@@ -16,6 +16,10 @@ export interface LinkProtocolSummary {
   accessLinks: number;
   transportProtocol: string;
   routingProtocol: string;
+  stackLayers: number;
+  carrierFrequencyGhz: number;
+  bandwidthMhz: number;
+  estimatedRainFadeDb: number;
   rows: readonly LinkProtocolRow[];
 }
 
@@ -49,6 +53,10 @@ export const LinkProtocolPanel = memo(function LinkProtocolPanel({
         <KpiPanel label="路径跳数" value={String(summary.bestHopCount)} />
         <KpiPanel label="传输协议" value={summary.transportProtocol} />
         <KpiPanel label="路由协议" value={summary.routingProtocol} />
+        <KpiPanel label="协议栈层数" value={String(summary.stackLayers)} />
+        <KpiPanel label="载波频率" value={`${summary.carrierFrequencyGhz.toFixed(1)} GHz`} />
+        <KpiPanel label="信道带宽" value={`${summary.bandwidthMhz.toFixed(0)} MHz`} />
+        <KpiPanel label="估算雨衰" value={`${summary.estimatedRainFadeDb.toFixed(2)} dB`} />
         <KpiPanel label="星间链路" value={String(summary.spaceLinks)} />
         <KpiPanel label="接入链路" value={String(summary.accessLinks)} />
       </div>
@@ -81,6 +89,13 @@ export function buildLinkProtocolSummary(
       ? 0
       : Math.min(...activeLinks.map((link) => link.capacity));
   const linkClasses = classifyLinks(activeLinks);
+  const network = snapshot.scenario_config?.network;
+  const carrierFrequencyGhz = (network?.carrier_frequency_hz ?? 20_000_000_000) / 1_000_000_000;
+  const bandwidthMhz = (network?.channel_bandwidth_hz ?? 100_000_000) / 1_000_000;
+  const estimatedRainFadeDb =
+    (network?.rain_rate_mm_h ?? 0) *
+    (network?.rain_attenuation_coefficient_db_per_km_per_mm_h ?? 0) *
+    (network?.rain_effective_path_km ?? 0);
 
   return {
     activeLinks: activeLinks.length,
@@ -92,8 +107,12 @@ export function buildLinkProtocolSummary(
     bottleneckCapacity,
     spaceLinks: linkClasses.spaceLinks,
     accessLinks: linkClasses.accessLinks,
-    transportProtocol: snapshot.scenario_config?.network?.transport_protocol ?? "TCP",
-    routingProtocol: snapshot.scenario_config?.network?.routing_protocol ?? "LINK_STATE",
+    transportProtocol: network?.transport_protocol ?? "TCP",
+    routingProtocol: network?.routing_protocol ?? "LINK_STATE",
+    stackLayers: 6,
+    carrierFrequencyGhz,
+    bandwidthMhz,
+    estimatedRainFadeDb,
     rows: activeLinks
       .slice()
       .sort(compareLinks)

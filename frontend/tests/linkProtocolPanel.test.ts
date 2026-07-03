@@ -9,7 +9,12 @@ describe("buildLinkProtocolSummary", () => {
       scenario_config: {
         network: {
           transport_protocol: "UDP",
-          routing_protocol: "DISTANCE_VECTOR"
+          routing_protocol: "DISTANCE_VECTOR",
+          carrier_frequency_hz: 22_000_000_000,
+          channel_bandwidth_hz: 250_000_000,
+          rain_rate_mm_h: 12.5,
+          rain_attenuation_coefficient_db_per_km_per_mm_h: 0.015,
+          rain_effective_path_km: 4
         }
       },
       links: [
@@ -74,6 +79,10 @@ describe("buildLinkProtocolSummary", () => {
       accessLinks: 1,
       transportProtocol: "UDP",
       routingProtocol: "DISTANCE_VECTOR",
+      stackLayers: 6,
+      carrierFrequencyGhz: 22,
+      bandwidthMhz: 250,
+      estimatedRainFadeDb: 0.75,
       rows: [
         {
           linkId: "sat-a -> sat-b",
@@ -126,5 +135,9 @@ describe("buildLinkProtocolSummary", () => {
     expect(summary.bestPath).toBe("x -> y");
     expect(summary.transportProtocol).toBe("TCP");
     expect(summary.routingProtocol).toBe("LINK_STATE");
+    expect(summary.stackLayers).toBe(6);
+    expect(summary.carrierFrequencyGhz).toBe(20);
+    expect(summary.bandwidthMhz).toBe(100);
+    expect(summary.estimatedRainFadeDb).toBe(0);
   });
 });
