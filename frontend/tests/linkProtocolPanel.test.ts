@@ -22,6 +22,13 @@ describe("buildLinkProtocolSummary", () => {
           availability: true
         },
         {
+          source_id: "sat-a",
+          target_id: "user-1",
+          latency: 0.3,
+          capacity: 30,
+          availability: true
+        },
+        {
           source_id: "sat-x",
           target_id: "sat-y",
           latency: 0.1,
@@ -50,12 +57,15 @@ describe("buildLinkProtocolSummary", () => {
     });
 
     expect(summary).toEqual({
-      activeLinks: 2,
+      activeLinks: 3,
       availableRoutes: 2,
       bestRouteId: "route-fast",
       bestPath: "user -> sat-a -> sat-b -> node",
+      bestHopCount: 3,
       bestLatency: 1.5,
-      bottleneckCapacity: 40,
+      bottleneckCapacity: 30,
+      spaceLinks: 2,
+      accessLinks: 1,
       rows: [
         {
           linkId: "sat-a -> sat-b",
@@ -67,6 +77,12 @@ describe("buildLinkProtocolSummary", () => {
           linkId: "sat-b -> sat-c",
           latency: 0.4,
           capacity: 40,
+          status: "可用"
+        },
+        {
+          linkId: "sat-a -> user-1",
+          latency: 0.3,
+          capacity: 30,
           status: "可用"
         }
       ]

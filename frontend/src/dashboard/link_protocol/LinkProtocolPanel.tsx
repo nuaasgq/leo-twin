@@ -9,8 +9,11 @@ export interface LinkProtocolSummary {
   availableRoutes: number;
   bestRouteId: string;
   bestPath: string;
+  bestHopCount: number;
   bestLatency: number;
   bottleneckCapacity: number;
+  spaceLinks: number;
+  accessLinks: number;
   rows: readonly LinkProtocolRow[];
 }
 
@@ -38,6 +41,9 @@ export const LinkProtocolPanel = memo(function LinkProtocolPanel({
         <KpiPanel label="可用路由" value={String(summary.availableRoutes)} />
         <KpiPanel label="最佳时延" value={`${summary.bestLatency.toFixed(3)} s`} />
         <KpiPanel label="瓶颈容量" value={`${summary.bottleneckCapacity.toFixed(1)} Mbps`} />
+        <KpiPanel label="路径跳数" value={String(summary.bestHopCount)} />
+        <KpiPanel label="星间链路" value={String(summary.spaceLinks)} />
+        <KpiPanel label="接入链路" value={String(summary.accessLinks)} />
       </div>
       <div className="route-strip" aria-label="最佳路径">
         <span>最佳路径</span>
@@ -67,20 +73,47 @@ export function buildLinkProtocolSummary(
     activeLinks.length === 0
       ? 0
       : Math.min(...activeLinks.map((link) => link.capacity));
+  const linkClasses = classifyLinks(activeLinks);
 
   return {
     activeLinks: activeLinks.length,
     availableRoutes: availableRoutes.length,
     bestRouteId: bestRoute?.route_id ?? "无",
     bestPath: bestRoute?.path.join(" -> ") ?? "暂无可用路径",
+    bestHopCount: bestRoute === undefined ? 0 : Math.max(0, bestRoute.path.length - 1),
     bestLatency: bestRoute?.latency ?? 0,
     bottleneckCapacity,
+    spaceLinks: linkClasses.spaceLinks,
+    accessLinks: linkClasses.accessLinks,
     rows: activeLinks
       .slice()
       .sort(compareLinks)
       .slice(0, 5)
       .map(linkToRow)
   };
+}
+
+function classifyLinks(links: readonly LinkState[]): {
+  spaceLinks: number;
+  accessLinks: number;
+} {
+  return links.reduce(
+    (summary, link) => {
+      const sourceIsSatellite = isSatelliteEndpoint(link.source_id);
+      const targetIsSatellite = isSatelliteEndpoint(link.target_id);
+      if (sourceIsSatellite && targetIsSatellite) {
+        summary.spaceLinks += 1;
+      } else if (sourceIsSatellite || targetIsSatellite) {
+        summary.accessLinks += 1;
+      }
+      return summary;
+    },
+    { spaceLinks: 0, accessLinks: 0 }
+  );
+}
+
+function isSatelliteEndpoint(endpointId: string): boolean {
+  return endpointId.toLowerCase().startsWith("sat-");
 }
 
 function selectBestRoute(
