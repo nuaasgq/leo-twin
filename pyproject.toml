@@ -10,6 +10,13 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = []
 
+[project.scripts]
+leo-twin-review = "leo_twin.reviewer.cli:main"
+sees-run = "leo_twin.sees.cli:main_run"
+sees-review = "leo_twin.sees.cli:main_review"
+sees-fix = "leo_twin.sees.cli:main_fix"
+sees-evolve = "leo_twin.sees.cli:main_evolve"
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
