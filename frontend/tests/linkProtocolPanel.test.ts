@@ -14,7 +14,9 @@ describe("buildLinkProtocolSummary", () => {
           channel_bandwidth_hz: 250_000_000,
           rain_rate_mm_h: 12.5,
           rain_attenuation_coefficient_db_per_km_per_mm_h: 0.015,
-          rain_effective_path_km: 4
+          rain_effective_path_km: 4,
+          antenna_diameter_m: 0.55,
+          antenna_aperture_efficiency: 0.7
         }
       },
       links: [
@@ -88,6 +90,10 @@ describe("buildLinkProtocolSummary", () => {
       carrierFrequencyGhz: 22,
       bandwidthMhz: 250,
       estimatedRainFadeDb: 0.75,
+      antennaDiameterM: 0.55,
+      antennaEfficiency: 0.7,
+      antennaGainDbi: 40.5132712017957,
+      antennaBeamWidthDeg: 1.7343365338842973,
       rows: [
         {
           linkId: "sat-a -> sat-b",
@@ -149,5 +155,9 @@ describe("buildLinkProtocolSummary", () => {
     expect(summary.carrierFrequencyGhz).toBe(20);
     expect(summary.bandwidthMhz).toBe(100);
     expect(summary.estimatedRainFadeDb).toBe(0);
+    expect(summary.antennaDiameterM).toBe(0.45);
+    expect(summary.antennaEfficiency).toBe(0.65);
+    expect(summary.antennaGainDbi).toBeCloseTo(37.620567, 6);
+    expect(summary.antennaBeamWidthDeg).toBeCloseTo(2.331719, 6);
   });
 });

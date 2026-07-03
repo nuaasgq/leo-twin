@@ -25,6 +25,10 @@ export interface LinkProtocolSummary {
   carrierFrequencyGhz: number;
   bandwidthMhz: number;
   estimatedRainFadeDb: number;
+  antennaDiameterM: number;
+  antennaEfficiency: number;
+  antennaGainDbi: number;
+  antennaBeamWidthDeg: number;
   rows: readonly LinkProtocolRow[];
 }
 
@@ -64,6 +68,12 @@ export const LinkProtocolPanel = memo(function LinkProtocolPanel({
         <KpiPanel label="协议栈层数" value={String(summary.stackLayers)} />
         <KpiPanel label="载波频率" value={`${summary.carrierFrequencyGhz.toFixed(1)} GHz`} />
         <KpiPanel label="信道带宽" value={`${summary.bandwidthMhz.toFixed(0)} MHz`} />
+        <KpiPanel
+          label="天线增益"
+          value={`${summary.antennaGainDbi.toFixed(1)} dBi`}
+          detail={`${summary.antennaDiameterM.toFixed(2)} m / η ${summary.antennaEfficiency.toFixed(2)}`}
+        />
+        <KpiPanel label="波束宽度" value={`${summary.antennaBeamWidthDeg.toFixed(2)}°`} />
         <KpiPanel label="估算雨衰" value={`${summary.estimatedRainFadeDb.toFixed(2)} dB`} />
         <KpiPanel label="星间链路" value={String(summary.spaceLinks)} />
         <KpiPanel label="接入链路" value={String(summary.accessLinks)} />
@@ -103,6 +113,8 @@ export function buildLinkProtocolSummary(
   const routingProtocol = network?.routing_protocol ?? "LINK_STATE";
   const carrierFrequencyGhz = (network?.carrier_frequency_hz ?? 20_000_000_000) / 1_000_000_000;
   const bandwidthMhz = (network?.channel_bandwidth_hz ?? 100_000_000) / 1_000_000;
+  const antennaDiameterM = network?.antenna_diameter_m ?? 0.45;
+  const antennaEfficiency = network?.antenna_aperture_efficiency ?? 0.65;
   const estimatedRainFadeDb =
     (network?.rain_rate_mm_h ?? 0) *
     (network?.rain_attenuation_coefficient_db_per_km_per_mm_h ?? 0) *
@@ -133,6 +145,17 @@ export function buildLinkProtocolSummary(
     carrierFrequencyGhz,
     bandwidthMhz,
     estimatedRainFadeDb,
+    antennaDiameterM,
+    antennaEfficiency,
+    antennaGainDbi: apertureAntennaGainDbi(
+      antennaDiameterM,
+      carrierFrequencyGhz * 1_000_000_000,
+      antennaEfficiency
+    ),
+    antennaBeamWidthDeg: apertureAntennaBeamWidthDeg(
+      antennaDiameterM,
+      carrierFrequencyGhz * 1_000_000_000
+    ),
     rows: activeLinks
       .slice()
       .sort(compareLinks)
@@ -148,6 +171,24 @@ function routeHopCount(route: Route): number {
 function routeEndsAtComputeNode(route: Route): boolean {
   const lastNode = route.path[route.path.length - 1];
   return typeof lastNode === "string" && lastNode.startsWith("compute-");
+}
+
+function apertureAntennaGainDbi(
+  diameterM: number,
+  carrierFrequencyHz: number,
+  apertureEfficiency: number
+): number {
+  const wavelengthM = 299_792_458 / carrierFrequencyHz;
+  const gainLinear = apertureEfficiency * Math.pow((Math.PI * diameterM) / wavelengthM, 2);
+  return 10 * Math.log10(gainLinear);
+}
+
+function apertureAntennaBeamWidthDeg(
+  diameterM: number,
+  carrierFrequencyHz: number
+): number {
+  const wavelengthM = 299_792_458 / carrierFrequencyHz;
+  return (70 * wavelengthM) / diameterM;
 }
 
 function formatTransportProtocol(protocol: string): string {
