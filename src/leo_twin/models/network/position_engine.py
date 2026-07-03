@@ -48,6 +48,8 @@ class PositionDrivenNetworkEngine(SimulationModule):
         static_links: Iterable[LinkState] = (),
         space_link_max_range_km: float | None = None,
         space_link_capacity: float | None = None,
+        space_link_update_latency_epsilon_s: float = 0.0,
+        space_link_update_capacity_epsilon: float = 0.0,
     ) -> None:
         _require_non_empty_str(module_name, "module_name")
         _require_non_empty_str(metrics_target, "metrics_target")
@@ -58,6 +60,14 @@ class PositionDrivenNetworkEngine(SimulationModule):
             _require_positive_number(space_link_max_range_km, "space_link_max_range_km")
         if space_link_capacity is not None:
             _require_positive_number(space_link_capacity, "space_link_capacity")
+        _require_non_negative_number(
+            space_link_update_latency_epsilon_s,
+            "space_link_update_latency_epsilon_s",
+        )
+        _require_non_negative_number(
+            space_link_update_capacity_epsilon,
+            "space_link_update_capacity_epsilon",
+        )
         compute_nodes = tuple(sorted(str(item) for item in compute_node_ids))
         if not compute_nodes or any(not item for item in compute_nodes):
             raise ValueError("compute_node_ids must contain non-empty ids")
@@ -83,6 +93,8 @@ class PositionDrivenNetworkEngine(SimulationModule):
         self._static_links = tuple(sorted(static_links, key=lambda item: (item.source_id, item.target_id)))
         self._space_link_max_range_km = space_link_max_range_km
         self._space_link_capacity = float(space_link_capacity or link_capacity)
+        self._space_link_update_latency_epsilon_s = float(space_link_update_latency_epsilon_s)
+        self._space_link_update_capacity_epsilon = float(space_link_update_capacity_epsilon)
         self._satellite_states: dict[str, SatelliteState] = {}
         self._active_links: dict[tuple[str, str], LinkState] = {}
         self._active_space_links: dict[tuple[str, str], LinkState] = {}
@@ -271,7 +283,7 @@ class PositionDrivenNetworkEngine(SimulationModule):
                 continue
 
             self._active_space_links[pair] = candidate
-            if previous != candidate:
+            if self._should_emit_space_link_update(previous, candidate):
                 emitted.append(
                     self._event(
                         dispatch_time=dispatch_time,
@@ -308,6 +320,21 @@ class PositionDrivenNetworkEngine(SimulationModule):
             capacity=capacity,
             availability=True,
         )
+
+    def _should_emit_space_link_update(
+        self,
+        previous: LinkState | None,
+        candidate: LinkState,
+    ) -> bool:
+        if previous is None:
+            return True
+        if previous.availability != candidate.availability:
+            return True
+        if abs(previous.latency - candidate.latency) > self._space_link_update_latency_epsilon_s:
+            return True
+        if abs(previous.capacity - candidate.capacity) > self._space_link_update_capacity_epsilon:
+            return True
+        return False
 
     def _link_from_candidate(
         self,

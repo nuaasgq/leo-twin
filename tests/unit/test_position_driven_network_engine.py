@@ -440,6 +440,80 @@ def test_position_driven_engine_ends_space_link_when_satellite_moves_out_of_rang
     )
 
 
+def test_space_link_update_threshold_suppresses_small_changes() -> None:
+    kernel = SimulationKernel()
+    network = PositionDrivenNetworkEngine(
+        endpoints=(
+            GroundEndpoint(
+                endpoint_id="user-east",
+                position=(EARTH_RADIUS_KM, 0.0, 0.0),
+                min_elevation_deg=10.0,
+                max_range_km=2000.0,
+            ),
+        ),
+        compute_node_ids=("node-a",),
+        link_capacity=50.0,
+        propagation_speed_km_s=1000.0,
+        cell_size_km=1000.0,
+        space_link_max_range_km=1500.0,
+        space_link_update_latency_epsilon_s=0.01,
+    )
+    metrics = MetricsSink()
+    kernel.register_module(network)
+    kernel.register_module(metrics)
+    kernel.schedule_event(
+        _event("orbit-a", EventType.ORBIT_UPDATE.value, _state((7000.0, 0.0, 0.0), "sat-001"))
+    )
+    kernel.schedule_event(
+        _event("orbit-b", EventType.ORBIT_UPDATE.value, _state((8000.0, 0.0, 0.0), "sat-002"))
+    )
+    kernel.schedule_event(
+        _event("orbit-b-small", EventType.ORBIT_UPDATE.value, _state((8000.005, 0.0, 0.0), "sat-002"), 1.0)
+    )
+
+    kernel.run()
+
+    space_links = _space_link_payloads(metrics.events)
+    assert [link.latency for link in space_links] == [1.0]
+
+
+def test_space_link_update_threshold_allows_significant_changes() -> None:
+    kernel = SimulationKernel()
+    network = PositionDrivenNetworkEngine(
+        endpoints=(
+            GroundEndpoint(
+                endpoint_id="user-east",
+                position=(EARTH_RADIUS_KM, 0.0, 0.0),
+                min_elevation_deg=10.0,
+                max_range_km=2000.0,
+            ),
+        ),
+        compute_node_ids=("node-a",),
+        link_capacity=50.0,
+        propagation_speed_km_s=1000.0,
+        cell_size_km=1000.0,
+        space_link_max_range_km=1500.0,
+        space_link_update_latency_epsilon_s=0.01,
+    )
+    metrics = MetricsSink()
+    kernel.register_module(network)
+    kernel.register_module(metrics)
+    kernel.schedule_event(
+        _event("orbit-a", EventType.ORBIT_UPDATE.value, _state((7000.0, 0.0, 0.0), "sat-001"))
+    )
+    kernel.schedule_event(
+        _event("orbit-b", EventType.ORBIT_UPDATE.value, _state((8000.0, 0.0, 0.0), "sat-002"))
+    )
+    kernel.schedule_event(
+        _event("orbit-b-large", EventType.ORBIT_UPDATE.value, _state((8050.0, 0.0, 0.0), "sat-002"), 1.0)
+    )
+
+    kernel.run()
+
+    space_links = _space_link_payloads(metrics.events)
+    assert [link.latency for link in space_links] == [1.0, 1.05]
+
+
 def test_routing_runtime_uses_position_driven_space_link() -> None:
     kernel = SimulationKernel()
     network = PositionDrivenNetworkEngine(
@@ -531,6 +605,16 @@ def test_position_driven_space_link_uses_medium_budget_selector() -> None:
 
 def test_position_driven_network_engine_is_deterministic() -> None:
     assert _run_scenario() == _run_scenario()
+
+
+def _space_link_payloads(events: list[SimEvent]) -> list[LinkState]:
+    return [
+        event.payload
+        for event in events
+        if isinstance(event.payload, LinkState)
+        and event.payload.source_id == "sat-001"
+        and event.payload.target_id == "sat-002"
+    ]
 
 
 def _run_scenario() -> tuple[tuple[str, object], ...]:
