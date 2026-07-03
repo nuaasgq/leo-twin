@@ -11,6 +11,14 @@ export interface ScenarioControlValues {
   satellite_count: number;
   user_count: number;
   compute_nodes: number;
+  visualization: VisualizationControlValues;
+}
+
+export interface VisualizationControlValues {
+  satellites: boolean;
+  links: boolean;
+  users: boolean;
+  metrics: boolean;
 }
 
 export interface ConfigPanelProps {
@@ -50,6 +58,10 @@ export function ConfigPanel({
   const [satelliteCount, setSatelliteCount] = useState(scenario.satellite_count);
   const [userCount, setUserCount] = useState(scenario.user_count);
   const [computeNodes, setComputeNodes] = useState(scenario.compute_nodes);
+  const [showSatellites, setShowSatellites] = useState(scenario.visualization.satellites);
+  const [showLinks, setShowLinks] = useState(scenario.visualization.links);
+  const [showUsers, setShowUsers] = useState(scenario.visualization.users);
+  const [showMetrics, setShowMetrics] = useState(scenario.visualization.metrics);
   const [runtimeMode, setRuntimeMode] = useState<Exclude<RuntimeMode, "PAUSED">>(
     runtime.mode === "ACCELERATED" ? "ACCELERATED" : "REAL_TIME"
   );
@@ -61,7 +73,19 @@ export function ConfigPanel({
     setSatelliteCount(scenario.satellite_count);
     setUserCount(scenario.user_count);
     setComputeNodes(scenario.compute_nodes);
-  }, [scenario.satellite_count, scenario.user_count, scenario.compute_nodes]);
+    setShowSatellites(scenario.visualization.satellites);
+    setShowLinks(scenario.visualization.links);
+    setShowUsers(scenario.visualization.users);
+    setShowMetrics(scenario.visualization.metrics);
+  }, [
+    scenario.satellite_count,
+    scenario.user_count,
+    scenario.compute_nodes,
+    scenario.visualization.satellites,
+    scenario.visualization.links,
+    scenario.visualization.users,
+    scenario.visualization.metrics
+  ]);
 
   useEffect(() => {
     if (runtime.mode !== "PAUSED") {
@@ -203,6 +227,44 @@ export function ConfigPanel({
         />
       </div>
 
+      <div className="control-group">
+        <div className="control-label">可视化图层</div>
+        <div className="toggle-grid" aria-label="可视化图层开关">
+          <label>
+            <input
+              type="checkbox"
+              checked={showSatellites}
+              onChange={(event) => setShowSatellites(event.currentTarget.checked)}
+            />
+            <span>卫星</span>
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={showUsers}
+              onChange={(event) => setShowUsers(event.currentTarget.checked)}
+            />
+            <span>用户</span>
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={showLinks}
+              onChange={(event) => setShowLinks(event.currentTarget.checked)}
+            />
+            <span>链路</span>
+          </label>
+          <label>
+            <input
+              type="checkbox"
+              checked={showMetrics}
+              onChange={(event) => setShowMetrics(event.currentTarget.checked)}
+            />
+            <span>指标</span>
+          </label>
+        </div>
+      </div>
+
       <div className="runtime-actions" aria-label="仿真运行控制">
         <button
           type="button"
@@ -214,7 +276,13 @@ export function ConfigPanel({
               mode: runtimeMode,
               speed_factor: speedFactor,
               duration: durationSeconds,
-              seed
+              seed,
+              visualization: visualizationControlPayload({
+                satellites: showSatellites,
+                users: showUsers,
+                links: showLinks,
+                metrics: showMetrics
+              })
             })
           }
         >
@@ -324,6 +392,17 @@ export function runtimeProgressSummary(
     eventCountLabel: formatInteger(progress.event_count),
     percent,
     percentLabel: `${formatDecimal(percent)}%`
+  };
+}
+
+export function visualizationControlPayload(
+  visualization: VisualizationControlValues
+): VisualizationControlValues {
+  return {
+    satellites: visualization.satellites,
+    links: visualization.links,
+    users: visualization.users,
+    metrics: visualization.metrics
   };
 }
 

@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   generatedScenarioSummaryItems,
   pauseResumeControl,
-  runtimeProgressSummary
+  runtimeProgressSummary,
+  visualizationControlPayload
 } from "../src/config_panel/ConfigPanel";
 import { GeneratedScenarioConfig } from "../src/core/event_types";
 
@@ -93,6 +94,24 @@ describe("runtimeProgressSummary", () => {
         event_count: 1
       }).percentLabel
     ).toBe("100%");
+  });
+});
+
+describe("visualizationControlPayload", () => {
+  it("creates deterministic visualization update payloads", () => {
+    expect(
+      visualizationControlPayload({
+        satellites: true,
+        users: false,
+        links: true,
+        metrics: false
+      })
+    ).toEqual({
+      satellites: true,
+      links: true,
+      users: false,
+      metrics: false
+    });
   });
 });
 

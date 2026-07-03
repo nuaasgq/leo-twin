@@ -363,6 +363,41 @@ body {
   font-size: 12px;
 }
 
+.toggle-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.toggle-grid label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  border: 1px solid #30383b;
+  border-radius: 4px;
+  padding: 7px 8px;
+  background: #121517;
+  color: #dce5e8;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.toggle-grid input {
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  accent-color: #54d68d;
+}
+
+.toggle-grid span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .runtime-actions {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -772,5 +807,9 @@ body {
 
   .runtime-actions {
     grid-template-columns: 1fr;
+  }
+
+  .toggle-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

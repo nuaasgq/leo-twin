@@ -357,6 +357,7 @@ function scenarioControlValues(
   scenarioConfig: ScenarioConfig | null,
   renderedSatellites: number
 ): ScenarioControlValues {
+  const visualization = scenarioConfig?.ui?.visualization;
   return {
     satellite_count:
       scenarioConfig?.scenario?.satellite_count ??
@@ -364,6 +365,12 @@ function scenarioControlValues(
       renderedSatellites,
     user_count:
       scenarioConfig?.scenario?.user_count ?? scenarioConfig?.ground_users?.length ?? 1000,
-    compute_nodes: scenarioConfig?.scenario?.compute_nodes ?? 10
+    compute_nodes: scenarioConfig?.scenario?.compute_nodes ?? 10,
+    visualization: {
+      satellites: visualization?.satellites ?? true,
+      links: visualization?.links ?? true,
+      users: visualization?.users ?? true,
+      metrics: visualization?.metrics ?? true
+    }
   };
 }
