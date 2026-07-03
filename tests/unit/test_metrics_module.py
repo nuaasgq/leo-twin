@@ -1,6 +1,9 @@
 import csv
 import io
 import json
+from math import sqrt
+
+import pytest
 
 from leo_twin.schema import (
     EventType,
@@ -162,6 +165,9 @@ def test_metrics_collector_kpis_are_consistent_with_observations() -> None:
 
     assert summary["event_count"] == 8
     assert summary["unique_satellites"] == 1
+    assert summary["satellite_altitude_avg"] == pytest.approx(sqrt(14.0) - 6371.0)
+    assert summary["satellite_altitude_max"] == pytest.approx(sqrt(14.0) - 6371.0)
+    assert summary["satellite_altitude_min"] == pytest.approx(sqrt(14.0) - 6371.0)
     assert summary["observed_links"] == 1
     assert summary["active_link_capacity_avg"] == 0.0
     assert summary["active_link_capacity_max"] == 0.0
@@ -188,6 +194,15 @@ def test_metrics_collector_kpis_are_consistent_with_observations() -> None:
     assert summary["events.TASK_FINISH.count"] == 1
 
     assert _last_record(records, "events.observed.count").value == float(summary["event_count"])
+    assert _last_record(records, "satellite.altitude_km").value == pytest.approx(
+        sqrt(14.0) - 6371.0
+    )
+    assert _last_record(records, "satellite.latitude_deg").value == pytest.approx(
+        53.30077479951012
+    )
+    assert _last_record(records, "satellite.longitude_deg").value == pytest.approx(
+        63.43494882292201
+    )
     assert _last_record(records, "links.active.count").value == float(summary["active_links"])
     assert _last_record(records, "links.available_capacity.total").value == summary[
         "available_link_capacity"

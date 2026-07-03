@@ -11,6 +11,7 @@ from dataclasses import fields, is_dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
+from leo_twin.models.orbit import ground_track_point
 from leo_twin.schema import (
     EventType,
     FlowState,
@@ -78,6 +79,7 @@ class MetricsCollector:
         self._event_log: deque[ReplayEvent] = deque(maxlen=event_log_limit)
         self._event_counts: Counter[str] = Counter()
         self._satellite_status: dict[str, str] = {}
+        self._satellite_altitudes_km: dict[str, float] = {}
         self._links: dict[tuple[str, str], LinkState] = {}
         self._active_links: set[tuple[str, str]] = set()
         self._routes: dict[str, Route] = {}
@@ -176,6 +178,14 @@ class MetricsCollector:
             "running_tasks": len(self._running_tasks),
             "routes_available": len(available_routes),
             "routes_total": len(self._routes),
+            "satellite_altitude_avg": _average(
+                tuple(
+                    self._satellite_altitudes_km[satellite_id]
+                    for satellite_id in sorted(self._satellite_altitudes_km)
+                )
+            ),
+            "satellite_altitude_max": max(self._satellite_altitudes_km.values(), default=0.0),
+            "satellite_altitude_min": min(self._satellite_altitudes_km.values(), default=0.0),
             "unique_satellites": len(self._satellite_status),
         }
         for event_type, count in sorted(self._event_counts.items()):
@@ -284,7 +294,9 @@ class MetricsCollector:
 
     def _observe_satellite(self, event: SimEvent) -> tuple[MetricRecord, ...]:
         state = _require_payload(event.payload, SatelliteState, "ORBIT_UPDATE")
+        point = ground_track_point(state)
         self._satellite_status[state.satellite_id] = state.status
+        self._satellite_altitudes_km[state.satellite_id] = point.altitude_km
         return (
             MetricRecord(
                 metric_name="satellites.observed.count",
@@ -297,6 +309,27 @@ class MetricsCollector:
                 sim_time=event.sim_time,
                 entity_id=state.satellite_id,
                 value=state.status,
+                tags=(("status", state.status),),
+            ),
+            MetricRecord(
+                metric_name="satellite.latitude_deg",
+                sim_time=event.sim_time,
+                entity_id=state.satellite_id,
+                value=float(point.latitude_deg),
+                tags=(("status", state.status),),
+            ),
+            MetricRecord(
+                metric_name="satellite.longitude_deg",
+                sim_time=event.sim_time,
+                entity_id=state.satellite_id,
+                value=float(point.longitude_deg),
+                tags=(("status", state.status),),
+            ),
+            MetricRecord(
+                metric_name="satellite.altitude_km",
+                sim_time=event.sim_time,
+                entity_id=state.satellite_id,
+                value=float(point.altitude_km),
                 tags=(("status", state.status),),
             ),
         )
