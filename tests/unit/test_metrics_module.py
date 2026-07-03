@@ -178,6 +178,7 @@ def test_metrics_collector_kpis_are_consistent_with_observations() -> None:
     assert summary["completed_flows"] == 1
     assert summary["running_tasks"] == 0
     assert summary["finished_tasks"] == 1
+    assert summary["deadline_missed_tasks"] == 0
     assert summary["last_sim_time"] == 6.0
     assert summary["events.ACCESS_START.count"] == 1
     assert summary["events.LINK_UPDATE.count"] == 1
@@ -199,6 +200,35 @@ def test_metrics_collector_kpis_are_consistent_with_observations() -> None:
     assert _last_record(records, "tasks.finished.count").value == float(
         summary["finished_tasks"]
     )
+    assert _last_record(records, "tasks.deadline_missed.count").value == float(
+        summary["deadline_missed_tasks"]
+    )
+
+
+def test_metrics_collector_counts_deadline_missed_tasks() -> None:
+    collector = MetricsCollector()
+
+    collector.observe(
+        _event(
+            "task-finish-timeout",
+            7.0,
+            EventType.TASK_FINISH,
+            TaskState(
+                task_id="task-timeout",
+                node_id="node-a",
+                sim_time=7.0,
+                progress=1.0,
+                status="DEADLINE_MISSED",
+            ),
+            "compute",
+        )
+    )
+
+    summary = collector.summary()
+    records = collector.records()
+    assert summary["finished_tasks"] == 1
+    assert summary["deadline_missed_tasks"] == 1
+    assert _last_record(records, "tasks.deadline_missed.count").value == 1.0
 
 
 def test_metrics_outputs_are_deterministic_and_have_expected_format(tmp_path) -> None:

@@ -153,6 +153,7 @@ class MetricsCollector:
             "active_links": len(active_links),
             "available_link_capacity": self._available_link_capacity(),
             "completed_flows": len(self._completed_flows),
+            "deadline_missed_tasks": self._deadline_missed_task_count(),
             "event_count": sum(self._event_counts.values()),
             "finished_tasks": len(self._finished_tasks),
             "last_sim_time": self._last_sim_time,
@@ -419,6 +420,12 @@ class MetricsCollector:
                 entity_id="system",
                 value=float(len(self._finished_tasks)),
             ),
+            MetricRecord(
+                metric_name="tasks.deadline_missed.count",
+                sim_time=event.sim_time,
+                entity_id="system",
+                value=float(self._deadline_missed_task_count()),
+            ),
         )
 
     def _available_link_capacity(self) -> float:
@@ -442,6 +449,13 @@ class MetricsCollector:
             self._routes[route_id]
             for route_id in sorted(self._routes)
             if self._routes[route_id].available
+        )
+
+    def _deadline_missed_task_count(self) -> int:
+        return sum(
+            1
+            for status in self._finished_tasks.values()
+            if status.upper() == "DEADLINE_MISSED"
         )
 
     def _metric_event(self, observed_event: SimEvent, record: MetricRecord) -> SimEvent:
