@@ -173,6 +173,9 @@ def test_metrics_collector_kpis_are_consistent_with_observations() -> None:
     assert summary["routes_available"] == 1
     assert summary["route_capacity_max"] == 60.0
     assert summary["route_capacity_min"] == 60.0
+    assert summary["route_hop_count_avg"] == 2.0
+    assert summary["route_hop_count_max"] == 2
+    assert summary["route_hop_count_min"] == 2
     assert summary["route_latency_avg"] == 16.0
     assert summary["route_latency_min"] == 16.0
     assert summary["completed_flows"] == 1
@@ -193,6 +196,8 @@ def test_metrics_collector_kpis_are_consistent_with_observations() -> None:
     assert _last_record(records, "routes.available.count").value == float(
         summary["routes_available"]
     )
+    assert _last_record(records, "route.hop_count").value == 2.0
+    assert _last_record(records, "route.path").value == "user-1 -> sat-a -> user-2"
     assert _last_record(records, "flows.completed.count").value == float(
         summary["completed_flows"]
     )

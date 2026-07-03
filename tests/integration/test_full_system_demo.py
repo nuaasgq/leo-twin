@@ -79,8 +79,9 @@ def test_scale_test_basic() -> None:
     summary = result.metrics_summary
 
     assert len(result.processed_events) >= 10_000
-    assert len(result.processed_events) == 71_387
+    assert len(result.processed_events) == 71_389
     assert summary["event_count"] >= 60_000
+    assert summary["route_hop_count_avg"] >= 0.0
     assert summary["deadline_missed_tasks"] == 0
     assert len(result.state_timeline) <= len(result.processed_events) // 1000 + 1
     assert len(result.final_snapshot["links"]) <= 72 * 21

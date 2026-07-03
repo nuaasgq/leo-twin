@@ -160,6 +160,17 @@ class MetricsCollector:
             "observed_links": len(self._links),
             "route_capacity_max": max((route.capacity for route in available_routes), default=0.0),
             "route_capacity_min": min((route.capacity for route in available_routes), default=0.0),
+            "route_hop_count_avg": _average(
+                tuple(float(_route_hop_count(route)) for route in available_routes)
+            ),
+            "route_hop_count_max": max(
+                (_route_hop_count(route) for route in available_routes),
+                default=0,
+            ),
+            "route_hop_count_min": min(
+                (_route_hop_count(route) for route in available_routes),
+                default=0,
+            ),
             "route_latency_avg": _average(tuple(route.latency for route in available_routes)),
             "route_latency_min": min((route.latency for route in available_routes), default=0.0),
             "running_tasks": len(self._running_tasks),
@@ -360,6 +371,20 @@ class MetricsCollector:
                 tags=(("flow_id", route.flow_id),),
             ),
             MetricRecord(
+                metric_name="route.hop_count",
+                sim_time=event.sim_time,
+                entity_id=route.route_id,
+                value=float(_route_hop_count(route)),
+                tags=(("flow_id", route.flow_id),),
+            ),
+            MetricRecord(
+                metric_name="route.path",
+                sim_time=event.sim_time,
+                entity_id=route.route_id,
+                value=" -> ".join(route.path),
+                tags=(("flow_id", route.flow_id),),
+            ),
+            MetricRecord(
                 metric_name="routes.total.count",
                 sim_time=event.sim_time,
                 entity_id="system",
@@ -485,6 +510,10 @@ def _event_type_name(event_type: object) -> str:
 
 def _link_id(link: LinkState) -> str:
     return f"{link.source_id}->{link.target_id}"
+
+
+def _route_hop_count(route: Route) -> int:
+    return max(0, len(route.path) - 1)
 
 
 def _json_scalar(value: str | int | float | bool) -> str:
