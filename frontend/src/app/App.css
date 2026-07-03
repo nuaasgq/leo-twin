@@ -365,7 +365,7 @@ body {
 
 .runtime-actions {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -385,6 +385,13 @@ body {
 .runtime-actions button:hover {
   border-color: #4f7c87;
   background: #17303a;
+}
+
+.runtime-actions button:disabled {
+  border-color: #2d3538;
+  background: #111517;
+  color: #697579;
+  cursor: not-allowed;
 }
 
 .generated-config-summary {

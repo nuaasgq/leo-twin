@@ -128,13 +128,13 @@ export function App() {
           }
           if (message.ok === true && message.type === "CONTROL_ACK") {
             const action = message.status?.last_action;
-            if (action === "START") {
+            if (action === "START" || action === "RESUME") {
               loadControlState()
                 .then(({ scenario }) => startStreams(scenario))
                 .catch(() => setConnectionState("degraded"));
               return;
             }
-            if (action === "STOP") {
+            if (action === "STOP" || action === "PAUSE") {
               closeStreams();
               return;
             }

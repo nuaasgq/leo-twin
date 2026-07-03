@@ -57,6 +57,7 @@ export function ConfigPanel({
   }, [runtime.mode, runtime.speed_factor, runtime.duration, runtime.seed]);
 
   const summaryItems = generatedScenarioSummaryItems(generatedConfig);
+  const pauseResume = pauseResumeControl(runtime);
 
   return (
     <section className="config-panel" aria-label="仿真配置与控制面板">
@@ -205,6 +206,13 @@ export function ConfigPanel({
         <button type="button" onClick={() => onRuntimeControl("START")}>
           开始
         </button>
+        <button
+          type="button"
+          disabled={pauseResume.disabled}
+          onClick={() => onRuntimeControl(pauseResume.action)}
+        >
+          {pauseResume.label}
+        </button>
         <button type="button" onClick={() => onRuntimeControl("STOP")}>
           停止
         </button>
@@ -250,6 +258,27 @@ export function generatedScenarioSummaryItems(
     },
     { label: "倾角", value: `${formatDecimal(config.inclination_deg)}°` }
   ];
+}
+
+export interface PauseResumeControl {
+  label: string;
+  action: RuntimeAction;
+  disabled: boolean;
+}
+
+export function pauseResumeControl(runtime: RuntimeStatusPayload): PauseResumeControl {
+  if (runtime.status === "PAUSED") {
+    return {
+      label: "继续",
+      action: "RESUME",
+      disabled: false
+    };
+  }
+  return {
+    label: "暂停",
+    action: "PAUSE",
+    disabled: runtime.status !== "RUNNING"
+  };
 }
 
 function formatInteger(value: number): string {

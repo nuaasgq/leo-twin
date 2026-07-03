@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { generatedScenarioSummaryItems } from "../src/config_panel/ConfigPanel";
+import {
+  generatedScenarioSummaryItems,
+  pauseResumeControl
+} from "../src/config_panel/ConfigPanel";
 import { GeneratedScenarioConfig } from "../src/core/event_types";
 
 describe("generatedScenarioSummaryItems", () => {
@@ -43,3 +46,35 @@ describe("generatedScenarioSummaryItems", () => {
     ]);
   });
 });
+
+describe("pauseResumeControl", () => {
+  it("maps runtime state to Chinese pause and resume controls", () => {
+    expect(pauseResumeControl(runtimeStatus("RUNNING"))).toEqual({
+      label: "暂停",
+      action: "PAUSE",
+      disabled: false
+    });
+    expect(pauseResumeControl(runtimeStatus("PAUSED"))).toEqual({
+      label: "继续",
+      action: "RESUME",
+      disabled: false
+    });
+    expect(pauseResumeControl(runtimeStatus("STOPPED"))).toEqual({
+      label: "暂停",
+      action: "PAUSE",
+      disabled: true
+    });
+  });
+});
+
+function runtimeStatus(status: "RUNNING" | "PAUSED" | "STOPPED") {
+  return {
+    status,
+    mode: status === "PAUSED" ? "PAUSED" : "REAL_TIME",
+    speed_factor: 1,
+    seed: 20260703,
+    duration: 600,
+    config_version: 1,
+    last_action: status
+  } as const;
+}
