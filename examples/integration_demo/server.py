@@ -5,12 +5,12 @@ from __future__ import annotations
 import argparse
 import base64
 import hashlib
-import socket
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Callable
 
 from examples.integration_demo.config import DEFAULT_CONFIG_PATH, DemoConfig, load_demo_config
+from examples.integration_demo.control_plane import DemoControlPlane
 from examples.integration_demo.runtime import DemoRunResult, run_integration_demo
 from examples.integration_demo.serialization import (
     JsonValue,
@@ -37,7 +37,7 @@ _FRONTEND_EVENT_TYPES = frozenset(
 
 
 def serve_demo(result: DemoRunResult, host: str, port: int) -> None:
-    handler = _handler_for(result)
+    handler = _handler_for(DemoControlPlane.from_result(result))
     ThreadingHTTPServer((host, port), handler).serve_forever()
 
 
@@ -96,7 +96,7 @@ def _summary_text(result: DemoRunResult) -> str:
     )
 
 
-def _handler_for(result: DemoRunResult) -> type[BaseHTTPRequestHandler]:
+def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler]:
     class DemoRequestHandler(BaseHTTPRequestHandler):
         server_version = "LEOTwinDemo/0.1"
 
@@ -106,6 +106,7 @@ def _handler_for(result: DemoRunResult) -> type[BaseHTTPRequestHandler]:
             self.end_headers()
 
         def do_GET(self) -> None:  # noqa: N802
+            result = control_plane.result
             path = self.path.split("?", 1)[0]
             if self.headers.get("Upgrade", "").lower() == "websocket":
                 self._handle_websocket(path)
@@ -119,12 +120,16 @@ def _handler_for(result: DemoRunResult) -> type[BaseHTTPRequestHandler]:
             if path == "/health":
                 self._send_json({"status": "ok", "events": len(result.processed_events)})
                 return
+            if path == "/runtime/status":
+                self._send_json(control_plane.runtime_status())
+                return
             self.send_error(404, "not found")
 
         def log_message(self, format: str, *args: object) -> None:
             return
 
         def _handle_websocket(self, path: str) -> None:
+            result = control_plane.result
             if path == result.config.websocket_events:
                 self._accept_websocket()
                 for event in result.processed_events:
@@ -137,6 +142,9 @@ def _handler_for(result: DemoRunResult) -> type[BaseHTTPRequestHandler]:
                 for snapshot in result.state_timeline:
                     self._send_ws_json(snapshot)
                 self._close_websocket()
+                return
+            if path == "/control":
+                self._handle_control_websocket()
                 return
             self.send_error(404, "websocket endpoint not found")
 
@@ -173,11 +181,36 @@ def _handler_for(result: DemoRunResult) -> type[BaseHTTPRequestHandler]:
         def _send_ws_close(self) -> None:
             _write_ws_frame(self.wfile.write, b"", opcode=0x8)
 
+        def _handle_control_websocket(self) -> None:
+            self._accept_websocket()
+            self._send_ws_json(control_plane.runtime_status())
+            while True:
+                try:
+                    opcode, payload = _read_ws_frame(self.rfile.read)
+                except OSError:
+                    break
+                if opcode == 0x8:
+                    break
+                if opcode == 0x9:
+                    _write_ws_frame(self.wfile.write, payload, opcode=0xA)
+                    continue
+                if opcode != 0x1:
+                    self._send_ws_json(
+                        {
+                            "type": "CONTROL_ACK",
+                            "ok": False,
+                            "error": f"unsupported websocket opcode: {opcode}",
+                        }
+                    )
+                    continue
+                self._send_ws_json(control_plane.handle_raw_message(payload))
+            self._close_websocket()
+
         def _close_websocket(self) -> None:
             self._send_ws_close()
             self.close_connection = True
             try:
-                self.connection.shutdown(socket.SHUT_RDWR)
+                self.connection.close()
             except OSError:
                 pass
 
@@ -198,6 +231,35 @@ def _write_ws_frame(
     else:
         header = first + bytes([127]) + length.to_bytes(8, "big")
     write(header + payload)
+
+
+def _read_ws_frame(read: Callable[[int], bytes]) -> tuple[int, bytes]:
+    header = _read_exact(read, 2)
+    first, second = header
+    opcode = first & 0x0F
+    masked = (second & 0x80) != 0
+    length = second & 0x7F
+    if length == 126:
+        length = int.from_bytes(_read_exact(read, 2), "big")
+    elif length == 127:
+        length = int.from_bytes(_read_exact(read, 8), "big")
+    mask_key = _read_exact(read, 4) if masked else b""
+    payload = _read_exact(read, length) if length else b""
+    if masked:
+        payload = bytes(byte ^ mask_key[index % 4] for index, byte in enumerate(payload))
+    return opcode, payload
+
+
+def _read_exact(read: Callable[[int], bytes], size: int) -> bytes:
+    chunks: list[bytes] = []
+    remaining = size
+    while remaining > 0:
+        chunk = read(remaining)
+        if not chunk:
+            raise OSError("websocket connection closed")
+        chunks.append(chunk)
+        remaining -= len(chunk)
+    return b"".join(chunks)
 
 
 if __name__ == "__main__":

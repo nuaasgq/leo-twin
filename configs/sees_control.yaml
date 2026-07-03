@@ -1,0 +1,31 @@
+scenario:
+  satellite_count: 72
+  user_count: 1000
+  compute_nodes: 10
+  ground_station_count: 3
+  cell_count: 100
+  orbit:
+    update_interval_seconds: 60
+    plane_count: 12
+    altitude_m: 550000.0
+    inclination_deg: 53.0
+  traffic_model:
+    flow_interval_seconds: 60
+    task_interval_seconds: 60
+    flow_demand_capacity: 25.0
+    task_compute_demand: 20.0
+
+runtime:
+  mode: REAL_TIME
+  speed_factor: 1.0
+  seed: 20260703
+  duration: 600
+
+ui:
+  visualization:
+    satellites: true
+    links: true
+    users: true
+    metrics: true
+  update_frequency_hz: 20
+  dashboard_layout: right_panel

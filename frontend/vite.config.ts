@@ -17,6 +17,13 @@ export default defineConfig({
       },
       "/scenario": {
         target: "http://127.0.0.1:8765"
+      },
+      "/control": {
+        target: "http://127.0.0.1:8765",
+        ws: true
+      },
+      "/runtime": {
+        target: "http://127.0.0.1:8765"
       }
     }
   }

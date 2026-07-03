@@ -6,6 +6,17 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from leo_twin.core.config import (
+    OrbitParameters,
+    RuntimeConfig,
+    RuntimeMode,
+    SEESConfig,
+    ScenarioConfig,
+    TrafficModel,
+    UIConfig,
+    VisualizationToggles,
+)
+
 
 @dataclass(frozen=True)
 class DemoConfig:
@@ -60,6 +71,65 @@ def load_demo_config(path: str | Path = DEFAULT_CONFIG_PATH) -> DemoConfig:
         scenario_config=_str(frontend, "scenario_config"),
         backend_host=_str(frontend, "backend_host"),
         backend_port=_int(frontend, "backend_port"),
+    )
+
+
+def demo_config_to_sees_config(config: DemoConfig) -> SEESConfig:
+    """Translate legacy demo config into the SEES control-plane schema."""
+
+    return SEESConfig(
+        scenario=ScenarioConfig(
+            satellite_count=config.satellite_count,
+            user_count=config.ground_user_count,
+            compute_nodes=config.compute_node_count,
+            ground_station_count=config.ground_station_count,
+            cell_count=config.cell_count,
+            orbit=OrbitParameters(update_interval_seconds=config.orbit_tick_seconds),
+            traffic_model=TrafficModel(
+                flow_interval_seconds=config.flow_interval_seconds,
+                task_interval_seconds=config.task_interval_seconds,
+            ),
+        ),
+        runtime=RuntimeConfig(
+            mode=RuntimeMode.REAL_TIME,
+            speed_factor=1.0,
+            seed=config.seed,
+            duration=config.duration_seconds,
+        ),
+        ui=UIConfig(
+            visualization=VisualizationToggles(),
+            update_frequency_hz=max(1, 1000 // max(1, config.metric_sample_interval)),
+            dashboard_layout="right_panel",
+        ),
+    )
+
+
+def demo_config_from_sees_config(
+    config: SEESConfig,
+    base: DemoConfig,
+) -> DemoConfig:
+    """Translate control-plane config back to demo runtime configuration."""
+
+    return DemoConfig(
+        seed=config.runtime.seed,
+        satellite_count=config.scenario.satellite_count,
+        ground_user_count=config.scenario.user_count,
+        ground_station_count=config.scenario.ground_station_count,
+        compute_node_count=config.scenario.compute_nodes,
+        duration_seconds=config.runtime.duration,
+        orbit_tick_seconds=config.scenario.orbit.update_interval_seconds,
+        network_slot_seconds=config.scenario.orbit.update_interval_seconds,
+        flow_interval_seconds=config.scenario.traffic_model.flow_interval_seconds,
+        task_interval_seconds=config.scenario.traffic_model.task_interval_seconds,
+        cell_count=config.scenario.cell_count,
+        state_snapshot_interval_events=base.state_snapshot_interval_events,
+        metric_sample_interval=base.metric_sample_interval,
+        websocket_events=base.websocket_events,
+        websocket_state=base.websocket_state,
+        metrics_snapshot=base.metrics_snapshot,
+        scenario_config=base.scenario_config,
+        backend_host=base.backend_host,
+        backend_port=base.backend_port,
     )
 
 

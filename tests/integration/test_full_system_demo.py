@@ -49,9 +49,12 @@ def test_frontend_sync_test() -> None:
         if str(event.event_type) in _FRONTEND_EVENT_TYPES
     } == _FRONTEND_EVENT_TYPES
     assert scenario_config["endpoints"] == {
+        "config": "/scenario/config",
+        "control": "/control",
         "events": "/stream/events",
         "state": "/stream/state",
         "metrics": "/metrics/snapshot",
+        "runtime_status": "/runtime/status",
     }
     assert stable_json(snapshot).startswith("{")
     assert stable_json(scenario_config).startswith("{")

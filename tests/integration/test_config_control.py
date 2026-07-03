@@ -1,0 +1,123 @@
+from __future__ import annotations
+
+import json
+
+import pytest
+
+from examples.integration_demo.config import DemoConfig
+from examples.integration_demo.control_plane import DemoControlPlane
+from examples.integration_demo.runtime import run_integration_demo
+from leo_twin.core.config import ConfigValidationError, config_from_mapping, load_config
+from leo_twin.services.control import RuntimeController
+
+
+def test_config_loads_correctly() -> None:
+    config = load_config("configs/sees_control.yaml")
+
+    assert config.scenario.satellite_count == 72
+    assert config.scenario.user_count == 1000
+    assert config.scenario.compute_nodes == 10
+    assert config.runtime.mode == "REAL_TIME"
+    assert config.runtime.speed_factor == 1.0
+    assert config.ui.visualization.satellites is True
+
+
+def test_invalid_config_is_rejected() -> None:
+    with pytest.raises(ConfigValidationError):
+        config_from_mapping({"scenario": {"satellite_count": 0}})
+
+    with pytest.raises(ConfigValidationError):
+        config_from_mapping({"scenario": {"unknown_field": 1}})
+
+
+def test_runtime_mode_switching_works() -> None:
+    controller = RuntimeController(load_config("configs/sees_control.yaml"))
+
+    accelerated = controller.handle_action(
+        "SET_MODE",
+        {"mode": "ACCELERATED"},
+    )
+    assert accelerated.mode == "ACCELERATED"
+    assert controller.handle_action("SET_SPEED", {"speed_factor": 25}).speed_factor == 25
+    assert controller.handle_action("START").status == "RUNNING"
+    assert controller.handle_action("PAUSE").status == "PAUSED"
+    assert controller.handle_action("STOP").status == "STOPPED"
+
+
+def test_frontend_control_messages_are_processed() -> None:
+    control_plane = _small_control_plane()
+
+    ack = control_plane.handle_raw_message(
+        json.dumps(
+            {
+                "type": "CONFIG_UPDATE",
+                "payload": {
+                    "satellite_count": 24,
+                    "user_count": 40,
+                    "compute_nodes": 3,
+                },
+            }
+        )
+    )
+    assert ack["ok"] is True
+    assert ack["status"]["last_action"] == "CONFIG_UPDATE"
+    assert control_plane.result.config.satellite_count == 24
+    assert len(control_plane.result.scenario.orbit_satellites) == 24
+    assert control_plane.result.config.ground_user_count == 40
+
+    runtime_ack = control_plane.handle_raw_message(
+        json.dumps({"type": "RUNTIME_CONTROL", "action": "START"})
+    )
+    assert runtime_ack["ok"] is True
+    assert runtime_ack["status"]["status"] == "RUNNING"
+
+
+def test_system_remains_deterministic_under_config_changes() -> None:
+    first = _small_control_plane()
+    second = _small_control_plane()
+    command = json.dumps(
+        {
+            "type": "CONFIG_UPDATE",
+            "payload": {
+                "satellite_count": 24,
+                "user_count": 40,
+                "speed_factor": 10,
+                "mode": "ACCELERATED",
+            },
+        }
+    )
+
+    first_ack = first.handle_raw_message(command)
+    second_ack = second.handle_raw_message(command)
+
+    assert first_ack == second_ack
+    assert first.result.event_log_jsonl() == second.result.event_log_jsonl()
+    assert first.result.final_snapshot == second.result.final_snapshot
+
+
+def _small_control_plane() -> DemoControlPlane:
+    return DemoControlPlane.from_result(run_integration_demo(_small_demo_config()))
+
+
+def _small_demo_config() -> DemoConfig:
+    return DemoConfig(
+        seed=1234,
+        satellite_count=12,
+        ground_user_count=30,
+        ground_station_count=1,
+        compute_node_count=2,
+        duration_seconds=120,
+        orbit_tick_seconds=60,
+        network_slot_seconds=60,
+        flow_interval_seconds=60,
+        task_interval_seconds=60,
+        cell_count=10,
+        state_snapshot_interval_events=100,
+        metric_sample_interval=10,
+        websocket_events="/stream/events",
+        websocket_state="/stream/state",
+        metrics_snapshot="/metrics/snapshot",
+        scenario_config="/scenario/config",
+        backend_host="127.0.0.1",
+        backend_port=8765,
+    )

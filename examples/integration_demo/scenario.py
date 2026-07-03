@@ -76,10 +76,35 @@ def build_demo_scenario(config: DemoConfig) -> DemoScenario:
                 "beam_radius_m": 160_000,
                 "max_satellites": config.satellite_count,
             },
+            "scenario": {
+                "satellite_count": config.satellite_count,
+                "user_count": config.ground_user_count,
+                "compute_nodes": config.compute_node_count,
+            },
+            "runtime": {
+                "mode": "REAL_TIME",
+                "speed_factor": 1.0,
+                "seed": config.seed,
+                "duration": config.duration_seconds,
+                "status": "STOPPED",
+            },
+            "ui": {
+                "visualization": {
+                    "satellites": True,
+                    "links": True,
+                    "users": True,
+                    "metrics": True,
+                },
+                "update_frequency_hz": max(1, 1000 // max(1, config.metric_sample_interval)),
+                "dashboard_layout": "right_panel",
+            },
             "endpoints": {
                 "events": config.websocket_events,
                 "state": config.websocket_state,
                 "metrics": config.metrics_snapshot,
+                "config": config.scenario_config,
+                "control": "/control",
+                "runtime_status": "/runtime/status",
             },
         },
     )

@@ -87,6 +87,36 @@ export interface ScenarioConfig {
     beam_radius_m?: number;
     max_satellites?: number;
   };
+  scenario?: {
+    satellite_count?: number;
+    user_count?: number;
+    compute_nodes?: number;
+  };
+  runtime?: {
+    mode?: RuntimeMode;
+    speed_factor?: number;
+    seed?: number;
+    duration?: number;
+    status?: RuntimeStatus;
+  };
+  ui?: {
+    visualization?: {
+      satellites?: boolean;
+      links?: boolean;
+      users?: boolean;
+      metrics?: boolean;
+    };
+    update_frequency_hz?: number;
+    dashboard_layout?: string;
+  };
+  endpoints?: {
+    events?: string;
+    state?: string;
+    metrics?: string;
+    config?: string;
+    control?: string;
+    runtime_status?: string;
+  };
 }
 
 export interface StateSnapshot {
@@ -100,3 +130,15 @@ export interface StateSnapshot {
 
 export type Vector3 = readonly [number, number, number];
 export type GeoPosition = readonly [number, number, number?];
+export type RuntimeMode = "REAL_TIME" | "ACCELERATED" | "PAUSED";
+export type RuntimeStatus = "STOPPED" | "RUNNING" | "PAUSED";
+
+export interface RuntimeStatusPayload {
+  status: RuntimeStatus;
+  mode: RuntimeMode;
+  speed_factor: number;
+  seed: number;
+  duration: number;
+  config_version: number;
+  last_action: string;
+}
