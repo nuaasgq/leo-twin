@@ -855,6 +855,41 @@ def test_routing_runtime_uses_position_driven_space_link() -> None:
     assert compute.routes[0].latency == 3.629
 
 
+def test_routing_runtime_does_not_use_unrelated_ground_users_as_transit() -> None:
+    network = PositionDrivenNetworkEngine(
+        endpoints=(
+            GroundEndpoint(
+                endpoint_id="user-east",
+                position=(EARTH_RADIUS_KM, 0.0, 0.0),
+                min_elevation_deg=10.0,
+                max_range_km=2000.0,
+            ),
+            GroundEndpoint(
+                endpoint_id="user-relay",
+                position=(EARTH_RADIUS_KM, 0.0, 0.0),
+                min_elevation_deg=10.0,
+                max_range_km=2000.0,
+            ),
+        ),
+        compute_node_ids=("node-a",),
+        link_capacity=100.0,
+        propagation_speed_km_s=1000.0,
+        cell_size_km=1000.0,
+        routing_runtime=RoutingRuntime(RoutingProtocol.LINK_STATE),
+        static_links=(LinkState("sat-002", "node-a", 2.0, 100.0, True),),
+    )
+    network._active_links = {
+        ("sat-001", "user-east"): LinkState("sat-001", "user-east", 0.5, 100.0, True),
+        ("sat-001", "user-relay"): LinkState("sat-001", "user-relay", 0.5, 100.0, True),
+        ("sat-002", "user-relay"): LinkState("sat-002", "user-relay", 0.5, 100.0, True),
+    }
+
+    route = network.route_flow(FlowRequest("flow-001", "user-east", "node-a", 10.0))
+
+    assert route.available is False
+    assert "user-relay" not in route.path
+
+
 def test_position_driven_space_link_uses_medium_budget_selector() -> None:
     kernel = SimulationKernel()
     network = PositionDrivenNetworkEngine(

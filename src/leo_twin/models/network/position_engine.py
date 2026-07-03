@@ -190,7 +190,7 @@ class PositionDrivenNetworkEngine(SimulationModule):
         if self._routing_runtime is not None:
             route = self._routing_runtime.route(
                 request,
-                self.active_link_states() + self._static_links,
+                self._routing_links_for_request(request),
             )
         elif request.target_id not in self._compute_node_ids:
             route = _unavailable_route(request)
@@ -218,6 +218,19 @@ class PositionDrivenNetworkEngine(SimulationModule):
         routed = self._apply_transport(request, route)
         self._record_stack_trace(request, routed)
         return routed
+
+    def _routing_links_for_request(self, request: FlowRequest) -> tuple[LinkState, ...]:
+        access_links = tuple(
+            link
+            for link in self._active_links.values()
+            if link.target_id == request.source_id or link.source_id == request.source_id
+        )
+        return tuple(
+            sorted(
+                access_links + tuple(self._active_space_links.values()) + self._static_links,
+                key=lambda item: (item.source_id, item.target_id),
+            )
+        )
 
     def _apply_transport(self, request: FlowRequest, route: Route) -> Route:
         if self._transport_runtime is None:

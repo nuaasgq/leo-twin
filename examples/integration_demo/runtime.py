@@ -14,6 +14,7 @@ from leo_twin.models.network import (
     PositionDrivenNetworkEngine,
     RadioTerminalProfile,
     RainFadeProfile,
+    RoutingRuntime,
     build_default_leo_protocol_stack,
     default_transport_runtime,
 )
@@ -21,6 +22,7 @@ from leo_twin.models.orbit import KeplerianOrbitEngine
 from leo_twin.schema import (
     AntennaProfile,
     ChannelProfile,
+    LinkState,
     LinkMedium,
     RoutingProtocol,
     SimEvent,
@@ -101,6 +103,8 @@ def run_integration_demo(config: DemoConfig) -> DemoRunResult:
         space_link_cell_size_km=2500.0,
         space_link_update_latency_epsilon_s=0.0005,
         space_link_update_capacity_epsilon=1.0,
+        routing_runtime=RoutingRuntime(routing_protocol),
+        static_links=_compute_gateway_links(scenario),
         transport_runtime=default_transport_runtime(transport_protocol),
         stack_runtime=NetworkStackRuntime(
             build_default_leo_protocol_stack(
@@ -235,4 +239,20 @@ def _space_space_budget(config: DemoConfig) -> LinkBudgetCalculator:
         atmospheric_loss_db=0.0,
         polarization_loss_db=0.2,
         implementation_loss_db=1.0,
+    )
+
+
+def _compute_gateway_links(scenario: DemoScenario) -> tuple[LinkState, ...]:
+    satellite_ids = tuple(satellite.satellite_id for satellite in scenario.orbit_satellites)
+    if not satellite_ids:
+        return ()
+    return tuple(
+        LinkState(
+            source_id=satellite_ids[(index * 7) % len(satellite_ids)],
+            target_id=node.node_id,
+            latency=0.005,
+            capacity=500.0,
+            availability=True,
+        )
+        for index, node in enumerate(scenario.compute_nodes)
     )
