@@ -268,7 +268,7 @@ def _initial_events(config: DemoConfig) -> tuple[SimEvent, ...]:
         slot = tick // config.network_slot_seconds
         cell = (slot * 7) % config.cell_count
         source_index = cell
-        target_index = cell + config.cell_count
+        target_index = flow_index % config.compute_node_count
         events.append(
             SimEvent(
                 event_id=f"scenario:flow-arrival:{flow_index:04d}",
@@ -280,7 +280,7 @@ def _initial_events(config: DemoConfig) -> tuple[SimEvent, ...]:
                 payload=FlowRequest(
                     flow_id=f"flow-{flow_index:04d}",
                     source_id=f"user-{source_index:04d}",
-                    target_id=f"user-{target_index:04d}",
+                    target_id=f"compute-{target_index:02d}",
                     demand_capacity=25.0,
                 ),
             )

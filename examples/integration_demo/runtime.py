@@ -6,9 +6,14 @@ from dataclasses import dataclass
 
 from leo_twin.core import SimulationKernel, SimulationModule
 from leo_twin.models.compute import ComputeEngine
-from leo_twin.models.network import NetworkEngine
+from leo_twin.models.network import (
+    LinkBudgetCalculator,
+    PositionDrivenNetworkEngine,
+    RadioTerminalProfile,
+    RainFadeProfile,
+)
 from leo_twin.models.orbit import OrbitEngine
-from leo_twin.schema import SimEvent
+from leo_twin.schema import AntennaProfile, ChannelProfile, LinkMedium, SimEvent
 from leo_twin.services.metrics import MetricsCollector
 
 from examples.integration_demo.config import DemoConfig
@@ -68,11 +73,15 @@ def run_integration_demo(config: DemoConfig) -> DemoRunResult:
             satellites=scenario.orbit_satellites,
             update_targets=("network", "metrics"),
         ),
-        NetworkEngine(
-            satellites=scenario.network_satellites,
-            ground_users=scenario.ground_users,
-            slot_duration=float(config.network_slot_seconds),
+        PositionDrivenNetworkEngine(
+            endpoints=scenario.ground_endpoints,
+            compute_node_ids=tuple(node.node_id for node in scenario.compute_nodes),
             route_targets=("compute", "metrics"),
+            link_capacity=500.0,
+            propagation_speed_km_s=299792.458,
+            cell_size_km=1000.0,
+            link_budget_calculator=_space_ground_budget(config),
+            position_scale_to_km=0.001,
         ),
         ComputeEngine(nodes=scenario.compute_nodes),
         metrics,
@@ -106,4 +115,52 @@ def run_integration_demo(config: DemoConfig) -> DemoRunResult:
         state_timeline=projector.timeline(),
         metrics_summary=metrics.summary(),
         replay=replay,
+    )
+
+
+def _space_ground_budget(config: DemoConfig) -> LinkBudgetCalculator:
+    antenna = AntennaProfile(
+        antenna_id="integration-demo-ka-terminal",
+        gain_dbi=36.0,
+        beam_width_deg=4.0,
+        steering_mode="electronic",
+    )
+    rain_profile = (
+        None
+        if config.rain_rate_mm_h == 0.0
+        or config.rain_attenuation_coefficient_db_per_km_per_mm_h == 0.0
+        or config.rain_effective_path_km == 0.0
+        else RainFadeProfile(
+            rain_rate_mm_h=config.rain_rate_mm_h,
+            attenuation_coefficient_db_per_km_per_mm_h=(
+                config.rain_attenuation_coefficient_db_per_km_per_mm_h
+            ),
+            effective_path_km=config.rain_effective_path_km,
+        )
+    )
+    return LinkBudgetCalculator(
+        transmit_terminal=RadioTerminalProfile(
+            terminal_id="integration-demo-sat-terminal",
+            antenna=antenna,
+            transmit_power_dbw=20.0,
+            system_loss_db=1.0,
+        ),
+        receive_terminal=RadioTerminalProfile(
+            terminal_id="integration-demo-ground-terminal",
+            antenna=antenna,
+            transmit_power_dbw=0.0,
+            system_loss_db=1.0,
+            noise_temperature_k=290.0,
+        ),
+        channel=ChannelProfile(
+            channel_id="integration-demo-space-ground",
+            medium=LinkMedium.SPACE_GROUND,
+            carrier_frequency_hz=config.carrier_frequency_hz,
+            bandwidth_hz=config.channel_bandwidth_hz,
+            loss_model_name="free_space_budget",
+        ),
+        atmospheric_loss_db=2.0,
+        polarization_loss_db=0.5,
+        implementation_loss_db=1.0,
+        rain_fade_profile=rain_profile,
     )
