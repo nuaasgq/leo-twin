@@ -27,6 +27,7 @@ from leo_twin.models.network import (
     NetworkStackRuntime,
     RadioTerminalProfile,
     RainFadeProfile,
+    RoutingCostProfile,
     RoutingRuntime,
     NetworkStackTrace,
     build_default_leo_protocol_stack,
@@ -47,6 +48,7 @@ from leo_twin.schema import (
 )
 from leo_twin.services.metrics import MetricsCollector
 from leo_twin.services.scenario_builder import (
+    GeneratedFullSystemScenario,
     FullSystemScenarioBuilderConfig,
     build_full_system_scenario,
     load_full_system_scenario_builder_config,
@@ -87,9 +89,15 @@ def run_generated_full_system_demo(
     transport_runtime = default_transport_runtime(
         TransportProtocol(str(resolved_config.transport_protocol))
     )
-    routing_profile = RoutingRuntime(
-        RoutingProtocol(str(resolved_config.routing_protocol))
-    ).cost_profile
+    routing_profile = RoutingCostProfile(
+        latency_weight=resolved_config.routing_latency_weight,
+        inverse_capacity_weight=resolved_config.routing_inverse_capacity_weight,
+        hop_weight=resolved_config.routing_hop_weight,
+    )
+    routing_runtime = RoutingRuntime(
+        RoutingProtocol(str(resolved_config.routing_protocol)),
+        cost_profile=routing_profile,
+    )
     network = PositionDrivenNetworkEngine(
         endpoints=tuple(
             GroundEndpoint(
@@ -120,6 +128,8 @@ def run_generated_full_system_demo(
             else None
         ),
         transport_runtime=transport_runtime,
+        routing_runtime=routing_runtime,
+        static_links=_compute_gateway_links(scenario, resolved_config),
         stack_runtime=NetworkStackRuntime(
             build_default_leo_protocol_stack(
                 application_protocol=ApplicationProtocol(
@@ -200,6 +210,25 @@ def run_generated_full_system_demo(
         active_link_count=len(network.active_link_states()),
         active_links=network.active_link_states(),
         network_stack_traces=network.stack_traces(),
+    )
+
+
+def _compute_gateway_links(
+    scenario: GeneratedFullSystemScenario,
+    config: FullSystemScenarioBuilderConfig,
+) -> tuple[LinkState, ...]:
+    satellite_ids = tuple(item.satellite_id for item in scenario.orbit_elements)
+    if not satellite_ids:
+        return ()
+    return tuple(
+        LinkState(
+            source_id=satellite_ids[(index * 7) % len(satellite_ids)],
+            target_id=node.node_id,
+            latency=0.005,
+            capacity=config.space_link_capacity,
+            availability=True,
+        )
+        for index, node in enumerate(scenario.compute_nodes)
     )
 
 

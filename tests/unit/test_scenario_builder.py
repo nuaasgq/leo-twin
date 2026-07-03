@@ -173,6 +173,9 @@ def test_load_full_system_scenario_builder_config_from_json(tmp_path) -> None:
     assert config.application_protocol == "TASK_OFFLOAD_FLOW"
     assert config.transport_protocol == "TCP"
     assert config.routing_protocol == "LINK_STATE"
+    assert config.routing_latency_weight == 1.0
+    assert config.routing_inverse_capacity_weight == 0.0
+    assert config.routing_hop_weight == 0.0
     assert config.carrier_frequency_hz == 20_000_000_000.0
     assert config.channel_bandwidth_hz == 100_000_000.0
     assert config.rain_rate_mm_h == 0.0
@@ -222,6 +225,9 @@ def test_scenario_builder_config_from_sees_config_maps_control_plane_fields() ->
             application_protocol=ApplicationProtocol.MQTT,
             transport_protocol=TransportProtocol.UDP,
             routing_protocol=RoutingProtocol.DISTANCE_VECTOR,
+            routing_latency_weight=0.2,
+            routing_inverse_capacity_weight=400.0,
+            routing_hop_weight=1.0,
             carrier_frequency_hz=22_000_000_000.0,
             channel_bandwidth_hz=250_000_000.0,
             rain_rate_mm_h=12.5,
@@ -248,6 +254,9 @@ def test_scenario_builder_config_from_sees_config_maps_control_plane_fields() ->
     assert generated.application_protocol == "MQTT"
     assert generated.transport_protocol == "UDP"
     assert generated.routing_protocol == "DISTANCE_VECTOR"
+    assert generated.routing_latency_weight == 0.2
+    assert generated.routing_inverse_capacity_weight == 400.0
+    assert generated.routing_hop_weight == 1.0
     assert generated.carrier_frequency_hz == 22_000_000_000.0
     assert generated.channel_bandwidth_hz == 250_000_000.0
     assert generated.rain_rate_mm_h == 12.5

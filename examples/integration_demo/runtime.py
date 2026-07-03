@@ -19,6 +19,7 @@ from leo_twin.models.network import (
     PositionDrivenNetworkEngine,
     RadioTerminalProfile,
     RainFadeProfile,
+    RoutingCostProfile,
     RoutingRuntime,
     build_default_leo_protocol_stack,
     default_transport_runtime,
@@ -97,7 +98,12 @@ def run_integration_demo(config: DemoConfig) -> DemoRunResult:
     routing_protocol = RoutingProtocol(str(config.routing_protocol))
     data_link_protocol = DataLinkProtocol(str(config.datalink_mac_protocol))
     transport_runtime = default_transport_runtime(transport_protocol)
-    routing_runtime = RoutingRuntime(routing_protocol)
+    routing_cost_profile = RoutingCostProfile(
+        latency_weight=config.routing_latency_weight,
+        inverse_capacity_weight=config.routing_inverse_capacity_weight,
+        hop_weight=config.routing_hop_weight,
+    )
+    routing_runtime = RoutingRuntime(routing_protocol, cost_profile=routing_cost_profile)
     network = PositionDrivenNetworkEngine(
         endpoints=scenario.ground_endpoints,
         compute_node_ids=tuple(node.node_id for node in scenario.compute_nodes),

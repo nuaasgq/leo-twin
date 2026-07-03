@@ -12,6 +12,9 @@ describe("buildLinkProtocolSummary", () => {
           transport_protocol: "UDP",
           routing_protocol: "DISTANCE_VECTOR",
           datalink_mac_protocol: "SLOTTED_ALOHA",
+          routing_latency_weight: 0.25,
+          routing_inverse_capacity_weight: 300,
+          routing_hop_weight: 1,
           carrier_frequency_hz: 22_000_000_000,
           channel_bandwidth_hz: 250_000_000,
           rain_rate_mm_h: 12.5,
@@ -96,7 +99,7 @@ describe("buildLinkProtocolSummary", () => {
       transportOverheadPercent: 1.866666666666667,
       transportEfficiencyPercent: 98,
       transportHandshakeRoundTrips: 0,
-      routingCostLabel: "跳数优先",
+      routingCostLabel: "距离向量 / 时延0.25 容量300 跳数1",
       stackLayers: 6,
       carrierFrequencyGhz: 22,
       bandwidthMhz: 250,
@@ -170,7 +173,7 @@ describe("buildLinkProtocolSummary", () => {
     expect(summary.transportOverheadPercent).toBeCloseTo(2.666667, 6);
     expect(summary.transportEfficiencyPercent).toBe(92);
     expect(summary.transportHandshakeRoundTrips).toBe(1);
-    expect(summary.routingCostLabel).toBe("时延优先");
+    expect(summary.routingCostLabel).toBe("链路状态 / 时延1 容量0 跳数0");
     expect(summary.stackLayers).toBe(6);
     expect(summary.carrierFrequencyGhz).toBe(20);
     expect(summary.bandwidthMhz).toBe(100);

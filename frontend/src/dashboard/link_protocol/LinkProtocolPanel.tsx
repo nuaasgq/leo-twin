@@ -133,7 +133,11 @@ export function buildLinkProtocolSummary(
   const routingProtocol = network?.routing_protocol ?? "LINK_STATE";
   const dataLinkProtocol = network?.datalink_mac_protocol ?? "TDMA";
   const transportProfile = transportProfileFor(transportProtocol);
-  const routingCostProfile = routingCostProfileFor(routingProtocol);
+  const routingCostProfile = routingCostProfileFor(routingProtocol, {
+    latencyWeight: network?.routing_latency_weight,
+    inverseCapacityWeight: network?.routing_inverse_capacity_weight,
+    hopWeight: network?.routing_hop_weight
+  });
   const dataLinkProfile = dataLinkProfileFor(dataLinkProtocol);
   const carrierFrequencyGhz = (network?.carrier_frequency_hz ?? 20_000_000_000) / 1_000_000_000;
   const bandwidthMhz = (network?.channel_bandwidth_hz ?? 100_000_000) / 1_000_000;
@@ -238,14 +242,36 @@ function formatApplicationProtocol(protocol: string): string {
   return "任务卸载";
 }
 
-function routingCostProfileFor(protocol: string): { label: string } {
+function routingCostProfileFor(
+  protocol: string,
+  weights: {
+    latencyWeight?: number;
+    inverseCapacityWeight?: number;
+    hopWeight?: number;
+  }
+): { label: string } {
+  const defaults =
+    protocol === "DISTANCE_VECTOR"
+      ? { latencyWeight: 0, inverseCapacityWeight: 0, hopWeight: 1 }
+      : { latencyWeight: 1, inverseCapacityWeight: 0, hopWeight: 0 };
+  const latencyWeight = weights.latencyWeight ?? defaults.latencyWeight;
+  const inverseCapacityWeight =
+    weights.inverseCapacityWeight ?? defaults.inverseCapacityWeight;
+  const hopWeight = weights.hopWeight ?? defaults.hopWeight;
+  const weightLabel = `时延${formatWeight(latencyWeight)} 容量${formatWeight(
+    inverseCapacityWeight
+  )} 跳数${formatWeight(hopWeight)}`;
   if (protocol === "DISTANCE_VECTOR") {
-    return { label: "跳数优先" };
+    return { label: `距离向量 / ${weightLabel}` };
   }
   if (protocol === "STATIC") {
-    return { label: "静态路径" };
+    return { label: `静态路径 / ${weightLabel}` };
   }
-  return { label: "时延优先" };
+  return { label: `链路状态 / ${weightLabel}` };
+}
+
+function formatWeight(value: number): string {
+  return Number.isInteger(value) ? value.toFixed(0) : value.toFixed(2);
 }
 
 function dataLinkProfileFor(protocol: string): {

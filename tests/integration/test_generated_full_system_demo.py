@@ -99,6 +99,9 @@ def test_generated_full_system_demo_records_configured_network_stack_trace() -> 
             transport_protocol="UDP",
             routing_protocol="DISTANCE_VECTOR",
             datalink_mac_protocol="CSMA_CA",
+            routing_latency_weight=0.2,
+            routing_inverse_capacity_weight=400.0,
+            routing_hop_weight=1.0,
             carrier_frequency_hz=22_000_000_000.0,
             channel_bandwidth_hz=250_000_000.0,
         )
@@ -122,7 +125,8 @@ def test_generated_full_system_demo_records_configured_network_stack_trace() -> 
     assert trace.application_protocol == "HTTP"
     assert application_attributes["application_profile"] == "web_request"
     assert application_attributes["interaction_model"] == "request_response"
-    assert network_attributes["latency_weight"] == "0.000000"
+    assert network_attributes["latency_weight"] == "0.200000"
+    assert network_attributes["inverse_capacity_weight"] == "400.000000"
     assert network_attributes["hop_weight"] == "1.000000"
     assert data_link_attributes["mac_profile"] == "CSMA_CA"
     assert data_link_attributes["medium_access"] == "listen_before_transmit"

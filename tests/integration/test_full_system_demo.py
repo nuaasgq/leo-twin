@@ -117,6 +117,10 @@ def test_network_stack_trace_uses_configured_protocols() -> None:
         for layer in trace.layers
         if str(layer.layer) == "DATA_LINK"
     } == {"TDMA"}
+    default_network_attributes = dict(result.network_stack_traces[0].layers[2].attributes)
+    assert default_network_attributes["latency_weight"] == "1.000000"
+    assert default_network_attributes["inverse_capacity_weight"] == "0.000000"
+    assert default_network_attributes["hop_weight"] == "0.000000"
     assert any(
         ("carrier_frequency_hz", "20000000000.000000") in layer.attributes
         for trace in result.network_stack_traces
@@ -130,6 +134,9 @@ def test_network_stack_trace_uses_configured_protocols() -> None:
             transport_protocol="UDP",
             routing_protocol="DISTANCE_VECTOR",
             datalink_mac_protocol="SLOTTED_ALOHA",
+            routing_latency_weight=0.2,
+            routing_inverse_capacity_weight=400.0,
+            routing_hop_weight=1.0,
         )
     )
 
@@ -153,6 +160,10 @@ def test_network_stack_trace_uses_configured_protocols() -> None:
         for layer in trace.layers
         if str(layer.layer) == "DATA_LINK"
     } == {"SLOTTED_ALOHA"}
+    custom_network_attributes = dict(udp_result.network_stack_traces[0].layers[2].attributes)
+    assert custom_network_attributes["latency_weight"] == "0.200000"
+    assert custom_network_attributes["inverse_capacity_weight"] == "400.000000"
+    assert custom_network_attributes["hop_weight"] == "1.000000"
     assert udp_result.metrics_summary["route_latency_avg"] < result.metrics_summary[
         "route_latency_avg"
     ]

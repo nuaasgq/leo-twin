@@ -52,6 +52,9 @@ class FullSystemScenarioBuilderConfig:
     transport_protocol: str = TransportProtocol.TCP.value
     routing_protocol: str = RoutingProtocol.LINK_STATE.value
     datalink_mac_protocol: str = DataLinkProtocol.TDMA.value
+    routing_latency_weight: float = 1.0
+    routing_inverse_capacity_weight: float = 0.0
+    routing_hop_weight: float = 0.0
     carrier_frequency_hz: float = 20_000_000_000.0
     channel_bandwidth_hz: float = 100_000_000.0
     rain_rate_mm_h: float = 0.0
@@ -121,6 +124,18 @@ class FullSystemScenarioBuilderConfig:
             "datalink_mac_protocol",
             DataLinkProtocol(str(self.datalink_mac_protocol)).value,
         )
+        _require_non_negative_number(self.routing_latency_weight, "routing_latency_weight")
+        _require_non_negative_number(
+            self.routing_inverse_capacity_weight,
+            "routing_inverse_capacity_weight",
+        )
+        _require_non_negative_number(self.routing_hop_weight, "routing_hop_weight")
+        if (
+            self.routing_latency_weight == 0.0
+            and self.routing_inverse_capacity_weight == 0.0
+            and self.routing_hop_weight == 0.0
+        ):
+            raise ValueError("at least one routing weight must be positive")
         _require_positive_number(self.carrier_frequency_hz, "carrier_frequency_hz")
         _require_positive_number(self.channel_bandwidth_hz, "channel_bandwidth_hz")
         _require_non_negative_number(self.rain_rate_mm_h, "rain_rate_mm_h")
@@ -271,6 +286,9 @@ def scenario_builder_config_from_sees_config(
         transport_protocol=config.network.transport_protocol.value,
         routing_protocol=config.network.routing_protocol.value,
         datalink_mac_protocol=config.network.datalink_mac_protocol.value,
+        routing_latency_weight=config.network.routing_latency_weight,
+        routing_inverse_capacity_weight=config.network.routing_inverse_capacity_weight,
+        routing_hop_weight=config.network.routing_hop_weight,
         carrier_frequency_hz=config.network.carrier_frequency_hz,
         channel_bandwidth_hz=config.network.channel_bandwidth_hz,
         rain_rate_mm_h=config.network.rain_rate_mm_h,

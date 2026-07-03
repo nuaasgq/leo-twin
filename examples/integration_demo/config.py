@@ -50,6 +50,9 @@ class DemoConfig:
     transport_protocol: str = "TCP"
     routing_protocol: str = "LINK_STATE"
     datalink_mac_protocol: str = "TDMA"
+    routing_latency_weight: float = 1.0
+    routing_inverse_capacity_weight: float = 0.0
+    routing_hop_weight: float = 0.0
     carrier_frequency_hz: float = 20_000_000_000.0
     channel_bandwidth_hz: float = 100_000_000.0
     rain_rate_mm_h: float = 0.0
@@ -106,6 +109,13 @@ def load_demo_config(path: str | Path = DEFAULT_CONFIG_PATH) -> DemoConfig:
         transport_protocol=_optional_str(network, "transport_protocol", "TCP"),
         routing_protocol=_optional_str(network, "routing_protocol", "LINK_STATE"),
         datalink_mac_protocol=_optional_str(network, "datalink_mac_protocol", "TDMA"),
+        routing_latency_weight=_optional_float(network, "routing_latency_weight", 1.0),
+        routing_inverse_capacity_weight=_optional_float(
+            network,
+            "routing_inverse_capacity_weight",
+            0.0,
+        ),
+        routing_hop_weight=_optional_float(network, "routing_hop_weight", 0.0),
         carrier_frequency_hz=_optional_float(
             network,
             "carrier_frequency_hz",
@@ -154,6 +164,9 @@ def demo_config_to_sees_config(config: DemoConfig) -> SEESConfig:
             transport_protocol=TransportProtocol(str(config.transport_protocol)),
             routing_protocol=RoutingProtocol(str(config.routing_protocol)),
             datalink_mac_protocol=DataLinkProtocol(str(config.datalink_mac_protocol)),
+            routing_latency_weight=config.routing_latency_weight,
+            routing_inverse_capacity_weight=config.routing_inverse_capacity_weight,
+            routing_hop_weight=config.routing_hop_weight,
             carrier_frequency_hz=config.carrier_frequency_hz,
             channel_bandwidth_hz=config.channel_bandwidth_hz,
             rain_rate_mm_h=config.rain_rate_mm_h,
@@ -209,6 +222,9 @@ def demo_config_from_sees_config(
         transport_protocol=config.network.transport_protocol.value,
         routing_protocol=config.network.routing_protocol.value,
         datalink_mac_protocol=config.network.datalink_mac_protocol.value,
+        routing_latency_weight=config.network.routing_latency_weight,
+        routing_inverse_capacity_weight=config.network.routing_inverse_capacity_weight,
+        routing_hop_weight=config.network.routing_hop_weight,
         carrier_frequency_hz=config.network.carrier_frequency_hz,
         channel_bandwidth_hz=config.network.channel_bandwidth_hz,
         rain_rate_mm_h=config.network.rain_rate_mm_h,

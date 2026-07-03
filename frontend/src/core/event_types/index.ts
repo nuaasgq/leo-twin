@@ -109,6 +109,9 @@ export interface ScenarioConfig {
     transport_protocol?: string;
     routing_protocol?: string;
     datalink_mac_protocol?: string;
+    routing_latency_weight?: number;
+    routing_inverse_capacity_weight?: number;
+    routing_hop_weight?: number;
     carrier_frequency_hz?: number;
     channel_bandwidth_hz?: number;
     rain_rate_mm_h?: number;
@@ -192,6 +195,9 @@ export interface GeneratedScenarioConfig {
   transport_protocol?: string;
   routing_protocol?: string;
   datalink_mac_protocol?: string;
+  routing_latency_weight?: number;
+  routing_inverse_capacity_weight?: number;
+  routing_hop_weight?: number;
   carrier_frequency_hz?: number;
   channel_bandwidth_hz?: number;
   rain_rate_mm_h?: number;

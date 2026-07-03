@@ -28,6 +28,9 @@ export interface NetworkControlValues {
   transport_protocol: string;
   routing_protocol: string;
   datalink_mac_protocol: string;
+  routing_latency_weight: number;
+  routing_inverse_capacity_weight: number;
+  routing_hop_weight: number;
   carrier_frequency_ghz: number;
   channel_bandwidth_mhz: number;
   rain_rate_mm_h: number;
@@ -91,6 +94,15 @@ export function ConfigPanel({
   const [dataLinkProtocol, setDataLinkProtocol] = useState(
     scenario.network.datalink_mac_protocol
   );
+  const [routingLatencyWeight, setRoutingLatencyWeight] = useState(
+    scenario.network.routing_latency_weight
+  );
+  const [routingInverseCapacityWeight, setRoutingInverseCapacityWeight] = useState(
+    scenario.network.routing_inverse_capacity_weight
+  );
+  const [routingHopWeight, setRoutingHopWeight] = useState(
+    scenario.network.routing_hop_weight
+  );
   const [carrierFrequencyGhz, setCarrierFrequencyGhz] = useState(
     scenario.network.carrier_frequency_ghz
   );
@@ -128,6 +140,9 @@ export function ConfigPanel({
     setTransportProtocol(scenario.network.transport_protocol);
     setRoutingProtocol(scenario.network.routing_protocol);
     setDataLinkProtocol(scenario.network.datalink_mac_protocol);
+    setRoutingLatencyWeight(scenario.network.routing_latency_weight);
+    setRoutingInverseCapacityWeight(scenario.network.routing_inverse_capacity_weight);
+    setRoutingHopWeight(scenario.network.routing_hop_weight);
     setCarrierFrequencyGhz(scenario.network.carrier_frequency_ghz);
     setChannelBandwidthMhz(scenario.network.channel_bandwidth_mhz);
     setRainRate(scenario.network.rain_rate_mm_h);
@@ -148,6 +163,9 @@ export function ConfigPanel({
     scenario.network.transport_protocol,
     scenario.network.routing_protocol,
     scenario.network.datalink_mac_protocol,
+    scenario.network.routing_latency_weight,
+    scenario.network.routing_inverse_capacity_weight,
+    scenario.network.routing_hop_weight,
     scenario.network.carrier_frequency_ghz,
     scenario.network.channel_bandwidth_mhz,
     scenario.network.rain_rate_mm_h,
@@ -410,6 +428,52 @@ export function ConfigPanel({
         </select>
       </div>
 
+      <div className="channel-grid" aria-label="路由代价权重">
+        <div className="control-group">
+          <label className="control-label" htmlFor="routing-latency-weight">
+            时延权重
+          </label>
+          <input
+            id="routing-latency-weight"
+            type="number"
+            min="0"
+            step="0.1"
+            value={routingLatencyWeight}
+            onChange={(event) => setRoutingLatencyWeight(Number(event.currentTarget.value))}
+          />
+        </div>
+
+        <div className="control-group">
+          <label className="control-label" htmlFor="routing-capacity-weight">
+            容量偏好
+          </label>
+          <input
+            id="routing-capacity-weight"
+            type="number"
+            min="0"
+            step="1"
+            value={routingInverseCapacityWeight}
+            onChange={(event) =>
+              setRoutingInverseCapacityWeight(Number(event.currentTarget.value))
+            }
+          />
+        </div>
+
+        <div className="control-group">
+          <label className="control-label" htmlFor="routing-hop-weight">
+            跳数权重
+          </label>
+          <input
+            id="routing-hop-weight"
+            type="number"
+            min="0"
+            step="0.1"
+            value={routingHopWeight}
+            onChange={(event) => setRoutingHopWeight(Number(event.currentTarget.value))}
+          />
+        </div>
+      </div>
+
       <div className="channel-grid" aria-label="信道参数">
         <div className="control-group">
           <label className="control-label" htmlFor="carrier-frequency">
@@ -555,6 +619,9 @@ export function ConfigPanel({
                 transport_protocol: transportProtocol,
                 routing_protocol: routingProtocol,
                 datalink_mac_protocol: dataLinkProtocol,
+                routing_latency_weight: routingLatencyWeight,
+                routing_inverse_capacity_weight: routingInverseCapacityWeight,
+                routing_hop_weight: routingHopWeight,
                 carrier_frequency_ghz: carrierFrequencyGhz,
                 channel_bandwidth_mhz: channelBandwidthMhz,
                 rain_rate_mm_h: rainRate,
@@ -635,6 +702,7 @@ export function generatedScenarioSummaryItems(
     { label: "应用协议", value: formatApplicationProtocol(config.application_protocol) },
     { label: "传输协议", value: config.transport_protocol ?? "TCP" },
     { label: "路由协议", value: config.routing_protocol ?? "LINK_STATE" },
+    { label: "路由权重", value: formatRoutingWeights(config) },
     { label: "载波频率", value: formatFrequency(config.carrier_frequency_hz) },
     { label: "信道带宽", value: formatBandwidth(config.channel_bandwidth_hz) },
     { label: "雨强", value: formatRainRate(config.rain_rate_mm_h) },
@@ -701,6 +769,9 @@ export function networkControlPayload(network: NetworkControlValues): Record<str
     transport_protocol: network.transport_protocol,
     routing_protocol: network.routing_protocol,
     datalink_mac_protocol: network.datalink_mac_protocol,
+    routing_latency_weight: network.routing_latency_weight,
+    routing_inverse_capacity_weight: network.routing_inverse_capacity_weight,
+    routing_hop_weight: network.routing_hop_weight,
     carrier_frequency_hz: network.carrier_frequency_ghz * 1_000_000_000,
     channel_bandwidth_hz: network.channel_bandwidth_mhz * 1_000_000,
     rain_rate_mm_h: network.rain_rate_mm_h,
@@ -774,6 +845,14 @@ function formatApplicationProtocol(value: string | undefined): string {
     return "遥测流";
   }
   return "任务卸载";
+}
+
+function formatRoutingWeights(config: GeneratedScenarioConfig): string {
+  return [
+    `时延 ${formatDecimal(config.routing_latency_weight ?? 1)}`,
+    `容量 ${formatDecimal(config.routing_inverse_capacity_weight ?? 0)}`,
+    `跳数 ${formatDecimal(config.routing_hop_weight ?? 0)}`
+  ].join(" / ");
 }
 
 function formatComputeSchedulingPolicy(value: string | undefined): string {

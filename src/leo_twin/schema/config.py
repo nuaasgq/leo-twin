@@ -71,6 +71,9 @@ class NetworkProfile:
     transport_protocol: TransportProtocol = TransportProtocol.TCP
     routing_protocol: RoutingProtocol = RoutingProtocol.LINK_STATE
     datalink_mac_protocol: DataLinkProtocol = DataLinkProtocol.TDMA
+    routing_latency_weight: float = 1.0
+    routing_inverse_capacity_weight: float = 0.0
+    routing_hop_weight: float = 0.0
     carrier_frequency_hz: float = 20_000_000_000.0
     channel_bandwidth_hz: float = 100_000_000.0
     rain_rate_mm_h: float = 0.0
@@ -104,6 +107,24 @@ class NetworkProfile:
                 "datalink_mac_protocol",
                 DataLinkProtocol(str(self.datalink_mac_protocol)),
             )
+        _require_non_negative_finite(
+            self.routing_latency_weight,
+            "network.routing_latency_weight",
+        )
+        _require_non_negative_finite(
+            self.routing_inverse_capacity_weight,
+            "network.routing_inverse_capacity_weight",
+        )
+        _require_non_negative_finite(
+            self.routing_hop_weight,
+            "network.routing_hop_weight",
+        )
+        if (
+            self.routing_latency_weight == 0.0
+            and self.routing_inverse_capacity_weight == 0.0
+            and self.routing_hop_weight == 0.0
+        ):
+            raise ValueError("at least one network routing weight must be positive")
         _require_positive_finite(self.carrier_frequency_hz, "network.carrier_frequency_hz")
         _require_positive_finite(self.channel_bandwidth_hz, "network.channel_bandwidth_hz")
         _require_non_negative_finite(self.rain_rate_mm_h, "network.rain_rate_mm_h")
@@ -135,6 +156,17 @@ class NetworkProfile:
             "antenna_aperture_efficiency",
             float(self.antenna_aperture_efficiency),
         )
+        object.__setattr__(
+            self,
+            "routing_latency_weight",
+            float(self.routing_latency_weight),
+        )
+        object.__setattr__(
+            self,
+            "routing_inverse_capacity_weight",
+            float(self.routing_inverse_capacity_weight),
+        )
+        object.__setattr__(self, "routing_hop_weight", float(self.routing_hop_weight))
 
 
 @dataclass(frozen=True)

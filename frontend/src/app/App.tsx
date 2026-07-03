@@ -342,6 +342,18 @@ export function scenarioWithRuntimeConfig(
           typeof runtimeConfig.network.datalink_mac_protocol === "string"
             ? runtimeConfig.network.datalink_mac_protocol
             : scenario.network?.datalink_mac_protocol,
+        routing_latency_weight:
+          typeof runtimeConfig.network.routing_latency_weight === "number"
+            ? runtimeConfig.network.routing_latency_weight
+            : scenario.network?.routing_latency_weight,
+        routing_inverse_capacity_weight:
+          typeof runtimeConfig.network.routing_inverse_capacity_weight === "number"
+            ? runtimeConfig.network.routing_inverse_capacity_weight
+            : scenario.network?.routing_inverse_capacity_weight,
+        routing_hop_weight:
+          typeof runtimeConfig.network.routing_hop_weight === "number"
+            ? runtimeConfig.network.routing_hop_weight
+            : scenario.network?.routing_hop_weight,
         carrier_frequency_hz:
           typeof runtimeConfig.network.carrier_frequency_hz === "number"
             ? runtimeConfig.network.carrier_frequency_hz
@@ -487,6 +499,10 @@ function scenarioControlValues(
       transport_protocol: scenarioConfig?.network?.transport_protocol ?? "TCP",
       routing_protocol: scenarioConfig?.network?.routing_protocol ?? "LINK_STATE",
       datalink_mac_protocol: scenarioConfig?.network?.datalink_mac_protocol ?? "TDMA",
+      routing_latency_weight: scenarioConfig?.network?.routing_latency_weight ?? 1,
+      routing_inverse_capacity_weight:
+        scenarioConfig?.network?.routing_inverse_capacity_weight ?? 0,
+      routing_hop_weight: scenarioConfig?.network?.routing_hop_weight ?? 0,
       carrier_frequency_ghz:
         (scenarioConfig?.network?.carrier_frequency_hz ?? 20_000_000_000) / 1_000_000_000,
       channel_bandwidth_mhz:
