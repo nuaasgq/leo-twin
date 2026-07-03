@@ -18,6 +18,7 @@ import { loadRuntimeStatus, loadScenarioConfig } from "./api";
 import "./App.css";
 
 export function App() {
+  const surface = surfaceFromPathname(window.location.pathname);
   const reducer = useMemo(
     () => new WorldStateReducer({ eventLogLimit: 10_000, metricSeriesLimit: 300 }),
     []
@@ -176,46 +177,70 @@ export function App() {
           <div className="brand-subtitle">低轨卫星互联网通信-算力数字孪生平台</div>
         </div>
         <div className="surface-tabs" aria-label="前端界面">
-          <span className="surface-tab active">三维仿真控制台</span>
-          <span className="surface-tab">数据态势面板</span>
+          <a className={`surface-tab ${surface === "control" ? "active" : ""}`} href="/">
+            三维仿真控制台
+          </a>
+          <a
+            className={`surface-tab ${surface === "dashboard" ? "active" : ""}`}
+            href="/dashboard"
+          >
+            数据态势面板
+          </a>
         </div>
         <div className={`connection-pill ${connectionState}`}>
           {connectionStateLabel(connectionState)}
         </div>
       </header>
-      <section className="workspace">
-        <section className="simulation-surface" aria-label="三维仿真控制台">
-          <div className="surface-header">
+      {surface === "dashboard" ? (
+        <section className="dashboard-page" aria-label="独立数据态势面板">
+          <div className="dashboard-page-header">
             <div>
-              <div className="surface-kicker">三维展示与运行控制</div>
-              <h1>星座运行视图</h1>
+              <div className="surface-kicker">实时观测数据</div>
+              <h1>数据态势面板</h1>
             </div>
             <div className="surface-status">
               <span>{runtimeStatusLabel(runtimeStatus.status)}</span>
               <strong>{runtimeStatus.speed_factor}x</strong>
             </div>
           </div>
-          <div className="globe-panel">
-            <CesiumGlobe snapshot={snapshot} />
-          </div>
-          <div className="control-dock">
-            <ConfigPanel
-              scenario={scenarioControls}
-              runtime={runtimeStatus}
-              onRuntimeControl={sendRuntimeControl}
-            />
-          </div>
-        </section>
-        <aside className="dashboard-surface" aria-label="数据态势面板">
-          <div className="dashboard-header">
-            <div className="surface-kicker">实时观测数据</div>
-            <h2>数据态势面板</h2>
-          </div>
           <Dashboard snapshot={snapshot} />
-        </aside>
-      </section>
+        </section>
+      ) : (
+        <section className="workspace control-workspace">
+          <section className="simulation-surface control-only" aria-label="三维仿真控制台">
+            <div className="surface-header">
+              <div>
+                <div className="surface-kicker">三维展示与运行控制</div>
+                <h1>星座运行视图</h1>
+              </div>
+              <div className="surface-status">
+                <span>{runtimeStatusLabel(runtimeStatus.status)}</span>
+                <strong>{runtimeStatus.speed_factor}x</strong>
+              </div>
+            </div>
+            <div className="globe-panel">
+              <CesiumGlobe snapshot={snapshot} />
+            </div>
+            <div className="control-dock">
+              <ConfigPanel
+                scenario={scenarioControls}
+                runtime={runtimeStatus}
+                onRuntimeControl={sendRuntimeControl}
+              />
+            </div>
+          </section>
+        </section>
+      )}
     </main>
   );
+}
+
+export type FrontendSurface = "control" | "dashboard";
+
+export function surfaceFromPathname(pathname: string): FrontendSurface {
+  return pathname === "/dashboard" || pathname.startsWith("/dashboard/")
+    ? "dashboard"
+    : "control";
 }
 
 function connectionStateLabel(state: "connecting" | "live" | "degraded"): string {
