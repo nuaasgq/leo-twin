@@ -5,6 +5,11 @@ import { buildComputeQueueSummary } from "../src/dashboard/compute_queue/Compute
 describe("buildComputeQueueSummary", () => {
   it("summarizes compute queues deterministically", () => {
     const summary = buildComputeQueueSummary({
+      scenario_config: {
+        scenario: {
+          compute_scheduling_policy: "SHORTEST_JOB_FIRST"
+        }
+      },
       active_tasks: [
         {
           task_id: "task-c",
@@ -70,6 +75,8 @@ describe("buildComputeQueueSummary", () => {
       waitingForNetwork: 1,
       computeNodes: 2,
       busiestNodeId: "node-b",
+      computeSchedulingPolicy: "SHORTEST_JOB_FIRST",
+      computeSchedulingPolicyLabel: "短作业优先",
       nodeRows: [
         {
           nodeId: "node-b",

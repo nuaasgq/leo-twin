@@ -13,6 +13,8 @@ export interface ComputeQueueSummary {
   waitingForNetwork: number;
   computeNodes: number;
   busiestNodeId: string;
+  computeSchedulingPolicy: string;
+  computeSchedulingPolicyLabel: string;
   nodeRows: readonly ComputeNodeQueueRow[];
   taskRows: readonly ComputeTaskRow[];
 }
@@ -32,7 +34,7 @@ export interface ComputeTaskRow {
 
 type ComputeQueueSnapshot = Pick<
   WorldSnapshot,
-  "active_tasks" | "compute_nodes" | "routes"
+  "active_tasks" | "compute_nodes" | "routes" | "scenario_config"
 >;
 
 export const ComputeQueuePanel = memo(function ComputeQueuePanel({
@@ -53,6 +55,7 @@ export const ComputeQueuePanel = memo(function ComputeQueuePanel({
         <KpiPanel label="可用路由" value={String(summary.availableRoutes)} />
         <KpiPanel label="节点数" value={String(summary.computeNodes)} />
         <KpiPanel label="最繁忙节点" value={summary.busiestNodeId} />
+        <KpiPanel label="调度策略" value={summary.computeSchedulingPolicyLabel} />
       </div>
       <div className="compute-table" aria-label="算力节点明细">
         {summary.nodeRows.map((row) => (
@@ -104,6 +107,8 @@ export function buildComputeQueueSummary(
   const waitingForNetwork = totalRequests - availableRoutes;
   const unfinishedTasks = Math.max(0, totalRequests - finishedTasks);
   const busiest = nodeRows[0];
+  const computeSchedulingPolicy =
+    snapshot.scenario_config?.scenario?.compute_scheduling_policy ?? "FIFO";
 
   return {
     runningTasks,
@@ -114,9 +119,21 @@ export function buildComputeQueueSummary(
     waitingForNetwork,
     computeNodes: nodeRows.length,
     busiestNodeId: busiest?.nodeId ?? "无",
+    computeSchedulingPolicy,
+    computeSchedulingPolicyLabel: formatComputeSchedulingPolicy(computeSchedulingPolicy),
     nodeRows: nodeRows.slice(0, 5),
     taskRows
   };
+}
+
+function formatComputeSchedulingPolicy(policy: string): string {
+  if (policy === "SHORTEST_JOB_FIRST") {
+    return "短作业优先";
+  }
+  if (policy === "EARLIEST_DEADLINE_FIRST") {
+    return "最早截止期优先";
+  }
+  return "先到先服务";
 }
 
 function compareComputeNodes(
