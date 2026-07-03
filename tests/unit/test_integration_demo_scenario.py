@@ -4,7 +4,7 @@ import pytest
 
 from examples.integration_demo.config import DemoConfig
 from examples.integration_demo.scenario import build_demo_scenario
-from leo_twin.schema import EventType, FlowRequest
+from leo_twin.schema import EventType, FlowRequest, TaskRequest
 
 
 def test_demo_scenario_builds_position_network_ground_endpoints() -> None:
@@ -40,10 +40,19 @@ def test_demo_flow_requests_target_compute_nodes() -> None:
         for event in scenario.initial_events
         if event.event_type == EventType.FLOW_ARRIVAL
     )
+    tasks = tuple(
+        event.payload
+        for event in scenario.initial_events
+        if event.event_type == EventType.TASK_ARRIVAL
+    )
 
     assert flows
     assert all(isinstance(flow, FlowRequest) for flow in flows)
+    assert all(isinstance(task, TaskRequest) for task in tasks)
     assert {flow.target_id for flow in flows if isinstance(flow, FlowRequest)} <= compute_node_ids
+    assert tuple(flow.flow_id for flow in flows if isinstance(flow, FlowRequest)) == tuple(
+        task.task_id for task in tasks if isinstance(task, TaskRequest)
+    )
 
 
 def _demo_config() -> DemoConfig:

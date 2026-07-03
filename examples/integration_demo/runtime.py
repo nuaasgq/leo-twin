@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from leo_twin.core import SimulationKernel, SimulationModule
-from leo_twin.models.compute import ComputeEngine
+from leo_twin.models.compute import RouteAwareComputeEngine
 from leo_twin.models.network import (
     LinkBudgetCalculator,
     PositionDrivenNetworkEngine,
@@ -84,7 +84,7 @@ def run_integration_demo(config: DemoConfig) -> DemoRunResult:
             link_budget_calculator=_space_ground_budget(config),
             position_scale_to_km=0.001,
         ),
-        ComputeEngine(nodes=scenario.compute_nodes),
+        RouteAwareComputeEngine(nodes=scenario.compute_nodes),
         metrics,
         frontend_sink,
     )

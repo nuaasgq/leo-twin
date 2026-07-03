@@ -263,45 +263,41 @@ def _initial_events(config: DemoConfig) -> tuple[SimEvent, ...]:
             )
         )
 
-    flow_index = 0
-    for tick in range(0, config.duration_seconds, config.flow_interval_seconds):
-        slot = tick // config.network_slot_seconds
-        cell = (slot * 7) % config.cell_count
-        source_index = cell
-        target_index = flow_index % config.compute_node_count
-        events.append(
-            SimEvent(
-                event_id=f"scenario:flow-arrival:{flow_index:04d}",
-                sim_time=float(tick) + 0.1,
-                priority=5,
-                source="scenario",
-                target="network",
-                event_type=EventType.FLOW_ARRIVAL.value,
-                payload=FlowRequest(
-                    flow_id=f"flow-{flow_index:04d}",
-                    source_id=f"user-{source_index:04d}",
-                    target_id=f"compute-{target_index:02d}",
-                    demand_capacity=25.0,
-                ),
-            )
-        )
-        flow_index += 1
-
     task_index = 0
     for tick in range(0, config.duration_seconds, config.task_interval_seconds):
         for offset in range(config.compute_node_count):
+            task_id = f"task-{task_index:05d}"
+            source_id = f"user-{(task_index * 13) % config.ground_user_count:04d}"
+            target_id = f"compute-{offset:02d}"
+            submit_time = float(tick) + 0.2 + offset * 0.01
+            events.append(
+                SimEvent(
+                    event_id=f"scenario:flow-arrival:{task_index:05d}",
+                    sim_time=submit_time - 0.05,
+                    priority=5,
+                    source="scenario",
+                    target="network",
+                    event_type=EventType.FLOW_ARRIVAL.value,
+                    payload=FlowRequest(
+                        flow_id=task_id,
+                        source_id=source_id,
+                        target_id=target_id,
+                        demand_capacity=25.0,
+                    ),
+                )
+            )
             events.append(
                 SimEvent(
                     event_id=f"scenario:task-arrival:{task_index:05d}",
-                    sim_time=float(tick) + 0.2 + offset * 0.01,
+                    sim_time=submit_time,
                     priority=4,
                     source="scenario",
                     target="compute",
                     event_type=EventType.TASK_ARRIVAL.value,
                     payload=TaskRequest(
-                        task_id=f"task-{task_index:05d}",
-                        source_id=f"user-{(task_index * 13) % config.ground_user_count:04d}",
-                        submit_time=float(tick) + 0.2 + offset * 0.01,
+                        task_id=task_id,
+                        source_id=source_id,
+                        submit_time=submit_time,
                         compute_demand=20.0 + float(task_index % 5),
                         data_size=2.0 + float(task_index % 3),
                         deadline=float(tick) + 20.0,
