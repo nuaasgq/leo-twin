@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { runtimeStatusRequiresStreams, surfaceFromPathname } from "../src/app/App";
+import {
+  runtimeStatusRequiresStreams,
+  scenarioWithRuntimeConfig,
+  surfaceFromPathname
+} from "../src/app/App";
 import { RuntimeStatusPayload } from "../src/core/event_types";
 
 describe("surfaceFromPathname", () => {
@@ -31,5 +35,42 @@ describe("runtimeStatusRequiresStreams", () => {
     expect(runtimeStatusRequiresStreams({ ...baseStatus, status: "PAUSED" })).toBe(false);
     expect(runtimeStatusRequiresStreams({ ...baseStatus, status: "STOPPED" })).toBe(false);
     expect(runtimeStatusRequiresStreams(undefined)).toBe(false);
+  });
+});
+
+describe("scenarioWithRuntimeConfig", () => {
+  it("merges control-plane network and visualization config into the scenario", () => {
+    expect(
+      scenarioWithRuntimeConfig(
+        {},
+        {
+          network: {
+            transport_protocol: "UDP",
+            routing_protocol: "DISTANCE_VECTOR"
+          },
+          ui: {
+            visualization: {
+              satellites: false,
+              links: true,
+              users: false,
+              metrics: true
+            }
+          }
+        }
+      )
+    ).toEqual({
+      network: {
+        transport_protocol: "UDP",
+        routing_protocol: "DISTANCE_VECTOR"
+      },
+      ui: {
+        visualization: {
+          satellites: false,
+          links: true,
+          users: false,
+          metrics: true
+        }
+      }
+    });
   });
 });

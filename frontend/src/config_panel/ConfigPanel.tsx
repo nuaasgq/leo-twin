@@ -12,6 +12,7 @@ export interface ScenarioControlValues {
   user_count: number;
   compute_nodes: number;
   visualization: VisualizationControlValues;
+  network: NetworkControlValues;
 }
 
 export interface VisualizationControlValues {
@@ -19,6 +20,11 @@ export interface VisualizationControlValues {
   links: boolean;
   users: boolean;
   metrics: boolean;
+}
+
+export interface NetworkControlValues {
+  transport_protocol: string;
+  routing_protocol: string;
 }
 
 export interface ConfigPanelProps {
@@ -62,6 +68,10 @@ export function ConfigPanel({
   const [showLinks, setShowLinks] = useState(scenario.visualization.links);
   const [showUsers, setShowUsers] = useState(scenario.visualization.users);
   const [showMetrics, setShowMetrics] = useState(scenario.visualization.metrics);
+  const [transportProtocol, setTransportProtocol] = useState(
+    scenario.network.transport_protocol
+  );
+  const [routingProtocol, setRoutingProtocol] = useState(scenario.network.routing_protocol);
   const [runtimeMode, setRuntimeMode] = useState<Exclude<RuntimeMode, "PAUSED">>(
     runtime.mode === "ACCELERATED" ? "ACCELERATED" : "REAL_TIME"
   );
@@ -77,6 +87,8 @@ export function ConfigPanel({
     setShowLinks(scenario.visualization.links);
     setShowUsers(scenario.visualization.users);
     setShowMetrics(scenario.visualization.metrics);
+    setTransportProtocol(scenario.network.transport_protocol);
+    setRoutingProtocol(scenario.network.routing_protocol);
   }, [
     scenario.satellite_count,
     scenario.user_count,
@@ -84,7 +96,9 @@ export function ConfigPanel({
     scenario.visualization.satellites,
     scenario.visualization.links,
     scenario.visualization.users,
-    scenario.visualization.metrics
+    scenario.visualization.metrics,
+    scenario.network.transport_protocol,
+    scenario.network.routing_protocol
   ]);
 
   useEffect(() => {
@@ -265,6 +279,35 @@ export function ConfigPanel({
         </div>
       </div>
 
+      <div className="control-group">
+        <label className="control-label" htmlFor="transport-protocol">
+          传输协议
+        </label>
+        <select
+          id="transport-protocol"
+          value={transportProtocol}
+          onChange={(event) => setTransportProtocol(event.currentTarget.value)}
+        >
+          <option value="TCP">TCP</option>
+          <option value="UDP">UDP</option>
+        </select>
+      </div>
+
+      <div className="control-group">
+        <label className="control-label" htmlFor="routing-protocol">
+          路由协议
+        </label>
+        <select
+          id="routing-protocol"
+          value={routingProtocol}
+          onChange={(event) => setRoutingProtocol(event.currentTarget.value)}
+        >
+          <option value="LINK_STATE">链路状态</option>
+          <option value="SHORTEST_PATH">最短路径</option>
+          <option value="DISTANCE_VECTOR">距离向量</option>
+        </select>
+      </div>
+
       <div className="runtime-actions" aria-label="仿真运行控制">
         <button
           type="button"
@@ -282,7 +325,9 @@ export function ConfigPanel({
                 users: showUsers,
                 links: showLinks,
                 metrics: showMetrics
-              })
+              }),
+              transport_protocol: transportProtocol,
+              routing_protocol: routingProtocol
             })
           }
         >

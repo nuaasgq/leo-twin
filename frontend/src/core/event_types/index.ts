@@ -92,6 +92,10 @@ export interface ScenarioConfig {
     user_count?: number;
     compute_nodes?: number;
   };
+  network?: {
+    transport_protocol?: string;
+    routing_protocol?: string;
+  };
   runtime?: {
     mode?: RuntimeMode;
     speed_factor?: number;

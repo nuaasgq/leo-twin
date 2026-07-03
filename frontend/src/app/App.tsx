@@ -78,16 +78,17 @@ export function App() {
       loadScenarioConfig(),
       loadRuntimeState()
     ]);
-    setScenarioConfig(scenario);
+    const effectiveScenario = scenarioWithRuntimeConfig(scenario, runtime.config);
+    setScenarioConfig(effectiveScenario);
     setGeneratedConfig(runtime.generated_config ?? null);
     setRuntimeStatus((previous) => ({
       ...previous,
-      ...scenario.runtime,
+      ...effectiveScenario.runtime,
       ...runtime.status
     }));
-    snapshotEngine.applyScenarioConfig(scenario);
+    snapshotEngine.applyScenarioConfig(effectiveScenario);
     snapshotEngine.publishNow();
-    return { scenario, runtime };
+    return { scenario: effectiveScenario, runtime };
   }, [snapshotEngine]);
 
   const startStreams = useCallback(
@@ -299,6 +300,59 @@ export function runtimeStatusRequiresStreams(
   return status?.status === "RUNNING";
 }
 
+export function scenarioWithRuntimeConfig(
+  scenario: ScenarioConfig,
+  runtimeConfig: unknown
+): ScenarioConfig {
+  if (!isRecord(runtimeConfig)) {
+    return scenario;
+  }
+  const network = isRecord(runtimeConfig.network)
+    ? {
+        ...scenario.network,
+        transport_protocol:
+          typeof runtimeConfig.network.transport_protocol === "string"
+            ? runtimeConfig.network.transport_protocol
+            : scenario.network?.transport_protocol,
+        routing_protocol:
+          typeof runtimeConfig.network.routing_protocol === "string"
+            ? runtimeConfig.network.routing_protocol
+            : scenario.network?.routing_protocol
+      }
+    : scenario.network;
+  const ui = isRecord(runtimeConfig.ui)
+    ? {
+        ...scenario.ui,
+        visualization: isRecord(runtimeConfig.ui.visualization)
+          ? {
+              ...scenario.ui?.visualization,
+              satellites:
+                typeof runtimeConfig.ui.visualization.satellites === "boolean"
+                  ? runtimeConfig.ui.visualization.satellites
+                  : scenario.ui?.visualization?.satellites,
+              links:
+                typeof runtimeConfig.ui.visualization.links === "boolean"
+                  ? runtimeConfig.ui.visualization.links
+                  : scenario.ui?.visualization?.links,
+              users:
+                typeof runtimeConfig.ui.visualization.users === "boolean"
+                  ? runtimeConfig.ui.visualization.users
+                  : scenario.ui?.visualization?.users,
+              metrics:
+                typeof runtimeConfig.ui.visualization.metrics === "boolean"
+                  ? runtimeConfig.ui.visualization.metrics
+                  : scenario.ui?.visualization?.metrics
+            }
+          : scenario.ui?.visualization
+      }
+    : scenario.ui;
+  return {
+    ...scenario,
+    network,
+    ui
+  };
+}
+
 function connectionStateLabel(state: "connecting" | "live" | "degraded"): string {
   if (state === "connecting") {
     return "连接中";
@@ -371,6 +425,14 @@ function scenarioControlValues(
       links: visualization?.links ?? true,
       users: visualization?.users ?? true,
       metrics: visualization?.metrics ?? true
+    },
+    network: {
+      transport_protocol: scenarioConfig?.network?.transport_protocol ?? "TCP",
+      routing_protocol: scenarioConfig?.network?.routing_protocol ?? "LINK_STATE"
     }
   };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
