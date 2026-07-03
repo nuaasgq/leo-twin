@@ -3,6 +3,7 @@ from __future__ import annotations
 from leo_twin.models.network import (
     LinkBudgetCalculator,
     NetworkStackRuntime,
+    RainFadeProfile,
     RadioTerminalProfile,
     build_default_leo_protocol_stack,
 )
@@ -104,6 +105,11 @@ def test_stack_runtime_records_link_physical_and_channel_profiles() -> None:
             transmit_power_dbw=0.0,
         ),
         channel=channel,
+        rain_fade_profile=RainFadeProfile(
+            rain_rate_mm_h=10.0,
+            attenuation_coefficient_db_per_km_per_mm_h=0.02,
+            effective_path_km=6.0,
+        ),
     ).evaluate(
         1000.0,
         transmit_off_boresight_deg=0.5,
@@ -129,5 +135,9 @@ def test_stack_runtime_records_link_physical_and_channel_profiles() -> None:
     assert physical_attributes["receive_pointing_loss_db"] == "0.480000"
     assert channel_attributes["medium"] == LinkMedium.SPACE_SPACE.value
     assert channel_attributes["range_km"] == "1000.000000"
+    assert channel_attributes["rain_fade_loss_db"] == "1.200000"
+    assert channel_attributes["spectral_efficiency_bps_hz"] == (
+        f"{budget.capacity_mbps * 1_000_000.0 / channel.bandwidth_hz:.6f}"
+    )
     assert "snr_db" in channel_attributes
     assert "capacity_mbps" in channel_attributes

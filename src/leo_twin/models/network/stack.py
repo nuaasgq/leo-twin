@@ -119,7 +119,7 @@ class NetworkStackRuntime:
         else:
             output_ref = f"channel:{request.flow_id}"
             attributes += _channel_attributes(self._channel)
-            attributes += _channel_budget_attributes(self._link_budget)
+            attributes += _channel_budget_attributes(self._link_budget, self._channel)
         return LayerTrace(
             layer=layer.layer,
             protocol_name=layer.protocol_name,
@@ -255,13 +255,23 @@ def _channel_attributes(channel: ChannelProfile | None) -> tuple[tuple[str, str]
 
 def _channel_budget_attributes(
     link_budget: LinkBudgetResult | None,
+    channel: ChannelProfile | None,
 ) -> tuple[tuple[str, str], ...]:
     if link_budget is None:
         return ()
-    return (
+    attributes = (
         ("capacity_mbps", f"{link_budget.capacity_mbps:.6f}"),
         ("noise_power_dbw", f"{link_budget.noise_power_dbw:.6f}"),
         ("propagation_delay_s", f"{link_budget.propagation_delay_s:.9f}"),
+        ("rain_fade_loss_db", f"{link_budget.rain_fade_loss_db:.6f}"),
         ("range_km", f"{link_budget.range_km:.6f}"),
         ("snr_db", f"{link_budget.snr_db:.6f}"),
+    )
+    if channel is None:
+        return attributes
+    spectral_efficiency_bps_hz = (
+        link_budget.capacity_mbps * 1_000_000.0 / channel.bandwidth_hz
+    )
+    return attributes + (
+        ("spectral_efficiency_bps_hz", f"{spectral_efficiency_bps_hz:.6f}"),
     )
