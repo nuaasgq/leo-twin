@@ -10,6 +10,7 @@ from typing import Any
 class TaskModule(StrEnum):
     """Engineering module ownership used for isolation-aware scheduling."""
 
+    SYSTEM = "system"
     ORBIT = "orbit"
     NETWORK = "network"
     COMPUTE = "compute"

@@ -1,0 +1,48 @@
+# LEO-Twin 完整版确定性任务计划
+phase: FULL_SYSTEM
+seed: 20260703
+tasks:
+  - id: FS-000
+    title: 阶段治理升级与完整版边界确认
+    module: system
+    dependencies: []
+  - id: FS-010
+    title: 全域耦合契约冻结
+    module: system
+    dependencies: [FS-000]
+  - id: FS-020
+    title: 轨道精细化模型第一版
+    module: orbit
+    dependencies: [FS-010]
+  - id: FS-030
+    title: 网络六层协议栈与链路画像第一版
+    module: network
+    dependencies: [FS-010]
+  - id: FS-040
+    title: 算力资源与任务生命周期第一版
+    module: compute
+    dependencies: [FS-010]
+  - id: FS-050
+    title: 三维仿真控制界面中文化与功能完善
+    module: frontend
+    dependencies: [FS-010]
+  - id: FS-060
+    title: 独立数据态势面板前端
+    module: frontend
+    dependencies: [FS-010]
+  - id: FS-070
+    title: 全域指标体系与数据面板输出
+    module: metrics
+    dependencies: [FS-010]
+  - id: FS-080
+    title: 轨道驱动网络拓扑耦合
+    module: network
+    dependencies: [FS-020, FS-030]
+  - id: FS-090
+    title: 网络状态驱动算力任务耦合
+    module: compute
+    dependencies: [FS-030, FS-040]
+  - id: FS-100
+    title: 完整版全链路集成验证
+    module: system
+    dependencies: [FS-050, FS-060, FS-070, FS-080, FS-090]

@@ -4,6 +4,11 @@ from leo_twin.sees.auto_fix import AutoFixEngine
 from leo_twin.sees.ci_gate import CIGate
 from leo_twin.sees.codex_executor import CodexExecutor, FilePatch
 from leo_twin.sees.evolution_controller import EvolutionController
+from leo_twin.sees.full_system_tasks import (
+    FullSystemTaskSpec,
+    build_full_system_task_graph,
+    build_full_system_task_specs,
+)
 from leo_twin.sees.runtime_scheduler_v2 import (
     FailureType,
     FeedbackLoopEngine,
@@ -34,6 +39,7 @@ __all__ = [
     "FeedbackLoopEngine",
     "FeedbackSignal",
     "FilePatch",
+    "FullSystemTaskSpec",
     "ParallelScheduler",
     "ReplanningEngine",
     "ResourceEstimate",
@@ -48,4 +54,6 @@ __all__ = [
     "TaskDAG",
     "TaskExecutionResult",
     "TaskModule",
+    "build_full_system_task_graph",
+    "build_full_system_task_specs",
 ]

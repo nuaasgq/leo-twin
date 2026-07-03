@@ -1,4 +1,4 @@
-# LEO-Twin Codex Skill (MVP-0 Multi-Agent Controlled Execution)
+# LEO-Twin Codex Skill (Phased Controlled Execution)
 
 ## 1. System Mission
 
@@ -6,7 +6,14 @@ This repository implements a Low Earth Orbit (LEO) satellite internet digital tw
 
 The system is based on a deterministic discrete-event simulation (DES) kernel.
 
-Current phase: MVP-0.
+Current phase: FULL-SYSTEM PLANNING, after MVP-0 foundation.
+
+MVP-0 remains a historical baseline. MVP-0 restrictions apply only when a task
+explicitly declares `Current phase: MVP-0`.
+
+Full-system tasks must still preserve the frozen deterministic event kernel and
+must introduce higher-fidelity behavior only through documented contracts,
+configuration, tests, and event-driven module boundaries.
 
 MVP-0 goal:
 - Build a correct, deterministic, modular simulation foundation
@@ -341,3 +348,55 @@ over:
 - realism
 - performance
 - feature richness
+
+---
+
+## 18. Full-System Phase Rules
+
+The full-system phase is allowed to evolve LEO-Twin toward a detailed Chinese
+industrial digital twin product, provided the evolution is controlled and
+test-driven.
+
+### Allowed full-system work
+
+- detailed orbit model contracts and later implementations
+- layered network architecture: application, transport, network, data link,
+  physical, and channel layers
+- transport protocol profiles such as TCP and UDP
+- routing protocol profiles and deterministic routing implementations
+- space-ground and space-space channel abstractions
+- antenna configuration contracts and later deterministic antenna calculations
+- compute resource, task scheduling, and network-compute coupling models
+- split frontend surfaces:
+  - 3D simulation/control surface
+  - separate data dashboard surface
+- Chinese product UI text
+
+### Still forbidden in full-system work
+
+- modifying the Event Kernel for domain behavior
+- direct module-to-module calls between Orbit, Network, Compute, and Metrics
+- hidden global mutable state
+- uncontrolled randomness
+- undocumented external simulator dependency
+- distributed execution unless a later explicit architecture task approves it
+- mixing unrelated modules in one implementation task
+
+### Full-system communication rule
+
+Orbit, Network, Compute, Metrics, and Frontend surfaces must communicate through:
+
+- `SimEvent`
+- `SimulationKernel.schedule_event()`
+- documented control-plane or observation-plane messages
+
+Direct imports across domain module implementations remain forbidden.
+
+### Full-system quality gate
+
+Every full-system task must include:
+
+- deterministic tests
+- contract or interface documentation when changing boundaries
+- scale-risk review for any topology, channel, routing, or scheduling logic
+- Chinese UI text for frontend user-facing changes
