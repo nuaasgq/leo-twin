@@ -74,5 +74,8 @@
     "source_id": "user-east",
     "submit_time": 0.0,
     "task_id": "flow-001"
+  },
+  "transport": {
+    "protocol": "TCP"
   }
 }

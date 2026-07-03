@@ -26,6 +26,7 @@ class FullSystemPipelineConfig:
     link_budget: Mapping[str, Any]
     transmit_terminal: Mapping[str, Any]
     receive_terminal: Mapping[str, Any]
+    transport: Mapping[str, Any]
 
 
 def load_full_system_pipeline_config(
@@ -47,6 +48,7 @@ def load_full_system_pipeline_config(
         link_budget=_mapping(data, "link_budget"),
         transmit_terminal=_mapping(data, "transmit_terminal"),
         receive_terminal=_mapping(data, "receive_terminal"),
+        transport=_mapping(data, "transport"),
     )
 
 

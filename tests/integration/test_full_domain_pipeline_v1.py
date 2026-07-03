@@ -42,7 +42,7 @@ def test_full_domain_pipeline_runs_orbit_network_compute_lifecycle() -> None:
     assert result.metrics_summary["routes_available"] == 1
     assert result.metrics_summary["running_tasks"] == 0
     assert result.metrics_summary["finished_tasks"] == 1
-    assert result.metrics_summary["last_sim_time"] == pytest.approx(3.004501)
+    assert result.metrics_summary["last_sim_time"] == pytest.approx(4.006879)
     assert result.stack_layer_statuses == (
         ("APPLICATION", "OK"),
         ("TRANSPORT", "OK"),
@@ -52,6 +52,9 @@ def test_full_domain_pipeline_runs_orbit_network_compute_lifecycle() -> None:
         ("CHANNEL", "OK"),
     )
     attributes_by_layer = {layer: dict(attributes) for layer, attributes in result.stack_layer_attributes}
+    assert attributes_by_layer["TRANSPORT"]["transport"] == "TCP"
+    assert attributes_by_layer["NETWORK"]["latency"] == "2.004196"
+    assert attributes_by_layer["NETWORK"]["capacity"] == "3726.592864"
     assert attributes_by_layer["PHYSICAL"]["path_loss_db"] == "174.443613"
     assert attributes_by_layer["PHYSICAL"]["received_power_dbw"] == "-90.943613"
     assert attributes_by_layer["CHANNEL"]["medium"] == "SPACE_GROUND"
@@ -59,8 +62,8 @@ def test_full_domain_pipeline_runs_orbit_network_compute_lifecycle() -> None:
     assert attributes_by_layer["CHANNEL"]["snr_db"] == "25.041874"
     assert len(result.scheduled_tasks) == 1
     assert result.scheduled_tasks[0].task_id == "flow-001"
-    assert result.scheduled_tasks[0].start_time == pytest.approx(1.004501)
-    assert result.scheduled_tasks[0].finish_time == pytest.approx(3.004501)
+    assert result.scheduled_tasks[0].start_time == pytest.approx(2.006879)
+    assert result.scheduled_tasks[0].finish_time == pytest.approx(4.006879)
 
 
 def test_full_domain_pipeline_is_deterministic() -> None:

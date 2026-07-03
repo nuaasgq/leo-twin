@@ -24,6 +24,12 @@ from leo_twin.models.network.stack import (
     NetworkStackTrace,
     build_default_leo_protocol_stack,
 )
+from leo_twin.models.network.transport import (
+    TransportDecision,
+    TransportProfile,
+    TransportRuntime,
+    default_transport_runtime,
+)
 
 NetworkModule = NetworkEngine
 
@@ -44,7 +50,11 @@ __all__ = [
     "RadioTerminalProfile",
     "RoutingRuntime",
     "StaticRouteEntry",
+    "TransportDecision",
+    "TransportProfile",
+    "TransportRuntime",
     "build_default_leo_protocol_stack",
+    "default_transport_runtime",
     "free_space_path_loss_db",
     "shannon_capacity_mbps",
     "thermal_noise_power_dbw",

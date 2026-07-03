@@ -17,6 +17,7 @@ def test_full_system_pipeline_config_loads_defaults() -> None:
     assert config.link_budget["reference_range_km"] == 629.0
     assert config.transmit_terminal["antenna"]["antenna_id"] == "satellite-ka"
     assert config.receive_terminal["antenna"]["antenna_id"] == "ground-ka"
+    assert config.transport["protocol"] == "TCP"
     assert config.flow["flow_id"] == "flow-001"
     assert config.task["task_id"] == "flow-001"
     assert config.compute["node_id"] == "node-a"

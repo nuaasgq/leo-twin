@@ -22,6 +22,7 @@ from leo_twin.models.network import (
     PositionDrivenNetworkEngine,
     RadioTerminalProfile,
     build_default_leo_protocol_stack,
+    default_transport_runtime,
 )
 from leo_twin.models.orbit import KeplerianOrbitEngine
 from leo_twin.services.metrics import MetricsCollector
@@ -35,6 +36,7 @@ from leo_twin.schema import (
     Route,
     SimEvent,
     TaskRequest,
+    TransportProtocol,
 )
 
 
@@ -86,6 +88,9 @@ def run_full_system_pipeline_demo() -> FullSystemPipelineResult:
 
     config = load_full_system_pipeline_config()
     link_budget_calculator = _link_budget_calculator(config)
+    transport_runtime = default_transport_runtime(
+        TransportProtocol(str(config.transport["protocol"]))
+    )
     reference_budget = link_budget_calculator.evaluate(
         float(config.link_budget["reference_range_km"])
     )
@@ -127,6 +132,7 @@ def run_full_system_pipeline_demo() -> FullSystemPipelineResult:
         base_latency_s=float(config.network["base_latency_s"]),
         cell_size_km=float(config.network["cell_size_km"]),
         link_budget_calculator=link_budget_calculator,
+        transport_runtime=transport_runtime,
     )
     trace_observer = NetworkStackObserver(
         stack_runtime=NetworkStackRuntime(

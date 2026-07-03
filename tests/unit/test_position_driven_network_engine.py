@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from leo_twin.core import SimulationKernel, SimulationModule
 from leo_twin.models.network import (
     LinkBudgetCalculator,
@@ -7,6 +9,7 @@ from leo_twin.models.network import (
     PositionDrivenNetworkEngine,
     RadioTerminalProfile,
     RoutingRuntime,
+    default_transport_runtime,
 )
 from leo_twin.schema import (
     AntennaProfile,
@@ -19,6 +22,7 @@ from leo_twin.schema import (
     RoutingProtocol,
     SatelliteState,
     SimEvent,
+    TransportProtocol,
 )
 
 
@@ -249,6 +253,46 @@ def test_position_driven_engine_can_use_routing_runtime_and_static_links() -> No
 
     assert compute.routes[0].path == ("user-east", "sat-001", "node-a")
     assert compute.routes[0].latency == 2.629
+
+
+def test_position_driven_engine_can_apply_transport_runtime_to_route() -> None:
+    kernel = SimulationKernel()
+    network = PositionDrivenNetworkEngine(
+        endpoints=(
+            GroundEndpoint(
+                endpoint_id="user-east",
+                position=(EARTH_RADIUS_KM, 0.0, 0.0),
+                min_elevation_deg=10.0,
+                max_range_km=2000.0,
+            ),
+        ),
+        compute_node_ids=("node-a",),
+        link_capacity=100.0,
+        propagation_speed_km_s=1000.0,
+        cell_size_km=1000.0,
+        transport_runtime=default_transport_runtime(TransportProtocol.TCP),
+    )
+    metrics = MetricsSink()
+    compute = ComputeSink()
+    kernel.register_module(network)
+    kernel.register_module(metrics)
+    kernel.register_module(compute)
+    kernel.schedule_event(
+        _event("orbit", EventType.ORBIT_UPDATE.value, _state((7000.0, 0.0, 0.0)))
+    )
+    kernel.schedule_event(
+        _event(
+            "flow",
+            EventType.FLOW_ARRIVAL.value,
+            FlowRequest("flow-001", "user-east", "node-a", 10.0),
+            1.0,
+        )
+    )
+
+    kernel.run()
+
+    assert compute.routes[0].latency == 1.258
+    assert compute.routes[0].capacity == pytest.approx(89.546667)
 
 
 def test_link_budget_limits_position_driven_link_capacity_and_latency() -> None:
