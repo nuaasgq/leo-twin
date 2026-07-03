@@ -235,6 +235,40 @@ def test_orbit_update_generates_access_start_and_link_update() -> None:
     assert network.compute_access()[0].satellite_id == "sat-001"
 
 
+def test_meter_position_input_can_be_scaled_to_kilometer_geometry() -> None:
+    kernel = SimulationKernel()
+    network = PositionDrivenNetworkEngine(
+        endpoints=(
+            GroundEndpoint(
+                endpoint_id="user-east",
+                position=(EARTH_RADIUS_KM, 0.0, 0.0),
+                min_elevation_deg=10.0,
+                max_range_km=2000.0,
+            ),
+        ),
+        compute_node_ids=("node-a",),
+        link_capacity=50.0,
+        propagation_speed_km_s=1000.0,
+        cell_size_km=1000.0,
+        position_scale_to_km=0.001,
+    )
+    metrics = MetricsSink()
+    kernel.register_module(network)
+    kernel.register_module(metrics)
+    kernel.schedule_event(
+        _event("orbit-meters", EventType.ORBIT_UPDATE.value, _state((7_000_000.0, 0.0, 0.0)))
+    )
+
+    kernel.run()
+
+    assert [event.event_type for event in metrics.events] == [
+        EventType.ACCESS_START.value,
+        EventType.LINK_UPDATE.value,
+    ]
+    assert network.compute_access()[0].satellite_id == "sat-001"
+    assert network.active_link_states()[0].latency == pytest.approx(0.629)
+
+
 def test_position_loss_generates_access_end() -> None:
     kernel = SimulationKernel()
     network = _engine()

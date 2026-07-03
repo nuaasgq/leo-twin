@@ -57,6 +57,7 @@ class PositionDrivenNetworkEngine(SimulationModule):
         space_link_cell_size_km: float | None = None,
         space_link_update_latency_epsilon_s: float = 0.0,
         space_link_update_capacity_epsilon: float = 0.0,
+        position_scale_to_km: float = 1.0,
     ) -> None:
         _require_non_empty_str(module_name, "module_name")
         _require_non_empty_str(metrics_target, "metrics_target")
@@ -77,6 +78,7 @@ class PositionDrivenNetworkEngine(SimulationModule):
             space_link_update_capacity_epsilon,
             "space_link_update_capacity_epsilon",
         )
+        _require_positive_number(position_scale_to_km, "position_scale_to_km")
         compute_nodes = tuple(sorted(str(item) for item in compute_node_ids))
         if not compute_nodes or any(not item for item in compute_nodes):
             raise ValueError("compute_node_ids must contain non-empty ids")
@@ -112,6 +114,7 @@ class PositionDrivenNetworkEngine(SimulationModule):
         )
         self._space_link_update_latency_epsilon_s = float(space_link_update_latency_epsilon_s)
         self._space_link_update_capacity_epsilon = float(space_link_update_capacity_epsilon)
+        self._position_scale_to_km = float(position_scale_to_km)
         self._satellite_states: dict[str, SatelliteState] = {}
         self._satellite_space_cells: dict[str, SpaceCellId] = {}
         self._satellites_by_space_cell: dict[SpaceCellId, set[str]] = {}
@@ -129,7 +132,8 @@ class PositionDrivenNetworkEngine(SimulationModule):
     def on_event(self, event: SimEvent, kernel: SimulationKernel) -> None:
         if event.event_type == EventType.ORBIT_UPDATE:
             state = self._coerce_satellite_state(event.payload)
-            emitted_events = list(self._update_for_state(state, event.sim_time))
+            geometry_state = self._state_for_geometry(state)
+            emitted_events = list(self._update_for_state(geometry_state, event.sim_time))
             if emitted_events:
                 emitted_events.extend(self._reroute_active_flows(event.sim_time))
             for emitted in emitted_events:
@@ -535,6 +539,17 @@ class PositionDrivenNetworkEngine(SimulationModule):
                 status=str(payload["status"]),
             )
         raise TypeError("ORBIT_UPDATE payload must be SatelliteState or dict")
+
+    def _state_for_geometry(self, state: SatelliteState) -> SatelliteState:
+        if self._position_scale_to_km == 1.0:
+            return state
+        return SatelliteState(
+            satellite_id=state.satellite_id,
+            sim_time=state.sim_time,
+            position=tuple(value * self._position_scale_to_km for value in state.position),
+            velocity=tuple(value * self._position_scale_to_km for value in state.velocity),
+            status=state.status,
+        )
 
     @staticmethod
     def _coerce_flow_request(payload: object) -> FlowRequest:
