@@ -173,22 +173,44 @@ export function App() {
       <header className="topbar">
         <div className="brand-block">
           <div className="brand-title">LEO-Twin</div>
-          <div className="brand-subtitle">低轨卫星互联网仿真控制台</div>
+          <div className="brand-subtitle">低轨卫星互联网通信-算力数字孪生平台</div>
+        </div>
+        <div className="surface-tabs" aria-label="前端界面">
+          <span className="surface-tab active">三维仿真控制台</span>
+          <span className="surface-tab">数据态势面板</span>
         </div>
         <div className={`connection-pill ${connectionState}`}>
           {connectionStateLabel(connectionState)}
         </div>
       </header>
       <section className="workspace">
-        <div className="globe-panel">
-          <CesiumGlobe snapshot={snapshot} />
-        </div>
-        <aside className="side-panel">
-          <ConfigPanel
-            scenario={scenarioControls}
-            runtime={runtimeStatus}
-            onRuntimeControl={sendRuntimeControl}
-          />
+        <section className="simulation-surface" aria-label="三维仿真控制台">
+          <div className="surface-header">
+            <div>
+              <div className="surface-kicker">三维展示与运行控制</div>
+              <h1>星座运行视图</h1>
+            </div>
+            <div className="surface-status">
+              <span>{runtimeStatusLabel(runtimeStatus.status)}</span>
+              <strong>{runtimeStatus.speed_factor}x</strong>
+            </div>
+          </div>
+          <div className="globe-panel">
+            <CesiumGlobe snapshot={snapshot} />
+          </div>
+          <div className="control-dock">
+            <ConfigPanel
+              scenario={scenarioControls}
+              runtime={runtimeStatus}
+              onRuntimeControl={sendRuntimeControl}
+            />
+          </div>
+        </section>
+        <aside className="dashboard-surface" aria-label="数据态势面板">
+          <div className="dashboard-header">
+            <div className="surface-kicker">实时观测数据</div>
+            <h2>数据态势面板</h2>
+          </div>
           <Dashboard snapshot={snapshot} />
         </aside>
       </section>
@@ -204,6 +226,16 @@ function connectionStateLabel(state: "connecting" | "live" | "degraded"): string
     return "已连接";
   }
   return "连接异常";
+}
+
+function runtimeStatusLabel(status: RuntimeStatusPayload["status"]): string {
+  if (status === "RUNNING") {
+    return "运行中";
+  }
+  if (status === "PAUSED") {
+    return "已暂停";
+  }
+  return "已停止";
 }
 
 function defaultRuntimeStatus(): RuntimeStatusPayload {
