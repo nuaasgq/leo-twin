@@ -101,11 +101,13 @@ sequenceDiagram
 | `KeplerianOrbitEngine` | 根据配置产生确定性卫星位置、速度和 `ORBIT_UPDATE` | 不集成 SGP4，不依赖网络或算力实现 |
 | `PositionDrivenNetworkEngine` | 根据轨道位置、用户位置和流请求产生接入、链路和路由事件 | 不做 packet-level 仿真，不直接调用 Orbit/Compute |
 | `LinkBudgetCalculator` | 根据频率、带宽、天线和距离计算链路预算与容量画像 | 确定性闭式计算，不引入外部射频工具 |
+| `ChannelBudgetSelector` | 按 `SPACE_GROUND`、`SPACE_SPACE`、`GROUND_GROUND` 选择链路预算画像 | 只做配置选择，不做外部信道工具集成 |
 | `RoutingRuntime` | 根据可用链路和路由画像输出确定性路径 | 当前是运行时策略抽象，不实现研究型路由优化 |
 | `TransportRuntime` | 将 TCP/UDP 画像映射为流级时延和有效容量调整 | 不模拟真实协议栈报文 |
-| `RouteAwareComputeEngine` | 根据路由状态和任务请求生成任务生命周期事件 | 当前不执行真实容器、GPU 或线程 |
-| `ComputeSchedulingRuntime` | 提供 FIFO、最短作业优先、最早截止期优先的确定性排序 | 待接入主算力运行引擎 |
-| `MetricsCollector` | 只读采集事件并生成指标摘要 | 禁止修改任何领域状态 |
+| `RouteAwareComputeEngine` | 根据路由状态、任务请求和调度策略生成任务生命周期事件 | 当前不执行真实容器、GPU 或线程 |
+| `ComputeSchedulingRuntime` | 提供 FIFO、最短作业优先、最早截止期优先的确定性排序 | 已接入 route-aware 算力运行路径 |
+| `MetricsCollector` | 只读采集事件并生成事件、链路、路由、任务指标摘要 | 禁止修改任何领域状态 |
+| `FullSystemScenarioBuilder` | 从配置生成轨道、地面端点、算力节点、流和任务输入 | 只生成输入，不启动仿真、不改变内核 |
 
 ## 层间影响规则
 
@@ -113,6 +115,19 @@ sequenceDiagram
 - 网络影响算力：路由时延、容量和可达性决定任务启动和完成时间。
 - 算力影响网络负载：任务生命周期可以生成后续业务流，但必须通过事件表达。
 - 指标只观察不干预：任何 KPI、日志或前端摘要都不能反向修改仿真状态。
+
+## 配置驱动流水线
+
+当前生成式 demo 路径为：
+
+```text
+configs/generated_full_system_demo.json
+  -> FullSystemScenarioBuilderConfig
+  -> GeneratedFullSystemScenario
+  -> KeplerianOrbitEngine + PositionDrivenNetworkEngine + RouteAwareComputeEngine + MetricsCollector
+```
+
+该路径已经验证小规模全链路运行和 10k 星/100k 用户输入生成 smoke。它不代表万星端到端仿真已经完成，后续仍需事件增长、内存窗口和指标下采样验证。
 
 ## 前端拆分
 
@@ -130,6 +145,7 @@ sequenceDiagram
 
 - 展示轨道、网络、算力、指标的可观测数据。
 - 支持吞吐、时延、链路可用性、任务完成率、资源利用率等 KPI。
+- `/dashboard` 已作为独立中文数据面板入口，包含全链路态势和链路与协议视图。
 - 独立展示，避免三维渲染影响数据阅读。
 
 ## 模块依赖规则
