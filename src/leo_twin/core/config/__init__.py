@@ -10,6 +10,7 @@ from leo_twin.core.config.loader import (
     write_config,
 )
 from leo_twin.core.config.schema import (
+    ComputeSchedulingPolicyConfig,
     OrbitParameters,
     RuntimeConfig,
     RuntimeMode,
@@ -24,6 +25,7 @@ from leo_twin.core.config.schema import (
 __all__ = [
     "DEFAULT_CONFIG",
     "ConfigValidationError",
+    "ComputeSchedulingPolicyConfig",
     "OrbitParameters",
     "RuntimeConfig",
     "RuntimeMode",

@@ -18,6 +18,14 @@ class RuntimeMode(StrEnum):
     PAUSED = "PAUSED"
 
 
+class ComputeSchedulingPolicyConfig(StrEnum):
+    """Compute scheduling policies exposed through the control plane."""
+
+    FIFO = "FIFO"
+    SHORTEST_JOB_FIRST = "SHORTEST_JOB_FIRST"
+    EARLIEST_DEADLINE_FIRST = "EARLIEST_DEADLINE_FIRST"
+
+
 @dataclass(frozen=True)
 class OrbitParameters:
     """Configuration-only orbit parameters."""
@@ -119,6 +127,7 @@ class ScenarioConfig:
     compute_nodes: int = 10
     ground_station_count: int = 3
     cell_count: int = 100
+    compute_scheduling_policy: ComputeSchedulingPolicyConfig = ComputeSchedulingPolicyConfig.FIFO
     orbit: OrbitParameters = field(default_factory=OrbitParameters)
     traffic_model: TrafficModel = field(default_factory=TrafficModel)
 
@@ -128,6 +137,12 @@ class ScenarioConfig:
         _require_positive_int(self.compute_nodes, "scenario.compute_nodes")
         _require_non_negative_int(self.ground_station_count, "scenario.ground_station_count")
         _require_positive_int(self.cell_count, "scenario.cell_count")
+        if not isinstance(self.compute_scheduling_policy, ComputeSchedulingPolicyConfig):
+            object.__setattr__(
+                self,
+                "compute_scheduling_policy",
+                ComputeSchedulingPolicyConfig(str(self.compute_scheduling_policy)),
+            )
 
 
 @dataclass(frozen=True)

@@ -2,6 +2,7 @@
 
 from leo_twin.schema.config import (
     OrbitParameters,
+    ComputeSchedulingPolicyConfig,
     RuntimeConfig,
     RuntimeMode,
     SEESConfig,
@@ -14,6 +15,7 @@ from leo_twin.schema.config import (
 
 __all__ = [
     "OrbitParameters",
+    "ComputeSchedulingPolicyConfig",
     "RuntimeConfig",
     "RuntimeMode",
     "SEESConfig",

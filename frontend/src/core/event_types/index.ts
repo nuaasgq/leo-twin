@@ -91,6 +91,7 @@ export interface ScenarioConfig {
     satellite_count?: number;
     user_count?: number;
     compute_nodes?: number;
+    compute_scheduling_policy?: string;
   };
   network?: {
     transport_protocol?: string;
@@ -160,6 +161,7 @@ export interface GeneratedScenarioConfig {
   user_count: number;
   compute_node_count: number;
   flow_count: number;
+  compute_scheduling_policy?: string;
   orbit_plane_count: number;
   epoch: number;
   semi_major_axis_km: number;

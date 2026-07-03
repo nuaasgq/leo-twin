@@ -44,6 +44,9 @@ describe("scenarioWithRuntimeConfig", () => {
       scenarioWithRuntimeConfig(
         {},
         {
+          scenario: {
+            compute_scheduling_policy: "EARLIEST_DEADLINE_FIRST"
+          },
           network: {
             transport_protocol: "UDP",
             routing_protocol: "DISTANCE_VECTOR",
@@ -66,6 +69,9 @@ describe("scenarioWithRuntimeConfig", () => {
         }
       )
     ).toEqual({
+      scenario: {
+        compute_scheduling_policy: "EARLIEST_DEADLINE_FIRST"
+      },
       network: {
         transport_protocol: "UDP",
         routing_protocol: "DISTANCE_VECTOR",

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from leo_twin.schema.config import (
+    ComputeSchedulingPolicyConfig,
     NetworkProfile,
     OrbitParameters,
     RuntimeConfig,
@@ -36,6 +37,7 @@ _SCENARIO_KEYS = frozenset(
         "compute_nodes",
         "ground_station_count",
         "cell_count",
+        "compute_scheduling_policy",
         "orbit",
         "traffic_model",
     }
@@ -170,6 +172,9 @@ def _build_config(data: Mapping[str, Any]) -> SEESConfig:
                 compute_nodes=scenario["compute_nodes"],
                 ground_station_count=scenario["ground_station_count"],
                 cell_count=scenario["cell_count"],
+                compute_scheduling_policy=ComputeSchedulingPolicyConfig(
+                    str(scenario["compute_scheduling_policy"])
+                ),
                 orbit=OrbitParameters(**dict(orbit)),
                 traffic_model=TrafficModel(**dict(traffic)),
             ),
@@ -205,7 +210,12 @@ def _build_config(data: Mapping[str, Any]) -> SEESConfig:
 def _normalize_update(update: Mapping[str, Any]) -> dict[str, Any]:
     nested: dict[str, Any] = {}
     direct = dict(update)
-    for key in ("satellite_count", "user_count", "compute_nodes"):
+    for key in (
+        "satellite_count",
+        "user_count",
+        "compute_nodes",
+        "compute_scheduling_policy",
+    ):
         if key in direct:
             nested.setdefault("scenario", {})[key] = direct.pop(key)
     for key in ("mode", "speed_factor", "seed", "duration"):
@@ -326,6 +336,7 @@ def _ordered_keys(context: str, data: Mapping[str, Any]) -> tuple[str, ...]:
             "compute_nodes",
             "ground_station_count",
             "cell_count",
+            "compute_scheduling_policy",
             "orbit",
             "traffic_model",
         ),

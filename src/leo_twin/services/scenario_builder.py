@@ -33,6 +33,7 @@ class FullSystemScenarioBuilderConfig:
     user_count: int = 1000
     compute_node_count: int = 10
     flow_count: int = 100
+    compute_scheduling_policy: str = "FIFO"
     orbit_plane_count: int = 6
     epoch: float = 0.0
     earth_rotation_rate_rad_s: float = 0.0
@@ -69,6 +70,11 @@ class FullSystemScenarioBuilderConfig:
         ):
             _require_positive_int(getattr(self, field_name), field_name)
         _require_non_negative_int(self.flow_count, "flow_count")
+        object.__setattr__(
+            self,
+            "compute_scheduling_policy",
+            _compute_scheduling_policy(str(self.compute_scheduling_policy)),
+        )
         if self.orbit_plane_count > self.satellite_count:
             raise ValueError("orbit_plane_count must be <= satellite_count")
         _require_finite_number(self.epoch, "epoch")
@@ -238,6 +244,7 @@ def scenario_builder_config_from_sees_config(
             config.runtime.duration
             // config.scenario.traffic_model.flow_interval_seconds,
         ),
+        compute_scheduling_policy=config.scenario.compute_scheduling_policy.value,
         orbit_plane_count=min(
             config.scenario.satellite_count,
             config.scenario.orbit.plane_count,
@@ -425,3 +432,10 @@ def _require_range(
     _require_finite_number(value, field_name)
     if value < lower or value >= upper:
         raise ValueError(f"{field_name} must be in [{lower}, {upper})")
+
+
+def _compute_scheduling_policy(value: str) -> str:
+    allowed = frozenset(("FIFO", "SHORTEST_JOB_FIRST", "EARLIEST_DEADLINE_FIRST"))
+    if value not in allowed:
+        raise ValueError("compute_scheduling_policy must be a supported policy")
+    return value

@@ -11,7 +11,13 @@ sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from leo_twin.core import SimulationKernel
-from leo_twin.models.compute import ComputeNode, RouteAwareComputeEngine, TaskPlacementDecision
+from leo_twin.models.compute import (
+    ComputeNode,
+    ComputeSchedulingPolicy,
+    ComputeSchedulingRuntime,
+    RouteAwareComputeEngine,
+    TaskPlacementDecision,
+)
 from leo_twin.models.network import (
     ApertureAntennaSpec,
     ChannelBudgetSelector,
@@ -127,7 +133,10 @@ def run_generated_full_system_demo(
         nodes=tuple(
             ComputeNode(node.node_id, capacity=node.capacity)
             for node in scenario.compute_nodes
-        )
+        ),
+        scheduling_runtime=ComputeSchedulingRuntime(
+            ComputeSchedulingPolicy(str(resolved_config.compute_scheduling_policy))
+        ),
     )
     metrics = MetricsCollector()
 

@@ -130,6 +130,9 @@ def test_full_system_scenario_builder_rejects_invalid_config() -> None:
     with pytest.raises(ValueError, match="flow_count"):
         FullSystemScenarioBuilderConfig(flow_count=-1)
 
+    with pytest.raises(ValueError, match="compute_scheduling_policy"):
+        FullSystemScenarioBuilderConfig(compute_scheduling_policy="RANDOM")
+
 
 def test_scenario_builder_config_from_mapping_rejects_unknown_fields() -> None:
     with pytest.raises(ValueError, match="unknown scenario builder fields"):
@@ -160,6 +163,7 @@ def test_load_full_system_scenario_builder_config_from_json(tmp_path) -> None:
     assert config.user_count == 8
     assert config.compute_node_count == 2
     assert config.flow_count == 3
+    assert config.compute_scheduling_policy == "FIFO"
     assert config.orbit_plane_count == 2
     assert config.earth_rotation_rate_rad_s == 0.0
     assert config.space_link_max_range_km == 0.0
@@ -200,6 +204,7 @@ def test_scenario_builder_config_from_sees_config_maps_control_plane_fields() ->
             satellite_count=24,
             user_count=40,
             compute_nodes=3,
+            compute_scheduling_policy="EARLIEST_DEADLINE_FIRST",
             orbit=OrbitParameters(
                 plane_count=4,
                 altitude_m=600_000.0,
@@ -232,6 +237,7 @@ def test_scenario_builder_config_from_sees_config_maps_control_plane_fields() ->
     assert generated.user_count == 40
     assert generated.compute_node_count == 3
     assert generated.flow_count == 10
+    assert generated.compute_scheduling_policy == "EARLIEST_DEADLINE_FIRST"
     assert generated.orbit_plane_count == 4
     assert generated.semi_major_axis_km == 6971.0
     assert generated.inclination_deg == 55.0

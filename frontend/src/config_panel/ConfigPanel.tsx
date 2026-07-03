@@ -11,6 +11,7 @@ export interface ScenarioControlValues {
   satellite_count: number;
   user_count: number;
   compute_nodes: number;
+  compute_scheduling_policy: string;
   visualization: VisualizationControlValues;
   network: NetworkControlValues;
 }
@@ -71,6 +72,9 @@ export function ConfigPanel({
   const [satelliteCount, setSatelliteCount] = useState(scenario.satellite_count);
   const [userCount, setUserCount] = useState(scenario.user_count);
   const [computeNodes, setComputeNodes] = useState(scenario.compute_nodes);
+  const [computeSchedulingPolicy, setComputeSchedulingPolicy] = useState(
+    scenario.compute_scheduling_policy
+  );
   const [showSatellites, setShowSatellites] = useState(scenario.visualization.satellites);
   const [showLinks, setShowLinks] = useState(scenario.visualization.links);
   const [showUsers, setShowUsers] = useState(scenario.visualization.users);
@@ -107,6 +111,7 @@ export function ConfigPanel({
     setSatelliteCount(scenario.satellite_count);
     setUserCount(scenario.user_count);
     setComputeNodes(scenario.compute_nodes);
+    setComputeSchedulingPolicy(scenario.compute_scheduling_policy);
     setShowSatellites(scenario.visualization.satellites);
     setShowLinks(scenario.visualization.links);
     setShowUsers(scenario.visualization.users);
@@ -124,6 +129,7 @@ export function ConfigPanel({
     scenario.satellite_count,
     scenario.user_count,
     scenario.compute_nodes,
+    scenario.compute_scheduling_policy,
     scenario.visualization.satellites,
     scenario.visualization.links,
     scenario.visualization.users,
@@ -213,6 +219,21 @@ export function ConfigPanel({
           />
           <output>{computeNodes}</output>
         </div>
+      </div>
+
+      <div className="control-group">
+        <label className="control-label" htmlFor="compute-scheduling-policy">
+          调度策略
+        </label>
+        <select
+          id="compute-scheduling-policy"
+          value={computeSchedulingPolicy}
+          onChange={(event) => setComputeSchedulingPolicy(event.currentTarget.value)}
+        >
+          <option value="FIFO">先到先服务</option>
+          <option value="SHORTEST_JOB_FIRST">短作业优先</option>
+          <option value="EARLIEST_DEADLINE_FIRST">最早截止期优先</option>
+        </select>
       </div>
 
       <div className="control-group">
@@ -475,6 +496,7 @@ export function ConfigPanel({
               satellite_count: satelliteCount,
               user_count: userCount,
               compute_nodes: computeNodes,
+              compute_scheduling_policy: computeSchedulingPolicy,
               mode: runtimeMode,
               speed_factor: speedFactor,
               duration: durationSeconds,
@@ -562,6 +584,7 @@ export function generatedScenarioSummaryItems(
     { label: "生效用户", value: formatInteger(config.user_count) },
     { label: "计算节点", value: formatInteger(config.compute_node_count) },
     { label: "业务流量", value: formatInteger(config.flow_count) },
+    { label: "调度策略", value: formatComputeSchedulingPolicy(config.compute_scheduling_policy) },
     { label: "轨道面", value: formatInteger(config.orbit_plane_count) },
     { label: "随机种子", value: formatInteger(config.seed) },
     { label: "传输协议", value: config.transport_protocol ?? "TCP" },
@@ -690,6 +713,16 @@ function formatRainRate(value: number | undefined): string {
     return "0 mm/h";
   }
   return `${formatDecimal(value)} mm/h`;
+}
+
+function formatComputeSchedulingPolicy(value: string | undefined): string {
+  if (value === "SHORTEST_JOB_FIRST") {
+    return "短作业优先";
+  }
+  if (value === "EARLIEST_DEADLINE_FIRST") {
+    return "最早截止期优先";
+  }
+  return "先到先服务";
 }
 
 function formatMeters(value: number | undefined): string {

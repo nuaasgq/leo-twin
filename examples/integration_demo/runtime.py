@@ -5,7 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from leo_twin.core import SimulationKernel, SimulationModule
-from leo_twin.models.compute import RouteAwareComputeEngine
+from leo_twin.models.compute import (
+    ComputeSchedulingPolicy,
+    ComputeSchedulingRuntime,
+    RouteAwareComputeEngine,
+)
 from leo_twin.models.network import (
     ApertureAntennaSpec,
     ChannelBudgetSelector,
@@ -129,7 +133,12 @@ def run_integration_demo(config: DemoConfig) -> DemoRunResult:
             state_vector_scale=1000.0,
         ),
         network,
-        RouteAwareComputeEngine(nodes=scenario.compute_nodes),
+        RouteAwareComputeEngine(
+            nodes=scenario.compute_nodes,
+            scheduling_runtime=ComputeSchedulingRuntime(
+                ComputeSchedulingPolicy(str(config.compute_scheduling_policy))
+            ),
+        ),
         metrics,
         frontend_sink,
     )

@@ -93,6 +93,7 @@ def build_demo_scenario(config: DemoConfig) -> DemoScenario:
                 "satellite_count": config.satellite_count,
                 "user_count": config.ground_user_count,
                 "compute_nodes": config.compute_node_count,
+                "compute_scheduling_policy": config.compute_scheduling_policy,
             },
             "network": {
                 "transport_protocol": config.transport_protocol,

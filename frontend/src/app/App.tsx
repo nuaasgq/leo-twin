@@ -301,6 +301,15 @@ export function scenarioWithRuntimeConfig(
   if (!isRecord(runtimeConfig)) {
     return scenario;
   }
+  const scenarioSection = isRecord(runtimeConfig.scenario)
+    ? {
+        ...scenario.scenario,
+        compute_scheduling_policy:
+          typeof runtimeConfig.scenario.compute_scheduling_policy === "string"
+            ? runtimeConfig.scenario.compute_scheduling_policy
+            : scenario.scenario?.compute_scheduling_policy
+      }
+    : scenario.scenario;
   const network = isRecord(runtimeConfig.network)
     ? {
         ...scenario.network,
@@ -371,6 +380,7 @@ export function scenarioWithRuntimeConfig(
     : scenario.ui;
   return {
     ...scenario,
+    scenario: scenarioSection,
     network,
     ui
   };
@@ -443,6 +453,8 @@ function scenarioControlValues(
     user_count:
       scenarioConfig?.scenario?.user_count ?? scenarioConfig?.ground_users?.length ?? 1000,
     compute_nodes: scenarioConfig?.scenario?.compute_nodes ?? 10,
+    compute_scheduling_policy:
+      scenarioConfig?.scenario?.compute_scheduling_policy ?? "FIFO",
     visualization: {
       satellites: visualization?.satellites ?? true,
       links: visualization?.links ?? true,

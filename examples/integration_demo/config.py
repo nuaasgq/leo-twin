@@ -50,6 +50,7 @@ class DemoConfig:
     rain_effective_path_km: float = 0.0
     antenna_diameter_m: float = 0.45
     antenna_aperture_efficiency: float = 0.65
+    compute_scheduling_policy: str = "FIFO"
 
 
 DEFAULT_CONFIG_PATH = Path("configs/integration_demo.yaml")
@@ -68,6 +69,11 @@ def load_demo_config(path: str | Path = DEFAULT_CONFIG_PATH) -> DemoConfig:
         ground_user_count=_int(scenario, "ground_user_count"),
         ground_station_count=_int(scenario, "ground_station_count"),
         compute_node_count=_int(scenario, "compute_node_count"),
+        compute_scheduling_policy=_optional_str(
+            scenario,
+            "compute_scheduling_policy",
+            "FIFO",
+        ),
         duration_seconds=_int(scenario, "duration_seconds"),
         orbit_tick_seconds=_int(scenario, "orbit_tick_seconds"),
         network_slot_seconds=_int(scenario, "network_slot_seconds"),
@@ -123,6 +129,7 @@ def demo_config_to_sees_config(config: DemoConfig) -> SEESConfig:
             compute_nodes=config.compute_node_count,
             ground_station_count=config.ground_station_count,
             cell_count=config.cell_count,
+            compute_scheduling_policy=config.compute_scheduling_policy,
             orbit=OrbitParameters(update_interval_seconds=config.orbit_tick_seconds),
             traffic_model=TrafficModel(
                 flow_interval_seconds=config.flow_interval_seconds,
@@ -168,6 +175,7 @@ def demo_config_from_sees_config(
         ground_user_count=config.scenario.user_count,
         ground_station_count=config.scenario.ground_station_count,
         compute_node_count=config.scenario.compute_nodes,
+        compute_scheduling_policy=config.scenario.compute_scheduling_policy.value,
         duration_seconds=config.runtime.duration,
         orbit_tick_seconds=config.scenario.orbit.update_interval_seconds,
         network_slot_seconds=config.scenario.orbit.update_interval_seconds,
