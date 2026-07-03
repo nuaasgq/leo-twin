@@ -143,16 +143,26 @@ class MetricsCollector:
         return tuple(dict(event) for event in self._event_log)
 
     def summary(self) -> MetricSummary:
+        active_links = self._active_link_states()
+        available_routes = self._available_routes()
         summary: MetricSummary = {
-            "active_links": len(self._active_links),
+            "active_link_capacity_avg": _average(tuple(link.capacity for link in active_links)),
+            "active_link_capacity_max": max((link.capacity for link in active_links), default=0.0),
+            "active_link_capacity_min": min((link.capacity for link in active_links), default=0.0),
+            "active_link_latency_avg": _average(tuple(link.latency for link in active_links)),
+            "active_links": len(active_links),
             "available_link_capacity": self._available_link_capacity(),
             "completed_flows": len(self._completed_flows),
             "event_count": sum(self._event_counts.values()),
             "finished_tasks": len(self._finished_tasks),
             "last_sim_time": self._last_sim_time,
             "observed_links": len(self._links),
+            "route_capacity_max": max((route.capacity for route in available_routes), default=0.0),
+            "route_capacity_min": min((route.capacity for route in available_routes), default=0.0),
+            "route_latency_avg": _average(tuple(route.latency for route in available_routes)),
+            "route_latency_min": min((route.latency for route in available_routes), default=0.0),
             "running_tasks": len(self._running_tasks),
-            "routes_available": sum(1 for route in self._routes.values() if route.available),
+            "routes_available": len(available_routes),
             "routes_total": len(self._routes),
             "unique_satellites": len(self._satellite_status),
         }
@@ -420,6 +430,20 @@ class MetricsCollector:
             )
         )
 
+    def _active_link_states(self) -> tuple[LinkState, ...]:
+        return tuple(
+            self._links[key]
+            for key in sorted(self._active_links)
+            if key in self._links and self._links[key].availability
+        )
+
+    def _available_routes(self) -> tuple[Route, ...]:
+        return tuple(
+            self._routes[route_id]
+            for route_id in sorted(self._routes)
+            if self._routes[route_id].available
+        )
+
     def _metric_event(self, observed_event: SimEvent, record: MetricRecord) -> SimEvent:
         self._metric_event_sequence += 1
         return SimEvent(
@@ -498,6 +522,12 @@ def _json_payload(value: object) -> ReplayPayload:
 
 def _should_sample(count: int, interval: int) -> bool:
     return count == 1 or count % interval == 0
+
+
+def _average(values: tuple[float, ...]) -> float:
+    if not values:
+        return 0.0
+    return float(sum(values) / len(values))
 
 
 def _require_optional_positive_int(value: int | None, field_name: str) -> None:

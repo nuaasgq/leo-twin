@@ -27,6 +27,9 @@ def test_generated_full_system_demo_runs_domain_lifecycle() -> None:
     assert result.active_link_count > 0
     assert len(result.scheduled_tasks) == 4
     assert result.metrics_summary["routes_available"] == 4
+    assert result.metrics_summary["route_latency_min"] > 0.0
+    assert result.metrics_summary["route_capacity_max"] == 100.0
+    assert result.metrics_summary["active_link_capacity_avg"] == 100.0
     assert result.metrics_summary["finished_tasks"] == 4
     assert EventType.ORBIT_UPDATE.value in result.processed_event_types
     assert EventType.ROUTE_UPDATE.value in result.processed_event_types

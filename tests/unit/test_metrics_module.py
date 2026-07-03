@@ -163,10 +163,18 @@ def test_metrics_collector_kpis_are_consistent_with_observations() -> None:
     assert summary["event_count"] == 8
     assert summary["unique_satellites"] == 1
     assert summary["observed_links"] == 1
+    assert summary["active_link_capacity_avg"] == 0.0
+    assert summary["active_link_capacity_max"] == 0.0
+    assert summary["active_link_capacity_min"] == 0.0
+    assert summary["active_link_latency_avg"] == 0.0
     assert summary["active_links"] == 0
     assert summary["available_link_capacity"] == 0.0
     assert summary["routes_total"] == 1
     assert summary["routes_available"] == 1
+    assert summary["route_capacity_max"] == 60.0
+    assert summary["route_capacity_min"] == 60.0
+    assert summary["route_latency_avg"] == 16.0
+    assert summary["route_latency_min"] == 16.0
     assert summary["completed_flows"] == 1
     assert summary["running_tasks"] == 0
     assert summary["finished_tasks"] == 1
