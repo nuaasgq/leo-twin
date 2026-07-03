@@ -8,8 +8,13 @@ from leo_twin.schema import EventType
 
 def test_full_domain_pipeline_runs_orbit_network_compute_lifecycle() -> None:
     result = run_full_system_pipeline_demo()
+    domain_event_types = tuple(
+        event_type
+        for event_type in result.processed_event_types
+        if event_type != "_COMPUTE_SCHEDULE_TICK"
+    )
 
-    assert result.processed_event_types == (
+    assert domain_event_types == (
         EventType.TASK_ARRIVAL.value,
         EventType.ORBIT_TRIGGER.value,
         EventType.ORBIT_UPDATE.value,

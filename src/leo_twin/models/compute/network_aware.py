@@ -7,6 +7,10 @@ from typing import Iterable
 
 from leo_twin.core import SimulationKernel, SimulationModule
 from leo_twin.models.compute.contracts import COMPUTE_NODE_UPDATE, ComputeNode
+from leo_twin.models.compute.scheduling import (
+    ComputeSchedulingRuntime,
+    ComputeWorkloadItem,
+)
 from leo_twin.schema import (
     ComputeNodeState,
     EventType,
@@ -15,6 +19,10 @@ from leo_twin.schema import (
     TaskRequest,
     TaskState,
 )
+
+
+_COMPUTE_SCHEDULE_TICK = "_COMPUTE_SCHEDULE_TICK"
+_SCHEDULE_TICK_PRIORITY = -1000
 
 
 @dataclass(frozen=True)
@@ -44,6 +52,7 @@ class RouteAwareComputeEngine(SimulationModule):
         nodes: Iterable[ComputeNode],
         module_name: str = "compute",
         metrics_target: str = "metrics",
+        scheduling_runtime: ComputeSchedulingRuntime | None = None,
     ) -> None:
         if not module_name:
             raise ValueError("module_name must be non-empty")
@@ -58,26 +67,34 @@ class RouteAwareComputeEngine(SimulationModule):
         self._module_name = module_name
         self._metrics_target = metrics_target
         self._nodes = ordered_nodes
+        self._scheduling_runtime = scheduling_runtime or ComputeSchedulingRuntime()
         self._available_at = {item.node_id: 0.0 for item in ordered_nodes}
         self._pending_tasks: dict[str, TaskRequest] = {}
         self._routes_by_flow: dict[str, Route] = {}
         self._scheduled_tasks: dict[str, _ScheduledTask] = {}
+        self._scheduled_tick_times: set[float] = set()
         self._event_sequence = 0
 
     def name(self) -> str:
         return self._module_name
 
     def on_event(self, event: SimEvent, kernel: SimulationKernel) -> None:
-        if event.event_type == EventType.TASK_ARRIVAL:
-            task = self._coerce_task_request(event.payload)
-            self._pending_tasks[task.task_id] = task
-            self._try_schedule(task.task_id, event.sim_time, kernel)
+        event_type = str(event.event_type)
+        if event_type == _COMPUTE_SCHEDULE_TICK:
+            self._scheduled_tick_times.discard(event.sim_time)
+            self._schedule_ready_tasks(event.sim_time, kernel)
             return
 
-        if event.event_type == EventType.ROUTE_UPDATE:
+        if event_type == EventType.TASK_ARRIVAL.value:
+            task = self._coerce_task_request(event.payload)
+            self._pending_tasks[task.task_id] = task
+            self._request_schedule_tick(event.sim_time, kernel)
+            return
+
+        if event_type == EventType.ROUTE_UPDATE.value:
             route = self._coerce_route(event.payload)
             self._routes_by_flow[route.flow_id] = route
-            self._try_schedule(route.flow_id, event.sim_time, kernel)
+            self._request_schedule_tick(event.sim_time, kernel)
 
     def pending_tasks(self) -> tuple[str, ...]:
         """Return pending task ids in deterministic order."""
@@ -92,33 +109,72 @@ class RouteAwareComputeEngine(SimulationModule):
             for task_id in sorted(self._scheduled_tasks)
         )
 
-    def _try_schedule(
+    def _request_schedule_tick(
         self,
-        task_id: str,
         dispatch_time: float,
         kernel: SimulationKernel,
     ) -> None:
-        if task_id in self._scheduled_tasks:
+        if dispatch_time in self._scheduled_tick_times:
             return
-        task = self._pending_tasks.get(task_id)
-        route = self._routes_by_flow.get(task_id)
-        if task is None or route is None or not route.available or route.capacity <= 0:
-            return
+        self._scheduled_tick_times.add(dispatch_time)
+        self._event_sequence += 1
+        kernel.schedule_event(
+            SimEvent(
+                event_id=f"{self._module_name}:schedule:{self._event_sequence:08d}",
+                sim_time=dispatch_time,
+                priority=_SCHEDULE_TICK_PRIORITY,
+                source=self._module_name,
+                target=self._module_name,
+                event_type=_COMPUTE_SCHEDULE_TICK,
+                payload=None,
+            )
+        )
 
-        decision = self._build_decision(task, route, dispatch_time)
-        self._scheduled_tasks[task.task_id] = _ScheduledTask(task=task, decision=decision)
-        self._pending_tasks.pop(task.task_id, None)
-        self._available_at[decision.node_id] = decision.finish_time
-        self._emit_task_lifecycle(task, decision, kernel)
+    def _schedule_ready_tasks(
+        self,
+        dispatch_time: float,
+        kernel: SimulationKernel,
+    ) -> None:
+        ready_workloads: list[ComputeWorkloadItem] = []
+        ready_routes: dict[str, Route] = {}
+
+        for task_id in sorted(self._pending_tasks):
+            if task_id in self._scheduled_tasks:
+                continue
+            task = self._pending_tasks[task_id]
+            route = self._routes_by_flow.get(task_id)
+            if route is None or not route.available or route.capacity <= 0:
+                continue
+            ready_time = self._ready_time(task, route, dispatch_time)
+            ready_workloads.append(ComputeWorkloadItem(task=task, ready_time=ready_time))
+            ready_routes[task_id] = route
+
+        for item in self._scheduling_runtime.order_workloads(tuple(ready_workloads)):
+            route = ready_routes[item.task.task_id]
+            decision = self._build_decision(item.task, route, item.ready_time)
+            self._scheduled_tasks[item.task.task_id] = _ScheduledTask(
+                task=item.task,
+                decision=decision,
+            )
+            self._pending_tasks.pop(item.task.task_id, None)
+            self._available_at[decision.node_id] = decision.finish_time
+            self._emit_task_lifecycle(item.task, decision, kernel)
+
+    def _ready_time(
+        self,
+        task: TaskRequest,
+        route: Route,
+        dispatch_time: float,
+    ) -> float:
+        transfer_time = route.latency + task.data_size / route.capacity
+        return max(dispatch_time, task.submit_time) + transfer_time
 
     def _build_decision(
         self,
         task: TaskRequest,
         route: Route,
-        dispatch_time: float,
+        ready_time: float,
     ) -> TaskPlacementDecision:
-        transfer_time = route.latency + task.data_size / route.capacity
-        ready_time = max(dispatch_time, task.submit_time) + transfer_time
         node, start_time, finish_time = self._select_node(task, route, ready_time)
         return TaskPlacementDecision(
             task_id=task.task_id,

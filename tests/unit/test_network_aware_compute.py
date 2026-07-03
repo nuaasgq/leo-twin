@@ -4,6 +4,8 @@ from leo_twin.core import SimulationKernel, SimulationModule
 from leo_twin.models.compute import (
     COMPUTE_NODE_UPDATE,
     ComputeNode,
+    ComputeSchedulingPolicy,
+    ComputeSchedulingRuntime,
     RouteAwareComputeEngine,
 )
 from leo_twin.schema import EventType, Route, SimEvent, TaskRequest
@@ -20,23 +22,34 @@ class MetricsSink(SimulationModule):
         self.events.append(event)
 
 
-def _task(task_id: str = "flow-001") -> TaskRequest:
+def _task(
+    task_id: str = "flow-001",
+    compute_demand: float = 20.0,
+    data_size: float = 10.0,
+    deadline: float | None = None,
+) -> TaskRequest:
     return TaskRequest(
         task_id=task_id,
         source_id="user-001",
         submit_time=0.0,
-        compute_demand=20.0,
-        data_size=10.0,
+        compute_demand=compute_demand,
+        data_size=data_size,
+        deadline=deadline,
     )
 
 
-def _route(available: bool = True) -> Route:
+def _route(
+    available: bool = True,
+    flow_id: str = "flow-001",
+    latency: float = 2.0,
+    capacity: float = 5.0,
+) -> Route:
     return Route(
-        route_id="route-flow-001",
-        flow_id="flow-001",
+        route_id=f"route-{flow_id}",
+        flow_id=flow_id,
         path=("user-001", "sat-001", "node-a"),
-        latency=2.0,
-        capacity=5.0,
+        latency=latency,
+        capacity=capacity,
         available=available,
     )
 
@@ -115,6 +128,60 @@ def test_route_aware_compute_uses_route_endpoint_node_when_present() -> None:
     assert decision.node_id == "node-a"
     assert decision.start_time == 4.0
     assert decision.finish_time == 6.0
+
+
+def test_route_aware_compute_applies_scheduling_policy_to_ready_batch() -> None:
+    kernel = SimulationKernel()
+    engine = RouteAwareComputeEngine(
+        nodes=(ComputeNode("node-a", capacity=10.0),),
+        scheduling_runtime=ComputeSchedulingRuntime(
+            ComputeSchedulingPolicy.SHORTEST_JOB_FIRST
+        ),
+    )
+    sink = MetricsSink()
+    kernel.register_module(engine)
+    kernel.register_module(sink)
+    kernel.schedule_event(
+        _event(
+            "task-large",
+            EventType.TASK_ARRIVAL.value,
+            _task("flow-large", compute_demand=30.0, data_size=0.0),
+        )
+    )
+    kernel.schedule_event(
+        _event(
+            "task-small",
+            EventType.TASK_ARRIVAL.value,
+            _task("flow-small", compute_demand=5.0, data_size=0.0),
+        )
+    )
+    kernel.schedule_event(
+        _event(
+            "route-large",
+            EventType.ROUTE_UPDATE.value,
+            _route(flow_id="flow-large", latency=0.0, capacity=10.0),
+        )
+    )
+    kernel.schedule_event(
+        _event(
+            "route-small",
+            EventType.ROUTE_UPDATE.value,
+            _route(flow_id="flow-small", latency=0.0, capacity=10.0),
+        )
+    )
+
+    kernel.run()
+
+    decisions = {decision.task_id: decision for decision in engine.scheduled_tasks()}
+    assert decisions["flow-small"].start_time == 0.0
+    assert decisions["flow-small"].finish_time == 0.5
+    assert decisions["flow-large"].start_time == 0.5
+    assert decisions["flow-large"].finish_time == 3.5
+    assert [
+        event.payload.task_id
+        for event in sink.events
+        if event.event_type == EventType.TASK_START.value
+    ] == ["flow-small", "flow-large"]
 
 
 def test_route_aware_compute_is_deterministic() -> None:

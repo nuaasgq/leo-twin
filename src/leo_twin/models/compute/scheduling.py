@@ -78,7 +78,7 @@ class ComputeSchedulingRuntime:
         available_at = {node.node_id: 0.0 for node in ordered_nodes}
         decisions: list[ComputeScheduleDecision] = []
 
-        for item in sorted(workloads, key=self._workload_key):
+        for item in self.order_workloads(workloads):
             node, start_time, finish_time = _select_node(
                 item=item,
                 nodes=ordered_nodes,
@@ -94,6 +94,14 @@ class ComputeSchedulingRuntime:
                 )
             )
         return tuple(decisions)
+
+    def order_workloads(
+        self,
+        workloads: tuple[ComputeWorkloadItem, ...],
+    ) -> tuple[ComputeWorkloadItem, ...]:
+        """Return workload order for the configured deterministic policy."""
+
+        return tuple(sorted(workloads, key=self._workload_key))
 
     def _workload_key(self, item: ComputeWorkloadItem) -> tuple[float, float, str]:
         if self._policy == ComputeSchedulingPolicy.SHORTEST_JOB_FIRST:
