@@ -29,7 +29,10 @@ describe("generatedScenarioSummaryItems", () => {
       task_compute_demand: 20,
       task_data_size: 10,
       transport_protocol: "UDP",
-      routing_protocol: "DISTANCE_VECTOR"
+      routing_protocol: "DISTANCE_VECTOR",
+      carrier_frequency_hz: 22_000_000_000,
+      channel_bandwidth_hz: 250_000_000,
+      rain_rate_mm_h: 12.5
     };
 
     expect(generatedScenarioSummaryItems(config)).toEqual([
@@ -41,6 +44,9 @@ describe("generatedScenarioSummaryItems", () => {
       { label: "随机种子", value: "1,234" },
       { label: "传输协议", value: "UDP" },
       { label: "路由协议", value: "DISTANCE_VECTOR" },
+      { label: "载波频率", value: "22 GHz" },
+      { label: "信道带宽", value: "250 MHz" },
+      { label: "雨强", value: "12.5 mm/h" },
       { label: "轨道高度", value: "550 km" },
       { label: "倾角", value: "53.5°" }
     ]);

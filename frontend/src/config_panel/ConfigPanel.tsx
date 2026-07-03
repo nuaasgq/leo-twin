@@ -398,6 +398,9 @@ export function generatedScenarioSummaryItems(
     { label: "随机种子", value: formatInteger(config.seed) },
     { label: "传输协议", value: config.transport_protocol ?? "TCP" },
     { label: "路由协议", value: config.routing_protocol ?? "LINK_STATE" },
+    { label: "载波频率", value: formatFrequency(config.carrier_frequency_hz) },
+    { label: "信道带宽", value: formatBandwidth(config.channel_bandwidth_hz) },
+    { label: "雨强", value: formatRainRate(config.rain_rate_mm_h) },
     {
       label: "轨道高度",
       value: `${formatInteger(config.semi_major_axis_km - config.earth_radius_km)} km`
@@ -481,6 +484,27 @@ function formatDurationCompact(seconds: number): string {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   return `${hours}时${minutes}分`;
+}
+
+function formatFrequency(value: number | undefined): string {
+  if (value === undefined) {
+    return "20 GHz";
+  }
+  return `${formatDecimal(value / 1_000_000_000)} GHz`;
+}
+
+function formatBandwidth(value: number | undefined): string {
+  if (value === undefined) {
+    return "100 MHz";
+  }
+  return `${formatDecimal(value / 1_000_000)} MHz`;
+}
+
+function formatRainRate(value: number | undefined): string {
+  if (value === undefined) {
+    return "0 mm/h";
+  }
+  return `${formatDecimal(value)} mm/h`;
 }
 
 function runtimeStatusLabel(runtime: RuntimeStatusPayload): string {
