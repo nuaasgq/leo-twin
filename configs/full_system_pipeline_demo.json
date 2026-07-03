@@ -18,8 +18,45 @@
   "network": {
     "base_latency_s": 1.0,
     "cell_size_km": 1000.0,
-    "link_capacity": 5.0,
+    "link_capacity": 10000.0,
     "propagation_speed_km_s": 629.0
+  },
+  "link_budget": {
+    "atmospheric_loss_db": 2.0,
+    "implementation_loss_db": 1.0,
+    "polarization_loss_db": 0.5,
+    "reference_range_km": 629.0
+  },
+  "channel": {
+    "bandwidth_hz": 500000000.0,
+    "carrier_frequency_hz": 20000000000.0,
+    "channel_id": "ka-space-ground",
+    "loss_model_name": "free_space_budget",
+    "medium": "SPACE_GROUND"
+  },
+  "transmit_terminal": {
+    "antenna": {
+      "antenna_id": "satellite-ka",
+      "beam_width_deg": 2.0,
+      "gain_dbi": 32.0,
+      "steering_mode": "electronic"
+    },
+    "noise_temperature_k": 290.0,
+    "system_loss_db": 1.0,
+    "terminal_id": "sat-terminal",
+    "transmit_power_dbw": 20.0
+  },
+  "receive_terminal": {
+    "antenna": {
+      "antenna_id": "ground-ka",
+      "beam_width_deg": 2.0,
+      "gain_dbi": 36.0,
+      "steering_mode": "electronic"
+    },
+    "noise_temperature_k": 290.0,
+    "system_loss_db": 1.0,
+    "terminal_id": "ground-terminal",
+    "transmit_power_dbw": 0.0
   },
   "orbit": {
     "argument_of_perigee_deg": 0.0,

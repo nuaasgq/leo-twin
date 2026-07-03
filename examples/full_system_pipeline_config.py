@@ -22,6 +22,10 @@ class FullSystemPipelineConfig:
     flow: Mapping[str, Any]
     task: Mapping[str, Any]
     compute: Mapping[str, Any]
+    channel: Mapping[str, Any]
+    link_budget: Mapping[str, Any]
+    transmit_terminal: Mapping[str, Any]
+    receive_terminal: Mapping[str, Any]
 
 
 def load_full_system_pipeline_config(
@@ -39,6 +43,10 @@ def load_full_system_pipeline_config(
         flow=_mapping(data, "flow"),
         task=_mapping(data, "task"),
         compute=_mapping(data, "compute"),
+        channel=_mapping(data, "channel"),
+        link_budget=_mapping(data, "link_budget"),
+        transmit_terminal=_mapping(data, "transmit_terminal"),
+        receive_terminal=_mapping(data, "receive_terminal"),
     )
 
 

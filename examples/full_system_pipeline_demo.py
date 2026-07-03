@@ -16,15 +16,21 @@ from examples.full_system_pipeline_config import load_full_system_pipeline_confi
 from leo_twin.models.compute import ComputeNode, RouteAwareComputeEngine, TaskPlacementDecision
 from leo_twin.models.network import (
     GroundEndpoint,
+    LinkBudgetCalculator,
+    LinkBudgetResult,
     NetworkStackRuntime,
     PositionDrivenNetworkEngine,
+    RadioTerminalProfile,
     build_default_leo_protocol_stack,
 )
 from leo_twin.models.orbit import KeplerianOrbitEngine
 from leo_twin.services.metrics import MetricsCollector
 from leo_twin.schema import (
+    AntennaProfile,
+    ChannelProfile,
     EventType,
     FlowRequest,
+    LinkMedium,
     OrbitalElementSet,
     Route,
     SimEvent,
@@ -40,6 +46,7 @@ class FullSystemPipelineResult:
     metrics_event_types: tuple[str, ...]
     metrics_summary: Mapping[str, str | float | int | bool]
     stack_layer_statuses: tuple[tuple[str, str], ...]
+    stack_layer_attributes: tuple[tuple[str, tuple[tuple[str, str], ...]], ...]
     scheduled_tasks: tuple[TaskPlacementDecision, ...]
 
 
@@ -54,6 +61,7 @@ class NetworkStackObserver(SimulationModule):
         self._stack_runtime = stack_runtime
         self._flow_request = flow_request
         self.stack_layer_statuses: list[tuple[str, str]] = []
+        self.stack_layer_attributes: list[tuple[str, tuple[tuple[str, str], ...]]] = []
 
     def name(self) -> str:
         return "trace"
@@ -68,12 +76,19 @@ class NetworkStackObserver(SimulationModule):
         self.stack_layer_statuses.extend(
             (layer.layer.value, layer.status) for layer in trace.layers
         )
+        self.stack_layer_attributes.extend(
+            (layer.layer.value, layer.attributes) for layer in trace.layers
+        )
 
 
 def run_full_system_pipeline_demo() -> FullSystemPipelineResult:
     """Run the deterministic full-system pipeline demo."""
 
     config = load_full_system_pipeline_config()
+    link_budget_calculator = _link_budget_calculator(config)
+    reference_budget = link_budget_calculator.evaluate(
+        float(config.link_budget["reference_range_km"])
+    )
     kernel = SimulationKernel()
     orbit = KeplerianOrbitEngine(
         elements=(
@@ -111,9 +126,15 @@ def run_full_system_pipeline_demo() -> FullSystemPipelineResult:
         propagation_speed_km_s=float(config.network["propagation_speed_km_s"]),
         base_latency_s=float(config.network["base_latency_s"]),
         cell_size_km=float(config.network["cell_size_km"]),
+        link_budget_calculator=link_budget_calculator,
     )
     trace_observer = NetworkStackObserver(
-        stack_runtime=NetworkStackRuntime(build_default_leo_protocol_stack()),
+        stack_runtime=NetworkStackRuntime(
+            build_default_leo_protocol_stack(),
+            antenna=_antenna(config.transmit_terminal["antenna"]),
+            channel=_channel(config.channel),
+            link_budget=reference_budget,
+        ),
         flow_request=flow_request,
     )
     compute = RouteAwareComputeEngine(
@@ -175,6 +196,7 @@ def run_full_system_pipeline_demo() -> FullSystemPipelineResult:
         metrics_event_types=tuple(str(event["event_type"]) for event in metrics.event_log()),
         metrics_summary=metrics.summary(),
         stack_layer_statuses=tuple(trace_observer.stack_layer_statuses),
+        stack_layer_attributes=tuple(trace_observer.stack_layer_attributes),
         scheduled_tasks=compute.scheduled_tasks(),
     )
 
@@ -190,7 +212,50 @@ def main() -> None:
         "stack_layer_statuses=",
         ",".join(f"{layer}:{status}" for layer, status in result.stack_layer_statuses),
     )
+    print("stack_layer_attributes=", result.stack_layer_attributes)
     print("scheduled_tasks=", result.scheduled_tasks)
+
+
+def _link_budget_calculator(config: object) -> LinkBudgetCalculator:
+    return LinkBudgetCalculator(
+        transmit_terminal=_radio_terminal(config.transmit_terminal),
+        receive_terminal=_radio_terminal(config.receive_terminal),
+        channel=_channel(config.channel),
+        atmospheric_loss_db=float(config.link_budget["atmospheric_loss_db"]),
+        polarization_loss_db=float(config.link_budget["polarization_loss_db"]),
+        implementation_loss_db=float(config.link_budget["implementation_loss_db"]),
+    )
+
+
+def _radio_terminal(config: Mapping[str, object]) -> RadioTerminalProfile:
+    return RadioTerminalProfile(
+        terminal_id=str(config["terminal_id"]),
+        antenna=_antenna(config["antenna"]),
+        transmit_power_dbw=float(config["transmit_power_dbw"]),
+        system_loss_db=float(config["system_loss_db"]),
+        noise_temperature_k=float(config["noise_temperature_k"]),
+    )
+
+
+def _antenna(config: object) -> AntennaProfile:
+    if not isinstance(config, Mapping):
+        raise TypeError("antenna config must be a mapping")
+    return AntennaProfile(
+        antenna_id=str(config["antenna_id"]),
+        gain_dbi=float(config["gain_dbi"]),
+        beam_width_deg=float(config["beam_width_deg"]),
+        steering_mode=str(config["steering_mode"]),
+    )
+
+
+def _channel(config: Mapping[str, object]) -> ChannelProfile:
+    return ChannelProfile(
+        channel_id=str(config["channel_id"]),
+        medium=LinkMedium(str(config["medium"])),
+        carrier_frequency_hz=float(config["carrier_frequency_hz"]),
+        bandwidth_hz=float(config["bandwidth_hz"]),
+        loss_model_name=str(config["loss_model_name"]),
+    )
 
 
 def _vector3(value: object) -> tuple[float, float, float]:
