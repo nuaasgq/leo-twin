@@ -14,12 +14,14 @@ from leo_twin.services.scenario_builder import (
     write_full_system_scenario_builder_config,
 )
 from leo_twin.schema.config import (
+    NetworkProfile,
     OrbitParameters,
     RuntimeConfig,
     SEESConfig,
     ScenarioConfig,
     TrafficModel,
 )
+from leo_twin.schema import RoutingProtocol, TransportProtocol
 
 
 def test_full_system_scenario_builder_generates_requested_counts() -> None:
@@ -164,6 +166,8 @@ def test_load_full_system_scenario_builder_config_from_json(tmp_path) -> None:
     assert config.space_link_capacity == 100.0
     assert config.space_link_cell_size_km == 0.0
     assert config.max_range_km == 2000.0
+    assert config.transport_protocol == "TCP"
+    assert config.routing_protocol == "LINK_STATE"
 
 
 def test_write_full_system_scenario_builder_config_round_trips(tmp_path) -> None:
@@ -203,6 +207,10 @@ def test_scenario_builder_config_from_sees_config_maps_control_plane_fields() ->
             ),
         ),
         runtime=RuntimeConfig(seed=42, duration=300),
+        network=NetworkProfile(
+            transport_protocol=TransportProtocol.UDP,
+            routing_protocol=RoutingProtocol.DISTANCE_VECTOR,
+        ),
     )
 
     generated = scenario_builder_config_from_sees_config(config)
@@ -217,6 +225,8 @@ def test_scenario_builder_config_from_sees_config_maps_control_plane_fields() ->
     assert generated.inclination_deg == 55.0
     assert generated.demand_capacity == 2.5
     assert generated.task_compute_demand == 15.0
+    assert generated.transport_protocol == "UDP"
+    assert generated.routing_protocol == "DISTANCE_VECTOR"
 
 
 def test_default_generated_scenario_config_file_loads() -> None:

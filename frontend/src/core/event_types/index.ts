@@ -161,6 +161,8 @@ export interface GeneratedScenarioConfig {
   demand_capacity: number;
   task_compute_demand: number;
   task_data_size: number;
+  transport_protocol?: string;
+  routing_protocol?: string;
 }
 
 export interface RuntimeStatusEnvelope {

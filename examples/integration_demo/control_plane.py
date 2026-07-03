@@ -143,7 +143,7 @@ class DemoControlPlane:
             "generated_config": self._generated_config_json(),
         }
 
-    def _generated_config_json(self) -> dict[str, int | float]:
+    def _generated_config_json(self) -> dict[str, int | float | str]:
         return scenario_builder_config_to_mapping(
             scenario_builder_config_from_sees_config(self._controller.config)
         )

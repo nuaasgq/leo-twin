@@ -9,7 +9,13 @@ from math import ceil, cos, isfinite, radians, sin
 from pathlib import Path
 from typing import Any
 
-from leo_twin.schema import FlowRequest, OrbitalElementSet, TaskRequest
+from leo_twin.schema import (
+    FlowRequest,
+    OrbitalElementSet,
+    RoutingProtocol,
+    TaskRequest,
+    TransportProtocol,
+)
 from leo_twin.schema.config import SEESConfig
 
 
@@ -39,6 +45,8 @@ class FullSystemScenarioBuilderConfig:
     space_link_max_range_km: float = 0.0
     space_link_capacity: float = 100.0
     space_link_cell_size_km: float = 0.0
+    transport_protocol: str = TransportProtocol.TCP.value
+    routing_protocol: str = RoutingProtocol.LINK_STATE.value
     compute_capacity: float = 10.0
     demand_capacity: float = 1.0
     task_compute_demand: float = 20.0
@@ -75,6 +83,16 @@ class FullSystemScenarioBuilderConfig:
         _require_non_negative_number(
             self.space_link_cell_size_km,
             "space_link_cell_size_km",
+        )
+        object.__setattr__(
+            self,
+            "transport_protocol",
+            TransportProtocol(str(self.transport_protocol)).value,
+        )
+        object.__setattr__(
+            self,
+            "routing_protocol",
+            RoutingProtocol(str(self.routing_protocol)).value,
         )
         _require_positive_number(self.compute_capacity, "compute_capacity")
         _require_non_negative_number(self.demand_capacity, "demand_capacity")
@@ -155,7 +173,7 @@ def write_full_system_scenario_builder_config(
 
 def scenario_builder_config_to_mapping(
     config: FullSystemScenarioBuilderConfig,
-) -> dict[str, int | float]:
+) -> dict[str, int | float | str]:
     """Return a deterministic JSON-compatible scenario builder config."""
 
     if not isinstance(config, FullSystemScenarioBuilderConfig):
@@ -205,6 +223,8 @@ def scenario_builder_config_from_sees_config(
         inclination_deg=config.scenario.orbit.inclination_deg,
         demand_capacity=config.scenario.traffic_model.flow_demand_capacity,
         task_compute_demand=config.scenario.traffic_model.task_compute_demand,
+        transport_protocol=config.network.transport_protocol.value,
+        routing_protocol=config.network.routing_protocol.value,
     )
 
 

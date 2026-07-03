@@ -27,7 +27,9 @@ describe("generatedScenarioSummaryItems", () => {
       compute_capacity: 10,
       demand_capacity: 1,
       task_compute_demand: 20,
-      task_data_size: 10
+      task_data_size: 10,
+      transport_protocol: "UDP",
+      routing_protocol: "DISTANCE_VECTOR"
     };
 
     expect(generatedScenarioSummaryItems(config)).toEqual([
@@ -37,6 +39,8 @@ describe("generatedScenarioSummaryItems", () => {
       { label: "业务流量", value: "1,200" },
       { label: "轨道面", value: "40" },
       { label: "随机种子", value: "1,234" },
+      { label: "传输协议", value: "UDP" },
+      { label: "路由协议", value: "DISTANCE_VECTOR" },
       { label: "轨道高度", value: "550 km" },
       { label: "倾角", value: "53.5°" }
     ]);

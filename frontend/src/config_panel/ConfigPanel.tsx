@@ -351,6 +351,8 @@ export function generatedScenarioSummaryItems(
     { label: "业务流量", value: formatInteger(config.flow_count) },
     { label: "轨道面", value: formatInteger(config.orbit_plane_count) },
     { label: "随机种子", value: formatInteger(config.seed) },
+    { label: "传输协议", value: config.transport_protocol ?? "TCP" },
+    { label: "路由协议", value: config.routing_protocol ?? "LINK_STATE" },
     {
       label: "轨道高度",
       value: `${formatInteger(config.semi_major_axis_km - config.earth_radius_km)} km`

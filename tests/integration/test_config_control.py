@@ -127,6 +127,8 @@ def test_initialize_writes_config_and_start_gates_streams(tmp_path) -> None:
     assert generated_config["user_count"] == 40
     assert generated_config["compute_node_count"] == 2
     assert generated_config["seed"] == 1234
+    assert generated_config["transport_protocol"] == "TCP"
+    assert generated_config["routing_protocol"] == "LINK_STATE"
     assert init_ack["generated_config"]["satellite_count"] == 24
     assert init_ack["generated_config"]["user_count"] == 40
     assert control_plane.result.config.satellite_count == 24
