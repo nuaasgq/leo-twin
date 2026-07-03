@@ -79,6 +79,22 @@ describe("frontend render performance architecture", () => {
     });
   });
 
+  it("exposes metric records in deterministic snapshot order", () => {
+    const snapshot = snapshotFromEvents([
+      metricEvent("metric-b", "satellite.longitude_deg", "sat-b", 45),
+      metricEvent("metric-a", "satellite.altitude_km", "sat-a", 629)
+    ]);
+
+    expect(snapshot.metrics.map((metric) => `${metric.metric_name}:${metric.entity_id}`)).toEqual([
+      "satellite.altitude_km:sat-a",
+      "satellite.longitude_deg:sat-b"
+    ]);
+    expect(snapshot.diff.metric_ids).toEqual([
+      "satellite.altitude_km:sat-a",
+      "satellite.longitude_deg:sat-b"
+    ]);
+  });
+
   it("keeps the render loop independent of snapshot publication cadence", () => {
     const clock = new FakeRenderClock();
     const frames: number[] = [];
@@ -176,6 +192,28 @@ function taskEvent(taskId: string, status: string): SimEvent {
       sim_time: 1,
       progress: 1,
       status
+    }
+  };
+}
+
+function metricEvent(
+  eventId: string,
+  metricName: string,
+  entityId: string,
+  value: number
+): SimEvent {
+  return {
+    event_id: eventId,
+    sim_time: 1,
+    priority: 0,
+    source: "metrics",
+    target: "frontend",
+    event_type: "METRIC_SAMPLE",
+    payload: {
+      metric_name: metricName,
+      sim_time: 1,
+      entity_id: entityId,
+      value
     }
   };
 }

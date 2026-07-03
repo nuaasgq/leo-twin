@@ -71,6 +71,7 @@ export interface WorldSnapshot {
   compute_nodes: readonly ComputeNodeRenderState[];
   ground_users: readonly GroundUserState[];
   active_tasks: readonly TaskState[];
+  metrics: readonly MetricRecord[];
   metrics_summary: MetricsSummary;
   scenario_config: ScenarioConfig | null;
   active_route_id: string | null;
@@ -224,6 +225,7 @@ export function buildWorldSnapshot(
       left.user_id.localeCompare(right.user_id)
     ),
     active_tasks: activeTasks,
+    metrics,
     metrics_summary: {
       network: networkSummary(links),
       compute: computeSummary(tasks),
