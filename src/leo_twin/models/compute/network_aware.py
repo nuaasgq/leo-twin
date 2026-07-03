@@ -35,6 +35,8 @@ class TaskPlacementDecision:
     ready_time: float
     start_time: float
     finish_time: float
+    transfer_time: float
+    compute_time: float
     status: str
 
 
@@ -222,8 +224,7 @@ class RouteAwareComputeEngine(SimulationModule):
         route: Route,
         dispatch_time: float,
     ) -> float:
-        transfer_time = route.latency + task.data_size / route.capacity
-        return max(dispatch_time, task.submit_time) + transfer_time
+        return max(dispatch_time, task.submit_time) + _transfer_time(task, route)
 
     def _build_decision(
         self,
@@ -231,7 +232,11 @@ class RouteAwareComputeEngine(SimulationModule):
         route: Route,
         ready_time: float,
     ) -> TaskPlacementDecision:
-        node, start_time, finish_time = self._select_node(task, route, ready_time)
+        node, start_time, finish_time, compute_time = self._select_node(
+            task,
+            route,
+            ready_time,
+        )
         return TaskPlacementDecision(
             task_id=task.task_id,
             node_id=node.node_id,
@@ -239,6 +244,8 @@ class RouteAwareComputeEngine(SimulationModule):
             ready_time=ready_time,
             start_time=start_time,
             finish_time=finish_time,
+            transfer_time=_transfer_time(task, route),
+            compute_time=compute_time,
             status=_decision_status(task, finish_time),
         )
 
@@ -247,15 +254,18 @@ class RouteAwareComputeEngine(SimulationModule):
         task: TaskRequest,
         route: Route,
         ready_time: float,
-    ) -> tuple[ComputeNode, float, float]:
+    ) -> tuple[ComputeNode, float, float, float]:
         candidates = self._candidate_nodes(route)
-        scored: list[tuple[float, float, str, ComputeNode]] = []
+        scored: list[tuple[float, float, str, ComputeNode, float]] = []
         for compute_node in candidates:
             start_time = max(self._available_at[compute_node.node_id], ready_time)
-            finish_time = start_time + task.compute_demand / compute_node.capacity
-            scored.append((finish_time, start_time, compute_node.node_id, compute_node))
-        finish_time, start_time, _, node = min(scored)
-        return node, start_time, finish_time
+            compute_time = task.compute_demand / compute_node.capacity
+            finish_time = start_time + compute_time
+            scored.append(
+                (finish_time, start_time, compute_node.node_id, compute_node, compute_time)
+            )
+        finish_time, start_time, _, node, compute_time = min(scored)
+        return node, start_time, finish_time, compute_time
 
     def _candidate_nodes(self, route: Route) -> tuple[ComputeNode, ...]:
         routed_node_ids = set(route.path)
@@ -381,6 +391,10 @@ def _decision_status(task: TaskRequest, finish_time: float) -> str:
     if task.deadline is not None and finish_time > task.deadline:
         return "DEADLINE_MISSED"
     return "SCHEDULED"
+
+
+def _transfer_time(task: TaskRequest, route: Route) -> float:
+    return route.latency + task.data_size / route.capacity
 
 
 def _finish_status(decision: TaskPlacementDecision) -> str:

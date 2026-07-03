@@ -83,7 +83,10 @@ def test_task_waits_until_matching_route_update_arrives() -> None:
     kernel.run()
 
     assert engine.pending_tasks() == ()
-    assert engine.scheduled_tasks()[0].ready_time == 7.0
+    decision = engine.scheduled_tasks()[0]
+    assert decision.ready_time == 7.0
+    assert decision.transfer_time == 4.0
+    assert decision.compute_time == 2.0
     assert [event.event_type for event in sink.events] == [
         EventType.TASK_START.value,
         COMPUTE_NODE_UPDATE,
@@ -257,6 +260,8 @@ def test_route_recovery_restarts_transfer_with_latest_route() -> None:
     decision = engine.scheduled_tasks()[0]
     assert engine.pending_tasks() == ()
     assert decision.ready_time == 6.0
+    assert decision.transfer_time == 1.0
+    assert decision.compute_time == 2.0
     assert decision.start_time == 6.0
     assert decision.finish_time == 8.0
     assert [
