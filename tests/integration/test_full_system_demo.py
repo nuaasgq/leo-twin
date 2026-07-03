@@ -31,6 +31,7 @@ def test_end_to_end_pipeline_test() -> None:
     assert len(result.scenario.orbit_satellites) == 72
     assert result.config.ground_user_count == 1000
     assert result.config.ground_station_count == 3
+    assert result.config.application_protocol == "TASK_OFFLOAD_FLOW"
     assert len(result.scenario.compute_nodes) == 10
 
 
@@ -100,6 +101,9 @@ def test_network_stack_trace_uses_configured_protocols() -> None:
     result = _demo_result()
 
     assert len(result.network_stack_traces) == 100
+    assert {trace.application_protocol for trace in result.network_stack_traces} == {
+        "TASK_OFFLOAD_FLOW"
+    }
     assert {trace.transport_protocol for trace in result.network_stack_traces} == {"TCP"}
     assert {
         layer.protocol_name
@@ -122,13 +126,21 @@ def test_network_stack_trace_uses_configured_protocols() -> None:
     udp_result = run_integration_demo(
         replace(
             load_demo_config(),
+            application_protocol="MQTT",
             transport_protocol="UDP",
             routing_protocol="DISTANCE_VECTOR",
             datalink_mac_protocol="SLOTTED_ALOHA",
         )
     )
 
+    assert {trace.application_protocol for trace in udp_result.network_stack_traces} == {"MQTT"}
     assert {trace.transport_protocol for trace in udp_result.network_stack_traces} == {"UDP"}
+    assert {
+        layer.protocol_name
+        for trace in udp_result.network_stack_traces
+        for layer in trace.layers
+        if str(layer.layer) == "APPLICATION"
+    } == {"MQTT"}
     assert {
         layer.protocol_name
         for trace in udp_result.network_stack_traces

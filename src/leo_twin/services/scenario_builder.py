@@ -10,8 +10,9 @@ from pathlib import Path
 from typing import Any
 
 from leo_twin.schema import (
-    FlowRequest,
+    ApplicationProtocol,
     DataLinkProtocol,
+    FlowRequest,
     OrbitalElementSet,
     RoutingProtocol,
     TaskRequest,
@@ -47,6 +48,7 @@ class FullSystemScenarioBuilderConfig:
     space_link_max_range_km: float = 0.0
     space_link_capacity: float = 100.0
     space_link_cell_size_km: float = 0.0
+    application_protocol: str = ApplicationProtocol.TASK_OFFLOAD_FLOW.value
     transport_protocol: str = TransportProtocol.TCP.value
     routing_protocol: str = RoutingProtocol.LINK_STATE.value
     datalink_mac_protocol: str = DataLinkProtocol.TDMA.value
@@ -98,6 +100,11 @@ class FullSystemScenarioBuilderConfig:
         _require_non_negative_number(
             self.space_link_cell_size_km,
             "space_link_cell_size_km",
+        )
+        object.__setattr__(
+            self,
+            "application_protocol",
+            ApplicationProtocol(str(self.application_protocol)).value,
         )
         object.__setattr__(
             self,
@@ -260,6 +267,7 @@ def scenario_builder_config_from_sees_config(
         inclination_deg=config.scenario.orbit.inclination_deg,
         demand_capacity=config.scenario.traffic_model.flow_demand_capacity,
         task_compute_demand=config.scenario.traffic_model.task_compute_demand,
+        application_protocol=config.network.application_protocol.value,
         transport_protocol=config.network.transport_protocol.value,
         routing_protocol=config.network.routing_protocol.value,
         datalink_mac_protocol=config.network.datalink_mac_protocol.value,

@@ -96,6 +96,7 @@ def build_demo_scenario(config: DemoConfig) -> DemoScenario:
                 "compute_scheduling_policy": config.compute_scheduling_policy,
             },
             "network": {
+                "application_protocol": config.application_protocol,
                 "transport_protocol": config.transport_protocol,
                 "routing_protocol": config.routing_protocol,
                 "datalink_mac_protocol": config.datalink_mac_protocol,

@@ -24,6 +24,7 @@ export interface VisualizationControlValues {
 }
 
 export interface NetworkControlValues {
+  application_protocol: string;
   transport_protocol: string;
   routing_protocol: string;
   datalink_mac_protocol: string;
@@ -80,6 +81,9 @@ export function ConfigPanel({
   const [showLinks, setShowLinks] = useState(scenario.visualization.links);
   const [showUsers, setShowUsers] = useState(scenario.visualization.users);
   const [showMetrics, setShowMetrics] = useState(scenario.visualization.metrics);
+  const [applicationProtocol, setApplicationProtocol] = useState(
+    scenario.network.application_protocol
+  );
   const [transportProtocol, setTransportProtocol] = useState(
     scenario.network.transport_protocol
   );
@@ -120,6 +124,7 @@ export function ConfigPanel({
     setShowLinks(scenario.visualization.links);
     setShowUsers(scenario.visualization.users);
     setShowMetrics(scenario.visualization.metrics);
+    setApplicationProtocol(scenario.network.application_protocol);
     setTransportProtocol(scenario.network.transport_protocol);
     setRoutingProtocol(scenario.network.routing_protocol);
     setDataLinkProtocol(scenario.network.datalink_mac_protocol);
@@ -139,6 +144,7 @@ export function ConfigPanel({
     scenario.visualization.links,
     scenario.visualization.users,
     scenario.visualization.metrics,
+    scenario.network.application_protocol,
     scenario.network.transport_protocol,
     scenario.network.routing_protocol,
     scenario.network.datalink_mac_protocol,
@@ -345,6 +351,22 @@ export function ConfigPanel({
       </div>
 
       <div className="control-group">
+        <label className="control-label" htmlFor="application-protocol">
+          应用协议
+        </label>
+        <select
+          id="application-protocol"
+          value={applicationProtocol}
+          onChange={(event) => setApplicationProtocol(event.currentTarget.value)}
+        >
+          <option value="TASK_OFFLOAD_FLOW">任务卸载</option>
+          <option value="HTTP">HTTP</option>
+          <option value="MQTT">MQTT</option>
+          <option value="TELEMETRY">遥测流</option>
+        </select>
+      </div>
+
+      <div className="control-group">
         <label className="control-label" htmlFor="transport-protocol">
           传输协议
         </label>
@@ -529,6 +551,7 @@ export function ConfigPanel({
                 metrics: showMetrics
               }),
               ...networkControlPayload({
+                application_protocol: applicationProtocol,
                 transport_protocol: transportProtocol,
                 routing_protocol: routingProtocol,
                 datalink_mac_protocol: dataLinkProtocol,
@@ -609,6 +632,7 @@ export function generatedScenarioSummaryItems(
     { label: "调度策略", value: formatComputeSchedulingPolicy(config.compute_scheduling_policy) },
     { label: "轨道面", value: formatInteger(config.orbit_plane_count) },
     { label: "随机种子", value: formatInteger(config.seed) },
+    { label: "应用协议", value: formatApplicationProtocol(config.application_protocol) },
     { label: "传输协议", value: config.transport_protocol ?? "TCP" },
     { label: "路由协议", value: config.routing_protocol ?? "LINK_STATE" },
     { label: "载波频率", value: formatFrequency(config.carrier_frequency_hz) },
@@ -673,6 +697,7 @@ export function visualizationControlPayload(
 
 export function networkControlPayload(network: NetworkControlValues): Record<string, unknown> {
   return {
+    application_protocol: network.application_protocol,
     transport_protocol: network.transport_protocol,
     routing_protocol: network.routing_protocol,
     datalink_mac_protocol: network.datalink_mac_protocol,
@@ -736,6 +761,19 @@ function formatRainRate(value: number | undefined): string {
     return "0 mm/h";
   }
   return `${formatDecimal(value)} mm/h`;
+}
+
+function formatApplicationProtocol(value: string | undefined): string {
+  if (value === "HTTP") {
+    return "HTTP";
+  }
+  if (value === "MQTT") {
+    return "MQTT";
+  }
+  if (value === "TELEMETRY") {
+    return "遥测流";
+  }
+  return "任务卸载";
 }
 
 function formatComputeSchedulingPolicy(value: string | undefined): string {

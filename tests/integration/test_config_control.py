@@ -21,6 +21,7 @@ def test_config_loads_correctly() -> None:
     assert config.scenario.compute_scheduling_policy == "FIFO"
     assert config.runtime.mode == "REAL_TIME"
     assert config.runtime.speed_factor == 1.0
+    assert config.network.application_protocol == "TASK_OFFLOAD_FLOW"
     assert config.network.transport_protocol == "TCP"
     assert config.network.routing_protocol == "LINK_STATE"
     assert config.network.datalink_mac_protocol == "TDMA"
@@ -44,6 +45,7 @@ def test_network_protocol_profile_can_be_updated_directly() -> None:
     controller = RuntimeController(load_config("configs/sees_control.yaml"))
     snapshot = controller.update_config(
         {
+            "application_protocol": "MQTT",
             "transport_protocol": "UDP",
             "routing_protocol": "DISTANCE_VECTOR",
             "datalink_mac_protocol": "SLOTTED_ALOHA",
@@ -59,6 +61,7 @@ def test_network_protocol_profile_can_be_updated_directly() -> None:
     )
 
     assert snapshot.last_action == "CONFIG_UPDATE"
+    assert controller.config.network.application_protocol == "MQTT"
     assert controller.config.network.transport_protocol == "UDP"
     assert controller.config.network.routing_protocol == "DISTANCE_VECTOR"
     assert controller.config.network.datalink_mac_protocol == "SLOTTED_ALOHA"
@@ -95,6 +98,7 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
                     "satellite_count": 24,
                     "user_count": 40,
                     "compute_nodes": 3,
+                    "application_protocol": "MQTT",
                     "transport_protocol": "UDP",
                     "routing_protocol": "DISTANCE_VECTOR",
                     "datalink_mac_protocol": "SLOTTED_ALOHA",
@@ -116,6 +120,7 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
     assert len(control_plane.result.scenario.orbit_satellites) == 24
     assert control_plane.result.config.ground_user_count == 40
     assert control_plane.result.config.transport_protocol == "UDP"
+    assert control_plane.result.config.application_protocol == "MQTT"
     assert control_plane.result.config.routing_protocol == "DISTANCE_VECTOR"
     assert control_plane.result.config.datalink_mac_protocol == "SLOTTED_ALOHA"
     assert control_plane.result.config.carrier_frequency_hz == 22_000_000_000.0
@@ -128,6 +133,7 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
         "compute_scheduling_policy"
     ] == "SHORTEST_JOB_FIRST"
     assert control_plane.result.scenario.frontend_config["network"] == {
+        "application_protocol": "MQTT",
         "transport_protocol": "UDP",
         "routing_protocol": "DISTANCE_VECTOR",
         "datalink_mac_protocol": "SLOTTED_ALOHA",
@@ -139,6 +145,7 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
         "antenna_diameter_m": 0.55,
         "antenna_aperture_efficiency": 0.7,
     }
+    assert ack["generated_config"]["application_protocol"] == "MQTT"
     assert ack["generated_config"]["transport_protocol"] == "UDP"
     assert ack["generated_config"]["routing_protocol"] == "DISTANCE_VECTOR"
     assert ack["generated_config"]["datalink_mac_protocol"] == "SLOTTED_ALOHA"
@@ -189,6 +196,7 @@ def test_initialize_writes_config_and_start_gates_streams(tmp_path) -> None:
     assert generated_config["user_count"] == 40
     assert generated_config["compute_node_count"] == 2
     assert generated_config["seed"] == 1234
+    assert generated_config["application_protocol"] == "TASK_OFFLOAD_FLOW"
     assert generated_config["transport_protocol"] == "TCP"
     assert generated_config["routing_protocol"] == "LINK_STATE"
     assert generated_config["datalink_mac_protocol"] == "TDMA"

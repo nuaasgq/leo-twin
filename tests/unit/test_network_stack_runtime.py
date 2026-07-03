@@ -11,6 +11,7 @@ from leo_twin.models.network import (
 )
 from leo_twin.schema import (
     AntennaProfile,
+    ApplicationProtocol,
     ChannelProfile,
     DataLinkProtocol,
     FlowRequest,
@@ -44,6 +45,7 @@ def _route(available: bool = True) -> Route:
 
 def test_default_stack_contains_required_layers_and_protocols() -> None:
     stack = build_default_leo_protocol_stack(
+        application_protocol=ApplicationProtocol.HTTP,
         transport_protocol=TransportProtocol.UDP,
         routing_protocol=RoutingProtocol.LINK_STATE,
         data_link_protocol=DataLinkProtocol.CSMA_CA,
@@ -57,9 +59,26 @@ def test_default_stack_contains_required_layers_and_protocols() -> None:
         NetworkLayer.PHYSICAL,
         NetworkLayer.CHANNEL,
     )
+    assert stack.layers[0].protocol_name == "HTTP"
+    assert stack.layers[0].inputs == ("HttpRequest",)
     assert stack.layers[1].protocol_name == "UDP"
     assert stack.layers[2].protocol_name == "LINK_STATE"
     assert stack.layers[3].protocol_name == "CSMA_CA"
+
+
+def test_stack_runtime_records_application_profile_attributes() -> None:
+    runtime = NetworkStackRuntime(
+        build_default_leo_protocol_stack(application_protocol=ApplicationProtocol.MQTT)
+    )
+
+    trace = runtime.process_flow(_flow(), _route())
+    attributes = dict(trace.layers[0].attributes)
+
+    assert trace.application_protocol == "MQTT"
+    assert attributes["application"] == "MQTT"
+    assert attributes["application_profile"] == "publish_subscribe"
+    assert attributes["interaction_model"] == "brokered_message"
+    assert attributes["session_model"] == "persistent_topic"
 
 
 def test_stack_runtime_records_data_link_mac_profile_attributes() -> None:
@@ -87,6 +106,7 @@ def test_stack_runtime_is_deterministic_for_same_flow_and_route() -> None:
 
     assert first == second
     assert first.available is True
+    assert first.application_protocol == "TASK_OFFLOAD_FLOW"
     assert first.transport_protocol == "TCP"
     assert first.layers[2].status == "OK"
 

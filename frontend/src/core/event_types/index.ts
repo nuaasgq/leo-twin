@@ -105,6 +105,7 @@ export interface ScenarioConfig {
     compute_scheduling_policy?: string;
   };
   network?: {
+    application_protocol?: string;
     transport_protocol?: string;
     routing_protocol?: string;
     datalink_mac_protocol?: string;
@@ -187,6 +188,7 @@ export interface GeneratedScenarioConfig {
   demand_capacity: number;
   task_compute_demand: number;
   task_data_size: number;
+  application_protocol?: string;
   transport_protocol?: string;
   routing_protocol?: string;
   datalink_mac_protocol?: string;

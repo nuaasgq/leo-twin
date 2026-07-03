@@ -326,6 +326,10 @@ export function scenarioWithRuntimeConfig(
   const network = isRecord(runtimeConfig.network)
     ? {
         ...scenario.network,
+        application_protocol:
+          typeof runtimeConfig.network.application_protocol === "string"
+            ? runtimeConfig.network.application_protocol
+            : scenario.network?.application_protocol,
         transport_protocol:
           typeof runtimeConfig.network.transport_protocol === "string"
             ? runtimeConfig.network.transport_protocol
@@ -334,6 +338,10 @@ export function scenarioWithRuntimeConfig(
           typeof runtimeConfig.network.routing_protocol === "string"
             ? runtimeConfig.network.routing_protocol
             : scenario.network?.routing_protocol,
+        datalink_mac_protocol:
+          typeof runtimeConfig.network.datalink_mac_protocol === "string"
+            ? runtimeConfig.network.datalink_mac_protocol
+            : scenario.network?.datalink_mac_protocol,
         carrier_frequency_hz:
           typeof runtimeConfig.network.carrier_frequency_hz === "number"
             ? runtimeConfig.network.carrier_frequency_hz
@@ -475,6 +483,7 @@ function scenarioControlValues(
       metrics: visualization?.metrics ?? true
     },
     network: {
+      application_protocol: scenarioConfig?.network?.application_protocol ?? "TASK_OFFLOAD_FLOW",
       transport_protocol: scenarioConfig?.network?.transport_protocol ?? "TCP",
       routing_protocol: scenarioConfig?.network?.routing_protocol ?? "LINK_STATE",
       datalink_mac_protocol: scenarioConfig?.network?.datalink_mac_protocol ?? "TDMA",

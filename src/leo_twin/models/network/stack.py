@@ -9,6 +9,7 @@ from leo_twin.models.network.routing import RoutingCostProfile
 from leo_twin.models.network.transport import TransportProfile
 from leo_twin.schema import (
     AntennaProfile,
+    ApplicationProtocol,
     ChannelProfile,
     DataLinkProtocol,
     FlowRequest,
@@ -43,6 +44,7 @@ class NetworkStackTrace:
     flow_id: str
     stack_id: str
     route_id: str
+    application_protocol: str
     transport_protocol: str
     available: bool
     layers: tuple[LayerTrace, ...]
@@ -91,6 +93,7 @@ class NetworkStackRuntime:
             flow_id=request.flow_id,
             stack_id=self._stack.stack_id,
             route_id=route_id,
+            application_protocol=_application_protocol_name(self._stack),
             transport_protocol=_transport_protocol_name(self._stack),
             available=available,
             layers=tuple(traces),
@@ -107,7 +110,9 @@ class NetworkStackRuntime:
         status = "OK"
         if layer.layer == NetworkLayer.APPLICATION:
             output_ref = f"application:{request.flow_id}"
+            attributes += (("application", layer.protocol_name),)
             attributes += (("demand_capacity", f"{request.demand_capacity:.6f}"),)
+            attributes += _application_profile_attributes(layer.protocol_name)
         elif layer.layer == NetworkLayer.TRANSPORT:
             output_ref = f"transport:{request.flow_id}:{layer.protocol_name}"
             attributes += (("transport", layer.protocol_name),)
@@ -142,22 +147,26 @@ class NetworkStackRuntime:
 
 def build_default_leo_protocol_stack(
     stack_id: str = "leo-default-stack",
+    application_protocol: ApplicationProtocol = ApplicationProtocol.TASK_OFFLOAD_FLOW,
     transport_protocol: TransportProtocol = TransportProtocol.TCP,
     routing_protocol: RoutingProtocol = RoutingProtocol.LINK_STATE,
     data_link_protocol: DataLinkProtocol = DataLinkProtocol.TDMA,
 ) -> ProtocolStackContract:
     """Build the default full-system LEO network stack contract."""
 
+    if not isinstance(application_protocol, ApplicationProtocol):
+        application_protocol = ApplicationProtocol(str(application_protocol))
     if not isinstance(data_link_protocol, DataLinkProtocol):
         data_link_protocol = DataLinkProtocol(str(data_link_protocol))
+    application_inputs, application_outputs = _application_io(application_protocol)
     return ProtocolStackContract(
         stack_id=stack_id,
         layers=(
             ProtocolLayerContract(
                 layer=NetworkLayer.APPLICATION,
-                protocol_name="TASK_OFFLOAD_FLOW",
-                inputs=("TaskRequest",),
-                outputs=("FlowRequest",),
+                protocol_name=application_protocol.value,
+                inputs=application_inputs,
+                outputs=application_outputs,
             ),
             ProtocolLayerContract(
                 layer=NetworkLayer.TRANSPORT,
@@ -193,6 +202,13 @@ def build_default_leo_protocol_stack(
     )
 
 
+def _application_protocol_name(stack: ProtocolStackContract) -> str:
+    for layer in stack.layers:
+        if layer.layer == NetworkLayer.APPLICATION:
+            return layer.protocol_name
+    return "UNKNOWN"
+
+
 def _transport_protocol_name(stack: ProtocolStackContract) -> str:
     for layer in stack.layers:
         if layer.layer == NetworkLayer.TRANSPORT:
@@ -204,6 +220,44 @@ def _base_attributes(layer: ProtocolLayerContract) -> tuple[tuple[str, str], ...
     return layer.parameters + (
         ("input_schema", ",".join(layer.inputs)),
         ("output_schema", ",".join(layer.outputs)),
+    )
+
+
+def _application_io(
+    protocol: ApplicationProtocol,
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    if protocol == ApplicationProtocol.HTTP:
+        return ("HttpRequest",), ("FlowRequest",)
+    if protocol == ApplicationProtocol.MQTT:
+        return ("MqttMessage",), ("FlowRequest",)
+    if protocol == ApplicationProtocol.TELEMETRY:
+        return ("TelemetrySample",), ("FlowRequest",)
+    return ("TaskRequest",), ("FlowRequest",)
+
+
+def _application_profile_attributes(protocol_name: str) -> tuple[tuple[str, str], ...]:
+    if protocol_name == ApplicationProtocol.HTTP.value:
+        return (
+            ("application_profile", "web_request"),
+            ("interaction_model", "request_response"),
+            ("session_model", "stateless"),
+        )
+    if protocol_name == ApplicationProtocol.MQTT.value:
+        return (
+            ("application_profile", "publish_subscribe"),
+            ("interaction_model", "brokered_message"),
+            ("session_model", "persistent_topic"),
+        )
+    if protocol_name == ApplicationProtocol.TELEMETRY.value:
+        return (
+            ("application_profile", "telemetry_stream"),
+            ("interaction_model", "periodic_push"),
+            ("session_model", "stream"),
+        )
+    return (
+        ("application_profile", "task_offload"),
+        ("interaction_model", "request_response"),
+        ("session_model", "job_lifecycle"),
     )
 
 

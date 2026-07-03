@@ -21,7 +21,7 @@ from leo_twin.schema.config import (
     ScenarioConfig,
     TrafficModel,
 )
-from leo_twin.schema import RoutingProtocol, TransportProtocol
+from leo_twin.schema import ApplicationProtocol, RoutingProtocol, TransportProtocol
 
 
 def test_full_system_scenario_builder_generates_requested_counts() -> None:
@@ -170,6 +170,7 @@ def test_load_full_system_scenario_builder_config_from_json(tmp_path) -> None:
     assert config.space_link_capacity == 100.0
     assert config.space_link_cell_size_km == 0.0
     assert config.max_range_km == 2000.0
+    assert config.application_protocol == "TASK_OFFLOAD_FLOW"
     assert config.transport_protocol == "TCP"
     assert config.routing_protocol == "LINK_STATE"
     assert config.carrier_frequency_hz == 20_000_000_000.0
@@ -218,6 +219,7 @@ def test_scenario_builder_config_from_sees_config_maps_control_plane_fields() ->
         ),
         runtime=RuntimeConfig(seed=42, duration=300),
         network=NetworkProfile(
+            application_protocol=ApplicationProtocol.MQTT,
             transport_protocol=TransportProtocol.UDP,
             routing_protocol=RoutingProtocol.DISTANCE_VECTOR,
             carrier_frequency_hz=22_000_000_000.0,
@@ -243,6 +245,7 @@ def test_scenario_builder_config_from_sees_config_maps_control_plane_fields() ->
     assert generated.inclination_deg == 55.0
     assert generated.demand_capacity == 2.5
     assert generated.task_compute_demand == 15.0
+    assert generated.application_protocol == "MQTT"
     assert generated.transport_protocol == "UDP"
     assert generated.routing_protocol == "DISTANCE_VECTOR"
     assert generated.carrier_frequency_hz == 22_000_000_000.0

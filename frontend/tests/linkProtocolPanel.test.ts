@@ -8,6 +8,7 @@ describe("buildLinkProtocolSummary", () => {
       active_route_id: null,
       scenario_config: {
         network: {
+          application_protocol: "MQTT",
           transport_protocol: "UDP",
           routing_protocol: "DISTANCE_VECTOR",
           datalink_mac_protocol: "SLOTTED_ALOHA",
@@ -83,9 +84,11 @@ describe("buildLinkProtocolSummary", () => {
       bottleneckCapacity: 30,
       spaceLinks: 2,
       accessLinks: 1,
+      applicationProtocol: "MQTT",
       transportProtocol: "UDP",
       routingProtocol: "DISTANCE_VECTOR",
       dataLinkProtocol: "SLOTTED_ALOHA",
+      applicationProtocolLabel: "MQTT",
       transportProtocolLabel: "UDP 低时延",
       routingProtocolLabel: "距离向量",
       dataLinkProtocolLabel: "Slotted ALOHA",
@@ -156,9 +159,11 @@ describe("buildLinkProtocolSummary", () => {
     expect(summary.maxHopCount).toBe(1);
     expect(summary.gatewayRoutes).toBe(0);
     expect(summary.transportProtocol).toBe("TCP");
+    expect(summary.applicationProtocol).toBe("TASK_OFFLOAD_FLOW");
     expect(summary.routingProtocol).toBe("LINK_STATE");
     expect(summary.dataLinkProtocol).toBe("TDMA");
     expect(summary.transportProtocolLabel).toBe("TCP 可靠传输");
+    expect(summary.applicationProtocolLabel).toBe("任务卸载");
     expect(summary.routingProtocolLabel).toBe("链路状态");
     expect(summary.dataLinkProtocolLabel).toBe("TDMA");
     expect(summary.dataLinkMediumAccess).toBe("时分调度");

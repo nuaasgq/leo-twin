@@ -60,8 +60,10 @@ describe("scenarioWithRuntimeConfig", () => {
             compute_scheduling_policy: "EARLIEST_DEADLINE_FIRST"
           },
           network: {
+            application_protocol: "MQTT",
             transport_protocol: "UDP",
             routing_protocol: "DISTANCE_VECTOR",
+            datalink_mac_protocol: "CSMA_CA",
             carrier_frequency_hz: 22_000_000_000,
             channel_bandwidth_hz: 250_000_000,
             rain_rate_mm_h: 12,
@@ -85,8 +87,10 @@ describe("scenarioWithRuntimeConfig", () => {
         compute_scheduling_policy: "EARLIEST_DEADLINE_FIRST"
       },
       network: {
+        application_protocol: "MQTT",
         transport_protocol: "UDP",
         routing_protocol: "DISTANCE_VECTOR",
+        datalink_mac_protocol: "CSMA_CA",
         carrier_frequency_hz: 22_000_000_000,
         channel_bandwidth_hz: 250_000_000,
         rain_rate_mm_h: 12,

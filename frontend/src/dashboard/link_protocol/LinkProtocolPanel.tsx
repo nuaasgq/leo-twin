@@ -17,9 +17,11 @@ export interface LinkProtocolSummary {
   bottleneckCapacity: number;
   spaceLinks: number;
   accessLinks: number;
+  applicationProtocol: string;
   transportProtocol: string;
   routingProtocol: string;
   dataLinkProtocol: string;
+  applicationProtocolLabel: string;
   transportProtocolLabel: string;
   routingProtocolLabel: string;
   dataLinkProtocolLabel: string;
@@ -70,6 +72,7 @@ export const LinkProtocolPanel = memo(function LinkProtocolPanel({
         <KpiPanel label="平均跳数" value={summary.averageHopCount.toFixed(1)} />
         <KpiPanel label="最长跳数" value={String(summary.maxHopCount)} />
         <KpiPanel label="网关路由" value={String(summary.gatewayRoutes)} />
+        <KpiPanel label="应用协议" value={summary.applicationProtocolLabel} />
         <KpiPanel label="传输协议" value={summary.transportProtocolLabel} />
         <KpiPanel label="路由协议" value={summary.routingProtocolLabel} />
         <KpiPanel label="链路层MAC" value={summary.dataLinkProtocolLabel} />
@@ -125,6 +128,7 @@ export function buildLinkProtocolSummary(
       : Math.min(...activeLinks.map((link) => link.capacity));
   const linkClasses = classifyLinks(activeLinks);
   const network = snapshot.scenario_config?.network;
+  const applicationProtocol = network?.application_protocol ?? "TASK_OFFLOAD_FLOW";
   const transportProtocol = network?.transport_protocol ?? "TCP";
   const routingProtocol = network?.routing_protocol ?? "LINK_STATE";
   const dataLinkProtocol = network?.datalink_mac_protocol ?? "TDMA";
@@ -157,9 +161,11 @@ export function buildLinkProtocolSummary(
     bottleneckCapacity,
     spaceLinks: linkClasses.spaceLinks,
     accessLinks: linkClasses.accessLinks,
+    applicationProtocol,
     transportProtocol,
     routingProtocol,
     dataLinkProtocol,
+    applicationProtocolLabel: formatApplicationProtocol(applicationProtocol),
     transportProtocolLabel: formatTransportProtocol(transportProtocol),
     routingProtocolLabel: formatRoutingProtocol(routingProtocol),
     dataLinkProtocolLabel: dataLinkProfile.label,
@@ -217,6 +223,19 @@ function transportProfileFor(protocol: string): {
     efficiency: 0.92,
     handshakeRoundTrips: 1
   };
+}
+
+function formatApplicationProtocol(protocol: string): string {
+  if (protocol === "HTTP") {
+    return "HTTP";
+  }
+  if (protocol === "MQTT") {
+    return "MQTT";
+  }
+  if (protocol === "TELEMETRY") {
+    return "遥测流";
+  }
+  return "任务卸载";
 }
 
 function routingCostProfileFor(protocol: string): { label: string } {

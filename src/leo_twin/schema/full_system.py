@@ -27,6 +27,15 @@ class NetworkLayer(StrEnum):
     CHANNEL = "CHANNEL"
 
 
+class ApplicationProtocol(StrEnum):
+    """Application-layer flow profiles exposed to the network stack."""
+
+    TASK_OFFLOAD_FLOW = "TASK_OFFLOAD_FLOW"
+    HTTP = "HTTP"
+    MQTT = "MQTT"
+    TELEMETRY = "TELEMETRY"
+
+
 class TransportProtocol(StrEnum):
     """Transport protocol profiles required by the product roadmap."""
 

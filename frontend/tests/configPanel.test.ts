@@ -30,6 +30,7 @@ describe("generatedScenarioSummaryItems", () => {
       demand_capacity: 1,
       task_compute_demand: 20,
       task_data_size: 10,
+      application_protocol: "MQTT",
       transport_protocol: "UDP",
       routing_protocol: "DISTANCE_VECTOR",
       carrier_frequency_hz: 22_000_000_000,
@@ -47,6 +48,7 @@ describe("generatedScenarioSummaryItems", () => {
       { label: "调度策略", value: "短作业优先" },
       { label: "轨道面", value: "40" },
       { label: "随机种子", value: "1,234" },
+      { label: "应用协议", value: "MQTT" },
       { label: "传输协议", value: "UDP" },
       { label: "路由协议", value: "DISTANCE_VECTOR" },
       { label: "载波频率", value: "22 GHz" },
@@ -136,6 +138,7 @@ describe("networkControlPayload", () => {
   it("converts Chinese panel units into deterministic control-plane fields", () => {
     expect(
       networkControlPayload({
+        application_protocol: "MQTT",
         transport_protocol: "UDP",
         routing_protocol: "DISTANCE_VECTOR",
         datalink_mac_protocol: "SLOTTED_ALOHA",
@@ -148,6 +151,7 @@ describe("networkControlPayload", () => {
         antenna_aperture_efficiency: 0.72
       })
     ).toEqual({
+      application_protocol: "MQTT",
       transport_protocol: "UDP",
       routing_protocol: "DISTANCE_VECTOR",
       datalink_mac_protocol: "SLOTTED_ALOHA",

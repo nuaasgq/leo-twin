@@ -14,6 +14,7 @@ scenario:
   metric_sample_interval: 50
 
 network:
+  application_protocol: TASK_OFFLOAD_FLOW
   transport_protocol: TCP
   routing_protocol: LINK_STATE
   datalink_mac_protocol: TDMA

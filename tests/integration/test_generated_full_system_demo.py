@@ -26,6 +26,7 @@ def test_generated_full_system_demo_runs_domain_lifecycle() -> None:
     assert result.flow_count == 4
     assert result.active_link_count > 0
     assert len(result.network_stack_traces) == 4
+    assert result.network_stack_traces[0].application_protocol == "TASK_OFFLOAD_FLOW"
     assert result.network_stack_traces[0].transport_protocol == "TCP"
     assert len(result.scheduled_tasks) == 4
     assert result.metrics_summary["routes_available"] == 4
@@ -94,6 +95,7 @@ def test_generated_full_system_demo_records_configured_network_stack_trace() -> 
             min_elevation_deg=-90.0,
             max_range_km=30000.0,
             compute_capacity=20.0,
+            application_protocol="HTTP",
             transport_protocol="UDP",
             routing_protocol="DISTANCE_VECTOR",
             datalink_mac_protocol="CSMA_CA",
@@ -108,14 +110,18 @@ def test_generated_full_system_demo_records_configured_network_stack_trace() -> 
     channel_attributes = dict(trace.layers[5].attributes)
 
     assert layer_protocols == (
-        "TASK_OFFLOAD_FLOW",
+        "HTTP",
         "UDP",
         "DISTANCE_VECTOR",
         "CSMA_CA",
         "CONFIGURED_TERMINAL_PROFILE",
         "CONFIGURED_CHANNEL_PROFILE",
     )
+    application_attributes = dict(trace.layers[0].attributes)
     data_link_attributes = dict(trace.layers[3].attributes)
+    assert trace.application_protocol == "HTTP"
+    assert application_attributes["application_profile"] == "web_request"
+    assert application_attributes["interaction_model"] == "request_response"
     assert network_attributes["latency_weight"] == "0.000000"
     assert network_attributes["hop_weight"] == "1.000000"
     assert data_link_attributes["mac_profile"] == "CSMA_CA"

@@ -16,6 +16,7 @@
   "space_link_max_range_km": 0.0,
   "space_link_capacity": 100.0,
   "space_link_cell_size_km": 0.0,
+  "application_protocol": "TASK_OFFLOAD_FLOW",
   "compute_capacity": 20.0,
   "demand_capacity": 1.0,
   "task_compute_demand": 20.0,

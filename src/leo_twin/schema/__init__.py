@@ -17,6 +17,7 @@ from leo_twin.schema.events import (
 )
 from leo_twin.schema.full_system import (
     AntennaProfile,
+    ApplicationProtocol,
     ChannelProfile,
     CouplingContract,
     CouplingSignalType,
@@ -45,6 +46,7 @@ from leo_twin.schema.sim_event import SimEvent
 __all__ = [
     "AccessAssociation",
     "AntennaProfile",
+    "ApplicationProtocol",
     "ChannelProfile",
     "ComputeNodeState",
     "CouplingContract",

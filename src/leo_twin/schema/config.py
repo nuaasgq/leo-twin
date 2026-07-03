@@ -7,7 +7,12 @@ from enum import StrEnum
 from math import isfinite
 from typing import Any
 
-from leo_twin.schema.full_system import DataLinkProtocol, RoutingProtocol, TransportProtocol
+from leo_twin.schema.full_system import (
+    ApplicationProtocol,
+    DataLinkProtocol,
+    RoutingProtocol,
+    TransportProtocol,
+)
 
 
 class RuntimeMode(StrEnum):
@@ -62,6 +67,7 @@ class TrafficModel:
 class NetworkProfile:
     """Configuration-only network protocol profile."""
 
+    application_protocol: ApplicationProtocol = ApplicationProtocol.TASK_OFFLOAD_FLOW
     transport_protocol: TransportProtocol = TransportProtocol.TCP
     routing_protocol: RoutingProtocol = RoutingProtocol.LINK_STATE
     datalink_mac_protocol: DataLinkProtocol = DataLinkProtocol.TDMA
@@ -74,6 +80,12 @@ class NetworkProfile:
     antenna_aperture_efficiency: float = 0.65
 
     def __post_init__(self) -> None:
+        if not isinstance(self.application_protocol, ApplicationProtocol):
+            object.__setattr__(
+                self,
+                "application_protocol",
+                ApplicationProtocol(str(self.application_protocol)),
+            )
         if not isinstance(self.transport_protocol, TransportProtocol):
             object.__setattr__(
                 self,

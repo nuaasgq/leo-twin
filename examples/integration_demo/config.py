@@ -17,7 +17,12 @@ from leo_twin.core.config import (
     VisualizationToggles,
 )
 from leo_twin.schema.config import NetworkProfile
-from leo_twin.schema.full_system import DataLinkProtocol, RoutingProtocol, TransportProtocol
+from leo_twin.schema.full_system import (
+    ApplicationProtocol,
+    DataLinkProtocol,
+    RoutingProtocol,
+    TransportProtocol,
+)
 
 
 @dataclass(frozen=True)
@@ -41,6 +46,7 @@ class DemoConfig:
     scenario_config: str
     backend_host: str
     backend_port: int
+    application_protocol: str = "TASK_OFFLOAD_FLOW"
     transport_protocol: str = "TCP"
     routing_protocol: str = "LINK_STATE"
     datalink_mac_protocol: str = "TDMA"
@@ -92,6 +98,11 @@ def load_demo_config(path: str | Path = DEFAULT_CONFIG_PATH) -> DemoConfig:
         scenario_config=_str(frontend, "scenario_config"),
         backend_host=_str(frontend, "backend_host"),
         backend_port=_int(frontend, "backend_port"),
+        application_protocol=_optional_str(
+            network,
+            "application_protocol",
+            "TASK_OFFLOAD_FLOW",
+        ),
         transport_protocol=_optional_str(network, "transport_protocol", "TCP"),
         routing_protocol=_optional_str(network, "routing_protocol", "LINK_STATE"),
         datalink_mac_protocol=_optional_str(network, "datalink_mac_protocol", "TDMA"),
@@ -139,6 +150,7 @@ def demo_config_to_sees_config(config: DemoConfig) -> SEESConfig:
             ),
         ),
         network=NetworkProfile(
+            application_protocol=ApplicationProtocol(str(config.application_protocol)),
             transport_protocol=TransportProtocol(str(config.transport_protocol)),
             routing_protocol=RoutingProtocol(str(config.routing_protocol)),
             datalink_mac_protocol=DataLinkProtocol(str(config.datalink_mac_protocol)),
@@ -193,6 +205,7 @@ def demo_config_from_sees_config(
         scenario_config=base.scenario_config,
         backend_host=base.backend_host,
         backend_port=base.backend_port,
+        application_protocol=config.network.application_protocol.value,
         transport_protocol=config.network.transport_protocol.value,
         routing_protocol=config.network.routing_protocol.value,
         datalink_mac_protocol=config.network.datalink_mac_protocol.value,

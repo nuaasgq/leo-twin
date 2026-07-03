@@ -20,7 +20,12 @@ from leo_twin.schema.config import (
     VisualizationToggles,
     config_to_dict,
 )
-from leo_twin.schema.full_system import DataLinkProtocol, RoutingProtocol, TransportProtocol
+from leo_twin.schema.full_system import (
+    ApplicationProtocol,
+    DataLinkProtocol,
+    RoutingProtocol,
+    TransportProtocol,
+)
 
 
 class ConfigValidationError(ValueError):
@@ -60,6 +65,7 @@ _TRAFFIC_KEYS = frozenset(
 )
 _NETWORK_KEYS = frozenset(
     {
+        "application_protocol",
         "transport_protocol",
         "routing_protocol",
         "datalink_mac_protocol",
@@ -180,6 +186,9 @@ def _build_config(data: Mapping[str, Any]) -> SEESConfig:
                 traffic_model=TrafficModel(**dict(traffic)),
             ),
             network=NetworkProfile(
+                application_protocol=ApplicationProtocol(
+                    str(network["application_protocol"])
+                ),
                 transport_protocol=TransportProtocol(str(network["transport_protocol"])),
                 routing_protocol=RoutingProtocol(str(network["routing_protocol"])),
                 datalink_mac_protocol=DataLinkProtocol(
@@ -226,6 +235,7 @@ def _normalize_update(update: Mapping[str, Any]) -> dict[str, Any]:
         if key in direct:
             nested.setdefault("runtime", {})[key] = direct.pop(key)
     for key in (
+        "application_protocol",
         "transport_protocol",
         "routing_protocol",
         "datalink_mac_protocol",
@@ -358,6 +368,7 @@ def _ordered_keys(context: str, data: Mapping[str, Any]) -> tuple[str, ...]:
             "task_compute_demand",
         ),
         "network": (
+            "application_protocol",
             "transport_protocol",
             "routing_protocol",
             "datalink_mac_protocol",
