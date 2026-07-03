@@ -287,6 +287,7 @@ def scenario_builder_config_from_sees_config(
         satellite_count=config.scenario.satellite_count,
         user_count=config.scenario.user_count,
         compute_node_count=config.scenario.compute_nodes,
+        compute_capacity=config.scenario.compute_capacity,
         flow_count=max(
             1,
             config.runtime.duration

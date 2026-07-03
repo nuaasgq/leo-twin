@@ -57,6 +57,7 @@ describe("scenarioWithRuntimeConfig", () => {
         {},
         {
           scenario: {
+            compute_capacity: 18,
             compute_scheduling_policy: "EARLIEST_DEADLINE_FIRST",
             orbit: {
               update_interval_seconds: 30,
@@ -105,6 +106,7 @@ describe("scenarioWithRuntimeConfig", () => {
       )
     ).toEqual({
       scenario: {
+        compute_capacity: 18,
         compute_scheduling_policy: "EARLIEST_DEADLINE_FIRST",
         orbit: {
           update_interval_seconds: 30,

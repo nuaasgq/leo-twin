@@ -200,6 +200,7 @@ class ScenarioConfig:
     satellite_count: int = 72
     user_count: int = 1000
     compute_nodes: int = 10
+    compute_capacity: float = 10.0
     ground_station_count: int = 3
     cell_count: int = 100
     compute_scheduling_policy: ComputeSchedulingPolicyConfig = ComputeSchedulingPolicyConfig.FIFO
@@ -210,6 +211,7 @@ class ScenarioConfig:
         _require_positive_int(self.satellite_count, "scenario.satellite_count")
         _require_positive_int(self.user_count, "scenario.user_count")
         _require_positive_int(self.compute_nodes, "scenario.compute_nodes")
+        _require_positive_finite(self.compute_capacity, "scenario.compute_capacity")
         _require_non_negative_int(self.ground_station_count, "scenario.ground_station_count")
         _require_positive_int(self.cell_count, "scenario.cell_count")
         if not isinstance(self.compute_scheduling_policy, ComputeSchedulingPolicyConfig):

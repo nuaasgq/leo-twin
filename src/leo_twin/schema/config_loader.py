@@ -40,6 +40,7 @@ _SCENARIO_KEYS = frozenset(
         "satellite_count",
         "user_count",
         "compute_nodes",
+        "compute_capacity",
         "ground_station_count",
         "cell_count",
         "compute_scheduling_policy",
@@ -186,6 +187,7 @@ def _build_config(data: Mapping[str, Any]) -> SEESConfig:
                 satellite_count=scenario["satellite_count"],
                 user_count=scenario["user_count"],
                 compute_nodes=scenario["compute_nodes"],
+                compute_capacity=scenario["compute_capacity"],
                 ground_station_count=scenario["ground_station_count"],
                 cell_count=scenario["cell_count"],
                 compute_scheduling_policy=ComputeSchedulingPolicyConfig(
@@ -248,6 +250,7 @@ def _normalize_update(update: Mapping[str, Any]) -> dict[str, Any]:
         "satellite_count",
         "user_count",
         "compute_nodes",
+        "compute_capacity",
         "compute_scheduling_policy",
     ):
         if key in direct:
@@ -378,6 +381,7 @@ def _ordered_keys(context: str, data: Mapping[str, Any]) -> tuple[str, ...]:
             "satellite_count",
             "user_count",
             "compute_nodes",
+            "compute_capacity",
             "ground_station_count",
             "cell_count",
             "compute_scheduling_policy",

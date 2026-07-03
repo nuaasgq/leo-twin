@@ -114,6 +114,14 @@ def test_demo_flow_and_task_demands_are_config_driven() -> None:
     }
 
 
+def test_demo_compute_capacity_is_config_driven() -> None:
+    scenario = build_demo_scenario(_demo_config(compute_capacity=18.0))
+
+    assert scenario.compute_nodes[0].capacity == 18.0
+    assert scenario.compute_nodes[1].capacity == 20.5
+    assert scenario.frontend_config["scenario"]["compute_capacity"] == 18.0
+
+
 def _demo_config(**overrides: object) -> DemoConfig:
     values = dict(
         seed=1234,

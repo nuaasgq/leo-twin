@@ -122,6 +122,7 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
                     "satellite_count": 24,
                     "user_count": 40,
                     "compute_nodes": 3,
+                    "compute_capacity": 18.0,
                     "orbit": {
                         "update_interval_seconds": 30,
                         "plane_count": 6,
@@ -164,6 +165,8 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
     assert control_plane.result.config.satellite_count == 24
     assert len(control_plane.result.scenario.orbit_satellites) == 24
     assert control_plane.result.config.ground_user_count == 40
+    assert control_plane.result.config.compute_capacity == 18.0
+    assert control_plane.result.scenario.compute_nodes[0].capacity == 18.0
     assert control_plane.result.config.orbit_tick_seconds == 30
     assert control_plane.result.config.orbit_plane_count == 6
     assert control_plane.result.config.orbit_altitude_m == 600_000.0
@@ -194,6 +197,9 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
     assert control_plane.result.scenario.frontend_config["scenario"][
         "compute_scheduling_policy"
     ] == "SHORTEST_JOB_FIRST"
+    assert control_plane.result.scenario.frontend_config["scenario"][
+        "compute_capacity"
+    ] == 18.0
     assert control_plane.result.scenario.frontend_config["scenario"]["orbit"] == {
         "update_interval_seconds": 30,
         "plane_count": 6,
@@ -276,6 +282,7 @@ def test_initialize_writes_config_and_start_gates_streams(tmp_path) -> None:
                 "payload": {
                     "satellite_count": 24,
                     "user_count": 40,
+                    "compute_capacity": 18.0,
                     "orbit": {
                         "update_interval_seconds": 30,
                         "plane_count": 6,
@@ -300,6 +307,7 @@ def test_initialize_writes_config_and_start_gates_streams(tmp_path) -> None:
     assert init_ack["status"]["last_action"] == "INITIALIZE"
     assert init_ack["status"]["status"] == "STOPPED"
     assert "satellite_count: 24" in config_path.read_text(encoding="utf-8")
+    assert "compute_capacity: 18.0" in config_path.read_text(encoding="utf-8")
     assert "plane_count: 6" in config_path.read_text(encoding="utf-8")
     assert "altitude_m: 600000.0" in config_path.read_text(encoding="utf-8")
     assert "inclination_deg: 55.0" in config_path.read_text(encoding="utf-8")
@@ -310,6 +318,7 @@ def test_initialize_writes_config_and_start_gates_streams(tmp_path) -> None:
     generated_config = json.loads(generated_config_path.read_text(encoding="utf-8"))
     assert generated_config["satellite_count"] == 24
     assert generated_config["user_count"] == 40
+    assert generated_config["compute_capacity"] == 18.0
     assert generated_config["orbit_plane_count"] == 6
     assert generated_config["semi_major_axis_km"] == 6971.0
     assert generated_config["inclination_deg"] == 55.0

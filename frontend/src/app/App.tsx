@@ -317,6 +317,10 @@ export function scenarioWithRuntimeConfig(
   const scenarioSection = isRecord(runtimeConfig.scenario)
     ? {
         ...scenario.scenario,
+        compute_capacity:
+          typeof runtimeConfig.scenario.compute_capacity === "number"
+            ? runtimeConfig.scenario.compute_capacity
+            : scenario.scenario?.compute_capacity,
         compute_scheduling_policy:
           typeof runtimeConfig.scenario.compute_scheduling_policy === "string"
             ? runtimeConfig.scenario.compute_scheduling_policy
@@ -552,6 +556,7 @@ function scenarioControlValues(
     user_count:
       scenarioConfig?.scenario?.user_count ?? scenarioConfig?.ground_users?.length ?? 1000,
     compute_nodes: scenarioConfig?.scenario?.compute_nodes ?? 10,
+    compute_capacity: scenarioConfig?.scenario?.compute_capacity ?? 10,
     compute_scheduling_policy:
       scenarioConfig?.scenario?.compute_scheduling_policy ?? "FIFO",
     orbit: {

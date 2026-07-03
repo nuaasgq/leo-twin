@@ -11,6 +11,7 @@ export interface ScenarioControlValues {
   satellite_count: number;
   user_count: number;
   compute_nodes: number;
+  compute_capacity: number;
   compute_scheduling_policy: string;
   orbit: OrbitControlValues;
   traffic_model: TrafficControlValues;
@@ -99,6 +100,7 @@ export function ConfigPanel({
   const [satelliteCount, setSatelliteCount] = useState(scenario.satellite_count);
   const [userCount, setUserCount] = useState(scenario.user_count);
   const [computeNodes, setComputeNodes] = useState(scenario.compute_nodes);
+  const [computeCapacity, setComputeCapacity] = useState(scenario.compute_capacity);
   const [computeSchedulingPolicy, setComputeSchedulingPolicy] = useState(
     scenario.compute_scheduling_policy
   );
@@ -187,6 +189,7 @@ export function ConfigPanel({
     setSatelliteCount(scenario.satellite_count);
     setUserCount(scenario.user_count);
     setComputeNodes(scenario.compute_nodes);
+    setComputeCapacity(scenario.compute_capacity);
     setComputeSchedulingPolicy(scenario.compute_scheduling_policy);
     setOrbitUpdateIntervalSeconds(scenario.orbit.update_interval_seconds);
     setOrbitPlaneCount(scenario.orbit.plane_count);
@@ -224,6 +227,7 @@ export function ConfigPanel({
     scenario.satellite_count,
     scenario.user_count,
     scenario.compute_nodes,
+    scenario.compute_capacity,
     scenario.compute_scheduling_policy,
     scenario.orbit.update_interval_seconds,
     scenario.orbit.plane_count,
@@ -333,6 +337,20 @@ export function ConfigPanel({
           />
           <output>{computeNodes}</output>
         </div>
+      </div>
+
+      <div className="control-group">
+        <label className="control-label" htmlFor="compute-capacity">
+          基准算力
+        </label>
+        <input
+          id="compute-capacity"
+          type="number"
+          min="0.1"
+          step="0.1"
+          value={computeCapacity}
+          onChange={(event) => setComputeCapacity(Number(event.currentTarget.value))}
+        />
       </div>
 
       <div className="control-group">
@@ -927,6 +945,7 @@ export function ConfigPanel({
               satellite_count: satelliteCount,
               user_count: userCount,
               compute_nodes: computeNodes,
+              compute_capacity: computeCapacity,
               compute_scheduling_policy: computeSchedulingPolicy,
               mode: runtimeMode,
               speed_factor: speedFactor,

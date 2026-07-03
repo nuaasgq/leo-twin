@@ -4,6 +4,7 @@ scenario:
   ground_user_count: 1000
   ground_station_count: 3
   compute_node_count: 10
+  compute_capacity: 10.0
   duration_seconds: 600
   orbit_tick_seconds: 60
   orbit_plane_count: 12

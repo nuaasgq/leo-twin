@@ -102,6 +102,7 @@ export interface ScenarioConfig {
     satellite_count?: number;
     user_count?: number;
     compute_nodes?: number;
+    compute_capacity?: number;
     compute_scheduling_policy?: string;
     orbit?: {
       update_interval_seconds?: number;

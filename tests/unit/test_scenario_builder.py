@@ -213,6 +213,7 @@ def test_scenario_builder_config_from_sees_config_maps_control_plane_fields() ->
             satellite_count=24,
             user_count=40,
             compute_nodes=3,
+            compute_capacity=18.0,
             compute_scheduling_policy="EARLIEST_DEADLINE_FIRST",
             orbit=OrbitParameters(
                 plane_count=4,
@@ -254,6 +255,7 @@ def test_scenario_builder_config_from_sees_config_maps_control_plane_fields() ->
     assert generated.satellite_count == 24
     assert generated.user_count == 40
     assert generated.compute_node_count == 3
+    assert generated.compute_capacity == 18.0
     assert generated.flow_count == 10
     assert generated.compute_scheduling_policy == "EARLIEST_DEADLINE_FIRST"
     assert generated.orbit_plane_count == 4

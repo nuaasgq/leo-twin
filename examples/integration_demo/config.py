@@ -46,6 +46,7 @@ class DemoConfig:
     scenario_config: str
     backend_host: str
     backend_port: int
+    compute_capacity: float = 10.0
     orbit_plane_count: int = 12
     orbit_altitude_m: float = 529_000.0
     orbit_inclination_deg: float = 53.0
@@ -90,6 +91,7 @@ def load_demo_config(path: str | Path = DEFAULT_CONFIG_PATH) -> DemoConfig:
         ground_user_count=_int(scenario, "ground_user_count"),
         ground_station_count=_int(scenario, "ground_station_count"),
         compute_node_count=_int(scenario, "compute_node_count"),
+        compute_capacity=_optional_float(scenario, "compute_capacity", 10.0),
         compute_scheduling_policy=_optional_str(
             scenario,
             "compute_scheduling_policy",
@@ -176,6 +178,7 @@ def demo_config_to_sees_config(config: DemoConfig) -> SEESConfig:
             satellite_count=config.satellite_count,
             user_count=config.ground_user_count,
             compute_nodes=config.compute_node_count,
+            compute_capacity=config.compute_capacity,
             ground_station_count=config.ground_station_count,
             cell_count=config.cell_count,
             compute_scheduling_policy=config.compute_scheduling_policy,
@@ -244,6 +247,7 @@ def demo_config_from_sees_config(
         ground_user_count=config.scenario.user_count,
         ground_station_count=config.scenario.ground_station_count,
         compute_node_count=config.scenario.compute_nodes,
+        compute_capacity=config.scenario.compute_capacity,
         compute_scheduling_policy=config.scenario.compute_scheduling_policy.value,
         duration_seconds=config.runtime.duration,
         orbit_tick_seconds=config.scenario.orbit.update_interval_seconds,

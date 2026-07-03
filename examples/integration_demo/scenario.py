@@ -93,6 +93,7 @@ def build_demo_scenario(config: DemoConfig) -> DemoScenario:
                 "satellite_count": config.satellite_count,
                 "user_count": config.ground_user_count,
                 "compute_nodes": config.compute_node_count,
+                "compute_capacity": config.compute_capacity,
                 "compute_scheduling_policy": config.compute_scheduling_policy,
                 "orbit": {
                     "update_interval_seconds": config.orbit_tick_seconds,
@@ -299,7 +300,7 @@ def _compute_nodes(config: DemoConfig) -> tuple[ComputeNode, ...]:
     return tuple(
         ComputeNode(
             node_id=f"compute-{index:02d}",
-            capacity=10.0 + float(index % 5) * 2.5,
+            capacity=config.compute_capacity + float(index % 5) * 2.5,
         )
         for index in range(config.compute_node_count)
     )
