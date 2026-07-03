@@ -41,6 +41,8 @@ class LinkBudgetResult:
     noise_power_dbw: float
     snr_db: float
     capacity_mbps: float
+    transmit_pointing_loss_db: float = 0.0
+    receive_pointing_loss_db: float = 0.0
 
     def __post_init__(self) -> None:
         _require_positive_number(self.range_km, "range_km")
@@ -50,6 +52,14 @@ class LinkBudgetResult:
         _require_finite_number(self.noise_power_dbw, "noise_power_dbw")
         _require_finite_number(self.snr_db, "snr_db")
         _require_non_negative_number(self.capacity_mbps, "capacity_mbps")
+        _require_non_negative_number(
+            self.transmit_pointing_loss_db,
+            "transmit_pointing_loss_db",
+        )
+        _require_non_negative_number(
+            self.receive_pointing_loss_db,
+            "receive_pointing_loss_db",
+        )
 
 
 @dataclass(frozen=True)
@@ -68,16 +78,31 @@ class LinkBudgetCalculator:
         _require_non_negative_number(self.polarization_loss_db, "polarization_loss_db")
         _require_non_negative_number(self.implementation_loss_db, "implementation_loss_db")
 
-    def evaluate(self, range_km: float) -> LinkBudgetResult:
+    def evaluate(
+        self,
+        range_km: float,
+        transmit_off_boresight_deg: float = 0.0,
+        receive_off_boresight_deg: float = 0.0,
+    ) -> LinkBudgetResult:
         """Evaluate deterministic budget values for one path range."""
 
         _require_positive_number(range_km, "range_km")
+        transmit_pointing_loss_db = antenna_pointing_loss_db(
+            self.transmit_terminal.antenna,
+            transmit_off_boresight_deg,
+        )
+        receive_pointing_loss_db = antenna_pointing_loss_db(
+            self.receive_terminal.antenna,
+            receive_off_boresight_deg,
+        )
         path_loss_db = free_space_path_loss_db(range_km, self.channel.carrier_frequency_hz)
         received_power_dbw = (
             self.transmit_terminal.transmit_power_dbw
             + self.transmit_terminal.antenna.gain_dbi
             + self.receive_terminal.antenna.gain_dbi
             - path_loss_db
+            - transmit_pointing_loss_db
+            - receive_pointing_loss_db
             - self.transmit_terminal.system_loss_db
             - self.receive_terminal.system_loss_db
             - self.atmospheric_loss_db
@@ -100,6 +125,8 @@ class LinkBudgetCalculator:
             noise_power_dbw=noise_power_dbw,
             snr_db=snr_db,
             capacity_mbps=capacity_mbps,
+            transmit_pointing_loss_db=transmit_pointing_loss_db,
+            receive_pointing_loss_db=receive_pointing_loss_db,
         )
 
 
@@ -158,6 +185,25 @@ def free_space_path_loss_db(range_km: float, carrier_frequency_hz: float) -> flo
     return 92.45 + 20.0 * log10(range_km) + 20.0 * log10(carrier_frequency_ghz)
 
 
+def antenna_pointing_loss_db(
+    antenna: AntennaProfile,
+    off_boresight_angle_deg: float,
+    max_loss_db: float = 30.0,
+) -> float:
+    """Return deterministic antenna gain loss from off-boresight pointing angle."""
+
+    if not isinstance(antenna, AntennaProfile):
+        raise TypeError("antenna must be an AntennaProfile")
+    _require_pointing_angle(off_boresight_angle_deg, "off_boresight_angle_deg")
+    _require_non_negative_number(max_loss_db, "max_loss_db")
+    if off_boresight_angle_deg == 0.0 or max_loss_db == 0.0:
+        return 0.0
+    if antenna.beam_width_deg <= 0.0:
+        return max_loss_db
+    normalized_angle = (2.0 * off_boresight_angle_deg) / antenna.beam_width_deg
+    return min(max_loss_db, 3.0 * normalized_angle * normalized_angle)
+
+
 def thermal_noise_power_dbw(bandwidth_hz: float, noise_temperature_k: float) -> float:
     """Return thermal noise power in dBW."""
 
@@ -198,3 +244,9 @@ def _require_non_negative_number(value: Any, field_name: str) -> None:
     _require_finite_number(value, field_name)
     if value < 0:
         raise ValueError(f"{field_name} must be non-negative")
+
+
+def _require_pointing_angle(value: Any, field_name: str) -> None:
+    _require_finite_number(value, field_name)
+    if value < 0.0 or value > 180.0:
+        raise ValueError(f"{field_name} must be in [0, 180]")

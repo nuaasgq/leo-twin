@@ -235,7 +235,9 @@ def _physical_budget_attributes(
         return ()
     return (
         ("path_loss_db", f"{link_budget.path_loss_db:.6f}"),
+        ("receive_pointing_loss_db", f"{link_budget.receive_pointing_loss_db:.6f}"),
         ("received_power_dbw", f"{link_budget.received_power_dbw:.6f}"),
+        ("transmit_pointing_loss_db", f"{link_budget.transmit_pointing_loss_db:.6f}"),
     )
 
 

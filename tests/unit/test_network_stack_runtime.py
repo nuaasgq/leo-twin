@@ -104,7 +104,11 @@ def test_stack_runtime_records_link_physical_and_channel_profiles() -> None:
             transmit_power_dbw=0.0,
         ),
         channel=channel,
-    ).evaluate(1000.0)
+    ).evaluate(
+        1000.0,
+        transmit_off_boresight_deg=0.5,
+        receive_off_boresight_deg=0.5,
+    )
     runtime = NetworkStackRuntime(
         build_default_leo_protocol_stack(),
         antenna=antenna,
@@ -121,6 +125,8 @@ def test_stack_runtime_records_link_physical_and_channel_profiles() -> None:
     assert physical_attributes["antenna_id"] == "ANT-001"
     assert "path_loss_db" in physical_attributes
     assert "received_power_dbw" in physical_attributes
+    assert physical_attributes["transmit_pointing_loss_db"] == "0.480000"
+    assert physical_attributes["receive_pointing_loss_db"] == "0.480000"
     assert channel_attributes["medium"] == LinkMedium.SPACE_SPACE.value
     assert channel_attributes["range_km"] == "1000.000000"
     assert "snr_db" in channel_attributes

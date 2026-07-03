@@ -6,6 +6,7 @@ from leo_twin.models.network import (
     ChannelBudgetSelector,
     LinkBudgetCalculator,
     RadioTerminalProfile,
+    antenna_pointing_loss_db,
     free_space_path_loss_db,
     shannon_capacity_mbps,
     thermal_noise_power_dbw,
@@ -88,6 +89,34 @@ def test_link_budget_capacity_drops_with_lower_transmit_power() -> None:
 
     assert low_power.snr_db == pytest.approx(high_power.snr_db - 20.0)
     assert low_power.capacity_mbps < high_power.capacity_mbps
+
+
+def test_antenna_pointing_loss_uses_beam_width_and_is_bounded() -> None:
+    antenna = _antenna("narrow-ant", 32.0)
+
+    assert antenna_pointing_loss_db(antenna, 0.0) == 0.0
+    assert antenna_pointing_loss_db(antenna, 1.0) == pytest.approx(3.0)
+    assert antenna_pointing_loss_db(antenna, 20.0, max_loss_db=18.0) == 18.0
+
+    with pytest.raises(ValueError, match="off_boresight_angle_deg"):
+        antenna_pointing_loss_db(antenna, 181.0)
+
+
+def test_link_budget_calculator_applies_antenna_pointing_losses() -> None:
+    calculator = _calculator()
+
+    aligned = calculator.evaluate(629.0)
+    offset = calculator.evaluate(
+        629.0,
+        transmit_off_boresight_deg=1.0,
+        receive_off_boresight_deg=1.0,
+    )
+
+    assert offset.transmit_pointing_loss_db == pytest.approx(3.0)
+    assert offset.receive_pointing_loss_db == pytest.approx(3.0)
+    assert offset.received_power_dbw == pytest.approx(aligned.received_power_dbw - 6.0)
+    assert offset.snr_db == pytest.approx(aligned.snr_db - 6.0)
+    assert offset.capacity_mbps < aligned.capacity_mbps
 
 
 def test_channel_budget_selector_uses_medium_specific_calculator() -> None:
