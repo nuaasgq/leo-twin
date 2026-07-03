@@ -19,6 +19,7 @@ from leo_twin.services.metrics import MetricsCollector
 from leo_twin.services.scenario_builder import (
     FullSystemScenarioBuilderConfig,
     build_full_system_scenario,
+    load_full_system_scenario_builder_config,
 )
 
 
@@ -41,7 +42,9 @@ def run_generated_full_system_demo(
 ) -> GeneratedFullSystemDemoResult:
     """Build and run a deterministic generated full-system demo."""
 
-    scenario = build_full_system_scenario(config or _default_config())
+    scenario = build_full_system_scenario(
+        config or load_full_system_scenario_builder_config()
+    )
     kernel = SimulationKernel()
     orbit = KeplerianOrbitEngine(
         elements=scenario.orbit_elements,
@@ -120,20 +123,6 @@ def run_generated_full_system_demo(
         compute_node_count=len(scenario.compute_nodes),
         flow_count=len(scenario.flows),
         active_link_count=len(network.active_link_states()),
-    )
-
-
-def _default_config() -> FullSystemScenarioBuilderConfig:
-    return FullSystemScenarioBuilderConfig(
-        seed=20260704,
-        satellite_count=6,
-        user_count=12,
-        compute_node_count=3,
-        flow_count=6,
-        orbit_plane_count=3,
-        min_elevation_deg=-90.0,
-        max_range_km=30000.0,
-        compute_capacity=20.0,
     )
 
 

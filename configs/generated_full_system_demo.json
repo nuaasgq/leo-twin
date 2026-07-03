@@ -1,0 +1,19 @@
+{
+  "seed": 20260704,
+  "satellite_count": 6,
+  "user_count": 12,
+  "compute_node_count": 3,
+  "flow_count": 6,
+  "orbit_plane_count": 3,
+  "epoch": 0.0,
+  "semi_major_axis_km": 7000.0,
+  "eccentricity": 0.0,
+  "inclination_deg": 53.0,
+  "earth_radius_km": 6371.0,
+  "min_elevation_deg": -90.0,
+  "max_range_km": 30000.0,
+  "compute_capacity": 20.0,
+  "demand_capacity": 1.0,
+  "task_compute_demand": 20.0,
+  "task_data_size": 10.0
+}

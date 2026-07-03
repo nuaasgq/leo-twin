@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from leo_twin.services.scenario_builder import (
     FullSystemScenarioBuilderConfig,
     build_full_system_scenario,
+    load_full_system_scenario_builder_config,
+    scenario_builder_config_from_mapping,
 )
 
 
@@ -113,3 +117,45 @@ def test_full_system_scenario_builder_rejects_invalid_config() -> None:
 
     with pytest.raises(ValueError, match="flow_count"):
         FullSystemScenarioBuilderConfig(flow_count=-1)
+
+
+def test_scenario_builder_config_from_mapping_rejects_unknown_fields() -> None:
+    with pytest.raises(ValueError, match="unknown scenario builder fields"):
+        scenario_builder_config_from_mapping({"satellite_count": 4, "unexpected": 1})
+
+
+def test_load_full_system_scenario_builder_config_from_json(tmp_path) -> None:
+    config_path = tmp_path / "scenario.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "seed": 5,
+                "satellite_count": 4,
+                "user_count": 8,
+                "compute_node_count": 2,
+                "flow_count": 3,
+                "orbit_plane_count": 2,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_full_system_scenario_builder_config(config_path)
+
+    assert config.seed == 5
+    assert config.satellite_count == 4
+    assert config.user_count == 8
+    assert config.compute_node_count == 2
+    assert config.flow_count == 3
+    assert config.orbit_plane_count == 2
+    assert config.max_range_km == 2000.0
+
+
+def test_default_generated_scenario_config_file_loads() -> None:
+    config = load_full_system_scenario_builder_config()
+
+    assert config.satellite_count == 6
+    assert config.user_count == 12
+    assert config.compute_node_count == 3
+    assert config.flow_count == 6

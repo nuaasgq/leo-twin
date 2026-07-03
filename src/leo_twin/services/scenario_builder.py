@@ -2,11 +2,19 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import json
+from collections.abc import Mapping
+from dataclasses import dataclass, fields
 from math import ceil, cos, isfinite, radians, sin
+from pathlib import Path
 from typing import Any
 
 from leo_twin.schema import FlowRequest, OrbitalElementSet, TaskRequest
+
+
+DEFAULT_GENERATED_SCENARIO_CONFIG_PATH = (
+    Path(__file__).resolve().parents[3] / "configs" / "generated_full_system_demo.json"
+)
 
 
 @dataclass(frozen=True)
@@ -97,6 +105,29 @@ def build_full_system_scenario(
         flows=_flow_requests(config),
         tasks=_task_requests(config),
     )
+
+
+def load_full_system_scenario_builder_config(
+    path: str | Path = DEFAULT_GENERATED_SCENARIO_CONFIG_PATH,
+) -> FullSystemScenarioBuilderConfig:
+    """Load deterministic generated scenario config from a JSON file."""
+
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    return scenario_builder_config_from_mapping(data)
+
+
+def scenario_builder_config_from_mapping(
+    data: Mapping[str, Any],
+) -> FullSystemScenarioBuilderConfig:
+    """Build a scenario builder config from a mapping with strict field checks."""
+
+    if not isinstance(data, Mapping):
+        raise TypeError("scenario builder config must be a mapping")
+    allowed_fields = {field.name for field in fields(FullSystemScenarioBuilderConfig)}
+    unknown_fields = tuple(sorted(set(data) - allowed_fields))
+    if unknown_fields:
+        raise ValueError(f"unknown scenario builder fields: {', '.join(unknown_fields)}")
+    return FullSystemScenarioBuilderConfig(**dict(data))
 
 
 def _orbit_elements(
