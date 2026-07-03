@@ -12,6 +12,7 @@ from leo_twin.schema import EventType
 class PerformanceMode(StrEnum):
     """Named runtime modes used by stabilization controls."""
 
+    NORMAL = "NORMAL"
     FULL = "FULL"
     OPTIMIZED = "OPTIMIZED"
     SCALE = "SCALE"
@@ -33,6 +34,10 @@ class EventFlowPolicy:
     suppressed_event_types: tuple[str, ...] = ()
     max_events_per_window: int | None = None
     window_history_limit: int = 1024
+    partitioning_enabled: bool = False
+    compression_enabled: bool = False
+    frontend_batch_size: int = 200
+    snapshot_interval_events: int = 1000
 
     def __post_init__(self) -> None:
         if not isinstance(self.mode, PerformanceMode):
@@ -48,6 +53,11 @@ class EventFlowPolicy:
             "max_events_per_window",
         )
         _require_positive_int(self.window_history_limit, "window_history_limit")
+        _require_positive_int(self.frontend_batch_size, "frontend_batch_size")
+        _require_positive_int(
+            self.snapshot_interval_events,
+            "snapshot_interval_events",
+        )
         object.__setattr__(
             self,
             "suppressed_event_types",
@@ -57,7 +67,7 @@ class EventFlowPolicy:
     @classmethod
     def for_mode(cls, mode: PerformanceMode | str) -> "EventFlowPolicy":
         selected_mode = PerformanceMode(mode)
-        if selected_mode == PerformanceMode.FULL:
+        if selected_mode in {PerformanceMode.NORMAL, PerformanceMode.FULL}:
             return cls(mode=selected_mode)
         if selected_mode == PerformanceMode.OPTIMIZED:
             return cls(
@@ -66,6 +76,10 @@ class EventFlowPolicy:
                 time_window=1.0,
                 deduplicate=True,
                 suppressed_event_types=(EventType.METRIC_SAMPLE.value,),
+                partitioning_enabled=True,
+                compression_enabled=True,
+                frontend_batch_size=500,
+                snapshot_interval_events=1000,
             )
         return cls(
             mode=selected_mode,
@@ -76,6 +90,10 @@ class EventFlowPolicy:
             suppressed_event_types=(EventType.METRIC_SAMPLE.value,),
             max_events_per_window=10000,
             window_history_limit=4096,
+            partitioning_enabled=True,
+            compression_enabled=True,
+            frontend_batch_size=2000,
+            snapshot_interval_events=10000,
         )
 
 

@@ -21,12 +21,18 @@ class ScaleConfig:
     satellite_count: int
     user_count: int
     simulation_duration: float
+    compute_node_count: int = 1
     tick_interval: float = 1.0
     average_events_per_entity_per_tick: float = 0.1
     partition_count: int = 100
     indexed_topology: bool = True
     incremental_updates: bool = True
     queue_based_compute: bool = True
+    partitioned_execution: bool = True
+    compression_enabled: bool = True
+    frontend_batch_size: int = 1000
+    snapshot_interval_events: int = 10_000
+    max_queue_depth: int = 100_000
     max_event_count: int = 1_000_000
     max_memory_bytes: int = 512 * 1024 * 1024
     event_log_limit: int = 100_000
@@ -34,6 +40,7 @@ class ScaleConfig:
     def __post_init__(self) -> None:
         _require_positive_int(self.satellite_count, "satellite_count")
         _require_positive_int(self.user_count, "user_count")
+        _require_positive_int(self.compute_node_count, "compute_node_count")
         _require_positive_float(self.simulation_duration, "simulation_duration")
         _require_positive_float(self.tick_interval, "tick_interval")
         _require_non_negative_float(
@@ -41,6 +48,12 @@ class ScaleConfig:
             "average_events_per_entity_per_tick",
         )
         _require_positive_int(self.partition_count, "partition_count")
+        _require_positive_int(self.frontend_batch_size, "frontend_batch_size")
+        _require_positive_int(
+            self.snapshot_interval_events,
+            "snapshot_interval_events",
+        )
+        _require_positive_int(self.max_queue_depth, "max_queue_depth")
         _require_positive_int(self.max_event_count, "max_event_count")
         _require_positive_int(self.max_memory_bytes, "max_memory_bytes")
         _require_positive_int(self.event_log_limit, "event_log_limit")
@@ -54,6 +67,8 @@ class ScaleSafetyReport:
     estimated_events: int
     estimated_memory_bytes: int
     estimated_interactions_per_tick: int
+    estimated_queue_depth: int
+    estimated_computation_per_tick: int
     violations: tuple[str, ...]
     risks: tuple[str, ...]
 
@@ -73,6 +88,12 @@ class ScaleSafetyChecker:
         )
         interactions_per_tick = ceil(
             config.satellite_count * (config.user_count / config.partition_count)
+        )
+        computation_per_tick = interactions_per_tick + config.compute_node_count
+        queue_depth = ceil(
+            entities
+            * config.average_events_per_entity_per_tick
+            / max(1, config.partition_count)
         )
         bounded_log_events = min(estimated_events, config.event_log_limit)
         estimated_memory = (
@@ -97,9 +118,21 @@ class ScaleSafetyChecker:
             violations.append("scale runs require incremental update policy")
         if not config.queue_based_compute:
             violations.append("compute scheduling must be queue based")
+        if not config.partitioned_execution:
+            violations.append("scale runs require partitioned event execution")
+        if not config.compression_enabled:
+            violations.append("scale runs require semantic event compression")
+        if config.frontend_batch_size < 500:
+            violations.append("frontend websocket batch size is too small for scale runs")
+        if config.snapshot_interval_events < 1000:
+            violations.append("snapshot interval is too frequent for scale runs")
+        if queue_depth > config.max_queue_depth:
+            violations.append("estimated partition queue depth exceeds max_queue_depth")
 
         if interactions_per_tick > entities * 10:
             risks.append("module interaction density is high for one simulation tick")
+        if computation_per_tick > config.max_event_count:
+            risks.append("estimated computation per tick is near scale guard limits")
 
         patterns = self.detect_quadratic_patterns(source_paths)
         violations.extend(patterns)
@@ -108,6 +141,8 @@ class ScaleSafetyChecker:
             estimated_events=estimated_events,
             estimated_memory_bytes=estimated_memory,
             estimated_interactions_per_tick=interactions_per_tick,
+            estimated_queue_depth=queue_depth,
+            estimated_computation_per_tick=computation_per_tick,
             violations=tuple(sorted(violations)),
             risks=tuple(sorted(risks)),
         )
