@@ -5,7 +5,8 @@ from __future__ import annotations
 import argparse
 import base64
 import hashlib
-from http.server import BaseHTTPRequestHandler, HTTPServer
+import socket
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Callable
 
@@ -37,7 +38,7 @@ _FRONTEND_EVENT_TYPES = frozenset(
 
 def serve_demo(result: DemoRunResult, host: str, port: int) -> None:
     handler = _handler_for(result)
-    HTTPServer((host, port), handler).serve_forever()
+    ThreadingHTTPServer((host, port), handler).serve_forever()
 
 
 def write_replay_artifacts(result: DemoRunResult, output_dir: str | Path) -> dict[str, Path]:
@@ -129,13 +130,13 @@ def _handler_for(result: DemoRunResult) -> type[BaseHTTPRequestHandler]:
                 for event in result.processed_events:
                     if str(event.event_type) in _FRONTEND_EVENT_TYPES:
                         self._send_ws_json(event_to_json(event))
-                self._send_ws_close()
+                self._close_websocket()
                 return
             if path == result.config.websocket_state:
                 self._accept_websocket()
                 for snapshot in result.state_timeline:
                     self._send_ws_json(snapshot)
-                self._send_ws_close()
+                self._close_websocket()
                 return
             self.send_error(404, "websocket endpoint not found")
 
@@ -171,6 +172,14 @@ def _handler_for(result: DemoRunResult) -> type[BaseHTTPRequestHandler]:
 
         def _send_ws_close(self) -> None:
             _write_ws_frame(self.wfile.write, b"", opcode=0x8)
+
+        def _close_websocket(self) -> None:
+            self._send_ws_close()
+            self.close_connection = True
+            try:
+                self.connection.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
 
     return DemoRequestHandler
 

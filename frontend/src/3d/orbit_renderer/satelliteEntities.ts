@@ -26,10 +26,11 @@ export function upsertSatelliteEntity(
       id,
       name: satellite.satellite_id,
       point: {
-        pixelSize: 7,
+        pixelSize: 12,
         color: active ? Color.CYAN : Color.GRAY,
         outlineColor: Color.BLACK,
-        outlineWidth: 1
+        outlineWidth: 2,
+        disableDepthTestDistance: Number.POSITIVE_INFINITY
       },
       label: {
         text: satellite.satellite_id,
@@ -39,6 +40,7 @@ export function upsertSatelliteEntity(
         outlineWidth: 2,
         style: LabelStyle.FILL_AND_OUTLINE,
         verticalOrigin: VerticalOrigin.BOTTOM,
+        disableDepthTestDistance: Number.POSITIVE_INFINITY,
         pixelOffset: new Cartesian2(0, -12)
       }
     });

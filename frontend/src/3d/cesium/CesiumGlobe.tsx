@@ -1,10 +1,12 @@
 import {
   Cartesian2,
+  Cartesian3,
   Color,
   ConstantPositionProperty,
   Entity,
   EntityCollection,
   LabelStyle,
+  Math as CesiumMath,
   VerticalOrigin,
   Viewer
 } from "cesium";
@@ -41,6 +43,7 @@ export function CesiumGlobe({ state }: CesiumGlobeProps) {
   const userCache = useRef(new Map<string, Entity>());
   const linkCache = useRef(new Map<string, Entity>());
   const routeCache = useRef(new Map<string, Entity>());
+  const hasFocusedSatellites = useRef(false);
 
   useEffect(() => {
     if (!containerRef.current) {
@@ -52,6 +55,7 @@ export function CesiumGlobe({ state }: CesiumGlobeProps) {
       geocoder: false,
       homeButton: false,
       sceneModePicker: false,
+      baseLayer: false,
       baseLayerPicker: false,
       navigationHelpButton: false,
       fullscreenButton: false,
@@ -59,6 +63,10 @@ export function CesiumGlobe({ state }: CesiumGlobeProps) {
       selectionIndicator: false,
       shouldAnimate: false
     });
+    viewer.scene.backgroundColor = Color.BLACK;
+    viewer.scene.globe.baseColor = Color.fromCssColorString("#1d465f");
+    viewer.scene.globe.depthTestAgainstTerrain = false;
+    focusEarthOverview(viewer);
     viewerRef.current = viewer;
     schedulerRef.current = createFrameScheduler();
     return () => {
@@ -83,11 +91,26 @@ export function CesiumGlobe({ state }: CesiumGlobeProps) {
         links: linkCache.current,
         routes: routeCache.current
       });
+      if (!hasFocusedSatellites.current && satelliteCache.current.size > 0) {
+        hasFocusedSatellites.current = true;
+        focusEarthOverview(viewer);
+      }
       viewer.scene.requestRender();
     });
   }, [state]);
 
   return <div className="cesium-globe" ref={containerRef} />;
+}
+
+function focusEarthOverview(viewer: Viewer): void {
+  viewer.camera.setView({
+    destination: Cartesian3.fromDegrees(35, 18, 18_000_000),
+    orientation: {
+      heading: CesiumMath.toRadians(0),
+      pitch: CesiumMath.toRadians(-90),
+      roll: 0
+    }
+  });
 }
 
 interface RenderCaches {
@@ -155,6 +178,7 @@ function upsertGroundUserEntity(
 ): void {
   const id = `user:${user.user_id}`;
   const position = groundUserCartesian(user);
+  const isGroundStation = user.status?.toUpperCase() === "GROUND_STATION";
   if (!position) {
     const existing = cache.get(id);
     if (existing) {
@@ -170,21 +194,23 @@ function upsertGroundUserEntity(
       name: user.user_id,
       position,
       point: {
-        pixelSize: 6,
-        color: Color.ORANGE,
+        pixelSize: isGroundStation ? 6 : 3,
+        color: isGroundStation ? Color.ORANGE : Color.ORANGE.withAlpha(0.58),
         outlineColor: Color.BLACK,
         outlineWidth: 1
       },
-      label: {
-        text: user.user_id,
-        font: "11px sans-serif",
-        fillColor: Color.WHITE,
-        outlineColor: Color.BLACK,
-        outlineWidth: 2,
-        style: LabelStyle.FILL_AND_OUTLINE,
-        verticalOrigin: VerticalOrigin.TOP,
-        pixelOffset: new Cartesian2(0, 10)
-      }
+      label: isGroundStation
+        ? {
+            text: user.user_id,
+            font: "11px sans-serif",
+            fillColor: Color.WHITE,
+            outlineColor: Color.BLACK,
+            outlineWidth: 2,
+            style: LabelStyle.FILL_AND_OUTLINE,
+            verticalOrigin: VerticalOrigin.TOP,
+            pixelOffset: new Cartesian2(0, 10)
+          }
+        : undefined
     });
     cache.set(id, entity);
   }
