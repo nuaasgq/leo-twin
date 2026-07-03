@@ -6,6 +6,12 @@ describe("buildLinkProtocolSummary", () => {
   it("summarizes links and selects the lowest-latency route deterministically", () => {
     const summary = buildLinkProtocolSummary({
       active_route_id: null,
+      scenario_config: {
+        network: {
+          transport_protocol: "UDP",
+          routing_protocol: "DISTANCE_VECTOR"
+        }
+      },
       links: [
         {
           source_id: "sat-b",
@@ -66,6 +72,8 @@ describe("buildLinkProtocolSummary", () => {
       bottleneckCapacity: 30,
       spaceLinks: 2,
       accessLinks: 1,
+      transportProtocol: "UDP",
+      routingProtocol: "DISTANCE_VECTOR",
       rows: [
         {
           linkId: "sat-a -> sat-b",
@@ -92,6 +100,7 @@ describe("buildLinkProtocolSummary", () => {
   it("prefers the active route when it is available", () => {
     const summary = buildLinkProtocolSummary({
       active_route_id: "route-selected",
+      scenario_config: null,
       links: [],
       routes: [
         {
@@ -115,5 +124,7 @@ describe("buildLinkProtocolSummary", () => {
 
     expect(summary.bestRouteId).toBe("route-selected");
     expect(summary.bestPath).toBe("x -> y");
+    expect(summary.transportProtocol).toBe("TCP");
+    expect(summary.routingProtocol).toBe("LINK_STATE");
   });
 });

@@ -14,6 +14,8 @@ export interface LinkProtocolSummary {
   bottleneckCapacity: number;
   spaceLinks: number;
   accessLinks: number;
+  transportProtocol: string;
+  routingProtocol: string;
   rows: readonly LinkProtocolRow[];
 }
 
@@ -24,7 +26,10 @@ export interface LinkProtocolRow {
   status: string;
 }
 
-type LinkProtocolSnapshot = Pick<WorldSnapshot, "links" | "routes" | "active_route_id">;
+type LinkProtocolSnapshot = Pick<
+  WorldSnapshot,
+  "links" | "routes" | "active_route_id" | "scenario_config"
+>;
 
 export const LinkProtocolPanel = memo(function LinkProtocolPanel({
   snapshot
@@ -42,6 +47,8 @@ export const LinkProtocolPanel = memo(function LinkProtocolPanel({
         <KpiPanel label="最佳时延" value={`${summary.bestLatency.toFixed(3)} s`} />
         <KpiPanel label="瓶颈容量" value={`${summary.bottleneckCapacity.toFixed(1)} Mbps`} />
         <KpiPanel label="路径跳数" value={String(summary.bestHopCount)} />
+        <KpiPanel label="传输协议" value={summary.transportProtocol} />
+        <KpiPanel label="路由协议" value={summary.routingProtocol} />
         <KpiPanel label="星间链路" value={String(summary.spaceLinks)} />
         <KpiPanel label="接入链路" value={String(summary.accessLinks)} />
       </div>
@@ -85,6 +92,8 @@ export function buildLinkProtocolSummary(
     bottleneckCapacity,
     spaceLinks: linkClasses.spaceLinks,
     accessLinks: linkClasses.accessLinks,
+    transportProtocol: snapshot.scenario_config?.network?.transport_protocol ?? "TCP",
+    routingProtocol: snapshot.scenario_config?.network?.routing_protocol ?? "LINK_STATE",
     rows: activeLinks
       .slice()
       .sort(compareLinks)
