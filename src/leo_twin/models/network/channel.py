@@ -43,6 +43,7 @@ class LinkBudgetResult:
     capacity_mbps: float
     transmit_pointing_loss_db: float = 0.0
     receive_pointing_loss_db: float = 0.0
+    rain_fade_loss_db: float = 0.0
 
     def __post_init__(self) -> None:
         _require_positive_number(self.range_km, "range_km")
@@ -60,6 +61,33 @@ class LinkBudgetResult:
             self.receive_pointing_loss_db,
             "receive_pointing_loss_db",
         )
+        _require_non_negative_number(self.rain_fade_loss_db, "rain_fade_loss_db")
+
+
+@dataclass(frozen=True)
+class RainFadeProfile:
+    """Configuration-only deterministic rain attenuation profile."""
+
+    rain_rate_mm_h: float
+    attenuation_coefficient_db_per_km_per_mm_h: float
+    effective_path_km: float
+
+    def __post_init__(self) -> None:
+        _require_non_negative_number(self.rain_rate_mm_h, "rain_rate_mm_h")
+        _require_non_negative_number(
+            self.attenuation_coefficient_db_per_km_per_mm_h,
+            "attenuation_coefficient_db_per_km_per_mm_h",
+        )
+        _require_non_negative_number(self.effective_path_km, "effective_path_km")
+
+    def loss_db(self) -> float:
+        """Return deterministic rain fade loss in dB."""
+
+        return (
+            self.rain_rate_mm_h
+            * self.attenuation_coefficient_db_per_km_per_mm_h
+            * self.effective_path_km
+        )
 
 
 @dataclass(frozen=True)
@@ -72,11 +100,17 @@ class LinkBudgetCalculator:
     atmospheric_loss_db: float = 0.0
     polarization_loss_db: float = 0.0
     implementation_loss_db: float = 0.0
+    rain_fade_profile: RainFadeProfile | None = None
 
     def __post_init__(self) -> None:
         _require_non_negative_number(self.atmospheric_loss_db, "atmospheric_loss_db")
         _require_non_negative_number(self.polarization_loss_db, "polarization_loss_db")
         _require_non_negative_number(self.implementation_loss_db, "implementation_loss_db")
+        if self.rain_fade_profile is not None and not isinstance(
+            self.rain_fade_profile,
+            RainFadeProfile,
+        ):
+            raise TypeError("rain_fade_profile must be a RainFadeProfile")
 
     def evaluate(
         self,
@@ -96,6 +130,9 @@ class LinkBudgetCalculator:
             receive_off_boresight_deg,
         )
         path_loss_db = free_space_path_loss_db(range_km, self.channel.carrier_frequency_hz)
+        rain_fade_loss_db = (
+            0.0 if self.rain_fade_profile is None else self.rain_fade_profile.loss_db()
+        )
         received_power_dbw = (
             self.transmit_terminal.transmit_power_dbw
             + self.transmit_terminal.antenna.gain_dbi
@@ -106,6 +143,7 @@ class LinkBudgetCalculator:
             - self.transmit_terminal.system_loss_db
             - self.receive_terminal.system_loss_db
             - self.atmospheric_loss_db
+            - rain_fade_loss_db
             - self.polarization_loss_db
         )
         noise_power_dbw = thermal_noise_power_dbw(
@@ -127,6 +165,7 @@ class LinkBudgetCalculator:
             capacity_mbps=capacity_mbps,
             transmit_pointing_loss_db=transmit_pointing_loss_db,
             receive_pointing_loss_db=receive_pointing_loss_db,
+            rain_fade_loss_db=rain_fade_loss_db,
         )
 
 

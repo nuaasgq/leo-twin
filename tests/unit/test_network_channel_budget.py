@@ -5,6 +5,7 @@ import pytest
 from leo_twin.models.network import (
     ChannelBudgetSelector,
     LinkBudgetCalculator,
+    RainFadeProfile,
     RadioTerminalProfile,
     antenna_pointing_loss_db,
     free_space_path_loss_db,
@@ -117,6 +118,33 @@ def test_link_budget_calculator_applies_antenna_pointing_losses() -> None:
     assert offset.received_power_dbw == pytest.approx(aligned.received_power_dbw - 6.0)
     assert offset.snr_db == pytest.approx(aligned.snr_db - 6.0)
     assert offset.capacity_mbps < aligned.capacity_mbps
+
+
+def test_link_budget_calculator_applies_rain_fade_profile() -> None:
+    clear_sky = _calculator()
+    rainy = LinkBudgetCalculator(
+        transmit_terminal=clear_sky.transmit_terminal,
+        receive_terminal=clear_sky.receive_terminal,
+        channel=clear_sky.channel,
+        atmospheric_loss_db=clear_sky.atmospheric_loss_db,
+        polarization_loss_db=clear_sky.polarization_loss_db,
+        implementation_loss_db=clear_sky.implementation_loss_db,
+        rain_fade_profile=RainFadeProfile(
+            rain_rate_mm_h=20.0,
+            attenuation_coefficient_db_per_km_per_mm_h=0.015,
+            effective_path_km=4.0,
+        ),
+    )
+
+    clear_result = clear_sky.evaluate(629.0)
+    rainy_result = rainy.evaluate(629.0)
+
+    assert rainy_result.rain_fade_loss_db == pytest.approx(1.2)
+    assert rainy_result.received_power_dbw == pytest.approx(
+        clear_result.received_power_dbw - 1.2
+    )
+    assert rainy_result.snr_db == pytest.approx(clear_result.snr_db - 1.2)
+    assert rainy_result.capacity_mbps < clear_result.capacity_mbps
 
 
 def test_channel_budget_selector_uses_medium_specific_calculator() -> None:
