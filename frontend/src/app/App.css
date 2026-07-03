@@ -387,7 +387,7 @@ body {
 
 .dashboard {
   display: grid;
-  grid-template-rows: repeat(5, minmax(206px, auto));
+  grid-template-rows: repeat(6, minmax(206px, auto));
   min-width: 0;
   min-height: 0;
   overflow: auto;
@@ -460,6 +460,60 @@ body {
 
 .chart-strip.compact {
   height: 112px;
+}
+
+.route-strip {
+  display: grid;
+  gap: 5px;
+  margin-top: 12px;
+  border: 1px solid #30383b;
+  border-radius: 6px;
+  padding: 9px 10px;
+  background: #121517;
+}
+
+.route-strip span {
+  color: #aeb9bd;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.route-strip strong {
+  overflow-wrap: anywhere;
+  color: #f3f7f8;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.link-table {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.link-table-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(74px, 0.6fr) minmax(92px, 0.8fr) 54px;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid #2a3134;
+  padding: 6px 0;
+  color: #c9d2d5;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.link-table-row span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.link-table-row strong {
+  color: #9bffcb;
+  font-size: 11px;
+  text-align: right;
 }
 
 .recharts-cartesian-axis-tick text,
