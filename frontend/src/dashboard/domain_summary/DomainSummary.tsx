@@ -11,6 +11,7 @@ export interface DomainSummaryValues {
   runningTasks: number;
   finishedTasks: number;
   computeNodes: number;
+  couplingHealth: number;
 }
 
 type DomainSummarySnapshot = Pick<
@@ -34,7 +35,9 @@ export const DomainSummary = memo(function DomainSummary({
         <KpiPanel label="路由时延" value={`${summary.routeLatency.toFixed(3)} s`} />
         <KpiPanel label="路由容量" value={`${summary.routeCapacity.toFixed(1)} Mbps`} />
         <KpiPanel label="运行任务" value={String(summary.runningTasks)} />
+        <KpiPanel label="完成任务" value={String(summary.finishedTasks)} />
         <KpiPanel label="算力节点" value={String(summary.computeNodes)} />
+        <KpiPanel label="耦合健康" value={`${summary.couplingHealth}%`} />
       </div>
     </section>
   );
@@ -65,6 +68,28 @@ export function buildDomainSummary(snapshot: DomainSummarySnapshot): DomainSumma
     routeCapacity: bestRoute?.capacity ?? 0,
     runningTasks,
     finishedTasks,
-    computeNodes: snapshot.compute_nodes.length
+    computeNodes: snapshot.compute_nodes.length,
+    couplingHealth: couplingHealthScore({
+      hasLinks: activeLinks > 0,
+      hasRoutes: availableRoutes.length > 0,
+      hasCapacity: (bestRoute?.capacity ?? 0) > 0,
+      hasCompute: snapshot.compute_nodes.length > 0
+    })
   };
+}
+
+function couplingHealthScore(signals: {
+  hasLinks: boolean;
+  hasRoutes: boolean;
+  hasCapacity: boolean;
+  hasCompute: boolean;
+}): number {
+  const values = [
+    signals.hasLinks,
+    signals.hasRoutes,
+    signals.hasCapacity,
+    signals.hasCompute
+  ];
+  const active = values.filter(Boolean).length;
+  return Math.round((active / values.length) * 100);
 }

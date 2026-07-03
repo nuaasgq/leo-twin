@@ -64,7 +64,26 @@ describe("buildDomainSummary", () => {
       routeCapacity: 40,
       runningTasks: 1,
       finishedTasks: 2,
-      computeNodes: 1
+      computeNodes: 1,
+      couplingHealth: 100
     });
+  });
+
+  it("reports partial coupling health when routes are not available", () => {
+    const summary = buildDomainSummary({
+      links: [],
+      routes: [],
+      active_tasks: [],
+      compute_nodes: [
+        {
+          node_id: "node-a",
+          running_tasks: 0,
+          finished_tasks: 0
+        }
+      ]
+    });
+
+    expect(summary.couplingHealth).toBe(25);
+    expect(summary.availableRoutes).toBe(0);
   });
 });
