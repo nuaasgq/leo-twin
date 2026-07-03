@@ -30,6 +30,9 @@ def test_config_loads_correctly() -> None:
     assert config.network.routing_hop_weight == 0.0
     assert config.network.antenna_diameter_m == 0.45
     assert config.network.antenna_aperture_efficiency == 0.65
+    assert config.network.transmit_power_dbw == 20.0
+    assert config.network.system_loss_db == 1.0
+    assert config.network.noise_temperature_k == 290.0
     assert config.ui.visualization.satellites is True
 
 
@@ -62,6 +65,9 @@ def test_network_protocol_profile_can_be_updated_directly() -> None:
             "rain_effective_path_km": 4.0,
             "antenna_diameter_m": 0.55,
             "antenna_aperture_efficiency": 0.7,
+            "transmit_power_dbw": 23.0,
+            "system_loss_db": 1.5,
+            "noise_temperature_k": 310.0,
             "compute_scheduling_policy": "SHORTEST_JOB_FIRST",
         }
     )
@@ -79,6 +85,9 @@ def test_network_protocol_profile_can_be_updated_directly() -> None:
     assert controller.config.network.rain_rate_mm_h == 12.5
     assert controller.config.network.antenna_diameter_m == 0.55
     assert controller.config.network.antenna_aperture_efficiency == 0.7
+    assert controller.config.network.transmit_power_dbw == 23.0
+    assert controller.config.network.system_loss_db == 1.5
+    assert controller.config.network.noise_temperature_k == 310.0
     assert controller.config.scenario.compute_scheduling_policy == "SHORTEST_JOB_FIRST"
 
 
@@ -121,6 +130,9 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
                     "rain_effective_path_km": 4.0,
                     "antenna_diameter_m": 0.55,
                     "antenna_aperture_efficiency": 0.7,
+                    "transmit_power_dbw": 23.0,
+                    "system_loss_db": 1.5,
+                    "noise_temperature_k": 310.0,
                     "compute_scheduling_policy": "SHORTEST_JOB_FIRST",
                 },
             }
@@ -143,6 +155,9 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
     assert control_plane.result.config.rain_rate_mm_h == 12.5
     assert control_plane.result.config.antenna_diameter_m == 0.55
     assert control_plane.result.config.antenna_aperture_efficiency == 0.7
+    assert control_plane.result.config.transmit_power_dbw == 23.0
+    assert control_plane.result.config.system_loss_db == 1.5
+    assert control_plane.result.config.noise_temperature_k == 310.0
     assert control_plane.result.config.compute_scheduling_policy == "SHORTEST_JOB_FIRST"
     assert control_plane.result.scenario.frontend_config["scenario"][
         "compute_scheduling_policy"
@@ -162,6 +177,9 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
         "rain_effective_path_km": 4.0,
         "antenna_diameter_m": 0.55,
         "antenna_aperture_efficiency": 0.7,
+        "transmit_power_dbw": 23.0,
+        "system_loss_db": 1.5,
+        "noise_temperature_k": 310.0,
     }
     assert ack["generated_config"]["application_protocol"] == "MQTT"
     assert ack["generated_config"]["transport_protocol"] == "UDP"
@@ -173,6 +191,9 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
     assert ack["generated_config"]["carrier_frequency_hz"] == 22_000_000_000.0
     assert ack["generated_config"]["antenna_diameter_m"] == 0.55
     assert ack["generated_config"]["antenna_aperture_efficiency"] == 0.7
+    assert ack["generated_config"]["transmit_power_dbw"] == 23.0
+    assert ack["generated_config"]["system_loss_db"] == 1.5
+    assert ack["generated_config"]["noise_temperature_k"] == 310.0
     assert ack["generated_config"]["compute_scheduling_policy"] == "SHORTEST_JOB_FIRST"
 
     runtime_ack = control_plane.handle_raw_message(
@@ -224,6 +245,9 @@ def test_initialize_writes_config_and_start_gates_streams(tmp_path) -> None:
     assert generated_config["routing_latency_weight"] == 1.0
     assert generated_config["routing_inverse_capacity_weight"] == 0.0
     assert generated_config["routing_hop_weight"] == 0.0
+    assert generated_config["transmit_power_dbw"] == 20.0
+    assert generated_config["system_loss_db"] == 1.0
+    assert generated_config["noise_temperature_k"] == 290.0
     assert generated_config["compute_scheduling_policy"] == "FIFO"
     assert init_ack["generated_config"]["satellite_count"] == 24
     assert init_ack["generated_config"]["user_count"] == 40

@@ -38,6 +38,9 @@ export interface NetworkControlValues {
   rain_effective_path_km: number;
   antenna_diameter_m: number;
   antenna_aperture_efficiency: number;
+  transmit_power_dbw: number;
+  system_loss_db: number;
+  noise_temperature_k: number;
 }
 
 export interface ConfigPanelProps {
@@ -120,6 +123,13 @@ export function ConfigPanel({
   const [antennaApertureEfficiency, setAntennaApertureEfficiency] = useState(
     scenario.network.antenna_aperture_efficiency
   );
+  const [transmitPowerDbw, setTransmitPowerDbw] = useState(
+    scenario.network.transmit_power_dbw
+  );
+  const [systemLossDb, setSystemLossDb] = useState(scenario.network.system_loss_db);
+  const [noiseTemperatureK, setNoiseTemperatureK] = useState(
+    scenario.network.noise_temperature_k
+  );
   const [runtimeMode, setRuntimeMode] = useState<Exclude<RuntimeMode, "PAUSED">>(
     runtime.mode === "ACCELERATED" ? "ACCELERATED" : "REAL_TIME"
   );
@@ -150,6 +160,9 @@ export function ConfigPanel({
     setRainPathKm(scenario.network.rain_effective_path_km);
     setAntennaDiameterM(scenario.network.antenna_diameter_m);
     setAntennaApertureEfficiency(scenario.network.antenna_aperture_efficiency);
+    setTransmitPowerDbw(scenario.network.transmit_power_dbw);
+    setSystemLossDb(scenario.network.system_loss_db);
+    setNoiseTemperatureK(scenario.network.noise_temperature_k);
   }, [
     scenario.satellite_count,
     scenario.user_count,
@@ -172,7 +185,10 @@ export function ConfigPanel({
     scenario.network.rain_attenuation_coefficient_db_per_km_per_mm_h,
     scenario.network.rain_effective_path_km,
     scenario.network.antenna_diameter_m,
-    scenario.network.antenna_aperture_efficiency
+    scenario.network.antenna_aperture_efficiency,
+    scenario.network.transmit_power_dbw,
+    scenario.network.system_loss_db,
+    scenario.network.noise_temperature_k
   ]);
 
   useEffect(() => {
@@ -593,6 +609,56 @@ export function ConfigPanel({
             <span>η</span>
           </div>
         </div>
+
+        <div className="control-group">
+          <label className="control-label" htmlFor="transmit-power">
+            发射功率
+          </label>
+          <div className="unit-input">
+            <input
+              id="transmit-power"
+              type="number"
+              step="0.5"
+              value={transmitPowerDbw}
+              onChange={(event) => setTransmitPowerDbw(Number(event.currentTarget.value))}
+            />
+            <span>dBW</span>
+          </div>
+        </div>
+
+        <div className="control-group">
+          <label className="control-label" htmlFor="system-loss">
+            系统损耗
+          </label>
+          <div className="unit-input">
+            <input
+              id="system-loss"
+              type="number"
+              min="0"
+              step="0.1"
+              value={systemLossDb}
+              onChange={(event) => setSystemLossDb(Number(event.currentTarget.value))}
+            />
+            <span>dB</span>
+          </div>
+        </div>
+
+        <div className="control-group">
+          <label className="control-label" htmlFor="noise-temperature">
+            噪声温度
+          </label>
+          <div className="unit-input">
+            <input
+              id="noise-temperature"
+              type="number"
+              min="1"
+              step="1"
+              value={noiseTemperatureK}
+              onChange={(event) => setNoiseTemperatureK(Number(event.currentTarget.value))}
+            />
+            <span>K</span>
+          </div>
+        </div>
       </div>
 
       <div className="runtime-actions" aria-label="仿真运行控制">
@@ -628,7 +694,10 @@ export function ConfigPanel({
                 rain_attenuation_coefficient_db_per_km_per_mm_h: rainCoefficient,
                 rain_effective_path_km: rainPathKm,
                 antenna_diameter_m: antennaDiameterM,
-                antenna_aperture_efficiency: antennaApertureEfficiency
+                antenna_aperture_efficiency: antennaApertureEfficiency,
+                transmit_power_dbw: transmitPowerDbw,
+                system_loss_db: systemLossDb,
+                noise_temperature_k: noiseTemperatureK
               })
             })
           }
@@ -708,6 +777,9 @@ export function generatedScenarioSummaryItems(
     { label: "雨强", value: formatRainRate(config.rain_rate_mm_h) },
     { label: "天线口径", value: formatMeters(config.antenna_diameter_m) },
     { label: "孔径效率", value: formatEfficiency(config.antenna_aperture_efficiency) },
+    { label: "发射功率", value: formatDbw(config.transmit_power_dbw) },
+    { label: "系统损耗", value: formatDb(config.system_loss_db) },
+    { label: "噪声温度", value: formatKelvin(config.noise_temperature_k) },
     {
       label: "轨道高度",
       value: `${formatInteger(config.semi_major_axis_km - config.earth_radius_km)} km`
@@ -779,7 +851,10 @@ export function networkControlPayload(network: NetworkControlValues): Record<str
       network.rain_attenuation_coefficient_db_per_km_per_mm_h,
     rain_effective_path_km: network.rain_effective_path_km,
     antenna_diameter_m: network.antenna_diameter_m,
-    antenna_aperture_efficiency: network.antenna_aperture_efficiency
+    antenna_aperture_efficiency: network.antenna_aperture_efficiency,
+    transmit_power_dbw: network.transmit_power_dbw,
+    system_loss_db: network.system_loss_db,
+    noise_temperature_k: network.noise_temperature_k
   };
 }
 
@@ -877,6 +952,27 @@ function formatEfficiency(value: number | undefined): string {
     return "0.65";
   }
   return formatDecimal(value);
+}
+
+function formatDbw(value: number | undefined): string {
+  if (value === undefined) {
+    return "20 dBW";
+  }
+  return `${formatDecimal(value)} dBW`;
+}
+
+function formatDb(value: number | undefined): string {
+  if (value === undefined) {
+    return "1 dB";
+  }
+  return `${formatDecimal(value)} dB`;
+}
+
+function formatKelvin(value: number | undefined): string {
+  if (value === undefined) {
+    return "290 K";
+  }
+  return `${formatDecimal(value)} K`;
 }
 
 function runtimeStatusLabel(runtime: RuntimeStatusPayload): string {

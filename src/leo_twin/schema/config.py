@@ -81,6 +81,9 @@ class NetworkProfile:
     rain_effective_path_km: float = 0.0
     antenna_diameter_m: float = 0.45
     antenna_aperture_efficiency: float = 0.65
+    transmit_power_dbw: float = 20.0
+    system_loss_db: float = 1.0
+    noise_temperature_k: float = 290.0
 
     def __post_init__(self) -> None:
         if not isinstance(self.application_protocol, ApplicationProtocol):
@@ -141,6 +144,9 @@ class NetworkProfile:
             self.antenna_aperture_efficiency,
             "network.antenna_aperture_efficiency",
         )
+        _require_finite(self.transmit_power_dbw, "network.transmit_power_dbw")
+        _require_non_negative_finite(self.system_loss_db, "network.system_loss_db")
+        _require_positive_finite(self.noise_temperature_k, "network.noise_temperature_k")
         object.__setattr__(self, "carrier_frequency_hz", float(self.carrier_frequency_hz))
         object.__setattr__(self, "channel_bandwidth_hz", float(self.channel_bandwidth_hz))
         object.__setattr__(self, "rain_rate_mm_h", float(self.rain_rate_mm_h))
@@ -156,6 +162,9 @@ class NetworkProfile:
             "antenna_aperture_efficiency",
             float(self.antenna_aperture_efficiency),
         )
+        object.__setattr__(self, "transmit_power_dbw", float(self.transmit_power_dbw))
+        object.__setattr__(self, "system_loss_db", float(self.system_loss_db))
+        object.__setattr__(self, "noise_temperature_k", float(self.noise_temperature_k))
         object.__setattr__(
             self,
             "routing_latency_weight",

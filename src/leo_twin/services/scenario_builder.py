@@ -62,6 +62,9 @@ class FullSystemScenarioBuilderConfig:
     rain_effective_path_km: float = 0.0
     antenna_diameter_m: float = 0.45
     antenna_aperture_efficiency: float = 0.65
+    transmit_power_dbw: float = 20.0
+    system_loss_db: float = 1.0
+    noise_temperature_k: float = 290.0
     compute_capacity: float = 10.0
     demand_capacity: float = 1.0
     task_compute_demand: float = 20.0
@@ -152,6 +155,9 @@ class FullSystemScenarioBuilderConfig:
             self.antenna_aperture_efficiency,
             "antenna_aperture_efficiency",
         )
+        _require_finite_number(self.transmit_power_dbw, "transmit_power_dbw")
+        _require_non_negative_number(self.system_loss_db, "system_loss_db")
+        _require_positive_number(self.noise_temperature_k, "noise_temperature_k")
         _require_positive_number(self.compute_capacity, "compute_capacity")
         _require_non_negative_number(self.demand_capacity, "demand_capacity")
         _require_non_negative_number(self.task_compute_demand, "task_compute_demand")
@@ -298,6 +304,9 @@ def scenario_builder_config_from_sees_config(
         rain_effective_path_km=config.network.rain_effective_path_km,
         antenna_diameter_m=config.network.antenna_diameter_m,
         antenna_aperture_efficiency=config.network.antenna_aperture_efficiency,
+        transmit_power_dbw=config.network.transmit_power_dbw,
+        system_loss_db=config.network.system_loss_db,
+        noise_temperature_k=config.network.noise_temperature_k,
     )
 
 

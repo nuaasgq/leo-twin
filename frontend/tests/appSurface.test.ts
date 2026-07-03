@@ -73,7 +73,10 @@ describe("scenarioWithRuntimeConfig", () => {
             rain_attenuation_coefficient_db_per_km_per_mm_h: 0.01,
             rain_effective_path_km: 5,
             antenna_diameter_m: 0.55,
-            antenna_aperture_efficiency: 0.7
+            antenna_aperture_efficiency: 0.7,
+            transmit_power_dbw: 23,
+            system_loss_db: 1.5,
+            noise_temperature_k: 310
           },
           ui: {
             visualization: {
@@ -103,7 +106,10 @@ describe("scenarioWithRuntimeConfig", () => {
         rain_attenuation_coefficient_db_per_km_per_mm_h: 0.01,
         rain_effective_path_km: 5,
         antenna_diameter_m: 0.55,
-        antenna_aperture_efficiency: 0.7
+        antenna_aperture_efficiency: 0.7,
+        transmit_power_dbw: 23,
+        system_loss_db: 1.5,
+        noise_temperature_k: 310
       },
       ui: {
         visualization: {

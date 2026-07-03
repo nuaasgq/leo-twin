@@ -112,6 +112,9 @@ def build_demo_scenario(config: DemoConfig) -> DemoScenario:
                 "rain_effective_path_km": config.rain_effective_path_km,
                 "antenna_diameter_m": config.antenna_diameter_m,
                 "antenna_aperture_efficiency": config.antenna_aperture_efficiency,
+                "transmit_power_dbw": config.transmit_power_dbw,
+                "system_loss_db": config.system_loss_db,
+                "noise_temperature_k": config.noise_temperature_k,
             },
             "runtime": {
                 "mode": "REAL_TIME",

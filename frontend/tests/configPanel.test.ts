@@ -40,7 +40,10 @@ describe("generatedScenarioSummaryItems", () => {
       channel_bandwidth_hz: 250_000_000,
       rain_rate_mm_h: 12.5,
       antenna_diameter_m: 0.6,
-      antenna_aperture_efficiency: 0.7
+      antenna_aperture_efficiency: 0.7,
+      transmit_power_dbw: 23,
+      system_loss_db: 1.5,
+      noise_temperature_k: 310
     };
 
     expect(generatedScenarioSummaryItems(config)).toEqual([
@@ -60,6 +63,9 @@ describe("generatedScenarioSummaryItems", () => {
       { label: "雨强", value: "12.5 mm/h" },
       { label: "天线口径", value: "0.6 m" },
       { label: "孔径效率", value: "0.7" },
+      { label: "发射功率", value: "23 dBW" },
+      { label: "系统损耗", value: "1.5 dB" },
+      { label: "噪声温度", value: "310 K" },
       { label: "轨道高度", value: "550 km" },
       { label: "倾角", value: "53.5°" }
     ]);
@@ -155,7 +161,10 @@ describe("networkControlPayload", () => {
         rain_attenuation_coefficient_db_per_km_per_mm_h: 0.012,
         rain_effective_path_km: 4.5,
         antenna_diameter_m: 0.55,
-        antenna_aperture_efficiency: 0.72
+        antenna_aperture_efficiency: 0.72,
+        transmit_power_dbw: 23,
+        system_loss_db: 1.5,
+        noise_temperature_k: 310
       })
     ).toEqual({
       application_protocol: "MQTT",
@@ -171,7 +180,10 @@ describe("networkControlPayload", () => {
       rain_attenuation_coefficient_db_per_km_per_mm_h: 0.012,
       rain_effective_path_km: 4.5,
       antenna_diameter_m: 0.55,
-      antenna_aperture_efficiency: 0.72
+      antenna_aperture_efficiency: 0.72,
+      transmit_power_dbw: 23,
+      system_loss_db: 1.5,
+      noise_temperature_k: 310
     });
   });
 });

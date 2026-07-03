@@ -38,6 +38,9 @@ export interface LinkProtocolSummary {
   antennaEfficiency: number;
   antennaGainDbi: number;
   antennaBeamWidthDeg: number;
+  transmitPowerDbw: number;
+  systemLossDb: number;
+  noiseTemperatureK: number;
   rows: readonly LinkProtocolRow[];
 }
 
@@ -93,6 +96,9 @@ export const LinkProtocolPanel = memo(function LinkProtocolPanel({
           detail={`${summary.antennaDiameterM.toFixed(2)} m / η ${summary.antennaEfficiency.toFixed(2)}`}
         />
         <KpiPanel label="波束宽度" value={`${summary.antennaBeamWidthDeg.toFixed(2)}°`} />
+        <KpiPanel label="发射功率" value={`${summary.transmitPowerDbw.toFixed(1)} dBW`} />
+        <KpiPanel label="系统损耗" value={`${summary.systemLossDb.toFixed(1)} dB`} />
+        <KpiPanel label="噪声温度" value={`${summary.noiseTemperatureK.toFixed(0)} K`} />
         <KpiPanel label="估算雨衰" value={`${summary.estimatedRainFadeDb.toFixed(2)} dB`} />
         <KpiPanel label="星间链路" value={String(summary.spaceLinks)} />
         <KpiPanel label="接入链路" value={String(summary.accessLinks)} />
@@ -143,6 +149,9 @@ export function buildLinkProtocolSummary(
   const bandwidthMhz = (network?.channel_bandwidth_hz ?? 100_000_000) / 1_000_000;
   const antennaDiameterM = network?.antenna_diameter_m ?? 0.45;
   const antennaEfficiency = network?.antenna_aperture_efficiency ?? 0.65;
+  const transmitPowerDbw = network?.transmit_power_dbw ?? 20;
+  const systemLossDb = network?.system_loss_db ?? 1;
+  const noiseTemperatureK = network?.noise_temperature_k ?? 290;
   const estimatedRainFadeDb =
     (network?.rain_rate_mm_h ?? 0) *
     (network?.rain_attenuation_coefficient_db_per_km_per_mm_h ?? 0) *
@@ -193,6 +202,9 @@ export function buildLinkProtocolSummary(
       antennaDiameterM,
       carrierFrequencyGhz * 1_000_000_000
     ),
+    transmitPowerDbw,
+    systemLossDb,
+    noiseTemperatureK,
     rows: activeLinks
       .slice()
       .sort(compareLinks)

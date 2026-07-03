@@ -212,15 +212,15 @@ def _space_ground_budget(config: DemoConfig) -> LinkBudgetCalculator:
         transmit_terminal=RadioTerminalProfile(
             terminal_id="integration-demo-sat-terminal",
             antenna=antenna,
-            transmit_power_dbw=20.0,
-            system_loss_db=1.0,
+            transmit_power_dbw=config.transmit_power_dbw,
+            system_loss_db=config.system_loss_db,
         ),
         receive_terminal=RadioTerminalProfile(
             terminal_id="integration-demo-ground-terminal",
             antenna=antenna,
             transmit_power_dbw=0.0,
-            system_loss_db=1.0,
-            noise_temperature_k=290.0,
+            system_loss_db=config.system_loss_db,
+            noise_temperature_k=config.noise_temperature_k,
         ),
         channel=ChannelProfile(
             channel_id="integration-demo-space-ground",
@@ -247,15 +247,15 @@ def _space_space_budget(config: DemoConfig) -> LinkBudgetCalculator:
         transmit_terminal=RadioTerminalProfile(
             terminal_id="integration-demo-isl-transmit",
             antenna=antenna,
-            transmit_power_dbw=18.0,
-            system_loss_db=1.0,
+            transmit_power_dbw=config.transmit_power_dbw,
+            system_loss_db=config.system_loss_db,
         ),
         receive_terminal=RadioTerminalProfile(
             terminal_id="integration-demo-isl-receive",
             antenna=antenna,
             transmit_power_dbw=0.0,
-            system_loss_db=1.0,
-            noise_temperature_k=260.0,
+            system_loss_db=config.system_loss_db,
+            noise_temperature_k=config.noise_temperature_k,
         ),
         channel=ChannelProfile(
             channel_id="integration-demo-space-space",

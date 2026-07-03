@@ -259,15 +259,15 @@ def _space_ground_budget(
         transmit_terminal=RadioTerminalProfile(
             terminal_id="generated-sat-terminal",
             antenna=antenna,
-            transmit_power_dbw=20.0,
-            system_loss_db=1.0,
+            transmit_power_dbw=config.transmit_power_dbw,
+            system_loss_db=config.system_loss_db,
         ),
         receive_terminal=RadioTerminalProfile(
             terminal_id="generated-ground-terminal",
             antenna=antenna,
             transmit_power_dbw=0.0,
-            system_loss_db=1.0,
-            noise_temperature_k=290.0,
+            system_loss_db=config.system_loss_db,
+            noise_temperature_k=config.noise_temperature_k,
         ),
         channel=ChannelProfile(
             channel_id="generated-space-ground-ka",
@@ -296,15 +296,15 @@ def _space_space_budget(
         transmit_terminal=RadioTerminalProfile(
             terminal_id="generated-isl-tx",
             antenna=antenna,
-            transmit_power_dbw=18.0,
-            system_loss_db=1.0,
+            transmit_power_dbw=config.transmit_power_dbw,
+            system_loss_db=config.system_loss_db,
         ),
         receive_terminal=RadioTerminalProfile(
             terminal_id="generated-isl-rx",
             antenna=antenna,
             transmit_power_dbw=0.0,
-            system_loss_db=1.0,
-            noise_temperature_k=290.0,
+            system_loss_db=config.system_loss_db,
+            noise_temperature_k=config.noise_temperature_k,
         ),
         channel=ChannelProfile(
             channel_id="generated-space-space-ka",

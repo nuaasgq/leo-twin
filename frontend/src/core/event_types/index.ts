@@ -119,6 +119,9 @@ export interface ScenarioConfig {
     rain_effective_path_km?: number;
     antenna_diameter_m?: number;
     antenna_aperture_efficiency?: number;
+    transmit_power_dbw?: number;
+    system_loss_db?: number;
+    noise_temperature_k?: number;
   };
   runtime?: {
     mode?: RuntimeMode;
@@ -205,6 +208,9 @@ export interface GeneratedScenarioConfig {
   rain_effective_path_km?: number;
   antenna_diameter_m?: number;
   antenna_aperture_efficiency?: number;
+  transmit_power_dbw?: number;
+  system_loss_db?: number;
+  noise_temperature_k?: number;
 }
 
 export interface RuntimeStatusEnvelope {

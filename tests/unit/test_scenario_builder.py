@@ -181,6 +181,9 @@ def test_load_full_system_scenario_builder_config_from_json(tmp_path) -> None:
     assert config.rain_rate_mm_h == 0.0
     assert config.antenna_diameter_m == 0.45
     assert config.antenna_aperture_efficiency == 0.65
+    assert config.transmit_power_dbw == 20.0
+    assert config.system_loss_db == 1.0
+    assert config.noise_temperature_k == 290.0
 
 
 def test_write_full_system_scenario_builder_config_round_trips(tmp_path) -> None:
@@ -235,6 +238,9 @@ def test_scenario_builder_config_from_sees_config_maps_control_plane_fields() ->
             rain_effective_path_km=4.0,
             antenna_diameter_m=0.55,
             antenna_aperture_efficiency=0.7,
+            transmit_power_dbw=23.0,
+            system_loss_db=1.5,
+            noise_temperature_k=310.0,
         ),
     )
 
@@ -262,6 +268,9 @@ def test_scenario_builder_config_from_sees_config_maps_control_plane_fields() ->
     assert generated.rain_rate_mm_h == 12.5
     assert generated.antenna_diameter_m == 0.55
     assert generated.antenna_aperture_efficiency == 0.7
+    assert generated.transmit_power_dbw == 23.0
+    assert generated.system_loss_db == 1.5
+    assert generated.noise_temperature_k == 310.0
 
 
 def test_default_generated_scenario_config_file_loads() -> None:

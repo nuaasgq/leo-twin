@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from examples.generated_full_system_demo import run_generated_full_system_demo
+from examples.generated_full_system_demo import _space_ground_budget, run_generated_full_system_demo
 from leo_twin.schema import EventType
 from leo_twin.services.scenario_builder import FullSystemScenarioBuilderConfig
 
@@ -165,6 +165,39 @@ def test_generated_full_system_demo_rain_fade_reduces_route_capacity() -> None:
         "routes_available"
     ]
 
+
+def test_generated_full_system_demo_radio_terminal_profile_changes_capacity() -> None:
+    base = dict(
+        seed=14,
+        satellite_count=4,
+        user_count=6,
+        compute_node_count=2,
+        flow_count=4,
+        orbit_plane_count=2,
+        min_elevation_deg=-90.0,
+        max_range_km=30000.0,
+        compute_capacity=20.0,
+        transport_protocol="UDP",
+    )
+
+    low_power = _space_ground_budget(
+        FullSystemScenarioBuilderConfig(
+            **base,
+            transmit_power_dbw=15.0,
+            system_loss_db=2.0,
+            noise_temperature_k=350.0,
+        )
+    ).evaluate(1000.0)
+    high_power = _space_ground_budget(
+        FullSystemScenarioBuilderConfig(
+            **base,
+            transmit_power_dbw=25.0,
+            system_loss_db=0.5,
+            noise_temperature_k=250.0,
+        )
+    ).evaluate(1000.0)
+
+    assert high_power.capacity_mbps > low_power.capacity_mbps
 
 def test_generated_full_system_demo_can_enable_space_links() -> None:
     result = run_generated_full_system_demo(

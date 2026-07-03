@@ -60,6 +60,9 @@ class DemoConfig:
     rain_effective_path_km: float = 0.0
     antenna_diameter_m: float = 0.45
     antenna_aperture_efficiency: float = 0.65
+    transmit_power_dbw: float = 20.0
+    system_loss_db: float = 1.0
+    noise_temperature_k: float = 290.0
     compute_scheduling_policy: str = "FIFO"
 
 
@@ -139,6 +142,9 @@ def load_demo_config(path: str | Path = DEFAULT_CONFIG_PATH) -> DemoConfig:
             "antenna_aperture_efficiency",
             0.65,
         ),
+        transmit_power_dbw=_optional_float(network, "transmit_power_dbw", 20.0),
+        system_loss_db=_optional_float(network, "system_loss_db", 1.0),
+        noise_temperature_k=_optional_float(network, "noise_temperature_k", 290.0),
     )
 
 
@@ -176,6 +182,9 @@ def demo_config_to_sees_config(config: DemoConfig) -> SEESConfig:
             rain_effective_path_km=config.rain_effective_path_km,
             antenna_diameter_m=config.antenna_diameter_m,
             antenna_aperture_efficiency=config.antenna_aperture_efficiency,
+            transmit_power_dbw=config.transmit_power_dbw,
+            system_loss_db=config.system_loss_db,
+            noise_temperature_k=config.noise_temperature_k,
         ),
         runtime=RuntimeConfig(
             mode=RuntimeMode.REAL_TIME,
@@ -234,6 +243,9 @@ def demo_config_from_sees_config(
         rain_effective_path_km=config.network.rain_effective_path_km,
         antenna_diameter_m=config.network.antenna_diameter_m,
         antenna_aperture_efficiency=config.network.antenna_aperture_efficiency,
+        transmit_power_dbw=config.network.transmit_power_dbw,
+        system_loss_db=config.network.system_loss_db,
+        noise_temperature_k=config.network.noise_temperature_k,
     )
 
 

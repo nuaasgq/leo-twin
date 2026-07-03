@@ -382,7 +382,19 @@ export function scenarioWithRuntimeConfig(
         antenna_aperture_efficiency:
           typeof runtimeConfig.network.antenna_aperture_efficiency === "number"
             ? runtimeConfig.network.antenna_aperture_efficiency
-            : scenario.network?.antenna_aperture_efficiency
+            : scenario.network?.antenna_aperture_efficiency,
+        transmit_power_dbw:
+          typeof runtimeConfig.network.transmit_power_dbw === "number"
+            ? runtimeConfig.network.transmit_power_dbw
+            : scenario.network?.transmit_power_dbw,
+        system_loss_db:
+          typeof runtimeConfig.network.system_loss_db === "number"
+            ? runtimeConfig.network.system_loss_db
+            : scenario.network?.system_loss_db,
+        noise_temperature_k:
+          typeof runtimeConfig.network.noise_temperature_k === "number"
+            ? runtimeConfig.network.noise_temperature_k
+            : scenario.network?.noise_temperature_k
       }
     : scenario.network;
   const ui = isRecord(runtimeConfig.ui)
@@ -513,7 +525,10 @@ function scenarioControlValues(
       rain_effective_path_km: scenarioConfig?.network?.rain_effective_path_km ?? 0,
       antenna_diameter_m: scenarioConfig?.network?.antenna_diameter_m ?? 0.45,
       antenna_aperture_efficiency:
-        scenarioConfig?.network?.antenna_aperture_efficiency ?? 0.65
+        scenarioConfig?.network?.antenna_aperture_efficiency ?? 0.65,
+      transmit_power_dbw: scenarioConfig?.network?.transmit_power_dbw ?? 20,
+      system_loss_db: scenarioConfig?.network?.system_loss_db ?? 1,
+      noise_temperature_k: scenarioConfig?.network?.noise_temperature_k ?? 290
     }
   };
 }
