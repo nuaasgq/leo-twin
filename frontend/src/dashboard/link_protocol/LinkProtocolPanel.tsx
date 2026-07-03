@@ -21,6 +21,10 @@ export interface LinkProtocolSummary {
   routingProtocol: string;
   transportProtocolLabel: string;
   routingProtocolLabel: string;
+  transportOverheadPercent: number;
+  transportEfficiencyPercent: number;
+  transportHandshakeRoundTrips: number;
+  routingCostLabel: string;
   stackLayers: number;
   carrierFrequencyGhz: number;
   bandwidthMhz: number;
@@ -65,6 +69,13 @@ export const LinkProtocolPanel = memo(function LinkProtocolPanel({
         <KpiPanel label="网关路由" value={String(summary.gatewayRoutes)} />
         <KpiPanel label="传输协议" value={summary.transportProtocolLabel} />
         <KpiPanel label="路由协议" value={summary.routingProtocolLabel} />
+        <KpiPanel
+          label="传输开销"
+          value={`${summary.transportOverheadPercent.toFixed(2)}%`}
+          detail={`效率 ${summary.transportEfficiencyPercent.toFixed(1)}%`}
+        />
+        <KpiPanel label="握手RTT" value={String(summary.transportHandshakeRoundTrips)} />
+        <KpiPanel label="路由代价" value={summary.routingCostLabel} />
         <KpiPanel label="协议栈层数" value={String(summary.stackLayers)} />
         <KpiPanel label="载波频率" value={`${summary.carrierFrequencyGhz.toFixed(1)} GHz`} />
         <KpiPanel label="信道带宽" value={`${summary.bandwidthMhz.toFixed(0)} MHz`} />
@@ -111,6 +122,8 @@ export function buildLinkProtocolSummary(
   const network = snapshot.scenario_config?.network;
   const transportProtocol = network?.transport_protocol ?? "TCP";
   const routingProtocol = network?.routing_protocol ?? "LINK_STATE";
+  const transportProfile = transportProfileFor(transportProtocol);
+  const routingCostProfile = routingCostProfileFor(routingProtocol);
   const carrierFrequencyGhz = (network?.carrier_frequency_hz ?? 20_000_000_000) / 1_000_000_000;
   const bandwidthMhz = (network?.channel_bandwidth_hz ?? 100_000_000) / 1_000_000;
   const antennaDiameterM = network?.antenna_diameter_m ?? 0.45;
@@ -141,6 +154,10 @@ export function buildLinkProtocolSummary(
     routingProtocol,
     transportProtocolLabel: formatTransportProtocol(transportProtocol),
     routingProtocolLabel: formatRoutingProtocol(routingProtocol),
+    transportOverheadPercent: transportProfile.overheadRatio * 100,
+    transportEfficiencyPercent: transportProfile.efficiency * 100,
+    transportHandshakeRoundTrips: transportProfile.handshakeRoundTrips,
+    routingCostLabel: routingCostProfile.label,
     stackLayers: 6,
     carrierFrequencyGhz,
     bandwidthMhz,
@@ -171,6 +188,37 @@ function routeHopCount(route: Route): number {
 function routeEndsAtComputeNode(route: Route): boolean {
   const lastNode = route.path[route.path.length - 1];
   return typeof lastNode === "string" && lastNode.startsWith("compute-");
+}
+
+function transportProfileFor(protocol: string): {
+  overheadRatio: number;
+  efficiency: number;
+  handshakeRoundTrips: number;
+} {
+  if (protocol === "UDP") {
+    return {
+      overheadRatio: 28 / (1472 + 28),
+      efficiency: 0.98,
+      handshakeRoundTrips: 0
+    };
+  }
+  return {
+    overheadRatio: 40 / (1460 + 40),
+    efficiency: 0.92,
+    handshakeRoundTrips: 1
+  };
+}
+
+function routingCostProfileFor(protocol: string): {
+  label: string;
+} {
+  if (protocol === "DISTANCE_VECTOR") {
+    return { label: "跳数优先" };
+  }
+  if (protocol === "STATIC") {
+    return { label: "静态路径" };
+  }
+  return { label: "时延优先" };
 }
 
 function apertureAntennaGainDbi(

@@ -86,6 +86,10 @@ describe("buildLinkProtocolSummary", () => {
       routingProtocol: "DISTANCE_VECTOR",
       transportProtocolLabel: "UDP 低时延",
       routingProtocolLabel: "距离向量",
+      transportOverheadPercent: 1.866666666666667,
+      transportEfficiencyPercent: 98,
+      transportHandshakeRoundTrips: 0,
+      routingCostLabel: "跳数优先",
       stackLayers: 6,
       carrierFrequencyGhz: 22,
       bandwidthMhz: 250,
@@ -151,6 +155,10 @@ describe("buildLinkProtocolSummary", () => {
     expect(summary.routingProtocol).toBe("LINK_STATE");
     expect(summary.transportProtocolLabel).toBe("TCP 可靠传输");
     expect(summary.routingProtocolLabel).toBe("链路状态");
+    expect(summary.transportOverheadPercent).toBeCloseTo(2.666667, 6);
+    expect(summary.transportEfficiencyPercent).toBe(92);
+    expect(summary.transportHandshakeRoundTrips).toBe(1);
+    expect(summary.routingCostLabel).toBe("时延优先");
     expect(summary.stackLayers).toBe(6);
     expect(summary.carrierFrequencyGhz).toBe(20);
     expect(summary.bandwidthMhz).toBe(100);
