@@ -78,6 +78,38 @@ def test_generated_full_system_demo_transport_protocol_changes_route_profile() -
     assert tcp.metrics_summary["route_capacity_max"] < udp.metrics_summary["route_capacity_max"]
 
 
+def test_generated_full_system_demo_rain_fade_reduces_route_capacity() -> None:
+    base = dict(
+        seed=14,
+        satellite_count=4,
+        user_count=6,
+        compute_node_count=2,
+        flow_count=4,
+        orbit_plane_count=2,
+        min_elevation_deg=-90.0,
+        max_range_km=30000.0,
+        compute_capacity=20.0,
+        transport_protocol="UDP",
+    )
+
+    clear = run_generated_full_system_demo(FullSystemScenarioBuilderConfig(**base))
+    rainy = run_generated_full_system_demo(
+        FullSystemScenarioBuilderConfig(
+            **base,
+            rain_rate_mm_h=40.0,
+            rain_attenuation_coefficient_db_per_km_per_mm_h=0.2,
+            rain_effective_path_km=5.0,
+        )
+    )
+
+    assert rainy.metrics_summary["route_capacity_max"] < clear.metrics_summary[
+        "route_capacity_max"
+    ]
+    assert rainy.metrics_summary["routes_available"] < clear.metrics_summary[
+        "routes_available"
+    ]
+
+
 def test_generated_full_system_demo_can_enable_space_links() -> None:
     result = run_generated_full_system_demo(
         FullSystemScenarioBuilderConfig(

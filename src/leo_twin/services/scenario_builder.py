@@ -47,6 +47,11 @@ class FullSystemScenarioBuilderConfig:
     space_link_cell_size_km: float = 0.0
     transport_protocol: str = TransportProtocol.TCP.value
     routing_protocol: str = RoutingProtocol.LINK_STATE.value
+    carrier_frequency_hz: float = 20_000_000_000.0
+    channel_bandwidth_hz: float = 100_000_000.0
+    rain_rate_mm_h: float = 0.0
+    rain_attenuation_coefficient_db_per_km_per_mm_h: float = 0.0
+    rain_effective_path_km: float = 0.0
     compute_capacity: float = 10.0
     demand_capacity: float = 1.0
     task_compute_demand: float = 20.0
@@ -93,6 +98,17 @@ class FullSystemScenarioBuilderConfig:
             self,
             "routing_protocol",
             RoutingProtocol(str(self.routing_protocol)).value,
+        )
+        _require_positive_number(self.carrier_frequency_hz, "carrier_frequency_hz")
+        _require_positive_number(self.channel_bandwidth_hz, "channel_bandwidth_hz")
+        _require_non_negative_number(self.rain_rate_mm_h, "rain_rate_mm_h")
+        _require_non_negative_number(
+            self.rain_attenuation_coefficient_db_per_km_per_mm_h,
+            "rain_attenuation_coefficient_db_per_km_per_mm_h",
+        )
+        _require_non_negative_number(
+            self.rain_effective_path_km,
+            "rain_effective_path_km",
         )
         _require_positive_number(self.compute_capacity, "compute_capacity")
         _require_non_negative_number(self.demand_capacity, "demand_capacity")

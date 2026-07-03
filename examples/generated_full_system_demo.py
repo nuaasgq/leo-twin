@@ -15,10 +15,20 @@ from leo_twin.models.compute import ComputeNode, RouteAwareComputeEngine, TaskPl
 from leo_twin.models.network import (
     GroundEndpoint,
     PositionDrivenNetworkEngine,
+    LinkBudgetCalculator,
+    RadioTerminalProfile,
+    RainFadeProfile,
     default_transport_runtime,
 )
 from leo_twin.models.orbit import KeplerianOrbitEngine
-from leo_twin.schema import EventType, SimEvent, TransportProtocol
+from leo_twin.schema import (
+    AntennaProfile,
+    ChannelProfile,
+    EventType,
+    LinkMedium,
+    SimEvent,
+    TransportProtocol,
+)
 from leo_twin.services.metrics import MetricsCollector
 from leo_twin.services.scenario_builder import (
     FullSystemScenarioBuilderConfig,
@@ -69,6 +79,7 @@ def run_generated_full_system_demo(
         link_capacity=100.0,
         propagation_speed_km_s=299792.458,
         cell_size_km=5000.0,
+        link_budget_calculator=_space_ground_budget(resolved_config),
         space_link_max_range_km=(
             resolved_config.space_link_max_range_km
             if resolved_config.space_link_max_range_km > 0.0
@@ -141,6 +152,56 @@ def run_generated_full_system_demo(
         compute_node_count=len(scenario.compute_nodes),
         flow_count=len(scenario.flows),
         active_link_count=len(network.active_link_states()),
+    )
+
+
+def _space_ground_budget(
+    config: FullSystemScenarioBuilderConfig,
+) -> LinkBudgetCalculator:
+    antenna = AntennaProfile(
+        antenna_id="generated-ka-terminal",
+        gain_dbi=36.0,
+        beam_width_deg=4.0,
+        steering_mode="electronic",
+    )
+    rain_profile = (
+        None
+        if config.rain_rate_mm_h == 0.0
+        or config.rain_attenuation_coefficient_db_per_km_per_mm_h == 0.0
+        or config.rain_effective_path_km == 0.0
+        else RainFadeProfile(
+            rain_rate_mm_h=config.rain_rate_mm_h,
+            attenuation_coefficient_db_per_km_per_mm_h=(
+                config.rain_attenuation_coefficient_db_per_km_per_mm_h
+            ),
+            effective_path_km=config.rain_effective_path_km,
+        )
+    )
+    return LinkBudgetCalculator(
+        transmit_terminal=RadioTerminalProfile(
+            terminal_id="generated-sat-terminal",
+            antenna=antenna,
+            transmit_power_dbw=20.0,
+            system_loss_db=1.0,
+        ),
+        receive_terminal=RadioTerminalProfile(
+            terminal_id="generated-ground-terminal",
+            antenna=antenna,
+            transmit_power_dbw=0.0,
+            system_loss_db=1.0,
+            noise_temperature_k=290.0,
+        ),
+        channel=ChannelProfile(
+            channel_id="generated-space-ground-ka",
+            medium=LinkMedium.SPACE_GROUND,
+            carrier_frequency_hz=config.carrier_frequency_hz,
+            bandwidth_hz=config.channel_bandwidth_hz,
+            loss_model_name="free_space_budget",
+        ),
+        atmospheric_loss_db=2.0,
+        polarization_loss_db=0.5,
+        implementation_loss_db=1.0,
+        rain_fade_profile=rain_profile,
     )
 
 

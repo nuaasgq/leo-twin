@@ -168,6 +168,9 @@ def test_load_full_system_scenario_builder_config_from_json(tmp_path) -> None:
     assert config.max_range_km == 2000.0
     assert config.transport_protocol == "TCP"
     assert config.routing_protocol == "LINK_STATE"
+    assert config.carrier_frequency_hz == 20_000_000_000.0
+    assert config.channel_bandwidth_hz == 100_000_000.0
+    assert config.rain_rate_mm_h == 0.0
 
 
 def test_write_full_system_scenario_builder_config_round_trips(tmp_path) -> None:
