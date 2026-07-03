@@ -66,6 +66,7 @@ def run_integration_demo(config: DemoConfig) -> DemoRunResult:
         metric_sample_interval=config.metric_sample_interval,
         event_log_sample_interval=1,
         event_log_segment_size=10_000,
+        satellite_position_scale_to_km=0.001,
     )
 
     modules: tuple[SimulationModule, ...] = (

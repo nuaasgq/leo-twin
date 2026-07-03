@@ -229,6 +229,33 @@ def test_metrics_collector_kpis_are_consistent_with_observations() -> None:
     )
 
 
+def test_metrics_collector_scales_satellite_positions_for_orbit_kpis() -> None:
+    collector = MetricsCollector(satellite_position_scale_to_km=0.001)
+
+    collector.observe(
+        _event(
+            "orbit-meters",
+            0.0,
+            EventType.ORBIT_UPDATE,
+            SatelliteState(
+                satellite_id="sat-meter",
+                sim_time=0.0,
+                position=(7_000_000.0, 0.0, 0.0),
+                velocity=(0.0, 7_500.0, 0.0),
+                status="online",
+            ),
+            "orbit",
+        )
+    )
+
+    summary = collector.summary()
+
+    assert summary["satellite_altitude_avg"] == pytest.approx(629.0)
+    assert _last_record(collector.records(), "satellite.altitude_km").value == pytest.approx(
+        629.0
+    )
+
+
 def test_metrics_collector_counts_deadline_missed_tasks() -> None:
     collector = MetricsCollector()
 

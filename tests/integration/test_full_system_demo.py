@@ -83,7 +83,7 @@ def test_scale_test_basic() -> None:
     assert summary["event_count"] >= 10_000
     assert summary["routes_available"] >= 1
     assert summary["route_hop_count_avg"] >= 2.0
-    assert summary["satellite_altitude_avg"] > 0.0
+    assert 500.0 <= summary["satellite_altitude_avg"] <= 600.0
     assert summary["task_duration_avg"] >= 0.0
     assert summary["deadline_missed_tasks"] == 0
     assert len(result.state_timeline) <= len(result.processed_events) // 1000 + 1

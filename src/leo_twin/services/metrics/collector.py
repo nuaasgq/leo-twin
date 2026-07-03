@@ -8,6 +8,7 @@ import json
 from collections import Counter, deque
 from collections.abc import Mapping
 from dataclasses import fields, is_dataclass
+from math import isfinite
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -55,6 +56,7 @@ class MetricsCollector:
         metric_sample_interval: int = 1,
         event_log_sample_interval: int = 1,
         event_log_segment_size: int | None = None,
+        satellite_position_scale_to_km: float = 1.0,
     ) -> None:
         if not module_name:
             raise ValueError("module_name must be non-empty")
@@ -68,6 +70,10 @@ class MetricsCollector:
             event_log_segment_size,
             "event_log_segment_size",
         )
+        _require_positive_number(
+            satellite_position_scale_to_km,
+            "satellite_position_scale_to_km",
+        )
 
         self._module_name = module_name
         self._emit_metric_events = emit_metric_events
@@ -75,6 +81,7 @@ class MetricsCollector:
         self._metric_sample_interval = metric_sample_interval
         self._event_log_sample_interval = event_log_sample_interval
         self._event_log_segment_size = event_log_segment_size
+        self._satellite_position_scale_to_km = float(satellite_position_scale_to_km)
         self._records: deque[MetricRecord] = deque(maxlen=record_limit)
         self._event_log: deque[ReplayEvent] = deque(maxlen=event_log_limit)
         self._event_counts: Counter[str] = Counter()
@@ -304,7 +311,8 @@ class MetricsCollector:
 
     def _observe_satellite(self, event: SimEvent) -> tuple[MetricRecord, ...]:
         state = _require_payload(event.payload, SatelliteState, "ORBIT_UPDATE")
-        point = ground_track_point(state)
+        metric_state = self._satellite_state_for_metrics(state)
+        point = ground_track_point(metric_state)
         self._satellite_status[state.satellite_id] = state.status
         self._satellite_altitudes_km[state.satellite_id] = point.altitude_km
         return (
@@ -342,6 +350,23 @@ class MetricsCollector:
                 value=float(point.altitude_km),
                 tags=(("status", state.status),),
             ),
+        )
+
+    def _satellite_state_for_metrics(self, state: SatelliteState) -> SatelliteState:
+        if self._satellite_position_scale_to_km == 1.0:
+            return state
+        return SatelliteState(
+            satellite_id=state.satellite_id,
+            sim_time=state.sim_time,
+            position=tuple(
+                value * self._satellite_position_scale_to_km
+                for value in state.position
+            ),
+            velocity=tuple(
+                value * self._satellite_position_scale_to_km
+                for value in state.velocity
+            ),
+            status=state.status,
         )
 
     def _observe_link(self, event: SimEvent, event_type: str) -> tuple[MetricRecord, ...]:
@@ -643,3 +668,10 @@ def _require_positive_int(value: int, field_name: str) -> None:
         raise TypeError(f"{field_name} must be an int")
     if value <= 0:
         raise ValueError(f"{field_name} must be positive")
+
+
+def _require_positive_number(value: float, field_name: str) -> None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise TypeError(f"{field_name} must be a number")
+    if not isfinite(value) or value <= 0.0:
+        raise ValueError(f"{field_name} must be finite and positive")
