@@ -178,6 +178,7 @@ body {
 .globe-panel {
   min-width: 0;
   min-height: 0;
+  overflow: hidden;
 }
 
 .cesium-globe {
@@ -645,8 +646,13 @@ body {
   }
 
   .simulation-surface {
+    grid-template-rows: auto minmax(420px, 56vh) auto;
     border-right: 0;
     border-bottom: 1px solid #2a3134;
+  }
+
+  .globe-panel {
+    min-height: 420px;
   }
 
   .control-dock {
@@ -697,6 +703,10 @@ body {
   .dashboard-header {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .globe-panel {
+    min-height: 360px;
   }
 
   .kpi-grid {

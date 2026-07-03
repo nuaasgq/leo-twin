@@ -116,6 +116,16 @@ export function App() {
         onMessage: (message) => {
           handleControlMessage(message, setRuntimeStatus);
           handleGeneratedConfig(message, setGeneratedConfig);
+          if (
+            message.type === "RUNTIME_STATUS" &&
+            runtimeStatusRequiresStreams(message.status) &&
+            streamClientRef.current === null
+          ) {
+            loadControlState()
+              .then(({ scenario }) => startStreams(scenario))
+              .catch(() => setConnectionState("degraded"));
+            return;
+          }
           if (message.ok === true && message.type === "CONTROL_ACK") {
             const action = message.status?.last_action;
             if (action === "START") {
@@ -148,11 +158,15 @@ export function App() {
   useEffect(() => {
     let closed = false;
     loadControlState()
-      .then(({ scenario }) => {
+      .then(({ scenario, runtime }) => {
         if (closed) {
           return;
         }
-        resetWorld(scenario);
+        if (runtimeStatusRequiresStreams(runtime.status)) {
+          startStreams(scenario);
+        } else {
+          resetWorld(scenario);
+        }
         setConnectionState("live");
       })
       .catch(() => {
@@ -165,7 +179,7 @@ export function App() {
       closed = true;
       closeStreams();
     };
-  }, [closeStreams, loadControlState, resetWorld]);
+  }, [closeStreams, loadControlState, resetWorld, startStreams]);
 
   const scenarioControls = scenarioControlValues(scenarioConfig, snapshot.satellites.length);
 
@@ -249,6 +263,12 @@ export function surfaceFromPathname(pathname: string): FrontendSurface {
   return pathname === "/dashboard" || pathname.startsWith("/dashboard/")
     ? "dashboard"
     : "control";
+}
+
+export function runtimeStatusRequiresStreams(
+  status: RuntimeStatusPayload | undefined
+): boolean {
+  return status?.status === "RUNNING";
 }
 
 function connectionStateLabel(state: "connecting" | "live" | "degraded"): string {
