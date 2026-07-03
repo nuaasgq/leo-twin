@@ -184,6 +184,35 @@ def test_route_aware_compute_applies_scheduling_policy_to_ready_batch() -> None:
     ] == ["flow-small", "flow-large"]
 
 
+def test_route_aware_compute_marks_deadline_miss_without_rescheduling() -> None:
+    kernel = SimulationKernel()
+    engine = RouteAwareComputeEngine(nodes=(ComputeNode("node-a", capacity=10.0),))
+    sink = MetricsSink()
+    kernel.register_module(engine)
+    kernel.register_module(sink)
+    kernel.schedule_event(
+        _event(
+            "task",
+            EventType.TASK_ARRIVAL.value,
+            _task(deadline=5.0),
+        )
+    )
+    kernel.schedule_event(_event("route", EventType.ROUTE_UPDATE.value, _route(), 3.0))
+
+    kernel.run()
+
+    decision = engine.scheduled_tasks()[0]
+    finish_events = [
+        event.payload
+        for event in sink.events
+        if event.event_type == EventType.TASK_FINISH.value
+    ]
+    assert decision.start_time == 7.0
+    assert decision.finish_time == 9.0
+    assert decision.status == "DEADLINE_MISSED"
+    assert finish_events[0].status == "DEADLINE_MISSED"
+
+
 def test_route_aware_compute_is_deterministic() -> None:
     first = _run_scenario()
     second = _run_scenario()

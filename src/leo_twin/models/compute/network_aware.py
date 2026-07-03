@@ -183,7 +183,7 @@ class RouteAwareComputeEngine(SimulationModule):
             ready_time=ready_time,
             start_time=start_time,
             finish_time=finish_time,
-            status="SCHEDULED",
+            status=_decision_status(task, finish_time),
         )
 
     def _select_node(
@@ -248,7 +248,7 @@ class RouteAwareComputeEngine(SimulationModule):
                     node_id=decision.node_id,
                     sim_time=decision.finish_time,
                     progress=1.0,
-                    status="FINISHED",
+                    status=_finish_status(decision),
                 ),
             )
         )
@@ -319,3 +319,15 @@ class RouteAwareComputeEngine(SimulationModule):
                 available=bool(payload["available"]),
             )
         raise TypeError("ROUTE_UPDATE payload must be Route or dict")
+
+
+def _decision_status(task: TaskRequest, finish_time: float) -> str:
+    if task.deadline is not None and finish_time > task.deadline:
+        return "DEADLINE_MISSED"
+    return "SCHEDULED"
+
+
+def _finish_status(decision: TaskPlacementDecision) -> str:
+    if decision.status == "DEADLINE_MISSED":
+        return "DEADLINE_MISSED"
+    return "FINISHED"
