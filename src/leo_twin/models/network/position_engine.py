@@ -7,7 +7,7 @@ from math import isfinite
 from typing import Any
 
 from leo_twin.core import SimulationKernel, SimulationModule
-from leo_twin.models.network.channel import LinkBudgetCalculator
+from leo_twin.models.network.channel import ChannelBudgetSelector, LinkBudgetCalculator
 from leo_twin.models.network.geometry import (
     AccessLinkCandidate,
     GroundEndpoint,
@@ -19,6 +19,7 @@ from leo_twin.schema import (
     AccessAssociation,
     EventType,
     FlowRequest,
+    LinkMedium,
     LinkState,
     Route,
     SatelliteState,
@@ -41,6 +42,7 @@ class PositionDrivenNetworkEngine(SimulationModule):
         base_latency_s: float = 0.0,
         cell_size_km: float = 1000.0,
         link_budget_calculator: LinkBudgetCalculator | None = None,
+        link_budget_selector: ChannelBudgetSelector | None = None,
         routing_runtime: RoutingRuntime | None = None,
         transport_runtime: TransportRuntime | None = None,
         static_links: Iterable[LinkState] = (),
@@ -75,6 +77,7 @@ class PositionDrivenNetworkEngine(SimulationModule):
         self._propagation_speed_km_s = float(propagation_speed_km_s)
         self._base_latency_s = float(base_latency_s)
         self._link_budget_calculator = link_budget_calculator
+        self._link_budget_selector = link_budget_selector
         self._routing_runtime = routing_runtime
         self._transport_runtime = transport_runtime
         self._static_links = tuple(sorted(static_links, key=lambda item: (item.source_id, item.target_id)))
@@ -290,11 +293,19 @@ class PositionDrivenNetworkEngine(SimulationModule):
         range_km = _distance_km(left.position, right.position)
         if range_km > float(self._space_link_max_range_km):
             return None
+        budget_calculator = self._budget_calculator_for(LinkMedium.SPACE_SPACE)
+        if budget_calculator is None:
+            latency = self._base_latency_s + range_km / self._propagation_speed_km_s
+            capacity = self._space_link_capacity
+        else:
+            budget = budget_calculator.evaluate(range_km)
+            latency = self._base_latency_s + budget.propagation_delay_s
+            capacity = min(self._space_link_capacity, budget.capacity_mbps)
         return LinkState(
             source_id=pair[0],
             target_id=pair[1],
-            latency=self._base_latency_s + range_km / self._propagation_speed_km_s,
-            capacity=self._space_link_capacity,
+            latency=latency,
+            capacity=capacity,
             availability=True,
         )
 
@@ -303,11 +314,12 @@ class PositionDrivenNetworkEngine(SimulationModule):
         candidate: AccessLinkCandidate,
         availability: bool,
     ) -> LinkState:
-        if self._link_budget_calculator is None:
+        budget_calculator = self._budget_calculator_for(LinkMedium.SPACE_GROUND)
+        if budget_calculator is None:
             latency = self._base_latency_s + candidate.range_km / self._propagation_speed_km_s
             capacity = self._link_capacity
         else:
-            budget = self._link_budget_calculator.evaluate(candidate.range_km)
+            budget = budget_calculator.evaluate(candidate.range_km)
             latency = self._base_latency_s + budget.propagation_delay_s
             capacity = min(self._link_capacity, budget.capacity_mbps)
         return LinkState(
@@ -317,6 +329,16 @@ class PositionDrivenNetworkEngine(SimulationModule):
             capacity=capacity,
             availability=availability,
         )
+
+    def _budget_calculator_for(
+        self,
+        medium: LinkMedium,
+    ) -> LinkBudgetCalculator | None:
+        if self._link_budget_selector is not None:
+            return self._link_budget_selector.optional_calculator_for(medium)
+        if medium == LinkMedium.SPACE_GROUND:
+            return self._link_budget_calculator
+        return None
 
     def _link_events(
         self,

@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from leo_twin.models.network import (
+    ChannelBudgetSelector,
     LinkBudgetCalculator,
     RadioTerminalProfile,
     free_space_path_loss_db,
@@ -21,7 +22,11 @@ def _antenna(antenna_id: str, gain_dbi: float) -> AntennaProfile:
     )
 
 
-def _calculator(transmit_power_dbw: float = 20.0) -> LinkBudgetCalculator:
+def _calculator(
+    transmit_power_dbw: float = 20.0,
+    medium: LinkMedium = LinkMedium.SPACE_GROUND,
+    channel_id: str = "ka-space-ground",
+) -> LinkBudgetCalculator:
     return LinkBudgetCalculator(
         transmit_terminal=RadioTerminalProfile(
             terminal_id="sat-terminal",
@@ -37,8 +42,8 @@ def _calculator(transmit_power_dbw: float = 20.0) -> LinkBudgetCalculator:
             noise_temperature_k=290.0,
         ),
         channel=ChannelProfile(
-            channel_id="ka-space-ground",
-            medium=LinkMedium.SPACE_GROUND,
+            channel_id=channel_id,
+            medium=medium,
             carrier_frequency_hz=20_000_000_000.0,
             bandwidth_hz=500_000_000.0,
             loss_model_name="free_space_budget",
@@ -83,3 +88,29 @@ def test_link_budget_capacity_drops_with_lower_transmit_power() -> None:
 
     assert low_power.snr_db == pytest.approx(high_power.snr_db - 20.0)
     assert low_power.capacity_mbps < high_power.capacity_mbps
+
+
+def test_channel_budget_selector_uses_medium_specific_calculator() -> None:
+    ground = _calculator(medium=LinkMedium.SPACE_GROUND, channel_id="ground")
+    space = _calculator(
+        transmit_power_dbw=10.0,
+        medium=LinkMedium.SPACE_SPACE,
+        channel_id="space",
+    )
+    selector = ChannelBudgetSelector(calculators=(space, ground))
+
+    assert selector.calculator_for(LinkMedium.SPACE_GROUND) == ground
+    assert selector.calculator_for("SPACE_SPACE") == space
+    assert selector.evaluate(LinkMedium.SPACE_SPACE, 629.0) == space.evaluate(629.0)
+
+
+def test_channel_budget_selector_supports_default_calculator() -> None:
+    ground = _calculator()
+    selector = ChannelBudgetSelector(calculators=(), default_calculator=ground)
+
+    assert selector.optional_calculator_for(LinkMedium.SPACE_SPACE) == ground
+
+
+def test_channel_budget_selector_rejects_duplicate_mediums() -> None:
+    with pytest.raises(ValueError, match="mediums must be unique"):
+        ChannelBudgetSelector(calculators=(_calculator(), _calculator(channel_id="copy")))

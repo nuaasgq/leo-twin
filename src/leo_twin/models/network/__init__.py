@@ -2,6 +2,7 @@
 
 from leo_twin.models.network.contracts import NetworkModuleContract
 from leo_twin.models.network.channel import (
+    ChannelBudgetSelector,
     LinkBudgetCalculator,
     LinkBudgetResult,
     RadioTerminalProfile,
@@ -35,6 +36,7 @@ NetworkModule = NetworkEngine
 
 __all__ = [
     "AccessLinkCandidate",
+    "ChannelBudgetSelector",
     "GroundEndpoint",
     "GroundEndpointIndex",
     "LayerTrace",

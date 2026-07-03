@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from math import isfinite, log10, log2
 from typing import Any
 
-from leo_twin.schema import AntennaProfile, ChannelProfile
+from leo_twin.schema import AntennaProfile, ChannelProfile, LinkMedium
 
 
 SPEED_OF_LIGHT_KM_S = 299792.458
@@ -101,6 +101,52 @@ class LinkBudgetCalculator:
             snr_db=snr_db,
             capacity_mbps=capacity_mbps,
         )
+
+
+@dataclass(frozen=True)
+class ChannelBudgetSelector:
+    """Select deterministic link budget calculators by link medium."""
+
+    calculators: tuple[LinkBudgetCalculator, ...]
+    default_calculator: LinkBudgetCalculator | None = None
+
+    def __post_init__(self) -> None:
+        if not self.calculators and self.default_calculator is None:
+            raise ValueError("at least one calculator or default_calculator is required")
+        mediums = tuple(calculator.channel.medium for calculator in self.calculators)
+        if len(set(mediums)) != len(mediums):
+            raise ValueError("calculator channel mediums must be unique")
+        object.__setattr__(
+            self,
+            "calculators",
+            tuple(sorted(self.calculators, key=lambda item: item.channel.medium.value)),
+        )
+
+    def calculator_for(self, medium: LinkMedium | str) -> LinkBudgetCalculator:
+        """Return the calculator configured for the requested link medium."""
+
+        normalized = medium if isinstance(medium, LinkMedium) else LinkMedium(str(medium))
+        calculator = self.optional_calculator_for(normalized)
+        if calculator is None:
+            raise KeyError(f"no link budget calculator for medium: {normalized.value}")
+        return calculator
+
+    def optional_calculator_for(
+        self,
+        medium: LinkMedium | str,
+    ) -> LinkBudgetCalculator | None:
+        """Return a configured calculator or the default calculator if available."""
+
+        normalized = medium if isinstance(medium, LinkMedium) else LinkMedium(str(medium))
+        for calculator in self.calculators:
+            if calculator.channel.medium == normalized:
+                return calculator
+        return self.default_calculator
+
+    def evaluate(self, medium: LinkMedium | str, range_km: float) -> LinkBudgetResult:
+        """Evaluate a link budget using the calculator for the given medium."""
+
+        return self.calculator_for(medium).evaluate(range_km)
 
 
 def free_space_path_loss_db(range_km: float, carrier_frequency_hz: float) -> float:

@@ -4,6 +4,7 @@ import pytest
 
 from leo_twin.core import SimulationKernel, SimulationModule
 from leo_twin.models.network import (
+    ChannelBudgetSelector,
     LinkBudgetCalculator,
     GroundEndpoint,
     PositionDrivenNetworkEngine,
@@ -108,6 +109,34 @@ def _budget_engine() -> PositionDrivenNetworkEngine:
         link_capacity=10000.0,
         link_budget_calculator=budget,
         cell_size_km=1000.0,
+    )
+
+
+def _budget_for_medium(medium: LinkMedium) -> LinkBudgetCalculator:
+    antenna = AntennaProfile(
+        antenna_id=f"ant-{medium.value.lower()}",
+        gain_dbi=30.0,
+        beam_width_deg=4.0,
+        steering_mode="fixed",
+    )
+    return LinkBudgetCalculator(
+        transmit_terminal=RadioTerminalProfile(
+            terminal_id=f"tx-{medium.value.lower()}",
+            antenna=antenna,
+            transmit_power_dbw=10.0,
+        ),
+        receive_terminal=RadioTerminalProfile(
+            terminal_id=f"rx-{medium.value.lower()}",
+            antenna=antenna,
+            transmit_power_dbw=0.0,
+        ),
+        channel=ChannelProfile(
+            channel_id=f"channel-{medium.value.lower()}",
+            medium=medium,
+            carrier_frequency_hz=20_000_000_000.0,
+            bandwidth_hz=100_000_000.0,
+            loss_model_name="free_space_budget",
+        ),
     )
 
 
@@ -456,6 +485,48 @@ def test_routing_runtime_uses_position_driven_space_link() -> None:
     assert compute.routes[0].available is True
     assert compute.routes[0].path == ("user-east", "sat-001", "sat-002", "node-a")
     assert compute.routes[0].latency == 3.629
+
+
+def test_position_driven_space_link_uses_medium_budget_selector() -> None:
+    kernel = SimulationKernel()
+    network = PositionDrivenNetworkEngine(
+        endpoints=(
+            GroundEndpoint(
+                endpoint_id="user-east",
+                position=(EARTH_RADIUS_KM, 0.0, 0.0),
+                min_elevation_deg=10.0,
+                max_range_km=2000.0,
+            ),
+        ),
+        compute_node_ids=("node-a",),
+        link_capacity=10000.0,
+        propagation_speed_km_s=1000.0,
+        cell_size_km=1000.0,
+        link_budget_selector=ChannelBudgetSelector(
+            calculators=(_budget_for_medium(LinkMedium.SPACE_SPACE),)
+        ),
+        space_link_max_range_km=1500.0,
+        space_link_capacity=10000.0,
+    )
+    metrics = MetricsSink()
+    kernel.register_module(network)
+    kernel.register_module(metrics)
+    kernel.schedule_event(
+        _event("orbit-a", EventType.ORBIT_UPDATE.value, _state((7000.0, 0.0, 0.0), "sat-001"))
+    )
+    kernel.schedule_event(
+        _event("orbit-b", EventType.ORBIT_UPDATE.value, _state((8000.0, 0.0, 0.0), "sat-002"))
+    )
+
+    kernel.run()
+
+    space_link = next(
+        link
+        for link in network.active_link_states()
+        if link.source_id == "sat-001" and link.target_id == "sat-002"
+    )
+    assert space_link.latency == pytest.approx(0.003336, abs=1e-6)
+    assert space_link.capacity < 10000.0
 
 
 def test_position_driven_network_engine_is_deterministic() -> None:
