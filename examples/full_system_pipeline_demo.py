@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import sys
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from collections.abc import Mapping
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
+sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from leo_twin.core import SimulationKernel, SimulationModule
+from examples.full_system_pipeline_config import load_full_system_pipeline_config
 from leo_twin.models.compute import ComputeNode, RouteAwareComputeEngine, TaskPlacementDecision
 from leo_twin.models.network import (
     GroundEndpoint,
@@ -27,9 +30,6 @@ from leo_twin.schema import (
     SimEvent,
     TaskRequest,
 )
-
-
-EARTH_RADIUS_KM = 6371.0
 
 
 @dataclass(frozen=True)
@@ -73,49 +73,57 @@ class NetworkStackObserver(SimulationModule):
 def run_full_system_pipeline_demo() -> FullSystemPipelineResult:
     """Run the deterministic full-system pipeline demo."""
 
+    config = load_full_system_pipeline_config()
     kernel = SimulationKernel()
     orbit = KeplerianOrbitEngine(
         elements=(
             OrbitalElementSet(
-                satellite_id="sat-001",
-                epoch=0.0,
-                semi_major_axis_km=7000.0,
-                eccentricity=0.0,
-                inclination_deg=0.0,
-                raan_deg=0.0,
-                argument_of_perigee_deg=0.0,
-                mean_anomaly_deg=0.0,
+                satellite_id=str(config.orbit["satellite_id"]),
+                epoch=float(config.orbit["epoch"]),
+                semi_major_axis_km=float(config.orbit["semi_major_axis_km"]),
+                eccentricity=float(config.orbit["eccentricity"]),
+                inclination_deg=float(config.orbit["inclination_deg"]),
+                raan_deg=float(config.orbit["raan_deg"]),
+                argument_of_perigee_deg=float(config.orbit["argument_of_perigee_deg"]),
+                mean_anomaly_deg=float(config.orbit["mean_anomaly_deg"]),
             ),
         ),
         update_targets=("metrics", "network"),
     )
     flow_request = FlowRequest(
-        flow_id="flow-001",
-        source_id="user-east",
-        target_id="node-a",
-        demand_capacity=1.0,
+        flow_id=str(config.flow["flow_id"]),
+        source_id=str(config.flow["source_id"]),
+        target_id=str(config.flow["target_id"]),
+        demand_capacity=float(config.flow["demand_capacity"]),
     )
     network = PositionDrivenNetworkEngine(
         endpoints=(
             GroundEndpoint(
-                endpoint_id="user-east",
-                position=(EARTH_RADIUS_KM, 0.0, 0.0),
-                min_elevation_deg=10.0,
-                max_range_km=2000.0,
+                endpoint_id=str(config.ground_endpoint["endpoint_id"]),
+                position=_vector3(config.ground_endpoint["position"]),
+                min_elevation_deg=float(config.ground_endpoint["min_elevation_deg"]),
+                max_range_km=float(config.ground_endpoint["max_range_km"]),
             ),
         ),
-        compute_node_ids=("node-a",),
+        compute_node_ids=(str(config.compute["node_id"]),),
         route_targets=("compute", "metrics", "trace"),
-        link_capacity=5.0,
-        propagation_speed_km_s=629.0,
-        base_latency_s=1.0,
-        cell_size_km=1000.0,
+        link_capacity=float(config.network["link_capacity"]),
+        propagation_speed_km_s=float(config.network["propagation_speed_km_s"]),
+        base_latency_s=float(config.network["base_latency_s"]),
+        cell_size_km=float(config.network["cell_size_km"]),
     )
     trace_observer = NetworkStackObserver(
         stack_runtime=NetworkStackRuntime(build_default_leo_protocol_stack()),
         flow_request=flow_request,
     )
-    compute = RouteAwareComputeEngine(nodes=(ComputeNode("node-a", capacity=10.0),))
+    compute = RouteAwareComputeEngine(
+        nodes=(
+            ComputeNode(
+                str(config.compute["node_id"]),
+                capacity=float(config.compute["capacity"]),
+            ),
+        )
+    )
     metrics = MetricsCollector()
     kernel.register_module(orbit)
     kernel.register_module(network)
@@ -131,11 +139,11 @@ def run_full_system_pipeline_demo() -> FullSystemPipelineResult:
             target="compute",
             event_type=EventType.TASK_ARRIVAL.value,
             payload=TaskRequest(
-                task_id="flow-001",
-                source_id="user-east",
-                submit_time=0.0,
-                compute_demand=20.0,
-                data_size=10.0,
+                task_id=str(config.task["task_id"]),
+                source_id=str(config.task["source_id"]),
+                submit_time=float(config.task["submit_time"]),
+                compute_demand=float(config.task["compute_demand"]),
+                data_size=float(config.task["data_size"]),
             ),
         )
     )
@@ -183,6 +191,12 @@ def main() -> None:
         ",".join(f"{layer}:{status}" for layer, status in result.stack_layer_statuses),
     )
     print("scheduled_tasks=", result.scheduled_tasks)
+
+
+def _vector3(value: object) -> tuple[float, float, float]:
+    if not isinstance(value, (list, tuple)) or len(value) != 3:
+        raise TypeError("position must contain three numeric values")
+    return (float(value[0]), float(value[1]), float(value[2]))
 
 
 if __name__ == "__main__":

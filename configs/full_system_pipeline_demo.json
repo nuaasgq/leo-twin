@@ -1,0 +1,41 @@
+{
+  "compute": {
+    "capacity": 10.0,
+    "node_id": "node-a"
+  },
+  "flow": {
+    "demand_capacity": 1.0,
+    "flow_id": "flow-001",
+    "source_id": "user-east",
+    "target_id": "node-a"
+  },
+  "ground_endpoint": {
+    "endpoint_id": "user-east",
+    "max_range_km": 2000.0,
+    "min_elevation_deg": 10.0,
+    "position": [6371.0, 0.0, 0.0]
+  },
+  "network": {
+    "base_latency_s": 1.0,
+    "cell_size_km": 1000.0,
+    "link_capacity": 5.0,
+    "propagation_speed_km_s": 629.0
+  },
+  "orbit": {
+    "argument_of_perigee_deg": 0.0,
+    "eccentricity": 0.0,
+    "epoch": 0.0,
+    "inclination_deg": 0.0,
+    "mean_anomaly_deg": 0.0,
+    "raan_deg": 0.0,
+    "satellite_id": "sat-001",
+    "semi_major_axis_km": 7000.0
+  },
+  "task": {
+    "compute_demand": 20.0,
+    "data_size": 10.0,
+    "source_id": "user-east",
+    "submit_time": 0.0,
+    "task_id": "flow-001"
+  }
+}
