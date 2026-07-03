@@ -4,6 +4,7 @@ import pytest
 
 from leo_twin.models.network import (
     TransportProfile,
+    TransportRuntime,
     default_transport_runtime,
 )
 from leo_twin.schema import FlowRequest, Route, TransportProtocol
@@ -51,6 +52,50 @@ def test_transport_runtime_marks_route_unavailable_when_effective_capacity_is_to
     assert route.capacity == pytest.approx(89.546667)
 
 
+def test_transport_profile_loss_rate_reduces_effective_capacity() -> None:
+    runtime = TransportRuntime(
+        TransportProfile(
+            protocol=TransportProtocol.UDP,
+            payload_unit_bytes=1000,
+            header_bytes=0,
+            efficiency=1.0,
+            loss_rate=0.25,
+        )
+    )
+
+    route = runtime.apply(_request(demand=70.0), _route())
+
+    assert route.capacity == pytest.approx(75.0)
+    assert route.available is True
+
+
+def test_transport_profile_congestion_window_limits_capacity() -> None:
+    runtime = TransportRuntime(
+        TransportProfile(
+            protocol=TransportProtocol.TCP,
+            payload_unit_bytes=1000,
+            header_bytes=0,
+            efficiency=1.0,
+            congestion_window_segments=10,
+        )
+    )
+    route = Route(
+        route_id="route:flow-001",
+        flow_id="flow-001",
+        path=("user-a", "sat-a", "node-a"),
+        latency=0.1,
+        capacity=1000.0,
+        available=True,
+    )
+
+    applied = runtime.apply(_request(demand=1.0), route)
+    decision = runtime.decision(route)
+
+    assert decision.window_capacity_mbps == pytest.approx(0.8)
+    assert applied.capacity == pytest.approx(0.8)
+    assert applied.available is False
+
+
 def test_transport_profile_rejects_invalid_efficiency() -> None:
     with pytest.raises(ValueError, match="efficiency"):
         TransportProfile(
@@ -58,4 +103,15 @@ def test_transport_profile_rejects_invalid_efficiency() -> None:
             payload_unit_bytes=1472,
             header_bytes=28,
             efficiency=0.0,
+        )
+
+
+def test_transport_profile_rejects_invalid_loss_rate() -> None:
+    with pytest.raises(ValueError, match="loss_rate"):
+        TransportProfile(
+            protocol=TransportProtocol.UDP,
+            payload_unit_bytes=1472,
+            header_bytes=28,
+            efficiency=1.0,
+            loss_rate=1.0,
         )

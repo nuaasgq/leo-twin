@@ -18,6 +18,8 @@ class TransportProfile:
     header_bytes: int
     efficiency: float
     handshake_round_trips: int = 0
+    loss_rate: float = 0.0
+    congestion_window_segments: int | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.protocol, TransportProtocol):
@@ -26,6 +28,12 @@ class TransportProfile:
         _require_non_negative_int(self.header_bytes, "header_bytes")
         _require_unit_interval(self.efficiency, "efficiency")
         _require_non_negative_int(self.handshake_round_trips, "handshake_round_trips")
+        _require_probability(self.loss_rate, "loss_rate")
+        if self.congestion_window_segments is not None:
+            _require_positive_int(
+                self.congestion_window_segments,
+                "congestion_window_segments",
+            )
 
 
 @dataclass(frozen=True)
@@ -37,6 +45,8 @@ class TransportDecision:
     effective_latency: float
     effective_capacity: float
     overhead_ratio: float
+    loss_rate: float = 0.0
+    window_capacity_mbps: float | None = None
 
 
 class TransportRuntime:
@@ -59,10 +69,18 @@ class TransportRuntime:
                 effective_latency=route.latency,
                 effective_capacity=0.0,
                 overhead_ratio=self._overhead_ratio(),
+                loss_rate=self._profile.loss_rate,
+                window_capacity_mbps=None,
             )
         effective_latency = route.latency * (1.0 + self._profile.handshake_round_trips)
-        effective_capacity = route.capacity * self._profile.efficiency * (
+        base_capacity = route.capacity * self._profile.efficiency * (
             1.0 - self._overhead_ratio()
+        ) * (1.0 - self._profile.loss_rate)
+        window_capacity = self._window_capacity_mbps(route)
+        effective_capacity = (
+            base_capacity
+            if window_capacity is None
+            else min(base_capacity, window_capacity)
         )
         return TransportDecision(
             protocol=self._profile.protocol,
@@ -70,6 +88,8 @@ class TransportRuntime:
             effective_latency=effective_latency,
             effective_capacity=effective_capacity,
             overhead_ratio=self._overhead_ratio(),
+            loss_rate=self._profile.loss_rate,
+            window_capacity_mbps=window_capacity,
         )
 
     def apply(self, request: FlowRequest, route: Route) -> Route:
@@ -88,6 +108,17 @@ class TransportRuntime:
     def _overhead_ratio(self) -> float:
         total_bytes = self._profile.payload_unit_bytes + self._profile.header_bytes
         return self._profile.header_bytes / total_bytes
+
+    def _window_capacity_mbps(self, route: Route) -> float | None:
+        if self._profile.congestion_window_segments is None:
+            return None
+        round_trip_time_s = max(route.latency, 1e-9)
+        payload_bits = (
+            self._profile.congestion_window_segments
+            * self._profile.payload_unit_bytes
+            * 8.0
+        )
+        return payload_bits / round_trip_time_s / 1_000_000.0
 
 
 def default_transport_runtime(protocol: TransportProtocol) -> TransportRuntime:
@@ -135,3 +166,10 @@ def _require_unit_interval(value: Any, field_name: str) -> None:
         raise TypeError(f"{field_name} must be an int or float")
     if not isfinite(float(value)) or value <= 0.0 or value > 1.0:
         raise ValueError(f"{field_name} must be in (0, 1]")
+
+
+def _require_probability(value: Any, field_name: str) -> None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise TypeError(f"{field_name} must be an int or float")
+    if not isfinite(float(value)) or value < 0.0 or value >= 1.0:
+        raise ValueError(f"{field_name} must be in [0, 1)")
