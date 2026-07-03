@@ -112,6 +112,8 @@ class PositionDrivenNetworkEngine(SimulationModule):
         self._satellites_by_space_cell: dict[SpaceCellId, set[str]] = {}
         self._active_links: dict[tuple[str, str], LinkState] = {}
         self._active_space_links: dict[tuple[str, str], LinkState] = {}
+        self._active_flows: dict[str, FlowRequest] = {}
+        self._last_routes: dict[str, Route] = {}
         self._last_links: dict[tuple[str, str], LinkState] = {}
         self._event_sequence = 0
 
@@ -121,22 +123,20 @@ class PositionDrivenNetworkEngine(SimulationModule):
     def on_event(self, event: SimEvent, kernel: SimulationKernel) -> None:
         if event.event_type == EventType.ORBIT_UPDATE:
             state = self._coerce_satellite_state(event.payload)
-            for emitted in self._update_for_state(state, event.sim_time):
+            emitted_events = list(self._update_for_state(state, event.sim_time))
+            if emitted_events:
+                emitted_events.extend(self._reroute_active_flows(event.sim_time))
+            for emitted in emitted_events:
                 kernel.schedule_event(emitted)
             return
 
         if event.event_type == EventType.FLOW_ARRIVAL:
             request = self._coerce_flow_request(event.payload)
+            self._active_flows[request.flow_id] = request
             route = self.route_flow(request)
-            for target in self._route_targets:
-                kernel.schedule_event(
-                    self._event(
-                        dispatch_time=event.sim_time,
-                        target=target,
-                        event_type=EventType.ROUTE_UPDATE.value,
-                        payload=route,
-                    )
-                )
+            self._last_routes[request.flow_id] = route
+            for emitted in self._route_events(event.sim_time, route):
+                kernel.schedule_event(emitted)
 
     def update_topology(self, sim_time: float) -> tuple[SimEvent, ...]:
         """Return no-op topology updates for contract compatibility."""
@@ -195,6 +195,17 @@ class PositionDrivenNetworkEngine(SimulationModule):
         if self._transport_runtime is None:
             return route
         return self._transport_runtime.apply(request, route)
+
+    def _reroute_active_flows(self, dispatch_time: float) -> tuple[SimEvent, ...]:
+        emitted: list[SimEvent] = []
+        for flow_id in sorted(self._active_flows):
+            request = self._active_flows[flow_id]
+            route = self.route_flow(request)
+            if self._last_routes.get(flow_id) == route:
+                continue
+            self._last_routes[flow_id] = route
+            emitted.extend(self._route_events(dispatch_time, route))
+        return tuple(emitted)
 
     def _update_for_state(
         self,
@@ -444,6 +455,21 @@ class PositionDrivenNetworkEngine(SimulationModule):
                 event_type=EventType.LINK_UPDATE.value,
                 payload=link,
             ),
+        )
+
+    def _route_events(
+        self,
+        dispatch_time: float,
+        route: Route,
+    ) -> tuple[SimEvent, ...]:
+        return tuple(
+            self._event(
+                dispatch_time=dispatch_time,
+                target=target,
+                event_type=EventType.ROUTE_UPDATE.value,
+                payload=route,
+            )
+            for target in self._route_targets
         )
 
     def _event(

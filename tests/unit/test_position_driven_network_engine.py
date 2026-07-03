@@ -288,6 +288,65 @@ def test_flow_arrival_outputs_route_from_active_access() -> None:
     assert compute.routes[0].path == ("user-east", "sat-001", "node-a")
 
 
+def test_active_flow_reroutes_when_access_link_ends() -> None:
+    kernel = SimulationKernel()
+    network = _engine()
+    metrics = MetricsSink()
+    compute = ComputeSink()
+    kernel.register_module(network)
+    kernel.register_module(metrics)
+    kernel.register_module(compute)
+    kernel.schedule_event(
+        _event("orbit-1", EventType.ORBIT_UPDATE.value, _state((7000.0, 0.0, 0.0)))
+    )
+    kernel.schedule_event(
+        _event(
+            "flow",
+            EventType.FLOW_ARRIVAL.value,
+            FlowRequest("flow-001", "user-east", "node-a", 10.0),
+            1.0,
+        )
+    )
+    kernel.schedule_event(
+        _event("orbit-2", EventType.ORBIT_UPDATE.value, _state((0.0, 7000.0, 0.0)), 2.0)
+    )
+
+    kernel.run()
+
+    assert [route.available for route in compute.routes] == [True, False]
+    assert compute.routes[0].path == ("user-east", "sat-001", "node-a")
+    assert compute.routes[1].path == ()
+
+
+def test_active_flow_is_not_rerouted_without_link_delta() -> None:
+    kernel = SimulationKernel()
+    network = _engine()
+    metrics = MetricsSink()
+    compute = ComputeSink()
+    kernel.register_module(network)
+    kernel.register_module(metrics)
+    kernel.register_module(compute)
+    kernel.schedule_event(
+        _event("orbit-1", EventType.ORBIT_UPDATE.value, _state((7000.0, 0.0, 0.0)))
+    )
+    kernel.schedule_event(
+        _event(
+            "flow",
+            EventType.FLOW_ARRIVAL.value,
+            FlowRequest("flow-001", "user-east", "node-a", 10.0),
+            1.0,
+        )
+    )
+    kernel.schedule_event(
+        _event("orbit-2", EventType.ORBIT_UPDATE.value, _state((7000.0, 0.0, 0.0)), 2.0)
+    )
+
+    kernel.run()
+
+    assert len(compute.routes) == 1
+    assert compute.routes[0].available is True
+
+
 def test_position_driven_engine_can_use_routing_runtime_and_static_links() -> None:
     kernel = SimulationKernel()
     network = PositionDrivenNetworkEngine(
