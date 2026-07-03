@@ -5,6 +5,7 @@ from __future__ import annotations
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from collections.abc import Mapping
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
@@ -17,6 +18,7 @@ from leo_twin.models.network import (
     build_default_leo_protocol_stack,
 )
 from leo_twin.models.orbit import KeplerianOrbitEngine
+from leo_twin.services.metrics import MetricsCollector
 from leo_twin.schema import (
     EventType,
     FlowRequest,
@@ -36,6 +38,7 @@ class FullSystemPipelineResult:
 
     processed_event_types: tuple[str, ...]
     metrics_event_types: tuple[str, ...]
+    metrics_summary: Mapping[str, str | float | int | bool]
     stack_layer_statuses: tuple[tuple[str, str], ...]
     scheduled_tasks: tuple[TaskPlacementDecision, ...]
 
@@ -65,19 +68,6 @@ class NetworkStackObserver(SimulationModule):
         self.stack_layer_statuses.extend(
             (layer.layer.value, layer.status) for layer in trace.layers
         )
-
-
-class MetricsSink(SimulationModule):
-    """Collect demo metric-facing events."""
-
-    def __init__(self) -> None:
-        self.events: list[SimEvent] = []
-
-    def name(self) -> str:
-        return "metrics"
-
-    def on_event(self, event: SimEvent, kernel: SimulationKernel) -> None:
-        self.events.append(event)
 
 
 def run_full_system_pipeline_demo() -> FullSystemPipelineResult:
@@ -126,7 +116,7 @@ def run_full_system_pipeline_demo() -> FullSystemPipelineResult:
         flow_request=flow_request,
     )
     compute = RouteAwareComputeEngine(nodes=(ComputeNode("node-a", capacity=10.0),))
-    metrics = MetricsSink()
+    metrics = MetricsCollector()
     kernel.register_module(orbit)
     kernel.register_module(network)
     kernel.register_module(trace_observer)
@@ -174,7 +164,8 @@ def run_full_system_pipeline_demo() -> FullSystemPipelineResult:
     processed_events = kernel.run()
     return FullSystemPipelineResult(
         processed_event_types=tuple(event.event_type for event in processed_events),
-        metrics_event_types=tuple(event.event_type for event in metrics.events),
+        metrics_event_types=tuple(str(event["event_type"]) for event in metrics.event_log()),
+        metrics_summary=metrics.summary(),
         stack_layer_statuses=tuple(trace_observer.stack_layer_statuses),
         scheduled_tasks=compute.scheduled_tasks(),
     )
@@ -186,6 +177,7 @@ def main() -> None:
     result = run_full_system_pipeline_demo()
     print("processed_event_types=", ",".join(result.processed_event_types))
     print("metrics_event_types=", ",".join(result.metrics_event_types))
+    print("metrics_summary=", dict(result.metrics_summary))
     print(
         "stack_layer_statuses=",
         ",".join(f"{layer}:{status}" for layer, status in result.stack_layer_statuses),

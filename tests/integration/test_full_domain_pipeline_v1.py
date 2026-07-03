@@ -33,6 +33,13 @@ def test_full_domain_pipeline_runs_orbit_network_compute_lifecycle() -> None:
         EventType.TASK_FINISH.value,
         "COMPUTE_NODE_UPDATE",
     )
+    assert result.metrics_summary["event_count"] == 8
+    assert result.metrics_summary["active_links"] == 1
+    assert result.metrics_summary["available_link_capacity"] == 5.0
+    assert result.metrics_summary["routes_total"] == 1
+    assert result.metrics_summary["routes_available"] == 1
+    assert result.metrics_summary["running_tasks"] == 0
+    assert result.metrics_summary["finished_tasks"] == 1
     assert result.stack_layer_statuses == (
         ("APPLICATION", "OK"),
         ("TRANSPORT", "OK"),
