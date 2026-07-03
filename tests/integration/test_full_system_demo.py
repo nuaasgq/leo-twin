@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from functools import lru_cache
 
 from examples.integration_demo import DemoRunResult, load_demo_config, run_integration_demo
@@ -72,6 +73,46 @@ def test_replay_test() -> None:
     assert replay.replay_signature == result.replay.replay_signature
     assert replay.timeline == result.state_timeline
     assert stable_json(event_to_json(result.processed_events[0])) in replay.replay_signature
+
+
+def test_network_stack_trace_uses_configured_protocols() -> None:
+    result = _demo_result()
+
+    assert len(result.network_stack_traces) == 100
+    assert {trace.transport_protocol for trace in result.network_stack_traces} == {"TCP"}
+    assert {
+        layer.protocol_name
+        for trace in result.network_stack_traces
+        for layer in trace.layers
+        if str(layer.layer) == "NETWORK"
+    } == {"LINK_STATE"}
+    assert any(
+        ("carrier_frequency_hz", "20000000000.000000") in layer.attributes
+        for trace in result.network_stack_traces
+        for layer in trace.layers
+    )
+
+    udp_result = run_integration_demo(
+        replace(
+            load_demo_config(),
+            transport_protocol="UDP",
+            routing_protocol="DISTANCE_VECTOR",
+        )
+    )
+
+    assert {trace.transport_protocol for trace in udp_result.network_stack_traces} == {"UDP"}
+    assert {
+        layer.protocol_name
+        for trace in udp_result.network_stack_traces
+        for layer in trace.layers
+        if str(layer.layer) == "NETWORK"
+    } == {"DISTANCE_VECTOR"}
+    assert udp_result.metrics_summary["route_latency_avg"] < result.metrics_summary[
+        "route_latency_avg"
+    ]
+    assert udp_result.metrics_summary["route_capacity_max"] > result.metrics_summary[
+        "route_capacity_max"
+    ]
 
 
 def test_scale_test_basic() -> None:

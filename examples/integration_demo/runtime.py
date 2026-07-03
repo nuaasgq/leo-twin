@@ -8,12 +8,23 @@ from leo_twin.core import SimulationKernel, SimulationModule
 from leo_twin.models.compute import RouteAwareComputeEngine
 from leo_twin.models.network import (
     LinkBudgetCalculator,
+    NetworkStackRuntime,
+    NetworkStackTrace,
     PositionDrivenNetworkEngine,
     RadioTerminalProfile,
     RainFadeProfile,
+    build_default_leo_protocol_stack,
+    default_transport_runtime,
 )
 from leo_twin.models.orbit import OrbitEngine
-from leo_twin.schema import AntennaProfile, ChannelProfile, LinkMedium, SimEvent
+from leo_twin.schema import (
+    AntennaProfile,
+    ChannelProfile,
+    LinkMedium,
+    RoutingProtocol,
+    SimEvent,
+    TransportProtocol,
+)
 from leo_twin.services.metrics import MetricsCollector
 
 from examples.integration_demo.config import DemoConfig
@@ -31,6 +42,7 @@ class DemoRunResult:
     final_snapshot: dict[str, JsonValue]
     state_timeline: tuple[dict[str, JsonValue], ...]
     metrics_summary: dict[str, str | float | int | bool]
+    network_stack_traces: tuple[NetworkStackTrace, ...]
     replay: ReplayResult
 
     def event_log_jsonl(self) -> str:
@@ -68,22 +80,35 @@ def run_integration_demo(config: DemoConfig) -> DemoRunResult:
         event_log_segment_size=10_000,
         satellite_position_scale_to_km=0.001,
     )
+    space_ground_budget = _space_ground_budget(config)
+    transport_protocol = TransportProtocol(str(config.transport_protocol))
+    routing_protocol = RoutingProtocol(str(config.routing_protocol))
+    network = PositionDrivenNetworkEngine(
+        endpoints=scenario.ground_endpoints,
+        compute_node_ids=tuple(node.node_id for node in scenario.compute_nodes),
+        route_targets=("compute", "metrics"),
+        link_capacity=500.0,
+        propagation_speed_km_s=299792.458,
+        cell_size_km=1000.0,
+        link_budget_calculator=space_ground_budget,
+        position_scale_to_km=0.001,
+        transport_runtime=default_transport_runtime(transport_protocol),
+        stack_runtime=NetworkStackRuntime(
+            build_default_leo_protocol_stack(
+                transport_protocol=transport_protocol,
+                routing_protocol=routing_protocol,
+            ),
+            antenna=space_ground_budget.transmit_terminal.antenna,
+            channel=space_ground_budget.channel,
+        ),
+    )
 
     modules: tuple[SimulationModule, ...] = (
         OrbitEngine(
             satellites=scenario.orbit_satellites,
             update_targets=("network", "metrics"),
         ),
-        PositionDrivenNetworkEngine(
-            endpoints=scenario.ground_endpoints,
-            compute_node_ids=tuple(node.node_id for node in scenario.compute_nodes),
-            route_targets=("compute", "metrics"),
-            link_capacity=500.0,
-            propagation_speed_km_s=299792.458,
-            cell_size_km=1000.0,
-            link_budget_calculator=_space_ground_budget(config),
-            position_scale_to_km=0.001,
-        ),
+        network,
         RouteAwareComputeEngine(nodes=scenario.compute_nodes),
         metrics,
         frontend_sink,
@@ -115,6 +140,7 @@ def run_integration_demo(config: DemoConfig) -> DemoRunResult:
         final_snapshot=projector.snapshot(),
         state_timeline=projector.timeline(),
         metrics_summary=metrics.summary(),
+        network_stack_traces=network.stack_traces(),
         replay=replay,
     )
 
