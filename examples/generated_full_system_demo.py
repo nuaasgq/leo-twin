@@ -16,8 +16,11 @@ from leo_twin.models.network import (
     GroundEndpoint,
     PositionDrivenNetworkEngine,
     LinkBudgetCalculator,
+    NetworkStackRuntime,
     RadioTerminalProfile,
     RainFadeProfile,
+    NetworkStackTrace,
+    build_default_leo_protocol_stack,
     default_transport_runtime,
 )
 from leo_twin.models.orbit import KeplerianOrbitEngine
@@ -26,6 +29,7 @@ from leo_twin.schema import (
     ChannelProfile,
     EventType,
     LinkMedium,
+    RoutingProtocol,
     SimEvent,
     TransportProtocol,
 )
@@ -49,6 +53,7 @@ class GeneratedFullSystemDemoResult:
     compute_node_count: int
     flow_count: int
     active_link_count: int
+    network_stack_traces: tuple[NetworkStackTrace, ...]
 
 
 def run_generated_full_system_demo(
@@ -64,6 +69,7 @@ def run_generated_full_system_demo(
         update_targets=("metrics", "network"),
         earth_rotation_rate_rad_s=resolved_config.earth_rotation_rate_rad_s,
     )
+    link_budget_calculator = _space_ground_budget(resolved_config)
     network = PositionDrivenNetworkEngine(
         endpoints=tuple(
             GroundEndpoint(
@@ -79,7 +85,7 @@ def run_generated_full_system_demo(
         link_capacity=100.0,
         propagation_speed_km_s=299792.458,
         cell_size_km=5000.0,
-        link_budget_calculator=_space_ground_budget(resolved_config),
+        link_budget_calculator=link_budget_calculator,
         space_link_max_range_km=(
             resolved_config.space_link_max_range_km
             if resolved_config.space_link_max_range_km > 0.0
@@ -93,6 +99,14 @@ def run_generated_full_system_demo(
         ),
         transport_runtime=default_transport_runtime(
             TransportProtocol(str(resolved_config.transport_protocol))
+        ),
+        stack_runtime=NetworkStackRuntime(
+            build_default_leo_protocol_stack(
+                transport_protocol=TransportProtocol(str(resolved_config.transport_protocol)),
+                routing_protocol=RoutingProtocol(str(resolved_config.routing_protocol)),
+            ),
+            antenna=link_budget_calculator.transmit_terminal.antenna,
+            channel=link_budget_calculator.channel,
         ),
     )
     compute = RouteAwareComputeEngine(
@@ -152,6 +166,7 @@ def run_generated_full_system_demo(
         compute_node_count=len(scenario.compute_nodes),
         flow_count=len(scenario.flows),
         active_link_count=len(network.active_link_states()),
+        network_stack_traces=network.stack_traces(),
     )
 
 

@@ -25,6 +25,8 @@ def test_generated_full_system_demo_runs_domain_lifecycle() -> None:
     assert result.compute_node_count == 2
     assert result.flow_count == 4
     assert result.active_link_count > 0
+    assert len(result.network_stack_traces) == 4
+    assert result.network_stack_traces[0].transport_protocol == "TCP"
     assert len(result.scheduled_tasks) == 4
     assert result.metrics_summary["routes_available"] == 4
     assert result.metrics_summary["route_latency_min"] > 0.0
@@ -76,6 +78,43 @@ def test_generated_full_system_demo_transport_protocol_changes_route_profile() -
 
     assert tcp.metrics_summary["route_latency_min"] > udp.metrics_summary["route_latency_min"]
     assert tcp.metrics_summary["route_capacity_max"] < udp.metrics_summary["route_capacity_max"]
+    assert {trace.transport_protocol for trace in tcp.network_stack_traces} == {"TCP"}
+    assert {trace.transport_protocol for trace in udp.network_stack_traces} == {"UDP"}
+
+
+def test_generated_full_system_demo_records_configured_network_stack_trace() -> None:
+    result = run_generated_full_system_demo(
+        FullSystemScenarioBuilderConfig(
+            seed=15,
+            satellite_count=3,
+            user_count=5,
+            compute_node_count=2,
+            flow_count=3,
+            orbit_plane_count=1,
+            min_elevation_deg=-90.0,
+            max_range_km=30000.0,
+            compute_capacity=20.0,
+            transport_protocol="UDP",
+            routing_protocol="DISTANCE_VECTOR",
+            carrier_frequency_hz=22_000_000_000.0,
+            channel_bandwidth_hz=250_000_000.0,
+        )
+    )
+
+    trace = result.network_stack_traces[0]
+    layer_protocols = tuple(layer.protocol_name for layer in trace.layers)
+    channel_attributes = dict(trace.layers[5].attributes)
+
+    assert layer_protocols == (
+        "TASK_OFFLOAD_FLOW",
+        "UDP",
+        "DISTANCE_VECTOR",
+        "LEO_LINK_ACCESS",
+        "CONFIGURED_TERMINAL_PROFILE",
+        "CONFIGURED_CHANNEL_PROFILE",
+    )
+    assert channel_attributes["carrier_frequency_hz"] == "22000000000.000000"
+    assert channel_attributes["bandwidth_hz"] == "250000000.000000"
 
 
 def test_generated_full_system_demo_rain_fade_reduces_route_capacity() -> None:
