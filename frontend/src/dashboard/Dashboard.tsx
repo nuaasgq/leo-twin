@@ -5,6 +5,7 @@ import { ChannelHealthPanel } from "./channel_health/ChannelHealthPanel";
 import { ComputeQueuePanel } from "./compute_queue/ComputeQueuePanel";
 import { ComputeView } from "./compute_view/ComputeView";
 import { DomainSummary } from "./domain_summary/DomainSummary";
+import { GroundTrackPanel } from "./ground_track/GroundTrackPanel";
 import { LinkProtocolPanel } from "./link_protocol/LinkProtocolPanel";
 import { NetworkView } from "./network_view/NetworkView";
 import { OrbitPanel } from "./orbit_panel/OrbitPanel";
@@ -20,6 +21,7 @@ export const Dashboard = memo(function Dashboard({ snapshot }: { snapshot: World
       <ComputeView snapshot={snapshot} />
       <ComputeQueuePanel snapshot={snapshot} />
       <OrbitPanel snapshot={snapshot} />
+      <GroundTrackPanel snapshot={snapshot} />
       <SystemHealth snapshot={snapshot} />
     </aside>
   );
