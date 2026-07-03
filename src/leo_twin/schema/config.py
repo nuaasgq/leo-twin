@@ -7,6 +7,8 @@ from enum import StrEnum
 from math import isfinite
 from typing import Any
 
+from leo_twin.schema.full_system import RoutingProtocol, TransportProtocol
+
 
 class RuntimeMode(StrEnum):
     """Runtime execution modes exposed to configuration and UI controls."""
@@ -46,6 +48,28 @@ class TrafficModel:
         _require_positive_int(self.task_interval_seconds, "traffic_model.task_interval_seconds")
         _require_positive_finite(self.flow_demand_capacity, "traffic_model.flow_demand_capacity")
         _require_positive_finite(self.task_compute_demand, "traffic_model.task_compute_demand")
+
+
+@dataclass(frozen=True)
+class NetworkProfile:
+    """Configuration-only network protocol profile."""
+
+    transport_protocol: TransportProtocol = TransportProtocol.TCP
+    routing_protocol: RoutingProtocol = RoutingProtocol.LINK_STATE
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.transport_protocol, TransportProtocol):
+            object.__setattr__(
+                self,
+                "transport_protocol",
+                TransportProtocol(str(self.transport_protocol)),
+            )
+        if not isinstance(self.routing_protocol, RoutingProtocol):
+            object.__setattr__(
+                self,
+                "routing_protocol",
+                RoutingProtocol(str(self.routing_protocol)),
+            )
 
 
 @dataclass(frozen=True)
@@ -121,6 +145,7 @@ class SEESConfig:
     """Top-level deterministic control-plane configuration."""
 
     scenario: ScenarioConfig = field(default_factory=ScenarioConfig)
+    network: NetworkProfile = field(default_factory=NetworkProfile)
     runtime: RuntimeConfig = field(default_factory=RuntimeConfig)
     ui: UIConfig = field(default_factory=UIConfig)
 

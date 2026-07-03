@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from leo_twin.schema.config import (
+    NetworkProfile,
     OrbitParameters,
     RuntimeConfig,
     RuntimeMode,
@@ -18,6 +19,7 @@ from leo_twin.schema.config import (
     VisualizationToggles,
     config_to_dict,
 )
+from leo_twin.schema.full_system import RoutingProtocol, TransportProtocol
 
 
 class ConfigValidationError(ValueError):
@@ -26,7 +28,7 @@ class ConfigValidationError(ValueError):
 
 DEFAULT_CONFIG = SEESConfig()
 
-_TOP_LEVEL_KEYS = frozenset({"scenario", "runtime", "ui"})
+_TOP_LEVEL_KEYS = frozenset({"scenario", "network", "runtime", "ui"})
 _SCENARIO_KEYS = frozenset(
     {
         "satellite_count",
@@ -54,6 +56,7 @@ _TRAFFIC_KEYS = frozenset(
         "task_compute_demand",
     }
 )
+_NETWORK_KEYS = frozenset({"transport_protocol", "routing_protocol"})
 _RUNTIME_KEYS = frozenset({"mode", "speed_factor", "seed", "duration"})
 _UI_KEYS = frozenset({"visualization", "update_frequency_hz", "dashboard_layout"})
 _VISUALIZATION_KEYS = frozenset({"satellites", "links", "users", "metrics"})
@@ -133,9 +136,11 @@ def parse_simple_yaml(text: str) -> dict[str, Any]:
 def _build_config(data: Mapping[str, Any]) -> SEESConfig:
     try:
         scenario = _mapping(data["scenario"], "scenario")
+        network = _mapping(data["network"], "network")
         runtime = _mapping(data["runtime"], "runtime")
         ui = _mapping(data["ui"], "ui")
         _reject_unknown(scenario, _SCENARIO_KEYS, "scenario")
+        _reject_unknown(network, _NETWORK_KEYS, "network")
         _reject_unknown(runtime, _RUNTIME_KEYS, "runtime")
         _reject_unknown(ui, _UI_KEYS, "ui")
 
@@ -155,6 +160,10 @@ def _build_config(data: Mapping[str, Any]) -> SEESConfig:
                 cell_count=scenario["cell_count"],
                 orbit=OrbitParameters(**dict(orbit)),
                 traffic_model=TrafficModel(**dict(traffic)),
+            ),
+            network=NetworkProfile(
+                transport_protocol=TransportProtocol(str(network["transport_protocol"])),
+                routing_protocol=RoutingProtocol(str(network["routing_protocol"])),
             ),
             runtime=RuntimeConfig(
                 mode=RuntimeMode(str(runtime["mode"])),
@@ -181,6 +190,9 @@ def _normalize_update(update: Mapping[str, Any]) -> dict[str, Any]:
     for key in ("mode", "speed_factor", "seed", "duration"):
         if key in direct:
             nested.setdefault("runtime", {})[key] = direct.pop(key)
+    for key in ("transport_protocol", "routing_protocol"):
+        if key in direct:
+            nested.setdefault("network", {})[key] = direct.pop(key)
     if "orbit" in direct:
         nested.setdefault("scenario", {})["orbit"] = direct.pop("orbit")
     if "traffic_model" in direct:
@@ -249,7 +261,7 @@ def _scalar(value: str) -> Any:
 def _config_yaml(config: SEESConfig) -> str:
     data = config_to_dict(config)
     lines: list[str] = []
-    for section_name in ("scenario", "runtime", "ui"):
+    for section_name in ("scenario", "network", "runtime", "ui"):
         lines.append(f"{section_name}:")
         section = data[section_name]
         if not isinstance(section, Mapping):
@@ -298,6 +310,7 @@ def _ordered_keys(context: str, data: Mapping[str, Any]) -> tuple[str, ...]:
             "flow_demand_capacity",
             "task_compute_demand",
         ),
+        "network": ("transport_protocol", "routing_protocol"),
         "runtime": ("mode", "speed_factor", "seed", "duration"),
         "ui": ("visualization", "update_frequency_hz", "dashboard_layout"),
         "ui.visualization": ("satellites", "links", "users", "metrics"),

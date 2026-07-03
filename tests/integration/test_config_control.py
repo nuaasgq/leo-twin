@@ -20,6 +20,8 @@ def test_config_loads_correctly() -> None:
     assert config.scenario.compute_nodes == 10
     assert config.runtime.mode == "REAL_TIME"
     assert config.runtime.speed_factor == 1.0
+    assert config.network.transport_protocol == "TCP"
+    assert config.network.routing_protocol == "LINK_STATE"
     assert config.ui.visualization.satellites is True
 
 
@@ -29,6 +31,23 @@ def test_invalid_config_is_rejected() -> None:
 
     with pytest.raises(ConfigValidationError):
         config_from_mapping({"scenario": {"unknown_field": 1}})
+
+    with pytest.raises(ConfigValidationError):
+        config_from_mapping({"network": {"transport_protocol": "SCTP"}})
+
+
+def test_network_protocol_profile_can_be_updated_directly() -> None:
+    controller = RuntimeController(load_config("configs/sees_control.yaml"))
+    snapshot = controller.update_config(
+        {
+            "transport_protocol": "UDP",
+            "routing_protocol": "DISTANCE_VECTOR",
+        }
+    )
+
+    assert snapshot.last_action == "CONFIG_UPDATE"
+    assert controller.config.network.transport_protocol == "UDP"
+    assert controller.config.network.routing_protocol == "DISTANCE_VECTOR"
 
 
 def test_runtime_mode_switching_works() -> None:
