@@ -10,6 +10,7 @@ import { RuntimeAction } from "./controlClient";
 export interface ScenarioControlValues {
   satellite_count: number;
   user_count: number;
+  compute_nodes: number;
 }
 
 export interface ConfigPanelProps {
@@ -32,6 +33,7 @@ export function ConfigPanel({
 }: ConfigPanelProps) {
   const [satelliteCount, setSatelliteCount] = useState(scenario.satellite_count);
   const [userCount, setUserCount] = useState(scenario.user_count);
+  const [computeNodes, setComputeNodes] = useState(scenario.compute_nodes);
   const [runtimeMode, setRuntimeMode] = useState<Exclude<RuntimeMode, "PAUSED">>(
     runtime.mode === "ACCELERATED" ? "ACCELERATED" : "REAL_TIME"
   );
@@ -40,7 +42,8 @@ export function ConfigPanel({
   useEffect(() => {
     setSatelliteCount(scenario.satellite_count);
     setUserCount(scenario.user_count);
-  }, [scenario.satellite_count, scenario.user_count]);
+    setComputeNodes(scenario.compute_nodes);
+  }, [scenario.satellite_count, scenario.user_count, scenario.compute_nodes]);
 
   useEffect(() => {
     if (runtime.mode !== "PAUSED") {
@@ -97,6 +100,24 @@ export function ConfigPanel({
       </div>
 
       <div className="control-group">
+        <label className="control-label" htmlFor="compute-node-count">
+          算力节点
+        </label>
+        <div className="control-row">
+          <input
+            id="compute-node-count"
+            type="range"
+            min="1"
+            max="1000"
+            step="1"
+            value={computeNodes}
+            onChange={(event) => setComputeNodes(Number(event.currentTarget.value))}
+          />
+          <output>{computeNodes}</output>
+        </div>
+      </div>
+
+      <div className="control-group">
         <label className="control-label" htmlFor="runtime-mode">
           运行模式
         </label>
@@ -135,6 +156,7 @@ export function ConfigPanel({
             onRuntimeControl("INITIALIZE", {
               satellite_count: satelliteCount,
               user_count: userCount,
+              compute_nodes: computeNodes,
               mode: runtimeMode,
               speed_factor: speedFactor
             })

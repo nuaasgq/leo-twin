@@ -315,6 +315,7 @@ function scenarioControlValues(
       scenarioConfig?.render?.max_satellites ??
       renderedSatellites,
     user_count:
-      scenarioConfig?.scenario?.user_count ?? scenarioConfig?.ground_users?.length ?? 1000
+      scenarioConfig?.scenario?.user_count ?? scenarioConfig?.ground_users?.length ?? 1000,
+    compute_nodes: scenarioConfig?.scenario?.compute_nodes ?? 10
   };
 }
