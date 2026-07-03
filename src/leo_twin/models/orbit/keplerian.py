@@ -17,10 +17,12 @@ class KeplerianOrbitPropagator:
         self,
         elements: Iterable[OrbitalElementSet],
         gravitational_parameter_km3_s2: float,
+        earth_rotation_rate_rad_s: float = 0.0,
         max_iterations: int = 12,
         tolerance: float = 1e-12,
     ) -> None:
         _require_positive_number(gravitational_parameter_km3_s2, "gravitational_parameter_km3_s2")
+        _require_finite_number(earth_rotation_rate_rad_s, "earth_rotation_rate_rad_s")
         _require_positive_int(max_iterations, "max_iterations")
         _require_positive_number(tolerance, "tolerance")
         configured_elements = tuple(sorted(elements, key=lambda item: item.satellite_id))
@@ -28,6 +30,7 @@ class KeplerianOrbitPropagator:
             raise ValueError("elements must contain at least one satellite")
         self._elements = configured_elements
         self._mu = float(gravitational_parameter_km3_s2)
+        self._earth_rotation_rate_rad_s = float(earth_rotation_rate_rad_s)
         self._max_iterations = max_iterations
         self._tolerance = float(tolerance)
 
@@ -53,17 +56,23 @@ class KeplerianOrbitPropagator:
             eccentricity,
             eccentric_anomaly,
         )
-        position = _rotate_perifocal_to_inertial(
+        position_inertial = _rotate_perifocal_to_inertial(
             position_perifocal,
             raan_rad=radians(element.raan_deg),
             inclination_rad=radians(element.inclination_deg),
             argument_rad=radians(element.argument_of_perigee_deg),
         )
-        velocity = _rotate_perifocal_to_inertial(
+        velocity_inertial = _rotate_perifocal_to_inertial(
             velocity_perifocal,
             raan_rad=radians(element.raan_deg),
             inclination_rad=radians(element.inclination_deg),
             argument_rad=radians(element.argument_of_perigee_deg),
+        )
+        position, velocity = _inertial_to_earth_fixed(
+            position=position_inertial,
+            velocity=velocity_inertial,
+            elapsed=elapsed,
+            earth_rotation_rate_rad_s=self._earth_rotation_rate_rad_s,
         )
         return SatelliteState(
             satellite_id=element.satellite_id,
@@ -118,6 +127,7 @@ class KeplerianOrbitEngine(SimulationModule):
         module_name: str = "orbit",
         update_targets: Iterable[str] = ("network", "metrics"),
         gravitational_parameter_km3_s2: float = 398600.4418,
+        earth_rotation_rate_rad_s: float = 0.0,
     ) -> None:
         _require_non_empty_str(module_name, "module_name")
         configured_targets = tuple(update_targets)
@@ -130,6 +140,7 @@ class KeplerianOrbitEngine(SimulationModule):
         self._propagator = KeplerianOrbitPropagator(
             elements=elements,
             gravitational_parameter_km3_s2=gravitational_parameter_km3_s2,
+            earth_rotation_rate_rad_s=earth_rotation_rate_rad_s,
         )
         self._event_sequence = 0
 
@@ -202,6 +213,38 @@ def _rotate_perifocal_to_inertial(
         + (cos_inclination) * z_perifocal
     )
     return (x_value, y_value, z_value)
+
+
+def _inertial_to_earth_fixed(
+    position: tuple[float, float, float],
+    velocity: tuple[float, float, float],
+    elapsed: float,
+    earth_rotation_rate_rad_s: float,
+) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
+    if earth_rotation_rate_rad_s == 0.0:
+        return position, velocity
+    theta = earth_rotation_rate_rad_s * elapsed
+    rotated_position = _rotate_z(position, -theta)
+    rotated_velocity = _rotate_z(velocity, -theta)
+    earth_fixed_velocity = (
+        rotated_velocity[0] + earth_rotation_rate_rad_s * rotated_position[1],
+        rotated_velocity[1] - earth_rotation_rate_rad_s * rotated_position[0],
+        rotated_velocity[2],
+    )
+    return rotated_position, earth_fixed_velocity
+
+
+def _rotate_z(
+    vector: tuple[float, float, float],
+    angle_rad: float,
+) -> tuple[float, float, float]:
+    cos_angle = cos(angle_rad)
+    sin_angle = sin(angle_rad)
+    return (
+        cos_angle * vector[0] - sin_angle * vector[1],
+        sin_angle * vector[0] + cos_angle * vector[1],
+        vector[2],
+    )
 
 
 def _normalize_radians(value: float) -> float:

@@ -90,6 +90,21 @@ def test_keplerian_states_are_deterministic_and_sorted() -> None:
     assert [state.satellite_id for state in first] == ["SAT-A", "SAT-B"]
 
 
+def test_keplerian_propagator_can_emit_earth_fixed_state() -> None:
+    semi_major_axis = 7000.0
+    mean_motion = sqrt(MU / (semi_major_axis**3))
+    propagator = KeplerianOrbitPropagator(
+        elements=(_element(),),
+        gravitational_parameter_km3_s2=MU,
+        earth_rotation_rate_rad_s=mean_motion,
+    )
+
+    state = propagator.states_at(10.0)[0]
+
+    assert state.position == pytest.approx((7000.0, 0.0, 0.0), abs=1e-8)
+    assert state.velocity == pytest.approx((0.0, 0.0, 0.0), abs=1e-10)
+
+
 def test_keplerian_orbit_engine_schedules_events_through_kernel() -> None:
     kernel = SimulationKernel()
     orbit = KeplerianOrbitEngine(elements=(_element(),), update_targets=("network", "metrics"))
