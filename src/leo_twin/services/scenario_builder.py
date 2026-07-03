@@ -36,6 +36,9 @@ class FullSystemScenarioBuilderConfig:
     earth_radius_km: float = 6371.0
     min_elevation_deg: float = 10.0
     max_range_km: float = 2000.0
+    space_link_max_range_km: float = 0.0
+    space_link_capacity: float = 100.0
+    space_link_cell_size_km: float = 0.0
     compute_capacity: float = 10.0
     demand_capacity: float = 1.0
     task_compute_demand: float = 20.0
@@ -64,6 +67,15 @@ class FullSystemScenarioBuilderConfig:
         _require_positive_number(self.earth_radius_km, "earth_radius_km")
         _require_range(self.min_elevation_deg, "min_elevation_deg", -90.0, 90.0)
         _require_positive_number(self.max_range_km, "max_range_km")
+        _require_non_negative_number(
+            self.space_link_max_range_km,
+            "space_link_max_range_km",
+        )
+        _require_positive_number(self.space_link_capacity, "space_link_capacity")
+        _require_non_negative_number(
+            self.space_link_cell_size_km,
+            "space_link_cell_size_km",
+        )
         _require_positive_number(self.compute_capacity, "compute_capacity")
         _require_non_negative_number(self.demand_capacity, "demand_capacity")
         _require_non_negative_number(self.task_compute_demand, "task_compute_demand")

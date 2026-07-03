@@ -65,6 +65,17 @@ def run_generated_full_system_demo(
         link_capacity=100.0,
         propagation_speed_km_s=299792.458,
         cell_size_km=5000.0,
+        space_link_max_range_km=(
+            resolved_config.space_link_max_range_km
+            if resolved_config.space_link_max_range_km > 0.0
+            else None
+        ),
+        space_link_capacity=resolved_config.space_link_capacity,
+        space_link_cell_size_km=(
+            resolved_config.space_link_cell_size_km
+            if resolved_config.space_link_cell_size_km > 0.0
+            else None
+        ),
     )
     compute = RouteAwareComputeEngine(
         nodes=tuple(

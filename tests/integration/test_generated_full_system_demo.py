@@ -52,3 +52,23 @@ def test_generated_full_system_demo_is_deterministic() -> None:
     )
 
     assert run_generated_full_system_demo(config) == run_generated_full_system_demo(config)
+
+
+def test_generated_full_system_demo_can_enable_space_links() -> None:
+    result = run_generated_full_system_demo(
+        FullSystemScenarioBuilderConfig(
+            seed=13,
+            satellite_count=3,
+            user_count=3,
+            compute_node_count=1,
+            flow_count=0,
+            orbit_plane_count=1,
+            min_elevation_deg=-90.0,
+            max_range_km=30000.0,
+            space_link_max_range_km=50000.0,
+            space_link_capacity=75.0,
+            compute_capacity=20.0,
+        )
+    )
+
+    assert result.active_link_count >= 12
