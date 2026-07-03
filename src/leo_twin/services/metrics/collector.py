@@ -5,7 +5,7 @@ from __future__ import annotations
 import csv
 import io
 import json
-from collections import Counter
+from collections import Counter, deque
 from collections.abc import Mapping
 from dataclasses import fields, is_dataclass
 from pathlib import Path
@@ -49,17 +49,33 @@ class MetricsCollector:
         *,
         emit_metric_events: bool = False,
         metric_target: str = "adapters",
+        record_limit: int = 100_000,
+        event_log_limit: int = 100_000,
+        metric_sample_interval: int = 1,
+        event_log_sample_interval: int = 1,
+        event_log_segment_size: int | None = None,
     ) -> None:
         if not module_name:
             raise ValueError("module_name must be non-empty")
         if not metric_target:
             raise ValueError("metric_target must be non-empty")
+        _require_positive_int(record_limit, "record_limit")
+        _require_positive_int(event_log_limit, "event_log_limit")
+        _require_positive_int(metric_sample_interval, "metric_sample_interval")
+        _require_positive_int(event_log_sample_interval, "event_log_sample_interval")
+        _require_optional_positive_int(
+            event_log_segment_size,
+            "event_log_segment_size",
+        )
 
         self._module_name = module_name
         self._emit_metric_events = emit_metric_events
         self._metric_target = metric_target
-        self._records: list[MetricRecord] = []
-        self._event_log: list[ReplayEvent] = []
+        self._metric_sample_interval = metric_sample_interval
+        self._event_log_sample_interval = event_log_sample_interval
+        self._event_log_segment_size = event_log_segment_size
+        self._records: deque[MetricRecord] = deque(maxlen=record_limit)
+        self._event_log: deque[ReplayEvent] = deque(maxlen=event_log_limit)
         self._event_counts: Counter[str] = Counter()
         self._satellite_status: dict[str, str] = {}
         self._links: dict[tuple[str, str], LinkState] = {}
@@ -88,8 +104,10 @@ class MetricsCollector:
         """Observe one event outside the kernel dispatch path."""
 
         event_type = _event_type_name(event.event_type)
-        self._event_log.append(_serialize_event(event))
         self._event_counts[event_type] += 1
+        event_count = sum(self._event_counts.values())
+        if _should_sample(event_count, self._event_log_sample_interval):
+            self._event_log.append(_serialize_event(event))
         self._last_sim_time = event.sim_time
 
         records = [
@@ -97,7 +115,7 @@ class MetricsCollector:
                 metric_name="events.observed.count",
                 sim_time=event.sim_time,
                 entity_id="system",
-                value=float(sum(self._event_counts.values())),
+                value=float(event_count),
                 tags=(
                     ("event_type", event_type),
                     ("source", event.source),
@@ -113,6 +131,8 @@ class MetricsCollector:
             ),
         ]
         records.extend(self._payload_records(event, event_type))
+        if not _should_sample(event_count, self._metric_sample_interval):
+            return ()
         self._records.extend(records)
         return tuple(records)
 
@@ -164,13 +184,26 @@ class MetricsCollector:
         return json.dumps(self.summary(), sort_keys=True, indent=2) + "\n"
 
     def events_jsonl(self) -> str:
-        if not self._event_log:
-            return ""
-        lines = [
-            json.dumps(event, sort_keys=True, separators=(",", ":"))
-            for event in self._event_log
-        ]
-        return "\n".join(lines) + "\n"
+        return _events_jsonl(tuple(self._event_log))
+
+    def events_jsonl_segments(
+        self,
+        events_per_segment: int | None = None,
+    ) -> tuple[str, ...]:
+        segment_size = (
+            self._event_log_segment_size
+            if events_per_segment is None
+            else events_per_segment
+        )
+        if segment_size is None:
+            segment_size = len(self._event_log) or 1
+        _require_positive_int(segment_size, "events_per_segment")
+
+        events = tuple(self._event_log)
+        return tuple(
+            _events_jsonl(events[index : index + segment_size])
+            for index in range(0, len(events), segment_size)
+        )
 
     def write_outputs(self, output_dir: str | Path) -> Mapping[str, Path]:
         output_path = Path(output_dir)
@@ -183,7 +216,32 @@ class MetricsCollector:
         files["events"].write_text(self.events_jsonl(), encoding="utf-8")
         files["metrics"].write_text(self.metrics_csv(), encoding="utf-8")
         files["summary"].write_text(self.summary_json(), encoding="utf-8")
+        if self._event_log_segment_size is not None:
+            segment_files = self.write_segmented_event_log(output_path)
+            files.update(
+                {
+                    f"events.segment.{index:06d}": path
+                    for index, path in enumerate(segment_files, start=1)
+                }
+            )
         return files
+
+    def write_segmented_event_log(
+        self,
+        output_dir: str | Path,
+        events_per_segment: int | None = None,
+    ) -> tuple[Path, ...]:
+        output_path = Path(output_dir)
+        output_path.mkdir(parents=True, exist_ok=True)
+        files: list[Path] = []
+        for index, segment in enumerate(
+            self.events_jsonl_segments(events_per_segment),
+            start=1,
+        ):
+            segment_path = output_path / f"events-{index:06d}.jsonl"
+            segment_path.write_text(segment, encoding="utf-8")
+            files.append(segment_path)
+        return tuple(files)
 
     def _payload_records(self, event: SimEvent, event_type: str) -> tuple[MetricRecord, ...]:
         if event_type == EventType.ORBIT_UPDATE:
@@ -395,6 +453,16 @@ def _json_scalar(value: str | int | float | bool) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"))
 
 
+def _events_jsonl(events: tuple[ReplayEvent, ...]) -> str:
+    if not events:
+        return ""
+    lines = [
+        json.dumps(event, sort_keys=True, separators=(",", ":"))
+        for event in events
+    ]
+    return "\n".join(lines) + "\n"
+
+
 def _serialize_event(event: SimEvent) -> ReplayEvent:
     return {
         "event_id": _json_payload(event.event_id),
@@ -426,3 +494,20 @@ def _json_payload(value: object) -> ReplayPayload:
     if isinstance(value, tuple | list):
         return [_json_payload(item) for item in value]
     raise TypeError(f"payload is not deterministic JSON serializable: {type(value).__name__}")
+
+
+def _should_sample(count: int, interval: int) -> bool:
+    return count == 1 or count % interval == 0
+
+
+def _require_optional_positive_int(value: int | None, field_name: str) -> None:
+    if value is None:
+        return
+    _require_positive_int(value, field_name)
+
+
+def _require_positive_int(value: int, field_name: str) -> None:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise TypeError(f"{field_name} must be an int")
+    if value <= 0:
+        raise ValueError(f"{field_name} must be positive")
