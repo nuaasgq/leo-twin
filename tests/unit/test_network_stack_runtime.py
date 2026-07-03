@@ -6,6 +6,7 @@ from leo_twin.models.network import (
     RainFadeProfile,
     RadioTerminalProfile,
     build_default_leo_protocol_stack,
+    default_transport_runtime,
 )
 from leo_twin.schema import (
     AntennaProfile,
@@ -77,6 +78,26 @@ def test_route_availability_changes_network_layer_status() -> None:
     assert trace.available is False
     assert trace.layers[2].layer == NetworkLayer.NETWORK
     assert trace.layers[2].status == "UNAVAILABLE"
+
+
+def test_stack_runtime_records_transport_profile_attributes() -> None:
+    transport = default_transport_runtime(TransportProtocol.TCP)
+    runtime = NetworkStackRuntime(
+        build_default_leo_protocol_stack(),
+        transport_profile=transport.profile,
+    )
+
+    trace = runtime.process_flow(_flow(), _route())
+    attributes = dict(trace.layers[1].attributes)
+
+    assert attributes["transport"] == "TCP"
+    assert attributes["payload_unit_bytes"] == "1460"
+    assert attributes["header_bytes"] == "40"
+    assert attributes["efficiency"] == "0.920000"
+    assert attributes["handshake_round_trips"] == "1"
+    assert attributes["loss_rate"] == "0.000000"
+    assert attributes["congestion_window_segments"] == "none"
+    assert attributes["overhead_ratio"] == "0.026667"
 
 
 def test_stack_runtime_records_link_physical_and_channel_profiles() -> None:

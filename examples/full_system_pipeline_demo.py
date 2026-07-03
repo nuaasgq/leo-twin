@@ -141,6 +141,7 @@ def run_full_system_pipeline_demo() -> FullSystemPipelineResult:
             antenna=antenna_from_config(config.transmit_terminal["antenna"]),
             channel=_channel(config.channel),
             link_budget=reference_budget,
+            transport_profile=transport_runtime.profile,
         ),
         flow_request=flow_request,
     )

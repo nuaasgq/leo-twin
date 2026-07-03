@@ -75,6 +75,9 @@ def run_generated_full_system_demo(
     )
     space_ground_budget = _space_ground_budget(resolved_config)
     space_space_budget = _space_space_budget(resolved_config)
+    transport_runtime = default_transport_runtime(
+        TransportProtocol(str(resolved_config.transport_protocol))
+    )
     network = PositionDrivenNetworkEngine(
         endpoints=tuple(
             GroundEndpoint(
@@ -104,9 +107,7 @@ def run_generated_full_system_demo(
             if resolved_config.space_link_cell_size_km > 0.0
             else None
         ),
-        transport_runtime=default_transport_runtime(
-            TransportProtocol(str(resolved_config.transport_protocol))
-        ),
+        transport_runtime=transport_runtime,
         stack_runtime=NetworkStackRuntime(
             build_default_leo_protocol_stack(
                 transport_protocol=TransportProtocol(str(resolved_config.transport_protocol)),
@@ -114,6 +115,7 @@ def run_generated_full_system_demo(
             ),
             antenna=space_ground_budget.transmit_terminal.antenna,
             channel=space_ground_budget.channel,
+            transport_profile=transport_runtime.profile,
         ),
     )
     compute = RouteAwareComputeEngine(

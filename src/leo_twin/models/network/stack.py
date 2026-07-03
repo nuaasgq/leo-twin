@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from leo_twin.models.network.channel import LinkBudgetResult
+from leo_twin.models.network.transport import TransportProfile
 from leo_twin.schema import (
     AntennaProfile,
     ChannelProfile,
@@ -54,11 +55,13 @@ class NetworkStackRuntime:
         antenna: AntennaProfile | None = None,
         channel: ChannelProfile | None = None,
         link_budget: LinkBudgetResult | None = None,
+        transport_profile: TransportProfile | None = None,
     ) -> None:
         self._stack = stack
         self._antenna = antenna
         self._channel = channel
         self._link_budget = link_budget
+        self._transport_profile = transport_profile
 
     def process_flow(
         self,
@@ -104,6 +107,7 @@ class NetworkStackRuntime:
         elif layer.layer == NetworkLayer.TRANSPORT:
             output_ref = f"transport:{request.flow_id}:{layer.protocol_name}"
             attributes += (("transport", layer.protocol_name),)
+            attributes += _transport_profile_attributes(self._transport_profile)
         elif layer.layer == NetworkLayer.NETWORK:
             route_id = "pending" if route is None else route.route_id
             output_ref = f"route:{route_id}"
@@ -208,6 +212,29 @@ def _route_attributes(route: Route | None) -> tuple[tuple[str, str], ...]:
         ("capacity", f"{route.capacity:.6f}"),
         ("latency", f"{route.latency:.6f}"),
         ("route_id", route.route_id),
+    )
+
+
+def _transport_profile_attributes(
+    profile: TransportProfile | None,
+) -> tuple[tuple[str, str], ...]:
+    if profile is None:
+        return ()
+    congestion_window = (
+        "none"
+        if profile.congestion_window_segments is None
+        else str(profile.congestion_window_segments)
+    )
+    total_bytes = profile.payload_unit_bytes + profile.header_bytes
+    overhead_ratio = profile.header_bytes / total_bytes
+    return (
+        ("congestion_window_segments", congestion_window),
+        ("efficiency", f"{profile.efficiency:.6f}"),
+        ("handshake_round_trips", str(profile.handshake_round_trips)),
+        ("header_bytes", str(profile.header_bytes)),
+        ("loss_rate", f"{profile.loss_rate:.6f}"),
+        ("overhead_ratio", f"{overhead_ratio:.6f}"),
+        ("payload_unit_bytes", str(profile.payload_unit_bytes)),
     )
 
 
