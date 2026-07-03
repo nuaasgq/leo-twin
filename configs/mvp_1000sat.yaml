@@ -1,0 +1,8 @@
+# Placeholder configuration for a future 1000-satellite MVP scenario.
+# This file defines parameters only and contains no simulation logic.
+
+scenario_name: mvp_1000sat
+number_of_satellites: 1000
+number_of_users: 0
+simulation_duration_seconds: 0
+random_seed: 0
