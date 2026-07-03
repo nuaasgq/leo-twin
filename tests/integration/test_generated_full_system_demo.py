@@ -83,6 +83,37 @@ def test_generated_full_system_demo_transport_protocol_changes_route_profile() -
     assert {trace.transport_protocol for trace in udp.network_stack_traces} == {"UDP"}
 
 
+def test_generated_full_system_demo_transport_profile_changes_capacity() -> None:
+    base = dict(
+        seed=12,
+        satellite_count=3,
+        user_count=5,
+        compute_node_count=2,
+        flow_count=3,
+        orbit_plane_count=1,
+        min_elevation_deg=-90.0,
+        max_range_km=30000.0,
+        compute_capacity=20.0,
+        transport_protocol="UDP",
+    )
+
+    clean = run_generated_full_system_demo(FullSystemScenarioBuilderConfig(**base))
+    constrained = run_generated_full_system_demo(
+        FullSystemScenarioBuilderConfig(
+            **base,
+            transport_loss_rate=0.1,
+            transport_congestion_window_segments=4,
+        )
+    )
+
+    assert constrained.metrics_summary["route_capacity_max"] < clean.metrics_summary[
+        "route_capacity_max"
+    ]
+    transport_attributes = dict(constrained.network_stack_traces[0].layers[1].attributes)
+    assert transport_attributes["loss_rate"] == "0.100000"
+    assert transport_attributes["congestion_window_segments"] == "4"
+
+
 def test_generated_full_system_demo_records_configured_network_stack_trace() -> None:
     result = run_generated_full_system_demo(
         FullSystemScenarioBuilderConfig(

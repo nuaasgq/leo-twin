@@ -16,6 +16,8 @@ scenario:
 network:
   application_protocol: TASK_OFFLOAD_FLOW
   transport_protocol: TCP
+  transport_loss_rate: 0.0
+  transport_congestion_window_segments: 0
   routing_protocol: LINK_STATE
   datalink_mac_protocol: TDMA
   routing_latency_weight: 1.0

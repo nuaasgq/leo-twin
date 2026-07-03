@@ -52,6 +52,8 @@ class FullSystemScenarioBuilderConfig:
     transport_protocol: str = TransportProtocol.TCP.value
     routing_protocol: str = RoutingProtocol.LINK_STATE.value
     datalink_mac_protocol: str = DataLinkProtocol.TDMA.value
+    transport_loss_rate: float = 0.0
+    transport_congestion_window_segments: int = 0
     routing_latency_weight: float = 1.0
     routing_inverse_capacity_weight: float = 0.0
     routing_hop_weight: float = 0.0
@@ -126,6 +128,17 @@ class FullSystemScenarioBuilderConfig:
             self,
             "datalink_mac_protocol",
             DataLinkProtocol(str(self.datalink_mac_protocol)).value,
+        )
+        _require_probability(self.transport_loss_rate, "transport_loss_rate")
+        _require_non_negative_int(
+            self.transport_congestion_window_segments,
+            "transport_congestion_window_segments",
+        )
+        object.__setattr__(self, "transport_loss_rate", float(self.transport_loss_rate))
+        object.__setattr__(
+            self,
+            "transport_congestion_window_segments",
+            int(self.transport_congestion_window_segments),
         )
         _require_non_negative_number(self.routing_latency_weight, "routing_latency_weight")
         _require_non_negative_number(
@@ -292,6 +305,10 @@ def scenario_builder_config_from_sees_config(
         transport_protocol=config.network.transport_protocol.value,
         routing_protocol=config.network.routing_protocol.value,
         datalink_mac_protocol=config.network.datalink_mac_protocol.value,
+        transport_loss_rate=config.network.transport_loss_rate,
+        transport_congestion_window_segments=(
+            config.network.transport_congestion_window_segments
+        ),
         routing_latency_weight=config.network.routing_latency_weight,
         routing_inverse_capacity_weight=config.network.routing_inverse_capacity_weight,
         routing_hop_weight=config.network.routing_hop_weight,
@@ -464,6 +481,12 @@ def _require_efficiency(value: Any, field_name: str) -> None:
     _require_finite_number(value, field_name)
     if value <= 0.0 or value > 1.0:
         raise ValueError(f"{field_name} must be in (0, 1]")
+
+
+def _require_probability(value: Any, field_name: str) -> None:
+    _require_finite_number(value, field_name)
+    if value < 0.0 or value >= 1.0:
+        raise ValueError(f"{field_name} must be in [0, 1)")
 
 
 def _require_range(

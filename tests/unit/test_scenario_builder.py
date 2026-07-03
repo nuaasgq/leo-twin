@@ -172,6 +172,8 @@ def test_load_full_system_scenario_builder_config_from_json(tmp_path) -> None:
     assert config.max_range_km == 2000.0
     assert config.application_protocol == "TASK_OFFLOAD_FLOW"
     assert config.transport_protocol == "TCP"
+    assert config.transport_loss_rate == 0.0
+    assert config.transport_congestion_window_segments == 0
     assert config.routing_protocol == "LINK_STATE"
     assert config.routing_latency_weight == 1.0
     assert config.routing_inverse_capacity_weight == 0.0
@@ -227,6 +229,8 @@ def test_scenario_builder_config_from_sees_config_maps_control_plane_fields() ->
         network=NetworkProfile(
             application_protocol=ApplicationProtocol.MQTT,
             transport_protocol=TransportProtocol.UDP,
+            transport_loss_rate=0.025,
+            transport_congestion_window_segments=32,
             routing_protocol=RoutingProtocol.DISTANCE_VECTOR,
             routing_latency_weight=0.2,
             routing_inverse_capacity_weight=400.0,
@@ -259,6 +263,8 @@ def test_scenario_builder_config_from_sees_config_maps_control_plane_fields() ->
     assert generated.task_compute_demand == 15.0
     assert generated.application_protocol == "MQTT"
     assert generated.transport_protocol == "UDP"
+    assert generated.transport_loss_rate == 0.025
+    assert generated.transport_congestion_window_segments == 32
     assert generated.routing_protocol == "DISTANCE_VECTOR"
     assert generated.routing_latency_weight == 0.2
     assert generated.routing_inverse_capacity_weight == 400.0

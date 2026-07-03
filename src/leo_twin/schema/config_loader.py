@@ -69,6 +69,8 @@ _NETWORK_KEYS = frozenset(
         "transport_protocol",
         "routing_protocol",
         "datalink_mac_protocol",
+        "transport_loss_rate",
+        "transport_congestion_window_segments",
         "routing_latency_weight",
         "routing_inverse_capacity_weight",
         "routing_hop_weight",
@@ -200,6 +202,10 @@ def _build_config(data: Mapping[str, Any]) -> SEESConfig:
                 datalink_mac_protocol=DataLinkProtocol(
                     str(network["datalink_mac_protocol"])
                 ),
+                transport_loss_rate=network["transport_loss_rate"],
+                transport_congestion_window_segments=network[
+                    "transport_congestion_window_segments"
+                ],
                 routing_latency_weight=network["routing_latency_weight"],
                 routing_inverse_capacity_weight=network[
                     "routing_inverse_capacity_weight"
@@ -253,6 +259,8 @@ def _normalize_update(update: Mapping[str, Any]) -> dict[str, Any]:
         "transport_protocol",
         "routing_protocol",
         "datalink_mac_protocol",
+        "transport_loss_rate",
+        "transport_congestion_window_segments",
         "routing_latency_weight",
         "routing_inverse_capacity_weight",
         "routing_hop_weight",
@@ -392,6 +400,8 @@ def _ordered_keys(context: str, data: Mapping[str, Any]) -> tuple[str, ...]:
             "transport_protocol",
             "routing_protocol",
             "datalink_mac_protocol",
+            "transport_loss_rate",
+            "transport_congestion_window_segments",
             "routing_latency_weight",
             "routing_inverse_capacity_weight",
             "routing_hop_weight",

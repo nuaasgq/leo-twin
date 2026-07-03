@@ -100,6 +100,10 @@ def build_demo_scenario(config: DemoConfig) -> DemoScenario:
                 "transport_protocol": config.transport_protocol,
                 "routing_protocol": config.routing_protocol,
                 "datalink_mac_protocol": config.datalink_mac_protocol,
+                "transport_loss_rate": config.transport_loss_rate,
+                "transport_congestion_window_segments": (
+                    config.transport_congestion_window_segments
+                ),
                 "routing_latency_weight": config.routing_latency_weight,
                 "routing_inverse_capacity_weight": config.routing_inverse_capacity_weight,
                 "routing_hop_weight": config.routing_hop_weight,

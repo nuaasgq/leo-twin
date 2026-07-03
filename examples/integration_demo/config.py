@@ -50,6 +50,8 @@ class DemoConfig:
     transport_protocol: str = "TCP"
     routing_protocol: str = "LINK_STATE"
     datalink_mac_protocol: str = "TDMA"
+    transport_loss_rate: float = 0.0
+    transport_congestion_window_segments: int = 0
     routing_latency_weight: float = 1.0
     routing_inverse_capacity_weight: float = 0.0
     routing_hop_weight: float = 0.0
@@ -112,6 +114,12 @@ def load_demo_config(path: str | Path = DEFAULT_CONFIG_PATH) -> DemoConfig:
         transport_protocol=_optional_str(network, "transport_protocol", "TCP"),
         routing_protocol=_optional_str(network, "routing_protocol", "LINK_STATE"),
         datalink_mac_protocol=_optional_str(network, "datalink_mac_protocol", "TDMA"),
+        transport_loss_rate=_optional_float(network, "transport_loss_rate", 0.0),
+        transport_congestion_window_segments=_optional_int(
+            network,
+            "transport_congestion_window_segments",
+            0,
+        ),
         routing_latency_weight=_optional_float(network, "routing_latency_weight", 1.0),
         routing_inverse_capacity_weight=_optional_float(
             network,
@@ -170,6 +178,10 @@ def demo_config_to_sees_config(config: DemoConfig) -> SEESConfig:
             transport_protocol=TransportProtocol(str(config.transport_protocol)),
             routing_protocol=RoutingProtocol(str(config.routing_protocol)),
             datalink_mac_protocol=DataLinkProtocol(str(config.datalink_mac_protocol)),
+            transport_loss_rate=config.transport_loss_rate,
+            transport_congestion_window_segments=(
+                config.transport_congestion_window_segments
+            ),
             routing_latency_weight=config.routing_latency_weight,
             routing_inverse_capacity_weight=config.routing_inverse_capacity_weight,
             routing_hop_weight=config.routing_hop_weight,
@@ -231,6 +243,10 @@ def demo_config_from_sees_config(
         transport_protocol=config.network.transport_protocol.value,
         routing_protocol=config.network.routing_protocol.value,
         datalink_mac_protocol=config.network.datalink_mac_protocol.value,
+        transport_loss_rate=config.network.transport_loss_rate,
+        transport_congestion_window_segments=(
+            config.network.transport_congestion_window_segments
+        ),
         routing_latency_weight=config.network.routing_latency_weight,
         routing_inverse_capacity_weight=config.network.routing_inverse_capacity_weight,
         routing_hop_weight=config.network.routing_hop_weight,
@@ -318,6 +334,12 @@ def _optional_str(section: dict[str, Any], key: str, default: str) -> str:
     if key not in section:
         return default
     return _str(section, key)
+
+
+def _optional_int(section: dict[str, Any], key: str, default: int) -> int:
+    if key not in section:
+        return default
+    return _int(section, key)
 
 
 def _optional_float(section: dict[str, Any], key: str, default: float) -> float:

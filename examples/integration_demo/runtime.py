@@ -21,6 +21,8 @@ from leo_twin.models.network import (
     RainFadeProfile,
     RoutingCostProfile,
     RoutingRuntime,
+    TransportProfile,
+    TransportRuntime,
     build_default_leo_protocol_stack,
     default_transport_runtime,
 )
@@ -97,7 +99,7 @@ def run_integration_demo(config: DemoConfig) -> DemoRunResult:
     transport_protocol = TransportProtocol(str(config.transport_protocol))
     routing_protocol = RoutingProtocol(str(config.routing_protocol))
     data_link_protocol = DataLinkProtocol(str(config.datalink_mac_protocol))
-    transport_runtime = default_transport_runtime(transport_protocol)
+    transport_runtime = _transport_runtime(config, transport_protocol)
     routing_cost_profile = RoutingCostProfile(
         latency_weight=config.routing_latency_weight,
         inverse_capacity_weight=config.routing_inverse_capacity_weight,
@@ -233,6 +235,29 @@ def _space_ground_budget(config: DemoConfig) -> LinkBudgetCalculator:
         polarization_loss_db=0.5,
         implementation_loss_db=1.0,
         rain_fade_profile=rain_profile,
+    )
+
+
+def _transport_runtime(
+    config: DemoConfig,
+    protocol: TransportProtocol,
+) -> TransportRuntime:
+    base_profile = default_transport_runtime(protocol).profile
+    congestion_window = (
+        None
+        if config.transport_congestion_window_segments == 0
+        else config.transport_congestion_window_segments
+    )
+    return TransportRuntime(
+        TransportProfile(
+            protocol=base_profile.protocol,
+            payload_unit_bytes=base_profile.payload_unit_bytes,
+            header_bytes=base_profile.header_bytes,
+            efficiency=base_profile.efficiency,
+            handshake_round_trips=base_profile.handshake_round_trips,
+            loss_rate=config.transport_loss_rate,
+            congestion_window_segments=congestion_window,
+        )
     )
 
 

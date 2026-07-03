@@ -107,6 +107,8 @@ export interface ScenarioConfig {
   network?: {
     application_protocol?: string;
     transport_protocol?: string;
+    transport_loss_rate?: number;
+    transport_congestion_window_segments?: number;
     routing_protocol?: string;
     datalink_mac_protocol?: string;
     routing_latency_weight?: number;
@@ -196,6 +198,8 @@ export interface GeneratedScenarioConfig {
   task_data_size: number;
   application_protocol?: string;
   transport_protocol?: string;
+  transport_loss_rate?: number;
+  transport_congestion_window_segments?: number;
   routing_protocol?: string;
   datalink_mac_protocol?: string;
   routing_latency_weight?: number;

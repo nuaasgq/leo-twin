@@ -29,6 +29,8 @@ export interface LinkProtocolSummary {
   transportOverheadPercent: number;
   transportEfficiencyPercent: number;
   transportHandshakeRoundTrips: number;
+  transportLossPercent: number;
+  transportCongestionWindow: number;
   routingCostLabel: string;
   stackLayers: number;
   carrierFrequencyGhz: number;
@@ -83,9 +85,17 @@ export const LinkProtocolPanel = memo(function LinkProtocolPanel({
         <KpiPanel
           label="传输开销"
           value={`${summary.transportOverheadPercent.toFixed(2)}%`}
-          detail={`效率 ${summary.transportEfficiencyPercent.toFixed(1)}%`}
+          detail={`效率 ${summary.transportEfficiencyPercent.toFixed(1)}% / 丢包 ${summary.transportLossPercent.toFixed(2)}%`}
         />
-        <KpiPanel label="握手RTT" value={String(summary.transportHandshakeRoundTrips)} />
+        <KpiPanel
+          label="握手RTT"
+          value={String(summary.transportHandshakeRoundTrips)}
+          detail={
+            summary.transportCongestionWindow === 0
+              ? "窗口未限制"
+              : `${summary.transportCongestionWindow} 段窗口`
+          }
+        />
         <KpiPanel label="路由代价" value={summary.routingCostLabel} />
         <KpiPanel label="协议栈层数" value={String(summary.stackLayers)} />
         <KpiPanel label="载波频率" value={`${summary.carrierFrequencyGhz.toFixed(1)} GHz`} />
@@ -138,7 +148,10 @@ export function buildLinkProtocolSummary(
   const transportProtocol = network?.transport_protocol ?? "TCP";
   const routingProtocol = network?.routing_protocol ?? "LINK_STATE";
   const dataLinkProtocol = network?.datalink_mac_protocol ?? "TDMA";
-  const transportProfile = transportProfileFor(transportProtocol);
+  const transportProfile = transportProfileFor(transportProtocol, {
+    lossRate: network?.transport_loss_rate,
+    congestionWindowSegments: network?.transport_congestion_window_segments
+  });
   const routingCostProfile = routingCostProfileFor(routingProtocol, {
     latencyWeight: network?.routing_latency_weight,
     inverseCapacityWeight: network?.routing_inverse_capacity_weight,
@@ -186,6 +199,8 @@ export function buildLinkProtocolSummary(
     transportOverheadPercent: transportProfile.overheadRatio * 100,
     transportEfficiencyPercent: transportProfile.efficiency * 100,
     transportHandshakeRoundTrips: transportProfile.handshakeRoundTrips,
+    transportLossPercent: transportProfile.lossRate * 100,
+    transportCongestionWindow: transportProfile.congestionWindowSegments,
     routingCostLabel: routingCostProfile.label,
     stackLayers: 6,
     carrierFrequencyGhz,
@@ -222,22 +237,36 @@ function routeEndsAtComputeNode(route: Route): boolean {
   return typeof lastNode === "string" && lastNode.startsWith("compute-");
 }
 
-function transportProfileFor(protocol: string): {
+function transportProfileFor(
+  protocol: string,
+  overrides: {
+    lossRate?: number;
+    congestionWindowSegments?: number;
+  }
+): {
   overheadRatio: number;
   efficiency: number;
   handshakeRoundTrips: number;
+  lossRate: number;
+  congestionWindowSegments: number;
 } {
+  const lossRate = overrides.lossRate ?? 0;
+  const congestionWindowSegments = overrides.congestionWindowSegments ?? 0;
   if (protocol === "UDP") {
     return {
       overheadRatio: 28 / (1472 + 28),
       efficiency: 0.98,
-      handshakeRoundTrips: 0
+      handshakeRoundTrips: 0,
+      lossRate,
+      congestionWindowSegments
     };
   }
   return {
     overheadRatio: 40 / (1460 + 40),
     efficiency: 0.92,
-    handshakeRoundTrips: 1
+    handshakeRoundTrips: 1,
+    lossRate,
+    congestionWindowSegments
   };
 }
 

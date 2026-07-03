@@ -71,6 +71,8 @@ class NetworkProfile:
     transport_protocol: TransportProtocol = TransportProtocol.TCP
     routing_protocol: RoutingProtocol = RoutingProtocol.LINK_STATE
     datalink_mac_protocol: DataLinkProtocol = DataLinkProtocol.TDMA
+    transport_loss_rate: float = 0.0
+    transport_congestion_window_segments: int = 0
     routing_latency_weight: float = 1.0
     routing_inverse_capacity_weight: float = 0.0
     routing_hop_weight: float = 0.0
@@ -110,6 +112,11 @@ class NetworkProfile:
                 "datalink_mac_protocol",
                 DataLinkProtocol(str(self.datalink_mac_protocol)),
             )
+        _require_probability(self.transport_loss_rate, "network.transport_loss_rate")
+        _require_non_negative_int(
+            self.transport_congestion_window_segments,
+            "network.transport_congestion_window_segments",
+        )
         _require_non_negative_finite(
             self.routing_latency_weight,
             "network.routing_latency_weight",
@@ -165,6 +172,12 @@ class NetworkProfile:
         object.__setattr__(self, "transmit_power_dbw", float(self.transmit_power_dbw))
         object.__setattr__(self, "system_loss_db", float(self.system_loss_db))
         object.__setattr__(self, "noise_temperature_k", float(self.noise_temperature_k))
+        object.__setattr__(self, "transport_loss_rate", float(self.transport_loss_rate))
+        object.__setattr__(
+            self,
+            "transport_congestion_window_segments",
+            int(self.transport_congestion_window_segments),
+        )
         object.__setattr__(
             self,
             "routing_latency_weight",
@@ -319,6 +332,12 @@ def _require_efficiency(value: float, field_name: str) -> None:
     _require_finite(value, field_name)
     if value <= 0.0 or value > 1.0:
         raise ValueError(f"{field_name} must be in (0, 1]")
+
+
+def _require_probability(value: float, field_name: str) -> None:
+    _require_finite(value, field_name)
+    if value < 0.0 or value >= 1.0:
+        raise ValueError(f"{field_name} must be in [0, 1)")
 
 
 def _require_finite_range(

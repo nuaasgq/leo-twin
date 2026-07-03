@@ -334,6 +334,14 @@ export function scenarioWithRuntimeConfig(
           typeof runtimeConfig.network.transport_protocol === "string"
             ? runtimeConfig.network.transport_protocol
             : scenario.network?.transport_protocol,
+        transport_loss_rate:
+          typeof runtimeConfig.network.transport_loss_rate === "number"
+            ? runtimeConfig.network.transport_loss_rate
+            : scenario.network?.transport_loss_rate,
+        transport_congestion_window_segments:
+          typeof runtimeConfig.network.transport_congestion_window_segments === "number"
+            ? runtimeConfig.network.transport_congestion_window_segments
+            : scenario.network?.transport_congestion_window_segments,
         routing_protocol:
           typeof runtimeConfig.network.routing_protocol === "string"
             ? runtimeConfig.network.routing_protocol
@@ -509,6 +517,9 @@ function scenarioControlValues(
     network: {
       application_protocol: scenarioConfig?.network?.application_protocol ?? "TASK_OFFLOAD_FLOW",
       transport_protocol: scenarioConfig?.network?.transport_protocol ?? "TCP",
+      transport_loss_rate: scenarioConfig?.network?.transport_loss_rate ?? 0,
+      transport_congestion_window_segments:
+        scenarioConfig?.network?.transport_congestion_window_segments ?? 0,
       routing_protocol: scenarioConfig?.network?.routing_protocol ?? "LINK_STATE",
       datalink_mac_protocol: scenarioConfig?.network?.datalink_mac_protocol ?? "TDMA",
       routing_latency_weight: scenarioConfig?.network?.routing_latency_weight ?? 1,

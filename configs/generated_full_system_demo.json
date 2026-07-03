@@ -17,6 +17,8 @@
   "space_link_capacity": 100.0,
   "space_link_cell_size_km": 0.0,
   "application_protocol": "TASK_OFFLOAD_FLOW",
+  "transport_loss_rate": 0.0,
+  "transport_congestion_window_segments": 0,
   "routing_latency_weight": 1.0,
   "routing_inverse_capacity_weight": 0.0,
   "routing_hop_weight": 0.0,

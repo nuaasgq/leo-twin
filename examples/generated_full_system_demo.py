@@ -29,6 +29,8 @@ from leo_twin.models.network import (
     RainFadeProfile,
     RoutingCostProfile,
     RoutingRuntime,
+    TransportProfile,
+    TransportRuntime,
     NetworkStackTrace,
     build_default_leo_protocol_stack,
     default_transport_runtime,
@@ -86,9 +88,8 @@ def run_generated_full_system_demo(
     )
     space_ground_budget = _space_ground_budget(resolved_config)
     space_space_budget = _space_space_budget(resolved_config)
-    transport_runtime = default_transport_runtime(
-        TransportProtocol(str(resolved_config.transport_protocol))
-    )
+    transport_protocol = TransportProtocol(str(resolved_config.transport_protocol))
+    transport_runtime = _transport_runtime(resolved_config, transport_protocol)
     routing_profile = RoutingCostProfile(
         latency_weight=resolved_config.routing_latency_weight,
         inverse_capacity_weight=resolved_config.routing_inverse_capacity_weight,
@@ -135,7 +136,7 @@ def run_generated_full_system_demo(
                 application_protocol=ApplicationProtocol(
                     str(resolved_config.application_protocol)
                 ),
-                transport_protocol=TransportProtocol(str(resolved_config.transport_protocol)),
+                transport_protocol=transport_protocol,
                 routing_protocol=RoutingProtocol(str(resolved_config.routing_protocol)),
                 data_link_protocol=DataLinkProtocol(
                     str(resolved_config.datalink_mac_protocol)
@@ -229,6 +230,29 @@ def _compute_gateway_links(
             availability=True,
         )
         for index, node in enumerate(scenario.compute_nodes)
+    )
+
+
+def _transport_runtime(
+    config: FullSystemScenarioBuilderConfig,
+    protocol: TransportProtocol,
+) -> TransportRuntime:
+    base_profile = default_transport_runtime(protocol).profile
+    congestion_window = (
+        None
+        if config.transport_congestion_window_segments == 0
+        else config.transport_congestion_window_segments
+    )
+    return TransportRuntime(
+        TransportProfile(
+            protocol=base_profile.protocol,
+            payload_unit_bytes=base_profile.payload_unit_bytes,
+            header_bytes=base_profile.header_bytes,
+            efficiency=base_profile.efficiency,
+            handshake_round_trips=base_profile.handshake_round_trips,
+            loss_rate=config.transport_loss_rate,
+            congestion_window_segments=congestion_window,
+        )
     )
 
 

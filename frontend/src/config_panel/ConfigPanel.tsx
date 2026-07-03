@@ -26,6 +26,8 @@ export interface VisualizationControlValues {
 export interface NetworkControlValues {
   application_protocol: string;
   transport_protocol: string;
+  transport_loss_rate: number;
+  transport_congestion_window_segments: number;
   routing_protocol: string;
   datalink_mac_protocol: string;
   routing_latency_weight: number;
@@ -93,6 +95,12 @@ export function ConfigPanel({
   const [transportProtocol, setTransportProtocol] = useState(
     scenario.network.transport_protocol
   );
+  const [transportLossRate, setTransportLossRate] = useState(
+    scenario.network.transport_loss_rate
+  );
+  const [transportCongestionWindow, setTransportCongestionWindow] = useState(
+    scenario.network.transport_congestion_window_segments
+  );
   const [routingProtocol, setRoutingProtocol] = useState(scenario.network.routing_protocol);
   const [dataLinkProtocol, setDataLinkProtocol] = useState(
     scenario.network.datalink_mac_protocol
@@ -148,6 +156,8 @@ export function ConfigPanel({
     setShowMetrics(scenario.visualization.metrics);
     setApplicationProtocol(scenario.network.application_protocol);
     setTransportProtocol(scenario.network.transport_protocol);
+    setTransportLossRate(scenario.network.transport_loss_rate);
+    setTransportCongestionWindow(scenario.network.transport_congestion_window_segments);
     setRoutingProtocol(scenario.network.routing_protocol);
     setDataLinkProtocol(scenario.network.datalink_mac_protocol);
     setRoutingLatencyWeight(scenario.network.routing_latency_weight);
@@ -174,6 +184,8 @@ export function ConfigPanel({
     scenario.visualization.metrics,
     scenario.network.application_protocol,
     scenario.network.transport_protocol,
+    scenario.network.transport_loss_rate,
+    scenario.network.transport_congestion_window_segments,
     scenario.network.routing_protocol,
     scenario.network.datalink_mac_protocol,
     scenario.network.routing_latency_weight,
@@ -412,6 +424,42 @@ export function ConfigPanel({
           <option value="TCP">TCP</option>
           <option value="UDP">UDP</option>
         </select>
+      </div>
+
+      <div className="channel-grid" aria-label="传输层参数">
+        <div className="control-group">
+          <label className="control-label" htmlFor="transport-loss-rate">
+            传输丢包率
+          </label>
+          <input
+            id="transport-loss-rate"
+            type="number"
+            min="0"
+            max="0.99"
+            step="0.001"
+            value={transportLossRate}
+            onChange={(event) => setTransportLossRate(Number(event.currentTarget.value))}
+          />
+        </div>
+
+        <div className="control-group">
+          <label className="control-label" htmlFor="transport-window">
+            拥塞窗口
+          </label>
+          <div className="unit-input">
+            <input
+              id="transport-window"
+              type="number"
+              min="0"
+              step="1"
+              value={transportCongestionWindow}
+              onChange={(event) =>
+                setTransportCongestionWindow(Number(event.currentTarget.value))
+              }
+            />
+            <span>段</span>
+          </div>
+        </div>
       </div>
 
       <div className="control-group">
@@ -683,6 +731,8 @@ export function ConfigPanel({
               ...networkControlPayload({
                 application_protocol: applicationProtocol,
                 transport_protocol: transportProtocol,
+                transport_loss_rate: transportLossRate,
+                transport_congestion_window_segments: transportCongestionWindow,
                 routing_protocol: routingProtocol,
                 datalink_mac_protocol: dataLinkProtocol,
                 routing_latency_weight: routingLatencyWeight,
@@ -770,6 +820,8 @@ export function generatedScenarioSummaryItems(
     { label: "随机种子", value: formatInteger(config.seed) },
     { label: "应用协议", value: formatApplicationProtocol(config.application_protocol) },
     { label: "传输协议", value: config.transport_protocol ?? "TCP" },
+    { label: "传输丢包", value: formatLossRate(config.transport_loss_rate) },
+    { label: "拥塞窗口", value: formatCongestionWindow(config.transport_congestion_window_segments) },
     { label: "路由协议", value: config.routing_protocol ?? "LINK_STATE" },
     { label: "路由权重", value: formatRoutingWeights(config) },
     { label: "载波频率", value: formatFrequency(config.carrier_frequency_hz) },
@@ -839,6 +891,8 @@ export function networkControlPayload(network: NetworkControlValues): Record<str
   return {
     application_protocol: network.application_protocol,
     transport_protocol: network.transport_protocol,
+    transport_loss_rate: network.transport_loss_rate,
+    transport_congestion_window_segments: network.transport_congestion_window_segments,
     routing_protocol: network.routing_protocol,
     datalink_mac_protocol: network.datalink_mac_protocol,
     routing_latency_weight: network.routing_latency_weight,
@@ -928,6 +982,17 @@ function formatRoutingWeights(config: GeneratedScenarioConfig): string {
     `容量 ${formatDecimal(config.routing_inverse_capacity_weight ?? 0)}`,
     `跳数 ${formatDecimal(config.routing_hop_weight ?? 0)}`
   ].join(" / ");
+}
+
+function formatLossRate(value: number | undefined): string {
+  return `${formatDecimal((value ?? 0) * 100)}%`;
+}
+
+function formatCongestionWindow(value: number | undefined): string {
+  if (value === undefined || value === 0) {
+    return "未限制";
+  }
+  return `${formatInteger(value)} 段`;
 }
 
 function formatComputeSchedulingPolicy(value: string | undefined): string {

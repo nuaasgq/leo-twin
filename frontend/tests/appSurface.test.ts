@@ -62,6 +62,8 @@ describe("scenarioWithRuntimeConfig", () => {
           network: {
             application_protocol: "MQTT",
             transport_protocol: "UDP",
+            transport_loss_rate: 0.025,
+            transport_congestion_window_segments: 32,
             routing_protocol: "DISTANCE_VECTOR",
             datalink_mac_protocol: "CSMA_CA",
             routing_latency_weight: 0.2,
@@ -95,6 +97,8 @@ describe("scenarioWithRuntimeConfig", () => {
       network: {
         application_protocol: "MQTT",
         transport_protocol: "UDP",
+        transport_loss_rate: 0.025,
+        transport_congestion_window_segments: 32,
         routing_protocol: "DISTANCE_VECTOR",
         datalink_mac_protocol: "CSMA_CA",
         routing_latency_weight: 0.2,

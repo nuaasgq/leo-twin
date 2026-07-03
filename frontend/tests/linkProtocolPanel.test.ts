@@ -10,6 +10,8 @@ describe("buildLinkProtocolSummary", () => {
         network: {
           application_protocol: "MQTT",
           transport_protocol: "UDP",
+          transport_loss_rate: 0.025,
+          transport_congestion_window_segments: 32,
           routing_protocol: "DISTANCE_VECTOR",
           datalink_mac_protocol: "SLOTTED_ALOHA",
           routing_latency_weight: 0.25,
@@ -102,6 +104,8 @@ describe("buildLinkProtocolSummary", () => {
       transportOverheadPercent: 1.866666666666667,
       transportEfficiencyPercent: 98,
       transportHandshakeRoundTrips: 0,
+      transportLossPercent: 2.5,
+      transportCongestionWindow: 32,
       routingCostLabel: "距离向量 / 时延0.25 容量300 跳数1",
       stackLayers: 6,
       carrierFrequencyGhz: 22,
@@ -179,6 +183,8 @@ describe("buildLinkProtocolSummary", () => {
     expect(summary.transportOverheadPercent).toBeCloseTo(2.666667, 6);
     expect(summary.transportEfficiencyPercent).toBe(92);
     expect(summary.transportHandshakeRoundTrips).toBe(1);
+    expect(summary.transportLossPercent).toBe(0);
+    expect(summary.transportCongestionWindow).toBe(0);
     expect(summary.routingCostLabel).toBe("链路状态 / 时延1 容量0 跳数0");
     expect(summary.stackLayers).toBe(6);
     expect(summary.carrierFrequencyGhz).toBe(20);

@@ -23,6 +23,8 @@ def test_config_loads_correctly() -> None:
     assert config.runtime.speed_factor == 1.0
     assert config.network.application_protocol == "TASK_OFFLOAD_FLOW"
     assert config.network.transport_protocol == "TCP"
+    assert config.network.transport_loss_rate == 0.0
+    assert config.network.transport_congestion_window_segments == 0
     assert config.network.routing_protocol == "LINK_STATE"
     assert config.network.datalink_mac_protocol == "TDMA"
     assert config.network.routing_latency_weight == 1.0
@@ -53,6 +55,8 @@ def test_network_protocol_profile_can_be_updated_directly() -> None:
         {
             "application_protocol": "MQTT",
             "transport_protocol": "UDP",
+            "transport_loss_rate": 0.025,
+            "transport_congestion_window_segments": 32,
             "routing_protocol": "DISTANCE_VECTOR",
             "datalink_mac_protocol": "SLOTTED_ALOHA",
             "routing_latency_weight": 0.2,
@@ -75,6 +79,8 @@ def test_network_protocol_profile_can_be_updated_directly() -> None:
     assert snapshot.last_action == "CONFIG_UPDATE"
     assert controller.config.network.application_protocol == "MQTT"
     assert controller.config.network.transport_protocol == "UDP"
+    assert controller.config.network.transport_loss_rate == 0.025
+    assert controller.config.network.transport_congestion_window_segments == 32
     assert controller.config.network.routing_protocol == "DISTANCE_VECTOR"
     assert controller.config.network.datalink_mac_protocol == "SLOTTED_ALOHA"
     assert controller.config.network.routing_latency_weight == 0.2
@@ -118,6 +124,8 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
                     "compute_nodes": 3,
                     "application_protocol": "MQTT",
                     "transport_protocol": "UDP",
+                    "transport_loss_rate": 0.025,
+                    "transport_congestion_window_segments": 32,
                     "routing_protocol": "DISTANCE_VECTOR",
                     "datalink_mac_protocol": "SLOTTED_ALOHA",
                     "routing_latency_weight": 0.2,
@@ -146,6 +154,8 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
     assert control_plane.result.config.transport_protocol == "UDP"
     assert control_plane.result.config.application_protocol == "MQTT"
     assert control_plane.result.config.routing_protocol == "DISTANCE_VECTOR"
+    assert control_plane.result.config.transport_loss_rate == 0.025
+    assert control_plane.result.config.transport_congestion_window_segments == 32
     assert control_plane.result.config.datalink_mac_protocol == "SLOTTED_ALOHA"
     assert control_plane.result.config.routing_latency_weight == 0.2
     assert control_plane.result.config.routing_inverse_capacity_weight == 400.0
@@ -165,6 +175,8 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
     assert control_plane.result.scenario.frontend_config["network"] == {
         "application_protocol": "MQTT",
         "transport_protocol": "UDP",
+        "transport_loss_rate": 0.025,
+        "transport_congestion_window_segments": 32,
         "routing_protocol": "DISTANCE_VECTOR",
         "datalink_mac_protocol": "SLOTTED_ALOHA",
         "routing_latency_weight": 0.2,
@@ -183,6 +195,8 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
     }
     assert ack["generated_config"]["application_protocol"] == "MQTT"
     assert ack["generated_config"]["transport_protocol"] == "UDP"
+    assert ack["generated_config"]["transport_loss_rate"] == 0.025
+    assert ack["generated_config"]["transport_congestion_window_segments"] == 32
     assert ack["generated_config"]["routing_protocol"] == "DISTANCE_VECTOR"
     assert ack["generated_config"]["datalink_mac_protocol"] == "SLOTTED_ALOHA"
     assert ack["generated_config"]["routing_latency_weight"] == 0.2
@@ -240,6 +254,8 @@ def test_initialize_writes_config_and_start_gates_streams(tmp_path) -> None:
     assert generated_config["seed"] == 1234
     assert generated_config["application_protocol"] == "TASK_OFFLOAD_FLOW"
     assert generated_config["transport_protocol"] == "TCP"
+    assert generated_config["transport_loss_rate"] == 0.0
+    assert generated_config["transport_congestion_window_segments"] == 0
     assert generated_config["routing_protocol"] == "LINK_STATE"
     assert generated_config["datalink_mac_protocol"] == "TDMA"
     assert generated_config["routing_latency_weight"] == 1.0
