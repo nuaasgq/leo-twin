@@ -13,6 +13,7 @@ from leo_twin.models.network.geometry import (
     GroundEndpoint,
     PositionDrivenAccessModel,
 )
+from leo_twin.models.network.routing import RoutingRuntime
 from leo_twin.schema import (
     AccessAssociation,
     EventType,
@@ -39,6 +40,8 @@ class PositionDrivenNetworkEngine(SimulationModule):
         base_latency_s: float = 0.0,
         cell_size_km: float = 1000.0,
         link_budget_calculator: LinkBudgetCalculator | None = None,
+        routing_runtime: RoutingRuntime | None = None,
+        static_links: Iterable[LinkState] = (),
     ) -> None:
         _require_non_empty_str(module_name, "module_name")
         _require_non_empty_str(metrics_target, "metrics_target")
@@ -64,6 +67,8 @@ class PositionDrivenNetworkEngine(SimulationModule):
         self._propagation_speed_km_s = float(propagation_speed_km_s)
         self._base_latency_s = float(base_latency_s)
         self._link_budget_calculator = link_budget_calculator
+        self._routing_runtime = routing_runtime
+        self._static_links = tuple(sorted(static_links, key=lambda item: (item.source_id, item.target_id)))
         self._active_links: dict[tuple[str, str], LinkState] = {}
         self._last_links: dict[tuple[str, str], LinkState] = {}
         self._event_sequence = 0
@@ -112,6 +117,12 @@ class PositionDrivenNetworkEngine(SimulationModule):
 
     def route_flow(self, request: FlowRequest) -> Route:
         """Route one flow through the best currently active access link."""
+
+        if self._routing_runtime is not None:
+            return self._routing_runtime.route(
+                request,
+                self.active_link_states() + self._static_links,
+            )
 
         if request.target_id not in self._compute_node_ids:
             return _unavailable_route(request)

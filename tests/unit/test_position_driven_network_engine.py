@@ -6,6 +6,7 @@ from leo_twin.models.network import (
     GroundEndpoint,
     PositionDrivenNetworkEngine,
     RadioTerminalProfile,
+    RoutingRuntime,
 )
 from leo_twin.schema import (
     AntennaProfile,
@@ -15,6 +16,7 @@ from leo_twin.schema import (
     LinkMedium,
     LinkState,
     Route,
+    RoutingProtocol,
     SatelliteState,
     SimEvent,
 )
@@ -206,6 +208,47 @@ def test_flow_arrival_outputs_route_from_active_access() -> None:
     assert len(compute.routes) == 1
     assert compute.routes[0].available is True
     assert compute.routes[0].path == ("user-east", "sat-001", "node-a")
+
+
+def test_position_driven_engine_can_use_routing_runtime_and_static_links() -> None:
+    kernel = SimulationKernel()
+    network = PositionDrivenNetworkEngine(
+        endpoints=(
+            GroundEndpoint(
+                endpoint_id="user-east",
+                position=(EARTH_RADIUS_KM, 0.0, 0.0),
+                min_elevation_deg=10.0,
+                max_range_km=2000.0,
+            ),
+        ),
+        compute_node_ids=("node-a",),
+        link_capacity=50.0,
+        propagation_speed_km_s=1000.0,
+        cell_size_km=1000.0,
+        routing_runtime=RoutingRuntime(RoutingProtocol.LINK_STATE),
+        static_links=(LinkState("sat-001", "node-a", 2.0, 50.0, True),),
+    )
+    metrics = MetricsSink()
+    compute = ComputeSink()
+    kernel.register_module(network)
+    kernel.register_module(metrics)
+    kernel.register_module(compute)
+    kernel.schedule_event(
+        _event("orbit", EventType.ORBIT_UPDATE.value, _state((7000.0, 0.0, 0.0)))
+    )
+    kernel.schedule_event(
+        _event(
+            "flow",
+            EventType.FLOW_ARRIVAL.value,
+            FlowRequest("flow-001", "user-east", "node-a", 10.0),
+            1.0,
+        )
+    )
+
+    kernel.run()
+
+    assert compute.routes[0].path == ("user-east", "sat-001", "node-a")
+    assert compute.routes[0].latency == 2.629
 
 
 def test_link_budget_limits_position_driven_link_capacity_and_latency() -> None:

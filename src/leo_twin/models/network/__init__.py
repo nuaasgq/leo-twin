@@ -17,6 +17,7 @@ from leo_twin.models.network.geometry import (
     PositionDrivenAccessModel,
 )
 from leo_twin.models.network.position_engine import PositionDrivenNetworkEngine
+from leo_twin.models.network.routing import RoutingRuntime, StaticRouteEntry
 from leo_twin.models.network.stack import (
     LayerTrace,
     NetworkStackRuntime,
@@ -41,6 +42,8 @@ __all__ = [
     "PositionDrivenAccessModel",
     "PositionDrivenNetworkEngine",
     "RadioTerminalProfile",
+    "RoutingRuntime",
+    "StaticRouteEntry",
     "build_default_leo_protocol_stack",
     "free_space_path_loss_db",
     "shannon_capacity_mbps",
