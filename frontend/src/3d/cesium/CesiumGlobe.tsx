@@ -26,6 +26,7 @@ import {
   upsertRouteEntity
 } from "../link_renderer/linkEntities";
 import { SatellitePrimitiveBatch } from "../orbit_renderer/satelliteEntities";
+import { visualLayerLimits } from "./renderLimits";
 
 export interface CesiumGlobeProps {
   snapshot: WorldSnapshot;
@@ -170,17 +171,14 @@ export function renderCesiumSnapshot(
   snapshot: WorldSnapshot,
   caches: RenderCaches
 ): void {
+  const limits = visualLayerLimits(snapshot.scenario_config);
   const beamLengthMeters = snapshot.scenario_config?.render?.beam_length_m ?? 600_000;
   const beamRadiusMeters = snapshot.scenario_config?.render?.beam_radius_m ?? 160_000;
-  const beamRenderLimit = 0;
-  const groundUserRenderLimit = 0;
-  const linkRenderLimit = 0;
-  const routeRenderLimit = 0;
   const beamEntityIds = new Set<string>();
 
-  caches.satellites.update(snapshot.satellites);
+  caches.satellites.update(limits.showSatellites ? snapshot.satellites : []);
 
-  for (const satellite of snapshot.satellites.slice(0, beamRenderLimit)) {
+  for (const satellite of snapshot.satellites.slice(0, limits.beamRenderLimit)) {
     const beamId = `beam:${satellite.satellite_id}`;
     beamEntityIds.add(beamId);
     upsertBeamEntity(entities, caches.beams, satellite, {
@@ -192,7 +190,7 @@ export function renderCesiumSnapshot(
   pruneBeamEntities(entities, caches.beams, beamEntityIds);
 
   const userEntityIds = new Set<string>();
-  for (const user of snapshot.ground_users.slice(0, groundUserRenderLimit)) {
+  for (const user of snapshot.ground_users.slice(0, limits.groundUserRenderLimit)) {
     const id = `user:${user.user_id}`;
     userEntityIds.add(id);
     upsertGroundUserEntity(entities, caches.users, user);
@@ -204,7 +202,7 @@ export function renderCesiumSnapshot(
     satellites: snapshot.indexes.satellites,
     groundUsers: snapshot.indexes.ground_users
   };
-  for (const link of snapshot.links.slice(0, linkRenderLimit)) {
+  for (const link of snapshot.links.slice(0, limits.linkRenderLimit)) {
     const id = `link:${link.source_id}->${link.target_id}`;
     linkEntityIds.add(id);
     upsertLinkEntity(entities, caches.links, link, nodeIndex);
@@ -212,7 +210,7 @@ export function renderCesiumSnapshot(
   pruneEntities(entities, caches.links, linkEntityIds);
 
   const routeEntityIds = new Set<string>();
-  for (const route of snapshot.routes.slice(0, routeRenderLimit)) {
+  for (const route of snapshot.routes.slice(0, limits.routeRenderLimit)) {
     const id = `route:${route.route_id}`;
     routeEntityIds.add(id);
     upsertRouteEntity(entities, caches.routes, route, nodeIndex);

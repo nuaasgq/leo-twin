@@ -37,7 +37,7 @@ export function upsertLinkEntity(
       name: id,
       polyline: {
         width: 2,
-        material: Color.LIME.withAlpha(0.62)
+        material: Color.LIME.withAlpha(0.34)
       }
     });
     cache.set(id, entity);
@@ -46,7 +46,7 @@ export function upsertLinkEntity(
     const highUtilization = (link.utilization ?? 0) > 0.8;
     entity.polyline.positions = new ConstantProperty([source, target]);
     entity.polyline.material = new ColorMaterialProperty(
-      Color.LIME.withAlpha(highUtilization ? 0.95 : 0.62)
+      Color.LIME.withAlpha(highUtilization ? 0.78 : 0.34)
     );
   }
 }
