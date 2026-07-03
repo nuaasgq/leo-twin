@@ -107,6 +107,7 @@ export interface ScenarioConfig {
   network?: {
     transport_protocol?: string;
     routing_protocol?: string;
+    datalink_mac_protocol?: string;
     carrier_frequency_hz?: number;
     channel_bandwidth_hz?: number;
     rain_rate_mm_h?: number;
@@ -188,6 +189,7 @@ export interface GeneratedScenarioConfig {
   task_data_size: number;
   transport_protocol?: string;
   routing_protocol?: string;
+  datalink_mac_protocol?: string;
   carrier_frequency_hz?: number;
   channel_bandwidth_hz?: number;
   rain_rate_mm_h?: number;

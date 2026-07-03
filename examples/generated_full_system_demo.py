@@ -36,6 +36,7 @@ from leo_twin.models.orbit import KeplerianOrbitEngine
 from leo_twin.schema import (
     AntennaProfile,
     ChannelProfile,
+    DataLinkProtocol,
     EventType,
     LinkMedium,
     LinkState,
@@ -122,6 +123,9 @@ def run_generated_full_system_demo(
             build_default_leo_protocol_stack(
                 transport_protocol=TransportProtocol(str(resolved_config.transport_protocol)),
                 routing_protocol=RoutingProtocol(str(resolved_config.routing_protocol)),
+                data_link_protocol=DataLinkProtocol(
+                    str(resolved_config.datalink_mac_protocol)
+                ),
             ),
             antenna=space_ground_budget.transmit_terminal.antenna,
             channel=space_ground_budget.channel,

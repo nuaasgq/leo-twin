@@ -10,6 +10,7 @@ describe("buildLinkProtocolSummary", () => {
         network: {
           transport_protocol: "UDP",
           routing_protocol: "DISTANCE_VECTOR",
+          datalink_mac_protocol: "SLOTTED_ALOHA",
           carrier_frequency_hz: 22_000_000_000,
           channel_bandwidth_hz: 250_000_000,
           rain_rate_mm_h: 12.5,
@@ -84,8 +85,11 @@ describe("buildLinkProtocolSummary", () => {
       accessLinks: 1,
       transportProtocol: "UDP",
       routingProtocol: "DISTANCE_VECTOR",
+      dataLinkProtocol: "SLOTTED_ALOHA",
       transportProtocolLabel: "UDP 低时延",
       routingProtocolLabel: "距离向量",
+      dataLinkProtocolLabel: "Slotted ALOHA",
+      dataLinkMediumAccess: "时隙竞争",
       transportOverheadPercent: 1.866666666666667,
       transportEfficiencyPercent: 98,
       transportHandshakeRoundTrips: 0,
@@ -153,8 +157,11 @@ describe("buildLinkProtocolSummary", () => {
     expect(summary.gatewayRoutes).toBe(0);
     expect(summary.transportProtocol).toBe("TCP");
     expect(summary.routingProtocol).toBe("LINK_STATE");
+    expect(summary.dataLinkProtocol).toBe("TDMA");
     expect(summary.transportProtocolLabel).toBe("TCP 可靠传输");
     expect(summary.routingProtocolLabel).toBe("链路状态");
+    expect(summary.dataLinkProtocolLabel).toBe("TDMA");
+    expect(summary.dataLinkMediumAccess).toBe("时分调度");
     expect(summary.transportOverheadPercent).toBeCloseTo(2.666667, 6);
     expect(summary.transportEfficiencyPercent).toBe(92);
     expect(summary.transportHandshakeRoundTrips).toBe(1);

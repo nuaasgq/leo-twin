@@ -107,6 +107,12 @@ def test_network_stack_trace_uses_configured_protocols() -> None:
         for layer in trace.layers
         if str(layer.layer) == "NETWORK"
     } == {"LINK_STATE"}
+    assert {
+        layer.protocol_name
+        for trace in result.network_stack_traces
+        for layer in trace.layers
+        if str(layer.layer) == "DATA_LINK"
+    } == {"TDMA"}
     assert any(
         ("carrier_frequency_hz", "20000000000.000000") in layer.attributes
         for trace in result.network_stack_traces
@@ -118,6 +124,7 @@ def test_network_stack_trace_uses_configured_protocols() -> None:
             load_demo_config(),
             transport_protocol="UDP",
             routing_protocol="DISTANCE_VECTOR",
+            datalink_mac_protocol="SLOTTED_ALOHA",
         )
     )
 
@@ -128,6 +135,12 @@ def test_network_stack_trace_uses_configured_protocols() -> None:
         for layer in trace.layers
         if str(layer.layer) == "NETWORK"
     } == {"DISTANCE_VECTOR"}
+    assert {
+        layer.protocol_name
+        for trace in udp_result.network_stack_traces
+        for layer in trace.layers
+        if str(layer.layer) == "DATA_LINK"
+    } == {"SLOTTED_ALOHA"}
     assert udp_result.metrics_summary["route_latency_avg"] < result.metrics_summary[
         "route_latency_avg"
     ]

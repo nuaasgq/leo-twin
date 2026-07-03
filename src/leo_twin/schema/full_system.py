@@ -43,6 +43,14 @@ class RoutingProtocol(StrEnum):
     DISTANCE_VECTOR = "DISTANCE_VECTOR"
 
 
+class DataLinkProtocol(StrEnum):
+    """Deterministic data-link MAC profile names."""
+
+    TDMA = "TDMA"
+    SLOTTED_ALOHA = "SLOTTED_ALOHA"
+    CSMA_CA = "CSMA_CA"
+
+
 class LinkMedium(StrEnum):
     """Link medium classes used by channel and link contracts."""
 

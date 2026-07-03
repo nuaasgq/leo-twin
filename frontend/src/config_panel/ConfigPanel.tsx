@@ -26,6 +26,7 @@ export interface VisualizationControlValues {
 export interface NetworkControlValues {
   transport_protocol: string;
   routing_protocol: string;
+  datalink_mac_protocol: string;
   carrier_frequency_ghz: number;
   channel_bandwidth_mhz: number;
   rain_rate_mm_h: number;
@@ -83,6 +84,9 @@ export function ConfigPanel({
     scenario.network.transport_protocol
   );
   const [routingProtocol, setRoutingProtocol] = useState(scenario.network.routing_protocol);
+  const [dataLinkProtocol, setDataLinkProtocol] = useState(
+    scenario.network.datalink_mac_protocol
+  );
   const [carrierFrequencyGhz, setCarrierFrequencyGhz] = useState(
     scenario.network.carrier_frequency_ghz
   );
@@ -118,6 +122,7 @@ export function ConfigPanel({
     setShowMetrics(scenario.visualization.metrics);
     setTransportProtocol(scenario.network.transport_protocol);
     setRoutingProtocol(scenario.network.routing_protocol);
+    setDataLinkProtocol(scenario.network.datalink_mac_protocol);
     setCarrierFrequencyGhz(scenario.network.carrier_frequency_ghz);
     setChannelBandwidthMhz(scenario.network.channel_bandwidth_mhz);
     setRainRate(scenario.network.rain_rate_mm_h);
@@ -136,6 +141,7 @@ export function ConfigPanel({
     scenario.visualization.metrics,
     scenario.network.transport_protocol,
     scenario.network.routing_protocol,
+    scenario.network.datalink_mac_protocol,
     scenario.network.carrier_frequency_ghz,
     scenario.network.channel_bandwidth_mhz,
     scenario.network.rain_rate_mm_h,
@@ -510,6 +516,7 @@ export function ConfigPanel({
               ...networkControlPayload({
                 transport_protocol: transportProtocol,
                 routing_protocol: routingProtocol,
+                datalink_mac_protocol: dataLinkProtocol,
                 carrier_frequency_ghz: carrierFrequencyGhz,
                 channel_bandwidth_mhz: channelBandwidthMhz,
                 rain_rate_mm_h: rainRate,
@@ -653,6 +660,7 @@ export function networkControlPayload(network: NetworkControlValues): Record<str
   return {
     transport_protocol: network.transport_protocol,
     routing_protocol: network.routing_protocol,
+    datalink_mac_protocol: network.datalink_mac_protocol,
     carrier_frequency_hz: network.carrier_frequency_ghz * 1_000_000_000,
     channel_bandwidth_hz: network.channel_bandwidth_mhz * 1_000_000,
     rain_rate_mm_h: network.rain_rate_mm_h,

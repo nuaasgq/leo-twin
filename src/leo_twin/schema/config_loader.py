@@ -20,7 +20,7 @@ from leo_twin.schema.config import (
     VisualizationToggles,
     config_to_dict,
 )
-from leo_twin.schema.full_system import RoutingProtocol, TransportProtocol
+from leo_twin.schema.full_system import DataLinkProtocol, RoutingProtocol, TransportProtocol
 
 
 class ConfigValidationError(ValueError):
@@ -62,6 +62,7 @@ _NETWORK_KEYS = frozenset(
     {
         "transport_protocol",
         "routing_protocol",
+        "datalink_mac_protocol",
         "carrier_frequency_hz",
         "channel_bandwidth_hz",
         "rain_rate_mm_h",
@@ -181,6 +182,9 @@ def _build_config(data: Mapping[str, Any]) -> SEESConfig:
             network=NetworkProfile(
                 transport_protocol=TransportProtocol(str(network["transport_protocol"])),
                 routing_protocol=RoutingProtocol(str(network["routing_protocol"])),
+                datalink_mac_protocol=DataLinkProtocol(
+                    str(network["datalink_mac_protocol"])
+                ),
                 carrier_frequency_hz=network["carrier_frequency_hz"],
                 channel_bandwidth_hz=network["channel_bandwidth_hz"],
                 rain_rate_mm_h=network["rain_rate_mm_h"],
@@ -224,6 +228,7 @@ def _normalize_update(update: Mapping[str, Any]) -> dict[str, Any]:
     for key in (
         "transport_protocol",
         "routing_protocol",
+        "datalink_mac_protocol",
         "carrier_frequency_hz",
         "channel_bandwidth_hz",
         "rain_rate_mm_h",
@@ -355,6 +360,7 @@ def _ordered_keys(context: str, data: Mapping[str, Any]) -> tuple[str, ...]:
         "network": (
             "transport_protocol",
             "routing_protocol",
+            "datalink_mac_protocol",
             "carrier_frequency_hz",
             "channel_bandwidth_hz",
             "rain_rate_mm_h",

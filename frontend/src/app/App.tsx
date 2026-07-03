@@ -464,6 +464,7 @@ function scenarioControlValues(
     network: {
       transport_protocol: scenarioConfig?.network?.transport_protocol ?? "TCP",
       routing_protocol: scenarioConfig?.network?.routing_protocol ?? "LINK_STATE",
+      datalink_mac_protocol: scenarioConfig?.network?.datalink_mac_protocol ?? "TDMA",
       carrier_frequency_ghz:
         (scenarioConfig?.network?.carrier_frequency_hz ?? 20_000_000_000) / 1_000_000_000,
       channel_bandwidth_mhz:

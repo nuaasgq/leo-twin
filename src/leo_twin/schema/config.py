@@ -7,7 +7,7 @@ from enum import StrEnum
 from math import isfinite
 from typing import Any
 
-from leo_twin.schema.full_system import RoutingProtocol, TransportProtocol
+from leo_twin.schema.full_system import DataLinkProtocol, RoutingProtocol, TransportProtocol
 
 
 class RuntimeMode(StrEnum):
@@ -64,6 +64,7 @@ class NetworkProfile:
 
     transport_protocol: TransportProtocol = TransportProtocol.TCP
     routing_protocol: RoutingProtocol = RoutingProtocol.LINK_STATE
+    datalink_mac_protocol: DataLinkProtocol = DataLinkProtocol.TDMA
     carrier_frequency_hz: float = 20_000_000_000.0
     channel_bandwidth_hz: float = 100_000_000.0
     rain_rate_mm_h: float = 0.0
@@ -84,6 +85,12 @@ class NetworkProfile:
                 self,
                 "routing_protocol",
                 RoutingProtocol(str(self.routing_protocol)),
+            )
+        if not isinstance(self.datalink_mac_protocol, DataLinkProtocol):
+            object.__setattr__(
+                self,
+                "datalink_mac_protocol",
+                DataLinkProtocol(str(self.datalink_mac_protocol)),
             )
         _require_positive_finite(self.carrier_frequency_hz, "network.carrier_frequency_hz")
         _require_positive_finite(self.channel_bandwidth_hz, "network.channel_bandwidth_hz")

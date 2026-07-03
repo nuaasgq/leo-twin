@@ -12,6 +12,7 @@ from leo_twin.models.network import (
 from leo_twin.schema import (
     AntennaProfile,
     ChannelProfile,
+    DataLinkProtocol,
     FlowRequest,
     LinkMedium,
     NetworkLayer,
@@ -45,6 +46,7 @@ def test_default_stack_contains_required_layers_and_protocols() -> None:
     stack = build_default_leo_protocol_stack(
         transport_protocol=TransportProtocol.UDP,
         routing_protocol=RoutingProtocol.LINK_STATE,
+        data_link_protocol=DataLinkProtocol.CSMA_CA,
     )
 
     assert tuple(layer.layer for layer in stack.layers) == (
@@ -57,6 +59,24 @@ def test_default_stack_contains_required_layers_and_protocols() -> None:
     )
     assert stack.layers[1].protocol_name == "UDP"
     assert stack.layers[2].protocol_name == "LINK_STATE"
+    assert stack.layers[3].protocol_name == "CSMA_CA"
+
+
+def test_stack_runtime_records_data_link_mac_profile_attributes() -> None:
+    runtime = NetworkStackRuntime(
+        build_default_leo_protocol_stack(
+            data_link_protocol=DataLinkProtocol.SLOTTED_ALOHA
+        )
+    )
+
+    trace = runtime.process_flow(_flow(), _route())
+    attributes = dict(trace.layers[3].attributes)
+
+    assert attributes["hop_count"] == "3"
+    assert attributes["mac_profile"] == "SLOTTED_ALOHA"
+    assert attributes["frame_model"] == "fixed_slot"
+    assert attributes["medium_access"] == "contention_slot"
+    assert attributes["retransmission_policy"] == "deterministic_backoff_trace"
 
 
 def test_stack_runtime_is_deterministic_for_same_flow_and_route() -> None:

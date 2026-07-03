@@ -27,6 +27,7 @@ from leo_twin.models.orbit import KeplerianOrbitEngine
 from leo_twin.schema import (
     AntennaProfile,
     ChannelProfile,
+    DataLinkProtocol,
     LinkState,
     LinkMedium,
     RoutingProtocol,
@@ -92,6 +93,7 @@ def run_integration_demo(config: DemoConfig) -> DemoRunResult:
     space_space_budget = _space_space_budget(config)
     transport_protocol = TransportProtocol(str(config.transport_protocol))
     routing_protocol = RoutingProtocol(str(config.routing_protocol))
+    data_link_protocol = DataLinkProtocol(str(config.datalink_mac_protocol))
     transport_runtime = default_transport_runtime(transport_protocol)
     routing_runtime = RoutingRuntime(routing_protocol)
     network = PositionDrivenNetworkEngine(
@@ -117,6 +119,7 @@ def run_integration_demo(config: DemoConfig) -> DemoRunResult:
             build_default_leo_protocol_stack(
                 transport_protocol=transport_protocol,
                 routing_protocol=routing_protocol,
+                data_link_protocol=data_link_protocol,
             ),
             antenna=space_ground_budget.transmit_terminal.antenna,
             channel=space_ground_budget.channel,

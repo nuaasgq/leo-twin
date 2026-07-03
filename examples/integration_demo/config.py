@@ -17,7 +17,7 @@ from leo_twin.core.config import (
     VisualizationToggles,
 )
 from leo_twin.schema.config import NetworkProfile
-from leo_twin.schema.full_system import RoutingProtocol, TransportProtocol
+from leo_twin.schema.full_system import DataLinkProtocol, RoutingProtocol, TransportProtocol
 
 
 @dataclass(frozen=True)
@@ -43,6 +43,7 @@ class DemoConfig:
     backend_port: int
     transport_protocol: str = "TCP"
     routing_protocol: str = "LINK_STATE"
+    datalink_mac_protocol: str = "TDMA"
     carrier_frequency_hz: float = 20_000_000_000.0
     channel_bandwidth_hz: float = 100_000_000.0
     rain_rate_mm_h: float = 0.0
@@ -93,6 +94,7 @@ def load_demo_config(path: str | Path = DEFAULT_CONFIG_PATH) -> DemoConfig:
         backend_port=_int(frontend, "backend_port"),
         transport_protocol=_optional_str(network, "transport_protocol", "TCP"),
         routing_protocol=_optional_str(network, "routing_protocol", "LINK_STATE"),
+        datalink_mac_protocol=_optional_str(network, "datalink_mac_protocol", "TDMA"),
         carrier_frequency_hz=_optional_float(
             network,
             "carrier_frequency_hz",
@@ -139,6 +141,7 @@ def demo_config_to_sees_config(config: DemoConfig) -> SEESConfig:
         network=NetworkProfile(
             transport_protocol=TransportProtocol(str(config.transport_protocol)),
             routing_protocol=RoutingProtocol(str(config.routing_protocol)),
+            datalink_mac_protocol=DataLinkProtocol(str(config.datalink_mac_protocol)),
             carrier_frequency_hz=config.carrier_frequency_hz,
             channel_bandwidth_hz=config.channel_bandwidth_hz,
             rain_rate_mm_h=config.rain_rate_mm_h,
@@ -192,6 +195,7 @@ def demo_config_from_sees_config(
         backend_port=base.backend_port,
         transport_protocol=config.network.transport_protocol.value,
         routing_protocol=config.network.routing_protocol.value,
+        datalink_mac_protocol=config.network.datalink_mac_protocol.value,
         carrier_frequency_hz=config.network.carrier_frequency_hz,
         channel_bandwidth_hz=config.network.channel_bandwidth_hz,
         rain_rate_mm_h=config.network.rain_rate_mm_h,

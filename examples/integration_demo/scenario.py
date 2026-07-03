@@ -98,6 +98,7 @@ def build_demo_scenario(config: DemoConfig) -> DemoScenario:
             "network": {
                 "transport_protocol": config.transport_protocol,
                 "routing_protocol": config.routing_protocol,
+                "datalink_mac_protocol": config.datalink_mac_protocol,
                 "carrier_frequency_hz": config.carrier_frequency_hz,
                 "channel_bandwidth_hz": config.channel_bandwidth_hz,
                 "rain_rate_mm_h": config.rain_rate_mm_h,

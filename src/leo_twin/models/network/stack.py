@@ -10,6 +10,7 @@ from leo_twin.models.network.transport import TransportProfile
 from leo_twin.schema import (
     AntennaProfile,
     ChannelProfile,
+    DataLinkProtocol,
     FlowRequest,
     NetworkLayer,
     ProtocolLayerContract,
@@ -120,6 +121,7 @@ class NetworkStackRuntime:
         elif layer.layer == NetworkLayer.DATA_LINK:
             output_ref = f"link:{request.flow_id}"
             attributes += (("hop_count", str(_hop_count(route))),)
+            attributes += _data_link_profile_attributes(layer.protocol_name)
         elif layer.layer == NetworkLayer.PHYSICAL:
             output_ref = f"physical:{request.flow_id}"
             attributes += _antenna_attributes(self._antenna)
@@ -142,9 +144,12 @@ def build_default_leo_protocol_stack(
     stack_id: str = "leo-default-stack",
     transport_protocol: TransportProtocol = TransportProtocol.TCP,
     routing_protocol: RoutingProtocol = RoutingProtocol.LINK_STATE,
+    data_link_protocol: DataLinkProtocol = DataLinkProtocol.TDMA,
 ) -> ProtocolStackContract:
     """Build the default full-system LEO network stack contract."""
 
+    if not isinstance(data_link_protocol, DataLinkProtocol):
+        data_link_protocol = DataLinkProtocol(str(data_link_protocol))
     return ProtocolStackContract(
         stack_id=stack_id,
         layers=(
@@ -168,7 +173,7 @@ def build_default_leo_protocol_stack(
             ),
             ProtocolLayerContract(
                 layer=NetworkLayer.DATA_LINK,
-                protocol_name="LEO_LINK_ACCESS",
+                protocol_name=data_link_protocol.value,
                 inputs=("Route",),
                 outputs=("LinkState",),
             ),
@@ -258,6 +263,29 @@ def _hop_count(route: Route | None) -> int:
     if route is None:
         return 0
     return max(0, len(route.path) - 1)
+
+
+def _data_link_profile_attributes(protocol_name: str) -> tuple[tuple[str, str], ...]:
+    if protocol_name == DataLinkProtocol.SLOTTED_ALOHA.value:
+        return (
+            ("frame_model", "fixed_slot"),
+            ("mac_profile", DataLinkProtocol.SLOTTED_ALOHA.value),
+            ("medium_access", "contention_slot"),
+            ("retransmission_policy", "deterministic_backoff_trace"),
+        )
+    if protocol_name == DataLinkProtocol.CSMA_CA.value:
+        return (
+            ("frame_model", "carrier_sense_frame"),
+            ("mac_profile", DataLinkProtocol.CSMA_CA.value),
+            ("medium_access", "listen_before_transmit"),
+            ("retransmission_policy", "deterministic_backoff_trace"),
+        )
+    return (
+        ("frame_model", "scheduled_slot"),
+        ("mac_profile", DataLinkProtocol.TDMA.value),
+        ("medium_access", "time_division"),
+        ("retransmission_policy", "none"),
+    )
 
 
 def _antenna_attributes(antenna: AntennaProfile | None) -> tuple[tuple[str, str], ...]:

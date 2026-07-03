@@ -96,6 +96,7 @@ def test_generated_full_system_demo_records_configured_network_stack_trace() -> 
             compute_capacity=20.0,
             transport_protocol="UDP",
             routing_protocol="DISTANCE_VECTOR",
+            datalink_mac_protocol="CSMA_CA",
             carrier_frequency_hz=22_000_000_000.0,
             channel_bandwidth_hz=250_000_000.0,
         )
@@ -110,12 +111,15 @@ def test_generated_full_system_demo_records_configured_network_stack_trace() -> 
         "TASK_OFFLOAD_FLOW",
         "UDP",
         "DISTANCE_VECTOR",
-        "LEO_LINK_ACCESS",
+        "CSMA_CA",
         "CONFIGURED_TERMINAL_PROFILE",
         "CONFIGURED_CHANNEL_PROFILE",
     )
+    data_link_attributes = dict(trace.layers[3].attributes)
     assert network_attributes["latency_weight"] == "0.000000"
     assert network_attributes["hop_weight"] == "1.000000"
+    assert data_link_attributes["mac_profile"] == "CSMA_CA"
+    assert data_link_attributes["medium_access"] == "listen_before_transmit"
     assert channel_attributes["carrier_frequency_hz"] == "22000000000.000000"
     assert channel_attributes["bandwidth_hz"] == "250000000.000000"
 

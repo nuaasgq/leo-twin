@@ -19,8 +19,11 @@ export interface LinkProtocolSummary {
   accessLinks: number;
   transportProtocol: string;
   routingProtocol: string;
+  dataLinkProtocol: string;
   transportProtocolLabel: string;
   routingProtocolLabel: string;
+  dataLinkProtocolLabel: string;
+  dataLinkMediumAccess: string;
   transportOverheadPercent: number;
   transportEfficiencyPercent: number;
   transportHandshakeRoundTrips: number;
@@ -69,6 +72,8 @@ export const LinkProtocolPanel = memo(function LinkProtocolPanel({
         <KpiPanel label="网关路由" value={String(summary.gatewayRoutes)} />
         <KpiPanel label="传输协议" value={summary.transportProtocolLabel} />
         <KpiPanel label="路由协议" value={summary.routingProtocolLabel} />
+        <KpiPanel label="链路层MAC" value={summary.dataLinkProtocolLabel} />
+        <KpiPanel label="接入方式" value={summary.dataLinkMediumAccess} />
         <KpiPanel
           label="传输开销"
           value={`${summary.transportOverheadPercent.toFixed(2)}%`}
@@ -122,8 +127,10 @@ export function buildLinkProtocolSummary(
   const network = snapshot.scenario_config?.network;
   const transportProtocol = network?.transport_protocol ?? "TCP";
   const routingProtocol = network?.routing_protocol ?? "LINK_STATE";
+  const dataLinkProtocol = network?.datalink_mac_protocol ?? "TDMA";
   const transportProfile = transportProfileFor(transportProtocol);
   const routingCostProfile = routingCostProfileFor(routingProtocol);
+  const dataLinkProfile = dataLinkProfileFor(dataLinkProtocol);
   const carrierFrequencyGhz = (network?.carrier_frequency_hz ?? 20_000_000_000) / 1_000_000_000;
   const bandwidthMhz = (network?.channel_bandwidth_hz ?? 100_000_000) / 1_000_000;
   const antennaDiameterM = network?.antenna_diameter_m ?? 0.45;
@@ -152,8 +159,11 @@ export function buildLinkProtocolSummary(
     accessLinks: linkClasses.accessLinks,
     transportProtocol,
     routingProtocol,
+    dataLinkProtocol,
     transportProtocolLabel: formatTransportProtocol(transportProtocol),
     routingProtocolLabel: formatRoutingProtocol(routingProtocol),
+    dataLinkProtocolLabel: dataLinkProfile.label,
+    dataLinkMediumAccess: dataLinkProfile.mediumAccess,
     transportOverheadPercent: transportProfile.overheadRatio * 100,
     transportEfficiencyPercent: transportProfile.efficiency * 100,
     transportHandshakeRoundTrips: transportProfile.handshakeRoundTrips,
@@ -209,9 +219,7 @@ function transportProfileFor(protocol: string): {
   };
 }
 
-function routingCostProfileFor(protocol: string): {
-  label: string;
-} {
+function routingCostProfileFor(protocol: string): { label: string } {
   if (protocol === "DISTANCE_VECTOR") {
     return { label: "跳数优先" };
   }
@@ -219,6 +227,19 @@ function routingCostProfileFor(protocol: string): {
     return { label: "静态路径" };
   }
   return { label: "时延优先" };
+}
+
+function dataLinkProfileFor(protocol: string): {
+  label: string;
+  mediumAccess: string;
+} {
+  if (protocol === "SLOTTED_ALOHA") {
+    return { label: "Slotted ALOHA", mediumAccess: "时隙竞争" };
+  }
+  if (protocol === "CSMA_CA") {
+    return { label: "CSMA/CA", mediumAccess: "侦听避碰" };
+  }
+  return { label: "TDMA", mediumAccess: "时分调度" };
 }
 
 function apertureAntennaGainDbi(

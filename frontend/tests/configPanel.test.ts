@@ -138,6 +138,7 @@ describe("networkControlPayload", () => {
       networkControlPayload({
         transport_protocol: "UDP",
         routing_protocol: "DISTANCE_VECTOR",
+        datalink_mac_protocol: "SLOTTED_ALOHA",
         carrier_frequency_ghz: 22.5,
         channel_bandwidth_mhz: 250,
         rain_rate_mm_h: 8,
@@ -149,6 +150,7 @@ describe("networkControlPayload", () => {
     ).toEqual({
       transport_protocol: "UDP",
       routing_protocol: "DISTANCE_VECTOR",
+      datalink_mac_protocol: "SLOTTED_ALOHA",
       carrier_frequency_hz: 22_500_000_000,
       channel_bandwidth_hz: 250_000_000,
       rain_rate_mm_h: 8,
