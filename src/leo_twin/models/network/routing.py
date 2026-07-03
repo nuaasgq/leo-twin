@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from heapq import heappop, heappush
+from math import isfinite
+from typing import Any
 
 from leo_twin.schema import FlowRequest, LinkState, Route, RoutingProtocol
 
@@ -27,6 +29,29 @@ class StaticRouteEntry:
             _require_non_empty_str(endpoint_id, "path")
 
 
+@dataclass(frozen=True)
+class RoutingCostProfile:
+    """Deterministic route cost weights for path selection."""
+
+    latency_weight: float = 1.0
+    inverse_capacity_weight: float = 0.0
+    hop_weight: float = 0.0
+
+    def __post_init__(self) -> None:
+        _require_non_negative_number(self.latency_weight, "latency_weight")
+        _require_non_negative_number(
+            self.inverse_capacity_weight,
+            "inverse_capacity_weight",
+        )
+        _require_non_negative_number(self.hop_weight, "hop_weight")
+        if (
+            self.latency_weight == 0.0
+            and self.inverse_capacity_weight == 0.0
+            and self.hop_weight == 0.0
+        ):
+            raise ValueError("at least one routing cost weight must be positive")
+
+
 class RoutingRuntime:
     """Route flow requests over deterministic logical link states."""
 
@@ -34,10 +59,12 @@ class RoutingRuntime:
         self,
         protocol: RoutingProtocol = RoutingProtocol.LINK_STATE,
         static_routes: tuple[StaticRouteEntry, ...] = (),
+        cost_profile: RoutingCostProfile | None = None,
     ) -> None:
         if not isinstance(protocol, RoutingProtocol):
             protocol = RoutingProtocol(str(protocol))
         self._protocol = protocol
+        self._cost_profile = cost_profile or RoutingCostProfile()
         self._static_routes = {
             (entry.source_id, entry.target_id): entry.path
             for entry in sorted(static_routes, key=lambda item: (item.source_id, item.target_id))
@@ -65,7 +92,7 @@ class RoutingRuntime:
             RoutingProtocol.LINK_STATE,
             RoutingProtocol.DISTANCE_VECTOR,
         }:
-            path = _shortest_path(request, links)
+            path = _shortest_path(request, links, self._cost_profile)
             if not path:
                 return _unavailable_route(request)
             return self._route_for_path(request, links, path)
@@ -101,6 +128,7 @@ class RoutingRuntime:
 def _shortest_path(
     request: FlowRequest,
     links: tuple[LinkState, ...],
+    cost_profile: RoutingCostProfile,
 ) -> tuple[str, ...]:
     adjacency = _adjacency(links, request.demand_capacity)
     queue: list[tuple[float, tuple[str, ...], str]] = [
@@ -110,20 +138,28 @@ def _shortest_path(
         request.source_id: (0.0, (request.source_id,))
     }
     while queue:
-        latency, path, current_id = heappop(queue)
-        if best.get(current_id) != (latency, path):
+        cost, path, current_id = heappop(queue)
+        if best.get(current_id) != (cost, path):
             continue
         if current_id == request.target_id:
             return path
         for adjacent_id, edge in adjacency.get(current_id, ()):
-            candidate_latency = latency + edge.latency
+            candidate_cost = cost + _edge_cost(edge, cost_profile)
             candidate_path = path + (adjacent_id,)
             current = best.get(adjacent_id)
-            candidate = (candidate_latency, candidate_path)
+            candidate = (candidate_cost, candidate_path)
             if current is None or candidate < current:
                 best[adjacent_id] = candidate
-                heappush(queue, (candidate_latency, candidate_path, adjacent_id))
+                heappush(queue, (candidate_cost, candidate_path, adjacent_id))
     return ()
+
+
+def _edge_cost(edge: LinkState, cost_profile: RoutingCostProfile) -> float:
+    return (
+        edge.latency * cost_profile.latency_weight
+        + cost_profile.inverse_capacity_weight / edge.capacity
+        + cost_profile.hop_weight
+    )
 
 
 def _adjacency(
@@ -164,3 +200,10 @@ def _unavailable_route(request: FlowRequest) -> Route:
 def _require_non_empty_str(value: str, field_name: str) -> None:
     if not isinstance(value, str) or not value:
         raise TypeError(f"{field_name} must be a non-empty str")
+
+
+def _require_non_negative_number(value: Any, field_name: str) -> None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise TypeError(f"{field_name} must be an int or float")
+    if not isfinite(value) or value < 0:
+        raise ValueError(f"{field_name} must be finite and non-negative")
