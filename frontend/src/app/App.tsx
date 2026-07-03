@@ -12,7 +12,7 @@ import {
   RuntimeStatusPayload,
   ScenarioConfig
 } from "../core/event_types";
-import { Dashboard } from "../dashboard/Dashboard";
+import { DataPanel } from "../dashboard/data_panel/DataPanel";
 import { SnapshotEngine, useWorldSnapshot } from "../state/snapshot_engine";
 import { WorldStateReducer } from "../state/reducer";
 import { EventRouter } from "../stream/event_router";
@@ -238,17 +238,11 @@ export function App() {
       </header>
       {surface === "dashboard" ? (
         <section className="dashboard-page" aria-label="独立数据态势面板">
-          <div className="dashboard-page-header">
-            <div>
-              <div className="surface-kicker">实时观测数据</div>
-              <h1>数据态势面板</h1>
-            </div>
-            <div className="surface-status">
-              <span>{runtimeStatusLabel(runtimeStatus.status)}</span>
-              <strong>{runtimeStatus.speed_factor}x</strong>
-            </div>
-          </div>
-          <Dashboard snapshot={snapshot} />
+          <DataPanel
+            snapshot={snapshot}
+            runtimeStatus={runtimeStatus}
+            generatedConfig={generatedConfig}
+          />
         </section>
       ) : (
         <section className="workspace control-workspace">
