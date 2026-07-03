@@ -8,7 +8,17 @@ from leo_twin.services.scenario_builder import (
     FullSystemScenarioBuilderConfig,
     build_full_system_scenario,
     load_full_system_scenario_builder_config,
+    scenario_builder_config_from_sees_config,
     scenario_builder_config_from_mapping,
+    scenario_builder_config_to_mapping,
+    write_full_system_scenario_builder_config,
+)
+from leo_twin.schema.config import (
+    OrbitParameters,
+    RuntimeConfig,
+    SEESConfig,
+    ScenarioConfig,
+    TrafficModel,
 )
 
 
@@ -150,6 +160,59 @@ def test_load_full_system_scenario_builder_config_from_json(tmp_path) -> None:
     assert config.flow_count == 3
     assert config.orbit_plane_count == 2
     assert config.max_range_km == 2000.0
+
+
+def test_write_full_system_scenario_builder_config_round_trips(tmp_path) -> None:
+    config = FullSystemScenarioBuilderConfig(
+        seed=6,
+        satellite_count=5,
+        user_count=7,
+        compute_node_count=2,
+        flow_count=3,
+        orbit_plane_count=1,
+    )
+    config_path = tmp_path / "generated.json"
+
+    write_full_system_scenario_builder_config(config_path, config)
+
+    assert load_full_system_scenario_builder_config(config_path) == config
+    assert json.loads(config_path.read_text(encoding="utf-8")) == (
+        scenario_builder_config_to_mapping(config)
+    )
+
+
+def test_scenario_builder_config_from_sees_config_maps_control_plane_fields() -> None:
+    config = SEESConfig(
+        scenario=ScenarioConfig(
+            satellite_count=24,
+            user_count=40,
+            compute_nodes=3,
+            orbit=OrbitParameters(
+                plane_count=4,
+                altitude_m=600_000.0,
+                inclination_deg=55.0,
+            ),
+            traffic_model=TrafficModel(
+                flow_interval_seconds=30,
+                task_compute_demand=15.0,
+                flow_demand_capacity=2.5,
+            ),
+        ),
+        runtime=RuntimeConfig(seed=42, duration=300),
+    )
+
+    generated = scenario_builder_config_from_sees_config(config)
+
+    assert generated.seed == 42
+    assert generated.satellite_count == 24
+    assert generated.user_count == 40
+    assert generated.compute_node_count == 3
+    assert generated.flow_count == 10
+    assert generated.orbit_plane_count == 4
+    assert generated.semi_major_axis_km == 6971.0
+    assert generated.inclination_deg == 55.0
+    assert generated.demand_capacity == 2.5
+    assert generated.task_compute_demand == 15.0
 
 
 def test_default_generated_scenario_config_file_loads() -> None:

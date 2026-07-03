@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from leo_twin.schema import FlowRequest, OrbitalElementSet, TaskRequest
+from leo_twin.schema.config import SEESConfig
 
 
 DEFAULT_GENERATED_SCENARIO_CONFIG_PATH = (
@@ -116,6 +117,38 @@ def load_full_system_scenario_builder_config(
     return scenario_builder_config_from_mapping(data)
 
 
+def write_full_system_scenario_builder_config(
+    path: str | Path,
+    config: FullSystemScenarioBuilderConfig,
+) -> None:
+    """Write deterministic generated scenario config as JSON."""
+
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(
+        json.dumps(
+            scenario_builder_config_to_mapping(config),
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def scenario_builder_config_to_mapping(
+    config: FullSystemScenarioBuilderConfig,
+) -> dict[str, int | float]:
+    """Return a deterministic JSON-compatible scenario builder config."""
+
+    if not isinstance(config, FullSystemScenarioBuilderConfig):
+        raise TypeError("config must be FullSystemScenarioBuilderConfig")
+    return {
+        field.name: getattr(config, field.name)
+        for field in fields(FullSystemScenarioBuilderConfig)
+    }
+
+
 def scenario_builder_config_from_mapping(
     data: Mapping[str, Any],
 ) -> FullSystemScenarioBuilderConfig:
@@ -128,6 +161,34 @@ def scenario_builder_config_from_mapping(
     if unknown_fields:
         raise ValueError(f"unknown scenario builder fields: {', '.join(unknown_fields)}")
     return FullSystemScenarioBuilderConfig(**dict(data))
+
+
+def scenario_builder_config_from_sees_config(
+    config: SEESConfig,
+) -> FullSystemScenarioBuilderConfig:
+    """Map SEES control-plane config into generated full-system scenario config."""
+
+    if not isinstance(config, SEESConfig):
+        raise TypeError("config must be SEESConfig")
+    return FullSystemScenarioBuilderConfig(
+        seed=config.runtime.seed,
+        satellite_count=config.scenario.satellite_count,
+        user_count=config.scenario.user_count,
+        compute_node_count=config.scenario.compute_nodes,
+        flow_count=max(
+            1,
+            config.runtime.duration
+            // config.scenario.traffic_model.flow_interval_seconds,
+        ),
+        orbit_plane_count=min(
+            config.scenario.satellite_count,
+            config.scenario.orbit.plane_count,
+        ),
+        semi_major_axis_km=6371.0 + config.scenario.orbit.altitude_m / 1000.0,
+        inclination_deg=config.scenario.orbit.inclination_deg,
+        demand_capacity=config.scenario.traffic_model.flow_demand_capacity,
+        task_compute_demand=config.scenario.traffic_model.task_compute_demand,
+    )
 
 
 def _orbit_elements(

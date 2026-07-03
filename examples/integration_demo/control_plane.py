@@ -13,6 +13,11 @@ from leo_twin.services.control import (
     control_error,
     parse_control_message,
 )
+from leo_twin.services.scenario_builder import (
+    scenario_builder_config_from_sees_config,
+    scenario_builder_config_to_mapping,
+    write_full_system_scenario_builder_config,
+)
 
 from examples.integration_demo.config import (
     DemoConfig,
@@ -45,12 +50,14 @@ class DemoControlPlane:
     _result: DemoRunResult
     _controller: RuntimeController
     _config_output_path: Path
+    _generated_config_output_path: Path
 
     @classmethod
     def from_result(
         cls,
         result: DemoRunResult,
         config_output_path: str | Path = "configs/sees_control.yaml",
+        generated_config_output_path: str | Path = "configs/generated_full_system_demo.json",
     ) -> "DemoControlPlane":
         controller = RuntimeController(demo_config_to_sees_config(result.config))
         return cls(
@@ -58,6 +65,7 @@ class DemoControlPlane:
             _result=result,
             _controller=controller,
             _config_output_path=Path(config_output_path),
+            _generated_config_output_path=Path(generated_config_output_path),
         )
 
     @property
@@ -73,6 +81,7 @@ class DemoControlPlane:
             "type": "RUNTIME_STATUS",
             "status": self._controller.snapshot().to_json(),
             "config": self._controller.config_json(),
+            "generated_config": self._generated_config_json(),
         }
 
     def visible_snapshot(self) -> dict[str, JsonValue]:
@@ -109,6 +118,7 @@ class DemoControlPlane:
                 "ok": True,
                 "status": snapshot.to_json(),
                 "config": self._controller.config_json(),
+                "generated_config": self._generated_config_json(),
             }
         except Exception as exc:  # noqa: BLE001 - returned as protocol error
             return control_error(exc)
@@ -116,6 +126,10 @@ class DemoControlPlane:
     def _initialize(self, payload: dict[str, Any]) -> dict[str, Any]:
         snapshot = self._controller.initialize(payload)
         write_config(self._config_output_path, self._controller.config)
+        write_full_system_scenario_builder_config(
+            self._generated_config_output_path,
+            scenario_builder_config_from_sees_config(self._controller.config),
+        )
         updated_demo_config = demo_config_from_sees_config(
             self._controller.config,
             self._base_config,
@@ -126,7 +140,13 @@ class DemoControlPlane:
             "ok": True,
             "status": snapshot.to_json(),
             "config": self._controller.config_json(),
+            "generated_config": self._generated_config_json(),
         }
+
+    def _generated_config_json(self) -> dict[str, int | float]:
+        return scenario_builder_config_to_mapping(
+            scenario_builder_config_from_sees_config(self._controller.config)
+        )
 
 
 def _initial_snapshot(result: DemoRunResult) -> dict[str, JsonValue]:

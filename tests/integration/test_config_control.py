@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -74,7 +75,8 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
 
 def test_initialize_writes_config_and_start_gates_streams(tmp_path) -> None:
     config_path = tmp_path / "sees_control.yaml"
-    control_plane = _small_control_plane(config_path)
+    generated_config_path = tmp_path / "generated_full_system_demo.json"
+    control_plane = _small_control_plane(config_path, generated_config_path)
 
     assert control_plane.stream_events() == ()
     assert control_plane.stream_snapshots() == ()
@@ -101,6 +103,13 @@ def test_initialize_writes_config_and_start_gates_streams(tmp_path) -> None:
     assert init_ack["status"]["status"] == "STOPPED"
     assert "satellite_count: 24" in config_path.read_text(encoding="utf-8")
     assert "speed_factor: 10" in config_path.read_text(encoding="utf-8")
+    generated_config = json.loads(generated_config_path.read_text(encoding="utf-8"))
+    assert generated_config["satellite_count"] == 24
+    assert generated_config["user_count"] == 40
+    assert generated_config["compute_node_count"] == 2
+    assert generated_config["seed"] == 1234
+    assert init_ack["generated_config"]["satellite_count"] == 24
+    assert init_ack["generated_config"]["user_count"] == 40
     assert control_plane.result.config.satellite_count == 24
     assert control_plane.stream_events() == ()
 
@@ -147,10 +156,19 @@ def test_system_remains_deterministic_under_config_changes(tmp_path) -> None:
     assert first.result.final_snapshot == second.result.final_snapshot
 
 
-def _small_control_plane(config_path: object = "configs/sees_control.yaml") -> DemoControlPlane:
+def _small_control_plane(
+    config_path: object = "configs/sees_control.yaml",
+    generated_config_path: object | None = None,
+) -> DemoControlPlane:
+    resolved_generated_path = (
+        generated_config_path
+        if generated_config_path is not None
+        else Path(config_path).with_name("generated_full_system_demo.json")
+    )
     return DemoControlPlane.from_result(
         run_integration_demo(_small_demo_config()),
         config_output_path=config_path,
+        generated_config_output_path=resolved_generated_path,
     )
 
 
