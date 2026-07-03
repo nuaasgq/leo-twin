@@ -30,14 +30,14 @@ describe("buildComputeQueueSummary", () => {
         {
           node_id: "node-a",
           running_tasks: 1,
-          finished_tasks: 4
+          finished_tasks: 5
         }
       ]
     });
 
     expect(summary).toEqual({
       runningTasks: 3,
-      finishedTasks: 5,
+      finishedTasks: 6,
       computeNodes: 2,
       busiestNodeId: "node-b",
       nodeRows: [
@@ -49,7 +49,7 @@ describe("buildComputeQueueSummary", () => {
         {
           nodeId: "node-a",
           runningTasks: 1,
-          finishedTasks: 4
+          finishedTasks: 5
         }
       ],
       taskRows: [

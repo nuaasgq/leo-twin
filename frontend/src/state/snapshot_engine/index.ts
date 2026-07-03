@@ -25,6 +25,7 @@ export interface ComputeMetricsSummary {
   executionSuccessRate: number;
   runningTasks: number;
   finishedTasks: number;
+  deadlineMissedTasks: number;
 }
 
 export interface OrbitMetricsSummary {
@@ -205,7 +206,7 @@ export function buildWorldSnapshot(
   const links = Array.from(state.links.values()).sort(compareLink);
   const tasks = Array.from(state.tasks.values()).sort(compareTask);
   const metrics = Array.from(state.metrics.values()).sort(compareMetric);
-  const activeTasks = tasks.filter((task) => task.status.toLowerCase() !== "finished");
+  const activeTasks = tasks.filter((task) => !isTerminalTaskStatus(task.status));
   const routes = Array.from(state.routes.values()).sort((left, right) =>
     left.route_id.localeCompare(right.route_id)
   );
@@ -261,15 +262,19 @@ function networkSummary(links: readonly LinkState[]): NetworkMetricsSummary {
 }
 
 function computeSummary(tasks: readonly TaskState[]): ComputeMetricsSummary {
-  const finished = tasks.filter((task) => task.status.toLowerCase() === "finished").length;
-  const failed = tasks.filter((task) => task.status.toLowerCase() === "failed").length;
-  const running = tasks.length - finished;
-  const completedTotal = finished + failed;
+  const finished = tasks.filter((task) => normalizeStatus(task.status) === "finished").length;
+  const failed = tasks.filter((task) => normalizeStatus(task.status) === "failed").length;
+  const deadlineMissed = tasks.filter(
+    (task) => normalizeStatus(task.status) === "deadline_missed"
+  ).length;
+  const running = tasks.length - finished - failed - deadlineMissed;
+  const completedTotal = finished + failed + deadlineMissed;
   return {
     taskQueueLength: running,
     executionSuccessRate: completedTotal === 0 ? 1 : finished / completedTotal,
     runningTasks: running,
-    finishedTasks: finished
+    finishedTasks: finished,
+    deadlineMissedTasks: deadlineMissed
   };
 }
 
@@ -310,7 +315,7 @@ function computeNodeSummary(tasks: readonly TaskState[]): readonly ComputeNodeRe
   const nodes = new Map<string, { running_tasks: number; finished_tasks: number }>();
   for (const task of tasks) {
     const entry = nodes.get(task.node_id) ?? { running_tasks: 0, finished_tasks: 0 };
-    if (task.status.toLowerCase() === "finished") {
+    if (isTerminalTaskStatus(task.status)) {
       entry.finished_tasks += 1;
     } else {
       entry.running_tasks += 1;
@@ -320,6 +325,14 @@ function computeNodeSummary(tasks: readonly TaskState[]): readonly ComputeNodeRe
   return Array.from(nodes.entries())
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([node_id, entry]) => ({ node_id, ...entry }));
+}
+
+function isTerminalTaskStatus(status: string): boolean {
+  return ["deadline_missed", "failed", "finished"].includes(normalizeStatus(status));
+}
+
+function normalizeStatus(status: string): string {
+  return status.toLowerCase();
 }
 
 function compareSatellite(left: SatelliteState, right: SatelliteState): number {

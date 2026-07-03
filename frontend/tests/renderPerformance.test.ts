@@ -56,6 +56,29 @@ describe("frontend render performance architecture", () => {
     expect(first.spatial_index).toEqual(second.spatial_index);
   });
 
+  it("treats deadline missed tasks as terminal compute outcomes", () => {
+    const snapshot = snapshotFromEvents([
+      taskEvent("task-finished", "FINISHED"),
+      taskEvent("task-timeout", "DEADLINE_MISSED")
+    ]);
+
+    expect(snapshot.active_tasks).toEqual([]);
+    expect(snapshot.compute_nodes).toEqual([
+      {
+        node_id: "node-a",
+        running_tasks: 0,
+        finished_tasks: 2
+      }
+    ]);
+    expect(snapshot.metrics_summary.compute).toEqual({
+      taskQueueLength: 0,
+      executionSuccessRate: 0.5,
+      runningTasks: 0,
+      finishedTasks: 1,
+      deadlineMissedTasks: 1
+    });
+  });
+
   it("keeps the render loop independent of snapshot publication cadence", () => {
     const clock = new FakeRenderClock();
     const frames: number[] = [];
@@ -137,6 +160,24 @@ function orbitEvents(count: number, uniqueSatellites = count): SimEvent[] {
       }
     };
   });
+}
+
+function taskEvent(taskId: string, status: string): SimEvent {
+  return {
+    event_id: `task:${taskId}`,
+    sim_time: 1,
+    priority: 0,
+    source: "compute",
+    target: "frontend",
+    event_type: "TASK_FINISH",
+    payload: {
+      task_id: taskId,
+      node_id: "node-a",
+      sim_time: 1,
+      progress: 1,
+      status
+    }
+  };
 }
 
 class FakeRenderClock implements RenderLoopClock {
