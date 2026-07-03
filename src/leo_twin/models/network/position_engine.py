@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from math import isfinite
+from math import ceil, floor, isfinite
 from typing import Any
 
 from leo_twin.core import SimulationKernel, SimulationModule
@@ -28,6 +28,9 @@ from leo_twin.schema import (
 )
 
 
+SpaceCellId = tuple[int, int, int]
+
+
 class PositionDrivenNetworkEngine(SimulationModule):
     """Maintain satellite-ground access and route flows from orbit updates."""
 
@@ -49,6 +52,7 @@ class PositionDrivenNetworkEngine(SimulationModule):
         static_links: Iterable[LinkState] = (),
         space_link_max_range_km: float | None = None,
         space_link_capacity: float | None = None,
+        space_link_cell_size_km: float | None = None,
         space_link_update_latency_epsilon_s: float = 0.0,
         space_link_update_capacity_epsilon: float = 0.0,
     ) -> None:
@@ -61,6 +65,8 @@ class PositionDrivenNetworkEngine(SimulationModule):
             _require_positive_number(space_link_max_range_km, "space_link_max_range_km")
         if space_link_capacity is not None:
             _require_positive_number(space_link_capacity, "space_link_capacity")
+        if space_link_cell_size_km is not None:
+            _require_positive_number(space_link_cell_size_km, "space_link_cell_size_km")
         _require_non_negative_number(
             space_link_update_latency_epsilon_s,
             "space_link_update_latency_epsilon_s",
@@ -94,9 +100,16 @@ class PositionDrivenNetworkEngine(SimulationModule):
         self._static_links = tuple(sorted(static_links, key=lambda item: (item.source_id, item.target_id)))
         self._space_link_max_range_km = space_link_max_range_km
         self._space_link_capacity = float(space_link_capacity or link_capacity)
+        self._space_link_cell_size_km = float(
+            space_link_cell_size_km
+            or space_link_max_range_km
+            or cell_size_km
+        )
         self._space_link_update_latency_epsilon_s = float(space_link_update_latency_epsilon_s)
         self._space_link_update_capacity_epsilon = float(space_link_update_capacity_epsilon)
         self._satellite_states: dict[str, SatelliteState] = {}
+        self._satellite_space_cells: dict[str, SpaceCellId] = {}
+        self._satellites_by_space_cell: dict[SpaceCellId, set[str]] = {}
         self._active_links: dict[tuple[str, str], LinkState] = {}
         self._active_space_links: dict[tuple[str, str], LinkState] = {}
         self._last_links: dict[tuple[str, str], LinkState] = {}
@@ -247,11 +260,13 @@ class PositionDrivenNetworkEngine(SimulationModule):
         dispatch_time: float,
     ) -> tuple[SimEvent, ...]:
         self._satellite_states[state.satellite_id] = state
+        self._update_space_index(state)
         if self._space_link_max_range_km is None:
             return ()
 
         emitted: list[SimEvent] = []
-        for other_id in sorted(self._satellite_states):
+        candidate_ids = self._space_link_candidate_ids(state)
+        for other_id in candidate_ids:
             if other_id == state.satellite_id:
                 continue
             other_state = self._satellite_states[other_id]
@@ -294,6 +309,38 @@ class PositionDrivenNetworkEngine(SimulationModule):
                     )
                 )
         return tuple(emitted)
+
+    def _update_space_index(self, state: SatelliteState) -> None:
+        next_cell = _space_cell_for(state.position, self._space_link_cell_size_km)
+        previous_cell = self._satellite_space_cells.get(state.satellite_id)
+        if previous_cell == next_cell:
+            return
+        if previous_cell is not None:
+            previous_ids = self._satellites_by_space_cell.get(previous_cell)
+            if previous_ids is not None:
+                previous_ids.discard(state.satellite_id)
+            if previous_ids is not None and not previous_ids:
+                self._satellites_by_space_cell.pop(previous_cell, None)
+        self._satellite_space_cells[state.satellite_id] = next_cell
+        self._satellites_by_space_cell.setdefault(next_cell, set()).update(
+            (state.satellite_id,)
+        )
+
+    def _space_link_candidate_ids(self, state: SatelliteState) -> tuple[str, ...]:
+        nearby_ids = set(
+            _nearby_satellite_ids(
+                position=state.position,
+                cell_size_km=self._space_link_cell_size_km,
+                radius_km=float(self._space_link_max_range_km),
+                satellites_by_cell=self._satellites_by_space_cell,
+            )
+        )
+        active_neighbor_ids = {
+            pair[1] if pair[0] == state.satellite_id else pair[0]
+            for pair in self._active_space_links
+            if state.satellite_id in pair
+        }
+        return tuple(sorted(nearby_ids | active_neighbor_ids))
 
     def _space_link_from_states(
         self,
@@ -470,6 +517,35 @@ def _distance_km(
     delta_y = left[1] - right[1]
     delta_z = left[2] - right[2]
     return (delta_x * delta_x + delta_y * delta_y + delta_z * delta_z) ** 0.5
+
+
+def _nearby_satellite_ids(
+    position: tuple[float, float, float],
+    cell_size_km: float,
+    radius_km: float,
+    satellites_by_cell: dict[SpaceCellId, set[str]],
+) -> tuple[str, ...]:
+    center = _space_cell_for(position, cell_size_km)
+    span = int(ceil(radius_km / cell_size_km))
+    satellite_ids: set[str] = set()
+    for x_index in range(center[0] - span, center[0] + span + 1):
+        for y_index in range(center[1] - span, center[1] + span + 1):
+            for z_index in range(center[2] - span, center[2] + span + 1):
+                satellite_ids.update(
+                    satellites_by_cell.get((x_index, y_index, z_index), set())
+                )
+    return tuple(sorted(satellite_ids))
+
+
+def _space_cell_for(
+    position: tuple[float, float, float],
+    cell_size_km: float,
+) -> SpaceCellId:
+    return (
+        floor(position[0] / cell_size_km),
+        floor(position[1] / cell_size_km),
+        floor(position[2] / cell_size_km),
+    )
 
 
 def _off_boresight_from_elevation(
