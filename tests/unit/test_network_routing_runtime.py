@@ -64,6 +64,20 @@ def test_static_routing_uses_configured_path() -> None:
     assert route.capacity == 100.0
 
 
+def test_distance_vector_defaults_to_lowest_hop_count() -> None:
+    runtime = RoutingRuntime(RoutingProtocol.DISTANCE_VECTOR)
+    links = (
+        LinkState("user-a", "node-a", latency=20.0, capacity=20.0, availability=True),
+        LinkState("user-a", "sat-a", latency=1.0, capacity=20.0, availability=True),
+        LinkState("sat-a", "node-a", latency=1.0, capacity=20.0, availability=True),
+    )
+
+    route = runtime.route(_request(), links)
+
+    assert route.path == ("user-a", "node-a")
+    assert route.latency == 20.0
+
+
 def test_routing_cost_profile_can_prefer_higher_capacity_path() -> None:
     runtime = RoutingRuntime(
         RoutingProtocol.LINK_STATE,

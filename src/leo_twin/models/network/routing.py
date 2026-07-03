@@ -64,7 +64,7 @@ class RoutingRuntime:
         if not isinstance(protocol, RoutingProtocol):
             protocol = RoutingProtocol(str(protocol))
         self._protocol = protocol
-        self._cost_profile = cost_profile or RoutingCostProfile()
+        self._cost_profile = cost_profile or _default_cost_profile(protocol)
         self._static_routes = {
             (entry.source_id, entry.target_id): entry.path
             for entry in sorted(static_routes, key=lambda item: (item.source_id, item.target_id))
@@ -152,6 +152,12 @@ def _shortest_path(
                 best[adjacent_id] = candidate
                 heappush(queue, (candidate_cost, candidate_path, adjacent_id))
     return ()
+
+
+def _default_cost_profile(protocol: RoutingProtocol) -> RoutingCostProfile:
+    if protocol == RoutingProtocol.DISTANCE_VECTOR:
+        return RoutingCostProfile(latency_weight=0.0, hop_weight=1.0)
+    return RoutingCostProfile()
 
 
 def _edge_cost(edge: LinkState, cost_profile: RoutingCostProfile) -> float:
