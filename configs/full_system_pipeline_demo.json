@@ -76,6 +76,12 @@
     "task_id": "flow-001"
   },
   "transport": {
-    "protocol": "TCP"
+    "protocol": "TCP",
+    "payload_unit_bytes": 1460,
+    "header_bytes": 40,
+    "efficiency": 0.92,
+    "handshake_round_trips": 1,
+    "loss_rate": 0.0,
+    "congestion_window_segments": null
   }
 }

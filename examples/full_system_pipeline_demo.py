@@ -21,6 +21,8 @@ from leo_twin.models.network import (
     NetworkStackRuntime,
     PositionDrivenNetworkEngine,
     RadioTerminalProfile,
+    TransportProfile,
+    TransportRuntime,
     build_default_leo_protocol_stack,
     default_transport_runtime,
 )
@@ -88,9 +90,7 @@ def run_full_system_pipeline_demo() -> FullSystemPipelineResult:
 
     config = load_full_system_pipeline_config()
     link_budget_calculator = _link_budget_calculator(config)
-    transport_runtime = default_transport_runtime(
-        TransportProtocol(str(config.transport["protocol"]))
-    )
+    transport_runtime = _transport_runtime(config.transport)
     reference_budget = link_budget_calculator.evaluate(
         float(config.link_budget["reference_range_km"])
     )
@@ -233,6 +233,32 @@ def _link_budget_calculator(config: object) -> LinkBudgetCalculator:
     )
 
 
+def _transport_runtime(config: Mapping[str, object]) -> TransportRuntime:
+    protocol = TransportProtocol(str(config["protocol"]))
+    default_profile = default_transport_runtime(protocol).profile
+    return TransportRuntime(
+        TransportProfile(
+            protocol=protocol,
+            payload_unit_bytes=int(config.get("payload_unit_bytes", default_profile.payload_unit_bytes)),
+            header_bytes=int(config.get("header_bytes", default_profile.header_bytes)),
+            efficiency=float(config.get("efficiency", default_profile.efficiency)),
+            handshake_round_trips=int(
+                config.get(
+                    "handshake_round_trips",
+                    default_profile.handshake_round_trips,
+                )
+            ),
+            loss_rate=float(config.get("loss_rate", default_profile.loss_rate)),
+            congestion_window_segments=_optional_int(
+                config.get(
+                    "congestion_window_segments",
+                    default_profile.congestion_window_segments,
+                )
+            ),
+        )
+    )
+
+
 def _radio_terminal(config: Mapping[str, object]) -> RadioTerminalProfile:
     return RadioTerminalProfile(
         terminal_id=str(config["terminal_id"]),
@@ -268,6 +294,12 @@ def _vector3(value: object) -> tuple[float, float, float]:
     if not isinstance(value, (list, tuple)) or len(value) != 3:
         raise TypeError("position must contain three numeric values")
     return (float(value[0]), float(value[1]), float(value[2]))
+
+
+def _optional_int(value: object) -> int | None:
+    if value is None:
+        return None
+    return int(value)
 
 
 if __name__ == "__main__":
