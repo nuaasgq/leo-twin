@@ -62,11 +62,17 @@ class RouteAwareComputeEngine(SimulationModule):
         module_name: str = "compute",
         metrics_target: str = "metrics",
         scheduling_runtime: ComputeSchedulingRuntime | None = None,
+        state_update_targets: Iterable[str] = (),
     ) -> None:
         if not module_name:
             raise ValueError("module_name must be non-empty")
         if not metrics_target:
             raise ValueError("metrics_target must be non-empty")
+        ordered_update_targets = tuple(
+            sorted(str(item) for item in state_update_targets)
+        )
+        if any(not item for item in ordered_update_targets):
+            raise ValueError("state_update_targets must contain non-empty ids")
         ordered_nodes = tuple(sorted(nodes, key=lambda item: item.node_id))
         if not ordered_nodes:
             raise ValueError("at least one compute node is required")
@@ -75,6 +81,11 @@ class RouteAwareComputeEngine(SimulationModule):
 
         self._module_name = module_name
         self._metrics_target = metrics_target
+        self._state_update_targets = tuple(
+            target
+            for target in dict.fromkeys(ordered_update_targets)
+            if target != metrics_target
+        )
         self._nodes = ordered_nodes
         self._scheduling_runtime = scheduling_runtime or ComputeSchedulingRuntime()
         self._available_at = {item.node_id: 0.0 for item in ordered_nodes}
@@ -305,6 +316,21 @@ class RouteAwareComputeEngine(SimulationModule):
                 ),
             )
         )
+        for target in self._state_update_targets:
+            kernel.schedule_event(
+                self._event(
+                    dispatch_time=decision.start_time,
+                    event_type=COMPUTE_NODE_UPDATE,
+                    payload=ComputeNodeState(
+                        node_id=decision.node_id,
+                        sim_time=decision.start_time,
+                        capacity=node.capacity,
+                        available_capacity=0.0,
+                        status="BUSY",
+                    ),
+                    target=target,
+                )
+            )
         kernel.schedule_event(
             self._event(
                 dispatch_time=decision.finish_time,
@@ -331,6 +357,21 @@ class RouteAwareComputeEngine(SimulationModule):
                 ),
             )
         )
+        for target in self._state_update_targets:
+            kernel.schedule_event(
+                self._event(
+                    dispatch_time=decision.finish_time,
+                    event_type=COMPUTE_NODE_UPDATE,
+                    payload=ComputeNodeState(
+                        node_id=decision.node_id,
+                        sim_time=decision.finish_time,
+                        capacity=node.capacity,
+                        available_capacity=node.capacity,
+                        status="IDLE",
+                    ),
+                    target=target,
+                )
+            )
 
     def _node_by_id(self, node_id: str) -> ComputeNode:
         for item in self._nodes:
@@ -343,6 +384,7 @@ class RouteAwareComputeEngine(SimulationModule):
         dispatch_time: float,
         event_type: str,
         payload: object,
+        target: str | None = None,
     ) -> SimEvent:
         self._event_sequence += 1
         return SimEvent(
@@ -350,7 +392,7 @@ class RouteAwareComputeEngine(SimulationModule):
             sim_time=dispatch_time,
             priority=0,
             source=self._module_name,
-            target=self._metrics_target,
+            target=target or self._metrics_target,
             event_type=event_type,
             payload=payload,
         )

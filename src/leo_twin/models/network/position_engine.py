@@ -19,6 +19,7 @@ from leo_twin.models.network.transport import TransportRuntime
 from leo_twin.schema import (
     AccessAssociation,
     AntennaProfile,
+    ComputeNodeState,
     EventType,
     FlowRequest,
     LinkMedium,
@@ -30,6 +31,7 @@ from leo_twin.schema import (
 
 
 SpaceCellId = tuple[int, int, int]
+_COMPUTE_NODE_UPDATE = "COMPUTE_NODE_UPDATE"
 
 
 class PositionDrivenNetworkEngine(SimulationModule):
@@ -124,6 +126,7 @@ class PositionDrivenNetworkEngine(SimulationModule):
         self._last_routes: dict[str, Route] = {}
         self._last_stack_traces: dict[str, NetworkStackTrace] = {}
         self._last_links: dict[tuple[str, str], LinkState] = {}
+        self._compute_load_by_node: dict[str, float] = {}
         self._event_sequence = 0
 
     def name(self) -> str:
@@ -146,6 +149,16 @@ class PositionDrivenNetworkEngine(SimulationModule):
             route = self.route_flow(request)
             self._last_routes[request.flow_id] = route
             for emitted in self._route_events(event.sim_time, route):
+                kernel.schedule_event(emitted)
+            return
+
+        if event.event_type == _COMPUTE_NODE_UPDATE:
+            state = self._coerce_compute_node_state(event.payload)
+            next_load = _compute_load_factor(state)
+            if self._compute_load_by_node.get(state.node_id) == next_load:
+                return
+            self._compute_load_by_node[state.node_id] = next_load
+            for emitted in self._reroute_active_flows(event.sim_time):
                 kernel.schedule_event(emitted)
 
     def update_topology(self, sim_time: float) -> tuple[SimEvent, ...]:
@@ -227,9 +240,31 @@ class PositionDrivenNetworkEngine(SimulationModule):
         )
         return tuple(
             sorted(
-                access_links + tuple(self._active_space_links.values()) + self._static_links,
+                access_links
+                + tuple(self._active_space_links.values())
+                + self._static_links_for_routing(),
                 key=lambda item: (item.source_id, item.target_id),
             )
+        )
+
+    def _static_links_for_routing(self) -> tuple[LinkState, ...]:
+        return tuple(
+            self._static_link_with_compute_load(link) for link in self._static_links
+        )
+
+    def _static_link_with_compute_load(self, link: LinkState) -> LinkState:
+        load_factor = self._compute_load_by_node.get(link.target_id)
+        if load_factor is None:
+            load_factor = self._compute_load_by_node.get(link.source_id)
+        if load_factor is None or load_factor <= 0.0:
+            return link
+        capacity_factor = max(0.1, 1.0 - load_factor)
+        return LinkState(
+            source_id=link.source_id,
+            target_id=link.target_id,
+            latency=link.latency,
+            capacity=link.capacity * capacity_factor,
+            availability=link.availability,
         )
 
     def _apply_transport(self, request: FlowRequest, route: Route) -> Route:
@@ -579,6 +614,20 @@ class PositionDrivenNetworkEngine(SimulationModule):
             )
         raise TypeError("FLOW_ARRIVAL payload must be FlowRequest or dict")
 
+    @staticmethod
+    def _coerce_compute_node_state(payload: object) -> ComputeNodeState:
+        if isinstance(payload, ComputeNodeState):
+            return payload
+        if isinstance(payload, dict):
+            return ComputeNodeState(
+                node_id=str(payload["node_id"]),
+                sim_time=float(payload["sim_time"]),
+                capacity=float(payload["capacity"]),
+                available_capacity=float(payload["available_capacity"]),
+                status=str(payload["status"]),
+            )
+        raise TypeError("COMPUTE_NODE_UPDATE payload must be ComputeNodeState or dict")
+
 
 def _unavailable_route(request: FlowRequest) -> Route:
     return Route(
@@ -645,6 +694,13 @@ def _off_boresight_from_elevation(
     if any(token in steering_mode for token in ("electronic", "tracking", "steerable")):
         return 0.0
     return max(0.0, min(180.0, 90.0 - elevation_deg))
+
+
+def _compute_load_factor(state: ComputeNodeState) -> float:
+    if state.capacity <= 0.0:
+        return 1.0
+    load = 1.0 - state.available_capacity / state.capacity
+    return max(0.0, min(1.0, load))
 
 
 def _require_non_empty_str(value: str, field_name: str) -> None:

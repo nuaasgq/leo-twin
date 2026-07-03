@@ -137,6 +137,7 @@ def run_generated_full_system_demo(
         scheduling_runtime=ComputeSchedulingRuntime(
             ComputeSchedulingPolicy(str(resolved_config.compute_scheduling_policy))
         ),
+        state_update_targets=("network",),
     )
     metrics = MetricsCollector()
 

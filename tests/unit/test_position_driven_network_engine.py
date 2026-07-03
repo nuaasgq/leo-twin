@@ -17,6 +17,7 @@ from leo_twin.models.network import (
 from leo_twin.schema import (
     AntennaProfile,
     ChannelProfile,
+    ComputeNodeState,
     EventType,
     FlowRequest,
     LinkMedium,
@@ -423,6 +424,69 @@ def test_position_driven_engine_can_use_routing_runtime_and_static_links() -> No
 
     assert compute.routes[0].path == ("user-east", "sat-001", "node-a")
     assert compute.routes[0].latency == 2.629
+
+
+def test_compute_node_update_reroutes_active_flows_with_capacity_feedback() -> None:
+    kernel = SimulationKernel()
+    network = PositionDrivenNetworkEngine(
+        endpoints=(
+            GroundEndpoint(
+                endpoint_id="user-east",
+                position=(EARTH_RADIUS_KM, 0.0, 0.0),
+                min_elevation_deg=10.0,
+                max_range_km=2000.0,
+            ),
+        ),
+        compute_node_ids=("node-a",),
+        link_capacity=100.0,
+        routing_runtime=RoutingRuntime(RoutingProtocol.LINK_STATE),
+        static_links=(LinkState("user-east", "node-a", 0.5, 100.0, True),),
+    )
+    compute = ComputeSink()
+    metrics = MetricsSink()
+    kernel.register_module(network)
+    kernel.register_module(compute)
+    kernel.register_module(metrics)
+    kernel.schedule_event(
+        _event(
+            "flow",
+            EventType.FLOW_ARRIVAL.value,
+            FlowRequest("flow-001", "user-east", "node-a", 50.0),
+        )
+    )
+    kernel.schedule_event(
+        _event(
+            "node-busy",
+            "COMPUTE_NODE_UPDATE",
+            ComputeNodeState(
+                node_id="node-a",
+                sim_time=1.0,
+                capacity=100.0,
+                available_capacity=20.0,
+                status="BUSY",
+            ),
+            1.0,
+        )
+    )
+    kernel.schedule_event(
+        _event(
+            "node-idle",
+            "COMPUTE_NODE_UPDATE",
+            ComputeNodeState(
+                node_id="node-a",
+                sim_time=2.0,
+                capacity=100.0,
+                available_capacity=100.0,
+                status="IDLE",
+            ),
+            2.0,
+        )
+    )
+
+    kernel.run()
+
+    assert [route.available for route in compute.routes] == [True, False, True]
+    assert [route.capacity for route in compute.routes] == [100.0, 0.0, 100.0]
 
 
 def test_position_driven_engine_can_apply_transport_runtime_to_route() -> None:

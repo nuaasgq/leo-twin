@@ -133,7 +133,7 @@ def test_scale_test_basic() -> None:
     summary = result.metrics_summary
 
     assert len(result.processed_events) >= 10_000
-    assert len(result.processed_events) == 17_852
+    assert len(result.processed_events) == 18_241
     assert summary["event_count"] >= 10_000
     assert summary["routes_total"] == 100
     assert summary["routes_available"] == 12

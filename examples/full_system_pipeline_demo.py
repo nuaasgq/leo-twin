@@ -151,7 +151,8 @@ def run_full_system_pipeline_demo() -> FullSystemPipelineResult:
                 str(config.compute["node_id"]),
                 capacity=float(config.compute["capacity"]),
             ),
-        )
+        ),
+        state_update_targets=("network",),
     )
     metrics = MetricsCollector()
     kernel.register_module(orbit)

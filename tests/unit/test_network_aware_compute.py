@@ -22,6 +22,17 @@ class MetricsSink(SimulationModule):
         self.events.append(event)
 
 
+class NetworkSink(SimulationModule):
+    def __init__(self) -> None:
+        self.events: list[SimEvent] = []
+
+    def name(self) -> str:
+        return "network"
+
+    def on_event(self, event: SimEvent, kernel: SimulationKernel) -> None:
+        self.events.append(event)
+
+
 def _task(
     task_id: str = "flow-001",
     compute_demand: float = 20.0,
@@ -271,6 +282,35 @@ def test_route_recovery_restarts_transfer_with_latest_route() -> None:
     ] == [
         (EventType.TASK_START.value, 6.0),
         (EventType.TASK_FINISH.value, 8.0),
+    ]
+
+
+def test_route_aware_compute_can_publish_node_updates_to_network() -> None:
+    kernel = SimulationKernel()
+    engine = RouteAwareComputeEngine(
+        nodes=(ComputeNode("node-a", capacity=10.0),),
+        state_update_targets=("network",),
+    )
+    metrics = MetricsSink()
+    network = NetworkSink()
+    kernel.register_module(engine)
+    kernel.register_module(metrics)
+    kernel.register_module(network)
+    kernel.schedule_event(_event("route", EventType.ROUTE_UPDATE.value, _route()))
+    kernel.schedule_event(_event("task", EventType.TASK_ARRIVAL.value, _task()))
+
+    kernel.run()
+
+    assert [event.event_type for event in network.events] == [
+        COMPUTE_NODE_UPDATE,
+        COMPUTE_NODE_UPDATE,
+    ]
+    assert [event.target for event in network.events] == ["network", "network"]
+    assert [event.event_type for event in metrics.events] == [
+        EventType.TASK_START.value,
+        COMPUTE_NODE_UPDATE,
+        EventType.TASK_FINISH.value,
+        COMPUTE_NODE_UPDATE,
     ]
 
 

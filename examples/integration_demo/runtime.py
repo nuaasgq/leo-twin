@@ -138,6 +138,7 @@ def run_integration_demo(config: DemoConfig) -> DemoRunResult:
             scheduling_runtime=ComputeSchedulingRuntime(
                 ComputeSchedulingPolicy(str(config.compute_scheduling_policy))
             ),
+            state_update_targets=("network",),
         ),
         metrics,
         frontend_sink,

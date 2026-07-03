@@ -27,7 +27,9 @@ def test_full_domain_pipeline_runs_orbit_network_compute_lifecycle() -> None:
         EventType.ROUTE_UPDATE.value,
         EventType.TASK_START.value,
         "COMPUTE_NODE_UPDATE",
+        "COMPUTE_NODE_UPDATE",
         EventType.TASK_FINISH.value,
+        "COMPUTE_NODE_UPDATE",
         "COMPUTE_NODE_UPDATE",
     )
     assert result.metrics_event_types == (
