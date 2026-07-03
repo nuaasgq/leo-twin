@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   generatedScenarioSummaryItems,
-  pauseResumeControl
+  pauseResumeControl,
+  runtimeProgressSummary
 } from "../src/config_panel/ConfigPanel";
 import { GeneratedScenarioConfig } from "../src/core/event_types";
 
@@ -64,6 +65,34 @@ describe("pauseResumeControl", () => {
       action: "PAUSE",
       disabled: true
     });
+  });
+});
+
+describe("runtimeProgressSummary", () => {
+  it("formats simulation progress for the Chinese control panel", () => {
+    expect(
+      runtimeProgressSummary({
+        sim_time: 125,
+        duration: 600,
+        event_count: 12345
+      })
+    ).toEqual({
+      elapsedLabel: "2分5秒",
+      totalLabel: "10分0秒",
+      eventCountLabel: "12,345",
+      percent: 20.833333333333336,
+      percentLabel: "20.83%"
+    });
+  });
+
+  it("clamps progress to the configured duration", () => {
+    expect(
+      runtimeProgressSummary({
+        sim_time: 900,
+        duration: 600,
+        event_count: 1
+      }).percentLabel
+    ).toBe("100%");
   });
 });
 

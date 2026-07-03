@@ -16,6 +16,7 @@ export interface ScenarioControlValues {
 export interface ConfigPanelProps {
   scenario: ScenarioControlValues;
   runtime: RuntimeStatusPayload;
+  progress: RuntimeProgressValues;
   generatedConfig: GeneratedScenarioConfig | null;
   onRuntimeControl: (action: RuntimeAction, payload?: Record<string, unknown>) => void;
 }
@@ -25,9 +26,24 @@ export interface ConfigSummaryItem {
   value: string;
 }
 
+export interface RuntimeProgressValues {
+  sim_time: number;
+  duration: number;
+  event_count: number;
+}
+
+export interface RuntimeProgressSummary {
+  elapsedLabel: string;
+  totalLabel: string;
+  eventCountLabel: string;
+  percent: number;
+  percentLabel: string;
+}
+
 export function ConfigPanel({
   scenario,
   runtime,
+  progress,
   generatedConfig,
   onRuntimeControl
 }: ConfigPanelProps) {
@@ -58,6 +74,7 @@ export function ConfigPanel({
 
   const summaryItems = generatedScenarioSummaryItems(generatedConfig);
   const pauseResume = pauseResumeControl(runtime);
+  const progressSummary = runtimeProgressSummary(progress);
 
   return (
     <section className="config-panel" aria-label="仿真配置与控制面板">
@@ -221,6 +238,20 @@ export function ConfigPanel({
         </button>
       </div>
 
+      <div className="runtime-progress" aria-label="仿真进度">
+        <div className="summary-title-row">
+          <span>仿真进度</span>
+          <strong>{progressSummary.percentLabel}</strong>
+        </div>
+        <progress value={progressSummary.percent} max="100" aria-label="仿真进度条" />
+        <div className="runtime-progress-meta">
+          <span>
+            {progressSummary.elapsedLabel} / {progressSummary.totalLabel}
+          </span>
+          <span>事件 {progressSummary.eventCountLabel}</span>
+        </div>
+      </div>
+
       <div className="generated-config-summary" aria-label="当前生效场景">
         <div className="summary-title-row">
           <span>当前生效场景</span>
@@ -281,6 +312,21 @@ export function pauseResumeControl(runtime: RuntimeStatusPayload): PauseResumeCo
   };
 }
 
+export function runtimeProgressSummary(
+  progress: RuntimeProgressValues
+): RuntimeProgressSummary {
+  const duration = Math.max(1, progress.duration);
+  const elapsed = Math.min(Math.max(0, progress.sim_time), duration);
+  const percent = Math.min(100, Math.max(0, (elapsed / duration) * 100));
+  return {
+    elapsedLabel: formatDurationCompact(elapsed),
+    totalLabel: formatDurationCompact(duration),
+    eventCountLabel: formatInteger(progress.event_count),
+    percent,
+    percentLabel: `${formatDecimal(percent)}%`
+  };
+}
+
 function formatInteger(value: number): string {
   return Math.round(value).toLocaleString("zh-CN");
 }
@@ -297,6 +343,18 @@ function formatDuration(seconds: number): string {
     return `${Math.round(seconds / 60)} 分钟`;
   }
   return `${(seconds / 3600).toFixed(1)} 小时`;
+}
+
+function formatDurationCompact(seconds: number): string {
+  if (seconds < 60) {
+    return `${Math.round(seconds)} 秒`;
+  }
+  if (seconds < 3600) {
+    return `${Math.floor(seconds / 60)}分${Math.round(seconds % 60)}秒`;
+  }
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  return `${hours}时${minutes}分`;
 }
 
 function runtimeStatusLabel(runtime: RuntimeStatusPayload): string {

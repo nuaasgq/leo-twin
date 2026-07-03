@@ -394,6 +394,56 @@ body {
   cursor: not-allowed;
 }
 
+.runtime-progress {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+  border: 1px solid #263633;
+  border-radius: 4px;
+  padding: 10px;
+  background: #111516;
+}
+
+.runtime-progress progress {
+  width: 100%;
+  height: 8px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 999px;
+  background: #232d2f;
+}
+
+.runtime-progress progress::-webkit-progress-bar {
+  border-radius: 999px;
+  background: #232d2f;
+}
+
+.runtime-progress progress::-webkit-progress-value {
+  border-radius: 999px;
+  background: #54d68d;
+}
+
+.runtime-progress progress::-moz-progress-bar {
+  border-radius: 999px;
+  background: #54d68d;
+}
+
+.runtime-progress-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: #aeb9bd;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.runtime-progress-meta span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .generated-config-summary {
   display: grid;
   gap: 10px;

@@ -269,6 +269,11 @@ export function App() {
               <ConfigPanel
                 scenario={scenarioControls}
                 runtime={runtimeStatus}
+                progress={{
+                  sim_time: snapshot.last_sim_time,
+                  duration: runtimeStatus.duration,
+                  event_count: snapshot.event_count
+                }}
                 generatedConfig={generatedConfig}
                 onRuntimeControl={sendRuntimeControl}
               />
