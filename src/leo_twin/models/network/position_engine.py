@@ -44,12 +44,18 @@ class PositionDrivenNetworkEngine(SimulationModule):
         routing_runtime: RoutingRuntime | None = None,
         transport_runtime: TransportRuntime | None = None,
         static_links: Iterable[LinkState] = (),
+        space_link_max_range_km: float | None = None,
+        space_link_capacity: float | None = None,
     ) -> None:
         _require_non_empty_str(module_name, "module_name")
         _require_non_empty_str(metrics_target, "metrics_target")
         _require_positive_number(link_capacity, "link_capacity")
         _require_positive_number(propagation_speed_km_s, "propagation_speed_km_s")
         _require_non_negative_number(base_latency_s, "base_latency_s")
+        if space_link_max_range_km is not None:
+            _require_positive_number(space_link_max_range_km, "space_link_max_range_km")
+        if space_link_capacity is not None:
+            _require_positive_number(space_link_capacity, "space_link_capacity")
         compute_nodes = tuple(sorted(str(item) for item in compute_node_ids))
         if not compute_nodes or any(not item for item in compute_nodes):
             raise ValueError("compute_node_ids must contain non-empty ids")
@@ -72,7 +78,11 @@ class PositionDrivenNetworkEngine(SimulationModule):
         self._routing_runtime = routing_runtime
         self._transport_runtime = transport_runtime
         self._static_links = tuple(sorted(static_links, key=lambda item: (item.source_id, item.target_id)))
+        self._space_link_max_range_km = space_link_max_range_km
+        self._space_link_capacity = float(space_link_capacity or link_capacity)
+        self._satellite_states: dict[str, SatelliteState] = {}
         self._active_links: dict[tuple[str, str], LinkState] = {}
+        self._active_space_links: dict[tuple[str, str], LinkState] = {}
         self._last_links: dict[tuple[str, str], LinkState] = {}
         self._event_sequence = 0
 
@@ -116,7 +126,11 @@ class PositionDrivenNetworkEngine(SimulationModule):
     def active_link_states(self) -> tuple[LinkState, ...]:
         """Return active links in deterministic order."""
 
-        return tuple(self._active_links[key] for key in sorted(self._active_links))
+        access_links = tuple(self._active_links[key] for key in sorted(self._active_links))
+        space_links = tuple(
+            self._active_space_links[key] for key in sorted(self._active_space_links)
+        )
+        return access_links + space_links
 
     def route_flow(self, request: FlowRequest) -> Route:
         """Route one flow through the best currently active access link."""
@@ -158,6 +172,7 @@ class PositionDrivenNetworkEngine(SimulationModule):
         state: SatelliteState,
         dispatch_time: float,
     ) -> tuple[SimEvent, ...]:
+        emitted: list[SimEvent] = []
         candidates = self._access_model.compute_access((state,))
         next_keys = {
             (candidate.satellite_id, candidate.endpoint_id) for candidate in candidates
@@ -177,7 +192,6 @@ class PositionDrivenNetworkEngine(SimulationModule):
             )
         )
 
-        emitted: list[SimEvent] = []
         for key in ended_keys:
             previous = self._active_links.pop(key)
             ended = LinkState(
@@ -208,7 +222,81 @@ class PositionDrivenNetworkEngine(SimulationModule):
                     link=link,
                 )
             )
+        emitted.extend(self._update_space_links_for_state(state, dispatch_time))
         return tuple(emitted)
+
+    def _update_space_links_for_state(
+        self,
+        state: SatelliteState,
+        dispatch_time: float,
+    ) -> tuple[SimEvent, ...]:
+        self._satellite_states[state.satellite_id] = state
+        if self._space_link_max_range_km is None:
+            return ()
+
+        emitted: list[SimEvent] = []
+        for other_id in sorted(self._satellite_states):
+            if other_id == state.satellite_id:
+                continue
+            other_state = self._satellite_states[other_id]
+            pair = tuple(sorted((state.satellite_id, other_state.satellite_id)))
+            candidate = self._space_link_from_states(
+                left=state,
+                right=other_state,
+                pair=pair,
+            )
+            previous = self._active_space_links.get(pair)
+            if candidate is None:
+                if previous is None:
+                    continue
+                ended = LinkState(
+                    source_id=previous.source_id,
+                    target_id=previous.target_id,
+                    latency=previous.latency,
+                    capacity=previous.capacity,
+                    availability=False,
+                )
+                self._active_space_links.pop(pair, None)
+                emitted.append(
+                    self._event(
+                        dispatch_time=dispatch_time,
+                        target=self._metrics_target,
+                        event_type=EventType.LINK_UPDATE.value,
+                        payload=ended,
+                    )
+                )
+                continue
+
+            self._active_space_links[pair] = candidate
+            if previous != candidate:
+                emitted.append(
+                    self._event(
+                        dispatch_time=dispatch_time,
+                        target=self._metrics_target,
+                        event_type=EventType.LINK_UPDATE.value,
+                        payload=candidate,
+                    )
+                )
+        return tuple(emitted)
+
+    def _space_link_from_states(
+        self,
+        left: SatelliteState,
+        right: SatelliteState,
+        pair: tuple[str, str],
+    ) -> LinkState | None:
+        if left.status != "ACTIVE" or right.status != "ACTIVE":
+            return None
+        range_km = _distance_km(left.position, right.position)
+        if range_km > float(self._space_link_max_range_km):
+            return None
+        return LinkState(
+            source_id=pair[0],
+            target_id=pair[1],
+            latency=self._base_latency_s + range_km / self._propagation_speed_km_s,
+            capacity=self._space_link_capacity,
+            availability=True,
+        )
 
     def _link_from_candidate(
         self,
@@ -312,6 +400,16 @@ def _vector3(value: Any) -> tuple[float, float, float]:
     if not isinstance(value, (list, tuple)) or len(value) != 3:
         raise TypeError("vector payload fields must have exactly three values")
     return (float(value[0]), float(value[1]), float(value[2]))
+
+
+def _distance_km(
+    left: tuple[float, float, float],
+    right: tuple[float, float, float],
+) -> float:
+    delta_x = left[0] - right[0]
+    delta_y = left[1] - right[1]
+    delta_z = left[2] - right[2]
+    return (delta_x * delta_x + delta_y * delta_y + delta_z * delta_z) ** 0.5
 
 
 def _require_non_empty_str(value: str, field_name: str) -> None:
