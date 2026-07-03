@@ -241,6 +241,13 @@ def scenario_builder_config_from_sees_config(
         task_compute_demand=config.scenario.traffic_model.task_compute_demand,
         transport_protocol=config.network.transport_protocol.value,
         routing_protocol=config.network.routing_protocol.value,
+        carrier_frequency_hz=config.network.carrier_frequency_hz,
+        channel_bandwidth_hz=config.network.channel_bandwidth_hz,
+        rain_rate_mm_h=config.network.rain_rate_mm_h,
+        rain_attenuation_coefficient_db_per_km_per_mm_h=(
+            config.network.rain_attenuation_coefficient_db_per_km_per_mm_h
+        ),
+        rain_effective_path_km=config.network.rain_effective_path_km,
     )
 
 

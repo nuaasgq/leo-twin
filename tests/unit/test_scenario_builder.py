@@ -213,6 +213,11 @@ def test_scenario_builder_config_from_sees_config_maps_control_plane_fields() ->
         network=NetworkProfile(
             transport_protocol=TransportProtocol.UDP,
             routing_protocol=RoutingProtocol.DISTANCE_VECTOR,
+            carrier_frequency_hz=22_000_000_000.0,
+            channel_bandwidth_hz=250_000_000.0,
+            rain_rate_mm_h=12.5,
+            rain_attenuation_coefficient_db_per_km_per_mm_h=0.015,
+            rain_effective_path_km=4.0,
         ),
     )
 
@@ -230,6 +235,9 @@ def test_scenario_builder_config_from_sees_config_maps_control_plane_fields() ->
     assert generated.task_compute_demand == 15.0
     assert generated.transport_protocol == "UDP"
     assert generated.routing_protocol == "DISTANCE_VECTOR"
+    assert generated.carrier_frequency_hz == 22_000_000_000.0
+    assert generated.channel_bandwidth_hz == 250_000_000.0
+    assert generated.rain_rate_mm_h == 12.5
 
 
 def test_default_generated_scenario_config_file_loads() -> None:

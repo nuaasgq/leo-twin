@@ -42,12 +42,20 @@ def test_network_protocol_profile_can_be_updated_directly() -> None:
         {
             "transport_protocol": "UDP",
             "routing_protocol": "DISTANCE_VECTOR",
+            "carrier_frequency_hz": 22_000_000_000.0,
+            "channel_bandwidth_hz": 250_000_000.0,
+            "rain_rate_mm_h": 12.5,
+            "rain_attenuation_coefficient_db_per_km_per_mm_h": 0.015,
+            "rain_effective_path_km": 4.0,
         }
     )
 
     assert snapshot.last_action == "CONFIG_UPDATE"
     assert controller.config.network.transport_protocol == "UDP"
     assert controller.config.network.routing_protocol == "DISTANCE_VECTOR"
+    assert controller.config.network.carrier_frequency_hz == 22_000_000_000.0
+    assert controller.config.network.channel_bandwidth_hz == 250_000_000.0
+    assert controller.config.network.rain_rate_mm_h == 12.5
 
 
 def test_runtime_mode_switching_works() -> None:

@@ -56,7 +56,17 @@ _TRAFFIC_KEYS = frozenset(
         "task_compute_demand",
     }
 )
-_NETWORK_KEYS = frozenset({"transport_protocol", "routing_protocol"})
+_NETWORK_KEYS = frozenset(
+    {
+        "transport_protocol",
+        "routing_protocol",
+        "carrier_frequency_hz",
+        "channel_bandwidth_hz",
+        "rain_rate_mm_h",
+        "rain_attenuation_coefficient_db_per_km_per_mm_h",
+        "rain_effective_path_km",
+    }
+)
 _RUNTIME_KEYS = frozenset({"mode", "speed_factor", "seed", "duration"})
 _UI_KEYS = frozenset({"visualization", "update_frequency_hz", "dashboard_layout"})
 _VISUALIZATION_KEYS = frozenset({"satellites", "links", "users", "metrics"})
@@ -164,6 +174,13 @@ def _build_config(data: Mapping[str, Any]) -> SEESConfig:
             network=NetworkProfile(
                 transport_protocol=TransportProtocol(str(network["transport_protocol"])),
                 routing_protocol=RoutingProtocol(str(network["routing_protocol"])),
+                carrier_frequency_hz=network["carrier_frequency_hz"],
+                channel_bandwidth_hz=network["channel_bandwidth_hz"],
+                rain_rate_mm_h=network["rain_rate_mm_h"],
+                rain_attenuation_coefficient_db_per_km_per_mm_h=network[
+                    "rain_attenuation_coefficient_db_per_km_per_mm_h"
+                ],
+                rain_effective_path_km=network["rain_effective_path_km"],
             ),
             runtime=RuntimeConfig(
                 mode=RuntimeMode(str(runtime["mode"])),
@@ -190,7 +207,15 @@ def _normalize_update(update: Mapping[str, Any]) -> dict[str, Any]:
     for key in ("mode", "speed_factor", "seed", "duration"):
         if key in direct:
             nested.setdefault("runtime", {})[key] = direct.pop(key)
-    for key in ("transport_protocol", "routing_protocol"):
+    for key in (
+        "transport_protocol",
+        "routing_protocol",
+        "carrier_frequency_hz",
+        "channel_bandwidth_hz",
+        "rain_rate_mm_h",
+        "rain_attenuation_coefficient_db_per_km_per_mm_h",
+        "rain_effective_path_km",
+    ):
         if key in direct:
             nested.setdefault("network", {})[key] = direct.pop(key)
     if "orbit" in direct:
@@ -310,7 +335,15 @@ def _ordered_keys(context: str, data: Mapping[str, Any]) -> tuple[str, ...]:
             "flow_demand_capacity",
             "task_compute_demand",
         ),
-        "network": ("transport_protocol", "routing_protocol"),
+        "network": (
+            "transport_protocol",
+            "routing_protocol",
+            "carrier_frequency_hz",
+            "channel_bandwidth_hz",
+            "rain_rate_mm_h",
+            "rain_attenuation_coefficient_db_per_km_per_mm_h",
+            "rain_effective_path_km",
+        ),
         "runtime": ("mode", "speed_factor", "seed", "duration"),
         "ui": ("visualization", "update_frequency_hz", "dashboard_layout"),
         "ui.visualization": ("satellites", "links", "users", "metrics"),

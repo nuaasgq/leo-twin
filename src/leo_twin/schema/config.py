@@ -56,6 +56,11 @@ class NetworkProfile:
 
     transport_protocol: TransportProtocol = TransportProtocol.TCP
     routing_protocol: RoutingProtocol = RoutingProtocol.LINK_STATE
+    carrier_frequency_hz: float = 20_000_000_000.0
+    channel_bandwidth_hz: float = 100_000_000.0
+    rain_rate_mm_h: float = 0.0
+    rain_attenuation_coefficient_db_per_km_per_mm_h: float = 0.0
+    rain_effective_path_km: float = 0.0
 
     def __post_init__(self) -> None:
         if not isinstance(self.transport_protocol, TransportProtocol):
@@ -70,6 +75,26 @@ class NetworkProfile:
                 "routing_protocol",
                 RoutingProtocol(str(self.routing_protocol)),
             )
+        _require_positive_finite(self.carrier_frequency_hz, "network.carrier_frequency_hz")
+        _require_positive_finite(self.channel_bandwidth_hz, "network.channel_bandwidth_hz")
+        _require_non_negative_finite(self.rain_rate_mm_h, "network.rain_rate_mm_h")
+        _require_non_negative_finite(
+            self.rain_attenuation_coefficient_db_per_km_per_mm_h,
+            "network.rain_attenuation_coefficient_db_per_km_per_mm_h",
+        )
+        _require_non_negative_finite(
+            self.rain_effective_path_km,
+            "network.rain_effective_path_km",
+        )
+        object.__setattr__(self, "carrier_frequency_hz", float(self.carrier_frequency_hz))
+        object.__setattr__(self, "channel_bandwidth_hz", float(self.channel_bandwidth_hz))
+        object.__setattr__(self, "rain_rate_mm_h", float(self.rain_rate_mm_h))
+        object.__setattr__(
+            self,
+            "rain_attenuation_coefficient_db_per_km_per_mm_h",
+            float(self.rain_attenuation_coefficient_db_per_km_per_mm_h),
+        )
+        object.__setattr__(self, "rain_effective_path_km", float(self.rain_effective_path_km))
 
 
 @dataclass(frozen=True)
