@@ -99,6 +99,25 @@ describe("frontend render performance architecture", () => {
     ]);
   });
 
+  it("counts topology changes from the bounded event log", () => {
+    const snapshot = snapshotFromEvents([
+      linkEvent("access-start", "ACCESS_START", "sat-a", "user-a", true),
+      linkEvent("space-link", "LINK_UPDATE", "sat-a", "sat-b", true),
+      routeEvent("route-a"),
+      linkEvent("access-end", "ACCESS_END", "sat-a", "user-a", false)
+    ]);
+
+    expect(snapshot.metrics_summary.network.topology).toEqual({
+      activeSpaceLinks: 1,
+      activeAccessLinks: 0,
+      linkUpdateEvents: 1,
+      accessStartEvents: 1,
+      accessEndEvents: 1,
+      routeUpdateEvents: 1,
+      topologyEvents: 4
+    });
+  });
+
   it("keeps the render loop independent of snapshot publication cadence", () => {
     const clock = new FakeRenderClock();
     const frames: number[] = [];
@@ -218,6 +237,49 @@ function metricEvent(
       sim_time: 1,
       entity_id: entityId,
       value
+    }
+  };
+}
+
+function linkEvent(
+  eventId: string,
+  eventType: "ACCESS_START" | "ACCESS_END" | "LINK_UPDATE",
+  sourceId: string,
+  targetId: string,
+  availability: boolean
+): SimEvent {
+  return {
+    event_id: eventId,
+    sim_time: 1,
+    priority: 0,
+    source: "network",
+    target: "frontend",
+    event_type: eventType,
+    payload: {
+      source_id: sourceId,
+      target_id: targetId,
+      latency: 0.1,
+      capacity: 10,
+      availability
+    }
+  };
+}
+
+function routeEvent(eventId: string): SimEvent {
+  return {
+    event_id: eventId,
+    sim_time: 1,
+    priority: 0,
+    source: "network",
+    target: "frontend",
+    event_type: "ROUTE_UPDATE",
+    payload: {
+      route_id: eventId,
+      flow_id: "flow-a",
+      path: ["user-a", "sat-a", "sat-b", "compute-a"],
+      latency: 1,
+      capacity: 10,
+      available: true
     }
   };
 }

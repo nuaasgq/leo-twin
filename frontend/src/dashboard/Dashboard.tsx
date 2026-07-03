@@ -10,11 +10,13 @@ import { LinkProtocolPanel } from "./link_protocol/LinkProtocolPanel";
 import { NetworkView } from "./network_view/NetworkView";
 import { OrbitPanel } from "./orbit_panel/OrbitPanel";
 import { SystemHealth } from "./system_health/SystemHealth";
+import { TopologyChangePanel } from "./topology_change/TopologyChangePanel";
 
 export const Dashboard = memo(function Dashboard({ snapshot }: { snapshot: WorldSnapshot }) {
   return (
     <aside className="dashboard" aria-label="仿真状态仪表盘">
       <DomainSummary snapshot={snapshot} />
+      <TopologyChangePanel snapshot={snapshot} />
       <LinkProtocolPanel snapshot={snapshot} />
       <ChannelHealthPanel snapshot={snapshot} />
       <NetworkView snapshot={snapshot} />

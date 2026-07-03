@@ -19,6 +19,17 @@ export interface NetworkMetricsSummary {
   throughput: number;
   linkUtilization: number;
   series: readonly { id: string; latency: number; capacity: number }[];
+  topology?: TopologyChangeSummary;
+}
+
+export interface TopologyChangeSummary {
+  activeSpaceLinks: number;
+  activeAccessLinks: number;
+  linkUpdateEvents: number;
+  accessStartEvents: number;
+  accessEndEvents: number;
+  routeUpdateEvents: number;
+  topologyEvents: number;
 }
 
 export interface ComputeMetricsSummary {
@@ -232,7 +243,7 @@ export function buildWorldSnapshot(
     active_tasks: activeTasks,
     metrics,
     metrics_summary: {
-      network: networkSummary(links),
+      network: networkSummary(links, state.eventLog),
       compute: computeSummary(tasks),
       orbit: orbitSummary(satellites, state.groundUsers.size, links),
       system: systemSummary(state, metrics)
@@ -248,7 +259,10 @@ export function buildWorldSnapshot(
   };
 }
 
-function networkSummary(links: readonly LinkState[]): NetworkMetricsSummary {
+function networkSummary(
+  links: readonly LinkState[],
+  eventLog: readonly SimEvent[]
+): NetworkMetricsSummary {
   const latency =
     links.length === 0 ? 0 : links.reduce((total, link) => total + link.latency, 0) / links.length;
   const throughput = links.reduce((total, link) => total + link.capacity, 0);
@@ -264,8 +278,57 @@ function networkSummary(links: readonly LinkState[]): NetworkMetricsSummary {
       id: `${link.source_id}->${link.target_id}`,
       latency: link.latency,
       capacity: link.capacity
-    }))
+    })),
+    topology: topologyChangeSummary(links, eventLog)
   };
+}
+
+function topologyChangeSummary(
+  links: readonly LinkState[],
+  eventLog: readonly SimEvent[]
+): TopologyChangeSummary {
+  const eventCounts = eventLog.reduce(
+    (counts, event) => {
+      if (event.event_type === "LINK_UPDATE") {
+        counts.linkUpdateEvents += 1;
+      } else if (event.event_type === "ACCESS_START") {
+        counts.accessStartEvents += 1;
+      } else if (event.event_type === "ACCESS_END") {
+        counts.accessEndEvents += 1;
+      } else if (event.event_type === "ROUTE_UPDATE") {
+        counts.routeUpdateEvents += 1;
+      }
+      return counts;
+    },
+    {
+      linkUpdateEvents: 0,
+      accessStartEvents: 0,
+      accessEndEvents: 0,
+      routeUpdateEvents: 0
+    }
+  );
+  return {
+    activeSpaceLinks: links.filter(isSpaceLink).length,
+    activeAccessLinks: links.filter(isAccessLink).length,
+    ...eventCounts,
+    topologyEvents:
+      eventCounts.linkUpdateEvents +
+      eventCounts.accessStartEvents +
+      eventCounts.accessEndEvents +
+      eventCounts.routeUpdateEvents
+  };
+}
+
+function isSpaceLink(link: LinkState): boolean {
+  return isSatelliteEndpoint(link.source_id) && isSatelliteEndpoint(link.target_id);
+}
+
+function isAccessLink(link: LinkState): boolean {
+  return isSatelliteEndpoint(link.source_id) !== isSatelliteEndpoint(link.target_id);
+}
+
+function isSatelliteEndpoint(endpointId: string): boolean {
+  return endpointId.toLowerCase().startsWith("sat-");
 }
 
 function computeSummary(tasks: readonly TaskState[]): ComputeMetricsSummary {

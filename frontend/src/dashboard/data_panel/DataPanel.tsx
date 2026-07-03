@@ -15,6 +15,7 @@ import { LinkProtocolPanel } from "../link_protocol/LinkProtocolPanel";
 import { NetworkView } from "../network_view/NetworkView";
 import { OrbitPanel } from "../orbit_panel/OrbitPanel";
 import { SystemHealth } from "../system_health/SystemHealth";
+import { TopologyChangePanel } from "../topology_change/TopologyChangePanel";
 
 export interface DataPanelSummary {
   simTime: number;
@@ -127,6 +128,7 @@ export const DataPanel = memo(function DataPanel({
 
       <div className="data-panel-grid">
         <DomainSummary snapshot={snapshot} />
+        <TopologyChangePanel snapshot={snapshot} />
         <LinkProtocolPanel snapshot={snapshot} />
         <ChannelHealthPanel snapshot={snapshot} />
         <NetworkView snapshot={snapshot} />
