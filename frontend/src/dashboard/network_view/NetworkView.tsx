@@ -1,15 +1,12 @@
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { memo } from "react";
 
-import { ObservabilityState, selectNetworkKpis } from "../../stream/state_store";
+import { WorldSnapshot } from "../../state/snapshot_engine";
 import { KpiPanel } from "../kpi_panel/KpiPanel";
 
-export function NetworkView({ state }: { state: ObservabilityState }) {
-  const kpis = selectNetworkKpis(state);
-  const chartData = Array.from(state.links.values()).slice(0, 24).map((link) => ({
-    id: `${link.source_id}->${link.target_id}`,
-    latency: link.latency,
-    capacity: link.capacity
-  }));
+export const NetworkView = memo(function NetworkView({ snapshot }: { snapshot: WorldSnapshot }) {
+  const kpis = snapshot.metrics_summary.network;
+  const chartData = kpis.series;
 
   return (
     <section className="dashboard-section" aria-label="Network KPI">
@@ -31,4 +28,4 @@ export function NetworkView({ state }: { state: ObservabilityState }) {
       </div>
     </section>
   );
-}
+});

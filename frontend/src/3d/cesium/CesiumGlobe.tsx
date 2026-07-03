@@ -7,14 +7,15 @@ import {
   EntityCollection,
   LabelStyle,
   Math as CesiumMath,
+  PointPrimitiveCollection,
   VerticalOrigin,
   Viewer
 } from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
 import { useEffect, useRef } from "react";
 
-import { createFrameScheduler, FrameScheduler } from "../../core/sync_engine";
-import { ObservabilityState } from "../../stream/state_store";
+import { RenderLoop } from "../../render/render_loop";
+import { WorldSnapshot } from "../../state/snapshot_engine";
 import {
   pruneBeamEntities,
   upsertBeamEntity
@@ -25,25 +26,28 @@ import {
   upsertLinkEntity,
   upsertRouteEntity
 } from "../link_renderer/linkEntities";
-import {
-  pruneSatelliteEntities,
-  upsertSatelliteEntity
-} from "../orbit_renderer/satelliteEntities";
+import { SatellitePrimitiveBatch } from "../orbit_renderer/satelliteEntities";
 
 export interface CesiumGlobeProps {
-  state: ObservabilityState;
+  snapshot: WorldSnapshot;
 }
 
-export function CesiumGlobe({ state }: CesiumGlobeProps) {
+export function CesiumGlobe({ snapshot }: CesiumGlobeProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewerRef = useRef<Viewer | null>(null);
-  const schedulerRef = useRef<FrameScheduler | null>(null);
-  const satelliteCache = useRef(new Map<string, Entity>());
+  const renderLoopRef = useRef<RenderLoop | null>(null);
+  const latestSnapshotRef = useRef(snapshot);
+  const satelliteBatchRef = useRef<SatellitePrimitiveBatch | null>(null);
   const beamCache = useRef(new Map<string, Entity>());
   const userCache = useRef(new Map<string, Entity>());
   const linkCache = useRef(new Map<string, Entity>());
   const routeCache = useRef(new Map<string, Entity>());
   const hasFocusedSatellites = useRef(false);
+  const lastRenderedVersion = useRef(-1);
+
+  useEffect(() => {
+    latestSnapshotRef.current = snapshot;
+  }, [snapshot]);
 
   useEffect(() => {
     if (!containerRef.current) {
@@ -67,37 +71,44 @@ export function CesiumGlobe({ state }: CesiumGlobeProps) {
     viewer.scene.globe.baseColor = Color.fromCssColorString("#1d465f");
     viewer.scene.globe.depthTestAgainstTerrain = false;
     focusEarthOverview(viewer);
+    const satellitePrimitives = viewer.scene.primitives.add(
+      new PointPrimitiveCollection()
+    ) as PointPrimitiveCollection;
+    const satelliteBatch = new SatellitePrimitiveBatch(satellitePrimitives);
+    satelliteBatchRef.current = satelliteBatch;
     viewerRef.current = viewer;
-    schedulerRef.current = createFrameScheduler();
-    return () => {
-      schedulerRef.current?.cancel();
-      schedulerRef.current = null;
-      viewer.destroy();
-      viewerRef.current = null;
-    };
-  }, []);
 
-  useEffect(() => {
-    const viewer = viewerRef.current;
-    const scheduler = schedulerRef.current;
-    if (!viewer || !scheduler) {
-      return;
-    }
-    scheduler.schedule(() => {
-      renderCesiumState(viewer.entities, state, {
-        satellites: satelliteCache.current,
-        beams: beamCache.current,
-        users: userCache.current,
-        links: linkCache.current,
-        routes: routeCache.current
-      });
-      if (!hasFocusedSatellites.current && satelliteCache.current.size > 0) {
+    const renderLoop = new RenderLoop(() => {
+      const currentSnapshot = latestSnapshotRef.current;
+      if (currentSnapshot.reducer_version !== lastRenderedVersion.current) {
+        renderCesiumSnapshot(viewer.entities, currentSnapshot, {
+          satellites: satelliteBatch,
+          beams: beamCache.current,
+          users: userCache.current,
+          links: linkCache.current,
+          routes: routeCache.current
+        });
+        lastRenderedVersion.current = currentSnapshot.reducer_version;
+      }
+      if (!hasFocusedSatellites.current && satelliteBatch.size() > 0) {
         hasFocusedSatellites.current = true;
         focusEarthOverview(viewer);
       }
       viewer.scene.requestRender();
     });
-  }, [state]);
+    renderLoop.start();
+    renderLoopRef.current = renderLoop;
+
+    return () => {
+      renderLoop.stop();
+      renderLoopRef.current = null;
+      satelliteBatch.clear();
+      viewer.scene.primitives.remove(satellitePrimitives);
+      satelliteBatchRef.current = null;
+      viewer.destroy();
+      viewerRef.current = null;
+    };
+  }, []);
 
   return <div className="cesium-globe" ref={containerRef} />;
 }
@@ -114,40 +125,41 @@ function focusEarthOverview(viewer: Viewer): void {
 }
 
 interface RenderCaches {
-  satellites: Map<string, Entity>;
+  satellites: SatellitePrimitiveBatch;
   beams: Map<string, Entity>;
   users: Map<string, Entity>;
   links: Map<string, Entity>;
   routes: Map<string, Entity>;
 }
 
-export function renderCesiumState(
+export function renderCesiumSnapshot(
   entities: EntityCollection,
-  state: ObservabilityState,
+  snapshot: WorldSnapshot,
   caches: RenderCaches
 ): void {
-  const beamLengthMeters = state.scenarioConfig?.render?.beam_length_m ?? 600_000;
-  const beamRadiusMeters = state.scenarioConfig?.render?.beam_radius_m ?? 160_000;
-  const satelliteEntityIds = new Set<string>();
+  const beamLengthMeters = snapshot.scenario_config?.render?.beam_length_m ?? 600_000;
+  const beamRadiusMeters = snapshot.scenario_config?.render?.beam_radius_m ?? 160_000;
+  const beamRenderLimit = Math.min(snapshot.satellites.length, 128);
+  const groundUserRenderLimit = Math.min(snapshot.ground_users.length, 1_000);
+  const linkRenderLimit = Math.min(snapshot.links.length, 512);
+  const routeRenderLimit = Math.min(snapshot.routes.length, 128);
   const beamEntityIds = new Set<string>();
 
-  for (const satellite of state.satellites.values()) {
-    const satelliteId = `satellite:${satellite.satellite_id}`;
+  caches.satellites.update(snapshot.satellites);
+
+  for (const satellite of snapshot.satellites.slice(0, beamRenderLimit)) {
     const beamId = `beam:${satellite.satellite_id}`;
-    satelliteEntityIds.add(satelliteId);
     beamEntityIds.add(beamId);
-    upsertSatelliteEntity(entities, caches.satellites, satellite);
     upsertBeamEntity(entities, caches.beams, satellite, {
       beamLengthMeters,
       beamRadiusMeters,
       enabled: satellite.status.toLowerCase() !== "offline"
     });
   }
-  pruneSatelliteEntities(entities, caches.satellites, satelliteEntityIds);
   pruneBeamEntities(entities, caches.beams, beamEntityIds);
 
   const userEntityIds = new Set<string>();
-  for (const user of state.groundUsers.values()) {
+  for (const user of snapshot.ground_users.slice(0, groundUserRenderLimit)) {
     const id = `user:${user.user_id}`;
     userEntityIds.add(id);
     upsertGroundUserEntity(entities, caches.users, user);
@@ -155,18 +167,22 @@ export function renderCesiumState(
   pruneEntities(entities, caches.users, userEntityIds);
 
   const linkEntityIds = new Set<string>();
-  for (const link of state.links.values()) {
+  const nodeIndex = {
+    satellites: snapshot.indexes.satellites,
+    groundUsers: snapshot.indexes.ground_users
+  };
+  for (const link of snapshot.links.slice(0, linkRenderLimit)) {
     const id = `link:${link.source_id}->${link.target_id}`;
     linkEntityIds.add(id);
-    upsertLinkEntity(entities, caches.links, link, state);
+    upsertLinkEntity(entities, caches.links, link, nodeIndex);
   }
   pruneEntities(entities, caches.links, linkEntityIds);
 
   const routeEntityIds = new Set<string>();
-  for (const route of state.routes.values()) {
+  for (const route of snapshot.routes.slice(0, routeRenderLimit)) {
     const id = `route:${route.route_id}`;
     routeEntityIds.add(id);
-    upsertRouteEntity(entities, caches.routes, route, state);
+    upsertRouteEntity(entities, caches.routes, route, nodeIndex);
   }
   pruneEntities(entities, caches.routes, routeEntityIds);
 }

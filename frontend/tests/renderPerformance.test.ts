@@ -1,0 +1,126 @@
+import { describe, expect, it } from "vitest";
+
+import { SimEvent } from "../src/core/event_types";
+import { RenderLoop, RenderLoopClock } from "../src/render/render_loop";
+import { WorldStateReducer } from "../src/state/reducer";
+import { SnapshotEngine } from "../src/state/snapshot_engine";
+import { EventThrottleLayer } from "../src/stream/throttle_layer";
+
+describe("frontend render performance architecture", () => {
+  it("generates stable snapshots for 1000+ satellites without per-event publishing", () => {
+    let timestamp = 1;
+    const reducer = new WorldStateReducer({ eventLogLimit: 128 });
+    const engine = new SnapshotEngine(reducer, {
+      snapshotHz: 20,
+      clock: () => timestamp++
+    });
+
+    reducer.applyEvents(orbitEvents(1500));
+    expect(engine.getSnapshot().satellites.length).toBe(0);
+
+    const started = Date.now();
+    const snapshot = engine.publishNow();
+    const elapsedMs = Date.now() - started;
+
+    expect(snapshot.satellites.length).toBe(1500);
+    expect(snapshot.event_count).toBe(1500);
+    expect(snapshot.diff.satellite_ids.length).toBe(1500);
+    expect(elapsedMs).toBeLessThan(250);
+  });
+
+  it("folds redundant high-rate orbit updates before reducer ingestion", () => {
+    const reducer = new WorldStateReducer();
+    const throttle = new EventThrottleLayer((events) => reducer.applyEvents(events), {
+      flushIntervalMs: 10_000,
+      maxEventsPerFlush: 10_000,
+      dropRedundantUpdates: true
+    });
+
+    throttle.pushEvents(orbitEvents(10_000, 1000));
+    expect(throttle.pendingCount()).toBe(1000);
+    throttle.flush();
+
+    const snapshot = new SnapshotEngine(reducer).publishNow();
+    expect(snapshot.satellites.length).toBe(1000);
+    expect(snapshot.event_count).toBe(1000);
+    expect(snapshot.satellites[999].sim_time).toBeGreaterThan(0);
+  });
+
+  it("produces deterministic snapshots from identical event input", () => {
+    const events = orbitEvents(128);
+    const first = snapshotFromEvents(events);
+    const second = snapshotFromEvents(events);
+
+    expect(first.satellites).toEqual(second.satellites);
+    expect(first.metrics_summary.orbit).toEqual(second.metrics_summary.orbit);
+    expect(first.spatial_index).toEqual(second.spatial_index);
+  });
+
+  it("keeps the render loop independent of snapshot publication cadence", () => {
+    const clock = new FakeRenderClock();
+    const frames: number[] = [];
+    const loop = new RenderLoop((frame) => frames.push(frame.fps), clock);
+
+    loop.start();
+    for (let index = 1; index <= 60; index += 1) {
+      clock.step(index * 16.67);
+    }
+    loop.stop();
+
+    expect(frames).toHaveLength(60);
+    expect(frames.every((fps) => fps > 59)).toBe(true);
+  });
+});
+
+function snapshotFromEvents(events: readonly SimEvent[]) {
+  const reducer = new WorldStateReducer();
+  const engine = new SnapshotEngine(reducer, { clock: () => 1 });
+  reducer.applyEvents(events);
+  return engine.publishNow();
+}
+
+function orbitEvents(count: number, uniqueSatellites = count): SimEvent[] {
+  return Array.from({ length: count }, (_, index) => {
+    const satelliteIndex = index % uniqueSatellites;
+    return {
+      event_id: `orbit:${index.toString().padStart(5, "0")}`,
+      sim_time: index / 20,
+      priority: 0,
+      source: "orbit",
+      target: "frontend",
+      event_type: "ORBIT_UPDATE",
+      payload: {
+        satellite_id: `sat-${satelliteIndex.toString().padStart(5, "0")}`,
+        sim_time: index / 20,
+        position: [satelliteIndex, satelliteIndex + 1, satelliteIndex + 2],
+        velocity: [0, 0, 0],
+        status: "online"
+      }
+    };
+  });
+}
+
+class FakeRenderClock implements RenderLoopClock {
+  private callbacks = new Map<number, FrameRequestCallback>();
+  private nextId = 1;
+
+  requestAnimationFrame(callback: FrameRequestCallback): number {
+    const id = this.nextId;
+    this.nextId += 1;
+    this.callbacks.set(id, callback);
+    return id;
+  }
+
+  cancelAnimationFrame(frameId: number): void {
+    this.callbacks.delete(frameId);
+  }
+
+  step(timestamp: number): void {
+    const [id, callback] = this.callbacks.entries().next().value as [
+      number,
+      FrameRequestCallback
+    ];
+    this.callbacks.delete(id);
+    callback(timestamp);
+  }
+}

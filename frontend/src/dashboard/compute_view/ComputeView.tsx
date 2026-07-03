@@ -1,16 +1,14 @@
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import { memo } from "react";
 
-import { ObservabilityState, selectComputeKpis } from "../../stream/state_store";
+import { WorldSnapshot } from "../../state/snapshot_engine";
 import { KpiPanel } from "../kpi_panel/KpiPanel";
 
-export function ComputeView({ state }: { state: ObservabilityState }) {
-  const kpis = selectComputeKpis(state);
-  const tasks = Array.from(state.tasks.values());
-  const finished = tasks.filter((task) => task.status.toLowerCase() === "finished").length;
-  const running = tasks.filter((task) => task.status.toLowerCase() !== "finished").length;
+export const ComputeView = memo(function ComputeView({ snapshot }: { snapshot: WorldSnapshot }) {
+  const kpis = snapshot.metrics_summary.compute;
   const chartData = [
-    { name: "Running", value: running },
-    { name: "Finished", value: finished }
+    { name: "Running", value: kpis.runningTasks },
+    { name: "Finished", value: kpis.finishedTasks }
   ];
 
   return (
@@ -33,4 +31,4 @@ export function ComputeView({ state }: { state: ObservabilityState }) {
       </div>
     </section>
   );
-}
+});

@@ -1,14 +1,11 @@
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { memo } from "react";
 
-import { ObservabilityState, selectOrbitKpis } from "../../stream/state_store";
+import { WorldSnapshot } from "../../state/snapshot_engine";
 import { KpiPanel } from "../kpi_panel/KpiPanel";
 
-export function OrbitPanel({ state }: { state: ObservabilityState }) {
-  const kpis = selectOrbitKpis(state);
-  const series = Array.from(state.satellites.values()).slice(0, 64).map((satellite, index) => ({
-    index,
-    active: satellite.status.toLowerCase() === "offline" ? 0 : 1
-  }));
+export const OrbitPanel = memo(function OrbitPanel({ snapshot }: { snapshot: WorldSnapshot }) {
+  const kpis = snapshot.metrics_summary.orbit;
 
   return (
     <section className="dashboard-section" aria-label="Orbit KPI">
@@ -19,7 +16,7 @@ export function OrbitPanel({ state }: { state: ObservabilityState }) {
       </div>
       <div className="chart-strip compact">
         <ResponsiveContainer width="100%" height={112}>
-          <LineChart data={series}>
+          <LineChart data={kpis.series}>
             <XAxis dataKey="index" hide />
             <YAxis width={36} />
             <Tooltip />
@@ -29,4 +26,4 @@ export function OrbitPanel({ state }: { state: ObservabilityState }) {
       </div>
     </section>
   );
-}
+});

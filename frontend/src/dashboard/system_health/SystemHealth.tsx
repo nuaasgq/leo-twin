@@ -1,14 +1,12 @@
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { memo } from "react";
 
-import { ObservabilityState, selectSystemHealth } from "../../stream/state_store";
+import { WorldSnapshot } from "../../state/snapshot_engine";
 import { KpiPanel } from "../kpi_panel/KpiPanel";
 
-export function SystemHealth({ state }: { state: ObservabilityState }) {
-  const health = selectSystemHealth(state);
-  const eventSeries = state.eventLog.slice(-80).map((event, index) => ({
-    index,
-    simTime: event.sim_time
-  }));
+export const SystemHealth = memo(function SystemHealth({ snapshot }: { snapshot: WorldSnapshot }) {
+  const health = snapshot.metrics_summary.system;
+  const eventSeries = health.eventSeries;
 
   return (
     <section className="dashboard-section" aria-label="System health">
@@ -29,4 +27,4 @@ export function SystemHealth({ state }: { state: ObservabilityState }) {
       </div>
     </section>
   );
-}
+});

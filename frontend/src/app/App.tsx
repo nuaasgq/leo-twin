@@ -2,23 +2,49 @@ import { useEffect, useMemo, useState } from "react";
 
 import { CesiumGlobe } from "../3d/cesium/CesiumGlobe";
 import { Dashboard } from "../dashboard/Dashboard";
+import { SnapshotEngine, useWorldSnapshot } from "../state/snapshot_engine";
+import { WorldStateReducer } from "../state/reducer";
 import { EventRouter } from "../stream/event_router";
-import { ObservabilityStore } from "../stream/state_store";
-import { useObservabilityState } from "../stream/state_store/useObservabilityState";
+import { EventThrottleLayer } from "../stream/throttle_layer";
 import { WebSocketStreamClient } from "../stream/websocket_client";
 import { loadMetricsSnapshot, loadScenarioConfig } from "./api";
 import "./App.css";
 
 export function App() {
-  const store = useMemo(() => new ObservabilityStore({ eventLogLimit: 10_000 }), []);
-  const state = useObservabilityState(store);
+  const reducer = useMemo(
+    () => new WorldStateReducer({ eventLogLimit: 10_000, metricSeriesLimit: 300 }),
+    []
+  );
+  const snapshotEngine = useMemo(
+    () =>
+      new SnapshotEngine(reducer, {
+        snapshotHz: 20
+      }),
+    [reducer]
+  );
+  const snapshot = useWorldSnapshot(snapshotEngine);
   const [connectionState, setConnectionState] = useState<"connecting" | "live" | "degraded">(
     "connecting"
   );
 
   useEffect(() => {
+    snapshotEngine.start();
+    return () => snapshotEngine.stop();
+  }, [snapshotEngine]);
+
+  useEffect(() => {
     let closed = false;
-    const router = new EventRouter(store);
+    const throttleLayer = new EventThrottleLayer(
+      (events) => {
+        snapshotEngine.applyEvents(events);
+      },
+      {
+        flushIntervalMs: 20,
+        maxEventsPerFlush: 10_000,
+        dropRedundantUpdates: true
+      }
+    );
+    const router = new EventRouter(snapshotEngine, { throttleLayer });
     const client = new WebSocketStreamClient(router, {
       batchSize: 500,
       flushIntervalMs: 40
@@ -30,11 +56,12 @@ export function App() {
           return;
         }
         if (scenario.status === "fulfilled") {
-          store.applyScenarioConfig(scenario.value);
+          snapshotEngine.applyScenarioConfig(scenario.value);
         }
         if (metrics.status === "fulfilled") {
-          store.applySnapshot(metrics.value);
+          snapshotEngine.applySnapshot(metrics.value);
         }
+        snapshotEngine.publishNow();
         client.connect();
         setConnectionState("live");
       })
@@ -47,8 +74,9 @@ export function App() {
     return () => {
       closed = true;
       client.close();
+      router.close();
     };
-  }, [store]);
+  }, [snapshotEngine]);
 
   return (
     <main className="app-shell">
@@ -61,9 +89,9 @@ export function App() {
       </header>
       <section className="workspace">
         <div className="globe-panel">
-          <CesiumGlobe state={state} />
+          <CesiumGlobe snapshot={snapshot} />
         </div>
-        <Dashboard state={state} />
+        <Dashboard snapshot={snapshot} />
       </section>
     </main>
   );
