@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from math import pi
+from math import cos, pi, radians, sin
 
 from leo_twin.models.compute import ComputeNode
+from leo_twin.models.network import GroundEndpoint
 from leo_twin.models.orbit import OrbitSatelliteConfig
 from leo_twin.schema import (
     CoverageSlot,
@@ -18,6 +19,11 @@ from leo_twin.schema import (
 )
 
 from examples.integration_demo.config import DemoConfig
+
+
+_EARTH_RADIUS_KM = 6371.0
+_GROUND_ENDPOINT_MIN_ELEVATION_DEG = 10.0
+_GROUND_ENDPOINT_MAX_RANGE_KM = 2500.0
 
 
 @dataclass(frozen=True)
@@ -34,6 +40,7 @@ class DemoScenario:
     network_satellites: tuple[SatelliteProfile, ...]
     ground_users: tuple[GroundUserProfile, ...]
     ground_user_render_states: tuple[GroundUserRenderState, ...]
+    ground_endpoints: tuple[GroundEndpoint, ...]
     compute_nodes: tuple[ComputeNode, ...]
     initial_events: tuple[SimEvent, ...]
     frontend_config: dict[str, object]
@@ -42,6 +49,7 @@ class DemoScenario:
 def build_demo_scenario(config: DemoConfig) -> DemoScenario:
     ground_users = _ground_users(config)
     render_users = _ground_user_render_states(config)
+    ground_endpoints = _ground_endpoints(render_users)
     orbit_satellites = _orbit_satellites(config)
     network_satellites = _network_satellites(config)
     compute_nodes = _compute_nodes(config)
@@ -51,6 +59,7 @@ def build_demo_scenario(config: DemoConfig) -> DemoScenario:
         network_satellites=network_satellites,
         ground_users=ground_users,
         ground_user_render_states=render_users,
+        ground_endpoints=ground_endpoints,
         compute_nodes=compute_nodes,
         initial_events=initial_events,
         frontend_config={
@@ -198,6 +207,35 @@ def _ground_user_render_states(config: DemoConfig) -> tuple[GroundUserRenderStat
             )
         )
     return tuple(users)
+
+
+def _ground_endpoints(
+    users: tuple[GroundUserRenderState, ...],
+) -> tuple[GroundEndpoint, ...]:
+    return tuple(
+        GroundEndpoint(
+            endpoint_id=user.user_id,
+            position=_ecef_km_from_geodetic(user.position),
+            min_elevation_deg=_GROUND_ENDPOINT_MIN_ELEVATION_DEG,
+            max_range_km=_GROUND_ENDPOINT_MAX_RANGE_KM,
+        )
+        for user in sorted(users, key=lambda item: item.user_id)
+    )
+
+
+def _ecef_km_from_geodetic(
+    position: tuple[float, float, float],
+) -> tuple[float, float, float]:
+    longitude_deg, latitude_deg, height_m = position
+    longitude = radians(longitude_deg)
+    latitude = radians(latitude_deg)
+    radius_km = _EARTH_RADIUS_KM + height_m / 1000.0
+    cos_latitude = cos(latitude)
+    return (
+        radius_km * cos_latitude * cos(longitude),
+        radius_km * cos_latitude * sin(longitude),
+        radius_km * sin(latitude),
+    )
 
 
 def _compute_nodes(config: DemoConfig) -> tuple[ComputeNode, ...]:
