@@ -45,8 +45,10 @@ export class WebSocketStreamClient {
   connect(): void {
     this.eventSocket = this.createWebSocket(this.eventUrl);
     this.eventSocket.onmessage = (message) => {
-      const parsed = parseJsonMessage(message.data);
-      const events = Array.isArray(parsed) ? parsed.map(decodeSimEvent) : [decodeSimEvent(parsed)];
+      const events = decodeStreamEvents(message.data);
+      if (events.length === 0) {
+        return;
+      }
       for (const event of events) {
         this.eventBuffer.push(event);
       }
@@ -59,7 +61,11 @@ export class WebSocketStreamClient {
 
     this.stateSocket = this.createWebSocket(this.stateUrl);
     this.stateSocket.onmessage = (message) => {
-      this.router.routeRawStateMessage(parseJsonMessage(message.data));
+      try {
+        this.router.routeRawStateMessage(parseJsonMessage(message.data));
+      } catch (error) {
+        console.warn("ignored invalid state stream message", error);
+      }
     };
   }
 
@@ -102,4 +108,23 @@ export function websocketUrl(path: string): string {
 
 function parseJsonMessage(data: string): unknown {
   return JSON.parse(data);
+}
+
+function decodeStreamEvents(data: string): readonly SimEvent[] {
+  try {
+    const parsed = parseJsonMessage(data);
+    const items = Array.isArray(parsed) ? parsed : [parsed];
+    const events: SimEvent[] = [];
+    for (const item of items) {
+      try {
+        events.push(decodeSimEvent(item));
+      } catch (error) {
+        console.warn("ignored invalid event stream message", error);
+      }
+    }
+    return events;
+  } catch (error) {
+    console.warn("ignored malformed event stream payload", error);
+    return [];
+  }
 }
