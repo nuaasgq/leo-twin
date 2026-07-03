@@ -28,7 +28,7 @@ def test_generated_full_system_demo_runs_domain_lifecycle() -> None:
     assert len(result.scheduled_tasks) == 4
     assert result.metrics_summary["routes_available"] == 4
     assert result.metrics_summary["route_latency_min"] > 0.0
-    assert result.metrics_summary["route_capacity_max"] == 100.0
+    assert result.metrics_summary["route_capacity_max"] == 89.54666666666667
     assert result.metrics_summary["active_link_capacity_avg"] == 100.0
     assert result.metrics_summary["finished_tasks"] == 4
     assert EventType.ORBIT_UPDATE.value in result.processed_event_types
@@ -52,6 +52,30 @@ def test_generated_full_system_demo_is_deterministic() -> None:
     )
 
     assert run_generated_full_system_demo(config) == run_generated_full_system_demo(config)
+
+
+def test_generated_full_system_demo_transport_protocol_changes_route_profile() -> None:
+    base = dict(
+        seed=12,
+        satellite_count=3,
+        user_count=5,
+        compute_node_count=2,
+        flow_count=3,
+        orbit_plane_count=1,
+        min_elevation_deg=-90.0,
+        max_range_km=30000.0,
+        compute_capacity=20.0,
+    )
+
+    tcp = run_generated_full_system_demo(
+        FullSystemScenarioBuilderConfig(**base, transport_protocol="TCP")
+    )
+    udp = run_generated_full_system_demo(
+        FullSystemScenarioBuilderConfig(**base, transport_protocol="UDP")
+    )
+
+    assert tcp.metrics_summary["route_latency_min"] > udp.metrics_summary["route_latency_min"]
+    assert tcp.metrics_summary["route_capacity_max"] < udp.metrics_summary["route_capacity_max"]
 
 
 def test_generated_full_system_demo_can_enable_space_links() -> None:

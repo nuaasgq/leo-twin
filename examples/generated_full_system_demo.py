@@ -12,9 +12,13 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 
 from leo_twin.core import SimulationKernel
 from leo_twin.models.compute import ComputeNode, RouteAwareComputeEngine, TaskPlacementDecision
-from leo_twin.models.network import GroundEndpoint, PositionDrivenNetworkEngine
+from leo_twin.models.network import (
+    GroundEndpoint,
+    PositionDrivenNetworkEngine,
+    default_transport_runtime,
+)
 from leo_twin.models.orbit import KeplerianOrbitEngine
-from leo_twin.schema import EventType, SimEvent
+from leo_twin.schema import EventType, SimEvent, TransportProtocol
 from leo_twin.services.metrics import MetricsCollector
 from leo_twin.services.scenario_builder import (
     FullSystemScenarioBuilderConfig,
@@ -75,6 +79,9 @@ def run_generated_full_system_demo(
             resolved_config.space_link_cell_size_km
             if resolved_config.space_link_cell_size_km > 0.0
             else None
+        ),
+        transport_runtime=default_transport_runtime(
+            TransportProtocol(str(resolved_config.transport_protocol))
         ),
     )
     compute = RouteAwareComputeEngine(
