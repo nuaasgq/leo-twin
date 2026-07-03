@@ -14,7 +14,6 @@ import {
 import "cesium/Build/Cesium/Widgets/widgets.css";
 import { useEffect, useRef } from "react";
 
-import { RenderLoop } from "../../render/render_loop";
 import { WorldSnapshot } from "../../state/snapshot_engine";
 import {
   pruneBeamEntities,
@@ -35,7 +34,6 @@ export interface CesiumGlobeProps {
 export function CesiumGlobe({ snapshot }: CesiumGlobeProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewerRef = useRef<Viewer | null>(null);
-  const renderLoopRef = useRef<RenderLoop | null>(null);
   const latestSnapshotRef = useRef(snapshot);
   const satelliteBatchRef = useRef<SatellitePrimitiveBatch | null>(null);
   const beamCache = useRef(new Map<string, Entity>());
@@ -65,7 +63,9 @@ export function CesiumGlobe({ snapshot }: CesiumGlobeProps) {
       fullscreenButton: false,
       infoBox: false,
       selectionIndicator: false,
-      shouldAnimate: false
+      shouldAnimate: false,
+      requestRenderMode: true,
+      maximumRenderTimeChange: Number.POSITIVE_INFINITY
     });
     viewer.scene.backgroundColor = Color.BLACK;
     viewer.scene.globe.baseColor = Color.fromCssColorString("#1d465f");
@@ -78,37 +78,47 @@ export function CesiumGlobe({ snapshot }: CesiumGlobeProps) {
     satelliteBatchRef.current = satelliteBatch;
     viewerRef.current = viewer;
 
-    const renderLoop = new RenderLoop(() => {
-      const currentSnapshot = latestSnapshotRef.current;
-      if (currentSnapshot.reducer_version !== lastRenderedVersion.current) {
-        renderCesiumSnapshot(viewer.entities, currentSnapshot, {
-          satellites: satelliteBatch,
-          beams: beamCache.current,
-          users: userCache.current,
-          links: linkCache.current,
-          routes: routeCache.current
-        });
-        lastRenderedVersion.current = currentSnapshot.reducer_version;
+    return () => {
+      if (!viewer.isDestroyed()) {
+        satelliteBatch.clear();
+        viewer.scene.primitives.remove(satellitePrimitives);
       }
+      satelliteBatchRef.current = null;
+      if (!viewer.isDestroyed()) {
+        viewer.destroy();
+      }
+      viewerRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    const satelliteBatch = satelliteBatchRef.current;
+    if (!viewer || !satelliteBatch || viewer.isDestroyed()) {
+      return;
+    }
+    if (snapshot.reducer_version === lastRenderedVersion.current) {
+      return;
+    }
+    latestSnapshotRef.current = snapshot;
+    try {
+      renderCesiumSnapshot(viewer.entities, snapshot, {
+        satellites: satelliteBatch,
+        beams: beamCache.current,
+        users: userCache.current,
+        links: linkCache.current,
+        routes: routeCache.current
+      });
+      lastRenderedVersion.current = snapshot.reducer_version;
       if (!hasFocusedSatellites.current && satelliteBatch.size() > 0) {
         hasFocusedSatellites.current = true;
         focusEarthOverview(viewer);
       }
-      viewer.scene.requestRender();
-    });
-    renderLoop.start();
-    renderLoopRef.current = renderLoop;
-
-    return () => {
-      renderLoop.stop();
-      renderLoopRef.current = null;
-      satelliteBatch.clear();
-      viewer.scene.primitives.remove(satellitePrimitives);
-      satelliteBatchRef.current = null;
-      viewer.destroy();
-      viewerRef.current = null;
-    };
-  }, []);
+    } catch (error) {
+      console.error("Cesium snapshot render failed", error);
+    }
+    viewer.scene.requestRender();
+  }, [snapshot]);
 
   return <div className="cesium-globe" ref={containerRef} />;
 }
@@ -139,10 +149,10 @@ export function renderCesiumSnapshot(
 ): void {
   const beamLengthMeters = snapshot.scenario_config?.render?.beam_length_m ?? 600_000;
   const beamRadiusMeters = snapshot.scenario_config?.render?.beam_radius_m ?? 160_000;
-  const beamRenderLimit = Math.min(snapshot.satellites.length, 128);
-  const groundUserRenderLimit = Math.min(snapshot.ground_users.length, 1_000);
-  const linkRenderLimit = Math.min(snapshot.links.length, 512);
-  const routeRenderLimit = Math.min(snapshot.routes.length, 128);
+  const beamRenderLimit = Math.min(snapshot.satellites.length, 72);
+  const groundUserRenderLimit = Math.min(snapshot.ground_users.length, 300);
+  const linkRenderLimit = Math.min(snapshot.links.length, 256);
+  const routeRenderLimit = Math.min(snapshot.routes.length, 32);
   const beamEntityIds = new Set<string>();
 
   caches.satellites.update(snapshot.satellites);

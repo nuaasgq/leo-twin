@@ -27,8 +27,8 @@ assert.match(files.throttle, /dropRedundantUpdates/);
 assert.match(files.renderLoop, /requestAnimationFrame/);
 
 assert.match(files.satellites, /PointPrimitiveCollection/);
-assert.match(files.cesium, /RenderLoop/);
 assert.match(files.cesium, /latestSnapshotRef/);
+assert.match(files.cesium, /requestRender/);
 assert.doesNotMatch(files.satellites, /EntityCollection/);
 assert.doesNotMatch(files.satellites, /entities\.add/);
 

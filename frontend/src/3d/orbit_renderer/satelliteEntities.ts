@@ -3,6 +3,8 @@ import { Color, PointPrimitive, PointPrimitiveCollection } from "cesium";
 import { SatelliteState } from "../../core/event_types";
 import { satelliteCartesian } from "../cesium/positions";
 
+const DEPTH_TEST_DISABLE_DISTANCE = 1_000_000_000_000;
+
 export class SatellitePrimitiveBatch {
   private readonly pointsBySatelliteId = new Map<string, PointPrimitive>();
 
@@ -43,7 +45,7 @@ export class SatellitePrimitiveBatch {
         color,
         outlineColor: Color.BLACK,
         outlineWidth: 2,
-        disableDepthTestDistance: Number.POSITIVE_INFINITY
+        disableDepthTestDistance: DEPTH_TEST_DISABLE_DISTANCE
       });
       this.pointsBySatelliteId.set(satellite.satellite_id, point);
       return;
