@@ -26,6 +26,7 @@ def test_link_state_routing_selects_lowest_latency_capacity_feasible_path() -> N
 
     route = runtime.route(_request(), _links())
 
+    assert runtime.cost_profile == RoutingCostProfile()
     assert route == Route(
         route_id="route:flow-001",
         flow_id="flow-001",

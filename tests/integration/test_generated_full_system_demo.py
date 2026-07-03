@@ -103,6 +103,7 @@ def test_generated_full_system_demo_records_configured_network_stack_trace() -> 
 
     trace = result.network_stack_traces[0]
     layer_protocols = tuple(layer.protocol_name for layer in trace.layers)
+    network_attributes = dict(trace.layers[2].attributes)
     channel_attributes = dict(trace.layers[5].attributes)
 
     assert layer_protocols == (
@@ -113,6 +114,8 @@ def test_generated_full_system_demo_records_configured_network_stack_trace() -> 
         "CONFIGURED_TERMINAL_PROFILE",
         "CONFIGURED_CHANNEL_PROFILE",
     )
+    assert network_attributes["latency_weight"] == "0.000000"
+    assert network_attributes["hop_weight"] == "1.000000"
     assert channel_attributes["carrier_frequency_hz"] == "22000000000.000000"
     assert channel_attributes["bandwidth_hz"] == "250000000.000000"
 

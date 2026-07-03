@@ -74,6 +74,10 @@ class RoutingRuntime:
     def protocol(self) -> RoutingProtocol:
         return self._protocol
 
+    @property
+    def cost_profile(self) -> RoutingCostProfile:
+        return self._cost_profile
+
     def route(
         self,
         request: FlowRequest,

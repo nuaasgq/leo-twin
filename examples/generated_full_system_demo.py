@@ -21,6 +21,7 @@ from leo_twin.models.network import (
     NetworkStackRuntime,
     RadioTerminalProfile,
     RainFadeProfile,
+    RoutingRuntime,
     NetworkStackTrace,
     build_default_leo_protocol_stack,
     default_transport_runtime,
@@ -78,6 +79,9 @@ def run_generated_full_system_demo(
     transport_runtime = default_transport_runtime(
         TransportProtocol(str(resolved_config.transport_protocol))
     )
+    routing_profile = RoutingRuntime(
+        RoutingProtocol(str(resolved_config.routing_protocol))
+    ).cost_profile
     network = PositionDrivenNetworkEngine(
         endpoints=tuple(
             GroundEndpoint(
@@ -116,6 +120,7 @@ def run_generated_full_system_demo(
             antenna=space_ground_budget.transmit_terminal.antenna,
             channel=space_ground_budget.channel,
             transport_profile=transport_runtime.profile,
+            routing_cost_profile=routing_profile,
         ),
     )
     compute = RouteAwareComputeEngine(

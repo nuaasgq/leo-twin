@@ -89,6 +89,7 @@ def run_integration_demo(config: DemoConfig) -> DemoRunResult:
     transport_protocol = TransportProtocol(str(config.transport_protocol))
     routing_protocol = RoutingProtocol(str(config.routing_protocol))
     transport_runtime = default_transport_runtime(transport_protocol)
+    routing_runtime = RoutingRuntime(routing_protocol)
     network = PositionDrivenNetworkEngine(
         endpoints=scenario.ground_endpoints,
         compute_node_ids=tuple(node.node_id for node in scenario.compute_nodes),
@@ -105,7 +106,7 @@ def run_integration_demo(config: DemoConfig) -> DemoRunResult:
         space_link_cell_size_km=2500.0,
         space_link_update_latency_epsilon_s=0.0005,
         space_link_update_capacity_epsilon=1.0,
-        routing_runtime=RoutingRuntime(routing_protocol),
+        routing_runtime=routing_runtime,
         static_links=_compute_gateway_links(scenario),
         transport_runtime=transport_runtime,
         stack_runtime=NetworkStackRuntime(
@@ -116,6 +117,7 @@ def run_integration_demo(config: DemoConfig) -> DemoRunResult:
             antenna=space_ground_budget.transmit_terminal.antenna,
             channel=space_ground_budget.channel,
             transport_profile=transport_runtime.profile,
+            routing_cost_profile=routing_runtime.cost_profile,
         ),
     )
 

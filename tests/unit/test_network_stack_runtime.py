@@ -5,6 +5,7 @@ from leo_twin.models.network import (
     NetworkStackRuntime,
     RainFadeProfile,
     RadioTerminalProfile,
+    RoutingRuntime,
     build_default_leo_protocol_stack,
     default_transport_runtime,
 )
@@ -98,6 +99,21 @@ def test_stack_runtime_records_transport_profile_attributes() -> None:
     assert attributes["loss_rate"] == "0.000000"
     assert attributes["congestion_window_segments"] == "none"
     assert attributes["overhead_ratio"] == "0.026667"
+
+
+def test_stack_runtime_records_routing_cost_profile_attributes() -> None:
+    routing = RoutingRuntime(RoutingProtocol.DISTANCE_VECTOR)
+    runtime = NetworkStackRuntime(
+        build_default_leo_protocol_stack(routing_protocol=RoutingProtocol.DISTANCE_VECTOR),
+        routing_cost_profile=routing.cost_profile,
+    )
+
+    trace = runtime.process_flow(_flow(), _route())
+    attributes = dict(trace.layers[2].attributes)
+
+    assert attributes["latency_weight"] == "0.000000"
+    assert attributes["inverse_capacity_weight"] == "0.000000"
+    assert attributes["hop_weight"] == "1.000000"
 
 
 def test_stack_runtime_records_link_physical_and_channel_profiles() -> None:

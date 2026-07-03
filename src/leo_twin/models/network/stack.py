@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from leo_twin.models.network.channel import LinkBudgetResult
+from leo_twin.models.network.routing import RoutingCostProfile
 from leo_twin.models.network.transport import TransportProfile
 from leo_twin.schema import (
     AntennaProfile,
@@ -56,12 +57,14 @@ class NetworkStackRuntime:
         channel: ChannelProfile | None = None,
         link_budget: LinkBudgetResult | None = None,
         transport_profile: TransportProfile | None = None,
+        routing_cost_profile: RoutingCostProfile | None = None,
     ) -> None:
         self._stack = stack
         self._antenna = antenna
         self._channel = channel
         self._link_budget = link_budget
         self._transport_profile = transport_profile
+        self._routing_cost_profile = routing_cost_profile
 
     def process_flow(
         self,
@@ -113,6 +116,7 @@ class NetworkStackRuntime:
             output_ref = f"route:{route_id}"
             status = _route_status(route)
             attributes += _route_attributes(route)
+            attributes += _routing_cost_profile_attributes(self._routing_cost_profile)
         elif layer.layer == NetworkLayer.DATA_LINK:
             output_ref = f"link:{request.flow_id}"
             attributes += (("hop_count", str(_hop_count(route))),)
@@ -212,6 +216,18 @@ def _route_attributes(route: Route | None) -> tuple[tuple[str, str], ...]:
         ("capacity", f"{route.capacity:.6f}"),
         ("latency", f"{route.latency:.6f}"),
         ("route_id", route.route_id),
+    )
+
+
+def _routing_cost_profile_attributes(
+    profile: RoutingCostProfile | None,
+) -> tuple[tuple[str, str], ...]:
+    if profile is None:
+        return ()
+    return (
+        ("hop_weight", f"{profile.hop_weight:.6f}"),
+        ("inverse_capacity_weight", f"{profile.inverse_capacity_weight:.6f}"),
+        ("latency_weight", f"{profile.latency_weight:.6f}"),
     )
 
 
