@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from math import cos, pi, radians, sin
+from math import ceil, cos, pi, radians, sin
 
 from leo_twin.models.compute import ComputeNode
 from leo_twin.models.network import GroundEndpoint
@@ -13,6 +13,7 @@ from leo_twin.schema import (
     EventType,
     FlowRequest,
     GroundUserProfile,
+    OrbitalElementSet,
     SatelliteProfile,
     SimEvent,
     TaskRequest,
@@ -37,6 +38,7 @@ class GroundUserRenderState:
 @dataclass(frozen=True)
 class DemoScenario:
     orbit_satellites: tuple[OrbitSatelliteConfig, ...]
+    orbit_elements: tuple[OrbitalElementSet, ...]
     network_satellites: tuple[SatelliteProfile, ...]
     ground_users: tuple[GroundUserProfile, ...]
     ground_user_render_states: tuple[GroundUserRenderState, ...]
@@ -51,11 +53,13 @@ def build_demo_scenario(config: DemoConfig) -> DemoScenario:
     render_users = _ground_user_render_states(config)
     ground_endpoints = _ground_endpoints(render_users)
     orbit_satellites = _orbit_satellites(config)
+    orbit_elements = _orbit_elements(config)
     network_satellites = _network_satellites(config)
     compute_nodes = _compute_nodes(config)
     initial_events = _initial_events(config)
     return DemoScenario(
         orbit_satellites=orbit_satellites,
+        orbit_elements=orbit_elements,
         network_satellites=network_satellites,
         ground_users=ground_users,
         ground_user_render_states=render_users,
@@ -140,6 +144,28 @@ def _orbit_satellites(config: DemoConfig) -> tuple[OrbitSatelliteConfig, ...]:
             angular_velocity=0.001 + (index % 5) * 0.00001,
             phase=((index % satellites_per_plane) / satellites_per_plane) * 2.0 * pi,
             inclination=((index // satellites_per_plane) / planes) * 0.9,
+        )
+        for index in range(config.satellite_count)
+    )
+
+
+def _orbit_elements(config: DemoConfig) -> tuple[OrbitalElementSet, ...]:
+    plane_count = min(12, config.satellite_count)
+    satellites_per_plane = ceil(config.satellite_count / plane_count)
+    return tuple(
+        OrbitalElementSet(
+            satellite_id=f"sat-{index:03d}",
+            epoch=0.0,
+            semi_major_axis_km=6900.0 + float(index % satellites_per_plane),
+            eccentricity=0.001,
+            inclination_deg=53.0,
+            raan_deg=((index % plane_count) * 360.0 / plane_count) % 360.0,
+            argument_of_perigee_deg=0.0,
+            mean_anomaly_deg=(
+                (index // plane_count) * 360.0 / satellites_per_plane
+                + (index % plane_count) * 0.5
+            )
+            % 360.0,
         )
         for index in range(config.satellite_count)
     )

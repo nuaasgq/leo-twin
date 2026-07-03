@@ -10,6 +10,8 @@ from leo_twin.schema import EventType, FlowRequest, TaskRequest
 def test_demo_scenario_builds_position_network_ground_endpoints() -> None:
     scenario = build_demo_scenario(_demo_config())
 
+    assert len(scenario.orbit_elements) == len(scenario.orbit_satellites)
+    assert scenario.orbit_elements[0].satellite_id == scenario.orbit_satellites[0].satellite_id
     assert len(scenario.ground_endpoints) == 5
     assert [endpoint.endpoint_id for endpoint in scenario.ground_endpoints] == [
         "ground-station-00",

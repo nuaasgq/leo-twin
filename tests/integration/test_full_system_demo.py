@@ -41,13 +41,13 @@ def test_frontend_sync_test() -> None:
 
     assert len(snapshot["satellites"]) == 72
     assert len(snapshot["ground_users"]) == 1003
-    assert len(snapshot["tasks"]) == 49
+    assert len(snapshot["tasks"]) == 100
     assert sum(
         1
         for link in snapshot["links"]
         if str(link["source_id"]).startswith("sat-")
         and str(link["target_id"]).startswith("sat-")
-    ) == 233
+    ) == 53
     assert int(snapshot["event_count"]) == len(result.processed_events)
     assert len(result.frontend_events) > 0
     assert {
@@ -126,14 +126,14 @@ def test_scale_test_basic() -> None:
     summary = result.metrics_summary
 
     assert len(result.processed_events) >= 10_000
-    assert len(result.processed_events) == 16_590
+    assert len(result.processed_events) == 17_286
     assert summary["event_count"] >= 10_000
     assert summary["routes_total"] == 100
-    assert summary["routes_available"] == 31
+    assert summary["routes_available"] == 92
     assert summary["route_hop_count_avg"] >= 2.0
     assert 500.0 <= summary["satellite_altitude_avg"] <= 600.0
     assert summary["task_duration_avg"] >= 0.0
-    assert summary["finished_tasks"] == 49
-    assert summary["deadline_missed_tasks"] == 24
+    assert summary["finished_tasks"] == 100
+    assert summary["deadline_missed_tasks"] == 19
     assert len(result.state_timeline) <= len(result.processed_events) // 1000 + 1
     assert len(result.final_snapshot["links"]) <= 72 * 21

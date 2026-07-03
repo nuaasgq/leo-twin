@@ -126,3 +126,16 @@ def test_keplerian_orbit_engine_schedules_events_through_kernel() -> None:
     assert len(metrics.states) == 1
     assert network.states == metrics.states
     assert processed[1].event_id == "orbit:keplerian-update:00000001"
+
+
+def test_keplerian_orbit_engine_can_scale_output_state_vectors() -> None:
+    orbit = KeplerianOrbitEngine(
+        elements=(_element(),),
+        update_targets=("metrics",),
+        state_vector_scale=1000.0,
+    )
+
+    state = orbit.states_at(0.0)[0]
+
+    assert state.position == pytest.approx((7_000_000.0, 0.0, 0.0))
+    assert state.velocity == pytest.approx((0.0, sqrt(MU / 7000.0) * 1000.0, 0.0))

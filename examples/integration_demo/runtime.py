@@ -17,7 +17,7 @@ from leo_twin.models.network import (
     build_default_leo_protocol_stack,
     default_transport_runtime,
 )
-from leo_twin.models.orbit import OrbitEngine
+from leo_twin.models.orbit import KeplerianOrbitEngine
 from leo_twin.schema import (
     AntennaProfile,
     ChannelProfile,
@@ -96,9 +96,9 @@ def run_integration_demo(config: DemoConfig) -> DemoRunResult:
             calculators=(space_ground_budget, space_space_budget)
         ),
         position_scale_to_km=0.001,
-        space_link_max_range_km=1500.0,
+        space_link_max_range_km=2500.0,
         space_link_capacity=500.0,
-        space_link_cell_size_km=1500.0,
+        space_link_cell_size_km=2500.0,
         space_link_update_latency_epsilon_s=0.0005,
         space_link_update_capacity_epsilon=1.0,
         transport_runtime=default_transport_runtime(transport_protocol),
@@ -113,9 +113,11 @@ def run_integration_demo(config: DemoConfig) -> DemoRunResult:
     )
 
     modules: tuple[SimulationModule, ...] = (
-        OrbitEngine(
-            satellites=scenario.orbit_satellites,
+        KeplerianOrbitEngine(
+            elements=scenario.orbit_elements,
             update_targets=("network", "metrics"),
+            earth_rotation_rate_rad_s=0.000072921159,
+            state_vector_scale=1000.0,
         ),
         network,
         RouteAwareComputeEngine(nodes=scenario.compute_nodes),

@@ -128,8 +128,10 @@ class KeplerianOrbitEngine(SimulationModule):
         update_targets: Iterable[str] = ("network", "metrics"),
         gravitational_parameter_km3_s2: float = 398600.4418,
         earth_rotation_rate_rad_s: float = 0.0,
+        state_vector_scale: float = 1.0,
     ) -> None:
         _require_non_empty_str(module_name, "module_name")
+        _require_positive_number(state_vector_scale, "state_vector_scale")
         configured_targets = tuple(update_targets)
         if not configured_targets:
             raise ValueError("update_targets must contain at least one target")
@@ -142,6 +144,7 @@ class KeplerianOrbitEngine(SimulationModule):
             gravitational_parameter_km3_s2=gravitational_parameter_km3_s2,
             earth_rotation_rate_rad_s=earth_rotation_rate_rad_s,
         )
+        self._state_vector_scale = float(state_vector_scale)
         self._event_sequence = 0
 
     def name(self) -> str:
@@ -163,7 +166,19 @@ class KeplerianOrbitEngine(SimulationModule):
     def states_at(self, requested_time: float) -> tuple[SatelliteState, ...]:
         """Return deterministic satellite states at one simulation time."""
 
-        return self._propagator.states_at(requested_time)
+        states = self._propagator.states_at(requested_time)
+        if self._state_vector_scale == 1.0:
+            return states
+        return tuple(self._scaled_state(state) for state in states)
+
+    def _scaled_state(self, state: SatelliteState) -> SatelliteState:
+        return SatelliteState(
+            satellite_id=state.satellite_id,
+            sim_time=state.sim_time,
+            position=tuple(value * self._state_vector_scale for value in state.position),
+            velocity=tuple(value * self._state_vector_scale for value in state.velocity),
+            status=state.status,
+        )
 
     def _event(
         self,
