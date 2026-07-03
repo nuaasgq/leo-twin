@@ -213,6 +213,62 @@ def test_route_aware_compute_marks_deadline_miss_without_rescheduling() -> None:
     assert finish_events[0].status == "DEADLINE_MISSED"
 
 
+def test_route_disruption_during_transfer_keeps_task_pending() -> None:
+    kernel = SimulationKernel()
+    engine = RouteAwareComputeEngine(nodes=(ComputeNode("node-a", capacity=10.0),))
+    sink = MetricsSink()
+    kernel.register_module(engine)
+    kernel.register_module(sink)
+    kernel.schedule_event(_event("route-up", EventType.ROUTE_UPDATE.value, _route()))
+    kernel.schedule_event(_event("task", EventType.TASK_ARRIVAL.value, _task()))
+    kernel.schedule_event(
+        _event("route-down", EventType.ROUTE_UPDATE.value, _route(False), 2.0)
+    )
+
+    kernel.run()
+
+    assert engine.pending_tasks() == ("flow-001",)
+    assert engine.scheduled_tasks() == ()
+    assert sink.events == []
+
+
+def test_route_recovery_restarts_transfer_with_latest_route() -> None:
+    kernel = SimulationKernel()
+    engine = RouteAwareComputeEngine(nodes=(ComputeNode("node-a", capacity=10.0),))
+    sink = MetricsSink()
+    kernel.register_module(engine)
+    kernel.register_module(sink)
+    kernel.schedule_event(_event("route-up", EventType.ROUTE_UPDATE.value, _route()))
+    kernel.schedule_event(_event("task", EventType.TASK_ARRIVAL.value, _task()))
+    kernel.schedule_event(
+        _event("route-down", EventType.ROUTE_UPDATE.value, _route(False), 2.0)
+    )
+    kernel.schedule_event(
+        _event(
+            "route-recovered",
+            EventType.ROUTE_UPDATE.value,
+            _route(latency=0.0, capacity=10.0),
+            5.0,
+        )
+    )
+
+    kernel.run()
+
+    decision = engine.scheduled_tasks()[0]
+    assert engine.pending_tasks() == ()
+    assert decision.ready_time == 6.0
+    assert decision.start_time == 6.0
+    assert decision.finish_time == 8.0
+    assert [
+        (event.event_type, event.sim_time)
+        for event in sink.events
+        if event.event_type in {EventType.TASK_START.value, EventType.TASK_FINISH.value}
+    ] == [
+        (EventType.TASK_START.value, 6.0),
+        (EventType.TASK_FINISH.value, 8.0),
+    ]
+
+
 def test_route_aware_compute_is_deterministic() -> None:
     first = _run_scenario()
     second = _run_scenario()

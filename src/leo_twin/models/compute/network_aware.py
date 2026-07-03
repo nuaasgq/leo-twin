@@ -44,6 +44,13 @@ class _ScheduledTask:
     decision: TaskPlacementDecision
 
 
+@dataclass(frozen=True)
+class _TransferringTask:
+    task: TaskRequest
+    route: Route
+    ready_time: float
+
+
 class RouteAwareComputeEngine(SimulationModule):
     """Schedule compute tasks only after a matching route is available."""
 
@@ -70,6 +77,7 @@ class RouteAwareComputeEngine(SimulationModule):
         self._scheduling_runtime = scheduling_runtime or ComputeSchedulingRuntime()
         self._available_at = {item.node_id: 0.0 for item in ordered_nodes}
         self._pending_tasks: dict[str, TaskRequest] = {}
+        self._transferring_tasks: dict[str, _TransferringTask] = {}
         self._routes_by_flow: dict[str, Route] = {}
         self._scheduled_tasks: dict[str, _ScheduledTask] = {}
         self._scheduled_tick_times: set[float] = set()
@@ -94,6 +102,7 @@ class RouteAwareComputeEngine(SimulationModule):
         if event_type == EventType.ROUTE_UPDATE.value:
             route = self._coerce_route(event.payload)
             self._routes_by_flow[route.flow_id] = route
+            self._apply_route_update_to_transfers(route, event.sim_time, kernel)
             self._request_schedule_tick(event.sim_time, kernel)
 
     def pending_tasks(self) -> tuple[str, ...]:
@@ -138,6 +147,20 @@ class RouteAwareComputeEngine(SimulationModule):
         ready_workloads: list[ComputeWorkloadItem] = []
         ready_routes: dict[str, Route] = {}
 
+        for task_id in sorted(self._transferring_tasks):
+            transfer = self._transferring_tasks[task_id]
+            if transfer.ready_time > dispatch_time:
+                continue
+            route = self._routes_by_flow.get(task_id)
+            if route is None or not route.available or route.capacity <= 0:
+                self._pending_tasks[task_id] = transfer.task
+                self._transferring_tasks.pop(task_id, None)
+                continue
+            ready_workloads.append(
+                ComputeWorkloadItem(task=transfer.task, ready_time=transfer.ready_time)
+            )
+            ready_routes[task_id] = route
+
         for task_id in sorted(self._pending_tasks):
             if task_id in self._scheduled_tasks:
                 continue
@@ -146,6 +169,15 @@ class RouteAwareComputeEngine(SimulationModule):
             if route is None or not route.available or route.capacity <= 0:
                 continue
             ready_time = self._ready_time(task, route, dispatch_time)
+            if ready_time > dispatch_time:
+                self._transferring_tasks[task_id] = _TransferringTask(
+                    task=task,
+                    route=route,
+                    ready_time=ready_time,
+                )
+                self._pending_tasks.pop(task_id, None)
+                self._request_schedule_tick(ready_time, kernel)
+                continue
             ready_workloads.append(ComputeWorkloadItem(task=task, ready_time=ready_time))
             ready_routes[task_id] = route
 
@@ -157,8 +189,32 @@ class RouteAwareComputeEngine(SimulationModule):
                 decision=decision,
             )
             self._pending_tasks.pop(item.task.task_id, None)
+            self._transferring_tasks.pop(item.task.task_id, None)
             self._available_at[decision.node_id] = decision.finish_time
             self._emit_task_lifecycle(item.task, decision, kernel)
+
+    def _apply_route_update_to_transfers(
+        self,
+        route: Route,
+        dispatch_time: float,
+        kernel: SimulationKernel,
+    ) -> None:
+        transfer = self._transferring_tasks.get(route.flow_id)
+        if transfer is None:
+            return
+        if not route.available or route.capacity <= 0:
+            self._pending_tasks[route.flow_id] = transfer.task
+            self._transferring_tasks.pop(route.flow_id, None)
+            return
+        if transfer.route == route:
+            return
+        ready_time = self._ready_time(transfer.task, route, dispatch_time)
+        self._transferring_tasks[route.flow_id] = _TransferringTask(
+            task=transfer.task,
+            route=route,
+            ready_time=ready_time,
+        )
+        self._request_schedule_tick(ready_time, kernel)
 
     def _ready_time(
         self,
