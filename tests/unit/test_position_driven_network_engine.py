@@ -647,6 +647,47 @@ def test_position_driven_engine_generates_space_link_update() -> None:
     assert space_links[0] in network.active_link_states()
 
 
+def test_position_driven_engine_skips_zero_distance_space_links() -> None:
+    kernel = SimulationKernel()
+    network = PositionDrivenNetworkEngine(
+        endpoints=(
+            GroundEndpoint(
+                endpoint_id="user-east",
+                position=(EARTH_RADIUS_KM, 0.0, 0.0),
+                min_elevation_deg=10.0,
+                max_range_km=2000.0,
+            ),
+        ),
+        compute_node_ids=("node-a",),
+        link_capacity=50.0,
+        cell_size_km=1000.0,
+        link_budget_selector=ChannelBudgetSelector(
+            calculators=(_budget_for_medium(LinkMedium.SPACE_SPACE),)
+        ),
+        space_link_max_range_km=1500.0,
+    )
+    metrics = MetricsSink()
+    kernel.register_module(network)
+    kernel.register_module(metrics)
+    kernel.schedule_event(
+        _event("orbit-a", EventType.ORBIT_UPDATE.value, _state((7000.0, 0.0, 0.0), "sat-001"))
+    )
+    kernel.schedule_event(
+        _event("orbit-b", EventType.ORBIT_UPDATE.value, _state((7000.0, 0.0, 0.0), "sat-002"))
+    )
+
+    kernel.run()
+
+    assert all(
+        not (
+            isinstance(event.payload, LinkState)
+            and event.payload.source_id == "sat-001"
+            and event.payload.target_id == "sat-002"
+        )
+        for event in metrics.events
+    )
+
+
 def test_position_driven_engine_ends_space_link_when_satellite_moves_out_of_range() -> None:
     kernel = SimulationKernel()
     network = PositionDrivenNetworkEngine(

@@ -398,6 +398,8 @@ class PositionDrivenNetworkEngine(SimulationModule):
         if left.status != "ACTIVE" or right.status != "ACTIVE":
             return None
         range_km = _distance_km(left.position, right.position)
+        if range_km <= 0.0:
+            return None
         if range_km > float(self._space_link_max_range_km):
             return None
         budget_calculator = self._budget_calculator_for(LinkMedium.SPACE_SPACE)

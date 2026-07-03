@@ -42,6 +42,12 @@ def test_frontend_sync_test() -> None:
     assert len(snapshot["satellites"]) == 72
     assert len(snapshot["ground_users"]) == 1003
     assert len(snapshot["tasks"]) == 49
+    assert sum(
+        1
+        for link in snapshot["links"]
+        if str(link["source_id"]).startswith("sat-")
+        and str(link["target_id"]).startswith("sat-")
+    ) == 233
     assert int(snapshot["event_count"]) == len(result.processed_events)
     assert len(result.frontend_events) > 0
     assert {
@@ -120,7 +126,7 @@ def test_scale_test_basic() -> None:
     summary = result.metrics_summary
 
     assert len(result.processed_events) >= 10_000
-    assert len(result.processed_events) == 13_542
+    assert len(result.processed_events) == 16_590
     assert summary["event_count"] >= 10_000
     assert summary["routes_total"] == 100
     assert summary["routes_available"] == 31

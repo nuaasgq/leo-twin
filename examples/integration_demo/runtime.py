@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from leo_twin.core import SimulationKernel, SimulationModule
 from leo_twin.models.compute import RouteAwareComputeEngine
 from leo_twin.models.network import (
+    ChannelBudgetSelector,
     LinkBudgetCalculator,
     NetworkStackRuntime,
     NetworkStackTrace,
@@ -81,6 +82,7 @@ def run_integration_demo(config: DemoConfig) -> DemoRunResult:
         satellite_position_scale_to_km=0.001,
     )
     space_ground_budget = _space_ground_budget(config)
+    space_space_budget = _space_space_budget(config)
     transport_protocol = TransportProtocol(str(config.transport_protocol))
     routing_protocol = RoutingProtocol(str(config.routing_protocol))
     network = PositionDrivenNetworkEngine(
@@ -90,8 +92,15 @@ def run_integration_demo(config: DemoConfig) -> DemoRunResult:
         link_capacity=500.0,
         propagation_speed_km_s=299792.458,
         cell_size_km=1000.0,
-        link_budget_calculator=space_ground_budget,
+        link_budget_selector=ChannelBudgetSelector(
+            calculators=(space_ground_budget, space_space_budget)
+        ),
         position_scale_to_km=0.001,
+        space_link_max_range_km=1500.0,
+        space_link_capacity=500.0,
+        space_link_cell_size_km=1500.0,
+        space_link_update_latency_epsilon_s=0.0005,
+        space_link_update_capacity_epsilon=1.0,
         transport_runtime=default_transport_runtime(transport_protocol),
         stack_runtime=NetworkStackRuntime(
             build_default_leo_protocol_stack(
@@ -190,4 +199,38 @@ def _space_ground_budget(config: DemoConfig) -> LinkBudgetCalculator:
         polarization_loss_db=0.5,
         implementation_loss_db=1.0,
         rain_fade_profile=rain_profile,
+    )
+
+
+def _space_space_budget(config: DemoConfig) -> LinkBudgetCalculator:
+    antenna = AntennaProfile(
+        antenna_id="integration-demo-isl-terminal",
+        gain_dbi=42.0,
+        beam_width_deg=2.5,
+        steering_mode="electronic",
+    )
+    return LinkBudgetCalculator(
+        transmit_terminal=RadioTerminalProfile(
+            terminal_id="integration-demo-isl-transmit",
+            antenna=antenna,
+            transmit_power_dbw=18.0,
+            system_loss_db=1.0,
+        ),
+        receive_terminal=RadioTerminalProfile(
+            terminal_id="integration-demo-isl-receive",
+            antenna=antenna,
+            transmit_power_dbw=0.0,
+            system_loss_db=1.0,
+            noise_temperature_k=260.0,
+        ),
+        channel=ChannelProfile(
+            channel_id="integration-demo-space-space",
+            medium=LinkMedium.SPACE_SPACE,
+            carrier_frequency_hz=config.carrier_frequency_hz,
+            bandwidth_hz=config.channel_bandwidth_hz,
+            loss_model_name="free_space_budget",
+        ),
+        atmospheric_loss_db=0.0,
+        polarization_loss_db=0.2,
+        implementation_loss_db=1.0,
     )
