@@ -30,6 +30,27 @@ describe("WebSocketStreamClient", () => {
     expect(sockets.map((socket) => socket.url)).toEqual(["ws://test/events", "ws://test/state"]);
     client.close();
   });
+
+  it("can disable the state snapshot stream for paced event playback", () => {
+    const sockets: MockSocket[] = [];
+    const store = new ObservabilityStore();
+    const router = new EventRouter(store);
+    const client = new WebSocketStreamClient(router, {
+      eventUrl: "ws://test/events",
+      stateUrl: "ws://test/state",
+      stateStreamEnabled: false,
+      createWebSocket: (url) => {
+        const socket = new MockSocket(url);
+        sockets.push(socket);
+        return socket;
+      }
+    });
+
+    client.connect();
+
+    expect(sockets.map((socket) => socket.url)).toEqual(["ws://test/events"]);
+    client.close();
+  });
 });
 
 class MockSocket implements WebSocketLike {

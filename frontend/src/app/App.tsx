@@ -16,6 +16,7 @@ import { Dashboard } from "../dashboard/Dashboard";
 import { SnapshotEngine, useWorldSnapshot } from "../state/snapshot_engine";
 import { WorldStateReducer } from "../state/reducer";
 import { EventRouter } from "../stream/event_router";
+import { EventPlaybackLayer } from "../stream/playback_layer";
 import { EventThrottleLayer } from "../stream/throttle_layer";
 import { WebSocketStreamClient } from "../stream/websocket_client";
 import { loadRuntimeState, loadScenarioConfig } from "./api";
@@ -41,8 +42,13 @@ export function App() {
   const [scenarioConfig, setScenarioConfig] = useState<ScenarioConfig | null>(null);
   const [generatedConfig, setGeneratedConfig] = useState<GeneratedScenarioConfig | null>(null);
   const [runtimeStatus, setRuntimeStatus] = useState<RuntimeStatusPayload>(defaultRuntimeStatus());
+  const runtimeStatusRef = useRef(runtimeStatus);
   const streamClientRef = useRef<WebSocketStreamClient | null>(null);
   const streamRouterRef = useRef<EventRouter | null>(null);
+
+  useEffect(() => {
+    runtimeStatusRef.current = runtimeStatus;
+  }, [runtimeStatus]);
 
   useEffect(() => {
     snapshotEngine.start();
@@ -85,7 +91,7 @@ export function App() {
   }, [snapshotEngine]);
 
   const startStreams = useCallback(
-    (scenario: ScenarioConfig | null) => {
+    (scenario: ScenarioConfig | null, speedFactorOverride?: number) => {
       closeStreams();
       resetWorld(scenario);
       const throttleLayer = new EventThrottleLayer(
@@ -99,9 +105,19 @@ export function App() {
         }
       );
       const router = new EventRouter(snapshotEngine, { throttleLayer });
+      const playbackLayer = new EventPlaybackLayer(
+        (events) => {
+          router.routeEvents(events);
+        },
+        {
+          speedFactor: speedFactorOverride ?? runtimeStatusRef.current.speed_factor
+        }
+      );
       const client = new WebSocketStreamClient(router, {
         batchSize: 500,
-        flushIntervalMs: 40
+        flushIntervalMs: 40,
+        playbackLayer,
+        stateStreamEnabled: false
       });
       streamRouterRef.current = router;
       streamClientRef.current = client;
@@ -122,7 +138,9 @@ export function App() {
             streamClientRef.current === null
           ) {
             loadControlState()
-              .then(({ scenario }) => startStreams(scenario))
+              .then(({ scenario, runtime }) =>
+                startStreams(scenario, message.status?.speed_factor ?? runtime.status.speed_factor)
+              )
               .catch(() => setConnectionState("degraded"));
             return;
           }
@@ -130,7 +148,12 @@ export function App() {
             const action = message.status?.last_action;
             if (action === "START" || action === "RESUME") {
               loadControlState()
-                .then(({ scenario }) => startStreams(scenario))
+                .then(({ scenario, runtime }) =>
+                  startStreams(
+                    scenario,
+                    message.status?.speed_factor ?? runtime.status.speed_factor
+                  )
+                )
                 .catch(() => setConnectionState("degraded"));
               return;
             }
@@ -163,7 +186,7 @@ export function App() {
           return;
         }
         if (runtimeStatusRequiresStreams(runtime.status)) {
-          startStreams(scenario);
+          startStreams(scenario, runtime.status.speed_factor);
         } else {
           resetWorld(scenario);
         }

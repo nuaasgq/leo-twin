@@ -1,12 +1,15 @@
 import { decodeSimEvent } from "../../core/decoder";
 import { SimEvent } from "../../core/event_types";
 import { EventRouter } from "../event_router";
+import { EventPlaybackLayer } from "../playback_layer";
 
 export interface StreamClientOptions {
   eventUrl?: string;
   stateUrl?: string;
   batchSize?: number;
   flushIntervalMs?: number;
+  playbackLayer?: EventPlaybackLayer;
+  stateStreamEnabled?: boolean;
   createWebSocket?: WebSocketFactory;
 }
 
@@ -26,6 +29,8 @@ export class WebSocketStreamClient {
   private readonly batchSize: number;
   private readonly flushIntervalMs: number;
   private readonly createWebSocket: WebSocketFactory;
+  private readonly playbackLayer: EventPlaybackLayer | null;
+  private readonly stateStreamEnabled: boolean;
   private eventSocket: WebSocketLike | null = null;
   private stateSocket: WebSocketLike | null = null;
   private flushTimer: ReturnType<typeof setTimeout> | null = null;
@@ -39,6 +44,8 @@ export class WebSocketStreamClient {
     this.stateUrl = options.stateUrl ?? websocketUrl("/stream/state");
     this.batchSize = options.batchSize ?? 200;
     this.flushIntervalMs = options.flushIntervalMs ?? 50;
+    this.playbackLayer = options.playbackLayer ?? null;
+    this.stateStreamEnabled = options.stateStreamEnabled ?? true;
     this.createWebSocket = options.createWebSocket ?? ((url) => new WebSocket(url));
   }
 
@@ -59,14 +66,16 @@ export class WebSocketStreamClient {
       }
     };
 
-    this.stateSocket = this.createWebSocket(this.stateUrl);
-    this.stateSocket.onmessage = (message) => {
-      try {
-        this.router.routeRawStateMessage(parseJsonMessage(message.data));
-      } catch (error) {
-        console.warn("ignored invalid state stream message", error);
-      }
-    };
+    if (this.stateStreamEnabled) {
+      this.stateSocket = this.createWebSocket(this.stateUrl);
+      this.stateSocket.onmessage = (message) => {
+        try {
+          this.router.routeRawStateMessage(parseJsonMessage(message.data));
+        } catch (error) {
+          console.warn("ignored invalid state stream message", error);
+        }
+      };
+    }
   }
 
   flush(): void {
@@ -78,6 +87,10 @@ export class WebSocketStreamClient {
       return;
     }
     const events = this.eventBuffer.splice(0, this.eventBuffer.length);
+    if (this.playbackLayer !== null) {
+      this.playbackLayer.pushEvents(events);
+      return;
+    }
     this.router.routeEvents(events);
   }
 
@@ -91,6 +104,7 @@ export class WebSocketStreamClient {
     this.eventSocket = null;
     this.stateSocket = null;
     this.eventBuffer.splice(0, this.eventBuffer.length);
+    this.playbackLayer?.close();
   }
 
   private scheduleFlush(): void {
