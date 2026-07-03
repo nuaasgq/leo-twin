@@ -1,0 +1,125 @@
+import { memo } from "react";
+
+import { TaskState } from "../../core/event_types";
+import { ComputeNodeRenderState, WorldSnapshot } from "../../state/snapshot_engine";
+import { KpiPanel } from "../kpi_panel/KpiPanel";
+
+export interface ComputeQueueSummary {
+  runningTasks: number;
+  finishedTasks: number;
+  computeNodes: number;
+  busiestNodeId: string;
+  nodeRows: readonly ComputeNodeQueueRow[];
+  taskRows: readonly ComputeTaskRow[];
+}
+
+export interface ComputeNodeQueueRow {
+  nodeId: string;
+  runningTasks: number;
+  finishedTasks: number;
+}
+
+export interface ComputeTaskRow {
+  taskId: string;
+  nodeId: string;
+  progress: number;
+  status: string;
+}
+
+type ComputeQueueSnapshot = Pick<WorldSnapshot, "active_tasks" | "compute_nodes">;
+
+export const ComputeQueuePanel = memo(function ComputeQueuePanel({
+  snapshot
+}: {
+  snapshot: WorldSnapshot;
+}) {
+  const summary = buildComputeQueueSummary(snapshot);
+
+  return (
+    <section className="dashboard-section compute-queue-panel" aria-label="算力队列">
+      <div className="section-title">算力队列</div>
+      <div className="kpi-grid wide">
+        <KpiPanel label="运行任务" value={String(summary.runningTasks)} />
+        <KpiPanel label="已完成" value={String(summary.finishedTasks)} />
+        <KpiPanel label="节点数" value={String(summary.computeNodes)} />
+        <KpiPanel label="最繁忙节点" value={summary.busiestNodeId} />
+      </div>
+      <div className="compute-table" aria-label="算力节点明细">
+        {summary.nodeRows.map((row) => (
+          <div className="compute-table-row" key={row.nodeId}>
+            <span>{row.nodeId}</span>
+            <span>{row.runningTasks} 运行</span>
+            <strong>{row.finishedTasks} 完成</strong>
+          </div>
+        ))}
+      </div>
+      <div className="task-strip" aria-label="当前任务">
+        {summary.taskRows.map((row) => (
+          <div className="task-strip-row" key={row.taskId}>
+            <span>{row.taskId}</span>
+            <span>{row.nodeId}</span>
+            <strong>{(row.progress * 100).toFixed(0)}%</strong>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+});
+
+export function buildComputeQueueSummary(
+  snapshot: ComputeQueueSnapshot
+): ComputeQueueSummary {
+  const nodeRows = snapshot.compute_nodes
+    .slice()
+    .sort(compareComputeNodes)
+    .map((node) => ({
+      nodeId: node.node_id,
+      runningTasks: node.running_tasks,
+      finishedTasks: node.finished_tasks
+    }));
+  const taskRows = snapshot.active_tasks
+    .slice()
+    .sort(compareTasks)
+    .slice(0, 5)
+    .map((task) => ({
+      taskId: task.task_id,
+      nodeId: task.node_id,
+      progress: task.progress,
+      status: task.status
+    }));
+  const runningTasks = nodeRows.reduce((total, row) => total + row.runningTasks, 0);
+  const finishedTasks = nodeRows.reduce((total, row) => total + row.finishedTasks, 0);
+  const busiest = nodeRows[0];
+
+  return {
+    runningTasks,
+    finishedTasks,
+    computeNodes: nodeRows.length,
+    busiestNodeId: busiest?.nodeId ?? "无",
+    nodeRows: nodeRows.slice(0, 5),
+    taskRows
+  };
+}
+
+function compareComputeNodes(
+  left: ComputeNodeRenderState,
+  right: ComputeNodeRenderState
+): number {
+  const running = right.running_tasks - left.running_tasks;
+  if (running !== 0) {
+    return running;
+  }
+  const finished = right.finished_tasks - left.finished_tasks;
+  if (finished !== 0) {
+    return finished;
+  }
+  return left.node_id.localeCompare(right.node_id);
+}
+
+function compareTasks(left: TaskState, right: TaskState): number {
+  const byNode = left.node_id.localeCompare(right.node_id);
+  if (byNode !== 0) {
+    return byNode;
+  }
+  return left.task_id.localeCompare(right.task_id);
+}

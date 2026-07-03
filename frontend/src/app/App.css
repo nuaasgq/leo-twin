@@ -249,7 +249,7 @@ body {
 
 .dashboard-page .dashboard {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-rows: repeat(3, minmax(220px, auto));
+  grid-template-rows: repeat(4, minmax(220px, auto));
   gap: 14px;
   padding: 16px;
   background: #141614;
@@ -387,7 +387,7 @@ body {
 
 .dashboard {
   display: grid;
-  grid-template-rows: repeat(6, minmax(206px, auto));
+  grid-template-rows: repeat(7, minmax(206px, auto));
   min-width: 0;
   min-height: 0;
   overflow: auto;
@@ -511,6 +511,48 @@ body {
 }
 
 .link-table-row strong {
+  color: #9bffcb;
+  font-size: 11px;
+  text-align: right;
+}
+
+.compute-table,
+.task-strip {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.compute-table-row,
+.task-strip-row {
+  display: grid;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid #2a3134;
+  padding: 6px 0;
+  color: #c9d2d5;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.compute-table-row {
+  grid-template-columns: minmax(0, 1fr) 76px 70px;
+}
+
+.task-strip-row {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr) 46px;
+}
+
+.compute-table-row span,
+.task-strip-row span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compute-table-row strong,
+.task-strip-row strong {
   color: #9bffcb;
   font-size: 11px;
   text-align: right;
