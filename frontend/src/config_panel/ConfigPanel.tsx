@@ -39,6 +39,7 @@ export function ConfigPanel({
   );
   const [speedFactor, setSpeedFactor] = useState(runtime.speed_factor);
   const [durationSeconds, setDurationSeconds] = useState(runtime.duration);
+  const [seed, setSeed] = useState(runtime.seed);
 
   useEffect(() => {
     setSatelliteCount(scenario.satellite_count);
@@ -52,7 +53,8 @@ export function ConfigPanel({
     }
     setSpeedFactor(runtime.speed_factor);
     setDurationSeconds(runtime.duration);
-  }, [runtime.mode, runtime.speed_factor, runtime.duration]);
+    setSeed(runtime.seed);
+  }, [runtime.mode, runtime.speed_factor, runtime.duration, runtime.seed]);
 
   const summaryItems = generatedScenarioSummaryItems(generatedConfig);
 
@@ -169,6 +171,20 @@ export function ConfigPanel({
         </div>
       </div>
 
+      <div className="control-group">
+        <label className="control-label" htmlFor="runtime-seed">
+          随机种子
+        </label>
+        <input
+          id="runtime-seed"
+          type="number"
+          min="0"
+          step="1"
+          value={seed}
+          onChange={(event) => setSeed(Number(event.currentTarget.value))}
+        />
+      </div>
+
       <div className="runtime-actions" aria-label="仿真运行控制">
         <button
           type="button"
@@ -179,7 +195,8 @@ export function ConfigPanel({
               compute_nodes: computeNodes,
               mode: runtimeMode,
               speed_factor: speedFactor,
-              duration: durationSeconds
+              duration: durationSeconds,
+              seed
             })
           }
         >

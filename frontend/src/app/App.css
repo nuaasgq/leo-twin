@@ -351,7 +351,8 @@ body {
   min-width: 0;
 }
 
-.config-panel select {
+.config-panel select,
+.config-panel input[type="number"] {
   width: 100%;
   border: 1px solid #30383b;
   border-radius: 4px;
