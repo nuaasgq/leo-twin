@@ -44,8 +44,8 @@ def test_runtime_mode_switching_works() -> None:
     assert controller.handle_action("STOP").status == "STOPPED"
 
 
-def test_frontend_control_messages_are_processed() -> None:
-    control_plane = _small_control_plane()
+def test_frontend_control_messages_are_processed(tmp_path) -> None:
+    control_plane = _small_control_plane(tmp_path / "sees_control.yaml")
 
     ack = control_plane.handle_raw_message(
         json.dumps(
@@ -60,7 +60,7 @@ def test_frontend_control_messages_are_processed() -> None:
         )
     )
     assert ack["ok"] is True
-    assert ack["status"]["last_action"] == "CONFIG_UPDATE"
+    assert ack["status"]["last_action"] == "INITIALIZE"
     assert control_plane.result.config.satellite_count == 24
     assert len(control_plane.result.scenario.orbit_satellites) == 24
     assert control_plane.result.config.ground_user_count == 40
@@ -72,9 +72,61 @@ def test_frontend_control_messages_are_processed() -> None:
     assert runtime_ack["status"]["status"] == "RUNNING"
 
 
-def test_system_remains_deterministic_under_config_changes() -> None:
-    first = _small_control_plane()
-    second = _small_control_plane()
+def test_initialize_writes_config_and_start_gates_streams(tmp_path) -> None:
+    config_path = tmp_path / "sees_control.yaml"
+    control_plane = _small_control_plane(config_path)
+
+    assert control_plane.stream_events() == ()
+    assert control_plane.stream_snapshots() == ()
+    assert control_plane.visible_snapshot()["satellites"] == []
+    assert control_plane.visible_snapshot()["event_count"] == 0
+
+    init_ack = control_plane.handle_raw_message(
+        json.dumps(
+            {
+                "type": "RUNTIME_CONTROL",
+                "action": "INITIALIZE",
+                "payload": {
+                    "satellite_count": 24,
+                    "user_count": 40,
+                    "mode": "ACCELERATED",
+                    "speed_factor": 10,
+                },
+            }
+        )
+    )
+
+    assert init_ack["ok"] is True
+    assert init_ack["status"]["last_action"] == "INITIALIZE"
+    assert init_ack["status"]["status"] == "STOPPED"
+    assert "satellite_count: 24" in config_path.read_text(encoding="utf-8")
+    assert "speed_factor: 10" in config_path.read_text(encoding="utf-8")
+    assert control_plane.result.config.satellite_count == 24
+    assert control_plane.stream_events() == ()
+
+    start_ack = control_plane.handle_raw_message(
+        json.dumps({"type": "RUNTIME_CONTROL", "action": "START"})
+    )
+    assert start_ack["status"]["status"] == "RUNNING"
+    assert len(control_plane.stream_events()) > 0
+    assert len(control_plane.stream_snapshots()) > 0
+
+    stop_ack = control_plane.handle_raw_message(
+        json.dumps({"type": "RUNTIME_CONTROL", "action": "STOP"})
+    )
+    assert stop_ack["status"]["status"] == "STOPPED"
+    assert control_plane.stream_events() == ()
+
+    reset_ack = control_plane.handle_raw_message(
+        json.dumps({"type": "RUNTIME_CONTROL", "action": "RESET"})
+    )
+    assert reset_ack["status"]["last_action"] == "RESET"
+    assert control_plane.visible_snapshot()["event_count"] == 0
+
+
+def test_system_remains_deterministic_under_config_changes(tmp_path) -> None:
+    first = _small_control_plane(tmp_path / "first.yaml")
+    second = _small_control_plane(tmp_path / "second.yaml")
     command = json.dumps(
         {
             "type": "CONFIG_UPDATE",
@@ -95,8 +147,11 @@ def test_system_remains_deterministic_under_config_changes() -> None:
     assert first.result.final_snapshot == second.result.final_snapshot
 
 
-def _small_control_plane() -> DemoControlPlane:
-    return DemoControlPlane.from_result(run_integration_demo(_small_demo_config()))
+def _small_control_plane(config_path: object = "configs/sees_control.yaml") -> DemoControlPlane:
+    return DemoControlPlane.from_result(
+        run_integration_demo(_small_demo_config()),
+        config_output_path=config_path,
+    )
 
 
 def _small_demo_config() -> DemoConfig:

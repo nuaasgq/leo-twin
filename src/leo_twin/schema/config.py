@@ -81,6 +81,7 @@ class RuntimeConfig:
         if not isinstance(self.mode, RuntimeMode):
             object.__setattr__(self, "mode", RuntimeMode(str(self.mode)))
         _require_speed_factor(self.speed_factor)
+        object.__setattr__(self, "speed_factor", float(self.speed_factor))
         _require_int(self.seed, "runtime.seed")
         _require_positive_int(self.duration, "runtime.duration")
 

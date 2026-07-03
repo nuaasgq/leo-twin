@@ -8,11 +8,11 @@ export const OrbitPanel = memo(function OrbitPanel({ snapshot }: { snapshot: Wor
   const kpis = snapshot.metrics_summary.orbit;
 
   return (
-    <section className="dashboard-section" aria-label="Orbit KPI">
-      <div className="section-title">Orbit</div>
+    <section className="dashboard-section" aria-label="轨道指标">
+      <div className="section-title">轨道</div>
       <div className="kpi-grid">
-        <KpiPanel label="Active" value={String(kpis.activeSatellites)} />
-        <KpiPanel label="Coverage" value={`${(kpis.coverageRatio * 100).toFixed(1)}%`} />
+        <KpiPanel label="活跃卫星" value={String(kpis.activeSatellites)} />
+        <KpiPanel label="覆盖率" value={`${(kpis.coverageRatio * 100).toFixed(1)}%`} />
       </div>
       <div className="chart-strip compact">
         <ResponsiveContainer width="100%" height={112}>

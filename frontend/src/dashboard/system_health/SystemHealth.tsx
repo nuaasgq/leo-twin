@@ -9,11 +9,11 @@ export const SystemHealth = memo(function SystemHealth({ snapshot }: { snapshot:
   const eventSeries = health.eventSeries;
 
   return (
-    <section className="dashboard-section" aria-label="System health">
-      <div className="section-title">System Health</div>
+    <section className="dashboard-section" aria-label="系统健康状态">
+      <div className="section-title">系统状态</div>
       <div className="kpi-grid">
-        <KpiPanel label="Event Rate" value={health.eventRate.toFixed(2)} />
-        <KpiPanel label="Load" value={`${(health.systemLoad * 100).toFixed(1)}%`} />
+        <KpiPanel label="事件速率" value={health.eventRate.toFixed(2)} />
+        <KpiPanel label="负载" value={`${(health.systemLoad * 100).toFixed(1)}%`} />
       </div>
       <div className="chart-strip compact">
         <ResponsiveContainer width="100%" height={112}>

@@ -75,6 +75,12 @@ def load_config(path: str | Path | None = None) -> SEESConfig:
     return config_from_mapping(raw)
 
 
+def write_config(path: str | Path, config: SEESConfig) -> None:
+    """Write a deterministic YAML config file."""
+
+    Path(path).write_text(_config_yaml(config), encoding="utf-8")
+
+
 def config_from_mapping(raw: Mapping[str, Any]) -> SEESConfig:
     """Validate raw mapping data and fill missing values from defaults."""
 
@@ -238,3 +244,74 @@ def _scalar(value: str) -> Any:
         return float(value)
     except ValueError:
         return value
+
+
+def _config_yaml(config: SEESConfig) -> str:
+    data = config_to_dict(config)
+    lines: list[str] = []
+    for section_name in ("scenario", "runtime", "ui"):
+        lines.append(f"{section_name}:")
+        section = data[section_name]
+        if not isinstance(section, Mapping):
+            raise ConfigValidationError(f"{section_name} must be a mapping")
+        _append_yaml_mapping(lines, section, indent=2, context=section_name)
+        lines.append("")
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _append_yaml_mapping(
+    lines: list[str],
+    data: Mapping[str, Any],
+    indent: int,
+    context: str,
+) -> None:
+    prefix = " " * indent
+    for key in _ordered_keys(context, data):
+        value = data[key]
+        if isinstance(value, Mapping):
+            lines.append(f"{prefix}{key}:")
+            _append_yaml_mapping(lines, value, indent + 2, context=f"{context}.{key}")
+        else:
+            lines.append(f"{prefix}{key}: {_yaml_scalar(value)}")
+
+
+def _ordered_keys(context: str, data: Mapping[str, Any]) -> tuple[str, ...]:
+    preferred = {
+        "scenario": (
+            "satellite_count",
+            "user_count",
+            "compute_nodes",
+            "ground_station_count",
+            "cell_count",
+            "orbit",
+            "traffic_model",
+        ),
+        "scenario.orbit": (
+            "update_interval_seconds",
+            "plane_count",
+            "altitude_m",
+            "inclination_deg",
+        ),
+        "scenario.traffic_model": (
+            "flow_interval_seconds",
+            "task_interval_seconds",
+            "flow_demand_capacity",
+            "task_compute_demand",
+        ),
+        "runtime": ("mode", "speed_factor", "seed", "duration"),
+        "ui": ("visualization", "update_frequency_hz", "dashboard_layout"),
+        "ui.visualization": ("satellites", "links", "users", "metrics"),
+    }.get(context, ())
+    ordered = [key for key in preferred if key in data]
+    ordered.extend(sorted(str(key) for key in data if str(key) not in preferred))
+    return tuple(ordered)
+
+
+def _yaml_scalar(value: Any) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if value is None:
+        return "null"
+    if isinstance(value, str):
+        return value
+    return str(value)

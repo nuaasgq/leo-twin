@@ -24,10 +24,12 @@ class RuntimeStatus(StrEnum):
 class RuntimeAction(StrEnum):
     """Actions accepted by the runtime control plane."""
 
+    INITIALIZE = "INITIALIZE"
     START = "START"
     STOP = "STOP"
     PAUSE = "PAUSE"
     RESUME = "RESUME"
+    RESET = "RESET"
     SET_SPEED = "SET_SPEED"
     SET_MODE = "SET_MODE"
 
@@ -142,6 +144,15 @@ class RuntimeController:
     def update_config(self, update: dict[str, object]) -> RuntimeSnapshot:
         return self.apply_config(merge_config_update(self._config, update))
 
+    def initialize(self, update: dict[str, object] | None = None) -> RuntimeSnapshot:
+        if update:
+            self._config = merge_config_update(self._config, update)
+            self._clock.apply_runtime_config(self._config)
+            self._config_version += 1
+        self._status = RuntimeStatus.STOPPED
+        self._last_action = RuntimeAction.INITIALIZE.value
+        return self.snapshot()
+
     def start(self) -> RuntimeSnapshot:
         self._status = RuntimeStatus.RUNNING
         if self._clock.mode == RuntimeMode.PAUSED:
@@ -169,6 +180,13 @@ class RuntimeController:
         self._last_action = RuntimeAction.STOP.value
         return self.snapshot()
 
+    def reset(self) -> RuntimeSnapshot:
+        self._status = RuntimeStatus.STOPPED
+        if self._clock.mode == RuntimeMode.PAUSED:
+            self._clock.set_mode(self._config.runtime.mode)
+        self._last_action = RuntimeAction.RESET.value
+        return self.snapshot()
+
     def set_speed_factor(self, speed_factor: float) -> RuntimeSnapshot:
         self.apply_config(merge_config_update(self._config, {"speed_factor": speed_factor}))
         self._last_action = RuntimeAction.SET_SPEED.value
@@ -189,6 +207,8 @@ class RuntimeController:
     ) -> RuntimeSnapshot:
         selected = RuntimeAction(str(action))
         data = {} if payload is None else payload
+        if selected == RuntimeAction.INITIALIZE:
+            return self.initialize(data)
         if selected == RuntimeAction.START:
             return self.start()
         if selected == RuntimeAction.STOP:
@@ -197,6 +217,8 @@ class RuntimeController:
             return self.pause()
         if selected == RuntimeAction.RESUME:
             return self.resume()
+        if selected == RuntimeAction.RESET:
+            return self.reset()
         if selected == RuntimeAction.SET_SPEED:
             return self.set_speed_factor(float(data["speed_factor"]))
         if selected == RuntimeAction.SET_MODE:

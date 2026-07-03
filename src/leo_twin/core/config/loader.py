@@ -7,6 +7,7 @@ from leo_twin.schema.config_loader import (
     load_config,
     merge_config_update,
     parse_simple_yaml,
+    write_config,
 )
 
 __all__ = [
@@ -16,4 +17,5 @@ __all__ = [
     "load_config",
     "merge_config_update",
     "parse_simple_yaml",
+    "write_config",
 ]

@@ -14,7 +14,6 @@ from examples.integration_demo.control_plane import DemoControlPlane
 from examples.integration_demo.runtime import DemoRunResult, run_integration_demo
 from examples.integration_demo.serialization import (
     JsonValue,
-    event_to_json,
     events_jsonl,
     stable_json,
     stable_json_pretty,
@@ -115,7 +114,7 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                 self._send_json(result.scenario.frontend_config)
                 return
             if path == result.config.metrics_snapshot:
-                self._send_json(result.final_snapshot)
+                self._send_json(control_plane.visible_snapshot())
                 return
             if path == "/health":
                 self._send_json({"status": "ok", "events": len(result.processed_events)})
@@ -132,14 +131,13 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
             result = control_plane.result
             if path == result.config.websocket_events:
                 self._accept_websocket()
-                for event in result.processed_events:
-                    if str(event.event_type) in _FRONTEND_EVENT_TYPES:
-                        self._send_ws_json(event_to_json(event))
+                for event in control_plane.stream_events():
+                    self._send_ws_json(event)
                 self._close_websocket()
                 return
             if path == result.config.websocket_state:
                 self._accept_websocket()
-                for snapshot in result.state_timeline:
+                for snapshot in control_plane.stream_snapshots():
                     self._send_ws_json(snapshot)
                 self._close_websocket()
                 return

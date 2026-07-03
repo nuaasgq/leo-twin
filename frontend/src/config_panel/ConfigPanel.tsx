@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { RuntimeStatusPayload } from "../core/event_types";
+import { RuntimeMode, RuntimeStatusPayload } from "../core/event_types";
 import { RuntimeAction } from "./controlClient";
 
 export interface ScenarioControlValues {
@@ -11,18 +11,19 @@ export interface ScenarioControlValues {
 export interface ConfigPanelProps {
   scenario: ScenarioControlValues;
   runtime: RuntimeStatusPayload;
-  onConfigUpdate: (payload: Record<string, unknown>) => void;
   onRuntimeControl: (action: RuntimeAction, payload?: Record<string, unknown>) => void;
 }
 
 export function ConfigPanel({
   scenario,
   runtime,
-  onConfigUpdate,
   onRuntimeControl
 }: ConfigPanelProps) {
   const [satelliteCount, setSatelliteCount] = useState(scenario.satellite_count);
   const [userCount, setUserCount] = useState(scenario.user_count);
+  const [runtimeMode, setRuntimeMode] = useState<Exclude<RuntimeMode, "PAUSED">>(
+    runtime.mode === "ACCELERATED" ? "ACCELERATED" : "REAL_TIME"
+  );
   const [speedFactor, setSpeedFactor] = useState(runtime.speed_factor);
 
   useEffect(() => {
@@ -31,19 +32,24 @@ export function ConfigPanel({
   }, [scenario.satellite_count, scenario.user_count]);
 
   useEffect(() => {
+    if (runtime.mode !== "PAUSED") {
+      setRuntimeMode(runtime.mode);
+    }
     setSpeedFactor(runtime.speed_factor);
-  }, [runtime.speed_factor]);
+  }, [runtime.mode, runtime.speed_factor]);
 
   return (
-    <section className="config-panel" aria-label="Configuration control panel">
+    <section className="config-panel" aria-label="仿真配置与控制面板">
       <div className="config-panel-header">
-        <div className="section-title">Control Plane</div>
-        <div className={`runtime-badge ${runtime.status.toLowerCase()}`}>{runtime.status}</div>
+        <div className="section-title">仿真控制</div>
+        <div className={`runtime-badge ${runtime.status.toLowerCase()}`}>
+          {runtimeStatusLabel(runtime)}
+        </div>
       </div>
 
       <div className="control-group">
         <label className="control-label" htmlFor="satellite-count">
-          Satellites
+          卫星数量
         </label>
         <div className="control-row">
           <input
@@ -54,8 +60,6 @@ export function ConfigPanel({
             step="12"
             value={satelliteCount}
             onChange={(event) => setSatelliteCount(Number(event.currentTarget.value))}
-            onBlur={() => onConfigUpdate({ satellite_count: satelliteCount })}
-            onPointerUp={() => onConfigUpdate({ satellite_count: satelliteCount })}
           />
           <output>{satelliteCount}</output>
         </div>
@@ -63,7 +67,7 @@ export function ConfigPanel({
 
       <div className="control-group">
         <label className="control-label" htmlFor="user-count">
-          Users
+          用户数量
         </label>
         <div className="control-row">
           <input
@@ -74,8 +78,6 @@ export function ConfigPanel({
             step="10"
             value={userCount}
             onChange={(event) => setUserCount(Number(event.currentTarget.value))}
-            onBlur={() => onConfigUpdate({ user_count: userCount })}
-            onPointerUp={() => onConfigUpdate({ user_count: userCount })}
           />
           <output>{userCount}</output>
         </div>
@@ -83,25 +85,21 @@ export function ConfigPanel({
 
       <div className="control-group">
         <label className="control-label" htmlFor="runtime-mode">
-          Mode
+          运行模式
         </label>
         <select
           id="runtime-mode"
-          value={runtime.mode === "PAUSED" ? "REAL_TIME" : runtime.mode}
-          onChange={(event) =>
-            onRuntimeControl("SET_MODE", {
-              mode: event.currentTarget.value
-            })
-          }
+          value={runtimeMode}
+          onChange={(event) => setRuntimeMode(event.currentTarget.value as Exclude<RuntimeMode, "PAUSED">)}
         >
-          <option value="REAL_TIME">REAL_TIME</option>
-          <option value="ACCELERATED">ACCELERATED</option>
+          <option value="REAL_TIME">实时运行</option>
+          <option value="ACCELERATED">加速运行</option>
         </select>
       </div>
 
       <div className="control-group">
         <label className="control-label" htmlFor="speed-factor">
-          Speed
+          仿真倍率
         </label>
         <div className="control-row">
           <input
@@ -112,24 +110,54 @@ export function ConfigPanel({
             step="1"
             value={speedFactor}
             onChange={(event) => setSpeedFactor(Number(event.currentTarget.value))}
-            onBlur={() => onRuntimeControl("SET_SPEED", { speed_factor: speedFactor })}
-            onPointerUp={() => onRuntimeControl("SET_SPEED", { speed_factor: speedFactor })}
           />
           <output>{speedFactor}x</output>
         </div>
       </div>
 
-      <div className="runtime-actions" aria-label="Runtime actions">
-        <button type="button" onClick={() => onRuntimeControl("START")}>
-          START
+      <div className="runtime-actions" aria-label="仿真运行控制">
+        <button
+          type="button"
+          onClick={() =>
+            onRuntimeControl("INITIALIZE", {
+              satellite_count: satelliteCount,
+              user_count: userCount,
+              mode: runtimeMode,
+              speed_factor: speedFactor
+            })
+          }
+        >
+          初始化
         </button>
-        <button type="button" onClick={() => onRuntimeControl("PAUSE")}>
-          PAUSE
+        <button type="button" onClick={() => onRuntimeControl("START")}>
+          开始
         </button>
         <button type="button" onClick={() => onRuntimeControl("STOP")}>
-          STOP
+          停止
+        </button>
+        <button type="button" onClick={() => onRuntimeControl("RESET")}>
+          重置
         </button>
       </div>
     </section>
   );
+}
+
+function runtimeStatusLabel(runtime: RuntimeStatusPayload): string {
+  if (runtime.last_action === "INIT") {
+    return "未初始化";
+  }
+  if (runtime.status === "RUNNING") {
+    return "运行中";
+  }
+  if (runtime.status === "PAUSED") {
+    return "已暂停";
+  }
+  if (runtime.last_action === "INITIALIZE") {
+    return "已初始化";
+  }
+  if (runtime.last_action === "RESET") {
+    return "初始状态";
+  }
+  return "已停止";
 }

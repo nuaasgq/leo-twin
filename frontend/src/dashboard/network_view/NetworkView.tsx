@@ -9,12 +9,12 @@ export const NetworkView = memo(function NetworkView({ snapshot }: { snapshot: W
   const chartData = kpis.series;
 
   return (
-    <section className="dashboard-section" aria-label="Network KPI">
-      <div className="section-title">Network</div>
+    <section className="dashboard-section" aria-label="网络指标">
+      <div className="section-title">网络</div>
       <div className="kpi-grid">
-        <KpiPanel label="Latency" value={`${kpis.latency.toFixed(2)} ms`} />
-        <KpiPanel label="Throughput" value={`${kpis.throughput.toFixed(1)}`} />
-        <KpiPanel label="Utilization" value={`${(kpis.linkUtilization * 100).toFixed(1)}%`} />
+        <KpiPanel label="时延" value={`${kpis.latency.toFixed(2)} ms`} />
+        <KpiPanel label="吞吐量" value={`${kpis.throughput.toFixed(1)}`} />
+        <KpiPanel label="利用率" value={`${(kpis.linkUtilization * 100).toFixed(1)}%`} />
       </div>
       <div className="chart-strip">
         <ResponsiveContainer width="100%" height={128}>

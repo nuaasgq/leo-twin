@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
+from leo_twin.schema.config_loader import write_config
+from leo_twin.services.control import RuntimeAction, RuntimeStatus
 from leo_twin.services.control import (
     RuntimeController,
     control_error,
@@ -17,6 +20,21 @@ from examples.integration_demo.config import (
     demo_config_to_sees_config,
 )
 from examples.integration_demo.runtime import DemoRunResult, run_integration_demo
+from examples.integration_demo.serialization import JsonValue, event_to_json
+
+
+_FRONTEND_EVENT_TYPES = frozenset(
+    {
+        "ORBIT_UPDATE",
+        "LINK_UPDATE",
+        "ACCESS_START",
+        "ACCESS_END",
+        "ROUTE_UPDATE",
+        "TASK_START",
+        "TASK_FINISH",
+        "METRIC_SAMPLE",
+    }
+)
 
 
 @dataclass
@@ -26,14 +44,20 @@ class DemoControlPlane:
     _base_config: DemoConfig
     _result: DemoRunResult
     _controller: RuntimeController
+    _config_output_path: Path
 
     @classmethod
-    def from_result(cls, result: DemoRunResult) -> "DemoControlPlane":
+    def from_result(
+        cls,
+        result: DemoRunResult,
+        config_output_path: str | Path = "configs/sees_control.yaml",
+    ) -> "DemoControlPlane":
         controller = RuntimeController(demo_config_to_sees_config(result.config))
         return cls(
             _base_config=result.config,
             _result=result,
             _controller=controller,
+            _config_output_path=Path(config_output_path),
         )
 
     @property
@@ -51,24 +75,34 @@ class DemoControlPlane:
             "config": self._controller.config_json(),
         }
 
+    def visible_snapshot(self) -> dict[str, JsonValue]:
+        if self._controller.snapshot().status == RuntimeStatus.RUNNING:
+            return self._result.final_snapshot
+        return _initial_snapshot(self._result)
+
+    def stream_events(self) -> tuple[dict[str, JsonValue], ...]:
+        if self._controller.snapshot().status != RuntimeStatus.RUNNING:
+            return ()
+        return tuple(
+            event_to_json(event)
+            for event in self._result.processed_events
+            if str(event.event_type) in _FRONTEND_EVENT_TYPES
+        )
+
+    def stream_snapshots(self) -> tuple[dict[str, JsonValue], ...]:
+        if self._controller.snapshot().status != RuntimeStatus.RUNNING:
+            return ()
+        return self._result.state_timeline
+
     def handle_raw_message(self, raw: str | bytes) -> dict[str, Any]:
         try:
             message = parse_control_message(raw)
             if message.type.value == "CONFIG_UPDATE":
-                snapshot = self._controller.update_config(message.payload)
-                updated_demo_config = demo_config_from_sees_config(
-                    self._controller.config,
-                    self._base_config,
-                )
-                self._result = run_integration_demo(updated_demo_config)
-                return {
-                    "type": "CONTROL_ACK",
-                    "ok": True,
-                    "status": snapshot.to_json(),
-                    "config": self._controller.config_json(),
-                }
+                return self._initialize(message.payload)
             if message.action is None:
                 raise ValueError("runtime control message requires an action")
+            if message.action == RuntimeAction.INITIALIZE:
+                return self._initialize(message.payload)
             snapshot = self._controller.handle_action(message.action, message.payload)
             return {
                 "type": "CONTROL_ACK",
@@ -78,3 +112,42 @@ class DemoControlPlane:
             }
         except Exception as exc:  # noqa: BLE001 - returned as protocol error
             return control_error(exc)
+
+    def _initialize(self, payload: dict[str, Any]) -> dict[str, Any]:
+        snapshot = self._controller.initialize(payload)
+        write_config(self._config_output_path, self._controller.config)
+        updated_demo_config = demo_config_from_sees_config(
+            self._controller.config,
+            self._base_config,
+        )
+        self._result = run_integration_demo(updated_demo_config)
+        return {
+            "type": "CONTROL_ACK",
+            "ok": True,
+            "status": snapshot.to_json(),
+            "config": self._controller.config_json(),
+        }
+
+
+def _initial_snapshot(result: DemoRunResult) -> dict[str, JsonValue]:
+    return {
+        "satellites": [],
+        "ground_users": [
+            {
+                "user_id": user.user_id,
+                "cell_id": user.cell_id,
+                "position": list(user.position),
+                "status": user.status,
+            }
+            for user in sorted(
+                result.scenario.ground_user_render_states,
+                key=lambda item: item.user_id,
+            )
+        ],
+        "links": [],
+        "routes": [],
+        "tasks": [],
+        "metrics": [],
+        "event_count": 0,
+        "last_sim_time": 0.0,
+    }

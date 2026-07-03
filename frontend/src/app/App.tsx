@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CesiumGlobe } from "../3d/cesium/CesiumGlobe";
 import { ConfigPanel, ScenarioControlValues } from "../config_panel/ConfigPanel";
@@ -14,7 +14,7 @@ import { WorldStateReducer } from "../state/reducer";
 import { EventRouter } from "../stream/event_router";
 import { EventThrottleLayer } from "../stream/throttle_layer";
 import { WebSocketStreamClient } from "../stream/websocket_client";
-import { loadMetricsSnapshot, loadRuntimeStatus, loadScenarioConfig } from "./api";
+import { loadRuntimeStatus, loadScenarioConfig } from "./api";
 import "./App.css";
 
 export function App() {
@@ -35,16 +35,35 @@ export function App() {
   );
   const [scenarioConfig, setScenarioConfig] = useState<ScenarioConfig | null>(null);
   const [runtimeStatus, setRuntimeStatus] = useState<RuntimeStatusPayload>(defaultRuntimeStatus());
+  const streamClientRef = useRef<WebSocketStreamClient | null>(null);
+  const streamRouterRef = useRef<EventRouter | null>(null);
 
   useEffect(() => {
     snapshotEngine.start();
     return () => snapshotEngine.stop();
   }, [snapshotEngine]);
 
-  const refreshSnapshot = useCallback(async () => {
-    const [scenario, metrics, runtime] = await Promise.all([
+  const closeStreams = useCallback(() => {
+    streamClientRef.current?.close();
+    streamRouterRef.current?.close();
+    streamClientRef.current = null;
+    streamRouterRef.current = null;
+  }, []);
+
+  const resetWorld = useCallback(
+    (scenario: ScenarioConfig | null) => {
+      reducer.reset();
+      if (scenario !== null) {
+        snapshotEngine.applyScenarioConfig(scenario);
+      }
+      snapshotEngine.publishNow();
+    },
+    [reducer, snapshotEngine]
+  );
+
+  const loadControlState = useCallback(async () => {
+    const [scenario, runtime] = await Promise.all([
       loadScenarioConfig(),
-      loadMetricsSnapshot(),
       loadRuntimeStatus()
     ]);
     setScenarioConfig(scenario);
@@ -54,9 +73,35 @@ export function App() {
       ...runtime
     }));
     snapshotEngine.applyScenarioConfig(scenario);
-    snapshotEngine.applySnapshot(metrics);
     snapshotEngine.publishNow();
+    return { scenario, runtime };
   }, [snapshotEngine]);
+
+  const startStreams = useCallback(
+    (scenario: ScenarioConfig | null) => {
+      closeStreams();
+      resetWorld(scenario);
+      const throttleLayer = new EventThrottleLayer(
+        (events) => {
+          snapshotEngine.applyEvents(events);
+        },
+        {
+          flushIntervalMs: 20,
+          maxEventsPerFlush: 10_000,
+          dropRedundantUpdates: true
+        }
+      );
+      const router = new EventRouter(snapshotEngine, { throttleLayer });
+      const client = new WebSocketStreamClient(router, {
+        batchSize: 500,
+        flushIntervalMs: 40
+      });
+      streamRouterRef.current = router;
+      streamClientRef.current = client;
+      client.connect();
+    },
+    [closeStreams, resetWorld, snapshotEngine]
+  );
 
   const controlClient = useMemo(
     () =>
@@ -64,11 +109,27 @@ export function App() {
         onMessage: (message) => {
           handleControlMessage(message, setRuntimeStatus);
           if (message.ok === true && message.type === "CONTROL_ACK") {
-            refreshSnapshot().catch(() => setConnectionState("degraded"));
+            const action = message.status?.last_action;
+            if (action === "START") {
+              loadControlState()
+                .then(({ scenario }) => startStreams(scenario))
+                .catch(() => setConnectionState("degraded"));
+              return;
+            }
+            if (action === "STOP") {
+              closeStreams();
+              return;
+            }
+            if (action === "RESET" || action === "INITIALIZE" || action === "CONFIG_UPDATE") {
+              closeStreams();
+              loadControlState()
+                .then(({ scenario }) => resetWorld(scenario))
+                .catch(() => setConnectionState("degraded"));
+            }
           }
         }
       }),
-    [refreshSnapshot]
+    [closeStreams, loadControlState, resetWorld, startStreams]
   );
 
   useEffect(() => {
@@ -78,48 +139,12 @@ export function App() {
 
   useEffect(() => {
     let closed = false;
-    const throttleLayer = new EventThrottleLayer(
-      (events) => {
-        snapshotEngine.applyEvents(events);
-      },
-      {
-        flushIntervalMs: 20,
-        maxEventsPerFlush: 10_000,
-        dropRedundantUpdates: true
-      }
-    );
-    const router = new EventRouter(snapshotEngine, { throttleLayer });
-    const client = new WebSocketStreamClient(router, {
-      batchSize: 500,
-      flushIntervalMs: 40
-    });
-
-    Promise.allSettled([loadScenarioConfig(), loadMetricsSnapshot(), loadRuntimeStatus()])
-      .then(([scenario, metrics, runtime]) => {
+    loadControlState()
+      .then(({ scenario }) => {
         if (closed) {
           return;
         }
-        if (scenario.status === "fulfilled") {
-          snapshotEngine.applyScenarioConfig(scenario.value);
-          setScenarioConfig(scenario.value);
-          setRuntimeStatus((previous) => ({
-            ...previous,
-            ...scenario.value.runtime,
-            status: scenario.value.runtime?.status ?? previous.status,
-            mode: scenario.value.runtime?.mode ?? previous.mode,
-            speed_factor: scenario.value.runtime?.speed_factor ?? previous.speed_factor,
-            seed: scenario.value.runtime?.seed ?? previous.seed,
-            duration: scenario.value.runtime?.duration ?? previous.duration
-          }));
-        }
-        if (runtime.status === "fulfilled") {
-          setRuntimeStatus(runtime.value);
-        }
-        if (metrics.status === "fulfilled") {
-          snapshotEngine.applySnapshot(metrics.value);
-        }
-        snapshotEngine.publishNow();
-        client.connect();
+        resetWorld(scenario);
         setConnectionState("live");
       })
       .catch(() => {
@@ -130,19 +155,11 @@ export function App() {
 
     return () => {
       closed = true;
-      client.close();
-      router.close();
+      closeStreams();
     };
-  }, [snapshotEngine]);
+  }, [closeStreams, loadControlState, resetWorld]);
 
   const scenarioControls = scenarioControlValues(scenarioConfig, snapshot.satellites.length);
-
-  const sendConfigUpdate = useCallback(
-    (payload: Record<string, unknown>) => {
-      controlClient.sendConfigUpdate(payload);
-    },
-    [controlClient]
-  );
 
   const sendRuntimeControl = useCallback(
     (action: RuntimeAction, payload: Record<string, unknown> = {}) => {
@@ -156,9 +173,11 @@ export function App() {
       <header className="topbar">
         <div className="brand-block">
           <div className="brand-title">LEO-Twin</div>
-          <div className="brand-subtitle">Observability Console</div>
+          <div className="brand-subtitle">低轨卫星互联网仿真控制台</div>
         </div>
-        <div className={`connection-pill ${connectionState}`}>{connectionState}</div>
+        <div className={`connection-pill ${connectionState}`}>
+          {connectionStateLabel(connectionState)}
+        </div>
       </header>
       <section className="workspace">
         <div className="globe-panel">
@@ -168,7 +187,6 @@ export function App() {
           <ConfigPanel
             scenario={scenarioControls}
             runtime={runtimeStatus}
-            onConfigUpdate={sendConfigUpdate}
             onRuntimeControl={sendRuntimeControl}
           />
           <Dashboard snapshot={snapshot} />
@@ -176,6 +194,16 @@ export function App() {
       </section>
     </main>
   );
+}
+
+function connectionStateLabel(state: "connecting" | "live" | "degraded"): string {
+  if (state === "connecting") {
+    return "连接中";
+  }
+  if (state === "live") {
+    return "已连接";
+  }
+  return "连接异常";
 }
 
 function defaultRuntimeStatus(): RuntimeStatusPayload {

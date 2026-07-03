@@ -8,7 +8,7 @@ import { SystemHealth } from "./system_health/SystemHealth";
 
 export const Dashboard = memo(function Dashboard({ snapshot }: { snapshot: WorldSnapshot }) {
   return (
-    <aside className="dashboard" aria-label="Observability dashboard">
+    <aside className="dashboard" aria-label="仿真状态仪表盘">
       <NetworkView snapshot={snapshot} />
       <ComputeView snapshot={snapshot} />
       <OrbitPanel snapshot={snapshot} />

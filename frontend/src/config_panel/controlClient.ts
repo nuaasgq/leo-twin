@@ -1,7 +1,15 @@
 import { RuntimeStatusPayload } from "../core/event_types";
 import { websocketUrl } from "../stream/websocket_client";
 
-export type RuntimeAction = "START" | "STOP" | "PAUSE" | "RESUME" | "SET_SPEED" | "SET_MODE";
+export type RuntimeAction =
+  | "INITIALIZE"
+  | "START"
+  | "STOP"
+  | "PAUSE"
+  | "RESUME"
+  | "RESET"
+  | "SET_SPEED"
+  | "SET_MODE";
 
 export interface ControlAck {
   type: "CONTROL_ACK" | "RUNTIME_STATUS";

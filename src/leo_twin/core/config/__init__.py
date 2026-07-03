@@ -7,6 +7,7 @@ from leo_twin.core.config.loader import (
     load_config,
     merge_config_update,
     parse_simple_yaml,
+    write_config,
 )
 from leo_twin.core.config.schema import (
     OrbitParameters,
@@ -36,4 +37,5 @@ __all__ = [
     "load_config",
     "merge_config_update",
     "parse_simple_yaml",
+    "write_config",
 ]
