@@ -73,6 +73,9 @@ describe("buildLinkProtocolSummary", () => {
       bestRouteId: "route-fast",
       bestPath: "user -> sat-a -> sat-b -> node",
       bestHopCount: 3,
+      averageHopCount: 2.5,
+      maxHopCount: 3,
+      gatewayRoutes: 0,
       bestLatency: 1.5,
       bottleneckCapacity: 30,
       spaceLinks: 2,
@@ -135,6 +138,9 @@ describe("buildLinkProtocolSummary", () => {
 
     expect(summary.bestRouteId).toBe("route-selected");
     expect(summary.bestPath).toBe("x -> y");
+    expect(summary.averageHopCount).toBe(1);
+    expect(summary.maxHopCount).toBe(1);
+    expect(summary.gatewayRoutes).toBe(0);
     expect(summary.transportProtocol).toBe("TCP");
     expect(summary.routingProtocol).toBe("LINK_STATE");
     expect(summary.transportProtocolLabel).toBe("TCP 可靠传输");

@@ -10,6 +10,9 @@ export interface LinkProtocolSummary {
   bestRouteId: string;
   bestPath: string;
   bestHopCount: number;
+  averageHopCount: number;
+  maxHopCount: number;
+  gatewayRoutes: number;
   bestLatency: number;
   bottleneckCapacity: number;
   spaceLinks: number;
@@ -53,6 +56,9 @@ export const LinkProtocolPanel = memo(function LinkProtocolPanel({
         <KpiPanel label="最佳时延" value={`${summary.bestLatency.toFixed(3)} s`} />
         <KpiPanel label="瓶颈容量" value={`${summary.bottleneckCapacity.toFixed(1)} Mbps`} />
         <KpiPanel label="路径跳数" value={String(summary.bestHopCount)} />
+        <KpiPanel label="平均跳数" value={summary.averageHopCount.toFixed(1)} />
+        <KpiPanel label="最长跳数" value={String(summary.maxHopCount)} />
+        <KpiPanel label="网关路由" value={String(summary.gatewayRoutes)} />
         <KpiPanel label="传输协议" value={summary.transportProtocolLabel} />
         <KpiPanel label="路由协议" value={summary.routingProtocolLabel} />
         <KpiPanel label="协议栈层数" value={String(summary.stackLayers)} />
@@ -86,6 +92,7 @@ export function buildLinkProtocolSummary(
   const activeLinks = snapshot.links.filter((link) => link.availability);
   const availableRoutes = snapshot.routes.filter((route) => route.available);
   const bestRoute = selectBestRoute(availableRoutes, snapshot.active_route_id);
+  const hopCounts = availableRoutes.map(routeHopCount);
   const bottleneckCapacity =
     activeLinks.length === 0
       ? 0
@@ -106,7 +113,14 @@ export function buildLinkProtocolSummary(
     availableRoutes: availableRoutes.length,
     bestRouteId: bestRoute?.route_id ?? "无",
     bestPath: bestRoute?.path.join(" -> ") ?? "暂无可用路径",
-    bestHopCount: bestRoute === undefined ? 0 : Math.max(0, bestRoute.path.length - 1),
+    bestHopCount: bestRoute === undefined ? 0 : routeHopCount(bestRoute),
+    averageHopCount:
+      hopCounts.length === 0
+        ? 0
+        : hopCounts.reduce((total, hopCount) => total + hopCount, 0) /
+          hopCounts.length,
+    maxHopCount: hopCounts.length === 0 ? 0 : Math.max(...hopCounts),
+    gatewayRoutes: availableRoutes.filter(routeEndsAtComputeNode).length,
     bestLatency: bestRoute?.latency ?? 0,
     bottleneckCapacity,
     spaceLinks: linkClasses.spaceLinks,
@@ -125,6 +139,15 @@ export function buildLinkProtocolSummary(
       .slice(0, 5)
       .map(linkToRow)
   };
+}
+
+function routeHopCount(route: Route): number {
+  return Math.max(0, route.path.length - 1);
+}
+
+function routeEndsAtComputeNode(route: Route): boolean {
+  const lastNode = route.path[route.path.length - 1];
+  return typeof lastNode === "string" && lastNode.startsWith("compute-");
 }
 
 function formatTransportProtocol(protocol: string): string {
