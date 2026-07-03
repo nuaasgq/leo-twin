@@ -81,6 +81,39 @@ def test_demo_flow_requests_target_compute_nodes() -> None:
     )
 
 
+def test_demo_flow_and_task_demands_are_config_driven() -> None:
+    scenario = build_demo_scenario(
+        _demo_config(
+            flow_demand_capacity=12.5,
+            task_compute_demand=15.0,
+            task_data_size=4.0,
+        )
+    )
+    first_flow = next(
+        event.payload
+        for event in scenario.initial_events
+        if event.event_type == EventType.FLOW_ARRIVAL
+    )
+    first_task = next(
+        event.payload
+        for event in scenario.initial_events
+        if event.event_type == EventType.TASK_ARRIVAL
+    )
+
+    assert isinstance(first_flow, FlowRequest)
+    assert isinstance(first_task, TaskRequest)
+    assert first_flow.demand_capacity == 12.5
+    assert first_task.compute_demand == 15.0
+    assert first_task.data_size == 4.0
+    assert scenario.frontend_config["scenario"]["traffic_model"] == {
+        "flow_interval_seconds": 60,
+        "task_interval_seconds": 60,
+        "flow_demand_capacity": 12.5,
+        "task_compute_demand": 15.0,
+        "task_data_size": 4.0,
+    }
+
+
 def _demo_config(**overrides: object) -> DemoConfig:
     values = dict(
         seed=1234,

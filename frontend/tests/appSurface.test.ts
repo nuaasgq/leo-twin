@@ -63,6 +63,13 @@ describe("scenarioWithRuntimeConfig", () => {
               plane_count: 24,
               altitude_m: 600_000,
               inclination_deg: 55
+            },
+            traffic_model: {
+              flow_interval_seconds: 30,
+              task_interval_seconds: 45,
+              flow_demand_capacity: 12.5,
+              task_compute_demand: 15,
+              task_data_size: 4
             }
           },
           network: {
@@ -104,6 +111,13 @@ describe("scenarioWithRuntimeConfig", () => {
           plane_count: 24,
           altitude_m: 600_000,
           inclination_deg: 55
+        },
+        traffic_model: {
+          flow_interval_seconds: 30,
+          task_interval_seconds: 45,
+          flow_demand_capacity: 12.5,
+          task_compute_demand: 15,
+          task_data_size: 4
         }
       },
       network: {

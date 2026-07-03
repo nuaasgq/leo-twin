@@ -341,7 +341,32 @@ export function scenarioWithRuntimeConfig(
                   ? runtimeConfig.scenario.orbit.inclination_deg
                   : scenario.scenario?.orbit?.inclination_deg
             }
-          : scenario.scenario?.orbit
+          : scenario.scenario?.orbit,
+        traffic_model: isRecord(runtimeConfig.scenario.traffic_model)
+          ? {
+              ...scenario.scenario?.traffic_model,
+              flow_interval_seconds:
+                typeof runtimeConfig.scenario.traffic_model.flow_interval_seconds === "number"
+                  ? runtimeConfig.scenario.traffic_model.flow_interval_seconds
+                  : scenario.scenario?.traffic_model?.flow_interval_seconds,
+              task_interval_seconds:
+                typeof runtimeConfig.scenario.traffic_model.task_interval_seconds === "number"
+                  ? runtimeConfig.scenario.traffic_model.task_interval_seconds
+                  : scenario.scenario?.traffic_model?.task_interval_seconds,
+              flow_demand_capacity:
+                typeof runtimeConfig.scenario.traffic_model.flow_demand_capacity === "number"
+                  ? runtimeConfig.scenario.traffic_model.flow_demand_capacity
+                  : scenario.scenario?.traffic_model?.flow_demand_capacity,
+              task_compute_demand:
+                typeof runtimeConfig.scenario.traffic_model.task_compute_demand === "number"
+                  ? runtimeConfig.scenario.traffic_model.task_compute_demand
+                  : scenario.scenario?.traffic_model?.task_compute_demand,
+              task_data_size:
+                typeof runtimeConfig.scenario.traffic_model.task_data_size === "number"
+                  ? runtimeConfig.scenario.traffic_model.task_data_size
+                  : scenario.scenario?.traffic_model?.task_data_size
+            }
+          : scenario.scenario?.traffic_model
       }
     : scenario.scenario;
   const network = isRecord(runtimeConfig.network)
@@ -535,6 +560,17 @@ function scenarioControlValues(
       plane_count: scenarioConfig?.scenario?.orbit?.plane_count ?? 12,
       altitude_km: (scenarioConfig?.scenario?.orbit?.altitude_m ?? 550_000) / 1000,
       inclination_deg: scenarioConfig?.scenario?.orbit?.inclination_deg ?? 53
+    },
+    traffic_model: {
+      flow_interval_seconds:
+        scenarioConfig?.scenario?.traffic_model?.flow_interval_seconds ?? 60,
+      task_interval_seconds:
+        scenarioConfig?.scenario?.traffic_model?.task_interval_seconds ?? 60,
+      flow_demand_capacity:
+        scenarioConfig?.scenario?.traffic_model?.flow_demand_capacity ?? 25,
+      task_compute_demand:
+        scenarioConfig?.scenario?.traffic_model?.task_compute_demand ?? 20,
+      task_data_size: scenarioConfig?.scenario?.traffic_model?.task_data_size ?? 2
     },
     visualization: {
       satellites: visualization?.satellites ?? true,

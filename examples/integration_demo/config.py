@@ -49,6 +49,9 @@ class DemoConfig:
     orbit_plane_count: int = 12
     orbit_altitude_m: float = 529_000.0
     orbit_inclination_deg: float = 53.0
+    flow_demand_capacity: float = 25.0
+    task_compute_demand: float = 20.0
+    task_data_size: float = 2.0
     application_protocol: str = "TASK_OFFLOAD_FLOW"
     transport_protocol: str = "TCP"
     routing_protocol: str = "LINK_STATE"
@@ -100,6 +103,9 @@ def load_demo_config(path: str | Path = DEFAULT_CONFIG_PATH) -> DemoConfig:
         network_slot_seconds=_int(scenario, "network_slot_seconds"),
         flow_interval_seconds=_int(scenario, "flow_interval_seconds"),
         task_interval_seconds=_int(scenario, "task_interval_seconds"),
+        flow_demand_capacity=_optional_float(scenario, "flow_demand_capacity", 25.0),
+        task_compute_demand=_optional_float(scenario, "task_compute_demand", 20.0),
+        task_data_size=_optional_float(scenario, "task_data_size", 2.0),
         cell_count=_int(scenario, "cell_count"),
         state_snapshot_interval_events=_int(
             scenario,
@@ -182,6 +188,9 @@ def demo_config_to_sees_config(config: DemoConfig) -> SEESConfig:
             traffic_model=TrafficModel(
                 flow_interval_seconds=config.flow_interval_seconds,
                 task_interval_seconds=config.task_interval_seconds,
+                flow_demand_capacity=config.flow_demand_capacity,
+                task_compute_demand=config.task_compute_demand,
+                task_data_size=config.task_data_size,
             ),
         ),
         network=NetworkProfile(
@@ -244,6 +253,9 @@ def demo_config_from_sees_config(
         network_slot_seconds=config.scenario.orbit.update_interval_seconds,
         flow_interval_seconds=config.scenario.traffic_model.flow_interval_seconds,
         task_interval_seconds=config.scenario.traffic_model.task_interval_seconds,
+        flow_demand_capacity=config.scenario.traffic_model.flow_demand_capacity,
+        task_compute_demand=config.scenario.traffic_model.task_compute_demand,
+        task_data_size=config.scenario.traffic_model.task_data_size,
         cell_count=config.scenario.cell_count,
         state_snapshot_interval_events=base.state_snapshot_interval_events,
         metric_sample_interval=base.metric_sample_interval,

@@ -100,6 +100,13 @@ def build_demo_scenario(config: DemoConfig) -> DemoScenario:
                     "altitude_m": config.orbit_altitude_m,
                     "inclination_deg": config.orbit_inclination_deg,
                 },
+                "traffic_model": {
+                    "flow_interval_seconds": config.flow_interval_seconds,
+                    "task_interval_seconds": config.task_interval_seconds,
+                    "flow_demand_capacity": config.flow_demand_capacity,
+                    "task_compute_demand": config.task_compute_demand,
+                    "task_data_size": config.task_data_size,
+                },
             },
             "network": {
                 "application_protocol": config.application_protocol,
@@ -332,7 +339,7 @@ def _initial_events(config: DemoConfig) -> tuple[SimEvent, ...]:
                         flow_id=task_id,
                         source_id=source_id,
                         target_id=target_id,
-                        demand_capacity=25.0,
+                        demand_capacity=config.flow_demand_capacity,
                     ),
                 )
             )
@@ -348,8 +355,8 @@ def _initial_events(config: DemoConfig) -> tuple[SimEvent, ...]:
                         task_id=task_id,
                         source_id=source_id,
                         submit_time=submit_time,
-                        compute_demand=20.0 + float(task_index % 5),
-                        data_size=2.0 + float(task_index % 3),
+                        compute_demand=config.task_compute_demand + float(task_index % 5),
+                        data_size=config.task_data_size + float(task_index % 3),
                         deadline=float(tick) + 20.0,
                     ),
                 )

@@ -301,6 +301,7 @@ def scenario_builder_config_from_sees_config(
         inclination_deg=config.scenario.orbit.inclination_deg,
         demand_capacity=config.scenario.traffic_model.flow_demand_capacity,
         task_compute_demand=config.scenario.traffic_model.task_compute_demand,
+        task_data_size=config.scenario.traffic_model.task_data_size,
         application_protocol=config.network.application_protocol.value,
         transport_protocol=config.network.transport_protocol.value,
         routing_protocol=config.network.routing_protocol.value,

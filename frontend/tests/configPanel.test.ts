@@ -6,6 +6,7 @@ import {
   orbitControlPayload,
   pauseResumeControl,
   runtimeProgressSummary,
+  trafficControlPayload,
   visualizationControlPayload
 } from "../src/config_panel/ConfigPanel";
 import { GeneratedScenarioConfig } from "../src/core/event_types";
@@ -163,6 +164,26 @@ describe("orbitControlPayload", () => {
       plane_count: 24,
       altitude_m: 600_000,
       inclination_deg: 55
+    });
+  });
+});
+
+describe("trafficControlPayload", () => {
+  it("creates deterministic traffic model payloads", () => {
+    expect(
+      trafficControlPayload({
+        flow_interval_seconds: 30,
+        task_interval_seconds: 45,
+        flow_demand_capacity: 12.5,
+        task_compute_demand: 15,
+        task_data_size: 4
+      })
+    ).toEqual({
+      flow_interval_seconds: 30,
+      task_interval_seconds: 45,
+      flow_demand_capacity: 12.5,
+      task_compute_demand: 15,
+      task_data_size: 4
     });
   });
 });

@@ -109,6 +109,13 @@ export interface ScenarioConfig {
       altitude_m?: number;
       inclination_deg?: number;
     };
+    traffic_model?: {
+      flow_interval_seconds?: number;
+      task_interval_seconds?: number;
+      flow_demand_capacity?: number;
+      task_compute_demand?: number;
+      task_data_size?: number;
+    };
   };
   network?: {
     application_protocol?: string;

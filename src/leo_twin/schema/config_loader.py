@@ -61,6 +61,7 @@ _TRAFFIC_KEYS = frozenset(
         "task_interval_seconds",
         "flow_demand_capacity",
         "task_compute_demand",
+        "task_data_size",
     }
 )
 _NETWORK_KEYS = frozenset(
@@ -394,6 +395,7 @@ def _ordered_keys(context: str, data: Mapping[str, Any]) -> tuple[str, ...]:
             "task_interval_seconds",
             "flow_demand_capacity",
             "task_compute_demand",
+            "task_data_size",
         ),
         "network": (
             "application_protocol",

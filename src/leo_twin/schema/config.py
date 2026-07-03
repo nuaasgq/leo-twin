@@ -55,12 +55,14 @@ class TrafficModel:
     task_interval_seconds: int = 60
     flow_demand_capacity: float = 25.0
     task_compute_demand: float = 20.0
+    task_data_size: float = 10.0
 
     def __post_init__(self) -> None:
         _require_positive_int(self.flow_interval_seconds, "traffic_model.flow_interval_seconds")
         _require_positive_int(self.task_interval_seconds, "traffic_model.task_interval_seconds")
         _require_positive_finite(self.flow_demand_capacity, "traffic_model.flow_demand_capacity")
         _require_positive_finite(self.task_compute_demand, "traffic_model.task_compute_demand")
+        _require_positive_finite(self.task_data_size, "traffic_model.task_data_size")
 
 
 @dataclass(frozen=True)

@@ -12,6 +12,9 @@ scenario:
   network_slot_seconds: 60
   flow_interval_seconds: 60
   task_interval_seconds: 60
+  flow_demand_capacity: 25.0
+  task_compute_demand: 20.0
+  task_data_size: 2.0
   cell_count: 100
   state_snapshot_interval_events: 1000
   metric_sample_interval: 50

@@ -128,6 +128,13 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
                         "altitude_m": 600_000.0,
                         "inclination_deg": 55.0,
                     },
+                    "traffic_model": {
+                        "flow_interval_seconds": 30,
+                        "task_interval_seconds": 45,
+                        "flow_demand_capacity": 12.5,
+                        "task_compute_demand": 15.0,
+                        "task_data_size": 4.0,
+                    },
                     "application_protocol": "MQTT",
                     "transport_protocol": "UDP",
                     "transport_loss_rate": 0.025,
@@ -161,6 +168,11 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
     assert control_plane.result.config.orbit_plane_count == 6
     assert control_plane.result.config.orbit_altitude_m == 600_000.0
     assert control_plane.result.config.orbit_inclination_deg == 55.0
+    assert control_plane.result.config.flow_interval_seconds == 30
+    assert control_plane.result.config.task_interval_seconds == 45
+    assert control_plane.result.config.flow_demand_capacity == 12.5
+    assert control_plane.result.config.task_compute_demand == 15.0
+    assert control_plane.result.config.task_data_size == 4.0
     assert control_plane.result.config.transport_protocol == "UDP"
     assert control_plane.result.config.application_protocol == "MQTT"
     assert control_plane.result.config.routing_protocol == "DISTANCE_VECTOR"
@@ -187,6 +199,13 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
         "plane_count": 6,
         "altitude_m": 600_000.0,
         "inclination_deg": 55.0,
+    }
+    assert control_plane.result.scenario.frontend_config["scenario"]["traffic_model"] == {
+        "flow_interval_seconds": 30,
+        "task_interval_seconds": 45,
+        "flow_demand_capacity": 12.5,
+        "task_compute_demand": 15.0,
+        "task_data_size": 4.0,
     }
     assert control_plane.result.scenario.frontend_config["network"] == {
         "application_protocol": "MQTT",
@@ -228,6 +247,9 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
     assert ack["generated_config"]["orbit_plane_count"] == 6
     assert ack["generated_config"]["semi_major_axis_km"] == 6971.0
     assert ack["generated_config"]["inclination_deg"] == 55.0
+    assert ack["generated_config"]["demand_capacity"] == 12.5
+    assert ack["generated_config"]["task_compute_demand"] == 15.0
+    assert ack["generated_config"]["task_data_size"] == 4.0
 
     runtime_ack = control_plane.handle_raw_message(
         json.dumps({"type": "RUNTIME_CONTROL", "action": "START"})
@@ -260,6 +282,13 @@ def test_initialize_writes_config_and_start_gates_streams(tmp_path) -> None:
                         "altitude_m": 600_000.0,
                         "inclination_deg": 55.0,
                     },
+                    "traffic_model": {
+                        "flow_interval_seconds": 30,
+                        "task_interval_seconds": 45,
+                        "flow_demand_capacity": 12.5,
+                        "task_compute_demand": 15.0,
+                        "task_data_size": 4.0,
+                    },
                     "mode": "ACCELERATED",
                     "speed_factor": 10,
                 },
@@ -274,6 +303,9 @@ def test_initialize_writes_config_and_start_gates_streams(tmp_path) -> None:
     assert "plane_count: 6" in config_path.read_text(encoding="utf-8")
     assert "altitude_m: 600000.0" in config_path.read_text(encoding="utf-8")
     assert "inclination_deg: 55.0" in config_path.read_text(encoding="utf-8")
+    assert "flow_interval_seconds: 30" in config_path.read_text(encoding="utf-8")
+    assert "flow_demand_capacity: 12.5" in config_path.read_text(encoding="utf-8")
+    assert "task_data_size: 4.0" in config_path.read_text(encoding="utf-8")
     assert "speed_factor: 10" in config_path.read_text(encoding="utf-8")
     generated_config = json.loads(generated_config_path.read_text(encoding="utf-8"))
     assert generated_config["satellite_count"] == 24
@@ -281,6 +313,9 @@ def test_initialize_writes_config_and_start_gates_streams(tmp_path) -> None:
     assert generated_config["orbit_plane_count"] == 6
     assert generated_config["semi_major_axis_km"] == 6971.0
     assert generated_config["inclination_deg"] == 55.0
+    assert generated_config["demand_capacity"] == 12.5
+    assert generated_config["task_compute_demand"] == 15.0
+    assert generated_config["task_data_size"] == 4.0
     assert generated_config["compute_node_count"] == 2
     assert generated_config["seed"] == 1234
     assert generated_config["application_protocol"] == "TASK_OFFLOAD_FLOW"

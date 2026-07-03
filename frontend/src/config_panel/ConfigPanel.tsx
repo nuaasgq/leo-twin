@@ -13,6 +13,7 @@ export interface ScenarioControlValues {
   compute_nodes: number;
   compute_scheduling_policy: string;
   orbit: OrbitControlValues;
+  traffic_model: TrafficControlValues;
   visualization: VisualizationControlValues;
   network: NetworkControlValues;
 }
@@ -22,6 +23,14 @@ export interface OrbitControlValues {
   plane_count: number;
   altitude_km: number;
   inclination_deg: number;
+}
+
+export interface TrafficControlValues {
+  flow_interval_seconds: number;
+  task_interval_seconds: number;
+  flow_demand_capacity: number;
+  task_compute_demand: number;
+  task_data_size: number;
 }
 
 export interface VisualizationControlValues {
@@ -101,6 +110,19 @@ export function ConfigPanel({
   const [orbitInclinationDeg, setOrbitInclinationDeg] = useState(
     scenario.orbit.inclination_deg
   );
+  const [flowIntervalSeconds, setFlowIntervalSeconds] = useState(
+    scenario.traffic_model.flow_interval_seconds
+  );
+  const [taskIntervalSeconds, setTaskIntervalSeconds] = useState(
+    scenario.traffic_model.task_interval_seconds
+  );
+  const [flowDemandCapacity, setFlowDemandCapacity] = useState(
+    scenario.traffic_model.flow_demand_capacity
+  );
+  const [taskComputeDemand, setTaskComputeDemand] = useState(
+    scenario.traffic_model.task_compute_demand
+  );
+  const [taskDataSize, setTaskDataSize] = useState(scenario.traffic_model.task_data_size);
   const [showSatellites, setShowSatellites] = useState(scenario.visualization.satellites);
   const [showLinks, setShowLinks] = useState(scenario.visualization.links);
   const [showUsers, setShowUsers] = useState(scenario.visualization.users);
@@ -170,6 +192,11 @@ export function ConfigPanel({
     setOrbitPlaneCount(scenario.orbit.plane_count);
     setOrbitAltitudeKm(scenario.orbit.altitude_km);
     setOrbitInclinationDeg(scenario.orbit.inclination_deg);
+    setFlowIntervalSeconds(scenario.traffic_model.flow_interval_seconds);
+    setTaskIntervalSeconds(scenario.traffic_model.task_interval_seconds);
+    setFlowDemandCapacity(scenario.traffic_model.flow_demand_capacity);
+    setTaskComputeDemand(scenario.traffic_model.task_compute_demand);
+    setTaskDataSize(scenario.traffic_model.task_data_size);
     setShowSatellites(scenario.visualization.satellites);
     setShowLinks(scenario.visualization.links);
     setShowUsers(scenario.visualization.users);
@@ -202,6 +229,11 @@ export function ConfigPanel({
     scenario.orbit.plane_count,
     scenario.orbit.altitude_km,
     scenario.orbit.inclination_deg,
+    scenario.traffic_model.flow_interval_seconds,
+    scenario.traffic_model.task_interval_seconds,
+    scenario.traffic_model.flow_demand_capacity,
+    scenario.traffic_model.task_compute_demand,
+    scenario.traffic_model.task_data_size,
     scenario.visualization.satellites,
     scenario.visualization.links,
     scenario.visualization.users,
@@ -384,6 +416,90 @@ export function ConfigPanel({
               onChange={(event) => setOrbitInclinationDeg(Number(event.currentTarget.value))}
             />
             <span>°</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="channel-grid" aria-label="流量与任务需求">
+        <div className="control-group">
+          <label className="control-label" htmlFor="flow-interval">
+            流量间隔
+          </label>
+          <div className="unit-input">
+            <input
+              id="flow-interval"
+              type="number"
+              min="1"
+              step="1"
+              value={flowIntervalSeconds}
+              onChange={(event) => setFlowIntervalSeconds(Number(event.currentTarget.value))}
+            />
+            <span>s</span>
+          </div>
+        </div>
+
+        <div className="control-group">
+          <label className="control-label" htmlFor="task-interval">
+            任务间隔
+          </label>
+          <div className="unit-input">
+            <input
+              id="task-interval"
+              type="number"
+              min="1"
+              step="1"
+              value={taskIntervalSeconds}
+              onChange={(event) => setTaskIntervalSeconds(Number(event.currentTarget.value))}
+            />
+            <span>s</span>
+          </div>
+        </div>
+
+        <div className="control-group">
+          <label className="control-label" htmlFor="flow-demand">
+            带宽需求
+          </label>
+          <div className="unit-input">
+            <input
+              id="flow-demand"
+              type="number"
+              min="0.1"
+              step="0.1"
+              value={flowDemandCapacity}
+              onChange={(event) => setFlowDemandCapacity(Number(event.currentTarget.value))}
+            />
+            <span>Mbps</span>
+          </div>
+        </div>
+
+        <div className="control-group">
+          <label className="control-label" htmlFor="task-compute-demand">
+            算力需求
+          </label>
+          <input
+            id="task-compute-demand"
+            type="number"
+            min="0.1"
+            step="0.1"
+            value={taskComputeDemand}
+            onChange={(event) => setTaskComputeDemand(Number(event.currentTarget.value))}
+          />
+        </div>
+
+        <div className="control-group">
+          <label className="control-label" htmlFor="task-data-size">
+            任务数据量
+          </label>
+          <div className="unit-input">
+            <input
+              id="task-data-size"
+              type="number"
+              min="0.1"
+              step="0.1"
+              value={taskDataSize}
+              onChange={(event) => setTaskDataSize(Number(event.currentTarget.value))}
+            />
+            <span>MB</span>
           </div>
         </div>
       </div>
@@ -822,6 +938,13 @@ export function ConfigPanel({
                 altitude_km: orbitAltitudeKm,
                 inclination_deg: orbitInclinationDeg
               }),
+              traffic_model: trafficControlPayload({
+                flow_interval_seconds: flowIntervalSeconds,
+                task_interval_seconds: taskIntervalSeconds,
+                flow_demand_capacity: flowDemandCapacity,
+                task_compute_demand: taskComputeDemand,
+                task_data_size: taskDataSize
+              }),
               visualization: visualizationControlPayload({
                 satellites: showSatellites,
                 users: showUsers,
@@ -993,6 +1116,16 @@ export function orbitControlPayload(orbit: OrbitControlValues): Record<string, u
     plane_count: orbit.plane_count,
     altitude_m: orbit.altitude_km * 1000,
     inclination_deg: orbit.inclination_deg
+  };
+}
+
+export function trafficControlPayload(traffic: TrafficControlValues): Record<string, unknown> {
+  return {
+    flow_interval_seconds: traffic.flow_interval_seconds,
+    task_interval_seconds: traffic.task_interval_seconds,
+    flow_demand_capacity: traffic.flow_demand_capacity,
+    task_compute_demand: traffic.task_compute_demand,
+    task_data_size: traffic.task_data_size
   };
 }
 
