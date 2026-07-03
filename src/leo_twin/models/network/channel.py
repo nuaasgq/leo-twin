@@ -1,0 +1,154 @@
+"""Deterministic physical/channel link budget utilities."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from math import isfinite, log10, log2
+from typing import Any
+
+from leo_twin.schema import AntennaProfile, ChannelProfile
+
+
+SPEED_OF_LIGHT_KM_S = 299792.458
+_BOLTZMANN_W_PER_HZ_K = 1.380649e-23
+
+
+@dataclass(frozen=True)
+class RadioTerminalProfile:
+    """Configuration for one deterministic radio terminal budget endpoint."""
+
+    terminal_id: str
+    antenna: AntennaProfile
+    transmit_power_dbw: float
+    system_loss_db: float = 0.0
+    noise_temperature_k: float = 290.0
+
+    def __post_init__(self) -> None:
+        _require_non_empty_str(self.terminal_id, "terminal_id")
+        _require_finite_number(self.transmit_power_dbw, "transmit_power_dbw")
+        _require_non_negative_number(self.system_loss_db, "system_loss_db")
+        _require_positive_number(self.noise_temperature_k, "noise_temperature_k")
+
+
+@dataclass(frozen=True)
+class LinkBudgetResult:
+    """Computed deterministic physical/channel state for one link."""
+
+    range_km: float
+    propagation_delay_s: float
+    path_loss_db: float
+    received_power_dbw: float
+    noise_power_dbw: float
+    snr_db: float
+    capacity_mbps: float
+
+    def __post_init__(self) -> None:
+        _require_positive_number(self.range_km, "range_km")
+        _require_non_negative_number(self.propagation_delay_s, "propagation_delay_s")
+        _require_finite_number(self.path_loss_db, "path_loss_db")
+        _require_finite_number(self.received_power_dbw, "received_power_dbw")
+        _require_finite_number(self.noise_power_dbw, "noise_power_dbw")
+        _require_finite_number(self.snr_db, "snr_db")
+        _require_non_negative_number(self.capacity_mbps, "capacity_mbps")
+
+
+@dataclass(frozen=True)
+class LinkBudgetCalculator:
+    """Deterministic link budget calculator for configured LEO links."""
+
+    transmit_terminal: RadioTerminalProfile
+    receive_terminal: RadioTerminalProfile
+    channel: ChannelProfile
+    atmospheric_loss_db: float = 0.0
+    polarization_loss_db: float = 0.0
+    implementation_loss_db: float = 0.0
+
+    def __post_init__(self) -> None:
+        _require_non_negative_number(self.atmospheric_loss_db, "atmospheric_loss_db")
+        _require_non_negative_number(self.polarization_loss_db, "polarization_loss_db")
+        _require_non_negative_number(self.implementation_loss_db, "implementation_loss_db")
+
+    def evaluate(self, range_km: float) -> LinkBudgetResult:
+        """Evaluate deterministic budget values for one path range."""
+
+        _require_positive_number(range_km, "range_km")
+        path_loss_db = free_space_path_loss_db(range_km, self.channel.carrier_frequency_hz)
+        received_power_dbw = (
+            self.transmit_terminal.transmit_power_dbw
+            + self.transmit_terminal.antenna.gain_dbi
+            + self.receive_terminal.antenna.gain_dbi
+            - path_loss_db
+            - self.transmit_terminal.system_loss_db
+            - self.receive_terminal.system_loss_db
+            - self.atmospheric_loss_db
+            - self.polarization_loss_db
+        )
+        noise_power_dbw = thermal_noise_power_dbw(
+            bandwidth_hz=self.channel.bandwidth_hz,
+            noise_temperature_k=self.receive_terminal.noise_temperature_k,
+        )
+        snr_db = received_power_dbw - noise_power_dbw - self.implementation_loss_db
+        capacity_mbps = shannon_capacity_mbps(
+            bandwidth_hz=self.channel.bandwidth_hz,
+            snr_db=snr_db,
+        )
+        return LinkBudgetResult(
+            range_km=range_km,
+            propagation_delay_s=range_km / SPEED_OF_LIGHT_KM_S,
+            path_loss_db=path_loss_db,
+            received_power_dbw=received_power_dbw,
+            noise_power_dbw=noise_power_dbw,
+            snr_db=snr_db,
+            capacity_mbps=capacity_mbps,
+        )
+
+
+def free_space_path_loss_db(range_km: float, carrier_frequency_hz: float) -> float:
+    """Return free-space path loss in dB for range in km and frequency in Hz."""
+
+    _require_positive_number(range_km, "range_km")
+    _require_positive_number(carrier_frequency_hz, "carrier_frequency_hz")
+    carrier_frequency_ghz = carrier_frequency_hz / 1_000_000_000.0
+    return 92.45 + 20.0 * log10(range_km) + 20.0 * log10(carrier_frequency_ghz)
+
+
+def thermal_noise_power_dbw(bandwidth_hz: float, noise_temperature_k: float) -> float:
+    """Return thermal noise power in dBW."""
+
+    _require_positive_number(bandwidth_hz, "bandwidth_hz")
+    _require_positive_number(noise_temperature_k, "noise_temperature_k")
+    return 10.0 * log10(_BOLTZMANN_W_PER_HZ_K * noise_temperature_k * bandwidth_hz)
+
+
+def shannon_capacity_mbps(bandwidth_hz: float, snr_db: float) -> float:
+    """Return deterministic Shannon capacity estimate in Mbps."""
+
+    _require_positive_number(bandwidth_hz, "bandwidth_hz")
+    _require_finite_number(snr_db, "snr_db")
+    snr_linear = 10.0 ** (snr_db / 10.0)
+    capacity_bps = bandwidth_hz * log2(1.0 + snr_linear)
+    return capacity_bps / 1_000_000.0
+
+
+def _require_non_empty_str(value: str, field_name: str) -> None:
+    if not isinstance(value, str) or not value:
+        raise TypeError(f"{field_name} must be a non-empty str")
+
+
+def _require_finite_number(value: Any, field_name: str) -> None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise TypeError(f"{field_name} must be an int or float")
+    if not isfinite(value):
+        raise ValueError(f"{field_name} must be finite")
+
+
+def _require_positive_number(value: Any, field_name: str) -> None:
+    _require_finite_number(value, field_name)
+    if value <= 0:
+        raise ValueError(f"{field_name} must be positive")
+
+
+def _require_non_negative_number(value: Any, field_name: str) -> None:
+    _require_finite_number(value, field_name)
+    if value < 0:
+        raise ValueError(f"{field_name} must be non-negative")

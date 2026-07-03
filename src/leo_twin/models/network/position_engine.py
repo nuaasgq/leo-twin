@@ -7,6 +7,7 @@ from math import isfinite
 from typing import Any
 
 from leo_twin.core import SimulationKernel, SimulationModule
+from leo_twin.models.network.channel import LinkBudgetCalculator
 from leo_twin.models.network.geometry import (
     AccessLinkCandidate,
     GroundEndpoint,
@@ -37,6 +38,7 @@ class PositionDrivenNetworkEngine(SimulationModule):
         propagation_speed_km_s: float = 299792.458,
         base_latency_s: float = 0.0,
         cell_size_km: float = 1000.0,
+        link_budget_calculator: LinkBudgetCalculator | None = None,
     ) -> None:
         _require_non_empty_str(module_name, "module_name")
         _require_non_empty_str(metrics_target, "metrics_target")
@@ -61,6 +63,7 @@ class PositionDrivenNetworkEngine(SimulationModule):
         self._link_capacity = float(link_capacity)
         self._propagation_speed_km_s = float(propagation_speed_km_s)
         self._base_latency_s = float(base_latency_s)
+        self._link_budget_calculator = link_budget_calculator
         self._active_links: dict[tuple[str, str], LinkState] = {}
         self._last_links: dict[tuple[str, str], LinkState] = {}
         self._event_sequence = 0
@@ -191,12 +194,18 @@ class PositionDrivenNetworkEngine(SimulationModule):
         candidate: AccessLinkCandidate,
         availability: bool,
     ) -> LinkState:
-        latency = self._base_latency_s + candidate.range_km / self._propagation_speed_km_s
+        if self._link_budget_calculator is None:
+            latency = self._base_latency_s + candidate.range_km / self._propagation_speed_km_s
+            capacity = self._link_capacity
+        else:
+            budget = self._link_budget_calculator.evaluate(candidate.range_km)
+            latency = self._base_latency_s + budget.propagation_delay_s
+            capacity = min(self._link_capacity, budget.capacity_mbps)
         return LinkState(
             source_id=candidate.satellite_id,
             target_id=candidate.endpoint_id,
             latency=latency,
-            capacity=self._link_capacity,
+            capacity=capacity,
             availability=availability,
         )
 

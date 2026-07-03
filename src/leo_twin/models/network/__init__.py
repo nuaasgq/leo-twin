@@ -1,6 +1,14 @@
 """Network module package for flow-level event-driven routing."""
 
 from leo_twin.models.network.contracts import NetworkModuleContract
+from leo_twin.models.network.channel import (
+    LinkBudgetCalculator,
+    LinkBudgetResult,
+    RadioTerminalProfile,
+    free_space_path_loss_db,
+    shannon_capacity_mbps,
+    thermal_noise_power_dbw,
+)
 from leo_twin.models.network.engine import NetworkEngine
 from leo_twin.models.network.geometry import (
     AccessLinkCandidate,
@@ -23,6 +31,8 @@ __all__ = [
     "GroundEndpoint",
     "GroundEndpointIndex",
     "LayerTrace",
+    "LinkBudgetCalculator",
+    "LinkBudgetResult",
     "NetworkEngine",
     "NetworkModule",
     "NetworkModuleContract",
@@ -30,5 +40,9 @@ __all__ = [
     "NetworkStackTrace",
     "PositionDrivenAccessModel",
     "PositionDrivenNetworkEngine",
+    "RadioTerminalProfile",
     "build_default_leo_protocol_stack",
+    "free_space_path_loss_db",
+    "shannon_capacity_mbps",
+    "thermal_noise_power_dbw",
 ]

@@ -1,8 +1,23 @@
 from __future__ import annotations
 
 from leo_twin.core import SimulationKernel, SimulationModule
-from leo_twin.models.network import GroundEndpoint, PositionDrivenNetworkEngine
-from leo_twin.schema import EventType, FlowRequest, LinkState, Route, SatelliteState, SimEvent
+from leo_twin.models.network import (
+    LinkBudgetCalculator,
+    GroundEndpoint,
+    PositionDrivenNetworkEngine,
+    RadioTerminalProfile,
+)
+from leo_twin.schema import (
+    AntennaProfile,
+    ChannelProfile,
+    EventType,
+    FlowRequest,
+    LinkMedium,
+    LinkState,
+    Route,
+    SatelliteState,
+    SimEvent,
+)
 
 
 EARTH_RADIUS_KM = 6371.0
@@ -44,6 +59,48 @@ def _engine() -> PositionDrivenNetworkEngine:
         compute_node_ids=("node-a",),
         link_capacity=50.0,
         propagation_speed_km_s=1000.0,
+        cell_size_km=1000.0,
+    )
+
+
+def _budget_engine() -> PositionDrivenNetworkEngine:
+    antenna = AntennaProfile(
+        antenna_id="test-ant",
+        gain_dbi=28.0,
+        beam_width_deg=4.0,
+        steering_mode="fixed",
+    )
+    budget = LinkBudgetCalculator(
+        transmit_terminal=RadioTerminalProfile(
+            terminal_id="sat-terminal",
+            antenna=antenna,
+            transmit_power_dbw=0.0,
+        ),
+        receive_terminal=RadioTerminalProfile(
+            terminal_id="ground-terminal",
+            antenna=antenna,
+            transmit_power_dbw=0.0,
+        ),
+        channel=ChannelProfile(
+            channel_id="budget-channel",
+            medium=LinkMedium.SPACE_GROUND,
+            carrier_frequency_hz=20_000_000_000.0,
+            bandwidth_hz=100_000_000.0,
+            loss_model_name="free_space_budget",
+        ),
+    )
+    return PositionDrivenNetworkEngine(
+        endpoints=(
+            GroundEndpoint(
+                endpoint_id="user-east",
+                position=(EARTH_RADIUS_KM, 0.0, 0.0),
+                min_elevation_deg=10.0,
+                max_range_km=2000.0,
+            ),
+        ),
+        compute_node_ids=("node-a",),
+        link_capacity=10000.0,
+        link_budget_calculator=budget,
         cell_size_km=1000.0,
     )
 
@@ -149,6 +206,24 @@ def test_flow_arrival_outputs_route_from_active_access() -> None:
     assert len(compute.routes) == 1
     assert compute.routes[0].available is True
     assert compute.routes[0].path == ("user-east", "sat-001", "node-a")
+
+
+def test_link_budget_limits_position_driven_link_capacity_and_latency() -> None:
+    kernel = SimulationKernel()
+    network = _budget_engine()
+    metrics = MetricsSink()
+    kernel.register_module(network)
+    kernel.register_module(metrics)
+    kernel.schedule_event(
+        _event("orbit", EventType.ORBIT_UPDATE.value, _state((7000.0, 0.0, 0.0)))
+    )
+
+    kernel.run()
+
+    link = network.active_link_states()[0]
+    assert link.capacity < 10000.0
+    assert link.capacity > 0.0
+    assert link.latency < 0.01
 
 
 def test_position_driven_network_engine_is_deterministic() -> None:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from leo_twin.models.network.channel import LinkBudgetResult
 from leo_twin.schema import (
     AntennaProfile,
     ChannelProfile,
@@ -52,10 +53,12 @@ class NetworkStackRuntime:
         stack: ProtocolStackContract,
         antenna: AntennaProfile | None = None,
         channel: ChannelProfile | None = None,
+        link_budget: LinkBudgetResult | None = None,
     ) -> None:
         self._stack = stack
         self._antenna = antenna
         self._channel = channel
+        self._link_budget = link_budget
 
     def process_flow(
         self,
@@ -112,9 +115,11 @@ class NetworkStackRuntime:
         elif layer.layer == NetworkLayer.PHYSICAL:
             output_ref = f"physical:{request.flow_id}"
             attributes += _antenna_attributes(self._antenna)
+            attributes += _physical_budget_attributes(self._link_budget)
         else:
             output_ref = f"channel:{request.flow_id}"
             attributes += _channel_attributes(self._channel)
+            attributes += _channel_budget_attributes(self._link_budget)
         return LayerTrace(
             layer=layer.layer,
             protocol_name=layer.protocol_name,
@@ -223,6 +228,17 @@ def _antenna_attributes(antenna: AntennaProfile | None) -> tuple[tuple[str, str]
     )
 
 
+def _physical_budget_attributes(
+    link_budget: LinkBudgetResult | None,
+) -> tuple[tuple[str, str], ...]:
+    if link_budget is None:
+        return ()
+    return (
+        ("path_loss_db", f"{link_budget.path_loss_db:.6f}"),
+        ("received_power_dbw", f"{link_budget.received_power_dbw:.6f}"),
+    )
+
+
 def _channel_attributes(channel: ChannelProfile | None) -> tuple[tuple[str, str], ...]:
     if channel is None:
         return (("channel_id", "none"),)
@@ -232,4 +248,18 @@ def _channel_attributes(channel: ChannelProfile | None) -> tuple[tuple[str, str]
         ("channel_id", channel.channel_id),
         ("loss_model_name", channel.loss_model_name),
         ("medium", channel.medium.value),
+    )
+
+
+def _channel_budget_attributes(
+    link_budget: LinkBudgetResult | None,
+) -> tuple[tuple[str, str], ...]:
+    if link_budget is None:
+        return ()
+    return (
+        ("capacity_mbps", f"{link_budget.capacity_mbps:.6f}"),
+        ("noise_power_dbw", f"{link_budget.noise_power_dbw:.6f}"),
+        ("propagation_delay_s", f"{link_budget.propagation_delay_s:.9f}"),
+        ("range_km", f"{link_budget.range_km:.6f}"),
+        ("snr_db", f"{link_budget.snr_db:.6f}"),
     )
