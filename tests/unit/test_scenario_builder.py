@@ -171,6 +171,8 @@ def test_load_full_system_scenario_builder_config_from_json(tmp_path) -> None:
     assert config.carrier_frequency_hz == 20_000_000_000.0
     assert config.channel_bandwidth_hz == 100_000_000.0
     assert config.rain_rate_mm_h == 0.0
+    assert config.antenna_diameter_m == 0.45
+    assert config.antenna_aperture_efficiency == 0.65
 
 
 def test_write_full_system_scenario_builder_config_round_trips(tmp_path) -> None:
@@ -218,6 +220,8 @@ def test_scenario_builder_config_from_sees_config_maps_control_plane_fields() ->
             rain_rate_mm_h=12.5,
             rain_attenuation_coefficient_db_per_km_per_mm_h=0.015,
             rain_effective_path_km=4.0,
+            antenna_diameter_m=0.55,
+            antenna_aperture_efficiency=0.7,
         ),
     )
 
@@ -238,6 +242,8 @@ def test_scenario_builder_config_from_sees_config_maps_control_plane_fields() ->
     assert generated.carrier_frequency_hz == 22_000_000_000.0
     assert generated.channel_bandwidth_hz == 250_000_000.0
     assert generated.rain_rate_mm_h == 12.5
+    assert generated.antenna_diameter_m == 0.55
+    assert generated.antenna_aperture_efficiency == 0.7
 
 
 def test_default_generated_scenario_config_file_loads() -> None:

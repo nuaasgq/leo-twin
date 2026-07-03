@@ -100,6 +100,8 @@ export interface ScenarioConfig {
     rain_rate_mm_h?: number;
     rain_attenuation_coefficient_db_per_km_per_mm_h?: number;
     rain_effective_path_km?: number;
+    antenna_diameter_m?: number;
+    antenna_aperture_efficiency?: number;
   };
   runtime?: {
     mode?: RuntimeMode;
@@ -177,6 +179,8 @@ export interface GeneratedScenarioConfig {
   rain_rate_mm_h?: number;
   rain_attenuation_coefficient_db_per_km_per_mm_h?: number;
   rain_effective_path_km?: number;
+  antenna_diameter_m?: number;
+  antenna_aperture_efficiency?: number;
 }
 
 export interface RuntimeStatusEnvelope {

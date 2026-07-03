@@ -51,7 +51,9 @@ describe("scenarioWithRuntimeConfig", () => {
             channel_bandwidth_hz: 250_000_000,
             rain_rate_mm_h: 12,
             rain_attenuation_coefficient_db_per_km_per_mm_h: 0.01,
-            rain_effective_path_km: 5
+            rain_effective_path_km: 5,
+            antenna_diameter_m: 0.55,
+            antenna_aperture_efficiency: 0.7
           },
           ui: {
             visualization: {
@@ -71,7 +73,9 @@ describe("scenarioWithRuntimeConfig", () => {
         channel_bandwidth_hz: 250_000_000,
         rain_rate_mm_h: 12,
         rain_attenuation_coefficient_db_per_km_per_mm_h: 0.01,
-        rain_effective_path_km: 5
+        rain_effective_path_km: 5,
+        antenna_diameter_m: 0.55,
+        antenna_aperture_efficiency: 0.7
       },
       ui: {
         visualization: {

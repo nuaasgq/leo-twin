@@ -65,6 +65,8 @@ _NETWORK_KEYS = frozenset(
         "rain_rate_mm_h",
         "rain_attenuation_coefficient_db_per_km_per_mm_h",
         "rain_effective_path_km",
+        "antenna_diameter_m",
+        "antenna_aperture_efficiency",
     }
 )
 _RUNTIME_KEYS = frozenset({"mode", "speed_factor", "seed", "duration"})
@@ -181,6 +183,8 @@ def _build_config(data: Mapping[str, Any]) -> SEESConfig:
                     "rain_attenuation_coefficient_db_per_km_per_mm_h"
                 ],
                 rain_effective_path_km=network["rain_effective_path_km"],
+                antenna_diameter_m=network["antenna_diameter_m"],
+                antenna_aperture_efficiency=network["antenna_aperture_efficiency"],
             ),
             runtime=RuntimeConfig(
                 mode=RuntimeMode(str(runtime["mode"])),
@@ -215,6 +219,8 @@ def _normalize_update(update: Mapping[str, Any]) -> dict[str, Any]:
         "rain_rate_mm_h",
         "rain_attenuation_coefficient_db_per_km_per_mm_h",
         "rain_effective_path_km",
+        "antenna_diameter_m",
+        "antenna_aperture_efficiency",
     ):
         if key in direct:
             nested.setdefault("network", {})[key] = direct.pop(key)
@@ -343,6 +349,8 @@ def _ordered_keys(context: str, data: Mapping[str, Any]) -> tuple[str, ...]:
             "rain_rate_mm_h",
             "rain_attenuation_coefficient_db_per_km_per_mm_h",
             "rain_effective_path_km",
+            "antenna_diameter_m",
+            "antenna_aperture_efficiency",
         ),
         "runtime": ("mode", "speed_factor", "seed", "duration"),
         "ui": ("visualization", "update_frequency_hz", "dashboard_layout"),

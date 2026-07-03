@@ -22,6 +22,8 @@ def test_config_loads_correctly() -> None:
     assert config.runtime.speed_factor == 1.0
     assert config.network.transport_protocol == "TCP"
     assert config.network.routing_protocol == "LINK_STATE"
+    assert config.network.antenna_diameter_m == 0.45
+    assert config.network.antenna_aperture_efficiency == 0.65
     assert config.ui.visualization.satellites is True
 
 
@@ -47,6 +49,8 @@ def test_network_protocol_profile_can_be_updated_directly() -> None:
             "rain_rate_mm_h": 12.5,
             "rain_attenuation_coefficient_db_per_km_per_mm_h": 0.015,
             "rain_effective_path_km": 4.0,
+            "antenna_diameter_m": 0.55,
+            "antenna_aperture_efficiency": 0.7,
         }
     )
 
@@ -56,6 +60,8 @@ def test_network_protocol_profile_can_be_updated_directly() -> None:
     assert controller.config.network.carrier_frequency_hz == 22_000_000_000.0
     assert controller.config.network.channel_bandwidth_hz == 250_000_000.0
     assert controller.config.network.rain_rate_mm_h == 12.5
+    assert controller.config.network.antenna_diameter_m == 0.55
+    assert controller.config.network.antenna_aperture_efficiency == 0.7
 
 
 def test_runtime_mode_switching_works() -> None:
@@ -90,6 +96,8 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
                     "rain_rate_mm_h": 12.5,
                     "rain_attenuation_coefficient_db_per_km_per_mm_h": 0.015,
                     "rain_effective_path_km": 4.0,
+                    "antenna_diameter_m": 0.55,
+                    "antenna_aperture_efficiency": 0.7,
                 },
             }
         )
@@ -104,6 +112,8 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
     assert control_plane.result.config.carrier_frequency_hz == 22_000_000_000.0
     assert control_plane.result.config.channel_bandwidth_hz == 250_000_000.0
     assert control_plane.result.config.rain_rate_mm_h == 12.5
+    assert control_plane.result.config.antenna_diameter_m == 0.55
+    assert control_plane.result.config.antenna_aperture_efficiency == 0.7
     assert control_plane.result.scenario.frontend_config["network"] == {
         "transport_protocol": "UDP",
         "routing_protocol": "DISTANCE_VECTOR",
@@ -112,10 +122,14 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
         "rain_rate_mm_h": 12.5,
         "rain_attenuation_coefficient_db_per_km_per_mm_h": 0.015,
         "rain_effective_path_km": 4.0,
+        "antenna_diameter_m": 0.55,
+        "antenna_aperture_efficiency": 0.7,
     }
     assert ack["generated_config"]["transport_protocol"] == "UDP"
     assert ack["generated_config"]["routing_protocol"] == "DISTANCE_VECTOR"
     assert ack["generated_config"]["carrier_frequency_hz"] == 22_000_000_000.0
+    assert ack["generated_config"]["antenna_diameter_m"] == 0.55
+    assert ack["generated_config"]["antenna_aperture_efficiency"] == 0.7
 
     runtime_ack = control_plane.handle_raw_message(
         json.dumps({"type": "RUNTIME_CONTROL", "action": "START"})

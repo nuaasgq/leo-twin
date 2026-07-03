@@ -33,7 +33,9 @@ describe("generatedScenarioSummaryItems", () => {
       routing_protocol: "DISTANCE_VECTOR",
       carrier_frequency_hz: 22_000_000_000,
       channel_bandwidth_hz: 250_000_000,
-      rain_rate_mm_h: 12.5
+      rain_rate_mm_h: 12.5,
+      antenna_diameter_m: 0.6,
+      antenna_aperture_efficiency: 0.7
     };
 
     expect(generatedScenarioSummaryItems(config)).toEqual([
@@ -48,6 +50,8 @@ describe("generatedScenarioSummaryItems", () => {
       { label: "载波频率", value: "22 GHz" },
       { label: "信道带宽", value: "250 MHz" },
       { label: "雨强", value: "12.5 mm/h" },
+      { label: "天线口径", value: "0.6 m" },
+      { label: "孔径效率", value: "0.7" },
       { label: "轨道高度", value: "550 km" },
       { label: "倾角", value: "53.5°" }
     ]);
@@ -136,7 +140,9 @@ describe("networkControlPayload", () => {
         channel_bandwidth_mhz: 250,
         rain_rate_mm_h: 8,
         rain_attenuation_coefficient_db_per_km_per_mm_h: 0.012,
-        rain_effective_path_km: 4.5
+        rain_effective_path_km: 4.5,
+        antenna_diameter_m: 0.55,
+        antenna_aperture_efficiency: 0.72
       })
     ).toEqual({
       transport_protocol: "UDP",
@@ -145,7 +151,9 @@ describe("networkControlPayload", () => {
       channel_bandwidth_hz: 250_000_000,
       rain_rate_mm_h: 8,
       rain_attenuation_coefficient_db_per_km_per_mm_h: 0.012,
-      rain_effective_path_km: 4.5
+      rain_effective_path_km: 4.5,
+      antenna_diameter_m: 0.55,
+      antenna_aperture_efficiency: 0.72
     });
   });
 });

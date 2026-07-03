@@ -104,6 +104,8 @@ def build_demo_scenario(config: DemoConfig) -> DemoScenario:
                     config.rain_attenuation_coefficient_db_per_km_per_mm_h
                 ),
                 "rain_effective_path_km": config.rain_effective_path_km,
+                "antenna_diameter_m": config.antenna_diameter_m,
+                "antenna_aperture_efficiency": config.antenna_aperture_efficiency,
             },
             "runtime": {
                 "mode": "REAL_TIME",

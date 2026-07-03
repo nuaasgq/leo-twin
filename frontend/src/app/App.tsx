@@ -332,7 +332,15 @@ export function scenarioWithRuntimeConfig(
         rain_effective_path_km:
           typeof runtimeConfig.network.rain_effective_path_km === "number"
             ? runtimeConfig.network.rain_effective_path_km
-            : scenario.network?.rain_effective_path_km
+            : scenario.network?.rain_effective_path_km,
+        antenna_diameter_m:
+          typeof runtimeConfig.network.antenna_diameter_m === "number"
+            ? runtimeConfig.network.antenna_diameter_m
+            : scenario.network?.antenna_diameter_m,
+        antenna_aperture_efficiency:
+          typeof runtimeConfig.network.antenna_aperture_efficiency === "number"
+            ? runtimeConfig.network.antenna_aperture_efficiency
+            : scenario.network?.antenna_aperture_efficiency
       }
     : scenario.network;
   const ui = isRecord(runtimeConfig.ui)
@@ -451,7 +459,10 @@ function scenarioControlValues(
       rain_rate_mm_h: scenarioConfig?.network?.rain_rate_mm_h ?? 0,
       rain_attenuation_coefficient_db_per_km_per_mm_h:
         scenarioConfig?.network?.rain_attenuation_coefficient_db_per_km_per_mm_h ?? 0,
-      rain_effective_path_km: scenarioConfig?.network?.rain_effective_path_km ?? 0
+      rain_effective_path_km: scenarioConfig?.network?.rain_effective_path_km ?? 0,
+      antenna_diameter_m: scenarioConfig?.network?.antenna_diameter_m ?? 0.45,
+      antenna_aperture_efficiency:
+        scenarioConfig?.network?.antenna_aperture_efficiency ?? 0.65
     }
   };
 }

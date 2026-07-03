@@ -483,10 +483,6 @@ body {
   gap: 0 10px;
 }
 
-.channel-grid .control-group:last-child {
-  grid-column: 1 / -1;
-}
-
 .unit-input {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -1068,10 +1064,6 @@ body {
 
   .channel-grid {
     grid-template-columns: 1fr;
-  }
-
-  .channel-grid .control-group:last-child {
-    grid-column: auto;
   }
 
   .data-panel {

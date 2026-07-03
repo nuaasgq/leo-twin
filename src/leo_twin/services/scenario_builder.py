@@ -52,6 +52,8 @@ class FullSystemScenarioBuilderConfig:
     rain_rate_mm_h: float = 0.0
     rain_attenuation_coefficient_db_per_km_per_mm_h: float = 0.0
     rain_effective_path_km: float = 0.0
+    antenna_diameter_m: float = 0.45
+    antenna_aperture_efficiency: float = 0.65
     compute_capacity: float = 10.0
     demand_capacity: float = 1.0
     task_compute_demand: float = 20.0
@@ -109,6 +111,11 @@ class FullSystemScenarioBuilderConfig:
         _require_non_negative_number(
             self.rain_effective_path_km,
             "rain_effective_path_km",
+        )
+        _require_positive_number(self.antenna_diameter_m, "antenna_diameter_m")
+        _require_efficiency(
+            self.antenna_aperture_efficiency,
+            "antenna_aperture_efficiency",
         )
         _require_positive_number(self.compute_capacity, "compute_capacity")
         _require_non_negative_number(self.demand_capacity, "demand_capacity")
@@ -248,6 +255,8 @@ def scenario_builder_config_from_sees_config(
             config.network.rain_attenuation_coefficient_db_per_km_per_mm_h
         ),
         rain_effective_path_km=config.network.rain_effective_path_km,
+        antenna_diameter_m=config.network.antenna_diameter_m,
+        antenna_aperture_efficiency=config.network.antenna_aperture_efficiency,
     )
 
 
@@ -399,6 +408,12 @@ def _require_non_negative_number(value: Any, field_name: str) -> None:
     _require_finite_number(value, field_name)
     if value < 0:
         raise ValueError(f"{field_name} must be non-negative")
+
+
+def _require_efficiency(value: Any, field_name: str) -> None:
+    _require_finite_number(value, field_name)
+    if value <= 0.0 or value > 1.0:
+        raise ValueError(f"{field_name} must be in (0, 1]")
 
 
 def _require_range(

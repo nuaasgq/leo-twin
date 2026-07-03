@@ -30,6 +30,8 @@ export interface NetworkControlValues {
   rain_rate_mm_h: number;
   rain_attenuation_coefficient_db_per_km_per_mm_h: number;
   rain_effective_path_km: number;
+  antenna_diameter_m: number;
+  antenna_aperture_efficiency: number;
 }
 
 export interface ConfigPanelProps {
@@ -88,6 +90,12 @@ export function ConfigPanel({
     scenario.network.rain_attenuation_coefficient_db_per_km_per_mm_h
   );
   const [rainPathKm, setRainPathKm] = useState(scenario.network.rain_effective_path_km);
+  const [antennaDiameterM, setAntennaDiameterM] = useState(
+    scenario.network.antenna_diameter_m
+  );
+  const [antennaApertureEfficiency, setAntennaApertureEfficiency] = useState(
+    scenario.network.antenna_aperture_efficiency
+  );
   const [runtimeMode, setRuntimeMode] = useState<Exclude<RuntimeMode, "PAUSED">>(
     runtime.mode === "ACCELERATED" ? "ACCELERATED" : "REAL_TIME"
   );
@@ -110,6 +118,8 @@ export function ConfigPanel({
     setRainRate(scenario.network.rain_rate_mm_h);
     setRainCoefficient(scenario.network.rain_attenuation_coefficient_db_per_km_per_mm_h);
     setRainPathKm(scenario.network.rain_effective_path_km);
+    setAntennaDiameterM(scenario.network.antenna_diameter_m);
+    setAntennaApertureEfficiency(scenario.network.antenna_aperture_efficiency);
   }, [
     scenario.satellite_count,
     scenario.user_count,
@@ -124,7 +134,9 @@ export function ConfigPanel({
     scenario.network.channel_bandwidth_mhz,
     scenario.network.rain_rate_mm_h,
     scenario.network.rain_attenuation_coefficient_db_per_km_per_mm_h,
-    scenario.network.rain_effective_path_km
+    scenario.network.rain_effective_path_km,
+    scenario.network.antenna_diameter_m,
+    scenario.network.antenna_aperture_efficiency
   ]);
 
   useEffect(() => {
@@ -416,6 +428,43 @@ export function ConfigPanel({
             <span>km</span>
           </div>
         </div>
+
+        <div className="control-group">
+          <label className="control-label" htmlFor="antenna-diameter">
+            天线口径
+          </label>
+          <div className="unit-input">
+            <input
+              id="antenna-diameter"
+              type="number"
+              min="0.05"
+              step="0.01"
+              value={antennaDiameterM}
+              onChange={(event) => setAntennaDiameterM(Number(event.currentTarget.value))}
+            />
+            <span>m</span>
+          </div>
+        </div>
+
+        <div className="control-group">
+          <label className="control-label" htmlFor="antenna-efficiency">
+            孔径效率
+          </label>
+          <div className="unit-input">
+            <input
+              id="antenna-efficiency"
+              type="number"
+              min="0.05"
+              max="1"
+              step="0.01"
+              value={antennaApertureEfficiency}
+              onChange={(event) =>
+                setAntennaApertureEfficiency(Number(event.currentTarget.value))
+              }
+            />
+            <span>η</span>
+          </div>
+        </div>
       </div>
 
       <div className="runtime-actions" aria-label="仿真运行控制">
@@ -443,7 +492,9 @@ export function ConfigPanel({
                 channel_bandwidth_mhz: channelBandwidthMhz,
                 rain_rate_mm_h: rainRate,
                 rain_attenuation_coefficient_db_per_km_per_mm_h: rainCoefficient,
-                rain_effective_path_km: rainPathKm
+                rain_effective_path_km: rainPathKm,
+                antenna_diameter_m: antennaDiameterM,
+                antenna_aperture_efficiency: antennaApertureEfficiency
               })
             })
           }
@@ -518,6 +569,8 @@ export function generatedScenarioSummaryItems(
     { label: "载波频率", value: formatFrequency(config.carrier_frequency_hz) },
     { label: "信道带宽", value: formatBandwidth(config.channel_bandwidth_hz) },
     { label: "雨强", value: formatRainRate(config.rain_rate_mm_h) },
+    { label: "天线口径", value: formatMeters(config.antenna_diameter_m) },
+    { label: "孔径效率", value: formatEfficiency(config.antenna_aperture_efficiency) },
     {
       label: "轨道高度",
       value: `${formatInteger(config.semi_major_axis_km - config.earth_radius_km)} km`
@@ -582,7 +635,9 @@ export function networkControlPayload(network: NetworkControlValues): Record<str
     rain_rate_mm_h: network.rain_rate_mm_h,
     rain_attenuation_coefficient_db_per_km_per_mm_h:
       network.rain_attenuation_coefficient_db_per_km_per_mm_h,
-    rain_effective_path_km: network.rain_effective_path_km
+    rain_effective_path_km: network.rain_effective_path_km,
+    antenna_diameter_m: network.antenna_diameter_m,
+    antenna_aperture_efficiency: network.antenna_aperture_efficiency
   };
 }
 
@@ -635,6 +690,20 @@ function formatRainRate(value: number | undefined): string {
     return "0 mm/h";
   }
   return `${formatDecimal(value)} mm/h`;
+}
+
+function formatMeters(value: number | undefined): string {
+  if (value === undefined) {
+    return "0.45 m";
+  }
+  return `${formatDecimal(value)} m`;
+}
+
+function formatEfficiency(value: number | undefined): string {
+  if (value === undefined) {
+    return "0.65";
+  }
+  return formatDecimal(value);
 }
 
 function runtimeStatusLabel(runtime: RuntimeStatusPayload): string {

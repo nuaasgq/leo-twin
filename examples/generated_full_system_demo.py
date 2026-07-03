@@ -13,6 +13,7 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 from leo_twin.core import SimulationKernel
 from leo_twin.models.compute import ComputeNode, RouteAwareComputeEngine, TaskPlacementDecision
 from leo_twin.models.network import (
+    ApertureAntennaSpec,
     ChannelBudgetSelector,
     GroundEndpoint,
     PositionDrivenNetworkEngine,
@@ -180,12 +181,13 @@ def run_generated_full_system_demo(
 def _space_ground_budget(
     config: FullSystemScenarioBuilderConfig,
 ) -> LinkBudgetCalculator:
-    antenna = AntennaProfile(
-        antenna_id="generated-ka-terminal",
-        gain_dbi=36.0,
-        beam_width_deg=4.0,
+    antenna = ApertureAntennaSpec(
+        antenna_id="generated-ka-aperture",
+        diameter_m=config.antenna_diameter_m,
+        carrier_frequency_hz=config.carrier_frequency_hz,
+        aperture_efficiency=config.antenna_aperture_efficiency,
         steering_mode="electronic",
-    )
+    ).to_profile()
     rain_profile = (
         None
         if config.rain_rate_mm_h == 0.0

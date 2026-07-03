@@ -61,6 +61,8 @@ class NetworkProfile:
     rain_rate_mm_h: float = 0.0
     rain_attenuation_coefficient_db_per_km_per_mm_h: float = 0.0
     rain_effective_path_km: float = 0.0
+    antenna_diameter_m: float = 0.45
+    antenna_aperture_efficiency: float = 0.65
 
     def __post_init__(self) -> None:
         if not isinstance(self.transport_protocol, TransportProtocol):
@@ -86,6 +88,11 @@ class NetworkProfile:
             self.rain_effective_path_km,
             "network.rain_effective_path_km",
         )
+        _require_positive_finite(self.antenna_diameter_m, "network.antenna_diameter_m")
+        _require_efficiency(
+            self.antenna_aperture_efficiency,
+            "network.antenna_aperture_efficiency",
+        )
         object.__setattr__(self, "carrier_frequency_hz", float(self.carrier_frequency_hz))
         object.__setattr__(self, "channel_bandwidth_hz", float(self.channel_bandwidth_hz))
         object.__setattr__(self, "rain_rate_mm_h", float(self.rain_rate_mm_h))
@@ -95,6 +102,12 @@ class NetworkProfile:
             float(self.rain_attenuation_coefficient_db_per_km_per_mm_h),
         )
         object.__setattr__(self, "rain_effective_path_km", float(self.rain_effective_path_km))
+        object.__setattr__(self, "antenna_diameter_m", float(self.antenna_diameter_m))
+        object.__setattr__(
+            self,
+            "antenna_aperture_efficiency",
+            float(self.antenna_aperture_efficiency),
+        )
 
 
 @dataclass(frozen=True)
@@ -225,6 +238,12 @@ def _require_non_negative_finite(value: float, field_name: str) -> None:
     _require_finite(value, field_name)
     if value < 0:
         raise ValueError(f"{field_name} must be non-negative")
+
+
+def _require_efficiency(value: float, field_name: str) -> None:
+    _require_finite(value, field_name)
+    if value <= 0.0 or value > 1.0:
+        raise ValueError(f"{field_name} must be in (0, 1]")
 
 
 def _require_finite_range(
