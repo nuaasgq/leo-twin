@@ -71,7 +71,48 @@ flowchart LR
 | 物理层 | 频段、带宽、发射功率、天线参数 | 天线增益、波束宽度、指向模式 |
 | 信道层 | 空地、空空、地面链路环境画像 | 载频、带宽、损耗模型名称 |
 
-当前第一轮只冻结分层契约，不实现协议细节。
+当前实现已经具备确定性协议画像运行时，协议仍然是流级和状态级抽象，不做 packet-level 仿真。
+
+## 当前运行数据链路
+
+```mermaid
+sequenceDiagram
+    participant K as Event Kernel
+    participant O as Keplerian Orbit
+    participant N as Position Network
+    participant C as Route-Aware Compute
+    participant M as Metrics
+    participant F as Frontend
+
+    K->>O: ORBIT_TRIGGER
+    O->>K: ORBIT_UPDATE / SatelliteState
+    K->>N: ORBIT_UPDATE + FlowRequest
+    N->>K: ACCESS_START / LINK_UPDATE / ROUTE_UPDATE
+    K->>C: ROUTE_UPDATE + TaskRequest
+    C->>K: TASK_START / TASK_FINISH
+    K->>M: all events read-only
+    M->>F: metrics snapshot / summary
+```
+
+## 已落地运行模块
+
+| 模块 | 运行职责 | 约束 |
+|---|---|---|
+| `KeplerianOrbitEngine` | 根据配置产生确定性卫星位置、速度和 `ORBIT_UPDATE` | 不集成 SGP4，不依赖网络或算力实现 |
+| `PositionDrivenNetworkEngine` | 根据轨道位置、用户位置和流请求产生接入、链路和路由事件 | 不做 packet-level 仿真，不直接调用 Orbit/Compute |
+| `LinkBudgetCalculator` | 根据频率、带宽、天线和距离计算链路预算与容量画像 | 确定性闭式计算，不引入外部射频工具 |
+| `RoutingRuntime` | 根据可用链路和路由画像输出确定性路径 | 当前是运行时策略抽象，不实现研究型路由优化 |
+| `TransportRuntime` | 将 TCP/UDP 画像映射为流级时延和有效容量调整 | 不模拟真实协议栈报文 |
+| `RouteAwareComputeEngine` | 根据路由状态和任务请求生成任务生命周期事件 | 当前不执行真实容器、GPU 或线程 |
+| `ComputeSchedulingRuntime` | 提供 FIFO、最短作业优先、最早截止期优先的确定性排序 | 待接入主算力运行引擎 |
+| `MetricsCollector` | 只读采集事件并生成指标摘要 | 禁止修改任何领域状态 |
+
+## 层间影响规则
+
+- 轨道影响网络：卫星位置改变覆盖、距离、链路预算和路由可达性。
+- 网络影响算力：路由时延、容量和可达性决定任务启动和完成时间。
+- 算力影响网络负载：任务生命周期可以生成后续业务流，但必须通过事件表达。
+- 指标只观察不干预：任何 KPI、日志或前端摘要都不能反向修改仿真状态。
 
 ## 前端拆分
 
