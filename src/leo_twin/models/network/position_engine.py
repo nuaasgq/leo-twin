@@ -14,6 +14,7 @@ from leo_twin.models.network.geometry import (
     PositionDrivenAccessModel,
 )
 from leo_twin.models.network.routing import RoutingRuntime
+from leo_twin.models.network.stack import NetworkStackRuntime, NetworkStackTrace
 from leo_twin.models.network.transport import TransportRuntime
 from leo_twin.schema import (
     AccessAssociation,
@@ -49,6 +50,7 @@ class PositionDrivenNetworkEngine(SimulationModule):
         link_budget_selector: ChannelBudgetSelector | None = None,
         routing_runtime: RoutingRuntime | None = None,
         transport_runtime: TransportRuntime | None = None,
+        stack_runtime: NetworkStackRuntime | None = None,
         static_links: Iterable[LinkState] = (),
         space_link_max_range_km: float | None = None,
         space_link_capacity: float | None = None,
@@ -97,7 +99,10 @@ class PositionDrivenNetworkEngine(SimulationModule):
         self._link_budget_selector = link_budget_selector
         self._routing_runtime = routing_runtime
         self._transport_runtime = transport_runtime
-        self._static_links = tuple(sorted(static_links, key=lambda item: (item.source_id, item.target_id)))
+        self._stack_runtime = stack_runtime
+        self._static_links = tuple(
+            sorted(static_links, key=lambda item: (item.source_id, item.target_id))
+        )
         self._space_link_max_range_km = space_link_max_range_km
         self._space_link_capacity = float(space_link_capacity or link_capacity)
         self._space_link_cell_size_km = float(
@@ -114,6 +119,7 @@ class PositionDrivenNetworkEngine(SimulationModule):
         self._active_space_links: dict[tuple[str, str], LinkState] = {}
         self._active_flows: dict[str, FlowRequest] = {}
         self._last_routes: dict[str, Route] = {}
+        self._last_stack_traces: dict[str, NetworkStackTrace] = {}
         self._last_links: dict[tuple[str, str], LinkState] = {}
         self._event_sequence = 0
 
@@ -161,6 +167,19 @@ class PositionDrivenNetworkEngine(SimulationModule):
         )
         return access_links + space_links
 
+    def stack_traces(self) -> tuple[NetworkStackTrace, ...]:
+        """Return latest protocol stack traces in deterministic flow order."""
+
+        return tuple(
+            self._last_stack_traces[flow_id]
+            for flow_id in sorted(self._last_stack_traces)
+        )
+
+    def stack_trace_for_flow(self, flow_id: str) -> NetworkStackTrace | None:
+        """Return the latest protocol stack trace for one flow, if available."""
+
+        return self._last_stack_traces.get(flow_id)
+
     def route_flow(self, request: FlowRequest) -> Route:
         """Route one flow through the best currently active access link."""
 
@@ -169,32 +188,45 @@ class PositionDrivenNetworkEngine(SimulationModule):
                 request,
                 self.active_link_states() + self._static_links,
             )
-            return self._apply_transport(request, route)
-
-        if request.target_id not in self._compute_node_ids:
-            return _unavailable_route(request)
-        candidates = tuple(
-            link
-            for key, link in sorted(self._active_links.items())
-            if key[1] == request.source_id and link.capacity >= request.demand_capacity
-        )
-        if not candidates:
-            return _unavailable_route(request)
-        selected = min(candidates, key=lambda item: (item.latency, item.source_id, item.target_id))
-        route = Route(
-            route_id=f"route:{request.flow_id}",
-            flow_id=request.flow_id,
-            path=(request.source_id, selected.source_id, request.target_id),
-            latency=selected.latency,
-            capacity=selected.capacity,
-            available=True,
-        )
-        return self._apply_transport(request, route)
+        elif request.target_id not in self._compute_node_ids:
+            route = _unavailable_route(request)
+        else:
+            candidates = tuple(
+                link
+                for key, link in sorted(self._active_links.items())
+                if key[1] == request.source_id and link.capacity >= request.demand_capacity
+            )
+            if not candidates:
+                route = _unavailable_route(request)
+            else:
+                selected = min(
+                    candidates,
+                    key=lambda item: (item.latency, item.source_id, item.target_id),
+                )
+                route = Route(
+                    route_id=f"route:{request.flow_id}",
+                    flow_id=request.flow_id,
+                    path=(request.source_id, selected.source_id, request.target_id),
+                    latency=selected.latency,
+                    capacity=selected.capacity,
+                    available=True,
+                )
+        routed = self._apply_transport(request, route)
+        self._record_stack_trace(request, routed)
+        return routed
 
     def _apply_transport(self, request: FlowRequest, route: Route) -> Route:
         if self._transport_runtime is None:
             return route
         return self._transport_runtime.apply(request, route)
+
+    def _record_stack_trace(self, request: FlowRequest, route: Route) -> None:
+        if self._stack_runtime is None:
+            return
+        self._last_stack_traces[request.flow_id] = self._stack_runtime.process_flow(
+            request,
+            route,
+        )
 
     def _reroute_active_flows(self, dispatch_time: float) -> tuple[SimEvent, ...]:
         emitted: list[SimEvent] = []

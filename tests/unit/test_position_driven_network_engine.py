@@ -7,9 +7,11 @@ from leo_twin.models.network import (
     ChannelBudgetSelector,
     LinkBudgetCalculator,
     GroundEndpoint,
+    NetworkStackRuntime,
     PositionDrivenNetworkEngine,
     RadioTerminalProfile,
     RoutingRuntime,
+    build_default_leo_protocol_stack,
     default_transport_runtime,
 )
 from leo_twin.schema import (
@@ -19,6 +21,7 @@ from leo_twin.schema import (
     FlowRequest,
     LinkMedium,
     LinkState,
+    NetworkLayer,
     Route,
     RoutingProtocol,
     SatelliteState,
@@ -426,6 +429,105 @@ def test_position_driven_engine_can_apply_transport_runtime_to_route() -> None:
 
     assert compute.routes[0].latency == 1.258
     assert compute.routes[0].capacity == pytest.approx(89.546667)
+
+
+def test_position_driven_engine_records_protocol_stack_trace_for_routed_flow() -> None:
+    kernel = SimulationKernel()
+    network = PositionDrivenNetworkEngine(
+        endpoints=(
+            GroundEndpoint(
+                endpoint_id="user-east",
+                position=(EARTH_RADIUS_KM, 0.0, 0.0),
+                min_elevation_deg=10.0,
+                max_range_km=2000.0,
+            ),
+        ),
+        compute_node_ids=("node-a",),
+        link_capacity=50.0,
+        propagation_speed_km_s=1000.0,
+        cell_size_km=1000.0,
+        stack_runtime=NetworkStackRuntime(build_default_leo_protocol_stack()),
+    )
+    metrics = MetricsSink()
+    compute = ComputeSink()
+    kernel.register_module(network)
+    kernel.register_module(metrics)
+    kernel.register_module(compute)
+    kernel.schedule_event(
+        _event("orbit", EventType.ORBIT_UPDATE.value, _state((7000.0, 0.0, 0.0)))
+    )
+    kernel.schedule_event(
+        _event(
+            "flow",
+            EventType.FLOW_ARRIVAL.value,
+            FlowRequest("flow-001", "user-east", "node-a", 10.0),
+            1.0,
+        )
+    )
+
+    kernel.run()
+
+    trace = network.stack_trace_for_flow("flow-001")
+    assert trace is not None
+    assert trace.route_id == compute.routes[0].route_id
+    assert trace.available is True
+    assert trace.transport_protocol == "TCP"
+    assert tuple(layer.layer for layer in trace.layers) == (
+        NetworkLayer.APPLICATION,
+        NetworkLayer.TRANSPORT,
+        NetworkLayer.NETWORK,
+        NetworkLayer.DATA_LINK,
+        NetworkLayer.PHYSICAL,
+        NetworkLayer.CHANNEL,
+    )
+    assert trace.layers[2].status == "OK"
+    assert network.stack_traces() == (trace,)
+
+
+def test_position_driven_stack_trace_updates_after_reroute() -> None:
+    kernel = SimulationKernel()
+    network = PositionDrivenNetworkEngine(
+        endpoints=(
+            GroundEndpoint(
+                endpoint_id="user-east",
+                position=(EARTH_RADIUS_KM, 0.0, 0.0),
+                min_elevation_deg=10.0,
+                max_range_km=2000.0,
+            ),
+        ),
+        compute_node_ids=("node-a",),
+        link_capacity=50.0,
+        propagation_speed_km_s=1000.0,
+        cell_size_km=1000.0,
+        stack_runtime=NetworkStackRuntime(build_default_leo_protocol_stack()),
+    )
+    metrics = MetricsSink()
+    compute = ComputeSink()
+    kernel.register_module(network)
+    kernel.register_module(metrics)
+    kernel.register_module(compute)
+    kernel.schedule_event(
+        _event("orbit-1", EventType.ORBIT_UPDATE.value, _state((7000.0, 0.0, 0.0)))
+    )
+    kernel.schedule_event(
+        _event(
+            "flow",
+            EventType.FLOW_ARRIVAL.value,
+            FlowRequest("flow-001", "user-east", "node-a", 10.0),
+            1.0,
+        )
+    )
+    kernel.schedule_event(
+        _event("orbit-2", EventType.ORBIT_UPDATE.value, _state((0.0, 7000.0, 0.0)), 2.0)
+    )
+
+    kernel.run()
+
+    trace = network.stack_trace_for_flow("flow-001")
+    assert trace is not None
+    assert [route.available for route in compute.routes] == [True, False]
+    assert trace.available is False
+    assert trace.layers[2].status == "UNAVAILABLE"
 
 
 def test_link_budget_limits_position_driven_link_capacity_and_latency() -> None:
