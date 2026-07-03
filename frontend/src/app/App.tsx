@@ -317,7 +317,28 @@ export function scenarioWithRuntimeConfig(
         routing_protocol:
           typeof runtimeConfig.network.routing_protocol === "string"
             ? runtimeConfig.network.routing_protocol
-            : scenario.network?.routing_protocol
+            : scenario.network?.routing_protocol,
+        carrier_frequency_hz:
+          typeof runtimeConfig.network.carrier_frequency_hz === "number"
+            ? runtimeConfig.network.carrier_frequency_hz
+            : scenario.network?.carrier_frequency_hz,
+        channel_bandwidth_hz:
+          typeof runtimeConfig.network.channel_bandwidth_hz === "number"
+            ? runtimeConfig.network.channel_bandwidth_hz
+            : scenario.network?.channel_bandwidth_hz,
+        rain_rate_mm_h:
+          typeof runtimeConfig.network.rain_rate_mm_h === "number"
+            ? runtimeConfig.network.rain_rate_mm_h
+            : scenario.network?.rain_rate_mm_h,
+        rain_attenuation_coefficient_db_per_km_per_mm_h:
+          typeof runtimeConfig.network.rain_attenuation_coefficient_db_per_km_per_mm_h ===
+          "number"
+            ? runtimeConfig.network.rain_attenuation_coefficient_db_per_km_per_mm_h
+            : scenario.network?.rain_attenuation_coefficient_db_per_km_per_mm_h,
+        rain_effective_path_km:
+          typeof runtimeConfig.network.rain_effective_path_km === "number"
+            ? runtimeConfig.network.rain_effective_path_km
+            : scenario.network?.rain_effective_path_km
       }
     : scenario.network;
   const ui = isRecord(runtimeConfig.ui)
@@ -428,7 +449,15 @@ function scenarioControlValues(
     },
     network: {
       transport_protocol: scenarioConfig?.network?.transport_protocol ?? "TCP",
-      routing_protocol: scenarioConfig?.network?.routing_protocol ?? "LINK_STATE"
+      routing_protocol: scenarioConfig?.network?.routing_protocol ?? "LINK_STATE",
+      carrier_frequency_ghz:
+        (scenarioConfig?.network?.carrier_frequency_hz ?? 20_000_000_000) / 1_000_000_000,
+      channel_bandwidth_mhz:
+        (scenarioConfig?.network?.channel_bandwidth_hz ?? 100_000_000) / 1_000_000,
+      rain_rate_mm_h: scenarioConfig?.network?.rain_rate_mm_h ?? 0,
+      rain_attenuation_coefficient_db_per_km_per_mm_h:
+        scenarioConfig?.network?.rain_attenuation_coefficient_db_per_km_per_mm_h ?? 0,
+      rain_effective_path_km: scenarioConfig?.network?.rain_effective_path_km ?? 0
     }
   };
 }

@@ -95,6 +95,11 @@ export interface ScenarioConfig {
   network?: {
     transport_protocol?: string;
     routing_protocol?: string;
+    carrier_frequency_hz?: number;
+    channel_bandwidth_hz?: number;
+    rain_rate_mm_h?: number;
+    rain_attenuation_coefficient_db_per_km_per_mm_h?: number;
+    rain_effective_path_km?: number;
   };
   runtime?: {
     mode?: RuntimeMode;

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   generatedScenarioSummaryItems,
+  networkControlPayload,
   pauseResumeControl,
   runtimeProgressSummary,
   visualizationControlPayload
@@ -121,6 +122,30 @@ describe("visualizationControlPayload", () => {
       links: true,
       users: false,
       metrics: false
+    });
+  });
+});
+
+describe("networkControlPayload", () => {
+  it("converts Chinese panel units into deterministic control-plane fields", () => {
+    expect(
+      networkControlPayload({
+        transport_protocol: "UDP",
+        routing_protocol: "DISTANCE_VECTOR",
+        carrier_frequency_ghz: 22.5,
+        channel_bandwidth_mhz: 250,
+        rain_rate_mm_h: 8,
+        rain_attenuation_coefficient_db_per_km_per_mm_h: 0.012,
+        rain_effective_path_km: 4.5
+      })
+    ).toEqual({
+      transport_protocol: "UDP",
+      routing_protocol: "DISTANCE_VECTOR",
+      carrier_frequency_hz: 22_500_000_000,
+      channel_bandwidth_hz: 250_000_000,
+      rain_rate_mm_h: 8,
+      rain_attenuation_coefficient_db_per_km_per_mm_h: 0.012,
+      rain_effective_path_km: 4.5
     });
   });
 });

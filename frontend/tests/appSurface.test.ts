@@ -46,7 +46,12 @@ describe("scenarioWithRuntimeConfig", () => {
         {
           network: {
             transport_protocol: "UDP",
-            routing_protocol: "DISTANCE_VECTOR"
+            routing_protocol: "DISTANCE_VECTOR",
+            carrier_frequency_hz: 22_000_000_000,
+            channel_bandwidth_hz: 250_000_000,
+            rain_rate_mm_h: 12,
+            rain_attenuation_coefficient_db_per_km_per_mm_h: 0.01,
+            rain_effective_path_km: 5
           },
           ui: {
             visualization: {
@@ -61,7 +66,12 @@ describe("scenarioWithRuntimeConfig", () => {
     ).toEqual({
       network: {
         transport_protocol: "UDP",
-        routing_protocol: "DISTANCE_VECTOR"
+        routing_protocol: "DISTANCE_VECTOR",
+        carrier_frequency_hz: 22_000_000_000,
+        channel_bandwidth_hz: 250_000_000,
+        rain_rate_mm_h: 12,
+        rain_attenuation_coefficient_db_per_km_per_mm_h: 0.01,
+        rain_effective_path_km: 5
       },
       ui: {
         visualization: {

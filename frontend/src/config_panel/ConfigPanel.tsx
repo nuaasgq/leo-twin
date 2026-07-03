@@ -25,6 +25,11 @@ export interface VisualizationControlValues {
 export interface NetworkControlValues {
   transport_protocol: string;
   routing_protocol: string;
+  carrier_frequency_ghz: number;
+  channel_bandwidth_mhz: number;
+  rain_rate_mm_h: number;
+  rain_attenuation_coefficient_db_per_km_per_mm_h: number;
+  rain_effective_path_km: number;
 }
 
 export interface ConfigPanelProps {
@@ -72,6 +77,17 @@ export function ConfigPanel({
     scenario.network.transport_protocol
   );
   const [routingProtocol, setRoutingProtocol] = useState(scenario.network.routing_protocol);
+  const [carrierFrequencyGhz, setCarrierFrequencyGhz] = useState(
+    scenario.network.carrier_frequency_ghz
+  );
+  const [channelBandwidthMhz, setChannelBandwidthMhz] = useState(
+    scenario.network.channel_bandwidth_mhz
+  );
+  const [rainRate, setRainRate] = useState(scenario.network.rain_rate_mm_h);
+  const [rainCoefficient, setRainCoefficient] = useState(
+    scenario.network.rain_attenuation_coefficient_db_per_km_per_mm_h
+  );
+  const [rainPathKm, setRainPathKm] = useState(scenario.network.rain_effective_path_km);
   const [runtimeMode, setRuntimeMode] = useState<Exclude<RuntimeMode, "PAUSED">>(
     runtime.mode === "ACCELERATED" ? "ACCELERATED" : "REAL_TIME"
   );
@@ -89,6 +105,11 @@ export function ConfigPanel({
     setShowMetrics(scenario.visualization.metrics);
     setTransportProtocol(scenario.network.transport_protocol);
     setRoutingProtocol(scenario.network.routing_protocol);
+    setCarrierFrequencyGhz(scenario.network.carrier_frequency_ghz);
+    setChannelBandwidthMhz(scenario.network.channel_bandwidth_mhz);
+    setRainRate(scenario.network.rain_rate_mm_h);
+    setRainCoefficient(scenario.network.rain_attenuation_coefficient_db_per_km_per_mm_h);
+    setRainPathKm(scenario.network.rain_effective_path_km);
   }, [
     scenario.satellite_count,
     scenario.user_count,
@@ -98,7 +119,12 @@ export function ConfigPanel({
     scenario.visualization.users,
     scenario.visualization.metrics,
     scenario.network.transport_protocol,
-    scenario.network.routing_protocol
+    scenario.network.routing_protocol,
+    scenario.network.carrier_frequency_ghz,
+    scenario.network.channel_bandwidth_mhz,
+    scenario.network.rain_rate_mm_h,
+    scenario.network.rain_attenuation_coefficient_db_per_km_per_mm_h,
+    scenario.network.rain_effective_path_km
   ]);
 
   useEffect(() => {
@@ -308,6 +334,90 @@ export function ConfigPanel({
         </select>
       </div>
 
+      <div className="channel-grid" aria-label="信道参数">
+        <div className="control-group">
+          <label className="control-label" htmlFor="carrier-frequency">
+            载波频率
+          </label>
+          <div className="unit-input">
+            <input
+              id="carrier-frequency"
+              type="number"
+              min="1"
+              step="0.1"
+              value={carrierFrequencyGhz}
+              onChange={(event) => setCarrierFrequencyGhz(Number(event.currentTarget.value))}
+            />
+            <span>GHz</span>
+          </div>
+        </div>
+
+        <div className="control-group">
+          <label className="control-label" htmlFor="channel-bandwidth">
+            信道带宽
+          </label>
+          <div className="unit-input">
+            <input
+              id="channel-bandwidth"
+              type="number"
+              min="1"
+              step="1"
+              value={channelBandwidthMhz}
+              onChange={(event) => setChannelBandwidthMhz(Number(event.currentTarget.value))}
+            />
+            <span>MHz</span>
+          </div>
+        </div>
+
+        <div className="control-group">
+          <label className="control-label" htmlFor="rain-rate">
+            雨强
+          </label>
+          <div className="unit-input">
+            <input
+              id="rain-rate"
+              type="number"
+              min="0"
+              step="0.5"
+              value={rainRate}
+              onChange={(event) => setRainRate(Number(event.currentTarget.value))}
+            />
+            <span>mm/h</span>
+          </div>
+        </div>
+
+        <div className="control-group">
+          <label className="control-label" htmlFor="rain-coefficient">
+            雨衰系数
+          </label>
+          <input
+            id="rain-coefficient"
+            type="number"
+            min="0"
+            step="0.001"
+            value={rainCoefficient}
+            onChange={(event) => setRainCoefficient(Number(event.currentTarget.value))}
+          />
+        </div>
+
+        <div className="control-group">
+          <label className="control-label" htmlFor="rain-path">
+            等效雨区
+          </label>
+          <div className="unit-input">
+            <input
+              id="rain-path"
+              type="number"
+              min="0"
+              step="0.5"
+              value={rainPathKm}
+              onChange={(event) => setRainPathKm(Number(event.currentTarget.value))}
+            />
+            <span>km</span>
+          </div>
+        </div>
+      </div>
+
       <div className="runtime-actions" aria-label="仿真运行控制">
         <button
           type="button"
@@ -326,8 +436,15 @@ export function ConfigPanel({
                 links: showLinks,
                 metrics: showMetrics
               }),
-              transport_protocol: transportProtocol,
-              routing_protocol: routingProtocol
+              ...networkControlPayload({
+                transport_protocol: transportProtocol,
+                routing_protocol: routingProtocol,
+                carrier_frequency_ghz: carrierFrequencyGhz,
+                channel_bandwidth_mhz: channelBandwidthMhz,
+                rain_rate_mm_h: rainRate,
+                rain_attenuation_coefficient_db_per_km_per_mm_h: rainCoefficient,
+                rain_effective_path_km: rainPathKm
+              })
             })
           }
         >
@@ -453,6 +570,19 @@ export function visualizationControlPayload(
     links: visualization.links,
     users: visualization.users,
     metrics: visualization.metrics
+  };
+}
+
+export function networkControlPayload(network: NetworkControlValues): Record<string, unknown> {
+  return {
+    transport_protocol: network.transport_protocol,
+    routing_protocol: network.routing_protocol,
+    carrier_frequency_hz: network.carrier_frequency_ghz * 1_000_000_000,
+    channel_bandwidth_hz: network.channel_bandwidth_mhz * 1_000_000,
+    rain_rate_mm_h: network.rain_rate_mm_h,
+    rain_attenuation_coefficient_db_per_km_per_mm_h:
+      network.rain_attenuation_coefficient_db_per_km_per_mm_h,
+    rain_effective_path_km: network.rain_effective_path_km
   };
 }
 
