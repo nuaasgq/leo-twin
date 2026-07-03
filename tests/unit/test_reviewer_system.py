@@ -30,6 +30,22 @@ def test_reviewer_rejects_hard_stop_import(valid_review_workspace):
     assert any("Hard-stop violation" in item for item in report["violations"])
 
 
+def test_reviewer_does_not_false_positive_external_simulator_token(valid_review_workspace):
+    normal_file = valid_review_workspace / "src/leo_twin/models/network/normal_set.py"
+    normal_file.parent.mkdir(parents=True, exist_ok=True)
+    normal_file.write_text(
+        "def update(values, state):\n"
+        "    values.add(state)\n"
+        "    return values\n",
+        encoding="utf-8",
+    )
+
+    report = review_path(valid_review_workspace, repository_root=valid_review_workspace)
+
+    assert report["decision"] == "PASS"
+    assert not any("external simulator import" in item for item in report["violations"])
+
+
 def test_reviewer_penalizes_unseeded_randomness(valid_review_workspace):
     random_file = valid_review_workspace / "src/leo_twin/services/random_use.py"
     random_file.parent.mkdir(parents=True, exist_ok=True)

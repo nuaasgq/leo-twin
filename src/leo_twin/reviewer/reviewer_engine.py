@@ -267,13 +267,24 @@ def _hard_stop_violations(context: Mapping[str, Any]) -> list[str]:
     compact = re.sub(r"[^a-z0-9]+", "", lowered)
 
     for label, terms in HARD_STOP_TERMS.items():
-        if any(term in lowered or term in compact for term in terms):
+        if any(_matches_hard_stop_term(label, term, lowered, compact) for term in terms):
             hard_stops.append(f"Hard-stop violation detected: {label}.")
 
     if _kernel_has_domain_logic(target_files.get("src/leo_twin/core/kernel.py", "")):
         hard_stops.append("Hard-stop violation detected: kernel contains domain logic.")
 
     return hard_stops
+
+
+def _matches_hard_stop_term(
+    label: str,
+    term: str,
+    lowered: str,
+    compact: str,
+) -> bool:
+    if label == "external simulator import":
+        return re.search(rf"(^|[^a-z0-9]){re.escape(term)}([^a-z0-9]|$)", lowered) is not None
+    return term in lowered or term in compact
 
 
 def _forbidden_imports(files: Mapping[str, str]) -> list[str]:
