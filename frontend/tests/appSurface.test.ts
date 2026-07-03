@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   runtimeStatusRequiresStreams,
   scenarioWithRuntimeConfig,
+  standaloneDashboardHref,
   surfaceFromPathname
 } from "../src/app/App";
 import { RuntimeStatusPayload } from "../src/core/event_types";
@@ -16,6 +17,17 @@ describe("surfaceFromPathname", () => {
   it("selects the standalone dashboard surface", () => {
     expect(surfaceFromPathname("/dashboard")).toBe("dashboard");
     expect(surfaceFromPathname("/dashboard/network")).toBe("dashboard");
+  });
+});
+
+describe("standaloneDashboardHref", () => {
+  it("builds a deterministic absolute dashboard URL", () => {
+    expect(standaloneDashboardHref("http://127.0.0.1:5173")).toBe(
+      "http://127.0.0.1:5173/dashboard"
+    );
+    expect(standaloneDashboardHref("http://127.0.0.1:5173/")).toBe(
+      "http://127.0.0.1:5173/dashboard"
+    );
   });
 });
 

@@ -231,6 +231,14 @@ export function App() {
           >
             数据态势面板
           </a>
+          <a
+            className="surface-tab surface-tab-external"
+            href={standaloneDashboardHref(window.location.origin)}
+            target="_blank"
+            rel="noreferrer"
+          >
+            弹出数据屏
+          </a>
         </div>
         <div className={`connection-pill ${connectionState}`}>
           {connectionStateLabel(connectionState)}
@@ -286,6 +294,11 @@ export function surfaceFromPathname(pathname: string): FrontendSurface {
   return pathname === "/dashboard" || pathname.startsWith("/dashboard/")
     ? "dashboard"
     : "control";
+}
+
+export function standaloneDashboardHref(origin: string): string {
+  const normalizedOrigin = origin.endsWith("/") ? origin.slice(0, -1) : origin;
+  return `${normalizedOrigin}/dashboard`;
 }
 
 export function runtimeStatusRequiresStreams(
