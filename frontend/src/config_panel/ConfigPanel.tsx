@@ -359,6 +359,21 @@ export function ConfigPanel({
       </div>
 
       <div className="control-group">
+        <label className="control-label" htmlFor="datalink-mac-protocol">
+          链路层 MAC
+        </label>
+        <select
+          id="datalink-mac-protocol"
+          value={dataLinkProtocol}
+          onChange={(event) => setDataLinkProtocol(event.currentTarget.value)}
+        >
+          <option value="TDMA">TDMA</option>
+          <option value="SLOTTED_ALOHA">Slotted ALOHA</option>
+          <option value="CSMA_CA">CSMA/CA</option>
+        </select>
+      </div>
+
+      <div className="control-group">
         <label className="control-label" htmlFor="routing-protocol">
           路由协议
         </label>
