@@ -16,6 +16,8 @@ export interface LinkProtocolSummary {
   accessLinks: number;
   transportProtocol: string;
   routingProtocol: string;
+  transportProtocolLabel: string;
+  routingProtocolLabel: string;
   stackLayers: number;
   carrierFrequencyGhz: number;
   bandwidthMhz: number;
@@ -51,8 +53,8 @@ export const LinkProtocolPanel = memo(function LinkProtocolPanel({
         <KpiPanel label="最佳时延" value={`${summary.bestLatency.toFixed(3)} s`} />
         <KpiPanel label="瓶颈容量" value={`${summary.bottleneckCapacity.toFixed(1)} Mbps`} />
         <KpiPanel label="路径跳数" value={String(summary.bestHopCount)} />
-        <KpiPanel label="传输协议" value={summary.transportProtocol} />
-        <KpiPanel label="路由协议" value={summary.routingProtocol} />
+        <KpiPanel label="传输协议" value={summary.transportProtocolLabel} />
+        <KpiPanel label="路由协议" value={summary.routingProtocolLabel} />
         <KpiPanel label="协议栈层数" value={String(summary.stackLayers)} />
         <KpiPanel label="载波频率" value={`${summary.carrierFrequencyGhz.toFixed(1)} GHz`} />
         <KpiPanel label="信道带宽" value={`${summary.bandwidthMhz.toFixed(0)} MHz`} />
@@ -90,6 +92,8 @@ export function buildLinkProtocolSummary(
       : Math.min(...activeLinks.map((link) => link.capacity));
   const linkClasses = classifyLinks(activeLinks);
   const network = snapshot.scenario_config?.network;
+  const transportProtocol = network?.transport_protocol ?? "TCP";
+  const routingProtocol = network?.routing_protocol ?? "LINK_STATE";
   const carrierFrequencyGhz = (network?.carrier_frequency_hz ?? 20_000_000_000) / 1_000_000_000;
   const bandwidthMhz = (network?.channel_bandwidth_hz ?? 100_000_000) / 1_000_000;
   const estimatedRainFadeDb =
@@ -107,8 +111,10 @@ export function buildLinkProtocolSummary(
     bottleneckCapacity,
     spaceLinks: linkClasses.spaceLinks,
     accessLinks: linkClasses.accessLinks,
-    transportProtocol: network?.transport_protocol ?? "TCP",
-    routingProtocol: network?.routing_protocol ?? "LINK_STATE",
+    transportProtocol,
+    routingProtocol,
+    transportProtocolLabel: formatTransportProtocol(transportProtocol),
+    routingProtocolLabel: formatRoutingProtocol(routingProtocol),
     stackLayers: 6,
     carrierFrequencyGhz,
     bandwidthMhz,
@@ -119,6 +125,32 @@ export function buildLinkProtocolSummary(
       .slice(0, 5)
       .map(linkToRow)
   };
+}
+
+function formatTransportProtocol(protocol: string): string {
+  if (protocol === "TCP") {
+    return "TCP 可靠传输";
+  }
+  if (protocol === "UDP") {
+    return "UDP 低时延";
+  }
+  return protocol;
+}
+
+function formatRoutingProtocol(protocol: string): string {
+  if (protocol === "LINK_STATE") {
+    return "链路状态";
+  }
+  if (protocol === "DISTANCE_VECTOR") {
+    return "距离向量";
+  }
+  if (protocol === "SHORTEST_PATH") {
+    return "最短路径";
+  }
+  if (protocol === "STATIC") {
+    return "静态路由";
+  }
+  return protocol;
 }
 
 function classifyLinks(links: readonly LinkState[]): {

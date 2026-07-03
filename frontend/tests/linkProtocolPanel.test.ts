@@ -79,6 +79,8 @@ describe("buildLinkProtocolSummary", () => {
       accessLinks: 1,
       transportProtocol: "UDP",
       routingProtocol: "DISTANCE_VECTOR",
+      transportProtocolLabel: "UDP 低时延",
+      routingProtocolLabel: "距离向量",
       stackLayers: 6,
       carrierFrequencyGhz: 22,
       bandwidthMhz: 250,
@@ -135,6 +137,8 @@ describe("buildLinkProtocolSummary", () => {
     expect(summary.bestPath).toBe("x -> y");
     expect(summary.transportProtocol).toBe("TCP");
     expect(summary.routingProtocol).toBe("LINK_STATE");
+    expect(summary.transportProtocolLabel).toBe("TCP 可靠传输");
+    expect(summary.routingProtocolLabel).toBe("链路状态");
     expect(summary.stackLayers).toBe(6);
     expect(summary.carrierFrequencyGhz).toBe(20);
     expect(summary.bandwidthMhz).toBe(100);
