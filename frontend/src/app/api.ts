@@ -1,5 +1,11 @@
 import { decodeStateSnapshot } from "../core/decoder";
-import { RuntimeStatusPayload, ScenarioConfig, StateSnapshot } from "../core/event_types";
+import {
+  GeneratedScenarioConfig,
+  RuntimeStatusEnvelope,
+  RuntimeStatusPayload,
+  ScenarioConfig,
+  StateSnapshot
+} from "../core/event_types";
 
 export async function loadScenarioConfig(endpoint = "/scenario/config"): Promise<ScenarioConfig> {
   const response = await fetch(endpoint);
@@ -18,11 +24,15 @@ export async function loadMetricsSnapshot(endpoint = "/metrics/snapshot"): Promi
 }
 
 export async function loadRuntimeStatus(endpoint = "/runtime/status"): Promise<RuntimeStatusPayload> {
+  return (await loadRuntimeState(endpoint)).status;
+}
+
+export async function loadRuntimeState(endpoint = "/runtime/status"): Promise<RuntimeStatusEnvelope> {
   const response = await fetch(endpoint);
   if (!response.ok) {
     throw new Error(`failed to load runtime status: ${response.status}`);
   }
-  return decodeRuntimeStatus(await response.json());
+  return decodeRuntimeStatusEnvelope(await response.json());
 }
 
 function decodeScenarioConfig(value: unknown): ScenarioConfig {
@@ -32,7 +42,7 @@ function decodeScenarioConfig(value: unknown): ScenarioConfig {
   return value as ScenarioConfig;
 }
 
-function decodeRuntimeStatus(value: unknown): RuntimeStatusPayload {
+function decodeRuntimeStatusEnvelope(value: unknown): RuntimeStatusEnvelope {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     throw new TypeError("runtime status must be an object");
   }
@@ -40,5 +50,21 @@ function decodeRuntimeStatus(value: unknown): RuntimeStatusPayload {
   if (typeof status !== "object" || status === null || Array.isArray(status)) {
     throw new TypeError("runtime status response must include status object");
   }
-  return status as RuntimeStatusPayload;
+  return {
+    ...(value as Record<string, unknown>),
+    status: status as RuntimeStatusPayload,
+    generated_config: decodeGeneratedScenarioConfig(
+      (value as { generated_config?: unknown }).generated_config
+    )
+  };
+}
+
+function decodeGeneratedScenarioConfig(value: unknown): GeneratedScenarioConfig | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError("generated scenario config must be an object");
+  }
+  return value as GeneratedScenarioConfig;
 }

@@ -1,4 +1,4 @@
-import { RuntimeStatusPayload } from "../core/event_types";
+import { GeneratedScenarioConfig, RuntimeStatusPayload } from "../core/event_types";
 import { websocketUrl } from "../stream/websocket_client";
 
 export type RuntimeAction =
@@ -17,6 +17,7 @@ export interface ControlAck {
   error?: string;
   status?: RuntimeStatusPayload;
   config?: unknown;
+  generated_config?: GeneratedScenarioConfig;
 }
 
 export interface ControlWebSocketLike {

@@ -7,14 +7,18 @@ import {
   ControlChannelClient,
   RuntimeAction
 } from "../config_panel/controlClient";
-import { RuntimeStatusPayload, ScenarioConfig } from "../core/event_types";
+import {
+  GeneratedScenarioConfig,
+  RuntimeStatusPayload,
+  ScenarioConfig
+} from "../core/event_types";
 import { Dashboard } from "../dashboard/Dashboard";
 import { SnapshotEngine, useWorldSnapshot } from "../state/snapshot_engine";
 import { WorldStateReducer } from "../state/reducer";
 import { EventRouter } from "../stream/event_router";
 import { EventThrottleLayer } from "../stream/throttle_layer";
 import { WebSocketStreamClient } from "../stream/websocket_client";
-import { loadRuntimeStatus, loadScenarioConfig } from "./api";
+import { loadRuntimeState, loadScenarioConfig } from "./api";
 import "./App.css";
 
 export function App() {
@@ -35,6 +39,7 @@ export function App() {
     "connecting"
   );
   const [scenarioConfig, setScenarioConfig] = useState<ScenarioConfig | null>(null);
+  const [generatedConfig, setGeneratedConfig] = useState<GeneratedScenarioConfig | null>(null);
   const [runtimeStatus, setRuntimeStatus] = useState<RuntimeStatusPayload>(defaultRuntimeStatus());
   const streamClientRef = useRef<WebSocketStreamClient | null>(null);
   const streamRouterRef = useRef<EventRouter | null>(null);
@@ -65,13 +70,14 @@ export function App() {
   const loadControlState = useCallback(async () => {
     const [scenario, runtime] = await Promise.all([
       loadScenarioConfig(),
-      loadRuntimeStatus()
+      loadRuntimeState()
     ]);
     setScenarioConfig(scenario);
+    setGeneratedConfig(runtime.generated_config ?? null);
     setRuntimeStatus((previous) => ({
       ...previous,
       ...scenario.runtime,
-      ...runtime
+      ...runtime.status
     }));
     snapshotEngine.applyScenarioConfig(scenario);
     snapshotEngine.publishNow();
@@ -109,6 +115,7 @@ export function App() {
       new ControlChannelClient({
         onMessage: (message) => {
           handleControlMessage(message, setRuntimeStatus);
+          handleGeneratedConfig(message, setGeneratedConfig);
           if (message.ok === true && message.type === "CONTROL_ACK") {
             const action = message.status?.last_action;
             if (action === "START") {
@@ -225,6 +232,7 @@ export function App() {
               <ConfigPanel
                 scenario={scenarioControls}
                 runtime={runtimeStatus}
+                generatedConfig={generatedConfig}
                 onRuntimeControl={sendRuntimeControl}
               />
             </div>
@@ -286,6 +294,15 @@ function handleControlMessage(
     ...previous,
     ...message.status
   }));
+}
+
+function handleGeneratedConfig(
+  message: ControlAck,
+  setGeneratedConfig: (config: GeneratedScenarioConfig | null) => void
+): void {
+  if (message.generated_config !== undefined) {
+    setGeneratedConfig(message.generated_config);
+  }
 }
 
 function scenarioControlValues(

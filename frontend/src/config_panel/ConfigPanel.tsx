@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 
-import { RuntimeMode, RuntimeStatusPayload } from "../core/event_types";
+import {
+  GeneratedScenarioConfig,
+  RuntimeMode,
+  RuntimeStatusPayload
+} from "../core/event_types";
 import { RuntimeAction } from "./controlClient";
 
 export interface ScenarioControlValues {
@@ -11,12 +15,19 @@ export interface ScenarioControlValues {
 export interface ConfigPanelProps {
   scenario: ScenarioControlValues;
   runtime: RuntimeStatusPayload;
+  generatedConfig: GeneratedScenarioConfig | null;
   onRuntimeControl: (action: RuntimeAction, payload?: Record<string, unknown>) => void;
+}
+
+export interface ConfigSummaryItem {
+  label: string;
+  value: string;
 }
 
 export function ConfigPanel({
   scenario,
   runtime,
+  generatedConfig,
   onRuntimeControl
 }: ConfigPanelProps) {
   const [satelliteCount, setSatelliteCount] = useState(scenario.satellite_count);
@@ -37,6 +48,8 @@ export function ConfigPanel({
     }
     setSpeedFactor(runtime.speed_factor);
   }, [runtime.mode, runtime.speed_factor]);
+
+  const summaryItems = generatedScenarioSummaryItems(generatedConfig);
 
   return (
     <section className="config-panel" aria-label="仿真配置与控制面板">
@@ -139,8 +152,55 @@ export function ConfigPanel({
           重置
         </button>
       </div>
+
+      <div className="generated-config-summary" aria-label="当前生效场景">
+        <div className="summary-title-row">
+          <span>当前生效场景</span>
+          <strong>配置版本 {runtime.config_version}</strong>
+        </div>
+        <div className="summary-grid">
+          {summaryItems.map((item) => (
+            <div className="summary-cell" key={item.label}>
+              <span>{item.label}</span>
+              <strong>{item.value}</strong>
+            </div>
+          ))}
+        </div>
+      </div>
     </section>
   );
+}
+
+export function generatedScenarioSummaryItems(
+  config: GeneratedScenarioConfig | null | undefined
+): readonly ConfigSummaryItem[] {
+  if (config === null || config === undefined) {
+    return [{ label: "生成场景", value: "等待初始化" }];
+  }
+  return [
+    { label: "生效卫星", value: formatInteger(config.satellite_count) },
+    { label: "生效用户", value: formatInteger(config.user_count) },
+    { label: "计算节点", value: formatInteger(config.compute_node_count) },
+    { label: "业务流量", value: formatInteger(config.flow_count) },
+    { label: "轨道面", value: formatInteger(config.orbit_plane_count) },
+    { label: "随机种子", value: formatInteger(config.seed) },
+    {
+      label: "轨道高度",
+      value: `${formatInteger(config.semi_major_axis_km - config.earth_radius_km)} km`
+    },
+    { label: "倾角", value: `${formatDecimal(config.inclination_deg)}°` }
+  ];
+}
+
+function formatInteger(value: number): string {
+  return Math.round(value).toLocaleString("zh-CN");
+}
+
+function formatDecimal(value: number): string {
+  return value.toLocaleString("zh-CN", {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 0
+  });
 }
 
 function runtimeStatusLabel(runtime: RuntimeStatusPayload): string {

@@ -142,3 +142,30 @@ export interface RuntimeStatusPayload {
   config_version: number;
   last_action: string;
 }
+
+export interface GeneratedScenarioConfig {
+  seed: number;
+  satellite_count: number;
+  user_count: number;
+  compute_node_count: number;
+  flow_count: number;
+  orbit_plane_count: number;
+  epoch: number;
+  semi_major_axis_km: number;
+  eccentricity: number;
+  inclination_deg: number;
+  earth_radius_km: number;
+  min_elevation_deg: number;
+  max_range_km: number;
+  compute_capacity: number;
+  demand_capacity: number;
+  task_compute_demand: number;
+  task_data_size: number;
+}
+
+export interface RuntimeStatusEnvelope {
+  type?: "RUNTIME_STATUS";
+  status: RuntimeStatusPayload;
+  config?: unknown;
+  generated_config?: GeneratedScenarioConfig;
+}
