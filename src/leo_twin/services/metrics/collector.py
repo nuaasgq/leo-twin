@@ -85,6 +85,8 @@ class MetricsCollector:
         self._routes: dict[str, Route] = {}
         self._completed_flows: dict[str, str] = {}
         self._running_tasks: set[str] = set()
+        self._task_start_times: dict[str, float] = {}
+        self._task_durations: dict[str, float] = {}
         self._finished_tasks: dict[str, str] = {}
         self._last_sim_time = 0.0
         self._metric_event_sequence = 0
@@ -186,6 +188,14 @@ class MetricsCollector:
             ),
             "satellite_altitude_max": max(self._satellite_altitudes_km.values(), default=0.0),
             "satellite_altitude_min": min(self._satellite_altitudes_km.values(), default=0.0),
+            "task_duration_avg": _average(
+                tuple(
+                    self._task_durations[task_id]
+                    for task_id in sorted(self._task_durations)
+                )
+            ),
+            "task_duration_max": max(self._task_durations.values(), default=0.0),
+            "task_duration_min": min(self._task_durations.values(), default=0.0),
             "unique_satellites": len(self._satellite_status),
         }
         for event_type, count in sorted(self._event_counts.items()):
@@ -454,11 +464,16 @@ class MetricsCollector:
         task = _require_payload(event.payload, TaskState, event_type)
         if event_type == EventType.TASK_START:
             self._running_tasks.add(task.task_id)
+            self._task_start_times[task.task_id] = task.sim_time
         else:
             self._running_tasks.discard(task.task_id)
             self._finished_tasks[task.task_id] = task.status
+            self._task_durations[task.task_id] = max(
+                0.0,
+                task.sim_time - self._task_start_times.get(task.task_id, task.sim_time),
+            )
 
-        return (
+        records = [
             MetricRecord(
                 metric_name="task.progress",
                 sim_time=event.sim_time,
@@ -484,7 +499,18 @@ class MetricsCollector:
                 entity_id="system",
                 value=float(self._deadline_missed_task_count()),
             ),
-        )
+        ]
+        if event_type == EventType.TASK_FINISH:
+            records.append(
+                MetricRecord(
+                    metric_name="task.duration",
+                    sim_time=event.sim_time,
+                    entity_id=task.task_id,
+                    value=float(self._task_durations[task.task_id]),
+                    tags=(("node_id", task.node_id), ("status", task.status)),
+                )
+            )
+        return tuple(records)
 
     def _available_link_capacity(self) -> float:
         return float(

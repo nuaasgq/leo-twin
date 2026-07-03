@@ -188,6 +188,9 @@ def test_metrics_collector_kpis_are_consistent_with_observations() -> None:
     assert summary["running_tasks"] == 0
     assert summary["finished_tasks"] == 1
     assert summary["deadline_missed_tasks"] == 0
+    assert summary["task_duration_avg"] == 1.0
+    assert summary["task_duration_max"] == 1.0
+    assert summary["task_duration_min"] == 1.0
     assert summary["last_sim_time"] == 6.0
     assert summary["events.ACCESS_START.count"] == 1
     assert summary["events.LINK_UPDATE.count"] == 1
@@ -220,6 +223,7 @@ def test_metrics_collector_kpis_are_consistent_with_observations() -> None:
     assert _last_record(records, "tasks.finished.count").value == float(
         summary["finished_tasks"]
     )
+    assert _last_record(records, "task.duration").value == 1.0
     assert _last_record(records, "tasks.deadline_missed.count").value == float(
         summary["deadline_missed_tasks"]
     )
