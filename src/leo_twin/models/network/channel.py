@@ -3,14 +3,50 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from math import isfinite, log10, log2
+from math import pi, isfinite, log10, log2
 from typing import Any
 
 from leo_twin.schema import AntennaProfile, ChannelProfile, LinkMedium
 
 
 SPEED_OF_LIGHT_KM_S = 299792.458
+SPEED_OF_LIGHT_M_S = 299792458.0
 _BOLTZMANN_W_PER_HZ_K = 1.380649e-23
+
+
+@dataclass(frozen=True)
+class ApertureAntennaSpec:
+    """Configuration for deriving an antenna profile from aperture parameters."""
+
+    antenna_id: str
+    diameter_m: float
+    carrier_frequency_hz: float
+    aperture_efficiency: float
+    steering_mode: str = "electronic"
+
+    def __post_init__(self) -> None:
+        _require_non_empty_str(self.antenna_id, "antenna_id")
+        _require_positive_number(self.diameter_m, "diameter_m")
+        _require_positive_number(self.carrier_frequency_hz, "carrier_frequency_hz")
+        _require_efficiency(self.aperture_efficiency, "aperture_efficiency")
+        _require_non_empty_str(self.steering_mode, "steering_mode")
+
+    def to_profile(self) -> AntennaProfile:
+        """Return a deterministic schema-level antenna profile."""
+
+        return AntennaProfile(
+            antenna_id=self.antenna_id,
+            gain_dbi=aperture_antenna_gain_dbi(
+                diameter_m=self.diameter_m,
+                carrier_frequency_hz=self.carrier_frequency_hz,
+                aperture_efficiency=self.aperture_efficiency,
+            ),
+            beam_width_deg=aperture_antenna_beam_width_deg(
+                diameter_m=self.diameter_m,
+                carrier_frequency_hz=self.carrier_frequency_hz,
+            ),
+            steering_mode=self.steering_mode,
+        )
 
 
 @dataclass(frozen=True)
@@ -224,6 +260,33 @@ def free_space_path_loss_db(range_km: float, carrier_frequency_hz: float) -> flo
     return 92.45 + 20.0 * log10(range_km) + 20.0 * log10(carrier_frequency_ghz)
 
 
+def aperture_antenna_gain_dbi(
+    diameter_m: float,
+    carrier_frequency_hz: float,
+    aperture_efficiency: float,
+) -> float:
+    """Return parabolic aperture gain in dBi from configured terminal parameters."""
+
+    _require_positive_number(diameter_m, "diameter_m")
+    _require_positive_number(carrier_frequency_hz, "carrier_frequency_hz")
+    _require_efficiency(aperture_efficiency, "aperture_efficiency")
+    wavelength_m = SPEED_OF_LIGHT_M_S / carrier_frequency_hz
+    gain_linear = aperture_efficiency * ((pi * diameter_m) / wavelength_m) ** 2.0
+    return 10.0 * log10(gain_linear)
+
+
+def aperture_antenna_beam_width_deg(
+    diameter_m: float,
+    carrier_frequency_hz: float,
+) -> float:
+    """Return a deterministic half-power beam width estimate in degrees."""
+
+    _require_positive_number(diameter_m, "diameter_m")
+    _require_positive_number(carrier_frequency_hz, "carrier_frequency_hz")
+    wavelength_m = SPEED_OF_LIGHT_M_S / carrier_frequency_hz
+    return 70.0 * wavelength_m / diameter_m
+
+
 def antenna_pointing_loss_db(
     antenna: AntennaProfile,
     off_boresight_angle_deg: float,
@@ -283,6 +346,12 @@ def _require_non_negative_number(value: Any, field_name: str) -> None:
     _require_finite_number(value, field_name)
     if value < 0:
         raise ValueError(f"{field_name} must be non-negative")
+
+
+def _require_efficiency(value: Any, field_name: str) -> None:
+    _require_finite_number(value, field_name)
+    if value <= 0.0 or value > 1.0:
+        raise ValueError(f"{field_name} must be in (0, 1]")
 
 
 def _require_pointing_angle(value: Any, field_name: str) -> None:

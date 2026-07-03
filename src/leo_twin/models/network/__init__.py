@@ -2,12 +2,15 @@
 
 from leo_twin.models.network.contracts import NetworkModuleContract
 from leo_twin.models.network.channel import (
+    ApertureAntennaSpec,
     ChannelBudgetSelector,
     LinkBudgetCalculator,
     LinkBudgetResult,
     RainFadeProfile,
     RadioTerminalProfile,
     antenna_pointing_loss_db,
+    aperture_antenna_beam_width_deg,
+    aperture_antenna_gain_dbi,
     free_space_path_loss_db,
     shannon_capacity_mbps,
     thermal_noise_power_dbw,
@@ -42,6 +45,7 @@ NetworkModule = NetworkEngine
 
 __all__ = [
     "AccessLinkCandidate",
+    "ApertureAntennaSpec",
     "ChannelBudgetSelector",
     "GroundEndpoint",
     "GroundEndpointIndex",
@@ -64,6 +68,8 @@ __all__ = [
     "TransportProfile",
     "TransportRuntime",
     "antenna_pointing_loss_db",
+    "aperture_antenna_beam_width_deg",
+    "aperture_antenna_gain_dbi",
     "build_default_leo_protocol_stack",
     "default_transport_runtime",
     "free_space_path_loss_db",
