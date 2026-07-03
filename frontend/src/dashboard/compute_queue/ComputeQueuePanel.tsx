@@ -7,6 +7,10 @@ import { KpiPanel } from "../kpi_panel/KpiPanel";
 export interface ComputeQueueSummary {
   runningTasks: number;
   finishedTasks: number;
+  totalRequests: number;
+  unfinishedTasks: number;
+  availableRoutes: number;
+  waitingForNetwork: number;
   computeNodes: number;
   busiestNodeId: string;
   nodeRows: readonly ComputeNodeQueueRow[];
@@ -26,7 +30,10 @@ export interface ComputeTaskRow {
   status: string;
 }
 
-type ComputeQueueSnapshot = Pick<WorldSnapshot, "active_tasks" | "compute_nodes">;
+type ComputeQueueSnapshot = Pick<
+  WorldSnapshot,
+  "active_tasks" | "compute_nodes" | "routes"
+>;
 
 export const ComputeQueuePanel = memo(function ComputeQueuePanel({
   snapshot
@@ -41,6 +48,9 @@ export const ComputeQueuePanel = memo(function ComputeQueuePanel({
       <div className="kpi-grid wide">
         <KpiPanel label="运行任务" value={String(summary.runningTasks)} />
         <KpiPanel label="已完成" value={String(summary.finishedTasks)} />
+        <KpiPanel label="未完成" value={String(summary.unfinishedTasks)} />
+        <KpiPanel label="网络等待" value={String(summary.waitingForNetwork)} />
+        <KpiPanel label="可用路由" value={String(summary.availableRoutes)} />
         <KpiPanel label="节点数" value={String(summary.computeNodes)} />
         <KpiPanel label="最繁忙节点" value={summary.busiestNodeId} />
       </div>
@@ -89,11 +99,19 @@ export function buildComputeQueueSummary(
     }));
   const runningTasks = nodeRows.reduce((total, row) => total + row.runningTasks, 0);
   const finishedTasks = nodeRows.reduce((total, row) => total + row.finishedTasks, 0);
+  const totalRequests = snapshot.routes.length;
+  const availableRoutes = snapshot.routes.filter((route) => route.available).length;
+  const waitingForNetwork = totalRequests - availableRoutes;
+  const unfinishedTasks = Math.max(0, totalRequests - finishedTasks);
   const busiest = nodeRows[0];
 
   return {
     runningTasks,
     finishedTasks,
+    totalRequests,
+    unfinishedTasks,
+    availableRoutes,
+    waitingForNetwork,
     computeNodes: nodeRows.length,
     busiestNodeId: busiest?.nodeId ?? "无",
     nodeRows: nodeRows.slice(0, 5),

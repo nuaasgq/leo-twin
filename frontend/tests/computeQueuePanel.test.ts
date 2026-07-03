@@ -32,12 +32,42 @@ describe("buildComputeQueueSummary", () => {
           running_tasks: 1,
           finished_tasks: 5
         }
+      ],
+      routes: [
+        {
+          route_id: "route-a",
+          flow_id: "task-a",
+          path: ["user-a", "sat-a", "node-a"],
+          latency: 1,
+          capacity: 50,
+          available: true
+        },
+        {
+          route_id: "route-b",
+          flow_id: "task-b",
+          path: [],
+          latency: 0,
+          capacity: 0,
+          available: false
+        },
+        {
+          route_id: "route-c",
+          flow_id: "task-c",
+          path: ["user-c", "sat-c", "node-b"],
+          latency: 2,
+          capacity: 30,
+          available: true
+        }
       ]
     });
 
     expect(summary).toEqual({
       runningTasks: 3,
       finishedTasks: 6,
+      totalRequests: 3,
+      unfinishedTasks: 0,
+      availableRoutes: 2,
+      waitingForNetwork: 1,
       computeNodes: 2,
       busiestNodeId: "node-b",
       nodeRows: [
