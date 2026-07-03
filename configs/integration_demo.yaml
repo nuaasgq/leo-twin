@@ -1,0 +1,22 @@
+scenario:
+  seed: 20260703
+  satellite_count: 72
+  ground_user_count: 1000
+  ground_station_count: 3
+  compute_node_count: 10
+  duration_seconds: 600
+  orbit_tick_seconds: 60
+  network_slot_seconds: 60
+  flow_interval_seconds: 60
+  task_interval_seconds: 60
+  cell_count: 100
+  state_snapshot_interval_events: 1000
+  metric_sample_interval: 50
+
+frontend:
+  websocket_events: /stream/events
+  websocket_state: /stream/state
+  metrics_snapshot: /metrics/snapshot
+  scenario_config: /scenario/config
+  backend_host: 127.0.0.1
+  backend_port: 8765
