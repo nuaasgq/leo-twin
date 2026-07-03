@@ -70,6 +70,45 @@ describe("frontend render performance architecture", () => {
     expect(frames).toHaveLength(60);
     expect(frames.every((fps) => fps > 59)).toBe(true);
   });
+
+  it("starts and stops with browser-safe timer invocation", () => {
+    const originalSetInterval = globalThis.setInterval;
+    const originalClearInterval = globalThis.clearInterval;
+    const timer = 7 as ReturnType<typeof setInterval>;
+    const intervals: number[] = [];
+
+    Object.defineProperty(globalThis, "setInterval", {
+      configurable: true,
+      value(this: typeof globalThis, _handler: () => void, intervalMs?: number) {
+        expect(this).toBe(globalThis);
+        intervals.push(intervalMs ?? 0);
+        return timer;
+      }
+    });
+    Object.defineProperty(globalThis, "clearInterval", {
+      configurable: true,
+      value(this: typeof globalThis, receivedTimer: ReturnType<typeof setInterval>) {
+        expect(this).toBe(globalThis);
+        expect(receivedTimer).toBe(timer);
+      }
+    });
+
+    try {
+      const engine = new SnapshotEngine(new WorldStateReducer(), { snapshotHz: 20 });
+      engine.start();
+      engine.stop();
+      expect(intervals).toEqual([50]);
+    } finally {
+      Object.defineProperty(globalThis, "setInterval", {
+        configurable: true,
+        value: originalSetInterval
+      });
+      Object.defineProperty(globalThis, "clearInterval", {
+        configurable: true,
+        value: originalClearInterval
+      });
+    }
+  });
 });
 
 function snapshotFromEvents(events: readonly SimEvent[]) {

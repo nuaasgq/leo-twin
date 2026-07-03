@@ -110,8 +110,10 @@ export class SnapshotEngine {
     }
     this.snapshotIntervalMs = Math.round(1000 / snapshotHz);
     this.clock = options.clock ?? (() => Date.now());
-    this.setIntervalFn = options.setIntervalFn ?? setInterval;
-    this.clearIntervalFn = options.clearIntervalFn ?? clearInterval;
+    this.setIntervalFn =
+      options.setIntervalFn ??
+      ((handler, intervalMs) => globalThis.setInterval(handler, intervalMs));
+    this.clearIntervalFn = options.clearIntervalFn ?? ((timer) => globalThis.clearInterval(timer));
     this.snapshot = buildWorldSnapshot(
       reducer.getState(),
       reducer.getVersion(),
