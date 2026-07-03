@@ -1,79 +1,343 @@
-# Codex Development Rules
+# LEO-Twin Codex Skill (MVP-0 Multi-Agent Controlled Execution)
 
-This document defines the operating rules for Codex when working in this repository.
+## 1. System Mission
 
-## MVP-0 Scope
+This repository implements a Low Earth Orbit (LEO) satellite internet digital twin and communication-computing network simulation framework.
 
-MVP-0 is limited to a deterministic discrete-event simulation framework skeleton for a future Low Earth Orbit satellite internet digital twin and communication-computing network simulator.
+The system is based on a deterministic discrete-event simulation (DES) kernel.
 
-MVP-0 may include:
+Current phase: MVP-0.
 
-- Repository structure.
-- Documentation.
-- Placeholder configuration files.
-- Test setup.
-- Future framework interfaces only when introduced by a scoped issue.
+MVP-0 goal:
+- Build a correct, deterministic, modular simulation foundation
+- NOT build a full-fidelity simulator
+- NOT integrate external tools
 
-MVP-0 must not include high-fidelity simulation models or external simulator integration.
+---
 
-## Forbidden Operations
+## 2. Core Principle (DES Model)
 
-Codex must not:
+The system follows a discrete-event formulation:
 
-- Use or integrate STK.
-- Use or integrate EXATA or GloMoSim.
-- Use or integrate AFSIM.
-- Use or integrate DDS runtime.
-- Implement packet-level network simulation.
-- Implement real orbital mechanics, SGP4, or high-precision astrodynamics.
-- Implement real RF propagation or antenna models.
-- Implement routing, networking, or compute algorithms unless a future issue explicitly allows a bounded placeholder.
-- Implement multithreading or distributed execution.
-- Add AI or machine learning components.
-- Add visualization engines such as Cesium, Unity, or similar tools.
-- Expand architecture beyond the current approved scope.
+S(t+1) = δ(S(t), E)
 
-## No External Simulator Dependency
+Where:
+- S = system state
+- E = event
+- δ = deterministic transition function
 
-The project must not depend on external simulators during MVP-0. All MVP-0 behavior must remain local, deterministic, testable, and independent of STK, EXATA, GloMoSim, AFSIM, DDS runtime, visualization engines, or external simulation services.
+All system behavior MUST be event-driven.
 
-## Git Workflow Rules
+---
 
-- One issue = one feature = one branch.
-- Branch names must describe the current scoped issue.
-- A commit must contain only changes related to the current issue.
-- Do not mix unrelated documentation, architecture, feature, test, or cleanup work.
-- Do not refactor unrelated code.
-- Before committing, run the relevant tests.
-- The main branch must remain a stable integration target.
+## 3. HARD CONSTRAINTS (ABSOLUTE)
 
-## Module Dependency Rules
+The following are strictly forbidden:
 
-Allowed dependency direction:
+### External systems
+- STK
+- EXATA / GloMoSim
+- AFSIM
+- DDS runtime
 
-```text
-adapters -> services -> models -> core
-schema may be used by adapters, services, models, and core
-```
+### Simulation fidelity violations
+- packet-level simulation (MVP-0 forbidden)
+- RF propagation modeling
+- antenna pattern modeling
+- high-fidelity orbital mechanics (SGP4, etc.)
 
-Rules:
+### System design violations
+- multithreading or distributed execution
+- global mutable state in core logic
+- circular module dependencies
+- cross-layer logic leakage
 
-- `core` must not import from `models`, `services`, or `adapters`.
-- `models` must not import from `services` or `adapters`.
-- `services` must not import from `adapters`.
-- `adapters` must not be imported by lower layers.
-- Shared structured definitions belong in `schema`.
-- Simulation time must be controlled only by the future `SimulationKernel`.
-- Core logic must not use global mutable state.
+### Engineering violations
+- implementing multiple issues in one task
+- modifying unrelated modules
+- adding undocumented abstractions
+- premature optimization
 
-## Testing Requirements
+---
 
-- All functionality must be test-driven.
-- Tests must be deterministic.
-- Tests must not rely on wall-clock time, network access, random behavior without an explicit seed, or machine-specific state.
-- MVP-0 initialization tests may only verify project structure and test runner setup.
-- No simulation tests should be added before simulation behavior exists.
+## 4. Architecture Rules
 
-## Determinism Requirement
+Strict layered architecture:
 
-Given the same code, configuration, and seed, future simulation runs must produce equivalent results. Any use of randomness must be controlled by explicit configuration. Hidden global state and uncontrolled time sources are not allowed in core logic.
+core        -> simulation kernel (ONLY event + time control)
+schema      -> data definitions (pure, serializable)
+models      -> simplified domain models
+services    -> metrics / scenario / replay
+adapters    -> mock only (MVP-0)
+examples    -> runnable demos
+
+### Dependency rules:
+
+core → schema only
+models → core + schema
+services → models + schema
+adapters → must NOT affect core
+examples → read-only dependency allowed
+
+---
+
+## 5. Simulation Kernel Rules (CRITICAL)
+
+The SimulationKernel is the ONLY authority for simulation time.
+
+It MUST:
+- control simulation time
+- manage event queue
+- dispatch events deterministically
+- guarantee reproducibility
+
+It MUST NOT:
+- contain domain logic (orbit/network/compute)
+- depend on external simulators
+- directly modify domain states
+
+---
+
+## 6. Event System Rules
+
+All behavior is event-driven.
+
+### Event ordering MUST follow:
+
+1. sim_time (ascending)
+2. priority (descending)
+3. event_id (deterministic tie-break)
+
+### Minimum event set:
+
+- ORBIT_UPDATE
+- COVERAGE_UPDATE
+- ACCESS_START / ACCESS_END
+- LINK_UPDATE
+- ROUTE_UPDATE
+- FLOW_ARRIVAL / FLOW_COMPLETE
+- TASK_ARRIVAL / TASK_START / TASK_FINISH
+- METRIC_SAMPLE
+
+---
+
+## 7. Determinism Rules (CRITICAL)
+
+All outputs MUST be deterministic.
+
+Given:
+- identical configuration
+- identical random seed
+
+Outputs MUST be identical:
+- event sequence
+- system states
+- metrics
+
+FORBIDDEN:
+- non-seeded randomness
+- unordered iteration over sets/dicts
+- real-time dependencies
+
+---
+
+## 8. Configuration Rules
+
+All scenarios MUST be configuration-driven (YAML).
+
+No hardcoded parameters allowed.
+
+Config includes:
+- satellite count
+- orbit parameters (simplified)
+- user count
+- traffic model
+- compute nodes
+- routing policy
+- scheduling policy
+- simulation duration
+- random seed
+
+---
+
+## 9. MVP-0 Model Fidelity Rules
+
+All models MUST be simplified:
+
+### Orbit model
+- circular or periodic motion only
+- no SGP4
+
+### Coverage model
+- geometric distance + angle threshold
+- no RF propagation
+
+### Network model
+- flow-level abstraction (NOT packet-level)
+- delay/capacity/loss abstraction
+
+### Routing model
+- shortest path
+- min delay
+- max capacity
+
+### Compute model
+- queue + service time abstraction
+- no real execution
+
+---
+
+## 10. Testing Rules (STRICT)
+
+Every feature MUST include tests.
+
+### Required test types:
+
+1. Unit tests
+2. Determinism tests (CRITICAL)
+3. Integration tests
+4. Scale tests (lightweight)
+
+### Mandatory deterministic test:
+Same seed → identical output
+
+### Forbidden in tests:
+- time-based assertions
+- uncontrolled randomness
+- external dependencies
+
+---
+
+## 11. Git Workflow Rules (MANDATORY)
+
+Each task MUST follow:
+
+1. Create feature branch:
+   feature/<issue-id>-<name>
+
+2. One issue = one branch = one commit scope
+
+3. No cross-module modifications
+
+4. No refactoring outside scope
+
+5. Must include:
+   - tests
+   - minimal runnable example (if required)
+
+---
+
+## 12. Multi-Agent Execution Model (CRITICAL)
+
+Codex MUST behave as a multi-agent system.
+
+### Agent A: Kernel Agent
+- event queue
+- simulation time
+- scheduling
+
+FORBIDDEN:
+- domain logic
+
+---
+
+### Agent B: Orbit Agent
+- satellite motion
+- simplified orbit model
+
+FORBIDDEN:
+- routing / compute logic
+
+---
+
+### Agent C: Network Agent
+- link state
+- coverage
+- routing
+
+FORBIDDEN:
+- orbit logic
+- compute logic
+
+---
+
+### Agent D: Compute Agent
+- task scheduling
+- compute simulation
+
+FORBIDDEN:
+- network / orbit logic
+
+---
+
+### Agent E: Metrics Agent
+- KPI calculation
+- logging
+- output generation
+
+FORBIDDEN:
+- modifying simulation state
+
+---
+
+## 13. Parallel Development Rule
+
+Independent modules SHOULD be developed in parallel:
+
+- Orbit module (independent)
+- Compute module (independent)
+- Metrics module (independent)
+
+ONLY Kernel is sequential dependency.
+
+---
+
+## 14. Output Requirements
+
+All simulation runs MUST output:
+
+- events.jsonl
+- metrics.csv
+- summary.json
+
+No binary or opaque outputs allowed.
+
+---
+
+## 15. Definition of Done
+
+A task is complete ONLY if:
+
+- implementation is within scope
+- tests are added
+- tests pass
+- deterministic behavior verified
+- no architecture violations
+- no external dependencies introduced
+- example runs successfully (if applicable)
+
+---
+
+## 16. If Requirements Are Unclear
+
+- choose simplest correct implementation
+- do NOT expand architecture
+- document assumptions explicitly
+- proceed without blocking
+
+---
+
+## 17. Final Principle
+
+This system prioritizes:
+
+1. determinism
+2. modularity
+3. reproducibility
+4. event-driven correctness
+
+over:
+
+- realism
+- performance
+- feature richness
