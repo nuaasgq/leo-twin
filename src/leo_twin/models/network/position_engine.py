@@ -17,6 +17,7 @@ from leo_twin.models.network.routing import RoutingRuntime
 from leo_twin.models.network.transport import TransportRuntime
 from leo_twin.schema import (
     AccessAssociation,
+    AntennaProfile,
     EventType,
     FlowRequest,
     LinkMedium,
@@ -346,7 +347,17 @@ class PositionDrivenNetworkEngine(SimulationModule):
             latency = self._base_latency_s + candidate.range_km / self._propagation_speed_km_s
             capacity = self._link_capacity
         else:
-            budget = budget_calculator.evaluate(candidate.range_km)
+            budget = budget_calculator.evaluate(
+                candidate.range_km,
+                transmit_off_boresight_deg=_off_boresight_from_elevation(
+                    budget_calculator.transmit_terminal.antenna,
+                    candidate.elevation_deg,
+                ),
+                receive_off_boresight_deg=_off_boresight_from_elevation(
+                    budget_calculator.receive_terminal.antenna,
+                    candidate.elevation_deg,
+                ),
+            )
             latency = self._base_latency_s + budget.propagation_delay_s
             capacity = min(self._link_capacity, budget.capacity_mbps)
         return LinkState(
@@ -459,6 +470,17 @@ def _distance_km(
     delta_y = left[1] - right[1]
     delta_z = left[2] - right[2]
     return (delta_x * delta_x + delta_y * delta_y + delta_z * delta_z) ** 0.5
+
+
+def _off_boresight_from_elevation(
+    antenna: AntennaProfile,
+    elevation_deg: float,
+) -> float:
+    _require_finite_number(elevation_deg, "elevation_deg")
+    steering_mode = antenna.steering_mode.lower()
+    if any(token in steering_mode for token in ("electronic", "tracking", "steerable")):
+        return 0.0
+    return max(0.0, min(180.0, 90.0 - elevation_deg))
 
 
 def _require_non_empty_str(value: str, field_name: str) -> None:

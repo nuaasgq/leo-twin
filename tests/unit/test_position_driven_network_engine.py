@@ -112,6 +112,48 @@ def _budget_engine() -> PositionDrivenNetworkEngine:
     )
 
 
+def _pointing_budget_engine(steering_mode: str) -> PositionDrivenNetworkEngine:
+    antenna = AntennaProfile(
+        antenna_id=f"pointing-ant-{steering_mode}",
+        gain_dbi=28.0,
+        beam_width_deg=4.0,
+        steering_mode=steering_mode,
+    )
+    budget = LinkBudgetCalculator(
+        transmit_terminal=RadioTerminalProfile(
+            terminal_id=f"sat-terminal-{steering_mode}",
+            antenna=antenna,
+            transmit_power_dbw=0.0,
+        ),
+        receive_terminal=RadioTerminalProfile(
+            terminal_id=f"ground-terminal-{steering_mode}",
+            antenna=antenna,
+            transmit_power_dbw=0.0,
+        ),
+        channel=ChannelProfile(
+            channel_id=f"pointing-channel-{steering_mode}",
+            medium=LinkMedium.SPACE_GROUND,
+            carrier_frequency_hz=20_000_000_000.0,
+            bandwidth_hz=100_000_000.0,
+            loss_model_name="free_space_budget",
+        ),
+    )
+    return PositionDrivenNetworkEngine(
+        endpoints=(
+            GroundEndpoint(
+                endpoint_id="user-east",
+                position=(EARTH_RADIUS_KM, 0.0, 0.0),
+                min_elevation_deg=10.0,
+                max_range_km=2500.0,
+            ),
+        ),
+        compute_node_ids=("node-a",),
+        link_capacity=1_000_000.0,
+        link_budget_calculator=budget,
+        cell_size_km=1000.0,
+    )
+
+
 def _budget_for_medium(medium: LinkMedium) -> LinkBudgetCalculator:
     antenna = AntennaProfile(
         antenna_id=f"ant-{medium.value.lower()}",
@@ -343,6 +385,22 @@ def test_link_budget_limits_position_driven_link_capacity_and_latency() -> None:
     assert link.capacity < 10000.0
     assert link.capacity > 0.0
     assert link.latency < 0.01
+
+
+def test_position_driven_budget_applies_fixed_antenna_pointing_loss() -> None:
+    low_elevation_state = _state((7000.0, 1000.0, 0.0))
+
+    fixed_link = _link_after_orbit_update(
+        _pointing_budget_engine("fixed"),
+        low_elevation_state,
+    )
+    tracking_link = _link_after_orbit_update(
+        _pointing_budget_engine("electronic"),
+        low_elevation_state,
+    )
+
+    assert fixed_link.latency == pytest.approx(tracking_link.latency)
+    assert fixed_link.capacity < tracking_link.capacity
 
 
 def test_position_driven_engine_generates_space_link_update() -> None:
@@ -615,6 +673,19 @@ def _space_link_payloads(events: list[SimEvent]) -> list[LinkState]:
         and event.payload.source_id == "sat-001"
         and event.payload.target_id == "sat-002"
     ]
+
+
+def _link_after_orbit_update(
+    network: PositionDrivenNetworkEngine,
+    state: SatelliteState,
+) -> LinkState:
+    kernel = SimulationKernel()
+    metrics = MetricsSink()
+    kernel.register_module(network)
+    kernel.register_module(metrics)
+    kernel.schedule_event(_event("orbit", EventType.ORBIT_UPDATE.value, state))
+    kernel.run()
+    return network.active_link_states()[0]
 
 
 def _run_scenario() -> tuple[tuple[str, object], ...]:
