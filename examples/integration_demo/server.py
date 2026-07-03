@@ -30,6 +30,7 @@ _FRONTEND_EVENT_TYPES = frozenset(
         "ROUTE_UPDATE",
         "TASK_START",
         "TASK_FINISH",
+        "COMPUTE_NODE_UPDATE",
         "METRIC_SAMPLE",
     }
 )

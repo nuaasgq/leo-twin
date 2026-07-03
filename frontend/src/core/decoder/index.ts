@@ -1,6 +1,7 @@
 import {
   EVENT_TYPES,
   EventType,
+  ComputeNodeState,
   LinkState,
   MetricRecord,
   Route,
@@ -50,6 +51,7 @@ export function decodeStateSnapshot(value: unknown): StateSnapshot {
     links: optionalArray(record.links, decodeLinkState),
     routes: optionalArray(record.routes, decodeRoute),
     tasks: optionalArray(record.tasks, decodeTaskState),
+    compute_nodes: optionalArray(record.compute_nodes, decodeComputeNodeState),
     metrics: optionalArray(record.metrics, decodeMetricRecord)
   };
 }
@@ -66,6 +68,9 @@ function decodePayload(eventType: EventType, payload: unknown): unknown {
   }
   if (eventType === "TASK_START" || eventType === "TASK_FINISH") {
     return decodeTaskState(payload);
+  }
+  if (eventType === "COMPUTE_NODE_UPDATE") {
+    return decodeComputeNodeState(payload);
   }
   return decodeMetricRecord(payload);
 }
@@ -119,6 +124,21 @@ function decodeTaskState(value: unknown): TaskState {
     sim_time: requireFiniteNumber(record.sim_time, "sim_time"),
     progress: requireFiniteNumber(record.progress, "progress"),
     status: requireString(record.status, "status")
+  };
+}
+
+function decodeComputeNodeState(value: unknown): ComputeNodeState {
+  const record = requireRecord(value, "ComputeNodeState");
+  return {
+    node_id: requireString(record.node_id, "node_id"),
+    sim_time: requireFiniteNumber(record.sim_time, "sim_time"),
+    capacity: requireFiniteNumber(record.capacity, "capacity"),
+    available_capacity: requireFiniteNumber(record.available_capacity, "available_capacity"),
+    status: requireString(record.status, "status"),
+    load_ratio:
+      record.load_ratio === undefined
+        ? undefined
+        : requireFiniteNumber(record.load_ratio, "load_ratio")
   };
 }
 

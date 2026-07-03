@@ -6,6 +6,7 @@ export type EventType =
   | "ROUTE_UPDATE"
   | "TASK_START"
   | "TASK_FINISH"
+  | "COMPUTE_NODE_UPDATE"
   | "METRIC_SAMPLE";
 
 export const EVENT_TYPES: readonly EventType[] = [
@@ -16,6 +17,7 @@ export const EVENT_TYPES: readonly EventType[] = [
   "ROUTE_UPDATE",
   "TASK_START",
   "TASK_FINISH",
+  "COMPUTE_NODE_UPDATE",
   "METRIC_SAMPLE"
 ] as const;
 
@@ -68,6 +70,15 @@ export interface TaskState {
   sim_time: number;
   progress: number;
   status: string;
+}
+
+export interface ComputeNodeState {
+  node_id: string;
+  sim_time: number;
+  capacity: number;
+  available_capacity: number;
+  status: string;
+  load_ratio?: number;
 }
 
 export interface MetricRecord {
@@ -137,6 +148,7 @@ export interface StateSnapshot {
   links?: readonly LinkState[];
   routes?: readonly Route[];
   tasks?: readonly TaskState[];
+  compute_nodes?: readonly ComputeNodeState[];
   metrics?: readonly MetricRecord[];
 }
 

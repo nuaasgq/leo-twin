@@ -42,6 +42,14 @@ def test_frontend_sync_test() -> None:
     assert len(snapshot["satellites"]) == 72
     assert len(snapshot["ground_users"]) == 1003
     assert len(snapshot["tasks"]) == 32
+    assert len(snapshot["compute_nodes"]) == 10
+    assert {
+        "node_id",
+        "capacity",
+        "available_capacity",
+        "status",
+        "load_ratio",
+    } <= set(snapshot["compute_nodes"][0])
     assert sum(
         1
         for link in snapshot["links"]

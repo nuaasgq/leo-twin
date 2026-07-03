@@ -30,12 +30,20 @@ describe("buildComputeQueueSummary", () => {
         {
           node_id: "node-b",
           running_tasks: 2,
-          finished_tasks: 1
+          finished_tasks: 1,
+          capacity: 40,
+          available_capacity: 10,
+          load_ratio: 0.75,
+          status: "BUSY"
         },
         {
           node_id: "node-a",
           running_tasks: 1,
-          finished_tasks: 5
+          finished_tasks: 5,
+          capacity: 50,
+          available_capacity: 50,
+          load_ratio: 0,
+          status: "IDLE"
         }
       ],
       routes: [
@@ -75,18 +83,27 @@ describe("buildComputeQueueSummary", () => {
       waitingForNetwork: 1,
       computeNodes: 2,
       busiestNodeId: "node-b",
+      averageLoadRatio: 0.375,
       computeSchedulingPolicy: "SHORTEST_JOB_FIRST",
       computeSchedulingPolicyLabel: "短作业优先",
       nodeRows: [
         {
           nodeId: "node-b",
           runningTasks: 2,
-          finishedTasks: 1
+          finishedTasks: 1,
+          capacity: 40,
+          availableCapacity: 10,
+          loadRatio: 0.75,
+          status: "BUSY"
         },
         {
           nodeId: "node-a",
           runningTasks: 1,
-          finishedTasks: 5
+          finishedTasks: 5,
+          capacity: 50,
+          availableCapacity: 50,
+          loadRatio: 0,
+          status: "IDLE"
         }
       ],
       taskRows: [

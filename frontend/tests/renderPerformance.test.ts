@@ -67,7 +67,11 @@ describe("frontend render performance architecture", () => {
       {
         node_id: "node-a",
         running_tasks: 0,
-        finished_tasks: 2
+        finished_tasks: 2,
+        capacity: 0,
+        available_capacity: 0,
+        status: "UNKNOWN",
+        load_ratio: 0
       }
     ]);
     expect(snapshot.metrics_summary.compute).toEqual({

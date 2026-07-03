@@ -13,6 +13,7 @@ export interface ComputeQueueSummary {
   waitingForNetwork: number;
   computeNodes: number;
   busiestNodeId: string;
+  averageLoadRatio: number;
   computeSchedulingPolicy: string;
   computeSchedulingPolicyLabel: string;
   nodeRows: readonly ComputeNodeQueueRow[];
@@ -23,6 +24,10 @@ export interface ComputeNodeQueueRow {
   nodeId: string;
   runningTasks: number;
   finishedTasks: number;
+  capacity: number;
+  availableCapacity: number;
+  loadRatio: number;
+  status: string;
 }
 
 export interface ComputeTaskRow {
@@ -54,15 +59,19 @@ export const ComputeQueuePanel = memo(function ComputeQueuePanel({
         <KpiPanel label="网络等待" value={String(summary.waitingForNetwork)} />
         <KpiPanel label="可用路由" value={String(summary.availableRoutes)} />
         <KpiPanel label="节点数" value={String(summary.computeNodes)} />
-        <KpiPanel label="最繁忙节点" value={summary.busiestNodeId} />
+        <KpiPanel label="平均负载" value={formatPercent(summary.averageLoadRatio)} />
         <KpiPanel label="调度策略" value={summary.computeSchedulingPolicyLabel} />
       </div>
       <div className="compute-table" aria-label="算力节点明细">
         {summary.nodeRows.map((row) => (
           <div className="compute-table-row" key={row.nodeId}>
             <span>{row.nodeId}</span>
-            <span>{row.runningTasks} 运行</span>
-            <strong>{row.finishedTasks} 完成</strong>
+            <span>
+              {formatStatus(row.status)} · {formatPercent(row.loadRatio)}
+            </span>
+            <strong>
+              {formatNumber(row.availableCapacity)} / {formatNumber(row.capacity)}
+            </strong>
           </div>
         ))}
       </div>
@@ -88,7 +97,11 @@ export function buildComputeQueueSummary(
     .map((node) => ({
       nodeId: node.node_id,
       runningTasks: node.running_tasks,
-      finishedTasks: node.finished_tasks
+      finishedTasks: node.finished_tasks,
+      capacity: node.capacity,
+      availableCapacity: node.available_capacity,
+      loadRatio: node.load_ratio,
+      status: node.status
     }));
   const taskRows = snapshot.active_tasks
     .slice()
@@ -119,6 +132,10 @@ export function buildComputeQueueSummary(
     waitingForNetwork,
     computeNodes: nodeRows.length,
     busiestNodeId: busiest?.nodeId ?? "无",
+    averageLoadRatio:
+      nodeRows.length === 0
+        ? 0
+        : nodeRows.reduce((total, row) => total + row.loadRatio, 0) / nodeRows.length,
     computeSchedulingPolicy,
     computeSchedulingPolicyLabel: formatComputeSchedulingPolicy(computeSchedulingPolicy),
     nodeRows: nodeRows.slice(0, 5),
@@ -140,6 +157,10 @@ function compareComputeNodes(
   left: ComputeNodeRenderState,
   right: ComputeNodeRenderState
 ): number {
+  const load = right.load_ratio - left.load_ratio;
+  if (load !== 0) {
+    return load;
+  }
   const running = right.running_tasks - left.running_tasks;
   if (running !== 0) {
     return running;
@@ -157,4 +178,22 @@ function compareTasks(left: TaskState, right: TaskState): number {
     return byNode;
   }
   return left.task_id.localeCompare(right.task_id);
+}
+
+function formatStatus(status: string): string {
+  if (status === "BUSY") {
+    return "忙碌";
+  }
+  if (status === "IDLE") {
+    return "空闲";
+  }
+  return status;
+}
+
+function formatPercent(value: number): string {
+  return `${(value * 100).toFixed(0)}%`;
+}
+
+function formatNumber(value: number): string {
+  return value.toFixed(value >= 100 ? 0 : 1);
 }

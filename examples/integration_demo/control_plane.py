@@ -37,6 +37,7 @@ _FRONTEND_EVENT_TYPES = frozenset(
         "ROUTE_UPDATE",
         "TASK_START",
         "TASK_FINISH",
+        "COMPUTE_NODE_UPDATE",
         "METRIC_SAMPLE",
     }
 )
@@ -167,6 +168,7 @@ def _initial_snapshot(result: DemoRunResult) -> dict[str, JsonValue]:
         "links": [],
         "routes": [],
         "tasks": [],
+        "compute_nodes": [],
         "metrics": [],
         "event_count": 0,
         "last_sim_time": 0.0,

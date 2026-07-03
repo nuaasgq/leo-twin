@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 
 import {
+  ComputeNodeState,
   GroundUserState,
   LinkState,
   MetricRecord,
@@ -51,6 +52,10 @@ export interface ComputeNodeRenderState {
   node_id: string;
   running_tasks: number;
   finished_tasks: number;
+  capacity: number;
+  available_capacity: number;
+  status: string;
+  load_ratio: number;
 }
 
 export interface SnapshotDiff {
@@ -220,7 +225,7 @@ export function buildWorldSnapshot(
     satellites,
     links,
     routes,
-    compute_nodes: computeNodeSummary(tasks),
+    compute_nodes: computeNodeSummary(state.computeNodes, tasks),
     ground_users: Array.from(state.groundUsers.values()).sort((left, right) =>
       left.user_id.localeCompare(right.user_id)
     ),
@@ -313,7 +318,10 @@ function systemSummary(
   };
 }
 
-function computeNodeSummary(tasks: readonly TaskState[]): readonly ComputeNodeRenderState[] {
+function computeNodeSummary(
+  computeNodes: ReadonlyMap<string, ComputeNodeState>,
+  tasks: readonly TaskState[]
+): readonly ComputeNodeRenderState[] {
   const nodes = new Map<string, { running_tasks: number; finished_tasks: number }>();
   for (const task of tasks) {
     const entry = nodes.get(task.node_id) ?? { running_tasks: 0, finished_tasks: 0 };
@@ -324,9 +332,44 @@ function computeNodeSummary(tasks: readonly TaskState[]): readonly ComputeNodeRe
     }
     nodes.set(task.node_id, entry);
   }
+  for (const node of computeNodes.values()) {
+    if (!nodes.has(node.node_id)) {
+      nodes.set(node.node_id, { running_tasks: 0, finished_tasks: 0 });
+    }
+  }
   return Array.from(nodes.entries())
     .sort(([left], [right]) => left.localeCompare(right))
-    .map(([node_id, entry]) => ({ node_id, ...entry }));
+    .map(([node_id, entry]) => {
+      const node = computeNodes.get(node_id);
+      return {
+        node_id,
+        ...entry,
+        capacity: node?.capacity ?? 0,
+        available_capacity: node?.available_capacity ?? 0,
+        status: node?.status ?? "UNKNOWN",
+        load_ratio: computeLoadRatio(node)
+      };
+    });
+}
+
+function computeLoadRatio(node: ComputeNodeState | undefined): number {
+  if (!node) {
+    return 0;
+  }
+  if (node.load_ratio !== undefined) {
+    return clampRatio(node.load_ratio);
+  }
+  if (node.capacity <= 0) {
+    return 1;
+  }
+  return clampRatio(1 - node.available_capacity / node.capacity);
+}
+
+function clampRatio(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  return Math.max(0, Math.min(1, value));
 }
 
 function isTerminalTaskStatus(status: string): boolean {

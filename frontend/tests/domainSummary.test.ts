@@ -52,7 +52,11 @@ describe("buildDomainSummary", () => {
         {
           node_id: "node-a",
           running_tasks: 1,
-          finished_tasks: 2
+          finished_tasks: 2,
+          capacity: 20,
+          available_capacity: 5,
+          status: "BUSY",
+          load_ratio: 0.75
         }
       ]
     });
@@ -78,7 +82,11 @@ describe("buildDomainSummary", () => {
         {
           node_id: "node-a",
           running_tasks: 0,
-          finished_tasks: 0
+          finished_tasks: 0,
+          capacity: 20,
+          available_capacity: 20,
+          status: "IDLE",
+          load_ratio: 0
         }
       ]
     });

@@ -90,7 +90,11 @@ describe("buildDataPanelSummary", () => {
         {
           node_id: "compute-a",
           running_tasks: 1,
-          finished_tasks: 2
+          finished_tasks: 2,
+          capacity: 20,
+          available_capacity: 4,
+          status: "BUSY",
+          load_ratio: 0.8
         }
       ],
       metrics_summary: {

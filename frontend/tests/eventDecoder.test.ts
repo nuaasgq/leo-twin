@@ -43,4 +43,32 @@ describe("decodeSimEvent", () => {
       })
     ).toThrow("event_type is not supported");
   });
+
+  it("decodes compute node update payloads", () => {
+    const event = decodeSimEvent({
+      event_id: "compute:0001",
+      sim_time: 2,
+      priority: 0,
+      source: "compute",
+      target: "frontend",
+      event_type: "COMPUTE_NODE_UPDATE",
+      payload: {
+        node_id: "compute-01",
+        sim_time: 2,
+        capacity: 20,
+        available_capacity: 5,
+        status: "BUSY",
+        load_ratio: 0.75
+      }
+    });
+
+    expect(event.payload).toEqual({
+      node_id: "compute-01",
+      sim_time: 2,
+      capacity: 20,
+      available_capacity: 5,
+      status: "BUSY",
+      load_ratio: 0.75
+    });
+  });
 });

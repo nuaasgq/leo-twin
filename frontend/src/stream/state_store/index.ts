@@ -1,4 +1,5 @@
 import {
+  ComputeNodeState,
   GroundUserState,
   LinkState,
   MetricRecord,
@@ -15,6 +16,7 @@ export interface ObservabilityState {
   groundUsers: ReadonlyMap<string, GroundUserState>;
   links: ReadonlyMap<string, LinkState>;
   routes: ReadonlyMap<string, Route>;
+  computeNodes: ReadonlyMap<string, ComputeNodeState>;
   tasks: ReadonlyMap<string, TaskState>;
   metrics: ReadonlyMap<string, MetricRecord>;
   metricSeries: ReadonlyMap<string, readonly MetricRecord[]>;
@@ -32,6 +34,7 @@ interface MutableState {
   groundUsers: Map<string, GroundUserState>;
   links: Map<string, LinkState>;
   routes: Map<string, Route>;
+  computeNodes: Map<string, ComputeNodeState>;
   tasks: Map<string, TaskState>;
   metrics: Map<string, MetricRecord>;
   metricSeries: Map<string, MetricRecord[]>;
@@ -100,6 +103,10 @@ export class ObservabilityStore {
       this.state.tasks.set(task.task_id, task);
       this.state.lastSimTime = Math.max(this.state.lastSimTime, task.sim_time);
     }
+    for (const node of snapshot.compute_nodes ?? []) {
+      this.state.computeNodes.set(node.node_id, node);
+      this.state.lastSimTime = Math.max(this.state.lastSimTime, node.sim_time);
+    }
     for (const metric of snapshot.metrics ?? []) {
       this.applyMetric(metric);
       this.state.lastSimTime = Math.max(this.state.lastSimTime, metric.sim_time);
@@ -156,6 +163,11 @@ export class ObservabilityStore {
     if (event.event_type === "TASK_START" || event.event_type === "TASK_FINISH") {
       const task = event.payload as TaskState;
       this.state.tasks.set(task.task_id, task);
+      return;
+    }
+    if (event.event_type === "COMPUTE_NODE_UPDATE") {
+      const node = event.payload as ComputeNodeState;
+      this.state.computeNodes.set(node.node_id, node);
       return;
     }
     this.applyMetric(event.payload as MetricRecord);
@@ -257,6 +269,7 @@ function createEmptyState(): MutableState {
     groundUsers: new Map(),
     links: new Map(),
     routes: new Map(),
+    computeNodes: new Map(),
     tasks: new Map(),
     metrics: new Map(),
     metricSeries: new Map(),
@@ -274,6 +287,7 @@ function freezeState(state: MutableState): ObservabilityState {
     groundUsers: new Map(state.groundUsers),
     links: new Map(state.links),
     routes: new Map(state.routes),
+    computeNodes: new Map(state.computeNodes),
     tasks: new Map(state.tasks),
     metrics: new Map(state.metrics),
     metricSeries: new Map(

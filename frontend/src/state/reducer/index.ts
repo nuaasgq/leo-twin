@@ -1,4 +1,5 @@
 import {
+  ComputeNodeState,
   GroundUserState,
   LinkState,
   MetricRecord,
@@ -22,6 +23,7 @@ export interface ReducedWorldState {
   groundUsers: ReadonlyMap<string, GroundUserState>;
   links: ReadonlyMap<string, LinkState>;
   routes: ReadonlyMap<string, Route>;
+  computeNodes: ReadonlyMap<string, ComputeNodeState>;
   tasks: ReadonlyMap<string, TaskState>;
   metrics: ReadonlyMap<string, MetricRecord>;
   metricSeries: ReadonlyMap<string, readonly MetricRecord[]>;
@@ -38,6 +40,7 @@ interface MutableWorldState {
   groundUsers: Map<string, GroundUserState>;
   links: Map<string, LinkState>;
   routes: Map<string, Route>;
+  computeNodes: Map<string, ComputeNodeState>;
   tasks: Map<string, TaskState>;
   metrics: Map<string, MetricRecord>;
   metricSeries: Map<string, MetricRecord[]>;
@@ -123,6 +126,9 @@ export class WorldStateReducer {
     for (const task of snapshot.tasks ?? []) {
       this.applyTask(task);
     }
+    for (const node of snapshot.compute_nodes ?? []) {
+      this.applyComputeNode(node);
+    }
     for (const metric of snapshot.metrics ?? []) {
       this.applyMetric(metric);
       this.state.lastSimTime = Math.max(this.state.lastSimTime, metric.sim_time);
@@ -181,6 +187,10 @@ export class WorldStateReducer {
       this.applyTask(event.payload as TaskState);
       return;
     }
+    if (event.event_type === "COMPUTE_NODE_UPDATE") {
+      this.applyComputeNode(event.payload as ComputeNodeState);
+      return;
+    }
     this.applyMetric(event.payload as MetricRecord);
   }
 
@@ -228,6 +238,11 @@ export class WorldStateReducer {
     this.dirtyTaskIds.add(task.task_id);
   }
 
+  private applyComputeNode(node: ComputeNodeState): void {
+    this.state.computeNodes.set(node.node_id, node);
+    this.state.lastSimTime = Math.max(this.state.lastSimTime, node.sim_time);
+  }
+
   private applyMetric(record: MetricRecord): void {
     const id = `${record.metric_name}:${record.entity_id}`;
     this.state.metrics.set(id, record);
@@ -247,6 +262,7 @@ function createMutableState(): MutableWorldState {
     groundUsers: new Map(),
     links: new Map(),
     routes: new Map(),
+    computeNodes: new Map(),
     tasks: new Map(),
     metrics: new Map(),
     metricSeries: new Map(),
@@ -266,6 +282,7 @@ function freezeReducerState(state: MutableWorldState): ReducedWorldState {
     groundUsers: state.groundUsers,
     links: state.links,
     routes: state.routes,
+    computeNodes: state.computeNodes,
     tasks: state.tasks,
     metrics: state.metrics,
     metricSeries: state.metricSeries,
