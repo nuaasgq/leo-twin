@@ -57,7 +57,13 @@ describe("scenarioWithRuntimeConfig", () => {
         {},
         {
           scenario: {
-            compute_scheduling_policy: "EARLIEST_DEADLINE_FIRST"
+            compute_scheduling_policy: "EARLIEST_DEADLINE_FIRST",
+            orbit: {
+              update_interval_seconds: 30,
+              plane_count: 24,
+              altitude_m: 600_000,
+              inclination_deg: 55
+            }
           },
           network: {
             application_protocol: "MQTT",
@@ -92,7 +98,13 @@ describe("scenarioWithRuntimeConfig", () => {
       )
     ).toEqual({
       scenario: {
-        compute_scheduling_policy: "EARLIEST_DEADLINE_FIRST"
+        compute_scheduling_policy: "EARLIEST_DEADLINE_FIRST",
+        orbit: {
+          update_interval_seconds: 30,
+          plane_count: 24,
+          altitude_m: 600_000,
+          inclination_deg: 55
+        }
       },
       network: {
         application_protocol: "MQTT",

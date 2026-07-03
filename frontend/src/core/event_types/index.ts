@@ -103,6 +103,12 @@ export interface ScenarioConfig {
     user_count?: number;
     compute_nodes?: number;
     compute_scheduling_policy?: string;
+    orbit?: {
+      update_interval_seconds?: number;
+      plane_count?: number;
+      altitude_m?: number;
+      inclination_deg?: number;
+    };
   };
   network?: {
     application_protocol?: string;

@@ -94,6 +94,12 @@ def build_demo_scenario(config: DemoConfig) -> DemoScenario:
                 "user_count": config.ground_user_count,
                 "compute_nodes": config.compute_node_count,
                 "compute_scheduling_policy": config.compute_scheduling_policy,
+                "orbit": {
+                    "update_interval_seconds": config.orbit_tick_seconds,
+                    "plane_count": config.orbit_plane_count,
+                    "altitude_m": config.orbit_altitude_m,
+                    "inclination_deg": config.orbit_inclination_deg,
+                },
             },
             "network": {
                 "application_protocol": config.application_protocol,
@@ -150,30 +156,33 @@ def build_demo_scenario(config: DemoConfig) -> DemoScenario:
 
 
 def _orbit_satellites(config: DemoConfig) -> tuple[OrbitSatelliteConfig, ...]:
-    planes = 12
+    planes = max(1, min(config.orbit_plane_count, config.satellite_count))
     satellites_per_plane = max(1, config.satellite_count // planes)
+    orbital_radius = 6_371_000.0 + config.orbit_altitude_m
+    inclination_scale = config.orbit_inclination_deg / 90.0
     return tuple(
         OrbitSatelliteConfig(
             satellite_id=f"sat-{index:03d}",
-            orbital_radius=6_900_000.0 + 1_000.0 * (index % satellites_per_plane),
+            orbital_radius=orbital_radius + 1_000.0 * (index % satellites_per_plane),
             angular_velocity=0.001 + (index % 5) * 0.00001,
             phase=((index % satellites_per_plane) / satellites_per_plane) * 2.0 * pi,
-            inclination=((index // satellites_per_plane) / planes) * 0.9,
+            inclination=((index // satellites_per_plane) / planes) * inclination_scale,
         )
         for index in range(config.satellite_count)
     )
 
 
 def _orbit_elements(config: DemoConfig) -> tuple[OrbitalElementSet, ...]:
-    plane_count = min(12, config.satellite_count)
+    plane_count = max(1, min(config.orbit_plane_count, config.satellite_count))
     satellites_per_plane = ceil(config.satellite_count / plane_count)
+    semi_major_axis_km = 6371.0 + config.orbit_altitude_m / 1000.0
     return tuple(
         OrbitalElementSet(
             satellite_id=f"sat-{index:03d}",
             epoch=0.0,
-            semi_major_axis_km=6900.0 + float(index % satellites_per_plane),
+            semi_major_axis_km=semi_major_axis_km + float(index % satellites_per_plane),
             eccentricity=0.001,
-            inclination_deg=53.0,
+            inclination_deg=config.orbit_inclination_deg,
             raan_deg=((index % plane_count) * 360.0 / plane_count) % 360.0,
             argument_of_perigee_deg=0.0,
             mean_anomaly_deg=(

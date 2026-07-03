@@ -46,6 +46,9 @@ class DemoConfig:
     scenario_config: str
     backend_host: str
     backend_port: int
+    orbit_plane_count: int = 12
+    orbit_altitude_m: float = 529_000.0
+    orbit_inclination_deg: float = 53.0
     application_protocol: str = "TASK_OFFLOAD_FLOW"
     transport_protocol: str = "TCP"
     routing_protocol: str = "LINK_STATE"
@@ -91,6 +94,9 @@ def load_demo_config(path: str | Path = DEFAULT_CONFIG_PATH) -> DemoConfig:
         ),
         duration_seconds=_int(scenario, "duration_seconds"),
         orbit_tick_seconds=_int(scenario, "orbit_tick_seconds"),
+        orbit_plane_count=_optional_int(scenario, "orbit_plane_count", 12),
+        orbit_altitude_m=_optional_float(scenario, "orbit_altitude_m", 529_000.0),
+        orbit_inclination_deg=_optional_float(scenario, "orbit_inclination_deg", 53.0),
         network_slot_seconds=_int(scenario, "network_slot_seconds"),
         flow_interval_seconds=_int(scenario, "flow_interval_seconds"),
         task_interval_seconds=_int(scenario, "task_interval_seconds"),
@@ -167,7 +173,12 @@ def demo_config_to_sees_config(config: DemoConfig) -> SEESConfig:
             ground_station_count=config.ground_station_count,
             cell_count=config.cell_count,
             compute_scheduling_policy=config.compute_scheduling_policy,
-            orbit=OrbitParameters(update_interval_seconds=config.orbit_tick_seconds),
+            orbit=OrbitParameters(
+                update_interval_seconds=config.orbit_tick_seconds,
+                plane_count=config.orbit_plane_count,
+                altitude_m=config.orbit_altitude_m,
+                inclination_deg=config.orbit_inclination_deg,
+            ),
             traffic_model=TrafficModel(
                 flow_interval_seconds=config.flow_interval_seconds,
                 task_interval_seconds=config.task_interval_seconds,
@@ -227,6 +238,9 @@ def demo_config_from_sees_config(
         compute_scheduling_policy=config.scenario.compute_scheduling_policy.value,
         duration_seconds=config.runtime.duration,
         orbit_tick_seconds=config.scenario.orbit.update_interval_seconds,
+        orbit_plane_count=config.scenario.orbit.plane_count,
+        orbit_altitude_m=config.scenario.orbit.altitude_m,
+        orbit_inclination_deg=config.scenario.orbit.inclination_deg,
         network_slot_seconds=config.scenario.orbit.update_interval_seconds,
         flow_interval_seconds=config.scenario.traffic_model.flow_interval_seconds,
         task_interval_seconds=config.scenario.traffic_model.task_interval_seconds,

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   generatedScenarioSummaryItems,
   networkControlPayload,
+  orbitControlPayload,
   pauseResumeControl,
   runtimeProgressSummary,
   visualizationControlPayload
@@ -144,6 +145,24 @@ describe("visualizationControlPayload", () => {
       links: true,
       users: false,
       metrics: false
+    });
+  });
+});
+
+describe("orbitControlPayload", () => {
+  it("converts Chinese panel orbit units into control-plane fields", () => {
+    expect(
+      orbitControlPayload({
+        update_interval_seconds: 30,
+        plane_count: 24,
+        altitude_km: 600,
+        inclination_deg: 55
+      })
+    ).toEqual({
+      update_interval_seconds: 30,
+      plane_count: 24,
+      altitude_m: 600_000,
+      inclination_deg: 55
     });
   });
 });

@@ -320,7 +320,28 @@ export function scenarioWithRuntimeConfig(
         compute_scheduling_policy:
           typeof runtimeConfig.scenario.compute_scheduling_policy === "string"
             ? runtimeConfig.scenario.compute_scheduling_policy
-            : scenario.scenario?.compute_scheduling_policy
+            : scenario.scenario?.compute_scheduling_policy,
+        orbit: isRecord(runtimeConfig.scenario.orbit)
+          ? {
+              ...scenario.scenario?.orbit,
+              update_interval_seconds:
+                typeof runtimeConfig.scenario.orbit.update_interval_seconds === "number"
+                  ? runtimeConfig.scenario.orbit.update_interval_seconds
+                  : scenario.scenario?.orbit?.update_interval_seconds,
+              plane_count:
+                typeof runtimeConfig.scenario.orbit.plane_count === "number"
+                  ? runtimeConfig.scenario.orbit.plane_count
+                  : scenario.scenario?.orbit?.plane_count,
+              altitude_m:
+                typeof runtimeConfig.scenario.orbit.altitude_m === "number"
+                  ? runtimeConfig.scenario.orbit.altitude_m
+                  : scenario.scenario?.orbit?.altitude_m,
+              inclination_deg:
+                typeof runtimeConfig.scenario.orbit.inclination_deg === "number"
+                  ? runtimeConfig.scenario.orbit.inclination_deg
+                  : scenario.scenario?.orbit?.inclination_deg
+            }
+          : scenario.scenario?.orbit
       }
     : scenario.scenario;
   const network = isRecord(runtimeConfig.network)
@@ -508,6 +529,13 @@ function scenarioControlValues(
     compute_nodes: scenarioConfig?.scenario?.compute_nodes ?? 10,
     compute_scheduling_policy:
       scenarioConfig?.scenario?.compute_scheduling_policy ?? "FIFO",
+    orbit: {
+      update_interval_seconds:
+        scenarioConfig?.scenario?.orbit?.update_interval_seconds ?? 60,
+      plane_count: scenarioConfig?.scenario?.orbit?.plane_count ?? 12,
+      altitude_km: (scenarioConfig?.scenario?.orbit?.altitude_m ?? 550_000) / 1000,
+      inclination_deg: scenarioConfig?.scenario?.orbit?.inclination_deg ?? 53
+    },
     visualization: {
       satellites: visualization?.satellites ?? true,
       links: visualization?.links ?? true,

@@ -6,6 +6,9 @@ scenario:
   compute_node_count: 10
   duration_seconds: 600
   orbit_tick_seconds: 60
+  orbit_plane_count: 12
+  orbit_altitude_m: 529000.0
+  orbit_inclination_deg: 53.0
   network_slot_seconds: 60
   flow_interval_seconds: 60
   task_interval_seconds: 60

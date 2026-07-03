@@ -122,6 +122,12 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
                     "satellite_count": 24,
                     "user_count": 40,
                     "compute_nodes": 3,
+                    "orbit": {
+                        "update_interval_seconds": 30,
+                        "plane_count": 6,
+                        "altitude_m": 600_000.0,
+                        "inclination_deg": 55.0,
+                    },
                     "application_protocol": "MQTT",
                     "transport_protocol": "UDP",
                     "transport_loss_rate": 0.025,
@@ -151,6 +157,10 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
     assert control_plane.result.config.satellite_count == 24
     assert len(control_plane.result.scenario.orbit_satellites) == 24
     assert control_plane.result.config.ground_user_count == 40
+    assert control_plane.result.config.orbit_tick_seconds == 30
+    assert control_plane.result.config.orbit_plane_count == 6
+    assert control_plane.result.config.orbit_altitude_m == 600_000.0
+    assert control_plane.result.config.orbit_inclination_deg == 55.0
     assert control_plane.result.config.transport_protocol == "UDP"
     assert control_plane.result.config.application_protocol == "MQTT"
     assert control_plane.result.config.routing_protocol == "DISTANCE_VECTOR"
@@ -172,6 +182,12 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
     assert control_plane.result.scenario.frontend_config["scenario"][
         "compute_scheduling_policy"
     ] == "SHORTEST_JOB_FIRST"
+    assert control_plane.result.scenario.frontend_config["scenario"]["orbit"] == {
+        "update_interval_seconds": 30,
+        "plane_count": 6,
+        "altitude_m": 600_000.0,
+        "inclination_deg": 55.0,
+    }
     assert control_plane.result.scenario.frontend_config["network"] == {
         "application_protocol": "MQTT",
         "transport_protocol": "UDP",
@@ -209,6 +225,9 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
     assert ack["generated_config"]["system_loss_db"] == 1.5
     assert ack["generated_config"]["noise_temperature_k"] == 310.0
     assert ack["generated_config"]["compute_scheduling_policy"] == "SHORTEST_JOB_FIRST"
+    assert ack["generated_config"]["orbit_plane_count"] == 6
+    assert ack["generated_config"]["semi_major_axis_km"] == 6971.0
+    assert ack["generated_config"]["inclination_deg"] == 55.0
 
     runtime_ack = control_plane.handle_raw_message(
         json.dumps({"type": "RUNTIME_CONTROL", "action": "START"})
@@ -235,6 +254,12 @@ def test_initialize_writes_config_and_start_gates_streams(tmp_path) -> None:
                 "payload": {
                     "satellite_count": 24,
                     "user_count": 40,
+                    "orbit": {
+                        "update_interval_seconds": 30,
+                        "plane_count": 6,
+                        "altitude_m": 600_000.0,
+                        "inclination_deg": 55.0,
+                    },
                     "mode": "ACCELERATED",
                     "speed_factor": 10,
                 },
@@ -246,10 +271,16 @@ def test_initialize_writes_config_and_start_gates_streams(tmp_path) -> None:
     assert init_ack["status"]["last_action"] == "INITIALIZE"
     assert init_ack["status"]["status"] == "STOPPED"
     assert "satellite_count: 24" in config_path.read_text(encoding="utf-8")
+    assert "plane_count: 6" in config_path.read_text(encoding="utf-8")
+    assert "altitude_m: 600000.0" in config_path.read_text(encoding="utf-8")
+    assert "inclination_deg: 55.0" in config_path.read_text(encoding="utf-8")
     assert "speed_factor: 10" in config_path.read_text(encoding="utf-8")
     generated_config = json.loads(generated_config_path.read_text(encoding="utf-8"))
     assert generated_config["satellite_count"] == 24
     assert generated_config["user_count"] == 40
+    assert generated_config["orbit_plane_count"] == 6
+    assert generated_config["semi_major_axis_km"] == 6971.0
+    assert generated_config["inclination_deg"] == 55.0
     assert generated_config["compute_node_count"] == 2
     assert generated_config["seed"] == 1234
     assert generated_config["application_protocol"] == "TASK_OFFLOAD_FLOW"

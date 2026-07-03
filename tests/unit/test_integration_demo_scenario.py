@@ -34,6 +34,30 @@ def test_demo_scenario_ground_endpoints_are_deterministic() -> None:
     assert first == second
 
 
+def test_demo_scenario_uses_configured_orbit_parameters() -> None:
+    scenario = build_demo_scenario(
+        _demo_config(
+            orbit_plane_count=3,
+            orbit_altitude_m=600_000.0,
+            orbit_inclination_deg=55.0,
+        )
+    )
+
+    assert scenario.frontend_config["scenario"]["orbit"] == {
+        "update_interval_seconds": 60,
+        "plane_count": 3,
+        "altitude_m": 600_000.0,
+        "inclination_deg": 55.0,
+    }
+    assert scenario.orbit_elements[0].semi_major_axis_km == 6971.0
+    assert scenario.orbit_elements[0].inclination_deg == 55.0
+    assert {element.raan_deg for element in scenario.orbit_elements[:3]} == {
+        0.0,
+        120.0,
+        240.0,
+    }
+
+
 def test_demo_flow_requests_target_compute_nodes() -> None:
     scenario = build_demo_scenario(_demo_config())
     compute_node_ids = {node.node_id for node in scenario.compute_nodes}
@@ -57,8 +81,8 @@ def test_demo_flow_requests_target_compute_nodes() -> None:
     )
 
 
-def _demo_config() -> DemoConfig:
-    return DemoConfig(
+def _demo_config(**overrides: object) -> DemoConfig:
+    values = dict(
         seed=1234,
         satellite_count=6,
         ground_user_count=4,
@@ -79,3 +103,5 @@ def _demo_config() -> DemoConfig:
         backend_host="127.0.0.1",
         backend_port=8765,
     )
+    values.update(overrides)
+    return DemoConfig(**values)

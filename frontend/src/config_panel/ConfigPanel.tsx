@@ -12,8 +12,16 @@ export interface ScenarioControlValues {
   user_count: number;
   compute_nodes: number;
   compute_scheduling_policy: string;
+  orbit: OrbitControlValues;
   visualization: VisualizationControlValues;
   network: NetworkControlValues;
+}
+
+export interface OrbitControlValues {
+  update_interval_seconds: number;
+  plane_count: number;
+  altitude_km: number;
+  inclination_deg: number;
 }
 
 export interface VisualizationControlValues {
@@ -85,6 +93,14 @@ export function ConfigPanel({
   const [computeSchedulingPolicy, setComputeSchedulingPolicy] = useState(
     scenario.compute_scheduling_policy
   );
+  const [orbitUpdateIntervalSeconds, setOrbitUpdateIntervalSeconds] = useState(
+    scenario.orbit.update_interval_seconds
+  );
+  const [orbitPlaneCount, setOrbitPlaneCount] = useState(scenario.orbit.plane_count);
+  const [orbitAltitudeKm, setOrbitAltitudeKm] = useState(scenario.orbit.altitude_km);
+  const [orbitInclinationDeg, setOrbitInclinationDeg] = useState(
+    scenario.orbit.inclination_deg
+  );
   const [showSatellites, setShowSatellites] = useState(scenario.visualization.satellites);
   const [showLinks, setShowLinks] = useState(scenario.visualization.links);
   const [showUsers, setShowUsers] = useState(scenario.visualization.users);
@@ -150,6 +166,10 @@ export function ConfigPanel({
     setUserCount(scenario.user_count);
     setComputeNodes(scenario.compute_nodes);
     setComputeSchedulingPolicy(scenario.compute_scheduling_policy);
+    setOrbitUpdateIntervalSeconds(scenario.orbit.update_interval_seconds);
+    setOrbitPlaneCount(scenario.orbit.plane_count);
+    setOrbitAltitudeKm(scenario.orbit.altitude_km);
+    setOrbitInclinationDeg(scenario.orbit.inclination_deg);
     setShowSatellites(scenario.visualization.satellites);
     setShowLinks(scenario.visualization.links);
     setShowUsers(scenario.visualization.users);
@@ -178,6 +198,10 @@ export function ConfigPanel({
     scenario.user_count,
     scenario.compute_nodes,
     scenario.compute_scheduling_policy,
+    scenario.orbit.update_interval_seconds,
+    scenario.orbit.plane_count,
+    scenario.orbit.altitude_km,
+    scenario.orbit.inclination_deg,
     scenario.visualization.satellites,
     scenario.visualization.links,
     scenario.visualization.users,
@@ -292,6 +316,76 @@ export function ConfigPanel({
           <option value="SHORTEST_JOB_FIRST">短作业优先</option>
           <option value="EARLIEST_DEADLINE_FIRST">最早截止期优先</option>
         </select>
+      </div>
+
+      <div className="channel-grid" aria-label="轨道参数">
+        <div className="control-group">
+          <label className="control-label" htmlFor="orbit-update-interval">
+            轨道步长
+          </label>
+          <div className="unit-input">
+            <input
+              id="orbit-update-interval"
+              type="number"
+              min="1"
+              step="1"
+              value={orbitUpdateIntervalSeconds}
+              onChange={(event) =>
+                setOrbitUpdateIntervalSeconds(Number(event.currentTarget.value))
+              }
+            />
+            <span>s</span>
+          </div>
+        </div>
+
+        <div className="control-group">
+          <label className="control-label" htmlFor="orbit-plane-count">
+            轨道面数
+          </label>
+          <input
+            id="orbit-plane-count"
+            type="number"
+            min="1"
+            step="1"
+            value={orbitPlaneCount}
+            onChange={(event) => setOrbitPlaneCount(Number(event.currentTarget.value))}
+          />
+        </div>
+
+        <div className="control-group">
+          <label className="control-label" htmlFor="orbit-altitude">
+            轨道高度
+          </label>
+          <div className="unit-input">
+            <input
+              id="orbit-altitude"
+              type="number"
+              min="160"
+              step="10"
+              value={orbitAltitudeKm}
+              onChange={(event) => setOrbitAltitudeKm(Number(event.currentTarget.value))}
+            />
+            <span>km</span>
+          </div>
+        </div>
+
+        <div className="control-group">
+          <label className="control-label" htmlFor="orbit-inclination">
+            轨道倾角
+          </label>
+          <div className="unit-input">
+            <input
+              id="orbit-inclination"
+              type="number"
+              min="0"
+              max="180"
+              step="0.1"
+              value={orbitInclinationDeg}
+              onChange={(event) => setOrbitInclinationDeg(Number(event.currentTarget.value))}
+            />
+            <span>°</span>
+          </div>
+        </div>
       </div>
 
       <div className="control-group">
@@ -722,6 +816,12 @@ export function ConfigPanel({
               speed_factor: speedFactor,
               duration: durationSeconds,
               seed,
+              orbit: orbitControlPayload({
+                update_interval_seconds: orbitUpdateIntervalSeconds,
+                plane_count: orbitPlaneCount,
+                altitude_km: orbitAltitudeKm,
+                inclination_deg: orbitInclinationDeg
+              }),
               visualization: visualizationControlPayload({
                 satellites: showSatellites,
                 users: showUsers,
@@ -884,6 +984,15 @@ export function visualizationControlPayload(
     links: visualization.links,
     users: visualization.users,
     metrics: visualization.metrics
+  };
+}
+
+export function orbitControlPayload(orbit: OrbitControlValues): Record<string, unknown> {
+  return {
+    update_interval_seconds: orbit.update_interval_seconds,
+    plane_count: orbit.plane_count,
+    altitude_m: orbit.altitude_km * 1000,
+    inclination_deg: orbit.inclination_deg
   };
 }
 
