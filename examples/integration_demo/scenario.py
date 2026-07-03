@@ -81,6 +81,17 @@ def build_demo_scenario(config: DemoConfig) -> DemoScenario:
                 "user_count": config.ground_user_count,
                 "compute_nodes": config.compute_node_count,
             },
+            "network": {
+                "transport_protocol": config.transport_protocol,
+                "routing_protocol": config.routing_protocol,
+                "carrier_frequency_hz": config.carrier_frequency_hz,
+                "channel_bandwidth_hz": config.channel_bandwidth_hz,
+                "rain_rate_mm_h": config.rain_rate_mm_h,
+                "rain_attenuation_coefficient_db_per_km_per_mm_h": (
+                    config.rain_attenuation_coefficient_db_per_km_per_mm_h
+                ),
+                "rain_effective_path_km": config.rain_effective_path_km,
+            },
             "runtime": {
                 "mode": "REAL_TIME",
                 "speed_factor": 1.0,

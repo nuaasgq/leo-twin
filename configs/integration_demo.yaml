@@ -13,6 +13,15 @@ scenario:
   state_snapshot_interval_events: 1000
   metric_sample_interval: 50
 
+network:
+  transport_protocol: TCP
+  routing_protocol: LINK_STATE
+  carrier_frequency_hz: 20000000000.0
+  channel_bandwidth_hz: 100000000.0
+  rain_rate_mm_h: 0.0
+  rain_attenuation_coefficient_db_per_km_per_mm_h: 0.0
+  rain_effective_path_km: 0.0
+
 frontend:
   websocket_events: /stream/events
   websocket_state: /stream/state

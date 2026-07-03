@@ -83,6 +83,13 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
                     "satellite_count": 24,
                     "user_count": 40,
                     "compute_nodes": 3,
+                    "transport_protocol": "UDP",
+                    "routing_protocol": "DISTANCE_VECTOR",
+                    "carrier_frequency_hz": 22_000_000_000.0,
+                    "channel_bandwidth_hz": 250_000_000.0,
+                    "rain_rate_mm_h": 12.5,
+                    "rain_attenuation_coefficient_db_per_km_per_mm_h": 0.015,
+                    "rain_effective_path_km": 4.0,
                 },
             }
         )
@@ -92,6 +99,23 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
     assert control_plane.result.config.satellite_count == 24
     assert len(control_plane.result.scenario.orbit_satellites) == 24
     assert control_plane.result.config.ground_user_count == 40
+    assert control_plane.result.config.transport_protocol == "UDP"
+    assert control_plane.result.config.routing_protocol == "DISTANCE_VECTOR"
+    assert control_plane.result.config.carrier_frequency_hz == 22_000_000_000.0
+    assert control_plane.result.config.channel_bandwidth_hz == 250_000_000.0
+    assert control_plane.result.config.rain_rate_mm_h == 12.5
+    assert control_plane.result.scenario.frontend_config["network"] == {
+        "transport_protocol": "UDP",
+        "routing_protocol": "DISTANCE_VECTOR",
+        "carrier_frequency_hz": 22_000_000_000.0,
+        "channel_bandwidth_hz": 250_000_000.0,
+        "rain_rate_mm_h": 12.5,
+        "rain_attenuation_coefficient_db_per_km_per_mm_h": 0.015,
+        "rain_effective_path_km": 4.0,
+    }
+    assert ack["generated_config"]["transport_protocol"] == "UDP"
+    assert ack["generated_config"]["routing_protocol"] == "DISTANCE_VECTOR"
+    assert ack["generated_config"]["carrier_frequency_hz"] == 22_000_000_000.0
 
     runtime_ack = control_plane.handle_raw_message(
         json.dumps({"type": "RUNTIME_CONTROL", "action": "START"})

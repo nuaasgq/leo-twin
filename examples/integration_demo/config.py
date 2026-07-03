@@ -16,6 +16,8 @@ from leo_twin.core.config import (
     UIConfig,
     VisualizationToggles,
 )
+from leo_twin.schema.config import NetworkProfile
+from leo_twin.schema.full_system import RoutingProtocol, TransportProtocol
 
 
 @dataclass(frozen=True)
@@ -39,6 +41,13 @@ class DemoConfig:
     scenario_config: str
     backend_host: str
     backend_port: int
+    transport_protocol: str = "TCP"
+    routing_protocol: str = "LINK_STATE"
+    carrier_frequency_hz: float = 20_000_000_000.0
+    channel_bandwidth_hz: float = 100_000_000.0
+    rain_rate_mm_h: float = 0.0
+    rain_attenuation_coefficient_db_per_km_per_mm_h: float = 0.0
+    rain_effective_path_km: float = 0.0
 
 
 DEFAULT_CONFIG_PATH = Path("configs/integration_demo.yaml")
@@ -47,6 +56,9 @@ DEFAULT_CONFIG_PATH = Path("configs/integration_demo.yaml")
 def load_demo_config(path: str | Path = DEFAULT_CONFIG_PATH) -> DemoConfig:
     data = _parse_simple_yaml(Path(path).read_text(encoding="utf-8"))
     scenario = _section(data, "scenario")
+    network = data.get("network", {})
+    if not isinstance(network, dict):
+        raise TypeError("network must be a config section")
     frontend = _section(data, "frontend")
     return DemoConfig(
         seed=_int(scenario, "seed"),
@@ -71,6 +83,25 @@ def load_demo_config(path: str | Path = DEFAULT_CONFIG_PATH) -> DemoConfig:
         scenario_config=_str(frontend, "scenario_config"),
         backend_host=_str(frontend, "backend_host"),
         backend_port=_int(frontend, "backend_port"),
+        transport_protocol=_optional_str(network, "transport_protocol", "TCP"),
+        routing_protocol=_optional_str(network, "routing_protocol", "LINK_STATE"),
+        carrier_frequency_hz=_optional_float(
+            network,
+            "carrier_frequency_hz",
+            20_000_000_000.0,
+        ),
+        channel_bandwidth_hz=_optional_float(
+            network,
+            "channel_bandwidth_hz",
+            100_000_000.0,
+        ),
+        rain_rate_mm_h=_optional_float(network, "rain_rate_mm_h", 0.0),
+        rain_attenuation_coefficient_db_per_km_per_mm_h=_optional_float(
+            network,
+            "rain_attenuation_coefficient_db_per_km_per_mm_h",
+            0.0,
+        ),
+        rain_effective_path_km=_optional_float(network, "rain_effective_path_km", 0.0),
     )
 
 
@@ -89,6 +120,17 @@ def demo_config_to_sees_config(config: DemoConfig) -> SEESConfig:
                 flow_interval_seconds=config.flow_interval_seconds,
                 task_interval_seconds=config.task_interval_seconds,
             ),
+        ),
+        network=NetworkProfile(
+            transport_protocol=TransportProtocol(str(config.transport_protocol)),
+            routing_protocol=RoutingProtocol(str(config.routing_protocol)),
+            carrier_frequency_hz=config.carrier_frequency_hz,
+            channel_bandwidth_hz=config.channel_bandwidth_hz,
+            rain_rate_mm_h=config.rain_rate_mm_h,
+            rain_attenuation_coefficient_db_per_km_per_mm_h=(
+                config.rain_attenuation_coefficient_db_per_km_per_mm_h
+            ),
+            rain_effective_path_km=config.rain_effective_path_km,
         ),
         runtime=RuntimeConfig(
             mode=RuntimeMode.REAL_TIME,
@@ -130,6 +172,15 @@ def demo_config_from_sees_config(
         scenario_config=base.scenario_config,
         backend_host=base.backend_host,
         backend_port=base.backend_port,
+        transport_protocol=config.network.transport_protocol.value,
+        routing_protocol=config.network.routing_protocol.value,
+        carrier_frequency_hz=config.network.carrier_frequency_hz,
+        channel_bandwidth_hz=config.network.channel_bandwidth_hz,
+        rain_rate_mm_h=config.network.rain_rate_mm_h,
+        rain_attenuation_coefficient_db_per_km_per_mm_h=(
+            config.network.rain_attenuation_coefficient_db_per_km_per_mm_h
+        ),
+        rain_effective_path_km=config.network.rain_effective_path_km,
     )
 
 
@@ -196,3 +247,18 @@ def _str(section: dict[str, Any], key: str) -> str:
     if not isinstance(value, str) or not value:
         raise TypeError(f"{key} must be a non-empty string")
     return value
+
+
+def _optional_str(section: dict[str, Any], key: str, default: str) -> str:
+    if key not in section:
+        return default
+    return _str(section, key)
+
+
+def _optional_float(section: dict[str, Any], key: str, default: float) -> float:
+    if key not in section:
+        return default
+    value = section[key]
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise TypeError(f"{key} must be a number")
+    return float(value)
