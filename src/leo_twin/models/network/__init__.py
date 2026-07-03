@@ -8,6 +8,7 @@ from leo_twin.models.network.geometry import (
     GroundEndpointIndex,
     PositionDrivenAccessModel,
 )
+from leo_twin.models.network.position_engine import PositionDrivenNetworkEngine
 from leo_twin.models.network.stack import (
     LayerTrace,
     NetworkStackRuntime,
@@ -28,5 +29,6 @@ __all__ = [
     "NetworkStackRuntime",
     "NetworkStackTrace",
     "PositionDrivenAccessModel",
+    "PositionDrivenNetworkEngine",
     "build_default_leo_protocol_stack",
 ]
