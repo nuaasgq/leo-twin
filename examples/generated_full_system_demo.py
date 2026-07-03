@@ -13,6 +13,7 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 from leo_twin.core import SimulationKernel
 from leo_twin.models.compute import ComputeNode, RouteAwareComputeEngine, TaskPlacementDecision
 from leo_twin.models.network import (
+    ChannelBudgetSelector,
     GroundEndpoint,
     PositionDrivenNetworkEngine,
     LinkBudgetCalculator,
@@ -29,6 +30,7 @@ from leo_twin.schema import (
     ChannelProfile,
     EventType,
     LinkMedium,
+    LinkState,
     RoutingProtocol,
     SimEvent,
     TransportProtocol,
@@ -53,6 +55,7 @@ class GeneratedFullSystemDemoResult:
     compute_node_count: int
     flow_count: int
     active_link_count: int
+    active_links: tuple[LinkState, ...]
     network_stack_traces: tuple[NetworkStackTrace, ...]
 
 
@@ -69,7 +72,8 @@ def run_generated_full_system_demo(
         update_targets=("metrics", "network"),
         earth_rotation_rate_rad_s=resolved_config.earth_rotation_rate_rad_s,
     )
-    link_budget_calculator = _space_ground_budget(resolved_config)
+    space_ground_budget = _space_ground_budget(resolved_config)
+    space_space_budget = _space_space_budget(resolved_config)
     network = PositionDrivenNetworkEngine(
         endpoints=tuple(
             GroundEndpoint(
@@ -85,7 +89,9 @@ def run_generated_full_system_demo(
         link_capacity=100.0,
         propagation_speed_km_s=299792.458,
         cell_size_km=5000.0,
-        link_budget_calculator=link_budget_calculator,
+        link_budget_selector=ChannelBudgetSelector(
+            calculators=(space_ground_budget, space_space_budget)
+        ),
         space_link_max_range_km=(
             resolved_config.space_link_max_range_km
             if resolved_config.space_link_max_range_km > 0.0
@@ -105,8 +111,8 @@ def run_generated_full_system_demo(
                 transport_protocol=TransportProtocol(str(resolved_config.transport_protocol)),
                 routing_protocol=RoutingProtocol(str(resolved_config.routing_protocol)),
             ),
-            antenna=link_budget_calculator.transmit_terminal.antenna,
-            channel=link_budget_calculator.channel,
+            antenna=space_ground_budget.transmit_terminal.antenna,
+            channel=space_ground_budget.channel,
         ),
     )
     compute = RouteAwareComputeEngine(
@@ -166,6 +172,7 @@ def run_generated_full_system_demo(
         compute_node_count=len(scenario.compute_nodes),
         flow_count=len(scenario.flows),
         active_link_count=len(network.active_link_states()),
+        active_links=network.active_link_states(),
         network_stack_traces=network.stack_traces(),
     )
 
@@ -217,6 +224,42 @@ def _space_ground_budget(
         polarization_loss_db=0.5,
         implementation_loss_db=1.0,
         rain_fade_profile=rain_profile,
+    )
+
+
+def _space_space_budget(
+    config: FullSystemScenarioBuilderConfig,
+) -> LinkBudgetCalculator:
+    antenna = AntennaProfile(
+        antenna_id="generated-isl-terminal",
+        gain_dbi=34.0,
+        beam_width_deg=2.0,
+        steering_mode="electronic",
+    )
+    return LinkBudgetCalculator(
+        transmit_terminal=RadioTerminalProfile(
+            terminal_id="generated-isl-tx",
+            antenna=antenna,
+            transmit_power_dbw=18.0,
+            system_loss_db=1.0,
+        ),
+        receive_terminal=RadioTerminalProfile(
+            terminal_id="generated-isl-rx",
+            antenna=antenna,
+            transmit_power_dbw=0.0,
+            system_loss_db=1.0,
+            noise_temperature_k=290.0,
+        ),
+        channel=ChannelProfile(
+            channel_id="generated-space-space-ka",
+            medium=LinkMedium.SPACE_SPACE,
+            carrier_frequency_hz=config.carrier_frequency_hz,
+            bandwidth_hz=config.channel_bandwidth_hz,
+            loss_model_name="free_space_budget",
+        ),
+        atmospheric_loss_db=0.0,
+        polarization_loss_db=0.2,
+        implementation_loss_db=1.0,
     )
 
 

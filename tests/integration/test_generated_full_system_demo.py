@@ -161,9 +161,16 @@ def test_generated_full_system_demo_can_enable_space_links() -> None:
             min_elevation_deg=-90.0,
             max_range_km=30000.0,
             space_link_max_range_km=50000.0,
-            space_link_capacity=75.0,
+            space_link_capacity=10000.0,
             compute_capacity=20.0,
         )
     )
+    space_links = tuple(
+        link
+        for link in result.active_links
+        if link.source_id.startswith("sat-") and link.target_id.startswith("sat-")
+    )
 
     assert result.active_link_count >= 12
+    assert space_links
+    assert all(link.capacity < 10000.0 for link in space_links)
