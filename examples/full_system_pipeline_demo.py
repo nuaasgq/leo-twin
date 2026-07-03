@@ -15,6 +15,7 @@ from leo_twin.core import SimulationKernel, SimulationModule
 from examples.full_system_pipeline_config import load_full_system_pipeline_config
 from leo_twin.models.compute import ComputeNode, RouteAwareComputeEngine, TaskPlacementDecision
 from leo_twin.models.network import (
+    ApertureAntennaSpec,
     GroundEndpoint,
     LinkBudgetCalculator,
     LinkBudgetResult,
@@ -137,7 +138,7 @@ def run_full_system_pipeline_demo() -> FullSystemPipelineResult:
     trace_observer = NetworkStackObserver(
         stack_runtime=NetworkStackRuntime(
             build_default_leo_protocol_stack(),
-            antenna=_antenna(config.transmit_terminal["antenna"]),
+            antenna=antenna_from_config(config.transmit_terminal["antenna"]),
             channel=_channel(config.channel),
             link_budget=reference_budget,
         ),
@@ -262,16 +263,31 @@ def _transport_runtime(config: Mapping[str, object]) -> TransportRuntime:
 def _radio_terminal(config: Mapping[str, object]) -> RadioTerminalProfile:
     return RadioTerminalProfile(
         terminal_id=str(config["terminal_id"]),
-        antenna=_antenna(config["antenna"]),
+        antenna=antenna_from_config(config["antenna"]),
         transmit_power_dbw=float(config["transmit_power_dbw"]),
         system_loss_db=float(config["system_loss_db"]),
         noise_temperature_k=float(config["noise_temperature_k"]),
     )
 
 
-def _antenna(config: object) -> AntennaProfile:
+def antenna_from_config(config: object) -> AntennaProfile:
+    """Build an antenna profile from direct gain/beam or aperture config."""
+
     if not isinstance(config, Mapping):
         raise TypeError("antenna config must be a mapping")
+    aperture = config.get("aperture")
+    if aperture is not None:
+        if not isinstance(aperture, Mapping):
+            raise TypeError("antenna aperture config must be a mapping")
+        return ApertureAntennaSpec(
+            antenna_id=str(aperture.get("antenna_id", config.get("antenna_id", ""))),
+            diameter_m=float(aperture["diameter_m"]),
+            carrier_frequency_hz=float(aperture["carrier_frequency_hz"]),
+            aperture_efficiency=float(aperture["aperture_efficiency"]),
+            steering_mode=str(
+                aperture.get("steering_mode", config.get("steering_mode", "electronic"))
+            ),
+        ).to_profile()
     return AntennaProfile(
         antenna_id=str(config["antenna_id"]),
         gain_dbi=float(config["gain_dbi"]),
