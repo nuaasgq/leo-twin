@@ -38,6 +38,7 @@ export function ConfigPanel({
     runtime.mode === "ACCELERATED" ? "ACCELERATED" : "REAL_TIME"
   );
   const [speedFactor, setSpeedFactor] = useState(runtime.speed_factor);
+  const [durationSeconds, setDurationSeconds] = useState(runtime.duration);
 
   useEffect(() => {
     setSatelliteCount(scenario.satellite_count);
@@ -50,7 +51,8 @@ export function ConfigPanel({
       setRuntimeMode(runtime.mode);
     }
     setSpeedFactor(runtime.speed_factor);
-  }, [runtime.mode, runtime.speed_factor]);
+    setDurationSeconds(runtime.duration);
+  }, [runtime.mode, runtime.speed_factor, runtime.duration]);
 
   const summaryItems = generatedScenarioSummaryItems(generatedConfig);
 
@@ -149,6 +151,24 @@ export function ConfigPanel({
         </div>
       </div>
 
+      <div className="control-group">
+        <label className="control-label" htmlFor="duration-seconds">
+          仿真时长
+        </label>
+        <div className="control-row">
+          <input
+            id="duration-seconds"
+            type="range"
+            min="60"
+            max="86400"
+            step="60"
+            value={durationSeconds}
+            onChange={(event) => setDurationSeconds(Number(event.currentTarget.value))}
+          />
+          <output>{formatDuration(durationSeconds)}</output>
+        </div>
+      </div>
+
       <div className="runtime-actions" aria-label="仿真运行控制">
         <button
           type="button"
@@ -158,7 +178,8 @@ export function ConfigPanel({
               user_count: userCount,
               compute_nodes: computeNodes,
               mode: runtimeMode,
-              speed_factor: speedFactor
+              speed_factor: speedFactor,
+              duration: durationSeconds
             })
           }
         >
@@ -223,6 +244,13 @@ function formatDecimal(value: number): string {
     maximumFractionDigits: 2,
     minimumFractionDigits: 0
   });
+}
+
+function formatDuration(seconds: number): string {
+  if (seconds < 3600) {
+    return `${Math.round(seconds / 60)} 分钟`;
+  }
+  return `${(seconds / 3600).toFixed(1)} 小时`;
 }
 
 function runtimeStatusLabel(runtime: RuntimeStatusPayload): string {
