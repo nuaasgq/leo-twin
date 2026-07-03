@@ -6,6 +6,7 @@
   "flow_count": 6,
   "orbit_plane_count": 3,
   "epoch": 0.0,
+  "earth_rotation_rate_rad_s": 0.000072921159,
   "semi_major_axis_km": 7000.0,
   "eccentricity": 0.0,
   "inclination_deg": 53.0,

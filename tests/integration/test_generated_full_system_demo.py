@@ -45,6 +45,7 @@ def test_generated_full_system_demo_is_deterministic() -> None:
         compute_node_count=2,
         flow_count=3,
         orbit_plane_count=1,
+        earth_rotation_rate_rad_s=0.000072921159,
         min_elevation_deg=-90.0,
         max_range_km=30000.0,
         compute_capacity=20.0,

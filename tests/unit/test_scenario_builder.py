@@ -159,6 +159,7 @@ def test_load_full_system_scenario_builder_config_from_json(tmp_path) -> None:
     assert config.compute_node_count == 2
     assert config.flow_count == 3
     assert config.orbit_plane_count == 2
+    assert config.earth_rotation_rate_rad_s == 0.0
     assert config.max_range_km == 2000.0
 
 
@@ -222,3 +223,4 @@ def test_default_generated_scenario_config_file_loads() -> None:
     assert config.user_count == 12
     assert config.compute_node_count == 3
     assert config.flow_count == 6
+    assert config.earth_rotation_rate_rad_s == 0.000072921159

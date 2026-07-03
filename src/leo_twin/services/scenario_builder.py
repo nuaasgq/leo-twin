@@ -29,6 +29,7 @@ class FullSystemScenarioBuilderConfig:
     flow_count: int = 100
     orbit_plane_count: int = 6
     epoch: float = 0.0
+    earth_rotation_rate_rad_s: float = 0.0
     semi_major_axis_km: float = 7000.0
     eccentricity: float = 0.0
     inclination_deg: float = 53.0
@@ -53,6 +54,10 @@ class FullSystemScenarioBuilderConfig:
         if self.orbit_plane_count > self.satellite_count:
             raise ValueError("orbit_plane_count must be <= satellite_count")
         _require_finite_number(self.epoch, "epoch")
+        _require_finite_number(
+            self.earth_rotation_rate_rad_s,
+            "earth_rotation_rate_rad_s",
+        )
         _require_positive_number(self.semi_major_axis_km, "semi_major_axis_km")
         _require_range(self.eccentricity, "eccentricity", 0.0, 1.0)
         _require_range(self.inclination_deg, "inclination_deg", 0.0, 180.0)

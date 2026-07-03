@@ -42,13 +42,13 @@ def run_generated_full_system_demo(
 ) -> GeneratedFullSystemDemoResult:
     """Build and run a deterministic generated full-system demo."""
 
-    scenario = build_full_system_scenario(
-        config or load_full_system_scenario_builder_config()
-    )
+    resolved_config = config or load_full_system_scenario_builder_config()
+    scenario = build_full_system_scenario(resolved_config)
     kernel = SimulationKernel()
     orbit = KeplerianOrbitEngine(
         elements=scenario.orbit_elements,
         update_targets=("metrics", "network"),
+        earth_rotation_rate_rad_s=resolved_config.earth_rotation_rate_rad_s,
     )
     network = PositionDrivenNetworkEngine(
         endpoints=tuple(
