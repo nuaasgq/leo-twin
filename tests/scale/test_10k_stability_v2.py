@@ -146,7 +146,9 @@ def test_scale_safety_detects_quadratic_patterns_and_unsafe_modes(tmp_path) -> N
     assert "frontend websocket batch size is too small for scale runs" in unsafe_report.violations
     assert "snapshot interval is too frequent for scale runs" in unsafe_report.violations
 
-    pairwise_source = tmp_path / "pairwise.py"
+    source_dir = tmp_path / "network"
+    source_dir.mkdir()
+    pairwise_source = source_dir / "pairwise.py"
     pairwise_source.write_text(
         "\n".join(
             (
@@ -165,7 +167,7 @@ def test_scale_safety_detects_quadratic_patterns_and_unsafe_modes(tmp_path) -> N
             simulation_duration=10.0,
             max_event_count=1_500_000,
         ),
-        source_paths=(pairwise_source,),
+        source_paths=(tmp_path,),
     )
     assert not report.allowed
     assert any("nested satellite/user scan" in violation for violation in report.violations)

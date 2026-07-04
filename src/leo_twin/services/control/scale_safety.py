@@ -163,7 +163,7 @@ class ScaleSafetyChecker:
         source_paths: Iterable[str | Path],
     ) -> tuple[str, ...]:
         findings: list[str] = []
-        for source_path in sorted(Path(path) for path in source_paths):
+        for source_path in _python_source_files(source_paths):
             tree = ast.parse(source_path.read_text(encoding="utf-8"))
             visitor = _PairwiseLoopVisitor(source_path)
             visitor.visit(tree)
@@ -198,6 +198,17 @@ def _iter_name(node: ast.AST) -> str:
     if isinstance(node, ast.Subscript):
         return _iter_name(node.value)
     return type(node).__name__
+
+
+def _python_source_files(source_paths: Iterable[str | Path]) -> tuple[Path, ...]:
+    files: list[Path] = []
+    for source_path in sorted(Path(path) for path in source_paths):
+        if source_path.is_dir():
+            files.extend(sorted(source_path.rglob("*.py")))
+            continue
+        if source_path.suffix == ".py":
+            files.append(source_path)
+    return tuple(files)
 
 
 def _looks_like_pairwise_scan(outer_name: str, inner_name: str) -> bool:
