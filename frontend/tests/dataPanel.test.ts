@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildComputeResourcePool,
   buildDataPanelDisplaySummary,
+  buildDataPanelNetworkFormulaInputs,
   buildDataPanelNetworkKpiSource,
   buildDataPanelRuntimeProgress,
   buildDataPanelSummary,
@@ -374,6 +375,32 @@ describe("buildDataPanelNetworkKpiSource", () => {
       sourceLabel: "前端快照估算",
       modelNote: "未收到后端网络质量指标时，根据快照链路与路由做显示估算。"
     });
+  });
+});
+
+describe("buildDataPanelNetworkFormulaInputs", () => {
+  it("formats backend network KPI formula inputs for dashboard display", () => {
+    expect(
+      buildDataPanelNetworkFormulaInputs({
+        network_quality_requested_route_demand_mbps: 90,
+        network_quality_offered_route_capacity_mbps: 100,
+        network_quality_flow_delivered_capacity_mbps: 88,
+        network_quality_route_loss_proxy_rate: 0.12,
+        network_quality_congestion_proxy: 0.95,
+        network_quality_demand_pressure_proxy: 0.9
+      })
+    ).toEqual([
+      { label: "请求需求", value: "90 Mbps" },
+      { label: "路由容量", value: "100 Mbps" },
+      { label: "完成流容量", value: "88 Mbps" },
+      { label: "路由损耗", value: "12%" },
+      { label: "拥塞代理", value: "95%" },
+      { label: "业务压力", value: "90%" }
+    ]);
+  });
+
+  it("hides formula inputs when backend metrics are absent", () => {
+    expect(buildDataPanelNetworkFormulaInputs(null)).toEqual([]);
   });
 });
 

@@ -2330,3 +2330,34 @@ change.
   - Add a dashboard details panel that displays the numeric formula inputs:
     route demand, offered capacity, completed flow capacity, route loss,
     congestion proxy, and pressure proxy.
+
+## 2026-07-05 - Network KPI Formula Inputs v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: display backend network KPI formula inputs in the dashboard network
+  chart using existing `network_quality_*` runtime metric fields.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 23 files / 131 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - Initial frontend validation failed because the new formula input formatter
+    referenced a non-existent `formatDecimal` helper. The task now uses a local
+    deterministic number formatter shared by Mbps and percentage display.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - Formula chips expose scalar backend inputs only. They do not yet show a
+    full derivation tree or per-route breakdown.
+- Recommended follow-up:
+  - Add a route-level KPI detail table for top constrained routes and top
+    overloaded links.

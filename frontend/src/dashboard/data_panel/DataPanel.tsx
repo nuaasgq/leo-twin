@@ -98,6 +98,9 @@ export const DataPanel = memo(function DataPanel({
     runtimeStatus.metrics_summary,
     runtimeStatus.kpi_time_series_v1
   );
+  const networkFormulaInputs = buildDataPanelNetworkFormulaInputs(
+    runtimeStatus.metrics_summary
+  );
   const latestTelemetry = telemetry[telemetry.length - 1];
   const computePool = buildComputeResourcePool(
     snapshot,
@@ -213,6 +216,15 @@ export const DataPanel = memo(function DataPanel({
             <span>{networkKpiSource.sourceLabel}</span>
             <small>{networkKpiSource.modelNote}</small>
           </div>
+          {networkFormulaInputs.length > 0 ? (
+            <div className="data-panel-formula-inputs" aria-label="网络KPI公式输入">
+              {networkFormulaInputs.map((input) => (
+                <span key={input.label}>
+                  {input.label} <strong>{input.value}</strong>
+                </span>
+              ))}
+            </div>
+          ) : null}
           <div className="data-panel-chart-kpis">
             <KpiPanel
               label="吞吐量"
@@ -918,6 +930,36 @@ function metricNumber(
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
+function metricInput(
+  metrics: RuntimeMetricsSummary | null | undefined,
+  key: string,
+  label: string,
+  format: (value: number) => string
+): DataPanelNetworkFormulaInput | null {
+  const value = metricNumber(metrics, key);
+  return value === undefined
+    ? null
+    : {
+        label,
+        value: format(value)
+      };
+}
+
+function formatMetricMbps(value: number): string {
+  return `${formatMetricValue(value)} Mbps`;
+}
+
+function formatRatioPercent(value: number): string {
+  return `${formatMetricValue(value * 100)}%`;
+}
+
+function formatMetricValue(value: number): string {
+  return value.toLocaleString("zh-CN", {
+    maximumFractionDigits: 1,
+    minimumFractionDigits: 0
+  });
+}
+
 function hasBackendNetworkQualityMetrics(
   metrics: RuntimeMetricsSummary | null | undefined
 ): boolean {
@@ -1055,6 +1097,11 @@ export interface DataPanelNetworkKpiSource {
   modelNote: string;
 }
 
+export interface DataPanelNetworkFormulaInput {
+  label: string;
+  value: string;
+}
+
 export function buildDataPanelNetworkKpiSource(
   snapshot: WorldSnapshot,
   backendMetrics: RuntimeMetricsSummary | null | undefined = undefined,
@@ -1083,6 +1130,34 @@ export function buildDataPanelNetworkKpiSource(
     sourceLabel: "前端快照估算",
     modelNote: "未收到后端网络质量指标时，根据快照链路与路由做显示估算。"
   };
+}
+
+export function buildDataPanelNetworkFormulaInputs(
+  metrics: RuntimeMetricsSummary | null | undefined
+): readonly DataPanelNetworkFormulaInput[] {
+  return [
+    metricInput(
+      metrics,
+      "network_quality_requested_route_demand_mbps",
+      "请求需求",
+      formatMetricMbps
+    ),
+    metricInput(
+      metrics,
+      "network_quality_offered_route_capacity_mbps",
+      "路由容量",
+      formatMetricMbps
+    ),
+    metricInput(
+      metrics,
+      "network_quality_flow_delivered_capacity_mbps",
+      "完成流容量",
+      formatMetricMbps
+    ),
+    metricInput(metrics, "network_quality_route_loss_proxy_rate", "路由损耗", formatRatioPercent),
+    metricInput(metrics, "network_quality_congestion_proxy", "拥塞代理", formatRatioPercent),
+    metricInput(metrics, "network_quality_demand_pressure_proxy", "业务压力", formatRatioPercent)
+  ].filter((input): input is DataPanelNetworkFormulaInput => input !== null);
 }
 
 function dataPanelTrafficLabel(traffic: TrafficDemandSummary): string {

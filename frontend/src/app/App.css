@@ -911,7 +911,7 @@ body {
 }
 
 .data-panel-chart.wide {
-  grid-template-rows: auto auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto auto minmax(0, 1fr);
   min-height: 320px;
 }
 
@@ -953,6 +953,31 @@ body {
   color: var(--app-muted);
   font-size: 10px;
   line-height: 1.3;
+}
+
+.data-panel-formula-inputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.data-panel-formula-inputs span {
+  min-width: 0;
+  border: 1px solid #243846;
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: #0b1219;
+  color: var(--app-muted);
+  font-size: 10px;
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+
+.data-panel-formula-inputs strong {
+  color: var(--app-text);
+  font-size: 10px;
+  font-weight: 700;
 }
 
 .data-panel-chart-kpis .kpi-panel {
