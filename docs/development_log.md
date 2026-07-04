@@ -3279,3 +3279,44 @@ change.
 - Recommended follow-up:
   - Add preset-specific backend summary text after initialization so users can
     see which fidelity policy and plane allocation the chosen scale produced.
+
+## 2026-07-05 - Launcher HTTP Health Check v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: harden the Windows one-click launcher so it validates backend and
+  frontend HTTP readiness, pins frontend Vite to the requested port, starts
+  services with deterministic backend host/port arguments, and writes
+  diagnostic logs under `artifacts\launcher`.
+- Changed files/modules:
+  - `scripts/sees_launcher.ps1`
+  - `docs/integration_demo.md`
+  - `docs/development_log.md`
+- Validation:
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\sees_launcher.ps1 status`
+    - Result: passed; existing backend and frontend were reported as HTTP
+      healthy on `127.0.0.1:8765` and `127.0.0.1:5173`.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- configPanel.test.ts`
+    - Result: passed, 23 files / 156 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+  - `git diff --check`
+    - Result: passed with warnings only for the existing uncommitted
+      runtime/generated config files.
+- Problems encountered:
+  - The previous launcher treated a listening port as ready, which could hide a
+    broken frontend or backend HTTP path. The launcher now checks
+    `/runtime/status` and the frontend homepage before opening the browser.
+  - Vite previously could choose another dev port if the requested one was not
+    available. The launcher now starts the frontend with `--strictPort`.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - This task validates `status` without restarting the user's currently
+    running services. A full restart smoke test should be run when disrupting
+    local services is acceptable.
+- Recommended follow-up:
+  - Add a small native launcher or tray-style command surface if the project
+    needs a non-terminal end-user startup experience.

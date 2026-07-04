@@ -21,8 +21,9 @@ For normal Windows use, start from the repository root:
 .\start_leo_twin.bat
 ```
 
-This starts both backend and frontend, waits until both ports are ready, then
-opens the frontend in the browser.
+This starts both backend and frontend, waits until both ports are ready, checks
+the backend `/runtime/status` endpoint and the frontend homepage over HTTP,
+then opens the frontend in the browser.
 
 Other launcher commands:
 
@@ -34,6 +35,13 @@ Other launcher commands:
 
 If the browser does not open automatically, run `.\scripts\sees_launcher.ps1
 status` and open `http://127.0.0.1:5173` after the frontend reports running.
+The launcher writes backend and frontend logs to `artifacts\launcher` and shows
+the last log lines when either service fails its HTTP health check. To keep the
+service consoles visible for manual inspection, run:
+
+```powershell
+.\scripts\sees_launcher.ps1 start -VisibleWindows
+```
 
 ## Backend
 
