@@ -12,6 +12,7 @@ from leo_twin.models.network import (
     PositionDrivenNetworkEngine,
     RadioTerminalProfile,
     RoutingRuntime,
+    SpaceLinkMode,
     build_default_leo_protocol_stack,
     default_application_runtime,
     default_data_link_runtime,
@@ -28,6 +29,7 @@ from leo_twin.schema import (
     LinkMedium,
     LinkState,
     NetworkLayer,
+    OrbitBatchState,
     Route,
     RoutingProtocol,
     SatelliteState,
@@ -1084,6 +1086,46 @@ def test_position_driven_space_link_uses_medium_budget_selector() -> None:
     assert space_link.capacity < 10000.0
 
 
+def test_bounded_candidate_space_link_mode_caps_candidates() -> None:
+    candidate_counts, space_links = _bounded_space_link_result(
+        satellite_count=12,
+        max_candidates=2,
+    )
+
+    assert len(candidate_counts) == 12
+    assert all(count <= 2 for count in candidate_counts.values())
+    assert all(count > 0 for count in candidate_counts.values())
+    assert len(space_links) <= 12 * 2
+    assert len(space_links) < (12 * 11) // 2
+
+
+def test_bounded_candidate_space_link_mode_is_deterministic() -> None:
+    assert _bounded_space_link_result(
+        satellite_count=12,
+        max_candidates=3,
+    ) == _bounded_space_link_result(
+        satellite_count=12,
+        max_candidates=3,
+    )
+
+
+def test_detailed_small_scale_space_link_batch_mode_remains_available() -> None:
+    candidate_counts, space_links = _bounded_space_link_result(
+        satellite_count=4,
+        max_candidates=1,
+        space_link_mode=SpaceLinkMode.DETAILED_SMALL_SCALE,
+        plane_count=2,
+    )
+
+    assert candidate_counts == {
+        "sat-000": 4,
+        "sat-001": 4,
+        "sat-002": 4,
+        "sat-003": 4,
+    }
+    assert len(space_links) == 6
+
+
 def test_position_driven_network_engine_is_deterministic() -> None:
     assert _run_scenario() == _run_scenario()
 
@@ -1109,6 +1151,80 @@ def _link_after_orbit_update(
     kernel.schedule_event(_event("orbit", EventType.ORBIT_UPDATE.value, state))
     kernel.run()
     return network.active_link_states()[0]
+
+
+def _bounded_space_link_result(
+    *,
+    satellite_count: int,
+    max_candidates: int,
+    space_link_mode: SpaceLinkMode = SpaceLinkMode.BOUNDED_CANDIDATE,
+    plane_count: int = 3,
+) -> tuple[dict[str, int], tuple[tuple[str, str, float, float], ...]]:
+    kernel = SimulationKernel()
+    network = PositionDrivenNetworkEngine(
+        endpoints=(
+            GroundEndpoint(
+                endpoint_id="user-east",
+                position=(EARTH_RADIUS_KM, 0.0, 0.0),
+                min_elevation_deg=-90.0,
+                max_range_km=1.0,
+            ),
+        ),
+        compute_node_ids=("node-a",),
+        link_capacity=50.0,
+        propagation_speed_km_s=1000.0,
+        cell_size_km=1000.0,
+        space_link_max_range_km=50_000.0,
+        space_link_capacity=75.0,
+        space_link_cell_size_km=50_000.0,
+        space_link_mode=space_link_mode,
+        max_space_link_candidates_per_satellite=max_candidates,
+        space_link_plane_count=plane_count,
+    )
+    metrics = MetricsSink()
+    kernel.register_module(network)
+    kernel.register_module(metrics)
+    kernel.schedule_event(
+        _event(
+            "orbit-batch",
+            EventType.ORBIT_BATCH_UPDATE.value,
+            OrbitBatchState(
+                sim_time=0.0,
+                satellite_states=_batch_states(satellite_count),
+                satellite_count=satellite_count,
+            ),
+        )
+    )
+
+    kernel.run()
+
+    space_links = tuple(
+        sorted(
+            (
+                link.source_id,
+                link.target_id,
+                round(link.latency, 9),
+                link.capacity,
+            )
+            for link in network.active_link_states()
+            if link.source_id.startswith("sat-") and link.target_id.startswith("sat-")
+        )
+    )
+    return network.space_link_candidate_counts(), space_links
+
+
+def _batch_states(satellite_count: int) -> tuple[SatelliteState, ...]:
+    return tuple(
+        _state(
+            (
+                7000.0 + float(index * 10),
+                float((index % 3) * 10),
+                float((index % 5) * 5),
+            ),
+            satellite_id=f"sat-{index:03d}",
+        )
+        for index in range(satellite_count)
+    )
 
 
 def _run_scenario() -> tuple[tuple[str, object], ...]:

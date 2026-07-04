@@ -38,6 +38,18 @@ class OrbitUpdateModeConfig(StrEnum):
     BATCH = "BATCH"
 
 
+class SpaceLinkModeConfig(StrEnum):
+    """Space-space link update granularity exposed through network configuration."""
+
+    DISABLED = "DISABLED"
+    BOUNDED_CANDIDATE = "BOUNDED_CANDIDATE"
+    DETAILED_SMALL_SCALE = "DETAILED_SMALL_SCALE"
+
+
+DEFAULT_BATCH_SPACE_LINK_UPDATE_LIMIT = 999
+DEFAULT_MAX_SPACE_LINK_CANDIDATES_PER_SATELLITE = 4
+
+
 @dataclass(frozen=True)
 class OrbitParameters:
     """Configuration-only orbit parameters."""
@@ -105,6 +117,11 @@ class NetworkProfile:
     transmit_power_dbw: float = 20.0
     system_loss_db: float = 1.0
     noise_temperature_k: float = 290.0
+    space_link_mode: SpaceLinkModeConfig | None = None
+    max_space_link_candidates_per_satellite: int = (
+        DEFAULT_MAX_SPACE_LINK_CANDIDATES_PER_SATELLITE
+    )
+    batch_space_link_update_limit: int = DEFAULT_BATCH_SPACE_LINK_UPDATE_LIMIT
 
     def __post_init__(self) -> None:
         if not isinstance(self.application_protocol, ApplicationProtocol):
@@ -130,6 +147,15 @@ class NetworkProfile:
                 self,
                 "datalink_mac_protocol",
                 DataLinkProtocol(str(self.datalink_mac_protocol)),
+            )
+        if self.space_link_mode is not None and not isinstance(
+            self.space_link_mode,
+            SpaceLinkModeConfig,
+        ):
+            object.__setattr__(
+                self,
+                "space_link_mode",
+                SpaceLinkModeConfig(str(self.space_link_mode)),
             )
         _require_probability(self.transport_loss_rate, "network.transport_loss_rate")
         _require_non_negative_int(
@@ -173,6 +199,14 @@ class NetworkProfile:
         _require_finite(self.transmit_power_dbw, "network.transmit_power_dbw")
         _require_non_negative_finite(self.system_loss_db, "network.system_loss_db")
         _require_positive_finite(self.noise_temperature_k, "network.noise_temperature_k")
+        _require_positive_int(
+            self.max_space_link_candidates_per_satellite,
+            "network.max_space_link_candidates_per_satellite",
+        )
+        _require_positive_int(
+            self.batch_space_link_update_limit,
+            "network.batch_space_link_update_limit",
+        )
         object.__setattr__(self, "carrier_frequency_hz", float(self.carrier_frequency_hz))
         object.__setattr__(self, "channel_bandwidth_hz", float(self.channel_bandwidth_hz))
         object.__setattr__(self, "rain_rate_mm_h", float(self.rain_rate_mm_h))
@@ -208,6 +242,16 @@ class NetworkProfile:
             float(self.routing_inverse_capacity_weight),
         )
         object.__setattr__(self, "routing_hop_weight", float(self.routing_hop_weight))
+        object.__setattr__(
+            self,
+            "max_space_link_candidates_per_satellite",
+            int(self.max_space_link_candidates_per_satellite),
+        )
+        object.__setattr__(
+            self,
+            "batch_space_link_update_limit",
+            int(self.batch_space_link_update_limit),
+        )
 
 
 @dataclass(frozen=True)

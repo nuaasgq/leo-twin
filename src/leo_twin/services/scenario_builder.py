@@ -24,7 +24,12 @@ from leo_twin.schema import (
     TaskRequest,
     TransportProtocol,
 )
-from leo_twin.schema.config import SEESConfig
+from leo_twin.schema.config import (
+    DEFAULT_BATCH_SPACE_LINK_UPDATE_LIMIT,
+    DEFAULT_MAX_SPACE_LINK_CANDIDATES_PER_SATELLITE,
+    SEESConfig,
+    SpaceLinkModeConfig,
+)
 
 
 DEFAULT_GENERATED_SCENARIO_CONFIG_PATH = (
@@ -57,6 +62,11 @@ class FullSystemScenarioBuilderConfig:
     space_link_max_range_km: float = 0.0
     space_link_capacity: float = 100.0
     space_link_cell_size_km: float = 0.0
+    space_link_mode: str | None = None
+    max_space_link_candidates_per_satellite: int = (
+        DEFAULT_MAX_SPACE_LINK_CANDIDATES_PER_SATELLITE
+    )
+    batch_space_link_update_limit: int = DEFAULT_BATCH_SPACE_LINK_UPDATE_LIMIT
     application_protocol: str = ApplicationProtocol.TASK_OFFLOAD_FLOW.value
     transport_protocol: str = TransportProtocol.TCP.value
     routing_protocol: str = RoutingProtocol.LINK_STATE.value
@@ -129,6 +139,20 @@ class FullSystemScenarioBuilderConfig:
             self.space_link_cell_size_km,
             "space_link_cell_size_km",
         )
+        if self.space_link_mode is not None:
+            object.__setattr__(
+                self,
+                "space_link_mode",
+                SpaceLinkModeConfig(str(self.space_link_mode)).value,
+            )
+        _require_positive_int(
+            self.max_space_link_candidates_per_satellite,
+            "max_space_link_candidates_per_satellite",
+        )
+        _require_positive_int(
+            self.batch_space_link_update_limit,
+            "batch_space_link_update_limit",
+        )
         object.__setattr__(
             self,
             "application_protocol",
@@ -159,6 +183,16 @@ class FullSystemScenarioBuilderConfig:
             self,
             "transport_congestion_window_segments",
             int(self.transport_congestion_window_segments),
+        )
+        object.__setattr__(
+            self,
+            "max_space_link_candidates_per_satellite",
+            int(self.max_space_link_candidates_per_satellite),
+        )
+        object.__setattr__(
+            self,
+            "batch_space_link_update_limit",
+            int(self.batch_space_link_update_limit),
         )
         _require_non_negative_number(self.routing_latency_weight, "routing_latency_weight")
         _require_non_negative_number(
@@ -372,6 +406,15 @@ def scenario_builder_config_from_sees_config(
         transmit_power_dbw=config.network.transmit_power_dbw,
         system_loss_db=config.network.system_loss_db,
         noise_temperature_k=config.network.noise_temperature_k,
+        space_link_mode=(
+            config.network.space_link_mode.value
+            if config.network.space_link_mode is not None
+            else None
+        ),
+        max_space_link_candidates_per_satellite=(
+            config.network.max_space_link_candidates_per_satellite
+        ),
+        batch_space_link_update_limit=config.network.batch_space_link_update_limit,
     )
 
 

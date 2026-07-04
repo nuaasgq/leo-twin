@@ -391,7 +391,7 @@ def _initial_snapshot(result: DemoRunResult) -> dict[str, JsonValue]:
 def _initial_snapshot_from_ground_users(
     ground_users: tuple[Any, ...],
     satellites: tuple[SatelliteState, ...] = (),
-    fidelity_summary: dict[str, str | int | bool] | None = None,
+    fidelity_summary: dict[str, object] | None = None,
 ) -> dict[str, JsonValue]:
     snapshot: dict[str, JsonValue] = {
         "satellites": [
@@ -480,18 +480,23 @@ def _frontend_event_batch(
     }
 
 
-def _fidelity_summary_from_demo_config(config: DemoConfig) -> dict[str, str | int | bool]:
+def _fidelity_summary_from_demo_config(config: DemoConfig) -> dict[str, object]:
     return build_scale_fidelity_summary(
         ScaleFidelityConfig(
             satellite_count=config.satellite_count,
             user_count=config.ground_user_count,
             forced_orbit_update_mode=config.orbit_update_mode,
+            forced_space_link_mode=config.space_link_mode,
             space_link_enabled=True,
+            max_space_link_candidates_per_satellite=(
+                config.max_space_link_candidates_per_satellite
+            ),
+            batch_space_link_update_limit=config.batch_space_link_update_limit,
         )
     )
 
 
-def _fidelity_summary_from_sees_config(config: SEESConfig) -> dict[str, str | int | bool]:
+def _fidelity_summary_from_sees_config(config: SEESConfig) -> dict[str, object]:
     orbit_update_mode = config.scenario.orbit.orbit_update_mode
     return build_scale_fidelity_summary(
         ScaleFidelityConfig(
@@ -500,6 +505,15 @@ def _fidelity_summary_from_sees_config(config: SEESConfig) -> dict[str, str | in
             forced_orbit_update_mode=(
                 orbit_update_mode.value if orbit_update_mode is not None else None
             ),
+            forced_space_link_mode=(
+                config.network.space_link_mode.value
+                if config.network.space_link_mode is not None
+                else None
+            ),
             space_link_enabled=True,
+            max_space_link_candidates_per_satellite=(
+                config.network.max_space_link_candidates_per_satellite
+            ),
+            batch_space_link_update_limit=config.network.batch_space_link_update_limit,
         )
     )

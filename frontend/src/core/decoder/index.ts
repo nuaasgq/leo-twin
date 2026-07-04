@@ -172,7 +172,20 @@ export function decodeFidelitySummary(value: unknown): FidelitySummary {
       record.space_link_candidate_policy,
       "space_link_candidate_policy"
     ),
+    max_space_link_candidates_per_satellite: requireInteger(
+      record.max_space_link_candidates_per_satellite,
+      "max_space_link_candidates_per_satellite"
+    ),
+    batch_space_link_update_limit: requireInteger(
+      record.batch_space_link_update_limit,
+      "batch_space_link_update_limit"
+    ),
     scale_limit_reason: requireString(record.scale_limit_reason, "scale_limit_reason"),
+    current_scale_mode: requireString(record.current_scale_mode, "current_scale_mode"),
+    fidelity_warnings: requireStringArray(
+      record.fidelity_warnings,
+      "fidelity_warnings"
+    ),
     satellite_count: requireInteger(record.satellite_count, "satellite_count"),
     user_count: requireInteger(record.user_count, "user_count")
   };
@@ -266,6 +279,13 @@ function requireTags(value: unknown): readonly [string, string][] {
     }
     return [requireString(item[0], "tag key"), requireString(item[1], "tag value")];
   });
+}
+
+function requireStringArray(value: unknown, label: string): readonly string[] {
+  if (!Array.isArray(value)) {
+    throw new TypeError(`${label} must be a string array`);
+  }
+  return value.map((item, index) => requireString(item, `${label}[${index}]`));
 }
 
 function optionalArray<T>(value: unknown, decoder: (item: unknown) => T): readonly T[] | undefined {

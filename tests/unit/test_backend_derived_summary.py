@@ -92,16 +92,29 @@ def test_scale_fidelity_summary_reports_large_scale_degradation() -> None:
     )
 
     assert summary == {
-        "orbit_update_mode": "BATCH",
-        "metrics_mode": "AGGREGATED",
-        "space_link_mode": "REDUCED_LARGE_BATCH",
-        "detailed_space_link_enabled": False,
-        "space_link_candidate_policy": "SPACE_GROUND_ONLY_WHEN_BATCH_EXCEEDS_LIMIT",
-        "scale_limit_reason": (
-            "orbit updates are batched; metrics are aggregated; "
-            "detailed space-space link updates are skipped because "
-            "satellite_count=1200 exceeds batch_space_link_update_limit=999"
-        ),
         "satellite_count": 1200,
         "user_count": 20,
+        "orbit_update_mode": "BATCH",
+        "metrics_mode": "AGGREGATED",
+        "space_link_mode": "BOUNDED_CANDIDATE",
+        "detailed_space_link_enabled": False,
+        "space_link_candidate_policy": (
+            "SAME_PLANE_AND_ADJACENT_PLANE_BOUNDED_CANDIDATES"
+        ),
+        "max_space_link_candidates_per_satellite": 4,
+        "batch_space_link_update_limit": 999,
+        "scale_limit_reason": (
+            "orbit updates are batched; metrics are aggregated; "
+            "detailed all-pairs space-space link updates are disabled because "
+            "satellite_count=1200 exceeds batch_space_link_update_limit=999; "
+            "bounded candidate updates are enabled with "
+            "max_space_link_candidates_per_satellite=4"
+        ),
+        "current_scale_mode": "LARGE_SCALE_AGGREGATED",
+        "fidelity_warnings": (
+            "Orbit updates are batched to avoid per-satellite event flood.",
+            "Metrics are aggregated for large-scale responsiveness.",
+            "Space-space links use bounded candidate updates capped at "
+            "4 candidates per satellite.",
+        ),
     }

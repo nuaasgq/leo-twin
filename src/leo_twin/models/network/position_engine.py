@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from enum import StrEnum
 from math import ceil, floor, isfinite
 from typing import Any
 
@@ -32,10 +33,21 @@ from leo_twin.schema import (
     SatelliteState,
     SimEvent,
 )
+from leo_twin.schema.config import (
+    DEFAULT_BATCH_SPACE_LINK_UPDATE_LIMIT,
+    DEFAULT_MAX_SPACE_LINK_CANDIDATES_PER_SATELLITE,
+)
 
 
 SpaceCellId = tuple[int, int, int]
-DEFAULT_BATCH_SPACE_LINK_UPDATE_LIMIT = 999
+
+
+class SpaceLinkMode(StrEnum):
+    """Supported scale modes for position-driven space-space links."""
+
+    DISABLED = "DISABLED"
+    BOUNDED_CANDIDATE = "BOUNDED_CANDIDATE"
+    DETAILED_SMALL_SCALE = "DETAILED_SMALL_SCALE"
 
 
 class PositionDrivenNetworkEngine(SimulationModule):
@@ -66,7 +78,12 @@ class PositionDrivenNetworkEngine(SimulationModule):
         space_link_update_latency_epsilon_s: float = 0.0,
         space_link_update_capacity_epsilon: float = 0.0,
         position_scale_to_km: float = 1.0,
+        space_link_mode: SpaceLinkMode | str | None = None,
+        max_space_link_candidates_per_satellite: int = (
+            DEFAULT_MAX_SPACE_LINK_CANDIDATES_PER_SATELLITE
+        ),
         batch_space_link_update_limit: int = DEFAULT_BATCH_SPACE_LINK_UPDATE_LIMIT,
+        space_link_plane_count: int | None = None,
     ) -> None:
         _require_non_empty_str(module_name, "module_name")
         _require_non_empty_str(metrics_target, "metrics_target")
@@ -88,7 +105,15 @@ class PositionDrivenNetworkEngine(SimulationModule):
             "space_link_update_capacity_epsilon",
         )
         _require_positive_number(position_scale_to_km, "position_scale_to_km")
+        if space_link_mode is not None:
+            space_link_mode = SpaceLinkMode(str(space_link_mode))
+        _require_positive_int(
+            max_space_link_candidates_per_satellite,
+            "max_space_link_candidates_per_satellite",
+        )
         _require_positive_int(batch_space_link_update_limit, "batch_space_link_update_limit")
+        if space_link_plane_count is not None:
+            _require_positive_int(space_link_plane_count, "space_link_plane_count")
         compute_nodes = tuple(sorted(str(item) for item in compute_node_ids))
         if not compute_nodes or any(not item for item in compute_nodes):
             raise ValueError("compute_node_ids must contain non-empty ids")
@@ -127,7 +152,12 @@ class PositionDrivenNetworkEngine(SimulationModule):
         self._space_link_update_latency_epsilon_s = float(space_link_update_latency_epsilon_s)
         self._space_link_update_capacity_epsilon = float(space_link_update_capacity_epsilon)
         self._position_scale_to_km = float(position_scale_to_km)
+        self._space_link_mode = space_link_mode
+        self._max_space_link_candidates_per_satellite = int(
+            max_space_link_candidates_per_satellite
+        )
         self._batch_space_link_update_limit = int(batch_space_link_update_limit)
+        self._space_link_plane_count = space_link_plane_count
         self._satellite_states: dict[str, SatelliteState] = {}
         self._satellite_space_cells: dict[str, SpaceCellId] = {}
         self._satellites_by_space_cell: dict[SpaceCellId, set[str]] = {}
@@ -138,6 +168,7 @@ class PositionDrivenNetworkEngine(SimulationModule):
         self._last_stack_traces: dict[str, NetworkStackTrace] = {}
         self._last_links: dict[tuple[str, str], LinkState] = {}
         self._compute_load_by_node: dict[str, float] = {}
+        self._last_space_link_candidate_counts: dict[str, int] = {}
         self._event_sequence = 0
 
     def name(self) -> str:
@@ -205,6 +236,11 @@ class PositionDrivenNetworkEngine(SimulationModule):
             self._active_space_links[key] for key in sorted(self._active_space_links)
         )
         return access_links + space_links
+
+    def space_link_candidate_counts(self) -> dict[str, int]:
+        """Return latest per-satellite space-link candidate counts for diagnostics."""
+
+        return dict(sorted(self._last_space_link_candidate_counts.items()))
 
     def stack_traces(self) -> tuple[NetworkStackTrace, ...]:
         """Return latest protocol stack traces in deterministic flow order."""
@@ -402,25 +438,42 @@ class PositionDrivenNetworkEngine(SimulationModule):
             self._update_space_index(state)
 
         emitted: list[SimEvent] = []
-        update_space_links = len(geometry_states) <= self._batch_space_link_update_limit
+        space_link_mode = self._space_link_mode_for_batch(len(geometry_states))
+        ordered_satellite_ids = tuple(sorted(state.satellite_id for state in geometry_states))
+        satellite_index_by_id = {
+            satellite_id: index for index, satellite_id in enumerate(ordered_satellite_ids)
+        }
         for state in geometry_states:
             emitted.extend(self._update_access_for_state(state, dispatch_time))
-            if update_space_links:
+            if space_link_mode == SpaceLinkMode.DETAILED_SMALL_SCALE:
                 emitted.extend(self._update_space_links_for_state(state, dispatch_time))
+            elif space_link_mode == SpaceLinkMode.BOUNDED_CANDIDATE:
+                emitted.extend(
+                    self._update_bounded_space_links_for_state(
+                        state,
+                        dispatch_time,
+                        ordered_satellite_ids,
+                        satellite_index_by_id,
+                    )
+                )
         return tuple(emitted)
 
     def _update_space_links_for_state(
         self,
         state: SatelliteState,
         dispatch_time: float,
+        candidate_ids: tuple[str, ...] | None = None,
     ) -> tuple[SimEvent, ...]:
         self._satellite_states[state.satellite_id] = state
         self._update_space_index(state)
-        if self._space_link_max_range_km is None:
+        if self._space_link_mode_for_state() == SpaceLinkMode.DISABLED:
+            self._last_space_link_candidate_counts[state.satellite_id] = 0
             return ()
 
         emitted: list[SimEvent] = []
-        candidate_ids = self._space_link_candidate_ids(state)
+        if candidate_ids is None:
+            candidate_ids = self._space_link_candidate_ids(state)
+        self._last_space_link_candidate_counts[state.satellite_id] = len(candidate_ids)
         for other_id in candidate_ids:
             if other_id == state.satellite_id:
                 continue
@@ -465,6 +518,40 @@ class PositionDrivenNetworkEngine(SimulationModule):
                 )
         return tuple(emitted)
 
+    def _update_bounded_space_links_for_state(
+        self,
+        state: SatelliteState,
+        dispatch_time: float,
+        ordered_satellite_ids: tuple[str, ...],
+        satellite_index_by_id: dict[str, int],
+    ) -> tuple[SimEvent, ...]:
+        candidate_ids = self._bounded_space_link_candidate_ids(
+            state,
+            ordered_satellite_ids,
+            satellite_index_by_id,
+        )
+        return self._update_space_links_for_state(
+            state,
+            dispatch_time,
+            candidate_ids=candidate_ids,
+        )
+
+    def _space_link_mode_for_state(self) -> SpaceLinkMode:
+        if self._space_link_max_range_km is None:
+            return SpaceLinkMode.DISABLED
+        if self._space_link_mode is not None:
+            return self._space_link_mode
+        return SpaceLinkMode.DETAILED_SMALL_SCALE
+
+    def _space_link_mode_for_batch(self, batch_size: int) -> SpaceLinkMode:
+        if self._space_link_max_range_km is None:
+            return SpaceLinkMode.DISABLED
+        if self._space_link_mode is not None:
+            return self._space_link_mode
+        if batch_size <= self._batch_space_link_update_limit:
+            return SpaceLinkMode.DETAILED_SMALL_SCALE
+        return SpaceLinkMode.BOUNDED_CANDIDATE
+
     def _update_space_index(self, state: SatelliteState) -> None:
         next_cell = _space_cell_for(state.position, self._space_link_cell_size_km)
         previous_cell = self._satellite_space_cells.get(state.satellite_id)
@@ -496,6 +583,51 @@ class PositionDrivenNetworkEngine(SimulationModule):
             if state.satellite_id in pair
         }
         return tuple(sorted(nearby_ids | active_neighbor_ids))
+
+    def _bounded_space_link_candidate_ids(
+        self,
+        state: SatelliteState,
+        ordered_satellite_ids: tuple[str, ...],
+        satellite_index_by_id: dict[str, int],
+    ) -> tuple[str, ...]:
+        if len(ordered_satellite_ids) <= 1:
+            return ()
+        state_index = satellite_index_by_id.get(state.satellite_id)
+        if state_index is None:
+            return ()
+        max_candidates = self._max_space_link_candidates_per_satellite
+        candidate_ids: list[str] = []
+        seen = {state.satellite_id}
+
+        def add_index(index: int) -> None:
+            if len(candidate_ids) >= max_candidates:
+                return
+            if index < 0 or index >= len(ordered_satellite_ids):
+                return
+            candidate_id = ordered_satellite_ids[index]
+            if candidate_id in seen:
+                return
+            seen.add(candidate_id)
+            candidate_ids.append(candidate_id)
+
+        plane_count = self._space_link_plane_count
+        if plane_count is not None and plane_count < len(ordered_satellite_ids):
+            slot_index = state_index // plane_count
+            plane_index = state_index % plane_count
+            for offset in (-plane_count, plane_count):
+                add_index(state_index + offset)
+            for plane_offset in (-1, 1):
+                adjacent_plane = (plane_index + plane_offset) % plane_count
+                add_index(slot_index * plane_count + adjacent_plane)
+
+        distance = 1
+        total = len(ordered_satellite_ids)
+        while len(candidate_ids) < max_candidates and distance < total:
+            add_index((state_index - distance) % total)
+            add_index((state_index + distance) % total)
+            distance += 1
+
+        return tuple(candidate_ids)
 
     def _space_link_from_states(
         self,

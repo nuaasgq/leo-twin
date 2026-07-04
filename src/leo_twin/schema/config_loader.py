@@ -15,6 +15,7 @@ from leo_twin.schema.config import (
     RuntimeMode,
     SEESConfig,
     ScenarioConfig,
+    SpaceLinkModeConfig,
     TrafficModel,
     UIConfig,
     VisualizationToggles,
@@ -87,6 +88,9 @@ _NETWORK_KEYS = frozenset(
         "transmit_power_dbw",
         "system_loss_db",
         "noise_temperature_k",
+        "space_link_mode",
+        "max_space_link_candidates_per_satellite",
+        "batch_space_link_update_limit",
     }
 )
 _RUNTIME_KEYS = frozenset({"mode", "speed_factor", "seed", "duration"})
@@ -227,6 +231,17 @@ def _build_config(data: Mapping[str, Any]) -> SEESConfig:
                 transmit_power_dbw=network["transmit_power_dbw"],
                 system_loss_db=network["system_loss_db"],
                 noise_temperature_k=network["noise_temperature_k"],
+                space_link_mode=(
+                    None
+                    if network["space_link_mode"] is None
+                    else SpaceLinkModeConfig(str(network["space_link_mode"]))
+                ),
+                max_space_link_candidates_per_satellite=network[
+                    "max_space_link_candidates_per_satellite"
+                ],
+                batch_space_link_update_limit=network[
+                    "batch_space_link_update_limit"
+                ],
             ),
             runtime=RuntimeConfig(
                 mode=RuntimeMode(str(runtime["mode"])),
@@ -279,6 +294,9 @@ def _normalize_update(update: Mapping[str, Any]) -> dict[str, Any]:
         "transmit_power_dbw",
         "system_loss_db",
         "noise_temperature_k",
+        "space_link_mode",
+        "max_space_link_candidates_per_satellite",
+        "batch_space_link_update_limit",
     ):
         if key in direct:
             nested.setdefault("network", {})[key] = direct.pop(key)
@@ -423,6 +441,9 @@ def _ordered_keys(context: str, data: Mapping[str, Any]) -> tuple[str, ...]:
             "transmit_power_dbw",
             "system_loss_db",
             "noise_temperature_k",
+            "space_link_mode",
+            "max_space_link_candidates_per_satellite",
+            "batch_space_link_update_limit",
         ),
         "runtime": ("mode", "speed_factor", "seed", "duration"),
         "ui": ("visualization", "update_frequency_hz", "dashboard_layout"),

@@ -148,7 +148,7 @@ change.
 ## 2026-07-04 - Scale Fidelity Notice v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`
-- Commit: this commit
+- Commit: `3672b4c`
 - Scope: expose backend-owned scale fidelity mode details through runtime
   status, generated backend summary, and live state snapshots, then render a
   visible frontend notice when large-scale mode reduces fidelity.
@@ -209,6 +209,97 @@ change.
 - Recommended follow-up:
   - Implement Bounded ISL Candidate Model v1 as the next separate network
     fidelity task, with explicit config fields and cap/determinism tests.
+
+## 2026-07-04 - Scale Mode Productization v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit
+- Scope: make 1200-satellite scale mode an explicit backend-owned product mode
+  and replace silent large-batch ISL skipping with deterministic bounded
+  candidate updates.
+- Changed files/modules:
+  - `src/leo_twin/schema/config.py`
+  - `src/leo_twin/schema/config_loader.py`
+  - `src/leo_twin/core/config/__init__.py`
+  - `src/leo_twin/core/config/schema.py`
+  - `src/leo_twin/models/network/position_engine.py`
+  - `src/leo_twin/models/network/__init__.py`
+  - `src/leo_twin/services/scale_fidelity.py`
+  - `src/leo_twin/services/scenario_builder.py`
+  - `examples/integration_demo/config.py`
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/runtime.py`
+  - `examples/integration_demo/scenario.py`
+  - `examples/integration_demo/replay.py`
+  - `examples/generated_full_system_demo.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/core/decoder/index.ts`
+  - `frontend/src/app/App.tsx`
+  - `frontend/tests/appSurface.test.ts`
+  - `frontend/tests/eventDecoder.test.ts`
+  - `frontend/tests/stateStore.test.ts`
+  - `tests/integration/test_config_control.py`
+  - `tests/integration/test_live_runtime_streaming.py`
+  - `tests/unit/test_backend_derived_summary.py`
+  - `tests/unit/test_position_driven_network_engine.py`
+  - `tests/unit/test_scenario_builder.py`
+  - `docs/scale_mode_1200_acceptance.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_backend_derived_summary.py tests/unit/test_position_driven_network_engine.py -q`
+    - Result: passed, 29 tests.
+  - `python -m pytest tests/integration/test_live_runtime_streaming.py::test_large_batch_runtime_keeps_snapshot_and_controls_responsive -q`
+    - Result: passed.
+  - `python -m pytest tests/integration/test_live_runtime_streaming.py tests/integration/test_orbit_batch_scale.py tests/unit/test_metrics_module.py -q`
+    - Result: passed, 20 tests.
+  - `python -m pytest tests/integration/test_config_control.py::test_network_protocol_profile_can_be_updated_directly tests/integration/test_config_control.py::test_frontend_control_messages_are_processed tests/integration/test_config_control.py::test_initialize_writes_config_and_start_gates_streams tests/unit/test_scenario_builder.py::test_scenario_builder_config_from_sees_config_maps_control_plane_fields tests/unit/test_scenario_builder.py::test_load_full_system_scenario_builder_config_from_json tests/unit/test_scenario_builder.py::test_write_full_system_scenario_builder_config_round_trips -q`
+    - Result: passed, 6 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test`
+    - Result: passed, 22 files / 82 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+  - Clean detached worktree from the committed tree:
+    `python -m pytest -q`
+    - Result: passed, 270 tests.
+  - 1200-satellite live control smoke using the real `INITIALIZE` path:
+    - `INITIALIZE`: ok in 51.76 ms.
+    - `START`: status `RUNNING`.
+    - One explicit advance-loop tick completed in 16164.06 ms.
+    - `PAUSE`: acknowledged in 0.27 ms.
+    - `STOP`: acknowledged in 10.92 ms.
+    - `RESET`: acknowledged in 127.94 ms and visible satellites reset to 0.
+    - Fidelity summary reported `orbit_update_mode=BATCH`,
+      `metrics_mode=AGGREGATED`, and `space_link_mode=BOUNDED_CANDIDATE`.
+- Problems encountered:
+  - Running `python -m pytest tests/integration/test_config_control.py tests/unit/test_scenario_builder.py -q`
+    in the active workspace failed only on tests that read the two known local
+    runtime config files. The files currently contain 1200-node local state
+    while repository baselines expect 72 and 6 respectively.
+  - A direct 1200 `run_integration_demo()` smoke timed out because it exercised
+    offline precomputed demo execution instead of the live control path. The
+    validation was rerun through the frontend-equivalent `INITIALIZE` live path.
+  - Clean-worktree frontend verification was attempted after commit. Running
+    frontend test/build in parallel caused a pnpm `EEXIST`/`EBUSY` symlink race
+    in the temporary `node_modules`; rerunning sequentially then hit npm
+    registry `ECONNRESET`/`fetch failed` while installing clean dependencies.
+    The active workspace frontend test/build had already passed with the
+    existing dependency installation.
+  - The first live advance tick remains heavy when 1200 satellites are also
+    configured as 1200 compute nodes with same-time flow/task bursts.
+- Known remaining issues:
+  - `BOUNDED_CANDIDATE` is a deterministic approximation. It does not model
+    high-fidelity ISL geometry, RF/optical acquisition, or packet-level
+    behavior.
+  - The first tick can still take multiple seconds under the current
+    1200-node traffic/compute burst. Pause/stop/reset remain responsive after
+    the tick returns, but the next scale task should smooth first-tick
+    workload.
+  - The active local runtime config files remain excluded from the commit.
+- Recommended follow-up:
+  - Implement deterministic traffic/compute first-tick smoothing and runtime
+    backpressure reporting for 1200 satellite-as-compute-node scenarios.
 
 ## 2026-07-04 - Scale Firebreak v1
 

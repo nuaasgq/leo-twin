@@ -178,6 +178,9 @@ def test_load_full_system_scenario_builder_config_from_json(tmp_path) -> None:
     assert config.space_link_max_range_km == 0.0
     assert config.space_link_capacity == 100.0
     assert config.space_link_cell_size_km == 0.0
+    assert config.space_link_mode is None
+    assert config.max_space_link_candidates_per_satellite == 4
+    assert config.batch_space_link_update_limit == 999
     assert config.max_range_km == 2000.0
     assert config.application_protocol == "TASK_OFFLOAD_FLOW"
     assert config.transport_protocol == "TCP"
@@ -282,6 +285,9 @@ def test_scenario_builder_config_from_sees_config_maps_control_plane_fields() ->
             transmit_power_dbw=23.0,
             system_loss_db=1.5,
             noise_temperature_k=310.0,
+            space_link_mode="BOUNDED_CANDIDATE",
+            max_space_link_candidates_per_satellite=6,
+            batch_space_link_update_limit=500,
         ),
     )
 
@@ -316,6 +322,9 @@ def test_scenario_builder_config_from_sees_config_maps_control_plane_fields() ->
     assert generated.transmit_power_dbw == 23.0
     assert generated.system_loss_db == 1.5
     assert generated.noise_temperature_k == 310.0
+    assert generated.space_link_mode == "BOUNDED_CANDIDATE"
+    assert generated.max_space_link_candidates_per_satellite == 6
+    assert generated.batch_space_link_update_limit == 500
 
 
 def test_default_generated_scenario_config_file_loads() -> None:

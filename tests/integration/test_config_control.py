@@ -36,6 +36,9 @@ def test_config_loads_correctly() -> None:
     assert config.network.transmit_power_dbw == 20.0
     assert config.network.system_loss_db == 1.0
     assert config.network.noise_temperature_k == 290.0
+    assert config.network.space_link_mode is None
+    assert config.network.max_space_link_candidates_per_satellite == 4
+    assert config.network.batch_space_link_update_limit == 999
     assert config.ui.visualization.satellites is True
 
 
@@ -73,6 +76,9 @@ def test_network_protocol_profile_can_be_updated_directly() -> None:
             "transmit_power_dbw": 23.0,
             "system_loss_db": 1.5,
             "noise_temperature_k": 310.0,
+            "space_link_mode": "BOUNDED_CANDIDATE",
+            "max_space_link_candidates_per_satellite": 6,
+            "batch_space_link_update_limit": 500,
             "compute_scheduling_policy": "SHORTEST_JOB_FIRST",
         }
     )
@@ -95,6 +101,9 @@ def test_network_protocol_profile_can_be_updated_directly() -> None:
     assert controller.config.network.transmit_power_dbw == 23.0
     assert controller.config.network.system_loss_db == 1.5
     assert controller.config.network.noise_temperature_k == 310.0
+    assert controller.config.network.space_link_mode == "BOUNDED_CANDIDATE"
+    assert controller.config.network.max_space_link_candidates_per_satellite == 6
+    assert controller.config.network.batch_space_link_update_limit == 500
     assert controller.config.scenario.compute_scheduling_policy == "SHORTEST_JOB_FIRST"
 
 
@@ -185,6 +194,9 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
                     "transmit_power_dbw": 23.0,
                     "system_loss_db": 1.5,
                     "noise_temperature_k": 310.0,
+                    "space_link_mode": "BOUNDED_CANDIDATE",
+                    "max_space_link_candidates_per_satellite": 6,
+                    "batch_space_link_update_limit": 500,
                     "compute_scheduling_policy": "SHORTEST_JOB_FIRST",
                 },
             }
@@ -223,6 +235,9 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
     assert control_plane.result.config.transmit_power_dbw == 23.0
     assert control_plane.result.config.system_loss_db == 1.5
     assert control_plane.result.config.noise_temperature_k == 310.0
+    assert control_plane.result.config.space_link_mode == "BOUNDED_CANDIDATE"
+    assert control_plane.result.config.max_space_link_candidates_per_satellite == 6
+    assert control_plane.result.config.batch_space_link_update_limit == 500
     assert control_plane.result.config.compute_scheduling_policy == "SHORTEST_JOB_FIRST"
     assert control_plane.result.scenario.frontend_config["scenario"][
         "compute_scheduling_policy"
@@ -263,6 +278,9 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
         "transmit_power_dbw": 23.0,
         "system_loss_db": 1.5,
         "noise_temperature_k": 310.0,
+        "space_link_mode": "BOUNDED_CANDIDATE",
+        "max_space_link_candidates_per_satellite": 6,
+        "batch_space_link_update_limit": 500,
     }
     assert ack["generated_config"]["application_protocol"] == "MQTT"
     assert ack["generated_config"]["transport_protocol"] == "UDP"
@@ -279,6 +297,9 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
     assert ack["generated_config"]["transmit_power_dbw"] == 23.0
     assert ack["generated_config"]["system_loss_db"] == 1.5
     assert ack["generated_config"]["noise_temperature_k"] == 310.0
+    assert ack["generated_config"]["space_link_mode"] == "BOUNDED_CANDIDATE"
+    assert ack["generated_config"]["max_space_link_candidates_per_satellite"] == 6
+    assert ack["generated_config"]["batch_space_link_update_limit"] == 500
     assert ack["generated_config"]["compute_scheduling_policy"] == "SHORTEST_JOB_FIRST"
     assert ack["generated_config"]["orbit_plane_count"] == 6
     assert ack["generated_config"]["semi_major_axis_km"] == 6971.0
@@ -387,6 +408,9 @@ def test_initialize_writes_config_and_start_gates_streams(tmp_path) -> None:
     assert generated_config["transmit_power_dbw"] == 20.0
     assert generated_config["system_loss_db"] == 1.0
     assert generated_config["noise_temperature_k"] == 290.0
+    assert generated_config["space_link_mode"] is None
+    assert generated_config["max_space_link_candidates_per_satellite"] == 4
+    assert generated_config["batch_space_link_update_limit"] == 999
     assert generated_config["compute_scheduling_policy"] == "FIFO"
     assert init_ack["generated_config"]["satellite_count"] == 24
     assert init_ack["generated_config"]["user_count"] == 40

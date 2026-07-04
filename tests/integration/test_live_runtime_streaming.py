@@ -121,25 +121,36 @@ def test_large_batch_runtime_keeps_snapshot_and_controls_responsive(tmp_path: Pa
         "fidelity_summary"
     ]
     assert set(fidelity) == {
+        "satellite_count",
+        "user_count",
         "orbit_update_mode",
         "metrics_mode",
         "space_link_mode",
         "detailed_space_link_enabled",
         "space_link_candidate_policy",
+        "max_space_link_candidates_per_satellite",
+        "batch_space_link_update_limit",
         "scale_limit_reason",
-        "satellite_count",
-        "user_count",
+        "current_scale_mode",
+        "fidelity_warnings",
     }
     assert fidelity["orbit_update_mode"] == "BATCH"
     assert fidelity["metrics_mode"] == "AGGREGATED"
-    assert fidelity["space_link_mode"] == "REDUCED_LARGE_BATCH"
+    assert fidelity["space_link_mode"] == "BOUNDED_CANDIDATE"
     assert fidelity["detailed_space_link_enabled"] is False
     assert fidelity["space_link_candidate_policy"] == (
-        "SPACE_GROUND_ONLY_WHEN_BATCH_EXCEEDS_LIMIT"
+        "SAME_PLANE_AND_ADJACENT_PLANE_BOUNDED_CANDIDATES"
     )
-    assert "detailed space-space link updates are skipped" in fidelity[
+    assert fidelity["max_space_link_candidates_per_satellite"] == 4
+    assert fidelity["batch_space_link_update_limit"] == 999
+    assert fidelity["current_scale_mode"] == "LARGE_SCALE_AGGREGATED"
+    assert "bounded candidate updates are enabled" in fidelity[
         "scale_limit_reason"
     ]
+    assert any(
+        "bounded candidate updates" in warning
+        for warning in fidelity["fidelity_warnings"]
+    )
     assert fidelity["satellite_count"] == 1200
     assert fidelity["user_count"] == 20
     assert len(control_plane.visible_snapshot()["satellites"]) == 1200

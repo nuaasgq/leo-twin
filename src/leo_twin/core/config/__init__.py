@@ -17,14 +17,19 @@ from leo_twin.core.config.schema import (
     RuntimeMode,
     ScenarioConfig,
     SEESConfig,
+    SpaceLinkModeConfig,
     TrafficModel,
     UIConfig,
     VisualizationToggles,
+    DEFAULT_BATCH_SPACE_LINK_UPDATE_LIMIT,
+    DEFAULT_MAX_SPACE_LINK_CANDIDATES_PER_SATELLITE,
     config_to_dict,
 )
 
 __all__ = [
     "DEFAULT_CONFIG",
+    "DEFAULT_BATCH_SPACE_LINK_UPDATE_LIMIT",
+    "DEFAULT_MAX_SPACE_LINK_CANDIDATES_PER_SATELLITE",
     "ConfigValidationError",
     "ComputeSchedulingPolicyConfig",
     "OrbitParameters",
@@ -33,6 +38,7 @@ __all__ = [
     "RuntimeMode",
     "SEESConfig",
     "ScenarioConfig",
+    "SpaceLinkModeConfig",
     "TrafficModel",
     "UIConfig",
     "VisualizationToggles",

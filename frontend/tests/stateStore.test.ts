@@ -45,10 +45,14 @@ describe("ObservabilityStore", () => {
         fidelity_summary: {
           orbit_update_mode: "BATCH",
           metrics_mode: "AGGREGATED",
-          space_link_mode: "REDUCED_LARGE_BATCH",
+          space_link_mode: "BOUNDED_CANDIDATE",
           detailed_space_link_enabled: false,
-          space_link_candidate_policy: "SPACE_GROUND_ONLY_WHEN_BATCH_EXCEEDS_LIMIT",
+          space_link_candidate_policy: "SAME_PLANE_AND_ADJACENT_PLANE_BOUNDED_CANDIDATES",
+          max_space_link_candidates_per_satellite: 4,
+          batch_space_link_update_limit: 999,
           scale_limit_reason: "orbit updates are batched",
+          current_scale_mode: "LARGE_SCALE_AGGREGATED",
+          fidelity_warnings: ["Orbit updates are batched."],
           satellite_count: 1200,
           user_count: 20
         }
@@ -64,7 +68,11 @@ describe("ObservabilityStore", () => {
         space_link_mode: "DETAILED_SMALL_SCALE",
         detailed_space_link_enabled: true,
         space_link_candidate_policy: "CELL_INDEX_NEARBY_WITH_RANGE_LIMIT",
+        max_space_link_candidates_per_satellite: 4,
+        batch_space_link_update_limit: 999,
         scale_limit_reason: "orbit updates are batched",
+        current_scale_mode: "LARGE_SCALE_BATCH",
+        fidelity_warnings: ["Orbit updates are batched."],
         satellite_count: 300,
         user_count: 20
       }

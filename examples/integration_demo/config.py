@@ -16,7 +16,11 @@ from leo_twin.core.config import (
     UIConfig,
     VisualizationToggles,
 )
-from leo_twin.schema.config import NetworkProfile
+from leo_twin.schema.config import (
+    DEFAULT_BATCH_SPACE_LINK_UPDATE_LIMIT,
+    DEFAULT_MAX_SPACE_LINK_CANDIDATES_PER_SATELLITE,
+    NetworkProfile,
+)
 from leo_twin.schema.full_system import (
     ApplicationProtocol,
     DataLinkProtocol,
@@ -75,6 +79,11 @@ class DemoConfig:
     transmit_power_dbw: float = 20.0
     system_loss_db: float = 1.0
     noise_temperature_k: float = 290.0
+    space_link_mode: str | None = None
+    max_space_link_candidates_per_satellite: int = (
+        DEFAULT_MAX_SPACE_LINK_CANDIDATES_PER_SATELLITE
+    )
+    batch_space_link_update_limit: int = DEFAULT_BATCH_SPACE_LINK_UPDATE_LIMIT
     compute_scheduling_policy: str = "FIFO"
 
 
@@ -177,6 +186,17 @@ def load_demo_config(path: str | Path = DEFAULT_CONFIG_PATH) -> DemoConfig:
         transmit_power_dbw=_optional_float(network, "transmit_power_dbw", 20.0),
         system_loss_db=_optional_float(network, "system_loss_db", 1.0),
         noise_temperature_k=_optional_float(network, "noise_temperature_k", 290.0),
+        space_link_mode=_optional_nullable_str(network, "space_link_mode"),
+        max_space_link_candidates_per_satellite=_optional_int(
+            network,
+            "max_space_link_candidates_per_satellite",
+            DEFAULT_MAX_SPACE_LINK_CANDIDATES_PER_SATELLITE,
+        ),
+        batch_space_link_update_limit=_optional_int(
+            network,
+            "batch_space_link_update_limit",
+            DEFAULT_BATCH_SPACE_LINK_UPDATE_LIMIT,
+        ),
     )
 
 
@@ -231,6 +251,11 @@ def demo_config_to_sees_config(config: DemoConfig) -> SEESConfig:
             transmit_power_dbw=config.transmit_power_dbw,
             system_loss_db=config.system_loss_db,
             noise_temperature_k=config.noise_temperature_k,
+            space_link_mode=config.space_link_mode,
+            max_space_link_candidates_per_satellite=(
+                config.max_space_link_candidates_per_satellite
+            ),
+            batch_space_link_update_limit=config.batch_space_link_update_limit,
         ),
         runtime=RuntimeConfig(
             mode=RuntimeMode.REAL_TIME,
@@ -310,6 +335,15 @@ def demo_config_from_sees_config(
         transmit_power_dbw=config.network.transmit_power_dbw,
         system_loss_db=config.network.system_loss_db,
         noise_temperature_k=config.network.noise_temperature_k,
+        space_link_mode=(
+            config.network.space_link_mode.value
+            if config.network.space_link_mode is not None
+            else None
+        ),
+        max_space_link_candidates_per_satellite=(
+            config.network.max_space_link_candidates_per_satellite
+        ),
+        batch_space_link_update_limit=config.network.batch_space_link_update_limit,
     )
 
 

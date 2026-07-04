@@ -140,6 +140,9 @@ export interface ScenarioConfig {
     transmit_power_dbw?: number;
     system_loss_db?: number;
     noise_temperature_k?: number;
+    space_link_mode?: string | null;
+    max_space_link_candidates_per_satellite?: number;
+    batch_space_link_update_limit?: number;
   };
   runtime?: {
     mode?: RuntimeMode;
@@ -208,7 +211,11 @@ export interface FidelitySummary {
   space_link_mode: string;
   detailed_space_link_enabled: boolean;
   space_link_candidate_policy: string;
+  max_space_link_candidates_per_satellite: number;
+  batch_space_link_update_limit: number;
   scale_limit_reason: string;
+  current_scale_mode: string;
+  fidelity_warnings: readonly string[];
   satellite_count: number;
   user_count: number;
 }
@@ -302,6 +309,9 @@ export interface GeneratedScenarioConfig {
   transmit_power_dbw?: number;
   system_loss_db?: number;
   noise_temperature_k?: number;
+  space_link_mode?: string | null;
+  max_space_link_candidates_per_satellite?: number;
+  batch_space_link_update_limit?: number;
   backend_summary?: BackendDerivedSummary;
 }
 

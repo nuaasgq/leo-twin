@@ -145,6 +145,12 @@ def build_integration_demo_runtime(config: DemoConfig) -> DemoRuntimeContext:
         space_link_cell_size_km=2500.0,
         space_link_update_latency_epsilon_s=0.0005,
         space_link_update_capacity_epsilon=1.0,
+        space_link_mode=config.space_link_mode,
+        max_space_link_candidates_per_satellite=(
+            config.max_space_link_candidates_per_satellite
+        ),
+        batch_space_link_update_limit=config.batch_space_link_update_limit,
+        space_link_plane_count=config.orbit_plane_count,
         application_runtime=application_runtime,
         routing_runtime=routing_runtime,
         static_links=_compute_gateway_links(scenario),

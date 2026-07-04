@@ -143,6 +143,11 @@ def build_demo_scenario(config: DemoConfig) -> DemoScenario:
                 "transmit_power_dbw": config.transmit_power_dbw,
                 "system_loss_db": config.system_loss_db,
                 "noise_temperature_k": config.noise_temperature_k,
+                "space_link_mode": config.space_link_mode,
+                "max_space_link_candidates_per_satellite": (
+                    config.max_space_link_candidates_per_satellite
+                ),
+                "batch_space_link_update_limit": config.batch_space_link_update_limit,
             },
             "runtime": {
                 "mode": "REAL_TIME",
@@ -252,13 +257,18 @@ def _backend_summary(
     return summary
 
 
-def _fidelity_summary(config: DemoConfig) -> dict[str, str | int | bool]:
+def _fidelity_summary(config: DemoConfig) -> dict[str, object]:
     return build_scale_fidelity_summary(
         ScaleFidelityConfig(
             satellite_count=config.satellite_count,
             user_count=config.ground_user_count,
             forced_orbit_update_mode=config.orbit_update_mode,
+            forced_space_link_mode=config.space_link_mode,
             space_link_enabled=True,
+            max_space_link_candidates_per_satellite=(
+                config.max_space_link_candidates_per_satellite
+            ),
+            batch_space_link_update_limit=config.batch_space_link_update_limit,
         )
     )
 

@@ -135,6 +135,12 @@ def run_generated_full_system_demo(
             if resolved_config.space_link_cell_size_km > 0.0
             else None
         ),
+        space_link_mode=resolved_config.space_link_mode,
+        max_space_link_candidates_per_satellite=(
+            resolved_config.max_space_link_candidates_per_satellite
+        ),
+        batch_space_link_update_limit=resolved_config.batch_space_link_update_limit,
+        space_link_plane_count=resolved_config.orbit_plane_count,
         application_runtime=application_runtime,
         data_link_runtime=data_link_runtime,
         transport_runtime=transport_runtime,

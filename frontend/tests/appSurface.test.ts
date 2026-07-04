@@ -143,11 +143,15 @@ describe("fidelity notice", () => {
   const summary: FidelitySummary = {
     orbit_update_mode: "BATCH",
     metrics_mode: "AGGREGATED",
-    space_link_mode: "REDUCED_LARGE_BATCH",
+    space_link_mode: "BOUNDED_CANDIDATE",
     detailed_space_link_enabled: false,
-    space_link_candidate_policy: "SPACE_GROUND_ONLY_WHEN_BATCH_EXCEEDS_LIMIT",
+    space_link_candidate_policy: "SAME_PLANE_AND_ADJACENT_PLANE_BOUNDED_CANDIDATES",
+    max_space_link_candidates_per_satellite: 4,
+    batch_space_link_update_limit: 999,
     scale_limit_reason:
-      "orbit updates are batched; metrics are aggregated; detailed space-space link updates are skipped",
+      "orbit updates are batched; metrics are aggregated; bounded candidate updates are enabled",
+    current_scale_mode: "LARGE_SCALE_AGGREGATED",
+    fidelity_warnings: ["Orbit updates are batched."],
     satellite_count: 1200,
     user_count: 20
   };
@@ -155,7 +159,7 @@ describe("fidelity notice", () => {
   it("builds the visible scale notice from backend-provided fields", () => {
     expect(shouldShowFidelityNotice(summary)).toBe(true);
     expect(fidelityNoticeText(summary)).toBe(
-      "Scale Mode: 1,200 satellites. Orbit updates are batched. Metrics are aggregated. Space-space links use reduced fidelity."
+      "规模模式：1,200 颗卫星。轨道更新采用批量模式。指标采用聚合模式。星间链路采用有界候选更新。"
     );
   });
 

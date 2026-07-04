@@ -35,7 +35,7 @@ class DemoStateProjector:
         ground_users: tuple[GroundUserRenderState, ...],
         snapshot_interval_events: int,
         initial_satellites: tuple[SatelliteState, ...] = (),
-        fidelity_summary: dict[str, str | int | bool] | None = None,
+        fidelity_summary: dict[str, object] | None = None,
     ) -> None:
         self._ground_users = tuple(sorted(ground_users, key=lambda user: user.user_id))
         self._snapshot_interval_events = snapshot_interval_events

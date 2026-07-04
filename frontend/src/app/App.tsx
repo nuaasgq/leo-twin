@@ -554,23 +554,42 @@ export function shouldShowFidelityNotice(summary: FidelitySummary | null): boole
 export function fidelityNoticeText(summary: FidelitySummary): string {
   const details: string[] = [];
   if (summary.orbit_update_mode === "BATCH") {
-    details.push("Orbit updates are batched.");
+    details.push("轨道更新采用批量模式。");
   } else {
-    details.push(`Orbit updates use ${summary.orbit_update_mode}.`);
+    details.push(`轨道更新模式为 ${summary.orbit_update_mode}。`);
   }
   if (summary.metrics_mode === "AGGREGATED") {
-    details.push("Metrics are aggregated.");
+    details.push("指标采用聚合模式。");
   } else {
-    details.push(`Metrics mode is ${summary.metrics_mode}.`);
+    details.push(`指标模式为 ${summary.metrics_mode}。`);
   }
   if (summary.space_link_mode === "DISABLED") {
-    details.push("Space-space links are disabled.");
+    details.push("星间链路更新已关闭。");
+  } else if (summary.space_link_mode === "BOUNDED_CANDIDATE") {
+    details.push("星间链路采用有界候选更新。");
   } else if (!summary.detailed_space_link_enabled) {
-    details.push("Space-space links use reduced fidelity.");
+    details.push("星间链路使用降级精度。");
   } else {
-    details.push("Space-space links use detailed small-scale updates.");
+    details.push("星间链路使用小规模详细更新。");
   }
-  return `Scale Mode: ${formatInteger(summary.satellite_count)} satellites. ${details.join(" ")}`;
+  return `规模模式：${formatInteger(summary.satellite_count)} 颗卫星。${details.join("")}`;
+}
+
+function fidelityNoticeDetail(summary: FidelitySummary): string {
+  if (summary.space_link_mode === "BOUNDED_CANDIDATE") {
+    return [
+      "后端策略：同轨邻近与相邻轨道有界候选；",
+      `每星候选上限 ${formatInteger(summary.max_space_link_candidates_per_satellite)}，`,
+      `详细批量阈值 ${formatInteger(summary.batch_space_link_update_limit)}。`
+    ].join("");
+  }
+  if (summary.space_link_mode === "DISABLED") {
+    return "后端策略：关闭星间链路更新以保持大规模控制响应。";
+  }
+  if (summary.scale_limit_reason !== "none") {
+    return `后端策略：${summary.current_scale_mode}。`;
+  }
+  return `后端策略：${summary.space_link_candidate_policy}。`;
 }
 
 function FidelityNotice({
@@ -583,15 +602,11 @@ function FidelityNotice({
   if (summary === null || !shouldShowFidelityNotice(summary)) {
     return null;
   }
-  const detail =
-    summary.scale_limit_reason === "none"
-      ? summary.space_link_candidate_policy
-      : summary.scale_limit_reason;
   return (
     <div className={`fidelity-notice ${surface}`} role="status" aria-live="polite">
-      <span>Runtime fidelity</span>
+      <span>规模精度策略</span>
       <strong>{fidelityNoticeText(summary)}</strong>
-      <small>{detail}</small>
+      <small>{fidelityNoticeDetail(summary)}</small>
     </div>
   );
 }
@@ -847,7 +862,20 @@ export function scenarioWithRuntimeConfig(
         noise_temperature_k:
           typeof runtimeConfig.network.noise_temperature_k === "number"
             ? runtimeConfig.network.noise_temperature_k
-            : scenario.network?.noise_temperature_k
+            : scenario.network?.noise_temperature_k,
+        space_link_mode:
+          typeof runtimeConfig.network.space_link_mode === "string" ||
+          runtimeConfig.network.space_link_mode === null
+            ? runtimeConfig.network.space_link_mode
+            : scenario.network?.space_link_mode,
+        max_space_link_candidates_per_satellite:
+          typeof runtimeConfig.network.max_space_link_candidates_per_satellite === "number"
+            ? runtimeConfig.network.max_space_link_candidates_per_satellite
+            : scenario.network?.max_space_link_candidates_per_satellite,
+        batch_space_link_update_limit:
+          typeof runtimeConfig.network.batch_space_link_update_limit === "number"
+            ? runtimeConfig.network.batch_space_link_update_limit
+            : scenario.network?.batch_space_link_update_limit
       }
     : scenario.network;
   const ui = isRecord(runtimeConfig.ui)

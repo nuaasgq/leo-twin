@@ -34,7 +34,12 @@ from leo_twin.models.network.geometry import (
     GroundEndpointIndex,
     PositionDrivenAccessModel,
 )
-from leo_twin.models.network.position_engine import PositionDrivenNetworkEngine
+from leo_twin.models.network.position_engine import (
+    DEFAULT_BATCH_SPACE_LINK_UPDATE_LIMIT,
+    DEFAULT_MAX_SPACE_LINK_CANDIDATES_PER_SATELLITE,
+    PositionDrivenNetworkEngine,
+    SpaceLinkMode,
+)
 from leo_twin.models.network.routing import (
     RoutingCostProfile,
     RoutingRuntime,
@@ -65,6 +70,8 @@ __all__ = [
     "DataLinkDecision",
     "DataLinkProfile",
     "DataLinkRuntime",
+    "DEFAULT_BATCH_SPACE_LINK_UPDATE_LIMIT",
+    "DEFAULT_MAX_SPACE_LINK_CANDIDATES_PER_SATELLITE",
     "GroundEndpoint",
     "GroundEndpointIndex",
     "LayerTrace",
@@ -81,6 +88,7 @@ __all__ = [
     "RadioTerminalProfile",
     "RoutingCostProfile",
     "RoutingRuntime",
+    "SpaceLinkMode",
     "StaticRouteEntry",
     "TransportDecision",
     "TransportProfile",
