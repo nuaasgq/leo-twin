@@ -5,6 +5,7 @@ from typing import Iterable
 
 from leo_twin.core import SimulationKernel, SimulationModule
 from leo_twin.models.compute.contracts import COMPUTE_NODE_UPDATE, ComputeNode
+from leo_twin.models.compute.resources import estimate_task_service_time
 from leo_twin.schema import (
     ComputeNodeState,
     EventType,
@@ -153,7 +154,8 @@ class ComputeEngine(SimulationModule):
         candidates: list[tuple[float, float, str, ComputeNode]] = []
         for node in self._nodes:
             start_time = max(self._available_at[node.node_id], ready_time)
-            finish_time = start_time + (task.compute_demand / node.capacity)
+            service_time = estimate_task_service_time(node, task).service_time
+            finish_time = start_time + service_time
             candidates.append((finish_time, start_time, node.node_id, node))
 
         finish_time, start_time, _, node = min(candidates)

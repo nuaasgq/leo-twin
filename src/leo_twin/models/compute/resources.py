@@ -6,6 +6,9 @@ from dataclasses import dataclass
 from math import isfinite
 from typing import Any
 
+from leo_twin.models.compute.contracts import ComputeNode
+from leo_twin.schema import TaskRequest
+
 
 _OPS_PER_GFLOP = 1_000_000_000.0
 _OPS_PER_TFLOP = 1_000_000_000_000.0
@@ -200,6 +203,47 @@ def estimate_compute_service_time(
         service_time=service_time,
         bottleneck_resource=bottleneck_resource,
         resource_times=tuple(resource_times),
+    )
+
+
+def compute_resource_vector_from_node(node: ComputeNode) -> ComputeResourceVector:
+    """Build the estimator resource vector represented by a compute node."""
+
+    if not isinstance(node, ComputeNode):
+        raise TypeError("node must be ComputeNode")
+    return ComputeResourceVector(
+        cpu_gflops_fp32=node.capacity,
+        cpu_gflops_fp64=node.cpu_gflops_fp64,
+        gpu_tflops_fp32=node.gpu_tflops_fp32,
+        gpu_tflops_fp16=node.gpu_tflops_fp16,
+        npu_tops_int8=node.npu_tops_int8,
+        memory_gb=node.memory_gb,
+        storage_gb=node.storage_gb,
+    )
+
+
+def task_resource_demand_from_request(task: TaskRequest) -> TaskResourceDemand:
+    """Build the estimator demand represented by a task request.
+
+    Current task requests carry the legacy scalar ``compute_demand`` contract.
+    The estimator maps it to CPU operations so existing timing remains
+    deterministic while all schedulers share the resource-vector path.
+    """
+
+    if not isinstance(task, TaskRequest):
+        raise TypeError("task must be TaskRequest")
+    return TaskResourceDemand.from_compute_demand(task.compute_demand)
+
+
+def estimate_task_service_time(
+    node: ComputeNode,
+    task: TaskRequest,
+) -> ComputeServiceTimeEstimate:
+    """Estimate service time for a task on a concrete compute node."""
+
+    return estimate_compute_service_time(
+        compute_resource_vector_from_node(node),
+        task_resource_demand_from_request(task),
     )
 
 

@@ -11,6 +11,7 @@ from leo_twin.models.compute.scheduling import (
     ComputeSchedulingRuntime,
     ComputeWorkloadItem,
 )
+from leo_twin.models.compute.resources import estimate_task_service_time
 from leo_twin.models.traffic import ComputeOutputFlowMetadata
 from leo_twin.schema import (
     ComputeNodeState,
@@ -309,7 +310,7 @@ class RouteAwareComputeEngine(SimulationModule):
         scored: list[tuple[float, float, str, ComputeNode, float]] = []
         for compute_node in candidates:
             start_time = max(self._available_at[compute_node.node_id], ready_time)
-            compute_time = task.compute_demand / compute_node.capacity
+            compute_time = estimate_task_service_time(compute_node, task).service_time
             finish_time = start_time + compute_time
             scored.append(
                 (finish_time, start_time, compute_node.node_id, compute_node, compute_time)

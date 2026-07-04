@@ -3,10 +3,15 @@ from __future__ import annotations
 import pytest
 
 from leo_twin.models.compute import (
+    ComputeNode,
     ComputeResourceVector,
     TaskResourceDemand,
+    compute_resource_vector_from_node,
     estimate_compute_service_time,
+    estimate_task_service_time,
+    task_resource_demand_from_request,
 )
+from leo_twin.schema import TaskRequest
 
 
 def test_legacy_capacity_vector_matches_scalar_compute_model() -> None:
@@ -28,6 +33,43 @@ def test_legacy_capacity_vector_matches_scalar_compute_model() -> None:
     assert estimate.service_time == pytest.approx(2.0)
     assert estimate.bottleneck_resource == "cpu_gflops_fp32"
     assert estimate.resource_times == (("cpu_gflops_fp32", 2.0),)
+
+
+def test_task_service_time_helper_preserves_legacy_scheduler_timing() -> None:
+    node = ComputeNode(
+        "sat-001",
+        capacity=40.0,
+        cpu_gflops_fp64=8.0,
+        gpu_tflops_fp32=2.5,
+        gpu_tflops_fp16=5.0,
+        npu_tops_int8=12.0,
+        memory_gb=32.0,
+        storage_gb=512.0,
+    )
+    task = TaskRequest(
+        task_id="task-a",
+        source_id="user-a",
+        submit_time=0.0,
+        compute_demand=100.0,
+        data_size=1.0,
+    )
+
+    resources = compute_resource_vector_from_node(node)
+    demand = task_resource_demand_from_request(task)
+    estimate = estimate_task_service_time(node, task)
+
+    assert resources == ComputeResourceVector(
+        cpu_gflops_fp32=40.0,
+        cpu_gflops_fp64=8.0,
+        gpu_tflops_fp32=2.5,
+        gpu_tflops_fp16=5.0,
+        npu_tops_int8=12.0,
+        memory_gb=32.0,
+        storage_gb=512.0,
+    )
+    assert demand == TaskResourceDemand(cpu_ops=100_000_000_000.0)
+    assert estimate.service_time == pytest.approx(2.5)
+    assert estimate.bottleneck_resource == "cpu_gflops_fp32"
 
 
 def test_cpu_only_task_uses_cpu_bottleneck() -> None:

@@ -58,6 +58,25 @@ def test_shortest_job_first_policy_prioritizes_small_compute_demand() -> None:
     assert [decision.task_id for decision in decisions] == ["small", "medium", "large"]
 
 
+def test_schedule_uses_shared_service_time_estimator() -> None:
+    runtime = ComputeSchedulingRuntime(ComputeSchedulingPolicy.FIFO)
+    workloads = (
+        ComputeWorkloadItem(_task("task-a", 80.0), ready_time=1.0),
+        ComputeWorkloadItem(_task("task-b", 20.0), ready_time=1.0),
+    )
+    nodes = (
+        ComputeNode("slow-node", capacity=10.0, gpu_tflops_fp32=10.0),
+        ComputeNode("fast-node", capacity=40.0, gpu_tflops_fp32=1.0),
+    )
+
+    decisions = runtime.schedule(workloads, nodes)
+
+    assert [(item.task_id, item.node_id, item.start_time, item.finish_time) for item in decisions] == [
+        ("task-a", "fast-node", 1.0, 3.0),
+        ("task-b", "slow-node", 1.0, 3.0),
+    ]
+
+
 def test_earliest_deadline_first_policy_prioritizes_deadline() -> None:
     runtime = ComputeSchedulingRuntime(ComputeSchedulingPolicy.EARLIEST_DEADLINE_FIRST)
     workloads = (

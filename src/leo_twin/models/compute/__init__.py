@@ -10,7 +10,10 @@ from leo_twin.models.compute.resources import (
     ComputeResourceVector,
     ComputeServiceTimeEstimate,
     TaskResourceDemand,
+    compute_resource_vector_from_node,
     estimate_compute_service_time,
+    estimate_task_service_time,
+    task_resource_demand_from_request,
 )
 from leo_twin.models.compute.scheduling import (
     ComputeScheduleDecision,
@@ -32,5 +35,8 @@ __all__ = [
     "RouteAwareComputeEngine",
     "TaskResourceDemand",
     "TaskPlacementDecision",
+    "compute_resource_vector_from_node",
     "estimate_compute_service_time",
+    "estimate_task_service_time",
+    "task_resource_demand_from_request",
 ]

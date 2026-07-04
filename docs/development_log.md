@@ -5,6 +5,44 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Compute Service-Time Estimator Wiring v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending in this commit
+- Scope: route compute scheduling service-time calculations through the
+  deterministic `ComputeResourceVector` / `TaskResourceDemand` estimator while
+  preserving legacy `compute_demand / compute_capacity` timing semantics.
+- Changed files/modules:
+  - `src/leo_twin/models/compute/resources.py`
+  - `src/leo_twin/models/compute/__init__.py`
+  - `src/leo_twin/models/compute/engine.py`
+  - `src/leo_twin/models/compute/network_aware.py`
+  - `src/leo_twin/models/compute/scheduling.py`
+  - `tests/unit/test_compute_resource_model.py`
+  - `tests/unit/test_compute_scheduling_runtime.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_compute_resource_model.py tests/unit/test_compute_scheduling_runtime.py tests/unit/test_compute_module.py tests/unit/test_network_aware_compute.py -q`
+    - Result: passed, 27 tests.
+  - `python -m pytest tests/integration/test_compute_service_lifecycle.py tests/integration/test_full_domain_pipeline_v1.py -q`
+    - Result: passed, 3 tests.
+  - `git diff --check`
+    - Result: passed with only CRLF warnings for excluded local runtime config
+      files.
+- Problems encountered:
+  - The initial scheduling-runtime test expectation assumed the second task
+    would wait for the faster node. The deterministic scheduler correctly chose
+    the idle slower node because it tied the faster node's finish time. The
+    assertion was corrected to preserve existing scheduling semantics.
+- Known remaining issues:
+  - `TaskRequest` still exposes the legacy scalar `compute_demand`; explicit
+    GPU FP32/FP16, NPU INT8, memory, and storage task-demand fields should be
+    introduced as a separate product-contract task.
+  - Resource utilization metrics are not yet split by resource lane.
+- Recommended follow-up:
+  - Add explicit task resource-demand fields and emit per-lane utilization
+    metrics before changing dashboard charts.
+
 ## 2026-07-05 - Runtime Compute Resource Vector State v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`

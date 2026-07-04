@@ -8,6 +8,7 @@ from math import isfinite
 from typing import Any
 
 from leo_twin.models.compute.contracts import ComputeNode
+from leo_twin.models.compute.resources import estimate_task_service_time
 from leo_twin.schema import TaskRequest
 
 
@@ -120,7 +121,8 @@ def _select_node(
     candidates: list[tuple[float, float, str, ComputeNode]] = []
     for compute_node in nodes:
         start_time = max(item.ready_time, available_at[compute_node.node_id])
-        finish_time = start_time + item.task.compute_demand / compute_node.capacity
+        service_time = estimate_task_service_time(compute_node, item.task).service_time
+        finish_time = start_time + service_time
         candidates.append((finish_time, start_time, compute_node.node_id, compute_node))
     finish_time, start_time, _, selected = min(candidates)
     return selected, start_time, finish_time
