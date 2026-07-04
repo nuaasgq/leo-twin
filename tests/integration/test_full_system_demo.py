@@ -161,13 +161,19 @@ def test_network_stack_trace_uses_configured_protocols() -> None:
         if str(layer.layer) == "DATA_LINK"
     } == {"SLOTTED_ALOHA"}
     custom_network_attributes = dict(udp_result.network_stack_traces[0].layers[2].attributes)
+    custom_data_link_attributes = dict(
+        udp_result.network_stack_traces[0].layers[3].attributes
+    )
     assert custom_network_attributes["latency_weight"] == "0.200000"
     assert custom_network_attributes["inverse_capacity_weight"] == "400.000000"
     assert custom_network_attributes["hop_weight"] == "1.000000"
+    assert custom_data_link_attributes["medium_access_efficiency"] == "0.620000"
+    assert custom_data_link_attributes["collision_loss_rate"] == "0.080000"
+    assert custom_data_link_attributes["contention_delay_s"] == "0.004000"
     assert udp_result.metrics_summary["route_latency_avg"] < result.metrics_summary[
         "route_latency_avg"
     ]
-    assert udp_result.metrics_summary["route_capacity_max"] > result.metrics_summary[
+    assert udp_result.metrics_summary["route_capacity_max"] < result.metrics_summary[
         "route_capacity_max"
     ]
 

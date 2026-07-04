@@ -24,6 +24,7 @@ from leo_twin.models.network import (
     TransportProfile,
     TransportRuntime,
     build_default_leo_protocol_stack,
+    default_data_link_runtime,
     default_transport_runtime,
 )
 from leo_twin.models.orbit import KeplerianOrbitEngine
@@ -99,6 +100,7 @@ def run_integration_demo(config: DemoConfig) -> DemoRunResult:
     transport_protocol = TransportProtocol(str(config.transport_protocol))
     routing_protocol = RoutingProtocol(str(config.routing_protocol))
     data_link_protocol = DataLinkProtocol(str(config.datalink_mac_protocol))
+    data_link_runtime = default_data_link_runtime(data_link_protocol)
     transport_runtime = _transport_runtime(config, transport_protocol)
     routing_cost_profile = RoutingCostProfile(
         latency_weight=config.routing_latency_weight,
@@ -124,6 +126,7 @@ def run_integration_demo(config: DemoConfig) -> DemoRunResult:
         space_link_update_capacity_epsilon=1.0,
         routing_runtime=routing_runtime,
         static_links=_compute_gateway_links(scenario),
+        data_link_runtime=data_link_runtime,
         transport_runtime=transport_runtime,
         stack_runtime=NetworkStackRuntime(
             build_default_leo_protocol_stack(
@@ -134,6 +137,7 @@ def run_integration_demo(config: DemoConfig) -> DemoRunResult:
             ),
             antenna=space_ground_budget.transmit_terminal.antenna,
             channel=space_ground_budget.channel,
+            data_link_profile=data_link_runtime.profile,
             transport_profile=transport_runtime.profile,
             routing_cost_profile=routing_runtime.cost_profile,
         ),

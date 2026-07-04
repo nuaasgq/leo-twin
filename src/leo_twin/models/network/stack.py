@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from leo_twin.models.network.channel import LinkBudgetResult
+from leo_twin.models.network.datalink import DataLinkProfile
 from leo_twin.models.network.routing import RoutingCostProfile
 from leo_twin.models.network.transport import TransportProfile
 from leo_twin.schema import (
@@ -59,6 +60,7 @@ class NetworkStackRuntime:
         antenna: AntennaProfile | None = None,
         channel: ChannelProfile | None = None,
         link_budget: LinkBudgetResult | None = None,
+        data_link_profile: DataLinkProfile | None = None,
         transport_profile: TransportProfile | None = None,
         routing_cost_profile: RoutingCostProfile | None = None,
     ) -> None:
@@ -66,6 +68,7 @@ class NetworkStackRuntime:
         self._antenna = antenna
         self._channel = channel
         self._link_budget = link_budget
+        self._data_link_profile = data_link_profile
         self._transport_profile = transport_profile
         self._routing_cost_profile = routing_cost_profile
 
@@ -127,6 +130,7 @@ class NetworkStackRuntime:
             output_ref = f"link:{request.flow_id}"
             attributes += (("hop_count", str(_hop_count(route))),)
             attributes += _data_link_profile_attributes(layer.protocol_name)
+            attributes += _data_link_runtime_attributes(self._data_link_profile)
         elif layer.layer == NetworkLayer.PHYSICAL:
             output_ref = f"physical:{request.flow_id}"
             attributes += _antenna_attributes(self._antenna)
@@ -339,6 +343,26 @@ def _data_link_profile_attributes(protocol_name: str) -> tuple[tuple[str, str], 
         ("mac_profile", DataLinkProtocol.TDMA.value),
         ("medium_access", "time_division"),
         ("retransmission_policy", "none"),
+    )
+
+
+def _data_link_runtime_attributes(
+    profile: DataLinkProfile | None,
+) -> tuple[tuple[str, str], ...]:
+    if profile is None:
+        return ()
+    total_bytes = profile.frame_payload_bytes + profile.frame_header_bytes
+    overhead_ratio = profile.frame_header_bytes / total_bytes
+    contention_delay_s = profile.contention_backoff_slots * profile.slot_duration_s
+    return (
+        ("collision_loss_rate", f"{profile.collision_loss_rate:.6f}"),
+        ("contention_backoff_slots", str(profile.contention_backoff_slots)),
+        ("contention_delay_s", f"{contention_delay_s:.6f}"),
+        ("frame_header_bytes", str(profile.frame_header_bytes)),
+        ("frame_overhead_ratio", f"{overhead_ratio:.6f}"),
+        ("frame_payload_bytes", str(profile.frame_payload_bytes)),
+        ("medium_access_efficiency", f"{profile.medium_access_efficiency:.6f}"),
+        ("scheduling_delay_s", f"{profile.scheduling_delay_s:.6f}"),
     )
 
 

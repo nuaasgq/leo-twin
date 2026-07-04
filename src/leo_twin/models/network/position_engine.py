@@ -9,6 +9,7 @@ from typing import Any
 from leo_twin.core import SimulationKernel, SimulationModule
 from leo_twin.models.compute.contracts import COMPUTE_NODE_UPDATE
 from leo_twin.models.network.channel import ChannelBudgetSelector, LinkBudgetCalculator
+from leo_twin.models.network.datalink import DataLinkRuntime
 from leo_twin.models.network.geometry import (
     AccessLinkCandidate,
     GroundEndpoint,
@@ -51,6 +52,7 @@ class PositionDrivenNetworkEngine(SimulationModule):
         link_budget_calculator: LinkBudgetCalculator | None = None,
         link_budget_selector: ChannelBudgetSelector | None = None,
         routing_runtime: RoutingRuntime | None = None,
+        data_link_runtime: DataLinkRuntime | None = None,
         transport_runtime: TransportRuntime | None = None,
         stack_runtime: NetworkStackRuntime | None = None,
         static_links: Iterable[LinkState] = (),
@@ -102,6 +104,7 @@ class PositionDrivenNetworkEngine(SimulationModule):
         self._link_budget_calculator = link_budget_calculator
         self._link_budget_selector = link_budget_selector
         self._routing_runtime = routing_runtime
+        self._data_link_runtime = data_link_runtime
         self._transport_runtime = transport_runtime
         self._stack_runtime = stack_runtime
         self._static_links = tuple(
@@ -228,7 +231,8 @@ class PositionDrivenNetworkEngine(SimulationModule):
                     capacity=selected.capacity,
                     available=True,
                 )
-        routed = self._apply_transport(request, route)
+        linked = self._apply_data_link(request, route)
+        routed = self._apply_transport(request, linked)
         self._record_stack_trace(request, routed)
         return routed
 
@@ -271,6 +275,11 @@ class PositionDrivenNetworkEngine(SimulationModule):
         if self._transport_runtime is None:
             return route
         return self._transport_runtime.apply(request, route)
+
+    def _apply_data_link(self, request: FlowRequest, route: Route) -> Route:
+        if self._data_link_runtime is None:
+            return route
+        return self._data_link_runtime.apply(request, route)
 
     def _record_stack_trace(self, request: FlowRequest, route: Route) -> None:
         if self._stack_runtime is None:

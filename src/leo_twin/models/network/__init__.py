@@ -15,6 +15,12 @@ from leo_twin.models.network.channel import (
     shannon_capacity_mbps,
     thermal_noise_power_dbw,
 )
+from leo_twin.models.network.datalink import (
+    DataLinkDecision,
+    DataLinkProfile,
+    DataLinkRuntime,
+    default_data_link_runtime,
+)
 from leo_twin.models.network.engine import NetworkEngine
 from leo_twin.models.network.geometry import (
     AccessLinkCandidate,
@@ -47,6 +53,9 @@ __all__ = [
     "AccessLinkCandidate",
     "ApertureAntennaSpec",
     "ChannelBudgetSelector",
+    "DataLinkDecision",
+    "DataLinkProfile",
+    "DataLinkRuntime",
     "GroundEndpoint",
     "GroundEndpointIndex",
     "LayerTrace",
@@ -71,6 +80,7 @@ __all__ = [
     "aperture_antenna_beam_width_deg",
     "aperture_antenna_gain_dbi",
     "build_default_leo_protocol_stack",
+    "default_data_link_runtime",
     "default_transport_runtime",
     "free_space_path_loss_db",
     "shannon_capacity_mbps",

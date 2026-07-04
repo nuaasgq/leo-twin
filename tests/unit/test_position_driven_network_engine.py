@@ -13,12 +13,14 @@ from leo_twin.models.network import (
     RadioTerminalProfile,
     RoutingRuntime,
     build_default_leo_protocol_stack,
+    default_data_link_runtime,
     default_transport_runtime,
 )
 from leo_twin.schema import (
     AntennaProfile,
     ChannelProfile,
     ComputeNodeState,
+    DataLinkProtocol,
     EventType,
     FlowRequest,
     LinkMedium,
@@ -528,6 +530,49 @@ def test_position_driven_engine_can_apply_transport_runtime_to_route() -> None:
 
     assert compute.routes[0].latency == 1.258
     assert compute.routes[0].capacity == pytest.approx(89.546667)
+
+
+def test_position_driven_engine_can_apply_data_link_runtime_to_route() -> None:
+    kernel = SimulationKernel()
+    network = PositionDrivenNetworkEngine(
+        endpoints=(
+            GroundEndpoint(
+                endpoint_id="user-east",
+                position=(EARTH_RADIUS_KM, 0.0, 0.0),
+                min_elevation_deg=10.0,
+                max_range_km=2000.0,
+            ),
+        ),
+        compute_node_ids=("node-a",),
+        link_capacity=100.0,
+        propagation_speed_km_s=1000.0,
+        cell_size_km=1000.0,
+        data_link_runtime=default_data_link_runtime(DataLinkProtocol.SLOTTED_ALOHA),
+    )
+    metrics = MetricsSink()
+    compute = ComputeSink()
+    kernel.register_module(network)
+    kernel.register_module(metrics)
+    kernel.register_module(compute)
+    kernel.schedule_event(
+        _event("orbit", EventType.ORBIT_UPDATE.value, _state((7000.0, 0.0, 0.0)))
+    )
+    kernel.schedule_event(
+        _event(
+            "flow",
+            EventType.FLOW_ARRIVAL.value,
+            FlowRequest("flow-001", "user-east", "node-a", 10.0),
+            1.0,
+        )
+    )
+
+    kernel.run()
+
+    assert compute.routes[0].latency == pytest.approx(0.638)
+    assert compute.routes[0].capacity == pytest.approx(
+        100.0 * 0.62 * (1.0 - 22.0 / 1522.0) * 0.92
+    )
+    assert compute.routes[0].available is True
 
 
 def test_position_driven_engine_records_protocol_stack_trace_for_routed_flow() -> None:

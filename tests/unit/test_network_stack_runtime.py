@@ -7,6 +7,7 @@ from leo_twin.models.network import (
     RadioTerminalProfile,
     RoutingRuntime,
     build_default_leo_protocol_stack,
+    default_data_link_runtime,
     default_transport_runtime,
 )
 from leo_twin.schema import (
@@ -82,10 +83,10 @@ def test_stack_runtime_records_application_profile_attributes() -> None:
 
 
 def test_stack_runtime_records_data_link_mac_profile_attributes() -> None:
+    data_link = default_data_link_runtime(DataLinkProtocol.SLOTTED_ALOHA)
     runtime = NetworkStackRuntime(
-        build_default_leo_protocol_stack(
-            data_link_protocol=DataLinkProtocol.SLOTTED_ALOHA
-        )
+        build_default_leo_protocol_stack(data_link_protocol=DataLinkProtocol.SLOTTED_ALOHA),
+        data_link_profile=data_link.profile,
     )
 
     trace = runtime.process_flow(_flow(), _route())
@@ -96,6 +97,10 @@ def test_stack_runtime_records_data_link_mac_profile_attributes() -> None:
     assert attributes["frame_model"] == "fixed_slot"
     assert attributes["medium_access"] == "contention_slot"
     assert attributes["retransmission_policy"] == "deterministic_backoff_trace"
+    assert attributes["medium_access_efficiency"] == "0.620000"
+    assert attributes["collision_loss_rate"] == "0.080000"
+    assert attributes["contention_backoff_slots"] == "2"
+    assert attributes["contention_delay_s"] == "0.004000"
 
 
 def test_stack_runtime_is_deterministic_for_same_flow_and_route() -> None:
