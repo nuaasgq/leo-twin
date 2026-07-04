@@ -19,7 +19,11 @@ import {
 import "cesium/Build/Cesium/Widgets/widgets.css";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { ComputeResourceSummary, SatelliteState } from "../../core/event_types";
+import {
+  ComputeResourceSummary,
+  RuntimeSatelliteKpiSlicesV1,
+  SatelliteState
+} from "../../core/event_types";
 import { ComputeNodeRenderState, WorldSnapshot } from "../../state/snapshot_engine";
 import {
   CoverageBeamDisplaySummary,
@@ -80,6 +84,7 @@ import {
 export interface CesiumGlobeProps {
   snapshot: WorldSnapshot;
   displaySimTime: number;
+  satelliteKpiSlices?: RuntimeSatelliteKpiSlicesV1 | null;
 }
 
 const LOCAL_VISUAL_LAYER_OPTIONS: readonly {
@@ -97,7 +102,11 @@ const LOCAL_VISUAL_LAYER_OPTIONS: readonly {
   { key: "routes", label: "路由" }
 ];
 
-export function CesiumGlobe({ snapshot, displaySimTime }: CesiumGlobeProps) {
+export function CesiumGlobe({
+  snapshot,
+  displaySimTime,
+  satelliteKpiSlices
+}: CesiumGlobeProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewerRef = useRef<Viewer | null>(null);
   const latestSnapshotRef = useRef(snapshot);
@@ -176,7 +185,8 @@ export function CesiumGlobe({ snapshot, displaySimTime }: CesiumGlobeProps) {
             links: snapshot.links,
             routes: snapshot.routes,
             groundUsers: snapshot.ground_users,
-            scenarioConfig: snapshot.scenario_config
+            scenarioConfig: snapshot.scenario_config,
+            satelliteKpiSlices
           })
         : null,
     [
@@ -194,7 +204,8 @@ export function CesiumGlobe({ snapshot, displaySimTime }: CesiumGlobeProps) {
       snapshot.links,
       snapshot.routes,
       snapshot.ground_users,
-      snapshot.scenario_config
+      snapshot.scenario_config,
+      satelliteKpiSlices
     ]
   );
 

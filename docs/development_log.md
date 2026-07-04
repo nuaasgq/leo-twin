@@ -3213,3 +3213,37 @@ change.
 - Recommended follow-up:
   - Pass runtime satellite KPI slices into the Cesium selected-satellite detail
     summary so console and dashboard explain satellite KPIs from one source.
+
+## 2026-07-05 - Console Selected Satellite KPI Binding v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: pass backend `satellite_kpi_slices_v1` into the Cesium control console
+  and make selected-satellite details prefer backend slice fields for link
+  counts, route capacity/latency/loss/jitter proxies, compute FP32 load, and
+  task counts. Snapshot aggregation remains the fallback.
+- Changed files/modules:
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/3d/cesium/CesiumGlobe.tsx`
+  - `frontend/src/3d/cesium/satelliteDetailSummary.ts`
+  - `frontend/tests/satelliteVisuals.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- satelliteVisuals.test.ts appSurface.test.ts`
+    - Result: passed, 23 files / 155 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The Cesium surface did not previously receive runtime status fields, so this
+    task passes only the narrow satellite slice object instead of broadening the
+    3D component dependency on runtime control state.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - Coverage-user containment is still computed from the frontend snapshot; the
+    backend slice currently covers network/compute KPIs only.
+- Recommended follow-up:
+  - Extend backend satellite KPI slices with selected-satellite coverage counts
+    or access-user counts once the coverage/access semantics are stable.

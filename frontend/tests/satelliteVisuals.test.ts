@@ -444,6 +444,57 @@ describe("selected satellite detail summary", () => {
       routeIds: []
     });
   });
+
+  it("prefers backend runtime satellite KPI slices for selected satellite facts", () => {
+    const summary = selectedSatelliteDetailSummary({
+      satellite: satelliteA,
+      links: [],
+      routes: [],
+      groundUsers: [],
+      scenarioConfig: null,
+      satelliteKpiSlices: {
+        version: "v1",
+        mode: "TOP_ACTIVITY_LIMITED",
+        slice_limit: 64,
+        satellite_count: 1,
+        slice_count: 1,
+        slices: [
+          {
+            satellite_id: "sat-a",
+            active_link_count: 4,
+            active_access_link_count: 2,
+            active_space_link_count: 2,
+            route_count: 3,
+            available_route_count: 2,
+            route_capacity_mbps: 180,
+            route_demand_mbps: 160,
+            route_latency_avg_s: 0.045,
+            route_delay_variation_proxy_s: 0.006,
+            route_loss_proxy_rate: 0.025,
+            compute_capacity_gflops_fp32: 100,
+            compute_used_gflops_fp32: 65,
+            compute_load_ratio: 0.65,
+            running_task_count: 2,
+            finished_task_count: 7
+          }
+        ]
+      }
+    });
+
+    expect(summary).toMatchObject({
+      activeLinksLabel: "链路 4 条（接入 2 / 星间 2）",
+      routeLabel: "相关路由 3 条 / 可用 2 条",
+      routeLatencyLabel: "平均路由时延 45 ms",
+      routeCapacityLabel: "可用路由容量 180 Mbps",
+      routeLossLabel: "路由丢包代理 2.5%",
+      routeJitterLabel: "路由抖动代理 6 ms",
+      computeLoadLabel: "算力负载 65%",
+      computeCapacityLabel: "容量 65 / 100 GFLOPS FP32",
+      runningTaskLabel: "任务 运行 2 / 完成 7",
+      resourceModelLabel: "RuntimeSatelliteKpiSlicesV1"
+    });
+    expect(summary.note).toContain("runtime satellite KPI");
+  });
 });
 
 const satelliteA: SatelliteState = {

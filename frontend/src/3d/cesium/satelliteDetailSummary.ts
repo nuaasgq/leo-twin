@@ -3,6 +3,8 @@ import {
   GroundUserState,
   LinkState,
   Route,
+  RuntimeSatelliteKpiSlicesV1,
+  RuntimeSatelliteKpiSliceV1,
   SatelliteState,
   ScenarioConfig
 } from "../../core/event_types";
@@ -44,7 +46,8 @@ export function selectedSatelliteDetailSummary({
   links,
   routes,
   groundUsers,
-  scenarioConfig
+  scenarioConfig,
+  satelliteKpiSlices
 }: {
   satellite: SatelliteState;
   computeNode?: ComputeNodeRenderState | null;
@@ -53,7 +56,11 @@ export function selectedSatelliteDetailSummary({
   routes: readonly Route[];
   groundUsers: readonly GroundUserState[];
   scenarioConfig: ScenarioConfig | null;
+  satelliteKpiSlices?: RuntimeSatelliteKpiSlicesV1 | null;
 }): SelectedSatelliteDetailSummary {
+  const backendSlice = satelliteKpiSlices?.slices.find(
+    (slice) => slice.satellite_id === satellite.satellite_id
+  );
   const relatedLinks = links.filter((link) => linkTouchesSatellite(link, satellite.satellite_id));
   const activeLinks = relatedLinks.filter((link) => link.availability);
   const activeSpaceLinks = activeLinks.filter(isSpaceLink);
@@ -86,6 +93,50 @@ export function selectedSatelliteDetailSummary({
     scenarioConfig
   );
   const computeSummary = satelliteComputeSummary(computeNode, computeResourceSummary);
+  const activeLinkCount = backendSlice?.active_link_count ?? activeLinks.length;
+  const activeAccessLinkCount =
+    backendSlice?.active_access_link_count ?? activeAccessLinks.length;
+  const activeSpaceLinkCount =
+    backendSlice?.active_space_link_count ?? activeSpaceLinks.length;
+  const routeCount = backendSlice?.route_count ?? relatedRoutes.length;
+  const availableRouteCount =
+    backendSlice?.available_route_count ?? availableRoutes.length;
+  const routeLatencySeconds = backendRouteValue(
+    backendSlice,
+    "route_latency_avg_s",
+    averageRouteLatencySeconds,
+    availableRouteCount > 0
+  );
+  const routeCapacityMbps = backendSlice?.route_capacity_mbps ?? totalRouteCapacity;
+  const routeLossRate = backendRouteValue(
+    backendSlice,
+    "route_loss_proxy_rate",
+    routeLossProxy,
+    availableRouteCount > 0
+  );
+  const routeJitterSeconds = backendRouteValue(
+    backendSlice,
+    "route_delay_variation_proxy_s",
+    routeJitterProxy,
+    availableRouteCount > 1
+  );
+  const computeLoadLabel = backendSlice
+    ? `算力负载 ${formatNumber(backendSlice.compute_load_ratio * 100)}%`
+    : computeSummary
+      ? `算力负载 ${computeSummary.utilizationLabel}`
+      : "算力节点未同步";
+  const computeCapacityLabel = backendSlice
+    ? `容量 ${formatNumber(backendSlice.compute_used_gflops_fp32)} / ${formatNumber(
+        backendSlice.compute_capacity_gflops_fp32
+      )} GFLOPS FP32`
+    : computeSummary
+      ? `容量 ${computeSummary.capacityLabel}`
+      : "容量 --";
+  const runningTaskLabel = backendSlice
+    ? `任务 运行 ${backendSlice.running_task_count} / 完成 ${backendSlice.finished_task_count}`
+    : computeNode
+      ? `任务 运行 ${computeNode.running_tasks} / 完成 ${computeNode.finished_tasks}`
+      : "任务 --";
 
   return {
     satelliteId: satellite.satellite_id,
@@ -93,38 +144,53 @@ export function selectedSatelliteDetailSummary({
     simTimeLabel: `t=${formatNumber(satellite.sim_time)}s`,
     altitudeLabel: `高度 ${formatNumber(satelliteAltitudeKm(satellite))} km`,
     speedLabel: `速度 ${formatNumber(satelliteSpeedKmPerSecond(satellite))} km/s`,
-    activeLinksLabel: `链路 ${activeLinks.length} 条（接入 ${activeAccessLinks.length} / 星间 ${activeSpaceLinks.length}）`,
-    routeLabel: `相关路由 ${relatedRoutes.length} 条 / 可用 ${availableRoutes.length} 条`,
+    activeLinksLabel: `链路 ${activeLinkCount} 条（接入 ${activeAccessLinkCount} / 星间 ${activeSpaceLinkCount}）`,
+    routeLabel: `相关路由 ${routeCount} 条 / 可用 ${availableRouteCount} 条`,
     routeLatencyLabel:
-      averageRouteLatencySeconds === null
+      routeLatencySeconds === null
         ? "平均路由时延 --"
-        : `平均路由时延 ${formatNumber(averageRouteLatencySeconds * 1000)} ms`,
-    routeCapacityLabel: `可用路由容量 ${formatNumber(totalRouteCapacity)} Mbps`,
+        : `平均路由时延 ${formatNumber(routeLatencySeconds * 1000)} ms`,
+    routeCapacityLabel: `可用路由容量 ${formatNumber(routeCapacityMbps)} Mbps`,
     routeLossLabel:
-      routeLossProxy === null
+      routeLossRate === null
         ? "路由丢包代理 --"
-        : `路由丢包代理 ${formatNumber(routeLossProxy * 100)}%`,
+        : `路由丢包代理 ${formatNumber(routeLossRate * 100)}%`,
     routeJitterLabel:
-      routeJitterProxy === null
+      routeJitterSeconds === null
         ? "路由抖动代理 --"
-        : `路由抖动代理 ${formatNumber(routeJitterProxy * 1000)} ms`,
+        : `路由抖动代理 ${formatNumber(routeJitterSeconds * 1000)} ms`,
     linkUtilizationLabel:
       averageLinkUtilization === null
         ? "平均链路利用率 --"
         : `平均链路利用率 ${formatNumber(averageLinkUtilization * 100)}%`,
     coverageLabel: coverageSummary.coveredUserLabel,
-    computeLoadLabel: computeSummary
-      ? `算力负载 ${computeSummary.utilizationLabel}`
-      : "算力节点未同步",
-    computeCapacityLabel: computeSummary ? `容量 ${computeSummary.capacityLabel}` : "容量 --",
-    runningTaskLabel: computeNode
-      ? `任务 运行 ${computeNode.running_tasks} / 完成 ${computeNode.finished_tasks}`
-      : "任务 --",
-    resourceModelLabel: computeSummary?.resourceModelLabel ?? "资源模型未同步",
+    computeLoadLabel,
+    computeCapacityLabel,
+    runningTaskLabel,
+    resourceModelLabel:
+      backendSlice !== undefined
+        ? "RuntimeSatelliteKpiSlicesV1"
+        : computeSummary?.resourceModelLabel ?? "资源模型未同步",
     routeIds: relatedRoutes.slice(0, 4).map((route) => route.route_id),
     computeSummary,
-    note: "链路、路由和算力为后端 snapshot 的流级聚合态势；不是 packet-level 仿真。"
+    note:
+      backendSlice !== undefined
+        ? "链路、路由和算力优先来自后端 runtime satellite KPI 切片；不是 packet-level 仿真。"
+        : "链路、路由和算力为后端 snapshot 的流级聚合态势；不是 packet-level 仿真。"
   };
+}
+
+function backendRouteValue(
+  slice: RuntimeSatelliteKpiSliceV1 | undefined,
+  key: "route_latency_avg_s" | "route_loss_proxy_rate" | "route_delay_variation_proxy_s",
+  fallback: number | null,
+  hasBackendSample: boolean
+): number | null {
+  if (slice === undefined || !hasBackendSample) {
+    return fallback;
+  }
+  const value = slice[key];
+  return Number.isFinite(value) ? value : fallback;
 }
 
 function linkTouchesSatellite(link: LinkState, satelliteId: string): boolean {

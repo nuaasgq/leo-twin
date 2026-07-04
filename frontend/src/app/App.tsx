@@ -499,7 +499,11 @@ export function App() {
                   </div>
                 }
               >
-                <CesiumGlobe snapshot={snapshot} displaySimTime={displaySimTime} />
+                <CesiumGlobe
+                  snapshot={snapshot}
+                  displaySimTime={displaySimTime}
+                  satelliteKpiSlices={runtimeStatus.satellite_kpi_slices_v1}
+                />
               </Suspense>
             </div>
             <div className="control-dock">
