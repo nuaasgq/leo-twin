@@ -448,6 +448,33 @@ change.
   - Add product acceptance scenarios next, or target metrics/snapshot scale
     aggregation before deeper traffic/compute semantics.
 
+## 2026-07-05 - Frontend Product Summary v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: this commit (created before hash assignment)
+- Scope: display backend-derived constellation semantics in the existing
+  product control summary without changing frontend architecture.
+- Changed files/modules:
+  - `frontend/src/config_panel/ConfigPanel.tsx`
+  - `frontend/tests/configPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test`
+    - Result: passed, 22 files / 84 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - No product logic or protocol changes were needed; the frontend consumed
+    optional backend summary fields.
+  - The active local runtime config files remain modified and excluded.
+- Known remaining issues:
+  - This was a bounded UI hardening step, not a full visual redesign.
+- Recommended follow-up:
+  - Add reproducible product acceptance scenarios, then use screenshots/manual
+    QA for a broader visual polish pass.
+
 ## 2026-07-04 - Scale Firebreak v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`

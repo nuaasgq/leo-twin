@@ -141,9 +141,15 @@ describe("generatedScenarioSummaryItems", () => {
           satellite_count: 10000,
           plane_count: 40,
           satellites_per_plane: 250,
+          satellites_per_plane_distribution: Array(40).fill(250),
           total_slots: 10000,
           plane_count_explicit: true,
-          model_note: "Approximate Starlink Shell 1-like plane allocation; not exact Starlink fidelity."
+          model_note: "Approximate Starlink Shell 1-like plane allocation; not exact Starlink fidelity.",
+          altitude_m: 550000,
+          inclination_deg: 53,
+          raan_spacing_deg: 9,
+          mean_anomaly_spacing_deg: 1.44,
+          phase_policy: "SLOT_INDEX_PHASE_WITH_PLANE_OFFSET"
         },
         traffic_demand_summary: {
           traffic_class: "COMPUTE_SERVICE",
@@ -178,6 +184,8 @@ describe("generatedScenarioSummaryItems", () => {
     expect(items).toContainEqual({ label: "算力卫星", value: "64" });
     expect(items).toContainEqual({ label: "星座剖面", value: "近似 Starlink Shell 1" });
     expect(items).toContainEqual({ label: "每面卫星", value: "250" });
+    expect(items).toContainEqual({ label: "RAAN 间隔", value: "9°" });
+    expect(items).toContainEqual({ label: "相位策略", value: "槽位相位 + 面偏置" });
     expect(items).toContainEqual({ label: "业务类型", value: "通信-计算服务" });
     expect(items).toContainEqual({ label: "业务流量", value: "1,200" });
     expect(items).toContainEqual({ label: "FP32 算力", value: "640 GFLOPS" });

@@ -1197,6 +1197,17 @@ export function generatedScenarioSummaryItems(
       value: formatInteger(constellation?.satellites_per_plane ?? 0)
     },
     {
+      label: "RAAN 间隔",
+      value:
+        constellation?.raan_spacing_deg !== undefined
+          ? `${formatDecimal(constellation.raan_spacing_deg)}°`
+          : "待初始化"
+    },
+    {
+      label: "相位策略",
+      value: formatPhasePolicy(constellation?.phase_policy)
+    },
+    {
       label: "业务类型",
       value: formatTrafficClass(traffic?.traffic_class ?? config.application_protocol)
     },
@@ -1233,9 +1244,15 @@ export function generatedScenarioSummaryItems(
     { label: "噪声温度", value: formatKelvin(config.noise_temperature_k) },
     {
       label: "轨道高度",
-      value: `${formatInteger(config.semi_major_axis_km - config.earth_radius_km)} km`
+      value: `${formatInteger(
+        (constellation?.altitude_m ?? (config.semi_major_axis_km - config.earth_radius_km) * 1000) /
+          1000
+      )} km`
     },
-    { label: "倾角", value: `${formatDecimal(config.inclination_deg)}°` }
+    {
+      label: "倾角",
+      value: `${formatDecimal(constellation?.inclination_deg ?? config.inclination_deg)}°`
+    }
   ];
 }
 
@@ -1426,6 +1443,19 @@ function formatTrafficClass(value: string | undefined): string {
     return "批量下传";
   }
   return "数据传输";
+}
+
+function formatPhasePolicy(value: string | undefined): string {
+  if (value === "SLOT_INDEX_PHASE_WITH_PLANE_OFFSET") {
+    return "槽位相位 + 面偏置";
+  }
+  if (value === "SEEDED_RAAN_AND_MEAN_ANOMALY_OFFSETS") {
+    return "种子偏置相位";
+  }
+  if (value === "DETERMINISTIC_PLANE_SLOT_PHASE") {
+    return "确定性面槽相位";
+  }
+  return value ?? "待初始化";
 }
 
 function formatModelAssumption(value: string | undefined): string {
