@@ -214,7 +214,19 @@ export interface ComputeResourceSummary {
   compute_node_count: number;
   legacy_capacity_per_node: number;
   cpu_gflops_fp32_per_node: number;
+  cpu_gflops_fp64_per_node: number;
+  gpu_tflops_fp32_per_node: number;
+  gpu_tflops_fp16_per_node: number;
+  npu_tops_int8_per_node: number;
+  memory_gb_per_node: number;
+  storage_gb_per_node: number;
   total_cpu_gflops_fp32: number;
+  total_cpu_gflops_fp64: number;
+  total_gpu_tflops_fp32: number;
+  total_gpu_tflops_fp16: number;
+  total_npu_tops_int8: number;
+  total_memory_gb: number;
+  total_storage_gb: number;
   capacity_unit: string;
   compatibility_note: string;
 }

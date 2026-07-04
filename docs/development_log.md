@@ -5,6 +5,43 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Compute Resource Vector Summary v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending in this commit
+- Scope: expose full compute resource vector dimensions in backend-derived
+  summaries and display GPU, NPU, memory, and storage dimensions in the
+  frontend generated scenario summary while preserving legacy FP32 capacity
+  compatibility.
+- Changed files/modules:
+  - `src/leo_twin/services/derived_summary.py`
+  - `tests/unit/test_backend_derived_summary.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/config_panel/ConfigPanel.tsx`
+  - `frontend/tests/configPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_backend_derived_summary.py tests/unit/test_compute_resource_model.py -q`
+    - Result: passed, 12 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- configPanel.test.ts`
+    - Result: passed, 22 files / 99 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - Current SEES runtime config still supplies a legacy scalar compute capacity,
+    so non-FP32 lanes are surfaced as zero until a later config task adds
+    explicit GPU/NPU/memory/storage fields.
+  - The active local runtime config files remain modified and excluded.
+- Known remaining issues:
+  - Runtime compute-node state still carries scalar capacity for compatibility.
+    The vector is currently visible in backend-derived generated scenario
+    semantics, not live per-node scheduling state.
+- Recommended follow-up:
+  - Add explicit compute resource vector config fields and map satellite-hosted
+    compute nodes to vector capacities in runtime snapshots.
+
 ## 2026-07-05 - Backend Coverage Beam Summary v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`

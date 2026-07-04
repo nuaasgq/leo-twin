@@ -187,7 +187,19 @@ describe("generatedScenarioSummaryItems", () => {
           compute_node_count: 64,
           legacy_capacity_per_node: 10,
           cpu_gflops_fp32_per_node: 10,
+          cpu_gflops_fp64_per_node: 0,
+          gpu_tflops_fp32_per_node: 0,
+          gpu_tflops_fp16_per_node: 0,
+          npu_tops_int8_per_node: 0,
+          memory_gb_per_node: 0,
+          storage_gb_per_node: 0,
           total_cpu_gflops_fp32: 640,
+          total_cpu_gflops_fp64: 0,
+          total_gpu_tflops_fp32: 0,
+          total_gpu_tflops_fp16: 0,
+          total_npu_tops_int8: 0,
+          total_memory_gb: 0,
+          total_storage_gb: 0,
           capacity_unit: "GFLOPS FP32",
           compatibility_note: "Legacy scalar capacity maps to cpu_gflops_fp32."
         },
@@ -226,6 +238,10 @@ describe("generatedScenarioSummaryItems", () => {
     expect(items).toContainEqual({ label: "轨道面", value: "40" });
     expect(items).toContainEqual({ label: "传输协议", value: "UDP" });
     expect(items).toContainEqual({ label: "轨道高度", value: "550 km" });
+    expect(items).toContainEqual({ label: "GPU FP32", value: "0 TFLOPS" });
+    expect(items).toContainEqual({ label: "GPU FP16", value: "0 TFLOPS" });
+    expect(items).toContainEqual({ label: "NPU INT8", value: "0 TOPS" });
+    expect(items).toContainEqual({ label: "内存/存储", value: "0 / 0 GB" });
     expect(items).toContainEqual({ label: "波束模式", value: "中心 + 六邻区蜂窝" });
     expect(items).toContainEqual({ label: "默认波束", value: "7 个" });
     expect(items).toContainEqual({ label: "波束半径", value: "160 km" });

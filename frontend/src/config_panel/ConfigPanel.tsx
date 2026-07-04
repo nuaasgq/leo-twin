@@ -1228,6 +1228,24 @@ export function generatedScenarioSummaryItems(
       value: formatModelAssumption(backendSummary?.model_assumptions?.[0])
     },
     {
+      label: "GPU FP32",
+      value: `${formatDecimal(compute?.total_gpu_tflops_fp32 ?? 0)} TFLOPS`
+    },
+    {
+      label: "GPU FP16",
+      value: `${formatDecimal(compute?.total_gpu_tflops_fp16 ?? 0)} TFLOPS`
+    },
+    {
+      label: "NPU INT8",
+      value: `${formatDecimal(compute?.total_npu_tops_int8 ?? 0)} TOPS`
+    },
+    {
+      label: "内存/存储",
+      value: `${formatDecimal(compute?.total_memory_gb ?? 0)} / ${formatDecimal(
+        compute?.total_storage_gb ?? 0
+      )} GB`
+    },
+    {
       label: "波束模式",
       value: formatBeamPattern(coverage?.beam_pattern)
     },
