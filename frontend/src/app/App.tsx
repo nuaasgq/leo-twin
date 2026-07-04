@@ -219,6 +219,12 @@ export function App() {
   }, [closeStreams, loadControlState, resetWorld, startStreams]);
 
   const scenarioControls = scenarioControlValues(scenarioConfig, snapshot.satellites.length);
+  const runtimeRibbon = buildRuntimeRibbonSummary({
+    simTime: snapshot.last_sim_time,
+    eventCount: snapshot.event_count,
+    runtimeStatus,
+    scenario: scenarioControls
+  });
 
   const sendRuntimeControl = useCallback(
     (action: RuntimeAction, payload: Record<string, unknown> = {}) => {
@@ -231,8 +237,13 @@ export function App() {
     <main className="app-shell">
       <header className="topbar">
         <div className="brand-block">
-          <div className="brand-title">LEO-Twin</div>
-          <div className="brand-subtitle">低轨卫星互联网通信-算力数字孪生平台</div>
+          <div className="brand-mark" aria-hidden="true">
+            LT
+          </div>
+          <div className="brand-copy">
+            <div className="brand-title">LEO-Twin</div>
+            <div className="brand-subtitle">低轨卫星互联网通信-算力数字孪生平台</div>
+          </div>
         </div>
         <div className="surface-tabs" aria-label="前端界面">
           <a className={`surface-tab ${surface === "control" ? "active" : ""}`} href="/">
@@ -281,9 +292,47 @@ export function App() {
                 <div className="surface-kicker">三维展示与运行控制</div>
                 <h1>星座运行视图</h1>
               </div>
-              <div className="surface-status">
-                <span>{runtimeStatusLabel(runtimeStatus.status)}</span>
-                <strong>{runtimeStatus.speed_factor}x</strong>
+              <div className="surface-status-stack">
+                <div className={`surface-status ${runtimeStatus.status.toLowerCase()}`}>
+                  <span>{runtimeStatusLabel(runtimeStatus.status)}</span>
+                  <strong>{runtimeStatus.speed_factor}x</strong>
+                </div>
+                <a className="surface-action-link" href="/dashboard">
+                  查看数据面板
+                </a>
+              </div>
+            </div>
+            <div className="simulation-ribbon" aria-label="仿真进程">
+              <div className="simulation-progress-block">
+                <div className="summary-title-row">
+                  <span>仿真进程</span>
+                  <strong>{runtimeRibbon.percentLabel}</strong>
+                </div>
+                <progress
+                  value={runtimeRibbon.percent}
+                  max="100"
+                  aria-label="三维控制台仿真进度"
+                />
+              </div>
+              <div className="simulation-ribbon-metrics">
+                <div>
+                  <span>仿真时间</span>
+                  <strong>
+                    {runtimeRibbon.elapsedLabel} / {runtimeRibbon.durationLabel}
+                  </strong>
+                </div>
+                <div>
+                  <span>事件数</span>
+                  <strong>{runtimeRibbon.eventCountLabel}</strong>
+                </div>
+                <div>
+                  <span>卫星规模</span>
+                  <strong>{runtimeRibbon.satelliteCountLabel}</strong>
+                </div>
+                <div>
+                  <span>用户规模</span>
+                  <strong>{runtimeRibbon.userCountLabel}</strong>
+                </div>
               </div>
             </div>
             <div className="globe-panel">
@@ -336,6 +385,41 @@ export function surfaceFromPathname(pathname: string): FrontendSurface {
 export function standaloneDashboardHref(origin: string): string {
   const normalizedOrigin = origin.endsWith("/") ? origin.slice(0, -1) : origin;
   return `${normalizedOrigin}/dashboard`;
+}
+
+export interface RuntimeRibbonSummary {
+  percent: number;
+  percentLabel: string;
+  elapsedLabel: string;
+  durationLabel: string;
+  eventCountLabel: string;
+  satelliteCountLabel: string;
+  userCountLabel: string;
+}
+
+export function buildRuntimeRibbonSummary({
+  simTime,
+  eventCount,
+  runtimeStatus,
+  scenario
+}: {
+  simTime: number;
+  eventCount: number;
+  runtimeStatus: RuntimeStatusPayload;
+  scenario: ScenarioControlValues;
+}): RuntimeRibbonSummary {
+  const duration = Math.max(1, runtimeStatus.duration);
+  const elapsed = Math.min(Math.max(0, simTime), duration);
+  const percent = Math.min(100, Math.max(0, (elapsed / duration) * 100));
+  return {
+    percent,
+    percentLabel: `${formatPercent(percent)}%`,
+    elapsedLabel: formatDurationCompact(elapsed),
+    durationLabel: formatDurationCompact(duration),
+    eventCountLabel: formatInteger(eventCount),
+    satelliteCountLabel: formatInteger(scenario.satellite_count),
+    userCountLabel: formatInteger(scenario.user_count)
+  };
 }
 
 export function runtimeStatusRequiresStreams(
@@ -544,6 +628,29 @@ function runtimeStatusLabel(status: RuntimeStatusPayload["status"]): string {
     return "已暂停";
   }
   return "已停止";
+}
+
+function formatInteger(value: number): string {
+  return Math.round(value).toLocaleString("zh-CN");
+}
+
+function formatPercent(value: number): string {
+  return value.toLocaleString("zh-CN", {
+    maximumFractionDigits: 1,
+    minimumFractionDigits: 0
+  });
+}
+
+function formatDurationCompact(seconds: number): string {
+  if (seconds < 60) {
+    return `${Math.round(seconds)}秒`;
+  }
+  if (seconds < 3600) {
+    return `${Math.floor(seconds / 60)}分${Math.round(seconds % 60)}秒`;
+  }
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  return `${hours}时${minutes}分`;
 }
 
 function defaultRuntimeStatus(): RuntimeStatusPayload {

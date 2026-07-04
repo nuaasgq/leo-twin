@@ -386,6 +386,28 @@ export function ConfigPanel({
             </button>
           </div>
 
+          <div className="execution-parameter-grid">
+            <div className="control-group emphasized-control">
+              <label className="control-label" htmlFor="duration-seconds">
+                仿真时长
+              </label>
+              <div className="control-row">
+                <input
+                  id="duration-seconds"
+                  type="range"
+                  min="60"
+                  max="86400"
+                  step="60"
+                  value={durationSeconds}
+                  onChange={(event) =>
+                    setDurationSeconds(Number(event.currentTarget.value))
+                  }
+                />
+                <output>{formatDuration(durationSeconds)}</output>
+              </div>
+            </div>
+          </div>
+
           <div className="runtime-progress" aria-label="仿真进度">
             <div className="summary-title-row">
               <span>仿真进度</span>
@@ -679,24 +701,6 @@ export function ConfigPanel({
             onChange={(event) => setSpeedFactor(Number(event.currentTarget.value))}
           />
           <output>{speedFactor}x</output>
-        </div>
-      </div>
-
-      <div className="control-group">
-        <label className="control-label" htmlFor="duration-seconds">
-          仿真时长
-        </label>
-        <div className="control-row">
-          <input
-            id="duration-seconds"
-            type="range"
-            min="60"
-            max="86400"
-            step="60"
-            value={durationSeconds}
-            onChange={(event) => setDurationSeconds(Number(event.currentTarget.value))}
-          />
-          <output>{formatDuration(durationSeconds)}</output>
         </div>
       </div>
 

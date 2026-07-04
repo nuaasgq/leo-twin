@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { buildDataPanelSummary } from "../src/dashboard/data_panel/DataPanel";
+import {
+  buildDataPanelRuntimeProgress,
+  buildDataPanelSummary
+} from "../src/dashboard/data_panel/DataPanel";
 import { WorldSnapshot } from "../src/state/snapshot_engine";
 
 describe("buildDataPanelSummary", () => {
@@ -158,6 +161,21 @@ describe("buildDataPanelSummary", () => {
     expect(summary.averageRouteHops).toBe(0);
     expect(summary.maxRouteHops).toBe(0);
     expect(summary.couplingHealth).toBe(0);
+  });
+});
+
+describe("buildDataPanelRuntimeProgress", () => {
+  it("formats the standalone data panel simulation progress", () => {
+    expect(buildDataPanelRuntimeProgress(3661, 7200)).toEqual({
+      percent: 50.84722222222222,
+      percentLabel: "50.8%",
+      elapsedLabel: "1时1分",
+      durationLabel: "2时0分"
+    });
+  });
+
+  it("clamps the data panel progress to the configured duration", () => {
+    expect(buildDataPanelRuntimeProgress(900, 600).percentLabel).toBe("100%");
   });
 });
 

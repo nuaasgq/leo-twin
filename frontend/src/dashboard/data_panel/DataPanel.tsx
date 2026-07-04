@@ -55,6 +55,10 @@ export const DataPanel = memo(function DataPanel({
   const configuredScale = generatedConfig
     ? `${generatedConfig.satellite_count} 星 / ${generatedConfig.user_count} 用户`
     : "等待初始化";
+  const runtimeProgress = buildDataPanelRuntimeProgress(
+    summary.simTime,
+    runtimeStatus.duration
+  );
 
   return (
     <section className="data-panel" aria-label="独立数据态势面板">
@@ -62,7 +66,12 @@ export const DataPanel = memo(function DataPanel({
         <div className="data-panel-title-block">
           <div className="surface-kicker">全链路实时观测</div>
           <h1>数据态势面板</h1>
-          <p>轨道、网络、算力与事件流联动状态</p>
+          <p>轨道、网络、算力与事件流联动状态。该页面独立承载数据分析，不与三维控制台混排。</p>
+          <div className="data-panel-actions">
+            <a href="/" className="data-panel-action">
+              返回三维控制台
+            </a>
+          </div>
         </div>
         <div className="data-panel-runtime">
           <div>
@@ -84,6 +93,21 @@ export const DataPanel = memo(function DataPanel({
         </div>
       </div>
 
+      <div className="data-panel-progress" aria-label="仿真进度概览">
+        <div className="summary-title-row">
+          <span>仿真进度</span>
+          <strong>{runtimeProgress.percentLabel}</strong>
+        </div>
+        <progress value={runtimeProgress.percent} max="100" aria-label="数据面板仿真进度" />
+        <div className="runtime-progress-meta">
+          <span>
+            {runtimeProgress.elapsedLabel} / {runtimeProgress.durationLabel}
+          </span>
+          <span>{summary.eventCount} 个离散事件</span>
+        </div>
+      </div>
+
+      <div className="data-panel-section-title">核心运行指标</div>
       <div className="data-panel-summary">
         <KpiPanel
           label="仿真时间"
@@ -127,6 +151,7 @@ export const DataPanel = memo(function DataPanel({
         />
       </div>
 
+      <div className="data-panel-section-title">跨域联动分析</div>
       <div className="data-panel-grid">
         <DomainSummary snapshot={snapshot} />
         <TopologyChangePanel snapshot={snapshot} />
@@ -192,6 +217,28 @@ export function buildDataPanelSummary(snapshot: WorldSnapshot): DataPanelSummary
   };
 }
 
+export interface DataPanelRuntimeProgress {
+  percent: number;
+  percentLabel: string;
+  elapsedLabel: string;
+  durationLabel: string;
+}
+
+export function buildDataPanelRuntimeProgress(
+  simTime: number,
+  durationSeconds: number
+): DataPanelRuntimeProgress {
+  const duration = Math.max(1, durationSeconds);
+  const elapsed = Math.min(Math.max(0, simTime), duration);
+  const percent = Math.min(100, Math.max(0, (elapsed / duration) * 100));
+  return {
+    percent,
+    percentLabel: `${formatPercent(percent)}%`,
+    elapsedLabel: formatDurationCompact(elapsed),
+    durationLabel: formatDurationCompact(duration)
+  };
+}
+
 function average(values: readonly number[]): number {
   if (values.length === 0) {
     return 0;
@@ -247,4 +294,23 @@ function runtimeModeLabel(mode: RuntimeStatusPayload["mode"]): string {
     return "暂停模式";
   }
   return "实时模式";
+}
+
+function formatPercent(value: number): string {
+  return value.toLocaleString("zh-CN", {
+    maximumFractionDigits: 1,
+    minimumFractionDigits: 0
+  });
+}
+
+function formatDurationCompact(seconds: number): string {
+  if (seconds < 60) {
+    return `${Math.round(seconds)}秒`;
+  }
+  if (seconds < 3600) {
+    return `${Math.floor(seconds / 60)}分${Math.round(seconds % 60)}秒`;
+  }
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  return `${hours}时${minutes}分`;
 }

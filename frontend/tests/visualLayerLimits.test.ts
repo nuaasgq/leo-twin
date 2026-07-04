@@ -7,6 +7,8 @@ describe("visualLayerLimits", () => {
   it("enables bounded network visual layers by default", () => {
     expect(visualLayerLimits(null)).toEqual({
       showSatellites: true,
+      satelliteIconRenderLimit: 96,
+      orbitTrackRenderLimit: 48,
       beamRenderLimit: 0,
       groundUserRenderLimit: 80,
       linkRenderLimit: 96,
@@ -28,6 +30,8 @@ describe("visualLayerLimits", () => {
 
     expect(visualLayerLimits(config)).toEqual({
       showSatellites: false,
+      satelliteIconRenderLimit: 0,
+      orbitTrackRenderLimit: 0,
       beamRenderLimit: 0,
       groundUserRenderLimit: 0,
       linkRenderLimit: 0,

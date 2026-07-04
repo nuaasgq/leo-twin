@@ -2,6 +2,8 @@ import { ScenarioConfig } from "../../core/event_types";
 
 export interface VisualLayerLimits {
   showSatellites: boolean;
+  satelliteIconRenderLimit: number;
+  orbitTrackRenderLimit: number;
   beamRenderLimit: number;
   groundUserRenderLimit: number;
   linkRenderLimit: number;
@@ -17,6 +19,8 @@ export function visualLayerLimits(
   const showUsers = visualization?.users ?? true;
   return {
     showSatellites,
+    satelliteIconRenderLimit: showSatellites ? 96 : 0,
+    orbitTrackRenderLimit: showSatellites ? 48 : 0,
     beamRenderLimit: 0,
     groundUserRenderLimit: showUsers ? 80 : 0,
     linkRenderLimit: showLinks ? 96 : 0,

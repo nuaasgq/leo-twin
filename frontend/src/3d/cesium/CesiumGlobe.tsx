@@ -25,7 +25,11 @@ import {
   upsertLinkEntity,
   upsertRouteEntity
 } from "../link_renderer/linkEntities";
-import { SatellitePrimitiveBatch } from "../orbit_renderer/satelliteEntities";
+import {
+  SatellitePrimitiveBatch,
+  upsertSatelliteIconEntity,
+  upsertSatelliteOrbitEntity
+} from "../orbit_renderer/satelliteEntities";
 import { visualLayerLimits } from "./renderLimits";
 
 export interface CesiumGlobeProps {
@@ -38,6 +42,8 @@ export function CesiumGlobe({ snapshot }: CesiumGlobeProps) {
   const latestSnapshotRef = useRef(snapshot);
   const satelliteBatchRef = useRef<SatellitePrimitiveBatch | null>(null);
   const beamCache = useRef(new Map<string, Entity>());
+  const satelliteIconCache = useRef(new Map<string, Entity>());
+  const orbitTrackCache = useRef(new Map<string, Entity>());
   const userCache = useRef(new Map<string, Entity>());
   const linkCache = useRef(new Map<string, Entity>());
   const routeCache = useRef(new Map<string, Entity>());
@@ -98,6 +104,12 @@ export function CesiumGlobe({ snapshot }: CesiumGlobeProps) {
         viewer.scene.primitives.remove(satellitePrimitives);
       }
       satelliteBatchRef.current = null;
+      satelliteIconCache.current.clear();
+      orbitTrackCache.current.clear();
+      beamCache.current.clear();
+      userCache.current.clear();
+      linkCache.current.clear();
+      routeCache.current.clear();
       if (!viewer.isDestroyed()) {
         viewer.destroy();
       }
@@ -119,6 +131,8 @@ export function CesiumGlobe({ snapshot }: CesiumGlobeProps) {
       setRenderError(null);
       renderCesiumSnapshot(viewer.entities, snapshot, {
         satellites: satelliteBatch,
+        satelliteIcons: satelliteIconCache.current,
+        orbitTracks: orbitTrackCache.current,
         beams: beamCache.current,
         users: userCache.current,
         links: linkCache.current,
@@ -160,6 +174,8 @@ function focusEarthOverview(viewer: Viewer): void {
 
 interface RenderCaches {
   satellites: SatellitePrimitiveBatch;
+  satelliteIcons: Map<string, Entity>;
+  orbitTracks: Map<string, Entity>;
   beams: Map<string, Entity>;
   users: Map<string, Entity>;
   links: Map<string, Entity>;
@@ -177,6 +193,22 @@ export function renderCesiumSnapshot(
   const beamEntityIds = new Set<string>();
 
   caches.satellites.update(limits.showSatellites ? snapshot.satellites : []);
+
+  const satelliteIconEntityIds = new Set<string>();
+  for (const satellite of snapshot.satellites.slice(0, limits.satelliteIconRenderLimit)) {
+    const id = `satellite-icon:${satellite.satellite_id}`;
+    satelliteIconEntityIds.add(id);
+    upsertSatelliteIconEntity(entities, caches.satelliteIcons, satellite);
+  }
+  pruneEntities(entities, caches.satelliteIcons, satelliteIconEntityIds);
+
+  const orbitTrackEntityIds = new Set<string>();
+  for (const satellite of snapshot.satellites.slice(0, limits.orbitTrackRenderLimit)) {
+    const id = `satellite-orbit:${satellite.satellite_id}`;
+    orbitTrackEntityIds.add(id);
+    upsertSatelliteOrbitEntity(entities, caches.orbitTracks, satellite);
+  }
+  pruneEntities(entities, caches.orbitTracks, orbitTrackEntityIds);
 
   for (const satellite of snapshot.satellites.slice(0, limits.beamRenderLimit)) {
     const beamId = `beam:${satellite.satellite_id}`;
