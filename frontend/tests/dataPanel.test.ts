@@ -420,6 +420,8 @@ describe("buildDataPanelNetworkKpiSource", () => {
         {
           version: "v1",
           sample_count: 1,
+          tail_sample_source: "CURRENT_METRICS_SUMMARY",
+          tail_sample_source_label: "当前指标摘要同步",
           samples: [
             {
               sim_time: 10,
@@ -435,7 +437,7 @@ describe("buildDataPanelNetworkKpiSource", () => {
     ).toEqual({
       sourceLabel: "后端实时 KPI 序列",
       modelNote: "后端流级代理指标；未进行包级仿真。",
-      caveats: []
+      caveats: ["尾点：当前指标摘要同步"]
     });
   });
 
@@ -540,17 +542,36 @@ describe("buildDataPanelNetworkKpiSource", () => {
 describe("buildDataPanelNetworkKpiCaveats", () => {
   it("maps backend KPI semantic fields into compact dashboard caveats", () => {
     expect(
-      buildDataPanelNetworkKpiCaveats({
-        network_quality_metric_model: "FLOW_LEVEL_PROXY",
-        network_quality_loss_zero_reason_label:
-          "路由阻塞、失败流、链路拥塞和业务压力均未触发损耗代理",
-        network_quality_delay_variation_zero_reason_label:
-          "时延样本不足，无法形成离散度代理"
-      })
+      buildDataPanelNetworkKpiCaveats(
+        {
+          network_quality_metric_model: "FLOW_LEVEL_PROXY",
+          network_quality_loss_zero_reason_label:
+            "路由阻塞、失败流、链路拥塞和业务压力均未触发损耗代理",
+          network_quality_delay_variation_zero_reason_label:
+            "时延样本不足，无法形成离散度代理"
+        },
+        {
+          version: "v1",
+          sample_count: 1,
+          tail_sample_source: "CURRENT_METRICS_SUMMARY",
+          tail_sample_source_label: "当前指标摘要同步",
+          samples: [
+            {
+              sim_time: 10,
+              network_effective_throughput_mbps: 150,
+              network_effective_latency_s: 0.11,
+              network_effective_loss_proxy_rate: 0.04,
+              network_effective_delay_variation_s: 0.006,
+              compute_resource_used_gflops_fp32: 2500
+            }
+          ]
+        }
+      )
     ).toEqual([
       "指标模型：后端流级代理",
       "丢包率：路由阻塞、失败流、链路拥塞和业务压力均未触发损耗代理",
-      "抖动：时延样本不足，无法形成离散度代理"
+      "抖动：时延样本不足，无法形成离散度代理",
+      "尾点：当前指标摘要同步"
     ]);
   });
 

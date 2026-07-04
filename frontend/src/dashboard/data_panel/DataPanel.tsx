@@ -1191,7 +1191,7 @@ export function buildDataPanelNetworkKpiSource(
     return {
       sourceLabel: "后端实时 KPI 序列",
       modelNote: backendNote,
-      caveats: buildDataPanelNetworkKpiCaveats(backendMetrics)
+      caveats: buildDataPanelNetworkKpiCaveats(backendMetrics, backendKpiTimeSeries)
     };
   }
   if ((snapshot.metrics_summary.network.kpiSeries ?? []).length > 0) {
@@ -1216,10 +1216,11 @@ export function buildDataPanelNetworkKpiSource(
 }
 
 export function buildDataPanelNetworkKpiCaveats(
-  metrics: RuntimeMetricsSummary | null | undefined
+  metrics: RuntimeMetricsSummary | null | undefined,
+  backendKpiTimeSeries: RuntimeKpiTimeSeriesV1 | null | undefined = undefined
 ): readonly string[] {
   if (metrics === null || metrics === undefined) {
-    return [];
+    return buildDataPanelKpiTailCaveats(backendKpiTimeSeries);
   }
   const caveats: string[] = [];
   if (metricString(metrics, "network_quality_metric_model") === "FLOW_LEVEL_PROXY") {
@@ -1236,7 +1237,21 @@ export function buildDataPanelNetworkKpiCaveats(
   if (jitterReason && jitterReason !== "当前代理指标为正值") {
     caveats.push(`抖动：${jitterReason}`);
   }
+  caveats.push(...buildDataPanelKpiTailCaveats(backendKpiTimeSeries));
   return caveats;
+}
+
+function buildDataPanelKpiTailCaveats(
+  backendKpiTimeSeries: RuntimeKpiTimeSeriesV1 | null | undefined
+): readonly string[] {
+  if ((backendKpiTimeSeries?.samples ?? []).length === 0) {
+    return [];
+  }
+  const tailLabel = backendKpiTimeSeries?.tail_sample_source_label;
+  if (typeof tailLabel !== "string" || tailLabel.trim().length === 0) {
+    return [];
+  }
+  return [`尾点：${tailLabel}`];
 }
 
 export function buildDataPanelNetworkFormulaInputs(

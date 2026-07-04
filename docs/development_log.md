@@ -2660,3 +2660,44 @@ change.
   - Add a dashboard-side badge when the latest time-series point is synthesized
     from the current metrics summary rather than from the historical sampling
     interval.
+
+## 2026-07-05 - KPI Tail Source Notice v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add backend and frontend transparency for the `kpi_time_series_v1`
+  tail sample source so users can see when the chart tail is synchronized from
+  the current metrics summary.
+- Changed files/modules:
+  - `src/leo_twin/services/metrics/collector.py`
+  - `examples/integration_demo/control_plane.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `tests/unit/test_metrics_module.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_metrics_module.py tests/integration/test_runtime_session_control.py -q`
+    - Result: passed, 27 tests.
+  - `python -m pytest tests/integration/test_live_runtime_streaming.py -q`
+    - Result: passed, 8 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 23 files / 139 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The dashboard should not silently mix historical samples and a current
+    summary tail point, so the backend now exposes `tail_sample_source` and
+    `tail_sample_source_label` and the frontend renders the label as a compact
+    caveat.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The tail label is descriptive only; the chart still displays flow-level
+    proxy metrics rather than packet-level measurements.
+- Recommended follow-up:
+  - Add a small dashboard control to switch between historical-only KPI series
+    and current-summary-tail series for debugging.

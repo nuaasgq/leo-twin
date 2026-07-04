@@ -752,6 +752,8 @@ def test_metrics_collector_publishes_backend_kpi_time_series() -> None:
 
     assert series["version"] == "v1"
     assert series["sample_count"] == 2
+    assert series["tail_sample_source"] == "CURRENT_METRICS_SUMMARY"
+    assert series["tail_sample_source_label"] == "当前指标摘要同步"
     assert series["samples"][-1] == {
         "sim_time": 2.0,
         "network_effective_throughput_mbps": 100.0,
@@ -806,6 +808,8 @@ def test_metrics_collector_kpi_time_series_refreshes_current_tail_sample() -> No
     series = collector.kpi_time_series()
 
     assert series["sample_count"] == 2
+    assert series["tail_sample_source"] == "CURRENT_METRICS_SUMMARY"
+    assert series["tail_sample_source_label"] == "当前指标摘要同步"
     assert series["samples"][-1]["sim_time"] == 2.0
     assert series["samples"][-1]["network_effective_loss_proxy_rate"] == 0.12
     assert series["samples"][-1][

@@ -273,6 +273,8 @@ class MetricsCollector:
         return {
             "version": "v1",
             "sample_count": len(samples),
+            "tail_sample_source": "CURRENT_METRICS_SUMMARY",
+            "tail_sample_source_label": "当前指标摘要同步",
             "samples": samples,
         }
 

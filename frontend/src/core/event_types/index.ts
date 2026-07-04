@@ -403,6 +403,8 @@ export type RuntimeMetricsSummary = Record<string, RuntimeMetricsSummaryValue>;
 export interface RuntimeKpiTimeSeriesV1 {
   version: "v1" | string;
   sample_count?: number;
+  tail_sample_source?: string;
+  tail_sample_source_label?: string;
   samples: readonly RuntimeKpiSampleV1[];
 }
 

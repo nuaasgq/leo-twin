@@ -366,7 +366,13 @@ class DemoControlPlane:
 
     def _kpi_time_series_json(self) -> dict[str, Any]:
         if self._runtime_context is None:
-            return {"version": "v1", "sample_count": 0, "samples": ()}
+            return {
+                "version": "v1",
+                "sample_count": 0,
+                "tail_sample_source": "NO_RUNTIME_SESSION",
+                "tail_sample_source_label": "等待运行时指标",
+                "samples": (),
+            }
         return dict(self._runtime_context.metrics.kpi_time_series())
 
     def _nack(self, command: str, error: str) -> dict[str, Any]:

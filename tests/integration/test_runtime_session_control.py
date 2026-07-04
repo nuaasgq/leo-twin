@@ -169,6 +169,8 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
     kpi_series = status_after_tick["kpi_time_series_v1"]
     assert kpi_series["version"] == "v1"
     assert kpi_series["sample_count"] == len(kpi_series["samples"])
+    assert kpi_series["tail_sample_source"] == "CURRENT_METRICS_SUMMARY"
+    assert kpi_series["tail_sample_source_label"] == "当前指标摘要同步"
     assert kpi_series["samples"]
     assert kpi_series["samples"] == sorted(
         kpi_series["samples"],
