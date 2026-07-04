@@ -413,6 +413,12 @@ def test_metrics_collector_reports_compute_resource_pool_proxy() -> None:
                 capacity=20.0,
                 available_capacity=5.0,
                 status="BUSY",
+                cpu_gflops_fp64=4.0,
+                gpu_tflops_fp32=2.0,
+                gpu_tflops_fp16=4.0,
+                npu_tops_int8=8.0,
+                memory_gb=16.0,
+                storage_gb=256.0,
             ),
             "compute",
         ),
@@ -426,6 +432,12 @@ def test_metrics_collector_reports_compute_resource_pool_proxy() -> None:
                 capacity=10.0,
                 available_capacity=10.0,
                 status="IDLE",
+                cpu_gflops_fp64=2.0,
+                gpu_tflops_fp32=1.0,
+                gpu_tflops_fp16=2.0,
+                npu_tops_int8=4.0,
+                memory_gb=8.0,
+                storage_gb=128.0,
             ),
             "compute",
         ),
@@ -440,10 +452,22 @@ def test_metrics_collector_reports_compute_resource_pool_proxy() -> None:
     assert summary["compute_resource_total_gflops_fp32"] == 30.0
     assert summary["compute_resource_available_gflops_fp32"] == 15.0
     assert summary["compute_resource_used_gflops_fp32"] == 15.0
+    assert summary["compute_resource_total_gflops_fp64"] == 6.0
+    assert summary["compute_resource_total_gpu_tflops_fp32"] == 3.0
+    assert summary["compute_resource_total_gpu_tflops_fp16"] == 6.0
+    assert summary["compute_resource_total_npu_tops_int8"] == 12.0
+    assert summary["compute_resource_total_memory_gb"] == 24.0
+    assert summary["compute_resource_total_storage_gb"] == 384.0
+    assert summary["compute_resource_vector_capacity_reported"] is True
+    assert (
+        summary["compute_resource_vector_utilization_mode"]
+        == "SCALAR_FP32_AVAILABLE_ONLY"
+    )
     assert summary["compute_resource_utilization"] == pytest.approx(0.5)
     assert summary["compute_resource_unit"] == "GFLOPS FP32"
     assert summary["compute_resource_proxy_note"] == (
-        "Legacy scalar compute capacity maps to FP32 GFLOPS."
+        "Legacy scalar compute capacity maps to FP32 GFLOPS; "
+        "resource-vector fields currently report capacity totals only."
     )
 
 

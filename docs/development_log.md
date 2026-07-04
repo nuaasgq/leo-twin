@@ -5,6 +5,36 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Compute Resource Metrics Summary v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending in this commit
+- Scope: extend backend `MetricsCollector.summary()` with deterministic
+  compute resource-vector capacity totals while keeping dynamic utilization
+  explicitly scoped to legacy scalar FP32 availability.
+- Changed files/modules:
+  - `src/leo_twin/services/metrics/collector.py`
+  - `tests/unit/test_metrics_module.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_metrics_module.py -q`
+    - Result: passed, 8 tests.
+  - `python -m pytest tests/integration/test_config_control.py::test_frontend_control_messages_are_processed tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer -q`
+    - Result: passed, 2 tests.
+  - `git diff --check`
+    - Result: passed with only CRLF warnings for excluded local runtime config
+      files.
+- Problems encountered:
+  - There is no per-resource available/used field in `ComputeNodeState` yet, so
+    GPU/NPU/memory/storage utilization was not fabricated. The summary exposes
+    totals and a deterministic `SCALAR_FP32_AVAILABLE_ONLY` utilization mode.
+- Known remaining issues:
+  - Frontend dashboard still reads the scalar FP32 pool for dynamic usage.
+  - Per-lane usage requires a separate compute-state contract update.
+- Recommended follow-up:
+  - Add optional per-resource available/used fields to `ComputeNodeState`, then
+    bind dashboard resource-pool charts to those backend-provided fields.
+
 ## 2026-07-05 - Task Resource Demand Contract v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`

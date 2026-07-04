@@ -754,10 +754,37 @@ class MetricsCollector:
             "compute_resource_total_gflops_fp32": total,
             "compute_resource_available_gflops_fp32": available,
             "compute_resource_used_gflops_fp32": used,
+            "compute_resource_total_gflops_fp64": _compute_resource_total(
+                nodes,
+                "cpu_gflops_fp64",
+            ),
+            "compute_resource_total_gpu_tflops_fp32": _compute_resource_total(
+                nodes,
+                "gpu_tflops_fp32",
+            ),
+            "compute_resource_total_gpu_tflops_fp16": _compute_resource_total(
+                nodes,
+                "gpu_tflops_fp16",
+            ),
+            "compute_resource_total_npu_tops_int8": _compute_resource_total(
+                nodes,
+                "npu_tops_int8",
+            ),
+            "compute_resource_total_memory_gb": _compute_resource_total(
+                nodes,
+                "memory_gb",
+            ),
+            "compute_resource_total_storage_gb": _compute_resource_total(
+                nodes,
+                "storage_gb",
+            ),
+            "compute_resource_vector_capacity_reported": True,
+            "compute_resource_vector_utilization_mode": "SCALAR_FP32_AVAILABLE_ONLY",
             "compute_resource_utilization": float(utilization),
             "compute_resource_unit": "GFLOPS FP32",
             "compute_resource_proxy_note": (
-                "Legacy scalar compute capacity maps to FP32 GFLOPS."
+                "Legacy scalar compute capacity maps to FP32 GFLOPS; "
+                "resource-vector fields currently report capacity totals only."
             ),
         }
 
@@ -799,6 +826,15 @@ def _link_id(link: LinkState) -> str:
 
 def _route_hop_count(route: Route) -> int:
     return max(0, len(route.path) - 1)
+
+
+def _compute_resource_total(
+    nodes: tuple[ComputeNodeState, ...],
+    field_name: str,
+) -> float:
+    return float(
+        sum(max(0.0, float(getattr(node, field_name))) for node in nodes)
+    )
 
 
 def _json_scalar(value: str | int | float | bool) -> str:
