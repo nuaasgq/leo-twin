@@ -9,6 +9,20 @@ export interface BeamRenderOptions {
   enabled: boolean;
 }
 
+export function selectedCoverageBeamSatellites(
+  satellites: readonly SatelliteState[],
+  selectedSatelliteId: string,
+  renderLimit: number
+): readonly SatelliteState[] {
+  if (renderLimit <= 0 || satellites.length === 0 || selectedSatelliteId.length === 0) {
+    return [];
+  }
+  const selected = satellites.find(
+    (satellite) => satellite.satellite_id === selectedSatelliteId
+  );
+  return selected ? [selected] : [];
+}
+
 export function upsertBeamEntity(
   entities: EntityCollection,
   cache: Map<string, Entity>,

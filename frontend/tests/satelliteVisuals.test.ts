@@ -8,6 +8,7 @@ import {
   SATELLITE_DEPTH_TEST_DISABLE_DISTANCE,
   SATELLITE_ICON_DATA_URI
 } from "../src/3d/orbit_renderer/satelliteEntities";
+import { selectedCoverageBeamSatellites } from "../src/3d/beam_renderer/beamEntities";
 import {
   appendSatelliteInsetTrail,
   satelliteAltitudeKm,
@@ -50,6 +51,17 @@ describe("satellite overview icon", () => {
     expect(decodedIcon).toContain("panel");
     expect(decodedIcon).toContain("antenna");
     expect(decodedIcon.match(/<rect/g)?.length ?? 0).toBeGreaterThanOrEqual(4);
+  });
+});
+
+describe("selected satellite coverage beams", () => {
+  it("renders coverage only for the selected satellite within the bounded limit", () => {
+    expect(selectedCoverageBeamSatellites([satelliteA, satelliteB], "sat-b", 1)).toEqual([
+      satelliteB
+    ]);
+    expect(selectedCoverageBeamSatellites([satelliteA, satelliteB], "sat-b", 0)).toEqual([]);
+    expect(selectedCoverageBeamSatellites([satelliteA, satelliteB], "", 1)).toEqual([]);
+    expect(selectedCoverageBeamSatellites([satelliteA, satelliteB], "missing", 1)).toEqual([]);
   });
 });
 

@@ -175,7 +175,7 @@ change.
 ## 2026-07-05 - Runtime Metrics Summary Binding v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`
-- Commit: this commit (created before hash assignment)
+- Commit: `3f54984`
 - Scope: expose `MetricsCollector.summary()` through runtime status and make
   the standalone DataPanel prefer backend-owned `network_quality_*` and
   `compute_resource_*` fields for dynamic telemetry values.
@@ -210,6 +210,41 @@ change.
 - Recommended follow-up:
   - Add backend-owned time-series samples for network quality and compute
     resource pool consumption, then remove the local envelope approximation.
+
+## 2026-07-05 - Selected Satellite Coverage Beam v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: this commit (created before hash assignment)
+- Scope: enable a bounded selected-satellite coverage beam in the Cesium view
+  by rendering at most one coverage cone for the active selected satellite.
+  This is a visual abstraction only and does not introduce RF propagation or
+  antenna pattern modeling.
+- Changed files/modules:
+  - `frontend/src/3d/beam_renderer/beamEntities.ts`
+  - `frontend/src/3d/cesium/CesiumGlobe.tsx`
+  - `frontend/src/3d/cesium/renderLimits.ts`
+  - `frontend/tests/satelliteVisuals.test.ts`
+  - `frontend/tests/visualLayerLimits.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- satelliteVisuals.test.ts visualLayerLimits.test.ts`
+    - Result: passed, 22 files / 94 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The existing renderer had a beam entity path but `beamRenderLimit` was set
+    to zero, so no coverage visualization could appear. The limit is now one
+    and the selection filter prevents large-scale beam fan-out.
+  - The active local runtime config files remain modified and excluded.
+- Known remaining issues:
+  - This is a single selected-satellite coverage cone, not honeycomb
+    multi-beam cells.
+  - The cone is a simplified visual cue and is not RF/antenna fidelity.
+- Recommended follow-up:
+  - Add backend-derived coverage assumptions and a selected-satellite resource
+    inspector before implementing multi-beam cell overlays.
 
 ## 2026-07-04 - Development Log Requirement
 

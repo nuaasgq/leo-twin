@@ -23,6 +23,7 @@ import { SatelliteState } from "../../core/event_types";
 import { WorldSnapshot } from "../../state/snapshot_engine";
 import {
   pruneBeamEntities,
+  selectedCoverageBeamSatellites,
   upsertBeamEntity
 } from "../beam_renderer/beamEntities";
 import {
@@ -192,7 +193,8 @@ export function CesiumGlobe({ snapshot, displaySimTime }: CesiumGlobeProps) {
           links: linkCache.current,
           routes: routeCache.current
         },
-        displaySimTime
+        displaySimTime,
+        activeSelectedSatelliteId
       );
       lastRenderedFrame.current = displayFrame;
       if (
@@ -393,7 +395,8 @@ export function renderCesiumSnapshot(
   entities: EntityCollection,
   snapshot: WorldSnapshot,
   caches: RenderCaches,
-  displaySimTime = snapshot.last_sim_time
+  displaySimTime = snapshot.last_sim_time,
+  selectedSatelliteId = ""
 ): void {
   const limits = visualLayerLimits(snapshot.scenario_config);
   const beamLengthMeters = snapshot.scenario_config?.render?.beam_length_m ?? 600_000;
@@ -434,7 +437,11 @@ export function renderCesiumSnapshot(
   }
   pruneEntities(entities, caches.orbitTracks, orbitTrackEntityIds);
 
-  for (const satellite of satellites.slice(0, limits.beamRenderLimit)) {
+  for (const satellite of selectedCoverageBeamSatellites(
+    satellites,
+    selectedSatelliteId,
+    limits.beamRenderLimit
+  )) {
     const beamId = `beam:${satellite.satellite_id}`;
     beamEntityIds.add(beamId);
     upsertBeamEntity(entities, caches.beams, satellite, {

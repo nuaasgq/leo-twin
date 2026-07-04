@@ -9,7 +9,7 @@ describe("visualLayerLimits", () => {
       showSatellites: true,
       satelliteIconRenderLimit: 96,
       orbitTrackRenderLimit: 48,
-      beamRenderLimit: 0,
+      beamRenderLimit: 1,
       groundUserRenderLimit: 80,
       linkRenderLimit: 96,
       routeRenderLimit: 8

@@ -22,7 +22,7 @@ export function visualLayerLimits(
     showSatellites,
     satelliteIconRenderLimit: showSatellites ? 96 : 0,
     orbitTrackRenderLimit: showSatellites && showMetrics ? 48 : 0,
-    beamRenderLimit: 0,
+    beamRenderLimit: showSatellites && showMetrics ? 1 : 0,
     groundUserRenderLimit: showUsers ? 80 : 0,
     linkRenderLimit: showLinks ? 96 : 0,
     routeRenderLimit: showLinks && showMetrics ? 8 : 0
