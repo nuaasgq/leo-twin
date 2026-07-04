@@ -23,9 +23,11 @@ def test_full_system_task_specs_are_deterministic() -> None:
         "FS-040",
         "FS-050",
         "FS-060",
+        "FS-065",
         "FS-070",
         "FS-080",
         "FS-090",
+        "FS-095",
         "FS-100",
     ]
 
@@ -42,10 +44,20 @@ def test_full_system_task_graph_is_a_dag() -> None:
         "FS-050",
         "FS-060",
         "FS-070",
+        "FS-065",
         "FS-080",
         "FS-090",
+        "FS-095",
         "FS-100",
     )
+
+
+def test_full_system_task_specs_include_feedback_and_frontend_split_dependencies() -> None:
+    specs = {task.task_id: task for task in build_full_system_task_specs()}
+
+    assert specs["FS-065"].dependencies == ("FS-050", "FS-060")
+    assert specs["FS-095"].dependencies == ("FS-080", "FS-090")
+    assert specs["FS-100"].dependencies == ("FS-065", "FS-070", "FS-095")
 
 
 def test_full_system_task_graph_exposes_parallel_domain_work() -> None:
