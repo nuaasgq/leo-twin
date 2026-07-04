@@ -11,9 +11,11 @@ from leo_twin.models.compute.scheduling import (
     ComputeSchedulingRuntime,
     ComputeWorkloadItem,
 )
+from leo_twin.models.traffic import ComputeOutputFlowMetadata
 from leo_twin.schema import (
     ComputeNodeState,
     EventType,
+    MetricRecord,
     Route,
     SimEvent,
     TaskRequest,
@@ -53,6 +55,12 @@ class _TransferringTask:
     ready_time: float
 
 
+@dataclass(frozen=True)
+class _OutputFlowState:
+    metadata: ComputeOutputFlowMetadata
+    decision: TaskPlacementDecision
+
+
 class RouteAwareComputeEngine(SimulationModule):
     """Schedule compute tasks only after a matching route is available."""
 
@@ -61,13 +69,17 @@ class RouteAwareComputeEngine(SimulationModule):
         nodes: Iterable[ComputeNode],
         module_name: str = "compute",
         metrics_target: str = "metrics",
+        network_target: str = "network",
         scheduling_runtime: ComputeSchedulingRuntime | None = None,
         state_update_targets: Iterable[str] = (),
+        output_flow_metadata: Iterable[ComputeOutputFlowMetadata] = (),
     ) -> None:
         if not module_name:
             raise ValueError("module_name must be non-empty")
         if not metrics_target:
             raise ValueError("metrics_target must be non-empty")
+        if not network_target:
+            raise ValueError("network_target must be non-empty")
         ordered_update_targets = tuple(
             sorted(str(item) for item in state_update_targets)
         )
@@ -78,9 +90,19 @@ class RouteAwareComputeEngine(SimulationModule):
             raise ValueError("at least one compute node is required")
         if len({item.node_id for item in ordered_nodes}) != len(ordered_nodes):
             raise ValueError("compute node ids must be unique")
+        ordered_output_flows = tuple(
+            sorted(output_flow_metadata, key=lambda item: (item.task_id, item.flow_id))
+        )
+        if any(not isinstance(item, ComputeOutputFlowMetadata) for item in ordered_output_flows):
+            raise TypeError("output_flow_metadata must contain ComputeOutputFlowMetadata")
+        if len({item.task_id for item in ordered_output_flows}) != len(ordered_output_flows):
+            raise ValueError("output_flow_metadata task ids must be unique")
+        if len({item.flow_id for item in ordered_output_flows}) != len(ordered_output_flows):
+            raise ValueError("output flow ids must be unique")
 
         self._module_name = module_name
         self._metrics_target = metrics_target
+        self._network_target = network_target
         self._state_update_targets = tuple(
             target
             for target in dict.fromkeys(ordered_update_targets)
@@ -93,6 +115,13 @@ class RouteAwareComputeEngine(SimulationModule):
         self._transferring_tasks: dict[str, _TransferringTask] = {}
         self._routes_by_flow: dict[str, Route] = {}
         self._scheduled_tasks: dict[str, _ScheduledTask] = {}
+        self._output_flows_by_task = {
+            item.task_id: item for item in ordered_output_flows
+        }
+        self._output_flow_to_task = {
+            item.flow_id: item.task_id for item in ordered_output_flows
+        }
+        self._output_flow_states: dict[str, _OutputFlowState] = {}
         self._scheduled_tick_times: set[float] = set()
         self._event_sequence = 0
 
@@ -115,6 +144,7 @@ class RouteAwareComputeEngine(SimulationModule):
         if event_type == EventType.ROUTE_UPDATE.value:
             route = self._coerce_route(event.payload)
             self._routes_by_flow[route.flow_id] = route
+            self._emit_output_route_metrics(route, event.sim_time, kernel)
             self._apply_route_update_to_transfers(route, event.sim_time, kernel)
             self._request_schedule_tick(event.sim_time, kernel)
 
@@ -164,7 +194,7 @@ class RouteAwareComputeEngine(SimulationModule):
             transfer = self._transferring_tasks[task_id]
             if transfer.ready_time > dispatch_time:
                 continue
-            route = self._routes_by_flow.get(task_id)
+            route = self._routes_by_flow.get(_input_flow_id(transfer.task))
             if route is None or not route.available or route.capacity <= 0:
                 self._pending_tasks[task_id] = transfer.task
                 self._transferring_tasks.pop(task_id, None)
@@ -178,7 +208,7 @@ class RouteAwareComputeEngine(SimulationModule):
             if task_id in self._scheduled_tasks:
                 continue
             task = self._pending_tasks[task_id]
-            route = self._routes_by_flow.get(task_id)
+            route = self._routes_by_flow.get(_input_flow_id(task))
             if route is None or not route.available or route.capacity <= 0:
                 continue
             ready_time = self._ready_time(task, route, dispatch_time)
@@ -214,10 +244,19 @@ class RouteAwareComputeEngine(SimulationModule):
     ) -> None:
         transfer = self._transferring_tasks.get(route.flow_id)
         if transfer is None:
+            transfer = next(
+                (
+                    item
+                    for item in self._transferring_tasks.values()
+                    if _input_flow_id(item.task) == route.flow_id
+                ),
+                None,
+            )
+        if transfer is None:
             return
         if not route.available or route.capacity <= 0:
-            self._pending_tasks[route.flow_id] = transfer.task
-            self._transferring_tasks.pop(route.flow_id, None)
+            self._pending_tasks[transfer.task.task_id] = transfer.task
+            self._transferring_tasks.pop(transfer.task.task_id, None)
             return
         if transfer.route == route:
             return
@@ -300,6 +339,7 @@ class RouteAwareComputeEngine(SimulationModule):
                     sim_time=decision.start_time,
                     progress=0.0,
                     status="RUNNING",
+                    flow_id=task.flow_id,
                 ),
             )
         )
@@ -341,6 +381,7 @@ class RouteAwareComputeEngine(SimulationModule):
                     sim_time=decision.finish_time,
                     progress=1.0,
                     status=_finish_status(decision),
+                    flow_id=task.flow_id,
                 ),
             )
         )
@@ -372,6 +413,8 @@ class RouteAwareComputeEngine(SimulationModule):
                     target=target,
                 )
             )
+        self._emit_service_component_metrics(task, decision, kernel)
+        self._emit_output_flow_arrival(task, decision, kernel)
 
     def _node_by_id(self, node_id: str) -> ComputeNode:
         for item in self._nodes:
@@ -410,6 +453,12 @@ class RouteAwareComputeEngine(SimulationModule):
                 compute_demand=float(payload["compute_demand"]),
                 data_size=float(payload["data_size"]),
                 deadline=None if deadline is None else float(deadline),
+                flow_id=(
+                    None
+                    if payload.get("flow_id") is None
+                    else str(payload.get("flow_id"))
+                ),
+                priority=int(payload.get("priority", 0)),
             )
         raise TypeError("TASK_ARRIVAL payload must be TaskRequest or dict")
 
@@ -428,6 +477,123 @@ class RouteAwareComputeEngine(SimulationModule):
             )
         raise TypeError("ROUTE_UPDATE payload must be Route or dict")
 
+    def _emit_service_component_metrics(
+        self,
+        task: TaskRequest,
+        decision: TaskPlacementDecision,
+        kernel: SimulationKernel,
+    ) -> None:
+        if task.flow_id is None:
+            return
+        queue_delay = max(0.0, decision.start_time - decision.ready_time)
+        tags = (
+            ("task_id", task.task_id),
+            ("input_flow_id", _input_flow_id(task)),
+            ("route_id", decision.route_id),
+        )
+        records = (
+            MetricRecord(
+                metric_name="service.input_network_latency",
+                sim_time=decision.finish_time,
+                entity_id=task.task_id,
+                value=decision.transfer_time,
+                tags=tags,
+            ),
+            MetricRecord(
+                metric_name="service.compute_queue_delay",
+                sim_time=decision.finish_time,
+                entity_id=task.task_id,
+                value=queue_delay,
+                tags=tags,
+            ),
+            MetricRecord(
+                metric_name="service.compute_execution_delay",
+                sim_time=decision.finish_time,
+                entity_id=task.task_id,
+                value=decision.compute_time,
+                tags=tags,
+            ),
+        )
+        for record in records:
+            kernel.schedule_event(
+                self._event(
+                    dispatch_time=decision.finish_time,
+                    event_type=EventType.METRIC_SAMPLE.value,
+                    payload=record,
+                )
+            )
+
+    def _emit_output_flow_arrival(
+        self,
+        task: TaskRequest,
+        decision: TaskPlacementDecision,
+        kernel: SimulationKernel,
+    ) -> None:
+        metadata = self._output_flows_by_task.get(task.task_id)
+        if metadata is None:
+            return
+        self._output_flow_states[metadata.flow_id] = _OutputFlowState(
+            metadata=metadata,
+            decision=decision,
+        )
+        kernel.schedule_event(
+            self._event(
+                dispatch_time=decision.finish_time,
+                event_type=EventType.FLOW_ARRIVAL.value,
+                payload=metadata.to_flow_request(),
+                target=self._network_target,
+            )
+        )
+
+    def _emit_output_route_metrics(
+        self,
+        route: Route,
+        dispatch_time: float,
+        kernel: SimulationKernel,
+    ) -> None:
+        state = self._output_flow_states.get(route.flow_id)
+        if state is None or not route.available or route.capacity <= 0:
+            return
+        output_latency = route.latency + state.metadata.data_size / route.capacity
+        decision = state.decision
+        queue_delay = max(0.0, decision.start_time - decision.ready_time)
+        total_latency = (
+            decision.transfer_time
+            + queue_delay
+            + decision.compute_time
+            + output_latency
+        )
+        tags = (
+            ("task_id", state.metadata.task_id),
+            ("input_flow_id", state.metadata.input_flow_id),
+            ("output_flow_id", state.metadata.flow_id),
+            ("route_id", route.route_id),
+        )
+        records = (
+            MetricRecord(
+                metric_name="service.output_network_latency",
+                sim_time=dispatch_time,
+                entity_id=state.metadata.task_id,
+                value=output_latency,
+                tags=tags,
+            ),
+            MetricRecord(
+                metric_name="service.total_latency",
+                sim_time=dispatch_time,
+                entity_id=state.metadata.task_id,
+                value=total_latency,
+                tags=tags,
+            ),
+        )
+        for record in records:
+            kernel.schedule_event(
+                self._event(
+                    dispatch_time=dispatch_time,
+                    event_type=EventType.METRIC_SAMPLE.value,
+                    payload=record,
+                )
+            )
+
 
 def _decision_status(task: TaskRequest, finish_time: float) -> str:
     if task.deadline is not None and finish_time > task.deadline:
@@ -437,6 +603,10 @@ def _decision_status(task: TaskRequest, finish_time: float) -> str:
 
 def _transfer_time(task: TaskRequest, route: Route) -> float:
     return route.latency + task.data_size / route.capacity
+
+
+def _input_flow_id(task: TaskRequest) -> str:
+    return task.flow_id or task.task_id
 
 
 def _finish_status(decision: TaskPlacementDecision) -> str:

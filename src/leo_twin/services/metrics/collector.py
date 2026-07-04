@@ -307,6 +307,8 @@ class MetricsCollector:
             return self._observe_flow(event)
         if event_type in {EventType.TASK_START, EventType.TASK_FINISH}:
             return self._observe_task(event, event_type)
+        if event_type == EventType.METRIC_SAMPLE:
+            return (_require_payload(event.payload, MetricRecord, "METRIC_SAMPLE"),)
         return ()
 
     def _observe_satellite(self, event: SimEvent) -> tuple[MetricRecord, ...]:

@@ -1,0 +1,103 @@
+from __future__ import annotations
+
+from leo_twin.core import SimulationKernel, SimulationModule
+from leo_twin.models.compute import ComputeNode, RouteAwareComputeEngine
+from leo_twin.models.traffic import (
+    TrafficClass,
+    TrafficDemandProfile,
+    TrafficDestinationType,
+    generate_traffic_demand,
+)
+from leo_twin.schema import EventType, FlowRequest, Route, SimEvent
+from leo_twin.services.metrics import MetricsCollector
+
+
+class DeterministicServiceNetwork(SimulationModule):
+    """Flow-level network stub for communication-compute lifecycle tests."""
+
+    def name(self) -> str:
+        return "network"
+
+    def on_event(self, event: SimEvent, kernel: SimulationKernel) -> None:
+        if event.event_type != EventType.FLOW_ARRIVAL.value:
+            return
+        flow = event.payload
+        if not isinstance(flow, FlowRequest):
+            raise TypeError("network test stub expects FlowRequest")
+        is_output = flow.flow_id.endswith("-output")
+        route = Route(
+            route_id=f"route:{flow.flow_id}",
+            flow_id=flow.flow_id,
+            path=(flow.source_id, "sat-relay", flow.target_id),
+            latency=1.0 if is_output else 2.0,
+            capacity=10.0 if is_output else 5.0,
+            available=True,
+        )
+        for target in ("compute", "metrics"):
+            kernel.schedule_event(
+                SimEvent(
+                    event_id=f"network:route:{flow.flow_id}:{target}",
+                    sim_time=event.sim_time,
+                    priority=0,
+                    source="network",
+                    target=target,
+                    event_type=EventType.ROUTE_UPDATE.value,
+                    payload=route,
+                )
+            )
+
+
+def test_compute_service_lifecycle_emits_component_metrics() -> None:
+    batch = generate_traffic_demand(
+        (
+            TrafficDemandProfile(
+                traffic_class=TrafficClass.COMPUTE_SERVICE,
+                source_ids=("user-001",),
+                destination_ids=("node-a",),
+                output_destination_ids=("user-001",),
+                request_count=1,
+                arrival_interval=10.0,
+                input_data_size=10.0,
+                output_data_size=4.0,
+                priority=3,
+                destination_type=TrafficDestinationType.COMPUTE_NODE,
+                compute_demand=20.0,
+                id_prefix="svc",
+            ),
+        )
+    )
+    kernel = SimulationKernel()
+    network = DeterministicServiceNetwork()
+    compute = RouteAwareComputeEngine(
+        nodes=(ComputeNode("node-a", capacity=10.0),),
+        output_flow_metadata=batch.output_flow_metadata,
+    )
+    metrics = MetricsCollector(metric_sample_interval=1)
+    kernel.register_module(network)
+    kernel.register_module(compute)
+    kernel.register_module(metrics)
+    for event in batch.flow_arrival_events():
+        kernel.schedule_event(event)
+    for event in batch.task_arrival_events():
+        kernel.schedule_event(event)
+
+    kernel.run()
+
+    decisions = compute.scheduled_tasks()
+    assert len(decisions) == 1
+    assert decisions[0].ready_time == 4.0
+    assert decisions[0].start_time == 4.0
+    assert decisions[0].finish_time == 6.0
+
+    records = {
+        record.metric_name: record.value
+        for record in metrics.records()
+        if str(record.metric_name).startswith("service.")
+    }
+    assert records == {
+        "service.input_network_latency": 4.0,
+        "service.compute_queue_delay": 0.0,
+        "service.compute_execution_delay": 2.0,
+        "service.output_network_latency": 1.4,
+        "service.total_latency": 7.4,
+    }
