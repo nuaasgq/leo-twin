@@ -295,7 +295,11 @@ def _fidelity_summary(config: DemoConfig) -> dict[str, object]:
 
 def _scheduled_task_count(config: DemoConfig) -> int:
     ticks = range(0, config.duration_seconds, config.task_interval_seconds)
-    return len(tuple(ticks)) * min(config.compute_node_count, config.satellite_count)
+    traffic_class = TrafficClass(str(config.traffic_class))
+    destination_type = TrafficDestinationType(str(config.traffic_destination_type))
+    return len(tuple(ticks)) * len(
+        _traffic_target_ids(config, traffic_class, destination_type)
+    )
 
 
 def _network_satellites(config: DemoConfig) -> tuple[SatelliteProfile, ...]:
@@ -422,12 +426,11 @@ def _initial_events(config: DemoConfig) -> tuple[SimEvent, ...]:
             )
         )
 
-    for task_index, record in enumerate(_traffic_demand_batch(config).records):
-        if record.task is None:
-            continue
+    task_event_index = 0
+    for flow_index, record in enumerate(_traffic_demand_batch(config).records):
         events.append(
             SimEvent(
-                event_id=f"scenario:flow-arrival:{task_index:05d}",
+                event_id=f"scenario:flow-arrival:{flow_index:05d}",
                 sim_time=record.arrival_time,
                 priority=5,
                 source="scenario",
@@ -436,9 +439,11 @@ def _initial_events(config: DemoConfig) -> tuple[SimEvent, ...]:
                 payload=record.input_flow,
             )
         )
+        if record.task is None:
+            continue
         events.append(
             SimEvent(
-                event_id=f"scenario:task-arrival:{task_index:05d}",
+                event_id=f"scenario:task-arrival:{task_event_index:05d}",
                 sim_time=record.task.submit_time,
                 priority=4,
                 source="scenario",
@@ -447,6 +452,7 @@ def _initial_events(config: DemoConfig) -> tuple[SimEvent, ...]:
                 payload=record.task,
             )
         )
+        task_event_index += 1
 
     return tuple(
         sorted(
@@ -458,15 +464,15 @@ def _initial_events(config: DemoConfig) -> tuple[SimEvent, ...]:
 
 def _traffic_demand_batch(config: DemoConfig) -> TrafficDemandBatch:
     records: list[TrafficDemandRecord] = []
-    task_index = 0
-    compute_node_ids = _compute_node_satellite_ids(config)
-    spacing_s = _initial_workload_spacing_s(config, len(compute_node_ids))
+    flow_index = 0
     traffic_class = TrafficClass(str(config.traffic_class))
     destination_type = TrafficDestinationType(str(config.traffic_destination_type))
+    target_ids = _traffic_target_ids(config, traffic_class, destination_type)
+    spacing_s = _initial_workload_spacing_s(config, len(target_ids))
     for tick in range(0, config.duration_seconds, config.task_interval_seconds):
-        for offset, target_id in enumerate(compute_node_ids):
-            task_id = f"task-{task_index:05d}"
-            source_id = f"user-{(task_index * 13) % config.ground_user_count:04d}"
+        for offset, target_id in enumerate(target_ids):
+            flow_id = f"task-{flow_index:05d}"
+            source_id = _traffic_source_id(config, traffic_class, flow_index)
             submit_time = float(tick) + 0.2 + offset * spacing_s
             deadline = (
                 submit_time + 20.0
@@ -474,18 +480,22 @@ def _traffic_demand_batch(config: DemoConfig) -> TrafficDemandBatch:
                 else float(tick) + 20.0
             )
             input_flow = FlowRequest(
-                flow_id=task_id,
+                flow_id=flow_id,
                 source_id=source_id,
                 target_id=target_id,
                 demand_capacity=config.flow_demand_capacity,
             )
-            task = TaskRequest(
-                task_id=task_id,
-                source_id=source_id,
-                submit_time=submit_time,
-                compute_demand=config.task_compute_demand + float(task_index % 5),
-                data_size=config.task_data_size + float(task_index % 3),
-                deadline=deadline,
+            task = (
+                TaskRequest(
+                    task_id=flow_id,
+                    source_id=source_id,
+                    submit_time=submit_time,
+                    compute_demand=config.task_compute_demand + float(flow_index % 5),
+                    data_size=config.task_data_size + float(flow_index % 3),
+                    deadline=deadline,
+                )
+                if traffic_class == TrafficClass.COMPUTE_SERVICE
+                else None
             )
             records.append(
                 TrafficDemandRecord(
@@ -498,8 +508,47 @@ def _traffic_demand_batch(config: DemoConfig) -> TrafficDemandBatch:
                     task=task,
                 )
             )
-            task_index += 1
+            flow_index += 1
     return TrafficDemandBatch(records=tuple(records))
+
+
+def _traffic_source_id(
+    config: DemoConfig,
+    traffic_class: TrafficClass,
+    flow_index: int,
+) -> str:
+    if traffic_class in {TrafficClass.TELEMETRY, TrafficClass.BULK_DOWNLINK}:
+        return f"sat-{flow_index % config.satellite_count:03d}"
+    return f"user-{(flow_index * 13) % config.ground_user_count:04d}"
+
+
+def _traffic_target_ids(
+    config: DemoConfig,
+    traffic_class: TrafficClass,
+    destination_type: TrafficDestinationType,
+) -> tuple[str, ...]:
+    if traffic_class == TrafficClass.COMPUTE_SERVICE:
+        return _compute_node_satellite_ids(config)
+    if destination_type == TrafficDestinationType.SATELLITE:
+        return tuple(f"sat-{index:03d}" for index in range(config.satellite_count))
+    if destination_type == TrafficDestinationType.COMPUTE_NODE:
+        return _compute_node_satellite_ids(config)
+    if destination_type == TrafficDestinationType.GROUND_ENDPOINT:
+        return _ground_endpoint_ids(config)
+    return _service_endpoint_ids(config)
+
+
+def _ground_endpoint_ids(config: DemoConfig) -> tuple[str, ...]:
+    station_ids = tuple(
+        f"ground-station-{index:02d}" for index in range(config.ground_station_count)
+    )
+    if station_ids:
+        return station_ids
+    return tuple(f"user-{index:04d}" for index in range(config.ground_user_count))
+
+
+def _service_endpoint_ids(config: DemoConfig) -> tuple[str, ...]:
+    return _ground_endpoint_ids(config)
 
 
 def _compute_node_satellite_ids(config: DemoConfig) -> tuple[str, ...]:

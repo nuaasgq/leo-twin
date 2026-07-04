@@ -194,9 +194,13 @@ def test_demo_traffic_model_semantics_are_config_driven() -> None:
     assert scenario.frontend_config["backend_summary"]["traffic_demand_summary"][
         "output_data_size_mb"
     ] == 4.5
+    assert scenario.frontend_config["backend_summary"]["traffic_demand_summary"][
+        "generated_flow_count"
+    ] == len(demand_batch.records)
     assert demand_batch.records[0].traffic_class == TrafficClass.BULK_DOWNLINK
     assert demand_batch.records[0].destination_type == TrafficDestinationType.GROUND_ENDPOINT
     assert demand_batch.records[0].output_data_size == 4.5
+    assert demand_batch.records[0].task is None
 
 
 def test_demo_initial_workload_uses_traffic_demand_records() -> None:
@@ -235,6 +239,46 @@ def test_demo_initial_workload_uses_traffic_demand_records() -> None:
     assert first_record.task is not None
     assert first_record.task.priority == 0
     assert first_record.task.flow_id is None
+
+
+def test_non_compute_demo_traffic_generates_flow_only_events() -> None:
+    config = _demo_config(
+        traffic_class="BULK_DOWNLINK",
+        traffic_destination_type="GROUND_ENDPOINT",
+        ground_station_count=2,
+        compute_node_count=4,
+    )
+    scenario = build_demo_scenario(config)
+    flow_events = tuple(
+        event
+        for event in scenario.initial_events
+        if event.event_type == EventType.FLOW_ARRIVAL
+    )
+    task_events = tuple(
+        event
+        for event in scenario.initial_events
+        if event.event_type == EventType.TASK_ARRIVAL
+    )
+    flow_payloads = tuple(event.payload for event in flow_events)
+
+    assert len(flow_events) == 4
+    assert task_events == ()
+    assert all(isinstance(flow, FlowRequest) for flow in flow_payloads)
+    assert tuple(flow.source_id for flow in flow_payloads if isinstance(flow, FlowRequest)) == (
+        "sat-000",
+        "sat-001",
+        "sat-002",
+        "sat-003",
+    )
+    assert tuple(flow.target_id for flow in flow_payloads if isinstance(flow, FlowRequest)) == (
+        "ground-station-00",
+        "ground-station-01",
+        "ground-station-00",
+        "ground-station-01",
+    )
+    assert scenario.frontend_config["backend_summary"]["traffic_demand_summary"][
+        "generated_flow_count"
+    ] == 4
 
 
 def test_scale_initial_workload_smoothing_spreads_first_burst() -> None:

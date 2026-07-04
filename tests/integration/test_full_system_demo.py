@@ -192,12 +192,42 @@ def test_network_stack_trace_uses_configured_protocols() -> None:
     ]
 
 
+def test_non_compute_traffic_mix_runs_without_compute_tasks() -> None:
+    result = run_integration_demo(
+        replace(
+            load_demo_config(),
+            satellite_count=12,
+            ground_user_count=20,
+            ground_station_count=2,
+            compute_node_count=4,
+            duration_seconds=120,
+            traffic_class="BULK_DOWNLINK",
+            traffic_destination_type="GROUND_ENDPOINT",
+            traffic_output_data_size=3.5,
+        )
+    )
+    event_types = tuple(str(event.event_type) for event in result.processed_events)
+    traffic_summary = result.scenario.frontend_config["backend_summary"][
+        "traffic_demand_summary"
+    ]
+
+    assert event_types.count(EventType.FLOW_ARRIVAL.value) == 4
+    assert EventType.TASK_ARRIVAL.value not in event_types
+    assert EventType.TASK_START.value not in event_types
+    assert EventType.TASK_FINISH.value not in event_types
+    assert traffic_summary["traffic_class"] == "BULK_DOWNLINK"
+    assert traffic_summary["destination_type"] == "GROUND_ENDPOINT"
+    assert traffic_summary["generated_flow_count"] == 4
+    assert traffic_summary["output_data_size_mb"] == 3.5
+    assert len(result.network_stack_traces) == 4
+
+
 def test_scale_test_basic() -> None:
     result = _demo_result()
     summary = result.metrics_summary
 
     assert len(result.processed_events) >= 10_000
-    assert len(result.processed_events) == 21_849
+    assert len(result.processed_events) == 23_049
     assert summary["event_count"] >= 10_000
     assert summary["routes_total"] == 100
     assert summary["routes_available"] == 25

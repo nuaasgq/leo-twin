@@ -1876,7 +1876,7 @@ change.
 ## 2026-07-05 - Traffic Mix Config v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`
-- Commit: pending
+- Commit: `8107145`
 - Scope: add deterministic traffic class, destination type, and output data
   size configuration across backend config, generated scenario summaries,
   integration demo traffic records, and frontend control payload typing.
@@ -1937,3 +1937,40 @@ change.
   - Add a Traffic Mix Execution v1 task that supports non-compute flow-only
     records and compute-service output metadata without changing Event Kernel
     ordering or introducing packet-level simulation.
+
+## 2026-07-05 - Traffic Mix Execution v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending
+- Scope: make non-compute traffic classes execute as network flow-only
+  workloads while preserving compute-service `FLOW_ARRIVAL` + `TASK_ARRIVAL`
+  behavior.
+- Changed files/modules:
+  - `examples/integration_demo/scenario.py`
+  - `tests/unit/test_integration_demo_scenario.py`
+  - `tests/integration/test_full_system_demo.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/integration/test_full_system_demo.py -q`
+    - Result: passed, 6 tests.
+  - `python -m pytest tests/unit/test_integration_demo_scenario.py tests/integration/test_config_control.py::test_frontend_control_messages_are_processed tests/integration/test_runtime_session_control.py tests/integration/test_live_runtime_streaming.py -q`
+    - Result: passed, 35 tests.
+  - `python -m pytest tests/unit/test_backend_derived_summary.py tests/unit/test_traffic_demand_model.py tests/integration/test_compute_service_lifecycle.py -q`
+    - Result: passed, 13 tests.
+- Problems encountered:
+  - The existing full-system demo exact event-count assertion expected
+    `21_849`, but the clean `8107145` baseline already produced `23_049`
+    events after the previous traffic semantics work. The deterministic test
+    baseline was updated to `23_049` after confirming the value in a clean
+    temporary worktree.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - Non-compute traffic uses deterministic flow-level network routing only. It
+    does not create application-specific service endpoints, packet flows, or
+    protocol-specific payload models.
+  - `COMPUTE_SERVICE` still uses the existing task-offload shape. Output/result
+    flow emission remains a later lifecycle task.
+- Recommended follow-up:
+  - Add dashboard/control explanation text that distinguishes compute-service
+    traffic from flow-only telemetry, bulk downlink, and data-transfer traffic.
