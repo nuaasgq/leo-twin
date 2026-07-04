@@ -193,7 +193,10 @@ export function App() {
             loadControlState()
               .then(({ scenario }) =>
                 startStreams(scenario, {
-                  resetBeforeConnect: snapshotEngine.getSnapshot().event_count === 0
+                  resetBeforeConnect: shouldResetWorldBeforeStreamConnect(
+                    "ATTACH",
+                    snapshotEngine.getSnapshot().event_count
+                  )
                 })
               )
               .catch(() => setConnectionState("degraded"));
@@ -203,7 +206,14 @@ export function App() {
             const action = message.status?.last_action;
             if (action === "START") {
               loadControlState()
-                .then(({ scenario }) => startStreams(scenario, { resetBeforeConnect: true }))
+                .then(({ scenario }) =>
+                  startStreams(scenario, {
+                    resetBeforeConnect: shouldResetWorldBeforeStreamConnect(
+                      "START",
+                      snapshotEngine.getSnapshot().event_count
+                    )
+                  })
+                )
                 .catch(() => setConnectionState("degraded"));
               return;
             }
@@ -292,7 +302,10 @@ export function App() {
         }
         if (runtimeStatusRequiresStreams(runtime.status)) {
           startStreams(scenario, {
-            resetBeforeConnect: snapshotEngine.getSnapshot().event_count === 0
+            resetBeforeConnect: shouldResetWorldBeforeStreamConnect(
+              "ATTACH",
+              snapshotEngine.getSnapshot().event_count
+            )
           });
         } else {
           resetWorld(scenario);
@@ -312,11 +325,16 @@ export function App() {
   }, [closeStreams, loadControlState, resetWorld, snapshotEngine, startStreams]);
 
   const scenarioControls = scenarioControlValues(scenarioConfig, snapshot.satellites.length);
-  const displaySimTime = Math.max(
+  const displaySimTime = selectRuntimeDisplaySimTime(
+    runtimeStatus,
     snapshot.last_sim_time,
-    runtimeProgressSimTime(runtimeProgressAnchor, runtimeProgressNowMs)
+    runtimeProgressAnchor,
+    runtimeProgressNowMs
   );
-  const displayEventCount = runtimeStatus.processed_event_count ?? snapshot.event_count;
+  const displayEventCount = selectRuntimeDisplayEventCount(
+    runtimeStatus,
+    snapshot.event_count
+  );
   const runtimeRibbon = buildRuntimeRibbonSummary({
     simTime: displaySimTime,
     eventCount: displayEventCount,
@@ -527,6 +545,15 @@ export interface RuntimeProgressAnchor {
   duration: number;
 }
 
+export type StreamConnectReason = "START" | "RESUME" | "ATTACH";
+
+export function shouldResetWorldBeforeStreamConnect(
+  reason: StreamConnectReason,
+  snapshotEventCount: number
+): boolean {
+  return reason === "START" && snapshotEventCount <= 0;
+}
+
 export function selectFidelitySummary(
   runtimeStatus: RuntimeStatusPayload,
   generatedConfig: GeneratedScenarioConfig | null,
@@ -678,10 +705,11 @@ export function nextRuntimeProgressAnchor(
   runtimeStatus: RuntimeStatusPayload,
   nowMs: number
 ): RuntimeProgressAnchor {
+  const resetDisplayClock = runtimeStatusResetsDisplayClock(runtimeStatus);
   const observedSimTime = Math.max(
     0,
-    snapshotSimTime,
-    finiteNumberOrZero(runtimeStatus.current_sim_time)
+    resetDisplayClock ? 0 : snapshotSimTime,
+    resetDisplayClock ? 0 : finiteNumberOrZero(runtimeStatus.current_sim_time)
   );
   const projectedSimTime = runtimeProgressSimTime(previous, nowMs);
   const statusChanged =
@@ -689,7 +717,7 @@ export function nextRuntimeProgressAnchor(
     previous.lifecycleState !== runtimeStatus.lifecycle_state ||
     previous.speedFactor !== runtimeStatus.speed_factor ||
     previous.duration !== runtimeStatus.duration;
-  if (runtimeStatusResetsDisplayClock(runtimeStatus)) {
+  if (resetDisplayClock) {
     return {
       simTime: Math.min(observedSimTime, runtimeStatus.duration),
       wallTimeMs: nowMs,
@@ -718,8 +746,37 @@ export function nextRuntimeProgressAnchor(
   };
 }
 
+export function selectRuntimeDisplaySimTime(
+  runtimeStatus: RuntimeStatusPayload,
+  snapshotSimTime: number,
+  anchor: RuntimeProgressAnchor,
+  nowMs: number
+): number {
+  if (runtimeStatusResetsDisplayClock(runtimeStatus)) {
+    return 0;
+  }
+  return Math.max(snapshotSimTime, runtimeProgressSimTime(anchor, nowMs));
+}
+
+export function selectRuntimeDisplayEventCount(
+  runtimeStatus: RuntimeStatusPayload,
+  snapshotEventCount: number
+): number {
+  if (runtimeStatusResetsDisplayClock(runtimeStatus)) {
+    return 0;
+  }
+  return runtimeStatus.processed_event_count ?? snapshotEventCount;
+}
+
 function runtimeStatusResetsDisplayClock(runtimeStatus: RuntimeStatusPayload): boolean {
-  return ["RESET", "INITIALIZE", "CONFIG_UPDATE"].includes(runtimeStatus.last_action);
+  return [
+    "RESET_PENDING",
+    "RESET",
+    "INITIALIZE_PENDING",
+    "INITIALIZE",
+    "CONFIG_UPDATE_PENDING",
+    "CONFIG_UPDATE"
+  ].includes(runtimeStatus.last_action);
 }
 
 export function runtimeProgressSimTime(

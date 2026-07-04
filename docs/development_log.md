@@ -8,7 +8,7 @@ change.
 ## 2026-07-05 - Ten Hour Product Enrichment Plan
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`
-- Commit: this commit (created before hash assignment)
+- Commit: `dc1a18b`
 - Scope: create a bounded 10-hour product enrichment plan covering frontend-
   backend consistency, 3D Earth quality, satellite assets, coverage and
   multi-beam visualization, resource inspection, network KPI dynamics, compute
@@ -30,6 +30,37 @@ change.
 - Recommended follow-up:
   - Start with route/session synchronization and reset semantics before the
     larger 3D asset and metric-model work.
+
+## 2026-07-05 - Frontend Runtime Session Sync v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: this commit (created before hash assignment)
+- Scope: keep the control console and standalone dashboard attached to the same
+  runtime session semantics by tightening frontend stream reset policy and
+  forcing visible progress/event counts to zero during reset-like transitions.
+- Changed files/modules:
+  - `frontend/src/app/App.tsx`
+  - `frontend/tests/appSurface.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- appSurface.test.ts`
+    - Result: passed, 22 files / 88 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The existing frontend source contains Chinese text that appears mojibake in
+    the PowerShell terminal. This task intentionally changed only logic and
+    tests around runtime reset semantics, avoiding unrelated text rewrites.
+  - The active local runtime config files remain modified and excluded.
+- Known remaining issues:
+  - This slice fixes frontend reset/reattach semantics. Backend-owned KPI
+    semantics for throughput, jitter, loss proxy, and compute resources remain
+    follow-up work.
+- Recommended follow-up:
+  - Add backend-owned network quality and compute resource summaries, then bind
+    dashboard charts to those summaries instead of local KPI inference.
 
 ## 2026-07-04 - Development Log Requirement
 

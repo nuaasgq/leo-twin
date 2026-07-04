@@ -10,7 +10,10 @@ import {
   runtimeProgressSimTime,
   runtimeStatusRequiresStreams,
   scenarioWithRuntimeConfig,
+  selectRuntimeDisplayEventCount,
+  selectRuntimeDisplaySimTime,
   selectFidelitySummary,
+  shouldResetWorldBeforeStreamConnect,
   shouldShowBackpressureNotice,
   shouldShowFidelityNotice,
   standaloneDashboardHref,
@@ -139,6 +142,18 @@ describe("runtimeStatusRequiresStreams", () => {
     expect(runtimeStatusRequiresStreams({ ...baseStatus, status: "PAUSED" })).toBe(false);
     expect(runtimeStatusRequiresStreams({ ...baseStatus, status: "STOPPED" })).toBe(false);
     expect(runtimeStatusRequiresStreams(undefined)).toBe(false);
+  });
+});
+
+describe("stream connection reset policy", () => {
+  it("keeps the world state when attaching to an already running backend session", () => {
+    expect(shouldResetWorldBeforeStreamConnect("ATTACH", 0)).toBe(false);
+    expect(shouldResetWorldBeforeStreamConnect("RESUME", 100)).toBe(false);
+  });
+
+  it("resets only for a fresh START with no local stream history", () => {
+    expect(shouldResetWorldBeforeStreamConnect("START", 0)).toBe(true);
+    expect(shouldResetWorldBeforeStreamConnect("START", 25)).toBe(false);
   });
 });
 
@@ -277,6 +292,28 @@ describe("runtime progress clock", () => {
 
     expect(next.simTime).toBe(0);
     expect(runtimeProgressSimTime(next, 6_000)).toBe(0);
+  });
+
+  it("immediately resets visible progress while a reset command is pending", () => {
+    const first = defaultRuntimeProgressAnchor(runningStatus, 1_000);
+    const pendingResetStatus: RuntimeStatusPayload = {
+      ...runningStatus,
+      last_action: "RESET_PENDING",
+      current_sim_time: 120,
+      processed_event_count: 900
+    };
+    const next = nextRuntimeProgressAnchor(first, 120, pendingResetStatus, 5_000);
+
+    expect(next.simTime).toBe(0);
+    expect(selectRuntimeDisplaySimTime(pendingResetStatus, 120, next, 6_000)).toBe(0);
+    expect(selectRuntimeDisplayEventCount(pendingResetStatus, 900)).toBe(0);
+  });
+
+  it("uses runtime event counts only outside reset-like transitions", () => {
+    expect(selectRuntimeDisplayEventCount({ ...runningStatus, processed_event_count: 80 }, 10)).toBe(
+      80
+    );
+    expect(selectRuntimeDisplayEventCount(runningStatus, 10)).toBe(10);
   });
 
   it("stops requesting streams when the lifecycle is completed", () => {
