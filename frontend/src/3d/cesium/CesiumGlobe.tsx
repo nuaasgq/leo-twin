@@ -23,7 +23,9 @@ import { ComputeResourceSummary, SatelliteState } from "../../core/event_types";
 import { ComputeNodeRenderState, WorldSnapshot } from "../../state/snapshot_engine";
 import {
   CoverageBeamDisplaySummary,
+  CoverageUserIntersectionSummary,
   coverageBeamDisplaySummary,
+  coverageUserIntersectionSummary,
   pruneBeamEntities,
   resolveBeamGeometryOptions,
   selectedCoverageBeamSatellites,
@@ -114,6 +116,22 @@ export function CesiumGlobe({ snapshot, displaySimTime }: CesiumGlobeProps) {
   const coverageDisplaySummary = useMemo(
     () => coverageBeamDisplaySummary(snapshot.scenario_config),
     [snapshot.scenario_config]
+  );
+  const coverageUserSummary = useMemo(
+    () =>
+      coverageUserIntersectionSummary(
+        selectedSatellite,
+        snapshot.ground_users,
+        snapshot.scenario_config
+      ),
+    [
+      selectedSatellite?.satellite_id,
+      selectedSatellite?.position[0],
+      selectedSatellite?.position[1],
+      selectedSatellite?.position[2],
+      snapshot.ground_users,
+      snapshot.scenario_config
+    ]
   );
 
   useEffect(() => {
@@ -327,6 +345,7 @@ export function CesiumGlobe({ snapshot, displaySimTime }: CesiumGlobeProps) {
           computeNode={selectedComputeNode}
           computeResourceSummary={computeResourceSummary}
           coverageSummary={coverageDisplaySummary}
+          coverageUserSummary={coverageUserSummary}
         />
       ) : null}
       {renderError ? <div className="globe-render-error">{renderError}</div> : null}
@@ -390,13 +409,15 @@ function SatelliteInset({
   trail,
   computeNode,
   computeResourceSummary,
-  coverageSummary
+  coverageSummary,
+  coverageUserSummary
 }: {
   satellite: SatelliteState;
   trail: readonly SatelliteInsetPoint[];
   computeNode?: ComputeNodeRenderState | null;
   computeResourceSummary?: ComputeResourceSummary | null;
   coverageSummary: CoverageBeamDisplaySummary;
+  coverageUserSummary: CoverageUserIntersectionSummary;
 }) {
   const latestPoint = trail[trail.length - 1] ?? {
     satelliteId: satellite.satellite_id,
@@ -443,6 +464,9 @@ function SatelliteInset({
         <span>{coverageSummary.beamCountLabel}</span>
         <span>{coverageSummary.modelLabel}</span>
         <span className="coverage-note">{coverageSummary.note}</span>
+        <span>{coverageUserSummary.label}</span>
+        <span>{coverageUserSummary.coveredUserLabel}</span>
+        <span className="coverage-note">{coverageUserSummary.note}</span>
         {computeSummary ? (
           <>
             <span>{computeSummary.resourceRoleLabel}</span>

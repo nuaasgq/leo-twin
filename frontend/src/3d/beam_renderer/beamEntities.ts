@@ -1,6 +1,6 @@
 import { Cartesian3, Color, ConstantPositionProperty, Entity, EntityCollection } from "cesium";
 
-import { SatelliteState, ScenarioConfig } from "../../core/event_types";
+import { GroundUserState, SatelliteState, ScenarioConfig } from "../../core/event_types";
 import { satelliteCartesian, Vector3Tuple } from "../cesium/positions";
 
 const EARTH_RADIUS_M = 6_371_000;
@@ -24,6 +24,16 @@ export interface CoverageBeamDisplaySummary {
   beamLengthLabel: string;
   beamCountLabel: string;
   modelLabel: string;
+  note: string;
+}
+
+export interface CoverageUserIntersectionSummary {
+  totalUserCount: number;
+  positionedUserCount: number;
+  coveredUserCount: number;
+  coveredUserIds: readonly string[];
+  label: string;
+  coveredUserLabel: string;
   note: string;
 }
 
@@ -152,6 +162,36 @@ export function coverageBeamDisplaySummary(
       coverage?.model_note ??
       "确定性几何可视化足迹；未进行 RF 传播、天线方向图或链路预算仿真。"
   };
+}
+
+export function coverageUserIntersectionSummary(
+  satellite: SatelliteState | null | undefined,
+  users: readonly GroundUserState[],
+  scenarioConfig: ScenarioConfig | null | undefined
+): CoverageUserIntersectionSummary {
+  const positionedUsers = users.filter((user) => user.position !== undefined);
+  if (!satellite) {
+    return coverageUserSummary(0, users.length, positionedUsers.length, []);
+  }
+  const footprint = buildCoverageFootprint(
+    satellite,
+    resolveBeamGeometryOptions(scenarioConfig).beamRadiusMeters
+  );
+  const coveredUserIds = positionedUsers
+    .filter((user) =>
+      user.position
+        ? vectorDistance(geoPositionToEcef(user.position), footprint.position) <=
+          footprint.radiusMeters
+        : false
+    )
+    .map((user) => user.user_id)
+    .sort();
+  return coverageUserSummary(
+    coveredUserIds.length,
+    users.length,
+    positionedUsers.length,
+    coveredUserIds
+  );
 }
 
 export function buildBeamCellFootprints(
@@ -316,6 +356,47 @@ function cross(left: Vector3Tuple, right: Vector3Tuple): Vector3Tuple {
     left[2] * right[0] - left[0] * right[2],
     left[0] * right[1] - left[1] * right[0]
   ];
+}
+
+function vectorDistance(left: Vector3Tuple, right: Vector3Tuple): number {
+  return vectorLength([left[0] - right[0], left[1] - right[1], left[2] - right[2]]);
+}
+
+function geoPositionToEcef(position: GroundUserState["position"]): Vector3Tuple {
+  if (!position) {
+    return [0, 0, 0];
+  }
+  const longitude = (position[0] * Math.PI) / 180;
+  const latitude = (position[1] * Math.PI) / 180;
+  const radius = EARTH_RADIUS_M + (position[2] ?? 0);
+  const cosLatitude = Math.cos(latitude);
+  return [
+    radius * cosLatitude * Math.cos(longitude),
+    radius * cosLatitude * Math.sin(longitude),
+    radius * Math.sin(latitude)
+  ];
+}
+
+function coverageUserSummary(
+  coveredUserCount: number,
+  totalUserCount: number,
+  positionedUserCount: number,
+  coveredUserIds: readonly string[]
+): CoverageUserIntersectionSummary {
+  const preview = coveredUserIds.slice(0, 4).join("、");
+  const remaining = Math.max(0, coveredUserIds.length - 4);
+  return {
+    totalUserCount,
+    positionedUserCount,
+    coveredUserCount,
+    coveredUserIds,
+    label: `覆盖内用户 ${coveredUserCount}/${positionedUserCount}`,
+    coveredUserLabel:
+      coveredUserIds.length === 0
+        ? "覆盖用户 暂无"
+        : `覆盖用户 ${preview}${remaining > 0 ? ` 等 ${coveredUserIds.length} 个` : ""}`,
+    note: `基于 ${totalUserCount} 个地面用户中的 ${positionedUserCount} 个定位用户做几何足迹包含统计；不是 RF 覆盖或接入判定。`
+  };
 }
 
 function positiveNumber(value: number | undefined, fallback: number): number {

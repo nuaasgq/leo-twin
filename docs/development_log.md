@@ -2514,3 +2514,34 @@ change.
 - Recommended follow-up:
   - Add a selected-satellite coverage/user intersection panel that reports how
     many visible ground users fall inside the visual footprint.
+
+## 2026-07-05 - Coverage User Intersection v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: count positioned ground users inside the selected satellite's visual
+  coverage footprint and show the result in the satellite-follow inset.
+- Changed files/modules:
+  - `frontend/src/3d/beam_renderer/beamEntities.ts`
+  - `frontend/src/3d/cesium/CesiumGlobe.tsx`
+  - `frontend/tests/satelliteVisuals.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- satelliteVisuals.test.ts visualLayerLimits.test.ts`
+    - Result: passed, 23 files / 137 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - Ground-user intersection is intentionally computed against the same visual
+    footprint radius used by the selected-satellite beam renderer, so it stays
+    consistent with what the user sees.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The count is not an access decision, RF coverage result, antenna pattern,
+    or link-budget model. It only explains the current visual footprint.
+- Recommended follow-up:
+  - Promote coverage/user intersection into a backend-derived observation once
+    the coverage model contract is upgraded beyond visual approximation.

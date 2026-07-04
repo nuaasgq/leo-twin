@@ -13,6 +13,7 @@ import {
   buildBeamCellFootprints,
   buildCoverageFootprint,
   coverageBeamDisplaySummary,
+  coverageUserIntersectionSummary,
   resolveBeamGeometryOptions,
   selectedCoverageBeamSatellites
 } from "../src/3d/beam_renderer/beamEntities";
@@ -25,6 +26,7 @@ import {
 } from "../src/3d/cesium/satelliteFollow";
 import {
   ComputeResourceSummary,
+  GroundUserState,
   SatelliteState,
   ScenarioConfig
 } from "../src/core/event_types";
@@ -168,6 +170,26 @@ describe("selected satellite coverage beams", () => {
       beamCountLabel: "蜂窝波束 7 个"
     });
     expect(coverageBeamDisplaySummary(null).note).toContain("未进行 RF");
+  });
+
+  it("counts positioned ground users inside the selected visual footprint", () => {
+    const users: GroundUserState[] = [
+      { user_id: "user-center", position: [0, 0, 0] },
+      { user_id: "user-near", position: [0.5, 0, 0] },
+      { user_id: "user-far", position: [3, 0, 0] },
+      { user_id: "user-unpositioned" }
+    ];
+
+    expect(coverageUserIntersectionSummary(satelliteA, users, null)).toEqual({
+      totalUserCount: 4,
+      positionedUserCount: 3,
+      coveredUserCount: 2,
+      coveredUserIds: ["user-center", "user-near"],
+      label: "覆盖内用户 2/3",
+      coveredUserLabel: "覆盖用户 user-center、user-near",
+      note:
+        "基于 4 个地面用户中的 3 个定位用户做几何足迹包含统计；不是 RF 覆盖或接入判定。"
+    });
   });
 
   it("keeps backend beam counts bounded for large-scale rendering safety", () => {
