@@ -37,7 +37,7 @@ from leo_twin.models.network import (
     default_data_link_runtime,
     default_transport_runtime,
 )
-from leo_twin.models.orbit import KeplerianOrbitEngine
+from leo_twin.models.orbit import J2SecularDriftProfile, KeplerianOrbitEngine
 from leo_twin.schema import (
     AntennaProfile,
     ApplicationProtocol,
@@ -87,6 +87,7 @@ def run_generated_full_system_demo(
         elements=scenario.orbit_elements,
         update_targets=("metrics", "network"),
         earth_rotation_rate_rad_s=resolved_config.earth_rotation_rate_rad_s,
+        j2_profile=_j2_profile_for(resolved_config.orbit_propagation_model),
     )
     space_ground_budget = _space_ground_budget(resolved_config)
     space_space_budget = _space_space_budget(resolved_config)
@@ -237,6 +238,12 @@ def _compute_gateway_links(
         )
         for index, node in enumerate(scenario.compute_nodes)
     )
+
+
+def _j2_profile_for(orbit_propagation_model: str) -> J2SecularDriftProfile | None:
+    if orbit_propagation_model == "J2_SECULAR":
+        return J2SecularDriftProfile()
+    return None
 
 
 def _transport_runtime(

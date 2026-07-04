@@ -37,6 +37,7 @@ class FullSystemScenarioBuilderConfig:
     flow_count: int = 100
     compute_scheduling_policy: str = "FIFO"
     orbit_plane_count: int = 6
+    orbit_propagation_model: str = "KEPLERIAN"
     epoch: float = 0.0
     earth_rotation_rate_rad_s: float = 0.0
     semi_major_axis_km: float = 7000.0
@@ -89,6 +90,11 @@ class FullSystemScenarioBuilderConfig:
         )
         if self.orbit_plane_count > self.satellite_count:
             raise ValueError("orbit_plane_count must be <= satellite_count")
+        object.__setattr__(
+            self,
+            "orbit_propagation_model",
+            _orbit_propagation_model(str(self.orbit_propagation_model)),
+        )
         _require_finite_number(self.epoch, "epoch")
         _require_finite_number(
             self.earth_rotation_rate_rad_s,
@@ -507,3 +513,11 @@ def _compute_scheduling_policy(value: str) -> str:
     if value not in allowed:
         raise ValueError("compute_scheduling_policy must be a supported policy")
     return value
+
+
+def _orbit_propagation_model(value: str) -> str:
+    normalized = value.upper()
+    allowed = frozenset(("KEPLERIAN", "J2_SECULAR"))
+    if normalized not in allowed:
+        raise ValueError("orbit_propagation_model must be a supported model")
+    return normalized

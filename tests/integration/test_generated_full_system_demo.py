@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-from examples.generated_full_system_demo import _space_ground_budget, run_generated_full_system_demo
+from examples.generated_full_system_demo import (
+    _j2_profile_for,
+    _space_ground_budget,
+    run_generated_full_system_demo,
+)
+from leo_twin.models.orbit import J2SecularDriftProfile
 from leo_twin.schema import EventType
 from leo_twin.services.scenario_builder import FullSystemScenarioBuilderConfig
 
@@ -59,6 +64,27 @@ def test_generated_full_system_demo_is_deterministic() -> None:
     )
 
     assert run_generated_full_system_demo(config) == run_generated_full_system_demo(config)
+
+
+def test_generated_full_system_demo_selects_configured_orbit_model() -> None:
+    config = FullSystemScenarioBuilderConfig(
+        seed=12,
+        satellite_count=3,
+        user_count=5,
+        compute_node_count=2,
+        flow_count=3,
+        orbit_plane_count=1,
+        orbit_propagation_model="J2_SECULAR",
+        min_elevation_deg=-90.0,
+        max_range_km=30000.0,
+        compute_capacity=20.0,
+    )
+
+    result = run_generated_full_system_demo(config)
+
+    assert isinstance(_j2_profile_for(config.orbit_propagation_model), J2SecularDriftProfile)
+    assert _j2_profile_for("KEPLERIAN") is None
+    assert result.metrics_summary["routes_total"] == 3
 
 
 def test_generated_full_system_demo_transport_protocol_changes_route_profile() -> None:

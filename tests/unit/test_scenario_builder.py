@@ -133,6 +133,9 @@ def test_full_system_scenario_builder_rejects_invalid_config() -> None:
     with pytest.raises(ValueError, match="compute_scheduling_policy"):
         FullSystemScenarioBuilderConfig(compute_scheduling_policy="RANDOM")
 
+    with pytest.raises(ValueError, match="orbit_propagation_model"):
+        FullSystemScenarioBuilderConfig(orbit_propagation_model="SGP4")
+
 
 def test_scenario_builder_config_from_mapping_rejects_unknown_fields() -> None:
     with pytest.raises(ValueError, match="unknown scenario builder fields"):
@@ -165,6 +168,7 @@ def test_load_full_system_scenario_builder_config_from_json(tmp_path) -> None:
     assert config.flow_count == 3
     assert config.compute_scheduling_policy == "FIFO"
     assert config.orbit_plane_count == 2
+    assert config.orbit_propagation_model == "KEPLERIAN"
     assert config.earth_rotation_rate_rad_s == 0.0
     assert config.space_link_max_range_km == 0.0
     assert config.space_link_capacity == 100.0
@@ -196,6 +200,7 @@ def test_write_full_system_scenario_builder_config_round_trips(tmp_path) -> None
         compute_node_count=2,
         flow_count=3,
         orbit_plane_count=1,
+        orbit_propagation_model="J2_SECULAR",
     )
     config_path = tmp_path / "generated.json"
 
@@ -259,6 +264,7 @@ def test_scenario_builder_config_from_sees_config_maps_control_plane_fields() ->
     assert generated.flow_count == 10
     assert generated.compute_scheduling_policy == "EARLIEST_DEADLINE_FIRST"
     assert generated.orbit_plane_count == 4
+    assert generated.orbit_propagation_model == "KEPLERIAN"
     assert generated.semi_major_axis_km == 6971.0
     assert generated.inclination_deg == 55.0
     assert generated.demand_capacity == 2.5
