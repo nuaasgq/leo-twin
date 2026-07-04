@@ -72,6 +72,41 @@ def test_task_service_time_helper_preserves_legacy_scheduler_timing() -> None:
     assert estimate.bottleneck_resource == "cpu_gflops_fp32"
 
 
+def test_task_service_time_helper_uses_explicit_task_resource_demand() -> None:
+    node = ComputeNode(
+        "gpu-node",
+        capacity=100.0,
+        gpu_tflops_fp32=2.0,
+        gpu_tflops_fp16=4.0,
+        npu_tops_int8=8.0,
+        memory_gb=16.0,
+        storage_gb=2.0,
+    )
+    task = TaskRequest(
+        task_id="task-gpu",
+        source_id="user-a",
+        submit_time=0.0,
+        compute_demand=1.0,
+        data_size=1.0,
+        fp32_ops=10_000_000_000_000.0,
+        memory_gb=4.0,
+        input_data_mb=256.0,
+        output_data_mb=128.0,
+    )
+
+    demand = task_resource_demand_from_request(task)
+    estimate = estimate_task_service_time(node, task)
+
+    assert demand == TaskResourceDemand(
+        fp32_ops=10_000_000_000_000.0,
+        memory_gb=4.0,
+        input_data_mb=256.0,
+        output_data_mb=128.0,
+    )
+    assert estimate.service_time == pytest.approx(5.0)
+    assert estimate.bottleneck_resource == "gpu_tflops_fp32"
+
+
 def test_cpu_only_task_uses_cpu_bottleneck() -> None:
     resources = ComputeResourceVector(
         cpu_gflops_fp32=50.0,

@@ -43,6 +43,13 @@ class TrafficDemandProfile:
     destination_type: TrafficDestinationType | str = TrafficDestinationType.GROUND_ENDPOINT
     start_time: float = 0.0
     compute_demand: float = 1.0
+    cpu_ops: float = 0.0
+    fp32_ops: float = 0.0
+    fp16_ops: float = 0.0
+    int8_ops: float = 0.0
+    memory_gb: float = 0.0
+    input_data_mb: float = 0.0
+    output_data_mb: float = 0.0
     application_id: str | None = None
     id_prefix: str = "traffic"
     output_destination_ids: tuple[str, ...] = ()
@@ -78,6 +85,16 @@ class TrafficDemandProfile:
         _require_int(self.priority, "priority")
         _require_non_negative_number(self.start_time, "start_time")
         _require_non_negative_number(self.compute_demand, "compute_demand")
+        for field_name in (
+            "cpu_ops",
+            "fp32_ops",
+            "fp16_ops",
+            "int8_ops",
+            "memory_gb",
+            "input_data_mb",
+            "output_data_mb",
+        ):
+            _require_non_negative_number(getattr(self, field_name), field_name)
         if self.application_id is not None:
             _require_non_empty_str(self.application_id, "application_id")
         _require_non_empty_str(self.id_prefix, "id_prefix")
@@ -363,6 +380,13 @@ def _compute_service_record(
         data_size=profile.input_data_size,
         flow_id=input_flow.flow_id,
         priority=profile.priority,
+        cpu_ops=profile.cpu_ops,
+        fp32_ops=profile.fp32_ops,
+        fp16_ops=profile.fp16_ops,
+        int8_ops=profile.int8_ops,
+        memory_gb=profile.memory_gb,
+        input_data_mb=profile.input_data_mb,
+        output_data_mb=profile.output_data_mb,
     )
     output_target_ids = profile.output_destination_ids or profile.source_ids
     output_target_id = output_target_ids[request_index % len(output_target_ids)]

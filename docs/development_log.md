@@ -5,6 +5,48 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Task Resource Demand Contract v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending in this commit
+- Scope: extend `TaskRequest` and compute-service traffic generation with
+  optional explicit CPU/GPU/NPU/memory/data resource-demand fields, and make the
+  existing compute estimator consume them while preserving legacy scalar
+  `compute_demand` behavior when explicit lanes are absent.
+- Changed files/modules:
+  - `src/leo_twin/schema/domain.py`
+  - `src/leo_twin/models/compute/resources.py`
+  - `src/leo_twin/models/compute/engine.py`
+  - `src/leo_twin/models/compute/network_aware.py`
+  - `src/leo_twin/models/traffic/demand.py`
+  - `docs/product_contracts.md`
+  - `tests/unit/test_product_contracts.py`
+  - `tests/unit/test_compute_resource_model.py`
+  - `tests/unit/test_compute_module.py`
+  - `tests/unit/test_traffic_demand_model.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_product_contracts.py tests/unit/test_compute_resource_model.py tests/unit/test_compute_module.py tests/unit/test_network_aware_compute.py tests/unit/test_traffic_demand_model.py -q`
+    - Result: passed, 34 tests.
+  - `python -m pytest tests/integration/test_compute_service_lifecycle.py tests/integration/test_full_domain_pipeline_v1.py tests/integration/test_config_control.py::test_frontend_control_messages_are_processed -q`
+    - Result: passed, 4 tests.
+  - `git diff --check`
+    - Result: passed with only CRLF warnings for excluded local runtime config
+      files.
+- Problems encountered:
+  - Existing `data_size` is network transfer size and many scenarios still use
+    compute nodes with `storage_gb=0`. The new `input_data_mb` /
+    `output_data_mb` fields therefore remain explicit instead of implicitly
+    mirroring `data_size`, avoiding unintended storage-capacity failures.
+- Known remaining issues:
+  - Control-panel configuration does not yet expose task lane demands. This
+    should be a separate frontend/backend configuration task.
+  - Metrics and dashboard still report scalar FP32 utilization; per-lane
+    utilization metrics remain a follow-up.
+- Recommended follow-up:
+  - Add control-plane configuration fields for representative task lane demand
+    profiles, then emit per-lane utilization metrics for dashboard charts.
+
 ## 2026-07-05 - Compute Service-Time Estimator Wiring v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`

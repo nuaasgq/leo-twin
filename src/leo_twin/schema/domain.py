@@ -339,6 +339,13 @@ class TaskRequest:
     deadline: float | None = None
     flow_id: str | None = None
     priority: int = 0
+    cpu_ops: float = 0.0
+    fp32_ops: float = 0.0
+    fp16_ops: float = 0.0
+    int8_ops: float = 0.0
+    memory_gb: float = 0.0
+    input_data_mb: float = 0.0
+    output_data_mb: float = 0.0
 
     def __post_init__(self) -> None:
         _require_non_empty_str(self.task_id, "task_id")
@@ -351,6 +358,16 @@ class TaskRequest:
         if self.flow_id is not None:
             _require_non_empty_str(self.flow_id, "flow_id")
         _require_int(self.priority, "priority")
+        for field_name in (
+            "cpu_ops",
+            "fp32_ops",
+            "fp16_ops",
+            "int8_ops",
+            "memory_gb",
+            "input_data_mb",
+            "output_data_mb",
+        ):
+            _require_non_negative_number(getattr(self, field_name), field_name)
 
 
 @dataclass(frozen=True)

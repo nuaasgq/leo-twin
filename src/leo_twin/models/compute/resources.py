@@ -225,14 +225,29 @@ def compute_resource_vector_from_node(node: ComputeNode) -> ComputeResourceVecto
 def task_resource_demand_from_request(task: TaskRequest) -> TaskResourceDemand:
     """Build the estimator demand represented by a task request.
 
-    Current task requests carry the legacy scalar ``compute_demand`` contract.
-    The estimator maps it to CPU operations so existing timing remains
-    deterministic while all schedulers share the resource-vector path.
+    If a request does not provide explicit resource-lane operation counts, the
+    legacy scalar ``compute_demand`` is mapped to CPU operations so existing
+    timing remains deterministic.
     """
 
     if not isinstance(task, TaskRequest):
         raise TypeError("task must be TaskRequest")
-    return TaskResourceDemand.from_compute_demand(task.compute_demand)
+    if not _has_explicit_processing_demand(task):
+        return TaskResourceDemand.from_compute_demand(
+            task.compute_demand,
+            memory_gb=task.memory_gb,
+            input_data_mb=task.input_data_mb,
+            output_data_mb=task.output_data_mb,
+        )
+    return TaskResourceDemand(
+        cpu_ops=task.cpu_ops,
+        fp32_ops=task.fp32_ops,
+        fp16_ops=task.fp16_ops,
+        int8_ops=task.int8_ops,
+        memory_gb=task.memory_gb,
+        input_data_mb=task.input_data_mb,
+        output_data_mb=task.output_data_mb,
+    )
 
 
 def estimate_task_service_time(
@@ -244,6 +259,15 @@ def estimate_task_service_time(
     return estimate_compute_service_time(
         compute_resource_vector_from_node(node),
         task_resource_demand_from_request(task),
+    )
+
+
+def _has_explicit_processing_demand(task: TaskRequest) -> bool:
+    return (
+        task.cpu_ops > 0.0
+        or task.fp32_ops > 0.0
+        or task.fp16_ops > 0.0
+        or task.int8_ops > 0.0
     )
 
 

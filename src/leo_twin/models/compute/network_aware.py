@@ -446,6 +446,13 @@ class RouteAwareComputeEngine(SimulationModule):
                     else str(payload.get("flow_id"))
                 ),
                 priority=int(payload.get("priority", 0)),
+                cpu_ops=float(payload.get("cpu_ops", 0.0)),
+                fp32_ops=float(payload.get("fp32_ops", 0.0)),
+                fp16_ops=float(payload.get("fp16_ops", 0.0)),
+                int8_ops=float(payload.get("int8_ops", 0.0)),
+                memory_gb=float(payload.get("memory_gb", 0.0)),
+                input_data_mb=float(payload.get("input_data_mb", 0.0)),
+                output_data_mb=float(payload.get("output_data_mb", 0.0)),
             )
         raise TypeError("TASK_ARRIVAL payload must be TaskRequest or dict")
 

@@ -43,6 +43,27 @@ domain contracts:
 - `leo_twin.schema.network.LinkState`
 - `leo_twin.schema.network.FlowRequest`
 
+## Compute Resource Demand
+
+`TaskRequest.compute_demand` remains the legacy scalar CPU FP32 demand used by
+existing scenarios and tests. When no explicit resource-lane fields are set,
+compute services map this value to CPU operations deterministically.
+
+`TaskRequest` also carries optional explicit resource demand fields:
+
+- `cpu_ops`
+- `fp32_ops`
+- `fp16_ops`
+- `int8_ops`
+- `memory_gb`
+- `input_data_mb`
+- `output_data_mb`
+
+These fields are data contracts only. They do not imply packet-level
+simulation, external simulators, or Event Kernel changes. Runtime compute
+models may use them for deterministic service-time estimation and resource
+capacity checks.
+
 ## Determinism Rules
 
 Contracts must be immutable dataclasses and deterministic when serialized.

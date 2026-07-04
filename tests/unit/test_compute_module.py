@@ -170,6 +170,45 @@ def test_compute_node_updates_publish_resource_vectors() -> None:
     )
 
 
+def test_dict_task_payload_can_drive_explicit_gpu_service_time() -> None:
+    kernel = SimulationKernel()
+    engine = ComputeEngine(
+        nodes=(
+            ComputeNode(
+                node_id="gpu-node",
+                capacity=100.0,
+                gpu_tflops_fp32=2.0,
+                memory_gb=16.0,
+                storage_gb=2.0,
+            ),
+        )
+    )
+    sink = MetricsSink()
+    kernel.register_module(engine)
+    kernel.register_module(sink)
+    kernel.schedule_event(
+        _event(
+            1,
+            EventType.TASK_ARRIVAL.value,
+            {
+                "task_id": "gpu-task",
+                "source_id": "user-1",
+                "submit_time": 0.0,
+                "compute_demand": 1.0,
+                "data_size": 1.0,
+                "fp32_ops": 10_000_000_000_000.0,
+                "memory_gb": 4.0,
+                "input_data_mb": 256.0,
+                "output_data_mb": 128.0,
+            },
+        )
+    )
+
+    kernel.run()
+
+    assert engine.scheduled_tasks() == (("gpu-task", "gpu-node", 0.0, 5.0),)
+
+
 def test_scheduler_uses_deterministic_earliest_finish_ordering() -> None:
     engine, sink, _ = _run_task_scenario()
 

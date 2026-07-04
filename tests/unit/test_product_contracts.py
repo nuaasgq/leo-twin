@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from leo_twin.schema import (
     ApplicationState,
     ChannelState,
@@ -96,6 +98,36 @@ def test_product_contracts_cover_required_runtime_domains() -> None:
     )
 
     assert all(hasattr(contract, "__dataclass_fields__") for contract in required)
+
+
+def test_task_request_carries_optional_resource_demand_contract() -> None:
+    task = TaskRequest(
+        task_id="task-vector",
+        source_id="user-a",
+        submit_time=1.0,
+        compute_demand=20.0,
+        data_size=4.0,
+        fp32_ops=10_000_000_000_000.0,
+        fp16_ops=4_000_000_000_000.0,
+        int8_ops=8_000_000_000_000.0,
+        memory_gb=4.0,
+        input_data_mb=512.0,
+        output_data_mb=128.0,
+    )
+
+    assert task.fp32_ops == 10_000_000_000_000.0
+    assert task.memory_gb == 4.0
+    assert task.input_data_mb == 512.0
+    assert task.output_data_mb == 128.0
+    with pytest.raises(ValueError, match="fp32_ops"):
+        TaskRequest(
+            task_id="bad-task",
+            source_id="user-a",
+            submit_time=1.0,
+            compute_demand=20.0,
+            data_size=4.0,
+            fp32_ops=-1.0,
+        )
 
 
 def _snapshot() -> WorldSnapshot:

@@ -92,6 +92,12 @@ def test_compute_service_generates_correlated_requests_and_output_metadata() -> 
         destination_type=TrafficDestinationType.COMPUTE_NODE,
         start_time=1.0,
         compute_demand=21.0,
+        fp32_ops=10_000_000_000_000.0,
+        fp16_ops=4_000_000_000_000.0,
+        int8_ops=8_000_000_000_000.0,
+        memory_gb=4.0,
+        input_data_mb=512.0,
+        output_data_mb=128.0,
         id_prefix="svc",
         output_destination_ids=("sink-a", "sink-b"),
     )
@@ -115,6 +121,12 @@ def test_compute_service_generates_correlated_requests_and_output_metadata() -> 
     assert first_task.data_size == 8.0
     assert first_task.flow_id == first_flow.flow_id
     assert first_task.priority == 9
+    assert first_task.fp32_ops == 10_000_000_000_000.0
+    assert first_task.fp16_ops == 4_000_000_000_000.0
+    assert first_task.int8_ops == 8_000_000_000_000.0
+    assert first_task.memory_gb == 4.0
+    assert first_task.input_data_mb == 512.0
+    assert first_task.output_data_mb == 128.0
 
     assert first_output.flow_id == "svc-00-compute_service-00000-output"
     assert first_output.task_id == first_task.task_id
