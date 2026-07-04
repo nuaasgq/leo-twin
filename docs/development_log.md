@@ -3108,3 +3108,37 @@ change.
 - Recommended follow-up:
   - Add backend per-satellite KPI slice contracts so the dashboard and selected
     satellite detail can share the same semantic source of truth.
+
+## 2026-07-05 - Dashboard Top Compute Nodes v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a high-load compute node table to the standalone data panel so
+  users can identify which satellite-hosted compute nodes are overloaded or
+  busy, using existing snapshot compute-node fields.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 23 files / 153 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The dashboard already had a global compute pool chart, but it did not expose
+    which satellite nodes were consuming resources. The new table is derived
+    from snapshot node state and does not change backend protocol.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - This is a snapshot ranking, not a backend per-satellite KPI time series.
+    It does not yet show recent per-node throughput, task wait time, or service
+    lifecycle latency.
+- Recommended follow-up:
+  - Add backend per-satellite KPI slices for recent network and compute service
+    metrics, then bind both dashboard and selected-satellite details to that
+    shared source.

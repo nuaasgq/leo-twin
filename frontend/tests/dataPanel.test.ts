@@ -11,6 +11,7 @@ import {
   buildDataPanelSummary,
   buildDataPanelTelemetry,
   buildDataPanelTrafficDisplay,
+  buildTopComputeNodeRows,
   resolveNetworkQualityKpis
 } from "../src/dashboard/data_panel/DataPanel";
 import { WorldSnapshot } from "../src/state/snapshot_engine";
@@ -1154,6 +1155,91 @@ describe("buildComputeResourcePool", () => {
         availableStorageGb: 2000,
         utilizationMode: "RESOURCE_VECTOR_ESTIMATED"
       }
+    });
+  });
+});
+
+describe("buildTopComputeNodeRows", () => {
+  it("orders satellite compute nodes by load, used FP32, tasks, and id", () => {
+    const rows = buildTopComputeNodeRows(
+      makeSnapshot({
+        compute_nodes: [
+          {
+            node_id: "sat-c",
+            running_tasks: 1,
+            finished_tasks: 2,
+            capacity: 40,
+            available_capacity: 10,
+            status: "BUSY",
+            load_ratio: 0.75
+          },
+          {
+            node_id: "sat-a",
+            running_tasks: 3,
+            finished_tasks: 1,
+            capacity: 100,
+            available_capacity: 20,
+            status: "OVERLOADED",
+            load_ratio: 0.8,
+            used_cpu_gflops_fp32: 82
+          },
+          {
+            node_id: "sat-b",
+            running_tasks: 2,
+            finished_tasks: 4,
+            capacity: 100,
+            available_capacity: 20,
+            status: "BUSY",
+            load_ratio: 0.8,
+            used_cpu_gflops_fp32: 80
+          },
+          {
+            node_id: "sat-d",
+            running_tasks: 0,
+            finished_tasks: 0,
+            capacity: 10,
+            available_capacity: 10,
+            status: "IDLE",
+            load_ratio: 0
+          }
+        ]
+      }),
+      3
+    );
+
+    expect(rows.map((row) => row.nodeId)).toEqual(["sat-a", "sat-b", "sat-c"]);
+    expect(rows[0]).toMatchObject({
+      statusLabel: "OVERLOADED",
+      loadPercent: 80,
+      usedFp32Gflops: 82,
+      runningTasks: 3,
+      loadLabel: "80%",
+      fp32Label: "82 / 100 GFLOPS",
+      taskLabel: "3 运行 / 1 完成"
+    });
+  });
+
+  it("derives load from scalar capacity when live load ratio is missing", () => {
+    expect(
+      buildTopComputeNodeRows(
+        makeSnapshot({
+          compute_nodes: [
+            {
+              node_id: "sat-a",
+              running_tasks: 0,
+              finished_tasks: 0,
+              capacity: 50,
+              available_capacity: 20,
+              status: "BUSY",
+              load_ratio: Number.NaN
+            }
+          ]
+        })
+      )[0]
+    ).toMatchObject({
+      loadPercent: 60,
+      loadLabel: "60%",
+      fp32Label: "30 / 50 GFLOPS"
     });
   });
 });

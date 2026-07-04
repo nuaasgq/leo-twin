@@ -110,6 +110,7 @@ export const DataPanel = memo(function DataPanel({
     snapshot,
     runtimeStatus.metrics_summary
   );
+  const topComputeNodes = buildTopComputeNodeRows(snapshot);
 
   return (
     <section className="data-panel" aria-label="独立数据态势面板">
@@ -358,6 +359,7 @@ export const DataPanel = memo(function DataPanel({
               {computePool.vectorSummary.storageGb.toFixed(1)} GB
             </span>
           </div>
+          <TopComputeNodeTable rows={topComputeNodes} />
           <div className="data-panel-chart-body compact">
             {computePool.totalTflops > 0 ? (
               <ResponsiveContainer width="100%" height={160}>
@@ -426,6 +428,32 @@ function RouteConstraintTable({ rows }: { rows: DataPanelRouteConstraintRows }) 
           <span>{row.capacityLabel}</span>
           <span>{row.demandLossLabel}</span>
           <span>{row.bottleneckLabel}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TopComputeNodeTable({ rows }: { rows: readonly TopComputeNodeRow[] }) {
+  if (rows.length === 0) {
+    return <div className="data-panel-compute-empty">等待算力节点快照</div>;
+  }
+  return (
+    <div className="data-panel-compute-node-table" aria-label="高负载卫星算力节点">
+      <div className="data-panel-compute-node-row header">
+        <span>节点</span>
+        <span>状态</span>
+        <span>负载</span>
+        <span>FP32</span>
+        <span>任务</span>
+      </div>
+      {rows.map((row) => (
+        <div className="data-panel-compute-node-row" key={row.nodeId}>
+          <span title={row.nodeId}>{row.nodeId}</span>
+          <span>{row.statusLabel}</span>
+          <span>{row.loadLabel}</span>
+          <span>{row.fp32Label}</span>
+          <span>{row.taskLabel}</span>
         </div>
       ))}
     </div>
@@ -569,6 +597,17 @@ export interface ComputeResourceVectorPoolSummary {
   usedStorageGb: number;
   availableStorageGb: number;
   utilizationMode: string;
+}
+
+export interface TopComputeNodeRow {
+  nodeId: string;
+  statusLabel: string;
+  loadPercent: number;
+  usedFp32Gflops: number;
+  runningTasks: number;
+  loadLabel: string;
+  fp32Label: string;
+  taskLabel: string;
 }
 
 export function buildDataPanelTelemetry(
@@ -761,6 +800,64 @@ export function buildComputeResourcePool(
       }
     ]
   };
+}
+
+export function buildTopComputeNodeRows(
+  snapshot: WorldSnapshot,
+  limit = 5
+): readonly TopComputeNodeRow[] {
+  return snapshot.compute_nodes
+    .map((node) => {
+      const capacity = Math.max(0, finiteMetric(node.capacity));
+      const available = Math.max(
+        0,
+        Math.min(capacity, finiteMetric(node.available_capacity))
+      );
+      const usedFp32 =
+        typeof node.used_cpu_gflops_fp32 === "number" &&
+        Number.isFinite(node.used_cpu_gflops_fp32)
+          ? Math.max(0, node.used_cpu_gflops_fp32)
+          : Math.max(0, capacity - available);
+      const loadRatio =
+        typeof node.load_ratio === "number" && Number.isFinite(node.load_ratio)
+          ? clampRatio(node.load_ratio)
+          : capacity <= 0
+            ? 0
+            : clampRatio(usedFp32 / capacity);
+      return {
+        nodeId: node.node_id,
+        statusLabel: node.status,
+        loadPercent: roundMetric(loadRatio * 100),
+        usedFp32Gflops: roundMetric(usedFp32),
+        runningTasks: node.running_tasks,
+        loadLabel: `${formatMetricValue(loadRatio * 100)}%`,
+        fp32Label: `${formatMetricValue(usedFp32)} / ${formatMetricValue(
+          capacity
+        )} GFLOPS`,
+        taskLabel: `${node.running_tasks} 运行 / ${node.finished_tasks} 完成`
+      };
+    })
+    .sort(compareTopComputeNodeRows)
+    .slice(0, Math.max(0, limit));
+}
+
+function compareTopComputeNodeRows(
+  left: TopComputeNodeRow,
+  right: TopComputeNodeRow
+): number {
+  const loadDelta = right.loadPercent - left.loadPercent;
+  if (loadDelta !== 0) {
+    return loadDelta;
+  }
+  const fp32Delta = right.usedFp32Gflops - left.usedFp32Gflops;
+  if (fp32Delta !== 0) {
+    return fp32Delta;
+  }
+  const taskDelta = right.runningTasks - left.runningTasks;
+  if (taskDelta !== 0) {
+    return taskDelta;
+  }
+  return left.nodeId.localeCompare(right.nodeId);
 }
 
 function buildComputeResourceVectorPoolSummary(
@@ -959,6 +1056,10 @@ function roundMetric(value: number): number {
     return 0;
   }
   return Math.round(value * 1000) / 1000;
+}
+
+function finiteMetric(value: number): number {
+  return Number.isFinite(value) ? value : 0;
 }
 
 function clampRatio(value: number): number {
