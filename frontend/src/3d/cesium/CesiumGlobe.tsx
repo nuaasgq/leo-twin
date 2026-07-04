@@ -27,7 +27,11 @@ import {
   upsertBeamEntity
 } from "../beam_renderer/beamEntities";
 import {
-  installCountryOverlays
+  NATURAL_EARTH_COUNTRY_SOURCE_URI,
+  NaturalEarthCountryFeatureCollection,
+  clearCountryOverlays,
+  installCountryOverlays,
+  installNaturalEarthCountryOverlays
 } from "./countryOverlays";
 import { groundUserCartesian, projectSatelliteStates } from "./positions";
 import {
@@ -108,6 +112,7 @@ export function CesiumGlobe({ snapshot, displaySimTime }: CesiumGlobeProps) {
       return;
     }
     let viewer: Viewer;
+    let disposed = false;
     try {
       viewer = new Viewer(containerRef.current, {
         animation: false,
@@ -141,6 +146,11 @@ export function CesiumGlobe({ snapshot, displaySimTime }: CesiumGlobeProps) {
       viewer.scene.skyAtmosphere.show = true;
     }
     installCountryOverlays(viewer.entities, countryOverlayCache.current);
+    void loadNaturalEarthCountryOverlays(
+      viewer,
+      countryOverlayCache.current,
+      () => disposed
+    );
     focusEarthOverview(viewer);
     const handleContextLost = (event: Event) => {
       event.preventDefault();
@@ -155,6 +165,7 @@ export function CesiumGlobe({ snapshot, displaySimTime }: CesiumGlobeProps) {
     viewerRef.current = viewer;
 
     return () => {
+      disposed = true;
       if (!viewer.isDestroyed()) {
         viewer.scene.canvas.removeEventListener("webglcontextlost", handleContextLost);
         satelliteBatch.clear();
@@ -312,6 +323,29 @@ export function CesiumGlobe({ snapshot, displaySimTime }: CesiumGlobeProps) {
       {renderError ? <div className="globe-render-error">{renderError}</div> : null}
     </div>
   );
+}
+
+async function loadNaturalEarthCountryOverlays(
+  viewer: Viewer,
+  cache: Map<string, Entity>,
+  isDisposed: () => boolean
+): Promise<void> {
+  try {
+    const response = await fetch(NATURAL_EARTH_COUNTRY_SOURCE_URI);
+    if (!response.ok) {
+      return;
+    }
+    const collection =
+      (await response.json()) as NaturalEarthCountryFeatureCollection;
+    if (isDisposed() || viewer.isDestroyed()) {
+      return;
+    }
+    clearCountryOverlays(viewer.entities, cache);
+    installNaturalEarthCountryOverlays(viewer.entities, cache, collection);
+    viewer.scene.requestRender();
+  } catch (error) {
+    console.warn("Natural Earth country overlay load failed", error);
+  }
 }
 
 function renderErrorMessage(error: unknown): string {

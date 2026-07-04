@@ -5,6 +5,43 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Natural Earth Globe Boundary v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending in this commit
+- Scope: improve 3D Earth country visibility by bundling Natural Earth 1:110m
+  Admin 0 country boundaries and replacing the coarse fallback overlays after
+  the local GeoJSON asset loads.
+- Changed files/modules:
+  - `frontend/public/assets/natural-earth/README.md`
+  - `frontend/public/assets/natural-earth/ne_110m_admin_0_countries.geojson`
+  - `frontend/src/3d/cesium/CesiumGlobe.tsx`
+  - `frontend/src/3d/cesium/countryOverlays.ts`
+  - `frontend/tests/countryOverlays.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- countryOverlays.test.ts`
+    - Result: passed, 22 files / 98 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+  - Bundled Node:
+    `node -e "JSON.parse(fs.readFileSync('frontend/public/assets/natural-earth/ne_110m_admin_0_countries.geojson','utf8'))"`
+    - Result: parsed as `FeatureCollection` with 177 features.
+- Problems encountered:
+  - PowerShell `ConvertFrom-Json` failed on the large multilingual GeoJSON, so
+    validation used Node JSON parsing, which matches the frontend runtime.
+  - The active local runtime config files remain modified and excluded.
+- Known remaining issues:
+  - The boundary layer uses one largest outer ring per country for a lightweight
+    visual overlay; islands and detailed disputed boundaries remain simplified.
+  - This task improves country boundary visibility but does not add a high-
+    resolution Earth texture or cloud layer.
+- Recommended follow-up:
+  - Add screenshot/canvas visual regression for globe opacity, boundary
+    visibility, and far-side satellite occlusion.
+
 ## 2026-07-05 - NASA Satellite Kit Asset Pipeline v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`

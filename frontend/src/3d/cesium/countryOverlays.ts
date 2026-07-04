@@ -13,12 +13,38 @@ import {
 const DEPTH_TEST_DISABLE_DISTANCE = 1_000_000_000_000;
 const COUNTRY_LABEL_HEIGHT_M = 18_000;
 
+export const NATURAL_EARTH_COUNTRY_SOURCE_URI =
+  "/assets/natural-earth/ne_110m_admin_0_countries.geojson";
+
 export interface CountryOverlayDefinition {
   id: string;
   name: string;
   label: readonly [number, number];
   borderDegrees: readonly number[];
 }
+
+export interface NaturalEarthCountryFeatureCollection {
+  type: "FeatureCollection";
+  features: readonly NaturalEarthCountryFeature[];
+}
+
+interface NaturalEarthCountryFeature {
+  type: "Feature";
+  properties: Record<string, unknown>;
+  geometry: NaturalEarthCountryGeometry | null;
+}
+
+type NaturalEarthCountryGeometry =
+  | {
+      type: "Polygon";
+      coordinates: readonly NaturalEarthLinearRing[];
+    }
+  | {
+      type: "MultiPolygon";
+      coordinates: readonly (readonly NaturalEarthLinearRing[])[];
+    };
+
+type NaturalEarthLinearRing = readonly (readonly [number, number])[];
 
 export const COUNTRY_OVERLAYS: readonly CountryOverlayDefinition[] = [
   {
@@ -129,11 +155,51 @@ export function installCountryOverlays(
   }
 }
 
-export function countryOverlayEntityIds(): readonly string[] {
-  return COUNTRY_OVERLAYS.flatMap((country) => [
+export function installNaturalEarthCountryOverlays(
+  entities: EntityCollection,
+  cache: Map<string, Entity>,
+  collection: NaturalEarthCountryFeatureCollection
+): void {
+  for (const country of naturalEarthCountryOverlayDefinitions(collection)) {
+    upsertCountryLabel(entities, cache, country);
+    upsertCountryBorder(entities, cache, country);
+  }
+}
+
+export function clearCountryOverlays(
+  entities: EntityCollection,
+  cache: Map<string, Entity>
+): void {
+  for (const entity of cache.values()) {
+    entities.remove(entity);
+  }
+  cache.clear();
+}
+
+export function countryOverlayEntityIds(
+  definitions: readonly CountryOverlayDefinition[] = COUNTRY_OVERLAYS
+): readonly string[] {
+  return definitions.flatMap((country) => [
     countryEntityId(country, "label"),
     countryEntityId(country, "border")
   ]);
+}
+
+export function naturalEarthCountryOverlayDefinitions(
+  collection: NaturalEarthCountryFeatureCollection
+): readonly CountryOverlayDefinition[] {
+  const definitions: CountryOverlayDefinition[] = [];
+  const usedIds = new Map<string, number>();
+  for (const feature of collection.features) {
+    const definition = naturalEarthFeatureToCountryOverlay(feature);
+    if (definition) {
+      definitions.push({
+        ...definition,
+        id: uniqueCountryId(definition.id, usedIds)
+      });
+    }
+  }
+  return definitions.sort((left, right) => left.id.localeCompare(right.id));
 }
 
 function upsertCountryLabel(
@@ -195,4 +261,154 @@ function countryEntityId(
   layer: "label" | "border"
 ): string {
   return `country-${layer}:${country.id}`;
+}
+
+function naturalEarthFeatureToCountryOverlay(
+  feature: NaturalEarthCountryFeature
+): CountryOverlayDefinition | null {
+  const ring = largestOuterRing(feature.geometry);
+  if (!ring) {
+    return null;
+  }
+  const borderDegrees = flattenClosedRing(ring);
+  if (borderDegrees.length < 6) {
+    return null;
+  }
+  const label = labelPosition(feature.properties, ring);
+  const id = countryId(feature.properties);
+  const name = countryName(feature.properties);
+  if (!id || !name || !label) {
+    return null;
+  }
+  return {
+    id,
+    name,
+    label,
+    borderDegrees
+  };
+}
+
+function largestOuterRing(
+  geometry: NaturalEarthCountryGeometry | null
+): NaturalEarthLinearRing | null {
+  if (!geometry) {
+    return null;
+  }
+  const rings =
+    geometry.type === "Polygon"
+      ? [geometry.coordinates[0]]
+      : geometry.coordinates.map((polygon) => polygon[0]);
+  let selected: NaturalEarthLinearRing | null = null;
+  let selectedArea = -1;
+  for (const ring of rings) {
+    const area = Math.abs(ringArea(ring));
+    if (area > selectedArea) {
+      selected = ring;
+      selectedArea = area;
+    }
+  }
+  return selected;
+}
+
+function flattenClosedRing(ring: NaturalEarthLinearRing): readonly number[] {
+  const coordinates = Array.from(ring).filter(isFiniteLonLat);
+  if (coordinates.length === 0) {
+    return [];
+  }
+  const first = coordinates[0];
+  const last = coordinates[coordinates.length - 1];
+  const closed =
+    first[0] === last[0] && first[1] === last[1]
+      ? coordinates
+      : [...coordinates, first];
+  return closed.flatMap(([longitude, latitude]) => [longitude, latitude]);
+}
+
+function labelPosition(
+  properties: Record<string, unknown>,
+  fallbackRing: NaturalEarthLinearRing
+): readonly [number, number] | null {
+  const longitude = numberProp(properties, "LABEL_X");
+  const latitude = numberProp(properties, "LABEL_Y");
+  if (longitude !== null && latitude !== null) {
+    return [longitude, latitude];
+  }
+  const centroid = ringCentroid(fallbackRing);
+  return centroid;
+}
+
+function countryId(properties: Record<string, unknown>): string {
+  const raw =
+    stringProp(properties, "ADM0_A3") ??
+    stringProp(properties, "ISO_A3") ??
+    stringProp(properties, "NAME_EN") ??
+    stringProp(properties, "NAME");
+  return raw ? slugId(raw) : "";
+}
+
+function countryName(properties: Record<string, unknown>): string {
+  return (
+    stringProp(properties, "NAME_ZH") ??
+    stringProp(properties, "NAME_EN") ??
+    stringProp(properties, "NAME") ??
+    stringProp(properties, "ADMIN") ??
+    ""
+  );
+}
+
+function uniqueCountryId(baseId: string, usedIds: Map<string, number>): string {
+  const count = usedIds.get(baseId) ?? 0;
+  usedIds.set(baseId, count + 1);
+  return count === 0 ? baseId : `${baseId}-${count + 1}`;
+}
+
+function slugId(value: string): string {
+  const slug = value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug && slug !== "99" ? slug : "";
+}
+
+function stringProp(properties: Record<string, unknown>, key: string): string | null {
+  const value = properties[key];
+  if (typeof value !== "string") {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed && trimmed !== "-99" ? trimmed : null;
+}
+
+function numberProp(properties: Record<string, unknown>, key: string): number | null {
+  const value = properties[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function isFiniteLonLat(value: readonly [number, number]): boolean {
+  return Number.isFinite(value[0]) && Number.isFinite(value[1]);
+}
+
+function ringArea(ring: NaturalEarthLinearRing): number {
+  let area = 0;
+  for (let index = 0; index < ring.length - 1; index += 1) {
+    const [x1, y1] = ring[index];
+    const [x2, y2] = ring[index + 1];
+    area += x1 * y2 - x2 * y1;
+  }
+  return area / 2;
+}
+
+function ringCentroid(ring: NaturalEarthLinearRing): readonly [number, number] | null {
+  const coordinates = Array.from(ring).filter(isFiniteLonLat);
+  if (coordinates.length === 0) {
+    return null;
+  }
+  const sums = coordinates.reduce(
+    (acc, [longitude, latitude]) => ({
+      longitude: acc.longitude + longitude,
+      latitude: acc.latitude + latitude
+    }),
+    { longitude: 0, latitude: 0 }
+  );
+  return [sums.longitude / coordinates.length, sums.latitude / coordinates.length];
 }
