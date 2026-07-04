@@ -77,6 +77,29 @@ describe("ConfigPanel priority controls", () => {
     expect(markup).toContain('id="duration-seconds-input"');
   });
 
+  it("renders compute resource vector inputs for satellite-hosted nodes", () => {
+    const markup = renderToStaticMarkup(
+      createElement(ConfigPanel, {
+        scenario: defaultScenario(),
+        runtime: runtimeStatus("STOPPED", true),
+        progress: {
+          sim_time: 0,
+          duration: 600,
+          event_count: 0
+        },
+        generatedConfig: null,
+        onRuntimeControl: () => undefined
+      })
+    );
+
+    expect(markup).toContain('id="compute-cpu-gflops-fp64"');
+    expect(markup).toContain('id="compute-gpu-tflops-fp32"');
+    expect(markup).toContain('id="compute-gpu-tflops-fp16"');
+    expect(markup).toContain('id="compute-npu-tops-int8"');
+    expect(markup).toContain('id="compute-memory-gb"');
+    expect(markup).toContain('id="compute-storage-gb"');
+  });
+
   it("uses backend-provided compute node count instead of satellite count", () => {
     const markup = renderToStaticMarkup(
       createElement(ConfigPanel, {
@@ -441,6 +464,12 @@ function defaultScenario() {
     user_count: 500,
     compute_nodes: 8,
     compute_capacity: 10,
+    compute_cpu_gflops_fp64: 4,
+    compute_gpu_tflops_fp32: 2,
+    compute_gpu_tflops_fp16: 4,
+    compute_npu_tops_int8: 16,
+    compute_memory_gb: 32,
+    compute_storage_gb: 512,
     compute_scheduling_policy: "FIFO",
     orbit: {
       update_interval_seconds: 30,

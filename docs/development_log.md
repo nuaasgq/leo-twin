@@ -5,6 +5,40 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Frontend Compute Vector Controls v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending in this commit
+- Scope: expose backend-supported compute resource vector fields in the
+  existing control panel so users can configure CPU FP64, GPU FP32/FP16, NPU
+  INT8, memory, and storage values during initialization without changing the
+  frontend architecture.
+- Changed files/modules:
+  - `frontend/src/config_panel/ConfigPanel.tsx`
+  - `frontend/src/app/App.tsx`
+  - `frontend/tests/configPanel.test.ts`
+  - `frontend/tests/appSurface.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- configPanel.test.ts appSurface.test.ts`
+    - Result: passed, 22 files / 104 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - `scenarioWithRuntimeConfig` initially risked adding absent vector fields as
+    explicit `undefined` keys. It now merges those fields only when a numeric
+    value exists, preserving older scenario object shapes.
+- Known remaining issues:
+  - These controls configure backend summaries and generated config semantics.
+    Runtime compute scheduling remains scalar until vector-aware scheduling is
+    implemented as a separate task.
+  - The active local runtime config files remain modified and excluded.
+- Recommended follow-up:
+  - Bind the resource vector controls to vector-aware compute service-time
+    estimation in the runtime compute scheduler.
+
 ## 2026-07-05 - Compute Resource Vector Config v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`

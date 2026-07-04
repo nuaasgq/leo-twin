@@ -334,6 +334,12 @@ describe("scenarioWithRuntimeConfig", () => {
         {
           scenario: {
             compute_capacity: 18,
+            compute_cpu_gflops_fp64: 6,
+            compute_gpu_tflops_fp32: 2.5,
+            compute_gpu_tflops_fp16: 5,
+            compute_npu_tops_int8: 12,
+            compute_memory_gb: 32,
+            compute_storage_gb: 512,
             compute_scheduling_policy: "EARLIEST_DEADLINE_FIRST",
             orbit: {
               update_interval_seconds: 30,
@@ -383,6 +389,12 @@ describe("scenarioWithRuntimeConfig", () => {
     ).toEqual({
       scenario: {
         compute_capacity: 18,
+        compute_cpu_gflops_fp64: 6,
+        compute_gpu_tflops_fp32: 2.5,
+        compute_gpu_tflops_fp16: 5,
+        compute_npu_tops_int8: 12,
+        compute_memory_gb: 32,
+        compute_storage_gb: 512,
         compute_scheduling_policy: "EARLIEST_DEADLINE_FIRST",
         orbit: {
           update_interval_seconds: 30,

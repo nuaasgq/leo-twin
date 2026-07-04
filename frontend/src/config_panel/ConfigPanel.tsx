@@ -12,6 +12,12 @@ export interface ScenarioControlValues {
   user_count: number;
   compute_nodes: number;
   compute_capacity: number;
+  compute_cpu_gflops_fp64?: number;
+  compute_gpu_tflops_fp32?: number;
+  compute_gpu_tflops_fp16?: number;
+  compute_npu_tops_int8?: number;
+  compute_memory_gb?: number;
+  compute_storage_gb?: number;
   compute_scheduling_policy: string;
   orbit: OrbitControlValues;
   traffic_model: TrafficControlValues;
@@ -118,6 +124,24 @@ export function ConfigPanel({
   const [userCount, setUserCount] = useState(scenario.user_count);
   const [computeNodes, setComputeNodes] = useState(scenario.compute_nodes);
   const [computeCapacity, setComputeCapacity] = useState(scenario.compute_capacity);
+  const [computeCpuFp64, setComputeCpuFp64] = useState(
+    scenario.compute_cpu_gflops_fp64 ?? 0
+  );
+  const [computeGpuFp32, setComputeGpuFp32] = useState(
+    scenario.compute_gpu_tflops_fp32 ?? 0
+  );
+  const [computeGpuFp16, setComputeGpuFp16] = useState(
+    scenario.compute_gpu_tflops_fp16 ?? 0
+  );
+  const [computeNpuInt8, setComputeNpuInt8] = useState(
+    scenario.compute_npu_tops_int8 ?? 0
+  );
+  const [computeMemoryGb, setComputeMemoryGb] = useState(
+    scenario.compute_memory_gb ?? 0
+  );
+  const [computeStorageGb, setComputeStorageGb] = useState(
+    scenario.compute_storage_gb ?? 0
+  );
   const [computeSchedulingPolicy, setComputeSchedulingPolicy] = useState(
     scenario.compute_scheduling_policy
   );
@@ -207,6 +231,12 @@ export function ConfigPanel({
     setUserCount(scenario.user_count);
     setComputeNodes(scenario.compute_nodes);
     setComputeCapacity(scenario.compute_capacity);
+    setComputeCpuFp64(scenario.compute_cpu_gflops_fp64 ?? 0);
+    setComputeGpuFp32(scenario.compute_gpu_tflops_fp32 ?? 0);
+    setComputeGpuFp16(scenario.compute_gpu_tflops_fp16 ?? 0);
+    setComputeNpuInt8(scenario.compute_npu_tops_int8 ?? 0);
+    setComputeMemoryGb(scenario.compute_memory_gb ?? 0);
+    setComputeStorageGb(scenario.compute_storage_gb ?? 0);
     setComputeSchedulingPolicy(scenario.compute_scheduling_policy);
     setOrbitUpdateIntervalSeconds(scenario.orbit.update_interval_seconds);
     setOrbitPlaneCount(scenario.orbit.plane_count);
@@ -245,6 +275,12 @@ export function ConfigPanel({
     scenario.user_count,
     scenario.compute_nodes,
     scenario.compute_capacity,
+    scenario.compute_cpu_gflops_fp64,
+    scenario.compute_gpu_tflops_fp32,
+    scenario.compute_gpu_tflops_fp16,
+    scenario.compute_npu_tops_int8,
+    scenario.compute_memory_gb,
+    scenario.compute_storage_gb,
     scenario.compute_scheduling_policy,
     scenario.orbit.update_interval_seconds,
     scenario.orbit.plane_count,
@@ -312,6 +348,12 @@ export function ConfigPanel({
       user_count: userCount,
       compute_nodes: computeNodes,
       compute_capacity: computeCapacity,
+      compute_cpu_gflops_fp64: computeCpuFp64,
+      compute_gpu_tflops_fp32: computeGpuFp32,
+      compute_gpu_tflops_fp16: computeGpuFp16,
+      compute_npu_tops_int8: computeNpuInt8,
+      compute_memory_gb: computeMemoryGb,
+      compute_storage_gb: computeStorageGb,
       compute_scheduling_policy: computeSchedulingPolicy,
       mode: runtimeMode,
       speed_factor: speedFactor,
@@ -600,7 +642,7 @@ export function ConfigPanel({
 
       <div className="control-group">
         <label className="control-label" htmlFor="compute-capacity">
-          基准算力（TFLOPS FP32）
+          CPU FP32（GFLOPS）
         </label>
         <input
           id="compute-capacity"
@@ -609,6 +651,102 @@ export function ConfigPanel({
           step="0.1"
           value={computeCapacity}
           onChange={(event) => setComputeCapacity(Number(event.currentTarget.value))}
+        />
+      </div>
+
+      <div className="control-group">
+        <label className="control-label" htmlFor="compute-cpu-gflops-fp64">
+          CPU FP64（GFLOPS）
+        </label>
+        <input
+          id="compute-cpu-gflops-fp64"
+          type="number"
+          min="0"
+          step="0.1"
+          value={computeCpuFp64}
+          onChange={(event) =>
+            setComputeCpuFp64(nonNegativeNumber(Number(event.currentTarget.value)))
+          }
+        />
+      </div>
+
+      <div className="control-group">
+        <label className="control-label" htmlFor="compute-gpu-tflops-fp32">
+          GPU FP32（TFLOPS）
+        </label>
+        <input
+          id="compute-gpu-tflops-fp32"
+          type="number"
+          min="0"
+          step="0.1"
+          value={computeGpuFp32}
+          onChange={(event) =>
+            setComputeGpuFp32(nonNegativeNumber(Number(event.currentTarget.value)))
+          }
+        />
+      </div>
+
+      <div className="control-group">
+        <label className="control-label" htmlFor="compute-gpu-tflops-fp16">
+          GPU FP16（TFLOPS）
+        </label>
+        <input
+          id="compute-gpu-tflops-fp16"
+          type="number"
+          min="0"
+          step="0.1"
+          value={computeGpuFp16}
+          onChange={(event) =>
+            setComputeGpuFp16(nonNegativeNumber(Number(event.currentTarget.value)))
+          }
+        />
+      </div>
+
+      <div className="control-group">
+        <label className="control-label" htmlFor="compute-npu-tops-int8">
+          NPU INT8（TOPS）
+        </label>
+        <input
+          id="compute-npu-tops-int8"
+          type="number"
+          min="0"
+          step="0.1"
+          value={computeNpuInt8}
+          onChange={(event) =>
+            setComputeNpuInt8(nonNegativeNumber(Number(event.currentTarget.value)))
+          }
+        />
+      </div>
+
+      <div className="control-group">
+        <label className="control-label" htmlFor="compute-memory-gb">
+          内存（GB）
+        </label>
+        <input
+          id="compute-memory-gb"
+          type="number"
+          min="0"
+          step="1"
+          value={computeMemoryGb}
+          onChange={(event) =>
+            setComputeMemoryGb(nonNegativeNumber(Number(event.currentTarget.value)))
+          }
+        />
+      </div>
+
+      <div className="control-group">
+        <label className="control-label" htmlFor="compute-storage-gb">
+          存储（GB）
+        </label>
+        <input
+          id="compute-storage-gb"
+          type="number"
+          min="0"
+          step="1"
+          value={computeStorageGb}
+          onChange={(event) =>
+            setComputeStorageGb(nonNegativeNumber(Number(event.currentTarget.value)))
+          }
         />
       </div>
 
@@ -1397,6 +1535,13 @@ function boundedInteger(value: number, min: number, max: number): number {
     return min;
   }
   return Math.min(max, Math.max(min, Math.round(value)));
+}
+
+function nonNegativeNumber(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  return Math.max(0, value);
 }
 
 function circularOrbitalPeriodMinutes(altitudeM: number): number {

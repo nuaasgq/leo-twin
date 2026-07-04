@@ -835,6 +835,36 @@ export function scenarioWithRuntimeConfig(
           typeof runtimeConfig.scenario.compute_capacity === "number"
             ? runtimeConfig.scenario.compute_capacity
             : scenario.scenario?.compute_capacity,
+        ...numberField(
+          runtimeConfig.scenario,
+          "compute_cpu_gflops_fp64",
+          scenario.scenario?.compute_cpu_gflops_fp64
+        ),
+        ...numberField(
+          runtimeConfig.scenario,
+          "compute_gpu_tflops_fp32",
+          scenario.scenario?.compute_gpu_tflops_fp32
+        ),
+        ...numberField(
+          runtimeConfig.scenario,
+          "compute_gpu_tflops_fp16",
+          scenario.scenario?.compute_gpu_tflops_fp16
+        ),
+        ...numberField(
+          runtimeConfig.scenario,
+          "compute_npu_tops_int8",
+          scenario.scenario?.compute_npu_tops_int8
+        ),
+        ...numberField(
+          runtimeConfig.scenario,
+          "compute_memory_gb",
+          scenario.scenario?.compute_memory_gb
+        ),
+        ...numberField(
+          runtimeConfig.scenario,
+          "compute_storage_gb",
+          scenario.scenario?.compute_storage_gb
+        ),
         compute_scheduling_policy:
           typeof runtimeConfig.scenario.compute_scheduling_policy === "string"
             ? runtimeConfig.scenario.compute_scheduling_policy
@@ -1199,6 +1229,21 @@ export function controlErrorMessage(error: string | undefined): string {
   return error;
 }
 
+function numberField(
+  record: Record<string, unknown>,
+  key: string,
+  fallback: number | undefined
+): Record<string, number> {
+  const value = record[key];
+  if (typeof value === "number") {
+    return { [key]: value };
+  }
+  if (fallback !== undefined) {
+    return { [key]: fallback };
+  }
+  return {};
+}
+
 function scenarioControlValues(
   scenarioConfig: ScenarioConfig | null,
   renderedSatellites: number
@@ -1213,6 +1258,12 @@ function scenarioControlValues(
       scenarioConfig?.scenario?.user_count ?? scenarioConfig?.ground_users?.length ?? 1000,
     compute_nodes: scenarioConfig?.scenario?.compute_nodes ?? 10,
     compute_capacity: scenarioConfig?.scenario?.compute_capacity ?? 10,
+    compute_cpu_gflops_fp64: scenarioConfig?.scenario?.compute_cpu_gflops_fp64 ?? 0,
+    compute_gpu_tflops_fp32: scenarioConfig?.scenario?.compute_gpu_tflops_fp32 ?? 0,
+    compute_gpu_tflops_fp16: scenarioConfig?.scenario?.compute_gpu_tflops_fp16 ?? 0,
+    compute_npu_tops_int8: scenarioConfig?.scenario?.compute_npu_tops_int8 ?? 0,
+    compute_memory_gb: scenarioConfig?.scenario?.compute_memory_gb ?? 0,
+    compute_storage_gb: scenarioConfig?.scenario?.compute_storage_gb ?? 0,
     compute_scheduling_policy:
       scenarioConfig?.scenario?.compute_scheduling_policy ?? "FIFO",
     orbit: {
