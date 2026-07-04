@@ -39,7 +39,10 @@ import {
   installNaturalEarthCountryOverlays
 } from "./countryOverlays";
 import { groundUserCartesian, projectSatelliteStates } from "./positions";
-import { applyOpaqueGlobeVisualPolicy } from "./globeVisualPolicy";
+import {
+  GlobeVisualMode,
+  applyGlobeVisualPolicy
+} from "./globeVisualPolicy";
 import {
   pruneEntities,
   upsertLinkEntity,
@@ -88,6 +91,7 @@ export function CesiumGlobe({ snapshot, displaySimTime }: CesiumGlobeProps) {
   const lastRenderedFrame = useRef("");
   const [renderError, setRenderError] = useState<string | null>(null);
   const [cameraMode, setCameraMode] = useState<GlobeCameraMode>("EARTH");
+  const [globeVisualMode, setGlobeVisualMode] = useState<GlobeVisualMode>("OPAQUE");
   const [selectedSatelliteId, setSelectedSatelliteId] = useState("");
   const [selectedTrail, setSelectedTrail] = useState<readonly SatelliteInsetPoint[]>([]);
   const displaySatellites = useMemo(
@@ -169,7 +173,7 @@ export function CesiumGlobe({ snapshot, displaySimTime }: CesiumGlobeProps) {
       setRenderError(renderErrorMessage(error));
       return;
     }
-    applyOpaqueGlobeVisualPolicy(viewer.scene);
+    applyGlobeVisualPolicy(viewer.scene, "OPAQUE");
     installCountryOverlays(viewer.entities, countryOverlayCache.current);
     void loadNaturalEarthCountryOverlays(
       viewer,
@@ -258,6 +262,15 @@ export function CesiumGlobe({ snapshot, displaySimTime }: CesiumGlobeProps) {
   }, [snapshot, cameraMode, displaySimTime]);
 
   useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer || viewer.isDestroyed()) {
+      return;
+    }
+    applyGlobeVisualPolicy(viewer.scene, globeVisualMode);
+    viewer.scene.requestRender();
+  }, [globeVisualMode]);
+
+  useEffect(() => {
     setSelectedTrail((trail) => appendSatelliteInsetTrail(trail, selectedSatellite));
   }, [
     selectedSatellite?.satellite_id,
@@ -317,6 +330,24 @@ export function CesiumGlobe({ snapshot, displaySimTime }: CesiumGlobeProps) {
             onClick={() => setCameraMode("SATELLITE")}
           >
             卫星跟随
+          </button>
+        </div>
+        <div className="globe-visual-mode" role="group" aria-label="地球显示模式">
+          <button
+            type="button"
+            className={globeVisualMode === "OPAQUE" ? "active" : ""}
+            aria-pressed={globeVisualMode === "OPAQUE"}
+            onClick={() => setGlobeVisualMode("OPAQUE")}
+          >
+            不透明地球
+          </button>
+          <button
+            type="button"
+            className={globeVisualMode === "TRANSLUCENT" ? "active" : ""}
+            aria-pressed={globeVisualMode === "TRANSLUCENT"}
+            onClick={() => setGlobeVisualMode("TRANSLUCENT")}
+          >
+            透明观察
           </button>
         </div>
         <label className="satellite-select-label" htmlFor="satellite-follow-target">

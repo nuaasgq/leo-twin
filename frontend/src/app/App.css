@@ -528,10 +528,10 @@ body {
   left: 18px;
   z-index: 3;
   display: grid;
-  grid-template-columns: auto minmax(150px, 220px);
+  grid-template-columns: auto auto minmax(150px, 220px);
   gap: 10px;
   align-items: end;
-  max-width: calc(100% - 460px);
+  max-width: calc(100% - 420px);
   border: 1px solid #34505f;
   border-radius: 8px;
   padding: 10px;
@@ -540,13 +540,15 @@ body {
   backdrop-filter: blur(8px);
 }
 
-.globe-view-mode {
+.globe-view-mode,
+.globe-visual-mode {
   display: grid;
   grid-template-columns: repeat(2, minmax(86px, 1fr));
   gap: 6px;
 }
 
-.globe-view-mode button {
+.globe-view-mode button,
+.globe-visual-mode button {
   min-width: 0;
   border: 1px solid #365869;
   border-radius: 6px;
@@ -559,13 +561,15 @@ body {
   cursor: pointer;
 }
 
-.globe-view-mode button.active {
+.globe-view-mode button.active,
+.globe-visual-mode button.active {
   border-color: var(--accent-cyan);
   background: #143243;
   color: #e8fbff;
 }
 
-.globe-view-mode button:disabled {
+.globe-view-mode button:disabled,
+.globe-visual-mode button:disabled {
   border-color: #2d3538;
   background: #111517;
   color: #697579;
@@ -2272,7 +2276,8 @@ body {
     max-width: none;
   }
 
-  .globe-view-mode {
+  .globe-view-mode,
+  .globe-visual-mode {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 

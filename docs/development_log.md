@@ -2967,3 +2967,36 @@ change.
   - Add a deterministic demo scenario with at least one successful data flow so
     dashboard KPI source switches to `COMPLETED_FLOW_CAPACITY` in an integration
     test.
+
+## 2026-07-05 - Globe Visual Mode Toggle v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a Cesium frontend-only globe display mode toggle with default
+  opaque Earth and an explicit translucent observation mode for inspecting
+  far-side/through-globe context.
+- Changed files/modules:
+  - `frontend/src/3d/cesium/globeVisualPolicy.ts`
+  - `frontend/src/3d/cesium/CesiumGlobe.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/globeVisualPolicy.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- globeVisualPolicy.test.ts satelliteVisuals.test.ts`
+    - Result: passed, 23 files / 146 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The 3D audit showed the default globe was already opaque; the user need is
+    better served by an explicit optional observation mode instead of making the
+    default globe transparent.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - This is a visual observation toggle only. It does not add terrain, imagery
+    fidelity, RF coverage physics, or satellite occlusion semantics.
+- Recommended follow-up:
+  - Add a Cesium-local layer toolbar for country borders, coverage beams,
+    satellite models/icons, and orbit tracks without requiring reinitialization.
