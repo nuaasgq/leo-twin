@@ -397,7 +397,13 @@ describe("buildComputeResourcePool", () => {
             capacity: 20,
             available_capacity: 5,
             status: "BUSY",
-            load_ratio: 0.75
+            load_ratio: 0.75,
+            cpu_gflops_fp64: 4,
+            gpu_tflops_fp32: 2,
+            gpu_tflops_fp16: 4,
+            npu_tops_int8: 8,
+            memory_gb: 16,
+            storage_gb: 256
           },
           {
             node_id: "sat-b",
@@ -406,7 +412,13 @@ describe("buildComputeResourcePool", () => {
             capacity: 10,
             available_capacity: 10,
             status: "IDLE",
-            load_ratio: 0
+            load_ratio: 0,
+            cpu_gflops_fp64: 2,
+            gpu_tflops_fp32: 1,
+            gpu_tflops_fp16: 2,
+            npu_tops_int8: 4,
+            memory_gb: 8,
+            storage_gb: 128
           }
         ]
       })
@@ -418,7 +430,47 @@ describe("buildComputeResourcePool", () => {
       availableTflops: 15,
       usedPercent: 50
     });
+    expect(pool.vectorSummary).toMatchObject({
+      cpuFp64Gflops: 6,
+      gpuFp32Tflops: 3,
+      gpuFp16Tflops: 6,
+      npuInt8Tops: 12,
+      memoryGb: 24,
+      storageGb: 384,
+      utilizationMode: "SNAPSHOT_SCALAR_FP32_AVAILABLE_ONLY"
+    });
     expect(pool.slices.map((slice) => slice.name)).toEqual(["已消耗 FP32", "可用 FP32"]);
+  });
+
+  it("prefers backend compute resource vector summary when available", () => {
+    const pool = buildComputeResourcePool(makeSnapshot(), {
+      compute_resource_total_gflops_fp32: 80,
+      compute_resource_available_gflops_fp32: 50,
+      compute_resource_used_gflops_fp32: 30,
+      compute_resource_total_gflops_fp64: 12,
+      compute_resource_total_gpu_tflops_fp32: 6,
+      compute_resource_total_gpu_tflops_fp16: 12,
+      compute_resource_total_npu_tops_int8: 24,
+      compute_resource_total_memory_gb: 96,
+      compute_resource_total_storage_gb: 2048,
+      compute_resource_vector_utilization_mode: "SCALAR_FP32_AVAILABLE_ONLY"
+    });
+
+    expect(pool).toMatchObject({
+      totalTflops: 80,
+      usedTflops: 30,
+      availableTflops: 50,
+      usedPercent: 37.5,
+      vectorSummary: {
+        cpuFp64Gflops: 12,
+        gpuFp32Tflops: 6,
+        gpuFp16Tflops: 12,
+        npuInt8Tops: 24,
+        memoryGb: 96,
+        storageGb: 2048,
+        utilizationMode: "SCALAR_FP32_AVAILABLE_ONLY"
+      }
+    });
   });
 });
 

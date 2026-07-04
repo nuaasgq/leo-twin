@@ -89,7 +89,10 @@ export const DataPanel = memo(function DataPanel({
     runtimeStatus.metrics_summary
   );
   const latestTelemetry = telemetry[telemetry.length - 1];
-  const computePool = buildComputeResourcePool(snapshot);
+  const computePool = buildComputeResourcePool(
+    snapshot,
+    runtimeStatus.metrics_summary
+  );
 
   return (
     <section className="data-panel" aria-label="独立数据态势面板">
@@ -290,6 +293,15 @@ export const DataPanel = memo(function DataPanel({
             />
             <KpiPanel label="消耗率" value={`${computePool.usedPercent.toFixed(1)}%`} />
           </div>
+          <div className="data-panel-resource-vector">
+            <span>GPU FP32 {computePool.vectorSummary.gpuFp32Tflops.toFixed(1)} TFLOPS</span>
+            <span>GPU FP16 {computePool.vectorSummary.gpuFp16Tflops.toFixed(1)} TFLOPS</span>
+            <span>NPU INT8 {computePool.vectorSummary.npuInt8Tops.toFixed(1)} TOPS</span>
+            <span>
+              内存 {computePool.vectorSummary.memoryGb.toFixed(1)} GB / 存储{" "}
+              {computePool.vectorSummary.storageGb.toFixed(1)} GB
+            </span>
+          </div>
           <div className="data-panel-chart-body compact">
             {computePool.totalTflops > 0 ? (
               <ResponsiveContainer width="100%" height={160}>
@@ -436,7 +448,18 @@ export interface ComputeResourcePool {
   usedTflops: number;
   availableTflops: number;
   usedPercent: number;
+  vectorSummary: ComputeResourceVectorPoolSummary;
   slices: readonly ComputeResourcePoolSlice[];
+}
+
+export interface ComputeResourceVectorPoolSummary {
+  cpuFp64Gflops: number;
+  gpuFp32Tflops: number;
+  gpuFp16Tflops: number;
+  npuInt8Tops: number;
+  memoryGb: number;
+  storageGb: number;
+  utilizationMode: string;
 }
 
 export function buildDataPanelTelemetry(
@@ -527,14 +550,27 @@ export function buildDataPanelTelemetry(
   });
 }
 
-export function buildComputeResourcePool(snapshot: WorldSnapshot): ComputeResourcePool {
-  const total = snapshot.compute_nodes.reduce((sum, node) => sum + Math.max(0, node.capacity), 0);
-  const used = snapshot.compute_nodes.reduce((sum, node) => {
+export function buildComputeResourcePool(
+  snapshot: WorldSnapshot,
+  backendMetrics: RuntimeMetricsSummary | null | undefined = undefined
+): ComputeResourcePool {
+  const total =
+    metricNumber(backendMetrics, "compute_resource_total_gflops_fp32") ??
+    snapshot.compute_nodes.reduce((sum, node) => sum + Math.max(0, node.capacity), 0);
+  const snapshotUsed = snapshot.compute_nodes.reduce((sum, node) => {
     const capacity = Math.max(0, node.capacity);
     const available = Math.max(0, Math.min(capacity, node.available_capacity));
     return sum + Math.max(0, capacity - available);
   }, 0);
-  const available = Math.max(0, total - used);
+  const used = Math.max(
+    0,
+    metricNumber(backendMetrics, "compute_resource_used_gflops_fp32") ?? snapshotUsed
+  );
+  const available = Math.max(
+    0,
+    metricNumber(backendMetrics, "compute_resource_available_gflops_fp32") ??
+      total - used
+  );
   const usedPercent = total <= 0 ? 0 : (used / total) * 100;
 
   return {
@@ -542,6 +578,7 @@ export function buildComputeResourcePool(snapshot: WorldSnapshot): ComputeResour
     usedTflops: roundMetric(used),
     availableTflops: roundMetric(available),
     usedPercent: roundMetric(usedPercent),
+    vectorSummary: buildComputeResourceVectorPoolSummary(snapshot, backendMetrics),
     slices: [
       {
         name: "已消耗 FP32",
@@ -555,6 +592,58 @@ export function buildComputeResourcePool(snapshot: WorldSnapshot): ComputeResour
       }
     ]
   };
+}
+
+function buildComputeResourceVectorPoolSummary(
+  snapshot: WorldSnapshot,
+  backendMetrics: RuntimeMetricsSummary | null | undefined
+): ComputeResourceVectorPoolSummary {
+  return {
+    cpuFp64Gflops: roundMetric(
+      metricNumber(backendMetrics, "compute_resource_total_gflops_fp64") ??
+        sumComputeNodeField(snapshot, "cpu_gflops_fp64")
+    ),
+    gpuFp32Tflops: roundMetric(
+      metricNumber(backendMetrics, "compute_resource_total_gpu_tflops_fp32") ??
+        sumComputeNodeField(snapshot, "gpu_tflops_fp32")
+    ),
+    gpuFp16Tflops: roundMetric(
+      metricNumber(backendMetrics, "compute_resource_total_gpu_tflops_fp16") ??
+        sumComputeNodeField(snapshot, "gpu_tflops_fp16")
+    ),
+    npuInt8Tops: roundMetric(
+      metricNumber(backendMetrics, "compute_resource_total_npu_tops_int8") ??
+        sumComputeNodeField(snapshot, "npu_tops_int8")
+    ),
+    memoryGb: roundMetric(
+      metricNumber(backendMetrics, "compute_resource_total_memory_gb") ??
+        sumComputeNodeField(snapshot, "memory_gb")
+    ),
+    storageGb: roundMetric(
+      metricNumber(backendMetrics, "compute_resource_total_storage_gb") ??
+        sumComputeNodeField(snapshot, "storage_gb")
+    ),
+    utilizationMode:
+      typeof backendMetrics?.compute_resource_vector_utilization_mode === "string"
+        ? backendMetrics.compute_resource_vector_utilization_mode
+        : "SNAPSHOT_SCALAR_FP32_AVAILABLE_ONLY"
+  };
+}
+
+function sumComputeNodeField(
+  snapshot: WorldSnapshot,
+  field:
+    | "cpu_gflops_fp64"
+    | "gpu_tflops_fp32"
+    | "gpu_tflops_fp16"
+    | "npu_tops_int8"
+    | "memory_gb"
+    | "storage_gb"
+): number {
+  return snapshot.compute_nodes.reduce((sum, node) => {
+    const value = node[field];
+    return sum + (typeof value === "number" && Number.isFinite(value) ? Math.max(0, value) : 0);
+  }, 0);
 }
 
 function average(values: readonly number[]): number {

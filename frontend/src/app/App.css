@@ -921,6 +921,21 @@ body {
   padding: 10px;
 }
 
+.data-panel-resource-vector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+  color: var(--app-muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.data-panel-resource-vector span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .data-panel-chart-body {
   min-width: 0;
   min-height: 220px;

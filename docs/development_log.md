@@ -5,6 +5,39 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Dashboard Compute Resource Vector Summary v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending in this commit
+- Scope: bind the standalone dashboard compute resource pool to backend
+  `runtimeStatus.metrics_summary` vector capacity totals while keeping the
+  existing FP32 utilization chart and layout structure.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 22 files / 106 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+  - `git diff --check`
+    - Result: passed with only CRLF warnings for excluded local runtime config
+      files.
+- Problems encountered:
+  - Existing DataPanel tests include legacy mojibake snapshot text. Assertions
+    were kept compatible and new vector assertions use ASCII field names.
+- Known remaining issues:
+  - The dashboard still shows dynamic utilization only for scalar FP32 because
+    backend state does not yet publish per-lane available/used values.
+  - The chart labels still use the existing FP32 resource-pool terminology.
+- Recommended follow-up:
+  - Add per-lane available/used compute-node state and then replace the FP32-only
+    resource pool with a true multi-resource pool view.
+
 ## 2026-07-05 - Compute Resource Metrics Summary v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`
