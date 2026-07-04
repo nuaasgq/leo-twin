@@ -3142,3 +3142,42 @@ change.
   - Add backend per-satellite KPI slices for recent network and compute service
     metrics, then bind both dashboard and selected-satellite details to that
     shared source.
+
+## 2026-07-05 - Runtime Satellite KPI Slices v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: expose a backend-owned `/runtime/status` satellite KPI slice contract
+  derived from the metrics collector, covering per-satellite active links,
+  route counts, route capacity/demand/latency/loss/jitter proxies, FP32 compute
+  load, and task counts. The v1 payload is bounded with
+  `mode=TOP_ACTIVITY_LIMITED` and `slice_limit=64`.
+- Changed files/modules:
+  - `src/leo_twin/services/metrics/collector.py`
+  - `examples/integration_demo/control_plane.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `tests/unit/test_metrics_module.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_metrics_module.py tests/integration/test_runtime_session_control.py -q`
+    - Result: passed, 28 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - MetricsCollector had global running/finished task counts but no per-node
+    task count state. This task adds minimal task-to-node counters inside the
+    passive metrics collector without changing compute scheduling or event
+    ordering.
+  - Payload size is bounded to avoid making 1200-node status polling heavy.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The contract is a bounded top-activity slice, not a full 1200-satellite
+    per-node telemetry dump.
+  - Route loss and jitter remain flow-level proxies, not packet-level metrics.
+- Recommended follow-up:
+  - Bind `satellite_kpi_slices_v1` into the dashboard top-node table and the
+    selected-satellite detail panel, preferring backend slice semantics over
+    frontend-only aggregation.

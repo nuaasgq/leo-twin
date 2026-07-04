@@ -193,6 +193,23 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
     assert latest_kpi_sample["network_effective_delay_variation_s"] == status_after_tick[
         "metrics_summary"
     ]["network_quality_effective_delay_variation_proxy_s"]
+    satellite_slices = status_after_tick["satellite_kpi_slices_v1"]
+    assert satellite_slices["version"] == "v1"
+    assert satellite_slices["mode"] == "TOP_ACTIVITY_LIMITED"
+    assert satellite_slices["slice_count"] == len(satellite_slices["slices"])
+    assert satellite_slices["slice_count"] <= satellite_slices["satellite_count"]
+    assert satellite_slices["slice_limit"] == 64
+    if satellite_slices["slices"]:
+        assert {
+            "satellite_id",
+            "active_link_count",
+            "route_count",
+            "route_latency_avg_s",
+            "route_loss_proxy_rate",
+            "compute_load_ratio",
+            "running_task_count",
+            "finished_task_count",
+        }.issubset(satellite_slices["slices"][0])
 
     requested = control_plane.handle_raw_message(json.dumps({"command": "REQUEST_STATUS"}))
     assert requested["ok"] is True

@@ -397,6 +397,7 @@ export interface RuntimeStatusPayload {
   fidelity_summary?: FidelitySummary;
   metrics_summary?: RuntimeMetricsSummary;
   kpi_time_series_v1?: RuntimeKpiTimeSeriesV1;
+  satellite_kpi_slices_v1?: RuntimeSatelliteKpiSlicesV1;
   profiling_summary?: RuntimeProfilingSummary | null;
   backpressure_summary?: RuntimeBackpressureSummary | null;
 }
@@ -421,6 +422,34 @@ export interface RuntimeKpiSampleV1 {
   network_effective_loss_proxy_rate: number;
   network_effective_delay_variation_s: number;
   compute_resource_used_gflops_fp32: number;
+}
+
+export interface RuntimeSatelliteKpiSlicesV1 {
+  version: "v1" | string;
+  mode: string;
+  slice_limit?: number;
+  satellite_count?: number;
+  slice_count?: number;
+  slices: readonly RuntimeSatelliteKpiSliceV1[];
+}
+
+export interface RuntimeSatelliteKpiSliceV1 {
+  satellite_id: string;
+  active_link_count: number;
+  active_access_link_count: number;
+  active_space_link_count: number;
+  route_count: number;
+  available_route_count: number;
+  route_capacity_mbps: number;
+  route_demand_mbps: number;
+  route_latency_avg_s: number;
+  route_delay_variation_proxy_s: number;
+  route_loss_proxy_rate: number;
+  compute_capacity_gflops_fp32: number;
+  compute_used_gflops_fp32: number;
+  compute_load_ratio: number;
+  running_task_count: number;
+  finished_task_count: number;
 }
 
 export interface GeneratedScenarioConfig {

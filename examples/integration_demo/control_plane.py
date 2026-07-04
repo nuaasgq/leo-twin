@@ -347,6 +347,7 @@ class DemoControlPlane:
         )
         status["metrics_summary"] = self._metrics_summary_json()
         status["kpi_time_series_v1"] = self._kpi_time_series_json()
+        status["satellite_kpi_slices_v1"] = self._satellite_kpi_slices_json()
         return status
 
     def _ack(self, command: ControlCommand) -> dict[str, Any]:
@@ -374,6 +375,18 @@ class DemoControlPlane:
                 "samples": (),
             }
         return dict(self._runtime_context.metrics.kpi_time_series())
+
+    def _satellite_kpi_slices_json(self) -> dict[str, Any]:
+        if self._runtime_context is None:
+            return {
+                "version": "v1",
+                "mode": "TOP_ACTIVITY_LIMITED",
+                "slice_limit": 64,
+                "satellite_count": 0,
+                "slice_count": 0,
+                "slices": (),
+            }
+        return dict(self._runtime_context.metrics.satellite_kpi_slices())
 
     def _nack(self, command: str, error: str) -> dict[str, Any]:
         return {

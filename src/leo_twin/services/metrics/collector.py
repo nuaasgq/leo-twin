@@ -30,6 +30,7 @@ from leo_twin.models.compute.contracts import COMPUTE_NODE_UPDATE
 
 MetricSummary = dict[str, str | float | int | bool]
 KpiSample = dict[str, float]
+SatelliteKpiSlice = dict[str, str | float | int]
 ReplayPayload = str | int | float | bool | None | list["ReplayPayload"] | dict[str, "ReplayPayload"]
 ReplayEvent = dict[str, ReplayPayload]
 
@@ -107,6 +108,9 @@ class MetricsCollector:
         self._completed_flows: dict[str, FlowState] = {}
         self._compute_nodes: dict[str, ComputeNodeState] = {}
         self._running_tasks: set[str] = set()
+        self._task_node_ids: dict[str, str] = {}
+        self._running_tasks_by_node: Counter[str] = Counter()
+        self._finished_tasks_by_node: Counter[str] = Counter()
         self._task_start_times: dict[str, float] = {}
         self._task_durations: dict[str, float] = {}
         self._finished_tasks: dict[str, str] = {}
@@ -276,6 +280,24 @@ class MetricsCollector:
             "tail_sample_source": "CURRENT_METRICS_SUMMARY",
             "tail_sample_source_label": "当前指标摘要同步",
             "samples": samples,
+        }
+
+    def satellite_kpi_slices(
+        self,
+        limit: int = 64,
+    ) -> dict[str, str | int | list[SatelliteKpiSlice]]:
+        _require_positive_int(limit, "limit")
+        satellite_ids = self._satellite_ids_for_kpi_slices()
+        slices = [self._satellite_kpi_slice(satellite_id) for satellite_id in satellite_ids]
+        selected = sorted(slices, key=_satellite_kpi_slice_sort_key)[:limit]
+        selected = sorted(selected, key=lambda item: str(item["satellite_id"]))
+        return {
+            "version": "v1",
+            "mode": "TOP_ACTIVITY_LIMITED",
+            "slice_limit": limit,
+            "satellite_count": len(satellite_ids),
+            "slice_count": len(selected),
+            "slices": selected,
         }
 
     def events_jsonl(self) -> str:
@@ -694,10 +716,26 @@ class MetricsCollector:
     def _observe_task(self, event: SimEvent, event_type: str) -> tuple[MetricRecord, ...]:
         task = _require_payload(event.payload, TaskState, event_type)
         if event_type == EventType.TASK_START:
+            previous_node_id = self._task_node_ids.get(task.task_id)
+            if (
+                task.task_id in self._running_tasks
+                and previous_node_id is not None
+                and previous_node_id != task.node_id
+            ):
+                self._running_tasks_by_node[previous_node_id] -= 1
+                self._running_tasks_by_node[task.node_id] += 1
+            elif task.task_id not in self._running_tasks:
+                self._running_tasks_by_node[task.node_id] += 1
             self._running_tasks.add(task.task_id)
+            self._task_node_ids[task.task_id] = task.node_id
             self._task_start_times[task.task_id] = task.sim_time
         else:
+            node_id = self._task_node_ids.get(task.task_id, task.node_id)
+            if task.task_id in self._running_tasks:
+                self._running_tasks_by_node[node_id] -= 1
             self._running_tasks.discard(task.task_id)
+            self._task_node_ids[task.task_id] = node_id
+            self._finished_tasks_by_node[node_id] += 1
             self._finished_tasks[task.task_id] = task.status
             self._task_durations[task.task_id] = max(
                 0.0,
@@ -742,6 +780,63 @@ class MetricsCollector:
                 )
             )
         return tuple(records)
+
+    def _satellite_ids_for_kpi_slices(self) -> tuple[str, ...]:
+        satellite_ids = set(self._satellite_status)
+        satellite_ids.update(
+            node_id for node_id in self._compute_nodes if _is_satellite_id(node_id)
+        )
+        for link in self._links.values():
+            if _is_satellite_id(link.source_id):
+                satellite_ids.add(link.source_id)
+            if _is_satellite_id(link.target_id):
+                satellite_ids.add(link.target_id)
+        for route in self._routes.values():
+            satellite_ids.update(node_id for node_id in route.path if _is_satellite_id(node_id))
+        return tuple(sorted(satellite_ids))
+
+    def _satellite_kpi_slice(self, satellite_id: str) -> SatelliteKpiSlice:
+        active_links = tuple(
+            link
+            for link in self._active_link_states()
+            if _link_touches_satellite(link, satellite_id)
+        )
+        active_access_links = tuple(link for link in active_links if _is_access_link(link))
+        active_space_links = tuple(link for link in active_links if _is_space_link(link))
+        routes = tuple(
+            route for route in self._routes.values() if satellite_id in route.path
+        )
+        available_routes = tuple(route for route in routes if route.available)
+        route_latencies = tuple(float(route.latency) for route in available_routes)
+        route_loss_values = tuple(
+            float(route.loss_rate)
+            for route in available_routes
+            if route.loss_rate is not None
+        )
+        route_capacity = float(sum(max(0.0, route.capacity) for route in available_routes))
+        route_demand = float(sum(_route_demand_capacity(route) for route in routes))
+        node = self._compute_nodes.get(satellite_id)
+        compute_capacity = 0.0 if node is None else max(0.0, float(node.capacity))
+        compute_used = _compute_node_used_fp32(node)
+        compute_load = _compute_node_load_ratio(node, compute_used)
+        return {
+            "satellite_id": satellite_id,
+            "active_link_count": len(active_links),
+            "active_access_link_count": len(active_access_links),
+            "active_space_link_count": len(active_space_links),
+            "route_count": len(routes),
+            "available_route_count": len(available_routes),
+            "route_capacity_mbps": route_capacity,
+            "route_demand_mbps": route_demand,
+            "route_latency_avg_s": _average(route_latencies),
+            "route_delay_variation_proxy_s": _standard_deviation(route_latencies),
+            "route_loss_proxy_rate": _average(route_loss_values),
+            "compute_capacity_gflops_fp32": compute_capacity,
+            "compute_used_gflops_fp32": compute_used,
+            "compute_load_ratio": compute_load,
+            "running_task_count": max(0, int(self._running_tasks_by_node[satellite_id])),
+            "finished_task_count": max(0, int(self._finished_tasks_by_node[satellite_id])),
+        }
 
     def _available_link_capacity(self) -> float:
         return float(
@@ -1288,6 +1383,18 @@ def _top_constrained_route(routes: tuple[Route, ...]) -> Route | None:
     return sorted(routes, key=_route_constraint_sort_key)[0]
 
 
+def _satellite_kpi_slice_sort_key(
+    item: SatelliteKpiSlice,
+) -> tuple[float, float, float, float, str]:
+    return (
+        -float(item["compute_load_ratio"]),
+        -float(item["compute_used_gflops_fp32"]),
+        -float(item["route_capacity_mbps"]),
+        -float(item["active_link_count"]),
+        str(item["satellite_id"]),
+    )
+
+
 def _route_constraint_sort_key(route: Route) -> tuple[int, float, float, int, str]:
     return (
         1 if route.available else 0,
@@ -1328,8 +1435,48 @@ def _link_id(link: LinkState) -> str:
     return f"{link.source_id}->{link.target_id}"
 
 
+def _link_touches_satellite(link: LinkState, satellite_id: str) -> bool:
+    return link.source_id == satellite_id or link.target_id == satellite_id
+
+
+def _is_space_link(link: LinkState) -> bool:
+    return _is_satellite_id(link.source_id) and _is_satellite_id(link.target_id)
+
+
+def _is_access_link(link: LinkState) -> bool:
+    return _is_satellite_id(link.source_id) != _is_satellite_id(link.target_id)
+
+
+def _is_satellite_id(node_id: str) -> bool:
+    return node_id.lower().startswith("sat-")
+
+
 def _route_hop_count(route: Route) -> int:
     return max(0, len(route.path) - 1)
+
+
+def _compute_node_used_fp32(node: ComputeNodeState | None) -> float:
+    if node is None:
+        return 0.0
+    used = getattr(node, "used_cpu_gflops_fp32", None)
+    if isinstance(used, (int, float)) and isfinite(used):
+        return max(0.0, float(used))
+    capacity = max(0.0, float(node.capacity))
+    available = max(0.0, min(capacity, float(node.available_capacity)))
+    return capacity - available
+
+
+def _compute_node_load_ratio(
+    node: ComputeNodeState | None,
+    used_fp32: float,
+) -> float:
+    if node is None:
+        return 0.0
+    load_ratio = getattr(node, "load_ratio", None)
+    if isinstance(load_ratio, (int, float)) and isfinite(load_ratio):
+        return _clamp_probability(float(load_ratio))
+    capacity = max(0.0, float(node.capacity))
+    return _clamp_probability(used_fp32 / capacity) if capacity > 0.0 else 0.0
 
 
 def _compute_resource_total(

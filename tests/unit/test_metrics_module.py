@@ -817,6 +817,145 @@ def test_metrics_collector_kpi_time_series_refreshes_current_tail_sample() -> No
     ] == collector.summary()["network_quality_effective_delay_variation_proxy_s"]
 
 
+def test_metrics_collector_publishes_satellite_kpi_slices() -> None:
+    collector = MetricsCollector()
+    for event in (
+        _event(
+            "link-a-b",
+            1.0,
+            EventType.LINK_UPDATE,
+            LinkState(
+                source_id="sat-a",
+                target_id="sat-b",
+                latency=0.02,
+                capacity=120.0,
+                availability=True,
+                utilization=0.5,
+            ),
+            "network",
+        ),
+        _event(
+            "link-user-a",
+            1.0,
+            EventType.ACCESS_START,
+            LinkState(
+                source_id="user-a",
+                target_id="sat-a",
+                latency=0.04,
+                capacity=40.0,
+                availability=True,
+                utilization=0.75,
+            ),
+            "network",
+        ),
+        _event(
+            "route-a",
+            1.0,
+            EventType.ROUTE_UPDATE,
+            Route(
+                route_id="route-a",
+                flow_id="flow-a",
+                path=("user-a", "sat-a", "sat-b"),
+                latency=0.02,
+                capacity=60.0,
+                available=True,
+                demand_capacity=30.0,
+                loss_rate=0.04,
+            ),
+            "network",
+        ),
+        _event(
+            "route-b",
+            1.0,
+            EventType.ROUTE_UPDATE,
+            Route(
+                route_id="route-b",
+                flow_id="flow-b",
+                path=("sat-a", "user-b"),
+                latency=0.08,
+                capacity=20.0,
+                available=True,
+                demand_capacity=15.0,
+                loss_rate=0.08,
+            ),
+            "network",
+        ),
+        _event(
+            "compute-a",
+            1.0,
+            COMPUTE_NODE_UPDATE,
+            ComputeNodeState(
+                node_id="sat-a",
+                sim_time=1.0,
+                capacity=100.0,
+                available_capacity=25.0,
+                status="BUSY",
+                used_cpu_gflops_fp32=80.0,
+            ),
+            "compute",
+        ),
+        _event(
+            "task-start",
+            1.0,
+            EventType.TASK_START,
+            TaskState(
+                task_id="task-a",
+                node_id="sat-a",
+                sim_time=1.0,
+                progress=0.2,
+                status="RUNNING",
+            ),
+            "compute",
+        ),
+        _event(
+            "task-finish",
+            2.0,
+            EventType.TASK_FINISH,
+            TaskState(
+                task_id="task-b",
+                node_id="sat-a",
+                sim_time=2.0,
+                progress=1.0,
+                status="FINISHED",
+            ),
+            "compute",
+        ),
+    ):
+        collector.observe(event)
+
+    slices = collector.satellite_kpi_slices()
+
+    assert slices["version"] == "v1"
+    assert slices["mode"] == "TOP_ACTIVITY_LIMITED"
+    assert slices["slice_limit"] == 64
+    assert slices["satellite_count"] == 2
+    assert slices["slice_count"] == 2
+    sat_a = next(
+        item for item in slices["slices"] if item["satellite_id"] == "sat-a"
+    )
+    assert sat_a == {
+        "satellite_id": "sat-a",
+        "active_link_count": 2,
+        "active_access_link_count": 1,
+        "active_space_link_count": 1,
+        "route_count": 2,
+        "available_route_count": 2,
+        "route_capacity_mbps": 80.0,
+        "route_demand_mbps": 45.0,
+        "route_latency_avg_s": pytest.approx(0.05),
+        "route_delay_variation_proxy_s": pytest.approx(0.03),
+        "route_loss_proxy_rate": pytest.approx(0.06),
+        "compute_capacity_gflops_fp32": 100.0,
+        "compute_used_gflops_fp32": 80.0,
+        "compute_load_ratio": 0.8,
+        "running_task_count": 1,
+        "finished_task_count": 1,
+    }
+    assert [
+        item["satellite_id"] for item in collector.satellite_kpi_slices(limit=1)["slices"]
+    ] == ["sat-a"]
+
+
 def test_metrics_collector_reports_compute_resource_pool_proxy() -> None:
     collector = MetricsCollector()
     for event in (
