@@ -22,10 +22,44 @@ change.
 - Follow-up:
   - Future development tasks must add a dated entry here before commit.
 
-## 2026-07-04 - Scale Firebreak v1
+## 2026-07-04 - Windows Demo Launcher
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`
 - Commit: pending in this task
+- Scope: add a Windows one-click launcher for starting, stopping, restarting,
+  and checking the SEES demo backend/frontend services.
+- Changed files/modules:
+  - `scripts/sees_launcher.ps1`
+  - `start_leo_twin.bat`
+  - `restart_leo_twin.bat`
+  - `stop_leo_twin.bat`
+  - `docs/integration_demo.md`
+  - `docs/development_log.md`
+- Validation:
+  - PowerShell AST parse for `scripts/sees_launcher.ps1`
+    - Result: passed.
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\sees_launcher.ps1 status`
+    - Result: passed; reported backend/frontend stopped on ports 8765/5173
+      in the current local environment.
+  - `git diff --check -- . ':(exclude)configs/generated_full_system_demo.json' ':(exclude)configs/sees_control.yaml'`
+    - Result: passed.
+- Problems encountered:
+  - The active workspace still has unrelated local runtime config changes in
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`;
+    they remain excluded from this task.
+  - The launcher start path was not executed during validation to avoid
+    changing the user's currently running local service state.
+- Known remaining issues:
+  - The launcher depends on Python and pnpm/corepack being available from the
+    user's PATH. A later packaged desktop app can bundle these dependencies.
+- Recommended follow-up:
+  - Package the launcher as a small desktop application or tray controller
+    after backend/frontend workflows stabilize.
+
+## 2026-07-04 - Scale Firebreak v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: `a9c8acd`
 - Scope: reduce orbit event explosion for large constellations by adding
   scale-safe batch orbit updates without changing Event Kernel ordering.
 - Changed files/modules:

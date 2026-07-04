@@ -13,6 +13,24 @@ digital-twin event log to the React/Cesium observability frontend.
 
 The demo uses `configs/integration_demo.yaml`.
 
+## One-Click Windows Launcher
+
+For normal Windows use, start from the repository root:
+
+```powershell
+.\start_leo_twin.bat
+```
+
+This starts both backend and frontend, then opens the frontend in the browser.
+
+Other launcher commands:
+
+```powershell
+.\restart_leo_twin.bat
+.\stop_leo_twin.bat
+.\scripts\sees_launcher.ps1 status
+```
+
 ## Backend
 
 ```powershell
