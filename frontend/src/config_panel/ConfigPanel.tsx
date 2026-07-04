@@ -1282,6 +1282,15 @@ export function generatedScenarioSummaryItems(
       )} km`
     },
     {
+      label: "轨道周期",
+      value: `${formatDecimal(
+        constellation?.orbital_period_minutes ??
+          circularOrbitalPeriodMinutes(
+            (config.semi_major_axis_km - config.earth_radius_km) * 1000
+          )
+      )} min`
+    },
+    {
       label: "倾角",
       value: `${formatDecimal(constellation?.inclination_deg ?? config.inclination_deg)}°`
     }
@@ -1388,6 +1397,13 @@ function boundedInteger(value: number, min: number, max: number): number {
     return min;
   }
   return Math.min(max, Math.max(min, Math.round(value)));
+}
+
+function circularOrbitalPeriodMinutes(altitudeM: number): number {
+  const earthRadiusKm = 6371;
+  const earthMuKm3S2 = 398600.4418;
+  const semiMajorAxisKm = earthRadiusKm + altitudeM / 1000;
+  return (2 * Math.PI * Math.sqrt(semiMajorAxisKm ** 3 / earthMuKm3S2)) / 60;
 }
 
 function formatInteger(value: number): string {

@@ -189,6 +189,8 @@ export interface ConstellationDerivedSummary {
   plane_count_explicit: boolean;
   model_note: string;
   altitude_m?: number;
+  orbital_period_minutes?: number;
+  orbital_period_model_note?: string;
   inclination_deg?: number;
   raan_spacing_deg?: number;
   mean_anomaly_spacing_deg?: number;

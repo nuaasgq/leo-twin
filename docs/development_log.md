@@ -5,6 +5,40 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Orbit Period Explanation v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending in this commit
+- Scope: add a backend-derived simplified circular orbital period estimate to
+  constellation summaries and display the period in the frontend generated
+  scenario summary.
+- Changed files/modules:
+  - `src/leo_twin/services/derived_summary.py`
+  - `tests/unit/test_backend_derived_summary.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/config_panel/ConfigPanel.tsx`
+  - `frontend/tests/configPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_backend_derived_summary.py -q`
+    - Result: passed, 5 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- configPanel.test.ts`
+    - Result: passed, 22 files / 100 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - This is intentionally a circular-orbit period explanation. It does not add
+    SGP4, external ephemeris, or high-fidelity orbit mechanics.
+  - The active local runtime config files remain modified and excluded.
+- Known remaining issues:
+  - The frontend still needs a clearer distinction between physical orbital
+    period and demo playback speed.
+- Recommended follow-up:
+  - Add separate playback-speed and physical-orbit explanatory text near the
+    runtime controls.
+
 ## 2026-07-05 - Dashboard Throughput Fallback v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`

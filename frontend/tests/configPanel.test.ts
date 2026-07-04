@@ -165,6 +165,9 @@ describe("generatedScenarioSummaryItems", () => {
           plane_count_explicit: true,
           model_note: "Approximate Starlink Shell 1-like plane allocation; not exact Starlink fidelity.",
           altitude_m: 550000,
+          orbital_period_minutes: 95.502118,
+          orbital_period_model_note:
+            "Simplified circular-orbit period estimate; no SGP4 or external ephemeris.",
           inclination_deg: 53,
           raan_spacing_deg: 9,
           mean_anomaly_spacing_deg: 1.44,
@@ -245,6 +248,7 @@ describe("generatedScenarioSummaryItems", () => {
     expect(items).toContainEqual({ label: "波束模式", value: "中心 + 六邻区蜂窝" });
     expect(items).toContainEqual({ label: "默认波束", value: "7 个" });
     expect(items).toContainEqual({ label: "波束半径", value: "160 km" });
+    expect(items).toContainEqual({ label: "轨道周期", value: "95.5 min" });
   });
 
   it("shows a waiting state before initialization", () => {

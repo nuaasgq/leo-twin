@@ -11,6 +11,8 @@ from leo_twin.models.traffic import TrafficClass, TrafficDestinationType
 
 
 BackendDerivedSummary = dict[str, object]
+_EARTH_RADIUS_KM = 6371.0
+_EARTH_MU_KM3_S2 = 398600.4418
 
 
 def build_backend_derived_summary(
@@ -154,8 +156,25 @@ def _add_constellation_geometry(
     summary["phase_policy"] = str(phase_policy)
     if orbit_altitude_m is not None:
         summary["altitude_m"] = float(orbit_altitude_m)
+        summary["orbital_period_minutes"] = _circular_orbital_period_minutes(
+            orbit_altitude_m,
+        )
+        summary["orbital_period_model_note"] = (
+            "Simplified circular-orbit period estimate; no SGP4 or external ephemeris."
+        )
     if orbit_inclination_deg is not None:
         summary["inclination_deg"] = float(orbit_inclination_deg)
+
+
+def _circular_orbital_period_minutes(altitude_m: float) -> float:
+    altitude_km = float(altitude_m) / 1000.0
+    semi_major_axis_km = _EARTH_RADIUS_KM + altitude_km
+    return float(
+        2.0
+        * 3.141592653589793
+        * (semi_major_axis_km**3 / _EARTH_MU_KM3_S2) ** 0.5
+        / 60.0
+    )
 
 
 def _plane_distribution(satellite_count: int, plane_count: int) -> list[int]:

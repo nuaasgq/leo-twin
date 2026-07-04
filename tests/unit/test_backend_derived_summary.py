@@ -66,6 +66,10 @@ def test_backend_derived_summary_is_deterministic_and_frontend_ready() -> None:
         "mean_anomaly_spacing_deg": 36.0,
         "phase_policy": "TEST_PHASE_POLICY",
         "altitude_m": 550_000.0,
+        "orbital_period_minutes": pytest.approx(95.502118),
+        "orbital_period_model_note": (
+            "Simplified circular-orbit period estimate; no SGP4 or external ephemeris."
+        ),
         "inclination_deg": 53.0,
     }
     assert first["traffic_demand_summary"] == {
@@ -181,6 +185,7 @@ def test_constellation_summary_is_deterministic_for_product_scales(
     assert len(first["satellites_per_plane_distribution"]) == expected_plane_count
     assert first["raan_spacing_deg"] == pytest.approx(360.0 / expected_plane_count)
     assert first["altitude_m"] == 550_000.0
+    assert first["orbital_period_minutes"] == pytest.approx(95.502118)
     assert first["inclination_deg"] == 53.0
     assert first["phase_policy"] == "DETERMINISTIC_PLANE_SLOT_PHASE"
 
