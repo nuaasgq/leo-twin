@@ -26,6 +26,12 @@ export interface BeamCellFootprint {
   ring: number;
 }
 
+export interface CoverageFootprint {
+  id: string;
+  position: Vector3Tuple;
+  radiusMeters: number;
+}
+
 export function selectedCoverageBeamSatellites(
   satellites: readonly SatelliteState[],
   selectedSatelliteId: string,
@@ -75,6 +81,9 @@ export function upsertBeamEntity(
   }
 
   entity.position = new ConstantPositionProperty(satelliteCartesian(satellite));
+  const footprint = buildCoverageFootprint(satellite, options.beamRadiusMeters);
+  activeIds.push(footprint.id);
+  upsertCoverageFootprintEntity(entities, cache, satellite, footprint);
   for (const cell of buildBeamCellFootprints(
     satellite,
     options.beamRadiusMeters,
@@ -157,6 +166,49 @@ export function buildBeamCellFootprints(
   return cells;
 }
 
+export function buildCoverageFootprint(
+  satellite: SatelliteState,
+  beamRadiusMeters: number
+): CoverageFootprint {
+  const radial = normalize(satellite.position);
+  return {
+    id: coverageFootprintId(satellite.satellite_id),
+    position: scale(radial, EARTH_RADIUS_M + 4_500),
+    radiusMeters: Math.max(1, beamRadiusMeters)
+  };
+}
+
+function upsertCoverageFootprintEntity(
+  entities: EntityCollection,
+  cache: Map<string, Entity>,
+  satellite: SatelliteState,
+  footprint: CoverageFootprint
+): void {
+  let entity = cache.get(footprint.id);
+  if (!entity) {
+    entity = entities.add({
+      id: footprint.id,
+      name: `${satellite.satellite_id} coverage footprint`,
+      ellipse: {
+        semiMajorAxis: footprint.radiusMeters,
+        semiMinorAxis: footprint.radiusMeters,
+        height: 4_500,
+        material: Color.fromCssColorString("#2ed7ff").withAlpha(0.08),
+        outline: true,
+        outlineColor: Color.fromCssColorString("#9bf4ff").withAlpha(0.62)
+      }
+    });
+    cache.set(footprint.id, entity);
+  }
+  entity.position = new ConstantPositionProperty(
+    Cartesian3.fromElements(
+      footprint.position[0],
+      footprint.position[1],
+      footprint.position[2]
+    )
+  );
+}
+
 function upsertBeamCellEntity(
   entities: EntityCollection,
   cache: Map<string, Entity>,
@@ -188,6 +240,10 @@ function upsertBeamCellEntity(
 
 function beamCellId(satelliteId: string, index: number): string {
   return `beam-cell:${satelliteId}:${index}`;
+}
+
+function coverageFootprintId(satelliteId: string): string {
+  return `beam-footprint:${satelliteId}`;
 }
 
 function tangentBasis(radial: Vector3Tuple, velocity: Vector3Tuple | undefined): Vector3Tuple {

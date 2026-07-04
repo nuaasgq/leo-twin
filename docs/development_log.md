@@ -2453,3 +2453,33 @@ change.
 - Recommended follow-up:
   - Extend backend summaries to a bounded top-N representation once the runtime
     status contract supports structured route/link constraint rows.
+
+## 2026-07-05 - Selected Satellite Coverage Footprint v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: render a deterministic selected-satellite coverage footprint boundary
+  together with the existing bounded honeycomb beam cells.
+- Changed files/modules:
+  - `frontend/src/3d/beam_renderer/beamEntities.ts`
+  - `frontend/tests/satelliteVisuals.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- satelliteVisuals.test.ts visualLayerLimits.test.ts`
+    - Result: passed, 23 files / 135 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The existing beam renderer already had selected-satellite honeycomb cells,
+    but lacked a larger boundary footprint that made coverage extent visually
+    explicit.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - This is a deterministic visual footprint only. It is not RF propagation,
+    antenna pattern, interference, or link budget simulation.
+- Recommended follow-up:
+  - Add a coverage legend in the satellite-follow inset that reports footprint
+    radius, beam count, and the simplified visual model note.

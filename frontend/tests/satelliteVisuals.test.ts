@@ -11,6 +11,7 @@ import {
 } from "../src/3d/orbit_renderer/satelliteEntities";
 import {
   buildBeamCellFootprints,
+  buildCoverageFootprint,
   resolveBeamGeometryOptions,
   selectedCoverageBeamSatellites
 } from "../src/3d/beam_renderer/beamEntities";
@@ -108,6 +109,15 @@ describe("selected satellite coverage beams", () => {
     expect(buildBeamCellFootprints(satelliteA, 160_000, 32)).toHaveLength(7);
     expect(buildBeamCellFootprints(satelliteA, 160_000, 0)).toHaveLength(1);
     expect(buildBeamCellFootprints(satelliteA, 160_000, 4)).toHaveLength(4);
+  });
+
+  it("builds a deterministic selected-satellite coverage footprint boundary", () => {
+    expect(buildCoverageFootprint(satelliteA, 160_000)).toEqual({
+      id: "beam-footprint:sat-a",
+      position: [6_375_500, 0, 0],
+      radiusMeters: 160_000
+    });
+    expect(buildCoverageFootprint(satelliteA, 0).radiusMeters).toBe(1);
   });
 
   it("resolves beam geometry from backend coverage summary before render defaults", () => {
