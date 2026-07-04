@@ -1204,6 +1204,7 @@ describe("buildTopComputeNodeRows", () => {
           }
         ]
       }),
+      undefined,
       3
     );
 
@@ -1216,6 +1217,62 @@ describe("buildTopComputeNodeRows", () => {
       loadLabel: "80%",
       fp32Label: "82 / 100 GFLOPS",
       taskLabel: "3 运行 / 1 完成"
+    });
+  });
+
+  it("prefers backend satellite KPI slices over local compute-node aggregation", () => {
+    const rows = buildTopComputeNodeRows(
+      makeSnapshot({
+        compute_nodes: [
+          {
+            node_id: "sat-a",
+            running_tasks: 0,
+            finished_tasks: 0,
+            capacity: 100,
+            available_capacity: 90,
+            status: "IDLE",
+            load_ratio: 0.1
+          }
+        ]
+      }),
+      {
+        version: "v1",
+        mode: "TOP_ACTIVITY_LIMITED",
+        slice_limit: 64,
+        satellite_count: 1,
+        slice_count: 1,
+        slices: [
+          {
+            satellite_id: "sat-a",
+            active_link_count: 3,
+            active_access_link_count: 1,
+            active_space_link_count: 2,
+            route_count: 4,
+            available_route_count: 3,
+            route_capacity_mbps: 120,
+            route_demand_mbps: 100,
+            route_latency_avg_s: 0.05,
+            route_delay_variation_proxy_s: 0.01,
+            route_loss_proxy_rate: 0.02,
+            compute_capacity_gflops_fp32: 100,
+            compute_used_gflops_fp32: 76,
+            compute_load_ratio: 0.76,
+            running_task_count: 2,
+            finished_task_count: 5
+          }
+        ]
+      }
+    );
+
+    expect(rows[0]).toMatchObject({
+      nodeId: "sat-a",
+      statusLabel: "IDLE",
+      loadPercent: 76,
+      usedFp32Gflops: 76,
+      runningTasks: 2,
+      loadLabel: "76%",
+      fp32Label: "76 / 100 GFLOPS",
+      taskLabel: "2 运行 / 5 完成"
     });
   });
 

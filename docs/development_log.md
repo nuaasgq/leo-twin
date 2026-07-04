@@ -3181,3 +3181,35 @@ change.
   - Bind `satellite_kpi_slices_v1` into the dashboard top-node table and the
     selected-satellite detail panel, preferring backend slice semantics over
     frontend-only aggregation.
+
+## 2026-07-05 - Dashboard Backend Satellite KPI Binding v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: make the standalone dashboard high-load compute-node table prefer
+  backend `satellite_kpi_slices_v1` from runtime status, while retaining the
+  previous snapshot compute-node aggregation as a fallback.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 23 files / 154 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed after fixing a readonly-array sort type issue by sorting a
+      copied array.
+- Problems encountered:
+  - TypeScript correctly rejected sorting a readonly fallback row array. The
+    implementation now sorts `Array.from(sourceRows)` and leaves the pure
+    fallback function immutable.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - Selected-satellite detail still uses frontend aggregation; it should be
+    bound to the same backend slice contract next.
+- Recommended follow-up:
+  - Pass runtime satellite KPI slices into the Cesium selected-satellite detail
+    summary so console and dashboard explain satellite KPIs from one source.

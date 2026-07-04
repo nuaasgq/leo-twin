@@ -18,6 +18,7 @@ import {
   TrafficDemandSummary,
   RuntimeKpiTimeSeriesV1,
   RuntimeMetricsSummary,
+  RuntimeSatelliteKpiSlicesV1,
   RuntimeStatusPayload
 } from "../../core/event_types";
 import { WorldSnapshot } from "../../state/snapshot_engine";
@@ -110,7 +111,10 @@ export const DataPanel = memo(function DataPanel({
     snapshot,
     runtimeStatus.metrics_summary
   );
-  const topComputeNodes = buildTopComputeNodeRows(snapshot);
+  const topComputeNodes = buildTopComputeNodeRows(
+    snapshot,
+    runtimeStatus.satellite_kpi_slices_v1
+  );
 
   return (
     <section className="data-panel" aria-label="独立数据态势面板">
@@ -804,8 +808,38 @@ export function buildComputeResourcePool(
 
 export function buildTopComputeNodeRows(
   snapshot: WorldSnapshot,
+  backendSlices: RuntimeSatelliteKpiSlicesV1 | null | undefined = undefined,
   limit = 5
 ): readonly TopComputeNodeRow[] {
+  const backendRows = (backendSlices?.slices ?? []).map((slice) => {
+    const node = snapshot.compute_nodes.find((item) => item.node_id === slice.satellite_id);
+    const capacity = Math.max(0, finiteMetric(slice.compute_capacity_gflops_fp32));
+    const usedFp32 = Math.max(0, finiteMetric(slice.compute_used_gflops_fp32));
+    const loadRatio = clampRatio(finiteMetric(slice.compute_load_ratio));
+    return {
+      nodeId: slice.satellite_id,
+      statusLabel: node?.status ?? "BACKEND_SLICE",
+      loadPercent: roundMetric(loadRatio * 100),
+      usedFp32Gflops: roundMetric(usedFp32),
+      runningTasks: Math.max(0, slice.running_task_count),
+      loadLabel: `${formatMetricValue(loadRatio * 100)}%`,
+      fp32Label: `${formatMetricValue(usedFp32)} / ${formatMetricValue(
+        capacity
+      )} GFLOPS`,
+      taskLabel: `${Math.max(0, slice.running_task_count)} 运行 / ${Math.max(
+        0,
+        slice.finished_task_count
+      )} 完成`
+    };
+  });
+  const sourceRows =
+    backendRows.length > 0 ? backendRows : buildSnapshotTopComputeNodeRows(snapshot);
+  return Array.from(sourceRows)
+    .sort(compareTopComputeNodeRows)
+    .slice(0, Math.max(0, limit));
+}
+
+function buildSnapshotTopComputeNodeRows(snapshot: WorldSnapshot): readonly TopComputeNodeRow[] {
   return snapshot.compute_nodes
     .map((node) => {
       const capacity = Math.max(0, finiteMetric(node.capacity));
@@ -836,9 +870,7 @@ export function buildTopComputeNodeRows(
         )} GFLOPS`,
         taskLabel: `${node.running_tasks} 运行 / ${node.finished_tasks} 完成`
       };
-    })
-    .sort(compareTopComputeNodeRows)
-    .slice(0, Math.max(0, limit));
+    });
 }
 
 function compareTopComputeNodeRows(
