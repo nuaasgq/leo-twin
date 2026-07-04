@@ -5,7 +5,8 @@ from math import pi
 import pytest
 
 from examples.integration_demo.config import DemoConfig
-from examples.integration_demo.scenario import build_demo_scenario
+from examples.integration_demo.scenario import _traffic_demand_batch, build_demo_scenario
+from leo_twin.models.traffic import TrafficClass, TrafficDestinationType
 from leo_twin.schema import EventType, FlowRequest, TaskRequest
 
 
@@ -163,6 +164,44 @@ def test_demo_flow_and_task_demands_are_config_driven() -> None:
         "task_compute_demand": 15.0,
         "task_data_size": 4.0,
     }
+
+
+def test_demo_initial_workload_uses_traffic_demand_records() -> None:
+    config = _demo_config()
+    scenario = build_demo_scenario(config)
+    demand_batch = _traffic_demand_batch(config)
+    flow_events = tuple(
+        event
+        for event in scenario.initial_events
+        if event.event_type == EventType.FLOW_ARRIVAL
+    )
+    task_events = tuple(
+        event
+        for event in scenario.initial_events
+        if event.event_type == EventType.TASK_ARRIVAL
+    )
+
+    assert demand_batch == _traffic_demand_batch(config)
+    assert len(demand_batch.records) == len(flow_events) == len(task_events)
+    first_record = demand_batch.records[0]
+    first_flow_event = flow_events[0]
+    first_task_event = task_events[0]
+
+    assert first_record.traffic_class == TrafficClass.COMPUTE_SERVICE
+    assert first_record.destination_type == TrafficDestinationType.COMPUTE_NODE
+    assert first_record.input_data_size == config.flow_demand_capacity
+    assert first_record.output_data_size == 0.0
+    assert first_record.arrival_time == first_flow_event.sim_time
+    assert first_record.task == first_task_event.payload
+    assert first_record.input_flow == first_flow_event.payload
+    assert first_task_event.sim_time - first_flow_event.sim_time == pytest.approx(0.05)
+    assert first_flow_event.priority == 5
+    assert first_task_event.priority == 4
+    assert first_record.input_flow.priority == 0
+    assert first_record.input_flow.application_id is None
+    assert first_record.task is not None
+    assert first_record.task.priority == 0
+    assert first_record.task.flow_id is None
 
 
 def test_scale_initial_workload_smoothing_spreads_first_burst() -> None:

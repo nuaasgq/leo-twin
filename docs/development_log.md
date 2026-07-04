@@ -1801,7 +1801,7 @@ change.
 ## 2026-07-05 - Frontend Route KPI Detail v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`
-- Commit: pending
+- Commit: `0e4f355`
 - Scope: display backend-provided best-route demand and route loss in the
   protocol/link dashboard summary.
 - Changed files/modules:
@@ -1827,3 +1827,45 @@ change.
 - Recommended follow-up:
   - Add a compact route-explanation strip sourced from backend metrics fields:
     demand pressure, route loss, route blocking, and congestion proxy.
+
+## 2026-07-05 - Traffic Demand Generator Integration v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending
+- Scope: make the integration demo initial workload use reusable traffic demand
+  records while preserving existing `FLOW_ARRIVAL` and `TASK_ARRIVAL` event
+  contracts, event IDs, timing, priorities, and deterministic ordering.
+- Changed files/modules:
+  - `examples/integration_demo/scenario.py`
+  - `tests/unit/test_integration_demo_scenario.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_integration_demo_scenario.py tests/unit/test_traffic_demand_model.py -q`
+    - Result: passed, 17 tests.
+  - `python -m pytest tests/integration/test_full_system_demo.py::test_replay_test tests/integration/test_full_system_demo.py::test_frontend_sync_test tests/integration/test_config_control.py::test_frontend_control_messages_are_processed tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer -q`
+    - Result: passed, 4 tests.
+  - `python -m pytest tests/integration/test_compute_service_lifecycle.py -q`
+    - Result: passed, 1 test.
+  - `python -m pytest tests/integration/test_runtime_session_control.py -q`
+    - Result: passed, 12 tests.
+- Problems encountered:
+  - `TrafficDemandBatch.task_arrival_events()` schedules tasks at record
+    arrival time, but the integration demo intentionally sends the input flow
+    first and the compute task 0.05 seconds later. The demo therefore uses
+    `TrafficDemandRecord` as the reusable business record and keeps a local
+    projection to the legacy event timing.
+  - Payload-level `FlowRequest.application_id`, `FlowRequest.priority`,
+    `TaskRequest.flow_id`, and `TaskRequest.priority` were left at their
+    previous defaults so this integration slice does not change existing
+    frontend/runtime payload compatibility.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The demo workload is now represented by traffic demand records, but it is
+    still a single compute-service class. User-selectable traffic mixes should
+    be introduced in a later bounded task.
+  - Output/result flow metadata is not emitted by this demo integration yet;
+    that belongs with the communication-compute lifecycle expansion.
+- Recommended follow-up:
+  - Add backend configuration fields for traffic class mix and destination type
+    so frontend user parameters can drive traffic demand profiles directly.

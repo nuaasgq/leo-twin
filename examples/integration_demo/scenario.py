@@ -8,6 +8,12 @@ from math import cos, pi, radians, sin
 from leo_twin.models.compute import ComputeNode
 from leo_twin.models.network import GroundEndpoint
 from leo_twin.models.orbit import AutoPlaneAllocator, ConstellationAllocation, OrbitSatelliteConfig
+from leo_twin.models.traffic import (
+    TrafficClass,
+    TrafficDemandBatch,
+    TrafficDemandRecord,
+    TrafficDestinationType,
+)
 from leo_twin.services.derived_summary import build_backend_derived_summary
 from leo_twin.services.scale_fidelity import (
     ScaleFidelityConfig,
@@ -413,6 +419,42 @@ def _initial_events(config: DemoConfig) -> tuple[SimEvent, ...]:
             )
         )
 
+    for task_index, record in enumerate(_traffic_demand_batch(config).records):
+        if record.task is None:
+            continue
+        events.append(
+            SimEvent(
+                event_id=f"scenario:flow-arrival:{task_index:05d}",
+                sim_time=record.arrival_time,
+                priority=5,
+                source="scenario",
+                target="network",
+                event_type=EventType.FLOW_ARRIVAL.value,
+                payload=record.input_flow,
+            )
+        )
+        events.append(
+            SimEvent(
+                event_id=f"scenario:task-arrival:{task_index:05d}",
+                sim_time=record.task.submit_time,
+                priority=4,
+                source="scenario",
+                target="compute",
+                event_type=EventType.TASK_ARRIVAL.value,
+                payload=record.task,
+            )
+        )
+
+    return tuple(
+        sorted(
+            events,
+            key=lambda event: (event.sim_time, -event.priority, str(event.event_id)),
+        )
+    )
+
+
+def _traffic_demand_batch(config: DemoConfig) -> TrafficDemandBatch:
+    records: list[TrafficDemandRecord] = []
     task_index = 0
     compute_node_ids = _compute_node_satellite_ids(config)
     spacing_s = _initial_workload_spacing_s(config, len(compute_node_ids))
@@ -426,43 +468,33 @@ def _initial_events(config: DemoConfig) -> tuple[SimEvent, ...]:
                 if _workload_smoothing_active(config)
                 else float(tick) + 20.0
             )
-            events.append(
-                SimEvent(
-                    event_id=f"scenario:flow-arrival:{task_index:05d}",
-                    sim_time=submit_time - 0.05,
-                    priority=5,
-                    source="scenario",
-                    target="network",
-                    event_type=EventType.FLOW_ARRIVAL.value,
-                    payload=FlowRequest(
-                        flow_id=task_id,
-                        source_id=source_id,
-                        target_id=target_id,
-                        demand_capacity=config.flow_demand_capacity,
-                    ),
-                )
+            input_flow = FlowRequest(
+                flow_id=task_id,
+                source_id=source_id,
+                target_id=target_id,
+                demand_capacity=config.flow_demand_capacity,
             )
-            events.append(
-                SimEvent(
-                    event_id=f"scenario:task-arrival:{task_index:05d}",
-                    sim_time=submit_time,
-                    priority=4,
-                    source="scenario",
-                    target="compute",
-                    event_type=EventType.TASK_ARRIVAL.value,
-                    payload=TaskRequest(
-                        task_id=task_id,
-                        source_id=source_id,
-                        submit_time=submit_time,
-                        compute_demand=config.task_compute_demand + float(task_index % 5),
-                        data_size=config.task_data_size + float(task_index % 3),
-                        deadline=deadline,
-                    ),
+            task = TaskRequest(
+                task_id=task_id,
+                source_id=source_id,
+                submit_time=submit_time,
+                compute_demand=config.task_compute_demand + float(task_index % 5),
+                data_size=config.task_data_size + float(task_index % 3),
+                deadline=deadline,
+            )
+            records.append(
+                TrafficDemandRecord(
+                    arrival_time=submit_time - 0.05,
+                    traffic_class=TrafficClass.COMPUTE_SERVICE,
+                    destination_type=TrafficDestinationType.COMPUTE_NODE,
+                    input_data_size=config.flow_demand_capacity,
+                    output_data_size=0.0,
+                    input_flow=input_flow,
+                    task=task,
                 )
             )
             task_index += 1
-
-    return tuple(sorted(events, key=lambda event: (event.sim_time, -event.priority, str(event.event_id))))
+    return TrafficDemandBatch(records=tuple(records))
 
 
 def _compute_node_satellite_ids(config: DemoConfig) -> tuple[str, ...]:
