@@ -189,6 +189,7 @@ export interface RuntimeStatusPayload {
   duration: number;
   config_version: number;
   last_action: string;
+  initialized?: boolean;
 }
 
 export interface GeneratedScenarioConfig {

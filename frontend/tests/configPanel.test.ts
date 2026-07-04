@@ -7,6 +7,7 @@ import {
   orbitControlPayload,
   pauseResumeControl,
   runtimeProgressSummary,
+  startControlDisabled,
   trafficControlPayload,
   visualizationControlPayload
 } from "../src/config_panel/ConfigPanel";
@@ -117,6 +118,15 @@ describe("pauseResumeControl", () => {
       action: "PAUSE",
       disabled: true
     });
+  });
+});
+
+describe("startControlDisabled", () => {
+  it("requires initialization before a stopped simulation can start", () => {
+    expect(startControlDisabled(runtimeStatus("STOPPED", false))).toBe(true);
+    expect(startControlDisabled(runtimeStatus("STOPPED", true))).toBe(false);
+    expect(startControlDisabled(runtimeStatus("RUNNING", true))).toBe(true);
+    expect(startControlDisabled(runtimeStatus("PAUSED", true))).toBe(true);
   });
 });
 
@@ -252,7 +262,10 @@ describe("networkControlPayload", () => {
   });
 });
 
-function runtimeStatus(status: "RUNNING" | "PAUSED" | "STOPPED") {
+function runtimeStatus(
+  status: "RUNNING" | "PAUSED" | "STOPPED",
+  initialized = true
+) {
   return {
     status,
     mode: status === "PAUSED" ? "PAUSED" : "REAL_TIME",
@@ -260,6 +273,7 @@ function runtimeStatus(status: "RUNNING" | "PAUSED" | "STOPPED") {
     seed: 20260703,
     duration: 600,
     config_version: 1,
-    last_action: status
+    last_action: status,
+    initialized
   } as const;
 }

@@ -303,6 +303,14 @@ def test_initialize_writes_config_and_start_gates_streams(tmp_path) -> None:
     assert control_plane.stream_snapshots() == ()
     assert control_plane.visible_snapshot()["satellites"] == []
     assert control_plane.visible_snapshot()["event_count"] == 0
+    assert control_plane.runtime_status()["status"]["initialized"] is False
+
+    blocked_start = control_plane.handle_raw_message(
+        json.dumps({"type": "RUNTIME_CONTROL", "action": "START"})
+    )
+    assert blocked_start["ok"] is False
+    assert "initialized before start" in blocked_start["error"]
+    assert control_plane.stream_events() == ()
 
     init_ack = control_plane.handle_raw_message(
         json.dumps(
@@ -336,6 +344,7 @@ def test_initialize_writes_config_and_start_gates_streams(tmp_path) -> None:
     assert init_ack["ok"] is True
     assert init_ack["status"]["last_action"] == "INITIALIZE"
     assert init_ack["status"]["status"] == "STOPPED"
+    assert init_ack["status"]["initialized"] is True
     assert "satellite_count: 24" in config_path.read_text(encoding="utf-8")
     assert "compute_capacity: 18.0" in config_path.read_text(encoding="utf-8")
     assert "plane_count: 6" in config_path.read_text(encoding="utf-8")
@@ -392,11 +401,15 @@ def test_initialize_writes_config_and_start_gates_streams(tmp_path) -> None:
         json.dumps({"type": "RUNTIME_CONTROL", "action": "RESET"})
     )
     assert reset_ack["status"]["last_action"] == "RESET"
+    assert reset_ack["status"]["initialized"] is False
     assert control_plane.visible_snapshot()["event_count"] == 0
 
 
 def test_demo_control_plane_blocks_unsafe_scale_start(tmp_path) -> None:
     control_plane = _small_control_plane(tmp_path / "sees_control.yaml")
+    control_plane.handle_raw_message(
+        json.dumps({"type": "RUNTIME_CONTROL", "action": "INITIALIZE"})
+    )
     control_plane.controller.apply_config(
         SEESConfig(
             scenario=ScenarioConfig(

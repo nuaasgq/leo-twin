@@ -53,6 +53,7 @@ class DemoControlPlane:
     _controller: RuntimeController
     _config_output_path: Path
     _generated_config_output_path: Path
+    _initialized: bool = False
 
     @classmethod
     def from_result(
@@ -84,7 +85,7 @@ class DemoControlPlane:
     def runtime_status(self) -> dict[str, Any]:
         return {
             "type": "RUNTIME_STATUS",
-            "status": self._controller.snapshot().to_json(),
+            "status": self._status_json(),
             "config": self._controller.config_json(),
             "generated_config": self._generated_config_json(),
         }
@@ -117,11 +118,15 @@ class DemoControlPlane:
                 raise ValueError("runtime control message requires an action")
             if message.action == RuntimeAction.INITIALIZE:
                 return self._initialize(message.payload)
-            snapshot = self._controller.handle_action(message.action, message.payload)
+            if message.action == RuntimeAction.START and not self._initialized:
+                raise RuntimeError("simulation must be initialized before start")
+            self._controller.handle_action(message.action, message.payload)
+            if message.action == RuntimeAction.RESET:
+                self._initialized = False
             return {
                 "type": "CONTROL_ACK",
                 "ok": True,
-                "status": snapshot.to_json(),
+                "status": self._status_json(),
                 "config": self._controller.config_json(),
                 "generated_config": self._generated_config_json(),
             }
@@ -129,7 +134,7 @@ class DemoControlPlane:
             return control_error(exc)
 
     def _initialize(self, payload: dict[str, Any]) -> dict[str, Any]:
-        snapshot = self._controller.initialize(payload)
+        self._controller.initialize(payload)
         write_config(self._config_output_path, self._controller.config)
         write_full_system_scenario_builder_config(
             self._generated_config_output_path,
@@ -140,10 +145,11 @@ class DemoControlPlane:
             self._base_config,
         )
         self._result = run_integration_demo(updated_demo_config)
+        self._initialized = True
         return {
             "type": "CONTROL_ACK",
             "ok": True,
-            "status": snapshot.to_json(),
+            "status": self._status_json(),
             "config": self._controller.config_json(),
             "generated_config": self._generated_config_json(),
         }
@@ -152,6 +158,11 @@ class DemoControlPlane:
         return scenario_builder_config_to_mapping(
             scenario_builder_config_from_sees_config(self._controller.config)
         )
+
+    def _status_json(self) -> dict[str, str | int | float | bool]:
+        status = self._controller.snapshot().to_json()
+        status["initialized"] = self._initialized
+        return status
 
 
 def _initial_snapshot(result: DemoRunResult) -> dict[str, JsonValue]:

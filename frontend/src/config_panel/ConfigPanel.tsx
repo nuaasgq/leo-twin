@@ -289,6 +289,7 @@ export function ConfigPanel({
 
   const summaryItems = generatedScenarioSummaryItems(generatedConfig);
   const pauseResume = pauseResumeControl(runtime);
+  const startDisabled = startControlDisabled(runtime);
   const progressSummary = runtimeProgressSummary(progress);
   const handleInitialize = () =>
     onRuntimeControl("INITIALIZE", {
@@ -363,7 +364,11 @@ export function ConfigPanel({
             <button type="button" onClick={handleInitialize}>
               初始化
             </button>
-            <button type="button" onClick={() => onRuntimeControl("START")}>
+            <button
+              type="button"
+              disabled={startDisabled}
+              onClick={() => onRuntimeControl("START")}
+            >
               开始
             </button>
             <button
@@ -1149,6 +1154,10 @@ export function pauseResumeControl(runtime: RuntimeStatusPayload): PauseResumeCo
     action: "PAUSE",
     disabled: runtime.status !== "RUNNING"
   };
+}
+
+export function startControlDisabled(runtime: RuntimeStatusPayload): boolean {
+  return runtime.initialized !== true || runtime.status !== "STOPPED";
 }
 
 export function runtimeProgressSummary(
