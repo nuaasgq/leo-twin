@@ -4,7 +4,10 @@ import {
   buildSatelliteModelParts,
   satelliteModelEntityIds
 } from "../src/3d/orbit_renderer/satelliteModelEntities";
-import { SATELLITE_ICON_DATA_URI } from "../src/3d/orbit_renderer/satelliteEntities";
+import {
+  SATELLITE_DEPTH_TEST_DISABLE_DISTANCE,
+  SATELLITE_ICON_DATA_URI
+} from "../src/3d/orbit_renderer/satelliteEntities";
 import {
   appendSatelliteInsetTrail,
   satelliteAltitudeKm,
@@ -34,6 +37,10 @@ describe("satellite model entities", () => {
 });
 
 describe("satellite overview icon", () => {
+  it("keeps satellite overlays depth-tested so the opaque globe occludes far-side satellites", () => {
+    expect(SATELLITE_DEPTH_TEST_DISABLE_DISTANCE).toBe(0);
+  });
+
   it("uses a recognizable satellite glyph instead of only a point marker", () => {
     const decodedIcon = decodeURIComponent(
       SATELLITE_ICON_DATA_URI.replace("data:image/svg+xml;charset=UTF-8,", "")

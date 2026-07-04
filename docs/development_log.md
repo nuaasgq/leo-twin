@@ -65,7 +65,7 @@ change.
 ## 2026-07-05 - Frontend State Stream Freshness v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`
-- Commit: this commit (created before hash assignment)
+- Commit: `aba6caf`
 - Scope: prevent stale state snapshots from rolling frontend satellite, task,
   and compute-node state backwards after newer event-stream updates, and make
   the configuration panel respect backend-provided compute node counts while
@@ -101,6 +101,40 @@ change.
 - Recommended follow-up:
   - Fix Cesium depth/opaque globe rendering next, then add backend-owned network
     quality summaries for throughput, delay, loss proxy, and jitter.
+
+## 2026-07-05 - Cesium Globe Depth Occlusion v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: this commit (created before hash assignment)
+- Scope: reduce the transparent-globe effect by keeping satellite point,
+  billboard, and label overlays depth-tested, and enabling Cesium globe depth
+  testing against the terrain/ellipsoid surface so far-side satellites are
+  occluded by Earth.
+- Changed files/modules:
+  - `frontend/src/3d/cesium/CesiumGlobe.tsx`
+  - `frontend/src/3d/orbit_renderer/satelliteEntities.ts`
+  - `frontend/tests/satelliteVisuals.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- satelliteVisuals.test.ts visualLayerLimits.test.ts countryOverlays.test.ts`
+    - Result: passed, 22 files / 92 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - No Playwright screenshot baseline exists in this repository yet. This slice
+    uses deterministic unit checks and TypeScript/Vite build validation; a
+    later visual QA task should add screenshot/canvas checks.
+  - The active local runtime config files remain modified and excluded.
+- Known remaining issues:
+  - The satellite model is still a code-built multi-part primitive, not a
+    licensed downloaded glTF asset.
+  - Selected-satellite foreground emphasis may need a separate design after
+    full depth testing hides far-side labels as intended.
+- Recommended follow-up:
+  - Add licensed satellite glTF assets and screenshot-based visual acceptance
+    checks, then implement selected-satellite coverage and beam rendering.
 
 ## 2026-07-04 - Development Log Requirement
 

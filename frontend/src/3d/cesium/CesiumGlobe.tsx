@@ -125,7 +125,7 @@ export function CesiumGlobe({ snapshot, displaySimTime }: CesiumGlobeProps) {
     }
     viewer.scene.backgroundColor = Color.BLACK;
     viewer.scene.globe.baseColor = Color.fromCssColorString("#07141d");
-    viewer.scene.globe.depthTestAgainstTerrain = false;
+    viewer.scene.globe.depthTestAgainstTerrain = true;
     viewer.scene.globe.showGroundAtmosphere = true;
     if (viewer.scene.skyAtmosphere) {
       viewer.scene.skyAtmosphere.show = true;

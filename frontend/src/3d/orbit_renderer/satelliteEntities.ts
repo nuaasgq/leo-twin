@@ -18,7 +18,7 @@ import {
   satelliteOrbitCartesianSamples
 } from "../cesium/positions";
 
-const DEPTH_TEST_DISABLE_DISTANCE = 1_000_000_000_000;
+export const SATELLITE_DEPTH_TEST_DISABLE_DISTANCE = 0;
 export const SATELLITE_ICON_DATA_URI = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
 <svg xmlns="http://www.w3.org/2000/svg" width="96" height="72" viewBox="0 0 96 72">
   <defs>
@@ -102,7 +102,7 @@ export class SatellitePrimitiveBatch {
         color,
         outlineColor: Color.BLACK,
         outlineWidth: 1,
-        disableDepthTestDistance: DEPTH_TEST_DISABLE_DISTANCE
+        disableDepthTestDistance: SATELLITE_DEPTH_TEST_DISABLE_DISTANCE
       });
       this.pointsBySatelliteId.set(satellite.satellite_id, point);
       return;
@@ -110,6 +110,7 @@ export class SatellitePrimitiveBatch {
     point.position = satelliteCartesian(satellite);
     point.color = color;
     point.pixelSize = active ? 6 : 4;
+    point.disableDepthTestDistance = SATELLITE_DEPTH_TEST_DISABLE_DISTANCE;
   }
 }
 
@@ -131,7 +132,7 @@ export function upsertSatelliteIconEntity(
         image: SATELLITE_ICON_DATA_URI,
         scale: 0.58,
         verticalOrigin: VerticalOrigin.CENTER,
-        disableDepthTestDistance: DEPTH_TEST_DISABLE_DISTANCE
+        disableDepthTestDistance: SATELLITE_DEPTH_TEST_DISABLE_DISTANCE
       },
       label: {
         text: satellite.satellite_id,
@@ -142,7 +143,7 @@ export function upsertSatelliteIconEntity(
         style: LabelStyle.FILL_AND_OUTLINE,
         verticalOrigin: VerticalOrigin.TOP,
         pixelOffset: new Cartesian2(0, 18),
-        disableDepthTestDistance: DEPTH_TEST_DISABLE_DISTANCE
+        disableDepthTestDistance: SATELLITE_DEPTH_TEST_DISABLE_DISTANCE
       }
     });
     cache.set(id, entity);
@@ -150,9 +151,15 @@ export function upsertSatelliteIconEntity(
   entity.position = new ConstantPositionProperty(position);
   if (entity.billboard) {
     entity.billboard.scale = new ConstantProperty(active ? 0.58 : 0.42);
+    entity.billboard.disableDepthTestDistance = new ConstantProperty(
+      SATELLITE_DEPTH_TEST_DISABLE_DISTANCE
+    );
   }
   if (entity.label) {
     entity.label.fillColor = new ConstantProperty(active ? Color.WHITE : Color.LIGHTGRAY);
+    entity.label.disableDepthTestDistance = new ConstantProperty(
+      SATELLITE_DEPTH_TEST_DISABLE_DISTANCE
+    );
   }
 }
 
