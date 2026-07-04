@@ -21,7 +21,8 @@ For normal Windows use, start from the repository root:
 .\start_leo_twin.bat
 ```
 
-This starts both backend and frontend, then opens the frontend in the browser.
+This starts both backend and frontend, waits until both ports are ready, then
+opens the frontend in the browser.
 
 Other launcher commands:
 
@@ -30,6 +31,9 @@ Other launcher commands:
 .\stop_leo_twin.bat
 .\scripts\sees_launcher.ps1 status
 ```
+
+If the browser does not open automatically, run `.\scripts\sees_launcher.ps1
+status` and open `http://127.0.0.1:5173` after the frontend reports running.
 
 ## Backend
 

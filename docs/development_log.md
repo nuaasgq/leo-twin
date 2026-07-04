@@ -25,7 +25,7 @@ change.
 ## 2026-07-04 - Windows Demo Launcher
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`
-- Commit: pending in this task
+- Commit: `8ca7331`
 - Scope: add a Windows one-click launcher for starting, stopping, restarting,
   and checking the SEES demo backend/frontend services.
 - Changed files/modules:
@@ -55,6 +55,41 @@ change.
 - Recommended follow-up:
   - Package the launcher as a small desktop application or tray controller
     after backend/frontend workflows stabilize.
+
+## 2026-07-04 - Windows Launcher Readiness Fix
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending in this task
+- Scope: fix launcher startup when Node.js is available only through the
+  bundled Codex runtime and delay browser opening until service ports are
+  actually ready.
+- Changed files/modules:
+  - `scripts/sees_launcher.ps1`
+  - `docs/integration_demo.md`
+  - `docs/development_log.md`
+- Validation:
+  - PowerShell AST parse for `scripts/sees_launcher.ps1`
+    - Result: passed.
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\sees_launcher.ps1 start -NoBrowser`
+    - Result: passed; backend became ready on port 8765 and frontend became
+      ready on port 5173.
+  - `Invoke-WebRequest -UseBasicParsing http://127.0.0.1:5173/`
+    - Result: HTTP 200.
+  - `Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8765/runtime/status`
+    - Result: HTTP 200.
+  - `git diff --check -- . ':(exclude)configs/generated_full_system_demo.json' ':(exclude)configs/sees_control.yaml'`
+    - Result: passed.
+- Problems encountered:
+  - The first launcher version found `pnpm.cmd` from the bundled runtime but
+    did not add the sibling bundled `node.exe` directory to PATH, so Vite could
+    exit immediately with `node` unavailable.
+  - The first launcher version opened the browser before Vite/backend ports
+    were ready, which could leave the user on a connection failure page.
+- Known remaining issues:
+  - This is still a script launcher. A packaged app should eventually capture
+    service logs and show health status in one window.
+- Recommended follow-up:
+  - Add log files or a small local tray UI for backend/frontend process output.
 
 ## 2026-07-04 - Scale Firebreak v1
 

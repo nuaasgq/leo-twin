@@ -55,6 +55,35 @@ function Get-PnpmInvocation {
     throw "pnpm was not found. Install Node.js and enable pnpm with: corepack enable"
 }
 
+function Add-BundledNodeToPath {
+    if ($null -ne (Get-Command "node" -ErrorAction SilentlyContinue)) {
+        return
+    }
+
+    $pnpm = Get-Command "pnpm.cmd" -ErrorAction SilentlyContinue
+    if ($null -eq $pnpm) {
+        $pnpm = Get-Command "pnpm" -ErrorAction SilentlyContinue
+    }
+    if ($null -eq $pnpm) {
+        return
+    }
+
+    $dependenciesBin = Split-Path -Parent $pnpm.Source
+    $dependenciesRoot = Split-Path -Parent $dependenciesBin
+    $nodeBin = Join-Path $dependenciesRoot "node\bin"
+    $nodeExe = Join-Path $nodeBin "node.exe"
+    if (-not (Test-Path -LiteralPath $nodeExe)) {
+        return
+    }
+
+    $entries = @($nodeBin, $dependenciesBin)
+    foreach ($entry in $entries) {
+        if ($env:PATH -notlike "*$entry*") {
+            $env:PATH = "$entry;$env:PATH"
+        }
+    }
+}
+
 function Get-ListeningProcesses {
     param([int]$Port)
 
@@ -75,6 +104,27 @@ function Stop-ListeningPort {
         Write-Host "Stopping port $Port process: $($process.ProcessName) [$($process.Id)]"
         Stop-Process -Id $process.Id -Force
     }
+}
+
+function Wait-ForPort {
+    param(
+        [string]$Name,
+        [int]$Port,
+        [int]$TimeoutSeconds
+    )
+
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    while ((Get-Date) -lt $deadline) {
+        $processes = @(Get-ListeningProcesses -Port $Port)
+        if ($processes.Count -gt 0) {
+            Write-Host "$Name is ready on port $Port"
+            return $true
+        }
+        Start-Sleep -Milliseconds 500
+    }
+
+    Write-Host "$Name did not become ready on port $Port within $TimeoutSeconds seconds"
+    return $false
 }
 
 function Show-Status {
@@ -113,6 +163,7 @@ function Start-ServiceWindow {
 }
 
 function Start-Sees {
+    Add-BundledNodeToPath
     $python = Get-PythonInvocation
     $pnpm = Get-PnpmInvocation
 
@@ -127,10 +178,16 @@ function Start-Sees {
         -Title "LEO-Twin Frontend :$FrontendPort" `
         -CommandText "$pnpm --dir frontend dev"
 
+    $backendReady = Wait-ForPort -Name "Backend" -Port $BackendPort -TimeoutSeconds 120
+    $frontendReady = Wait-ForPort -Name "Frontend" -Port $FrontendPort -TimeoutSeconds 60
+
     Write-Host "Backend:  $BackendUrl"
     Write-Host "Frontend: $FrontendUrl"
-    if (-not $NoBrowser) {
+    if ((-not $NoBrowser) -and $frontendReady) {
         Start-Process $FrontendUrl
+    }
+    if (-not $backendReady -or -not $frontendReady) {
+        throw "LEO-Twin services did not become ready. Run scripts\sees_launcher.ps1 status and check the backend/frontend windows."
     }
 }
 
