@@ -590,6 +590,62 @@ body {
   white-space: normal;
 }
 
+.satellite-resource-meter {
+  display: grid;
+  flex-basis: 100%;
+  gap: 5px;
+  min-width: 0;
+  padding: 7px 8px;
+  border: 1px solid #263b49;
+  border-radius: 6px;
+  background: #09131a;
+}
+
+.satellite-resource-meter-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.satellite-resource-meter-row span,
+.satellite-resource-meter-row strong {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 10px;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.satellite-resource-meter-row span {
+  color: var(--app-muted);
+}
+
+.satellite-resource-meter-row strong {
+  color: var(--app-text);
+}
+
+.satellite-resource-meter-row.muted strong {
+  color: var(--app-muted);
+  font-weight: 600;
+}
+
+.satellite-resource-track {
+  overflow: hidden;
+  height: 7px;
+  border-radius: 999px;
+  background: #162532;
+}
+
+.satellite-resource-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #4fd37a, #f2bd45);
+}
+
 .satellite-inset-header strong {
   min-width: 0;
   overflow: hidden;

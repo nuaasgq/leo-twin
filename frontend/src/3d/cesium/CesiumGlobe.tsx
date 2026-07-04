@@ -475,6 +475,22 @@ function SatelliteInset({
             <span>可用 {computeSummary.availableLabel}</span>
             <span>负载 {computeSummary.utilizationLabel}</span>
             <span>状态 {computeSummary.statusLabel}</span>
+            <div className="satellite-resource-meter" aria-label="选中卫星算力资源使用">
+              <div className="satellite-resource-meter-row">
+                <span>算力负载</span>
+                <strong>{computeSummary.utilizationLabel}</strong>
+              </div>
+              <div className="satellite-resource-track">
+                <span
+                  className="satellite-resource-fill"
+                  style={{ width: `${computeSummary.utilizationPercent}%` }}
+                />
+              </div>
+              <div className="satellite-resource-meter-row muted">
+                <span>可用比例</span>
+                <strong>{computeSummary.availablePercent.toFixed(1)}%</strong>
+              </div>
+            </div>
             <span>{computeSummary.cpuVectorLabel}</span>
             <span>{computeSummary.gpuVectorLabel}</span>
             <span>{computeSummary.npuVectorLabel}</span>

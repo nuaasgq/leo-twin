@@ -17,6 +17,8 @@ export interface SatelliteComputeSummary {
   capacityLabel: string;
   availableLabel: string;
   utilizationLabel: string;
+  utilizationPercent: number;
+  availablePercent: number;
   statusLabel: string;
   cpuVectorLabel: string;
   gpuVectorLabel: string;
@@ -181,6 +183,8 @@ export function satelliteComputeSummary(
     capacityLabel: `${formatNumber(capacity)} GFLOPS FP32`,
     availableLabel: `${formatNumber(available)} GFLOPS`,
     utilizationLabel: `${formatNumber(utilization * 100)}%`,
+    utilizationPercent: utilization * 100,
+    availablePercent: capacity <= 0 ? 0 : (available / capacity) * 100,
     statusLabel: node.status,
     cpuVectorLabel: `CPU FP32 ${formatNumber(cpuFp32)} GFLOPS / FP64 ${formatNumber(
       cpuFp64

@@ -2701,3 +2701,35 @@ change.
 - Recommended follow-up:
   - Add a small dashboard control to switch between historical-only KPI series
     and current-summary-tail series for debugging.
+
+## 2026-07-05 - Selected Satellite Resource Meter v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a compact compute-resource load meter to the selected-satellite
+  follow inset, using the existing satellite-to-compute-node summary.
+- Changed files/modules:
+  - `frontend/src/3d/cesium/satelliteFollow.ts`
+  - `frontend/src/3d/cesium/CesiumGlobe.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/satelliteVisuals.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- satelliteVisuals.test.ts`
+    - Result: passed, 23 files / 139 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The selected-satellite inset already had detailed resource labels, but the
+    load state was not visually scannable. This task reuses the same summary
+    math and adds bounded percentage fields plus a compact meter.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The meter reflects the compute-node snapshot currently associated with the
+    selected satellite ID. It does not add a new backend resource scheduler.
+- Recommended follow-up:
+  - Add a selected-satellite resource history sparkline once backend per-node
+    resource samples are exposed as a time series.
