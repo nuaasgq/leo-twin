@@ -585,6 +585,11 @@ body {
   white-space: nowrap;
 }
 
+.satellite-inset-meta .coverage-note {
+  flex-basis: 100%;
+  white-space: normal;
+}
+
 .satellite-inset-header strong {
   min-width: 0;
   overflow: hidden;

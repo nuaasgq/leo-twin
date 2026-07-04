@@ -22,6 +22,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ComputeResourceSummary, SatelliteState } from "../../core/event_types";
 import { ComputeNodeRenderState, WorldSnapshot } from "../../state/snapshot_engine";
 import {
+  CoverageBeamDisplaySummary,
+  coverageBeamDisplaySummary,
   pruneBeamEntities,
   resolveBeamGeometryOptions,
   selectedCoverageBeamSatellites,
@@ -109,6 +111,10 @@ export function CesiumGlobe({ snapshot, displaySimTime }: CesiumGlobeProps) {
   );
   const computeResourceSummary =
     snapshot.scenario_config?.backend_summary?.compute_resource_summary ?? null;
+  const coverageDisplaySummary = useMemo(
+    () => coverageBeamDisplaySummary(snapshot.scenario_config),
+    [snapshot.scenario_config]
+  );
 
   useEffect(() => {
     latestSnapshotRef.current = snapshot;
@@ -320,6 +326,7 @@ export function CesiumGlobe({ snapshot, displaySimTime }: CesiumGlobeProps) {
           trail={selectedTrail}
           computeNode={selectedComputeNode}
           computeResourceSummary={computeResourceSummary}
+          coverageSummary={coverageDisplaySummary}
         />
       ) : null}
       {renderError ? <div className="globe-render-error">{renderError}</div> : null}
@@ -382,12 +389,14 @@ function SatelliteInset({
   satellite,
   trail,
   computeNode,
-  computeResourceSummary
+  computeResourceSummary,
+  coverageSummary
 }: {
   satellite: SatelliteState;
   trail: readonly SatelliteInsetPoint[];
   computeNode?: ComputeNodeRenderState | null;
   computeResourceSummary?: ComputeResourceSummary | null;
+  coverageSummary: CoverageBeamDisplaySummary;
 }) {
   const latestPoint = trail[trail.length - 1] ?? {
     satelliteId: satellite.satellite_id,
@@ -429,6 +438,11 @@ function SatelliteInset({
       <div className="satellite-inset-meta">
         <span>高度 {satelliteAltitudeKm(satellite).toFixed(0)} km</span>
         <span>t={satellite.sim_time.toFixed(1)}s</span>
+        <span>{coverageSummary.footprintRadiusLabel}</span>
+        <span>{coverageSummary.beamLengthLabel}</span>
+        <span>{coverageSummary.beamCountLabel}</span>
+        <span>{coverageSummary.modelLabel}</span>
+        <span className="coverage-note">{coverageSummary.note}</span>
         {computeSummary ? (
           <>
             <span>{computeSummary.resourceRoleLabel}</span>

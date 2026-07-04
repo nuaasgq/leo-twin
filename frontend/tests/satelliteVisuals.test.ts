@@ -12,6 +12,7 @@ import {
 import {
   buildBeamCellFootprints,
   buildCoverageFootprint,
+  coverageBeamDisplaySummary,
   resolveBeamGeometryOptions,
   selectedCoverageBeamSatellites
 } from "../src/3d/beam_renderer/beamEntities";
@@ -140,6 +141,33 @@ describe("selected satellite coverage beams", () => {
       beamRadiusMeters: 220_000,
       beamCellCount: 4
     });
+  });
+
+  it("summarizes selected satellite coverage model for the follow inset", () => {
+    expect(
+      coverageBeamDisplaySummary({
+        backend_summary: {
+          coverage_beam_summary: coverageSummary({
+            default_beam_count: 4,
+            beam_length_m: 700_000,
+            beam_radius_m: 220_000,
+            model_note: "backend note"
+          })
+        }
+      })
+    ).toEqual({
+      footprintRadiusLabel: "覆盖半径 220 km",
+      beamLengthLabel: "波束长度 700 km",
+      beamCountLabel: "蜂窝波束 4 个",
+      modelLabel: "DETERMINISTIC_GEOMETRIC_FOOTPRINT",
+      note: "backend note"
+    });
+    expect(coverageBeamDisplaySummary(null)).toMatchObject({
+      footprintRadiusLabel: "覆盖半径 160 km",
+      beamLengthLabel: "波束长度 600 km",
+      beamCountLabel: "蜂窝波束 7 个"
+    });
+    expect(coverageBeamDisplaySummary(null).note).toContain("未进行 RF");
   });
 
   it("keeps backend beam counts bounded for large-scale rendering safety", () => {

@@ -19,6 +19,14 @@ export interface BeamRenderOptions {
 
 export type BeamGeometryOptions = Omit<BeamRenderOptions, "enabled">;
 
+export interface CoverageBeamDisplaySummary {
+  footprintRadiusLabel: string;
+  beamLengthLabel: string;
+  beamCountLabel: string;
+  modelLabel: string;
+  note: string;
+}
+
 export interface BeamCellFootprint {
   id: string;
   position: Vector3Tuple;
@@ -127,6 +135,22 @@ export function resolveBeamGeometryOptions(
       1,
       DEFAULT_BEAM_CELL_COUNT
     )
+  };
+}
+
+export function coverageBeamDisplaySummary(
+  scenarioConfig: ScenarioConfig | null | undefined
+): CoverageBeamDisplaySummary {
+  const geometry = resolveBeamGeometryOptions(scenarioConfig);
+  const coverage = scenarioConfig?.backend_summary?.coverage_beam_summary;
+  return {
+    footprintRadiusLabel: `覆盖半径 ${formatKilometers(geometry.beamRadiusMeters)} km`,
+    beamLengthLabel: `波束长度 ${formatKilometers(geometry.beamLengthMeters)} km`,
+    beamCountLabel: `蜂窝波束 ${geometry.beamCellCount} 个`,
+    modelLabel: coverage?.coverage_model ?? "DETERMINISTIC_GEOMETRIC_FOOTPRINT",
+    note:
+      coverage?.model_note ??
+      "确定性几何可视化足迹；未进行 RF 传播、天线方向图或链路预算仿真。"
   };
 }
 
@@ -308,4 +332,11 @@ function boundedInteger(
     return fallback;
   }
   return Math.max(min, Math.min(max, Math.round(value)));
+}
+
+function formatKilometers(valueMeters: number): string {
+  return (valueMeters / 1000).toLocaleString("zh-CN", {
+    maximumFractionDigits: 1,
+    minimumFractionDigits: 0
+  });
 }

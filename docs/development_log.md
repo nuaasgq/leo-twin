@@ -2483,3 +2483,34 @@ change.
 - Recommended follow-up:
   - Add a coverage legend in the satellite-follow inset that reports footprint
     radius, beam count, and the simplified visual model note.
+
+## 2026-07-05 - Satellite Coverage Legend v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: show selected-satellite coverage radius, beam length, beam count, and
+  visual-model note in the satellite-follow inset.
+- Changed files/modules:
+  - `frontend/src/3d/beam_renderer/beamEntities.ts`
+  - `frontend/src/3d/cesium/CesiumGlobe.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/satelliteVisuals.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- satelliteVisuals.test.ts visualLayerLimits.test.ts`
+    - Result: passed, 23 files / 136 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The same beam geometry resolver is now used for both Cesium rendering and
+    the inset labels, so the text cannot drift from the visual footprint.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The legend explains the selected-satellite visual approximation only; it
+    does not provide RF, antenna, or link-budget fidelity.
+- Recommended follow-up:
+  - Add a selected-satellite coverage/user intersection panel that reports how
+    many visible ground users fall inside the visual footprint.
