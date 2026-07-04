@@ -38,6 +38,12 @@ export function decodeSimEventBatch(value: unknown): readonly SimEvent[] {
 export function decodeStateSnapshot(value: unknown): StateSnapshot {
   const record = requireRecord(value, "StateSnapshot");
   return {
+    event_count:
+      record.event_count === undefined ? undefined : requireInteger(record.event_count, "event_count"),
+    last_sim_time:
+      record.last_sim_time === undefined
+        ? undefined
+        : requireFiniteNumber(record.last_sim_time, "last_sim_time"),
     satellites: optionalArray(record.satellites, decodeSatelliteState),
     ground_users: optionalArray(record.ground_users, (item) => {
       const user = requireRecord(item, "GroundUserState");

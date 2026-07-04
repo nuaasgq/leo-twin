@@ -2898,3 +2898,39 @@ change.
 - Recommended follow-up:
   - Add explicit runtime session id and stream cursor diagnostics once the
     backend exposes them in `/runtime/status`.
+
+## 2026-07-05 - Frontend Attach Snapshot Hydration v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: hydrate frontend world state from `/metrics/snapshot` when attaching
+  to runtime control state, and carry snapshot-level `event_count` /
+  `last_sim_time` into the shared reducer without rolling back newer stream
+  events.
+- Changed files/modules:
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/core/decoder/index.ts`
+  - `frontend/src/state/reducer/index.ts`
+  - `frontend/tests/eventDecoder.test.ts`
+  - `frontend/tests/renderPerformance.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- eventDecoder.test.ts renderPerformance.test.ts appSurface.test.ts`
+    - Result: passed, 23 files / 145 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - Read-only consistency audit showed new dashboard/browser tabs relied on
+    stream replay alone for initial runtime baseline. The frontend now applies
+    the visible backend snapshot before opening or reattaching streams.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - Independent browser tabs still have separate frontend reducer caches; this
+    task only hydrates them from the backend visible snapshot.
+- Recommended follow-up:
+  - Add runtime session id and stream cursor diagnostics to `/runtime/status`
+    and display them in the frontend sync pill.

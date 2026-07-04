@@ -104,6 +104,8 @@ describe("decodeSimEvent", () => {
 
   it("decodes route demand capacity from state snapshots", () => {
     const snapshot = decodeStateSnapshot({
+      event_count: 64,
+      last_sim_time: 12.5,
       routes: [
         {
           route_id: "route-flow-a",
@@ -118,6 +120,8 @@ describe("decodeSimEvent", () => {
       ]
     });
 
+    expect(snapshot.event_count).toBe(64);
+    expect(snapshot.last_sim_time).toBe(12.5);
     expect(snapshot.routes?.[0]?.demand_capacity).toBe(90);
     expect(snapshot.routes?.[0]?.loss_rate).toBe(0.04);
   });

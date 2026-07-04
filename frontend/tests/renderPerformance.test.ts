@@ -113,6 +113,31 @@ describe("frontend render performance architecture", () => {
     });
   });
 
+  it("hydrates snapshot counters without rolling back newer stream events", () => {
+    const reducer = new WorldStateReducer();
+    const engine = new SnapshotEngine(reducer, { clock: () => 1 });
+
+    reducer.applySnapshot({
+      event_count: 500,
+      last_sim_time: 120
+    });
+    let snapshot = engine.publishNow();
+
+    expect(snapshot.event_count).toBe(500);
+    expect(snapshot.last_sim_time).toBe(120);
+
+    reducer.applyEvents([orbitEvent("orbit-new", "sat-a", 130, [130, 0, 0])]);
+    reducer.applySnapshot({
+      event_count: 400,
+      last_sim_time: 90
+    });
+    snapshot = engine.publishNow();
+
+    expect(snapshot.event_count).toBe(501);
+    expect(snapshot.last_sim_time).toBe(130);
+    expect(snapshot.satellites[0].sim_time).toBe(130);
+  });
+
   it("treats deadline missed tasks as terminal compute outcomes", () => {
     const snapshot = snapshotFromEvents([
       taskEvent("task-finished", "FINISHED"),

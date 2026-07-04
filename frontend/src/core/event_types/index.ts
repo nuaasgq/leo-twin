@@ -353,6 +353,8 @@ export interface RuntimeBackpressureSummary {
 }
 
 export interface StateSnapshot {
+  event_count?: number;
+  last_sim_time?: number;
   satellites?: readonly SatelliteState[];
   ground_users?: readonly GroundUserState[];
   links?: readonly LinkState[];

@@ -19,7 +19,7 @@ import { WorldStateReducer } from "../state/reducer";
 import { EventRouter } from "../stream/event_router";
 import { EventThrottleLayer } from "../stream/throttle_layer";
 import { WebSocketStreamClient } from "../stream/websocket_client";
-import { loadRuntimeState, loadScenarioConfig } from "./api";
+import { loadMetricsSnapshot, loadRuntimeState, loadScenarioConfig } from "./api";
 import "./App.css";
 
 const RUNTIME_STATUS_POLL_MS = 250;
@@ -123,9 +123,10 @@ export function App() {
   );
 
   const loadControlState = useCallback(async () => {
-    const [scenario, runtime] = await Promise.all([
+    const [scenario, runtime, visibleSnapshot] = await Promise.all([
       loadScenarioConfig(),
-      loadRuntimeState()
+      loadRuntimeState(),
+      loadMetricsSnapshot()
     ]);
     const effectiveScenario = scenarioWithRuntimeConfig(scenario, runtime.config);
     setScenarioConfig(effectiveScenario);
@@ -136,6 +137,7 @@ export function App() {
       ...runtime.status
     }));
     snapshotEngine.applyScenarioConfig(effectiveScenario);
+    snapshotEngine.applySnapshot(visibleSnapshot);
     snapshotEngine.publishNow();
     return { scenario: effectiveScenario, runtime };
   }, [snapshotEngine]);

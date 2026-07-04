@@ -111,6 +111,12 @@ export class WorldStateReducer {
   }
 
   applySnapshot(snapshot: StateSnapshot): void {
+    if (snapshot.event_count !== undefined) {
+      this.state.eventCount = Math.max(this.state.eventCount, snapshot.event_count);
+    }
+    if (snapshot.last_sim_time !== undefined) {
+      this.state.lastSimTime = Math.max(this.state.lastSimTime, snapshot.last_sim_time);
+    }
     if (snapshot.fidelity_summary !== undefined) {
       this.state.fidelitySummary = snapshot.fidelity_summary;
     }
