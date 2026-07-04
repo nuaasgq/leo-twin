@@ -114,7 +114,7 @@ export function ConfigPanel({
 }: ConfigPanelProps) {
   const [satelliteCount, setSatelliteCount] = useState(scenario.satellite_count);
   const [userCount, setUserCount] = useState(scenario.user_count);
-  const [computeNodes, setComputeNodes] = useState(scenario.compute_nodes);
+  const [computeNodes, setComputeNodes] = useState(scenario.satellite_count);
   const [computeCapacity, setComputeCapacity] = useState(scenario.compute_capacity);
   const [computeSchedulingPolicy, setComputeSchedulingPolicy] = useState(
     scenario.compute_scheduling_policy
@@ -203,7 +203,7 @@ export function ConfigPanel({
   useEffect(() => {
     setSatelliteCount(scenario.satellite_count);
     setUserCount(scenario.user_count);
-    setComputeNodes(scenario.compute_nodes);
+    setComputeNodes(scenario.satellite_count);
     setComputeCapacity(scenario.compute_capacity);
     setComputeSchedulingPolicy(scenario.compute_scheduling_policy);
     setOrbitUpdateIntervalSeconds(scenario.orbit.update_interval_seconds);
@@ -241,7 +241,6 @@ export function ConfigPanel({
   }, [
     scenario.satellite_count,
     scenario.user_count,
-    scenario.compute_nodes,
     scenario.compute_capacity,
     scenario.compute_scheduling_policy,
     scenario.orbit.update_interval_seconds,
@@ -291,6 +290,19 @@ export function ConfigPanel({
   const pauseResume = pauseResumeControl(runtime);
   const startDisabled = startControlDisabled(runtime);
   const progressSummary = runtimeProgressSummary(progress);
+  const handleSatelliteCountChange = (value: number) => {
+    const nextCount = boundedInteger(value, 12, 10000);
+    setSatelliteCount(nextCount);
+    setComputeNodes(nextCount);
+  };
+  const handleUserCountChange = (value: number) =>
+    setUserCount(boundedInteger(value, 10, 100000));
+  const handleComputeNodesChange = (value: number) =>
+    setComputeNodes(boundedInteger(value, 1, Math.max(1, satelliteCount)));
+  const handleSpeedFactorChange = (value: number) =>
+    setSpeedFactor(boundedInteger(value, 1, 100));
+  const handleDurationSecondsChange = (value: number) =>
+    setDurationSeconds(boundedInteger(value, 60, 86400));
   const handleInitialize = () =>
     onRuntimeControl("INITIALIZE", {
       satellite_count: satelliteCount,
@@ -407,7 +419,7 @@ export function ConfigPanel({
               <label className="control-label" htmlFor="speed-factor">
                 仿真倍率
               </label>
-              <div className="control-row">
+              <div className="control-row numeric-control-row">
                 <input
                   id="speed-factor"
                   type="range"
@@ -415,9 +427,22 @@ export function ConfigPanel({
                   max="100"
                   step="1"
                   value={speedFactor}
-                  onChange={(event) => setSpeedFactor(Number(event.currentTarget.value))}
+                  onChange={(event) => handleSpeedFactorChange(Number(event.currentTarget.value))}
                 />
-                <output>{speedFactor}x</output>
+                <div className="unit-input">
+                  <input
+                    id="speed-factor-input"
+                    type="number"
+                    min="1"
+                    max="100"
+                    step="1"
+                    value={speedFactor}
+                    onChange={(event) =>
+                      handleSpeedFactorChange(Number(event.currentTarget.value))
+                    }
+                  />
+                  <span>x</span>
+                </div>
               </div>
             </div>
 
@@ -425,7 +450,7 @@ export function ConfigPanel({
               <label className="control-label" htmlFor="duration-seconds">
                 仿真时长
               </label>
-              <div className="control-row">
+              <div className="control-row numeric-control-row">
                 <input
                   id="duration-seconds"
                   type="range"
@@ -434,10 +459,23 @@ export function ConfigPanel({
                   step="60"
                   value={durationSeconds}
                   onChange={(event) =>
-                    setDurationSeconds(Number(event.currentTarget.value))
+                    handleDurationSecondsChange(Number(event.currentTarget.value))
                   }
                 />
-                <output>{formatDuration(durationSeconds)}</output>
+                <div className="unit-input">
+                  <input
+                    id="duration-seconds-input"
+                    type="number"
+                    min="60"
+                    max="86400"
+                    step="60"
+                    value={durationSeconds}
+                    onChange={(event) =>
+                      handleDurationSecondsChange(Number(event.currentTarget.value))
+                    }
+                  />
+                  <span>s</span>
+                </div>
               </div>
             </div>
 
@@ -478,7 +516,7 @@ export function ConfigPanel({
         <label className="control-label" htmlFor="satellite-count">
           卫星数量
         </label>
-        <div className="control-row">
+        <div className="control-row numeric-control-row">
           <input
             id="satellite-count"
             type="range"
@@ -486,9 +524,17 @@ export function ConfigPanel({
             max="10000"
             step="12"
             value={satelliteCount}
-            onChange={(event) => setSatelliteCount(Number(event.currentTarget.value))}
+            onChange={(event) => handleSatelliteCountChange(Number(event.currentTarget.value))}
           />
-          <output>{satelliteCount}</output>
+          <input
+            id="satellite-count-input"
+            type="number"
+            min="12"
+            max="10000"
+            step="1"
+            value={satelliteCount}
+            onChange={(event) => handleSatelliteCountChange(Number(event.currentTarget.value))}
+          />
         </div>
       </div>
 
@@ -496,7 +542,7 @@ export function ConfigPanel({
         <label className="control-label" htmlFor="user-count">
           用户数量
         </label>
-        <div className="control-row">
+        <div className="control-row numeric-control-row">
           <input
             id="user-count"
             type="range"
@@ -504,33 +550,49 @@ export function ConfigPanel({
             max="100000"
             step="10"
             value={userCount}
-            onChange={(event) => setUserCount(Number(event.currentTarget.value))}
+            onChange={(event) => handleUserCountChange(Number(event.currentTarget.value))}
           />
-          <output>{userCount}</output>
+          <input
+            id="user-count-input"
+            type="number"
+            min="10"
+            max="100000"
+            step="1"
+            value={userCount}
+            onChange={(event) => handleUserCountChange(Number(event.currentTarget.value))}
+          />
         </div>
       </div>
 
       <div className="control-group">
         <label className="control-label" htmlFor="compute-node-count">
-          算力节点
+          算力卫星
         </label>
-        <div className="control-row">
+        <div className="control-row numeric-control-row">
           <input
             id="compute-node-count"
             type="range"
             min="1"
-            max="1000"
+            max={satelliteCount}
             step="1"
             value={computeNodes}
-            onChange={(event) => setComputeNodes(Number(event.currentTarget.value))}
+            onChange={(event) => handleComputeNodesChange(Number(event.currentTarget.value))}
           />
-          <output>{computeNodes}</output>
+          <input
+            id="compute-node-count-input"
+            type="number"
+            min="1"
+            max={satelliteCount}
+            step="1"
+            value={computeNodes}
+            onChange={(event) => handleComputeNodesChange(Number(event.currentTarget.value))}
+          />
         </div>
       </div>
 
       <div className="control-group">
         <label className="control-label" htmlFor="compute-capacity">
-          基准算力
+          基准算力（TFLOPS FP32）
         </label>
         <input
           id="compute-capacity"
@@ -753,7 +815,7 @@ export function ConfigPanel({
               checked={showMetrics}
               onChange={(event) => setShowMetrics(event.currentTarget.checked)}
             />
-            <span>指标</span>
+            <span>轨迹</span>
           </label>
         </div>
       </div>
@@ -1114,7 +1176,7 @@ export function generatedScenarioSummaryItems(
   return [
     { label: "生效卫星", value: formatInteger(config.satellite_count) },
     { label: "生效用户", value: formatInteger(config.user_count) },
-    { label: "计算节点", value: formatInteger(config.compute_node_count) },
+    { label: "算力卫星", value: formatInteger(config.compute_node_count) },
     { label: "业务流量", value: formatInteger(config.flow_count) },
     { label: "调度策略", value: formatComputeSchedulingPolicy(config.compute_scheduling_policy) },
     { label: "轨道面", value: formatInteger(config.orbit_plane_count) },
@@ -1234,6 +1296,13 @@ export function networkControlPayload(network: NetworkControlValues): Record<str
     system_loss_db: network.system_loss_db,
     noise_temperature_k: network.noise_temperature_k
   };
+}
+
+function boundedInteger(value: number, min: number, max: number): number {
+  if (!Number.isFinite(value)) {
+    return min;
+  }
+  return Math.min(max, Math.max(min, Math.round(value)));
 }
 
 function formatInteger(value: number): string {

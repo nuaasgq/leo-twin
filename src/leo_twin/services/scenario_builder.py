@@ -394,21 +394,22 @@ def _compute_nodes(
 ) -> tuple[ComputeNodeSpec, ...]:
     return tuple(
         ComputeNodeSpec(
-            node_id=f"node-{node_index:04d}",
+            node_id=satellite_id,
             capacity=config.compute_capacity,
         )
-        for node_index in range(config.compute_node_count)
+        for satellite_id in _compute_node_satellite_ids(config)
     )
 
 
 def _flow_requests(
     config: FullSystemScenarioBuilderConfig,
 ) -> tuple[FlowRequest, ...]:
+    compute_node_ids = _compute_node_satellite_ids(config)
     return tuple(
         FlowRequest(
             flow_id=f"flow-{flow_index:05d}",
             source_id=f"user-{flow_index % config.user_count:05d}",
-            target_id=f"node-{flow_index % config.compute_node_count:04d}",
+            target_id=compute_node_ids[flow_index % len(compute_node_ids)],
             demand_capacity=config.demand_capacity,
         )
         for flow_index in range(config.flow_count)
@@ -428,6 +429,13 @@ def _task_requests(
         )
         for task_index in range(config.flow_count)
     )
+
+
+def _compute_node_satellite_ids(
+    config: FullSystemScenarioBuilderConfig,
+) -> tuple[str, ...]:
+    count = min(config.compute_node_count, config.satellite_count)
+    return tuple(f"sat-{node_index:05d}" for node_index in range(count))
 
 
 def _surface_position(

@@ -38,4 +38,27 @@ describe("visualLayerLimits", () => {
       routeRenderLimit: 0
     });
   });
+
+  it("uses the metrics switch for orbit and route auxiliary layers", () => {
+    const config: ScenarioConfig = {
+      ui: {
+        visualization: {
+          satellites: true,
+          users: true,
+          links: true,
+          metrics: false
+        }
+      }
+    };
+
+    expect(visualLayerLimits(config)).toEqual({
+      showSatellites: true,
+      satelliteIconRenderLimit: 96,
+      orbitTrackRenderLimit: 0,
+      beamRenderLimit: 0,
+      groundUserRenderLimit: 80,
+      linkRenderLimit: 96,
+      routeRenderLimit: 0
+    });
+  });
 });

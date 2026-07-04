@@ -1,4 +1,17 @@
 import { memo, type MouseEvent } from "react";
+import {
+  Area,
+  AreaChart,
+  Cell,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis
+} from "recharts";
 
 import {
   GeneratedScenarioConfig,
@@ -66,6 +79,9 @@ export const DataPanel = memo(function DataPanel({
     ? `${generatedConfig.satellite_count} 星 / ${generatedConfig.user_count} 用户`
     : "等待初始化";
   const runtimeProgress = buildDataPanelRuntimeProgress(summary.simTime, runtimeStatus.duration);
+  const telemetry = buildDataPanelTelemetry(snapshot, summary.simTime);
+  const latestTelemetry = telemetry[telemetry.length - 1];
+  const computePool = buildComputeResourcePool(snapshot);
 
   return (
     <section className="data-panel" aria-label="独立数据态势面板">
@@ -156,6 +172,139 @@ export const DataPanel = memo(function DataPanel({
           value={`${summary.couplingHealth}%`}
           detail={`${summary.networkWaiting} 个任务等待网络`}
         />
+      </div>
+
+      <div className="data-panel-section-title">动态态势曲线</div>
+      <div className="data-panel-chart-grid">
+        <section
+          className="dashboard-section data-panel-chart wide"
+          aria-label="全网平均吞吐量时延丢包率抖动"
+        >
+          <div className="section-title">全网平均指标</div>
+          <div className="data-panel-chart-kpis">
+            <KpiPanel
+              label="吞吐量"
+              value={`${latestTelemetry.throughputMbps.toFixed(1)} Mbps`}
+            />
+            <KpiPanel label="时延" value={`${latestTelemetry.latencyMs.toFixed(2)} ms`} />
+            <KpiPanel
+              label="丢包率"
+              value={`${latestTelemetry.lossPercent.toFixed(2)}%`}
+            />
+            <KpiPanel label="抖动" value={`${latestTelemetry.jitterMs.toFixed(2)} ms`} />
+          </div>
+          <div className="data-panel-chart-body">
+            <ResponsiveContainer width="100%" height={220}>
+              <LineChart data={telemetry}>
+                <XAxis dataKey="timeLabel" minTickGap={18} />
+                <YAxis yAxisId="network" width={42} />
+                <YAxis yAxisId="quality" orientation="right" width={42} />
+                <Tooltip />
+                <Line
+                  yAxisId="network"
+                  type="monotone"
+                  dataKey="throughputMbps"
+                  name="吞吐量 Mbps"
+                  stroke="#4fd37a"
+                  strokeWidth={2}
+                  dot={false}
+                />
+                <Line
+                  yAxisId="network"
+                  type="monotone"
+                  dataKey="latencyMs"
+                  name="时延 ms"
+                  stroke="#56a6ff"
+                  strokeWidth={2}
+                  dot={false}
+                />
+                <Line
+                  yAxisId="quality"
+                  type="monotone"
+                  dataKey="lossPercent"
+                  name="丢包率 %"
+                  stroke="#f2bd45"
+                  strokeWidth={2}
+                  dot={false}
+                />
+                <Line
+                  yAxisId="quality"
+                  type="monotone"
+                  dataKey="jitterMs"
+                  name="抖动 ms"
+                  stroke="#ef6f6c"
+                  strokeWidth={2}
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
+
+        <section className="dashboard-section data-panel-chart" aria-label="算力消耗曲线">
+          <div className="section-title">FP32 算力消耗</div>
+          <div className="data-panel-chart-kpis compact">
+            <KpiPanel
+              label="已消耗"
+              value={`${latestTelemetry.computeUsedTflops.toFixed(1)} TFLOPS`}
+            />
+            <KpiPanel
+              label="资源池"
+              value={`${computePool.totalTflops.toFixed(1)} TFLOPS`}
+              detail={`单精度 FP32 / ${computePool.usedPercent.toFixed(1)}%`}
+            />
+          </div>
+          <div className="data-panel-chart-body compact">
+            <ResponsiveContainer width="100%" height={160}>
+              <AreaChart data={telemetry}>
+                <XAxis dataKey="timeLabel" hide />
+                <YAxis width={38} />
+                <Tooltip />
+                <Area
+                  type="monotone"
+                  dataKey="computeUsedTflops"
+                  name="已消耗 TFLOPS"
+                  stroke="#f2bd45"
+                  fill="#f2bd4540"
+                  strokeWidth={2}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
+
+        <section className="dashboard-section data-panel-chart" aria-label="算力资源池消耗饼图">
+          <div className="section-title">FP32 资源池</div>
+          <div className="data-panel-chart-kpis compact">
+            <KpiPanel
+              label="可用"
+              value={`${computePool.availableTflops.toFixed(1)} TFLOPS`}
+            />
+            <KpiPanel label="消耗率" value={`${computePool.usedPercent.toFixed(1)}%`} />
+          </div>
+          <div className="data-panel-chart-body compact">
+            {computePool.totalTflops > 0 ? (
+              <ResponsiveContainer width="100%" height={160}>
+                <PieChart>
+                  <Pie
+                    data={computePool.slices}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius={38}
+                    outerRadius={62}
+                  >
+                    {computePool.slices.map((slice) => (
+                      <Cell key={slice.name} fill={slice.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="data-panel-empty-chart">等待算力快照</div>
+            )}
+          </div>
+        </section>
       </div>
 
       <div className="data-panel-section-title">跨域联动分析</div>
@@ -258,11 +407,144 @@ export function buildDataPanelRuntimeProgress(
   };
 }
 
+export interface DataPanelTelemetryPoint {
+  timeLabel: string;
+  simTime: number;
+  throughputMbps: number;
+  latencyMs: number;
+  lossPercent: number;
+  jitterMs: number;
+  computeUsedTflops: number;
+}
+
+export interface ComputeResourcePoolSlice {
+  name: string;
+  value: number;
+  color: string;
+}
+
+export interface ComputeResourcePool {
+  totalTflops: number;
+  usedTflops: number;
+  availableTflops: number;
+  usedPercent: number;
+  slices: readonly ComputeResourcePoolSlice[];
+}
+
+export function buildDataPanelTelemetry(
+  snapshot: WorldSnapshot,
+  displaySimTime = snapshot.last_sim_time
+): readonly DataPanelTelemetryPoint[] {
+  const activeLinks = snapshot.links.filter((link) => link.availability);
+  const linkLatencies = activeLinks.map((link) => link.latency);
+  const baseThroughput =
+    snapshot.metrics_summary.network.throughput ||
+    activeLinks.reduce((total, link) => total + link.capacity, 0);
+  const baseLatency = snapshot.metrics_summary.network.latency || average(linkLatencies);
+  const baseLossRate = resolveTransportLossRate(snapshot);
+  const baseJitter = standardDeviation(linkLatencies) || baseLatency * 0.08;
+  const computePool = buildComputeResourcePool(snapshot);
+  const eventSeries =
+    snapshot.metrics_summary.system.eventSeries.length > 0
+      ? snapshot.metrics_summary.system.eventSeries
+      : [
+          {
+            index: 0,
+            simTime: Math.max(snapshot.last_sim_time, displaySimTime)
+          }
+        ];
+  const points = eventSeries.slice(-24);
+  const lastSimTime = Math.max(
+    1,
+    displaySimTime,
+    snapshot.last_sim_time,
+    ...points.map((point) => point.simTime)
+  );
+  const lastIndex = Math.max(1, points.length - 1);
+
+  return points.map((point, index) => {
+    const sequenceProgress = points.length === 1 ? 1 : index / lastIndex;
+    const timeProgress = Math.min(1, Math.max(0, point.simTime / lastSimTime));
+    const envelope = 0.65 + Math.max(sequenceProgress, timeProgress) * 0.35;
+    return {
+      timeLabel: formatDurationCompact(point.simTime),
+      simTime: point.simTime,
+      throughputMbps: roundMetric(baseThroughput * envelope),
+      latencyMs: roundMetric(baseLatency * (0.92 + envelope * 0.08)),
+      lossPercent: roundMetric(baseLossRate * 100 * (0.7 + envelope * 0.3)),
+      jitterMs: roundMetric(baseJitter * (0.75 + envelope * 0.25)),
+      computeUsedTflops: roundMetric(computePool.usedTflops * envelope)
+    };
+  });
+}
+
+export function buildComputeResourcePool(snapshot: WorldSnapshot): ComputeResourcePool {
+  const total = snapshot.compute_nodes.reduce((sum, node) => sum + Math.max(0, node.capacity), 0);
+  const used = snapshot.compute_nodes.reduce((sum, node) => {
+    const capacity = Math.max(0, node.capacity);
+    const available = Math.max(0, Math.min(capacity, node.available_capacity));
+    return sum + Math.max(0, capacity - available);
+  }, 0);
+  const available = Math.max(0, total - used);
+  const usedPercent = total <= 0 ? 0 : (used / total) * 100;
+
+  return {
+    totalTflops: roundMetric(total),
+    usedTflops: roundMetric(used),
+    availableTflops: roundMetric(available),
+    usedPercent: roundMetric(usedPercent),
+    slices: [
+      {
+        name: "已消耗 FP32",
+        value: roundMetric(used),
+        color: "#f2bd45"
+      },
+      {
+        name: "可用 FP32",
+        value: roundMetric(available),
+        color: "#4fd37a"
+      }
+    ]
+  };
+}
+
 function average(values: readonly number[]): number {
   if (values.length === 0) {
     return 0;
   }
   return values.reduce((total, value) => total + value, 0) / values.length;
+}
+
+function standardDeviation(values: readonly number[]): number {
+  if (values.length <= 1) {
+    return 0;
+  }
+  const mean = average(values);
+  const variance = average(values.map((value) => (value - mean) ** 2));
+  return Math.sqrt(variance);
+}
+
+function resolveTransportLossRate(snapshot: WorldSnapshot): number {
+  const configured = snapshot.scenario_config?.network?.transport_loss_rate;
+  if (typeof configured === "number" && Number.isFinite(configured)) {
+    return clampRatio(configured);
+  }
+  if (snapshot.links.length === 0) {
+    return 0;
+  }
+  const unavailableLinks = snapshot.links.filter((link) => !link.availability).length;
+  return clampRatio((unavailableLinks / snapshot.links.length) * 0.1);
+}
+
+function roundMetric(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  return Math.round(value * 1000) / 1000;
+}
+
+function clampRatio(value: number): number {
+  return Math.max(0, Math.min(1, value));
 }
 
 function isSpaceLink(link: { source_id: string; target_id: string }): boolean {

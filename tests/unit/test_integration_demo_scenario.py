@@ -61,6 +61,7 @@ def test_demo_scenario_uses_configured_orbit_parameters() -> None:
 def test_demo_flow_requests_target_compute_nodes() -> None:
     scenario = build_demo_scenario(_demo_config())
     compute_node_ids = {node.node_id for node in scenario.compute_nodes}
+    satellite_ids = {satellite.satellite_id for satellite in scenario.orbit_satellites}
     flows = tuple(
         event.payload
         for event in scenario.initial_events
@@ -75,6 +76,7 @@ def test_demo_flow_requests_target_compute_nodes() -> None:
     assert flows
     assert all(isinstance(flow, FlowRequest) for flow in flows)
     assert all(isinstance(task, TaskRequest) for task in tasks)
+    assert compute_node_ids <= satellite_ids
     assert {flow.target_id for flow in flows if isinstance(flow, FlowRequest)} <= compute_node_ids
     assert tuple(flow.flow_id for flow in flows if isinstance(flow, FlowRequest)) == tuple(
         task.task_id for task in tasks if isinstance(task, TaskRequest)
@@ -117,6 +119,7 @@ def test_demo_flow_and_task_demands_are_config_driven() -> None:
 def test_demo_compute_capacity_is_config_driven() -> None:
     scenario = build_demo_scenario(_demo_config(compute_capacity=18.0))
 
+    assert tuple(node.node_id for node in scenario.compute_nodes) == ("sat-000", "sat-001")
     assert scenario.compute_nodes[0].capacity == 18.0
     assert scenario.compute_nodes[1].capacity == 20.5
     assert scenario.frontend_config["scenario"]["compute_capacity"] == 18.0

@@ -43,7 +43,10 @@ def test_full_system_scenario_builder_generates_requested_counts() -> None:
     assert len(scenario.tasks) == 5
     assert scenario.orbit_elements[0].satellite_id == "sat-00000"
     assert scenario.ground_endpoints[0].endpoint_id == "user-00000"
-    assert scenario.compute_nodes[-1].node_id == "node-0002"
+    assert scenario.compute_nodes[-1].node_id == "sat-00002"
+    assert {node.node_id for node in scenario.compute_nodes} <= {
+        element.satellite_id for element in scenario.orbit_elements
+    }
 
 
 def test_full_system_scenario_builder_is_deterministic() -> None:
@@ -106,12 +109,12 @@ def test_full_system_scenario_builder_aligns_flows_and_tasks() -> None:
         task.source_id for task in scenario.tasks
     )
     assert tuple(flow.target_id for flow in scenario.flows) == (
-        "node-0000",
-        "node-0001",
-        "node-0000",
-        "node-0001",
-        "node-0000",
-        "node-0001",
+        "sat-00000",
+        "sat-00001",
+        "sat-00000",
+        "sat-00001",
+        "sat-00000",
+        "sat-00001",
     )
     assert scenario.flows[0].demand_capacity == 2.5
     assert scenario.tasks[0].compute_demand == 12.0

@@ -158,6 +158,25 @@ describe("runtime progress clock", () => {
     expect(runtimeProgressSimTime(next, 3_000)).toBe(4);
   });
 
+  it("resets the shared display clock after reset or initialization", () => {
+    const first = defaultRuntimeProgressAnchor(runningStatus, 1_000);
+    const next = nextRuntimeProgressAnchor(
+      first,
+      0,
+      {
+        ...runningStatus,
+        status: "STOPPED",
+        lifecycle_state: "INITIALIZED",
+        current_sim_time: 0,
+        last_action: "RESET"
+      },
+      5_000
+    );
+
+    expect(next.simTime).toBe(0);
+    expect(runtimeProgressSimTime(next, 6_000)).toBe(0);
+  });
+
   it("stops requesting streams when the lifecycle is completed", () => {
     expect(
       runtimeStatusRequiresStreams({

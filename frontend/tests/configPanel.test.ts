@@ -54,6 +54,28 @@ describe("ConfigPanel priority controls", () => {
     expect(progressIndex).toBeGreaterThan(-1);
     expect(modeIndex).toBeLessThan(progressIndex);
   });
+
+  it("renders numeric inputs next to key range controls", () => {
+    const markup = renderToStaticMarkup(
+      createElement(ConfigPanel, {
+        scenario: defaultScenario(),
+        runtime: runtimeStatus("STOPPED", true),
+        progress: {
+          sim_time: 0,
+          duration: 600,
+          event_count: 0
+        },
+        generatedConfig: null,
+        onRuntimeControl: () => undefined
+      })
+    );
+
+    expect(markup).toContain('id="satellite-count-input"');
+    expect(markup).toContain('id="user-count-input"');
+    expect(markup).toContain('id="compute-node-count-input"');
+    expect(markup).toContain('id="speed-factor-input"');
+    expect(markup).toContain('id="duration-seconds-input"');
+  });
 });
 
 describe("generatedScenarioSummaryItems", () => {
@@ -98,7 +120,7 @@ describe("generatedScenarioSummaryItems", () => {
     expect(generatedScenarioSummaryItems(config)).toEqual([
       { label: "生效卫星", value: "10,000" },
       { label: "生效用户", value: "100,000" },
-      { label: "计算节点", value: "64" },
+      { label: "算力卫星", value: "64" },
       { label: "业务流量", value: "1,200" },
       { label: "调度策略", value: "短作业优先" },
       { label: "轨道面", value: "40" },

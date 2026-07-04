@@ -92,7 +92,7 @@ def build_demo_scenario(config: DemoConfig) -> DemoScenario:
             "scenario": {
                 "satellite_count": config.satellite_count,
                 "user_count": config.ground_user_count,
-                "compute_nodes": config.compute_node_count,
+                "compute_nodes": min(config.compute_node_count, config.satellite_count),
                 "compute_capacity": config.compute_capacity,
                 "compute_scheduling_policy": config.compute_scheduling_policy,
                 "orbit": {
@@ -299,10 +299,10 @@ def _ecef_km_from_geodetic(
 def _compute_nodes(config: DemoConfig) -> tuple[ComputeNode, ...]:
     return tuple(
         ComputeNode(
-            node_id=f"compute-{index:02d}",
+            node_id=satellite_id,
             capacity=config.compute_capacity + float(index % 5) * 2.5,
         )
-        for index in range(config.compute_node_count)
+        for index, satellite_id in enumerate(_compute_node_satellite_ids(config))
     )
 
 
@@ -322,11 +322,11 @@ def _initial_events(config: DemoConfig) -> tuple[SimEvent, ...]:
         )
 
     task_index = 0
+    compute_node_ids = _compute_node_satellite_ids(config)
     for tick in range(0, config.duration_seconds, config.task_interval_seconds):
-        for offset in range(config.compute_node_count):
+        for offset, target_id in enumerate(compute_node_ids):
             task_id = f"task-{task_index:05d}"
             source_id = f"user-{(task_index * 13) % config.ground_user_count:04d}"
-            target_id = f"compute-{offset:02d}"
             submit_time = float(tick) + 0.2 + offset * 0.01
             events.append(
                 SimEvent(
@@ -365,6 +365,11 @@ def _initial_events(config: DemoConfig) -> tuple[SimEvent, ...]:
             task_index += 1
 
     return tuple(sorted(events, key=lambda event: (event.sim_time, -event.priority, str(event.event_id))))
+
+
+def _compute_node_satellite_ids(config: DemoConfig) -> tuple[str, ...]:
+    count = min(config.compute_node_count, config.satellite_count)
+    return tuple(f"sat-{index:03d}" for index in range(count))
 
 
 def _cell_id(config: DemoConfig, index: int) -> str:

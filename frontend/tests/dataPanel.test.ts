@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildComputeResourcePool,
   buildDataPanelDisplaySummary,
   buildDataPanelRuntimeProgress,
-  buildDataPanelSummary
+  buildDataPanelSummary,
+  buildDataPanelTelemetry
 } from "../src/dashboard/data_panel/DataPanel";
 import { WorldSnapshot } from "../src/state/snapshot_engine";
 
@@ -207,6 +209,125 @@ describe("buildDataPanelRuntimeProgress", () => {
 
   it("clamps the data panel progress to the configured duration", () => {
     expect(buildDataPanelRuntimeProgress(900, 600).percentLabel).toBe("100%");
+  });
+});
+
+describe("buildDataPanelTelemetry", () => {
+  it("builds deterministic time-varying network and FP32 compute series", () => {
+    const snapshot = makeSnapshot({
+      last_sim_time: 30,
+      links: [
+        {
+          source_id: "sat-a",
+          target_id: "sat-b",
+          latency: 10,
+          capacity: 100,
+          availability: true
+        },
+        {
+          source_id: "sat-a",
+          target_id: "user-a",
+          latency: 20,
+          capacity: 50,
+          availability: true
+        }
+      ],
+      compute_nodes: [
+        {
+          node_id: "sat-a",
+          running_tasks: 1,
+          finished_tasks: 0,
+          capacity: 20,
+          available_capacity: 5,
+          status: "BUSY",
+          load_ratio: 0.75
+        }
+      ],
+      scenario_config: {
+        network: {
+          transport_loss_rate: 0.02
+        }
+      },
+      metrics_summary: {
+        network: {
+          latency: 15,
+          throughput: 150,
+          linkUtilization: 0.5,
+          series: []
+        },
+        compute: {
+          taskQueueLength: 1,
+          executionSuccessRate: 1,
+          runningTasks: 1,
+          finishedTasks: 0,
+          deadlineMissedTasks: 0
+        },
+        orbit: {
+          activeSatellites: 2,
+          coverageRatio: 1,
+          series: []
+        },
+        system: {
+          eventRate: 2,
+          systemLoad: 0.2,
+          eventSeries: [
+            { index: 0, simTime: 10 },
+            { index: 1, simTime: 20 },
+            { index: 2, simTime: 30 }
+          ]
+        }
+      }
+    });
+
+    const telemetry = buildDataPanelTelemetry(snapshot, 30);
+
+    expect(telemetry).toHaveLength(3);
+    expect(telemetry.map((point) => point.timeLabel)).toEqual(["10秒", "20秒", "30秒"]);
+    expect(telemetry[2]).toMatchObject({
+      throughputMbps: 150,
+      latencyMs: 15,
+      lossPercent: 2,
+      jitterMs: 5,
+      computeUsedTflops: 15
+    });
+    expect(telemetry[0].throughputMbps).toBeLessThan(telemetry[2].throughputMbps);
+  });
+});
+
+describe("buildComputeResourcePool", () => {
+  it("summarizes satellite-hosted FP32 compute capacity", () => {
+    const pool = buildComputeResourcePool(
+      makeSnapshot({
+        compute_nodes: [
+          {
+            node_id: "sat-a",
+            running_tasks: 1,
+            finished_tasks: 0,
+            capacity: 20,
+            available_capacity: 5,
+            status: "BUSY",
+            load_ratio: 0.75
+          },
+          {
+            node_id: "sat-b",
+            running_tasks: 0,
+            finished_tasks: 0,
+            capacity: 10,
+            available_capacity: 10,
+            status: "IDLE",
+            load_ratio: 0
+          }
+        ]
+      })
+    );
+
+    expect(pool).toMatchObject({
+      totalTflops: 30,
+      usedTflops: 15,
+      availableTflops: 15,
+      usedPercent: 50
+    });
+    expect(pool.slices.map((slice) => slice.name)).toEqual(["已消耗 FP32", "可用 FP32"]);
   });
 });
 

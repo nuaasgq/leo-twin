@@ -541,6 +541,16 @@ export function nextRuntimeProgressAnchor(
     previous.lifecycleState !== runtimeStatus.lifecycle_state ||
     previous.speedFactor !== runtimeStatus.speed_factor ||
     previous.duration !== runtimeStatus.duration;
+  if (runtimeStatusResetsDisplayClock(runtimeStatus)) {
+    return {
+      simTime: Math.min(observedSimTime, runtimeStatus.duration),
+      wallTimeMs: nowMs,
+      status: runtimeStatus.status,
+      lifecycleState: runtimeStatus.lifecycle_state,
+      speedFactor: runtimeStatus.speed_factor,
+      duration: runtimeStatus.duration
+    };
+  }
 
   if (
     runtimeStatusIsProgressing(runtimeStatus) &&
@@ -558,6 +568,10 @@ export function nextRuntimeProgressAnchor(
     speedFactor: runtimeStatus.speed_factor,
     duration: runtimeStatus.duration
   };
+}
+
+function runtimeStatusResetsDisplayClock(runtimeStatus: RuntimeStatusPayload): boolean {
+  return ["RESET", "INITIALIZE", "CONFIG_UPDATE"].includes(runtimeStatus.last_action);
 }
 
 export function runtimeProgressSimTime(

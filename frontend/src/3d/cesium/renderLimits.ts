@@ -17,13 +17,14 @@ export function visualLayerLimits(
   const showSatellites = visualization?.satellites ?? true;
   const showLinks = visualization?.links ?? true;
   const showUsers = visualization?.users ?? true;
+  const showMetrics = visualization?.metrics ?? true;
   return {
     showSatellites,
     satelliteIconRenderLimit: showSatellites ? 96 : 0,
-    orbitTrackRenderLimit: showSatellites ? 48 : 0,
+    orbitTrackRenderLimit: showSatellites && showMetrics ? 48 : 0,
     beamRenderLimit: 0,
     groundUserRenderLimit: showUsers ? 80 : 0,
     linkRenderLimit: showLinks ? 96 : 0,
-    routeRenderLimit: showLinks ? 8 : 0
+    routeRenderLimit: showLinks && showMetrics ? 8 : 0
   };
 }
