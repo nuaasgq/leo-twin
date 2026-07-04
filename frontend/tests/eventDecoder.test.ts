@@ -102,6 +102,24 @@ describe("decodeSimEvent", () => {
     });
   });
 
+  it("decodes route demand capacity from state snapshots", () => {
+    const snapshot = decodeStateSnapshot({
+      routes: [
+        {
+          route_id: "route-flow-a",
+          flow_id: "flow-a",
+          path: ["user-a", "sat-a", "user-b"],
+          latency: 0.02,
+          capacity: 100,
+          available: true,
+          demand_capacity: 90
+        }
+      ]
+    });
+
+    expect(snapshot.routes?.[0]?.demand_capacity).toBe(90);
+  });
+
   it("decodes backend fidelity summary on state snapshots", () => {
     const snapshot = decodeStateSnapshot({
       satellites: [],

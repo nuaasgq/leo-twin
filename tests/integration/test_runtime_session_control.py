@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -177,6 +177,8 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
     assert {
         "sim_time",
         "network_effective_throughput_mbps",
+        "network_requested_route_demand_mbps",
+        "network_demand_pressure_proxy",
         "network_effective_latency_s",
         "network_effective_loss_proxy_rate",
         "network_effective_delay_variation_s",
@@ -191,6 +193,26 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
     assert invalid["ok"] is False
 
     control_plane.handle_raw_message(json.dumps({"type": "RUNTIME_CONTROL", "action": "STOP"}))
+
+
+def test_runtime_kpi_series_changes_with_configured_flow_demand(tmp_path) -> None:
+    low = _runtime_status_after_route_demand(
+        replace(_small_demo_config(), flow_demand_capacity=10.0),
+        tmp_path / "low",
+    )
+    high = _runtime_status_after_route_demand(
+        replace(_small_demo_config(), flow_demand_capacity=450.0),
+        tmp_path / "high",
+    )
+
+    assert low["metrics_summary"]["network_quality_requested_route_demand_mbps"] < high[
+        "metrics_summary"
+    ]["network_quality_requested_route_demand_mbps"]
+    assert low["kpi_time_series_v1"]["samples"][-1][
+        "network_requested_route_demand_mbps"
+    ] < high["kpi_time_series_v1"]["samples"][-1][
+        "network_requested_route_demand_mbps"
+    ]
 
 
 def test_session_registry_owns_multiple_sessions() -> None:
@@ -409,3 +431,27 @@ def _small_demo_config() -> DemoConfig:
         backend_host="127.0.0.1",
         backend_port=8765,
     )
+
+
+def _runtime_status_after_route_demand(config: DemoConfig, output_dir: Path) -> dict[str, Any]:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    control_plane = DemoControlPlane.from_result(
+        run_integration_demo(config),
+        config_output_path=output_dir / "sees_control.yaml",
+        generated_config_output_path=output_dir / "generated_full_system_demo.json",
+    )
+    initialized = control_plane.handle_raw_message(
+        json.dumps({"type": "RUNTIME_CONTROL", "action": "INITIALIZE"})
+    )
+    assert initialized["ok"] is True
+    started = control_plane.handle_raw_message(
+        json.dumps({"type": "RUNTIME_CONTROL", "action": "START"})
+    )
+    assert started["ok"] is True
+    for _ in range(5):
+        control_plane._require_session().advance_control_step()
+        control_plane._require_advance_loop().publish_pending()
+        status = control_plane.runtime_status()["status"]
+        if status["metrics_summary"]["network_quality_requested_route_demand_mbps"] > 0:
+            return status
+    raise AssertionError("route demand did not reach runtime metrics")

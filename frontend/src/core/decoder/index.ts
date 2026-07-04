@@ -117,7 +117,11 @@ function decodeRoute(value: unknown): Route {
     path: record.path,
     latency: requireFiniteNumber(record.latency, "latency"),
     capacity: requireFiniteNumber(record.capacity, "capacity"),
-    available: requireBoolean(record.available, "available")
+    available: requireBoolean(record.available, "available"),
+    demand_capacity:
+      record.demand_capacity === undefined
+        ? undefined
+        : requireFiniteNumber(record.demand_capacity, "demand_capacity")
   };
 }
 

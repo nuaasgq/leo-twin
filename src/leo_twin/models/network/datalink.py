@@ -110,6 +110,11 @@ class DataLinkRuntime:
             latency=decision.effective_latency,
             capacity=decision.effective_capacity,
             available=route.available and decision.effective_capacity >= request.demand_capacity,
+            demand_capacity=(
+                route.demand_capacity
+                if route.demand_capacity is not None
+                else request.demand_capacity
+            ),
         )
 
     def _frame_overhead_ratio(self) -> float:

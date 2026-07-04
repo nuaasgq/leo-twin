@@ -43,6 +43,11 @@ domain contracts:
 - `leo_twin.schema.network.LinkState`
 - `leo_twin.schema.network.FlowRequest`
 
+`RouteState.demand_capacity` is optional for backward compatibility. Network
+runtimes should populate it from the originating `FlowRequest` when available
+so metrics and frontend surfaces can explain flow-level demand pressure without
+observing `FLOW_ARRIVAL` directly.
+
 ## Compute Resource Demand
 
 `TaskRequest.compute_demand` remains the legacy scalar CPU FP32 demand used by

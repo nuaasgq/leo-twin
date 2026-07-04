@@ -176,6 +176,7 @@ class RouteState:
     available: bool
     routing_protocol: str | None = None
     cost: float | None = None
+    demand_capacity: float | None = None
 
     def __post_init__(self) -> None:
         _require_non_empty_str(self.route_id, "route_id")
@@ -188,6 +189,8 @@ class RouteState:
             _require_non_empty_str(self.routing_protocol, "routing_protocol")
         if self.cost is not None:
             _require_non_negative_number(self.cost, "cost")
+        if self.demand_capacity is not None:
+            _require_non_negative_number(self.demand_capacity, "demand_capacity")
 
 
 Route = RouteState

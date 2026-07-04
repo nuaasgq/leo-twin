@@ -34,6 +34,7 @@ def test_link_state_routing_selects_lowest_latency_capacity_feasible_path() -> N
         latency=5.0,
         capacity=50.0,
         available=True,
+        demand_capacity=10.0,
     )
 
 

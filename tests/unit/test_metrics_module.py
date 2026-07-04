@@ -504,6 +504,37 @@ def test_metrics_collector_reports_effective_flow_level_network_quality() -> Non
     ).value == pytest.approx(0.015)
 
 
+def test_metrics_collector_uses_route_demand_for_network_pressure_proxy() -> None:
+    collector = MetricsCollector()
+    collector.observe(
+        _event(
+            "route-demand",
+            1.0,
+            EventType.ROUTE_UPDATE,
+            Route(
+                route_id="route-demand",
+                flow_id="flow-demand",
+                path=("user-a", "sat-a", "user-b"),
+                latency=0.02,
+                capacity=100.0,
+                available=True,
+                demand_capacity=90.0,
+            ),
+            "network",
+        )
+    )
+
+    summary = collector.summary()
+
+    assert summary["network_quality_requested_route_demand_mbps"] == 90.0
+    assert summary["network_quality_available_route_demand_mbps"] == 90.0
+    assert summary["network_quality_demand_pressure_proxy"] == pytest.approx(0.9)
+    assert summary["network_quality_demand_loss_proxy_rate"] == pytest.approx(0.05)
+    assert summary["network_quality_pressure_loss_proxy_rate"] == pytest.approx(0.05)
+    assert summary["network_quality_effective_loss_proxy_rate"] == pytest.approx(0.05)
+    assert summary["network_quality_effective_throughput_mbps"] == pytest.approx(95.0)
+
+
 def test_metrics_collector_publishes_backend_kpi_time_series() -> None:
     collector = MetricsCollector()
     collector.observe(
@@ -545,6 +576,8 @@ def test_metrics_collector_publishes_backend_kpi_time_series() -> None:
     assert series["samples"][-1] == {
         "sim_time": 2.0,
         "network_effective_throughput_mbps": 100.0,
+        "network_requested_route_demand_mbps": 0.0,
+        "network_demand_pressure_proxy": 0.0,
         "network_effective_latency_s": 0.02,
         "network_effective_loss_proxy_rate": 0.0,
         "network_effective_delay_variation_s": 0.0,

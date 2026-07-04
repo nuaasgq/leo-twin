@@ -193,6 +193,7 @@ def _route_row(route: Route) -> dict[str, JsonValue]:
         "latency": route.latency,
         "capacity": route.capacity,
         "available": route.available,
+        "demand_capacity": route.demand_capacity,
     }
 
 

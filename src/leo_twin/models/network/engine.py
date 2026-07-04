@@ -191,6 +191,7 @@ class NetworkEngine(SimulationModule):
                 latency=0.0,
                 capacity=0.0,
                 available=request.demand_capacity <= 0,
+                demand_capacity=request.demand_capacity,
             )
 
         path = self._shortest_path(
@@ -214,6 +215,7 @@ class NetworkEngine(SimulationModule):
                 latency=0.0,
                 capacity=0.0,
                 available=False,
+                demand_capacity=request.demand_capacity,
             )
 
         latency, capacity = self._path_metrics(path)
@@ -224,6 +226,7 @@ class NetworkEngine(SimulationModule):
             latency=latency,
             capacity=capacity,
             available=available and capacity >= request.demand_capacity,
+            demand_capacity=request.demand_capacity,
         )
 
     def _access_for_slot(self, slot: int) -> tuple[tuple[str, str], ...]:

@@ -115,6 +115,7 @@ def test_routing_output_is_consistent() -> None:
         latency=20.0,
         capacity=100.0,
         available=True,
+        demand_capacity=25.0,
     )
 
 
@@ -149,5 +150,6 @@ def test_network_engine_integrates_with_simulation_kernel() -> None:
             latency=20.0,
             capacity=100.0,
             available=True,
+            demand_capacity=25.0,
         )
     ]

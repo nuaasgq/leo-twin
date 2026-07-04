@@ -126,6 +126,7 @@ class RoutingRuntime:
             latency=latency,
             capacity=route_capacity,
             available=route_capacity >= request.demand_capacity,
+            demand_capacity=request.demand_capacity,
         )
 
 
@@ -204,6 +205,7 @@ def _unavailable_route(request: FlowRequest) -> Route:
         latency=0.0,
         capacity=0.0,
         available=False,
+        demand_capacity=request.demand_capacity,
     )
 
 

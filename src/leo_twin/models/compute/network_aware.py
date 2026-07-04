@@ -483,6 +483,11 @@ class RouteAwareComputeEngine(SimulationModule):
                 latency=float(payload["latency"]),
                 capacity=float(payload["capacity"]),
                 available=bool(payload["available"]),
+                demand_capacity=(
+                    None
+                    if payload.get("demand_capacity") is None
+                    else float(payload["demand_capacity"])
+                ),
             )
         raise TypeError("ROUTE_UPDATE payload must be Route or dict")
 

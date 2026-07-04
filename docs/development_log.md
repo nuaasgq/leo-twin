@@ -1637,7 +1637,7 @@ change.
 ## 2026-07-05 - Backend KPI Time-Series v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`
-- Commit: pending
+- Commit: `ee4c4ce`
 - Scope: expose backend-owned bounded KPI time series to runtime status and
   make the data dashboard prefer true backend samples over frontend envelope
   interpolation.
@@ -1683,3 +1683,63 @@ change.
   - Add a bounded traffic-demand pressure model so backend KPI series changes
     under configurable data-transfer, telemetry, downlink, and compute-service
     mixes instead of only reacting to route/link/task events.
+
+## 2026-07-05 - Traffic Demand KPI Binding v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending
+- Scope: preserve originating flow demand on route outputs and use route demand
+  in metrics pressure proxies so configured flow demand affects backend KPI
+  summaries and time-series samples.
+- Changed files/modules:
+  - `src/leo_twin/schema/domain.py`
+  - `src/leo_twin/models/network_engine.py`
+  - `src/leo_twin/models/network/engine.py`
+  - `src/leo_twin/models/network/routing.py`
+  - `src/leo_twin/models/network/datalink.py`
+  - `src/leo_twin/models/network/transport.py`
+  - `src/leo_twin/models/network/position_engine.py`
+  - `src/leo_twin/models/compute/network_aware.py`
+  - `src/leo_twin/services/metrics/collector.py`
+  - `examples/integration_demo/replay.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/core/decoder/index.ts`
+  - `docs/product_contracts.md`
+  - `tests/unit/test_metrics_module.py`
+  - `tests/unit/test_network_engine.py`
+  - `tests/unit/test_network_routing_runtime.py`
+  - `tests/unit/test_product_contracts.py`
+  - `frontend/tests/eventDecoder.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_network_engine.py tests/unit/test_position_driven_network_engine.py tests/unit/test_network_routing_runtime.py tests/unit/test_network_datalink_runtime.py tests/unit/test_network_transport_runtime.py tests/unit/test_metrics_module.py -q`
+    - Result: passed, 62 tests.
+  - `python -m pytest tests/unit/test_product_contracts.py tests/unit/test_integration_demo_scenario.py -q`
+    - Result: passed, 17 tests.
+  - `python -m pytest tests/integration/test_full_system_demo.py::test_replay_test tests/integration/test_full_system_demo.py::test_frontend_sync_test tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer tests/integration/test_runtime_session_control.py::test_runtime_kpi_series_changes_with_configured_flow_demand tests/integration/test_config_control.py::test_frontend_control_messages_are_processed -q`
+    - Result: passed, 5 tests.
+  - `python -m pytest tests/integration/test_generated_full_system_demo.py::test_generated_full_system_demo_runs_domain_lifecycle tests/integration/test_generated_full_system_demo.py::test_generated_full_system_demo_is_deterministic tests/integration/test_full_domain_pipeline_v1.py tests/unit/test_product_contracts.py tests/unit/test_integration_demo_scenario.py -q`
+    - Result: passed, 21 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- eventDecoder.test.ts dataPanel.test.ts renderPerformance.test.ts`
+    - Result: passed, 22 files / 111 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - `FLOW_ARRIVAL` is targeted to network, not metrics, so metrics should not
+    observe it directly without changing event contracts. The safer binding is
+    to preserve `FlowRequest.demand_capacity` on the resulting `RouteState`.
+  - Existing route equality tests needed expected `demand_capacity` values
+    because network-generated routes now retain the request demand.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - Demand pressure is a flow-level route proxy. It does not model packets,
+    queues, RF, retransmissions, or per-hop congestion buffers.
+  - Demo traffic generation is still task-coupled and should later move toward
+    the reusable traffic demand model for richer traffic classes.
+- Recommended follow-up:
+  - Replace the hand-built integration demo flow/task burst generator with the
+    reusable `leo_twin.models.traffic` demand profiles while keeping the same
+    event contracts and deterministic ordering.

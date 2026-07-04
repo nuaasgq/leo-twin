@@ -298,6 +298,7 @@ class PositionDrivenNetworkEngine(SimulationModule):
                     latency=selected.latency,
                     capacity=selected.capacity,
                     available=True,
+                    demand_capacity=request.demand_capacity,
                 )
         linked = self._apply_data_link(request, route)
         routed = self._apply_transport(request, linked)
@@ -921,6 +922,7 @@ def _unavailable_route(request: FlowRequest) -> Route:
         latency=0.0,
         capacity=0.0,
         available=False,
+        demand_capacity=request.demand_capacity,
     )
 
 

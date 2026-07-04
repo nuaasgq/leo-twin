@@ -107,6 +107,7 @@ class NetworkEngine(SimulationModule):
                 latency=0.0,
                 capacity=0.0,
                 available=False,
+                demand_capacity=request.demand_capacity,
             )
 
         link_path = tuple(zip(path, path[1:]))
@@ -124,6 +125,7 @@ class NetworkEngine(SimulationModule):
             latency=latency,
             capacity=capacity,
             available=available,
+            demand_capacity=request.demand_capacity,
         )
 
     def _access_for_slot(self, slot: int) -> tuple[tuple[str, str], ...]:

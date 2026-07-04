@@ -427,6 +427,12 @@ class MetricsCollector:
             "network_effective_throughput_mbps": float(
                 network_summary["network_quality_effective_throughput_mbps"]
             ),
+            "network_requested_route_demand_mbps": float(
+                network_summary["network_quality_requested_route_demand_mbps"]
+            ),
+            "network_demand_pressure_proxy": float(
+                network_summary["network_quality_demand_pressure_proxy"]
+            ),
             "network_effective_latency_s": float(
                 network_summary["network_quality_effective_latency_avg_s"]
             ),
@@ -776,6 +782,20 @@ class MetricsCollector:
             max(route_blocking_ratio, failed_flow_ratio, congestion_loss_proxy_rate)
         )
         offered_route_capacity = float(sum(route.capacity for route in available_routes))
+        requested_route_demand = float(
+            sum(_route_demand_capacity(route) for route in self._routes.values())
+        )
+        available_route_demand = float(
+            sum(_route_demand_capacity(route) for route in available_routes)
+        )
+        demand_pressure_proxy = _clamp_probability(
+            requested_route_demand / offered_route_capacity
+            if offered_route_capacity > 0.0
+            else 1.0
+            if requested_route_demand > 0.0
+            else 0.0
+        )
+        demand_loss_proxy_rate = _congestion_loss_proxy_rate(demand_pressure_proxy)
         flow_quality = self._completed_flow_quality()
         completed_route_capacity = flow_quality["capacity_sum"]
         throughput_pressure_proxy = _clamp_probability(
@@ -787,6 +807,10 @@ class MetricsCollector:
             _congestion_loss_proxy_rate(throughput_pressure_proxy)
             if flow_quality["successful_count"] > 1
             else 0.0
+        )
+        pressure_loss_proxy_rate = max(
+            pressure_loss_proxy_rate,
+            demand_loss_proxy_rate,
         )
         effective_loss_proxy_rate = _clamp_probability(
             max(loss_proxy_rate, pressure_loss_proxy_rate)
@@ -816,6 +840,8 @@ class MetricsCollector:
             "network_quality_active_link_count": len(active_links),
             "network_quality_available_route_count": len(available_routes),
             "network_quality_offered_route_capacity_mbps": offered_route_capacity,
+            "network_quality_requested_route_demand_mbps": requested_route_demand,
+            "network_quality_available_route_demand_mbps": available_route_demand,
             "network_quality_estimated_delivered_throughput_mbps": float(
                 completed_route_capacity
             ),
@@ -850,6 +876,8 @@ class MetricsCollector:
             "network_quality_throughput_pressure_proxy": float(
                 throughput_pressure_proxy
             ),
+            "network_quality_demand_pressure_proxy": float(demand_pressure_proxy),
+            "network_quality_demand_loss_proxy_rate": float(demand_loss_proxy_rate),
             "network_quality_pressure_loss_proxy_rate": float(
                 pressure_loss_proxy_rate
             ),
@@ -1192,6 +1220,10 @@ def _is_kpi_sample_event_type(event_type: str) -> bool:
 
 def _flow_is_failed(flow: FlowState) -> bool:
     return flow.status.upper() in {"FAILED", "DROPPED", "BLOCKED"}
+
+
+def _route_demand_capacity(route: Route) -> float:
+    return 0.0 if route.demand_capacity is None else float(route.demand_capacity)
 
 
 def _clamp_probability(value: float) -> float:

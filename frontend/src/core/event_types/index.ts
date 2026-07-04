@@ -62,6 +62,7 @@ export interface Route {
   latency: number;
   capacity: number;
   available: boolean;
+  demand_capacity?: number;
 }
 
 export interface TaskState {
@@ -393,6 +394,8 @@ export interface RuntimeKpiTimeSeriesV1 {
 export interface RuntimeKpiSampleV1 {
   sim_time: number;
   network_effective_throughput_mbps: number;
+  network_requested_route_demand_mbps?: number;
+  network_demand_pressure_proxy?: number;
   network_effective_latency_s: number;
   network_effective_loss_proxy_rate: number;
   network_effective_delay_variation_s: number;
