@@ -83,6 +83,10 @@ export const DataPanel = memo(function DataPanel({
       ? `${generatedConfig.satellite_count} 星 / ${constellation.plane_count} 面 / ${generatedConfig.user_count} 用户`
       : `${generatedConfig.satellite_count} 星 / ${generatedConfig.user_count} 用户`
     : "等待初始化";
+  const trafficSummary = generatedConfig?.backend_summary?.traffic_demand_summary;
+  const configuredTraffic = trafficSummary
+    ? dataPanelTrafficLabel(trafficSummary.traffic_class, trafficSummary.destination_type)
+    : "等待初始化";
   const runtimeProgress = buildDataPanelRuntimeProgress(summary.simTime, runtimeStatus.duration);
   const telemetry = buildDataPanelTelemetry(
     snapshot,
@@ -125,6 +129,10 @@ export const DataPanel = memo(function DataPanel({
           <div>
             <span>配置规模</span>
             <strong>{configuredScale}</strong>
+          </div>
+          <div>
+            <span>业务类型</span>
+            <strong>{configuredTraffic}</strong>
           </div>
         </div>
       </div>
@@ -929,6 +937,30 @@ function runtimeModeLabel(mode: RuntimeStatusPayload["mode"]): string {
     return "暂停模式";
   }
   return "实时模式";
+}
+
+function dataPanelTrafficLabel(trafficClass: string, destinationType: string): string {
+  const classLabel =
+    trafficClass === "COMPUTE_SERVICE" || trafficClass === "TASK_OFFLOAD_FLOW"
+      ? "通信-计算服务"
+      : trafficClass === "TELEMETRY"
+        ? "遥测"
+        : trafficClass === "BULK_DOWNLINK"
+          ? "批量下传"
+          : "数据传输";
+  const executionLabel =
+    trafficClass === "COMPUTE_SERVICE" || trafficClass === "TASK_OFFLOAD_FLOW"
+      ? "通信+计算"
+      : "仅网络流";
+  const destinationLabel =
+    destinationType === "COMPUTE_NODE"
+      ? "星上算力"
+      : destinationType === "GROUND_ENDPOINT"
+        ? "地面端"
+        : destinationType === "SATELLITE"
+          ? "卫星"
+          : "服务端点";
+  return `${classLabel} / ${destinationLabel} / ${executionLabel}`;
 }
 
 function formatPercent(value: number): string {

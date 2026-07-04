@@ -256,6 +256,10 @@ describe("generatedScenarioSummaryItems", () => {
     expect(items).toContainEqual({ label: "相位策略", value: "槽位相位 + 面偏置" });
     expect(items).toContainEqual({ label: "业务类型", value: "通信-计算服务" });
     expect(items).toContainEqual({ label: "业务流量", value: "1,200" });
+    expect(items).toContainEqual({ label: "目的类型", value: "星上算力节点" });
+    expect(items).toContainEqual({ label: "输入数据", value: "10 MB" });
+    expect(items).toContainEqual({ label: "输出数据", value: "0 MB" });
+    expect(items).toContainEqual({ label: "执行形态", value: "通信 + 计算任务" });
     expect(items).toContainEqual({ label: "FP32 算力", value: "640 GFLOPS" });
     expect(items).toContainEqual({
       label: "模型假设",

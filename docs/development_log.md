@@ -1941,7 +1941,7 @@ change.
 ## 2026-07-05 - Traffic Mix Execution v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`
-- Commit: pending
+- Commit: `0139952`
 - Scope: make non-compute traffic classes execute as network flow-only
   workloads while preserving compute-service `FLOW_ARRIVAL` + `TASK_ARRIVAL`
   behavior.
@@ -1974,3 +1974,37 @@ change.
 - Recommended follow-up:
   - Add dashboard/control explanation text that distinguishes compute-service
     traffic from flow-only telemetry, bulk downlink, and data-transfer traffic.
+
+## 2026-07-05 - Frontend Traffic Summary v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending
+- Scope: surface backend-provided traffic semantics in the frontend without
+  changing control layout or rendering architecture.
+- Changed files/modules:
+  - `frontend/src/config_panel/ConfigPanel.tsx`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/configPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- configPanel.test.ts dataPanel.test.ts appSurface.test.ts`
+    - Result: passed, 22 files / 111 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The dashboard component currently has helper-focused tests rather than a
+    dedicated rendered dashboard assertion. This slice relies on TypeScript
+    build and existing app-surface coverage for the dashboard markup change.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The frontend displays the backend-selected traffic class, destination, data
+    sizes, and execution shape, but it still does not provide user-facing
+    controls for choosing traffic class in the panel.
+  - Dashboard traffic display is a compact runtime summary, not a dedicated
+    traffic-analysis card.
+- Recommended follow-up:
+  - Add a small traffic mix control group with segmented traffic-class choices
+    and numeric output-data input, reusing the existing backend config fields.

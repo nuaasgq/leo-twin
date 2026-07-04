@@ -1379,6 +1379,24 @@ export function generatedScenarioSummaryItems(
       value: formatInteger(traffic?.generated_flow_count ?? config.flow_count)
     },
     {
+      label: "目的类型",
+      value: formatTrafficDestination(traffic?.destination_type)
+    },
+    {
+      label: "输入数据",
+      value: formatDataMegabytes(traffic?.input_data_size_mb ?? config.task_data_size)
+    },
+    {
+      label: "输出数据",
+      value: formatDataMegabytes(
+        traffic?.output_data_size_mb ?? config.traffic_output_data_size ?? 0
+      )
+    },
+    {
+      label: "执行形态",
+      value: formatTrafficExecutionMode(traffic?.traffic_class)
+    },
+    {
       label: "FP32 算力",
       value: compute
         ? `${formatDecimal(compute.total_cpu_gflops_fp32)} GFLOPS`
@@ -1662,6 +1680,33 @@ function formatTrafficClass(value: string | undefined): string {
     return "批量下传";
   }
   return "数据传输";
+}
+
+function formatTrafficDestination(value: string | undefined): string {
+  if (value === "COMPUTE_NODE") {
+    return "星上算力节点";
+  }
+  if (value === "GROUND_ENDPOINT") {
+    return "地面端";
+  }
+  if (value === "SATELLITE") {
+    return "卫星节点";
+  }
+  if (value === "SERVICE_ENDPOINT") {
+    return "服务端点";
+  }
+  return "后端默认";
+}
+
+function formatTrafficExecutionMode(value: string | undefined): string {
+  if (value === "COMPUTE_SERVICE" || value === "TASK_OFFLOAD_FLOW") {
+    return "通信 + 计算任务";
+  }
+  return "仅网络流";
+}
+
+function formatDataMegabytes(value: number): string {
+  return `${formatDecimal(value)} MB`;
 }
 
 function formatPhasePolicy(value: string | undefined): string {
