@@ -13,7 +13,11 @@ export interface ComputeQueueSummary {
   waitingForNetwork: number;
   computeNodes: number;
   busiestNodeId: string;
+  totalCapacity: number;
+  availableCapacity: number;
   averageLoadRatio: number;
+  networkReadyRatio: number;
+  completionRatio: number;
   computeSchedulingPolicy: string;
   computeSchedulingPolicyLabel: string;
   nodeRows: readonly ComputeNodeQueueRow[];
@@ -59,7 +63,11 @@ export const ComputeQueuePanel = memo(function ComputeQueuePanel({
         <KpiPanel label="网络等待" value={String(summary.waitingForNetwork)} />
         <KpiPanel label="可用路由" value={String(summary.availableRoutes)} />
         <KpiPanel label="节点数" value={String(summary.computeNodes)} />
+        <KpiPanel label="总算力" value={formatNumber(summary.totalCapacity)} />
+        <KpiPanel label="剩余算力" value={formatNumber(summary.availableCapacity)} />
         <KpiPanel label="平均负载" value={formatPercent(summary.averageLoadRatio)} />
+        <KpiPanel label="网络就绪率" value={formatPercent(summary.networkReadyRatio)} />
+        <KpiPanel label="完成率" value={formatPercent(summary.completionRatio)} />
         <KpiPanel label="调度策略" value={summary.computeSchedulingPolicyLabel} />
       </div>
       <div className="compute-table" aria-label="算力节点明细">
@@ -119,6 +127,11 @@ export function buildComputeQueueSummary(
   const availableRoutes = snapshot.routes.filter((route) => route.available).length;
   const waitingForNetwork = totalRequests - availableRoutes;
   const unfinishedTasks = Math.max(0, totalRequests - finishedTasks);
+  const totalCapacity = nodeRows.reduce((total, row) => total + row.capacity, 0);
+  const availableCapacity = nodeRows.reduce(
+    (total, row) => total + row.availableCapacity,
+    0
+  );
   const busiest = nodeRows[0];
   const computeSchedulingPolicy =
     snapshot.scenario_config?.scenario?.compute_scheduling_policy ?? "FIFO";
@@ -132,10 +145,14 @@ export function buildComputeQueueSummary(
     waitingForNetwork,
     computeNodes: nodeRows.length,
     busiestNodeId: busiest?.nodeId ?? "无",
+    totalCapacity,
+    availableCapacity,
     averageLoadRatio:
       nodeRows.length === 0
         ? 0
         : nodeRows.reduce((total, row) => total + row.loadRatio, 0) / nodeRows.length,
+    networkReadyRatio: totalRequests === 0 ? 1 : availableRoutes / totalRequests,
+    completionRatio: totalRequests === 0 ? 1 : Math.min(1, finishedTasks / totalRequests),
     computeSchedulingPolicy,
     computeSchedulingPolicyLabel: formatComputeSchedulingPolicy(computeSchedulingPolicy),
     nodeRows: nodeRows.slice(0, 5),

@@ -83,7 +83,11 @@ describe("buildComputeQueueSummary", () => {
       waitingForNetwork: 1,
       computeNodes: 2,
       busiestNodeId: "node-b",
+      totalCapacity: 90,
+      availableCapacity: 60,
       averageLoadRatio: 0.375,
+      networkReadyRatio: 0.6666666666666666,
+      completionRatio: 1,
       computeSchedulingPolicy: "SHORTEST_JOB_FIRST",
       computeSchedulingPolicyLabel: "短作业优先",
       nodeRows: [
