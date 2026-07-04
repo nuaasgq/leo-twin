@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 
 import {
+  ConfigPanel,
   configPanelSectionTitles,
   generatedScenarioSummaryItems,
   networkControlPayload,
@@ -20,11 +23,36 @@ describe("configPanelSectionTitles", () => {
       "场景规模与算力资源",
       "轨道参数",
       "业务流量与任务需求",
-      "运行模式与可视化",
+      "可视化图层",
       "网络协议栈与路由",
       "物理层与信道参数",
       "当前生效场景"
     ]);
+  });
+});
+
+describe("ConfigPanel priority controls", () => {
+  it("places runtime mode above simulation progress for first-touch control", () => {
+    const markup = renderToStaticMarkup(
+      createElement(ConfigPanel, {
+        scenario: defaultScenario(),
+        runtime: runtimeStatus("STOPPED", true),
+        progress: {
+          sim_time: 0,
+          duration: 600,
+          event_count: 0
+        },
+        generatedConfig: null,
+        onRuntimeControl: () => undefined
+      })
+    );
+
+    const modeIndex = markup.indexOf('id="runtime-mode"');
+    const progressIndex = markup.indexOf('aria-label="仿真进度"');
+
+    expect(modeIndex).toBeGreaterThan(-1);
+    expect(progressIndex).toBeGreaterThan(-1);
+    expect(modeIndex).toBeLessThan(progressIndex);
   });
 });
 
@@ -276,4 +304,54 @@ function runtimeStatus(
     last_action: status,
     initialized
   } as const;
+}
+
+function defaultScenario() {
+  return {
+    satellite_count: 120,
+    user_count: 500,
+    compute_nodes: 8,
+    compute_capacity: 10,
+    compute_scheduling_policy: "FIFO",
+    orbit: {
+      update_interval_seconds: 30,
+      plane_count: 12,
+      altitude_km: 550,
+      inclination_deg: 53
+    },
+    traffic_model: {
+      flow_interval_seconds: 30,
+      task_interval_seconds: 30,
+      flow_demand_capacity: 5,
+      task_compute_demand: 10,
+      task_data_size: 2
+    },
+    visualization: {
+      satellites: true,
+      links: true,
+      users: true,
+      metrics: true
+    },
+    network: {
+      application_protocol: "TASK_OFFLOAD_FLOW",
+      transport_protocol: "TCP",
+      transport_loss_rate: 0,
+      transport_congestion_window_segments: 32,
+      routing_protocol: "LINK_STATE",
+      datalink_mac_protocol: "TDMA",
+      routing_latency_weight: 1,
+      routing_inverse_capacity_weight: 0,
+      routing_hop_weight: 0,
+      carrier_frequency_ghz: 20,
+      channel_bandwidth_mhz: 100,
+      rain_rate_mm_h: 0,
+      rain_attenuation_coefficient_db_per_km_per_mm_h: 0,
+      rain_effective_path_km: 0,
+      antenna_diameter_m: 0.45,
+      antenna_aperture_efficiency: 0.65,
+      transmit_power_dbw: 20,
+      system_loss_db: 1,
+      noise_temperature_k: 290
+    }
+  };
 }

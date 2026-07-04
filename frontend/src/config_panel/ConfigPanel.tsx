@@ -95,7 +95,7 @@ export const CONFIG_PANEL_SECTION_LABELS = {
   resources: "场景规模与算力资源",
   orbit: "轨道参数",
   traffic: "业务流量与任务需求",
-  runtime: "运行模式与可视化",
+  runtime: "可视化图层",
   network: "网络协议栈与路由",
   physical: "物理层与信道参数",
   activeScenario: "当前生效场景"
@@ -387,7 +387,41 @@ export function ConfigPanel({
           </div>
 
           <div className="execution-parameter-grid">
-            <div className="control-group emphasized-control">
+            <div className="control-group emphasized-control priority-mode-control">
+              <label className="control-label" htmlFor="runtime-mode">
+                运行模式
+              </label>
+              <select
+                id="runtime-mode"
+                value={runtimeMode}
+                onChange={(event) =>
+                  setRuntimeMode(event.currentTarget.value as Exclude<RuntimeMode, "PAUSED">)
+                }
+              >
+                <option value="REAL_TIME">实时运行</option>
+                <option value="ACCELERATED">加速运行</option>
+              </select>
+            </div>
+
+            <div className="control-group">
+              <label className="control-label" htmlFor="speed-factor">
+                仿真倍率
+              </label>
+              <div className="control-row">
+                <input
+                  id="speed-factor"
+                  type="range"
+                  min="1"
+                  max="100"
+                  step="1"
+                  value={speedFactor}
+                  onChange={(event) => setSpeedFactor(Number(event.currentTarget.value))}
+                />
+                <output>{speedFactor}x</output>
+              </div>
+            </div>
+
+            <div className="control-group">
               <label className="control-label" htmlFor="duration-seconds">
                 仿真时长
               </label>
@@ -405,6 +439,20 @@ export function ConfigPanel({
                 />
                 <output>{formatDuration(durationSeconds)}</output>
               </div>
+            </div>
+
+            <div className="control-group">
+              <label className="control-label" htmlFor="runtime-seed">
+                随机种子
+              </label>
+              <input
+                id="runtime-seed"
+                type="number"
+                min="0"
+                step="1"
+                value={seed}
+                onChange={(event) => setSeed(Number(event.currentTarget.value))}
+              />
             </div>
           </div>
 
@@ -672,52 +720,6 @@ export function ConfigPanel({
 
         <section className="config-section" aria-label={CONFIG_PANEL_SECTION_LABELS.runtime}>
           <div className="config-section-title">{CONFIG_PANEL_SECTION_LABELS.runtime}</div>
-      <div className="control-group">
-        <label className="control-label" htmlFor="runtime-mode">
-          运行模式
-        </label>
-        <select
-          id="runtime-mode"
-          value={runtimeMode}
-          onChange={(event) => setRuntimeMode(event.currentTarget.value as Exclude<RuntimeMode, "PAUSED">)}
-        >
-          <option value="REAL_TIME">实时运行</option>
-          <option value="ACCELERATED">加速运行</option>
-        </select>
-      </div>
-
-      <div className="control-group">
-        <label className="control-label" htmlFor="speed-factor">
-          仿真倍率
-        </label>
-        <div className="control-row">
-          <input
-            id="speed-factor"
-            type="range"
-            min="1"
-            max="100"
-            step="1"
-            value={speedFactor}
-            onChange={(event) => setSpeedFactor(Number(event.currentTarget.value))}
-          />
-          <output>{speedFactor}x</output>
-        </div>
-      </div>
-
-      <div className="control-group">
-        <label className="control-label" htmlFor="runtime-seed">
-          随机种子
-        </label>
-        <input
-          id="runtime-seed"
-          type="number"
-          min="0"
-          step="1"
-          value={seed}
-          onChange={(event) => setSeed(Number(event.currentTarget.value))}
-        />
-      </div>
-
       <div className="control-group">
         <div className="control-label">可视化图层</div>
         <div className="toggle-grid" aria-label="可视化图层开关">

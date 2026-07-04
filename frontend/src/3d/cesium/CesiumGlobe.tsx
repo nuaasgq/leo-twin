@@ -5,20 +5,29 @@ import {
   ConstantPositionProperty,
   Entity,
   EntityCollection,
+  HeadingPitchRange,
+  ImageryLayer,
   LabelStyle,
   Math as CesiumMath,
+  Matrix4,
   PointPrimitiveCollection,
+  TileMapServiceImageryProvider,
   VerticalOrigin,
-  Viewer
+  Viewer,
+  buildModuleUrl
 } from "cesium";
 import "cesium/Build/Cesium/Widgets/widgets.css";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
+import { SatelliteState } from "../../core/event_types";
 import { WorldSnapshot } from "../../state/snapshot_engine";
 import {
   pruneBeamEntities,
   upsertBeamEntity
 } from "../beam_renderer/beamEntities";
+import {
+  installCountryOverlays
+} from "./countryOverlays";
 import { groundUserCartesian } from "./positions";
 import {
   pruneEntities,
@@ -26,11 +35,21 @@ import {
   upsertRouteEntity
 } from "../link_renderer/linkEntities";
 import {
+  upsertSatelliteModelEntities
+} from "../orbit_renderer/satelliteModelEntities";
+import {
   SatellitePrimitiveBatch,
   upsertSatelliteIconEntity,
   upsertSatelliteOrbitEntity
 } from "../orbit_renderer/satelliteEntities";
 import { visualLayerLimits } from "./renderLimits";
+import {
+  GlobeCameraMode,
+  SatelliteInsetPoint,
+  appendSatelliteInsetTrail,
+  satelliteAltitudeKm,
+  selectedDisplaySatellite
+} from "./satelliteFollow";
 
 export interface CesiumGlobeProps {
   snapshot: WorldSnapshot;
@@ -43,13 +62,27 @@ export function CesiumGlobe({ snapshot }: CesiumGlobeProps) {
   const satelliteBatchRef = useRef<SatellitePrimitiveBatch | null>(null);
   const beamCache = useRef(new Map<string, Entity>());
   const satelliteIconCache = useRef(new Map<string, Entity>());
+  const satelliteModelCache = useRef(new Map<string, Entity>());
   const orbitTrackCache = useRef(new Map<string, Entity>());
+  const countryOverlayCache = useRef(new Map<string, Entity>());
   const userCache = useRef(new Map<string, Entity>());
   const linkCache = useRef(new Map<string, Entity>());
   const routeCache = useRef(new Map<string, Entity>());
   const hasFocusedSatellites = useRef(false);
   const lastRenderedVersion = useRef(-1);
   const [renderError, setRenderError] = useState<string | null>(null);
+  const [cameraMode, setCameraMode] = useState<GlobeCameraMode>("EARTH");
+  const [selectedSatelliteId, setSelectedSatelliteId] = useState("");
+  const [selectedTrail, setSelectedTrail] = useState<readonly SatelliteInsetPoint[]>([]);
+  const selectableSatellites = useMemo(
+    () => snapshot.satellites.slice(0, 96),
+    [snapshot.satellites]
+  );
+  const selectedSatellite = useMemo(
+    () => selectedDisplaySatellite(selectableSatellites, selectedSatelliteId),
+    [selectableSatellites, selectedSatelliteId]
+  );
+  const activeSelectedSatelliteId = selectedSatellite?.satellite_id ?? "";
 
   useEffect(() => {
     latestSnapshotRef.current = snapshot;
@@ -67,7 +100,11 @@ export function CesiumGlobe({ snapshot }: CesiumGlobeProps) {
         geocoder: false,
         homeButton: false,
         sceneModePicker: false,
-        baseLayer: false,
+        baseLayer: ImageryLayer.fromProviderAsync(
+          TileMapServiceImageryProvider.fromUrl(
+            buildModuleUrl("Assets/Textures/NaturalEarthII")
+          )
+        ),
         baseLayerPicker: false,
         navigationHelpButton: false,
         fullscreenButton: false,
@@ -82,8 +119,13 @@ export function CesiumGlobe({ snapshot }: CesiumGlobeProps) {
       return;
     }
     viewer.scene.backgroundColor = Color.BLACK;
-    viewer.scene.globe.baseColor = Color.fromCssColorString("#1d465f");
+    viewer.scene.globe.baseColor = Color.fromCssColorString("#07141d");
     viewer.scene.globe.depthTestAgainstTerrain = false;
+    viewer.scene.globe.showGroundAtmosphere = true;
+    if (viewer.scene.skyAtmosphere) {
+      viewer.scene.skyAtmosphere.show = true;
+    }
+    installCountryOverlays(viewer.entities, countryOverlayCache.current);
     focusEarthOverview(viewer);
     const handleContextLost = (event: Event) => {
       event.preventDefault();
@@ -105,7 +147,9 @@ export function CesiumGlobe({ snapshot }: CesiumGlobeProps) {
       }
       satelliteBatchRef.current = null;
       satelliteIconCache.current.clear();
+      satelliteModelCache.current.clear();
       orbitTrackCache.current.clear();
+      countryOverlayCache.current.clear();
       beamCache.current.clear();
       userCache.current.clear();
       linkCache.current.clear();
@@ -132,6 +176,7 @@ export function CesiumGlobe({ snapshot }: CesiumGlobeProps) {
       renderCesiumSnapshot(viewer.entities, snapshot, {
         satellites: satelliteBatch,
         satelliteIcons: satelliteIconCache.current,
+        satelliteModels: satelliteModelCache.current,
         orbitTracks: orbitTrackCache.current,
         beams: beamCache.current,
         users: userCache.current,
@@ -139,7 +184,11 @@ export function CesiumGlobe({ snapshot }: CesiumGlobeProps) {
         routes: routeCache.current
       });
       lastRenderedVersion.current = snapshot.reducer_version;
-      if (!hasFocusedSatellites.current && satelliteBatch.size() > 0) {
+      if (
+        cameraMode === "EARTH" &&
+        !hasFocusedSatellites.current &&
+        satelliteBatch.size() > 0
+      ) {
         hasFocusedSatellites.current = true;
         focusEarthOverview(viewer);
       }
@@ -148,10 +197,92 @@ export function CesiumGlobe({ snapshot }: CesiumGlobeProps) {
       console.error("Cesium snapshot render failed", error);
     }
     viewer.scene.requestRender();
-  }, [snapshot]);
+  }, [snapshot, cameraMode]);
+
+  useEffect(() => {
+    setSelectedTrail((trail) => appendSatelliteInsetTrail(trail, selectedSatellite));
+  }, [
+    selectedSatellite?.satellite_id,
+    selectedSatellite?.sim_time,
+    selectedSatellite?.position[0],
+    selectedSatellite?.position[1],
+    selectedSatellite?.position[2]
+  ]);
+
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer || viewer.isDestroyed() || cameraMode !== "EARTH") {
+      return;
+    }
+    focusEarthOverview(viewer);
+    viewer.scene.requestRender();
+  }, [cameraMode]);
+
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (
+      !viewer ||
+      viewer.isDestroyed() ||
+      cameraMode !== "SATELLITE" ||
+      !selectedSatellite
+    ) {
+      return;
+    }
+    focusSatelliteFollow(viewer, selectedSatellite);
+    viewer.scene.requestRender();
+  }, [
+    cameraMode,
+    selectedSatellite?.satellite_id,
+    selectedSatellite?.sim_time,
+    selectedSatellite?.position[0],
+    selectedSatellite?.position[1],
+    selectedSatellite?.position[2]
+  ]);
 
   return (
     <div className="cesium-globe" ref={containerRef}>
+      <div className="globe-view-controls" aria-label="三维视角控制">
+        <div className="globe-view-mode" role="group" aria-label="视角模式">
+          <button
+            type="button"
+            className={cameraMode === "EARTH" ? "active" : ""}
+            aria-pressed={cameraMode === "EARTH"}
+            onClick={() => setCameraMode("EARTH")}
+          >
+            地球视角
+          </button>
+          <button
+            type="button"
+            className={cameraMode === "SATELLITE" ? "active" : ""}
+            aria-pressed={cameraMode === "SATELLITE"}
+            disabled={selectableSatellites.length === 0}
+            onClick={() => setCameraMode("SATELLITE")}
+          >
+            卫星跟随
+          </button>
+        </div>
+        <label className="satellite-select-label" htmlFor="satellite-follow-target">
+          <span>目标卫星</span>
+          <select
+            id="satellite-follow-target"
+            value={activeSelectedSatelliteId}
+            disabled={selectableSatellites.length === 0}
+            onChange={(event) => setSelectedSatelliteId(event.currentTarget.value)}
+          >
+            {selectableSatellites.length === 0 ? (
+              <option value="">暂无卫星</option>
+            ) : null}
+            {selectableSatellites.map((satellite) => (
+              <option key={satellite.satellite_id} value={satellite.satellite_id}>
+                {satellite.satellite_id}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      {cameraMode === "SATELLITE" && selectedSatellite ? (
+        <SatelliteInset satellite={selectedSatellite} trail={selectedTrail} />
+      ) : null}
       {renderError ? <div className="globe-render-error">{renderError}</div> : null}
     </div>
   );
@@ -162,6 +293,7 @@ function renderErrorMessage(error: unknown): string {
 }
 
 function focusEarthOverview(viewer: Viewer): void {
+  viewer.camera.lookAtTransform(Matrix4.IDENTITY);
   viewer.camera.setView({
     destination: Cartesian3.fromDegrees(35, 18, 18_000_000),
     orientation: {
@@ -172,9 +304,73 @@ function focusEarthOverview(viewer: Viewer): void {
   });
 }
 
+function focusSatelliteFollow(viewer: Viewer, satellite: SatelliteState): void {
+  viewer.camera.lookAtTransform(Matrix4.IDENTITY);
+  viewer.camera.lookAt(
+    Cartesian3.fromElements(
+      satellite.position[0],
+      satellite.position[1],
+      satellite.position[2]
+    ),
+    new HeadingPitchRange(CesiumMath.toRadians(28), CesiumMath.toRadians(-18), 980_000)
+  );
+}
+
+function SatelliteInset({
+  satellite,
+  trail
+}: {
+  satellite: SatelliteState;
+  trail: readonly SatelliteInsetPoint[];
+}) {
+  const latestPoint = trail[trail.length - 1] ?? {
+    satelliteId: satellite.satellite_id,
+    simTime: satellite.sim_time,
+    x: 50,
+    y: 50
+  };
+  const trailPoints = trail.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`);
+  return (
+    <aside className="satellite-inset" aria-label="卫星局部放大">
+      <div className="satellite-inset-header">
+        <span>卫星局部</span>
+        <strong>{satellite.satellite_id}</strong>
+      </div>
+      <div className="satellite-inset-scene">
+        <svg viewBox="0 0 100 100" role="img" aria-label="卫星局部轨迹">
+          <polyline points={trailPoints.join(" ")} />
+          {trail.map((point) => (
+            <circle
+              key={`${point.satelliteId}:${point.simTime}:${point.x}:${point.y}`}
+              cx={point.x}
+              cy={point.y}
+              r="1.3"
+            />
+          ))}
+        </svg>
+        <div
+          className="satellite-mini-model"
+          aria-hidden="true"
+          style={{ left: `${latestPoint.x}%`, top: `${latestPoint.y}%` }}
+        >
+          <span className="mini-panel left" />
+          <span className="mini-bus" />
+          <span className="mini-panel right" />
+          <span className="mini-antenna" />
+        </div>
+      </div>
+      <div className="satellite-inset-meta">
+        <span>高度 {satelliteAltitudeKm(satellite).toFixed(0)} km</span>
+        <span>t={satellite.sim_time.toFixed(1)}s</span>
+      </div>
+    </aside>
+  );
+}
+
 interface RenderCaches {
   satellites: SatellitePrimitiveBatch;
   satelliteIcons: Map<string, Entity>;
+  satelliteModels: Map<string, Entity>;
   orbitTracks: Map<string, Entity>;
   beams: Map<string, Entity>;
   users: Map<string, Entity>;
@@ -201,6 +397,21 @@ export function renderCesiumSnapshot(
     upsertSatelliteIconEntity(entities, caches.satelliteIcons, satellite);
   }
   pruneEntities(entities, caches.satelliteIcons, satelliteIconEntityIds);
+
+  const satelliteModelEntityIds = new Set<string>();
+  for (const satellite of snapshot.satellites.slice(
+    0,
+    Math.min(limits.satelliteIconRenderLimit, 32)
+  )) {
+    for (const id of upsertSatelliteModelEntities(
+      entities,
+      caches.satelliteModels,
+      satellite
+    )) {
+      satelliteModelEntityIds.add(id);
+    }
+  }
+  pruneEntities(entities, caches.satelliteModels, satelliteModelEntityIds);
 
   const orbitTrackEntityIds = new Set<string>();
   for (const satellite of snapshot.satellites.slice(0, limits.orbitTrackRenderLimit)) {
