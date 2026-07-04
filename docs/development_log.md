@@ -3359,3 +3359,39 @@ change.
 - Recommended follow-up:
   - Add preset-specific traffic and workload-smoothing explanations once those
     backend summaries are stable across all scale presets.
+
+## 2026-07-05 - Frontend Runtime API Diagnostics v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: make frontend runtime API failures visible and actionable by adding a
+  Chinese error mapper for backend connection, HTTP, and contract-shape errors,
+  then routing App startup, polling, and post-control reload failures through
+  that mapper.
+- Changed files/modules:
+  - `frontend/src/app/api.ts`
+  - `frontend/src/app/App.tsx`
+  - `frontend/tests/api.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- api.test.ts appSurface.test.ts`
+    - Result: passed, 24 files / 163 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+  - `git diff --check`
+    - Result: passed with warnings only for the existing uncommitted
+      runtime/generated config files.
+- Problems encountered:
+  - Previous failed API loads only degraded the connection state, which left the
+    user without a concrete recovery action. The new mapper points to the
+    one-click launcher and `scripts\sees_launcher.ps1 status`.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - WebSocket transport errors still rely on stream/client lifecycle state and
+    console warnings; this task covers HTTP runtime/control-state reload paths.
+- Recommended follow-up:
+  - Add typed WebSocket connection diagnostics so `/control`, `/stream/events`,
+    and `/stream/state` failures produce similarly actionable UI feedback.

@@ -10,7 +10,7 @@ import {
 export async function loadScenarioConfig(endpoint = "/scenario/config"): Promise<ScenarioConfig> {
   const response = await fetch(endpoint);
   if (!response.ok) {
-    throw new Error(`failed to load scenario config: ${response.status}`);
+    throw new Error(`failed to load scenario config from ${endpoint}: HTTP ${response.status}`);
   }
   return decodeScenarioConfig(await response.json());
 }
@@ -18,7 +18,7 @@ export async function loadScenarioConfig(endpoint = "/scenario/config"): Promise
 export async function loadMetricsSnapshot(endpoint = "/metrics/snapshot"): Promise<StateSnapshot> {
   const response = await fetch(endpoint);
   if (!response.ok) {
-    throw new Error(`failed to load metrics snapshot: ${response.status}`);
+    throw new Error(`failed to load metrics snapshot from ${endpoint}: HTTP ${response.status}`);
   }
   return decodeStateSnapshot(await response.json());
 }
@@ -30,9 +30,31 @@ export async function loadRuntimeStatus(endpoint = "/runtime/status"): Promise<R
 export async function loadRuntimeState(endpoint = "/runtime/status"): Promise<RuntimeStatusEnvelope> {
   const response = await fetch(endpoint);
   if (!response.ok) {
-    throw new Error(`failed to load runtime status: ${response.status}`);
+    throw new Error(`failed to load runtime status from ${endpoint}: HTTP ${response.status}`);
   }
   return decodeRuntimeStatusEnvelope(await response.json());
+}
+
+export function runtimeApiErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  if (
+    message.includes("Failed to fetch") ||
+    message.includes("NetworkError") ||
+    message.includes("Load failed")
+  ) {
+    return [
+      "无法连接后端服务。",
+      "请运行 start_leo_twin.bat，或执行 scripts\\sees_launcher.ps1 status 检查 ",
+      "http://127.0.0.1:8765/runtime/status。"
+    ].join("");
+  }
+  if (message.includes("failed to load")) {
+    return `后端接口返回错误：${message}`;
+  }
+  if (message.includes("must be an object") || message.includes("must include")) {
+    return `后端接口格式不符合前端契约：${message}`;
+  }
+  return `运行状态刷新失败：${message}`;
 }
 
 function decodeScenarioConfig(value: unknown): ScenarioConfig {

@@ -19,7 +19,12 @@ import { WorldStateReducer } from "../state/reducer";
 import { EventRouter } from "../stream/event_router";
 import { EventThrottleLayer } from "../stream/throttle_layer";
 import { WebSocketStreamClient } from "../stream/websocket_client";
-import { loadMetricsSnapshot, loadRuntimeState, loadScenarioConfig } from "./api";
+import {
+  loadMetricsSnapshot,
+  loadRuntimeState,
+  loadScenarioConfig,
+  runtimeApiErrorMessage
+} from "./api";
 import "./App.css";
 
 const RUNTIME_STATUS_POLL_MS = 250;
@@ -142,6 +147,11 @@ export function App() {
     return { scenario: effectiveScenario, runtime };
   }, [snapshotEngine]);
 
+  const handleRuntimeApiError = useCallback((error: unknown) => {
+    setConnectionState("degraded");
+    setControlError(runtimeApiErrorMessage(error));
+  }, []);
+
   const startStreams = useCallback(
     (
       scenario: ScenarioConfig | null,
@@ -201,7 +211,7 @@ export function App() {
                   )
                 })
               )
-              .catch(() => setConnectionState("degraded"));
+              .catch(handleRuntimeApiError);
             return;
           }
           if (message.ok === true && message.type === "CONTROL_ACK") {
@@ -216,13 +226,13 @@ export function App() {
                     )
                   })
                 )
-                .catch(() => setConnectionState("degraded"));
+                .catch(handleRuntimeApiError);
               return;
             }
             if (action === "RESUME") {
               loadControlState()
                 .then(({ scenario }) => startStreams(scenario, { resetBeforeConnect: false }))
-                .catch(() => setConnectionState("degraded"));
+                .catch(handleRuntimeApiError);
               return;
             }
             if (action === "STOP" || action === "PAUSE") {
@@ -233,12 +243,12 @@ export function App() {
               closeStreams();
               loadControlState()
                 .then(({ scenario }) => resetWorld(scenario))
-                .catch(() => setConnectionState("degraded"));
+                .catch(handleRuntimeApiError);
             }
           }
         }
       }),
-    [closeStreams, loadControlState, resetWorld, snapshotEngine, startStreams]
+    [closeStreams, handleRuntimeApiError, loadControlState, resetWorld, snapshotEngine, startStreams]
   );
 
   useEffect(() => {
@@ -281,9 +291,9 @@ export function App() {
         if (runtime.generated_config !== undefined) {
           setGeneratedConfig(runtime.generated_config);
         }
-      } catch {
+      } catch (error) {
         if (!closed) {
-          setConnectionState("degraded");
+          handleRuntimeApiError(error);
         }
       }
     };
@@ -293,7 +303,7 @@ export function App() {
       closed = true;
       window.clearInterval(timer);
     };
-  }, [runtimeStatus.status, runtimeStatus.lifecycle_state]);
+  }, [handleRuntimeApiError, runtimeStatus.status, runtimeStatus.lifecycle_state]);
 
   useEffect(() => {
     let closed = false;
@@ -313,10 +323,11 @@ export function App() {
           resetWorld(scenario);
         }
         setConnectionState("live");
+        setControlError(null);
       })
-      .catch(() => {
+      .catch((error) => {
         if (!closed) {
-          setConnectionState("degraded");
+          handleRuntimeApiError(error);
         }
       });
 
@@ -324,7 +335,7 @@ export function App() {
       closed = true;
       closeStreams();
     };
-  }, [closeStreams, loadControlState, resetWorld, snapshotEngine, startStreams]);
+  }, [closeStreams, handleRuntimeApiError, loadControlState, resetWorld, snapshotEngine, startStreams]);
 
   const scenarioControls = scenarioControlValues(scenarioConfig, snapshot.satellites.length);
   const displaySimTime = selectRuntimeDisplaySimTime(
