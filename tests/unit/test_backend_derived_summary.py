@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from leo_twin.models.orbit import AutoPlaneAllocator, ConstellationProfile
 from leo_twin.services.derived_summary import build_backend_derived_summary
 from leo_twin.services.scale_fidelity import (
@@ -26,6 +28,9 @@ def test_backend_derived_summary_is_deterministic_and_frontend_ready() -> None:
         task_data_size=2.0,
         application_protocol="TASK_OFFLOAD_FLOW",
         arrival_interval_seconds=60,
+        orbit_altitude_m=550_000.0,
+        orbit_inclination_deg=53.0,
+        phase_policy="TEST_PHASE_POLICY",
     )
     second = build_backend_derived_summary(
         constellation=allocation,
@@ -39,6 +44,9 @@ def test_backend_derived_summary_is_deterministic_and_frontend_ready() -> None:
         task_data_size=2.0,
         application_protocol="TASK_OFFLOAD_FLOW",
         arrival_interval_seconds=60,
+        orbit_altitude_m=550_000.0,
+        orbit_inclination_deg=53.0,
+        phase_policy="TEST_PHASE_POLICY",
     )
 
     assert first == second
@@ -47,12 +55,18 @@ def test_backend_derived_summary_is_deterministic_and_frontend_ready() -> None:
         "satellite_count": 300,
         "plane_count": 30,
         "satellites_per_plane": 10,
+        "satellites_per_plane_distribution": [10] * 30,
         "total_slots": 300,
         "plane_count_explicit": False,
         "model_note": (
             "Approximate Starlink Shell 1-like plane allocation; "
             "not exact Starlink fidelity."
         ),
+        "raan_spacing_deg": 12.0,
+        "mean_anomaly_spacing_deg": 36.0,
+        "phase_policy": "TEST_PHASE_POLICY",
+        "altitude_m": 550_000.0,
+        "inclination_deg": 53.0,
     }
     assert first["traffic_demand_summary"] == {
         "traffic_class": "COMPUTE_SERVICE",
@@ -80,6 +94,66 @@ def test_backend_derived_summary_is_deterministic_and_frontend_ready() -> None:
         "not exact Starlink fidelity" in assumption
         for assumption in first["model_assumptions"]
     )
+
+
+@pytest.mark.parametrize(
+    ("satellite_count", "plane_count", "profile", "expected_plane_count"),
+    (
+        (72, 12, ConstellationProfile.CUSTOM_WALKER, 12),
+        (1200, 12, ConstellationProfile.CUSTOM_WALKER, 12),
+        (1584, None, ConstellationProfile.STARLINK_SHELL_1_LIKE, 72),
+    ),
+)
+def test_constellation_summary_is_deterministic_for_product_scales(
+    satellite_count: int,
+    plane_count: int | None,
+    profile: ConstellationProfile,
+    expected_plane_count: int,
+) -> None:
+    allocation = AutoPlaneAllocator.allocate(
+        satellite_count=satellite_count,
+        plane_count=plane_count,
+        profile=profile,
+    )
+
+    first = build_backend_derived_summary(
+        constellation=allocation,
+        satellite_count=satellite_count,
+        user_count=20,
+        compute_node_count=min(10, satellite_count),
+        compute_capacity=10.0,
+        flow_count=10,
+        demand_capacity=25.0,
+        task_compute_demand=20.0,
+        task_data_size=2.0,
+        application_protocol="TASK_OFFLOAD_FLOW",
+        orbit_altitude_m=550_000.0,
+        orbit_inclination_deg=53.0,
+    )["derived_constellation_summary"]
+    second = build_backend_derived_summary(
+        constellation=allocation,
+        satellite_count=satellite_count,
+        user_count=20,
+        compute_node_count=min(10, satellite_count),
+        compute_capacity=10.0,
+        flow_count=10,
+        demand_capacity=25.0,
+        task_compute_demand=20.0,
+        task_data_size=2.0,
+        application_protocol="TASK_OFFLOAD_FLOW",
+        orbit_altitude_m=550_000.0,
+        orbit_inclination_deg=53.0,
+    )["derived_constellation_summary"]
+
+    assert first == second
+    assert first["satellite_count"] == satellite_count
+    assert first["plane_count"] == expected_plane_count
+    assert sum(first["satellites_per_plane_distribution"]) == satellite_count
+    assert len(first["satellites_per_plane_distribution"]) == expected_plane_count
+    assert first["raan_spacing_deg"] == pytest.approx(360.0 / expected_plane_count)
+    assert first["altitude_m"] == 550_000.0
+    assert first["inclination_deg"] == 53.0
+    assert first["phase_policy"] == "DETERMINISTIC_PLANE_SLOT_PHASE"
 
 
 def test_scale_fidelity_summary_reports_large_scale_degradation() -> None:

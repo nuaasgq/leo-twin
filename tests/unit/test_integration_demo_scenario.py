@@ -77,12 +77,18 @@ def test_demo_scenario_auto_allocates_starlink_like_planes_when_not_explicit() -
         "satellite_count": 300,
         "plane_count": 30,
         "satellites_per_plane": 10,
+        "satellites_per_plane_distribution": [10] * 30,
         "total_slots": 300,
         "plane_count_explicit": False,
         "model_note": (
             "Approximate Starlink Shell 1-like plane allocation; "
             "not exact Starlink fidelity."
         ),
+        "raan_spacing_deg": 12.0,
+        "mean_anomaly_spacing_deg": 36.0,
+        "phase_policy": "SLOT_INDEX_PHASE_WITH_PLANE_OFFSET",
+        "altitude_m": 529_000.0,
+        "inclination_deg": 53.0,
     }
     assert backend_summary["derived_constellation_summary"] == summary
     assert backend_summary["traffic_demand_summary"]["traffic_class"] == "COMPUTE_SERVICE"

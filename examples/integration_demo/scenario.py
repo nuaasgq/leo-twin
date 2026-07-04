@@ -247,6 +247,9 @@ def _backend_summary(
         task_data_size=config.task_data_size,
         application_protocol=config.application_protocol,
         arrival_interval_seconds=config.flow_interval_seconds,
+        orbit_altitude_m=config.orbit_altitude_m,
+        orbit_inclination_deg=config.orbit_inclination_deg,
+        phase_policy="SLOT_INDEX_PHASE_WITH_PLANE_OFFSET",
     )
     summary["fidelity_summary"] = _fidelity_summary(config)
     summary["workload_smoothing_summary"] = _workload_smoothing_summary(config)

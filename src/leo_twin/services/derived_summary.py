@@ -26,10 +26,18 @@ def build_backend_derived_summary(
     task_data_size: float,
     application_protocol: str,
     arrival_interval_seconds: int | float | None = None,
+    orbit_altitude_m: float | None = None,
+    orbit_inclination_deg: float | None = None,
+    phase_policy: str = "DETERMINISTIC_PLANE_SLOT_PHASE",
 ) -> BackendDerivedSummary:
     """Build deterministic backend-owned explanations for frontend display."""
 
-    constellation_summary = _constellation_summary(constellation)
+    constellation_summary = _constellation_summary(
+        constellation,
+        orbit_altitude_m=orbit_altitude_m,
+        orbit_inclination_deg=orbit_inclination_deg,
+        phase_policy=phase_policy,
+    )
     traffic_class = _traffic_class(application_protocol)
     compute_vector = ComputeResourceVector.from_capacity(compute_capacity)
     total_cpu_gflops_fp32 = compute_vector.cpu_gflops_fp32 * compute_node_count
@@ -72,12 +80,62 @@ def build_backend_derived_summary(
 
 def _constellation_summary(
     constellation: ConstellationAllocation | Mapping[str, object],
+    *,
+    orbit_altitude_m: float | None = None,
+    orbit_inclination_deg: float | None = None,
+    phase_policy: str,
 ) -> dict[str, object]:
     if isinstance(constellation, ConstellationAllocation):
-        return dict(constellation.to_summary())
+        summary: dict[str, object] = dict(constellation.to_summary())
+        _add_constellation_geometry(
+            summary,
+            orbit_altitude_m=orbit_altitude_m,
+            orbit_inclination_deg=orbit_inclination_deg,
+            phase_policy=phase_policy,
+        )
+        return summary
     if not isinstance(constellation, Mapping):
         raise TypeError("constellation must be ConstellationAllocation or mapping")
-    return dict(constellation)
+    summary = dict(constellation)
+    _add_constellation_geometry(
+        summary,
+        orbit_altitude_m=orbit_altitude_m,
+        orbit_inclination_deg=orbit_inclination_deg,
+        phase_policy=phase_policy,
+    )
+    return summary
+
+
+def _add_constellation_geometry(
+    summary: dict[str, object],
+    *,
+    orbit_altitude_m: float | None,
+    orbit_inclination_deg: float | None,
+    phase_policy: str,
+) -> None:
+    satellite_count = int(summary["satellite_count"])
+    plane_count = int(summary["plane_count"])
+    satellites_per_plane = int(summary["satellites_per_plane"])
+    summary["satellites_per_plane_distribution"] = _plane_distribution(
+        satellite_count,
+        plane_count,
+    )
+    summary["raan_spacing_deg"] = 360.0 / float(plane_count)
+    summary["mean_anomaly_spacing_deg"] = 360.0 / float(satellites_per_plane)
+    summary["phase_policy"] = str(phase_policy)
+    if orbit_altitude_m is not None:
+        summary["altitude_m"] = float(orbit_altitude_m)
+    if orbit_inclination_deg is not None:
+        summary["inclination_deg"] = float(orbit_inclination_deg)
+
+
+def _plane_distribution(satellite_count: int, plane_count: int) -> list[int]:
+    base = satellite_count // plane_count
+    remainder = satellite_count % plane_count
+    return [
+        base + (1 if plane_index < remainder else 0)
+        for plane_index in range(plane_count)
+    ]
 
 
 def _traffic_class(application_protocol: str) -> TrafficClass:

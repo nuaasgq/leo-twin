@@ -411,6 +411,43 @@ change.
   - Treat scale-mode metrics/snapshot aggregation as the next targeted hardening
     phase before broader product UI or business-model work.
 
+## 2026-07-05 - Business Model Deepening v1A
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: this commit (created before hash assignment)
+- Scope: enrich backend-derived constellation summaries with deterministic
+  orbit/allocation semantics for product explanation surfaces.
+- Changed files/modules:
+  - `src/leo_twin/services/derived_summary.py`
+  - `src/leo_twin/services/scenario_builder.py`
+  - `examples/integration_demo/scenario.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `tests/unit/test_backend_derived_summary.py`
+  - `tests/unit/test_integration_demo_scenario.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_backend_derived_summary.py tests/unit/test_integration_demo_scenario.py tests/unit/test_scenario_builder.py::test_scenario_builder_config_from_sees_config_maps_control_plane_fields tests/integration/test_config_control.py::test_frontend_control_messages_are_processed tests/integration/test_config_control.py::test_initialize_writes_config_and_start_gates_streams -q`
+    - Result: passed, 18 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test`
+    - Result: passed, 22 files / 84 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - Existing tests used exact dictionary comparisons for derived summaries.
+    The tests were intentionally updated to include the new backend-owned
+    semantic fields.
+  - The active local runtime config files remain modified and excluded.
+- Known remaining issues:
+  - This phase completed the constellation-summary portion of Phase 3 only.
+    Traffic demand, compute resource, and communication-compute lifecycle
+    already have baseline implementations and tests, but they were not expanded
+    further in this isolated commit.
+- Recommended follow-up:
+  - Add product acceptance scenarios next, or target metrics/snapshot scale
+    aggregation before deeper traffic/compute semantics.
+
 ## 2026-07-04 - Scale Firebreak v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`

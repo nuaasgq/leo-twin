@@ -335,6 +335,9 @@ def scenario_builder_backend_summary(
         task_compute_demand=config.task_compute_demand,
         task_data_size=config.task_data_size,
         application_protocol=config.application_protocol,
+        orbit_altitude_m=(config.semi_major_axis_km - config.earth_radius_km) * 1000.0,
+        orbit_inclination_deg=config.inclination_deg,
+        phase_policy="SEEDED_RAAN_AND_MEAN_ANOMALY_OFFSETS",
     )
 
 

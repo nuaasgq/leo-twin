@@ -184,9 +184,15 @@ export interface ConstellationDerivedSummary {
   satellite_count: number;
   plane_count: number;
   satellites_per_plane: number;
+  satellites_per_plane_distribution?: readonly number[];
   total_slots: number;
   plane_count_explicit: boolean;
   model_note: string;
+  altitude_m?: number;
+  inclination_deg?: number;
+  raan_spacing_deg?: number;
+  mean_anomaly_spacing_deg?: number;
+  phase_policy?: string;
 }
 
 export interface TrafficDemandSummary {
