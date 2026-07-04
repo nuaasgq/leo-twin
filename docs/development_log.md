@@ -2361,3 +2361,36 @@ change.
 - Recommended follow-up:
   - Add a route-level KPI detail table for top constrained routes and top
     overloaded links.
+
+## 2026-07-05 - Route KPI Detail Table v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a deterministic dashboard route constraint detail table using
+  existing snapshot `Route` and `LinkState` fields.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 23 files / 133 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - A parallel explorer confirmed the existing frontend route/link protocol is
+    sufficient for v1. The implementation therefore avoids extending decoder
+    contracts or backend payloads in this slice.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The table explains top constrained routes from current snapshots only. It
+    does not yet expose backend-owned per-route congestion history or
+    overloaded-link time series.
+- Recommended follow-up:
+  - Add backend route/link constraint summaries so the dashboard can rank
+    overloaded links and constrained flows from backend metrics rather than
+    relying only on the latest snapshot.

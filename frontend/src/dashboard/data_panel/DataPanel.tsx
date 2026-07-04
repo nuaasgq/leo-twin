@@ -101,6 +101,7 @@ export const DataPanel = memo(function DataPanel({
   const networkFormulaInputs = buildDataPanelNetworkFormulaInputs(
     runtimeStatus.metrics_summary
   );
+  const routeConstraints = buildDataPanelRouteConstraints(snapshot);
   const latestTelemetry = telemetry[telemetry.length - 1];
   const computePool = buildComputeResourcePool(
     snapshot,
@@ -283,6 +284,7 @@ export const DataPanel = memo(function DataPanel({
               </LineChart>
             </ResponsiveContainer>
           </div>
+          <RouteConstraintTable rows={routeConstraints} />
         </section>
 
         <section className="dashboard-section data-panel-chart" aria-label="算力消耗曲线">
@@ -388,6 +390,36 @@ export const DataPanel = memo(function DataPanel({
     </section>
   );
 });
+
+function RouteConstraintTable({ rows }: { rows: readonly DataPanelRouteConstraint[] }) {
+  if (rows.length === 0) {
+    return <div className="data-panel-route-empty">等待路由快照</div>;
+  }
+  return (
+    <div className="data-panel-route-table" aria-label="路由KPI约束明细">
+      <div className="data-panel-route-row header">
+        <span>路由</span>
+        <span>状态</span>
+        <span>跳数</span>
+        <span>时延</span>
+        <span>容量</span>
+        <span>需求/损耗</span>
+        <span>瓶颈解释</span>
+      </div>
+      {rows.map((row) => (
+        <div className="data-panel-route-row" key={row.routeId} title={row.pathLabel}>
+          <span>{row.routeId}</span>
+          <span>{row.statusLabel}</span>
+          <span>{row.hopCount}</span>
+          <span>{row.latencyLabel}</span>
+          <span>{row.capacityLabel}</span>
+          <span>{row.demandLossLabel}</span>
+          <span>{row.bottleneckLabel}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function buildDataPanelSummary(snapshot: WorldSnapshot): DataPanelSummary {
   const activeLinks = snapshot.links.filter((link) => link.availability);
@@ -960,6 +992,13 @@ function formatMetricValue(value: number): string {
   });
 }
 
+function formatPreciseMetricValue(value: number): string {
+  return value.toLocaleString("zh-CN", {
+    maximumFractionDigits: 3,
+    minimumFractionDigits: 0
+  });
+}
+
 function hasBackendNetworkQualityMetrics(
   metrics: RuntimeMetricsSummary | null | undefined
 ): boolean {
@@ -1102,6 +1141,21 @@ export interface DataPanelNetworkFormulaInput {
   value: string;
 }
 
+export interface DataPanelRouteConstraint {
+  routeId: string;
+  flowId: string;
+  statusLabel: string;
+  hopCount: number;
+  latencyLabel: string;
+  capacityLabel: string;
+  demandLossLabel: string;
+  bottleneckLabel: string;
+  pathLabel: string;
+}
+
+type SnapshotRoute = WorldSnapshot["routes"][number];
+type SnapshotLink = WorldSnapshot["links"][number];
+
 export function buildDataPanelNetworkKpiSource(
   snapshot: WorldSnapshot,
   backendMetrics: RuntimeMetricsSummary | null | undefined = undefined,
@@ -1158,6 +1212,129 @@ export function buildDataPanelNetworkFormulaInputs(
     metricInput(metrics, "network_quality_congestion_proxy", "拥塞代理", formatRatioPercent),
     metricInput(metrics, "network_quality_demand_pressure_proxy", "业务压力", formatRatioPercent)
   ].filter((input): input is DataPanelNetworkFormulaInput => input !== null);
+}
+
+export function buildDataPanelRouteConstraints(
+  snapshot: WorldSnapshot,
+  limit = 6
+): readonly DataPanelRouteConstraint[] {
+  const linkLookup = buildRouteLinkLookup(snapshot.links);
+  return snapshot.routes
+    .map((route) => ({
+      route,
+      row: {
+        routeId: route.route_id,
+        flowId: route.flow_id,
+        statusLabel: route.available ? "可用" : "不可用",
+        hopCount: Math.max(0, route.path.length - 1),
+        latencyLabel: `${formatPreciseMetricValue(route.latency)} s`,
+        capacityLabel: `${formatMetricValue(route.capacity)} Mbps`,
+        demandLossLabel: routeDemandLossLabel(route),
+        bottleneckLabel: routeBottleneckLabel(route, linkLookup),
+        pathLabel: route.path.length > 0 ? route.path.join(" → ") : "无路径"
+      }
+    }))
+    .sort((left, right) => compareRouteConstraint(left.route, right.route))
+    .slice(0, Math.max(0, limit))
+    .map((entry) => entry.row);
+}
+
+function compareRouteConstraint(left: SnapshotRoute, right: SnapshotRoute): number {
+  if (left.available !== right.available) {
+    return Number(left.available) - Number(right.available);
+  }
+  const capacityDelta = left.capacity - right.capacity;
+  if (capacityDelta !== 0) {
+    return capacityDelta;
+  }
+  const latencyDelta = right.latency - left.latency;
+  if (latencyDelta !== 0) {
+    return latencyDelta;
+  }
+  const hopDelta = Math.max(0, right.path.length - 1) - Math.max(0, left.path.length - 1);
+  if (hopDelta !== 0) {
+    return hopDelta;
+  }
+  return left.route_id.localeCompare(right.route_id);
+}
+
+function buildRouteLinkLookup(links: readonly SnapshotLink[]): ReadonlyMap<string, SnapshotLink> {
+  const lookup = new Map<string, SnapshotLink>();
+  for (const link of links) {
+    if (!link.availability) {
+      continue;
+    }
+    const directKey = routeLinkKey(link.source_id, link.target_id);
+    if (!lookup.has(directKey)) {
+      lookup.set(directKey, link);
+    }
+    const reverseKey = routeLinkKey(link.target_id, link.source_id);
+    if (!lookup.has(reverseKey)) {
+      lookup.set(reverseKey, link);
+    }
+  }
+  return lookup;
+}
+
+function routeBottleneckLabel(
+  route: SnapshotRoute,
+  linkLookup: ReadonlyMap<string, SnapshotLink>
+): string {
+  if (route.path.length < 2) {
+    return route.available ? "无跳段" : "无可用路径";
+  }
+  let bottleneck:
+    | {
+        edgeLabel: string;
+        capacity: number;
+        latency: number;
+      }
+    | null = null;
+  for (let index = 0; index < route.path.length - 1; index += 1) {
+    const source = route.path[index];
+    const target = route.path[index + 1];
+    const link = linkLookup.get(routeLinkKey(source, target));
+    if (!link) {
+      continue;
+    }
+    const edgeLabel = `${source} → ${target}`;
+    if (
+      bottleneck === null ||
+      link.capacity < bottleneck.capacity ||
+      (link.capacity === bottleneck.capacity && link.latency > bottleneck.latency) ||
+      (link.capacity === bottleneck.capacity &&
+        link.latency === bottleneck.latency &&
+        edgeLabel.localeCompare(bottleneck.edgeLabel) < 0)
+    ) {
+      bottleneck = {
+        edgeLabel,
+        capacity: link.capacity,
+        latency: link.latency
+      };
+    }
+  }
+  if (bottleneck !== null) {
+    return `${bottleneck.edgeLabel} / ${formatMetricValue(
+      bottleneck.capacity
+    )} Mbps / ${formatPreciseMetricValue(bottleneck.latency)} s`;
+  }
+  return route.available ? "未匹配链路明细" : "未收到可用链路";
+}
+
+function routeDemandLossLabel(route: SnapshotRoute): string {
+  const demand =
+    typeof route.demand_capacity === "number" && Number.isFinite(route.demand_capacity)
+      ? `需求${formatMetricValue(route.demand_capacity)} Mbps`
+      : null;
+  const loss =
+    typeof route.loss_rate === "number" && Number.isFinite(route.loss_rate)
+      ? `损耗${formatMetricValue(route.loss_rate * 100)}%`
+      : null;
+  return [demand, loss].filter((value): value is string => value !== null).join(" / ") || "未声明";
+}
+
+function routeLinkKey(sourceId: string, targetId: string): string {
+  return `${sourceId}\u0000${targetId}`;
 }
 
 function dataPanelTrafficLabel(traffic: TrafficDemandSummary): string {

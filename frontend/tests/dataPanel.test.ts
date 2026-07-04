@@ -5,6 +5,7 @@ import {
   buildDataPanelDisplaySummary,
   buildDataPanelNetworkFormulaInputs,
   buildDataPanelNetworkKpiSource,
+  buildDataPanelRouteConstraints,
   buildDataPanelRuntimeProgress,
   buildDataPanelSummary,
   buildDataPanelTelemetry,
@@ -168,6 +169,106 @@ describe("buildDataPanelSummary", () => {
     expect(summary.averageRouteHops).toBe(0);
     expect(summary.maxRouteHops).toBe(0);
     expect(summary.couplingHealth).toBe(0);
+  });
+});
+
+describe("buildDataPanelRouteConstraints", () => {
+  it("builds deterministic route constraint rows from snapshot links and routes", () => {
+    expect(
+      buildDataPanelRouteConstraints(
+        makeSnapshot({
+          links: [
+            {
+              source_id: "sat-a",
+              target_id: "sat-b",
+              latency: 0.1,
+              capacity: 80,
+              availability: true
+            },
+            {
+              source_id: "sat-b",
+              target_id: "sat-c",
+              latency: 0.3,
+              capacity: 20,
+              availability: true
+            },
+            {
+              source_id: "sat-c",
+              target_id: "sat-d",
+              latency: 0.2,
+              capacity: 50,
+              availability: true
+            }
+          ],
+          routes: [
+            {
+              route_id: "route-good",
+              flow_id: "flow-good",
+              path: ["sat-a", "sat-b", "sat-c"],
+              latency: 0.4,
+              capacity: 20,
+              available: true,
+              demand_capacity: 25,
+              loss_rate: 0.05
+            },
+            {
+              route_id: "route-low",
+              flow_id: "flow-low",
+              path: ["sat-a", "sat-b"],
+              latency: 0.1,
+              capacity: 80,
+              available: true
+            },
+            {
+              route_id: "route-down",
+              flow_id: "flow-down",
+              path: [],
+              latency: 0,
+              capacity: 0,
+              available: false
+            }
+          ]
+        })
+      )
+    ).toEqual([
+      {
+        routeId: "route-down",
+        flowId: "flow-down",
+        statusLabel: "不可用",
+        hopCount: 0,
+        latencyLabel: "0 s",
+        capacityLabel: "0 Mbps",
+        demandLossLabel: "未声明",
+        bottleneckLabel: "无可用路径",
+        pathLabel: "无路径"
+      },
+      {
+        routeId: "route-good",
+        flowId: "flow-good",
+        statusLabel: "可用",
+        hopCount: 2,
+        latencyLabel: "0.4 s",
+        capacityLabel: "20 Mbps",
+        demandLossLabel: "需求25 Mbps / 损耗5%",
+        bottleneckLabel: "sat-b → sat-c / 20 Mbps / 0.3 s",
+        pathLabel: "sat-a → sat-b → sat-c"
+      },
+      {
+        routeId: "route-low",
+        flowId: "flow-low",
+        statusLabel: "可用",
+        hopCount: 1,
+        latencyLabel: "0.1 s",
+        capacityLabel: "80 Mbps",
+        demandLossLabel: "未声明",
+        bottleneckLabel: "sat-a → sat-b / 80 Mbps / 0.1 s",
+        pathLabel: "sat-a → sat-b"
+      }
+    ]);
+  });
+
+  it("returns no route constraint rows for an empty snapshot", () => {
+    expect(buildDataPanelRouteConstraints(makeSnapshot())).toEqual([]);
   });
 });
 
