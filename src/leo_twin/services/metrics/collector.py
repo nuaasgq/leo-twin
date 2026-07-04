@@ -228,6 +228,7 @@ class MetricsCollector:
             "unique_satellites": len(self._satellite_status),
         }
         summary.update(self._network_quality_summary(active_links, available_routes))
+        summary.update(self._network_constraint_summary(active_links, available_routes))
         summary.update(self._compute_resource_summary())
         for event_type, count in sorted(self._event_counts.items()):
             summary[f"events.{event_type}.count"] = count
@@ -966,6 +967,74 @@ class MetricsCollector:
             ),
         }
 
+    def _network_constraint_summary(
+        self,
+        active_links: tuple[LinkState, ...],
+        available_routes: tuple[Route, ...],
+    ) -> MetricSummary:
+        routes = tuple(self._routes[route_id] for route_id in sorted(self._routes))
+        top_route = _top_constrained_route(routes)
+        top_link = _top_constrained_link(active_links)
+        unavailable_routes = max(0, len(routes) - len(available_routes))
+        over_demand_routes = sum(
+            1 for route in routes if _route_demand_capacity(route) > route.capacity
+        )
+        overloaded_links = sum(
+            1
+            for link in active_links
+            if link.utilization is not None and link.utilization >= 0.9
+        )
+
+        return {
+            "network_constraint_summary_source": "BACKEND_METRICS_COLLECTOR",
+            "network_constraint_route_count": len(routes),
+            "network_constraint_available_route_count": len(available_routes),
+            "network_constraint_unavailable_route_count": unavailable_routes,
+            "network_constraint_over_demand_route_count": over_demand_routes,
+            "network_constraint_active_link_count": len(active_links),
+            "network_constraint_overloaded_link_count": overloaded_links,
+            "network_constraint_top_route_id": "" if top_route is None else top_route.route_id,
+            "network_constraint_top_route_flow_id": (
+                "" if top_route is None else top_route.flow_id
+            ),
+            "network_constraint_top_route_available": (
+                False if top_route is None else top_route.available
+            ),
+            "network_constraint_top_route_capacity_mbps": (
+                0.0 if top_route is None else float(top_route.capacity)
+            ),
+            "network_constraint_top_route_latency_s": (
+                0.0 if top_route is None else float(top_route.latency)
+            ),
+            "network_constraint_top_route_hop_count": (
+                0 if top_route is None else _route_hop_count(top_route)
+            ),
+            "network_constraint_top_route_demand_mbps": (
+                0.0 if top_route is None else _route_demand_capacity(top_route)
+            ),
+            "network_constraint_top_route_loss_rate": (
+                0.0
+                if top_route is None or top_route.loss_rate is None
+                else float(top_route.loss_rate)
+            ),
+            "network_constraint_top_route_pressure_proxy": (
+                0.0 if top_route is None else _route_pressure_proxy(top_route)
+            ),
+            "network_constraint_top_route_path": (
+                "" if top_route is None else " -> ".join(top_route.path)
+            ),
+            "network_constraint_top_link_id": "" if top_link is None else _link_id(top_link),
+            "network_constraint_top_link_capacity_mbps": (
+                0.0 if top_link is None else float(top_link.capacity)
+            ),
+            "network_constraint_top_link_latency_s": (
+                0.0 if top_link is None else float(top_link.latency)
+            ),
+            "network_constraint_top_link_utilization": (
+                0.0 if top_link is None else _link_utilization_value(top_link)
+            ),
+        }
+
     def _completed_flow_quality(self) -> dict[str, float | int | tuple[float, ...]]:
         successful_count = 0
         failed_count = 0
@@ -1177,6 +1246,48 @@ def _event_type_name(event_type: object) -> str:
     if isinstance(event_type, EventType):
         return event_type.value
     return str(event_type)
+
+
+def _top_constrained_route(routes: tuple[Route, ...]) -> Route | None:
+    if not routes:
+        return None
+    return sorted(routes, key=_route_constraint_sort_key)[0]
+
+
+def _route_constraint_sort_key(route: Route) -> tuple[int, float, float, int, str]:
+    return (
+        1 if route.available else 0,
+        float(route.capacity),
+        -float(route.latency),
+        -_route_hop_count(route),
+        route.route_id,
+    )
+
+
+def _top_constrained_link(links: tuple[LinkState, ...]) -> LinkState | None:
+    if not links:
+        return None
+    return sorted(links, key=_link_constraint_sort_key)[0]
+
+
+def _link_constraint_sort_key(link: LinkState) -> tuple[float, float, float, str]:
+    return (
+        -_link_utilization_value(link, missing=-1.0),
+        float(link.capacity),
+        -float(link.latency),
+        _link_id(link),
+    )
+
+
+def _link_utilization_value(link: LinkState, *, missing: float = 0.0) -> float:
+    return missing if link.utilization is None else float(link.utilization)
+
+
+def _route_pressure_proxy(route: Route) -> float:
+    demand = _route_demand_capacity(route)
+    if route.capacity > 0.0:
+        return _clamp_probability(demand / route.capacity)
+    return 1.0 if demand > 0.0 else 0.0
 
 
 def _link_id(link: LinkState) -> str:

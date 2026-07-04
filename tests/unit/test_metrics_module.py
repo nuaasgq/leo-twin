@@ -400,6 +400,111 @@ def test_metrics_collector_reports_dynamic_network_quality_proxy() -> None:
     )
 
 
+def test_metrics_collector_reports_route_constraint_summary() -> None:
+    collector = MetricsCollector()
+    for event in (
+        _event(
+            "link-hot",
+            1.0,
+            EventType.LINK_UPDATE,
+            LinkState(
+                source_id="sat-a",
+                target_id="sat-b",
+                latency=0.02,
+                capacity=80.0,
+                availability=True,
+                utilization=0.92,
+            ),
+            "network",
+        ),
+        _event(
+            "link-low",
+            1.0,
+            EventType.LINK_UPDATE,
+            LinkState(
+                source_id="sat-b",
+                target_id="sat-c",
+                latency=0.05,
+                capacity=20.0,
+                availability=True,
+                utilization=0.7,
+            ),
+            "network",
+        ),
+        _event(
+            "route-wide",
+            2.0,
+            EventType.ROUTE_UPDATE,
+            Route(
+                route_id="route-wide",
+                flow_id="flow-wide",
+                path=("sat-a", "sat-b"),
+                latency=0.02,
+                capacity=100.0,
+                available=True,
+                demand_capacity=50.0,
+            ),
+            "network",
+        ),
+        _event(
+            "route-low",
+            2.0,
+            EventType.ROUTE_UPDATE,
+            Route(
+                route_id="route-low",
+                flow_id="flow-low",
+                path=("sat-a", "sat-b", "sat-c"),
+                latency=0.08,
+                capacity=20.0,
+                available=True,
+                demand_capacity=30.0,
+                loss_rate=0.1,
+            ),
+            "network",
+        ),
+        _event(
+            "route-down",
+            2.0,
+            EventType.ROUTE_UPDATE,
+            Route(
+                route_id="route-down",
+                flow_id="flow-down",
+                path=(),
+                latency=0.0,
+                capacity=0.0,
+                available=False,
+                demand_capacity=10.0,
+            ),
+            "network",
+        ),
+    ):
+        collector.observe(event)
+
+    summary = collector.summary()
+
+    assert summary["network_constraint_summary_source"] == "BACKEND_METRICS_COLLECTOR"
+    assert summary["network_constraint_route_count"] == 3
+    assert summary["network_constraint_available_route_count"] == 2
+    assert summary["network_constraint_unavailable_route_count"] == 1
+    assert summary["network_constraint_over_demand_route_count"] == 2
+    assert summary["network_constraint_active_link_count"] == 2
+    assert summary["network_constraint_overloaded_link_count"] == 1
+    assert summary["network_constraint_top_route_id"] == "route-down"
+    assert summary["network_constraint_top_route_flow_id"] == "flow-down"
+    assert summary["network_constraint_top_route_available"] is False
+    assert summary["network_constraint_top_route_capacity_mbps"] == 0.0
+    assert summary["network_constraint_top_route_latency_s"] == 0.0
+    assert summary["network_constraint_top_route_hop_count"] == 0
+    assert summary["network_constraint_top_route_demand_mbps"] == 10.0
+    assert summary["network_constraint_top_route_loss_rate"] == 0.0
+    assert summary["network_constraint_top_route_pressure_proxy"] == 1.0
+    assert summary["network_constraint_top_route_path"] == ""
+    assert summary["network_constraint_top_link_id"] == "sat-a->sat-b"
+    assert summary["network_constraint_top_link_capacity_mbps"] == 80.0
+    assert summary["network_constraint_top_link_latency_s"] == 0.02
+    assert summary["network_constraint_top_link_utilization"] == pytest.approx(0.92)
+
+
 def test_metrics_collector_reports_effective_flow_level_network_quality() -> None:
     collector = MetricsCollector()
     last_records: tuple[MetricRecord, ...] = ()

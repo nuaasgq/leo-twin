@@ -2394,3 +2394,32 @@ change.
   - Add backend route/link constraint summaries so the dashboard can rank
     overloaded links and constrained flows from backend metrics rather than
     relying only on the latest snapshot.
+
+## 2026-07-05 - Backend Route Constraint Summary v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: expose backend-owned flat route/link constraint summary fields from
+  `MetricsCollector.summary()` without changing Event Kernel behavior.
+- Changed files/modules:
+  - `src/leo_twin/services/metrics/collector.py`
+  - `tests/unit/test_metrics_module.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_metrics_module.py -q`
+    - Result: passed, 14 tests.
+  - `python -m pytest tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer -q`
+    - Result: passed, 1 test.
+- Problems encountered:
+  - Runtime metrics summaries are flat string/number/bool dictionaries, so this
+    task publishes deterministic scalar/string fields instead of nested route
+    arrays.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The backend now identifies one top constrained route and one top
+    constrained link, but it does not yet emit a ranked list or time-series
+    history of overloaded links.
+- Recommended follow-up:
+  - Bind the dashboard route detail table to these backend summary fields and
+    show a backend-source note when constraint summaries are available.
