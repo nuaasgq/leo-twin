@@ -458,6 +458,7 @@ def test_metrics_collector_reports_compute_resource_pool_proxy() -> None:
     assert summary["compute_resource_total_npu_tops_int8"] == 12.0
     assert summary["compute_resource_total_memory_gb"] == 24.0
     assert summary["compute_resource_total_storage_gb"] == 384.0
+    assert summary["compute_resource_used_gpu_tflops_fp32"] == 0.0
     assert summary["compute_resource_vector_capacity_reported"] is True
     assert (
         summary["compute_resource_vector_utilization_mode"]
@@ -467,8 +468,55 @@ def test_metrics_collector_reports_compute_resource_pool_proxy() -> None:
     assert summary["compute_resource_unit"] == "GFLOPS FP32"
     assert summary["compute_resource_proxy_note"] == (
         "Legacy scalar compute capacity maps to FP32 GFLOPS; "
-        "resource-vector fields currently report capacity totals only."
+        "resource-vector usage is deterministic estimator output when "
+        "ComputeNodeState reports RESOURCE_VECTOR_ESTIMATED."
     )
+
+
+def test_metrics_collector_reports_estimated_vector_resource_usage() -> None:
+    collector = MetricsCollector()
+    collector.observe(
+        _event(
+            "compute-vector",
+            1.0,
+            COMPUTE_NODE_UPDATE,
+            ComputeNodeState(
+                node_id="sat-a",
+                sim_time=1.0,
+                capacity=100.0,
+                available_capacity=0.0,
+                status="BUSY",
+                gpu_tflops_fp32=2.0,
+                memory_gb=16.0,
+                storage_gb=2.0,
+                resource_usage_mode="RESOURCE_VECTOR_ESTIMATED",
+                available_cpu_gflops_fp32=100.0,
+                used_cpu_gflops_fp32=0.0,
+                available_gpu_tflops_fp32=0.0,
+                used_gpu_tflops_fp32=2.0,
+                available_memory_gb=12.0,
+                used_memory_gb=4.0,
+                available_storage_gb=1.5,
+                used_storage_gb=0.5,
+            ),
+            "compute",
+        )
+    )
+
+    summary = collector.summary()
+
+    assert (
+        summary["compute_resource_vector_utilization_mode"]
+        == "RESOURCE_VECTOR_ESTIMATED"
+    )
+    assert summary["compute_resource_available_cpu_gflops_fp32"] == 100.0
+    assert summary["compute_resource_used_cpu_gflops_fp32"] == 0.0
+    assert summary["compute_resource_available_gpu_tflops_fp32"] == 0.0
+    assert summary["compute_resource_used_gpu_tflops_fp32"] == 2.0
+    assert summary["compute_resource_available_memory_gb"] == 12.0
+    assert summary["compute_resource_used_memory_gb"] == 4.0
+    assert summary["compute_resource_available_storage_gb"] == 1.5
+    assert summary["compute_resource_used_storage_gb"] == 0.5
 
 
 def test_metrics_collector_scales_satellite_positions_for_orbit_kpis() -> None:

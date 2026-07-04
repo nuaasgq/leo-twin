@@ -64,6 +64,14 @@ simulation, external simulators, or Event Kernel changes. Runtime compute
 models may use them for deterministic service-time estimation and resource
 capacity checks.
 
+`ComputeNodeState` keeps the legacy scalar `capacity` /
+`available_capacity` fields as the CPU FP32 compatibility view. It also carries
+optional resource-vector capacity and estimated used/available fields for CPU
+FP32/FP64, GPU FP32/FP16, NPU INT8, memory, and storage. The
+`resource_usage_mode` field identifies whether those per-resource usage values
+come from the deterministic resource estimator or from the scalar compatibility
+path.
+
 ## Determinism Rules
 
 Contracts must be immutable dataclasses and deterministic when serialized.

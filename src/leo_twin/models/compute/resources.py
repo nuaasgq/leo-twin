@@ -262,6 +262,73 @@ def estimate_task_service_time(
     )
 
 
+def compute_node_resource_usage_fields(
+    node: ComputeNode,
+    task: TaskRequest | None = None,
+) -> dict[str, float | str]:
+    """Return deterministic per-resource used/available fields for node state."""
+
+    resources = compute_resource_vector_from_node(node)
+    demand = (
+        TaskResourceDemand()
+        if task is None
+        else task_resource_demand_from_request(task)
+    )
+    estimate = (
+        ComputeServiceTimeEstimate(0.0, _NO_BOTTLENECK)
+        if task is None
+        else estimate_compute_service_time(resources, demand)
+    )
+    resource_times = dict(estimate.resource_times)
+    used_cpu_fp32 = _processing_used(
+        resources.cpu_gflops_fp32,
+        resource_times.get("cpu_gflops_fp32", 0.0),
+        estimate.service_time,
+    )
+    used_cpu_fp64 = _processing_used(
+        resources.cpu_gflops_fp64,
+        resource_times.get("cpu_gflops_fp64", 0.0),
+        estimate.service_time,
+    )
+    used_gpu_fp32 = _processing_used(
+        resources.gpu_tflops_fp32,
+        resource_times.get("gpu_tflops_fp32", 0.0),
+        estimate.service_time,
+    )
+    used_gpu_fp16 = _processing_used(
+        resources.gpu_tflops_fp16,
+        resource_times.get("gpu_tflops_fp16", 0.0),
+        estimate.service_time,
+    )
+    used_npu_int8 = _processing_used(
+        resources.npu_tops_int8,
+        resource_times.get("npu_tops_int8", 0.0),
+        estimate.service_time,
+    )
+    used_memory = min(resources.memory_gb, demand.memory_gb)
+    used_storage = min(
+        resources.storage_gb,
+        (demand.input_data_mb + demand.output_data_mb) / _MB_PER_GB,
+    )
+    return {
+        "resource_usage_mode": "RESOURCE_VECTOR_ESTIMATED",
+        "available_cpu_gflops_fp32": _available(resources.cpu_gflops_fp32, used_cpu_fp32),
+        "used_cpu_gflops_fp32": used_cpu_fp32,
+        "available_cpu_gflops_fp64": _available(resources.cpu_gflops_fp64, used_cpu_fp64),
+        "used_cpu_gflops_fp64": used_cpu_fp64,
+        "available_gpu_tflops_fp32": _available(resources.gpu_tflops_fp32, used_gpu_fp32),
+        "used_gpu_tflops_fp32": used_gpu_fp32,
+        "available_gpu_tflops_fp16": _available(resources.gpu_tflops_fp16, used_gpu_fp16),
+        "used_gpu_tflops_fp16": used_gpu_fp16,
+        "available_npu_tops_int8": _available(resources.npu_tops_int8, used_npu_int8),
+        "used_npu_tops_int8": used_npu_int8,
+        "available_memory_gb": _available(resources.memory_gb, used_memory),
+        "used_memory_gb": used_memory,
+        "available_storage_gb": _available(resources.storage_gb, used_storage),
+        "used_storage_gb": used_storage,
+    }
+
+
 def _has_explicit_processing_demand(task: TaskRequest) -> bool:
     return (
         task.cpu_ops > 0.0
@@ -269,6 +336,16 @@ def _has_explicit_processing_demand(task: TaskRequest) -> bool:
         or task.fp16_ops > 0.0
         or task.int8_ops > 0.0
     )
+
+
+def _processing_used(capacity: float, resource_time: float, service_time: float) -> float:
+    if capacity <= 0.0 or resource_time <= 0.0 or service_time <= 0.0:
+        return 0.0
+    return min(capacity, capacity * resource_time / service_time)
+
+
+def _available(capacity: float, used: float) -> float:
+    return max(0.0, capacity - used)
 
 
 _RESOURCE_FIELD_NAMES = (

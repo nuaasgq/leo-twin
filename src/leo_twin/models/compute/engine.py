@@ -5,7 +5,10 @@ from typing import Iterable
 
 from leo_twin.core import SimulationKernel, SimulationModule
 from leo_twin.models.compute.contracts import COMPUTE_NODE_UPDATE, ComputeNode
-from leo_twin.models.compute.resources import estimate_task_service_time
+from leo_twin.models.compute.resources import (
+    compute_node_resource_usage_fields,
+    estimate_task_service_time,
+)
 from leo_twin.schema import (
     ComputeNodeState,
     EventType,
@@ -122,7 +125,7 @@ class ComputeEngine(SimulationModule):
             self._event(
                 sim_time=start_time,
                 event_type=COMPUTE_NODE_UPDATE,
-                payload=_compute_node_state(node, start_time, 0.0, "BUSY"),
+                payload=_compute_node_state(node, start_time, 0.0, "BUSY", task),
             )
         )
         kernel.schedule_event(
@@ -227,6 +230,7 @@ def _compute_node_state(
     sim_time: float,
     available_capacity: float,
     status: str,
+    task: TaskRequest | None = None,
 ) -> ComputeNodeState:
     return ComputeNodeState(
         node_id=node.node_id,
@@ -240,4 +244,5 @@ def _compute_node_state(
         npu_tops_int8=node.npu_tops_int8,
         memory_gb=node.memory_gb,
         storage_gb=node.storage_gb,
+        **compute_node_resource_usage_fields(node, task),
     )

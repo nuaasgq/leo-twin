@@ -1,3 +1,5 @@
+import pytest
+
 from leo_twin.core import SimulationKernel, SimulationModule
 from leo_twin.models.compute import COMPUTE_NODE_UPDATE, ComputeEngine, ComputeNode
 from leo_twin.schema import (
@@ -98,13 +100,15 @@ def test_task_lifecycle_events_and_node_state_updates_are_scheduled() -> None:
         progress=0.0,
         status="RUNNING",
     )
-    assert sink.events[1].payload == ComputeNodeState(
-        node_id="fast-node",
-        sim_time=0.0,
-        capacity=20.0,
-        available_capacity=0.0,
-        status="BUSY",
-    )
+    busy_state = sink.events[1].payload
+    assert busy_state.node_id == "fast-node"
+    assert busy_state.sim_time == 0.0
+    assert busy_state.capacity == 20.0
+    assert busy_state.available_capacity == 0.0
+    assert busy_state.status == "BUSY"
+    assert busy_state.resource_usage_mode == "RESOURCE_VECTOR_ESTIMATED"
+    assert busy_state.used_cpu_gflops_fp32 == 20.0
+    assert busy_state.available_cpu_gflops_fp32 == 0.0
     assert sink.events[2].payload == TaskState(
         task_id="task-1",
         node_id="fast-node",
@@ -112,13 +116,15 @@ def test_task_lifecycle_events_and_node_state_updates_are_scheduled() -> None:
         progress=1.0,
         status="FINISHED",
     )
-    assert sink.events[3].payload == ComputeNodeState(
-        node_id="fast-node",
-        sim_time=2.0,
-        capacity=20.0,
-        available_capacity=20.0,
-        status="IDLE",
-    )
+    idle_state = sink.events[3].payload
+    assert idle_state.node_id == "fast-node"
+    assert idle_state.sim_time == 2.0
+    assert idle_state.capacity == 20.0
+    assert idle_state.available_capacity == 20.0
+    assert idle_state.status == "IDLE"
+    assert idle_state.resource_usage_mode == "RESOURCE_VECTOR_ESTIMATED"
+    assert idle_state.used_cpu_gflops_fp32 == 0.0
+    assert idle_state.available_cpu_gflops_fp32 == 20.0
 
 
 def test_compute_node_updates_publish_resource_vectors() -> None:
@@ -155,19 +161,22 @@ def test_compute_node_updates_publish_resource_vectors() -> None:
         for event in sink.events
         if event.event_type == COMPUTE_NODE_UPDATE
     )
-    assert busy_state == ComputeNodeState(
-        node_id="vector-node",
-        sim_time=0.0,
-        capacity=40.0,
-        available_capacity=0.0,
-        status="BUSY",
-        cpu_gflops_fp64=8.0,
-        gpu_tflops_fp32=2.5,
-        gpu_tflops_fp16=5.0,
-        npu_tops_int8=12.0,
-        memory_gb=32.0,
-        storage_gb=512.0,
-    )
+    assert busy_state.node_id == "vector-node"
+    assert busy_state.sim_time == 0.0
+    assert busy_state.capacity == 40.0
+    assert busy_state.available_capacity == 0.0
+    assert busy_state.status == "BUSY"
+    assert busy_state.cpu_gflops_fp64 == 8.0
+    assert busy_state.gpu_tflops_fp32 == 2.5
+    assert busy_state.gpu_tflops_fp16 == 5.0
+    assert busy_state.npu_tops_int8 == 12.0
+    assert busy_state.memory_gb == 32.0
+    assert busy_state.storage_gb == 512.0
+    assert busy_state.resource_usage_mode == "RESOURCE_VECTOR_ESTIMATED"
+    assert busy_state.used_cpu_gflops_fp32 == 40.0
+    assert busy_state.available_cpu_gflops_fp64 == 8.0
+    assert busy_state.available_gpu_tflops_fp32 == 2.5
+    assert busy_state.available_memory_gb == 32.0
 
 
 def test_dict_task_payload_can_drive_explicit_gpu_service_time() -> None:
@@ -207,6 +216,26 @@ def test_dict_task_payload_can_drive_explicit_gpu_service_time() -> None:
     kernel.run()
 
     assert engine.scheduled_tasks() == (("gpu-task", "gpu-node", 0.0, 5.0),)
+    busy_state = next(
+        event.payload
+        for event in sink.events
+        if event.event_type == COMPUTE_NODE_UPDATE
+        and event.payload.status == "BUSY"
+    )
+    idle_state = next(
+        event.payload
+        for event in sink.events
+        if event.event_type == COMPUTE_NODE_UPDATE
+        and event.payload.status == "IDLE"
+    )
+    assert busy_state.resource_usage_mode == "RESOURCE_VECTOR_ESTIMATED"
+    assert busy_state.used_gpu_tflops_fp32 == 2.0
+    assert busy_state.available_gpu_tflops_fp32 == 0.0
+    assert busy_state.used_memory_gb == 4.0
+    assert busy_state.used_storage_gb == pytest.approx(0.375)
+    assert idle_state.resource_usage_mode == "RESOURCE_VECTOR_ESTIMATED"
+    assert idle_state.used_gpu_tflops_fp32 == 0.0
+    assert idle_state.available_gpu_tflops_fp32 == 2.0
 
 
 def test_scheduler_uses_deterministic_earliest_finish_ordering() -> None:

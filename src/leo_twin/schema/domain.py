@@ -307,6 +307,21 @@ class ComputeNodeState:
     npu_tops_int8: float = 0.0
     memory_gb: float = 0.0
     storage_gb: float = 0.0
+    resource_usage_mode: str = "SCALAR_FP32_ONLY"
+    available_cpu_gflops_fp32: float = 0.0
+    used_cpu_gflops_fp32: float = 0.0
+    available_cpu_gflops_fp64: float = 0.0
+    used_cpu_gflops_fp64: float = 0.0
+    available_gpu_tflops_fp32: float = 0.0
+    used_gpu_tflops_fp32: float = 0.0
+    available_gpu_tflops_fp16: float = 0.0
+    used_gpu_tflops_fp16: float = 0.0
+    available_npu_tops_int8: float = 0.0
+    used_npu_tops_int8: float = 0.0
+    available_memory_gb: float = 0.0
+    used_memory_gb: float = 0.0
+    available_storage_gb: float = 0.0
+    used_storage_gb: float = 0.0
 
     def __post_init__(self) -> None:
         _require_non_empty_str(self.node_id, "node_id")
@@ -314,6 +329,7 @@ class ComputeNodeState:
         _require_non_negative_number(self.capacity, "capacity")
         _require_non_negative_number(self.available_capacity, "available_capacity")
         _require_non_empty_str(self.status, "status")
+        _require_non_empty_str(self.resource_usage_mode, "resource_usage_mode")
         if self.load_ratio is not None:
             _require_probability(self.load_ratio, "load_ratio")
         for field_name in (
@@ -323,6 +339,20 @@ class ComputeNodeState:
             "npu_tops_int8",
             "memory_gb",
             "storage_gb",
+            "available_cpu_gflops_fp32",
+            "used_cpu_gflops_fp32",
+            "available_cpu_gflops_fp64",
+            "used_cpu_gflops_fp64",
+            "available_gpu_tflops_fp32",
+            "used_gpu_tflops_fp32",
+            "available_gpu_tflops_fp16",
+            "used_gpu_tflops_fp16",
+            "available_npu_tops_int8",
+            "used_npu_tops_int8",
+            "available_memory_gb",
+            "used_memory_gb",
+            "available_storage_gb",
+            "used_storage_gb",
         ):
             _require_non_negative_number(getattr(self, field_name), field_name)
 

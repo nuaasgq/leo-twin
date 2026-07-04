@@ -5,6 +5,53 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Compute Node Per-Resource Usage State v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending in this commit
+- Scope: extend backend compute-node state with deterministic per-resource
+  used/available estimates for CPU FP32/FP64, GPU FP32/FP16, NPU INT8, memory,
+  and storage while preserving legacy scalar `capacity` / `available_capacity`
+  behavior.
+- Changed files/modules:
+  - `src/leo_twin/schema/domain.py`
+  - `src/leo_twin/models/compute/resources.py`
+  - `src/leo_twin/models/compute/__init__.py`
+  - `src/leo_twin/models/compute/engine.py`
+  - `src/leo_twin/models/compute/network_aware.py`
+  - `src/leo_twin/models/network/position_engine.py`
+  - `src/leo_twin/services/metrics/collector.py`
+  - `examples/integration_demo/replay.py`
+  - `docs/product_contracts.md`
+  - `tests/unit/test_compute_resource_model.py`
+  - `tests/unit/test_compute_module.py`
+  - `tests/unit/test_metrics_module.py`
+  - `tests/unit/test_product_contracts.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_compute_resource_model.py tests/unit/test_compute_module.py tests/unit/test_network_aware_compute.py tests/unit/test_metrics_module.py tests/unit/test_product_contracts.py -q`
+    - Result: passed, 40 tests.
+  - `python -m pytest tests/integration/test_compute_service_lifecycle.py tests/integration/test_full_domain_pipeline_v1.py tests/integration/test_full_system_demo.py::test_replay_test tests/integration/test_config_control.py::test_frontend_control_messages_are_processed tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer -q`
+    - Result: passed, 6 tests.
+  - `git diff --check`
+    - Result: passed with only CRLF warnings for excluded local runtime config
+      files.
+- Problems encountered:
+  - Existing compute-module tests compared full `ComputeNodeState` dataclasses.
+    They were updated to assert legacy timing/state fields plus the new
+    resource usage fields explicitly.
+  - Metrics naming now keeps legacy scalar FP32 fields unchanged and uses
+    `compute_resource_available_cpu_gflops_fp32` /
+    `compute_resource_used_cpu_gflops_fp32` for vector-estimated CPU FP32.
+- Known remaining issues:
+  - Frontend decoder and dashboard do not yet consume the new per-resource
+    used/available state fields.
+  - Resource usage is an average deterministic estimator over the task service
+    interval, not packet-level or real execution telemetry.
+- Recommended follow-up:
+  - Bind frontend `ComputeNodeState` decoding and the selected-satellite /
+    dashboard resource panels to the new per-resource used/available fields.
+
 ## 2026-07-05 - Dashboard Compute Resource Vector Summary v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`

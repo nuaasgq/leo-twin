@@ -6,6 +6,7 @@ from leo_twin.models.compute import (
     ComputeNode,
     ComputeResourceVector,
     TaskResourceDemand,
+    compute_node_resource_usage_fields,
     compute_resource_vector_from_node,
     estimate_compute_service_time,
     estimate_task_service_time,
@@ -105,6 +106,41 @@ def test_task_service_time_helper_uses_explicit_task_resource_demand() -> None:
     )
     assert estimate.service_time == pytest.approx(5.0)
     assert estimate.bottleneck_resource == "gpu_tflops_fp32"
+
+
+def test_compute_node_resource_usage_fields_are_deterministic() -> None:
+    node = ComputeNode(
+        "gpu-node",
+        capacity=100.0,
+        gpu_tflops_fp32=2.0,
+        gpu_tflops_fp16=4.0,
+        npu_tops_int8=8.0,
+        memory_gb=16.0,
+        storage_gb=2.0,
+    )
+    task = TaskRequest(
+        task_id="task-gpu",
+        source_id="user-a",
+        submit_time=0.0,
+        compute_demand=1.0,
+        data_size=1.0,
+        fp32_ops=10_000_000_000_000.0,
+        memory_gb=4.0,
+        input_data_mb=256.0,
+        output_data_mb=256.0,
+    )
+
+    fields = compute_node_resource_usage_fields(node, task)
+
+    assert fields["resource_usage_mode"] == "RESOURCE_VECTOR_ESTIMATED"
+    assert fields["used_cpu_gflops_fp32"] == 0.0
+    assert fields["available_cpu_gflops_fp32"] == 100.0
+    assert fields["used_gpu_tflops_fp32"] == pytest.approx(2.0)
+    assert fields["available_gpu_tflops_fp32"] == pytest.approx(0.0)
+    assert fields["used_memory_gb"] == 4.0
+    assert fields["available_memory_gb"] == 12.0
+    assert fields["used_storage_gb"] == 0.5
+    assert fields["available_storage_gb"] == 1.5
 
 
 def test_cpu_only_task_uses_cpu_bottleneck() -> None:

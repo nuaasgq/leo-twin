@@ -130,6 +130,39 @@ def test_task_request_carries_optional_resource_demand_contract() -> None:
         )
 
 
+def test_compute_node_state_carries_optional_resource_usage_contract() -> None:
+    state = ComputeNodeState(
+        node_id="sat-a",
+        sim_time=1.0,
+        capacity=100.0,
+        available_capacity=0.0,
+        status="BUSY",
+        gpu_tflops_fp32=2.0,
+        memory_gb=16.0,
+        storage_gb=2.0,
+        resource_usage_mode="RESOURCE_VECTOR_ESTIMATED",
+        available_gpu_tflops_fp32=0.0,
+        used_gpu_tflops_fp32=2.0,
+        available_memory_gb=12.0,
+        used_memory_gb=4.0,
+        available_storage_gb=1.5,
+        used_storage_gb=0.5,
+    )
+
+    assert state.resource_usage_mode == "RESOURCE_VECTOR_ESTIMATED"
+    assert state.used_gpu_tflops_fp32 == 2.0
+    assert state.available_memory_gb == 12.0
+    with pytest.raises(ValueError, match="used_gpu_tflops_fp32"):
+        ComputeNodeState(
+            node_id="bad-node",
+            sim_time=1.0,
+            capacity=100.0,
+            available_capacity=0.0,
+            status="BUSY",
+            used_gpu_tflops_fp32=-1.0,
+        )
+
+
 def _snapshot() -> WorldSnapshot:
     return WorldSnapshot(
         timestamp=1000.0,

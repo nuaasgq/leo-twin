@@ -228,6 +228,21 @@ def _compute_node_row(node: ComputeNodeState) -> dict[str, JsonValue]:
         "npu_tops_int8": node.npu_tops_int8,
         "memory_gb": node.memory_gb,
         "storage_gb": node.storage_gb,
+        "resource_usage_mode": node.resource_usage_mode,
+        "available_cpu_gflops_fp32": node.available_cpu_gflops_fp32,
+        "used_cpu_gflops_fp32": node.used_cpu_gflops_fp32,
+        "available_cpu_gflops_fp64": node.available_cpu_gflops_fp64,
+        "used_cpu_gflops_fp64": node.used_cpu_gflops_fp64,
+        "available_gpu_tflops_fp32": node.available_gpu_tflops_fp32,
+        "used_gpu_tflops_fp32": node.used_gpu_tflops_fp32,
+        "available_gpu_tflops_fp16": node.available_gpu_tflops_fp16,
+        "used_gpu_tflops_fp16": node.used_gpu_tflops_fp16,
+        "available_npu_tops_int8": node.available_npu_tops_int8,
+        "used_npu_tops_int8": node.used_npu_tops_int8,
+        "available_memory_gb": node.available_memory_gb,
+        "used_memory_gb": node.used_memory_gb,
+        "available_storage_gb": node.available_storage_gb,
+        "used_storage_gb": node.used_storage_gb,
     }
 
 

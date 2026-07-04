@@ -747,6 +747,10 @@ class MetricsCollector:
                 and node.available_capacity < node.capacity
             )
         )
+        vector_usage_reported = any(
+            node.resource_usage_mode == "RESOURCE_VECTOR_ESTIMATED"
+            for node in nodes
+        )
         return {
             "compute_resource_node_count": len(nodes),
             "compute_resource_busy_nodes": busy_nodes,
@@ -754,37 +758,98 @@ class MetricsCollector:
             "compute_resource_total_gflops_fp32": total,
             "compute_resource_available_gflops_fp32": available,
             "compute_resource_used_gflops_fp32": used,
+            "compute_resource_available_cpu_gflops_fp32": _compute_resource_total(
+                nodes,
+                "available_cpu_gflops_fp32",
+            ),
+            "compute_resource_used_cpu_gflops_fp32": _compute_resource_total(
+                nodes,
+                "used_cpu_gflops_fp32",
+            ),
             "compute_resource_total_gflops_fp64": _compute_resource_total(
                 nodes,
                 "cpu_gflops_fp64",
+            ),
+            "compute_resource_available_gflops_fp64": _compute_resource_total(
+                nodes,
+                "available_cpu_gflops_fp64",
+            ),
+            "compute_resource_used_gflops_fp64": _compute_resource_total(
+                nodes,
+                "used_cpu_gflops_fp64",
             ),
             "compute_resource_total_gpu_tflops_fp32": _compute_resource_total(
                 nodes,
                 "gpu_tflops_fp32",
             ),
+            "compute_resource_available_gpu_tflops_fp32": _compute_resource_total(
+                nodes,
+                "available_gpu_tflops_fp32",
+            ),
+            "compute_resource_used_gpu_tflops_fp32": _compute_resource_total(
+                nodes,
+                "used_gpu_tflops_fp32",
+            ),
             "compute_resource_total_gpu_tflops_fp16": _compute_resource_total(
                 nodes,
                 "gpu_tflops_fp16",
+            ),
+            "compute_resource_available_gpu_tflops_fp16": _compute_resource_total(
+                nodes,
+                "available_gpu_tflops_fp16",
+            ),
+            "compute_resource_used_gpu_tflops_fp16": _compute_resource_total(
+                nodes,
+                "used_gpu_tflops_fp16",
             ),
             "compute_resource_total_npu_tops_int8": _compute_resource_total(
                 nodes,
                 "npu_tops_int8",
             ),
+            "compute_resource_available_npu_tops_int8": _compute_resource_total(
+                nodes,
+                "available_npu_tops_int8",
+            ),
+            "compute_resource_used_npu_tops_int8": _compute_resource_total(
+                nodes,
+                "used_npu_tops_int8",
+            ),
             "compute_resource_total_memory_gb": _compute_resource_total(
                 nodes,
                 "memory_gb",
+            ),
+            "compute_resource_available_memory_gb": _compute_resource_total(
+                nodes,
+                "available_memory_gb",
+            ),
+            "compute_resource_used_memory_gb": _compute_resource_total(
+                nodes,
+                "used_memory_gb",
             ),
             "compute_resource_total_storage_gb": _compute_resource_total(
                 nodes,
                 "storage_gb",
             ),
+            "compute_resource_available_storage_gb": _compute_resource_total(
+                nodes,
+                "available_storage_gb",
+            ),
+            "compute_resource_used_storage_gb": _compute_resource_total(
+                nodes,
+                "used_storage_gb",
+            ),
             "compute_resource_vector_capacity_reported": True,
-            "compute_resource_vector_utilization_mode": "SCALAR_FP32_AVAILABLE_ONLY",
+            "compute_resource_vector_utilization_mode": (
+                "RESOURCE_VECTOR_ESTIMATED"
+                if vector_usage_reported
+                else "SCALAR_FP32_AVAILABLE_ONLY"
+            ),
             "compute_resource_utilization": float(utilization),
             "compute_resource_unit": "GFLOPS FP32",
             "compute_resource_proxy_note": (
                 "Legacy scalar compute capacity maps to FP32 GFLOPS; "
-                "resource-vector fields currently report capacity totals only."
+                "resource-vector usage is deterministic estimator output when "
+                "ComputeNodeState reports RESOURCE_VECTOR_ESTIMATED."
             ),
         }
 

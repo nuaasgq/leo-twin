@@ -11,7 +11,10 @@ from leo_twin.models.compute.scheduling import (
     ComputeSchedulingRuntime,
     ComputeWorkloadItem,
 )
-from leo_twin.models.compute.resources import estimate_task_service_time
+from leo_twin.models.compute.resources import (
+    compute_node_resource_usage_fields,
+    estimate_task_service_time,
+)
 from leo_twin.models.traffic import ComputeOutputFlowMetadata
 from leo_twin.schema import (
     ComputeNodeState,
@@ -348,7 +351,13 @@ class RouteAwareComputeEngine(SimulationModule):
             self._event(
                 dispatch_time=decision.start_time,
                 event_type=COMPUTE_NODE_UPDATE,
-                payload=_compute_node_state(node, decision.start_time, 0.0, "BUSY"),
+                payload=_compute_node_state(
+                    node,
+                    decision.start_time,
+                    0.0,
+                    "BUSY",
+                    task,
+                ),
             )
         )
         for target in self._state_update_targets:
@@ -356,7 +365,13 @@ class RouteAwareComputeEngine(SimulationModule):
                 self._event(
                     dispatch_time=decision.start_time,
                     event_type=COMPUTE_NODE_UPDATE,
-                    payload=_compute_node_state(node, decision.start_time, 0.0, "BUSY"),
+                    payload=_compute_node_state(
+                        node,
+                        decision.start_time,
+                        0.0,
+                        "BUSY",
+                        task,
+                    ),
                     target=target,
                 )
             )
@@ -614,6 +629,7 @@ def _compute_node_state(
     sim_time: float,
     available_capacity: float,
     status: str,
+    task: TaskRequest | None = None,
 ) -> ComputeNodeState:
     return ComputeNodeState(
         node_id=node.node_id,
@@ -627,4 +643,5 @@ def _compute_node_state(
         npu_tops_int8=node.npu_tops_int8,
         memory_gb=node.memory_gb,
         storage_gb=node.storage_gb,
+        **compute_node_resource_usage_fields(node, task),
     )
