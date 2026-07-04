@@ -1,5 +1,10 @@
 """Deterministic simplified orbit runtime module."""
 
+from leo_twin.models.orbit.constellation import (
+    AutoPlaneAllocator,
+    ConstellationAllocation,
+    ConstellationProfile,
+)
 from leo_twin.models.orbit.contracts import OrbitSatelliteConfig
 from leo_twin.models.orbit.engine import OrbitEngine
 from leo_twin.models.orbit.ground_track import (
@@ -14,6 +19,9 @@ from leo_twin.models.orbit.keplerian import (
 )
 
 __all__ = [
+    "AutoPlaneAllocator",
+    "ConstellationAllocation",
+    "ConstellationProfile",
     "GroundTrackPoint",
     "J2SecularDriftProfile",
     "KeplerianOrbitEngine",

@@ -48,6 +48,8 @@ class DemoConfig:
     backend_port: int
     compute_capacity: float = 10.0
     orbit_plane_count: int = 12
+    orbit_plane_count_explicit: bool = True
+    constellation_profile: str = "CUSTOM_WALKER"
     orbit_altitude_m: float = 529_000.0
     orbit_inclination_deg: float = 53.0
     flow_demand_capacity: float = 25.0
@@ -100,6 +102,12 @@ def load_demo_config(path: str | Path = DEFAULT_CONFIG_PATH) -> DemoConfig:
         duration_seconds=_int(scenario, "duration_seconds"),
         orbit_tick_seconds=_int(scenario, "orbit_tick_seconds"),
         orbit_plane_count=_optional_int(scenario, "orbit_plane_count", 12),
+        orbit_plane_count_explicit="orbit_plane_count" in scenario,
+        constellation_profile=_optional_str(
+            scenario,
+            "constellation_profile",
+            "CUSTOM_WALKER",
+        ),
         orbit_altitude_m=_optional_float(scenario, "orbit_altitude_m", 529_000.0),
         orbit_inclination_deg=_optional_float(scenario, "orbit_inclination_deg", 53.0),
         network_slot_seconds=_int(scenario, "network_slot_seconds"),
@@ -252,6 +260,8 @@ def demo_config_from_sees_config(
         duration_seconds=config.runtime.duration,
         orbit_tick_seconds=config.scenario.orbit.update_interval_seconds,
         orbit_plane_count=config.scenario.orbit.plane_count,
+        orbit_plane_count_explicit=True,
+        constellation_profile=base.constellation_profile,
         orbit_altitude_m=config.scenario.orbit.altitude_m,
         orbit_inclination_deg=config.scenario.orbit.inclination_deg,
         network_slot_seconds=config.scenario.orbit.update_interval_seconds,

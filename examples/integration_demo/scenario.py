@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from math import ceil, cos, pi, radians, sin
+from math import cos, pi, radians, sin
 
 from leo_twin.models.compute import ComputeNode
 from leo_twin.models.network import GroundEndpoint
-from leo_twin.models.orbit import OrbitSatelliteConfig
+from leo_twin.models.orbit import AutoPlaneAllocator, ConstellationAllocation, OrbitSatelliteConfig
 from leo_twin.schema import (
     CoverageSlot,
     EventType,
@@ -52,8 +52,9 @@ def build_demo_scenario(config: DemoConfig) -> DemoScenario:
     ground_users = _ground_users(config)
     render_users = _ground_user_render_states(config)
     ground_endpoints = _ground_endpoints(render_users)
-    orbit_satellites = _orbit_satellites(config)
-    orbit_elements = _orbit_elements(config)
+    constellation_allocation = _constellation_allocation(config)
+    orbit_satellites = _orbit_satellites(config, constellation_allocation)
+    orbit_elements = _orbit_elements(config, constellation_allocation)
     network_satellites = _network_satellites(config)
     compute_nodes = _compute_nodes(config)
     initial_events = _initial_events(config)
@@ -97,7 +98,7 @@ def build_demo_scenario(config: DemoConfig) -> DemoScenario:
                 "compute_scheduling_policy": config.compute_scheduling_policy,
                 "orbit": {
                     "update_interval_seconds": config.orbit_tick_seconds,
-                    "plane_count": config.orbit_plane_count,
+                    "plane_count": constellation_allocation.plane_count,
                     "altitude_m": config.orbit_altitude_m,
                     "inclination_deg": config.orbit_inclination_deg,
                 },
@@ -151,6 +152,7 @@ def build_demo_scenario(config: DemoConfig) -> DemoScenario:
                 "update_frequency_hz": max(1, 1000 // max(1, config.metric_sample_interval)),
                 "dashboard_layout": "right_panel",
             },
+            "derived_constellation_summary": constellation_allocation.to_summary(),
             "endpoints": {
                 "events": config.websocket_events,
                 "state": config.websocket_state,
@@ -163,43 +165,57 @@ def build_demo_scenario(config: DemoConfig) -> DemoScenario:
     )
 
 
-def _orbit_satellites(config: DemoConfig) -> tuple[OrbitSatelliteConfig, ...]:
-    planes = max(1, min(config.orbit_plane_count, config.satellite_count))
-    satellites_per_plane = max(1, config.satellite_count // planes)
+def _orbit_satellites(
+    config: DemoConfig,
+    allocation: ConstellationAllocation,
+) -> tuple[OrbitSatelliteConfig, ...]:
+    planes = allocation.plane_count
+    satellites_per_plane = allocation.satellites_per_plane
     orbital_radius = 6_371_000.0 + config.orbit_altitude_m
     inclination_scale = config.orbit_inclination_deg / 90.0
     return tuple(
         OrbitSatelliteConfig(
             satellite_id=f"sat-{index:03d}",
-            orbital_radius=orbital_radius + 1_000.0 * (index % satellites_per_plane),
+            orbital_radius=orbital_radius + 1_000.0 * allocation.slot_index(index),
             angular_velocity=0.001 + (index % 5) * 0.00001,
-            phase=((index % satellites_per_plane) / satellites_per_plane) * 2.0 * pi,
-            inclination=((index // satellites_per_plane) / planes) * inclination_scale,
+            phase=(allocation.slot_index(index) / satellites_per_plane) * 2.0 * pi,
+            inclination=(allocation.plane_index(index) / planes) * inclination_scale,
         )
         for index in range(config.satellite_count)
     )
 
 
-def _orbit_elements(config: DemoConfig) -> tuple[OrbitalElementSet, ...]:
-    plane_count = max(1, min(config.orbit_plane_count, config.satellite_count))
-    satellites_per_plane = ceil(config.satellite_count / plane_count)
+def _orbit_elements(
+    config: DemoConfig,
+    allocation: ConstellationAllocation,
+) -> tuple[OrbitalElementSet, ...]:
+    plane_count = allocation.plane_count
+    satellites_per_plane = allocation.satellites_per_plane
     semi_major_axis_km = 6371.0 + config.orbit_altitude_m / 1000.0
     return tuple(
         OrbitalElementSet(
             satellite_id=f"sat-{index:03d}",
             epoch=0.0,
-            semi_major_axis_km=semi_major_axis_km + float(index % satellites_per_plane),
+            semi_major_axis_km=semi_major_axis_km + float(allocation.slot_index(index)),
             eccentricity=0.001,
             inclination_deg=config.orbit_inclination_deg,
-            raan_deg=((index % plane_count) * 360.0 / plane_count) % 360.0,
+            raan_deg=(allocation.plane_index(index) * 360.0 / plane_count) % 360.0,
             argument_of_perigee_deg=0.0,
             mean_anomaly_deg=(
-                (index // plane_count) * 360.0 / satellites_per_plane
-                + (index % plane_count) * 0.5
+                allocation.slot_index(index) * 360.0 / satellites_per_plane
+                + allocation.plane_index(index) * 0.5
             )
             % 360.0,
         )
         for index in range(config.satellite_count)
+    )
+
+
+def _constellation_allocation(config: DemoConfig) -> ConstellationAllocation:
+    return AutoPlaneAllocator.allocate(
+        satellite_count=config.satellite_count,
+        plane_count=config.orbit_plane_count if config.orbit_plane_count_explicit else None,
+        profile=config.constellation_profile,
     )
 
 

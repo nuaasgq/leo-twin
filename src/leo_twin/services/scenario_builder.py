@@ -5,10 +5,15 @@ from __future__ import annotations
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass, fields
-from math import ceil, cos, isfinite, radians, sin
+from math import cos, isfinite, radians, sin
 from pathlib import Path
 from typing import Any
 
+from leo_twin.models.orbit import (
+    AutoPlaneAllocator,
+    ConstellationAllocation,
+    ConstellationProfile,
+)
 from leo_twin.schema import (
     ApplicationProtocol,
     DataLinkProtocol,
@@ -37,6 +42,8 @@ class FullSystemScenarioBuilderConfig:
     flow_count: int = 100
     compute_scheduling_policy: str = "FIFO"
     orbit_plane_count: int = 6
+    orbit_plane_count_explicit: bool = True
+    constellation_profile: str = ConstellationProfile.CUSTOM_WALKER.value
     orbit_propagation_model: str = "KEPLERIAN"
     epoch: float = 0.0
     earth_rotation_rate_rad_s: float = 0.0
@@ -82,13 +89,19 @@ class FullSystemScenarioBuilderConfig:
             "orbit_plane_count",
         ):
             _require_positive_int(getattr(self, field_name), field_name)
+        _require_bool(self.orbit_plane_count_explicit, "orbit_plane_count_explicit")
         _require_non_negative_int(self.flow_count, "flow_count")
         object.__setattr__(
             self,
             "compute_scheduling_policy",
             _compute_scheduling_policy(str(self.compute_scheduling_policy)),
         )
-        if self.orbit_plane_count > self.satellite_count:
+        object.__setattr__(
+            self,
+            "constellation_profile",
+            ConstellationProfile(str(self.constellation_profile)).value,
+        )
+        if self.orbit_plane_count_explicit and self.orbit_plane_count > self.satellite_count:
             raise ValueError("orbit_plane_count must be <= satellite_count")
         object.__setattr__(
             self,
@@ -210,6 +223,7 @@ class GeneratedFullSystemScenario:
     compute_nodes: tuple[ComputeNodeSpec, ...]
     flows: tuple[FlowRequest, ...]
     tasks: tuple[TaskRequest, ...]
+    constellation_summary: dict[str, int | str | bool]
 
 
 def build_full_system_scenario(
@@ -223,6 +237,7 @@ def build_full_system_scenario(
         compute_nodes=_compute_nodes(config),
         flows=_flow_requests(config),
         tasks=_task_requests(config),
+        constellation_summary=_constellation_allocation(config).to_summary(),
     )
 
 
@@ -256,7 +271,7 @@ def write_full_system_scenario_builder_config(
 
 def scenario_builder_config_to_mapping(
     config: FullSystemScenarioBuilderConfig,
-) -> dict[str, int | float | str]:
+) -> dict[str, int | float | str | bool]:
     """Return a deterministic JSON-compatible scenario builder config."""
 
     if not isinstance(config, FullSystemScenarioBuilderConfig):
@@ -278,7 +293,10 @@ def scenario_builder_config_from_mapping(
     unknown_fields = tuple(sorted(set(data) - allowed_fields))
     if unknown_fields:
         raise ValueError(f"unknown scenario builder fields: {', '.join(unknown_fields)}")
-    return FullSystemScenarioBuilderConfig(**dict(data))
+    values = dict(data)
+    if "orbit_plane_count" not in values and "orbit_plane_count_explicit" not in values:
+        values["orbit_plane_count_explicit"] = False
+    return FullSystemScenarioBuilderConfig(**values)
 
 
 def scenario_builder_config_from_sees_config(
@@ -338,15 +356,16 @@ def scenario_builder_config_from_sees_config(
 def _orbit_elements(
     config: FullSystemScenarioBuilderConfig,
 ) -> tuple[OrbitalElementSet, ...]:
-    satellites_per_plane = ceil(config.satellite_count / config.orbit_plane_count)
+    allocation = _constellation_allocation(config)
+    satellites_per_plane = allocation.satellites_per_plane
     raan_offset = _wrap_degrees(config.seed % 360)
     anomaly_offset = _wrap_degrees((config.seed * 7) % 360)
     elements: list[OrbitalElementSet] = []
     for satellite_index in range(config.satellite_count):
-        plane_index = satellite_index % config.orbit_plane_count
-        slot_index = satellite_index // config.orbit_plane_count
+        plane_index = allocation.plane_index(satellite_index)
+        slot_index = allocation.slot_index(satellite_index)
         raan_deg = _wrap_degrees(
-            raan_offset + plane_index * 360.0 / config.orbit_plane_count
+            raan_offset + plane_index * 360.0 / allocation.plane_count
         )
         mean_anomaly_deg = _wrap_degrees(
             anomaly_offset + slot_index * 360.0 / satellites_per_plane
@@ -364,6 +383,16 @@ def _orbit_elements(
             )
         )
     return tuple(elements)
+
+
+def _constellation_allocation(
+    config: FullSystemScenarioBuilderConfig,
+) -> ConstellationAllocation:
+    return AutoPlaneAllocator.allocate(
+        satellite_count=config.satellite_count,
+        plane_count=config.orbit_plane_count if config.orbit_plane_count_explicit else None,
+        profile=config.constellation_profile,
+    )
 
 
 def _ground_endpoints(
@@ -472,6 +501,11 @@ def _require_non_negative_int(value: Any, field_name: str) -> None:
     _require_int(value, field_name)
     if value < 0:
         raise ValueError(f"{field_name} must be non-negative")
+
+
+def _require_bool(value: Any, field_name: str) -> None:
+    if not isinstance(value, bool):
+        raise TypeError(f"{field_name} must be a bool")
 
 
 def _require_finite_number(value: Any, field_name: str) -> None:

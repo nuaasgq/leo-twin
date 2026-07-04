@@ -171,6 +171,8 @@ def test_load_full_system_scenario_builder_config_from_json(tmp_path) -> None:
     assert config.flow_count == 3
     assert config.compute_scheduling_policy == "FIFO"
     assert config.orbit_plane_count == 2
+    assert config.orbit_plane_count_explicit is True
+    assert config.constellation_profile == "CUSTOM_WALKER"
     assert config.orbit_propagation_model == "KEPLERIAN"
     assert config.earth_rotation_rate_rad_s == 0.0
     assert config.space_link_max_range_km == 0.0
@@ -213,6 +215,32 @@ def test_write_full_system_scenario_builder_config_round_trips(tmp_path) -> None
     assert json.loads(config_path.read_text(encoding="utf-8")) == (
         scenario_builder_config_to_mapping(config)
     )
+
+
+def test_full_system_scenario_builder_auto_allocates_starlink_like_planes() -> None:
+    config = scenario_builder_config_from_mapping(
+        {
+            "satellite_count": 1584,
+            "user_count": 10,
+            "compute_node_count": 4,
+            "flow_count": 4,
+            "constellation_profile": "STARLINK_SHELL_1_LIKE",
+        }
+    )
+
+    scenario = build_full_system_scenario(config)
+
+    assert config.orbit_plane_count_explicit is False
+    assert scenario.constellation_summary["profile"] == "STARLINK_SHELL_1_LIKE"
+    assert scenario.constellation_summary["plane_count"] == 72
+    assert scenario.constellation_summary["satellites_per_plane"] == 22
+    assert scenario.constellation_summary["model_note"] == (
+        "Approximate Starlink Shell 1-like plane allocation; not exact Starlink fidelity."
+    )
+    assert scenario.orbit_elements[72].raan_deg == scenario.orbit_elements[0].raan_deg
+    assert scenario.orbit_elements[72].mean_anomaly_deg != scenario.orbit_elements[
+        0
+    ].mean_anomaly_deg
 
 
 def test_scenario_builder_config_from_sees_config_maps_control_plane_fields() -> None:

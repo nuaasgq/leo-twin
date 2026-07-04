@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from math import pi
+
 import pytest
 
 from examples.integration_demo.config import DemoConfig
@@ -56,6 +58,37 @@ def test_demo_scenario_uses_configured_orbit_parameters() -> None:
         120.0,
         240.0,
     }
+
+
+def test_demo_scenario_auto_allocates_starlink_like_planes_when_not_explicit() -> None:
+    scenario = build_demo_scenario(
+        _demo_config(
+            satellite_count=300,
+            orbit_plane_count_explicit=False,
+            constellation_profile="STARLINK_SHELL_1_LIKE",
+        )
+    )
+
+    summary = scenario.frontend_config["derived_constellation_summary"]
+
+    assert summary == {
+        "profile": "STARLINK_SHELL_1_LIKE",
+        "satellite_count": 300,
+        "plane_count": 30,
+        "satellites_per_plane": 10,
+        "total_slots": 300,
+        "plane_count_explicit": False,
+        "model_note": (
+            "Approximate Starlink Shell 1-like plane allocation; "
+            "not exact Starlink fidelity."
+        ),
+    }
+    assert scenario.frontend_config["scenario"]["orbit"]["plane_count"] == 30
+    assert scenario.orbit_elements[30].raan_deg == pytest.approx(
+        scenario.orbit_elements[0].raan_deg
+    )
+    assert scenario.orbit_elements[30].mean_anomaly_deg == pytest.approx(36.0)
+    assert scenario.orbit_satellites[30].phase == pytest.approx(2.0 * pi / 10.0)
 
 
 def test_demo_flow_requests_target_compute_nodes() -> None:
