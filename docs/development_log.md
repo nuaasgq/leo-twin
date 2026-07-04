@@ -59,7 +59,7 @@ change.
 ## 2026-07-04 - Windows Launcher Readiness Fix
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`
-- Commit: pending in this task
+- Commit: `686894d`
 - Scope: fix launcher startup when Node.js is available only through the
   bundled Codex runtime and delay browser opening until service ports are
   actually ready.
@@ -90,6 +90,60 @@ change.
     service logs and show health status in one window.
 - Recommended follow-up:
   - Add log files or a small local tray UI for backend/frontend process output.
+
+## 2026-07-04 - 1200 Node Live Control Stabilization
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending in this task
+- Scope: keep 1200-satellite live runtime responsive after batch orbit updates
+  by bounding server-side advance loop work and avoiding detailed space-space
+  link updates for very large orbit batches.
+- Changed files/modules:
+  - `src/leo_twin/runtime/session.py`
+  - `src/leo_twin/runtime/advance_loop.py`
+  - `src/leo_twin/models/network/position_engine.py`
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/replay.py`
+  - `tests/integration/test_live_runtime_streaming.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/integration/test_live_runtime_streaming.py::test_large_batch_runtime_keeps_snapshot_and_controls_responsive -q`
+    - Result: passed.
+  - `python -m pytest tests/integration/test_live_runtime_streaming.py tests/integration/test_runtime_session_control.py tests/integration/test_orbit_batch_scale.py tests/unit/test_position_driven_network_engine.py tests/unit/test_metrics_module.py -q`
+    - Result: passed, 55 tests.
+  - 1200-satellite WebSocket control smoke against local demo server:
+    - `INITIALIZE`: acknowledged in 118 ms.
+    - `/metrics/snapshot`: returned 1200 satellites.
+    - `START`: acknowledged in 57 ms.
+    - `/stream/state`: first satellite-bearing frame contained 1200 satellites.
+    - `PAUSE`: acknowledged in 63 ms.
+    - `STOP`: acknowledged in 62 ms.
+    - `RESET`: acknowledged in 186 ms.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test`
+    - Result: passed, 22 files / 78 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+  - `git diff --check -- . ':(exclude)configs/generated_full_system_demo.json' ':(exclude)configs/sees_control.yaml'`
+    - Result: passed.
+- Problems encountered:
+  - Reproduction showed `INITIALIZE` and `START` returned quickly, but `PAUSE`
+    did not acknowledge within 30 seconds because the background advance loop
+    held the session lock while processing a large same-time network batch.
+  - The initial live snapshot had no satellites because `DemoStateProjector`
+    started empty and the control plane did not expose session snapshots while
+    lifecycle state was `INITIALIZED`.
+  - The active local workspace config files were modified by runtime control
+    tests and remain excluded from the commit scope.
+- Known remaining issues:
+  - Large batches still update satellite state and star-ground access, but
+    detailed space-space link updates are skipped once a batch exceeds the
+    configured threshold. This keeps live control responsive but is not a
+    high-fidelity ISL scale model.
+- Recommended follow-up:
+  - Add a frontend-visible fidelity notice explaining when large-scale mode
+    skips detailed space-space link updates.
 
 ## 2026-07-04 - Scale Firebreak v1
 

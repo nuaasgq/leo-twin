@@ -65,6 +65,7 @@ class PositionDrivenNetworkEngine(SimulationModule):
         space_link_update_latency_epsilon_s: float = 0.0,
         space_link_update_capacity_epsilon: float = 0.0,
         position_scale_to_km: float = 1.0,
+        batch_space_link_update_limit: int = 999,
     ) -> None:
         _require_non_empty_str(module_name, "module_name")
         _require_non_empty_str(metrics_target, "metrics_target")
@@ -86,6 +87,7 @@ class PositionDrivenNetworkEngine(SimulationModule):
             "space_link_update_capacity_epsilon",
         )
         _require_positive_number(position_scale_to_km, "position_scale_to_km")
+        _require_positive_int(batch_space_link_update_limit, "batch_space_link_update_limit")
         compute_nodes = tuple(sorted(str(item) for item in compute_node_ids))
         if not compute_nodes or any(not item for item in compute_nodes):
             raise ValueError("compute_node_ids must contain non-empty ids")
@@ -124,6 +126,7 @@ class PositionDrivenNetworkEngine(SimulationModule):
         self._space_link_update_latency_epsilon_s = float(space_link_update_latency_epsilon_s)
         self._space_link_update_capacity_epsilon = float(space_link_update_capacity_epsilon)
         self._position_scale_to_km = float(position_scale_to_km)
+        self._batch_space_link_update_limit = int(batch_space_link_update_limit)
         self._satellite_states: dict[str, SatelliteState] = {}
         self._satellite_space_cells: dict[str, SpaceCellId] = {}
         self._satellites_by_space_cell: dict[SpaceCellId, set[str]] = {}
@@ -326,6 +329,15 @@ class PositionDrivenNetworkEngine(SimulationModule):
         state: SatelliteState,
         dispatch_time: float,
     ) -> tuple[SimEvent, ...]:
+        emitted = list(self._update_access_for_state(state, dispatch_time))
+        emitted.extend(self._update_space_links_for_state(state, dispatch_time))
+        return tuple(emitted)
+
+    def _update_access_for_state(
+        self,
+        state: SatelliteState,
+        dispatch_time: float,
+    ) -> tuple[SimEvent, ...]:
         emitted: list[SimEvent] = []
         candidates = self._access_model.compute_access((state,))
         next_keys = {
@@ -376,7 +388,6 @@ class PositionDrivenNetworkEngine(SimulationModule):
                     link=link,
                 )
             )
-        emitted.extend(self._update_space_links_for_state(state, dispatch_time))
         return tuple(emitted)
 
     def _update_for_batch(
@@ -390,8 +401,11 @@ class PositionDrivenNetworkEngine(SimulationModule):
             self._update_space_index(state)
 
         emitted: list[SimEvent] = []
+        update_space_links = len(geometry_states) <= self._batch_space_link_update_limit
         for state in geometry_states:
-            emitted.extend(self._update_for_state(state, dispatch_time))
+            emitted.extend(self._update_access_for_state(state, dispatch_time))
+            if update_space_links:
+                emitted.extend(self._update_space_links_for_state(state, dispatch_time))
         return tuple(emitted)
 
     def _update_space_links_for_state(
@@ -783,6 +797,13 @@ def _require_finite_number(value: Any, field_name: str) -> None:
 
 def _require_positive_number(value: Any, field_name: str) -> None:
     _require_finite_number(value, field_name)
+    if value <= 0:
+        raise ValueError(f"{field_name} must be positive")
+
+
+def _require_positive_int(value: Any, field_name: str) -> None:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise TypeError(f"{field_name} must be an int")
     if value <= 0:
         raise ValueError(f"{field_name} must be positive")
 

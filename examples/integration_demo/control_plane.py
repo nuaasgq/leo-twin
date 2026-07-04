@@ -19,6 +19,8 @@ from leo_twin.runtime import (
     parse_control_command,
 )
 from leo_twin.schema.config_loader import write_config
+from leo_twin.models.orbit import KeplerianOrbitEngine
+from leo_twin.schema import SatelliteState
 from leo_twin.services.control import (
     RuntimeController,
     ScaleSafetyChecker,
@@ -116,6 +118,7 @@ class DemoControlPlane:
     def visible_snapshot(self) -> dict[str, JsonValue]:
         session = self._require_session()
         if self._initialized and session.lifecycle_state in {
+            RuntimeLifecycleState.INITIALIZED,
             RuntimeLifecycleState.RUNNING,
             RuntimeLifecycleState.PAUSED,
             RuntimeLifecycleState.COMPLETED,
@@ -261,15 +264,18 @@ class DemoControlPlane:
         ) -> RuntimeKernelSpec:
             context = build_integration_demo_runtime(config)
             self._runtime_context = context
+            initial_satellites = _initial_satellite_states(config, context)
             return RuntimeKernelSpec(
                 kernel=context.kernel,
                 initial_events=context.scenario.initial_events,
                 snapshot_projector=DemoStateProjector(
                     context.scenario.ground_user_render_states,
                     config.state_snapshot_interval_events,
+                    initial_satellites=initial_satellites,
                 ),
                 initial_snapshot=_initial_snapshot_from_ground_users(
-                    context.scenario.ground_user_render_states
+                    context.scenario.ground_user_render_states,
+                    initial_satellites,
                 ),
             )
 
@@ -292,6 +298,7 @@ class DemoControlPlane:
                 max_batch_size=100_000,
             ),
             tick_interval_seconds=0.01,
+            max_sim_delta_per_tick=1.0,
         )
 
     def advance_loop_snapshot(self) -> dict[str, Any]:
@@ -363,9 +370,21 @@ def _initial_snapshot(result: DemoRunResult) -> dict[str, JsonValue]:
     return _initial_snapshot_from_ground_users(result.scenario.ground_user_render_states)
 
 
-def _initial_snapshot_from_ground_users(ground_users: tuple[Any, ...]) -> dict[str, JsonValue]:
+def _initial_snapshot_from_ground_users(
+    ground_users: tuple[Any, ...],
+    satellites: tuple[SatelliteState, ...] = (),
+) -> dict[str, JsonValue]:
     return {
-        "satellites": [],
+        "satellites": [
+            {
+                "satellite_id": satellite.satellite_id,
+                "sim_time": satellite.sim_time,
+                "position": list(satellite.position),
+                "velocity": list(satellite.velocity),
+                "status": satellite.status,
+            }
+            for satellite in sorted(satellites, key=lambda item: item.satellite_id)
+        ],
         "ground_users": [
             {
                 "user_id": user.user_id,
@@ -383,6 +402,19 @@ def _initial_snapshot_from_ground_users(ground_users: tuple[Any, ...]) -> dict[s
         "event_count": 0,
         "last_sim_time": 0.0,
     }
+
+
+def _initial_satellite_states(
+    config: DemoConfig,
+    context: DemoRuntimeContext,
+) -> tuple[SatelliteState, ...]:
+    return KeplerianOrbitEngine(
+        elements=context.scenario.orbit_elements,
+        update_targets=("metrics",),
+        earth_rotation_rate_rad_s=0.000072921159,
+        state_vector_scale=1000.0,
+        update_mode=config.orbit_update_mode,
+    ).states_at(0.0)
 
 
 def _frontend_event_batch(

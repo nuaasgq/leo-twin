@@ -53,14 +53,20 @@ class SessionAdvanceLoop:
         snapshot_stream: StreamBuffer[object] | None = None,
         stream_policy: StreamBackpressurePolicy | None = None,
         tick_interval_seconds: float = 0.05,
+        max_sim_delta_per_tick: float | None = None,
     ) -> None:
         if tick_interval_seconds <= 0.0:
             raise ValueError("tick_interval_seconds must be positive")
+        if max_sim_delta_per_tick is not None and max_sim_delta_per_tick <= 0.0:
+            raise ValueError("max_sim_delta_per_tick must be positive when provided")
         policy = stream_policy or StreamBackpressurePolicy()
         self._session = session
         self._event_stream = event_stream or StreamBuffer(policy)
         self._snapshot_stream = snapshot_stream or StreamBuffer(policy)
         self._tick_interval_seconds = float(tick_interval_seconds)
+        self._max_sim_delta_per_tick = (
+            None if max_sim_delta_per_tick is None else float(max_sim_delta_per_tick)
+        )
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
         self._state = AdvanceLoopState.STOPPED
@@ -118,11 +124,13 @@ class SessionAdvanceLoop:
         if lifecycle != RuntimeLifecycleState.RUNNING:
             self._publish_pending_session_records()
             return ()
-        events = (
-            self._session.advance_control_step()
-            if self._session.get_status().deterministic_replay
-            else self._session.advance()
-        )
+        status = self._session.get_status()
+        if status.deterministic_replay:
+            events = self._session.advance_control_step()
+        elif self._max_sim_delta_per_tick is not None:
+            events = self._session.advance_bounded(self._max_sim_delta_per_tick)
+        else:
+            events = self._session.advance()
         self._publish_pending_session_records()
         return events
 

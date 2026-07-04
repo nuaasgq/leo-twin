@@ -34,10 +34,14 @@ class DemoStateProjector:
         self,
         ground_users: tuple[GroundUserRenderState, ...],
         snapshot_interval_events: int,
+        initial_satellites: tuple[SatelliteState, ...] = (),
     ) -> None:
         self._ground_users = tuple(sorted(ground_users, key=lambda user: user.user_id))
         self._snapshot_interval_events = snapshot_interval_events
-        self._satellites: dict[str, SatelliteState] = {}
+        self._satellites: dict[str, SatelliteState] = {
+            state.satellite_id: state
+            for state in sorted(initial_satellites, key=lambda item: item.satellite_id)
+        }
         self._links: dict[tuple[str, str], LinkState] = {}
         self._routes: dict[str, Route] = {}
         self._tasks: dict[str, TaskState] = {}

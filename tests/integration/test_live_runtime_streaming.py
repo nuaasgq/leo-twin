@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+import queue
+import threading
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, TypeVar
 
 from examples.integration_demo.config import DemoConfig
 from examples.integration_demo.control_plane import DemoControlPlane
@@ -81,6 +83,62 @@ def test_reset_replaces_session_and_clears_stream_buffers(tmp_path: Path) -> Non
     assert control_plane.advance_loop_snapshot()["event_stream"]["retained_count"] == 0
     assert control_plane.advance_loop_snapshot()["snapshot_stream"]["retained_count"] == 0
     assert control_plane.stream_event_batch(cursor=0)["items"] == []
+
+
+def test_large_batch_runtime_keeps_snapshot_and_controls_responsive(tmp_path: Path) -> None:
+    control_plane = _control_plane(tmp_path)
+    initialize_ack = control_plane.handle_raw_message(
+        json.dumps(
+            {
+                "type": "RUNTIME_CONTROL",
+                "action": "INITIALIZE",
+                "payload": {
+                    "satellite_count": 1200,
+                    "user_count": 20,
+                    "compute_nodes": 1200,
+                    "duration": 120,
+                    "orbit": {
+                        "update_interval_seconds": 60,
+                        "plane_count": 12,
+                        "altitude_m": 550_000.0,
+                        "inclination_deg": 53.0,
+                    },
+                    "traffic_model": {
+                        "flow_interval_seconds": 60,
+                        "task_interval_seconds": 60,
+                        "flow_demand_capacity": 25.0,
+                        "task_compute_demand": 20.0,
+                        "task_data_size": 2.0,
+                    },
+                },
+            }
+        )
+    )
+
+    assert initialize_ack["ok"] is True
+    assert len(control_plane.visible_snapshot()["satellites"]) == 1200
+
+    start_ack = control_plane.handle_raw_message(
+        json.dumps({"type": "RUNTIME_CONTROL", "action": "START"})
+    )
+    assert start_ack["ok"] is True
+    pause_ack = _call_with_timeout(
+        lambda: control_plane.handle_raw_message(
+            json.dumps({"type": "RUNTIME_CONTROL", "action": "PAUSE"})
+        ),
+        timeout_seconds=10.0,
+    )
+    assert pause_ack["ok"] is True
+    assert pause_ack["status"]["status"] == "PAUSED"
+
+    stop_ack = _call_with_timeout(
+        lambda: control_plane.handle_raw_message(
+            json.dumps({"type": "RUNTIME_CONTROL", "action": "STOP"})
+        ),
+        timeout_seconds=10.0,
+    )
+    assert stop_ack["ok"] is True
+    assert stop_ack["status"]["status"] == "STOPPED"
 
 
 def test_http_cursor_batches_return_incremental_events(tmp_path: Path) -> None:
@@ -238,6 +296,29 @@ def _deterministic_replay_sequence() -> tuple[int, ...]:
     loop.publish_pending()
     loop.run_until_idle()
     return tuple(int(event.event_id) for event in loop.event_stream.read_after(0).items)
+
+
+T = TypeVar("T")
+
+
+def _call_with_timeout(callback: Callable[[], T], timeout_seconds: float) -> T:
+    results: queue.Queue[tuple[str, T | BaseException]] = queue.Queue(maxsize=1)
+
+    def run() -> None:
+        try:
+            results.put(("result", callback()))
+        except BaseException as exc:  # noqa: BLE001 - re-raised below
+            results.put(("error", exc))
+
+    thread = threading.Thread(target=run, daemon=True)
+    thread.start()
+    thread.join(timeout_seconds)
+    if thread.is_alive():
+        raise AssertionError("control command did not respond before timeout")
+    kind, value = results.get_nowait()
+    if kind == "error":
+        raise value  # type: ignore[misc]
+    return value  # type: ignore[return-value]
 
 
 def _kernel_factory(

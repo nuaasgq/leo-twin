@@ -253,6 +253,22 @@ class SimulationSession:
             )
             return self._run_until(target)
 
+    def advance_bounded(self, max_delta_seconds: float) -> tuple[SimEvent, ...]:
+        """Advance toward wall-clock time, capped by one bounded sim-time step."""
+
+        if max_delta_seconds <= 0.0:
+            raise ValueError("max_delta_seconds must be positive")
+        with self._lock:
+            if self._lifecycle_state != RuntimeLifecycleState.RUNNING:
+                return ()
+            current = self._current_sim_time()
+            wall_target = self._clock.target_sim_time(current)
+            bounded_target = self._clock.deterministic_target(
+                current,
+                max_delta_seconds,
+            )
+            return self._run_until(min(wall_target, bounded_target))
+
     def advance_control_step(self) -> tuple[SimEvent, ...]:
         with self._lock:
             if self._lifecycle_state != RuntimeLifecycleState.RUNNING:
