@@ -5,6 +5,46 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - NASA Satellite Kit Asset Pipeline v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending in this commit
+- Scope: replace the primary Cesium satellite display with bundled, licensed
+  NASA Satellite Kit GLB assets while preserving the deterministic fallback
+  satellite-part helper used by tests.
+- Changed files/modules:
+  - `frontend/public/assets/nasa-satellite-kit/README.md`
+  - `frontend/public/assets/nasa-satellite-kit/satellite-kit-body-2.glb`
+  - `frontend/public/assets/nasa-satellite-kit/satellite-kit-wings-2.glb`
+  - `frontend/public/assets/nasa-satellite-kit/satellite-kit-radio-1.glb`
+  - `frontend/src/3d/orbit_renderer/satelliteModelEntities.ts`
+  - `frontend/tests/satelliteVisuals.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- satelliteVisuals.test.ts`
+    - Result: passed, 22 files / 96 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - Direct Node filesystem imports in the frontend test compile failed because
+    the frontend TypeScript config intentionally does not include Node runtime
+    types. The test was kept browser/Vite-compatible and now validates the
+    model asset contract through exported GLB URIs.
+  - Asset source and usage guidance were verified from NASA 3D Resources and
+    recorded with SHA-256 hashes in the asset README. NASA media and brand
+    usage guidance still applies.
+  - The active local runtime config files remain modified and excluded.
+- Known remaining issues:
+  - The bundled satellite is a generic NASA Satellite Kit visual, not an exact
+    Starlink bus model.
+  - Cesium GLB loading still needs browser screenshot/canvas visual regression
+    coverage in a later task.
+- Recommended follow-up:
+  - Add automated visual QA for GLB loading, satellite orientation, and
+    distance-based level-of-detail behavior in the 3D globe.
+
 ## 2026-07-05 - Ten Hour Product Enrichment Plan
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`

@@ -2,6 +2,7 @@ import {
   Cartesian3,
   Color,
   ConstantPositionProperty,
+  ConstantProperty,
   DistanceDisplayCondition,
   Entity,
   EntityCollection
@@ -14,6 +15,29 @@ const MODEL_DISPLAY_DISTANCE = new DistanceDisplayCondition(0, 22_000_000);
 const BUS_DIMENSIONS = new Cartesian3(120_000, 72_000, 72_000);
 const PANEL_DIMENSIONS = new Cartesian3(168_000, 9_000, 88_000);
 const SENSOR_RADII = new Cartesian3(38_000, 38_000, 22_000);
+const NASA_SATELLITE_KIT_SCALE = 90_000;
+const NASA_SATELLITE_KIT_MINIMUM_PIXEL_SIZE = 44;
+const NASA_SATELLITE_KIT_MAXIMUM_SCALE = 180_000;
+
+export interface SatelliteModelAsset {
+  idSuffix: string;
+  uri: string;
+}
+
+export const NASA_SATELLITE_KIT_MODEL_PARTS: readonly SatelliteModelAsset[] = [
+  {
+    idSuffix: "body",
+    uri: "/assets/nasa-satellite-kit/satellite-kit-body-2.glb"
+  },
+  {
+    idSuffix: "wings",
+    uri: "/assets/nasa-satellite-kit/satellite-kit-wings-2.glb"
+  },
+  {
+    idSuffix: "radio",
+    uri: "/assets/nasa-satellite-kit/satellite-kit-radio-1.glb"
+  }
+];
 
 export type SatelliteModelPartKind =
   | "bus"
@@ -66,7 +90,9 @@ export function buildSatelliteModelParts(
 }
 
 export function satelliteModelEntityIds(satellite: SatelliteState): readonly string[] {
-  return buildSatelliteModelParts(satellite).map((part) => part.id);
+  return NASA_SATELLITE_KIT_MODEL_PARTS.map((asset) =>
+    satelliteModelAssetId(satellite.satellite_id, asset.idSuffix)
+  );
 }
 
 export function upsertSatelliteModelEntities(
@@ -76,22 +102,53 @@ export function upsertSatelliteModelEntities(
 ): readonly string[] {
   const active = satellite.status.toLowerCase() !== "offline";
   const activeIds: string[] = [];
-  for (const part of buildSatelliteModelParts(satellite)) {
-    activeIds.push(part.id);
-    const position = Cartesian3.fromElements(
-      part.position[0],
-      part.position[1],
-      part.position[2]
-    );
-    let entity = cache.get(part.id);
+  const position = Cartesian3.fromElements(
+    satellite.position[0],
+    satellite.position[1],
+    satellite.position[2]
+  );
+  for (const asset of NASA_SATELLITE_KIT_MODEL_PARTS) {
+    const id = satelliteModelAssetId(satellite.satellite_id, asset.idSuffix);
+    activeIds.push(id);
+    let entity = cache.get(id);
     if (!entity) {
-      entity = entities.add(satelliteModelEntityOptions(satellite, part, position));
-      cache.set(part.id, entity);
+      entity = entities.add(satelliteModelAssetEntityOptions(satellite, asset, id, position));
+      cache.set(id, entity);
     }
     entity.position = new ConstantPositionProperty(position);
-    entity.show = active || part.kind === "bus";
+    entity.show = active;
+    if (entity.model) {
+      entity.model.uri = new ConstantProperty(asset.uri);
+      entity.model.scale = new ConstantProperty(NASA_SATELLITE_KIT_SCALE);
+      entity.model.minimumPixelSize = new ConstantProperty(
+        NASA_SATELLITE_KIT_MINIMUM_PIXEL_SIZE
+      );
+      entity.model.maximumScale = new ConstantProperty(NASA_SATELLITE_KIT_MAXIMUM_SCALE);
+    }
   }
   return activeIds;
+}
+
+function satelliteModelAssetEntityOptions(
+  satellite: SatelliteState,
+  asset: SatelliteModelAsset,
+  id: string,
+  position: Cartesian3
+): Entity.ConstructorOptions {
+  return {
+    id,
+    name: `${satellite.satellite_id} ${asset.idSuffix}`,
+    position,
+    model: {
+      uri: asset.uri,
+      scale: NASA_SATELLITE_KIT_SCALE,
+      minimumPixelSize: NASA_SATELLITE_KIT_MINIMUM_PIXEL_SIZE,
+      maximumScale: NASA_SATELLITE_KIT_MAXIMUM_SCALE,
+      distanceDisplayCondition: MODEL_DISPLAY_DISTANCE,
+      silhouetteColor: Color.fromCssColorString("#9be7ff").withAlpha(0.72),
+      silhouetteSize: 1.2
+    }
+  };
 }
 
 function satelliteModelEntityOptions(
@@ -165,6 +222,10 @@ function satelliteModelPartId(
   kind: SatelliteModelPartKind
 ): string {
   return `satellite-model:${satelliteId}:${kind}`;
+}
+
+function satelliteModelAssetId(satelliteId: string, suffix: string): string {
+  return `satellite-model:nasa-kit:${satelliteId}:${suffix}`;
 }
 
 function tangentBasis(

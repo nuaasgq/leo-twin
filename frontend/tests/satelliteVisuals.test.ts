@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  NASA_SATELLITE_KIT_MODEL_PARTS,
   buildSatelliteModelParts,
   satelliteModelEntityIds
 } from "../src/3d/orbit_renderer/satelliteModelEntities";
@@ -19,7 +20,7 @@ import {
 import { SatelliteState } from "../src/core/event_types";
 
 describe("satellite model entities", () => {
-  it("builds a deterministic multi-part 3D satellite display model", () => {
+  it("builds a deterministic fallback multi-part satellite display model", () => {
     const parts = buildSatelliteModelParts(satelliteA);
 
     expect(parts.map((part) => part.kind)).toEqual([
@@ -29,12 +30,27 @@ describe("satellite model entities", () => {
       "antenna",
       "sensor"
     ]);
-    expect(parts.map((part) => part.id)).toEqual(satelliteModelEntityIds(satelliteA));
     expect(parts[0].position).toEqual([7_000_000, 0, 0]);
     expect(parts[1].position).toEqual([7_000_000, 0, -126_000]);
     expect(parts[2].position).toEqual([7_000_000, 0, 126_000]);
     expect(parts[3].position).toEqual([7_082_000, 0, 0]);
     expect(parts[4].position).toEqual([6_934_000, 0, 0]);
+  });
+
+  it("uses bundled NASA Satellite Kit GLB assets for the primary satellite model", () => {
+    expect(NASA_SATELLITE_KIT_MODEL_PARTS.map((asset) => asset.idSuffix)).toEqual([
+      "body",
+      "wings",
+      "radio"
+    ]);
+    expect(satelliteModelEntityIds(satelliteA)).toEqual([
+      "satellite-model:nasa-kit:sat-a:body",
+      "satellite-model:nasa-kit:sat-a:wings",
+      "satellite-model:nasa-kit:sat-a:radio"
+    ]);
+    for (const asset of NASA_SATELLITE_KIT_MODEL_PARTS) {
+      expect(asset.uri).toMatch(/^\/assets\/nasa-satellite-kit\/.+\.glb$/);
+    }
   });
 });
 
