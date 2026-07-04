@@ -382,6 +382,7 @@ def test_initialize_writes_config_and_start_gates_streams(tmp_path) -> None:
     assert init_ack["generated_config"]["satellite_count"] == 24
     assert init_ack["generated_config"]["user_count"] == 40
     assert control_plane.result.config.satellite_count == 24
+    assert control_plane.result.processed_events == ()
     assert control_plane.stream_events() == ()
 
     start_ack = control_plane.handle_raw_message(

@@ -228,6 +228,10 @@ export function App() {
 
   const sendRuntimeControl = useCallback(
     (action: RuntimeAction, payload: Record<string, unknown> = {}) => {
+      setRuntimeStatus((previous) => ({
+        ...previous,
+        last_action: `${action}_PENDING`
+      }));
       controlClient.sendRuntimeControl(action, payload);
     },
     [controlClient]

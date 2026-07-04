@@ -8,6 +8,7 @@ import hashlib
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Callable
+from urllib.parse import parse_qs, urlsplit
 
 from examples.integration_demo.config import DEFAULT_CONFIG_PATH, DemoConfig, load_demo_config
 from examples.integration_demo.control_plane import DemoControlPlane
@@ -107,7 +108,9 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
 
         def do_GET(self) -> None:  # noqa: N802
             result = control_plane.result
-            path = self.path.split("?", 1)[0]
+            parsed_url = urlsplit(self.path)
+            path = parsed_url.path
+            query = parse_qs(parsed_url.query)
             if self.headers.get("Upgrade", "").lower() == "websocket":
                 self._handle_websocket(path)
                 return
@@ -116,6 +119,22 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                 return
             if path == result.config.metrics_snapshot:
                 self._send_json(control_plane.visible_snapshot())
+                return
+            if path == result.config.websocket_events:
+                try:
+                    cursor, limit = _stream_query(query)
+                except ValueError as exc:
+                    self.send_error(400, str(exc))
+                    return
+                self._send_json(control_plane.stream_event_batch(cursor, limit))
+                return
+            if path == result.config.websocket_state:
+                try:
+                    cursor, limit = _stream_query(query)
+                except ValueError as exc:
+                    self.send_error(400, str(exc))
+                    return
+                self._send_json(control_plane.stream_snapshot_batch(cursor, limit))
                 return
             if path == "/health":
                 self._send_json({"status": "ok", "events": len(result.processed_events)})
@@ -259,6 +278,27 @@ def _read_exact(read: Callable[[int], bytes], size: int) -> bytes:
         chunks.append(chunk)
         remaining -= len(chunk)
     return b"".join(chunks)
+
+
+def _stream_query(query: dict[str, list[str]]) -> tuple[int, int | None]:
+    cursor = _optional_query_int(query, "cursor", 0)
+    limit = _optional_query_int(query, "limit", None)
+    if cursor < 0:
+        raise ValueError("cursor must be non-negative")
+    if limit is not None and limit <= 0:
+        raise ValueError("limit must be positive")
+    return cursor, limit
+
+
+def _optional_query_int(
+    query: dict[str, list[str]],
+    key: str,
+    default: int | None,
+) -> int | None:
+    values = query.get(key)
+    if not values:
+        return default
+    return int(values[-1])
 
 
 if __name__ == "__main__":

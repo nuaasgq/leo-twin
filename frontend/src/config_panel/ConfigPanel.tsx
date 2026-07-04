@@ -1363,6 +1363,24 @@ function formatKelvin(value: number | undefined): string {
 }
 
 function runtimeStatusLabel(runtime: RuntimeStatusPayload): string {
+  if (runtime.last_action === "INITIALIZE_PENDING") {
+    return "初始化中";
+  }
+  if (runtime.last_action === "START_PENDING") {
+    return "启动中";
+  }
+  if (runtime.last_action === "PAUSE_PENDING") {
+    return "暂停中";
+  }
+  if (runtime.last_action === "RESUME_PENDING") {
+    return "恢复中";
+  }
+  if (runtime.last_action === "STOP_PENDING") {
+    return "停止中";
+  }
+  if (runtime.last_action === "RESET_PENDING") {
+    return "重置中";
+  }
   if (runtime.last_action === "INIT") {
     return "未初始化";
   }

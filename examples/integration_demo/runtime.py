@@ -81,7 +81,21 @@ class FrontendEventSink(SimulationModule):
         return tuple(self._events)
 
 
-def run_integration_demo(config: DemoConfig) -> DemoRunResult:
+@dataclass(frozen=True)
+class DemoRuntimeContext:
+    """Registered demo kernel context before scenario events are executed."""
+
+    config: DemoConfig
+    scenario: DemoScenario
+    kernel: SimulationKernel
+    frontend_sink: FrontendEventSink
+    metrics: MetricsCollector
+    network: PositionDrivenNetworkEngine
+
+
+def build_integration_demo_runtime(config: DemoConfig) -> DemoRuntimeContext:
+    """Build demo modules and register them with a fresh kernel."""
+
     scenario = build_demo_scenario(config)
     kernel = SimulationKernel()
     frontend_sink = FrontendEventSink()
@@ -168,10 +182,31 @@ def run_integration_demo(config: DemoConfig) -> DemoRunResult:
     for module in modules:
         kernel.register_module(module)
 
-    for event in scenario.initial_events:
-        kernel.schedule_event(event)
+    return DemoRuntimeContext(
+        config=config,
+        scenario=scenario,
+        kernel=kernel,
+        frontend_sink=frontend_sink,
+        metrics=metrics,
+        network=network,
+    )
 
-    processed_events = kernel.run()
+
+def run_integration_demo(config: DemoConfig) -> DemoRunResult:
+    context = build_integration_demo_runtime(config)
+    for event in context.scenario.initial_events:
+        context.kernel.schedule_event(event)
+
+    processed_events = context.kernel.run()
+    return finalize_integration_demo_run(context, processed_events)
+
+
+def finalize_integration_demo_run(
+    context: DemoRuntimeContext,
+    processed_events: tuple[SimEvent, ...],
+) -> DemoRunResult:
+    config = context.config
+    scenario = context.scenario
     projector = DemoStateProjector(
         scenario.ground_user_render_states,
         config.state_snapshot_interval_events,
@@ -188,11 +223,11 @@ def run_integration_demo(config: DemoConfig) -> DemoRunResult:
         config=config,
         scenario=scenario,
         processed_events=processed_events,
-        frontend_events=frontend_sink.events(),
+        frontend_events=context.frontend_sink.events(),
         final_snapshot=projector.snapshot(),
         state_timeline=projector.timeline(),
-        metrics_summary=metrics.summary(),
-        network_stack_traces=network.stack_traces(),
+        metrics_summary=context.metrics.summary(),
+        network_stack_traces=context.network.stack_traces(),
         replay=replay,
     )
 
