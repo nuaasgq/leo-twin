@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   backpressureNoticeText,
   buildRuntimeRibbonSummary,
+  buildSurfaceSyncSummary,
   controlErrorMessage,
   defaultRuntimeProgressAnchor,
   fidelityNoticeText,
@@ -122,6 +123,51 @@ describe("buildRuntimeRibbonSummary", () => {
       eventCountLabel: "12,345",
       satelliteCountLabel: "10,000",
       userCountLabel: "100,000"
+    });
+  });
+});
+
+describe("buildSurfaceSyncSummary", () => {
+  const baseStatus: RuntimeStatusPayload = {
+    status: "RUNNING",
+    mode: "ACCELERATED",
+    speed_factor: 10,
+    seed: 20260703,
+    duration: 600,
+    config_version: 2,
+    last_action: "START",
+    initialized: true
+  };
+
+  it("summarizes the shared console-dashboard display clock", () => {
+    expect(
+      buildSurfaceSyncSummary({
+        displaySimTime: 130,
+        snapshotSimTime: 125,
+        eventCount: 12345,
+        runtimeStatus: baseStatus
+      })
+    ).toEqual({
+      displayTimeLabel: "显示 2分10秒",
+      snapshotTimeLabel: "2分5秒",
+      deltaLabel: "前端插值 +5秒",
+      eventCountLabel: "12,345",
+      statusLabel: "同步运行"
+    });
+  });
+
+  it("labels paused and snapshot-leading sync states", () => {
+    expect(
+      buildSurfaceSyncSummary({
+        displaySimTime: 118,
+        snapshotSimTime: 120,
+        eventCount: 42,
+        runtimeStatus: { ...baseStatus, status: "PAUSED", last_action: "PAUSE" }
+      })
+    ).toMatchObject({
+      deltaLabel: "快照领先 2秒",
+      eventCountLabel: "42",
+      statusLabel: "同步暂停"
     });
   });
 });

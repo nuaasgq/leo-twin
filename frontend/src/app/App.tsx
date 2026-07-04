@@ -341,6 +341,12 @@ export function App() {
     runtimeStatus,
     scenario: scenarioControls
   });
+  const surfaceSyncSummary = buildSurfaceSyncSummary({
+    displaySimTime,
+    snapshotSimTime: snapshot.last_sim_time,
+    eventCount: displayEventCount,
+    runtimeStatus
+  });
   const fidelitySummary = selectFidelitySummary(runtimeStatus, generatedConfig, snapshot);
 
   const sendRuntimeControl = useCallback(
@@ -391,8 +397,18 @@ export function App() {
             弹出数据屏
           </a>
         </div>
-        <div className={`connection-pill ${connectionState}`}>
-          {connectionStateLabel(connectionState)}
+        <div className="topbar-status-cluster" aria-label="前端运行同步状态">
+          <div className="sync-pill">
+            <span>{surfaceSyncSummary.statusLabel}</span>
+            <strong>{surfaceSyncSummary.displayTimeLabel}</strong>
+            <small>
+              快照 {surfaceSyncSummary.snapshotTimeLabel} · {surfaceSyncSummary.deltaLabel} · 事件{" "}
+              {surfaceSyncSummary.eventCountLabel}
+            </small>
+          </div>
+          <div className={`connection-pill ${connectionState}`}>
+            {connectionStateLabel(connectionState)}
+          </div>
         </div>
       </header>
       {surface === "dashboard" ? (
@@ -534,6 +550,14 @@ export interface RuntimeRibbonSummary {
   eventCountLabel: string;
   satelliteCountLabel: string;
   userCountLabel: string;
+}
+
+export interface SurfaceSyncSummary {
+  displayTimeLabel: string;
+  snapshotTimeLabel: string;
+  deltaLabel: string;
+  eventCountLabel: string;
+  statusLabel: string;
 }
 
 export interface RuntimeProgressAnchor {
@@ -813,6 +837,44 @@ export function buildRuntimeRibbonSummary({
     satelliteCountLabel: formatInteger(scenario.satellite_count),
     userCountLabel: formatInteger(scenario.user_count)
   };
+}
+
+export function buildSurfaceSyncSummary({
+  displaySimTime,
+  snapshotSimTime,
+  eventCount,
+  runtimeStatus
+}: {
+  displaySimTime: number;
+  snapshotSimTime: number;
+  eventCount: number;
+  runtimeStatus: RuntimeStatusPayload;
+}): SurfaceSyncSummary {
+  const boundedDisplayTime = Math.max(0, displaySimTime);
+  const boundedSnapshotTime = Math.max(0, snapshotSimTime);
+  const deltaSeconds = boundedDisplayTime - boundedSnapshotTime;
+  const statusLabel =
+    runtimeStatus.status === "RUNNING"
+      ? "同步运行"
+      : runtimeStatus.status === "PAUSED"
+        ? "同步暂停"
+        : "同步待机";
+  return {
+    displayTimeLabel: `显示 ${formatDurationCompact(boundedDisplayTime)}`,
+    snapshotTimeLabel: formatDurationCompact(boundedSnapshotTime),
+    deltaLabel: formatSyncDelta(deltaSeconds),
+    eventCountLabel: formatInteger(eventCount),
+    statusLabel
+  };
+}
+
+function formatSyncDelta(deltaSeconds: number): string {
+  const magnitude = Math.abs(deltaSeconds);
+  if (magnitude < 0.05) {
+    return "同帧";
+  }
+  const label = formatDurationCompact(magnitude);
+  return deltaSeconds > 0 ? `前端插值 +${label}` : `快照领先 ${label}`;
 }
 
 export function runtimeStatusRequiresStreams(

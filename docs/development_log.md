@@ -2866,3 +2866,35 @@ change.
 - Recommended follow-up:
   - Add backend per-node resource time-series samples so the selected-satellite
     inset can show short history sparklines for CPU/GPU/NPU/memory/storage.
+
+## 2026-07-05 - Frontend Surface Sync Status v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a shared topbar sync status pill that shows the frontend display
+  time, latest snapshot time, interpolation/snapshot delta, and event count
+  across both the 3D control console and dashboard surfaces.
+- Changed files/modules:
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/appSurface.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- appSurface.test.ts`
+    - Result: passed, 23 files / 144 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - Users reported that dashboard/control navigation felt unsynchronized. This
+    task does not change stream ownership; it makes the shared display clock and
+    snapshot lag visible on both surfaces.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The status pill is a diagnostic display only. It does not persist a backend
+    session id across independent browser tabs.
+- Recommended follow-up:
+  - Add explicit runtime session id and stream cursor diagnostics once the
+    backend exposes them in `/runtime/status`.

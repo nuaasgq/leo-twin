@@ -134,6 +134,56 @@ body {
   background: #171d16;
 }
 
+.topbar-status-cluster {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sync-pill {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 3px;
+  min-width: 190px;
+  max-width: 310px;
+  border: 1px solid #2d4050;
+  border-radius: 8px;
+  padding: 6px 9px;
+  background: #0b1219;
+}
+
+.sync-pill span,
+.sync-pill strong,
+.sync-pill small {
+  min-width: 0;
+  overflow: hidden;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sync-pill span {
+  color: var(--accent-cyan);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.sync-pill strong {
+  color: var(--app-text);
+  font-size: 11px;
+  text-align: right;
+}
+
+.sync-pill small {
+  grid-column: 1 / -1;
+  color: var(--app-muted);
+  font-size: 10px;
+}
+
 .connection-pill {
   min-width: 88px;
   border: 1px solid var(--app-line);
@@ -2066,6 +2116,23 @@ body {
   .app-shell {
     min-height: 100%;
     height: auto;
+  }
+
+  .topbar {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 66px;
+    padding-block: 10px;
+  }
+
+  .topbar-status-cluster {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .sync-pill {
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   .workspace {
