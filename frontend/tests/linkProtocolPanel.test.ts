@@ -101,6 +101,10 @@ describe("buildLinkProtocolSummary", () => {
       routingProtocolLabel: "距离向量",
       dataLinkProtocolLabel: "Slotted ALOHA",
       dataLinkMediumAccess: "时隙竞争",
+      dataLinkEfficiencyPercent: 62,
+      dataLinkFrameOverheadPercent: 1.445466491458607,
+      dataLinkCollisionLossPercent: 8,
+      dataLinkAccessDelayMs: 9.000000000000002,
       transportOverheadPercent: 1.866666666666667,
       transportEfficiencyPercent: 98,
       transportHandshakeRoundTrips: 0,
@@ -180,6 +184,10 @@ describe("buildLinkProtocolSummary", () => {
     expect(summary.routingProtocolLabel).toBe("链路状态");
     expect(summary.dataLinkProtocolLabel).toBe("TDMA");
     expect(summary.dataLinkMediumAccess).toBe("时分调度");
+    expect(summary.dataLinkEfficiencyPercent).toBe(96);
+    expect(summary.dataLinkFrameOverheadPercent).toBeCloseTo(1.185771, 6);
+    expect(summary.dataLinkCollisionLossPercent).toBe(0);
+    expect(summary.dataLinkAccessDelayMs).toBe(1);
     expect(summary.transportOverheadPercent).toBeCloseTo(2.666667, 6);
     expect(summary.transportEfficiencyPercent).toBe(92);
     expect(summary.transportHandshakeRoundTrips).toBe(1);

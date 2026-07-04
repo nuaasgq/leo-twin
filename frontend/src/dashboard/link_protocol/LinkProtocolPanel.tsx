@@ -26,6 +26,10 @@ export interface LinkProtocolSummary {
   routingProtocolLabel: string;
   dataLinkProtocolLabel: string;
   dataLinkMediumAccess: string;
+  dataLinkEfficiencyPercent: number;
+  dataLinkFrameOverheadPercent: number;
+  dataLinkCollisionLossPercent: number;
+  dataLinkAccessDelayMs: number;
   transportOverheadPercent: number;
   transportEfficiencyPercent: number;
   transportHandshakeRoundTrips: number;
@@ -82,6 +86,15 @@ export const LinkProtocolPanel = memo(function LinkProtocolPanel({
         <KpiPanel label="路由协议" value={summary.routingProtocolLabel} />
         <KpiPanel label="链路层MAC" value={summary.dataLinkProtocolLabel} />
         <KpiPanel label="接入方式" value={summary.dataLinkMediumAccess} />
+        <KpiPanel
+          label="MAC效率"
+          value={`${summary.dataLinkEfficiencyPercent.toFixed(1)}%`}
+          detail={`帧开销 ${summary.dataLinkFrameOverheadPercent.toFixed(2)}% / 碰撞损耗 ${summary.dataLinkCollisionLossPercent.toFixed(2)}%`}
+        />
+        <KpiPanel
+          label="链路接入时延"
+          value={`${summary.dataLinkAccessDelayMs.toFixed(1)} ms`}
+        />
         <KpiPanel
           label="传输开销"
           value={`${summary.transportOverheadPercent.toFixed(2)}%`}
@@ -196,6 +209,10 @@ export function buildLinkProtocolSummary(
     routingProtocolLabel: formatRoutingProtocol(routingProtocol),
     dataLinkProtocolLabel: dataLinkProfile.label,
     dataLinkMediumAccess: dataLinkProfile.mediumAccess,
+    dataLinkEfficiencyPercent: dataLinkProfile.mediumAccessEfficiency * 100,
+    dataLinkFrameOverheadPercent: dataLinkProfile.frameOverheadRatio * 100,
+    dataLinkCollisionLossPercent: dataLinkProfile.collisionLossRate * 100,
+    dataLinkAccessDelayMs: dataLinkProfile.accessDelaySeconds * 1000,
     transportOverheadPercent: transportProfile.overheadRatio * 100,
     transportEfficiencyPercent: transportProfile.efficiency * 100,
     transportHandshakeRoundTrips: transportProfile.handshakeRoundTrips,
@@ -318,14 +335,39 @@ function formatWeight(value: number): string {
 function dataLinkProfileFor(protocol: string): {
   label: string;
   mediumAccess: string;
+  mediumAccessEfficiency: number;
+  frameOverheadRatio: number;
+  collisionLossRate: number;
+  accessDelaySeconds: number;
 } {
   if (protocol === "SLOTTED_ALOHA") {
-    return { label: "Slotted ALOHA", mediumAccess: "时隙竞争" };
+    return {
+      label: "Slotted ALOHA",
+      mediumAccess: "时隙竞争",
+      mediumAccessEfficiency: 0.62,
+      frameOverheadRatio: 22 / (1500 + 22),
+      collisionLossRate: 0.08,
+      accessDelaySeconds: 0.005 + 2 * 0.002
+    };
   }
   if (protocol === "CSMA_CA") {
-    return { label: "CSMA/CA", mediumAccess: "侦听避碰" };
+    return {
+      label: "CSMA/CA",
+      mediumAccess: "侦听避碰",
+      mediumAccessEfficiency: 0.78,
+      frameOverheadRatio: 26 / (1500 + 26),
+      collisionLossRate: 0.03,
+      accessDelaySeconds: 0.003 + 0.001
+    };
   }
-  return { label: "TDMA", mediumAccess: "时分调度" };
+  return {
+    label: "TDMA",
+    mediumAccess: "时分调度",
+    mediumAccessEfficiency: 0.96,
+    frameOverheadRatio: 18 / (1500 + 18),
+    collisionLossRate: 0,
+    accessDelaySeconds: 0.001
+  };
 }
 
 function apertureAntennaGainDbi(
