@@ -55,6 +55,18 @@ def test_invalid_config_is_rejected() -> None:
     with pytest.raises(ConfigValidationError):
         config_from_mapping({"network": {"transport_protocol": "SCTP"}})
 
+    with pytest.raises(ConfigValidationError, match="destination_type"):
+        config_from_mapping(
+            {
+                "scenario": {
+                    "traffic_model": {
+                        "traffic_class": "COMPUTE_SERVICE",
+                        "destination_type": "GROUND_ENDPOINT",
+                    }
+                }
+            }
+        )
+
 
 def test_network_protocol_profile_can_be_updated_directly() -> None:
     controller = RuntimeController(load_config("configs/sees_control.yaml"))

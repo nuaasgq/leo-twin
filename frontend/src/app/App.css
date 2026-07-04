@@ -1124,6 +1124,14 @@ body {
   font-size: 12px;
 }
 
+.config-panel select:disabled {
+  cursor: not-allowed;
+  border-color: #283844;
+  background: #101721;
+  color: #b8c4ca;
+  opacity: 0.82;
+}
+
 .config-panel input[type="range"] {
   accent-color: var(--accent-cyan);
 }
@@ -1157,6 +1165,17 @@ body {
   line-height: 1;
   text-align: right;
   white-space: nowrap;
+}
+
+.traffic-compatibility-note {
+  grid-column: 1 / -1;
+  border: 1px solid #284050;
+  border-radius: 6px;
+  padding: 8px 9px;
+  background: #101923;
+  color: #b8c7cf;
+  font-size: 11px;
+  line-height: 1.35;
 }
 
 .toggle-grid {

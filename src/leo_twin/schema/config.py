@@ -133,6 +133,14 @@ class TrafficModel:
                 "destination_type",
                 TrafficDestinationTypeConfig(str(self.destination_type)),
             )
+        if (
+            self.traffic_class == TrafficClassConfig.COMPUTE_SERVICE
+            and self.destination_type != TrafficDestinationTypeConfig.COMPUTE_NODE
+        ):
+            raise ValueError(
+                "traffic_model.destination_type must be COMPUTE_NODE "
+                "when traffic_model.traffic_class is COMPUTE_SERVICE"
+            )
         _require_non_negative_finite(self.output_data_size, "traffic_model.output_data_size")
         object.__setattr__(self, "output_data_size", float(self.output_data_size))
 

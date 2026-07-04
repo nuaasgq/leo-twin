@@ -131,6 +131,26 @@ describe("ConfigPanel priority controls", () => {
     expect(markup).toContain('value="3.5"');
   });
 
+  it("locks compute-service traffic to compute-node destinations", () => {
+    const markup = renderToStaticMarkup(
+      createElement(ConfigPanel, {
+        scenario: defaultScenario(),
+        runtime: runtimeStatus("STOPPED", true),
+        progress: {
+          sim_time: 0,
+          duration: 600,
+          event_count: 0
+        },
+        generatedConfig: null,
+        onRuntimeControl: () => undefined
+      })
+    );
+
+    expect(markup).toContain('id="traffic-destination-type" disabled=""');
+    expect(markup).toContain('value="COMPUTE_NODE" selected');
+    expect(markup).toContain("通信-计算服务固定使用星上算力节点");
+  });
+
   it("uses backend-provided compute node count instead of satellite count", () => {
     const markup = renderToStaticMarkup(
       createElement(ConfigPanel, {

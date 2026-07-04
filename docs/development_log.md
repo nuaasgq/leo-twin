@@ -2012,7 +2012,7 @@ change.
 ## 2026-07-05 - Frontend Traffic Mix Controls v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`
-- Commit: pending
+- Commit: `f1909f6`
 - Scope: add frontend controls for backend traffic class, destination type, and
   output data size without changing the control architecture.
 - Changed files/modules:
@@ -2040,3 +2040,43 @@ change.
 - Recommended follow-up:
   - Add backend validation and frontend helper text for traffic-class and
     destination compatibility.
+
+## 2026-07-05 - Traffic Compatibility Guard v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending
+- Scope: make compute-service traffic destination compatibility a backend
+  configuration rule and keep the frontend control payload aligned with that
+  rule.
+- Changed files/modules:
+  - `src/leo_twin/schema/config.py`
+  - `tests/integration/test_config_control.py`
+  - `frontend/src/config_panel/ConfigPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/configPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/integration/test_config_control.py::test_invalid_config_is_rejected -q`
+    - Result: passed, 1 test.
+  - `python -m pytest tests/integration/test_config_control.py -k "not test_config_loads_correctly" -q`
+    - Result: passed, 9 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- configPanel.test.ts`
+    - Result: passed, 22 files / 113 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - `python -m pytest tests/integration/test_config_control.py -q` still
+    fails only in `test_config_loads_correctly` because the local
+    `configs/sees_control.yaml` runtime state has `satellite_count: 120`
+    while the committed baseline expects `72`. The file is intentionally not
+    reset or submitted; the remaining config-control tests pass.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - Non-compute destinations remain flexible because only `COMPUTE_SERVICE`
+    currently has a hard backend lifecycle dependency on compute nodes.
+- Recommended follow-up:
+  - Add explicit backend summary wording for unsupported or degraded traffic
+    combinations when future traffic classes gain stricter lifecycle rules.

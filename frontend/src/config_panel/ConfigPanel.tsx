@@ -372,6 +372,10 @@ export function ConfigPanel({
       setTrafficDestinationType("SERVICE_ENDPOINT");
     }
   };
+  const computeServiceDestinationLocked = trafficClass === "COMPUTE_SERVICE";
+  const effectiveTrafficDestinationType = computeServiceDestinationLocked
+    ? "COMPUTE_NODE"
+    : trafficDestinationType;
   const handleInitialize = () =>
     onRuntimeControl("INITIALIZE", {
       satellite_count: satelliteCount,
@@ -402,7 +406,7 @@ export function ConfigPanel({
         task_compute_demand: taskComputeDemand,
         task_data_size: taskDataSize,
         traffic_class: trafficClass,
-        destination_type: trafficDestinationType,
+        destination_type: effectiveTrafficDestinationType,
         output_data_size: trafficOutputDataSize
       }),
       visualization: visualizationControlPayload({
@@ -897,7 +901,8 @@ export function ConfigPanel({
           </label>
           <select
             id="traffic-destination-type"
-            value={trafficDestinationType}
+            value={effectiveTrafficDestinationType}
+            disabled={computeServiceDestinationLocked}
             onChange={(event) => setTrafficDestinationType(event.currentTarget.value)}
           >
             <option value="COMPUTE_NODE">星上算力节点</option>
@@ -905,6 +910,12 @@ export function ConfigPanel({
             <option value="SATELLITE">卫星节点</option>
             <option value="SERVICE_ENDPOINT">服务端点</option>
           </select>
+        </div>
+
+        <div className="traffic-compatibility-note">
+          {computeServiceDestinationLocked
+            ? "通信-计算服务固定使用星上算力节点，后端会先完成输入流传输再触发计算任务。"
+            : "当前业务按流级网络业务执行，不生成计算任务。"}
         </div>
 
         <div className="control-group">
