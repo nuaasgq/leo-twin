@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import base64
 import hashlib
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Callable
@@ -19,9 +20,12 @@ from examples.integration_demo.serialization import (
     stable_json,
     stable_json_pretty,
 )
+from leo_twin.runtime import RuntimeLifecycleState
 
 
 _WEBSOCKET_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+_WEBSOCKET_STREAM_INTERVAL_SECONDS = 0.05
+_WEBSOCKET_STREAM_BATCH_LIMIT = 500
 _FRONTEND_EVENT_TYPES = frozenset(
     {
         "ORBIT_UPDATE",
@@ -151,14 +155,12 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
             result = control_plane.result
             if path == result.config.websocket_events:
                 self._accept_websocket()
-                for event in control_plane.stream_events():
-                    self._send_ws_json(event)
+                self._stream_event_batches()
                 self._close_websocket()
                 return
             if path == result.config.websocket_state:
                 self._accept_websocket()
-                for snapshot in control_plane.stream_snapshots():
-                    self._send_ws_json(snapshot)
+                self._stream_snapshot_batches()
                 self._close_websocket()
                 return
             if path == "/control":
@@ -224,6 +226,36 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                 self._send_ws_json(control_plane.handle_raw_message(payload))
             self._close_websocket()
 
+        def _stream_event_batches(self) -> None:
+            cursor = 0
+            while True:
+                batch = control_plane.stream_event_batch(
+                    cursor,
+                    limit=_WEBSOCKET_STREAM_BATCH_LIMIT,
+                )
+                cursor = int(batch["next_cursor"])
+                items = batch["items"]
+                if items:
+                    self._send_ws_json(items)  # type: ignore[arg-type]
+                if _live_stream_finished(control_plane.runtime_lifecycle_state(), bool(items)):
+                    return
+                time.sleep(_WEBSOCKET_STREAM_INTERVAL_SECONDS)
+
+        def _stream_snapshot_batches(self) -> None:
+            cursor = 0
+            while True:
+                batch = control_plane.stream_snapshot_batch(
+                    cursor,
+                    limit=_WEBSOCKET_STREAM_BATCH_LIMIT,
+                )
+                cursor = int(batch["next_cursor"])
+                items = batch["items"]
+                for snapshot in items:
+                    self._send_ws_json(snapshot)  # type: ignore[arg-type]
+                if _live_stream_finished(control_plane.runtime_lifecycle_state(), bool(items)):
+                    return
+                time.sleep(_WEBSOCKET_STREAM_INTERVAL_SECONDS)
+
         def _close_websocket(self) -> None:
             self._send_ws_close()
             self.close_connection = True
@@ -233,6 +265,12 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                 pass
 
     return DemoRequestHandler
+
+
+def _live_stream_finished(state: RuntimeLifecycleState, sent_items: bool) -> bool:
+    if sent_items:
+        return False
+    return state != RuntimeLifecycleState.RUNNING
 
 
 def _write_ws_frame(

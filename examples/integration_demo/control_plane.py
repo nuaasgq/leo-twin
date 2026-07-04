@@ -15,6 +15,7 @@ from leo_twin.runtime import (
     SimulationController,
     SimulationSession,
     StreamBackpressurePolicy,
+    StreamBuffer,
     parse_control_command,
 )
 from leo_twin.schema.config_loader import write_config
@@ -124,8 +125,7 @@ class DemoControlPlane:
     def stream_events(self) -> tuple[dict[str, JsonValue], ...]:
         if not self._initialized or self._controller.snapshot().status != "RUNNING":
             return ()
-        self._require_advance_loop().run_until_idle()
-        self._finalize_result_from_session()
+        self._require_advance_loop().publish_pending()
         batch = self._require_advance_loop().event_stream.read_after(0)
         return tuple(
             event_to_json(event)
@@ -137,8 +137,7 @@ class DemoControlPlane:
         if not self._initialized or self._controller.snapshot().status != "RUNNING":
             return ()
         loop = self._require_advance_loop()
-        loop.run_until_idle()
-        self._finalize_result_from_session()
+        loop.publish_pending()
         snapshots = loop.snapshot_stream.read_after(0).items
         if not snapshots:
             snapshots = (self._require_runtime_adapter().snapshot(),)
@@ -149,27 +148,19 @@ class DemoControlPlane:
         cursor: int = 0,
         limit: int | None = None,
     ) -> dict[str, Any]:
-        if self._initialized and self._controller.snapshot().status == "RUNNING":
-            self._require_advance_loop().run_until_idle()
-            self._finalize_result_from_session()
-        batch = self._require_advance_loop().event_stream.read_after(cursor, limit=limit)
-        return {
-            **batch.to_dict(),
-            "items": [
-                event_to_json(event)
-                for event in batch.items
-                if str(event.event_type) in _FRONTEND_EVENT_TYPES
-            ],
-        }
+        self._require_advance_loop().publish_pending()
+        return _frontend_event_batch(
+            self._require_advance_loop().event_stream,
+            cursor,
+            limit,
+        )
 
     def stream_snapshot_batch(
         self,
         cursor: int = 0,
         limit: int | None = None,
     ) -> dict[str, Any]:
-        if self._initialized and self._controller.snapshot().status == "RUNNING":
-            self._require_advance_loop().run_until_idle()
-            self._finalize_result_from_session()
+        self._require_advance_loop().publish_pending()
         return self._require_advance_loop().snapshot_stream.read_after(
             cursor,
             limit=limit,
@@ -190,6 +181,8 @@ class DemoControlPlane:
                 response = self._ack(command)
                 response["snapshot"] = self.visible_snapshot()
                 return response
+            if command.command == RuntimeCommand.RESET:
+                return self._reset(command.payload)
 
             self._controller.handle_action(command.command.value, command.payload)
             runtime_ack = self._require_runtime_adapter().handle_raw_message(
@@ -198,19 +191,23 @@ class DemoControlPlane:
             if not runtime_ack["ok"]:
                 return self._nack(command_name, str(runtime_ack["error"]))
             if command.command == RuntimeCommand.START:
+                self._require_advance_loop().publish_pending()
                 self._require_advance_loop().start()
-            if command.command == RuntimeCommand.RESET:
+            if command.command == RuntimeCommand.RESUME:
+                self._require_advance_loop().publish_pending()
+                self._require_advance_loop().start()
+            if command.command == RuntimeCommand.PAUSE:
+                self._require_advance_loop().publish_pending()
+            if command.command == RuntimeCommand.STOP:
                 loop = self._require_advance_loop()
                 loop.stop()
-                loop.reset_streams()
-                self._initialized = False
-            if command.command == RuntimeCommand.STOP:
-                self._require_advance_loop().stop()
+                loop.publish_pending()
             return self._ack(command)
         except Exception as exc:  # noqa: BLE001 - returned as protocol error
             return self._nack(command_name, str(exc))
 
     def _initialize(self, payload: dict[str, Any]) -> dict[str, Any]:
+        self._stop_advance_loop()
         self._controller.initialize(payload)
         write_config(self._config_output_path, self._controller.config)
         write_full_system_scenario_builder_config(
@@ -227,7 +224,23 @@ class DemoControlPlane:
         self._initialized = True
         return self._ack(ControlCommand(RuntimeCommand.INITIALIZE, payload))
 
+    def _reset(self, payload: dict[str, Any]) -> dict[str, Any]:
+        self._stop_advance_loop()
+        if self._advance_loop is not None:
+            self._advance_loop.reset_streams()
+        self._controller.handle_action(RuntimeCommand.RESET.value, payload)
+        reset_demo_config = demo_config_from_sees_config(
+            self._controller.config,
+            self._base_config,
+        )
+        self._install_runtime_session(reset_demo_config)
+        if self._runtime_context is not None:
+            self._result = finalize_integration_demo_run(self._runtime_context, ())
+        self._initialized = False
+        return self._ack(ControlCommand(RuntimeCommand.RESET, payload))
+
     def _install_runtime_session(self, config: DemoConfig) -> None:
+        self._stop_advance_loop()
         sees_config = demo_config_to_sees_config(config)
 
         def kernel_factory(
@@ -269,15 +282,15 @@ class DemoControlPlane:
             tick_interval_seconds=0.01,
         )
 
-    def _finalize_result_from_session(self) -> None:
-        if self._runtime_context is None or self._session is None:
-            return
-        if not self._session.processed_events:
-            return
-        self._result = finalize_integration_demo_run(
-            self._runtime_context,
-            self._session.processed_events,
-        )
+    def advance_loop_snapshot(self) -> dict[str, Any]:
+        return self._require_advance_loop().snapshot().to_dict()
+
+    def runtime_lifecycle_state(self) -> RuntimeLifecycleState:
+        return self._require_session().lifecycle_state
+
+    def _stop_advance_loop(self) -> None:
+        if self._advance_loop is not None:
+            self._advance_loop.stop()
 
     def _generated_config_json(self) -> dict[str, int | float | str]:
         return scenario_builder_config_to_mapping(
@@ -356,4 +369,45 @@ def _initial_snapshot_from_ground_users(ground_users: tuple[Any, ...]) -> dict[s
         "metrics": [],
         "event_count": 0,
         "last_sim_time": 0.0,
+    }
+
+
+def _frontend_event_batch(
+    stream: StreamBuffer[Any],
+    cursor: int,
+    limit: int | None,
+) -> dict[str, Any]:
+    selected_limit = stream.policy.max_batch_size if limit is None else min(
+        limit,
+        stream.policy.max_batch_size,
+    )
+    if selected_limit <= 0:
+        raise ValueError("limit must be positive")
+    items: list[dict[str, JsonValue]] = []
+    next_cursor = cursor
+    overflow = False
+    dropped_count = 0
+    first_read = True
+    while len(items) < selected_limit:
+        batch = stream.read_after(next_cursor, limit=selected_limit)
+        if first_read:
+            overflow = batch.overflow
+            dropped_count = batch.dropped_count
+            first_read = False
+        if batch.next_cursor == next_cursor:
+            break
+        next_cursor = batch.next_cursor
+        for event in batch.items:
+            if str(event.event_type) in _FRONTEND_EVENT_TYPES:
+                items.append(event_to_json(event))
+                if len(items) >= selected_limit:
+                    break
+        if len(batch.items) < selected_limit:
+            break
+    return {
+        "items": items,
+        "cursor": cursor,
+        "next_cursor": next_cursor,
+        "overflow": overflow,
+        "dropped_count": dropped_count,
     }

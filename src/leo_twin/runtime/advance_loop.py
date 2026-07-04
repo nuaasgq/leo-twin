@@ -126,6 +126,12 @@ class SessionAdvanceLoop:
         self._publish_pending_session_records()
         return events
 
+    def publish_pending(self) -> None:
+        """Publish records already processed by the session without advancing."""
+
+        with self._lock:
+            self._publish_pending_session_records()
+
     def run_until_idle(self, max_ticks: int = 10_000) -> None:
         if max_ticks <= 0:
             raise ValueError("max_ticks must be positive")

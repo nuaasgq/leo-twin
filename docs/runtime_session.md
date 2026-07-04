@@ -139,19 +139,40 @@ processed events into an event stream, and publishes projected snapshots into a
 snapshot stream. The loop does not inspect or reorder kernel internals; it only
 calls the session, which drives the kernel through public methods.
 
-The integration demo still exposes the legacy websocket array streams, but the
-adapter now also has cursor batch methods over the same reusable stream
-buffers. This lets future HTTP/WebSocket handlers keep long-lived clients
+The integration demo exposes cursor batch methods over the same reusable
+stream buffers. This lets HTTP/WebSocket handlers keep long-lived clients
 independent from raw event flood and apply backpressure deterministically.
 
-In the demo server, the existing stream paths keep their WebSocket behavior.
-When called as plain HTTP GET, they also expose cursor batches:
+In the demo server, the existing stream paths keep their endpoint names. When
+called as plain HTTP GET, they expose cursor batches:
 
 - `GET /stream/events?cursor=0&limit=100`
 - `GET /stream/state?cursor=0&limit=20`
 
 The response includes `items`, `cursor`, `next_cursor`, `overflow`, and
 `dropped_count`.
+
+## Live Runtime Streaming v1
+
+The integration demo backend is a live adapter over `SimulationSession` and
+`SessionAdvanceLoop`.
+
+- `START` starts the backend advance loop after publishing records already
+  processed by the session start transition.
+- `PAUSE` pauses the session; loop ticks do not advance simulation time while
+  the lifecycle is not `RUNNING`.
+- `RESUME` resumes the session and ensures the advance loop is running.
+- `STOP` stops the session and joins the advance loop.
+- `RESET` stops the loop, clears stream buffers, and installs a clean session.
+
+Normal `/stream/events` and `/stream/state` reads do not call
+`run_until_idle()`. They publish pending session records into `StreamBuffer`
+and serve cursor reads. `run_until_idle()` remains available only for tests or
+explicit replay/batch use.
+
+WebSocket streams keep the same paths. They read cursor batches periodically
+while the session is `RUNNING`, send new event or snapshot items when present,
+and close after the session leaves `RUNNING` and no retained items remain.
 
 ## Replay And Determinism
 
