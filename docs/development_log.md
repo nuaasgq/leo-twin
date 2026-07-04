@@ -2294,3 +2294,39 @@ change.
 - Recommended follow-up:
   - Add a selected-satellite visual quality task that improves orientation,
     scale, and panel alignment of the GLB kit during satellite-follow mode.
+
+## 2026-07-05 - Network KPI Provenance v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: expose backend network KPI source/provenance fields and surface those
+  labels in the dashboard KPI source note.
+- Changed files/modules:
+  - `src/leo_twin/services/metrics/collector.py`
+  - `tests/unit/test_metrics_module.py`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_metrics_module.py::test_metrics_collector_reports_effective_flow_level_network_quality tests/unit/test_metrics_module.py::test_metrics_collector_uses_route_loss_rate_for_network_loss_proxy tests/unit/test_metrics_module.py::test_metrics_collector_publishes_backend_kpi_time_series tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer -q`
+    - Result: passed, 4 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 23 files / 129 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - `RuntimeMetricsSummary` is a flat string/number/bool record, so the
+    provenance is intentionally exposed as deterministic flat source and label
+    fields instead of nested objects.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - This improves KPI explainability, not physical fidelity. The underlying
+    loss, jitter, latency, and throughput formulas remain flow-level proxy
+    models.
+- Recommended follow-up:
+  - Add a dashboard details panel that displays the numeric formula inputs:
+    route demand, offered capacity, completed flow capacity, route loss,
+    congestion proxy, and pressure proxy.

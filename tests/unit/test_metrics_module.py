@@ -486,6 +486,21 @@ def test_metrics_collector_reports_effective_flow_level_network_quality() -> Non
         190.0
     )
     assert summary["network_quality_effective_throughput_mbps"] == 180.0
+    assert summary["network_quality_throughput_source"] == "COMPLETED_FLOW_CAPACITY"
+    assert summary["network_quality_throughput_source_label"] == "已完成流容量"
+    assert summary["network_quality_latency_source"] == "COMPLETED_FLOW_LATENCY"
+    assert summary["network_quality_latency_source_label"] == "已完成流时延"
+    assert summary["network_quality_loss_source"] == "PRESSURE_LOSS_PROXY"
+    assert summary["network_quality_loss_source_label"] == "业务压力损耗代理"
+    assert summary["network_quality_delay_variation_source"] == "FLOW_LATENCY_VARIATION"
+    assert (
+        summary["network_quality_delay_variation_source_label"]
+        == "流完成时延离散度"
+    )
+    assert summary["network_quality_provenance_note"] == (
+        "Flow-level KPI provenance from route, link, and completed-flow state; "
+        "no packet-level samples are used."
+    )
     assert _last_record(
         last_records,
         "network.quality.effective_throughput_mbps",
@@ -561,6 +576,8 @@ def test_metrics_collector_uses_route_loss_rate_for_network_loss_proxy() -> None
     assert summary["network_quality_loss_proxy_rate"] == pytest.approx(0.12)
     assert summary["network_quality_effective_loss_proxy_rate"] == pytest.approx(0.12)
     assert summary["network_quality_effective_throughput_mbps"] == pytest.approx(88.0)
+    assert summary["network_quality_loss_source"] == "ROUTE_LOSS_RATE"
+    assert summary["network_quality_loss_source_label"] == "路由损耗率"
 
 
 def test_metrics_collector_publishes_backend_kpi_time_series() -> None:

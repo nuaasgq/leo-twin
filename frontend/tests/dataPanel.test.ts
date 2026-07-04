@@ -304,6 +304,25 @@ describe("buildDataPanelNetworkKpiSource", () => {
     });
   });
 
+  it("includes backend KPI provenance labels when available", () => {
+    expect(
+      buildDataPanelNetworkKpiSource(makeSnapshot(), {
+        network_quality_proxy_note:
+          "Flow-level proxy only; no packet-level simulation is performed.",
+        network_quality_effective_throughput_mbps: 77,
+        network_quality_effective_latency_avg_s: 0.15,
+        network_quality_throughput_source_label: "已完成流容量",
+        network_quality_latency_source_label: "已完成流时延",
+        network_quality_loss_source_label: "业务压力损耗代理",
+        network_quality_delay_variation_source_label: "流完成时延离散度"
+      })
+    ).toEqual({
+      sourceLabel: "后端指标摘要",
+      modelNote:
+        "后端流级代理指标；未进行包级仿真。 来源：吞吐量 已完成流容量；时延 已完成流时延；丢包 业务压力损耗代理；抖动 流完成时延离散度。"
+    });
+  });
+
   it("reports snapshot KPI series when runtime series is absent", () => {
     expect(
       buildDataPanelNetworkKpiSource(

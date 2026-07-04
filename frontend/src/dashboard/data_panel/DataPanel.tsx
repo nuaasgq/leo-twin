@@ -939,17 +939,45 @@ function formatNetworkQualityProxyNote(
   metrics: RuntimeMetricsSummary | null | undefined
 ): string {
   const note = metrics?.network_quality_proxy_note;
+  const provenance = formatNetworkQualityProvenanceNote(metrics);
+  const suffix = provenance ? ` ${provenance}` : "";
   if (typeof note === "string" && note.trim().length > 0) {
     if (note === "Flow-level proxy only; no packet-level simulation is performed.") {
-      return "后端流级代理指标；未进行包级仿真。";
+      return `后端流级代理指标；未进行包级仿真。${suffix}`;
     }
-    return note;
+    return `${note}${suffix}`;
   }
-  return "后端网络质量指标为流级代理模型；未进行包级仿真。";
+  return `后端网络质量指标为流级代理模型；未进行包级仿真。${suffix}`;
+}
+
+function formatNetworkQualityProvenanceNote(
+  metrics: RuntimeMetricsSummary | null | undefined
+): string {
+  const throughput = metricString(metrics, "network_quality_throughput_source_label");
+  const latency = metricString(metrics, "network_quality_latency_source_label");
+  const loss = metricString(metrics, "network_quality_loss_source_label");
+  const jitter = metricString(
+    metrics,
+    "network_quality_delay_variation_source_label"
+  );
+  if (!throughput && !latency && !loss && !jitter) {
+    return "";
+  }
+  return `来源：吞吐量 ${throughput ?? "未声明"}；时延 ${
+    latency ?? "未声明"
+  }；丢包 ${loss ?? "未声明"}；抖动 ${jitter ?? "未声明"}。`;
 }
 
 function positiveMetric(value: number | undefined): number | undefined {
   return value !== undefined && value > 0 ? value : undefined;
+}
+
+function metricString(
+  metrics: RuntimeMetricsSummary | null | undefined,
+  key: string
+): string | undefined {
+  const value = metrics?.[key];
+  return typeof value === "string" && value.trim().length > 0 ? value : undefined;
 }
 
 function isSpaceLink(link: { source_id: string; target_id: string }): boolean {

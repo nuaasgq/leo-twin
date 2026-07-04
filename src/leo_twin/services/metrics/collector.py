@@ -847,6 +847,35 @@ class MetricsCollector:
             if completed_route_capacity > 0.0
             else effective_available_throughput
         )
+        throughput_source = (
+            "COMPLETED_FLOW_CAPACITY"
+            if completed_route_capacity > 0.0
+            else "AVAILABLE_ROUTE_CAPACITY_AFTER_LOSS"
+        )
+        latency_source = (
+            "COMPLETED_FLOW_LATENCY"
+            if flow_latency_avg > 0.0
+            else "AVAILABLE_ROUTE_LATENCY"
+        )
+        loss_source = _dominant_proxy_source(
+            (
+                ("ROUTE_BLOCKING_RATIO", route_blocking_ratio),
+                ("FAILED_FLOW_RATIO", failed_flow_ratio),
+                ("ROUTE_LOSS_RATE", route_loss_proxy_rate),
+                ("CONGESTION_LOSS_PROXY", congestion_loss_proxy_rate),
+                ("PRESSURE_LOSS_PROXY", pressure_loss_proxy_rate),
+            )
+        )
+        delay_variation_source = _dominant_proxy_source(
+            (
+                ("ROUTE_LATENCY_VARIATION", delay_variation_proxy),
+                (
+                    "FLOW_LATENCY_VARIATION",
+                    _standard_deviation(flow_quality["latencies"]),
+                ),
+                ("PRESSURE_DELAY_VARIATION", pressure_delay_variation_proxy),
+            )
+        )
 
         return {
             "network_quality_active_link_count": len(active_links),
@@ -914,6 +943,26 @@ class MetricsCollector:
             ),
             "network_quality_proxy_note": (
                 "Flow-level proxy only; no packet-level simulation is performed."
+            ),
+            "network_quality_provenance_note": (
+                "Flow-level KPI provenance from route, link, and completed-flow state; "
+                "no packet-level samples are used."
+            ),
+            "network_quality_throughput_source": throughput_source,
+            "network_quality_throughput_source_label": _network_quality_source_label(
+                throughput_source
+            ),
+            "network_quality_latency_source": latency_source,
+            "network_quality_latency_source_label": _network_quality_source_label(
+                latency_source
+            ),
+            "network_quality_loss_source": loss_source,
+            "network_quality_loss_source_label": _network_quality_source_label(
+                loss_source
+            ),
+            "network_quality_delay_variation_source": delay_variation_source,
+            "network_quality_delay_variation_source_label": (
+                _network_quality_source_label(delay_variation_source)
             ),
         }
 
@@ -1216,6 +1265,35 @@ def _congestion_loss_proxy_rate(utilization: float) -> float:
     if utilization <= 0.8:
         return 0.0
     return _clamp_probability((utilization - 0.8) * 0.5)
+
+
+def _dominant_proxy_source(sources: tuple[tuple[str, float], ...]) -> str:
+    selected_name = ""
+    selected_value = -1.0
+    for name, value in sources:
+        numeric_value = float(value)
+        if numeric_value > selected_value:
+            selected_name = name
+            selected_value = numeric_value
+    return selected_name
+
+
+def _network_quality_source_label(source: str) -> str:
+    labels = {
+        "COMPLETED_FLOW_CAPACITY": "已完成流容量",
+        "AVAILABLE_ROUTE_CAPACITY_AFTER_LOSS": "可用路由容量扣除损耗代理",
+        "COMPLETED_FLOW_LATENCY": "已完成流时延",
+        "AVAILABLE_ROUTE_LATENCY": "可用路由平均时延",
+        "ROUTE_BLOCKING_RATIO": "路由阻塞比例",
+        "FAILED_FLOW_RATIO": "失败流比例",
+        "ROUTE_LOSS_RATE": "路由损耗率",
+        "CONGESTION_LOSS_PROXY": "链路拥塞损耗代理",
+        "PRESSURE_LOSS_PROXY": "业务压力损耗代理",
+        "ROUTE_LATENCY_VARIATION": "路由时延离散度",
+        "FLOW_LATENCY_VARIATION": "流完成时延离散度",
+        "PRESSURE_DELAY_VARIATION": "业务压力时延扰动",
+    }
+    return labels.get(source, source)
 
 
 def _is_kpi_sample_event_type(event_type: str) -> bool:
