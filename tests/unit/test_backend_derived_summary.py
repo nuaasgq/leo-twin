@@ -190,6 +190,44 @@ def test_constellation_summary_is_deterministic_for_product_scales(
     assert first["phase_policy"] == "DETERMINISTIC_PLANE_SLOT_PHASE"
 
 
+def test_compute_resource_summary_uses_configured_vector_lanes() -> None:
+    allocation = AutoPlaneAllocator.allocate(satellite_count=12, plane_count=3)
+
+    summary = build_backend_derived_summary(
+        constellation=allocation,
+        satellite_count=12,
+        user_count=20,
+        compute_node_count=4,
+        compute_capacity=40.0,
+        flow_count=10,
+        demand_capacity=25.0,
+        task_compute_demand=20.0,
+        task_data_size=2.0,
+        application_protocol="TASK_OFFLOAD_FLOW",
+        compute_cpu_gflops_fp64=8.0,
+        compute_gpu_tflops_fp32=2.5,
+        compute_gpu_tflops_fp16=5.0,
+        compute_npu_tops_int8=12.0,
+        compute_memory_gb=32.0,
+        compute_storage_gb=512.0,
+    )["compute_resource_summary"]
+
+    assert summary["cpu_gflops_fp32_per_node"] == 40.0
+    assert summary["cpu_gflops_fp64_per_node"] == 8.0
+    assert summary["gpu_tflops_fp32_per_node"] == 2.5
+    assert summary["gpu_tflops_fp16_per_node"] == 5.0
+    assert summary["npu_tops_int8_per_node"] == 12.0
+    assert summary["memory_gb_per_node"] == 32.0
+    assert summary["storage_gb_per_node"] == 512.0
+    assert summary["total_cpu_gflops_fp32"] == 160.0
+    assert summary["total_cpu_gflops_fp64"] == 32.0
+    assert summary["total_gpu_tflops_fp32"] == 10.0
+    assert summary["total_gpu_tflops_fp16"] == 20.0
+    assert summary["total_npu_tops_int8"] == 48.0
+    assert summary["total_memory_gb"] == 128.0
+    assert summary["total_storage_gb"] == 2048.0
+
+
 def test_scale_fidelity_summary_reports_large_scale_degradation() -> None:
     summary = build_scale_fidelity_summary(
         ScaleFidelityConfig(

@@ -87,6 +87,12 @@ class FullSystemScenarioBuilderConfig:
     system_loss_db: float = 1.0
     noise_temperature_k: float = 290.0
     compute_capacity: float = 10.0
+    compute_cpu_gflops_fp64: float = 0.0
+    compute_gpu_tflops_fp32: float = 0.0
+    compute_gpu_tflops_fp16: float = 0.0
+    compute_npu_tops_int8: float = 0.0
+    compute_memory_gb: float = 0.0
+    compute_storage_gb: float = 0.0
     demand_capacity: float = 1.0
     task_compute_demand: float = 20.0
     task_data_size: float = 10.0
@@ -226,6 +232,15 @@ class FullSystemScenarioBuilderConfig:
         _require_non_negative_number(self.system_loss_db, "system_loss_db")
         _require_positive_number(self.noise_temperature_k, "noise_temperature_k")
         _require_positive_number(self.compute_capacity, "compute_capacity")
+        for field_name in (
+            "compute_cpu_gflops_fp64",
+            "compute_gpu_tflops_fp32",
+            "compute_gpu_tflops_fp16",
+            "compute_npu_tops_int8",
+            "compute_memory_gb",
+            "compute_storage_gb",
+        ):
+            _require_non_negative_number(getattr(self, field_name), field_name)
         _require_non_negative_number(self.demand_capacity, "demand_capacity")
         _require_non_negative_number(self.task_compute_demand, "task_compute_demand")
         _require_non_negative_number(self.task_data_size, "task_data_size")
@@ -335,6 +350,12 @@ def scenario_builder_backend_summary(
         task_compute_demand=config.task_compute_demand,
         task_data_size=config.task_data_size,
         application_protocol=config.application_protocol,
+        compute_cpu_gflops_fp64=config.compute_cpu_gflops_fp64,
+        compute_gpu_tflops_fp32=config.compute_gpu_tflops_fp32,
+        compute_gpu_tflops_fp16=config.compute_gpu_tflops_fp16,
+        compute_npu_tops_int8=config.compute_npu_tops_int8,
+        compute_memory_gb=config.compute_memory_gb,
+        compute_storage_gb=config.compute_storage_gb,
         orbit_altitude_m=(config.semi_major_axis_km - config.earth_radius_km) * 1000.0,
         orbit_inclination_deg=config.inclination_deg,
         phase_policy="SEEDED_RAAN_AND_MEAN_ANOMALY_OFFSETS",
@@ -371,6 +392,12 @@ def scenario_builder_config_from_sees_config(
         user_count=config.scenario.user_count,
         compute_node_count=config.scenario.compute_nodes,
         compute_capacity=config.scenario.compute_capacity,
+        compute_cpu_gflops_fp64=config.scenario.compute_cpu_gflops_fp64,
+        compute_gpu_tflops_fp32=config.scenario.compute_gpu_tflops_fp32,
+        compute_gpu_tflops_fp16=config.scenario.compute_gpu_tflops_fp16,
+        compute_npu_tops_int8=config.scenario.compute_npu_tops_int8,
+        compute_memory_gb=config.scenario.compute_memory_gb,
+        compute_storage_gb=config.scenario.compute_storage_gb,
         flow_count=max(
             1,
             config.runtime.duration

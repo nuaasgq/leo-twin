@@ -253,6 +253,12 @@ def test_scenario_builder_config_from_sees_config_maps_control_plane_fields() ->
             user_count=40,
             compute_nodes=3,
             compute_capacity=18.0,
+            compute_cpu_gflops_fp64=6.0,
+            compute_gpu_tflops_fp32=2.5,
+            compute_gpu_tflops_fp16=5.0,
+            compute_npu_tops_int8=12.0,
+            compute_memory_gb=32.0,
+            compute_storage_gb=512.0,
             compute_scheduling_policy="EARLIEST_DEADLINE_FIRST",
             orbit=OrbitParameters(
                 plane_count=4,
@@ -298,6 +304,12 @@ def test_scenario_builder_config_from_sees_config_maps_control_plane_fields() ->
     assert generated.user_count == 40
     assert generated.compute_node_count == 3
     assert generated.compute_capacity == 18.0
+    assert generated.compute_cpu_gflops_fp64 == 6.0
+    assert generated.compute_gpu_tflops_fp32 == 2.5
+    assert generated.compute_gpu_tflops_fp16 == 5.0
+    assert generated.compute_npu_tops_int8 == 12.0
+    assert generated.compute_memory_gb == 32.0
+    assert generated.compute_storage_gb == 512.0
     assert generated.flow_count == 10
     assert generated.compute_scheduling_policy == "EARLIEST_DEADLINE_FIRST"
     assert generated.orbit_plane_count == 4

@@ -27,6 +27,12 @@ def build_backend_derived_summary(
     task_compute_demand: float,
     task_data_size: float,
     application_protocol: str,
+    compute_cpu_gflops_fp64: float = 0.0,
+    compute_gpu_tflops_fp32: float = 0.0,
+    compute_gpu_tflops_fp16: float = 0.0,
+    compute_npu_tops_int8: float = 0.0,
+    compute_memory_gb: float = 0.0,
+    compute_storage_gb: float = 0.0,
     arrival_interval_seconds: int | float | None = None,
     orbit_altitude_m: float | None = None,
     orbit_inclination_deg: float | None = None,
@@ -44,7 +50,15 @@ def build_backend_derived_summary(
         phase_policy=phase_policy,
     )
     traffic_class = _traffic_class(application_protocol)
-    compute_vector = ComputeResourceVector.from_capacity(compute_capacity)
+    compute_vector = ComputeResourceVector(
+        cpu_gflops_fp32=compute_capacity,
+        cpu_gflops_fp64=compute_cpu_gflops_fp64,
+        gpu_tflops_fp32=compute_gpu_tflops_fp32,
+        gpu_tflops_fp16=compute_gpu_tflops_fp16,
+        npu_tops_int8=compute_npu_tops_int8,
+        memory_gb=compute_memory_gb,
+        storage_gb=compute_storage_gb,
+    )
     total_cpu_gflops_fp32 = compute_vector.cpu_gflops_fp32 * compute_node_count
     traffic_summary: dict[str, object] = {
         "traffic_class": traffic_class.value,

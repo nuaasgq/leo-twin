@@ -162,6 +162,12 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
                     "user_count": 40,
                     "compute_nodes": 3,
                     "compute_capacity": 18.0,
+                    "compute_cpu_gflops_fp64": 6.0,
+                    "compute_gpu_tflops_fp32": 2.5,
+                    "compute_gpu_tflops_fp16": 5.0,
+                    "compute_npu_tops_int8": 12.0,
+                    "compute_memory_gb": 32.0,
+                    "compute_storage_gb": 512.0,
                     "orbit": {
                         "update_interval_seconds": 30,
                         "plane_count": 6,
@@ -208,6 +214,12 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
     assert len(control_plane.result.scenario.orbit_satellites) == 24
     assert control_plane.result.config.ground_user_count == 40
     assert control_plane.result.config.compute_capacity == 18.0
+    assert control_plane.result.config.compute_cpu_gflops_fp64 == 6.0
+    assert control_plane.result.config.compute_gpu_tflops_fp32 == 2.5
+    assert control_plane.result.config.compute_gpu_tflops_fp16 == 5.0
+    assert control_plane.result.config.compute_npu_tops_int8 == 12.0
+    assert control_plane.result.config.compute_memory_gb == 32.0
+    assert control_plane.result.config.compute_storage_gb == 512.0
     assert control_plane.result.scenario.compute_nodes[0].capacity == 18.0
     assert control_plane.result.config.orbit_tick_seconds == 30
     assert control_plane.result.config.orbit_plane_count == 6
@@ -245,6 +257,12 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
     assert control_plane.result.scenario.frontend_config["scenario"][
         "compute_capacity"
     ] == 18.0
+    assert control_plane.result.scenario.frontend_config["scenario"][
+        "compute_gpu_tflops_fp32"
+    ] == 2.5
+    assert control_plane.result.scenario.frontend_config["scenario"][
+        "compute_npu_tops_int8"
+    ] == 12.0
     assert control_plane.result.scenario.frontend_config["scenario"]["orbit"] == {
         "update_interval_seconds": 30,
         "plane_count": 6,
@@ -301,6 +319,12 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
     assert ack["generated_config"]["max_space_link_candidates_per_satellite"] == 6
     assert ack["generated_config"]["batch_space_link_update_limit"] == 500
     assert ack["generated_config"]["compute_scheduling_policy"] == "SHORTEST_JOB_FIRST"
+    assert ack["generated_config"]["compute_cpu_gflops_fp64"] == 6.0
+    assert ack["generated_config"]["compute_gpu_tflops_fp32"] == 2.5
+    assert ack["generated_config"]["compute_gpu_tflops_fp16"] == 5.0
+    assert ack["generated_config"]["compute_npu_tops_int8"] == 12.0
+    assert ack["generated_config"]["compute_memory_gb"] == 32.0
+    assert ack["generated_config"]["compute_storage_gb"] == 512.0
     assert ack["generated_config"]["orbit_plane_count"] == 6
     assert ack["generated_config"]["semi_major_axis_km"] == 6971.0
     assert ack["generated_config"]["inclination_deg"] == 55.0
@@ -316,6 +340,12 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
     assert ack["generated_config"]["backend_summary"]["compute_resource_summary"][
         "capacity_unit"
     ] == "GFLOPS FP32"
+    assert ack["generated_config"]["backend_summary"]["compute_resource_summary"][
+        "total_gpu_tflops_fp32"
+    ] == 7.5
+    assert ack["generated_config"]["backend_summary"]["compute_resource_summary"][
+        "total_npu_tops_int8"
+    ] == 36.0
 
     runtime_ack = control_plane.handle_raw_message(
         json.dumps({"type": "RUNTIME_CONTROL", "action": "START"})

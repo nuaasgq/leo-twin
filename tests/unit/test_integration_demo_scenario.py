@@ -255,6 +255,35 @@ def test_demo_compute_capacity_is_config_driven() -> None:
     assert scenario.frontend_config["scenario"]["compute_capacity"] == 18.0
 
 
+def test_demo_compute_resource_vector_is_config_driven() -> None:
+    scenario = build_demo_scenario(
+        _demo_config(
+            compute_capacity=40.0,
+            compute_cpu_gflops_fp64=8.0,
+            compute_gpu_tflops_fp32=2.5,
+            compute_gpu_tflops_fp16=5.0,
+            compute_npu_tops_int8=12.0,
+            compute_memory_gb=32.0,
+            compute_storage_gb=512.0,
+        )
+    )
+    frontend_scenario = scenario.frontend_config["scenario"]
+    summary = scenario.frontend_config["backend_summary"]["compute_resource_summary"]
+
+    assert frontend_scenario["compute_capacity"] == 40.0
+    assert frontend_scenario["compute_gpu_tflops_fp32"] == 2.5
+    assert frontend_scenario["compute_npu_tops_int8"] == 12.0
+    assert summary["cpu_gflops_fp32_per_node"] == 40.0
+    assert summary["cpu_gflops_fp64_per_node"] == 8.0
+    assert summary["gpu_tflops_fp32_per_node"] == 2.5
+    assert summary["gpu_tflops_fp16_per_node"] == 5.0
+    assert summary["npu_tops_int8_per_node"] == 12.0
+    assert summary["memory_gb_per_node"] == 32.0
+    assert summary["storage_gb_per_node"] == 512.0
+    assert summary["total_gpu_tflops_fp32"] == 5.0
+    assert summary["total_npu_tops_int8"] == 24.0
+
+
 def _demo_config(**overrides: object) -> DemoConfig:
     values = dict(
         seed=1234,

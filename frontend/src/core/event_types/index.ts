@@ -105,6 +105,12 @@ export interface ScenarioConfig {
     user_count?: number;
     compute_nodes?: number;
     compute_capacity?: number;
+    compute_cpu_gflops_fp64?: number;
+    compute_gpu_tflops_fp32?: number;
+    compute_gpu_tflops_fp16?: number;
+    compute_npu_tops_int8?: number;
+    compute_memory_gb?: number;
+    compute_storage_gb?: number;
     compute_scheduling_policy?: string;
     initial_workload_smoothing_enabled?: boolean;
     initial_workload_window_s?: number;
@@ -372,6 +378,12 @@ export interface GeneratedScenarioConfig {
   min_elevation_deg: number;
   max_range_km: number;
   compute_capacity: number;
+  compute_cpu_gflops_fp64?: number;
+  compute_gpu_tflops_fp32?: number;
+  compute_gpu_tflops_fp16?: number;
+  compute_npu_tops_int8?: number;
+  compute_memory_gb?: number;
+  compute_storage_gb?: number;
   demand_capacity: number;
   task_compute_demand: number;
   task_data_size: number;

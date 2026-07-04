@@ -270,6 +270,12 @@ class ScenarioConfig:
     user_count: int = 1000
     compute_nodes: int = 10
     compute_capacity: float = 10.0
+    compute_cpu_gflops_fp64: float = 0.0
+    compute_gpu_tflops_fp32: float = 0.0
+    compute_gpu_tflops_fp16: float = 0.0
+    compute_npu_tops_int8: float = 0.0
+    compute_memory_gb: float = 0.0
+    compute_storage_gb: float = 0.0
     ground_station_count: int = 3
     cell_count: int = 100
     compute_scheduling_policy: ComputeSchedulingPolicyConfig = ComputeSchedulingPolicyConfig.FIFO
@@ -285,6 +291,19 @@ class ScenarioConfig:
         _require_positive_int(self.user_count, "scenario.user_count")
         _require_positive_int(self.compute_nodes, "scenario.compute_nodes")
         _require_positive_finite(self.compute_capacity, "scenario.compute_capacity")
+        for field_name in (
+            "compute_cpu_gflops_fp64",
+            "compute_gpu_tflops_fp32",
+            "compute_gpu_tflops_fp16",
+            "compute_npu_tops_int8",
+            "compute_memory_gb",
+            "compute_storage_gb",
+        ):
+            _require_non_negative_finite(
+                getattr(self, field_name),
+                f"scenario.{field_name}",
+            )
+            object.__setattr__(self, field_name, float(getattr(self, field_name)))
         _require_non_negative_int(self.ground_station_count, "scenario.ground_station_count")
         _require_positive_int(self.cell_count, "scenario.cell_count")
         if not isinstance(self.compute_scheduling_policy, ComputeSchedulingPolicyConfig):

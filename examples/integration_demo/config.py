@@ -52,6 +52,12 @@ class DemoConfig:
     backend_host: str
     backend_port: int
     compute_capacity: float = 10.0
+    compute_cpu_gflops_fp64: float = 0.0
+    compute_gpu_tflops_fp32: float = 0.0
+    compute_gpu_tflops_fp16: float = 0.0
+    compute_npu_tops_int8: float = 0.0
+    compute_memory_gb: float = 0.0
+    compute_storage_gb: float = 0.0
     orbit_plane_count: int = 12
     orbit_plane_count_explicit: bool = True
     constellation_profile: str = "CUSTOM_WALKER"
@@ -109,6 +115,24 @@ def load_demo_config(path: str | Path = DEFAULT_CONFIG_PATH) -> DemoConfig:
         ground_station_count=_int(scenario, "ground_station_count"),
         compute_node_count=_int(scenario, "compute_node_count"),
         compute_capacity=_optional_float(scenario, "compute_capacity", 10.0),
+        compute_cpu_gflops_fp64=_optional_float(
+            scenario,
+            "compute_cpu_gflops_fp64",
+            0.0,
+        ),
+        compute_gpu_tflops_fp32=_optional_float(
+            scenario,
+            "compute_gpu_tflops_fp32",
+            0.0,
+        ),
+        compute_gpu_tflops_fp16=_optional_float(
+            scenario,
+            "compute_gpu_tflops_fp16",
+            0.0,
+        ),
+        compute_npu_tops_int8=_optional_float(scenario, "compute_npu_tops_int8", 0.0),
+        compute_memory_gb=_optional_float(scenario, "compute_memory_gb", 0.0),
+        compute_storage_gb=_optional_float(scenario, "compute_storage_gb", 0.0),
         compute_scheduling_policy=_optional_str(
             scenario,
             "compute_scheduling_policy",
@@ -234,6 +258,12 @@ def demo_config_to_sees_config(config: DemoConfig) -> SEESConfig:
             user_count=config.ground_user_count,
             compute_nodes=config.compute_node_count,
             compute_capacity=config.compute_capacity,
+            compute_cpu_gflops_fp64=config.compute_cpu_gflops_fp64,
+            compute_gpu_tflops_fp32=config.compute_gpu_tflops_fp32,
+            compute_gpu_tflops_fp16=config.compute_gpu_tflops_fp16,
+            compute_npu_tops_int8=config.compute_npu_tops_int8,
+            compute_memory_gb=config.compute_memory_gb,
+            compute_storage_gb=config.compute_storage_gb,
             ground_station_count=config.ground_station_count,
             cell_count=config.cell_count,
             compute_scheduling_policy=config.compute_scheduling_policy,
@@ -317,6 +347,12 @@ def demo_config_from_sees_config(
         ground_station_count=config.scenario.ground_station_count,
         compute_node_count=config.scenario.compute_nodes,
         compute_capacity=config.scenario.compute_capacity,
+        compute_cpu_gflops_fp64=config.scenario.compute_cpu_gflops_fp64,
+        compute_gpu_tflops_fp32=config.scenario.compute_gpu_tflops_fp32,
+        compute_gpu_tflops_fp16=config.scenario.compute_gpu_tflops_fp16,
+        compute_npu_tops_int8=config.scenario.compute_npu_tops_int8,
+        compute_memory_gb=config.scenario.compute_memory_gb,
+        compute_storage_gb=config.scenario.compute_storage_gb,
         compute_scheduling_policy=config.scenario.compute_scheduling_policy.value,
         duration_seconds=config.runtime.duration,
         orbit_tick_seconds=config.scenario.orbit.update_interval_seconds,

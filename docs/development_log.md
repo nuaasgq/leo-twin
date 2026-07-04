@@ -5,6 +5,52 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Compute Resource Vector Config v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending in this commit
+- Scope: extend the SEES control-plane and generated demo configuration path
+  with deterministic compute resource vector fields while preserving
+  `compute_capacity` as the legacy CPU FP32 scheduling capacity.
+- Changed files/modules:
+  - `src/leo_twin/schema/config.py`
+  - `src/leo_twin/schema/config_loader.py`
+  - `src/leo_twin/services/derived_summary.py`
+  - `src/leo_twin/services/scenario_builder.py`
+  - `examples/integration_demo/config.py`
+  - `examples/integration_demo/scenario.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `tests/unit/test_backend_derived_summary.py`
+  - `tests/unit/test_scenario_builder.py`
+  - `tests/unit/test_integration_demo_scenario.py`
+  - `tests/integration/test_config_control.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_backend_derived_summary.py tests/unit/test_scenario_builder.py::test_scenario_builder_config_from_sees_config_maps_control_plane_fields tests/unit/test_integration_demo_scenario.py::test_demo_compute_resource_vector_is_config_driven tests/integration/test_config_control.py::test_frontend_control_messages_are_processed -q`
+    - Result: passed, 9 tests.
+  - `python -m pytest tests/integration/test_config_control.py::test_initialize_writes_config_and_start_gates_streams tests/unit/test_scenario_builder.py tests/unit/test_integration_demo_scenario.py -q -k "not default_generated_scenario_config_file_loads"`
+    - Result: passed, 22 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- satelliteVisuals.test.ts configPanel.test.ts`
+    - Result: passed, 22 files / 103 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - Running the broader scenario-builder selection without a `-k` exclusion
+    failed only at `test_default_generated_scenario_config_file_loads` because
+    the active local `configs/generated_full_system_demo.json` still contains
+    runtime 120-node state while the repository baseline expects 6 satellites.
+    The file remains intentionally excluded from this task.
+- Known remaining issues:
+  - Runtime scheduling still consumes the legacy scalar `compute_capacity`.
+    CPU/GPU/NPU/memory/storage fields currently drive backend-derived product
+    summaries and generated config semantics, not per-lane scheduling.
+  - The active local runtime config files remain modified and excluded.
+- Recommended follow-up:
+  - Add explicit frontend controls for the resource vector fields, then extend
+    compute scheduling to use vector-aware service-time estimates.
+
 ## 2026-07-05 - Selected Satellite Compute Detail v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`
