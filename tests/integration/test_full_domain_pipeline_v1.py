@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from examples.full_system_pipeline_demo import run_full_system_pipeline_demo
+from leo_twin.models.compute import COMPUTE_NODE_UPDATE
 from leo_twin.schema import EventType
 
 
@@ -26,11 +27,11 @@ def test_full_domain_pipeline_runs_orbit_network_compute_lifecycle() -> None:
         EventType.ROUTE_UPDATE.value,
         EventType.ROUTE_UPDATE.value,
         EventType.TASK_START.value,
-        "COMPUTE_NODE_UPDATE",
-        "COMPUTE_NODE_UPDATE",
+        COMPUTE_NODE_UPDATE,
+        COMPUTE_NODE_UPDATE,
         EventType.TASK_FINISH.value,
-        "COMPUTE_NODE_UPDATE",
-        "COMPUTE_NODE_UPDATE",
+        COMPUTE_NODE_UPDATE,
+        COMPUTE_NODE_UPDATE,
     )
     assert result.metrics_event_types == (
         EventType.ORBIT_UPDATE.value,
@@ -38,9 +39,9 @@ def test_full_domain_pipeline_runs_orbit_network_compute_lifecycle() -> None:
         EventType.LINK_UPDATE.value,
         EventType.ROUTE_UPDATE.value,
         EventType.TASK_START.value,
-        "COMPUTE_NODE_UPDATE",
+        COMPUTE_NODE_UPDATE,
         EventType.TASK_FINISH.value,
-        "COMPUTE_NODE_UPDATE",
+        COMPUTE_NODE_UPDATE,
     )
     assert result.metrics_summary["event_count"] == 8
     assert result.metrics_summary["active_links"] == 1

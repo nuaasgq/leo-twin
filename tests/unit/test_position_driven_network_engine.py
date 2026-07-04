@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from leo_twin.core import SimulationKernel, SimulationModule
+from leo_twin.models.compute import COMPUTE_NODE_UPDATE
 from leo_twin.models.network import (
     ChannelBudgetSelector,
     LinkBudgetCalculator,
@@ -457,7 +458,7 @@ def test_compute_node_update_reroutes_active_flows_with_capacity_feedback() -> N
     kernel.schedule_event(
         _event(
             "node-busy",
-            "COMPUTE_NODE_UPDATE",
+            COMPUTE_NODE_UPDATE,
             ComputeNodeState(
                 node_id="node-a",
                 sim_time=1.0,
@@ -471,7 +472,7 @@ def test_compute_node_update_reroutes_active_flows_with_capacity_feedback() -> N
     kernel.schedule_event(
         _event(
             "node-idle",
-            "COMPUTE_NODE_UPDATE",
+            COMPUTE_NODE_UPDATE,
             ComputeNodeState(
                 node_id="node-a",
                 sim_time=2.0,

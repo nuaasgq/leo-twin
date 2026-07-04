@@ -55,7 +55,7 @@ flowchart LR
 |---|---|---|
 | 轨道 -> 网络 | `ORBIT_UPDATE` / `SatelliteState` | 卫星位置、速度、状态驱动覆盖、链路和拓扑变化。 |
 | 网络 -> 算力 | `ROUTE_UPDATE` / `FlowState` | 路由可达性、时延和容量影响任务输入数据传输。 |
-| 算力 -> 网络 | `TASK_START` / `TASK_FINISH` | 任务生命周期改变业务负载和后续流请求。 |
+| 算力 -> 网络 | `COMPUTE_NODE_UPDATE` / `ComputeNodeState` | 算力节点负载和可用容量反馈驱动网络重路由与容量调整。 |
 | 全域 -> 指标 | 所有事件只读 | 指标域采样、聚合并输出可视化数据。 |
 
 ## 网络分层架构
@@ -89,7 +89,8 @@ sequenceDiagram
     K->>N: ORBIT_UPDATE + FlowRequest
     N->>K: ACCESS_START / LINK_UPDATE / ROUTE_UPDATE
     K->>C: ROUTE_UPDATE + TaskRequest
-    C->>K: TASK_START / TASK_FINISH
+    C->>K: TASK_START / COMPUTE_NODE_UPDATE / TASK_FINISH
+    K->>N: COMPUTE_NODE_UPDATE
     K->>M: all events read-only
     M->>F: metrics snapshot / summary
 ```
@@ -113,7 +114,7 @@ sequenceDiagram
 
 - 轨道影响网络：卫星位置改变覆盖、距离、链路预算和路由可达性。
 - 网络影响算力：路由时延、容量和可达性决定任务启动和完成时间。
-- 算力影响网络负载：任务生命周期可以生成后续业务流，但必须通过事件表达。
+- 算力影响网络负载：算力节点状态通过 `COMPUTE_NODE_UPDATE` 反馈到网络，网络据此调整路由容量并重新发布路由事件。
 - 指标只观察不干预：任何 KPI、日志或前端摘要都不能反向修改仿真状态。
 
 ## 配置驱动流水线

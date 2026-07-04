@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from leo_twin.models.compute.contracts import COMPUTE_NODE_UPDATE
 from leo_twin.schema import (
     CouplingContract,
     CouplingSignalType,
@@ -34,9 +35,12 @@ FULL_SYSTEM_COUPLING_CONTRACTS: tuple[CouplingContract, ...] = (
         signal_type=CouplingSignalType.COMPUTE_TO_NETWORK,
         producer="compute",
         consumer="network",
-        event_type="TASK_START",
-        payload_schema="TaskState",
-        description="Task lifecycle events can produce deterministic load and flow updates.",
+        event_type=COMPUTE_NODE_UPDATE,
+        payload_schema="ComputeNodeState",
+        description=(
+            "Compute node capacity updates drive deterministic network route "
+            "refreshes and capacity feedback."
+        ),
     ),
     CouplingContract(
         coupling_id="domain-to-metrics-observation",

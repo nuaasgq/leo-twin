@@ -7,6 +7,7 @@ from math import ceil, floor, isfinite
 from typing import Any
 
 from leo_twin.core import SimulationKernel, SimulationModule
+from leo_twin.models.compute.contracts import COMPUTE_NODE_UPDATE
 from leo_twin.models.network.channel import ChannelBudgetSelector, LinkBudgetCalculator
 from leo_twin.models.network.geometry import (
     AccessLinkCandidate,
@@ -31,7 +32,6 @@ from leo_twin.schema import (
 
 
 SpaceCellId = tuple[int, int, int]
-_COMPUTE_NODE_UPDATE = "COMPUTE_NODE_UPDATE"
 
 
 class PositionDrivenNetworkEngine(SimulationModule):
@@ -152,7 +152,7 @@ class PositionDrivenNetworkEngine(SimulationModule):
                 kernel.schedule_event(emitted)
             return
 
-        if event.event_type == _COMPUTE_NODE_UPDATE:
+        if event.event_type == COMPUTE_NODE_UPDATE:
             state = self._coerce_compute_node_state(event.payload)
             next_load = _compute_load_factor(state)
             if self._compute_load_by_node.get(state.node_id) == next_load:

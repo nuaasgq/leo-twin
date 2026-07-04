@@ -55,6 +55,7 @@ The graph is a DAG. Domain modules are peers and must not import each other.
 | `TASK_ARRIVAL` | Scenario | Compute | `TaskRequest` | Request compute task handling |
 | `TASK_START` | Compute | Metrics | `TaskState` | Publish task start |
 | `TASK_FINISH` | Compute | Metrics | `TaskState` | Publish task finish |
+| `COMPUTE_NODE_UPDATE` | Compute | Network, Metrics | `ComputeNodeState` | Publish compute capacity/load feedback |
 | `METRIC_SAMPLE` | Metrics | Adapters | `MetricRecord` | Publish read-only metric sample |
 
 ## Orbit Module Contract
@@ -94,7 +95,8 @@ Inputs:
 
 - `SimEvent` with `event_type == ORBIT_UPDATE`
 - `SimEvent` with `event_type == FLOW_ARRIVAL`
-- Payloads: `SatelliteState`, `FlowRequest`
+- `SimEvent` with `event_type == COMPUTE_NODE_UPDATE`
+- Payloads: `SatelliteState`, `FlowRequest`, `ComputeNodeState`
 
 Outputs:
 
@@ -115,6 +117,7 @@ Rules:
 - Must not depend on Orbit internal implementation.
 - Must not depend on Compute logic.
 - Must output flow-level route decisions only.
+- May consume compute node state events as capacity/load feedback.
 - Must not implement packet-level simulation.
 
 Future file structure:
@@ -140,7 +143,7 @@ Outputs:
 
 - `TASK_START`
 - `TASK_FINISH`
-- Compute node state updates
+- `COMPUTE_NODE_UPDATE`
 - Payloads: `TaskState`, `ComputeNodeState`
 
 Rules:

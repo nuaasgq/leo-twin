@@ -6,6 +6,7 @@ from leo_twin.models.coupling import (
     frontend_surface_contracts,
     full_system_coupling_contracts,
 )
+from leo_twin.models.compute import COMPUTE_NODE_UPDATE
 from leo_twin.schema import (
     AntennaProfile,
     ChannelProfile,
@@ -134,6 +135,8 @@ def test_coupling_contracts_keep_domain_boundaries_event_driven() -> None:
 
     assert by_id["orbit-to-network-topology"].event_type == "ORBIT_UPDATE"
     assert by_id["network-to-compute-route"].event_type == "ROUTE_UPDATE"
+    assert by_id["compute-to-network-load"].event_type == COMPUTE_NODE_UPDATE
+    assert by_id["compute-to-network-load"].payload_schema == "ComputeNodeState"
     assert by_id["domain-to-metrics-observation"].consumer == "metrics"
 
 
