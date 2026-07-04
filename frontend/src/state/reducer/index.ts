@@ -115,8 +115,9 @@ export class WorldStateReducer {
       this.state.fidelitySummary = snapshot.fidelity_summary;
     }
     for (const satellite of snapshot.satellites ?? []) {
-      this.upsertSatellite(satellite);
-      this.state.lastSimTime = Math.max(this.state.lastSimTime, satellite.sim_time);
+      if (this.upsertSatelliteIfFresh(satellite)) {
+        this.state.lastSimTime = Math.max(this.state.lastSimTime, satellite.sim_time);
+      }
     }
     for (const user of snapshot.ground_users ?? []) {
       this.state.groundUsers.set(user.user_id, user);
@@ -131,10 +132,10 @@ export class WorldStateReducer {
       }
     }
     for (const task of snapshot.tasks ?? []) {
-      this.applyTask(task);
+      this.applyTaskIfFresh(task);
     }
     for (const node of snapshot.compute_nodes ?? []) {
-      this.applyComputeNode(node);
+      this.applyComputeNodeIfFresh(node);
     }
     for (const metric of snapshot.metrics ?? []) {
       this.applyMetric(metric);
@@ -171,7 +172,7 @@ export class WorldStateReducer {
     }
 
     if (event.event_type === "ORBIT_UPDATE") {
-      this.upsertSatellite(event.payload as SatelliteState);
+      this.upsertSatelliteIfFresh(event.payload as SatelliteState);
       return;
     }
     if (
@@ -191,20 +192,25 @@ export class WorldStateReducer {
       return;
     }
     if (event.event_type === "TASK_START" || event.event_type === "TASK_FINISH") {
-      this.applyTask(event.payload as TaskState);
+      this.applyTaskIfFresh(event.payload as TaskState);
       return;
     }
     if (event.event_type === "COMPUTE_NODE_UPDATE") {
-      this.applyComputeNode(event.payload as ComputeNodeState);
+      this.applyComputeNodeIfFresh(event.payload as ComputeNodeState);
       return;
     }
     this.applyMetric(event.payload as MetricRecord);
   }
 
-  private upsertSatellite(satellite: SatelliteState): void {
+  private upsertSatelliteIfFresh(satellite: SatelliteState): boolean {
+    const previous = this.state.satellites.get(satellite.satellite_id);
+    if (previous !== undefined && satellite.sim_time < previous.sim_time) {
+      return false;
+    }
     this.state.satellites.set(satellite.satellite_id, satellite);
     this.dirtySatelliteIds.add(satellite.satellite_id);
     this.updateSatelliteCell(satellite);
+    return true;
   }
 
   private updateSatelliteCell(satellite: SatelliteState): void {
@@ -239,15 +245,25 @@ export class WorldStateReducer {
     this.dirtyLinkIds.add(id);
   }
 
-  private applyTask(task: TaskState): void {
+  private applyTaskIfFresh(task: TaskState): boolean {
+    const previous = this.state.tasks.get(task.task_id);
+    if (previous !== undefined && task.sim_time < previous.sim_time) {
+      return false;
+    }
     this.state.tasks.set(task.task_id, task);
     this.state.lastSimTime = Math.max(this.state.lastSimTime, task.sim_time);
     this.dirtyTaskIds.add(task.task_id);
+    return true;
   }
 
-  private applyComputeNode(node: ComputeNodeState): void {
+  private applyComputeNodeIfFresh(node: ComputeNodeState): boolean {
+    const previous = this.state.computeNodes.get(node.node_id);
+    if (previous !== undefined && node.sim_time < previous.sim_time) {
+      return false;
+    }
     this.state.computeNodes.set(node.node_id, node);
     this.state.lastSimTime = Math.max(this.state.lastSimTime, node.sim_time);
+    return true;
   }
 
   private applyMetric(record: MetricRecord): void {

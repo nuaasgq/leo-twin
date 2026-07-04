@@ -56,6 +56,63 @@ describe("frontend render performance architecture", () => {
     expect(first.spatial_index).toEqual(second.spatial_index);
   });
 
+  it("ignores stale state snapshots that arrive after newer stream events", () => {
+    const reducer = new WorldStateReducer();
+    const engine = new SnapshotEngine(reducer, { clock: () => 1 });
+
+    reducer.applyEvents([
+      orbitEvent("orbit-new", "sat-a", 10, [10, 0, 0]),
+      taskEvent("task-a", "RUNNING", 10, 0.9),
+      computeNodeEvent("node-a", 10, 10, 1)
+    ]);
+    reducer.applySnapshot({
+      satellites: [
+        {
+          satellite_id: "sat-a",
+          sim_time: 5,
+          position: [5, 0, 0],
+          velocity: [0, 0, 0],
+          status: "stale"
+        }
+      ],
+      tasks: [
+        {
+          task_id: "task-a",
+          node_id: "node-a",
+          sim_time: 5,
+          progress: 0.1,
+          status: "STALE"
+        }
+      ],
+      compute_nodes: [
+        {
+          node_id: "node-a",
+          sim_time: 5,
+          capacity: 10,
+          available_capacity: 8,
+          status: "STALE"
+        }
+      ]
+    });
+
+    const snapshot = engine.publishNow();
+
+    expect(snapshot.satellites[0]).toMatchObject({
+      sim_time: 10,
+      position: [10, 0, 0],
+      status: "online"
+    });
+    expect(snapshot.active_tasks[0]).toMatchObject({
+      sim_time: 10,
+      progress: 0.9,
+      status: "RUNNING"
+    });
+    expect(snapshot.compute_nodes[0]).toMatchObject({
+      available_capacity: 1,
+      status: "BUSY"
+    });
+  });
+
   it("treats deadline missed tasks as terminal compute outcomes", () => {
     const snapshot = snapshotFromEvents([
       taskEvent("task-finished", "FINISHED"),
@@ -183,28 +240,42 @@ function snapshotFromEvents(events: readonly SimEvent[]) {
 function orbitEvents(count: number, uniqueSatellites = count): SimEvent[] {
   return Array.from({ length: count }, (_, index) => {
     const satelliteIndex = index % uniqueSatellites;
-    return {
-      event_id: `orbit:${index.toString().padStart(5, "0")}`,
-      sim_time: index / 20,
-      priority: 0,
-      source: "orbit",
-      target: "frontend",
-      event_type: "ORBIT_UPDATE",
-      payload: {
-        satellite_id: `sat-${satelliteIndex.toString().padStart(5, "0")}`,
-        sim_time: index / 20,
-        position: [satelliteIndex, satelliteIndex + 1, satelliteIndex + 2],
-        velocity: [0, 0, 0],
-        status: "online"
-      }
-    };
+    return orbitEvent(
+      `orbit:${index.toString().padStart(5, "0")}`,
+      `sat-${satelliteIndex.toString().padStart(5, "0")}`,
+      index / 20,
+      [satelliteIndex, satelliteIndex + 1, satelliteIndex + 2]
+    );
   });
 }
 
-function taskEvent(taskId: string, status: string): SimEvent {
+function orbitEvent(
+  eventId: string,
+  satelliteId: string,
+  simTime: number,
+  position: readonly [number, number, number]
+): SimEvent {
+  return {
+    event_id: eventId,
+    sim_time: simTime,
+    priority: 0,
+    source: "orbit",
+    target: "frontend",
+    event_type: "ORBIT_UPDATE",
+    payload: {
+      satellite_id: satelliteId,
+      sim_time: simTime,
+      position,
+      velocity: [0, 0, 0],
+      status: "online"
+    }
+  };
+}
+
+function taskEvent(taskId: string, status: string, simTime = 1, progress = 1): SimEvent {
   return {
     event_id: `task:${taskId}`,
-    sim_time: 1,
+    sim_time: simTime,
     priority: 0,
     source: "compute",
     target: "frontend",
@@ -212,9 +283,32 @@ function taskEvent(taskId: string, status: string): SimEvent {
     payload: {
       task_id: taskId,
       node_id: "node-a",
-      sim_time: 1,
-      progress: 1,
+      sim_time: simTime,
+      progress,
       status
+    }
+  };
+}
+
+function computeNodeEvent(
+  nodeId: string,
+  simTime: number,
+  capacity: number,
+  availableCapacity: number
+): SimEvent {
+  return {
+    event_id: `compute:${nodeId}`,
+    sim_time: simTime,
+    priority: 0,
+    source: "compute",
+    target: "frontend",
+    event_type: "COMPUTE_NODE_UPDATE",
+    payload: {
+      node_id: nodeId,
+      sim_time: simTime,
+      capacity,
+      available_capacity: availableCapacity,
+      status: availableCapacity < capacity ? "BUSY" : "IDLE"
     }
   };
 }

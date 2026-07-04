@@ -77,6 +77,25 @@ describe("ConfigPanel priority controls", () => {
     expect(markup).toContain('id="duration-seconds-input"');
   });
 
+  it("uses backend-provided compute node count instead of satellite count", () => {
+    const markup = renderToStaticMarkup(
+      createElement(ConfigPanel, {
+        scenario: defaultScenario(),
+        runtime: runtimeStatus("STOPPED", true),
+        progress: {
+          sim_time: 0,
+          duration: 600,
+          event_count: 0
+        },
+        generatedConfig: null,
+        onRuntimeControl: () => undefined
+      })
+    );
+
+    expect(markup).toContain('id="compute-node-count-input"');
+    expect(markup).toContain('value="8"');
+  });
+
   it("renders backend control errors near runtime controls", () => {
     const markup = renderToStaticMarkup(
       createElement(ConfigPanel, {

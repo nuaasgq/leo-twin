@@ -91,8 +91,9 @@ export class ObservabilityStore {
       this.state.fidelitySummary = snapshot.fidelity_summary;
     }
     for (const satellite of snapshot.satellites ?? []) {
-      this.state.satellites.set(satellite.satellite_id, satellite);
-      this.state.lastSimTime = Math.max(this.state.lastSimTime, satellite.sim_time);
+      if (this.upsertSatelliteIfFresh(satellite)) {
+        this.state.lastSimTime = Math.max(this.state.lastSimTime, satellite.sim_time);
+      }
     }
     for (const user of snapshot.ground_users ?? []) {
       this.state.groundUsers.set(user.user_id, user);
@@ -107,12 +108,10 @@ export class ObservabilityStore {
       }
     }
     for (const task of snapshot.tasks ?? []) {
-      this.state.tasks.set(task.task_id, task);
-      this.state.lastSimTime = Math.max(this.state.lastSimTime, task.sim_time);
+      this.applyTaskIfFresh(task);
     }
     for (const node of snapshot.compute_nodes ?? []) {
-      this.state.computeNodes.set(node.node_id, node);
-      this.state.lastSimTime = Math.max(this.state.lastSimTime, node.sim_time);
+      this.applyComputeNodeIfFresh(node);
     }
     for (const metric of snapshot.metrics ?? []) {
       this.applyMetric(metric);
@@ -149,8 +148,7 @@ export class ObservabilityStore {
     }
 
     if (event.event_type === "ORBIT_UPDATE") {
-      const satellite = event.payload as SatelliteState;
-      this.state.satellites.set(satellite.satellite_id, satellite);
+      this.upsertSatelliteIfFresh(event.payload as SatelliteState);
       return;
     }
     if (
@@ -168,16 +166,43 @@ export class ObservabilityStore {
       return;
     }
     if (event.event_type === "TASK_START" || event.event_type === "TASK_FINISH") {
-      const task = event.payload as TaskState;
-      this.state.tasks.set(task.task_id, task);
+      this.applyTaskIfFresh(event.payload as TaskState);
       return;
     }
     if (event.event_type === "COMPUTE_NODE_UPDATE") {
-      const node = event.payload as ComputeNodeState;
-      this.state.computeNodes.set(node.node_id, node);
+      this.applyComputeNodeIfFresh(event.payload as ComputeNodeState);
       return;
     }
     this.applyMetric(event.payload as MetricRecord);
+  }
+
+  private upsertSatelliteIfFresh(satellite: SatelliteState): boolean {
+    const previous = this.state.satellites.get(satellite.satellite_id);
+    if (previous !== undefined && satellite.sim_time < previous.sim_time) {
+      return false;
+    }
+    this.state.satellites.set(satellite.satellite_id, satellite);
+    return true;
+  }
+
+  private applyTaskIfFresh(task: TaskState): boolean {
+    const previous = this.state.tasks.get(task.task_id);
+    if (previous !== undefined && task.sim_time < previous.sim_time) {
+      return false;
+    }
+    this.state.tasks.set(task.task_id, task);
+    this.state.lastSimTime = Math.max(this.state.lastSimTime, task.sim_time);
+    return true;
+  }
+
+  private applyComputeNodeIfFresh(node: ComputeNodeState): boolean {
+    const previous = this.state.computeNodes.get(node.node_id);
+    if (previous !== undefined && node.sim_time < previous.sim_time) {
+      return false;
+    }
+    this.state.computeNodes.set(node.node_id, node);
+    this.state.lastSimTime = Math.max(this.state.lastSimTime, node.sim_time);
+    return true;
   }
 
   private applyLink(link: LinkState): void {

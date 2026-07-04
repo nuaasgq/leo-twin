@@ -83,6 +83,81 @@ describe("ObservabilityStore", () => {
       "DETAILED_SMALL_SCALE"
     );
   });
+
+  it("does not let stale state snapshots roll back newer event stream entities", () => {
+    const store = new ObservabilityStore();
+    store.applyEvents([
+      event("orbit:new", "ORBIT_UPDATE", {
+        satellite_id: "sat-1",
+        sim_time: 10,
+        position: [10, 0, 0],
+        velocity: [0, 0, 0],
+        status: "online"
+      }),
+      event("task:new", "TASK_START", {
+        task_id: "task-1",
+        node_id: "sat-1",
+        sim_time: 10,
+        progress: 0.8,
+        status: "RUNNING"
+      }),
+      event("compute:new", "COMPUTE_NODE_UPDATE", {
+        node_id: "sat-1",
+        sim_time: 10,
+        capacity: 10,
+        available_capacity: 2,
+        status: "BUSY"
+      })
+    ]);
+
+    store.applySnapshot({
+      satellites: [
+        {
+          satellite_id: "sat-1",
+          sim_time: 5,
+          position: [5, 0, 0],
+          velocity: [0, 0, 0],
+          status: "stale"
+        }
+      ],
+      tasks: [
+        {
+          task_id: "task-1",
+          node_id: "sat-1",
+          sim_time: 5,
+          progress: 0.1,
+          status: "STALE"
+        }
+      ],
+      compute_nodes: [
+        {
+          node_id: "sat-1",
+          sim_time: 5,
+          capacity: 10,
+          available_capacity: 9,
+          status: "STALE"
+        }
+      ]
+    });
+
+    const snapshot = store.getSnapshot();
+
+    expect(snapshot.satellites.get("sat-1")).toMatchObject({
+      sim_time: 10,
+      position: [10, 0, 0],
+      status: "online"
+    });
+    expect(snapshot.tasks.get("task-1")).toMatchObject({
+      sim_time: 10,
+      progress: 0.8,
+      status: "RUNNING"
+    });
+    expect(snapshot.computeNodes.get("sat-1")).toMatchObject({
+      sim_time: 10,
+      available_capacity: 2,
+      status: "BUSY"
+    });
+  });
 });
 
 function event(eventId: string, eventType: SimEvent["event_type"], payload: unknown): SimEvent {

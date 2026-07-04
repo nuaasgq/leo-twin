@@ -34,7 +34,7 @@ change.
 ## 2026-07-05 - Frontend Runtime Session Sync v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`
-- Commit: this commit (created before hash assignment)
+- Commit: `422432a`
 - Scope: keep the control console and standalone dashboard attached to the same
   runtime session semantics by tightening frontend stream reset policy and
   forcing visible progress/event counts to zero during reset-like transitions.
@@ -61,6 +61,46 @@ change.
 - Recommended follow-up:
   - Add backend-owned network quality and compute resource summaries, then bind
     dashboard charts to those summaries instead of local KPI inference.
+
+## 2026-07-05 - Frontend State Stream Freshness v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: this commit (created before hash assignment)
+- Scope: prevent stale state snapshots from rolling frontend satellite, task,
+  and compute-node state backwards after newer event-stream updates, and make
+  the configuration panel respect backend-provided compute node counts while
+  preserving satellite-as-compute-node convenience when users change satellite
+  count.
+- Changed files/modules:
+  - `frontend/src/state/reducer/index.ts`
+  - `frontend/src/stream/state_store/index.ts`
+  - `frontend/src/config_panel/ConfigPanel.tsx`
+  - `frontend/tests/renderPerformance.test.ts`
+  - `frontend/tests/stateStore.test.ts`
+  - `frontend/tests/configPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- renderPerformance.test.ts stateStore.test.ts configPanel.test.ts`
+    - Result: passed, 22 files / 91 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The first target test asserted `sim_time` on `WorldSnapshot.compute_nodes`,
+    but the rendered compute-node contract intentionally omits that field. The
+    test was adjusted to verify visible anti-rollback fields instead:
+    `available_capacity` and `status`.
+  - The active local runtime config files remain modified and excluded.
+- Known remaining issues:
+  - State snapshots still upsert links and routes without per-entity freshness
+    checks because those frontend contracts do not currently include
+    `sim_time`.
+  - Earth far-side visual bleed-through and backend-owned KPI semantics remain
+    separate follow-up tasks.
+- Recommended follow-up:
+  - Fix Cesium depth/opaque globe rendering next, then add backend-owned network
+    quality summaries for throughput, delay, loss proxy, and jitter.
 
 ## 2026-07-04 - Development Log Requirement
 

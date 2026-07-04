@@ -116,7 +116,7 @@ export function ConfigPanel({
 }: ConfigPanelProps) {
   const [satelliteCount, setSatelliteCount] = useState(scenario.satellite_count);
   const [userCount, setUserCount] = useState(scenario.user_count);
-  const [computeNodes, setComputeNodes] = useState(scenario.satellite_count);
+  const [computeNodes, setComputeNodes] = useState(scenario.compute_nodes);
   const [computeCapacity, setComputeCapacity] = useState(scenario.compute_capacity);
   const [computeSchedulingPolicy, setComputeSchedulingPolicy] = useState(
     scenario.compute_scheduling_policy
@@ -205,7 +205,7 @@ export function ConfigPanel({
   useEffect(() => {
     setSatelliteCount(scenario.satellite_count);
     setUserCount(scenario.user_count);
-    setComputeNodes(scenario.satellite_count);
+    setComputeNodes(scenario.compute_nodes);
     setComputeCapacity(scenario.compute_capacity);
     setComputeSchedulingPolicy(scenario.compute_scheduling_policy);
     setOrbitUpdateIntervalSeconds(scenario.orbit.update_interval_seconds);
@@ -243,6 +243,7 @@ export function ConfigPanel({
   }, [
     scenario.satellite_count,
     scenario.user_count,
+    scenario.compute_nodes,
     scenario.compute_capacity,
     scenario.compute_scheduling_policy,
     scenario.orbit.update_interval_seconds,
