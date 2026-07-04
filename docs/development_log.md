@@ -475,6 +475,44 @@ change.
   - Add reproducible product acceptance scenarios, then use screenshots/manual
     QA for a broader visual polish pass.
 
+## 2026-07-05 - Product Acceptance Scenarios v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: this commit (created before hash assignment)
+- Scope: add deterministic product acceptance scenarios and runtime smoke tests
+  for 72, 300, and 1200 satellite configurations.
+- Changed files/modules:
+  - `configs/acceptance/small_demo_72sat.yaml`
+  - `configs/acceptance/medium_demo_300sat.yaml`
+  - `configs/acceptance/scale_demo_1200sat_short.yaml`
+  - `docs/product_acceptance_scenarios.md`
+  - `tests/integration/test_product_acceptance_scenarios.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/integration/test_product_acceptance_scenarios.py -q`
+    - Result: passed, 4 tests. Runtime was about 90 seconds because the
+      1200-satellite acceptance smoke executes a live tick.
+  - `python -m pytest tests/integration/test_live_runtime_streaming.py tests/integration/test_runtime_session_control.py tests/integration/test_orbit_batch_scale.py tests/unit/test_position_driven_network_engine.py tests/unit/test_metrics_module.py tests/unit/test_backend_derived_summary.py tests/integration/test_product_acceptance_scenarios.py -q`
+    - Result: passed, 67 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test`
+    - Result: passed, 22 files / 84 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - `metrics_mode`, traffic mix, and compute-service mix are documented as
+    derived product semantics rather than loader fields, so the YAML files stay
+    compatible with the existing SEES config schema.
+  - The active local runtime config files remain modified and excluded.
+- Known remaining issues:
+  - The 1200 acceptance smoke is intentionally not a fast unit test. It is a
+    product-level smoke and should stay in targeted/acceptance validation
+    rather than every tight edit loop.
+- Recommended follow-up:
+  - Use these scenarios as stable fixtures for the next scale-mode metrics and
+    snapshot aggregation task.
+
 ## 2026-07-04 - Scale Firebreak v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`
