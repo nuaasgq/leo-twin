@@ -2582,3 +2582,41 @@ change.
 - Recommended follow-up:
   - Add a backend-owned coverage observation contract before using coverage
     counts for access decisions or KPI calculations.
+
+## 2026-07-05 - Network KPI Semantics v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: expose backend-owned network KPI proxy semantics and zero-value
+  reasons, then render compact caveats in the standalone data dashboard.
+- Changed files/modules:
+  - `src/leo_twin/services/metrics/collector.py`
+  - `tests/unit/test_metrics_module.py`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_metrics_module.py -q`
+    - Result: passed, 14 tests.
+  - `python -m pytest tests/integration/test_runtime_session_control.py tests/integration/test_generated_full_system_demo.py -q`
+    - Result: passed, 21 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 23 files / 139 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - Users can interpret zero loss or jitter as real packet-level measurements;
+    this task keeps the existing formulas unchanged and adds explicit
+    backend-provided proxy semantics and zero-value reasons instead.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - Network KPIs remain deterministic flow-level proxy metrics. No packet-level
+    loss, jitter, queueing, or protocol emulation is introduced.
+- Recommended follow-up:
+  - Add a deterministic flow-level demand/route pressure scenario that
+    demonstrates non-zero loss and delay-variation proxy values in the default
+    dashboard without packet-level simulation.

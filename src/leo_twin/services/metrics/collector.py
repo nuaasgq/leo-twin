@@ -835,9 +835,10 @@ class MetricsCollector:
             if flow_quality["successful_count"] > 1
             else 0.0
         )
+        flow_latency_variation_proxy = _standard_deviation(flow_quality["latencies"])
         effective_delay_variation_proxy = max(
             delay_variation_proxy,
-            _standard_deviation(flow_quality["latencies"]),
+            flow_latency_variation_proxy,
             pressure_delay_variation_proxy,
         )
         effective_available_throughput = offered_route_capacity * (
@@ -870,15 +871,27 @@ class MetricsCollector:
         delay_variation_source = _dominant_proxy_source(
             (
                 ("ROUTE_LATENCY_VARIATION", delay_variation_proxy),
-                (
-                    "FLOW_LATENCY_VARIATION",
-                    _standard_deviation(flow_quality["latencies"]),
-                ),
+                ("FLOW_LATENCY_VARIATION", flow_latency_variation_proxy),
                 ("PRESSURE_DELAY_VARIATION", pressure_delay_variation_proxy),
             )
         )
+        loss_zero_reason = _network_quality_loss_zero_reason(
+            effective_loss_proxy_rate,
+            route_count=len(self._routes),
+            flow_count=int(flow_quality["successful_count"] + flow_quality["failed_count"]),
+        )
+        delay_variation_zero_reason = _network_quality_delay_variation_zero_reason(
+            effective_delay_variation_proxy,
+            route_latency_count=len(route_latencies),
+            flow_latency_count=len(flow_quality["latencies"]),
+        )
 
         return {
+            "network_quality_metric_model": "FLOW_LEVEL_PROXY",
+            "network_quality_loss_metric_semantics": "LOSS_PROXY_RATE_NOT_PACKET_LOSS",
+            "network_quality_delay_variation_metric_semantics": (
+                "DELAY_VARIATION_PROXY_NOT_PACKET_JITTER"
+            ),
             "network_quality_active_link_count": len(active_links),
             "network_quality_available_route_count": len(available_routes),
             "network_quality_offered_route_capacity_mbps": offered_route_capacity,
@@ -910,8 +923,8 @@ class MetricsCollector:
                 flow_quality["success_ratio"]
             ),
             "network_quality_flow_latency_avg_s": flow_latency_avg,
-            "network_quality_flow_latency_variation_proxy_s": _standard_deviation(
-                flow_quality["latencies"]
+            "network_quality_flow_latency_variation_proxy_s": (
+                flow_latency_variation_proxy
             ),
             "network_quality_flow_delivered_capacity_mbps": float(
                 completed_route_capacity
@@ -964,6 +977,16 @@ class MetricsCollector:
             "network_quality_delay_variation_source": delay_variation_source,
             "network_quality_delay_variation_source_label": (
                 _network_quality_source_label(delay_variation_source)
+            ),
+            "network_quality_loss_zero_reason": loss_zero_reason,
+            "network_quality_loss_zero_reason_label": _network_quality_zero_reason_label(
+                loss_zero_reason
+            ),
+            "network_quality_delay_variation_zero_reason": (
+                delay_variation_zero_reason
+            ),
+            "network_quality_delay_variation_zero_reason_label": (
+                _network_quality_zero_reason_label(delay_variation_zero_reason)
             ),
         }
 
@@ -1405,6 +1428,47 @@ def _network_quality_source_label(source: str) -> str:
         "PRESSURE_DELAY_VARIATION": "业务压力时延扰动",
     }
     return labels.get(source, source)
+
+
+def _network_quality_loss_zero_reason(
+    effective_loss_proxy_rate: float,
+    *,
+    route_count: int,
+    flow_count: int,
+) -> str:
+    if effective_loss_proxy_rate > 0.0:
+        return "POSITIVE_PROXY"
+    if route_count == 0 and flow_count == 0:
+        return "NO_ROUTE_OR_FLOW_SAMPLE"
+    return "NO_LOSS_PROXY_TRIGGERED"
+
+
+def _network_quality_delay_variation_zero_reason(
+    effective_delay_variation_proxy: float,
+    *,
+    route_latency_count: int,
+    flow_latency_count: int,
+) -> str:
+    if effective_delay_variation_proxy > 0.0:
+        return "POSITIVE_PROXY"
+    if route_latency_count == 0 and flow_latency_count == 0:
+        return "NO_ROUTE_OR_FLOW_SAMPLE"
+    if route_latency_count <= 1 and flow_latency_count <= 1:
+        return "INSUFFICIENT_VARIATION_SAMPLE"
+    return "NO_LATENCY_VARIATION"
+
+
+def _network_quality_zero_reason_label(reason: str) -> str:
+    labels = {
+        "POSITIVE_PROXY": "当前代理指标为正值",
+        "NO_ROUTE_OR_FLOW_SAMPLE": "暂无路由或流样本，零值仅表示代理未触发",
+        "NO_LOSS_PROXY_TRIGGERED": (
+            "路由阻塞、失败流、链路拥塞和业务压力均未触发损耗代理"
+        ),
+        "INSUFFICIENT_VARIATION_SAMPLE": "时延样本不足，无法形成离散度代理",
+        "NO_LATENCY_VARIATION": "路由/流时延样本未产生变化",
+    }
+    return labels.get(reason, reason)
 
 
 def _is_kpi_sample_event_type(event_type: str) -> bool:

@@ -960,6 +960,25 @@ body {
   line-height: 1.3;
 }
 
+.data-panel-kpi-caveats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.data-panel-kpi-caveats span {
+  min-width: 0;
+  border: 1px solid #3b3440;
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: #18141a;
+  color: #d9b889;
+  font-size: 10px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
 .data-panel-formula-inputs {
   display: flex;
   flex-wrap: wrap;

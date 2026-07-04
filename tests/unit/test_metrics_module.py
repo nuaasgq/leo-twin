@@ -202,6 +202,26 @@ def test_metrics_collector_kpis_are_consistent_with_observations() -> None:
     assert summary["network_quality_congestion_proxy"] == 0.0
     assert summary["network_quality_congestion_loss_proxy_rate"] == 0.0
     assert summary["network_quality_loss_proxy_rate"] == 0.0
+    assert summary["network_quality_metric_model"] == "FLOW_LEVEL_PROXY"
+    assert (
+        summary["network_quality_loss_metric_semantics"]
+        == "LOSS_PROXY_RATE_NOT_PACKET_LOSS"
+    )
+    assert (
+        summary["network_quality_delay_variation_metric_semantics"]
+        == "DELAY_VARIATION_PROXY_NOT_PACKET_JITTER"
+    )
+    assert summary["network_quality_loss_zero_reason"] == "NO_LOSS_PROXY_TRIGGERED"
+    assert summary["network_quality_loss_zero_reason_label"] == (
+        "路由阻塞、失败流、链路拥塞和业务压力均未触发损耗代理"
+    )
+    assert (
+        summary["network_quality_delay_variation_zero_reason"]
+        == "INSUFFICIENT_VARIATION_SAMPLE"
+    )
+    assert summary["network_quality_delay_variation_zero_reason_label"] == (
+        "时延样本不足，无法形成离散度代理"
+    )
     assert summary["network_quality_proxy_note"] == (
         "Flow-level proxy only; no packet-level simulation is performed."
     )
@@ -597,10 +617,17 @@ def test_metrics_collector_reports_effective_flow_level_network_quality() -> Non
     assert summary["network_quality_latency_source_label"] == "已完成流时延"
     assert summary["network_quality_loss_source"] == "PRESSURE_LOSS_PROXY"
     assert summary["network_quality_loss_source_label"] == "业务压力损耗代理"
+    assert summary["network_quality_loss_zero_reason"] == "POSITIVE_PROXY"
+    assert summary["network_quality_loss_zero_reason_label"] == "当前代理指标为正值"
     assert summary["network_quality_delay_variation_source"] == "FLOW_LATENCY_VARIATION"
     assert (
         summary["network_quality_delay_variation_source_label"]
         == "流完成时延离散度"
+    )
+    assert summary["network_quality_delay_variation_zero_reason"] == "POSITIVE_PROXY"
+    assert (
+        summary["network_quality_delay_variation_zero_reason_label"]
+        == "当前代理指标为正值"
     )
     assert summary["network_quality_provenance_note"] == (
         "Flow-level KPI provenance from route, link, and completed-flow state; "
@@ -683,6 +710,8 @@ def test_metrics_collector_uses_route_loss_rate_for_network_loss_proxy() -> None
     assert summary["network_quality_effective_throughput_mbps"] == pytest.approx(88.0)
     assert summary["network_quality_loss_source"] == "ROUTE_LOSS_RATE"
     assert summary["network_quality_loss_source_label"] == "路由损耗率"
+    assert summary["network_quality_loss_zero_reason"] == "POSITIVE_PROXY"
+    assert summary["network_quality_loss_zero_reason_label"] == "当前代理指标为正值"
 
 
 def test_metrics_collector_publishes_backend_kpi_time_series() -> None:

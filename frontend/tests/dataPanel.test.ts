@@ -4,6 +4,7 @@ import {
   buildComputeResourcePool,
   buildDataPanelDisplaySummary,
   buildDataPanelNetworkFormulaInputs,
+  buildDataPanelNetworkKpiCaveats,
   buildDataPanelNetworkKpiSource,
   buildDataPanelRouteConstraints,
   buildDataPanelRuntimeProgress,
@@ -433,7 +434,8 @@ describe("buildDataPanelNetworkKpiSource", () => {
       )
     ).toEqual({
       sourceLabel: "后端实时 KPI 序列",
-      modelNote: "后端流级代理指标；未进行包级仿真。"
+      modelNote: "后端流级代理指标；未进行包级仿真。",
+      caveats: []
     });
   });
 
@@ -445,7 +447,8 @@ describe("buildDataPanelNetworkKpiSource", () => {
       })
     ).toEqual({
       sourceLabel: "后端指标摘要",
-      modelNote: "后端网络质量指标为流级代理模型；未进行包级仿真。"
+      modelNote: "后端网络质量指标为流级代理模型；未进行包级仿真。",
+      caveats: []
     });
   });
 
@@ -459,12 +462,22 @@ describe("buildDataPanelNetworkKpiSource", () => {
         network_quality_throughput_source_label: "已完成流容量",
         network_quality_latency_source_label: "已完成流时延",
         network_quality_loss_source_label: "业务压力损耗代理",
-        network_quality_delay_variation_source_label: "流完成时延离散度"
+        network_quality_delay_variation_source_label: "流完成时延离散度",
+        network_quality_metric_model: "FLOW_LEVEL_PROXY",
+        network_quality_loss_zero_reason_label:
+          "路由阻塞、失败流、链路拥塞和业务压力均未触发损耗代理",
+        network_quality_delay_variation_zero_reason_label:
+          "时延样本不足，无法形成离散度代理"
       })
     ).toEqual({
       sourceLabel: "后端指标摘要",
       modelNote:
-        "后端流级代理指标；未进行包级仿真。 来源：吞吐量 已完成流容量；时延 已完成流时延；丢包 业务压力损耗代理；抖动 流完成时延离散度。"
+        "后端流级代理指标；未进行包级仿真。 来源：吞吐量 已完成流容量；时延 已完成流时延；丢包 业务压力损耗代理；抖动 流完成时延离散度。",
+      caveats: [
+        "指标模型：后端流级代理",
+        "丢包率：路由阻塞、失败流、链路拥塞和业务压力均未触发损耗代理",
+        "抖动：时延样本不足，无法形成离散度代理"
+      ]
     });
   });
 
@@ -510,15 +523,45 @@ describe("buildDataPanelNetworkKpiSource", () => {
       )
     ).toEqual({
       sourceLabel: "状态快照 KPI 序列",
-      modelNote: "后端网络质量指标为流级代理模型；未进行包级仿真。"
+      modelNote: "后端网络质量指标为流级代理模型；未进行包级仿真。",
+      caveats: []
     });
   });
 
   it("marks fallback estimates when backend network quality is absent", () => {
     expect(buildDataPanelNetworkKpiSource(makeSnapshot())).toEqual({
       sourceLabel: "前端快照估算",
-      modelNote: "未收到后端网络质量指标时，根据快照链路与路由做显示估算。"
+      modelNote: "未收到后端网络质量指标时，根据快照链路与路由做显示估算。",
+      caveats: []
     });
+  });
+});
+
+describe("buildDataPanelNetworkKpiCaveats", () => {
+  it("maps backend KPI semantic fields into compact dashboard caveats", () => {
+    expect(
+      buildDataPanelNetworkKpiCaveats({
+        network_quality_metric_model: "FLOW_LEVEL_PROXY",
+        network_quality_loss_zero_reason_label:
+          "路由阻塞、失败流、链路拥塞和业务压力均未触发损耗代理",
+        network_quality_delay_variation_zero_reason_label:
+          "时延样本不足，无法形成离散度代理"
+      })
+    ).toEqual([
+      "指标模型：后端流级代理",
+      "丢包率：路由阻塞、失败流、链路拥塞和业务压力均未触发损耗代理",
+      "抖动：时延样本不足，无法形成离散度代理"
+    ]);
+  });
+
+  it("does not warn on positive backend proxy values", () => {
+    expect(
+      buildDataPanelNetworkKpiCaveats({
+        network_quality_metric_model: "FLOW_LEVEL_PROXY",
+        network_quality_loss_zero_reason_label: "当前代理指标为正值",
+        network_quality_delay_variation_zero_reason_label: "当前代理指标为正值"
+      })
+    ).toEqual(["指标模型：后端流级代理"]);
   });
 });
 

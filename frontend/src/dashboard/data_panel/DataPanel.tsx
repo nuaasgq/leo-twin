@@ -220,6 +220,13 @@ export const DataPanel = memo(function DataPanel({
             <span>{networkKpiSource.sourceLabel}</span>
             <small>{networkKpiSource.modelNote}</small>
           </div>
+          {networkKpiSource.caveats.length > 0 ? (
+            <div className="data-panel-kpi-caveats" aria-label="网络KPI语义说明">
+              {networkKpiSource.caveats.map((caveat) => (
+                <span key={caveat}>{caveat}</span>
+              ))}
+            </div>
+          ) : null}
           {networkFormulaInputs.length > 0 ? (
             <div className="data-panel-formula-inputs" aria-label="网络KPI公式输入">
               {networkFormulaInputs.map((input) => (
@@ -1146,6 +1153,7 @@ export function buildDataPanelTrafficDisplay(
 export interface DataPanelNetworkKpiSource {
   sourceLabel: string;
   modelNote: string;
+  caveats: readonly string[];
 }
 
 export interface DataPanelNetworkFormulaInput {
@@ -1182,25 +1190,53 @@ export function buildDataPanelNetworkKpiSource(
   if ((backendKpiTimeSeries?.samples ?? []).length > 0) {
     return {
       sourceLabel: "后端实时 KPI 序列",
-      modelNote: backendNote
+      modelNote: backendNote,
+      caveats: buildDataPanelNetworkKpiCaveats(backendMetrics)
     };
   }
   if ((snapshot.metrics_summary.network.kpiSeries ?? []).length > 0) {
     return {
       sourceLabel: "状态快照 KPI 序列",
-      modelNote: backendNote
+      modelNote: backendNote,
+      caveats: buildDataPanelNetworkKpiCaveats(backendMetrics)
     };
   }
   if (hasBackendNetworkQualityMetrics(backendMetrics)) {
     return {
       sourceLabel: "后端指标摘要",
-      modelNote: backendNote
+      modelNote: backendNote,
+      caveats: buildDataPanelNetworkKpiCaveats(backendMetrics)
     };
   }
   return {
     sourceLabel: "前端快照估算",
-    modelNote: "未收到后端网络质量指标时，根据快照链路与路由做显示估算。"
+    modelNote: "未收到后端网络质量指标时，根据快照链路与路由做显示估算。",
+    caveats: []
   };
+}
+
+export function buildDataPanelNetworkKpiCaveats(
+  metrics: RuntimeMetricsSummary | null | undefined
+): readonly string[] {
+  if (metrics === null || metrics === undefined) {
+    return [];
+  }
+  const caveats: string[] = [];
+  if (metricString(metrics, "network_quality_metric_model") === "FLOW_LEVEL_PROXY") {
+    caveats.push("指标模型：后端流级代理");
+  }
+  const lossReason = metricString(metrics, "network_quality_loss_zero_reason_label");
+  if (lossReason && lossReason !== "当前代理指标为正值") {
+    caveats.push(`丢包率：${lossReason}`);
+  }
+  const jitterReason = metricString(
+    metrics,
+    "network_quality_delay_variation_zero_reason_label"
+  );
+  if (jitterReason && jitterReason !== "当前代理指标为正值") {
+    caveats.push(`抖动：${jitterReason}`);
+  }
+  return caveats;
 }
 
 export function buildDataPanelNetworkFormulaInputs(
