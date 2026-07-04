@@ -2765,3 +2765,39 @@ change.
 - Recommended follow-up:
   - Add immediate local preview toggles for 3D-only visibility once control
     state and runtime config updates are separated cleanly.
+
+## 2026-07-05 - Orbit Velocity Summary v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: expose a simplified circular-orbit velocity estimate in the
+  backend-derived constellation summary and frontend configuration
+  explanations.
+- Changed files/modules:
+  - `src/leo_twin/services/derived_summary.py`
+  - `tests/unit/test_backend_derived_summary.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/config_panel/ConfigPanel.tsx`
+  - `frontend/tests/configPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_backend_derived_summary.py -q`
+    - Result: passed, 8 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- configPanel.test.ts`
+    - Result: passed, 23 files / 140 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - Users can mistake LEO motion for "a few minutes per orbit"; this task keeps
+    the existing simplified circular-orbit model and exposes the derived speed
+    alongside the orbital period.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - This remains a circular-orbit explanatory estimate. It does not add SGP4,
+    perturbation modeling, or external ephemeris fidelity.
+- Recommended follow-up:
+  - Add an orbit explanation tooltip that relates update interval, display
+    interpolation, orbital period, and visual motion speed.

@@ -70,6 +70,10 @@ def test_backend_derived_summary_is_deterministic_and_frontend_ready() -> None:
         "orbital_period_model_note": (
             "Simplified circular-orbit period estimate; no SGP4 or external ephemeris."
         ),
+        "orbital_velocity_km_s": pytest.approx(7.588998),
+        "orbital_velocity_model_note": (
+            "Simplified circular-orbit speed estimate; no SGP4 or external ephemeris."
+        ),
         "inclination_deg": 53.0,
     }
     assert first["traffic_demand_summary"] == {
@@ -205,6 +209,7 @@ def test_constellation_summary_is_deterministic_for_product_scales(
     assert first["raan_spacing_deg"] == pytest.approx(360.0 / expected_plane_count)
     assert first["altitude_m"] == 550_000.0
     assert first["orbital_period_minutes"] == pytest.approx(95.502118)
+    assert first["orbital_velocity_km_s"] == pytest.approx(7.588998)
     assert first["inclination_deg"] == 53.0
     assert first["phase_policy"] == "DETERMINISTIC_PLANE_SLOT_PHASE"
 

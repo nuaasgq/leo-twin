@@ -223,6 +223,8 @@ export interface ConstellationDerivedSummary {
   altitude_m?: number;
   orbital_period_minutes?: number;
   orbital_period_model_note?: string;
+  orbital_velocity_km_s?: number;
+  orbital_velocity_model_note?: string;
   inclination_deg?: number;
   raan_spacing_deg?: number;
   mean_anomaly_spacing_deg?: number;

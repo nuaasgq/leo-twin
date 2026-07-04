@@ -243,6 +243,9 @@ describe("generatedScenarioSummaryItems", () => {
           orbital_period_minutes: 95.502118,
           orbital_period_model_note:
             "Simplified circular-orbit period estimate; no SGP4 or external ephemeris.",
+          orbital_velocity_km_s: 7.588998,
+          orbital_velocity_model_note:
+            "Simplified circular-orbit speed estimate; no SGP4 or external ephemeris.",
           inclination_deg: 53,
           raan_spacing_deg: 9,
           mean_anomaly_spacing_deg: 1.44,
@@ -351,6 +354,7 @@ describe("generatedScenarioSummaryItems", () => {
     expect(items).toContainEqual({ label: "覆盖保真", value: "显示近似" });
     expect(items).toContainEqual({ label: "足迹交集", value: "仅视觉几何包含" });
     expect(items).toContainEqual({ label: "轨道周期", value: "95.5 min" });
+    expect(items).toContainEqual({ label: "轨道速度", value: "7.59 km/s" });
   });
 
   it("shows a waiting state before initialization", () => {

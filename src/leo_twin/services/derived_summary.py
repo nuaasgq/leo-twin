@@ -204,6 +204,12 @@ def _add_constellation_geometry(
         summary["orbital_period_model_note"] = (
             "Simplified circular-orbit period estimate; no SGP4 or external ephemeris."
         )
+        summary["orbital_velocity_km_s"] = _circular_orbital_velocity_km_s(
+            orbit_altitude_m,
+        )
+        summary["orbital_velocity_model_note"] = (
+            "Simplified circular-orbit speed estimate; no SGP4 or external ephemeris."
+        )
     if orbit_inclination_deg is not None:
         summary["inclination_deg"] = float(orbit_inclination_deg)
 
@@ -217,6 +223,12 @@ def _circular_orbital_period_minutes(altitude_m: float) -> float:
         * (semi_major_axis_km**3 / _EARTH_MU_KM3_S2) ** 0.5
         / 60.0
     )
+
+
+def _circular_orbital_velocity_km_s(altitude_m: float) -> float:
+    altitude_km = float(altitude_m) / 1000.0
+    semi_major_axis_km = _EARTH_RADIUS_KM + altitude_km
+    return float((_EARTH_MU_KM3_S2 / semi_major_axis_km) ** 0.5)
 
 
 def _plane_distribution(satellite_count: int, plane_count: int) -> list[int]:
