@@ -233,6 +233,19 @@ Each task MUST follow:
    - tests
    - minimal runnable example (if required)
 
+6. After each completed task, push committed changes to GitHub.
+
+7. GitHub remote synchronization is mandatory:
+   - keep `origin` configured as `https://github.com/nuaasgq/leo-twin.git`
+   - push the task branch after commit
+   - update the remote default branch when the task is intended to become the
+     current project baseline
+   - do not push unrelated local runtime/config changes unless they are part of
+     the current task scope
+
+8. A task is not considered fully delivered until its committed scope is
+   available from the GitHub repository URL.
+
 ---
 
 ## 12. Multi-Agent Execution Model (CRITICAL)
@@ -323,6 +336,7 @@ A task is complete ONLY if:
 - no architecture violations
 - no external dependencies introduced
 - example runs successfully (if applicable)
+- committed changes are pushed to GitHub
 
 ---
 
