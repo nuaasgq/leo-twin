@@ -100,6 +100,37 @@ describe("ConfigPanel priority controls", () => {
     expect(markup).toContain('id="compute-storage-gb"');
   });
 
+  it("renders traffic mix controls from backend scenario fields", () => {
+    const markup = renderToStaticMarkup(
+      createElement(ConfigPanel, {
+        scenario: {
+          ...defaultScenario(),
+          traffic_model: {
+            ...defaultScenario().traffic_model,
+            traffic_class: "BULK_DOWNLINK",
+            destination_type: "GROUND_ENDPOINT",
+            output_data_size: 3.5
+          }
+        },
+        runtime: runtimeStatus("STOPPED", true),
+        progress: {
+          sim_time: 0,
+          duration: 600,
+          event_count: 0
+        },
+        generatedConfig: null,
+        onRuntimeControl: () => undefined
+      })
+    );
+
+    expect(markup).toContain('id="traffic-class"');
+    expect(markup).toContain('value="BULK_DOWNLINK" selected');
+    expect(markup).toContain('id="traffic-destination-type"');
+    expect(markup).toContain('value="GROUND_ENDPOINT" selected');
+    expect(markup).toContain('id="traffic-output-data-size"');
+    expect(markup).toContain('value="3.5"');
+  });
+
   it("uses backend-provided compute node count instead of satellite count", () => {
     const markup = renderToStaticMarkup(
       createElement(ConfigPanel, {

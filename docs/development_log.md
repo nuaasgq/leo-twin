@@ -1978,7 +1978,7 @@ change.
 ## 2026-07-05 - Frontend Traffic Summary v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`
-- Commit: pending
+- Commit: `dbb3151`
 - Scope: surface backend-provided traffic semantics in the frontend without
   changing control layout or rendering architecture.
 - Changed files/modules:
@@ -2008,3 +2008,35 @@ change.
 - Recommended follow-up:
   - Add a small traffic mix control group with segmented traffic-class choices
     and numeric output-data input, reusing the existing backend config fields.
+
+## 2026-07-05 - Frontend Traffic Mix Controls v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending
+- Scope: add frontend controls for backend traffic class, destination type, and
+  output data size without changing the control architecture.
+- Changed files/modules:
+  - `frontend/src/config_panel/ConfigPanel.tsx`
+  - `frontend/tests/configPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- configPanel.test.ts`
+    - Result: passed, 22 files / 112 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The control panel already had state and payload plumbing from the backend
+    config slice, so the UI change was limited to rendering controls and
+    adding a deterministic static-markup test.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - Destination choices are user-selectable, but compute-service execution
+    still uses the backend compute-service workload shape. A later backend
+    validation task should prevent incompatible class/destination combinations
+    or explain how they are coerced.
+- Recommended follow-up:
+  - Add backend validation and frontend helper text for traffic-class and
+    destination compatibility.

@@ -362,6 +362,16 @@ export function ConfigPanel({
     setSpeedFactor(boundedInteger(value, 1, 100));
   const handleDurationSecondsChange = (value: number) =>
     setDurationSeconds(boundedInteger(value, 60, 86400));
+  const handleTrafficClassChange = (value: string) => {
+    setTrafficClass(value);
+    if (value === "COMPUTE_SERVICE") {
+      setTrafficDestinationType("COMPUTE_NODE");
+    } else if (value === "TELEMETRY" || value === "BULK_DOWNLINK") {
+      setTrafficDestinationType("GROUND_ENDPOINT");
+    } else {
+      setTrafficDestinationType("SERVICE_ENDPOINT");
+    }
+  };
   const handleInitialize = () =>
     onRuntimeControl("INITIALIZE", {
       satellite_count: satelliteCount,
@@ -866,6 +876,38 @@ export function ConfigPanel({
           <div className="config-section-title">{CONFIG_PANEL_SECTION_LABELS.traffic}</div>
       <div className="channel-grid" aria-label="流量与任务需求">
         <div className="control-group">
+          <label className="control-label" htmlFor="traffic-class">
+            业务类型
+          </label>
+          <select
+            id="traffic-class"
+            value={trafficClass}
+            onChange={(event) => handleTrafficClassChange(event.currentTarget.value)}
+          >
+            <option value="COMPUTE_SERVICE">通信-计算服务</option>
+            <option value="DATA_TRANSFER">数据传输</option>
+            <option value="TELEMETRY">遥测</option>
+            <option value="BULK_DOWNLINK">批量下传</option>
+          </select>
+        </div>
+
+        <div className="control-group">
+          <label className="control-label" htmlFor="traffic-destination-type">
+            目的类型
+          </label>
+          <select
+            id="traffic-destination-type"
+            value={trafficDestinationType}
+            onChange={(event) => setTrafficDestinationType(event.currentTarget.value)}
+          >
+            <option value="COMPUTE_NODE">星上算力节点</option>
+            <option value="GROUND_ENDPOINT">地面端</option>
+            <option value="SATELLITE">卫星节点</option>
+            <option value="SERVICE_ENDPOINT">服务端点</option>
+          </select>
+        </div>
+
+        <div className="control-group">
           <label className="control-label" htmlFor="flow-interval">
             流量间隔
           </label>
@@ -932,7 +974,7 @@ export function ConfigPanel({
 
         <div className="control-group">
           <label className="control-label" htmlFor="task-data-size">
-            任务数据量
+            输入数据量
           </label>
           <div className="unit-input">
             <input
@@ -942,6 +984,25 @@ export function ConfigPanel({
               step="0.1"
               value={taskDataSize}
               onChange={(event) => setTaskDataSize(Number(event.currentTarget.value))}
+            />
+            <span>MB</span>
+          </div>
+        </div>
+
+        <div className="control-group">
+          <label className="control-label" htmlFor="traffic-output-data-size">
+            输出数据量
+          </label>
+          <div className="unit-input">
+            <input
+              id="traffic-output-data-size"
+              type="number"
+              min="0"
+              step="0.1"
+              value={trafficOutputDataSize}
+              onChange={(event) =>
+                setTrafficOutputDataSize(nonNegativeNumber(Number(event.currentTarget.value)))
+              }
             />
             <span>MB</span>
           </div>
