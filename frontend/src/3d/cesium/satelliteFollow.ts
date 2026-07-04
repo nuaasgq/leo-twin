@@ -108,6 +108,12 @@ export function satelliteComputeSummary(
         available_capacity: number;
         load_ratio?: number;
         status: string;
+        cpu_gflops_fp64?: number;
+        gpu_tflops_fp32?: number;
+        gpu_tflops_fp16?: number;
+        npu_tops_int8?: number;
+        memory_gb?: number;
+        storage_gb?: number;
       }
     | null
     | undefined,
@@ -118,13 +124,32 @@ export function satelliteComputeSummary(
   }
   const capacity = Math.max(0, finiteNumber(node.capacity));
   const available = Math.max(0, Math.min(capacity, finiteNumber(node.available_capacity)));
-  const cpuFp32 = finiteOptionalNumber(resourceSummary?.cpu_gflops_fp32_per_node, capacity);
-  const cpuFp64 = finiteOptionalNumber(resourceSummary?.cpu_gflops_fp64_per_node, 0);
-  const gpuFp32 = finiteOptionalNumber(resourceSummary?.gpu_tflops_fp32_per_node, 0);
-  const gpuFp16 = finiteOptionalNumber(resourceSummary?.gpu_tflops_fp16_per_node, 0);
-  const npuInt8 = finiteOptionalNumber(resourceSummary?.npu_tops_int8_per_node, 0);
-  const memoryGb = finiteOptionalNumber(resourceSummary?.memory_gb_per_node, 0);
-  const storageGb = finiteOptionalNumber(resourceSummary?.storage_gb_per_node, 0);
+  const hasLiveResourceVector = hasNodeResourceVector(node);
+  const cpuFp32 = capacity;
+  const cpuFp64 = finiteOptionalNumber(
+    node.cpu_gflops_fp64,
+    finiteOptionalNumber(resourceSummary?.cpu_gflops_fp64_per_node, 0)
+  );
+  const gpuFp32 = finiteOptionalNumber(
+    node.gpu_tflops_fp32,
+    finiteOptionalNumber(resourceSummary?.gpu_tflops_fp32_per_node, 0)
+  );
+  const gpuFp16 = finiteOptionalNumber(
+    node.gpu_tflops_fp16,
+    finiteOptionalNumber(resourceSummary?.gpu_tflops_fp16_per_node, 0)
+  );
+  const npuInt8 = finiteOptionalNumber(
+    node.npu_tops_int8,
+    finiteOptionalNumber(resourceSummary?.npu_tops_int8_per_node, 0)
+  );
+  const memoryGb = finiteOptionalNumber(
+    node.memory_gb,
+    finiteOptionalNumber(resourceSummary?.memory_gb_per_node, 0)
+  );
+  const storageGb = finiteOptionalNumber(
+    node.storage_gb,
+    finiteOptionalNumber(resourceSummary?.storage_gb_per_node, 0)
+  );
   const utilization =
     node.load_ratio !== undefined
       ? clamp(finiteNumber(node.load_ratio), 0, 1)
@@ -132,7 +157,9 @@ export function satelliteComputeSummary(
         ? 0
         : clamp((capacity - available) / capacity, 0, 1);
   return {
-    resourceModelLabel: resourceSummary?.resource_model ?? "LegacyScalarCapacity",
+    resourceModelLabel:
+      resourceSummary?.resource_model ??
+      (hasLiveResourceVector ? "ComputeResourceVector" : "LegacyScalarCapacity"),
     resourceRoleLabel: formatNodeRole(resourceSummary?.node_role),
     capacityLabel: `${formatNumber(capacity)} GFLOPS FP32`,
     availableLabel: `${formatNumber(available)} GFLOPS`,
@@ -151,6 +178,24 @@ export function satelliteComputeSummary(
     compatibilityNote:
       resourceSummary?.compatibility_note ?? "实时节点状态仍使用标量 capacity。"
   };
+}
+
+function hasNodeResourceVector(node: {
+  cpu_gflops_fp64?: number;
+  gpu_tflops_fp32?: number;
+  gpu_tflops_fp16?: number;
+  npu_tops_int8?: number;
+  memory_gb?: number;
+  storage_gb?: number;
+}): boolean {
+  return (
+    node.cpu_gflops_fp64 !== undefined ||
+    node.gpu_tflops_fp32 !== undefined ||
+    node.gpu_tflops_fp16 !== undefined ||
+    node.npu_tops_int8 !== undefined ||
+    node.memory_gb !== undefined ||
+    node.storage_gb !== undefined
+  );
 }
 
 function clamp(value: number, min: number, max: number): number {

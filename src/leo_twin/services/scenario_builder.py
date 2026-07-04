@@ -262,6 +262,12 @@ class ComputeNodeSpec:
 
     node_id: str
     capacity: float
+    cpu_gflops_fp64: float = 0.0
+    gpu_tflops_fp32: float = 0.0
+    gpu_tflops_fp16: float = 0.0
+    npu_tops_int8: float = 0.0
+    memory_gb: float = 0.0
+    storage_gb: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -520,6 +526,12 @@ def _compute_nodes(
         ComputeNodeSpec(
             node_id=satellite_id,
             capacity=config.compute_capacity,
+            cpu_gflops_fp64=config.compute_cpu_gflops_fp64,
+            gpu_tflops_fp32=config.compute_gpu_tflops_fp32,
+            gpu_tflops_fp16=config.compute_gpu_tflops_fp16,
+            npu_tops_int8=config.compute_npu_tops_int8,
+            memory_gb=config.compute_memory_gb,
+            storage_gb=config.compute_storage_gb,
         )
         for satellite_id in _compute_node_satellite_ids(config)
     )

@@ -143,7 +143,13 @@ function decodeComputeNodeState(value: unknown): ComputeNodeState {
     load_ratio:
       record.load_ratio === undefined
         ? undefined
-        : requireFiniteNumber(record.load_ratio, "load_ratio")
+        : requireFiniteNumber(record.load_ratio, "load_ratio"),
+    ...optionalNumberField(record, "cpu_gflops_fp64"),
+    ...optionalNumberField(record, "gpu_tflops_fp32"),
+    ...optionalNumberField(record, "gpu_tflops_fp16"),
+    ...optionalNumberField(record, "npu_tops_int8"),
+    ...optionalNumberField(record, "memory_gb"),
+    ...optionalNumberField(record, "storage_gb")
   };
 }
 
@@ -232,6 +238,16 @@ function requireFiniteNumber(value: unknown, label: string): number {
     throw new TypeError(`${label} must be a finite number`);
   }
   return value;
+}
+
+function optionalNumberField(
+  record: Record<string, unknown>,
+  fieldName: string
+): Record<string, number> {
+  if (record[fieldName] === undefined) {
+    return {};
+  }
+  return { [fieldName]: requireFiniteNumber(record[fieldName], fieldName) };
 }
 
 function requireBoolean(value: unknown, label: string): boolean {

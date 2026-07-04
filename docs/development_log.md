@@ -5,6 +5,72 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Runtime Compute Resource Vector State v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending in this commit
+- Scope: publish configured compute resource vector fields through runtime
+  compute node state, replay snapshots, frontend decoding, and the selected
+  satellite resource inset while preserving scalar `compute_capacity`
+  compatibility.
+- Changed files/modules:
+  - `src/leo_twin/models/compute/contracts.py`
+  - `src/leo_twin/models/compute/engine.py`
+  - `src/leo_twin/models/compute/network_aware.py`
+  - `src/leo_twin/models/network/position_engine.py`
+  - `src/leo_twin/schema/domain.py`
+  - `src/leo_twin/services/scenario_builder.py`
+  - `examples/integration_demo/scenario.py`
+  - `examples/integration_demo/replay.py`
+  - `examples/generated_full_system_demo.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/core/decoder/index.ts`
+  - `frontend/src/state/snapshot_engine/index.ts`
+  - `frontend/src/3d/cesium/CesiumGlobe.tsx`
+  - `frontend/src/3d/cesium/satelliteFollow.ts`
+  - `tests/unit/test_compute_module.py`
+  - `tests/unit/test_network_aware_compute.py`
+  - `tests/unit/test_integration_demo_scenario.py`
+  - `frontend/tests/eventDecoder.test.ts`
+  - `frontend/tests/satelliteVisuals.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_compute_module.py tests/unit/test_network_aware_compute.py tests/unit/test_integration_demo_scenario.py::test_demo_compute_resource_vector_is_config_driven tests/unit/test_product_contracts.py -q`
+    - Result: passed, 19 tests.
+  - `python -m pytest tests/unit/test_position_driven_network_engine.py::test_compute_node_update_reroutes_active_flows_with_capacity_feedback tests/integration/test_full_system_demo.py::test_replay_test -q`
+    - Result: passed, 2 tests.
+  - `python -m pytest tests/unit/test_scenario_builder.py tests/unit/test_backend_derived_summary.py tests/integration/test_config_control.py::test_frontend_control_messages_are_processed tests/integration/test_config_control.py::test_initialize_writes_config_and_start_gates_streams -k "not default_generated_scenario_config_file_loads" -q`
+    - Result: passed, 18 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- satelliteVisuals.test.ts eventDecoder.test.ts renderPerformance.test.ts`
+    - Result: passed, 22 files / 105 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+  - `git diff --check`
+    - Result: passed with only CRLF warnings for excluded local runtime config
+      files.
+- Problems encountered:
+  - The first frontend satellite visual test expectation used the old mojibake
+    string and omitted numeric thousands formatting. The assertion was corrected
+    to the actual UTF-8 UI label: `内存 48 GB / 存储 1,024 GB`.
+  - The broader scenario-builder/config-control selection fails if
+    `test_default_generated_scenario_config_file_loads` is included because the
+    active local `configs/generated_full_system_demo.json` contains runtime
+    120-node state while the repository baseline expects 6 satellites. That
+    generated runtime config remains intentionally excluded.
+- Known remaining issues:
+  - Compute scheduling still uses scalar `compute_capacity` as CPU FP32
+    compatibility capacity. Vector-aware service-time estimation remains a
+    separate backend task.
+  - The selected satellite resource inset now displays live vector fields when
+    available, but dashboard aggregate charts still use existing summary and
+    metric paths.
+- Recommended follow-up:
+  - Implement deterministic vector-aware compute service-time estimation and
+    emit per-resource utilization metrics for CPU FP32/FP64, GPU FP32/FP16,
+    NPU INT8, memory, and storage.
+
 ## 2026-07-05 - Frontend Compute Vector Controls v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`

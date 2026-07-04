@@ -288,7 +288,18 @@ def test_route_recovery_restarts_transfer_with_latest_route() -> None:
 def test_route_aware_compute_can_publish_node_updates_to_network() -> None:
     kernel = SimulationKernel()
     engine = RouteAwareComputeEngine(
-        nodes=(ComputeNode("node-a", capacity=10.0),),
+        nodes=(
+            ComputeNode(
+                "node-a",
+                capacity=10.0,
+                cpu_gflops_fp64=2.0,
+                gpu_tflops_fp32=1.5,
+                gpu_tflops_fp16=3.0,
+                npu_tops_int8=8.0,
+                memory_gb=16.0,
+                storage_gb=256.0,
+            ),
+        ),
         state_update_targets=("network",),
     )
     metrics = MetricsSink()
@@ -306,6 +317,12 @@ def test_route_aware_compute_can_publish_node_updates_to_network() -> None:
         COMPUTE_NODE_UPDATE,
     ]
     assert [event.target for event in network.events] == ["network", "network"]
+    assert network.events[0].payload.cpu_gflops_fp64 == 2.0
+    assert network.events[0].payload.gpu_tflops_fp32 == 1.5
+    assert network.events[0].payload.gpu_tflops_fp16 == 3.0
+    assert network.events[0].payload.npu_tops_int8 == 8.0
+    assert network.events[0].payload.memory_gb == 16.0
+    assert network.events[0].payload.storage_gb == 256.0
     assert [event.event_type for event in metrics.events] == [
         EventType.TASK_START.value,
         COMPUTE_NODE_UPDATE,

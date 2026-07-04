@@ -121,13 +121,7 @@ class ComputeEngine(SimulationModule):
             self._event(
                 sim_time=start_time,
                 event_type=COMPUTE_NODE_UPDATE,
-                payload=ComputeNodeState(
-                    node_id=node.node_id,
-                    sim_time=start_time,
-                    capacity=node.capacity,
-                    available_capacity=0.0,
-                    status="BUSY",
-                ),
+                payload=_compute_node_state(node, start_time, 0.0, "BUSY"),
             )
         )
         kernel.schedule_event(
@@ -147,13 +141,7 @@ class ComputeEngine(SimulationModule):
             self._event(
                 sim_time=finish_time,
                 event_type=COMPUTE_NODE_UPDATE,
-                payload=ComputeNodeState(
-                    node_id=node.node_id,
-                    sim_time=finish_time,
-                    capacity=node.capacity,
-                    available_capacity=node.capacity,
-                    status="IDLE",
-                ),
+                payload=_compute_node_state(node, finish_time, node.capacity, "IDLE"),
             )
         )
 
@@ -217,3 +205,24 @@ class ComputeEngine(SimulationModule):
                 status=str(payload["status"]),
             )
         raise TypeError("FLOW_COMPLETE payload must be FlowState or dict")
+
+
+def _compute_node_state(
+    node: ComputeNode,
+    sim_time: float,
+    available_capacity: float,
+    status: str,
+) -> ComputeNodeState:
+    return ComputeNodeState(
+        node_id=node.node_id,
+        sim_time=sim_time,
+        capacity=node.capacity,
+        available_capacity=available_capacity,
+        status=status,
+        cpu_gflops_fp64=node.cpu_gflops_fp64,
+        gpu_tflops_fp32=node.gpu_tflops_fp32,
+        gpu_tflops_fp16=node.gpu_tflops_fp16,
+        npu_tops_int8=node.npu_tops_int8,
+        memory_gb=node.memory_gb,
+        storage_gb=node.storage_gb,
+    )

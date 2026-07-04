@@ -273,6 +273,13 @@ def test_demo_compute_resource_vector_is_config_driven() -> None:
     assert frontend_scenario["compute_capacity"] == 40.0
     assert frontend_scenario["compute_gpu_tflops_fp32"] == 2.5
     assert frontend_scenario["compute_npu_tops_int8"] == 12.0
+    assert scenario.compute_nodes[0].capacity == 40.0
+    assert scenario.compute_nodes[0].cpu_gflops_fp64 == 8.0
+    assert scenario.compute_nodes[0].gpu_tflops_fp32 == 2.5
+    assert scenario.compute_nodes[0].gpu_tflops_fp16 == 5.0
+    assert scenario.compute_nodes[0].npu_tops_int8 == 12.0
+    assert scenario.compute_nodes[0].memory_gb == 32.0
+    assert scenario.compute_nodes[0].storage_gb == 512.0
     assert summary["cpu_gflops_fp32_per_node"] == 40.0
     assert summary["cpu_gflops_fp64_per_node"] == 8.0
     assert summary["gpu_tflops_fp32_per_node"] == 2.5

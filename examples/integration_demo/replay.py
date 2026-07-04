@@ -222,6 +222,12 @@ def _compute_node_row(node: ComputeNodeState) -> dict[str, JsonValue]:
         "available_capacity": node.available_capacity,
         "status": node.status,
         "load_ratio": _compute_load_ratio(node),
+        "cpu_gflops_fp64": node.cpu_gflops_fp64,
+        "gpu_tflops_fp32": node.gpu_tflops_fp32,
+        "gpu_tflops_fp16": node.gpu_tflops_fp16,
+        "npu_tops_int8": node.npu_tops_int8,
+        "memory_gb": node.memory_gb,
+        "storage_gb": node.storage_gb,
     }
 
 

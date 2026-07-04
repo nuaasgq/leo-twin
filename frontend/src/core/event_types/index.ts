@@ -79,6 +79,12 @@ export interface ComputeNodeState {
   available_capacity: number;
   status: string;
   load_ratio?: number;
+  cpu_gflops_fp64?: number;
+  gpu_tflops_fp32?: number;
+  gpu_tflops_fp16?: number;
+  npu_tops_int8?: number;
+  memory_gb?: number;
+  storage_gb?: number;
 }
 
 export interface MetricRecord {

@@ -163,7 +163,16 @@ def run_generated_full_system_demo(
     )
     compute = RouteAwareComputeEngine(
         nodes=tuple(
-            ComputeNode(node.node_id, capacity=node.capacity)
+            ComputeNode(
+                node.node_id,
+                capacity=node.capacity,
+                cpu_gflops_fp64=node.cpu_gflops_fp64,
+                gpu_tflops_fp32=node.gpu_tflops_fp32,
+                gpu_tflops_fp16=node.gpu_tflops_fp16,
+                npu_tops_int8=node.npu_tops_int8,
+                memory_gb=node.memory_gb,
+                storage_gb=node.storage_gb,
+            )
             for node in scenario.compute_nodes
         ),
         scheduling_runtime=ComputeSchedulingRuntime(

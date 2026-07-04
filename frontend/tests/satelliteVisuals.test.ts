@@ -242,6 +242,31 @@ describe("satellite follow inset", () => {
       compatibilityNote: "Legacy scalar capacity maps to cpu_gflops_fp32."
     });
   });
+
+  it("prefers live compute-node resource vectors for selected satellite details", () => {
+    const summary = satelliteComputeSummary({
+      capacity: 44,
+      available_capacity: 11,
+      status: "BUSY",
+      cpu_gflops_fp64: 9,
+      gpu_tflops_fp32: 3.5,
+      gpu_tflops_fp16: 7,
+      npu_tops_int8: 16,
+      memory_gb: 48,
+      storage_gb: 1024
+    });
+
+    expect(summary).toMatchObject({
+      resourceModelLabel: "ComputeResourceVector",
+      capacityLabel: "44 GFLOPS FP32",
+      availableLabel: "11 GFLOPS",
+      utilizationLabel: "75%",
+      cpuVectorLabel: "CPU FP32 44 GFLOPS / FP64 9 GFLOPS",
+      gpuVectorLabel: "GPU FP32 3.5 TFLOPS / FP16 7 TFLOPS",
+      npuVectorLabel: "NPU INT8 16 TOPS",
+      memoryStorageLabel: "内存 48 GB / 存储 1,024 GB"
+    });
+  });
 });
 
 const satelliteA: SatelliteState = {

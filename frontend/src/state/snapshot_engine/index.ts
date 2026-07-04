@@ -68,6 +68,12 @@ export interface ComputeNodeRenderState {
   available_capacity: number;
   status: string;
   load_ratio: number;
+  cpu_gflops_fp64?: number;
+  gpu_tflops_fp32?: number;
+  gpu_tflops_fp16?: number;
+  npu_tops_int8?: number;
+  memory_gb?: number;
+  storage_gb?: number;
 }
 
 export interface SnapshotDiff {
@@ -413,9 +419,32 @@ function computeNodeSummary(
         capacity: node?.capacity ?? 0,
         available_capacity: node?.available_capacity ?? 0,
         status: node?.status ?? "UNKNOWN",
-        load_ratio: computeLoadRatio(node)
+        load_ratio: computeLoadRatio(node),
+        ...computeResourceVectorFields(node)
       };
     });
+}
+
+function computeResourceVectorFields(
+  node: ComputeNodeState | undefined
+): Partial<ComputeNodeRenderState> {
+  if (!node) {
+    return {};
+  }
+  return {
+    ...(node.cpu_gflops_fp64 === undefined
+      ? {}
+      : { cpu_gflops_fp64: node.cpu_gflops_fp64 }),
+    ...(node.gpu_tflops_fp32 === undefined
+      ? {}
+      : { gpu_tflops_fp32: node.gpu_tflops_fp32 }),
+    ...(node.gpu_tflops_fp16 === undefined
+      ? {}
+      : { gpu_tflops_fp16: node.gpu_tflops_fp16 }),
+    ...(node.npu_tops_int8 === undefined ? {} : { npu_tops_int8: node.npu_tops_int8 }),
+    ...(node.memory_gb === undefined ? {} : { memory_gb: node.memory_gb }),
+    ...(node.storage_gb === undefined ? {} : { storage_gb: node.storage_gb })
+  };
 }
 
 function computeLoadRatio(node: ComputeNodeState | undefined): number {

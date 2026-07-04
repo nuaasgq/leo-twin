@@ -871,6 +871,17 @@ class PositionDrivenNetworkEngine(SimulationModule):
                 capacity=float(payload["capacity"]),
                 available_capacity=float(payload["available_capacity"]),
                 status=str(payload["status"]),
+                load_ratio=(
+                    None
+                    if payload.get("load_ratio") is None
+                    else float(payload["load_ratio"])
+                ),
+                cpu_gflops_fp64=float(payload.get("cpu_gflops_fp64", 0.0)),
+                gpu_tflops_fp32=float(payload.get("gpu_tflops_fp32", 0.0)),
+                gpu_tflops_fp16=float(payload.get("gpu_tflops_fp16", 0.0)),
+                npu_tops_int8=float(payload.get("npu_tops_int8", 0.0)),
+                memory_gb=float(payload.get("memory_gb", 0.0)),
+                storage_gb=float(payload.get("storage_gb", 0.0)),
             )
         raise TypeError("COMPUTE_NODE_UPDATE payload must be ComputeNodeState or dict")
 

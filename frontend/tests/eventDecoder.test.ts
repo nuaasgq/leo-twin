@@ -58,7 +58,13 @@ describe("decodeSimEvent", () => {
         capacity: 20,
         available_capacity: 5,
         status: "BUSY",
-        load_ratio: 0.75
+        load_ratio: 0.75,
+        cpu_gflops_fp64: 8,
+        gpu_tflops_fp32: 2.5,
+        gpu_tflops_fp16: 5,
+        npu_tops_int8: 12,
+        memory_gb: 32,
+        storage_gb: 512
       }
     });
 
@@ -68,7 +74,13 @@ describe("decodeSimEvent", () => {
       capacity: 20,
       available_capacity: 5,
       status: "BUSY",
-      load_ratio: 0.75
+      load_ratio: 0.75,
+      cpu_gflops_fp64: 8,
+      gpu_tflops_fp32: 2.5,
+      gpu_tflops_fp16: 5,
+      npu_tops_int8: 12,
+      memory_gb: 32,
+      storage_gb: 512
     });
   });
 

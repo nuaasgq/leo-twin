@@ -387,6 +387,12 @@ def _compute_nodes(config: DemoConfig) -> tuple[ComputeNode, ...]:
         ComputeNode(
             node_id=satellite_id,
             capacity=config.compute_capacity + float(index % 5) * 2.5,
+            cpu_gflops_fp64=config.compute_cpu_gflops_fp64,
+            gpu_tflops_fp32=config.compute_gpu_tflops_fp32,
+            gpu_tflops_fp16=config.compute_gpu_tflops_fp16,
+            npu_tops_int8=config.compute_npu_tops_int8,
+            memory_gb=config.compute_memory_gb,
+            storage_gb=config.compute_storage_gb,
         )
         for index, satellite_id in enumerate(_compute_node_satellite_ids(config))
     )

@@ -301,6 +301,12 @@ class ComputeNodeState:
     available_capacity: float
     status: str
     load_ratio: float | None = None
+    cpu_gflops_fp64: float = 0.0
+    gpu_tflops_fp32: float = 0.0
+    gpu_tflops_fp16: float = 0.0
+    npu_tops_int8: float = 0.0
+    memory_gb: float = 0.0
+    storage_gb: float = 0.0
 
     def __post_init__(self) -> None:
         _require_non_empty_str(self.node_id, "node_id")
@@ -310,6 +316,15 @@ class ComputeNodeState:
         _require_non_empty_str(self.status, "status")
         if self.load_ratio is not None:
             _require_probability(self.load_ratio, "load_ratio")
+        for field_name in (
+            "cpu_gflops_fp64",
+            "gpu_tflops_fp32",
+            "gpu_tflops_fp16",
+            "npu_tops_int8",
+            "memory_gb",
+            "storage_gb",
+        ):
+            _require_non_negative_number(getattr(self, field_name), field_name)
 
 
 @dataclass(frozen=True)

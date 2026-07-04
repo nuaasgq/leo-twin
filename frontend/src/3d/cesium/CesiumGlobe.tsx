@@ -20,7 +20,7 @@ import "cesium/Build/Cesium/Widgets/widgets.css";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ComputeResourceSummary, SatelliteState } from "../../core/event_types";
-import { WorldSnapshot } from "../../state/snapshot_engine";
+import { ComputeNodeRenderState, WorldSnapshot } from "../../state/snapshot_engine";
 import {
   pruneBeamEntities,
   resolveBeamGeometryOptions,
@@ -388,12 +388,7 @@ function SatelliteInset({
 }: {
   satellite: SatelliteState;
   trail: readonly SatelliteInsetPoint[];
-  computeNode?: {
-    capacity: number;
-    available_capacity: number;
-    load_ratio?: number;
-    status: string;
-  } | null;
+  computeNode?: ComputeNodeRenderState | null;
   computeResourceSummary?: ComputeResourceSummary | null;
 }) {
   const latestPoint = trail[trail.length - 1] ?? {

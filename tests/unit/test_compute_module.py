@@ -121,6 +121,55 @@ def test_task_lifecycle_events_and_node_state_updates_are_scheduled() -> None:
     )
 
 
+def test_compute_node_updates_publish_resource_vectors() -> None:
+    kernel = SimulationKernel()
+    engine = ComputeEngine(
+        nodes=(
+            ComputeNode(
+                node_id="vector-node",
+                capacity=40.0,
+                cpu_gflops_fp64=8.0,
+                gpu_tflops_fp32=2.5,
+                gpu_tflops_fp16=5.0,
+                npu_tops_int8=12.0,
+                memory_gb=32.0,
+                storage_gb=512.0,
+            ),
+        )
+    )
+    sink = MetricsSink()
+    kernel.register_module(engine)
+    kernel.register_module(sink)
+    kernel.schedule_event(
+        _event(
+            1,
+            EventType.TASK_ARRIVAL.value,
+            _task("task-vector", compute_demand=40.0),
+        )
+    )
+
+    kernel.run()
+
+    busy_state = next(
+        event.payload
+        for event in sink.events
+        if event.event_type == COMPUTE_NODE_UPDATE
+    )
+    assert busy_state == ComputeNodeState(
+        node_id="vector-node",
+        sim_time=0.0,
+        capacity=40.0,
+        available_capacity=0.0,
+        status="BUSY",
+        cpu_gflops_fp64=8.0,
+        gpu_tflops_fp32=2.5,
+        gpu_tflops_fp16=5.0,
+        npu_tops_int8=12.0,
+        memory_gb=32.0,
+        storage_gb=512.0,
+    )
+
+
 def test_scheduler_uses_deterministic_earliest_finish_ordering() -> None:
     engine, sink, _ = _run_task_scenario()
 
