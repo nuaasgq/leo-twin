@@ -139,7 +139,7 @@ change.
 ## 2026-07-05 - Backend Metrics Quality Summary v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`
-- Commit: this commit (created before hash assignment)
+- Commit: `7509d90`
 - Scope: add backend-owned flow-level network quality proxy fields and
   satellite-hosted compute resource pool fields to `MetricsCollector.summary()`
   without introducing packet-level simulation or extra metric events.
@@ -171,6 +171,45 @@ change.
   - Bind dashboard KPI charts to backend-owned `network_quality_*` and
     `compute_resource_*` fields, then add timestamped link/route quality
     contract fields in a separate task if needed.
+
+## 2026-07-05 - Runtime Metrics Summary Binding v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: this commit (created before hash assignment)
+- Scope: expose `MetricsCollector.summary()` through runtime status and make
+  the standalone DataPanel prefer backend-owned `network_quality_*` and
+  `compute_resource_*` fields for dynamic telemetry values.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer -q`
+    - Result: passed.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 22 files / 93 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+  - `python -m pytest tests/integration/test_runtime_session_control.py tests/integration/test_live_runtime_streaming.py -q`
+    - Result: passed, 19 tests.
+- Problems encountered:
+  - TypeScript/esbuild rejected a mixed `??` / `||` expression without
+    parentheses. The throughput fallback expression was split into a stable
+    intermediate value and retested.
+  - The active local runtime config files remain modified and excluded.
+- Known remaining issues:
+  - Dashboard charts still use a frontend envelope over backend values rather
+    than a backend-owned time-series sample window.
+  - The loss field is still a route-blocking proxy and is intentionally not
+    packet loss.
+- Recommended follow-up:
+  - Add backend-owned time-series samples for network quality and compute
+    resource pool consumption, then remove the local envelope approximation.
 
 ## 2026-07-04 - Development Log Requirement
 

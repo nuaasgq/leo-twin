@@ -292,6 +292,55 @@ describe("buildDataPanelTelemetry", () => {
     });
     expect(telemetry[0].throughputMbps).toBeLessThan(telemetry[2].throughputMbps);
   });
+
+  it("prefers backend-owned runtime metrics for network quality telemetry", () => {
+    const telemetry = buildDataPanelTelemetry(
+      makeSnapshot({
+        last_sim_time: 10,
+        metrics_summary: {
+          network: {
+            latency: 0,
+            throughput: 0,
+            linkUtilization: 0,
+            series: []
+          },
+          compute: {
+            taskQueueLength: 0,
+            executionSuccessRate: 1,
+            runningTasks: 0,
+            finishedTasks: 0,
+            deadlineMissedTasks: 0
+          },
+          orbit: {
+            activeSatellites: 0,
+            coverageRatio: 0,
+            series: []
+          },
+          system: {
+            eventRate: 1,
+            systemLoad: 0,
+            eventSeries: [{ index: 0, simTime: 10 }]
+          }
+        }
+      }),
+      10,
+      {
+        network_quality_estimated_delivered_throughput_mbps: 42,
+        network_quality_route_latency_avg_s: 0.12,
+        network_quality_loss_proxy_rate: 0.05,
+        network_quality_delay_variation_proxy_s: 0.003,
+        compute_resource_used_gflops_fp32: 1500
+      }
+    );
+
+    expect(telemetry[0]).toMatchObject({
+      throughputMbps: 42,
+      latencyMs: 120,
+      lossPercent: 5,
+      jitterMs: 3,
+      computeUsedTflops: 1.5
+    });
+  });
 });
 
 describe("buildComputeResourcePool", () => {

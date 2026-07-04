@@ -322,9 +322,13 @@ export interface RuntimeStatusPayload {
   deterministic_replay?: boolean;
   last_error?: string | null;
   fidelity_summary?: FidelitySummary;
+  metrics_summary?: RuntimeMetricsSummary;
   profiling_summary?: RuntimeProfilingSummary | null;
   backpressure_summary?: RuntimeBackpressureSummary | null;
 }
+
+export type RuntimeMetricsSummaryValue = string | number | boolean | null;
+export type RuntimeMetricsSummary = Record<string, RuntimeMetricsSummaryValue>;
 
 export interface GeneratedScenarioConfig {
   seed: number;

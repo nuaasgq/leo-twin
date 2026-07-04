@@ -345,6 +345,7 @@ class DemoControlPlane:
         status["fidelity_summary"] = _fidelity_summary_from_sees_config(
             self._controller.config
         )
+        status["metrics_summary"] = self._metrics_summary_json()
         return status
 
     def _ack(self, command: ControlCommand) -> dict[str, Any]:
@@ -356,6 +357,11 @@ class DemoControlPlane:
             "config": self._controller.config_json(),
             "generated_config": self._generated_config_json(),
         }
+
+    def _metrics_summary_json(self) -> dict[str, Any]:
+        if self._runtime_context is not None:
+            return dict(self._runtime_context.metrics.summary())
+        return dict(self._result.metrics_summary)
 
     def _nack(self, command: str, error: str) -> dict[str, Any]:
         return {

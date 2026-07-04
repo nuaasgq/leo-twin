@@ -137,6 +137,7 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
     assert status["status"]["lifecycle_state"] == "INITIALIZED"
     assert status["status"]["queued_event_count"] is not None
     assert status["status"]["fidelity_summary"]["orbit_update_mode"] == "PER_SATELLITE"
+    assert status["status"]["metrics_summary"]["event_count"] >= 0
     assert status["generated_config"]["backend_summary"]["fidelity_summary"] == status[
         "status"
     ]["fidelity_summary"]
@@ -162,6 +163,9 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
     control_plane._require_advance_loop().tick()
     assert control_plane.stream_events()
     assert control_plane.stream_snapshots()
+    status_after_tick = control_plane.runtime_status()["status"]
+    assert "network_quality_loss_proxy_rate" in status_after_tick["metrics_summary"]
+    assert "compute_resource_used_gflops_fp32" in status_after_tick["metrics_summary"]
 
     requested = control_plane.handle_raw_message(json.dumps({"command": "REQUEST_STATUS"}))
     assert requested["ok"] is True

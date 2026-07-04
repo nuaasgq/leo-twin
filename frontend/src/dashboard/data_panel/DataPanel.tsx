@@ -15,6 +15,7 @@ import {
 
 import {
   GeneratedScenarioConfig,
+  RuntimeMetricsSummary,
   RuntimeStatusPayload
 } from "../../core/event_types";
 import { WorldSnapshot } from "../../state/snapshot_engine";
@@ -82,7 +83,11 @@ export const DataPanel = memo(function DataPanel({
       : `${generatedConfig.satellite_count} 星 / ${generatedConfig.user_count} 用户`
     : "等待初始化";
   const runtimeProgress = buildDataPanelRuntimeProgress(summary.simTime, runtimeStatus.duration);
-  const telemetry = buildDataPanelTelemetry(snapshot, summary.simTime);
+  const telemetry = buildDataPanelTelemetry(
+    snapshot,
+    summary.simTime,
+    runtimeStatus.metrics_summary
+  );
   const latestTelemetry = telemetry[telemetry.length - 1];
   const computePool = buildComputeResourcePool(snapshot);
 
@@ -436,17 +441,53 @@ export interface ComputeResourcePool {
 
 export function buildDataPanelTelemetry(
   snapshot: WorldSnapshot,
-  displaySimTime = snapshot.last_sim_time
+  displaySimTime = snapshot.last_sim_time,
+  backendMetrics: RuntimeMetricsSummary | null | undefined = undefined
 ): readonly DataPanelTelemetryPoint[] {
   const activeLinks = snapshot.links.filter((link) => link.availability);
   const linkLatencies = activeLinks.map((link) => link.latency);
-  const baseThroughput =
+  const backendThroughput = metricNumber(
+    backendMetrics,
+    "network_quality_estimated_delivered_throughput_mbps"
+  );
+  const backendOfferedThroughput = metricNumber(
+    backendMetrics,
+    "network_quality_offered_route_capacity_mbps"
+  );
+  const backendLatencySeconds = metricNumber(
+    backendMetrics,
+    "network_quality_route_latency_avg_s"
+  );
+  const backendLossRate = metricNumber(backendMetrics, "network_quality_loss_proxy_rate");
+  const backendJitterSeconds = metricNumber(
+    backendMetrics,
+    "network_quality_delay_variation_proxy_s"
+  );
+  const backendComputeUsedGflops = metricNumber(
+    backendMetrics,
+    "compute_resource_used_gflops_fp32"
+  );
+  const snapshotThroughput =
     snapshot.metrics_summary.network.throughput ||
     activeLinks.reduce((total, link) => total + link.capacity, 0);
-  const baseLatency = snapshot.metrics_summary.network.latency || average(linkLatencies);
-  const baseLossRate = resolveTransportLossRate(snapshot);
-  const baseJitter = standardDeviation(linkLatencies) || baseLatency * 0.08;
+  const baseThroughput =
+    backendThroughput ??
+    backendOfferedThroughput ??
+    snapshotThroughput;
+  const baseLatency =
+    backendLatencySeconds !== undefined
+      ? backendLatencySeconds * 1000
+      : snapshot.metrics_summary.network.latency || average(linkLatencies);
+  const baseLossRate = backendLossRate ?? resolveTransportLossRate(snapshot);
+  const baseJitter =
+    backendJitterSeconds !== undefined
+      ? backendJitterSeconds * 1000
+      : standardDeviation(linkLatencies) || baseLatency * 0.08;
   const computePool = buildComputeResourcePool(snapshot);
+  const computeUsedTflops =
+    backendComputeUsedGflops !== undefined
+      ? backendComputeUsedGflops / 1000
+      : computePool.usedTflops;
   const eventSeries =
     snapshot.metrics_summary.system.eventSeries.length > 0
       ? snapshot.metrics_summary.system.eventSeries
@@ -476,7 +517,7 @@ export function buildDataPanelTelemetry(
       latencyMs: roundMetric(baseLatency * (0.92 + envelope * 0.08)),
       lossPercent: roundMetric(baseLossRate * 100 * (0.7 + envelope * 0.3)),
       jitterMs: roundMetric(baseJitter * (0.75 + envelope * 0.25)),
-      computeUsedTflops: roundMetric(computePool.usedTflops * envelope)
+      computeUsedTflops: roundMetric(computeUsedTflops * envelope)
     };
   });
 }
@@ -548,6 +589,14 @@ function roundMetric(value: number): number {
 
 function clampRatio(value: number): number {
   return Math.max(0, Math.min(1, value));
+}
+
+function metricNumber(
+  metrics: RuntimeMetricsSummary | null | undefined,
+  key: string
+): number | undefined {
+  const value = metrics?.[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
 function isSpaceLink(link: { source_id: string; target_id: string }): boolean {
