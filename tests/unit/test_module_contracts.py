@@ -22,6 +22,7 @@ def test_event_contracts_freeze_required_event_types_and_payloads() -> None:
     assert tuple(contracts) == tuple(EventType)
     assert contracts[EventType.ORBIT_TRIGGER].payload_schema == "None"
     assert contracts[EventType.ORBIT_UPDATE].payload_schema == "SatelliteState"
+    assert contracts[EventType.ORBIT_BATCH_UPDATE].payload_schema == "OrbitBatchState"
     assert contracts[EventType.ACCESS_START].payload_schema == "LinkState"
     assert contracts[EventType.ACCESS_END].payload_schema == "LinkState"
     assert contracts[EventType.LINK_UPDATE].payload_schema == "LinkState"

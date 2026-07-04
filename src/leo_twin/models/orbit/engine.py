@@ -6,7 +6,8 @@ from typing import Any
 
 from leo_twin.core import SimulationKernel, SimulationModule
 from leo_twin.models.orbit.contracts import OrbitSatelliteConfig
-from leo_twin.schema import EventType, SatelliteState, SimEvent
+from leo_twin.models.orbit.fidelity import OrbitUpdateMode, resolve_orbit_update_mode
+from leo_twin.schema import EventType, OrbitBatchState, SatelliteState, SimEvent
 
 
 class OrbitEngine(SimulationModule):
@@ -17,6 +18,7 @@ class OrbitEngine(SimulationModule):
         satellites: Iterable[OrbitSatelliteConfig],
         module_name: str = "orbit",
         update_targets: Iterable[str] = ("network", "metrics"),
+        update_mode: OrbitUpdateMode | str | None = None,
     ) -> None:
         _require_non_empty_str(module_name, "module_name")
         self._module_name = module_name
@@ -32,6 +34,10 @@ class OrbitEngine(SimulationModule):
         for target in configured_targets:
             _require_non_empty_str(target, "update_targets")
         self._update_targets = tuple(sorted(set(configured_targets)))
+        self._update_mode = resolve_orbit_update_mode(
+            len(self._satellites),
+            update_mode,
+        )
 
         self._event_sequence = 0
 
@@ -42,7 +48,24 @@ class OrbitEngine(SimulationModule):
         if event.event_type != EventType.ORBIT_TRIGGER:
             return
 
-        for state in self.states_at(event.sim_time):
+        states = self.states_at(event.sim_time)
+        if self._update_mode == OrbitUpdateMode.BATCH:
+            batch = OrbitBatchState(
+                sim_time=event.sim_time,
+                satellite_states=states,
+                satellite_count=len(states),
+            )
+            for target in self._update_targets:
+                kernel.schedule_event(
+                    self._batch_event(
+                        sim_time=event.sim_time,
+                        target=target,
+                        payload=batch,
+                    )
+                )
+            return
+
+        for state in states:
             for target in self._update_targets:
                 kernel.schedule_event(
                     self._event(
@@ -103,6 +126,23 @@ class OrbitEngine(SimulationModule):
             source=self._module_name,
             target=target,
             event_type=EventType.ORBIT_UPDATE.value,
+            payload=payload,
+        )
+
+    def _batch_event(
+        self,
+        sim_time: float,
+        target: str,
+        payload: OrbitBatchState,
+    ) -> SimEvent:
+        self._event_sequence += 1
+        return SimEvent(
+            event_id=f"{self._module_name}:orbit-batch:{self._event_sequence:08d}",
+            sim_time=sim_time,
+            priority=0,
+            source=self._module_name,
+            target=target,
+            event_type=EventType.ORBIT_BATCH_UPDATE.value,
             payload=payload,
         )
 

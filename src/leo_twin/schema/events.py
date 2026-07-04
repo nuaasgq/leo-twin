@@ -9,6 +9,7 @@ class EventType(StrEnum):
 
     ORBIT_TRIGGER = "ORBIT_TRIGGER"
     ORBIT_UPDATE = "ORBIT_UPDATE"
+    ORBIT_BATCH_UPDATE = "ORBIT_BATCH_UPDATE"
     ACCESS_START = "ACCESS_START"
     ACCESS_END = "ACCESS_END"
     LINK_UPDATE = "LINK_UPDATE"
@@ -46,6 +47,13 @@ EVENT_CONTRACTS: tuple[EventContract, ...] = (
         consumers=("network", "metrics"),
         payload_schema="SatelliteState",
         description="Published satellite state update.",
+    ),
+    EventContract(
+        event_type=EventType.ORBIT_BATCH_UPDATE,
+        producer="orbit",
+        consumers=("network", "metrics"),
+        payload_schema="OrbitBatchState",
+        description="Published batch of satellite state updates for scale runs.",
     ),
     EventContract(
         event_type=EventType.ACCESS_START,

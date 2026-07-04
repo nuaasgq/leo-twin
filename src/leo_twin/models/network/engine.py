@@ -16,6 +16,7 @@ from leo_twin.schema import (
     FlowRequest,
     GroundUserProfile,
     LinkState,
+    OrbitBatchState,
     Route,
     SatelliteProfile,
     SatelliteState,
@@ -104,6 +105,14 @@ class NetworkEngine(SimulationModule):
         if event.event_type == EventType.ORBIT_UPDATE:
             state = self._coerce_satellite_state(event.payload)
             self._satellite_states[state.satellite_id] = state
+            for emitted in self.update_topology(event.sim_time):
+                kernel.schedule_event(emitted)
+            return
+
+        if event.event_type == EventType.ORBIT_BATCH_UPDATE:
+            batch = self._coerce_orbit_batch(event.payload)
+            for state in batch.satellite_states:
+                self._satellite_states[state.satellite_id] = state
             for emitted in self.update_topology(event.sim_time):
                 kernel.schedule_event(emitted)
             return
@@ -402,6 +411,24 @@ class NetworkEngine(SimulationModule):
                 status=str(payload["status"]),
             )
         raise TypeError("ORBIT_UPDATE payload must be SatelliteState or dict")
+
+    @staticmethod
+    def _coerce_orbit_batch(payload: object) -> OrbitBatchState:
+        if isinstance(payload, OrbitBatchState):
+            return payload
+        if isinstance(payload, dict):
+            raw_states = payload.get("satellite_states", payload.get("satellites"))
+            if not isinstance(raw_states, (tuple, list)):
+                raise TypeError("ORBIT_BATCH_UPDATE satellite_states must be a list or tuple")
+            states = tuple(NetworkEngine._coerce_satellite_state(item) for item in raw_states)
+            partition_id = payload.get("partition_id")
+            return OrbitBatchState(
+                sim_time=float(payload["sim_time"]),
+                satellite_states=states,
+                satellite_count=int(payload.get("satellite_count", len(states))),
+                partition_id=None if partition_id is None else str(partition_id),
+            )
+        raise TypeError("ORBIT_BATCH_UPDATE payload must be OrbitBatchState or dict")
 
     @staticmethod
     def _vector3(value: Any) -> tuple[float, float, float]:

@@ -60,6 +60,14 @@ def build_demo_scenario(config: DemoConfig) -> DemoScenario:
     compute_nodes = _compute_nodes(config)
     initial_events = _initial_events(config)
     backend_summary = _backend_summary(config, constellation_allocation)
+    orbit_frontend_config: dict[str, object] = {
+        "update_interval_seconds": config.orbit_tick_seconds,
+        "plane_count": constellation_allocation.plane_count,
+        "altitude_m": config.orbit_altitude_m,
+        "inclination_deg": config.orbit_inclination_deg,
+    }
+    if config.orbit_update_mode is not None:
+        orbit_frontend_config["orbit_update_mode"] = config.orbit_update_mode
     return DemoScenario(
         orbit_satellites=orbit_satellites,
         orbit_elements=orbit_elements,
@@ -98,12 +106,7 @@ def build_demo_scenario(config: DemoConfig) -> DemoScenario:
                 "compute_nodes": min(config.compute_node_count, config.satellite_count),
                 "compute_capacity": config.compute_capacity,
                 "compute_scheduling_policy": config.compute_scheduling_policy,
-                "orbit": {
-                    "update_interval_seconds": config.orbit_tick_seconds,
-                    "plane_count": constellation_allocation.plane_count,
-                    "altitude_m": config.orbit_altitude_m,
-                    "inclination_deg": config.orbit_inclination_deg,
-                },
+                "orbit": orbit_frontend_config,
                 "traffic_model": {
                     "flow_interval_seconds": config.flow_interval_seconds,
                     "task_interval_seconds": config.task_interval_seconds,

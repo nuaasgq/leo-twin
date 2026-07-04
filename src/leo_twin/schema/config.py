@@ -31,6 +31,13 @@ class ComputeSchedulingPolicyConfig(StrEnum):
     EARLIEST_DEADLINE_FIRST = "EARLIEST_DEADLINE_FIRST"
 
 
+class OrbitUpdateModeConfig(StrEnum):
+    """Orbit update granularity exposed through scenario configuration."""
+
+    PER_SATELLITE = "PER_SATELLITE"
+    BATCH = "BATCH"
+
+
 @dataclass(frozen=True)
 class OrbitParameters:
     """Configuration-only orbit parameters."""
@@ -39,12 +46,22 @@ class OrbitParameters:
     plane_count: int = 12
     altitude_m: float = 550_000.0
     inclination_deg: float = 53.0
+    orbit_update_mode: OrbitUpdateModeConfig | None = None
 
     def __post_init__(self) -> None:
         _require_positive_int(self.update_interval_seconds, "orbit.update_interval_seconds")
         _require_positive_int(self.plane_count, "orbit.plane_count")
         _require_non_negative_finite(self.altitude_m, "orbit.altitude_m")
         _require_finite_range(self.inclination_deg, "orbit.inclination_deg", 0.0, 180.0)
+        if self.orbit_update_mode is not None and not isinstance(
+            self.orbit_update_mode,
+            OrbitUpdateModeConfig,
+        ):
+            object.__setattr__(
+                self,
+                "orbit_update_mode",
+                OrbitUpdateModeConfig(str(self.orbit_update_mode)),
+            )
 
 
 @dataclass(frozen=True)

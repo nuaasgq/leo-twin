@@ -27,6 +27,7 @@ from leo_twin.schema import (
     FlowRequest,
     LinkMedium,
     LinkState,
+    OrbitBatchState,
     Route,
     SatelliteState,
     SimEvent,
@@ -143,6 +144,17 @@ class PositionDrivenNetworkEngine(SimulationModule):
             state = self._coerce_satellite_state(event.payload)
             geometry_state = self._state_for_geometry(state)
             emitted_events = list(self._update_for_state(geometry_state, event.sim_time))
+            if emitted_events:
+                emitted_events.extend(self._reroute_active_flows(event.sim_time))
+            for emitted in emitted_events:
+                kernel.schedule_event(emitted)
+            return
+
+        if event.event_type == EventType.ORBIT_BATCH_UPDATE:
+            batch = self._coerce_orbit_batch(event.payload)
+            emitted_events = list(
+                self._update_for_batch(batch.satellite_states, event.sim_time)
+            )
             if emitted_events:
                 emitted_events.extend(self._reroute_active_flows(event.sim_time))
             for emitted in emitted_events:
@@ -365,6 +377,21 @@ class PositionDrivenNetworkEngine(SimulationModule):
                 )
             )
         emitted.extend(self._update_space_links_for_state(state, dispatch_time))
+        return tuple(emitted)
+
+    def _update_for_batch(
+        self,
+        states: tuple[SatelliteState, ...],
+        dispatch_time: float,
+    ) -> tuple[SimEvent, ...]:
+        geometry_states = tuple(self._state_for_geometry(state) for state in states)
+        for state in geometry_states:
+            self._satellite_states[state.satellite_id] = state
+            self._update_space_index(state)
+
+        emitted: list[SimEvent] = []
+        for state in geometry_states:
+            emitted.extend(self._update_for_state(state, dispatch_time))
         return tuple(emitted)
 
     def _update_space_links_for_state(
@@ -607,6 +634,27 @@ class PositionDrivenNetworkEngine(SimulationModule):
                 status=str(payload["status"]),
             )
         raise TypeError("ORBIT_UPDATE payload must be SatelliteState or dict")
+
+    @staticmethod
+    def _coerce_orbit_batch(payload: object) -> OrbitBatchState:
+        if isinstance(payload, OrbitBatchState):
+            return payload
+        if isinstance(payload, dict):
+            raw_states = payload.get("satellite_states", payload.get("satellites"))
+            if not isinstance(raw_states, (tuple, list)):
+                raise TypeError("ORBIT_BATCH_UPDATE satellite_states must be a list or tuple")
+            states = tuple(
+                PositionDrivenNetworkEngine._coerce_satellite_state(item)
+                for item in raw_states
+            )
+            partition_id = payload.get("partition_id")
+            return OrbitBatchState(
+                sim_time=float(payload["sim_time"]),
+                satellite_states=states,
+                satellite_count=int(payload.get("satellite_count", len(states))),
+                partition_id=None if partition_id is None else str(partition_id),
+            )
+        raise TypeError("ORBIT_BATCH_UPDATE payload must be OrbitBatchState or dict")
 
     def _state_for_geometry(self, state: SatelliteState) -> SatelliteState:
         if self._position_scale_to_km == 1.0:

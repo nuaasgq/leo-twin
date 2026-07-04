@@ -9,6 +9,7 @@ from leo_twin.schema import (
     EventType,
     LinkState,
     MetricRecord,
+    OrbitBatchState,
     Route,
     SatelliteState,
     SimEvent,
@@ -53,6 +54,10 @@ class DemoStateProjector:
         if event_type == EventType.ORBIT_UPDATE.value:
             state = _payload(event, SatelliteState)
             self._satellites[state.satellite_id] = state
+        elif event_type == EventType.ORBIT_BATCH_UPDATE.value:
+            batch = _payload(event, OrbitBatchState)
+            for state in batch.satellite_states:
+                self._satellites[state.satellite_id] = state
         elif event_type in {
             EventType.ACCESS_START.value,
             EventType.ACCESS_END.value,

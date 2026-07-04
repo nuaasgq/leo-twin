@@ -10,11 +10,13 @@ from leo_twin.schema.config import (
     TrafficModel,
     UIConfig,
     VisualizationToggles,
+    OrbitUpdateModeConfig,
     config_to_dict,
 )
 
 __all__ = [
     "OrbitParameters",
+    "OrbitUpdateModeConfig",
     "ComputeSchedulingPolicyConfig",
     "RuntimeConfig",
     "RuntimeMode",

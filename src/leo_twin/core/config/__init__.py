@@ -12,6 +12,7 @@ from leo_twin.core.config.loader import (
 from leo_twin.core.config.schema import (
     ComputeSchedulingPolicyConfig,
     OrbitParameters,
+    OrbitUpdateModeConfig,
     RuntimeConfig,
     RuntimeMode,
     ScenarioConfig,
@@ -27,6 +28,7 @@ __all__ = [
     "ConfigValidationError",
     "ComputeSchedulingPolicyConfig",
     "OrbitParameters",
+    "OrbitUpdateModeConfig",
     "RuntimeConfig",
     "RuntimeMode",
     "SEESConfig",

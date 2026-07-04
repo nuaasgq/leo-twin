@@ -54,6 +54,7 @@ _ORBIT_KEYS = frozenset(
         "plane_count",
         "altitude_m",
         "inclination_deg",
+        "orbit_update_mode",
     }
 )
 _TRAFFIC_KEYS = frozenset(
@@ -393,6 +394,7 @@ def _ordered_keys(context: str, data: Mapping[str, Any]) -> tuple[str, ...]:
             "plane_count",
             "altitude_m",
             "inclination_deg",
+            "orbit_update_mode",
         ),
         "scenario.traffic_model": (
             "flow_interval_seconds",

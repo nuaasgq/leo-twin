@@ -29,6 +29,7 @@ from leo_twin.models.network import (
     default_transport_runtime,
 )
 from leo_twin.models.orbit import KeplerianOrbitEngine
+from leo_twin.models.orbit import SimulationFidelityPolicy
 from leo_twin.schema import (
     AntennaProfile,
     ApplicationProtocol,
@@ -97,6 +98,10 @@ def build_integration_demo_runtime(config: DemoConfig) -> DemoRuntimeContext:
     """Build demo modules and register them with a fresh kernel."""
 
     scenario = build_demo_scenario(config)
+    fidelity_policy = SimulationFidelityPolicy.for_satellite_count(
+        config.satellite_count,
+        forced_orbit_update_mode=config.orbit_update_mode,
+    )
     kernel = SimulationKernel()
     frontend_sink = FrontendEventSink()
     metrics = MetricsCollector(
@@ -167,6 +172,7 @@ def build_integration_demo_runtime(config: DemoConfig) -> DemoRuntimeContext:
             update_targets=("network", "metrics"),
             earth_rotation_rate_rad_s=0.000072921159,
             state_vector_scale=1000.0,
+            update_mode=fidelity_policy.orbit_update_mode,
         ),
         network,
         RouteAwareComputeEngine(

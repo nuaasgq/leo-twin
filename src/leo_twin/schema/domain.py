@@ -44,6 +44,36 @@ class SatelliteState:
 
 
 @dataclass(frozen=True)
+class OrbitBatchState:
+    """Canonical batch of satellite states for scale-safe orbit publication."""
+
+    sim_time: float
+    satellite_states: tuple[SatelliteState, ...]
+    satellite_count: int
+    partition_id: str | None = None
+
+    def __post_init__(self) -> None:
+        _require_finite_number(self.sim_time, "sim_time")
+        if not isinstance(self.satellite_states, tuple):
+            raise TypeError("satellite_states must be a tuple")
+        if any(not isinstance(state, SatelliteState) for state in self.satellite_states):
+            raise TypeError("satellite_states must contain SatelliteState items")
+        _require_non_negative_int(self.satellite_count, "satellite_count")
+        if self.satellite_count != len(self.satellite_states):
+            raise ValueError("satellite_count must match satellite_states length")
+        for state in self.satellite_states:
+            if state.sim_time != self.sim_time:
+                raise ValueError("each satellite state sim_time must match batch sim_time")
+        object.__setattr__(
+            self,
+            "satellite_states",
+            tuple(sorted(self.satellite_states, key=lambda item: item.satellite_id)),
+        )
+        if self.partition_id is not None:
+            _require_non_empty_str(self.partition_id, "partition_id")
+
+
+@dataclass(frozen=True)
 class GroundUserState:
     """Canonical frontend and network contract for ground users."""
 

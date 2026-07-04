@@ -8,7 +8,14 @@ from math import atan2, cos, isfinite, pi, radians, sin, sqrt
 from typing import Any
 
 from leo_twin.core import SimulationKernel, SimulationModule
-from leo_twin.schema import EventType, OrbitalElementSet, SatelliteState, SimEvent
+from leo_twin.models.orbit.fidelity import OrbitUpdateMode, resolve_orbit_update_mode
+from leo_twin.schema import (
+    EventType,
+    OrbitBatchState,
+    OrbitalElementSet,
+    SatelliteState,
+    SimEvent,
+)
 
 
 @dataclass(frozen=True)
@@ -176,9 +183,13 @@ class KeplerianOrbitEngine(SimulationModule):
         earth_rotation_rate_rad_s: float = 0.0,
         state_vector_scale: float = 1.0,
         j2_profile: J2SecularDriftProfile | None = None,
+        update_mode: OrbitUpdateMode | str | None = None,
     ) -> None:
         _require_non_empty_str(module_name, "module_name")
         _require_positive_number(state_vector_scale, "state_vector_scale")
+        configured_elements = tuple(elements)
+        if not configured_elements:
+            raise ValueError("elements must contain at least one satellite")
         configured_targets = tuple(update_targets)
         if not configured_targets:
             raise ValueError("update_targets must contain at least one target")
@@ -186,8 +197,12 @@ class KeplerianOrbitEngine(SimulationModule):
             _require_non_empty_str(target, "update_targets")
         self._module_name = module_name
         self._update_targets = tuple(sorted(set(configured_targets)))
+        self._update_mode = resolve_orbit_update_mode(
+            len(configured_elements),
+            update_mode,
+        )
         self._propagator = KeplerianOrbitPropagator(
-            elements=elements,
+            elements=configured_elements,
             gravitational_parameter_km3_s2=gravitational_parameter_km3_s2,
             earth_rotation_rate_rad_s=earth_rotation_rate_rad_s,
             j2_profile=j2_profile,
@@ -201,7 +216,24 @@ class KeplerianOrbitEngine(SimulationModule):
     def on_event(self, event: SimEvent, kernel: SimulationKernel) -> None:
         if event.event_type != EventType.ORBIT_TRIGGER:
             return
-        for state in self.states_at(event.sim_time):
+        states = self.states_at(event.sim_time)
+        if self._update_mode == OrbitUpdateMode.BATCH:
+            batch = OrbitBatchState(
+                sim_time=event.sim_time,
+                satellite_states=states,
+                satellite_count=len(states),
+            )
+            for target in self._update_targets:
+                kernel.schedule_event(
+                    self._batch_event(
+                        dispatch_time=event.sim_time,
+                        target=target,
+                        payload=batch,
+                    )
+                )
+            return
+
+        for state in states:
             for target in self._update_targets:
                 kernel.schedule_event(
                     self._event(
@@ -242,6 +274,23 @@ class KeplerianOrbitEngine(SimulationModule):
             source=self._module_name,
             target=target,
             event_type=EventType.ORBIT_UPDATE.value,
+            payload=payload,
+        )
+
+    def _batch_event(
+        self,
+        dispatch_time: float,
+        target: str,
+        payload: OrbitBatchState,
+    ) -> SimEvent:
+        self._event_sequence += 1
+        return SimEvent(
+            event_id=f"{self._module_name}:keplerian-batch:{self._event_sequence:08d}",
+            sim_time=dispatch_time,
+            priority=0,
+            source=self._module_name,
+            target=target,
+            event_type=EventType.ORBIT_BATCH_UPDATE.value,
             payload=payload,
         )
 

@@ -18,6 +18,7 @@ from leo_twin.schema import (
     FlowState,
     LinkState,
     MetricRecord,
+    OrbitBatchState,
     Route,
     SatelliteState,
     SimEvent,
@@ -87,6 +88,11 @@ class MetricsCollector:
         self._event_counts: Counter[str] = Counter()
         self._satellite_status: dict[str, str] = {}
         self._satellite_altitudes_km: dict[str, float] = {}
+        self._satellite_state_updates = 0
+        self._orbit_batch_updates = 0
+        self._last_orbit_update_time = 0.0
+        self._last_orbit_batch_size = 0
+        self._orbit_event_reduction_ratio = 1.0
         self._links: dict[tuple[str, str], LinkState] = {}
         self._active_links: set[tuple[str, str]] = set()
         self._routes: dict[str, Route] = {}
@@ -168,7 +174,10 @@ class MetricsCollector:
             "event_count": sum(self._event_counts.values()),
             "finished_tasks": len(self._finished_tasks),
             "last_sim_time": self._last_sim_time,
+            "last_orbit_update_time": self._last_orbit_update_time,
             "observed_links": len(self._links),
+            "orbit_batch_updates": self._orbit_batch_updates,
+            "orbit_event_reduction_ratio": self._orbit_event_reduction_ratio,
             "route_capacity_max": max((route.capacity for route in available_routes), default=0.0),
             "route_capacity_min": min((route.capacity for route in available_routes), default=0.0),
             "route_hop_count_avg": _average(
@@ -195,6 +204,9 @@ class MetricsCollector:
             ),
             "satellite_altitude_max": max(self._satellite_altitudes_km.values(), default=0.0),
             "satellite_altitude_min": min(self._satellite_altitudes_km.values(), default=0.0),
+            "satellite_count": len(self._satellite_status),
+            "satellite_state_updates": self._satellite_state_updates,
+            "batch_size": self._last_orbit_batch_size,
             "task_duration_avg": _average(
                 tuple(
                     self._task_durations[task_id]
@@ -295,6 +307,8 @@ class MetricsCollector:
     def _payload_records(self, event: SimEvent, event_type: str) -> tuple[MetricRecord, ...]:
         if event_type == EventType.ORBIT_UPDATE:
             return self._observe_satellite(event)
+        if event_type == EventType.ORBIT_BATCH_UPDATE:
+            return self._observe_satellite_batch(event)
         if event_type in {
             EventType.ACCESS_START,
             EventType.ACCESS_END,
@@ -317,6 +331,10 @@ class MetricsCollector:
         point = ground_track_point(metric_state)
         self._satellite_status[state.satellite_id] = state.status
         self._satellite_altitudes_km[state.satellite_id] = point.altitude_km
+        self._satellite_state_updates += 1
+        self._last_orbit_update_time = event.sim_time
+        self._last_orbit_batch_size = 1
+        self._orbit_event_reduction_ratio = 1.0
         return (
             MetricRecord(
                 metric_name="satellites.observed.count",
@@ -351,6 +369,51 @@ class MetricsCollector:
                 entity_id=state.satellite_id,
                 value=float(point.altitude_km),
                 tags=(("status", state.status),),
+            ),
+        )
+
+    def _observe_satellite_batch(self, event: SimEvent) -> tuple[MetricRecord, ...]:
+        batch = _require_payload(event.payload, OrbitBatchState, "ORBIT_BATCH_UPDATE")
+        for state in batch.satellite_states:
+            metric_state = self._satellite_state_for_metrics(state)
+            point = ground_track_point(metric_state)
+            self._satellite_status[state.satellite_id] = state.status
+            self._satellite_altitudes_km[state.satellite_id] = point.altitude_km
+
+        self._satellite_state_updates += batch.satellite_count
+        self._orbit_batch_updates += 1
+        self._last_orbit_update_time = batch.sim_time
+        self._last_orbit_batch_size = batch.satellite_count
+        self._orbit_event_reduction_ratio = float(max(1, batch.satellite_count))
+        tags = (("event_type", EventType.ORBIT_BATCH_UPDATE.value),)
+        return (
+            MetricRecord(
+                metric_name="satellite_count",
+                sim_time=batch.sim_time,
+                entity_id="orbit",
+                value=float(len(self._satellite_status)),
+                tags=tags,
+            ),
+            MetricRecord(
+                metric_name="last_orbit_update_time",
+                sim_time=batch.sim_time,
+                entity_id="orbit",
+                value=float(batch.sim_time),
+                tags=tags,
+            ),
+            MetricRecord(
+                metric_name="batch_size",
+                sim_time=batch.sim_time,
+                entity_id="orbit",
+                value=float(batch.satellite_count),
+                tags=tags,
+            ),
+            MetricRecord(
+                metric_name="orbit_event_reduction_ratio",
+                sim_time=batch.sim_time,
+                entity_id="orbit",
+                value=self._orbit_event_reduction_ratio,
+                tags=tags,
             ),
         )
 

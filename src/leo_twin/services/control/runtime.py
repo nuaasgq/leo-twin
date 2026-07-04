@@ -14,6 +14,12 @@ from leo_twin.schema.config_loader import (
     ConfigValidationError,
     merge_config_update,
 )
+from leo_twin.models.orbit import (
+    SAFE_PER_SATELLITE_ORBIT_EVENT_THRESHOLD,
+    OrbitUpdateMode,
+    estimate_orbit_event_volume,
+    resolve_orbit_update_mode,
+)
 from leo_twin.services.control.scale_safety import ScaleConfig, ScaleSafetyChecker
 
 
@@ -270,10 +276,24 @@ def _scale_config_from_runtime_config(config: SEESConfig) -> ScaleConfig:
     flow_interval = config.scenario.traffic_model.flow_interval_seconds
     task_interval = config.scenario.traffic_model.task_interval_seconds
     compute_nodes = min(config.scenario.compute_nodes, config.scenario.satellite_count)
+    orbit_tick_total = _scheduled_tick_count(duration, orbit_interval, include_final=True)
+    orbit_target_count = 2
+    forced_orbit_mode = config.scenario.orbit.orbit_update_mode
+    orbit_mode = resolve_orbit_update_mode(
+        config.scenario.satellite_count,
+        forced_orbit_update_mode=(
+            forced_orbit_mode.value if forced_orbit_mode is not None else None
+        ),
+    )
+    per_satellite_orbit_events = estimate_orbit_event_volume(
+        satellite_count=config.scenario.satellite_count,
+        update_target_count=orbit_target_count,
+        orbit_tick_count=orbit_tick_total,
+    )
     orbit_update_events = (
-        _scheduled_tick_count(duration, orbit_interval, include_final=True)
-        * config.scenario.satellite_count
-        * 2
+        per_satellite_orbit_events
+        if orbit_mode == OrbitUpdateMode.PER_SATELLITE
+        else orbit_tick_total * orbit_target_count
     )
     flow_events = _scheduled_tick_count(duration, flow_interval) * compute_nodes
     task_events = _scheduled_tick_count(duration, task_interval) * compute_nodes
@@ -285,6 +305,11 @@ def _scale_config_from_runtime_config(config: SEESConfig) -> ScaleConfig:
         tick_interval=float(orbit_interval),
         partition_count=config.scenario.cell_count,
         scheduled_event_count=orbit_update_events + flow_events + task_events,
+        max_event_count=(
+            SAFE_PER_SATELLITE_ORBIT_EVENT_THRESHOLD
+            if orbit_mode == OrbitUpdateMode.PER_SATELLITE
+            else 1_000_000
+        ),
     )
 
 
