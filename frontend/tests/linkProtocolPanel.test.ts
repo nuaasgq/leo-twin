@@ -74,7 +74,9 @@ describe("buildLinkProtocolSummary", () => {
           path: ["user", "sat-a", "sat-b", "node"],
           latency: 1.5,
           capacity: 60,
-          available: true
+          available: true,
+          demand_capacity: 45,
+          loss_rate: 0.035
         }
       ]
     });
@@ -90,6 +92,8 @@ describe("buildLinkProtocolSummary", () => {
       gatewayRoutes: 0,
       bestLatency: 1.5,
       bottleneckCapacity: 30,
+      bestDemandCapacity: 45,
+      bestLossPercent: 3.5000000000000004,
       spaceLinks: 2,
       accessLinks: 1,
       applicationProtocol: "MQTT",
@@ -178,6 +182,8 @@ describe("buildLinkProtocolSummary", () => {
     expect(summary.averageHopCount).toBe(1);
     expect(summary.maxHopCount).toBe(1);
     expect(summary.gatewayRoutes).toBe(0);
+    expect(summary.bestDemandCapacity).toBe(0);
+    expect(summary.bestLossPercent).toBe(0);
     expect(summary.transportProtocol).toBe("TCP");
     expect(summary.applicationProtocol).toBe("TASK_OFFLOAD_FLOW");
     expect(summary.routingProtocol).toBe("LINK_STATE");

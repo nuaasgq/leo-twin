@@ -1747,7 +1747,7 @@ change.
 ## 2026-07-05 - Route Loss KPI Binding v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`
-- Commit: pending
+- Commit: `a05452a`
 - Scope: preserve data-link and transport loss as route-level flow proxies and
   include route loss in backend network KPI loss summaries.
 - Changed files/modules:
@@ -1797,3 +1797,33 @@ change.
   - Add frontend route detail text for demand pressure and route loss so users
     can see whether loss comes from transport profile, MAC collision profile,
     route blocking, or demand pressure.
+
+## 2026-07-05 - Frontend Route KPI Detail v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending
+- Scope: display backend-provided best-route demand and route loss in the
+  protocol/link dashboard summary.
+- Changed files/modules:
+  - `frontend/src/dashboard/link_protocol/LinkProtocolPanel.tsx`
+  - `frontend/tests/linkProtocolPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- linkProtocolPanel.test.ts eventDecoder.test.ts dataPanel.test.ts`
+    - Result: passed, 22 files / 111 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The PowerShell terminal displays historical Chinese text as mojibake, so
+    exact UTF-8 lines were inspected with Python `repr()` before patching.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The current panel shows best-route demand and route loss only. It does not
+    yet break loss down into transport, MAC, blocking, and demand-pressure
+    components.
+- Recommended follow-up:
+  - Add a compact route-explanation strip sourced from backend metrics fields:
+    demand pressure, route loss, route blocking, and congestion proxy.

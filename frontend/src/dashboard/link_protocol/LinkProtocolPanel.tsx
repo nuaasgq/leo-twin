@@ -15,6 +15,8 @@ export interface LinkProtocolSummary {
   gatewayRoutes: number;
   bestLatency: number;
   bottleneckCapacity: number;
+  bestDemandCapacity: number;
+  bestLossPercent: number;
   spaceLinks: number;
   accessLinks: number;
   applicationProtocol: string;
@@ -80,6 +82,8 @@ export const LinkProtocolPanel = memo(function LinkProtocolPanel({
         <KpiPanel label="可用路由" value={String(summary.availableRoutes)} />
         <KpiPanel label="最佳时延" value={`${summary.bestLatency.toFixed(3)} s`} />
         <KpiPanel label="瓶颈容量" value={`${summary.bottleneckCapacity.toFixed(1)} Mbps`} />
+        <KpiPanel label="路由需求" value={`${summary.bestDemandCapacity.toFixed(1)} Mbps`} />
+        <KpiPanel label="路由丢包" value={`${summary.bestLossPercent.toFixed(2)}%`} />
         <KpiPanel label="路径跳数" value={String(summary.bestHopCount)} />
         <KpiPanel label="平均跳数" value={summary.averageHopCount.toFixed(1)} />
         <KpiPanel label="最长跳数" value={String(summary.maxHopCount)} />
@@ -207,6 +211,8 @@ export function buildLinkProtocolSummary(
     gatewayRoutes: availableRoutes.filter(routeEndsAtComputeNode).length,
     bestLatency: bestRoute?.latency ?? 0,
     bottleneckCapacity,
+    bestDemandCapacity: bestRoute?.demand_capacity ?? 0,
+    bestLossPercent: (bestRoute?.loss_rate ?? 0) * 100,
     spaceLinks: linkClasses.spaceLinks,
     accessLinks: linkClasses.accessLinks,
     applicationProtocol,
