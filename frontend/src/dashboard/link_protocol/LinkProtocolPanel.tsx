@@ -22,6 +22,9 @@ export interface LinkProtocolSummary {
   routingProtocol: string;
   dataLinkProtocol: string;
   applicationProtocolLabel: string;
+  applicationDemandMultiplier: number;
+  applicationSetupDelayMs: number;
+  applicationInteractionLabel: string;
   transportProtocolLabel: string;
   routingProtocolLabel: string;
   dataLinkProtocolLabel: string;
@@ -82,6 +85,11 @@ export const LinkProtocolPanel = memo(function LinkProtocolPanel({
         <KpiPanel label="最长跳数" value={String(summary.maxHopCount)} />
         <KpiPanel label="网关路由" value={String(summary.gatewayRoutes)} />
         <KpiPanel label="应用协议" value={summary.applicationProtocolLabel} />
+        <KpiPanel
+          label="应用需求倍率"
+          value={`${summary.applicationDemandMultiplier.toFixed(2)}x`}
+          detail={`${summary.applicationInteractionLabel} / 建链 ${summary.applicationSetupDelayMs.toFixed(1)} ms`}
+        />
         <KpiPanel label="传输协议" value={summary.transportProtocolLabel} />
         <KpiPanel label="路由协议" value={summary.routingProtocolLabel} />
         <KpiPanel label="链路层MAC" value={summary.dataLinkProtocolLabel} />
@@ -161,6 +169,7 @@ export function buildLinkProtocolSummary(
   const transportProtocol = network?.transport_protocol ?? "TCP";
   const routingProtocol = network?.routing_protocol ?? "LINK_STATE";
   const dataLinkProtocol = network?.datalink_mac_protocol ?? "TDMA";
+  const applicationProfile = applicationProfileFor(applicationProtocol);
   const transportProfile = transportProfileFor(transportProtocol, {
     lossRate: network?.transport_loss_rate,
     congestionWindowSegments: network?.transport_congestion_window_segments
@@ -205,6 +214,9 @@ export function buildLinkProtocolSummary(
     routingProtocol,
     dataLinkProtocol,
     applicationProtocolLabel: formatApplicationProtocol(applicationProtocol),
+    applicationDemandMultiplier: applicationProfile.demandCapacityMultiplier,
+    applicationSetupDelayMs: applicationProfile.sessionSetupLatencySeconds * 1000,
+    applicationInteractionLabel: applicationProfile.interactionLabel,
     transportProtocolLabel: formatTransportProtocol(transportProtocol),
     routingProtocolLabel: formatRoutingProtocol(routingProtocol),
     dataLinkProtocolLabel: dataLinkProfile.label,
@@ -298,6 +310,39 @@ function formatApplicationProtocol(protocol: string): string {
     return "遥测流";
   }
   return "任务卸载";
+}
+
+function applicationProfileFor(protocol: string): {
+  demandCapacityMultiplier: number;
+  sessionSetupLatencySeconds: number;
+  interactionLabel: string;
+} {
+  if (protocol === "HTTP") {
+    return {
+      demandCapacityMultiplier: 1.15,
+      sessionSetupLatencySeconds: 0.02,
+      interactionLabel: "请求响应"
+    };
+  }
+  if (protocol === "MQTT") {
+    return {
+      demandCapacityMultiplier: 0.75,
+      sessionSetupLatencySeconds: 0.005,
+      interactionLabel: "发布订阅"
+    };
+  }
+  if (protocol === "TELEMETRY") {
+    return {
+      demandCapacityMultiplier: 0.5,
+      sessionSetupLatencySeconds: 0,
+      interactionLabel: "周期上报"
+    };
+  }
+  return {
+    demandCapacityMultiplier: 1,
+    sessionSetupLatencySeconds: 0,
+    interactionLabel: "任务生命周期"
+  };
 }
 
 function routingCostProfileFor(

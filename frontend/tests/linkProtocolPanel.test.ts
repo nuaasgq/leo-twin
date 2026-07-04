@@ -97,6 +97,9 @@ describe("buildLinkProtocolSummary", () => {
       routingProtocol: "DISTANCE_VECTOR",
       dataLinkProtocol: "SLOTTED_ALOHA",
       applicationProtocolLabel: "MQTT",
+      applicationDemandMultiplier: 0.75,
+      applicationSetupDelayMs: 5,
+      applicationInteractionLabel: "发布订阅",
       transportProtocolLabel: "UDP 低时延",
       routingProtocolLabel: "距离向量",
       dataLinkProtocolLabel: "Slotted ALOHA",
@@ -181,6 +184,9 @@ describe("buildLinkProtocolSummary", () => {
     expect(summary.dataLinkProtocol).toBe("TDMA");
     expect(summary.transportProtocolLabel).toBe("TCP 可靠传输");
     expect(summary.applicationProtocolLabel).toBe("任务卸载");
+    expect(summary.applicationDemandMultiplier).toBe(1);
+    expect(summary.applicationSetupDelayMs).toBe(0);
+    expect(summary.applicationInteractionLabel).toBe("任务生命周期");
     expect(summary.routingProtocolLabel).toBe("链路状态");
     expect(summary.dataLinkProtocolLabel).toBe("TDMA");
     expect(summary.dataLinkMediumAccess).toBe("时分调度");
