@@ -149,7 +149,22 @@ function decodeComputeNodeState(value: unknown): ComputeNodeState {
     ...optionalNumberField(record, "gpu_tflops_fp16"),
     ...optionalNumberField(record, "npu_tops_int8"),
     ...optionalNumberField(record, "memory_gb"),
-    ...optionalNumberField(record, "storage_gb")
+    ...optionalNumberField(record, "storage_gb"),
+    ...optionalStringField(record, "resource_usage_mode"),
+    ...optionalNumberField(record, "available_cpu_gflops_fp32"),
+    ...optionalNumberField(record, "used_cpu_gflops_fp32"),
+    ...optionalNumberField(record, "available_cpu_gflops_fp64"),
+    ...optionalNumberField(record, "used_cpu_gflops_fp64"),
+    ...optionalNumberField(record, "available_gpu_tflops_fp32"),
+    ...optionalNumberField(record, "used_gpu_tflops_fp32"),
+    ...optionalNumberField(record, "available_gpu_tflops_fp16"),
+    ...optionalNumberField(record, "used_gpu_tflops_fp16"),
+    ...optionalNumberField(record, "available_npu_tops_int8"),
+    ...optionalNumberField(record, "used_npu_tops_int8"),
+    ...optionalNumberField(record, "available_memory_gb"),
+    ...optionalNumberField(record, "used_memory_gb"),
+    ...optionalNumberField(record, "available_storage_gb"),
+    ...optionalNumberField(record, "used_storage_gb")
   };
 }
 
@@ -248,6 +263,16 @@ function optionalNumberField(
     return {};
   }
   return { [fieldName]: requireFiniteNumber(record[fieldName], fieldName) };
+}
+
+function optionalStringField(
+  record: Record<string, unknown>,
+  fieldName: string
+): Record<string, string> {
+  if (record[fieldName] === undefined) {
+    return {};
+  }
+  return { [fieldName]: requireString(record[fieldName], fieldName) };
 }
 
 function requireBoolean(value: unknown, label: string): boolean {

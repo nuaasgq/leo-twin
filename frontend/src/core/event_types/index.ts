@@ -85,6 +85,21 @@ export interface ComputeNodeState {
   npu_tops_int8?: number;
   memory_gb?: number;
   storage_gb?: number;
+  resource_usage_mode?: string;
+  available_cpu_gflops_fp32?: number;
+  used_cpu_gflops_fp32?: number;
+  available_cpu_gflops_fp64?: number;
+  used_cpu_gflops_fp64?: number;
+  available_gpu_tflops_fp32?: number;
+  used_gpu_tflops_fp32?: number;
+  available_gpu_tflops_fp16?: number;
+  used_gpu_tflops_fp16?: number;
+  available_npu_tops_int8?: number;
+  used_npu_tops_int8?: number;
+  available_memory_gb?: number;
+  used_memory_gb?: number;
+  available_storage_gb?: number;
+  used_storage_gb?: number;
 }
 
 export interface MetricRecord {

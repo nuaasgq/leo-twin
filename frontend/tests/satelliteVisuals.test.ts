@@ -205,6 +205,9 @@ describe("satellite follow inset", () => {
       gpuVectorLabel: "GPU FP32 0 TFLOPS / FP16 0 TFLOPS",
       npuVectorLabel: "NPU INT8 0 TOPS",
       memoryStorageLabel: "内存 0 GB / 存储 0 GB",
+      processingUsageLabel:
+        "使用 CPU FP32 0 GFLOPS / FP64 0 GFLOPS / GPU FP32 0 TFLOPS / FP16 0 TFLOPS / NPU 0 TOPS",
+      memoryUsageLabel: "使用 内存 0 GB / 存储 0 GB",
       compatibilityNote: "实时节点状态仍使用标量 capacity。"
     });
     expect(satelliteComputeSummary(null)).toBeNull();
@@ -239,6 +242,9 @@ describe("satellite follow inset", () => {
       gpuVectorLabel: "GPU FP32 2.5 TFLOPS / FP16 5 TFLOPS",
       npuVectorLabel: "NPU INT8 12 TOPS",
       memoryStorageLabel: "内存 32 GB / 存储 512 GB",
+      processingUsageLabel:
+        "使用 CPU FP32 0 GFLOPS / FP64 0 GFLOPS / GPU FP32 0 TFLOPS / FP16 0 TFLOPS / NPU 0 TOPS",
+      memoryUsageLabel: "使用 内存 0 GB / 存储 0 GB",
       compatibilityNote: "Legacy scalar capacity maps to cpu_gflops_fp32."
     });
   });
@@ -253,7 +259,12 @@ describe("satellite follow inset", () => {
       gpu_tflops_fp16: 7,
       npu_tops_int8: 16,
       memory_gb: 48,
-      storage_gb: 1024
+      storage_gb: 1024,
+      used_cpu_gflops_fp32: 12,
+      used_gpu_tflops_fp32: 2.5,
+      used_npu_tops_int8: 4,
+      used_memory_gb: 8,
+      used_storage_gb: 16
     });
 
     expect(summary).toMatchObject({
@@ -264,7 +275,10 @@ describe("satellite follow inset", () => {
       cpuVectorLabel: "CPU FP32 44 GFLOPS / FP64 9 GFLOPS",
       gpuVectorLabel: "GPU FP32 3.5 TFLOPS / FP16 7 TFLOPS",
       npuVectorLabel: "NPU INT8 16 TOPS",
-      memoryStorageLabel: "内存 48 GB / 存储 1,024 GB"
+      memoryStorageLabel: "内存 48 GB / 存储 1,024 GB",
+      processingUsageLabel:
+        "使用 CPU FP32 12 GFLOPS / FP64 0 GFLOPS / GPU FP32 2.5 TFLOPS / FP16 0 TFLOPS / NPU 4 TOPS",
+      memoryUsageLabel: "使用 内存 8 GB / 存储 16 GB"
     });
   });
 });

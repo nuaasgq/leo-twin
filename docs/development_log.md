@@ -5,6 +5,45 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Frontend Per-Resource Usage Binding v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending in this commit
+- Scope: pass backend per-resource compute used/available fields through the
+  frontend decoder and snapshot engine, then surface them in the selected
+  satellite resource inset and dashboard compute resource summary.
+- Changed files/modules:
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/core/decoder/index.ts`
+  - `frontend/src/state/snapshot_engine/index.ts`
+  - `frontend/src/3d/cesium/satelliteFollow.ts`
+  - `frontend/src/3d/cesium/CesiumGlobe.tsx`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/eventDecoder.test.ts`
+  - `frontend/tests/satelliteVisuals.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- dataPanel.test.ts satelliteVisuals.test.ts eventDecoder.test.ts renderPerformance.test.ts`
+    - Result: passed, 22 files / 106 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - Existing satellite visual tests used exact object assertions. They were
+    updated to include the new usage labels while preserving existing capacity
+    labels.
+- Known remaining issues:
+  - The dashboard still presents a compact textual multi-resource summary
+    alongside the FP32 pie chart; a full multi-resource chart remains future
+    work.
+  - Per-resource values are deterministic estimator outputs, not real execution
+    telemetry.
+- Recommended follow-up:
+  - Replace the FP32-only dashboard pie with a multi-resource panel once visual
+    design and acceptance tests are defined.
+
 ## 2026-07-05 - Compute Node Per-Resource Usage State v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`

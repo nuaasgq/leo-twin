@@ -294,11 +294,22 @@ export const DataPanel = memo(function DataPanel({
             <KpiPanel label="消耗率" value={`${computePool.usedPercent.toFixed(1)}%`} />
           </div>
           <div className="data-panel-resource-vector">
-            <span>GPU FP32 {computePool.vectorSummary.gpuFp32Tflops.toFixed(1)} TFLOPS</span>
-            <span>GPU FP16 {computePool.vectorSummary.gpuFp16Tflops.toFixed(1)} TFLOPS</span>
-            <span>NPU INT8 {computePool.vectorSummary.npuInt8Tops.toFixed(1)} TOPS</span>
             <span>
-              内存 {computePool.vectorSummary.memoryGb.toFixed(1)} GB / 存储{" "}
+              GPU FP32 {computePool.vectorSummary.usedGpuFp32Tflops.toFixed(1)} /{" "}
+              {computePool.vectorSummary.gpuFp32Tflops.toFixed(1)} TFLOPS
+            </span>
+            <span>
+              GPU FP16 {computePool.vectorSummary.usedGpuFp16Tflops.toFixed(1)} /{" "}
+              {computePool.vectorSummary.gpuFp16Tflops.toFixed(1)} TFLOPS
+            </span>
+            <span>
+              NPU INT8 {computePool.vectorSummary.usedNpuInt8Tops.toFixed(1)} /{" "}
+              {computePool.vectorSummary.npuInt8Tops.toFixed(1)} TOPS
+            </span>
+            <span>
+              内存 {computePool.vectorSummary.usedMemoryGb.toFixed(1)} /{" "}
+              {computePool.vectorSummary.memoryGb.toFixed(1)} GB · 存储{" "}
+              {computePool.vectorSummary.usedStorageGb.toFixed(1)} /{" "}
               {computePool.vectorSummary.storageGb.toFixed(1)} GB
             </span>
           </div>
@@ -454,11 +465,25 @@ export interface ComputeResourcePool {
 
 export interface ComputeResourceVectorPoolSummary {
   cpuFp64Gflops: number;
+  usedCpuFp32Gflops: number;
+  availableCpuFp32Gflops: number;
+  usedCpuFp64Gflops: number;
+  availableCpuFp64Gflops: number;
   gpuFp32Tflops: number;
+  usedGpuFp32Tflops: number;
+  availableGpuFp32Tflops: number;
   gpuFp16Tflops: number;
+  usedGpuFp16Tflops: number;
+  availableGpuFp16Tflops: number;
   npuInt8Tops: number;
+  usedNpuInt8Tops: number;
+  availableNpuInt8Tops: number;
   memoryGb: number;
+  usedMemoryGb: number;
+  availableMemoryGb: number;
   storageGb: number;
+  usedStorageGb: number;
+  availableStorageGb: number;
   utilizationMode: string;
 }
 
@@ -603,25 +628,109 @@ function buildComputeResourceVectorPoolSummary(
       metricNumber(backendMetrics, "compute_resource_total_gflops_fp64") ??
         sumComputeNodeField(snapshot, "cpu_gflops_fp64")
     ),
+    usedCpuFp32Gflops: metricOrNodeSum(
+      snapshot,
+      backendMetrics,
+      "compute_resource_used_cpu_gflops_fp32",
+      "used_cpu_gflops_fp32"
+    ),
+    availableCpuFp32Gflops: metricOrNodeSum(
+      snapshot,
+      backendMetrics,
+      "compute_resource_available_cpu_gflops_fp32",
+      "available_cpu_gflops_fp32"
+    ),
+    usedCpuFp64Gflops: metricOrNodeSum(
+      snapshot,
+      backendMetrics,
+      "compute_resource_used_gflops_fp64",
+      "used_cpu_gflops_fp64"
+    ),
+    availableCpuFp64Gflops: metricOrNodeSum(
+      snapshot,
+      backendMetrics,
+      "compute_resource_available_gflops_fp64",
+      "available_cpu_gflops_fp64"
+    ),
     gpuFp32Tflops: roundMetric(
       metricNumber(backendMetrics, "compute_resource_total_gpu_tflops_fp32") ??
         sumComputeNodeField(snapshot, "gpu_tflops_fp32")
+    ),
+    usedGpuFp32Tflops: metricOrNodeSum(
+      snapshot,
+      backendMetrics,
+      "compute_resource_used_gpu_tflops_fp32",
+      "used_gpu_tflops_fp32"
+    ),
+    availableGpuFp32Tflops: metricOrNodeSum(
+      snapshot,
+      backendMetrics,
+      "compute_resource_available_gpu_tflops_fp32",
+      "available_gpu_tflops_fp32"
     ),
     gpuFp16Tflops: roundMetric(
       metricNumber(backendMetrics, "compute_resource_total_gpu_tflops_fp16") ??
         sumComputeNodeField(snapshot, "gpu_tflops_fp16")
     ),
+    usedGpuFp16Tflops: metricOrNodeSum(
+      snapshot,
+      backendMetrics,
+      "compute_resource_used_gpu_tflops_fp16",
+      "used_gpu_tflops_fp16"
+    ),
+    availableGpuFp16Tflops: metricOrNodeSum(
+      snapshot,
+      backendMetrics,
+      "compute_resource_available_gpu_tflops_fp16",
+      "available_gpu_tflops_fp16"
+    ),
     npuInt8Tops: roundMetric(
       metricNumber(backendMetrics, "compute_resource_total_npu_tops_int8") ??
         sumComputeNodeField(snapshot, "npu_tops_int8")
+    ),
+    usedNpuInt8Tops: metricOrNodeSum(
+      snapshot,
+      backendMetrics,
+      "compute_resource_used_npu_tops_int8",
+      "used_npu_tops_int8"
+    ),
+    availableNpuInt8Tops: metricOrNodeSum(
+      snapshot,
+      backendMetrics,
+      "compute_resource_available_npu_tops_int8",
+      "available_npu_tops_int8"
     ),
     memoryGb: roundMetric(
       metricNumber(backendMetrics, "compute_resource_total_memory_gb") ??
         sumComputeNodeField(snapshot, "memory_gb")
     ),
+    usedMemoryGb: metricOrNodeSum(
+      snapshot,
+      backendMetrics,
+      "compute_resource_used_memory_gb",
+      "used_memory_gb"
+    ),
+    availableMemoryGb: metricOrNodeSum(
+      snapshot,
+      backendMetrics,
+      "compute_resource_available_memory_gb",
+      "available_memory_gb"
+    ),
     storageGb: roundMetric(
       metricNumber(backendMetrics, "compute_resource_total_storage_gb") ??
         sumComputeNodeField(snapshot, "storage_gb")
+    ),
+    usedStorageGb: metricOrNodeSum(
+      snapshot,
+      backendMetrics,
+      "compute_resource_used_storage_gb",
+      "used_storage_gb"
+    ),
+    availableStorageGb: metricOrNodeSum(
+      snapshot,
+      backendMetrics,
+      "compute_resource_available_storage_gb",
+      "available_storage_gb"
     ),
     utilizationMode:
       typeof backendMetrics?.compute_resource_vector_utilization_mode === "string"
@@ -630,15 +739,42 @@ function buildComputeResourceVectorPoolSummary(
   };
 }
 
+function metricOrNodeSum(
+  snapshot: WorldSnapshot,
+  backendMetrics: RuntimeMetricsSummary | null | undefined,
+  metricKey: string,
+  nodeField: ComputeNodeNumericField
+): number {
+  return roundMetric(
+    metricNumber(backendMetrics, metricKey) ?? sumComputeNodeField(snapshot, nodeField)
+  );
+}
+
+type ComputeNodeNumericField =
+  | "cpu_gflops_fp64"
+  | "gpu_tflops_fp32"
+  | "gpu_tflops_fp16"
+  | "npu_tops_int8"
+  | "memory_gb"
+  | "storage_gb"
+  | "available_cpu_gflops_fp32"
+  | "used_cpu_gflops_fp32"
+  | "available_cpu_gflops_fp64"
+  | "used_cpu_gflops_fp64"
+  | "available_gpu_tflops_fp32"
+  | "used_gpu_tflops_fp32"
+  | "available_gpu_tflops_fp16"
+  | "used_gpu_tflops_fp16"
+  | "available_npu_tops_int8"
+  | "used_npu_tops_int8"
+  | "available_memory_gb"
+  | "used_memory_gb"
+  | "available_storage_gb"
+  | "used_storage_gb";
+
 function sumComputeNodeField(
   snapshot: WorldSnapshot,
-  field:
-    | "cpu_gflops_fp64"
-    | "gpu_tflops_fp32"
-    | "gpu_tflops_fp16"
-    | "npu_tops_int8"
-    | "memory_gb"
-    | "storage_gb"
+  field: ComputeNodeNumericField
 ): number {
   return snapshot.compute_nodes.reduce((sum, node) => {
     const value = node[field];

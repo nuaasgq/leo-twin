@@ -74,6 +74,21 @@ export interface ComputeNodeRenderState {
   npu_tops_int8?: number;
   memory_gb?: number;
   storage_gb?: number;
+  resource_usage_mode?: string;
+  available_cpu_gflops_fp32?: number;
+  used_cpu_gflops_fp32?: number;
+  available_cpu_gflops_fp64?: number;
+  used_cpu_gflops_fp64?: number;
+  available_gpu_tflops_fp32?: number;
+  used_gpu_tflops_fp32?: number;
+  available_gpu_tflops_fp16?: number;
+  used_gpu_tflops_fp16?: number;
+  available_npu_tops_int8?: number;
+  used_npu_tops_int8?: number;
+  available_memory_gb?: number;
+  used_memory_gb?: number;
+  available_storage_gb?: number;
+  used_storage_gb?: number;
 }
 
 export interface SnapshotDiff {
@@ -443,8 +458,33 @@ function computeResourceVectorFields(
       : { gpu_tflops_fp16: node.gpu_tflops_fp16 }),
     ...(node.npu_tops_int8 === undefined ? {} : { npu_tops_int8: node.npu_tops_int8 }),
     ...(node.memory_gb === undefined ? {} : { memory_gb: node.memory_gb }),
-    ...(node.storage_gb === undefined ? {} : { storage_gb: node.storage_gb })
+    ...(node.storage_gb === undefined ? {} : { storage_gb: node.storage_gb }),
+    ...(node.resource_usage_mode === undefined
+      ? {}
+      : { resource_usage_mode: node.resource_usage_mode }),
+    ...optionalRenderNumber(node, "available_cpu_gflops_fp32"),
+    ...optionalRenderNumber(node, "used_cpu_gflops_fp32"),
+    ...optionalRenderNumber(node, "available_cpu_gflops_fp64"),
+    ...optionalRenderNumber(node, "used_cpu_gflops_fp64"),
+    ...optionalRenderNumber(node, "available_gpu_tflops_fp32"),
+    ...optionalRenderNumber(node, "used_gpu_tflops_fp32"),
+    ...optionalRenderNumber(node, "available_gpu_tflops_fp16"),
+    ...optionalRenderNumber(node, "used_gpu_tflops_fp16"),
+    ...optionalRenderNumber(node, "available_npu_tops_int8"),
+    ...optionalRenderNumber(node, "used_npu_tops_int8"),
+    ...optionalRenderNumber(node, "available_memory_gb"),
+    ...optionalRenderNumber(node, "used_memory_gb"),
+    ...optionalRenderNumber(node, "available_storage_gb"),
+    ...optionalRenderNumber(node, "used_storage_gb")
   };
+}
+
+function optionalRenderNumber(
+  node: ComputeNodeState,
+  field: keyof ComputeNodeState
+): Partial<ComputeNodeRenderState> {
+  const value = node[field];
+  return typeof value === "number" ? { [field]: value } : {};
 }
 
 function computeLoadRatio(node: ComputeNodeState | undefined): number {

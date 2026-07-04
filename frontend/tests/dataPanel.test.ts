@@ -432,9 +432,11 @@ describe("buildComputeResourcePool", () => {
     });
     expect(pool.vectorSummary).toMatchObject({
       cpuFp64Gflops: 6,
+      usedGpuFp32Tflops: 0,
       gpuFp32Tflops: 3,
       gpuFp16Tflops: 6,
       npuInt8Tops: 12,
+      usedMemoryGb: 0,
       memoryGb: 24,
       storageGb: 384,
       utilizationMode: "SNAPSHOT_SCALAR_FP32_AVAILABLE_ONLY"
@@ -448,12 +450,24 @@ describe("buildComputeResourcePool", () => {
       compute_resource_available_gflops_fp32: 50,
       compute_resource_used_gflops_fp32: 30,
       compute_resource_total_gflops_fp64: 12,
+      compute_resource_available_gflops_fp64: 10,
+      compute_resource_used_gflops_fp64: 2,
       compute_resource_total_gpu_tflops_fp32: 6,
+      compute_resource_available_gpu_tflops_fp32: 4,
+      compute_resource_used_gpu_tflops_fp32: 2,
       compute_resource_total_gpu_tflops_fp16: 12,
+      compute_resource_available_gpu_tflops_fp16: 9,
+      compute_resource_used_gpu_tflops_fp16: 3,
       compute_resource_total_npu_tops_int8: 24,
+      compute_resource_available_npu_tops_int8: 20,
+      compute_resource_used_npu_tops_int8: 4,
       compute_resource_total_memory_gb: 96,
+      compute_resource_available_memory_gb: 88,
+      compute_resource_used_memory_gb: 8,
       compute_resource_total_storage_gb: 2048,
-      compute_resource_vector_utilization_mode: "SCALAR_FP32_AVAILABLE_ONLY"
+      compute_resource_available_storage_gb: 2000,
+      compute_resource_used_storage_gb: 48,
+      compute_resource_vector_utilization_mode: "RESOURCE_VECTOR_ESTIMATED"
     });
 
     expect(pool).toMatchObject({
@@ -463,12 +477,24 @@ describe("buildComputeResourcePool", () => {
       usedPercent: 37.5,
       vectorSummary: {
         cpuFp64Gflops: 12,
+        usedCpuFp64Gflops: 2,
+        availableCpuFp64Gflops: 10,
         gpuFp32Tflops: 6,
+        usedGpuFp32Tflops: 2,
+        availableGpuFp32Tflops: 4,
         gpuFp16Tflops: 12,
+        usedGpuFp16Tflops: 3,
+        availableGpuFp16Tflops: 9,
         npuInt8Tops: 24,
+        usedNpuInt8Tops: 4,
+        availableNpuInt8Tops: 20,
         memoryGb: 96,
+        usedMemoryGb: 8,
+        availableMemoryGb: 88,
         storageGb: 2048,
-        utilizationMode: "SCALAR_FP32_AVAILABLE_ONLY"
+        usedStorageGb: 48,
+        availableStorageGb: 2000,
+        utilizationMode: "RESOURCE_VECTOR_ESTIMATED"
       }
     });
   });

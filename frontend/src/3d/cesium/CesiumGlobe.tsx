@@ -443,6 +443,8 @@ function SatelliteInset({
             <span>{computeSummary.gpuVectorLabel}</span>
             <span>{computeSummary.npuVectorLabel}</span>
             <span>{computeSummary.memoryStorageLabel}</span>
+            <span>{computeSummary.processingUsageLabel}</span>
+            <span>{computeSummary.memoryUsageLabel}</span>
             <span>{computeSummary.compatibilityNote}</span>
           </>
         ) : (

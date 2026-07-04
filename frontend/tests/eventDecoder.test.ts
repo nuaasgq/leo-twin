@@ -64,7 +64,16 @@ describe("decodeSimEvent", () => {
         gpu_tflops_fp16: 5,
         npu_tops_int8: 12,
         memory_gb: 32,
-        storage_gb: 512
+        storage_gb: 512,
+        resource_usage_mode: "RESOURCE_VECTOR_ESTIMATED",
+        available_cpu_gflops_fp32: 10,
+        used_cpu_gflops_fp32: 10,
+        available_gpu_tflops_fp32: 0,
+        used_gpu_tflops_fp32: 2.5,
+        available_memory_gb: 24,
+        used_memory_gb: 8,
+        available_storage_gb: 500,
+        used_storage_gb: 12
       }
     });
 
@@ -80,7 +89,16 @@ describe("decodeSimEvent", () => {
       gpu_tflops_fp16: 5,
       npu_tops_int8: 12,
       memory_gb: 32,
-      storage_gb: 512
+      storage_gb: 512,
+      resource_usage_mode: "RESOURCE_VECTOR_ESTIMATED",
+      available_cpu_gflops_fp32: 10,
+      used_cpu_gflops_fp32: 10,
+      available_gpu_tflops_fp32: 0,
+      used_gpu_tflops_fp32: 2.5,
+      available_memory_gb: 24,
+      used_memory_gb: 8,
+      available_storage_gb: 500,
+      used_storage_gb: 12
     });
   });
 

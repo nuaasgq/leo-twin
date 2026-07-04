@@ -22,6 +22,8 @@ export interface SatelliteComputeSummary {
   gpuVectorLabel: string;
   npuVectorLabel: string;
   memoryStorageLabel: string;
+  processingUsageLabel: string;
+  memoryUsageLabel: string;
   compatibilityNote: string;
 }
 
@@ -114,6 +116,14 @@ export function satelliteComputeSummary(
         npu_tops_int8?: number;
         memory_gb?: number;
         storage_gb?: number;
+        resource_usage_mode?: string;
+        used_cpu_gflops_fp32?: number;
+        used_cpu_gflops_fp64?: number;
+        used_gpu_tflops_fp32?: number;
+        used_gpu_tflops_fp16?: number;
+        used_npu_tops_int8?: number;
+        used_memory_gb?: number;
+        used_storage_gb?: number;
       }
     | null
     | undefined,
@@ -150,6 +160,13 @@ export function satelliteComputeSummary(
     node.storage_gb,
     finiteOptionalNumber(resourceSummary?.storage_gb_per_node, 0)
   );
+  const usedCpuFp32 = finiteOptionalNumber(node.used_cpu_gflops_fp32, 0);
+  const usedCpuFp64 = finiteOptionalNumber(node.used_cpu_gflops_fp64, 0);
+  const usedGpuFp32 = finiteOptionalNumber(node.used_gpu_tflops_fp32, 0);
+  const usedGpuFp16 = finiteOptionalNumber(node.used_gpu_tflops_fp16, 0);
+  const usedNpuInt8 = finiteOptionalNumber(node.used_npu_tops_int8, 0);
+  const usedMemoryGb = finiteOptionalNumber(node.used_memory_gb, 0);
+  const usedStorageGb = finiteOptionalNumber(node.used_storage_gb, 0);
   const utilization =
     node.load_ratio !== undefined
       ? clamp(finiteNumber(node.load_ratio), 0, 1)
@@ -175,6 +192,16 @@ export function satelliteComputeSummary(
     memoryStorageLabel: `内存 ${formatNumber(memoryGb)} GB / 存储 ${formatNumber(
       storageGb
     )} GB`,
+    processingUsageLabel: `使用 CPU FP32 ${formatNumber(
+      usedCpuFp32
+    )} GFLOPS / FP64 ${formatNumber(usedCpuFp64)} GFLOPS / GPU FP32 ${formatNumber(
+      usedGpuFp32
+    )} TFLOPS / FP16 ${formatNumber(usedGpuFp16)} TFLOPS / NPU ${formatNumber(
+      usedNpuInt8
+    )} TOPS`,
+    memoryUsageLabel: `使用 内存 ${formatNumber(usedMemoryGb)} GB / 存储 ${formatNumber(
+      usedStorageGb
+    )} GB`,
     compatibilityNote:
       resourceSummary?.compatibility_note ?? "实时节点状态仍使用标量 capacity。"
   };
@@ -187,6 +214,14 @@ function hasNodeResourceVector(node: {
   npu_tops_int8?: number;
   memory_gb?: number;
   storage_gb?: number;
+  resource_usage_mode?: string;
+  used_cpu_gflops_fp32?: number;
+  used_cpu_gflops_fp64?: number;
+  used_gpu_tflops_fp32?: number;
+  used_gpu_tflops_fp16?: number;
+  used_npu_tops_int8?: number;
+  used_memory_gb?: number;
+  used_storage_gb?: number;
 }): boolean {
   return (
     node.cpu_gflops_fp64 !== undefined ||
@@ -194,7 +229,15 @@ function hasNodeResourceVector(node: {
     node.gpu_tflops_fp16 !== undefined ||
     node.npu_tops_int8 !== undefined ||
     node.memory_gb !== undefined ||
-    node.storage_gb !== undefined
+    node.storage_gb !== undefined ||
+    node.resource_usage_mode !== undefined ||
+    node.used_cpu_gflops_fp32 !== undefined ||
+    node.used_cpu_gflops_fp64 !== undefined ||
+    node.used_gpu_tflops_fp32 !== undefined ||
+    node.used_gpu_tflops_fp16 !== undefined ||
+    node.used_npu_tops_int8 !== undefined ||
+    node.used_memory_gb !== undefined ||
+    node.used_storage_gb !== undefined
   );
 }
 
