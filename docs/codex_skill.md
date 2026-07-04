@@ -246,6 +246,19 @@ Each task MUST follow:
 8. A task is not considered fully delivered until its committed scope is
    available from the GitHub repository URL.
 
+9. Every completed task MUST update `docs/development_log.md` in the same
+   commit scope. The log entry must record:
+   - date
+   - branch
+   - commit hash or pending commit note
+   - changed files or modules
+   - validation commands and results
+   - problems encountered and how they were handled
+   - known remaining issues or follow-up work
+
+10. Runtime/local generated config changes MUST NOT be logged as delivered
+    product changes unless they are intentionally part of the task scope.
+
 ---
 
 ## 12. Multi-Agent Execution Model (CRITICAL)
