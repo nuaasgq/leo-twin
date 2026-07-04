@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { CesiumGlobe } from "../3d/cesium/CesiumGlobe";
-import { ConfigPanel, ScenarioControlValues } from "../config_panel/ConfigPanel";
+import type { ScenarioControlValues } from "../config_panel/ConfigPanel";
 import {
   ControlAck,
   ControlChannelClient,
@@ -12,7 +11,6 @@ import {
   RuntimeStatusPayload,
   ScenarioConfig
 } from "../core/event_types";
-import { DataPanel } from "../dashboard/data_panel/DataPanel";
 import { SnapshotEngine, useWorldSnapshot } from "../state/snapshot_engine";
 import { WorldStateReducer } from "../state/reducer";
 import { EventRouter } from "../stream/event_router";
@@ -21,6 +19,21 @@ import { EventThrottleLayer } from "../stream/throttle_layer";
 import { WebSocketStreamClient } from "../stream/websocket_client";
 import { loadRuntimeState, loadScenarioConfig } from "./api";
 import "./App.css";
+
+const CesiumGlobe = lazy(async () => {
+  const module = await import("../3d/cesium/CesiumGlobe");
+  return { default: module.CesiumGlobe };
+});
+
+const ConfigPanel = lazy(async () => {
+  const module = await import("../config_panel/ConfigPanel");
+  return { default: module.ConfigPanel };
+});
+
+const DataPanel = lazy(async () => {
+  const module = await import("../dashboard/data_panel/DataPanel");
+  return { default: module.DataPanel };
+});
 
 export function App() {
   const surface = surfaceFromPathname(window.location.pathname);
@@ -246,11 +259,19 @@ export function App() {
       </header>
       {surface === "dashboard" ? (
         <section className="dashboard-page" aria-label="独立数据态势面板">
-          <DataPanel
-            snapshot={snapshot}
-            runtimeStatus={runtimeStatus}
-            generatedConfig={generatedConfig}
-          />
+          <Suspense
+            fallback={
+              <div className="surface-loading" role="status">
+                数据面板加载中
+              </div>
+            }
+          >
+            <DataPanel
+              snapshot={snapshot}
+              runtimeStatus={runtimeStatus}
+              generatedConfig={generatedConfig}
+            />
+          </Suspense>
         </section>
       ) : (
         <section className="workspace control-workspace">
@@ -266,20 +287,36 @@ export function App() {
               </div>
             </div>
             <div className="globe-panel">
-              <CesiumGlobe snapshot={snapshot} />
+              <Suspense
+                fallback={
+                  <div className="globe-loading" role="status">
+                    三维引擎加载中
+                  </div>
+                }
+              >
+                <CesiumGlobe snapshot={snapshot} />
+              </Suspense>
             </div>
             <div className="control-dock">
-              <ConfigPanel
-                scenario={scenarioControls}
-                runtime={runtimeStatus}
-                progress={{
-                  sim_time: snapshot.last_sim_time,
-                  duration: runtimeStatus.duration,
-                  event_count: snapshot.event_count
-                }}
-                generatedConfig={generatedConfig}
-                onRuntimeControl={sendRuntimeControl}
-              />
+              <Suspense
+                fallback={
+                  <div className="control-panel-loading" role="status">
+                    配置面板加载中
+                  </div>
+                }
+              >
+                <ConfigPanel
+                  scenario={scenarioControls}
+                  runtime={runtimeStatus}
+                  progress={{
+                    sim_time: snapshot.last_sim_time,
+                    duration: runtimeStatus.duration,
+                    event_count: snapshot.event_count
+                  }}
+                  generatedConfig={generatedConfig}
+                  onRuntimeControl={sendRuntimeControl}
+                />
+              </Suspense>
             </div>
           </section>
         </section>
