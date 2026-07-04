@@ -54,6 +54,24 @@ class WorkloadSmoothingModeConfig(StrEnum):
     RATE_LIMITED = "RATE_LIMITED"
 
 
+class TrafficClassConfig(StrEnum):
+    """Flow-level traffic classes exposed through scenario configuration."""
+
+    DATA_TRANSFER = "DATA_TRANSFER"
+    TELEMETRY = "TELEMETRY"
+    BULK_DOWNLINK = "BULK_DOWNLINK"
+    COMPUTE_SERVICE = "COMPUTE_SERVICE"
+
+
+class TrafficDestinationTypeConfig(StrEnum):
+    """Traffic destination categories exposed through scenario configuration."""
+
+    GROUND_ENDPOINT = "GROUND_ENDPOINT"
+    SATELLITE = "SATELLITE"
+    COMPUTE_NODE = "COMPUTE_NODE"
+    SERVICE_ENDPOINT = "SERVICE_ENDPOINT"
+
+
 DEFAULT_BATCH_SPACE_LINK_UPDATE_LIMIT = 999
 DEFAULT_MAX_SPACE_LINK_CANDIDATES_PER_SATELLITE = 4
 
@@ -93,6 +111,9 @@ class TrafficModel:
     flow_demand_capacity: float = 25.0
     task_compute_demand: float = 20.0
     task_data_size: float = 10.0
+    traffic_class: TrafficClassConfig = TrafficClassConfig.COMPUTE_SERVICE
+    destination_type: TrafficDestinationTypeConfig = TrafficDestinationTypeConfig.COMPUTE_NODE
+    output_data_size: float = 0.0
 
     def __post_init__(self) -> None:
         _require_positive_int(self.flow_interval_seconds, "traffic_model.flow_interval_seconds")
@@ -100,6 +121,20 @@ class TrafficModel:
         _require_positive_finite(self.flow_demand_capacity, "traffic_model.flow_demand_capacity")
         _require_positive_finite(self.task_compute_demand, "traffic_model.task_compute_demand")
         _require_positive_finite(self.task_data_size, "traffic_model.task_data_size")
+        if not isinstance(self.traffic_class, TrafficClassConfig):
+            object.__setattr__(
+                self,
+                "traffic_class",
+                TrafficClassConfig(str(self.traffic_class)),
+            )
+        if not isinstance(self.destination_type, TrafficDestinationTypeConfig):
+            object.__setattr__(
+                self,
+                "destination_type",
+                TrafficDestinationTypeConfig(str(self.destination_type)),
+            )
+        _require_non_negative_finite(self.output_data_size, "traffic_model.output_data_size")
+        object.__setattr__(self, "output_data_size", float(self.output_data_size))
 
 
 @dataclass(frozen=True)

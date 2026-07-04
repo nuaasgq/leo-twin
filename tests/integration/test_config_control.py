@@ -39,6 +39,9 @@ def test_config_loads_correctly() -> None:
     assert config.network.space_link_mode is None
     assert config.network.max_space_link_candidates_per_satellite == 4
     assert config.network.batch_space_link_update_limit == 999
+    assert config.scenario.traffic_model.traffic_class == "COMPUTE_SERVICE"
+    assert config.scenario.traffic_model.destination_type == "COMPUTE_NODE"
+    assert config.scenario.traffic_model.output_data_size == 0.0
     assert config.ui.visualization.satellites is True
 
 
@@ -180,6 +183,9 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
                         "flow_demand_capacity": 12.5,
                         "task_compute_demand": 15.0,
                         "task_data_size": 4.0,
+                        "traffic_class": "BULK_DOWNLINK",
+                        "destination_type": "GROUND_ENDPOINT",
+                        "output_data_size": 3.5,
                     },
                     "application_protocol": "MQTT",
                     "transport_protocol": "UDP",
@@ -230,6 +236,9 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
     assert control_plane.result.config.flow_demand_capacity == 12.5
     assert control_plane.result.config.task_compute_demand == 15.0
     assert control_plane.result.config.task_data_size == 4.0
+    assert control_plane.result.config.traffic_class == "BULK_DOWNLINK"
+    assert control_plane.result.config.traffic_destination_type == "GROUND_ENDPOINT"
+    assert control_plane.result.config.traffic_output_data_size == 3.5
     assert control_plane.result.config.transport_protocol == "UDP"
     assert control_plane.result.config.application_protocol == "MQTT"
     assert control_plane.result.config.routing_protocol == "DISTANCE_VECTOR"
@@ -275,6 +284,9 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
         "flow_demand_capacity": 12.5,
         "task_compute_demand": 15.0,
         "task_data_size": 4.0,
+        "traffic_class": "BULK_DOWNLINK",
+        "destination_type": "GROUND_ENDPOINT",
+        "output_data_size": 3.5,
     }
     assert control_plane.result.scenario.frontend_config["network"] == {
         "application_protocol": "MQTT",
@@ -331,12 +343,21 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
     assert ack["generated_config"]["demand_capacity"] == 12.5
     assert ack["generated_config"]["task_compute_demand"] == 15.0
     assert ack["generated_config"]["task_data_size"] == 4.0
+    assert ack["generated_config"]["traffic_class"] == "BULK_DOWNLINK"
+    assert ack["generated_config"]["traffic_destination_type"] == "GROUND_ENDPOINT"
+    assert ack["generated_config"]["traffic_output_data_size"] == 3.5
     assert ack["generated_config"]["backend_summary"][
         "derived_constellation_summary"
     ]["plane_count"] == 6
     assert ack["generated_config"]["backend_summary"]["traffic_demand_summary"][
         "traffic_class"
-    ] == "DATA_TRANSFER"
+    ] == "BULK_DOWNLINK"
+    assert ack["generated_config"]["backend_summary"]["traffic_demand_summary"][
+        "destination_type"
+    ] == "GROUND_ENDPOINT"
+    assert ack["generated_config"]["backend_summary"]["traffic_demand_summary"][
+        "output_data_size_mb"
+    ] == 3.5
     assert ack["generated_config"]["backend_summary"]["compute_resource_summary"][
         "capacity_unit"
     ] == "GFLOPS FP32"
@@ -393,6 +414,9 @@ def test_initialize_writes_config_and_start_gates_streams(tmp_path) -> None:
                         "flow_demand_capacity": 12.5,
                         "task_compute_demand": 15.0,
                         "task_data_size": 4.0,
+                        "traffic_class": "COMPUTE_SERVICE",
+                        "destination_type": "COMPUTE_NODE",
+                        "output_data_size": 0.0,
                     },
                     "mode": "ACCELERATED",
                     "speed_factor": 10,
@@ -413,6 +437,9 @@ def test_initialize_writes_config_and_start_gates_streams(tmp_path) -> None:
     assert "flow_interval_seconds: 30" in config_path.read_text(encoding="utf-8")
     assert "flow_demand_capacity: 12.5" in config_path.read_text(encoding="utf-8")
     assert "task_data_size: 4.0" in config_path.read_text(encoding="utf-8")
+    assert "traffic_class: COMPUTE_SERVICE" in config_path.read_text(encoding="utf-8")
+    assert "destination_type: COMPUTE_NODE" in config_path.read_text(encoding="utf-8")
+    assert "output_data_size: 0.0" in config_path.read_text(encoding="utf-8")
     assert "speed_factor: 10" in config_path.read_text(encoding="utf-8")
     generated_config = json.loads(generated_config_path.read_text(encoding="utf-8"))
     assert generated_config["satellite_count"] == 24
@@ -424,6 +451,9 @@ def test_initialize_writes_config_and_start_gates_streams(tmp_path) -> None:
     assert generated_config["demand_capacity"] == 12.5
     assert generated_config["task_compute_demand"] == 15.0
     assert generated_config["task_data_size"] == 4.0
+    assert generated_config["traffic_class"] == "COMPUTE_SERVICE"
+    assert generated_config["traffic_destination_type"] == "COMPUTE_NODE"
+    assert generated_config["traffic_output_data_size"] == 0.0
     assert generated_config["compute_node_count"] == 2
     assert generated_config["seed"] == 1234
     assert generated_config["application_protocol"] == "TASK_OFFLOAD_FLOW"

@@ -30,6 +30,9 @@ change.
   - Bundled Node:
     `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
     - Result: passed.
+  - Clean temporary worktree with this task patch applied:
+    `python -m pytest tests/integration/test_config_control.py::test_config_loads_correctly tests/unit/test_scenario_builder.py::test_default_generated_scenario_config_file_loads -q`
+    - Result: passed, 2 tests.
 - Problems encountered:
   - Existing satellite visual tests used exact object assertions. They were
     updated to include the new usage labels while preserving existing capacity
@@ -1831,7 +1834,7 @@ change.
 ## 2026-07-05 - Traffic Demand Generator Integration v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`
-- Commit: pending
+- Commit: `7aed3ce`
 - Scope: make the integration demo initial workload use reusable traffic demand
   records while preserving existing `FLOW_ARRIVAL` and `TASK_ARRIVAL` event
   contracts, event IDs, timing, priorities, and deterministic ordering.
@@ -1869,3 +1872,68 @@ change.
 - Recommended follow-up:
   - Add backend configuration fields for traffic class mix and destination type
     so frontend user parameters can drive traffic demand profiles directly.
+
+## 2026-07-05 - Traffic Mix Config v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending
+- Scope: add deterministic traffic class, destination type, and output data
+  size configuration across backend config, generated scenario summaries,
+  integration demo traffic records, and frontend control payload typing.
+- Changed files/modules:
+  - `src/leo_twin/schema/config.py`
+  - `src/leo_twin/schema/config_loader.py`
+  - `src/leo_twin/core/config/schema.py`
+  - `src/leo_twin/core/config/__init__.py`
+  - `src/leo_twin/services/derived_summary.py`
+  - `src/leo_twin/services/scenario_builder.py`
+  - `examples/integration_demo/config.py`
+  - `examples/integration_demo/scenario.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/config_panel/ConfigPanel.tsx`
+  - `tests/unit/test_backend_derived_summary.py`
+  - `tests/unit/test_integration_demo_scenario.py`
+  - `tests/unit/test_scenario_builder.py`
+  - `tests/integration/test_config_control.py`
+  - `frontend/tests/configPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_backend_derived_summary.py tests/unit/test_integration_demo_scenario.py tests/unit/test_scenario_builder.py::test_scenario_builder_config_from_sees_config_maps_control_plane_fields tests/integration/test_config_control.py::test_invalid_config_is_rejected tests/integration/test_config_control.py::test_frontend_control_messages_are_processed tests/integration/test_config_control.py::test_initialize_writes_config_and_start_gates_streams tests/integration/test_config_control.py::test_system_remains_deterministic_under_config_changes -q`
+    - Result: passed, 25 tests.
+  - `python -m pytest tests/integration/test_full_system_demo.py::test_replay_test tests/integration/test_full_system_demo.py::test_frontend_sync_test tests/integration/test_runtime_session_control.py tests/integration/test_live_runtime_streaming.py -q`
+    - Result: passed, 22 tests.
+  - `python -m pytest tests/integration/test_product_acceptance_scenarios.py tests/integration/test_compute_service_lifecycle.py tests/unit/test_traffic_demand_model.py -q`
+    - Result: passed, 10 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- configPanel.test.ts appSurface.test.ts`
+    - Result: passed, 22 files / 111 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - Two read-only subagents inspected the frontend/control-plane path and the
+    backend summary/scenario path. Both confirmed the safe v1 boundary is
+    config, payload typing, backend summary, and `TrafficDemandRecord`
+    metadata; non-compute traffic execution semantics should remain a later
+    task.
+  - `tests/integration/test_config_control.py::test_config_loads_correctly`
+    and
+    `tests/unit/test_scenario_builder.py::test_default_generated_scenario_config_file_loads`
+    read the locally modified `configs/sees_control.yaml` and
+    `configs/generated_full_system_demo.json`; those files are intentionally
+    not reset or committed. Targeted tests avoid relying on those local dirty
+    baseline files, and the same two tests pass in a clean temporary worktree.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The integration demo still executes a compute-service workload shape. The
+    new traffic class and destination type are product semantics and demand
+    metadata; true non-compute flow scheduling needs a separate bounded task.
+  - Output data size is reported through configuration, backend summary, and
+    demand records. Result/output flow emission remains part of the later
+    communication-compute lifecycle expansion.
+- Recommended follow-up:
+  - Add a Traffic Mix Execution v1 task that supports non-compute flow-only
+    records and compute-service output metadata without changing Event Kernel
+    ordering or introducing packet-level simulation.

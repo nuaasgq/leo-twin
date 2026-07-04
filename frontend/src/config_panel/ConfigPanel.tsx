@@ -38,6 +38,9 @@ export interface TrafficControlValues {
   flow_demand_capacity: number;
   task_compute_demand: number;
   task_data_size: number;
+  traffic_class?: string;
+  destination_type?: string;
+  output_data_size?: number;
 }
 
 export interface VisualizationControlValues {
@@ -166,6 +169,15 @@ export function ConfigPanel({
     scenario.traffic_model.task_compute_demand
   );
   const [taskDataSize, setTaskDataSize] = useState(scenario.traffic_model.task_data_size);
+  const [trafficClass, setTrafficClass] = useState(
+    scenario.traffic_model.traffic_class ?? "COMPUTE_SERVICE"
+  );
+  const [trafficDestinationType, setTrafficDestinationType] = useState(
+    scenario.traffic_model.destination_type ?? "COMPUTE_NODE"
+  );
+  const [trafficOutputDataSize, setTrafficOutputDataSize] = useState(
+    scenario.traffic_model.output_data_size ?? 0
+  );
   const [showSatellites, setShowSatellites] = useState(scenario.visualization.satellites);
   const [showLinks, setShowLinks] = useState(scenario.visualization.links);
   const [showUsers, setShowUsers] = useState(scenario.visualization.users);
@@ -247,6 +259,11 @@ export function ConfigPanel({
     setFlowDemandCapacity(scenario.traffic_model.flow_demand_capacity);
     setTaskComputeDemand(scenario.traffic_model.task_compute_demand);
     setTaskDataSize(scenario.traffic_model.task_data_size);
+    setTrafficClass(scenario.traffic_model.traffic_class ?? "COMPUTE_SERVICE");
+    setTrafficDestinationType(
+      scenario.traffic_model.destination_type ?? "COMPUTE_NODE"
+    );
+    setTrafficOutputDataSize(scenario.traffic_model.output_data_size ?? 0);
     setShowSatellites(scenario.visualization.satellites);
     setShowLinks(scenario.visualization.links);
     setShowUsers(scenario.visualization.users);
@@ -291,6 +308,9 @@ export function ConfigPanel({
     scenario.traffic_model.flow_demand_capacity,
     scenario.traffic_model.task_compute_demand,
     scenario.traffic_model.task_data_size,
+    scenario.traffic_model.traffic_class,
+    scenario.traffic_model.destination_type,
+    scenario.traffic_model.output_data_size,
     scenario.visualization.satellites,
     scenario.visualization.links,
     scenario.visualization.users,
@@ -370,7 +390,10 @@ export function ConfigPanel({
         task_interval_seconds: taskIntervalSeconds,
         flow_demand_capacity: flowDemandCapacity,
         task_compute_demand: taskComputeDemand,
-        task_data_size: taskDataSize
+        task_data_size: taskDataSize,
+        traffic_class: trafficClass,
+        destination_type: trafficDestinationType,
+        output_data_size: trafficOutputDataSize
       }),
       visualization: visualizationControlPayload({
         satellites: showSatellites,
@@ -1501,7 +1524,10 @@ export function trafficControlPayload(traffic: TrafficControlValues): Record<str
     task_interval_seconds: traffic.task_interval_seconds,
     flow_demand_capacity: traffic.flow_demand_capacity,
     task_compute_demand: traffic.task_compute_demand,
-    task_data_size: traffic.task_data_size
+    task_data_size: traffic.task_data_size,
+    traffic_class: traffic.traffic_class ?? "COMPUTE_SERVICE",
+    destination_type: traffic.destination_type ?? "COMPUTE_NODE",
+    output_data_size: traffic.output_data_size ?? 0
   };
 }
 

@@ -163,7 +163,40 @@ def test_demo_flow_and_task_demands_are_config_driven() -> None:
         "flow_demand_capacity": 12.5,
         "task_compute_demand": 15.0,
         "task_data_size": 4.0,
+        "traffic_class": "COMPUTE_SERVICE",
+        "destination_type": "COMPUTE_NODE",
+        "output_data_size": 0.0,
     }
+
+
+def test_demo_traffic_model_semantics_are_config_driven() -> None:
+    config = _demo_config(
+        traffic_class="BULK_DOWNLINK",
+        traffic_destination_type="GROUND_ENDPOINT",
+        traffic_output_data_size=4.5,
+    )
+    scenario = build_demo_scenario(config)
+    demand_batch = _traffic_demand_batch(config)
+
+    assert scenario.frontend_config["scenario"]["traffic_model"][
+        "traffic_class"
+    ] == "BULK_DOWNLINK"
+    assert scenario.frontend_config["scenario"]["traffic_model"][
+        "destination_type"
+    ] == "GROUND_ENDPOINT"
+    assert scenario.frontend_config["scenario"]["traffic_model"]["output_data_size"] == 4.5
+    assert scenario.frontend_config["backend_summary"]["traffic_demand_summary"][
+        "traffic_class"
+    ] == "BULK_DOWNLINK"
+    assert scenario.frontend_config["backend_summary"]["traffic_demand_summary"][
+        "destination_type"
+    ] == "GROUND_ENDPOINT"
+    assert scenario.frontend_config["backend_summary"]["traffic_demand_summary"][
+        "output_data_size_mb"
+    ] == 4.5
+    assert demand_batch.records[0].traffic_class == TrafficClass.BULK_DOWNLINK
+    assert demand_batch.records[0].destination_type == TrafficDestinationType.GROUND_ENDPOINT
+    assert demand_batch.records[0].output_data_size == 4.5
 
 
 def test_demo_initial_workload_uses_traffic_demand_records() -> None:
@@ -190,7 +223,7 @@ def test_demo_initial_workload_uses_traffic_demand_records() -> None:
     assert first_record.traffic_class == TrafficClass.COMPUTE_SERVICE
     assert first_record.destination_type == TrafficDestinationType.COMPUTE_NODE
     assert first_record.input_data_size == config.flow_demand_capacity
-    assert first_record.output_data_size == 0.0
+    assert first_record.output_data_size == config.traffic_output_data_size
     assert first_record.arrival_time == first_flow_event.sim_time
     assert first_record.task == first_task_event.payload
     assert first_record.input_flow == first_flow_event.payload

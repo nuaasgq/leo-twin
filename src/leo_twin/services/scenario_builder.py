@@ -14,6 +14,7 @@ from leo_twin.models.orbit import (
     ConstellationAllocation,
     ConstellationProfile,
 )
+from leo_twin.models.traffic import TrafficClass, TrafficDestinationType
 from leo_twin.services.derived_summary import build_backend_derived_summary
 from leo_twin.schema import (
     ApplicationProtocol,
@@ -96,6 +97,9 @@ class FullSystemScenarioBuilderConfig:
     demand_capacity: float = 1.0
     task_compute_demand: float = 20.0
     task_data_size: float = 10.0
+    traffic_class: str = TrafficClass.COMPUTE_SERVICE.value
+    traffic_destination_type: str = TrafficDestinationType.COMPUTE_NODE.value
+    traffic_output_data_size: float = 0.0
 
     def __post_init__(self) -> None:
         _require_int(self.seed, "seed")
@@ -244,6 +248,20 @@ class FullSystemScenarioBuilderConfig:
         _require_non_negative_number(self.demand_capacity, "demand_capacity")
         _require_non_negative_number(self.task_compute_demand, "task_compute_demand")
         _require_non_negative_number(self.task_data_size, "task_data_size")
+        object.__setattr__(
+            self,
+            "traffic_class",
+            TrafficClass(str(self.traffic_class)).value,
+        )
+        object.__setattr__(
+            self,
+            "traffic_destination_type",
+            TrafficDestinationType(str(self.traffic_destination_type)).value,
+        )
+        _require_non_negative_number(
+            self.traffic_output_data_size,
+            "traffic_output_data_size",
+        )
 
 
 @dataclass(frozen=True)
@@ -356,6 +374,9 @@ def scenario_builder_backend_summary(
         task_compute_demand=config.task_compute_demand,
         task_data_size=config.task_data_size,
         application_protocol=config.application_protocol,
+        traffic_class=config.traffic_class,
+        traffic_destination_type=config.traffic_destination_type,
+        traffic_output_data_size=config.traffic_output_data_size,
         compute_cpu_gflops_fp64=config.compute_cpu_gflops_fp64,
         compute_gpu_tflops_fp32=config.compute_gpu_tflops_fp32,
         compute_gpu_tflops_fp16=config.compute_gpu_tflops_fp16,
@@ -419,6 +440,9 @@ def scenario_builder_config_from_sees_config(
         demand_capacity=config.scenario.traffic_model.flow_demand_capacity,
         task_compute_demand=config.scenario.traffic_model.task_compute_demand,
         task_data_size=config.scenario.traffic_model.task_data_size,
+        traffic_class=config.scenario.traffic_model.traffic_class.value,
+        traffic_destination_type=config.scenario.traffic_model.destination_type.value,
+        traffic_output_data_size=config.scenario.traffic_model.output_data_size,
         application_protocol=config.network.application_protocol.value,
         transport_protocol=config.network.transport_protocol.value,
         routing_protocol=config.network.routing_protocol.value,

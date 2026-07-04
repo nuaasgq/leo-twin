@@ -1050,6 +1050,7 @@ function mergeTrafficModelConfig(
     "flow_demand_capacity",
     "task_compute_demand",
     "task_data_size",
+    "output_data_size",
     "initial_workload_window_s",
     "max_initial_events_per_tick"
   ] as const) {
@@ -1073,6 +1074,12 @@ function mergeTrafficModelConfig(
   );
   if (smoothingMode !== undefined) {
     merged.workload_smoothing_mode = smoothingMode;
+  }
+  for (const key of ["traffic_class", "destination_type"] as const) {
+    const value = stringFromRuntimeScenario(runtimeScenario, traffic, key);
+    if (value !== undefined) {
+      merged[key] = value;
+    }
   }
   return merged;
 }
@@ -1282,7 +1289,12 @@ function scenarioControlValues(
         scenarioConfig?.scenario?.traffic_model?.flow_demand_capacity ?? 25,
       task_compute_demand:
         scenarioConfig?.scenario?.traffic_model?.task_compute_demand ?? 20,
-      task_data_size: scenarioConfig?.scenario?.traffic_model?.task_data_size ?? 2
+      task_data_size: scenarioConfig?.scenario?.traffic_model?.task_data_size ?? 2,
+      traffic_class:
+        scenarioConfig?.scenario?.traffic_model?.traffic_class ?? "COMPUTE_SERVICE",
+      destination_type:
+        scenarioConfig?.scenario?.traffic_model?.destination_type ?? "COMPUTE_NODE",
+      output_data_size: scenarioConfig?.scenario?.traffic_model?.output_data_size ?? 0
     },
     visualization: {
       satellites: visualization?.satellites ?? true,

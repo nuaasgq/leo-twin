@@ -228,6 +228,32 @@ def test_compute_resource_summary_uses_configured_vector_lanes() -> None:
     assert summary["total_storage_gb"] == 2048.0
 
 
+def test_traffic_summary_uses_explicit_traffic_model_fields() -> None:
+    allocation = AutoPlaneAllocator.allocate(satellite_count=12, plane_count=3)
+
+    summary = build_backend_derived_summary(
+        constellation=allocation,
+        satellite_count=12,
+        user_count=20,
+        compute_node_count=4,
+        compute_capacity=40.0,
+        flow_count=10,
+        demand_capacity=25.0,
+        task_compute_demand=20.0,
+        task_data_size=2.0,
+        application_protocol="TASK_OFFLOAD_FLOW",
+        traffic_class="BULK_DOWNLINK",
+        traffic_destination_type="GROUND_ENDPOINT",
+        traffic_output_data_size=4.5,
+    )["traffic_demand_summary"]
+
+    assert summary["traffic_class"] == "BULK_DOWNLINK"
+    assert summary["destination_type"] == "GROUND_ENDPOINT"
+    assert summary["output_data_size_mb"] == 4.5
+    assert summary["input_data_size_mb"] == 2.0
+    assert summary["demand_capacity_mbps"] == 25.0
+
+
 def test_scale_fidelity_summary_reports_large_scale_degradation() -> None:
     summary = build_scale_fidelity_summary(
         ScaleFidelityConfig(

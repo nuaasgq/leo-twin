@@ -151,6 +151,9 @@ export interface ScenarioConfig {
       flow_demand_capacity?: number;
       task_compute_demand?: number;
       task_data_size?: number;
+      traffic_class?: string;
+      destination_type?: string;
+      output_data_size?: number;
       initial_workload_smoothing_enabled?: boolean;
       initial_workload_window_s?: number;
       max_initial_events_per_tick?: number;
@@ -428,6 +431,9 @@ export interface GeneratedScenarioConfig {
   demand_capacity: number;
   task_compute_demand: number;
   task_data_size: number;
+  traffic_class?: string;
+  traffic_destination_type?: string;
+  traffic_output_data_size?: number;
   application_protocol?: string;
   transport_protocol?: string;
   transport_loss_rate?: number;

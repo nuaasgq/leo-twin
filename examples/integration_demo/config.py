@@ -67,6 +67,9 @@ class DemoConfig:
     flow_demand_capacity: float = 25.0
     task_compute_demand: float = 20.0
     task_data_size: float = 2.0
+    traffic_class: str = "COMPUTE_SERVICE"
+    traffic_destination_type: str = "COMPUTE_NODE"
+    traffic_output_data_size: float = 0.0
     application_protocol: str = "TASK_OFFLOAD_FLOW"
     transport_protocol: str = "TCP"
     routing_protocol: str = "LINK_STATE"
@@ -176,6 +179,17 @@ def load_demo_config(path: str | Path = DEFAULT_CONFIG_PATH) -> DemoConfig:
         flow_demand_capacity=_optional_float(scenario, "flow_demand_capacity", 25.0),
         task_compute_demand=_optional_float(scenario, "task_compute_demand", 20.0),
         task_data_size=_optional_float(scenario, "task_data_size", 2.0),
+        traffic_class=_optional_str(scenario, "traffic_class", "COMPUTE_SERVICE"),
+        traffic_destination_type=_optional_str(
+            scenario,
+            "traffic_destination_type",
+            "COMPUTE_NODE",
+        ),
+        traffic_output_data_size=_optional_float(
+            scenario,
+            "traffic_output_data_size",
+            0.0,
+        ),
         cell_count=_int(scenario, "cell_count"),
         state_snapshot_interval_events=_int(
             scenario,
@@ -288,6 +302,9 @@ def demo_config_to_sees_config(config: DemoConfig) -> SEESConfig:
                 flow_demand_capacity=config.flow_demand_capacity,
                 task_compute_demand=config.task_compute_demand,
                 task_data_size=config.task_data_size,
+                traffic_class=config.traffic_class,
+                destination_type=config.traffic_destination_type,
+                output_data_size=config.traffic_output_data_size,
             ),
         ),
         network=NetworkProfile(
@@ -378,6 +395,9 @@ def demo_config_from_sees_config(
         flow_demand_capacity=config.scenario.traffic_model.flow_demand_capacity,
         task_compute_demand=config.scenario.traffic_model.task_compute_demand,
         task_data_size=config.scenario.traffic_model.task_data_size,
+        traffic_class=config.scenario.traffic_model.traffic_class.value,
+        traffic_destination_type=config.scenario.traffic_model.destination_type.value,
+        traffic_output_data_size=config.scenario.traffic_model.output_data_size,
         cell_count=config.scenario.cell_count,
         state_snapshot_interval_events=base.state_snapshot_interval_events,
         metric_sample_interval=base.metric_sample_interval,

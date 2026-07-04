@@ -382,14 +382,20 @@ describe("trafficControlPayload", () => {
         task_interval_seconds: 45,
         flow_demand_capacity: 12.5,
         task_compute_demand: 15,
-        task_data_size: 4
+        task_data_size: 4,
+        traffic_class: "BULK_DOWNLINK",
+        destination_type: "GROUND_ENDPOINT",
+        output_data_size: 3.5
       })
     ).toEqual({
       flow_interval_seconds: 30,
       task_interval_seconds: 45,
       flow_demand_capacity: 12.5,
       task_compute_demand: 15,
-      task_data_size: 4
+      task_data_size: 4,
+      traffic_class: "BULK_DOWNLINK",
+      destination_type: "GROUND_ENDPOINT",
+      output_data_size: 3.5
     });
   });
 });

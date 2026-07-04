@@ -258,6 +258,9 @@ def _backend_summary(
         task_compute_demand=config.task_compute_demand,
         task_data_size=config.task_data_size,
         application_protocol=config.application_protocol,
+        traffic_class=config.traffic_class,
+        traffic_destination_type=config.traffic_destination_type,
+        traffic_output_data_size=config.traffic_output_data_size,
         compute_cpu_gflops_fp64=config.compute_cpu_gflops_fp64,
         compute_gpu_tflops_fp32=config.compute_gpu_tflops_fp32,
         compute_gpu_tflops_fp16=config.compute_gpu_tflops_fp16,
@@ -458,6 +461,8 @@ def _traffic_demand_batch(config: DemoConfig) -> TrafficDemandBatch:
     task_index = 0
     compute_node_ids = _compute_node_satellite_ids(config)
     spacing_s = _initial_workload_spacing_s(config, len(compute_node_ids))
+    traffic_class = TrafficClass(str(config.traffic_class))
+    destination_type = TrafficDestinationType(str(config.traffic_destination_type))
     for tick in range(0, config.duration_seconds, config.task_interval_seconds):
         for offset, target_id in enumerate(compute_node_ids):
             task_id = f"task-{task_index:05d}"
@@ -485,10 +490,10 @@ def _traffic_demand_batch(config: DemoConfig) -> TrafficDemandBatch:
             records.append(
                 TrafficDemandRecord(
                     arrival_time=submit_time - 0.05,
-                    traffic_class=TrafficClass.COMPUTE_SERVICE,
-                    destination_type=TrafficDestinationType.COMPUTE_NODE,
+                    traffic_class=traffic_class,
+                    destination_type=destination_type,
                     input_data_size=config.flow_demand_capacity,
-                    output_data_size=0.0,
+                    output_data_size=config.traffic_output_data_size,
                     input_flow=input_flow,
                     task=task,
                 )
@@ -509,6 +514,9 @@ def _traffic_frontend_config(config: DemoConfig) -> dict[str, object]:
         "flow_demand_capacity": config.flow_demand_capacity,
         "task_compute_demand": config.task_compute_demand,
         "task_data_size": config.task_data_size,
+        "traffic_class": config.traffic_class,
+        "destination_type": config.traffic_destination_type,
+        "output_data_size": config.traffic_output_data_size,
     }
     if _workload_smoothing_should_be_exposed(config):
         traffic.update(

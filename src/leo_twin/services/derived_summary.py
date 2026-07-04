@@ -27,6 +27,9 @@ def build_backend_derived_summary(
     task_compute_demand: float,
     task_data_size: float,
     application_protocol: str,
+    traffic_class: TrafficClass | str | None = None,
+    traffic_destination_type: TrafficDestinationType | str | None = None,
+    traffic_output_data_size: float = 0.0,
     compute_cpu_gflops_fp64: float = 0.0,
     compute_gpu_tflops_fp32: float = 0.0,
     compute_gpu_tflops_fp16: float = 0.0,
@@ -49,7 +52,14 @@ def build_backend_derived_summary(
         orbit_inclination_deg=orbit_inclination_deg,
         phase_policy=phase_policy,
     )
-    traffic_class = _traffic_class(application_protocol)
+    selected_traffic_class = _selected_traffic_class(
+        application_protocol,
+        traffic_class,
+    )
+    selected_destination_type = _selected_destination_type(
+        selected_traffic_class,
+        traffic_destination_type,
+    )
     compute_vector = ComputeResourceVector(
         cpu_gflops_fp32=compute_capacity,
         cpu_gflops_fp64=compute_cpu_gflops_fp64,
@@ -61,12 +71,12 @@ def build_backend_derived_summary(
     )
     total_cpu_gflops_fp32 = compute_vector.cpu_gflops_fp32 * compute_node_count
     traffic_summary: dict[str, object] = {
-        "traffic_class": traffic_class.value,
-        "destination_type": _destination_type(traffic_class).value,
+        "traffic_class": selected_traffic_class.value,
+        "destination_type": selected_destination_type.value,
         "generated_flow_count": flow_count,
         "arrival_model": "DETERMINISTIC_INTERVAL",
         "input_data_size_mb": task_data_size,
-        "output_data_size_mb": 0.0,
+        "output_data_size_mb": float(traffic_output_data_size),
         "priority": 0,
         "demand_capacity_mbps": demand_capacity,
         "task_compute_demand": task_compute_demand,
@@ -211,12 +221,34 @@ def _traffic_class(application_protocol: str) -> TrafficClass:
     return TrafficClass.DATA_TRANSFER
 
 
+def _selected_traffic_class(
+    application_protocol: str,
+    traffic_class: TrafficClass | str | None,
+) -> TrafficClass:
+    if traffic_class is None:
+        return _traffic_class(application_protocol)
+    if isinstance(traffic_class, TrafficClass):
+        return traffic_class
+    return TrafficClass(str(traffic_class))
+
+
 def _destination_type(traffic_class: TrafficClass) -> TrafficDestinationType:
     if traffic_class == TrafficClass.COMPUTE_SERVICE:
         return TrafficDestinationType.COMPUTE_NODE
     if traffic_class in {TrafficClass.TELEMETRY, TrafficClass.BULK_DOWNLINK}:
         return TrafficDestinationType.GROUND_ENDPOINT
     return TrafficDestinationType.SERVICE_ENDPOINT
+
+
+def _selected_destination_type(
+    traffic_class: TrafficClass,
+    destination_type: TrafficDestinationType | str | None,
+) -> TrafficDestinationType:
+    if destination_type is None:
+        return _destination_type(traffic_class)
+    if isinstance(destination_type, TrafficDestinationType):
+        return destination_type
+    return TrafficDestinationType(str(destination_type))
 
 
 def _model_assumptions(
