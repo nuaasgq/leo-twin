@@ -12,6 +12,7 @@ import {
   runtimeProgressSummary,
   startControlDisabled,
   trafficControlPayload,
+  visualizationLayerEffectItems,
   visualizationControlPayload
 } from "../src/config_panel/ConfigPanel";
 import { GeneratedScenarioConfig } from "../src/core/event_types";
@@ -431,6 +432,40 @@ describe("visualizationControlPayload", () => {
       users: false,
       metrics: false
     });
+  });
+});
+
+describe("visualizationLayerEffectItems", () => {
+  it("explains what each visualization switch changes in the 3D view", () => {
+    expect(
+      visualizationLayerEffectItems({
+        satellites: true,
+        users: false,
+        links: true,
+        metrics: false
+      })
+    ).toEqual([
+      {
+        label: "卫星",
+        stateLabel: "显示",
+        detail: "控制卫星点、卫星图标和三维卫星模型"
+      },
+      {
+        label: "用户",
+        stateLabel: "隐藏",
+        detail: "控制地面用户与地面站点"
+      },
+      {
+        label: "链路",
+        stateLabel: "显示",
+        detail: "控制接入链路、星间链路和路由线"
+      },
+      {
+        label: "轨迹",
+        stateLabel: "隐藏",
+        detail: "控制轨道轨迹、覆盖波束和路由辅助层"
+      }
+    ]);
   });
 });
 

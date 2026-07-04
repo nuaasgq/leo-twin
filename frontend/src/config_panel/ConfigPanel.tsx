@@ -50,6 +50,12 @@ export interface VisualizationControlValues {
   metrics: boolean;
 }
 
+export interface VisualizationLayerEffectItem {
+  label: string;
+  stateLabel: string;
+  detail: string;
+}
+
 export interface NetworkControlValues {
   application_protocol: string;
   transport_protocol: string;
@@ -349,6 +355,12 @@ export function ConfigPanel({
   const pauseResume = pauseResumeControl(runtime);
   const startDisabled = startControlDisabled(runtime);
   const progressSummary = runtimeProgressSummary(progress);
+  const visualizationLayerEffects = visualizationLayerEffectItems({
+    satellites: showSatellites,
+    users: showUsers,
+    links: showLinks,
+    metrics: showMetrics
+  });
   const handleSatelliteCountChange = (value: number) => {
     const nextCount = boundedInteger(value, 12, 10000);
     setSatelliteCount(nextCount);
@@ -1068,6 +1080,15 @@ export function ConfigPanel({
             <span>轨迹</span>
           </label>
         </div>
+        <div className="layer-effect-list" aria-label="可视化图层作用">
+          {visualizationLayerEffects.map((item) => (
+            <div className="layer-effect-row" key={item.label}>
+              <span>{item.label}</span>
+              <strong>{item.stateLabel}</strong>
+              <small>{item.detail}</small>
+            </div>
+          ))}
+        </div>
       </div>
         </section>
 
@@ -1618,6 +1639,33 @@ export function visualizationControlPayload(
     users: visualization.users,
     metrics: visualization.metrics
   };
+}
+
+export function visualizationLayerEffectItems(
+  visualization: VisualizationControlValues
+): readonly VisualizationLayerEffectItem[] {
+  return [
+    {
+      label: "卫星",
+      stateLabel: visualization.satellites ? "显示" : "隐藏",
+      detail: "控制卫星点、卫星图标和三维卫星模型"
+    },
+    {
+      label: "用户",
+      stateLabel: visualization.users ? "显示" : "隐藏",
+      detail: "控制地面用户与地面站点"
+    },
+    {
+      label: "链路",
+      stateLabel: visualization.links ? "显示" : "隐藏",
+      detail: "控制接入链路、星间链路和路由线"
+    },
+    {
+      label: "轨迹",
+      stateLabel: visualization.metrics ? "显示" : "隐藏",
+      detail: "控制轨道轨迹、覆盖波束和路由辅助层"
+    }
+  ];
 }
 
 export function orbitControlPayload(orbit: OrbitControlValues): Record<string, unknown> {

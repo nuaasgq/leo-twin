@@ -1417,6 +1417,48 @@ body {
   white-space: nowrap;
 }
 
+.layer-effect-list {
+  display: grid;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.layer-effect-row {
+  display: grid;
+  grid-template-columns: minmax(42px, 0.45fr) minmax(42px, 0.45fr) minmax(0, 2fr);
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  border: 1px solid #233846;
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: #0c141c;
+}
+
+.layer-effect-row span,
+.layer-effect-row strong,
+.layer-effect-row small {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 10px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.layer-effect-row span {
+  color: var(--app-text);
+}
+
+.layer-effect-row strong {
+  color: var(--accent-cyan);
+  font-weight: 700;
+}
+
+.layer-effect-row small {
+  color: var(--app-muted);
+}
+
 .runtime-actions {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));

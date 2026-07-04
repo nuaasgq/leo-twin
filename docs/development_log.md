@@ -2733,3 +2733,35 @@ change.
 - Recommended follow-up:
   - Add a selected-satellite resource history sparkline once backend per-node
     resource samples are exposed as a time series.
+
+## 2026-07-05 - Visualization Layer Effects v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: make the visualization layer switches self-explanatory by showing the
+  exact 3D layers affected by each switch.
+- Changed files/modules:
+  - `frontend/src/config_panel/ConfigPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/configPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- configPanel.test.ts visualLayerLimits.test.ts`
+    - Result: passed, 23 files / 140 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The layer switches were already consumed by `visualLayerLimits`, but the UI
+    did not tell users what each switch changed. This task adds a deterministic
+    explanation map without changing Cesium rendering behavior.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The switches still apply after configuration update/initialization through
+    the existing control-plane flow; this task does not add an immediate local
+    preview mode.
+- Recommended follow-up:
+  - Add immediate local preview toggles for 3D-only visibility once control
+    state and runtime config updates are separated cleanly.
