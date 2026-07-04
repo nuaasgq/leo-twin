@@ -1867,6 +1867,50 @@ body {
   gap: 10px;
 }
 
+.scale-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.scale-preset-grid button {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  border: 1px solid #2d4050;
+  border-radius: 6px;
+  padding: 8px;
+  background: #0b1118;
+  color: var(--app-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.scale-preset-grid button.active {
+  border-color: var(--accent-cyan);
+  background: #102633;
+}
+
+.scale-preset-grid span,
+.scale-preset-grid small {
+  min-width: 0;
+  overflow: hidden;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scale-preset-grid span {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.scale-preset-grid small {
+  color: var(--app-muted);
+  font-size: 10px;
+}
+
 .emphasized-control {
   border: 1px solid #273741;
   border-radius: 6px;

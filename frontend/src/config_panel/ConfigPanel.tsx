@@ -123,6 +123,42 @@ export const CONFIG_PANEL_SECTION_LABELS = {
   activeScenario: "当前生效场景"
 } as const;
 
+export interface ScenarioScalePreset {
+  id: string;
+  label: string;
+  detail: string;
+  satelliteCount: number;
+  userCount: number;
+  computeNodeCount: number;
+}
+
+export const SCENARIO_SCALE_PRESETS: readonly ScenarioScalePreset[] = [
+  {
+    id: "demo-72",
+    label: "72 星",
+    detail: "详细演示",
+    satelliteCount: 72,
+    userCount: 1000,
+    computeNodeCount: 72
+  },
+  {
+    id: "medium-300",
+    label: "300 星",
+    detail: "中等规模",
+    satelliteCount: 300,
+    userCount: 1000,
+    computeNodeCount: 300
+  },
+  {
+    id: "scale-1200",
+    label: "1200 星",
+    detail: "规模稳定",
+    satelliteCount: 1200,
+    userCount: 100,
+    computeNodeCount: 1200
+  }
+];
+
 export function configPanelSectionTitles(): readonly string[] {
   return Object.values(CONFIG_PANEL_SECTION_LABELS);
 }
@@ -384,6 +420,11 @@ export function ConfigPanel({
     setUserCount(boundedInteger(value, 10, 100000));
   const handleComputeNodesChange = (value: number) =>
     setComputeNodes(boundedInteger(value, 1, Math.max(1, satelliteCount)));
+  const handleScalePreset = (preset: ScenarioScalePreset) => {
+    setSatelliteCount(preset.satelliteCount);
+    setUserCount(preset.userCount);
+    setComputeNodes(preset.computeNodeCount);
+  };
   const handleSpeedFactorChange = (value: number) =>
     setSpeedFactor(boundedInteger(value, 1, 100));
   const handleDurationSecondsChange = (value: number) =>
@@ -635,6 +676,24 @@ export function ConfigPanel({
 
         <section className="config-section" aria-label={CONFIG_PANEL_SECTION_LABELS.resources}>
           <div className="config-section-title">{CONFIG_PANEL_SECTION_LABELS.resources}</div>
+
+      <div className="scale-preset-grid" aria-label="场景规模预设">
+        {SCENARIO_SCALE_PRESETS.map((preset) => (
+          <button
+            type="button"
+            key={preset.id}
+            className={
+              satelliteCount === preset.satelliteCount && userCount === preset.userCount
+                ? "active"
+                : ""
+            }
+            onClick={() => handleScalePreset(preset)}
+          >
+            <span>{preset.label}</span>
+            <small>{preset.detail}</small>
+          </button>
+        ))}
+      </div>
 
       <div className="control-group">
         <label className="control-label" htmlFor="satellite-count">

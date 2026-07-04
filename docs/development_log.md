@@ -3247,3 +3247,35 @@ change.
 - Recommended follow-up:
   - Extend backend satellite KPI slices with selected-satellite coverage counts
     or access-user counts once the coverage/access semantics are stable.
+
+## 2026-07-05 - Config Scale Presets v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add one-click scenario scale presets for 72, 300, and 1200 satellites
+  in the control panel, setting satellite count, user count, and compute node
+  count together so the UI preserves the product rule that satellites are
+  compute nodes by default.
+- Changed files/modules:
+  - `frontend/src/config_panel/ConfigPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/configPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- configPanel.test.ts`
+    - Result: passed, 23 files / 156 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - Numeric inputs were already present next to key sliders, so the higher-value
+    control improvement was quick scale presets rather than duplicating inputs.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The presets only set scale counts. They do not yet switch orbit profile,
+    traffic class, or fidelity mode labels directly.
+- Recommended follow-up:
+  - Add preset-specific backend summary text after initialization so users can
+    see which fidelity policy and plane allocation the chosen scale produced.

@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import {
   ConfigPanel,
+  SCENARIO_SCALE_PRESETS,
   configPanelSectionTitles,
   generatedScenarioSummaryItems,
   networkControlPayload,
@@ -77,6 +78,38 @@ describe("ConfigPanel priority controls", () => {
     expect(markup).toContain('id="compute-node-count-input"');
     expect(markup).toContain('id="speed-factor-input"');
     expect(markup).toContain('id="duration-seconds-input"');
+  });
+
+  it("renders quick scale presets for 72, 300, and 1200 satellite scenarios", () => {
+    expect(SCENARIO_SCALE_PRESETS.map((preset) => preset.satelliteCount)).toEqual([
+      72,
+      300,
+      1200
+    ]);
+    expect(SCENARIO_SCALE_PRESETS.map((preset) => preset.computeNodeCount)).toEqual([
+      72,
+      300,
+      1200
+    ]);
+    const markup = renderToStaticMarkup(
+      createElement(ConfigPanel, {
+        scenario: defaultScenario(),
+        runtime: runtimeStatus("STOPPED", true),
+        progress: {
+          sim_time: 0,
+          duration: 600,
+          event_count: 0
+        },
+        generatedConfig: null,
+        onRuntimeControl: () => undefined
+      })
+    );
+
+    expect(markup).toContain('aria-label="场景规模预设"');
+    expect(markup).toContain("72 星");
+    expect(markup).toContain("300 星");
+    expect(markup).toContain("1200 星");
+    expect(markup).toContain("规模稳定");
   });
 
   it("renders compute resource vector inputs for satellite-hosted nodes", () => {
