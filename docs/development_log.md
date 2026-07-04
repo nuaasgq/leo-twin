@@ -3395,3 +3395,42 @@ change.
 - Recommended follow-up:
   - Add typed WebSocket connection diagnostics so `/control`, `/stream/events`,
     and `/stream/state` failures produce similarly actionable UI feedback.
+
+## 2026-07-05 - Frontend WebSocket Diagnostics v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add typed connection-issue callbacks for the control WebSocket and
+  event/state stream WebSockets, suppress intentional client-close reports, and
+  surface unexpected stream/control disconnects as Chinese launcher
+  troubleshooting text in the App.
+- Changed files/modules:
+  - `frontend/src/config_panel/controlClient.ts`
+  - `frontend/src/stream/websocket_client/index.ts`
+  - `frontend/src/app/App.tsx`
+  - `frontend/tests/controlClient.test.ts`
+  - `frontend/tests/websocketClient.test.ts`
+  - `frontend/tests/appSurface.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- controlClient.test.ts websocketClient.test.ts appSurface.test.ts`
+    - Result: passed, 24 files / 166 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+  - `git diff --check`
+    - Result: passed with warnings only for the existing uncommitted
+      runtime/generated config files.
+- Problems encountered:
+  - WebSocket close handlers also fire during intentional client shutdown. Both
+    clients now keep a local closing flag so teardown does not produce false
+    degraded-state feedback.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The diagnostic text is channel-level. It does not yet classify close codes
+    into separate user actions.
+- Recommended follow-up:
+  - Add a compact connection diagnostics row that distinguishes HTTP status,
+    control WebSocket, event stream, and state stream health at a glance.

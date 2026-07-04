@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   ControlChannelClient,
+  ControlConnectionIssue,
   ControlWebSocketLike
 } from "../src/config_panel/controlClient";
 
@@ -64,6 +65,38 @@ describe("ControlChannelClient", () => {
     client.close();
     expect(sockets[0].closed).toBe(true);
   });
+
+  it("reports unexpected control websocket issues", () => {
+    const sockets: MockControlSocket[] = [];
+    const issues: ControlConnectionIssue[] = [];
+    const client = new ControlChannelClient({
+      url: "ws://test/control",
+      createWebSocket: (url) => {
+        const socket = new MockControlSocket(url);
+        sockets.push(socket);
+        return socket;
+      },
+      onConnectionIssue: (issue) => issues.push(issue)
+    });
+
+    client.connect();
+    sockets[0].error();
+    sockets[0].closeUnexpected(1006, "network");
+
+    expect(issues).toEqual([
+      { type: "error", url: "ws://test/control" },
+      {
+        type: "close",
+        url: "ws://test/control",
+        code: 1006,
+        reason: "network",
+        wasClean: false
+      }
+    ]);
+
+    client.close();
+    expect(issues).toHaveLength(2);
+  });
 });
 
 class MockControlSocket implements ControlWebSocketLike {
@@ -86,6 +119,16 @@ class MockControlSocket implements ControlWebSocketLike {
     this.onmessage?.({ data: JSON.stringify(payload) } as MessageEvent<string>);
   }
 
+  error(): void {
+    this.onerror?.({} as Event);
+  }
+
+  closeUnexpected(code: number, reason: string): void {
+    this.closed = true;
+    this.readyState = 3;
+    this.onclose?.({ code, reason, wasClean: false } as CloseEvent);
+  }
+
   send(data: string): void {
     this.sent.push(data);
   }
@@ -93,6 +136,6 @@ class MockControlSocket implements ControlWebSocketLike {
   close(): void {
     this.closed = true;
     this.readyState = 3;
-    this.onclose?.({} as CloseEvent);
+    this.onclose?.({ code: 1000, reason: "client", wasClean: true } as CloseEvent);
   }
 }

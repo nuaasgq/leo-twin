@@ -9,6 +9,7 @@ import {
   fidelityNoticeText,
   nextRuntimeProgressAnchor,
   runtimeProgressSimTime,
+  runtimeWebSocketErrorMessage,
   runtimeStatusRequiresStreams,
   scenarioWithRuntimeConfig,
   selectRuntimeDisplayEventCount,
@@ -290,6 +291,15 @@ describe("controlErrorMessage", () => {
     expect(controlErrorMessage("scale safety check failed: max_event_count")).toContain(
       "实时交互演示安全上限"
     );
+  });
+});
+
+describe("runtimeWebSocketErrorMessage", () => {
+  it("maps stream failures to launcher troubleshooting text", () => {
+    expect(runtimeWebSocketErrorMessage("events")).toContain(
+      "scripts\\sees_launcher.ps1 status"
+    );
+    expect(runtimeWebSocketErrorMessage("control")).toContain("restart_leo_twin.bat");
   });
 });
 

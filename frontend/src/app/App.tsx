@@ -175,7 +175,11 @@ export function App() {
       const client = new WebSocketStreamClient(router, {
         batchSize: 500,
         flushIntervalMs: 40,
-        stateStreamEnabled: true
+        stateStreamEnabled: true,
+        onConnectionIssue: (issue) => {
+          setConnectionState("degraded");
+          setControlError(runtimeWebSocketErrorMessage(issue.channel));
+        }
       });
       streamRouterRef.current = router;
       streamClientRef.current = client;
@@ -246,6 +250,10 @@ export function App() {
                 .catch(handleRuntimeApiError);
             }
           }
+        },
+        onConnectionIssue: () => {
+          setConnectionState("degraded");
+          setControlError(runtimeWebSocketErrorMessage("control"));
         }
       }),
     [closeStreams, handleRuntimeApiError, loadControlState, resetWorld, snapshotEngine, startStreams]
@@ -1313,6 +1321,18 @@ export function controlErrorMessage(error: string | undefined): string {
     ].join("");
   }
   return error;
+}
+
+type RuntimeWebSocketChannel = "control" | "events" | "state";
+
+export function runtimeWebSocketErrorMessage(channel: RuntimeWebSocketChannel): string {
+  const channelLabel =
+    channel === "control" ? "控制通道" : channel === "events" ? "事件流" : "状态流";
+  return [
+    `${channelLabel}连接中断。`,
+    "请执行 scripts\\sees_launcher.ps1 status 检查后端和前端是否 HTTP healthy，",
+    "必要时运行 restart_leo_twin.bat。"
+  ].join("");
 }
 
 function numberField(

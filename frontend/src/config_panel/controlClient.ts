@@ -32,31 +32,44 @@ export interface ControlWebSocketLike {
 
 export type ControlWebSocketFactory = (url: string) => ControlWebSocketLike;
 
+export interface ControlConnectionIssue {
+  type: "error" | "close";
+  url: string;
+  code?: number;
+  reason?: string;
+  wasClean?: boolean;
+}
+
 const OPEN_SOCKET_STATE = 1;
 
 export interface ControlChannelClientOptions {
   url?: string;
   createWebSocket?: ControlWebSocketFactory;
   onMessage?: (message: ControlAck) => void;
+  onConnectionIssue?: (issue: ControlConnectionIssue) => void;
 }
 
 export class ControlChannelClient {
   private readonly url: string;
   private readonly createWebSocket: ControlWebSocketFactory;
   private readonly onMessage: (message: ControlAck) => void;
+  private readonly onConnectionIssue: (issue: ControlConnectionIssue) => void;
   private socket: ControlWebSocketLike | null = null;
   private readonly pendingMessages: string[] = [];
+  private closing = false;
 
   constructor(options: ControlChannelClientOptions = {}) {
     this.url = options.url ?? websocketUrl("/control");
     this.createWebSocket = options.createWebSocket ?? ((url) => new WebSocket(url));
     this.onMessage = options.onMessage ?? (() => undefined);
+    this.onConnectionIssue = options.onConnectionIssue ?? (() => undefined);
   }
 
   connect(): void {
     if (this.socket !== null) {
       return;
     }
+    this.closing = false;
     const socket = this.createWebSocket(this.url);
     this.socket = socket;
     socket.onopen = () => {
@@ -65,9 +78,23 @@ export class ControlChannelClient {
     socket.onmessage = (message) => {
       this.onMessage(decodeControlAck(message.data));
     };
-    socket.onclose = () => {
+    socket.onerror = () => {
+      if (!this.closing) {
+        this.onConnectionIssue({ type: "error", url: this.url });
+      }
+    };
+    socket.onclose = (event) => {
       if (this.socket === socket) {
         this.socket = null;
+      }
+      if (!this.closing) {
+        this.onConnectionIssue({
+          type: "close",
+          url: this.url,
+          code: event.code,
+          reason: event.reason,
+          wasClean: event.wasClean
+        });
       }
     };
   }
@@ -88,6 +115,7 @@ export class ControlChannelClient {
   }
 
   close(): void {
+    this.closing = true;
     this.socket?.close();
     this.socket = null;
     this.pendingMessages.splice(0, this.pendingMessages.length);

@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import { EventRouter } from "../src/stream/event_router";
 import { ObservabilityStore } from "../src/stream/state_store";
-import { WebSocketLike, WebSocketStreamClient } from "../src/stream/websocket_client";
+import {
+  WebSocketConnectionIssue,
+  WebSocketLike,
+  WebSocketStreamClient
+} from "../src/stream/websocket_client";
 
 describe("WebSocketStreamClient", () => {
   it("batches event stream messages from a mock websocket", () => {
@@ -51,6 +55,42 @@ describe("WebSocketStreamClient", () => {
     expect(sockets.map((socket) => socket.url)).toEqual(["ws://test/events"]);
     client.close();
   });
+
+  it("reports unexpected event and state stream socket issues", () => {
+    const sockets: MockSocket[] = [];
+    const issues: WebSocketConnectionIssue[] = [];
+    const store = new ObservabilityStore();
+    const router = new EventRouter(store);
+    const client = new WebSocketStreamClient(router, {
+      eventUrl: "ws://test/events",
+      stateUrl: "ws://test/state",
+      createWebSocket: (url) => {
+        const socket = new MockSocket(url);
+        sockets.push(socket);
+        return socket;
+      },
+      onConnectionIssue: (issue) => issues.push(issue)
+    });
+
+    client.connect();
+    sockets[0].error();
+    sockets[1].closeUnexpected(1006, "network");
+
+    expect(issues).toEqual([
+      { channel: "events", type: "error", url: "ws://test/events" },
+      {
+        channel: "state",
+        type: "close",
+        url: "ws://test/state",
+        code: 1006,
+        reason: "network",
+        wasClean: false
+      }
+    ]);
+
+    client.close();
+    expect(issues).toHaveLength(2);
+  });
 });
 
 class MockSocket implements WebSocketLike {
@@ -66,8 +106,18 @@ class MockSocket implements WebSocketLike {
     this.onmessage?.({ data: JSON.stringify(payload) } as MessageEvent<string>);
   }
 
+  error(): void {
+    this.onerror?.({} as Event);
+  }
+
+  closeUnexpected(code: number, reason: string): void {
+    this.closed = true;
+    this.onclose?.({ code, reason, wasClean: false } as CloseEvent);
+  }
+
   close(): void {
     this.closed = true;
+    this.onclose?.({ code: 1000, reason: "client", wasClean: true } as CloseEvent);
   }
 }
 

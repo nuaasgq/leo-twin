@@ -11,9 +11,20 @@ export interface StreamClientOptions {
   playbackLayer?: EventPlaybackLayer;
   stateStreamEnabled?: boolean;
   createWebSocket?: WebSocketFactory;
+  onConnectionIssue?: (issue: WebSocketConnectionIssue) => void;
 }
 
 export type WebSocketFactory = (url: string) => WebSocketLike;
+export type WebSocketChannel = "events" | "state";
+
+export interface WebSocketConnectionIssue {
+  channel: WebSocketChannel;
+  type: "error" | "close";
+  url: string;
+  code?: number;
+  reason?: string;
+  wasClean?: boolean;
+}
 
 export interface WebSocketLike {
   onopen: ((event: Event) => void) | null;
@@ -29,12 +40,14 @@ export class WebSocketStreamClient {
   private readonly batchSize: number;
   private readonly flushIntervalMs: number;
   private readonly createWebSocket: WebSocketFactory;
+  private readonly onConnectionIssue: (issue: WebSocketConnectionIssue) => void;
   private readonly playbackLayer: EventPlaybackLayer | null;
   private readonly stateStreamEnabled: boolean;
   private eventSocket: WebSocketLike | null = null;
   private stateSocket: WebSocketLike | null = null;
   private flushTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly eventBuffer: SimEvent[] = [];
+  private closing = false;
 
   constructor(
     private readonly router: EventRouter,
@@ -47,10 +60,13 @@ export class WebSocketStreamClient {
     this.playbackLayer = options.playbackLayer ?? null;
     this.stateStreamEnabled = options.stateStreamEnabled ?? true;
     this.createWebSocket = options.createWebSocket ?? ((url) => new WebSocket(url));
+    this.onConnectionIssue = options.onConnectionIssue ?? (() => undefined);
   }
 
   connect(): void {
+    this.closing = false;
     this.eventSocket = this.createWebSocket(this.eventUrl);
+    this.attachDiagnostics(this.eventSocket, "events", this.eventUrl);
     this.eventSocket.onmessage = (message) => {
       const events = decodeStreamEvents(message.data);
       if (events.length === 0) {
@@ -68,6 +84,7 @@ export class WebSocketStreamClient {
 
     if (this.stateStreamEnabled) {
       this.stateSocket = this.createWebSocket(this.stateUrl);
+      this.attachDiagnostics(this.stateSocket, "state", this.stateUrl);
       this.stateSocket.onmessage = (message) => {
         try {
           this.router.routeRawStateMessage(parseJsonMessage(message.data));
@@ -95,6 +112,7 @@ export class WebSocketStreamClient {
   }
 
   close(): void {
+    this.closing = true;
     if (this.flushTimer !== null) {
       clearTimeout(this.flushTimer);
       this.flushTimer = null;
@@ -105,6 +123,30 @@ export class WebSocketStreamClient {
     this.stateSocket = null;
     this.eventBuffer.splice(0, this.eventBuffer.length);
     this.playbackLayer?.close();
+  }
+
+  private attachDiagnostics(
+    socket: WebSocketLike,
+    channel: WebSocketChannel,
+    url: string
+  ): void {
+    socket.onerror = () => {
+      if (!this.closing) {
+        this.onConnectionIssue({ channel, type: "error", url });
+      }
+    };
+    socket.onclose = (event) => {
+      if (!this.closing) {
+        this.onConnectionIssue({
+          channel,
+          type: "close",
+          url,
+          code: event.code,
+          reason: event.reason,
+          wasClean: event.wasClean
+        });
+      }
+    };
   }
 
   private scheduleFlush(): void {
