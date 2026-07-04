@@ -1,5 +1,6 @@
 import {
   ComputeNodeState,
+  FidelitySummary,
   GroundUserState,
   LinkState,
   MetricRecord,
@@ -24,6 +25,7 @@ export interface ObservabilityState {
   eventCount: number;
   lastSimTime: number;
   scenarioConfig: ScenarioConfig | null;
+  fidelitySummary: FidelitySummary | null;
   activeRouteId: string | null;
 }
 
@@ -42,6 +44,7 @@ interface MutableState {
   eventCount: number;
   lastSimTime: number;
   scenarioConfig: ScenarioConfig | null;
+  fidelitySummary: FidelitySummary | null;
   activeRouteId: string | null;
 }
 
@@ -76,6 +79,7 @@ export class ObservabilityStore {
 
   applyScenarioConfig(config: ScenarioConfig): void {
     this.state.scenarioConfig = config;
+    this.state.fidelitySummary = config.backend_summary?.fidelity_summary ?? null;
     for (const user of config.ground_users ?? []) {
       this.state.groundUsers.set(user.user_id, user);
     }
@@ -83,6 +87,9 @@ export class ObservabilityStore {
   }
 
   applySnapshot(snapshot: StateSnapshot): void {
+    if (snapshot.fidelity_summary !== undefined) {
+      this.state.fidelitySummary = snapshot.fidelity_summary;
+    }
     for (const satellite of snapshot.satellites ?? []) {
       this.state.satellites.set(satellite.satellite_id, satellite);
       this.state.lastSimTime = Math.max(this.state.lastSimTime, satellite.sim_time);
@@ -277,6 +284,7 @@ function createEmptyState(): MutableState {
     eventCount: 0,
     lastSimTime: 0,
     scenarioConfig: null,
+    fidelitySummary: null,
     activeRouteId: null
   };
 }
@@ -297,6 +305,7 @@ function freezeState(state: MutableState): ObservabilityState {
     eventCount: state.eventCount,
     lastSimTime: state.lastSimTime,
     scenarioConfig: state.scenarioConfig,
+    fidelitySummary: state.fidelitySummary,
     activeRouteId: state.activeRouteId
   };
 }

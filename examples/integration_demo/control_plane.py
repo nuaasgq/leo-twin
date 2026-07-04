@@ -21,6 +21,7 @@ from leo_twin.runtime import (
 from leo_twin.schema.config_loader import write_config
 from leo_twin.models.orbit import KeplerianOrbitEngine
 from leo_twin.schema import SatelliteState
+from leo_twin.schema.config import SEESConfig
 from leo_twin.services.control import (
     RuntimeController,
     ScaleSafetyChecker,
@@ -30,6 +31,10 @@ from leo_twin.services.scenario_builder import (
     scenario_builder_config_from_sees_config,
     scenario_builder_config_to_mapping,
     write_full_system_scenario_builder_config,
+)
+from leo_twin.services.scale_fidelity import (
+    ScaleFidelityConfig,
+    build_scale_fidelity_summary,
 )
 
 from examples.integration_demo.config import (
@@ -257,6 +262,7 @@ class DemoControlPlane:
     def _install_runtime_session(self, config: DemoConfig) -> None:
         self._stop_advance_loop()
         sees_config = demo_config_to_sees_config(config)
+        fidelity_summary = _fidelity_summary_from_demo_config(config)
 
         def kernel_factory(
             _scenario_config: object,
@@ -272,10 +278,12 @@ class DemoControlPlane:
                     context.scenario.ground_user_render_states,
                     config.state_snapshot_interval_events,
                     initial_satellites=initial_satellites,
+                    fidelity_summary=fidelity_summary,
                 ),
                 initial_snapshot=_initial_snapshot_from_ground_users(
                     context.scenario.ground_user_render_states,
                     initial_satellites,
+                    fidelity_summary,
                 ),
             )
 
@@ -314,10 +322,14 @@ class DemoControlPlane:
     def _generated_config_json(self) -> dict[str, Any]:
         builder_config = scenario_builder_config_from_sees_config(self._controller.config)
         generated = scenario_builder_config_to_mapping(builder_config)
-        generated["backend_summary"] = scenario_builder_backend_summary(builder_config)
+        backend_summary = scenario_builder_backend_summary(builder_config)
+        backend_summary["fidelity_summary"] = _fidelity_summary_from_sees_config(
+            self._controller.config
+        )
+        generated["backend_summary"] = backend_summary
         return generated
 
-    def _status_json(self) -> dict[str, str | int | float | bool | None]:
+    def _status_json(self) -> dict[str, Any]:
         runtime_status = self._require_session().get_status().to_dict()
         status = dict(runtime_status)
         status.update(self._controller.snapshot().to_json())
@@ -329,6 +341,9 @@ class DemoControlPlane:
         status["last_error"] = runtime_status["last_error"]
         status["deterministic_replay"] = runtime_status["deterministic_replay"]
         status["initialized"] = self._initialized
+        status["fidelity_summary"] = _fidelity_summary_from_sees_config(
+            self._controller.config
+        )
         return status
 
     def _ack(self, command: ControlCommand) -> dict[str, Any]:
@@ -367,14 +382,18 @@ class DemoControlPlane:
 
 
 def _initial_snapshot(result: DemoRunResult) -> dict[str, JsonValue]:
-    return _initial_snapshot_from_ground_users(result.scenario.ground_user_render_states)
+    return _initial_snapshot_from_ground_users(
+        result.scenario.ground_user_render_states,
+        fidelity_summary=_fidelity_summary_from_demo_config(result.config),
+    )
 
 
 def _initial_snapshot_from_ground_users(
     ground_users: tuple[Any, ...],
     satellites: tuple[SatelliteState, ...] = (),
+    fidelity_summary: dict[str, str | int | bool] | None = None,
 ) -> dict[str, JsonValue]:
-    return {
+    snapshot: dict[str, JsonValue] = {
         "satellites": [
             {
                 "satellite_id": satellite.satellite_id,
@@ -402,6 +421,9 @@ def _initial_snapshot_from_ground_users(
         "event_count": 0,
         "last_sim_time": 0.0,
     }
+    if fidelity_summary is not None:
+        snapshot["fidelity_summary"] = dict(fidelity_summary)
+    return snapshot
 
 
 def _initial_satellite_states(
@@ -456,3 +478,28 @@ def _frontend_event_batch(
         "overflow": overflow,
         "dropped_count": dropped_count,
     }
+
+
+def _fidelity_summary_from_demo_config(config: DemoConfig) -> dict[str, str | int | bool]:
+    return build_scale_fidelity_summary(
+        ScaleFidelityConfig(
+            satellite_count=config.satellite_count,
+            user_count=config.ground_user_count,
+            forced_orbit_update_mode=config.orbit_update_mode,
+            space_link_enabled=True,
+        )
+    )
+
+
+def _fidelity_summary_from_sees_config(config: SEESConfig) -> dict[str, str | int | bool]:
+    orbit_update_mode = config.scenario.orbit.orbit_update_mode
+    return build_scale_fidelity_summary(
+        ScaleFidelityConfig(
+            satellite_count=config.scenario.satellite_count,
+            user_count=config.scenario.user_count,
+            forced_orbit_update_mode=(
+                orbit_update_mode.value if orbit_update_mode is not None else None
+            ),
+            space_link_enabled=True,
+        )
+    )

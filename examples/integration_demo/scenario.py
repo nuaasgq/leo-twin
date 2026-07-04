@@ -9,6 +9,10 @@ from leo_twin.models.compute import ComputeNode
 from leo_twin.models.network import GroundEndpoint
 from leo_twin.models.orbit import AutoPlaneAllocator, ConstellationAllocation, OrbitSatelliteConfig
 from leo_twin.services.derived_summary import build_backend_derived_summary
+from leo_twin.services.scale_fidelity import (
+    ScaleFidelityConfig,
+    build_scale_fidelity_summary,
+)
 from leo_twin.schema import (
     CoverageSlot,
     EventType,
@@ -231,7 +235,7 @@ def _backend_summary(
     config: DemoConfig,
     allocation: ConstellationAllocation,
 ) -> dict[str, object]:
-    return build_backend_derived_summary(
+    summary = build_backend_derived_summary(
         constellation=allocation,
         satellite_count=config.satellite_count,
         user_count=config.ground_user_count,
@@ -243,6 +247,19 @@ def _backend_summary(
         task_data_size=config.task_data_size,
         application_protocol=config.application_protocol,
         arrival_interval_seconds=config.flow_interval_seconds,
+    )
+    summary["fidelity_summary"] = _fidelity_summary(config)
+    return summary
+
+
+def _fidelity_summary(config: DemoConfig) -> dict[str, str | int | bool]:
+    return build_scale_fidelity_summary(
+        ScaleFidelityConfig(
+            satellite_count=config.satellite_count,
+            user_count=config.ground_user_count,
+            forced_orbit_update_mode=config.orbit_update_mode,
+            space_link_enabled=True,
+        )
     )
 
 

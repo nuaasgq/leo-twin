@@ -35,6 +35,7 @@ from leo_twin.schema import (
 
 
 SpaceCellId = tuple[int, int, int]
+DEFAULT_BATCH_SPACE_LINK_UPDATE_LIMIT = 999
 
 
 class PositionDrivenNetworkEngine(SimulationModule):
@@ -65,7 +66,7 @@ class PositionDrivenNetworkEngine(SimulationModule):
         space_link_update_latency_epsilon_s: float = 0.0,
         space_link_update_capacity_epsilon: float = 0.0,
         position_scale_to_km: float = 1.0,
-        batch_space_link_update_limit: int = 999,
+        batch_space_link_update_limit: int = DEFAULT_BATCH_SPACE_LINK_UPDATE_LIMIT,
     ) -> None:
         _require_non_empty_str(module_name, "module_name")
         _require_non_empty_str(metrics_target, "metrics_target")

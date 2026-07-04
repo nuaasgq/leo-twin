@@ -351,6 +351,66 @@ body {
   line-height: 1;
 }
 
+.fidelity-notice {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  border: 1px solid #7b6a31;
+  border-radius: 8px;
+  padding: 9px 12px;
+  background: rgba(35, 29, 14, 0.92);
+  color: #ffe6a3;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(8px);
+}
+
+.fidelity-notice.control,
+.fidelity-notice.dashboard {
+  position: absolute;
+  z-index: 4;
+}
+
+.fidelity-notice.control {
+  top: 158px;
+  right: min(470px, 36vw);
+  left: 20px;
+}
+
+.fidelity-notice.dashboard {
+  top: 14px;
+  right: 18px;
+  left: 18px;
+}
+
+.fidelity-notice span,
+.fidelity-notice strong,
+.fidelity-notice small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fidelity-notice span {
+  color: #f3c75f;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.fidelity-notice strong {
+  color: #fff3c4;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.fidelity-notice small {
+  color: #d1b87d;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
 .globe-panel {
   position: relative;
   min-width: 0;
@@ -649,6 +709,7 @@ body {
 }
 
 .dashboard-page {
+  position: relative;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
@@ -1641,6 +1702,16 @@ body {
 
   .simulation-ribbon-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .fidelity-notice.control,
+  .fidelity-notice.dashboard {
+    right: 12px;
+    left: 12px;
+  }
+
+  .fidelity-notice.control {
+    top: 188px;
   }
 
   .globe-panel {

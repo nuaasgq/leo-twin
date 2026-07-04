@@ -37,6 +37,44 @@ describe("ObservabilityStore", () => {
       linkUtilization: 0
     });
   });
+
+  it("keeps backend fidelity summary from scenario and state snapshots", () => {
+    const store = new ObservabilityStore();
+    store.applyScenarioConfig({
+      backend_summary: {
+        fidelity_summary: {
+          orbit_update_mode: "BATCH",
+          metrics_mode: "AGGREGATED",
+          space_link_mode: "REDUCED_LARGE_BATCH",
+          detailed_space_link_enabled: false,
+          space_link_candidate_policy: "SPACE_GROUND_ONLY_WHEN_BATCH_EXCEEDS_LIMIT",
+          scale_limit_reason: "orbit updates are batched",
+          satellite_count: 1200,
+          user_count: 20
+        }
+      }
+    });
+
+    expect(store.getSnapshot().fidelitySummary?.satellite_count).toBe(1200);
+
+    store.applySnapshot({
+      fidelity_summary: {
+        orbit_update_mode: "BATCH",
+        metrics_mode: "DETAILED",
+        space_link_mode: "DETAILED_SMALL_SCALE",
+        detailed_space_link_enabled: true,
+        space_link_candidate_policy: "CELL_INDEX_NEARBY_WITH_RANGE_LIMIT",
+        scale_limit_reason: "orbit updates are batched",
+        satellite_count: 300,
+        user_count: 20
+      }
+    });
+
+    expect(store.getSnapshot().fidelitySummary?.satellite_count).toBe(300);
+    expect(store.getSnapshot().fidelitySummary?.space_link_mode).toBe(
+      "DETAILED_SMALL_SCALE"
+    );
+  });
 });
 
 function event(eventId: string, eventType: SimEvent["event_type"], payload: unknown): SimEvent {

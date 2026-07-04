@@ -2,6 +2,7 @@ import { useSyncExternalStore } from "react";
 
 import {
   ComputeNodeState,
+  FidelitySummary,
   GroundUserState,
   LinkState,
   MetricRecord,
@@ -90,6 +91,7 @@ export interface WorldSnapshot {
   metrics: readonly MetricRecord[];
   metrics_summary: MetricsSummary;
   scenario_config: ScenarioConfig | null;
+  fidelity_summary: FidelitySummary | null;
   active_route_id: string | null;
   spatial_index: ReadonlyMap<string, readonly string[]>;
   indexes: {
@@ -249,6 +251,7 @@ export function buildWorldSnapshot(
       system: systemSummary(state, metrics)
     },
     scenario_config: state.scenarioConfig,
+    fidelity_summary: state.fidelitySummary,
     active_route_id: state.activeRouteId,
     spatial_index: state.spatialCells,
     indexes: {

@@ -94,7 +94,7 @@ change.
 ## 2026-07-04 - 1200 Node Live Control Stabilization
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`
-- Commit: pending in this task
+- Commit: `9168508`
 - Scope: keep 1200-satellite live runtime responsive after batch orbit updates
   by bounding server-side advance loop work and avoiding detailed space-space
   link updates for very large orbit batches.
@@ -144,6 +144,71 @@ change.
 - Recommended follow-up:
   - Add a frontend-visible fidelity notice explaining when large-scale mode
     skips detailed space-space link updates.
+
+## 2026-07-04 - Scale Fidelity Notice v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: this commit
+- Scope: expose backend-owned scale fidelity mode details through runtime
+  status, generated backend summary, and live state snapshots, then render a
+  visible frontend notice when large-scale mode reduces fidelity.
+- Changed files/modules:
+  - `src/leo_twin/services/scale_fidelity.py`
+  - `src/leo_twin/models/network/position_engine.py`
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/replay.py`
+  - `examples/integration_demo/scenario.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/core/decoder/index.ts`
+  - `frontend/src/state/reducer/index.ts`
+  - `frontend/src/state/snapshot_engine/index.ts`
+  - `frontend/src/stream/state_store/index.ts`
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/app/App.css`
+  - `tests/integration/test_live_runtime_streaming.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `tests/unit/test_backend_derived_summary.py`
+  - `frontend/tests/appSurface.test.ts`
+  - `frontend/tests/eventDecoder.test.ts`
+  - `frontend/tests/stateStore.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/integration/test_live_runtime_streaming.py::test_large_batch_runtime_keeps_snapshot_and_controls_responsive tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer tests/unit/test_backend_derived_summary.py -q`
+    - Result: passed, 4 tests.
+  - `python -m pytest tests/integration/test_live_runtime_streaming.py tests/integration/test_runtime_session_control.py tests/integration/test_orbit_batch_scale.py tests/unit/test_position_driven_network_engine.py tests/unit/test_metrics_module.py tests/unit/test_backend_derived_summary.py -q`
+    - Result: passed, 57 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test`
+    - Result: passed, 22 files / 82 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+  - 1200-satellite direct control-plane smoke:
+    - `INITIALIZE`: 43.4 ms.
+    - `START`: 0.6 ms.
+    - First state stream batch after one bounded tick included
+      `fidelity_summary.space_link_mode=REDUCED_LARGE_BATCH`.
+    - `PAUSE`: 0.2 ms.
+    - `STOP`: 10.8 ms.
+    - `RESET`: 47.7 ms.
+- Problems encountered:
+  - The first state-stream assertion ran immediately after `START`; no
+    snapshot had been published yet, so the test now advances one bounded tick
+    before checking the cursor batch.
+  - A direct Python smoke script initially failed outside pytest because
+    `PYTHONPATH` was not set. It passed after using `PYTHONPATH=src;.`.
+  - The active local runtime config files remain modified by local runs and
+    are intentionally excluded from this commit.
+- Known remaining issues:
+  - Large-scale mode is now transparent to users, but 1200-satellite ISL
+    fidelity is still reduced: detailed space-space link updates are skipped
+    beyond the current batch threshold.
+  - Task 2, bounded ISL candidate modeling, was not mixed into this commit so
+    the transparency change remains isolated and reviewable.
+- Recommended follow-up:
+  - Implement Bounded ISL Candidate Model v1 as the next separate network
+    fidelity task, with explicit config fields and cap/determinism tests.
 
 ## 2026-07-04 - Scale Firebreak v1
 

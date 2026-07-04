@@ -1,5 +1,6 @@
 import {
   ComputeNodeState,
+  FidelitySummary,
   GroundUserState,
   LinkState,
   MetricRecord,
@@ -31,6 +32,7 @@ export interface ReducedWorldState {
   eventCount: number;
   lastSimTime: number;
   scenarioConfig: ScenarioConfig | null;
+  fidelitySummary: FidelitySummary | null;
   activeRouteId: string | null;
   spatialCells: ReadonlyMap<string, readonly string[]>;
 }
@@ -48,6 +50,7 @@ interface MutableWorldState {
   eventCount: number;
   lastSimTime: number;
   scenarioConfig: ScenarioConfig | null;
+  fidelitySummary: FidelitySummary | null;
   activeRouteId: string | null;
   satelliteCellById: Map<string, string>;
   satelliteIdsByCell: Map<string, Set<string>>;
@@ -100,6 +103,7 @@ export class WorldStateReducer {
 
   applyScenarioConfig(config: ScenarioConfig): void {
     this.state.scenarioConfig = config;
+    this.state.fidelitySummary = config.backend_summary?.fidelity_summary ?? null;
     for (const user of config.ground_users ?? []) {
       this.state.groundUsers.set(user.user_id, user);
     }
@@ -107,6 +111,9 @@ export class WorldStateReducer {
   }
 
   applySnapshot(snapshot: StateSnapshot): void {
+    if (snapshot.fidelity_summary !== undefined) {
+      this.state.fidelitySummary = snapshot.fidelity_summary;
+    }
     for (const satellite of snapshot.satellites ?? []) {
       this.upsertSatellite(satellite);
       this.state.lastSimTime = Math.max(this.state.lastSimTime, satellite.sim_time);
@@ -270,6 +277,7 @@ function createMutableState(): MutableWorldState {
     eventCount: 0,
     lastSimTime: 0,
     scenarioConfig: null,
+    fidelitySummary: null,
     activeRouteId: null,
     satelliteCellById: new Map(),
     satelliteIdsByCell: new Map()
@@ -290,6 +298,7 @@ function freezeReducerState(state: MutableWorldState): ReducedWorldState {
     eventCount: state.eventCount,
     lastSimTime: state.lastSimTime,
     scenarioConfig: state.scenarioConfig,
+    fidelitySummary: state.fidelitySummary,
     activeRouteId: state.activeRouteId,
     spatialCells: new Map(
       Array.from(state.satelliteIdsByCell.entries()).map(([cellId, satelliteIds]) => [

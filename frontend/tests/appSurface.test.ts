@@ -4,14 +4,22 @@ import {
   buildRuntimeRibbonSummary,
   controlErrorMessage,
   defaultRuntimeProgressAnchor,
+  fidelityNoticeText,
   nextRuntimeProgressAnchor,
   runtimeProgressSimTime,
   runtimeStatusRequiresStreams,
   scenarioWithRuntimeConfig,
+  selectFidelitySummary,
+  shouldShowFidelityNotice,
   standaloneDashboardHref,
   surfaceFromPathname
 } from "../src/app/App";
-import { RuntimeStatusPayload } from "../src/core/event_types";
+import {
+  FidelitySummary,
+  GeneratedScenarioConfig,
+  RuntimeStatusPayload
+} from "../src/core/event_types";
+import { WorldSnapshot } from "../src/state/snapshot_engine";
 
 describe("surfaceFromPathname", () => {
   it("selects the control surface by default", () => {
@@ -128,6 +136,53 @@ describe("runtimeStatusRequiresStreams", () => {
     expect(runtimeStatusRequiresStreams({ ...baseStatus, status: "PAUSED" })).toBe(false);
     expect(runtimeStatusRequiresStreams({ ...baseStatus, status: "STOPPED" })).toBe(false);
     expect(runtimeStatusRequiresStreams(undefined)).toBe(false);
+  });
+});
+
+describe("fidelity notice", () => {
+  const summary: FidelitySummary = {
+    orbit_update_mode: "BATCH",
+    metrics_mode: "AGGREGATED",
+    space_link_mode: "REDUCED_LARGE_BATCH",
+    detailed_space_link_enabled: false,
+    space_link_candidate_policy: "SPACE_GROUND_ONLY_WHEN_BATCH_EXCEEDS_LIMIT",
+    scale_limit_reason:
+      "orbit updates are batched; metrics are aggregated; detailed space-space link updates are skipped",
+    satellite_count: 1200,
+    user_count: 20
+  };
+
+  it("builds the visible scale notice from backend-provided fields", () => {
+    expect(shouldShowFidelityNotice(summary)).toBe(true);
+    expect(fidelityNoticeText(summary)).toBe(
+      "Scale Mode: 1,200 satellites. Orbit updates are batched. Metrics are aggregated. Space-space links use reduced fidelity."
+    );
+  });
+
+  it("selects runtime status fidelity as the newest backend source of truth", () => {
+    const fallback: FidelitySummary = {
+      ...summary,
+      satellite_count: 300,
+      metrics_mode: "DETAILED"
+    };
+    const runtime: RuntimeStatusPayload = {
+      status: "RUNNING",
+      mode: "REAL_TIME",
+      speed_factor: 1,
+      seed: 20260703,
+      duration: 600,
+      config_version: 1,
+      last_action: "START",
+      fidelity_summary: summary
+    };
+
+    expect(
+      selectFidelitySummary(
+        runtime,
+        { backend_summary: { fidelity_summary: fallback } } as unknown as GeneratedScenarioConfig,
+        { fidelity_summary: fallback, scenario_config: null } as unknown as WorldSnapshot
+      )
+    ).toBe(summary);
   });
 });
 

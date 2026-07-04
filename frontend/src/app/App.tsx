@@ -8,11 +8,12 @@ import {
   RuntimeAction
 } from "../config_panel/controlClient";
 import {
+  FidelitySummary,
   GeneratedScenarioConfig,
   RuntimeStatusPayload,
   ScenarioConfig
 } from "../core/event_types";
-import { SnapshotEngine, useWorldSnapshot } from "../state/snapshot_engine";
+import { SnapshotEngine, WorldSnapshot, useWorldSnapshot } from "../state/snapshot_engine";
 import { WorldStateReducer } from "../state/reducer";
 import { EventRouter } from "../stream/event_router";
 import { EventThrottleLayer } from "../stream/throttle_layer";
@@ -321,6 +322,7 @@ export function App() {
     runtimeStatus,
     scenario: scenarioControls
   });
+  const fidelitySummary = selectFidelitySummary(runtimeStatus, generatedConfig, snapshot);
 
   const sendRuntimeControl = useCallback(
     (action: RuntimeAction, payload: Record<string, unknown> = {}) => {
@@ -376,6 +378,7 @@ export function App() {
       </header>
       {surface === "dashboard" ? (
         <section className="dashboard-page" aria-label="独立数据态势面板">
+          <FidelityNotice summary={fidelitySummary} surface="dashboard" />
           <Suspense
             fallback={
               <div className="surface-loading" role="status">
@@ -448,6 +451,7 @@ export function App() {
                 </div>
               </div>
             </div>
+            <FidelityNotice summary={fidelitySummary} surface="control" />
             <div className="globe-panel">
               <Suspense
                 fallback={
@@ -518,6 +522,78 @@ export interface RuntimeProgressAnchor {
   lifecycleState?: RuntimeStatusPayload["lifecycle_state"];
   speedFactor: number;
   duration: number;
+}
+
+export function selectFidelitySummary(
+  runtimeStatus: RuntimeStatusPayload,
+  generatedConfig: GeneratedScenarioConfig | null,
+  snapshot: WorldSnapshot
+): FidelitySummary | null {
+  return (
+    runtimeStatus.fidelity_summary ??
+    generatedConfig?.backend_summary?.fidelity_summary ??
+    snapshot.fidelity_summary ??
+    snapshot.scenario_config?.backend_summary?.fidelity_summary ??
+    null
+  );
+}
+
+export function shouldShowFidelityNotice(summary: FidelitySummary | null): boolean {
+  if (summary === null) {
+    return false;
+  }
+  return (
+    summary.orbit_update_mode !== "PER_SATELLITE" ||
+    summary.metrics_mode !== "DETAILED" ||
+    summary.space_link_mode !== "DETAILED_SMALL_SCALE" ||
+    !summary.detailed_space_link_enabled ||
+    summary.scale_limit_reason !== "none"
+  );
+}
+
+export function fidelityNoticeText(summary: FidelitySummary): string {
+  const details: string[] = [];
+  if (summary.orbit_update_mode === "BATCH") {
+    details.push("Orbit updates are batched.");
+  } else {
+    details.push(`Orbit updates use ${summary.orbit_update_mode}.`);
+  }
+  if (summary.metrics_mode === "AGGREGATED") {
+    details.push("Metrics are aggregated.");
+  } else {
+    details.push(`Metrics mode is ${summary.metrics_mode}.`);
+  }
+  if (summary.space_link_mode === "DISABLED") {
+    details.push("Space-space links are disabled.");
+  } else if (!summary.detailed_space_link_enabled) {
+    details.push("Space-space links use reduced fidelity.");
+  } else {
+    details.push("Space-space links use detailed small-scale updates.");
+  }
+  return `Scale Mode: ${formatInteger(summary.satellite_count)} satellites. ${details.join(" ")}`;
+}
+
+function FidelityNotice({
+  summary,
+  surface
+}: {
+  summary: FidelitySummary | null;
+  surface: "control" | "dashboard";
+}) {
+  if (summary === null || !shouldShowFidelityNotice(summary)) {
+    return null;
+  }
+  const detail =
+    summary.scale_limit_reason === "none"
+      ? summary.space_link_candidate_policy
+      : summary.scale_limit_reason;
+  return (
+    <div className={`fidelity-notice ${surface}`} role="status" aria-live="polite">
+      <span>Runtime fidelity</span>
+      <strong>{fidelityNoticeText(summary)}</strong>
+      <small>{detail}</small>
+    </div>
+  );
 }
 
 export function defaultRuntimeProgressAnchor(

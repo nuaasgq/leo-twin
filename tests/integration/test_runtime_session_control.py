@@ -136,6 +136,10 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
     assert status["status"]["initialized"] is False
     assert status["status"]["lifecycle_state"] == "INITIALIZED"
     assert status["status"]["queued_event_count"] is not None
+    assert status["status"]["fidelity_summary"]["orbit_update_mode"] == "PER_SATELLITE"
+    assert status["generated_config"]["backend_summary"]["fidelity_summary"] == status[
+        "status"
+    ]["fidelity_summary"]
 
     blocked = control_plane.handle_raw_message(
         json.dumps({"type": "RUNTIME_CONTROL", "action": "START"})

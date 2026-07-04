@@ -202,10 +202,22 @@ export interface ComputeResourceSummary {
   compatibility_note: string;
 }
 
+export interface FidelitySummary {
+  orbit_update_mode: string;
+  metrics_mode: string;
+  space_link_mode: string;
+  detailed_space_link_enabled: boolean;
+  space_link_candidate_policy: string;
+  scale_limit_reason: string;
+  satellite_count: number;
+  user_count: number;
+}
+
 export interface BackendDerivedSummary {
   derived_constellation_summary?: ConstellationDerivedSummary;
   traffic_demand_summary?: TrafficDemandSummary;
   compute_resource_summary?: ComputeResourceSummary;
+  fidelity_summary?: FidelitySummary;
   model_assumptions?: readonly string[];
 }
 
@@ -217,6 +229,7 @@ export interface StateSnapshot {
   tasks?: readonly TaskState[];
   compute_nodes?: readonly ComputeNodeState[];
   metrics?: readonly MetricRecord[];
+  fidelity_summary?: FidelitySummary;
 }
 
 export type Vector3 = readonly [number, number, number];
@@ -248,6 +261,7 @@ export interface RuntimeStatusPayload {
   queued_event_count?: number | null;
   deterministic_replay?: boolean;
   last_error?: string | null;
+  fidelity_summary?: FidelitySummary;
 }
 
 export interface GeneratedScenarioConfig {

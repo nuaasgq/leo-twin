@@ -370,6 +370,7 @@ function makeSnapshot(overrides: Partial<WorldSnapshot> = {}): WorldSnapshot {
       }
     },
     scenario_config: null,
+    fidelity_summary: null,
     active_route_id: null,
     spatial_index: new Map(),
     indexes: {

@@ -35,6 +35,7 @@ class DemoStateProjector:
         ground_users: tuple[GroundUserRenderState, ...],
         snapshot_interval_events: int,
         initial_satellites: tuple[SatelliteState, ...] = (),
+        fidelity_summary: dict[str, str | int | bool] | None = None,
     ) -> None:
         self._ground_users = tuple(sorted(ground_users, key=lambda user: user.user_id))
         self._snapshot_interval_events = snapshot_interval_events
@@ -49,6 +50,9 @@ class DemoStateProjector:
         self._metrics: dict[tuple[str, str], MetricRecord] = {}
         self._event_count = 0
         self._last_sim_time = 0.0
+        self._fidelity_summary = (
+            None if fidelity_summary is None else dict(fidelity_summary)
+        )
         self._timeline: list[dict[str, JsonValue]] = []
 
     def apply(self, event: SimEvent) -> None:
@@ -90,7 +94,7 @@ class DemoStateProjector:
             self._timeline.append(self.snapshot())
 
     def snapshot(self) -> dict[str, JsonValue]:
-        return {
+        snapshot: dict[str, JsonValue] = {
             "satellites": _satellite_rows(self._satellites),
             "ground_users": _ground_user_rows(self._ground_users),
             "links": _link_rows(self._links),
@@ -101,6 +105,9 @@ class DemoStateProjector:
             "event_count": self._event_count,
             "last_sim_time": self._last_sim_time,
         }
+        if self._fidelity_summary is not None:
+            snapshot["fidelity_summary"] = dict(self._fidelity_summary)
+        return snapshot
 
     def timeline(self) -> tuple[dict[str, JsonValue], ...]:
         if not self._timeline or self._timeline[-1] != self.snapshot():

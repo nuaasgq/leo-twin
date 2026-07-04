@@ -2,6 +2,7 @@ import {
   EVENT_TYPES,
   EventType,
   ComputeNodeState,
+  FidelitySummary,
   LinkState,
   MetricRecord,
   Route,
@@ -52,7 +53,11 @@ export function decodeStateSnapshot(value: unknown): StateSnapshot {
     routes: optionalArray(record.routes, decodeRoute),
     tasks: optionalArray(record.tasks, decodeTaskState),
     compute_nodes: optionalArray(record.compute_nodes, decodeComputeNodeState),
-    metrics: optionalArray(record.metrics, decodeMetricRecord)
+    metrics: optionalArray(record.metrics, decodeMetricRecord),
+    fidelity_summary:
+      record.fidelity_summary === undefined
+        ? undefined
+        : decodeFidelitySummary(record.fidelity_summary)
   };
 }
 
@@ -150,6 +155,26 @@ function decodeMetricRecord(value: unknown): MetricRecord {
     entity_id: requireString(record.entity_id, "entity_id"),
     value: requireMetricValue(record.value),
     tags: record.tags === undefined ? undefined : requireTags(record.tags)
+  };
+}
+
+export function decodeFidelitySummary(value: unknown): FidelitySummary {
+  const record = requireRecord(value, "FidelitySummary");
+  return {
+    orbit_update_mode: requireString(record.orbit_update_mode, "orbit_update_mode"),
+    metrics_mode: requireString(record.metrics_mode, "metrics_mode"),
+    space_link_mode: requireString(record.space_link_mode, "space_link_mode"),
+    detailed_space_link_enabled: requireBoolean(
+      record.detailed_space_link_enabled,
+      "detailed_space_link_enabled"
+    ),
+    space_link_candidate_policy: requireString(
+      record.space_link_candidate_policy,
+      "space_link_candidate_policy"
+    ),
+    scale_limit_reason: requireString(record.scale_limit_reason, "scale_limit_reason"),
+    satellite_count: requireInteger(record.satellite_count, "satellite_count"),
+    user_count: requireInteger(record.user_count, "user_count")
   };
 }
 

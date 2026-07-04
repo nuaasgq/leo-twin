@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { decodeSimEvent } from "../src/core/decoder";
+import { decodeSimEvent, decodeStateSnapshot } from "../src/core/decoder";
 
 describe("decodeSimEvent", () => {
   it("decodes supported SEES event payloads", () => {
@@ -69,6 +69,27 @@ describe("decodeSimEvent", () => {
       available_capacity: 5,
       status: "BUSY",
       load_ratio: 0.75
+    });
+  });
+
+  it("decodes backend fidelity summary on state snapshots", () => {
+    const snapshot = decodeStateSnapshot({
+      satellites: [],
+      fidelity_summary: {
+        orbit_update_mode: "BATCH",
+        metrics_mode: "AGGREGATED",
+        space_link_mode: "REDUCED_LARGE_BATCH",
+        detailed_space_link_enabled: false,
+        space_link_candidate_policy: "SPACE_GROUND_ONLY_WHEN_BATCH_EXCEEDS_LIMIT",
+        scale_limit_reason: "orbit updates are batched",
+        satellite_count: 1200,
+        user_count: 20
+      }
+    });
+
+    expect(snapshot.fidelity_summary).toMatchObject({
+      orbit_update_mode: "BATCH",
+      satellite_count: 1200
     });
   });
 });

@@ -116,12 +116,43 @@ def test_large_batch_runtime_keeps_snapshot_and_controls_responsive(tmp_path: Pa
     )
 
     assert initialize_ack["ok"] is True
+    fidelity = initialize_ack["status"]["fidelity_summary"]
+    assert fidelity == initialize_ack["generated_config"]["backend_summary"][
+        "fidelity_summary"
+    ]
+    assert set(fidelity) == {
+        "orbit_update_mode",
+        "metrics_mode",
+        "space_link_mode",
+        "detailed_space_link_enabled",
+        "space_link_candidate_policy",
+        "scale_limit_reason",
+        "satellite_count",
+        "user_count",
+    }
+    assert fidelity["orbit_update_mode"] == "BATCH"
+    assert fidelity["metrics_mode"] == "AGGREGATED"
+    assert fidelity["space_link_mode"] == "REDUCED_LARGE_BATCH"
+    assert fidelity["detailed_space_link_enabled"] is False
+    assert fidelity["space_link_candidate_policy"] == (
+        "SPACE_GROUND_ONLY_WHEN_BATCH_EXCEEDS_LIMIT"
+    )
+    assert "detailed space-space link updates are skipped" in fidelity[
+        "scale_limit_reason"
+    ]
+    assert fidelity["satellite_count"] == 1200
+    assert fidelity["user_count"] == 20
     assert len(control_plane.visible_snapshot()["satellites"]) == 1200
+    assert control_plane.visible_snapshot()["fidelity_summary"] == fidelity
 
     start_ack = control_plane.handle_raw_message(
         json.dumps({"type": "RUNTIME_CONTROL", "action": "START"})
     )
     assert start_ack["ok"] is True
+    control_plane._require_advance_loop().tick()
+    state_batch = control_plane.stream_snapshot_batch(cursor=0, limit=10)
+    assert state_batch["items"]
+    assert state_batch["items"][0]["fidelity_summary"] == fidelity
     pause_ack = _call_with_timeout(
         lambda: control_plane.handle_raw_message(
             json.dumps({"type": "RUNTIME_CONTROL", "action": "PAUSE"})
