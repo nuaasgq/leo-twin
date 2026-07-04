@@ -2,6 +2,7 @@ import { memo } from "react";
 
 import { WorldSnapshot } from "../state/snapshot_engine";
 import { ChannelHealthPanel } from "./channel_health/ChannelHealthPanel";
+import { CouplingFeedbackPanel } from "./coupling_feedback/CouplingFeedbackPanel";
 import { ComputeQueuePanel } from "./compute_queue/ComputeQueuePanel";
 import { ComputeView } from "./compute_view/ComputeView";
 import { DomainSummary } from "./domain_summary/DomainSummary";
@@ -18,6 +19,7 @@ export const Dashboard = memo(function Dashboard({ snapshot }: { snapshot: World
       <DomainSummary snapshot={snapshot} />
       <TopologyChangePanel snapshot={snapshot} />
       <LinkProtocolPanel snapshot={snapshot} />
+      <CouplingFeedbackPanel snapshot={snapshot} />
       <ChannelHealthPanel snapshot={snapshot} />
       <NetworkView snapshot={snapshot} />
       <ComputeView snapshot={snapshot} />
