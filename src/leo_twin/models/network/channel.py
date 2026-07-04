@@ -233,6 +233,11 @@ class ChannelBudgetSelector:
             raise KeyError(f"no link budget calculator for medium: {normalized.value}")
         return calculator
 
+    def configured_media(self) -> tuple[LinkMedium, ...]:
+        """Return explicitly configured link media in deterministic order."""
+
+        return tuple(calculator.channel.medium for calculator in self.calculators)
+
     def optional_calculator_for(
         self,
         medium: LinkMedium | str,

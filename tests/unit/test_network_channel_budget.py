@@ -154,10 +154,21 @@ def test_channel_budget_selector_uses_medium_specific_calculator() -> None:
         medium=LinkMedium.SPACE_SPACE,
         channel_id="space",
     )
-    selector = ChannelBudgetSelector(calculators=(space, ground))
+    terrestrial = _calculator(
+        transmit_power_dbw=5.0,
+        medium=LinkMedium.GROUND_GROUND,
+        channel_id="ground-ground",
+    )
+    selector = ChannelBudgetSelector(calculators=(space, terrestrial, ground))
 
+    assert selector.configured_media() == (
+        LinkMedium.GROUND_GROUND,
+        LinkMedium.SPACE_GROUND,
+        LinkMedium.SPACE_SPACE,
+    )
     assert selector.calculator_for(LinkMedium.SPACE_GROUND) == ground
     assert selector.calculator_for("SPACE_SPACE") == space
+    assert selector.calculator_for(LinkMedium.GROUND_GROUND) == terrestrial
     assert selector.evaluate(LinkMedium.SPACE_SPACE, 629.0) == space.evaluate(629.0)
 
 
