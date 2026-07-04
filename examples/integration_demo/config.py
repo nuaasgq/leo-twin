@@ -20,6 +20,7 @@ from leo_twin.schema.config import (
     DEFAULT_BATCH_SPACE_LINK_UPDATE_LIMIT,
     DEFAULT_MAX_SPACE_LINK_CANDIDATES_PER_SATELLITE,
     NetworkProfile,
+    WorkloadSmoothingModeConfig,
 )
 from leo_twin.schema.full_system import (
     ApplicationProtocol,
@@ -84,6 +85,10 @@ class DemoConfig:
         DEFAULT_MAX_SPACE_LINK_CANDIDATES_PER_SATELLITE
     )
     batch_space_link_update_limit: int = DEFAULT_BATCH_SPACE_LINK_UPDATE_LIMIT
+    initial_workload_smoothing_enabled: bool = False
+    initial_workload_window_s: float = 0.0
+    max_initial_events_per_tick: int = 0
+    workload_smoothing_mode: str = "NONE"
     compute_scheduling_policy: str = "FIFO"
 
 
@@ -121,6 +126,26 @@ def load_demo_config(path: str | Path = DEFAULT_CONFIG_PATH) -> DemoConfig:
         orbit_altitude_m=_optional_float(scenario, "orbit_altitude_m", 529_000.0),
         orbit_inclination_deg=_optional_float(scenario, "orbit_inclination_deg", 53.0),
         orbit_update_mode=_optional_nullable_str(scenario, "orbit_update_mode"),
+        initial_workload_smoothing_enabled=_optional_bool(
+            scenario,
+            "initial_workload_smoothing_enabled",
+            False,
+        ),
+        initial_workload_window_s=_optional_float(
+            scenario,
+            "initial_workload_window_s",
+            0.0,
+        ),
+        max_initial_events_per_tick=_optional_int(
+            scenario,
+            "max_initial_events_per_tick",
+            0,
+        ),
+        workload_smoothing_mode=_optional_str(
+            scenario,
+            "workload_smoothing_mode",
+            "NONE",
+        ),
         network_slot_seconds=_int(scenario, "network_slot_seconds"),
         flow_interval_seconds=_int(scenario, "flow_interval_seconds"),
         task_interval_seconds=_int(scenario, "task_interval_seconds"),
@@ -212,6 +237,14 @@ def demo_config_to_sees_config(config: DemoConfig) -> SEESConfig:
             ground_station_count=config.ground_station_count,
             cell_count=config.cell_count,
             compute_scheduling_policy=config.compute_scheduling_policy,
+            initial_workload_smoothing_enabled=(
+                config.initial_workload_smoothing_enabled
+            ),
+            initial_workload_window_s=config.initial_workload_window_s,
+            max_initial_events_per_tick=config.max_initial_events_per_tick,
+            workload_smoothing_mode=WorkloadSmoothingModeConfig(
+                str(config.workload_smoothing_mode)
+            ),
             orbit=OrbitParameters(
                 update_interval_seconds=config.orbit_tick_seconds,
                 plane_count=config.orbit_plane_count,
@@ -297,6 +330,12 @@ def demo_config_from_sees_config(
             if config.scenario.orbit.orbit_update_mode is not None
             else None
         ),
+        initial_workload_smoothing_enabled=(
+            config.scenario.initial_workload_smoothing_enabled
+        ),
+        initial_workload_window_s=config.scenario.initial_workload_window_s,
+        max_initial_events_per_tick=config.scenario.max_initial_events_per_tick,
+        workload_smoothing_mode=config.scenario.workload_smoothing_mode.value,
         network_slot_seconds=config.scenario.orbit.update_interval_seconds,
         flow_interval_seconds=config.scenario.traffic_model.flow_interval_seconds,
         task_interval_seconds=config.scenario.traffic_model.task_interval_seconds,
@@ -428,6 +467,15 @@ def _optional_int(section: dict[str, Any], key: str, default: int) -> int:
     if key not in section:
         return default
     return _int(section, key)
+
+
+def _optional_bool(section: dict[str, Any], key: str, default: bool) -> bool:
+    if key not in section:
+        return default
+    value = section[key]
+    if not isinstance(value, bool):
+        raise TypeError(f"{key} must be a bool")
+    return value
 
 
 def _optional_float(section: dict[str, Any], key: str, default: float) -> float:

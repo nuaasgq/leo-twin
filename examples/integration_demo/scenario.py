@@ -30,6 +30,7 @@ from examples.integration_demo.config import DemoConfig
 _EARTH_RADIUS_KM = 6371.0
 _GROUND_ENDPOINT_MIN_ELEVATION_DEG = 10.0
 _GROUND_ENDPOINT_MAX_RANGE_KM = 2500.0
+_SCALE_WORKLOAD_SMOOTHING_NODE_THRESHOLD = 300
 
 
 @dataclass(frozen=True)
@@ -111,13 +112,7 @@ def build_demo_scenario(config: DemoConfig) -> DemoScenario:
                 "compute_capacity": config.compute_capacity,
                 "compute_scheduling_policy": config.compute_scheduling_policy,
                 "orbit": orbit_frontend_config,
-                "traffic_model": {
-                    "flow_interval_seconds": config.flow_interval_seconds,
-                    "task_interval_seconds": config.task_interval_seconds,
-                    "flow_demand_capacity": config.flow_demand_capacity,
-                    "task_compute_demand": config.task_compute_demand,
-                    "task_data_size": config.task_data_size,
-                },
+                "traffic_model": _traffic_frontend_config(config),
             },
             "network": {
                 "application_protocol": config.application_protocol,
@@ -254,6 +249,7 @@ def _backend_summary(
         arrival_interval_seconds=config.flow_interval_seconds,
     )
     summary["fidelity_summary"] = _fidelity_summary(config)
+    summary["workload_smoothing_summary"] = _workload_smoothing_summary(config)
     return summary
 
 
@@ -398,11 +394,17 @@ def _initial_events(config: DemoConfig) -> tuple[SimEvent, ...]:
 
     task_index = 0
     compute_node_ids = _compute_node_satellite_ids(config)
+    spacing_s = _initial_workload_spacing_s(config, len(compute_node_ids))
     for tick in range(0, config.duration_seconds, config.task_interval_seconds):
         for offset, target_id in enumerate(compute_node_ids):
             task_id = f"task-{task_index:05d}"
             source_id = f"user-{(task_index * 13) % config.ground_user_count:04d}"
-            submit_time = float(tick) + 0.2 + offset * 0.01
+            submit_time = float(tick) + 0.2 + offset * spacing_s
+            deadline = (
+                submit_time + 20.0
+                if _workload_smoothing_active(config)
+                else float(tick) + 20.0
+            )
             events.append(
                 SimEvent(
                     event_id=f"scenario:flow-arrival:{task_index:05d}",
@@ -433,7 +435,7 @@ def _initial_events(config: DemoConfig) -> tuple[SimEvent, ...]:
                         submit_time=submit_time,
                         compute_demand=config.task_compute_demand + float(task_index % 5),
                         data_size=config.task_data_size + float(task_index % 3),
-                        deadline=float(tick) + 20.0,
+                        deadline=deadline,
                     ),
                 )
             )
@@ -445,6 +447,95 @@ def _initial_events(config: DemoConfig) -> tuple[SimEvent, ...]:
 def _compute_node_satellite_ids(config: DemoConfig) -> tuple[str, ...]:
     count = min(config.compute_node_count, config.satellite_count)
     return tuple(f"sat-{index:03d}" for index in range(count))
+
+
+def _traffic_frontend_config(config: DemoConfig) -> dict[str, object]:
+    traffic: dict[str, object] = {
+        "flow_interval_seconds": config.flow_interval_seconds,
+        "task_interval_seconds": config.task_interval_seconds,
+        "flow_demand_capacity": config.flow_demand_capacity,
+        "task_compute_demand": config.task_compute_demand,
+        "task_data_size": config.task_data_size,
+    }
+    if _workload_smoothing_should_be_exposed(config):
+        traffic.update(
+            {
+                "initial_workload_smoothing_enabled": _workload_smoothing_active(config),
+                "initial_workload_window_s": _workload_smoothing_window_s(config),
+                "max_initial_events_per_tick": config.max_initial_events_per_tick,
+                "workload_smoothing_mode": _workload_smoothing_mode(config),
+            }
+        )
+    return traffic
+
+
+def _workload_smoothing_should_be_exposed(config: DemoConfig) -> bool:
+    return (
+        _workload_smoothing_active(config)
+        or config.initial_workload_window_s > 0.0
+        or config.max_initial_events_per_tick > 0
+    )
+
+
+def _workload_smoothing_summary(config: DemoConfig) -> dict[str, object]:
+    workload_count = min(config.compute_node_count, config.satellite_count)
+    return {
+        "enabled": _workload_smoothing_active(config),
+        "mode": _workload_smoothing_mode(config),
+        "scale_triggered": _scale_workload_smoothing_required(config),
+        "initial_workload_window_s": _workload_smoothing_window_s(config),
+        "max_initial_events_per_tick": config.max_initial_events_per_tick,
+        "workload_count": workload_count,
+        "spacing_s": _initial_workload_spacing_s(config, workload_count),
+    }
+
+
+def _workload_smoothing_active(config: DemoConfig) -> bool:
+    return (
+        config.initial_workload_smoothing_enabled
+        or _workload_smoothing_mode(config) != "NONE"
+        or _scale_workload_smoothing_required(config)
+    )
+
+
+def _workload_smoothing_mode(config: DemoConfig) -> str:
+    mode = str(config.workload_smoothing_mode)
+    if mode != "NONE":
+        return mode
+    if config.initial_workload_smoothing_enabled or _scale_workload_smoothing_required(config):
+        return "DETERMINISTIC_STAGGER"
+    return "NONE"
+
+
+def _scale_workload_smoothing_required(config: DemoConfig) -> bool:
+    return (
+        min(config.compute_node_count, config.satellite_count)
+        >= _SCALE_WORKLOAD_SMOOTHING_NODE_THRESHOLD
+    )
+
+
+def _workload_smoothing_window_s(config: DemoConfig) -> float:
+    if not _workload_smoothing_active(config):
+        return 0.0
+    if config.initial_workload_window_s > 0.0:
+        return float(config.initial_workload_window_s)
+    if config.task_interval_seconds <= 1:
+        return 1.0
+    return float(min(60, max(1, config.task_interval_seconds - 1)))
+
+
+def _initial_workload_spacing_s(config: DemoConfig, workload_count: int) -> float:
+    if not _workload_smoothing_active(config):
+        return 0.01
+    if workload_count <= 1:
+        return 0.0
+    spacing_s = _workload_smoothing_window_s(config) / float(workload_count - 1)
+    if (
+        config.workload_smoothing_mode == "RATE_LIMITED"
+        and config.max_initial_events_per_tick > 0
+    ):
+        spacing_s = max(spacing_s, 2.0 / float(config.max_initial_events_per_tick))
+    return max(0.001, spacing_s)
 
 
 def _cell_id(config: DemoConfig, index: int) -> str:

@@ -19,6 +19,7 @@ from leo_twin.schema.config import (
     TrafficModel,
     UIConfig,
     VisualizationToggles,
+    WorkloadSmoothingModeConfig,
     config_to_dict,
 )
 from leo_twin.schema.full_system import (
@@ -45,6 +46,10 @@ _SCENARIO_KEYS = frozenset(
         "ground_station_count",
         "cell_count",
         "compute_scheduling_policy",
+        "initial_workload_smoothing_enabled",
+        "initial_workload_window_s",
+        "max_initial_events_per_tick",
+        "workload_smoothing_mode",
         "orbit",
         "traffic_model",
     }
@@ -198,6 +203,14 @@ def _build_config(data: Mapping[str, Any]) -> SEESConfig:
                 compute_scheduling_policy=ComputeSchedulingPolicyConfig(
                     str(scenario["compute_scheduling_policy"])
                 ),
+                initial_workload_smoothing_enabled=scenario[
+                    "initial_workload_smoothing_enabled"
+                ],
+                initial_workload_window_s=scenario["initial_workload_window_s"],
+                max_initial_events_per_tick=scenario["max_initial_events_per_tick"],
+                workload_smoothing_mode=WorkloadSmoothingModeConfig(
+                    str(scenario["workload_smoothing_mode"])
+                ),
                 orbit=OrbitParameters(**dict(orbit)),
                 traffic_model=TrafficModel(**dict(traffic)),
             ),
@@ -268,6 +281,10 @@ def _normalize_update(update: Mapping[str, Any]) -> dict[str, Any]:
         "compute_nodes",
         "compute_capacity",
         "compute_scheduling_policy",
+        "initial_workload_smoothing_enabled",
+        "initial_workload_window_s",
+        "max_initial_events_per_tick",
+        "workload_smoothing_mode",
     ):
         if key in direct:
             nested.setdefault("scenario", {})[key] = direct.pop(key)
@@ -404,6 +421,10 @@ def _ordered_keys(context: str, data: Mapping[str, Any]) -> tuple[str, ...]:
             "ground_station_count",
             "cell_count",
             "compute_scheduling_policy",
+            "initial_workload_smoothing_enabled",
+            "initial_workload_window_s",
+            "max_initial_events_per_tick",
+            "workload_smoothing_mode",
             "orbit",
             "traffic_model",
         ),

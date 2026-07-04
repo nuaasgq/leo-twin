@@ -30,6 +30,7 @@ from leo_twin.models.network import (
 )
 from leo_twin.models.orbit import KeplerianOrbitEngine
 from leo_twin.models.orbit import SimulationFidelityPolicy
+from leo_twin.runtime import RuntimeTickProfiler
 from leo_twin.schema import (
     AntennaProfile,
     ApplicationProtocol,
@@ -92,6 +93,7 @@ class DemoRuntimeContext:
     frontend_sink: FrontendEventSink
     metrics: MetricsCollector
     network: PositionDrivenNetworkEngine
+    profiler: RuntimeTickProfiler
 
 
 def build_integration_demo_runtime(config: DemoConfig) -> DemoRuntimeContext:
@@ -103,6 +105,7 @@ def build_integration_demo_runtime(config: DemoConfig) -> DemoRuntimeContext:
         forced_orbit_update_mode=config.orbit_update_mode,
     )
     kernel = SimulationKernel()
+    profiler = RuntimeTickProfiler()
     frontend_sink = FrontendEventSink()
     metrics = MetricsCollector(
         emit_metric_events=True,
@@ -192,7 +195,7 @@ def build_integration_demo_runtime(config: DemoConfig) -> DemoRuntimeContext:
         frontend_sink,
     )
     for module in modules:
-        kernel.register_module(module)
+        kernel.register_module(profiler.wrap(module))
 
     return DemoRuntimeContext(
         config=config,
@@ -201,6 +204,7 @@ def build_integration_demo_runtime(config: DemoConfig) -> DemoRuntimeContext:
         frontend_sink=frontend_sink,
         metrics=metrics,
         network=network,
+        profiler=profiler,
     )
 
 

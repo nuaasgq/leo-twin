@@ -106,6 +106,10 @@ export interface ScenarioConfig {
     compute_nodes?: number;
     compute_capacity?: number;
     compute_scheduling_policy?: string;
+    initial_workload_smoothing_enabled?: boolean;
+    initial_workload_window_s?: number;
+    max_initial_events_per_tick?: number;
+    workload_smoothing_mode?: string;
     orbit?: {
       update_interval_seconds?: number;
       plane_count?: number;
@@ -118,6 +122,10 @@ export interface ScenarioConfig {
       flow_demand_capacity?: number;
       task_compute_demand?: number;
       task_data_size?: number;
+      initial_workload_smoothing_enabled?: boolean;
+      initial_workload_window_s?: number;
+      max_initial_events_per_tick?: number;
+      workload_smoothing_mode?: string;
     };
   };
   network?: {
@@ -225,7 +233,46 @@ export interface BackendDerivedSummary {
   traffic_demand_summary?: TrafficDemandSummary;
   compute_resource_summary?: ComputeResourceSummary;
   fidelity_summary?: FidelitySummary;
+  workload_smoothing_summary?: WorkloadSmoothingSummary;
   model_assumptions?: readonly string[];
+}
+
+export interface WorkloadSmoothingSummary {
+  enabled: boolean;
+  mode: string;
+  scale_triggered: boolean;
+  initial_workload_window_s: number;
+  max_initial_events_per_tick: number;
+  workload_count: number;
+  spacing_s: number;
+}
+
+export interface RuntimeProfilingSummary {
+  orbit_batch_update_time_ms: number;
+  network_batch_ingestion_time_ms: number;
+  access_update_time_ms: number;
+  space_space_candidate_update_time_ms: number;
+  flow_arrival_processing_time_ms: number;
+  route_update_time_ms: number;
+  compute_task_arrival_processing_time_ms: number;
+  compute_queue_update_time_ms: number;
+  metrics_aggregation_time_ms: number;
+  snapshot_projection_time_ms: number;
+  total_tick_time_ms: number;
+  processed_event_count: number;
+  event_type_counts?: Record<string, number>;
+}
+
+export interface RuntimeBackpressureSummary {
+  tick_duration_ms: number;
+  tick_budget_ms: number;
+  overloaded: boolean;
+  queue_depth: number;
+  processed_event_count: number;
+  deferred_event_count: number;
+  first_tick_heavy: boolean;
+  bottleneck_component: string;
+  recommended_action: string;
 }
 
 export interface StateSnapshot {
@@ -269,6 +316,8 @@ export interface RuntimeStatusPayload {
   deterministic_replay?: boolean;
   last_error?: string | null;
   fidelity_summary?: FidelitySummary;
+  profiling_summary?: RuntimeProfilingSummary | null;
+  backpressure_summary?: RuntimeBackpressureSummary | null;
 }
 
 export interface GeneratedScenarioConfig {

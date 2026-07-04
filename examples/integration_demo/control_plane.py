@@ -285,6 +285,7 @@ class DemoControlPlane:
                     initial_satellites,
                     fidelity_summary,
                 ),
+                tick_observer=context.profiler,
             )
 
         session = SimulationSession(

@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from enum import StrEnum
 from math import ceil, floor, isfinite
+from time import perf_counter
 from typing import Any
 
 from leo_twin.core import SimulationKernel, SimulationModule
@@ -169,6 +170,7 @@ class PositionDrivenNetworkEngine(SimulationModule):
         self._last_links: dict[tuple[str, str], LinkState] = {}
         self._compute_load_by_node: dict[str, float] = {}
         self._last_space_link_candidate_counts: dict[str, int] = {}
+        self._profiling_times_ms = _empty_network_profiling_times()
         self._event_sequence = 0
 
     def name(self) -> str:
@@ -241,6 +243,16 @@ class PositionDrivenNetworkEngine(SimulationModule):
         """Return latest per-satellite space-link candidate counts for diagnostics."""
 
         return dict(sorted(self._last_space_link_candidate_counts.items()))
+
+    def reset_profiling(self) -> None:
+        """Reset per-tick network phase timings."""
+
+        self._profiling_times_ms = _empty_network_profiling_times()
+
+    def profiling_summary(self) -> dict[str, float]:
+        """Return per-tick network phase timings for runtime observability."""
+
+        return dict(self._profiling_times_ms)
 
     def stack_traces(self) -> tuple[NetworkStackTrace, ...]:
         """Return latest protocol stack traces in deterministic flow order."""
@@ -366,8 +378,12 @@ class PositionDrivenNetworkEngine(SimulationModule):
         state: SatelliteState,
         dispatch_time: float,
     ) -> tuple[SimEvent, ...]:
+        access_started = perf_counter()
         emitted = list(self._update_access_for_state(state, dispatch_time))
+        self._record_profile_time("access_update_time_ms", access_started)
+        space_started = perf_counter()
         emitted.extend(self._update_space_links_for_state(state, dispatch_time))
+        self._record_profile_time("space_space_candidate_update_time_ms", space_started)
         return tuple(emitted)
 
     def _update_access_for_state(
@@ -444,10 +460,18 @@ class PositionDrivenNetworkEngine(SimulationModule):
             satellite_id: index for index, satellite_id in enumerate(ordered_satellite_ids)
         }
         for state in geometry_states:
+            access_started = perf_counter()
             emitted.extend(self._update_access_for_state(state, dispatch_time))
+            self._record_profile_time("access_update_time_ms", access_started)
             if space_link_mode == SpaceLinkMode.DETAILED_SMALL_SCALE:
+                space_started = perf_counter()
                 emitted.extend(self._update_space_links_for_state(state, dispatch_time))
+                self._record_profile_time(
+                    "space_space_candidate_update_time_ms",
+                    space_started,
+                )
             elif space_link_mode == SpaceLinkMode.BOUNDED_CANDIDATE:
+                space_started = perf_counter()
                 emitted.extend(
                     self._update_bounded_space_links_for_state(
                         state,
@@ -456,7 +480,16 @@ class PositionDrivenNetworkEngine(SimulationModule):
                         satellite_index_by_id,
                     )
                 )
+                self._record_profile_time(
+                    "space_space_candidate_update_time_ms",
+                    space_started,
+                )
         return tuple(emitted)
+
+    def _record_profile_time(self, key: str, started: float) -> None:
+        if key not in self._profiling_times_ms:
+            return
+        self._profiling_times_ms[key] += max(0.0, (perf_counter() - started) * 1000.0)
 
     def _update_space_links_for_state(
         self,
@@ -896,6 +929,13 @@ def _space_cell_for(
         floor(position[1] / cell_size_km),
         floor(position[2] / cell_size_km),
     )
+
+
+def _empty_network_profiling_times() -> dict[str, float]:
+    return {
+        "access_update_time_ms": 0.0,
+        "space_space_candidate_update_time_ms": 0.0,
+    }
 
 
 def _off_boresight_from_elevation(

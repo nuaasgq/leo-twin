@@ -46,6 +46,14 @@ class SpaceLinkModeConfig(StrEnum):
     DETAILED_SMALL_SCALE = "DETAILED_SMALL_SCALE"
 
 
+class WorkloadSmoothingModeConfig(StrEnum):
+    """Initial generated workload staggering exposed through configuration."""
+
+    NONE = "NONE"
+    DETERMINISTIC_STAGGER = "DETERMINISTIC_STAGGER"
+    RATE_LIMITED = "RATE_LIMITED"
+
+
 DEFAULT_BATCH_SPACE_LINK_UPDATE_LIMIT = 999
 DEFAULT_MAX_SPACE_LINK_CANDIDATES_PER_SATELLITE = 4
 
@@ -265,6 +273,10 @@ class ScenarioConfig:
     ground_station_count: int = 3
     cell_count: int = 100
     compute_scheduling_policy: ComputeSchedulingPolicyConfig = ComputeSchedulingPolicyConfig.FIFO
+    initial_workload_smoothing_enabled: bool = False
+    initial_workload_window_s: float = 0.0
+    max_initial_events_per_tick: int = 0
+    workload_smoothing_mode: WorkloadSmoothingModeConfig = WorkloadSmoothingModeConfig.NONE
     orbit: OrbitParameters = field(default_factory=OrbitParameters)
     traffic_model: TrafficModel = field(default_factory=TrafficModel)
 
@@ -281,6 +293,29 @@ class ScenarioConfig:
                 "compute_scheduling_policy",
                 ComputeSchedulingPolicyConfig(str(self.compute_scheduling_policy)),
             )
+        _require_bool(
+            self.initial_workload_smoothing_enabled,
+            "scenario.initial_workload_smoothing_enabled",
+        )
+        _require_non_negative_finite(
+            self.initial_workload_window_s,
+            "scenario.initial_workload_window_s",
+        )
+        _require_non_negative_int(
+            self.max_initial_events_per_tick,
+            "scenario.max_initial_events_per_tick",
+        )
+        if not isinstance(self.workload_smoothing_mode, WorkloadSmoothingModeConfig):
+            object.__setattr__(
+                self,
+                "workload_smoothing_mode",
+                WorkloadSmoothingModeConfig(str(self.workload_smoothing_mode)),
+            )
+        object.__setattr__(
+            self,
+            "initial_workload_window_s",
+            float(self.initial_workload_window_s),
+        )
 
 
 @dataclass(frozen=True)

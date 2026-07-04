@@ -54,11 +54,14 @@ class SessionAdvanceLoop:
         stream_policy: StreamBackpressurePolicy | None = None,
         tick_interval_seconds: float = 0.05,
         max_sim_delta_per_tick: float | None = None,
+        tick_budget_ms: float = 1000.0,
     ) -> None:
         if tick_interval_seconds <= 0.0:
             raise ValueError("tick_interval_seconds must be positive")
         if max_sim_delta_per_tick is not None and max_sim_delta_per_tick <= 0.0:
             raise ValueError("max_sim_delta_per_tick must be positive when provided")
+        if tick_budget_ms <= 0.0:
+            raise ValueError("tick_budget_ms must be positive")
         policy = stream_policy or StreamBackpressurePolicy()
         self._session = session
         self._event_stream = event_stream or StreamBuffer(policy)
@@ -67,6 +70,7 @@ class SessionAdvanceLoop:
         self._max_sim_delta_per_tick = (
             None if max_sim_delta_per_tick is None else float(max_sim_delta_per_tick)
         )
+        self._tick_budget_ms = float(tick_budget_ms)
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
         self._state = AdvanceLoopState.STOPPED
@@ -120,10 +124,12 @@ class SessionAdvanceLoop:
 
         with self._lock:
             self._tick_count += 1
+            tick_index = self._tick_count
         lifecycle = self._session.lifecycle_state
         if lifecycle != RuntimeLifecycleState.RUNNING:
             self._publish_pending_session_records()
             return ()
+        started = time.perf_counter()
         status = self._session.get_status()
         if status.deterministic_replay:
             events = self._session.advance_control_step()
@@ -132,6 +138,12 @@ class SessionAdvanceLoop:
         else:
             events = self._session.advance()
         self._publish_pending_session_records()
+        self._session.record_tick_observability(
+            tick_duration_ms=(time.perf_counter() - started) * 1000.0,
+            tick_budget_ms=self._tick_budget_ms,
+            tick_index=tick_index,
+            processed_event_count=len(events),
+        )
         return events
 
     def publish_pending(self) -> None:

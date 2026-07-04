@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  backpressureNoticeText,
   buildRuntimeRibbonSummary,
   controlErrorMessage,
   defaultRuntimeProgressAnchor,
@@ -10,6 +11,7 @@ import {
   runtimeStatusRequiresStreams,
   scenarioWithRuntimeConfig,
   selectFidelitySummary,
+  shouldShowBackpressureNotice,
   shouldShowFidelityNotice,
   standaloneDashboardHref,
   surfaceFromPathname
@@ -17,6 +19,7 @@ import {
 import {
   FidelitySummary,
   GeneratedScenarioConfig,
+  RuntimeBackpressureSummary,
   RuntimeStatusPayload
 } from "../src/core/event_types";
 import { WorldSnapshot } from "../src/state/snapshot_engine";
@@ -187,6 +190,37 @@ describe("fidelity notice", () => {
         { fidelity_summary: fallback, scenario_config: null } as unknown as WorldSnapshot
       )
     ).toBe(summary);
+  });
+});
+
+describe("backpressure notice", () => {
+  const summary: RuntimeBackpressureSummary = {
+    tick_duration_ms: 1234.4,
+    tick_budget_ms: 1000,
+    overloaded: true,
+    queue_depth: 42,
+    processed_event_count: 128,
+    deferred_event_count: 42,
+    first_tick_heavy: true,
+    bottleneck_component: "flow_arrival_processing",
+    recommended_action: "widen_initial_workload_smoothing_window"
+  };
+
+  it("renders overload text from backend-provided backpressure fields", () => {
+    expect(shouldShowBackpressureNotice(summary)).toBe(true);
+    expect(backpressureNoticeText(summary)).toBe(
+      "运行压力：最近推进 1,234.4 ms，预算 1,000 ms。瓶颈组件：flow_arrival_processing。"
+    );
+  });
+
+  it("does not show a warning when backend reports a healthy tick", () => {
+    expect(
+      shouldShowBackpressureNotice({
+        ...summary,
+        overloaded: false,
+        first_tick_heavy: false
+      })
+    ).toBe(false);
   });
 });
 

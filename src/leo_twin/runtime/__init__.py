@@ -14,6 +14,11 @@ from leo_twin.runtime.control_protocol import (
     parse_control_command,
 )
 from leo_twin.runtime.controller import SimulationController
+from leo_twin.runtime.profiling import (
+    PROFILE_TIMING_FIELDS,
+    RuntimeTickProfiler,
+    RuntimeTickObserver,
+)
 from leo_twin.runtime.registry import RuntimeSessionRecord, SimulationSessionRegistry
 from leo_twin.runtime.session import (
     KernelFactory,
@@ -38,11 +43,14 @@ __all__ = [
     "ControlProtocolError",
     "KernelFactory",
     "KernelPort",
+    "PROFILE_TIMING_FIELDS",
     "RuntimeCommand",
     "RuntimeKernelSpec",
     "RuntimeLifecycleState",
     "RuntimeSessionRecord",
     "RuntimeStatus",
+    "RuntimeTickObserver",
+    "RuntimeTickProfiler",
     "SessionAdvanceLoop",
     "SimulationClockController",
     "SimulationController",

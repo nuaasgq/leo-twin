@@ -14,6 +14,7 @@ from leo_twin.schema.config import (
     SpaceLinkModeConfig,
     DEFAULT_BATCH_SPACE_LINK_UPDATE_LIMIT,
     DEFAULT_MAX_SPACE_LINK_CANDIDATES_PER_SATELLITE,
+    WorkloadSmoothingModeConfig,
     config_to_dict,
 )
 
@@ -31,5 +32,6 @@ __all__ = [
     "TrafficModel",
     "UIConfig",
     "VisualizationToggles",
+    "WorkloadSmoothingModeConfig",
     "config_to_dict",
 ]

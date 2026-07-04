@@ -155,6 +155,87 @@ def test_demo_flow_and_task_demands_are_config_driven() -> None:
     }
 
 
+def test_scale_initial_workload_smoothing_spreads_first_burst() -> None:
+    scenario = build_demo_scenario(
+        _demo_config(
+            satellite_count=1200,
+            ground_user_count=20,
+            compute_node_count=1200,
+            duration_seconds=120,
+            task_interval_seconds=60,
+            flow_interval_seconds=60,
+        )
+    )
+    first_period_workload = tuple(
+        event
+        for event in scenario.initial_events
+        if event.event_type in {EventType.FLOW_ARRIVAL, EventType.TASK_ARRIVAL}
+        and str(event.event_id).endswith(tuple(f"{index:05d}" for index in range(1200)))
+    )
+    first_second_workload = tuple(
+        event
+        for event in first_period_workload
+        if event.sim_time <= 1.0
+    )
+    task_times = tuple(
+        event.sim_time
+        for event in first_period_workload
+        if event.event_type == EventType.TASK_ARRIVAL
+    )
+    summary = scenario.frontend_config["backend_summary"][
+        "workload_smoothing_summary"
+    ]
+
+    assert summary["enabled"] is True
+    assert summary["scale_triggered"] is True
+    assert summary["mode"] == "DETERMINISTIC_STAGGER"
+    assert summary["initial_workload_window_s"] == 59.0
+    assert len(first_period_workload) == 2400
+    assert len(first_second_workload) < 80
+    assert max(task_times) - min(task_times) == pytest.approx(59.0)
+
+
+def test_initial_workload_smoothing_preserves_count_and_determinism() -> None:
+    config = _demo_config(
+        satellite_count=1200,
+        ground_user_count=20,
+        compute_node_count=1200,
+        duration_seconds=120,
+        task_interval_seconds=60,
+    )
+    first = build_demo_scenario(config).initial_events
+    second = build_demo_scenario(config).initial_events
+    workload_events = tuple(
+        event
+        for event in first
+        if event.event_type in {EventType.FLOW_ARRIVAL, EventType.TASK_ARRIVAL}
+    )
+
+    assert tuple((event.event_id, event.event_type, event.sim_time) for event in first) == tuple(
+        (event.event_id, event.event_type, event.sim_time) for event in second
+    )
+    assert len(workload_events) == 4800
+
+
+def test_small_scenario_keeps_default_initial_workload_timing() -> None:
+    scenario = build_demo_scenario(_demo_config())
+    workload_times = tuple(
+        (event.event_type, event.sim_time)
+        for event in scenario.initial_events
+        if event.event_type in {EventType.FLOW_ARRIVAL, EventType.TASK_ARRIVAL}
+    )
+
+    assert [event_type for event_type, _time in workload_times[:4]] == [
+        EventType.FLOW_ARRIVAL.value,
+        EventType.FLOW_ARRIVAL.value,
+        EventType.TASK_ARRIVAL.value,
+        EventType.TASK_ARRIVAL.value,
+    ]
+    assert [time for _event_type, time in workload_times[:4]] == pytest.approx(
+        [0.15, 0.16, 0.2, 0.21]
+    )
+
+
 def test_demo_compute_capacity_is_config_driven() -> None:
     scenario = build_demo_scenario(_demo_config(compute_capacity=18.0))
 

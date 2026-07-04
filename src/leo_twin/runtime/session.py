@@ -4,9 +4,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from threading import RLock
+from time import perf_counter
 from typing import Protocol
 
 from leo_twin.runtime.clock import SimulationClockController
+from leo_twin.runtime.profiling import (
+    PROFILE_TIMING_FIELDS,
+    RuntimeTickObserver,
+    empty_profiling_summary,
+)
 from leo_twin.runtime.snapshot_stream import SnapshotProjector, SnapshotStream
 from leo_twin.runtime.status import RuntimeLifecycleState, RuntimeStatus
 from leo_twin.schema import SimEvent
@@ -37,6 +43,7 @@ class RuntimeKernelSpec:
     initial_events: tuple[SimEvent, ...] = ()
     snapshot_projector: SnapshotProjector | None = None
     initial_snapshot: object | None = None
+    tick_observer: RuntimeTickObserver | None = None
 
 
 class KernelFactory(Protocol):
@@ -83,11 +90,14 @@ class SimulationSession:
             deterministic_replay=deterministic_replay,
         )
         self._kernel: KernelPort | None = None
+        self._tick_observer: RuntimeTickObserver | None = None
         self._snapshot_stream = SnapshotStream()
         self._processed_events: list[SimEvent] = []
         self._lifecycle_state = RuntimeLifecycleState.UNINITIALIZED
         self._last_error: str | None = None
         self._config_version = 0
+        self._last_profiling_summary: dict[str, object] | None = None
+        self._last_backpressure_summary: dict[str, object] | None = None
         self._lock = RLock()
 
     @property
@@ -140,6 +150,7 @@ class SimulationSession:
             try:
                 spec = self._kernel_factory(self._scenario_config, self._runtime_config)
                 self._kernel = spec.kernel
+                self._tick_observer = spec.tick_observer
                 for event in spec.initial_events:
                     self._kernel.schedule_event(event)
                 self._snapshot_stream = SnapshotStream(
@@ -149,6 +160,8 @@ class SimulationSession:
                     max_frequency_hz=self._snapshot_max_frequency_hz,
                 )
                 self._processed_events.clear()
+                self._last_profiling_summary = None
+                self._last_backpressure_summary = None
                 self._lifecycle_state = RuntimeLifecycleState.INITIALIZED
                 self._last_error = None
                 self._config_version += 1
@@ -307,6 +320,42 @@ class SimulationSession:
                 last_error=self._last_error,
                 deterministic_replay=self._deterministic_replay,
                 config_version=self._config_version,
+                profiling_summary=self._last_profiling_summary,
+                backpressure_summary=self._last_backpressure_summary,
+            )
+
+    def record_tick_observability(
+        self,
+        *,
+        tick_duration_ms: float,
+        tick_budget_ms: float,
+        tick_index: int,
+        processed_event_count: int,
+    ) -> None:
+        """Store operational tick profiling/backpressure after an advance loop tick."""
+
+        with self._lock:
+            profiling = (
+                dict(self._last_profiling_summary)
+                if self._last_profiling_summary is not None
+                else empty_profiling_summary(
+                    processed_event_count=processed_event_count,
+                )
+            )
+            profiling["total_tick_time_ms"] = round(
+                max(0.0, float(tick_duration_ms)),
+                6,
+            )
+            profiling["processed_event_count"] = int(processed_event_count)
+            self._last_profiling_summary = profiling
+            queue_depth = _queued_event_count(self._kernel)
+            self._last_backpressure_summary = _backpressure_summary(
+                profiling=profiling,
+                tick_duration_ms=float(tick_duration_ms),
+                tick_budget_ms=float(tick_budget_ms),
+                queue_depth=0 if queue_depth is None else queue_depth,
+                processed_event_count=processed_event_count,
+                first_tick=tick_index == 1,
             )
 
     def get_snapshot(self) -> object:
@@ -323,14 +372,24 @@ class SimulationSession:
 
     def _run_until(self, target: float | None) -> tuple[SimEvent, ...]:
         kernel = self._require_kernel()
+        observer = self._tick_observer
         try:
+            if observer is not None:
+                observer.reset()
             events = kernel.run(until_time=target)
             self._processed_events.extend(events)
+            snapshot_started = perf_counter()
             self._snapshot_stream.ingest(events)
             if events and _queued_event_count(kernel) == 0:
                 self._snapshot_stream.flush()
                 if self._lifecycle_state == RuntimeLifecycleState.RUNNING:
                     self._lifecycle_state = RuntimeLifecycleState.COMPLETED
+            snapshot_projection_time_ms = (perf_counter() - snapshot_started) * 1000.0
+            if observer is not None:
+                self._last_profiling_summary = observer.summary(
+                    snapshot_projection_time_ms=snapshot_projection_time_ms,
+                    processed_event_count=len(events),
+                )
             return events
         except Exception as exc:
             self._last_error = str(exc)
@@ -362,3 +421,60 @@ def _queued_event_count(kernel: KernelPort | None) -> int | None:
     if isinstance(heap, list):
         return len(heap)
     return None
+
+
+def _backpressure_summary(
+    *,
+    profiling: dict[str, object],
+    tick_duration_ms: float,
+    tick_budget_ms: float,
+    queue_depth: int,
+    processed_event_count: int,
+    first_tick: bool,
+) -> dict[str, object]:
+    overloaded = tick_duration_ms > tick_budget_ms
+    bottleneck_component = _bottleneck_component(profiling)
+    return {
+        "tick_duration_ms": round(max(0.0, tick_duration_ms), 6),
+        "tick_budget_ms": round(max(0.0, tick_budget_ms), 6),
+        "overloaded": overloaded,
+        "queue_depth": int(queue_depth),
+        "processed_event_count": int(processed_event_count),
+        "deferred_event_count": int(queue_depth),
+        "first_tick_heavy": bool(first_tick and overloaded),
+        "bottleneck_component": bottleneck_component,
+        "recommended_action": _recommended_action(overloaded, bottleneck_component),
+    }
+
+
+def _bottleneck_component(profiling: dict[str, object]) -> str:
+    candidates: dict[str, float] = {}
+    for key in PROFILE_TIMING_FIELDS:
+        if key == "total_tick_time_ms" or not key.endswith("_time_ms"):
+            continue
+        value = profiling.get(key, 0.0)
+        if isinstance(value, (int, float)):
+            candidates[key.removesuffix("_time_ms")] = float(value)
+    if not candidates:
+        return "none"
+    component, elapsed_ms = max(
+        candidates.items(),
+        key=lambda item: (item[1], item[0]),
+    )
+    return component if elapsed_ms > 0.0 else "none"
+
+
+def _recommended_action(overloaded: bool, bottleneck_component: str) -> str:
+    if not overloaded:
+        return "none"
+    if bottleneck_component in {
+        "flow_arrival_processing",
+        "compute_task_arrival_processing",
+        "compute_queue_update",
+    }:
+        return "widen_initial_workload_smoothing_window"
+    if bottleneck_component == "space_space_candidate_update":
+        return "reduce_space_link_candidate_cap_or_keep_bounded_mode"
+    if bottleneck_component == "snapshot_projection":
+        return "lower_snapshot_frequency_or_stream_batch_size"
+    return "keep_scale_mode_enabled_or_reduce_scenario_scale"

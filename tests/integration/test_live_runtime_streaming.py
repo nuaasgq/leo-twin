@@ -161,6 +161,38 @@ def test_large_batch_runtime_keeps_snapshot_and_controls_responsive(tmp_path: Pa
     )
     assert start_ack["ok"] is True
     control_plane._require_advance_loop().tick()
+    status_after_tick = control_plane.runtime_status()["status"]
+    profiling = status_after_tick["profiling_summary"]
+    backpressure = status_after_tick["backpressure_summary"]
+
+    assert set(profiling) >= {
+        "orbit_batch_update_time_ms",
+        "network_batch_ingestion_time_ms",
+        "access_update_time_ms",
+        "space_space_candidate_update_time_ms",
+        "flow_arrival_processing_time_ms",
+        "route_update_time_ms",
+        "compute_task_arrival_processing_time_ms",
+        "compute_queue_update_time_ms",
+        "metrics_aggregation_time_ms",
+        "snapshot_projection_time_ms",
+        "total_tick_time_ms",
+        "processed_event_count",
+        "event_type_counts",
+    }
+    assert set(backpressure) == {
+        "tick_duration_ms",
+        "tick_budget_ms",
+        "overloaded",
+        "queue_depth",
+        "processed_event_count",
+        "deferred_event_count",
+        "first_tick_heavy",
+        "bottleneck_component",
+        "recommended_action",
+    }
+    assert backpressure["tick_budget_ms"] == 1000.0
+    assert backpressure["processed_event_count"] == profiling["processed_event_count"]
     state_batch = control_plane.stream_snapshot_batch(cursor=0, limit=10)
     assert state_batch["items"]
     assert state_batch["items"][0]["fidelity_summary"] == fidelity

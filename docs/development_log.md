@@ -213,7 +213,7 @@ change.
 ## 2026-07-04 - Scale Mode Productization v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`
-- Commit: pending commit
+- Commit: `73fab2b`
 - Scope: make 1200-satellite scale mode an explicit backend-owned product mode
   and replace silent large-batch ISL skipping with deterministic bounded
   candidate updates.
@@ -300,6 +300,78 @@ change.
 - Recommended follow-up:
   - Implement deterministic traffic/compute first-tick smoothing and runtime
     backpressure reporting for 1200 satellite-as-compute-node scenarios.
+
+## 2026-07-05 - Runtime Load Smoothing & Backpressure v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: this commit (created before hash assignment)
+- Scope: reduce 1200-node first-tick workload spikes and expose backend-owned
+  runtime profiling/backpressure status without changing Event Kernel ordering.
+- Changed files/modules:
+  - `src/leo_twin/runtime/profiling.py`
+  - `src/leo_twin/runtime/session.py`
+  - `src/leo_twin/runtime/advance_loop.py`
+  - `src/leo_twin/runtime/status.py`
+  - `src/leo_twin/runtime/__init__.py`
+  - `src/leo_twin/schema/config.py`
+  - `src/leo_twin/schema/config_loader.py`
+  - `src/leo_twin/core/config/__init__.py`
+  - `src/leo_twin/core/config/schema.py`
+  - `src/leo_twin/models/network/position_engine.py`
+  - `examples/integration_demo/config.py`
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/runtime.py`
+  - `examples/integration_demo/scenario.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/app/App.tsx`
+  - `frontend/tests/appSurface.test.ts`
+  - `tests/integration/test_live_runtime_streaming.py`
+  - `tests/unit/test_integration_demo_scenario.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_integration_demo_scenario.py tests/integration/test_live_runtime_streaming.py::test_large_batch_runtime_keeps_snapshot_and_controls_responsive -q`
+    - Result: passed, 11 tests.
+  - `python -m pytest tests/integration/test_live_runtime_streaming.py tests/integration/test_runtime_session_control.py tests/integration/test_orbit_batch_scale.py tests/unit/test_position_driven_network_engine.py tests/unit/test_metrics_module.py tests/unit/test_integration_demo_scenario.py -q`
+    - Result: passed, 68 tests.
+  - `python -m pytest tests/unit/test_integration_demo_scenario.py tests/integration/test_live_runtime_streaming.py::test_large_batch_runtime_keeps_snapshot_and_controls_responsive tests/integration/test_config_control.py::test_frontend_control_messages_are_processed tests/unit/test_scenario_builder.py::test_scenario_builder_config_from_sees_config_maps_control_plane_fields tests/unit/test_backend_derived_summary.py -q`
+    - Result: passed, 15 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test`
+    - Result: passed, 22 files / 84 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+  - 1200-satellite / 1200-compute direct control-plane smoke:
+    - Previous recorded first explicit tick: 16164.06 ms.
+    - Current first explicit tick: 1805.53 ms.
+    - Processed events in tick: 4073.
+    - Backpressure summary reported `overloaded=true`,
+      `tick_budget_ms=1000.0`, `bottleneck_component=metrics_aggregation`.
+    - Workload smoothing summary reported
+      `mode=DETERMINISTIC_STAGGER`, `initial_workload_window_s=59.0`,
+      `spacing_s=0.04920767306088407`, `workload_count=1200`.
+- Problems encountered:
+  - `python -m pytest tests/integration/test_config_control.py tests/unit/test_scenario_builder.py tests/unit/test_backend_derived_summary.py -q`
+    still fails in the active workspace only on tests that read the two known
+    local runtime config files. `configs/sees_control.yaml` and
+    `configs/generated_full_system_demo.json` contain local 1200-node state and
+    remain excluded from this commit.
+  - A direct smoke script initially failed because `PYTHONPATH=src;.` was not
+    set outside pytest. The same smoke passed after setting `PYTHONPATH`.
+  - The new frontend smoothing fields initially appeared in small-scenario
+    `traffic_model` output as default values. This was corrected so small
+    scenarios keep their existing frontend fixture shape unless smoothing is
+    explicit or scale-triggered.
+- Known remaining issues:
+  - The first scale tick is reduced substantially but can still exceed the
+    1-second runtime budget because metrics aggregation and snapshot projection
+    are still in-process.
+  - Phase 4 bounded wall-time tick budgeting was not implemented in this task;
+    doing it cleanly should be a separate runtime scheduling task if needed.
+  - Active local runtime/generated config files remain excluded from the commit.
+- Recommended follow-up:
+  - Optimize or aggregate metrics/snapshot projection for scale mode, using the
+    new profiling/backpressure fields as the acceptance signal.
 
 ## 2026-07-04 - Scale Firebreak v1
 

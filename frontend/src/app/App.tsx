@@ -10,6 +10,7 @@ import {
 import {
   FidelitySummary,
   GeneratedScenarioConfig,
+  RuntimeBackpressureSummary,
   RuntimeStatusPayload,
   ScenarioConfig
 } from "../core/event_types";
@@ -379,6 +380,7 @@ export function App() {
       {surface === "dashboard" ? (
         <section className="dashboard-page" aria-label="独立数据态势面板">
           <FidelityNotice summary={fidelitySummary} surface="dashboard" />
+          <BackpressureNotice summary={runtimeStatus.backpressure_summary ?? null} surface="dashboard" />
           <Suspense
             fallback={
               <div className="surface-loading" role="status">
@@ -452,6 +454,7 @@ export function App() {
               </div>
             </div>
             <FidelityNotice summary={fidelitySummary} surface="control" />
+            <BackpressureNotice summary={runtimeStatus.backpressure_summary ?? null} surface="control" />
             <div className="globe-panel">
               <Suspense
                 fallback={
@@ -611,6 +614,50 @@ function FidelityNotice({
   );
 }
 
+export function shouldShowBackpressureNotice(
+  summary: RuntimeBackpressureSummary | null | undefined
+): boolean {
+  if (summary === null || summary === undefined) {
+    return false;
+  }
+  return summary.overloaded || summary.first_tick_heavy;
+}
+
+export function backpressureNoticeText(summary: RuntimeBackpressureSummary): string {
+  return [
+    `运行压力：最近推进 ${formatMilliseconds(summary.tick_duration_ms)}，`,
+    `预算 ${formatMilliseconds(summary.tick_budget_ms)}。`,
+    `瓶颈组件：${summary.bottleneck_component}。`
+  ].join("");
+}
+
+function backpressureNoticeDetail(summary: RuntimeBackpressureSummary): string {
+  return [
+    `队列深度 ${formatInteger(summary.queue_depth)}，`,
+    `本 tick 处理事件 ${formatInteger(summary.processed_event_count)}，`,
+    `建议：${summary.recommended_action}。`
+  ].join("");
+}
+
+function BackpressureNotice({
+  summary,
+  surface
+}: {
+  summary: RuntimeBackpressureSummary | null;
+  surface: "control" | "dashboard";
+}) {
+  if (summary === null || !shouldShowBackpressureNotice(summary)) {
+    return null;
+  }
+  return (
+    <div className={`fidelity-notice backpressure ${surface}`} role="status" aria-live="polite">
+      <span>运行后压提示</span>
+      <strong>{backpressureNoticeText(summary)}</strong>
+      <small>{backpressureNoticeDetail(summary)}</small>
+    </div>
+  );
+}
+
 export function defaultRuntimeProgressAnchor(
   runtimeStatus: RuntimeStatusPayload,
   nowMs = Date.now()
@@ -756,31 +803,10 @@ export function scenarioWithRuntimeConfig(
                   : scenario.scenario?.orbit?.inclination_deg
             }
           : scenario.scenario?.orbit,
-        traffic_model: isRecord(runtimeConfig.scenario.traffic_model)
-          ? {
-              ...scenario.scenario?.traffic_model,
-              flow_interval_seconds:
-                typeof runtimeConfig.scenario.traffic_model.flow_interval_seconds === "number"
-                  ? runtimeConfig.scenario.traffic_model.flow_interval_seconds
-                  : scenario.scenario?.traffic_model?.flow_interval_seconds,
-              task_interval_seconds:
-                typeof runtimeConfig.scenario.traffic_model.task_interval_seconds === "number"
-                  ? runtimeConfig.scenario.traffic_model.task_interval_seconds
-                  : scenario.scenario?.traffic_model?.task_interval_seconds,
-              flow_demand_capacity:
-                typeof runtimeConfig.scenario.traffic_model.flow_demand_capacity === "number"
-                  ? runtimeConfig.scenario.traffic_model.flow_demand_capacity
-                  : scenario.scenario?.traffic_model?.flow_demand_capacity,
-              task_compute_demand:
-                typeof runtimeConfig.scenario.traffic_model.task_compute_demand === "number"
-                  ? runtimeConfig.scenario.traffic_model.task_compute_demand
-                  : scenario.scenario?.traffic_model?.task_compute_demand,
-              task_data_size:
-                typeof runtimeConfig.scenario.traffic_model.task_data_size === "number"
-                  ? runtimeConfig.scenario.traffic_model.task_data_size
-                  : scenario.scenario?.traffic_model?.task_data_size
-            }
-          : scenario.scenario?.traffic_model
+        traffic_model: mergeTrafficModelConfig(
+          scenario.scenario?.traffic_model,
+          runtimeConfig.scenario
+        )
       }
     : scenario.scenario;
   const network = isRecord(runtimeConfig.network)
@@ -912,6 +938,91 @@ export function scenarioWithRuntimeConfig(
   };
 }
 
+type TrafficModelConfig = NonNullable<NonNullable<ScenarioConfig["scenario"]>["traffic_model"]>;
+
+function mergeTrafficModelConfig(
+  base: TrafficModelConfig | undefined,
+  runtimeScenario: Record<string, unknown>
+): TrafficModelConfig | undefined {
+  const rawTraffic = isRecord(runtimeScenario.traffic_model)
+    ? runtimeScenario.traffic_model
+    : null;
+  const hasTopLevelSmoothing =
+    "initial_workload_smoothing_enabled" in runtimeScenario ||
+    "initial_workload_window_s" in runtimeScenario ||
+    "max_initial_events_per_tick" in runtimeScenario ||
+    "workload_smoothing_mode" in runtimeScenario;
+  if (rawTraffic === null && !hasTopLevelSmoothing) {
+    return base;
+  }
+  const traffic: Record<string, unknown> = rawTraffic ?? {};
+  const merged: TrafficModelConfig = { ...base };
+  for (const key of [
+    "flow_interval_seconds",
+    "task_interval_seconds",
+    "flow_demand_capacity",
+    "task_compute_demand",
+    "task_data_size",
+    "initial_workload_window_s",
+    "max_initial_events_per_tick"
+  ] as const) {
+    const value = numberFromRuntimeScenario(runtimeScenario, traffic, key);
+    if (value !== undefined) {
+      merged[key] = value;
+    }
+  }
+  const smoothingEnabled = booleanFromRuntimeScenario(
+    runtimeScenario,
+    traffic,
+    "initial_workload_smoothing_enabled"
+  );
+  if (smoothingEnabled !== undefined) {
+    merged.initial_workload_smoothing_enabled = smoothingEnabled;
+  }
+  const smoothingMode = stringFromRuntimeScenario(
+    runtimeScenario,
+    traffic,
+    "workload_smoothing_mode"
+  );
+  if (smoothingMode !== undefined) {
+    merged.workload_smoothing_mode = smoothingMode;
+  }
+  return merged;
+}
+
+function numberFromRuntimeScenario(
+  runtimeScenario: Record<string, unknown>,
+  rawTraffic: Record<string, unknown>,
+  key: string
+): number | undefined {
+  if (typeof runtimeScenario[key] === "number") {
+    return runtimeScenario[key];
+  }
+  return typeof rawTraffic[key] === "number" ? rawTraffic[key] : undefined;
+}
+
+function booleanFromRuntimeScenario(
+  runtimeScenario: Record<string, unknown>,
+  rawTraffic: Record<string, unknown>,
+  key: string
+): boolean | undefined {
+  if (typeof runtimeScenario[key] === "boolean") {
+    return runtimeScenario[key];
+  }
+  return typeof rawTraffic[key] === "boolean" ? rawTraffic[key] : undefined;
+}
+
+function stringFromRuntimeScenario(
+  runtimeScenario: Record<string, unknown>,
+  rawTraffic: Record<string, unknown>,
+  key: string
+): string | undefined {
+  if (typeof runtimeScenario[key] === "string") {
+    return runtimeScenario[key];
+  }
+  return typeof rawTraffic[key] === "string" ? rawTraffic[key] : undefined;
+}
+
 function connectionStateLabel(state: "connecting" | "live" | "degraded"): string {
   if (state === "connecting") {
     return "连接中";
@@ -963,6 +1074,13 @@ function formatPercent(value: number): string {
     maximumFractionDigits: 1,
     minimumFractionDigits: 0
   });
+}
+
+function formatMilliseconds(value: number): string {
+  return `${Math.max(0, value).toLocaleString("zh-CN", {
+    maximumFractionDigits: 1,
+    minimumFractionDigits: 0
+  })} ms`;
 }
 
 function formatDurationCompact(seconds: number): string {

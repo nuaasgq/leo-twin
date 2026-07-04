@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 from math import isfinite
+from typing import Any
 
 from leo_twin.schema.config import RuntimeMode
 
@@ -36,6 +37,8 @@ class RuntimeStatus:
     last_error: str | None = None
     deterministic_replay: bool = False
     config_version: int = 0
+    profiling_summary: dict[str, Any] | None = None
+    backpressure_summary: dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.session_id, str) or not self.session_id:
@@ -68,8 +71,18 @@ class RuntimeStatus:
         if not isinstance(self.deterministic_replay, bool):
             raise TypeError("deterministic_replay must be a bool")
         _require_non_negative_int(self.config_version, "config_version")
+        if self.profiling_summary is not None and not isinstance(
+            self.profiling_summary,
+            dict,
+        ):
+            raise TypeError("profiling_summary must be a dict or None")
+        if self.backpressure_summary is not None and not isinstance(
+            self.backpressure_summary,
+            dict,
+        ):
+            raise TypeError("backpressure_summary must be a dict or None")
 
-    def to_dict(self) -> dict[str, str | int | float | bool | None]:
+    def to_dict(self) -> dict[str, Any]:
         lifecycle_state = RuntimeLifecycleState(self.lifecycle_state).value
         simulation_mode = RuntimeMode(self.simulation_mode).value
         return {
@@ -86,6 +99,8 @@ class RuntimeStatus:
             "last_error": self.last_error,
             "deterministic_replay": self.deterministic_replay,
             "config_version": self.config_version,
+            "profiling_summary": self.profiling_summary,
+            "backpressure_summary": self.backpressure_summary,
         }
 
 
