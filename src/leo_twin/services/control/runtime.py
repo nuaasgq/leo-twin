@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+from collections.abc import Iterable
+from pathlib import Path
 from typing import Protocol
 
 from leo_twin.schema.config import RuntimeMode, SEESConfig, config_to_dict
@@ -11,6 +13,7 @@ from leo_twin.schema.config_loader import (
     ConfigValidationError,
     merge_config_update,
 )
+from leo_twin.services.control.scale_safety import ScaleConfig, ScaleSafetyChecker
 
 
 class RuntimeStatus(StrEnum):
@@ -108,7 +111,12 @@ class SimulationClockController:
 class RuntimeController:
     """Apply config and lifecycle commands outside the simulation kernel."""
 
-    def __init__(self, config: SEESConfig | None = None) -> None:
+    def __init__(
+        self,
+        config: SEESConfig | None = None,
+        scale_safety_checker: ScaleSafetyChecker | None = None,
+        scale_source_paths: Iterable[str | Path] = (),
+    ) -> None:
         self._config = SEESConfig() if config is None else config
         self._clock = SimulationClockController(
             self._config.runtime.mode,
@@ -121,6 +129,8 @@ class RuntimeController:
         )
         self._config_version = 0
         self._last_action = "INIT"
+        self._scale_safety_checker = scale_safety_checker
+        self._scale_source_paths = tuple(scale_source_paths)
 
     @property
     def config(self) -> SEESConfig:
@@ -154,6 +164,7 @@ class RuntimeController:
         return self.snapshot()
 
     def start(self) -> RuntimeSnapshot:
+        self._validate_scale_safety()
         self._status = RuntimeStatus.RUNNING
         if self._clock.mode == RuntimeMode.PAUSED:
             self._clock.set_mode(RuntimeMode.REAL_TIME)
@@ -238,3 +249,22 @@ class RuntimeController:
 
     def config_json(self) -> dict[str, object]:
         return config_to_dict(self._config)
+
+    def _validate_scale_safety(self) -> None:
+        if self._scale_safety_checker is None:
+            return
+        self._scale_safety_checker.raise_if_unsafe(
+            _scale_config_from_runtime_config(self._config),
+            self._scale_source_paths,
+        )
+
+
+def _scale_config_from_runtime_config(config: SEESConfig) -> ScaleConfig:
+    return ScaleConfig(
+        satellite_count=config.scenario.satellite_count,
+        user_count=config.scenario.user_count,
+        simulation_duration=float(config.runtime.duration),
+        compute_node_count=config.scenario.compute_nodes,
+        tick_interval=float(config.scenario.orbit.update_interval_seconds),
+        partition_count=config.scenario.cell_count,
+    )

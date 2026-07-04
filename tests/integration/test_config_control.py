@@ -9,7 +9,8 @@ from examples.integration_demo.config import DemoConfig
 from examples.integration_demo.control_plane import DemoControlPlane
 from examples.integration_demo.runtime import run_integration_demo
 from leo_twin.core.config import ConfigValidationError, config_from_mapping, load_config
-from leo_twin.services.control import RuntimeController
+from leo_twin.schema.config import OrbitParameters, RuntimeConfig, ScenarioConfig, SEESConfig
+from leo_twin.services.control import RuntimeController, ScaleSafetyChecker
 
 
 def test_config_loads_correctly() -> None:
@@ -109,6 +110,35 @@ def test_runtime_mode_switching_works() -> None:
     assert controller.handle_action("START").status == "RUNNING"
     assert controller.handle_action("PAUSE").status == "PAUSED"
     assert controller.handle_action("STOP").status == "STOPPED"
+
+
+def test_runtime_start_can_be_guarded_by_scale_safety() -> None:
+    safe_controller = RuntimeController(
+        load_config("configs/sees_control.yaml"),
+        scale_safety_checker=ScaleSafetyChecker(),
+    )
+
+    assert safe_controller.start().status == "RUNNING"
+
+    unsafe_controller = RuntimeController(
+        SEESConfig(
+            scenario=ScenarioConfig(
+                satellite_count=10_000,
+                user_count=100_000,
+                compute_nodes=10,
+                cell_count=1000,
+                orbit=OrbitParameters(update_interval_seconds=1),
+            ),
+            runtime=RuntimeConfig(duration=1000),
+        ),
+        scale_safety_checker=ScaleSafetyChecker(),
+    )
+
+    with pytest.raises(RuntimeError, match="scale safety check failed"):
+        unsafe_controller.start()
+
+    assert unsafe_controller.snapshot().status == "STOPPED"
+    assert unsafe_controller.snapshot().last_action == "INIT"
 
 
 def test_frontend_control_messages_are_processed(tmp_path) -> None:
