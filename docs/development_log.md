@@ -2620,3 +2620,43 @@ change.
   - Add a deterministic flow-level demand/route pressure scenario that
     demonstrates non-zero loss and delay-variation proxy values in the default
     dashboard without packet-level simulation.
+
+## 2026-07-05 - Runtime KPI Series Tail Refresh v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: ensure `kpi_time_series_v1` appends or refreshes a current metrics
+  summary sample when runtime status is read, so dashboard charts do not keep
+  showing stale zero loss/jitter values after backend metrics have advanced.
+- Changed files/modules:
+  - `src/leo_twin/services/metrics/collector.py`
+  - `tests/unit/test_metrics_module.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_metrics_module.py -q`
+    - Result: passed, 15 tests.
+  - `python -m pytest tests/integration/test_runtime_session_control.py -q`
+    - Result: passed, 12 tests.
+  - `python -m pytest tests/integration/test_live_runtime_streaming.py -q`
+    - Result: passed, 8 tests.
+  - Live runtime probe:
+    - Result: `metrics_summary` and `kpi_time_series_v1` latest loss/jitter
+      values matched after one control step (`0.7` loss proxy and
+      `0.026494054645502058` delay-variation proxy).
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 23 files / 139 tests.
+- Problems encountered:
+  - The metrics summary already had non-zero flow-level loss and delay
+    variation proxy values, but `kpi_time_series_v1` could lag behind because
+    its sampled tail point was produced before the current summary state.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The KPI values remain flow-level proxies. This task fixes live status
+    synchronization only; it does not add packet-level network simulation.
+- Recommended follow-up:
+  - Add a dashboard-side badge when the latest time-series point is synthesized
+    from the current metrics summary rather than from the historical sampling
+    interval.

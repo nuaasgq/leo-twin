@@ -87,6 +87,7 @@ class MetricsCollector:
         self._metric_sample_interval = metric_sample_interval
         self._event_log_sample_interval = event_log_sample_interval
         self._event_log_segment_size = event_log_segment_size
+        self._kpi_sample_limit = kpi_sample_limit
         self._satellite_position_scale_to_km = float(satellite_position_scale_to_km)
         self._records: deque[MetricRecord] = deque(maxlen=record_limit)
         self._event_log: deque[ReplayEvent] = deque(maxlen=event_log_limit)
@@ -158,8 +159,8 @@ class MetricsCollector:
         records.extend(self._payload_records(event, event_type))
         if not _should_sample(event_count, self._metric_sample_interval):
             return ()
-        self._append_kpi_sample(event.sim_time, event_type)
         records.extend(self._derived_metric_records(event.sim_time, event_type))
+        self._append_kpi_sample(event.sim_time, event_type)
         self._records.extend(records)
         return tuple(records)
 
@@ -259,8 +260,16 @@ class MetricsCollector:
 
     def kpi_time_series(self) -> dict[str, str | int | list[KpiSample]]:
         samples = [dict(sample) for sample in self._kpi_samples]
+        current_sample = self._current_kpi_sample(self._last_sim_time)
         if not samples:
-            samples = [self._current_kpi_sample(self._last_sim_time)]
+            samples = [current_sample]
+        elif samples[-1]["sim_time"] == current_sample["sim_time"]:
+            samples[-1] = current_sample
+        elif samples[-1]["sim_time"] < current_sample["sim_time"]:
+            samples.append(current_sample)
+            samples = samples[-self._kpi_sample_limit :]
+        else:
+            samples = [current_sample]
         return {
             "version": "v1",
             "sample_count": len(samples),

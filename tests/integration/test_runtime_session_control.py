@@ -184,6 +184,13 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
         "network_effective_delay_variation_s",
         "compute_resource_used_gflops_fp32",
     }.issubset(kpi_series["samples"][-1])
+    latest_kpi_sample = kpi_series["samples"][-1]
+    assert latest_kpi_sample["network_effective_loss_proxy_rate"] == status_after_tick[
+        "metrics_summary"
+    ]["network_quality_effective_loss_proxy_rate"]
+    assert latest_kpi_sample["network_effective_delay_variation_s"] == status_after_tick[
+        "metrics_summary"
+    ]["network_quality_effective_delay_variation_proxy_s"]
 
     requested = control_plane.handle_raw_message(json.dumps({"command": "REQUEST_STATUS"}))
     assert requested["ok"] is True

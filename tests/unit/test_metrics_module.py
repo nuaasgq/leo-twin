@@ -768,6 +768,51 @@ def test_metrics_collector_publishes_backend_kpi_time_series() -> None:
     ).value == 30.0
 
 
+def test_metrics_collector_kpi_time_series_refreshes_current_tail_sample() -> None:
+    collector = MetricsCollector(metric_sample_interval=100)
+    collector.observe(
+        _event(
+            "compute-a",
+            1.0,
+            COMPUTE_NODE_UPDATE,
+            ComputeNodeState(
+                node_id="sat-a",
+                sim_time=1.0,
+                capacity=50.0,
+                available_capacity=20.0,
+                status="BUSY",
+            ),
+            "compute",
+        )
+    )
+    collector.observe(
+        _event(
+            "route-loss",
+            2.0,
+            EventType.ROUTE_UPDATE,
+            Route(
+                route_id="route-loss",
+                flow_id="flow-loss",
+                path=("user-a", "sat-a", "user-b"),
+                latency=0.02,
+                capacity=100.0,
+                available=True,
+                loss_rate=0.12,
+            ),
+            "network",
+        )
+    )
+
+    series = collector.kpi_time_series()
+
+    assert series["sample_count"] == 2
+    assert series["samples"][-1]["sim_time"] == 2.0
+    assert series["samples"][-1]["network_effective_loss_proxy_rate"] == 0.12
+    assert series["samples"][-1][
+        "network_effective_delay_variation_s"
+    ] == collector.summary()["network_quality_effective_delay_variation_proxy_s"]
+
+
 def test_metrics_collector_reports_compute_resource_pool_proxy() -> None:
     collector = MetricsCollector()
     for event in (
