@@ -64,10 +64,10 @@ flowchart LR
 
 | 层级 | 职责 | 首批协议/配置 |
 |---|---|---|
-| 应用层 | 业务流、任务数据、请求模型 | 文件传输、遥测流、任务卸载流配置 |
+| 应用层 | 业务流、任务数据、请求模型 | HTTP、MQTT、遥测流、任务卸载流画像 |
 | 传输层 | 端到端传输语义 | TCP、UDP 配置画像 |
 | 网络层 | 路由、路径选择、可达性 | 静态路由、链路状态、距离向量、最短路径画像 |
-| 数据链路层 | 空地/空空链路抽象、帧级资源画像 | 链路容量、链路可用性、接入窗口 |
+| 数据链路层 | 空地/空空链路抽象、帧级资源画像 | TDMA、Slotted ALOHA、CSMA/CA 流级 MAC 画像 |
 | 物理层 | 频段、带宽、发射功率、天线参数 | 天线增益、波束宽度、指向模式 |
 | 信道层 | 空地、空空、地面链路环境画像 | 载频、带宽、损耗模型名称 |
 
@@ -100,10 +100,13 @@ sequenceDiagram
 | 模块 | 运行职责 | 约束 |
 |---|---|---|
 | `KeplerianOrbitEngine` | 根据配置产生确定性卫星位置、速度和 `ORBIT_UPDATE` | 不集成 SGP4，不依赖网络或算力实现 |
+| `J2SecularDriftProfile` | 可选提供 RAAN 与近地点幅角的 J2 长周期漂移 | 默认关闭，只作为配置驱动轨道精细化扩展点 |
 | `PositionDrivenNetworkEngine` | 根据轨道位置、用户位置和流请求产生接入、链路和路由事件 | 不做 packet-level 仿真，不直接调用 Orbit/Compute |
+| `ApplicationRuntime` | 将 HTTP、MQTT、遥测、任务卸载映射为流级需求倍率 | 不生成应用报文，不改变事件 schema |
 | `LinkBudgetCalculator` | 根据频率、带宽、天线和距离计算链路预算与容量画像 | 确定性闭式计算，不引入外部射频工具 |
 | `ChannelBudgetSelector` | 按 `SPACE_GROUND`、`SPACE_SPACE`、`GROUND_GROUND` 选择链路预算画像 | 只做配置选择，不做外部信道工具集成 |
 | `RoutingRuntime` | 根据可用链路和路由画像输出确定性路径 | 当前是运行时策略抽象，不实现研究型路由优化 |
+| `DataLinkRuntime` | 将 TDMA、Slotted ALOHA、CSMA/CA 映射为流级容量和接入时延 | 不做帧级或包级事件仿真 |
 | `TransportRuntime` | 将 TCP/UDP 画像映射为流级时延和有效容量调整 | 不模拟真实协议栈报文 |
 | `RouteAwareComputeEngine` | 根据路由状态、任务请求和调度策略生成任务生命周期事件 | 当前不执行真实容器、GPU 或线程 |
 | `ComputeSchedulingRuntime` | 提供 FIFO、最短作业优先、最早截止期优先的确定性排序 | 已接入 route-aware 算力运行路径 |

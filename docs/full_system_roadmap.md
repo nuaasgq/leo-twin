@@ -71,10 +71,10 @@ flowchart TD
 | 领域 | 已具备能力 | 主要文件 | 下一步缺口 |
 |---|---|---|---|
 | 任务治理 | 完整版任务 DAG、阶段边界和自动化执行规则 | `docs/codex_skill.md`, `src/leo_twin/sees/full_system_tasks.py` | 将 DAG 状态接入可视化任务面板 |
-| 轨道 | 确定性 Kepler 轨道状态生成，输出 `ORBIT_UPDATE` | `src/leo_twin/models/orbit/keplerian.py` | 星座批量配置、摄动画像、星历导入边界 |
-| 场景配置 | 多卫星、多用户、算力节点、业务流和任务的确定性生成与 JSON 加载 | `src/leo_twin/services/scenario_builder.py`, `configs/generated_full_system_demo.json` | 将 UI 初始化配置直接映射到生成式场景配置 |
+| 轨道 | 确定性 Kepler 轨道状态生成，支持可选 J2 secular drift 扩展点，输出 `ORBIT_UPDATE` | `src/leo_twin/models/orbit/keplerian.py` | 星座批量配置、星历导入边界、更完整摄动模型 |
+| 场景配置 | 多卫星、多用户、算力节点、业务流、任务和 `orbit_propagation_model` 轨道传播模型的确定性生成与 JSON 加载 | `src/leo_twin/services/scenario_builder.py`, `configs/generated_full_system_demo.json` | 将 UI 初始化配置直接映射到生成式场景配置 |
 | 网络接入 | 基于卫星位置的空地接入、空空链路和多跳路由输入生成 | `src/leo_twin/models/network/position_engine.py` | 增量拓扑缓存、链路更新阈值、动态失败重路由 |
-| 网络分层 | 应用层、传输层、网络层、数据链路层、物理层、信道层配置画像 | `src/leo_twin/models/network/stack.py` | 每层协议画像和事件输出的更细粒度映射 |
+| 网络分层 | 应用层、传输层、网络层、数据链路层、物理层、信道层配置画像；应用层和数据链路层已可影响流级路由 | `src/leo_twin/models/network/application.py`, `src/leo_twin/models/network/datalink.py`, `src/leo_twin/models/network/stack.py` | 每层协议画像和事件输出的更细粒度映射 |
 | 信道/物理 | 确定性链路预算、自由空间损耗、容量估算、按链路介质选择预算画像 | `src/leo_twin/models/network/channel.py` | 天气/遮挡画像、频率复用、波束切换 |
 | 路由 | 静态、最短路径、链路状态、距离向量画像的确定性路径选择，已可消费空空链路 | `src/leo_twin/models/network/routing.py` | 动态链路代价、失败重路由、策略对比指标 |
 | 传输 | TCP/UDP 流级传输画像，影响时延和有效容量 | `src/leo_twin/models/network/transport.py` | 拥塞窗口画像、丢包响应、业务流分类 |
