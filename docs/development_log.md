@@ -373,6 +373,44 @@ change.
   - Optimize or aggregate metrics/snapshot projection for scale mode, using the
     new profiling/backpressure fields as the acceptance signal.
 
+## 2026-07-05 - Morning Product Hardening Baseline
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: this commit (created before hash assignment)
+- Scope: establish Phase 0 baseline health before further product hardening.
+- Changed files/modules:
+  - `docs/morning_hardening_baseline.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/integration/test_live_runtime_streaming.py tests/integration/test_runtime_session_control.py tests/integration/test_orbit_batch_scale.py tests/unit/test_position_driven_network_engine.py tests/unit/test_metrics_module.py tests/unit/test_backend_derived_summary.py -q`
+    - Result: passed, 60 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test`
+    - Result: passed, 22 files / 84 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+  - Integration demo control-plane smoke:
+    - 72 satellites: initialize/start/tick/pause/stop/reset passed; explicit
+      tick 15.92 ms; state stream contained satellites and fidelity summary.
+    - 1200 satellites / 1200 compute nodes: initialize/start/tick/pause/stop/reset
+      passed; explicit full START-path tick 2169.18 ms; state stream contained
+      satellites and fidelity summary.
+    - Isolated 1200 explicit first tick: 1466.91 ms, 4073 events,
+      `bottleneck_component=metrics_aggregation`, `overloaded=true`.
+- Problems encountered:
+  - The smoke scripts required `PYTHONPATH=src;.` when run directly outside
+    pytest.
+  - The active local runtime config files remain modified and are intentionally
+    excluded from this baseline commit.
+- Known remaining issues:
+  - 1200-scale runtime is controllable, but the first tick still exceeds the
+    1000 ms budget. Profiling shows metrics aggregation and snapshot projection
+    dominate the remaining cost.
+- Recommended follow-up:
+  - Treat scale-mode metrics/snapshot aggregation as the next targeted hardening
+    phase before broader product UI or business-model work.
+
 ## 2026-07-04 - Scale Firebreak v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`
