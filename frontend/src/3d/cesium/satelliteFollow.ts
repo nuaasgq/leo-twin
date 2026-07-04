@@ -11,6 +11,13 @@ export interface SatelliteInsetPoint {
   y: number;
 }
 
+export interface SatelliteComputeSummary {
+  capacityLabel: string;
+  availableLabel: string;
+  utilizationLabel: string;
+  statusLabel: string;
+}
+
 export function selectedDisplaySatellite(
   satellites: readonly SatelliteState[],
   selectedSatelliteId: string
@@ -87,6 +94,47 @@ export function satelliteAltitudeKm(satellite: SatelliteState): number {
   return Math.max(0, (radius - EARTH_RADIUS_M) / 1000);
 }
 
+export function satelliteComputeSummary(
+  node:
+    | {
+        capacity: number;
+        available_capacity: number;
+        load_ratio?: number;
+        status: string;
+      }
+    | null
+    | undefined
+): SatelliteComputeSummary | null {
+  if (!node) {
+    return null;
+  }
+  const capacity = Math.max(0, finiteNumber(node.capacity));
+  const available = Math.max(0, Math.min(capacity, finiteNumber(node.available_capacity)));
+  const utilization =
+    node.load_ratio !== undefined
+      ? clamp(finiteNumber(node.load_ratio), 0, 1)
+      : capacity <= 0
+        ? 0
+        : clamp((capacity - available) / capacity, 0, 1);
+  return {
+    capacityLabel: `${formatNumber(capacity)} GFLOPS FP32`,
+    availableLabel: `${formatNumber(available)} GFLOPS`,
+    utilizationLabel: `${formatNumber(utilization * 100)}%`,
+    statusLabel: node.status
+  };
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
+}
+
+function finiteNumber(value: number): number {
+  return Number.isFinite(value) ? value : 0;
+}
+
+function formatNumber(value: number): string {
+  return value.toLocaleString("zh-CN", {
+    maximumFractionDigits: 1,
+    minimumFractionDigits: 0
+  });
 }

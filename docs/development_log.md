@@ -214,7 +214,7 @@ change.
 ## 2026-07-05 - Selected Satellite Coverage Beam v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`
-- Commit: this commit (created before hash assignment)
+- Commit: `67ddf82`
 - Scope: enable a bounded selected-satellite coverage beam in the Cesium view
   by rendering at most one coverage cone for the active selected satellite.
   This is a visual abstraction only and does not introduce RF propagation or
@@ -245,6 +245,39 @@ change.
 - Recommended follow-up:
   - Add backend-derived coverage assumptions and a selected-satellite resource
     inspector before implementing multi-beam cell overlays.
+
+## 2026-07-05 - Selected Satellite Resource Inset v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: this commit (created before hash assignment)
+- Scope: show selected satellite compute-node resource status in the satellite
+  follow inset, reflecting the product assumption that satellites are compute
+  nodes when matching compute-node ids are present in the snapshot.
+- Changed files/modules:
+  - `frontend/src/3d/cesium/CesiumGlobe.tsx`
+  - `frontend/src/3d/cesium/satelliteFollow.ts`
+  - `frontend/tests/satelliteVisuals.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- satelliteVisuals.test.ts`
+    - Result: passed, 22 files / 95 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The Cesium component file contains existing Chinese UI strings that appear
+    as mojibake in PowerShell output. The task limited text changes to the new
+    inset resource rows.
+  - The active local runtime config files remain modified and excluded.
+- Known remaining issues:
+  - The inset only shows resources for selected satellites whose ids match
+    compute-node ids in the snapshot.
+  - It still uses the legacy scalar FP32 GFLOPS capacity fields.
+- Recommended follow-up:
+  - Extend snapshot compute nodes with `ComputeResourceVector` dimensions and
+    show CPU/GPU/NPU/memory/storage resource lanes in the selected-satellite
+    inspector.
 
 ## 2026-07-04 - Development Log Requirement
 

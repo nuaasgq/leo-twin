@@ -49,6 +49,7 @@ import {
   SatelliteInsetPoint,
   appendSatelliteInsetTrail,
   satelliteAltitudeKm,
+  satelliteComputeSummary,
   selectedDisplaySatellite
 } from "./satelliteFollow";
 
@@ -89,6 +90,14 @@ export function CesiumGlobe({ snapshot, displaySimTime }: CesiumGlobeProps) {
     [selectableSatellites, selectedSatelliteId]
   );
   const activeSelectedSatelliteId = selectedSatellite?.satellite_id ?? "";
+  const selectedComputeNode = useMemo(
+    () =>
+      activeSelectedSatelliteId
+        ? snapshot.compute_nodes.find((node) => node.node_id === activeSelectedSatelliteId) ??
+          null
+        : null,
+    [activeSelectedSatelliteId, snapshot.compute_nodes]
+  );
 
   useEffect(() => {
     latestSnapshotRef.current = snapshot;
@@ -294,7 +303,11 @@ export function CesiumGlobe({ snapshot, displaySimTime }: CesiumGlobeProps) {
         </label>
       </div>
       {cameraMode === "SATELLITE" && selectedSatellite ? (
-        <SatelliteInset satellite={selectedSatellite} trail={selectedTrail} />
+        <SatelliteInset
+          satellite={selectedSatellite}
+          trail={selectedTrail}
+          computeNode={selectedComputeNode}
+        />
       ) : null}
       {renderError ? <div className="globe-render-error">{renderError}</div> : null}
     </div>
@@ -331,10 +344,17 @@ function focusSatelliteFollow(viewer: Viewer, satellite: SatelliteState): void {
 
 function SatelliteInset({
   satellite,
-  trail
+  trail,
+  computeNode
 }: {
   satellite: SatelliteState;
   trail: readonly SatelliteInsetPoint[];
+  computeNode?: {
+    capacity: number;
+    available_capacity: number;
+    load_ratio?: number;
+    status: string;
+  } | null;
 }) {
   const latestPoint = trail[trail.length - 1] ?? {
     satelliteId: satellite.satellite_id,
@@ -343,6 +363,7 @@ function SatelliteInset({
     y: 50
   };
   const trailPoints = trail.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`);
+  const computeSummary = satelliteComputeSummary(computeNode);
   return (
     <aside className="satellite-inset" aria-label="卫星局部放大">
       <div className="satellite-inset-header">
@@ -375,6 +396,16 @@ function SatelliteInset({
       <div className="satellite-inset-meta">
         <span>高度 {satelliteAltitudeKm(satellite).toFixed(0)} km</span>
         <span>t={satellite.sim_time.toFixed(1)}s</span>
+        {computeSummary ? (
+          <>
+            <span>算力 {computeSummary.capacityLabel}</span>
+            <span>可用 {computeSummary.availableLabel}</span>
+            <span>负载 {computeSummary.utilizationLabel}</span>
+            <span>状态 {computeSummary.statusLabel}</span>
+          </>
+        ) : (
+          <span>算力节点未同步</span>
+        )}
       </div>
     </aside>
   );

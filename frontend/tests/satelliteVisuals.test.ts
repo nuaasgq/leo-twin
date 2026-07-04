@@ -11,6 +11,7 @@ import {
 import { selectedCoverageBeamSatellites } from "../src/3d/beam_renderer/beamEntities";
 import {
   appendSatelliteInsetTrail,
+  satelliteComputeSummary,
   satelliteAltitudeKm,
   satelliteInsetPoint,
   selectedDisplaySatellite
@@ -98,6 +99,23 @@ describe("satellite follow inset", () => {
     expect(secondTrail[1].y).toBeCloseTo(74, 2);
     expect(switchedTrail).toHaveLength(1);
     expect(switchedTrail[0].satelliteId).toBe("sat-b");
+  });
+
+  it("summarizes selected satellite compute-node resources", () => {
+    expect(
+      satelliteComputeSummary({
+        capacity: 20,
+        available_capacity: 5,
+        load_ratio: 0.75,
+        status: "BUSY"
+      })
+    ).toEqual({
+      capacityLabel: "20 GFLOPS FP32",
+      availableLabel: "5 GFLOPS",
+      utilizationLabel: "75%",
+      statusLabel: "BUSY"
+    });
+    expect(satelliteComputeSummary(null)).toBeNull();
   });
 });
 
