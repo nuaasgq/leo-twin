@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "leo-twin"
 version = "0.0.0"
-description = "MVP-0 skeleton for a deterministic LEO satellite internet digital twin simulation framework."
+description = "Deterministic LEO satellite internet communication-computing digital twin simulation platform."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = []

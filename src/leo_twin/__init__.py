@@ -1,3 +1,3 @@
-"""Project package for the leo-twin MVP-0 skeleton."""
+"""LEO-Twin full-system digital twin simulation platform package."""
 
 __all__ = []

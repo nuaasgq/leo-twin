@@ -1,34 +1,44 @@
 # leo-twin
 
-`leo-twin` is a Low Earth Orbit satellite internet digital twin and communication-computing network simulation project.
+`leo-twin` is a deterministic Low Earth Orbit satellite internet communication-computing digital twin simulation platform.
 
 ## Current Phase
 
-The current phase is **MVP-0**.
+The current phase is **full-system engineering iteration**.
 
-MVP-0 only establishes a deterministic discrete-event simulation framework foundation. It does not implement simulation models, orbital mechanics, networking, routing, compute models, visualization, external simulator integration, AI/ML, multithreading, or distributed execution.
+MVP-0 remains the historical foundation: it established the deterministic discrete-event kernel and repository rules. The project now includes event-driven orbit, network, compute, metrics, control-plane, reviewer, and frontend subsystems. All domain interaction still flows through `SimEvent` and `SimulationKernel.schedule_event()`.
 
-## Repository Scope
+## Current Capabilities
 
-This repository currently contains:
+- Deterministic event kernel with strict event ordering.
+- Keplerian-style orbit runtime for configurable satellite state generation.
+- Position-driven network runtime with access, link, routing, transport, physical, and channel abstractions.
+- Route-aware compute runtime with scheduling policies and compute-to-network load feedback.
+- Metrics collection and full-system pipeline demos.
+- Config-driven runtime control with initialize/start/pause/stop/reset actions.
+- Chinese frontend surfaces for three-dimensional control and standalone data dashboard.
+- Reviewer and CI gate workflow for deterministic engineering checks.
 
-- Project structure for future core, model, service, adapter, schema, and example modules.
-- Documentation for architecture, data entities, development plan, and Codex development rules.
-- Placeholder configuration files for future deterministic scenarios.
-- Pytest setup and a structure-only test.
-
-## Development Rules
+## Engineering Rules
 
 - One issue = one feature = one branch.
 - All functionality must be test-driven.
 - All results must be deterministic.
 - All parameters must be configuration-driven.
-- Core logic must not use global mutable state.
-- Simulation time must be controlled only by the future `SimulationKernel`.
-- MVP-0 must not introduce high-fidelity models or external simulator dependencies.
+- Event Kernel remains the only simulation time authority.
+- Domain modules must not call each other directly.
+- Cross-domain communication must use events only.
 
 ## Run Tests
 
 ```powershell
-python -m pytest
+$env:PYTHONPATH='src;.'
+pytest
+```
+
+Frontend:
+
+```powershell
+pnpm --dir frontend test
+pnpm --dir frontend build
 ```
