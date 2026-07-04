@@ -507,13 +507,13 @@ export function renderCesiumSnapshot(
     selectedSatelliteId,
     limits.beamRenderLimit
   )) {
-    const beamId = `beam:${satellite.satellite_id}`;
-    beamEntityIds.add(beamId);
-    upsertBeamEntity(entities, caches.beams, satellite, {
+    for (const beamId of upsertBeamEntity(entities, caches.beams, satellite, {
       beamLengthMeters,
       beamRadiusMeters,
       enabled: satellite.status.toLowerCase() !== "offline"
-    });
+    })) {
+      beamEntityIds.add(beamId);
+    }
   }
   pruneBeamEntities(entities, caches.beams, beamEntityIds);
 

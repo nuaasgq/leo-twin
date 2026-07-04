@@ -1,12 +1,24 @@
-import { Color, ConstantPositionProperty, Entity, EntityCollection } from "cesium";
+import { Cartesian3, Color, ConstantPositionProperty, Entity, EntityCollection } from "cesium";
 
 import { SatelliteState } from "../../core/event_types";
-import { satelliteCartesian } from "../cesium/positions";
+import { satelliteCartesian, Vector3Tuple } from "../cesium/positions";
+
+const EARTH_RADIUS_M = 6_371_000;
+const DEFAULT_BEAM_CELL_COUNT = 7;
+const BEAM_CELL_SPACING_RATIO = 0.52;
+const BEAM_CELL_RADIUS_RATIO = 0.34;
 
 export interface BeamRenderOptions {
   beamLengthMeters: number;
   beamRadiusMeters: number;
   enabled: boolean;
+}
+
+export interface BeamCellFootprint {
+  id: string;
+  position: Vector3Tuple;
+  radiusMeters: number;
+  ring: number;
 }
 
 export function selectedCoverageBeamSatellites(
@@ -28,7 +40,7 @@ export function upsertBeamEntity(
   cache: Map<string, Entity>,
   satellite: SatelliteState,
   options: BeamRenderOptions
-): void {
+): readonly string[] {
   const id = `beam:${satellite.satellite_id}`;
   if (!options.enabled) {
     const existing = cache.get(id);
@@ -36,9 +48,10 @@ export function upsertBeamEntity(
       entities.remove(existing);
       cache.delete(id);
     }
-    return;
+    return [];
   }
 
+  const activeIds = [id];
   let entity = cache.get(id);
   if (!entity) {
     entity = entities.add({
@@ -57,6 +70,11 @@ export function upsertBeamEntity(
   }
 
   entity.position = new ConstantPositionProperty(satelliteCartesian(satellite));
+  for (const cell of buildBeamCellFootprints(satellite, options.beamRadiusMeters)) {
+    activeIds.push(cell.id);
+    upsertBeamCellEntity(entities, cache, satellite, cell);
+  }
+  return activeIds;
 }
 
 export function pruneBeamEntities(
@@ -70,4 +88,121 @@ export function pruneBeamEntities(
       cache.delete(id);
     }
   }
+}
+
+export function buildBeamCellFootprints(
+  satellite: SatelliteState,
+  beamRadiusMeters: number,
+  cellCount = DEFAULT_BEAM_CELL_COUNT
+): readonly BeamCellFootprint[] {
+  const count = Math.max(1, Math.min(DEFAULT_BEAM_CELL_COUNT, Math.round(cellCount)));
+  const radial = normalize(satellite.position);
+  const tangent = tangentBasis(radial, satellite.velocity);
+  const bitangent = normalize(cross(radial, tangent));
+  const center = scale(radial, EARTH_RADIUS_M + 6_000);
+  const spacing = Math.max(1, beamRadiusMeters * BEAM_CELL_SPACING_RATIO);
+  const radius = Math.max(1, beamRadiusMeters * BEAM_CELL_RADIUS_RATIO);
+  const cells: BeamCellFootprint[] = [
+    {
+      id: beamCellId(satellite.satellite_id, 0),
+      position: center,
+      radiusMeters: radius,
+      ring: 0
+    }
+  ];
+  for (let index = 1; index < count; index += 1) {
+    const angle = ((index - 1) / 6) * Math.PI * 2;
+    const localOffset = add(
+      scale(tangent, Math.cos(angle) * spacing),
+      scale(bitangent, Math.sin(angle) * spacing)
+    );
+    cells.push({
+      id: beamCellId(satellite.satellite_id, index),
+      position: add(center, localOffset),
+      radiusMeters: radius,
+      ring: 1
+    });
+  }
+  return cells;
+}
+
+function upsertBeamCellEntity(
+  entities: EntityCollection,
+  cache: Map<string, Entity>,
+  satellite: SatelliteState,
+  cell: BeamCellFootprint
+): void {
+  let entity = cache.get(cell.id);
+  if (!entity) {
+    entity = entities.add({
+      id: cell.id,
+      name: `${satellite.satellite_id} beam cell ${cell.ring}`,
+      ellipse: {
+        semiMajorAxis: cell.radiusMeters,
+        semiMinorAxis: cell.radiusMeters * 0.86,
+        height: 5_000,
+        material: Color.fromCssColorString("#44d7ff").withAlpha(
+          cell.ring === 0 ? 0.2 : 0.12
+        ),
+        outline: true,
+        outlineColor: Color.fromCssColorString("#dff9ff").withAlpha(0.48)
+      }
+    });
+    cache.set(cell.id, entity);
+  }
+  entity.position = new ConstantPositionProperty(
+    Cartesian3.fromElements(cell.position[0], cell.position[1], cell.position[2])
+  );
+}
+
+function beamCellId(satelliteId: string, index: number): string {
+  return `beam-cell:${satelliteId}:${index}`;
+}
+
+function tangentBasis(radial: Vector3Tuple, velocity: Vector3Tuple | undefined): Vector3Tuple {
+  if (velocity) {
+    const projection = dot(velocity, radial);
+    const tangent: Vector3Tuple = [
+      velocity[0] - projection * radial[0],
+      velocity[1] - projection * radial[1],
+      velocity[2] - projection * radial[2]
+    ];
+    if (vectorLength(tangent) > 0) {
+      return normalize(tangent);
+    }
+  }
+  const reference: Vector3Tuple = Math.abs(radial[2]) < 0.9 ? [0, 0, 1] : [0, 1, 0];
+  return normalize(cross(reference, radial));
+}
+
+function normalize(vector: Vector3Tuple): Vector3Tuple {
+  const length = vectorLength(vector);
+  if (length <= 0) {
+    return [1, 0, 0];
+  }
+  return [vector[0] / length, vector[1] / length, vector[2] / length];
+}
+
+function vectorLength(vector: Vector3Tuple): number {
+  return Math.hypot(vector[0], vector[1], vector[2]);
+}
+
+function scale(vector: Vector3Tuple, value: number): Vector3Tuple {
+  return [vector[0] * value, vector[1] * value, vector[2] * value];
+}
+
+function add(left: Vector3Tuple, right: Vector3Tuple): Vector3Tuple {
+  return [left[0] + right[0], left[1] + right[1], left[2] + right[2]];
+}
+
+function dot(left: Vector3Tuple, right: Vector3Tuple): number {
+  return left[0] * right[0] + left[1] * right[1] + left[2] * right[2];
+}
+
+function cross(left: Vector3Tuple, right: Vector3Tuple): Vector3Tuple {
+  return [
+    left[1] * right[2] - left[2] * right[1],
+    left[2] * right[0] - left[0] * right[2],
+    left[0] * right[1] - left[1] * right[0]
+  ];
 }

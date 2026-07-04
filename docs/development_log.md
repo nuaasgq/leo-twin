@@ -5,6 +5,39 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Selected Satellite Multi-Beam Footprint v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending in this commit
+- Scope: add a bounded honeycomb-style multi-beam footprint for the selected
+  satellite in the Cesium globe while keeping global large-scale rendering
+  limited to avoid 1200-node regressions.
+- Changed files/modules:
+  - `frontend/src/3d/beam_renderer/beamEntities.ts`
+  - `frontend/src/3d/cesium/CesiumGlobe.tsx`
+  - `frontend/tests/satelliteVisuals.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- satelliteVisuals.test.ts`
+    - Result: passed, 22 files / 99 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - One initial test used exact equality for a floating-point radius derived
+    from `160000 * 0.34`; it was corrected to a tolerance-based assertion.
+  - The active local runtime config files remain modified and excluded.
+- Known remaining issues:
+  - The honeycomb cells are deterministic visual footprints around the nadir
+    point. They are not antenna-pattern, RF propagation, or interference
+    models.
+  - Only the selected satellite renders detailed cells; large-scale global
+    multi-beam rendering remains intentionally bounded.
+- Recommended follow-up:
+  - Move beam count, footprint radius, and beam utilization coloring into
+    backend-derived satellite/coverage summary fields.
+
 ## 2026-07-05 - Flow-Level Network KPI Dynamics v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`

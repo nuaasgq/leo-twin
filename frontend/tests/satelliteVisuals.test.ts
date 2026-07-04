@@ -9,7 +9,10 @@ import {
   SATELLITE_DEPTH_TEST_DISABLE_DISTANCE,
   SATELLITE_ICON_DATA_URI
 } from "../src/3d/orbit_renderer/satelliteEntities";
-import { selectedCoverageBeamSatellites } from "../src/3d/beam_renderer/beamEntities";
+import {
+  buildBeamCellFootprints,
+  selectedCoverageBeamSatellites
+} from "../src/3d/beam_renderer/beamEntities";
 import {
   appendSatelliteInsetTrail,
   satelliteComputeSummary,
@@ -79,6 +82,26 @@ describe("selected satellite coverage beams", () => {
     expect(selectedCoverageBeamSatellites([satelliteA, satelliteB], "sat-b", 0)).toEqual([]);
     expect(selectedCoverageBeamSatellites([satelliteA, satelliteB], "", 1)).toEqual([]);
     expect(selectedCoverageBeamSatellites([satelliteA, satelliteB], "missing", 1)).toEqual([]);
+  });
+
+  it("builds bounded deterministic honeycomb beam footprints for the selected satellite", () => {
+    const cells = buildBeamCellFootprints(satelliteA, 160_000);
+
+    expect(cells.map((cell) => cell.id)).toEqual([
+      "beam-cell:sat-a:0",
+      "beam-cell:sat-a:1",
+      "beam-cell:sat-a:2",
+      "beam-cell:sat-a:3",
+      "beam-cell:sat-a:4",
+      "beam-cell:sat-a:5",
+      "beam-cell:sat-a:6"
+    ]);
+    expect(cells.map((cell) => cell.ring)).toEqual([0, 1, 1, 1, 1, 1, 1]);
+    expect(cells[0].position).toEqual([6_377_000, 0, 0]);
+    expect(cells[1].position).toEqual([6_377_000, 83_200, 0]);
+    expect(cells[1].radiusMeters).toBeCloseTo(54_400, 6);
+    expect(buildBeamCellFootprints(satelliteA, 160_000, 32)).toHaveLength(7);
+    expect(buildBeamCellFootprints(satelliteA, 160_000, 0)).toHaveLength(1);
   });
 });
 
