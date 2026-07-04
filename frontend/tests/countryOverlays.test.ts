@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   COUNTRY_OVERLAYS,
+  COUNTRY_OVERLAY_DEPTH_TEST_DISABLE_DISTANCE,
   NATURAL_EARTH_COUNTRY_SOURCE_URI,
   NaturalEarthCountryFeatureCollection,
   countryOverlayEntityIds,
@@ -41,6 +42,10 @@ describe("country overlays", () => {
       expect(border[0]).toBe(border[border.length - 2]);
       expect(border[1]).toBe(border[border.length - 1]);
     }
+  });
+
+  it("keeps country labels depth-tested so the opaque globe hides far-side labels", () => {
+    expect(COUNTRY_OVERLAY_DEPTH_TEST_DISABLE_DISTANCE).toBe(0);
   });
 });
 

@@ -2198,3 +2198,35 @@ change.
   - Add backend KPI provenance fields alongside `network_quality_*` so the
     resolver can show formula inputs and distinguish measured flow completion
     from route-capacity estimates.
+
+## 2026-07-05 - Opaque Globe Overlay v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: stop country labels from bypassing globe depth testing so far-side
+  labels no longer make the earth look transparent.
+- Changed files/modules:
+  - `frontend/src/3d/cesium/countryOverlays.ts`
+  - `frontend/tests/countryOverlays.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- countryOverlays.test.ts satelliteVisuals.test.ts`
+    - Result: passed, 22 files / 123 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The earth material was already opaque and satellite overlays were already
+    depth-tested. The visible far-side effect came from country labels using a
+    very large `disableDepthTestDistance`, so the bounded fix changes that
+    overlay policy to depth-tested labels.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - This does not upgrade earth imagery resolution or terrain. It only prevents
+    far-side country labels from drawing through the globe.
+- Recommended follow-up:
+  - Add an explicit globe visual configuration helper that locks imagery,
+    atmosphere, depth testing, and optional country overlay modes in one tested
+    place.

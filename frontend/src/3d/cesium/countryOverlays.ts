@@ -10,11 +10,11 @@ import {
   VerticalOrigin
 } from "cesium";
 
-const DEPTH_TEST_DISABLE_DISTANCE = 1_000_000_000_000;
 const COUNTRY_LABEL_HEIGHT_M = 18_000;
 
 export const NATURAL_EARTH_COUNTRY_SOURCE_URI =
   "/assets/natural-earth/ne_110m_admin_0_countries.geojson";
+export const COUNTRY_OVERLAY_DEPTH_TEST_DISABLE_DISTANCE = 0;
 
 export interface CountryOverlayDefinition {
   id: string;
@@ -225,7 +225,7 @@ function upsertCountryLabel(
       style: LabelStyle.FILL_AND_OUTLINE,
       verticalOrigin: VerticalOrigin.CENTER,
       pixelOffset: new Cartesian2(0, 0),
-      disableDepthTestDistance: DEPTH_TEST_DISABLE_DISTANCE,
+      disableDepthTestDistance: COUNTRY_OVERLAY_DEPTH_TEST_DISABLE_DISTANCE,
       distanceDisplayCondition: new DistanceDisplayCondition(0, 28_000_000)
     }
   });
