@@ -54,6 +54,9 @@ describe("buildChannelHealthSummary", () => {
       availableLinks: 3,
       averageCapacity: 53.333333333333336,
       weakestCapacity: 40,
+      averageRangeKm: 109923.90126666667,
+      freeSpacePathLossDb: 220.12029628377394,
+      estimatedSnrDb: -7.976103479918592,
       spectralEfficiency: 0.21333333333333335,
       healthScore: 69,
       rows: [
@@ -93,6 +96,9 @@ describe("buildChannelHealthSummary", () => {
       availableLinks: 0,
       averageCapacity: 0,
       weakestCapacity: 0,
+      averageRangeKm: 0,
+      freeSpacePathLossDb: 0,
+      estimatedSnrDb: 0,
       spectralEfficiency: 0,
       healthScore: 0,
       rows: []

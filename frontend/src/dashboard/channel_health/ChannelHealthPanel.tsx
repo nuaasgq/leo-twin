@@ -12,6 +12,9 @@ export interface ChannelHealthSummary {
   availableLinks: number;
   averageCapacity: number;
   weakestCapacity: number;
+  averageRangeKm: number;
+  freeSpacePathLossDb: number;
+  estimatedSnrDb: number;
   spectralEfficiency: number;
   healthScore: number;
   rows: readonly ChannelLinkRow[];
@@ -42,6 +45,9 @@ export const ChannelHealthPanel = memo(function ChannelHealthPanel({
         <KpiPanel label="雨强" value={`${summary.rainRate.toFixed(1)} mm/h`} />
         <KpiPanel label="估算雨衰" value={`${summary.estimatedRainFadeDb.toFixed(2)} dB`} />
         <KpiPanel label="平均容量" value={`${summary.averageCapacity.toFixed(1)} Mbps`} />
+        <KpiPanel label="估算距离" value={`${summary.averageRangeKm.toFixed(0)} km`} />
+        <KpiPanel label="自由空间损耗" value={`${summary.freeSpacePathLossDb.toFixed(1)} dB`} />
+        <KpiPanel label="估算SNR" value={`${summary.estimatedSnrDb.toFixed(1)} dB`} />
         <KpiPanel label="健康度" value={`${summary.healthScore}%`} />
       </div>
       <div className="channel-health-strip" aria-label="信道预算">
@@ -87,7 +93,19 @@ export function buildChannelHealthSummary(
     availableLinks.length === 0
       ? 0
       : Math.min(...availableLinks.map((link) => link.capacity));
+  const averageLatency =
+    availableLinks.length === 0
+      ? 0
+      : availableLinks.reduce((total, link) => total + link.latency, 0) /
+        availableLinks.length;
+  const averageRangeKm = averageLatency * 299_792.458;
   const spectralEfficiency = bandwidthMhz <= 0 ? 0 : averageCapacity / bandwidthMhz;
+  const freeSpacePathLossDb =
+    averageRangeKm <= 0
+      ? 0
+      : 92.45 + 20 * Math.log10(carrierFrequencyGhz) + 20 * Math.log10(averageRangeKm);
+  const estimatedSnrDb =
+    spectralEfficiency <= 0 ? 0 : 10 * Math.log10(Math.pow(2, spectralEfficiency) - 1);
 
   return {
     carrierFrequencyGhz,
@@ -97,6 +115,9 @@ export function buildChannelHealthSummary(
     availableLinks: availableLinks.length,
     averageCapacity,
     weakestCapacity,
+    averageRangeKm,
+    freeSpacePathLossDb,
+    estimatedSnrDb,
     spectralEfficiency,
     healthScore: channelHealthScore({
       hasLinks: availableLinks.length > 0,
