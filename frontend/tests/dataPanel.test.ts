@@ -7,7 +7,8 @@ import {
   buildDataPanelRuntimeProgress,
   buildDataPanelSummary,
   buildDataPanelTelemetry,
-  buildDataPanelTrafficDisplay
+  buildDataPanelTrafficDisplay,
+  resolveNetworkQualityKpis
 } from "../src/dashboard/data_panel/DataPanel";
 import { WorldSnapshot } from "../src/state/snapshot_engine";
 
@@ -353,6 +354,82 @@ describe("buildDataPanelNetworkKpiSource", () => {
     expect(buildDataPanelNetworkKpiSource(makeSnapshot())).toEqual({
       sourceLabel: "前端快照估算",
       modelNote: "未收到后端网络质量指标时，根据快照链路与路由做显示估算。"
+    });
+  });
+});
+
+describe("resolveNetworkQualityKpis", () => {
+  it("converts backend seconds and rates into dashboard display units", () => {
+    expect(
+      resolveNetworkQualityKpis(makeSnapshot(), {
+        network_quality_effective_throughput_mbps: 77,
+        network_quality_effective_latency_avg_s: 0.15,
+        network_quality_effective_loss_proxy_rate: 0.07,
+        network_quality_effective_delay_variation_proxy_s: 0.009
+      })
+    ).toEqual({
+      source: "后端指标摘要",
+      throughputMbps: 77,
+      latencyMs: 150,
+      lossPercent: 7,
+      jitterMs: 9
+    });
+  });
+
+  it("treats zero delivered throughput as incomplete and falls back to available capacity", () => {
+    expect(
+      resolveNetworkQualityKpis(makeSnapshot(), {
+        network_quality_estimated_delivered_throughput_mbps: 0,
+        network_quality_estimated_available_throughput_mbps: 88,
+        network_quality_offered_route_capacity_mbps: 100,
+        network_quality_route_latency_avg_s: 0.12,
+        network_quality_loss_proxy_rate: 0.05,
+        network_quality_delay_variation_proxy_s: 0.003
+      })
+    ).toMatchObject({
+      source: "后端指标摘要",
+      throughputMbps: 88,
+      latencyMs: 120,
+      lossPercent: 5,
+      jitterMs: 3
+    });
+  });
+
+  it("falls back to snapshot link and route estimates when backend metrics are absent", () => {
+    expect(
+      resolveNetworkQualityKpis(
+        makeSnapshot({
+          links: [
+            {
+              source_id: "sat-a",
+              target_id: "sat-b",
+              latency: 10,
+              capacity: 40,
+              availability: true
+            },
+            {
+              source_id: "sat-b",
+              target_id: "sat-c",
+              latency: 20,
+              capacity: 60,
+              availability: true
+            },
+            {
+              source_id: "sat-c",
+              target_id: "sat-d",
+              latency: 30,
+              capacity: 0,
+              availability: false
+            }
+          ]
+        })
+      )
+    ).toMatchObject({
+      source: "前端快照估算",
+      throughputMbps: 100,
+      latencyMs: 15,
+      lossPercent: 3.333,
+      jitterMs: 5
     });
   });
 });

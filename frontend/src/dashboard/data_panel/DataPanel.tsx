@@ -469,6 +469,14 @@ export interface DataPanelTelemetryPoint {
   computeUsedTflops: number;
 }
 
+export interface NetworkQualityKpis {
+  source: DataPanelNetworkKpiSource["sourceLabel"];
+  throughputMbps: number;
+  latencyMs: number;
+  lossPercent: number;
+  jitterMs: number;
+}
+
 export interface ComputeResourcePoolSlice {
   name: string;
   value: number;
@@ -514,65 +522,11 @@ export function buildDataPanelTelemetry(
   backendMetrics: RuntimeMetricsSummary | null | undefined = undefined,
   backendKpiTimeSeries: RuntimeKpiTimeSeriesV1 | null | undefined = undefined
 ): readonly DataPanelTelemetryPoint[] {
-  const activeLinks = snapshot.links.filter((link) => link.availability);
-  const linkLatencies = activeLinks.map((link) => link.latency);
-  const backendThroughput = metricNumber(
-    backendMetrics,
-    "network_quality_effective_throughput_mbps"
-  ) ?? metricNumber(
-    backendMetrics,
-    "network_quality_estimated_delivered_throughput_mbps"
-  );
-  const backendAvailableThroughput = metricNumber(
-    backendMetrics,
-    "network_quality_estimated_available_throughput_mbps"
-  );
-  const backendOfferedThroughput = metricNumber(
-    backendMetrics,
-    "network_quality_offered_route_capacity_mbps"
-  );
-  const backendLatencySeconds = metricNumber(
-    backendMetrics,
-    "network_quality_effective_latency_avg_s"
-  ) ?? metricNumber(
-    backendMetrics,
-    "network_quality_route_latency_avg_s"
-  );
-  const backendLossRate = metricNumber(
-    backendMetrics,
-    "network_quality_effective_loss_proxy_rate"
-  ) ?? metricNumber(
-    backendMetrics,
-    "network_quality_loss_proxy_rate"
-  );
-  const backendJitterSeconds = metricNumber(
-    backendMetrics,
-    "network_quality_effective_delay_variation_proxy_s"
-  ) ?? metricNumber(
-    backendMetrics,
-    "network_quality_delay_variation_proxy_s"
-  );
   const backendComputeUsedGflops = metricNumber(
     backendMetrics,
     "compute_resource_used_gflops_fp32"
   );
-  const snapshotThroughput =
-    snapshot.metrics_summary.network.throughput ||
-    activeLinks.reduce((total, link) => total + link.capacity, 0);
-  const baseThroughput =
-    positiveMetric(backendThroughput) ??
-    backendAvailableThroughput ??
-    backendOfferedThroughput ??
-    snapshotThroughput;
-  const baseLatency =
-    backendLatencySeconds !== undefined
-      ? backendLatencySeconds * 1000
-      : snapshot.metrics_summary.network.latency || average(linkLatencies);
-  const baseLossRate = backendLossRate ?? resolveTransportLossRate(snapshot);
-  const baseJitter =
-    backendJitterSeconds !== undefined
-      ? backendJitterSeconds * 1000
-      : standardDeviation(linkLatencies) || baseLatency * 0.08;
+  const baseKpis = resolveNetworkQualityKpis(snapshot, backendMetrics);
   const computePool = buildComputeResourcePool(snapshot);
   const computeUsedTflops =
     backendComputeUsedGflops !== undefined
@@ -633,13 +587,81 @@ export function buildDataPanelTelemetry(
     return {
       timeLabel: formatDurationCompact(point.simTime),
       simTime: point.simTime,
-      throughputMbps: roundMetric(baseThroughput * envelope),
-      latencyMs: roundMetric(baseLatency * (0.92 + envelope * 0.08)),
-      lossPercent: roundMetric(baseLossRate * 100 * (0.7 + envelope * 0.3)),
-      jitterMs: roundMetric(baseJitter * (0.75 + envelope * 0.25)),
+      throughputMbps: roundMetric(baseKpis.throughputMbps * envelope),
+      latencyMs: roundMetric(baseKpis.latencyMs * (0.92 + envelope * 0.08)),
+      lossPercent: roundMetric(baseKpis.lossPercent * (0.7 + envelope * 0.3)),
+      jitterMs: roundMetric(baseKpis.jitterMs * (0.75 + envelope * 0.25)),
       computeUsedTflops: roundMetric(computeUsedTflops * envelope)
     };
   });
+}
+
+export function resolveNetworkQualityKpis(
+  snapshot: WorldSnapshot,
+  backendMetrics: RuntimeMetricsSummary | null | undefined = undefined
+): NetworkQualityKpis {
+  const activeLinks = snapshot.links.filter((link) => link.availability);
+  const linkLatencies = activeLinks.map((link) => link.latency);
+  const backendThroughput = metricNumber(
+    backendMetrics,
+    "network_quality_effective_throughput_mbps"
+  ) ?? metricNumber(
+    backendMetrics,
+    "network_quality_estimated_delivered_throughput_mbps"
+  );
+  const backendAvailableThroughput = metricNumber(
+    backendMetrics,
+    "network_quality_estimated_available_throughput_mbps"
+  );
+  const backendOfferedThroughput = metricNumber(
+    backendMetrics,
+    "network_quality_offered_route_capacity_mbps"
+  );
+  const backendLatencySeconds = metricNumber(
+    backendMetrics,
+    "network_quality_effective_latency_avg_s"
+  ) ?? metricNumber(
+    backendMetrics,
+    "network_quality_route_latency_avg_s"
+  );
+  const backendLossRate = metricNumber(
+    backendMetrics,
+    "network_quality_effective_loss_proxy_rate"
+  ) ?? metricNumber(
+    backendMetrics,
+    "network_quality_loss_proxy_rate"
+  );
+  const backendJitterSeconds = metricNumber(
+    backendMetrics,
+    "network_quality_effective_delay_variation_proxy_s"
+  ) ?? metricNumber(
+    backendMetrics,
+    "network_quality_delay_variation_proxy_s"
+  );
+  const snapshotThroughput =
+    snapshot.metrics_summary.network.throughput ||
+    activeLinks.reduce((total, link) => total + link.capacity, 0);
+  const throughputMbps =
+    positiveMetric(backendThroughput) ??
+    backendAvailableThroughput ??
+    backendOfferedThroughput ??
+    snapshotThroughput;
+  const latencyMs =
+    backendLatencySeconds !== undefined
+      ? backendLatencySeconds * 1000
+      : snapshot.metrics_summary.network.latency || average(linkLatencies);
+  const lossPercent = (backendLossRate ?? resolveTransportLossRate(snapshot)) * 100;
+  const jitterMs =
+    backendJitterSeconds !== undefined
+      ? backendJitterSeconds * 1000
+      : standardDeviation(linkLatencies) || latencyMs * 0.08;
+  return {
+    source: buildDataPanelNetworkKpiSource(snapshot, backendMetrics).sourceLabel,
+    throughputMbps: roundMetric(throughputMbps),
+    latencyMs: roundMetric(latencyMs),
+    lossPercent: roundMetric(lossPercent),
+    jitterMs: roundMetric(jitterMs)
+  };
 }
 
 export function buildComputeResourcePool(
