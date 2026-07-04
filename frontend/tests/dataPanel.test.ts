@@ -343,6 +343,57 @@ describe("buildDataPanelTelemetry", () => {
     });
   });
 
+  it("prefers backend effective network quality fields when available", () => {
+    const telemetry = buildDataPanelTelemetry(
+      makeSnapshot({
+        last_sim_time: 10,
+        metrics_summary: {
+          network: {
+            latency: 0,
+            throughput: 0,
+            linkUtilization: 0,
+            series: []
+          },
+          compute: {
+            taskQueueLength: 0,
+            executionSuccessRate: 1,
+            runningTasks: 0,
+            finishedTasks: 0,
+            deadlineMissedTasks: 0
+          },
+          orbit: {
+            activeSatellites: 0,
+            coverageRatio: 0,
+            series: []
+          },
+          system: {
+            eventRate: 1,
+            systemLoad: 0,
+            eventSeries: [{ index: 0, simTime: 10 }]
+          }
+        }
+      }),
+      10,
+      {
+        network_quality_estimated_delivered_throughput_mbps: 42,
+        network_quality_effective_throughput_mbps: 77,
+        network_quality_route_latency_avg_s: 0.12,
+        network_quality_effective_latency_avg_s: 0.15,
+        network_quality_loss_proxy_rate: 0.01,
+        network_quality_effective_loss_proxy_rate: 0.07,
+        network_quality_delay_variation_proxy_s: 0.003,
+        network_quality_effective_delay_variation_proxy_s: 0.009
+      }
+    );
+
+    expect(telemetry[0]).toMatchObject({
+      throughputMbps: 77,
+      latencyMs: 150,
+      lossPercent: 7,
+      jitterMs: 9
+    });
+  });
+
   it("falls back to backend available throughput before offered capacity", () => {
     const telemetry = buildDataPanelTelemetry(
       makeSnapshot({

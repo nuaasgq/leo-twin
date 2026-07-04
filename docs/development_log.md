@@ -1595,3 +1595,41 @@ change.
 - Recommended follow-up:
   - Add a frontend-facing scale/fidelity summary so users can see when the
     backend automatically selected batch orbit updates and aggregated metrics.
+
+## 2026-07-05 - Network KPI Dynamics v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending
+- Scope: make dashboard network KPI curves consume backend-owned effective
+  flow-level metrics for throughput, latency, loss proxy, and jitter proxy.
+- Changed files/modules:
+  - `src/leo_twin/services/metrics/collector.py`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `tests/unit/test_metrics_module.py`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_metrics_module.py -q`
+    - Result: passed, 10 tests.
+  - `python -m pytest tests/unit/test_metrics_module.py tests/integration/test_full_system_demo.py::test_replay_test tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer -q`
+    - Result: passed, 12 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 22 files / 107 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The current model is still flow-level only, so loss and jitter must remain
+    documented deterministic proxies instead of packet-level measurements.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The KPI proxy can show pressure-driven loss/jitter when enough completed
+    flow evidence exists, but it is not a high-fidelity transport simulator.
+  - More realistic latency and throughput still require a later bounded traffic
+    demand and transport model enrichment task.
+- Recommended follow-up:
+  - Add backend-generated time-series KPI samples so the dashboard can plot
+    actual per-tick metric history instead of deriving chart points from the
+    latest summary.

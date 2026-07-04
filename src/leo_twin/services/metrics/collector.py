@@ -646,6 +646,7 @@ class MetricsCollector:
         available_routes: tuple[Route, ...],
     ) -> MetricSummary:
         route_latencies = tuple(route.latency for route in available_routes)
+        route_latency_avg = _average(route_latencies)
         delay_variation_proxy = max(
             _standard_deviation(route_latencies),
             self._route_latency_delta_average(),
@@ -667,16 +668,41 @@ class MetricsCollector:
             max(route_blocking_ratio, failed_flow_ratio, congestion_loss_proxy_rate)
         )
         offered_route_capacity = float(sum(route.capacity for route in available_routes))
-        completed_route_capacity = 0.0
-        for flow_id in sorted(self._completed_flows):
-            flow = self._completed_flows[flow_id]
-            route = self._routes.get(flow.route_id)
-            if route is not None and route.available and flow.status.upper() not in {
-                "FAILED",
-                "DROPPED",
-                "BLOCKED",
-            }:
-                completed_route_capacity += route.capacity
+        flow_quality = self._completed_flow_quality()
+        completed_route_capacity = flow_quality["capacity_sum"]
+        throughput_pressure_proxy = _clamp_probability(
+            completed_route_capacity / offered_route_capacity
+            if offered_route_capacity > 0.0
+            else 0.0
+        )
+        pressure_loss_proxy_rate = (
+            _congestion_loss_proxy_rate(throughput_pressure_proxy)
+            if flow_quality["successful_count"] > 1
+            else 0.0
+        )
+        effective_loss_proxy_rate = _clamp_probability(
+            max(loss_proxy_rate, pressure_loss_proxy_rate)
+        )
+        flow_latency_avg = _average(flow_quality["latencies"])
+        effective_latency_avg = flow_latency_avg or route_latency_avg
+        pressure_delay_variation_proxy = (
+            effective_latency_avg * max(0.0, throughput_pressure_proxy - 0.75) * 0.1
+            if flow_quality["successful_count"] > 1
+            else 0.0
+        )
+        effective_delay_variation_proxy = max(
+            delay_variation_proxy,
+            _standard_deviation(flow_quality["latencies"]),
+            pressure_delay_variation_proxy,
+        )
+        effective_available_throughput = offered_route_capacity * (
+            1.0 - effective_loss_proxy_rate
+        )
+        effective_throughput = (
+            completed_route_capacity
+            if completed_route_capacity > 0.0
+            else effective_available_throughput
+        )
 
         return {
             "network_quality_active_link_count": len(active_links),
@@ -688,7 +714,7 @@ class MetricsCollector:
             "network_quality_estimated_available_throughput_mbps": float(
                 offered_route_capacity * (1.0 - loss_proxy_rate)
             ),
-            "network_quality_route_latency_avg_s": _average(route_latencies),
+            "network_quality_route_latency_avg_s": route_latency_avg,
             "network_quality_route_latency_min_s": min(route_latencies, default=0.0),
             "network_quality_route_latency_max_s": max(route_latencies, default=0.0),
             "network_quality_delay_variation_proxy_s": delay_variation_proxy,
@@ -699,9 +725,79 @@ class MetricsCollector:
                 congestion_loss_proxy_rate
             ),
             "network_quality_loss_proxy_rate": float(loss_proxy_rate),
+            "network_quality_flow_success_count": int(
+                flow_quality["successful_count"]
+            ),
+            "network_quality_flow_failure_count": int(flow_quality["failed_count"]),
+            "network_quality_flow_success_ratio": float(
+                flow_quality["success_ratio"]
+            ),
+            "network_quality_flow_latency_avg_s": flow_latency_avg,
+            "network_quality_flow_latency_variation_proxy_s": _standard_deviation(
+                flow_quality["latencies"]
+            ),
+            "network_quality_flow_delivered_capacity_mbps": float(
+                completed_route_capacity
+            ),
+            "network_quality_throughput_pressure_proxy": float(
+                throughput_pressure_proxy
+            ),
+            "network_quality_pressure_loss_proxy_rate": float(
+                pressure_loss_proxy_rate
+            ),
+            "network_quality_pressure_delay_variation_proxy_s": float(
+                pressure_delay_variation_proxy
+            ),
+            "network_quality_effective_latency_avg_s": float(
+                effective_latency_avg
+            ),
+            "network_quality_effective_delay_variation_proxy_s": float(
+                effective_delay_variation_proxy
+            ),
+            "network_quality_effective_loss_proxy_rate": float(
+                effective_loss_proxy_rate
+            ),
+            "network_quality_effective_throughput_mbps": float(
+                effective_throughput
+            ),
+            "network_quality_effective_available_throughput_mbps": float(
+                effective_available_throughput
+            ),
             "network_quality_proxy_note": (
                 "Flow-level proxy only; no packet-level simulation is performed."
             ),
+        }
+
+    def _completed_flow_quality(self) -> dict[str, float | int | tuple[float, ...]]:
+        successful_count = 0
+        failed_count = 0
+        latencies: list[float] = []
+        capacity_sum = 0.0
+        for flow_id in sorted(self._completed_flows):
+            flow = self._completed_flows[flow_id]
+            route = self._routes.get(flow.route_id)
+            if _flow_is_failed(flow):
+                failed_count += 1
+                continue
+            successful_count += 1
+            if flow.latency is not None:
+                latencies.append(float(flow.latency))
+            elif route is not None and route.available:
+                latencies.append(float(route.latency))
+
+            if flow.capacity is not None:
+                capacity_sum += float(flow.capacity)
+            elif route is not None and route.available:
+                capacity_sum += float(route.capacity)
+
+        total = successful_count + failed_count
+        success_ratio = 0.0 if total == 0 else successful_count / total
+        return {
+            "successful_count": successful_count,
+            "failed_count": failed_count,
+            "success_ratio": float(success_ratio),
+            "latencies": tuple(latencies),
+            "capacity_sum": float(capacity_sum),
         }
 
     def _route_latency_delta_average(self) -> float:
@@ -971,6 +1067,10 @@ def _congestion_loss_proxy_rate(utilization: float) -> float:
     if utilization <= 0.8:
         return 0.0
     return _clamp_probability((utilization - 0.8) * 0.5)
+
+
+def _flow_is_failed(flow: FlowState) -> bool:
+    return flow.status.upper() in {"FAILED", "DROPPED", "BLOCKED"}
 
 
 def _clamp_probability(value: float) -> float:

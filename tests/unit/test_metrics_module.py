@@ -400,6 +400,93 @@ def test_metrics_collector_reports_dynamic_network_quality_proxy() -> None:
     )
 
 
+def test_metrics_collector_reports_effective_flow_level_network_quality() -> None:
+    collector = MetricsCollector()
+    for event in (
+        _event(
+            "route-a",
+            1.0,
+            EventType.ROUTE_UPDATE,
+            Route(
+                route_id="route-a",
+                flow_id="flow-a",
+                path=("user-a", "sat-a", "user-b"),
+                latency=0.02,
+                capacity=100.0,
+                available=True,
+            ),
+            "network",
+        ),
+        _event(
+            "route-b",
+            1.0,
+            EventType.ROUTE_UPDATE,
+            Route(
+                route_id="route-b",
+                flow_id="flow-b",
+                path=("user-c", "sat-b", "user-d"),
+                latency=0.04,
+                capacity=100.0,
+                available=True,
+            ),
+            "network",
+        ),
+        _event(
+            "flow-a",
+            2.0,
+            EventType.FLOW_COMPLETE,
+            FlowState(
+                flow_id="flow-a",
+                route_id="route-a",
+                source_id="user-a",
+                target_id="user-b",
+                status="complete",
+                latency=0.025,
+                capacity=90.0,
+            ),
+            "network",
+        ),
+        _event(
+            "flow-b",
+            2.5,
+            EventType.FLOW_COMPLETE,
+            FlowState(
+                flow_id="flow-b",
+                route_id="route-b",
+                source_id="user-c",
+                target_id="user-d",
+                status="complete",
+                latency=0.055,
+                capacity=90.0,
+            ),
+            "network",
+        ),
+    ):
+        collector.observe(event)
+
+    summary = collector.summary()
+
+    assert summary["network_quality_flow_success_count"] == 2
+    assert summary["network_quality_flow_failure_count"] == 0
+    assert summary["network_quality_flow_success_ratio"] == 1.0
+    assert summary["network_quality_flow_latency_avg_s"] == pytest.approx(0.04)
+    assert summary["network_quality_flow_latency_variation_proxy_s"] == pytest.approx(
+        0.015
+    )
+    assert summary["network_quality_flow_delivered_capacity_mbps"] == 180.0
+    assert summary["network_quality_throughput_pressure_proxy"] == pytest.approx(0.9)
+    assert summary["network_quality_pressure_loss_proxy_rate"] == pytest.approx(0.05)
+    assert summary["network_quality_effective_loss_proxy_rate"] == pytest.approx(0.05)
+    assert summary["network_quality_effective_latency_avg_s"] == pytest.approx(0.04)
+    assert summary["network_quality_effective_delay_variation_proxy_s"] == pytest.approx(
+        0.015
+    )
+    assert summary["network_quality_effective_available_throughput_mbps"] == pytest.approx(
+        190.0
+    )
+    assert summary["network_quality_effective_throughput_mbps"] == 180.0
+
+
 def test_metrics_collector_reports_compute_resource_pool_proxy() -> None:
     collector = MetricsCollector()
     for event in (

@@ -496,6 +496,9 @@ export function buildDataPanelTelemetry(
   const linkLatencies = activeLinks.map((link) => link.latency);
   const backendThroughput = metricNumber(
     backendMetrics,
+    "network_quality_effective_throughput_mbps"
+  ) ?? metricNumber(
+    backendMetrics,
     "network_quality_estimated_delivered_throughput_mbps"
   );
   const backendAvailableThroughput = metricNumber(
@@ -508,10 +511,22 @@ export function buildDataPanelTelemetry(
   );
   const backendLatencySeconds = metricNumber(
     backendMetrics,
+    "network_quality_effective_latency_avg_s"
+  ) ?? metricNumber(
+    backendMetrics,
     "network_quality_route_latency_avg_s"
   );
-  const backendLossRate = metricNumber(backendMetrics, "network_quality_loss_proxy_rate");
+  const backendLossRate = metricNumber(
+    backendMetrics,
+    "network_quality_effective_loss_proxy_rate"
+  ) ?? metricNumber(
+    backendMetrics,
+    "network_quality_loss_proxy_rate"
+  );
   const backendJitterSeconds = metricNumber(
+    backendMetrics,
+    "network_quality_effective_delay_variation_proxy_s"
+  ) ?? metricNumber(
     backendMetrics,
     "network_quality_delay_variation_proxy_s"
   );
