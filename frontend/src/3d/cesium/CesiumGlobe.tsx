@@ -19,7 +19,7 @@ import {
 import "cesium/Build/Cesium/Widgets/widgets.css";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { SatelliteState } from "../../core/event_types";
+import { ComputeResourceSummary, SatelliteState } from "../../core/event_types";
 import { WorldSnapshot } from "../../state/snapshot_engine";
 import {
   pruneBeamEntities,
@@ -103,6 +103,8 @@ export function CesiumGlobe({ snapshot, displaySimTime }: CesiumGlobeProps) {
         : null,
     [activeSelectedSatelliteId, snapshot.compute_nodes]
   );
+  const computeResourceSummary =
+    snapshot.scenario_config?.backend_summary?.compute_resource_summary ?? null;
 
   useEffect(() => {
     latestSnapshotRef.current = snapshot;
@@ -319,6 +321,7 @@ export function CesiumGlobe({ snapshot, displaySimTime }: CesiumGlobeProps) {
           satellite={selectedSatellite}
           trail={selectedTrail}
           computeNode={selectedComputeNode}
+          computeResourceSummary={computeResourceSummary}
         />
       ) : null}
       {renderError ? <div className="globe-render-error">{renderError}</div> : null}
@@ -380,7 +383,8 @@ function focusSatelliteFollow(viewer: Viewer, satellite: SatelliteState): void {
 function SatelliteInset({
   satellite,
   trail,
-  computeNode
+  computeNode,
+  computeResourceSummary
 }: {
   satellite: SatelliteState;
   trail: readonly SatelliteInsetPoint[];
@@ -390,6 +394,7 @@ function SatelliteInset({
     load_ratio?: number;
     status: string;
   } | null;
+  computeResourceSummary?: ComputeResourceSummary | null;
 }) {
   const latestPoint = trail[trail.length - 1] ?? {
     satelliteId: satellite.satellite_id,
@@ -398,7 +403,7 @@ function SatelliteInset({
     y: 50
   };
   const trailPoints = trail.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`);
-  const computeSummary = satelliteComputeSummary(computeNode);
+  const computeSummary = satelliteComputeSummary(computeNode, computeResourceSummary);
   return (
     <aside className="satellite-inset" aria-label="卫星局部放大">
       <div className="satellite-inset-header">
@@ -433,10 +438,17 @@ function SatelliteInset({
         <span>t={satellite.sim_time.toFixed(1)}s</span>
         {computeSummary ? (
           <>
+            <span>{computeSummary.resourceRoleLabel}</span>
+            <span>{computeSummary.resourceModelLabel}</span>
             <span>算力 {computeSummary.capacityLabel}</span>
             <span>可用 {computeSummary.availableLabel}</span>
             <span>负载 {computeSummary.utilizationLabel}</span>
             <span>状态 {computeSummary.statusLabel}</span>
+            <span>{computeSummary.cpuVectorLabel}</span>
+            <span>{computeSummary.gpuVectorLabel}</span>
+            <span>{computeSummary.npuVectorLabel}</span>
+            <span>{computeSummary.memoryStorageLabel}</span>
+            <span>{computeSummary.compatibilityNote}</span>
           </>
         ) : (
           <span>算力节点未同步</span>

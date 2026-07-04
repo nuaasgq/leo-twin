@@ -5,6 +5,40 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Selected Satellite Compute Detail v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending in this commit
+- Scope: make the satellite-follow inset show that selected satellites are
+  satellite-hosted compute nodes, combining live snapshot load with backend-
+  derived `ComputeResourceVector` summary fields for CPU, GPU, NPU, memory, and
+  storage explanations.
+- Changed files/modules:
+  - `frontend/src/3d/cesium/satelliteFollow.ts`
+  - `frontend/src/3d/cesium/CesiumGlobe.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/satelliteVisuals.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- satelliteVisuals.test.ts`
+    - Result: passed, 22 files / 103 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The satellite-follow inset previously only exposed legacy scalar capacity;
+    the new vector fields are additive and keep the existing live load labels
+    for backward compatibility.
+- Known remaining issues:
+  - Runtime `ComputeNodeState` still carries legacy scalar capacity. The
+    multidimensional vector is displayed from backend-derived scenario summary
+    until a later task adds explicit per-node vector state to snapshots.
+  - The active local runtime config files remain modified and excluded.
+- Recommended follow-up:
+  - Add backend/runtime snapshot support for per-satellite compute resource
+    vectors so live scheduling can consume CPU/GPU/NPU dimensions directly.
+
 ## 2026-07-05 - Backend Summary Integration Assertions v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`

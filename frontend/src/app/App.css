@@ -567,13 +567,20 @@ body {
   min-width: 0;
 }
 
+.satellite-inset-meta {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  row-gap: 6px;
+}
+
 .satellite-inset-header span,
 .satellite-inset-meta span {
   min-width: 0;
+  max-width: 100%;
   overflow: hidden;
   color: var(--app-muted);
   font-size: 11px;
-  line-height: 1;
+  line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

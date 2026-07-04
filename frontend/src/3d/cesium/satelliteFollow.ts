@@ -1,4 +1,4 @@
-import { SatelliteState } from "../../core/event_types";
+import { ComputeResourceSummary, SatelliteState } from "../../core/event_types";
 
 const EARTH_RADIUS_M = 6_371_000;
 
@@ -12,10 +12,17 @@ export interface SatelliteInsetPoint {
 }
 
 export interface SatelliteComputeSummary {
+  resourceModelLabel: string;
+  resourceRoleLabel: string;
   capacityLabel: string;
   availableLabel: string;
   utilizationLabel: string;
   statusLabel: string;
+  cpuVectorLabel: string;
+  gpuVectorLabel: string;
+  npuVectorLabel: string;
+  memoryStorageLabel: string;
+  compatibilityNote: string;
 }
 
 export function selectedDisplaySatellite(
@@ -103,13 +110,21 @@ export function satelliteComputeSummary(
         status: string;
       }
     | null
-    | undefined
+    | undefined,
+  resourceSummary?: ComputeResourceSummary | null
 ): SatelliteComputeSummary | null {
   if (!node) {
     return null;
   }
   const capacity = Math.max(0, finiteNumber(node.capacity));
   const available = Math.max(0, Math.min(capacity, finiteNumber(node.available_capacity)));
+  const cpuFp32 = finiteOptionalNumber(resourceSummary?.cpu_gflops_fp32_per_node, capacity);
+  const cpuFp64 = finiteOptionalNumber(resourceSummary?.cpu_gflops_fp64_per_node, 0);
+  const gpuFp32 = finiteOptionalNumber(resourceSummary?.gpu_tflops_fp32_per_node, 0);
+  const gpuFp16 = finiteOptionalNumber(resourceSummary?.gpu_tflops_fp16_per_node, 0);
+  const npuInt8 = finiteOptionalNumber(resourceSummary?.npu_tops_int8_per_node, 0);
+  const memoryGb = finiteOptionalNumber(resourceSummary?.memory_gb_per_node, 0);
+  const storageGb = finiteOptionalNumber(resourceSummary?.storage_gb_per_node, 0);
   const utilization =
     node.load_ratio !== undefined
       ? clamp(finiteNumber(node.load_ratio), 0, 1)
@@ -117,10 +132,24 @@ export function satelliteComputeSummary(
         ? 0
         : clamp((capacity - available) / capacity, 0, 1);
   return {
+    resourceModelLabel: resourceSummary?.resource_model ?? "LegacyScalarCapacity",
+    resourceRoleLabel: formatNodeRole(resourceSummary?.node_role),
     capacityLabel: `${formatNumber(capacity)} GFLOPS FP32`,
     availableLabel: `${formatNumber(available)} GFLOPS`,
     utilizationLabel: `${formatNumber(utilization * 100)}%`,
-    statusLabel: node.status
+    statusLabel: node.status,
+    cpuVectorLabel: `CPU FP32 ${formatNumber(cpuFp32)} GFLOPS / FP64 ${formatNumber(
+      cpuFp64
+    )} GFLOPS`,
+    gpuVectorLabel: `GPU FP32 ${formatNumber(gpuFp32)} TFLOPS / FP16 ${formatNumber(
+      gpuFp16
+    )} TFLOPS`,
+    npuVectorLabel: `NPU INT8 ${formatNumber(npuInt8)} TOPS`,
+    memoryStorageLabel: `内存 ${formatNumber(memoryGb)} GB / 存储 ${formatNumber(
+      storageGb
+    )} GB`,
+    compatibilityNote:
+      resourceSummary?.compatibility_note ?? "实时节点状态仍使用标量 capacity。"
   };
 }
 
@@ -132,9 +161,20 @@ function finiteNumber(value: number): number {
   return Number.isFinite(value) ? value : 0;
 }
 
+function finiteOptionalNumber(value: number | undefined, fallback: number): number {
+  return value !== undefined && Number.isFinite(value) ? value : fallback;
+}
+
 function formatNumber(value: number): string {
   return value.toLocaleString("zh-CN", {
     maximumFractionDigits: 1,
     minimumFractionDigits: 0
   });
+}
+
+function formatNodeRole(value: string | undefined): string {
+  if (value === "SATELLITE_HOSTED_COMPUTE") {
+    return "卫星载荷算力节点";
+  }
+  return value ?? "卫星算力节点";
 }

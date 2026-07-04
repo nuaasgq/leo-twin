@@ -21,7 +21,11 @@ import {
   satelliteInsetPoint,
   selectedDisplaySatellite
 } from "../src/3d/cesium/satelliteFollow";
-import { SatelliteState, ScenarioConfig } from "../src/core/event_types";
+import {
+  ComputeResourceSummary,
+  SatelliteState,
+  ScenarioConfig
+} from "../src/core/event_types";
 
 describe("satellite model entities", () => {
   it("builds a deterministic fallback multi-part satellite display model", () => {
@@ -191,12 +195,52 @@ describe("satellite follow inset", () => {
         status: "BUSY"
       })
     ).toEqual({
+      resourceModelLabel: "LegacyScalarCapacity",
+      resourceRoleLabel: "卫星算力节点",
       capacityLabel: "20 GFLOPS FP32",
       availableLabel: "5 GFLOPS",
       utilizationLabel: "75%",
-      statusLabel: "BUSY"
+      statusLabel: "BUSY",
+      cpuVectorLabel: "CPU FP32 20 GFLOPS / FP64 0 GFLOPS",
+      gpuVectorLabel: "GPU FP32 0 TFLOPS / FP16 0 TFLOPS",
+      npuVectorLabel: "NPU INT8 0 TOPS",
+      memoryStorageLabel: "内存 0 GB / 存储 0 GB",
+      compatibilityNote: "实时节点状态仍使用标量 capacity。"
     });
     expect(satelliteComputeSummary(null)).toBeNull();
+  });
+
+  it("uses backend compute resource vectors for selected satellite details", () => {
+    expect(
+      satelliteComputeSummary(
+        {
+          capacity: 40,
+          available_capacity: 10,
+          status: "BUSY"
+        },
+        computeResourceSummary({
+          cpu_gflops_fp32_per_node: 40,
+          cpu_gflops_fp64_per_node: 8,
+          gpu_tflops_fp32_per_node: 2.5,
+          gpu_tflops_fp16_per_node: 5,
+          npu_tops_int8_per_node: 12,
+          memory_gb_per_node: 32,
+          storage_gb_per_node: 512
+        })
+      )
+    ).toEqual({
+      resourceModelLabel: "ComputeResourceVector",
+      resourceRoleLabel: "卫星载荷算力节点",
+      capacityLabel: "40 GFLOPS FP32",
+      availableLabel: "10 GFLOPS",
+      utilizationLabel: "75%",
+      statusLabel: "BUSY",
+      cpuVectorLabel: "CPU FP32 40 GFLOPS / FP64 8 GFLOPS",
+      gpuVectorLabel: "GPU FP32 2.5 TFLOPS / FP16 5 TFLOPS",
+      npuVectorLabel: "NPU INT8 12 TOPS",
+      memoryStorageLabel: "内存 32 GB / 存储 512 GB",
+      compatibilityNote: "Legacy scalar capacity maps to cpu_gflops_fp32."
+    });
   });
 });
 
@@ -231,6 +275,34 @@ function coverageSummary(
     global_beam_render_limit: 1,
     model_note:
       "Selected-satellite beam cells are deterministic visual footprints; no RF propagation or antenna-pattern simulation is performed.",
+    ...overrides
+  };
+}
+
+function computeResourceSummary(
+  overrides: Partial<ComputeResourceSummary>
+): ComputeResourceSummary {
+  return {
+    resource_model: "ComputeResourceVector",
+    node_role: "SATELLITE_HOSTED_COMPUTE",
+    compute_node_count: 1,
+    legacy_capacity_per_node: 40,
+    cpu_gflops_fp32_per_node: 40,
+    cpu_gflops_fp64_per_node: 0,
+    gpu_tflops_fp32_per_node: 0,
+    gpu_tflops_fp16_per_node: 0,
+    npu_tops_int8_per_node: 0,
+    memory_gb_per_node: 0,
+    storage_gb_per_node: 0,
+    total_cpu_gflops_fp32: 40,
+    total_cpu_gflops_fp64: 0,
+    total_gpu_tflops_fp32: 0,
+    total_gpu_tflops_fp16: 0,
+    total_npu_tops_int8: 0,
+    total_memory_gb: 0,
+    total_storage_gb: 0,
+    capacity_unit: "GFLOPS FP32",
+    compatibility_note: "Legacy scalar capacity maps to cpu_gflops_fp32.",
     ...overrides
   };
 }
