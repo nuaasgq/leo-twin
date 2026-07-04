@@ -14,11 +14,13 @@ import {
 import { SnapshotEngine, useWorldSnapshot } from "../state/snapshot_engine";
 import { WorldStateReducer } from "../state/reducer";
 import { EventRouter } from "../stream/event_router";
-import { EventPlaybackLayer } from "../stream/playback_layer";
 import { EventThrottleLayer } from "../stream/throttle_layer";
 import { WebSocketStreamClient } from "../stream/websocket_client";
 import { loadRuntimeState, loadScenarioConfig } from "./api";
 import "./App.css";
+
+const RUNTIME_STATUS_POLL_MS = 250;
+const RUNTIME_PROGRESS_TICK_MS = 100;
 
 const CesiumGlobe = lazy(async () => {
   const module = await import("../3d/cesium/CesiumGlobe");
@@ -55,13 +57,12 @@ export function App() {
   const [scenarioConfig, setScenarioConfig] = useState<ScenarioConfig | null>(null);
   const [generatedConfig, setGeneratedConfig] = useState<GeneratedScenarioConfig | null>(null);
   const [runtimeStatus, setRuntimeStatus] = useState<RuntimeStatusPayload>(defaultRuntimeStatus());
-  const runtimeStatusRef = useRef(runtimeStatus);
+  const [runtimeProgressAnchor, setRuntimeProgressAnchor] = useState<RuntimeProgressAnchor>(() =>
+    defaultRuntimeProgressAnchor(defaultRuntimeStatus())
+  );
+  const [runtimeProgressNowMs, setRuntimeProgressNowMs] = useState(() => Date.now());
   const streamClientRef = useRef<WebSocketStreamClient | null>(null);
   const streamRouterRef = useRef<EventRouter | null>(null);
-
-  useEffect(() => {
-    runtimeStatusRef.current = runtimeStatus;
-  }, [runtimeStatus]);
 
   useEffect(() => {
     snapshotEngine.start();
@@ -105,7 +106,7 @@ export function App() {
   }, [snapshotEngine]);
 
   const startStreams = useCallback(
-    (scenario: ScenarioConfig | null, speedFactorOverride?: number) => {
+    (scenario: ScenarioConfig | null) => {
       closeStreams();
       resetWorld(scenario);
       const throttleLayer = new EventThrottleLayer(
@@ -119,18 +120,9 @@ export function App() {
         }
       );
       const router = new EventRouter(snapshotEngine, { throttleLayer });
-      const playbackLayer = new EventPlaybackLayer(
-        (events) => {
-          router.routeEvents(events);
-        },
-        {
-          speedFactor: speedFactorOverride ?? runtimeStatusRef.current.speed_factor
-        }
-      );
       const client = new WebSocketStreamClient(router, {
         batchSize: 500,
         flushIntervalMs: 40,
-        playbackLayer,
         stateStreamEnabled: false
       });
       streamRouterRef.current = router;
@@ -152,9 +144,7 @@ export function App() {
             streamClientRef.current === null
           ) {
             loadControlState()
-              .then(({ scenario, runtime }) =>
-                startStreams(scenario, message.status?.speed_factor ?? runtime.status.speed_factor)
-              )
+              .then(({ scenario }) => startStreams(scenario))
               .catch(() => setConnectionState("degraded"));
             return;
           }
@@ -162,12 +152,7 @@ export function App() {
             const action = message.status?.last_action;
             if (action === "START" || action === "RESUME") {
               loadControlState()
-                .then(({ scenario, runtime }) =>
-                  startStreams(
-                    scenario,
-                    message.status?.speed_factor ?? runtime.status.speed_factor
-                  )
-                )
+                .then(({ scenario }) => startStreams(scenario))
                 .catch(() => setConnectionState("degraded"));
               return;
             }
@@ -193,6 +178,55 @@ export function App() {
   }, [controlClient]);
 
   useEffect(() => {
+    setRuntimeProgressAnchor((previous) =>
+      nextRuntimeProgressAnchor(previous, snapshot.last_sim_time, runtimeStatus, Date.now())
+    );
+  }, [runtimeStatus, snapshot.last_sim_time]);
+
+  useEffect(() => {
+    if (!runtimeStatusIsProgressing(runtimeStatus)) {
+      setRuntimeProgressNowMs(Date.now());
+      return;
+    }
+    const timer = window.setInterval(() => {
+      setRuntimeProgressNowMs(Date.now());
+    }, RUNTIME_PROGRESS_TICK_MS);
+    return () => window.clearInterval(timer);
+  }, [runtimeStatus]);
+
+  useEffect(() => {
+    if (!runtimeStatusRequiresStreams(runtimeStatus)) {
+      return;
+    }
+    let closed = false;
+    const refreshStatus = async () => {
+      try {
+        const runtime = await loadRuntimeState();
+        if (closed) {
+          return;
+        }
+        setRuntimeStatus((previous) => ({
+          ...previous,
+          ...runtime.status
+        }));
+        if (runtime.generated_config !== undefined) {
+          setGeneratedConfig(runtime.generated_config);
+        }
+      } catch {
+        if (!closed) {
+          setConnectionState("degraded");
+        }
+      }
+    };
+    const timer = window.setInterval(refreshStatus, RUNTIME_STATUS_POLL_MS);
+    void refreshStatus();
+    return () => {
+      closed = true;
+      window.clearInterval(timer);
+    };
+  }, [runtimeStatus.status, runtimeStatus.lifecycle_state]);
+
+  useEffect(() => {
     let closed = false;
     loadControlState()
       .then(({ scenario, runtime }) => {
@@ -200,7 +234,7 @@ export function App() {
           return;
         }
         if (runtimeStatusRequiresStreams(runtime.status)) {
-          startStreams(scenario, runtime.status.speed_factor);
+          startStreams(scenario);
         } else {
           resetWorld(scenario);
         }
@@ -219,9 +253,14 @@ export function App() {
   }, [closeStreams, loadControlState, resetWorld, startStreams]);
 
   const scenarioControls = scenarioControlValues(scenarioConfig, snapshot.satellites.length);
+  const displaySimTime = Math.max(
+    snapshot.last_sim_time,
+    runtimeProgressSimTime(runtimeProgressAnchor, runtimeProgressNowMs)
+  );
+  const displayEventCount = runtimeStatus.processed_event_count ?? snapshot.event_count;
   const runtimeRibbon = buildRuntimeRibbonSummary({
-    simTime: snapshot.last_sim_time,
-    eventCount: snapshot.event_count,
+    simTime: displaySimTime,
+    eventCount: displayEventCount,
     runtimeStatus,
     scenario: scenarioControls
   });
@@ -362,9 +401,9 @@ export function App() {
                   scenario={scenarioControls}
                   runtime={runtimeStatus}
                   progress={{
-                    sim_time: snapshot.last_sim_time,
+                    sim_time: displaySimTime,
                     duration: runtimeStatus.duration,
-                    event_count: snapshot.event_count
+                    event_count: displayEventCount
                   }}
                   generatedConfig={generatedConfig}
                   onRuntimeControl={sendRuntimeControl}
@@ -401,6 +440,76 @@ export interface RuntimeRibbonSummary {
   userCountLabel: string;
 }
 
+export interface RuntimeProgressAnchor {
+  simTime: number;
+  wallTimeMs: number;
+  status: RuntimeStatusPayload["status"];
+  lifecycleState?: RuntimeStatusPayload["lifecycle_state"];
+  speedFactor: number;
+  duration: number;
+}
+
+export function defaultRuntimeProgressAnchor(
+  runtimeStatus: RuntimeStatusPayload,
+  nowMs = Date.now()
+): RuntimeProgressAnchor {
+  return {
+    simTime: runtimeStatus.current_sim_time ?? 0,
+    wallTimeMs: nowMs,
+    status: runtimeStatus.status,
+    lifecycleState: runtimeStatus.lifecycle_state,
+    speedFactor: runtimeStatus.speed_factor,
+    duration: runtimeStatus.duration
+  };
+}
+
+export function nextRuntimeProgressAnchor(
+  previous: RuntimeProgressAnchor,
+  snapshotSimTime: number,
+  runtimeStatus: RuntimeStatusPayload,
+  nowMs: number
+): RuntimeProgressAnchor {
+  const observedSimTime = Math.max(
+    0,
+    snapshotSimTime,
+    finiteNumberOrZero(runtimeStatus.current_sim_time)
+  );
+  const projectedSimTime = runtimeProgressSimTime(previous, nowMs);
+  const statusChanged =
+    previous.status !== runtimeStatus.status ||
+    previous.lifecycleState !== runtimeStatus.lifecycle_state ||
+    previous.speedFactor !== runtimeStatus.speed_factor ||
+    previous.duration !== runtimeStatus.duration;
+
+  if (
+    runtimeStatusIsProgressing(runtimeStatus) &&
+    !statusChanged &&
+    observedSimTime <= projectedSimTime
+  ) {
+    return previous;
+  }
+
+  return {
+    simTime: Math.min(Math.max(observedSimTime, projectedSimTime), runtimeStatus.duration),
+    wallTimeMs: nowMs,
+    status: runtimeStatus.status,
+    lifecycleState: runtimeStatus.lifecycle_state,
+    speedFactor: runtimeStatus.speed_factor,
+    duration: runtimeStatus.duration
+  };
+}
+
+export function runtimeProgressSimTime(
+  anchor: RuntimeProgressAnchor,
+  nowMs: number
+): number {
+  if (!runtimeProgressAnchorIsRunning(anchor)) {
+    return Math.min(anchor.simTime, anchor.duration);
+  }
+  const elapsedSeconds = Math.max(0, (nowMs - anchor.wallTimeMs) / 1000);
+  return Math.min(anchor.duration, anchor.simTime + elapsedSeconds * anchor.speedFactor);
+}
+
 export function buildRuntimeRibbonSummary({
   simTime,
   eventCount,
@@ -429,7 +538,7 @@ export function buildRuntimeRibbonSummary({
 export function runtimeStatusRequiresStreams(
   status: RuntimeStatusPayload | undefined
 ): boolean {
-  return status?.status === "RUNNING";
+  return status !== undefined && runtimeStatusIsProgressing(status);
 }
 
 export function scenarioWithRuntimeConfig(
@@ -622,6 +731,28 @@ function connectionStateLabel(state: "connecting" | "live" | "degraded"): string
     return "已连接";
   }
   return "连接异常";
+}
+
+function runtimeStatusIsProgressing(status: RuntimeStatusPayload): boolean {
+  return (
+    status.status === "RUNNING" &&
+    status.lifecycle_state !== "COMPLETED" &&
+    status.lifecycle_state !== "ERROR" &&
+    status.lifecycle_state !== "STOPPED"
+  );
+}
+
+function runtimeProgressAnchorIsRunning(anchor: RuntimeProgressAnchor): boolean {
+  return (
+    anchor.status === "RUNNING" &&
+    anchor.lifecycleState !== "COMPLETED" &&
+    anchor.lifecycleState !== "ERROR" &&
+    anchor.lifecycleState !== "STOPPED"
+  );
+}
+
+function finiteNumberOrZero(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
 function runtimeStatusLabel(status: RuntimeStatusPayload["status"]): string {

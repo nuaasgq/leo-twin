@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildRuntimeRibbonSummary,
+  defaultRuntimeProgressAnchor,
+  nextRuntimeProgressAnchor,
+  runtimeProgressSimTime,
   runtimeStatusRequiresStreams,
   scenarioWithRuntimeConfig,
   standaloneDashboardHref,
@@ -124,6 +127,44 @@ describe("runtimeStatusRequiresStreams", () => {
     expect(runtimeStatusRequiresStreams({ ...baseStatus, status: "PAUSED" })).toBe(false);
     expect(runtimeStatusRequiresStreams({ ...baseStatus, status: "STOPPED" })).toBe(false);
     expect(runtimeStatusRequiresStreams(undefined)).toBe(false);
+  });
+});
+
+describe("runtime progress clock", () => {
+  const runningStatus: RuntimeStatusPayload = {
+    status: "RUNNING",
+    lifecycle_state: "RUNNING",
+    mode: "REAL_TIME",
+    speed_factor: 1,
+    seed: 20260703,
+    duration: 600,
+    config_version: 1,
+    last_action: "START",
+    initialized: true,
+    current_sim_time: 2
+  };
+
+  it("advances display progress between sparse event batches", () => {
+    const anchor = defaultRuntimeProgressAnchor(runningStatus, 1_000);
+
+    expect(runtimeProgressSimTime(anchor, 3_500)).toBe(4.5);
+  });
+
+  it("does not reset the display clock when polled status has the same sim time", () => {
+    const first = defaultRuntimeProgressAnchor(runningStatus, 1_000);
+    const next = nextRuntimeProgressAnchor(first, 2, runningStatus, 3_000);
+
+    expect(next).toBe(first);
+    expect(runtimeProgressSimTime(next, 3_000)).toBe(4);
+  });
+
+  it("stops requesting streams when the lifecycle is completed", () => {
+    expect(
+      runtimeStatusRequiresStreams({
+        ...runningStatus,
+        lifecycle_state: "COMPLETED"
+      })
+    ).toBe(false);
   });
 });
 

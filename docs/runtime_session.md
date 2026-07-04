@@ -174,6 +174,11 @@ WebSocket streams keep the same paths. They read cursor batches periodically
 while the session is `RUNNING`, send new event or snapshot items when present,
 and close after the session leaves `RUNNING` and no retained items remain.
 
+The demo live adapter uses wall-clock runtime mode for frontend operation. It
+does not use deterministic replay to precompute future batches before the UI
+has consumed them. Deterministic replay remains available in the reusable
+runtime layer for tests and explicit batch/replay workflows.
+
 ## Replay And Determinism
 
 Replay determinism is preserved by these rules:

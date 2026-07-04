@@ -267,8 +267,8 @@ class DemoControlPlane:
             scenario_config=sees_config.scenario,
             kernel_factory=kernel_factory,  # type: ignore[arg-type]
             snapshot_interval_events=config.state_snapshot_interval_events,
-            deterministic_replay=True,
-            control_step_seconds=max(1.0, float(config.orbit_tick_seconds)),
+            deterministic_replay=False,
+            control_step_seconds=1.0,
         )
         session.initialize()
         self._session = session

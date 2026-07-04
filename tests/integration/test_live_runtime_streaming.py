@@ -93,6 +93,26 @@ def test_http_cursor_batches_return_incremental_events(tmp_path: Path) -> None:
     assert second["items"] != first["items"]
 
 
+def test_demo_live_session_does_not_precompute_full_orbit_step(tmp_path: Path) -> None:
+    control_plane = DemoControlPlane.from_result(
+        run_integration_demo(_slow_orbit_demo_config()),
+        config_output_path=tmp_path / "sees_control.yaml",
+        generated_config_output_path=tmp_path / "generated_full_system_demo.json",
+    )
+    control_plane.handle_raw_message(
+        json.dumps({"type": "RUNTIME_CONTROL", "action": "INITIALIZE"})
+    )
+
+    start_ack = control_plane.handle_raw_message(
+        json.dumps({"type": "RUNTIME_CONTROL", "action": "START"})
+    )
+
+    assert start_ack["ok"] is True
+    assert start_ack["status"]["deterministic_replay"] is False
+    assert start_ack["status"]["current_sim_time"] < 60
+    assert start_ack["status"]["queued_event_count"] > 0
+
+
 def test_live_stream_reads_do_not_run_until_idle(tmp_path: Path) -> None:
     control_plane = _initialized_running_control_plane(tmp_path)
 
@@ -156,6 +176,30 @@ def _small_demo_config() -> DemoConfig:
         network_slot_seconds=30,
         flow_interval_seconds=30,
         task_interval_seconds=30,
+        cell_count=10,
+        state_snapshot_interval_events=20,
+        metric_sample_interval=10,
+        websocket_events="/stream/events",
+        websocket_state="/stream/state",
+        metrics_snapshot="/metrics/snapshot",
+        scenario_config="/scenario/config",
+        backend_host="127.0.0.1",
+        backend_port=8765,
+    )
+
+
+def _slow_orbit_demo_config() -> DemoConfig:
+    return DemoConfig(
+        seed=1234,
+        satellite_count=8,
+        ground_user_count=20,
+        ground_station_count=1,
+        compute_node_count=2,
+        duration_seconds=180,
+        orbit_tick_seconds=60,
+        network_slot_seconds=60,
+        flow_interval_seconds=60,
+        task_interval_seconds=60,
         cell_count=10,
         state_snapshot_interval_events=20,
         metric_sample_interval=10,

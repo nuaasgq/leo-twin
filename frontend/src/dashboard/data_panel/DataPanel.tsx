@@ -56,7 +56,7 @@ export const DataPanel = memo(function DataPanel({
     ? `${generatedConfig.satellite_count} 星 / ${generatedConfig.user_count} 用户`
     : "等待初始化";
   const runtimeProgress = buildDataPanelRuntimeProgress(
-    summary.simTime,
+    Math.max(summary.simTime, runtimeStatus.current_sim_time ?? 0),
     runtimeStatus.duration
   );
 

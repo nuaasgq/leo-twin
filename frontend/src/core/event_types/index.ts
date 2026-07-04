@@ -180,9 +180,18 @@ export type Vector3 = readonly [number, number, number];
 export type GeoPosition = readonly [number, number, number?];
 export type RuntimeMode = "REAL_TIME" | "ACCELERATED" | "PAUSED";
 export type RuntimeStatus = "STOPPED" | "RUNNING" | "PAUSED";
+export type RuntimeLifecycleState =
+  | "UNINITIALIZED"
+  | "INITIALIZED"
+  | "RUNNING"
+  | "PAUSED"
+  | "STOPPED"
+  | "COMPLETED"
+  | "ERROR";
 
 export interface RuntimeStatusPayload {
   status: RuntimeStatus;
+  lifecycle_state?: RuntimeLifecycleState;
   mode: RuntimeMode;
   speed_factor: number;
   seed: number;
@@ -190,6 +199,12 @@ export interface RuntimeStatusPayload {
   config_version: number;
   last_action: string;
   initialized?: boolean;
+  current_sim_time?: number;
+  wall_clock_start_time?: number | null;
+  processed_event_count?: number;
+  queued_event_count?: number | null;
+  deterministic_replay?: boolean;
+  last_error?: string | null;
 }
 
 export interface GeneratedScenarioConfig {
