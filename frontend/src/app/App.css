@@ -1911,6 +1911,42 @@ body {
   font-size: 10px;
 }
 
+.scale-preset-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: -2px 0 10px;
+  border: 1px solid #263847;
+  border-radius: 6px;
+  padding: 8px;
+  background: #0b131a;
+}
+
+.scale-preset-summary-cell {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.scale-preset-summary-cell span,
+.scale-preset-summary-cell strong {
+  min-width: 0;
+  overflow: hidden;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scale-preset-summary-cell span {
+  color: var(--app-muted);
+  font-size: 10px;
+}
+
+.scale-preset-summary-cell strong {
+  color: #d8f1f5;
+  font-size: 11px;
+}
+
 .emphasized-control {
   border: 1px solid #273741;
   border-radius: 6px;

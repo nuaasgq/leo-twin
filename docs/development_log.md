@@ -3320,3 +3320,42 @@ change.
 - Recommended follow-up:
   - Add a small native launcher or tray-style command surface if the project
     needs a non-terminal end-user startup experience.
+
+## 2026-07-05 - Scale Preset Backend Explanation v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a compact scale-preset explanation strip to the control panel.
+  Before initialization it shows deterministic preset expectations; after a
+  matching backend-generated config is available it prefers backend-derived
+  constellation and fidelity summaries.
+- Changed files/modules:
+  - `frontend/src/config_panel/ConfigPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/configPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- configPanel.test.ts`
+    - Result: passed, 23 files / 159 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+  - `git diff --check`
+    - Result: passed with warnings only for the existing uncommitted
+      runtime/generated config files.
+- Problems encountered:
+  - The first test run expected the full backend model note, but the existing
+    summary formatter intentionally truncates long assumptions for compact UI
+    cells. The test was updated to assert the existing truncation behavior.
+  - The minimal generated-config test fixture needed an `unknown` cast before
+    `GeneratedScenarioConfig` because it intentionally included only fields
+    relevant to this helper.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The pre-initialization preset text is a frontend explanation. Backend output
+    remains the source of truth once initialization returns a generated config.
+- Recommended follow-up:
+  - Add preset-specific traffic and workload-smoothing explanations once those
+    backend summaries are stable across all scale presets.

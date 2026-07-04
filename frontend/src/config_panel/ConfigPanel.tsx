@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import {
+  FidelitySummary,
   GeneratedScenarioConfig,
   RuntimeMode,
   RuntimeStatusPayload
@@ -127,6 +128,8 @@ export interface ScenarioScalePreset {
   id: string;
   label: string;
   detail: string;
+  expectedTopology: string;
+  expectedFidelity: string;
   satelliteCount: number;
   userCount: number;
   computeNodeCount: number;
@@ -137,6 +140,8 @@ export const SCENARIO_SCALE_PRESETS: readonly ScenarioScalePreset[] = [
     id: "demo-72",
     label: "72 星",
     detail: "详细演示",
+    expectedTopology: "小规模详细演示，初始化后由后端确认轨道面与相位。",
+    expectedFidelity: "预计保留逐星轨道更新和详细链路展示。",
     satelliteCount: 72,
     userCount: 1000,
     computeNodeCount: 72
@@ -145,6 +150,8 @@ export const SCENARIO_SCALE_PRESETS: readonly ScenarioScalePreset[] = [
     id: "medium-300",
     label: "300 星",
     detail: "中等规模",
+    expectedTopology: "中等规模星座，初始化后由后端自动分配轨道面。",
+    expectedFidelity: "预计启用批量轨道更新，保持交互响应。",
     satelliteCount: 300,
     userCount: 1000,
     computeNodeCount: 300
@@ -153,11 +160,76 @@ export const SCENARIO_SCALE_PRESETS: readonly ScenarioScalePreset[] = [
     id: "scale-1200",
     label: "1200 星",
     detail: "规模稳定",
+    expectedTopology: "大规模稳定性场景，卫星同时作为算力节点。",
+    expectedFidelity: "预计启用批量轨道、聚合指标和有界星间链路候选。",
     satelliteCount: 1200,
     userCount: 100,
     computeNodeCount: 1200
   }
 ];
+
+export interface ScenarioScaleSelection {
+  satelliteCount: number;
+  userCount: number;
+  computeNodes: number;
+}
+
+export function selectedScenarioScalePreset(
+  selection: ScenarioScaleSelection
+): ScenarioScalePreset | null {
+  return (
+    SCENARIO_SCALE_PRESETS.find(
+      (preset) =>
+        preset.satelliteCount === selection.satelliteCount &&
+        preset.userCount === selection.userCount &&
+        preset.computeNodeCount === selection.computeNodes
+    ) ?? null
+  );
+}
+
+export function scalePresetSummaryItems(
+  selection: ScenarioScaleSelection,
+  generatedConfig: GeneratedScenarioConfig | null | undefined
+): readonly ConfigSummaryItem[] {
+  const preset = selectedScenarioScalePreset(selection);
+  if (preset === null) {
+    return [
+      { label: "规模选择", value: "自定义规模" },
+      { label: "初始化后", value: "后端将重新推导轨道面、算力节点和保真策略。" }
+    ];
+  }
+
+  if (generatedConfigMatchesSelection(selection, generatedConfig)) {
+    const backendSummary = generatedConfig?.backend_summary;
+    const constellation = backendSummary?.derived_constellation_summary;
+    const fidelity = backendSummary?.fidelity_summary;
+    return [
+      {
+        label: "后端轨道",
+        value:
+          constellation !== undefined
+            ? `${formatInteger(constellation.plane_count)} 面 / 每面 ${formatInteger(
+                constellation.satellites_per_plane
+              )} 星`
+            : "后端未返回轨道摘要"
+      },
+      {
+        label: "后端保真",
+        value: formatFidelityModeSummary(fidelity)
+      },
+      {
+        label: "后端说明",
+        value: formatModelAssumption(constellation?.model_note)
+      }
+    ];
+  }
+
+  return [
+    { label: "规模预设", value: `${preset.label} · ${preset.detail}` },
+    { label: "预计拓扑", value: preset.expectedTopology },
+    { label: "预计保真", value: preset.expectedFidelity }
+  ];
+}
 
 export function configPanelSectionTitles(): readonly string[] {
   return Object.values(CONFIG_PANEL_SECTION_LABELS);
@@ -411,6 +483,13 @@ export function ConfigPanel({
     links: showLinks,
     metrics: showMetrics
   });
+  const scaleSelection = {
+    satelliteCount,
+    userCount,
+    computeNodes
+  };
+  const activeScalePreset = selectedScenarioScalePreset(scaleSelection);
+  const scalePresetSummary = scalePresetSummaryItems(scaleSelection, generatedConfig);
   const handleSatelliteCountChange = (value: number) => {
     const nextCount = boundedInteger(value, 12, 10000);
     setSatelliteCount(nextCount);
@@ -682,16 +761,20 @@ export function ConfigPanel({
           <button
             type="button"
             key={preset.id}
-            className={
-              satelliteCount === preset.satelliteCount && userCount === preset.userCount
-                ? "active"
-                : ""
-            }
+            className={activeScalePreset?.id === preset.id ? "active" : ""}
             onClick={() => handleScalePreset(preset)}
           >
             <span>{preset.label}</span>
             <small>{preset.detail}</small>
           </button>
+        ))}
+      </div>
+      <div className="scale-preset-summary" aria-label="规模预设说明">
+        {scalePresetSummary.map((item) => (
+          <div className="scale-preset-summary-cell" key={item.label}>
+            <span>{item.label}</span>
+            <strong>{item.value}</strong>
+          </div>
         ))}
       </div>
 
@@ -1844,6 +1927,19 @@ export function networkControlPayload(network: NetworkControlValues): Record<str
   };
 }
 
+function generatedConfigMatchesSelection(
+  selection: ScenarioScaleSelection,
+  generatedConfig: GeneratedScenarioConfig | null | undefined
+): generatedConfig is GeneratedScenarioConfig {
+  return (
+    generatedConfig !== null &&
+    generatedConfig !== undefined &&
+    generatedConfig.satellite_count === selection.satelliteCount &&
+    generatedConfig.user_count === selection.userCount &&
+    generatedConfig.compute_node_count === selection.computeNodes
+  );
+}
+
 function boundedInteger(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) {
     return min;
@@ -2035,6 +2131,17 @@ function formatModelAssumption(value: string | undefined): string {
     return "后端确定性简化模型";
   }
   return value.length > 42 ? `${value.slice(0, 42)}...` : value;
+}
+
+function formatFidelityModeSummary(summary: FidelitySummary | undefined): string {
+  if (summary === undefined) {
+    return "后端未返回保真摘要";
+  }
+  return [
+    `轨道 ${summary.orbit_update_mode}`,
+    `指标 ${summary.metrics_mode}`,
+    `链路 ${summary.space_link_mode}`
+  ].join(" / ");
 }
 
 function formatRoutingWeights(config: GeneratedScenarioConfig): string {

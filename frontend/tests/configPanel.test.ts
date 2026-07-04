@@ -12,6 +12,8 @@ import {
   orbitControlPayload,
   pauseResumeControl,
   runtimeProgressSummary,
+  scalePresetSummaryItems,
+  selectedScenarioScalePreset,
   startControlDisabled,
   trafficControlPayload,
   visualizationLayerEffectItems,
@@ -106,10 +108,12 @@ describe("ConfigPanel priority controls", () => {
     );
 
     expect(markup).toContain('aria-label="场景规模预设"');
+    expect(markup).toContain('aria-label="规模预设说明"');
     expect(markup).toContain("72 星");
     expect(markup).toContain("300 星");
     expect(markup).toContain("1200 星");
     expect(markup).toContain("规模稳定");
+    expect(markup).toContain("自定义规模");
   });
 
   it("renders compute resource vector inputs for satellite-hosted nodes", () => {
@@ -244,6 +248,94 @@ describe("ConfigPanel priority controls", () => {
 
     expect(markup).toContain('role="alert"');
     expect(markup).toContain("实时交互演示安全上限");
+  });
+});
+
+describe("scale preset summaries", () => {
+  it("requires satellite, user, and compute counts to match the preset", () => {
+    expect(
+      selectedScenarioScalePreset({
+        satelliteCount: 72,
+        userCount: 1000,
+        computeNodes: 72
+      })?.id
+    ).toBe("demo-72");
+
+    expect(
+      selectedScenarioScalePreset({
+        satelliteCount: 72,
+        userCount: 1000,
+        computeNodes: 8
+      })
+    ).toBeNull();
+  });
+
+  it("shows preset expectations before backend initialization", () => {
+    expect(
+      scalePresetSummaryItems(
+        {
+          satelliteCount: 1200,
+          userCount: 100,
+          computeNodes: 1200
+        },
+        null
+      )
+    ).toEqual([
+      { label: "规模预设", value: "1200 星 · 规模稳定" },
+      { label: "预计拓扑", value: "大规模稳定性场景，卫星同时作为算力节点。" },
+      {
+        label: "预计保真",
+        value: "预计启用批量轨道、聚合指标和有界星间链路候选。"
+      }
+    ]);
+  });
+
+  it("prefers backend-derived topology and fidelity after initialization", () => {
+    const generatedConfig = {
+      satellite_count: 1200,
+      user_count: 100,
+      compute_node_count: 1200,
+      backend_summary: {
+        derived_constellation_summary: {
+          profile: "STARLINK_SHELL_1_LIKE",
+          satellite_count: 1200,
+          plane_count: 24,
+          satellites_per_plane: 50,
+          total_slots: 1200,
+          plane_count_explicit: false,
+          model_note: "Approximate Starlink-like deterministic allocation."
+        },
+        fidelity_summary: {
+          orbit_update_mode: "BATCH",
+          metrics_mode: "AGGREGATED",
+          space_link_mode: "BOUNDED_CANDIDATE",
+          detailed_space_link_enabled: false,
+          space_link_candidate_policy: "SAME_PLANE_NEAREST_NEIGHBORS",
+          max_space_link_candidates_per_satellite: 4,
+          batch_space_link_update_limit: 5000,
+          scale_limit_reason: "satellite_count>=1000",
+          current_scale_mode: "LARGE_SCALE_AGGREGATED",
+          fidelity_warnings: [],
+          satellite_count: 1200,
+          user_count: 100
+        }
+      }
+    } as unknown as GeneratedScenarioConfig;
+
+    expect(
+      scalePresetSummaryItems(
+        {
+          satelliteCount: 1200,
+          userCount: 100,
+          computeNodes: 1200
+        },
+        generatedConfig
+      )
+    ).toEqual([
+      { label: "后端轨道", value: "24 面 / 每面 50 星" },
+      { label: "后端保真", value: "轨道 BATCH / 指标 AGGREGATED / 链路 BOUNDED_CANDIDATE" },
+      { label: "后端说明", value: "Approximate Starlink-like deterministic al..." }
+    ]);
   });
 });
 
