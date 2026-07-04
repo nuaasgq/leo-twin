@@ -1,0 +1,298 @@
+# 10-Hour Product Enrichment Plan
+
+Date: 2026-07-05
+Branch: `feature/T163-frontend-dashboard-compute-v2`
+
+This plan turns the next product-improvement discussion into a bounded,
+testable, multi-agent development flow. It preserves the frozen deterministic
+event kernel and keeps all realism improvements inside documented contracts,
+configuration, event-driven models, and frontend observation surfaces.
+
+## Operating Rules
+
+- Do not modify Event Kernel ordering or time authority.
+- Do not introduce STK, EXATA, AFSIM, DDS, packet-level simulation, or hidden
+  external simulator dependencies.
+- Use Starlink-like language only for approximate constellation profiles, not
+  exact proprietary Starlink fidelity.
+- Use EXATA-like language only for layered flow-level abstractions and KPI
+  semantics, not for integration with EXATA.
+- Keep backend as source of truth for product semantics.
+- Update `docs/development_log.md`, commit, and push every completed task.
+- Do not commit local runtime/generated config state.
+
+## Checked Public Asset Sources
+
+- NASA 3D Resources provides free downloadable mission-related 3D assets and
+  points users to NASA media usage guidance:
+  <https://science.nasa.gov/3d-resources/>
+- NASA 3D Resources GitHub mirrors many assets and describes them as free and
+  without copyright, still subject to NASA usage guidance:
+  <https://github.com/nasa/NASA-3D-Resources>
+- NASA Images and Media Usage Guidelines are the required licensing reference
+  before bundling NASA assets:
+  <https://www.nasa.gov/nasa-brand-center/images-and-media/>
+- Natural Earth provides public-domain raster/vector map data suitable for
+  country borders and Earth texture overlays:
+  <https://www.naturalearthdata.com/>
+- CesiumJS remains a future option for high-end 3D geospatial visualization, but
+  adopting it would be a separate architecture task:
+  <https://cesium.com/platform/cesiumjs/>
+
+## 100 Product Improvement Suggestions
+
+### A. Frontend-Backend Consistency
+
+1. Make runtime status, WorldSnapshot, and dashboard cards consume one backend
+   product summary object.
+2. Add a schema version field to every frontend-consumed runtime payload.
+3. Add frontend fallback text for missing optional backend fields.
+4. Display backend-derived constellation profile names instead of local labels.
+5. Show backend-selected fidelity mode in both control console and dashboard.
+6. Keep simulation time, wall-clock run state, and cursor state synchronized
+   across routes.
+7. Persist the active session id when switching between console and dashboard.
+8. Show stream cursor lag and last update age in developer diagnostics.
+9. Add explicit status text for starting, running, paused, stopping, stopped,
+   and reset states.
+10. Add contract tests that compare backend JSON fields with frontend TypeScript
+    types.
+
+### B. Frontend Control Experience
+
+11. Move simulation mode controls above progress as the primary control group.
+12. Replace the unattractive mode frame with a compact segmented control.
+13. Add numeric inputs next to sliders for satellite count, users, duration,
+    and update rate.
+14. Add min, max, and step labels for every numeric control.
+15. Disable only controls that truly cannot be changed during a running session.
+16. Add immediate validation messages for unsafe large-scale configurations.
+17. Add a one-click 72, 300, and 1200 satellite scenario selector.
+18. Add a small session health strip with backend, frontend stream, and cursor
+    states.
+19. Keep reset behavior visually atomic: progress, time, selected satellite,
+    and charts reset together.
+20. Add keyboard-free accessible controls for camera follow, pause, stop, and
+    reset.
+
+### C. 3D Earth Visual Quality
+
+21. Replace transparent Earth material with opaque day-side surface rendering.
+22. Add country boundary overlays using public-domain map data.
+23. Add optional coastline and major land/water contrast layers.
+24. Add low-cost night-side shading without exposing opposite-side satellites.
+25. Add atmosphere rim and cloud layer as separate toggles.
+26. Keep Earth texture loading deterministic with bundled or pinned assets.
+27. Add level-of-detail controls for large satellite counts.
+28. Add clear visual separation between Earth surface, orbit lines, and beams.
+29. Add camera clipping and depth settings so far-side objects do not bleed
+    through the globe.
+30. Add screenshot-based visual regression checks for globe opacity and country
+    visibility.
+
+### D. Satellite Assets and Camera Interaction
+
+31. Replace circular satellite markers with a reusable glTF satellite model.
+32. Use instancing or shared geometry so 1200 satellites remain responsive.
+33. Add a simplified fallback icon for scale mode and low-end devices.
+34. Add satellite orientation based on velocity tangent and nadir direction.
+35. Add hover highlight and selected-state outline.
+36. Add satellite follow camera mode.
+37. Add a local picture-in-picture window for the followed satellite.
+38. Add zoomed local orbit trail around the selected satellite.
+39. Show satellite id, plane, slot, altitude, velocity, and resource status in
+    the selection panel.
+40. Add deterministic model asset metadata and licensing documentation.
+
+### E. Coverage and Multi-Beam Visualization
+
+41. Show a satellite coverage footprint on Earth as a projected cone/ellipse.
+42. Add coverage radius derived from altitude and configured elevation angle.
+43. Add beam count as a backend-provided satellite payload field.
+44. Render honeycomb-like multi-beam cells for the selected satellite.
+45. Add beam color by utilization, interference risk, or load.
+46. Add beam labels only when zoomed enough to avoid clutter.
+47. Add ground user points that light up when covered.
+48. Add handover preview for users moving between beams.
+49. Add coverage confidence/fidelity notice for simplified geometry.
+50. Add tests that verify coverage fields are deterministic for a fixed seed.
+
+### F. Satellite Resource Situation Awareness
+
+51. Treat each satellite as a compute node by default unless configuration says
+    otherwise.
+52. Add per-satellite resource vectors: CPU FP32/FP64, GPU FP32/FP16, NPU INT8,
+    memory, storage, power, thermal headroom.
+53. Add resource utilization bars in the selected satellite panel.
+54. Add task queue depth and estimated wait time per satellite.
+55. Add current ingress, egress, and compute-service flow counts.
+56. Add resource pool pie charts for constellation-wide compute consumption.
+57. Add resource heat coloring for satellites in the 3D view.
+58. Add overloaded, degraded, and idle resource states.
+59. Add a deterministic service-time estimator per resource bottleneck.
+60. Add compute-node summary in WorldSnapshot and runtime status.
+
+### G. Network and KPI Model Fidelity
+
+61. Replace always-zero loss and jitter with deterministic flow-level models.
+62. Compute propagation delay from current geometric distance.
+63. Add queueing delay based on link utilization and configured capacity.
+64. Add jitter as deterministic variation of recent delay deltas.
+65. Add loss as deterministic function of congestion and link quality class.
+66. Add throughput as delivered data over simulated time, not static display
+    decoration.
+67. Add link utilization, bottleneck link, and route hop count metrics.
+68. Add transport profile labels such as UDP-like, TCP-like, and best-effort at
+    flow level only.
+69. Add route recomputation cadence for moving topology.
+70. Add network KPI acceptance fixtures for 72, 300, and 1200 satellite modes.
+
+### H. Orbit and Constellation Design
+
+71. Add approximate Starlink-shell-like presets with documented assumptions.
+72. Add multi-shell profile summaries for altitude, inclination, planes, and
+    slots.
+73. Add plane/slot visualization and color grouping.
+74. Add derived orbital period display so users understand LEO motion speed.
+75. Add speed scaling controls that separate real orbital period from demo
+    playback speed.
+76. Add deterministic phase offsets per plane.
+77. Add altitude and inclination validation ranges.
+78. Add shell-level satellite counts and totals in the frontend summary.
+79. Add selected-satellite ground track.
+80. Add orbit fidelity notice clarifying circular/periodic approximation.
+
+### I. Data Dashboard and Analytics
+
+81. Replace static KPI cards with time-series backed by stream cursor data.
+82. Add synchronized charts for average throughput, latency, packet-loss proxy,
+    jitter, and compute consumption.
+83. Add chart reset behavior tied to backend RESET.
+84. Add per-mode KPI explanations sourced from backend assumptions.
+85. Add scenario comparison table for 72, 300, and 1200 satellite runs.
+86. Add stream freshness and sample count indicators.
+87. Add top congested links and top overloaded satellites tables.
+88. Add selectable aggregation windows.
+89. Add CSV/JSON export for visible KPI data.
+90. Add dashboard tests that verify charts update over simulated time.
+
+### J. Engineering, Validation, and Productization
+
+91. Add a typed frontend API client for all runtime endpoints.
+92. Add a backend contract fixture used by frontend tests.
+93. Add Playwright smoke tests for console, dashboard, reset, and route switch.
+94. Add deterministic screenshot checks for globe, satellite icon, and fidelity
+    notice.
+95. Add startup health checks to the Windows launcher UI/script output.
+96. Add performance budget tests for 1200 satellites.
+97. Add a docs page explaining model assumptions and forbidden external tools.
+98. Add a product demo script with exact commands and expected screens.
+99. Add release checklist entries for logs, tests, commits, and GitHub push.
+100. Add issue-sized roadmap labels so future work stays reviewable.
+
+## 10-Hour Task Flow
+
+The first 10 hours should not attempt full realism. It should produce a visible
+product-quality jump and a better semantic foundation.
+
+### Hour 0.0-0.5: Baseline and Work Split
+
+- Confirm branch, dirty files, latest remote, and service start status.
+- Keep local runtime configs excluded.
+- Spawn parallel read-only agents for frontend/3D, backend semantics, and
+  validation flow.
+- Deliverable: this plan and a development-log entry.
+
+### Hour 0.5-2.0: Contract and Synchronization Slice
+
+- Backend agent: identify canonical runtime summary fields for session, scale
+  fidelity, constellation, KPI assumptions, and compute resources.
+- Frontend agent: identify components consuming runtime status and snapshot.
+- Main implementation target: ensure route switching does not restart the active
+  session and RESET clears frontend progress/charts.
+- Validation: targeted backend runtime tests plus frontend tests.
+
+### Hour 2.0-3.5: 3D Earth and Satellite Asset Slice
+
+- Replace transparent Earth rendering with opaque material and depth-safe
+  settings.
+- Add country/coastline overlay path using pinned public-domain map assets or a
+  generated lightweight bundled texture.
+- Add satellite model/asset pipeline with license notes; use instancing or a
+  scale-mode fallback.
+- Validation: frontend test/build and screenshot/manual browser check.
+
+### Hour 3.5-5.0: Coverage and Multi-Beam Slice
+
+- Add backend-derived selected-satellite coverage summary.
+- Add selected-satellite coverage footprint and honeycomb beam visualization.
+- Keep global 1200-node view aggregated; show detailed beams only for selected
+  satellite.
+- Validation: deterministic coverage tests and frontend render tests.
+
+### Hour 5.0-6.5: Satellite Resource Inspector Slice
+
+- Make satellite-as-compute-node semantics explicit.
+- Add per-satellite resource vector summary to snapshot/status.
+- Add selected satellite resource panel and constellation resource pool chart.
+- Validation: compute model unit tests and dashboard tests.
+
+### Hour 6.5-8.0: Network KPI Semantics Slice
+
+- Add deterministic flow-level latency, throughput, jitter, and loss proxy
+  calculations.
+- Use geometric distance, utilization, route hops, and congestion class.
+- Preserve no-packet-level rule.
+- Validation: deterministic network KPI fixtures.
+
+### Hour 8.0-9.0: Dashboard Dynamics Slice
+
+- Bind dashboard charts to stream cursor samples.
+- Add reset synchronization for chart buffers.
+- Add top congested links and overloaded satellites using backend fields.
+- Validation: frontend tests and build.
+
+### Hour 9.0-10.0: Acceptance, Logs, Commits, Pushes
+
+- Run targeted backend tests.
+- Run frontend tests/build.
+- Update development log for each delivered slice.
+- Commit and push each completed issue-sized task.
+- Report changed files, tests, limitations, and recommended next task.
+
+## Parallel Agent Roles
+
+- Agent Frontend/3D: owns visual components, 3D scene, asset rendering, and
+  route-level state synchronization.
+- Agent Backend Semantics: owns runtime summaries, model assumptions, KPI
+  summaries, and snapshot fields.
+- Agent Network Metrics: owns flow-level delay, throughput, jitter, loss proxy,
+  and deterministic tests.
+- Agent Compute: owns resource vector semantics and service-time estimation.
+- Agent Validation: owns tests, development log checks, commit scope review, and
+  launcher smoke checks.
+
+## Commit Slices
+
+1. `docs(plan): add ten hour product enrichment plan`
+2. `fix(frontend): preserve runtime session across dashboard routes`
+3. `feat(visual): improve globe opacity and satellite asset rendering`
+4. `feat(visual): show selected satellite coverage and beams`
+5. `feat(compute): expose satellite resource inspector summary`
+6. `feat(network): add deterministic flow-level KPI dynamics`
+7. `feat(dashboard): bind KPI charts to runtime streams`
+8. `test(product): add visual and runtime acceptance checks`
+
+## Acceptance Gates
+
+- Existing backend runtime/session tests pass.
+- Existing frontend tests and build pass.
+- 72-satellite demo remains visually detailed.
+- 1200-satellite mode remains responsive and transparent about fidelity.
+- Switching between console and dashboard does not restart the session.
+- RESET clears backend session state, frontend progress, selected satellite, and
+  dashboard chart buffers.
+- Earth is opaque enough that far-side satellites are not visible through it.
+- Selected satellite can show coverage, beam cells, and resource usage.
+- Loss, jitter, latency, throughput, and compute utilization change over
+  simulated time using deterministic flow-level abstractions.
