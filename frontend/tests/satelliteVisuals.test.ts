@@ -4,6 +4,7 @@ import {
   buildSatelliteModelParts,
   satelliteModelEntityIds
 } from "../src/3d/orbit_renderer/satelliteModelEntities";
+import { SATELLITE_ICON_DATA_URI } from "../src/3d/orbit_renderer/satelliteEntities";
 import {
   appendSatelliteInsetTrail,
   satelliteAltitudeKm,
@@ -32,6 +33,19 @@ describe("satellite model entities", () => {
   });
 });
 
+describe("satellite overview icon", () => {
+  it("uses a recognizable satellite glyph instead of only a point marker", () => {
+    const decodedIcon = decodeURIComponent(
+      SATELLITE_ICON_DATA_URI.replace("data:image/svg+xml;charset=UTF-8,", "")
+    );
+
+    expect(decodedIcon).toContain("linearGradient");
+    expect(decodedIcon).toContain("panel");
+    expect(decodedIcon).toContain("antenna");
+    expect(decodedIcon.match(/<rect/g)?.length ?? 0).toBeGreaterThanOrEqual(4);
+  });
+});
+
 describe("satellite follow inset", () => {
   it("selects a stable target satellite and projects it into the inset", () => {
     expect(selectedDisplaySatellite([satelliteA, satelliteB], "sat-b")).toBe(satelliteB);
@@ -40,12 +54,12 @@ describe("satellite follow inset", () => {
     );
     expect(selectedDisplaySatellite([], "sat-a")).toBeNull();
 
-    expect(satelliteInsetPoint(satelliteA)).toEqual({
-      satelliteId: "sat-a",
-      simTime: 1,
-      x: 50,
-      y: 50
-    });
+    const insetPoint = satelliteInsetPoint(satelliteA);
+
+    expect(insetPoint.satelliteId).toBe("sat-a");
+    expect(insetPoint.simTime).toBe(1);
+    expect(insetPoint.x).toBeCloseTo(84, 3);
+    expect(insetPoint.y).toBeCloseTo(50.026, 3);
     expect(satelliteAltitudeKm(satelliteA)).toBeCloseTo(629, 6);
   });
 
@@ -61,7 +75,8 @@ describe("satellite follow inset", () => {
 
     expect(duplicateTrail).toBe(firstTrail);
     expect(secondTrail).toHaveLength(2);
-    expect(secondTrail[1].x).toBe(71);
+    expect(secondTrail[1].x).toBeCloseTo(49.927, 3);
+    expect(secondTrail[1].y).toBeCloseTo(74, 2);
     expect(switchedTrail).toHaveLength(1);
     expect(switchedTrail[0].satelliteId).toBe("sat-b");
   });

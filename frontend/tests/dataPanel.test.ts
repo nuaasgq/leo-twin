@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  buildDataPanelDisplaySummary,
   buildDataPanelRuntimeProgress,
   buildDataPanelSummary
 } from "../src/dashboard/data_panel/DataPanel";
@@ -161,6 +162,36 @@ describe("buildDataPanelSummary", () => {
     expect(summary.averageRouteHops).toBe(0);
     expect(summary.maxRouteHops).toBe(0);
     expect(summary.couplingHealth).toBe(0);
+  });
+});
+
+describe("buildDataPanelDisplaySummary", () => {
+  it("uses the shared frontend display clock for dashboard-console sync", () => {
+    const summary = buildDataPanelSummary(
+      makeSnapshot({
+        last_sim_time: 12,
+        event_count: 30
+      })
+    );
+
+    expect(buildDataPanelDisplaySummary(summary, 18.5, 42)).toMatchObject({
+      simTime: 18.5,
+      eventCount: 42
+    });
+  });
+
+  it("never moves dashboard values backwards when snapshots are newer", () => {
+    const summary = buildDataPanelSummary(
+      makeSnapshot({
+        last_sim_time: 24,
+        event_count: 120
+      })
+    );
+
+    expect(buildDataPanelDisplaySummary(summary, 18, 42)).toMatchObject({
+      simTime: 24,
+      eventCount: 120
+    });
   });
 });
 

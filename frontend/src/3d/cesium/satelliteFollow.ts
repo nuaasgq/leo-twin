@@ -58,13 +58,20 @@ export function satelliteInsetPoint(satellite: SatelliteState): SatelliteInsetPo
       y: 50
     };
   }
-  const longitude = Math.atan2(y, x);
-  const latitude = Math.asin(z / radius);
+  const velocityMagnitude = satellite.velocity
+    ? Math.hypot(satellite.velocity[0], satellite.velocity[1], satellite.velocity[2])
+    : 0;
+  const phaseDrift =
+    Number.isFinite(velocityMagnitude) && velocityMagnitude > 0
+      ? satellite.sim_time * (velocityMagnitude / radius)
+      : 0;
+  const phase = Math.atan2(y, x) + phaseDrift;
+  const inclinationOffset = clamp(z / radius, -1, 1) * 8;
   return {
     satelliteId: satellite.satellite_id,
     simTime: satellite.sim_time,
-    x: clamp(8 + ((longitude + Math.PI) / (Math.PI * 2)) * 84, 8, 92),
-    y: clamp(8 + (0.5 - latitude / Math.PI) * 84, 8, 92)
+    x: clamp(50 + Math.cos(phase) * 34, 8, 92),
+    y: clamp(50 + Math.sin(phase) * 24 - inclinationOffset, 8, 92)
   };
 }
 

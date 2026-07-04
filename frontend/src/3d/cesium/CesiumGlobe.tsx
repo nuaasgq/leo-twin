@@ -28,7 +28,7 @@ import {
 import {
   installCountryOverlays
 } from "./countryOverlays";
-import { groundUserCartesian } from "./positions";
+import { groundUserCartesian, projectSatelliteStates } from "./positions";
 import {
   pruneEntities,
   upsertLinkEntity,
@@ -53,9 +53,10 @@ import {
 
 export interface CesiumGlobeProps {
   snapshot: WorldSnapshot;
+  displaySimTime: number;
 }
 
-export function CesiumGlobe({ snapshot }: CesiumGlobeProps) {
+export function CesiumGlobe({ snapshot, displaySimTime }: CesiumGlobeProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewerRef = useRef<Viewer | null>(null);
   const latestSnapshotRef = useRef(snapshot);
@@ -69,14 +70,18 @@ export function CesiumGlobe({ snapshot }: CesiumGlobeProps) {
   const linkCache = useRef(new Map<string, Entity>());
   const routeCache = useRef(new Map<string, Entity>());
   const hasFocusedSatellites = useRef(false);
-  const lastRenderedVersion = useRef(-1);
+  const lastRenderedFrame = useRef("");
   const [renderError, setRenderError] = useState<string | null>(null);
   const [cameraMode, setCameraMode] = useState<GlobeCameraMode>("EARTH");
   const [selectedSatelliteId, setSelectedSatelliteId] = useState("");
   const [selectedTrail, setSelectedTrail] = useState<readonly SatelliteInsetPoint[]>([]);
+  const displaySatellites = useMemo(
+    () => projectSatelliteStates(snapshot.satellites, displaySimTime),
+    [snapshot.satellites, displaySimTime]
+  );
   const selectableSatellites = useMemo(
-    () => snapshot.satellites.slice(0, 96),
-    [snapshot.satellites]
+    () => displaySatellites.slice(0, 96),
+    [displaySatellites]
   );
   const selectedSatellite = useMemo(
     () => selectedDisplaySatellite(selectableSatellites, selectedSatelliteId),
@@ -167,23 +172,29 @@ export function CesiumGlobe({ snapshot }: CesiumGlobeProps) {
     if (!viewer || !satelliteBatch || viewer.isDestroyed()) {
       return;
     }
-    if (snapshot.reducer_version === lastRenderedVersion.current) {
+    const displayFrame = `${snapshot.reducer_version}:${Math.round(displaySimTime * 10)}`;
+    if (displayFrame === lastRenderedFrame.current) {
       return;
     }
     latestSnapshotRef.current = snapshot;
     try {
       setRenderError(null);
-      renderCesiumSnapshot(viewer.entities, snapshot, {
-        satellites: satelliteBatch,
-        satelliteIcons: satelliteIconCache.current,
-        satelliteModels: satelliteModelCache.current,
-        orbitTracks: orbitTrackCache.current,
-        beams: beamCache.current,
-        users: userCache.current,
-        links: linkCache.current,
-        routes: routeCache.current
-      });
-      lastRenderedVersion.current = snapshot.reducer_version;
+      renderCesiumSnapshot(
+        viewer.entities,
+        snapshot,
+        {
+          satellites: satelliteBatch,
+          satelliteIcons: satelliteIconCache.current,
+          satelliteModels: satelliteModelCache.current,
+          orbitTracks: orbitTrackCache.current,
+          beams: beamCache.current,
+          users: userCache.current,
+          links: linkCache.current,
+          routes: routeCache.current
+        },
+        displaySimTime
+      );
+      lastRenderedFrame.current = displayFrame;
       if (
         cameraMode === "EARTH" &&
         !hasFocusedSatellites.current &&
@@ -197,7 +208,7 @@ export function CesiumGlobe({ snapshot }: CesiumGlobeProps) {
       console.error("Cesium snapshot render failed", error);
     }
     viewer.scene.requestRender();
-  }, [snapshot, cameraMode]);
+  }, [snapshot, cameraMode, displaySimTime]);
 
   useEffect(() => {
     setSelectedTrail((trail) => appendSatelliteInsetTrail(trail, selectedSatellite));
@@ -381,17 +392,19 @@ interface RenderCaches {
 export function renderCesiumSnapshot(
   entities: EntityCollection,
   snapshot: WorldSnapshot,
-  caches: RenderCaches
+  caches: RenderCaches,
+  displaySimTime = snapshot.last_sim_time
 ): void {
   const limits = visualLayerLimits(snapshot.scenario_config);
   const beamLengthMeters = snapshot.scenario_config?.render?.beam_length_m ?? 600_000;
   const beamRadiusMeters = snapshot.scenario_config?.render?.beam_radius_m ?? 160_000;
   const beamEntityIds = new Set<string>();
+  const satellites = projectSatelliteStates(snapshot.satellites, displaySimTime);
 
-  caches.satellites.update(limits.showSatellites ? snapshot.satellites : []);
+  caches.satellites.update(limits.showSatellites ? satellites : []);
 
   const satelliteIconEntityIds = new Set<string>();
-  for (const satellite of snapshot.satellites.slice(0, limits.satelliteIconRenderLimit)) {
+  for (const satellite of satellites.slice(0, limits.satelliteIconRenderLimit)) {
     const id = `satellite-icon:${satellite.satellite_id}`;
     satelliteIconEntityIds.add(id);
     upsertSatelliteIconEntity(entities, caches.satelliteIcons, satellite);
@@ -399,7 +412,7 @@ export function renderCesiumSnapshot(
   pruneEntities(entities, caches.satelliteIcons, satelliteIconEntityIds);
 
   const satelliteModelEntityIds = new Set<string>();
-  for (const satellite of snapshot.satellites.slice(
+  for (const satellite of satellites.slice(
     0,
     Math.min(limits.satelliteIconRenderLimit, 32)
   )) {
@@ -414,14 +427,14 @@ export function renderCesiumSnapshot(
   pruneEntities(entities, caches.satelliteModels, satelliteModelEntityIds);
 
   const orbitTrackEntityIds = new Set<string>();
-  for (const satellite of snapshot.satellites.slice(0, limits.orbitTrackRenderLimit)) {
+  for (const satellite of satellites.slice(0, limits.orbitTrackRenderLimit)) {
     const id = `satellite-orbit:${satellite.satellite_id}`;
     orbitTrackEntityIds.add(id);
     upsertSatelliteOrbitEntity(entities, caches.orbitTracks, satellite);
   }
   pruneEntities(entities, caches.orbitTracks, orbitTrackEntityIds);
 
-  for (const satellite of snapshot.satellites.slice(0, limits.beamRenderLimit)) {
+  for (const satellite of satellites.slice(0, limits.beamRenderLimit)) {
     const beamId = `beam:${satellite.satellite_id}`;
     beamEntityIds.add(beamId);
     upsertBeamEntity(entities, caches.beams, satellite, {
@@ -442,7 +455,7 @@ export function renderCesiumSnapshot(
 
   const linkEntityIds = new Set<string>();
   const nodeIndex = {
-    satellites: snapshot.indexes.satellites,
+    satellites: new Map(satellites.map((satellite) => [satellite.satellite_id, satellite])),
     groundUsers: snapshot.indexes.ground_users
   };
   for (const link of snapshot.links.slice(0, limits.linkRenderLimit)) {

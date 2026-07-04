@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, type MouseEvent } from "react";
 
 import {
   GeneratedScenarioConfig,
@@ -45,20 +45,27 @@ export interface DataPanelSummary {
 export const DataPanel = memo(function DataPanel({
   snapshot,
   runtimeStatus,
-  generatedConfig
+  generatedConfig,
+  displaySimTime,
+  displayEventCount,
+  onNavigateControl
 }: {
   snapshot: WorldSnapshot;
   runtimeStatus: RuntimeStatusPayload;
   generatedConfig: GeneratedScenarioConfig | null;
+  displaySimTime: number;
+  displayEventCount: number;
+  onNavigateControl: (event: MouseEvent<HTMLAnchorElement>) => void;
 }) {
-  const summary = buildDataPanelSummary(snapshot);
+  const summary = buildDataPanelDisplaySummary(
+    buildDataPanelSummary(snapshot),
+    displaySimTime,
+    displayEventCount
+  );
   const configuredScale = generatedConfig
     ? `${generatedConfig.satellite_count} 星 / ${generatedConfig.user_count} 用户`
     : "等待初始化";
-  const runtimeProgress = buildDataPanelRuntimeProgress(
-    Math.max(summary.simTime, runtimeStatus.current_sim_time ?? 0),
-    runtimeStatus.duration
-  );
+  const runtimeProgress = buildDataPanelRuntimeProgress(summary.simTime, runtimeStatus.duration);
 
   return (
     <section className="data-panel" aria-label="独立数据态势面板">
@@ -68,7 +75,7 @@ export const DataPanel = memo(function DataPanel({
           <h1>数据态势面板</h1>
           <p>轨道、网络、算力与事件流联动状态。该页面独立承载数据分析，不与三维控制台混排。</p>
           <div className="data-panel-actions">
-            <a href="/" className="data-panel-action">
+            <a href="/" className="data-panel-action" onClick={onNavigateControl}>
               返回三维控制台
             </a>
           </div>
@@ -214,6 +221,18 @@ export function buildDataPanelSummary(snapshot: WorldSnapshot): DataPanelSummary
       hasCompute: snapshot.compute_nodes.length > 0,
       hasEvents: snapshot.event_count > 0
     })
+  };
+}
+
+export function buildDataPanelDisplaySummary(
+  summary: DataPanelSummary,
+  displaySimTime: number,
+  displayEventCount: number
+): DataPanelSummary {
+  return {
+    ...summary,
+    simTime: Math.max(summary.simTime, displaySimTime),
+    eventCount: Math.max(summary.eventCount, Math.round(displayEventCount))
   };
 }
 

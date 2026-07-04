@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { buildOrbitTrackSamples } from "../src/3d/cesium/positions";
+import {
+  buildOrbitTrackSamples,
+  projectSatelliteState
+} from "../src/3d/cesium/positions";
 
 describe("buildOrbitTrackSamples", () => {
   it("builds a closed deterministic display orbit through the satellite position", () => {
@@ -46,5 +49,40 @@ describe("buildOrbitTrackSamples", () => {
     expect(second).toEqual(first);
     expect(first[0]).toEqual([0, 7_000_000, 0]);
     expect(first[first.length - 1]).toEqual(first[0]);
+  });
+});
+
+describe("projectSatelliteState", () => {
+  it("uses velocity to advance display-only satellite motion between event updates", () => {
+    expect(
+      projectSatelliteState(
+        {
+          satellite_id: "sat-a",
+          sim_time: 10,
+          position: [7_000_000, 0, 0],
+          velocity: [0, 7_500, 0],
+          status: "ACTIVE"
+        },
+        12.5
+      )
+    ).toEqual({
+      satellite_id: "sat-a",
+      sim_time: 12.5,
+      position: [7_000_000, 18_750, 0],
+      velocity: [0, 7_500, 0],
+      status: "ACTIVE"
+    });
+  });
+
+  it("does not extrapolate backwards or without velocity", () => {
+    const satellite = {
+      satellite_id: "sat-a",
+      sim_time: 10,
+      position: [7_000_000, 0, 0],
+      status: "ACTIVE"
+    } as const;
+
+    expect(projectSatelliteState(satellite, 9)).toBe(satellite);
+    expect(projectSatelliteState(satellite, 12)).toBe(satellite);
   });
 });

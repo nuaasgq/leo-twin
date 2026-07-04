@@ -1,4 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { MouseEvent } from "react";
 
 import type { ScenarioControlValues } from "../config_panel/ConfigPanel";
 import {
@@ -38,7 +39,9 @@ const DataPanel = lazy(async () => {
 });
 
 export function App() {
-  const surface = surfaceFromPathname(window.location.pathname);
+  const [surface, setSurface] = useState<FrontendSurface>(() =>
+    surfaceFromPathname(window.location.pathname)
+  );
   const reducer = useMemo(
     () => new WorldStateReducer({ eventLogLimit: 10_000, metricSeriesLimit: 300 }),
     []
@@ -68,6 +71,35 @@ export function App() {
     snapshotEngine.start();
     return () => snapshotEngine.stop();
   }, [snapshotEngine]);
+
+  useEffect(() => {
+    const syncSurfaceFromLocation = () => {
+      setSurface(surfaceFromPathname(window.location.pathname));
+    };
+    window.addEventListener("popstate", syncSurfaceFromLocation);
+    return () => window.removeEventListener("popstate", syncSurfaceFromLocation);
+  }, []);
+
+  const navigateWithinApp = useCallback(
+    (event: MouseEvent<HTMLAnchorElement>, pathname: string) => {
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.shiftKey
+      ) {
+        return;
+      }
+      event.preventDefault();
+      if (window.location.pathname !== pathname) {
+        window.history.pushState(null, "", pathname);
+      }
+      setSurface(surfaceFromPathname(pathname));
+    },
+    []
+  );
 
   const closeStreams = useCallback(() => {
     streamClientRef.current?.close();
@@ -106,9 +138,14 @@ export function App() {
   }, [snapshotEngine]);
 
   const startStreams = useCallback(
-    (scenario: ScenarioConfig | null) => {
+    (
+      scenario: ScenarioConfig | null,
+      options: { resetBeforeConnect?: boolean } = {}
+    ) => {
       closeStreams();
-      resetWorld(scenario);
+      if (options.resetBeforeConnect ?? true) {
+        resetWorld(scenario);
+      }
       const throttleLayer = new EventThrottleLayer(
         (events) => {
           snapshotEngine.applyEvents(events);
@@ -123,7 +160,7 @@ export function App() {
       const client = new WebSocketStreamClient(router, {
         batchSize: 500,
         flushIntervalMs: 40,
-        stateStreamEnabled: false
+        stateStreamEnabled: true
       });
       streamRouterRef.current = router;
       streamClientRef.current = client;
@@ -144,15 +181,25 @@ export function App() {
             streamClientRef.current === null
           ) {
             loadControlState()
-              .then(({ scenario }) => startStreams(scenario))
+              .then(({ scenario }) =>
+                startStreams(scenario, {
+                  resetBeforeConnect: snapshotEngine.getSnapshot().event_count === 0
+                })
+              )
               .catch(() => setConnectionState("degraded"));
             return;
           }
           if (message.ok === true && message.type === "CONTROL_ACK") {
             const action = message.status?.last_action;
-            if (action === "START" || action === "RESUME") {
+            if (action === "START") {
               loadControlState()
-                .then(({ scenario }) => startStreams(scenario))
+                .then(({ scenario }) => startStreams(scenario, { resetBeforeConnect: true }))
+                .catch(() => setConnectionState("degraded"));
+              return;
+            }
+            if (action === "RESUME") {
+              loadControlState()
+                .then(({ scenario }) => startStreams(scenario, { resetBeforeConnect: false }))
                 .catch(() => setConnectionState("degraded"));
               return;
             }
@@ -169,7 +216,7 @@ export function App() {
           }
         }
       }),
-    [closeStreams, loadControlState, resetWorld, startStreams]
+    [closeStreams, loadControlState, resetWorld, snapshotEngine, startStreams]
   );
 
   useEffect(() => {
@@ -234,7 +281,9 @@ export function App() {
           return;
         }
         if (runtimeStatusRequiresStreams(runtime.status)) {
-          startStreams(scenario);
+          startStreams(scenario, {
+            resetBeforeConnect: snapshotEngine.getSnapshot().event_count === 0
+          });
         } else {
           resetWorld(scenario);
         }
@@ -250,7 +299,7 @@ export function App() {
       closed = true;
       closeStreams();
     };
-  }, [closeStreams, loadControlState, resetWorld, startStreams]);
+  }, [closeStreams, loadControlState, resetWorld, snapshotEngine, startStreams]);
 
   const scenarioControls = scenarioControlValues(scenarioConfig, snapshot.satellites.length);
   const displaySimTime = Math.max(
@@ -289,12 +338,17 @@ export function App() {
           </div>
         </div>
         <div className="surface-tabs" aria-label="前端界面">
-          <a className={`surface-tab ${surface === "control" ? "active" : ""}`} href="/">
+          <a
+            className={`surface-tab ${surface === "control" ? "active" : ""}`}
+            href="/"
+            onClick={(event) => navigateWithinApp(event, "/")}
+          >
             三维仿真控制台
           </a>
           <a
             className={`surface-tab ${surface === "dashboard" ? "active" : ""}`}
             href="/dashboard"
+            onClick={(event) => navigateWithinApp(event, "/dashboard")}
           >
             数据态势面板
           </a>
@@ -324,6 +378,9 @@ export function App() {
               snapshot={snapshot}
               runtimeStatus={runtimeStatus}
               generatedConfig={generatedConfig}
+              displaySimTime={displaySimTime}
+              displayEventCount={displayEventCount}
+              onNavigateControl={(event) => navigateWithinApp(event, "/")}
             />
           </Suspense>
         </section>
@@ -340,7 +397,11 @@ export function App() {
                   <span>{runtimeStatusLabel(runtimeStatus.status)}</span>
                   <strong>{runtimeStatus.speed_factor}x</strong>
                 </div>
-                <a className="surface-action-link" href="/dashboard">
+                <a
+                  className="surface-action-link"
+                  href="/dashboard"
+                  onClick={(event) => navigateWithinApp(event, "/dashboard")}
+                >
                   查看数据面板
                 </a>
               </div>
@@ -386,7 +447,7 @@ export function App() {
                   </div>
                 }
               >
-                <CesiumGlobe snapshot={snapshot} />
+                <CesiumGlobe snapshot={snapshot} displaySimTime={displaySimTime} />
               </Suspense>
             </div>
             <div className="control-dock">

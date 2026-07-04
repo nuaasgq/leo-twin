@@ -9,6 +9,39 @@ export function satelliteCartesian(state: SatelliteState): Cartesian3 {
   return Cartesian3.fromElements(state.position[0], state.position[1], state.position[2]);
 }
 
+export function projectSatelliteState(
+  state: SatelliteState,
+  displaySimTime: number,
+  maxProjectionSeconds = 180
+): SatelliteState {
+  if (!state.velocity) {
+    return state;
+  }
+  const deltaSeconds = Math.min(
+    Math.max(0, displaySimTime - state.sim_time),
+    Math.max(0, maxProjectionSeconds)
+  );
+  if (deltaSeconds <= 0) {
+    return state;
+  }
+  return {
+    ...state,
+    sim_time: Math.max(state.sim_time, displaySimTime),
+    position: [
+      state.position[0] + state.velocity[0] * deltaSeconds,
+      state.position[1] + state.velocity[1] * deltaSeconds,
+      state.position[2] + state.velocity[2] * deltaSeconds
+    ]
+  };
+}
+
+export function projectSatelliteStates(
+  states: readonly SatelliteState[],
+  displaySimTime: number
+): readonly SatelliteState[] {
+  return states.map((state) => projectSatelliteState(state, displaySimTime));
+}
+
 export function satelliteOrbitCartesianSamples(
   state: SatelliteState,
   sampleCount = 96
