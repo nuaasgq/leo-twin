@@ -5,6 +5,42 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Flow-Level Network KPI Dynamics v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending in this commit
+- Scope: make backend network quality summaries less static by adding
+  deterministic flow-level route-latency history, congestion, failed-flow, loss
+  proxy, and available-throughput fields while preserving existing metrics
+  names consumed by the frontend.
+- Changed files/modules:
+  - `src/leo_twin/services/metrics/collector.py`
+  - `tests/unit/test_metrics_module.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_metrics_module.py -q`
+    - Result: passed, 8 tests.
+  - `python -m pytest tests/integration/test_runtime_session_control.py tests/integration/test_live_runtime_streaming.py -q`
+    - Result: passed, 19 tests.
+  - `python -m pytest tests/unit/test_backend_derived_summary.py -q`
+    - Result: passed, 5 tests.
+- Problems encountered:
+  - The project does not yet carry packet-level observations or per-flow data
+    sizes in `FlowState`, so throughput/loss remain deterministic flow-level
+    proxies. No packet-level simulation was introduced.
+  - The active local runtime config files remain modified and excluded.
+- Known remaining issues:
+  - `network_quality_estimated_delivered_throughput_mbps` still uses completed
+    route capacity for backward compatibility. The new
+    `network_quality_estimated_available_throughput_mbps` field is the loss-
+    adjusted offered-capacity proxy.
+  - Jitter is modeled as route latency standard deviation plus per-route
+    latency-delta history, not packet inter-arrival variation.
+- Recommended follow-up:
+  - Extend traffic demand contracts with deterministic flow data size and
+    offered-load fields so throughput can be computed as delivered data over
+    simulated time.
+
 ## 2026-07-05 - Natural Earth Globe Boundary v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`

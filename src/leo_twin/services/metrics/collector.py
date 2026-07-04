@@ -98,6 +98,7 @@ class MetricsCollector:
         self._links: dict[tuple[str, str], LinkState] = {}
         self._active_links: set[tuple[str, str]] = set()
         self._routes: dict[str, Route] = {}
+        self._route_latency_history: dict[str, deque[float]] = {}
         self._completed_flows: dict[str, FlowState] = {}
         self._compute_nodes: dict[str, ComputeNodeState] = {}
         self._running_tasks: set[str] = set()
@@ -488,6 +489,8 @@ class MetricsCollector:
     def _observe_route(self, event: SimEvent) -> tuple[MetricRecord, ...]:
         route = _require_payload(event.payload, Route, "ROUTE_UPDATE")
         self._routes[route.route_id] = route
+        history = self._route_latency_history.setdefault(route.route_id, deque(maxlen=16))
+        history.append(float(route.latency))
         return (
             MetricRecord(
                 metric_name="route.available",
@@ -643,9 +646,25 @@ class MetricsCollector:
         available_routes: tuple[Route, ...],
     ) -> MetricSummary:
         route_latencies = tuple(route.latency for route in available_routes)
+        delay_variation_proxy = max(
+            _standard_deviation(route_latencies),
+            self._route_latency_delta_average(),
+        )
         unavailable_routes = max(0, len(self._routes) - len(available_routes))
         route_blocking_ratio = (
             0.0 if not self._routes else unavailable_routes / len(self._routes)
+        )
+        failed_flow_ratio = self._failed_flow_ratio()
+        congestion_proxy = _average(
+            tuple(
+                float(link.utilization)
+                for link in active_links
+                if link.utilization is not None
+            )
+        )
+        congestion_loss_proxy_rate = _congestion_loss_proxy_rate(congestion_proxy)
+        loss_proxy_rate = _clamp_probability(
+            max(route_blocking_ratio, failed_flow_ratio, congestion_loss_proxy_rate)
         )
         offered_route_capacity = float(sum(route.capacity for route in available_routes))
         completed_route_capacity = 0.0
@@ -666,18 +685,44 @@ class MetricsCollector:
             "network_quality_estimated_delivered_throughput_mbps": float(
                 completed_route_capacity
             ),
+            "network_quality_estimated_available_throughput_mbps": float(
+                offered_route_capacity * (1.0 - loss_proxy_rate)
+            ),
             "network_quality_route_latency_avg_s": _average(route_latencies),
             "network_quality_route_latency_min_s": min(route_latencies, default=0.0),
             "network_quality_route_latency_max_s": max(route_latencies, default=0.0),
-            "network_quality_delay_variation_proxy_s": _standard_deviation(
-                route_latencies
-            ),
+            "network_quality_delay_variation_proxy_s": delay_variation_proxy,
             "network_quality_route_blocking_ratio": float(route_blocking_ratio),
-            "network_quality_loss_proxy_rate": float(route_blocking_ratio),
+            "network_quality_failed_flow_ratio": float(failed_flow_ratio),
+            "network_quality_congestion_proxy": float(congestion_proxy),
+            "network_quality_congestion_loss_proxy_rate": float(
+                congestion_loss_proxy_rate
+            ),
+            "network_quality_loss_proxy_rate": float(loss_proxy_rate),
             "network_quality_proxy_note": (
                 "Flow-level proxy only; no packet-level simulation is performed."
             ),
         }
+
+    def _route_latency_delta_average(self) -> float:
+        deltas: list[float] = []
+        for route_id in sorted(self._route_latency_history):
+            values = tuple(self._route_latency_history[route_id])
+            deltas.extend(
+                abs(values[index] - values[index - 1])
+                for index in range(1, len(values))
+            )
+        return _average(tuple(deltas))
+
+    def _failed_flow_ratio(self) -> float:
+        if not self._completed_flows:
+            return 0.0
+        failed = sum(
+            1
+            for flow in self._completed_flows.values()
+            if flow.status.upper() in {"FAILED", "DROPPED", "BLOCKED"}
+        )
+        return failed / len(self._completed_flows)
 
     def _compute_resource_summary(self) -> MetricSummary:
         nodes = tuple(
@@ -819,6 +864,18 @@ def _standard_deviation(values: tuple[float, ...]) -> float:
     mean = _average(values)
     variance = _average(tuple((value - mean) ** 2 for value in values))
     return float(variance**0.5)
+
+
+def _congestion_loss_proxy_rate(utilization: float) -> float:
+    if utilization <= 0.8:
+        return 0.0
+    return _clamp_probability((utilization - 0.8) * 0.5)
+
+
+def _clamp_probability(value: float) -> float:
+    if not isfinite(value):
+        return 0.0
+    return max(0.0, min(1.0, float(value)))
 
 
 def _require_optional_positive_int(value: int | None, field_name: str) -> None:

@@ -192,11 +192,15 @@ def test_metrics_collector_kpis_are_consistent_with_observations() -> None:
     assert summary["deadline_missed_tasks"] == 0
     assert summary["network_quality_offered_route_capacity_mbps"] == 60.0
     assert summary["network_quality_estimated_delivered_throughput_mbps"] == 60.0
+    assert summary["network_quality_estimated_available_throughput_mbps"] == 60.0
     assert summary["network_quality_route_latency_avg_s"] == 16.0
     assert summary["network_quality_route_latency_min_s"] == 16.0
     assert summary["network_quality_route_latency_max_s"] == 16.0
     assert summary["network_quality_delay_variation_proxy_s"] == 0.0
     assert summary["network_quality_route_blocking_ratio"] == 0.0
+    assert summary["network_quality_failed_flow_ratio"] == 0.0
+    assert summary["network_quality_congestion_proxy"] == 0.0
+    assert summary["network_quality_congestion_loss_proxy_rate"] == 0.0
     assert summary["network_quality_loss_proxy_rate"] == 0.0
     assert summary["network_quality_proxy_note"] == (
         "Flow-level proxy only; no packet-level simulation is performed."
@@ -313,7 +317,87 @@ def test_metrics_collector_reports_flow_level_network_quality_proxy() -> None:
     assert summary["network_quality_route_latency_max_s"] == 0.08
     assert summary["network_quality_delay_variation_proxy_s"] == pytest.approx(0.03)
     assert summary["network_quality_route_blocking_ratio"] == pytest.approx(1 / 3)
+    assert summary["network_quality_failed_flow_ratio"] == 0.0
+    assert summary["network_quality_congestion_proxy"] == 0.0
+    assert summary["network_quality_congestion_loss_proxy_rate"] == 0.0
     assert summary["network_quality_loss_proxy_rate"] == pytest.approx(1 / 3)
+
+
+def test_metrics_collector_reports_dynamic_network_quality_proxy() -> None:
+    collector = MetricsCollector()
+    for event in (
+        _event(
+            "link-a",
+            1.0,
+            EventType.LINK_UPDATE,
+            LinkState(
+                source_id="sat-a",
+                target_id="sat-b",
+                latency=0.01,
+                capacity=100.0,
+                availability=True,
+                utilization=0.95,
+            ),
+            "network",
+        ),
+        _event(
+            "route-a-1",
+            1.0,
+            EventType.ROUTE_UPDATE,
+            Route(
+                route_id="route-a",
+                flow_id="flow-a",
+                path=("user-a", "sat-a", "sat-b", "user-b"),
+                latency=0.02,
+                capacity=100.0,
+                available=True,
+            ),
+            "network",
+        ),
+        _event(
+            "route-a-2",
+            2.0,
+            EventType.ROUTE_UPDATE,
+            Route(
+                route_id="route-a",
+                flow_id="flow-a",
+                path=("user-a", "sat-a", "sat-b", "user-b"),
+                latency=0.05,
+                capacity=100.0,
+                available=True,
+            ),
+            "network",
+        ),
+        _event(
+            "flow-a",
+            3.0,
+            EventType.FLOW_COMPLETE,
+            FlowState(
+                flow_id="flow-a",
+                route_id="route-a",
+                source_id="user-a",
+                target_id="user-b",
+                status="complete",
+            ),
+            "network",
+        ),
+    ):
+        collector.observe(event)
+
+    summary = collector.summary()
+
+    assert summary["network_quality_available_route_count"] == 1
+    assert summary["network_quality_offered_route_capacity_mbps"] == 100.0
+    assert summary["network_quality_estimated_delivered_throughput_mbps"] == 100.0
+    assert summary["network_quality_route_latency_avg_s"] == pytest.approx(0.05)
+    assert summary["network_quality_delay_variation_proxy_s"] == pytest.approx(0.03)
+    assert summary["network_quality_failed_flow_ratio"] == 0.0
+    assert summary["network_quality_congestion_proxy"] == pytest.approx(0.95)
+    assert summary["network_quality_congestion_loss_proxy_rate"] == pytest.approx(0.075)
+    assert summary["network_quality_loss_proxy_rate"] == pytest.approx(0.075)
+    assert summary["network_quality_estimated_available_throughput_mbps"] == pytest.approx(
+        92.5
+    )
 
 
 def test_metrics_collector_reports_compute_resource_pool_proxy() -> None:
