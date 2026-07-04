@@ -70,6 +70,7 @@ def test_demo_scenario_auto_allocates_starlink_like_planes_when_not_explicit() -
     )
 
     summary = scenario.frontend_config["derived_constellation_summary"]
+    backend_summary = scenario.frontend_config["backend_summary"]
 
     assert summary == {
         "profile": "STARLINK_SHELL_1_LIKE",
@@ -83,6 +84,11 @@ def test_demo_scenario_auto_allocates_starlink_like_planes_when_not_explicit() -
             "not exact Starlink fidelity."
         ),
     }
+    assert backend_summary["derived_constellation_summary"] == summary
+    assert backend_summary["traffic_demand_summary"]["traffic_class"] == "COMPUTE_SERVICE"
+    assert backend_summary["compute_resource_summary"]["node_role"] == (
+        "SATELLITE_HOSTED_COMPUTE"
+    )
     assert scenario.frontend_config["scenario"]["orbit"]["plane_count"] == 30
     assert scenario.orbit_elements[30].raan_deg == pytest.approx(
         scenario.orbit_elements[0].raan_deg

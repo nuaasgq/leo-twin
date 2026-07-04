@@ -114,34 +114,60 @@ describe("generatedScenarioSummaryItems", () => {
       antenna_aperture_efficiency: 0.7,
       transmit_power_dbw: 23,
       system_loss_db: 1.5,
-      noise_temperature_k: 310
+      noise_temperature_k: 310,
+      backend_summary: {
+        derived_constellation_summary: {
+          profile: "STARLINK_SHELL_1_LIKE",
+          satellite_count: 10000,
+          plane_count: 40,
+          satellites_per_plane: 250,
+          total_slots: 10000,
+          plane_count_explicit: true,
+          model_note: "Approximate Starlink Shell 1-like plane allocation; not exact Starlink fidelity."
+        },
+        traffic_demand_summary: {
+          traffic_class: "COMPUTE_SERVICE",
+          destination_type: "COMPUTE_NODE",
+          generated_flow_count: 1200,
+          arrival_model: "DETERMINISTIC_INTERVAL",
+          input_data_size_mb: 10,
+          output_data_size_mb: 0,
+          priority: 0,
+          demand_capacity_mbps: 1,
+          task_compute_demand: 20
+        },
+        compute_resource_summary: {
+          resource_model: "ComputeResourceVector",
+          node_role: "SATELLITE_HOSTED_COMPUTE",
+          compute_node_count: 64,
+          legacy_capacity_per_node: 10,
+          cpu_gflops_fp32_per_node: 10,
+          total_cpu_gflops_fp32: 640,
+          capacity_unit: "GFLOPS FP32",
+          compatibility_note: "Legacy scalar capacity maps to cpu_gflops_fp32."
+        },
+        model_assumptions: [
+          "Orbit allocation is deterministic and simplified; no SGP4 or external ephemeris is used."
+        ]
+      }
     };
 
-    expect(generatedScenarioSummaryItems(config)).toEqual([
-      { label: "生效卫星", value: "10,000" },
-      { label: "生效用户", value: "100,000" },
-      { label: "算力卫星", value: "64" },
-      { label: "业务流量", value: "1,200" },
-      { label: "调度策略", value: "短作业优先" },
-      { label: "轨道面", value: "40" },
-      { label: "随机种子", value: "1,234" },
-      { label: "应用协议", value: "MQTT" },
-      { label: "传输协议", value: "UDP" },
-      { label: "传输丢包", value: "2.5%" },
-      { label: "拥塞窗口", value: "32 段" },
-      { label: "路由协议", value: "DISTANCE_VECTOR" },
-      { label: "路由权重", value: "时延 0.2 / 容量 400 / 跳数 1" },
-      { label: "载波频率", value: "22 GHz" },
-      { label: "信道带宽", value: "250 MHz" },
-      { label: "雨强", value: "12.5 mm/h" },
-      { label: "天线口径", value: "0.6 m" },
-      { label: "孔径效率", value: "0.7" },
-      { label: "发射功率", value: "23 dBW" },
-      { label: "系统损耗", value: "1.5 dB" },
-      { label: "噪声温度", value: "310 K" },
-      { label: "轨道高度", value: "550 km" },
-      { label: "倾角", value: "53.5°" }
-    ]);
+    const items = generatedScenarioSummaryItems(config);
+
+    expect(items).toContainEqual({ label: "生效卫星", value: "10,000" });
+    expect(items).toContainEqual({ label: "算力卫星", value: "64" });
+    expect(items).toContainEqual({ label: "星座剖面", value: "近似 Starlink Shell 1" });
+    expect(items).toContainEqual({ label: "每面卫星", value: "250" });
+    expect(items).toContainEqual({ label: "业务类型", value: "通信-计算服务" });
+    expect(items).toContainEqual({ label: "业务流量", value: "1,200" });
+    expect(items).toContainEqual({ label: "FP32 算力", value: "640 GFLOPS" });
+    expect(items).toContainEqual({
+      label: "模型假设",
+      value: "Orbit allocation is deterministic and simp..."
+    });
+    expect(items).toContainEqual({ label: "轨道面", value: "40" });
+    expect(items).toContainEqual({ label: "传输协议", value: "UDP" });
+    expect(items).toContainEqual({ label: "轨道高度", value: "550 km" });
   });
 
   it("shows a waiting state before initialization", () => {

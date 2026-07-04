@@ -24,6 +24,7 @@ from leo_twin.services.control import (
     ScaleSafetyChecker,
 )
 from leo_twin.services.scenario_builder import (
+    scenario_builder_backend_summary,
     scenario_builder_config_from_sees_config,
     scenario_builder_config_to_mapping,
     write_full_system_scenario_builder_config,
@@ -292,10 +293,11 @@ class DemoControlPlane:
         if self._advance_loop is not None:
             self._advance_loop.stop()
 
-    def _generated_config_json(self) -> dict[str, int | float | str]:
-        return scenario_builder_config_to_mapping(
-            scenario_builder_config_from_sees_config(self._controller.config)
-        )
+    def _generated_config_json(self) -> dict[str, Any]:
+        builder_config = scenario_builder_config_from_sees_config(self._controller.config)
+        generated = scenario_builder_config_to_mapping(builder_config)
+        generated["backend_summary"] = scenario_builder_backend_summary(builder_config)
+        return generated
 
     def _status_json(self) -> dict[str, str | int | float | bool | None]:
         runtime_status = self._require_session().get_status().to_dict()

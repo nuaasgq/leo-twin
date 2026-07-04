@@ -286,6 +286,15 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
     assert ack["generated_config"]["demand_capacity"] == 12.5
     assert ack["generated_config"]["task_compute_demand"] == 15.0
     assert ack["generated_config"]["task_data_size"] == 4.0
+    assert ack["generated_config"]["backend_summary"][
+        "derived_constellation_summary"
+    ]["plane_count"] == 6
+    assert ack["generated_config"]["backend_summary"]["traffic_demand_summary"][
+        "traffic_class"
+    ] == "DATA_TRANSFER"
+    assert ack["generated_config"]["backend_summary"]["compute_resource_summary"][
+        "capacity_unit"
+    ] == "GFLOPS FP32"
 
     runtime_ack = control_plane.handle_raw_message(
         json.dumps({"type": "RUNTIME_CONTROL", "action": "START"})
@@ -381,6 +390,12 @@ def test_initialize_writes_config_and_start_gates_streams(tmp_path) -> None:
     assert generated_config["compute_scheduling_policy"] == "FIFO"
     assert init_ack["generated_config"]["satellite_count"] == 24
     assert init_ack["generated_config"]["user_count"] == 40
+    assert init_ack["generated_config"]["backend_summary"][
+        "derived_constellation_summary"
+    ]["plane_count"] == 6
+    assert init_ack["generated_config"]["backend_summary"]["compute_resource_summary"][
+        "total_cpu_gflops_fp32"
+    ] == 36.0
     assert control_plane.result.config.satellite_count == 24
     assert control_plane.result.processed_events == ()
     assert control_plane.stream_events() == ()

@@ -1173,13 +1173,42 @@ export function generatedScenarioSummaryItems(
   if (config === null || config === undefined) {
     return [{ label: "生成场景", value: "等待初始化" }];
   }
+  const backendSummary = config.backend_summary;
+  const constellation = backendSummary?.derived_constellation_summary;
+  const traffic = backendSummary?.traffic_demand_summary;
+  const compute = backendSummary?.compute_resource_summary;
   return [
     { label: "生效卫星", value: formatInteger(config.satellite_count) },
     { label: "生效用户", value: formatInteger(config.user_count) },
     { label: "算力卫星", value: formatInteger(config.compute_node_count) },
-    { label: "业务流量", value: formatInteger(config.flow_count) },
+    {
+      label: "星座剖面",
+      value: formatConstellationProfile(constellation?.profile)
+    },
+    {
+      label: "每面卫星",
+      value: formatInteger(constellation?.satellites_per_plane ?? 0)
+    },
+    {
+      label: "业务类型",
+      value: formatTrafficClass(traffic?.traffic_class ?? config.application_protocol)
+    },
+    {
+      label: "业务流量",
+      value: formatInteger(traffic?.generated_flow_count ?? config.flow_count)
+    },
+    {
+      label: "FP32 算力",
+      value: compute
+        ? `${formatDecimal(compute.total_cpu_gflops_fp32)} GFLOPS`
+        : `${formatDecimal(config.compute_capacity * config.compute_node_count)} GFLOPS`
+    },
+    {
+      label: "模型假设",
+      value: formatModelAssumption(backendSummary?.model_assumptions?.[0])
+    },
     { label: "调度策略", value: formatComputeSchedulingPolicy(config.compute_scheduling_policy) },
-    { label: "轨道面", value: formatInteger(config.orbit_plane_count) },
+    { label: "轨道面", value: formatInteger(constellation?.plane_count ?? config.orbit_plane_count) },
     { label: "随机种子", value: formatInteger(config.seed) },
     { label: "应用协议", value: formatApplicationProtocol(config.application_protocol) },
     { label: "传输协议", value: config.transport_protocol ?? "TCP" },
@@ -1367,6 +1396,36 @@ function formatApplicationProtocol(value: string | undefined): string {
     return "遥测流";
   }
   return "任务卸载";
+}
+
+function formatConstellationProfile(value: string | undefined): string {
+  if (value === "STARLINK_SHELL_1_LIKE") {
+    return "近似 Starlink Shell 1";
+  }
+  if (value === "CUSTOM_MULTI_SHELL") {
+    return "自定义多壳层";
+  }
+  return "自定义 Walker";
+}
+
+function formatTrafficClass(value: string | undefined): string {
+  if (value === "COMPUTE_SERVICE" || value === "TASK_OFFLOAD_FLOW") {
+    return "通信-计算服务";
+  }
+  if (value === "TELEMETRY") {
+    return "遥测";
+  }
+  if (value === "BULK_DOWNLINK") {
+    return "批量下传";
+  }
+  return "数据传输";
+}
+
+function formatModelAssumption(value: string | undefined): string {
+  if (value === undefined || value.length === 0) {
+    return "后端确定性简化模型";
+  }
+  return value.length > 42 ? `${value.slice(0, 42)}...` : value;
 }
 
 function formatRoutingWeights(config: GeneratedScenarioConfig): string {

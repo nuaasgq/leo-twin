@@ -75,8 +75,11 @@ export const DataPanel = memo(function DataPanel({
     displaySimTime,
     displayEventCount
   );
+  const constellation = generatedConfig?.backend_summary?.derived_constellation_summary;
   const configuredScale = generatedConfig
-    ? `${generatedConfig.satellite_count} 星 / ${generatedConfig.user_count} 用户`
+    ? constellation
+      ? `${generatedConfig.satellite_count} 星 / ${constellation.plane_count} 面 / ${generatedConfig.user_count} 用户`
+      : `${generatedConfig.satellite_count} 星 / ${generatedConfig.user_count} 用户`
     : "等待初始化";
   const runtimeProgress = buildDataPanelRuntimeProgress(summary.simTime, runtimeStatus.duration);
   const telemetry = buildDataPanelTelemetry(snapshot, summary.simTime);

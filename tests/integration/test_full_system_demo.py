@@ -66,6 +66,15 @@ def test_frontend_sync_test() -> None:
         )
     assert int(snapshot["event_count"]) == len(result.processed_events)
     assert len(result.frontend_events) > 0
+    assert scenario_config["backend_summary"]["derived_constellation_summary"][
+        "plane_count"
+    ] == 12
+    assert scenario_config["backend_summary"]["traffic_demand_summary"][
+        "traffic_class"
+    ] == "COMPUTE_SERVICE"
+    assert scenario_config["backend_summary"]["compute_resource_summary"][
+        "node_role"
+    ] == "SATELLITE_HOSTED_COMPUTE"
     assert {
         str(event.event_type)
         for event in result.processed_events

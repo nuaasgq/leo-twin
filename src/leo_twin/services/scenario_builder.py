@@ -14,6 +14,7 @@ from leo_twin.models.orbit import (
     ConstellationAllocation,
     ConstellationProfile,
 )
+from leo_twin.services.derived_summary import build_backend_derived_summary
 from leo_twin.schema import (
     ApplicationProtocol,
     DataLinkProtocol,
@@ -280,6 +281,27 @@ def scenario_builder_config_to_mapping(
         field.name: getattr(config, field.name)
         for field in fields(FullSystemScenarioBuilderConfig)
     }
+
+
+def scenario_builder_backend_summary(
+    config: FullSystemScenarioBuilderConfig,
+) -> dict[str, object]:
+    """Return backend-derived semantic summary for generated scenarios."""
+
+    if not isinstance(config, FullSystemScenarioBuilderConfig):
+        raise TypeError("config must be FullSystemScenarioBuilderConfig")
+    return build_backend_derived_summary(
+        constellation=_constellation_allocation(config),
+        satellite_count=config.satellite_count,
+        user_count=config.user_count,
+        compute_node_count=config.compute_node_count,
+        compute_capacity=config.compute_capacity,
+        flow_count=config.flow_count,
+        demand_capacity=config.demand_capacity,
+        task_compute_demand=config.task_compute_demand,
+        task_data_size=config.task_data_size,
+        application_protocol=config.application_protocol,
+    )
 
 
 def scenario_builder_config_from_mapping(

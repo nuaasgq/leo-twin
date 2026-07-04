@@ -91,6 +91,8 @@ export interface MetricRecord {
 
 export interface ScenarioConfig {
   scenario_id?: string;
+  backend_summary?: BackendDerivedSummary;
+  derived_constellation_summary?: ConstellationDerivedSummary;
   satellites?: readonly { satellite_id: string; label?: string }[];
   ground_users?: readonly GroundUserState[];
   render?: {
@@ -164,6 +166,47 @@ export interface ScenarioConfig {
     control?: string;
     runtime_status?: string;
   };
+}
+
+export interface ConstellationDerivedSummary {
+  profile: string;
+  satellite_count: number;
+  plane_count: number;
+  satellites_per_plane: number;
+  total_slots: number;
+  plane_count_explicit: boolean;
+  model_note: string;
+}
+
+export interface TrafficDemandSummary {
+  traffic_class: string;
+  destination_type: string;
+  generated_flow_count: number;
+  arrival_model: string;
+  input_data_size_mb: number;
+  output_data_size_mb: number;
+  priority: number;
+  demand_capacity_mbps: number;
+  task_compute_demand: number;
+  arrival_interval_seconds?: number;
+}
+
+export interface ComputeResourceSummary {
+  resource_model: string;
+  node_role: string;
+  compute_node_count: number;
+  legacy_capacity_per_node: number;
+  cpu_gflops_fp32_per_node: number;
+  total_cpu_gflops_fp32: number;
+  capacity_unit: string;
+  compatibility_note: string;
+}
+
+export interface BackendDerivedSummary {
+  derived_constellation_summary?: ConstellationDerivedSummary;
+  traffic_demand_summary?: TrafficDemandSummary;
+  compute_resource_summary?: ComputeResourceSummary;
+  model_assumptions?: readonly string[];
 }
 
 export interface StateSnapshot {
@@ -245,6 +288,7 @@ export interface GeneratedScenarioConfig {
   transmit_power_dbw?: number;
   system_loss_db?: number;
   noise_temperature_k?: number;
+  backend_summary?: BackendDerivedSummary;
 }
 
 export interface RuntimeStatusEnvelope {

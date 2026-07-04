@@ -8,6 +8,7 @@ from math import cos, pi, radians, sin
 from leo_twin.models.compute import ComputeNode
 from leo_twin.models.network import GroundEndpoint
 from leo_twin.models.orbit import AutoPlaneAllocator, ConstellationAllocation, OrbitSatelliteConfig
+from leo_twin.services.derived_summary import build_backend_derived_summary
 from leo_twin.schema import (
     CoverageSlot,
     EventType,
@@ -58,6 +59,7 @@ def build_demo_scenario(config: DemoConfig) -> DemoScenario:
     network_satellites = _network_satellites(config)
     compute_nodes = _compute_nodes(config)
     initial_events = _initial_events(config)
+    backend_summary = _backend_summary(config, constellation_allocation)
     return DemoScenario(
         orbit_satellites=orbit_satellites,
         orbit_elements=orbit_elements,
@@ -152,7 +154,10 @@ def build_demo_scenario(config: DemoConfig) -> DemoScenario:
                 "update_frequency_hz": max(1, 1000 // max(1, config.metric_sample_interval)),
                 "dashboard_layout": "right_panel",
             },
-            "derived_constellation_summary": constellation_allocation.to_summary(),
+            "derived_constellation_summary": (
+                backend_summary["derived_constellation_summary"]
+            ),
+            "backend_summary": backend_summary,
             "endpoints": {
                 "events": config.websocket_events,
                 "state": config.websocket_state,
@@ -217,6 +222,30 @@ def _constellation_allocation(config: DemoConfig) -> ConstellationAllocation:
         plane_count=config.orbit_plane_count if config.orbit_plane_count_explicit else None,
         profile=config.constellation_profile,
     )
+
+
+def _backend_summary(
+    config: DemoConfig,
+    allocation: ConstellationAllocation,
+) -> dict[str, object]:
+    return build_backend_derived_summary(
+        constellation=allocation,
+        satellite_count=config.satellite_count,
+        user_count=config.ground_user_count,
+        compute_node_count=min(config.compute_node_count, config.satellite_count),
+        compute_capacity=config.compute_capacity,
+        flow_count=_scheduled_task_count(config),
+        demand_capacity=config.flow_demand_capacity,
+        task_compute_demand=config.task_compute_demand,
+        task_data_size=config.task_data_size,
+        application_protocol=config.application_protocol,
+        arrival_interval_seconds=config.flow_interval_seconds,
+    )
+
+
+def _scheduled_task_count(config: DemoConfig) -> int:
+    ticks = range(0, config.duration_seconds, config.task_interval_seconds)
+    return len(tuple(ticks)) * min(config.compute_node_count, config.satellite_count)
 
 
 def _network_satellites(config: DemoConfig) -> tuple[SatelliteProfile, ...]:

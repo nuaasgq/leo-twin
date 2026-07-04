@@ -1,0 +1,78 @@
+from __future__ import annotations
+
+from leo_twin.models.orbit import AutoPlaneAllocator, ConstellationProfile
+from leo_twin.services.derived_summary import build_backend_derived_summary
+
+
+def test_backend_derived_summary_is_deterministic_and_frontend_ready() -> None:
+    allocation = AutoPlaneAllocator.allocate(
+        satellite_count=300,
+        profile=ConstellationProfile.STARLINK_SHELL_1_LIKE,
+    )
+
+    first = build_backend_derived_summary(
+        constellation=allocation,
+        satellite_count=300,
+        user_count=1000,
+        compute_node_count=300,
+        compute_capacity=10.0,
+        flow_count=1200,
+        demand_capacity=25.0,
+        task_compute_demand=20.0,
+        task_data_size=2.0,
+        application_protocol="TASK_OFFLOAD_FLOW",
+        arrival_interval_seconds=60,
+    )
+    second = build_backend_derived_summary(
+        constellation=allocation,
+        satellite_count=300,
+        user_count=1000,
+        compute_node_count=300,
+        compute_capacity=10.0,
+        flow_count=1200,
+        demand_capacity=25.0,
+        task_compute_demand=20.0,
+        task_data_size=2.0,
+        application_protocol="TASK_OFFLOAD_FLOW",
+        arrival_interval_seconds=60,
+    )
+
+    assert first == second
+    assert first["derived_constellation_summary"] == {
+        "profile": "STARLINK_SHELL_1_LIKE",
+        "satellite_count": 300,
+        "plane_count": 30,
+        "satellites_per_plane": 10,
+        "total_slots": 300,
+        "plane_count_explicit": False,
+        "model_note": (
+            "Approximate Starlink Shell 1-like plane allocation; "
+            "not exact Starlink fidelity."
+        ),
+    }
+    assert first["traffic_demand_summary"] == {
+        "traffic_class": "COMPUTE_SERVICE",
+        "destination_type": "COMPUTE_NODE",
+        "generated_flow_count": 1200,
+        "arrival_model": "DETERMINISTIC_INTERVAL",
+        "input_data_size_mb": 2.0,
+        "output_data_size_mb": 0.0,
+        "priority": 0,
+        "demand_capacity_mbps": 25.0,
+        "task_compute_demand": 20.0,
+        "arrival_interval_seconds": 60.0,
+    }
+    assert first["compute_resource_summary"] == {
+        "resource_model": "ComputeResourceVector",
+        "node_role": "SATELLITE_HOSTED_COMPUTE",
+        "compute_node_count": 300,
+        "legacy_capacity_per_node": 10.0,
+        "cpu_gflops_fp32_per_node": 10.0,
+        "total_cpu_gflops_fp32": 3000.0,
+        "capacity_unit": "GFLOPS FP32",
+        "compatibility_note": "Legacy scalar capacity maps to cpu_gflops_fp32.",
+    }
+    assert any(
+        "not exact Starlink fidelity" in assumption
+        for assumption in first["model_assumptions"]
+    )
