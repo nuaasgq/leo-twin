@@ -2,12 +2,24 @@
 
 from leo_twin.schema.domain import (
     AccessAssociation,
+    ApplicationState,
+    ChannelState,
     ComputeNodeState,
+    FlowRequest,
     FlowState,
+    GroundUserState,
+    LinkState,
     MetricRecord,
+    Route,
+    RouteState,
+    RuntimeConfigState,
+    RuntimeMode,
+    RuntimeStatus,
     SatelliteState,
     TaskRequest,
     TaskState,
+    TransportState,
+    WorldSnapshot,
 )
 from leo_twin.schema.events import (
     EVENT_CONTRACTS,
@@ -35,10 +47,7 @@ from leo_twin.schema.full_system import (
 )
 from leo_twin.schema.network import (
     CoverageSlot,
-    FlowRequest,
     GroundUserProfile,
-    LinkState,
-    Route,
     SatelliteProfile,
 )
 from leo_twin.schema.sim_event import SimEvent
@@ -46,7 +55,9 @@ from leo_twin.schema.sim_event import SimEvent
 __all__ = [
     "AccessAssociation",
     "AntennaProfile",
+    "ApplicationState",
     "ApplicationProtocol",
+    "ChannelState",
     "ChannelProfile",
     "ComputeNodeState",
     "CouplingContract",
@@ -60,6 +71,7 @@ __all__ = [
     "FlowState",
     "FrontendSurfaceContract",
     "FrontendSurfaceRole",
+    "GroundUserState",
     "GroundUserProfile",
     "LinkState",
     "LinkMedium",
@@ -72,10 +84,16 @@ __all__ = [
     "ProtocolStackContract",
     "RoutingProtocol",
     "Route",
+    "RouteState",
+    "RuntimeConfigState",
+    "RuntimeMode",
+    "RuntimeStatus",
     "SatelliteState",
     "SatelliteProfile",
     "SimEvent",
     "TaskRequest",
     "TaskState",
+    "TransportState",
     "TransportProtocol",
+    "WorldSnapshot",
 ]
