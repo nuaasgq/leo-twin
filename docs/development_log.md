@@ -2230,3 +2230,34 @@ change.
   - Add an explicit globe visual configuration helper that locks imagery,
     atmosphere, depth testing, and optional country overlay modes in one tested
     place.
+
+## 2026-07-05 - Globe Visual Policy v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: centralize Cesium globe opacity, base color, atmosphere, and terrain
+  depth-testing policy in a tested frontend helper.
+- Changed files/modules:
+  - `frontend/src/3d/cesium/globeVisualPolicy.ts`
+  - `frontend/src/3d/cesium/CesiumGlobe.tsx`
+  - `frontend/tests/globeVisualPolicy.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- globeVisualPolicy.test.ts countryOverlays.test.ts satelliteVisuals.test.ts`
+    - Result: passed, 23 files / 125 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - Cesium globe settings were previously embedded directly in `CesiumGlobe`.
+    The helper keeps behavior the same while making opacity and depth-test
+    expectations explicit and testable.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The earth still uses the existing bundled NaturalEarthII texture. This task
+    does not download or integrate higher-resolution imagery or terrain.
+- Recommended follow-up:
+  - Add a high-resolution earth asset task that evaluates local/public-domain
+    imagery availability, asset size, attribution, and offline loading behavior.

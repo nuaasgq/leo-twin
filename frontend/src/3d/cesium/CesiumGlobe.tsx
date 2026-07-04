@@ -35,6 +35,7 @@ import {
   installNaturalEarthCountryOverlays
 } from "./countryOverlays";
 import { groundUserCartesian, projectSatelliteStates } from "./positions";
+import { applyOpaqueGlobeVisualPolicy } from "./globeVisualPolicy";
 import {
   pruneEntities,
   upsertLinkEntity,
@@ -141,13 +142,7 @@ export function CesiumGlobe({ snapshot, displaySimTime }: CesiumGlobeProps) {
       setRenderError(renderErrorMessage(error));
       return;
     }
-    viewer.scene.backgroundColor = Color.BLACK;
-    viewer.scene.globe.baseColor = Color.fromCssColorString("#07141d");
-    viewer.scene.globe.depthTestAgainstTerrain = true;
-    viewer.scene.globe.showGroundAtmosphere = true;
-    if (viewer.scene.skyAtmosphere) {
-      viewer.scene.skyAtmosphere.show = true;
-    }
+    applyOpaqueGlobeVisualPolicy(viewer.scene);
     installCountryOverlays(viewer.entities, countryOverlayCache.current);
     void loadNaturalEarthCountryOverlays(
       viewer,
