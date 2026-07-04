@@ -3000,3 +3000,42 @@ change.
 - Recommended follow-up:
   - Add a Cesium-local layer toolbar for country borders, coverage beams,
     satellite models/icons, and orbit tracks without requiring reinitialization.
+
+## 2026-07-05 - Cesium Local Layer Toolbar v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add frontend-only local 3D layer toggles for the Cesium control view
+  so users can immediately show/hide country borders, satellite points/icons,
+  satellite models, orbit tracks, coverage beams, ground users, links, and
+  routes without reinitializing the scenario.
+- Changed files/modules:
+  - `frontend/src/3d/cesium/renderLimits.ts`
+  - `frontend/src/3d/cesium/CesiumGlobe.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/visualLayerLimits.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- visualLayerLimits.test.ts satelliteVisuals.test.ts`
+    - Result: passed, 23 files / 149 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - Existing visualization switches were scenario/config inputs, so changing
+    layer visibility during runtime required reinitialization. This task adds a
+    local visual-layer state that only reduces existing backend-derived render
+    limits and never increases large-scale rendering load.
+  - Natural Earth country overlays load asynchronously; the loader now applies
+    the current local visibility state after replacing the fallback overlay.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The layer toolbar is a visibility control only. It does not add higher
+    fidelity Earth imagery, terrain, RF coverage physics, or packet-level link
+    visualization.
+- Recommended follow-up:
+  - Add a selected-satellite detail drawer backed by backend snapshot fields for
+    resource use, current access users, route participation, and recent service
+    metrics.

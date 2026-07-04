@@ -57,6 +57,10 @@ import {
   upsertSatelliteOrbitEntity
 } from "../orbit_renderer/satelliteEntities";
 import {
+  DEFAULT_LOCAL_VISUAL_LAYERS,
+  LocalVisualLayerKey,
+  LocalVisualLayerState,
+  applyLocalVisualLayerLimits,
   visualLayerLimits,
   visualSatelliteModelRenderSatellites
 } from "./renderLimits";
@@ -74,10 +78,28 @@ export interface CesiumGlobeProps {
   displaySimTime: number;
 }
 
+const LOCAL_VISUAL_LAYER_OPTIONS: readonly {
+  key: LocalVisualLayerKey;
+  label: string;
+}[] = [
+  { key: "countryOverlays", label: "国界" },
+  { key: "satellitePoints", label: "点位" },
+  { key: "satelliteIcons", label: "图标" },
+  { key: "satelliteModels", label: "模型" },
+  { key: "orbitTracks", label: "轨迹" },
+  { key: "coverageBeams", label: "波束" },
+  { key: "groundUsers", label: "用户" },
+  { key: "links", label: "链路" },
+  { key: "routes", label: "路由" }
+];
+
 export function CesiumGlobe({ snapshot, displaySimTime }: CesiumGlobeProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewerRef = useRef<Viewer | null>(null);
   const latestSnapshotRef = useRef(snapshot);
+  const countryOverlayVisibleRef = useRef(
+    DEFAULT_LOCAL_VISUAL_LAYERS.countryOverlays
+  );
   const satelliteBatchRef = useRef<SatellitePrimitiveBatch | null>(null);
   const beamCache = useRef(new Map<string, Entity>());
   const satelliteIconCache = useRef(new Map<string, Entity>());
@@ -92,6 +114,9 @@ export function CesiumGlobe({ snapshot, displaySimTime }: CesiumGlobeProps) {
   const [renderError, setRenderError] = useState<string | null>(null);
   const [cameraMode, setCameraMode] = useState<GlobeCameraMode>("EARTH");
   const [globeVisualMode, setGlobeVisualMode] = useState<GlobeVisualMode>("OPAQUE");
+  const [localLayers, setLocalLayers] = useState<LocalVisualLayerState>(
+    DEFAULT_LOCAL_VISUAL_LAYERS
+  );
   const [selectedSatelliteId, setSelectedSatelliteId] = useState("");
   const [selectedTrail, setSelectedTrail] = useState<readonly SatelliteInsetPoint[]>([]);
   const displaySatellites = useMemo(
@@ -178,7 +203,8 @@ export function CesiumGlobe({ snapshot, displaySimTime }: CesiumGlobeProps) {
     void loadNaturalEarthCountryOverlays(
       viewer,
       countryOverlayCache.current,
-      () => disposed
+      () => disposed,
+      () => countryOverlayVisibleRef.current
     );
     focusEarthOverview(viewer);
     const handleContextLost = (event: Event) => {
@@ -222,7 +248,11 @@ export function CesiumGlobe({ snapshot, displaySimTime }: CesiumGlobeProps) {
     if (!viewer || !satelliteBatch || viewer.isDestroyed()) {
       return;
     }
-    const displayFrame = `${snapshot.reducer_version}:${Math.round(displaySimTime * 10)}`;
+    const layerFrame = localVisualLayerFrame(localLayers);
+    const selectedFrame = activeSelectedSatelliteId || "none";
+    const displayFrame = `${snapshot.reducer_version}:${Math.round(
+      displaySimTime * 10
+    )}:${selectedFrame}:${layerFrame}`;
     if (displayFrame === lastRenderedFrame.current) {
       return;
     }
@@ -243,7 +273,8 @@ export function CesiumGlobe({ snapshot, displaySimTime }: CesiumGlobeProps) {
           routes: routeCache.current
         },
         displaySimTime,
-        activeSelectedSatelliteId
+        activeSelectedSatelliteId,
+        localLayers
       );
       lastRenderedFrame.current = displayFrame;
       if (
@@ -259,7 +290,7 @@ export function CesiumGlobe({ snapshot, displaySimTime }: CesiumGlobeProps) {
       console.error("Cesium snapshot render failed", error);
     }
     viewer.scene.requestRender();
-  }, [snapshot, cameraMode, displaySimTime]);
+  }, [snapshot, cameraMode, displaySimTime, activeSelectedSatelliteId, localLayers]);
 
   useEffect(() => {
     const viewer = viewerRef.current;
@@ -269,6 +300,19 @@ export function CesiumGlobe({ snapshot, displaySimTime }: CesiumGlobeProps) {
     applyGlobeVisualPolicy(viewer.scene, globeVisualMode);
     viewer.scene.requestRender();
   }, [globeVisualMode]);
+
+  useEffect(() => {
+    countryOverlayVisibleRef.current = localLayers.countryOverlays;
+    const viewer = viewerRef.current;
+    if (!viewer || viewer.isDestroyed()) {
+      return;
+    }
+    setEntityCacheVisibility(
+      countryOverlayCache.current,
+      localLayers.countryOverlays
+    );
+    viewer.scene.requestRender();
+  }, [localLayers.countryOverlays]);
 
   useEffect(() => {
     setSelectedTrail((trail) => appendSatelliteInsetTrail(trail, selectedSatellite));
@@ -368,6 +412,26 @@ export function CesiumGlobe({ snapshot, displaySimTime }: CesiumGlobeProps) {
             ))}
           </select>
         </label>
+        <div className="globe-layer-toggles" role="group" aria-label="即时图层">
+          {LOCAL_VISUAL_LAYER_OPTIONS.map((option) => (
+            <label
+              className={localLayers[option.key] ? "active" : ""}
+              key={option.key}
+            >
+              <input
+                type="checkbox"
+                checked={localLayers[option.key]}
+                onChange={(event) =>
+                  setLocalLayers((current) => ({
+                    ...current,
+                    [option.key]: event.currentTarget.checked
+                  }))
+                }
+              />
+              <span>{option.label}</span>
+            </label>
+          ))}
+        </div>
       </div>
       {cameraMode === "SATELLITE" && selectedSatellite ? (
         <SatelliteInset
@@ -387,7 +451,8 @@ export function CesiumGlobe({ snapshot, displaySimTime }: CesiumGlobeProps) {
 async function loadNaturalEarthCountryOverlays(
   viewer: Viewer,
   cache: Map<string, Entity>,
-  isDisposed: () => boolean
+  isDisposed: () => boolean,
+  isVisible: () => boolean
 ): Promise<void> {
   try {
     const response = await fetch(NATURAL_EARTH_COUNTRY_SOURCE_URI);
@@ -401,10 +466,33 @@ async function loadNaturalEarthCountryOverlays(
     }
     clearCountryOverlays(viewer.entities, cache);
     installNaturalEarthCountryOverlays(viewer.entities, cache, collection);
+    setEntityCacheVisibility(cache, isVisible());
     viewer.scene.requestRender();
   } catch (error) {
     console.warn("Natural Earth country overlay load failed", error);
   }
+}
+
+function setEntityCacheVisibility(cache: Map<string, Entity>, visible: boolean): void {
+  for (const entity of cache.values()) {
+    entity.show = visible;
+  }
+}
+
+function localVisualLayerFrame(layers: LocalVisualLayerState): string {
+  return [
+    layers.countryOverlays,
+    layers.satellitePoints,
+    layers.satelliteIcons,
+    layers.satelliteModels,
+    layers.orbitTracks,
+    layers.coverageBeams,
+    layers.groundUsers,
+    layers.links,
+    layers.routes
+  ]
+    .map((enabled) => (enabled ? "1" : "0"))
+    .join("");
 }
 
 function renderErrorMessage(error: unknown): string {
@@ -566,9 +654,13 @@ export function renderCesiumSnapshot(
   snapshot: WorldSnapshot,
   caches: RenderCaches,
   displaySimTime = snapshot.last_sim_time,
-  selectedSatelliteId = ""
+  selectedSatelliteId = "",
+  localLayers: LocalVisualLayerState = DEFAULT_LOCAL_VISUAL_LAYERS
 ): void {
-  const limits = visualLayerLimits(snapshot.scenario_config);
+  const limits = applyLocalVisualLayerLimits(
+    visualLayerLimits(snapshot.scenario_config),
+    localLayers
+  );
   const beamGeometry = resolveBeamGeometryOptions(snapshot.scenario_config);
   const beamEntityIds = new Set<string>();
   const satellites = projectSatelliteStates(snapshot.satellites, displaySimTime);

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { ScenarioConfig } from "../src/core/event_types";
 import {
+  DEFAULT_LOCAL_VISUAL_LAYERS,
+  applyLocalVisualLayerLimits,
   visualLayerLimits,
   visualSatelliteModelRenderSatellites
 } from "../src/3d/cesium/renderLimits";
@@ -66,6 +68,53 @@ describe("visualLayerLimits", () => {
       linkRenderLimit: 96,
       routeRenderLimit: 0
     });
+  });
+
+  it("keeps backend layer limits unchanged when local layers are all enabled", () => {
+    const limits = visualLayerLimits(null);
+
+    expect(applyLocalVisualLayerLimits(limits, DEFAULT_LOCAL_VISUAL_LAYERS)).toEqual(
+      limits
+    );
+  });
+
+  it("locally suppresses selected visual layers without changing other budgets", () => {
+    expect(
+      applyLocalVisualLayerLimits(visualLayerLimits(null), {
+        ...DEFAULT_LOCAL_VISUAL_LAYERS,
+        satellitePoints: false,
+        satelliteIcons: false,
+        coverageBeams: false,
+        links: false
+      })
+    ).toEqual({
+      showSatellites: false,
+      satelliteIconRenderLimit: 0,
+      satelliteModelRenderLimit: 32,
+      orbitTrackRenderLimit: 48,
+      beamRenderLimit: 0,
+      groundUserRenderLimit: 80,
+      linkRenderLimit: 0,
+      routeRenderLimit: 8
+    });
+  });
+
+  it("cannot re-enable layers disabled by scenario configuration", () => {
+    const config: ScenarioConfig = {
+      ui: {
+        visualization: {
+          satellites: false,
+          users: false,
+          links: false,
+          metrics: false
+        }
+      }
+    };
+    const disabledLimits = visualLayerLimits(config);
+
+    expect(
+      applyLocalVisualLayerLimits(disabledLimits, DEFAULT_LOCAL_VISUAL_LAYERS)
+    ).toEqual(disabledLimits);
   });
 });
 

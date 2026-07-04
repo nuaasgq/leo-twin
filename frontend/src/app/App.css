@@ -576,6 +576,51 @@ body {
   cursor: not-allowed;
 }
 
+.globe-layer-toggles {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+  padding-top: 2px;
+}
+
+.globe-layer-toggles label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  border: 1px solid #2d4050;
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: #0b1118;
+  color: #a8bac2;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.globe-layer-toggles label.active {
+  border-color: #3d7c8f;
+  background: #102633;
+  color: #e8fbff;
+}
+
+.globe-layer-toggles input {
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  accent-color: var(--accent-cyan);
+}
+
+.globe-layer-toggles span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .satellite-select-label {
   display: grid;
   gap: 6px;

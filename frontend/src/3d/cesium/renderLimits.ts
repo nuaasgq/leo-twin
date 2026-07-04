@@ -11,6 +11,32 @@ export interface VisualLayerLimits {
   routeRenderLimit: number;
 }
 
+export interface LocalVisualLayerState {
+  countryOverlays: boolean;
+  satellitePoints: boolean;
+  satelliteIcons: boolean;
+  satelliteModels: boolean;
+  orbitTracks: boolean;
+  coverageBeams: boolean;
+  groundUsers: boolean;
+  links: boolean;
+  routes: boolean;
+}
+
+export type LocalVisualLayerKey = keyof LocalVisualLayerState;
+
+export const DEFAULT_LOCAL_VISUAL_LAYERS: LocalVisualLayerState = {
+  countryOverlays: true,
+  satellitePoints: true,
+  satelliteIcons: true,
+  satelliteModels: true,
+  orbitTracks: true,
+  coverageBeams: true,
+  groundUsers: true,
+  links: true,
+  routes: true
+};
+
 export function visualLayerLimits(
   scenarioConfig: ScenarioConfig | null | undefined
 ): VisualLayerLimits {
@@ -28,6 +54,26 @@ export function visualLayerLimits(
     groundUserRenderLimit: showUsers ? 80 : 0,
     linkRenderLimit: showLinks ? 96 : 0,
     routeRenderLimit: showLinks && showMetrics ? 8 : 0
+  };
+}
+
+export function applyLocalVisualLayerLimits(
+  limits: VisualLayerLimits,
+  localLayers: LocalVisualLayerState = DEFAULT_LOCAL_VISUAL_LAYERS
+): VisualLayerLimits {
+  return {
+    showSatellites: limits.showSatellites && localLayers.satellitePoints,
+    satelliteIconRenderLimit: localLayers.satelliteIcons
+      ? limits.satelliteIconRenderLimit
+      : 0,
+    satelliteModelRenderLimit: localLayers.satelliteModels
+      ? limits.satelliteModelRenderLimit
+      : 0,
+    orbitTrackRenderLimit: localLayers.orbitTracks ? limits.orbitTrackRenderLimit : 0,
+    beamRenderLimit: localLayers.coverageBeams ? limits.beamRenderLimit : 0,
+    groundUserRenderLimit: localLayers.groundUsers ? limits.groundUserRenderLimit : 0,
+    linkRenderLimit: localLayers.links ? limits.linkRenderLimit : 0,
+    routeRenderLimit: localLayers.routes ? limits.routeRenderLimit : 0
   };
 }
 
