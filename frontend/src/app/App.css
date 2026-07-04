@@ -409,6 +409,53 @@ body {
   margin-bottom: 12px;
 }
 
+.config-panel-body {
+  display: grid;
+  gap: 12px;
+}
+
+.config-section {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  border: 1px solid #273430;
+  border-radius: 6px;
+  padding: 11px;
+  background: #111615;
+}
+
+.config-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #e7f3ef;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.config-section-title::before {
+  display: block;
+  width: 3px;
+  height: 13px;
+  border-radius: 999px;
+  background: #54d68d;
+  content: "";
+}
+
+.command-config-section {
+  border-color: #345146;
+  background: #111918;
+}
+
+.config-section .control-group {
+  margin-bottom: 0;
+}
+
+.config-section .channel-grid {
+  gap: 10px;
+}
+
 .runtime-badge {
   min-width: 76px;
   border: 1px solid #3b4548;

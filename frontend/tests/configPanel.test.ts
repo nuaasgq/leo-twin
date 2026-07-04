@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  configPanelSectionTitles,
   generatedScenarioSummaryItems,
   networkControlPayload,
   orbitControlPayload,
@@ -10,6 +11,21 @@ import {
   visualizationControlPayload
 } from "../src/config_panel/ConfigPanel";
 import { GeneratedScenarioConfig } from "../src/core/event_types";
+
+describe("configPanelSectionTitles", () => {
+  it("keeps the Chinese control panel grouped in an operational order", () => {
+    expect(configPanelSectionTitles()).toEqual([
+      "仿真执行控制",
+      "场景规模与算力资源",
+      "轨道参数",
+      "业务流量与任务需求",
+      "运行模式与可视化",
+      "网络协议栈与路由",
+      "物理层与信道参数",
+      "当前生效场景"
+    ]);
+  });
+});
 
 describe("generatedScenarioSummaryItems", () => {
   it("formats generated scenario config for the Chinese control panel", () => {

@@ -90,6 +90,21 @@ export interface RuntimeProgressSummary {
   percentLabel: string;
 }
 
+export const CONFIG_PANEL_SECTION_LABELS = {
+  execution: "仿真执行控制",
+  resources: "场景规模与算力资源",
+  orbit: "轨道参数",
+  traffic: "业务流量与任务需求",
+  runtime: "运行模式与可视化",
+  network: "网络协议栈与路由",
+  physical: "物理层与信道参数",
+  activeScenario: "当前生效场景"
+} as const;
+
+export function configPanelSectionTitles(): readonly string[] {
+  return Object.values(CONFIG_PANEL_SECTION_LABELS);
+}
+
 export function ConfigPanel({
   scenario,
   runtime,
@@ -275,6 +290,58 @@ export function ConfigPanel({
   const summaryItems = generatedScenarioSummaryItems(generatedConfig);
   const pauseResume = pauseResumeControl(runtime);
   const progressSummary = runtimeProgressSummary(progress);
+  const handleInitialize = () =>
+    onRuntimeControl("INITIALIZE", {
+      satellite_count: satelliteCount,
+      user_count: userCount,
+      compute_nodes: computeNodes,
+      compute_capacity: computeCapacity,
+      compute_scheduling_policy: computeSchedulingPolicy,
+      mode: runtimeMode,
+      speed_factor: speedFactor,
+      duration: durationSeconds,
+      seed,
+      orbit: orbitControlPayload({
+        update_interval_seconds: orbitUpdateIntervalSeconds,
+        plane_count: orbitPlaneCount,
+        altitude_km: orbitAltitudeKm,
+        inclination_deg: orbitInclinationDeg
+      }),
+      traffic_model: trafficControlPayload({
+        flow_interval_seconds: flowIntervalSeconds,
+        task_interval_seconds: taskIntervalSeconds,
+        flow_demand_capacity: flowDemandCapacity,
+        task_compute_demand: taskComputeDemand,
+        task_data_size: taskDataSize
+      }),
+      visualization: visualizationControlPayload({
+        satellites: showSatellites,
+        users: showUsers,
+        links: showLinks,
+        metrics: showMetrics
+      }),
+      ...networkControlPayload({
+        application_protocol: applicationProtocol,
+        transport_protocol: transportProtocol,
+        transport_loss_rate: transportLossRate,
+        transport_congestion_window_segments: transportCongestionWindow,
+        routing_protocol: routingProtocol,
+        datalink_mac_protocol: dataLinkProtocol,
+        routing_latency_weight: routingLatencyWeight,
+        routing_inverse_capacity_weight: routingInverseCapacityWeight,
+        routing_hop_weight: routingHopWeight,
+        carrier_frequency_ghz: carrierFrequencyGhz,
+        channel_bandwidth_mhz: channelBandwidthMhz,
+        rain_rate_mm_h: rainRate,
+        rain_attenuation_coefficient_db_per_km_per_mm_h: rainCoefficient,
+        rain_effective_path_km: rainPathKm,
+        antenna_diameter_m: antennaDiameterM,
+        antenna_aperture_efficiency: antennaApertureEfficiency,
+        transmit_power_dbw: transmitPowerDbw,
+        system_loss_db: systemLossDb,
+        noise_temperature_k: noiseTemperatureK
+      })
+    });
 
   return (
     <section className="config-panel" aria-label="仿真配置与控制面板">
@@ -284,6 +351,53 @@ export function ConfigPanel({
           {runtimeStatusLabel(runtime)}
         </div>
       </div>
+
+      <div className="config-panel-body">
+        <section
+          className="config-section command-config-section"
+          aria-label={CONFIG_PANEL_SECTION_LABELS.execution}
+        >
+          <div className="config-section-title">{CONFIG_PANEL_SECTION_LABELS.execution}</div>
+
+          <div className="runtime-actions" aria-label="仿真运行控制">
+            <button type="button" onClick={handleInitialize}>
+              初始化
+            </button>
+            <button type="button" onClick={() => onRuntimeControl("START")}>
+              开始
+            </button>
+            <button
+              type="button"
+              disabled={pauseResume.disabled}
+              onClick={() => onRuntimeControl(pauseResume.action)}
+            >
+              {pauseResume.label}
+            </button>
+            <button type="button" onClick={() => onRuntimeControl("STOP")}>
+              停止
+            </button>
+            <button type="button" onClick={() => onRuntimeControl("RESET")}>
+              重置
+            </button>
+          </div>
+
+          <div className="runtime-progress" aria-label="仿真进度">
+            <div className="summary-title-row">
+              <span>仿真进度</span>
+              <strong>{progressSummary.percentLabel}</strong>
+            </div>
+            <progress value={progressSummary.percent} max="100" aria-label="仿真进度条" />
+            <div className="runtime-progress-meta">
+              <span>
+                {progressSummary.elapsedLabel} / {progressSummary.totalLabel}
+              </span>
+              <span>事件 {progressSummary.eventCountLabel}</span>
+            </div>
+          </div>
+        </section>
+
+        <section className="config-section" aria-label={CONFIG_PANEL_SECTION_LABELS.resources}>
+          <div className="config-section-title">{CONFIG_PANEL_SECTION_LABELS.resources}</div>
 
       <div className="control-group">
         <label className="control-label" htmlFor="satellite-count">
@@ -367,7 +481,10 @@ export function ConfigPanel({
           <option value="EARLIEST_DEADLINE_FIRST">最早截止期优先</option>
         </select>
       </div>
+        </section>
 
+        <section className="config-section" aria-label={CONFIG_PANEL_SECTION_LABELS.orbit}>
+          <div className="config-section-title">{CONFIG_PANEL_SECTION_LABELS.orbit}</div>
       <div className="channel-grid" aria-label="轨道参数">
         <div className="control-group">
           <label className="control-label" htmlFor="orbit-update-interval">
@@ -437,7 +554,10 @@ export function ConfigPanel({
           </div>
         </div>
       </div>
+        </section>
 
+        <section className="config-section" aria-label={CONFIG_PANEL_SECTION_LABELS.traffic}>
+          <div className="config-section-title">{CONFIG_PANEL_SECTION_LABELS.traffic}</div>
       <div className="channel-grid" aria-label="流量与任务需求">
         <div className="control-group">
           <label className="control-label" htmlFor="flow-interval">
@@ -521,7 +641,10 @@ export function ConfigPanel({
           </div>
         </div>
       </div>
+        </section>
 
+        <section className="config-section" aria-label={CONFIG_PANEL_SECTION_LABELS.runtime}>
+          <div className="config-section-title">{CONFIG_PANEL_SECTION_LABELS.runtime}</div>
       <div className="control-group">
         <label className="control-label" htmlFor="runtime-mode">
           运行模式
@@ -623,7 +746,10 @@ export function ConfigPanel({
           </label>
         </div>
       </div>
+        </section>
 
+        <section className="config-section" aria-label={CONFIG_PANEL_SECTION_LABELS.network}>
+          <div className="config-section-title">{CONFIG_PANEL_SECTION_LABELS.network}</div>
       <div className="control-group">
         <label className="control-label" htmlFor="application-protocol">
           应用协议
@@ -765,7 +891,10 @@ export function ConfigPanel({
           />
         </div>
       </div>
+        </section>
 
+        <section className="config-section" aria-label={CONFIG_PANEL_SECTION_LABELS.physical}>
+          <div className="config-section-title">{CONFIG_PANEL_SECTION_LABELS.physical}</div>
       <div className="channel-grid" aria-label="信道参数">
         <div className="control-group">
           <label className="control-label" htmlFor="carrier-frequency">
@@ -936,98 +1065,15 @@ export function ConfigPanel({
           </div>
         </div>
       </div>
+        </section>
 
-      <div className="runtime-actions" aria-label="仿真运行控制">
-        <button
-          type="button"
-          onClick={() =>
-            onRuntimeControl("INITIALIZE", {
-              satellite_count: satelliteCount,
-              user_count: userCount,
-              compute_nodes: computeNodes,
-              compute_capacity: computeCapacity,
-              compute_scheduling_policy: computeSchedulingPolicy,
-              mode: runtimeMode,
-              speed_factor: speedFactor,
-              duration: durationSeconds,
-              seed,
-              orbit: orbitControlPayload({
-                update_interval_seconds: orbitUpdateIntervalSeconds,
-                plane_count: orbitPlaneCount,
-                altitude_km: orbitAltitudeKm,
-                inclination_deg: orbitInclinationDeg
-              }),
-              traffic_model: trafficControlPayload({
-                flow_interval_seconds: flowIntervalSeconds,
-                task_interval_seconds: taskIntervalSeconds,
-                flow_demand_capacity: flowDemandCapacity,
-                task_compute_demand: taskComputeDemand,
-                task_data_size: taskDataSize
-              }),
-              visualization: visualizationControlPayload({
-                satellites: showSatellites,
-                users: showUsers,
-                links: showLinks,
-                metrics: showMetrics
-              }),
-              ...networkControlPayload({
-                application_protocol: applicationProtocol,
-                transport_protocol: transportProtocol,
-                transport_loss_rate: transportLossRate,
-                transport_congestion_window_segments: transportCongestionWindow,
-                routing_protocol: routingProtocol,
-                datalink_mac_protocol: dataLinkProtocol,
-                routing_latency_weight: routingLatencyWeight,
-                routing_inverse_capacity_weight: routingInverseCapacityWeight,
-                routing_hop_weight: routingHopWeight,
-                carrier_frequency_ghz: carrierFrequencyGhz,
-                channel_bandwidth_mhz: channelBandwidthMhz,
-                rain_rate_mm_h: rainRate,
-                rain_attenuation_coefficient_db_per_km_per_mm_h: rainCoefficient,
-                rain_effective_path_km: rainPathKm,
-                antenna_diameter_m: antennaDiameterM,
-                antenna_aperture_efficiency: antennaApertureEfficiency,
-                transmit_power_dbw: transmitPowerDbw,
-                system_loss_db: systemLossDb,
-                noise_temperature_k: noiseTemperatureK
-              })
-            })
-          }
+        <section
+          className="config-section"
+          aria-label={CONFIG_PANEL_SECTION_LABELS.activeScenario}
         >
-          初始化
-        </button>
-        <button type="button" onClick={() => onRuntimeControl("START")}>
-          开始
-        </button>
-        <button
-          type="button"
-          disabled={pauseResume.disabled}
-          onClick={() => onRuntimeControl(pauseResume.action)}
-        >
-          {pauseResume.label}
-        </button>
-        <button type="button" onClick={() => onRuntimeControl("STOP")}>
-          停止
-        </button>
-        <button type="button" onClick={() => onRuntimeControl("RESET")}>
-          重置
-        </button>
-      </div>
-
-      <div className="runtime-progress" aria-label="仿真进度">
-        <div className="summary-title-row">
-          <span>仿真进度</span>
-          <strong>{progressSummary.percentLabel}</strong>
-        </div>
-        <progress value={progressSummary.percent} max="100" aria-label="仿真进度条" />
-        <div className="runtime-progress-meta">
-          <span>
-            {progressSummary.elapsedLabel} / {progressSummary.totalLabel}
-          </span>
-          <span>事件 {progressSummary.eventCountLabel}</span>
-        </div>
-      </div>
-
+          <div className="config-section-title">
+            {CONFIG_PANEL_SECTION_LABELS.activeScenario}
+          </div>
       <div className="generated-config-summary" aria-label="当前生效场景">
         <div className="summary-title-row">
           <span>当前生效场景</span>
@@ -1041,6 +1087,8 @@ export function ConfigPanel({
             </div>
           ))}
         </div>
+      </div>
+        </section>
       </div>
     </section>
   );
