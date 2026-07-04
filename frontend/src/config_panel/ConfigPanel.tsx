@@ -376,6 +376,17 @@ export function ConfigPanel({
   const effectiveTrafficDestinationType = computeServiceDestinationLocked
     ? "COMPUTE_NODE"
     : trafficDestinationType;
+  const activeTrafficSummary = generatedConfig?.backend_summary?.traffic_demand_summary;
+  const activeTrafficSummaryMatchesControls =
+    activeTrafficSummary?.traffic_class === trafficClass &&
+    activeTrafficSummary?.destination_type === effectiveTrafficDestinationType;
+  const trafficCompatibilityNote = activeTrafficSummaryMatchesControls
+    ? activeTrafficSummary?.compatibility_note ??
+      activeTrafficSummary?.lifecycle_note ??
+      "后端未声明业务约束摘要。"
+    : generatedConfig
+      ? "参数已修改，重新初始化后刷新后端业务约束摘要。"
+      : "初始化后显示后端业务约束摘要。";
   const handleInitialize = () =>
     onRuntimeControl("INITIALIZE", {
       satellite_count: satelliteCount,
@@ -913,9 +924,7 @@ export function ConfigPanel({
         </div>
 
         <div className="traffic-compatibility-note">
-          {computeServiceDestinationLocked
-            ? "通信-计算服务固定使用星上算力节点，后端会先完成输入流传输再触发计算任务。"
-            : "当前业务按流级网络业务执行，不生成计算任务。"}
+          {trafficCompatibilityNote}
         </div>
 
         <div className="control-group">
@@ -1444,7 +1453,7 @@ export function generatedScenarioSummaryItems(
     },
     {
       label: "业务类型",
-      value: formatTrafficClass(traffic?.traffic_class ?? config.application_protocol)
+      value: traffic?.traffic_class_label ?? formatTrafficClass(traffic?.traffic_class ?? config.application_protocol)
     },
     {
       label: "业务流量",
@@ -1452,7 +1461,7 @@ export function generatedScenarioSummaryItems(
     },
     {
       label: "目的类型",
-      value: formatTrafficDestination(traffic?.destination_type)
+      value: traffic?.destination_type_label ?? formatTrafficDestination(traffic?.destination_type)
     },
     {
       label: "输入数据",
@@ -1466,7 +1475,11 @@ export function generatedScenarioSummaryItems(
     },
     {
       label: "执行形态",
-      value: formatTrafficExecutionMode(traffic?.traffic_class)
+      value: traffic?.execution_label ?? formatTrafficExecutionMode(traffic?.traffic_class)
+    },
+    {
+      label: "业务约束",
+      value: traffic?.compatibility_note ?? "待初始化"
     },
     {
       label: "FP32 算力",
@@ -1745,13 +1758,16 @@ function formatTrafficClass(value: string | undefined): string {
   if (value === "COMPUTE_SERVICE" || value === "TASK_OFFLOAD_FLOW") {
     return "通信-计算服务";
   }
+  if (value === "DATA_TRANSFER" || value === "HTTP" || value === "MQTT") {
+    return "数据传输";
+  }
   if (value === "TELEMETRY") {
     return "遥测";
   }
   if (value === "BULK_DOWNLINK") {
     return "批量下传";
   }
-  return "数据传输";
+  return value ?? "待初始化";
 }
 
 function formatTrafficDestination(value: string | undefined): string {
@@ -1767,14 +1783,21 @@ function formatTrafficDestination(value: string | undefined): string {
   if (value === "SERVICE_ENDPOINT") {
     return "服务端点";
   }
-  return "后端默认";
+  return value ?? "后端默认";
 }
 
 function formatTrafficExecutionMode(value: string | undefined): string {
   if (value === "COMPUTE_SERVICE" || value === "TASK_OFFLOAD_FLOW") {
     return "通信 + 计算任务";
   }
-  return "仅网络流";
+  if (
+    value === "DATA_TRANSFER" ||
+    value === "TELEMETRY" ||
+    value === "BULK_DOWNLINK"
+  ) {
+    return "仅网络流";
+  }
+  return value ?? "待初始化";
 }
 
 function formatDataMegabytes(value: number): string {

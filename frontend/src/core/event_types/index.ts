@@ -231,7 +231,9 @@ export interface ConstellationDerivedSummary {
 
 export interface TrafficDemandSummary {
   traffic_class: string;
+  traffic_class_label?: string;
   destination_type: string;
+  destination_type_label?: string;
   generated_flow_count: number;
   arrival_model: string;
   input_data_size_mb: number;
@@ -239,6 +241,11 @@ export interface TrafficDemandSummary {
   priority: number;
   demand_capacity_mbps: number;
   task_compute_demand: number;
+  execution_shape?: string;
+  execution_label?: string;
+  requires_compute_node_destination?: boolean;
+  compatibility_note?: string;
+  lifecycle_note?: string;
   arrival_interval_seconds?: number;
 }
 

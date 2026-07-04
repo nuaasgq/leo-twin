@@ -370,6 +370,12 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
     assert ack["generated_config"]["backend_summary"]["traffic_demand_summary"][
         "output_data_size_mb"
     ] == 3.5
+    assert ack["generated_config"]["backend_summary"]["traffic_demand_summary"][
+        "execution_shape"
+    ] == "FLOW_ONLY"
+    assert ack["generated_config"]["backend_summary"]["traffic_demand_summary"][
+        "lifecycle_note"
+    ] == "网络流完成即完成本次业务；不触发星上计算任务生命周期。"
     assert ack["generated_config"]["backend_summary"]["compute_resource_summary"][
         "capacity_unit"
     ] == "GFLOPS FP32"

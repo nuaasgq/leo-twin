@@ -2044,7 +2044,7 @@ change.
 ## 2026-07-05 - Traffic Compatibility Guard v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`
-- Commit: pending
+- Commit: `c8fb326`
 - Scope: make compute-service traffic destination compatibility a backend
   configuration rule and keep the frontend control payload aligned with that
   rule.
@@ -2080,3 +2080,52 @@ change.
 - Recommended follow-up:
   - Add explicit backend summary wording for unsupported or degraded traffic
     combinations when future traffic classes gain stricter lifecycle rules.
+
+## 2026-07-05 - Traffic Lifecycle Summary v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: make traffic execution shape, compatibility constraints, and lifecycle
+  notes backend-derived summary fields consumed by the frontend.
+- Changed files/modules:
+  - `src/leo_twin/services/derived_summary.py`
+  - `tests/unit/test_backend_derived_summary.py`
+  - `tests/unit/test_integration_demo_scenario.py`
+  - `tests/integration/test_config_control.py`
+  - `tests/integration/test_full_system_demo.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/config_panel/ConfigPanel.tsx`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/configPanel.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_backend_derived_summary.py tests/unit/test_integration_demo_scenario.py tests/integration/test_config_control.py::test_frontend_control_messages_are_processed tests/integration/test_full_system_demo.py::test_non_compute_traffic_mix_runs_without_compute_tasks -q`
+    - Result: passed, 24 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- configPanel.test.ts dataPanel.test.ts`
+    - Result: passed, 22 files / 115 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - Two read-only subagents reviewed the backend summary path and frontend
+    consumption path. They confirmed the minimal safe scope is
+    `backend_summary.traffic_demand_summary` plus frontend display tests, not
+    new scenario config fields.
+  - The control input area previously showed a frontend-inferred lifecycle
+    note. It now shows the backend note only when an initialized generated
+    config matches the current controls, otherwise it shows a neutral
+    initialization prompt.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The lifecycle notes are explanatory summary fields. They do not implement
+    output/result flow scheduling beyond the current metadata.
+  - Unknown future traffic classes are displayed from backend labels when
+    present; without backend labels the frontend falls back to raw enum values.
+- Recommended follow-up:
+  - Add a dedicated traffic-analysis dashboard card that charts generated
+    traffic class mix, flow completion, and compute-service lifecycle latency
+    components over simulation time.

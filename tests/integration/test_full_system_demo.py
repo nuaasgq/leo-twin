@@ -219,6 +219,8 @@ def test_non_compute_traffic_mix_runs_without_compute_tasks() -> None:
     assert traffic_summary["destination_type"] == "GROUND_ENDPOINT"
     assert traffic_summary["generated_flow_count"] == 4
     assert traffic_summary["output_data_size_mb"] == 3.5
+    assert traffic_summary["execution_shape"] == "FLOW_ONLY"
+    assert traffic_summary["requires_compute_node_destination"] is False
     assert len(result.network_stack_traces) == 4
 
 

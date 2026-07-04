@@ -148,7 +148,7 @@ describe("ConfigPanel priority controls", () => {
 
     expect(markup).toContain('id="traffic-destination-type" disabled=""');
     expect(markup).toContain('value="COMPUTE_NODE" selected');
-    expect(markup).toContain("通信-计算服务固定使用星上算力节点");
+    expect(markup).toContain("初始化后显示后端业务约束摘要。");
   });
 
   it("uses backend-provided compute node count instead of satellite count", () => {
@@ -249,14 +249,21 @@ describe("generatedScenarioSummaryItems", () => {
         },
         traffic_demand_summary: {
           traffic_class: "COMPUTE_SERVICE",
+          traffic_class_label: "通信-计算服务",
           destination_type: "COMPUTE_NODE",
+          destination_type_label: "星上算力节点",
           generated_flow_count: 1200,
           arrival_model: "DETERMINISTIC_INTERVAL",
           input_data_size_mb: 10,
           output_data_size_mb: 0,
           priority: 0,
           demand_capacity_mbps: 1,
-          task_compute_demand: 20
+          task_compute_demand: 20,
+          execution_shape: "FLOW_THEN_COMPUTE_TASK",
+          execution_label: "输入流 + 计算任务",
+          requires_compute_node_destination: true,
+          compatibility_note: "通信-计算服务要求目的类型为星上算力节点。",
+          lifecycle_note: "输入流完成后触发计算任务；输出数据大小作为结果流元数据保留。"
         },
         compute_resource_summary: {
           resource_model: "ComputeResourceVector",
@@ -310,7 +317,11 @@ describe("generatedScenarioSummaryItems", () => {
     expect(items).toContainEqual({ label: "目的类型", value: "星上算力节点" });
     expect(items).toContainEqual({ label: "输入数据", value: "10 MB" });
     expect(items).toContainEqual({ label: "输出数据", value: "0 MB" });
-    expect(items).toContainEqual({ label: "执行形态", value: "通信 + 计算任务" });
+    expect(items).toContainEqual({ label: "执行形态", value: "输入流 + 计算任务" });
+    expect(items).toContainEqual({
+      label: "业务约束",
+      value: "通信-计算服务要求目的类型为星上算力节点。"
+    });
     expect(items).toContainEqual({ label: "FP32 算力", value: "640 GFLOPS" });
     expect(items).toContainEqual({
       label: "模型假设",

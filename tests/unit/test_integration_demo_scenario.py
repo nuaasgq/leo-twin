@@ -195,6 +195,12 @@ def test_demo_traffic_model_semantics_are_config_driven() -> None:
         "output_data_size_mb"
     ] == 4.5
     assert scenario.frontend_config["backend_summary"]["traffic_demand_summary"][
+        "execution_shape"
+    ] == "FLOW_ONLY"
+    assert scenario.frontend_config["backend_summary"]["traffic_demand_summary"][
+        "compatibility_note"
+    ] == "该业务类型按流级网络业务执行，不生成计算任务。"
+    assert scenario.frontend_config["backend_summary"]["traffic_demand_summary"][
         "generated_flow_count"
     ] == len(demand_batch.records)
     assert demand_batch.records[0].traffic_class == TrafficClass.BULK_DOWNLINK

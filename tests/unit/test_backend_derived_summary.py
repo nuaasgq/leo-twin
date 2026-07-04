@@ -74,7 +74,9 @@ def test_backend_derived_summary_is_deterministic_and_frontend_ready() -> None:
     }
     assert first["traffic_demand_summary"] == {
         "traffic_class": "COMPUTE_SERVICE",
+        "traffic_class_label": "通信-计算服务",
         "destination_type": "COMPUTE_NODE",
+        "destination_type_label": "星上算力节点",
         "generated_flow_count": 1200,
         "arrival_model": "DETERMINISTIC_INTERVAL",
         "input_data_size_mb": 2.0,
@@ -82,6 +84,11 @@ def test_backend_derived_summary_is_deterministic_and_frontend_ready() -> None:
         "priority": 0,
         "demand_capacity_mbps": 25.0,
         "task_compute_demand": 20.0,
+        "execution_shape": "FLOW_THEN_COMPUTE_TASK",
+        "execution_label": "输入流 + 计算任务",
+        "requires_compute_node_destination": True,
+        "compatibility_note": "通信-计算服务要求目的类型为星上算力节点。",
+        "lifecycle_note": "输入流完成后触发计算任务；输出数据大小作为结果流元数据保留。",
         "arrival_interval_seconds": 60.0,
     }
     assert first["compute_resource_summary"] == {
@@ -248,10 +255,37 @@ def test_traffic_summary_uses_explicit_traffic_model_fields() -> None:
     )["traffic_demand_summary"]
 
     assert summary["traffic_class"] == "BULK_DOWNLINK"
+    assert summary["traffic_class_label"] == "批量下传"
     assert summary["destination_type"] == "GROUND_ENDPOINT"
+    assert summary["destination_type_label"] == "地面端"
     assert summary["output_data_size_mb"] == 4.5
     assert summary["input_data_size_mb"] == 2.0
     assert summary["demand_capacity_mbps"] == 25.0
+    assert summary["execution_shape"] == "FLOW_ONLY"
+    assert summary["execution_label"] == "流级网络业务"
+    assert summary["requires_compute_node_destination"] is False
+    assert summary["compatibility_note"] == "该业务类型按流级网络业务执行，不生成计算任务。"
+    assert summary["lifecycle_note"] == "网络流完成即完成本次业务；不触发星上计算任务生命周期。"
+
+
+def test_traffic_summary_rejects_compute_service_non_compute_destination() -> None:
+    allocation = AutoPlaneAllocator.allocate(satellite_count=12, plane_count=3)
+
+    with pytest.raises(ValueError, match="COMPUTE_NODE"):
+        build_backend_derived_summary(
+            constellation=allocation,
+            satellite_count=12,
+            user_count=20,
+            compute_node_count=4,
+            compute_capacity=40.0,
+            flow_count=10,
+            demand_capacity=25.0,
+            task_compute_demand=20.0,
+            task_data_size=2.0,
+            application_protocol="TASK_OFFLOAD_FLOW",
+            traffic_class="COMPUTE_SERVICE",
+            traffic_destination_type="GROUND_ENDPOINT",
+        )
 
 
 def test_scale_fidelity_summary_reports_large_scale_degradation() -> None:

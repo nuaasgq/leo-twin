@@ -72,7 +72,9 @@ def build_backend_derived_summary(
     total_cpu_gflops_fp32 = compute_vector.cpu_gflops_fp32 * compute_node_count
     traffic_summary: dict[str, object] = {
         "traffic_class": selected_traffic_class.value,
+        "traffic_class_label": _traffic_class_label(selected_traffic_class),
         "destination_type": selected_destination_type.value,
+        "destination_type_label": _traffic_destination_label(selected_destination_type),
         "generated_flow_count": flow_count,
         "arrival_model": "DETERMINISTIC_INTERVAL",
         "input_data_size_mb": task_data_size,
@@ -80,6 +82,10 @@ def build_backend_derived_summary(
         "priority": 0,
         "demand_capacity_mbps": demand_capacity,
         "task_compute_demand": task_compute_demand,
+        **_traffic_lifecycle_summary(
+            selected_traffic_class,
+            selected_destination_type,
+        ),
     }
     if arrival_interval_seconds is not None:
         traffic_summary["arrival_interval_seconds"] = float(arrival_interval_seconds)
@@ -249,6 +255,53 @@ def _selected_destination_type(
     if isinstance(destination_type, TrafficDestinationType):
         return destination_type
     return TrafficDestinationType(str(destination_type))
+
+
+def _traffic_class_label(traffic_class: TrafficClass) -> str:
+    labels = {
+        TrafficClass.COMPUTE_SERVICE: "通信-计算服务",
+        TrafficClass.DATA_TRANSFER: "数据传输",
+        TrafficClass.TELEMETRY: "遥测",
+        TrafficClass.BULK_DOWNLINK: "批量下传",
+    }
+    return labels[traffic_class]
+
+
+def _traffic_destination_label(destination_type: TrafficDestinationType) -> str:
+    labels = {
+        TrafficDestinationType.COMPUTE_NODE: "星上算力节点",
+        TrafficDestinationType.GROUND_ENDPOINT: "地面端",
+        TrafficDestinationType.SATELLITE: "卫星节点",
+        TrafficDestinationType.SERVICE_ENDPOINT: "服务端点",
+    }
+    return labels[destination_type]
+
+
+def _traffic_lifecycle_summary(
+    traffic_class: TrafficClass,
+    destination_type: TrafficDestinationType,
+) -> dict[str, object]:
+    if traffic_class == TrafficClass.COMPUTE_SERVICE:
+        if destination_type != TrafficDestinationType.COMPUTE_NODE:
+            raise ValueError(
+                "COMPUTE_SERVICE traffic requires destination_type=COMPUTE_NODE"
+            )
+        return {
+            "execution_shape": "FLOW_THEN_COMPUTE_TASK",
+            "execution_label": "输入流 + 计算任务",
+            "requires_compute_node_destination": True,
+            "compatibility_note": "通信-计算服务要求目的类型为星上算力节点。",
+            "lifecycle_note": (
+                "输入流完成后触发计算任务；输出数据大小作为结果流元数据保留。"
+            ),
+        }
+    return {
+        "execution_shape": "FLOW_ONLY",
+        "execution_label": "流级网络业务",
+        "requires_compute_node_destination": False,
+        "compatibility_note": "该业务类型按流级网络业务执行，不生成计算任务。",
+        "lifecycle_note": "网络流完成即完成本次业务；不触发星上计算任务生命周期。",
+    }
 
 
 def _model_assumptions(

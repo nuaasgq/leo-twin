@@ -5,7 +5,8 @@ import {
   buildDataPanelDisplaySummary,
   buildDataPanelRuntimeProgress,
   buildDataPanelSummary,
-  buildDataPanelTelemetry
+  buildDataPanelTelemetry,
+  buildDataPanelTrafficDisplay
 } from "../src/dashboard/data_panel/DataPanel";
 import { WorldSnapshot } from "../src/state/snapshot_engine";
 
@@ -209,6 +210,53 @@ describe("buildDataPanelRuntimeProgress", () => {
 
   it("clamps the data panel progress to the configured duration", () => {
     expect(buildDataPanelRuntimeProgress(900, 600).percentLabel).toBe("100%");
+  });
+});
+
+describe("buildDataPanelTrafficDisplay", () => {
+  it("uses backend traffic labels and lifecycle notes", () => {
+    expect(
+      buildDataPanelTrafficDisplay({
+        traffic_class: "SCIENCE_PAYLOAD",
+        traffic_class_label: "科学载荷业务",
+        destination_type: "PAYLOAD_ENDPOINT",
+        destination_type_label: "载荷端点",
+        generated_flow_count: 12,
+        arrival_model: "DETERMINISTIC_INTERVAL",
+        input_data_size_mb: 10,
+        output_data_size_mb: 1,
+        priority: 0,
+        demand_capacity_mbps: 25,
+        task_compute_demand: 20,
+        execution_shape: "PAYLOAD_FLOW_ONLY",
+        execution_label: "载荷数据流",
+        requires_compute_node_destination: false,
+        compatibility_note: "后端声明该业务不触发算力任务。",
+        lifecycle_note: "载荷数据流完成即完成业务。"
+      })
+    ).toEqual({
+      label: "科学载荷业务 / 载荷端点 / 载荷数据流",
+      note: "载荷数据流完成即完成业务。"
+    });
+  });
+
+  it("falls back to deterministic labels for older backend summaries", () => {
+    expect(
+      buildDataPanelTrafficDisplay({
+        traffic_class: "BULK_DOWNLINK",
+        destination_type: "GROUND_ENDPOINT",
+        generated_flow_count: 12,
+        arrival_model: "DETERMINISTIC_INTERVAL",
+        input_data_size_mb: 10,
+        output_data_size_mb: 1,
+        priority: 0,
+        demand_capacity_mbps: 25,
+        task_compute_demand: 20
+      })
+    ).toEqual({
+      label: "批量下传 / 地面端 / 仅网络流",
+      note: null
+    });
   });
 });
 

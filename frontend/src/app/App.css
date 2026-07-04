@@ -848,6 +848,15 @@ body {
   line-height: 1.15;
 }
 
+.data-panel-runtime-note {
+  display: block;
+  margin-top: 6px;
+  color: var(--app-muted);
+  font-size: 10px;
+  line-height: 1.3;
+  white-space: normal;
+}
+
 .data-panel-progress {
   margin: 0;
 }

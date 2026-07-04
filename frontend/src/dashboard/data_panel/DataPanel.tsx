@@ -15,6 +15,7 @@ import {
 
 import {
   GeneratedScenarioConfig,
+  TrafficDemandSummary,
   RuntimeKpiTimeSeriesV1,
   RuntimeMetricsSummary,
   RuntimeStatusPayload
@@ -84,9 +85,7 @@ export const DataPanel = memo(function DataPanel({
       : `${generatedConfig.satellite_count} 星 / ${generatedConfig.user_count} 用户`
     : "等待初始化";
   const trafficSummary = generatedConfig?.backend_summary?.traffic_demand_summary;
-  const configuredTraffic = trafficSummary
-    ? dataPanelTrafficLabel(trafficSummary.traffic_class, trafficSummary.destination_type)
-    : "等待初始化";
+  const trafficDisplay = buildDataPanelTrafficDisplay(trafficSummary);
   const runtimeProgress = buildDataPanelRuntimeProgress(summary.simTime, runtimeStatus.duration);
   const telemetry = buildDataPanelTelemetry(
     snapshot,
@@ -132,7 +131,10 @@ export const DataPanel = memo(function DataPanel({
           </div>
           <div>
             <span>业务类型</span>
-            <strong>{configuredTraffic}</strong>
+            <strong>{trafficDisplay.label}</strong>
+            {trafficDisplay.note ? (
+              <small className="data-panel-runtime-note">{trafficDisplay.note}</small>
+            ) : null}
           </div>
         </div>
       </div>
@@ -939,27 +941,60 @@ function runtimeModeLabel(mode: RuntimeStatusPayload["mode"]): string {
   return "实时模式";
 }
 
-function dataPanelTrafficLabel(trafficClass: string, destinationType: string): string {
+export interface DataPanelTrafficDisplay {
+  label: string;
+  note: string | null;
+}
+
+export function buildDataPanelTrafficDisplay(
+  traffic: TrafficDemandSummary | null | undefined
+): DataPanelTrafficDisplay {
+  if (traffic === null || traffic === undefined) {
+    return {
+      label: "等待初始化",
+      note: null
+    };
+  }
+  return {
+    label: dataPanelTrafficLabel(traffic),
+    note: traffic.lifecycle_note ?? traffic.compatibility_note ?? null
+  };
+}
+
+function dataPanelTrafficLabel(traffic: TrafficDemandSummary): string {
+  const trafficClass = traffic.traffic_class;
+  const destinationType = traffic.destination_type;
   const classLabel =
-    trafficClass === "COMPUTE_SERVICE" || trafficClass === "TASK_OFFLOAD_FLOW"
+    traffic.traffic_class_label ??
+    (trafficClass === "COMPUTE_SERVICE" || trafficClass === "TASK_OFFLOAD_FLOW"
       ? "通信-计算服务"
+      : trafficClass === "DATA_TRANSFER"
+        ? "数据传输"
       : trafficClass === "TELEMETRY"
         ? "遥测"
         : trafficClass === "BULK_DOWNLINK"
           ? "批量下传"
-          : "数据传输";
+          : trafficClass);
   const executionLabel =
-    trafficClass === "COMPUTE_SERVICE" || trafficClass === "TASK_OFFLOAD_FLOW"
+    traffic.execution_label ??
+    (trafficClass === "COMPUTE_SERVICE" || trafficClass === "TASK_OFFLOAD_FLOW"
       ? "通信+计算"
-      : "仅网络流";
+      : trafficClass === "DATA_TRANSFER" ||
+          trafficClass === "TELEMETRY" ||
+          trafficClass === "BULK_DOWNLINK"
+        ? "仅网络流"
+        : traffic.execution_shape ?? "执行形态未声明");
   const destinationLabel =
-    destinationType === "COMPUTE_NODE"
+    traffic.destination_type_label ??
+    (destinationType === "COMPUTE_NODE"
       ? "星上算力"
       : destinationType === "GROUND_ENDPOINT"
         ? "地面端"
         : destinationType === "SATELLITE"
           ? "卫星"
-          : "服务端点";
+          : destinationType === "SERVICE_ENDPOINT"
+            ? "服务端点"
+            : destinationType);
   return `${classLabel} / ${destinationLabel} / ${executionLabel}`;
 }
 
