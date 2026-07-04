@@ -1514,6 +1514,14 @@ export function generatedScenarioSummaryItems(
       value: formatBeamPattern(coverage?.beam_pattern)
     },
     {
+      label: "覆盖保真",
+      value: formatCoverageFidelityLevel(coverage?.fidelity_level)
+    },
+    {
+      label: "足迹交集",
+      value: formatCoverageIntersectionPolicy(coverage?.footprint_intersection_policy)
+    },
+    {
       label: "默认波束",
       value: `${formatInteger(coverage?.default_beam_count ?? 7)} 个`
     },
@@ -1822,6 +1830,20 @@ function formatBeamPattern(value: string | undefined): string {
     return "中心 + 六邻区蜂窝";
   }
   return value ?? "中心 + 六邻区蜂窝";
+}
+
+function formatCoverageFidelityLevel(value: string | undefined): string {
+  if (value === "DISPLAY_APPROXIMATION") {
+    return "显示近似";
+  }
+  return value ?? "显示近似";
+}
+
+function formatCoverageIntersectionPolicy(value: string | undefined): string {
+  if (value === "VISUAL_GEOMETRIC_CONTAINMENT_ONLY") {
+    return "仅视觉几何包含";
+  }
+  return value ?? "仅视觉几何包含";
 }
 
 function formatModelAssumption(value: string | undefined): string {

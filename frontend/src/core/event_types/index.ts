@@ -299,13 +299,17 @@ export interface BackendDerivedSummary {
 
 export interface CoverageBeamSummary {
   coverage_model: string;
+  fidelity_level?: string;
   selected_satellite_detail_mode: string;
   beam_pattern: string;
+  footprint_intersection_policy?: string;
   default_beam_count: number;
   beam_radius_m: number;
   beam_length_m: number;
   global_beam_render_limit: number;
+  excluded_physics?: readonly string[];
   model_note: string;
+  intersection_note?: string;
 }
 
 export interface WorkloadSmoothingSummary {

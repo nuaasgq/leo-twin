@@ -115,15 +115,27 @@ def test_backend_derived_summary_is_deterministic_and_frontend_ready() -> None:
     }
     assert first["coverage_beam_summary"] == {
         "coverage_model": "DETERMINISTIC_GEOMETRIC_FOOTPRINT",
+        "fidelity_level": "DISPLAY_APPROXIMATION",
         "selected_satellite_detail_mode": "SELECTED_SATELLITE_ONLY",
         "beam_pattern": "CENTER_PLUS_HEX_RING_VISUAL_APPROXIMATION",
+        "footprint_intersection_policy": "VISUAL_GEOMETRIC_CONTAINMENT_ONLY",
         "default_beam_count": 7,
         "beam_radius_m": 160_000.0,
         "beam_length_m": 600_000.0,
         "global_beam_render_limit": 1,
+        "excluded_physics": [
+            "RF_PROPAGATION",
+            "ANTENNA_PATTERN",
+            "LINK_BUDGET",
+            "INTERFERENCE",
+        ],
         "model_note": (
             "Selected-satellite beam cells are deterministic visual footprints; "
             "no RF propagation or antenna-pattern simulation is performed."
+        ),
+        "intersection_note": (
+            "Coverage/user intersections are deterministic geometric containment "
+            "counts for visualization only; they are not access decisions."
         ),
     }
     assert any(

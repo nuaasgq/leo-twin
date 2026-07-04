@@ -114,15 +114,27 @@ def build_backend_derived_summary(
     }
     coverage_summary = {
         "coverage_model": "DETERMINISTIC_GEOMETRIC_FOOTPRINT",
+        "fidelity_level": "DISPLAY_APPROXIMATION",
         "selected_satellite_detail_mode": "SELECTED_SATELLITE_ONLY",
         "beam_pattern": "CENTER_PLUS_HEX_RING_VISUAL_APPROXIMATION",
+        "footprint_intersection_policy": "VISUAL_GEOMETRIC_CONTAINMENT_ONLY",
         "default_beam_count": int(beam_count),
         "beam_radius_m": float(beam_radius_m),
         "beam_length_m": float(beam_length_m),
         "global_beam_render_limit": 1,
+        "excluded_physics": [
+            "RF_PROPAGATION",
+            "ANTENNA_PATTERN",
+            "LINK_BUDGET",
+            "INTERFERENCE",
+        ],
         "model_note": (
             "Selected-satellite beam cells are deterministic visual footprints; "
             "no RF propagation or antenna-pattern simulation is performed."
+        ),
+        "intersection_note": (
+            "Coverage/user intersections are deterministic geometric containment "
+            "counts for visualization only; they are not access decisions."
         ),
     }
 

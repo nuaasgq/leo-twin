@@ -291,12 +291,22 @@ describe("generatedScenarioSummaryItems", () => {
           coverage_model: "DETERMINISTIC_GEOMETRIC_FOOTPRINT",
           selected_satellite_detail_mode: "SELECTED_SATELLITE_ONLY",
           beam_pattern: "CENTER_PLUS_HEX_RING_VISUAL_APPROXIMATION",
+          fidelity_level: "DISPLAY_APPROXIMATION",
+          footprint_intersection_policy: "VISUAL_GEOMETRIC_CONTAINMENT_ONLY",
+          excluded_physics: [
+            "RF_PROPAGATION",
+            "ANTENNA_PATTERN",
+            "LINK_BUDGET",
+            "INTERFERENCE"
+          ],
           default_beam_count: 7,
           beam_radius_m: 160_000,
           beam_length_m: 600_000,
           global_beam_render_limit: 1,
           model_note:
-            "Selected-satellite beam cells are deterministic visual footprints; no RF propagation or antenna-pattern simulation is performed."
+            "Selected-satellite beam cells are deterministic visual footprints; no RF propagation or antenna-pattern simulation is performed.",
+          intersection_note:
+            "Coverage/user intersections are deterministic geometric containment counts for visualization only; they are not access decisions."
         },
         model_assumptions: [
           "Orbit allocation is deterministic and simplified; no SGP4 or external ephemeris is used."
@@ -337,6 +347,8 @@ describe("generatedScenarioSummaryItems", () => {
     expect(items).toContainEqual({ label: "波束模式", value: "中心 + 六邻区蜂窝" });
     expect(items).toContainEqual({ label: "默认波束", value: "7 个" });
     expect(items).toContainEqual({ label: "波束半径", value: "160 km" });
+    expect(items).toContainEqual({ label: "覆盖保真", value: "显示近似" });
+    expect(items).toContainEqual({ label: "足迹交集", value: "仅视觉几何包含" });
     expect(items).toContainEqual({ label: "轨道周期", value: "95.5 min" });
   });
 

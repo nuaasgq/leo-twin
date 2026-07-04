@@ -2545,3 +2545,40 @@ change.
 - Recommended follow-up:
   - Promote coverage/user intersection into a backend-derived observation once
     the coverage model contract is upgraded beyond visual approximation.
+
+## 2026-07-05 - Coverage Summary Transparency v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: expose backend-owned coverage/beam fidelity and visual-footprint
+  intersection policy in the derived summary and frontend configuration
+  explanation.
+- Changed files/modules:
+  - `src/leo_twin/services/derived_summary.py`
+  - `tests/unit/test_backend_derived_summary.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/config_panel/ConfigPanel.tsx`
+  - `frontend/tests/configPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_backend_derived_summary.py -q`
+    - Result: passed, 8 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- configPanel.test.ts satelliteVisuals.test.ts`
+    - Result: passed, 23 files / 137 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The existing frontend visual footprint count could be mistaken for an
+    access or RF result, so this task makes the backend summary explicitly
+    report display-only fidelity and excluded physics.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - Coverage/user intersection remains deterministic visual geometry only; no
+    RF propagation, antenna pattern, link budget, or interference model is
+    introduced in this task.
+- Recommended follow-up:
+  - Add a backend-owned coverage observation contract before using coverage
+    counts for access decisions or KPI calculations.
