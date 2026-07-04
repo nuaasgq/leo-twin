@@ -88,6 +88,10 @@ def test_demo_scenario_auto_allocates_starlink_like_planes_when_not_explicit() -
         "mean_anomaly_spacing_deg": 36.0,
         "phase_policy": "SLOT_INDEX_PHASE_WITH_PLANE_OFFSET",
         "altitude_m": 529_000.0,
+        "orbital_period_minutes": pytest.approx(95.067783),
+        "orbital_period_model_note": (
+            "Simplified circular-orbit period estimate; no SGP4 or external ephemeris."
+        ),
         "inclination_deg": 53.0,
     }
     assert backend_summary["derived_constellation_summary"] == summary

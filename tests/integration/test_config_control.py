@@ -417,9 +417,24 @@ def test_initialize_writes_config_and_start_gates_streams(tmp_path) -> None:
     assert init_ack["generated_config"]["backend_summary"][
         "derived_constellation_summary"
     ]["plane_count"] == 6
+    assert init_ack["generated_config"]["backend_summary"][
+        "derived_constellation_summary"
+    ]["orbital_period_minutes"] == pytest.approx(96.538902)
+    assert init_ack["generated_config"]["backend_summary"][
+        "coverage_beam_summary"
+    ]["default_beam_count"] == 7
+    assert init_ack["generated_config"]["backend_summary"][
+        "coverage_beam_summary"
+    ]["beam_pattern"] == "CENTER_PLUS_HEX_RING_VISUAL_APPROXIMATION"
     assert init_ack["generated_config"]["backend_summary"]["compute_resource_summary"][
         "total_cpu_gflops_fp32"
     ] == 36.0
+    assert init_ack["generated_config"]["backend_summary"]["compute_resource_summary"][
+        "total_gpu_tflops_fp32"
+    ] == 0.0
+    assert init_ack["generated_config"]["backend_summary"]["compute_resource_summary"][
+        "total_npu_tops_int8"
+    ] == 0.0
     assert control_plane.result.config.satellite_count == 24
     assert control_plane.result.processed_events == ()
     assert control_plane.stream_events() == ()

@@ -5,6 +5,36 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Backend Summary Integration Assertions v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending in this commit
+- Scope: strengthen integration-level acceptance that generated demo/control
+  configurations expose backend-derived orbital period, coverage/beam summary,
+  and compute vector summary fields beyond unit-level summary tests.
+- Changed files/modules:
+  - `tests/integration/test_config_control.py`
+  - `tests/unit/test_integration_demo_scenario.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_backend_derived_summary.py tests/unit/test_integration_demo_scenario.py::test_demo_scenario_auto_allocates_starlink_like_planes_when_not_explicit tests/integration/test_config_control.py::test_initialize_writes_config_and_start_gates_streams -q`
+    - Result: passed, 7 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- satelliteVisuals.test.ts`
+    - Result: passed, 22 files / 102 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The exact Starlink-like constellation summary fixture needed to include the
+    newly added orbital period fields.
+  - The active local runtime config files remain modified and excluded.
+- Known remaining issues:
+  - These are contract assertions; browser screenshot-level visual acceptance
+    is still not present because this repository has no Playwright setup yet.
+- Recommended follow-up:
+  - Add a dedicated browser smoke harness if Playwright is introduced later.
+
 ## 2026-07-05 - 3D Beam Summary Binding v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`
