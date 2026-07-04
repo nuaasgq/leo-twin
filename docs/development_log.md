@@ -2934,3 +2934,36 @@ change.
 - Recommended follow-up:
   - Add runtime session id and stream cursor diagnostics to `/runtime/status`
     and display them in the frontend sync pill.
+
+## 2026-07-05 - Network Flow Completion Metrics v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: make `PositionDrivenNetworkEngine` emit deterministic flow-level
+  `FLOW_COMPLETE` events to metrics after `FLOW_ARRIVAL` routing, using
+  `complete` for available routes and `blocked` for unavailable routes.
+- Changed files/modules:
+  - `src/leo_twin/models/network/position_engine.py`
+  - `tests/unit/test_position_driven_network_engine.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_position_driven_network_engine.py -q`
+    - Result: passed, 27 tests.
+  - `python -m pytest tests/unit/test_metrics_module.py tests/unit/test_position_driven_network_engine.py tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer tests/integration/test_runtime_session_control.py::test_runtime_kpi_series_changes_with_configured_flow_demand -q`
+    - Result: passed, 44 tests.
+  - `python -m pytest tests/integration/test_runtime_session_control.py -q`
+    - Result: passed, 12 tests.
+- Problems encountered:
+  - The default small demo still produces blocked early flows, so runtime-level
+    assertions validate that metrics sees completed flow outcomes rather than
+    claiming successful delivered throughput for that scenario.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - This remains flow-level completion reporting. It is not packet-level loss,
+    jitter, retransmission, or EXATA integration.
+- Recommended follow-up:
+  - Add a deterministic demo scenario with at least one successful data flow so
+    dashboard KPI source switches to `COMPLETED_FLOW_CAPACITY` in an integration
+    test.

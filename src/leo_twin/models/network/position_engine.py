@@ -27,6 +27,7 @@ from leo_twin.schema import (
     ComputeNodeState,
     EventType,
     FlowRequest,
+    FlowState,
     LinkMedium,
     LinkState,
     OrbitBatchState,
@@ -205,6 +206,7 @@ class PositionDrivenNetworkEngine(SimulationModule):
             self._last_routes[request.flow_id] = route
             for emitted in self._route_events(event.sim_time, route):
                 kernel.schedule_event(emitted)
+            kernel.schedule_event(self._flow_completion_event(event.sim_time, request, route))
             return
 
         if event.event_type == COMPUTE_NODE_UPDATE:
@@ -784,6 +786,29 @@ class PositionDrivenNetworkEngine(SimulationModule):
             for target in self._route_targets
         )
 
+    def _flow_completion_event(
+        self,
+        dispatch_time: float,
+        request: FlowRequest,
+        route: Route,
+    ) -> SimEvent:
+        completion_time = dispatch_time + route.latency if route.available else dispatch_time
+        return self._event(
+            dispatch_time=completion_time,
+            target=self._metrics_target,
+            event_type=EventType.FLOW_COMPLETE.value,
+            payload=FlowState(
+                flow_id=request.flow_id,
+                route_id=route.route_id,
+                source_id=request.source_id,
+                target_id=request.target_id,
+                status="complete" if route.available else "blocked",
+                route_path=route.path,
+                latency=route.latency if route.available else None,
+                capacity=_delivered_flow_capacity(route) if route.available else 0.0,
+            ),
+        )
+
     def _event(
         self,
         dispatch_time: float,
@@ -924,6 +949,12 @@ def _unavailable_route(request: FlowRequest) -> Route:
         available=False,
         demand_capacity=request.demand_capacity,
     )
+
+
+def _delivered_flow_capacity(route: Route) -> float:
+    if route.demand_capacity is None:
+        return float(route.capacity)
+    return float(min(route.capacity, route.demand_capacity))
 
 
 def _vector3(value: Any) -> tuple[float, float, float]:

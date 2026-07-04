@@ -26,6 +26,7 @@ from leo_twin.schema import (
     DataLinkProtocol,
     EventType,
     FlowRequest,
+    FlowState,
     LinkMedium,
     LinkState,
     NetworkLayer,
@@ -326,11 +327,40 @@ def test_flow_arrival_outputs_route_from_active_access() -> None:
         )
     )
 
-    kernel.run()
+    processed = kernel.run()
 
     assert len(compute.routes) == 1
     assert compute.routes[0].available is True
     assert compute.routes[0].path == ("user-east", "sat-001", "node-a")
+    completed = [
+        event
+        for event in metrics.events
+        if event.event_type == EventType.FLOW_COMPLETE
+    ]
+    assert len(completed) == 1
+    assert completed[0].sim_time == pytest.approx(1.0 + compute.routes[0].latency)
+    assert completed[0].target == "metrics"
+    route_metric_index = next(
+        index
+        for index, event in enumerate(processed)
+        if event.event_type == EventType.ROUTE_UPDATE and event.target == "metrics"
+    )
+    complete_index = next(
+        index
+        for index, event in enumerate(processed)
+        if event.event_type == EventType.FLOW_COMPLETE and event.target == "metrics"
+    )
+    assert processed[route_metric_index].sim_time <= processed[complete_index].sim_time
+    assert completed[0].payload == FlowState(
+        flow_id="flow-001",
+        route_id="route:flow-001",
+        source_id="user-east",
+        target_id="node-a",
+        status="complete",
+        route_path=("user-east", "sat-001", "node-a"),
+        latency=compute.routes[0].latency,
+        capacity=10.0,
+    )
 
 
 def test_application_runtime_changes_route_availability_through_flow_demand() -> None:
@@ -371,6 +401,23 @@ def test_application_runtime_changes_route_availability_through_flow_demand() ->
 
     assert compute.routes[0].available is False
     assert compute.routes[0].path == ()
+    completed = [
+        event
+        for event in metrics.events
+        if event.event_type == EventType.FLOW_COMPLETE
+    ]
+    assert len(completed) == 1
+    assert completed[0].sim_time == pytest.approx(1.0)
+    assert completed[0].payload == FlowState(
+        flow_id="flow-001",
+        route_id="route:flow-001",
+        source_id="user-east",
+        target_id="node-a",
+        status="blocked",
+        route_path=(),
+        latency=None,
+        capacity=0.0,
+    )
 
 
 def test_active_flow_reroutes_when_access_link_ends() -> None:

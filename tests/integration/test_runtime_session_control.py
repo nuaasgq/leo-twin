@@ -217,6 +217,14 @@ def test_runtime_kpi_series_changes_with_configured_flow_demand(tmp_path) -> Non
     assert low["metrics_summary"]["network_quality_requested_route_demand_mbps"] < high[
         "metrics_summary"
     ]["network_quality_requested_route_demand_mbps"]
+    assert (
+        low["metrics_summary"]["network_quality_flow_success_count"]
+        + low["metrics_summary"]["network_quality_flow_failure_count"]
+    ) > 0
+    assert (
+        high["metrics_summary"]["network_quality_flow_success_count"]
+        + high["metrics_summary"]["network_quality_flow_failure_count"]
+    ) > 0
     assert low["kpi_time_series_v1"]["samples"][-1][
         "network_requested_route_demand_mbps"
     ] < high["kpi_time_series_v1"]["samples"][-1][
