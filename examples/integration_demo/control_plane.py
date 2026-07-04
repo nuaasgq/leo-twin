@@ -346,6 +346,7 @@ class DemoControlPlane:
             self._controller.config
         )
         status["metrics_summary"] = self._metrics_summary_json()
+        status["kpi_time_series_v1"] = self._kpi_time_series_json()
         return status
 
     def _ack(self, command: ControlCommand) -> dict[str, Any]:
@@ -362,6 +363,11 @@ class DemoControlPlane:
         if self._runtime_context is not None:
             return dict(self._runtime_context.metrics.summary())
         return dict(self._result.metrics_summary)
+
+    def _kpi_time_series_json(self) -> dict[str, Any]:
+        if self._runtime_context is None:
+            return {"version": "v1", "sample_count": 0, "samples": ()}
+        return dict(self._runtime_context.metrics.kpi_time_series())
 
     def _nack(self, command: str, error: str) -> dict[str, Any]:
         return {

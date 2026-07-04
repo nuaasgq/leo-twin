@@ -293,6 +293,137 @@ describe("buildDataPanelTelemetry", () => {
     expect(telemetry[0].throughputMbps).toBeLessThan(telemetry[2].throughputMbps);
   });
 
+  it("uses backend network KPI series directly when present", () => {
+    const telemetry = buildDataPanelTelemetry(
+      makeSnapshot({
+        last_sim_time: 20,
+        metrics_summary: {
+          network: {
+            latency: 0,
+            throughput: 0,
+            linkUtilization: 0,
+            series: [],
+            kpiSeries: [
+              {
+                simTime: 10,
+                throughputMbps: 80,
+                latencyMs: 70,
+                lossPercent: 1,
+                jitterMs: 2
+              },
+              {
+                simTime: 20,
+                throughputMbps: 120,
+                latencyMs: 90,
+                lossPercent: 3,
+                jitterMs: 5
+              }
+            ]
+          },
+          compute: {
+            taskQueueLength: 0,
+            executionSuccessRate: 1,
+            runningTasks: 0,
+            finishedTasks: 0,
+            deadlineMissedTasks: 0
+          },
+          orbit: {
+            activeSatellites: 0,
+            coverageRatio: 0,
+            series: []
+          },
+          system: {
+            eventRate: 1,
+            systemLoad: 0,
+            eventSeries: [{ index: 0, simTime: 20 }]
+          }
+        }
+      }),
+      20
+    );
+
+    expect(telemetry).toHaveLength(2);
+    expect(telemetry[0]).toMatchObject({
+      throughputMbps: 80,
+      latencyMs: 70,
+      lossPercent: 1,
+      jitterMs: 2
+    });
+    expect(telemetry[1]).toMatchObject({
+      throughputMbps: 120,
+      latencyMs: 90,
+      lossPercent: 3,
+      jitterMs: 5
+    });
+  });
+
+  it("prefers runtime backend KPI time series over snapshot metric series", () => {
+    const telemetry = buildDataPanelTelemetry(
+      makeSnapshot({
+        metrics_summary: {
+          network: {
+            latency: 0,
+            throughput: 0,
+            linkUtilization: 0,
+            series: [],
+            kpiSeries: [
+              {
+                simTime: 10,
+                throughputMbps: 80,
+                latencyMs: 70,
+                lossPercent: 1,
+                jitterMs: 2
+              }
+            ]
+          },
+          compute: {
+            taskQueueLength: 0,
+            executionSuccessRate: 1,
+            runningTasks: 0,
+            finishedTasks: 0,
+            deadlineMissedTasks: 0
+          },
+          orbit: {
+            activeSatellites: 0,
+            coverageRatio: 0,
+            series: []
+          },
+          system: {
+            eventRate: 1,
+            systemLoad: 0,
+            eventSeries: [{ index: 0, simTime: 10 }]
+          }
+        }
+      }),
+      10,
+      undefined,
+      {
+        version: "v1",
+        sample_count: 1,
+        samples: [
+          {
+            sim_time: 20,
+            network_effective_throughput_mbps: 150,
+            network_effective_latency_s: 0.11,
+            network_effective_loss_proxy_rate: 0.04,
+            network_effective_delay_variation_s: 0.006,
+            compute_resource_used_gflops_fp32: 2500
+          }
+        ]
+      }
+    );
+
+    expect(telemetry).toHaveLength(1);
+    expect(telemetry[0]).toMatchObject({
+      simTime: 20,
+      throughputMbps: 150,
+      latencyMs: 110,
+      lossPercent: 4,
+      jitterMs: 6,
+      computeUsedTflops: 2.5
+    });
+  });
+
   it("prefers backend-owned runtime metrics for network quality telemetry", () => {
     const telemetry = buildDataPanelTelemetry(
       makeSnapshot({

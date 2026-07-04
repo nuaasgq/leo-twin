@@ -20,7 +20,16 @@ export interface NetworkMetricsSummary {
   throughput: number;
   linkUtilization: number;
   series: readonly { id: string; latency: number; capacity: number }[];
+  kpiSeries?: readonly NetworkKpiSample[];
   topology?: TopologyChangeSummary;
+}
+
+export interface NetworkKpiSample {
+  simTime: number;
+  throughputMbps: number;
+  latencyMs: number;
+  lossPercent: number;
+  jitterMs: number;
 }
 
 export interface TopologyChangeSummary {
@@ -266,7 +275,7 @@ export function buildWorldSnapshot(
     active_tasks: activeTasks,
     metrics,
     metrics_summary: {
-      network: networkSummary(links, state.eventLog),
+      network: networkSummary(links, state.eventLog, state.metricSeries),
       compute: computeSummary(tasks),
       orbit: orbitSummary(satellites, state.groundUsers.size, links),
       system: systemSummary(state, metrics)
@@ -285,7 +294,8 @@ export function buildWorldSnapshot(
 
 function networkSummary(
   links: readonly LinkState[],
-  eventLog: readonly SimEvent[]
+  eventLog: readonly SimEvent[],
+  metricSeries: ReadonlyMap<string, readonly MetricRecord[]>
 ): NetworkMetricsSummary {
   const latency =
     links.length === 0 ? 0 : links.reduce((total, link) => total + link.latency, 0) / links.length;
@@ -303,8 +313,52 @@ function networkSummary(
       latency: link.latency,
       capacity: link.capacity
     })),
+    kpiSeries: networkKpiSeries(metricSeries),
     topology: topologyChangeSummary(links, eventLog)
   };
+}
+
+function networkKpiSeries(
+  metricSeries: ReadonlyMap<string, readonly MetricRecord[]>
+): readonly NetworkKpiSample[] {
+  type DraftSample = Partial<NetworkKpiSample> & { simTime: number };
+  const samples = new Map<number, DraftSample>();
+
+  function add(metricName: string, assign: (sample: DraftSample, value: number) => void): void {
+    for (const record of metricSeries.get(metricName) ?? []) {
+      const value = metricRecordNumber(record);
+      if (value === undefined) {
+        continue;
+      }
+      const sample = samples.get(record.sim_time) ?? { simTime: record.sim_time };
+      assign(sample, value);
+      samples.set(record.sim_time, sample);
+    }
+  }
+
+  add("network.quality.effective_throughput_mbps", (sample, value) => {
+    sample.throughputMbps = value;
+  });
+  add("network.quality.effective_latency_s", (sample, value) => {
+    sample.latencyMs = value * 1000;
+  });
+  add("network.quality.effective_loss_proxy_rate", (sample, value) => {
+    sample.lossPercent = value * 100;
+  });
+  add("network.quality.effective_delay_variation_s", (sample, value) => {
+    sample.jitterMs = value * 1000;
+  });
+
+  return Array.from(samples.values())
+    .filter(
+      (sample): sample is NetworkKpiSample =>
+        sample.throughputMbps !== undefined &&
+        sample.latencyMs !== undefined &&
+        sample.lossPercent !== undefined &&
+        sample.jitterMs !== undefined
+    )
+    .sort((left, right) => left.simTime - right.simTime)
+    .slice(-24);
 }
 
 function topologyChangeSummary(
@@ -485,6 +539,12 @@ function optionalRenderNumber(
 ): Partial<ComputeNodeRenderState> {
   const value = node[field];
   return typeof value === "number" ? { [field]: value } : {};
+}
+
+function metricRecordNumber(record: MetricRecord): number | undefined {
+  return typeof record.value === "number" && Number.isFinite(record.value)
+    ? record.value
+    : undefined;
 }
 
 function computeLoadRatio(node: ComputeNodeState | undefined): number {

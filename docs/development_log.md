@@ -1599,7 +1599,7 @@ change.
 ## 2026-07-05 - Network KPI Dynamics v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`
-- Commit: pending
+- Commit: `cdc455f`
 - Scope: make dashboard network KPI curves consume backend-owned effective
   flow-level metrics for throughput, latency, loss proxy, and jitter proxy.
 - Changed files/modules:
@@ -1633,3 +1633,53 @@ change.
   - Add backend-generated time-series KPI samples so the dashboard can plot
     actual per-tick metric history instead of deriving chart points from the
     latest summary.
+
+## 2026-07-05 - Backend KPI Time-Series v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending
+- Scope: expose backend-owned bounded KPI time series to runtime status and
+  make the data dashboard prefer true backend samples over frontend envelope
+  interpolation.
+- Changed files/modules:
+  - `src/leo_twin/services/metrics/collector.py`
+  - `examples/integration_demo/control_plane.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/state/snapshot_engine/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `tests/unit/test_metrics_module.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `frontend/tests/dataPanel.test.ts`
+  - `frontend/tests/renderPerformance.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_metrics_module.py tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer -q`
+    - Result: passed, 12 tests.
+  - `python -m pytest tests/integration/test_full_system_demo.py::test_replay_test tests/integration/test_live_runtime_streaming.py::test_http_cursor_batches_return_incremental_events tests/integration/test_live_runtime_streaming.py::test_live_stream_reads_do_not_run_until_idle tests/integration/test_config_control.py::test_frontend_control_messages_are_processed -q`
+    - Result: passed, 4 tests.
+  - `python -m pytest tests/integration/test_full_domain_pipeline_v1.py tests/integration/test_generated_full_system_demo.py::test_generated_full_system_demo_runs_domain_lifecycle tests/integration/test_generated_full_system_demo.py::test_generated_full_system_demo_is_deterministic -q`
+    - Result: passed, 4 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- dataPanel.test.ts renderPerformance.test.ts`
+    - Result: passed, 22 files / 110 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The first live runtime tick can process orbit events before network or
+    compute KPI samples exist, so `kpi_time_series_v1` returns a deterministic
+    current-summary baseline sample when the bounded sample window is empty.
+  - The frontend test file contains historical Chinese mojibake in existing
+    strings, so new assertions avoid exact localized duration labels where the
+    label itself is not the behavior under test.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - `kpi_time_series_v1` is still flow-level and summary-derived; it is not a
+    packet trace or high-fidelity transport measurement.
+  - Compute chart samples currently use FP32 GFLOPS used; later work should add
+    GPU FP32/FP16, NPU INT8, memory, and storage time-series channels.
+- Recommended follow-up:
+  - Add a bounded traffic-demand pressure model so backend KPI series changes
+    under configurable data-transfer, telemetry, downlink, and compute-service
+    mixes instead of only reacting to route/link/task events.

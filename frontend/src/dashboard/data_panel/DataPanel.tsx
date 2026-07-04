@@ -15,6 +15,7 @@ import {
 
 import {
   GeneratedScenarioConfig,
+  RuntimeKpiTimeSeriesV1,
   RuntimeMetricsSummary,
   RuntimeStatusPayload
 } from "../../core/event_types";
@@ -86,7 +87,8 @@ export const DataPanel = memo(function DataPanel({
   const telemetry = buildDataPanelTelemetry(
     snapshot,
     summary.simTime,
-    runtimeStatus.metrics_summary
+    runtimeStatus.metrics_summary,
+    runtimeStatus.kpi_time_series_v1
   );
   const latestTelemetry = telemetry[telemetry.length - 1];
   const computePool = buildComputeResourcePool(
@@ -490,7 +492,8 @@ export interface ComputeResourceVectorPoolSummary {
 export function buildDataPanelTelemetry(
   snapshot: WorldSnapshot,
   displaySimTime = snapshot.last_sim_time,
-  backendMetrics: RuntimeMetricsSummary | null | undefined = undefined
+  backendMetrics: RuntimeMetricsSummary | null | undefined = undefined,
+  backendKpiTimeSeries: RuntimeKpiTimeSeriesV1 | null | undefined = undefined
 ): readonly DataPanelTelemetryPoint[] {
   const activeLinks = snapshot.links.filter((link) => link.availability);
   const linkLatencies = activeLinks.map((link) => link.latency);
@@ -556,6 +559,36 @@ export function buildDataPanelTelemetry(
     backendComputeUsedGflops !== undefined
       ? backendComputeUsedGflops / 1000
       : computePool.usedTflops;
+  const runtimeKpiSeries = backendKpiTimeSeries?.samples ?? [];
+  if (runtimeKpiSeries.length > 0) {
+    return runtimeKpiSeries.slice(-24).map((point) => ({
+      timeLabel: formatDurationCompact(point.sim_time),
+      simTime: point.sim_time,
+      throughputMbps: roundMetric(point.network_effective_throughput_mbps),
+      latencyMs: roundMetric(point.network_effective_latency_s * 1000),
+      lossPercent: roundMetric(point.network_effective_loss_proxy_rate * 100),
+      jitterMs: roundMetric(point.network_effective_delay_variation_s * 1000),
+      computeUsedTflops: roundMetric(point.compute_resource_used_gflops_fp32 / 1000)
+    }));
+  }
+  const backendKpiSeries = snapshot.metrics_summary.network.kpiSeries ?? [];
+  if (backendKpiSeries.length > 0) {
+    const points = backendKpiSeries.slice(-24);
+    const lastIndex = Math.max(1, points.length - 1);
+    return points.map((point, index) => {
+      const sequenceProgress = points.length === 1 ? 1 : index / lastIndex;
+      const envelope = 0.65 + sequenceProgress * 0.35;
+      return {
+        timeLabel: formatDurationCompact(point.simTime),
+        simTime: point.simTime,
+        throughputMbps: roundMetric(point.throughputMbps),
+        latencyMs: roundMetric(point.latencyMs),
+        lossPercent: roundMetric(point.lossPercent),
+        jitterMs: roundMetric(point.jitterMs),
+        computeUsedTflops: roundMetric(computeUsedTflops * envelope)
+      };
+    });
+  }
   const eventSeries =
     snapshot.metrics_summary.system.eventSeries.length > 0
       ? snapshot.metrics_summary.system.eventSeries

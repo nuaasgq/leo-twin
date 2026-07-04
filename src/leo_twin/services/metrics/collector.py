@@ -29,6 +29,7 @@ from leo_twin.models.compute.contracts import COMPUTE_NODE_UPDATE
 
 
 MetricSummary = dict[str, str | float | int | bool]
+KpiSample = dict[str, float]
 ReplayPayload = str | int | float | bool | None | list["ReplayPayload"] | dict[str, "ReplayPayload"]
 ReplayEvent = dict[str, ReplayPayload]
 
@@ -59,6 +60,7 @@ class MetricsCollector:
         metric_sample_interval: int = 1,
         event_log_sample_interval: int = 1,
         event_log_segment_size: int | None = None,
+        kpi_sample_limit: int = 240,
         satellite_position_scale_to_km: float = 1.0,
     ) -> None:
         if not module_name:
@@ -69,6 +71,7 @@ class MetricsCollector:
         _require_positive_int(event_log_limit, "event_log_limit")
         _require_positive_int(metric_sample_interval, "metric_sample_interval")
         _require_positive_int(event_log_sample_interval, "event_log_sample_interval")
+        _require_positive_int(kpi_sample_limit, "kpi_sample_limit")
         _require_optional_positive_int(
             event_log_segment_size,
             "event_log_segment_size",
@@ -87,6 +90,7 @@ class MetricsCollector:
         self._satellite_position_scale_to_km = float(satellite_position_scale_to_km)
         self._records: deque[MetricRecord] = deque(maxlen=record_limit)
         self._event_log: deque[ReplayEvent] = deque(maxlen=event_log_limit)
+        self._kpi_samples: deque[KpiSample] = deque(maxlen=kpi_sample_limit)
         self._event_counts: Counter[str] = Counter()
         self._satellite_status: dict[str, str] = {}
         self._satellite_altitudes_km: dict[str, float] = {}
@@ -154,6 +158,8 @@ class MetricsCollector:
         records.extend(self._payload_records(event, event_type))
         if not _should_sample(event_count, self._metric_sample_interval):
             return ()
+        self._append_kpi_sample(event.sim_time, event_type)
+        records.extend(self._derived_metric_records(event.sim_time, event_type))
         self._records.extend(records)
         return tuple(records)
 
@@ -250,6 +256,16 @@ class MetricsCollector:
     def summary_json(self) -> str:
         return json.dumps(self.summary(), sort_keys=True, indent=2) + "\n"
 
+    def kpi_time_series(self) -> dict[str, str | int | list[KpiSample]]:
+        samples = [dict(sample) for sample in self._kpi_samples]
+        if not samples:
+            samples = [self._current_kpi_sample(self._last_sim_time)]
+        return {
+            "version": "v1",
+            "sample_count": len(samples),
+            "samples": samples,
+        }
+
     def events_jsonl(self) -> str:
         return _events_jsonl(tuple(self._event_log))
 
@@ -332,6 +348,98 @@ class MetricsCollector:
         if event_type == EventType.METRIC_SAMPLE:
             return (_require_payload(event.payload, MetricRecord, "METRIC_SAMPLE"),)
         return ()
+
+    def _derived_metric_records(
+        self,
+        sim_time: float,
+        event_type: str,
+    ) -> tuple[MetricRecord, ...]:
+        records: list[MetricRecord] = []
+        if event_type in {
+            EventType.ACCESS_START,
+            EventType.ACCESS_END,
+            EventType.LINK_UPDATE,
+            EventType.ROUTE_UPDATE,
+            EventType.FLOW_COMPLETE,
+        }:
+            summary = self._network_quality_summary(
+                self._active_link_states(),
+                self._available_routes(),
+            )
+            fields = (
+                (
+                    "network.quality.effective_throughput_mbps",
+                    "network_quality_effective_throughput_mbps",
+                ),
+                (
+                    "network.quality.effective_latency_s",
+                    "network_quality_effective_latency_avg_s",
+                ),
+                (
+                    "network.quality.effective_loss_proxy_rate",
+                    "network_quality_effective_loss_proxy_rate",
+                ),
+                (
+                    "network.quality.effective_delay_variation_s",
+                    "network_quality_effective_delay_variation_proxy_s",
+                ),
+            )
+            records.extend(
+                MetricRecord(
+                    metric_name=metric_name,
+                    sim_time=sim_time,
+                    entity_id="system",
+                    value=float(summary[summary_key]),
+                    tags=(("source", "metrics_summary"),),
+                )
+                for metric_name, summary_key in fields
+            )
+        if event_type == COMPUTE_NODE_UPDATE:
+            compute_summary = self._compute_resource_summary()
+            records.append(
+                MetricRecord(
+                    metric_name="compute.resource.used_gflops_fp32",
+                    sim_time=sim_time,
+                    entity_id="system",
+                    value=float(compute_summary["compute_resource_used_gflops_fp32"]),
+                    tags=(("source", "metrics_summary"),),
+                )
+            )
+        return tuple(records)
+
+    def _append_kpi_sample(self, sim_time: float, event_type: str) -> None:
+        if not _is_kpi_sample_event_type(event_type):
+            return
+        sample = self._current_kpi_sample(sim_time)
+        if self._kpi_samples and self._kpi_samples[-1]["sim_time"] == sample["sim_time"]:
+            self._kpi_samples[-1] = sample
+            return
+        self._kpi_samples.append(sample)
+
+    def _current_kpi_sample(self, sim_time: float) -> KpiSample:
+        network_summary = self._network_quality_summary(
+            self._active_link_states(),
+            self._available_routes(),
+        )
+        compute_summary = self._compute_resource_summary()
+        return {
+            "sim_time": float(sim_time),
+            "network_effective_throughput_mbps": float(
+                network_summary["network_quality_effective_throughput_mbps"]
+            ),
+            "network_effective_latency_s": float(
+                network_summary["network_quality_effective_latency_avg_s"]
+            ),
+            "network_effective_loss_proxy_rate": float(
+                network_summary["network_quality_effective_loss_proxy_rate"]
+            ),
+            "network_effective_delay_variation_s": float(
+                network_summary["network_quality_effective_delay_variation_proxy_s"]
+            ),
+            "compute_resource_used_gflops_fp32": float(
+                compute_summary["compute_resource_used_gflops_fp32"]
+            ),
+        }
 
     def _observe_satellite(self, event: SimEvent) -> tuple[MetricRecord, ...]:
         state = _require_payload(event.payload, SatelliteState, "ORBIT_UPDATE")
@@ -1067,6 +1175,19 @@ def _congestion_loss_proxy_rate(utilization: float) -> float:
     if utilization <= 0.8:
         return 0.0
     return _clamp_probability((utilization - 0.8) * 0.5)
+
+
+def _is_kpi_sample_event_type(event_type: str) -> bool:
+    return event_type in {
+        EventType.ACCESS_START,
+        EventType.ACCESS_END,
+        EventType.LINK_UPDATE,
+        EventType.ROUTE_UPDATE,
+        EventType.FLOW_COMPLETE,
+        EventType.TASK_START,
+        EventType.TASK_FINISH,
+        COMPUTE_NODE_UPDATE,
+    }
 
 
 def _flow_is_failed(flow: FlowState) -> bool:

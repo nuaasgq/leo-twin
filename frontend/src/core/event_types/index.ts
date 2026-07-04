@@ -376,12 +376,28 @@ export interface RuntimeStatusPayload {
   last_error?: string | null;
   fidelity_summary?: FidelitySummary;
   metrics_summary?: RuntimeMetricsSummary;
+  kpi_time_series_v1?: RuntimeKpiTimeSeriesV1;
   profiling_summary?: RuntimeProfilingSummary | null;
   backpressure_summary?: RuntimeBackpressureSummary | null;
 }
 
 export type RuntimeMetricsSummaryValue = string | number | boolean | null;
 export type RuntimeMetricsSummary = Record<string, RuntimeMetricsSummaryValue>;
+
+export interface RuntimeKpiTimeSeriesV1 {
+  version: "v1" | string;
+  sample_count?: number;
+  samples: readonly RuntimeKpiSampleV1[];
+}
+
+export interface RuntimeKpiSampleV1 {
+  sim_time: number;
+  network_effective_throughput_mbps: number;
+  network_effective_latency_s: number;
+  network_effective_loss_proxy_rate: number;
+  network_effective_delay_variation_s: number;
+  compute_resource_used_gflops_fp32: number;
+}
 
 export interface GeneratedScenarioConfig {
   seed: number;

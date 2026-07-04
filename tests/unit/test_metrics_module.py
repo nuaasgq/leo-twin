@@ -402,6 +402,7 @@ def test_metrics_collector_reports_dynamic_network_quality_proxy() -> None:
 
 def test_metrics_collector_reports_effective_flow_level_network_quality() -> None:
     collector = MetricsCollector()
+    last_records: tuple[MetricRecord, ...] = ()
     for event in (
         _event(
             "route-a",
@@ -462,7 +463,7 @@ def test_metrics_collector_reports_effective_flow_level_network_quality() -> Non
             "network",
         ),
     ):
-        collector.observe(event)
+        last_records = collector.observe(event)
 
     summary = collector.summary()
 
@@ -485,6 +486,74 @@ def test_metrics_collector_reports_effective_flow_level_network_quality() -> Non
         190.0
     )
     assert summary["network_quality_effective_throughput_mbps"] == 180.0
+    assert _last_record(
+        last_records,
+        "network.quality.effective_throughput_mbps",
+    ).value == 180.0
+    assert _last_record(
+        last_records,
+        "network.quality.effective_latency_s",
+    ).value == pytest.approx(0.04)
+    assert _last_record(
+        last_records,
+        "network.quality.effective_loss_proxy_rate",
+    ).value == pytest.approx(0.05)
+    assert _last_record(
+        last_records,
+        "network.quality.effective_delay_variation_s",
+    ).value == pytest.approx(0.015)
+
+
+def test_metrics_collector_publishes_backend_kpi_time_series() -> None:
+    collector = MetricsCollector()
+    collector.observe(
+        _event(
+            "route-a",
+            1.0,
+            EventType.ROUTE_UPDATE,
+            Route(
+                route_id="route-a",
+                flow_id="flow-a",
+                path=("user-a", "sat-a", "user-b"),
+                latency=0.02,
+                capacity=100.0,
+                available=True,
+            ),
+            "network",
+        )
+    )
+    compute_records = collector.observe(
+        _event(
+            "compute-a",
+            2.0,
+            COMPUTE_NODE_UPDATE,
+            ComputeNodeState(
+                node_id="sat-a",
+                sim_time=2.0,
+                capacity=50.0,
+                available_capacity=20.0,
+                status="BUSY",
+            ),
+            "compute",
+        )
+    )
+
+    series = collector.kpi_time_series()
+
+    assert series["version"] == "v1"
+    assert series["sample_count"] == 2
+    assert series["samples"][-1] == {
+        "sim_time": 2.0,
+        "network_effective_throughput_mbps": 100.0,
+        "network_effective_latency_s": 0.02,
+        "network_effective_loss_proxy_rate": 0.0,
+        "network_effective_delay_variation_s": 0.0,
+        "compute_resource_used_gflops_fp32": 30.0,
+    }
+    assert _last_record(
+        compute_records,
+        "compute.resource.used_gflops_fp32",
+    ).value == 30.0
 
 
 def test_metrics_collector_reports_compute_resource_pool_proxy() -> None:

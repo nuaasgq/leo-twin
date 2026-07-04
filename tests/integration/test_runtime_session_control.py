@@ -166,6 +166,22 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
     status_after_tick = control_plane.runtime_status()["status"]
     assert "network_quality_loss_proxy_rate" in status_after_tick["metrics_summary"]
     assert "compute_resource_used_gflops_fp32" in status_after_tick["metrics_summary"]
+    kpi_series = status_after_tick["kpi_time_series_v1"]
+    assert kpi_series["version"] == "v1"
+    assert kpi_series["sample_count"] == len(kpi_series["samples"])
+    assert kpi_series["samples"]
+    assert kpi_series["samples"] == sorted(
+        kpi_series["samples"],
+        key=lambda sample: sample["sim_time"],
+    )
+    assert {
+        "sim_time",
+        "network_effective_throughput_mbps",
+        "network_effective_latency_s",
+        "network_effective_loss_proxy_rate",
+        "network_effective_delay_variation_s",
+        "compute_resource_used_gflops_fp32",
+    }.issubset(kpi_series["samples"][-1])
 
     requested = control_plane.handle_raw_message(json.dumps({"command": "REQUEST_STATUS"}))
     assert requested["ok"] is True

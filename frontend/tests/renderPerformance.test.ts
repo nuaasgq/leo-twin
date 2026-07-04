@@ -156,6 +156,36 @@ describe("frontend render performance architecture", () => {
     ]);
   });
 
+  it("builds backend network KPI series from metric samples", () => {
+    const snapshot = snapshotFromEvents([
+      metricEvent("throughput-1", "network.quality.effective_throughput_mbps", "system", 80, 1),
+      metricEvent("latency-1", "network.quality.effective_latency_s", "system", 0.08, 1),
+      metricEvent("loss-1", "network.quality.effective_loss_proxy_rate", "system", 0.01, 1),
+      metricEvent("jitter-1", "network.quality.effective_delay_variation_s", "system", 0.002, 1),
+      metricEvent("throughput-2", "network.quality.effective_throughput_mbps", "system", 120, 2),
+      metricEvent("latency-2", "network.quality.effective_latency_s", "system", 0.12, 2),
+      metricEvent("loss-2", "network.quality.effective_loss_proxy_rate", "system", 0.03, 2),
+      metricEvent("jitter-2", "network.quality.effective_delay_variation_s", "system", 0.004, 2)
+    ]);
+
+    expect(snapshot.metrics_summary.network.kpiSeries).toEqual([
+      {
+        simTime: 1,
+        throughputMbps: 80,
+        latencyMs: 80,
+        lossPercent: 1,
+        jitterMs: 2
+      },
+      {
+        simTime: 2,
+        throughputMbps: 120,
+        latencyMs: 120,
+        lossPercent: 3,
+        jitterMs: 4
+      }
+    ]);
+  });
+
   it("counts topology changes from the bounded event log", () => {
     const snapshot = snapshotFromEvents([
       linkEvent("access-start", "ACCESS_START", "sat-a", "user-a", true),
@@ -317,18 +347,19 @@ function metricEvent(
   eventId: string,
   metricName: string,
   entityId: string,
-  value: number
+  value: number,
+  simTime = 1
 ): SimEvent {
   return {
     event_id: eventId,
-    sim_time: 1,
+    sim_time: simTime,
     priority: 0,
     source: "metrics",
     target: "frontend",
     event_type: "METRIC_SAMPLE",
     payload: {
       metric_name: metricName,
-      sim_time: 1,
+      sim_time: simTime,
       entity_id: entityId,
       value
     }
