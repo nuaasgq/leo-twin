@@ -1382,6 +1382,48 @@ body {
   line-height: 1.35;
 }
 
+.orbit-motion-explanation {
+  display: grid;
+  gap: 5px;
+}
+
+.orbit-motion-row {
+  display: grid;
+  grid-template-columns: minmax(50px, 0.55fr) minmax(58px, 0.65fr) minmax(0, 2.1fr);
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  border: 1px solid #233846;
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: #0c141c;
+}
+
+.orbit-motion-row span,
+.orbit-motion-row strong,
+.orbit-motion-row small {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 10px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+}
+
+.orbit-motion-row span {
+  color: var(--app-text);
+  white-space: nowrap;
+}
+
+.orbit-motion-row strong {
+  color: var(--accent-green);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.orbit-motion-row small {
+  color: var(--app-muted);
+}
+
 .toggle-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

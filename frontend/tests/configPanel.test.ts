@@ -7,6 +7,7 @@ import {
   configPanelSectionTitles,
   generatedScenarioSummaryItems,
   networkControlPayload,
+  orbitMotionExplanationItems,
   orbitControlPayload,
   pauseResumeControl,
   runtimeProgressSummary,
@@ -99,6 +100,27 @@ describe("ConfigPanel priority controls", () => {
     expect(markup).toContain('id="compute-npu-tops-int8"');
     expect(markup).toContain('id="compute-memory-gb"');
     expect(markup).toContain('id="compute-storage-gb"');
+  });
+
+  it("renders orbit motion explanations near orbit controls", () => {
+    const markup = renderToStaticMarkup(
+      createElement(ConfigPanel, {
+        scenario: defaultScenario(),
+        runtime: runtimeStatus("STOPPED", true),
+        progress: {
+          sim_time: 0,
+          duration: 600,
+          event_count: 0
+        },
+        generatedConfig: null,
+        onRuntimeControl: () => undefined
+      })
+    );
+
+    expect(markup).toContain('aria-label="轨道运动说明"');
+    expect(markup).toContain("采样步长");
+    expect(markup).toContain("不代表卫星绕行周期");
+    expect(markup).toContain("显示运动");
   });
 
   it("renders traffic mix controls from backend scenario fields", () => {
@@ -360,6 +382,35 @@ describe("generatedScenarioSummaryItems", () => {
   it("shows a waiting state before initialization", () => {
     expect(generatedScenarioSummaryItems(null)).toEqual([
       { label: "生成场景", value: "等待初始化" }
+    ]);
+  });
+});
+
+describe("orbitMotionExplanationItems", () => {
+  it("uses backend-provided period and velocity when available", () => {
+    expect(
+      orbitMotionExplanationItems({
+        updateIntervalSeconds: 10,
+        altitudeM: 550_000,
+        orbitalPeriodMinutes: 95.502118,
+        orbitalVelocityKmS: 7.588998
+      })
+    ).toEqual([
+      {
+        label: "采样步长",
+        value: "10 s",
+        detail: "控制后端轨道状态刷新频率，不代表卫星绕行周期"
+      },
+      {
+        label: "近圆轨道",
+        value: "7.59 km/s",
+        detail: "约 95.5 min 完成一圈，低轨卫星不是几分钟绕地一圈"
+      },
+      {
+        label: "显示运动",
+        value: "573 点/圈",
+        detail: "前端在轨道样本之间插值/跟随，流畅度还受直播批量与渲染帧率影响"
+      }
     ]);
   });
 });

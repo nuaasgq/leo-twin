@@ -56,6 +56,12 @@ export interface VisualizationLayerEffectItem {
   detail: string;
 }
 
+export interface OrbitMotionExplanationItem {
+  label: string;
+  value: string;
+  detail: string;
+}
+
 export interface NetworkControlValues {
   application_protocol: string;
   transport_protocol: string;
@@ -352,6 +358,14 @@ export function ConfigPanel({
   }, [runtime.mode, runtime.speed_factor, runtime.duration, runtime.seed]);
 
   const summaryItems = generatedScenarioSummaryItems(generatedConfig);
+  const constellationSummary =
+    generatedConfig?.backend_summary?.derived_constellation_summary;
+  const orbitMotionExplanations = orbitMotionExplanationItems({
+    updateIntervalSeconds: orbitUpdateIntervalSeconds,
+    altitudeM: orbitAltitudeKm * 1000,
+    orbitalPeriodMinutes: constellationSummary?.orbital_period_minutes,
+    orbitalVelocityKmS: constellationSummary?.orbital_velocity_km_s
+  });
   const pauseResume = pauseResumeControl(runtime);
   const startDisabled = startControlDisabled(runtime);
   const progressSummary = runtimeProgressSummary(progress);
@@ -896,6 +910,15 @@ export function ConfigPanel({
             <span>°</span>
           </div>
         </div>
+      </div>
+      <div className="orbit-motion-explanation" aria-label="轨道运动说明">
+        {orbitMotionExplanations.map((item) => (
+          <div className="orbit-motion-row" key={item.label}>
+            <span>{item.label}</span>
+            <strong>{item.value}</strong>
+            <small>{item.detail}</small>
+          </div>
+        ))}
       </div>
         </section>
 
@@ -1648,6 +1671,44 @@ export function visualizationControlPayload(
     users: visualization.users,
     metrics: visualization.metrics
   };
+}
+
+export function orbitMotionExplanationItems({
+  updateIntervalSeconds,
+  altitudeM,
+  orbitalPeriodMinutes,
+  orbitalVelocityKmS
+}: {
+  updateIntervalSeconds: number;
+  altitudeM: number;
+  orbitalPeriodMinutes?: number;
+  orbitalVelocityKmS?: number;
+}): readonly OrbitMotionExplanationItem[] {
+  const boundedUpdateIntervalSeconds = Math.max(1, Math.round(updateIntervalSeconds));
+  const periodMinutes = orbitalPeriodMinutes ?? circularOrbitalPeriodMinutes(altitudeM);
+  const velocityKmS = orbitalVelocityKmS ?? circularOrbitalVelocityKmS(altitudeM);
+  const samplesPerOrbit = Math.max(
+    1,
+    Math.round((periodMinutes * 60) / boundedUpdateIntervalSeconds)
+  );
+
+  return [
+    {
+      label: "采样步长",
+      value: `${formatInteger(boundedUpdateIntervalSeconds)} s`,
+      detail: "控制后端轨道状态刷新频率，不代表卫星绕行周期"
+    },
+    {
+      label: "近圆轨道",
+      value: `${formatDecimal(velocityKmS)} km/s`,
+      detail: `约 ${formatDecimal(periodMinutes)} min 完成一圈，低轨卫星不是几分钟绕地一圈`
+    },
+    {
+      label: "显示运动",
+      value: `${formatInteger(samplesPerOrbit)} 点/圈`,
+      detail: "前端在轨道样本之间插值/跟随，流畅度还受直播批量与渲染帧率影响"
+    }
+  ];
 }
 
 export function visualizationLayerEffectItems(

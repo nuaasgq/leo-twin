@@ -2801,3 +2801,35 @@ change.
 - Recommended follow-up:
   - Add an orbit explanation tooltip that relates update interval, display
     interpolation, orbital period, and visual motion speed.
+
+## 2026-07-05 - Orbit Motion Explanation v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a deterministic orbit-motion explanation block to the frontend
+  configuration panel so users can distinguish backend orbit sample interval,
+  simplified circular-orbit speed, orbital period, and display interpolation.
+- Changed files/modules:
+  - `frontend/src/config_panel/ConfigPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/configPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- configPanel.test.ts`
+    - Result: passed, 23 files / 142 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - Orbit step controls can be mistaken for physical orbital period. This task
+    keeps the existing simplified model unchanged and explains that the step is
+    a backend sampling interval.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - This task does not add high-fidelity orbital mechanics or change Cesium
+    interpolation/rendering behavior.
+- Recommended follow-up:
+  - Add a selected-satellite orbit inspector that shows current angular
+    position, period, speed, and next sample time from the runtime stream.
