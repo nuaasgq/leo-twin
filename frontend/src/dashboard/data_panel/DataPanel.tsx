@@ -450,6 +450,10 @@ export function buildDataPanelTelemetry(
     backendMetrics,
     "network_quality_estimated_delivered_throughput_mbps"
   );
+  const backendAvailableThroughput = metricNumber(
+    backendMetrics,
+    "network_quality_estimated_available_throughput_mbps"
+  );
   const backendOfferedThroughput = metricNumber(
     backendMetrics,
     "network_quality_offered_route_capacity_mbps"
@@ -471,7 +475,8 @@ export function buildDataPanelTelemetry(
     snapshot.metrics_summary.network.throughput ||
     activeLinks.reduce((total, link) => total + link.capacity, 0);
   const baseThroughput =
-    backendThroughput ??
+    positiveMetric(backendThroughput) ??
+    backendAvailableThroughput ??
     backendOfferedThroughput ??
     snapshotThroughput;
   const baseLatency =
@@ -597,6 +602,10 @@ function metricNumber(
 ): number | undefined {
   const value = metrics?.[key];
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function positiveMetric(value: number | undefined): number | undefined {
+  return value !== undefined && value > 0 ? value : undefined;
 }
 
 function isSpaceLink(link: { source_id: string; target_id: string }): boolean {

@@ -5,6 +5,36 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Dashboard Throughput Fallback v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending in this commit
+- Scope: make dashboard network throughput prefer positive backend delivered
+  throughput and fall back to backend loss-adjusted available throughput before
+  using offered capacity or snapshot link capacity.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 22 files / 100 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - Existing `network_quality_estimated_delivered_throughput_mbps` must remain
+    backward compatible, so the dashboard fallback is additive rather than a
+    field rename.
+  - The active local runtime config files remain modified and excluded.
+- Known remaining issues:
+  - Throughput is still a deterministic flow-level KPI proxy until traffic
+    demand carries delivered data size over simulated time.
+- Recommended follow-up:
+  - Add flow data-size accounting to backend metrics so delivered throughput can
+    be computed from completed data volume and simulation time.
+
 ## 2026-07-05 - Compute Resource Vector Summary v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`
