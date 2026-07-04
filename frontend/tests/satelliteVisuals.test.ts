@@ -254,7 +254,7 @@ describe("satellite follow inset", () => {
         load_ratio: 0.75,
         status: "BUSY"
       })
-    ).toEqual({
+    ).toMatchObject({
       resourceModelLabel: "LegacyScalarCapacity",
       resourceRoleLabel: "卫星算力节点",
       capacityLabel: "20 GFLOPS FP32",
@@ -293,7 +293,7 @@ describe("satellite follow inset", () => {
           storage_gb_per_node: 512
         })
       )
-    ).toEqual({
+    ).toMatchObject({
       resourceModelLabel: "ComputeResourceVector",
       resourceRoleLabel: "卫星载荷算力节点",
       capacityLabel: "40 GFLOPS FP32",
@@ -346,6 +346,24 @@ describe("satellite follow inset", () => {
         "使用 CPU FP32 12 GFLOPS / FP64 0 GFLOPS / GPU FP32 2.5 TFLOPS / FP16 0 TFLOPS / NPU 4 TOPS",
       memoryUsageLabel: "使用 内存 8 GB / 存储 16 GB"
     });
+
+    expect(
+      summary?.resourceBreakdown.map(({ label, capacityLabel, usedLabel }) => ({
+        label,
+        capacityLabel,
+        usedLabel
+      }))
+    ).toEqual([
+      { label: "CPU FP32", capacityLabel: "44 GFLOPS", usedLabel: "12 GFLOPS" },
+      { label: "CPU FP64", capacityLabel: "9 GFLOPS", usedLabel: "0 GFLOPS" },
+      { label: "GPU FP32", capacityLabel: "3.5 TFLOPS", usedLabel: "2.5 TFLOPS" },
+      { label: "GPU FP16", capacityLabel: "7 TFLOPS", usedLabel: "0 TFLOPS" },
+      { label: "NPU INT8", capacityLabel: "16 TOPS", usedLabel: "4 TOPS" },
+      { label: "内存", capacityLabel: "48 GB", usedLabel: "8 GB" },
+      { label: "存储", capacityLabel: "1,024 GB", usedLabel: "16 GB" }
+    ]);
+    expect(summary?.resourceBreakdown[0].utilizationPercent).toBeCloseTo(27.27, 2);
+    expect(summary?.resourceBreakdown[2].utilizationPercent).toBeCloseTo(71.43, 2);
   });
 });
 

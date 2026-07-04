@@ -646,6 +646,60 @@ body {
   background: linear-gradient(90deg, #4fd37a, #f2bd45);
 }
 
+.satellite-resource-breakdown {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding-top: 2px;
+}
+
+.satellite-resource-breakdown-row {
+  display: grid;
+  grid-template-columns: minmax(54px, 0.7fr) minmax(58px, 0.8fr) minmax(58px, 0.8fr);
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.satellite-resource-breakdown-row span,
+.satellite-resource-breakdown-row strong,
+.satellite-resource-breakdown-row small {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 9px;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.satellite-resource-breakdown-row span {
+  color: var(--app-muted);
+}
+
+.satellite-resource-breakdown-row strong {
+  color: var(--app-text);
+  font-weight: 700;
+}
+
+.satellite-resource-breakdown-row small {
+  color: #7f8f96;
+}
+
+.satellite-resource-mini-track {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  height: 3px;
+  border-radius: 999px;
+  background: #162532;
+}
+
+.satellite-resource-mini-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #4fd37a;
+}
+
 .satellite-inset-header strong {
   min-width: 0;
   overflow: hidden;

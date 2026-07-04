@@ -490,6 +490,18 @@ function SatelliteInset({
                 <span>可用比例</span>
                 <strong>{computeSummary.availablePercent.toFixed(1)}%</strong>
               </div>
+              <div className="satellite-resource-breakdown" aria-label="选中卫星资源向量">
+                {computeSummary.resourceBreakdown.map((item) => (
+                  <div className="satellite-resource-breakdown-row" key={item.label}>
+                    <span>{item.label}</span>
+                    <strong>{item.usedLabel}</strong>
+                    <small>{item.capacityLabel}</small>
+                    <div className="satellite-resource-mini-track" aria-hidden="true">
+                      <span style={{ width: `${item.utilizationPercent}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
             <span>{computeSummary.cpuVectorLabel}</span>
             <span>{computeSummary.gpuVectorLabel}</span>

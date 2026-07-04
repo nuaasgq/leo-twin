@@ -2833,3 +2833,36 @@ change.
 - Recommended follow-up:
   - Add a selected-satellite orbit inspector that shows current angular
     position, period, speed, and next sample time from the runtime stream.
+
+## 2026-07-05 - Selected Satellite Resource Vector Details v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add structured selected-satellite resource-vector rows to the 3D
+  satellite follow inset, showing capacity and used values for CPU, GPU, NPU,
+  memory, and storage without inventing missing backend usage data.
+- Changed files/modules:
+  - `frontend/src/3d/cesium/satelliteFollow.ts`
+  - `frontend/src/3d/cesium/CesiumGlobe.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/satelliteVisuals.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- satelliteVisuals.test.ts`
+    - Result: passed, 23 files / 142 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - Existing tests used full-object equality for compute summaries. The new
+    resource breakdown is additive, so those checks were narrowed to
+    `toMatchObject` and a dedicated breakdown assertion was added.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - Per-satellite resource history is still not available; this task displays
+    only the current snapshot values from the runtime stream.
+- Recommended follow-up:
+  - Add backend per-node resource time-series samples so the selected-satellite
+    inset can show short history sparklines for CPU/GPU/NPU/memory/storage.

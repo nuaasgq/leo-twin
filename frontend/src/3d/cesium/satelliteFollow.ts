@@ -11,6 +11,13 @@ export interface SatelliteInsetPoint {
   y: number;
 }
 
+export interface SatelliteResourceBreakdownItem {
+  label: string;
+  capacityLabel: string;
+  usedLabel: string;
+  utilizationPercent: number;
+}
+
 export interface SatelliteComputeSummary {
   resourceModelLabel: string;
   resourceRoleLabel: string;
@@ -24,6 +31,7 @@ export interface SatelliteComputeSummary {
   gpuVectorLabel: string;
   npuVectorLabel: string;
   memoryStorageLabel: string;
+  resourceBreakdown: readonly SatelliteResourceBreakdownItem[];
   processingUsageLabel: string;
   memoryUsageLabel: string;
   compatibilityNote: string;
@@ -119,12 +127,19 @@ export function satelliteComputeSummary(
         memory_gb?: number;
         storage_gb?: number;
         resource_usage_mode?: string;
+        available_cpu_gflops_fp32?: number;
         used_cpu_gflops_fp32?: number;
+        available_cpu_gflops_fp64?: number;
         used_cpu_gflops_fp64?: number;
+        available_gpu_tflops_fp32?: number;
         used_gpu_tflops_fp32?: number;
+        available_gpu_tflops_fp16?: number;
         used_gpu_tflops_fp16?: number;
+        available_npu_tops_int8?: number;
         used_npu_tops_int8?: number;
+        available_memory_gb?: number;
         used_memory_gb?: number;
+        available_storage_gb?: number;
         used_storage_gb?: number;
       }
     | null
@@ -169,6 +184,50 @@ export function satelliteComputeSummary(
   const usedNpuInt8 = finiteOptionalNumber(node.used_npu_tops_int8, 0);
   const usedMemoryGb = finiteOptionalNumber(node.used_memory_gb, 0);
   const usedStorageGb = finiteOptionalNumber(node.used_storage_gb, 0);
+  const resourceBreakdown = [
+    resourceBreakdownItem(
+      "CPU FP32",
+      cpuFp32,
+      usedOrAvailableUsed(node.used_cpu_gflops_fp32, node.available_cpu_gflops_fp32, cpuFp32),
+      "GFLOPS"
+    ),
+    resourceBreakdownItem(
+      "CPU FP64",
+      cpuFp64,
+      usedOrAvailableUsed(node.used_cpu_gflops_fp64, node.available_cpu_gflops_fp64, cpuFp64),
+      "GFLOPS"
+    ),
+    resourceBreakdownItem(
+      "GPU FP32",
+      gpuFp32,
+      usedOrAvailableUsed(node.used_gpu_tflops_fp32, node.available_gpu_tflops_fp32, gpuFp32),
+      "TFLOPS"
+    ),
+    resourceBreakdownItem(
+      "GPU FP16",
+      gpuFp16,
+      usedOrAvailableUsed(node.used_gpu_tflops_fp16, node.available_gpu_tflops_fp16, gpuFp16),
+      "TFLOPS"
+    ),
+    resourceBreakdownItem(
+      "NPU INT8",
+      npuInt8,
+      usedOrAvailableUsed(node.used_npu_tops_int8, node.available_npu_tops_int8, npuInt8),
+      "TOPS"
+    ),
+    resourceBreakdownItem(
+      "内存",
+      memoryGb,
+      usedOrAvailableUsed(node.used_memory_gb, node.available_memory_gb, memoryGb),
+      "GB"
+    ),
+    resourceBreakdownItem(
+      "存储",
+      storageGb,
+      usedOrAvailableUsed(node.used_storage_gb, node.available_storage_gb, storageGb),
+      "GB"
+    )
+  ];
   const utilization =
     node.load_ratio !== undefined
       ? clamp(finiteNumber(node.load_ratio), 0, 1)
@@ -196,6 +255,7 @@ export function satelliteComputeSummary(
     memoryStorageLabel: `内存 ${formatNumber(memoryGb)} GB / 存储 ${formatNumber(
       storageGb
     )} GB`,
+    resourceBreakdown,
     processingUsageLabel: `使用 CPU FP32 ${formatNumber(
       usedCpuFp32
     )} GFLOPS / FP64 ${formatNumber(usedCpuFp64)} GFLOPS / GPU FP32 ${formatNumber(
@@ -219,12 +279,19 @@ function hasNodeResourceVector(node: {
   memory_gb?: number;
   storage_gb?: number;
   resource_usage_mode?: string;
+  available_cpu_gflops_fp32?: number;
   used_cpu_gflops_fp32?: number;
+  available_cpu_gflops_fp64?: number;
   used_cpu_gflops_fp64?: number;
+  available_gpu_tflops_fp32?: number;
   used_gpu_tflops_fp32?: number;
+  available_gpu_tflops_fp16?: number;
   used_gpu_tflops_fp16?: number;
+  available_npu_tops_int8?: number;
   used_npu_tops_int8?: number;
+  available_memory_gb?: number;
   used_memory_gb?: number;
+  available_storage_gb?: number;
   used_storage_gb?: number;
 }): boolean {
   return (
@@ -235,14 +302,51 @@ function hasNodeResourceVector(node: {
     node.memory_gb !== undefined ||
     node.storage_gb !== undefined ||
     node.resource_usage_mode !== undefined ||
+    node.available_cpu_gflops_fp32 !== undefined ||
     node.used_cpu_gflops_fp32 !== undefined ||
+    node.available_cpu_gflops_fp64 !== undefined ||
     node.used_cpu_gflops_fp64 !== undefined ||
+    node.available_gpu_tflops_fp32 !== undefined ||
     node.used_gpu_tflops_fp32 !== undefined ||
+    node.available_gpu_tflops_fp16 !== undefined ||
     node.used_gpu_tflops_fp16 !== undefined ||
+    node.available_npu_tops_int8 !== undefined ||
     node.used_npu_tops_int8 !== undefined ||
+    node.available_memory_gb !== undefined ||
     node.used_memory_gb !== undefined ||
+    node.available_storage_gb !== undefined ||
     node.used_storage_gb !== undefined
   );
+}
+
+function usedOrAvailableUsed(
+  usedValue: number | undefined,
+  availableValue: number | undefined,
+  capacity: number
+): number {
+  if (usedValue !== undefined) {
+    return finiteOptionalNumber(usedValue, 0);
+  }
+  if (availableValue !== undefined) {
+    return Math.max(0, capacity - finiteOptionalNumber(availableValue, 0));
+  }
+  return 0;
+}
+
+function resourceBreakdownItem(
+  label: string,
+  capacity: number,
+  used: number,
+  unit: string
+): SatelliteResourceBreakdownItem {
+  const safeCapacity = Math.max(0, finiteNumber(capacity));
+  const safeUsed = clamp(finiteNumber(used), 0, safeCapacity);
+  return {
+    label,
+    capacityLabel: `${formatNumber(safeCapacity)} ${unit}`,
+    usedLabel: `${formatNumber(safeUsed)} ${unit}`,
+    utilizationPercent: safeCapacity <= 0 ? 0 : (safeUsed / safeCapacity) * 100
+  };
 }
 
 function clamp(value: number, min: number, max: number): number {
