@@ -3,11 +3,42 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from dataclasses import dataclass
 from math import atan2, cos, isfinite, pi, radians, sin, sqrt
 from typing import Any
 
 from leo_twin.core import SimulationKernel, SimulationModule
 from leo_twin.schema import EventType, OrbitalElementSet, SatelliteState, SimEvent
+
+
+@dataclass(frozen=True)
+class J2SecularDriftProfile:
+    """Deterministic J2 secular drift parameters for low-order orbit evolution."""
+
+    j2: float = 1.08262668e-3
+    equatorial_radius_km: float = 6378.137
+
+    def __post_init__(self) -> None:
+        _require_positive_number(self.j2, "j2")
+        _require_positive_number(self.equatorial_radius_km, "equatorial_radius_km")
+
+    def drift_rates_rad_s(
+        self,
+        semi_major_axis_km: float,
+        eccentricity: float,
+        inclination_rad: float,
+        gravitational_parameter_km3_s2: float,
+    ) -> tuple[float, float]:
+        """Return deterministic RAAN and argument-of-perigee drift rates."""
+
+        semi_latus_rectum = semi_major_axis_km * (1.0 - eccentricity**2)
+        mean_motion = sqrt(gravitational_parameter_km3_s2 / (semi_major_axis_km**3))
+        radius_ratio_squared = (self.equatorial_radius_km / semi_latus_rectum) ** 2
+        inclination_cosine = cos(inclination_rad)
+        factor = self.j2 * radius_ratio_squared * mean_motion
+        raan_rate = -1.5 * factor * inclination_cosine
+        argument_rate = 0.75 * factor * (5.0 * inclination_cosine**2 - 1.0)
+        return raan_rate, argument_rate
 
 
 class KeplerianOrbitPropagator:
@@ -20,6 +51,7 @@ class KeplerianOrbitPropagator:
         earth_rotation_rate_rad_s: float = 0.0,
         max_iterations: int = 12,
         tolerance: float = 1e-12,
+        j2_profile: J2SecularDriftProfile | None = None,
     ) -> None:
         _require_positive_number(gravitational_parameter_km3_s2, "gravitational_parameter_km3_s2")
         _require_finite_number(earth_rotation_rate_rad_s, "earth_rotation_rate_rad_s")
@@ -33,6 +65,7 @@ class KeplerianOrbitPropagator:
         self._earth_rotation_rate_rad_s = float(earth_rotation_rate_rad_s)
         self._max_iterations = max_iterations
         self._tolerance = float(tolerance)
+        self._j2_profile = j2_profile
 
     def states_at(self, requested_time: float) -> tuple[SatelliteState, ...]:
         """Return deterministic satellite states at one simulation time."""
@@ -56,17 +89,30 @@ class KeplerianOrbitPropagator:
             eccentricity,
             eccentric_anomaly,
         )
+        inclination_rad = radians(element.inclination_deg)
+        raan_rad = radians(element.raan_deg)
+        argument_rad = radians(element.argument_of_perigee_deg)
+        if self._j2_profile is not None:
+            raan_rate, argument_rate = self._j2_profile.drift_rates_rad_s(
+                semi_major_axis_km=semi_major_axis,
+                eccentricity=eccentricity,
+                inclination_rad=inclination_rad,
+                gravitational_parameter_km3_s2=self._mu,
+            )
+            raan_rad += raan_rate * elapsed
+            argument_rad += argument_rate * elapsed
+
         position_inertial = _rotate_perifocal_to_inertial(
             position_perifocal,
-            raan_rad=radians(element.raan_deg),
-            inclination_rad=radians(element.inclination_deg),
-            argument_rad=radians(element.argument_of_perigee_deg),
+            raan_rad=raan_rad,
+            inclination_rad=inclination_rad,
+            argument_rad=argument_rad,
         )
         velocity_inertial = _rotate_perifocal_to_inertial(
             velocity_perifocal,
-            raan_rad=radians(element.raan_deg),
-            inclination_rad=radians(element.inclination_deg),
-            argument_rad=radians(element.argument_of_perigee_deg),
+            raan_rad=raan_rad,
+            inclination_rad=inclination_rad,
+            argument_rad=argument_rad,
         )
         position, velocity = _inertial_to_earth_fixed(
             position=position_inertial,
@@ -129,6 +175,7 @@ class KeplerianOrbitEngine(SimulationModule):
         gravitational_parameter_km3_s2: float = 398600.4418,
         earth_rotation_rate_rad_s: float = 0.0,
         state_vector_scale: float = 1.0,
+        j2_profile: J2SecularDriftProfile | None = None,
     ) -> None:
         _require_non_empty_str(module_name, "module_name")
         _require_positive_number(state_vector_scale, "state_vector_scale")
@@ -143,6 +190,7 @@ class KeplerianOrbitEngine(SimulationModule):
             elements=elements,
             gravitational_parameter_km3_s2=gravitational_parameter_km3_s2,
             earth_rotation_rate_rad_s=earth_rotation_rate_rad_s,
+            j2_profile=j2_profile,
         )
         self._state_vector_scale = float(state_vector_scale)
         self._event_sequence = 0

@@ -7,10 +7,15 @@ from leo_twin.models.orbit.ground_track import (
     ground_track_point,
     ground_track_points,
 )
-from leo_twin.models.orbit.keplerian import KeplerianOrbitEngine, KeplerianOrbitPropagator
+from leo_twin.models.orbit.keplerian import (
+    J2SecularDriftProfile,
+    KeplerianOrbitEngine,
+    KeplerianOrbitPropagator,
+)
 
 __all__ = [
     "GroundTrackPoint",
+    "J2SecularDriftProfile",
     "KeplerianOrbitEngine",
     "KeplerianOrbitPropagator",
     "OrbitEngine",

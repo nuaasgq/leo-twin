@@ -5,7 +5,11 @@ from math import pi, sqrt
 import pytest
 
 from leo_twin.core import SimulationKernel, SimulationModule
-from leo_twin.models.orbit import KeplerianOrbitEngine, KeplerianOrbitPropagator
+from leo_twin.models.orbit import (
+    J2SecularDriftProfile,
+    KeplerianOrbitEngine,
+    KeplerianOrbitPropagator,
+)
 from leo_twin.schema import EventType, OrbitalElementSet, SatelliteState, SimEvent
 
 
@@ -103,6 +107,56 @@ def test_keplerian_propagator_can_emit_earth_fixed_state() -> None:
 
     assert state.position == pytest.approx((7000.0, 0.0, 0.0), abs=1e-8)
     assert state.velocity == pytest.approx((0.0, 0.0, 0.0), abs=1e-10)
+
+
+def test_j2_secular_drift_profile_produces_deterministic_rates() -> None:
+    profile = J2SecularDriftProfile()
+
+    raan_rate, argument_rate = profile.drift_rates_rad_s(
+        semi_major_axis_km=7000.0,
+        eccentricity=0.001,
+        inclination_rad=0.9250245035569946,
+        gravitational_parameter_km3_s2=MU,
+    )
+
+    assert raan_rate < 0.0
+    assert argument_rate > 0.0
+    assert (raan_rate, argument_rate) == profile.drift_rates_rad_s(
+        semi_major_axis_km=7000.0,
+        eccentricity=0.001,
+        inclination_rad=0.9250245035569946,
+        gravitational_parameter_km3_s2=MU,
+    )
+
+
+def test_keplerian_propagator_can_apply_j2_secular_drift() -> None:
+    element = OrbitalElementSet(
+        satellite_id="SAT-J2",
+        epoch=0.0,
+        semi_major_axis_km=7000.0,
+        eccentricity=0.001,
+        inclination_deg=53.0,
+        raan_deg=10.0,
+        argument_of_perigee_deg=20.0,
+        mean_anomaly_deg=30.0,
+    )
+    base = KeplerianOrbitPropagator(
+        elements=(element,),
+        gravitational_parameter_km3_s2=MU,
+    )
+    perturbed = KeplerianOrbitPropagator(
+        elements=(element,),
+        gravitational_parameter_km3_s2=MU,
+        j2_profile=J2SecularDriftProfile(),
+    )
+
+    base_state = base.states_at(3600.0)[0]
+    first = perturbed.states_at(3600.0)[0]
+    second = perturbed.states_at(3600.0)[0]
+
+    assert first == second
+    assert first.position != pytest.approx(base_state.position)
+    assert first.velocity != pytest.approx(base_state.velocity)
 
 
 def test_keplerian_orbit_engine_schedules_events_through_kernel() -> None:
