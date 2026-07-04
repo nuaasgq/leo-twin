@@ -1154,6 +1154,17 @@ body {
   cursor: not-allowed;
 }
 
+.control-feedback {
+  min-width: 0;
+  border: 1px solid #6e4044;
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: #241315;
+  color: #ffd7d9;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
 .execution-parameter-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

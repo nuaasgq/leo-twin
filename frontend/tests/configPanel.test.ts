@@ -76,6 +76,26 @@ describe("ConfigPanel priority controls", () => {
     expect(markup).toContain('id="speed-factor-input"');
     expect(markup).toContain('id="duration-seconds-input"');
   });
+
+  it("renders backend control errors near runtime controls", () => {
+    const markup = renderToStaticMarkup(
+      createElement(ConfigPanel, {
+        scenario: defaultScenario(),
+        runtime: runtimeStatus("STOPPED", true),
+        progress: {
+          sim_time: 0,
+          duration: 600,
+          event_count: 0
+        },
+        generatedConfig: null,
+        controlError: "当前配置超出实时交互演示安全上限。",
+        onRuntimeControl: () => undefined
+      })
+    );
+
+    expect(markup).toContain('role="alert"');
+    expect(markup).toContain("实时交互演示安全上限");
+  });
 });
 
 describe("generatedScenarioSummaryItems", () => {

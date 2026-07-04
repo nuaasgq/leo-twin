@@ -59,6 +59,7 @@ export function App() {
   );
   const [scenarioConfig, setScenarioConfig] = useState<ScenarioConfig | null>(null);
   const [generatedConfig, setGeneratedConfig] = useState<GeneratedScenarioConfig | null>(null);
+  const [controlError, setControlError] = useState<string | null>(null);
   const [runtimeStatus, setRuntimeStatus] = useState<RuntimeStatusPayload>(defaultRuntimeStatus());
   const [runtimeProgressAnchor, setRuntimeProgressAnchor] = useState<RuntimeProgressAnchor>(() =>
     defaultRuntimeProgressAnchor(defaultRuntimeStatus())
@@ -175,6 +176,13 @@ export function App() {
         onMessage: (message) => {
           handleControlMessage(message, setRuntimeStatus);
           handleGeneratedConfig(message, setGeneratedConfig);
+          if (message.ok === false) {
+            setControlError(controlErrorMessage(message.error));
+            return;
+          }
+          if (message.ok === true) {
+            setControlError(null);
+          }
           if (
             message.type === "RUNTIME_STATUS" &&
             runtimeStatusRequiresStreams(message.status) &&
@@ -316,6 +324,7 @@ export function App() {
 
   const sendRuntimeControl = useCallback(
     (action: RuntimeAction, payload: Record<string, unknown> = {}) => {
+      setControlError(null);
       setRuntimeStatus((previous) => ({
         ...previous,
         last_action: `${action}_PENDING`
@@ -467,6 +476,7 @@ export function App() {
                     event_count: displayEventCount
                   }}
                   generatedConfig={generatedConfig}
+                  controlError={controlError}
                   onRuntimeControl={sendRuntimeControl}
                 />
               </Suspense>
@@ -895,6 +905,19 @@ function handleGeneratedConfig(
   if (message.generated_config !== undefined) {
     setGeneratedConfig(message.generated_config);
   }
+}
+
+export function controlErrorMessage(error: string | undefined): string {
+  if (error === undefined || error.length === 0) {
+    return "控制命令执行失败，请检查后端运行状态。";
+  }
+  if (error.includes("scale safety check failed")) {
+    return [
+      "当前配置超出实时交互演示安全上限。",
+      "请缩短仿真时长、降低卫星/算力节点数量，或使用离线批处理模式。"
+    ].join("");
+  }
+  return error;
 }
 
 function scenarioControlValues(

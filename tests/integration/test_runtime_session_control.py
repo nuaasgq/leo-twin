@@ -154,7 +154,8 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
     )
     assert started["ok"] is True
     assert started["status"]["status"] == "RUNNING"
-    assert started["status"]["processed_event_count"] > 0
+    assert started["status"]["processed_event_count"] == 0
+    control_plane._require_advance_loop().tick()
     assert control_plane.stream_events()
     assert control_plane.stream_snapshots()
 
@@ -247,6 +248,7 @@ def test_demo_adapter_exposes_cursor_batches(tmp_path) -> None:
         json.dumps({"type": "RUNTIME_CONTROL", "action": "INITIALIZE"})
     )
     control_plane.handle_raw_message(json.dumps({"type": "RUNTIME_CONTROL", "action": "START"}))
+    control_plane._require_advance_loop().tick()
 
     first = control_plane.stream_event_batch(cursor=0, limit=100)
     second = control_plane.stream_event_batch(

@@ -186,17 +186,28 @@ class DemoControlPlane:
                 return self._reset(command.payload)
 
             self._controller.handle_action(command.command.value, command.payload)
-            runtime_ack = self._require_runtime_adapter().handle_raw_message(
-                {"command": command.command.value, "payload": command.payload}
-            )
+            if command.command == RuntimeCommand.START:
+                self._require_session().start_live()
+                runtime_ack = {"ok": True}
+            elif command.command == RuntimeCommand.RESUME:
+                self._require_session().resume_live()
+                runtime_ack = {"ok": True}
+            else:
+                runtime_ack = self._require_runtime_adapter().handle_raw_message(
+                    {"command": command.command.value, "payload": command.payload}
+                )
             if not runtime_ack["ok"]:
                 return self._nack(command_name, str(runtime_ack["error"]))
             if command.command == RuntimeCommand.START:
                 self._require_advance_loop().publish_pending()
+                response = self._ack(command)
                 self._require_advance_loop().start()
+                return response
             if command.command == RuntimeCommand.RESUME:
                 self._require_advance_loop().publish_pending()
+                response = self._ack(command)
                 self._require_advance_loop().start()
+                return response
             if command.command == RuntimeCommand.PAUSE:
                 self._require_advance_loop().publish_pending()
             if command.command == RuntimeCommand.STOP:

@@ -68,6 +68,7 @@ export interface ConfigPanelProps {
   runtime: RuntimeStatusPayload;
   progress: RuntimeProgressValues;
   generatedConfig: GeneratedScenarioConfig | null;
+  controlError?: string | null;
   onRuntimeControl: (action: RuntimeAction, payload?: Record<string, unknown>) => void;
 }
 
@@ -110,6 +111,7 @@ export function ConfigPanel({
   runtime,
   progress,
   generatedConfig,
+  controlError = null,
   onRuntimeControl
 }: ConfigPanelProps) {
   const [satelliteCount, setSatelliteCount] = useState(scenario.satellite_count);
@@ -397,6 +399,11 @@ export function ConfigPanel({
               重置
             </button>
           </div>
+          {controlError !== null && controlError.length > 0 ? (
+            <div className="control-feedback error" role="alert">
+              {controlError}
+            </div>
+          ) : null}
 
           <div className="execution-parameter-grid">
             <div className="control-group emphasized-control priority-mode-control">

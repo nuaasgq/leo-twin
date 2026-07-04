@@ -170,6 +170,19 @@ class SimulationSession:
             self.advance_control_step()
             return self.get_status()
 
+    def start_live(self) -> RuntimeStatus:
+        """Start the session without draining a control step on the caller thread."""
+
+        with self._lock:
+            if self._lifecycle_state == RuntimeLifecycleState.UNINITIALIZED:
+                self.initialize()
+            self._require_kernel()
+            if self._lifecycle_state == RuntimeLifecycleState.STOPPED:
+                raise RuntimeError("stopped session must be reset before start")
+            self._lifecycle_state = RuntimeLifecycleState.RUNNING
+            self._clock.start(self._current_sim_time())
+            return self.get_status()
+
     def pause(self) -> RuntimeStatus:
         with self._lock:
             self._require_kernel()
@@ -185,6 +198,17 @@ class SimulationSession:
             self._lifecycle_state = RuntimeLifecycleState.RUNNING
             self._clock.resume(self._current_sim_time())
             self.advance_control_step()
+            return self.get_status()
+
+    def resume_live(self) -> RuntimeStatus:
+        """Resume the session without advancing on the caller thread."""
+
+        with self._lock:
+            self._require_kernel()
+            if self._lifecycle_state != RuntimeLifecycleState.PAUSED:
+                raise RuntimeError("only a paused session can be resumed")
+            self._lifecycle_state = RuntimeLifecycleState.RUNNING
+            self._clock.resume(self._current_sim_time())
             return self.get_status()
 
     def stop(self) -> RuntimeStatus:

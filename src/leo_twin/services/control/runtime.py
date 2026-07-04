@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 from collections.abc import Iterable
+from math import ceil
 from pathlib import Path
 from typing import Protocol
 
@@ -155,8 +156,12 @@ class RuntimeController:
         return self.apply_config(merge_config_update(self._config, update))
 
     def initialize(self, update: dict[str, object] | None = None) -> RuntimeSnapshot:
+        next_config = self._config
         if update:
-            self._config = merge_config_update(self._config, update)
+            next_config = merge_config_update(self._config, update)
+        self._validate_scale_safety(next_config)
+        if update:
+            self._config = next_config
             self._clock.apply_runtime_config(self._config)
             self._config_version += 1
         self._status = RuntimeStatus.STOPPED
@@ -164,7 +169,7 @@ class RuntimeController:
         return self.snapshot()
 
     def start(self) -> RuntimeSnapshot:
-        self._validate_scale_safety()
+        self._validate_scale_safety(self._config)
         self._status = RuntimeStatus.RUNNING
         if self._clock.mode == RuntimeMode.PAUSED:
             self._clock.set_mode(RuntimeMode.REAL_TIME)
@@ -250,21 +255,46 @@ class RuntimeController:
     def config_json(self) -> dict[str, object]:
         return config_to_dict(self._config)
 
-    def _validate_scale_safety(self) -> None:
+    def _validate_scale_safety(self, config: SEESConfig) -> None:
         if self._scale_safety_checker is None:
             return
         self._scale_safety_checker.raise_if_unsafe(
-            _scale_config_from_runtime_config(self._config),
+            _scale_config_from_runtime_config(config),
             self._scale_source_paths,
         )
 
 
 def _scale_config_from_runtime_config(config: SEESConfig) -> ScaleConfig:
+    duration = float(config.runtime.duration)
+    orbit_interval = config.scenario.orbit.update_interval_seconds
+    flow_interval = config.scenario.traffic_model.flow_interval_seconds
+    task_interval = config.scenario.traffic_model.task_interval_seconds
+    compute_nodes = min(config.scenario.compute_nodes, config.scenario.satellite_count)
+    orbit_update_events = (
+        _scheduled_tick_count(duration, orbit_interval, include_final=True)
+        * config.scenario.satellite_count
+        * 2
+    )
+    flow_events = _scheduled_tick_count(duration, flow_interval) * compute_nodes
+    task_events = _scheduled_tick_count(duration, task_interval) * compute_nodes
     return ScaleConfig(
         satellite_count=config.scenario.satellite_count,
         user_count=config.scenario.user_count,
-        simulation_duration=float(config.runtime.duration),
-        compute_node_count=config.scenario.compute_nodes,
-        tick_interval=float(config.scenario.orbit.update_interval_seconds),
+        simulation_duration=duration,
+        compute_node_count=compute_nodes,
+        tick_interval=float(orbit_interval),
         partition_count=config.scenario.cell_count,
+        scheduled_event_count=orbit_update_events + flow_events + task_events,
     )
+
+
+def _scheduled_tick_count(
+    duration: float,
+    interval: int,
+    *,
+    include_final: bool = False,
+) -> int:
+    count = ceil(duration / float(interval))
+    if include_final and duration % float(interval) == 0.0:
+        return count + 1
+    return count

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildRuntimeRibbonSummary,
+  controlErrorMessage,
   defaultRuntimeProgressAnchor,
   nextRuntimeProgressAnchor,
   runtimeProgressSimTime,
@@ -127,6 +128,14 @@ describe("runtimeStatusRequiresStreams", () => {
     expect(runtimeStatusRequiresStreams({ ...baseStatus, status: "PAUSED" })).toBe(false);
     expect(runtimeStatusRequiresStreams({ ...baseStatus, status: "STOPPED" })).toBe(false);
     expect(runtimeStatusRequiresStreams(undefined)).toBe(false);
+  });
+});
+
+describe("controlErrorMessage", () => {
+  it("maps scale safety failures to an actionable Chinese message", () => {
+    expect(controlErrorMessage("scale safety check failed: max_event_count")).toContain(
+      "实时交互演示安全上限"
+    );
   });
 });
 

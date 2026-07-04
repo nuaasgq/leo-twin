@@ -33,6 +33,7 @@ def test_start_pause_resume_stop_drive_live_advance_loop(tmp_path: Path) -> None
     assert start_ack["status"]["status"] == "RUNNING"
     assert start_ack["status"]["lifecycle_state"] == "RUNNING"
     assert control_plane.advance_loop_snapshot()["state"] == "RUNNING"
+    control_plane._require_advance_loop().tick()
 
     pause_ack = control_plane.handle_raw_message(
         json.dumps({"type": "RUNTIME_CONTROL", "action": "PAUSE"})
@@ -49,8 +50,10 @@ def test_start_pause_resume_stop_drive_live_advance_loop(tmp_path: Path) -> None
     )
     assert resume_ack["status"]["status"] == "RUNNING"
     assert resume_ack["status"]["lifecycle_state"] == "RUNNING"
-    assert float(resume_ack["status"]["current_sim_time"]) > paused_time
     assert control_plane.advance_loop_snapshot()["state"] == "RUNNING"
+    control_plane._require_session().advance_control_step()
+    control_plane._require_advance_loop().publish_pending()
+    assert control_plane.runtime_status()["status"]["current_sim_time"] > paused_time
 
     stop_ack = control_plane.handle_raw_message(
         json.dumps({"type": "RUNTIME_CONTROL", "action": "STOP"})
@@ -153,6 +156,7 @@ def _initialized_running_control_plane(tmp_path: Path) -> DemoControlPlane:
         json.dumps({"type": "RUNTIME_CONTROL", "action": "START"})
     )
     assert start_ack["ok"] is True
+    control_plane._require_advance_loop().tick()
     return control_plane
 
 

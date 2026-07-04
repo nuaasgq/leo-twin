@@ -32,6 +32,7 @@ class ScaleConfig:
     compression_enabled: bool = True
     frontend_batch_size: int = 1000
     snapshot_interval_events: int = 10_000
+    scheduled_event_count: int = 0
     max_queue_depth: int = 100_000
     max_event_count: int = 1_000_000
     max_memory_bytes: int = 512 * 1024 * 1024
@@ -53,6 +54,7 @@ class ScaleConfig:
             self.snapshot_interval_events,
             "snapshot_interval_events",
         )
+        _require_non_negative_int(self.scheduled_event_count, "scheduled_event_count")
         _require_positive_int(self.max_queue_depth, "max_queue_depth")
         _require_positive_int(self.max_event_count, "max_event_count")
         _require_positive_int(self.max_memory_bytes, "max_memory_bytes")
@@ -85,7 +87,7 @@ class ScaleSafetyChecker:
         entities = config.satellite_count + config.user_count
         estimated_events = ceil(
             ticks * entities * config.average_events_per_entity_per_tick
-        )
+        ) + config.scheduled_event_count
         interactions_per_tick = ceil(
             config.satellite_count * (config.user_count / config.partition_count)
         )
@@ -228,6 +230,13 @@ def _require_positive_int(value: int, field_name: str) -> None:
         raise TypeError(f"{field_name} must be an int")
     if value <= 0:
         raise ValueError(f"{field_name} must be positive")
+
+
+def _require_non_negative_int(value: int, field_name: str) -> None:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise TypeError(f"{field_name} must be an int")
+    if value < 0:
+        raise ValueError(f"{field_name} must be non-negative")
 
 
 def _require_positive_float(value: float, field_name: str) -> None:

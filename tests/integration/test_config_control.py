@@ -404,6 +404,7 @@ def test_initialize_writes_config_and_start_gates_streams(tmp_path) -> None:
         json.dumps({"type": "RUNTIME_CONTROL", "action": "START"})
     )
     assert start_ack["status"]["status"] == "RUNNING"
+    control_plane._require_advance_loop().tick()
     assert len(control_plane.stream_events()) > 0
     assert len(control_plane.stream_snapshots()) > 0
 
@@ -445,6 +446,38 @@ def test_demo_control_plane_blocks_unsafe_scale_start(tmp_path) -> None:
 
     assert ack["ok"] is False
     assert "scale safety check failed" in ack["error"]
+    assert control_plane.controller.snapshot().status == "STOPPED"
+
+
+def test_demo_control_plane_blocks_unsafe_scale_initialize(tmp_path) -> None:
+    control_plane = _small_control_plane(tmp_path / "sees_control.yaml")
+
+    ack = control_plane.handle_raw_message(
+        json.dumps(
+            {
+                "type": "RUNTIME_CONTROL",
+                "action": "INITIALIZE",
+                "payload": {
+                    "satellite_count": 1200,
+                    "user_count": 1000,
+                    "compute_nodes": 1200,
+                    "duration": 28740,
+                    "orbit": {
+                        "update_interval_seconds": 60,
+                        "plane_count": 12,
+                    },
+                    "traffic_model": {
+                        "flow_interval_seconds": 60,
+                        "task_interval_seconds": 60,
+                    },
+                },
+            }
+        )
+    )
+
+    assert ack["ok"] is False
+    assert "scale safety check failed" in ack["error"]
+    assert ack["status"]["initialized"] is False
     assert control_plane.controller.snapshot().status == "STOPPED"
 
 
