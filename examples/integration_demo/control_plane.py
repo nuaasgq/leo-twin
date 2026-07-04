@@ -10,6 +10,7 @@ from leo_twin.schema.config_loader import write_config
 from leo_twin.services.control import RuntimeAction, RuntimeStatus
 from leo_twin.services.control import (
     RuntimeController,
+    ScaleSafetyChecker,
     control_error,
     parse_control_message,
 )
@@ -60,7 +61,10 @@ class DemoControlPlane:
         config_output_path: str | Path = "configs/sees_control.yaml",
         generated_config_output_path: str | Path = "configs/generated_full_system_demo.json",
     ) -> "DemoControlPlane":
-        controller = RuntimeController(demo_config_to_sees_config(result.config))
+        controller = RuntimeController(
+            demo_config_to_sees_config(result.config),
+            scale_safety_checker=ScaleSafetyChecker(),
+        )
         return cls(
             _base_config=result.config,
             _result=result,

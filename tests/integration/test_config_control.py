@@ -395,6 +395,30 @@ def test_initialize_writes_config_and_start_gates_streams(tmp_path) -> None:
     assert control_plane.visible_snapshot()["event_count"] == 0
 
 
+def test_demo_control_plane_blocks_unsafe_scale_start(tmp_path) -> None:
+    control_plane = _small_control_plane(tmp_path / "sees_control.yaml")
+    control_plane.controller.apply_config(
+        SEESConfig(
+            scenario=ScenarioConfig(
+                satellite_count=10_000,
+                user_count=100_000,
+                compute_nodes=10,
+                cell_count=1000,
+                orbit=OrbitParameters(update_interval_seconds=1),
+            ),
+            runtime=RuntimeConfig(duration=1000),
+        )
+    )
+
+    ack = control_plane.handle_raw_message(
+        json.dumps({"type": "RUNTIME_CONTROL", "action": "START"})
+    )
+
+    assert ack["ok"] is False
+    assert "scale safety check failed" in ack["error"]
+    assert control_plane.controller.snapshot().status == "STOPPED"
+
+
 def test_system_remains_deterministic_under_config_changes(tmp_path) -> None:
     first = _small_control_plane(tmp_path / "first.yaml")
     second = _small_control_plane(tmp_path / "second.yaml")
