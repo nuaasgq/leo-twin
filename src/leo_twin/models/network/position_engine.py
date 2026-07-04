@@ -8,6 +8,7 @@ from typing import Any
 
 from leo_twin.core import SimulationKernel, SimulationModule
 from leo_twin.models.compute.contracts import COMPUTE_NODE_UPDATE
+from leo_twin.models.network.application import ApplicationRuntime
 from leo_twin.models.network.channel import ChannelBudgetSelector, LinkBudgetCalculator
 from leo_twin.models.network.datalink import DataLinkRuntime
 from leo_twin.models.network.geometry import (
@@ -51,6 +52,7 @@ class PositionDrivenNetworkEngine(SimulationModule):
         cell_size_km: float = 1000.0,
         link_budget_calculator: LinkBudgetCalculator | None = None,
         link_budget_selector: ChannelBudgetSelector | None = None,
+        application_runtime: ApplicationRuntime | None = None,
         routing_runtime: RoutingRuntime | None = None,
         data_link_runtime: DataLinkRuntime | None = None,
         transport_runtime: TransportRuntime | None = None,
@@ -103,6 +105,7 @@ class PositionDrivenNetworkEngine(SimulationModule):
         self._base_latency_s = float(base_latency_s)
         self._link_budget_calculator = link_budget_calculator
         self._link_budget_selector = link_budget_selector
+        self._application_runtime = application_runtime
         self._routing_runtime = routing_runtime
         self._data_link_runtime = data_link_runtime
         self._transport_runtime = transport_runtime
@@ -203,6 +206,7 @@ class PositionDrivenNetworkEngine(SimulationModule):
     def route_flow(self, request: FlowRequest) -> Route:
         """Route one flow through the best currently active access link."""
 
+        request = self._apply_application(request)
         if self._routing_runtime is not None:
             route = self._routing_runtime.route(
                 request,
@@ -235,6 +239,11 @@ class PositionDrivenNetworkEngine(SimulationModule):
         routed = self._apply_transport(request, linked)
         self._record_stack_trace(request, routed)
         return routed
+
+    def _apply_application(self, request: FlowRequest) -> FlowRequest:
+        if self._application_runtime is None:
+            return request
+        return self._application_runtime.apply(request)
 
     def _routing_links_for_request(self, request: FlowRequest) -> tuple[LinkState, ...]:
         access_links = tuple(

@@ -24,6 +24,7 @@ from leo_twin.models.network import (
     TransportProfile,
     TransportRuntime,
     build_default_leo_protocol_stack,
+    default_application_runtime,
     default_data_link_runtime,
     default_transport_runtime,
 )
@@ -100,6 +101,7 @@ def run_integration_demo(config: DemoConfig) -> DemoRunResult:
     transport_protocol = TransportProtocol(str(config.transport_protocol))
     routing_protocol = RoutingProtocol(str(config.routing_protocol))
     data_link_protocol = DataLinkProtocol(str(config.datalink_mac_protocol))
+    application_runtime = default_application_runtime(application_protocol)
     data_link_runtime = default_data_link_runtime(data_link_protocol)
     transport_runtime = _transport_runtime(config, transport_protocol)
     routing_cost_profile = RoutingCostProfile(
@@ -124,6 +126,7 @@ def run_integration_demo(config: DemoConfig) -> DemoRunResult:
         space_link_cell_size_km=2500.0,
         space_link_update_latency_epsilon_s=0.0005,
         space_link_update_capacity_epsilon=1.0,
+        application_runtime=application_runtime,
         routing_runtime=routing_runtime,
         static_links=_compute_gateway_links(scenario),
         data_link_runtime=data_link_runtime,
@@ -135,6 +138,7 @@ def run_integration_demo(config: DemoConfig) -> DemoRunResult:
                 routing_protocol=routing_protocol,
                 data_link_protocol=data_link_protocol,
             ),
+            application_profile=application_runtime.profile,
             antenna=space_ground_budget.transmit_terminal.antenna,
             channel=space_ground_budget.channel,
             data_link_profile=data_link_runtime.profile,

@@ -31,8 +31,12 @@ def test_generated_full_system_demo_runs_domain_lifecycle() -> None:
     assert len(result.scheduled_tasks) == 4
     assert result.metrics_summary["routes_available"] == 4
     assert result.metrics_summary["route_latency_min"] > 0.0
-    assert result.metrics_summary["route_capacity_max"] == 89.54666666666667
+    assert result.metrics_summary["route_capacity_max"] == 84.94545454545454
     assert result.metrics_summary["active_link_capacity_avg"] == 100.0
+    application_attributes = dict(result.network_stack_traces[0].layers[0].attributes)
+    data_link_attributes = dict(result.network_stack_traces[0].layers[3].attributes)
+    assert application_attributes["demand_capacity_multiplier"] == "1.000000"
+    assert data_link_attributes["medium_access_efficiency"] == "0.960000"
     assert result.metrics_summary["finished_tasks"] == 4
     assert EventType.ORBIT_UPDATE.value in result.processed_event_types
     assert EventType.ROUTE_UPDATE.value in result.processed_event_types
@@ -156,11 +160,15 @@ def test_generated_full_system_demo_records_configured_network_stack_trace() -> 
     assert trace.application_protocol == "HTTP"
     assert application_attributes["application_profile"] == "web_request"
     assert application_attributes["interaction_model"] == "request_response"
+    assert application_attributes["demand_capacity_multiplier"] == "1.150000"
+    assert application_attributes["session_setup_latency_s"] == "0.020000"
     assert network_attributes["latency_weight"] == "0.200000"
     assert network_attributes["inverse_capacity_weight"] == "400.000000"
     assert network_attributes["hop_weight"] == "1.000000"
     assert data_link_attributes["mac_profile"] == "CSMA_CA"
     assert data_link_attributes["medium_access"] == "listen_before_transmit"
+    assert data_link_attributes["medium_access_efficiency"] == "0.780000"
+    assert data_link_attributes["collision_loss_rate"] == "0.030000"
     assert channel_attributes["carrier_frequency_hz"] == "22000000000.000000"
     assert channel_attributes["bandwidth_hz"] == "250000000.000000"
 

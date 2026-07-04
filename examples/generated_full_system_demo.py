@@ -33,6 +33,8 @@ from leo_twin.models.network import (
     TransportRuntime,
     NetworkStackTrace,
     build_default_leo_protocol_stack,
+    default_application_runtime,
+    default_data_link_runtime,
     default_transport_runtime,
 )
 from leo_twin.models.orbit import KeplerianOrbitEngine
@@ -89,6 +91,10 @@ def run_generated_full_system_demo(
     space_ground_budget = _space_ground_budget(resolved_config)
     space_space_budget = _space_space_budget(resolved_config)
     transport_protocol = TransportProtocol(str(resolved_config.transport_protocol))
+    application_protocol = ApplicationProtocol(str(resolved_config.application_protocol))
+    data_link_protocol = DataLinkProtocol(str(resolved_config.datalink_mac_protocol))
+    application_runtime = default_application_runtime(application_protocol)
+    data_link_runtime = default_data_link_runtime(data_link_protocol)
     transport_runtime = _transport_runtime(resolved_config, transport_protocol)
     routing_profile = RoutingCostProfile(
         latency_weight=resolved_config.routing_latency_weight,
@@ -128,22 +134,22 @@ def run_generated_full_system_demo(
             if resolved_config.space_link_cell_size_km > 0.0
             else None
         ),
+        application_runtime=application_runtime,
+        data_link_runtime=data_link_runtime,
         transport_runtime=transport_runtime,
         routing_runtime=routing_runtime,
         static_links=_compute_gateway_links(scenario, resolved_config),
         stack_runtime=NetworkStackRuntime(
             build_default_leo_protocol_stack(
-                application_protocol=ApplicationProtocol(
-                    str(resolved_config.application_protocol)
-                ),
+                application_protocol=application_protocol,
                 transport_protocol=transport_protocol,
                 routing_protocol=RoutingProtocol(str(resolved_config.routing_protocol)),
-                data_link_protocol=DataLinkProtocol(
-                    str(resolved_config.datalink_mac_protocol)
-                ),
+                data_link_protocol=data_link_protocol,
             ),
+            application_profile=application_runtime.profile,
             antenna=space_ground_budget.transmit_terminal.antenna,
             channel=space_ground_budget.channel,
+            data_link_profile=data_link_runtime.profile,
             transport_profile=transport_runtime.profile,
             routing_cost_profile=routing_profile,
         ),

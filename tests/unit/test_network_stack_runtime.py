@@ -7,6 +7,7 @@ from leo_twin.models.network import (
     RadioTerminalProfile,
     RoutingRuntime,
     build_default_leo_protocol_stack,
+    default_application_runtime,
     default_data_link_runtime,
     default_transport_runtime,
 )
@@ -68,8 +69,10 @@ def test_default_stack_contains_required_layers_and_protocols() -> None:
 
 
 def test_stack_runtime_records_application_profile_attributes() -> None:
+    application = default_application_runtime(ApplicationProtocol.MQTT)
     runtime = NetworkStackRuntime(
-        build_default_leo_protocol_stack(application_protocol=ApplicationProtocol.MQTT)
+        build_default_leo_protocol_stack(application_protocol=ApplicationProtocol.MQTT),
+        application_profile=application.profile,
     )
 
     trace = runtime.process_flow(_flow(), _route())
@@ -80,6 +83,9 @@ def test_stack_runtime_records_application_profile_attributes() -> None:
     assert attributes["application_profile"] == "publish_subscribe"
     assert attributes["interaction_model"] == "brokered_message"
     assert attributes["session_model"] == "persistent_topic"
+    assert attributes["demand_capacity_multiplier"] == "0.750000"
+    assert attributes["session_setup_latency_s"] == "0.005000"
+    assert attributes["runtime_interaction_model"] == "publish_subscribe"
 
 
 def test_stack_runtime_records_data_link_mac_profile_attributes() -> None:

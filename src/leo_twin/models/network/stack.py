@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from leo_twin.models.network.application import ApplicationProfile
 from leo_twin.models.network.channel import LinkBudgetResult
 from leo_twin.models.network.datalink import DataLinkProfile
 from leo_twin.models.network.routing import RoutingCostProfile
@@ -57,6 +58,7 @@ class NetworkStackRuntime:
     def __init__(
         self,
         stack: ProtocolStackContract,
+        application_profile: ApplicationProfile | None = None,
         antenna: AntennaProfile | None = None,
         channel: ChannelProfile | None = None,
         link_budget: LinkBudgetResult | None = None,
@@ -65,6 +67,7 @@ class NetworkStackRuntime:
         routing_cost_profile: RoutingCostProfile | None = None,
     ) -> None:
         self._stack = stack
+        self._application_profile = application_profile
         self._antenna = antenna
         self._channel = channel
         self._link_budget = link_budget
@@ -116,6 +119,7 @@ class NetworkStackRuntime:
             attributes += (("application", layer.protocol_name),)
             attributes += (("demand_capacity", f"{request.demand_capacity:.6f}"),)
             attributes += _application_profile_attributes(layer.protocol_name)
+            attributes += _application_runtime_attributes(self._application_profile)
         elif layer.layer == NetworkLayer.TRANSPORT:
             output_ref = f"transport:{request.flow_id}:{layer.protocol_name}"
             attributes += (("transport", layer.protocol_name),)
@@ -262,6 +266,19 @@ def _application_profile_attributes(protocol_name: str) -> tuple[tuple[str, str]
         ("application_profile", "task_offload"),
         ("interaction_model", "request_response"),
         ("session_model", "job_lifecycle"),
+    )
+
+
+def _application_runtime_attributes(
+    profile: ApplicationProfile | None,
+) -> tuple[tuple[str, str], ...]:
+    if profile is None:
+        return ()
+    return (
+        ("application_runtime_protocol", profile.protocol.value),
+        ("demand_capacity_multiplier", f"{profile.demand_capacity_multiplier:.6f}"),
+        ("runtime_interaction_model", profile.interaction_model),
+        ("session_setup_latency_s", f"{profile.session_setup_latency_s:.6f}"),
     )
 
 

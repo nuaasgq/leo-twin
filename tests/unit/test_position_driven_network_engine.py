@@ -13,11 +13,13 @@ from leo_twin.models.network import (
     RadioTerminalProfile,
     RoutingRuntime,
     build_default_leo_protocol_stack,
+    default_application_runtime,
     default_data_link_runtime,
     default_transport_runtime,
 )
 from leo_twin.schema import (
     AntennaProfile,
+    ApplicationProtocol,
     ChannelProfile,
     ComputeNodeState,
     DataLinkProtocol,
@@ -327,6 +329,46 @@ def test_flow_arrival_outputs_route_from_active_access() -> None:
     assert len(compute.routes) == 1
     assert compute.routes[0].available is True
     assert compute.routes[0].path == ("user-east", "sat-001", "node-a")
+
+
+def test_application_runtime_changes_route_availability_through_flow_demand() -> None:
+    kernel = SimulationKernel()
+    network = PositionDrivenNetworkEngine(
+        endpoints=(
+            GroundEndpoint(
+                endpoint_id="user-east",
+                position=(EARTH_RADIUS_KM, 0.0, 0.0),
+                min_elevation_deg=10.0,
+                max_range_km=2000.0,
+            ),
+        ),
+        compute_node_ids=("node-a",),
+        link_capacity=20.0,
+        propagation_speed_km_s=1000.0,
+        cell_size_km=1000.0,
+        application_runtime=default_application_runtime(ApplicationProtocol.HTTP),
+    )
+    metrics = MetricsSink()
+    compute = ComputeSink()
+    kernel.register_module(network)
+    kernel.register_module(metrics)
+    kernel.register_module(compute)
+    kernel.schedule_event(
+        _event("orbit", EventType.ORBIT_UPDATE.value, _state((7000.0, 0.0, 0.0)))
+    )
+    kernel.schedule_event(
+        _event(
+            "flow",
+            EventType.FLOW_ARRIVAL.value,
+            FlowRequest("flow-001", "user-east", "node-a", 18.0),
+            1.0,
+        )
+    )
+
+    kernel.run()
+
+    assert compute.routes[0].available is False
+    assert compute.routes[0].path == ()
 
 
 def test_active_flow_reroutes_when_access_link_ends() -> None:

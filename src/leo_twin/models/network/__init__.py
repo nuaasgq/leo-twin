@@ -1,6 +1,12 @@
 """Network module package for flow-level event-driven routing."""
 
 from leo_twin.models.network.contracts import NetworkModuleContract
+from leo_twin.models.network.application import (
+    ApplicationDecision,
+    ApplicationProfile,
+    ApplicationRuntime,
+    default_application_runtime,
+)
 from leo_twin.models.network.channel import (
     ApertureAntennaSpec,
     ChannelBudgetSelector,
@@ -51,6 +57,9 @@ NetworkModule = NetworkEngine
 
 __all__ = [
     "AccessLinkCandidate",
+    "ApplicationDecision",
+    "ApplicationProfile",
+    "ApplicationRuntime",
     "ApertureAntennaSpec",
     "ChannelBudgetSelector",
     "DataLinkDecision",
@@ -80,6 +89,7 @@ __all__ = [
     "aperture_antenna_beam_width_deg",
     "aperture_antenna_gain_dbi",
     "build_default_leo_protocol_stack",
+    "default_application_runtime",
     "default_data_link_runtime",
     "default_transport_runtime",
     "free_space_path_loss_db",

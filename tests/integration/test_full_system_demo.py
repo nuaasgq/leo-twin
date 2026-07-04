@@ -160,10 +160,15 @@ def test_network_stack_trace_uses_configured_protocols() -> None:
         for layer in trace.layers
         if str(layer.layer) == "DATA_LINK"
     } == {"SLOTTED_ALOHA"}
+    custom_application_attributes = dict(
+        udp_result.network_stack_traces[0].layers[0].attributes
+    )
     custom_network_attributes = dict(udp_result.network_stack_traces[0].layers[2].attributes)
     custom_data_link_attributes = dict(
         udp_result.network_stack_traces[0].layers[3].attributes
     )
+    assert custom_application_attributes["demand_capacity_multiplier"] == "0.750000"
+    assert custom_application_attributes["session_setup_latency_s"] == "0.005000"
     assert custom_network_attributes["latency_weight"] == "0.200000"
     assert custom_network_attributes["inverse_capacity_weight"] == "400.000000"
     assert custom_network_attributes["hop_weight"] == "1.000000"
