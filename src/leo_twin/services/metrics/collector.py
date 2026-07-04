@@ -14,6 +14,7 @@ from typing import Any, Protocol
 
 from leo_twin.models.orbit import ground_track_point
 from leo_twin.schema import (
+    ComputeNodeState,
     EventType,
     FlowState,
     LinkState,
@@ -24,6 +25,7 @@ from leo_twin.schema import (
     SimEvent,
     TaskState,
 )
+from leo_twin.models.compute.contracts import COMPUTE_NODE_UPDATE
 
 
 MetricSummary = dict[str, str | float | int | bool]
@@ -96,7 +98,8 @@ class MetricsCollector:
         self._links: dict[tuple[str, str], LinkState] = {}
         self._active_links: set[tuple[str, str]] = set()
         self._routes: dict[str, Route] = {}
-        self._completed_flows: dict[str, str] = {}
+        self._completed_flows: dict[str, FlowState] = {}
+        self._compute_nodes: dict[str, ComputeNodeState] = {}
         self._running_tasks: set[str] = set()
         self._task_start_times: dict[str, float] = {}
         self._task_durations: dict[str, float] = {}
@@ -217,6 +220,8 @@ class MetricsCollector:
             "task_duration_min": min(self._task_durations.values(), default=0.0),
             "unique_satellites": len(self._satellite_status),
         }
+        summary.update(self._network_quality_summary(active_links, available_routes))
+        summary.update(self._compute_resource_summary())
         for event_type, count in sorted(self._event_counts.items()):
             summary[f"events.{event_type}.count"] = count
         return summary
@@ -321,6 +326,8 @@ class MetricsCollector:
             return self._observe_flow(event)
         if event_type in {EventType.TASK_START, EventType.TASK_FINISH}:
             return self._observe_task(event, event_type)
+        if event_type == COMPUTE_NODE_UPDATE:
+            return self._observe_compute_node(event)
         if event_type == EventType.METRIC_SAMPLE:
             return (_require_payload(event.payload, MetricRecord, "METRIC_SAMPLE"),)
         return ()
@@ -533,7 +540,7 @@ class MetricsCollector:
 
     def _observe_flow(self, event: SimEvent) -> tuple[MetricRecord, ...]:
         flow = _require_payload(event.payload, FlowState, "FLOW_COMPLETE")
-        self._completed_flows[flow.flow_id] = flow.status
+        self._completed_flows[flow.flow_id] = flow
         return (
             MetricRecord(
                 metric_name="flow.status",
@@ -549,6 +556,11 @@ class MetricsCollector:
                 value=float(len(self._completed_flows)),
             ),
         )
+
+    def _observe_compute_node(self, event: SimEvent) -> tuple[MetricRecord, ...]:
+        node = _require_payload(event.payload, ComputeNodeState, COMPUTE_NODE_UPDATE)
+        self._compute_nodes[node.node_id] = node
+        return ()
 
     def _observe_task(self, event: SimEvent, event_type: str) -> tuple[MetricRecord, ...]:
         task = _require_payload(event.payload, TaskState, event_type)
@@ -624,6 +636,85 @@ class MetricsCollector:
             for route_id in sorted(self._routes)
             if self._routes[route_id].available
         )
+
+    def _network_quality_summary(
+        self,
+        active_links: tuple[LinkState, ...],
+        available_routes: tuple[Route, ...],
+    ) -> MetricSummary:
+        route_latencies = tuple(route.latency for route in available_routes)
+        unavailable_routes = max(0, len(self._routes) - len(available_routes))
+        route_blocking_ratio = (
+            0.0 if not self._routes else unavailable_routes / len(self._routes)
+        )
+        offered_route_capacity = float(sum(route.capacity for route in available_routes))
+        completed_route_capacity = 0.0
+        for flow_id in sorted(self._completed_flows):
+            flow = self._completed_flows[flow_id]
+            route = self._routes.get(flow.route_id)
+            if route is not None and route.available and flow.status.upper() not in {
+                "FAILED",
+                "DROPPED",
+                "BLOCKED",
+            }:
+                completed_route_capacity += route.capacity
+
+        return {
+            "network_quality_active_link_count": len(active_links),
+            "network_quality_available_route_count": len(available_routes),
+            "network_quality_offered_route_capacity_mbps": offered_route_capacity,
+            "network_quality_estimated_delivered_throughput_mbps": float(
+                completed_route_capacity
+            ),
+            "network_quality_route_latency_avg_s": _average(route_latencies),
+            "network_quality_route_latency_min_s": min(route_latencies, default=0.0),
+            "network_quality_route_latency_max_s": max(route_latencies, default=0.0),
+            "network_quality_delay_variation_proxy_s": _standard_deviation(
+                route_latencies
+            ),
+            "network_quality_route_blocking_ratio": float(route_blocking_ratio),
+            "network_quality_loss_proxy_rate": float(route_blocking_ratio),
+            "network_quality_proxy_note": (
+                "Flow-level proxy only; no packet-level simulation is performed."
+            ),
+        }
+
+    def _compute_resource_summary(self) -> MetricSummary:
+        nodes = tuple(
+            self._compute_nodes[node_id]
+            for node_id in sorted(self._compute_nodes)
+        )
+        total = float(sum(max(0.0, node.capacity) for node in nodes))
+        available = float(
+            sum(
+                min(max(0.0, node.available_capacity), max(0.0, node.capacity))
+                for node in nodes
+            )
+        )
+        used = max(0.0, total - available)
+        utilization = 0.0 if total <= 0.0 else used / total
+        busy_nodes = sum(
+            1
+            for node in nodes
+            if node.status.upper() == "BUSY"
+            or (
+                node.capacity > 0.0
+                and node.available_capacity < node.capacity
+            )
+        )
+        return {
+            "compute_resource_node_count": len(nodes),
+            "compute_resource_busy_nodes": busy_nodes,
+            "compute_resource_idle_nodes": max(0, len(nodes) - busy_nodes),
+            "compute_resource_total_gflops_fp32": total,
+            "compute_resource_available_gflops_fp32": available,
+            "compute_resource_used_gflops_fp32": used,
+            "compute_resource_utilization": float(utilization),
+            "compute_resource_unit": "GFLOPS FP32",
+            "compute_resource_proxy_note": (
+                "Legacy scalar compute capacity maps to FP32 GFLOPS."
+            ),
+        }
 
     def _deadline_missed_task_count(self) -> int:
         return sum(
@@ -720,6 +811,14 @@ def _average(values: tuple[float, ...]) -> float:
     if not values:
         return 0.0
     return float(sum(values) / len(values))
+
+
+def _standard_deviation(values: tuple[float, ...]) -> float:
+    if len(values) <= 1:
+        return 0.0
+    mean = _average(values)
+    variance = _average(tuple((value - mean) ** 2 for value in values))
+    return float(variance**0.5)
 
 
 def _require_optional_positive_int(value: int | None, field_name: str) -> None:

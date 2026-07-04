@@ -6,6 +6,7 @@ from math import sqrt
 import pytest
 
 from leo_twin.schema import (
+    ComputeNodeState,
     EventType,
     FlowState,
     LinkState,
@@ -15,6 +16,7 @@ from leo_twin.schema import (
     SimEvent,
     TaskState,
 )
+from leo_twin.models.compute import COMPUTE_NODE_UPDATE
 from leo_twin.services.metrics import MetricsCollector
 
 
@@ -188,6 +190,17 @@ def test_metrics_collector_kpis_are_consistent_with_observations() -> None:
     assert summary["running_tasks"] == 0
     assert summary["finished_tasks"] == 1
     assert summary["deadline_missed_tasks"] == 0
+    assert summary["network_quality_offered_route_capacity_mbps"] == 60.0
+    assert summary["network_quality_estimated_delivered_throughput_mbps"] == 60.0
+    assert summary["network_quality_route_latency_avg_s"] == 16.0
+    assert summary["network_quality_route_latency_min_s"] == 16.0
+    assert summary["network_quality_route_latency_max_s"] == 16.0
+    assert summary["network_quality_delay_variation_proxy_s"] == 0.0
+    assert summary["network_quality_route_blocking_ratio"] == 0.0
+    assert summary["network_quality_loss_proxy_rate"] == 0.0
+    assert summary["network_quality_proxy_note"] == (
+        "Flow-level proxy only; no packet-level simulation is performed."
+    )
     assert summary["task_duration_avg"] == 1.0
     assert summary["task_duration_max"] == 1.0
     assert summary["task_duration_min"] == 1.0
@@ -226,6 +239,127 @@ def test_metrics_collector_kpis_are_consistent_with_observations() -> None:
     assert _last_record(records, "task.duration").value == 1.0
     assert _last_record(records, "tasks.deadline_missed.count").value == float(
         summary["deadline_missed_tasks"]
+    )
+
+
+def test_metrics_collector_reports_flow_level_network_quality_proxy() -> None:
+    collector = MetricsCollector()
+    for event in (
+        _event(
+            "route-a",
+            1.0,
+            EventType.ROUTE_UPDATE,
+            Route(
+                route_id="route-a",
+                flow_id="flow-a",
+                path=("user-a", "sat-a", "user-b"),
+                latency=0.02,
+                capacity=120.0,
+                available=True,
+            ),
+            "network",
+        ),
+        _event(
+            "route-b",
+            1.0,
+            EventType.ROUTE_UPDATE,
+            Route(
+                route_id="route-b",
+                flow_id="flow-b",
+                path=(),
+                latency=0.0,
+                capacity=0.0,
+                available=False,
+            ),
+            "network",
+        ),
+        _event(
+            "route-c",
+            1.0,
+            EventType.ROUTE_UPDATE,
+            Route(
+                route_id="route-c",
+                flow_id="flow-c",
+                path=("user-c", "sat-c", "sat-d", "user-d"),
+                latency=0.08,
+                capacity=80.0,
+                available=True,
+            ),
+            "network",
+        ),
+        _event(
+            "flow-a",
+            2.0,
+            EventType.FLOW_COMPLETE,
+            FlowState(
+                flow_id="flow-a",
+                route_id="route-a",
+                source_id="user-a",
+                target_id="user-b",
+                status="complete",
+            ),
+            "network",
+        ),
+    ):
+        collector.observe(event)
+
+    summary = collector.summary()
+
+    assert summary["network_quality_available_route_count"] == 2
+    assert summary["network_quality_offered_route_capacity_mbps"] == 200.0
+    assert summary["network_quality_estimated_delivered_throughput_mbps"] == 120.0
+    assert summary["network_quality_route_latency_avg_s"] == pytest.approx(0.05)
+    assert summary["network_quality_route_latency_min_s"] == 0.02
+    assert summary["network_quality_route_latency_max_s"] == 0.08
+    assert summary["network_quality_delay_variation_proxy_s"] == pytest.approx(0.03)
+    assert summary["network_quality_route_blocking_ratio"] == pytest.approx(1 / 3)
+    assert summary["network_quality_loss_proxy_rate"] == pytest.approx(1 / 3)
+
+
+def test_metrics_collector_reports_compute_resource_pool_proxy() -> None:
+    collector = MetricsCollector()
+    for event in (
+        _event(
+            "compute-a",
+            1.0,
+            COMPUTE_NODE_UPDATE,
+            ComputeNodeState(
+                node_id="sat-a",
+                sim_time=1.0,
+                capacity=20.0,
+                available_capacity=5.0,
+                status="BUSY",
+            ),
+            "compute",
+        ),
+        _event(
+            "compute-b",
+            1.0,
+            COMPUTE_NODE_UPDATE,
+            ComputeNodeState(
+                node_id="sat-b",
+                sim_time=1.0,
+                capacity=10.0,
+                available_capacity=10.0,
+                status="IDLE",
+            ),
+            "compute",
+        ),
+    ):
+        collector.observe(event)
+
+    summary = collector.summary()
+
+    assert summary["compute_resource_node_count"] == 2
+    assert summary["compute_resource_busy_nodes"] == 1
+    assert summary["compute_resource_idle_nodes"] == 1
+    assert summary["compute_resource_total_gflops_fp32"] == 30.0
+    assert summary["compute_resource_available_gflops_fp32"] == 15.0
+    assert summary["compute_resource_used_gflops_fp32"] == 15.0
+    assert summary["compute_resource_utilization"] == pytest.approx(0.5)
+    assert summary["compute_resource_unit"] == "GFLOPS FP32"
+    assert summary["compute_resource_proxy_note"] == (
+        "Legacy scalar compute capacity maps to FP32 GFLOPS."
     )
 
 

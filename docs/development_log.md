@@ -105,7 +105,7 @@ change.
 ## 2026-07-05 - Cesium Globe Depth Occlusion v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`
-- Commit: this commit (created before hash assignment)
+- Commit: `dd7d0c6`
 - Scope: reduce the transparent-globe effect by keeping satellite point,
   billboard, and label overlays depth-tested, and enabling Cesium globe depth
   testing against the terrain/ellipsoid surface so far-side satellites are
@@ -135,6 +135,42 @@ change.
 - Recommended follow-up:
   - Add licensed satellite glTF assets and screenshot-based visual acceptance
     checks, then implement selected-satellite coverage and beam rendering.
+
+## 2026-07-05 - Backend Metrics Quality Summary v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: this commit (created before hash assignment)
+- Scope: add backend-owned flow-level network quality proxy fields and
+  satellite-hosted compute resource pool fields to `MetricsCollector.summary()`
+  without introducing packet-level simulation or extra metric events.
+- Changed files/modules:
+  - `src/leo_twin/services/metrics/collector.py`
+  - `tests/unit/test_metrics_module.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_metrics_module.py -q`
+    - Result: passed, 7 tests.
+  - `python -m pytest tests/integration/test_full_domain_pipeline_v1.py tests/integration/test_full_system_demo.py -q`
+    - Result: passed, 14 tests.
+  - `python -m pytest tests/integration/test_full_system_pipeline.py tests/integration/test_generated_full_system_demo.py tests/integration/test_orbit_batch_scale.py tests/scale/test_position_network_scale_smoke.py -q`
+    - Result: passed, 18 tests.
+- Problems encountered:
+  - The first implementation emitted new metric records for
+    `COMPUTE_NODE_UPDATE`, which increased full-system demo processed event
+    count from 21,849 to 21,865. That would break existing deterministic event
+    baselines, so compute resource collection was changed to summary-only.
+  - The new `network_quality_loss_proxy_rate` is explicitly a flow-level route
+    blocking proxy, not packet loss.
+  - The active local runtime config files remain modified and excluded.
+- Known remaining issues:
+  - Runtime status and frontend dashboard do not yet consume these backend-owned
+    KPI fields directly.
+  - Link and route contracts still lack per-update timestamp fields for richer
+    temporal jitter analysis.
+- Recommended follow-up:
+  - Bind dashboard KPI charts to backend-owned `network_quality_*` and
+    `compute_resource_*` fields, then add timestamped link/route quality
+    contract fields in a separate task if needed.
 
 ## 2026-07-04 - Development Log Requirement
 
