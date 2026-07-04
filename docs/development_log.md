@@ -3076,3 +3076,35 @@ change.
   - Add backend-emitted per-satellite recent KPI slices so selected satellite
     detail can show recent throughput, latency, loss proxy, compute demand, and
     task lifecycle without frontend-only filtering.
+
+## 2026-07-05 - Selected Satellite Route KPI Proxy v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: extend selected-satellite detail with route-level loss and jitter proxy
+  labels derived from related available routes in the backend snapshot, showing
+  `--` when there is no supporting route data instead of implying a true zero.
+- Changed files/modules:
+  - `frontend/src/3d/cesium/satelliteDetailSummary.ts`
+  - `frontend/src/3d/cesium/CesiumGlobe.tsx`
+  - `frontend/tests/satelliteVisuals.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- satelliteVisuals.test.ts`
+    - Result: passed, 23 files / 151 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - Route loss and jitter are available only as flow-level/proxy semantics, not
+    packet-level measurements. The UI now labels them explicitly as proxies and
+    avoids presenting missing data as zero.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - These values are selected-satellite route proxies, not RF, transport
+    retransmission, or packet-level telemetry.
+- Recommended follow-up:
+  - Add backend per-satellite KPI slice contracts so the dashboard and selected
+    satellite detail can share the same semantic source of truth.

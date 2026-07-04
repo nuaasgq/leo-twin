@@ -24,6 +24,8 @@ export interface SelectedSatelliteDetailSummary {
   routeLabel: string;
   routeLatencyLabel: string;
   routeCapacityLabel: string;
+  routeLossLabel: string;
+  routeJitterLabel: string;
   linkUtilizationLabel: string;
   coverageLabel: string;
   computeLoadLabel: string;
@@ -65,6 +67,14 @@ export function selectedSatelliteDetailSummary({
     (total, route) => total + Math.max(0, finiteNumber(route.capacity)),
     0
   );
+  const routeLossProxy = average(
+    availableRoutes
+      .map((route) => route.loss_rate)
+      .filter((value): value is number => value !== undefined)
+  );
+  const routeJitterProxy = latencySpreadSeconds(
+    availableRoutes.map((route) => route.latency)
+  );
   const averageLinkUtilization = average(
     activeLinks
       .map((link) => link.utilization)
@@ -90,6 +100,14 @@ export function selectedSatelliteDetailSummary({
         ? "平均路由时延 --"
         : `平均路由时延 ${formatNumber(averageRouteLatencySeconds * 1000)} ms`,
     routeCapacityLabel: `可用路由容量 ${formatNumber(totalRouteCapacity)} Mbps`,
+    routeLossLabel:
+      routeLossProxy === null
+        ? "路由丢包代理 --"
+        : `路由丢包代理 ${formatNumber(routeLossProxy * 100)}%`,
+    routeJitterLabel:
+      routeJitterProxy === null
+        ? "路由抖动代理 --"
+        : `路由抖动代理 ${formatNumber(routeJitterProxy * 1000)} ms`,
     linkUtilizationLabel:
       averageLinkUtilization === null
         ? "平均链路利用率 --"
@@ -141,6 +159,14 @@ function average(values: readonly number[]): number | null {
     return null;
   }
   return finiteValues.reduce((total, value) => total + value, 0) / finiteValues.length;
+}
+
+function latencySpreadSeconds(values: readonly number[]): number | null {
+  const finiteValues = values.filter(Number.isFinite);
+  if (finiteValues.length < 2) {
+    return null;
+  }
+  return Math.max(...finiteValues) - Math.min(...finiteValues);
 }
 
 function finiteNumber(value: number): number {

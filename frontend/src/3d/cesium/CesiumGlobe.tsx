@@ -508,6 +508,8 @@ function SelectedSatelliteDetailStrip({
         <span>{summary.routeLabel}</span>
         <span>{summary.routeLatencyLabel}</span>
         <span>{summary.routeCapacityLabel}</span>
+        <span>{summary.routeLossLabel}</span>
+        <span>{summary.routeJitterLabel}</span>
         <span>{summary.linkUtilizationLabel}</span>
         <span>{summary.coverageLabel}</span>
         <span>{summary.computeLoadLabel}</span>

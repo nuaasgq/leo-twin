@@ -403,9 +403,11 @@ describe("selected satellite detail summary", () => {
       altitudeLabel: "高度 629 km",
       speedLabel: "速度 7.5 km/s",
       activeLinksLabel: "链路 2 条（接入 1 / 星间 1）",
-      routeLabel: "相关路由 2 条 / 可用 1 条",
-      routeLatencyLabel: "平均路由时延 20 ms",
-      routeCapacityLabel: "可用路由容量 40 Mbps",
+      routeLabel: "相关路由 2 条 / 可用 2 条",
+      routeLatencyLabel: "平均路由时延 50 ms",
+      routeCapacityLabel: "可用路由容量 50 Mbps",
+      routeLossLabel: "路由丢包代理 7%",
+      routeJitterLabel: "路由抖动代理 60 ms",
       linkUtilizationLabel: "平均链路利用率 50%",
       computeLoadLabel: "算力负载 75%",
       computeCapacityLabel: "容量 40 GFLOPS FP32",
@@ -432,6 +434,8 @@ describe("selected satellite detail summary", () => {
       routeLabel: "相关路由 0 条 / 可用 0 条",
       routeLatencyLabel: "平均路由时延 --",
       routeCapacityLabel: "可用路由容量 0 Mbps",
+      routeLossLabel: "路由丢包代理 --",
+      routeJitterLabel: "路由抖动代理 --",
       linkUtilizationLabel: "平均链路利用率 --",
       computeLoadLabel: "算力节点未同步",
       computeCapacityLabel: "容量 --",
@@ -492,7 +496,8 @@ const detailRoutes: readonly Route[] = [
     path: ["user-center", "sat-a", "sat-b"],
     latency: 0.02,
     capacity: 40,
-    available: true
+    available: true,
+    loss_rate: 0.04
   },
   {
     route_id: "route-b",
@@ -500,7 +505,8 @@ const detailRoutes: readonly Route[] = [
     path: ["sat-a", "user-far"],
     latency: 0.08,
     capacity: 10,
-    available: false
+    available: true,
+    loss_rate: 0.1
   }
 ];
 
