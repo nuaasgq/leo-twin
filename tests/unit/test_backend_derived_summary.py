@@ -90,8 +90,25 @@ def test_backend_derived_summary_is_deterministic_and_frontend_ready() -> None:
         "capacity_unit": "GFLOPS FP32",
         "compatibility_note": "Legacy scalar capacity maps to cpu_gflops_fp32.",
     }
+    assert first["coverage_beam_summary"] == {
+        "coverage_model": "DETERMINISTIC_GEOMETRIC_FOOTPRINT",
+        "selected_satellite_detail_mode": "SELECTED_SATELLITE_ONLY",
+        "beam_pattern": "CENTER_PLUS_HEX_RING_VISUAL_APPROXIMATION",
+        "default_beam_count": 7,
+        "beam_radius_m": 160_000.0,
+        "beam_length_m": 600_000.0,
+        "global_beam_render_limit": 1,
+        "model_note": (
+            "Selected-satellite beam cells are deterministic visual footprints; "
+            "no RF propagation or antenna-pattern simulation is performed."
+        ),
+    }
     assert any(
         "not exact Starlink fidelity" in assumption
+        for assumption in first["model_assumptions"]
+    )
+    assert any(
+        "Coverage beams are bounded geometric visualization footprints" in assumption
         for assumption in first["model_assumptions"]
     )
 

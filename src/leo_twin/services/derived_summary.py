@@ -28,6 +28,9 @@ def build_backend_derived_summary(
     arrival_interval_seconds: int | float | None = None,
     orbit_altitude_m: float | None = None,
     orbit_inclination_deg: float | None = None,
+    beam_count: int = 7,
+    beam_radius_m: float = 160_000.0,
+    beam_length_m: float = 600_000.0,
     phase_policy: str = "DETERMINISTIC_PLANE_SLOT_PHASE",
 ) -> BackendDerivedSummary:
     """Build deterministic backend-owned explanations for frontend display."""
@@ -65,11 +68,25 @@ def build_backend_derived_summary(
         "capacity_unit": "GFLOPS FP32",
         "compatibility_note": "Legacy scalar capacity maps to cpu_gflops_fp32.",
     }
+    coverage_summary = {
+        "coverage_model": "DETERMINISTIC_GEOMETRIC_FOOTPRINT",
+        "selected_satellite_detail_mode": "SELECTED_SATELLITE_ONLY",
+        "beam_pattern": "CENTER_PLUS_HEX_RING_VISUAL_APPROXIMATION",
+        "default_beam_count": int(beam_count),
+        "beam_radius_m": float(beam_radius_m),
+        "beam_length_m": float(beam_length_m),
+        "global_beam_render_limit": 1,
+        "model_note": (
+            "Selected-satellite beam cells are deterministic visual footprints; "
+            "no RF propagation or antenna-pattern simulation is performed."
+        ),
+    }
 
     return {
         "derived_constellation_summary": constellation_summary,
         "traffic_demand_summary": traffic_summary,
         "compute_resource_summary": compute_summary,
+        "coverage_beam_summary": coverage_summary,
         "model_assumptions": _model_assumptions(
             constellation_summary,
             satellite_count=satellite_count,
@@ -168,6 +185,7 @@ def _model_assumptions(
         "Orbit allocation is deterministic and simplified; no SGP4 or external ephemeris is used.",
         "Network behavior is flow-level, not packet-level.",
         "Compute capacity is a deterministic abstract resource vector, not real execution.",
+        "Coverage beams are bounded geometric visualization footprints, not RF antenna patterns.",
         f"Scenario scale uses {satellite_count} satellites and {user_count} users from backend config.",
     ]
     if profile == "STARLINK_SHELL_1_LIKE":

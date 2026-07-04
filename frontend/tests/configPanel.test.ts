@@ -191,6 +191,17 @@ describe("generatedScenarioSummaryItems", () => {
           capacity_unit: "GFLOPS FP32",
           compatibility_note: "Legacy scalar capacity maps to cpu_gflops_fp32."
         },
+        coverage_beam_summary: {
+          coverage_model: "DETERMINISTIC_GEOMETRIC_FOOTPRINT",
+          selected_satellite_detail_mode: "SELECTED_SATELLITE_ONLY",
+          beam_pattern: "CENTER_PLUS_HEX_RING_VISUAL_APPROXIMATION",
+          default_beam_count: 7,
+          beam_radius_m: 160_000,
+          beam_length_m: 600_000,
+          global_beam_render_limit: 1,
+          model_note:
+            "Selected-satellite beam cells are deterministic visual footprints; no RF propagation or antenna-pattern simulation is performed."
+        },
         model_assumptions: [
           "Orbit allocation is deterministic and simplified; no SGP4 or external ephemeris is used."
         ]
@@ -215,6 +226,9 @@ describe("generatedScenarioSummaryItems", () => {
     expect(items).toContainEqual({ label: "轨道面", value: "40" });
     expect(items).toContainEqual({ label: "传输协议", value: "UDP" });
     expect(items).toContainEqual({ label: "轨道高度", value: "550 km" });
+    expect(items).toContainEqual({ label: "波束模式", value: "中心 + 六邻区蜂窝" });
+    expect(items).toContainEqual({ label: "默认波束", value: "7 个" });
+    expect(items).toContainEqual({ label: "波束半径", value: "160 km" });
   });
 
   it("shows a waiting state before initialization", () => {

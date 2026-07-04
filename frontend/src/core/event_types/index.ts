@@ -238,9 +238,21 @@ export interface BackendDerivedSummary {
   derived_constellation_summary?: ConstellationDerivedSummary;
   traffic_demand_summary?: TrafficDemandSummary;
   compute_resource_summary?: ComputeResourceSummary;
+  coverage_beam_summary?: CoverageBeamSummary;
   fidelity_summary?: FidelitySummary;
   workload_smoothing_summary?: WorkloadSmoothingSummary;
   model_assumptions?: readonly string[];
+}
+
+export interface CoverageBeamSummary {
+  coverage_model: string;
+  selected_satellite_detail_mode: string;
+  beam_pattern: string;
+  default_beam_count: number;
+  beam_radius_m: number;
+  beam_length_m: number;
+  global_beam_render_limit: number;
+  model_note: string;
 }
 
 export interface WorkloadSmoothingSummary {

@@ -5,6 +5,42 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Backend Coverage Beam Summary v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending in this commit
+- Scope: add a backend-derived coverage/beam semantic summary and have the
+  frontend scenario summary display beam mode, default beam count, and footprint
+  radius from backend-provided fields.
+- Changed files/modules:
+  - `src/leo_twin/services/derived_summary.py`
+  - `tests/unit/test_backend_derived_summary.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/config_panel/ConfigPanel.tsx`
+  - `frontend/tests/configPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_backend_derived_summary.py -q`
+    - Result: passed, 5 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- configPanel.test.ts`
+    - Result: passed, 22 files / 99 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - Existing UTF-8 Chinese UI files display as mojibake in the PowerShell
+    console, so patches were anchored on ASCII identifiers to avoid accidental
+    unrelated text churn.
+  - The active local runtime config files remain modified and excluded.
+- Known remaining issues:
+  - Coverage summary describes the current bounded visual footprint only. Beam
+    utilization, per-satellite beam count, and backend coverage geometry are
+    not yet dynamic model outputs.
+- Recommended follow-up:
+  - Add backend-selected satellite coverage fields to `WorldSnapshot` so the
+    3D view can consume beam count/radius directly from snapshot state.
+
 ## 2026-07-05 - Selected Satellite Multi-Beam Footprint v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`

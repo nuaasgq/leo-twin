@@ -1185,6 +1185,7 @@ export function generatedScenarioSummaryItems(
   const constellation = backendSummary?.derived_constellation_summary;
   const traffic = backendSummary?.traffic_demand_summary;
   const compute = backendSummary?.compute_resource_summary;
+  const coverage = backendSummary?.coverage_beam_summary;
   return [
     { label: "生效卫星", value: formatInteger(config.satellite_count) },
     { label: "生效用户", value: formatInteger(config.user_count) },
@@ -1225,6 +1226,18 @@ export function generatedScenarioSummaryItems(
     {
       label: "模型假设",
       value: formatModelAssumption(backendSummary?.model_assumptions?.[0])
+    },
+    {
+      label: "波束模式",
+      value: formatBeamPattern(coverage?.beam_pattern)
+    },
+    {
+      label: "默认波束",
+      value: `${formatInteger(coverage?.default_beam_count ?? 7)} 个`
+    },
+    {
+      label: "波束半径",
+      value: `${formatInteger((coverage?.beam_radius_m ?? 160_000) / 1000)} km`
     },
     { label: "调度策略", value: formatComputeSchedulingPolicy(config.compute_scheduling_policy) },
     { label: "轨道面", value: formatInteger(constellation?.plane_count ?? config.orbit_plane_count) },
@@ -1457,6 +1470,13 @@ function formatPhasePolicy(value: string | undefined): string {
     return "确定性面槽相位";
   }
   return value ?? "待初始化";
+}
+
+function formatBeamPattern(value: string | undefined): string {
+  if (value === "CENTER_PLUS_HEX_RING_VISUAL_APPROXIMATION") {
+    return "中心 + 六邻区蜂窝";
+  }
+  return value ?? "中心 + 六邻区蜂窝";
 }
 
 function formatModelAssumption(value: string | undefined): string {
