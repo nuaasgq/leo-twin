@@ -3039,3 +3039,40 @@ change.
   - Add a selected-satellite detail drawer backed by backend snapshot fields for
     resource use, current access users, route participation, and recent service
     metrics.
+
+## 2026-07-05 - Selected Satellite Detail Summary v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a frontend 3D control-view summary for the selected satellite,
+  using existing backend snapshot fields for orbit state, active links, route
+  participation, coverage users, compute load, task counts, and compute
+  resource model labels.
+- Changed files/modules:
+  - `frontend/src/3d/cesium/satelliteDetailSummary.ts`
+  - `frontend/src/3d/cesium/CesiumGlobe.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/satelliteVisuals.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- satelliteVisuals.test.ts visualLayerLimits.test.ts`
+    - Result: passed, 23 files / 151 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The prior selected-satellite resource details were mainly visible in the
+    satellite-follow inset. This task adds a compact always-available summary in
+    the 3D control surface without changing backend protocol or Cesium entity
+    load.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The summary is still based on flow-level snapshot aggregates. It does not
+    introduce packet-level loss/jitter, RF antenna patterns, or high-fidelity
+    link-budget simulation.
+- Recommended follow-up:
+  - Add backend-emitted per-satellite recent KPI slices so selected satellite
+    detail can show recent throughput, latency, loss proxy, compute demand, and
+    task lifecycle without frontend-only filtering.

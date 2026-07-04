@@ -24,9 +24,12 @@ import {
   satelliteInsetPoint,
   selectedDisplaySatellite
 } from "../src/3d/cesium/satelliteFollow";
+import { selectedSatelliteDetailSummary } from "../src/3d/cesium/satelliteDetailSummary";
 import {
   ComputeResourceSummary,
   GroundUserState,
+  LinkState,
+  Route,
   SatelliteState,
   ScenarioConfig
 } from "../src/core/event_types";
@@ -367,6 +370,78 @@ describe("satellite follow inset", () => {
   });
 });
 
+describe("selected satellite detail summary", () => {
+  it("aggregates deterministic orbit, network, coverage, and compute facts", () => {
+    const summary = selectedSatelliteDetailSummary({
+      satellite: satelliteA,
+      computeNode: {
+        node_id: "sat-a",
+        running_tasks: 2,
+        finished_tasks: 3,
+        capacity: 40,
+        available_capacity: 10,
+        status: "BUSY",
+        load_ratio: 0.75
+      },
+      computeResourceSummary: computeResourceSummary({
+        cpu_gflops_fp32_per_node: 40,
+        gpu_tflops_fp32_per_node: 2
+      }),
+      links: detailLinks,
+      routes: detailRoutes,
+      groundUsers: [
+        { user_id: "user-center", position: [0, 0, 0] },
+        { user_id: "user-far", position: [4, 0, 0] }
+      ],
+      scenarioConfig: null
+    });
+
+    expect(summary).toMatchObject({
+      satelliteId: "sat-a",
+      statusLabel: "状态 ACTIVE",
+      simTimeLabel: "t=1s",
+      altitudeLabel: "高度 629 km",
+      speedLabel: "速度 7.5 km/s",
+      activeLinksLabel: "链路 2 条（接入 1 / 星间 1）",
+      routeLabel: "相关路由 2 条 / 可用 1 条",
+      routeLatencyLabel: "平均路由时延 20 ms",
+      routeCapacityLabel: "可用路由容量 40 Mbps",
+      linkUtilizationLabel: "平均链路利用率 50%",
+      computeLoadLabel: "算力负载 75%",
+      computeCapacityLabel: "容量 40 GFLOPS FP32",
+      runningTaskLabel: "任务 运行 2 / 完成 3",
+      resourceModelLabel: "ComputeResourceVector",
+      routeIds: ["route-a", "route-b"]
+    });
+    expect(summary.coverageLabel).toContain("user-center");
+    expect(summary.note).toContain("流级聚合态势");
+  });
+
+  it("reports empty network and compute data without inventing values", () => {
+    const summary = selectedSatelliteDetailSummary({
+      satellite: satelliteB,
+      links: [],
+      routes: [],
+      groundUsers: [],
+      scenarioConfig: null
+    });
+
+    expect(summary).toMatchObject({
+      satelliteId: "sat-b",
+      activeLinksLabel: "链路 0 条（接入 0 / 星间 0）",
+      routeLabel: "相关路由 0 条 / 可用 0 条",
+      routeLatencyLabel: "平均路由时延 --",
+      routeCapacityLabel: "可用路由容量 0 Mbps",
+      linkUtilizationLabel: "平均链路利用率 --",
+      computeLoadLabel: "算力节点未同步",
+      computeCapacityLabel: "容量 --",
+      runningTaskLabel: "任务 --",
+      resourceModelLabel: "资源模型未同步",
+      routeIds: []
+    });
+  });
+});
+
 const satelliteA: SatelliteState = {
   satellite_id: "sat-a",
   sim_time: 1,
@@ -382,6 +457,52 @@ const satelliteB: SatelliteState = {
   velocity: [7_500, 0, 0],
   status: "ACTIVE"
 };
+
+const detailLinks: readonly LinkState[] = [
+  {
+    source_id: "sat-a",
+    target_id: "sat-b",
+    latency: 0.012,
+    capacity: 80,
+    availability: true,
+    utilization: 0.25
+  },
+  {
+    source_id: "user-center",
+    target_id: "sat-a",
+    latency: 0.02,
+    capacity: 20,
+    availability: true,
+    utilization: 0.75
+  },
+  {
+    source_id: "sat-a",
+    target_id: "user-far",
+    latency: 0.06,
+    capacity: 10,
+    availability: false,
+    utilization: 0.9
+  }
+];
+
+const detailRoutes: readonly Route[] = [
+  {
+    route_id: "route-a",
+    flow_id: "flow-a",
+    path: ["user-center", "sat-a", "sat-b"],
+    latency: 0.02,
+    capacity: 40,
+    available: true
+  },
+  {
+    route_id: "route-b",
+    flow_id: "flow-b",
+    path: ["sat-a", "user-far"],
+    latency: 0.08,
+    capacity: 10,
+    available: false
+  }
+];
 
 function coverageSummary(
   overrides: Partial<

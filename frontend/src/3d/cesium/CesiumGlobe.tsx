@@ -72,6 +72,10 @@ import {
   satelliteComputeSummary,
   selectedDisplaySatellite
 } from "./satelliteFollow";
+import {
+  SelectedSatelliteDetailSummary,
+  selectedSatelliteDetailSummary
+} from "./satelliteDetailSummary";
 
 export interface CesiumGlobeProps {
   snapshot: WorldSnapshot;
@@ -158,6 +162,37 @@ export function CesiumGlobe({ snapshot, displaySimTime }: CesiumGlobeProps) {
       selectedSatellite?.position[0],
       selectedSatellite?.position[1],
       selectedSatellite?.position[2],
+      snapshot.ground_users,
+      snapshot.scenario_config
+    ]
+  );
+  const selectedDetailSummary = useMemo(
+    () =>
+      selectedSatellite
+        ? selectedSatelliteDetailSummary({
+            satellite: selectedSatellite,
+            computeNode: selectedComputeNode,
+            computeResourceSummary,
+            links: snapshot.links,
+            routes: snapshot.routes,
+            groundUsers: snapshot.ground_users,
+            scenarioConfig: snapshot.scenario_config
+          })
+        : null,
+    [
+      selectedSatellite?.satellite_id,
+      selectedSatellite?.sim_time,
+      selectedSatellite?.position[0],
+      selectedSatellite?.position[1],
+      selectedSatellite?.position[2],
+      selectedSatellite?.velocity?.[0],
+      selectedSatellite?.velocity?.[1],
+      selectedSatellite?.velocity?.[2],
+      selectedSatellite?.status,
+      selectedComputeNode,
+      computeResourceSummary,
+      snapshot.links,
+      snapshot.routes,
       snapshot.ground_users,
       snapshot.scenario_config
     ]
@@ -432,6 +467,9 @@ export function CesiumGlobe({ snapshot, displaySimTime }: CesiumGlobeProps) {
             </label>
           ))}
         </div>
+        {selectedDetailSummary ? (
+          <SelectedSatelliteDetailStrip summary={selectedDetailSummary} />
+        ) : null}
       </div>
       {cameraMode === "SATELLITE" && selectedSatellite ? (
         <SatelliteInset
@@ -445,6 +483,53 @@ export function CesiumGlobe({ snapshot, displaySimTime }: CesiumGlobeProps) {
       ) : null}
       {renderError ? <div className="globe-render-error">{renderError}</div> : null}
     </div>
+  );
+}
+
+function SelectedSatelliteDetailStrip({
+  summary
+}: {
+  summary: SelectedSatelliteDetailSummary;
+}) {
+  const utilization = summary.computeSummary?.utilizationPercent ?? 0;
+  return (
+    <section className="selected-satellite-strip" aria-label="选中卫星态势">
+      <div className="selected-satellite-strip-header">
+        <span>选中卫星</span>
+        <strong>{summary.satelliteId}</strong>
+        <small>{summary.resourceModelLabel}</small>
+      </div>
+      <div className="selected-satellite-strip-grid">
+        <span>{summary.statusLabel}</span>
+        <span>{summary.simTimeLabel}</span>
+        <span>{summary.altitudeLabel}</span>
+        <span>{summary.speedLabel}</span>
+        <span>{summary.activeLinksLabel}</span>
+        <span>{summary.routeLabel}</span>
+        <span>{summary.routeLatencyLabel}</span>
+        <span>{summary.routeCapacityLabel}</span>
+        <span>{summary.linkUtilizationLabel}</span>
+        <span>{summary.coverageLabel}</span>
+        <span>{summary.computeLoadLabel}</span>
+        <span>{summary.runningTaskLabel}</span>
+      </div>
+      <div className="selected-satellite-resource">
+        <div className="selected-satellite-resource-row">
+          <span>{summary.computeCapacityLabel}</span>
+          <strong>{summary.computeSummary?.utilizationLabel ?? "--"}</strong>
+        </div>
+        <div className="selected-satellite-resource-track" aria-hidden="true">
+          <span style={{ width: `${Math.max(0, Math.min(100, utilization))}%` }} />
+        </div>
+      </div>
+      {summary.routeIds.length > 0 ? (
+        <div className="selected-satellite-routes">
+          <span>路由</span>
+          <strong>{summary.routeIds.join(" / ")}</strong>
+        </div>
+      ) : null}
+      <p>{summary.note}</p>
+    </section>
   );
 }
 

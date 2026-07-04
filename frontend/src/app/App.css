@@ -621,6 +621,109 @@ body {
   white-space: nowrap;
 }
 
+.selected-satellite-strip {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  border-top: 1px solid #263b49;
+  padding-top: 8px;
+}
+
+.selected-satellite-strip-header,
+.selected-satellite-resource-row,
+.selected-satellite-routes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.selected-satellite-strip-header strong,
+.selected-satellite-routes strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--app-text);
+  font-size: 12px;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selected-satellite-strip-header span,
+.selected-satellite-strip-header small,
+.selected-satellite-resource-row span,
+.selected-satellite-resource-row strong,
+.selected-satellite-routes span,
+.selected-satellite-strip p {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--app-muted);
+  font-size: 10px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selected-satellite-strip-header small {
+  margin-left: auto;
+}
+
+.selected-satellite-strip-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  gap: 5px 8px;
+  min-width: 0;
+}
+
+.selected-satellite-strip-grid span {
+  min-width: 0;
+  overflow: hidden;
+  color: #d5eaf1;
+  font-size: 10px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selected-satellite-resource {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.selected-satellite-resource-row {
+  justify-content: space-between;
+}
+
+.selected-satellite-resource-row strong {
+  color: var(--app-text);
+}
+
+.selected-satellite-resource-track {
+  overflow: hidden;
+  height: 6px;
+  border-radius: 999px;
+  background: #162532;
+}
+
+.selected-satellite-resource-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #4fd37a, #f2bd45);
+}
+
+.selected-satellite-routes strong {
+  color: #d5eaf1;
+  font-size: 10px;
+}
+
+.selected-satellite-strip p {
+  margin: 0;
+  white-space: normal;
+}
+
 .satellite-select-label {
   display: grid;
   gap: 6px;
