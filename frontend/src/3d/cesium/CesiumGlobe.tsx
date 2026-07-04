@@ -49,7 +49,10 @@ import {
   upsertSatelliteIconEntity,
   upsertSatelliteOrbitEntity
 } from "../orbit_renderer/satelliteEntities";
-import { visualLayerLimits } from "./renderLimits";
+import {
+  visualLayerLimits,
+  visualSatelliteModelRenderSatellites
+} from "./renderLimits";
 import {
   GlobeCameraMode,
   SatelliteInsetPoint,
@@ -484,9 +487,10 @@ export function renderCesiumSnapshot(
   pruneEntities(entities, caches.satelliteIcons, satelliteIconEntityIds);
 
   const satelliteModelEntityIds = new Set<string>();
-  for (const satellite of satellites.slice(
-    0,
-    Math.min(limits.satelliteIconRenderLimit, 32)
+  for (const satellite of visualSatelliteModelRenderSatellites(
+    satellites,
+    limits.satelliteModelRenderLimit,
+    selectedSatelliteId
   )) {
     for (const id of upsertSatelliteModelEntities(
       entities,

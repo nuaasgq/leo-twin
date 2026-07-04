@@ -2261,3 +2261,36 @@ change.
 - Recommended follow-up:
   - Add a high-resolution earth asset task that evaluates local/public-domain
     imagery availability, asset size, attribution, and offline loading behavior.
+
+## 2026-07-05 - Selected Satellite Model v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: keep large-scene satellite model rendering bounded while ensuring the
+  currently selected satellite receives a GLB model even when it is outside the
+  default model render budget.
+- Changed files/modules:
+  - `frontend/src/3d/cesium/renderLimits.ts`
+  - `frontend/src/3d/cesium/CesiumGlobe.tsx`
+  - `frontend/tests/visualLayerLimits.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- visualLayerLimits.test.ts satelliteVisuals.test.ts`
+    - Result: passed, 23 files / 128 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The NASA Satellite Kit GLB files are present under
+    `frontend/public/assets/nasa-satellite-kit`. The remaining issue was the
+    render budget: only the first 32 satellites received GLB models, so a
+    selected satellite outside that range could still appear as an icon.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The model budget remains intentionally bounded for large scenes. This does
+    not render GLB models for all 1200 satellites.
+- Recommended follow-up:
+  - Add a selected-satellite visual quality task that improves orientation,
+    scale, and panel alignment of the GLB kit during satellite-follow mode.
