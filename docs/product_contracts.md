@@ -43,10 +43,13 @@ domain contracts:
 - `leo_twin.schema.network.LinkState`
 - `leo_twin.schema.network.FlowRequest`
 
-`RouteState.demand_capacity` is optional for backward compatibility. Network
-runtimes should populate it from the originating `FlowRequest` when available
-so metrics and frontend surfaces can explain flow-level demand pressure without
-observing `FLOW_ARRIVAL` directly.
+`RouteState.demand_capacity` and `RouteState.loss_rate` are optional for
+backward compatibility. Network runtimes should populate demand from the
+originating `FlowRequest` when available so metrics and frontend surfaces can
+explain flow-level demand pressure without observing `FLOW_ARRIVAL` directly.
+Data-link and transport runtimes may populate `loss_rate` as a deterministic
+flow-level proxy from configured MAC collision loss and transport loss. This is
+not packet-level loss measurement.
 
 ## Compute Resource Demand
 

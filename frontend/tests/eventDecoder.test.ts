@@ -112,12 +112,14 @@ describe("decodeSimEvent", () => {
           latency: 0.02,
           capacity: 100,
           available: true,
-          demand_capacity: 90
+          demand_capacity: 90,
+          loss_rate: 0.04
         }
       ]
     });
 
     expect(snapshot.routes?.[0]?.demand_capacity).toBe(90);
+    expect(snapshot.routes?.[0]?.loss_rate).toBe(0.04);
   });
 
   it("decodes backend fidelity summary on state snapshots", () => {

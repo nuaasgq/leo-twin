@@ -488,6 +488,11 @@ class RouteAwareComputeEngine(SimulationModule):
                     if payload.get("demand_capacity") is None
                     else float(payload["demand_capacity"])
                 ),
+                loss_rate=(
+                    None
+                    if payload.get("loss_rate") is None
+                    else float(payload["loss_rate"])
+                ),
             )
         raise TypeError("ROUTE_UPDATE payload must be Route or dict")
 

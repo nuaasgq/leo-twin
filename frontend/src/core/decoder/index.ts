@@ -121,7 +121,11 @@ function decodeRoute(value: unknown): Route {
     demand_capacity:
       record.demand_capacity === undefined
         ? undefined
-        : requireFiniteNumber(record.demand_capacity, "demand_capacity")
+        : requireFiniteNumber(record.demand_capacity, "demand_capacity"),
+    loss_rate:
+      record.loss_rate === undefined
+        ? undefined
+        : requireFiniteNumber(record.loss_rate, "loss_rate")
   };
 }
 

@@ -63,6 +63,7 @@ export interface Route {
   capacity: number;
   available: boolean;
   demand_capacity?: number;
+  loss_rate?: number;
 }
 
 export interface TaskState {

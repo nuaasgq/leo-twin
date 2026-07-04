@@ -79,20 +79,21 @@ def test_backward_compatibility_aliases_use_canonical_contracts() -> None:
 
     assert isinstance(old_route, RouteState)
     assert old_route.demand_capacity is None
+    assert old_route.loss_rate is None
     assert old_link.link_id == "sat-a->user-a"
     assert old_flow.demand_capacity == 10.0
-    assert (
-        Route(
-            route_id="route-demand",
-            flow_id="flow-a",
-            path=("user-a", "sat-a", "compute-a"),
-            latency=1.0,
-            capacity=10.0,
-            available=True,
-            demand_capacity=7.5,
-        ).demand_capacity
-        == 7.5
+    new_route = Route(
+        route_id="route-demand",
+        flow_id="flow-a",
+        path=("user-a", "sat-a", "compute-a"),
+        latency=1.0,
+        capacity=10.0,
+        available=True,
+        demand_capacity=7.5,
+        loss_rate=0.02,
     )
+    assert new_route.demand_capacity == 7.5
+    assert new_route.loss_rate == 0.02
 
 
 def test_product_contracts_cover_required_runtime_domains() -> None:

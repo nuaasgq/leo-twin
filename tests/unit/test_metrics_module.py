@@ -535,6 +535,34 @@ def test_metrics_collector_uses_route_demand_for_network_pressure_proxy() -> Non
     assert summary["network_quality_effective_throughput_mbps"] == pytest.approx(95.0)
 
 
+def test_metrics_collector_uses_route_loss_rate_for_network_loss_proxy() -> None:
+    collector = MetricsCollector()
+    collector.observe(
+        _event(
+            "route-loss",
+            1.0,
+            EventType.ROUTE_UPDATE,
+            Route(
+                route_id="route-loss",
+                flow_id="flow-loss",
+                path=("user-a", "sat-a", "user-b"),
+                latency=0.02,
+                capacity=100.0,
+                available=True,
+                loss_rate=0.12,
+            ),
+            "network",
+        )
+    )
+
+    summary = collector.summary()
+
+    assert summary["network_quality_route_loss_proxy_rate"] == pytest.approx(0.12)
+    assert summary["network_quality_loss_proxy_rate"] == pytest.approx(0.12)
+    assert summary["network_quality_effective_loss_proxy_rate"] == pytest.approx(0.12)
+    assert summary["network_quality_effective_throughput_mbps"] == pytest.approx(88.0)
+
+
 def test_metrics_collector_publishes_backend_kpi_time_series() -> None:
     collector = MetricsCollector()
     collector.observe(

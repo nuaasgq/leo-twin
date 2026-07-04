@@ -108,6 +108,7 @@ class TransportRuntime:
                 if route.demand_capacity is not None
                 else request.demand_capacity
             ),
+            loss_rate=_combine_loss_rate(route.loss_rate, decision.loss_rate),
         )
 
     def _overhead_ratio(self) -> float:
@@ -150,6 +151,11 @@ def default_transport_runtime(protocol: TransportProtocol) -> TransportRuntime:
             handshake_round_trips=0,
         )
     )
+
+
+def _combine_loss_rate(left: float | None, right: float) -> float:
+    base = 0.0 if left is None else float(left)
+    return 1.0 - (1.0 - base) * (1.0 - float(right))
 
 
 def _require_positive_int(value: int, field_name: str) -> None:

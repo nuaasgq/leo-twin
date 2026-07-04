@@ -18,7 +18,11 @@ def _request(demand_capacity: float = 10.0) -> FlowRequest:
     )
 
 
-def _route(capacity: float = 50.0, available: bool = True) -> Route:
+def _route(
+    capacity: float = 50.0,
+    available: bool = True,
+    loss_rate: float | None = None,
+) -> Route:
     return Route(
         route_id="route-flow-001",
         flow_id="flow-001",
@@ -26,6 +30,7 @@ def _route(capacity: float = 50.0, available: bool = True) -> Route:
         latency=0.5,
         capacity=capacity,
         available=available,
+        loss_rate=loss_rate,
     )
 
 
@@ -54,10 +59,21 @@ def test_contention_mac_profiles_reduce_capacity_and_add_backoff_deterministical
 
     assert aloha.latency > csma.latency > tdma.latency
     assert aloha.capacity < csma.capacity < tdma.capacity
+    assert aloha.loss_rate == pytest.approx(0.08)
+    assert csma.loss_rate == pytest.approx(0.03)
     assert aloha == default_data_link_runtime(DataLinkProtocol.SLOTTED_ALOHA).apply(
         _request(),
         _route(),
     )
+
+
+def test_data_link_runtime_combines_existing_route_loss_rate() -> None:
+    updated = default_data_link_runtime(DataLinkProtocol.SLOTTED_ALOHA).apply(
+        _request(),
+        _route(loss_rate=0.1),
+    )
+
+    assert updated.loss_rate == pytest.approx(1.0 - 0.9 * 0.92)
 
 
 def test_data_link_runtime_marks_route_unavailable_when_effective_capacity_is_too_low() -> None:

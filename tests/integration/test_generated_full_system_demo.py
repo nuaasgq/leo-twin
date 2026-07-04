@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from examples.generated_full_system_demo import (
     _j2_profile_for,
     _space_ground_budget,
@@ -139,6 +141,12 @@ def test_generated_full_system_demo_transport_profile_changes_capacity() -> None
     assert constrained.metrics_summary["route_capacity_max"] < clean.metrics_summary[
         "route_capacity_max"
     ]
+    assert constrained.metrics_summary["network_quality_route_loss_proxy_rate"] == pytest.approx(
+        0.1
+    )
+    assert constrained.metrics_summary[
+        "network_quality_effective_loss_proxy_rate"
+    ] == pytest.approx(0.1)
     transport_attributes = dict(constrained.network_stack_traces[0].layers[1].attributes)
     assert transport_attributes["loss_rate"] == "0.100000"
     assert transport_attributes["congestion_window_segments"] == "4"

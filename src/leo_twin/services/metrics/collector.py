@@ -777,9 +777,21 @@ class MetricsCollector:
                 if link.utilization is not None
             )
         )
+        route_loss_proxy_rate = _average(
+            tuple(
+                float(route.loss_rate)
+                for route in self._routes.values()
+                if route.loss_rate is not None
+            )
+        )
         congestion_loss_proxy_rate = _congestion_loss_proxy_rate(congestion_proxy)
         loss_proxy_rate = _clamp_probability(
-            max(route_blocking_ratio, failed_flow_ratio, congestion_loss_proxy_rate)
+            max(
+                route_blocking_ratio,
+                failed_flow_ratio,
+                route_loss_proxy_rate,
+                congestion_loss_proxy_rate,
+            )
         )
         offered_route_capacity = float(sum(route.capacity for route in available_routes))
         requested_route_demand = float(
@@ -855,6 +867,7 @@ class MetricsCollector:
             "network_quality_route_blocking_ratio": float(route_blocking_ratio),
             "network_quality_failed_flow_ratio": float(failed_flow_ratio),
             "network_quality_congestion_proxy": float(congestion_proxy),
+            "network_quality_route_loss_proxy_rate": float(route_loss_proxy_rate),
             "network_quality_congestion_loss_proxy_rate": float(
                 congestion_loss_proxy_rate
             ),

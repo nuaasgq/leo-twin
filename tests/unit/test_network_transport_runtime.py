@@ -67,6 +67,32 @@ def test_transport_profile_loss_rate_reduces_effective_capacity() -> None:
 
     assert route.capacity == pytest.approx(75.0)
     assert route.available is True
+    assert route.loss_rate == pytest.approx(0.25)
+
+
+def test_transport_profile_combines_existing_route_loss_rate() -> None:
+    runtime = TransportRuntime(
+        TransportProfile(
+            protocol=TransportProtocol.UDP,
+            payload_unit_bytes=1000,
+            header_bytes=0,
+            efficiency=1.0,
+            loss_rate=0.25,
+        )
+    )
+    route = Route(
+        route_id="route:flow-001",
+        flow_id="flow-001",
+        path=("user-a", "sat-a", "node-a"),
+        latency=2.0,
+        capacity=100.0,
+        available=True,
+        loss_rate=0.1,
+    )
+
+    updated = runtime.apply(_request(demand=70.0), route)
+
+    assert updated.loss_rate == pytest.approx(1.0 - 0.9 * 0.75)
 
 
 def test_transport_profile_congestion_window_limits_capacity() -> None:

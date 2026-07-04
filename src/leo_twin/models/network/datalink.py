@@ -115,6 +115,7 @@ class DataLinkRuntime:
                 if route.demand_capacity is not None
                 else request.demand_capacity
             ),
+            loss_rate=_combine_loss_rate(route.loss_rate, decision.collision_loss_rate),
         )
 
     def _frame_overhead_ratio(self) -> float:
@@ -162,6 +163,11 @@ def default_data_link_runtime(protocol: DataLinkProtocol) -> DataLinkRuntime:
             scheduling_delay_s=0.001,
         )
     )
+
+
+def _combine_loss_rate(left: float | None, right: float) -> float:
+    base = 0.0 if left is None else float(left)
+    return 1.0 - (1.0 - base) * (1.0 - float(right))
 
 
 def _require_positive_int(value: int, field_name: str) -> None:

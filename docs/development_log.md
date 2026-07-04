@@ -1687,7 +1687,7 @@ change.
 ## 2026-07-05 - Traffic Demand KPI Binding v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`
-- Commit: pending
+- Commit: `76b5c87`
 - Scope: preserve originating flow demand on route outputs and use route demand
   in metrics pressure proxies so configured flow demand affects backend KPI
   summaries and time-series samples.
@@ -1743,3 +1743,57 @@ change.
   - Replace the hand-built integration demo flow/task burst generator with the
     reusable `leo_twin.models.traffic` demand profiles while keeping the same
     event contracts and deterministic ordering.
+
+## 2026-07-05 - Route Loss KPI Binding v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending
+- Scope: preserve data-link and transport loss as route-level flow proxies and
+  include route loss in backend network KPI loss summaries.
+- Changed files/modules:
+  - `src/leo_twin/schema/domain.py`
+  - `src/leo_twin/models/network/datalink.py`
+  - `src/leo_twin/models/network/transport.py`
+  - `src/leo_twin/models/compute/network_aware.py`
+  - `src/leo_twin/services/metrics/collector.py`
+  - `examples/integration_demo/replay.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/core/decoder/index.ts`
+  - `docs/product_contracts.md`
+  - `tests/unit/test_network_datalink_runtime.py`
+  - `tests/unit/test_network_transport_runtime.py`
+  - `tests/unit/test_metrics_module.py`
+  - `tests/unit/test_product_contracts.py`
+  - `tests/integration/test_generated_full_system_demo.py`
+  - `frontend/tests/eventDecoder.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_network_datalink_runtime.py tests/unit/test_network_transport_runtime.py tests/unit/test_metrics_module.py tests/unit/test_product_contracts.py -q`
+    - Result: passed, 32 tests.
+  - `python -m pytest tests/unit/test_network_engine.py tests/unit/test_position_driven_network_engine.py tests/unit/test_network_routing_runtime.py tests/integration/test_runtime_session_control.py::test_runtime_kpi_series_changes_with_configured_flow_demand -q`
+    - Result: passed, 40 tests.
+  - `python -m pytest tests/integration/test_generated_full_system_demo.py::test_generated_full_system_demo_transport_profile_changes_capacity -q`
+    - Result: passed, 1 test.
+  - `python -m pytest tests/integration/test_full_system_demo.py::test_replay_test tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer tests/integration/test_config_control.py::test_frontend_control_messages_are_processed -q`
+    - Result: passed, 3 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- eventDecoder.test.ts dataPanel.test.ts renderPerformance.test.ts`
+    - Result: passed, 22 files / 111 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The first generated-demo integration assertion used a direct `>= 0.1`
+    comparison and failed on the expected `0.09999999999999998` floating-point
+    representation. The assertion now uses `pytest.approx(0.1)`.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - Route `loss_rate` is still a deterministic flow-level proxy derived from
+    configured layer profiles; it is not packet-level observed loss.
+  - Loss is aggregated at route-summary level. Per-hop or per-medium loss
+    decomposition should be a later channel/link observability task.
+- Recommended follow-up:
+  - Add frontend route detail text for demand pressure and route loss so users
+    can see whether loss comes from transport profile, MAC collision profile,
+    route blocking, or demand pressure.
