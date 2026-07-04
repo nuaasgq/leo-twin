@@ -2129,3 +2129,38 @@ change.
   - Add a dedicated traffic-analysis dashboard card that charts generated
     traffic class mix, flow completion, and compute-service lifecycle latency
     components over simulation time.
+
+## 2026-07-05 - Network KPI Source Notice v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: make the dashboard network KPI chart disclose whether values come
+  from backend realtime KPI series, snapshot KPI series, backend metric
+  summary, or frontend snapshot estimates.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 22 files / 119 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - Read-only KPI source review was started in parallel, but the bounded UI
+    change did not need to wait for backend model changes. The implementation
+    follows existing frontend telemetry precedence.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - This slice explains KPI provenance and proxy fidelity. It does not change
+    backend loss, jitter, latency, or throughput equations.
+  - When no backend network quality metrics are present, the dashboard still
+    falls back to frontend snapshot estimates for display continuity.
+- Recommended follow-up:
+  - Add a backend metrics provenance summary to runtime status so the UI can
+    show exact formula inputs for throughput, latency, loss proxy, and delay
+    variation proxy.

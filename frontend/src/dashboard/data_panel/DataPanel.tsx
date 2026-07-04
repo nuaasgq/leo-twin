@@ -93,6 +93,11 @@ export const DataPanel = memo(function DataPanel({
     runtimeStatus.metrics_summary,
     runtimeStatus.kpi_time_series_v1
   );
+  const networkKpiSource = buildDataPanelNetworkKpiSource(
+    snapshot,
+    runtimeStatus.metrics_summary,
+    runtimeStatus.kpi_time_series_v1
+  );
   const latestTelemetry = telemetry[telemetry.length - 1];
   const computePool = buildComputeResourcePool(
     snapshot,
@@ -204,6 +209,10 @@ export const DataPanel = memo(function DataPanel({
           aria-label="全网平均吞吐量时延丢包率抖动"
         >
           <div className="section-title">全网平均指标</div>
+          <div className="data-panel-source-note">
+            <span>{networkKpiSource.sourceLabel}</span>
+            <small>{networkKpiSource.modelNote}</small>
+          </div>
           <div className="data-panel-chart-kpis">
             <KpiPanel
               label="吞吐量"
@@ -887,6 +896,36 @@ function metricNumber(
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
+function hasBackendNetworkQualityMetrics(
+  metrics: RuntimeMetricsSummary | null | undefined
+): boolean {
+  return (
+    metricNumber(metrics, "network_quality_effective_throughput_mbps") !== undefined ||
+    metricNumber(metrics, "network_quality_estimated_delivered_throughput_mbps") !==
+      undefined ||
+    metricNumber(metrics, "network_quality_effective_latency_avg_s") !== undefined ||
+    metricNumber(metrics, "network_quality_route_latency_avg_s") !== undefined ||
+    metricNumber(metrics, "network_quality_effective_loss_proxy_rate") !== undefined ||
+    metricNumber(metrics, "network_quality_loss_proxy_rate") !== undefined ||
+    metricNumber(metrics, "network_quality_effective_delay_variation_proxy_s") !==
+      undefined ||
+    metricNumber(metrics, "network_quality_delay_variation_proxy_s") !== undefined
+  );
+}
+
+function formatNetworkQualityProxyNote(
+  metrics: RuntimeMetricsSummary | null | undefined
+): string {
+  const note = metrics?.network_quality_proxy_note;
+  if (typeof note === "string" && note.trim().length > 0) {
+    if (note === "Flow-level proxy only; no packet-level simulation is performed.") {
+      return "后端流级代理指标；未进行包级仿真。";
+    }
+    return note;
+  }
+  return "后端网络质量指标为流级代理模型；未进行包级仿真。";
+}
+
 function positiveMetric(value: number | undefined): number | undefined {
   return value !== undefined && value > 0 ? value : undefined;
 }
@@ -958,6 +997,41 @@ export function buildDataPanelTrafficDisplay(
   return {
     label: dataPanelTrafficLabel(traffic),
     note: traffic.lifecycle_note ?? traffic.compatibility_note ?? null
+  };
+}
+
+export interface DataPanelNetworkKpiSource {
+  sourceLabel: string;
+  modelNote: string;
+}
+
+export function buildDataPanelNetworkKpiSource(
+  snapshot: WorldSnapshot,
+  backendMetrics: RuntimeMetricsSummary | null | undefined = undefined,
+  backendKpiTimeSeries: RuntimeKpiTimeSeriesV1 | null | undefined = undefined
+): DataPanelNetworkKpiSource {
+  const backendNote = formatNetworkQualityProxyNote(backendMetrics);
+  if ((backendKpiTimeSeries?.samples ?? []).length > 0) {
+    return {
+      sourceLabel: "后端实时 KPI 序列",
+      modelNote: backendNote
+    };
+  }
+  if ((snapshot.metrics_summary.network.kpiSeries ?? []).length > 0) {
+    return {
+      sourceLabel: "状态快照 KPI 序列",
+      modelNote: backendNote
+    };
+  }
+  if (hasBackendNetworkQualityMetrics(backendMetrics)) {
+    return {
+      sourceLabel: "后端指标摘要",
+      modelNote: backendNote
+    };
+  }
+  return {
+    sourceLabel: "前端快照估算",
+    modelNote: "未收到后端网络质量指标时，根据快照链路与路由做显示估算。"
   };
 }
 

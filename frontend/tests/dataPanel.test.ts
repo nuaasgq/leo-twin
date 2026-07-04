@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildComputeResourcePool,
   buildDataPanelDisplaySummary,
+  buildDataPanelNetworkKpiSource,
   buildDataPanelRuntimeProgress,
   buildDataPanelSummary,
   buildDataPanelTelemetry,
@@ -256,6 +257,102 @@ describe("buildDataPanelTrafficDisplay", () => {
     ).toEqual({
       label: "批量下传 / 地面端 / 仅网络流",
       note: null
+    });
+  });
+});
+
+describe("buildDataPanelNetworkKpiSource", () => {
+  it("reports backend runtime KPI time series as the preferred source", () => {
+    expect(
+      buildDataPanelNetworkKpiSource(
+        makeSnapshot(),
+        {
+          network_quality_proxy_note:
+            "Flow-level proxy only; no packet-level simulation is performed."
+        },
+        {
+          version: "v1",
+          sample_count: 1,
+          samples: [
+            {
+              sim_time: 10,
+              network_effective_throughput_mbps: 150,
+              network_effective_latency_s: 0.11,
+              network_effective_loss_proxy_rate: 0.04,
+              network_effective_delay_variation_s: 0.006,
+              compute_resource_used_gflops_fp32: 2500
+            }
+          ]
+        }
+      )
+    ).toEqual({
+      sourceLabel: "后端实时 KPI 序列",
+      modelNote: "后端流级代理指标；未进行包级仿真。"
+    });
+  });
+
+  it("reports backend metric summaries before frontend snapshot estimates", () => {
+    expect(
+      buildDataPanelNetworkKpiSource(makeSnapshot(), {
+        network_quality_effective_throughput_mbps: 77,
+        network_quality_effective_latency_avg_s: 0.15
+      })
+    ).toEqual({
+      sourceLabel: "后端指标摘要",
+      modelNote: "后端网络质量指标为流级代理模型；未进行包级仿真。"
+    });
+  });
+
+  it("reports snapshot KPI series when runtime series is absent", () => {
+    expect(
+      buildDataPanelNetworkKpiSource(
+        makeSnapshot({
+          metrics_summary: {
+            network: {
+              latency: 0,
+              throughput: 0,
+              linkUtilization: 0,
+              series: [],
+              kpiSeries: [
+                {
+                  simTime: 10,
+                  throughputMbps: 80,
+                  latencyMs: 70,
+                  lossPercent: 1,
+                  jitterMs: 2
+                }
+              ]
+            },
+            compute: {
+              taskQueueLength: 0,
+              executionSuccessRate: 1,
+              runningTasks: 0,
+              finishedTasks: 0,
+              deadlineMissedTasks: 0
+            },
+            orbit: {
+              activeSatellites: 0,
+              coverageRatio: 0,
+              series: []
+            },
+            system: {
+              eventRate: 1,
+              systemLoad: 0,
+              eventSeries: [{ index: 0, simTime: 10 }]
+            }
+          }
+        })
+      )
+    ).toEqual({
+      sourceLabel: "状态快照 KPI 序列",
+      modelNote: "后端网络质量指标为流级代理模型；未进行包级仿真。"
+    });
+  });
+
+  it("marks fallback estimates when backend network quality is absent", () => {
+    expect(buildDataPanelNetworkKpiSource(makeSnapshot())).toEqual({
+      sourceLabel: "前端快照估算",
+      modelNote: "未收到后端网络质量指标时，根据快照链路与路由做显示估算。"
     });
   });
 });
