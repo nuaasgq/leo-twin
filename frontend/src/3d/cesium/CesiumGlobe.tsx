@@ -23,6 +23,7 @@ import { SatelliteState } from "../../core/event_types";
 import { WorldSnapshot } from "../../state/snapshot_engine";
 import {
   pruneBeamEntities,
+  resolveBeamGeometryOptions,
   selectedCoverageBeamSatellites,
   upsertBeamEntity
 } from "../beam_renderer/beamEntities";
@@ -464,8 +465,7 @@ export function renderCesiumSnapshot(
   selectedSatelliteId = ""
 ): void {
   const limits = visualLayerLimits(snapshot.scenario_config);
-  const beamLengthMeters = snapshot.scenario_config?.render?.beam_length_m ?? 600_000;
-  const beamRadiusMeters = snapshot.scenario_config?.render?.beam_radius_m ?? 160_000;
+  const beamGeometry = resolveBeamGeometryOptions(snapshot.scenario_config);
   const beamEntityIds = new Set<string>();
   const satellites = projectSatelliteStates(snapshot.satellites, displaySimTime);
 
@@ -508,8 +508,7 @@ export function renderCesiumSnapshot(
     limits.beamRenderLimit
   )) {
     for (const beamId of upsertBeamEntity(entities, caches.beams, satellite, {
-      beamLengthMeters,
-      beamRadiusMeters,
+      ...beamGeometry,
       enabled: satellite.status.toLowerCase() !== "offline"
     })) {
       beamEntityIds.add(beamId);

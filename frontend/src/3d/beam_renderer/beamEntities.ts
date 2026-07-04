@@ -1,18 +1,23 @@
 import { Cartesian3, Color, ConstantPositionProperty, Entity, EntityCollection } from "cesium";
 
-import { SatelliteState } from "../../core/event_types";
+import { SatelliteState, ScenarioConfig } from "../../core/event_types";
 import { satelliteCartesian, Vector3Tuple } from "../cesium/positions";
 
 const EARTH_RADIUS_M = 6_371_000;
 const DEFAULT_BEAM_CELL_COUNT = 7;
+const DEFAULT_BEAM_LENGTH_METERS = 600_000;
+const DEFAULT_BEAM_RADIUS_METERS = 160_000;
 const BEAM_CELL_SPACING_RATIO = 0.52;
 const BEAM_CELL_RADIUS_RATIO = 0.34;
 
 export interface BeamRenderOptions {
   beamLengthMeters: number;
   beamRadiusMeters: number;
+  beamCellCount: number;
   enabled: boolean;
 }
+
+export type BeamGeometryOptions = Omit<BeamRenderOptions, "enabled">;
 
 export interface BeamCellFootprint {
   id: string;
@@ -70,7 +75,11 @@ export function upsertBeamEntity(
   }
 
   entity.position = new ConstantPositionProperty(satelliteCartesian(satellite));
-  for (const cell of buildBeamCellFootprints(satellite, options.beamRadiusMeters)) {
+  for (const cell of buildBeamCellFootprints(
+    satellite,
+    options.beamRadiusMeters,
+    options.beamCellCount
+  )) {
     activeIds.push(cell.id);
     upsertBeamCellEntity(entities, cache, satellite, cell);
   }
@@ -88,6 +97,28 @@ export function pruneBeamEntities(
       cache.delete(id);
     }
   }
+}
+
+export function resolveBeamGeometryOptions(
+  scenarioConfig: ScenarioConfig | null | undefined
+): BeamGeometryOptions {
+  const coverage = scenarioConfig?.backend_summary?.coverage_beam_summary;
+  return {
+    beamLengthMeters: positiveNumber(
+      coverage?.beam_length_m,
+      positiveNumber(scenarioConfig?.render?.beam_length_m, DEFAULT_BEAM_LENGTH_METERS)
+    ),
+    beamRadiusMeters: positiveNumber(
+      coverage?.beam_radius_m,
+      positiveNumber(scenarioConfig?.render?.beam_radius_m, DEFAULT_BEAM_RADIUS_METERS)
+    ),
+    beamCellCount: boundedInteger(
+      coverage?.default_beam_count,
+      DEFAULT_BEAM_CELL_COUNT,
+      1,
+      DEFAULT_BEAM_CELL_COUNT
+    )
+  };
 }
 
 export function buildBeamCellFootprints(
@@ -205,4 +236,20 @@ function cross(left: Vector3Tuple, right: Vector3Tuple): Vector3Tuple {
     left[2] * right[0] - left[0] * right[2],
     left[0] * right[1] - left[1] * right[0]
   ];
+}
+
+function positiveNumber(value: number | undefined, fallback: number): number {
+  return value !== undefined && Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+function boundedInteger(
+  value: number | undefined,
+  fallback: number,
+  min: number,
+  max: number
+): number {
+  if (value === undefined || !Number.isFinite(value)) {
+    return fallback;
+  }
+  return Math.max(min, Math.min(max, Math.round(value)));
 }

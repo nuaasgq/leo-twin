@@ -5,6 +5,37 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - 3D Beam Summary Binding v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending in this commit
+- Scope: bind the 3D selected-satellite beam renderer to backend-derived
+  coverage/beam summary fields for beam length, footprint radius, and bounded
+  beam-cell count, while preserving legacy render defaults as fallback values.
+- Changed files/modules:
+  - `frontend/src/3d/beam_renderer/beamEntities.ts`
+  - `frontend/src/3d/cesium/CesiumGlobe.tsx`
+  - `frontend/tests/satelliteVisuals.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- satelliteVisuals.test.ts`
+    - Result: passed, 22 files / 102 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - Backend-provided beam counts must not expand unbounded detail rendering in
+    1200-satellite scenarios, so the frontend clamps selected-satellite
+    footprint cells to the existing safe 1..7 range.
+  - The active local runtime config files remain modified and excluded.
+- Known remaining issues:
+  - The backend summary is still generated scenario metadata. Per-satellite
+    coverage state is not yet streamed in `WorldSnapshot`.
+- Recommended follow-up:
+  - Add selected-satellite coverage state to snapshots so beam utilization and
+    count can vary by satellite and simulation time.
+
 ## 2026-07-05 - Orbit Period Explanation v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`

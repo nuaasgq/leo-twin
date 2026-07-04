@@ -11,6 +11,7 @@ import {
 } from "../src/3d/orbit_renderer/satelliteEntities";
 import {
   buildBeamCellFootprints,
+  resolveBeamGeometryOptions,
   selectedCoverageBeamSatellites
 } from "../src/3d/beam_renderer/beamEntities";
 import {
@@ -20,7 +21,7 @@ import {
   satelliteInsetPoint,
   selectedDisplaySatellite
 } from "../src/3d/cesium/satelliteFollow";
-import { SatelliteState } from "../src/core/event_types";
+import { SatelliteState, ScenarioConfig } from "../src/core/event_types";
 
 describe("satellite model entities", () => {
   it("builds a deterministic fallback multi-part satellite display model", () => {
@@ -102,6 +103,47 @@ describe("selected satellite coverage beams", () => {
     expect(cells[1].radiusMeters).toBeCloseTo(54_400, 6);
     expect(buildBeamCellFootprints(satelliteA, 160_000, 32)).toHaveLength(7);
     expect(buildBeamCellFootprints(satelliteA, 160_000, 0)).toHaveLength(1);
+    expect(buildBeamCellFootprints(satelliteA, 160_000, 4)).toHaveLength(4);
+  });
+
+  it("resolves beam geometry from backend coverage summary before render defaults", () => {
+    const options = resolveBeamGeometryOptions({
+      render: {
+        beam_length_m: 300_000,
+        beam_radius_m: 90_000
+      },
+      backend_summary: {
+        coverage_beam_summary: coverageSummary({
+          default_beam_count: 4,
+          beam_length_m: 700_000,
+          beam_radius_m: 220_000
+        })
+      }
+    });
+
+    expect(options).toEqual({
+      beamLengthMeters: 700_000,
+      beamRadiusMeters: 220_000,
+      beamCellCount: 4
+    });
+  });
+
+  it("keeps backend beam counts bounded for large-scale rendering safety", () => {
+    expect(
+      resolveBeamGeometryOptions({
+        backend_summary: {
+          coverage_beam_summary: coverageSummary({
+            default_beam_count: 99,
+            beam_length_m: 0,
+            beam_radius_m: -1
+          })
+        }
+      })
+    ).toEqual({
+      beamLengthMeters: 600_000,
+      beamRadiusMeters: 160_000,
+      beamCellCount: 7
+    });
   });
 });
 
@@ -173,3 +215,22 @@ const satelliteB: SatelliteState = {
   velocity: [7_500, 0, 0],
   status: "ACTIVE"
 };
+
+function coverageSummary(
+  overrides: Partial<
+    NonNullable<NonNullable<ScenarioConfig["backend_summary"]>["coverage_beam_summary"]>
+  >
+): NonNullable<NonNullable<ScenarioConfig["backend_summary"]>["coverage_beam_summary"]> {
+  return {
+    coverage_model: "DETERMINISTIC_GEOMETRIC_FOOTPRINT",
+    selected_satellite_detail_mode: "SELECTED_SATELLITE_ONLY",
+    beam_pattern: "CENTER_PLUS_HEX_RING_VISUAL_APPROXIMATION",
+    default_beam_count: 7,
+    beam_radius_m: 160_000,
+    beam_length_m: 600_000,
+    global_beam_render_limit: 1,
+    model_note:
+      "Selected-satellite beam cells are deterministic visual footprints; no RF propagation or antenna-pattern simulation is performed.",
+    ...overrides
+  };
+}
