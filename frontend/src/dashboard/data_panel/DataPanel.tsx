@@ -101,7 +101,10 @@ export const DataPanel = memo(function DataPanel({
   const networkFormulaInputs = buildDataPanelNetworkFormulaInputs(
     runtimeStatus.metrics_summary
   );
-  const routeConstraints = buildDataPanelRouteConstraints(snapshot);
+  const routeConstraints = buildDataPanelRouteConstraints(
+    snapshot,
+    runtimeStatus.metrics_summary
+  );
   const latestTelemetry = telemetry[telemetry.length - 1];
   const computePool = buildComputeResourcePool(
     snapshot,
@@ -391,12 +394,13 @@ export const DataPanel = memo(function DataPanel({
   );
 });
 
-function RouteConstraintTable({ rows }: { rows: readonly DataPanelRouteConstraint[] }) {
-  if (rows.length === 0) {
+function RouteConstraintTable({ rows }: { rows: DataPanelRouteConstraintRows }) {
+  if (rows.items.length === 0) {
     return <div className="data-panel-route-empty">等待路由快照</div>;
   }
   return (
     <div className="data-panel-route-table" aria-label="路由KPI约束明细">
+      <div className="data-panel-route-source">{rows.sourceLabel}</div>
       <div className="data-panel-route-row header">
         <span>路由</span>
         <span>状态</span>
@@ -406,7 +410,7 @@ function RouteConstraintTable({ rows }: { rows: readonly DataPanelRouteConstrain
         <span>需求/损耗</span>
         <span>瓶颈解释</span>
       </div>
-      {rows.map((row) => (
+      {rows.items.map((row) => (
         <div className="data-panel-route-row" key={row.routeId} title={row.pathLabel}>
           <span>{row.routeId}</span>
           <span>{row.statusLabel}</span>
@@ -1061,6 +1065,14 @@ function metricString(
   return typeof value === "string" && value.trim().length > 0 ? value : undefined;
 }
 
+function metricBoolean(
+  metrics: RuntimeMetricsSummary | null | undefined,
+  key: string
+): boolean | undefined {
+  const value = metrics?.[key];
+  return typeof value === "boolean" ? value : undefined;
+}
+
 function isSpaceLink(link: { source_id: string; target_id: string }): boolean {
   return link.source_id.startsWith("sat-") && link.target_id.startsWith("sat-");
 }
@@ -1153,6 +1165,11 @@ export interface DataPanelRouteConstraint {
   pathLabel: string;
 }
 
+export interface DataPanelRouteConstraintRows {
+  sourceLabel: string;
+  items: readonly DataPanelRouteConstraint[];
+}
+
 type SnapshotRoute = WorldSnapshot["routes"][number];
 type SnapshotLink = WorldSnapshot["links"][number];
 
@@ -1216,10 +1233,18 @@ export function buildDataPanelNetworkFormulaInputs(
 
 export function buildDataPanelRouteConstraints(
   snapshot: WorldSnapshot,
+  backendMetrics: RuntimeMetricsSummary | null | undefined = undefined,
   limit = 6
-): readonly DataPanelRouteConstraint[] {
+): DataPanelRouteConstraintRows {
+  const backendRow = buildBackendRouteConstraint(backendMetrics);
+  if (backendRow !== null) {
+    return {
+      sourceLabel: "后端约束摘要",
+      items: [backendRow]
+    };
+  }
   const linkLookup = buildRouteLinkLookup(snapshot.links);
-  return snapshot.routes
+  const items = snapshot.routes
     .map((route) => ({
       route,
       row: {
@@ -1237,6 +1262,57 @@ export function buildDataPanelRouteConstraints(
     .sort((left, right) => compareRouteConstraint(left.route, right.route))
     .slice(0, Math.max(0, limit))
     .map((entry) => entry.row);
+  return {
+    sourceLabel: "快照路由明细",
+    items
+  };
+}
+
+function buildBackendRouteConstraint(
+  metrics: RuntimeMetricsSummary | null | undefined
+): DataPanelRouteConstraint | null {
+  const source = metricString(metrics, "network_constraint_summary_source");
+  const routeId = metricString(metrics, "network_constraint_top_route_id");
+  if (source !== "BACKEND_METRICS_COLLECTOR" || !routeId) {
+    return null;
+  }
+  const available = metricBoolean(metrics, "network_constraint_top_route_available");
+  const flowId = metricString(metrics, "network_constraint_top_route_flow_id") ?? "未声明";
+  const hopCount = metricNumber(metrics, "network_constraint_top_route_hop_count") ?? 0;
+  const latency = metricNumber(metrics, "network_constraint_top_route_latency_s") ?? 0;
+  const capacity = metricNumber(metrics, "network_constraint_top_route_capacity_mbps") ?? 0;
+  const demand = metricNumber(metrics, "network_constraint_top_route_demand_mbps") ?? 0;
+  const lossRate = metricNumber(metrics, "network_constraint_top_route_loss_rate") ?? 0;
+  const pressure =
+    metricNumber(metrics, "network_constraint_top_route_pressure_proxy") ?? 0;
+  const topLink = metricString(metrics, "network_constraint_top_link_id");
+  const topLinkCapacity = metricNumber(
+    metrics,
+    "network_constraint_top_link_capacity_mbps"
+  );
+  const topLinkLatency = metricNumber(metrics, "network_constraint_top_link_latency_s");
+  const topLinkUtilization = metricNumber(
+    metrics,
+    "network_constraint_top_link_utilization"
+  );
+  return {
+    routeId,
+    flowId,
+    statusLabel: available === false ? "不可用" : "可用",
+    hopCount: Math.max(0, Math.round(hopCount)),
+    latencyLabel: `${formatPreciseMetricValue(latency)} s`,
+    capacityLabel: `${formatMetricValue(capacity)} Mbps`,
+    demandLossLabel: `需求${formatMetricValue(demand)} Mbps / 损耗${formatMetricValue(
+      lossRate * 100
+    )}% / 压力${formatMetricValue(pressure * 100)}%`,
+    bottleneckLabel: backendLinkConstraintLabel(
+      topLink,
+      topLinkCapacity,
+      topLinkLatency,
+      topLinkUtilization
+    ),
+    pathLabel: metricString(metrics, "network_constraint_top_route_path") ?? "未声明"
+  };
 }
 
 function compareRouteConstraint(left: SnapshotRoute, right: SnapshotRoute): number {
@@ -1331,6 +1407,23 @@ function routeDemandLossLabel(route: SnapshotRoute): string {
       ? `损耗${formatMetricValue(route.loss_rate * 100)}%`
       : null;
   return [demand, loss].filter((value): value is string => value !== null).join(" / ") || "未声明";
+}
+
+function backendLinkConstraintLabel(
+  linkId: string | undefined,
+  capacity: number | undefined,
+  latency: number | undefined,
+  utilization: number | undefined
+): string {
+  if (!linkId) {
+    return "后端未声明瓶颈链路";
+  }
+  const details = [
+    capacity === undefined ? null : `${formatMetricValue(capacity)} Mbps`,
+    latency === undefined ? null : `${formatPreciseMetricValue(latency)} s`,
+    utilization === undefined ? null : `利用率${formatMetricValue(utilization * 100)}%`
+  ].filter((value): value is string => value !== null);
+  return details.length === 0 ? linkId : `${linkId} / ${details.join(" / ")}`;
 }
 
 function routeLinkKey(sourceId: string, targetId: string): string {

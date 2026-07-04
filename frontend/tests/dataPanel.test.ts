@@ -230,45 +230,88 @@ describe("buildDataPanelRouteConstraints", () => {
           ]
         })
       )
-    ).toEqual([
-      {
-        routeId: "route-down",
-        flowId: "flow-down",
-        statusLabel: "不可用",
-        hopCount: 0,
-        latencyLabel: "0 s",
-        capacityLabel: "0 Mbps",
-        demandLossLabel: "未声明",
-        bottleneckLabel: "无可用路径",
-        pathLabel: "无路径"
-      },
-      {
-        routeId: "route-good",
-        flowId: "flow-good",
-        statusLabel: "可用",
-        hopCount: 2,
-        latencyLabel: "0.4 s",
-        capacityLabel: "20 Mbps",
-        demandLossLabel: "需求25 Mbps / 损耗5%",
-        bottleneckLabel: "sat-b → sat-c / 20 Mbps / 0.3 s",
-        pathLabel: "sat-a → sat-b → sat-c"
-      },
-      {
-        routeId: "route-low",
-        flowId: "flow-low",
-        statusLabel: "可用",
-        hopCount: 1,
-        latencyLabel: "0.1 s",
-        capacityLabel: "80 Mbps",
-        demandLossLabel: "未声明",
-        bottleneckLabel: "sat-a → sat-b / 80 Mbps / 0.1 s",
-        pathLabel: "sat-a → sat-b"
-      }
-    ]);
+    ).toEqual({
+      sourceLabel: "快照路由明细",
+      items: [
+        {
+          routeId: "route-down",
+          flowId: "flow-down",
+          statusLabel: "不可用",
+          hopCount: 0,
+          latencyLabel: "0 s",
+          capacityLabel: "0 Mbps",
+          demandLossLabel: "未声明",
+          bottleneckLabel: "无可用路径",
+          pathLabel: "无路径"
+        },
+        {
+          routeId: "route-good",
+          flowId: "flow-good",
+          statusLabel: "可用",
+          hopCount: 2,
+          latencyLabel: "0.4 s",
+          capacityLabel: "20 Mbps",
+          demandLossLabel: "需求25 Mbps / 损耗5%",
+          bottleneckLabel: "sat-b → sat-c / 20 Mbps / 0.3 s",
+          pathLabel: "sat-a → sat-b → sat-c"
+        },
+        {
+          routeId: "route-low",
+          flowId: "flow-low",
+          statusLabel: "可用",
+          hopCount: 1,
+          latencyLabel: "0.1 s",
+          capacityLabel: "80 Mbps",
+          demandLossLabel: "未声明",
+          bottleneckLabel: "sat-a → sat-b / 80 Mbps / 0.1 s",
+          pathLabel: "sat-a → sat-b"
+        }
+      ]
+    });
+  });
+
+  it("prefers backend route constraint summary when available", () => {
+    expect(
+      buildDataPanelRouteConstraints(makeSnapshot(), {
+        network_constraint_summary_source: "BACKEND_METRICS_COLLECTOR",
+        network_constraint_top_route_id: "route-backend",
+        network_constraint_top_route_flow_id: "flow-backend",
+        network_constraint_top_route_available: false,
+        network_constraint_top_route_capacity_mbps: 0,
+        network_constraint_top_route_latency_s: 0.125,
+        network_constraint_top_route_hop_count: 3,
+        network_constraint_top_route_demand_mbps: 40,
+        network_constraint_top_route_loss_rate: 0.08,
+        network_constraint_top_route_pressure_proxy: 1,
+        network_constraint_top_route_path: "user-a -> sat-a -> sat-b -> user-b",
+        network_constraint_top_link_id: "sat-a->sat-b",
+        network_constraint_top_link_capacity_mbps: 20,
+        network_constraint_top_link_latency_s: 0.05,
+        network_constraint_top_link_utilization: 0.92
+      })
+    ).toEqual({
+      sourceLabel: "后端约束摘要",
+      items: [
+        {
+          routeId: "route-backend",
+          flowId: "flow-backend",
+          statusLabel: "不可用",
+          hopCount: 3,
+          latencyLabel: "0.125 s",
+          capacityLabel: "0 Mbps",
+          demandLossLabel: "需求40 Mbps / 损耗8% / 压力100%",
+          bottleneckLabel: "sat-a->sat-b / 20 Mbps / 0.05 s / 利用率92%",
+          pathLabel: "user-a -> sat-a -> sat-b -> user-b"
+        }
+      ]
+    });
   });
 
   it("returns no route constraint rows for an empty snapshot", () => {
-    expect(buildDataPanelRouteConstraints(makeSnapshot())).toEqual([]);
+    expect(buildDataPanelRouteConstraints(makeSnapshot())).toEqual({
+      sourceLabel: "快照路由明细",
+      items: []
+    });
   });
 });
 

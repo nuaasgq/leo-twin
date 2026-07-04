@@ -2423,3 +2423,33 @@ change.
 - Recommended follow-up:
   - Bind the dashboard route detail table to these backend summary fields and
     show a backend-source note when constraint summaries are available.
+
+## 2026-07-05 - Frontend Backend Route Constraint Binding v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: bind the dashboard route constraint table to backend
+  `network_constraint_*` summary fields, with deterministic snapshot fallback.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 23 files / 134 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - `RuntimeMetricsSummary` already supports flat string/number/bool values, so
+    no frontend event type or decoder expansion was needed.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The UI shows one backend top constrained route/link summary. It does not
+    yet display a backend-ranked list of multiple constrained routes or links.
+- Recommended follow-up:
+  - Extend backend summaries to a bounded top-N representation once the runtime
+    status contract supports structured route/link constraint rows.

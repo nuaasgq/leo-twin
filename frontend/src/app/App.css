@@ -987,6 +987,14 @@ body {
   overflow-x: auto;
 }
 
+.data-panel-route-source {
+  min-width: 0;
+  color: var(--accent-cyan);
+  font-size: 10px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
 .data-panel-route-row {
   display: grid;
   grid-template-columns:
