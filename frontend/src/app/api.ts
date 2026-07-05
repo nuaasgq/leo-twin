@@ -8,6 +8,8 @@ import {
   RuntimeExportHistoryV1,
   RuntimeExportPackageCompareEnvelope,
   RuntimeExportPackageCompareV1,
+  RuntimeExportRestorePreflightEnvelope,
+  RuntimeExportRestorePreflightV1,
   RuntimeNodeDetailPageV1,
   RuntimeSatelliteServiceSummaryV1,
   RuntimeStatusEnvelope,
@@ -116,6 +118,18 @@ export async function loadRuntimeExportPackageCompare(
   return decodeRuntimeExportPackageCompare(await response.json()).summary;
 }
 
+export async function loadRuntimeExportRestorePreflight(
+  packageId: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): Promise<RuntimeExportRestorePreflightV1> {
+  const url = runtimeExportRestorePreflightHref(packageId, endpoint);
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`failed to load runtime export restore preflight from ${url}: HTTP ${response.status}`);
+  }
+  return decodeRuntimeExportRestorePreflight(await response.json()).summary;
+}
+
 export function runtimeApiErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   if (
@@ -170,6 +184,13 @@ export function runtimeExportPackageCompareHref(
   endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
 ): string {
   return `${runtimeExportPackageRecordHref(packageId, endpoint)}/compare`;
+}
+
+export function runtimeExportRestorePreflightHref(
+  packageId: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): string {
+  return `${runtimeExportPackageRecordHref(packageId, endpoint)}/restore-preflight`;
 }
 
 export function runtimeExportPackageFileHref(
@@ -268,6 +289,22 @@ export function decodeRuntimeExportPackageCompare(
     ...(value as Record<string, unknown>),
     summary: summary as RuntimeExportPackageCompareV1
   } as RuntimeExportPackageCompareEnvelope;
+}
+
+export function decodeRuntimeExportRestorePreflight(
+  value: unknown
+): RuntimeExportRestorePreflightEnvelope {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError("runtime export restore preflight response must be an object");
+  }
+  const summary = (value as { summary?: unknown }).summary;
+  if (typeof summary !== "object" || summary === null || Array.isArray(summary)) {
+    throw new TypeError("runtime export restore preflight response must include summary object");
+  }
+  return {
+    ...(value as Record<string, unknown>),
+    summary: summary as RuntimeExportRestorePreflightV1
+  } as RuntimeExportRestorePreflightEnvelope;
 }
 
 export function decodeRuntimeStatusEnvelope(value: unknown): RuntimeStatusEnvelope {

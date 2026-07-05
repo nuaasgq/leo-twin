@@ -738,6 +738,37 @@ export interface RuntimeExportPackageCompareEnvelope {
   summary: RuntimeExportPackageCompareV1;
 }
 
+export interface RuntimeExportRestorePreflightV1 {
+  version: "v1" | string;
+  source: string;
+  preflight_scope: string;
+  package_id: string;
+  readiness: "READY" | "NO_CHANGE" | "BLOCKED" | string;
+  can_restore: boolean;
+  requires_user_confirmation: boolean;
+  would_mutate_current_runtime: boolean;
+  would_write_config_files: boolean;
+  would_reset_runtime_session: boolean;
+  would_stop_live_streams: boolean;
+  current_lifecycle_state: string;
+  package_config_hash: string;
+  current_config_hash: string;
+  same_config: boolean;
+  same_generated_config: boolean;
+  config_diff_count: number;
+  generated_config_diff_count: number;
+  compare_hash: string;
+  blocked_reasons: readonly string[];
+  warnings: readonly string[];
+  next_action: string;
+  preflight_hash: string;
+}
+
+export interface RuntimeExportRestorePreflightEnvelope {
+  type: "RUNTIME_EXPORT_RESTORE_PREFLIGHT" | string;
+  summary: RuntimeExportRestorePreflightV1;
+}
+
 export interface StateSnapshot {
   event_count?: number;
   last_sim_time?: number;

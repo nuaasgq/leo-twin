@@ -948,6 +948,10 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
         package_id,
         export_root,
     )
+    matched_preflight = control_plane.runtime_export_package_restore_preflight(
+        package_id,
+        export_root,
+    )
 
     assert record["type"] == "RUNTIME_EXPORT_PACKAGE_RECORD"
     assert record["summary"]["export_type"] == "ARCHIVE"
@@ -967,6 +971,15 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
     assert matched_compare["summary"]["same_config"] is True
     assert matched_compare["summary"]["same_generated_config"] is True
     assert matched_compare["summary"]["compare_hash"].startswith("sha256:")
+    matched_preflight_summary = matched_preflight["summary"]
+    assert matched_preflight["type"] == "RUNTIME_EXPORT_RESTORE_PREFLIGHT"
+    assert matched_preflight_summary["readiness"] == "NO_CHANGE"
+    assert matched_preflight_summary["can_restore"] is True
+    assert matched_preflight_summary["requires_user_confirmation"] is False
+    assert matched_preflight_summary["would_mutate_current_runtime"] is False
+    assert matched_preflight_summary["would_reset_runtime_session"] is False
+    assert matched_preflight_summary["config_diff_count"] == 0
+    assert matched_preflight_summary["preflight_hash"].startswith("sha256:")
 
     control_plane.handle_raw_message(
         json.dumps(
@@ -983,6 +996,10 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
         package_id,
         export_root,
     )
+    changed_preflight = control_plane.runtime_export_package_restore_preflight(
+        package_id,
+        export_root,
+    )
     changed_summary = changed_compare["summary"]
     assert changed_summary["compatibility"] == "DIFFERENT"
     assert changed_summary["diff_count"] >= 2
@@ -995,6 +1012,19 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
         ("config", "$.scenario.satellite_count"),
         ("generated_config", "$.satellite_count"),
     }
+    changed_preflight_summary = changed_preflight["summary"]
+    assert changed_preflight_summary["readiness"] == "READY"
+    assert changed_preflight_summary["can_restore"] is True
+    assert changed_preflight_summary["requires_user_confirmation"] is True
+    assert changed_preflight_summary["would_mutate_current_runtime"] is False
+    assert changed_preflight_summary["would_write_config_files"] is True
+    assert changed_preflight_summary["would_reset_runtime_session"] is True
+    assert changed_preflight_summary["config_diff_count"] >= 1
+    assert changed_preflight_summary["compare_hash"] == changed_summary["compare_hash"]
+    assert (
+        "RESTORE_WOULD_REPLACE_RUNTIME_CONFIG_AND_REQUIRE_REINITIALIZATION"
+        in changed_preflight_summary["warnings"]
+    )
 
     with pytest.raises(RuntimeExportArtifactError):
         control_plane.runtime_export_package_artifact(
@@ -1034,6 +1064,9 @@ def test_demo_server_stream_query_parses_cursor_options() -> None:
     assert _runtime_export_package_route(
         "/runtime/export/packages/pkg%201/compare"
     ) == ("pkg 1", "compare", None)
+    assert _runtime_export_package_route(
+        "/runtime/export/packages/pkg%201/restore-preflight"
+    ) == ("pkg 1", "restore-preflight", None)
     assert _runtime_export_package_route(
         "/runtime/export/packages/pkg-1/archive"
     ) == ("pkg-1", "archive", None)

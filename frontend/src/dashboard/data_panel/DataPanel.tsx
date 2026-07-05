@@ -43,7 +43,8 @@ import {
   runtimeExportPackageArchiveHref,
   runtimeExportPackageCompareHref,
   runtimeExportPackageManifestHref,
-  runtimeExportPackageRecordHref
+  runtimeExportPackageRecordHref,
+  runtimeExportRestorePreflightHref
 } from "../../app/api";
 import { runtimeSpeedFactorLabel } from "../../runtime_display";
 import { WorldSnapshot } from "../../state/snapshot_engine";
@@ -456,6 +457,7 @@ export const DataPanel = memo(function DataPanel({
                       对比
                     </button>
                     <a href={row.compareHref}>JSON</a>
+                    <a href={row.restorePreflightHref}>预检</a>
                   </span>
                 </div>
               ))
@@ -4433,6 +4435,7 @@ export interface DataPanelExportCatalogRow {
   manifestHref: string;
   archiveHref: string | null;
   compareHref: string;
+  restorePreflightHref: string;
 }
 
 export function buildDataPanelExportCatalogDisplay(
@@ -4474,7 +4477,8 @@ export function buildDataPanelExportCatalogDisplay(
         archiveHref: record.archive_filename
           ? runtimeExportPackageArchiveHref(record.package_id)
           : null,
-        compareHref: runtimeExportPackageCompareHref(record.package_id)
+        compareHref: runtimeExportPackageCompareHref(record.package_id),
+        restorePreflightHref: runtimeExportRestorePreflightHref(record.package_id)
       };
     });
   return {

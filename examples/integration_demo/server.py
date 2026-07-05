@@ -175,6 +175,13 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                             control_plane.runtime_export_package_compare(package_id)
                         )
                         return
+                    if artifact_kind == "restore-preflight":
+                        self._send_json(
+                            control_plane.runtime_export_package_restore_preflight(
+                                package_id
+                            )
+                        )
+                        return
                     if artifact_kind == "manifest":
                         artifact = control_plane.runtime_export_package_artifact(
                             package_id,
@@ -463,6 +470,8 @@ def _runtime_export_package_route(
         return parts[0], "manifest", None
     if len(parts) == 2 and parts[1] == "compare":
         return parts[0], "compare", None
+    if len(parts) == 2 and parts[1] == "restore-preflight":
+        return parts[0], "restore-preflight", None
     if len(parts) == 2 and parts[1] == "archive":
         return parts[0], "archive", None
     if len(parts) == 3 and parts[1] == "files":

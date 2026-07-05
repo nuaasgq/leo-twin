@@ -4,6 +4,7 @@ import {
   loadRuntimeExportCatalog,
   loadRuntimeExportHistory,
   loadRuntimeExportPackageCompare,
+  loadRuntimeExportRestorePreflight,
   loadRuntimeNodeDetails,
   loadRuntimeSatelliteDetails,
   loadRuntimeState,
@@ -14,6 +15,7 @@ import {
   runtimeExportPackageFileHref,
   runtimeExportPackageManifestHref,
   runtimeExportPackageRecordHref,
+  runtimeExportRestorePreflightHref,
   runtimeApiErrorMessage
 } from "../src/app/api";
 
@@ -39,6 +41,9 @@ describe("runtime API diagnostics", () => {
     );
     expect(runtimeExportPackageCompareHref("pkg 1")).toBe(
       "/runtime/export/packages/pkg%201/compare"
+    );
+    expect(runtimeExportRestorePreflightHref("pkg 1")).toBe(
+      "/runtime/export/packages/pkg%201/restore-preflight"
     );
     expect(runtimeExportPackageFileHref("pkg 1", "events 1.jsonl")).toBe(
       "/runtime/export/packages/pkg%201/files/events%201.jsonl"
@@ -87,6 +92,50 @@ describe("runtime API diagnostics", () => {
       differences: [{ path: "$.satellite_count" }]
     });
     expect(fetchMock).toHaveBeenCalledWith("/runtime/export/packages/pkg/compare");
+  });
+
+  it("loads runtime export restore preflight previews", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        type: "RUNTIME_EXPORT_RESTORE_PREFLIGHT",
+        summary: {
+          version: "v1",
+          source: "BACKEND_RUNTIME_EXPORT_RESTORE_PREFLIGHT",
+          preflight_scope: "CONFIG_RESTORE_PREVIEW_ONLY",
+          package_id: "pkg",
+          readiness: "READY",
+          can_restore: true,
+          requires_user_confirmation: true,
+          would_mutate_current_runtime: false,
+          would_write_config_files: true,
+          would_reset_runtime_session: true,
+          would_stop_live_streams: true,
+          current_lifecycle_state: "PAUSED",
+          package_config_hash: "sha256:old",
+          current_config_hash: "sha256:new",
+          same_config: false,
+          same_generated_config: false,
+          config_diff_count: 2,
+          generated_config_diff_count: 3,
+          compare_hash: "sha256:compare",
+          blocked_reasons: [],
+          warnings: ["RESTORE_WOULD_REPLACE_RUNTIME_CONFIG_AND_REQUIRE_REINITIALIZATION"],
+          next_action: "USER_CONFIRMATION_REQUIRED_BEFORE_RESTORE",
+          preflight_hash: "sha256:preflight"
+        }
+      })
+    }));
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+
+    await expect(loadRuntimeExportRestorePreflight("pkg")).resolves.toMatchObject({
+      readiness: "READY",
+      requires_user_confirmation: true,
+      would_mutate_current_runtime: false
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/runtime/export/packages/pkg/restore-preflight"
+    );
   });
 
   it("loads runtime export history summaries", async () => {

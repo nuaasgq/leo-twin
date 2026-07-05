@@ -22,7 +22,11 @@ from leo_twin.runtime import (
     StreamBuffer,
     parse_control_command,
 )
-from leo_twin.schema.config_loader import write_config
+from leo_twin.schema.config_loader import (
+    ConfigValidationError,
+    config_from_mapping,
+    write_config,
+)
 from leo_twin.models.orbit import KeplerianOrbitEngine
 from leo_twin.schema import SatelliteState
 from leo_twin.schema.config import SEESConfig
@@ -382,6 +386,52 @@ class DemoControlPlane:
         )
         return {
             "type": "RUNTIME_EXPORT_PACKAGE_COMPARE",
+            "summary": summary,
+        }
+
+    def runtime_export_package_restore_preflight(
+        self,
+        package_id: str,
+        output_root: str | Path = "artifacts/runtime_exports",
+        *,
+        diff_limit: int = 32,
+    ) -> dict[str, Any]:
+        artifact = self.runtime_export_package_artifact(
+            package_id,
+            "config_snapshot.json",
+            output_root,
+        )
+        package_snapshot = json.loads(
+            Path(str(artifact["path"])).read_text(encoding="utf-8")
+        )
+        if not isinstance(package_snapshot, dict):
+            raise RuntimeExportArtifactError(
+                f"runtime export package {package_id!r} has invalid config snapshot"
+            )
+        generated_config = self._generated_config_json()
+        current_snapshot = {
+            "type": "RUNTIME_CONFIG_SNAPSHOT",
+            "status": _runtime_export_status_snapshot(
+                self._status_json(generated_config)
+            ),
+            "config": self._controller.config_json(),
+            "generated_config": generated_config,
+        }
+        compare = _runtime_export_package_compare_summary(
+            package_id,
+            package_snapshot,
+            current_snapshot,
+            diff_limit=diff_limit,
+        )
+        summary = _runtime_export_package_restore_preflight_summary(
+            package_id,
+            package_snapshot,
+            current_snapshot,
+            compare,
+            lifecycle_state=self.runtime_lifecycle_state().value,
+        )
+        return {
+            "type": "RUNTIME_EXPORT_RESTORE_PREFLIGHT",
             "summary": summary,
         }
 
@@ -1444,6 +1494,109 @@ def _runtime_export_package_compare_summary(
     }
     summary["compare_hash"] = stable_hash_payload(summary)
     return summary
+
+
+def _runtime_export_package_restore_preflight_summary(
+    package_id: str,
+    package_snapshot: dict[str, Any],
+    current_snapshot: dict[str, Any],
+    compare: dict[str, Any],
+    *,
+    lifecycle_state: str,
+) -> dict[str, Any]:
+    package_config = package_snapshot.get("config")
+    current_config = current_snapshot.get("config")
+    blocked_reasons: list[str] = []
+    if not isinstance(package_config, dict):
+        blocked_reasons.append("package config_snapshot.config is not an object")
+    else:
+        try:
+            config_from_mapping(package_config)
+        except ConfigValidationError as exc:
+            blocked_reasons.append(f"package config is invalid: {exc}")
+    if not isinstance(current_config, dict):
+        blocked_reasons.append("current runtime config is not an object")
+    package_config_hash = (
+        stable_hash_payload(package_config) if isinstance(package_config, dict) else ""
+    )
+    current_config_hash = (
+        stable_hash_payload(current_config) if isinstance(current_config, dict) else ""
+    )
+    config_diff_count = _runtime_export_section_diff_count(compare, "config")
+    generated_config_diff_count = _runtime_export_section_diff_count(
+        compare,
+        "generated_config",
+    )
+    same_config = bool(compare.get("same_config"))
+    if blocked_reasons:
+        readiness = "BLOCKED"
+    elif same_config:
+        readiness = "NO_CHANGE"
+    else:
+        readiness = "READY"
+    requires_runtime_reset = readiness == "READY"
+    summary: dict[str, Any] = {
+        "version": "v1",
+        "source": "BACKEND_RUNTIME_EXPORT_RESTORE_PREFLIGHT",
+        "preflight_scope": "CONFIG_RESTORE_PREVIEW_ONLY",
+        "package_id": package_id,
+        "readiness": readiness,
+        "can_restore": readiness in {"READY", "NO_CHANGE"},
+        "requires_user_confirmation": readiness == "READY",
+        "would_mutate_current_runtime": False,
+        "would_write_config_files": readiness == "READY",
+        "would_reset_runtime_session": requires_runtime_reset,
+        "would_stop_live_streams": requires_runtime_reset,
+        "current_lifecycle_state": lifecycle_state,
+        "package_config_hash": package_config_hash,
+        "current_config_hash": current_config_hash,
+        "same_config": same_config,
+        "same_generated_config": bool(compare.get("same_generated_config")),
+        "config_diff_count": config_diff_count,
+        "generated_config_diff_count": generated_config_diff_count,
+        "compare_hash": str(compare.get("compare_hash", "")),
+        "blocked_reasons": tuple(blocked_reasons),
+        "warnings": _runtime_export_restore_preflight_warnings(
+            readiness,
+            lifecycle_state,
+            generated_config_diff_count,
+        ),
+        "next_action": _runtime_export_restore_preflight_next_action(readiness),
+    }
+    summary["preflight_hash"] = stable_hash_payload(summary)
+    return summary
+
+
+def _runtime_export_section_diff_count(compare: dict[str, Any], section: str) -> int:
+    for item in _control_records(compare.get("sections")):
+        if str(item.get("section", "")) == section:
+            return _control_int(item.get("diff_count"))
+    return 0
+
+
+def _runtime_export_restore_preflight_warnings(
+    readiness: str,
+    lifecycle_state: str,
+    generated_config_diff_count: int,
+) -> tuple[str, ...]:
+    warnings: list[str] = []
+    if readiness == "READY":
+        warnings.append(
+            "RESTORE_WOULD_REPLACE_RUNTIME_CONFIG_AND_REQUIRE_REINITIALIZATION"
+        )
+        if lifecycle_state == "RUNNING":
+            warnings.append("RESTORE_WOULD_STOP_RUNNING_SESSION")
+    if generated_config_diff_count > 0:
+        warnings.append("GENERATED_CONFIG_WILL_BE_REDERIVED_AFTER_RESTORE")
+    return tuple(warnings)
+
+
+def _runtime_export_restore_preflight_next_action(readiness: str) -> str:
+    if readiness == "BLOCKED":
+        return "FIX_PACKAGE_OR_SELECT_ANOTHER_EXPORT"
+    if readiness == "NO_CHANGE":
+        return "NO_RESTORE_REQUIRED"
+    return "USER_CONFIRMATION_REQUIRED_BEFORE_RESTORE"
 
 
 def _runtime_export_section_differences(

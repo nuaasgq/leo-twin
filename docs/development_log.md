@@ -5,6 +5,62 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Runtime Export Restore Preflight v1
+
+- Branch: `feature/T189-runtime-export-restore-preflight-v1`
+- Commit: pending in this commit
+- Scope: add a deterministic, read-only restore preflight for persisted runtime
+  export packages. The backend now exposes
+  `/runtime/export/packages/{package_id}/restore-preflight`, validates the
+  package `config_snapshot.json` as a potential restore source, compares package
+  config against current runtime config, and reports readiness (`NO_CHANGE`,
+  `READY`, or `BLOCKED`), confirmation requirements, config hashes, diff counts,
+  warnings, next action, and a stable preflight hash. Frontend contracts, API
+  helper, and dashboard catalog row links were added so users can inspect the
+  preflight result. This task does not restore packages, write config files,
+  stop sessions, mutate runtime state, modify Event Kernel behavior, or change
+  simulation/model logic.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/app/api.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/integration_demo.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/integration/test_runtime_session_control.py::test_demo_adapter_serves_persisted_runtime_export_artifacts tests/integration/test_runtime_session_control.py::test_demo_server_stream_query_parses_cursor_options -q`
+    - Result: passed, 2 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- api.test.ts dataPanel.test.ts appSurface.test.ts`
+    - Result: passed, 25 files / 283 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing `DataPanel` chunk-size
+      warning after minification.
+  - `git diff --check`
+    - Result: passed. Git still reported the pre-existing CRLF warning for
+      local runtime/config drift in `configs/generated_full_system_demo.json`
+      and `configs/sees_control.yaml`.
+- Problems encountered:
+  - Restore semantics must not be hidden behind a link that mutates state. The
+    endpoint was therefore kept strictly read-only and returns
+    `would_mutate_current_runtime: false` plus explicit warnings/next action
+    instead of performing any restore.
+  - The working tree still contains unrelated local runtime/config drift in
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`;
+    these files were intentionally left unstaged and unchanged by this task.
+- Known remaining issues / follow-up:
+  - A future restore flow should require an explicit confirmation command,
+    preserve a rollback package, and reinitialize runtime services through the
+    existing control-plane configuration path.
+
 ## 2026-07-06 - Dashboard Selected Export Compare v1
 
 - Branch: `feature/T188-dashboard-selected-export-compare-v1`

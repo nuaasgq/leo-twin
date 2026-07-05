@@ -90,6 +90,7 @@ Endpoints:
 - `GET /runtime/export/packages/{package_id}`
 - `GET /runtime/export/packages/{package_id}/manifest`
 - `GET /runtime/export/packages/{package_id}/compare`
+- `GET /runtime/export/packages/{package_id}/restore-preflight`
 - `GET /runtime/export/packages/{package_id}/archive`
 - `GET /runtime/export/packages/{package_id}/files/{filename}`
 - `WS /stream/events`
@@ -144,6 +145,7 @@ Persisted package artifact routes:
 http://127.0.0.1:8765/runtime/export/packages/{package_id}
 http://127.0.0.1:8765/runtime/export/packages/{package_id}/manifest
 http://127.0.0.1:8765/runtime/export/packages/{package_id}/compare
+http://127.0.0.1:8765/runtime/export/packages/{package_id}/restore-preflight
 http://127.0.0.1:8765/runtime/export/packages/{package_id}/archive
 http://127.0.0.1:8765/runtime/export/packages/{package_id}/files/events.jsonl
 ```
@@ -157,6 +159,12 @@ The compare route reads the package `config_snapshot.json` and compares its
 configuration. It returns a deterministic summary with compatibility status,
 diff counts, and a limited set of changed JSON paths. It does not restore or
 mutate the current scenario.
+
+The restore-preflight route validates the package `config_snapshot.json` as a
+potential configuration restore source and reports readiness, required user
+confirmation, config hashes, diff counts, warnings, and the next action. It is
+strictly read-only: it does not write config files, stop the current runtime, or
+replace the active scenario.
 
 ## Frontend
 

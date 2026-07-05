@@ -714,7 +714,9 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           recordHref: "/runtime/export/packages/integration-demo-new",
           manifestHref: "/runtime/export/packages/integration-demo-new/manifest",
           archiveHref: "/runtime/export/packages/integration-demo-new/archive",
-          compareHref: "/runtime/export/packages/integration-demo-new/compare"
+          compareHref: "/runtime/export/packages/integration-demo-new/compare",
+          restorePreflightHref:
+            "/runtime/export/packages/integration-demo-new/restore-preflight"
         },
         {
           key: "PACKAGE:old",
@@ -727,7 +729,9 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           recordHref: "/runtime/export/packages/integration-demo-old",
           manifestHref: "/runtime/export/packages/integration-demo-old/manifest",
           archiveHref: null,
-          compareHref: "/runtime/export/packages/integration-demo-old/compare"
+          compareHref: "/runtime/export/packages/integration-demo-old/compare",
+          restorePreflightHref:
+            "/runtime/export/packages/integration-demo-old/restore-preflight"
         }
       ]
     });
