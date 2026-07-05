@@ -6122,3 +6122,48 @@ change.
 - Recommended follow-up:
   - Implement frontend sparse initialization payloads and a launcher option for
     a user-selected detailed config file.
+
+## 2026-07-05 - Flow-Level Network Pressure KPI Dynamics v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a deterministic, non-packet-level link pressure model inside
+  `PositionDrivenNetworkEngine`. Concurrent flow arrivals now reserve demand
+  against touched route links, emit `LinkState.utilization`, apply bounded
+  queue-delay and loss proxies to the affected route, and release pressure when
+  the flow completes. This gives the existing metrics collector a real backend
+  source for non-zero and time-varying latency, jitter, loss, throughput, and
+  demand pressure indicators.
+- Changed files/modules:
+  - `src/leo_twin/models/network/position_engine.py`
+  - `tests/unit/test_position_driven_network_engine.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_position_driven_network_engine.py -q`
+    - Result: passed, 28 tests.
+  - `python -m pytest tests/unit/test_position_driven_network_engine.py tests/unit/test_metrics_module.py::test_metrics_collector_reports_dynamic_network_quality_proxy tests/unit/test_metrics_module.py::test_metrics_collector_publishes_backend_kpi_time_series tests/unit/test_metrics_module.py::test_metrics_collector_kpi_time_series_refreshes_current_tail_sample -q`
+    - Result: passed, 31 tests.
+  - `python -m pytest tests/integration/test_live_runtime_streaming.py::test_http_cursor_batches_return_incremental_events tests/integration/test_runtime_session_control.py::test_demo_adapter_exposes_cursor_batches tests/integration/test_runtime_session_control.py::test_runtime_kpi_series_changes_with_configured_flow_demand -q`
+    - Result: passed, 3 tests.
+  - `python -m pytest tests/unit/test_position_driven_network_engine.py tests/unit/test_metrics_module.py tests/integration/test_runtime_session_control.py::test_runtime_kpi_series_changes_with_configured_flow_demand tests/integration/test_runtime_session_control.py::test_demo_adapter_exposes_cursor_batches tests/integration/test_live_runtime_streaming.py::test_http_cursor_batches_return_incremental_events -q`
+    - Result: passed, 50 tests.
+- Problems encountered:
+  - The first implementation subtracted existing protocol `loss_rate` from
+    route capacity a second time. `DataLinkRuntime` already folds its own
+    efficiency/loss behavior into route capacity, so the pressure model now
+    only reduces capacity by the newly introduced pressure loss proxy.
+  - An attempted integration test command used stale test names and pytest
+    reported `not found`; the actual runtime cursor/KPI tests were located and
+    rerun successfully.
+- Model limits:
+  - This remains flow-level simulation, not packet-level queuing.
+  - Pressure is tracked on route links touched by active flows and released on
+    flow completion; it does not yet model per-link scheduling disciplines,
+    retransmission, interference, or RF-layer loss.
+  - Completed flows are still retained in the existing `_active_flows` reroute
+    cache for compatibility with current tests; cleanup of completed flow
+    lifecycle state should be a separate bounded task.
+- Recommended follow-up:
+  - Add a backend-owned per-user request lifecycle table so the dashboard can
+    show queue state, selected satellite, next hop, and flow/service state
+    without deriving those fields from route paths.

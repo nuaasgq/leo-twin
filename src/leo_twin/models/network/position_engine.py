@@ -42,6 +42,12 @@ from leo_twin.schema.config import (
 
 
 SpaceCellId = tuple[int, int, int]
+PressureEdge = tuple[str, str]
+
+_NETWORK_FLOW_RELEASE = "NETWORK_FLOW_RELEASE"
+_QUEUE_UTILIZATION_THRESHOLD = 0.75
+_LOSS_UTILIZATION_THRESHOLD = 0.80
+_MAX_PRESSURE_LOSS_RATE = 0.95
 
 
 class SpaceLinkMode(StrEnum):
@@ -166,6 +172,9 @@ class PositionDrivenNetworkEngine(SimulationModule):
         self._active_links: dict[tuple[str, str], LinkState] = {}
         self._active_space_links: dict[tuple[str, str], LinkState] = {}
         self._active_flows: dict[str, FlowRequest] = {}
+        self._flow_pressure_edges: dict[str, tuple[PressureEdge, ...]] = {}
+        self._flow_pressure_demand: dict[str, float] = {}
+        self._edge_active_demand: dict[PressureEdge, float] = {}
         self._last_routes: dict[str, Route] = {}
         self._last_stack_traces: dict[str, NetworkStackTrace] = {}
         self._last_links: dict[tuple[str, str], LinkState] = {}
@@ -199,14 +208,28 @@ class PositionDrivenNetworkEngine(SimulationModule):
                 kernel.schedule_event(emitted)
             return
 
+        if event.event_type == _NETWORK_FLOW_RELEASE:
+            for emitted in self._release_flow_pressure(event.sim_time, event.payload):
+                kernel.schedule_event(emitted)
+            return
+
         if event.event_type == EventType.FLOW_ARRIVAL:
             request = self._coerce_flow_request(event.payload)
             self._active_flows[request.flow_id] = request
             route = self.route_flow(request)
+            route, pressure_events = self._reserve_flow_pressure(
+                event.sim_time,
+                request,
+                route,
+            )
             self._last_routes[request.flow_id] = route
+            for emitted in pressure_events:
+                kernel.schedule_event(emitted)
             for emitted in self._route_events(event.sim_time, route):
                 kernel.schedule_event(emitted)
             kernel.schedule_event(self._flow_completion_event(event.sim_time, request, route))
+            if route.available:
+                kernel.schedule_event(self._flow_release_event(event.sim_time, request, route))
             return
 
         if event.event_type == COMPUTE_NODE_UPDATE:
@@ -375,6 +398,124 @@ class PositionDrivenNetworkEngine(SimulationModule):
             self._last_routes[flow_id] = route
             emitted.extend(self._route_events(dispatch_time, route))
         return tuple(emitted)
+
+    def _reserve_flow_pressure(
+        self,
+        dispatch_time: float,
+        request: FlowRequest,
+        route: Route,
+    ) -> tuple[Route, tuple[SimEvent, ...]]:
+        if not route.available:
+            return route, ()
+        edges = self._route_pressure_edges(route)
+        if not edges:
+            return route, ()
+        demand = _route_demand_capacity(request, route)
+        if demand <= 0.0:
+            return route, ()
+        self._release_flow_pressure(dispatch_time, request.flow_id)
+        for edge in edges:
+            self._edge_active_demand[edge] = self._edge_active_demand.get(edge, 0.0) + demand
+        self._flow_pressure_edges[request.flow_id] = edges
+        self._flow_pressure_demand[request.flow_id] = demand
+
+        max_utilization = max(self._edge_utilization(edge) for edge in edges)
+        pressure_loss = _pressure_loss_rate(max_utilization)
+        next_loss_rate = max(float(route.loss_rate or 0.0), pressure_loss)
+        queue_delay = route.latency * max(
+            0.0,
+            max_utilization - _QUEUE_UTILIZATION_THRESHOLD,
+        )
+        pressured_route = Route(
+            route_id=route.route_id,
+            flow_id=route.flow_id,
+            path=route.path,
+            latency=route.latency + queue_delay,
+            capacity=max(0.0, route.capacity * (1.0 - pressure_loss)),
+            available=route.available,
+            routing_protocol=route.routing_protocol,
+            cost=route.cost,
+            demand_capacity=route.demand_capacity,
+            loss_rate=next_loss_rate,
+        )
+        return pressured_route, self._pressure_link_events(dispatch_time, edges)
+
+    def _release_flow_pressure(
+        self,
+        dispatch_time: float,
+        payload: object,
+    ) -> tuple[SimEvent, ...]:
+        flow_id = _flow_id_from_release_payload(payload)
+        edges = self._flow_pressure_edges.pop(flow_id, ())
+        demand = self._flow_pressure_demand.pop(flow_id, 0.0)
+        if not edges or demand <= 0.0:
+            return ()
+        for edge in edges:
+            next_demand = max(0.0, self._edge_active_demand.get(edge, 0.0) - demand)
+            if next_demand == 0.0:
+                self._edge_active_demand.pop(edge, None)
+            else:
+                self._edge_active_demand[edge] = next_demand
+        return self._pressure_link_events(dispatch_time, edges)
+
+    def _route_pressure_edges(self, route: Route) -> tuple[PressureEdge, ...]:
+        edges: list[PressureEdge] = []
+        seen: set[PressureEdge] = set()
+        for left, right in zip(route.path, route.path[1:]):
+            edge = self._pressure_edge_for_path_step(left, right)
+            if edge is None or edge in seen:
+                continue
+            seen.add(edge)
+            edges.append(edge)
+        return tuple(edges)
+
+    def _pressure_edge_for_path_step(
+        self,
+        left: str,
+        right: str,
+    ) -> PressureEdge | None:
+        for edge in ((left, right), (right, left), tuple(sorted((left, right)))):
+            if self._link_for_pressure_edge(edge) is not None:
+                return edge
+        return None
+
+    def _link_for_pressure_edge(self, edge: PressureEdge) -> LinkState | None:
+        if edge in self._active_links:
+            return self._active_links[edge]
+        if edge in self._active_space_links:
+            return self._active_space_links[edge]
+        if edge in self._last_links:
+            return self._last_links[edge]
+        for link in self._static_links_for_routing():
+            if (link.source_id, link.target_id) == edge:
+                return link
+        return None
+
+    def _edge_utilization(self, edge: PressureEdge) -> float:
+        link = self._link_for_pressure_edge(edge)
+        if link is None or link.capacity <= 0.0:
+            return 1.0
+        return min(1.0, self._edge_active_demand.get(edge, 0.0) / link.capacity)
+
+    def _pressure_link_events(
+        self,
+        dispatch_time: float,
+        edges: tuple[PressureEdge, ...],
+    ) -> tuple[SimEvent, ...]:
+        events: list[SimEvent] = []
+        for edge in sorted(set(edges)):
+            link = self._link_for_pressure_edge(edge)
+            if link is None:
+                continue
+            events.append(
+                self._event(
+                    dispatch_time=dispatch_time,
+                    target=self._metrics_target,
+                    event_type=EventType.LINK_UPDATE.value,
+                    payload=_link_with_utilization(link, self._edge_utilization(edge)),
+                )
+            )
+        return tuple(events)
 
     def _update_for_state(
         self,
@@ -809,6 +950,20 @@ class PositionDrivenNetworkEngine(SimulationModule):
             ),
         )
 
+    def _flow_release_event(
+        self,
+        dispatch_time: float,
+        request: FlowRequest,
+        route: Route,
+    ) -> SimEvent:
+        completion_time = dispatch_time + route.latency
+        return self._event(
+            dispatch_time=completion_time,
+            target=self._module_name,
+            event_type=_NETWORK_FLOW_RELEASE,
+            payload=request.flow_id,
+        )
+
     def _event(
         self,
         dispatch_time: float,
@@ -955,6 +1110,43 @@ def _delivered_flow_capacity(route: Route) -> float:
     if route.demand_capacity is None:
         return float(route.capacity)
     return float(min(route.capacity, route.demand_capacity))
+
+
+def _route_demand_capacity(request: FlowRequest, route: Route) -> float:
+    if route.demand_capacity is not None:
+        return float(route.demand_capacity)
+    return float(request.demand_capacity)
+
+
+def _pressure_loss_rate(utilization: float) -> float:
+    if utilization <= _LOSS_UTILIZATION_THRESHOLD:
+        return 0.0
+    return min(
+        _MAX_PRESSURE_LOSS_RATE,
+        max(0.0, (utilization - _LOSS_UTILIZATION_THRESHOLD) * 0.5),
+    )
+
+
+def _flow_id_from_release_payload(payload: object) -> str:
+    if isinstance(payload, str):
+        return payload
+    if isinstance(payload, dict) and "flow_id" in payload:
+        return str(payload["flow_id"])
+    raise TypeError("NETWORK_FLOW_RELEASE payload must be a flow id")
+
+
+def _link_with_utilization(link: LinkState, utilization: float) -> LinkState:
+    return LinkState(
+        source_id=link.source_id,
+        target_id=link.target_id,
+        latency=link.latency,
+        capacity=link.capacity,
+        availability=link.availability,
+        link_id=link.link_id,
+        channel_id=link.channel_id,
+        medium=link.medium,
+        utilization=max(0.0, min(1.0, utilization)),
+    )
 
 
 def _vector3(value: Any) -> tuple[float, float, float]:

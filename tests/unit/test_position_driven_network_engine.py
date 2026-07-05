@@ -363,6 +363,50 @@ def test_flow_arrival_outputs_route_from_active_access() -> None:
     )
 
 
+def test_concurrent_flows_emit_link_pressure_and_release_updates() -> None:
+    kernel = SimulationKernel()
+    network = _engine()
+    metrics = MetricsSink()
+    compute = ComputeSink()
+    kernel.register_module(network)
+    kernel.register_module(metrics)
+    kernel.register_module(compute)
+    kernel.schedule_event(
+        _event("orbit", EventType.ORBIT_UPDATE.value, _state((7000.0, 0.0, 0.0)))
+    )
+    kernel.schedule_event(
+        _event(
+            "flow-a",
+            EventType.FLOW_ARRIVAL.value,
+            FlowRequest("flow-a", "user-east", "node-a", 30.0),
+            1.0,
+        )
+    )
+    kernel.schedule_event(
+        _event(
+            "flow-b",
+            EventType.FLOW_ARRIVAL.value,
+            FlowRequest("flow-b", "user-east", "node-a", 30.0),
+            1.0,
+        )
+    )
+
+    kernel.run()
+
+    assert len(compute.routes) == 2
+    assert compute.routes[0].loss_rate == 0.0
+    assert compute.routes[1].loss_rate == pytest.approx(0.1)
+    assert compute.routes[1].latency > compute.routes[0].latency
+    link_utilizations = [
+        event.payload.utilization
+        for event in metrics.events
+        if event.event_type == EventType.LINK_UPDATE
+        and isinstance(event.payload, LinkState)
+        and event.payload.utilization is not None
+    ]
+    assert link_utilizations == pytest.approx([0.6, 1.0, 0.6, 0.0])
+
+
 def test_application_runtime_changes_route_availability_through_flow_demand() -> None:
     kernel = SimulationKernel()
     network = PositionDrivenNetworkEngine(
