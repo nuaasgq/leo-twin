@@ -65,6 +65,16 @@ if ($null -eq $runtimeStatus.generated_config) {
 if ($null -eq $runtimeStatus.generated_config.backend_summary) {
     throw "Backend runtime status is missing generated_config.backend_summary."
 }
+$backendSummary = $runtimeStatus.generated_config.backend_summary
+if ($null -eq $backendSummary.derived_constellation_summary) {
+    throw "Backend runtime status is missing generated_config.backend_summary.derived_constellation_summary."
+}
+if ($null -eq $backendSummary.traffic_demand_summary) {
+    throw "Backend runtime status is missing generated_config.backend_summary.traffic_demand_summary."
+}
+if ($null -eq $backendSummary.compute_resource_summary) {
+    throw "Backend runtime status is missing generated_config.backend_summary.compute_resource_summary."
+}
 
 $consoleCheck = Assert-HttpOk -Name "Frontend console" -Url $FrontendUrl
 $dashboardCheck = Assert-HttpOk -Name "Frontend dashboard" -Url $DashboardUrl
@@ -76,6 +86,11 @@ $summary = [ordered]@{
     lifecycle_state = $runtimeStatus.status.lifecycle_state
     simulation_status = $runtimeStatus.status.status
     session_id = $runtimeStatus.status.session_id
+    satellite_count = $backendSummary.derived_constellation_summary.satellite_count
+    user_count = $runtimeStatus.generated_config.user_count
+    constellation_profile = $backendSummary.derived_constellation_summary.profile
+    traffic_class = $backendSummary.traffic_demand_summary.traffic_class
+    compute_node_count = $backendSummary.compute_resource_summary.compute_node_count
     console_url = $FrontendUrl
     console_ms = $consoleCheck.ElapsedMs
     dashboard_url = $DashboardUrl
@@ -89,6 +104,9 @@ else {
     Write-Host "Runtime health smoke passed."
     Write-Host "  lifecycle_state: $($summary.lifecycle_state)"
     Write-Host "  simulation status: $($summary.simulation_status)"
+    Write-Host "  constellation: $($summary.satellite_count) satellites / $($summary.user_count) users / $($summary.constellation_profile)"
+    Write-Host "  traffic class: $($summary.traffic_class)"
+    Write-Host "  compute nodes: $($summary.compute_node_count)"
     Write-Host "  runtime status: $($summary.runtime_status_ms) ms"
     Write-Host "  console: $($summary.console_url) ($($summary.console_ms) ms)"
     Write-Host "  dashboard: $($summary.dashboard_url) ($($summary.dashboard_ms) ms)"

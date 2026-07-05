@@ -432,6 +432,11 @@ The following issue-sized slices have now been delivered on
   - Maps to suggestions 18, 91, 94, and 95.
   - Runtime health smoke now reports backend status, console, and dashboard
     endpoint timings in both human-readable and JSON outputs.
+- `test(runtime): validate health product summary`
+  - Maps to suggestions 1, 5, 76-82, and 91-95.
+  - Runtime health smoke now verifies backend-derived constellation, traffic,
+    and compute summaries and reports satellite count, user count, profile,
+    traffic class, and compute node count.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected

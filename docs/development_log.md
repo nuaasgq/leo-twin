@@ -4978,3 +4978,32 @@ change.
     measurements.
 - Recommended follow-up:
   - Add threshold checks only after stable local/CI baselines are established.
+
+## 2026-07-05 - Runtime Health Product Summary v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: extend `scripts/smoke_runtime_health.ps1` so the read-only smoke check
+  validates backend-derived product summaries, including constellation,
+  traffic demand, and compute resource summaries. Human and JSON outputs now
+  include satellite count, user count, constellation profile, traffic class,
+  and compute node count.
+- Changed files/modules:
+  - `scripts/smoke_runtime_health.ps1`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\smoke_runtime_health.ps1`
+    - Result: passed; printed runtime product summary fields.
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\smoke_runtime_health.ps1 -JsonSummary`
+    - Result: passed; emitted product summary fields in JSON.
+- Problems encountered:
+  - None. The script remains read-only and does not alter runtime configuration.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The smoke check validates presence and reporting, not semantic correctness
+    of every backend-derived assumption.
+- Recommended follow-up:
+  - Add optional expected-value parameters for satellite count, user count, and
+    traffic class once acceptance scenarios are selected by script.
