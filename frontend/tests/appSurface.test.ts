@@ -4,6 +4,7 @@ import {
   backpressureNoticeText,
   buildRuntimeRibbonSummary,
   buildSurfaceSyncSummary,
+  connectionDiagnosticItems,
   controlErrorMessage,
   defaultRuntimeProgressAnchor,
   fidelityNoticeText,
@@ -300,6 +301,24 @@ describe("runtimeWebSocketErrorMessage", () => {
       "scripts\\sees_launcher.ps1 status"
     );
     expect(runtimeWebSocketErrorMessage("control")).toContain("restart_leo_twin.bat");
+  });
+});
+
+describe("connectionDiagnosticItems", () => {
+  it("maps channel health into compact topbar diagnostics", () => {
+    expect(
+      connectionDiagnosticItems({
+        http: "live",
+        control: "degraded",
+        events: "connecting",
+        state: "idle"
+      })
+    ).toEqual([
+      { channel: "http", label: "HTTP", status: "live", statusLabel: "正常" },
+      { channel: "control", label: "控制", status: "degraded", statusLabel: "异常" },
+      { channel: "events", label: "事件", status: "connecting", statusLabel: "连接中" },
+      { channel: "state", label: "状态", status: "idle", statusLabel: "空闲" }
+    ]);
   });
 });
 

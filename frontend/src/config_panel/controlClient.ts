@@ -46,6 +46,7 @@ export interface ControlChannelClientOptions {
   url?: string;
   createWebSocket?: ControlWebSocketFactory;
   onMessage?: (message: ControlAck) => void;
+  onConnectionOpen?: (url: string) => void;
   onConnectionIssue?: (issue: ControlConnectionIssue) => void;
 }
 
@@ -53,6 +54,7 @@ export class ControlChannelClient {
   private readonly url: string;
   private readonly createWebSocket: ControlWebSocketFactory;
   private readonly onMessage: (message: ControlAck) => void;
+  private readonly onConnectionOpen: (url: string) => void;
   private readonly onConnectionIssue: (issue: ControlConnectionIssue) => void;
   private socket: ControlWebSocketLike | null = null;
   private readonly pendingMessages: string[] = [];
@@ -62,6 +64,7 @@ export class ControlChannelClient {
     this.url = options.url ?? websocketUrl("/control");
     this.createWebSocket = options.createWebSocket ?? ((url) => new WebSocket(url));
     this.onMessage = options.onMessage ?? (() => undefined);
+    this.onConnectionOpen = options.onConnectionOpen ?? (() => undefined);
     this.onConnectionIssue = options.onConnectionIssue ?? (() => undefined);
   }
 
@@ -73,6 +76,7 @@ export class ControlChannelClient {
     const socket = this.createWebSocket(this.url);
     this.socket = socket;
     socket.onopen = () => {
+      this.onConnectionOpen(this.url);
       this.flushPending();
     };
     socket.onmessage = (message) => {

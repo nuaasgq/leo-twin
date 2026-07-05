@@ -3434,3 +3434,43 @@ change.
 - Recommended follow-up:
   - Add a compact connection diagnostics row that distinguishes HTTP status,
     control WebSocket, event stream, and state stream health at a glance.
+
+## 2026-07-05 - Frontend Connection Diagnostics Row v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a compact topbar connection diagnostics row for HTTP, control
+  WebSocket, event stream, and state stream health. The App now tracks channel
+  open/error transitions and renders each channel as idle, connecting, normal,
+  or abnormal.
+- Changed files/modules:
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/src/config_panel/controlClient.ts`
+  - `frontend/src/stream/websocket_client/index.ts`
+  - `frontend/tests/appSurface.test.ts`
+  - `frontend/tests/controlClient.test.ts`
+  - `frontend/tests/websocketClient.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- controlClient.test.ts websocketClient.test.ts appSurface.test.ts`
+    - Result: passed, 24 files / 167 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+  - `git diff --check`
+    - Result: passed with warnings only for the existing uncommitted
+      runtime/generated config files.
+- Problems encountered:
+  - The previous WebSocket diagnostics only surfaced failures. This task added
+    open callbacks so the UI can distinguish live channels from connecting or
+    idle channels without inferring from aggregate connection state.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - Stream health is still connection-level. It does not yet show cursor lag or
+    backpressure per stream.
+- Recommended follow-up:
+  - Add cursor/backpressure counters to the diagnostics row using backend
+    runtime status once those fields are stable.

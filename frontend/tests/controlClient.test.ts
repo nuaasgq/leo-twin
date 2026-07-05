@@ -68,6 +68,7 @@ describe("ControlChannelClient", () => {
 
   it("reports unexpected control websocket issues", () => {
     const sockets: MockControlSocket[] = [];
+    const opened: string[] = [];
     const issues: ControlConnectionIssue[] = [];
     const client = new ControlChannelClient({
       url: "ws://test/control",
@@ -76,13 +77,16 @@ describe("ControlChannelClient", () => {
         sockets.push(socket);
         return socket;
       },
+      onConnectionOpen: (url) => opened.push(url),
       onConnectionIssue: (issue) => issues.push(issue)
     });
 
     client.connect();
+    sockets[0].open();
     sockets[0].error();
     sockets[0].closeUnexpected(1006, "network");
 
+    expect(opened).toEqual(["ws://test/control"]);
     expect(issues).toEqual([
       { type: "error", url: "ws://test/control" },
       {

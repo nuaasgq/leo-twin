@@ -30,6 +30,17 @@ import "./App.css";
 const RUNTIME_STATUS_POLL_MS = 250;
 const RUNTIME_PROGRESS_TICK_MS = 100;
 
+type RuntimeConnectionChannel = "http" | "control" | "events" | "state";
+type RuntimeConnectionStatus = "idle" | "connecting" | "live" | "degraded";
+type RuntimeConnectionHealth = Record<RuntimeConnectionChannel, RuntimeConnectionStatus>;
+
+const DEFAULT_RUNTIME_CONNECTION_HEALTH: RuntimeConnectionHealth = {
+  http: "connecting",
+  control: "connecting",
+  events: "idle",
+  state: "idle"
+};
+
 const CesiumGlobe = lazy(async () => {
   const module = await import("../3d/cesium/CesiumGlobe");
   return { default: module.CesiumGlobe };
@@ -63,6 +74,9 @@ export function App() {
   const snapshot = useWorldSnapshot(snapshotEngine);
   const [connectionState, setConnectionState] = useState<"connecting" | "live" | "degraded">(
     "connecting"
+  );
+  const [connectionHealth, setConnectionHealth] = useState<RuntimeConnectionHealth>(
+    DEFAULT_RUNTIME_CONNECTION_HEALTH
   );
   const [scenarioConfig, setScenarioConfig] = useState<ScenarioConfig | null>(null);
   const [generatedConfig, setGeneratedConfig] = useState<GeneratedScenarioConfig | null>(null);
@@ -109,12 +123,23 @@ export function App() {
     []
   );
 
+  const setConnectionChannel = useCallback(
+    (channel: RuntimeConnectionChannel, status: RuntimeConnectionStatus) => {
+      setConnectionHealth((previous) =>
+        previous[channel] === status ? previous : { ...previous, [channel]: status }
+      );
+    },
+    []
+  );
+
   const closeStreams = useCallback(() => {
     streamClientRef.current?.close();
     streamRouterRef.current?.close();
     streamClientRef.current = null;
     streamRouterRef.current = null;
-  }, []);
+    setConnectionChannel("events", "idle");
+    setConnectionChannel("state", "idle");
+  }, [setConnectionChannel]);
 
   const resetWorld = useCallback(
     (scenario: ScenarioConfig | null) => {
@@ -144,13 +169,15 @@ export function App() {
     snapshotEngine.applyScenarioConfig(effectiveScenario);
     snapshotEngine.applySnapshot(visibleSnapshot);
     snapshotEngine.publishNow();
+    setConnectionChannel("http", "live");
     return { scenario: effectiveScenario, runtime };
-  }, [snapshotEngine]);
+  }, [setConnectionChannel, snapshotEngine]);
 
   const handleRuntimeApiError = useCallback((error: unknown) => {
     setConnectionState("degraded");
+    setConnectionChannel("http", "degraded");
     setControlError(runtimeApiErrorMessage(error));
-  }, []);
+  }, [setConnectionChannel]);
 
   const startStreams = useCallback(
     (
@@ -172,12 +199,18 @@ export function App() {
         }
       );
       const router = new EventRouter(snapshotEngine, { throttleLayer });
+      setConnectionChannel("events", "connecting");
+      setConnectionChannel("state", "connecting");
       const client = new WebSocketStreamClient(router, {
         batchSize: 500,
         flushIntervalMs: 40,
         stateStreamEnabled: true,
+        onConnectionOpen: (channel) => {
+          setConnectionChannel(channel, "live");
+        },
         onConnectionIssue: (issue) => {
           setConnectionState("degraded");
+          setConnectionChannel(issue.channel, "degraded");
           setControlError(runtimeWebSocketErrorMessage(issue.channel));
         }
       });
@@ -185,7 +218,7 @@ export function App() {
       streamClientRef.current = client;
       client.connect();
     },
-    [closeStreams, resetWorld, snapshotEngine]
+    [closeStreams, resetWorld, setConnectionChannel, snapshotEngine]
   );
 
   const controlClient = useMemo(
@@ -251,12 +284,24 @@ export function App() {
             }
           }
         },
+        onConnectionOpen: () => {
+          setConnectionChannel("control", "live");
+        },
         onConnectionIssue: () => {
           setConnectionState("degraded");
+          setConnectionChannel("control", "degraded");
           setControlError(runtimeWebSocketErrorMessage("control"));
         }
       }),
-    [closeStreams, handleRuntimeApiError, loadControlState, resetWorld, snapshotEngine, startStreams]
+    [
+      closeStreams,
+      handleRuntimeApiError,
+      loadControlState,
+      resetWorld,
+      setConnectionChannel,
+      snapshotEngine,
+      startStreams
+    ]
   );
 
   useEffect(() => {
@@ -368,6 +413,7 @@ export function App() {
     eventCount: displayEventCount,
     runtimeStatus
   });
+  const connectionDiagnostics = connectionDiagnosticItems(connectionHealth);
   const fidelitySummary = selectFidelitySummary(runtimeStatus, generatedConfig, snapshot);
 
   const sendRuntimeControl = useCallback(
@@ -429,6 +475,14 @@ export function App() {
           </div>
           <div className={`connection-pill ${connectionState}`}>
             {connectionStateLabel(connectionState)}
+          </div>
+          <div className="connection-diagnostics" aria-label="连接诊断">
+            {connectionDiagnostics.map((item) => (
+              <span className={`connection-diagnostic ${item.status}`} key={item.channel}>
+                <small>{item.label}</small>
+                <strong>{item.statusLabel}</strong>
+              </span>
+            ))}
           </div>
         </div>
       </header>
@@ -1212,6 +1266,50 @@ function connectionStateLabel(state: "connecting" | "live" | "degraded"): string
     return "已连接";
   }
   return "连接异常";
+}
+
+export interface ConnectionDiagnosticItem {
+  channel: RuntimeConnectionChannel;
+  label: string;
+  status: RuntimeConnectionStatus;
+  statusLabel: string;
+}
+
+export function connectionDiagnosticItems(
+  health: RuntimeConnectionHealth
+): readonly ConnectionDiagnosticItem[] {
+  return (["http", "control", "events", "state"] as const).map((channel) => ({
+    channel,
+    label: connectionChannelLabel(channel),
+    status: health[channel],
+    statusLabel: connectionStatusLabel(health[channel])
+  }));
+}
+
+function connectionChannelLabel(channel: RuntimeConnectionChannel): string {
+  if (channel === "http") {
+    return "HTTP";
+  }
+  if (channel === "control") {
+    return "控制";
+  }
+  if (channel === "events") {
+    return "事件";
+  }
+  return "状态";
+}
+
+function connectionStatusLabel(status: RuntimeConnectionStatus): string {
+  if (status === "idle") {
+    return "空闲";
+  }
+  if (status === "connecting") {
+    return "连接中";
+  }
+  if (status === "live") {
+    return "正常";
+  }
+  return "异常";
 }
 
 function runtimeStatusIsProgressing(status: RuntimeStatusPayload): boolean {

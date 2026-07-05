@@ -206,6 +206,59 @@ body {
   color: #ffd08a;
 }
 
+.connection-diagnostics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(42px, 1fr));
+  gap: 4px;
+  min-width: 210px;
+}
+
+.connection-diagnostic {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  border: 1px solid #263847;
+  border-radius: 6px;
+  padding: 4px 5px;
+  background: #0b1219;
+}
+
+.connection-diagnostic small,
+.connection-diagnostic strong {
+  min-width: 0;
+  overflow: hidden;
+  line-height: 1;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.connection-diagnostic small {
+  color: var(--app-muted);
+  font-size: 9px;
+}
+
+.connection-diagnostic strong {
+  color: #dce5e8;
+  font-size: 10px;
+}
+
+.connection-diagnostic.live {
+  border-color: #2f8058;
+}
+
+.connection-diagnostic.live strong {
+  color: #9bffcb;
+}
+
+.connection-diagnostic.degraded {
+  border-color: #9f6b28;
+}
+
+.connection-diagnostic.degraded strong {
+  color: #ffd08a;
+}
+
 .workspace {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(380px, 28vw);
@@ -2414,6 +2467,11 @@ body {
 
   .sync-pill {
     flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .connection-diagnostics {
+    flex: 1 1 100%;
     min-width: 0;
   }
 

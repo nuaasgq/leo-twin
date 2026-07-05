@@ -58,6 +58,7 @@ describe("WebSocketStreamClient", () => {
 
   it("reports unexpected event and state stream socket issues", () => {
     const sockets: MockSocket[] = [];
+    const opened: string[] = [];
     const issues: WebSocketConnectionIssue[] = [];
     const store = new ObservabilityStore();
     const router = new EventRouter(store);
@@ -69,13 +70,17 @@ describe("WebSocketStreamClient", () => {
         sockets.push(socket);
         return socket;
       },
+      onConnectionOpen: (channel, url) => opened.push(`${channel}:${url}`),
       onConnectionIssue: (issue) => issues.push(issue)
     });
 
     client.connect();
+    sockets[0].open();
+    sockets[1].open();
     sockets[0].error();
     sockets[1].closeUnexpected(1006, "network");
 
+    expect(opened).toEqual(["events:ws://test/events", "state:ws://test/state"]);
     expect(issues).toEqual([
       { channel: "events", type: "error", url: "ws://test/events" },
       {
@@ -101,6 +106,10 @@ class MockSocket implements WebSocketLike {
   closed = false;
 
   constructor(readonly url: string) {}
+
+  open(): void {
+    this.onopen?.({} as Event);
+  }
 
   emit(payload: unknown): void {
     this.onmessage?.({ data: JSON.stringify(payload) } as MessageEvent<string>);

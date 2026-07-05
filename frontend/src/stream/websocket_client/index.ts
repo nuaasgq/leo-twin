@@ -11,6 +11,7 @@ export interface StreamClientOptions {
   playbackLayer?: EventPlaybackLayer;
   stateStreamEnabled?: boolean;
   createWebSocket?: WebSocketFactory;
+  onConnectionOpen?: (channel: WebSocketChannel, url: string) => void;
   onConnectionIssue?: (issue: WebSocketConnectionIssue) => void;
 }
 
@@ -40,6 +41,7 @@ export class WebSocketStreamClient {
   private readonly batchSize: number;
   private readonly flushIntervalMs: number;
   private readonly createWebSocket: WebSocketFactory;
+  private readonly onConnectionOpen: (channel: WebSocketChannel, url: string) => void;
   private readonly onConnectionIssue: (issue: WebSocketConnectionIssue) => void;
   private readonly playbackLayer: EventPlaybackLayer | null;
   private readonly stateStreamEnabled: boolean;
@@ -60,6 +62,7 @@ export class WebSocketStreamClient {
     this.playbackLayer = options.playbackLayer ?? null;
     this.stateStreamEnabled = options.stateStreamEnabled ?? true;
     this.createWebSocket = options.createWebSocket ?? ((url) => new WebSocket(url));
+    this.onConnectionOpen = options.onConnectionOpen ?? (() => undefined);
     this.onConnectionIssue = options.onConnectionIssue ?? (() => undefined);
   }
 
@@ -130,6 +133,11 @@ export class WebSocketStreamClient {
     channel: WebSocketChannel,
     url: string
   ): void {
+    socket.onopen = () => {
+      if (!this.closing) {
+        this.onConnectionOpen(channel, url);
+      }
+    };
     socket.onerror = () => {
       if (!this.closing) {
         this.onConnectionIssue({ channel, type: "error", url });
