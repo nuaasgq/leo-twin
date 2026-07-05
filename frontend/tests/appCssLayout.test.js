@@ -35,4 +35,10 @@ describe("dashboard scroll layout CSS", () => {
     expect(appCss).toContain("position: relative;");
     expect(appCss).toContain("margin: 14px 18px 0;");
   });
+
+  it("shows visual layer budget details inline in the globe controls", () => {
+    expect(appCss).toContain(".globe-layer-summary small");
+    expect(appCss).toContain("grid-column: 1 / -1;");
+    expect(appCss).toContain("font-size: 9px;");
+  });
 });

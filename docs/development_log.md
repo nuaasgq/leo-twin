@@ -5,6 +5,35 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Visual Layer Budget Explanation v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending in this commit
+- Scope: make the 3D visual layer buttons explain their render budget and
+  effect inline instead of relying on hover-only titles.
+- Changed files/modules:
+  - `frontend/src/3d/cesium/CesiumGlobe.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/appCssLayout.test.js`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `pnpm --dir frontend test -- appCssLayout.test.js visualLayerLimits.test.ts`
+    - Result: passed, 25 files / 247 tests.
+  - Bundled Node:
+    `pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The layer controls already had deterministic summaries, but the detailed
+    effect text was only exposed through `title`, making the buttons feel
+    ineffective unless users hovered each summary chip.
+- Known remaining issues:
+  - This remains a render-budget explanation; it does not add per-layer
+    animated before/after previews.
+- Recommended follow-up:
+  - Add a selected-layer focus mode so toggling links, beams, or tracks can
+    briefly highlight the affected entities in the 3D view.
+
 ## 2026-07-05 - Runtime Parameter Lock v1
 
 - Branch: `feature/T164-dashboard-observability-v1`

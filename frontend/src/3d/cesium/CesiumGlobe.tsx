@@ -529,6 +529,7 @@ export function CesiumGlobe({
             <span key={item.label} title={item.detail}>
               <strong>{item.label}</strong>
               <em>{item.value}</em>
+              <small>{item.detail}</small>
             </span>
           ))}
         </div>
