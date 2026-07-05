@@ -23,6 +23,7 @@ import {
   buildDataPanelTrafficDisplay,
   buildDataPanelUserRequestHistory,
   buildRuntimeKpiTelemetrySamples,
+  buildRuntimeDetailWindowNote,
   buildRuntimeDetailSourceBadge,
   buildSatelliteResourceRows,
   buildTopComputeNodeRows,
@@ -250,6 +251,71 @@ describe("runtime detail page selection", () => {
       120
     );
     expect(selectRuntimeUserRequestSummary(runtimeStatus, null)?.cursor).toBeUndefined();
+  });
+});
+
+describe("buildRuntimeDetailWindowNote", () => {
+  it("explains when the backend detail window covers a 1200-node scenario", () => {
+    expect(
+      buildRuntimeDetailWindowNote(
+        {
+          version: "v1",
+          source: "BACKEND_RUNTIME_SNAPSHOT",
+          summary_scope: "PAGE",
+          cursor: 0,
+          limit: 5000,
+          has_more: false,
+          user_count: 1200,
+          item_count: 1200,
+          active_user_count: 80,
+          compute_service_user_count: 20,
+          waiting_user_count: 4,
+          hidden_user_count: 0,
+          items: []
+        },
+        "users"
+      )
+    ).toBe("后端窗口 1-1,200 / 1,200；当前窗口覆盖全部明细");
+  });
+
+  it("reports remaining cursor-readable rows when the backend window is partial", () => {
+    expect(
+      buildRuntimeDetailWindowNote(
+        {
+          version: "v1",
+          source: "BACKEND_RUNTIME_SNAPSHOT",
+          summary_scope: "PAGE",
+          cursor: 5000,
+          limit: 5000,
+          next_cursor: 10000,
+          has_more: true,
+          satellite_count: 12000,
+          item_count: 5000,
+          hidden_satellite_count: 2000,
+          items: []
+        },
+        "satellites"
+      )
+    ).toBe("后端窗口 5,001-10,000 / 12,000；仍有 2,000 行可通过游标继续读取");
+  });
+
+  it("omits the note for legacy status summaries without cursor metadata", () => {
+    expect(
+      buildRuntimeDetailWindowNote(
+        {
+          version: "v1",
+          source: "BACKEND_RUNTIME_SNAPSHOT",
+          user_count: 10,
+          item_count: 10,
+          active_user_count: 1,
+          compute_service_user_count: 0,
+          waiting_user_count: 0,
+          hidden_user_count: 0,
+          items: []
+        },
+        "users"
+      )
+    ).toBeNull();
   });
 });
 

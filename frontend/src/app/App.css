@@ -2073,7 +2073,8 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
 }
 
 .data-panel-detail-pager span,
-.data-panel-detail-pager strong {
+.data-panel-detail-pager strong,
+.data-panel-detail-pager small {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2082,6 +2083,11 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
 
 .data-panel-detail-pager strong {
   color: var(--app-text);
+}
+
+.data-panel-detail-pager small {
+  grid-column: 1 / -1;
+  color: var(--app-dim);
 }
 
 .data-panel-detail-pager button {

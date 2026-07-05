@@ -33,8 +33,8 @@ import "./App.css";
 
 const RUNTIME_STATUS_POLL_MS = 250;
 const RUNTIME_PROGRESS_TICK_MS = 100;
-const RUNTIME_DETAIL_USER_PAGE_LIMIT = 1000;
-const RUNTIME_DETAIL_SATELLITE_PAGE_LIMIT = 1500;
+const RUNTIME_DETAIL_USER_PAGE_LIMIT = 5000;
+const RUNTIME_DETAIL_SATELLITE_PAGE_LIMIT = 5000;
 
 type RuntimeConnectionChannel = "http" | "control" | "events" | "state";
 type RuntimeConnectionStatus = "idle" | "connecting" | "live" | "degraded";

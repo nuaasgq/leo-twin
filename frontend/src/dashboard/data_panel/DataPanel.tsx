@@ -189,6 +189,14 @@ export const DataPanel = memo(function DataPanel({
     runtimeStatus.satellite_kpi_slices_v1,
     satelliteServiceSummary
   );
+  const userDetailWindowNote = buildRuntimeDetailWindowNote(
+    userRequestSummary,
+    "users"
+  );
+  const satelliteDetailWindowNote = buildRuntimeDetailWindowNote(
+    satelliteServiceSummary,
+    "satellites"
+  );
   const satelliteResourceHistory = buildDataPanelSatelliteResourceHistory(
     runtimeStatus.satellite_kpi_history_v1,
     selectedHistorySatelliteId
@@ -832,6 +840,7 @@ export const DataPanel = memo(function DataPanel({
           <DetailPaginationControls
             page={userDetailWindow}
             label="用户明细"
+            windowNote={userDetailWindowNote}
             onPrevious={() => setUserDetailPage(Math.max(0, userDetailWindow.pageIndex - 1))}
             onNext={() => setUserDetailPage(userDetailWindow.pageIndex + 1)}
           />
@@ -854,6 +863,7 @@ export const DataPanel = memo(function DataPanel({
           <DetailPaginationControls
             page={satelliteDetailWindow}
             label="卫星明细"
+            windowNote={satelliteDetailWindowNote}
             onPrevious={() =>
               setSatelliteDetailPage(Math.max(0, satelliteDetailWindow.pageIndex - 1))
             }
@@ -878,6 +888,43 @@ export function selectRuntimeSatelliteServiceSummary(
   runtimeDetailPages: RuntimeDetailPages | null | undefined
 ): RuntimeSatelliteServiceSummaryV1 | null | undefined {
   return runtimeDetailPages?.satellites ?? runtimeStatus.satellite_service_summary_v1;
+}
+
+type RuntimeDetailWindowKind = "users" | "satellites";
+
+export function buildRuntimeDetailWindowNote(
+  summary:
+    | RuntimeUserRequestSummaryV1
+    | RuntimeSatelliteServiceSummaryV1
+    | null
+    | undefined,
+  kind: RuntimeDetailWindowKind
+): string | null {
+  if (summary === null || summary === undefined) {
+    return null;
+  }
+  if (typeof summary.cursor !== "number" || typeof summary.item_count !== "number") {
+    return null;
+  }
+  const cursor = Math.max(0, Math.floor(summary.cursor));
+  const itemCount = Math.max(0, Math.floor(summary.item_count));
+  const totalCount =
+    kind === "users"
+      ? (summary as RuntimeUserRequestSummaryV1).user_count
+      : (summary as RuntimeSatelliteServiceSummaryV1).satellite_count;
+  const hiddenCount =
+    kind === "users"
+      ? (summary as RuntimeUserRequestSummaryV1).hidden_user_count
+      : (summary as RuntimeSatelliteServiceSummaryV1).hidden_satellite_count;
+  const startIndex = itemCount === 0 ? 0 : cursor + 1;
+  const endIndex = cursor + itemCount;
+  const windowText = `后端窗口 ${formatCount(startIndex)}-${formatCount(endIndex)} / ${formatCount(
+    Math.max(itemCount, totalCount, endIndex)
+  )}`;
+  if (summary.has_more === true || hiddenCount > 0) {
+    return `${windowText}；仍有 ${formatCount(Math.max(0, hiddenCount))} 行可通过游标继续读取`;
+  }
+  return `${windowText}；当前窗口覆盖全部明细`;
 }
 
 function RouteConstraintTable({ rows }: { rows: DataPanelRouteConstraintRows }) {
@@ -940,11 +987,13 @@ function TopComputeNodeTable({ rows }: { rows: readonly TopComputeNodeRow[] }) {
 function DetailPaginationControls<T>({
   page,
   label,
+  windowNote,
   onPrevious,
   onNext
 }: {
   page: DetailRowPage<T>;
   label: string;
+  windowNote?: string | null;
   onPrevious: () => void;
   onNext: () => void;
 }) {
@@ -953,6 +1002,7 @@ function DetailPaginationControls<T>({
       <div className="data-panel-detail-pager">
         <span>{label}</span>
         <strong>显示全部 {formatCount(page.totalCount)} 行</strong>
+        {windowNote ? <small>{windowNote}</small> : null}
       </div>
     );
   }
@@ -973,6 +1023,7 @@ function DetailPaginationControls<T>({
       >
         下一页
       </button>
+      {windowNote ? <small>{windowNote}</small> : null}
     </div>
   );
 }

@@ -5,6 +5,38 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Dashboard Detail Window Visibility v2
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending in this commit
+- Scope: make the standalone dashboard request a full 5,000-row backend
+  detail window for users and satellites, and show the backend cursor window
+  range inside each detail pager so 120/1200-node scenarios are visibly
+  complete when they fit in the current backend page.
+- Changed files/modules:
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `pnpm --dir frontend test -- dataPanel.test.ts api.test.ts appSurface.test.ts`
+    - Result: passed, 25 files / 255 tests.
+  - `git diff --check -- frontend/src/app/App.tsx frontend/src/dashboard/data_panel/DataPanel.tsx frontend/src/app/App.css frontend/tests/dataPanel.test.ts`
+    - Result: passed.
+  - Bundled Node:
+    `pnpm --dir frontend build`
+    - Result: passed; Vite reported the existing large `DataPanel` chunk
+      warning.
+- Problems encountered:
+  - The shell PATH `pnpm` invocation could not find `node`; validation was
+    rerun with the Codex bundled Node and pnpm paths prepended.
+- Known remaining issues / follow-up:
+  - The dashboard now covers current 120/1200-node detail windows in one
+    backend page. A later task should add explicit remote cursor next-window
+    controls for scenarios above 5,000 detail rows.
+
 ## 2026-07-05 - Runtime Detail Pagination API v1
 
 - Branch: `feature/T164-dashboard-observability-v1`
