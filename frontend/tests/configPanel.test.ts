@@ -297,6 +297,30 @@ describe("ConfigPanel priority controls", () => {
     expect(markup).toContain('role="alert"');
     expect(markup).toContain("实时交互演示安全上限");
   });
+
+  it("renders runtime action buttons disabled while a control command is pending", () => {
+    const markup = renderToStaticMarkup(
+      createElement(ConfigPanel, {
+        scenario: defaultScenario(),
+        runtime: {
+          ...runtimeStatus("STOPPED", true),
+          last_action: "START_PENDING"
+        },
+        progress: {
+          sim_time: 0,
+          duration: 600,
+          event_count: 0
+        },
+        generatedConfig: null,
+        onRuntimeControl: () => undefined
+      })
+    );
+
+    expect(markup).toContain('<button type="button" disabled="">初始化</button>');
+    expect(markup).toContain('<button type="button" disabled="">开始</button>');
+    expect(markup).toContain('<button type="button" disabled="">停止</button>');
+    expect(markup).toContain('<button type="button" disabled="">重置</button>');
+  });
 });
 
 describe("scale preset summaries", () => {

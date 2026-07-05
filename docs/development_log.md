@@ -5785,3 +5785,23 @@ change.
 - Recommended follow-up:
   - Add Playwright browser control smoke before the next large frontend control
     refactor.
+
+## 2026-07-05 - Frontend Pending Button Render Test v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a rendered ConfigPanel regression test confirming pending runtime
+  control states disable the visible initialize/start/stop/reset buttons.
+- Changed files/modules:
+  - `frontend/tests/configPanel.test.ts`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `$env:PATH='C:\Users\沈高青\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin;C:\Users\沈高青\.cache\codex-runtimes\codex-primary-runtime\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- configPanel.test.ts`
+    - Result: passed, 25 files / 197 tests passed.
+- Problems encountered:
+  - None during implementation.
+- Known remaining issues:
+  - This is still jsdom/static-render coverage, not a real browser click test.
+- Recommended follow-up:
+  - Add Playwright button-click smoke once an E2E harness exists.
