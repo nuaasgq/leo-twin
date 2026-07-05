@@ -68,6 +68,12 @@ use `CONFIG_UPDATE`, template loading uses `LOAD_TEMPLATE`, and package restore
 uses `RESTORE_EXPORT_PACKAGE`. The read-only endpoints do not write config
 files, initialize sessions, or mutate the runtime.
 
+The standalone dashboard consumes the same read-only endpoints. It shows a
+compact contract summary plus a schema field browser grouped by backend
+sections, including key control-panel fields and detailed file-only fields, so
+users can understand which settings belong in the UI and which belong in the
+full YAML/JSON configuration file.
+
 Each field schema includes:
 
 - path

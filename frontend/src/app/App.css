@@ -1895,6 +1895,66 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
   gap: 10px;
 }
 
+.data-panel-config-field-browser {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.data-panel-config-field-section {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  border-top: 1px solid #213442;
+  padding-top: 8px;
+}
+
+.data-panel-config-field-section-head {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.data-panel-config-field-section-head strong {
+  overflow: hidden;
+  color: var(--app-text);
+  font-size: 12px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.data-panel-config-field-section-head small {
+  color: var(--app-muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.data-panel-config-field-section-meta,
+.data-panel-config-field-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.data-panel-config-field-section-meta span,
+.data-panel-config-field-list span {
+  min-width: 0;
+  max-width: 100%;
+  border: 1px solid #263a48;
+  border-radius: 5px;
+  padding: 5px 7px;
+  background: #0b1219;
+  color: var(--app-muted);
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+
+.data-panel-config-field-list span {
+  color: var(--accent-cyan);
+}
+
 .data-panel-export-compare {
   display: grid;
   gap: 8px;

@@ -471,6 +471,33 @@ export const DataPanel = memo(function DataPanel({
               </a>
             </div>
           </div>
+          {userConfigurationContractDisplay.fieldSections.length > 0 ? (
+            <div
+              className="data-panel-config-field-browser"
+              aria-label="用户配置字段分组"
+            >
+              {userConfigurationContractDisplay.fieldSections.map((section) => (
+                <div className="data-panel-config-field-section" key={section.sectionPath}>
+                  <div className="data-panel-config-field-section-head">
+                    <strong>{section.sectionPath}</strong>
+                    <small>{section.purpose}</small>
+                  </div>
+                  <div className="data-panel-config-field-section-meta">
+                    {section.metaLabels.map((label) => (
+                      <span key={label}>{label}</span>
+                    ))}
+                  </div>
+                  <div className="data-panel-config-field-list">
+                    {section.sampleFields.map((field) => (
+                      <span key={field.path} title={field.description}>
+                        {field.label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
         </section>
       ) : null}
 
@@ -4545,9 +4572,23 @@ export interface DataPanelUserConfigurationContractDisplay {
   statusLabel: string;
   detailLabel: string;
   metaLabels: readonly string[];
+  fieldSections: readonly DataPanelUserConfigurationFieldSectionDisplay[];
   schemaHref: string;
   templatesHref: string;
   exportHref: string;
+}
+
+export interface DataPanelUserConfigurationFieldSectionDisplay {
+  sectionPath: string;
+  purpose: string;
+  metaLabels: readonly string[];
+  sampleFields: readonly DataPanelUserConfigurationFieldDisplay[];
+}
+
+export interface DataPanelUserConfigurationFieldDisplay {
+  path: string;
+  label: string;
+  description: string;
 }
 
 export function buildDataPanelUserConfigurationContractDisplay(
@@ -4565,6 +4606,7 @@ export function buildDataPanelUserConfigurationContractDisplay(
       statusLabel: "加载中",
       detailLabel: "只读接口，不会修改当前配置",
       metaLabels: ["schema pending", "templates pending", "export pending"],
+      fieldSections: [],
       schemaHref: userConfigurationSchemaHref(),
       templatesHref: userConfigurationTemplatesHref(),
       exportHref: userConfigurationExportHref()
@@ -4578,6 +4620,7 @@ export function buildDataPanelUserConfigurationContractDisplay(
       statusLabel: "配置契约加载失败",
       detailLabel: "请检查后端 /scenario/user-config/* 只读接口",
       metaLabels: [error],
+      fieldSections: [],
       schemaHref: userConfigurationSchemaHref(),
       templatesHref: userConfigurationTemplatesHref(),
       exportHref: userConfigurationExportHref()
@@ -4609,10 +4652,66 @@ export function buildDataPanelUserConfigurationContractDisplay(
       `validation ${validationOk ? "ok" : exported === null ? "pending" : "failed"}`,
       `format ${schema?.format ?? exported?.format ?? "YAML_OR_JSON_MAPPING"}`
     ],
+    fieldSections: buildDataPanelUserConfigurationFieldSections(schema),
     schemaHref: userConfigurationSchemaHref(),
     templatesHref: userConfigurationTemplatesHref(),
     exportHref: userConfigurationExportHref()
   };
+}
+
+export function buildDataPanelUserConfigurationFieldSections(
+  schema: UserConfigurationSchemaV2 | null | undefined
+): readonly DataPanelUserConfigurationFieldSectionDisplay[] {
+  if (schema === null || schema === undefined || schema.fields.length === 0) {
+    return [];
+  }
+  const fieldsBySection = new Map<string, typeof schema.fields>();
+  schema.fields.forEach((field) => {
+    const sectionPath = field.section || field.path.split(".")[0] || "root";
+    fieldsBySection.set(sectionPath, [...(fieldsBySection.get(sectionPath) ?? []), field]);
+  });
+  const declaredSectionPaths = new Set(schema.root_sections.map((section) => section.path));
+  const extraSections = [...fieldsBySection.keys()]
+    .filter((sectionPath) => !declaredSectionPaths.has(sectionPath))
+    .sort((left, right) => left.localeCompare(right));
+  const sections = [
+    ...schema.root_sections.map((section) => ({
+      sectionPath: section.path,
+      purpose: section.purpose
+    })),
+    ...extraSections.map((sectionPath) => ({
+      sectionPath,
+      purpose: "后端 schema 字段分组"
+    }))
+  ];
+  const sectionDisplays: DataPanelUserConfigurationFieldSectionDisplay[] = [];
+  sections.forEach(({ sectionPath, purpose }) => {
+    const fields = fieldsBySection.get(sectionPath) ?? [];
+    if (fields.length === 0) {
+      return;
+    }
+    const keyFieldCount = fields.filter(
+      (field) => field.editable_surface === "CONTROL_PANEL_KEY_FIELD"
+    ).length;
+    const fileOnlyFieldCount = fields.filter(
+      (field) => field.editable_surface === "DETAILED_CONFIG_FILE_ONLY"
+    ).length;
+    sectionDisplays.push({
+      sectionPath,
+      purpose,
+      metaLabels: [
+        `字段 ${formatCount(fields.length)}`,
+        `关键 ${formatCount(keyFieldCount)}`,
+        `文件 ${formatCount(fileOnlyFieldCount)}`
+      ],
+      sampleFields: fields.slice(0, 4).map((field) => ({
+        path: field.path,
+        label: `${field.path} · ${field.label}`,
+        description: field.description
+      }))
+    });
+  });
+  return sectionDisplays;
 }
 
 export interface DataPanelExportHistoryDisplay {

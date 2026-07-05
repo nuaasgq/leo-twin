@@ -32,6 +32,7 @@ import {
   buildDataPanelTelemetry,
   buildDataPanelTrafficDisplay,
   buildDataPanelUserConfigurationContractDisplay,
+  buildDataPanelUserConfigurationFieldSections,
   buildUserBusinessRequestInspector,
   buildDataPanelUserRequestHistory,
   buildRuntimeKpiTelemetrySamples,
@@ -638,8 +639,62 @@ describe("buildDataPanelUserConfigurationContractDisplay", () => {
         field_count: 42,
         key_field_count: 12,
         file_only_field_count: 30,
-        root_sections: [],
-        fields: [],
+        root_sections: [
+          {
+            path: "scenario",
+            purpose: "卫星规模、轨道和算力配置"
+          },
+          {
+            path: "network",
+            purpose: "网络链路和指标代理配置"
+          }
+        ],
+        fields: [
+          {
+            path: "scenario.satellite_count",
+            section: "scenario",
+            label: "卫星数量",
+            description: "场景中的卫星节点数量。",
+            value_type: "integer",
+            default_value: 72,
+            current_value: 120,
+            required_in_effective_config: true,
+            required_in_user_file: false,
+            editable_surface: "CONTROL_PANEL_KEY_FIELD",
+            validation_rules: ["minimum 1"],
+            minimum: 1
+          },
+          {
+            path: "scenario.compute_gpu_tflops_fp16",
+            section: "scenario",
+            label: "FP16 GPU 算力",
+            description: "单颗卫星的 FP16 GPU 峰值算力。",
+            value_type: "number",
+            default_value: 5,
+            current_value: 5,
+            required_in_effective_config: true,
+            required_in_user_file: false,
+            editable_surface: "DETAILED_CONFIG_FILE_ONLY",
+            validation_rules: ["minimum 0"],
+            minimum: 0,
+            unit: "TFLOPS"
+          },
+          {
+            path: "network.carrier_frequency_hz",
+            section: "network",
+            label: "载波频率",
+            description: "网络抽象模型记录的载波频率元数据。",
+            value_type: "number",
+            default_value: 20000000000,
+            current_value: 20000000000,
+            required_in_effective_config: true,
+            required_in_user_file: false,
+            editable_surface: "DETAILED_CONFIG_FILE_ONLY",
+            validation_rules: ["minimum 1"],
+            minimum: 1,
+            unit: "Hz"
+          }
+        ],
         templates: [],
         examples: []
       },
@@ -688,6 +743,37 @@ describe("buildDataPanelUserConfigurationContractDisplay", () => {
       templatesHref: "/scenario/user-config/templates",
       exportHref: "/scenario/user-config/export"
     });
+    expect(display?.fieldSections).toEqual([
+      {
+        sectionPath: "scenario",
+        purpose: "卫星规模、轨道和算力配置",
+        metaLabels: ["字段 2", "关键 1", "文件 1"],
+        sampleFields: [
+          {
+            path: "scenario.satellite_count",
+            label: "scenario.satellite_count · 卫星数量",
+            description: "场景中的卫星节点数量。"
+          },
+          {
+            path: "scenario.compute_gpu_tflops_fp16",
+            label: "scenario.compute_gpu_tflops_fp16 · FP16 GPU 算力",
+            description: "单颗卫星的 FP16 GPU 峰值算力。"
+          }
+        ]
+      },
+      {
+        sectionPath: "network",
+        purpose: "网络链路和指标代理配置",
+        metaLabels: ["字段 1", "关键 0", "文件 1"],
+        sampleFields: [
+          {
+            path: "network.carrier_frequency_hz",
+            label: "network.carrier_frequency_hz · 载波频率",
+            description: "网络抽象模型记录的载波频率元数据。"
+          }
+        ]
+      }
+    ]);
     expect(display?.metaLabels).toEqual([
       "unknown REJECT",
       "default OMITTED_FIELDS_USE_BACKEND_DEFAULTS",
@@ -717,6 +803,87 @@ describe("buildDataPanelUserConfigurationContractDisplay", () => {
       summaryLabel: "HTTP 503"
     });
     expect(buildDataPanelUserConfigurationContractDisplay(null, null, null)).toBeNull();
+  });
+});
+
+describe("buildDataPanelUserConfigurationFieldSections", () => {
+  it("groups declared and extra schema fields deterministically", () => {
+    const sections = buildDataPanelUserConfigurationFieldSections({
+      version: "v2",
+      schema_id: "sees.user_configuration.v2",
+      source: "backend_sees_config",
+      format: "YAML_OR_JSON_MAPPING",
+      unknown_key_policy: "REJECT",
+      defaulting_policy: "OMITTED_FIELDS_USE_BACKEND_DEFAULTS",
+      frontend_policy: "CONTROL_PANEL_KEY_FIELDS_ONLY",
+      forbidden_integrations: ["STK", "EXATA", "AFSIM", "DDS"],
+      packet_level_simulation: false,
+      field_count: 3,
+      key_field_count: 1,
+      file_only_field_count: 2,
+      root_sections: [
+        {
+          path: "runtime",
+          purpose: "运行时配置"
+        }
+      ],
+      fields: [
+        {
+          path: "ui.visualization.coverage",
+          section: "ui",
+          label: "覆盖显示",
+          description: "是否显示覆盖层。",
+          value_type: "boolean",
+          default_value: true,
+          current_value: true,
+          required_in_effective_config: true,
+          required_in_user_file: false,
+          editable_surface: "DETAILED_CONFIG_FILE_ONLY",
+          validation_rules: []
+        },
+        {
+          path: "runtime.duration",
+          section: "runtime",
+          label: "仿真时长",
+          description: "仿真运行的目标时长。",
+          value_type: "number",
+          default_value: 600,
+          current_value: 600,
+          required_in_effective_config: true,
+          required_in_user_file: false,
+          editable_surface: "CONTROL_PANEL_KEY_FIELD",
+          validation_rules: ["minimum 1"],
+          minimum: 1,
+          unit: "s"
+        },
+        {
+          path: "network.loss_proxy_enabled",
+          section: "network",
+          label: "丢包代理",
+          description: "是否启用流级丢包代理。",
+          value_type: "boolean",
+          default_value: true,
+          current_value: true,
+          required_in_effective_config: true,
+          required_in_user_file: false,
+          editable_surface: "DETAILED_CONFIG_FILE_ONLY",
+          validation_rules: []
+        }
+      ],
+      templates: [],
+      examples: []
+    });
+
+    expect(sections.map((section) => section.sectionPath)).toEqual([
+      "runtime",
+      "network",
+      "ui"
+    ]);
+    expect(sections[0]?.metaLabels).toEqual(["字段 1", "关键 1", "文件 0"]);
+    expect(sections[1]?.purpose).toBe("后端 schema 字段分组");
+    expect(sections[2]?.sampleFields[0]?.label).toBe(
+      "ui.visualization.coverage · 覆盖显示"
+    );
   });
 });
 

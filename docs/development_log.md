@@ -5,6 +5,59 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Dashboard Config Field Browser v1
+
+- Branch: `feature/T195-dashboard-config-field-browser-v1`
+- Commit: pending in this commit
+- Scope: extend the standalone dashboard's read-only user configuration
+  contract panel with a backend-schema field browser. The dashboard now groups
+  `UserConfigurationSchemaV2.fields` by backend section, displays each
+  section's purpose, total field count, control-panel key field count, detailed
+  file-only field count, and representative field paths/labels. This keeps the
+  backend user configuration schema as the source of truth and helps users
+  distinguish key UI controls from the full YAML/JSON configuration surface.
+  The task does not add config upload/apply, does not mutate runtime
+  configuration, does not modify simulation models, and does not touch Event
+  Kernel behavior.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/user_configuration_schema_v2.md`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 25 files / 293 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing `DataPanel` chunk-size
+      warning after minification.
+  - `git diff --check`
+    - Result: passed. Git still reported the pre-existing CRLF warning for
+      local runtime/config drift in `configs/generated_full_system_demo.json`
+      and `configs/sees_control.yaml`.
+- Problems encountered:
+  - Windows PowerShell's default console decoding can display UTF-8 Chinese UI
+    text as mojibake. File reads and patches used UTF-8-aware contexts where
+    needed, and the source files remain UTF-8.
+  - The first type-check run exposed a TypeScript narrowing issue around
+    `map(...).filter(...)` on readonly display rows. The helper now builds an
+    explicitly typed deterministic array instead.
+  - The working tree still contains unrelated local runtime/config drift in
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`;
+    these files are intentionally left unstaged and unchanged by this task.
+- Known remaining issues / follow-up:
+  - The dashboard now explains the schema field surface, but it still does not
+    provide a guarded validate/upload/apply workflow for user-provided
+    YAML/JSON configs.
+  - The field browser shows representative fields per section; a later task can
+    add expandable full-field inspection and filtering without changing the
+    backend contract.
+
 ## 2026-07-06 - Dashboard User Config Contract v1
 
 - Branch: `feature/T194-dashboard-user-config-contract-v1`
