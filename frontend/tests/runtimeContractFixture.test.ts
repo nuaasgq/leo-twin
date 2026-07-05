@@ -22,6 +22,14 @@ describe("runtime status contract fixture", () => {
       compute_resource_used_gpu_tflops_fp32: 2.5,
       compute_resource_used_npu_tops_int8: 8
     });
+    expect(status.network_quality_provenance_v1).toMatchObject({
+      version: "v1",
+      metric_model: "FLOW_LEVEL_PROXY",
+      packet_level_simulation: false
+    });
+    expect(status.network_quality_provenance_v1?.sources.loss?.source).toBe(
+      "PRESSURE_LOSS_PROXY"
+    );
     expect(status.satellite_kpi_slices_v1?.slices[0]).toMatchObject({
       satellite_id: "sat-00001",
       active_link_count: 4,

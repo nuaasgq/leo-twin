@@ -333,14 +333,18 @@ The following issue-sized slices have now been delivered on
   - Runtime status now exposes bounded `satellite_kpi_history_v1` resource
     samples from satellite compute-node observations, and the 3D control view
     uses that backend history before falling back to local observation.
+- `feat(metrics): expose network quality provenance`
+  - Maps to suggestions 66-75 and 91.
+  - Runtime status now exposes structured `network_quality_provenance_v1`, and
+    the data panel uses it to explain throughput, latency, loss, and
+    delay-variation proxy sources without introducing packet-level simulation.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected
 satellite coverage/beam labels, compute vector KPI samples, and the frontend
 visual verification script. The remaining high-value product gaps are backend
-richer route-quality provenance, full communication-compute lifecycle history,
-screenshot-based visual acceptance, and durable route-switch/reset end-to-end
-smoke tests.
+full communication-compute lifecycle history, screenshot-based visual
+acceptance, and durable route-switch/reset end-to-end smoke tests.
 
 ## Acceptance Gates
 

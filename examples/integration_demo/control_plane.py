@@ -345,7 +345,11 @@ class DemoControlPlane:
         status["fidelity_summary"] = _fidelity_summary_from_sees_config(
             self._controller.config
         )
-        status["metrics_summary"] = self._metrics_summary_json()
+        metrics_summary = self._metrics_summary_json()
+        status["metrics_summary"] = metrics_summary
+        status["network_quality_provenance_v1"] = _network_quality_provenance_from_metrics(
+            metrics_summary
+        )
         status["kpi_time_series_v1"] = self._kpi_time_series_json()
         status["satellite_kpi_slices_v1"] = self._satellite_kpi_slices_json()
         status["satellite_kpi_history_v1"] = self._satellite_kpi_history_json()
@@ -556,6 +560,77 @@ def _stream_buffer_diagnostics(name: str, stream: StreamBuffer[Any]) -> dict[str
         "max_batch_size": stream.policy.max_batch_size,
         "overflow_risk": snapshot.total_dropped_count > 0,
     }
+
+
+def _network_quality_provenance_from_metrics(metrics: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "version": "v1",
+        "metric_model": _metric_string(metrics, "network_quality_metric_model"),
+        "packet_level_simulation": False,
+        "proxy_note": _metric_string(metrics, "network_quality_proxy_note"),
+        "provenance_note": _metric_string(metrics, "network_quality_provenance_note"),
+        "sources": {
+            "throughput": _network_quality_source(
+                metrics,
+                "network_quality_throughput_source",
+                "network_quality_throughput_source_label",
+            ),
+            "latency": _network_quality_source(
+                metrics,
+                "network_quality_latency_source",
+                "network_quality_latency_source_label",
+            ),
+            "loss": _network_quality_source(
+                metrics,
+                "network_quality_loss_source",
+                "network_quality_loss_source_label",
+            ),
+            "delay_variation": _network_quality_source(
+                metrics,
+                "network_quality_delay_variation_source",
+                "network_quality_delay_variation_source_label",
+            ),
+        },
+        "zero_reasons": {
+            "loss": _network_quality_zero_reason(
+                metrics,
+                "network_quality_loss_zero_reason",
+                "network_quality_loss_zero_reason_label",
+            ),
+            "delay_variation": _network_quality_zero_reason(
+                metrics,
+                "network_quality_delay_variation_zero_reason",
+                "network_quality_delay_variation_zero_reason_label",
+            ),
+        },
+    }
+
+
+def _network_quality_source(
+    metrics: dict[str, Any],
+    source_key: str,
+    label_key: str,
+) -> dict[str, str]:
+    return {
+        "source": _metric_string(metrics, source_key),
+        "label": _metric_string(metrics, label_key),
+    }
+
+
+def _network_quality_zero_reason(
+    metrics: dict[str, Any],
+    reason_key: str,
+    label_key: str,
+) -> dict[str, str]:
+    return {
+        "reason": _metric_string(metrics, reason_key),
+        "label": _metric_string(metrics, label_key),
+    }
+
+
+def _metric_string(metrics: dict[str, Any], key: str) -> str:
+    value = metrics.get(key)
+    return value if isinstance(value, str) else ""
 
 
 def _fidelity_summary_from_demo_config(config: DemoConfig) -> dict[str, object]:

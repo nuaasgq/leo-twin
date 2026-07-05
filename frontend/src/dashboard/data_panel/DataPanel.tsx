@@ -19,6 +19,7 @@ import {
   TrafficDemandSummary,
   RuntimeKpiTimeSeriesV1,
   RuntimeMetricsSummary,
+  RuntimeNetworkQualityProvenanceV1,
   RuntimeSatelliteKpiSlicesV1,
   RuntimeStatusPayload
 } from "../../core/event_types";
@@ -103,7 +104,8 @@ export const DataPanel = memo(function DataPanel({
   const networkKpiSource = buildDataPanelNetworkKpiSource(
     snapshot,
     runtimeStatus.metrics_summary,
-    runtimeStatus.kpi_time_series_v1
+    runtimeStatus.kpi_time_series_v1,
+    runtimeStatus.network_quality_provenance_v1
   );
   const networkFormulaInputs = buildDataPanelNetworkFormulaInputs(
     runtimeStatus.metrics_summary
@@ -1411,10 +1413,11 @@ function hasBackendNetworkQualityMetrics(
 }
 
 function formatNetworkQualityProxyNote(
-  metrics: RuntimeMetricsSummary | null | undefined
+  metrics: RuntimeMetricsSummary | null | undefined,
+  networkProvenance: RuntimeNetworkQualityProvenanceV1 | null | undefined = undefined
 ): string {
-  const note = metrics?.network_quality_proxy_note;
-  const provenance = formatNetworkQualityProvenanceNote(metrics);
+  const note = networkProvenance?.proxy_note || metrics?.network_quality_proxy_note;
+  const provenance = formatNetworkQualityProvenanceNote(metrics, networkProvenance);
   const suffix = provenance ? ` ${provenance}` : "";
   if (typeof note === "string" && note.trim().length > 0) {
     if (note === "Flow-level proxy only; no packet-level simulation is performed.") {
@@ -1426,15 +1429,21 @@ function formatNetworkQualityProxyNote(
 }
 
 function formatNetworkQualityProvenanceNote(
-  metrics: RuntimeMetricsSummary | null | undefined
+  metrics: RuntimeMetricsSummary | null | undefined,
+  networkProvenance: RuntimeNetworkQualityProvenanceV1 | null | undefined = undefined
 ): string {
-  const throughput = metricString(metrics, "network_quality_throughput_source_label");
-  const latency = metricString(metrics, "network_quality_latency_source_label");
-  const loss = metricString(metrics, "network_quality_loss_source_label");
-  const jitter = metricString(
-    metrics,
-    "network_quality_delay_variation_source_label"
-  );
+  const throughput =
+    networkProvenance?.sources.throughput?.label ||
+    metricString(metrics, "network_quality_throughput_source_label");
+  const latency =
+    networkProvenance?.sources.latency?.label ||
+    metricString(metrics, "network_quality_latency_source_label");
+  const loss =
+    networkProvenance?.sources.loss?.label ||
+    metricString(metrics, "network_quality_loss_source_label");
+  const jitter =
+    networkProvenance?.sources.delay_variation?.label ||
+    metricString(metrics, "network_quality_delay_variation_source_label");
   if (!throughput && !latency && !loss && !jitter) {
     return "";
   }
@@ -1567,28 +1576,41 @@ type SnapshotLink = WorldSnapshot["links"][number];
 export function buildDataPanelNetworkKpiSource(
   snapshot: WorldSnapshot,
   backendMetrics: RuntimeMetricsSummary | null | undefined = undefined,
-  backendKpiTimeSeries: RuntimeKpiTimeSeriesV1 | null | undefined = undefined
+  backendKpiTimeSeries: RuntimeKpiTimeSeriesV1 | null | undefined = undefined,
+  networkProvenance: RuntimeNetworkQualityProvenanceV1 | null | undefined = undefined
 ): DataPanelNetworkKpiSource {
-  const backendNote = formatNetworkQualityProxyNote(backendMetrics);
+  const backendNote = formatNetworkQualityProxyNote(backendMetrics, networkProvenance);
   if ((backendKpiTimeSeries?.samples ?? []).length > 0) {
     return {
       sourceLabel: "后端实时 KPI 序列",
       modelNote: backendNote,
-      caveats: buildDataPanelNetworkKpiCaveats(backendMetrics, backendKpiTimeSeries)
+      caveats: buildDataPanelNetworkKpiCaveats(
+        backendMetrics,
+        backendKpiTimeSeries,
+        networkProvenance
+      )
     };
   }
   if ((snapshot.metrics_summary.network.kpiSeries ?? []).length > 0) {
     return {
       sourceLabel: "状态快照 KPI 序列",
       modelNote: backendNote,
-      caveats: buildDataPanelNetworkKpiCaveats(backendMetrics)
+      caveats: buildDataPanelNetworkKpiCaveats(
+        backendMetrics,
+        undefined,
+        networkProvenance
+      )
     };
   }
   if (hasBackendNetworkQualityMetrics(backendMetrics)) {
     return {
       sourceLabel: "后端指标摘要",
       modelNote: backendNote,
-      caveats: buildDataPanelNetworkKpiCaveats(backendMetrics)
+      caveats: buildDataPanelNetworkKpiCaveats(
+        backendMetrics,
+        undefined,
+        networkProvenance
+      )
     };
   }
   return {
@@ -1600,23 +1622,31 @@ export function buildDataPanelNetworkKpiSource(
 
 export function buildDataPanelNetworkKpiCaveats(
   metrics: RuntimeMetricsSummary | null | undefined,
-  backendKpiTimeSeries: RuntimeKpiTimeSeriesV1 | null | undefined = undefined
+  backendKpiTimeSeries: RuntimeKpiTimeSeriesV1 | null | undefined = undefined,
+  networkProvenance: RuntimeNetworkQualityProvenanceV1 | null | undefined = undefined
 ): readonly string[] {
-  if (metrics === null || metrics === undefined) {
+  if (
+    (metrics === null || metrics === undefined) &&
+    (networkProvenance === null || networkProvenance === undefined)
+  ) {
     return buildDataPanelKpiTailCaveats(backendKpiTimeSeries);
   }
   const caveats: string[] = [];
-  if (metricString(metrics, "network_quality_metric_model") === "FLOW_LEVEL_PROXY") {
+  const metricModel =
+    networkProvenance?.metric_model ||
+    metricString(metrics, "network_quality_metric_model");
+  if (metricModel === "FLOW_LEVEL_PROXY") {
     caveats.push("指标模型：后端流级代理");
   }
-  const lossReason = metricString(metrics, "network_quality_loss_zero_reason_label");
+  const lossReason =
+    networkProvenance?.zero_reasons.loss?.label ||
+    metricString(metrics, "network_quality_loss_zero_reason_label");
   if (lossReason && lossReason !== "当前代理指标为正值") {
     caveats.push(`丢包率：${lossReason}`);
   }
-  const jitterReason = metricString(
-    metrics,
-    "network_quality_delay_variation_zero_reason_label"
-  );
+  const jitterReason =
+    networkProvenance?.zero_reasons.delay_variation?.label ||
+    metricString(metrics, "network_quality_delay_variation_zero_reason_label");
   if (jitterReason && jitterReason !== "当前代理指标为正值") {
     caveats.push(`抖动：${jitterReason}`);
   }

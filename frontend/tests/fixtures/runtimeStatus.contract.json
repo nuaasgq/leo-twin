@@ -44,6 +44,41 @@
       "compute_resource_used_memory_gb": 16,
       "compute_resource_used_storage_gb": 32
     },
+    "network_quality_provenance_v1": {
+      "version": "v1",
+      "metric_model": "FLOW_LEVEL_PROXY",
+      "packet_level_simulation": false,
+      "proxy_note": "Flow-level proxy only; no packet-level simulation is performed.",
+      "provenance_note": "Flow-level KPI provenance from route, link, and completed-flow state; no packet-level samples are used.",
+      "sources": {
+        "throughput": {
+          "source": "COMPLETED_FLOW_CAPACITY",
+          "label": "已完成流容量"
+        },
+        "latency": {
+          "source": "COMPLETED_FLOW_LATENCY",
+          "label": "已完成流时延"
+        },
+        "loss": {
+          "source": "PRESSURE_LOSS_PROXY",
+          "label": "业务压力损耗代理"
+        },
+        "delay_variation": {
+          "source": "FLOW_LATENCY_VARIATION",
+          "label": "流完成时延离散度"
+        }
+      },
+      "zero_reasons": {
+        "loss": {
+          "reason": "POSITIVE_PROXY",
+          "label": "当前代理指标为正值"
+        },
+        "delay_variation": {
+          "reason": "POSITIVE_PROXY",
+          "label": "当前代理指标为正值"
+        }
+      }
+    },
     "kpi_time_series_v1": {
       "version": "v1",
       "sample_count": 1,

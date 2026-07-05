@@ -166,6 +166,17 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
     status_after_tick = control_plane.runtime_status()["status"]
     assert "network_quality_loss_proxy_rate" in status_after_tick["metrics_summary"]
     assert "compute_resource_used_gflops_fp32" in status_after_tick["metrics_summary"]
+    network_provenance = status_after_tick["network_quality_provenance_v1"]
+    assert network_provenance["version"] == "v1"
+    assert network_provenance["metric_model"] == "FLOW_LEVEL_PROXY"
+    assert network_provenance["packet_level_simulation"] is False
+    assert set(network_provenance["sources"]) == {
+        "throughput",
+        "latency",
+        "loss",
+        "delay_variation",
+    }
+    assert set(network_provenance["zero_reasons"]) == {"loss", "delay_variation"}
     kpi_series = status_after_tick["kpi_time_series_v1"]
     assert kpi_series["version"] == "v1"
     assert kpi_series["sample_count"] == len(kpi_series["samples"])

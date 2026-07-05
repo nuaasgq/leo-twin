@@ -396,6 +396,7 @@ export interface RuntimeStatusPayload {
   last_error?: string | null;
   fidelity_summary?: FidelitySummary;
   metrics_summary?: RuntimeMetricsSummary;
+  network_quality_provenance_v1?: RuntimeNetworkQualityProvenanceV1;
   kpi_time_series_v1?: RuntimeKpiTimeSeriesV1;
   satellite_kpi_slices_v1?: RuntimeSatelliteKpiSlicesV1;
   satellite_kpi_history_v1?: RuntimeSatelliteKpiHistoryV1;
@@ -406,6 +407,38 @@ export interface RuntimeStatusPayload {
 
 export type RuntimeMetricsSummaryValue = string | number | boolean | null;
 export type RuntimeMetricsSummary = Record<string, RuntimeMetricsSummaryValue>;
+
+export interface RuntimeNetworkQualityProvenanceV1 {
+  version: "v1" | string;
+  metric_model: string;
+  packet_level_simulation: boolean;
+  proxy_note?: string;
+  provenance_note?: string;
+  sources: RuntimeNetworkQualityProvenanceSourcesV1;
+  zero_reasons: RuntimeNetworkQualityZeroReasonsV1;
+}
+
+export interface RuntimeNetworkQualityProvenanceSourcesV1 {
+  throughput?: RuntimeNetworkQualitySourceV1;
+  latency?: RuntimeNetworkQualitySourceV1;
+  loss?: RuntimeNetworkQualitySourceV1;
+  delay_variation?: RuntimeNetworkQualitySourceV1;
+}
+
+export interface RuntimeNetworkQualityZeroReasonsV1 {
+  loss?: RuntimeNetworkQualityZeroReasonV1;
+  delay_variation?: RuntimeNetworkQualityZeroReasonV1;
+}
+
+export interface RuntimeNetworkQualitySourceV1 {
+  source: string;
+  label: string;
+}
+
+export interface RuntimeNetworkQualityZeroReasonV1 {
+  reason: string;
+  label: string;
+}
 
 export interface RuntimeKpiTimeSeriesV1 {
   version: "v1" | string;

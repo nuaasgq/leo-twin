@@ -4328,3 +4328,42 @@ change.
 - Recommended follow-up:
   - Add route-quality provenance labels or end-to-end reset/route-switch smoke
     coverage before broadening lifecycle history.
+
+## 2026-07-05 - Network Quality Provenance v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: expose structured `network_quality_provenance_v1` in runtime status
+  and let the data panel prefer this backend-owned provenance object when
+  explaining throughput, latency, loss, and delay-variation proxy sources. The
+  existing scalar `metrics_summary` fields remain for backward compatibility.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/fixtures/runtimeStatus.contract.json`
+  - `frontend/tests/runtimeContractFixture.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `PYTHONPATH=src python -m pytest tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer -q`
+    - Result: passed, 1 test.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- dataPanel.test.ts runtimeContractFixture.test.ts`
+    - Result: passed, 25 files / 188 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - None. The change only structures existing flow-level proxy provenance and
+    keeps packet-level simulation explicitly disabled.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The network KPI values remain flow-level deterministic proxies; this task
+    improves transparency, not physical or packet-level fidelity.
+- Recommended follow-up:
+  - Add screenshot-based visual acceptance for the 3D console/dashboard or a
+    durable reset/route-switch smoke test.

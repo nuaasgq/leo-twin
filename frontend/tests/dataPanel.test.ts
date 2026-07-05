@@ -540,6 +540,60 @@ describe("buildDataPanelNetworkKpiSource", () => {
     });
   });
 
+  it("prefers structured backend KPI provenance when available", () => {
+    const source = buildDataPanelNetworkKpiSource(
+      makeSnapshot(),
+      {
+        network_quality_effective_throughput_mbps: 77,
+        network_quality_effective_latency_avg_s: 0.15
+      },
+      undefined,
+      {
+        version: "v1",
+        metric_model: "FLOW_LEVEL_PROXY",
+        packet_level_simulation: false,
+        proxy_note: "Flow-level proxy only; no packet-level simulation is performed.",
+        sources: {
+          throughput: {
+            source: "COMPLETED_FLOW_CAPACITY",
+            label: "structured-throughput"
+          },
+          latency: {
+            source: "COMPLETED_FLOW_LATENCY",
+            label: "structured-latency"
+          },
+          loss: {
+            source: "PRESSURE_LOSS_PROXY",
+            label: "structured-loss"
+          },
+          delay_variation: {
+            source: "FLOW_LATENCY_VARIATION",
+            label: "structured-jitter"
+          }
+        },
+        zero_reasons: {
+          loss: {
+            reason: "NO_LOSS_PROXY_TRIGGERED",
+            label: "structured-loss-zero"
+          },
+          delay_variation: {
+            reason: "INSUFFICIENT_VARIATION_SAMPLE",
+            label: "structured-jitter-zero"
+          }
+        }
+      }
+    );
+
+    expect(source.modelNote).toContain("structured-throughput");
+    expect(source.modelNote).toContain("structured-jitter");
+    expect(source.caveats.some((item) => item.includes("structured-loss-zero"))).toBe(
+      true
+    );
+    expect(source.caveats.some((item) => item.includes("structured-jitter-zero"))).toBe(
+      true
+    );
+  });
+
   it("reports snapshot KPI series when runtime series is absent", () => {
     expect(
       buildDataPanelNetworkKpiSource(
