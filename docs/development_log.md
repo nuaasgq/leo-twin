@@ -3872,3 +3872,36 @@ change.
 - Recommended follow-up:
   - Add a short movement/fidelity legend near the 3D controls explaining
     backend snapshot cadence versus frontend display interpolation.
+
+## 2026-07-05 - 3D Layer Render Summary v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: make the 3D visualization layer toggles explain their effect. The
+  control overlay now shows a compact render summary for country boundaries,
+  satellite points, icons, GLB models, tracks, coverage beams, users, links, and
+  routes, including current visibility and bounded render limits.
+- Changed files/modules:
+  - `frontend/src/3d/cesium/renderLimits.ts`
+  - `frontend/src/3d/cesium/CesiumGlobe.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/visualLayerLimits.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- visualLayerLimits.test.ts`
+    - Result: passed, 24 files / 176 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - None. The change is a UI explanation layer over existing render limits and
+    does not change Cesium rendering architecture.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The summary reports configured limits, not actual rendered object counts
+    after Cesium pruning.
+- Recommended follow-up:
+  - Add actual rendered entity counters from the render caches when a visual
+    smoke/instrumentation pass is added.

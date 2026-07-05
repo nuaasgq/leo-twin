@@ -69,6 +69,7 @@ import {
   LocalVisualLayerKey,
   LocalVisualLayerState,
   applyLocalVisualLayerLimits,
+  visualLayerControlSummary,
   visualLayerLimits,
   visualSatelliteModelRenderSatellites
 } from "./renderLimits";
@@ -211,6 +212,10 @@ export function CesiumGlobe({
       snapshot.scenario_config,
       satelliteKpiSlices
     ]
+  );
+  const layerSummary = useMemo(
+    () => visualLayerControlSummary(snapshot.scenario_config, localLayers),
+    [snapshot.scenario_config, localLayers]
   );
 
   useEffect(() => {
@@ -480,6 +485,14 @@ export function CesiumGlobe({
               />
               <span>{option.label}</span>
             </label>
+          ))}
+        </div>
+        <div className="globe-layer-summary" aria-label="图层渲染摘要">
+          {layerSummary.map((item) => (
+            <span key={item.label} title={item.detail}>
+              <strong>{item.label}</strong>
+              <em>{item.value}</em>
+            </span>
           ))}
         </div>
         {selectedDetailSummary ? (

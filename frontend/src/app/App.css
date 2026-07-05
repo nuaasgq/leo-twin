@@ -674,6 +674,46 @@ body {
   white-space: nowrap;
 }
 
+.globe-layer-summary {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-width: 0;
+}
+
+.globe-layer-summary span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  border: 1px solid #243845;
+  border-radius: 5px;
+  padding: 4px 6px;
+  background: rgba(12, 20, 28, 0.9);
+  color: var(--app-muted);
+  font-size: 10px;
+  line-height: 1;
+}
+
+.globe-layer-summary strong,
+.globe-layer-summary em {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.globe-layer-summary strong {
+  color: #d7edf4;
+  font-weight: 700;
+}
+
+.globe-layer-summary em {
+  color: var(--accent-cyan);
+  font-style: normal;
+}
+
 .selected-satellite-strip {
   grid-column: 1 / -1;
   display: grid;

@@ -4,6 +4,7 @@ import { ScenarioConfig } from "../src/core/event_types";
 import {
   DEFAULT_LOCAL_VISUAL_LAYERS,
   applyLocalVisualLayerLimits,
+  visualLayerControlSummary,
   visualLayerLimits,
   visualSatelliteModelRenderSatellites
 } from "../src/3d/cesium/renderLimits";
@@ -115,6 +116,38 @@ describe("visualLayerLimits", () => {
     expect(
       applyLocalVisualLayerLimits(disabledLimits, DEFAULT_LOCAL_VISUAL_LAYERS)
     ).toEqual(disabledLimits);
+  });
+});
+
+describe("visualLayerControlSummary", () => {
+  it("explains local layer limits shown by the 3D control toggles", () => {
+    expect(visualLayerControlSummary(null)).toEqual([
+      { label: "国界", value: "显示", detail: "Natural Earth 国家边界" },
+      { label: "点位", value: "显示", detail: "全部卫星点位" },
+      { label: "图标", value: "≤96", detail: "卫星图标上限" },
+      { label: "模型", value: "≤32", detail: "GLB 模型上限，选中卫星优先" },
+      { label: "轨迹", value: "≤48", detail: "轨道轨迹上限" },
+      { label: "波束", value: "≤1", detail: "选中卫星覆盖波束" },
+      { label: "用户", value: "≤80", detail: "地面用户上限" },
+      { label: "链路", value: "≤96", detail: "可视链路上限" },
+      { label: "路由", value: "≤8", detail: "路径高亮上限" }
+    ]);
+  });
+
+  it("reports hidden layer effects after local toggles are disabled", () => {
+    const summary = visualLayerControlSummary(null, {
+      ...DEFAULT_LOCAL_VISUAL_LAYERS,
+      countryOverlays: false,
+      satelliteIcons: false,
+      coverageBeams: false,
+      links: false
+    });
+
+    expect(summary.find((item) => item.label === "国界")?.value).toBe("隐藏");
+    expect(summary.find((item) => item.label === "图标")?.value).toBe("隐藏");
+    expect(summary.find((item) => item.label === "波束")?.value).toBe("隐藏");
+    expect(summary.find((item) => item.label === "链路")?.value).toBe("隐藏");
+    expect(summary.find((item) => item.label === "模型")?.value).toBe("≤32");
   });
 });
 

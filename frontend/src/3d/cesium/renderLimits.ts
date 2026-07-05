@@ -25,6 +25,12 @@ export interface LocalVisualLayerState {
 
 export type LocalVisualLayerKey = keyof LocalVisualLayerState;
 
+export interface VisualLayerControlSummaryItem {
+  label: string;
+  value: string;
+  detail: string;
+}
+
 export const DEFAULT_LOCAL_VISUAL_LAYERS: LocalVisualLayerState = {
   countryOverlays: true,
   satellitePoints: true,
@@ -95,4 +101,65 @@ export function visualSatelliteModelRenderSatellites<
     return rendered;
   }
   return [...rendered, selected];
+}
+
+export function visualLayerControlSummary(
+  scenarioConfig: ScenarioConfig | null | undefined,
+  localLayers: LocalVisualLayerState = DEFAULT_LOCAL_VISUAL_LAYERS
+): readonly VisualLayerControlSummaryItem[] {
+  const limits = applyLocalVisualLayerLimits(
+    visualLayerLimits(scenarioConfig),
+    localLayers
+  );
+  return [
+    {
+      label: "国界",
+      value: localLayers.countryOverlays ? "显示" : "隐藏",
+      detail: "Natural Earth 国家边界"
+    },
+    {
+      label: "点位",
+      value: limits.showSatellites ? "显示" : "隐藏",
+      detail: "全部卫星点位"
+    },
+    {
+      label: "图标",
+      value: formatLayerLimit(limits.satelliteIconRenderLimit),
+      detail: "卫星图标上限"
+    },
+    {
+      label: "模型",
+      value: formatLayerLimit(limits.satelliteModelRenderLimit),
+      detail: "GLB 模型上限，选中卫星优先"
+    },
+    {
+      label: "轨迹",
+      value: formatLayerLimit(limits.orbitTrackRenderLimit),
+      detail: "轨道轨迹上限"
+    },
+    {
+      label: "波束",
+      value: formatLayerLimit(limits.beamRenderLimit),
+      detail: "选中卫星覆盖波束"
+    },
+    {
+      label: "用户",
+      value: formatLayerLimit(limits.groundUserRenderLimit),
+      detail: "地面用户上限"
+    },
+    {
+      label: "链路",
+      value: formatLayerLimit(limits.linkRenderLimit),
+      detail: "可视链路上限"
+    },
+    {
+      label: "路由",
+      value: formatLayerLimit(limits.routeRenderLimit),
+      detail: "路径高亮上限"
+    }
+  ];
+}
+
+function formatLayerLimit(limit: number): string {
+  return limit <= 0 ? "隐藏" : `≤${limit.toLocaleString("zh-CN")}`;
 }
