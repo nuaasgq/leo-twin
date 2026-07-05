@@ -535,6 +535,11 @@ The following issue-sized slices have now been delivered on
   - `scripts/verify_product_acceptance.ps1 -RunControlCycleSmoke` can now add
     the mutating 1200-satellite control-cycle check after normal acceptance
     verification.
+- `docs(status): refresh current product status`
+  - Maps to suggestions 14-18 and 91-95.
+  - `docs/current_product_status.md` now lists the control-cycle smoke,
+    optional aggregate acceptance gate, and latest 1200-node control validation
+    result.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected

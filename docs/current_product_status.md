@@ -11,6 +11,7 @@ Branch: `feature/T163-frontend-dashboard-compute-v2`
 - Dashboard-first startup: `.\dashboard_leo_twin.bat`
 - Status: `.\status_leo_twin.bat`
 - Read-only health smoke: `.\smoke_leo_twin.bat`
+- Mutating control-cycle smoke: `.\control_smoke_leo_twin.bat`
 
 Default local URLs:
 
@@ -24,6 +25,12 @@ Default local URLs:
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_product_acceptance.ps1 -ExpectedSatelliteCount 120 -ExpectedUserCount 100 -ExpectedComputeNodeCount 120 -ExpectedConstellationProfile CUSTOM_WALKER -ExpectedTrafficClass COMPUTE_SERVICE
 ```
 
+Optional 1200-node control-cycle gate:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_product_acceptance.ps1 -SkipBuild -RunControlCycleSmoke -ExpectedSatelliteCount 1200 -ExpectedUserCount 20 -ExpectedComputeNodeCount 1200 -ExpectedConstellationProfile CUSTOM_WALKER -ExpectedTrafficClass COMPUTE_SERVICE
+```
+
 The latest full local run passed:
 
 - runtime config staging guard;
@@ -33,6 +40,10 @@ The latest full local run passed:
 - frontend build;
 - read-only runtime health smoke.
 
+The latest fast local run with `-RunControlCycleSmoke` also passed for a
+1200-satellite / 20-user / 1200-compute-node scenario and verified INITIALIZE,
+START, PAUSE, RESUME, STOP, and RESET through the control websocket.
+
 ## Current Product Signals
 
 - Backend runtime status is the source of truth for generated product summary.
@@ -41,8 +52,14 @@ The latest full local run passed:
 - Runtime health smoke reports endpoint timings, orbit/protocol fields,
   constellation profile, traffic class, compute node count, and compute
   resource model.
+- Runtime control-cycle smoke validates 1200-node control responsiveness
+  through the existing backend control websocket and resets the active session
+  at the end.
+- Aggregate product acceptance can optionally run the mutating control-cycle
+  smoke via `-RunControlCycleSmoke`.
 - Launcher workflow is Windows-first and supports menu, batch shortcuts,
-  status, smoke, dashboard-first startup, and fast/full acceptance checks.
+  status, read-only smoke, control-cycle smoke, dashboard-first startup, and
+  fast/full acceptance checks.
 
 ## Remaining Gaps
 
@@ -51,3 +68,5 @@ The latest full local run passed:
 - Acceptance scripts validate currently running services; they do not yet
   launch disposable backends from selected acceptance YAML files.
 - Runtime config staging guard is script-enforced, not a Git hook.
+- Control-cycle smoke validates backend control protocol responsiveness, not
+  browser button clicks.

@@ -5699,3 +5699,27 @@ change.
     already running.
 - Recommended follow-up:
   - Add disposable acceptance launch mode for fully isolated scenario checks.
+
+## 2026-07-05 - Current Product Status Refresh v2
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: refresh the current product handoff page with the new control-cycle
+  smoke command, optional acceptance gate, and latest 1200-node control
+  validation result.
+- Changed files/modules:
+  - `docs/current_product_status.md`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `git diff --check`
+    - Result: passed, with only pre-existing local runtime config CRLF
+      warnings.
+- Problems encountered:
+  - None. This is documentation-only.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The status page is still manually maintained.
+- Recommended follow-up:
+  - Refresh this page after the next backend/frontend product milestone.
