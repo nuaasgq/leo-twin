@@ -398,6 +398,7 @@ export interface RuntimeStatusPayload {
   metrics_summary?: RuntimeMetricsSummary;
   kpi_time_series_v1?: RuntimeKpiTimeSeriesV1;
   satellite_kpi_slices_v1?: RuntimeSatelliteKpiSlicesV1;
+  stream_diagnostics_v1?: RuntimeStreamDiagnosticsV1;
   profiling_summary?: RuntimeProfilingSummary | null;
   backpressure_summary?: RuntimeBackpressureSummary | null;
 }
@@ -450,6 +451,25 @@ export interface RuntimeSatelliteKpiSliceV1 {
   compute_load_ratio: number;
   running_task_count: number;
   finished_task_count: number;
+}
+
+export interface RuntimeStreamDiagnosticsV1 {
+  version: "v1" | string;
+  advance_loop_state: string;
+  tick_count: number;
+  event_stream: RuntimeStreamBufferDiagnosticsV1;
+  state_stream: RuntimeStreamBufferDiagnosticsV1;
+}
+
+export interface RuntimeStreamBufferDiagnosticsV1 {
+  name: string;
+  next_cursor: number;
+  oldest_cursor: number;
+  retained_count: number;
+  total_dropped_count: number;
+  max_items: number;
+  max_batch_size: number;
+  overflow_risk: boolean;
 }
 
 export interface GeneratedScenarioConfig {

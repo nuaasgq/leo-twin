@@ -3474,3 +3474,41 @@ change.
 - Recommended follow-up:
   - Add cursor/backpressure counters to the diagnostics row using backend
     runtime status once those fields are stable.
+
+## 2026-07-05 - Runtime Stream Diagnostics Status v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: expose backend stream buffer diagnostics through
+  `/runtime/status.status.stream_diagnostics_v1`, including event/state cursor
+  bounds, retained item counts, drop counts, buffer limits, advance-loop state,
+  and tick count. Frontend TypeScript contracts now include the optional field.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/integration/test_runtime_session_control.py::test_demo_adapter_exposes_cursor_batches -q`
+    - Result: passed.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- api.test.ts appSurface.test.ts`
+    - Result: passed, 24 files / 167 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+  - `git diff --check`
+    - Result: passed with warnings only for the existing uncommitted
+      runtime/generated config files.
+- Problems encountered:
+  - The first attempted file read used a non-existent `runtime/streaming.py`.
+    The actual runtime stream code is split into `stream_buffer.py` and
+    `advance_loop.py`.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The frontend connection diagnostics row does not yet render these cursor
+    counters; this task only exposes and types the backend contract.
+- Recommended follow-up:
+  - Bind `stream_diagnostics_v1` into the topbar diagnostics row so users can
+    see cursor lag, retained records, and dropped records without opening logs.

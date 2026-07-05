@@ -348,6 +348,7 @@ class DemoControlPlane:
         status["metrics_summary"] = self._metrics_summary_json()
         status["kpi_time_series_v1"] = self._kpi_time_series_json()
         status["satellite_kpi_slices_v1"] = self._satellite_kpi_slices_json()
+        status["stream_diagnostics_v1"] = self._stream_diagnostics_json()
         return status
 
     def _ack(self, command: ControlCommand) -> dict[str, Any]:
@@ -387,6 +388,23 @@ class DemoControlPlane:
                 "slices": (),
             }
         return dict(self._runtime_context.metrics.satellite_kpi_slices())
+
+    def _stream_diagnostics_json(self) -> dict[str, Any]:
+        loop = self._require_advance_loop()
+        snapshot = loop.snapshot()
+        return {
+            "version": "v1",
+            "advance_loop_state": snapshot.state.value,
+            "tick_count": snapshot.tick_count,
+            "event_stream": _stream_buffer_diagnostics(
+                name="events",
+                stream=loop.event_stream,
+            ),
+            "state_stream": _stream_buffer_diagnostics(
+                name="state",
+                stream=loop.snapshot_stream,
+            ),
+        }
 
     def _nack(self, command: str, error: str) -> dict[str, Any]:
         return {
@@ -509,6 +527,20 @@ def _frontend_event_batch(
         "next_cursor": next_cursor,
         "overflow": overflow,
         "dropped_count": dropped_count,
+    }
+
+
+def _stream_buffer_diagnostics(name: str, stream: StreamBuffer[Any]) -> dict[str, Any]:
+    snapshot = stream.snapshot()
+    return {
+        "name": name,
+        "next_cursor": max(0, snapshot.next_sequence - 1),
+        "oldest_cursor": max(0, snapshot.oldest_sequence - 1),
+        "retained_count": snapshot.retained_count,
+        "total_dropped_count": snapshot.total_dropped_count,
+        "max_items": stream.policy.max_items,
+        "max_batch_size": stream.policy.max_batch_size,
+        "overflow_risk": snapshot.total_dropped_count > 0,
     }
 
 

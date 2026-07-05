@@ -341,6 +341,16 @@ def test_demo_adapter_exposes_cursor_batches(tmp_path) -> None:
     assert second["cursor"] == first["next_cursor"]
     assert "overflow" in first
     assert control_plane.stream_snapshot_batch(cursor=0)["items"]
+    diagnostics = control_plane.runtime_status()["status"]["stream_diagnostics_v1"]
+    assert diagnostics["version"] == "v1"
+    assert diagnostics["advance_loop_state"] in {"RUNNING", "STOPPED"}
+    assert diagnostics["tick_count"] >= 1
+    assert diagnostics["event_stream"]["name"] == "events"
+    assert diagnostics["event_stream"]["next_cursor"] >= first["next_cursor"]
+    assert diagnostics["event_stream"]["retained_count"] >= len(first["items"])
+    assert diagnostics["event_stream"]["max_batch_size"] == 100_000
+    assert diagnostics["state_stream"]["name"] == "state"
+    assert diagnostics["state_stream"]["next_cursor"] >= 1
 
     control_plane.handle_raw_message(json.dumps({"type": "RUNTIME_CONTROL", "action": "STOP"}))
 
