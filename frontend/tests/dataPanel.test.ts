@@ -12,6 +12,8 @@ import {
   buildDataPanelExportCompareDisplay,
   buildDataPanelExportCompareStatus,
   buildDataPanelExportHistoryDisplay,
+  buildDataPanelExportRestorePreflightDisplay,
+  buildDataPanelExportRestorePreflightStatus,
   buildDataPanelNetworkFormulaInputs,
   buildDataPanelNetworkComponentTail,
   buildDataPanelNetworkKpiCaveats,
@@ -890,6 +892,169 @@ describe("buildDataPanelExportCompareStatus", () => {
       diffRows: display.diffRows
     });
     expect(buildDataPanelExportCompareStatus(null, null, false, null)).toBeNull();
+  });
+});
+
+describe("buildDataPanelExportRestorePreflightDisplay", () => {
+  it("summarizes no-change restore preflights", () => {
+    expect(
+      buildDataPanelExportRestorePreflightDisplay({
+        version: "v1",
+        source: "BACKEND_RUNTIME_EXPORT_RESTORE_PREFLIGHT",
+        preflight_scope: "CONFIG_RESTORE_PREVIEW_ONLY",
+        package_id: "pkg-same",
+        readiness: "NO_CHANGE",
+        can_restore: true,
+        requires_user_confirmation: false,
+        would_mutate_current_runtime: false,
+        would_write_config_files: false,
+        would_reset_runtime_session: false,
+        would_stop_live_streams: false,
+        current_lifecycle_state: "PAUSED",
+        package_config_hash: "sha256:aaa",
+        current_config_hash: "sha256:aaa",
+        same_config: true,
+        same_generated_config: true,
+        config_diff_count: 0,
+        generated_config_diff_count: 0,
+        compare_hash: "sha256:compare",
+        blocked_reasons: [],
+        warnings: [],
+        next_action: "NO_RESTORE_REQUIRED",
+        preflight_hash:
+          "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      })
+    ).toEqual({
+      packageId: "pkg-same",
+      tone: "match",
+      statusLabel: "无需恢复",
+      summaryLabel: "pkg-same / config差异 0 / generated差异 0",
+      metaLabels: [
+        "确认 不需要",
+        "写配置 不会",
+        "重置runtime 不会",
+        "当前 PAUSED",
+        "preflight aaaaaaaaaaaa"
+      ],
+      warningRows: []
+    });
+  });
+
+  it("summarizes ready and blocked restore preflights", () => {
+    const ready = buildDataPanelExportRestorePreflightDisplay({
+      version: "v1",
+      source: "BACKEND_RUNTIME_EXPORT_RESTORE_PREFLIGHT",
+      preflight_scope: "CONFIG_RESTORE_PREVIEW_ONLY",
+      package_id: "pkg-ready",
+      readiness: "READY",
+      can_restore: true,
+      requires_user_confirmation: true,
+      would_mutate_current_runtime: false,
+      would_write_config_files: true,
+      would_reset_runtime_session: true,
+      would_stop_live_streams: true,
+      current_lifecycle_state: "RUNNING",
+      package_config_hash: "sha256:old",
+      current_config_hash: "sha256:new",
+      same_config: false,
+      same_generated_config: false,
+      config_diff_count: 2,
+      generated_config_diff_count: 4,
+      compare_hash: "sha256:compare",
+      blocked_reasons: [],
+      warnings: ["RESTORE_WOULD_STOP_RUNNING_SESSION"],
+      next_action: "USER_CONFIRMATION_REQUIRED_BEFORE_RESTORE",
+      preflight_hash:
+        "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    });
+    expect(ready).toMatchObject({
+      tone: "different",
+      statusLabel: "可恢复，需确认",
+      summaryLabel: "pkg-ready / config差异 2 / generated差异 4",
+      warningRows: ["警告: RESTORE_WOULD_STOP_RUNNING_SESSION"]
+    });
+
+    const blocked = buildDataPanelExportRestorePreflightDisplay({
+      version: "v1",
+      source: "BACKEND_RUNTIME_EXPORT_RESTORE_PREFLIGHT",
+      preflight_scope: "CONFIG_RESTORE_PREVIEW_ONLY",
+      package_id: "pkg-blocked",
+      readiness: "BLOCKED",
+      can_restore: false,
+      requires_user_confirmation: false,
+      would_mutate_current_runtime: false,
+      would_write_config_files: false,
+      would_reset_runtime_session: false,
+      would_stop_live_streams: false,
+      current_lifecycle_state: "PAUSED",
+      package_config_hash: "",
+      current_config_hash: "sha256:new",
+      same_config: false,
+      same_generated_config: false,
+      config_diff_count: 0,
+      generated_config_diff_count: 0,
+      compare_hash: "sha256:compare",
+      blocked_reasons: ["package config is invalid"],
+      warnings: [],
+      next_action: "FIX_PACKAGE_OR_SELECT_ANOTHER_EXPORT",
+      preflight_hash:
+        "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    });
+    expect(blocked).toMatchObject({
+      tone: "error",
+      statusLabel: "预检阻塞",
+      warningRows: ["阻塞: package config is invalid"]
+    });
+  });
+
+  it("maps restore preflight loading and error state", () => {
+    const display = buildDataPanelExportRestorePreflightDisplay({
+      version: "v1",
+      source: "BACKEND_RUNTIME_EXPORT_RESTORE_PREFLIGHT",
+      preflight_scope: "CONFIG_RESTORE_PREVIEW_ONLY",
+      package_id: "pkg-ready",
+      readiness: "READY",
+      can_restore: true,
+      requires_user_confirmation: true,
+      would_mutate_current_runtime: false,
+      would_write_config_files: true,
+      would_reset_runtime_session: true,
+      would_stop_live_streams: true,
+      current_lifecycle_state: "PAUSED",
+      package_config_hash: "sha256:old",
+      current_config_hash: "sha256:new",
+      same_config: false,
+      same_generated_config: false,
+      config_diff_count: 2,
+      generated_config_diff_count: 4,
+      compare_hash: "sha256:compare",
+      blocked_reasons: [],
+      warnings: [],
+      next_action: "USER_CONFIRMATION_REQUIRED_BEFORE_RESTORE",
+      preflight_hash:
+        "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+    });
+    expect(buildDataPanelExportRestorePreflightStatus(display, "pkg-2", true)).toEqual({
+      tone: "pending",
+      statusLabel: "正在加载预检",
+      summaryLabel: "pkg-2",
+      metaLabels: ["只读预检", "不会修改当前配置"],
+      warningRows: []
+    });
+    expect(
+      buildDataPanelExportRestorePreflightStatus(display, "pkg-2", false, "HTTP 404")
+    ).toEqual({
+      tone: "error",
+      statusLabel: "预检加载失败",
+      summaryLabel: "pkg-2",
+      metaLabels: ["HTTP 404"],
+      warningRows: []
+    });
+    expect(buildDataPanelExportRestorePreflightStatus(display, "pkg-ready")).toMatchObject({
+      tone: "different",
+      statusLabel: "可恢复，需确认"
+    });
+    expect(buildDataPanelExportRestorePreflightStatus(null, null)).toBeNull();
   });
 });
 

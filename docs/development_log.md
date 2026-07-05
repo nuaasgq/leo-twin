@@ -5,6 +5,53 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Dashboard Restore Preflight Summary v1
+
+- Branch: `feature/T190-dashboard-restore-preflight-summary-v1`
+- Commit: pending in this commit
+- Scope: render runtime export restore preflight results directly in the
+  standalone dashboard for the selected catalog package. The app now loads
+  `/runtime/export/packages/{package_id}/restore-preflight` alongside the
+  existing compare preview, keeps compare and preflight failures isolated, and
+  the data panel displays restore readiness, confirmation requirement, config
+  write/reset impact, current lifecycle state, preflight hash, warnings, and
+  blocked reasons. This is frontend-only on top of the existing read-only
+  preflight endpoint; it does not restore packages, write config files, stop
+  sessions, mutate runtime state, modify Event Kernel behavior, or change
+  simulation/model logic.
+- Changed files/modules:
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/appSurface.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- api.test.ts dataPanel.test.ts appSurface.test.ts`
+    - Result: passed, 25 files / 286 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing `DataPanel` chunk-size
+      warning after minification.
+  - `git diff --check`
+    - Result: passed. Git still reported the pre-existing CRLF warning for
+      local runtime/config drift in `configs/generated_full_system_demo.json`
+      and `configs/sees_control.yaml`.
+- Problems encountered:
+  - The preflight preview is related to compare but should not be blocked by a
+    compare request failure. The app now loads compare and preflight with
+    `Promise.allSettled()` and reports independent error states.
+  - The working tree still contains unrelated local runtime/config drift in
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`;
+    these files were intentionally left unstaged and unchanged by this task.
+- Known remaining issues / follow-up:
+  - The UI still does not execute restore. A future task should introduce a
+    guarded confirmation flow with rollback package creation and control-plane
+    reinitialization through existing configuration services.
+
 ## 2026-07-06 - Runtime Export Restore Preflight v1
 
 - Branch: `feature/T189-runtime-export-restore-preflight-v1`

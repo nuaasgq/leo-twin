@@ -12,6 +12,7 @@ import {
   GeneratedScenarioConfig,
   RuntimeExportCatalogV1,
   RuntimeExportPackageCompareV1,
+  RuntimeExportRestorePreflightV1,
   RuntimeBackpressureSummary,
   RuntimeStatusPayload,
   ScenarioConfig
@@ -26,6 +27,7 @@ import {
   loadMetricsSnapshot,
   loadRuntimeExportCatalog,
   loadRuntimeExportPackageCompare,
+  loadRuntimeExportRestorePreflight,
   loadRuntimeNodeDetails,
   loadRuntimeSatelliteDetails,
   loadRuntimeUserDetails,
@@ -116,6 +118,12 @@ export function App() {
   const [runtimeExportCompareError, setRuntimeExportCompareError] = useState<string | null>(
     null
   );
+  const [runtimeExportRestorePreflight, setRuntimeExportRestorePreflight] =
+    useState<RuntimeExportRestorePreflightV1 | null>(null);
+  const [runtimeExportRestorePreflightLoading, setRuntimeExportRestorePreflightLoading] =
+    useState(false);
+  const [runtimeExportRestorePreflightError, setRuntimeExportRestorePreflightError] =
+    useState<string | null>(null);
   const [dismissedBackpressureNoticeKey, setDismissedBackpressureNoticeKey] =
     useState<string | null>(null);
   const [dismissedCompletionNoticeKey, setDismissedCompletionNoticeKey] =
@@ -223,15 +231,29 @@ export function App() {
   const refreshRuntimeExportCompare = useCallback(async (packageId: string) => {
     setRuntimeExportComparePackageId(packageId);
     setRuntimeExportCompareLoading(true);
+    setRuntimeExportRestorePreflightLoading(true);
     setRuntimeExportCompareError(null);
-    try {
-      setRuntimeExportCompare(await loadRuntimeExportPackageCompare(packageId));
-    } catch (error) {
+    setRuntimeExportRestorePreflightError(null);
+    const [compare, preflight] = await Promise.allSettled([
+      loadRuntimeExportPackageCompare(packageId),
+      loadRuntimeExportRestorePreflight(packageId)
+    ]);
+    if (compare.status === "fulfilled") {
+      setRuntimeExportCompare(compare.value);
+    } else {
       setRuntimeExportCompare(null);
-      setRuntimeExportCompareError(runtimeExportCompareErrorMessage(error));
-    } finally {
-      setRuntimeExportCompareLoading(false);
+      setRuntimeExportCompareError(runtimeExportCompareErrorMessage(compare.reason));
     }
+    if (preflight.status === "fulfilled") {
+      setRuntimeExportRestorePreflight(preflight.value);
+    } else {
+      setRuntimeExportRestorePreflight(null);
+      setRuntimeExportRestorePreflightError(
+        runtimeExportRestorePreflightErrorMessage(preflight.reason)
+      );
+    }
+    setRuntimeExportCompareLoading(false);
+    setRuntimeExportRestorePreflightLoading(false);
   }, []);
 
   const refreshRuntimeExportCatalog = useCallback(async () => {
@@ -244,18 +266,24 @@ export function App() {
       );
       if (packageId === null) {
         setRuntimeExportCompare(null);
+        setRuntimeExportRestorePreflight(null);
         setRuntimeExportComparePackageId(null);
         setRuntimeExportCompareLoading(false);
+        setRuntimeExportRestorePreflightLoading(false);
         setRuntimeExportCompareError(null);
+        setRuntimeExportRestorePreflightError(null);
         return;
       }
       void refreshRuntimeExportCompare(packageId);
     } catch {
       setRuntimeExportCatalog(null);
       setRuntimeExportCompare(null);
+      setRuntimeExportRestorePreflight(null);
       setRuntimeExportComparePackageId(null);
       setRuntimeExportCompareLoading(false);
+      setRuntimeExportRestorePreflightLoading(false);
       setRuntimeExportCompareError(null);
+      setRuntimeExportRestorePreflightError(null);
     }
   }, [refreshRuntimeExportCompare, runtimeExportComparePackageId]);
 
@@ -737,6 +765,9 @@ export function App() {
               runtimeExportComparePackageId={runtimeExportComparePackageId}
               runtimeExportCompareLoading={runtimeExportCompareLoading}
               runtimeExportCompareError={runtimeExportCompareError}
+              runtimeExportRestorePreflight={runtimeExportRestorePreflight}
+              runtimeExportRestorePreflightLoading={runtimeExportRestorePreflightLoading}
+              runtimeExportRestorePreflightError={runtimeExportRestorePreflightError}
               onRuntimeExportCompareSelect={refreshRuntimeExportCompare}
               displaySimTime={displaySimTime}
               displayEventCount={displayEventCount}
@@ -1928,6 +1959,11 @@ export function controlErrorMessage(error: string | undefined): string {
 export function runtimeExportCompareErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   return `复盘包配置对比加载失败：${message}`;
+}
+
+export function runtimeExportRestorePreflightErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  return `复盘包恢复预检加载失败：${message}`;
 }
 
 type RuntimeWebSocketChannel = "control" | "events" | "state";

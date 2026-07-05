@@ -19,6 +19,7 @@ import {
   TrafficDemandSummary,
   RuntimeExportCatalogV1,
   RuntimeExportPackageCompareV1,
+  RuntimeExportRestorePreflightV1,
   RuntimeKpiSampleV1,
   RuntimeKpiTimeSeriesV1,
   RuntimeExportHistoryV1,
@@ -104,6 +105,9 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportComparePackageId,
   runtimeExportCompareLoading,
   runtimeExportCompareError,
+  runtimeExportRestorePreflight,
+  runtimeExportRestorePreflightLoading,
+  runtimeExportRestorePreflightError,
   onRuntimeExportCompareSelect,
   displaySimTime,
   displayEventCount,
@@ -118,6 +122,9 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportComparePackageId?: string | null;
   runtimeExportCompareLoading?: boolean;
   runtimeExportCompareError?: string | null;
+  runtimeExportRestorePreflight?: RuntimeExportRestorePreflightV1 | null;
+  runtimeExportRestorePreflightLoading?: boolean;
+  runtimeExportRestorePreflightError?: string | null;
   onRuntimeExportCompareSelect?: (packageId: string) => void;
   displaySimTime: number;
   displayEventCount: number;
@@ -162,6 +169,15 @@ export const DataPanel = memo(function DataPanel({
     runtimeExportComparePackageId,
     runtimeExportCompareLoading,
     runtimeExportCompareError
+  );
+  const exportRestorePreflightDisplay = buildDataPanelExportRestorePreflightDisplay(
+    runtimeExportRestorePreflight
+  );
+  const exportRestorePreflightStatus = buildDataPanelExportRestorePreflightStatus(
+    exportRestorePreflightDisplay,
+    runtimeExportComparePackageId,
+    runtimeExportRestorePreflightLoading,
+    runtimeExportRestorePreflightError
   );
   const runtimeProgress = buildDataPanelRuntimeProgress(summary.simTime, runtimeStatus.duration);
   const telemetry = buildDataPanelTelemetry(
@@ -407,6 +423,30 @@ export const DataPanel = memo(function DataPanel({
                     <span key={`${row.section}:${row.path}`} title={row.title}>
                       {row.section} {row.path} <strong>{row.valueLabel}</strong>
                     </span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+          {exportRestorePreflightStatus ? (
+            <div
+              className={`data-panel-export-compare ${exportRestorePreflightStatus.tone}`}
+              aria-label="复盘包恢复预检摘要"
+            >
+              <div>
+                <span>恢复预检</span>
+                <strong>{exportRestorePreflightStatus.statusLabel}</strong>
+                <small>{exportRestorePreflightStatus.summaryLabel}</small>
+              </div>
+              <div className="data-panel-export-compare-meta">
+                {exportRestorePreflightStatus.metaLabels.map((label) => (
+                  <span key={label}>{label}</span>
+                ))}
+              </div>
+              {exportRestorePreflightStatus.warningRows.length > 0 ? (
+                <div className="data-panel-export-compare-diffs">
+                  {exportRestorePreflightStatus.warningRows.map((warning) => (
+                    <span key={warning}>{warning}</span>
                   ))}
                 </div>
               ) : null}
@@ -4509,6 +4549,23 @@ export interface DataPanelExportCompareStatus {
   diffRows: readonly DataPanelExportCompareDiffRow[];
 }
 
+export interface DataPanelExportRestorePreflightDisplay {
+  packageId: string;
+  tone: "match" | "different" | "error";
+  statusLabel: string;
+  summaryLabel: string;
+  metaLabels: readonly string[];
+  warningRows: readonly string[];
+}
+
+export interface DataPanelExportRestorePreflightStatus {
+  tone: "match" | "different" | "pending" | "error";
+  statusLabel: string;
+  summaryLabel: string;
+  metaLabels: readonly string[];
+  warningRows: readonly string[];
+}
+
 export interface DataPanelExportCompareDiffRow {
   section: string;
   path: string;
@@ -4585,6 +4642,79 @@ export function buildDataPanelExportCompareStatus(
     summaryLabel: display.summaryLabel,
     metaLabels: [display.configLabel, display.generatedConfigLabel, display.hashLabel],
     diffRows: display.diffRows
+  };
+}
+
+export function buildDataPanelExportRestorePreflightDisplay(
+  preflight: RuntimeExportRestorePreflightV1 | null | undefined
+): DataPanelExportRestorePreflightDisplay | null {
+  if (preflight === null || preflight === undefined) {
+    return null;
+  }
+  const readiness = preflight.readiness;
+  const tone =
+    readiness === "NO_CHANGE" ? "match" : readiness === "BLOCKED" ? "error" : "different";
+  const statusLabel =
+    readiness === "NO_CHANGE"
+      ? "无需恢复"
+      : readiness === "BLOCKED"
+        ? "预检阻塞"
+        : "可恢复，需确认";
+  const warningRows = [
+    ...preflight.blocked_reasons.map((reason) => `阻塞: ${reason}`),
+    ...preflight.warnings.map((warning) => `警告: ${warning}`)
+  ];
+  return {
+    packageId: preflight.package_id,
+    tone,
+    statusLabel,
+    summaryLabel: `${preflight.package_id} / config差异 ${formatCount(
+      preflight.config_diff_count
+    )} / generated差异 ${formatCount(preflight.generated_config_diff_count)}`,
+    metaLabels: [
+      `确认 ${preflight.requires_user_confirmation ? "需要" : "不需要"}`,
+      `写配置 ${preflight.would_write_config_files ? "会" : "不会"}`,
+      `重置runtime ${preflight.would_reset_runtime_session ? "会" : "不会"}`,
+      `当前 ${preflight.current_lifecycle_state}`,
+      `preflight ${shortRuntimeHash(preflight.preflight_hash)}`
+    ],
+    warningRows
+  };
+}
+
+export function buildDataPanelExportRestorePreflightStatus(
+  display: DataPanelExportRestorePreflightDisplay | null,
+  selectedPackageId: string | null | undefined,
+  loading = false,
+  error: string | null | undefined = null
+): DataPanelExportRestorePreflightStatus | null {
+  if (loading) {
+    return {
+      tone: "pending",
+      statusLabel: "正在加载预检",
+      summaryLabel: selectedPackageId ?? "等待复盘包选择",
+      metaLabels: ["只读预检", "不会修改当前配置"],
+      warningRows: []
+    };
+  }
+  if (error !== null && error !== undefined) {
+    return {
+      tone: "error",
+      statusLabel: "预检加载失败",
+      summaryLabel: selectedPackageId ?? "未知复盘包",
+      metaLabels: [error],
+      warningRows: []
+    };
+  }
+  if (display === null) {
+    return null;
+  }
+  return {
+    tone: display.tone,
+    statusLabel: display.statusLabel,
+    summaryLabel: display.summaryLabel,
+    metaLabels: display.metaLabels,
+    warningRows: display.warningRows
   };
 }
 
