@@ -5723,3 +5723,33 @@ change.
   - The status page is still manually maintained.
 - Recommended follow-up:
   - Refresh this page after the next backend/frontend product milestone.
+
+## 2026-07-05 - Frontend Pending Control Guard v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: prevent duplicate frontend runtime control commands while a
+  `*_PENDING` transition is visible locally, covering start/pause/resume and
+  shared initialize/stop/reset buttons.
+- Changed files/modules:
+  - `frontend/src/config_panel/ConfigPanel.tsx`
+  - `frontend/tests/configPanel.test.ts`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `pnpm --dir frontend test -- configPanel.test.ts`
+    - Initial result: environment failure because `node` was not on the current
+      shell PATH.
+  - `$env:PATH='C:\Users\沈高青\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin;C:\Users\沈高青\.cache\codex-runtimes\codex-primary-runtime\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- configPanel.test.ts`
+    - Result: passed, 25 files / 196 tests passed.
+  - `$env:PATH='C:\Users\沈高青\.cache\codex-runtimes\codex-primary-runtime\dependencies\node\bin;C:\Users\沈高青\.cache\codex-runtimes\codex-primary-runtime\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - Direct `pnpm` invocation failed until bundled Node was added to PATH; the
+    code/tests passed after using the workspace runtime Node path.
+- Known remaining issues:
+  - This is a frontend guard for duplicate clicks; backend control
+    responsiveness is covered separately by `smoke_runtime_control_cycle.ps1`.
+- Recommended follow-up:
+  - Add browser-driven button-click smoke when a Playwright harness is
+    introduced.

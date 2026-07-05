@@ -13,6 +13,7 @@ import {
   orbitControlPayload,
   pauseResumeControl,
   runtimeProgressSummary,
+  runtimeControlBusy,
   scalePresetSummaryItems,
   selectedNetworkQualityPreset,
   selectedScenarioScalePreset,
@@ -605,6 +606,29 @@ describe("pauseResumeControl", () => {
       disabled: true
     });
   });
+
+  it("disables pause and resume controls while a runtime command is pending", () => {
+    expect(
+      pauseResumeControl({
+        ...runtimeStatus("RUNNING"),
+        last_action: "PAUSE_PENDING"
+      })
+    ).toEqual({
+      label: "暂停",
+      action: "PAUSE",
+      disabled: true
+    });
+    expect(
+      pauseResumeControl({
+        ...runtimeStatus("PAUSED"),
+        last_action: "RESUME_PENDING"
+      })
+    ).toEqual({
+      label: "继续",
+      action: "RESUME",
+      disabled: true
+    });
+  });
 });
 
 describe("startControlDisabled", () => {
@@ -613,6 +637,33 @@ describe("startControlDisabled", () => {
     expect(startControlDisabled(runtimeStatus("STOPPED", true))).toBe(false);
     expect(startControlDisabled(runtimeStatus("RUNNING", true))).toBe(true);
     expect(startControlDisabled(runtimeStatus("PAUSED", true))).toBe(true);
+  });
+
+  it("keeps start disabled during command pending transitions", () => {
+    expect(
+      startControlDisabled({
+        ...runtimeStatus("STOPPED", true),
+        last_action: "START_PENDING"
+      })
+    ).toBe(true);
+  });
+});
+
+describe("runtimeControlBusy", () => {
+  it("detects frontend-side pending control transitions", () => {
+    expect(runtimeControlBusy(runtimeStatus("STOPPED", true))).toBe(false);
+    expect(
+      runtimeControlBusy({
+        ...runtimeStatus("RUNNING", true),
+        last_action: "STOP_PENDING"
+      })
+    ).toBe(true);
+    expect(
+      runtimeControlBusy({
+        ...runtimeStatus("STOPPED", true),
+        last_action: "RESET_PENDING"
+      })
+    ).toBe(true);
   });
 });
 

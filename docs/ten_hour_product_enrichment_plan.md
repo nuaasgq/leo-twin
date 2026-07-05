@@ -540,6 +540,11 @@ The following issue-sized slices have now been delivered on
   - `docs/current_product_status.md` now lists the control-cycle smoke,
     optional aggregate acceptance gate, and latest 1200-node control validation
     result.
+- `fix(frontend): guard pending control actions`
+  - Maps to suggestions 14-18 and 91-95.
+  - The control panel now treats `*_PENDING` runtime actions as busy states so
+    start, pause/resume, initialize, stop, and reset cannot be fired repeatedly
+    while the local control transition is awaiting backend acknowledgement.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected

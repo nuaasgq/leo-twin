@@ -577,6 +577,7 @@ export function ConfigPanel({
   });
   const pauseResume = pauseResumeControl(runtime);
   const startDisabled = startControlDisabled(runtime);
+  const runtimeBusy = runtimeControlBusy(runtime);
   const progressSummary = runtimeProgressSummary(progress);
   const visualizationLayerEffects = visualizationLayerEffectItems({
     satellites: showSatellites,
@@ -739,7 +740,7 @@ export function ConfigPanel({
           <div className="config-section-title">{CONFIG_PANEL_SECTION_LABELS.execution}</div>
 
           <div className="runtime-actions" aria-label="仿真运行控制">
-            <button type="button" onClick={handleInitialize}>
+            <button type="button" disabled={runtimeBusy} onClick={handleInitialize}>
               初始化
             </button>
             <button
@@ -756,10 +757,10 @@ export function ConfigPanel({
             >
               {pauseResume.label}
             </button>
-            <button type="button" onClick={() => onRuntimeControl("STOP")}>
+            <button type="button" disabled={runtimeBusy} onClick={() => onRuntimeControl("STOP")}>
               停止
             </button>
-            <button type="button" onClick={() => onRuntimeControl("RESET")}>
+            <button type="button" disabled={runtimeBusy} onClick={() => onRuntimeControl("RESET")}>
               重置
             </button>
           </div>
@@ -1911,6 +1912,13 @@ export interface PauseResumeControl {
 }
 
 export function pauseResumeControl(runtime: RuntimeStatusPayload): PauseResumeControl {
+  if (runtimeControlBusy(runtime)) {
+    return {
+      label: runtime.status === "PAUSED" ? "继续" : "暂停",
+      action: runtime.status === "PAUSED" ? "RESUME" : "PAUSE",
+      disabled: true
+    };
+  }
   if (runtime.status === "PAUSED") {
     return {
       label: "继续",
@@ -1926,7 +1934,15 @@ export function pauseResumeControl(runtime: RuntimeStatusPayload): PauseResumeCo
 }
 
 export function startControlDisabled(runtime: RuntimeStatusPayload): boolean {
-  return runtime.initialized !== true || runtime.status !== "STOPPED";
+  return (
+    runtimeControlBusy(runtime) ||
+    runtime.initialized !== true ||
+    runtime.status !== "STOPPED"
+  );
+}
+
+export function runtimeControlBusy(runtime: RuntimeStatusPayload): boolean {
+  return typeof runtime.last_action === "string" && runtime.last_action.endsWith("_PENDING");
 }
 
 export function runtimeProgressSummary(
