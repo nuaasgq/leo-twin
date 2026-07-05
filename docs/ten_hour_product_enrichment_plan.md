@@ -545,6 +545,10 @@ The following issue-sized slices have now been delivered on
   - The control panel now treats `*_PENDING` runtime actions as busy states so
     start, pause/resume, initialize, stop, and reset cannot be fired repeatedly
     while the local control transition is awaiting backend acknowledgement.
+- `docs(acceptance): record final 10-hour checkpoint`
+  - Maps to suggestions 91-95.
+  - The final checkpoint records aggregate fast acceptance with the 1200-node
+    control-cycle gate after the frontend pending-control guard.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected

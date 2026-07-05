@@ -43,6 +43,8 @@ The latest full local run passed:
 The latest fast local run with `-RunControlCycleSmoke` also passed for a
 1200-satellite / 20-user / 1200-compute-node scenario and verified INITIALIZE,
 START, PAUSE, RESUME, STOP, and RESET through the control websocket.
+The latest run after the frontend pending-control guard included 25 frontend
+test files / 196 tests and the same 1200-node control-cycle gate.
 
 ## Current Product Signals
 

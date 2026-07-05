@@ -5753,3 +5753,35 @@ change.
 - Recommended follow-up:
   - Add browser-driven button-click smoke when a Playwright harness is
     introduced.
+
+## 2026-07-05 - Final 10-Hour Acceptance Checkpoint
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: record the final aggregate verification checkpoint after the frontend
+  pending-control guard and runtime control-cycle smoke work.
+- Changed files/modules:
+  - `docs/current_product_status.md`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_product_acceptance.ps1 -SkipBuild -RunControlCycleSmoke -ExpectedSatelliteCount 1200 -ExpectedUserCount 20 -ExpectedComputeNodeCount 1200 -ExpectedConstellationProfile CUSTOM_WALKER -ExpectedTrafficClass COMPUTE_SERVICE`
+    - Result: passed.
+    - Runtime config staging guard: passed.
+    - Forbidden runtime import guard: passed.
+    - Backend targeted tests: 2 passed.
+    - Frontend visual/dashboard tests: 25 files / 196 tests passed.
+    - Runtime health smoke: passed for 1200 satellites / 20 users / 1200
+      compute nodes.
+    - Runtime control-cycle smoke: passed for INITIALIZE, START, PAUSE,
+      RESUME, STOP, and RESET.
+- Problems encountered:
+  - None in this final checkpoint.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - Browser-driven button-click smoke is still future work.
+  - Disposable isolated acceptance launch mode is still future work.
+- Recommended follow-up:
+  - Add Playwright browser control smoke before the next large frontend control
+    refactor.
