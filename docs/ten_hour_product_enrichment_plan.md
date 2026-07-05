@@ -353,13 +353,18 @@ The following issue-sized slices have now been delivered on
   - Metrics summary now aggregates existing `service.*` lifecycle samples into
     input-network, compute-queue, compute-execution, output-network, and total
     service latency fields.
+- `feat(dashboard): show service latency components`
+  - Maps to suggestions 76-82 and 91.
+  - The dashboard now consumes backend `service_latency_*` summary fields and
+    displays communication-compute component latency values in the compute
+    resource panel when samples exist.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected
 satellite coverage/beam labels, compute vector KPI samples, and the frontend
 visual verification script. The remaining high-value product gaps are backend
-dashboard rendering for communication-compute lifecycle components, screenshot
-pixel baselines, and browser-driven reset/control end-to-end smoke tests.
+per-service lifecycle trace histories, screenshot pixel baselines, and
+browser-driven reset/control end-to-end smoke tests.
 
 ## Acceptance Gates
 

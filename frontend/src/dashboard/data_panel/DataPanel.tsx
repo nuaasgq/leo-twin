@@ -110,6 +110,9 @@ export const DataPanel = memo(function DataPanel({
   const networkFormulaInputs = buildDataPanelNetworkFormulaInputs(
     runtimeStatus.metrics_summary
   );
+  const serviceLatency = buildDataPanelServiceLatencyDisplay(
+    runtimeStatus.metrics_summary
+  );
   const routeConstraints = buildDataPanelRouteConstraints(
     snapshot,
     runtimeStatus.metrics_summary
@@ -404,6 +407,27 @@ export const DataPanel = memo(function DataPanel({
               {computePool.vectorSummary.storageGb.toFixed(1)} GB
             </span>
           </div>
+          {serviceLatency.items.length > 0 ? (
+            <>
+              <div className="data-panel-source-note">
+                <span>{serviceLatency.sourceLabel}</span>
+                <small>
+                  {serviceLatency.modelLabel} / {serviceLatency.taskCountLabel} /{" "}
+                  {serviceLatency.completeCountLabel}
+                </small>
+              </div>
+              <div className="data-panel-formula-inputs" aria-label="通信计算服务延迟组件">
+                <span>
+                  总延迟 <strong>{serviceLatency.totalLatencyLabel}</strong>
+                </span>
+                {serviceLatency.items.map((item) => (
+                  <span key={item.label}>
+                    {item.label} <strong>{item.value}</strong>
+                  </span>
+                ))}
+              </div>
+            </>
+          ) : null}
           <TopComputeNodeTable rows={topComputeNodes} />
           <div className="data-panel-chart-body compact">
             {computePool.totalTflops > 0 ? (
@@ -1365,6 +1389,10 @@ function formatMetricMbps(value: number): string {
   return `${formatMetricValue(value)} Mbps`;
 }
 
+function formatMetricMilliseconds(value: number): string {
+  return `${formatMetricValue(value * 1000)} ms`;
+}
+
 function computeSeriesOption(key: DataPanelComputeSeriesKey): DataPanelComputeSeriesOption {
   return COMPUTE_SERIES_OPTIONS.find((option) => option.key === key) ?? COMPUTE_SERIES_OPTIONS[0];
 }
@@ -1553,6 +1581,15 @@ export interface DataPanelNetworkFormulaInput {
   value: string;
 }
 
+export interface DataPanelServiceLatencyDisplay {
+  sourceLabel: string;
+  modelLabel: string;
+  taskCountLabel: string;
+  completeCountLabel: string;
+  totalLatencyLabel: string;
+  items: readonly DataPanelNetworkFormulaInput[];
+}
+
 export interface DataPanelRouteConstraint {
   routeId: string;
   flowId: string;
@@ -1693,6 +1730,58 @@ export function buildDataPanelNetworkFormulaInputs(
     metricInput(metrics, "network_quality_congestion_proxy", "拥塞代理", formatRatioPercent),
     metricInput(metrics, "network_quality_demand_pressure_proxy", "业务压力", formatRatioPercent)
   ].filter((input): input is DataPanelNetworkFormulaInput => input !== null);
+}
+
+export function buildDataPanelServiceLatencyDisplay(
+  metrics: RuntimeMetricsSummary | null | undefined
+): DataPanelServiceLatencyDisplay {
+  const taskCount = Math.max(0, metricNumber(metrics, "service_latency_task_count") ?? 0);
+  const completeCount = Math.max(
+    0,
+    metricNumber(metrics, "service_latency_complete_count") ?? 0
+  );
+  const model =
+    metricString(metrics, "service_latency_model") ??
+    "COMMUNICATION_COMPUTE_COMPONENT_PROXY";
+  const items = [
+    metricInput(
+      metrics,
+      "service_latency_input_network_avg_s",
+      "输入网络",
+      formatMetricMilliseconds
+    ),
+    metricInput(
+      metrics,
+      "service_latency_compute_queue_avg_s",
+      "计算排队",
+      formatMetricMilliseconds
+    ),
+    metricInput(
+      metrics,
+      "service_latency_compute_execution_avg_s",
+      "计算执行",
+      formatMetricMilliseconds
+    ),
+    metricInput(
+      metrics,
+      "service_latency_output_network_avg_s",
+      "输出网络",
+      formatMetricMilliseconds
+    )
+  ].filter((input): input is DataPanelNetworkFormulaInput => input !== null);
+  return {
+    sourceLabel: "通信-计算服务延迟",
+    modelLabel:
+      model === "COMMUNICATION_COMPUTE_COMPONENT_PROXY"
+        ? "后端服务组件代理"
+        : model,
+    taskCountLabel: `${formatCount(taskCount)} 个服务`,
+    completeCountLabel: `${formatCount(completeCount)} 个完整闭环`,
+    totalLatencyLabel: formatMetricMilliseconds(
+      metricNumber(metrics, "service_latency_total_avg_s") ?? 0
+    ),
+    items: taskCount > 0 ? items : []
+  };
 }
 
 export function buildDataPanelRouteConstraints(

@@ -4458,3 +4458,36 @@ change.
 - Recommended follow-up:
   - Add a compact dashboard lifecycle panel or KPI row for service component
     latency once the UI placement is agreed.
+
+## 2026-07-05 - Dashboard Service Latency Components v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: bind the dashboard to the backend `service_latency_*` metrics summary
+  fields by adding a compact communication-compute service latency block inside
+  the compute resource panel. The block shows service sample counts, complete
+  closed-loop counts, total latency, and input-network/queue/execution/output
+  component latency values.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 25 files / 191 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - None. The UI only renders the block when backend service latency samples
+    exist, so scenarios without compute-service lifecycle samples stay compact.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The service latency display is a compact dashboard block, not a dedicated
+    drill-down view with per-service trace rows.
+- Recommended follow-up:
+  - Add selected service trace rows once backend exposes bounded per-service
+    lifecycle histories.

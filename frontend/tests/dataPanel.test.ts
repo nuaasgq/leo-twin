@@ -11,6 +11,7 @@ import {
   buildDataPanelNetworkKpiSource,
   buildDataPanelRouteConstraints,
   buildDataPanelRuntimeProgress,
+  buildDataPanelServiceLatencyDisplay,
   buildDataPanelSummary,
   buildDataPanelTelemetry,
   buildDataPanelTrafficDisplay,
@@ -720,6 +721,45 @@ describe("buildDataPanelNetworkFormulaInputs", () => {
 
   it("hides formula inputs when backend metrics are absent", () => {
     expect(buildDataPanelNetworkFormulaInputs(null)).toEqual([]);
+  });
+});
+
+describe("buildDataPanelServiceLatencyDisplay", () => {
+  it("formats backend communication-compute service latency components", () => {
+    const display = buildDataPanelServiceLatencyDisplay({
+      service_latency_model: "COMMUNICATION_COMPUTE_COMPONENT_PROXY",
+      service_latency_task_count: 2,
+      service_latency_complete_count: 1,
+      service_latency_input_network_avg_s: 4,
+      service_latency_compute_queue_avg_s: 0,
+      service_latency_compute_execution_avg_s: 2,
+      service_latency_output_network_avg_s: 1.4,
+      service_latency_total_avg_s: 7.4
+    });
+
+    expect(display).toMatchObject({
+      sourceLabel: "通信-计算服务延迟",
+      modelLabel: "后端服务组件代理",
+      taskCountLabel: "2 个服务",
+      completeCountLabel: "1 个完整闭环",
+      totalLatencyLabel: "7,400 ms"
+    });
+    expect(display.items.map((item) => item.value)).toEqual([
+      "4,000 ms",
+      "0 ms",
+      "2,000 ms",
+      "1,400 ms"
+    ]);
+  });
+
+  it("hides service latency items until backend samples exist", () => {
+    expect(buildDataPanelServiceLatencyDisplay(null).items).toEqual([]);
+    expect(
+      buildDataPanelServiceLatencyDisplay({
+        service_latency_task_count: 0,
+        service_latency_input_network_avg_s: 4
+      }).items
+    ).toEqual([]);
   });
 });
 
