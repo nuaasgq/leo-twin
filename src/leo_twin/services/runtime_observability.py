@@ -585,6 +585,80 @@ def build_runtime_compute_node_detail_page(
     return result
 
 
+def build_runtime_route_detail_item(
+    snapshot: Mapping[str, Any],
+    route_id: str,
+    *,
+    service_latency_history: Mapping[str, Any] | None = None,
+) -> dict[str, object] | None:
+    """Build one backend-owned route explanation row by route id."""
+
+    if not isinstance(snapshot, Mapping):
+        raise TypeError("snapshot must be a mapping")
+    normalized_route_id = _str(route_id).strip()
+    if not normalized_route_id:
+        return None
+    service_lookup = _service_lookup(service_latency_history)
+    for route in sorted(_records(snapshot.get("routes")), key=_route_explanation_sort_key):
+        if _str(route.get("route_id")) == normalized_route_id:
+            return _route_explanation_item(route, service_lookup)
+    return None
+
+
+def build_runtime_service_detail_item(
+    service_latency_history: Mapping[str, Any] | None,
+    service_id: str,
+) -> dict[str, object] | None:
+    """Build one backend-owned service lifecycle row by stable service id."""
+
+    normalized_service_id = _str(service_id).strip()
+    if not normalized_service_id:
+        return None
+    ordered_items = tuple(
+        sorted(
+            _records((service_latency_history or {}).get("items")),
+            key=_service_detail_sort_key,
+        )
+    )
+    for item in ordered_items:
+        if _service_id(item) == normalized_service_id:
+            return _service_detail_item(item)
+    return None
+
+
+def build_runtime_compute_node_detail_item(
+    snapshot: Mapping[str, Any],
+    node_id: str,
+    *,
+    satellite_kpi_slices: Mapping[str, Any] | None = None,
+) -> dict[str, object] | None:
+    """Build one backend-owned compute-node detail row by node id."""
+
+    if not isinstance(snapshot, Mapping):
+        raise TypeError("snapshot must be a mapping")
+    normalized_node_id = _str(node_id).strip()
+    if not normalized_node_id:
+        return None
+    node_by_id = {
+        _str(item.get("node_id")): item
+        for item in _records(snapshot.get("compute_nodes"))
+        if _str(item.get("node_id"))
+    }
+    node = node_by_id.get(normalized_node_id)
+    if node is None:
+        return None
+    kpi_slice_by_id = {
+        _str(item.get("satellite_id")): item
+        for item in _records((satellite_kpi_slices or {}).get("slices"))
+        if _str(item.get("satellite_id"))
+    }
+    return _compute_node_detail_item(
+        normalized_node_id,
+        node,
+        kpi_slice_by_id.get(normalized_node_id),
+    )
+
+
 def _user_request_summary(
     users: tuple[Mapping[str, Any], ...],
     routes: tuple[Mapping[str, Any], ...],

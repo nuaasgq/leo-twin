@@ -5,11 +5,14 @@ import {
   loadRuntimeExportHistory,
   loadRuntimeExportPackageCompare,
   loadRuntimeExportRestorePreflight,
+  loadRuntimeComputeNodeDetail,
   loadRuntimeComputeNodeDetails,
   loadRuntimeNodeDetails,
+  loadRuntimeRouteDetail,
   loadRuntimeRouteDetails,
   loadRuntimeSatelliteDetail,
   loadRuntimeSatelliteDetails,
+  loadRuntimeServiceDetail,
   loadRuntimeServiceDetails,
   loadRuntimeState,
   loadRuntimeUserDetail,
@@ -774,6 +777,109 @@ describe("runtime API diagnostics", () => {
     );
     expect(runtimeDetailEntityHref("user/with space", "/runtime/details/users/")).toBe(
       "/runtime/details/users/user%2Fwith%20space"
+    );
+  });
+
+  it("loads runtime route service and compute-node entity details by id", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          type: "RUNTIME_ENTITY_DETAIL",
+          kind: "route",
+          entity_id: "route-0",
+          summary: {
+            route_id: "route-0",
+            flow_id: "flow-0",
+            user_id: "user-0",
+            source_id: "user-0",
+            destination_id: "sat-0",
+            selected_satellite_id: "sat-0",
+            primary_next_hop_id: "sat-0",
+            next_hop_ids: ["sat-0"],
+            hop_count: 1,
+            path_label: "user-0 -> sat-0",
+            available: true,
+            route_pressure_proxy: 0.5,
+            business_type: "DATA_TRANSFER",
+            business_label: "Data transfer",
+            bottleneck_component: "NONE",
+            bottleneck_reason: "NO_BOTTLENECK",
+            bottleneck_reason_label: "No bottleneck",
+            explanation_label: "available"
+          }
+        })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          type: "RUNTIME_ENTITY_DETAIL",
+          kind: "service",
+          entity_id: "task-0",
+          summary: {
+            service_id: "task-0",
+            task_id: "task-0",
+            complete: false,
+            service_state: "RUNNING",
+            service_state_label: "Service running",
+            input_network_latency_s: 0.1,
+            compute_queue_delay_s: 0.2,
+            compute_execution_delay_s: 0.3,
+            output_network_latency_s: 0.4,
+            total_latency_s: 1.0,
+            stage_count: 0,
+            stages: []
+          }
+        })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          type: "RUNTIME_ENTITY_DETAIL",
+          kind: "compute_node",
+          entity_id: "sat-0",
+          summary: {
+            node_id: "sat-0",
+            platform_type: "SATELLITE_COMPUTE_NODE",
+            status: "BUSY",
+            compute_load_ratio: 0.5,
+            compute_capacity_gflops_fp32: 100,
+            compute_used_gflops_fp32: 50,
+            compute_available_gflops_fp32: 50,
+            compute_capacity_gflops_fp64: 0,
+            compute_used_gflops_fp64: 0,
+            compute_capacity_gpu_tflops_fp32: 0,
+            compute_used_gpu_tflops_fp32: 0,
+            compute_capacity_gpu_tflops_fp16: 0,
+            compute_used_gpu_tflops_fp16: 0,
+            compute_capacity_npu_tops_int8: 0,
+            compute_used_npu_tops_int8: 0,
+            compute_capacity_memory_gb: 0,
+            compute_used_memory_gb: 0,
+            compute_capacity_storage_gb: 0,
+            compute_used_storage_gb: 0,
+            running_task_count: 1,
+            finished_task_count: 2
+          }
+        })
+      });
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+
+    await expect(loadRuntimeRouteDetail("route-0")).resolves.toMatchObject({
+      route_id: "route-0"
+    });
+    await expect(loadRuntimeServiceDetail("task-0")).resolves.toMatchObject({
+      service_id: "task-0"
+    });
+    await expect(loadRuntimeComputeNodeDetail("sat-0")).resolves.toMatchObject({
+      node_id: "sat-0"
+    });
+    expect(fetchMock).toHaveBeenNthCalledWith(1, "/runtime/details/routes/route-0");
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "/runtime/details/services/task-0");
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      "/runtime/details/compute-nodes/sat-0"
     );
   });
 

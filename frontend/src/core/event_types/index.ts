@@ -1709,9 +1709,13 @@ export interface RuntimeDetailPageEnvelope {
 
 export interface RuntimeEntityDetailEnvelopeV1 {
   type: "RUNTIME_ENTITY_DETAIL" | string;
-  kind: "user" | "satellite" | string;
+  kind: "user" | "satellite" | "route" | "service" | "compute_node" | string;
   entity_id: string;
-  summary: RuntimeNodeDetailCardV1;
+  summary:
+    | RuntimeNodeDetailCardV1
+    | RuntimeRouteExplanationItemV1
+    | RuntimeServiceDetailItemV1
+    | RuntimeComputeNodeDetailItemV1;
 }
 
 export interface RuntimeNodeDetailPageV1 {

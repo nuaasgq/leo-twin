@@ -331,6 +331,13 @@ def test_runtime_detail_pages_return_deterministic_windows(tmp_path: Path) -> No
     assert route_first["summary"]["route_count"] >= route_first["summary"][
         "item_count"
     ]
+    if route_first["summary"]["items"]:
+        first_route_id = route_first["summary"]["items"][0]["route_id"]
+        route_detail = control_plane.runtime_route_detail(first_route_id)
+        assert route_detail["type"] == "RUNTIME_ENTITY_DETAIL"
+        assert route_detail["kind"] == "route"
+        assert route_detail["entity_id"] == first_route_id
+        assert route_detail["summary"]["route_id"] == first_route_id
 
     assert service_first["type"] == "RUNTIME_DETAIL_PAGE"
     assert service_first["kind"] == "services"
@@ -339,6 +346,13 @@ def test_runtime_detail_pages_return_deterministic_windows(tmp_path: Path) -> No
     assert service_first["summary"]["service_count"] >= service_first["summary"][
         "item_count"
     ]
+    if service_first["summary"]["items"]:
+        first_service_id = service_first["summary"]["items"][0]["service_id"]
+        service_detail = control_plane.runtime_service_detail(first_service_id)
+        assert service_detail["type"] == "RUNTIME_ENTITY_DETAIL"
+        assert service_detail["kind"] == "service"
+        assert service_detail["entity_id"] == first_service_id
+        assert service_detail["summary"]["service_id"] == first_service_id
 
     assert compute_node_first["type"] == "RUNTIME_DETAIL_PAGE"
     assert compute_node_first["kind"] == "compute_nodes"
@@ -347,6 +361,15 @@ def test_runtime_detail_pages_return_deterministic_windows(tmp_path: Path) -> No
     assert compute_node_first["summary"]["compute_node_count"] >= (
         compute_node_first["summary"]["item_count"]
     )
+    if compute_node_first["summary"]["items"]:
+        first_compute_node_id = compute_node_first["summary"]["items"][0]["node_id"]
+        compute_node_detail = control_plane.runtime_compute_node_detail(
+            first_compute_node_id
+        )
+        assert compute_node_detail["type"] == "RUNTIME_ENTITY_DETAIL"
+        assert compute_node_detail["kind"] == "compute_node"
+        assert compute_node_detail["entity_id"] == first_compute_node_id
+        assert compute_node_detail["summary"]["node_id"] == first_compute_node_id
 
 
 def test_demo_runtime_status_completes_at_configured_duration(tmp_path: Path) -> None:

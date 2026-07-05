@@ -5,6 +5,51 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Route, Service, and Compute Detail-by-ID v1
+
+- Branch: `feature/T246-route-service-compute-detail-by-id-v1`
+- Commit: pending in this commit
+- Scope: extend exact detail retrieval beyond users and satellites. The demo
+  backend now exposes `GET /runtime/details/routes/<route_id>`,
+  `GET /runtime/details/services/<service_id>`, and
+  `GET /runtime/details/compute-nodes/<node_id>`. The exact response reuses
+  the same backend-owned row shapes as the existing cursor pages. The frontend
+  adds typed API loaders for these endpoints without changing dashboard layout.
+- Changed files/modules:
+  - `src/leo_twin/services/runtime_observability.py`
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `frontend/src/app/api.ts`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/tests/api.test.ts`
+  - `tests/unit/test_runtime_observability.py`
+  - `tests/integration/test_live_runtime_streaming.py`
+  - `docs/route_service_compute_detail_by_id_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_runtime_observability.py tests/integration/test_live_runtime_streaming.py -q`
+    - Result: passed, 17 tests.
+  - `pnpm --dir frontend test -- api.test.ts`
+    - Result: passed, 26 test files / 346 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. The command includes TypeScript checking; Vite reported
+      the existing `DataPanel` chunk size warning after minification.
+- Problems encountered and handling:
+  - The live runtime integration fixture can have empty route, service, or
+    compute-node cursor windows at the sampled runtime moment. Exact lookup
+    construction is therefore covered with deterministic unit fixtures, while
+    the integration test checks envelope compatibility when rows are present.
+  - Extending `RuntimeEntityDetailEnvelopeV1` to non-node row summaries required
+    explicit return narrowing for existing user/satellite detail loaders.
+  - Existing local runtime/generated config files remain dirty and are
+    intentionally not included in this task.
+- Known remaining issues / follow-up:
+  - Bind route, service, and compute-node row selections in the dashboard to
+    these exact detail endpoints.
+  - Add visible loading/error affordances once exact inspectors are wired into
+    the dashboard UI.
+
 ## 2026-07-06 - User and Satellite Detail-by-ID v1
 
 - Branch: `feature/T245-user-satellite-detail-by-id-v1`

@@ -51,12 +51,15 @@ from leo_twin.services.control import (
     ScaleSafetyChecker,
 )
 from leo_twin.services.runtime_observability import (
+    build_runtime_compute_node_detail_item,
     build_runtime_compute_node_detail_page,
     build_runtime_lifecycle_summaries,
     build_runtime_node_detail_page,
+    build_runtime_route_detail_item,
     build_runtime_route_explanation_summary,
     build_runtime_satellite_detail_card,
     build_runtime_satellite_service_summary,
+    build_runtime_service_detail_item,
     build_runtime_service_detail_page,
     build_runtime_user_detail_card,
     build_runtime_user_request_summary,
@@ -454,6 +457,21 @@ class DemoControlPlane:
             "summary": summary,
         }
 
+    def runtime_route_detail(self, route_id: str) -> dict[str, Any]:
+        summary = build_runtime_route_detail_item(
+            self.visible_snapshot(),
+            route_id,
+            service_latency_history=self._service_latency_history_json(),
+        )
+        if summary is None:
+            raise KeyError(f"runtime route detail not found: {route_id}")
+        return {
+            "type": "RUNTIME_ENTITY_DETAIL",
+            "kind": "route",
+            "entity_id": str(summary["route_id"]),
+            "summary": summary,
+        }
+
     def runtime_service_details(
         self,
         cursor: int = 0,
@@ -470,6 +488,20 @@ class DemoControlPlane:
         return {
             "type": "RUNTIME_DETAIL_PAGE",
             "kind": "services",
+            "summary": summary,
+        }
+
+    def runtime_service_detail(self, service_id: str) -> dict[str, Any]:
+        summary = build_runtime_service_detail_item(
+            self._service_latency_history_json(),
+            service_id,
+        )
+        if summary is None:
+            raise KeyError(f"runtime service detail not found: {service_id}")
+        return {
+            "type": "RUNTIME_ENTITY_DETAIL",
+            "kind": "service",
+            "entity_id": str(summary["service_id"]),
             "summary": summary,
         }
 
@@ -490,6 +522,21 @@ class DemoControlPlane:
         return {
             "type": "RUNTIME_DETAIL_PAGE",
             "kind": "compute_nodes",
+            "summary": summary,
+        }
+
+    def runtime_compute_node_detail(self, node_id: str) -> dict[str, Any]:
+        summary = build_runtime_compute_node_detail_item(
+            self.visible_snapshot(),
+            node_id,
+            satellite_kpi_slices=self._satellite_kpi_slices_json(),
+        )
+        if summary is None:
+            raise KeyError(f"runtime compute node detail not found: {node_id}")
+        return {
+            "type": "RUNTIME_ENTITY_DETAIL",
+            "kind": "compute_node",
+            "entity_id": str(summary["node_id"]),
             "summary": summary,
         }
 

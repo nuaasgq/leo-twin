@@ -259,6 +259,44 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                 except KeyError as exc:
                     self.send_error(404, str(exc))
                 return
+            route_detail_id = _runtime_detail_entity_route(path, "/runtime/details/routes")
+            if route_detail_id is not None:
+                if not route_detail_id:
+                    self.send_error(404, "runtime route detail not found")
+                    return
+                try:
+                    self._send_json(control_plane.runtime_route_detail(route_detail_id))
+                except KeyError as exc:
+                    self.send_error(404, str(exc))
+                return
+            service_detail_id = _runtime_detail_entity_route(
+                path,
+                "/runtime/details/services",
+            )
+            if service_detail_id is not None:
+                if not service_detail_id:
+                    self.send_error(404, "runtime service detail not found")
+                    return
+                try:
+                    self._send_json(control_plane.runtime_service_detail(service_detail_id))
+                except KeyError as exc:
+                    self.send_error(404, str(exc))
+                return
+            compute_node_detail_id = _runtime_detail_entity_route(
+                path,
+                "/runtime/details/compute-nodes",
+            )
+            if compute_node_detail_id is not None:
+                if not compute_node_detail_id:
+                    self.send_error(404, "runtime compute node detail not found")
+                    return
+                try:
+                    self._send_json(
+                        control_plane.runtime_compute_node_detail(compute_node_detail_id)
+                    )
+                except KeyError as exc:
+                    self.send_error(404, str(exc))
+                return
             if path == "/runtime/details/users":
                 try:
                     cursor, limit = _detail_query(query, default_limit=100)

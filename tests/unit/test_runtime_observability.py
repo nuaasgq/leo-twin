@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 from leo_twin.services.runtime_observability import (
+    build_runtime_compute_node_detail_item,
     build_runtime_compute_node_detail_page,
     build_runtime_compute_task_timeline_summary,
+    build_runtime_route_detail_item,
     build_runtime_service_detail_page,
+    build_runtime_service_detail_item,
     build_runtime_lifecycle_summaries,
     build_runtime_node_detail_page,
     build_runtime_route_explanation_summary,
@@ -500,6 +503,29 @@ def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> No
     assert satellite_detail_card["entity_id"] == "sat-0"
     assert satellite_detail_card["fields"][0]["value"] == "75%"
     assert build_runtime_satellite_detail_card(snapshot, "missing-sat") is None
+    route_detail_item = build_runtime_route_detail_item(
+        snapshot,
+        "route-a",
+        service_latency_history=service_history,
+    )
+    assert route_detail_item is not None
+    assert route_detail_item["route_id"] == "route-a"
+    assert route_detail_item["business_type"] == "COMPUTE_SERVICE"
+    assert build_runtime_route_detail_item(snapshot, "missing-route") is None
+    service_detail_item = build_runtime_service_detail_item(service_history, "task-0")
+    assert service_detail_item is not None
+    assert service_detail_item["service_id"] == "task-0"
+    assert service_detail_item["compute_node_id"] == "sat-0"
+    assert build_runtime_service_detail_item(service_history, "missing-service") is None
+    compute_node_detail_item = build_runtime_compute_node_detail_item(
+        snapshot,
+        "sat-0",
+        satellite_kpi_slices=kpi_slices,
+    )
+    assert compute_node_detail_item is not None
+    assert compute_node_detail_item["node_id"] == "sat-0"
+    assert compute_node_detail_item["compute_used_gflops_fp32"] == 75.0
+    assert build_runtime_compute_node_detail_item(snapshot, "missing-node") is None
     route_page = build_runtime_route_explanation_summary(
         snapshot,
         service_latency_history=service_history,

@@ -291,6 +291,13 @@ Tasks:
     lifecycle and compute-node resource detail pages. The dashboard now has
     backend text filters for all five visible detail collections, with filters
     applied before cursor pagination.
+  - Status: T246 adds backend detail-by-id endpoints and frontend API loaders
+    for routes, service lifecycle rows, and compute-node resource rows:
+    `/runtime/details/routes/<route_id>`,
+    `/runtime/details/services/<service_id>`, and
+    `/runtime/details/compute-nodes/<node_id>`. The exact detail response
+    reuses the same backend-owned row shape as the corresponding cursor page
+    and preserves existing dashboard layout and cursor endpoints.
 - V2-054: Add model assumptions panel.
   - Scope: backend-derived model caveats, fidelity mode, KPI provenance.
   - Depends on: V2-003, V2-021.

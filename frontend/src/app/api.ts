@@ -14,8 +14,11 @@ import {
   RuntimeEntityDetailEnvelopeV1,
   RuntimeNodeDetailCardV1,
   RuntimeNodeDetailPageV1,
+  RuntimeComputeNodeDetailItemV1,
   RuntimeRouteExplanationSummaryV1,
+  RuntimeRouteExplanationItemV1,
   RuntimeSatelliteServiceSummaryV1,
+  RuntimeServiceDetailItemV1,
   RuntimeServiceDetailPageV1,
   RuntimeStatusEnvelope,
   RuntimeStatusPayload,
@@ -110,7 +113,7 @@ export async function loadRuntimeUserDetail(
   if (detail.kind !== "user") {
     throw new TypeError(`runtime entity detail kind must be user, got ${detail.kind}`);
   }
-  return detail.summary;
+  return detail.summary as RuntimeNodeDetailCardV1;
 }
 
 export async function loadRuntimeSatelliteDetail(
@@ -125,7 +128,7 @@ export async function loadRuntimeSatelliteDetail(
       `runtime entity detail kind must be satellite, got ${detail.kind}`
     );
   }
-  return detail.summary;
+  return detail.summary as RuntimeNodeDetailCardV1;
 }
 
 export async function loadRuntimeNodeDetails(
@@ -153,6 +156,17 @@ export async function loadRuntimeRouteDetails(
   return page.summary as RuntimeRouteExplanationSummaryV1;
 }
 
+export async function loadRuntimeRouteDetail(
+  routeId: string,
+  endpoint = "/runtime/details/routes"
+): Promise<RuntimeRouteExplanationItemV1> {
+  const detail = await loadRuntimeEntityDetail(runtimeDetailEntityHref(routeId, endpoint));
+  if (detail.kind !== "route") {
+    throw new TypeError(`runtime entity detail kind must be route, got ${detail.kind}`);
+  }
+  return detail.summary as RuntimeRouteExplanationItemV1;
+}
+
 export async function loadRuntimeServiceDetails(
   cursor = 0,
   limit = 100,
@@ -164,6 +178,17 @@ export async function loadRuntimeServiceDetails(
     throw new TypeError(`runtime detail response kind must be services, got ${page.kind}`);
   }
   return page.summary as RuntimeServiceDetailPageV1;
+}
+
+export async function loadRuntimeServiceDetail(
+  serviceId: string,
+  endpoint = "/runtime/details/services"
+): Promise<RuntimeServiceDetailItemV1> {
+  const detail = await loadRuntimeEntityDetail(runtimeDetailEntityHref(serviceId, endpoint));
+  if (detail.kind !== "service") {
+    throw new TypeError(`runtime entity detail kind must be service, got ${detail.kind}`);
+  }
+  return detail.summary as RuntimeServiceDetailItemV1;
 }
 
 export async function loadRuntimeComputeNodeDetails(
@@ -179,6 +204,19 @@ export async function loadRuntimeComputeNodeDetails(
     );
   }
   return page.summary as RuntimeComputeNodeDetailPageV1;
+}
+
+export async function loadRuntimeComputeNodeDetail(
+  nodeId: string,
+  endpoint = "/runtime/details/compute-nodes"
+): Promise<RuntimeComputeNodeDetailItemV1> {
+  const detail = await loadRuntimeEntityDetail(runtimeDetailEntityHref(nodeId, endpoint));
+  if (detail.kind !== "compute_node") {
+    throw new TypeError(
+      `runtime entity detail kind must be compute_node, got ${detail.kind}`
+    );
+  }
+  return detail.summary as RuntimeComputeNodeDetailItemV1;
 }
 
 export async function loadRuntimeExportHistory(
@@ -498,8 +536,16 @@ export function decodeRuntimeEntityDetail(value: unknown): RuntimeEntityDetailEn
   const kind = (value as { kind?: unknown }).kind;
   const entityId = (value as { entity_id?: unknown }).entity_id;
   const summary = (value as { summary?: unknown }).summary;
-  if (kind !== "user" && kind !== "satellite") {
-    throw new TypeError("runtime entity detail kind must be user or satellite");
+  if (
+    kind !== "user" &&
+    kind !== "satellite" &&
+    kind !== "route" &&
+    kind !== "service" &&
+    kind !== "compute_node"
+  ) {
+    throw new TypeError(
+      "runtime entity detail kind must be user, satellite, route, service, or compute_node"
+    );
   }
   if (typeof entityId !== "string" || entityId.trim().length === 0) {
     throw new TypeError("runtime entity detail response must include entity_id string");
