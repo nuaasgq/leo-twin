@@ -310,6 +310,17 @@ The following issue-sized slices have now been delivered on
   - Users can choose stable low-load, congested demand, lossy access, and
     high delay-variation presets without changing backend schema or runtime
     config files.
+- `c39fd72 test(frontend): add runtime contract fixture`
+  - Maps to suggestions 1, 2, 10, 91, and 92.
+  - Frontend tests now decode a representative backend `/runtime/status`
+    envelope covering fidelity, generated config, KPI series, satellite slices,
+    stream diagnostics, and compute resource summaries.
+- `95b3953 feat(metrics): extend satellite kpi resource slices`
+  - Maps to suggestions 51, 52, 55, 57, and the satellite resource inspector
+    slice.
+  - Backend satellite KPI slices now include optional compute vector usage
+    fields, and the selected-satellite detail summary can use those fields when
+    a compute-node snapshot is not present.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected
