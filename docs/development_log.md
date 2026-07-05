@@ -5463,3 +5463,30 @@ change.
 - Recommended follow-up:
   - Add explicit `constellation_profile` to acceptance YAML if profile checks
     become required in CI.
+
+## 2026-07-05 - Runtime Health Protocol Guard v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: extend runtime health smoke with a hard-constraint guard that fails if
+  runtime status JSON contains forbidden `STK`, `EXATA`, `AFSIM`, or `DDS`
+  markers. The smoke JSON also reports orbit model, application protocol,
+  transport protocol, and routing protocol.
+- Changed files/modules:
+  - `scripts/smoke_runtime_health.ps1`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\smoke_runtime_health.ps1 -JsonSummary -ExpectedSatelliteCount 120 -ExpectedUserCount 100 -ExpectedComputeNodeCount 120 -ExpectedConstellationProfile CUSTOM_WALKER -ExpectedTrafficClass COMPUTE_SERVICE`
+    - Result: passed; JSON output reported `KEPLERIAN`,
+      `TASK_OFFLOAD_FLOW`, `TCP`, and `LINK_STATE`.
+- Problems encountered:
+  - None. This is read-only contract inspection of runtime status.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The marker guard is a coarse smoke check; architectural bans are still
+    primarily enforced by code review and targeted tests.
+- Recommended follow-up:
+  - Add repository-wide static checks for forbidden simulator/runtime names if
+    the project needs CI enforcement.

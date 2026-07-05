@@ -65,6 +65,12 @@ function Assert-FrontendShell {
 
 $runtimeCheck = Assert-HttpOk -Name "Backend runtime status" -Url $RuntimeStatusUrl
 $runtimeStatus = $runtimeCheck.Response.Content | ConvertFrom-Json
+$runtimeStatusText = $runtimeStatus | ConvertTo-Json -Depth 32
+foreach ($forbiddenName in @("STK", "EXATA", "AFSIM", "DDS")) {
+    if ($runtimeStatusText -match $forbiddenName) {
+        throw "Backend runtime status contains forbidden external simulator/runtime marker: $forbiddenName"
+    }
+}
 
 if ($runtimeStatus.type -ne "RUNTIME_STATUS") {
     throw "Backend runtime status type was '$($runtimeStatus.type)', expected RUNTIME_STATUS."
@@ -133,6 +139,10 @@ $summary = [ordered]@{
     user_count = $userCount
     constellation_profile = $constellationProfile
     traffic_class = $trafficClass
+    orbit_model = $runtimeStatus.generated_config.orbit_propagation_model
+    application_protocol = $runtimeStatus.generated_config.application_protocol
+    transport_protocol = $runtimeStatus.generated_config.transport_protocol
+    routing_protocol = $runtimeStatus.generated_config.routing_protocol
     compute_node_count = $computeNodeCount
     compute_resource_model = $backendSummary.compute_resource_summary.resource_model
     console_url = $FrontendUrl
@@ -150,6 +160,8 @@ else {
     Write-Host "  simulation status: $($summary.simulation_status)"
     Write-Host "  constellation: $($summary.satellite_count) satellites / $($summary.user_count) users / $($summary.constellation_profile)"
     Write-Host "  traffic class: $($summary.traffic_class)"
+    Write-Host "  protocols: $($summary.application_protocol) / $($summary.transport_protocol) / $($summary.routing_protocol)"
+    Write-Host "  orbit model: $($summary.orbit_model)"
     Write-Host "  compute nodes: $($summary.compute_node_count) / $($summary.compute_resource_model)"
     Write-Host "  runtime status: $($summary.runtime_status_ms) ms"
     Write-Host "  console: $($summary.console_url) ($($summary.console_ms) ms)"
