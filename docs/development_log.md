@@ -5,6 +5,47 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Result Package Export Contract v1
+
+- Branch: `feature/T220-result-package-export-v1`
+- Commit: pending in this commit
+- Scope: advance V2-073 by adding a product-level result package contract over
+  the existing runtime export implementation. The contract defines required
+  files, endpoint shape, manifest id, hash policy, archive policy, restore
+  scope, benchmark evidence binding, and excluded semantics. A summary helper
+  checks whether a runtime export package record satisfies the contract, and a
+  real integration export test verifies the current DemoControlPlane export
+  package.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `docs/result_package_contract_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src/leo_twin/services/result_package_contract.py`
+    - Result: passed.
+  - `python -m pytest tests/unit/test_result_package_contract_v1.py tests/integration/test_result_package_export_v1.py -q`
+    - Result: passed, 4 tests.
+  - `python -m pytest tests/unit/test_runtime_reproducibility.py tests/integration/test_result_package_export_v1.py -q`
+    - Result: passed, 3 tests.
+  - `python -m pytest tests/integration/test_runtime_session_control.py::test_demo_adapter_persists_runtime_export_catalog -q`
+    - Result: passed, 1 test.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - Runtime export routes and catalog/restore behavior already existed. This
+    task therefore formalizes the product contract and adds validation over the
+    current export package instead of rewriting control-plane export code.
+  - Local runtime/generated config files remain dirty and are intentionally not
+    included in this task.
+- Known remaining issues / follow-up:
+  - Future benchmark runners should attach result package ids and contract
+    summaries to completed model verification reports.
+  - Runtime logs are represented by export/catalog metadata in v1; a later
+    operations task should add a dedicated operator diagnostics log bundle.
+
 ## 2026-07-06 - Benchmark Acceptance Tests v1
 
 - Branch: `feature/T219-benchmark-acceptance-tests-v1`

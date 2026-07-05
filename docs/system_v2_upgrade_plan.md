@@ -264,6 +264,12 @@ Tasks:
   - Scope: config snapshot, events, metrics, summary, model assumptions,
     runtime logs.
   - Depends on: V2-071.
+  - Status: T220 adds `leo_twin.result_package_contract.v1`, documenting the
+    existing runtime export package routes and required artifacts
+    (`config_snapshot.json`, `events.jsonl`, `metrics.csv`, `summary.json`,
+    `manifest.json`). It also adds a package-record summary validator and a
+    real integration export test that verifies the package satisfies the
+    contract.
 
 ### WS9. Delivery and Operations v2
 
