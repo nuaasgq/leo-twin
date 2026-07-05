@@ -53,6 +53,7 @@ After the launcher reports both services healthy, run a read-only smoke check:
 
 ```powershell
 .\scripts\smoke_runtime_health.ps1
+.\scripts\smoke_runtime_health.ps1 -JsonSummary
 ```
 
 ## Backend

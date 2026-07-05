@@ -45,6 +45,7 @@ Useful launcher commands:
 .\scripts\sees_launcher.ps1 status
 .\scripts\sees_launcher.ps1 restart -OpenSurface dashboard
 .\scripts\smoke_runtime_health.ps1
+.\scripts\smoke_runtime_health.ps1 -JsonSummary
 ```
 
 Default local surfaces:

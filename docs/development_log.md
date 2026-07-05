@@ -4920,3 +4920,34 @@ change.
 - Recommended follow-up:
   - Add an optional isolated control smoke mode once config mutation can be
     redirected to a temporary path.
+
+## 2026-07-05 - Runtime Health JSON Summary v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add `-JsonSummary` to `scripts/smoke_runtime_health.ps1` so local
+  tools and future CI jobs can consume runtime health results as structured
+  JSON while preserving the existing human-readable output by default.
+- Changed files/modules:
+  - `scripts/smoke_runtime_health.ps1`
+  - `README.md`
+  - `docs/integration_demo.md`
+  - `docs/product_acceptance_scenarios.md`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\smoke_runtime_health.ps1`
+    - Result: passed; human-readable output unchanged.
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\smoke_runtime_health.ps1 -JsonSummary`
+    - Result: passed; emitted JSON with `ok`, runtime status URL,
+      lifecycle state, simulation status, session id, console URL, and
+      dashboard URL.
+- Problems encountered:
+  - None. This remains a read-only smoke check.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - JSON summary does not yet include timing measurements or endpoint latency.
+- Recommended follow-up:
+  - Add endpoint timing fields if runtime smoke becomes part of performance
+    acceptance.

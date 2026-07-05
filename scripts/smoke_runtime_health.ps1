@@ -1,7 +1,8 @@
 param(
     [int]$BackendPort = 8765,
     [int]$FrontendPort = 5173,
-    [int]$TimeoutSeconds = 3
+    [int]$TimeoutSeconds = 3,
+    [switch]$JsonSummary
 )
 
 $ErrorActionPreference = "Stop"
@@ -10,6 +11,14 @@ $BackendUrl = "http://127.0.0.1:$BackendPort"
 $FrontendUrl = "http://127.0.0.1:$FrontendPort"
 $DashboardUrl = "$FrontendUrl/dashboard"
 $RuntimeStatusUrl = "$BackendUrl/runtime/status"
+
+function Write-Status {
+    param([string]$Message)
+
+    if (-not $JsonSummary) {
+        Write-Host $Message
+    }
+}
 
 function Get-HttpResponse {
     param([string]$Url)
@@ -28,7 +37,7 @@ function Assert-HttpOk {
     if ($statusCode -lt 200 -or $statusCode -ge 400) {
         throw "$Name returned HTTP $statusCode at $Url"
     }
-    Write-Host "$Name OK: $Url"
+    Write-Status "$Name OK: $Url"
     return $response
 }
 
@@ -54,8 +63,23 @@ if ($null -eq $runtimeStatus.generated_config.backend_summary) {
 Assert-HttpOk -Name "Frontend console" -Url $FrontendUrl | Out-Null
 Assert-HttpOk -Name "Frontend dashboard" -Url $DashboardUrl | Out-Null
 
-Write-Host "Runtime health smoke passed."
-Write-Host "  lifecycle_state: $($runtimeStatus.status.lifecycle_state)"
-Write-Host "  simulation status: $($runtimeStatus.status.status)"
-Write-Host "  console: $FrontendUrl"
-Write-Host "  dashboard: $DashboardUrl"
+$summary = [ordered]@{
+    ok = $true
+    runtime_status_url = $RuntimeStatusUrl
+    lifecycle_state = $runtimeStatus.status.lifecycle_state
+    simulation_status = $runtimeStatus.status.status
+    session_id = $runtimeStatus.status.session_id
+    console_url = $FrontendUrl
+    dashboard_url = $DashboardUrl
+}
+
+if ($JsonSummary) {
+    $summary | ConvertTo-Json -Depth 4
+}
+else {
+    Write-Host "Runtime health smoke passed."
+    Write-Host "  lifecycle_state: $($summary.lifecycle_state)"
+    Write-Host "  simulation status: $($summary.simulation_status)"
+    Write-Host "  console: $($summary.console_url)"
+    Write-Host "  dashboard: $($summary.dashboard_url)"
+}

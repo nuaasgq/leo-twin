@@ -423,6 +423,11 @@ The following issue-sized slices have now been delivered on
   - `scripts/verify_product_acceptance.ps1` runs targeted backend service
     timeline tests, frontend visual/dashboard verification, and read-only
     runtime health smoke as one local acceptance command.
+- `test(runtime): add health smoke json summary`
+  - Maps to suggestions 91-95.
+  - `scripts/smoke_runtime_health.ps1 -JsonSummary` now emits structured
+    health output for automation while preserving human-readable output by
+    default.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected

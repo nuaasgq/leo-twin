@@ -52,6 +52,7 @@ Local read-only health smoke:
 
 ```powershell
 .\scripts\smoke_runtime_health.ps1
+.\scripts\smoke_runtime_health.ps1 -JsonSummary
 ```
 
 Frontend visual/dashboard verification:
