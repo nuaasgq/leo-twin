@@ -2665,6 +2665,57 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
   padding-top: 12px;
 }
 
+.configuration-template-summary {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  border: 1px solid #263847;
+  border-radius: 8px;
+  padding: 10px;
+  background: #0b1219;
+}
+
+.configuration-template-list {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.configuration-template-item {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  border: 1px solid #20323d;
+  border-radius: 6px;
+  padding: 8px;
+  background: #0d151d;
+}
+
+.configuration-template-item span,
+.configuration-template-item strong,
+.configuration-template-item small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.configuration-template-item span {
+  color: var(--accent-cyan);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.configuration-template-item strong {
+  color: var(--app-text);
+  font-size: 11px;
+}
+
+.configuration-template-item small {
+  color: var(--app-muted);
+  font-size: 10px;
+}
+
 .summary-title-row {
   display: flex;
   align-items: center;

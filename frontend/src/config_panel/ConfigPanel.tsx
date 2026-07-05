@@ -105,6 +105,7 @@ export interface ConfigPanelProps {
 export interface ConfigSummaryItem {
   label: string;
   value: string;
+  detail?: string;
 }
 
 export interface RuntimeProgressValues {
@@ -584,6 +585,7 @@ export function ConfigPanel({
   }, [runtime.mode, runtime.speed_factor, runtime.duration, runtime.seed]);
 
   const summaryItems = generatedScenarioSummaryItems(generatedConfig);
+  const templateItems = configurationTemplateSummaryItems(generatedConfig);
   const constellationSummary =
     generatedConfig?.backend_summary?.derived_constellation_summary;
   const orbitMotionExplanations = orbitMotionExplanationItems({
@@ -1775,6 +1777,28 @@ export function ConfigPanel({
             </div>
           ))}
         </div>
+        <div className="configuration-template-summary" aria-label="详细配置模板">
+          <div className="summary-title-row">
+            <span>详细配置模板</span>
+            <strong>{templateItems.length > 0 ? "后端声明" : "等待初始化"}</strong>
+          </div>
+          <div className="configuration-template-list">
+            {templateItems.length > 0 ? (
+              templateItems.map((item) => (
+                <div className="configuration-template-item" key={item.label}>
+                  <span>{item.label}</span>
+                  <strong>{item.value}</strong>
+                  {item.detail ? <small>{item.detail}</small> : null}
+                </div>
+              ))
+            ) : (
+              <div className="configuration-template-item empty">
+                <span>模板</span>
+                <strong>初始化后显示完整 YAML 模板路径</strong>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
         </section>
       </div>
@@ -1940,6 +1964,35 @@ export function generatedScenarioSummaryItems(
       label: "倾角",
       value: `${formatDecimal(constellation?.inclination_deg ?? config.inclination_deg)}°`
     }
+  ];
+}
+
+export function configurationTemplateSummaryItems(
+  config: GeneratedScenarioConfig | null | undefined
+): readonly ConfigSummaryItem[] {
+  const surface = config?.backend_summary?.configuration_surface_summary;
+  if (surface === undefined) {
+    return [];
+  }
+  const profiles = surface.template_profiles ?? [];
+  return [
+    {
+      label: "详细配置文件",
+      value: surface.detailed_config_file,
+      detail: "运行态生成配置，不应作为产品提交。"
+    },
+    {
+      label: "前端配置策略",
+      value: surface.frontend_policy,
+      detail: `${formatInteger(surface.key_field_count)} 个关键字段 / ${formatInteger(
+        surface.detailed_field_count
+      )} 个完整字段`
+    },
+    ...profiles.map((profile) => ({
+      label: profile.label,
+      value: profile.path,
+      detail: profile.purpose
+    }))
   ];
 }
 

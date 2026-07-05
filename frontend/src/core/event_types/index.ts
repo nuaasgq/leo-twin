@@ -318,6 +318,7 @@ export interface ConfigurationSurfaceSummary {
   source: string;
   detailed_config_file: string;
   template_config_file: string;
+  template_profiles?: readonly ConfigurationTemplateProfile[];
   frontend_policy: string;
   key_field_count: number;
   detailed_field_count: number;
@@ -325,6 +326,13 @@ export interface ConfigurationSurfaceSummary {
   detailed_file_sections: readonly ConfigurationSurfaceSection[];
   file_only_fields: readonly string[];
   notes?: readonly string[];
+}
+
+export interface ConfigurationTemplateProfile {
+  id: string;
+  label: string;
+  path: string;
+  purpose: string;
 }
 
 export interface ConfigurationSurfaceField {

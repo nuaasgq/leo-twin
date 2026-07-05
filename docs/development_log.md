@@ -5,6 +5,37 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Frontend Template Profile Binding v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending in this commit
+- Scope: bind backend-provided `configuration_surface_summary.template_profiles`
+  into the frontend control panel so users can see the detailed YAML templates
+  while the UI continues to expose only key operational controls.
+- Changed files/modules:
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/config_panel/ConfigPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/configPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `pnpm --dir frontend test -- configPanel.test.ts`
+    - Result: passed, 25 files / 241 tests.
+  - Bundled Node:
+    `pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The first render test used a too-small `GeneratedScenarioConfig` fixture;
+    `ConfigPanel` also renders the existing generated scenario summary, so the
+    fixture was expanded with the required baseline generated-config fields.
+- Known remaining issues:
+  - The UI currently displays template paths and purposes but does not yet
+    load a selected template into the form.
+- Recommended follow-up:
+  - Add an explicit "apply template" workflow that loads a template through the
+    backend config-control path and then refreshes the backend-derived summary.
+
 ## 2026-07-05 - User Dynamic Observability Template v1
 
 - Branch: `feature/T164-dashboard-observability-v1`

@@ -6,6 +6,7 @@ import {
   ConfigPanel,
   NETWORK_QUALITY_PRESETS,
   SCENARIO_SCALE_PRESETS,
+  configurationTemplateSummaryItems,
   configPanelSectionTitles,
   generatedScenarioSummaryItems,
   initializationControlPayload,
@@ -657,6 +658,130 @@ describe("generatedScenarioSummaryItems", () => {
     expect(generatedScenarioSummaryItems(null)).toEqual([
       { label: "生成场景", value: "等待初始化" }
     ]);
+  });
+});
+
+describe("configurationTemplateSummaryItems", () => {
+  it("maps backend template profiles into frontend display rows", () => {
+    const config = {
+      backend_summary: {
+        configuration_surface_summary: {
+          version: "v1",
+          source: "backend_sees_config",
+          detailed_config_file: "configs/sees_control.yaml",
+          template_config_file: "configs/templates/sees_user_detailed.example.yaml",
+          frontend_policy: "CONTROL_PANEL_KEY_FIELDS_ONLY",
+          key_field_count: 29,
+          detailed_field_count: 75,
+          key_fields: [],
+          detailed_file_sections: [],
+          file_only_fields: [],
+          template_profiles: [
+            {
+              id: "baseline_72sat",
+              label: "72-satellite baseline",
+              path: "configs/templates/sees_user_detailed.example.yaml",
+              purpose: "Executable baseline for full-contract editing."
+            },
+            {
+              id: "dynamic_observability_120sat",
+              label: "120-satellite dynamic observability",
+              path: "configs/templates/sees_user_dynamic_observability.example.yaml",
+              purpose: "Mixed traffic and non-zero network proxies."
+            }
+          ]
+        }
+      }
+    } as unknown as GeneratedScenarioConfig;
+
+    expect(configurationTemplateSummaryItems(config)).toEqual([
+      {
+        label: "详细配置文件",
+        value: "configs/sees_control.yaml",
+        detail: "运行态生成配置，不应作为产品提交。"
+      },
+      {
+        label: "前端配置策略",
+        value: "CONTROL_PANEL_KEY_FIELDS_ONLY",
+        detail: "29 个关键字段 / 75 个完整字段"
+      },
+      {
+        label: "72-satellite baseline",
+        value: "configs/templates/sees_user_detailed.example.yaml",
+        detail: "Executable baseline for full-contract editing."
+      },
+      {
+        label: "120-satellite dynamic observability",
+        value: "configs/templates/sees_user_dynamic_observability.example.yaml",
+        detail: "Mixed traffic and non-zero network proxies."
+      }
+    ]);
+  });
+
+  it("renders backend template profiles in the control panel", () => {
+    const generatedConfig = {
+      seed: 20260705,
+      satellite_count: 120,
+      user_count: 600,
+      compute_node_count: 120,
+      flow_count: 60,
+      orbit_plane_count: 12,
+      epoch: 0,
+      semi_major_axis_km: 6900,
+      eccentricity: 0,
+      inclination_deg: 53,
+      earth_radius_km: 6371,
+      min_elevation_deg: 10,
+      max_range_km: 2000,
+      compute_capacity: 40,
+      demand_capacity: 180,
+      task_compute_demand: 60,
+      task_data_size: 16,
+      backend_summary: {
+        configuration_surface_summary: {
+          version: "v1",
+          source: "backend_sees_config",
+          detailed_config_file: "configs/sees_control.yaml",
+          template_config_file: "configs/templates/sees_user_detailed.example.yaml",
+          frontend_policy: "CONTROL_PANEL_KEY_FIELDS_ONLY",
+          key_field_count: 29,
+          detailed_field_count: 75,
+          key_fields: [],
+          detailed_file_sections: [],
+          file_only_fields: [],
+          template_profiles: [
+            {
+              id: "dynamic_observability_120sat",
+              label: "120-satellite dynamic observability",
+              path: "configs/templates/sees_user_dynamic_observability.example.yaml",
+              purpose: "Mixed traffic and non-zero network proxies."
+            }
+          ]
+        }
+      }
+    } as unknown as GeneratedScenarioConfig;
+
+    const markup = renderToStaticMarkup(
+      createElement(ConfigPanel, {
+        scenario: defaultScenario(),
+        runtime: runtimeStatus("STOPPED", true),
+        progress: {
+          sim_time: 0,
+          duration: 600,
+          event_count: 0
+        },
+        generatedConfig,
+        onRuntimeControl: () => undefined
+      })
+    );
+
+    expect(markup).toContain("详细配置模板");
+    expect(markup).toContain("120-satellite dynamic observability");
+    expect(markup).toContain("configs/templates/sees_user_dynamic_observability.example.yaml");
+  });
+
+  it("returns no template rows before initialization", () => {
+    expect(configurationTemplateSummaryItems(null)).toEqual([]);
   });
 });
 
