@@ -278,9 +278,17 @@ class MetricsCollector:
     def summary_json(self) -> str:
         return json.dumps(self.summary(), sort_keys=True, indent=2) + "\n"
 
-    def kpi_time_series(self) -> dict[str, str | int | list[KpiSample]]:
+    def kpi_time_series(
+        self,
+        sim_time: float | None = None,
+    ) -> dict[str, str | int | list[KpiSample]]:
         samples = [dict(sample) for sample in self._kpi_samples]
-        current_sample = self._current_kpi_sample(self._last_sim_time)
+        current_sample_time = (
+            self._last_sim_time
+            if sim_time is None
+            else max(self._last_sim_time, float(sim_time))
+        )
+        current_sample = self._current_kpi_sample(current_sample_time)
         if not samples:
             samples = [current_sample]
         elif samples[-1]["sim_time"] == current_sample["sim_time"]:

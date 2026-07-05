@@ -5879,3 +5879,58 @@ change.
   - Run `scripts\smoke_runtime_control_cycle.ps1 -SatelliteCount 72 -UserCount
     1000 -ComputeNodeCount 72 -IncludeComputeVector` after backend restarts to
     confirm the UI initialization payload is accepted.
+
+## 2026-07-05 - Runtime Completion and Live Dashboard KPI Tail
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: make live runtime sessions stop at configured `runtime.duration` and
+  keep dashboard KPI/resource-pool displays synchronized with the current
+  runtime KPI tail instead of freezing at the previous event sample.
+- Changed files/modules:
+  - `src/leo_twin/runtime/session.py`
+  - `src/leo_twin/runtime/advance_loop.py`
+  - `src/leo_twin/services/metrics/collector.py`
+  - `examples/integration_demo/control_plane.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `tests/integration/test_runtime_session_control.py`
+  - `tests/integration/test_live_runtime_streaming.py`
+  - `tests/unit/test_metrics_module.py`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/integration/test_runtime_session_control.py tests/integration/test_live_runtime_streaming.py tests/unit/test_metrics_module.py`
+    - Result: passed, 42 passed.
+  - `pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 25 frontend test files / 200 tests passed.
+  - `pnpm --dir frontend build`
+    - Result: passed.
+  - `python -m pytest`
+    - Result: failed after 309 passed / 7 failed. The failures were outside
+      this task's changed modules and included local runtime/generated config
+      drift (`configs/sees_control.yaml`, `configs/generated_full_system_demo.json`)
+      plus existing network/scenario expectation mismatches in tests such as
+      `test_full_system_pipeline.py`, `test_network_module_parallel.py`, and
+      `test_integration_demo_scenario.py`.
+- Problems encountered:
+  - A first full-pytest attempt timed out at 184 seconds without failure
+    details; a second longer run completed and exposed the unrelated failures
+    listed above.
+  - The initial frontend test command failed because `node` was not on the
+    PowerShell PATH. The Codex bundled Node/pnpm paths were loaded and the
+    frontend tests/build then passed.
+  - Probe files `tmp_probe_generated.json` and `tmp_probe_sees.yaml` were
+    created during diagnosis and removed before staging.
+  - Existing local runtime config changes remain intentionally unstaged.
+- Known remaining issues:
+  - The full backend suite still needs a separate baseline cleanup for the
+    unrelated config/scenario expectation failures before it can be used as a
+    clean all-green gate in this worktree.
+  - Network loss/jitter/throughput remain flow-level proxy metrics, not
+    packet-level measurements.
+- Recommended follow-up:
+  - Add a focused baseline-alignment task for the remaining full-pytest
+    failures, starting with the generated config defaults versus fixture
+    expectations, then the route demand and constellation summary expectation
+    drift.

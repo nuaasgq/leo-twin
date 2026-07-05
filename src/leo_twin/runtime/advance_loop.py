@@ -204,6 +204,12 @@ class SessionAdvanceLoop:
         try:
             while not self._stop_event.is_set():
                 self.tick()
+                if self._session.lifecycle_state in {
+                    RuntimeLifecycleState.COMPLETED,
+                    RuntimeLifecycleState.STOPPED,
+                    RuntimeLifecycleState.ERROR,
+                }:
+                    break
                 time.sleep(self._tick_interval_seconds)
         finally:
             with self._lock:

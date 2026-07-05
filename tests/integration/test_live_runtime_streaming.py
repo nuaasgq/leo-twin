@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import queue
 import threading
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, TypeVar
@@ -228,6 +229,73 @@ def test_http_cursor_batches_return_incremental_events(tmp_path: Path) -> None:
     assert second["items"] != first["items"]
 
 
+def test_demo_runtime_status_completes_at_configured_duration(tmp_path: Path) -> None:
+    control_plane = _control_plane(tmp_path)
+    initialized = control_plane.handle_raw_message(
+        json.dumps(
+            {
+                "type": "RUNTIME_CONTROL",
+                "action": "INITIALIZE",
+                "payload": {
+                    "duration": 2,
+                    "orbit": {"update_interval_seconds": 1},
+                    "traffic_model": {
+                        "flow_interval_seconds": 1,
+                        "task_interval_seconds": 1,
+                    },
+                },
+            }
+        )
+    )
+    assert initialized["ok"] is True
+    started = control_plane.handle_raw_message(
+        json.dumps({"type": "RUNTIME_CONTROL", "action": "START"})
+    )
+    assert started["ok"] is True
+    control_plane._require_advance_loop().stop()
+
+    for _ in range(4):
+        control_plane._require_session().advance_control_step()
+        control_plane._require_advance_loop().publish_pending()
+
+    status = control_plane.runtime_status()["status"]
+    kpi_series = status["kpi_time_series_v1"]
+
+    assert status["lifecycle_state"] == "COMPLETED"
+    assert status["status"] == "COMPLETED"
+    assert status["current_sim_time"] == 2.0
+    assert kpi_series["samples"][-1]["sim_time"] == 2.0
+
+
+def test_server_side_advance_loop_stops_at_configured_duration() -> None:
+    session = SimulationSession(
+        session_id="duration-loop-test",
+        runtime_config=RuntimeConfig(seed=7, duration=2),
+        scenario_config=ScenarioConfig(
+            satellite_count=1,
+            user_count=1,
+            compute_nodes=1,
+            cell_count=1,
+            orbit=OrbitParameters(update_interval_seconds=1),
+        ),
+        kernel_factory=_kernel_factory,
+        snapshot_interval_events=1,
+        deterministic_replay=True,
+        control_step_seconds=1.0,
+    )
+    session.initialize()
+    session.start_live()
+    loop = SessionAdvanceLoop(session, tick_interval_seconds=0.001)
+
+    loop.start()
+    assert _wait_for(lambda: loop.state.value == "STOPPED", timeout_seconds=1.0)
+    loop.publish_pending()
+
+    assert session.get_status().lifecycle_state == RuntimeLifecycleState.COMPLETED
+    assert session.get_status().current_sim_time == 2.0
+    assert [event.event_id for event in loop.event_stream.read_after(0).items] == [0, 1, 2]
+
+
 def test_demo_live_session_does_not_precompute_full_orbit_step(tmp_path: Path) -> None:
     control_plane = DemoControlPlane.from_result(
         run_integration_demo(_slow_orbit_demo_config()),
@@ -393,6 +461,15 @@ def _call_with_timeout(callback: Callable[[], T], timeout_seconds: float) -> T:
     if kind == "error":
         raise value  # type: ignore[misc]
     return value  # type: ignore[return-value]
+
+
+def _wait_for(callback: Callable[[], bool], timeout_seconds: float) -> bool:
+    deadline = time.time() + timeout_seconds
+    while time.time() <= deadline:
+        if callback():
+            return True
+        time.sleep(0.001)
+    return callback()
 
 
 def _kernel_factory(

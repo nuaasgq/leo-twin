@@ -17,6 +17,7 @@ import {
   FidelitySummary,
   GeneratedScenarioConfig,
   TrafficDemandSummary,
+  RuntimeKpiSampleV1,
   RuntimeKpiTimeSeriesV1,
   RuntimeMetricsSummary,
   RuntimeNetworkQualityProvenanceV1,
@@ -124,9 +125,10 @@ export const DataPanel = memo(function DataPanel({
   const latestTelemetry = telemetry[telemetry.length - 1];
   const computeSeries = computeSeriesOption(computeSeriesKey);
   const latestComputeValue = latestTelemetry[computeSeriesKey];
-  const computePool = buildComputeResourcePool(
+  const computePool = buildComputeResourcePoolFromRuntime(
     snapshot,
-    runtimeStatus.metrics_summary
+    runtimeStatus.metrics_summary,
+    runtimeStatus.kpi_time_series_v1
   );
   const computePoolModeNote = buildComputeResourcePoolModeNote(computePool);
   const topComputeNodes = buildTopComputeNodeRows(
@@ -849,9 +851,12 @@ export function buildDataPanelTelemetry(
     backendComputeUsedGflops !== undefined
       ? backendComputeUsedGflops / 1000
       : computePool.usedTflops;
-  const runtimeKpiSeries = backendKpiTimeSeries?.samples ?? [];
+  const runtimeKpiSeries = buildRuntimeKpiTelemetrySamples(
+    backendKpiTimeSeries,
+    displaySimTime
+  );
   if (runtimeKpiSeries.length > 0) {
-    return runtimeKpiSeries.slice(-24).map((point) => ({
+    return runtimeKpiSeries.map((point) => ({
       timeLabel: formatDurationCompact(point.sim_time),
       simTime: point.sim_time,
       throughputMbps: roundMetric(point.network_effective_throughput_mbps),
@@ -966,6 +971,115 @@ export function buildDataPanelComputeVectorTail(
     computeVectorTailItem("内存", tail.compute_resource_used_memory_gb, "GB"),
     computeVectorTailItem("存储", tail.compute_resource_used_storage_gb, "GB")
   ].filter((item): item is DataPanelComputeVectorTailItem => item !== null);
+}
+
+export function buildComputeResourcePoolFromRuntime(
+  snapshot: WorldSnapshot,
+  backendMetrics: RuntimeMetricsSummary | null | undefined = undefined,
+  backendKpiTimeSeries: RuntimeKpiTimeSeriesV1 | null | undefined = undefined
+): ComputeResourcePool {
+  return buildComputeResourcePool(
+    snapshot,
+    metricsWithRuntimeKpiTail(backendMetrics, backendKpiTimeSeries)
+  );
+}
+
+export function buildRuntimeKpiTelemetrySamples(
+  backendKpiTimeSeries: RuntimeKpiTimeSeriesV1 | null | undefined,
+  displaySimTime: number
+): readonly RuntimeKpiSampleV1[] {
+  const samples = backendKpiTimeSeries?.samples ?? [];
+  if (samples.length === 0) {
+    return [];
+  }
+  const tail = samples[samples.length - 1];
+  const boundedDisplayTime = Math.max(0, displaySimTime);
+  if (
+    !Number.isFinite(boundedDisplayTime) ||
+    boundedDisplayTime <= tail.sim_time
+  ) {
+    return samples.slice(-24);
+  }
+  return [...samples.slice(-23), { ...tail, sim_time: boundedDisplayTime }];
+}
+
+function metricsWithRuntimeKpiTail(
+  backendMetrics: RuntimeMetricsSummary | null | undefined,
+  backendKpiTimeSeries: RuntimeKpiTimeSeriesV1 | null | undefined
+): RuntimeMetricsSummary | null | undefined {
+  const tail = backendKpiTimeSeries?.samples.at(-1);
+  if (tail === undefined) {
+    return backendMetrics;
+  }
+  const merged: RuntimeMetricsSummary = { ...(backendMetrics ?? {}) };
+  mergeUsedMetric(
+    merged,
+    "compute_resource_used_gflops_fp32",
+    "compute_resource_total_gflops_fp32",
+    "compute_resource_available_gflops_fp32",
+    tail.compute_resource_used_gflops_fp32
+  );
+  mergeUsedMetric(
+    merged,
+    "compute_resource_used_gflops_fp64",
+    "compute_resource_total_gflops_fp64",
+    "compute_resource_available_gflops_fp64",
+    tail.compute_resource_used_gflops_fp64
+  );
+  mergeUsedMetric(
+    merged,
+    "compute_resource_used_gpu_tflops_fp32",
+    "compute_resource_total_gpu_tflops_fp32",
+    "compute_resource_available_gpu_tflops_fp32",
+    tail.compute_resource_used_gpu_tflops_fp32
+  );
+  mergeUsedMetric(
+    merged,
+    "compute_resource_used_gpu_tflops_fp16",
+    "compute_resource_total_gpu_tflops_fp16",
+    "compute_resource_available_gpu_tflops_fp16",
+    tail.compute_resource_used_gpu_tflops_fp16
+  );
+  mergeUsedMetric(
+    merged,
+    "compute_resource_used_npu_tops_int8",
+    "compute_resource_total_npu_tops_int8",
+    "compute_resource_available_npu_tops_int8",
+    tail.compute_resource_used_npu_tops_int8
+  );
+  mergeUsedMetric(
+    merged,
+    "compute_resource_used_memory_gb",
+    "compute_resource_total_memory_gb",
+    "compute_resource_available_memory_gb",
+    tail.compute_resource_used_memory_gb
+  );
+  mergeUsedMetric(
+    merged,
+    "compute_resource_used_storage_gb",
+    "compute_resource_total_storage_gb",
+    "compute_resource_available_storage_gb",
+    tail.compute_resource_used_storage_gb
+  );
+  return merged;
+}
+
+function mergeUsedMetric(
+  metrics: RuntimeMetricsSummary,
+  usedKey: string,
+  totalKey: string,
+  availableKey: string,
+  usedValue: number | undefined
+): void {
+  if (usedValue === undefined || !Number.isFinite(usedValue)) {
+    return;
+  }
+  const used = Math.max(0, usedValue);
+  metrics[usedKey] = used;
+  const total = metricNumber(metrics, totalKey);
+  if (total !== undefined) {
+    metrics[availableKey] = Math.max(0, total - used);
+  }
 }
 
 function computeVectorTailItem(

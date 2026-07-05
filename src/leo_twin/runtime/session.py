@@ -98,6 +98,7 @@ class SimulationSession:
         self._config_version = 0
         self._last_profiling_summary: dict[str, object] | None = None
         self._last_backpressure_summary: dict[str, object] | None = None
+        self._terminal_sim_time: float | None = None
         self._lock = RLock()
 
     @property
@@ -162,6 +163,7 @@ class SimulationSession:
                 self._processed_events.clear()
                 self._last_profiling_summary = None
                 self._last_backpressure_summary = None
+                self._terminal_sim_time = None
                 self._lifecycle_state = RuntimeLifecycleState.INITIALIZED
                 self._last_error = None
                 self._config_version += 1
@@ -229,6 +231,7 @@ class SimulationSession:
             kernel = self._require_kernel()
             kernel.stop()
             self._clock.stop()
+            self._terminal_sim_time = None
             self._lifecycle_state = RuntimeLifecycleState.STOPPED
             return self.get_status()
 
@@ -373,14 +376,22 @@ class SimulationSession:
     def _run_until(self, target: float | None) -> tuple[SimEvent, ...]:
         kernel = self._require_kernel()
         observer = self._tick_observer
+        effective_target = self._duration_limited_target(target)
         try:
+            if self._duration_reached_before_run(effective_target):
+                self._complete_at_runtime_duration()
+                self._snapshot_stream.flush()
+                return ()
             if observer is not None:
                 observer.reset()
-            events = kernel.run(until_time=target)
+            events = kernel.run(until_time=effective_target)
             self._processed_events.extend(events)
             snapshot_started = perf_counter()
             self._snapshot_stream.ingest(events)
-            if events and _queued_event_count(kernel) == 0:
+            if self._duration_target_reached(effective_target):
+                self._snapshot_stream.flush()
+                self._complete_at_runtime_duration()
+            elif events and _queued_event_count(kernel) == 0:
                 self._snapshot_stream.flush()
                 if self._lifecycle_state == RuntimeLifecycleState.RUNNING:
                     self._lifecycle_state = RuntimeLifecycleState.COMPLETED
@@ -402,9 +413,39 @@ class SimulationSession:
         return self._kernel
 
     def _current_sim_time(self) -> float:
+        if self._terminal_sim_time is not None:
+            return self._terminal_sim_time
         if self._kernel is None:
             return 0.0
         return self._kernel.get_current_time()
+
+    def _duration_limited_target(self, target: float | None) -> float | None:
+        duration = float(self._runtime_config.duration)
+        if target is None:
+            return duration
+        return min(float(target), duration)
+
+    def _duration_reached_before_run(self, target: float | None) -> bool:
+        if target is None:
+            return False
+        return (
+            self._lifecycle_state == RuntimeLifecycleState.RUNNING
+            and self._kernel is not None
+            and self._kernel.get_current_time() >= float(self._runtime_config.duration)
+        )
+
+    def _duration_target_reached(self, target: float | None) -> bool:
+        if target is None:
+            return False
+        return (
+            self._lifecycle_state == RuntimeLifecycleState.RUNNING
+            and target >= float(self._runtime_config.duration)
+        )
+
+    def _complete_at_runtime_duration(self) -> None:
+        self._terminal_sim_time = float(self._runtime_config.duration)
+        if self._lifecycle_state == RuntimeLifecycleState.RUNNING:
+            self._lifecycle_state = RuntimeLifecycleState.COMPLETED
 
 
 def _queued_event_count(kernel: KernelPort | None) -> int | None:

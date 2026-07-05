@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildComputeResourcePool,
+  buildComputeResourcePoolFromRuntime,
   buildComputeResourcePoolModeNote,
   buildDataPanelComputeVectorTail,
   buildDataPanelConfiguredScale,
@@ -16,6 +17,7 @@ import {
   buildDataPanelSummary,
   buildDataPanelTelemetry,
   buildDataPanelTrafficDisplay,
+  buildRuntimeKpiTelemetrySamples,
   buildTopComputeNodeRows,
   COMPUTE_SERIES_OPTIONS,
   resolveNetworkQualityKpis
@@ -1212,6 +1214,63 @@ describe("buildDataPanelTelemetry", () => {
     });
   });
 
+  it("extends backend runtime KPI telemetry to the displayed simulation time", () => {
+    const telemetry = buildDataPanelTelemetry(
+      makeSnapshot(),
+      25,
+      undefined,
+      {
+        version: "v1",
+        sample_count: 1,
+        samples: [
+          {
+            sim_time: 20,
+            network_effective_throughput_mbps: 150,
+            network_effective_latency_s: 0.11,
+            network_effective_loss_proxy_rate: 0.04,
+            network_effective_delay_variation_s: 0.006,
+            compute_resource_used_gflops_fp32: 2500
+          }
+        ]
+      }
+    );
+
+    expect(telemetry).toHaveLength(2);
+    expect(telemetry[1]).toMatchObject({
+      simTime: 25,
+      throughputMbps: 150,
+      latencyMs: 110,
+      lossPercent: 4,
+      jitterMs: 6,
+      computeUsedTflops: 2.5
+    });
+  });
+
+  it("builds a bounded runtime KPI sample tail at the displayed simulation time", () => {
+    const samples = buildRuntimeKpiTelemetrySamples(
+      {
+        version: "v1",
+        samples: Array.from({ length: 25 }, (_, index) => ({
+          sim_time: index,
+          network_effective_throughput_mbps: 100 + index,
+          network_effective_latency_s: 0.1,
+          network_effective_loss_proxy_rate: 0.01,
+          network_effective_delay_variation_s: 0.002,
+          compute_resource_used_gflops_fp32: 1000 + index
+        }))
+      },
+      30
+    );
+
+    expect(samples).toHaveLength(24);
+    expect(samples[0].sim_time).toBe(2);
+    expect(samples[samples.length - 1]).toMatchObject({
+      sim_time: 30,
+      network_effective_throughput_mbps: 124,
+      compute_resource_used_gflops_fp32: 1024
+    });
+  });
+
   it("maps backend compute vector KPI fields into telemetry points", () => {
     const telemetry = buildDataPanelTelemetry(
       makeSnapshot(),
@@ -1565,6 +1624,51 @@ describe("buildComputeResourcePool", () => {
     expect(buildComputeResourcePoolModeNote(pool)).toBe(
       "后端资源向量：CPU FP32/FP64、GPU FP32/FP16、NPU INT8、内存、存储。"
     );
+  });
+  it("uses the latest backend KPI sample for live resource-pool consumption", () => {
+    const pool = buildComputeResourcePoolFromRuntime(
+      makeSnapshot(),
+      {
+        compute_resource_total_gflops_fp32: 80,
+        compute_resource_available_gflops_fp32: 70,
+        compute_resource_used_gflops_fp32: 10,
+        compute_resource_total_gpu_tflops_fp32: 6,
+        compute_resource_available_gpu_tflops_fp32: 5,
+        compute_resource_used_gpu_tflops_fp32: 1,
+        compute_resource_total_memory_gb: 96,
+        compute_resource_available_memory_gb: 90,
+        compute_resource_used_memory_gb: 6,
+        compute_resource_vector_utilization_mode: "RESOURCE_VECTOR_ESTIMATED"
+      },
+      {
+        version: "v1",
+        samples: [
+          {
+            sim_time: 12,
+            network_effective_throughput_mbps: 80,
+            network_effective_latency_s: 0.08,
+            network_effective_loss_proxy_rate: 0.01,
+            network_effective_delay_variation_s: 0.002,
+            compute_resource_used_gflops_fp32: 30,
+            compute_resource_used_gpu_tflops_fp32: 2,
+            compute_resource_used_memory_gb: 24
+          }
+        ]
+      }
+    );
+
+    expect(pool).toMatchObject({
+      totalTflops: 80,
+      usedTflops: 30,
+      availableTflops: 50,
+      usedPercent: 37.5
+    });
+    expect(pool.vectorSummary).toMatchObject({
+      usedGpuFp32Tflops: 2,
+      availableGpuFp32Tflops: 4,
+      usedMemoryGb: 24,
+      availableMemoryGb: 72
+    });
   });
 });
 

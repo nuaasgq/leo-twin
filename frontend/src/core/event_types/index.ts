@@ -368,7 +368,14 @@ export interface StateSnapshot {
 export type Vector3 = readonly [number, number, number];
 export type GeoPosition = readonly [number, number, number?];
 export type RuntimeMode = "REAL_TIME" | "ACCELERATED" | "PAUSED";
-export type RuntimeStatus = "STOPPED" | "RUNNING" | "PAUSED";
+export type RuntimeStatus =
+  | "UNINITIALIZED"
+  | "INITIALIZED"
+  | "STOPPED"
+  | "RUNNING"
+  | "PAUSED"
+  | "COMPLETED"
+  | "ERROR";
 export type RuntimeLifecycleState =
   | "UNINITIALIZED"
   | "INITIALIZED"

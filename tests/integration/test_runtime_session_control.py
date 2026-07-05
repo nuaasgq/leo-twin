@@ -107,6 +107,19 @@ def test_set_speed_factor_changes_accelerated_progression() -> None:
     assert slow.get_status().current_sim_time == 4.0
 
 
+def test_session_completes_at_configured_duration_without_draining_future_events() -> None:
+    session = _initialized_session(duration=2)
+
+    session.start()
+    session.advance_control_step()
+    status = session.get_status()
+
+    assert status.lifecycle_state == RuntimeLifecycleState.COMPLETED
+    assert status.current_sim_time == 2.0
+    assert status.queued_event_count == 2
+    assert [event.event_id for event in session.processed_events] == [0, 1, 2]
+
+
 def test_repeated_deterministic_run_produces_same_status_and_snapshots() -> None:
     first_statuses, first_snapshots = _deterministic_sequence()
     second_statuses, second_snapshots = _deterministic_sequence()
@@ -426,8 +439,9 @@ def _initialized_session(
     *,
     mode: RuntimeMode = RuntimeMode.REAL_TIME,
     speed_factor: float = 1.0,
+    duration: int = 10,
 ) -> SimulationSession:
-    session = _session(mode=mode, speed_factor=speed_factor)
+    session = _session(mode=mode, speed_factor=speed_factor, duration=duration)
     session.initialize()
     return session
 
@@ -436,6 +450,7 @@ def _session(
     *,
     mode: RuntimeMode = RuntimeMode.REAL_TIME,
     speed_factor: float = 1.0,
+    duration: int = 10,
 ) -> SimulationSession:
     return SimulationSession(
         session_id="test-session",
@@ -443,7 +458,7 @@ def _session(
             mode=mode,
             speed_factor=speed_factor,
             seed=7,
-            duration=10,
+            duration=duration,
         ),
         scenario_config=ScenarioConfig(
             satellite_count=1,

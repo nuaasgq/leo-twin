@@ -341,6 +341,8 @@ class DemoControlPlane:
         status["queued_event_count"] = runtime_status["queued_event_count"]
         status["last_error"] = runtime_status["last_error"]
         status["deterministic_replay"] = runtime_status["deterministic_replay"]
+        if runtime_status["lifecycle_state"] in {"COMPLETED", "ERROR"}:
+            status["status"] = runtime_status["status"]
         status["initialized"] = self._initialized
         status["fidelity_summary"] = _fidelity_summary_from_sees_config(
             self._controller.config
@@ -381,7 +383,8 @@ class DemoControlPlane:
                 "tail_sample_source_label": "等待运行时指标",
                 "samples": (),
             }
-        return dict(self._runtime_context.metrics.kpi_time_series())
+        current_sim_time = self._require_session().get_status().current_sim_time
+        return dict(self._runtime_context.metrics.kpi_time_series(sim_time=current_sim_time))
 
     def _satellite_kpi_slices_json(self) -> dict[str, Any]:
         if self._runtime_context is None:

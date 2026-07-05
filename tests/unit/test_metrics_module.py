@@ -838,6 +838,33 @@ def test_metrics_collector_kpi_time_series_refreshes_current_tail_sample() -> No
     ] == collector.summary()["network_quality_effective_delay_variation_proxy_s"]
 
 
+def test_metrics_collector_kpi_time_series_accepts_runtime_sim_time_tail() -> None:
+    collector = MetricsCollector(metric_sample_interval=100)
+    collector.observe(
+        _event(
+            "route-loss",
+            2.0,
+            EventType.ROUTE_UPDATE,
+            Route(
+                route_id="route-loss",
+                flow_id="flow-loss",
+                path=("user-a", "sat-a", "user-b"),
+                latency=0.02,
+                capacity=100.0,
+                available=True,
+                loss_rate=0.12,
+            ),
+            "network",
+        )
+    )
+
+    series = collector.kpi_time_series(sim_time=5.0)
+
+    assert series["sample_count"] == 2
+    assert series["samples"][-1]["sim_time"] == 5.0
+    assert series["samples"][-1]["network_effective_loss_proxy_rate"] == 0.12
+
+
 def test_metrics_collector_publishes_satellite_kpi_slices() -> None:
     collector = MetricsCollector()
     for event in (
