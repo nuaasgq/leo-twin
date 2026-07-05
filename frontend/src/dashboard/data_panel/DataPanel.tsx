@@ -554,6 +554,7 @@ export const DataPanel = memo(function DataPanel({
                     <span key={row.taskId} title={row.traceTitle}>
                       {row.taskLabel} <strong>{row.totalLatencyLabel}</strong>{" "}
                       {row.statusLabel}
+                      {row.placementLabel !== "无计算放置" ? ` / ${row.placementLabel}` : ""}
                     </span>
                   ))}
                 </div>
@@ -1044,6 +1045,7 @@ function UserBusinessRequestTable({ rows }: { rows: readonly UserBusinessRequest
         <span>网络队列</span>
         <span>目标卫星</span>
         <span>目标节点</span>
+        <span>放置节点</span>
         <span>状态</span>
         <span>时延/容量</span>
         <span>服务链路</span>
@@ -1057,6 +1059,7 @@ function UserBusinessRequestTable({ rows }: { rows: readonly UserBusinessRequest
           <span>{row.networkQueueLabel}</span>
           <span>{row.selectedSatelliteId}</span>
           <span>{row.destinationId}</span>
+          <span>{row.placementLabel}</span>
           <span>{row.statusLabel}</span>
           <span>{row.latencyCapacityLabel}</span>
           <span>{row.serviceLabel}</span>
@@ -1393,6 +1396,7 @@ export interface UserBusinessRequestRow {
   networkQueueLabel: string;
   selectedSatelliteId: string;
   destinationId: string;
+  placementLabel: string;
   statusLabel: string;
   latencyCapacityLabel: string;
   serviceLabel: string;
@@ -1956,6 +1960,7 @@ function buildSnapshotUserBusinessRequestRows(
   limit = 1000
 ): UserBusinessRequestRows {
   const serviceLookup = buildServiceFlowLookup(serviceHistory);
+  const placementLookup = buildServicePlacementLookup(serviceHistory);
   const routesByUser = buildRoutesByUser(snapshot.routes);
   const userIds = Array.from(
     new Set([
@@ -1977,6 +1982,10 @@ function buildSnapshotUserBusinessRequestRows(
       selectedRoute !== null
         ? serviceLookup.get(selectedRoute.flow_id) ?? selectedRoute.flow_id
         : "无业务";
+    const placementLabel =
+      selectedRoute !== null
+        ? placementLookup.get(selectedRoute.flow_id) ?? "无计算放置"
+        : "无计算放置";
     const latencyCapacityLabel =
       selectedRoute !== null
         ? `${formatPreciseMetricValue(selectedRoute.latency)} s / ${formatMetricValue(
@@ -1996,6 +2005,7 @@ function buildSnapshotUserBusinessRequestRows(
         waitingRoutes.length > 0 ? `${formatCount(waitingRoutes.length)} 条等待` : "队列空",
       selectedSatelliteId: selectedSatelliteId ?? "未选择",
       destinationId,
+      placementLabel,
       statusLabel: userRouteStatusLabel(user?.status, routes, availableRoutes),
       latencyCapacityLabel,
       serviceLabel,
@@ -2423,6 +2433,7 @@ export function filterUserBusinessRequestRows(
       item.networkQueueLabel,
       item.selectedSatelliteId,
       item.destinationId,
+      item.placementLabel,
       item.statusLabel,
       item.latencyCapacityLabel,
       item.serviceLabel,
@@ -2613,6 +2624,7 @@ function buildBackendUserBusinessRequestRows(
       (item.request_state ? dataPanelRequestStateLabel(item.request_state) : "");
     const queueReason = item.network_queue_reason_label || "";
     const serviceLatencyLabel = backendUserServiceLatencyLabel(item);
+    const placementLabel = backendUserPlacementLabel(item);
     const serviceLabel = [
       businessLabel,
       requestState,
@@ -2647,6 +2659,7 @@ function buildBackendUserBusinessRequestRows(
       networkQueueLabel: queueLabel,
       selectedSatelliteId: item.selected_satellite_id || "none",
       destinationId: item.destination_id || "none",
+      placementLabel,
       statusLabel: item.status || "IDLE",
       latencyCapacityLabel,
       serviceLabel,
@@ -2714,6 +2727,17 @@ function backendUserServiceLatencyLabel(item: RuntimeUserRequestItemV1): string 
   ]
     .filter((value): value is string => value !== null)
     .join(" / ");
+}
+
+function backendUserPlacementLabel(item: RuntimeUserRequestItemV1): string {
+  return servicePlacementLabel({
+    computeNodeId: item.compute_node_id,
+    status: item.service_placement_status,
+    policy: item.service_placement_policy,
+    bottleneckResource: item.service_placement_bottleneck_resource,
+    candidateCount: item.service_placement_candidate_count,
+    capableCandidateCount: item.service_placement_capable_candidate_count
+  });
 }
 
 function buildBackendSatelliteResourceRows(
@@ -2906,6 +2930,25 @@ function buildServiceFlowLookup(
     const label = `${compactTaskId(item.task_id)} / ${formatMetricMilliseconds(
       item.total_latency_s
     )} / ${item.complete ? "闭环" : "进行中"}`;
+    if (item.input_flow_id) {
+      lookup.set(item.input_flow_id, label);
+    }
+    if (item.output_flow_id) {
+      lookup.set(item.output_flow_id, label);
+    }
+  }
+  return lookup;
+}
+
+function buildServicePlacementLookup(
+  history: RuntimeServiceLatencyHistoryV1 | null | undefined
+): ReadonlyMap<string, string> {
+  const lookup = new Map<string, string>();
+  for (const item of history?.items ?? []) {
+    const label = serviceLatencyPlacementLabel(item);
+    if (label === "无计算放置") {
+      continue;
+    }
     if (item.input_flow_id) {
       lookup.set(item.input_flow_id, label);
     }
@@ -3482,6 +3525,7 @@ function serviceLatencyTraceTitle(
     item.output_flow_id ? `output=${item.output_flow_id}` : "",
     item.input_route_id ? `input_route=${item.input_route_id}` : "",
     item.output_route_id ? `output_route=${item.output_route_id}` : "",
+    serviceLatencyPlacementTrace(item),
     typeof item.first_sample_sim_time === "number"
       ? `first=${formatMetricValue(item.first_sample_sim_time)}s`
       : "",
@@ -3491,6 +3535,81 @@ function serviceLatencyTraceTitle(
     serviceLatencyComponentTimeline(item)
   ].filter((part) => part.length > 0);
   return parts.join(" / ");
+}
+
+function serviceLatencyPlacementTrace(
+  item: RuntimeServiceLatencyHistoryV1["items"][number]
+): string {
+  const parts = [
+    item.compute_node_id ? `placement_node=${item.compute_node_id}` : "",
+    item.service_placement_status ? `placement_status=${item.service_placement_status}` : "",
+    item.service_placement_policy ? `placement_policy=${item.service_placement_policy}` : "",
+    item.service_placement_bottleneck_resource
+      ? `placement_bottleneck=${item.service_placement_bottleneck_resource}`
+      : "",
+    typeof item.service_placement_candidate_count === "number"
+      ? `placement_candidates=${formatCount(
+          item.service_placement_capable_candidate_count ?? 0
+        )}/${formatCount(item.service_placement_candidate_count)}`
+      : ""
+  ].filter((part) => part.length > 0);
+  return parts.join(" / ");
+}
+
+function serviceLatencyPlacementLabel(
+  item: RuntimeServiceLatencyHistoryV1["items"][number]
+): string {
+  return servicePlacementLabel({
+    computeNodeId: item.compute_node_id,
+    status: item.service_placement_status,
+    policy: item.service_placement_policy,
+    bottleneckResource: item.service_placement_bottleneck_resource,
+    candidateCount: item.service_placement_candidate_count,
+    capableCandidateCount: item.service_placement_capable_candidate_count
+  });
+}
+
+function servicePlacementLabel(fields: {
+  computeNodeId?: string;
+  status?: string;
+  policy?: string;
+  bottleneckResource?: string;
+  candidateCount?: number | null;
+  capableCandidateCount?: number | null;
+}): string {
+  if (
+    !fields.computeNodeId &&
+    !fields.status &&
+    !fields.policy &&
+    !fields.bottleneckResource &&
+    typeof fields.candidateCount !== "number"
+  ) {
+    return "无计算放置";
+  }
+  const parts = [
+    fields.computeNodeId ? `节点 ${fields.computeNodeId}` : null,
+    fields.status ? dataPanelPlacementStatusLabel(fields.status) : null,
+    fields.bottleneckResource ? `瓶颈 ${fields.bottleneckResource}` : null,
+    typeof fields.candidateCount === "number"
+      ? `候选 ${formatCount(fields.capableCandidateCount ?? 0)}/${formatCount(
+          fields.candidateCount
+        )}`
+      : null
+  ].filter((value): value is string => value !== null);
+  return parts.length > 0 ? parts.join(" / ") : "无计算放置";
+}
+
+function dataPanelPlacementStatusLabel(status: string): string {
+  switch (status) {
+    case "PLACED":
+      return "已放置";
+    case "QUEUED":
+      return "排队";
+    case "REJECTED":
+      return "拒绝";
+    default:
+      return status;
+  }
 }
 
 function serviceLatencyComponentTimeline(
@@ -3749,6 +3868,7 @@ export interface DataPanelServiceLatencyRow {
   taskLabel: string;
   traceTitle: string;
   statusLabel: string;
+  placementLabel: string;
   totalLatencyLabel: string;
   timeline: readonly DataPanelServiceLatencyTimelineItem[];
 }
@@ -4115,6 +4235,7 @@ export function buildDataPanelServiceLatencyRows(
     taskLabel: compactTaskId(item.task_id),
     traceTitle: serviceLatencyTraceTitle(item),
     statusLabel: item.complete ? "完整闭环" : "未闭环",
+    placementLabel: serviceLatencyPlacementLabel(item),
     totalLatencyLabel: formatMetricMilliseconds(item.total_latency_s),
     timeline: serviceLatencyTimelineItems(item)
   }));

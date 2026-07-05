@@ -1135,6 +1135,12 @@ describe("buildDataPanelServiceLatencyRows", () => {
             output_flow_id: "svc-00-compute_service-00000-output",
             input_route_id: "route:svc-00-compute_service-00000-input",
             output_route_id: "route:svc-00-compute_service-00000-output",
+            compute_node_id: "sat-00001",
+            service_placement_status: "PLACED",
+            service_placement_policy: "MIN_ESTIMATED_FINISH_TIME",
+            service_placement_bottleneck_resource: "cpu_gflops_fp32",
+            service_placement_candidate_count: 4,
+            service_placement_capable_candidate_count: 2,
             first_sample_sim_time: 6,
             last_sample_sim_time: 8,
             component_timeline: [
@@ -1190,8 +1196,9 @@ describe("buildDataPanelServiceLatencyRows", () => {
         taskId: "svc-00-compute_service-00000-task",
         taskLabel: "...vice-00000-task",
         traceTitle:
-          "task=svc-00-compute_service-00000-task / input=svc-00-compute_service-00000-input / output=svc-00-compute_service-00000-output / input_route=route:svc-00-compute_service-00000-input / output_route=route:svc-00-compute_service-00000-output / first=6s / last=8s / timeline=input_network@6s=4,000 ms, compute_queue@6s=0 ms, compute_execution@7s=2,000 ms, output_network@8s=1,400 ms, total@8s=7,400 ms",
+          "task=svc-00-compute_service-00000-task / input=svc-00-compute_service-00000-input / output=svc-00-compute_service-00000-output / input_route=route:svc-00-compute_service-00000-input / output_route=route:svc-00-compute_service-00000-output / placement_node=sat-00001 / placement_status=PLACED / placement_policy=MIN_ESTIMATED_FINISH_TIME / placement_bottleneck=cpu_gflops_fp32 / placement_candidates=2/4 / first=6s / last=8s / timeline=input_network@6s=4,000 ms, compute_queue@6s=0 ms, compute_execution@7s=2,000 ms, output_network@8s=1,400 ms, total@8s=7,400 ms",
         statusLabel: "完整闭环",
+        placementLabel: "节点 sat-00001 / 已放置 / 瓶颈 cpu_gflops_fp32 / 候选 2/4",
         totalLatencyLabel: "7,400 ms",
         timeline: [
           {
@@ -1254,6 +1261,7 @@ describe("buildDataPanelServiceLatencyRows", () => {
     expect(rows[0]).toMatchObject({
       taskId: "svc-legacy",
       totalLatencyLabel: "2,000 ms",
+      placementLabel: "无计算放置",
       timeline: []
     });
   });
@@ -2290,6 +2298,12 @@ describe("buildUserBusinessRequestRows", () => {
             output_network_latency_s: 0,
             input_route_id: "route-a",
             output_route_id: "route-out",
+            compute_node_id: "sat-0",
+            service_placement_status: "QUEUED",
+            service_placement_policy: "MIN_ESTIMATED_FINISH_TIME",
+            service_placement_bottleneck_resource: "gpu_tflops_fp32",
+            service_placement_candidate_count: 3,
+            service_placement_capable_candidate_count: 2,
             active_business_type: "COMPUTE_SERVICE",
             active_business_label: "通信-计算服务",
             request_state: "COMPUTE_SERVICE_ACTIVE",
@@ -2312,6 +2326,7 @@ describe("buildUserBusinessRequestRows", () => {
       networkQueueLabel: "无网络排队",
       selectedSatelliteId: "sat-0",
       destinationId: "compute-0",
+      placementLabel: "节点 sat-0 / 排队 / 瓶颈 gpu_tflops_fp32 / 候选 2/3",
       statusLabel: "ACTIVE/AVAILABLE",
       latencyCapacityLabel: "0.12 s / 80 Mbps",
       serviceLabel:
@@ -2405,6 +2420,11 @@ describe("buildUserBusinessRequestRows", () => {
           {
             task_id: "task-service-0",
             input_flow_id: "flow-input",
+            compute_node_id: "sat-0",
+            service_placement_status: "PLACED",
+            service_placement_bottleneck_resource: "cpu_gflops_fp32",
+            service_placement_candidate_count: 1,
+            service_placement_capable_candidate_count: 1,
             complete: false,
             input_network_latency_s: 0.12,
             compute_queue_delay_s: 0.01,
@@ -2425,6 +2445,7 @@ describe("buildUserBusinessRequestRows", () => {
       networkQueueLabel: "队列空",
       selectedSatelliteId: "sat-0",
       destinationId: "compute-0",
+      placementLabel: "节点 sat-0 / 已放置 / 瓶颈 cpu_gflops_fp32 / 候选 1/1",
       statusLabel: "ACTIVE / 业务可达",
       latencyCapacityLabel: "0.12 s / 80 Mbps",
       serviceLabel: "task-service-0 / 330 ms / 进行中"
@@ -2987,6 +3008,7 @@ describe("buildDataPanelDetailScopeNotes", () => {
           networkQueueLabel: "队列空",
           selectedSatelliteId: "未选择",
           destinationId: "未声明",
+          placementLabel: "无计算放置",
           statusLabel: "IDLE",
           latencyCapacityLabel: "无链路",
           serviceLabel: "无业务",
@@ -3112,7 +3134,28 @@ describe("detail row filters", () => {
             available: true
           }
         ]
-      })
+      }),
+      {
+        version: "v1",
+        mode: "RECENT_SERVICE_LIMITED",
+        items: [
+          {
+            task_id: "task-a",
+            input_flow_id: "flow-a",
+            compute_node_id: "sat-0",
+            service_placement_status: "PLACED",
+            service_placement_bottleneck_resource: "cpu_gflops_fp32",
+            service_placement_candidate_count: 2,
+            service_placement_capable_candidate_count: 1,
+            complete: false,
+            input_network_latency_s: 0,
+            compute_queue_delay_s: 0,
+            compute_execution_delay_s: 0,
+            output_network_latency_s: 0,
+            total_latency_s: 0
+          }
+        ]
+      }
     );
 
     expect(filterUserBusinessRequestRows(rows, "compute-0").items.map((row) => row.userId)).toEqual([
@@ -3120,6 +3163,9 @@ describe("detail row filters", () => {
     ]);
     expect(filterUserBusinessRequestRows(rows, "  SAT-1 ").items.map((row) => row.userId)).toEqual([
       "user-1"
+    ]);
+    expect(filterUserBusinessRequestRows(rows, "cpu_gflops").items.map((row) => row.userId)).toEqual([
+      "user-0"
     ]);
     expect(filterUserBusinessRequestRows(rows, "").items).toBe(rows.items);
   });

@@ -2167,10 +2167,11 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
     minmax(86px, 0.7fr)
     minmax(86px, 0.7fr)
     minmax(110px, 0.9fr)
+    minmax(168px, 1.25fr)
     minmax(96px, 0.8fr)
     minmax(116px, 0.95fr)
     minmax(156px, 1.35fr);
-  min-width: 1140px;
+  min-width: 1320px;
 }
 
 .data-panel-satellite-resource-row {

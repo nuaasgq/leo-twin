@@ -8358,3 +8358,48 @@ change.
 - Recommended follow-up:
   - Add dashboard table columns/detail drawer fields for selected compute node,
     placement status, bottleneck resource, and candidate count.
+
+## 2026-07-05 - Dashboard Placement Fields v1
+
+- Branch: `feature/T172-dashboard-placement-fields-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: expose backend-owned service placement semantics in the standalone data
+  panel. User business rows now include a placement-node column fed by
+  `user_request_summary_v1` or service latency history fallback data. Per-service
+  latency trace rows now display placement status, selected compute node,
+  bottleneck resource, and capable/total candidate counts. Detail row filtering
+  also searches placement labels. This is a frontend semantic-display task only;
+  no Event Kernel, backend model, packet-level simulation, or dashboard layout
+  redesign was introduced.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- dataPanel.test.ts runtimeContractFixture.test.ts`
+    - Result: passed, 25 files / 261 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Existing DataPanel chunk-size warning remains.
+  - `python -m pytest tests/unit/test_runtime_observability.py::test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned tests/integration/test_compute_service_lifecycle.py -q`
+    - Result: passed, 2 tests.
+- Problems encountered:
+  - While adding tests, an initial service-history fixture was inserted into a
+    similarly shaped but unrelated `buildDataPanelSummary()` test. The fixture
+    was removed and re-added to the intended detail-row filter test.
+  - Existing local runtime config drift remains untouched and unstaged.
+- Known remaining issues:
+  - The data panel shows placement summaries in compact table text. A later UI
+    task should add a richer selected-user or selected-satellite detail drawer
+    with full placement candidates and queue details.
+  - Placement remains the deterministic flow-level abstraction from Service
+    Placement Model v2; no packet queues, migration, power, or thermal effects
+    are displayed.
+- Recommended follow-up:
+  - Add a selected user/satellite detail drawer that expands placement
+    candidates, queue delay, execution delay, and compute resource vector usage.
