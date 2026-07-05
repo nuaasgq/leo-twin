@@ -2144,6 +2144,89 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
   padding-right: 2px;
 }
 
+.data-panel-detail-inspector-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  min-width: 0;
+}
+
+.data-panel-detail-inspector {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  border: 1px solid #2a4555;
+  border-radius: 8px;
+  padding: 10px;
+  background: #0b141b;
+}
+
+.data-panel-detail-inspector.empty {
+  min-height: 92px;
+  align-content: center;
+}
+
+.data-panel-detail-inspector-title {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.data-panel-detail-inspector-title span,
+.data-panel-detail-inspector.empty span {
+  color: var(--app-text);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.data-panel-detail-inspector-title small,
+.data-panel-detail-inspector.empty small {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--app-muted);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.data-panel-detail-inspector-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.data-panel-detail-inspector-field {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  border: 1px solid #233642;
+  border-radius: 6px;
+  padding: 7px;
+  background: #091118;
+}
+
+.data-panel-detail-inspector-field small {
+  color: #87a5b8;
+  font-size: 9px;
+}
+
+.data-panel-detail-inspector-field strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--app-text);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.data-panel-detail-inspector-field.resource strong {
+  color: var(--accent-cyan);
+}
+
+.data-panel-detail-inspector-field.warning strong {
+  color: #f2bd45;
+}
+
 .data-panel-business-row,
 .data-panel-satellite-resource-row {
   display: grid;
@@ -2156,6 +2239,24 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
   color: var(--app-muted);
   font-size: 10px;
   line-height: 1.2;
+}
+
+button.data-panel-business-row,
+button.data-panel-satellite-resource-row {
+  width: 100%;
+  appearance: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+
+button.data-panel-business-row:hover,
+button.data-panel-satellite-resource-row:hover,
+.data-panel-business-row.selected,
+.data-panel-satellite-resource-row.selected {
+  border-color: var(--accent-cyan);
+  background: #0e1d26;
+  color: var(--app-text);
 }
 
 .data-panel-business-row {
@@ -2217,6 +2318,13 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
   border-radius: 6px;
   color: var(--app-muted);
   font-size: 11px;
+}
+
+@media (max-width: 900px) {
+  .data-panel-detail-inspector-grid,
+  .data-panel-detail-inspector-fields {
+    grid-template-columns: 1fr;
+  }
 }
 
 .dashboard-header {

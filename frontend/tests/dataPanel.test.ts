@@ -18,9 +18,11 @@ import {
   buildDataPanelSatelliteResourceHistory,
   buildDataPanelServiceLatencyDisplay,
   buildDataPanelServiceLatencyRows,
+  buildSatelliteResourceInspector,
   buildDataPanelSummary,
   buildDataPanelTelemetry,
   buildDataPanelTrafficDisplay,
+  buildUserBusinessRequestInspector,
   buildDataPanelUserRequestHistory,
   buildRuntimeKpiTelemetrySamples,
   buildRuntimeDetailWindowNote,
@@ -34,7 +36,9 @@ import {
   paginateDetailRows,
   resolveNetworkQualityKpis,
   selectRuntimeSatelliteServiceSummary,
-  selectRuntimeUserRequestSummary
+  selectRuntimeUserRequestSummary,
+  selectSatelliteResourceRow,
+  selectUserBusinessRequestRow
 } from "../src/dashboard/data_panel/DataPanel";
 import {
   FidelitySummary,
@@ -2480,6 +2484,77 @@ describe("buildUserBusinessRequestRows", () => {
       networkQueueLabel: "队列空",
       selectedSatelliteId: "未选择",
       statusLabel: "IDLE"
+    });
+  });
+});
+
+describe("detail inspectors", () => {
+  const userRow = {
+    userId: "user-0",
+    platformTypeLabel: "地面用户终端 / cell-a",
+    communicationLabel: "1 / 2 routes / next sat-0",
+    computeLabel: "1 compute",
+    networkQueueLabel: "empty",
+    selectedSatelliteId: "sat-0",
+    destinationId: "compute-0",
+    placementLabel: "节点 sat-0 / 排队 / 瓶颈 gpu_tflops_fp32 / 候选 2/3",
+    statusLabel: "ACTIVE/AVAILABLE",
+    latencyCapacityLabel: "0.12 s / 80 Mbps",
+    serviceLabel: "task-0 active / total 330 ms",
+    pathLabel: "route-a: user-0 -> sat-0 -> compute-0"
+  };
+  const satelliteRow = {
+    satelliteId: "sat-0",
+    statusLabel: "BUSY / Satellite compute node",
+    loadPercent: 75,
+    loadLabel: "75%",
+    serviceObjectLabel: "user-0, user-1",
+    nextHopLabel: "compute-0",
+    cpuFp32Label: "75 / 100 GFLOPS",
+    cpuFp64Label: "2 / 8 GFLOPS",
+    gpuLabel: "GPU32 1 / 2 TFLOPS · GPU16 2 / 4 TFLOPS",
+    npuLabel: "6 / 12 TOPS",
+    memoryStorageLabel: "10 / 32 GB · 64 / 512 GB",
+    taskLabel: "运行 2 / 完成 7",
+    networkLabel: "route 2 / available 1"
+  };
+
+  it("selects requested rows or falls back to the current window head", () => {
+    expect(selectUserBusinessRequestRow([userRow], "missing")).toBe(userRow);
+    expect(selectUserBusinessRequestRow([], "user-0")).toBeNull();
+    expect(selectSatelliteResourceRow([satelliteRow], "sat-0")).toBe(satelliteRow);
+    expect(selectSatelliteResourceRow([], null)).toBeNull();
+  });
+
+  it("builds user and satellite detail inspector fields", () => {
+    expect(buildUserBusinessRequestInspector(userRow)).toMatchObject({
+      title: "用户 user-0",
+      subtitle: "ACTIVE/AVAILABLE",
+      fields: expect.arrayContaining([
+        { label: "服务放置", value: userRow.placementLabel, tone: "resource" },
+        { label: "路径", value: userRow.pathLabel }
+      ])
+    });
+    expect(buildSatelliteResourceInspector(satelliteRow)).toMatchObject({
+      title: "卫星 sat-0",
+      subtitle: "BUSY / Satellite compute node",
+      fields: expect.arrayContaining([
+        { label: "GPU", value: satelliteRow.gpuLabel, tone: "resource" },
+        { label: "网络", value: satelliteRow.networkLabel }
+      ])
+    });
+  });
+
+  it("returns empty inspector shells when no row is visible", () => {
+    expect(buildUserBusinessRequestInspector(null)).toEqual({
+      title: "用户详情",
+      subtitle: "当前窗口暂无用户节点",
+      fields: []
+    });
+    expect(buildSatelliteResourceInspector(undefined)).toEqual({
+      title: "卫星详情",
+      subtitle: "当前窗口暂无卫星节点",
+      fields: []
     });
   });
 });

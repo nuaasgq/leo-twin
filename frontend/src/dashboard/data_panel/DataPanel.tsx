@@ -104,6 +104,10 @@ export const DataPanel = memo(function DataPanel({
     null
   );
   const [selectedHistoryUserId, setSelectedHistoryUserId] = useState<string | null>(null);
+  const [selectedDetailUserId, setSelectedDetailUserId] = useState<string | null>(null);
+  const [selectedDetailSatelliteId, setSelectedDetailSatelliteId] = useState<string | null>(
+    null
+  );
   const summary = buildDataPanelDisplaySummary(
     buildDataPanelSummary(snapshot),
     displaySimTime,
@@ -223,6 +227,16 @@ export const DataPanel = memo(function DataPanel({
     satelliteDetailPage,
     SATELLITE_DETAIL_PAGE_SIZE
   );
+  const selectedUserDetailRow = selectUserBusinessRequestRow(
+    userDetailWindow.items,
+    selectedDetailUserId
+  );
+  const selectedSatelliteDetailRow = selectSatelliteResourceRow(
+    satelliteDetailWindow.items,
+    selectedDetailSatelliteId
+  );
+  const userDetailInspector = buildUserBusinessRequestInspector(selectedUserDetailRow);
+  const satelliteDetailInspector = buildSatelliteResourceInspector(selectedSatelliteDetailRow);
   const userSourceBadge = buildRuntimeDetailSourceBadge(userBusinessRequests.sourceLabel);
   const satelliteSourceBadge = buildRuntimeDetailSourceBadge(satelliteResourceRows.sourceLabel);
   const detailScopeNotes = buildDataPanelDetailScopeNotes(
@@ -794,6 +808,8 @@ export const DataPanel = memo(function DataPanel({
             setDetailFilter(event.currentTarget.value);
             setUserDetailPage(0);
             setSatelliteDetailPage(0);
+            setSelectedDetailUserId(null);
+            setSelectedDetailSatelliteId(null);
           }}
         />
         <span>
@@ -810,6 +826,10 @@ export const DataPanel = memo(function DataPanel({
           </div>
         ))}
       </div>
+      <DetailInspectorGrid
+        user={userDetailInspector}
+        satellite={satelliteDetailInspector}
+      />
       <div className="data-panel-detail-grid">
         <section className="dashboard-section data-panel-detail-table" aria-label="用户节点状态明细">
           <div className="section-title">用户节点状态</div>
@@ -832,7 +852,11 @@ export const DataPanel = memo(function DataPanel({
             onPrevious={() => setUserDetailPage(Math.max(0, userDetailWindow.pageIndex - 1))}
             onNext={() => setUserDetailPage(userDetailWindow.pageIndex + 1)}
           />
-          <UserBusinessRequestTable rows={userDetailWindow.items} />
+          <UserBusinessRequestTable
+            rows={userDetailWindow.items}
+            selectedUserId={selectedUserDetailRow?.userId ?? null}
+            onSelect={(row) => setSelectedDetailUserId(row.userId)}
+          />
         </section>
         <section className="dashboard-section data-panel-detail-table" aria-label="卫星资源消耗明细">
           <div className="section-title">卫星资源消耗</div>
@@ -857,7 +881,11 @@ export const DataPanel = memo(function DataPanel({
             }
             onNext={() => setSatelliteDetailPage(satelliteDetailWindow.pageIndex + 1)}
           />
-          <SatelliteResourceTable rows={satelliteDetailWindow.items} />
+          <SatelliteResourceTable
+            rows={satelliteDetailWindow.items}
+            selectedSatelliteId={selectedSatelliteDetailRow?.satelliteId ?? null}
+            onSelect={(row) => setSelectedDetailSatelliteId(row.satelliteId)}
+          />
         </section>
       </div>
 
@@ -1031,7 +1059,67 @@ function DetailPaginationControls<T>({
   );
 }
 
-function UserBusinessRequestTable({ rows }: { rows: readonly UserBusinessRequestRow[] }) {
+function DetailInspectorGrid({
+  user,
+  satellite
+}: {
+  user: DataPanelDetailInspector;
+  satellite: DataPanelDetailInspector;
+}) {
+  return (
+    <div className="data-panel-detail-inspector-grid" aria-label="选中节点详情">
+      <DetailInspectorCard title={user.title} subtitle={user.subtitle} fields={user.fields} />
+      <DetailInspectorCard
+        title={satellite.title}
+        subtitle={satellite.subtitle}
+        fields={satellite.fields}
+      />
+    </div>
+  );
+}
+
+function DetailInspectorCard({ title, subtitle, fields }: DataPanelDetailInspector) {
+  if (fields.length === 0) {
+    return (
+      <section className="data-panel-detail-inspector empty">
+        <div>
+          <span>{title}</span>
+          <small>{subtitle}</small>
+        </div>
+      </section>
+    );
+  }
+  return (
+    <section className="data-panel-detail-inspector">
+      <div className="data-panel-detail-inspector-title">
+        <span>{title}</span>
+        <small>{subtitle}</small>
+      </div>
+      <div className="data-panel-detail-inspector-fields">
+        {fields.map((field) => (
+          <span
+            className={`data-panel-detail-inspector-field ${field.tone ?? "normal"}`}
+            key={field.label}
+            title={`${field.label}: ${field.value}`}
+          >
+            <small>{field.label}</small>
+            <strong>{field.value}</strong>
+          </span>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function UserBusinessRequestTable({
+  rows,
+  selectedUserId,
+  onSelect
+}: {
+  rows: readonly UserBusinessRequestRow[];
+  selectedUserId?: string | null;
+  onSelect?: (row: UserBusinessRequestRow) => void;
+}) {
   if (rows.length === 0) {
     return <div className="data-panel-detail-empty">等待用户节点快照</div>;
   }
@@ -1051,7 +1139,15 @@ function UserBusinessRequestTable({ rows }: { rows: readonly UserBusinessRequest
         <span>服务链路</span>
       </div>
       {rows.map((row) => (
-        <div className="data-panel-business-row" key={row.userId} title={row.pathLabel}>
+        <button
+          type="button"
+          className={`data-panel-business-row ${
+            row.userId === selectedUserId ? "selected" : ""
+          }`}
+          key={row.userId}
+          title={row.pathLabel}
+          onClick={() => onSelect?.(row)}
+        >
           <span>{row.userId}</span>
           <span>{row.platformTypeLabel}</span>
           <span>{row.communicationLabel}</span>
@@ -1063,13 +1159,21 @@ function UserBusinessRequestTable({ rows }: { rows: readonly UserBusinessRequest
           <span>{row.statusLabel}</span>
           <span>{row.latencyCapacityLabel}</span>
           <span>{row.serviceLabel}</span>
-        </div>
+        </button>
       ))}
     </div>
   );
 }
 
-function SatelliteResourceTable({ rows }: { rows: readonly SatelliteResourceRow[] }) {
+function SatelliteResourceTable({
+  rows,
+  selectedSatelliteId,
+  onSelect
+}: {
+  rows: readonly SatelliteResourceRow[];
+  selectedSatelliteId?: string | null;
+  onSelect?: (row: SatelliteResourceRow) => void;
+}) {
   if (rows.length === 0) {
     return <div className="data-panel-detail-empty">等待卫星算力快照</div>;
   }
@@ -1090,7 +1194,14 @@ function SatelliteResourceTable({ rows }: { rows: readonly SatelliteResourceRow[
         <span>网络</span>
       </div>
       {rows.map((row) => (
-        <div className="data-panel-satellite-resource-row" key={row.satelliteId}>
+        <button
+          type="button"
+          className={`data-panel-satellite-resource-row ${
+            row.satelliteId === selectedSatelliteId ? "selected" : ""
+          }`}
+          key={row.satelliteId}
+          onClick={() => onSelect?.(row)}
+        >
           <span>{row.satelliteId}</span>
           <span>{row.statusLabel}</span>
           <span>{row.loadLabel}</span>
@@ -1103,7 +1214,7 @@ function SatelliteResourceTable({ rows }: { rows: readonly SatelliteResourceRow[
           <span>{row.memoryStorageLabel}</span>
           <span>{row.taskLabel}</span>
           <span>{row.networkLabel}</span>
-        </div>
+        </button>
       ))}
     </div>
   );
@@ -1495,6 +1606,18 @@ export interface DataPanelDetailScopeNote {
   value: string;
   detail: string;
   tone: "backend" | "limit" | "history";
+}
+
+export interface DataPanelDetailInspector {
+  title: string;
+  subtitle: string;
+  fields: readonly DataPanelDetailInspectorField[];
+}
+
+export interface DataPanelDetailInspectorField {
+  label: string;
+  value: string;
+  tone?: "normal" | "warning" | "resource";
 }
 
 export function buildDataPanelTelemetry(
@@ -2475,6 +2598,76 @@ export function filterSatelliteResourceRows(
     ...rows,
     summaryLabel: `${rows.summaryLabel} / 筛选 ${formatCount(items.length)}`,
     items
+  };
+}
+
+export function selectUserBusinessRequestRow(
+  rows: readonly UserBusinessRequestRow[],
+  selectedUserId: string | null | undefined
+): UserBusinessRequestRow | null {
+  return rows.find((row) => row.userId === selectedUserId) ?? rows[0] ?? null;
+}
+
+export function selectSatelliteResourceRow(
+  rows: readonly SatelliteResourceRow[],
+  selectedSatelliteId: string | null | undefined
+): SatelliteResourceRow | null {
+  return rows.find((row) => row.satelliteId === selectedSatelliteId) ?? rows[0] ?? null;
+}
+
+export function buildUserBusinessRequestInspector(
+  row: UserBusinessRequestRow | null | undefined
+): DataPanelDetailInspector {
+  if (row === null || row === undefined) {
+    return {
+      title: "用户详情",
+      subtitle: "当前窗口暂无用户节点",
+      fields: []
+    };
+  }
+  return {
+    title: `用户 ${row.userId}`,
+    subtitle: row.statusLabel,
+    fields: [
+      { label: "平台", value: row.platformTypeLabel },
+      { label: "通信", value: row.communicationLabel },
+      { label: "计算", value: row.computeLabel, tone: "resource" },
+      { label: "网络队列", value: row.networkQueueLabel, tone: "warning" },
+      { label: "目标卫星", value: row.selectedSatelliteId },
+      { label: "目标节点", value: row.destinationId },
+      { label: "服务放置", value: row.placementLabel, tone: "resource" },
+      { label: "时延/容量", value: row.latencyCapacityLabel },
+      { label: "服务链路", value: row.serviceLabel },
+      { label: "路径", value: row.pathLabel }
+    ]
+  };
+}
+
+export function buildSatelliteResourceInspector(
+  row: SatelliteResourceRow | null | undefined
+): DataPanelDetailInspector {
+  if (row === null || row === undefined) {
+    return {
+      title: "卫星详情",
+      subtitle: "当前窗口暂无卫星节点",
+      fields: []
+    };
+  }
+  return {
+    title: `卫星 ${row.satelliteId}`,
+    subtitle: row.statusLabel,
+    fields: [
+      { label: "负载", value: row.loadLabel, tone: "resource" },
+      { label: "服务对象", value: row.serviceObjectLabel },
+      { label: "下一跳", value: row.nextHopLabel },
+      { label: "CPU FP32", value: row.cpuFp32Label, tone: "resource" },
+      { label: "CPU FP64", value: row.cpuFp64Label, tone: "resource" },
+      { label: "GPU", value: row.gpuLabel, tone: "resource" },
+      { label: "NPU", value: row.npuLabel, tone: "resource" },
+      { label: "内存/存储", value: row.memoryStorageLabel, tone: "resource" },
+      { label: "任务", value: row.taskLabel },
+      { label: "网络", value: row.networkLabel }
+    ]
   };
 }
 

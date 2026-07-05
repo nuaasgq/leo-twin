@@ -8403,3 +8403,45 @@ change.
 - Recommended follow-up:
   - Add a selected user/satellite detail drawer that expands placement
     candidates, queue delay, execution delay, and compute resource vector usage.
+
+## 2026-07-05 - Dashboard Detail Inspector v1
+
+- Branch: `feature/T173-dashboard-detail-inspector-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a selected user/satellite detail inspector to the standalone data
+  panel using existing backend/runtime fields. User and satellite detail rows are
+  now selectable, the current page falls back to its first visible row when no
+  selection is active, and the inspector exposes service placement, route,
+  queue, next-hop, compute resource, task, and network status summaries without
+  changing backend models, Event Kernel behavior, or frontend routing.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 25 files / 264 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Existing DataPanel chunk-size warning remains.
+  - `python -m pytest tests/integration/test_compute_service_lifecycle.py -q`
+    - Result: passed, 1 test.
+- Problems encountered:
+  - The default PowerShell process did not have the bundled Node runtime on
+    `PATH`, so the frontend validation was rerun with the repository's bundled
+    Node/Pnpm paths.
+  - Existing local runtime config drift remains untouched and unstaged.
+- Known remaining issues:
+  - The inspector is still a compact summary over the currently streamed table
+    rows. It does not yet expose full placement candidate lists, per-task queue
+    timelines, or a separate detail drawer fed by a dedicated backend detail
+    endpoint.
+- Recommended follow-up:
+  - Add a backend-owned node detail stream or query endpoint for full
+    per-user/per-satellite placement candidates, queue history, and resource
+    timeline data, then bind it into an expandable dashboard drawer.
