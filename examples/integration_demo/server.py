@@ -260,6 +260,7 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
         def do_POST(self) -> None:  # noqa: N802
             parsed_url = urlsplit(self.path)
             path = parsed_url.path
+            query = parse_qs(parsed_url.query)
             if path == "/scenario/user-config/validate":
                 try:
                     payload = self._read_json_body()
@@ -267,6 +268,19 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                     self.send_error(400, str(exc))
                     return
                 self._send_json(control_plane.user_configuration_validate(payload))
+                return
+            if path == "/scenario/user-config/validate-text":
+                try:
+                    text = self._read_text_body()
+                except ValueError as exc:
+                    self.send_error(400, str(exc))
+                    return
+                self._send_json(
+                    control_plane.user_configuration_validate_text(
+                        text,
+                        format_hint=_first_query_value(query, "format", "auto"),
+                    )
+                )
                 return
             self.send_error(404, "not found")
 
@@ -319,6 +333,13 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
             self.wfile.write(data)
 
         def _read_json_body(self) -> object:
+            text = self._read_text_body()
+            try:
+                return json.loads(text)
+            except json.JSONDecodeError as exc:
+                raise ValueError("request body must be valid UTF-8 JSON") from exc
+
+        def _read_text_body(self) -> str:
             content_length = self.headers.get("Content-Length")
             if content_length is None:
                 raise ValueError("missing Content-Length")
@@ -330,9 +351,9 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                 raise ValueError("invalid Content-Length")
             raw = self.rfile.read(length)
             try:
-                return json.loads(raw.decode("utf-8"))
-            except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-                raise ValueError("request body must be valid UTF-8 JSON") from exc
+                return raw.decode("utf-8")
+            except UnicodeDecodeError as exc:
+                raise ValueError("request body must be valid UTF-8 text") from exc
 
         def _cors_headers(self) -> None:
             self.send_header("Access-Control-Allow-Origin", "*")
@@ -483,6 +504,17 @@ def _stream_query(query: dict[str, list[str]]) -> tuple[int, int | None]:
     if limit is not None and limit <= 0:
         raise ValueError("limit must be positive")
     return cursor, limit
+
+
+def _first_query_value(
+    query: dict[str, list[str]],
+    key: str,
+    default: str,
+) -> str:
+    values = query.get(key)
+    if not values:
+        return default
+    return values[0] if values[0] else default
 
 
 def _detail_query(query: dict[str, list[str]], *, default_limit: int) -> tuple[int, int]:

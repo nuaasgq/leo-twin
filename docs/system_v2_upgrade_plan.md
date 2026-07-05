@@ -68,7 +68,8 @@ Tasks:
     sending backend-normalized config through explicit `CONFIG_UPDATE`;
     backend preflight diff summary implemented in T201; dashboard diff
     rendering implemented in T202; backend/runtime apply readiness and
-    dashboard readiness rendering implemented in T203.
+    dashboard readiness rendering implemented in T203; backend JSON/YAML text
+    preflight endpoint implemented in T204.
 
 ### WS2. Business Demand Model v2
 

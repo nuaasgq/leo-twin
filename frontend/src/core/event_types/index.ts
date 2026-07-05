@@ -645,6 +645,7 @@ export interface UserConfigurationValidationReportV1 {
   errors: readonly UserConfigurationValidationErrorV1[];
   normalized_config_hash: string | null;
   normalized_config: Record<string, unknown> | null;
+  text_parse?: UserConfigurationTextParseV1 | null;
   change_summary?: UserConfigurationChangeSummaryV1 | null;
   apply_readiness?: UserConfigurationApplyReadinessV1 | null;
   apply_command: UserConfigurationValidationApplyCommandV1;
@@ -664,6 +665,14 @@ export interface UserConfigurationValidationApplyCommandV1 {
   requires_explicit_user_action: boolean;
   runtime_effect?: string;
   runtime_status_policy?: string;
+}
+
+export interface UserConfigurationTextParseV1 {
+  version: "v1" | string;
+  source: string;
+  requested_format: string;
+  detected_format: string | null;
+  ok: boolean;
 }
 
 export interface UserConfigurationChangeSummaryV1 {

@@ -772,6 +772,73 @@ def test_control_plane_validates_user_configuration_without_applying(tmp_path) -
     assert control_plane.runtime_status()["status"]["initialized"] is before_initialized
 
 
+def test_control_plane_validates_user_configuration_text_without_applying(tmp_path) -> None:
+    control_plane = _small_control_plane(tmp_path / "sees_control.yaml")
+    before_config = control_plane.controller.config_json()
+
+    yaml_report = control_plane.user_configuration_validate_text(
+        """
+scenario:
+  satellite_count: 72
+  compute_nodes: 72
+runtime:
+  duration: 600
+  seed: 20260703
+""",
+        format_hint="yaml",
+    )
+    json_report = control_plane.user_configuration_validate_text(
+        json.dumps(
+            {
+                "scenario": {
+                    "satellite_count": 72,
+                    "compute_nodes": 72,
+                },
+                "runtime": {
+                    "duration": 600,
+                    "seed": 20260703,
+                },
+            }
+        ),
+        format_hint="auto",
+    )
+    rejected = control_plane.user_configuration_validate_text(
+        "scenario:\n  satellite_count: [unsupported]\n",
+        format_hint="yaml",
+    )
+
+    yaml_summary = yaml_report["summary"]
+    assert yaml_report["type"] == "USER_CONFIGURATION_VALIDATION_REPORT"
+    assert yaml_summary["validation_scope"] == "USER_PROVIDED_CONFIG_TEXT"
+    assert yaml_summary["format"] == "YAML_TEXT"
+    assert yaml_summary["text_parse"] == {
+        "version": "v1",
+        "source": "BACKEND_USER_CONFIGURATION",
+        "requested_format": "yaml",
+        "detected_format": "yaml",
+        "ok": True,
+    }
+    assert yaml_summary["ok"] is True
+    assert yaml_summary["normalized_config"]["scenario"]["satellite_count"] == 72
+    assert yaml_summary["change_summary"]["changed_field_count"] > 0
+    assert yaml_summary["apply_readiness"]["can_apply"] is True
+
+    json_summary = json_report["summary"]
+    assert json_summary["ok"] is True
+    assert json_summary["format"] == "JSON_TEXT"
+    assert json_summary["text_parse"]["requested_format"] == "auto"
+    assert json_summary["text_parse"]["detected_format"] == "json"
+
+    rejected_summary = rejected["summary"]
+    assert rejected_summary["ok"] is False
+    assert rejected_summary["validation_scope"] == "USER_PROVIDED_CONFIG_TEXT"
+    assert rejected_summary["format"] == "YAML_TEXT"
+    assert rejected_summary["normalized_config"] is None
+    assert rejected_summary["change_summary"] is None
+    assert rejected_summary["apply_readiness"] is None
+    assert control_plane.controller.config_json() == before_config
+
+
 def test_control_plane_applies_preflight_normalized_user_configuration(tmp_path) -> None:
     control_plane = _small_control_plane(tmp_path / "sees_control.yaml")
     accepted = control_plane.user_configuration_validate(

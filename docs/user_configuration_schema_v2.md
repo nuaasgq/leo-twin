@@ -42,6 +42,7 @@ The backend exposes the schema through:
 - `GET /scenario/user-config/templates`
 - `GET /scenario/user-config/export`
 - `POST /scenario/user-config/validate`
+- `POST /scenario/user-config/validate-text`
 
 Important contract fields:
 
@@ -73,6 +74,10 @@ The HTTP endpoints are read-only:
   backend runtime-state summary describing whether the config can be applied
   now, the current controller/session lifecycle state, recommended operator
   action, and session/stream side effects.
+- `/scenario/user-config/validate-text` accepts raw UTF-8 JSON or simplified
+  YAML config text and returns the same validate-only report. The optional
+  query parameter `format=auto|json|yaml` controls parsing. The report includes
+  `text_parse` with requested format, detected format, and parse status.
 
 Configuration import remains an explicit control-plane action. Validated full
 or partial mappings use `CONFIG_UPDATE`, template loading uses `LOAD_TEMPLATE`,

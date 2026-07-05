@@ -26,6 +26,7 @@ from leo_twin.runtime import (
 from leo_twin.schema.config_loader import (
     ConfigValidationError,
     config_from_mapping,
+    parse_simple_yaml,
     write_config,
 )
 from leo_twin.models.orbit import KeplerianOrbitEngine
@@ -222,6 +223,68 @@ class DemoControlPlane:
 
     def user_configuration_validate(self, raw_config: Any) -> dict[str, Any]:
         validation = validate_user_configuration_mapping_v2(raw_config)
+        return self._user_configuration_validation_response(
+            validation,
+            validation_scope="USER_PROVIDED_CONFIG_MAPPING",
+            format_label="JSON_MAPPING",
+        )
+
+    def user_configuration_validate_text(
+        self,
+        text: str,
+        *,
+        format_hint: str = "auto",
+    ) -> dict[str, Any]:
+        try:
+            raw_config, detected_format = _parse_user_configuration_text(
+                text,
+                format_hint=format_hint,
+            )
+        except ValueError as exc:
+            return self._user_configuration_validation_response(
+                {
+                    "ok": False,
+                    "error_count": 1,
+                    "errors": (
+                        {
+                            "source": "config_text_parser",
+                            "message": str(exc),
+                        },
+                    ),
+                    "normalized_config": None,
+                },
+                validation_scope="USER_PROVIDED_CONFIG_TEXT",
+                format_label="YAML_OR_JSON_TEXT",
+                text_parse={
+                    "version": "v1",
+                    "source": "BACKEND_USER_CONFIGURATION",
+                    "requested_format": format_hint,
+                    "detected_format": None,
+                    "ok": False,
+                },
+            )
+        validation = validate_user_configuration_mapping_v2(raw_config)
+        return self._user_configuration_validation_response(
+            validation,
+            validation_scope="USER_PROVIDED_CONFIG_TEXT",
+            format_label=f"{detected_format.upper()}_TEXT",
+            text_parse={
+                "version": "v1",
+                "source": "BACKEND_USER_CONFIGURATION",
+                "requested_format": format_hint,
+                "detected_format": detected_format,
+                "ok": True,
+            },
+        )
+
+    def _user_configuration_validation_response(
+        self,
+        validation: Mapping[str, Any],
+        *,
+        validation_scope: str,
+        format_label: str,
+        text_parse: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         normalized_config = validation.get("normalized_config")
         normalized_hash = (
             stable_hash_payload(normalized_config)
@@ -245,14 +308,14 @@ class DemoControlPlane:
             if isinstance(normalized_config, dict)
             else None
         )
-        return {
+        response = {
             "type": "USER_CONFIGURATION_VALIDATION_REPORT",
             "summary": {
                 "version": "v1",
                 "source": "BACKEND_USER_CONFIGURATION",
                 "schema_id": USER_CONFIGURATION_SCHEMA_V2_ID,
-                "validation_scope": "USER_PROVIDED_CONFIG_MAPPING",
-                "format": "JSON_MAPPING",
+                "validation_scope": validation_scope,
+                "format": format_label,
                 "mutation_policy": "VALIDATE_ONLY_NO_APPLY",
                 "unknown_key_policy": "REJECT",
                 "defaulting_policy": "OMITTED_FIELDS_USE_BACKEND_DEFAULTS",
@@ -266,6 +329,9 @@ class DemoControlPlane:
                 "apply_command": _user_configuration_apply_command(),
             },
         }
+        if text_parse is not None:
+            response["summary"]["text_parse"] = text_parse
+        return response
 
     def runtime_user_details(self, cursor: int = 0, limit: int = 100) -> dict[str, Any]:
         summary = build_runtime_user_request_summary(
@@ -1239,6 +1305,54 @@ def _runtime_export_restore_control_payload(raw: str | bytes) -> dict[str, Any] 
     if not isinstance(payload, dict):
         raise RuntimeError("restore payload must be a mapping")
     return dict(payload)
+
+
+def _parse_user_configuration_text(
+    text: str,
+    *,
+    format_hint: str,
+) -> tuple[Mapping[str, Any], str]:
+    if not isinstance(text, str):
+        raise ValueError("config text must be a UTF-8 string")
+    normalized_hint = str(format_hint or "auto").strip().lower()
+    if normalized_hint not in {"auto", "json", "yaml", "yml"}:
+        raise ValueError("format must be one of: auto, json, yaml")
+    if not text.strip():
+        raise ValueError("config text must not be empty")
+    if normalized_hint == "json":
+        return _parse_user_configuration_json_text(text), "json"
+    if normalized_hint in {"yaml", "yml"}:
+        return _parse_user_configuration_yaml_text(text), "yaml"
+    try:
+        return _parse_user_configuration_json_text(text), "json"
+    except ValueError as json_error:
+        try:
+            return _parse_user_configuration_yaml_text(text), "yaml"
+        except ValueError as yaml_error:
+            raise ValueError(
+                f"config text is neither valid JSON nor supported YAML: "
+                f"json={json_error}; yaml={yaml_error}"
+            ) from yaml_error
+
+
+def _parse_user_configuration_json_text(text: str) -> Mapping[str, Any]:
+    try:
+        value = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise ValueError(str(exc)) from exc
+    if not isinstance(value, Mapping):
+        raise ValueError("JSON config root must be a mapping")
+    return value
+
+
+def _parse_user_configuration_yaml_text(text: str) -> Mapping[str, Any]:
+    try:
+        value = parse_simple_yaml(text)
+    except ConfigValidationError as exc:
+        raise ValueError(str(exc)) from exc
+    if not isinstance(value, Mapping):
+        raise ValueError("YAML config root must be a mapping")
+    return value
 
 
 def _user_configuration_apply_command() -> dict[str, Any]:

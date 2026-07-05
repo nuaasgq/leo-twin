@@ -5,6 +5,52 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - User Config Text Preflight v1
+
+- Branch: `feature/T204-user-config-text-preflight-v1`
+- Commit: pending in this commit
+- Scope: add a backend validate-only text preflight path for user configuration
+  files. `DemoControlPlane.user_configuration_validate_text()` accepts raw
+  UTF-8 JSON or simplified YAML text with `format=auto|json|yaml`, parses it
+  into the existing user configuration mapping contract, and returns the same
+  `USER_CONFIGURATION_VALIDATION_REPORT` plus `text_parse`. The integration
+  server exposes `POST /scenario/user-config/validate-text`, while the existing
+  JSON mapping endpoint remains unchanged.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `tests/integration/test_config_control.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `docs/integration_demo.md`
+  - `docs/user_configuration_schema_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `$env:PYTHONPATH='.'; python -m pytest tests/integration/test_config_control.py::test_control_plane_validates_user_configuration_text_without_applying tests/integration/test_config_control.py::test_control_plane_validates_user_configuration_without_applying -q`
+    - Result: passed, 2 tests.
+  - `python -m py_compile examples/integration_demo/control_plane.py examples/integration_demo/server.py`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing `DataPanel` chunk-size
+      warning after minification.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - Initial implementation returned the validation response before attaching
+    `text_parse`; the text preflight test caught it and the response builder
+    now assigns the payload before returning.
+  - Local runtime/generated config files remain dirty and are intentionally not
+    included in this task.
+- Known remaining issues / follow-up:
+  - The dashboard still uses the JSON editor; a later frontend task should add
+    upload/paste mode selection for YAML/JSON text and call the new endpoint.
+  - The YAML parser is the existing deterministic simplified project parser,
+    not a general YAML 1.2 implementation.
+
 ## 2026-07-06 - User Config Apply Readiness v1
 
 - Branch: `feature/T203-user-config-apply-readiness-v1`

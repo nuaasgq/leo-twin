@@ -164,6 +164,20 @@ Invoke-RestMethod `
   -Uri http://127.0.0.1:8765/scenario/user-config/validate `
   -ContentType "application/json" `
   -Body $candidate
+
+$yamlCandidate = @"
+scenario:
+  satellite_count: 72
+  compute_nodes: 72
+runtime:
+  duration: 600
+  seed: 20260703
+"@
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "http://127.0.0.1:8765/scenario/user-config/validate-text?format=yaml" `
+  -ContentType "text/plain; charset=utf-8" `
+  -Body $yamlCandidate
 ```
 
 These endpoints are backend-owned and read-only. They expose the full
@@ -185,6 +199,8 @@ field-path ordering and bounded preview rows. Reports include
 `apply_readiness` as well, which records current controller/session lifecycle,
 recommended action, confirmation requirement, and the fact that applying a
 config rebuilds the session and stream buffers.
+`POST /scenario/user-config/validate-text` accepts raw UTF-8 JSON/YAML text
+with `format=auto|json|yaml` and returns the same report plus `text_parse`.
 The standalone dashboard also shows these links in the user configuration
 contract section so users can download the current full configuration and
 inspect the backend schema without editing runtime state. The dashboard also
