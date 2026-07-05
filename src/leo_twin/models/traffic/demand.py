@@ -282,6 +282,118 @@ class TrafficDemandConfig:
                 raise TypeError("profiles must contain TrafficDemandProfile values")
 
 
+@dataclass(frozen=True)
+class TrafficServiceMixItem:
+    """One weighted business class in a deterministic service mix."""
+
+    traffic_class: TrafficClass | str
+    weight: float
+    source_ids: tuple[str, ...]
+    destination_ids: tuple[str, ...]
+    input_data_size: float
+    output_data_size: float = 0.0
+    priority: int = 0
+    destination_type: TrafficDestinationType | str | None = None
+    compute_demand: float = 1.0
+    cpu_ops: float = 0.0
+    fp32_ops: float = 0.0
+    fp16_ops: float = 0.0
+    int8_ops: float = 0.0
+    memory_gb: float = 0.0
+    input_data_mb: float = 0.0
+    output_data_mb: float = 0.0
+    application_id: str | None = None
+    output_destination_ids: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.traffic_class, TrafficClass):
+            object.__setattr__(self, "traffic_class", TrafficClass(str(self.traffic_class)))
+        destination_type = (
+            _default_destination_type(self.traffic_class)
+            if self.destination_type is None
+            else self.destination_type
+        )
+        if not isinstance(destination_type, TrafficDestinationType):
+            destination_type = TrafficDestinationType(str(destination_type))
+        object.__setattr__(self, "destination_type", destination_type)
+        object.__setattr__(
+            self,
+            "source_ids",
+            _normalize_non_empty_str_tuple(self.source_ids, "source_ids"),
+        )
+        object.__setattr__(
+            self,
+            "destination_ids",
+            _normalize_non_empty_str_tuple(self.destination_ids, "destination_ids"),
+        )
+        object.__setattr__(
+            self,
+            "output_destination_ids",
+            _normalize_str_tuple(self.output_destination_ids, "output_destination_ids"),
+        )
+        _require_non_negative_number(self.weight, "weight")
+        _require_non_negative_number(self.input_data_size, "input_data_size")
+        _require_non_negative_number(self.output_data_size, "output_data_size")
+        _require_int(self.priority, "priority")
+        _require_non_negative_number(self.compute_demand, "compute_demand")
+        for field_name in (
+            "cpu_ops",
+            "fp32_ops",
+            "fp16_ops",
+            "int8_ops",
+            "memory_gb",
+            "input_data_mb",
+            "output_data_mb",
+        ):
+            _require_non_negative_number(getattr(self, field_name), field_name)
+        if self.application_id is not None:
+            _require_non_empty_str(self.application_id, "application_id")
+
+
+@dataclass(frozen=True)
+class TrafficServiceMixConfig:
+    """Weighted service-mix plan that expands into demand profiles."""
+
+    items: tuple[TrafficServiceMixItem, ...]
+    total_request_count: int
+    arrival_interval: float
+    start_time: float = 0.0
+    id_prefix: str = "service-mix"
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.items, tuple):
+            raise TypeError("items must be a tuple")
+        if not self.items:
+            raise ValueError("items must not be empty")
+        for item in self.items:
+            if not isinstance(item, TrafficServiceMixItem):
+                raise TypeError("items must contain TrafficServiceMixItem values")
+        _require_non_negative_int(self.total_request_count, "total_request_count")
+        _require_positive_number(self.arrival_interval, "arrival_interval")
+        _require_non_negative_number(self.start_time, "start_time")
+        _require_non_empty_str(self.id_prefix, "id_prefix")
+        if sum(float(item.weight) for item in self.items) <= 0.0:
+            raise ValueError("service mix must contain at least one positive weight")
+
+    def to_demand_profiles(self) -> tuple[TrafficDemandProfile, ...]:
+        """Expand weighted service-mix items into deterministic demand profiles."""
+
+        request_counts = _allocate_weighted_counts(
+            self.total_request_count,
+            tuple(float(item.weight) for item in self.items),
+        )
+        return tuple(
+            _service_mix_item_to_profile(
+                item,
+                request_count=request_count,
+                arrival_interval=self.arrival_interval,
+                start_time=self.start_time,
+                id_prefix=f"{self.id_prefix}-{index:02d}",
+            )
+            for index, (item, request_count) in enumerate(zip(self.items, request_counts))
+        )
+
+
 class TrafficDemandModel:
     """Generate flow-level traffic demands from deterministic profiles."""
 
@@ -309,6 +421,81 @@ def generate_traffic_demand(
     """Convenience wrapper for one-shot deterministic traffic generation."""
 
     return TrafficDemandModel(TrafficDemandConfig(profiles=profiles)).generate()
+
+
+def generate_traffic_service_mix(config: TrafficServiceMixConfig) -> TrafficDemandBatch:
+    """Generate a deterministic demand batch from a weighted service mix."""
+
+    if not isinstance(config, TrafficServiceMixConfig):
+        raise TypeError("config must be TrafficServiceMixConfig")
+    return generate_traffic_demand(config.to_demand_profiles())
+
+
+def _allocate_weighted_counts(
+    total_count: int,
+    weights: tuple[float, ...],
+) -> tuple[int, ...]:
+    if total_count == 0:
+        return tuple(0 for _ in weights)
+    total_weight = sum(weights)
+    if total_weight <= 0.0:
+        raise ValueError("weights must contain at least one positive value")
+    exact_counts = tuple(total_count * weight / total_weight for weight in weights)
+    base_counts = [int(exact_count) for exact_count in exact_counts]
+    remaining = total_count - sum(base_counts)
+    remainders = sorted(
+        (
+            (exact_counts[index] - base_counts[index], index)
+            for index in range(len(weights))
+        ),
+        key=lambda item: (-item[0], item[1]),
+    )
+    for _, index in remainders[:remaining]:
+        base_counts[index] += 1
+    return tuple(base_counts)
+
+
+def _service_mix_item_to_profile(
+    item: TrafficServiceMixItem,
+    *,
+    request_count: int,
+    arrival_interval: float,
+    start_time: float,
+    id_prefix: str,
+) -> TrafficDemandProfile:
+    return TrafficDemandProfile(
+        traffic_class=item.traffic_class,
+        source_ids=item.source_ids,
+        destination_ids=item.destination_ids,
+        request_count=request_count,
+        arrival_interval=arrival_interval,
+        input_data_size=item.input_data_size,
+        output_data_size=item.output_data_size,
+        priority=item.priority,
+        destination_type=item.destination_type,
+        start_time=start_time,
+        compute_demand=item.compute_demand,
+        cpu_ops=item.cpu_ops,
+        fp32_ops=item.fp32_ops,
+        fp16_ops=item.fp16_ops,
+        int8_ops=item.int8_ops,
+        memory_gb=item.memory_gb,
+        input_data_mb=item.input_data_mb,
+        output_data_mb=item.output_data_mb,
+        application_id=item.application_id,
+        id_prefix=id_prefix,
+        output_destination_ids=item.output_destination_ids,
+    )
+
+
+def _default_destination_type(traffic_class: TrafficClass) -> TrafficDestinationType:
+    if traffic_class == TrafficClass.COMPUTE_SERVICE:
+        return TrafficDestinationType.COMPUTE_NODE
+    if traffic_class == TrafficClass.BULK_DOWNLINK:
+        return TrafficDestinationType.GROUND_ENDPOINT
+    if traffic_class == TrafficClass.TELEMETRY:
+        return TrafficDestinationType.SERVICE_ENDPOINT
+    return TrafficDestinationType.GROUND_ENDPOINT
 
 
 def _generate_profile_records(
@@ -467,5 +654,8 @@ __all__ = [
     "TrafficDemandProfile",
     "TrafficDemandRecord",
     "TrafficDestinationType",
+    "TrafficServiceMixConfig",
+    "TrafficServiceMixItem",
     "generate_traffic_demand",
+    "generate_traffic_service_mix",
 ]

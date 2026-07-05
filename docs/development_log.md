@@ -6696,3 +6696,35 @@ change.
   - Add explicit service-mix configuration fields and deterministic per-user
     demand summaries for DATA_TRANSFER, TELEMETRY, BULK_DOWNLINK, and
     COMPUTE_SERVICE mixes.
+
+## 2026-07-05 - Traffic Service Mix Contract v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a deterministic backend traffic service-mix contract. New
+  `TrafficServiceMixItem` and `TrafficServiceMixConfig` types allocate a total
+  request count across weighted DATA_TRANSFER, TELEMETRY, BULK_DOWNLINK, and
+  COMPUTE_SERVICE items using largest-remainder allocation with deterministic
+  tie-breaking, then expand into existing `TrafficDemandProfile` values. The
+  generated batch reuses the current flow-level TrafficDemandModel, including
+  correlated compute-service input flow, task, and output-flow metadata. This
+  does not change SEES config loading, demo defaults, Event Kernel behavior, or
+  packet-level semantics.
+- Changed files/modules:
+  - `src/leo_twin/models/traffic/demand.py`
+  - `src/leo_twin/models/traffic/__init__.py`
+  - `tests/unit/test_traffic_demand_model.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_traffic_demand_model.py -q`
+    - Result: passed, 8 tests.
+  - `python -m pytest tests/unit/test_traffic_demand_model.py tests/unit/test_integration_demo_scenario.py tests/integration/test_compute_service_lifecycle.py -q`
+    - Result: passed, 23 tests.
+- Problems encountered:
+  - None. The new contract is additive and reuses existing demand generation.
+- Known remaining issues:
+  - The SEES YAML control-plane schema still exposes a single traffic profile.
+    Wiring this service mix into user-facing config should be a separate task.
+- Recommended follow-up:
+  - Add SEES config service-mix fields and backend-derived service-mix summary
+    once the contract is stable.
