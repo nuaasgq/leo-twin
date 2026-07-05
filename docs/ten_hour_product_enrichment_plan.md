@@ -530,6 +530,11 @@ The following issue-sized slices have now been delivered on
   - `scripts/smoke_runtime_control_cycle.ps1` and `control_smoke_leo_twin.bat`
     exercise INITIALIZE, START, PAUSE, RESUME, STOP, and RESET through the
     existing control websocket for a scale-safe 1200-satellite scenario.
+- `test(product): add optional control cycle gate`
+  - Maps to suggestions 14-18 and 91-95.
+  - `scripts/verify_product_acceptance.ps1 -RunControlCycleSmoke` can now add
+    the mutating 1200-satellite control-cycle check after normal acceptance
+    verification.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected

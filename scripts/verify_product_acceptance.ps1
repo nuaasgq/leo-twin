@@ -7,7 +7,11 @@ param(
     [int]$ExpectedUserCount = -1,
     [int]$ExpectedComputeNodeCount = -1,
     [string]$ExpectedConstellationProfile = "",
-    [string]$ExpectedTrafficClass = ""
+    [string]$ExpectedTrafficClass = "",
+    [switch]$RunControlCycleSmoke,
+    [int]$ControlSmokeSatelliteCount = 1200,
+    [int]$ControlSmokeUserCount = 20,
+    [int]$ControlSmokeComputeNodeCount = 1200
 )
 
 $ErrorActionPreference = "Stop"
@@ -157,6 +161,22 @@ try {
             $smokeArgs += @("-ExpectedTrafficClass", $ExpectedTrafficClass)
         }
         Invoke-CheckedCommand "powershell" $smokeArgs
+    }
+
+    if ($RunControlCycleSmoke) {
+        Invoke-CheckedCommand "powershell" @(
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            (Join-Path $PSScriptRoot "smoke_runtime_control_cycle.ps1"),
+            "-SatelliteCount",
+            "$ControlSmokeSatelliteCount",
+            "-UserCount",
+            "$ControlSmokeUserCount",
+            "-ComputeNodeCount",
+            "$ControlSmokeComputeNodeCount"
+        )
     }
 
     Write-Host "Product acceptance verification passed."

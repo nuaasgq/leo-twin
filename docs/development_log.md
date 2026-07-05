@@ -5667,3 +5667,35 @@ change.
 - Recommended follow-up:
   - Add browser-driven Playwright control smoke when a browser E2E harness is
     introduced.
+
+## 2026-07-05 - Optional Acceptance Control Cycle Gate v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add an explicit aggregate acceptance flag that can run the mutating
+  runtime control-cycle smoke after the default product acceptance checks.
+- Changed files/modules:
+  - `scripts/verify_product_acceptance.ps1`
+  - `README.md`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_product_acceptance.ps1 -SkipBuild -RunControlCycleSmoke -ExpectedSatelliteCount 1200 -ExpectedUserCount 20 -ExpectedComputeNodeCount 1200 -ExpectedConstellationProfile CUSTOM_WALKER -ExpectedTrafficClass COMPUTE_SERVICE`
+    - Result: passed.
+    - Runtime config staging guard: passed.
+    - Forbidden runtime import guard: passed.
+    - Backend targeted tests: 2 passed.
+    - Frontend visual/dashboard tests: 25 files / 193 tests passed.
+    - Runtime health smoke: passed for 1200 satellites / 20 users / 1200
+      compute nodes.
+    - Runtime control-cycle smoke: passed for INITIALIZE, START, PAUSE,
+      RESUME, STOP, and RESET.
+- Problems encountered:
+  - None during implementation.
+  - The control-cycle gate is opt-in because it resets the active backend
+    session.
+- Known remaining issues:
+  - The aggregate acceptance still assumes local backend/frontend services are
+    already running.
+- Recommended follow-up:
+  - Add disposable acceptance launch mode for fully isolated scenario checks.
