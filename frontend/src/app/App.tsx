@@ -101,6 +101,8 @@ export function App() {
   );
   const [dismissedBackpressureNoticeKey, setDismissedBackpressureNoticeKey] =
     useState<string | null>(null);
+  const [dismissedCompletionNoticeKey, setDismissedCompletionNoticeKey] =
+    useState<string | null>(null);
   const [runtimeProgressAnchor, setRuntimeProgressAnchor] = useState<RuntimeProgressAnchor>(() =>
     defaultRuntimeProgressAnchor(defaultRuntimeStatus())
   );
@@ -495,12 +497,24 @@ export function App() {
   const backpressureNoticeDismissed =
     backpressureNoticeKeyForStatus !== null &&
     backpressureNoticeKeyForStatus === dismissedBackpressureNoticeKey;
+  const completionNoticeKeyForStatus = shouldShowCompletionNotice(runtimeStatus)
+    ? completionNoticeDismissKey(runtimeStatus)
+    : null;
+  const completionNoticeDismissed =
+    completionNoticeKeyForStatus !== null &&
+    completionNoticeKeyForStatus === dismissedCompletionNoticeKey;
 
   useEffect(() => {
     if (backpressureNoticeKeyForStatus === null) {
       setDismissedBackpressureNoticeKey(null);
     }
   }, [backpressureNoticeKeyForStatus]);
+
+  useEffect(() => {
+    if (completionNoticeKeyForStatus === null) {
+      setDismissedCompletionNoticeKey(null);
+    }
+  }, [completionNoticeKeyForStatus]);
 
   const sendRuntimeControl = useCallback(
     (action: RuntimeAction, payload: Record<string, unknown> = {}) => {
@@ -518,6 +532,11 @@ export function App() {
       setDismissedBackpressureNoticeKey(backpressureNoticeKeyForStatus);
     }
   }, [backpressureNoticeKeyForStatus]);
+  const dismissCompletionNotice = useCallback(() => {
+    if (completionNoticeKeyForStatus !== null) {
+      setDismissedCompletionNoticeKey(completionNoticeKeyForStatus);
+    }
+  }, [completionNoticeKeyForStatus]);
 
   return (
     <main className="app-shell">
@@ -585,7 +604,12 @@ export function App() {
       {surface === "dashboard" ? (
         <section className="dashboard-page" aria-label="独立数据态势面板">
           <FidelityNotice summary={fidelitySummary} surface="dashboard" />
-          <CompletionNotice runtimeStatus={runtimeStatus} surface="dashboard" />
+          <CompletionNotice
+            runtimeStatus={runtimeStatus}
+            surface="dashboard"
+            dismissed={completionNoticeDismissed}
+            onDismiss={dismissCompletionNotice}
+          />
           <BackpressureNotice
             summary={backpressureSummary}
             surface="dashboard"
@@ -666,7 +690,12 @@ export function App() {
               </div>
             </div>
             <FidelityNotice summary={fidelitySummary} surface="control" />
-            <CompletionNotice runtimeStatus={runtimeStatus} surface="control" />
+            <CompletionNotice
+              runtimeStatus={runtimeStatus}
+              surface="control"
+              dismissed={completionNoticeDismissed}
+              onDismiss={dismissCompletionNotice}
+            />
             <BackpressureNotice
               summary={backpressureSummary}
               surface="control"
@@ -889,14 +918,27 @@ export function completionNoticeDetail(runtimeStatus: RuntimeStatusPayload): str
   return `后端推进循环已停止，事件流保持最终状态。事件数 ${eventCount}；重置后可重新初始化并开始下一轮仿真。`;
 }
 
+export function completionNoticeDismissKey(runtimeStatus: RuntimeStatusPayload): string {
+  return [
+    runtimeStatus.config_version,
+    runtimeStatus.duration,
+    runtimeStatus.current_sim_time ?? 0,
+    runtimeStatus.processed_event_count ?? 0
+  ].join("|");
+}
+
 function CompletionNotice({
   runtimeStatus,
-  surface
+  surface,
+  dismissed,
+  onDismiss
 }: {
   runtimeStatus: RuntimeStatusPayload;
   surface: "control" | "dashboard";
+  dismissed?: boolean;
+  onDismiss?: () => void;
 }) {
-  if (!shouldShowCompletionNotice(runtimeStatus)) {
+  if (dismissed === true || !shouldShowCompletionNotice(runtimeStatus)) {
     return null;
   }
   return (
@@ -905,6 +947,14 @@ function CompletionNotice({
       role="status"
       aria-live="polite"
     >
+      <button
+        type="button"
+        className="fidelity-notice-dismiss"
+        aria-label="关闭仿真完成提示"
+        onClick={onDismiss}
+      >
+        x
+      </button>
       <span>仿真完成</span>
       <strong>{completionNoticeText(runtimeStatus)}</strong>
       <small>{completionNoticeDetail(runtimeStatus)}</small>

@@ -5,6 +5,48 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Dashboard Layout Rebalance v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending in this commit
+- Scope: fix the standalone dashboard completion-state notice that could expand
+  into large dark blocks above the data panel, then rebalance the data panel
+  layout by information importance. Completion notices are now compact,
+  dismissible dashboard/control banners. The dashboard now keeps the core KPI
+  summary first, uses a two-column primary trend area, moves user/satellite
+  detail tables ahead of auxiliary model panels, and compresses auxiliary
+  cross-domain cards into a denser grid. This is a frontend layout task only;
+  Event Kernel behavior, runtime protocol, and backend simulation models are
+  unchanged.
+- Changed files/modules:
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/appSurface.test.ts`
+  - `frontend/tests/appCssLayout.test.js`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- appSurface.test.ts appCssLayout.test.js dataPanel.test.ts`
+    - Result: passed, 25 files / 259 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing `DataPanel` chunk-size
+      warning at about 502 kB after minification.
+  - `git diff --check frontend/src/app/App.tsx frontend/src/app/App.css frontend/src/dashboard/data_panel/DataPanel.tsx frontend/tests/appSurface.test.ts frontend/tests/appCssLayout.test.js`
+    - Result: passed.
+- Problems encountered:
+  - Browser inspection identified `.fidelity-notice completion dashboard` as the
+    oversized dark block source before code changes. After changes, two
+    follow-up in-app browser layout probes timed out while reading the local
+    page, so final verification relied on targeted frontend tests, CSS source
+    assertions, and production build.
+- Known remaining issues / follow-up:
+  - `DataPanel` remains slightly above Vite's 500 kB chunk warning threshold.
+    A later task should split dashboard subpanels with dynamic imports.
+  - This task rebalances layout only. It does not add new backend KPI semantics
+    or packet-level network behavior.
+
 ## 2026-07-05 - Satellite Route KPI Detail v1
 
 - Branch: `feature/T164-dashboard-observability-v1`

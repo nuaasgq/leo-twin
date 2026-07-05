@@ -4,6 +4,7 @@ import {
   backpressureNoticeDismissKey,
   backpressureNoticeText,
   bodySurfaceAttribute,
+  completionNoticeDismissKey,
   completionNoticeDetail,
   completionNoticeText,
   buildRuntimeRibbonSummary,
@@ -286,6 +287,12 @@ describe("completion notice", () => {
     expect(completionNoticeText(completedStatus)).toContain("仿真已完成");
     expect(completionNoticeText(completedStatus)).toContain("配置时长");
     expect(completionNoticeDetail(completedStatus)).toContain("事件数 128");
+    expect(completionNoticeDismissKey(completedStatus)).toBe(
+      completionNoticeDismissKey({ ...completedStatus })
+    );
+    expect(completionNoticeDismissKey(completedStatus)).not.toBe(
+      completionNoticeDismissKey({ ...completedStatus, processed_event_count: 256 })
+    );
   });
 });
 

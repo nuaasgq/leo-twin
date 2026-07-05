@@ -781,21 +781,6 @@ export const DataPanel = memo(function DataPanel({
         </section>
       </div>
 
-      <div className="data-panel-section-title">跨域联动分析</div>
-      <div className="data-panel-grid">
-        <DomainSummary snapshot={snapshot} />
-        <TopologyChangePanel snapshot={snapshot} />
-        <LinkProtocolPanel snapshot={snapshot} />
-        <CouplingFeedbackPanel snapshot={snapshot} />
-        <ChannelHealthPanel snapshot={snapshot} />
-        <NetworkView snapshot={snapshot} />
-        <ComputeQueuePanel snapshot={snapshot} />
-        <ComputeView snapshot={snapshot} />
-        <OrbitPanel snapshot={snapshot} />
-        <GroundTrackPanel snapshot={snapshot} />
-        <SystemHealth snapshot={snapshot} />
-      </div>
-
       <div className="data-panel-section-title">用户节点与卫星运行明细</div>
       <div className="data-panel-detail-toolbar">
         <label htmlFor="data-panel-detail-filter">节点筛选</label>
@@ -873,6 +858,21 @@ export const DataPanel = memo(function DataPanel({
           />
           <SatelliteResourceTable rows={satelliteDetailWindow.items} />
         </section>
+      </div>
+
+      <div className="data-panel-section-title secondary">辅助模型分析</div>
+      <div className="data-panel-grid">
+        <DomainSummary snapshot={snapshot} />
+        <TopologyChangePanel snapshot={snapshot} />
+        <LinkProtocolPanel snapshot={snapshot} />
+        <CouplingFeedbackPanel snapshot={snapshot} />
+        <ChannelHealthPanel snapshot={snapshot} />
+        <NetworkView snapshot={snapshot} />
+        <ComputeQueuePanel snapshot={snapshot} />
+        <ComputeView snapshot={snapshot} />
+        <OrbitPanel snapshot={snapshot} />
+        <GroundTrackPanel snapshot={snapshot} />
+        <SystemHealth snapshot={snapshot} />
       </div>
     </section>
   );
