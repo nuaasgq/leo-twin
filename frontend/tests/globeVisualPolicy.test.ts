@@ -23,7 +23,9 @@ describe("opaque globe visual policy", () => {
         translucency: {
           enabled: true,
           frontFaceAlpha: 0.5,
-          backFaceAlpha: 0.2
+          backFaceAlpha: 0.2,
+          frontFaceAlphaByDistance: { near: 0, far: 1 },
+          backFaceAlphaByDistance: { near: 0, far: 1 }
         }
       },
       skyAtmosphere: {
@@ -42,6 +44,8 @@ describe("opaque globe visual policy", () => {
     expect(scene.globe.translucency.enabled).toBe(false);
     expect(scene.globe.translucency.frontFaceAlpha).toBe(1);
     expect(scene.globe.translucency.backFaceAlpha).toBe(1);
+    expect(scene.globe.translucency.frontFaceAlphaByDistance).toBeUndefined();
+    expect(scene.globe.translucency.backFaceAlphaByDistance).toBeUndefined();
     expect(scene.skyAtmosphere.show).toBe(true);
   });
 

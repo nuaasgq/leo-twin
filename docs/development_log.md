@@ -3649,3 +3649,36 @@ change.
 - Recommended follow-up:
   - Add a small scale/fidelity details popover shared by the control console
     and data dashboard.
+
+## 2026-07-05 - Opaque Globe Policy Hardening v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: harden the Cesium opaque globe policy so switching back from the
+  explicit translucent observation mode clears distance-based globe
+  translucency fields. This prevents stale transparent-earth settings from
+  leaking into the default opaque view.
+- Changed files/modules:
+  - `frontend/src/3d/cesium/globeVisualPolicy.ts`
+  - `frontend/tests/globeVisualPolicy.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- globeVisualPolicy.test.ts`
+    - Result: passed, 24 files / 173 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The existing UI already had an explicit translucent observation mode, so
+    the fix was constrained to preventing translucency state from persisting
+    when the user selects the default opaque mode.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - This is a policy-level regression guard. A browser screenshot pass should
+    still be used later to visually verify Cesium terrain/imagery behavior on
+    the target machine.
+- Recommended follow-up:
+  - Add an in-app visual smoke check for opaque globe, country overlay, and
+    selected satellite model rendering.

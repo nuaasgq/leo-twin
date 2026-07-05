@@ -22,6 +22,8 @@ interface GlobeTranslucencyTarget {
   enabled: boolean;
   frontFaceAlpha?: number;
   backFaceAlpha?: number;
+  frontFaceAlphaByDistance?: unknown;
+  backFaceAlphaByDistance?: unknown;
 }
 
 export interface GlobeVisualSceneTarget {
@@ -46,6 +48,8 @@ export function applyOpaqueGlobeVisualPolicy(scene: GlobeVisualSceneTarget): voi
     scene.globe.translucency.enabled = false;
     scene.globe.translucency.frontFaceAlpha = 1;
     scene.globe.translucency.backFaceAlpha = 1;
+    scene.globe.translucency.frontFaceAlphaByDistance = undefined;
+    scene.globe.translucency.backFaceAlphaByDistance = undefined;
   }
   if (scene.skyAtmosphere) {
     scene.skyAtmosphere.show = true;
