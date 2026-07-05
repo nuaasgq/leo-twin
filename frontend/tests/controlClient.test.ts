@@ -24,6 +24,7 @@ describe("ControlChannelClient", () => {
     expect(sockets[0].sent).toHaveLength(0);
 
     sockets[0].open();
+    client.sendRuntimeControl("LOAD_TEMPLATE", { template_id: "network_stress_120sat" });
     client.sendRuntimeControl("SET_SPEED", { speed_factor: 25 });
     client.sendRuntimeControl("START");
     sockets[0].emit({
@@ -46,6 +47,13 @@ describe("ControlChannelClient", () => {
         type: "CONFIG_UPDATE",
         payload: {
           satellite_count: 1000
+        }
+      },
+      {
+        type: "RUNTIME_CONTROL",
+        action: "LOAD_TEMPLATE",
+        payload: {
+          template_id: "network_stress_120sat"
         }
       },
       {

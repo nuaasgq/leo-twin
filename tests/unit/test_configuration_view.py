@@ -8,8 +8,12 @@ from leo_twin.schema.config import (
     SEESConfig,
     ScenarioConfig,
 )
-from leo_twin.schema.config_loader import load_config
-from leo_twin.services.configuration_view import build_user_configuration_view
+from leo_twin.schema.config_loader import ConfigValidationError, load_config
+from leo_twin.services.configuration_view import (
+    build_user_configuration_view,
+    configuration_template_profiles,
+    load_user_configuration_template,
+)
 
 
 def test_user_configuration_view_is_deterministic_and_frontend_ready() -> None:
@@ -189,6 +193,34 @@ def test_network_stress_120_user_config_template_loads() -> None:
     assert config.runtime.mode == "ACCELERATED"
     assert config.runtime.speed_factor == 5.0
     assert config.runtime.duration == 900
+
+
+def test_user_configuration_templates_load_by_backend_profile_id() -> None:
+    profiles = configuration_template_profiles()
+
+    assert [profile["id"] for profile in profiles] == [
+        "baseline_72sat",
+        "dynamic_observability_120sat",
+        "network_stress_120sat",
+        "large_scale_1200sat",
+    ]
+
+    config = load_user_configuration_template("network_stress_120sat")
+
+    assert config.scenario.satellite_count == 120
+    assert config.scenario.user_count == 900
+    assert config.network.transport_loss_rate == 0.06
+    assert config.runtime.duration == 900
+
+
+def test_user_configuration_template_loader_rejects_unknown_ids() -> None:
+    try:
+        load_user_configuration_template("not-a-template")
+    except ConfigValidationError as exc:
+        assert "unknown configuration template_id" in str(exc)
+        assert "network_stress_120sat" in str(exc)
+    else:
+        raise AssertionError("unknown template ids must be rejected")
 
 
 def test_large_scale_1200_user_config_template_loads() -> None:

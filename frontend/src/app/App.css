@@ -2794,6 +2794,23 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
   font-size: 10px;
 }
 
+.configuration-template-item button {
+  justify-self: start;
+  border: 1px solid #3d5f68;
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: #12232c;
+  color: #dff9ff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.configuration-template-item button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .summary-title-row {
   display: flex;
   align-items: center;

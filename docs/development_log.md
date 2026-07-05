@@ -5,6 +5,53 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - User Config Template Loader v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending in this commit
+- Scope: add a backend-approved template loading workflow for the integration
+  demo control plane and frontend control panel. The backend exposes a
+  deterministic `LOAD_TEMPLATE` runtime control action that accepts a
+  whitelisted `template_id`, loads the corresponding detailed YAML template,
+  writes the runtime config/generated scenario files, rebuilds a clean
+  uninitialized session, and returns the usual config/generated_config ACK.
+  The frontend renders backend template profiles with a "加载模板" action while
+  keeping full template loading locked after initialization. Event Kernel
+  behavior is unchanged.
+- Changed files/modules:
+  - `src/leo_twin/services/configuration_view.py`
+  - `src/leo_twin/runtime/control_protocol.py`
+  - `examples/integration_demo/control_plane.py`
+  - `frontend/src/config_panel/controlClient.ts`
+  - `frontend/src/config_panel/ConfigPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `tests/unit/test_configuration_view.py`
+  - `tests/integration/test_config_control.py`
+  - `frontend/tests/configPanel.test.ts`
+  - `frontend/tests/controlClient.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_configuration_view.py tests/integration/test_config_control.py::test_control_plane_loads_user_config_template_before_initialization tests/integration/test_config_control.py::test_control_plane_rejects_template_load_after_initialization -q`
+    - Result: passed, 9 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- configPanel.test.ts controlClient.test.ts`
+    - Result: passed, 25 files / 256 tests.
+  - `python -m pytest tests/unit/test_configuration_view.py tests/integration/test_config_control.py -k "template or frontend_control_messages_are_processed or initialize_writes_config_and_start_gates_streams or system_remains_deterministic_under_config_changes" -q`
+    - Result: passed, 11 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed with the existing Vite warning that `DataPanel` is larger
+      than 500 kB after minification.
+  - `git diff --check -- src/leo_twin/services/configuration_view.py src/leo_twin/runtime/control_protocol.py examples/integration_demo/control_plane.py tests/unit/test_configuration_view.py tests/integration/test_config_control.py frontend/src/config_panel/controlClient.ts frontend/src/config_panel/ConfigPanel.tsx frontend/src/app/App.css frontend/tests/configPanel.test.ts frontend/tests/controlClient.test.ts docs/development_log.md`
+    - Result: passed.
+- Problems encountered:
+  - None so far.
+- Known remaining issues / follow-up:
+  - Template loading is intentionally available only before initialization.
+    Users must reset before replacing the full detailed configuration.
+  - The workflow still uses deterministic flow-level models; it does not add
+    packet-level simulation, RF propagation, or external simulators.
+
 ## 2026-07-05 - Network Stress User Config Template v1
 
 - Branch: `feature/T164-dashboard-observability-v1`

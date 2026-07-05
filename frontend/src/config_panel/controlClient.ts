@@ -9,7 +9,8 @@ export type RuntimeAction =
   | "RESUME"
   | "RESET"
   | "SET_SPEED"
-  | "SET_MODE";
+  | "SET_MODE"
+  | "LOAD_TEMPLATE";
 
 export interface ControlAck {
   type: "CONTROL_ACK" | "RUNTIME_STATUS";

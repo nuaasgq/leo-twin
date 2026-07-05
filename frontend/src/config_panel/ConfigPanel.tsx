@@ -106,6 +106,7 @@ export interface ConfigSummaryItem {
   label: string;
   value: string;
   detail?: string;
+  templateId?: string;
 }
 
 export interface RuntimeProgressValues {
@@ -1795,6 +1796,21 @@ export function ConfigPanel({
                   <span>{item.label}</span>
                   <strong>{item.value}</strong>
                   {item.detail ? <small>{item.detail}</small> : null}
+                  {item.templateId ? (
+                    <button
+                      type="button"
+                      aria-label={`加载${item.label}`}
+                      data-template-id={item.templateId}
+                      disabled={runtimeBusy || executionParameterLocked}
+                      onClick={() =>
+                        onRuntimeControl("LOAD_TEMPLATE", {
+                          template_id: item.templateId
+                        })
+                      }
+                    >
+                      加载模板
+                    </button>
+                  ) : null}
                 </div>
               ))
             ) : (
@@ -2003,7 +2019,8 @@ export function configurationTemplateSummaryItems(
     ...profiles.map((profile) => ({
       label: profile.label,
       value: profile.path,
-      detail: profile.purpose
+      detail: profile.purpose,
+      templateId: profile.id
     }))
   ];
 }

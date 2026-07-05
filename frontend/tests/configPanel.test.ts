@@ -788,12 +788,14 @@ describe("configurationTemplateSummaryItems", () => {
       {
         label: "72-satellite baseline",
         value: "configs/templates/sees_user_detailed.example.yaml",
-        detail: "Executable baseline for full-contract editing."
+        detail: "Executable baseline for full-contract editing.",
+        templateId: "baseline_72sat"
       },
       {
         label: "120-satellite dynamic observability",
         value: "configs/templates/sees_user_dynamic_observability.example.yaml",
-        detail: "Mixed traffic and non-zero network proxies."
+        detail: "Mixed traffic and non-zero network proxies.",
+        templateId: "dynamic_observability_120sat"
       }
     ]);
   });
@@ -868,6 +870,8 @@ describe("configurationTemplateSummaryItems", () => {
     expect(markup).toContain("network.carrier_frequency_hz");
     expect(markup).toContain("120-satellite dynamic observability");
     expect(markup).toContain("configs/templates/sees_user_dynamic_observability.example.yaml");
+    expect(markup).toContain("加载模板");
+    expect(markup).toContain('data-template-id="dynamic_observability_120sat"');
   });
 
   it("returns no template rows before initialization", () => {

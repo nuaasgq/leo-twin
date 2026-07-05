@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from pathlib import Path
 from typing import Any
 
 from leo_twin.schema.config import SEESConfig, config_to_dict
+from leo_twin.schema.config_loader import ConfigValidationError, load_config
 
 
 ConfigurationView = dict[str, object]
@@ -248,6 +250,23 @@ _TEMPLATE_PROFILES = (
     },
 )
 
+_REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
+
+
+def configuration_template_profiles() -> tuple[dict[str, str], ...]:
+    """Return deterministic backend-approved user config template profiles."""
+
+    return tuple(dict(profile) for profile in _TEMPLATE_PROFILES)
+
+
+def load_user_configuration_template(template_id: str) -> SEESConfig:
+    """Load one backend-approved user configuration template by profile id."""
+
+    if not isinstance(template_id, str) or not template_id:
+        raise ConfigValidationError("template_id must be a non-empty string")
+    profile = _template_profile_by_id(template_id)
+    return load_config(_REPOSITORY_ROOT / str(profile["path"]))
+
 
 def build_user_configuration_view(config: SEESConfig) -> ConfigurationView:
     """Return a deterministic user-facing config surface contract."""
@@ -284,6 +303,16 @@ def build_user_configuration_view(config: SEESConfig) -> ConfigurationView:
             "This summary is derived from SEESConfig and is the backend source of truth.",
         ),
     }
+
+
+def _template_profile_by_id(template_id: str) -> Mapping[str, str]:
+    for profile in _TEMPLATE_PROFILES:
+        if profile["id"] == template_id:
+            return profile
+    known = ", ".join(str(profile["id"]) for profile in _TEMPLATE_PROFILES)
+    raise ConfigValidationError(
+        f"unknown configuration template_id: {template_id}; expected one of: {known}"
+    )
 
 
 def _file_only_section_summaries(

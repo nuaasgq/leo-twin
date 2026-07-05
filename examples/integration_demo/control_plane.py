@@ -23,7 +23,10 @@ from leo_twin.schema.config_loader import write_config
 from leo_twin.models.orbit import KeplerianOrbitEngine
 from leo_twin.schema import SatelliteState
 from leo_twin.schema.config import SEESConfig
-from leo_twin.services.configuration_view import build_user_configuration_view
+from leo_twin.services.configuration_view import (
+    build_user_configuration_view,
+    load_user_configuration_template,
+)
 from leo_twin.services.control import (
     RuntimeController,
     ScaleSafetyChecker,
@@ -232,6 +235,8 @@ class DemoControlPlane:
                 response = self._ack(command)
                 response["snapshot"] = self.visible_snapshot()
                 return response
+            if command.command == RuntimeCommand.LOAD_TEMPLATE:
+                return self._load_template(command.payload)
             if command.command == RuntimeCommand.RESET:
                 return self._reset(command.payload)
 
@@ -285,6 +290,38 @@ class DemoControlPlane:
             self._result = finalize_integration_demo_run(self._runtime_context, ())
         self._initialized = True
         return self._ack(ControlCommand(RuntimeCommand.INITIALIZE, payload))
+
+    def _load_template(self, payload: dict[str, Any]) -> dict[str, Any]:
+        if self._initialized:
+            raise RuntimeError(
+                "configuration templates can be loaded only before initialization; reset first"
+            )
+        template_id = payload.get("template_id")
+        if not isinstance(template_id, str) or not template_id:
+            raise RuntimeError("template_id is required")
+
+        self._stop_advance_loop()
+        if self._advance_loop is not None:
+            self._advance_loop.reset_streams()
+        next_config = load_user_configuration_template(template_id)
+        self._controller.apply_config(next_config)
+        write_config(self._config_output_path, self._controller.config)
+        write_full_system_scenario_builder_config(
+            self._generated_config_output_path,
+            scenario_builder_config_from_sees_config(self._controller.config),
+        )
+        updated_demo_config = demo_config_from_sees_config(
+            self._controller.config,
+            self._base_config,
+        )
+        self._install_runtime_session(updated_demo_config)
+        if self._runtime_context is not None:
+            self._result = finalize_integration_demo_run(self._runtime_context, ())
+        response = self._ack(
+            ControlCommand(RuntimeCommand.LOAD_TEMPLATE, {"template_id": template_id})
+        )
+        response["loaded_template_id"] = template_id
+        return response
 
     def _reset(self, payload: dict[str, Any]) -> dict[str, Any]:
         self._stop_advance_loop()
