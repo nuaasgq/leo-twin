@@ -479,12 +479,15 @@ describe("connectionDiagnosticItems", () => {
       status: "live",
       statusLabel: "正常"
     });
-    expect(items[1]).toEqual({
+    expect(items[1]).toMatchObject({
       channel: "control",
       label: "控制",
       status: "live",
-      statusLabel: "正常"
+      statusLabel: "正常",
+      detail: "推进 12 tick"
     });
+    expect(items[1].description).toContain("服务端推进循环 RUNNING");
+    expect(items[1].description).toContain("事件数只统计离散仿真事件");
     expect(items[2]).toMatchObject({
       channel: "events",
       label: "事件",

@@ -5,6 +5,38 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Runtime Heartbeat Diagnostics v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending in this commit
+- Scope: expose the backend advance-loop heartbeat that already exists in
+  `stream_diagnostics_v1.tick_count` on the frontend connection diagnostics.
+  The control channel now shows cumulative server-side advance ticks and the
+  hover text clarifies that event count is a discrete simulation event counter,
+  while tick count is the live backend progression heartbeat. This addresses
+  the user-facing confusion where event count can stay flat during quiet
+  periods even though the live runtime loop is still active.
+- Changed files/modules:
+  - `frontend/src/app/App.tsx`
+  - `frontend/tests/appSurface.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- appSurface.test.ts`
+    - Result: passed, 25 files / 256 tests.
+  - `git diff --check -- frontend/src/app/App.tsx frontend/tests/appSurface.test.ts docs/development_log.md`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed with the existing Vite warning that `DataPanel` is larger
+      than 500 kB after minification.
+- Problems encountered:
+  - None so far.
+- Known remaining issues / follow-up:
+  - This does not create synthetic simulation events. KPI and event dynamics
+    still depend on configured flow-level demand, orbit/network state changes,
+    and compute workload events.
+
 ## 2026-07-05 - Large-Scale User Config Template v1
 
 - Branch: `feature/T164-dashboard-observability-v1`

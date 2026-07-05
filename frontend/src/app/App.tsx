@@ -1526,6 +1526,9 @@ function connectionDiagnosticDetail(
   if (streamDiagnostics === undefined) {
     return undefined;
   }
+  if (channel === "control") {
+    return `推进 ${formatInteger(streamDiagnostics.tick_count)} tick`;
+  }
   const stream =
     channel === "events"
       ? streamDiagnostics.event_stream
@@ -1560,6 +1563,11 @@ function connectionDiagnosticDescription(
 ): string | undefined {
   const label = connectionChannelLabel(channel);
   const statusLabel = connectionStatusLabel(status);
+  if (channel === "control" && streamDiagnostics !== undefined) {
+    return `控制通道诊断：连接${statusLabel}，服务端推进循环 ${streamDiagnostics.advance_loop_state}，累计推进 ${formatInteger(
+      streamDiagnostics.tick_count
+    )} tick。事件数只统计离散仿真事件，tick 表示后端实时推进心跳。`;
+  }
   const stream =
     channel === "events"
       ? streamDiagnostics?.event_stream
