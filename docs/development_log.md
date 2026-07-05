@@ -5,6 +5,50 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - LOD Snapshot Policy v2
+
+- Branch: `feature/T235-lod-snapshot-policy-v2`
+- Commit: pending in this commit
+- Scope: advance V2-041 by adding backend-owned
+  `leo_twin.lod_snapshot_policy.v2`. The policy derives from
+  `scale_policy_v2` and defines raw count fields, bounded detail windows,
+  Top-K summary limits, sampled history lengths, cursor requirements, and
+  hidden-row explanations for scale-aware observation surfaces.
+- Changed files/modules:
+  - `src/leo_twin/services/lod_snapshot_policy.py`
+  - `src/leo_twin/services/derived_summary.py`
+  - `tests/unit/test_lod_snapshot_policy_v2.py`
+  - `tests/unit/test_backend_derived_summary.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `docs/lod_snapshot_policy_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_lod_snapshot_policy_v2.py tests/unit/test_scale_policy_v2.py tests/unit/test_backend_derived_summary.py -q`
+    - Result: passed, 29 tests.
+  - `python -m pytest tests/integration/test_benchmark_acceptance_v1.py -q`
+    - Result: passed, 9 tests.
+  - `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - This task intentionally defines the LOD snapshot contract without changing
+    live snapshot publication or Event Kernel behavior. Runtime enforcement
+    belongs to V2-042/V2-043.
+  - Frontend protocol types were updated so later dashboard work can consume
+    `scale_policy_v2` and `lod_snapshot_policy_v2` without inventing local LOD
+    semantics.
+  - Existing local runtime/generated config files remain dirty and are
+    intentionally not included in this task.
+- Known remaining issues / follow-up:
+  - V2-042 should enforce event, memory, stream backlog, and degrade/refusal
+    guardrails from the active profile.
+  - V2-043 should add backend cursor/detail APIs for hidden users, satellites,
+    routes, services, and compute nodes.
+  - Dashboard v3 should display hidden-row explanations and raw counts from
+    this backend policy.
+
 ## 2026-07-06 - Scale Policy v2
 
 - Branch: `feature/T234-scale-policy-v2`

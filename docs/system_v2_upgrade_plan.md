@@ -184,6 +184,12 @@ Tasks:
 - V2-041: Add LOD snapshot policy.
   - Scope: detail windows, top-K summaries, sampled histories, raw counts.
   - Depends on: V2-040.
+  - Status: T235 adds backend-owned `leo_twin.lod_snapshot_policy.v2` derived
+    from `scale_policy_v2`. The policy is included in backend derived summaries
+    and records raw count fields, bounded detail windows, Top-K summary limits,
+    sampled history lengths, cursor requirements, hidden-row explanations, and
+    deterministic ordering/sampling rules without changing current runtime
+    snapshot publication behavior.
 - V2-042: Add runtime guardrails.
   - Scope: event volume estimate, memory estimate, stream backlog estimate,
     explicit refusal/degrade reason.

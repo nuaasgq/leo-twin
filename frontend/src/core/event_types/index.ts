@@ -302,6 +302,96 @@ export interface FidelitySummary {
   user_count: number;
 }
 
+export interface ScalePolicyV2 {
+  version: "v2" | string;
+  policy_id: string;
+  profile_targets: readonly number[];
+  active_profile_id: string;
+  active_scale_band: string;
+  active_profile: ScalePolicyProfileV2;
+  active_fidelity_summary: FidelitySummary;
+  profiles: readonly ScalePolicyProfileV2[];
+  frontend_notice_policy: string;
+  result_reproducibility_policy: string;
+  forbidden_integrations: readonly string[];
+  packet_level_simulation: boolean;
+  event_kernel_policy: string;
+}
+
+export interface ScalePolicyProfileV2 {
+  profile_id: string;
+  scale_band: string;
+  target_satellite_count: number;
+  satellite_count_min: number;
+  satellite_count_max: number | null;
+  orbit_update_mode: string;
+  metrics_mode: string;
+  space_link_mode: string;
+  snapshot_lod_policy: string;
+  detail_window_policy: string;
+  frontend_policy: string;
+  runtime_guardrail_policy: string;
+  recommended_use: string;
+  limitation_note: string;
+}
+
+export interface LodSnapshotPolicyV2 {
+  version: "v2" | string;
+  policy_id: string;
+  source_policy_id: string;
+  active_profile_id: string;
+  active_scale_band: string;
+  snapshot_lod_policy: string;
+  detail_window_policy: string;
+  frontend_policy: string;
+  configured_counts: {
+    satellite_count: number;
+    user_count: number;
+  };
+  raw_count_policy: LodRawCountPolicyV2;
+  detail_windows: readonly LodDetailWindowV2[];
+  top_k_summaries: readonly LodTopKSummaryV2[];
+  sampled_histories: readonly LodSampledHistoryV2[];
+  cursor_required: boolean;
+  full_detail_allowed: boolean;
+  hidden_detail_policy: string;
+  determinism: {
+    stable_ordering: string;
+    sampling: string;
+    frontend_inference: string;
+  };
+  event_kernel_policy: string;
+}
+
+export interface LodRawCountPolicyV2 {
+  always_include_raw_counts: boolean;
+  fields: readonly string[];
+  source: string;
+}
+
+export interface LodDetailWindowV2 {
+  collection: string;
+  max_rows: number;
+  stable_key: string;
+  purpose: string;
+  cursor_required_for_hidden_rows: boolean;
+  raw_count_field: string;
+}
+
+export interface LodTopKSummaryV2 {
+  summary: string;
+  limit: number;
+  ranking: string;
+  source: string;
+}
+
+export interface LodSampledHistoryV2 {
+  history: string;
+  max_points: number;
+  sampling_policy: string;
+  source: string;
+}
+
 export interface BackendDerivedSummary {
   derived_constellation_summary?: ConstellationDerivedSummary;
   traffic_demand_summary?: TrafficDemandSummary;
@@ -312,6 +402,8 @@ export interface BackendDerivedSummary {
   coverage_beam_summary?: CoverageBeamSummary;
   network_model_contract_v2?: NetworkModelContractV2;
   fidelity_summary?: FidelitySummary;
+  scale_policy_v2?: ScalePolicyV2;
+  lod_snapshot_policy_v2?: LodSnapshotPolicyV2;
   workload_smoothing_summary?: WorkloadSmoothingSummary;
   configuration_surface_summary?: ConfigurationSurfaceSummary;
   dashboard_information_architecture_v3?: DashboardInformationArchitectureV3;
