@@ -283,6 +283,42 @@ product-quality jump and a better semantic foundation.
 7. `feat(dashboard): bind KPI charts to runtime streams`
 8. `test(product): add visual and runtime acceptance checks`
 
+## Execution Progress
+
+The following issue-sized slices have now been delivered on
+`feature/T163-frontend-dashboard-compute-v2` and pushed to GitHub:
+
+- `3dac262 feat(globe): show selected satellite resource detail`
+  - Maps to suggestions 39, 51, 52, 55, and the Hour 5.0-6.5 satellite
+    resource inspector slice.
+  - The selected satellite strip now expands CPU FP32/FP64, GPU FP32/FP16,
+    NPU INT8, memory, and storage usage rows from existing backend/snapshot
+    resource vectors.
+- `15815e1 feat(dashboard): add selectable compute series`
+  - Maps to suggestions 57, 61, 62, 65, and the Hour 8.0-9.0 dashboard
+    dynamics slice.
+  - The data panel compute chart can switch between FP32, FP64, GPU, NPU,
+    memory, and storage series from backend KPI samples.
+- `025bd10 test(metrics): lock network quality proxies`
+  - Maps to suggestions 66-75 and the Hour 6.5-8.0 network KPI semantics
+    slice.
+  - Integration coverage now prevents demo network loss and delay-variation
+    proxies from regressing to all-zero values.
+- `5cb497d feat(config): add network quality presets`
+  - Maps to suggestions 14, 65, 66, 68, 72, and the network KPI semantics
+    configuration path.
+  - Users can choose stable low-load, congested demand, lossy access, and
+    high delay-variation presets without changing backend schema or runtime
+    config files.
+
+Completed earlier slices in this thread also cover stream diagnostics, opaque
+Earth rendering, country boundary assets, visual layer explanations, selected
+satellite coverage/beam labels, compute vector KPI samples, and the frontend
+visual verification script. The remaining high-value product gaps are backend
+per-satellite vector time-series, multi-resource chart comparison, richer
+route-quality provenance, screenshot-based visual acceptance, and durable
+route-switch/reset end-to-end smoke tests.
+
 ## Acceptance Gates
 
 - Existing backend runtime/session tests pass.
