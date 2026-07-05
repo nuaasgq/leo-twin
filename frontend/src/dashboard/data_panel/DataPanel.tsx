@@ -358,8 +358,16 @@ export const DataPanel = memo(function DataPanel({
   const serviceLatencyRows = buildDataPanelServiceLatencyRows(
     runtimeStatus.service_latency_history_v1
   );
+  const serviceDetailRows = buildDataPanelServiceDetailRows(
+    selectRuntimeServiceDetailPage(runtimeDetailPages),
+    detailPageSizes.services
+  );
   const computeTaskTimeline = buildDataPanelComputeTaskTimelineDisplay(
     runtimeStatus.compute_task_timeline_summary_v1
+  );
+  const computeNodeDetailRows = buildDataPanelComputeNodeDetailRows(
+    selectRuntimeComputeNodeDetailPage(runtimeDetailPages),
+    detailPageSizes.computeNodes
   );
   const routeConstraints = buildDataPanelRouteConstraints(
     snapshot,
@@ -1305,7 +1313,9 @@ export const DataPanel = memo(function DataPanel({
               ) : null}
             </>
           ) : null}
+          <ServiceDetailPageTable rows={serviceDetailRows} />
           <TopComputeNodeTable rows={topComputeNodes} />
+          <ComputeNodeDetailPageTable rows={computeNodeDetailRows} />
           <div className="data-panel-chart-body compact">
             {computePool.totalTflops > 0 ? (
               <ResponsiveContainer width="100%" height={160}>
@@ -1753,6 +1763,18 @@ export function selectRuntimeRouteExplanationSummary(
   return runtimeDetailPages?.routes ?? runtimeStatus.route_explanation_summary_v1;
 }
 
+export function selectRuntimeServiceDetailPage(
+  runtimeDetailPages: RuntimeDetailPages | null | undefined
+): RuntimeServiceDetailPageV1 | null | undefined {
+  return runtimeDetailPages?.services;
+}
+
+export function selectRuntimeComputeNodeDetailPage(
+  runtimeDetailPages: RuntimeDetailPages | null | undefined
+): RuntimeComputeNodeDetailPageV1 | null | undefined {
+  return runtimeDetailPages?.computeNodes;
+}
+
 export function runtimeNodeDetailPageToSummary(
   page: RuntimeNodeDetailPageV1
 ): RuntimeNodeDetailSummaryV1 {
@@ -2024,6 +2046,73 @@ function TopComputeNodeTable({ rows }: { rows: readonly TopComputeNodeRow[] }) {
           <span>{row.statusLabel}</span>
           <span>{row.loadLabel}</span>
           <span>{row.fp32Label}</span>
+          <span>{row.taskLabel}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ServiceDetailPageTable({ rows }: { rows: DataPanelServiceDetailRows }) {
+  if (rows.items.length === 0) {
+    return <div className="data-panel-route-empty">{rows.summaryLabel}</div>;
+  }
+  return (
+    <div
+      className="data-panel-route-table service-detail"
+      aria-label="服务生命周期游标明细"
+    >
+      <div className="data-panel-route-source">{rows.sourceLabel}</div>
+      <div className="data-panel-route-row header">
+        <span>服务</span>
+        <span>状态</span>
+        <span>放置</span>
+        <span>网络</span>
+        <span>计算</span>
+        <span>总延迟</span>
+      </div>
+      {rows.items.map((row) => (
+        <div className="data-panel-route-row" key={row.serviceId} title={row.traceTitle}>
+          <span>{row.taskLabel}</span>
+          <span>{row.stateLabel}</span>
+          <span>{row.placementLabel}</span>
+          <span>{row.networkLatencyLabel}</span>
+          <span>{row.computeLatencyLabel}</span>
+          <span>{row.totalLatencyLabel}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ComputeNodeDetailPageTable({
+  rows
+}: {
+  rows: DataPanelComputeNodeDetailRows;
+}) {
+  if (rows.items.length === 0) {
+    return <div className="data-panel-compute-empty">{rows.summaryLabel}</div>;
+  }
+  return (
+    <div className="data-panel-compute-node-table detail" aria-label="算力节点游标明细">
+      <div className="data-panel-route-source">{rows.sourceLabel}</div>
+      <div className="data-panel-compute-node-row header">
+        <span>节点</span>
+        <span>状态</span>
+        <span>负载</span>
+        <span>FP32</span>
+        <span>GPU/NPU</span>
+        <span>内存/存储</span>
+        <span>任务</span>
+      </div>
+      {rows.items.map((row) => (
+        <div className="data-panel-compute-node-row" key={row.nodeId} title={row.traceTitle}>
+          <span>{row.nodeId}</span>
+          <span>{row.statusLabel}</span>
+          <span>{row.loadLabel}</span>
+          <span>{row.fp32Label}</span>
+          <span>{row.acceleratorLabel}</span>
+          <span>{row.memoryStorageLabel}</span>
           <span>{row.taskLabel}</span>
         </div>
       ))}
@@ -5278,6 +5367,93 @@ function serviceLatencyPlacementLabel(
   });
 }
 
+function serviceDetailPlacementLabel(
+  item: RuntimeServiceDetailPageV1["items"][number]
+): string {
+  return servicePlacementLabel({
+    computeNodeId: item.compute_node_id,
+    status: item.placement_status,
+    policy: item.placement_policy,
+    bottleneckResource: item.placement_bottleneck_resource,
+    candidateCount: item.placement_candidate_count,
+    capableCandidateCount: item.placement_capable_candidate_count,
+    candidateQueueLabel: item.placement_candidate_queue_label
+  });
+}
+
+function serviceDetailTraceTitle(
+  item: RuntimeServiceDetailPageV1["items"][number]
+): string {
+  const stageLabels = item.stages
+    .map((stage) => {
+      const simTime =
+        typeof stage.sample_sim_time === "number"
+          ? `@${formatMetricValue(stage.sample_sim_time)}s`
+          : "";
+      return `${stage.component}${simTime}=${formatMetricMilliseconds(stage.duration_s)}`;
+    })
+    .join(", ");
+  return [
+    `service=${item.service_id}`,
+    item.task_id ? `task=${item.task_id}` : "",
+    item.input_flow_id ? `input=${item.input_flow_id}` : "",
+    item.output_flow_id ? `output=${item.output_flow_id}` : "",
+    item.input_route_id ? `input_route=${item.input_route_id}` : "",
+    item.output_route_id ? `output_route=${item.output_route_id}` : "",
+    item.compute_node_id ? `node=${item.compute_node_id}` : "",
+    item.placement_status ? `placement=${item.placement_status}` : "",
+    item.placement_bottleneck_resource
+      ? `bottleneck=${item.placement_bottleneck_resource}`
+      : "",
+    `input_network=${formatMetricMilliseconds(item.input_network_latency_s)}`,
+    `compute_queue=${formatMetricMilliseconds(item.compute_queue_delay_s)}`,
+    `compute_execution=${formatMetricMilliseconds(item.compute_execution_delay_s)}`,
+    `output_network=${formatMetricMilliseconds(item.output_network_latency_s)}`,
+    `total=${formatMetricMilliseconds(item.total_latency_s)}`,
+    stageLabels ? `stages=${stageLabels}` : ""
+  ]
+    .filter((part) => part.length > 0)
+    .join(" / ");
+}
+
+function computeNodeDetailTraceTitle(
+  item: RuntimeComputeNodeDetailPageV1["items"][number]
+): string {
+  return [
+    `node=${item.node_id}`,
+    `status=${item.status}`,
+    `load=${formatRatioPercent(item.compute_load_ratio)}`,
+    `fp32=${resourceUsageLabel(
+      item.compute_used_gflops_fp32,
+      item.compute_capacity_gflops_fp32,
+      "GFLOPS"
+    )}`,
+    `gpu_fp32=${resourceUsageLabel(
+      item.compute_used_gpu_tflops_fp32,
+      item.compute_capacity_gpu_tflops_fp32,
+      "TFLOPS"
+    )}`,
+    `npu_int8=${resourceUsageLabel(
+      item.compute_used_npu_tops_int8,
+      item.compute_capacity_npu_tops_int8,
+      "TOPS"
+    )}`,
+    `memory=${resourceUsageLabel(
+      item.compute_used_memory_gb,
+      item.compute_capacity_memory_gb,
+      "GB"
+    )}`,
+    `storage=${resourceUsageLabel(
+      item.compute_used_storage_gb,
+      item.compute_capacity_storage_gb,
+      "GB"
+    )}`,
+    `tasks=${formatCount(item.running_task_count)}/${formatCount(
+      item.finished_task_count
+    )}`
+  ].join(" / ");
+}
+
 function servicePlacementLabel(fields: {
   computeNodeId?: string;
   status?: string;
@@ -6575,6 +6751,23 @@ export interface DataPanelServiceLatencyTimelineItem {
   traceTitle: string;
 }
 
+export interface DataPanelServiceDetailRows {
+  sourceLabel: string;
+  summaryLabel: string;
+  items: readonly DataPanelServiceDetailRow[];
+}
+
+export interface DataPanelServiceDetailRow {
+  serviceId: string;
+  taskLabel: string;
+  stateLabel: string;
+  placementLabel: string;
+  networkLatencyLabel: string;
+  computeLatencyLabel: string;
+  totalLatencyLabel: string;
+  traceTitle: string;
+}
+
 export interface DataPanelComputeTaskTimelineDisplay {
   sourceLabel: string;
   summaryLabel: string;
@@ -6589,6 +6782,23 @@ export interface DataPanelComputeTaskTimelineRow {
   taskLabel: string;
   nodeLabel: string;
   queueExecutionLabel: string;
+  traceTitle: string;
+}
+
+export interface DataPanelComputeNodeDetailRows {
+  sourceLabel: string;
+  summaryLabel: string;
+  items: readonly DataPanelComputeNodeDetailRow[];
+}
+
+export interface DataPanelComputeNodeDetailRow {
+  nodeId: string;
+  statusLabel: string;
+  loadLabel: string;
+  fp32Label: string;
+  acceleratorLabel: string;
+  memoryStorageLabel: string;
+  taskLabel: string;
   traceTitle: string;
 }
 
@@ -7187,6 +7397,45 @@ export function buildDataPanelServiceLatencyRows(
   }));
 }
 
+export function buildDataPanelServiceDetailRows(
+  page: RuntimeServiceDetailPageV1 | null | undefined,
+  limit = 8
+): DataPanelServiceDetailRows {
+  if (page === null || page === undefined) {
+    return {
+      sourceLabel: "等待后端服务详情页",
+      summaryLabel: "暂无服务生命周期游标明细",
+      items: []
+    };
+  }
+  const boundedLimit = Math.max(0, Math.floor(limit));
+  const items = page.items.slice(0, boundedLimit).map((item) => ({
+    serviceId: item.service_id,
+    taskLabel: compactTaskId(item.task_id || item.service_id),
+    stateLabel: item.service_state_label || item.service_state,
+    placementLabel: serviceDetailPlacementLabel(item),
+    networkLatencyLabel: `${formatMetricMilliseconds(
+      item.input_network_latency_s
+    )} / ${formatMetricMilliseconds(item.output_network_latency_s)}`,
+    computeLatencyLabel: `${formatMetricMilliseconds(
+      item.compute_queue_delay_s
+    )} / ${formatMetricMilliseconds(item.compute_execution_delay_s)}`,
+    totalLatencyLabel: formatMetricMilliseconds(item.total_latency_s),
+    traceTitle: serviceDetailTraceTitle(item)
+  }));
+  return {
+    sourceLabel: `后端服务详情页 ${formatCount(page.item_count)} / ${formatCount(
+      page.service_count
+    )}`,
+    summaryLabel: `${formatCount(items.length)} 行 / 完成 ${formatCount(
+      page.complete_service_count
+    )} / 排队 ${formatCount(page.queued_service_count)}${
+      page.has_more ? " / 可继续游标读取" : ""
+    }`,
+    items
+  };
+}
+
 export function buildDataPanelComputeTaskTimelineDisplay(
   summary: RuntimeComputeTaskTimelineSummaryV1 | null | undefined,
   limit = 4
@@ -7216,6 +7465,61 @@ export function buildDataPanelComputeTaskTimelineDisplay(
       )} / ${formatMetricMilliseconds(item.execution_delay_s)}`,
       traceTitle: computeTaskTimelineTraceTitle(item)
     }))
+  };
+}
+
+export function buildDataPanelComputeNodeDetailRows(
+  page: RuntimeComputeNodeDetailPageV1 | null | undefined,
+  limit = 12
+): DataPanelComputeNodeDetailRows {
+  if (page === null || page === undefined) {
+    return {
+      sourceLabel: "等待后端算力节点详情页",
+      summaryLabel: "暂无算力节点游标明细",
+      items: []
+    };
+  }
+  const boundedLimit = Math.max(0, Math.floor(limit));
+  const items = page.items.slice(0, boundedLimit).map((item) => ({
+    nodeId: item.node_id,
+    statusLabel: item.status,
+    loadLabel: formatRatioPercent(item.compute_load_ratio),
+    fp32Label: resourceUsageLabel(
+      item.compute_used_gflops_fp32,
+      item.compute_capacity_gflops_fp32,
+      "GFLOPS"
+    ),
+    acceleratorLabel: `GPU ${resourceUsageLabel(
+      item.compute_used_gpu_tflops_fp32,
+      item.compute_capacity_gpu_tflops_fp32,
+      "TFLOPS"
+    )} / NPU ${resourceUsageLabel(
+      item.compute_used_npu_tops_int8,
+      item.compute_capacity_npu_tops_int8,
+      "TOPS"
+    )}`,
+    memoryStorageLabel: `内存 ${resourceUsageLabel(
+      item.compute_used_memory_gb,
+      item.compute_capacity_memory_gb,
+      "GB"
+    )} / 存储 ${resourceUsageLabel(
+      item.compute_used_storage_gb,
+      item.compute_capacity_storage_gb,
+      "GB"
+    )}`,
+    taskLabel: `${formatCount(item.running_task_count)} 运行 / ${formatCount(
+      item.finished_task_count
+    )} 完成`,
+    traceTitle: computeNodeDetailTraceTitle(item)
+  }));
+  return {
+    sourceLabel: `后端算力节点详情页 ${formatCount(page.item_count)} / ${formatCount(
+      page.compute_node_count
+    )}`,
+    summaryLabel: `${formatCount(items.length)} 行 / 忙碌 ${formatCount(
+      page.busy_compute_node_count
+    )}${page.has_more ? " / 可继续游标读取" : ""}`,
+    items
   };
 }
 

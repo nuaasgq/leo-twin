@@ -5,6 +5,46 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Dashboard Service and Compute Detail Tables v1
+
+- Branch: `feature/T239-dashboard-service-compute-detail-tables-v1`
+- Commit: pending in this commit
+- Scope: complete the visible dashboard binding for backend cursor pages added
+  by the large detail pagination contract. The standalone dashboard now renders
+  dedicated service lifecycle rows from `runtimeDetailPages.services` and
+  compute-node resource rows from `runtimeDetailPages.computeNodes`, using
+  backend-recommended detail page sizes where available.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/dashboard_service_compute_detail_tables_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 26 test files / 339 tests.
+  - `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed using the Codex bundled Node.js runtime.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite reported the existing `DataPanel` chunk size
+      warning after minification.
+  - `python -m pytest tests/integration/test_benchmark_acceptance_v1.py -q`
+    - Result: passed, 9 tests.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - Service and compute-node cursor pages were already fetched and typed, but
+    were not visible as dedicated dashboard tables. This task keeps the current
+    dashboard structure and adds only the missing render surfaces and formatter
+    tests.
+  - Existing local runtime/generated config files remain dirty and are
+    intentionally not included in this task.
+- Known remaining issues / follow-up:
+  - Add UI controls for cursor navigation beyond the first backend page.
+  - Add detail-by-id endpoints for selected service and selected compute node.
+  - Add column-level filtering after backend cursor navigation is available.
+
 ## 2026-07-06 - Dashboard Cursor Contract Binding v1
 
 - Branch: `feature/T238-dashboard-cursor-contract-binding-v1`

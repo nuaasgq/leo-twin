@@ -1984,6 +1984,17 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
   white-space: nowrap;
 }
 
+.data-panel-route-table.service-detail .data-panel-route-row {
+  grid-template-columns:
+    minmax(110px, 1.1fr)
+    minmax(70px, 0.7fr)
+    minmax(130px, 1.25fr)
+    minmax(108px, 1fr)
+    minmax(108px, 1fr)
+    minmax(86px, 0.8fr);
+  min-width: 780px;
+}
+
 .data-panel-route-empty {
   display: grid;
   min-height: 44px;
@@ -2572,6 +2583,22 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
 
 .data-panel-compute-node-row.header span {
   color: #7f8f96;
+}
+
+.data-panel-compute-node-table.detail {
+  overflow-x: auto;
+}
+
+.data-panel-compute-node-table.detail .data-panel-compute-node-row {
+  grid-template-columns:
+    minmax(86px, 1fr)
+    minmax(58px, 0.65fr)
+    minmax(56px, 0.55fr)
+    minmax(110px, 1.05fr)
+    minmax(138px, 1.3fr)
+    minmax(142px, 1.3fr)
+    minmax(82px, 0.75fr);
+  min-width: 860px;
 }
 
 .data-panel-compute-empty {

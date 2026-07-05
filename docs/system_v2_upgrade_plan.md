@@ -257,6 +257,11 @@ Tasks:
     pages where available, prefers route cursor pages over bounded status
     summaries, and displays the backend pagination contract as the source of
     detail table budgets while preserving compatibility fallbacks.
+  - Status: T239 renders the backend service lifecycle cursor page and
+    compute-node resource cursor page as dedicated standalone dashboard
+    tables. The dashboard now exposes service state, placement, network and
+    compute latency splits, node resource vectors, and task counts from
+    backend-owned detail pages without adding frontend-local model inference.
 - V2-054: Add model assumptions panel.
   - Scope: backend-derived model caveats, fidelity mode, KPI provenance.
   - Depends on: V2-003, V2-021.

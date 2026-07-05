@@ -36,7 +36,9 @@ import {
   buildDataPanelRuntimeProgress,
   buildDataPanelSatelliteResourceHistory,
   buildDataPanelServiceLatencyDisplay,
+  buildDataPanelServiceDetailRows,
   buildDataPanelServiceLatencyRows,
+  buildDataPanelComputeNodeDetailRows,
   buildSatelliteDetailDrawerSectionsV1,
   buildSatelliteResourceInspector,
   buildDataPanelSummary,
@@ -63,9 +65,11 @@ import {
   RuntimeDetailPages,
   runtimeNodeDetailPageToSummary,
   selectRuntimeNodeDetailSummary,
+  selectRuntimeComputeNodeDetailPage,
   selectRuntimeRouteExplanationSummary,
   selectRuntimeSatelliteDetailCard,
   selectRuntimeSatelliteServiceSummary,
+  selectRuntimeServiceDetailPage,
   selectRuntimeUserDetailCard,
   selectRuntimeUserRequestSummary,
   selectSatelliteResourceRow,
@@ -400,6 +404,76 @@ describe("runtime detail page selection", () => {
             explanation_label: "page route"
           }
         ]
+      },
+      services: {
+        version: "v1",
+        source: "SERVICE_LATENCY_HISTORY",
+        summary_scope: "SERVICE_LIFECYCLE_DETAIL_WINDOW",
+        cursor: 0,
+        limit: 20,
+        next_cursor: 1,
+        has_more: false,
+        service_count: 1,
+        item_count: 1,
+        complete_service_count: 0,
+        queued_service_count: 1,
+        window_service_count: 1,
+        hidden_service_count: 0,
+        items: [
+          {
+            service_id: "service-page",
+            task_id: "task-page",
+            complete: false,
+            service_state: "RUNNING",
+            service_state_label: "Service running",
+            input_network_latency_s: 0.1,
+            compute_queue_delay_s: 0.2,
+            compute_execution_delay_s: 0.3,
+            output_network_latency_s: 0.4,
+            total_latency_s: 1,
+            stage_count: 0,
+            stages: []
+          }
+        ]
+      },
+      computeNodes: {
+        version: "v1",
+        source: "BACKEND_RUNTIME_SNAPSHOT",
+        summary_scope: "COMPUTE_NODE_DETAIL_WINDOW",
+        cursor: 0,
+        limit: 20,
+        next_cursor: 1,
+        has_more: false,
+        compute_node_count: 1,
+        item_count: 1,
+        busy_compute_node_count: 1,
+        window_compute_node_count: 1,
+        hidden_compute_node_count: 0,
+        items: [
+          {
+            node_id: "sat-page",
+            platform_type: "SATELLITE_COMPUTE_NODE",
+            status: "BUSY",
+            compute_load_ratio: 0.65,
+            compute_capacity_gflops_fp32: 100,
+            compute_used_gflops_fp32: 65,
+            compute_available_gflops_fp32: 35,
+            compute_capacity_gflops_fp64: 0,
+            compute_used_gflops_fp64: 0,
+            compute_capacity_gpu_tflops_fp32: 0,
+            compute_used_gpu_tflops_fp32: 0,
+            compute_capacity_gpu_tflops_fp16: 0,
+            compute_used_gpu_tflops_fp16: 0,
+            compute_capacity_npu_tops_int8: 0,
+            compute_used_npu_tops_int8: 0,
+            compute_capacity_memory_gb: 0,
+            compute_used_memory_gb: 0,
+            compute_capacity_storage_gb: 0,
+            compute_used_storage_gb: 0,
+            running_task_count: 1,
+            finished_task_count: 2
+          }
+        ]
       }
     };
 
@@ -427,6 +501,12 @@ describe("runtime detail page selection", () => {
     expect(
       selectRuntimeRouteExplanationSummary(runtimeStatus, null)?.items[0].route_id
     ).toBe("route-status");
+    expect(selectRuntimeServiceDetailPage(detailPages)?.items[0].service_id).toBe(
+      "service-page"
+    );
+    expect(selectRuntimeComputeNodeDetailPage(detailPages)?.items[0].node_id).toBe(
+      "sat-page"
+    );
   });
 });
 
@@ -3213,6 +3293,94 @@ describe("buildDataPanelServiceLatencyRows", () => {
   });
 });
 
+describe("buildDataPanelServiceDetailRows", () => {
+  it("formats backend cursor service lifecycle detail rows", () => {
+    const rows = buildDataPanelServiceDetailRows(
+      {
+        version: "v1",
+        source: "SERVICE_LATENCY_HISTORY",
+        summary_scope: "SERVICE_LIFECYCLE_DETAIL_WINDOW",
+        cursor: 0,
+        limit: 2,
+        next_cursor: 1,
+        has_more: true,
+        service_count: 3,
+        item_count: 1,
+        complete_service_count: 1,
+        queued_service_count: 1,
+        window_service_count: 1,
+        hidden_service_count: 2,
+        items: [
+          {
+            service_id: "svc-0",
+            task_id: "svc-00-compute_service-00000-task",
+            input_flow_id: "input-0",
+            output_flow_id: "output-0",
+            input_route_id: "route-input",
+            output_route_id: "route-output",
+            compute_node_id: "sat-00001",
+            complete: false,
+            service_state: "RUNNING",
+            service_state_label: "Service running",
+            placement_status: "QUEUED",
+            placement_policy: "MIN_ESTIMATED_FINISH_TIME",
+            placement_bottleneck_resource: "gpu_tflops_fp32",
+            placement_candidate_count: 3,
+            placement_capable_candidate_count: 2,
+            placement_candidate_queue_label: "sat-00001:QUEUED",
+            first_sample_sim_time: 1,
+            last_sample_sim_time: 2,
+            input_network_latency_s: 0.1,
+            compute_queue_delay_s: 0.2,
+            compute_execution_delay_s: 0.3,
+            output_network_latency_s: 0.4,
+            total_latency_s: 1,
+            stage_count: 1,
+            stages: [
+              {
+                component: "compute_queue",
+                label: "Compute queue",
+                sample_sim_time: 1.5,
+                duration_s: 0.2
+              }
+            ]
+          }
+        ]
+      },
+      1
+    );
+
+    expect(rows).toMatchObject({
+      sourceLabel: "后端服务详情页 1 / 3",
+      summaryLabel: "1 行 / 完成 1 / 排队 1 / 可继续游标读取",
+      items: [
+        {
+          serviceId: "svc-0",
+          taskLabel: "...vice-00000-task",
+          stateLabel: "Service running",
+          placementLabel:
+            "节点 sat-00001 / 排队 / 瓶颈 gpu_tflops_fp32 / 候选 2/3 / 队列 sat-00001:QUEUED",
+          networkLatencyLabel: "100 ms / 400 ms",
+          computeLatencyLabel: "200 ms / 300 ms",
+          totalLatencyLabel: "1,000 ms"
+        }
+      ]
+    });
+    expect(rows.items[0].traceTitle).toContain("service=svc-0");
+    expect(rows.items[0].traceTitle).toContain(
+      "stages=compute_queue@1.5s=200 ms"
+    );
+  });
+
+  it("returns an empty waiting state before backend service pages arrive", () => {
+    expect(buildDataPanelServiceDetailRows(null)).toEqual({
+      sourceLabel: "等待后端服务详情页",
+      summaryLabel: "暂无服务生命周期游标明细",
+      items: []
+    });
+  });
+});
+
 describe("resolveNetworkQualityKpis", () => {
   it("converts backend seconds and rates into dashboard display units", () => {
     expect(
@@ -3977,6 +4145,79 @@ describe("buildDataPanelComputeTaskTimelineDisplay", () => {
             "task=svc-00-compute_service-00000-task / node=sat-00001 / placement=QUEUED / bottleneck=gpu_tflops_fp32 / queue=3,000 ms / execution=4,000 ms / state=QUEUED / stages=compute_queue@6s=3,000 ms, compute_execution@10s=4,000 ms"
         }
       ]
+    });
+  });
+});
+
+describe("buildDataPanelComputeNodeDetailRows", () => {
+  it("formats backend cursor compute-node resource detail rows", () => {
+    const rows = buildDataPanelComputeNodeDetailRows(
+      {
+        version: "v1",
+        source: "BACKEND_RUNTIME_SNAPSHOT",
+        summary_scope: "COMPUTE_NODE_DETAIL_WINDOW",
+        cursor: 0,
+        limit: 2,
+        next_cursor: 1,
+        has_more: true,
+        compute_node_count: 2,
+        item_count: 1,
+        busy_compute_node_count: 1,
+        window_compute_node_count: 1,
+        hidden_compute_node_count: 1,
+        items: [
+          {
+            node_id: "sat-000",
+            platform_type: "SATELLITE_COMPUTE_NODE",
+            status: "BUSY",
+            compute_load_ratio: 0.75,
+            compute_capacity_gflops_fp32: 100,
+            compute_used_gflops_fp32: 75,
+            compute_available_gflops_fp32: 25,
+            compute_capacity_gflops_fp64: 10,
+            compute_used_gflops_fp64: 2,
+            compute_capacity_gpu_tflops_fp32: 2,
+            compute_used_gpu_tflops_fp32: 1,
+            compute_capacity_gpu_tflops_fp16: 4,
+            compute_used_gpu_tflops_fp16: 2,
+            compute_capacity_npu_tops_int8: 8,
+            compute_used_npu_tops_int8: 3,
+            compute_capacity_memory_gb: 32,
+            compute_used_memory_gb: 8,
+            compute_capacity_storage_gb: 512,
+            compute_used_storage_gb: 128,
+            running_task_count: 2,
+            finished_task_count: 7
+          }
+        ]
+      },
+      1
+    );
+
+    expect(rows).toMatchObject({
+      sourceLabel: "后端算力节点详情页 1 / 2",
+      summaryLabel: "1 行 / 忙碌 1 / 可继续游标读取",
+      items: [
+        {
+          nodeId: "sat-000",
+          statusLabel: "BUSY",
+          loadLabel: "75%",
+          fp32Label: "75 / 100 GFLOPS",
+          acceleratorLabel: "GPU 1 / 2 TFLOPS / NPU 3 / 8 TOPS",
+          memoryStorageLabel: "内存 8 / 32 GB / 存储 128 / 512 GB",
+          taskLabel: "2 运行 / 7 完成"
+        }
+      ]
+    });
+    expect(rows.items[0].traceTitle).toContain("node=sat-000");
+    expect(rows.items[0].traceTitle).toContain("gpu_fp32=1 / 2 TFLOPS");
+  });
+
+  it("returns an empty waiting state before backend compute-node pages arrive", () => {
+    expect(buildDataPanelComputeNodeDetailRows(undefined)).toEqual({
+      sourceLabel: "等待后端算力节点详情页",
+      summaryLabel: "暂无算力节点游标明细",
+      items: []
     });
   });
 });
