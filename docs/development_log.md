@@ -5,6 +5,40 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Dashboard Terminal Backpressure Suppression v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending in this commit
+- Scope: prevent stale runtime backpressure notices from reappearing on page
+  refresh after the simulation has completed or stopped. The backend may keep
+  the last `backpressure_summary` in runtime status for diagnostics, but the
+  frontend now treats pressure notices as active runtime warnings only and
+  suppresses them for terminal `COMPLETED` / `STOPPED` states. Event Kernel,
+  runtime protocol, and backend simulation behavior are unchanged.
+- Changed files/modules:
+  - `frontend/src/app/App.tsx`
+  - `frontend/tests/appSurface.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- appSurface.test.ts`
+    - Result: passed, 25 files / 260 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing `DataPanel` chunk-size
+      warning at about 502 kB after minification.
+  - `git diff --check frontend/src/app/App.tsx frontend/tests/appSurface.test.ts docs/development_log.md`
+    - Result: passed.
+- Problems encountered:
+  - The issue was caused by frontend state resetting on page refresh while the
+    runtime status still contained the previous backpressure summary. The fix
+    gates rendering by runtime lifecycle instead of relying only on in-memory
+    dismissal state.
+- Known remaining issues / follow-up:
+  - Backpressure dismissal is still in-memory during active runs. If users need
+    dismissal persistence across refresh while a run is still active, add a
+    small `sessionStorage`-backed dismissal key in a separate frontend task.
+
 ## 2026-07-05 - Dashboard Layout Rebalance v1
 
 - Branch: `feature/T164-dashboard-observability-v1`

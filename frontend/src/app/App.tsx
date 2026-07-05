@@ -490,8 +490,12 @@ export function App() {
   );
   const fidelitySummary = selectFidelitySummary(runtimeStatus, generatedConfig, snapshot);
   const backpressureSummary = runtimeStatus.backpressure_summary ?? null;
+  const showBackpressureNotice = shouldShowRuntimeBackpressureNotice(
+    runtimeStatus,
+    backpressureSummary
+  );
   const backpressureNoticeKeyForStatus =
-    backpressureSummary !== null && shouldShowBackpressureNotice(backpressureSummary)
+    backpressureSummary !== null && showBackpressureNotice
       ? backpressureNoticeDismissKey(backpressureSummary)
       : null;
   const backpressureNoticeDismissed =
@@ -611,7 +615,7 @@ export function App() {
             onDismiss={dismissCompletionNotice}
           />
           <BackpressureNotice
-            summary={backpressureSummary}
+            summary={showBackpressureNotice ? backpressureSummary : null}
             surface="dashboard"
             dismissed={backpressureNoticeDismissed}
             onDismiss={dismissBackpressureNotice}
@@ -697,7 +701,7 @@ export function App() {
               onDismiss={dismissCompletionNotice}
             />
             <BackpressureNotice
-              summary={backpressureSummary}
+              summary={showBackpressureNotice ? backpressureSummary : null}
               surface="control"
               dismissed={backpressureNoticeDismissed}
               onDismiss={dismissBackpressureNotice}
@@ -969,6 +973,23 @@ export function shouldShowBackpressureNotice(
     return false;
   }
   return summary.overloaded || summary.first_tick_heavy;
+}
+
+export function shouldShowRuntimeBackpressureNotice(
+  runtimeStatus: RuntimeStatusPayload,
+  summary: RuntimeBackpressureSummary | null | undefined
+): boolean {
+  if (!shouldShowBackpressureNotice(summary)) {
+    return false;
+  }
+  const status = runtimeStatus.status;
+  const lifecycleState = runtimeStatus.lifecycle_state;
+  return (
+    status !== "COMPLETED" &&
+    status !== "STOPPED" &&
+    lifecycleState !== "COMPLETED" &&
+    lifecycleState !== "STOPPED"
+  );
 }
 
 export function backpressureNoticeDismissKey(summary: RuntimeBackpressureSummary): string {

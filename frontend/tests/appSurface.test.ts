@@ -23,6 +23,7 @@ import {
   selectFidelitySummary,
   shouldResetWorldBeforeStreamConnect,
   shouldShowBackpressureNotice,
+  shouldShowRuntimeBackpressureNotice,
   shouldShowCompletionNotice,
   shouldShowFidelityNotice,
   standaloneDashboardHref,
@@ -407,6 +408,41 @@ describe("backpressure notice", () => {
         overloaded: false,
         first_tick_heavy: false
       })
+    ).toBe(false);
+  });
+
+  it("suppresses stale pressure warnings after runtime completion or stop", () => {
+    const runningStatus = {
+      status: "RUNNING",
+      lifecycle_state: "RUNNING",
+      mode: "REAL_TIME",
+      speed_factor: 1,
+      seed: 20260703,
+      duration: 600,
+      config_version: 1,
+      last_action: "START"
+    } as RuntimeStatusPayload;
+
+    expect(shouldShowRuntimeBackpressureNotice(runningStatus, summary)).toBe(true);
+    expect(
+      shouldShowRuntimeBackpressureNotice(
+        {
+          ...runningStatus,
+          status: "COMPLETED",
+          lifecycle_state: "COMPLETED"
+        },
+        summary
+      )
+    ).toBe(false);
+    expect(
+      shouldShowRuntimeBackpressureNotice(
+        {
+          ...runningStatus,
+          status: "STOPPED",
+          lifecycle_state: "STOPPED"
+        },
+        summary
+      )
     ).toBe(false);
   });
 });
