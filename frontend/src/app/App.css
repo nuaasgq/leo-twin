@@ -1491,6 +1491,17 @@ body {
   background: #0f171f;
 }
 
+.data-panel-source-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.data-panel-source-main > span:first-child {
+  flex: 1 1 auto;
+}
+
 .data-panel-source-note span,
 .data-panel-source-note small {
   min-width: 0;
@@ -1502,6 +1513,36 @@ body {
   font-size: 11px;
   font-weight: 700;
   line-height: 1;
+}
+
+.data-panel-source-badge {
+  flex: 0 0 auto;
+  border: 1px solid #40566a;
+  border-radius: 999px;
+  padding: 3px 7px;
+  background: #16202a;
+  color: var(--app-muted);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.data-panel-source-badge.backend {
+  border-color: #2b7051;
+  background: #10251d;
+  color: #5ed58e;
+}
+
+.data-panel-source-badge.mixed {
+  border-color: #8a7130;
+  background: #281f10;
+  color: #f2bd45;
+}
+
+.data-panel-source-badge.snapshot {
+  border-color: #314656;
+  background: #101820;
+  color: #9fb5c6;
 }
 
 .data-panel-source-note small {

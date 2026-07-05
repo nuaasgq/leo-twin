@@ -6283,3 +6283,32 @@ change.
 - Recommended follow-up:
   - Add a visible backend-summary source badge and then implement bounded
     table virtualization or pagination for 1200-satellite inspection.
+
+## 2026-07-05 - Dashboard Runtime Detail Source Badges v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: make standalone dashboard detail tables more transparent by showing
+  a visible source badge for user-node and satellite-resource details. The
+  badge distinguishes backend-owned runtime summaries, backend-enhanced
+  snapshot rows, and pure snapshot fallback rows without changing backend
+  runtime contracts or Event Kernel behavior.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend exec vitest run dataPanel.test.ts`
+    - Result: passed, 1 file / 58 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - None. This is a display-only observability task layered on existing
+    `sourceLabel` values.
+- Known remaining issues:
+  - Source badges explain table provenance but do not add backend pagination,
+    row virtualization, or new simulation fidelity.
+- Recommended follow-up:
+  - Add bounded pagination or virtualization for very large satellite detail
+    tables, then continue with deeper business and network metric dynamics.

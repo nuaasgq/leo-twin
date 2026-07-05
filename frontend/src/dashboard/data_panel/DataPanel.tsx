@@ -156,6 +156,8 @@ export const DataPanel = memo(function DataPanel({
     satelliteResourceRows,
     detailFilter
   );
+  const userSourceBadge = buildRuntimeDetailSourceBadge(userBusinessRequests.sourceLabel);
+  const satelliteSourceBadge = buildRuntimeDetailSourceBadge(satelliteResourceRows.sourceLabel);
 
   return (
     <section className="data-panel" aria-label="独立数据态势面板">
@@ -542,7 +544,15 @@ export const DataPanel = memo(function DataPanel({
         <section className="dashboard-section data-panel-detail-table" aria-label="用户节点状态明细">
           <div className="section-title">用户节点状态</div>
           <div className="data-panel-source-note">
-            <span>{userBusinessRequests.sourceLabel}</span>
+            <div className="data-panel-source-main">
+              <span>{userBusinessRequests.sourceLabel}</span>
+              <span
+                className={`data-panel-source-badge ${userSourceBadge.tone}`}
+                title={userSourceBadge.title}
+              >
+                {userSourceBadge.label}
+              </span>
+            </div>
             <small>{userBusinessRequests.summaryLabel}</small>
           </div>
           <UserBusinessRequestTable rows={filteredUserBusinessRequests.items} />
@@ -550,7 +560,15 @@ export const DataPanel = memo(function DataPanel({
         <section className="dashboard-section data-panel-detail-table" aria-label="卫星资源消耗明细">
           <div className="section-title">卫星资源消耗</div>
           <div className="data-panel-source-note">
-            <span>{satelliteResourceRows.sourceLabel}</span>
+            <div className="data-panel-source-main">
+              <span>{satelliteResourceRows.sourceLabel}</span>
+              <span
+                className={`data-panel-source-badge ${satelliteSourceBadge.tone}`}
+                title={satelliteSourceBadge.title}
+              >
+                {satelliteSourceBadge.label}
+              </span>
+            </div>
             <small>{satelliteResourceRows.summaryLabel}</small>
           </div>
           <SatelliteResourceTable rows={filteredSatelliteResourceRows.items} />
@@ -1006,6 +1024,14 @@ export interface SatelliteResourceRow {
   memoryStorageLabel: string;
   taskLabel: string;
   networkLabel: string;
+}
+
+export type RuntimeDetailSourceTone = "backend" | "mixed" | "snapshot";
+
+export interface RuntimeDetailSourceBadge {
+  label: string;
+  title: string;
+  tone: RuntimeDetailSourceTone;
 }
 
 export function buildDataPanelTelemetry(
@@ -1662,6 +1688,31 @@ export function filterSatelliteResourceRows(
     ...rows,
     summaryLabel: `${rows.summaryLabel} / 筛选 ${formatCount(items.length)}`,
     items
+  };
+}
+
+export function buildRuntimeDetailSourceBadge(sourceLabel: string): RuntimeDetailSourceBadge {
+  const normalized = sourceLabel.toLowerCase();
+  const hasBackend = normalized.includes("backend") || sourceLabel.includes("后端");
+  const hasSnapshot = normalized.includes("snapshot") || sourceLabel.includes("快照");
+  if (hasBackend && !hasSnapshot) {
+    return {
+      label: "后端摘要",
+      title: "明细来自后端运行态摘要字段",
+      tone: "backend"
+    };
+  }
+  if (hasBackend && hasSnapshot) {
+    return {
+      label: "后端增强",
+      title: "后端运行态摘要与状态快照共同生成明细",
+      tone: "mixed"
+    };
+  }
+  return {
+    label: "快照回退",
+    title: "后端运行态摘要暂缺，明细由当前状态快照推导",
+    tone: "snapshot"
   };
 }
 

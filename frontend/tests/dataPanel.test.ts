@@ -18,6 +18,7 @@ import {
   buildDataPanelTelemetry,
   buildDataPanelTrafficDisplay,
   buildRuntimeKpiTelemetrySamples,
+  buildRuntimeDetailSourceBadge,
   buildSatelliteResourceRows,
   buildTopComputeNodeRows,
   buildUserBusinessRequestRows,
@@ -2253,6 +2254,25 @@ describe("detail row filters", () => {
     expect(filterSatelliteResourceRows(rows, "user-1").items.map((row) => row.satelliteId)).toEqual([
       "sat-1"
     ]);
+  });
+});
+
+describe("buildRuntimeDetailSourceBadge", () => {
+  it("marks backend-owned detail summaries distinctly from snapshot fallbacks", () => {
+    expect(buildRuntimeDetailSourceBadge("backend user_request_summary_v1")).toMatchObject({
+      label: "后端摘要",
+      tone: "backend"
+    });
+    expect(
+      buildRuntimeDetailSourceBadge("快照用户/路由 + 后端服务延迟历史")
+    ).toMatchObject({
+      label: "后端增强",
+      tone: "mixed"
+    });
+    expect(buildRuntimeDetailSourceBadge("快照用户/路由")).toMatchObject({
+      label: "快照回退",
+      tone: "snapshot"
+    });
   });
 });
 
