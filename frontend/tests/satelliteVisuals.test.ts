@@ -1,3 +1,4 @@
+import { ArcType, EntityCollection, JulianDate } from "cesium";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -7,8 +8,13 @@ import {
 } from "../src/3d/orbit_renderer/satelliteModelEntities";
 import {
   SATELLITE_DEPTH_TEST_DISABLE_DISTANCE,
-  SATELLITE_ICON_DATA_URI
+  SATELLITE_ICON_DATA_URI,
+  upsertSatelliteOrbitEntity
 } from "../src/3d/orbit_renderer/satelliteEntities";
+import {
+  upsertLinkEntity,
+  upsertRouteEntity
+} from "../src/3d/link_renderer/linkEntities";
 import {
   buildBeamCellFootprints,
   buildCoverageFootprint,
@@ -95,6 +101,89 @@ describe("satellite overview icon", () => {
     expect(decodedIcon).toContain("panel");
     expect(decodedIcon).toContain("antenna");
     expect(decodedIcon.match(/<rect/g)?.length ?? 0).toBeGreaterThanOrEqual(4);
+  });
+});
+
+describe("space polyline render safety", () => {
+  it("renders near-antipodal space links as direct 3D segments", () => {
+    const entities = new EntityCollection();
+    const cache = new Map();
+    const nodes = {
+      satellites: new Map([
+        ["sat-a", satelliteA],
+        [
+          "sat-antipodal",
+          {
+            ...satelliteB,
+            satellite_id: "sat-antipodal",
+            position: [-6_999_900, 28_258, 0]
+          }
+        ]
+      ]),
+      groundUsers: new Map()
+    };
+
+    upsertLinkEntity(
+      entities,
+      cache,
+      {
+        source_id: "sat-a",
+        target_id: "sat-antipodal",
+        latency: 0.08,
+        capacity: 40,
+        availability: true
+      },
+      nodes
+    );
+
+    const entity = entities.getById("link:sat-a->sat-antipodal");
+    expect(entity?.polyline?.arcType?.getValue(new JulianDate())).toBe(ArcType.NONE);
+  });
+
+  it("renders near-antipodal routes as direct 3D segments", () => {
+    const entities = new EntityCollection();
+    const cache = new Map();
+    const nodes = {
+      satellites: new Map([
+        ["sat-a", satelliteA],
+        [
+          "sat-antipodal",
+          {
+            ...satelliteB,
+            satellite_id: "sat-antipodal",
+            position: [-6_999_900, 28_258, 0]
+          }
+        ]
+      ]),
+      groundUsers: new Map()
+    };
+
+    upsertRouteEntity(
+      entities,
+      cache,
+      {
+        route_id: "route-antipodal",
+        flow_id: "flow-antipodal",
+        path: ["sat-a", "sat-antipodal"],
+        latency: 0.12,
+        capacity: 20,
+        available: true
+      },
+      nodes
+    );
+
+    const entity = entities.getById("route:route-antipodal");
+    expect(entity?.polyline?.arcType?.getValue(new JulianDate())).toBe(ArcType.NONE);
+  });
+
+  it("renders orbit tracks as direct 3D space polylines", () => {
+    const entities = new EntityCollection();
+    const cache = new Map();
+
+    upsertSatelliteOrbitEntity(entities, cache, satelliteA);
+
+    const entity = entities.getById("satellite-orbit:sat-a");
+    expect(entity?.polyline?.arcType?.getValue(new JulianDate())).toBe(ArcType.NONE);
   });
 });
 

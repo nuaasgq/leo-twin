@@ -1,4 +1,5 @@
 import {
+  ArcType,
   Cartesian2,
   Color,
   ConstantPositionProperty,
@@ -185,6 +186,7 @@ export function upsertSatelliteOrbitEntity(
       id,
       name: `${satellite.satellite_id} orbit`,
       polyline: {
+        arcType: ArcType.NONE,
         width: 1.5,
         material: new PolylineGlowMaterialProperty({
           color: Color.fromCssColorString("#67d7ff").withAlpha(0.34),
@@ -195,6 +197,7 @@ export function upsertSatelliteOrbitEntity(
     cache.set(id, entity);
   }
   if (entity.polyline) {
+    entity.polyline.arcType = new ConstantProperty(ArcType.NONE);
     entity.polyline.positions = new ConstantProperty(positions);
   }
 }

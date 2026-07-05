@@ -7782,6 +7782,48 @@ change.
     then expose per-user active business state and per-satellite service-load
     summaries in the standalone dashboard.
 
+## 2026-07-05 - Cesium Space Polyline Render Safety v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: fix a frontend Cesium render stop reported as
+  `DeveloperError: Expected value to be greater than or equal to 0.0125`.
+  The stack trace showed `PolylineGeometry` / `EllipsoidGeodesic`, which means
+  space links or routes were being interpreted as ellipsoid geodesic arcs. The
+  3D renderer now marks satellite links, business routes, and orbit tracks as
+  `ArcType.NONE`, so they render as direct space polylines instead of surface
+  arcs. Event Kernel behavior, backend simulation, and country overlays are
+  unchanged.
+- Changed files/modules:
+  - `frontend/src/3d/link_renderer/linkEntities.ts`
+  - `frontend/src/3d/orbit_renderer/satelliteEntities.ts`
+  - `frontend/tests/satelliteVisuals.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- satelliteVisuals.test.ts`
+    - Result: passed, 25 files / 259 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing DataPanel chunk-size
+      warning at about 502 kB after minification.
+  - `git diff --check frontend/src/3d/link_renderer/linkEntities.ts frontend/src/3d/orbit_renderer/satelliteEntities.ts frontend/tests/satelliteVisuals.test.ts docs/development_log.md`
+    - Result: passed.
+- Problems encountered:
+  - The browser stack did not include the application entity id, so the fix was
+    derived from the Cesium worker path and from the fact that satellite-space
+    lines can connect near-antipodal positions.
+  - The first local frontend test invocation failed before running tests because
+    `node` was not on PATH. The command was rerun with the bundled Node and
+    Pnpm paths prepended.
+- Known remaining issues:
+  - Country borders still use Cesium's default surface arc behavior. No
+    near-antipodal Natural Earth segment was identified as the reported failure
+    path in this task.
+- Recommended follow-up:
+  - Add a Playwright smoke test for large-scale 3D rendering once the local dev
+    server lifecycle is stabilized.
+
 ## 2026-07-05 - Integration Demo Service Mix Generation v1
 
 - Branch: `feature/T164-dashboard-observability-v1`

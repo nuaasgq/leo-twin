@@ -1,4 +1,5 @@
 import {
+  ArcType,
   Cartesian3,
   Color,
   ColorMaterialProperty,
@@ -36,6 +37,7 @@ export function upsertLinkEntity(
       id,
       name: id,
       polyline: {
+        arcType: ArcType.NONE,
         width: 2,
         material: Color.LIME.withAlpha(0.34)
       }
@@ -44,6 +46,7 @@ export function upsertLinkEntity(
   }
   if (entity.polyline) {
     const highUtilization = (link.utilization ?? 0) > 0.8;
+    entity.polyline.arcType = new ConstantProperty(ArcType.NONE);
     entity.polyline.positions = new ConstantProperty([source, target]);
     entity.polyline.material = new ColorMaterialProperty(
       Color.LIME.withAlpha(highUtilization ? 0.78 : 0.34)
@@ -76,6 +79,7 @@ export function upsertRouteEntity(
       id,
       name: route.route_id,
       polyline: {
+        arcType: ArcType.NONE,
         width: 5,
         material: new PolylineGlowMaterialProperty({
           color: Color.YELLOW.withAlpha(0.86),
@@ -86,6 +90,7 @@ export function upsertRouteEntity(
     cache.set(id, entity);
   }
   if (entity.polyline) {
+    entity.polyline.arcType = new ConstantProperty(ArcType.NONE);
     entity.polyline.positions = new ConstantProperty(positions);
   }
 }
