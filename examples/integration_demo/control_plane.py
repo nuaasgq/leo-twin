@@ -505,6 +505,13 @@ class DemoControlPlane:
                 "capacity_mbps": _control_optional_float(item.get("capacity_mbps")),
                 "loss_proxy_rate": _control_optional_float(item.get("loss_proxy_rate")),
                 "service_state": _control_string(item.get("service_state")),
+                "active_business_type": _control_string(
+                    item.get("active_business_type")
+                ),
+                "active_business_label": _control_string(
+                    item.get("active_business_label")
+                ),
+                "request_state": _control_string(item.get("request_state")),
             }
             history = self._user_request_history.setdefault(user_id, [])
             if history and history[-1]["sim_time"] == sim_time:

@@ -6821,3 +6821,44 @@ change.
 - Recommended follow-up:
   - Emit deterministic per-user business state and per-satellite service-load
     summaries into the dashboard snapshot stream.
+
+## 2026-07-05 - Runtime Business Observability Semantics v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: enrich backend-owned runtime observability summaries for the
+  standalone data panel. User request rows now include active business type,
+  backend business label, and request state. Satellite service rows now include
+  service-user count, primary service user, next-hop count, primary next hop,
+  compute-service route count, and network-service route count. The data panel
+  consumes these backend fields inside the existing user and satellite tables
+  without changing overall layout. Event Kernel behavior and packet-level
+  semantics are unchanged.
+- Changed files/modules:
+  - `src/leo_twin/services/runtime_observability.py`
+  - `examples/integration_demo/control_plane.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `tests/unit/test_runtime_observability.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_runtime_observability.py tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer -q`
+    - Result: passed, 2 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 25 files / 236 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - None in scope. Existing local runtime config drift remains untouched.
+- Known remaining issues:
+  - Request states are deterministic route/service-history labels; they are not
+    packet-level queue states.
+  - Satellite business counts are route-level counts. They do not represent RF
+    beam scheduling, antenna beams, or packet queues.
+- Recommended follow-up:
+  - Add time-varying user/satellite observability charts fed by these semantic
+    fields, then connect mixed traffic demand to per-user request timelines.

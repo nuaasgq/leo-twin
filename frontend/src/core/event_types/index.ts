@@ -573,6 +573,9 @@ export interface RuntimeUserRequestItemV1 {
   capacity_mbps?: number | null;
   loss_proxy_rate?: number | null;
   service_state?: string;
+  active_business_type?: string;
+  active_business_label?: string;
+  request_state?: string;
   path: readonly string[];
 }
 
@@ -606,6 +609,9 @@ export interface RuntimeUserRequestHistorySampleV1 {
   capacity_mbps?: number | null;
   loss_proxy_rate?: number | null;
   service_state?: string;
+  active_business_type?: string;
+  active_business_label?: string;
+  request_state?: string;
 }
 
 export interface RuntimeSatelliteServiceSummaryV1 {
@@ -621,9 +627,15 @@ export interface RuntimeSatelliteServiceItemV1 {
   satellite_id: string;
   status: string;
   service_user_ids: readonly string[];
+  service_user_count?: number;
+  primary_service_user_id?: string;
   next_hop_ids: readonly string[];
+  next_hop_count?: number;
+  primary_next_hop_id?: string;
   route_count: number;
   available_route_count: number;
+  compute_service_route_count?: number;
+  network_service_route_count?: number;
   active_link_count: number;
   active_access_link_count: number;
   active_space_link_count: number;

@@ -2067,6 +2067,9 @@ describe("buildUserBusinessRequestRows", () => {
             capacity_mbps: 80,
             loss_proxy_rate: 0.02,
             service_state: "task-0/330ms/RUNNING",
+            active_business_type: "COMPUTE_SERVICE",
+            active_business_label: "通信-计算服务",
+            request_state: "COMPUTE_SERVICE_ACTIVE",
             path: ["user-0", "sat-0", "compute-0"]
           }
         ]
@@ -2085,7 +2088,7 @@ describe("buildUserBusinessRequestRows", () => {
       destinationId: "compute-0",
       statusLabel: "ACTIVE/AVAILABLE",
       latencyCapacityLabel: "0.12 s / 80 Mbps",
-      serviceLabel: "task-0/330ms/RUNNING"
+      serviceLabel: "通信-计算服务 / 计算服务进行中 / task-0/330ms/RUNNING"
     });
   });
 
@@ -2311,9 +2314,15 @@ describe("buildSatelliteResourceRows", () => {
             satellite_id: "sat-0",
             status: "BUSY",
             service_user_ids: ["user-0", "user-1"],
+            service_user_count: 2,
+            primary_service_user_id: "user-0",
             next_hop_ids: ["compute-0", "sat-1"],
+            next_hop_count: 2,
+            primary_next_hop_id: "compute-0",
             route_count: 2,
             available_route_count: 1,
+            compute_service_route_count: 1,
+            network_service_route_count: 1,
             active_link_count: 3,
             active_access_link_count: 1,
             active_space_link_count: 2,
@@ -2349,7 +2358,7 @@ describe("buildSatelliteResourceRows", () => {
       cpuFp32Label: "64 / 100 GFLOPS",
       cpuFp64Label: "2 / 8 GFLOPS",
       npuLabel: "4 / 10 TOPS",
-      taskLabel: "2 running / 7 done",
+      taskLabel: "2 running / 7 done / compute 1 / network 1",
       networkLabel: "links 3 / access 1 / space 2 / routes 2"
     });
   });

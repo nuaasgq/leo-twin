@@ -325,6 +325,9 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
         "status",
         "latency_s",
         "capacity_mbps",
+        "active_business_type",
+        "active_business_label",
+        "request_state",
         "path",
     }.issubset(user_summary["items"][0])
     user_history = status_after_tick["user_request_history_v1"]
@@ -354,6 +357,9 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
         "capacity_mbps",
         "loss_proxy_rate",
         "service_state",
+        "active_business_type",
+        "active_business_label",
+        "request_state",
     }.issubset(user_history["series"][0]["samples"][-1])
     satellite_service_summary = status_after_tick["satellite_service_summary_v1"]
     assert satellite_service_summary["version"] == "v1"
@@ -368,8 +374,14 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
         assert {
             "satellite_id",
             "service_user_ids",
+            "service_user_count",
+            "primary_service_user_id",
             "next_hop_ids",
+            "next_hop_count",
+            "primary_next_hop_id",
             "route_count",
+            "compute_service_route_count",
+            "network_service_route_count",
             "active_link_count",
             "compute_load_ratio",
             "compute_used_gflops_fp32",

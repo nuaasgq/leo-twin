@@ -2244,7 +2244,18 @@ function buildBackendUserBusinessRequestRows(
           )} Mbps`
         : "no route";
     const cellLabel = item.cell_id ? ` / ${item.cell_id}` : "";
-    const serviceLabel = item.service_state || item.primary_flow_id || "no service";
+    const businessLabel =
+      item.active_business_label || trafficClassLabel(item.active_business_type ?? "NONE");
+    const requestState = item.request_state
+      ? dataPanelRequestStateLabel(item.request_state)
+      : "";
+    const serviceLabel = [
+      businessLabel,
+      requestState,
+      item.service_state || item.primary_flow_id
+    ]
+      .filter((value) => value !== "")
+      .join(" / ") || "no service";
     return {
       userId: item.user_id,
       platformTypeLabel: `${item.platform_type}${cellLabel}`,
@@ -2303,10 +2314,14 @@ function buildBackendSatelliteResourceRows(
       loadLabel: `${formatMetricValue(loadRatio * 100)}%`,
       serviceObjectLabel: compactBackendEntityLabel(
         item.service_user_ids,
-        item.route_count,
+        item.service_user_count ?? item.route_count,
         "users"
       ),
-      nextHopLabel: compactBackendEntityLabel(item.next_hop_ids, item.route_count, "hops"),
+      nextHopLabel: compactBackendEntityLabel(
+        item.next_hop_ids,
+        item.next_hop_count ?? item.route_count,
+        "hops"
+      ),
       cpuFp32Label: resourceUsageLabel(
         item.compute_used_gflops_fp32,
         item.compute_capacity_gflops_fp32,
@@ -2342,7 +2357,9 @@ function buildBackendSatelliteResourceRows(
       )}`,
       taskLabel: `${formatCount(item.running_task_count)} running / ${formatCount(
         item.finished_task_count
-      )} done`,
+      )} done / compute ${formatCount(item.compute_service_route_count ?? 0)} / network ${formatCount(
+        item.network_service_route_count ?? 0
+      )}`,
       networkLabel: `links ${formatCount(item.active_link_count)} / access ${formatCount(
         item.active_access_link_count
       )} / space ${formatCount(item.active_space_link_count)} / routes ${formatCount(
@@ -3924,6 +3941,25 @@ function trafficClassLabel(trafficClass: string): string {
     return "批量下传";
   }
   return trafficClass;
+}
+
+function dataPanelRequestStateLabel(requestState: string): string {
+  if (requestState === "IDLE") {
+    return "空闲";
+  }
+  if (requestState === "NETWORK_WAITING") {
+    return "等待网络路径";
+  }
+  if (requestState === "COMPUTE_SERVICE_ACTIVE") {
+    return "计算服务进行中";
+  }
+  if (requestState === "COMPUTE_SERVICE_READY") {
+    return "计算服务可达";
+  }
+  if (requestState === "NETWORK_SERVICE_READY") {
+    return "网络业务可达";
+  }
+  return requestState;
 }
 
 function formatPercent(value: number): string {

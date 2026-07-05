@@ -40,6 +40,7 @@ def build_runtime_lifecycle_summaries(
             routes,
             links,
             satellite_kpi_slices,
+            service_lookup,
             limit=satellite_limit,
         ),
     }
@@ -125,6 +126,14 @@ def _user_item(
         "capacity_mbps": _float(selected_route.get("capacity")) if selected_route is not None else None,
         "loss_proxy_rate": _optional_float(selected_route.get("loss_rate")) if selected_route is not None else None,
         "service_state": service_lookup.get(flow_id, ""),
+        "active_business_type": _route_business_type(selected_route, service_lookup),
+        "active_business_label": _route_business_label(selected_route, service_lookup),
+        "request_state": _user_request_state(
+            ordered_routes,
+            available_routes,
+            compute_routes,
+            service_lookup.get(flow_id, ""),
+        ),
         "path": tuple(_route_path(selected_route)) if selected_route is not None else (),
     }
 
@@ -135,6 +144,7 @@ def _satellite_service_summary(
     routes: tuple[Mapping[str, Any], ...],
     links: tuple[Mapping[str, Any], ...],
     satellite_kpi_slices: Mapping[str, Any] | None,
+    service_lookup: Mapping[str, str],
     *,
     limit: int,
 ) -> dict[str, object]:
@@ -156,7 +166,7 @@ def _satellite_service_summary(
         for item in _records((satellite_kpi_slices or {}).get("slices"))
     }
     link_counts = _link_counts_by_satellite(links)
-    route_context = _route_context_by_satellite(routes)
+    route_context = _route_context_by_satellite(routes, service_lookup)
     items = tuple(
         _satellite_item(
             satellite_id,
@@ -200,9 +210,23 @@ def _satellite_item(
         "satellite_id": satellite_id,
         "status": _str((node or satellite or {}).get("status")) or "ACTIVE",
         "service_user_ids": tuple(route_context.get("service_user_ids", ())),
+        "service_user_count": len(tuple(route_context.get("service_user_ids", ()))),
+        "primary_service_user_id": _first_tuple_item(
+            tuple(route_context.get("service_user_ids", ()))
+        ),
         "next_hop_ids": tuple(route_context.get("next_hop_ids", ())),
+        "next_hop_count": len(tuple(route_context.get("next_hop_ids", ()))),
+        "primary_next_hop_id": _first_tuple_item(
+            tuple(route_context.get("next_hop_ids", ()))
+        ),
         "route_count": int(route_context.get("route_count", 0)),
         "available_route_count": int(route_context.get("available_route_count", 0)),
+        "compute_service_route_count": int(
+            route_context.get("compute_service_route_count", 0)
+        ),
+        "network_service_route_count": int(
+            route_context.get("network_service_route_count", 0)
+        ),
         "active_link_count": int(
             _first_float(kpi_slice, "active_link_count", default=float(link_counts.get("active", 0)))
         ),
@@ -234,6 +258,7 @@ def _satellite_item(
 
 def _route_context_by_satellite(
     routes: tuple[Mapping[str, Any], ...],
+    service_lookup: Mapping[str, str],
 ) -> dict[str, dict[str, object]]:
     context: dict[str, dict[str, object]] = {}
     for route in sorted(routes, key=_route_sort_key):
@@ -249,11 +274,21 @@ def _route_context_by_satellite(
                     "next_hop_ids": set(),
                     "route_count": 0,
                     "available_route_count": 0,
+                    "compute_service_route_count": 0,
+                    "network_service_route_count": 0,
                 },
             )
             entry["route_count"] = int(entry["route_count"]) + 1
             if bool(route.get("available")):
                 entry["available_route_count"] = int(entry["available_route_count"]) + 1
+            if _route_is_compute_service(route, service_lookup):
+                entry["compute_service_route_count"] = (
+                    int(entry["compute_service_route_count"]) + 1
+                )
+            else:
+                entry["network_service_route_count"] = (
+                    int(entry["network_service_route_count"]) + 1
+                )
             if user_id is not None:
                 entry["service_user_ids"].add(user_id)  # type: ignore[union-attr]
             next_hop = path[index + 1] if index + 1 < len(path) else "END"
@@ -319,6 +354,50 @@ def _user_status(
     return f"{base}/WAITING_ROUTE" if base else "WAITING_ROUTE"
 
 
+def _user_request_state(
+    routes: Sequence[Mapping[str, Any]],
+    available_routes: Sequence[Mapping[str, Any]],
+    compute_routes: Sequence[Mapping[str, Any]],
+    service_state: str,
+) -> str:
+    if not routes:
+        return "IDLE"
+    if not available_routes:
+        return "NETWORK_WAITING"
+    if compute_routes and service_state:
+        return "COMPUTE_SERVICE_ACTIVE"
+    if compute_routes:
+        return "COMPUTE_SERVICE_READY"
+    return "NETWORK_SERVICE_READY"
+
+
+def _route_business_type(
+    route: Mapping[str, Any] | None,
+    service_lookup: Mapping[str, str],
+) -> str:
+    if route is None:
+        return "NONE"
+    if _route_is_compute_service(route, service_lookup):
+        return "COMPUTE_SERVICE"
+    path = _route_path(route)
+    if path and path[0].startswith("sat-"):
+        return "BULK_DOWNLINK"
+    return "DATA_TRANSFER"
+
+
+def _route_business_label(
+    route: Mapping[str, Any] | None,
+    service_lookup: Mapping[str, str],
+) -> str:
+    labels = {
+        "NONE": "无业务",
+        "COMPUTE_SERVICE": "通信-计算服务",
+        "BULK_DOWNLINK": "批量下传",
+        "DATA_TRANSFER": "数据传输",
+    }
+    return labels[_route_business_type(route, service_lookup)]
+
+
 def _route_is_compute_service(
     route: Mapping[str, Any],
     service_lookup: Mapping[str, str],
@@ -344,6 +423,12 @@ def _route_path(route: Mapping[str, Any] | None) -> tuple[str, ...]:
     if not isinstance(path, Sequence) or isinstance(path, (str, bytes)):
         return ()
     return tuple(_str(item) for item in path)
+
+
+def _first_tuple_item(values: tuple[object, ...]) -> str:
+    if not values:
+        return ""
+    return _str(values[0])
 
 
 def _route_sort_key(route: Mapping[str, Any]) -> tuple[tuple[object, ...], str]:
