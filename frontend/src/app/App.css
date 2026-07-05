@@ -2627,6 +2627,10 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
   min-width: 0;
 }
 
+.data-panel-grid .data-panel-information-architecture {
+  border-color: #345160;
+}
+
 .data-panel-config-explanation-meta,
 .data-panel-config-explanation-surfaces {
   display: flex;

@@ -811,6 +811,119 @@
           "candidate_count_policy": "Route path compute nodes are preferred when available; otherwise all configured satellite compute nodes remain candidates."
         }
       },
+      "dashboard_information_architecture_v3": {
+        "version": "v3",
+        "architecture_id": "leo_twin.dashboard_information_architecture.v3",
+        "source": "BACKEND_DERIVED_SUMMARY",
+        "frontend_policy": "RENDER_BACKEND_SECTIONS_WITH_LOCAL_FORMATTING_ONLY",
+        "backend_source_of_truth": true,
+        "frontend_inference_policy": "Frontend may sort, paginate, and format values, but must not invent business, network, compute, fidelity, or model-assumption semantics.",
+        "layout_policy": {
+          "page_scroll": true,
+          "primary_order": [
+            "OVERVIEW",
+            "NETWORK",
+            "BUSINESS"
+          ],
+          "section_grouping": "overview first, then domain sections",
+          "card_policy": "no nested cards",
+          "large_scale_policy": "detail rows must be bounded"
+        },
+        "sections": [
+          {
+            "section": "OVERVIEW",
+            "title_zh": "总览",
+            "title_en": "Overview",
+            "priority": 10,
+            "purpose": "Show simulation time, run state, scale, event volume, fidelity mode, and high-level health first.",
+            "primary_data_sources": [
+              "RuntimeStatusPayload",
+              "WorldSnapshot.metrics_summary",
+              "backend_summary.fidelity_summary"
+            ],
+            "runtime_status_fields": [
+              "state",
+              "current_sim_time",
+              "duration"
+            ],
+            "detail_surfaces": [
+              "runtime progress strip",
+              "scale and fidelity notice"
+            ],
+            "expected_controls": [
+              "time range"
+            ],
+            "empty_state": "Waiting for initialized runtime status.",
+            "scale_behavior": "Always visible; values are aggregated at large scale.",
+            "owner": "BACKEND_SUMMARY_CONTRACT"
+          },
+          {
+            "section": "NETWORK",
+            "title_zh": "网络态势",
+            "title_en": "Network",
+            "priority": 20,
+            "purpose": "Explain throughput, latency, jitter, loss, routes, links, and network model provenance.",
+            "primary_data_sources": [
+              "metrics_summary.network",
+              "kpi_time_series_v1",
+              "network_quality_provenance_v1"
+            ],
+            "runtime_status_fields": [
+              "metrics_summary.network",
+              "network_kpi_credibility_v1"
+            ],
+            "detail_surfaces": [
+              "network KPI trends",
+              "route explanation table"
+            ],
+            "expected_controls": [
+              "route search"
+            ],
+            "empty_state": "No network samples have been emitted yet.",
+            "scale_behavior": "Use aggregate KPI series and bounded route/link samples in large-scale mode.",
+            "owner": "BACKEND_SUMMARY_CONTRACT"
+          },
+          {
+            "section": "BUSINESS",
+            "title_zh": "业务态势",
+            "title_en": "Business",
+            "priority": 30,
+            "purpose": "Show each user business request, service class, target satellite, lifecycle stage, and service latency components.",
+            "primary_data_sources": [
+              "traffic_demand_summary",
+              "user_request_summary_v1",
+              "service_latency_history_v1"
+            ],
+            "runtime_status_fields": [
+              "user_request_summary_v1",
+              "service_latency_history_v1"
+            ],
+            "detail_surfaces": [
+              "user business request table",
+              "service latency timeline"
+            ],
+            "expected_controls": [
+              "user search"
+            ],
+            "empty_state": "No user business request is active in the current window.",
+            "scale_behavior": "Use paginated user windows and retain raw counts.",
+            "owner": "BACKEND_SUMMARY_CONTRACT"
+          }
+        ],
+        "determinism": {
+          "section_order": "priority_ascending_then_section_id",
+          "unknown_section_policy": "display_after_known_sections_with_backend_label",
+          "stable_identifiers": [
+            "OVERVIEW",
+            "NETWORK",
+            "BUSINESS"
+          ]
+        },
+        "follow_up_tasks": [
+          "V2-051 user detail drawer",
+          "V2-052 satellite detail drawer"
+        ]
+      },
       "configuration_explanation_v2": {
         "version": "v2",
         "explanation_id": "leo_twin.configuration_explanation.v2",

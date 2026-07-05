@@ -18,6 +18,9 @@ from leo_twin.schema.network_model_contract import network_model_contract_v2_to_
 from leo_twin.schema.service_placement_contract import (
     service_placement_contract_v2_to_dict,
 )
+from leo_twin.services.dashboard_information_architecture import (
+    dashboard_information_architecture_v3_to_dict,
+)
 
 
 BackendDerivedSummary = dict[str, object]
@@ -240,6 +243,9 @@ def build_backend_derived_summary(
         "cache_offload_migration_contract_v1": cache_offload_migration_contract,
         "coverage_beam_summary": coverage_summary,
         "network_model_contract_v2": network_model_contract,
+        "dashboard_information_architecture_v3": (
+            dashboard_information_architecture_v3_to_dict()
+        ),
         "configuration_explanation_v2": _configuration_explanation_v2(
             constellation_summary=constellation_summary,
             traffic_summary=traffic_summary,

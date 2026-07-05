@@ -9,6 +9,7 @@ import {
   buildDataPanelComputeVectorTail,
   buildDataPanelConfiguredScale,
   buildDataPanelConfigurationExplanationDisplay,
+  buildDataPanelInformationArchitectureDisplay,
   buildDataPanelDetailScopeNotes,
   buildDataPanelDisplaySummary,
   buildDataPanelExportCatalogDisplay,
@@ -1410,6 +1411,89 @@ describe("buildDataPanelUserConfigurationValidationDisplay", () => {
 });
 
 describe("buildDataPanelConfigurationExplanationDisplay", () => {
+  it("summarizes backend-owned dashboard information architecture v3", () => {
+    const display = buildDataPanelInformationArchitectureDisplay({
+      version: "v3",
+      architecture_id: "leo_twin.dashboard_information_architecture.v3",
+      source: "BACKEND_DERIVED_SUMMARY",
+      frontend_policy: "RENDER_BACKEND_SECTIONS_WITH_LOCAL_FORMATTING_ONLY",
+      backend_source_of_truth: true,
+      frontend_inference_policy: "Frontend must not invent model semantics.",
+      layout_policy: {
+        page_scroll: true,
+        primary_order: ["OVERVIEW", "NETWORK"],
+        section_grouping: "overview first",
+        card_policy: "no nested cards",
+        large_scale_policy: "detail rows must be bounded"
+      },
+      sections: [
+        {
+          section: "NETWORK",
+          title_zh: "网络态势",
+          title_en: "Network",
+          priority: 20,
+          purpose: "Explain network KPIs.",
+          primary_data_sources: ["metrics_summary.network"],
+          runtime_status_fields: ["metrics_summary.network"],
+          detail_surfaces: ["network KPI trends", "route explanation table"],
+          expected_controls: ["route search"],
+          empty_state: "No network samples.",
+          scale_behavior: "Use aggregate KPI series.",
+          owner: "BACKEND_SUMMARY_CONTRACT"
+        },
+        {
+          section: "OVERVIEW",
+          title_zh: "总览",
+          title_en: "Overview",
+          priority: 10,
+          purpose: "Show runtime health first.",
+          primary_data_sources: ["RuntimeStatusPayload", "fidelity_summary"],
+          runtime_status_fields: ["state", "current_sim_time"],
+          detail_surfaces: ["runtime progress strip", "scale and fidelity notice"],
+          expected_controls: ["export"],
+          empty_state: "Waiting for status.",
+          scale_behavior: "Always visible.",
+          owner: "BACKEND_SUMMARY_CONTRACT"
+        }
+      ],
+      determinism: {
+        section_order: "priority_ascending_then_section_id",
+        unknown_section_policy: "display_after_known_sections_with_backend_label",
+        stable_identifiers: ["OVERVIEW", "NETWORK"]
+      },
+      follow_up_tasks: ["V2-051 user detail drawer"]
+    });
+
+    expect(display).toMatchObject({
+      sourceLabel:
+        "BACKEND_DERIVED_SUMMARY / leo_twin.dashboard_information_architecture.v3",
+      summaryLabel:
+        "2 个态势分区 / RENDER_BACKEND_SECTIONS_WITH_LOCAL_FORMATTING_ONLY",
+      policyLabel: "后端为语义源；前端只做格式化",
+      layoutLabel: "整页滚动 / detail rows must be bounded"
+    });
+    expect(display?.sections).toEqual([
+      {
+        section: "OVERVIEW",
+        title: "OVERVIEW · 总览",
+        purpose: "Show runtime health first.",
+        sourcesLabel: "RuntimeStatusPayload / fidelity_summary",
+        surfacesLabel:
+          "runtime progress strip / scale and fidelity notice · Always visible."
+      },
+      {
+        section: "NETWORK",
+        title: "NETWORK · 网络态势",
+        purpose: "Explain network KPIs.",
+        sourcesLabel: "metrics_summary.network",
+        surfacesLabel:
+          "network KPI trends / route explanation table · Use aggregate KPI series."
+      }
+    ]);
+    expect(buildDataPanelInformationArchitectureDisplay(null)).toBeNull();
+    expect(buildDataPanelInformationArchitectureDisplay(undefined)).toBeNull();
+  });
+
   it("summarizes backend-owned configuration explanation v2", () => {
     const display = buildDataPanelConfigurationExplanationDisplay({
       version: "v2",

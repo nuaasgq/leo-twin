@@ -195,6 +195,10 @@ Tasks:
   - Scope: overview, network, business, compute, node detail, assumptions,
     diagnostics.
   - Output: frontend structure and CSS tests.
+  - Status: T225 adds backend-owned
+    `dashboard_information_architecture_v3` to `backend_summary`, documents
+    the seven-section dashboard structure, and adds frontend typing, display
+    builder tests, runtime fixture checks, and a CSS style hook test.
 - V2-051: Add user detail drawer.
   - Scope: active service, selected satellite, route, queue, latency timeline.
   - Depends on: V2-023, V2-013.

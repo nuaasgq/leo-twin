@@ -15,6 +15,7 @@ import {
 
 import {
   ConfigurationExplanationV2,
+  DashboardInformationArchitectureV3,
   FidelitySummary,
   GeneratedScenarioConfig,
   TrafficDemandSummary,
@@ -271,6 +272,10 @@ export const DataPanel = memo(function DataPanel({
   const configurationExplanationDisplay = buildDataPanelConfigurationExplanationDisplay(
     generatedConfig?.backend_summary?.configuration_explanation_v2
   );
+  const informationArchitectureDisplay =
+    buildDataPanelInformationArchitectureDisplay(
+      generatedConfig?.backend_summary?.dashboard_information_architecture_v3
+    );
   const exportCatalogDisplay = buildDataPanelExportCatalogDisplay(runtimeExportCatalog);
   const exportCompareDisplay = buildDataPanelExportCompareDisplay(runtimeExportCompare);
   const exportCompareStatus = buildDataPanelExportCompareStatus(
@@ -1576,6 +1581,38 @@ export const DataPanel = memo(function DataPanel({
 
       <div className="data-panel-section-title secondary">辅助模型分析</div>
       <div className="data-panel-grid">
+        {informationArchitectureDisplay ? (
+          <section
+            className="dashboard-section data-panel-configuration-explanation data-panel-information-architecture"
+            aria-label="后端数据态势信息架构"
+          >
+            <div className="section-title">数据态势信息架构</div>
+            <div className="data-panel-source-note">
+              <span>{informationArchitectureDisplay.sourceLabel}</span>
+              <small>{informationArchitectureDisplay.summaryLabel}</small>
+            </div>
+            <div className="data-panel-config-explanation-meta">
+              <span>{informationArchitectureDisplay.policyLabel}</span>
+              <span>{informationArchitectureDisplay.layoutLabel}</span>
+            </div>
+            <div className="data-panel-config-explanation-sections">
+              {informationArchitectureDisplay.sections.map((section) => (
+                <div
+                  className="data-panel-config-explanation-section"
+                  key={section.section}
+                >
+                  <div>
+                    <strong>{section.title}</strong>
+                    <small>{section.purpose}</small>
+                  </div>
+                  <span title={section.sourcesLabel}>
+                    {section.surfacesLabel}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
         {configurationExplanationDisplay ? (
           <section
             className="dashboard-section data-panel-configuration-explanation"
@@ -5594,6 +5631,53 @@ export interface DataPanelConfigurationExplanationSectionDisplay {
   currentValueLabel: string;
   sourceFieldsLabel: string;
   excludedSemanticsLabel: string;
+}
+
+export interface DataPanelInformationArchitectureDisplay {
+  sourceLabel: string;
+  summaryLabel: string;
+  policyLabel: string;
+  layoutLabel: string;
+  sections: readonly DataPanelInformationArchitectureSectionDisplay[];
+}
+
+export interface DataPanelInformationArchitectureSectionDisplay {
+  section: string;
+  title: string;
+  purpose: string;
+  sourcesLabel: string;
+  surfacesLabel: string;
+}
+
+export function buildDataPanelInformationArchitectureDisplay(
+  architecture: DashboardInformationArchitectureV3 | null | undefined
+): DataPanelInformationArchitectureDisplay | null {
+  if (architecture === null || architecture === undefined) {
+    return null;
+  }
+  const sections = [...architecture.sections].sort(
+    (left, right) =>
+      left.priority - right.priority || left.section.localeCompare(right.section)
+  );
+  return {
+    sourceLabel: `${architecture.source} / ${architecture.architecture_id}`,
+    summaryLabel: `${formatCount(sections.length)} 个态势分区 / ${architecture.frontend_policy}`,
+    policyLabel: architecture.backend_source_of_truth
+      ? "后端为语义源；前端只做格式化"
+      : "前端需要校验语义来源",
+    layoutLabel: `${architecture.layout_policy.page_scroll ? "整页滚动" : "固定视窗"} / ${
+      architecture.layout_policy.large_scale_policy
+    }`,
+    sections: sections.map((section) => ({
+      section: section.section,
+      title: `${section.section} · ${section.title_zh}`,
+      purpose: section.purpose,
+      sourcesLabel: section.primary_data_sources.join(" / "),
+      surfacesLabel: `${section.detail_surfaces.slice(0, 3).join(" / ")} · ${
+        section.scale_behavior
+      }`
+    }))
+  };
 }
 
 export function buildDataPanelConfigurationExplanationDisplay(

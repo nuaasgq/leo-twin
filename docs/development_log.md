@@ -5,6 +5,59 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Dashboard Information Architecture v3
+
+- Branch: `feature/T225-dashboard-information-architecture-v3`
+- Commit: pending in this commit
+- Scope: advance V2-050 by adding a backend-owned dashboard information
+  architecture v3 contract to `backend_summary`. The standalone dashboard now
+  consumes the backend field through typed frontend contracts and renders a
+  compact IA card before the existing auxiliary model panels.
+- Changed files/modules:
+  - `src/leo_twin/services/dashboard_information_architecture.py`
+  - `src/leo_twin/services/derived_summary.py`
+  - `tests/unit/test_dashboard_information_architecture_v3.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `frontend/tests/runtimeContractFixture.test.ts`
+  - `frontend/tests/fixtures/runtimeStatus.contract.json`
+  - `tests/unit/test_dashboard_information_architecture_styles.py`
+  - `docs/dashboard_information_architecture_v3.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src/leo_twin/services/dashboard_information_architecture.py src/leo_twin/services/derived_summary.py`
+    - Result: passed.
+  - `python -m pytest tests/unit/test_dashboard_information_architecture_v3.py tests/unit/test_dashboard_information_architecture_styles.py tests/unit/test_backend_derived_summary.py -q`
+    - Result: passed, 14 tests.
+  - `pnpm --dir frontend test -- dataPanel.test.ts runtimeContractFixture.test.ts`
+    - Result: passed, 25 test files / 314 tests.
+  - `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite reported the existing large `DataPanel` chunk
+      warning after minification.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - Existing dashboard panels were already feature-heavy, so this task defines
+    and exposes the information architecture contract without performing a
+    broad dashboard layout rewrite.
+  - A Vitest CSS raw-import attempt returned an empty CSS string in the current
+    frontend test setup. The CSS hook check was moved to a Python file-read
+    contract test to avoid depending on bundler-specific CSS transforms.
+  - Existing local runtime/generated config files remain dirty and are
+    intentionally not included in this task.
+- Known remaining issues / follow-up:
+  - V2-051/V2-052 should add dedicated user and satellite detail drawers based
+    on this IA contract.
+  - V2-053 should replace large detail sections with virtualized or backend
+    paginated tables.
+  - V2-054 should split model assumptions, KPI credibility, and fidelity
+    notices into a clearer product-grade assumptions panel.
+
 ## 2026-07-06 - User Documentation v2
 
 - Branch: `feature/T224-user-documentation-v2`

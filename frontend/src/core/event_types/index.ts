@@ -314,8 +314,51 @@ export interface BackendDerivedSummary {
   fidelity_summary?: FidelitySummary;
   workload_smoothing_summary?: WorkloadSmoothingSummary;
   configuration_surface_summary?: ConfigurationSurfaceSummary;
+  dashboard_information_architecture_v3?: DashboardInformationArchitectureV3;
   configuration_explanation_v2?: ConfigurationExplanationV2;
   model_assumptions?: readonly string[];
+}
+
+export interface DashboardInformationArchitectureV3 {
+  version: "v3" | string;
+  architecture_id: string;
+  source: string;
+  frontend_policy: string;
+  backend_source_of_truth: boolean;
+  frontend_inference_policy: string;
+  layout_policy: DashboardInformationArchitectureLayoutPolicyV3;
+  sections: readonly DashboardInformationArchitectureSectionV3[];
+  determinism: DashboardInformationArchitectureDeterminismV3;
+  follow_up_tasks: readonly string[];
+}
+
+export interface DashboardInformationArchitectureLayoutPolicyV3 {
+  page_scroll: boolean;
+  primary_order: readonly string[];
+  section_grouping: string;
+  card_policy: string;
+  large_scale_policy: string;
+}
+
+export interface DashboardInformationArchitectureSectionV3 {
+  section: string;
+  title_zh: string;
+  title_en: string;
+  priority: number;
+  purpose: string;
+  primary_data_sources: readonly string[];
+  runtime_status_fields: readonly string[];
+  detail_surfaces: readonly string[];
+  expected_controls: readonly string[];
+  empty_state: string;
+  scale_behavior: string;
+  owner: string;
+}
+
+export interface DashboardInformationArchitectureDeterminismV3 {
+  section_order: string;
+  unknown_section_policy: string;
+  stable_identifiers: readonly string[];
 }
 
 export interface ConfigurationExplanationV2 {

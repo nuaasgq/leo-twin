@@ -277,6 +277,19 @@ describe("runtime status contract fixture", () => {
       generated?.backend_summary?.configuration_explanation_v2?.determinism
         .unknown_key_policy
     ).toBe("REJECT");
+    expect(
+      generated?.backend_summary?.dashboard_information_architecture_v3
+    ).toMatchObject({
+      version: "v3",
+      architecture_id: "leo_twin.dashboard_information_architecture.v3",
+      source: "BACKEND_DERIVED_SUMMARY",
+      backend_source_of_truth: true
+    });
+    expect(
+      generated?.backend_summary?.dashboard_information_architecture_v3?.sections.map(
+        (section) => section.section
+      )
+    ).toEqual(["OVERVIEW", "NETWORK", "BUSINESS"]);
   });
 
   it("rejects malformed runtime status envelopes before UI consumption", () => {
