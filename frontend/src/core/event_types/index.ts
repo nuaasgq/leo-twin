@@ -920,8 +920,29 @@ export interface RuntimeSatelliteServiceSummaryV1 {
 
 export interface RuntimeDetailPageEnvelope {
   type: "RUNTIME_DETAIL_PAGE" | string;
-  kind: "users" | "satellites" | string;
-  summary: RuntimeUserRequestSummaryV1 | RuntimeSatelliteServiceSummaryV1;
+  kind: "users" | "satellites" | "nodes" | string;
+  summary:
+    | RuntimeUserRequestSummaryV1
+    | RuntimeSatelliteServiceSummaryV1
+    | RuntimeNodeDetailPageV1;
+}
+
+export interface RuntimeNodeDetailPageV1 {
+  version: "v1" | string;
+  source: string;
+  summary_scope?: string;
+  cursor: number;
+  limit: number;
+  next_cursor: number;
+  has_more: boolean;
+  node_count: number;
+  user_count: number;
+  satellite_count: number;
+  item_count: number;
+  hidden_node_count: number;
+  window_user_detail_count: number;
+  window_satellite_detail_count: number;
+  items: readonly RuntimeNodeDetailCardV1[];
 }
 
 export interface RuntimeNodeDetailSummaryV1 {

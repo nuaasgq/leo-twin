@@ -2,6 +2,7 @@ import { decodeStateSnapshot } from "../core/decoder";
 import {
   GeneratedScenarioConfig,
   RuntimeDetailPageEnvelope,
+  RuntimeNodeDetailPageV1,
   RuntimeSatelliteServiceSummaryV1,
   RuntimeStatusEnvelope,
   RuntimeStatusPayload,
@@ -62,6 +63,18 @@ export async function loadRuntimeSatelliteDetails(
   return page.summary as RuntimeSatelliteServiceSummaryV1;
 }
 
+export async function loadRuntimeNodeDetails(
+  cursor = 0,
+  limit = 100,
+  endpoint = "/runtime/details/nodes"
+): Promise<RuntimeNodeDetailPageV1> {
+  const page = await loadRuntimeDetailPage(endpoint, cursor, limit);
+  if (page.kind !== "nodes") {
+    throw new TypeError(`runtime detail response kind must be nodes, got ${page.kind}`);
+  }
+  return page.summary as RuntimeNodeDetailPageV1;
+}
+
 export function runtimeApiErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   if (
@@ -112,8 +125,8 @@ export function decodeRuntimeDetailPage(value: unknown): RuntimeDetailPageEnvelo
   }
   const kind = (value as { kind?: unknown }).kind;
   const summary = (value as { summary?: unknown }).summary;
-  if (kind !== "users" && kind !== "satellites") {
-    throw new TypeError("runtime detail response kind must be users or satellites");
+  if (kind !== "users" && kind !== "satellites" && kind !== "nodes") {
+    throw new TypeError("runtime detail response kind must be users, satellites, or nodes");
   }
   if (typeof summary !== "object" || summary === null || Array.isArray(summary)) {
     throw new TypeError("runtime detail response must include summary object");
@@ -121,7 +134,10 @@ export function decodeRuntimeDetailPage(value: unknown): RuntimeDetailPageEnvelo
   return {
     ...(value as Record<string, unknown>),
     kind,
-    summary: summary as RuntimeUserRequestSummaryV1 | RuntimeSatelliteServiceSummaryV1
+    summary: summary as
+      | RuntimeUserRequestSummaryV1
+      | RuntimeSatelliteServiceSummaryV1
+      | RuntimeNodeDetailPageV1
   } as RuntimeDetailPageEnvelope;
 }
 

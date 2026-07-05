@@ -8496,3 +8496,50 @@ change.
   - Add `/runtime/details/nodes` or an equivalent cursor-readable detail stream
     for full per-node placement candidates, queue history, and resource
     timeline data without bloating `/runtime/status`.
+
+## 2026-07-05 - Node Detail Card Endpoint v1
+
+- Branch: `feature/T175-node-detail-card-endpoint-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a dedicated cursor-readable `/runtime/details/nodes` endpoint for
+  backend-owned user/satellite detail cards. The endpoint returns a deterministic
+  combined node-card window ordered by users first and satellites second, while
+  existing `/runtime/status`, `/runtime/details/users`, and
+  `/runtime/details/satellites` remain compatible. Frontend API contracts now
+  include `loadRuntimeNodeDetails()` for future dashboard drawers, but no
+  frontend layout or rendering architecture was changed.
+- Changed files/modules:
+  - `src/leo_twin/services/runtime_observability.py`
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/app/api.ts`
+  - `frontend/tests/api.test.ts`
+  - `tests/unit/test_runtime_observability.py`
+  - `tests/integration/test_live_runtime_streaming.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_runtime_observability.py tests/integration/test_live_runtime_streaming.py::test_runtime_detail_pages_return_deterministic_windows tests/integration/test_runtime_session_control.py::test_demo_server_stream_query_parses_cursor_options -q`
+    - Result: passed, 4 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- api.test.ts runtimeContractFixture.test.ts`
+    - Result: passed, 25 files / 265 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Existing DataPanel chunk-size warning remains.
+- Problems encountered:
+  - Existing API test mocks were adjusted so user, satellite, and node detail
+    responses match the actual request order.
+  - Existing local runtime config drift remains untouched and unstaged.
+- Known remaining issues:
+  - `/runtime/details/nodes` returns current detail-card fields only. It still
+    does not expose full placement candidate lists, per-task queue timelines, or
+    resource history curves per selected node.
+- Recommended follow-up:
+  - Bind `loadRuntimeNodeDetails()` into a dashboard detail drawer with virtual
+    scrolling and add a richer backend node-detail payload for placement
+    candidate lists and resource timeline slices.

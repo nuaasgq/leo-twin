@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from leo_twin.services.runtime_observability import build_runtime_lifecycle_summaries
+from leo_twin.services.runtime_observability import (
+    build_runtime_lifecycle_summaries,
+    build_runtime_node_detail_page,
+)
 
 
 def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> None:
@@ -314,6 +317,27 @@ def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> No
         "value": "链路 2 / 接入 1 / 星间 1 / 路由 1/2 / 排队 1 / 时延 0.045 s / 损耗 2%",
         "tone": "normal",
     }
+    node_page = build_runtime_node_detail_page(
+        snapshot,
+        service_latency_history=service_history,
+        satellite_kpi_slices=kpi_slices,
+        cursor=1,
+        limit=2,
+    )
+    assert node_page["version"] == "v1"
+    assert node_page["source"] == "BACKEND_RUNTIME_STATUS"
+    assert node_page["summary_scope"] == "COMBINED_USER_SATELLITE_NODE_DETAIL_WINDOW"
+    assert node_page["cursor"] == 1
+    assert node_page["limit"] == 2
+    assert node_page["next_cursor"] == 3
+    assert node_page["has_more"] is True
+    assert node_page["node_count"] == 4
+    assert node_page["user_count"] == 2
+    assert node_page["satellite_count"] == 2
+    assert node_page["item_count"] == 2
+    assert node_page["window_user_detail_count"] == 1
+    assert node_page["window_satellite_detail_count"] == 1
+    assert [item["entity_id"] for item in node_page["items"]] == ["user-1", "sat-0"]
 
 
 def test_runtime_user_summary_counts_full_set_when_items_are_limited() -> None:

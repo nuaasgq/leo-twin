@@ -8,7 +8,7 @@ from typing import Any
 from examples.integration_demo.config import DemoConfig
 from examples.integration_demo.control_plane import DemoControlPlane
 from examples.integration_demo.runtime import run_integration_demo
-from examples.integration_demo.server import _stream_query
+from examples.integration_demo.server import _detail_query, _stream_query
 from leo_twin.core import SimulationKernel, SimulationModule
 from leo_twin.runtime import (
     ControlProtocol,
@@ -692,6 +692,11 @@ def test_demo_adapter_exposes_cursor_batches(tmp_path) -> None:
 def test_demo_server_stream_query_parses_cursor_options() -> None:
     assert _stream_query({"cursor": ["5"], "limit": ["10"]}) == (5, 10)
     assert _stream_query({}) == (0, None)
+    assert _detail_query({"cursor": ["6"], "limit": ["12"]}, default_limit=100) == (
+        6,
+        12,
+    )
+    assert _detail_query({}, default_limit=100) == (0, 100)
 
 
 def _deterministic_sequence() -> tuple[tuple[dict[str, Any], ...], tuple[dict[str, Any], ...]]:

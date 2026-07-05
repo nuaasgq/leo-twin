@@ -162,6 +162,14 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                     return
                 self._send_json(control_plane.runtime_satellite_details(cursor, limit))
                 return
+            if path == "/runtime/details/nodes":
+                try:
+                    cursor, limit = _detail_query(query, default_limit=100)
+                except ValueError as exc:
+                    self.send_error(400, str(exc))
+                    return
+                self._send_json(control_plane.runtime_node_details(cursor, limit))
+                return
             self.send_error(404, "not found")
 
         def log_message(self, format: str, *args: object) -> None:

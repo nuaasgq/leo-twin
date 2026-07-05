@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  loadRuntimeNodeDetails,
   loadRuntimeSatelliteDetails,
   loadRuntimeState,
   loadRuntimeUserDetails,
@@ -51,11 +52,41 @@ describe("runtime API diagnostics", () => {
           kind: "satellites",
           summary: {
             version: "v1",
-            source: "BACKEND_RUNTIME_SNAPSHOT",
             satellite_count: 3,
             item_count: 1,
             hidden_satellite_count: 2,
             items: []
+          }
+        })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          type: "RUNTIME_DETAIL_PAGE",
+          kind: "nodes",
+          summary: {
+            version: "v1",
+            source: "BACKEND_RUNTIME_STATUS",
+            cursor: 4,
+            limit: 20,
+            next_cursor: 5,
+            has_more: false,
+            node_count: 5,
+            user_count: 2,
+            satellite_count: 3,
+            item_count: 1,
+            hidden_node_count: 4,
+            window_user_detail_count: 0,
+            window_satellite_detail_count: 1,
+            items: [
+              {
+                entity_type: "SATELLITE",
+                entity_id: "sat-0",
+                title: "卫星 sat-0",
+                subtitle: "ACTIVE",
+                fields: [{ label: "负载", value: "65%", tone: "resource" }]
+              }
+            ]
           }
         })
       });
@@ -69,6 +100,11 @@ describe("runtime API diagnostics", () => {
       satellite_count: 3,
       item_count: 1
     });
+    await expect(loadRuntimeNodeDetails(4, 20)).resolves.toMatchObject({
+      node_count: 5,
+      item_count: 1,
+      items: [{ entity_id: "sat-0" }]
+    });
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       "/runtime/details/users?cursor=2&limit=80"
@@ -76,6 +112,10 @@ describe("runtime API diagnostics", () => {
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
       "/runtime/details/satellites?cursor=3&limit=120"
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      "/runtime/details/nodes?cursor=4&limit=20"
     );
   });
 

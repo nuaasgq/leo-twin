@@ -72,6 +72,89 @@ def build_runtime_node_detail_summary(
     }
 
 
+def build_runtime_node_detail_page(
+    snapshot: Mapping[str, Any],
+    *,
+    service_latency_history: Mapping[str, Any] | None = None,
+    satellite_kpi_slices: Mapping[str, Any] | None = None,
+    cursor: int = 0,
+    limit: int = 100,
+) -> dict[str, object]:
+    """Build one deterministic cursor page of backend-owned node detail cards."""
+
+    if not isinstance(snapshot, Mapping):
+        raise TypeError("snapshot must be a mapping")
+    normalized_cursor = _page_cursor(cursor)
+    normalized_limit = _page_limit(limit)
+    user_probe = build_runtime_user_request_summary(
+        snapshot,
+        service_latency_history=service_latency_history,
+        cursor=0,
+        limit=1,
+    )
+    satellite_probe = build_runtime_satellite_service_summary(
+        snapshot,
+        service_latency_history=service_latency_history,
+        satellite_kpi_slices=satellite_kpi_slices,
+        cursor=0,
+        limit=1,
+    )
+    user_count = _count(user_probe.get("user_count"))
+    satellite_count = _count(satellite_probe.get("satellite_count"))
+    total_count = user_count + satellite_count
+    remaining = normalized_limit
+    user_cards: tuple[dict[str, object], ...] = ()
+    satellite_cards: tuple[dict[str, object], ...] = ()
+    satellite_cursor = max(0, normalized_cursor - user_count)
+
+    if normalized_cursor < user_count and remaining > 0:
+        user_limit = min(remaining, user_count - normalized_cursor)
+        user_summary = build_runtime_user_request_summary(
+            snapshot,
+            service_latency_history=service_latency_history,
+            cursor=normalized_cursor,
+            limit=user_limit,
+        )
+        user_cards = tuple(
+            _user_detail_card(item) for item in _records(user_summary.get("items"))
+        )
+        remaining -= len(user_cards)
+        satellite_cursor = 0
+
+    if remaining > 0 and satellite_cursor < satellite_count:
+        satellite_summary = build_runtime_satellite_service_summary(
+            snapshot,
+            service_latency_history=service_latency_history,
+            satellite_kpi_slices=satellite_kpi_slices,
+            cursor=satellite_cursor,
+            limit=remaining,
+        )
+        satellite_cards = tuple(
+            _satellite_detail_card(item)
+            for item in _records(satellite_summary.get("items"))
+        )
+
+    items = user_cards + satellite_cards
+    next_cursor = min(total_count, normalized_cursor + len(items))
+    return {
+        "version": "v1",
+        "source": "BACKEND_RUNTIME_STATUS",
+        "summary_scope": "COMBINED_USER_SATELLITE_NODE_DETAIL_WINDOW",
+        "cursor": normalized_cursor,
+        "limit": normalized_limit,
+        "next_cursor": next_cursor,
+        "has_more": next_cursor < total_count,
+        "node_count": total_count,
+        "user_count": user_count,
+        "satellite_count": satellite_count,
+        "item_count": len(items),
+        "hidden_node_count": max(0, total_count - len(items)),
+        "window_user_detail_count": len(user_cards),
+        "window_satellite_detail_count": len(satellite_cards),
+        "items": items,
+    }
+
+
 def build_runtime_user_request_summary(
     snapshot: Mapping[str, Any],
     *,

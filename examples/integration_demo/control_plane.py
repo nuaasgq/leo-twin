@@ -34,6 +34,7 @@ from leo_twin.services.control import (
 )
 from leo_twin.services.runtime_observability import (
     build_runtime_lifecycle_summaries,
+    build_runtime_node_detail_page,
     build_runtime_satellite_service_summary,
     build_runtime_user_request_summary,
 )
@@ -163,6 +164,20 @@ class DemoControlPlane:
         return {
             "type": "RUNTIME_DETAIL_PAGE",
             "kind": "satellites",
+            "summary": summary,
+        }
+
+    def runtime_node_details(self, cursor: int = 0, limit: int = 100) -> dict[str, Any]:
+        summary = build_runtime_node_detail_page(
+            self.visible_snapshot(),
+            service_latency_history=self._service_latency_history_json(),
+            satellite_kpi_slices=self._satellite_kpi_slices_json(),
+            cursor=cursor,
+            limit=limit,
+        )
+        return {
+            "type": "RUNTIME_DETAIL_PAGE",
+            "kind": "nodes",
             "summary": summary,
         }
 

@@ -242,11 +242,18 @@ def test_runtime_detail_pages_return_deterministic_windows(tmp_path: Path) -> No
     user_second = control_plane.runtime_user_details(cursor=2, limit=2)
     satellite_first = control_plane.runtime_satellite_details(cursor=0, limit=3)
     satellite_second = control_plane.runtime_satellite_details(cursor=3, limit=3)
+    node_first = control_plane.runtime_node_details(cursor=0, limit=2)
+    node_after_users = control_plane.runtime_node_details(
+        cursor=user_first["summary"]["user_count"],
+        limit=2,
+    )
 
     user_first_summary = user_first["summary"]
     user_second_summary = user_second["summary"]
     satellite_first_summary = satellite_first["summary"]
     satellite_second_summary = satellite_second["summary"]
+    node_first_summary = node_first["summary"]
+    node_after_users_summary = node_after_users["summary"]
 
     assert user_first["type"] == "RUNTIME_DETAIL_PAGE"
     assert user_first["kind"] == "users"
@@ -280,6 +287,26 @@ def test_runtime_detail_pages_return_deterministic_windows(tmp_path: Path) -> No
         "sat-003",
         "sat-004",
         "sat-005",
+    ]
+
+    assert node_first["type"] == "RUNTIME_DETAIL_PAGE"
+    assert node_first["kind"] == "nodes"
+    assert node_first_summary["cursor"] == 0
+    assert node_first_summary["limit"] == 2
+    assert node_first_summary["next_cursor"] == 2
+    assert node_first_summary["window_user_detail_count"] == 2
+    assert node_first_summary["window_satellite_detail_count"] == 0
+    assert [item["entity_id"] for item in node_first_summary["items"]] == [
+        "ground-station-00",
+        "user-0000",
+    ]
+    assert node_after_users["kind"] == "nodes"
+    assert node_after_users_summary["cursor"] == user_first_summary["user_count"]
+    assert node_after_users_summary["window_user_detail_count"] == 0
+    assert node_after_users_summary["window_satellite_detail_count"] == 2
+    assert [item["entity_id"] for item in node_after_users_summary["items"]] == [
+        "sat-000",
+        "sat-001",
     ]
 
 
