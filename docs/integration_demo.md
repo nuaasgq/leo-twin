@@ -84,6 +84,7 @@ Endpoints:
 - `GET /scenario/user-config/schema`
 - `GET /scenario/user-config/templates`
 - `GET /scenario/user-config/export`
+- `POST /scenario/user-config/validate`
 - `GET /metrics/snapshot`
 - `GET /runtime/status`
 - `GET /runtime/export`
@@ -148,13 +149,33 @@ User configuration contract:
 Invoke-RestMethod http://127.0.0.1:8765/scenario/user-config/schema
 Invoke-RestMethod http://127.0.0.1:8765/scenario/user-config/templates
 Invoke-RestMethod http://127.0.0.1:8765/scenario/user-config/export
+$candidate = @{
+  scenario = @{
+    satellite_count = 72
+    compute_nodes = 72
+  }
+  runtime = @{
+    duration = 600
+    seed = 20260703
+  }
+} | ConvertTo-Json -Depth 8
+Invoke-RestMethod `
+  -Method Post `
+  -Uri http://127.0.0.1:8765/scenario/user-config/validate `
+  -ContentType "application/json" `
+  -Body $candidate
 ```
 
 These endpoints are backend-owned and read-only. They expose the full
 user-facing configuration schema v2, the approved executable template catalog,
-and the current effective SEES config export with a stable hash and validation
-status. Configuration import still happens only through explicit control-plane
-commands such as `CONFIG_UPDATE`, `LOAD_TEMPLATE`, or `RESTORE_EXPORT_PACKAGE`.
+the current effective SEES config export with a stable hash and validation
+status, and a validate-only user configuration preflight report. Configuration
+import still happens only through explicit control-plane commands such as
+`CONFIG_UPDATE`, `LOAD_TEMPLATE`, or `RESTORE_EXPORT_PACKAGE`.
+`POST /scenario/user-config/validate` returns
+`USER_CONFIGURATION_VALIDATION_REPORT` with normalized config/hash when
+accepted, but it never writes config files, initializes runtime state, or
+applies a `CONFIG_UPDATE`.
 The standalone dashboard also shows these links in the user configuration
 contract section so users can download the current full configuration and
 inspect the backend schema without editing runtime state.

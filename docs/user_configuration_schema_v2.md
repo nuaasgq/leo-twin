@@ -41,6 +41,7 @@ The backend exposes the schema through:
 - `GET /scenario/user-config/schema`
 - `GET /scenario/user-config/templates`
 - `GET /scenario/user-config/export`
+- `POST /scenario/user-config/validate`
 
 Important contract fields:
 
@@ -62,6 +63,9 @@ The HTTP endpoints are read-only:
 - `/scenario/user-config/export` returns the current effective `SEESConfig`
   JSON mapping, a stable config hash, validation status, and supported import
   paths.
+- `/scenario/user-config/validate` accepts a JSON mapping and returns a
+  validate-only `USER_CONFIGURATION_VALIDATION_REPORT` with normalized config
+  and stable hash when accepted. It does not apply the config.
 
 Configuration import remains an explicit control-plane action. Partial updates
 use `CONFIG_UPDATE`, template loading uses `LOAD_TEMPLATE`, and package restore

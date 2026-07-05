@@ -219,6 +219,38 @@ class DemoControlPlane:
             },
         }
 
+    def user_configuration_validate(self, raw_config: Any) -> dict[str, Any]:
+        validation = validate_user_configuration_mapping_v2(raw_config)
+        normalized_config = validation.get("normalized_config")
+        normalized_hash = (
+            stable_hash_payload(normalized_config)
+            if isinstance(normalized_config, dict)
+            else None
+        )
+        return {
+            "type": "USER_CONFIGURATION_VALIDATION_REPORT",
+            "summary": {
+                "version": "v1",
+                "source": "BACKEND_USER_CONFIGURATION",
+                "schema_id": USER_CONFIGURATION_SCHEMA_V2_ID,
+                "validation_scope": "USER_PROVIDED_CONFIG_MAPPING",
+                "format": "JSON_MAPPING",
+                "mutation_policy": "VALIDATE_ONLY_NO_APPLY",
+                "unknown_key_policy": "REJECT",
+                "defaulting_policy": "OMITTED_FIELDS_USE_BACKEND_DEFAULTS",
+                "ok": bool(validation["ok"]),
+                "error_count": int(validation["error_count"]),
+                "errors": tuple(validation["errors"]),
+                "normalized_config_hash": normalized_hash,
+                "normalized_config": normalized_config,
+                "apply_command": {
+                    "type": "RUNTIME_CONTROL",
+                    "action": "CONFIG_UPDATE",
+                    "requires_explicit_user_action": True,
+                },
+            },
+        }
+
     def runtime_user_details(self, cursor: int = 0, limit: int = 100) -> dict[str, Any]:
         summary = build_runtime_user_request_summary(
             self.visible_snapshot(),

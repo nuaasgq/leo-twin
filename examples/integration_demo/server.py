@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import base64
 import hashlib
+import json
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -256,6 +257,19 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                 return
             self.send_error(404, "not found")
 
+        def do_POST(self) -> None:  # noqa: N802
+            parsed_url = urlsplit(self.path)
+            path = parsed_url.path
+            if path == "/scenario/user-config/validate":
+                try:
+                    payload = self._read_json_body()
+                except ValueError as exc:
+                    self.send_error(400, str(exc))
+                    return
+                self._send_json(control_plane.user_configuration_validate(payload))
+                return
+            self.send_error(404, "not found")
+
         def log_message(self, format: str, *args: object) -> None:
             return
 
@@ -304,9 +318,25 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
             self.end_headers()
             self.wfile.write(data)
 
+        def _read_json_body(self) -> object:
+            content_length = self.headers.get("Content-Length")
+            if content_length is None:
+                raise ValueError("missing Content-Length")
+            try:
+                length = int(content_length)
+            except ValueError as exc:
+                raise ValueError("invalid Content-Length") from exc
+            if length < 0:
+                raise ValueError("invalid Content-Length")
+            raw = self.rfile.read(length)
+            try:
+                return json.loads(raw.decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+                raise ValueError("request body must be valid UTF-8 JSON") from exc
+
         def _cors_headers(self) -> None:
             self.send_header("Access-Control-Allow-Origin", "*")
-            self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
             self.send_header("Access-Control-Allow-Headers", "Content-Type")
 
         def _accept_websocket(self) -> None:

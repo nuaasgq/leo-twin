@@ -5,6 +5,56 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - User Config Validation API v1
+
+- Branch: `feature/T198-user-config-validate-api-v1`
+- Commit: pending in this commit
+- Scope: add a validate-only backend preflight endpoint for user-provided
+  configuration mappings. The integration demo now exposes
+  `POST /scenario/user-config/validate`, which returns
+  `USER_CONFIGURATION_VALIDATION_REPORT` with schema id, validation scope,
+  mutation policy, normalized config/hash for accepted mappings, and validation
+  errors for rejected mappings. The endpoint does not write files, initialize
+  runtime state, or apply `CONFIG_UPDATE`; applying a config remains an explicit
+  future control action. This task also fixes the T196 scenario-builder summary
+  regression by passing only the actual builder seed into runtime explanation
+  fields instead of referencing a nonexistent runtime object. Event Kernel and
+  simulation models are unchanged.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `src/leo_twin/services/scenario_builder.py`
+  - `tests/integration/test_config_control.py`
+  - `docs/integration_demo.md`
+  - `docs/user_configuration_schema_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `$env:PYTHONPATH='.'; python -m pytest tests/integration/test_config_control.py::test_control_plane_validates_user_configuration_without_applying tests/integration/test_config_control.py::test_control_plane_exposes_user_configuration_contract_api tests/unit/test_user_configuration_schema_v2.py tests/unit/test_scenario_builder.py::test_scenario_builder_config_from_sees_config_maps_control_plane_fields -q`
+    - Result: passed, 9 tests.
+  - `$env:PYTHONPATH='.'; python -m pytest tests/integration/test_config_control.py::test_control_plane_validates_user_configuration_without_applying tests/integration/test_config_control.py::test_control_plane_exposes_user_configuration_contract_api tests/integration/test_config_control.py::test_frontend_control_messages_are_processed tests/unit/test_user_configuration_schema_v2.py tests/unit/test_scenario_builder.py::test_scenario_builder_config_from_sees_config_maps_control_plane_fields tests/unit/test_backend_derived_summary.py::test_configuration_explanation_v2_binds_config_to_backend_semantics -q`
+    - Result: passed, 11 tests.
+  - `python -m py_compile examples/integration_demo/server.py examples/integration_demo/control_plane.py src/leo_twin/services/scenario_builder.py`
+    - Result: passed.
+  - `git diff --check`
+    - Result: passed. Git still reported the pre-existing CRLF warning for
+      local runtime/config drift in `configs/generated_full_system_demo.json`
+      and `configs/sees_control.yaml`.
+- Problems encountered:
+  - Targeted tests exposed a T196 regression:
+    `scenario_builder_backend_summary()` referenced `config.runtime`, but
+    `FullSystemScenarioBuilderConfig` stores only builder-level fields. The
+    summary now passes `runtime_seed=config.seed` and leaves unavailable
+    runtime mode/speed/duration fields absent.
+  - The working tree still contains unrelated local runtime/config drift in
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`;
+    these files are intentionally left unstaged and unchanged by this task.
+- Known remaining issues / follow-up:
+  - The frontend does not yet provide YAML/JSON upload, validation display, or
+    a guarded apply button.
+  - The validation endpoint currently accepts JSON mappings; YAML file parsing
+    can be added in the frontend/upload workflow or a later backend endpoint.
+
 ## 2026-07-06 - Dashboard Configuration Explanation v1
 
 - Branch: `feature/T197-dashboard-configuration-explanation-v1`

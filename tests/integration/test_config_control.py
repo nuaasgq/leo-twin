@@ -687,6 +687,61 @@ def test_control_plane_exposes_user_configuration_contract_api(tmp_path) -> None
     assert control_plane.runtime_status()["status"]["initialized"] is True
 
 
+def test_control_plane_validates_user_configuration_without_applying(tmp_path) -> None:
+    control_plane = _small_control_plane(tmp_path / "sees_control.yaml")
+    before_config = control_plane.controller.config_json()
+    before_initialized = control_plane.runtime_status()["status"]["initialized"]
+
+    accepted = control_plane.user_configuration_validate(
+        {
+            "scenario": {
+                "satellite_count": 72,
+                "compute_nodes": 72,
+            },
+            "runtime": {
+                "duration": 600,
+                "seed": 20260703,
+            },
+        }
+    )
+    rejected = control_plane.user_configuration_validate(
+        {
+            "scenario": {
+                "satellite_count": 72,
+                "unsupported_compute_gpu": 1.0,
+            },
+        }
+    )
+
+    assert accepted["type"] == "USER_CONFIGURATION_VALIDATION_REPORT"
+    accepted_summary = accepted["summary"]
+    assert accepted_summary["schema_id"] == USER_CONFIGURATION_SCHEMA_V2_ID
+    assert accepted_summary["validation_scope"] == "USER_PROVIDED_CONFIG_MAPPING"
+    assert accepted_summary["mutation_policy"] == "VALIDATE_ONLY_NO_APPLY"
+    assert accepted_summary["ok"] is True
+    assert accepted_summary["error_count"] == 0
+    assert accepted_summary["errors"] == ()
+    assert accepted_summary["normalized_config_hash"].startswith("sha256:")
+    assert accepted_summary["normalized_config"]["scenario"]["satellite_count"] == 72
+    assert accepted_summary["normalized_config"]["runtime"]["duration"] == 600
+    assert accepted_summary["apply_command"] == {
+        "type": "RUNTIME_CONTROL",
+        "action": "CONFIG_UPDATE",
+        "requires_explicit_user_action": True,
+    }
+
+    rejected_summary = rejected["summary"]
+    assert rejected_summary["ok"] is False
+    assert rejected_summary["error_count"] == 1
+    assert rejected_summary["normalized_config_hash"] is None
+    assert rejected_summary["normalized_config"] is None
+    assert "unknown scenario keys: unsupported_compute_gpu" in rejected_summary[
+        "errors"
+    ][0]["message"]
+    assert control_plane.controller.config_json() == before_config
+    assert control_plane.runtime_status()["status"]["initialized"] is before_initialized
+
+
 def test_control_plane_rejects_template_load_after_initialization(tmp_path) -> None:
     control_plane = _small_control_plane(tmp_path / "sees_control.yaml")
     initialized = control_plane.handle_raw_message(

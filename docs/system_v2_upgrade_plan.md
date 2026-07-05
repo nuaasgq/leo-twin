@@ -62,6 +62,9 @@ Tasks:
   - Scope: frontend upload/download for user config, backend validation errors.
   - Output: no silent fallback on invalid keys.
   - Depends on: V2-001, V2-003.
+  - Status: preflight validation API implemented in T198 as
+    `POST /scenario/user-config/validate`; guarded frontend upload/apply is
+    still pending.
 
 ### WS2. Business Demand Model v2
 
