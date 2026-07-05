@@ -244,6 +244,99 @@ def test_orbit_update_generates_access_start_and_link_update() -> None:
     assert network.compute_access()[0].satellite_id == "sat-001"
 
 
+def test_continuing_access_link_refreshes_latency_without_access_restart() -> None:
+    kernel = SimulationKernel()
+    network = _engine()
+    metrics = MetricsSink()
+    kernel.register_module(network)
+    kernel.register_module(metrics)
+    kernel.schedule_event(
+        _event("orbit-1", EventType.ORBIT_UPDATE.value, _state((7000.0, 0.0, 0.0)))
+    )
+    kernel.schedule_event(
+        _event("orbit-2", EventType.ORBIT_UPDATE.value, _state((7200.0, 0.0, 0.0)), 1.0)
+    )
+
+    kernel.run()
+
+    assert [event.event_type for event in metrics.events] == [
+        EventType.ACCESS_START.value,
+        EventType.LINK_UPDATE.value,
+        EventType.LINK_UPDATE.value,
+    ]
+    assert [event.event_type for event in metrics.events].count(
+        EventType.ACCESS_START.value
+    ) == 1
+    link_updates = [
+        event.payload
+        for event in metrics.events
+        if event.event_type == EventType.LINK_UPDATE.value
+    ]
+    assert [link.latency for link in link_updates] == pytest.approx([0.629, 0.829])
+    assert network.active_link_states()[0].latency == pytest.approx(0.829)
+
+
+def test_repeated_identical_access_state_does_not_emit_duplicate_link_update() -> None:
+    kernel = SimulationKernel()
+    network = _engine()
+    metrics = MetricsSink()
+    kernel.register_module(network)
+    kernel.register_module(metrics)
+    kernel.schedule_event(
+        _event("orbit-1", EventType.ORBIT_UPDATE.value, _state((7000.0, 0.0, 0.0)))
+    )
+    kernel.schedule_event(
+        _event("orbit-2", EventType.ORBIT_UPDATE.value, _state((7000.0, 0.0, 0.0)), 1.0)
+    )
+
+    kernel.run()
+
+    assert [event.event_type for event in metrics.events] == [
+        EventType.ACCESS_START.value,
+        EventType.LINK_UPDATE.value,
+    ]
+
+
+def test_access_link_update_threshold_suppresses_small_changes() -> None:
+    kernel = SimulationKernel()
+    network = PositionDrivenNetworkEngine(
+        endpoints=(
+            GroundEndpoint(
+                endpoint_id="user-east",
+                position=(EARTH_RADIUS_KM, 0.0, 0.0),
+                min_elevation_deg=10.0,
+                max_range_km=2000.0,
+            ),
+        ),
+        compute_node_ids=("node-a",),
+        link_capacity=50.0,
+        propagation_speed_km_s=1000.0,
+        cell_size_km=1000.0,
+        access_link_update_latency_epsilon_s=0.01,
+    )
+    metrics = MetricsSink()
+    kernel.register_module(network)
+    kernel.register_module(metrics)
+    kernel.schedule_event(
+        _event("orbit-1", EventType.ORBIT_UPDATE.value, _state((7000.0, 0.0, 0.0)))
+    )
+    kernel.schedule_event(
+        _event(
+            "orbit-2",
+            EventType.ORBIT_UPDATE.value,
+            _state((7000.005, 0.0, 0.0)),
+            1.0,
+        )
+    )
+
+    kernel.run()
+
+    assert [event.event_type for event in metrics.events] == [
+        EventType.ACCESS_START.value,
+        EventType.LINK_UPDATE.value,
+    ]
+
+
 def test_meter_position_input_can_be_scaled_to_kilometer_geometry() -> None:
     kernel = SimulationKernel()
     network = PositionDrivenNetworkEngine(

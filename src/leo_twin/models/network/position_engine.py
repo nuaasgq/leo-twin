@@ -83,6 +83,8 @@ class PositionDrivenNetworkEngine(SimulationModule):
         space_link_max_range_km: float | None = None,
         space_link_capacity: float | None = None,
         space_link_cell_size_km: float | None = None,
+        access_link_update_latency_epsilon_s: float = 0.0,
+        access_link_update_capacity_epsilon: float = 0.0,
         space_link_update_latency_epsilon_s: float = 0.0,
         space_link_update_capacity_epsilon: float = 0.0,
         position_scale_to_km: float = 1.0,
@@ -104,6 +106,14 @@ class PositionDrivenNetworkEngine(SimulationModule):
             _require_positive_number(space_link_capacity, "space_link_capacity")
         if space_link_cell_size_km is not None:
             _require_positive_number(space_link_cell_size_km, "space_link_cell_size_km")
+        _require_non_negative_number(
+            access_link_update_latency_epsilon_s,
+            "access_link_update_latency_epsilon_s",
+        )
+        _require_non_negative_number(
+            access_link_update_capacity_epsilon,
+            "access_link_update_capacity_epsilon",
+        )
         _require_non_negative_number(
             space_link_update_latency_epsilon_s,
             "space_link_update_latency_epsilon_s",
@@ -156,6 +166,12 @@ class PositionDrivenNetworkEngine(SimulationModule):
             space_link_cell_size_km
             or space_link_max_range_km
             or cell_size_km
+        )
+        self._access_link_update_latency_epsilon_s = float(
+            access_link_update_latency_epsilon_s
+        )
+        self._access_link_update_capacity_epsilon = float(
+            access_link_update_capacity_epsilon
         )
         self._space_link_update_latency_epsilon_s = float(space_link_update_latency_epsilon_s)
         self._space_link_update_capacity_epsilon = float(space_link_update_capacity_epsilon)
@@ -554,6 +570,16 @@ class PositionDrivenNetworkEngine(SimulationModule):
                 key=lambda item: (item.satellite_id, item.endpoint_id),
             )
         )
+        continuing_candidates = tuple(
+            sorted(
+                (
+                    candidate
+                    for candidate in candidates
+                    if (candidate.satellite_id, candidate.endpoint_id) in previous_keys
+                ),
+                key=lambda item: (item.satellite_id, item.endpoint_id),
+            )
+        )
 
         for key in ended_keys:
             previous = self._active_links.pop(key)
@@ -570,6 +596,23 @@ class PositionDrivenNetworkEngine(SimulationModule):
                     dispatch_time=dispatch_time,
                     access_event_type=EventType.ACCESS_END.value,
                     link=ended,
+                )
+            )
+
+        for candidate in continuing_candidates:
+            key = (candidate.satellite_id, candidate.endpoint_id)
+            link = self._link_from_candidate(candidate, availability=True)
+            previous = self._active_links[key]
+            if not self._should_emit_access_link_update(previous, link):
+                continue
+            self._active_links[key] = link
+            self._last_links[key] = link
+            emitted.append(
+                self._event(
+                    dispatch_time=dispatch_time,
+                    target=self._metrics_target,
+                    event_type=EventType.LINK_UPDATE.value,
+                    payload=link,
                 )
             )
 
@@ -847,6 +890,25 @@ class PositionDrivenNetworkEngine(SimulationModule):
         if abs(previous.latency - candidate.latency) > self._space_link_update_latency_epsilon_s:
             return True
         if abs(previous.capacity - candidate.capacity) > self._space_link_update_capacity_epsilon:
+            return True
+        return False
+
+    def _should_emit_access_link_update(
+        self,
+        previous: LinkState,
+        candidate: LinkState,
+    ) -> bool:
+        if previous.availability != candidate.availability:
+            return True
+        if (
+            abs(previous.latency - candidate.latency)
+            > self._access_link_update_latency_epsilon_s
+        ):
+            return True
+        if (
+            abs(previous.capacity - candidate.capacity)
+            > self._access_link_update_capacity_epsilon
+        ):
             return True
         return False
 

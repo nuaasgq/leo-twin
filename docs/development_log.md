@@ -5,6 +5,38 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Continuous Access Link Refresh v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending in this commit
+- Scope: refresh continuing satellite-ground access link latency/capacity when
+  orbit updates move an already-connected satellite-user pair, emitting a
+  deterministic `LINK_UPDATE` without a duplicate `ACCESS_START`. This gives
+  route latency and jitter proxies real time-varying input while preserving the
+  existing event-driven network model.
+- Changed files/modules:
+  - `src/leo_twin/models/network/position_engine.py`
+  - `tests/unit/test_position_driven_network_engine.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_position_driven_network_engine.py -q`
+    - Result: passed, 31 tests.
+  - `python -m pytest tests/unit/test_metrics_module.py::test_metrics_collector_reports_dynamic_network_quality_proxy tests/unit/test_metrics_module.py::test_metrics_collector_publishes_backend_kpi_time_series tests/unit/test_metrics_module.py::test_metrics_collector_kpi_time_series_refreshes_current_tail_sample -q`
+    - Result: passed, 3 tests.
+  - `python -m pytest tests/integration/test_live_runtime_streaming.py::test_http_cursor_batches_return_incremental_events tests/integration/test_orbit_batch_scale.py -q`
+    - Result: passed, 8 tests.
+  - `python -m pytest tests/scale/test_position_network_scale_smoke.py -q`
+    - Result: passed, 1 test.
+  - `git diff --check -- src/leo_twin/models/network/position_engine.py tests/unit/test_position_driven_network_engine.py`
+    - Result: passed.
+- Problems encountered:
+  - Two initially selected metrics test node IDs did not exist; validation was
+    rerun with the actual dynamic network quality and KPI time-series tests.
+- Known remaining issues / follow-up:
+  - This is still a flow-level proxy, not packet-level network simulation.
+    Large-scale scenarios should continue using batched orbit updates and
+    bounded ISL candidates.
+
 ## 2026-07-05 - Dashboard Recent KPI Empty-Window Fallback v1
 
 - Branch: `feature/T164-dashboard-observability-v1`
