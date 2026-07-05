@@ -5,6 +5,43 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Dashboard Detail Window Policy v1
+
+- Branch: `feature/T228-dashboard-detail-window-policy-v1`
+- Commit: pending in this commit
+- Scope: advance V2-053 by making large detail table windowing explicit in the
+  standalone dashboard. The dashboard now reports the active rendered rows,
+  total rows, user/satellite table windows, render budget, and hidden rows
+  waiting for pagination.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/dashboard_detail_window_policy_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 25 test files / 318 tests.
+  - `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite reported the existing large `DataPanel` chunk
+      warning after minification.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - Existing tables already used deterministic pagination. This task avoids a
+    broad table rewrite and instead makes the active render budget visible and
+    testable.
+  - Existing local runtime/generated config files remain dirty and are
+    intentionally not included in this task.
+- Known remaining issues / follow-up:
+  - True continuous virtual scrolling is still future work.
+  - Backend cursor APIs should eventually replace large frontend fallback row
+    merges for very large scenarios.
+  - DataPanel remains a large frontend chunk and should be split after the
+    dashboard layout stabilizes.
+
 ## 2026-07-06 - Dashboard Satellite Detail Drawer v1
 
 - Branch: `feature/T227-dashboard-satellite-detail-drawer-v1`

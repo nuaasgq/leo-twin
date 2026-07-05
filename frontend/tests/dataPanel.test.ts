@@ -11,6 +11,7 @@ import {
   buildDataPanelConfigurationExplanationDisplay,
   buildDataPanelInformationArchitectureDisplay,
   buildDataPanelDetailScopeNotes,
+  buildDataPanelDetailWindowPolicyNote,
   buildDataPanelDisplaySummary,
   buildDataPanelExportCatalogDisplay,
   buildDataPanelExportCompareDisplay,
@@ -5487,6 +5488,40 @@ describe("paginateDetailRows", () => {
 
   it("rejects invalid page sizes", () => {
     expect(() => paginateDetailRows([1, 2, 3], 0, 0)).toThrow(RangeError);
+  });
+
+  it("summarizes the active detail window render budget for 1200 node scenarios", () => {
+    const userPage = paginateDetailRows(
+      Array.from({ length: 300 }, (_, index) => `user-${index}`),
+      0,
+      80
+    );
+    const satellitePage = paginateDetailRows(
+      Array.from({ length: 1200 }, (_, index) => `sat-${index}`),
+      2,
+      120
+    );
+
+    expect(buildDataPanelDetailWindowPolicyNote(userPage, satellitePage)).toEqual({
+      label: "表格窗口化",
+      value: "200 / 1,500 行渲染",
+      detail:
+        "用户窗口 1-80 / 300，上限 80；卫星窗口 241-360 / 1,200，上限 120；渲染预算 200 行；隐藏 1,300 行等待翻页，避免大规模场景一次性展开 DOM。",
+      tone: "limit"
+    });
+  });
+
+  it("marks small filtered detail windows as fully rendered", () => {
+    const userPage = paginateDetailRows(["user-0"], 0, 80);
+    const satellitePage = paginateDetailRows([], 0, 120);
+
+    expect(buildDataPanelDetailWindowPolicyNote(userPage, satellitePage)).toEqual({
+      label: "表格窗口化",
+      value: "1 / 1 行渲染",
+      detail:
+        "用户窗口 1-1 / 1，上限 80；卫星窗口 0 / 0，上限 120；渲染预算 200 行；当前筛选结果可在一屏窗口内完整渲染。",
+      tone: "backend"
+    });
   });
 });
 

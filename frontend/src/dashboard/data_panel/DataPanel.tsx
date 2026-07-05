@@ -456,14 +456,17 @@ export const DataPanel = memo(function DataPanel({
   );
   const userSourceBadge = buildRuntimeDetailSourceBadge(userBusinessRequests.sourceLabel);
   const satelliteSourceBadge = buildRuntimeDetailSourceBadge(satelliteResourceRows.sourceLabel);
-  const detailScopeNotes = buildDataPanelDetailScopeNotes(
-    userBusinessRequests,
-    satelliteResourceRows,
-    userRequestSummary,
-    satelliteServiceSummary,
-    runtimeStatus.satellite_kpi_slices_v1,
-    runtimeStatus.satellite_kpi_history_v1
-  );
+  const detailScopeNotes = [
+    ...buildDataPanelDetailScopeNotes(
+      userBusinessRequests,
+      satelliteResourceRows,
+      userRequestSummary,
+      satelliteServiceSummary,
+      runtimeStatus.satellite_kpi_slices_v1,
+      runtimeStatus.satellite_kpi_history_v1
+    ),
+    buildDataPanelDetailWindowPolicyNote(userDetailWindow, satelliteDetailWindow)
+  ];
   const submitUserConfigurationValidation = async () => {
     if (
       userConfigurationValidatePending ||
@@ -3959,6 +3962,38 @@ export function paginateDetailRows<T>(
     startIndex,
     endIndex
   };
+}
+
+export function buildDataPanelDetailWindowPolicyNote(
+  userPage: DetailRowPage<unknown>,
+  satellitePage: DetailRowPage<unknown>
+): DataPanelDetailScopeNote {
+  const renderedRows = userPage.items.length + satellitePage.items.length;
+  const totalRows = userPage.totalCount + satellitePage.totalCount;
+  const hiddenRows = Math.max(0, totalRows - renderedRows);
+  const configuredWindowRows = userPage.pageSize + satellitePage.pageSize;
+  return {
+    label: "表格窗口化",
+    value: `${formatCount(renderedRows)} / ${formatCount(totalRows)} 行渲染`,
+    detail: [
+      `用户窗口 ${detailWindowRangeLabel(userPage)}`,
+      `卫星窗口 ${detailWindowRangeLabel(satellitePage)}`,
+      `渲染预算 ${formatCount(configuredWindowRows)} 行`,
+      hiddenRows > 0
+        ? `隐藏 ${formatCount(hiddenRows)} 行等待翻页，避免大规模场景一次性展开 DOM。`
+        : "当前筛选结果可在一屏窗口内完整渲染。"
+    ].join("；"),
+    tone: hiddenRows > 0 ? "limit" : "backend"
+  };
+}
+
+function detailWindowRangeLabel(page: DetailRowPage<unknown>): string {
+  if (page.totalCount === 0) {
+    return `0 / 0，上限 ${formatCount(page.pageSize)}`;
+  }
+  return `${formatCount(page.startIndex + 1)}-${formatCount(
+    page.endIndex
+  )} / ${formatCount(page.totalCount)}，上限 ${formatCount(page.pageSize)}`;
 }
 
 function mergeUserBusinessRequestRows(

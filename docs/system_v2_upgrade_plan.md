@@ -218,6 +218,10 @@ Tasks:
 - V2-053: Add virtualized large tables.
   - Scope: avoid rendering hundreds/thousands of rows directly.
   - Depends on: V2-043.
+  - Status: T228 adds dashboard detail window policy v1. The dashboard now
+    exposes the active user/satellite table render budget and verifies that
+    1200-node scenarios render only the current bounded windows. True
+    continuous virtual scrolling or backend cursor APIs remain follow-up work.
 - V2-054: Add model assumptions panel.
   - Scope: backend-derived model caveats, fidelity mode, KPI provenance.
   - Depends on: V2-003, V2-021.
