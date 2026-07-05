@@ -237,6 +237,11 @@ Tasks:
 
 - V2-070: Define benchmark scenarios.
   - Scope: 72, 300, 1200 baseline configs with expected ranges.
+  - Status: T217 adds backend-owned
+    `leo_twin.benchmark_scenario_matrix.v1`, resolving the shipped 72/300/1200
+    acceptance YAML files into deterministic scenario specs with expected
+    fidelity modes, compact backend summaries, exact numeric guardrails, result
+    artifact expectations, and acceptance command shapes.
 - V2-071: Add model verification report template.
   - Scope: formulas, assumptions, boundary conditions, deterministic seed,
     expected outputs.

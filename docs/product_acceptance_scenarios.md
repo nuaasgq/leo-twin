@@ -7,6 +7,11 @@ product acceptance smoke tests. They are not local runtime output files.
 
 ## Scenario Matrix
 
+Backend source of truth: `leo_twin.services.benchmark_scenarios`.
+The exported matrix id is `leo_twin.benchmark_scenario_matrix.v1`; see
+`docs/benchmark_scenario_matrix_v1.md` for the structured fields and expected
+ranges.
+
 | Scenario | Config | Satellites | Users | Compute nodes | Orbit mode | Metrics mode | Space link mode | Duration | Seed |
 | --- | --- | ---: | ---: | ---: | --- | --- | --- | ---: | ---: |
 | small_demo_72sat | `configs/acceptance/small_demo_72sat.yaml` | 72 | 1000 | 72 | `PER_SATELLITE` | `DETAILED` | `DETAILED_SMALL_SCALE` | 120 s | 20260705 |

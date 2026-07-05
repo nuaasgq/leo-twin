@@ -1,0 +1,90 @@
+# Benchmark Scenario Matrix v1
+
+Date: 2026-07-06
+Branch: `feature/T217-benchmark-scenario-matrix-v1`
+
+`benchmark_scenario_matrix_v1` is the backend-owned source of truth for the
+current product acceptance benchmark set. It does not create new simulation
+behavior. It resolves the shipped acceptance YAML files through the normal SEES
+configuration loader and records deterministic expectations for scale,
+fidelity, traffic, compute, and artifact generation.
+
+## Matrix Source
+
+Python API:
+
+```python
+from leo_twin.services.benchmark_scenarios import (
+    benchmark_scenario_matrix_v1_to_dict,
+)
+
+matrix = benchmark_scenario_matrix_v1_to_dict()
+```
+
+Matrix id:
+
+```text
+leo_twin.benchmark_scenario_matrix.v1
+```
+
+## Baseline Scenarios
+
+| Scenario | Config | Purpose | Expected fidelity |
+| --- | --- | --- | --- |
+| `small_demo_72sat` | `configs/acceptance/small_demo_72sat.yaml` | detailed control-plane and dashboard semantic baseline | orbit `PER_SATELLITE`, metrics `DETAILED`, ISL `DETAILED_SMALL_SCALE` |
+| `medium_demo_300sat` | `configs/acceptance/medium_demo_300sat.yaml` | scale transition baseline for batch orbit updates | orbit `BATCH`, metrics `DETAILED`, ISL `BOUNDED_CANDIDATE` |
+| `scale_demo_1200sat_short` | `configs/acceptance/scale_demo_1200sat_short.yaml` | large-scale live-control responsiveness baseline | orbit `BATCH`, metrics `AGGREGATED`, ISL `BOUNDED_CANDIDATE` |
+
+## Expected Ranges
+
+Each scenario exposes exact numeric guardrails derived from its YAML config:
+
+- `satellite_count`
+- `user_count`
+- `compute_node_count`
+- `runtime_duration_s`
+- `orbit_update_interval_s`
+- `plane_count`
+- `flow_interval_s`
+- `task_interval_s`
+- `flow_demand_capacity_mbps`
+- `task_compute_demand`
+- `task_data_size_mb`
+- `max_space_link_candidates_per_satellite`
+- `batch_space_link_update_limit`
+
+These ranges are acceptance guardrails, not claims of physical accuracy. They
+are intended to catch unintended drift in shipped benchmark inputs and backend
+derived semantics.
+
+## Acceptance Command
+
+Each scenario records the command shape used for product acceptance:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify_product_acceptance.ps1 -AcceptanceConfig configs/acceptance/small_demo_72sat.yaml
+```
+
+The config path changes per scenario.
+
+## Scope Boundaries
+
+The benchmark matrix keeps the same hard product constraints as the rest of
+SEES:
+
+- Event Kernel behavior is not modified.
+- STK, EXATA, AFSIM, and DDS are forbidden.
+- Packet-level simulation is not introduced.
+- Benchmarks use deterministic flow-level abstractions.
+- Large-scale fidelity degradation is reported by backend policy, not inferred
+  by the frontend.
+
+## Required Result Artifacts
+
+Future result-package work should bind benchmark runs to these artifacts:
+
+- config snapshot
+- `events.jsonl`
+- `metrics.csv`
+- `summary.json`
+- runtime log

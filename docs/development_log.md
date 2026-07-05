@@ -5,6 +5,47 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Benchmark Scenario Matrix v1
+
+- Branch: `feature/T217-benchmark-scenario-matrix-v1`
+- Commit: pending in this commit
+- Scope: advance V2-070 by adding a backend-owned benchmark scenario matrix for
+  the shipped 72, 300, and 1200 satellite acceptance configurations. The matrix
+  resolves existing YAML through the SEES config loader, records expected
+  fidelity modes, compact backend-derived summaries, exact numeric guardrails,
+  acceptance command shapes, result artifact expectations, and explicit
+  forbidden integration boundaries.
+- Changed files/modules:
+  - `src/leo_twin/services/benchmark_scenarios.py`
+  - `tests/unit/test_benchmark_scenario_matrix_v1.py`
+  - `docs/benchmark_scenario_matrix_v1.md`
+  - `docs/product_acceptance_scenarios.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src/leo_twin/services/benchmark_scenarios.py`
+    - Result: passed.
+  - `python -m pytest tests/unit/test_benchmark_scenario_matrix_v1.py -q`
+    - Result: passed, 8 tests.
+  - `python -m pytest tests/integration/test_product_acceptance_scenarios.py::test_acceptance_scenarios_leave_event_kernel_unchanged -q`
+    - Result: passed, 1 test.
+  - `python -m pytest tests/integration/test_product_acceptance_scenarios.py -q`
+    - Result: passed, 5 tests.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - This task intentionally does not add new simulation behavior. It creates a
+    reusable acceptance matrix over existing shipped configs to avoid another
+    hand-maintained tuple/table drift source.
+  - Local runtime/generated config files remain dirty and are intentionally not
+    included in this task.
+- Known remaining issues / follow-up:
+  - V2-071 should add a model verification report template that consumes this
+    matrix and records formulas, assumptions, boundary conditions, and expected
+    outputs per benchmark.
+  - V2-072 should extend acceptance tests from structural guardrails to
+    deterministic summary and KPI range checks.
+
 ## 2026-07-06 - Cache Offload Migration Contracts v1
 
 - Branch: `feature/T216-cache-offload-migration-contracts-v1`
