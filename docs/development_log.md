@@ -6616,3 +6616,43 @@ change.
 - Recommended follow-up:
   - Add a backend endpoint or CLI workflow for selecting a user-provided
     detailed config file without editing local runtime-generated files.
+
+## 2026-07-05 - Network KPI Component Tail v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: extend backend `kpi_time_series_v1` samples with deterministic
+  flow-level network KPI component fields already computed by MetricsCollector:
+  route capacity/demand, available demand, demand and throughput pressure,
+  route latency, route loss, blocking, failed-flow ratio, congestion, demand
+  loss, pressure loss, route/flow/pressure delay variation, effective available
+  throughput, and delivered flow capacity. The standalone dashboard now displays
+  a latest-sample component tail so users can see whether network KPI changes
+  come from demand pressure, route loss, or pressure/jitter proxies. Event
+  Kernel and network model behavior are unchanged; this is an observation
+  contract enhancement.
+- Changed files/modules:
+  - `src/leo_twin/services/metrics/collector.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `tests/unit/test_metrics_module.py`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_metrics_module.py::test_metrics_collector_publishes_backend_kpi_time_series tests/unit/test_metrics_module.py::test_metrics_collector_kpi_time_series_refreshes_current_tail_sample tests/unit/test_metrics_module.py::test_metrics_collector_reports_recent_flow_kpi_window -q`
+    - Result: passed, 3 tests.
+  - `pnpm --dir frontend exec vitest run dataPanel.test.ts`
+    - Result: passed, 1 file / 72 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed.
+  - `pnpm --dir frontend test`
+    - Result: passed, 25 files / 235 tests.
+- Problems encountered:
+  - None. The added fields are copied from existing MetricsCollector summaries
+    and do not introduce packet-level simulation.
+- Known remaining issues:
+  - The dashboard still shows flow-level proxy semantics. It does not model
+    packet retransmission, RF fading samples, or queueing at packet granularity.
+- Recommended follow-up:
+  - Add acceptance scenarios proving KPI component tails vary over time for
+    different traffic demand and transport profiles.

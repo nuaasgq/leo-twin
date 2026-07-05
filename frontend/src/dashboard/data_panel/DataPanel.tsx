@@ -132,6 +132,9 @@ export const DataPanel = memo(function DataPanel({
   const networkFormulaInputs = buildDataPanelNetworkFormulaInputs(
     runtimeStatus.metrics_summary
   );
+  const networkComponentTail = buildDataPanelNetworkComponentTail(
+    runtimeStatus.kpi_time_series_v1
+  );
   const serviceLatency = buildDataPanelServiceLatencyDisplay(
     runtimeStatus.metrics_summary
   );
@@ -326,6 +329,15 @@ export const DataPanel = memo(function DataPanel({
           {networkFormulaInputs.length > 0 ? (
             <div className="data-panel-formula-inputs" aria-label="网络KPI公式输入">
               {networkFormulaInputs.map((input) => (
+                <span key={input.label}>
+                  {input.label} <strong>{input.value}</strong>
+                </span>
+              ))}
+            </div>
+          ) : null}
+          {networkComponentTail.length > 0 ? (
+            <div className="data-panel-formula-inputs" aria-label="网络KPI时间序列分解尾点">
+              {networkComponentTail.map((input) => (
                 <span key={input.label}>
                   {input.label} <strong>{input.value}</strong>
                 </span>
@@ -2944,6 +2956,19 @@ function metricInput(
       };
 }
 
+function sampleMetricInput(
+  value: number | undefined,
+  label: string,
+  format: (value: number) => string
+): DataPanelNetworkFormulaInput | null {
+  return typeof value === "number" && Number.isFinite(value)
+    ? {
+        label,
+        value: format(value)
+      }
+    : null;
+}
+
 function formatMetricMbps(value: number): string {
   return `${formatMetricValue(value)} Mbps`;
 }
@@ -3478,6 +3503,40 @@ export function buildDataPanelNetworkFormulaInputs(
     metricInput(metrics, "network_quality_route_loss_proxy_rate", "路由损耗", formatRatioPercent),
     metricInput(metrics, "network_quality_congestion_proxy", "拥塞代理", formatRatioPercent),
     metricInput(metrics, "network_quality_demand_pressure_proxy", "业务压力", formatRatioPercent)
+  ].filter((input): input is DataPanelNetworkFormulaInput => input !== null);
+}
+
+export function buildDataPanelNetworkComponentTail(
+  backendKpiTimeSeries: RuntimeKpiTimeSeriesV1 | null | undefined
+): readonly DataPanelNetworkFormulaInput[] {
+  const sample = latestRuntimeKpiSample(backendKpiTimeSeries);
+  if (sample === null) {
+    return [];
+  }
+  return [
+    sampleMetricInput(sample.network_offered_route_capacity_mbps, "样本路由容量", formatMetricMbps),
+    sampleMetricInput(
+      sample.network_requested_route_demand_mbps,
+      "样本请求需求",
+      formatMetricMbps
+    ),
+    sampleMetricInput(sample.network_demand_pressure_proxy, "样本需求压力", formatRatioPercent),
+    sampleMetricInput(sample.network_route_loss_proxy_rate, "样本路由损耗", formatRatioPercent),
+    sampleMetricInput(
+      sample.network_pressure_loss_proxy_rate,
+      "样本压力损耗",
+      formatRatioPercent
+    ),
+    sampleMetricInput(
+      sample.network_route_delay_variation_s,
+      "样本路由抖动",
+      formatMetricMilliseconds
+    ),
+    sampleMetricInput(
+      sample.network_pressure_delay_variation_s,
+      "样本压力抖动",
+      formatMetricMilliseconds
+    )
   ].filter((input): input is DataPanelNetworkFormulaInput => input !== null);
 }
 

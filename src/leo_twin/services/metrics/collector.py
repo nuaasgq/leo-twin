@@ -585,17 +585,65 @@ class MetricsCollector:
             "network_requested_route_demand_mbps": float(
                 network_summary["network_quality_requested_route_demand_mbps"]
             ),
+            "network_offered_route_capacity_mbps": float(
+                network_summary["network_quality_offered_route_capacity_mbps"]
+            ),
+            "network_available_route_demand_mbps": float(
+                network_summary["network_quality_available_route_demand_mbps"]
+            ),
             "network_demand_pressure_proxy": float(
                 network_summary["network_quality_demand_pressure_proxy"]
+            ),
+            "network_throughput_pressure_proxy": float(
+                network_summary["network_quality_throughput_pressure_proxy"]
             ),
             "network_effective_latency_s": float(
                 network_summary["network_quality_effective_latency_avg_s"]
             ),
+            "network_route_latency_avg_s": float(
+                network_summary["network_quality_route_latency_avg_s"]
+            ),
             "network_effective_loss_proxy_rate": float(
                 network_summary["network_quality_effective_loss_proxy_rate"]
             ),
+            "network_route_loss_proxy_rate": float(
+                network_summary["network_quality_route_loss_proxy_rate"]
+            ),
+            "network_route_blocking_ratio": float(
+                network_summary["network_quality_route_blocking_ratio"]
+            ),
+            "network_failed_flow_ratio": float(
+                network_summary["network_quality_failed_flow_ratio"]
+            ),
+            "network_congestion_proxy": float(
+                network_summary["network_quality_congestion_proxy"]
+            ),
+            "network_congestion_loss_proxy_rate": float(
+                network_summary["network_quality_congestion_loss_proxy_rate"]
+            ),
+            "network_demand_loss_proxy_rate": float(
+                network_summary["network_quality_demand_loss_proxy_rate"]
+            ),
+            "network_pressure_loss_proxy_rate": float(
+                network_summary["network_quality_pressure_loss_proxy_rate"]
+            ),
             "network_effective_delay_variation_s": float(
                 network_summary["network_quality_effective_delay_variation_proxy_s"]
+            ),
+            "network_route_delay_variation_s": float(
+                network_summary["network_quality_delay_variation_proxy_s"]
+            ),
+            "network_flow_delay_variation_s": float(
+                network_summary["network_quality_flow_latency_variation_proxy_s"]
+            ),
+            "network_pressure_delay_variation_s": float(
+                network_summary["network_quality_pressure_delay_variation_proxy_s"]
+            ),
+            "network_effective_available_throughput_mbps": float(
+                network_summary["network_quality_effective_available_throughput_mbps"]
+            ),
+            "network_flow_delivered_capacity_mbps": float(
+                network_summary["network_quality_flow_delivered_capacity_mbps"]
             ),
             "network_recent_window_s": float(_RECENT_FLOW_KPI_WINDOW_S),
             "network_recent_flow_count": float(recent_flow_count),

@@ -8,6 +8,7 @@ import {
   buildDataPanelConfiguredScale,
   buildDataPanelDisplaySummary,
   buildDataPanelNetworkFormulaInputs,
+  buildDataPanelNetworkComponentTail,
   buildDataPanelNetworkKpiCaveats,
   buildDataPanelNetworkKpiProvenanceItems,
   buildDataPanelNetworkKpiSource,
@@ -815,6 +816,45 @@ describe("buildDataPanelNetworkFormulaInputs", () => {
 
   it("hides formula inputs when backend metrics are absent", () => {
     expect(buildDataPanelNetworkFormulaInputs(null)).toEqual([]);
+  });
+});
+
+describe("buildDataPanelNetworkComponentTail", () => {
+  it("formats backend KPI time-series component tail fields", () => {
+    expect(
+      buildDataPanelNetworkComponentTail({
+        version: "v1",
+        samples: [
+          {
+            sim_time: 12,
+            network_effective_throughput_mbps: 88,
+            network_requested_route_demand_mbps: 90,
+            network_offered_route_capacity_mbps: 100,
+            network_demand_pressure_proxy: 0.9,
+            network_effective_latency_s: 0.12,
+            network_effective_loss_proxy_rate: 0.08,
+            network_route_loss_proxy_rate: 0.03,
+            network_pressure_loss_proxy_rate: 0.08,
+            network_effective_delay_variation_s: 0.014,
+            network_route_delay_variation_s: 0.01,
+            network_pressure_delay_variation_s: 0.004,
+            compute_resource_used_gflops_fp32: 12
+          }
+        ]
+      })
+    ).toEqual([
+      { label: "样本路由容量", value: "100 Mbps" },
+      { label: "样本请求需求", value: "90 Mbps" },
+      { label: "样本需求压力", value: "90%" },
+      { label: "样本路由损耗", value: "3%" },
+      { label: "样本压力损耗", value: "8%" },
+      { label: "样本路由抖动", value: "10 ms" },
+      { label: "样本压力抖动", value: "4 ms" }
+    ]);
+  });
+
+  it("hides component tail fields until backend time-series samples exist", () => {
+    expect(buildDataPanelNetworkComponentTail(undefined)).toEqual([]);
   });
 });
 

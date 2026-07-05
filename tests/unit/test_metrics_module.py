@@ -765,10 +765,26 @@ def test_metrics_collector_publishes_backend_kpi_time_series() -> None:
         "sim_time": 2.0,
         "network_effective_throughput_mbps": 100.0,
         "network_requested_route_demand_mbps": 0.0,
+        "network_offered_route_capacity_mbps": 100.0,
+        "network_available_route_demand_mbps": 0.0,
         "network_demand_pressure_proxy": 0.0,
+        "network_throughput_pressure_proxy": 0.0,
         "network_effective_latency_s": 0.02,
+        "network_route_latency_avg_s": 0.02,
         "network_effective_loss_proxy_rate": 0.0,
+        "network_route_loss_proxy_rate": 0.0,
+        "network_route_blocking_ratio": 0.0,
+        "network_failed_flow_ratio": 0.0,
+        "network_congestion_proxy": 0.0,
+        "network_congestion_loss_proxy_rate": 0.0,
+        "network_demand_loss_proxy_rate": 0.0,
+        "network_pressure_loss_proxy_rate": 0.0,
         "network_effective_delay_variation_s": 0.0,
+        "network_route_delay_variation_s": 0.0,
+        "network_flow_delay_variation_s": 0.0,
+        "network_pressure_delay_variation_s": 0.0,
+        "network_effective_available_throughput_mbps": 100.0,
+        "network_flow_delivered_capacity_mbps": 0.0,
         "network_recent_window_s": 60.0,
         "network_recent_flow_count": 0.0,
         "network_recent_delivered_throughput_mbps": 0.0,
@@ -839,6 +855,8 @@ def test_metrics_collector_kpi_time_series_refreshes_current_tail_sample() -> No
     assert series["tail_sample_source_label"] == "当前指标摘要同步"
     assert series["samples"][-1]["sim_time"] == 2.0
     assert series["samples"][-1]["network_effective_loss_proxy_rate"] == 0.12
+    assert series["samples"][-1]["network_route_loss_proxy_rate"] == 0.12
+    assert series["samples"][-1]["network_pressure_loss_proxy_rate"] == 0.0
     assert series["samples"][-1][
         "network_effective_delay_variation_s"
     ] == collector.summary()["network_quality_effective_delay_variation_proxy_s"]
@@ -920,6 +938,8 @@ def test_metrics_collector_reports_recent_flow_kpi_window() -> None:
     assert recent["network_recent_latency_s"] == pytest.approx(0.15)
     assert recent["network_recent_loss_proxy_rate"] == pytest.approx(1 / 3)
     assert recent["network_recent_delay_variation_s"] == pytest.approx(0.05)
+    assert recent["network_flow_delivered_capacity_mbps"] == pytest.approx(140.0)
+    assert recent["network_flow_delay_variation_s"] == pytest.approx(0.05)
 
     expired = collector.kpi_time_series(sim_time=111.0)["samples"][-1]
     assert expired["network_recent_flow_count"] == 0.0
