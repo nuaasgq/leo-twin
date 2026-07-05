@@ -71,6 +71,7 @@ scenario:
     telemetry_weight: 0.0
     bulk_downlink_weight: 0.0
     compute_service_weight: 0.0
+    emergency_weight: 0.0
 
 network:
   # Layered flow-level network profile. These protocol names affect deterministic

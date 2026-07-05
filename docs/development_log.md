@@ -12066,3 +12066,80 @@ change.
 - Recommended follow-up:
   - Add a dashboard export catalog view with a compact table of prior packages,
     archive hashes, simulation time, and package ids.
+
+## 2026-07-06 - Service Mix Active State v2
+
+- Branch: `feature/T254-service-mix-active-state-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: complete V2-012 service mix profiles by adding `EMERGENCY` as a
+  deterministic flow-level service class, exposing default-zero emergency
+  service-mix weights through user configuration, propagating the weight through
+  scenario builder and integration demo adapters, and adding backend-owned
+  service mix summaries with per-user active service state rows. Event Kernel
+  behavior, network routing, compute scheduling, metrics formulas, and frontend
+  rendering remain unchanged.
+- Changed files/modules:
+  - `src/leo_twin/models/traffic/demand.py`
+  - `src/leo_twin/schema/service_request_contract.py`
+  - `src/leo_twin/schema/config.py`
+  - `src/leo_twin/schema/config_loader.py`
+  - `src/leo_twin/services/derived_summary.py`
+  - `src/leo_twin/services/scenario_builder.py`
+  - `src/leo_twin/services/configuration_schema.py`
+  - `examples/integration_demo/config.py`
+  - `examples/integration_demo/scenario.py`
+  - `configs/templates/sees_user_detailed.example.yaml`
+  - `configs/templates/sees_user_dynamic_observability.example.yaml`
+  - `configs/templates/sees_user_network_stress_120.example.yaml`
+  - `configs/templates/sees_user_large_scale_1200.example.yaml`
+  - `configs/integration_demo.yaml`
+  - `configs/acceptance/network_stress_dynamic_72sat.yaml`
+  - `tests/unit/test_traffic_demand_model.py`
+  - `tests/unit/test_service_request_contract_v2.py`
+  - `tests/unit/test_backend_derived_summary.py`
+  - `tests/unit/test_configuration_view.py`
+  - `tests/unit/test_user_configuration_schema_v2.py`
+  - `tests/unit/test_integration_demo_scenario.py`
+  - `tests/unit/test_scenario_builder.py`
+  - `tests/integration/test_config_control.py`
+  - `tests/integration/test_product_acceptance_scenarios.py`
+  - `docs/service_mix_active_state_v2.md`
+  - `docs/service_request_contract_v2.md`
+  - `docs/product_contracts.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_traffic_demand_model.py tests/unit/test_service_request_contract_v2.py -q`
+    - Result: passed, 16 tests.
+  - `python -m pytest tests/unit/test_integration_demo_scenario.py -q`
+    - Result: passed, 15 tests.
+  - `python -m pytest tests/unit/test_backend_derived_summary.py tests/unit/test_configuration_view.py tests/unit/test_user_configuration_schema_v2.py -q`
+    - Result: passed, 24 tests.
+  - `python -m pytest tests/unit/test_scenario_builder.py::test_scenario_builder_config_from_sees_config_maps_control_plane_fields -q`
+    - Result: passed, 1 test.
+  - `python -m pytest tests/integration/test_config_control.py::test_frontend_control_messages_are_processed -q`
+    - Result: passed, 1 test.
+  - `python -m pytest tests/integration/test_product_acceptance_scenarios.py -q`
+    - Result: passed, 5 tests.
+  - `python -m pytest tests/integration/test_runtime_session_control.py::test_runtime_kpi_series_exposes_initial_baseline_for_single_live_sample -q`
+    - Result: passed, 1 test.
+- Problems encountered:
+  - Several exact expected service-mix dictionaries still assumed four service
+    classes. They were updated to include default-zero `EMERGENCY` while
+    preserving the previous request allocation for existing classes.
+  - Integration demo used an independent `DemoConfig` and hand-built frontend
+    config, so `traffic_emergency_weight` had to be propagated separately from
+    the SEES config schema path.
+  - The full `tests/integration/test_config_control.py` file exceeded the local
+    timeout during validation. Targeted control-message coverage passed. The
+    unrelated `test_config_loads_correctly` still reflects local dirty
+    `configs/sees_control.yaml` values and is not part of this commit scope.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - `EMERGENCY` is currently a flow-level service class only. It does not yet
+    implement retry, preemption, deadline scheduling, or emergency-specific KPI
+    formulas.
+- Recommended follow-up:
+  - Start V2-013 service lifecycle trace so active service rows can reference a
+    runtime lifecycle timeline instead of only generated demand records.

@@ -137,6 +137,7 @@ def test_network_stress_acceptance_scenario_drives_dynamic_kpis(
         "TELEMETRY": 2,
         "BULK_DOWNLINK": 2,
         "COMPUTE_SERVICE": 4,
+        "EMERGENCY": 0,
     }
 
     start_ack = control_plane.handle_raw_message(

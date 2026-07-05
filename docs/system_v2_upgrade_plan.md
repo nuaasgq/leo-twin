@@ -106,6 +106,11 @@ Tasks:
   - Scope: telemetry, bulk downlink, data transfer, compute service, emergency.
   - Output: summary counts and per-user active service state.
   - Depends on: V2-010, V2-011.
+  - Status: T254 adds `EMERGENCY` as a deterministic flow-level service class,
+    propagates `emergency_weight` through user config, scenario builder,
+    integration demo, backend-derived summaries, and service request contracts,
+    and adds `TrafficDemandBatch.service_mix_summary()` with per-user active
+    service state rows.
 - V2-013: Add service lifecycle trace.
   - Scope: input flow, queue, compute, output flow, terminal state.
   - Output: timeline records for dashboard and result export.

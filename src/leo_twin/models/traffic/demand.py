@@ -18,6 +18,7 @@ class TrafficClass(StrEnum):
     TELEMETRY = "TELEMETRY"
     BULK_DOWNLINK = "BULK_DOWNLINK"
     COMPUTE_SERVICE = "COMPUTE_SERVICE"
+    EMERGENCY = "EMERGENCY"
 
 
 class TrafficDestinationType(StrEnum):
@@ -316,6 +317,40 @@ class TrafficDemandBatch:
             for index, (arrival_time, task) in enumerate(task_items)
         )
 
+    def service_mix_summary(self) -> dict[str, object]:
+        """Return deterministic aggregate and per-user service state."""
+
+        counts = {
+            traffic_class.value: sum(
+                1 for record in self.records if record.traffic_class == traffic_class
+            )
+            for traffic_class in TrafficClass
+        }
+        active_classes = tuple(
+            traffic_class.value
+            for traffic_class in TrafficClass
+            if counts[traffic_class.value] > 0
+        )
+        return {
+            "version": "v2",
+            "summary_id": "leo_twin.traffic_service_mix_summary.v2",
+            "generated_request_count": len(self.records),
+            "generated_request_counts": counts,
+            "active_service_classes": active_classes,
+            "per_user_active_service_state": self.per_user_active_service_state(),
+        }
+
+    def per_user_active_service_state(self) -> tuple[dict[str, object], ...]:
+        """Return deterministic per-source service state rows."""
+
+        by_user: dict[str, list[TrafficDemandRecord]] = {}
+        for record in self.records:
+            by_user.setdefault(record.input_flow.source_id, []).append(record)
+        return tuple(
+            _per_user_active_service_state(user_id, tuple(by_user[user_id]))
+            for user_id in sorted(by_user)
+        )
+
 
 @dataclass(frozen=True)
 class TrafficDemandConfig:
@@ -353,6 +388,15 @@ class TrafficServiceMixItem:
     output_data_mb: float = 0.0
     application_id: str | None = None
     output_destination_ids: tuple[str, ...] = ()
+    arrival_profile: TrafficArrivalProfile | str = TrafficArrivalProfile.PERIODIC
+    seed: int = 0
+    burst_size: int = 1
+    burst_spacing: float = 0.0
+    diurnal_period: float = 86_400.0
+    diurnal_peak_time: float = 0.0
+    diurnal_amplitude: float = 0.0
+    source_region_weights: tuple[float, ...] = ()
+    destination_region_weights: tuple[float, ...] = ()
 
     def __post_init__(self) -> None:
         if not isinstance(self.traffic_class, TrafficClass):
@@ -365,6 +409,12 @@ class TrafficServiceMixItem:
         if not isinstance(destination_type, TrafficDestinationType):
             destination_type = TrafficDestinationType(str(destination_type))
         object.__setattr__(self, "destination_type", destination_type)
+        if not isinstance(self.arrival_profile, TrafficArrivalProfile):
+            object.__setattr__(
+                self,
+                "arrival_profile",
+                TrafficArrivalProfile(str(self.arrival_profile)),
+            )
         object.__setattr__(
             self,
             "source_ids",
@@ -385,6 +435,30 @@ class TrafficServiceMixItem:
         _require_non_negative_number(self.output_data_size, "output_data_size")
         _require_int(self.priority, "priority")
         _require_non_negative_number(self.compute_demand, "compute_demand")
+        _require_int(self.seed, "seed")
+        _require_positive_int(self.burst_size, "burst_size")
+        _require_non_negative_number(self.burst_spacing, "burst_spacing")
+        _require_positive_number(self.diurnal_period, "diurnal_period")
+        _require_non_negative_number(self.diurnal_peak_time, "diurnal_peak_time")
+        _require_probability(self.diurnal_amplitude, "diurnal_amplitude")
+        object.__setattr__(
+            self,
+            "source_region_weights",
+            _normalize_weight_tuple(
+                self.source_region_weights,
+                "source_region_weights",
+                expected_length=len(self.source_ids),
+            ),
+        )
+        object.__setattr__(
+            self,
+            "destination_region_weights",
+            _normalize_weight_tuple(
+                self.destination_region_weights,
+                "destination_region_weights",
+                expected_length=len(self.destination_ids),
+            ),
+        )
         for field_name in (
             "cpu_ops",
             "fp32_ops",
@@ -534,6 +608,15 @@ def _service_mix_item_to_profile(
         application_id=item.application_id,
         id_prefix=id_prefix,
         output_destination_ids=item.output_destination_ids,
+        arrival_profile=item.arrival_profile,
+        seed=item.seed,
+        burst_size=item.burst_size,
+        burst_spacing=item.burst_spacing,
+        diurnal_period=item.diurnal_period,
+        diurnal_peak_time=item.diurnal_peak_time,
+        diurnal_amplitude=item.diurnal_amplitude,
+        source_region_weights=item.source_region_weights,
+        destination_region_weights=item.destination_region_weights,
     )
 
 
@@ -543,6 +626,8 @@ def _default_destination_type(traffic_class: TrafficClass) -> TrafficDestination
     if traffic_class == TrafficClass.BULK_DOWNLINK:
         return TrafficDestinationType.GROUND_ENDPOINT
     if traffic_class == TrafficClass.TELEMETRY:
+        return TrafficDestinationType.SERVICE_ENDPOINT
+    if traffic_class == TrafficClass.EMERGENCY:
         return TrafficDestinationType.SERVICE_ENDPOINT
     return TrafficDestinationType.GROUND_ENDPOINT
 
@@ -733,6 +818,69 @@ def _compute_service_record(
         task=task,
         output_flow=output_flow,
     )
+
+
+def _per_user_active_service_state(
+    user_id: str,
+    records: tuple[TrafficDemandRecord, ...],
+) -> dict[str, object]:
+    if not records:
+        raise ValueError("records must not be empty")
+    ordered_records = tuple(
+        sorted(
+            records,
+            key=lambda record: (
+                record.arrival_time,
+                _service_id_from_record(record),
+            ),
+        )
+    )
+    primary_record = min(
+        ordered_records,
+        key=lambda record: (
+            -record.input_flow.priority,
+            record.arrival_time,
+            _service_id_from_record(record),
+        ),
+    )
+    service_classes = tuple(
+        traffic_class.value
+        for traffic_class in TrafficClass
+        if any(record.traffic_class == traffic_class for record in ordered_records)
+    )
+    task_ids = tuple(
+        record.task.task_id
+        for record in ordered_records
+        if record.task is not None
+    )
+    output_flow_ids = tuple(
+        record.output_flow.flow_id
+        for record in ordered_records
+        if record.output_flow is not None
+    )
+    return {
+        "user_id": user_id,
+        "request_count": len(ordered_records),
+        "service_classes": service_classes,
+        "primary_service_class": primary_record.traffic_class.value,
+        "max_priority": max(record.input_flow.priority for record in ordered_records),
+        "first_arrival_time": ordered_records[0].arrival_time,
+        "last_arrival_time": ordered_records[-1].arrival_time,
+        "flow_ids": tuple(record.input_flow.flow_id for record in ordered_records),
+        "task_ids": task_ids,
+        "output_flow_ids": output_flow_ids,
+        "total_input_data_mb": sum(record.input_data_size for record in ordered_records),
+        "total_output_data_mb": sum(record.output_data_size for record in ordered_records),
+    }
+
+
+def _service_id_from_record(record: TrafficDemandRecord) -> str:
+    flow_id = record.input_flow.flow_id
+    if record.traffic_class == TrafficClass.COMPUTE_SERVICE and flow_id.endswith(
+        "-input",
+    ):
+        return flow_id[: -len("-input")]
+    return flow_id
 
 
 def _normalize_non_empty_str_tuple(values: tuple[str, ...], field_name: str) -> tuple[str, ...]:

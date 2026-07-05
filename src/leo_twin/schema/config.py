@@ -61,6 +61,7 @@ class TrafficClassConfig(StrEnum):
     TELEMETRY = "TELEMETRY"
     BULK_DOWNLINK = "BULK_DOWNLINK"
     COMPUTE_SERVICE = "COMPUTE_SERVICE"
+    EMERGENCY = "EMERGENCY"
 
 
 class TrafficDestinationTypeConfig(StrEnum):
@@ -118,6 +119,7 @@ class TrafficModel:
     telemetry_weight: float = 0.0
     bulk_downlink_weight: float = 0.0
     compute_service_weight: float = 0.0
+    emergency_weight: float = 0.0
 
     def __post_init__(self) -> None:
         _require_positive_int(self.flow_interval_seconds, "traffic_model.flow_interval_seconds")
@@ -142,6 +144,7 @@ class TrafficModel:
             "telemetry_weight",
             "bulk_downlink_weight",
             "compute_service_weight",
+            "emergency_weight",
         ):
             _require_non_negative_finite(
                 getattr(self, field_name),
@@ -174,6 +177,7 @@ class TrafficModel:
             TrafficClassConfig.TELEMETRY.value: self.telemetry_weight,
             TrafficClassConfig.BULK_DOWNLINK.value: self.bulk_downlink_weight,
             TrafficClassConfig.COMPUTE_SERVICE.value: self.compute_service_weight,
+            TrafficClassConfig.EMERGENCY.value: self.emergency_weight,
         }
 
 

@@ -272,6 +272,7 @@ def _backend_summary(
         traffic_telemetry_weight=config.traffic_telemetry_weight,
         traffic_bulk_downlink_weight=config.traffic_bulk_downlink_weight,
         traffic_compute_service_weight=config.traffic_compute_service_weight,
+        traffic_emergency_weight=config.traffic_emergency_weight,
         compute_cpu_gflops_fp64=config.compute_cpu_gflops_fp64,
         compute_gpu_tflops_fp32=config.compute_gpu_tflops_fp32,
         compute_gpu_tflops_fp16=config.compute_gpu_tflops_fp16,
@@ -553,6 +554,7 @@ def _traffic_service_mix_weights(
         (TrafficClass.TELEMETRY, config.traffic_telemetry_weight),
         (TrafficClass.BULK_DOWNLINK, config.traffic_bulk_downlink_weight),
         (TrafficClass.COMPUTE_SERVICE, config.traffic_compute_service_weight),
+        (TrafficClass.EMERGENCY, config.traffic_emergency_weight),
     )
     if sum(weight for _, weight in weights) <= 0.0:
         return None
@@ -679,6 +681,7 @@ def _traffic_frontend_config(config: DemoConfig) -> dict[str, object]:
         "telemetry_weight": config.traffic_telemetry_weight,
         "bulk_downlink_weight": config.traffic_bulk_downlink_weight,
         "compute_service_weight": config.traffic_compute_service_weight,
+        "emergency_weight": config.traffic_emergency_weight,
     }
     if _workload_smoothing_should_be_exposed(config):
         traffic.update(

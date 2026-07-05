@@ -23,6 +23,7 @@ def test_traffic_classes_are_explicit_contract_values() -> None:
         "TELEMETRY",
         "BULK_DOWNLINK",
         "COMPUTE_SERVICE",
+        "EMERGENCY",
     )
 
 
@@ -303,6 +304,80 @@ def test_service_mix_weight_ties_are_allocated_by_item_order() -> None:
 
     assert tuple(profile.request_count for profile in config.to_demand_profiles()) == (3, 2)
     assert generate_traffic_service_mix(config) == generate_traffic_service_mix(config)
+
+
+def test_service_mix_summary_reports_counts_and_per_user_state() -> None:
+    config = TrafficServiceMixConfig(
+        total_request_count=7,
+        arrival_interval=4.0,
+        id_prefix="portfolio",
+        items=(
+            TrafficServiceMixItem(
+                traffic_class=TrafficClass.EMERGENCY,
+                weight=2.0,
+                source_ids=("user-a", "user-b"),
+                destination_ids=("ops-center",),
+                input_data_size=0.5,
+                priority=10,
+                arrival_profile=TrafficArrivalProfile.BURST,
+                burst_size=2,
+                burst_spacing=0.25,
+            ),
+            TrafficServiceMixItem(
+                traffic_class=TrafficClass.COMPUTE_SERVICE,
+                weight=1.0,
+                source_ids=("user-a",),
+                destination_ids=("sat-compute-a",),
+                input_data_size=6.0,
+                output_data_size=2.0,
+                priority=5,
+                output_destination_ids=("user-a",),
+            ),
+            TrafficServiceMixItem(
+                traffic_class=TrafficClass.BULK_DOWNLINK,
+                weight=1.0,
+                source_ids=("sat-a",),
+                destination_ids=("ground-a",),
+                input_data_size=10.0,
+                priority=1,
+            ),
+        ),
+    )
+
+    batch = generate_traffic_service_mix(config)
+    summary = batch.service_mix_summary()
+    per_user = {
+        item["user_id"]: item
+        for item in summary["per_user_active_service_state"]
+        if isinstance(item, dict)
+    }
+
+    assert summary["generated_request_count"] == 7
+    assert summary["generated_request_counts"] == {
+        "DATA_TRANSFER": 0,
+        "TELEMETRY": 0,
+        "BULK_DOWNLINK": 2,
+        "COMPUTE_SERVICE": 2,
+        "EMERGENCY": 3,
+    }
+    assert summary["active_service_classes"] == (
+        "BULK_DOWNLINK",
+        "COMPUTE_SERVICE",
+        "EMERGENCY",
+    )
+    assert per_user["user-a"]["request_count"] == 4
+    assert per_user["user-a"]["service_classes"] == (
+        "COMPUTE_SERVICE",
+        "EMERGENCY",
+    )
+    assert per_user["user-a"]["primary_service_class"] == "EMERGENCY"
+    assert per_user["user-a"]["max_priority"] == 10
+    assert per_user["user-a"]["task_ids"] == (
+        "portfolio-01-01-compute_service-00000-task",
+        "portfolio-01-01-compute_service-00001-task",
+    )
+    assert per_user["user-b"]["service_classes"] == ("EMERGENCY",)
+    assert per_user["sat-a"]["service_classes"] == ("BULK_DOWNLINK",)
 
 
 def test_burst_arrival_profile_groups_requests_deterministically() -> None:

@@ -64,6 +64,7 @@ scenario:
     telemetry_weight: 1.0
     bulk_downlink_weight: 1.0
     compute_service_weight: 3.0
+    emergency_weight: 0.0
 
 network:
   # Flow-level protocol profile. These select deterministic internal

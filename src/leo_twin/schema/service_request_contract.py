@@ -16,6 +16,7 @@ class ServiceRequestClass(StrEnum):
     TELEMETRY = "TELEMETRY"
     BULK_DOWNLINK = "BULK_DOWNLINK"
     COMPUTE_SERVICE = "COMPUTE_SERVICE"
+    EMERGENCY = "EMERGENCY"
 
 
 class ServiceRequestFieldStatus(StrEnum):
@@ -220,6 +221,7 @@ def default_service_request_contract_v2() -> ServiceRequestContractV2:
         ServiceRequestClass.TELEMETRY,
         ServiceRequestClass.BULK_DOWNLINK,
         ServiceRequestClass.COMPUTE_SERVICE,
+        ServiceRequestClass.EMERGENCY,
     )
     return ServiceRequestContractV2(
         contract_id=SERVICE_REQUEST_CONTRACT_V2_ID,

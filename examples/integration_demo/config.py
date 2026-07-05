@@ -76,6 +76,7 @@ class DemoConfig:
     traffic_telemetry_weight: float = 0.0
     traffic_bulk_downlink_weight: float = 0.0
     traffic_compute_service_weight: float = 0.0
+    traffic_emergency_weight: float = 0.0
     application_protocol: str = "TASK_OFFLOAD_FLOW"
     transport_protocol: str = "TCP"
     routing_protocol: str = "LINK_STATE"
@@ -216,6 +217,11 @@ def load_demo_config(path: str | Path = DEFAULT_CONFIG_PATH) -> DemoConfig:
             "traffic_compute_service_weight",
             0.0,
         ),
+        traffic_emergency_weight=_optional_float(
+            scenario,
+            "traffic_emergency_weight",
+            0.0,
+        ),
         cell_count=_int(scenario, "cell_count"),
         state_snapshot_interval_events=_int(
             scenario,
@@ -335,6 +341,7 @@ def demo_config_to_sees_config(config: DemoConfig) -> SEESConfig:
                 telemetry_weight=config.traffic_telemetry_weight,
                 bulk_downlink_weight=config.traffic_bulk_downlink_weight,
                 compute_service_weight=config.traffic_compute_service_weight,
+                emergency_weight=config.traffic_emergency_weight,
             ),
         ),
         network=NetworkProfile(
@@ -436,6 +443,7 @@ def demo_config_from_sees_config(
         traffic_compute_service_weight=(
             config.scenario.traffic_model.compute_service_weight
         ),
+        traffic_emergency_weight=config.scenario.traffic_model.emergency_weight,
         cell_count=config.scenario.cell_count,
         state_snapshot_interval_events=base.state_snapshot_interval_events,
         metric_sample_interval=base.metric_sample_interval,

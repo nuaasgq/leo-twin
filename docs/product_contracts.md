@@ -37,7 +37,8 @@ priority, destination policy, input/output data size, duration, deadline, retry
 policy, and generated flow/task ids.
 
 The current runtime supports deterministic flow-level mapping for
-`DATA_TRANSFER`, `TELEMETRY`, `BULK_DOWNLINK`, and `COMPUTE_SERVICE`.
+`DATA_TRANSFER`, `TELEMETRY`, `BULK_DOWNLINK`, `COMPUTE_SERVICE`, and
+`EMERGENCY`.
 `duration_s`, `deadline_s`, and `retry_policy` are contract fields, but current
 runtime behavior marks unsupported execution semantics as reserved rather than
 silently pretending deadline scheduling or retries exist.

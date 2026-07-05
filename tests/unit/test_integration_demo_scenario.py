@@ -188,6 +188,7 @@ def test_demo_flow_and_task_demands_are_config_driven() -> None:
         "telemetry_weight": 0.0,
         "bulk_downlink_weight": 0.0,
         "compute_service_weight": 0.0,
+        "emergency_weight": 0.0,
     }
 
 
@@ -273,6 +274,7 @@ def test_demo_service_mix_weights_drive_demand_generation() -> None:
         "TELEMETRY": 0,
         "BULK_DOWNLINK": 0,
         "COMPUTE_SERVICE": 1,
+        "EMERGENCY": 0,
     }
     assert traffic_summary["generated_task_count"] == 1
     assert len(compute_records) == 1

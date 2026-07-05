@@ -59,6 +59,7 @@ def build_backend_derived_summary(
     traffic_telemetry_weight: float = 0.0,
     traffic_bulk_downlink_weight: float = 0.0,
     traffic_compute_service_weight: float = 0.0,
+    traffic_emergency_weight: float = 0.0,
     compute_cpu_gflops_fp64: float = 0.0,
     compute_gpu_tflops_fp32: float = 0.0,
     compute_gpu_tflops_fp16: float = 0.0,
@@ -101,6 +102,7 @@ def build_backend_derived_summary(
         telemetry_weight=traffic_telemetry_weight,
         bulk_downlink_weight=traffic_bulk_downlink_weight,
         compute_service_weight=traffic_compute_service_weight,
+        emergency_weight=traffic_emergency_weight,
     )
     service_mix_request_counts = service_mix_summary[
         "service_mix_generated_request_counts"
@@ -409,6 +411,8 @@ def _traffic_class(application_protocol: str) -> TrafficClass:
         return TrafficClass.COMPUTE_SERVICE
     if normalized in {"BULK_DOWNLINK", "FILE_TRANSFER"}:
         return TrafficClass.BULK_DOWNLINK
+    if normalized in {"EMERGENCY", "EMERGENCY_ALERT"}:
+        return TrafficClass.EMERGENCY
     return TrafficClass.DATA_TRANSFER
 
 
@@ -447,6 +451,7 @@ _TRAFFIC_CLASS_ORDER = (
     TrafficClass.TELEMETRY,
     TrafficClass.BULK_DOWNLINK,
     TrafficClass.COMPUTE_SERVICE,
+    TrafficClass.EMERGENCY,
 )
 
 
@@ -459,6 +464,7 @@ def _traffic_service_mix_summary(
     telemetry_weight: float,
     bulk_downlink_weight: float,
     compute_service_weight: float,
+    emergency_weight: float,
 ) -> dict[str, object]:
     raw_weights = {
         TrafficClass.DATA_TRANSFER.value: _non_negative_float(
@@ -476,6 +482,10 @@ def _traffic_service_mix_summary(
         TrafficClass.COMPUTE_SERVICE.value: _non_negative_float(
             compute_service_weight,
             "traffic_compute_service_weight",
+        ),
+        TrafficClass.EMERGENCY.value: _non_negative_float(
+            emergency_weight,
+            "traffic_emergency_weight",
         ),
     }
     total_weight = sum(raw_weights.values())
@@ -556,6 +566,7 @@ def _traffic_class_label(traffic_class: TrafficClass) -> str:
         TrafficClass.DATA_TRANSFER: "数据传输",
         TrafficClass.TELEMETRY: "遥测",
         TrafficClass.BULK_DOWNLINK: "批量下传",
+        TrafficClass.EMERGENCY: "应急业务",
     }
     return labels[traffic_class]
 

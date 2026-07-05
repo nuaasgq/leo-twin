@@ -159,6 +159,7 @@ def test_detailed_user_config_template_loads_with_full_contract() -> None:
         "TELEMETRY": 0.0,
         "BULK_DOWNLINK": 0.0,
         "COMPUTE_SERVICE": 0.0,
+        "EMERGENCY": 0.0,
     }
     assert config.network.max_space_link_candidates_per_satellite == 4
     assert config.runtime.duration == 600
@@ -185,6 +186,7 @@ def test_dynamic_observability_user_config_template_loads() -> None:
         "TELEMETRY": 1.0,
         "BULK_DOWNLINK": 1.0,
         "COMPUTE_SERVICE": 2.0,
+        "EMERGENCY": 0.0,
     }
     assert config.network.transport_protocol == "UDP"
     assert config.network.transport_loss_rate == 0.02
@@ -213,6 +215,7 @@ def test_network_stress_120_user_config_template_loads() -> None:
         "TELEMETRY": 1.0,
         "BULK_DOWNLINK": 2.0,
         "COMPUTE_SERVICE": 3.0,
+        "EMERGENCY": 0.0,
     }
     assert config.network.transport_protocol == "UDP"
     assert config.network.transport_loss_rate == 0.05
@@ -271,6 +274,7 @@ def test_large_scale_1200_user_config_template_loads() -> None:
         "TELEMETRY": 1.0,
         "BULK_DOWNLINK": 1.0,
         "COMPUTE_SERVICE": 3.0,
+        "EMERGENCY": 0.0,
     }
     assert config.network.space_link_mode == "BOUNDED_CANDIDATE"
     assert config.network.max_space_link_candidates_per_satellite == 4

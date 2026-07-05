@@ -100,12 +100,14 @@ def test_backend_derived_summary_is_deterministic_and_frontend_ready() -> None:
             "TELEMETRY": 0.0,
             "BULK_DOWNLINK": 0.0,
             "COMPUTE_SERVICE": 1.0,
+            "EMERGENCY": 0.0,
         },
         "service_mix_normalized_weights": {
             "DATA_TRANSFER": 0.0,
             "TELEMETRY": 0.0,
             "BULK_DOWNLINK": 0.0,
             "COMPUTE_SERVICE": 1.0,
+            "EMERGENCY": 0.0,
         },
         "active_service_classes": ["COMPUTE_SERVICE"],
         "service_mix_generated_request_counts": {
@@ -113,6 +115,7 @@ def test_backend_derived_summary_is_deterministic_and_frontend_ready() -> None:
             "TELEMETRY": 0,
             "BULK_DOWNLINK": 0,
             "COMPUTE_SERVICE": 1200,
+            "EMERGENCY": 0,
         },
         "execution_shape": "FLOW_THEN_COMPUTE_TASK",
         "execution_label": "输入流 + 计算任务",
@@ -418,6 +421,7 @@ def test_traffic_summary_uses_explicit_traffic_model_fields() -> None:
         "TELEMETRY": 0.0,
         "BULK_DOWNLINK": 1.0,
         "COMPUTE_SERVICE": 0.0,
+        "EMERGENCY": 0.0,
     }
     assert summary["active_service_classes"] == ["BULK_DOWNLINK"]
     assert summary["service_mix_generated_request_counts"] == {
@@ -425,6 +429,7 @@ def test_traffic_summary_uses_explicit_traffic_model_fields() -> None:
         "TELEMETRY": 0,
         "BULK_DOWNLINK": 10,
         "COMPUTE_SERVICE": 0,
+        "EMERGENCY": 0,
     }
     assert summary["execution_shape"] == "FLOW_ONLY"
     assert summary["execution_label"] == "流级网络业务"
@@ -457,6 +462,7 @@ def test_traffic_summary_exposes_weighted_service_mix() -> None:
         "TELEMETRY": 0.0,
         "BULK_DOWNLINK": 0.0,
         "COMPUTE_SERVICE": 1.0,
+        "EMERGENCY": 0.0,
     }
     assert summary["service_mix_normalized_weights"]["DATA_TRANSFER"] == pytest.approx(
         2.0 / 3.0
@@ -470,8 +476,45 @@ def test_traffic_summary_exposes_weighted_service_mix() -> None:
         "TELEMETRY": 0,
         "BULK_DOWNLINK": 0,
         "COMPUTE_SERVICE": 3,
+        "EMERGENCY": 0,
     }
     assert summary["generated_task_count"] == 3
+
+
+def test_traffic_summary_exposes_emergency_service_mix() -> None:
+    allocation = AutoPlaneAllocator.allocate(satellite_count=12, plane_count=3)
+
+    summary = build_backend_derived_summary(
+        constellation=allocation,
+        satellite_count=12,
+        user_count=20,
+        compute_node_count=4,
+        compute_capacity=40.0,
+        flow_count=8,
+        demand_capacity=25.0,
+        task_compute_demand=20.0,
+        task_data_size=2.0,
+        application_protocol="EMERGENCY_ALERT",
+        traffic_class="EMERGENCY",
+        traffic_destination_type="SERVICE_ENDPOINT",
+        traffic_emergency_weight=2.0,
+    )["traffic_demand_summary"]
+
+    assert summary["traffic_class"] == "EMERGENCY"
+    assert summary["traffic_class_label"] == "应急业务"
+    assert summary["destination_type"] == "SERVICE_ENDPOINT"
+    assert summary["service_mix_mode"] == "SINGLE_CLASS"
+    assert summary["service_mix_weights"]["EMERGENCY"] == 2.0
+    assert summary["active_service_classes"] == ["EMERGENCY"]
+    assert summary["service_mix_generated_request_counts"] == {
+        "DATA_TRANSFER": 0,
+        "TELEMETRY": 0,
+        "BULK_DOWNLINK": 0,
+        "COMPUTE_SERVICE": 0,
+        "EMERGENCY": 8,
+    }
+    assert summary["generated_task_count"] == 0
+    assert summary["execution_shape"] == "FLOW_ONLY"
 
 
 def test_traffic_summary_rejects_compute_service_non_compute_destination() -> None:

@@ -330,6 +330,7 @@ def test_scenario_builder_config_from_sees_config_maps_control_plane_fields() ->
     assert generated.traffic_telemetry_weight == 3.0
     assert generated.traffic_bulk_downlink_weight == 1.0
     assert generated.traffic_compute_service_weight == 0.0
+    assert generated.traffic_emergency_weight == 0.0
     assert generated.application_protocol == "MQTT"
     assert generated.transport_protocol == "UDP"
     assert generated.transport_loss_rate == 0.025

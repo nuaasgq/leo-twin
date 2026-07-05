@@ -104,6 +104,7 @@ class FullSystemScenarioBuilderConfig:
     traffic_telemetry_weight: float = 0.0
     traffic_bulk_downlink_weight: float = 0.0
     traffic_compute_service_weight: float = 0.0
+    traffic_emergency_weight: float = 0.0
 
     def __post_init__(self) -> None:
         _require_int(self.seed, "seed")
@@ -271,6 +272,7 @@ class FullSystemScenarioBuilderConfig:
             "traffic_telemetry_weight",
             "traffic_bulk_downlink_weight",
             "traffic_compute_service_weight",
+            "traffic_emergency_weight",
         ):
             _require_non_negative_number(getattr(self, field_name), field_name)
             object.__setattr__(self, field_name, float(getattr(self, field_name)))
@@ -393,6 +395,7 @@ def scenario_builder_backend_summary(
         traffic_telemetry_weight=config.traffic_telemetry_weight,
         traffic_bulk_downlink_weight=config.traffic_bulk_downlink_weight,
         traffic_compute_service_weight=config.traffic_compute_service_weight,
+        traffic_emergency_weight=config.traffic_emergency_weight,
         transport_protocol=config.transport_protocol,
         routing_protocol=config.routing_protocol,
         datalink_mac_protocol=config.datalink_mac_protocol,
@@ -471,6 +474,7 @@ def scenario_builder_config_from_sees_config(
         traffic_compute_service_weight=(
             config.scenario.traffic_model.compute_service_weight
         ),
+        traffic_emergency_weight=config.scenario.traffic_model.emergency_weight,
         application_protocol=config.network.application_protocol.value,
         transport_protocol=config.network.transport_protocol.value,
         routing_protocol=config.network.routing_protocol.value,

@@ -96,6 +96,7 @@ _LABELS = {
     "scenario.traffic_model.task_compute_demand": "Task compute demand",
     "scenario.traffic_model.task_data_size": "Input data size",
     "scenario.traffic_model.output_data_size": "Output data size",
+    "scenario.traffic_model.emergency_weight": "Emergency service weight",
     "network.transport_loss_rate": "Transport loss proxy input",
     "network.transport_congestion_window_segments": "Transport congestion window",
     "network.carrier_frequency_hz": "Carrier frequency",
@@ -131,6 +132,9 @@ _DESCRIPTIONS = {
     ),
     "scenario.traffic_model.output_data_size": (
         "Result metadata for compute-service traffic; no packet-level output is generated."
+    ),
+    "scenario.traffic_model.emergency_weight": (
+        "Optional deterministic service-mix weight for high-priority emergency flows."
     ),
     "network.transport_loss_rate": (
         "Deterministic flow-level loss proxy input, not packet loss simulation."
@@ -254,6 +258,7 @@ _NON_NEGATIVE_NUMBER_PATHS = frozenset(
         "scenario.traffic_model.telemetry_weight",
         "scenario.traffic_model.bulk_downlink_weight",
         "scenario.traffic_model.compute_service_weight",
+        "scenario.traffic_model.emergency_weight",
         "network.rain_rate_mm_h",
         "network.rain_attenuation_coefficient_db_per_km_per_mm_h",
         "network.rain_effective_path_km",

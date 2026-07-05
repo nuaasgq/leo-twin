@@ -83,6 +83,7 @@ _TRAFFIC_KEYS = frozenset(
         "telemetry_weight",
         "bulk_downlink_weight",
         "compute_service_weight",
+        "emergency_weight",
     }
 )
 _NETWORK_KEYS = frozenset(
@@ -479,6 +480,7 @@ def _ordered_keys(context: str, data: Mapping[str, Any]) -> tuple[str, ...]:
             "telemetry_weight",
             "bulk_downlink_weight",
             "compute_service_weight",
+            "emergency_weight",
         ),
         "network": (
             "application_protocol",

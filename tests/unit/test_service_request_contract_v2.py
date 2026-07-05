@@ -28,6 +28,7 @@ def test_service_request_contract_v2_is_deterministic_and_json_ready() -> None:
         "TELEMETRY",
         "BULK_DOWNLINK",
         "COMPUTE_SERVICE",
+        "EMERGENCY",
     )
     assert json.loads(json.dumps(first, sort_keys=True))["contract_id"] == (
         SERVICE_REQUEST_CONTRACT_V2_ID
@@ -79,6 +80,7 @@ def test_service_request_contract_v2_declares_compute_service_artifacts() -> Non
         "TELEMETRY",
         "BULK_DOWNLINK",
         "COMPUTE_SERVICE",
+        "EMERGENCY",
     )
     assert artifacts["COMPUTE_TASK"]["generated_for_classes"] == (
         "COMPUTE_SERVICE",

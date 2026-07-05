@@ -20,6 +20,7 @@ compute, and result-export work a shared vocabulary for user demand.
 - `TELEMETRY`
 - `BULK_DOWNLINK`
 - `COMPUTE_SERVICE`
+- `EMERGENCY`
 
 These are the service classes currently represented by the deterministic
 traffic demand model.
