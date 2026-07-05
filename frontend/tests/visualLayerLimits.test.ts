@@ -135,6 +135,11 @@ describe("visualLayerLimits", () => {
 describe("visualLayerControlSummary", () => {
   it("explains local layer limits shown by the 3D control toggles", () => {
     expect(visualLayerControlSummary(null)).toEqual([
+      {
+        label: "资产",
+        value: "v1 / 6 项",
+        detail: "地球底图 1 / 国界 1 / 模型 3 / 图标 1 / SHA 4"
+      },
       { label: "国界", value: "显示", detail: "Natural Earth 国家边界" },
       { label: "点位", value: "显示", detail: "全部卫星点位" },
       { label: "图标", value: "≤120", detail: "卫星图标上限" },

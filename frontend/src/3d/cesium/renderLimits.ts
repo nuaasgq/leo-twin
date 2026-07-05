@@ -1,4 +1,5 @@
 import { ScenarioConfig } from "../../core/event_types";
+import { scene3dAssetManifestSummary } from "../assets/assetManifest";
 
 const SMALL_SCALE_FULL_ICON_LIMIT = 120;
 
@@ -135,6 +136,7 @@ export function visualLayerControlSummary(
     localLayers
   );
   return [
+    scene3dAssetManifestSummary(),
     {
       label: "国界",
       value: localLayers.countryOverlays ? "显示" : "隐藏",

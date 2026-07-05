@@ -238,6 +238,11 @@ Tasks:
 
 - V2-060: Add 3D asset manifest.
   - Scope: Earth texture, satellite models/icons, license/source hashes.
+  - Status: T230 adds `leo_twin.3d_asset_manifest.v1` for the Cesium scene,
+    covering the package-managed NaturalEarthII Earth texture, SHA-verified
+    Natural Earth country boundaries, SHA-verified NASA Satellite Kit GLB
+    model parts, and the project-generated satellite SVG icon. The Cesium
+    layer summary now exposes the active asset manifest version and counts.
 - V2-061: Add Earth visual policy v2.
   - Scope: opaque default, country borders, day/night optional, no far-side
     satellites through globe unless explicitly enabled.

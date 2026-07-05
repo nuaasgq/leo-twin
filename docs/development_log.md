@@ -5,6 +5,58 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - 3D Asset Manifest v1
+
+- Branch: `feature/T230-3d-asset-manifest-v1`
+- Commit: pending in this commit
+- Scope: advance V2-060 by adding a Cesium 3D scene asset manifest. The
+  manifest records the package-managed NaturalEarthII Earth texture,
+  SHA-verified Natural Earth country boundary GeoJSON, SHA-verified NASA
+  Satellite Kit GLB parts, and the project-generated satellite SVG icon. The
+  Cesium layer summary now exposes the active asset manifest version and asset
+  counts.
+- Changed files/modules:
+  - `frontend/src/3d/assets/assetManifest.ts`
+  - `frontend/src/3d/cesium/renderLimits.ts`
+  - `frontend/tests/sceneAssetManifest.test.ts`
+  - `frontend/tests/visualLayerLimits.test.ts`
+  - `tests/unit/test_scene_3d_asset_manifest_v1.py`
+  - `docs/scene_3d_asset_manifest_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_scene_3d_asset_manifest_v1.py -q`
+    - Result: passed, 2 tests.
+  - `pnpm --dir frontend test -- sceneAssetManifest.test.ts visualLayerLimits.test.ts satelliteVisuals.test.ts countryOverlays.test.ts`
+    - Result: passed, 26 test files / 324 tests.
+  - `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite reported the existing large `DataPanel` chunk
+      warning after minification.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - This task intentionally does not download new external assets. It registers
+    and verifies the current bundled assets first so future replacements have a
+    stable license/hash gate.
+  - The Cesium NaturalEarthII texture is package-managed rather than a single
+    project-owned file, so the manifest marks it as package-lock managed while
+    SHA-verifying the project-bundled GLB and GeoJSON assets.
+  - The first Python hash test expected NASA GLB hashes to appear literally in
+    the new manifest file. The manifest imports the existing
+    `NASA_SATELLITE_KIT_MODEL_PARTS` constants, so the test was corrected to
+    verify both the manifest dependency and the source constant file.
+  - Existing local runtime/generated config files remain dirty and are
+    intentionally not included in this task.
+- Known remaining issues / follow-up:
+  - V2-061 should bind the manifest to the Earth visual policy and opaque globe
+    rendering checks.
+  - A future task should add or replace a higher-resolution Earth texture only
+    after source, license, SHA, and screenshot checks are in place.
+  - A future task should add selected-satellite visual regression checks for
+    the GLB model in browser rendering.
+
 ## 2026-07-06 - Dashboard Model Assumptions Panel v1
 
 - Branch: `feature/T229-dashboard-model-assumptions-panel-v1`
