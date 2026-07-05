@@ -13,6 +13,7 @@ import {
   buildDataPanelNetworkKpiSource,
   buildDataPanelRouteConstraints,
   buildDataPanelRuntimeProgress,
+  buildDataPanelSatelliteResourceHistory,
   buildDataPanelServiceLatencyDisplay,
   buildDataPanelServiceLatencyRows,
   buildDataPanelSummary,
@@ -2254,6 +2255,110 @@ describe("buildSatelliteResourceRows", () => {
     });
     expect(rows.items[0].networkLabel).toContain("链路 4 / 路由 3");
     expect(rows.items[0].memoryStorageLabel).toContain("内存 8 / 32 GB");
+  });
+});
+
+describe("buildDataPanelSatelliteResourceHistory", () => {
+  const history = {
+    version: "v1",
+    mode: "RECENT_LIMITED",
+    sample_limit: 3,
+    satellite_count: 2,
+    series_count: 2,
+    series: [
+      {
+        satellite_id: "sat-10",
+        samples: [
+          {
+            sim_time: 1,
+            compute_load_ratio: 0.2,
+            compute_used_gflops_fp32: 20,
+            compute_used_gflops_fp64: 2,
+            compute_used_gpu_tflops_fp32: 0.5,
+            compute_used_gpu_tflops_fp16: 1,
+            compute_used_npu_tops_int8: 3,
+            compute_used_memory_gb: 4,
+            compute_used_storage_gb: 8
+          },
+          {
+            sim_time: 2,
+            compute_load_ratio: 0.4,
+            compute_used_gflops_fp32: 40,
+            compute_used_gflops_fp64: 4,
+            compute_used_gpu_tflops_fp32: 0.75,
+            compute_used_gpu_tflops_fp16: 1.5,
+            compute_used_npu_tops_int8: 5,
+            compute_used_memory_gb: 6,
+            compute_used_storage_gb: 10
+          }
+        ]
+      },
+      {
+        satellite_id: "sat-2",
+        samples: [
+          {
+            sim_time: 3,
+            compute_load_ratio: 0.75,
+            compute_used_gflops_fp32: 75,
+            compute_used_memory_gb: 12,
+            compute_used_storage_gb: 24
+          }
+        ]
+      }
+    ]
+  };
+
+  it("defaults to the first deterministic satellite series", () => {
+    const display = buildDataPanelSatelliteResourceHistory(history);
+
+    expect(display.sourceLabel).toBe("后端 satellite_kpi_history_v1");
+    expect(display.selectedSatelliteId).toBe("sat-2");
+    expect(display.availableSatelliteIds).toEqual(["sat-2", "sat-10"]);
+    expect(display.summaryLabel).toContain("sat-2");
+    expect(display.points).toEqual([
+      {
+        timeLabel: "3秒",
+        simTime: 3,
+        loadPercent: 75,
+        usedFp32Gflops: 75,
+        usedFp64Gflops: 0,
+        usedGpuFp32Tflops: 0,
+        usedGpuFp16Tflops: 0,
+        usedNpuInt8Tops: 0,
+        usedMemoryGb: 12,
+        usedStorageGb: 24
+      }
+    ]);
+  });
+
+  it("uses an explicit satellite selection and bounds the sample window", () => {
+    const display = buildDataPanelSatelliteResourceHistory(history, "sat-10", 1);
+
+    expect(display.selectedSatelliteId).toBe("sat-10");
+    expect(display.points).toEqual([
+      {
+        timeLabel: "2秒",
+        simTime: 2,
+        loadPercent: 40,
+        usedFp32Gflops: 40,
+        usedFp64Gflops: 4,
+        usedGpuFp32Tflops: 0.75,
+        usedGpuFp16Tflops: 1.5,
+        usedNpuInt8Tops: 5,
+        usedMemoryGb: 6,
+        usedStorageGb: 10
+      }
+    ]);
+  });
+
+  it("falls back to an empty display when backend history is unavailable", () => {
+    expect(buildDataPanelSatelliteResourceHistory(undefined)).toEqual({
+      sourceLabel: "等待后端 satellite_kpi_history_v1",
+      summaryLabel: "暂无单星资源历史",
+      selectedSatelliteId: null,
+      availableSatelliteIds: [],
+      points: []
+    });
   });
 });
 

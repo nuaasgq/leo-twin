@@ -6477,3 +6477,43 @@ change.
 - Recommended follow-up:
   - Add per-user business request time-series panels and per-satellite
     resource history selection on the standalone dashboard.
+
+## 2026-07-05 - Dashboard Satellite Resource History v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: connect the standalone dashboard to backend
+  `satellite_kpi_history_v1` so users can select a satellite and inspect its
+  resource-use history over simulation time. The new panel shows backend
+  source/provenance text, load and CPU FP32 trend lines, plus latest memory,
+  storage, GPU FP32, and NPU INT8 values. This is a frontend observability
+  change only; backend runtime services, protocols, and Event Kernel behavior
+  are unchanged.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend exec vitest run dataPanel.test.ts`
+    - Result: passed, 1 file / 67 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed.
+  - `pnpm --dir frontend test`
+    - Result: passed, 25 files / 229 tests.
+- Problems encountered:
+  - The first local frontend test invocation failed because the shell PATH did
+    not expose `node`. The Codex bundled Node.js and pnpm paths were loaded and
+    the same tests were rerun successfully.
+  - The initial unit-test expected labels used `s`; the existing UI formatter
+    emits Chinese `秒`, so the expectation was corrected to match current
+    product display semantics.
+- Known remaining issues:
+  - The panel displays the bounded history window already emitted by the
+    backend. It is not a full archival query or backend-paginated history API.
+  - Selection is a standard dropdown over backend-provided history series; a
+    searchable selector may be needed when the backend exposes hundreds of
+    series.
+- Recommended follow-up:
+  - Add per-user business/request time-series drilldowns and backend row-window
+    APIs for large-scale dashboard inspection.

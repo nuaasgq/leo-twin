@@ -22,6 +22,7 @@ import {
   RuntimeMetricsSummary,
   RuntimeNetworkQualityProvenanceV1,
   RuntimeSatelliteServiceSummaryV1,
+  RuntimeSatelliteKpiHistoryV1,
   RuntimeSatelliteKpiSlicesV1,
   RuntimeServiceLatencyHistoryV1,
   RuntimeStatusPayload,
@@ -89,6 +90,9 @@ export const DataPanel = memo(function DataPanel({
   const [detailFilter, setDetailFilter] = useState("");
   const [userDetailPage, setUserDetailPage] = useState(0);
   const [satelliteDetailPage, setSatelliteDetailPage] = useState(0);
+  const [selectedHistorySatelliteId, setSelectedHistorySatelliteId] = useState<string | null>(
+    null
+  );
   const summary = buildDataPanelDisplaySummary(
     buildDataPanelSummary(snapshot),
     displaySimTime,
@@ -159,6 +163,12 @@ export const DataPanel = memo(function DataPanel({
     runtimeStatus.satellite_kpi_slices_v1,
     runtimeStatus.satellite_service_summary_v1
   );
+  const satelliteResourceHistory = buildDataPanelSatelliteResourceHistory(
+    runtimeStatus.satellite_kpi_history_v1,
+    selectedHistorySatelliteId
+  );
+  const latestSatelliteResourceHistoryPoint =
+    satelliteResourceHistory.points[satelliteResourceHistory.points.length - 1];
   const filteredUserBusinessRequests = filterUserBusinessRequestRows(
     userBusinessRequests,
     detailFilter
@@ -535,6 +545,96 @@ export const DataPanel = memo(function DataPanel({
               </ResponsiveContainer>
             ) : (
               <div className="data-panel-empty-chart">等待算力快照</div>
+            )}
+          </div>
+        </section>
+
+        <section className="dashboard-section data-panel-chart" aria-label="单星资源历史曲线">
+          <div className="section-title">单星资源历史</div>
+          <div className="data-panel-source-note">
+            <span>{satelliteResourceHistory.sourceLabel}</span>
+            <small>{satelliteResourceHistory.summaryLabel}</small>
+          </div>
+          <div className="data-panel-history-selector">
+            <label htmlFor="data-panel-history-satellite">卫星</label>
+            <select
+              id="data-panel-history-satellite"
+              value={satelliteResourceHistory.selectedSatelliteId ?? ""}
+              disabled={satelliteResourceHistory.availableSatelliteIds.length === 0}
+              onChange={(event) => setSelectedHistorySatelliteId(event.currentTarget.value)}
+            >
+              {satelliteResourceHistory.availableSatelliteIds.length === 0 ? (
+                <option value="">等待后端历史</option>
+              ) : (
+                satelliteResourceHistory.availableSatelliteIds.map((satelliteId) => (
+                  <option key={satelliteId} value={satelliteId}>
+                    {satelliteId}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+          {latestSatelliteResourceHistoryPoint !== undefined ? (
+            <div className="data-panel-chart-kpis compact">
+              <KpiPanel
+                label="负载"
+                value={`${latestSatelliteResourceHistoryPoint.loadPercent.toFixed(1)}%`}
+              />
+              <KpiPanel
+                label="FP32"
+                value={`${latestSatelliteResourceHistoryPoint.usedFp32Gflops.toFixed(
+                  1
+                )} GFLOPS`}
+              />
+            </div>
+          ) : null}
+          {latestSatelliteResourceHistoryPoint !== undefined ? (
+            <div className="data-panel-resource-vector">
+              <span>
+                内存 {latestSatelliteResourceHistoryPoint.usedMemoryGb.toFixed(1)} GB
+              </span>
+              <span>
+                存储 {latestSatelliteResourceHistoryPoint.usedStorageGb.toFixed(1)} GB
+              </span>
+              <span>
+                GPU FP32{" "}
+                {latestSatelliteResourceHistoryPoint.usedGpuFp32Tflops.toFixed(2)} TFLOPS
+              </span>
+              <span>
+                NPU INT8 {latestSatelliteResourceHistoryPoint.usedNpuInt8Tops.toFixed(1)} TOPS
+              </span>
+            </div>
+          ) : null}
+          <div className="data-panel-chart-body compact">
+            {satelliteResourceHistory.points.length > 0 ? (
+              <ResponsiveContainer width="100%" height={160}>
+                <LineChart data={satelliteResourceHistory.points}>
+                  <XAxis dataKey="timeLabel" hide />
+                  <YAxis yAxisId="load" width={38} />
+                  <YAxis yAxisId="resource" orientation="right" width={42} />
+                  <Tooltip />
+                  <Line
+                    yAxisId="load"
+                    type="monotone"
+                    dataKey="loadPercent"
+                    name="负载 %"
+                    stroke="#56a6ff"
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                  <Line
+                    yAxisId="resource"
+                    type="monotone"
+                    dataKey="usedFp32Gflops"
+                    name="CPU FP32 GFLOPS"
+                    stroke="#f2bd45"
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="data-panel-empty-chart">等待后端单星资源历史</div>
             )}
           </div>
         </section>
@@ -1112,6 +1212,27 @@ export interface SatelliteResourceRow {
   memoryStorageLabel: string;
   taskLabel: string;
   networkLabel: string;
+}
+
+export interface DataPanelSatelliteResourceHistory {
+  sourceLabel: string;
+  summaryLabel: string;
+  selectedSatelliteId: string | null;
+  availableSatelliteIds: readonly string[];
+  points: readonly DataPanelSatelliteResourceHistoryPoint[];
+}
+
+export interface DataPanelSatelliteResourceHistoryPoint {
+  timeLabel: string;
+  simTime: number;
+  loadPercent: number;
+  usedFp32Gflops: number;
+  usedFp64Gflops: number;
+  usedGpuFp32Tflops: number;
+  usedGpuFp16Tflops: number;
+  usedNpuInt8Tops: number;
+  usedMemoryGb: number;
+  usedStorageGb: number;
 }
 
 export interface DetailRowPage<T> {
@@ -1737,6 +1858,60 @@ export function buildSatelliteResourceRows(
       satelliteIds.length
     )} 颗卫星${hiddenCount > 0 ? ` / 另有 ${formatCount(hiddenCount)} 颗未显示` : ""}`,
     items
+  };
+}
+
+export function buildDataPanelSatelliteResourceHistory(
+  history: RuntimeSatelliteKpiHistoryV1 | null | undefined,
+  selectedSatelliteId: string | null | undefined = undefined,
+  sampleLimit = 24
+): DataPanelSatelliteResourceHistory {
+  const orderedSeries = (history?.series ?? [])
+    .filter((series) => series.samples.length > 0)
+    .slice()
+    .sort((left, right) =>
+      left.satellite_id.localeCompare(right.satellite_id, "zh-CN", { numeric: true })
+    );
+  if (orderedSeries.length === 0) {
+    return {
+      sourceLabel: "等待后端 satellite_kpi_history_v1",
+      summaryLabel: "暂无单星资源历史",
+      selectedSatelliteId: null,
+      availableSatelliteIds: [],
+      points: []
+    };
+  }
+
+  const availableSatelliteIds = orderedSeries.map((series) => series.satellite_id);
+  const requestedId = selectedSatelliteId ?? "";
+  const selectedSeries =
+    orderedSeries.find((series) => series.satellite_id === requestedId) ?? orderedSeries[0];
+  const normalizedLimit = Math.max(1, Math.floor(sampleLimit));
+  const points = selectedSeries.samples.slice(-normalizedLimit).map((sample) => ({
+    timeLabel: formatDurationCompact(sample.sim_time),
+    simTime: roundMetric(sample.sim_time),
+    loadPercent: roundMetric(clampRatio(finiteMetric(sample.compute_load_ratio)) * 100),
+    usedFp32Gflops: roundMetric(finiteOptionalMetric(sample.compute_used_gflops_fp32, 0)),
+    usedFp64Gflops: roundMetric(finiteOptionalMetric(sample.compute_used_gflops_fp64, 0)),
+    usedGpuFp32Tflops: roundMetric(
+      finiteOptionalMetric(sample.compute_used_gpu_tflops_fp32, 0)
+    ),
+    usedGpuFp16Tflops: roundMetric(
+      finiteOptionalMetric(sample.compute_used_gpu_tflops_fp16, 0)
+    ),
+    usedNpuInt8Tops: roundMetric(finiteOptionalMetric(sample.compute_used_npu_tops_int8, 0)),
+    usedMemoryGb: roundMetric(finiteOptionalMetric(sample.compute_used_memory_gb, 0)),
+    usedStorageGb: roundMetric(finiteOptionalMetric(sample.compute_used_storage_gb, 0))
+  }));
+
+  return {
+    sourceLabel: "后端 satellite_kpi_history_v1",
+    summaryLabel: `${selectedSeries.satellite_id} / ${formatCount(points.length)} 个样本 / ${
+      history?.mode ?? "UNKNOWN"
+    }`,
+    selectedSatelliteId: selectedSeries.satellite_id,
+    availableSatelliteIds,
+    points
   };
 }
 
