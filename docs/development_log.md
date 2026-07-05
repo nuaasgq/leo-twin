@@ -5,6 +5,58 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Large Detail Pagination Contract v2
+
+- Branch: `feature/T237-large-detail-pagination-contract-v2`
+- Commit: pending in this commit
+- Scope: advance V2-043 by adding backend-owned
+  `leo_twin.large_detail_pagination_contract.v2`. The contract derives from
+  `scale_policy_v2` and `lod_snapshot_policy_v2` and covers cursor metadata for
+  ground users, satellites, routes, services, and compute nodes. The integration
+  demo backend now exposes read-only cursor endpoints for route, service, and
+  compute-node detail pages in addition to the existing user, satellite, and
+  combined node detail endpoints.
+- Changed files/modules:
+  - `src/leo_twin/services/detail_pagination_contract.py`
+  - `src/leo_twin/services/derived_summary.py`
+  - `src/leo_twin/services/runtime_observability.py`
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `tests/unit/test_large_detail_pagination_contract_v2.py`
+  - `tests/unit/test_backend_derived_summary.py`
+  - `tests/unit/test_runtime_observability.py`
+  - `tests/integration/test_live_runtime_streaming.py`
+  - `docs/large_detail_pagination_contract_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_large_detail_pagination_contract_v2.py tests/unit/test_backend_derived_summary.py tests/unit/test_runtime_observability.py -q`
+    - Result: passed, 19 tests.
+  - `python -m pytest tests/integration/test_live_runtime_streaming.py::test_runtime_detail_pages_return_deterministic_windows -q`
+    - Result: passed, 1 test.
+  - `python -m pytest tests/integration/test_benchmark_acceptance_v1.py -q`
+    - Result: passed, 9 tests.
+  - `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed using the Codex bundled Node.js runtime.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - Existing runtime observability already had user, satellite, and combined
+    node cursor pages. This task kept those paths compatible and added the
+    missing route, service, and compute-node read-only pages instead of
+    rewriting dashboard architecture.
+  - Route, service, and compute-node pages reuse existing snapshot, route
+    explanation, service latency history, and KPI slice data. No traffic,
+    network, compute, or Event Kernel behavior was changed.
+  - Existing local runtime/generated config files remain dirty and are
+    intentionally not included in this task.
+- Known remaining issues / follow-up:
+  - V2-053 should connect standalone dashboard large tables to these cursor
+    contracts and avoid local hardcoded table budgets.
+  - Single-entity full detail by id remains future work.
+  - Result exports should include this contract metadata for replay packages.
+
 ## 2026-07-06 - Runtime Guardrails v2
 
 - Branch: `feature/T236-runtime-guardrails-v2`

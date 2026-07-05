@@ -310,6 +310,96 @@ def build_runtime_route_explanation_summary(
     }
 
 
+def build_runtime_service_detail_page(
+    service_latency_history: Mapping[str, Any] | None,
+    *,
+    cursor: int = 0,
+    limit: int = 100,
+) -> dict[str, object]:
+    """Build one deterministic cursor page of service lifecycle rows."""
+
+    items = tuple(_records((service_latency_history or {}).get("items")))
+    ordered_items = tuple(sorted(items, key=_service_detail_sort_key))
+    normalized_cursor = _page_cursor(cursor)
+    normalized_limit = _page_limit(limit)
+    page_items = ordered_items[
+        normalized_cursor : normalized_cursor + normalized_limit
+    ]
+    rows = tuple(_service_detail_item(item) for item in page_items)
+    next_cursor = min(len(ordered_items), normalized_cursor + len(rows))
+    return {
+        "version": "v1",
+        "source": "SERVICE_LATENCY_HISTORY",
+        "summary_scope": "SERVICE_LIFECYCLE_DETAIL_WINDOW",
+        "cursor": normalized_cursor,
+        "limit": normalized_limit,
+        "next_cursor": next_cursor,
+        "has_more": next_cursor < len(ordered_items),
+        "service_count": len(ordered_items),
+        "item_count": len(rows),
+        "complete_service_count": sum(
+            1 for item in ordered_items if bool(item.get("complete"))
+        ),
+        "queued_service_count": sum(
+            1 for item in ordered_items if _float(item.get("compute_queue_delay_s")) > 0.0
+        ),
+        "window_service_count": len(rows),
+        "hidden_service_count": max(0, len(ordered_items) - len(rows)),
+        "items": rows,
+    }
+
+
+def build_runtime_compute_node_detail_page(
+    snapshot: Mapping[str, Any],
+    *,
+    satellite_kpi_slices: Mapping[str, Any] | None = None,
+    cursor: int = 0,
+    limit: int = 100,
+) -> dict[str, object]:
+    """Build one deterministic cursor page of satellite-hosted compute nodes."""
+
+    if not isinstance(snapshot, Mapping):
+        raise TypeError("snapshot must be a mapping")
+    compute_nodes = tuple(_records(snapshot.get("compute_nodes")))
+    node_by_id = {_str(item.get("node_id")): item for item in compute_nodes}
+    kpi_slice_by_id = {
+        _str(item.get("satellite_id")): item
+        for item in _records((satellite_kpi_slices or {}).get("slices"))
+    }
+    node_ids = tuple(
+        sorted((node_id for node_id in node_by_id if node_id), key=_entity_sort_key)
+    )
+    normalized_cursor = _page_cursor(cursor)
+    normalized_limit = _page_limit(limit)
+    page_node_ids = node_ids[normalized_cursor : normalized_cursor + normalized_limit]
+    rows = tuple(
+        _compute_node_detail_item(
+            node_id,
+            node_by_id[node_id],
+            kpi_slice_by_id.get(node_id),
+        )
+        for node_id in page_node_ids
+    )
+    next_cursor = min(len(node_ids), normalized_cursor + len(rows))
+    return {
+        "version": "v1",
+        "source": "BACKEND_RUNTIME_SNAPSHOT",
+        "summary_scope": "COMPUTE_NODE_DETAIL_WINDOW",
+        "cursor": normalized_cursor,
+        "limit": normalized_limit,
+        "next_cursor": next_cursor,
+        "has_more": next_cursor < len(node_ids),
+        "compute_node_count": len(node_ids),
+        "item_count": len(rows),
+        "busy_compute_node_count": sum(
+            1 for item in rows if str(item["status"]).upper() == "BUSY"
+        ),
+        "window_compute_node_count": len(rows),
+        "hidden_compute_node_count": max(0, len(node_ids) - len(rows)),
+        "items": rows,
+    }
+
+
 def _user_request_summary(
     users: tuple[Mapping[str, Any], ...],
     routes: tuple[Mapping[str, Any], ...],
@@ -899,6 +989,181 @@ def _compute_task_timeline_item(item: Mapping[str, Any]) -> dict[str, object]:
         "last_sample_sim_time": _optional_float(item.get("last_sample_sim_time")),
         "stage_count": len(stages),
         "stages": stages,
+    }
+
+
+def _service_detail_sort_key(item: Mapping[str, Any]) -> tuple[float, str, str]:
+    return (
+        -_float(item.get("last_sample_sim_time")),
+        _str(item.get("task_id")),
+        _str(item.get("input_flow_id")),
+    )
+
+
+def _service_detail_item(item: Mapping[str, Any]) -> dict[str, object]:
+    stages = tuple(
+        _compute_task_stage(stage)
+        for stage in _records(item.get("component_timeline"))
+        if _str(stage.get("component")) in {
+            "input_network",
+            "compute_queue",
+            "compute_execution",
+            "output_network",
+            "total",
+        }
+    )
+    complete = bool(item.get("complete"))
+    return {
+        "service_id": _service_id(item),
+        "task_id": _str(item.get("task_id")),
+        "input_flow_id": _str(item.get("input_flow_id")),
+        "output_flow_id": _str(item.get("output_flow_id")),
+        "input_route_id": _str(item.get("input_route_id")),
+        "output_route_id": _str(item.get("output_route_id")),
+        "compute_node_id": _str(item.get("compute_node_id")),
+        "complete": complete,
+        "service_state": "COMPLETE" if complete else "RUNNING",
+        "service_state_label": "Service complete" if complete else "Service running",
+        "placement_status": _str(item.get("service_placement_status")),
+        "placement_policy": _str(item.get("service_placement_policy")),
+        "placement_bottleneck_resource": _str(
+            item.get("service_placement_bottleneck_resource")
+        ),
+        "placement_candidate_count": _optional_int(
+            item.get("service_placement_candidate_count")
+        ),
+        "placement_capable_candidate_count": _optional_int(
+            item.get("service_placement_capable_candidate_count")
+        ),
+        "placement_candidate_queue_label": _str(
+            item.get("service_placement_candidate_queue_label")
+        ),
+        "first_sample_sim_time": _optional_float(item.get("first_sample_sim_time")),
+        "last_sample_sim_time": _optional_float(item.get("last_sample_sim_time")),
+        "input_network_latency_s": _float(item.get("input_network_latency_s")),
+        "compute_queue_delay_s": _float(item.get("compute_queue_delay_s")),
+        "compute_execution_delay_s": _float(item.get("compute_execution_delay_s")),
+        "output_network_latency_s": _float(item.get("output_network_latency_s")),
+        "total_latency_s": _float(item.get("total_latency_s")),
+        "stage_count": len(stages),
+        "stages": stages,
+    }
+
+
+def _compute_node_detail_item(
+    node_id: str,
+    node: Mapping[str, Any],
+    kpi_slice: Mapping[str, Any] | None,
+) -> dict[str, object]:
+    capacity = max(
+        0.0,
+        _first_float(kpi_slice, "compute_capacity_gflops_fp32", node, "capacity"),
+    )
+    used = max(
+        0.0,
+        _first_float(
+            kpi_slice,
+            "compute_used_gflops_fp32",
+            node,
+            "used_cpu_gflops_fp32",
+        ),
+    )
+    if used == 0.0:
+        used = max(0.0, capacity - _first_float(node, "available_capacity"))
+    return {
+        "node_id": node_id,
+        "platform_type": "SATELLITE_COMPUTE_NODE",
+        "status": _str(node.get("status")) or "IDLE",
+        "compute_load_ratio": _clamp_ratio(
+            _first_float(
+                kpi_slice,
+                "compute_load_ratio",
+                node,
+                "load_ratio",
+                default=used / capacity if capacity > 0.0 else 0.0,
+            )
+        ),
+        "compute_capacity_gflops_fp32": capacity,
+        "compute_used_gflops_fp32": used,
+        "compute_available_gflops_fp32": max(0.0, capacity - used),
+        "compute_capacity_gflops_fp64": _first_float(
+            kpi_slice,
+            "compute_capacity_gflops_fp64",
+            node,
+            "cpu_gflops_fp64",
+        ),
+        "compute_used_gflops_fp64": _first_float(
+            kpi_slice,
+            "compute_used_gflops_fp64",
+            node,
+            "used_cpu_gflops_fp64",
+        ),
+        "compute_capacity_gpu_tflops_fp32": _first_float(
+            kpi_slice,
+            "compute_capacity_gpu_tflops_fp32",
+            node,
+            "gpu_tflops_fp32",
+        ),
+        "compute_used_gpu_tflops_fp32": _first_float(
+            kpi_slice,
+            "compute_used_gpu_tflops_fp32",
+            node,
+            "used_gpu_tflops_fp32",
+        ),
+        "compute_capacity_gpu_tflops_fp16": _first_float(
+            kpi_slice,
+            "compute_capacity_gpu_tflops_fp16",
+            node,
+            "gpu_tflops_fp16",
+        ),
+        "compute_used_gpu_tflops_fp16": _first_float(
+            kpi_slice,
+            "compute_used_gpu_tflops_fp16",
+            node,
+            "used_gpu_tflops_fp16",
+        ),
+        "compute_capacity_npu_tops_int8": _first_float(
+            kpi_slice,
+            "compute_capacity_npu_tops_int8",
+            node,
+            "npu_tops_int8",
+        ),
+        "compute_used_npu_tops_int8": _first_float(
+            kpi_slice,
+            "compute_used_npu_tops_int8",
+            node,
+            "used_npu_tops_int8",
+        ),
+        "compute_capacity_memory_gb": _first_float(
+            kpi_slice,
+            "compute_capacity_memory_gb",
+            node,
+            "memory_gb",
+        ),
+        "compute_used_memory_gb": _first_float(
+            kpi_slice,
+            "compute_used_memory_gb",
+            node,
+            "used_memory_gb",
+        ),
+        "compute_capacity_storage_gb": _first_float(
+            kpi_slice,
+            "compute_capacity_storage_gb",
+            node,
+            "storage_gb",
+        ),
+        "compute_used_storage_gb": _first_float(
+            kpi_slice,
+            "compute_used_storage_gb",
+            node,
+            "used_storage_gb",
+        ),
+        "running_task_count": int(
+            _first_float(kpi_slice, "running_task_count", node, "running_tasks")
+        ),
+        "finished_task_count": int(
+            _first_float(kpi_slice, "finished_task_count", node, "finished_tasks")
+        ),
     }
 
 
@@ -1593,6 +1858,15 @@ def _service_label(item: Mapping[str, Any]) -> str:
     if total_ms is None:
         return f"{task_id}/{state}"
     return f"{task_id}/{round(total_ms * 1000.0)}ms/{state}"
+
+
+def _service_id(item: Mapping[str, Any]) -> str:
+    return (
+        _str(item.get("task_id"))
+        or _str(item.get("input_flow_id"))
+        or _str(item.get("output_flow_id"))
+        or "service"
+    )
 
 
 def _records(value: object) -> tuple[Mapping[str, Any], ...]:

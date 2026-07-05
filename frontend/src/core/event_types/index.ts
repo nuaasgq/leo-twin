@@ -467,6 +467,77 @@ export interface RuntimeGuardrailActionsV2 {
   fallback: string;
 }
 
+export interface LargeDetailPaginationContractV2 {
+  version: "v2" | string;
+  contract_id: string;
+  source_policy_ids: {
+    scale_policy: string;
+    lod_snapshot_policy: string;
+  };
+  active_profile_id: string;
+  active_scale_band: string;
+  cursor_model: LargeDetailPaginationCursorModelV2;
+  collections: readonly LargeDetailPaginationCollectionV2[];
+  combined_node_endpoint: LargeDetailPaginationCombinedNodeEndpointV2;
+  frontend_policy: LargeDetailPaginationFrontendPolicyV2;
+  determinism: LargeDetailPaginationDeterminismV2;
+  event_kernel_policy: string;
+}
+
+export interface LargeDetailPaginationCursorModelV2 {
+  cursor_type: string;
+  limit_type: string;
+  next_cursor_policy: string;
+  has_more_policy: string;
+  max_limit: number;
+}
+
+export interface LargeDetailPaginationCollectionV2 {
+  collection: string;
+  kind: string;
+  label_zh: string;
+  endpoint: string;
+  http_method: string;
+  query_parameters: readonly string[];
+  response_envelope_type: string;
+  summary_type: string;
+  item_type: string;
+  stable_key: string;
+  sort_policy: string;
+  count_field: string;
+  estimated_total_count: number;
+  default_limit: number;
+  recommended_limit: number;
+  max_limit: number;
+  cursor_required: boolean;
+  cursor_required_for_hidden_rows: boolean;
+  hidden_count_estimate: number;
+  window_source: string;
+  availability: string;
+}
+
+export interface LargeDetailPaginationCombinedNodeEndpointV2 {
+  kind: string;
+  endpoint: string;
+  summary_type: string;
+  composition: readonly string[];
+  purpose: string;
+  stable_ordering: string;
+}
+
+export interface LargeDetailPaginationFrontendPolicyV2 {
+  rendering: string;
+  hidden_rows: string;
+  raw_counts: string;
+  local_inference: string;
+}
+
+export interface LargeDetailPaginationDeterminismV2 {
+  ordering: string;
+  cursor_replay: string;
+  mutation_policy: string;
+}
+
 export interface BackendDerivedSummary {
   derived_constellation_summary?: ConstellationDerivedSummary;
   traffic_demand_summary?: TrafficDemandSummary;
@@ -480,6 +551,7 @@ export interface BackendDerivedSummary {
   scale_policy_v2?: ScalePolicyV2;
   lod_snapshot_policy_v2?: LodSnapshotPolicyV2;
   runtime_guardrails_v2?: RuntimeGuardrailsV2;
+  large_detail_pagination_contract_v2?: LargeDetailPaginationContractV2;
   workload_smoothing_summary?: WorkloadSmoothingSummary;
   configuration_surface_summary?: ConfigurationSurfaceSummary;
   dashboard_information_architecture_v3?: DashboardInformationArchitectureV3;
@@ -1606,11 +1678,21 @@ export interface RuntimeSatelliteServiceSummaryV1 {
 
 export interface RuntimeDetailPageEnvelope {
   type: "RUNTIME_DETAIL_PAGE" | string;
-  kind: "users" | "satellites" | "nodes" | string;
+  kind:
+    | "users"
+    | "satellites"
+    | "nodes"
+    | "routes"
+    | "services"
+    | "compute_nodes"
+    | string;
   summary:
     | RuntimeUserRequestSummaryV1
     | RuntimeSatelliteServiceSummaryV1
-    | RuntimeNodeDetailPageV1;
+    | RuntimeNodeDetailPageV1
+    | RuntimeRouteExplanationSummaryV1
+    | RuntimeServiceDetailPageV1
+    | RuntimeComputeNodeDetailPageV1;
 }
 
 export interface RuntimeNodeDetailPageV1 {
@@ -1826,6 +1908,51 @@ export interface RuntimeServiceLatencyComponentSampleV1 {
   route_id?: string;
 }
 
+export interface RuntimeServiceDetailPageV1 {
+  version: "v1" | string;
+  source: string;
+  summary_scope: string;
+  cursor: number;
+  limit: number;
+  next_cursor: number;
+  has_more: boolean;
+  service_count: number;
+  item_count: number;
+  complete_service_count: number;
+  queued_service_count: number;
+  window_service_count: number;
+  hidden_service_count: number;
+  items: readonly RuntimeServiceDetailItemV1[];
+}
+
+export interface RuntimeServiceDetailItemV1 {
+  service_id: string;
+  task_id: string;
+  input_flow_id?: string;
+  output_flow_id?: string;
+  input_route_id?: string;
+  output_route_id?: string;
+  compute_node_id?: string;
+  complete: boolean;
+  service_state: string;
+  service_state_label: string;
+  placement_status?: string;
+  placement_policy?: string;
+  placement_bottleneck_resource?: string;
+  placement_candidate_count?: number | null;
+  placement_capable_candidate_count?: number | null;
+  placement_candidate_queue_label?: string;
+  first_sample_sim_time?: number | null;
+  last_sample_sim_time?: number | null;
+  input_network_latency_s: number;
+  compute_queue_delay_s: number;
+  compute_execution_delay_s: number;
+  output_network_latency_s: number;
+  total_latency_s: number;
+  stage_count: number;
+  stages: readonly RuntimeComputeTaskTimelineStageV1[];
+}
+
 export interface RuntimeComputeTaskTimelineSummaryV1 {
   version: "v1" | string;
   source: string;
@@ -1864,6 +1991,46 @@ export interface RuntimeComputeTaskTimelineStageV1 {
   sample_sim_time?: number | null;
   duration_s: number;
   route_id?: string;
+}
+
+export interface RuntimeComputeNodeDetailPageV1 {
+  version: "v1" | string;
+  source: string;
+  summary_scope: string;
+  cursor: number;
+  limit: number;
+  next_cursor: number;
+  has_more: boolean;
+  compute_node_count: number;
+  item_count: number;
+  busy_compute_node_count: number;
+  window_compute_node_count: number;
+  hidden_compute_node_count: number;
+  items: readonly RuntimeComputeNodeDetailItemV1[];
+}
+
+export interface RuntimeComputeNodeDetailItemV1 {
+  node_id: string;
+  platform_type: string;
+  status: string;
+  compute_load_ratio: number;
+  compute_capacity_gflops_fp32: number;
+  compute_used_gflops_fp32: number;
+  compute_available_gflops_fp32: number;
+  compute_capacity_gflops_fp64: number;
+  compute_used_gflops_fp64: number;
+  compute_capacity_gpu_tflops_fp32: number;
+  compute_used_gpu_tflops_fp32: number;
+  compute_capacity_gpu_tflops_fp16: number;
+  compute_used_gpu_tflops_fp16: number;
+  compute_capacity_npu_tops_int8: number;
+  compute_used_npu_tops_int8: number;
+  compute_capacity_memory_gb: number;
+  compute_used_memory_gb: number;
+  compute_capacity_storage_gb: number;
+  compute_used_storage_gb: number;
+  running_task_count: number;
+  finished_task_count: number;
 }
 
 export interface RuntimeStreamDiagnosticsV1 {

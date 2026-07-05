@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 from leo_twin.services.runtime_observability import (
+    build_runtime_compute_node_detail_page,
     build_runtime_compute_task_timeline_summary,
+    build_runtime_service_detail_page,
     build_runtime_lifecycle_summaries,
     build_runtime_node_detail_page,
+    build_runtime_route_explanation_summary,
 )
 
 
@@ -472,6 +475,39 @@ def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> No
     assert node_page["window_user_detail_count"] == 1
     assert node_page["window_satellite_detail_count"] == 1
     assert [item["entity_id"] for item in node_page["items"]] == ["user-1", "sat-0"]
+    route_page = build_runtime_route_explanation_summary(
+        snapshot,
+        service_latency_history=service_history,
+        cursor=1,
+        limit=1,
+    )
+    assert route_page["cursor"] == 1
+    assert route_page["limit"] == 1
+    assert route_page["next_cursor"] == 2
+    assert route_page["has_more"] is False
+    assert route_page["item_count"] == 1
+    assert route_page["items"][0]["route_id"] == "route-a"
+    service_page = build_runtime_service_detail_page(
+        service_history,
+        cursor=0,
+        limit=1,
+    )
+    assert service_page["summary_scope"] == "SERVICE_LIFECYCLE_DETAIL_WINDOW"
+    assert service_page["service_count"] == 1
+    assert service_page["queued_service_count"] == 1
+    assert service_page["items"][0]["service_id"] == "task-0"
+    assert service_page["items"][0]["compute_node_id"] == "sat-0"
+    compute_node_page = build_runtime_compute_node_detail_page(
+        snapshot,
+        satellite_kpi_slices=kpi_slices,
+        cursor=0,
+        limit=1,
+    )
+    assert compute_node_page["summary_scope"] == "COMPUTE_NODE_DETAIL_WINDOW"
+    assert compute_node_page["compute_node_count"] == 1
+    assert compute_node_page["busy_compute_node_count"] == 1
+    assert compute_node_page["items"][0]["node_id"] == "sat-0"
+    assert compute_node_page["items"][0]["compute_used_gflops_fp32"] == 75.0
 
 
 def test_compute_task_timeline_summary_is_backend_owned_and_deterministic() -> None:

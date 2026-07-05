@@ -242,6 +242,37 @@ def test_backend_derived_summary_is_deterministic_and_frontend_ready() -> None:
         "Runtime guardrails v2 classify pre-run execution as DEGRADE" in assumption
         for assumption in first["model_assumptions"]
     )
+    detail_pagination = first["large_detail_pagination_contract_v2"]
+    assert isinstance(detail_pagination, dict)
+    assert detail_pagination["contract_id"] == (
+        "leo_twin.large_detail_pagination_contract.v2"
+    )
+    assert detail_pagination["active_profile_id"] == "medium_300"
+    detail_collections = {
+        item["collection"]: item
+        for item in detail_pagination["collections"]
+        if isinstance(item, dict)
+    }
+    assert tuple(detail_collections) == (
+        "ground_users",
+        "satellites",
+        "routes",
+        "services",
+        "compute_nodes",
+    )
+    assert detail_collections["ground_users"]["endpoint"] == (
+        "/runtime/details/users"
+    )
+    assert detail_collections["routes"]["endpoint"] == "/runtime/details/routes"
+    assert detail_collections["services"]["estimated_total_count"] == 1200
+    assert detail_pagination["combined_node_endpoint"]["endpoint"] == (
+        "/runtime/details/nodes"
+    )
+    assert any(
+        "Large detail pagination contract v2 exposes 5 cursor-backed collections"
+        in assumption
+        for assumption in first["model_assumptions"]
+    )
     assert any(
         "Coverage beams are bounded geometric visualization footprints" in assumption
         for assumption in first["model_assumptions"]

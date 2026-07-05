@@ -204,6 +204,14 @@ Tasks:
 - V2-043: Add large detail pagination contract.
   - Scope: users, satellites, routes, services, compute nodes.
   - Depends on: V2-041.
+  - Status: T237 adds backend-owned
+    `leo_twin.large_detail_pagination_contract.v2` to backend derived
+    summaries. The contract covers ground users, satellites, routes, services,
+    and compute nodes with stable cursor semantics, endpoint metadata,
+    recommended LOD-derived limits, hidden-row estimates, and no frontend-local
+    pagination inference. The demo server now also exposes read-only cursor
+    endpoints for routes, service lifecycle rows, and compute-node resource
+    rows while preserving existing user, satellite, and combined-node endpoints.
 
 ### WS6. Dashboard and Frontend Product UX v3
 

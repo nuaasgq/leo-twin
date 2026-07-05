@@ -247,6 +247,9 @@ def test_runtime_detail_pages_return_deterministic_windows(tmp_path: Path) -> No
         cursor=user_first["summary"]["user_count"],
         limit=2,
     )
+    route_first = control_plane.runtime_route_details(cursor=0, limit=2)
+    service_first = control_plane.runtime_service_details(cursor=0, limit=2)
+    compute_node_first = control_plane.runtime_compute_node_details(cursor=0, limit=2)
 
     user_first_summary = user_first["summary"]
     user_second_summary = user_second["summary"]
@@ -308,6 +311,30 @@ def test_runtime_detail_pages_return_deterministic_windows(tmp_path: Path) -> No
         "sat-000",
         "sat-001",
     ]
+
+    assert route_first["type"] == "RUNTIME_DETAIL_PAGE"
+    assert route_first["kind"] == "routes"
+    assert route_first["summary"]["cursor"] == 0
+    assert route_first["summary"]["limit"] == 2
+    assert route_first["summary"]["route_count"] >= route_first["summary"][
+        "item_count"
+    ]
+
+    assert service_first["type"] == "RUNTIME_DETAIL_PAGE"
+    assert service_first["kind"] == "services"
+    assert service_first["summary"]["cursor"] == 0
+    assert service_first["summary"]["limit"] == 2
+    assert service_first["summary"]["service_count"] >= service_first["summary"][
+        "item_count"
+    ]
+
+    assert compute_node_first["type"] == "RUNTIME_DETAIL_PAGE"
+    assert compute_node_first["kind"] == "compute_nodes"
+    assert compute_node_first["summary"]["cursor"] == 0
+    assert compute_node_first["summary"]["limit"] == 2
+    assert compute_node_first["summary"]["compute_node_count"] >= (
+        compute_node_first["summary"]["item_count"]
+    )
 
 
 def test_demo_runtime_status_completes_at_configured_duration(tmp_path: Path) -> None:

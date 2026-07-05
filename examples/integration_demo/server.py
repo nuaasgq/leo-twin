@@ -258,6 +258,32 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                     return
                 self._send_json(control_plane.runtime_node_details(cursor, limit))
                 return
+            if path == "/runtime/details/routes":
+                try:
+                    cursor, limit = _detail_query(query, default_limit=100)
+                except ValueError as exc:
+                    self.send_error(400, str(exc))
+                    return
+                self._send_json(control_plane.runtime_route_details(cursor, limit))
+                return
+            if path == "/runtime/details/services":
+                try:
+                    cursor, limit = _detail_query(query, default_limit=100)
+                except ValueError as exc:
+                    self.send_error(400, str(exc))
+                    return
+                self._send_json(control_plane.runtime_service_details(cursor, limit))
+                return
+            if path == "/runtime/details/compute-nodes":
+                try:
+                    cursor, limit = _detail_query(query, default_limit=100)
+                except ValueError as exc:
+                    self.send_error(400, str(exc))
+                    return
+                self._send_json(
+                    control_plane.runtime_compute_node_details(cursor, limit)
+                )
+                return
             self.send_error(404, "not found")
 
         def do_POST(self) -> None:  # noqa: N802

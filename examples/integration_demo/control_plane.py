@@ -51,9 +51,12 @@ from leo_twin.services.control import (
     ScaleSafetyChecker,
 )
 from leo_twin.services.runtime_observability import (
+    build_runtime_compute_node_detail_page,
     build_runtime_lifecycle_summaries,
     build_runtime_node_detail_page,
+    build_runtime_route_explanation_summary,
     build_runtime_satellite_service_summary,
+    build_runtime_service_detail_page,
     build_runtime_user_request_summary,
 )
 from leo_twin.services.runtime_reproducibility import (
@@ -379,6 +382,52 @@ class DemoControlPlane:
         return {
             "type": "RUNTIME_DETAIL_PAGE",
             "kind": "nodes",
+            "summary": summary,
+        }
+
+    def runtime_route_details(self, cursor: int = 0, limit: int = 100) -> dict[str, Any]:
+        summary = build_runtime_route_explanation_summary(
+            self.visible_snapshot(),
+            service_latency_history=self._service_latency_history_json(),
+            cursor=cursor,
+            limit=limit,
+        )
+        return {
+            "type": "RUNTIME_DETAIL_PAGE",
+            "kind": "routes",
+            "summary": summary,
+        }
+
+    def runtime_service_details(
+        self,
+        cursor: int = 0,
+        limit: int = 100,
+    ) -> dict[str, Any]:
+        summary = build_runtime_service_detail_page(
+            self._service_latency_history_json(),
+            cursor=cursor,
+            limit=limit,
+        )
+        return {
+            "type": "RUNTIME_DETAIL_PAGE",
+            "kind": "services",
+            "summary": summary,
+        }
+
+    def runtime_compute_node_details(
+        self,
+        cursor: int = 0,
+        limit: int = 100,
+    ) -> dict[str, Any]:
+        summary = build_runtime_compute_node_detail_page(
+            self.visible_snapshot(),
+            satellite_kpi_slices=self._satellite_kpi_slices_json(),
+            cursor=cursor,
+            limit=limit,
+        )
+        return {
+            "type": "RUNTIME_DETAIL_PAGE",
+            "kind": "compute_nodes",
             "summary": summary,
         }
 

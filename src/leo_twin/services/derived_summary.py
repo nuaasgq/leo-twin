@@ -21,6 +21,9 @@ from leo_twin.schema.service_placement_contract import (
 from leo_twin.services.dashboard_information_architecture import (
     dashboard_information_architecture_v3_to_dict,
 )
+from leo_twin.services.detail_pagination_contract import (
+    large_detail_pagination_contract_v2_to_dict,
+)
 from leo_twin.services.lod_snapshot_policy import lod_snapshot_policy_v2_to_dict
 from leo_twin.services.runtime_guardrails_v2 import (
     RuntimeGuardrailConfigV2,
@@ -258,6 +261,15 @@ def build_backend_derived_summary(
         scale_policy=scale_policy,
         lod_snapshot_policy=lod_snapshot_policy,
     )
+    detail_pagination_contract = large_detail_pagination_contract_v2_to_dict(
+        satellite_count=satellite_count,
+        user_count=user_count,
+        compute_node_count=compute_node_count,
+        route_count_estimate=flow_count,
+        service_count_estimate=compute_service_request_count,
+        scale_policy=scale_policy,
+        lod_snapshot_policy=lod_snapshot_policy,
+    )
 
     return {
         "derived_constellation_summary": constellation_summary,
@@ -271,6 +283,7 @@ def build_backend_derived_summary(
         "scale_policy_v2": scale_policy,
         "lod_snapshot_policy_v2": lod_snapshot_policy,
         "runtime_guardrails_v2": runtime_guardrails,
+        "large_detail_pagination_contract_v2": detail_pagination_contract,
         "dashboard_information_architecture_v3": (
             dashboard_information_architecture_v3_to_dict()
         ),
@@ -294,6 +307,7 @@ def build_backend_derived_summary(
             scale_policy=scale_policy,
             lod_snapshot_policy=lod_snapshot_policy,
             runtime_guardrails=runtime_guardrails,
+            detail_pagination_contract=detail_pagination_contract,
         ),
     }
 
@@ -832,6 +846,7 @@ def _model_assumptions(
     scale_policy: Mapping[str, Any],
     lod_snapshot_policy: Mapping[str, Any],
     runtime_guardrails: Mapping[str, Any],
+    detail_pagination_contract: Mapping[str, Any],
 ) -> tuple[str, ...]:
     profile = str(constellation_summary.get("profile", "CUSTOM_WALKER"))
     scale_band = str(scale_policy.get("active_scale_band", "UNKNOWN"))
@@ -839,6 +854,10 @@ def _model_assumptions(
         lod_snapshot_policy.get("hidden_detail_policy", "UNKNOWN")
     )
     guardrail_decision = str(runtime_guardrails.get("decision", "UNKNOWN"))
+    detail_collections = detail_pagination_contract.get("collections", ())
+    detail_collection_count = (
+        len(detail_collections) if isinstance(detail_collections, tuple) else 0
+    )
     assumptions = [
         "Orbit allocation is deterministic and simplified; no SGP4 or external ephemeris is used.",
         "Network behavior is flow-level, not packet-level.",
@@ -847,6 +866,7 @@ def _model_assumptions(
         f"Scale policy v2 classifies this scenario as {scale_band} for fidelity and LOD decisions.",
         f"LOD snapshot policy v2 uses {hidden_detail_policy} for rows outside active windows.",
         f"Runtime guardrails v2 classify pre-run execution as {guardrail_decision}.",
+        f"Large detail pagination contract v2 exposes {detail_collection_count} cursor-backed collections.",
         f"Scenario scale uses {satellite_count} satellites and {user_count} users from backend config.",
     ]
     if profile == "STARLINK_SHELL_1_LIKE":
