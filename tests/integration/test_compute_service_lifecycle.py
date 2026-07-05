@@ -128,6 +128,8 @@ def test_compute_service_lifecycle_emits_component_metrics() -> None:
                 "output_flow_id": "svc-00-compute_service-00000-output",
                 "input_route_id": "route:svc-00-compute_service-00000-input",
                 "output_route_id": "route:svc-00-compute_service-00000-output",
+                "first_sample_sim_time": 6.0,
+                "last_sample_sim_time": 6.0,
                 "complete": True,
                 "input_network_latency_s": 4.0,
                 "compute_queue_delay_s": 0.0,

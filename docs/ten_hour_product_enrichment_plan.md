@@ -376,12 +376,17 @@ The following issue-sized slices have now been delivered on
   - Service trace history now carries input/output flow ids and route ids from
     existing metric tags, and dashboard trace labels expose them in hover
     titles.
+- `feat(metrics): include service trace timing`
+  - Maps to suggestions 76-82.
+  - Service trace history now carries first/last service metric sample
+    simulation times, and dashboard trace labels expose the observation window
+    in hover titles.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected
 satellite coverage/beam labels, compute vector KPI samples, and the frontend
 visual verification script. The remaining high-value product gaps are backend
-timestamped service trace detail views, screenshot pixel baselines, and
+per-component timestamp detail views, screenshot pixel baselines, and
 browser-driven reset/control end-to-end smoke tests.
 
 ## Acceptance Gates

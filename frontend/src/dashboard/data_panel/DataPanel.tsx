@@ -1445,7 +1445,13 @@ function serviceLatencyTraceTitle(
     item.input_flow_id ? `input=${item.input_flow_id}` : "",
     item.output_flow_id ? `output=${item.output_flow_id}` : "",
     item.input_route_id ? `input_route=${item.input_route_id}` : "",
-    item.output_route_id ? `output_route=${item.output_route_id}` : ""
+    item.output_route_id ? `output_route=${item.output_route_id}` : "",
+    typeof item.first_sample_sim_time === "number"
+      ? `first=${formatMetricValue(item.first_sample_sim_time)}s`
+      : "",
+    typeof item.last_sample_sim_time === "number"
+      ? `last=${formatMetricValue(item.last_sample_sim_time)}s`
+      : ""
   ].filter((part) => part.length > 0);
   return parts.join(" / ");
 }

@@ -41,6 +41,8 @@ describe("runtime status contract fixture", () => {
       output_flow_id: "svc-00001-output",
       input_route_id: "route:svc-00001-input",
       output_route_id: "route:svc-00001-output",
+      first_sample_sim_time: 120,
+      last_sample_sim_time: 124,
       complete: true,
       total_latency_s: 7.4
     });

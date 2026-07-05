@@ -556,6 +556,8 @@ export interface RuntimeServiceLatencyHistoryItemV1 {
   output_flow_id?: string;
   input_route_id?: string;
   output_route_id?: string;
+  first_sample_sim_time?: number;
+  last_sample_sim_time?: number;
   complete: boolean;
   input_network_latency_s: number;
   compute_queue_delay_s: number;

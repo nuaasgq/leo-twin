@@ -4627,3 +4627,42 @@ change.
 - Recommended follow-up:
   - Add a dedicated lifecycle details table or drawer once service traces carry
     timestamps and per-component status.
+
+## 2026-07-05 - Service Trace Timing v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: carry first and last service metric observation simulation times into
+  `service_latency_history_v1`. The dashboard trace row title exposes the
+  bounded observation window while preserving the compact row layout.
+- Changed files/modules:
+  - `src/leo_twin/services/metrics/collector.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/fixtures/runtimeStatus.contract.json`
+  - `frontend/tests/runtimeContractFixture.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `tests/integration/test_compute_service_lifecycle.py`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `PYTHONPATH=src python -m pytest tests/integration/test_compute_service_lifecycle.py -q`
+    - Result: passed, 1 test.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- dataPanel.test.ts runtimeContractFixture.test.ts`
+    - Result: passed, 25 files / 192 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - A first frontend test attempt failed because the plain shell `PATH` did not
+    expose `node`; the same test command passed after prepending the bundled
+    Codex Node/Pnpm paths.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The timestamps are service metric observation bounds, not per-component
+    start/end timeline records.
+- Recommended follow-up:
+  - Add a lifecycle detail table with per-component timing when the backend
+    emits component-level start/end observations.

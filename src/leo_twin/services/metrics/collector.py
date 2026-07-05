@@ -124,6 +124,7 @@ class MetricsCollector:
         self._finished_tasks: dict[str, str] = {}
         self._service_latency_components_by_task: dict[str, dict[str, float]] = {}
         self._service_latency_metadata_by_task: dict[str, dict[str, str]] = {}
+        self._service_latency_times_by_task: dict[str, dict[str, float]] = {}
         self._last_sim_time = 0.0
         self._metric_event_sequence = 0
 
@@ -361,6 +362,7 @@ class MetricsCollector:
                 task_id,
                 components,
                 self._service_latency_metadata_by_task.get(task_id, {}),
+                self._service_latency_times_by_task.get(task_id, {}),
             )
             for task_id, components in selected
         ]
@@ -839,6 +841,15 @@ class MetricsCollector:
             component
         ] = max(0.0, float(record.value))
         metadata = self._service_latency_metadata_by_task.setdefault(record.entity_id, {})
+        times = self._service_latency_times_by_task.setdefault(record.entity_id, {})
+        times["first_sample_sim_time"] = min(
+            float(record.sim_time),
+            times.get("first_sample_sim_time", float(record.sim_time)),
+        )
+        times["last_sample_sim_time"] = max(
+            float(record.sim_time),
+            times.get("last_sample_sim_time", float(record.sim_time)),
+        )
         tags = dict(record.tags)
         for key in ("input_flow_id", "output_flow_id"):
             value = tags.get(key)
@@ -1724,6 +1735,7 @@ def _service_latency_history_item(
     task_id: str,
     components: dict[str, float],
     metadata: dict[str, str],
+    times: dict[str, float],
 ) -> dict[str, str | float | bool]:
     return {
         "task_id": task_id,
@@ -1731,6 +1743,8 @@ def _service_latency_history_item(
         "output_flow_id": metadata.get("output_flow_id", ""),
         "input_route_id": metadata.get("input_route_id", ""),
         "output_route_id": metadata.get("output_route_id", ""),
+        "first_sample_sim_time": float(times.get("first_sample_sim_time", 0.0)),
+        "last_sample_sim_time": float(times.get("last_sample_sim_time", 0.0)),
         "complete": "total" in components,
         "input_network_latency_s": float(components.get("input_network", 0.0)),
         "compute_queue_delay_s": float(components.get("compute_queue", 0.0)),
