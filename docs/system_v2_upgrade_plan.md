@@ -279,6 +279,10 @@ Tasks:
     satellite, and route detail pages. The backend applies filters before
     cursor pagination and the frontend sends active text/availability/business/
     bottleneck filters during refresh and page-turn actions.
+  - Status: T244 extends filter-aware backend cursor requests to service
+    lifecycle and compute-node resource detail pages. The dashboard now has
+    backend text filters for all five visible detail collections, with filters
+    applied before cursor pagination.
 - V2-054: Add model assumptions panel.
   - Scope: backend-derived model caveats, fidelity mode, KPI provenance.
   - Depends on: V2-003, V2-021.

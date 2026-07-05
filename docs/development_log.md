@@ -5,6 +5,52 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Service and Compute Detail Filters v1
+
+- Branch: `feature/T244-service-compute-detail-filters-v1`
+- Commit: pending in this commit
+- Scope: complete the first filter-aware cursor pass across all visible
+  dashboard detail collections. Service lifecycle and compute-node detail pages
+  now accept backend text `query`, apply filtering before cursor pagination, and
+  report filter metadata when active. The dashboard adds backend text filters
+  for the service and compute-node tables and sends those queries during
+  refresh and page-turn actions.
+- Changed files/modules:
+  - `src/leo_twin/services/runtime_observability.py`
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `frontend/src/app/api.ts`
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/api.test.ts`
+  - `tests/unit/test_runtime_observability.py`
+  - `docs/service_compute_detail_filters_v1.md`
+  - `docs/filter_aware_detail_cursors_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_runtime_observability.py tests/integration/test_runtime_session_control.py tests/integration/test_live_runtime_streaming.py tests/integration/test_benchmark_acceptance_v1.py -q`
+    - Result: passed, 49 tests.
+  - `pnpm --dir frontend test -- api.test.ts dataPanel.test.ts appSurface.test.ts`
+    - Result: passed, 26 test files / 343 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. The command includes TypeScript checking; Vite reported
+      the existing `DataPanel` chunk size warning after minification.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - Service and compute-node unfiltered response shapes remain unchanged.
+    Filter metadata is emitted only when a text query is active.
+  - Existing local runtime/generated config files remain dirty and are
+    intentionally not included in this task.
+- Known remaining issues / follow-up:
+  - Add detail-by-id endpoints for selected entities.
+  - Add backend filter metadata to a future large detail pagination contract
+    version.
+  - Split large dashboard sections into smaller lazy chunks.
+
 ## 2026-07-06 - Filter-Aware Detail Cursors v1
 
 - Branch: `feature/T243-filter-aware-detail-cursors-v1`

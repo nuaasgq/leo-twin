@@ -74,7 +74,7 @@ type RuntimeDetailCursorState = Record<RuntimeDetailCursorKey, number>;
 type RuntimeDetailCursorLoadingState = Record<RuntimeDetailCursorKey, boolean>;
 type RuntimeDetailCursorErrorState = Record<RuntimeDetailCursorKey, string | null>;
 type RuntimeDetailFilterState = Record<
-  "users" | "satellites" | "routes",
+  RuntimeDetailCursorKey,
   RuntimeDetailQueryFilters
 >;
 
@@ -117,7 +117,9 @@ const DEFAULT_RUNTIME_DETAIL_CURSOR_ERRORS: RuntimeDetailCursorErrorState = {
 const DEFAULT_RUNTIME_DETAIL_FILTERS: RuntimeDetailFilterState = {
   users: {},
   satellites: {},
-  routes: {}
+  routes: {},
+  services: {},
+  computeNodes: {}
 };
 
 const CesiumGlobe = lazy(async () => {
@@ -331,12 +333,14 @@ export function App() {
         loadRuntimeServiceDetails(
           runtimeDetailCursors.services,
           requestPlan.services.limit,
-          requestPlan.services.endpoint
+          requestPlan.services.endpoint,
+          runtimeDetailFilters.services
         ),
         loadRuntimeComputeNodeDetails(
           runtimeDetailCursors.computeNodes,
           requestPlan.computeNodes.limit,
-          requestPlan.computeNodes.endpoint
+          requestPlan.computeNodes.endpoint,
+          runtimeDetailFilters.computeNodes
         )
     ]);
     if (
@@ -495,18 +499,27 @@ export function App() {
     }
   }, [generatedConfig, runtimeDetailFilters.routes, setConnectionChannel]);
 
-  const refreshRuntimeServiceDetailCursor = useCallback(async (cursor: number) => {
+  const refreshRuntimeServiceDetailCursor = useCallback(async (
+    cursor: number,
+    filters: RuntimeDetailQueryFilters = runtimeDetailFilters.services
+  ) => {
     const requestPlan = runtimeDetailRequestPlan(
       generatedConfig?.backend_summary?.large_detail_pagination_contract_v2
     );
     const safeCursor = normalizeRuntimeDetailCursor(cursor);
+    const normalizedFilters = normalizeRuntimeDetailFilters(filters);
+    setRuntimeDetailFilters((previous) => ({
+      ...previous,
+      services: normalizedFilters
+    }));
     setRuntimeDetailCursorLoading((previous) => ({ ...previous, services: true }));
     setRuntimeDetailCursorErrors((previous) => ({ ...previous, services: null }));
     try {
       const page = await loadRuntimeServiceDetails(
         safeCursor,
         requestPlan.services.limit,
-        requestPlan.services.endpoint
+        requestPlan.services.endpoint,
+        normalizedFilters
       );
       setRuntimeDetailPages((previous) => ({
         ...(previous ?? {}),
@@ -523,20 +536,29 @@ export function App() {
     } finally {
       setRuntimeDetailCursorLoading((previous) => ({ ...previous, services: false }));
     }
-  }, [generatedConfig, setConnectionChannel]);
+  }, [generatedConfig, runtimeDetailFilters.services, setConnectionChannel]);
 
-  const refreshRuntimeComputeNodeDetailCursor = useCallback(async (cursor: number) => {
+  const refreshRuntimeComputeNodeDetailCursor = useCallback(async (
+    cursor: number,
+    filters: RuntimeDetailQueryFilters = runtimeDetailFilters.computeNodes
+  ) => {
     const requestPlan = runtimeDetailRequestPlan(
       generatedConfig?.backend_summary?.large_detail_pagination_contract_v2
     );
     const safeCursor = normalizeRuntimeDetailCursor(cursor);
+    const normalizedFilters = normalizeRuntimeDetailFilters(filters);
+    setRuntimeDetailFilters((previous) => ({
+      ...previous,
+      computeNodes: normalizedFilters
+    }));
     setRuntimeDetailCursorLoading((previous) => ({ ...previous, computeNodes: true }));
     setRuntimeDetailCursorErrors((previous) => ({ ...previous, computeNodes: null }));
     try {
       const page = await loadRuntimeComputeNodeDetails(
         safeCursor,
         requestPlan.computeNodes.limit,
-        requestPlan.computeNodes.endpoint
+        requestPlan.computeNodes.endpoint,
+        normalizedFilters
       );
       setRuntimeDetailPages((previous) => ({
         ...(previous ?? {}),
@@ -559,7 +581,7 @@ export function App() {
         computeNodes: false
       }));
     }
-  }, [generatedConfig, setConnectionChannel]);
+  }, [generatedConfig, runtimeDetailFilters.computeNodes, setConnectionChannel]);
 
   const refreshRuntimeExportCompare = useCallback(async (packageId: string) => {
     setRuntimeExportComparePackageId(packageId);
@@ -1258,19 +1280,21 @@ export function App() {
                   loading: runtimeDetailCursorLoading.services,
                   error: runtimeDetailCursorErrors.services,
                   onCursorChange: refreshRuntimeServiceDetailCursor,
-                  onRefresh: () =>
+                  onRefresh: (filters) =>
                     refreshRuntimeServiceDetailCursor(
-                      runtimeDetailPages?.services?.cursor ?? runtimeDetailCursors.services
+                      runtimeDetailPages?.services?.cursor ?? runtimeDetailCursors.services,
+                      filters
                     )
                 },
                 computeNodes: {
                   loading: runtimeDetailCursorLoading.computeNodes,
                   error: runtimeDetailCursorErrors.computeNodes,
                   onCursorChange: refreshRuntimeComputeNodeDetailCursor,
-                  onRefresh: () =>
+                  onRefresh: (filters) =>
                     refreshRuntimeComputeNodeDetailCursor(
                       runtimeDetailPages?.computeNodes?.cursor ??
-                        runtimeDetailCursors.computeNodes
+                        runtimeDetailCursors.computeNodes,
+                      filters
                     )
                 }
               }}

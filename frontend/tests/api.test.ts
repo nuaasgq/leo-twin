@@ -600,6 +600,34 @@ describe("runtime API diagnostics", () => {
             items: [{ route_id: "route-filtered" }]
           }
         })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          type: "RUNTIME_DETAIL_PAGE",
+          kind: "services",
+          summary: {
+            version: "v1",
+            source: "SERVICE_LATENCY_HISTORY",
+            service_count: 1,
+            item_count: 1,
+            items: [{ service_id: "service-filtered" }]
+          }
+        })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          type: "RUNTIME_DETAIL_PAGE",
+          kind: "compute_nodes",
+          summary: {
+            version: "v1",
+            source: "BACKEND_RUNTIME_SNAPSHOT",
+            compute_node_count: 1,
+            item_count: 1,
+            items: [{ node_id: "sat-filtered" }]
+          }
+        })
       });
     vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
 
@@ -639,6 +667,22 @@ describe("runtime API diagnostics", () => {
       route_count: 1,
       items: [{ route_id: "route-filtered" }]
     });
+    await expect(
+      loadRuntimeServiceDetails(9, 70, "/runtime/details/services", {
+        query: "sat-1"
+      })
+    ).resolves.toMatchObject({
+      service_count: 1,
+      items: [{ service_id: "service-filtered" }]
+    });
+    await expect(
+      loadRuntimeComputeNodeDetails(10, 80, "/runtime/details/compute-nodes", {
+        query: "busy"
+      })
+    ).resolves.toMatchObject({
+      compute_node_count: 1,
+      items: [{ node_id: "sat-filtered" }]
+    });
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       "/runtime/details/users?cursor=2&limit=80"
@@ -666,6 +710,14 @@ describe("runtime API diagnostics", () => {
     expect(fetchMock).toHaveBeenNthCalledWith(
       7,
       "/runtime/details/routes?cursor=8&limit=60&query=sat-1&availability=BLOCKED&business_type=DATA_TRANSFER&bottleneck_component=AVAILABILITY"
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      8,
+      "/runtime/details/services?cursor=9&limit=70&query=sat-1"
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      9,
+      "/runtime/details/compute-nodes?cursor=10&limit=80&query=busy"
     );
   });
 

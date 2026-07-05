@@ -425,11 +425,14 @@ class DemoControlPlane:
         self,
         cursor: int = 0,
         limit: int = 100,
+        *,
+        query: str = "",
     ) -> dict[str, Any]:
         summary = build_runtime_service_detail_page(
             self._service_latency_history_json(),
             cursor=cursor,
             limit=limit,
+            query=query,
         )
         return {
             "type": "RUNTIME_DETAIL_PAGE",
@@ -441,12 +444,15 @@ class DemoControlPlane:
         self,
         cursor: int = 0,
         limit: int = 100,
+        *,
+        query: str = "",
     ) -> dict[str, Any]:
         summary = build_runtime_compute_node_detail_page(
             self.visible_snapshot(),
             satellite_kpi_slices=self._satellite_kpi_slices_json(),
             cursor=cursor,
             limit=limit,
+            query=query,
         )
         return {
             "type": "RUNTIME_DETAIL_PAGE",

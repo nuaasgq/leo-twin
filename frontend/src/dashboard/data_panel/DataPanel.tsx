@@ -241,6 +241,8 @@ export const DataPanel = memo(function DataPanel({
     useState("ALL");
   const [routeExplanationBottleneckFilter, setRouteExplanationBottleneckFilter] =
     useState("ALL");
+  const [serviceDetailFilter, setServiceDetailFilter] = useState("");
+  const [computeNodeDetailFilter, setComputeNodeDetailFilter] = useState("");
   const [userDetailPage, setUserDetailPage] = useState(0);
   const [satelliteDetailPage, setSatelliteDetailPage] = useState(0);
   const [selectedHistorySatelliteId, setSelectedHistorySatelliteId] = useState<string | null>(
@@ -1358,12 +1360,16 @@ export const DataPanel = memo(function DataPanel({
             rows={serviceDetailRows}
             page={serviceDetailPage}
             control={runtimeDetailCursorControls?.services}
+            filterValue={serviceDetailFilter}
+            onFilterChange={setServiceDetailFilter}
           />
           <TopComputeNodeTable rows={topComputeNodes} />
           <ComputeNodeDetailPageTable
             rows={computeNodeDetailRows}
             page={computeNodeDetailPage}
             control={runtimeDetailCursorControls?.computeNodes}
+            filterValue={computeNodeDetailFilter}
+            onFilterChange={setComputeNodeDetailFilter}
           />
           <div className="data-panel-chart-body compact">
             {computePool.totalTflops > 0 ? (
@@ -2142,21 +2148,33 @@ function TopComputeNodeTable({ rows }: { rows: readonly TopComputeNodeRow[] }) {
 function ServiceDetailPageTable({
   rows,
   page,
-  control
+  control,
+  filterValue,
+  onFilterChange
 }: {
   rows: DataPanelServiceDetailRows;
   page: RuntimeServiceDetailPageV1 | null | undefined;
   control?: RuntimeDetailCursorControl | null;
+  filterValue: string;
+  onFilterChange: (value: string) => void;
 }) {
+  const filters = filterValue ? { query: filterValue } : undefined;
   if (rows.items.length === 0) {
     return (
       <div className="data-panel-route-empty">
         {rows.summaryLabel}
+        <BackendTextFilter
+          label="服务筛选"
+          value={filterValue}
+          placeholder="task / sat / route / queue"
+          onChange={onFilterChange}
+        />
         <BackendCursorPager
           label="服务生命周期"
           page={page}
           totalCount={page?.service_count ?? 0}
           control={control}
+          filters={filters}
         />
       </div>
     );
@@ -2167,11 +2185,18 @@ function ServiceDetailPageTable({
       aria-label="服务生命周期游标明细"
     >
       <div className="data-panel-route-source">{rows.sourceLabel}</div>
+      <BackendTextFilter
+        label="服务筛选"
+        value={filterValue}
+        placeholder="task / sat / route / queue"
+        onChange={onFilterChange}
+      />
       <BackendCursorPager
         label="服务生命周期"
         page={page}
         totalCount={page?.service_count ?? rows.items.length}
         control={control}
+        filters={filters}
       />
       <div className="data-panel-route-row header">
         <span>服务</span>
@@ -2198,21 +2223,33 @@ function ServiceDetailPageTable({
 function ComputeNodeDetailPageTable({
   rows,
   page,
-  control
+  control,
+  filterValue,
+  onFilterChange
 }: {
   rows: DataPanelComputeNodeDetailRows;
   page: RuntimeComputeNodeDetailPageV1 | null | undefined;
   control?: RuntimeDetailCursorControl | null;
+  filterValue: string;
+  onFilterChange: (value: string) => void;
 }) {
+  const filters = filterValue ? { query: filterValue } : undefined;
   if (rows.items.length === 0) {
     return (
       <div className="data-panel-compute-empty">
         {rows.summaryLabel}
+        <BackendTextFilter
+          label="算力节点筛选"
+          value={filterValue}
+          placeholder="sat / busy / GPU / memory"
+          onChange={onFilterChange}
+        />
         <BackendCursorPager
           label="算力节点"
           page={page}
           totalCount={page?.compute_node_count ?? 0}
           control={control}
+          filters={filters}
         />
       </div>
     );
@@ -2220,11 +2257,18 @@ function ComputeNodeDetailPageTable({
   return (
     <div className="data-panel-compute-node-table detail" aria-label="算力节点游标明细">
       <div className="data-panel-route-source">{rows.sourceLabel}</div>
+      <BackendTextFilter
+        label="算力节点筛选"
+        value={filterValue}
+        placeholder="sat / busy / GPU / memory"
+        onChange={onFilterChange}
+      />
       <BackendCursorPager
         label="算力节点"
         page={page}
         totalCount={page?.compute_node_count ?? rows.items.length}
         control={control}
+        filters={filters}
       />
       <div className="data-panel-compute-node-row header">
         <span>节点</span>
@@ -2247,6 +2291,30 @@ function ComputeNodeDetailPageTable({
         </div>
       ))}
     </div>
+  );
+}
+
+function BackendTextFilter({
+  label,
+  value,
+  placeholder,
+  onChange
+}: {
+  label: string;
+  value: string;
+  placeholder: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="data-panel-backend-filter">
+      <span>{label}</span>
+      <input
+        type="search"
+        value={value}
+        placeholder={placeholder}
+        onChange={(event) => onChange(event.currentTarget.value)}
+      />
+    </label>
   );
 }
 

@@ -128,9 +128,10 @@ export async function loadRuntimeRouteDetails(
 export async function loadRuntimeServiceDetails(
   cursor = 0,
   limit = 100,
-  endpoint = "/runtime/details/services"
+  endpoint = "/runtime/details/services",
+  filters: RuntimeDetailQueryFilters = {}
 ): Promise<RuntimeServiceDetailPageV1> {
-  const page = await loadRuntimeDetailPage(endpoint, cursor, limit);
+  const page = await loadRuntimeDetailPage(endpoint, cursor, limit, filters);
   if (page.kind !== "services") {
     throw new TypeError(`runtime detail response kind must be services, got ${page.kind}`);
   }
@@ -140,9 +141,10 @@ export async function loadRuntimeServiceDetails(
 export async function loadRuntimeComputeNodeDetails(
   cursor = 0,
   limit = 100,
-  endpoint = "/runtime/details/compute-nodes"
+  endpoint = "/runtime/details/compute-nodes",
+  filters: RuntimeDetailQueryFilters = {}
 ): Promise<RuntimeComputeNodeDetailPageV1> {
-  const page = await loadRuntimeDetailPage(endpoint, cursor, limit);
+  const page = await loadRuntimeDetailPage(endpoint, cursor, limit, filters);
   if (page.kind !== "compute_nodes") {
     throw new TypeError(
       `runtime detail response kind must be compute_nodes, got ${page.kind}`

@@ -1929,11 +1929,14 @@ export interface RuntimeServiceDetailPageV1 {
   next_cursor: number;
   has_more: boolean;
   service_count: number;
+  unfiltered_service_count?: number;
   item_count: number;
   complete_service_count: number;
   queued_service_count: number;
   window_service_count: number;
   hidden_service_count: number;
+  filter_query?: string;
+  filter_applied?: boolean;
   items: readonly RuntimeServiceDetailItemV1[];
 }
 
@@ -2014,10 +2017,13 @@ export interface RuntimeComputeNodeDetailPageV1 {
   next_cursor: number;
   has_more: boolean;
   compute_node_count: number;
+  unfiltered_compute_node_count?: number;
   item_count: number;
   busy_compute_node_count: number;
   window_compute_node_count: number;
   hidden_compute_node_count: number;
+  filter_query?: string;
+  filter_applied?: boolean;
   items: readonly RuntimeComputeNodeDetailItemV1[];
 }
 

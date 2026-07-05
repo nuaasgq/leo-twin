@@ -2855,6 +2855,34 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
   margin: 4px 0 6px;
 }
 
+.data-panel-backend-filter {
+  display: grid;
+  grid-template-columns: auto minmax(180px, 320px);
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin: 4px 0 6px;
+  color: var(--app-muted);
+  font-size: 10px;
+}
+
+.data-panel-backend-filter span {
+  color: var(--accent-cyan);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.data-panel-backend-filter input {
+  min-width: 0;
+  width: 100%;
+  border: 1px solid #314656;
+  border-radius: 5px;
+  padding: 6px 8px;
+  background: #0d151d;
+  color: var(--app-text);
+  font: inherit;
+}
+
 .data-panel-detail-pager span,
 .data-panel-detail-pager strong,
 .data-panel-detail-pager small {
@@ -4444,5 +4472,9 @@ button.data-panel-satellite-resource-row:hover,
 
   .data-panel-detail-pager {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .data-panel-backend-filter {
+    grid-template-columns: 1fr;
   }
 }

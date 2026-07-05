@@ -766,3 +766,63 @@ def test_runtime_detail_pages_apply_filters_before_cursor_pagination() -> None:
     assert route_page["filter_bottleneck_component"] == "AVAILABILITY"
     assert route_page["filter_applied"] is True
     assert route_page["items"][0]["route_id"] == "route-blocked"
+
+
+def test_runtime_service_and_compute_detail_pages_apply_text_filters() -> None:
+    service_page = build_runtime_service_detail_page(
+        {
+            "items": [
+                {
+                    "task_id": "task-a",
+                    "input_flow_id": "flow-a",
+                    "compute_node_id": "sat-0",
+                    "complete": True,
+                },
+                {
+                    "task_id": "task-b",
+                    "input_flow_id": "flow-b",
+                    "compute_node_id": "sat-1",
+                    "compute_queue_delay_s": 0.5,
+                    "complete": False,
+                },
+            ]
+        },
+        query="sat-1",
+        cursor=0,
+        limit=10,
+    )
+    assert service_page["summary_scope"] == "FILTERED_SERVICE_LIFECYCLE_DETAIL_WINDOW"
+    assert service_page["service_count"] == 1
+    assert service_page["unfiltered_service_count"] == 2
+    assert service_page["filter_query"] == "sat-1"
+    assert service_page["filter_applied"] is True
+    assert service_page["queued_service_count"] == 1
+    assert service_page["items"][0]["service_id"] == "task-b"
+
+    compute_page = build_runtime_compute_node_detail_page(
+        {
+            "compute_nodes": [
+                {
+                    "node_id": "sat-0",
+                    "status": "BUSY",
+                    "capacity": 100.0,
+                    "available_capacity": 10.0,
+                },
+                {
+                    "node_id": "sat-1",
+                    "status": "IDLE",
+                    "capacity": 100.0,
+                    "available_capacity": 100.0,
+                },
+            ]
+        },
+        query="busy",
+        cursor=0,
+        limit=10,
+    )
+    assert compute_page["summary_scope"] == "FILTERED_COMPUTE_NODE_DETAIL_WINDOW"
+    assert compute_page["compute_node_count"] == 1
+    assert compute_page["unfiltered_compute_node_count"] == 2
+    assert compute_page["filter_query"] == "busy"
+    assert compute_page["filter_applied"] is True
+    assert compute_page["items"][0]["node_id"] == "sat-0"

@@ -55,6 +55,6 @@ the filtered collection. When a filter is active, the summary also reports:
 
 ## Follow-Up
 
-- Add service lifecycle and compute-node filter controls.
+- Service lifecycle and compute-node filter controls were added in T244.
 - Add detail-by-id endpoints for selected entities.
 - Add backend filter metadata to the large detail pagination contract v3.

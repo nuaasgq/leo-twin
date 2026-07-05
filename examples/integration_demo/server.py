@@ -296,7 +296,14 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                 except ValueError as exc:
                     self.send_error(400, str(exc))
                     return
-                self._send_json(control_plane.runtime_service_details(cursor, limit))
+                filters = _detail_filter_query(query)
+                self._send_json(
+                    control_plane.runtime_service_details(
+                        cursor,
+                        limit,
+                        query=filters["query"],
+                    )
+                )
                 return
             if path == "/runtime/details/compute-nodes":
                 try:
@@ -304,8 +311,13 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                 except ValueError as exc:
                     self.send_error(400, str(exc))
                     return
+                filters = _detail_filter_query(query)
                 self._send_json(
-                    control_plane.runtime_compute_node_details(cursor, limit)
+                    control_plane.runtime_compute_node_details(
+                        cursor,
+                        limit,
+                        query=filters["query"],
+                    )
                 )
                 return
             self.send_error(404, "not found")

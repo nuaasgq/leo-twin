@@ -369,38 +369,58 @@ def build_runtime_service_detail_page(
     *,
     cursor: int = 0,
     limit: int = 100,
+    query: str = "",
 ) -> dict[str, object]:
     """Build one deterministic cursor page of service lifecycle rows."""
 
     items = tuple(_records((service_latency_history or {}).get("items")))
     ordered_items = tuple(sorted(items, key=_service_detail_sort_key))
+    all_rows = tuple(_service_detail_item(item) for item in ordered_items)
+    filtered_rows = tuple(
+        row for row in all_rows if _detail_item_matches_query(row, query)
+    )
     normalized_cursor = _page_cursor(cursor)
     normalized_limit = _page_limit(limit)
-    page_items = ordered_items[
+    rows = filtered_rows[
         normalized_cursor : normalized_cursor + normalized_limit
     ]
-    rows = tuple(_service_detail_item(item) for item in page_items)
-    next_cursor = min(len(ordered_items), normalized_cursor + len(rows))
-    return {
+    next_cursor = min(len(filtered_rows), normalized_cursor + len(rows))
+    filter_query = _normalized_filter_text(query)
+    result: dict[str, object] = {
         "version": "v1",
         "source": "SERVICE_LATENCY_HISTORY",
-        "summary_scope": "SERVICE_LIFECYCLE_DETAIL_WINDOW",
+        "summary_scope": (
+            "FILTERED_SERVICE_LIFECYCLE_DETAIL_WINDOW"
+            if filter_query
+            else "SERVICE_LIFECYCLE_DETAIL_WINDOW"
+        ),
         "cursor": normalized_cursor,
         "limit": normalized_limit,
         "next_cursor": next_cursor,
-        "has_more": next_cursor < len(ordered_items),
-        "service_count": len(ordered_items),
+        "has_more": next_cursor < len(filtered_rows),
+        "service_count": len(filtered_rows),
         "item_count": len(rows),
         "complete_service_count": sum(
-            1 for item in ordered_items if bool(item.get("complete"))
+            1 for row in filtered_rows if bool(row.get("complete"))
         ),
         "queued_service_count": sum(
-            1 for item in ordered_items if _float(item.get("compute_queue_delay_s")) > 0.0
+            1
+            for row in filtered_rows
+            if _float(row.get("compute_queue_delay_s")) > 0.0
         ),
         "window_service_count": len(rows),
-        "hidden_service_count": max(0, len(ordered_items) - len(rows)),
+        "hidden_service_count": max(0, len(filtered_rows) - len(rows)),
         "items": rows,
     }
+    if filter_query:
+        result.update(
+            {
+                "unfiltered_service_count": len(ordered_items),
+                "filter_query": filter_query,
+                "filter_applied": True,
+            }
+        )
+    return result
 
 
 def build_runtime_compute_node_detail_page(
@@ -409,6 +429,7 @@ def build_runtime_compute_node_detail_page(
     satellite_kpi_slices: Mapping[str, Any] | None = None,
     cursor: int = 0,
     limit: int = 100,
+    query: str = "",
 ) -> dict[str, object]:
     """Build one deterministic cursor page of satellite-hosted compute nodes."""
 
@@ -423,35 +444,54 @@ def build_runtime_compute_node_detail_page(
     node_ids = tuple(
         sorted((node_id for node_id in node_by_id if node_id), key=_entity_sort_key)
     )
-    normalized_cursor = _page_cursor(cursor)
-    normalized_limit = _page_limit(limit)
-    page_node_ids = node_ids[normalized_cursor : normalized_cursor + normalized_limit]
-    rows = tuple(
+    all_rows = tuple(
         _compute_node_detail_item(
             node_id,
             node_by_id[node_id],
             kpi_slice_by_id.get(node_id),
         )
-        for node_id in page_node_ids
+        for node_id in node_ids
     )
-    next_cursor = min(len(node_ids), normalized_cursor + len(rows))
-    return {
+    filtered_rows = tuple(
+        row for row in all_rows if _detail_item_matches_query(row, query)
+    )
+    normalized_cursor = _page_cursor(cursor)
+    normalized_limit = _page_limit(limit)
+    rows = filtered_rows[
+        normalized_cursor : normalized_cursor + normalized_limit
+    ]
+    next_cursor = min(len(filtered_rows), normalized_cursor + len(rows))
+    filter_query = _normalized_filter_text(query)
+    result: dict[str, object] = {
         "version": "v1",
         "source": "BACKEND_RUNTIME_SNAPSHOT",
-        "summary_scope": "COMPUTE_NODE_DETAIL_WINDOW",
+        "summary_scope": (
+            "FILTERED_COMPUTE_NODE_DETAIL_WINDOW"
+            if filter_query
+            else "COMPUTE_NODE_DETAIL_WINDOW"
+        ),
         "cursor": normalized_cursor,
         "limit": normalized_limit,
         "next_cursor": next_cursor,
-        "has_more": next_cursor < len(node_ids),
-        "compute_node_count": len(node_ids),
+        "has_more": next_cursor < len(filtered_rows),
+        "compute_node_count": len(filtered_rows),
         "item_count": len(rows),
         "busy_compute_node_count": sum(
             1 for item in rows if str(item["status"]).upper() == "BUSY"
         ),
         "window_compute_node_count": len(rows),
-        "hidden_compute_node_count": max(0, len(node_ids) - len(rows)),
+        "hidden_compute_node_count": max(0, len(filtered_rows) - len(rows)),
         "items": rows,
     }
+    if filter_query:
+        result.update(
+            {
+                "unfiltered_compute_node_count": len(node_ids),
+                "filter_query": filter_query,
+                "filter_applied": True,
+            }
+        )
+    return result
 
 
 def _user_request_summary(
