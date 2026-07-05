@@ -1,0 +1,113 @@
+# SEES / LEO-Twin 120-satellite network stress observability template.
+#
+# Purpose:
+# - Deterministic 120-satellite scenario for exercising dashboard throughput,
+#   latency, loss proxy, jitter proxy, route pressure, and compute load curves.
+# - The frontend should still expose only key operational controls; this file
+#   keeps the full backend contract for advanced scenario tuning.
+# - Deterministic flow-level simulation only. Do not configure or expect
+#   STK, EXATA, AFSIM, DDS, packet-level simulation, RF propagation, or
+#   antenna-pattern simulation.
+# - This is a stress-observability preset, not a high-fidelity network twin.
+# - Dashboard network curves are flow-level proxy metrics derived from routes,
+#   flows, demand pressure, and completed services.
+
+scenario:
+  satellite_count: 120
+  user_count: 900
+  compute_nodes: 120
+
+  # Every satellite is modeled as a compute-capable platform. The scalar
+  # capacity remains the legacy CPU FP32 GFLOPS field; vector fields make the
+  # dashboard resource pool and per-satellite rows meaningful.
+  compute_capacity: 32.0
+  compute_cpu_gflops_fp64: 6.0
+  compute_gpu_tflops_fp32: 1.2
+  compute_gpu_tflops_fp16: 2.4
+  compute_npu_tops_int8: 8.0
+  compute_memory_gb: 24.0
+  compute_storage_gb: 384.0
+
+  ground_station_count: 4
+  cell_count: 120
+  compute_scheduling_policy: FIFO
+
+  # Spread startup demand so the first live tick does not monopolize the run.
+  initial_workload_smoothing_enabled: true
+  initial_workload_window_s: 20.0
+  max_initial_events_per_tick: 12
+  workload_smoothing_mode: RATE_LIMITED
+
+  orbit:
+    # Approximate Starlink shell-1-like altitude/inclination, not exact
+    # Starlink fidelity and not SGP4.
+    update_interval_seconds: 20
+    plane_count: 12
+    altitude_m: 550000.0
+    inclination_deg: 53.0
+    orbit_update_mode: null
+
+  traffic_model:
+    # Mixed services with higher demand and shorter intervals to produce
+    # visible flow-level pressure and service-latency movement.
+    flow_interval_seconds: 5
+    task_interval_seconds: 6
+    flow_demand_capacity: 420.0
+    task_compute_demand: 90.0
+    task_data_size: 32.0
+    traffic_class: COMPUTE_SERVICE
+    destination_type: COMPUTE_NODE
+    output_data_size: 8.0
+    data_transfer_weight: 3.0
+    telemetry_weight: 1.0
+    bulk_downlink_weight: 2.0
+    compute_service_weight: 3.0
+
+network:
+  # Flow-level protocol profile. These select deterministic internal
+  # abstractions only; no external network simulator is used.
+  application_protocol: TASK_OFFLOAD_FLOW
+  transport_protocol: UDP
+  routing_protocol: DISTANCE_VECTOR
+  datalink_mac_protocol: SLOTTED_ALOHA
+
+  # Intentional non-zero proxy stress. Loss, rain, route capacity pressure,
+  # and hop/latency tradeoffs make dashboard KPI curves easier to validate.
+  transport_loss_rate: 0.06
+  transport_congestion_window_segments: 0
+  routing_latency_weight: 0.2
+  routing_inverse_capacity_weight: 500.0
+  routing_hop_weight: 1.5
+
+  carrier_frequency_hz: 20000000000.0
+  channel_bandwidth_hz: 80000000.0
+  rain_rate_mm_h: 12.0
+  rain_attenuation_coefficient_db_per_km_per_mm_h: 0.018
+  rain_effective_path_km: 5.0
+  antenna_diameter_m: 0.35
+  antenna_aperture_efficiency: 0.58
+  transmit_power_dbw: 18.0
+  system_loss_db: 1.8
+  noise_temperature_k: 310.0
+
+  # 120 satellites can keep bounded ISL candidates without all-pairs links.
+  space_link_mode: BOUNDED_CANDIDATE
+  max_space_link_candidates_per_satellite: 4
+  batch_space_link_update_limit: 999
+
+runtime:
+  # ACCELERATED is useful for scenario exploration. Switch to REAL_TIME before
+  # initialization when validating live wall-clock behavior.
+  mode: ACCELERATED
+  speed_factor: 5.0
+  seed: 20260705
+  duration: 900
+
+ui:
+  visualization:
+    satellites: true
+    links: true
+    users: true
+    metrics: true
+  update_frequency_hz: 20
+  dashboard_layout: right_panel

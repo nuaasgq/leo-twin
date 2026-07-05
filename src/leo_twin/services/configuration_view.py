@@ -229,6 +229,15 @@ _TEMPLATE_PROFILES = (
         ),
     },
     {
+        "id": "network_stress_120sat",
+        "label": "120-satellite network stress observability",
+        "path": "configs/templates/sees_user_network_stress_120.example.yaml",
+        "purpose": (
+            "Higher flow-level demand, loss, rain, and routing pressure for "
+            "validating changing network KPI curves."
+        ),
+    },
+    {
         "id": "large_scale_1200sat",
         "label": "1200-satellite scale mode",
         "path": "configs/templates/sees_user_large_scale_1200.example.yaml",

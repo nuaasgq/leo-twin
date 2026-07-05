@@ -5,6 +5,40 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Network Stress User Config Template v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending in this commit
+- Scope: add a deterministic 120-satellite user configuration template for
+  dashboard network-stress observability. The template increases flow-level
+  demand, configured transport loss, rain attenuation inputs, and routing
+  pressure so throughput, latency, loss proxy, jitter proxy, route pressure,
+  and compute load curves are easier to validate. It remains configuration
+  only: no Event Kernel changes, no packet-level simulation, no RF propagation
+  model, and no STK/EXATA/AFSIM/DDS integration.
+- Changed files/modules:
+  - `configs/templates/sees_user_network_stress_120.example.yaml`
+  - `src/leo_twin/services/configuration_view.py`
+  - `tests/unit/test_configuration_view.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_configuration_view.py -q`
+    - Result: passed, 5 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- configPanel.test.ts`
+    - Result: passed, 25 files / 256 tests.
+  - `git diff --check -- configs/templates/sees_user_network_stress_120.example.yaml src/leo_twin/services/configuration_view.py tests/unit/test_configuration_view.py docs/development_log.md`
+    - Result: passed.
+- Problems encountered:
+  - The first backend template test run failed because the new template
+    described loss/jitter proxy fields but did not include the exact
+    user-facing phrase `flow-level proxy`; the template purpose text was
+    clarified and the test was rerun.
+- Known remaining issues / follow-up:
+  - The frontend currently lists backend template profiles but does not yet
+    provide a one-click "load this template" workflow. Loading templates into
+    the active control config should be a separate endpoint/UI task.
+
 ## 2026-07-05 - Runtime Heartbeat Diagnostics v1
 
 - Branch: `feature/T164-dashboard-observability-v1`
