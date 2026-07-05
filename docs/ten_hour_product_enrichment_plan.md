@@ -520,6 +520,11 @@ The following issue-sized slices have now been delivered on
   - Maps to suggestions 91-95.
   - README now lists both runtime config staging and forbidden runtime import
     guard commands for local pre-commit checks.
+- `test(git): add pre-commit aggregate checks`
+  - Maps to suggestions 91-95.
+  - `scripts/pre_commit_checks.ps1` now runs the staged runtime config guard,
+    forbidden runtime import guard, and `git diff --check` through one local
+    pre-commit entry point.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected

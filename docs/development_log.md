@@ -5599,3 +5599,32 @@ change.
 - Recommended follow-up:
   - Update the status page after the next substantial backend or frontend
     milestone.
+
+## 2026-07-05 - Pre-Commit Aggregate Checks v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add one local pre-commit verification entry point that aggregates the
+  runtime config staging guard, forbidden runtime import guard, and whitespace
+  diff check before developers commit.
+- Changed files/modules:
+  - `scripts/pre_commit_checks.ps1`
+  - `README.md`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\pre_commit_checks.ps1`
+    - Result: passed.
+    - Runtime config staging guard: passed.
+    - Forbidden runtime import guard: passed.
+    - `git diff --check`: passed, with only pre-existing local runtime config
+      CRLF warnings.
+- Problems encountered:
+  - None.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - This is still a manual command, not an installed Git hook.
+- Recommended follow-up:
+  - Add an optional hook installer only if the team wants enforced local
+    pre-commit behavior.
