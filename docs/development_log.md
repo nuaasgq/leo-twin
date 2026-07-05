@@ -3839,3 +3839,36 @@ change.
 - Recommended follow-up:
   - Add a visible selected-satellite coverage legend explaining footprint,
     honeycomb cells, and covered-user counting in one compact panel.
+
+## 2026-07-05 - Satellite Motion Projection Label v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: make frontend display-clock satellite motion projection visible in the
+  selected-satellite inset. The inset now shows whether the current satellite
+  view is snapshot-synchronized or display-projected ahead of the latest backend
+  snapshot.
+- Changed files/modules:
+  - `frontend/src/3d/cesium/positions.ts`
+  - `frontend/src/3d/cesium/CesiumGlobe.tsx`
+  - `frontend/tests/orbitTrackRenderer.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- orbitTrackRenderer.test.ts`
+    - Result: passed, 24 files / 174 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - Satellite position projection already existed. The issue was that users had
+    no visible indication of display-time extrapolation relative to the latest
+    backend snapshot.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - This labels projection state; it does not change the simplified circular
+    orbit or backend update cadence.
+- Recommended follow-up:
+  - Add a short movement/fidelity legend near the 3D controls explaining
+    backend snapshot cadence versus frontend display interpolation.

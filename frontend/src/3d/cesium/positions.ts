@@ -42,6 +42,17 @@ export function projectSatelliteStates(
   return states.map((state) => projectSatelliteState(state, displaySimTime));
 }
 
+export function satelliteMotionProjectionLabel(
+  displaySimTime: number,
+  snapshotSimTime: number
+): string {
+  const deltaSeconds = Math.max(0, displaySimTime - snapshotSimTime);
+  if (deltaSeconds < 0.05) {
+    return "快照同步";
+  }
+  return `显示外推 +${formatProjectionSeconds(deltaSeconds)}秒`;
+}
+
 export function satelliteOrbitCartesianSamples(
   state: SatelliteState,
   sampleCount = 96
@@ -125,6 +136,13 @@ function normalize(vector: Vector3Tuple): Vector3Tuple {
 
 function vectorLength(vector: Vector3Tuple): number {
   return Math.hypot(vector[0], vector[1], vector[2]);
+}
+
+function formatProjectionSeconds(value: number): string {
+  return value.toLocaleString("zh-CN", {
+    maximumFractionDigits: 1,
+    minimumFractionDigits: 0
+  });
 }
 
 function dot(left: Vector3Tuple, right: Vector3Tuple): number {

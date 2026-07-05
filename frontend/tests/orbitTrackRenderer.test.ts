@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildOrbitTrackSamples,
-  projectSatelliteState
+  projectSatelliteState,
+  satelliteMotionProjectionLabel
 } from "../src/3d/cesium/positions";
 
 describe("buildOrbitTrackSamples", () => {
@@ -49,6 +50,15 @@ describe("buildOrbitTrackSamples", () => {
     expect(second).toEqual(first);
     expect(first[0]).toEqual([0, 7_000_000, 0]);
     expect(first[first.length - 1]).toEqual(first[0]);
+  });
+});
+
+describe("satelliteMotionProjectionLabel", () => {
+  it("labels display-clock projection relative to the latest snapshot", () => {
+    expect(satelliteMotionProjectionLabel(120, 120)).toBe("快照同步");
+    expect(satelliteMotionProjectionLabel(120.03, 120)).toBe("快照同步");
+    expect(satelliteMotionProjectionLabel(122.5, 120)).toBe("显示外推 +2.5秒");
+    expect(satelliteMotionProjectionLabel(118, 120)).toBe("快照同步");
   });
 });
 

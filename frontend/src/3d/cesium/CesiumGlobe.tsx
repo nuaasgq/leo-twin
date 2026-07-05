@@ -42,7 +42,11 @@ import {
   installCountryOverlays,
   installNaturalEarthCountryOverlays
 } from "./countryOverlays";
-import { groundUserCartesian, projectSatelliteStates } from "./positions";
+import {
+  groundUserCartesian,
+  projectSatelliteStates,
+  satelliteMotionProjectionLabel
+} from "./positions";
 import {
   GlobeVisualMode,
   applyGlobeVisualPolicy
@@ -490,6 +494,10 @@ export function CesiumGlobe({
           computeResourceSummary={computeResourceSummary}
           coverageSummary={coverageDisplaySummary}
           coverageUserSummary={coverageUserSummary}
+          motionProjectionLabel={satelliteMotionProjectionLabel(
+            displaySimTime,
+            snapshot.last_sim_time
+          )}
         />
       ) : null}
       {renderError ? <div className="globe-render-error">{renderError}</div> : null}
@@ -627,7 +635,8 @@ function SatelliteInset({
   computeNode,
   computeResourceSummary,
   coverageSummary,
-  coverageUserSummary
+  coverageUserSummary,
+  motionProjectionLabel
 }: {
   satellite: SatelliteState;
   trail: readonly SatelliteInsetPoint[];
@@ -635,6 +644,7 @@ function SatelliteInset({
   computeResourceSummary?: ComputeResourceSummary | null;
   coverageSummary: CoverageBeamDisplaySummary;
   coverageUserSummary: CoverageUserIntersectionSummary;
+  motionProjectionLabel: string;
 }) {
   const latestPoint = trail[trail.length - 1] ?? {
     satelliteId: satellite.satellite_id,
@@ -676,6 +686,7 @@ function SatelliteInset({
       <div className="satellite-inset-meta">
         <span>高度 {satelliteAltitudeKm(satellite).toFixed(0)} km</span>
         <span>t={satellite.sim_time.toFixed(1)}s</span>
+        <span>{motionProjectionLabel}</span>
         <span>{coverageSummary.footprintRadiusLabel}</span>
         <span>{coverageSummary.beamLengthLabel}</span>
         <span>{coverageSummary.beamCountLabel}</span>
