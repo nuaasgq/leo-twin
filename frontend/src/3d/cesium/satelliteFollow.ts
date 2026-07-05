@@ -1,6 +1,9 @@
 import { ComputeResourceSummary, SatelliteState } from "../../core/event_types";
 
 const EARTH_RADIUS_M = 6_371_000;
+const SATELLITE_CAMERA_DETAIL_POLICY_V2_ID =
+  "leo_twin.satellite_camera_detail_policy.v2";
+const DEFAULT_INSET_TRAIL_MAX_POINTS = 28;
 
 export type GlobeCameraMode = "EARTH" | "SATELLITE";
 
@@ -37,6 +40,42 @@ export interface SatelliteComputeSummary {
   compatibilityNote: string;
 }
 
+export interface SatelliteCameraDetailPolicyV2Input {
+  cameraMode: GlobeCameraMode;
+  selectedSatelliteId: string;
+  selectableSatelliteCount: number;
+  trailPointCount: number;
+  hasComputeNode: boolean;
+  coverageOverlayEnabled: boolean;
+  maxTrailPoints?: number;
+}
+
+export interface SatelliteCameraDetailPolicyV2Summary {
+  version: "v2";
+  policy_id: string;
+  default_camera_mode: GlobeCameraMode;
+  active_camera_mode: GlobeCameraMode;
+  follow_available: boolean;
+  selected_satellite_id: string | null;
+  selectable_satellite_count: number;
+  target_selection_policy: "EXPLICIT_SELECTION_OR_FIRST_SNAPSHOT_SATELLITE";
+  camera_follow_policy: "CESIUM_LOOK_AT_SELECTED_SATELLITE";
+  inset_enabled: boolean;
+  local_motion_trail_enabled: boolean;
+  trail_point_count: number;
+  max_trail_points: number;
+  coverage_overlay_enabled: boolean;
+  resource_overlay_enabled: boolean;
+  visual_only: true;
+  no_simulation_semantics: true;
+}
+
+export interface SatelliteCameraDetailPolicyV2LayerSummary {
+  label: string;
+  value: string;
+  detail: string;
+}
+
 export function selectedDisplaySatellite(
   satellites: readonly SatelliteState[],
   selectedSatelliteId: string
@@ -59,7 +98,7 @@ export function selectableSatelliteTargets(
 export function appendSatelliteInsetTrail(
   currentTrail: readonly SatelliteInsetPoint[],
   satellite: SatelliteState | null,
-  maxPoints = 28
+  maxPoints = DEFAULT_INSET_TRAIL_MAX_POINTS
 ): readonly SatelliteInsetPoint[] {
   if (!satellite) {
     return [];
@@ -77,6 +116,75 @@ export function appendSatelliteInsetTrail(
     return currentTrail;
   }
   return [...retainedTrail, nextPoint].slice(-Math.max(2, maxPoints));
+}
+
+export function satelliteCameraDetailPolicyV2Summary(
+  input: SatelliteCameraDetailPolicyV2Input
+): SatelliteCameraDetailPolicyV2Summary {
+  const selectableSatelliteCount = Math.max(
+    0,
+    Math.floor(finiteNumber(input.selectableSatelliteCount))
+  );
+  const followAvailable = selectableSatelliteCount > 0;
+  const activeCameraMode =
+    input.cameraMode === "SATELLITE" && followAvailable ? "SATELLITE" : "EARTH";
+  const maxTrailPoints = Math.max(
+    2,
+    Math.floor(
+      finiteOptionalNumber(input.maxTrailPoints, DEFAULT_INSET_TRAIL_MAX_POINTS)
+    )
+  );
+  const insetEnabled = activeCameraMode === "SATELLITE";
+  const trailPointCount = insetEnabled
+    ? Math.max(
+        0,
+        Math.min(maxTrailPoints, Math.floor(finiteNumber(input.trailPointCount)))
+      )
+    : 0;
+  return {
+    version: "v2",
+    policy_id: SATELLITE_CAMERA_DETAIL_POLICY_V2_ID,
+    default_camera_mode: "EARTH",
+    active_camera_mode: activeCameraMode,
+    follow_available: followAvailable,
+    selected_satellite_id:
+      activeCameraMode === "SATELLITE" && input.selectedSatelliteId
+        ? input.selectedSatelliteId
+        : null,
+    selectable_satellite_count: selectableSatelliteCount,
+    target_selection_policy: "EXPLICIT_SELECTION_OR_FIRST_SNAPSHOT_SATELLITE",
+    camera_follow_policy: "CESIUM_LOOK_AT_SELECTED_SATELLITE",
+    inset_enabled: insetEnabled,
+    local_motion_trail_enabled: insetEnabled,
+    trail_point_count: trailPointCount,
+    max_trail_points: maxTrailPoints,
+    coverage_overlay_enabled: insetEnabled && input.coverageOverlayEnabled,
+    resource_overlay_enabled: insetEnabled && input.hasComputeNode,
+    visual_only: true,
+    no_simulation_semantics: true
+  };
+}
+
+export function satelliteCameraDetailPolicyV2LayerSummary(
+  input: SatelliteCameraDetailPolicyV2Input
+): SatelliteCameraDetailPolicyV2LayerSummary {
+  const summary = satelliteCameraDetailPolicyV2Summary(input);
+  const resourceLabel = !summary.inset_enabled
+    ? "关"
+    : summary.resource_overlay_enabled
+      ? "开"
+      : "待同步";
+  return {
+    label: "跟随",
+    value: `${summary.active_camera_mode === "SATELLITE" ? "卫星" : "地球"} / ${
+      summary.version
+    }`,
+    detail: `目标 ${summary.selected_satellite_id ?? "未选"} / 可选 ${
+      summary.selectable_satellite_count
+    } / 小窗 ${summary.inset_enabled ? "开" : "关"} / 轨迹 ${
+      summary.trail_point_count
+    }/${summary.max_trail_points} / 资源 ${resourceLabel}`
+  };
 }
 
 export function satelliteInsetPoint(satellite: SatelliteState): SatelliteInsetPoint {

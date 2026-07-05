@@ -264,6 +264,12 @@ Tasks:
 - V2-063: Add selected-satellite camera/detail mode v2.
   - Scope: follow camera, inset, local motion trail, resource overlay.
   - Depends on: V2-052, V2-062.
+  - Status: T233 formalizes the existing Earth/satellite camera toggle and
+    selected-satellite inset as `leo_twin.satellite_camera_detail_policy.v2`.
+    The 3D summary now reports active camera mode, selectable target count,
+    target satellite, inset state, bounded local trail, coverage overlay, and
+    compute-resource overlay availability without changing simulation
+    semantics.
 
 ### WS8. Verification and Acceptance v2
 

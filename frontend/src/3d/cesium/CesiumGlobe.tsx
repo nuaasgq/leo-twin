@@ -78,6 +78,7 @@ import {
   GlobeCameraMode,
   SatelliteInsetPoint,
   appendSatelliteInsetTrail,
+  satelliteCameraDetailPolicyV2LayerSummary,
   satelliteAltitudeKm,
   satelliteComputeSummary,
   selectableSatelliteTargets,
@@ -234,13 +235,31 @@ export function CesiumGlobe({
     [satelliteKpiHistory, activeSelectedSatelliteId]
   );
   const layerSummary = useMemo(
-    () =>
-      visualLayerControlSummary(
+    () => [
+      ...visualLayerControlSummary(
         snapshot.scenario_config,
         localLayers,
         globeVisualMode
       ),
-    [snapshot.scenario_config, localLayers, globeVisualMode]
+      satelliteCameraDetailPolicyV2LayerSummary({
+        cameraMode,
+        selectedSatelliteId: activeSelectedSatelliteId,
+        selectableSatelliteCount: selectableSatellites.length,
+        trailPointCount: selectedTrail.length,
+        hasComputeNode: selectedComputeNode !== null,
+        coverageOverlayEnabled: localLayers.coverageBeams
+      })
+    ],
+    [
+      snapshot.scenario_config,
+      localLayers,
+      globeVisualMode,
+      cameraMode,
+      activeSelectedSatelliteId,
+      selectableSatellites.length,
+      selectedTrail.length,
+      selectedComputeNode
+    ]
   );
 
   useEffect(() => {

@@ -5,6 +5,48 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Satellite Camera Detail Policy v2
+
+- Branch: `feature/T233-satellite-camera-detail-policy-v2`
+- Commit: pending in this commit
+- Scope: advance V2-063 by formalizing the 3D Earth/satellite camera toggle and
+  selected-satellite inset as `leo_twin.satellite_camera_detail_policy.v2`.
+  The summary reports active camera mode, selectable target count, selected
+  satellite, inset state, bounded local trail, coverage overlay state, and
+  compute-resource overlay availability.
+- Changed files/modules:
+  - `frontend/src/3d/cesium/satelliteFollow.ts`
+  - `frontend/src/3d/cesium/CesiumGlobe.tsx`
+  - `frontend/tests/satelliteVisuals.test.ts`
+  - `docs/satellite_camera_detail_policy_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test -- satelliteVisuals.test.ts visualLayerLimits.test.ts globeVisualPolicy.test.ts sceneAssetManifest.test.ts countryOverlays.test.ts`
+    - Result: passed, 26 test files / 331 tests.
+  - `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite reported the existing large `DataPanel` chunk
+      warning after minification.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - Existing follow camera, selected-satellite inset, local trail, coverage
+    summary, and resource overlay already existed. This task adds a stable
+    policy summary and UI explanation rather than changing Cesium camera
+    behavior.
+  - The policy falls back to Earth overview when no selectable satellite exists,
+    which keeps the summary consistent with the disabled follow button.
+  - Existing local runtime/generated config files remain dirty and are
+    intentionally not included in this task.
+- Known remaining issues / follow-up:
+  - Add screenshot regression for the follow camera and local inset.
+  - Add richer selected-satellite detail inspection once backend cursor/detail
+    APIs are available for large scenarios.
+  - Camera transition diagnostics are still limited to existing Cesium render
+    errors.
+
 ## 2026-07-06 - Selected Coverage Visual Policy v2
 
 - Branch: `feature/T232-selected-coverage-visual-policy-v2`

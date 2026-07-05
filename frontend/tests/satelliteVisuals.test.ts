@@ -27,6 +27,8 @@ import {
 } from "../src/3d/beam_renderer/beamEntities";
 import {
   appendSatelliteInsetTrail,
+  satelliteCameraDetailPolicyV2LayerSummary,
+  satelliteCameraDetailPolicyV2Summary,
   satelliteComputeSummary,
   satelliteAltitudeKm,
   satelliteInsetPoint,
@@ -426,6 +428,97 @@ describe("satellite follow inset", () => {
     expect(secondTrail[1].y).toBeCloseTo(74, 2);
     expect(switchedTrail).toHaveLength(1);
     expect(switchedTrail[0].satelliteId).toBe("sat-b");
+  });
+
+  it("summarizes satellite camera/detail policy v2 for follow mode", () => {
+    expect(
+      satelliteCameraDetailPolicyV2Summary({
+        cameraMode: "SATELLITE",
+        selectedSatelliteId: "sat-b",
+        selectableSatelliteCount: 120,
+        trailPointCount: 6,
+        hasComputeNode: true,
+        coverageOverlayEnabled: true
+      })
+    ).toEqual({
+      version: "v2",
+      policy_id: "leo_twin.satellite_camera_detail_policy.v2",
+      default_camera_mode: "EARTH",
+      active_camera_mode: "SATELLITE",
+      follow_available: true,
+      selected_satellite_id: "sat-b",
+      selectable_satellite_count: 120,
+      target_selection_policy: "EXPLICIT_SELECTION_OR_FIRST_SNAPSHOT_SATELLITE",
+      camera_follow_policy: "CESIUM_LOOK_AT_SELECTED_SATELLITE",
+      inset_enabled: true,
+      local_motion_trail_enabled: true,
+      trail_point_count: 6,
+      max_trail_points: 28,
+      coverage_overlay_enabled: true,
+      resource_overlay_enabled: true,
+      visual_only: true,
+      no_simulation_semantics: true
+    });
+    expect(
+      satelliteCameraDetailPolicyV2LayerSummary({
+        cameraMode: "SATELLITE",
+        selectedSatelliteId: "sat-b",
+        selectableSatelliteCount: 120,
+        trailPointCount: 6,
+        hasComputeNode: true,
+        coverageOverlayEnabled: true
+      })
+    ).toEqual({
+      label: "跟随",
+      value: "卫星 / v2",
+      detail: "目标 sat-b / 可选 120 / 小窗 开 / 轨迹 6/28 / 资源 开"
+    });
+  });
+
+  it("falls back to earth camera policy when follow has no selectable satellite", () => {
+    expect(
+      satelliteCameraDetailPolicyV2Summary({
+        cameraMode: "SATELLITE",
+        selectedSatelliteId: "",
+        selectableSatelliteCount: 0,
+        trailPointCount: 99,
+        hasComputeNode: false,
+        coverageOverlayEnabled: true,
+        maxTrailPoints: 4
+      })
+    ).toEqual({
+      version: "v2",
+      policy_id: "leo_twin.satellite_camera_detail_policy.v2",
+      default_camera_mode: "EARTH",
+      active_camera_mode: "EARTH",
+      follow_available: false,
+      selected_satellite_id: null,
+      selectable_satellite_count: 0,
+      target_selection_policy: "EXPLICIT_SELECTION_OR_FIRST_SNAPSHOT_SATELLITE",
+      camera_follow_policy: "CESIUM_LOOK_AT_SELECTED_SATELLITE",
+      inset_enabled: false,
+      local_motion_trail_enabled: false,
+      trail_point_count: 0,
+      max_trail_points: 4,
+      coverage_overlay_enabled: false,
+      resource_overlay_enabled: false,
+      visual_only: true,
+      no_simulation_semantics: true
+    });
+    expect(
+      satelliteCameraDetailPolicyV2LayerSummary({
+        cameraMode: "EARTH",
+        selectedSatelliteId: "",
+        selectableSatelliteCount: 0,
+        trailPointCount: 0,
+        hasComputeNode: false,
+        coverageOverlayEnabled: false
+      })
+    ).toEqual({
+      label: "跟随",
+      value: "地球 / v2",
+      detail: "目标 未选 / 可选 0 / 小窗 关 / 轨迹 0/28 / 资源 关"
+    });
   });
 
   it("summarizes selected satellite compute-node resources", () => {
