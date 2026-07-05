@@ -21,20 +21,54 @@ def build_runtime_lifecycle_summaries(
 ) -> RuntimeObservabilitySummary:
     """Build deterministic per-user and per-satellite lifecycle summaries."""
 
+    user_summary = build_runtime_user_request_summary(
+        snapshot,
+        service_latency_history=service_latency_history,
+        cursor=user_cursor,
+        limit=user_limit,
+    )
+    satellite_summary = build_runtime_satellite_service_summary(
+        snapshot,
+        service_latency_history=service_latency_history,
+        satellite_kpi_slices=satellite_kpi_slices,
+        cursor=satellite_cursor,
+        limit=satellite_limit,
+    )
     return {
-        "user_request_summary_v1": build_runtime_user_request_summary(
-            snapshot,
-            service_latency_history=service_latency_history,
-            cursor=user_cursor,
-            limit=user_limit,
+        "user_request_summary_v1": user_summary,
+        "satellite_service_summary_v1": satellite_summary,
+        "node_detail_summary_v1": build_runtime_node_detail_summary(
+            user_summary,
+            satellite_summary,
         ),
-        "satellite_service_summary_v1": build_runtime_satellite_service_summary(
-            snapshot,
-            service_latency_history=service_latency_history,
-            satellite_kpi_slices=satellite_kpi_slices,
-            cursor=satellite_cursor,
-            limit=satellite_limit,
-        ),
+    }
+
+
+def build_runtime_node_detail_summary(
+    user_summary: Mapping[str, Any],
+    satellite_summary: Mapping[str, Any],
+) -> dict[str, object]:
+    """Build backend-owned UI detail cards from runtime summary rows."""
+
+    if not isinstance(user_summary, Mapping):
+        raise TypeError("user_summary must be a mapping")
+    if not isinstance(satellite_summary, Mapping):
+        raise TypeError("satellite_summary must be a mapping")
+    user_cards = tuple(
+        _user_detail_card(item) for item in _records(user_summary.get("items"))
+    )
+    satellite_cards = tuple(
+        _satellite_detail_card(item)
+        for item in _records(satellite_summary.get("items"))
+    )
+    return {
+        "version": "v1",
+        "source": "BACKEND_RUNTIME_STATUS",
+        "summary_scope": "VISIBLE_RUNTIME_DETAIL_ROWS",
+        "user_detail_count": len(user_cards),
+        "satellite_detail_count": len(satellite_cards),
+        "users": user_cards,
+        "satellites": satellite_cards,
     }
 
 
@@ -294,6 +328,299 @@ def _service_placement_detail_fields(
             service_detail.get("service_placement_capable_candidate_count")
         ),
     }
+
+
+def _user_detail_card(item: Mapping[str, Any]) -> dict[str, object]:
+    user_id = _str(item.get("user_id"))
+    cell_id = _str(item.get("cell_id"))
+    route_count = _count(item.get("communication_route_count"))
+    available_route_count = _count(item.get("available_route_count"))
+    compute_service_count = _count(item.get("compute_service_count"))
+    queue_count = _count(item.get("network_queue_count"))
+    next_hop = _str(item.get("primary_next_hop_id"))
+    communication = (
+        f"{available_route_count} / {route_count} 条路由"
+        if route_count > 0
+        else "无通信业务"
+    )
+    if next_hop:
+        communication = f"{communication} / 下一跳 {next_hop}"
+    queue_reason = _str(item.get("network_queue_reason_label")) or _str(
+        item.get("network_queue_reason")
+    )
+    return {
+        "entity_type": "USER",
+        "entity_id": user_id,
+        "title": f"用户 {user_id}",
+        "subtitle": _str(item.get("status")) or "IDLE",
+        "fields": (
+            _detail_field(
+                "平台",
+                _join_non_empty(
+                    _str(item.get("platform_type_label"))
+                    or _str(item.get("platform_type")),
+                    cell_id,
+                    separator=" / ",
+                ),
+            ),
+            _detail_field("通信", communication),
+            _detail_field(
+                "计算",
+                f"{compute_service_count} 条计算业务"
+                if compute_service_count > 0
+                else "无计算业务",
+                tone="resource",
+            ),
+            _detail_field(
+                "网络队列",
+                f"{queue_count} 条 / {queue_reason}" if queue_count > 0 else "队列空",
+                tone="warning" if queue_count > 0 else "normal",
+            ),
+            _detail_field("目标卫星", _str(item.get("selected_satellite_id"))),
+            _detail_field("目标节点", _str(item.get("destination_id"))),
+            _detail_field("服务放置", _user_placement_label(item), tone="resource"),
+            _detail_field("时延/容量", _user_latency_capacity_label(item)),
+            _detail_field("服务链路", _user_service_label(item)),
+            _detail_field(
+                "路径",
+                _str(item.get("route_path_label"))
+                or _route_path_label(_string_sequence(item.get("path"))),
+            ),
+        ),
+    }
+
+
+def _satellite_detail_card(item: Mapping[str, Any]) -> dict[str, object]:
+    satellite_id = _str(item.get("satellite_id"))
+    return {
+        "entity_type": "SATELLITE",
+        "entity_id": satellite_id,
+        "title": f"卫星 {satellite_id}",
+        "subtitle": _join_non_empty(
+            _str(item.get("status")) or "ACTIVE",
+            _str(item.get("resource_role_label")),
+            separator=" / ",
+        ),
+        "fields": (
+            _detail_field(
+                "负载",
+                _ratio_percent_label(_float(item.get("compute_load_ratio"))),
+                tone="resource",
+            ),
+            _detail_field(
+                "服务对象",
+                _compact_entity_list(
+                    _string_sequence(item.get("service_user_ids")),
+                    _count(item.get("service_user_count")),
+                    "用户",
+                ),
+            ),
+            _detail_field(
+                "下一跳",
+                _compact_entity_list(
+                    _string_sequence(item.get("next_hop_ids")),
+                    _count(item.get("next_hop_count")),
+                    "跳",
+                ),
+            ),
+            _detail_field(
+                "CPU FP32",
+                _resource_usage_label(
+                    _float(item.get("compute_used_gflops_fp32")),
+                    _float(item.get("compute_capacity_gflops_fp32")),
+                    "GFLOPS",
+                ),
+                tone="resource",
+            ),
+            _detail_field(
+                "CPU FP64",
+                _resource_usage_label(
+                    _float(item.get("compute_used_gflops_fp64")),
+                    _float(item.get("compute_capacity_gflops_fp64")),
+                    "GFLOPS",
+                ),
+                tone="resource",
+            ),
+            _detail_field(
+                "GPU",
+                (
+                    "FP32 "
+                    + _resource_usage_label(
+                        _float(item.get("compute_used_gpu_tflops_fp32")),
+                        _float(item.get("compute_capacity_gpu_tflops_fp32")),
+                        "TFLOPS",
+                    )
+                    + " / FP16 "
+                    + _resource_usage_label(
+                        _float(item.get("compute_used_gpu_tflops_fp16")),
+                        _float(item.get("compute_capacity_gpu_tflops_fp16")),
+                        "TFLOPS",
+                    )
+                ),
+                tone="resource",
+            ),
+            _detail_field(
+                "NPU",
+                _resource_usage_label(
+                    _float(item.get("compute_used_npu_tops_int8")),
+                    _float(item.get("compute_capacity_npu_tops_int8")),
+                    "TOPS",
+                ),
+                tone="resource",
+            ),
+            _detail_field(
+                "内存/存储",
+                (
+                    "内存 "
+                    + _resource_usage_label(
+                        _float(item.get("compute_used_memory_gb")),
+                        _float(item.get("compute_capacity_memory_gb")),
+                        "GB",
+                    )
+                    + " / 存储 "
+                    + _resource_usage_label(
+                        _float(item.get("compute_used_storage_gb")),
+                        _float(item.get("compute_capacity_storage_gb")),
+                        "GB",
+                    )
+                ),
+                tone="resource",
+            ),
+            _detail_field(
+                "任务",
+                (
+                    f"{_count(item.get('running_task_count'))} 运行 / "
+                    f"{_count(item.get('finished_task_count'))} 完成"
+                ),
+            ),
+            _detail_field("网络", _satellite_network_label(item)),
+        ),
+    }
+
+
+def _detail_field(label: str, value: object, *, tone: str = "normal") -> dict[str, str]:
+    field = {
+        "label": label,
+        "value": _detail_value(value),
+        "tone": tone,
+    }
+    return field
+
+
+def _detail_value(value: object) -> str:
+    text = _str(value).strip()
+    return text or "无"
+
+
+def _user_placement_label(item: Mapping[str, Any]) -> str:
+    compute_node_id = _str(item.get("compute_node_id"))
+    if not compute_node_id:
+        return "无计算放置"
+    candidate_count = _optional_int(item.get("service_placement_candidate_count"))
+    capable_count = _optional_int(
+        item.get("service_placement_capable_candidate_count")
+    )
+    candidate_label = (
+        f"候选 {max(0, capable_count or 0)}/{max(0, candidate_count or 0)}"
+        if candidate_count is not None
+        else ""
+    )
+    return _join_non_empty(
+        f"节点 {compute_node_id}",
+        _str(item.get("service_placement_status")),
+        f"策略 {_str(item.get('service_placement_policy'))}"
+        if _str(item.get("service_placement_policy"))
+        else "",
+        f"瓶颈 {_str(item.get('service_placement_bottleneck_resource'))}"
+        if _str(item.get("service_placement_bottleneck_resource"))
+        else "",
+        candidate_label,
+        separator=" / ",
+    )
+
+
+def _user_latency_capacity_label(item: Mapping[str, Any]) -> str:
+    latency = _optional_float(item.get("latency_s"))
+    capacity = _optional_float(item.get("capacity_mbps"))
+    if latency is None and capacity is None:
+        return "无可用路由"
+    return (
+        f"{_format_number(latency or 0.0)} s / "
+        f"{_format_number(capacity or 0.0)} Mbps"
+    )
+
+
+def _user_service_label(item: Mapping[str, Any]) -> str:
+    parts = (
+        _str(item.get("active_business_label")),
+        _str(item.get("request_state_label")) or _str(item.get("request_state")),
+        _str(item.get("service_task_id")),
+        _str(item.get("service_state")),
+    )
+    return _join_non_empty(*parts, separator=" / ") or "无服务链路"
+
+
+def _satellite_network_label(item: Mapping[str, Any]) -> str:
+    link_part = (
+        f"链路 {_count(item.get('active_link_count'))} / "
+        f"接入 {_count(item.get('active_access_link_count'))} / "
+        f"星间 {_count(item.get('active_space_link_count'))}"
+    )
+    route_part = (
+        f"路由 {_count(item.get('available_route_count'))}/"
+        f"{_count(item.get('route_count'))}"
+    )
+    queue_part = f"排队 {_count(item.get('network_queue_route_count'))}"
+    kpi_part = _join_non_empty(
+        f"时延 {_format_number(_float(item.get('route_latency_avg_s')))} s"
+        if _optional_float(item.get("route_latency_avg_s")) is not None
+        else "",
+        f"损耗 {_format_number(_float(item.get('route_loss_proxy_rate')) * 100.0)}%"
+        if _optional_float(item.get("route_loss_proxy_rate")) is not None
+        else "",
+        separator=" / ",
+    )
+    return _join_non_empty(link_part, route_part, queue_part, kpi_part, separator=" / ")
+
+
+def _compact_entity_list(values: tuple[str, ...], total_count: int, unit: str) -> str:
+    normalized = tuple(value for value in values if value)
+    total = max(total_count, len(normalized))
+    if total <= 0:
+        return "无"
+    visible = ", ".join(normalized[:3]) if normalized else f"{total} 个{unit}"
+    hidden_count = max(0, total - len(normalized[:3]))
+    return f"{visible} +{hidden_count} 个{unit}" if hidden_count > 0 else visible
+
+
+def _resource_usage_label(used: float, capacity: float, unit: str) -> str:
+    return f"{_format_number(max(0.0, used))} / {_format_number(max(0.0, capacity))} {unit}"
+
+
+def _ratio_percent_label(value: float) -> str:
+    return f"{_format_number(_clamp_ratio(value) * 100.0)}%"
+
+
+def _format_number(value: float) -> str:
+    rounded = round(float(value), 3)
+    if rounded.is_integer():
+        return str(int(rounded))
+    return f"{rounded:.3f}".rstrip("0").rstrip(".")
+
+
+def _join_non_empty(*values: object, separator: str) -> str:
+    return separator.join(_str(value) for value in values if _str(value))
+
+
+def _string_sequence(value: object) -> tuple[str, ...]:
+    if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
+        return ()
+    return tuple(_str(item) for item in value if _str(item))
+
+
+def _count(value: object) -> int:
+    parsed = _optional_int(value)
+    return max(0, parsed or 0)
 
 
 def _satellite_service_summary(

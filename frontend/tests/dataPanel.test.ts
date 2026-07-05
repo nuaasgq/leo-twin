@@ -35,7 +35,9 @@ import {
   filterUserBusinessRequestRows,
   paginateDetailRows,
   resolveNetworkQualityKpis,
+  selectRuntimeSatelliteDetailCard,
   selectRuntimeSatelliteServiceSummary,
+  selectRuntimeUserDetailCard,
   selectRuntimeUserRequestSummary,
   selectSatelliteResourceRow,
   selectUserBusinessRequestRow
@@ -2524,6 +2526,64 @@ describe("detail inspectors", () => {
     expect(selectUserBusinessRequestRow([], "user-0")).toBeNull();
     expect(selectSatelliteResourceRow([satelliteRow], "sat-0")).toBe(satelliteRow);
     expect(selectSatelliteResourceRow([], null)).toBeNull();
+  });
+
+  it("prefers backend-owned node detail cards when available", () => {
+    const backendDetailSummary = {
+      version: "v1",
+      source: "BACKEND_RUNTIME_STATUS",
+      user_detail_count: 1,
+      satellite_detail_count: 1,
+      users: [
+        {
+          entity_type: "USER",
+          entity_id: "user-0",
+          title: "后端用户 user-0",
+          subtitle: "COMPUTE_SERVICE_ACTIVE",
+          fields: [
+            { label: "服务放置", value: "后端节点 sat-0", tone: "resource" },
+            { label: "路径", value: "backend route path" }
+          ]
+        }
+      ],
+      satellites: [
+        {
+          entity_type: "SATELLITE",
+          entity_id: "sat-0",
+          title: "后端卫星 sat-0",
+          subtitle: "COMPUTE_NODE",
+          fields: [
+            { label: "CPU FP32", value: "80 / 100 GFLOPS", tone: "resource" },
+            { label: "网络", value: "链路 4 / 路由 2", tone: "normal" }
+          ]
+        }
+      ]
+    } as const;
+
+    expect(selectRuntimeUserDetailCard(backendDetailSummary, "user-0")?.title).toBe(
+      "后端用户 user-0"
+    );
+    expect(selectRuntimeUserDetailCard(backendDetailSummary, "missing")).toBeNull();
+    expect(
+      selectRuntimeSatelliteDetailCard(backendDetailSummary, "sat-0")?.title
+    ).toBe("后端卫星 sat-0");
+    expect(selectRuntimeSatelliteDetailCard(backendDetailSummary, null)).toBeNull();
+    expect(buildUserBusinessRequestInspector(userRow, backendDetailSummary)).toMatchObject({
+      title: "后端用户 user-0",
+      subtitle: "COMPUTE_SERVICE_ACTIVE",
+      fields: expect.arrayContaining([
+        { label: "服务放置", value: "后端节点 sat-0", tone: "resource" },
+        { label: "路径", value: "backend route path", tone: "normal" }
+      ])
+    });
+    expect(buildSatelliteResourceInspector(satelliteRow, backendDetailSummary)).toMatchObject({
+      title: "后端卫星 sat-0",
+      subtitle: "COMPUTE_NODE",
+      fields: expect.arrayContaining([
+        { label: "CPU FP32", value: "80 / 100 GFLOPS", tone: "resource" },
+        { label: "网络", value: "链路 4 / 路由 2", tone: "normal" }
+      ])
+    });
   });
 
   it("builds user and satellite detail inspector fields", () => {

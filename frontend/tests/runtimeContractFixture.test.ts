@@ -112,6 +112,34 @@ describe("runtime status contract fixture", () => {
         route_id: "route:svc-00001-output"
       }
     ]);
+    expect(status.node_detail_summary_v1).toMatchObject({
+      version: "v1",
+      source: "BACKEND_RUNTIME_STATUS",
+      user_detail_count: 1,
+      satellite_detail_count: 1
+    });
+    expect(status.node_detail_summary_v1?.users[0]).toMatchObject({
+      entity_type: "USER",
+      entity_id: "user-00001",
+      title: "用户 user-00001"
+    });
+    expect(status.node_detail_summary_v1?.users[0].fields).toEqual([
+      {
+        label: "服务放置",
+        value: "节点 sat-00001 / PLACED / 瓶颈 cpu_gflops_fp32 / 候选 4/4",
+        tone: "resource"
+      },
+      {
+        label: "路径",
+        value: "user-00001 -> sat-00001 -> compute-00001",
+        tone: "normal"
+      }
+    ]);
+    expect(status.node_detail_summary_v1?.satellites[0].fields[0]).toEqual({
+      label: "负载",
+      value: "65%",
+      tone: "resource"
+    });
     expect(status.satellite_kpi_slices_v1?.slices[0]).toMatchObject({
       satellite_id: "sat-00001",
       active_link_count: 4,

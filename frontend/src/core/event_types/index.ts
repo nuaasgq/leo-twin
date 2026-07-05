@@ -657,6 +657,7 @@ export interface RuntimeStatusPayload {
   user_request_summary_v1?: RuntimeUserRequestSummaryV1;
   user_request_history_v1?: RuntimeUserRequestHistoryV1;
   satellite_service_summary_v1?: RuntimeSatelliteServiceSummaryV1;
+  node_detail_summary_v1?: RuntimeNodeDetailSummaryV1;
   stream_diagnostics_v1?: RuntimeStreamDiagnosticsV1;
   profiling_summary?: RuntimeProfilingSummary | null;
   backpressure_summary?: RuntimeBackpressureSummary | null;
@@ -921,6 +922,30 @@ export interface RuntimeDetailPageEnvelope {
   type: "RUNTIME_DETAIL_PAGE" | string;
   kind: "users" | "satellites" | string;
   summary: RuntimeUserRequestSummaryV1 | RuntimeSatelliteServiceSummaryV1;
+}
+
+export interface RuntimeNodeDetailSummaryV1 {
+  version: "v1" | string;
+  source: string;
+  summary_scope?: string;
+  user_detail_count: number;
+  satellite_detail_count: number;
+  users: readonly RuntimeNodeDetailCardV1[];
+  satellites: readonly RuntimeNodeDetailCardV1[];
+}
+
+export interface RuntimeNodeDetailCardV1 {
+  entity_type: "USER" | "SATELLITE" | string;
+  entity_id: string;
+  title: string;
+  subtitle: string;
+  fields: readonly RuntimeNodeDetailFieldV1[];
+}
+
+export interface RuntimeNodeDetailFieldV1 {
+  label: string;
+  value: string;
+  tone?: "normal" | "warning" | "resource" | string;
 }
 
 export interface RuntimeSatelliteServiceItemV1 {

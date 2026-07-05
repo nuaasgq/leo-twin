@@ -428,6 +428,29 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
             "running_task_count",
             "finished_task_count",
         }.issubset(satellite_service_summary["items"][0])
+    node_detail_summary = status_after_tick["node_detail_summary_v1"]
+    assert node_detail_summary["version"] == "v1"
+    assert node_detail_summary["source"] == "BACKEND_RUNTIME_STATUS"
+    assert node_detail_summary["summary_scope"] == "VISIBLE_RUNTIME_DETAIL_ROWS"
+    assert node_detail_summary["user_detail_count"] == len(
+        node_detail_summary["users"]
+    )
+    assert node_detail_summary["satellite_detail_count"] == len(
+        node_detail_summary["satellites"]
+    )
+    assert node_detail_summary["users"]
+    assert {
+        "entity_type",
+        "entity_id",
+        "title",
+        "subtitle",
+        "fields",
+    }.issubset(node_detail_summary["users"][0])
+    assert node_detail_summary["users"][0]["entity_type"] == "USER"
+    assert node_detail_summary["users"][0]["fields"]
+    if node_detail_summary["satellites"]:
+        assert node_detail_summary["satellites"][0]["entity_type"] == "SATELLITE"
+        assert node_detail_summary["satellites"][0]["fields"]
 
     speed_change = control_plane.handle_raw_message(
         json.dumps(

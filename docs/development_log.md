@@ -8445,3 +8445,54 @@ change.
   - Add a backend-owned node detail stream or query endpoint for full
     per-user/per-satellite placement candidates, queue history, and resource
     timeline data, then bind it into an expandable dashboard drawer.
+
+## 2026-07-05 - Node Detail Summary API v1
+
+- Branch: `feature/T174-node-detail-summary-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add backend-owned `node_detail_summary_v1` to runtime status. The
+  summary is derived deterministically from existing
+  `user_request_summary_v1` and `satellite_service_summary_v1` rows, and
+  provides user/satellite detail-card fields for the dashboard inspector.
+  DataPanel now prefers these backend fields and falls back to local row
+  summaries when an older runtime status does not provide the new contract.
+  Event Kernel, simulation models, packet-level semantics, frontend routing,
+  and layout architecture are unchanged.
+- Changed files/modules:
+  - `src/leo_twin/services/runtime_observability.py`
+  - `tests/unit/test_runtime_observability.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `frontend/tests/runtimeContractFixture.test.ts`
+  - `frontend/tests/fixtures/runtimeStatus.contract.json`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_runtime_observability.py tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer -q`
+    - Result: passed, 3 tests.
+  - `python -m json.tool frontend/tests/fixtures/runtimeStatus.contract.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- dataPanel.test.ts runtimeContractFixture.test.ts`
+    - Result: passed, 25 files / 265 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Existing DataPanel chunk-size warning remains.
+- Problems encountered:
+  - A first integration-test command targeted a non-existent test name. The
+    assertion was added to the existing runtime status/control-plane integration
+    test and rerun successfully.
+  - Existing local runtime config drift remains untouched and unstaged.
+- Known remaining issues:
+  - `node_detail_summary_v1` is currently embedded in `/runtime/status` and
+    limited to the visible summary windows. It is not yet a cursor-paged
+    dedicated node-detail endpoint and does not expose full placement candidate
+    lists or queue timelines.
+- Recommended follow-up:
+  - Add `/runtime/details/nodes` or an equivalent cursor-readable detail stream
+    for full per-node placement candidates, queue history, and resource
+    timeline data without bloating `/runtime/status`.

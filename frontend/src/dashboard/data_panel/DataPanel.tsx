@@ -21,6 +21,8 @@ import {
   RuntimeKpiTimeSeriesV1,
   RuntimeMetricsSummary,
   RuntimeNetworkQualityProvenanceV1,
+  RuntimeNodeDetailCardV1,
+  RuntimeNodeDetailSummaryV1,
   RuntimeSatelliteServiceItemV1,
   RuntimeSatelliteServiceSummaryV1,
   RuntimeSatelliteKpiHistoryV1,
@@ -235,8 +237,14 @@ export const DataPanel = memo(function DataPanel({
     satelliteDetailWindow.items,
     selectedDetailSatelliteId
   );
-  const userDetailInspector = buildUserBusinessRequestInspector(selectedUserDetailRow);
-  const satelliteDetailInspector = buildSatelliteResourceInspector(selectedSatelliteDetailRow);
+  const userDetailInspector = buildUserBusinessRequestInspector(
+    selectedUserDetailRow,
+    runtimeStatus.node_detail_summary_v1
+  );
+  const satelliteDetailInspector = buildSatelliteResourceInspector(
+    selectedSatelliteDetailRow,
+    runtimeStatus.node_detail_summary_v1
+  );
   const userSourceBadge = buildRuntimeDetailSourceBadge(userBusinessRequests.sourceLabel);
   const satelliteSourceBadge = buildRuntimeDetailSourceBadge(satelliteResourceRows.sourceLabel);
   const detailScopeNotes = buildDataPanelDetailScopeNotes(
@@ -2615,8 +2623,29 @@ export function selectSatelliteResourceRow(
   return rows.find((row) => row.satelliteId === selectedSatelliteId) ?? rows[0] ?? null;
 }
 
+export function selectRuntimeUserDetailCard(
+  summary: RuntimeNodeDetailSummaryV1 | null | undefined,
+  userId: string | null | undefined
+): RuntimeNodeDetailCardV1 | null {
+  if (!userId) {
+    return null;
+  }
+  return summary?.users.find((card) => card.entity_id === userId) ?? null;
+}
+
+export function selectRuntimeSatelliteDetailCard(
+  summary: RuntimeNodeDetailSummaryV1 | null | undefined,
+  satelliteId: string | null | undefined
+): RuntimeNodeDetailCardV1 | null {
+  if (!satelliteId) {
+    return null;
+  }
+  return summary?.satellites.find((card) => card.entity_id === satelliteId) ?? null;
+}
+
 export function buildUserBusinessRequestInspector(
-  row: UserBusinessRequestRow | null | undefined
+  row: UserBusinessRequestRow | null | undefined,
+  backendDetailSummary: RuntimeNodeDetailSummaryV1 | null | undefined = undefined
 ): DataPanelDetailInspector {
   if (row === null || row === undefined) {
     return {
@@ -2624,6 +2653,10 @@ export function buildUserBusinessRequestInspector(
       subtitle: "当前窗口暂无用户节点",
       fields: []
     };
+  }
+  const backendCard = selectRuntimeUserDetailCard(backendDetailSummary, row.userId);
+  if (backendCard !== null) {
+    return buildRuntimeNodeDetailInspector(backendCard);
   }
   return {
     title: `用户 ${row.userId}`,
@@ -2644,7 +2677,8 @@ export function buildUserBusinessRequestInspector(
 }
 
 export function buildSatelliteResourceInspector(
-  row: SatelliteResourceRow | null | undefined
+  row: SatelliteResourceRow | null | undefined,
+  backendDetailSummary: RuntimeNodeDetailSummaryV1 | null | undefined = undefined
 ): DataPanelDetailInspector {
   if (row === null || row === undefined) {
     return {
@@ -2652,6 +2686,13 @@ export function buildSatelliteResourceInspector(
       subtitle: "当前窗口暂无卫星节点",
       fields: []
     };
+  }
+  const backendCard = selectRuntimeSatelliteDetailCard(
+    backendDetailSummary,
+    row.satelliteId
+  );
+  if (backendCard !== null) {
+    return buildRuntimeNodeDetailInspector(backendCard);
   }
   return {
     title: `卫星 ${row.satelliteId}`,
@@ -2669,6 +2710,29 @@ export function buildSatelliteResourceInspector(
       { label: "网络", value: row.networkLabel }
     ]
   };
+}
+
+function buildRuntimeNodeDetailInspector(
+  card: RuntimeNodeDetailCardV1
+): DataPanelDetailInspector {
+  return {
+    title: card.title,
+    subtitle: card.subtitle,
+    fields: card.fields.map((field) => ({
+      label: field.label,
+      value: field.value,
+      tone: runtimeNodeDetailFieldTone(field.tone)
+    }))
+  };
+}
+
+function runtimeNodeDetailFieldTone(
+  tone: RuntimeNodeDetailCardV1["fields"][number]["tone"]
+): DataPanelDetailInspectorField["tone"] {
+  if (tone === "warning" || tone === "resource") {
+    return tone;
+  }
+  return "normal";
 }
 
 export function paginateDetailRows<T>(
