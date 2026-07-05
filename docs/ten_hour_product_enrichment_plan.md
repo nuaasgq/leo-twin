@@ -441,6 +441,11 @@ The following issue-sized slices have now been delivered on
   - Maps to suggestions 91-95.
   - Runtime health smoke now supports opt-in expected satellite count, user
     count, and traffic class assertions for acceptance scenario checks.
+- `test(product): pass expected summary checks`
+  - Maps to suggestions 91-95.
+  - Aggregate product acceptance verification now forwards expected satellite
+    count, user count, and traffic class into the read-only runtime health
+    smoke check.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected

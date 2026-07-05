@@ -5034,3 +5034,33 @@ change.
 - Recommended follow-up:
   - Load expected counts from acceptance scenario YAML when acceptance scenario
     selection is automated.
+
+## 2026-07-05 - Product Acceptance Expected Summary v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: pass expected satellite count, user count, and traffic class from
+  `scripts/verify_product_acceptance.ps1` into the runtime health smoke script
+  so the aggregate acceptance command can validate scenario-scale assumptions.
+- Changed files/modules:
+  - `scripts/verify_product_acceptance.ps1`
+  - `README.md`
+  - `docs/product_acceptance_scenarios.md`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_product_acceptance.ps1 -SkipBuild -ExpectedSatelliteCount 120 -ExpectedUserCount 100 -ExpectedTrafficClass COMPUTE_SERVICE`
+    - Result: passed; backend targeted tests 2 passed, visual assets 4
+      verified, frontend test files 25 / tests 193 passed, read-only runtime
+      health smoke passed with expected product summary values.
+- Problems encountered:
+  - None. Expected checks are opt-in and keep the default aggregate command
+    scenario-agnostic.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - Expected values are still passed manually rather than loaded from an
+    acceptance scenario file.
+- Recommended follow-up:
+  - Add an `-AcceptanceConfig` option that reads expected values from YAML once
+    the acceptance config schema is stable enough for script consumption.

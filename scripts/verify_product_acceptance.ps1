@@ -1,7 +1,10 @@
 param(
     [string]$RepoRoot = (Split-Path -Parent $PSScriptRoot),
     [switch]$SkipRuntimeSmoke,
-    [switch]$SkipBuild
+    [switch]$SkipBuild,
+    [int]$ExpectedSatelliteCount = -1,
+    [int]$ExpectedUserCount = -1,
+    [string]$ExpectedTrafficClass = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -57,13 +60,23 @@ try {
     Invoke-CheckedCommand "powershell" $visualArgs
 
     if (-not $SkipRuntimeSmoke) {
-        Invoke-CheckedCommand "powershell" @(
+        $smokeArgs = @(
             "-NoProfile",
             "-ExecutionPolicy",
             "Bypass",
             "-File",
             (Join-Path $PSScriptRoot "smoke_runtime_health.ps1")
         )
+        if ($ExpectedSatelliteCount -ge 0) {
+            $smokeArgs += @("-ExpectedSatelliteCount", "$ExpectedSatelliteCount")
+        }
+        if ($ExpectedUserCount -ge 0) {
+            $smokeArgs += @("-ExpectedUserCount", "$ExpectedUserCount")
+        }
+        if ($ExpectedTrafficClass) {
+            $smokeArgs += @("-ExpectedTrafficClass", $ExpectedTrafficClass)
+        }
+        Invoke-CheckedCommand "powershell" $smokeArgs
     }
 
     Write-Host "Product acceptance verification passed."
