@@ -4028,3 +4028,37 @@ change.
 - Recommended follow-up:
   - Add a richer compare mode for multiple compute resources after backend
     compute workload semantics are expanded.
+
+## 2026-07-05 - Selected Satellite Resource Detail v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: expose per-satellite compute resource usage in the 3D control view.
+  The selected satellite strip now expands existing backend/snapshot resource
+  vectors into deterministic rows for CPU FP32/FP64, GPU FP32/FP16, NPU INT8,
+  memory, and storage, with used value, capacity, and utilization bar.
+- Changed files/modules:
+  - `frontend/src/3d/cesium/CesiumGlobe.tsx`
+  - `frontend/src/3d/cesium/satelliteDetailSummary.ts`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/satelliteVisuals.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- satelliteVisuals.test.ts`
+    - Result: passed, 24 files / 181 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - None. The change reuses existing selected-satellite summary data and does
+    not alter Cesium entity rendering, backend runtime, or Event Kernel logic.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - Runtime satellite KPI slices still expose FP32 scalar load for backend
+    slices; per-resource live usage depends on compute-node snapshot vector
+    fields being present.
+- Recommended follow-up:
+  - Add backend per-satellite vector usage slices once compute workload
+    lifecycle metrics are expanded beyond FP32.

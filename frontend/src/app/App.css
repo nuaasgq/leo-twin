@@ -807,6 +807,80 @@ body {
   background: linear-gradient(90deg, #4fd37a, #f2bd45);
 }
 
+.selected-satellite-resource-breakdown {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(122px, 1fr));
+  gap: 5px;
+  min-width: 0;
+}
+
+.selected-satellite-resource-breakdown-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "label percent"
+    "used used"
+    "capacity capacity"
+    "track track";
+  gap: 3px 6px;
+  min-width: 0;
+  border: 1px solid #243845;
+  border-radius: 6px;
+  padding: 6px;
+  background: #0b1219;
+}
+
+.selected-satellite-resource-breakdown-row span,
+.selected-satellite-resource-breakdown-row strong,
+.selected-satellite-resource-breakdown-row small,
+.selected-satellite-resource-breakdown-row em {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 9px;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selected-satellite-resource-breakdown-row span {
+  grid-area: label;
+  color: var(--app-text);
+  font-weight: 700;
+}
+
+.selected-satellite-resource-breakdown-row strong {
+  grid-area: used;
+  color: #d5eaf1;
+  font-weight: 700;
+}
+
+.selected-satellite-resource-breakdown-row small {
+  grid-area: capacity;
+  color: var(--app-muted);
+}
+
+.selected-satellite-resource-breakdown-row em {
+  grid-area: percent;
+  color: var(--accent-cyan);
+  font-style: normal;
+  font-weight: 700;
+}
+
+.selected-satellite-resource-breakdown-row i {
+  grid-area: track;
+  overflow: hidden;
+  height: 4px;
+  border-radius: 999px;
+  background: #152430;
+}
+
+.selected-satellite-resource-breakdown-row i span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #56a6ff;
+}
+
 .selected-satellite-routes strong {
   color: #d5eaf1;
   font-size: 10px;

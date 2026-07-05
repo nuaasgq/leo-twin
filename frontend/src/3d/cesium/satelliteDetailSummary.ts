@@ -39,6 +39,14 @@ export interface SelectedSatelliteDetailSummary {
   note: string;
 }
 
+export interface SelectedSatelliteResourceUsageRow {
+  label: string;
+  usedLabel: string;
+  capacityLabel: string;
+  utilizationPercent: number;
+  utilizationLabel: string;
+}
+
 export function selectedSatelliteDetailSummary({
   satellite,
   computeNode,
@@ -180,6 +188,24 @@ export function selectedSatelliteDetailSummary({
   };
 }
 
+export function selectedSatelliteResourceUsageRows(
+  summary: SelectedSatelliteDetailSummary,
+  limit = 7
+): readonly SelectedSatelliteResourceUsageRow[] {
+  const rows = summary.computeSummary?.resourceBreakdown ?? [];
+  const rowLimit = Math.max(0, Math.floor(limit));
+  return rows.slice(0, rowLimit).map((row) => {
+    const utilizationPercent = clamp(row.utilizationPercent, 0, 100);
+    return {
+      label: row.label,
+      usedLabel: row.usedLabel,
+      capacityLabel: row.capacityLabel,
+      utilizationPercent,
+      utilizationLabel: `${formatNumber(utilizationPercent)}%`
+    };
+  });
+}
+
 function backendRouteValue(
   slice: RuntimeSatelliteKpiSliceV1 | undefined,
   key: "route_latency_avg_s" | "route_loss_proxy_rate" | "route_delay_variation_proxy_s",
@@ -237,6 +263,10 @@ function latencySpreadSeconds(values: readonly number[]): number | null {
 
 function finiteNumber(value: number): number {
   return Number.isFinite(value) ? value : 0;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, finiteNumber(value)));
 }
 
 function formatNumber(value: number): string {

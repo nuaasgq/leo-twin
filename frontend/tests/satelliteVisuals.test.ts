@@ -24,7 +24,10 @@ import {
   satelliteInsetPoint,
   selectedDisplaySatellite
 } from "../src/3d/cesium/satelliteFollow";
-import { selectedSatelliteDetailSummary } from "../src/3d/cesium/satelliteDetailSummary";
+import {
+  selectedSatelliteDetailSummary,
+  selectedSatelliteResourceUsageRows
+} from "../src/3d/cesium/satelliteDetailSummary";
 import {
   ComputeResourceSummary,
   GroundUserState,
@@ -428,6 +431,60 @@ describe("selected satellite detail summary", () => {
     });
     expect(summary.coverageLabel).toContain("user-center");
     expect(summary.note).toContain("流级聚合态势");
+  });
+
+  it("builds selected satellite resource usage rows for the control strip", () => {
+    const summary = selectedSatelliteDetailSummary({
+      satellite: satelliteA,
+      computeNode: {
+        node_id: "sat-a",
+        running_tasks: 2,
+        finished_tasks: 3,
+        capacity: 44,
+        available_capacity: 11,
+        status: "BUSY",
+        load_ratio: 0.75,
+        cpu_gflops_fp64: 9,
+        gpu_tflops_fp32: 3.5,
+        gpu_tflops_fp16: 7,
+        npu_tops_int8: 16,
+        memory_gb: 48,
+        storage_gb: 1024,
+        used_cpu_gflops_fp32: 12,
+        used_gpu_tflops_fp32: 2.5,
+        used_npu_tops_int8: 4,
+        used_memory_gb: 8,
+        used_storage_gb: 16
+      },
+      links: [],
+      routes: [],
+      groundUsers: [],
+      scenarioConfig: null
+    });
+
+    expect(selectedSatelliteResourceUsageRows(summary, 3)).toEqual([
+      {
+        label: "CPU FP32",
+        usedLabel: "12 GFLOPS",
+        capacityLabel: "44 GFLOPS",
+        utilizationPercent: 27.27272727272727,
+        utilizationLabel: "27.3%"
+      },
+      {
+        label: "CPU FP64",
+        usedLabel: "0 GFLOPS",
+        capacityLabel: "9 GFLOPS",
+        utilizationPercent: 0,
+        utilizationLabel: "0%"
+      },
+      {
+        label: "GPU FP32",
+        usedLabel: "2.5 TFLOPS",
+        capacityLabel: "3.5 TFLOPS",
+        utilizationPercent: 71.42857142857143,
+        utilizationLabel: "71.4%"
+      }
+    ]);
   });
 
   it("reports empty network and compute data without inventing values", () => {

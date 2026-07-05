@@ -83,7 +83,8 @@ import {
 } from "./satelliteFollow";
 import {
   SelectedSatelliteDetailSummary,
-  selectedSatelliteDetailSummary
+  selectedSatelliteDetailSummary,
+  selectedSatelliteResourceUsageRows
 } from "./satelliteDetailSummary";
 
 export interface CesiumGlobeProps {
@@ -524,6 +525,7 @@ function SelectedSatelliteDetailStrip({
   summary: SelectedSatelliteDetailSummary;
 }) {
   const utilization = summary.computeSummary?.utilizationPercent ?? 0;
+  const resourceRows = selectedSatelliteResourceUsageRows(summary);
   return (
     <section className="selected-satellite-strip" aria-label="选中卫星态势">
       <div className="selected-satellite-strip-header">
@@ -555,6 +557,24 @@ function SelectedSatelliteDetailStrip({
         <div className="selected-satellite-resource-track" aria-hidden="true">
           <span style={{ width: `${Math.max(0, Math.min(100, utilization))}%` }} />
         </div>
+        {resourceRows.length > 0 ? (
+          <div
+            className="selected-satellite-resource-breakdown"
+            aria-label="选中卫星资源使用明细"
+          >
+            {resourceRows.map((row) => (
+              <div className="selected-satellite-resource-breakdown-row" key={row.label}>
+                <span>{row.label}</span>
+                <strong>{row.usedLabel}</strong>
+                <small>{row.capacityLabel}</small>
+                <em>{row.utilizationLabel}</em>
+                <i aria-hidden="true">
+                  <span style={{ width: `${row.utilizationPercent}%` }} />
+                </i>
+              </div>
+            ))}
+          </div>
+        ) : null}
       </div>
       {summary.routeIds.length > 0 ? (
         <div className="selected-satellite-routes">
