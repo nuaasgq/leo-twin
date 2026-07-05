@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from leo_twin.schema.config import (
     NetworkProfile,
     RuntimeConfig,
@@ -62,8 +64,13 @@ def test_user_configuration_view_is_deterministic_and_frontend_ready() -> None:
 
 
 def test_detailed_user_config_template_loads_with_full_contract() -> None:
-    config = load_config("configs/templates/sees_user_detailed.example.yaml")
+    template_path = "configs/templates/sees_user_detailed.example.yaml"
+    template_text = Path(template_path).read_text(encoding="utf-8")
+    config = load_config(template_path)
 
+    assert "frontend control panel should expose only key operational controls" in template_text
+    assert "STK, EXATA, AFSIM, DDS" in template_text
+    assert "flow-level proxy metrics" in template_text
     assert config.scenario.satellite_count == 72
     assert config.scenario.compute_nodes == 72
     assert config.scenario.traffic_model.traffic_class == "COMPUTE_SERVICE"

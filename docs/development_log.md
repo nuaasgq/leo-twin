@@ -6589,3 +6589,30 @@ change.
 - Recommended follow-up:
   - Add visual/manual browser checks for dashboard scrolling at desktop and
     mobile viewports once the next dev server restart is requested.
+
+## 2026-07-05 - Detailed User Config Template Notes v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: strengthen the user-facing detailed SEES configuration template with
+  explanatory comments for topology scale, satellite-as-compute-node semantics,
+  compute resource vectors, traffic demand, flow-level network proxy metrics,
+  scale-safe orbit/space-link policy, runtime pacing, and UI key-control
+  boundaries. Template values and loader behavior are unchanged; local runtime
+  configs are not touched.
+- Changed files/modules:
+  - `configs/templates/sees_user_detailed.example.yaml`
+  - `tests/unit/test_configuration_view.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_configuration_view.py -q`
+    - Result: passed, 2 tests.
+- Problems encountered:
+  - None. Comments are ignored by the deterministic YAML loader.
+- Known remaining issues:
+  - The default launcher still starts from the runtime/demo config path. A
+    separate import/select workflow is needed if users should load arbitrary
+    detailed config files from the UI.
+- Recommended follow-up:
+  - Add a backend endpoint or CLI workflow for selecting a user-provided
+    detailed config file without editing local runtime-generated files.

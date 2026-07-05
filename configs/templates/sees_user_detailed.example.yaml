@@ -1,11 +1,25 @@
-# SEES detailed user configuration template.
-# The frontend should expose only key operational fields; advanced users can
-# copy this template and edit the full backend contract explicitly.
+# SEES / LEO-Twin detailed user configuration template.
+#
+# Usage policy:
+# - The frontend control panel should expose only key operational controls.
+# - Advanced users can copy this file, edit the complete backend contract, and
+#   load it through the backend/config-control workflow.
+# - This project remains deterministic and flow-level. Do not configure or
+#   expect STK, EXATA, AFSIM, DDS, packet-level simulation, or RF propagation.
+# - Values below are an executable 72-satellite baseline. Comments explain the
+#   product meaning of each section; comments are ignored by the loader.
 
 scenario:
+  # Topology scale. In this product model, each satellite can also be a compute
+  # node, so compute_nodes should usually match satellite_count unless a study
+  # intentionally disables onboard compute for some satellites.
   satellite_count: 72
   user_count: 1000
   compute_nodes: 72
+
+  # Per-node compute resource vector. compute_capacity is the legacy FP32
+  # scalar capacity kept for compatibility; the following fields expose the
+  # richer CPU/GPU/NPU/memory/storage resources used by dashboard summaries.
   compute_capacity: 10.0
   compute_cpu_gflops_fp64: 0.0
   compute_gpu_tflops_fp32: 0.0
@@ -13,20 +27,35 @@ scenario:
   compute_npu_tops_int8: 0.0
   compute_memory_gb: 0.0
   compute_storage_gb: 0.0
+
+  # Ground access model. cell_count is a deterministic service-cell grouping
+  # for dashboard/user summaries, not a packet-level radio-cell simulator.
   ground_station_count: 3
   cell_count: 100
+
+  # Compute scheduling and initial workload shaping. Use RATE_LIMITED or
+  # DETERMINISTIC_STAGGER for larger scenarios to avoid unrealistic event
+  # bursts at simulation time 0.
   compute_scheduling_policy: FIFO
   initial_workload_smoothing_enabled: false
   initial_workload_window_s: 0.0
   max_initial_events_per_tick: 0
   workload_smoothing_mode: NONE
+
   orbit:
+    # Simplified circular/Keplerian-style product orbit settings. This is not
+    # SGP4 and does not claim exact Starlink fidelity.
     update_interval_seconds: 60
     plane_count: 12
     altitude_m: 550000.0
     inclination_deg: 53.0
+    # null lets backend scale policy choose PER_SATELLITE or BATCH safely.
     orbit_update_mode: null
+
   traffic_model:
+    # Flow-level demand generation. COMPUTE_SERVICE creates correlated input
+    # flow + compute task + optional output metadata; no packet-level traffic is
+    # generated.
     flow_interval_seconds: 60
     task_interval_seconds: 60
     flow_demand_capacity: 25.0
@@ -37,15 +66,23 @@ scenario:
     output_data_size: 0.0
 
 network:
+  # Layered flow-level network profile. These protocol names affect deterministic
+  # route/flow abstractions only; external network simulators are not used.
   application_protocol: TASK_OFFLOAD_FLOW
   transport_protocol: TCP
   routing_protocol: LINK_STATE
   datalink_mac_protocol: TDMA
+
+  # Transport and routing proxy parameters. Loss and jitter reported by the
+  # dashboard are flow-level proxy metrics, not packet loss or retransmissions.
   transport_loss_rate: 0.0
   transport_congestion_window_segments: 0
   routing_latency_weight: 1.0
   routing_inverse_capacity_weight: 0.0
   routing_hop_weight: 0.0
+
+  # Deterministic channel/link budget inputs used by simplified capacity
+  # calculations. This is not RF propagation modeling.
   carrier_frequency_hz: 20000000000.0
   channel_bandwidth_hz: 100000000.0
   rain_rate_mm_h: 0.0
@@ -56,17 +93,24 @@ network:
   transmit_power_dbw: 20.0
   system_loss_db: 1.0
   noise_temperature_k: 290.0
+
+  # Scale-safe space-space link mode. null lets backend policy select detailed
+  # small-scale behavior or bounded candidate mode for larger constellations.
   space_link_mode: null
   max_space_link_candidates_per_satellite: 4
   batch_space_link_update_limit: 999
 
 runtime:
+  # Runtime pacing. REAL_TIME should keep speed_factor at 1.0; accelerated
+  # speed is intended for ACCELERATED/replay-style runs.
   mode: REAL_TIME
   speed_factor: 1.0
   seed: 20260703
   duration: 600
 
 ui:
+  # Key display toggles. The dashboard should explain backend-derived
+  # assumptions instead of deriving business semantics locally.
   visualization:
     satellites: true
     links: true
