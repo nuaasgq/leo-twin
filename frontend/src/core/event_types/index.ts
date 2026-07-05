@@ -1022,6 +1022,7 @@ export interface RuntimeStatusPayload {
   user_request_summary_v1?: RuntimeUserRequestSummaryV1;
   user_request_history_v1?: RuntimeUserRequestHistoryV1;
   satellite_service_summary_v1?: RuntimeSatelliteServiceSummaryV1;
+  route_explanation_summary_v1?: RuntimeRouteExplanationSummaryV1;
   node_detail_summary_v1?: RuntimeNodeDetailSummaryV1;
   stream_diagnostics_v1?: RuntimeStreamDiagnosticsV1;
   reproducibility_manifest_v1?: RuntimeReproducibilityManifestV1;
@@ -1211,6 +1212,49 @@ export interface RuntimeUserRequestSummaryV1 {
   window_waiting_user_count?: number;
   hidden_user_count: number;
   items: readonly RuntimeUserRequestItemV1[];
+}
+
+export interface RuntimeRouteExplanationSummaryV1 {
+  version: "v1" | string;
+  source: string;
+  summary_scope?: string;
+  cursor?: number;
+  limit?: number;
+  next_cursor?: number;
+  has_more?: boolean;
+  route_count: number;
+  item_count: number;
+  available_route_count: number;
+  blocked_route_count: number;
+  over_demand_route_count: number;
+  compute_service_route_count: number;
+  network_service_route_count: number;
+  items: readonly RuntimeRouteExplanationItemV1[];
+}
+
+export interface RuntimeRouteExplanationItemV1 {
+  route_id: string;
+  flow_id: string;
+  user_id: string;
+  source_id: string;
+  destination_id: string;
+  selected_satellite_id: string;
+  primary_next_hop_id: string;
+  next_hop_ids: readonly string[];
+  hop_count: number;
+  path_label: string;
+  available: boolean;
+  capacity_mbps?: number | null;
+  demand_mbps?: number | null;
+  latency_s?: number | null;
+  loss_proxy_rate?: number | null;
+  route_pressure_proxy: number;
+  business_type: string;
+  business_label: string;
+  bottleneck_component: string;
+  bottleneck_reason: string;
+  bottleneck_reason_label: string;
+  explanation_label: string;
 }
 
 export interface RuntimeUserRequestItemV1 {

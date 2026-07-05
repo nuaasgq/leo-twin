@@ -5,6 +5,52 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Route Explanation Records v1
+
+- Branch: `feature/T209-route-explanation-records-v1`
+- Commit: pending in this commit
+- Scope: add backend-owned route explanation records to runtime status as
+  `route_explanation_summary_v1`. The summary is derived from the visible
+  runtime snapshot and service history and reports route/flow/user ids, source
+  and destination, selected satellite, primary next hop, path, route pressure,
+  capacity/demand/latency/loss, business type, bottleneck component, bottleneck
+  reason, and compact explanation label. This does not change routing behavior,
+  network algorithms, frontend architecture, or Event Kernel behavior.
+- Changed files/modules:
+  - `src/leo_twin/services/runtime_observability.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `tests/unit/test_runtime_observability.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/integration_demo.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `$env:PYTHONPATH='.'; python -m pytest tests/unit/test_runtime_observability.py tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer -q`
+    - Result: passed, 3 tests.
+  - `python -m py_compile src/leo_twin/services/runtime_observability.py examples/integration_demo/control_plane.py`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing `DataPanel` chunk-size
+      warning after minification.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - Existing user and satellite runtime rows already carried partial route
+    context. T209 keeps those fields intact and adds a separate summary object
+    so consumers can use one backend-owned explanation contract instead of
+    reverse-engineering rows.
+  - Local runtime/generated config files remain dirty and are intentionally not
+    included in this task.
+- Known remaining issues / follow-up:
+  - The summary explains selected runtime routes; it does not enumerate
+    discarded route alternatives yet.
+  - A follow-up dashboard task should render the route explanation table with
+    filtering by user, satellite, bottleneck, and business type.
+
 ## 2026-07-06 - Network Pressure Dynamics v1
 
 - Branch: `feature/T208-network-pressure-dynamics-v1`

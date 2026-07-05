@@ -34,9 +34,14 @@ def build_runtime_lifecycle_summaries(
         cursor=satellite_cursor,
         limit=satellite_limit,
     )
+    route_explanation_summary = build_runtime_route_explanation_summary(
+        snapshot,
+        service_latency_history=service_latency_history,
+    )
     return {
         "user_request_summary_v1": user_summary,
         "satellite_service_summary_v1": satellite_summary,
+        "route_explanation_summary_v1": route_explanation_summary,
         "node_detail_summary_v1": build_runtime_node_detail_summary(
             user_summary,
             satellite_summary,
@@ -207,6 +212,62 @@ def build_runtime_satellite_service_summary(
         cursor=cursor,
         limit=limit,
     )
+
+
+def build_runtime_route_explanation_summary(
+    snapshot: Mapping[str, Any],
+    *,
+    service_latency_history: Mapping[str, Any] | None = None,
+    cursor: int = 0,
+    limit: int = 500,
+) -> dict[str, object]:
+    """Build backend-owned route explanation rows for dashboard consumers."""
+
+    if not isinstance(snapshot, Mapping):
+        raise TypeError("snapshot must be a mapping")
+    routes = tuple(_records(snapshot.get("routes")))
+    service_lookup = _service_lookup(service_latency_history)
+    ordered_routes = tuple(sorted(routes, key=_route_explanation_sort_key))
+    normalized_cursor = _page_cursor(cursor)
+    normalized_limit = _page_limit(limit)
+    page_routes = ordered_routes[
+        normalized_cursor : normalized_cursor + normalized_limit
+    ]
+    items = tuple(
+        _route_explanation_item(route, service_lookup) for route in page_routes
+    )
+    next_cursor = min(len(ordered_routes), normalized_cursor + len(items))
+    return {
+        "version": "v1",
+        "source": "BACKEND_RUNTIME_SNAPSHOT",
+        "summary_scope": "ROUTE_EXPLANATION_WINDOW",
+        "cursor": normalized_cursor,
+        "limit": normalized_limit,
+        "next_cursor": next_cursor,
+        "has_more": next_cursor < len(ordered_routes),
+        "route_count": len(ordered_routes),
+        "item_count": len(items),
+        "available_route_count": sum(
+            1 for route in ordered_routes if bool(route.get("available"))
+        ),
+        "blocked_route_count": sum(
+            1 for route in ordered_routes if not bool(route.get("available"))
+        ),
+        "over_demand_route_count": sum(
+            1
+            for route in ordered_routes
+            if _route_capacity_below_demand(route)
+        ),
+        "compute_service_route_count": sum(
+            1 for route in ordered_routes if _route_is_compute_service(route, service_lookup)
+        ),
+        "network_service_route_count": sum(
+            1
+            for route in ordered_routes
+            if not _route_is_compute_service(route, service_lookup)
+        ),
+        "items": items,
+    }
 
 
 def _user_request_summary(
@@ -1128,6 +1189,149 @@ def _network_queue_reason_label(reason: str) -> str:
     return reason
 
 
+def _route_explanation_item(
+    route: Mapping[str, Any],
+    service_lookup: Mapping[str, str],
+) -> dict[str, object]:
+    path = _route_path(route)
+    source_id = path[0] if path else ""
+    destination_id = path[-1] if path else ""
+    user_id = _route_user_id(route) or ""
+    reason = _route_bottleneck_reason(route)
+    business_type = _route_business_type(route, service_lookup)
+    next_hop = _route_primary_next_hop(path, user_id or source_id)
+    capacity = _optional_float(route.get("capacity"))
+    demand = _optional_float(route.get("demand_capacity"))
+    available = bool(route.get("available"))
+    return {
+        "route_id": _str(route.get("route_id")),
+        "flow_id": _str(route.get("flow_id")),
+        "user_id": user_id,
+        "source_id": source_id,
+        "destination_id": destination_id,
+        "selected_satellite_id": _route_first_satellite(route) or "",
+        "primary_next_hop_id": next_hop,
+        "next_hop_ids": tuple(path[1:]),
+        "hop_count": max(0, len(path) - 1),
+        "path_label": _route_path_label(path),
+        "available": available,
+        "capacity_mbps": capacity,
+        "demand_mbps": demand,
+        "latency_s": _optional_float(route.get("latency")),
+        "loss_proxy_rate": _optional_float(route.get("loss_rate")),
+        "route_pressure_proxy": _route_pressure_proxy_from_values(
+            capacity,
+            demand,
+            _optional_float(route.get("loss_rate")),
+            available,
+        ),
+        "business_type": business_type,
+        "business_label": _route_business_label(route, service_lookup),
+        "bottleneck_component": _route_bottleneck_component(reason),
+        "bottleneck_reason": reason,
+        "bottleneck_reason_label": _route_bottleneck_reason_label(reason),
+        "explanation_label": _route_explanation_label(
+            reason,
+            available=available,
+            capacity=capacity,
+            demand=demand,
+            next_hop=next_hop,
+        ),
+    }
+
+
+def _route_bottleneck_reason(route: Mapping[str, Any]) -> str:
+    path = _route_path(route)
+    if not path:
+        return "NO_ROUTE_PATH"
+    if _route_capacity_below_demand(route):
+        return "ROUTE_CAPACITY_BELOW_DEMAND"
+    if not bool(route.get("available")):
+        return "ROUTE_UNAVAILABLE"
+    loss_rate = _optional_float(route.get("loss_rate"))
+    if loss_rate is not None and loss_rate > 0.0:
+        return "ROUTE_LOSS_PROXY_POSITIVE"
+    return "NO_BOTTLENECK"
+
+
+def _route_bottleneck_component(reason: str) -> str:
+    if reason == "NO_ROUTE_PATH":
+        return "PATH"
+    if reason == "ROUTE_CAPACITY_BELOW_DEMAND":
+        return "CAPACITY"
+    if reason == "ROUTE_UNAVAILABLE":
+        return "AVAILABILITY"
+    if reason == "ROUTE_LOSS_PROXY_POSITIVE":
+        return "LOSS_PROXY"
+    return "NONE"
+
+
+def _route_bottleneck_reason_label(reason: str) -> str:
+    labels = {
+        "NO_ROUTE_PATH": "No feasible path",
+        "ROUTE_CAPACITY_BELOW_DEMAND": "Route capacity below demand",
+        "ROUTE_UNAVAILABLE": "Route unavailable",
+        "ROUTE_LOSS_PROXY_POSITIVE": "Route loss proxy is positive",
+        "NO_BOTTLENECK": "No route bottleneck",
+    }
+    return labels.get(reason, reason)
+
+
+def _route_explanation_label(
+    reason: str,
+    *,
+    available: bool,
+    capacity: float | None,
+    demand: float | None,
+    next_hop: str,
+) -> str:
+    if reason == "ROUTE_CAPACITY_BELOW_DEMAND":
+        return (
+            f"capacity {capacity or 0.0:g} Mbps < demand {demand or 0.0:g} Mbps"
+        )
+    if reason == "ROUTE_UNAVAILABLE":
+        return "route is unavailable in the current snapshot"
+    if reason == "NO_ROUTE_PATH":
+        return "route has no path"
+    if reason == "ROUTE_LOSS_PROXY_POSITIVE":
+        return "route has a positive flow-level loss proxy"
+    if available and next_hop:
+        return f"route ready via next hop {next_hop}"
+    if available:
+        return "route ready"
+    return reason
+
+
+def _route_primary_next_hop(path: Sequence[str], source_id: str) -> str:
+    if source_id:
+        next_hop = _route_next_hop_after_user(path, source_id)
+        if next_hop:
+            return next_hop
+    return path[1] if len(path) > 1 else ""
+
+
+def _route_capacity_below_demand(route: Mapping[str, Any]) -> bool:
+    demand = _optional_float(route.get("demand_capacity"))
+    capacity = _optional_float(route.get("capacity"))
+    return demand is not None and capacity is not None and capacity < demand
+
+
+def _route_pressure_proxy_from_values(
+    capacity: float | None,
+    demand: float | None,
+    loss_rate: float | None,
+    available: bool,
+) -> float:
+    if not available:
+        return 1.0
+    demand_pressure = 0.0
+    if capacity is not None and demand is not None:
+        demand_pressure = 1.0 if capacity <= 0.0 and demand > 0.0 else (
+            max(0.0, demand / capacity) if capacity > 0.0 else 0.0
+        )
+    return min(1.0, max(demand_pressure, loss_rate or 0.0))
+
+
 def _route_next_hop_after_user(path: Sequence[str], user_id: str) -> str:
     for index, node_id in enumerate(path):
         if node_id == user_id and index + 1 < len(path):
@@ -1221,6 +1425,20 @@ def _first_tuple_item(values: tuple[object, ...]) -> str:
 
 def _route_sort_key(route: Mapping[str, Any]) -> tuple[tuple[object, ...], str]:
     return (_entity_sort_key(_route_user_id(route) or ""), _str(route.get("route_id")))
+
+
+def _route_explanation_sort_key(route: Mapping[str, Any]) -> tuple[int, float, tuple[object, ...], str]:
+    return (
+        0 if not bool(route.get("available")) else 1,
+        -_route_pressure_proxy_from_values(
+            _optional_float(route.get("capacity")),
+            _optional_float(route.get("demand_capacity")),
+            _optional_float(route.get("loss_rate")),
+            bool(route.get("available")),
+        ),
+        _entity_sort_key(_route_user_id(route) or _str(route.get("flow_id"))),
+        _str(route.get("route_id")),
+    )
 
 
 def _service_lookup(history: Mapping[str, Any] | None) -> dict[str, str]:

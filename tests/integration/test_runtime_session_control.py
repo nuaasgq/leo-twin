@@ -480,6 +480,29 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
             "running_task_count",
             "finished_task_count",
         }.issubset(satellite_service_summary["items"][0])
+    route_explanation_summary = status_after_tick["route_explanation_summary_v1"]
+    assert route_explanation_summary["version"] == "v1"
+    assert route_explanation_summary["source"] == "BACKEND_RUNTIME_SNAPSHOT"
+    assert route_explanation_summary["route_count"] >= route_explanation_summary[
+        "item_count"
+    ]
+    if route_explanation_summary["items"]:
+        assert {
+            "route_id",
+            "flow_id",
+            "user_id",
+            "source_id",
+            "destination_id",
+            "primary_next_hop_id",
+            "next_hop_ids",
+            "path_label",
+            "route_pressure_proxy",
+            "business_type",
+            "bottleneck_component",
+            "bottleneck_reason",
+            "bottleneck_reason_label",
+            "explanation_label",
+        }.issubset(route_explanation_summary["items"][0])
     node_detail_summary = status_after_tick["node_detail_summary_v1"]
     assert node_detail_summary["version"] == "v1"
     assert node_detail_summary["source"] == "BACKEND_RUNTIME_STATUS"

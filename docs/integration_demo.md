@@ -133,6 +133,23 @@ Invoke-RestMethod http://127.0.0.1:8765/runtime/export/history
 The runtime status payload also includes `runtime_export_history_v1`, which the
 dashboard uses to show the latest package or archive export.
 
+Runtime observability summaries:
+
+```text
+/runtime/status
+  user_request_summary_v1
+  satellite_service_summary_v1
+  route_explanation_summary_v1
+  node_detail_summary_v1
+```
+
+`route_explanation_summary_v1` is backend-owned. It explains each visible route
+with route/flow/user ids, source and destination, selected satellite, primary
+next hop, path, capacity, demand, latency, loss proxy, business type,
+bottleneck component, bottleneck reason, and a compact explanation label. It is
+derived from the runtime snapshot and service history; it does not change route
+selection or simulate packets.
+
 Persisted export catalog:
 
 ```powershell
