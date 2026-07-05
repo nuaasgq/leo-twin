@@ -5355,3 +5355,28 @@ change.
 - Recommended follow-up:
   - Add a pre-commit hook installer only if the team wants local Git hook
     enforcement.
+
+## 2026-07-05 - Launcher Status Hints v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: make `scripts/sees_launcher.ps1 status` print the non-destructive
+  smoke shortcut and dashboard launcher shortcut alongside service URLs.
+- Changed files/modules:
+  - `scripts/sees_launcher.ps1`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `cmd /c status_leo_twin.bat`
+    - Result: passed; status output includes backend/frontend health, console
+      URL, dashboard URL, smoke shortcut, and dashboard launcher shortcut.
+- Problems encountered:
+  - None. This is status output only.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - Status output does not inspect browser state; it only checks backend and
+    frontend HTTP health.
+- Recommended follow-up:
+  - Keep browser-level smoke checks separate so status remains fast and
+    non-invasive.

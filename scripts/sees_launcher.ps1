@@ -236,6 +236,8 @@ function Show-Status {
     Write-Host "Launcher logs: $LauncherLogDir"
     Write-Host "Console URL: $FrontendUrl"
     Write-Host "Dashboard URL: $DashboardUrl"
+    Write-Host "Smoke check: .\smoke_leo_twin.bat"
+    Write-Host "Dashboard launcher: .\dashboard_leo_twin.bat"
 }
 
 function Start-ServiceWindow {
