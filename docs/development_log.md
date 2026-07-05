@@ -4397,3 +4397,32 @@ change.
 - Recommended follow-up:
   - Add Playwright/browser smoke coverage for initialize, start, dashboard
     switch, pause, stop, and reset once the local launcher is stable.
+
+## 2026-07-05 - Frontend Visual Verification Scope v2
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: expand `scripts/verify_frontend_visuals.ps1` so the frontend visual
+  verification entry point also runs the runtime status contract fixture and
+  dashboard attach progress tests. This keeps visual, dashboard, and
+  frontend-backend contract guards together in one command.
+- Changed files/modules:
+  - `scripts/verify_frontend_visuals.ps1`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_frontend_visuals.ps1`
+    - Result: passed; verified 4 frontend visual assets, 25 frontend test files
+      / 189 tests, and frontend build.
+- Problems encountered:
+  - None. The script extension only adds existing tests to the verification
+    target and does not change application runtime behavior.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The script remains a code-level visual and contract verification command;
+    it does not capture browser screenshots or pixel baselines.
+- Recommended follow-up:
+  - Add optional browser screenshot checks once the local service launcher and
+    browser smoke workflow are stable enough for repeatable CI-style runs.

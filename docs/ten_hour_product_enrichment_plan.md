@@ -343,13 +343,18 @@ The following issue-sized slices have now been delivered on
   - Frontend tests now guard that dashboard/control route switches attach to an
     already running runtime without resetting local stream state or rolling back
     the shared display progress clock.
+- `test(frontend): expand visual verification scope`
+  - Maps to suggestions 30, 93, 94, and 95.
+  - `scripts/verify_frontend_visuals.ps1` now verifies visual assets, globe and
+    dashboard visual logic, runtime status contract decoding, dashboard attach
+    progress behavior, and frontend build in one command.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected
 satellite coverage/beam labels, compute vector KPI samples, and the frontend
 visual verification script. The remaining high-value product gaps are backend
-full communication-compute lifecycle history, screenshot-based visual
-acceptance, and browser-driven reset/control end-to-end smoke tests.
+full communication-compute lifecycle history, screenshot pixel baselines, and
+browser-driven reset/control end-to-end smoke tests.
 
 ## Acceptance Gates
 

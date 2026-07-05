@@ -39,7 +39,9 @@ try {
         "visualLayerLimits.test.ts",
         "orbitTrackRenderer.test.ts",
         "countryOverlays.test.ts",
-        "dataPanel.test.ts"
+        "dataPanel.test.ts",
+        "runtimeContractFixture.test.ts",
+        "appSurface.test.ts"
     )
 
     if (-not $SkipBuild) {
