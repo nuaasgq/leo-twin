@@ -1293,6 +1293,144 @@ def test_metrics_collector_counts_deadline_missed_tasks() -> None:
     assert _last_record(records, "tasks.deadline_missed.count").value == 1.0
 
 
+def test_service_latency_history_includes_sorted_component_timeline() -> None:
+    collector = MetricsCollector()
+    base_tags = (
+        ("input_flow_id", "svc-input"),
+        ("route_id", "route:svc-input"),
+    )
+    samples = (
+        MetricRecord(
+            metric_name="service.total_latency",
+            sim_time=12.0,
+            entity_id="svc-task",
+            value="pending",
+        ),
+        MetricRecord(
+            metric_name="service.total_latency",
+            sim_time=12.0,
+            entity_id="svc-task",
+            value=7.4,
+            tags=(
+                ("input_flow_id", "svc-input"),
+                ("output_flow_id", "svc-output"),
+                ("route_id", "route:svc-output"),
+            ),
+        ),
+        MetricRecord(
+            metric_name="service.input_network_latency",
+            sim_time=4.0,
+            entity_id="svc-task",
+            value=4.0,
+            tags=base_tags,
+        ),
+        MetricRecord(
+            metric_name="service.compute_queue_delay",
+            sim_time=5.0,
+            entity_id="svc-task",
+            value=0.25,
+            tags=base_tags,
+        ),
+        MetricRecord(
+            metric_name="service.compute_execution_delay",
+            sim_time=6.0,
+            entity_id="svc-task",
+            value=2.0,
+            tags=base_tags,
+        ),
+        MetricRecord(
+            metric_name="service.output_network_latency",
+            sim_time=11.0,
+            entity_id="svc-task",
+            value=1.15,
+            tags=(
+                ("input_flow_id", "svc-input"),
+                ("output_flow_id", "svc-output"),
+                ("route_id", "route:svc-output"),
+            ),
+        ),
+        MetricRecord(
+            metric_name="service.untracked_delay",
+            sim_time=7.0,
+            entity_id="svc-task",
+            value=99.0,
+        ),
+    )
+
+    for index, sample in enumerate(samples):
+        collector.observe(
+            _event(
+                f"metric-{index}",
+                sample.sim_time,
+                EventType.METRIC_SAMPLE,
+                sample,
+                "compute",
+            )
+        )
+
+    history = collector.service_latency_history()
+    assert history["item_count"] == 1
+    assert history["items"][0] == {
+        "task_id": "svc-task",
+        "input_flow_id": "svc-input",
+        "output_flow_id": "svc-output",
+        "input_route_id": "route:svc-input",
+        "output_route_id": "route:svc-output",
+        "first_sample_sim_time": 4.0,
+        "last_sample_sim_time": 12.0,
+        "component_timeline": [
+            {
+                "component": "input_network",
+                "metric_name": "service.input_network_latency",
+                "sample_sim_time": 4.0,
+                "duration_s": 4.0,
+                "input_flow_id": "svc-input",
+                "route_id": "route:svc-input",
+            },
+            {
+                "component": "compute_queue",
+                "metric_name": "service.compute_queue_delay",
+                "sample_sim_time": 5.0,
+                "duration_s": 0.25,
+                "input_flow_id": "svc-input",
+                "route_id": "route:svc-input",
+            },
+            {
+                "component": "compute_execution",
+                "metric_name": "service.compute_execution_delay",
+                "sample_sim_time": 6.0,
+                "duration_s": 2.0,
+                "input_flow_id": "svc-input",
+                "route_id": "route:svc-input",
+            },
+            {
+                "component": "output_network",
+                "metric_name": "service.output_network_latency",
+                "sample_sim_time": 11.0,
+                "duration_s": 1.15,
+                "input_flow_id": "svc-input",
+                "output_flow_id": "svc-output",
+                "route_id": "route:svc-output",
+            },
+            {
+                "component": "total",
+                "metric_name": "service.total_latency",
+                "sample_sim_time": 12.0,
+                "duration_s": 7.4,
+                "input_flow_id": "svc-input",
+                "output_flow_id": "svc-output",
+                "route_id": "route:svc-output",
+            },
+        ],
+        "complete": True,
+        "input_network_latency_s": 4.0,
+        "compute_queue_delay_s": 0.25,
+        "compute_execution_delay_s": 2.0,
+        "output_network_latency_s": 1.15,
+        "total_latency_s": 7.4,
+    }
+
+
 def test_metrics_outputs_are_deterministic_and_have_expected_format(tmp_path) -> None:
     first = MetricsCollector()
     second = MetricsCollector()

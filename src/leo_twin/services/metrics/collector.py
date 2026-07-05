@@ -125,6 +125,10 @@ class MetricsCollector:
         self._service_latency_components_by_task: dict[str, dict[str, float]] = {}
         self._service_latency_metadata_by_task: dict[str, dict[str, str]] = {}
         self._service_latency_times_by_task: dict[str, dict[str, float]] = {}
+        self._service_latency_timeline_by_task: dict[
+            str,
+            dict[str, dict[str, str | float]],
+        ] = {}
         self._last_sim_time = 0.0
         self._metric_event_sequence = 0
 
@@ -363,6 +367,7 @@ class MetricsCollector:
                 components,
                 self._service_latency_metadata_by_task.get(task_id, {}),
                 self._service_latency_times_by_task.get(task_id, {}),
+                self._service_latency_timeline_by_task.get(task_id, {}),
             )
             for task_id, components in selected
         ]
@@ -837,9 +842,10 @@ class MetricsCollector:
         component = _service_latency_component_name(record.metric_name)
         if component is None:
             return
+        latency = max(0.0, float(record.value))
         self._service_latency_components_by_task.setdefault(record.entity_id, {})[
             component
-        ] = max(0.0, float(record.value))
+        ] = latency
         metadata = self._service_latency_metadata_by_task.setdefault(record.entity_id, {})
         times = self._service_latency_times_by_task.setdefault(record.entity_id, {})
         times["first_sample_sim_time"] = min(
@@ -851,16 +857,27 @@ class MetricsCollector:
             times.get("last_sample_sim_time", float(record.sim_time)),
         )
         tags = dict(record.tags)
+        sample: dict[str, str | float] = {
+            "component": component,
+            "metric_name": record.metric_name,
+            "sample_sim_time": float(record.sim_time),
+            "duration_s": latency,
+        }
         for key in ("input_flow_id", "output_flow_id"):
             value = tags.get(key)
             if isinstance(value, str) and value:
                 metadata[key] = value
+                sample[key] = value
         route_id = tags.get("route_id")
         if isinstance(route_id, str) and route_id:
+            sample["route_id"] = route_id
             if component in {"input_network", "compute_queue", "compute_execution"}:
                 metadata["input_route_id"] = route_id
             elif component in {"output_network", "total"}:
                 metadata["output_route_id"] = route_id
+        self._service_latency_timeline_by_task.setdefault(record.entity_id, {})[
+            component
+        ] = sample
 
     def _append_satellite_kpi_history_sample(
         self,
@@ -1724,6 +1741,22 @@ def _service_latency_component_name(metric_name: str) -> str | None:
     return components.get(metric_name)
 
 
+_SERVICE_LATENCY_COMPONENT_ORDER = (
+    "input_network",
+    "compute_queue",
+    "compute_execution",
+    "output_network",
+    "total",
+)
+
+
+def _service_latency_component_rank(component: str) -> int:
+    try:
+        return _SERVICE_LATENCY_COMPONENT_ORDER.index(component)
+    except ValueError:
+        return len(_SERVICE_LATENCY_COMPONENT_ORDER)
+
+
 def _service_latency_history_sort_key(
     item: tuple[str, dict[str, float]],
 ) -> tuple[float, str]:
@@ -1736,7 +1769,8 @@ def _service_latency_history_item(
     components: dict[str, float],
     metadata: dict[str, str],
     times: dict[str, float],
-) -> dict[str, str | float | bool]:
+    timeline: dict[str, dict[str, str | float]],
+) -> dict[str, Any]:
     return {
         "task_id": task_id,
         "input_flow_id": metadata.get("input_flow_id", ""),
@@ -1745,6 +1779,7 @@ def _service_latency_history_item(
         "output_route_id": metadata.get("output_route_id", ""),
         "first_sample_sim_time": float(times.get("first_sample_sim_time", 0.0)),
         "last_sample_sim_time": float(times.get("last_sample_sim_time", 0.0)),
+        "component_timeline": _service_latency_component_timeline(timeline),
         "complete": "total" in components,
         "input_network_latency_s": float(components.get("input_network", 0.0)),
         "compute_queue_delay_s": float(components.get("compute_queue", 0.0)),
@@ -1752,6 +1787,22 @@ def _service_latency_history_item(
         "output_network_latency_s": float(components.get("output_network", 0.0)),
         "total_latency_s": float(components.get("total", 0.0)),
     }
+
+
+def _service_latency_component_timeline(
+    timeline: Mapping[str, Mapping[str, str | float]],
+) -> list[dict[str, str | float]]:
+    return [
+        dict(sample)
+        for _, sample in sorted(
+            timeline.items(),
+            key=lambda item: (
+                float(item[1].get("sample_sim_time", 0.0)),
+                _service_latency_component_rank(item[0]),
+                item[0],
+            ),
+        )
+    ]
 
 
 def _route_constraint_sort_key(route: Route) -> tuple[int, float, float, int, str]:

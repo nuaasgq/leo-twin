@@ -46,6 +46,50 @@ describe("runtime status contract fixture", () => {
       complete: true,
       total_latency_s: 7.4
     });
+    expect(status.service_latency_history_v1?.items[0].component_timeline).toEqual([
+      {
+        component: "input_network",
+        metric_name: "service.input_network_latency",
+        sample_sim_time: 120,
+        duration_s: 4,
+        input_flow_id: "svc-00001-input",
+        route_id: "route:svc-00001-input"
+      },
+      {
+        component: "compute_queue",
+        metric_name: "service.compute_queue_delay",
+        sample_sim_time: 121,
+        duration_s: 0,
+        input_flow_id: "svc-00001-input",
+        route_id: "route:svc-00001-input"
+      },
+      {
+        component: "compute_execution",
+        metric_name: "service.compute_execution_delay",
+        sample_sim_time: 122,
+        duration_s: 2,
+        input_flow_id: "svc-00001-input",
+        route_id: "route:svc-00001-input"
+      },
+      {
+        component: "output_network",
+        metric_name: "service.output_network_latency",
+        sample_sim_time: 124,
+        duration_s: 1.4,
+        input_flow_id: "svc-00001-input",
+        output_flow_id: "svc-00001-output",
+        route_id: "route:svc-00001-output"
+      },
+      {
+        component: "total",
+        metric_name: "service.total_latency",
+        sample_sim_time: 124,
+        duration_s: 7.4,
+        input_flow_id: "svc-00001-input",
+        output_flow_id: "svc-00001-output",
+        route_id: "route:svc-00001-output"
+      }
+    ]);
     expect(status.satellite_kpi_slices_v1?.slices[0]).toMatchObject({
       satellite_id: "sat-00001",
       active_link_count: 4,

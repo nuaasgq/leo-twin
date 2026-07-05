@@ -782,6 +782,33 @@ describe("buildDataPanelServiceLatencyRows", () => {
             output_route_id: "route:svc-00-compute_service-00000-output",
             first_sample_sim_time: 6,
             last_sample_sim_time: 8,
+            component_timeline: [
+              {
+                component: "input_network",
+                sample_sim_time: 6,
+                duration_s: 4
+              },
+              {
+                component: "compute_queue",
+                sample_sim_time: 6,
+                duration_s: 0
+              },
+              {
+                component: "compute_execution",
+                sample_sim_time: 7,
+                duration_s: 2
+              },
+              {
+                component: "output_network",
+                sample_sim_time: 8,
+                duration_s: 1.4
+              },
+              {
+                component: "total",
+                sample_sim_time: 8,
+                duration_s: 7.4
+              }
+            ],
             complete: true,
             input_network_latency_s: 4,
             compute_queue_delay_s: 0,
@@ -808,7 +835,7 @@ describe("buildDataPanelServiceLatencyRows", () => {
         taskId: "svc-00-compute_service-00000-task",
         taskLabel: "...vice-00000-task",
         traceTitle:
-          "task=svc-00-compute_service-00000-task / input=svc-00-compute_service-00000-input / output=svc-00-compute_service-00000-output / input_route=route:svc-00-compute_service-00000-input / output_route=route:svc-00-compute_service-00000-output / first=6s / last=8s",
+          "task=svc-00-compute_service-00000-task / input=svc-00-compute_service-00000-input / output=svc-00-compute_service-00000-output / input_route=route:svc-00-compute_service-00000-input / output_route=route:svc-00-compute_service-00000-output / first=6s / last=8s / timeline=input_network@6s=4,000 ms, compute_queue@6s=0 ms, compute_execution@7s=2,000 ms, output_network@8s=1,400 ms, total@8s=7,400 ms",
         statusLabel: "完整闭环",
         totalLatencyLabel: "7,400 ms"
       }

@@ -1451,9 +1451,27 @@ function serviceLatencyTraceTitle(
       : "",
     typeof item.last_sample_sim_time === "number"
       ? `last=${formatMetricValue(item.last_sample_sim_time)}s`
-      : ""
+      : "",
+    serviceLatencyComponentTimeline(item)
   ].filter((part) => part.length > 0);
   return parts.join(" / ");
+}
+
+function serviceLatencyComponentTimeline(
+  item: RuntimeServiceLatencyHistoryV1["items"][number]
+): string {
+  const components = item.component_timeline ?? [];
+  if (components.length === 0) {
+    return "";
+  }
+  const labels = components.map((component) => {
+    const simTime =
+      typeof component.sample_sim_time === "number"
+        ? `@${formatMetricValue(component.sample_sim_time)}s`
+        : "";
+    return `${component.component}${simTime}=${formatMetricMilliseconds(component.duration_s)}`;
+  });
+  return `timeline=${labels.join(", ")}`;
 }
 
 function formatPreciseMetricValue(value: number): string {

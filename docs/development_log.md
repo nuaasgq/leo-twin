@@ -4666,3 +4666,49 @@ change.
 - Recommended follow-up:
   - Add a lifecycle detail table with per-component timing when the backend
     emits component-level start/end observations.
+
+## 2026-07-05 - Service Trace Detail v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: expose component-level service trace samples inside
+  `service_latency_history_v1`. Each trace item now carries a deterministic
+  `component_timeline` with component name, metric name, sample simulation
+  time, duration, route id, and available input/output flow ids. The dashboard
+  keeps the compact trace row layout and appends the component timeline to the
+  hover title.
+- Changed files/modules:
+  - `src/leo_twin/services/metrics/collector.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/fixtures/runtimeStatus.contract.json`
+  - `frontend/tests/runtimeContractFixture.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `tests/integration/test_compute_service_lifecycle.py`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `PYTHONPATH=src python -m pytest tests/unit/test_metrics_module.py::test_service_latency_history_includes_sorted_component_timeline tests/integration/test_compute_service_lifecycle.py -q`
+    - Result: passed, 2 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- dataPanel.test.ts runtimeContractFixture.test.ts`
+    - Result: passed, 25 files / 192 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - A parallel read-only explorer noted that `component_timeline` and
+    `duration_s` better describe the new contract than the initial local
+    `components`/`latency_s` draft; the implementation was adjusted before
+    commit.
+  - The implementation is passive metrics enrichment over existing
+    `METRIC_SAMPLE` records and does not alter kernel, network, or compute
+    behavior.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The dashboard still renders component details in a hover title rather than
+    a dedicated expandable lifecycle table.
+- Recommended follow-up:
+  - Add a bounded lifecycle detail table or drawer with component rows when the
+    UI has room for a richer service-inspection interaction.

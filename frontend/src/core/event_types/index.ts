@@ -558,12 +558,23 @@ export interface RuntimeServiceLatencyHistoryItemV1 {
   output_route_id?: string;
   first_sample_sim_time?: number;
   last_sample_sim_time?: number;
+  component_timeline?: readonly RuntimeServiceLatencyComponentSampleV1[];
   complete: boolean;
   input_network_latency_s: number;
   compute_queue_delay_s: number;
   compute_execution_delay_s: number;
   output_network_latency_s: number;
   total_latency_s: number;
+}
+
+export interface RuntimeServiceLatencyComponentSampleV1 {
+  component: string;
+  metric_name?: string;
+  sample_sim_time?: number;
+  duration_s: number;
+  input_flow_id?: string;
+  output_flow_id?: string;
+  route_id?: string;
 }
 
 export interface RuntimeStreamDiagnosticsV1 {
