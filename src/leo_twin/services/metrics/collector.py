@@ -292,7 +292,11 @@ class MetricsCollector:
         )
         current_sample = self._current_kpi_sample(current_sample_time)
         if not samples:
-            samples = [current_sample]
+            samples = (
+                [_baseline_kpi_sample(0.0), current_sample]
+                if current_sample_time > 0.0
+                else [current_sample]
+            )[-self._kpi_sample_limit :]
         elif samples[-1]["sim_time"] == current_sample["sim_time"]:
             samples[-1] = current_sample
         elif samples[-1]["sim_time"] < current_sample["sim_time"]:
@@ -300,6 +304,12 @@ class MetricsCollector:
             samples = samples[-self._kpi_sample_limit :]
         else:
             samples = [current_sample]
+        if (
+            len(samples) == 1
+            and samples[0]["sim_time"] > 0.0
+            and self._kpi_sample_limit > 1
+        ):
+            samples = [_baseline_kpi_sample(0.0), samples[0]]
         return {
             "version": "v1",
             "sample_count": len(samples),
@@ -1784,6 +1794,47 @@ def _satellite_kpi_history_sort_key(
         -float(latest["sim_time"]),
         satellite_id,
     )
+
+
+def _baseline_kpi_sample(sim_time: float) -> KpiSample:
+    return {
+        "sim_time": float(sim_time),
+        "network_effective_throughput_mbps": 0.0,
+        "network_requested_route_demand_mbps": 0.0,
+        "network_offered_route_capacity_mbps": 0.0,
+        "network_available_route_demand_mbps": 0.0,
+        "network_demand_pressure_proxy": 0.0,
+        "network_throughput_pressure_proxy": 0.0,
+        "network_effective_latency_s": 0.0,
+        "network_route_latency_avg_s": 0.0,
+        "network_effective_loss_proxy_rate": 0.0,
+        "network_route_loss_proxy_rate": 0.0,
+        "network_route_blocking_ratio": 0.0,
+        "network_failed_flow_ratio": 0.0,
+        "network_congestion_proxy": 0.0,
+        "network_congestion_loss_proxy_rate": 0.0,
+        "network_demand_loss_proxy_rate": 0.0,
+        "network_pressure_loss_proxy_rate": 0.0,
+        "network_effective_delay_variation_s": 0.0,
+        "network_route_delay_variation_s": 0.0,
+        "network_flow_delay_variation_s": 0.0,
+        "network_pressure_delay_variation_s": 0.0,
+        "network_effective_available_throughput_mbps": 0.0,
+        "network_flow_delivered_capacity_mbps": 0.0,
+        "network_recent_window_s": float(_RECENT_FLOW_KPI_WINDOW_S),
+        "network_recent_flow_count": 0.0,
+        "network_recent_delivered_throughput_mbps": 0.0,
+        "network_recent_latency_s": 0.0,
+        "network_recent_loss_proxy_rate": 0.0,
+        "network_recent_delay_variation_s": 0.0,
+        "compute_resource_used_gflops_fp32": 0.0,
+        "compute_resource_used_gflops_fp64": 0.0,
+        "compute_resource_used_gpu_tflops_fp32": 0.0,
+        "compute_resource_used_gpu_tflops_fp16": 0.0,
+        "compute_resource_used_npu_tops_int8": 0.0,
+        "compute_resource_used_memory_gb": 0.0,
+        "compute_resource_used_storage_gb": 0.0,
+    }
 
 
 def _satellite_kpi_history_sample(

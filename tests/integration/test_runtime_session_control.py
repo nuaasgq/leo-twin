@@ -440,6 +440,29 @@ def test_runtime_kpi_series_changes_with_configured_flow_demand(tmp_path) -> Non
     ]
 
 
+def test_runtime_kpi_series_exposes_initial_baseline_for_single_live_sample(
+    tmp_path,
+) -> None:
+    status = _runtime_status_after_route_demand(
+        replace(
+            _small_demo_config(),
+            flow_demand_capacity=450.0,
+            traffic_data_transfer_weight=2.0,
+            traffic_compute_service_weight=1.0,
+        ),
+        tmp_path / "single-sample",
+    )
+
+    samples = status["kpi_time_series_v1"]["samples"]
+
+    assert len(samples) >= 2
+    assert samples[0]["sim_time"] == 0.0
+    assert samples[0]["network_requested_route_demand_mbps"] == 0.0
+    assert samples[0]["network_effective_loss_proxy_rate"] == 0.0
+    assert samples[-1]["sim_time"] > 0.0
+    assert samples[-1]["network_requested_route_demand_mbps"] > 0.0
+
+
 def test_session_registry_owns_multiple_sessions() -> None:
     registry = SimulationSessionRegistry()
     first = registry.create(

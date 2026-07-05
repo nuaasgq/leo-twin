@@ -889,6 +889,42 @@ def test_metrics_collector_kpi_time_series_accepts_runtime_sim_time_tail() -> No
     assert series["samples"][-1]["network_effective_loss_proxy_rate"] == 0.12
 
 
+def test_metrics_collector_kpi_time_series_prepends_initial_baseline_for_single_sample() -> None:
+    collector = MetricsCollector()
+    collector.observe(
+        _event(
+            "route-loss",
+            2.0,
+            EventType.ROUTE_UPDATE,
+            Route(
+                route_id="route-loss",
+                flow_id="flow-loss",
+                path=("user-a", "sat-a", "user-b"),
+                latency=0.02,
+                capacity=100.0,
+                available=True,
+                loss_rate=0.12,
+            ),
+            "network",
+        )
+    )
+
+    series = collector.kpi_time_series()
+
+    assert series["sample_count"] == 2
+    assert series["samples"][0]["sim_time"] == 0.0
+    assert series["samples"][0]["network_effective_throughput_mbps"] == 0.0
+    assert series["samples"][0]["network_effective_loss_proxy_rate"] == 0.0
+    assert series["samples"][0]["network_recent_window_s"] == 60.0
+    assert series["samples"][1]["sim_time"] == 2.0
+    assert series["samples"][1]["network_effective_throughput_mbps"] == pytest.approx(
+        88.0
+    )
+    assert series["samples"][1]["network_effective_loss_proxy_rate"] == pytest.approx(
+        0.12
+    )
+
+
 def test_metrics_collector_reports_recent_flow_kpi_window() -> None:
     collector = MetricsCollector(metric_sample_interval=100)
     collector.observe(

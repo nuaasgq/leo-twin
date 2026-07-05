@@ -6862,3 +6862,39 @@ change.
 - Recommended follow-up:
   - Add time-varying user/satellite observability charts fed by these semantic
     fields, then connect mixed traffic demand to per-user request timelines.
+
+## 2026-07-05 - KPI Time-Series Initial Baseline v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: improve live dashboard KPI time-series usability when the runtime has
+  only one backend KPI sample after simulation time has already advanced. The
+  MetricsCollector now prepends a deterministic `sim_time=0` zero-demand
+  baseline sample for single-sample series, so throughput, loss proxy, delay
+  variation, and compute resource charts can show a truthful initial-to-current
+  transition instead of a single static point. Existing multi-sample series are
+  unchanged. This is a metrics observation change only; Event Kernel, network
+  model behavior, and packet-level semantics are unchanged.
+- Changed files/modules:
+  - `src/leo_twin/services/metrics/collector.py`
+  - `tests/unit/test_metrics_module.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_metrics_module.py::test_metrics_collector_kpi_time_series_prepends_initial_baseline_for_single_sample tests/unit/test_metrics_module.py::test_metrics_collector_publishes_backend_kpi_time_series tests/unit/test_metrics_module.py::test_metrics_collector_kpi_time_series_refreshes_current_tail_sample tests/unit/test_metrics_module.py::test_metrics_collector_kpi_time_series_accepts_runtime_sim_time_tail tests/unit/test_metrics_module.py::test_metrics_collector_reports_recent_flow_kpi_window tests/integration/test_runtime_session_control.py::test_runtime_kpi_series_changes_with_configured_flow_demand tests/integration/test_runtime_session_control.py::test_runtime_kpi_series_exposes_initial_baseline_for_single_live_sample -q`
+    - Result: passed, 7 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 25 files / 236 tests.
+- Problems encountered:
+  - A probe showed that high-pressure mixed traffic can legitimately expose
+    only one live KPI sample early in the run. The fix adds a deterministic
+    initial baseline instead of inventing random jitter.
+- Known remaining issues:
+  - This does not make every scenario highly dynamic. If the configured traffic
+    demand is low and routes remain stable, loss and delay variation proxies may
+    still remain zero, which is valid for the current flow-level abstraction.
+- Recommended follow-up:
+  - Add a user-facing "network stress scenario" preset or acceptance config that
+    combines mixed demand, higher flow demand, and transport loss to exercise
+    throughput, latency, loss proxy, and delay-variation charts over time.
