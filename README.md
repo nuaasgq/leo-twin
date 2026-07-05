@@ -39,7 +39,7 @@ Windows one-command launcher:
 ```
 
 The menu launcher includes console/dashboard startup, status, read-only health
-smoke, restart/stop, and product acceptance verification.
+smoke, restart/stop, and fast/full product acceptance verification.
 
 Useful launcher commands:
 

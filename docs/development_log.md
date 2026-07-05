@@ -5246,3 +5246,32 @@ change.
 - Recommended follow-up:
   - Add a second menu option for full acceptance with build only if users ask
     for it.
+
+## 2026-07-05 - Launcher Full Acceptance Menu Option v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: split launcher acceptance verification into two menu options: fast
+  product acceptance with `-SkipBuild`, and full product acceptance that also
+  runs the frontend build through the aggregate verification script.
+- Changed files/modules:
+  - `leo_twin_launcher.bat`
+  - `README.md`
+  - `docs/integration_demo.md`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `cmd /c "echo 3| leo_twin_launcher.bat"`
+    - Result: passed; menu still selected the non-destructive status action and
+      reported backend/frontend health and URLs.
+- Problems encountered:
+  - None. The full acceptance option was not executed through the menu in this
+    slice; the underlying full script path remains available directly.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - Menu validation still uses a non-destructive status selection rather than
+    executing every menu branch.
+- Recommended follow-up:
+  - Add a dry-run mode for menu branch validation if batch menu complexity
+    increases.

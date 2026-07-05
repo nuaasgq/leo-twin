@@ -9,9 +9,11 @@ echo 3. Status
 echo 4. Smoke health check
 echo 5. Restart console
 echo 6. Stop services
-echo 7. Product acceptance verification
+echo 7. Product acceptance verification (fast)
+echo 8. Product acceptance verification (with build)
 echo.
-choice /C 1234567 /N /M "Select an action [1-7]: "
+choice /C 12345678 /N /M "Select an action [1-8]: "
+if errorlevel 8 goto acceptance_full
 if errorlevel 7 goto acceptance
 if errorlevel 6 goto stop
 if errorlevel 5 goto restart
@@ -46,6 +48,10 @@ goto end
 
 :acceptance
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\verify_product_acceptance.ps1" -SkipBuild
+goto end
+
+:acceptance_full
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\verify_product_acceptance.ps1"
 goto end
 
 :end

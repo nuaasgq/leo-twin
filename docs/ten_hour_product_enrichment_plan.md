@@ -472,6 +472,10 @@ The following issue-sized slices have now been delivered on
   - Maps to suggestions 91-95.
   - The interactive launcher menu now includes product acceptance verification
     through the aggregate script for dashboard/service/runtime checks.
+- `feat(launcher): add full acceptance menu option`
+  - Maps to suggestions 91-95.
+  - The launcher menu now separates fast acceptance without frontend build from
+    full acceptance with build.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected
