@@ -6446,3 +6446,34 @@ change.
 - Recommended follow-up:
   - Add visible KPI provenance labels beside the dashboard charts so users can
     distinguish recent-flow proxy metrics from packet-level metrics.
+
+## 2026-07-05 - Dashboard KPI Provenance Labels v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: make standalone dashboard network KPI chart semantics explicit. The
+  network chart now displays source chips for chart window, throughput,
+  latency, loss, jitter, and simulation semantics. The labels are derived from
+  backend `network_quality_provenance_v1`, metrics summary source labels, and
+  recent-flow KPI sample fields. This makes it clear when curves use the
+  recent completed-flow window and that loss/jitter are flow-level proxy
+  metrics, not packet-level simulation.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend exec vitest run dataPanel.test.ts`
+    - Result: passed, 1 file / 64 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - None. This is a frontend interpretability change and does not alter
+    backend metrics, Event Kernel behavior, or streaming protocols.
+- Known remaining issues:
+  - The labels explain existing proxy semantics; they do not implement
+    packet-level loss, retransmission, or RF jitter.
+- Recommended follow-up:
+  - Add per-user business request time-series panels and per-satellite
+    resource history selection on the standalone dashboard.

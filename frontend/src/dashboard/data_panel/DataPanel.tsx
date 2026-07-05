@@ -118,6 +118,11 @@ export const DataPanel = memo(function DataPanel({
     runtimeStatus.kpi_time_series_v1,
     runtimeStatus.network_quality_provenance_v1
   );
+  const networkKpiProvenanceItems = buildDataPanelNetworkKpiProvenanceItems(
+    runtimeStatus.metrics_summary,
+    runtimeStatus.kpi_time_series_v1,
+    runtimeStatus.network_quality_provenance_v1
+  );
   const networkFormulaInputs = buildDataPanelNetworkFormulaInputs(
     runtimeStatus.metrics_summary
   );
@@ -284,6 +289,15 @@ export const DataPanel = memo(function DataPanel({
             <span>{networkKpiSource.sourceLabel}</span>
             <small>{networkKpiSource.modelNote}</small>
           </div>
+          {networkKpiProvenanceItems.length > 0 ? (
+            <div className="data-panel-kpi-provenance" aria-label="网络KPI曲线来源">
+              {networkKpiProvenanceItems.map((item) => (
+                <span key={item.label} title={item.title}>
+                  {item.label} <strong>{item.value}</strong>
+                </span>
+              ))}
+            </div>
+          ) : null}
           {networkKpiSource.caveats.length > 0 ? (
             <div className="data-panel-kpi-caveats" aria-label="网络KPI语义说明">
               {networkKpiSource.caveats.map((caveat) => (
@@ -2855,6 +2869,12 @@ export interface DataPanelNetworkFormulaInput {
   value: string;
 }
 
+export interface DataPanelNetworkKpiProvenanceItem {
+  label: string;
+  value: string;
+  title: string;
+}
+
 export interface DataPanelServiceLatencyDisplay {
   sourceLabel: string;
   modelLabel: string;
@@ -2982,6 +3002,73 @@ export function buildDataPanelNetworkKpiCaveats(
   return caveats;
 }
 
+export function buildDataPanelNetworkKpiProvenanceItems(
+  metrics: RuntimeMetricsSummary | null | undefined,
+  backendKpiTimeSeries: RuntimeKpiTimeSeriesV1 | null | undefined = undefined,
+  networkProvenance: RuntimeNetworkQualityProvenanceV1 | null | undefined = undefined
+): readonly DataPanelNetworkKpiProvenanceItem[] {
+  const items: DataPanelNetworkKpiProvenanceItem[] = [];
+  const latestSample = latestRuntimeKpiSample(backendKpiTimeSeries);
+  const recentWindowSeconds = latestSample?.network_recent_window_s;
+  const hasRecentWindow =
+    typeof recentWindowSeconds === "number" && Number.isFinite(recentWindowSeconds);
+  items.push({
+    label: "曲线窗口",
+    value: hasRecentWindow
+      ? `最近 ${formatDurationCompact(Math.max(0, recentWindowSeconds))} 完成流`
+      : "累计有效指标",
+    title: hasRecentWindow
+      ? "图表优先使用后端最近窗口内完成流的吞吐、时延、丢包代理和抖动代理。"
+      : "图表使用后端累计有效指标或快照估算值。"
+  });
+
+  const sourceItems = (
+    [
+      [
+        "吞吐",
+        networkProvenance?.sources.throughput?.label ||
+          metricString(metrics, "network_quality_throughput_source_label")
+      ],
+      [
+        "时延",
+        networkProvenance?.sources.latency?.label ||
+          metricString(metrics, "network_quality_latency_source_label")
+      ],
+      [
+        "丢包",
+        networkProvenance?.sources.loss?.label ||
+          metricString(metrics, "network_quality_loss_source_label")
+      ],
+      [
+        "抖动",
+        networkProvenance?.sources.delay_variation?.label ||
+          metricString(metrics, "network_quality_delay_variation_source_label")
+      ]
+    ] as const
+  )
+    .filter(([, value]) => typeof value === "string" && value.trim().length > 0)
+    .map(([label, value]) => ({
+      label,
+      value: value as string,
+      title: `${label}指标来源由后端运行态指标摘要声明。`
+    }));
+  items.push(...sourceItems);
+
+  const metricModel =
+    networkProvenance?.metric_model || metricString(metrics, "network_quality_metric_model");
+  if (metricModel !== undefined || networkProvenance?.packet_level_simulation === false) {
+    items.push({
+      label: "语义",
+      value:
+        networkProvenance?.packet_level_simulation === false || metricModel === "FLOW_LEVEL_PROXY"
+          ? "流级代理 / 非包级"
+          : metricModel ?? "后端声明",
+      title: "该说明来自后端网络质量 provenance，不代表包级仿真。"
+    });
+  }
+  return items;
+}
+
 function buildDataPanelKpiTailCaveats(
   backendKpiTimeSeries: RuntimeKpiTimeSeriesV1 | null | undefined
 ): readonly string[] {
@@ -2993,6 +3080,13 @@ function buildDataPanelKpiTailCaveats(
     return [];
   }
   return [`尾点：${tailLabel}`];
+}
+
+function latestRuntimeKpiSample(
+  backendKpiTimeSeries: RuntimeKpiTimeSeriesV1 | null | undefined
+): RuntimeKpiSampleV1 | null {
+  const samples = backendKpiTimeSeries?.samples ?? [];
+  return samples.length === 0 ? null : samples[samples.length - 1];
 }
 
 export function buildDataPanelNetworkFormulaInputs(

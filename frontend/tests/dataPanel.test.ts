@@ -9,6 +9,7 @@ import {
   buildDataPanelDisplaySummary,
   buildDataPanelNetworkFormulaInputs,
   buildDataPanelNetworkKpiCaveats,
+  buildDataPanelNetworkKpiProvenanceItems,
   buildDataPanelNetworkKpiSource,
   buildDataPanelRouteConstraints,
   buildDataPanelRuntimeProgress,
@@ -704,6 +705,88 @@ describe("buildDataPanelNetworkKpiCaveats", () => {
         network_quality_delay_variation_zero_reason_label: "当前代理指标为正值"
       })
     ).toEqual(["指标模型：后端流级代理"]);
+  });
+});
+
+describe("buildDataPanelNetworkKpiProvenanceItems", () => {
+  it("explains recent flow-window KPI chart fields from backend provenance", () => {
+    const items = buildDataPanelNetworkKpiProvenanceItems(
+      {
+        network_quality_throughput_source_label: "已完成流容量",
+        network_quality_latency_source_label: "已完成流时延",
+        network_quality_loss_source_label: "近期失败流比例",
+        network_quality_delay_variation_source_label: "近期流时延离散度",
+        network_quality_metric_model: "FLOW_LEVEL_PROXY"
+      },
+      {
+        version: "v1",
+        samples: [
+          {
+            sim_time: 70,
+            network_effective_throughput_mbps: 150,
+            network_effective_latency_s: 0.11,
+            network_effective_loss_proxy_rate: 0.04,
+            network_effective_delay_variation_s: 0.006,
+            network_recent_window_s: 60,
+            network_recent_flow_count: 3,
+            network_recent_delivered_throughput_mbps: 65,
+            network_recent_latency_s: 0.18,
+            network_recent_loss_proxy_rate: 0.25,
+            network_recent_delay_variation_s: 0.012,
+            compute_resource_used_gflops_fp32: 2500
+          }
+        ]
+      }
+    );
+
+    expect(items.map((item) => [item.label, item.value])).toEqual([
+      ["曲线窗口", "最近 1分0秒 完成流"],
+      ["吞吐", "已完成流容量"],
+      ["时延", "已完成流时延"],
+      ["丢包", "近期失败流比例"],
+      ["抖动", "近期流时延离散度"],
+      ["语义", "流级代理 / 非包级"]
+    ]);
+  });
+
+  it("prefers structured runtime provenance and falls back to cumulative mode", () => {
+    const items = buildDataPanelNetworkKpiProvenanceItems(
+      {},
+      undefined,
+      {
+        version: "v1",
+        metric_model: "FLOW_LEVEL_PROXY",
+        packet_level_simulation: false,
+        sources: {
+          throughput: {
+            source: "COMPLETED_FLOW_CAPACITY",
+            label: "structured-throughput"
+          },
+          latency: {
+            source: "COMPLETED_FLOW_LATENCY",
+            label: "structured-latency"
+          },
+          loss: {
+            source: "PRESSURE_LOSS_PROXY",
+            label: "structured-loss"
+          },
+          delay_variation: {
+            source: "FLOW_LATENCY_VARIATION",
+            label: "structured-jitter"
+          }
+        },
+        zero_reasons: {}
+      }
+    );
+
+    expect(items.map((item) => [item.label, item.value])).toEqual([
+      ["曲线窗口", "累计有效指标"],
+      ["吞吐", "structured-throughput"],
+      ["时延", "structured-latency"],
+      ["丢包", "structured-loss"],
+      ["抖动", "structured-jitter"],
+      ["语义", "流级代理 / 非包级"]
+    ]);
   });
 });
 

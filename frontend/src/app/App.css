@@ -1610,6 +1610,31 @@ body {
   min-width: 0;
 }
 
+.data-panel-kpi-provenance {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.data-panel-kpi-provenance span {
+  min-width: 0;
+  border: 1px solid #244a5a;
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: #0b1720;
+  color: var(--app-muted);
+  font-size: 10px;
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+
+.data-panel-kpi-provenance strong {
+  color: #b9f2ff;
+  font-size: 10px;
+  font-weight: 800;
+}
+
 .data-panel-kpi-caveats span {
   min-width: 0;
   border: 1px solid #3b3440;
