@@ -5,6 +5,39 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Dashboard Detail Scope Notice v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending in this commit
+- Scope: make standalone dashboard detail coverage explicit by rendering
+  backend-owned user/satellite summary coverage, hidden-row fallback status,
+  satellite KPI slice limits, and single-satellite history limits inline above
+  the user/satellite detail tables.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `frontend/tests/appCssLayout.test.js`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `pnpm --dir frontend test -- dataPanel.test.ts appCssLayout.test.js`
+    - Result: passed, 25 files / 244 tests.
+  - Bundled Node:
+    `pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The existing dashboard already had backend detail summaries and scrollable
+    tables, but it did not visibly distinguish full detail rows from bounded
+    KPI slice/history windows. The new notice is inline and responsive rather
+    than a floating overlay.
+- Known remaining issues:
+  - Satellite KPI history is still a representative bounded window; per-satellite
+    historical series for every satellite remains a later backend scale task.
+- Recommended follow-up:
+  - Add user-selectable detail export or server-side pagination if users need
+    to inspect thousands of users/satellites beyond the current in-memory table.
+
 ## 2026-07-05 - Recent KPI Zero-Reason Transparency v1
 
 - Branch: `feature/T164-dashboard-observability-v1`

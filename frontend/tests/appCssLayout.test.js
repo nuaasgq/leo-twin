@@ -18,4 +18,11 @@ describe("dashboard scroll layout CSS", () => {
     expect(appCss).toContain(".data-panel-table-scroll");
     expect(appCss).toContain("overflow: auto;");
   });
+
+  it("shows observability scope notes inline without a floating overlay", () => {
+    expect(appCss).toContain(".data-panel-observability-notes");
+    expect(appCss).toContain("grid-template-columns: repeat(4, minmax(0, 1fr));");
+    expect(appCss).toContain(".data-panel-observability-note.limit");
+    expect(appCss).toContain(".data-panel-observability-note.history");
+  });
 });

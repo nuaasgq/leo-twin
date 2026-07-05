@@ -200,6 +200,14 @@ export const DataPanel = memo(function DataPanel({
   );
   const userSourceBadge = buildRuntimeDetailSourceBadge(userBusinessRequests.sourceLabel);
   const satelliteSourceBadge = buildRuntimeDetailSourceBadge(satelliteResourceRows.sourceLabel);
+  const detailScopeNotes = buildDataPanelDetailScopeNotes(
+    userBusinessRequests,
+    satelliteResourceRows,
+    runtimeStatus.user_request_summary_v1,
+    runtimeStatus.satellite_service_summary_v1,
+    runtimeStatus.satellite_kpi_slices_v1,
+    runtimeStatus.satellite_kpi_history_v1
+  );
 
   return (
     <section className="data-panel" aria-label="独立数据态势面板">
@@ -781,6 +789,15 @@ export const DataPanel = memo(function DataPanel({
           {filteredUserBusinessRequests.items.length} 个用户 /{" "}
           {filteredSatelliteResourceRows.items.length} 个卫星
         </span>
+      </div>
+      <div className="data-panel-observability-notes" aria-label="明细观测范围说明">
+        {detailScopeNotes.map((note) => (
+          <div className={`data-panel-observability-note ${note.tone}`} key={note.label}>
+            <span>{note.label}</span>
+            <strong>{note.value}</strong>
+            <small>{note.detail}</small>
+          </div>
+        ))}
       </div>
       <div className="data-panel-detail-grid">
         <section className="dashboard-section data-panel-detail-table" aria-label="用户节点状态明细">
@@ -1385,6 +1402,13 @@ export interface RuntimeDetailSourceBadge {
   label: string;
   title: string;
   tone: RuntimeDetailSourceTone;
+}
+
+export interface DataPanelDetailScopeNote {
+  label: string;
+  value: string;
+  detail: string;
+  tone: "backend" | "limit" | "history";
 }
 
 export function buildDataPanelTelemetry(
@@ -2138,6 +2162,108 @@ export function buildDataPanelSatelliteResourceHistory(
     availableSatelliteIds,
     points
   };
+}
+
+export function buildDataPanelDetailScopeNotes(
+  userRows: UserBusinessRequestRows,
+  satelliteRows: SatelliteResourceRows,
+  userSummary: RuntimeUserRequestSummaryV1 | null | undefined = undefined,
+  satelliteSummary: RuntimeSatelliteServiceSummaryV1 | null | undefined = undefined,
+  satelliteKpiSlices: RuntimeSatelliteKpiSlicesV1 | null | undefined = undefined,
+  satelliteKpiHistory: RuntimeSatelliteKpiHistoryV1 | null | undefined = undefined
+): readonly DataPanelDetailScopeNote[] {
+  const notes: DataPanelDetailScopeNote[] = [];
+  if (userSummary !== null && userSummary !== undefined) {
+    const hiddenUsers = Math.max(0, userSummary.hidden_user_count);
+    const backendItems = Math.max(0, userSummary.item_count);
+    const totalUsers = Math.max(0, userSummary.user_count);
+    notes.push({
+      label: "用户明细",
+      value: `${formatCount(userRows.items.length)} / ${formatCount(totalUsers)} 行`,
+      detail:
+        hiddenUsers > 0
+          ? `后端摘要返回 ${formatCount(backendItems)} 行，隐藏 ${formatCount(
+              hiddenUsers
+            )} 行；表格已用快照补齐可见用户。`
+          : `后端摘要覆盖 ${formatCount(backendItems)} 个用户节点。`,
+      tone: hiddenUsers > 0 ? "limit" : "backend"
+    });
+  }
+  if (satelliteSummary !== null && satelliteSummary !== undefined) {
+    const hiddenSatellites = Math.max(0, satelliteSummary.hidden_satellite_count);
+    const backendItems = Math.max(0, satelliteSummary.item_count);
+    const totalSatellites = Math.max(0, satelliteSummary.satellite_count);
+    notes.push({
+      label: "卫星明细",
+      value: `${formatCount(satelliteRows.items.length)} / ${formatCount(
+        totalSatellites
+      )} 行`,
+      detail:
+        hiddenSatellites > 0
+          ? `后端服务摘要返回 ${formatCount(backendItems)} 行，隐藏 ${formatCount(
+              hiddenSatellites
+            )} 行；表格已用快照补齐卫星与算力节点。`
+          : `后端服务摘要覆盖 ${formatCount(backendItems)} 颗卫星。`,
+      tone: hiddenSatellites > 0 ? "limit" : "backend"
+    });
+  }
+  if (satelliteKpiSlices !== null && satelliteKpiSlices !== undefined) {
+    const sliceCount = Math.max(
+      0,
+      satelliteKpiSlices.slice_count ?? satelliteKpiSlices.slices.length
+    );
+    const satelliteCount = Math.max(0, satelliteKpiSlices.satellite_count ?? sliceCount);
+    const sliceLimit = satelliteKpiSlices.slice_limit;
+    const limitNote =
+      typeof sliceLimit === "number" && Number.isFinite(sliceLimit)
+        ? `，上限 ${formatCount(sliceLimit)}`
+        : "";
+    notes.push({
+      label: "卫星KPI切片",
+      value: `${formatCount(sliceCount)} / ${formatCount(satelliteCount)} 切片`,
+      detail: `后端 ${satelliteKpiSlices.mode}${limitNote}；用于高负载榜和资源补充，不等同于全量卫星明细。`,
+      tone: satelliteCount > sliceCount ? "limit" : "backend"
+    });
+  }
+  if (satelliteKpiHistory !== null && satelliteKpiHistory !== undefined) {
+    const seriesCount = Math.max(
+      0,
+      satelliteKpiHistory.series_count ?? satelliteKpiHistory.series.length
+    );
+    const satelliteCount = Math.max(
+      0,
+      satelliteKpiHistory.satellite_count ?? seriesCount
+    );
+    const sliceLimit = satelliteKpiHistory.slice_limit;
+    const sampleLimit = satelliteKpiHistory.sample_limit;
+    const parts = [
+      typeof sliceLimit === "number" && Number.isFinite(sliceLimit)
+        ? `卫星上限 ${formatCount(sliceLimit)}`
+        : null,
+      typeof sampleLimit === "number" && Number.isFinite(sampleLimit)
+        ? `单星样本上限 ${formatCount(sampleLimit)}`
+        : null
+    ].filter((part): part is string => part !== null);
+    notes.push({
+      label: "单星历史",
+      value: `${formatCount(seriesCount)} / ${formatCount(satelliteCount)} 条序列`,
+      detail: `后端 ${satelliteKpiHistory.mode}${
+        parts.length > 0 ? `，${parts.join(" / ")}` : ""
+      }；历史曲线是代表性窗口，不代表每颗卫星都有历史曲线。`,
+      tone: satelliteCount > seriesCount ? "history" : "backend"
+    });
+  }
+  if (notes.length > 0) {
+    return notes;
+  }
+  return [
+    {
+      label: "明细来源",
+      value: "等待后端摘要",
+      detail: "暂时使用快照回退行，后端 runtime observability 到达后会显示覆盖范围。",
+      tone: "history"
+    }
+  ];
 }
 
 export function filterUserBusinessRequestRows(

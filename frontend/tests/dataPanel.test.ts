@@ -6,6 +6,7 @@ import {
   buildComputeResourcePoolModeNote,
   buildDataPanelComputeVectorTail,
   buildDataPanelConfiguredScale,
+  buildDataPanelDetailScopeNotes,
   buildDataPanelDisplaySummary,
   buildDataPanelNetworkFormulaInputs,
   buildDataPanelNetworkComponentTail,
@@ -2760,6 +2761,113 @@ describe("buildDataPanelSatelliteResourceHistory", () => {
       availableSatelliteIds: [],
       points: []
     });
+  });
+});
+
+describe("buildDataPanelDetailScopeNotes", () => {
+  it("explains full detail coverage separately from bounded satellite KPI slices", () => {
+    const notes = buildDataPanelDetailScopeNotes(
+      {
+        sourceLabel: "backend user_request_summary_v1 + 快照补齐",
+        summaryLabel: "1,200 users",
+        items: Array.from({ length: 1200 }, (_, index) => ({
+          userId: `user-${index}`,
+          platformTypeLabel: "地面用户终端",
+          communicationLabel: "无通信业务",
+          computeLabel: "无计算业务",
+          networkQueueLabel: "队列空",
+          selectedSatelliteId: "未选择",
+          destinationId: "未声明",
+          statusLabel: "IDLE",
+          latencyCapacityLabel: "无链路",
+          serviceLabel: "无业务",
+          pathLabel: `user-${index}: no active route`
+        }))
+      },
+      {
+        sourceLabel: "backend satellite_service_summary_v1 + 快照补齐",
+        summaryLabel: "1,200 satellites",
+        items: Array.from({ length: 1200 }, (_, index) => ({
+          satelliteId: `sat-${index}`,
+          statusLabel: "ACTIVE",
+          loadPercent: 0,
+          loadLabel: "0%",
+          serviceObjectLabel: "无服务对象",
+          nextHopLabel: "无下一跳",
+          cpuFp32Label: "0 / 100 GFLOPS",
+          cpuFp64Label: "0 / 0 GFLOPS",
+          gpuLabel: "FP32 0 / 0 TFLOPS / FP16 0 / 0 TFLOPS",
+          npuLabel: "0 / 0 TOPS",
+          memoryStorageLabel: "内存 0 / 0 GB / 存储 0 / 0 GB",
+          taskLabel: "0 运行 / 0 完成",
+          networkLabel: "links 0 / access 0 / space 0 / routes 0"
+        }))
+      },
+      {
+        version: "v1",
+        source: "BACKEND_RUNTIME_SNAPSHOT",
+        user_count: 1200,
+        item_count: 1000,
+        active_user_count: 80,
+        compute_service_user_count: 20,
+        waiting_user_count: 4,
+        hidden_user_count: 200,
+        items: []
+      },
+      {
+        version: "v1",
+        source: "BACKEND_RUNTIME_SNAPSHOT",
+        satellite_count: 1200,
+        item_count: 1000,
+        hidden_satellite_count: 200,
+        items: []
+      },
+      {
+        version: "v1",
+        mode: "TOP_ACTIVITY_LIMITED",
+        slice_limit: 64,
+        satellite_count: 1200,
+        slice_count: 64,
+        slices: []
+      },
+      {
+        version: "v1",
+        mode: "RECENT_LIMITED",
+        slice_limit: 64,
+        sample_limit: 32,
+        satellite_count: 1200,
+        series_count: 64,
+        series: []
+      }
+    );
+
+    expect(notes.map((note) => [note.label, note.value, note.tone])).toEqual([
+      ["用户明细", "1,200 / 1,200 行", "limit"],
+      ["卫星明细", "1,200 / 1,200 行", "limit"],
+      ["卫星KPI切片", "64 / 1,200 切片", "limit"],
+      ["单星历史", "64 / 1,200 条序列", "history"]
+    ]);
+    expect(notes[0].detail).toContain("后端摘要返回 1,000 行，隐藏 200 行");
+    expect(notes[1].detail).toContain("后端服务摘要返回 1,000 行，隐藏 200 行");
+    expect(notes[2].detail).toContain("TOP_ACTIVITY_LIMITED，上限 64");
+    expect(notes[2].detail).toContain("不等同于全量卫星明细");
+    expect(notes[3].detail).toContain("卫星上限 64 / 单星样本上限 32");
+  });
+
+  it("falls back to a waiting note before backend observability summaries arrive", () => {
+    expect(
+      buildDataPanelDetailScopeNotes(
+        { sourceLabel: "快照用户/路由", summaryLabel: "0", items: [] },
+        { sourceLabel: "快照算力节点", summaryLabel: "0", items: [] }
+      )
+    ).toEqual([
+      {
+        label: "明细来源",
+        value: "等待后端摘要",
+        detail: "暂时使用快照回退行，后端 runtime observability 到达后会显示覆盖范围。",
+        tone: "history"
+      }
+    ]);
   });
 });
 
