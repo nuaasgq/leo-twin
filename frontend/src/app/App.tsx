@@ -17,7 +17,10 @@ import {
   RuntimeExportRestoreCommandResultV1,
   RuntimeExportRestorePreflightV1,
   RuntimeBackpressureSummary,
+  RuntimeComputeNodeDetailItemV1,
   RuntimeNodeDetailCardV1,
+  RuntimeRouteExplanationItemV1,
+  RuntimeServiceDetailItemV1,
   RuntimeStatusPayload,
   ScenarioConfig,
   UserConfigurationExportV1,
@@ -33,14 +36,17 @@ import { EventThrottleLayer } from "../stream/throttle_layer";
 import { WebSocketStreamClient } from "../stream/websocket_client";
 import {
   loadMetricsSnapshot,
+  loadRuntimeComputeNodeDetail,
   loadRuntimeComputeNodeDetails,
   loadRuntimeExportCatalog,
   loadRuntimeExportPackageCompare,
   loadRuntimeExportRestorePreflight,
   loadRuntimeNodeDetails,
+  loadRuntimeRouteDetail,
   loadRuntimeRouteDetails,
   loadRuntimeSatelliteDetail,
   loadRuntimeSatelliteDetails,
+  loadRuntimeServiceDetail,
   loadRuntimeServiceDetails,
   loadRuntimeUserDetail,
   loadRuntimeUserDetails,
@@ -83,6 +89,9 @@ type RuntimeDetailFilterState = Record<
 type RuntimeSelectedNodeDetails = {
   user: RuntimeNodeDetailCardV1 | null;
   satellite: RuntimeNodeDetailCardV1 | null;
+  route: RuntimeRouteExplanationItemV1 | null;
+  service: RuntimeServiceDetailItemV1 | null;
+  computeNode: RuntimeComputeNodeDetailItemV1 | null;
 };
 
 const DEFAULT_RUNTIME_CONNECTION_HEALTH: RuntimeConnectionHealth = {
@@ -186,7 +195,10 @@ export function App() {
   const [runtimeSelectedNodeDetails, setRuntimeSelectedNodeDetails] =
     useState<RuntimeSelectedNodeDetails>({
       user: null,
-      satellite: null
+      satellite: null,
+      route: null,
+      service: null,
+      computeNode: null
     });
   const [runtimeExportCatalog, setRuntimeExportCatalog] =
     useState<RuntimeExportCatalogV1 | null>(null);
@@ -309,7 +321,13 @@ export function App() {
     setRuntimeDetailCursors(DEFAULT_RUNTIME_DETAIL_CURSORS);
     setRuntimeDetailCursorErrors(DEFAULT_RUNTIME_DETAIL_CURSOR_ERRORS);
     setRuntimeDetailFilters(DEFAULT_RUNTIME_DETAIL_FILTERS);
-    setRuntimeSelectedNodeDetails({ user: null, satellite: null });
+    setRuntimeSelectedNodeDetails({
+      user: null,
+      satellite: null,
+      route: null,
+      service: null,
+      computeNode: null
+    });
   }, [runtimeStatus.config_version]);
 
   const refreshRuntimeDetails = useCallback(async (
@@ -648,6 +666,93 @@ export function App() {
         setRuntimeSelectedNodeDetails((previous) => ({
           ...previous,
           satellite: null
+        }));
+        setConnectionChannel("http", "degraded");
+      }
+    },
+    [generatedConfig, setConnectionChannel]
+  );
+
+  const refreshRuntimeRouteEntityDetail = useCallback(async (routeId: string | null) => {
+    const normalizedRouteId = routeId?.trim() ?? "";
+    if (!normalizedRouteId) {
+      setRuntimeSelectedNodeDetails((previous) => ({ ...previous, route: null }));
+      return;
+    }
+    const requestPlan = runtimeDetailRequestPlan(
+      generatedConfig?.backend_summary?.large_detail_pagination_contract_v2
+    );
+    try {
+      const detail = await loadRuntimeRouteDetail(
+        normalizedRouteId,
+        requestPlan.routes.endpoint
+      );
+      setRuntimeSelectedNodeDetails((previous) => ({
+        ...previous,
+        route: detail
+      }));
+      setConnectionChannel("http", "live");
+    } catch (error) {
+      setRuntimeSelectedNodeDetails((previous) => ({ ...previous, route: null }));
+      setConnectionChannel("http", "degraded");
+    }
+  }, [generatedConfig, setConnectionChannel]);
+
+  const refreshRuntimeServiceEntityDetail = useCallback(
+    async (serviceId: string | null) => {
+      const normalizedServiceId = serviceId?.trim() ?? "";
+      if (!normalizedServiceId) {
+        setRuntimeSelectedNodeDetails((previous) => ({ ...previous, service: null }));
+        return;
+      }
+      const requestPlan = runtimeDetailRequestPlan(
+        generatedConfig?.backend_summary?.large_detail_pagination_contract_v2
+      );
+      try {
+        const detail = await loadRuntimeServiceDetail(
+          normalizedServiceId,
+          requestPlan.services.endpoint
+        );
+        setRuntimeSelectedNodeDetails((previous) => ({
+          ...previous,
+          service: detail
+        }));
+        setConnectionChannel("http", "live");
+      } catch (error) {
+        setRuntimeSelectedNodeDetails((previous) => ({ ...previous, service: null }));
+        setConnectionChannel("http", "degraded");
+      }
+    },
+    [generatedConfig, setConnectionChannel]
+  );
+
+  const refreshRuntimeComputeNodeEntityDetail = useCallback(
+    async (nodeId: string | null) => {
+      const normalizedNodeId = nodeId?.trim() ?? "";
+      if (!normalizedNodeId) {
+        setRuntimeSelectedNodeDetails((previous) => ({
+          ...previous,
+          computeNode: null
+        }));
+        return;
+      }
+      const requestPlan = runtimeDetailRequestPlan(
+        generatedConfig?.backend_summary?.large_detail_pagination_contract_v2
+      );
+      try {
+        const detail = await loadRuntimeComputeNodeDetail(
+          normalizedNodeId,
+          requestPlan.computeNodes.endpoint
+        );
+        setRuntimeSelectedNodeDetails((previous) => ({
+          ...previous,
+          computeNode: detail
+        }));
+        setConnectionChannel("http", "live");
+      } catch (error) {
+        setRuntimeSelectedNodeDetails((previous) => ({
+          ...previous,
+          computeNode: null
         }));
         setConnectionChannel("http", "degraded");
       }
@@ -1396,6 +1501,9 @@ export function App() {
               onRuntimeExportRestore={restoreRuntimeExportPackage}
               onRuntimeUserDetailSelect={refreshRuntimeUserEntityDetail}
               onRuntimeSatelliteDetailSelect={refreshRuntimeSatelliteEntityDetail}
+              onRuntimeRouteDetailSelect={refreshRuntimeRouteEntityDetail}
+              onRuntimeServiceDetailSelect={refreshRuntimeServiceEntityDetail}
+              onRuntimeComputeNodeDetailSelect={refreshRuntimeComputeNodeEntityDetail}
               displaySimTime={displaySimTime}
               displayEventCount={displayEventCount}
               onNavigateControl={(event) => navigateWithinApp(event, "/")}

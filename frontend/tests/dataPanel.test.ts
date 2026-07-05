@@ -41,6 +41,9 @@ import {
   buildDataPanelServiceDetailRows,
   buildDataPanelServiceLatencyRows,
   buildDataPanelComputeNodeDetailRows,
+  buildComputeNodeExactDetailInspector,
+  buildRouteExplanationDetailInspector,
+  buildServiceLifecycleDetailInspector,
   buildSatelliteDetailDrawerSectionsV1,
   buildSatelliteResourceInspector,
   buildDataPanelSummary,
@@ -66,8 +69,11 @@ import {
   resolveNetworkQualityKpis,
   RuntimeDetailPages,
   runtimeNodeDetailPageToSummary,
+  selectComputeNodeDetailRow,
   selectRuntimeNodeDetailSummary,
   selectRuntimeComputeNodeDetailPage,
+  selectRouteExplanationRow,
+  selectServiceDetailRow,
   selectRuntimeRouteExplanationSummary,
   selectRuntimeSatelliteDetailCard,
   selectRuntimeSatelliteServiceSummary,
@@ -4974,6 +4980,172 @@ describe("detail inspectors", () => {
       title: "explicit satellite detail",
       subtitle: "EXACT_BY_ID",
       fields: [{ label: "source", value: "entity endpoint", tone: "resource" }]
+    });
+  });
+
+  it("builds exact route service and compute-node inspectors", () => {
+    const routeRows = [
+      {
+        routeId: "route-a",
+        flowId: "flow-a",
+        available: true,
+        availabilityLabel: "available",
+        businessType: "DATA_TRANSFER",
+        businessLabel: "data",
+        nextHopLabel: "sat-a",
+        capacityDemandLabel: "10 / 5 Mbps",
+        pressureLabel: "50%",
+        bottleneckComponent: "NONE",
+        bottleneckLabel: "none",
+        explanationLabel: "available",
+        pathLabel: "user-a -> sat-a"
+      },
+      {
+        routeId: "route-b",
+        flowId: "flow-b",
+        available: false,
+        availabilityLabel: "blocked",
+        businessType: "COMPUTE_SERVICE",
+        businessLabel: "compute",
+        nextHopLabel: "sat-b",
+        capacityDemandLabel: "4 / 8 Mbps",
+        pressureLabel: "200%",
+        bottleneckComponent: "CAPACITY",
+        bottleneckLabel: "capacity",
+        explanationLabel: "capacity below demand",
+        pathLabel: "user-b -> sat-b"
+      }
+    ];
+    const serviceRows = [
+      {
+        serviceId: "task-a",
+        taskLabel: "task-a",
+        stateLabel: "running",
+        placementLabel: "sat-a",
+        networkLatencyLabel: "10 ms / 20 ms",
+        computeLatencyLabel: "30 ms / 40 ms",
+        totalLatencyLabel: "100 ms",
+        traceTitle: "task-a trace"
+      }
+    ];
+    const computeRows = [
+      {
+        nodeId: "sat-a",
+        statusLabel: "BUSY",
+        loadLabel: "50%",
+        fp32Label: "50 / 100 GFLOPS",
+        acceleratorLabel: "GPU 0 / 0 TFLOPS",
+        memoryStorageLabel: "memory 1 / 2 GB",
+        taskLabel: "1 running / 2 finished",
+        traceTitle: "sat-a trace"
+      }
+    ];
+
+    expect(selectRouteExplanationRow(routeRows, "route-b")?.routeId).toBe("route-b");
+    expect(selectServiceDetailRow(serviceRows, "task-a")?.serviceId).toBe("task-a");
+    expect(selectComputeNodeDetailRow(computeRows, "sat-a")?.nodeId).toBe("sat-a");
+    expect(buildRouteExplanationDetailInspector(routeRows[0])).toMatchObject({
+      title: "路由 route-a",
+      subtitle: "data / available"
+    });
+    expect(
+      buildRouteExplanationDetailInspector(routeRows[0], {
+        route_id: "route-exact",
+        flow_id: "flow-exact",
+        user_id: "user-exact",
+        source_id: "user-exact",
+        destination_id: "sat-exact",
+        selected_satellite_id: "sat-exact",
+        primary_next_hop_id: "sat-exact",
+        next_hop_ids: ["sat-exact"],
+        hop_count: 1,
+        path_label: "user-exact -> sat-exact",
+        available: false,
+        capacity_mbps: 4,
+        demand_mbps: 8,
+        latency_s: 0.12,
+        loss_proxy_rate: 0.03,
+        route_pressure_proxy: 2,
+        business_type: "COMPUTE_SERVICE",
+        business_label: "compute exact",
+        bottleneck_component: "CAPACITY",
+        bottleneck_reason: "ROUTE_CAPACITY_BELOW_DEMAND",
+        bottleneck_reason_label: "capacity exact",
+        explanation_label: "capacity below demand"
+      })
+    ).toMatchObject({
+      title: "路由 route-exact",
+      subtitle: "compute exact / 阻塞",
+      fields: expect.arrayContaining([
+        { label: "流", value: "flow-exact" },
+        { label: "瓶颈", value: "capacity exact", tone: "warning" }
+      ])
+    });
+    expect(
+      buildServiceLifecycleDetailInspector(serviceRows[0], {
+        service_id: "service-exact",
+        task_id: "task-exact",
+        input_flow_id: "flow-in",
+        output_flow_id: "flow-out",
+        input_route_id: "route-in",
+        output_route_id: "route-out",
+        compute_node_id: "sat-exact",
+        complete: false,
+        service_state: "RUNNING",
+        service_state_label: "running exact",
+        placement_status: "QUEUED",
+        placement_policy: "MIN_ESTIMATED_FINISH_TIME",
+        placement_bottleneck_resource: "gpu_tflops_fp32",
+        placement_candidate_count: 3,
+        placement_capable_candidate_count: 2,
+        placement_candidate_queue_label: "sat-exact:queued",
+        input_network_latency_s: 0.1,
+        compute_queue_delay_s: 0.2,
+        compute_execution_delay_s: 0.3,
+        output_network_latency_s: 0.4,
+        total_latency_s: 1,
+        stage_count: 0,
+        stages: []
+      })
+    ).toMatchObject({
+      title: "服务 service-exact",
+      subtitle: "running exact",
+      fields: expect.arrayContaining([
+        { label: "算力节点", value: "sat-exact" },
+        { label: "计算", value: "200 ms / 300 ms", tone: "warning" }
+      ])
+    });
+    expect(
+      buildComputeNodeExactDetailInspector(computeRows[0], {
+        node_id: "sat-exact",
+        platform_type: "SATELLITE_COMPUTE_NODE",
+        status: "BUSY",
+        compute_load_ratio: 0.5,
+        compute_capacity_gflops_fp32: 100,
+        compute_used_gflops_fp32: 50,
+        compute_available_gflops_fp32: 50,
+        compute_capacity_gflops_fp64: 10,
+        compute_used_gflops_fp64: 2,
+        compute_capacity_gpu_tflops_fp32: 4,
+        compute_used_gpu_tflops_fp32: 1,
+        compute_capacity_gpu_tflops_fp16: 8,
+        compute_used_gpu_tflops_fp16: 2,
+        compute_capacity_npu_tops_int8: 16,
+        compute_used_npu_tops_int8: 4,
+        compute_capacity_memory_gb: 64,
+        compute_used_memory_gb: 8,
+        compute_capacity_storage_gb: 512,
+        compute_used_storage_gb: 32,
+        running_task_count: 1,
+        finished_task_count: 2
+      })
+    ).toMatchObject({
+      title: "算力节点 sat-exact",
+      subtitle: "BUSY",
+      fields: expect.arrayContaining([
+        { label: "CPU FP32", value: "50 / 100 GFLOPS", tone: "resource" },
+        { label: "任务", value: "1 运行 / 2 完成" }
+      ])
     });
   });
 

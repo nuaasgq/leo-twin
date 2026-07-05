@@ -298,6 +298,11 @@ Tasks:
     `/runtime/details/compute-nodes/<node_id>`. The exact detail response
     reuses the same backend-owned row shape as the corresponding cursor page
     and preserves existing dashboard layout and cursor endpoints.
+  - Status: T247 binds those exact detail APIs into the standalone dashboard.
+    Route, service lifecycle, and compute-node detail rows are now selectable;
+    the dashboard requests the backend exact row on selection and prefers it
+    over the current cursor-window fallback in small exact-detail inspector
+    cards.
 - V2-054: Add model assumptions panel.
   - Scope: backend-derived model caveats, fidelity mode, KPI provenance.
   - Depends on: V2-003, V2-021.

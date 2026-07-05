@@ -33,15 +33,18 @@ import {
   RuntimeMetricsSummary,
   RuntimeNetworkKpiCredibilityV1,
   RuntimeNetworkQualityProvenanceV1,
+  RuntimeComputeNodeDetailItemV1,
   RuntimeNodeDetailCardV1,
   RuntimeNodeDetailPageV1,
   RuntimeNodeDetailSummaryV1,
+  RuntimeRouteExplanationItemV1,
   RuntimeReproducibilityManifestV1,
   RuntimeRouteExplanationSummaryV1,
   RuntimeSatelliteServiceItemV1,
   RuntimeSatelliteServiceSummaryV1,
   RuntimeSatelliteKpiHistoryV1,
   RuntimeSatelliteKpiSlicesV1,
+  RuntimeServiceDetailItemV1,
   RuntimeServiceDetailPageV1,
   RuntimeServiceLatencyHistoryV1,
   RuntimeStatusPayload,
@@ -140,6 +143,9 @@ export interface RuntimeDetailCursorFilters {
 export interface RuntimeSelectedNodeDetails {
   user?: RuntimeNodeDetailCardV1 | null;
   satellite?: RuntimeNodeDetailCardV1 | null;
+  route?: RuntimeRouteExplanationItemV1 | null;
+  service?: RuntimeServiceDetailItemV1 | null;
+  computeNode?: RuntimeComputeNodeDetailItemV1 | null;
 }
 
 const FALLBACK_USER_DETAIL_PAGE_SIZE = 80;
@@ -197,6 +203,9 @@ export const DataPanel = memo(function DataPanel({
   onRuntimeExportRestore,
   onRuntimeUserDetailSelect,
   onRuntimeSatelliteDetailSelect,
+  onRuntimeRouteDetailSelect,
+  onRuntimeServiceDetailSelect,
+  onRuntimeComputeNodeDetailSelect,
   displaySimTime,
   displayEventCount,
   onNavigateControl
@@ -238,6 +247,9 @@ export const DataPanel = memo(function DataPanel({
   onRuntimeExportRestore?: (packageId: string) => void;
   onRuntimeUserDetailSelect?: (userId: string | null) => void;
   onRuntimeSatelliteDetailSelect?: (satelliteId: string | null) => void;
+  onRuntimeRouteDetailSelect?: (routeId: string | null) => void;
+  onRuntimeServiceDetailSelect?: (serviceId: string | null) => void;
+  onRuntimeComputeNodeDetailSelect?: (nodeId: string | null) => void;
   displaySimTime: number;
   displayEventCount: number;
   onNavigateControl: (event: MouseEvent<HTMLAnchorElement>) => void;
@@ -264,6 +276,13 @@ export const DataPanel = memo(function DataPanel({
   const [selectedDetailSatelliteId, setSelectedDetailSatelliteId] = useState<string | null>(
     null
   );
+  const [selectedRouteDetailId, setSelectedRouteDetailId] = useState<string | null>(null);
+  const [selectedServiceDetailId, setSelectedServiceDetailId] = useState<string | null>(
+    null
+  );
+  const [selectedComputeNodeDetailId, setSelectedComputeNodeDetailId] = useState<
+    string | null
+  >(null);
   const [restoreConfirmPackageId, setRestoreConfirmPackageId] = useState<string | null>(
     null
   );
@@ -400,6 +419,10 @@ export const DataPanel = memo(function DataPanel({
     serviceDetailPage,
     detailPageSizes.services
   );
+  const selectedServiceDetailRow = selectServiceDetailRow(
+    serviceDetailRows.items,
+    selectedServiceDetailId
+  );
   const computeTaskTimeline = buildDataPanelComputeTaskTimelineDisplay(
     runtimeStatus.compute_task_timeline_summary_v1
   );
@@ -407,6 +430,10 @@ export const DataPanel = memo(function DataPanel({
   const computeNodeDetailRows = buildDataPanelComputeNodeDetailRows(
     computeNodeDetailPage,
     detailPageSizes.computeNodes
+  );
+  const selectedComputeNodeDetailRow = selectComputeNodeDetailRow(
+    computeNodeDetailRows.items,
+    selectedComputeNodeDetailId
   );
   const routeConstraints = buildDataPanelRouteConstraints(
     snapshot,
@@ -425,6 +452,10 @@ export const DataPanel = memo(function DataPanel({
       businessType: routeExplanationBusinessFilter,
       bottleneckComponent: routeExplanationBottleneckFilter
     }
+  );
+  const selectedRouteDetailRow = selectRouteExplanationRow(
+    filteredRouteExplanations.items,
+    selectedRouteDetailId
   );
   const latestTelemetry = telemetry[telemetry.length - 1];
   const computeSeries = computeSeriesOption(computeSeriesKey);
@@ -515,6 +546,18 @@ export const DataPanel = memo(function DataPanel({
     runtimeSelectedNodeDetails?.satellite?.entity_id === selectedDetailSatelliteId
       ? runtimeSelectedNodeDetails.satellite
       : null;
+  const selectedRouteBackendDetail =
+    runtimeSelectedNodeDetails?.route?.route_id === selectedRouteDetailId
+      ? runtimeSelectedNodeDetails.route
+      : null;
+  const selectedServiceBackendDetail =
+    runtimeSelectedNodeDetails?.service?.service_id === selectedServiceDetailId
+      ? runtimeSelectedNodeDetails.service
+      : null;
+  const selectedComputeNodeBackendDetail =
+    runtimeSelectedNodeDetails?.computeNode?.node_id === selectedComputeNodeDetailId
+      ? runtimeSelectedNodeDetails.computeNode
+      : null;
   const userDetailInspector = buildUserBusinessRequestInspector(
     selectedUserDetailRow,
     nodeDetailSummary,
@@ -524,6 +567,18 @@ export const DataPanel = memo(function DataPanel({
     selectedSatelliteDetailRow,
     nodeDetailSummary,
     selectedSatelliteBackendDetail
+  );
+  const routeDetailInspector = buildRouteExplanationDetailInspector(
+    selectedRouteDetailRow,
+    selectedRouteBackendDetail
+  );
+  const serviceDetailInspector = buildServiceLifecycleDetailInspector(
+    selectedServiceDetailRow,
+    selectedServiceBackendDetail
+  );
+  const computeNodeDetailInspector = buildComputeNodeExactDetailInspector(
+    selectedComputeNodeDetailRow,
+    selectedComputeNodeBackendDetail
   );
   const nodeDetailDrawerItems = buildDataPanelNodeDetailDrawerItems(
     userDetailInspector,
@@ -1179,6 +1234,7 @@ export const DataPanel = memo(function DataPanel({
             rows={filteredRouteExplanations}
             page={routeExplanationSummary}
             control={runtimeDetailCursorControls?.routes}
+            selectedRouteId={selectedRouteDetailRow?.routeId ?? null}
             cursorFilters={{
               query: routeExplanationFilter,
               availability: routeExplanationAvailabilityFilter,
@@ -1186,14 +1242,35 @@ export const DataPanel = memo(function DataPanel({
               bottleneckComponent: routeExplanationBottleneckFilter
             }}
             filterValue={routeExplanationFilter}
-            onFilterChange={setRouteExplanationFilter}
+            onFilterChange={(value) => {
+              setRouteExplanationFilter(value);
+              setSelectedRouteDetailId(null);
+              onRuntimeRouteDetailSelect?.(null);
+            }}
             availabilityFilter={routeExplanationAvailabilityFilter}
-            onAvailabilityFilterChange={setRouteExplanationAvailabilityFilter}
+            onAvailabilityFilterChange={(value) => {
+              setRouteExplanationAvailabilityFilter(value);
+              setSelectedRouteDetailId(null);
+              onRuntimeRouteDetailSelect?.(null);
+            }}
             businessFilter={routeExplanationBusinessFilter}
-            onBusinessFilterChange={setRouteExplanationBusinessFilter}
+            onBusinessFilterChange={(value) => {
+              setRouteExplanationBusinessFilter(value);
+              setSelectedRouteDetailId(null);
+              onRuntimeRouteDetailSelect?.(null);
+            }}
             bottleneckFilter={routeExplanationBottleneckFilter}
-            onBottleneckFilterChange={setRouteExplanationBottleneckFilter}
+            onBottleneckFilterChange={(value) => {
+              setRouteExplanationBottleneckFilter(value);
+              setSelectedRouteDetailId(null);
+              onRuntimeRouteDetailSelect?.(null);
+            }}
+            onSelect={(row) => {
+              setSelectedRouteDetailId(row.routeId);
+              onRuntimeRouteDetailSelect?.(row.routeId);
+            }}
           />
+          <ExactDetailInspectorGrid items={[routeDetailInspector]} />
         </section>
 
         <section className="dashboard-section data-panel-chart" aria-label="算力资源消耗曲线">
@@ -1381,16 +1458,37 @@ export const DataPanel = memo(function DataPanel({
             rows={serviceDetailRows}
             page={serviceDetailPage}
             control={runtimeDetailCursorControls?.services}
+            selectedServiceId={selectedServiceDetailRow?.serviceId ?? null}
             filterValue={serviceDetailFilter}
-            onFilterChange={setServiceDetailFilter}
+            onFilterChange={(value) => {
+              setServiceDetailFilter(value);
+              setSelectedServiceDetailId(null);
+              onRuntimeServiceDetailSelect?.(null);
+            }}
+            onSelect={(row) => {
+              setSelectedServiceDetailId(row.serviceId);
+              onRuntimeServiceDetailSelect?.(row.serviceId);
+            }}
           />
           <TopComputeNodeTable rows={topComputeNodes} />
           <ComputeNodeDetailPageTable
             rows={computeNodeDetailRows}
             page={computeNodeDetailPage}
             control={runtimeDetailCursorControls?.computeNodes}
+            selectedNodeId={selectedComputeNodeDetailRow?.nodeId ?? null}
             filterValue={computeNodeDetailFilter}
-            onFilterChange={setComputeNodeDetailFilter}
+            onFilterChange={(value) => {
+              setComputeNodeDetailFilter(value);
+              setSelectedComputeNodeDetailId(null);
+              onRuntimeComputeNodeDetailSelect?.(null);
+            }}
+            onSelect={(row) => {
+              setSelectedComputeNodeDetailId(row.nodeId);
+              onRuntimeComputeNodeDetailSelect?.(row.nodeId);
+            }}
+          />
+          <ExactDetailInspectorGrid
+            items={[serviceDetailInspector, computeNodeDetailInspector]}
           />
           <div className="data-panel-chart-body compact">
             {computePool.totalTflops > 0 ? (
@@ -1968,6 +2066,7 @@ function RouteExplanationTable({
   rows,
   page,
   control,
+  selectedRouteId,
   cursorFilters,
   filterValue,
   onFilterChange,
@@ -1976,11 +2075,13 @@ function RouteExplanationTable({
   businessFilter,
   onBusinessFilterChange,
   bottleneckFilter,
-  onBottleneckFilterChange
+  onBottleneckFilterChange,
+  onSelect
 }: {
   rows: DataPanelRouteExplanationRows;
   page: RuntimeRouteExplanationSummaryV1 | null | undefined;
   control?: RuntimeDetailCursorControl | null;
+  selectedRouteId?: string | null;
   cursorFilters?: RuntimeDetailCursorFilters;
   filterValue: string;
   onFilterChange: (value: string) => void;
@@ -1992,6 +2093,7 @@ function RouteExplanationTable({
   onBusinessFilterChange: (value: string) => void;
   bottleneckFilter: string;
   onBottleneckFilterChange: (value: string) => void;
+  onSelect?: (row: DataPanelRouteExplanationRow) => void;
 }) {
   const controls = (
     <RouteExplanationFilterControls
@@ -2046,7 +2148,15 @@ function RouteExplanationTable({
           <span>解释</span>
         </div>
         {rows.items.map((row) => (
-          <div className="data-panel-route-row" key={row.routeId} title={row.pathLabel}>
+          <button
+            type="button"
+            className={`data-panel-route-row ${
+              row.routeId === selectedRouteId ? "selected" : ""
+            }`}
+            key={row.routeId}
+            title={row.pathLabel}
+            onClick={() => onSelect?.(row)}
+          >
             <span>{row.routeId}</span>
             <span>{row.businessLabel}</span>
             <span>{row.nextHopLabel}</span>
@@ -2054,7 +2164,7 @@ function RouteExplanationTable({
             <span>{row.pressureLabel}</span>
             <span>{row.bottleneckLabel}</span>
             <span>{row.explanationLabel}</span>
-          </div>
+          </button>
         ))}
       </div>
     </div>
@@ -2178,14 +2288,18 @@ function ServiceDetailPageTable({
   rows,
   page,
   control,
+  selectedServiceId,
   filterValue,
-  onFilterChange
+  onFilterChange,
+  onSelect
 }: {
   rows: DataPanelServiceDetailRows;
   page: RuntimeServiceDetailPageV1 | null | undefined;
   control?: RuntimeDetailCursorControl | null;
+  selectedServiceId?: string | null;
   filterValue: string;
   onFilterChange: (value: string) => void;
+  onSelect?: (row: DataPanelServiceDetailRow) => void;
 }) {
   const filters = filterValue ? { query: filterValue } : undefined;
   if (rows.items.length === 0) {
@@ -2236,14 +2350,22 @@ function ServiceDetailPageTable({
         <span>总延迟</span>
       </div>
       {rows.items.map((row) => (
-        <div className="data-panel-route-row" key={row.serviceId} title={row.traceTitle}>
+        <button
+          type="button"
+          className={`data-panel-route-row ${
+            row.serviceId === selectedServiceId ? "selected" : ""
+          }`}
+          key={row.serviceId}
+          title={row.traceTitle}
+          onClick={() => onSelect?.(row)}
+        >
           <span>{row.taskLabel}</span>
           <span>{row.stateLabel}</span>
           <span>{row.placementLabel}</span>
           <span>{row.networkLatencyLabel}</span>
           <span>{row.computeLatencyLabel}</span>
           <span>{row.totalLatencyLabel}</span>
-        </div>
+        </button>
       ))}
     </div>
   );
@@ -2253,14 +2375,18 @@ function ComputeNodeDetailPageTable({
   rows,
   page,
   control,
+  selectedNodeId,
   filterValue,
-  onFilterChange
+  onFilterChange,
+  onSelect
 }: {
   rows: DataPanelComputeNodeDetailRows;
   page: RuntimeComputeNodeDetailPageV1 | null | undefined;
   control?: RuntimeDetailCursorControl | null;
+  selectedNodeId?: string | null;
   filterValue: string;
   onFilterChange: (value: string) => void;
+  onSelect?: (row: DataPanelComputeNodeDetailRow) => void;
 }) {
   const filters = filterValue ? { query: filterValue } : undefined;
   if (rows.items.length === 0) {
@@ -2309,7 +2435,15 @@ function ComputeNodeDetailPageTable({
         <span>任务</span>
       </div>
       {rows.items.map((row) => (
-        <div className="data-panel-compute-node-row" key={row.nodeId} title={row.traceTitle}>
+        <button
+          type="button"
+          className={`data-panel-compute-node-row ${
+            row.nodeId === selectedNodeId ? "selected" : ""
+          }`}
+          key={row.nodeId}
+          title={row.traceTitle}
+          onClick={() => onSelect?.(row)}
+        >
           <span>{row.nodeId}</span>
           <span>{row.statusLabel}</span>
           <span>{row.loadLabel}</span>
@@ -2317,7 +2451,7 @@ function ComputeNodeDetailPageTable({
           <span>{row.acceleratorLabel}</span>
           <span>{row.memoryStorageLabel}</span>
           <span>{row.taskLabel}</span>
-        </div>
+        </button>
       ))}
     </div>
   );
@@ -2472,6 +2606,25 @@ function DetailInspectorGrid({
         subtitle={satellite.subtitle}
         fields={satellite.fields}
       />
+    </div>
+  );
+}
+
+function ExactDetailInspectorGrid({
+  items
+}: {
+  items: readonly DataPanelDetailInspector[];
+}) {
+  return (
+    <div className="data-panel-detail-inspector-grid exact" aria-label="后端精确行详情">
+      {items.map((item) => (
+        <DetailInspectorCard
+          title={item.title}
+          subtitle={item.subtitle}
+          fields={item.fields}
+          key={item.title}
+        />
+      ))}
     </div>
   );
 }
@@ -4247,6 +4400,27 @@ export function selectSatelliteResourceRow(
   return rows.find((row) => row.satelliteId === selectedSatelliteId) ?? rows[0] ?? null;
 }
 
+export function selectRouteExplanationRow(
+  rows: readonly DataPanelRouteExplanationRow[],
+  selectedRouteId: string | null | undefined
+): DataPanelRouteExplanationRow | null {
+  return rows.find((row) => row.routeId === selectedRouteId) ?? rows[0] ?? null;
+}
+
+export function selectServiceDetailRow(
+  rows: readonly DataPanelServiceDetailRow[],
+  selectedServiceId: string | null | undefined
+): DataPanelServiceDetailRow | null {
+  return rows.find((row) => row.serviceId === selectedServiceId) ?? rows[0] ?? null;
+}
+
+export function selectComputeNodeDetailRow(
+  rows: readonly DataPanelComputeNodeDetailRow[],
+  selectedNodeId: string | null | undefined
+): DataPanelComputeNodeDetailRow | null {
+  return rows.find((row) => row.nodeId === selectedNodeId) ?? rows[0] ?? null;
+}
+
 export function selectRuntimeUserDetailCard(
   summary: RuntimeNodeDetailSummaryV1 | null | undefined,
   userId: string | null | undefined
@@ -4455,6 +4629,229 @@ function satelliteNetworkContextTone(
     return "warning";
   }
   return "normal";
+}
+
+export function buildRouteExplanationDetailInspector(
+  row: DataPanelRouteExplanationRow | null | undefined,
+  backendDetail: RuntimeRouteExplanationItemV1 | null | undefined = undefined
+): DataPanelDetailInspector {
+  if (backendDetail !== null && backendDetail !== undefined) {
+    return {
+      title: `路由 ${backendDetail.route_id}`,
+      subtitle: `${backendDetail.business_label} / ${
+        backendDetail.available ? "可用" : "阻塞"
+      }`,
+      fields: [
+        { label: "流", value: backendDetail.flow_id },
+        { label: "源/目的", value: `${backendDetail.source_id} -> ${backendDetail.destination_id}` },
+        { label: "下一跳", value: backendDetail.primary_next_hop_id || "无" },
+        {
+          label: "容量/需求",
+          value: routeExplanationCapacityDemandLabel(
+            backendDetail.capacity_mbps,
+            backendDetail.demand_mbps
+          )
+        },
+        {
+          label: "时延/损耗",
+          value: `${formatMetricMilliseconds(backendDetail.latency_s ?? 0)} / ${formatRatioPercent(
+            backendDetail.loss_proxy_rate ?? 0
+          )}`,
+          tone: backendDetail.available ? "normal" : "warning"
+        },
+        {
+          label: "压力",
+          value: formatRatioPercent(Math.max(0, backendDetail.route_pressure_proxy)),
+          tone: backendDetail.route_pressure_proxy > 1 ? "warning" : "normal"
+        },
+        {
+          label: "瓶颈",
+          value: backendDetail.bottleneck_reason_label,
+          tone: backendDetail.bottleneck_component === "NONE" ? "normal" : "warning"
+        },
+        { label: "路径", value: backendDetail.path_label }
+      ]
+    };
+  }
+  if (row === null || row === undefined) {
+    return {
+      title: "路由详情",
+      subtitle: "当前窗口暂无路由",
+      fields: []
+    };
+  }
+  return {
+    title: `路由 ${row.routeId}`,
+    subtitle: `${row.businessLabel} / ${row.availabilityLabel}`,
+    fields: [
+      { label: "流", value: row.flowId },
+      { label: "下一跳", value: row.nextHopLabel },
+      { label: "容量/需求", value: row.capacityDemandLabel },
+      { label: "压力", value: row.pressureLabel },
+      {
+        label: "瓶颈",
+        value: row.bottleneckLabel,
+        tone: row.bottleneckComponent === "NONE" ? "normal" : "warning"
+      },
+      { label: "解释", value: row.explanationLabel },
+      { label: "路径", value: row.pathLabel }
+    ]
+  };
+}
+
+export function buildServiceLifecycleDetailInspector(
+  row: DataPanelServiceDetailRow | null | undefined,
+  backendDetail: RuntimeServiceDetailItemV1 | null | undefined = undefined
+): DataPanelDetailInspector {
+  if (backendDetail !== null && backendDetail !== undefined) {
+    return {
+      title: `服务 ${backendDetail.service_id}`,
+      subtitle: backendDetail.service_state_label || backendDetail.service_state,
+      fields: [
+        { label: "任务", value: backendDetail.task_id || backendDetail.service_id },
+        { label: "算力节点", value: backendDetail.compute_node_id || "无" },
+        { label: "输入路由", value: backendDetail.input_route_id || "无" },
+        { label: "输出路由", value: backendDetail.output_route_id || "无" },
+        {
+          label: "放置",
+          value: serviceDetailPlacementLabel(backendDetail),
+          tone: "resource"
+        },
+        {
+          label: "网络",
+          value: `${formatMetricMilliseconds(
+            backendDetail.input_network_latency_s
+          )} / ${formatMetricMilliseconds(backendDetail.output_network_latency_s)}`
+        },
+        {
+          label: "计算",
+          value: `${formatMetricMilliseconds(
+            backendDetail.compute_queue_delay_s
+          )} / ${formatMetricMilliseconds(backendDetail.compute_execution_delay_s)}`,
+          tone: backendDetail.compute_queue_delay_s > 0 ? "warning" : "resource"
+        },
+        {
+          label: "总时延",
+          value: formatMetricMilliseconds(backendDetail.total_latency_s)
+        },
+        { label: "阶段数", value: formatCount(backendDetail.stage_count) }
+      ]
+    };
+  }
+  if (row === null || row === undefined) {
+    return {
+      title: "服务详情",
+      subtitle: "当前窗口暂无服务",
+      fields: []
+    };
+  }
+  return {
+    title: `服务 ${row.serviceId}`,
+    subtitle: row.stateLabel,
+    fields: [
+      { label: "任务", value: row.taskLabel },
+      { label: "放置", value: row.placementLabel, tone: "resource" },
+      { label: "网络", value: row.networkLatencyLabel },
+      { label: "计算", value: row.computeLatencyLabel, tone: "resource" },
+      { label: "总时延", value: row.totalLatencyLabel }
+    ]
+  };
+}
+
+export function buildComputeNodeExactDetailInspector(
+  row: DataPanelComputeNodeDetailRow | null | undefined,
+  backendDetail: RuntimeComputeNodeDetailItemV1 | null | undefined = undefined
+): DataPanelDetailInspector {
+  if (backendDetail !== null && backendDetail !== undefined) {
+    return {
+      title: `算力节点 ${backendDetail.node_id}`,
+      subtitle: backendDetail.status,
+      fields: [
+        {
+          label: "负载",
+          value: formatRatioPercent(backendDetail.compute_load_ratio),
+          tone: "resource"
+        },
+        {
+          label: "CPU FP32",
+          value: resourceUsageLabel(
+            backendDetail.compute_used_gflops_fp32,
+            backendDetail.compute_capacity_gflops_fp32,
+            "GFLOPS"
+          ),
+          tone: "resource"
+        },
+        {
+          label: "CPU FP64",
+          value: resourceUsageLabel(
+            backendDetail.compute_used_gflops_fp64,
+            backendDetail.compute_capacity_gflops_fp64,
+            "GFLOPS"
+          ),
+          tone: "resource"
+        },
+        {
+          label: "GPU",
+          value: `FP32 ${resourceUsageLabel(
+            backendDetail.compute_used_gpu_tflops_fp32,
+            backendDetail.compute_capacity_gpu_tflops_fp32,
+            "TFLOPS"
+          )} / FP16 ${resourceUsageLabel(
+            backendDetail.compute_used_gpu_tflops_fp16,
+            backendDetail.compute_capacity_gpu_tflops_fp16,
+            "TFLOPS"
+          )}`,
+          tone: "resource"
+        },
+        {
+          label: "NPU",
+          value: resourceUsageLabel(
+            backendDetail.compute_used_npu_tops_int8,
+            backendDetail.compute_capacity_npu_tops_int8,
+            "TOPS"
+          ),
+          tone: "resource"
+        },
+        {
+          label: "内存/存储",
+          value: `内存 ${resourceUsageLabel(
+            backendDetail.compute_used_memory_gb,
+            backendDetail.compute_capacity_memory_gb,
+            "GB"
+          )} / 存储 ${resourceUsageLabel(
+            backendDetail.compute_used_storage_gb,
+            backendDetail.compute_capacity_storage_gb,
+            "GB"
+          )}`,
+          tone: "resource"
+        },
+        {
+          label: "任务",
+          value: `${formatCount(backendDetail.running_task_count)} 运行 / ${formatCount(
+            backendDetail.finished_task_count
+          )} 完成`
+        }
+      ]
+    };
+  }
+  if (row === null || row === undefined) {
+    return {
+      title: "算力节点详情",
+      subtitle: "当前窗口暂无算力节点",
+      fields: []
+    };
+  }
+  return {
+    title: `算力节点 ${row.nodeId}`,
+    subtitle: row.statusLabel,
+    fields: [
+      { label: "负载", value: row.loadLabel, tone: "resource" },
+      { label: "FP32", value: row.fp32Label, tone: "resource" },
+      { label: "GPU/NPU", value: row.acceleratorLabel, tone: "resource" },
+      { label: "内存/存储", value: row.memoryStorageLabel, tone: "resource" },
+      { label: "任务", value: row.taskLabel }
+    ]
+  };
 }
 
 export function buildDataPanelNodeDetailDrawerItems(

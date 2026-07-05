@@ -5,6 +5,41 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Dashboard Exact Detail Binding v1
+
+- Branch: `feature/T247-route-service-compute-exact-inspector-v1`
+- Commit: pending in this commit
+- Scope: bind route, service lifecycle, and compute-node exact detail APIs into
+  the standalone dashboard. The three backend cursor tables now support
+  selectable rows, trigger exact-detail API requests through App state, and
+  render backend-preferred exact detail cards with local cursor-window rows as
+  immediate fallback.
+- Changed files/modules:
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/dashboard_exact_detail_binding_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test -- dataPanel.test.ts api.test.ts appSurface.test.ts`
+    - Result: passed, 26 test files / 347 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. The command includes TypeScript checking; Vite reported
+      the existing `DataPanel` chunk size warning after minification.
+- Problems encountered and handling:
+  - Route, service, and compute-node rows previously rendered as static divs.
+    They were changed to `button type="button"` rows with matching grid styles
+    and selected-row styling to preserve layout while adding interaction.
+  - Existing local runtime/generated config files remain dirty and are
+    intentionally not included in this task.
+- Known remaining issues / follow-up:
+  - Add loading/error affordances for exact detail requests if backend latency
+    becomes visible at larger scale.
+  - Split the large DataPanel bundle into smaller chunks in a dedicated
+    frontend performance task.
+
 ## 2026-07-06 - Route, Service, and Compute Detail-by-ID v1
 
 - Branch: `feature/T246-route-service-compute-detail-by-id-v1`
