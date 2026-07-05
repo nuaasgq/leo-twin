@@ -82,6 +82,7 @@ export const DataPanel = memo(function DataPanel({
 }) {
   const [computeSeriesKey, setComputeSeriesKey] =
     useState<DataPanelComputeSeriesKey>("computeUsedTflops");
+  const [detailFilter, setDetailFilter] = useState("");
   const summary = buildDataPanelDisplaySummary(
     buildDataPanelSummary(snapshot),
     displaySimTime,
@@ -146,6 +147,14 @@ export const DataPanel = memo(function DataPanel({
     snapshot,
     runtimeStatus.satellite_kpi_slices_v1,
     runtimeStatus.satellite_service_summary_v1
+  );
+  const filteredUserBusinessRequests = filterUserBusinessRequestRows(
+    userBusinessRequests,
+    detailFilter
+  );
+  const filteredSatelliteResourceRows = filterSatelliteResourceRows(
+    satelliteResourceRows,
+    detailFilter
   );
 
   return (
@@ -515,6 +524,20 @@ export const DataPanel = memo(function DataPanel({
       </div>
 
       <div className="data-panel-section-title">用户节点与卫星运行明细</div>
+      <div className="data-panel-detail-toolbar">
+        <label htmlFor="data-panel-detail-filter">节点筛选</label>
+        <input
+          id="data-panel-detail-filter"
+          type="search"
+          value={detailFilter}
+          placeholder="user-0 / sat-0 / compute"
+          onChange={(event) => setDetailFilter(event.currentTarget.value)}
+        />
+        <span>
+          {filteredUserBusinessRequests.items.length} 个用户 /{" "}
+          {filteredSatelliteResourceRows.items.length} 个卫星
+        </span>
+      </div>
       <div className="data-panel-detail-grid">
         <section className="dashboard-section data-panel-detail-table" aria-label="用户节点状态明细">
           <div className="section-title">用户节点状态</div>
@@ -522,7 +545,7 @@ export const DataPanel = memo(function DataPanel({
             <span>{userBusinessRequests.sourceLabel}</span>
             <small>{userBusinessRequests.summaryLabel}</small>
           </div>
-          <UserBusinessRequestTable rows={userBusinessRequests.items} />
+          <UserBusinessRequestTable rows={filteredUserBusinessRequests.items} />
         </section>
         <section className="dashboard-section data-panel-detail-table" aria-label="卫星资源消耗明细">
           <div className="section-title">卫星资源消耗</div>
@@ -530,7 +553,7 @@ export const DataPanel = memo(function DataPanel({
             <span>{satelliteResourceRows.sourceLabel}</span>
             <small>{satelliteResourceRows.summaryLabel}</small>
           </div>
-          <SatelliteResourceTable rows={satelliteResourceRows.items} />
+          <SatelliteResourceTable rows={filteredSatelliteResourceRows.items} />
         </section>
       </div>
     </section>
@@ -1579,6 +1602,71 @@ export function buildSatelliteResourceRows(
     )} 颗卫星${hiddenCount > 0 ? ` / 另有 ${formatCount(hiddenCount)} 颗未显示` : ""}`,
     items
   };
+}
+
+export function filterUserBusinessRequestRows(
+  rows: UserBusinessRequestRows,
+  query: string
+): UserBusinessRequestRows {
+  const normalized = normalizeDetailFilter(query);
+  if (normalized.length === 0) {
+    return rows;
+  }
+  const items = rows.items.filter((item) =>
+    [
+      item.userId,
+      item.platformTypeLabel,
+      item.communicationLabel,
+      item.computeLabel,
+      item.networkQueueLabel,
+      item.selectedSatelliteId,
+      item.destinationId,
+      item.statusLabel,
+      item.latencyCapacityLabel,
+      item.serviceLabel,
+      item.pathLabel
+    ].some((value) => value.toLowerCase().includes(normalized))
+  );
+  return {
+    ...rows,
+    summaryLabel: `${rows.summaryLabel} / 筛选 ${formatCount(items.length)}`,
+    items
+  };
+}
+
+export function filterSatelliteResourceRows(
+  rows: SatelliteResourceRows,
+  query: string
+): SatelliteResourceRows {
+  const normalized = normalizeDetailFilter(query);
+  if (normalized.length === 0) {
+    return rows;
+  }
+  const items = rows.items.filter((item) =>
+    [
+      item.satelliteId,
+      item.statusLabel,
+      item.loadLabel,
+      item.serviceObjectLabel,
+      item.nextHopLabel,
+      item.cpuFp32Label,
+      item.cpuFp64Label,
+      item.gpuLabel,
+      item.npuLabel,
+      item.memoryStorageLabel,
+      item.taskLabel,
+      item.networkLabel
+    ].some((value) => value.toLowerCase().includes(normalized))
+  );
+  return {
+    ...rows,
+    summaryLabel: `${rows.summaryLabel} / 筛选 ${formatCount(items.length)}`,
+    items
+  };
+}
+
+function normalizeDetailFilter(query: string): string {
+  return query.trim().toLowerCase();
 }
 
 function buildBackendUserBusinessRequestRows(

@@ -22,6 +22,8 @@ import {
   buildTopComputeNodeRows,
   buildUserBusinessRequestRows,
   COMPUTE_SERIES_OPTIONS,
+  filterSatelliteResourceRows,
+  filterUserBusinessRequestRows,
   resolveNetworkQualityKpis
 } from "../src/dashboard/data_panel/DataPanel";
 import { FidelitySummary, GeneratedScenarioConfig } from "../src/core/event_types";
@@ -2133,6 +2135,124 @@ describe("buildSatelliteResourceRows", () => {
     });
     expect(rows.items[0].networkLabel).toContain("链路 4 / 路由 3");
     expect(rows.items[0].memoryStorageLabel).toContain("内存 8 / 32 GB");
+  });
+});
+
+describe("detail row filters", () => {
+  it("filters user request rows by node, destination, service, or path text", () => {
+    const rows = buildUserBusinessRequestRows(
+      makeSnapshot({
+        ground_users: [
+          { user_id: "user-0", status: "ACTIVE" },
+          { user_id: "user-1", status: "ACTIVE" }
+        ],
+        routes: [
+          {
+            route_id: "route-a",
+            flow_id: "flow-a",
+            path: ["user-0", "sat-0", "compute-0"],
+            latency: 0.1,
+            capacity: 80,
+            available: true
+          },
+          {
+            route_id: "route-b",
+            flow_id: "flow-b",
+            path: ["user-1", "sat-1", "service-1"],
+            latency: 0.2,
+            capacity: 40,
+            available: true
+          }
+        ]
+      })
+    );
+
+    expect(filterUserBusinessRequestRows(rows, "compute-0").items.map((row) => row.userId)).toEqual([
+      "user-0"
+    ]);
+    expect(filterUserBusinessRequestRows(rows, "  SAT-1 ").items.map((row) => row.userId)).toEqual([
+      "user-1"
+    ]);
+    expect(filterUserBusinessRequestRows(rows, "").items).toBe(rows.items);
+  });
+
+  it("filters satellite resource rows by satellite, served user, or next hop", () => {
+    const rows = buildSatelliteResourceRows(
+      makeSnapshot(),
+      undefined,
+      {
+        version: "v1",
+        source: "BACKEND_RUNTIME_SNAPSHOT",
+        satellite_count: 2,
+        item_count: 2,
+        hidden_satellite_count: 0,
+        items: [
+          {
+            satellite_id: "sat-0",
+            status: "ACTIVE",
+            service_user_ids: ["user-0"],
+            next_hop_ids: ["compute-0"],
+            route_count: 1,
+            available_route_count: 1,
+            active_link_count: 1,
+            active_access_link_count: 1,
+            active_space_link_count: 0,
+            compute_load_ratio: 0.2,
+            compute_capacity_gflops_fp32: 100,
+            compute_used_gflops_fp32: 20,
+            compute_capacity_gflops_fp64: 0,
+            compute_used_gflops_fp64: 0,
+            compute_capacity_gpu_tflops_fp32: 0,
+            compute_used_gpu_tflops_fp32: 0,
+            compute_capacity_gpu_tflops_fp16: 0,
+            compute_used_gpu_tflops_fp16: 0,
+            compute_capacity_npu_tops_int8: 0,
+            compute_used_npu_tops_int8: 0,
+            compute_capacity_memory_gb: 0,
+            compute_used_memory_gb: 0,
+            compute_capacity_storage_gb: 0,
+            compute_used_storage_gb: 0,
+            running_task_count: 1,
+            finished_task_count: 0
+          },
+          {
+            satellite_id: "sat-1",
+            status: "ACTIVE",
+            service_user_ids: ["user-1"],
+            next_hop_ids: ["sat-2"],
+            route_count: 1,
+            available_route_count: 1,
+            active_link_count: 1,
+            active_access_link_count: 0,
+            active_space_link_count: 1,
+            compute_load_ratio: 0.1,
+            compute_capacity_gflops_fp32: 100,
+            compute_used_gflops_fp32: 10,
+            compute_capacity_gflops_fp64: 0,
+            compute_used_gflops_fp64: 0,
+            compute_capacity_gpu_tflops_fp32: 0,
+            compute_used_gpu_tflops_fp32: 0,
+            compute_capacity_gpu_tflops_fp16: 0,
+            compute_used_gpu_tflops_fp16: 0,
+            compute_capacity_npu_tops_int8: 0,
+            compute_used_npu_tops_int8: 0,
+            compute_capacity_memory_gb: 0,
+            compute_used_memory_gb: 0,
+            compute_capacity_storage_gb: 0,
+            compute_used_storage_gb: 0,
+            running_task_count: 0,
+            finished_task_count: 1
+          }
+        ]
+      }
+    );
+
+    expect(filterSatelliteResourceRows(rows, "compute-0").items.map((row) => row.satelliteId)).toEqual([
+      "sat-0"
+    ]);
+    expect(filterSatelliteResourceRows(rows, "user-1").items.map((row) => row.satelliteId)).toEqual([
+      "sat-1"
+    ]);
   });
 });
 

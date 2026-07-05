@@ -1797,6 +1797,43 @@ body {
   min-width: 0;
 }
 
+.data-panel-detail-toolbar {
+  display: grid;
+  grid-template-columns: auto minmax(180px, 320px) 1fr;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  border: 1px solid #273844;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #0d151d;
+  color: var(--app-muted);
+  font-size: 11px;
+}
+
+.data-panel-detail-toolbar label {
+  color: var(--accent-cyan);
+  font-weight: 800;
+}
+
+.data-panel-detail-toolbar input {
+  min-width: 0;
+  width: 100%;
+  border: 1px solid #314656;
+  border-radius: 6px;
+  padding: 7px 9px;
+  background: #081016;
+  color: var(--app-text);
+  font: inherit;
+}
+
+.data-panel-detail-toolbar span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .data-panel-detail-table {
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
@@ -3032,5 +3069,9 @@ body {
 
   .data-panel-chart-kpis {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .data-panel-detail-toolbar {
+    grid-template-columns: 1fr;
   }
 }

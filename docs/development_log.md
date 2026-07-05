@@ -6249,3 +6249,37 @@ change.
 - Recommended follow-up:
   - Add dashboard filters/sticky table headers and a visible source badge for
     backend lifecycle summaries on the user and satellite detail tables.
+
+## 2026-07-05 - Dashboard Detail Table Filtering v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: improve standalone dashboard observability for medium and large
+  scenarios by adding a client-side detail filter above the user-node and
+  satellite-resource tables. The filter searches user IDs, satellite IDs,
+  selected service paths, destinations, next hops, service labels, and compute
+  or network status labels while preserving the backend-owned runtime summary
+  as the source data.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend exec vitest run dataPanel.test.ts`
+    - Result: passed, 1 file / 57 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - None. The implementation is intentionally display-only and does not
+    modify runtime control, Event Kernel behavior, backend summaries, or
+    streaming protocols.
+- Known remaining issues:
+  - Filtering is currently client-side over the rows already provided to the
+    table. A later scale pass should add backend pagination or virtualized
+    rendering for very large detailed tables.
+  - This pass does not add new business generation, network, or compute
+    fidelity logic.
+- Recommended follow-up:
+  - Add a visible backend-summary source badge and then implement bounded
+    table virtualization or pagination for 1200-satellite inspection.
