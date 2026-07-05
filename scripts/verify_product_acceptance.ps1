@@ -2,6 +2,7 @@ param(
     [string]$RepoRoot = (Split-Path -Parent $PSScriptRoot),
     [switch]$SkipRuntimeSmoke,
     [switch]$SkipBuild,
+    [string]$AcceptanceConfig = "",
     [int]$ExpectedSatelliteCount = -1,
     [int]$ExpectedUserCount = -1,
     [string]$ExpectedTrafficClass = ""
@@ -33,10 +34,55 @@ function Get-PythonCommand {
     throw "Python was not found. Install Python 3 or run from a Python-enabled development shell."
 }
 
+function Get-AcceptanceExpectations {
+    param(
+        [string]$Python,
+        [string]$ConfigPath
+    )
+
+    $script = @'
+import json
+import sys
+from pathlib import Path
+
+import yaml
+
+path = Path(sys.argv[1])
+data = yaml.safe_load(path.read_text(encoding='utf-8'))
+scenario = data.get('scenario', {})
+network = data.get('network', {})
+application_protocol = str(network.get('application_protocol', ''))
+traffic_class = 'COMPUTE_SERVICE' if application_protocol == 'TASK_OFFLOAD_FLOW' else ''
+print(json.dumps({
+    'satellite_count': int(scenario.get('satellite_count', -1)),
+    'user_count': int(scenario.get('user_count', -1)),
+    'traffic_class': traffic_class,
+}, sort_keys=True))
+'@
+    $output = & $Python -c $script $ConfigPath
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to read acceptance config: $ConfigPath"
+    }
+    return ($output | ConvertFrom-Json)
+}
+
 Push-Location $RepoRoot
 try {
     $env:PYTHONPATH = "src;."
     $python = Get-PythonCommand
+    if ($AcceptanceConfig) {
+        $resolvedConfig = Resolve-Path -LiteralPath $AcceptanceConfig
+        $expectations = Get-AcceptanceExpectations -Python $python -ConfigPath $resolvedConfig.Path
+        if ($ExpectedSatelliteCount -lt 0) {
+            $ExpectedSatelliteCount = [int]$expectations.satellite_count
+        }
+        if ($ExpectedUserCount -lt 0) {
+            $ExpectedUserCount = [int]$expectations.user_count
+        }
+        if (-not $ExpectedTrafficClass -and $expectations.traffic_class) {
+            $ExpectedTrafficClass = [string]$expectations.traffic_class
+        }
+    }
     Invoke-CheckedCommand $python @(
         "-m",
         "pytest",

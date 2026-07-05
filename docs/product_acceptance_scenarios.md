@@ -67,6 +67,7 @@ Aggregate product acceptance verification:
 ```powershell
 .\scripts\verify_product_acceptance.ps1
 .\scripts\verify_product_acceptance.ps1 -ExpectedSatelliteCount 120 -ExpectedUserCount 100 -ExpectedTrafficClass COMPUTE_SERVICE
+.\scripts\verify_product_acceptance.ps1 -AcceptanceConfig configs\acceptance\small_demo_72sat.yaml
 ```
 
 ## Limitations

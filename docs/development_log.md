@@ -5064,3 +5064,35 @@ change.
 - Recommended follow-up:
   - Add an `-AcceptanceConfig` option that reads expected values from YAML once
     the acceptance config schema is stable enough for script consumption.
+
+## 2026-07-05 - Product Acceptance Config Expectations v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add `-AcceptanceConfig` to `scripts/verify_product_acceptance.ps1`.
+  The aggregate acceptance command can now read satellite count, user count,
+  and traffic class expectations from acceptance YAML, with explicit CLI
+  expected values still able to override the file-derived values.
+- Changed files/modules:
+  - `scripts/verify_product_acceptance.ps1`
+  - `README.md`
+  - `docs/product_acceptance_scenarios.md`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_product_acceptance.ps1 -SkipBuild -AcceptanceConfig configs\acceptance\small_demo_72sat.yaml -ExpectedSatelliteCount 120 -ExpectedUserCount 100 -ExpectedTrafficClass COMPUTE_SERVICE`
+    - Result: passed; acceptance YAML parsing path was exercised while explicit
+      expected values matched the currently running local demo.
+- Problems encountered:
+  - The first implementation used a double-quoted PowerShell here-string for
+    Python `-c` code, which stripped Python string quotes in the child process.
+    It was fixed by using a single-quoted here-string and Python single-quoted
+    literals before commit.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The script reads only the minimal acceptance expectations needed for the
+    smoke check; it does not initialize the backend from the YAML.
+- Recommended follow-up:
+  - Add an isolated acceptance runner that launches a disposable backend using
+    the selected YAML before running strict expected-value checks.

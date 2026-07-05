@@ -81,4 +81,5 @@ Product acceptance verification:
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_product_acceptance.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_product_acceptance.ps1 -ExpectedSatelliteCount 120 -ExpectedUserCount 100 -ExpectedTrafficClass COMPUTE_SERVICE
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_product_acceptance.ps1 -AcceptanceConfig configs\acceptance\small_demo_72sat.yaml
 ```
