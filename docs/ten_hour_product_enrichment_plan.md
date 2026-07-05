@@ -495,6 +495,10 @@ The following issue-sized slices have now been delivered on
   - Maps to suggestions 18 and 95.
   - Launcher status output now points directly to smoke and dashboard launcher
     shortcuts after reporting service URLs.
+- `test(runtime): verify frontend shell in smoke`
+  - Maps to suggestions 91-95.
+  - Runtime health smoke now confirms console and dashboard URLs return the
+    expected frontend application shell, not only HTTP success.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected

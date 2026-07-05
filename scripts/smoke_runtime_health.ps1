@@ -51,6 +51,17 @@ function Assert-HttpOk {
     }
 }
 
+function Assert-FrontendShell {
+    param(
+        [string]$Name,
+        [object]$Check
+    )
+
+    if ($Check.Response.Content -notmatch 'id="root"') {
+        throw "$Name did not return the expected frontend application shell."
+    }
+}
+
 $runtimeCheck = Assert-HttpOk -Name "Backend runtime status" -Url $RuntimeStatusUrl
 $runtimeStatus = $runtimeCheck.Response.Content | ConvertFrom-Json
 
@@ -82,6 +93,8 @@ if ($null -eq $backendSummary.compute_resource_summary) {
 
 $consoleCheck = Assert-HttpOk -Name "Frontend console" -Url $FrontendUrl
 $dashboardCheck = Assert-HttpOk -Name "Frontend dashboard" -Url $DashboardUrl
+Assert-FrontendShell -Name "Frontend console" -Check $consoleCheck
+Assert-FrontendShell -Name "Frontend dashboard" -Check $dashboardCheck
 
 $satelliteCount = [int]$backendSummary.derived_constellation_summary.satellite_count
 $userCount = [int]$runtimeStatus.generated_config.user_count

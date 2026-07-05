@@ -5380,3 +5380,28 @@ change.
 - Recommended follow-up:
   - Keep browser-level smoke checks separate so status remains fast and
     non-invasive.
+
+## 2026-07-05 - Runtime Health Frontend Shell Check v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: make `scripts/smoke_runtime_health.ps1` verify that frontend console
+  and dashboard URLs return the expected React/Vite application shell, not just
+  any HTTP 200 response.
+- Changed files/modules:
+  - `scripts/smoke_runtime_health.ps1`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\smoke_runtime_health.ps1 -JsonSummary -ExpectedSatelliteCount 120 -ExpectedUserCount 100 -ExpectedComputeNodeCount 120 -ExpectedTrafficClass COMPUTE_SERVICE`
+    - Result: passed; frontend shell checks and expected runtime summary checks
+      passed.
+- Problems encountered:
+  - None. The check is read-only and works against the current Vite shell.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - This is still an HTTP shell check, not a browser-rendered Playwright test.
+- Recommended follow-up:
+  - Add browser-level route smoke once Playwright/browser automation is adopted
+    for CI.
