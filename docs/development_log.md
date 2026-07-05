@@ -5,6 +5,43 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Runtime Detail Semantics v2
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending in this commit
+- Scope: enrich backend-owned user and satellite runtime detail rows for the
+  standalone dashboard. User rows now include platform labels, request-state
+  labels, network queue reasons, selected next hop, route hop count, and a
+  route path label. Satellite rows now include resource role labels, primary
+  route/flow ids, queued route counts, and route-mix labels. The frontend
+  detail tables consume these backend fields before falling back to local
+  derivation. Event Kernel behavior is unchanged.
+- Changed files/modules:
+  - `src/leo_twin/services/runtime_observability.py`
+  - `tests/unit/test_runtime_observability.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_runtime_observability.py tests/integration/test_live_runtime_streaming.py::test_runtime_detail_pages_return_deterministic_windows -q`
+    - Result: passed, 3 tests.
+  - Bundled Node/Pnpm: `pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 25 files / 256 tests.
+  - Bundled Node/Pnpm: `pnpm --dir frontend build`
+    - Result: passed with the existing Vite warning that `DataPanel` is larger
+      than 500 kB after minification.
+  - `git diff --check -- src/leo_twin/services/runtime_observability.py tests/unit/test_runtime_observability.py frontend/src/core/event_types/index.ts frontend/src/dashboard/data_panel/DataPanel.tsx frontend/tests/dataPanel.test.ts`
+    - Result: passed.
+- Problems encountered:
+  - The frontend test file contains historical mojibake text in several
+    Chinese strings. The implementation avoided broad text rewrites and only
+    changed the assertions needed for the new backend-provided labels.
+- Known remaining issues / follow-up:
+  - `service_latency_history_v1` is still consumed as compact service-state
+    text in user rows. A follow-up should expose structured per-service
+    latency components directly in each user detail row.
+
 ## 2026-07-05 - Network Stress KPI Movement v1
 
 - Branch: `feature/T164-dashboard-observability-v1`

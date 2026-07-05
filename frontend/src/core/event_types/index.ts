@@ -581,16 +581,22 @@ export interface RuntimeUserRequestSummaryV1 {
 export interface RuntimeUserRequestItemV1 {
   user_id: string;
   platform_type: string;
+  platform_type_label?: string;
   cell_id?: string;
   communication_route_count: number;
   available_route_count: number;
   compute_service_count: number;
   network_queue_count: number;
+  network_queue_reason?: string;
+  network_queue_reason_label?: string;
   selected_satellite_id?: string;
   destination_id?: string;
   status: string;
   primary_route_id?: string;
   primary_flow_id?: string;
+  primary_next_hop_id?: string;
+  route_hop_count?: number;
+  route_path_label?: string;
   latency_s?: number | null;
   capacity_mbps?: number | null;
   loss_proxy_rate?: number | null;
@@ -598,6 +604,7 @@ export interface RuntimeUserRequestItemV1 {
   active_business_type?: string;
   active_business_label?: string;
   request_state?: string;
+  request_state_label?: string;
   path: readonly string[];
 }
 
@@ -666,16 +673,22 @@ export interface RuntimeDetailPageEnvelope {
 export interface RuntimeSatelliteServiceItemV1 {
   satellite_id: string;
   status: string;
+  resource_role?: string;
+  resource_role_label?: string;
   service_user_ids: readonly string[];
   service_user_count?: number;
   primary_service_user_id?: string;
   next_hop_ids: readonly string[];
   next_hop_count?: number;
   primary_next_hop_id?: string;
+  primary_route_id?: string;
+  primary_flow_id?: string;
   route_count: number;
   available_route_count: number;
+  network_queue_route_count?: number;
   compute_service_route_count?: number;
   network_service_route_count?: number;
+  route_mix_label?: string;
   active_link_count: number;
   active_access_link_count: number;
   active_space_link_count: number;

@@ -2606,9 +2606,10 @@ function buildBackendUserBusinessRequestRows(
     const cellLabel = item.cell_id ? ` / ${item.cell_id}` : "";
     const businessLabel =
       item.active_business_label || trafficClassLabel(item.active_business_type ?? "NONE");
-    const requestState = item.request_state
-      ? dataPanelRequestStateLabel(item.request_state)
-      : "";
+    const requestState =
+      item.request_state_label ||
+      (item.request_state ? dataPanelRequestStateLabel(item.request_state) : "");
+    const queueReason = item.network_queue_reason_label || "";
     const serviceLabel = [
       businessLabel,
       requestState,
@@ -2616,34 +2617,43 @@ function buildBackendUserBusinessRequestRows(
     ]
       .filter((value) => value !== "")
       .join(" / ") || "no service";
+    const queueLabel =
+      item.network_queue_count > 0
+        ? `${formatCount(item.network_queue_count)} waiting${
+            queueReason ? ` / ${queueReason}` : ""
+          }`
+        : queueReason && queueReason !== "No network queue"
+          ? queueReason
+          : "empty";
+    const nextHopDetail = item.primary_next_hop_id
+      ? ` / next ${item.primary_next_hop_id}`
+      : "";
     return {
       userId: item.user_id,
-      platformTypeLabel: `${item.platform_type}${cellLabel}`,
+      platformTypeLabel: `${item.platform_type_label || item.platform_type}${cellLabel}`,
       communicationLabel:
         item.communication_route_count > 0
           ? `${formatCount(item.available_route_count)} / ${formatCount(
               item.communication_route_count
-            )} routes`
+            )} routes${nextHopDetail}`
           : "idle",
       computeLabel:
         item.compute_service_count > 0
           ? `${formatCount(item.compute_service_count)} compute`
           : "no compute",
-      networkQueueLabel:
-        item.network_queue_count > 0
-          ? `${formatCount(item.network_queue_count)} waiting`
-          : "empty",
+      networkQueueLabel: queueLabel,
       selectedSatelliteId: item.selected_satellite_id || "none",
       destinationId: item.destination_id || "none",
       statusLabel: item.status || "IDLE",
       latencyCapacityLabel,
       serviceLabel,
       pathLabel:
-        item.path.length > 0
+        item.route_path_label ||
+        (item.path.length > 0
           ? `${item.primary_route_id || item.primary_flow_id || item.user_id}: ${item.path.join(
               " -> "
             )}`
-          : `${item.user_id}: no active route`
+          : `${item.user_id}: no active route`)
     };
   });
   const hiddenCount = Math.max(
@@ -2678,7 +2688,9 @@ function buildBackendSatelliteResourceRows(
     const loadRatio = clampRatio(finiteMetric(item.compute_load_ratio));
     return {
       satelliteId: item.satellite_id,
-      statusLabel: item.status,
+      statusLabel: item.resource_role_label
+        ? `${item.status} / ${item.resource_role_label}`
+        : item.status,
       loadPercent: roundMetric(loadRatio * 100),
       loadLabel: `${formatMetricValue(loadRatio * 100)}%`,
       serviceObjectLabel: compactBackendEntityLabel(
@@ -2726,14 +2738,23 @@ function buildBackendSatelliteResourceRows(
       )}`,
       taskLabel: `${formatCount(item.running_task_count)} running / ${formatCount(
         item.finished_task_count
-      )} done / compute ${formatCount(item.compute_service_route_count ?? 0)} / network ${formatCount(
-        item.network_service_route_count ?? 0
-      )}`,
+      )} done / ${
+        item.route_mix_label ??
+        `compute ${formatCount(item.compute_service_route_count ?? 0)} / network ${formatCount(
+          item.network_service_route_count ?? 0
+        )}`
+      }`,
       networkLabel: `links ${formatCount(item.active_link_count)} / access ${formatCount(
         item.active_access_link_count
       )} / space ${formatCount(item.active_space_link_count)} / routes ${formatCount(
         item.route_count
-      )}`
+      )}${
+        item.network_queue_route_count !== undefined
+          ? ` / queued ${formatCount(item.network_queue_route_count)}`
+          : ""
+      }${
+        item.primary_route_id ? ` / primary ${item.primary_route_id}` : ""
+      }`
     };
   });
   const hiddenCount = Math.max(

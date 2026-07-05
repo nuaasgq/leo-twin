@@ -179,36 +179,56 @@ def _user_item(
     selected_satellite_id = (
         _route_first_satellite(selected_route) if selected_route is not None else None
     )
+    selected_path = (
+        tuple(_route_path(selected_route)) if selected_route is not None else ()
+    )
     destination_id = (
-        _route_path(selected_route)[-1] if selected_route is not None and _route_path(selected_route) else None
+        selected_path[-1] if selected_route is not None and selected_path else None
     )
     flow_id = _str(selected_route.get("flow_id")) if selected_route is not None else ""
+    platform_type = (
+        "GROUND_STATION" if user_id.startswith("ground-station") else "GROUND_USER_TERMINAL"
+    )
+    request_state = _user_request_state(
+        ordered_routes,
+        available_routes,
+        compute_routes,
+        service_lookup.get(flow_id, ""),
+    )
+    queue_reason = _network_queue_reason(
+        ordered_routes,
+        available_routes,
+        waiting_routes,
+        selected_route,
+    )
     return {
         "user_id": user_id,
-        "platform_type": "GROUND_STATION" if user_id.startswith("ground-station") else "GROUND_USER_TERMINAL",
+        "platform_type": platform_type,
+        "platform_type_label": _platform_type_label(platform_type),
         "cell_id": _str(user.get("cell_id")) if user is not None else "",
         "communication_route_count": len(ordered_routes),
         "available_route_count": len(available_routes),
         "compute_service_count": len(compute_routes),
         "network_queue_count": len(waiting_routes),
+        "network_queue_reason": queue_reason,
+        "network_queue_reason_label": _network_queue_reason_label(queue_reason),
         "selected_satellite_id": selected_satellite_id or "",
         "destination_id": destination_id or "",
         "status": _user_status(user, ordered_routes, available_routes),
         "primary_route_id": _str(selected_route.get("route_id")) if selected_route is not None else "",
         "primary_flow_id": flow_id,
+        "primary_next_hop_id": _route_next_hop_after_user(selected_path, user_id),
+        "route_hop_count": max(0, len(selected_path) - 1),
+        "route_path_label": _route_path_label(selected_path),
         "latency_s": _float(selected_route.get("latency")) if selected_route is not None else None,
         "capacity_mbps": _float(selected_route.get("capacity")) if selected_route is not None else None,
         "loss_proxy_rate": _optional_float(selected_route.get("loss_rate")) if selected_route is not None else None,
         "service_state": service_lookup.get(flow_id, ""),
         "active_business_type": _route_business_type(selected_route, service_lookup),
         "active_business_label": _route_business_label(selected_route, service_lookup),
-        "request_state": _user_request_state(
-            ordered_routes,
-            available_routes,
-            compute_routes,
-            service_lookup.get(flow_id, ""),
-        ),
-        "path": tuple(_route_path(selected_route)) if selected_route is not None else (),
+        "request_state": request_state,
+        "request_state_label": _request_state_label(request_state),
+        "path": selected_path,
     }
 
 
@@ -293,9 +313,21 @@ def _satellite_item(
     load_ratio = _clamp_ratio(
         _first_float(kpi_slice, "compute_load_ratio", node, "load_ratio", default=used / capacity if capacity > 0 else 0.0)
     )
+    route_count = int(route_context.get("route_count", 0))
+    available_route_count = int(route_context.get("available_route_count", 0))
+    compute_service_route_count = int(
+        route_context.get("compute_service_route_count", 0)
+    )
+    network_service_route_count = int(
+        route_context.get("network_service_route_count", 0)
+    )
+    network_queue_route_count = max(0, route_count - available_route_count)
+    resource_role = "COMPUTE_NODE" if node is not None else "SATELLITE_ONLY"
     return {
         "satellite_id": satellite_id,
         "status": _str((node or satellite or {}).get("status")) or "ACTIVE",
+        "resource_role": resource_role,
+        "resource_role_label": _satellite_resource_role_label(resource_role),
         "service_user_ids": tuple(route_context.get("service_user_ids", ())),
         "service_user_count": len(tuple(route_context.get("service_user_ids", ()))),
         "primary_service_user_id": _first_tuple_item(
@@ -306,13 +338,17 @@ def _satellite_item(
         "primary_next_hop_id": _first_tuple_item(
             tuple(route_context.get("next_hop_ids", ()))
         ),
-        "route_count": int(route_context.get("route_count", 0)),
-        "available_route_count": int(route_context.get("available_route_count", 0)),
-        "compute_service_route_count": int(
-            route_context.get("compute_service_route_count", 0)
-        ),
-        "network_service_route_count": int(
-            route_context.get("network_service_route_count", 0)
+        "primary_route_id": _str(route_context.get("primary_route_id")),
+        "primary_flow_id": _str(route_context.get("primary_flow_id")),
+        "route_count": route_count,
+        "available_route_count": available_route_count,
+        "network_queue_route_count": network_queue_route_count,
+        "compute_service_route_count": compute_service_route_count,
+        "network_service_route_count": network_service_route_count,
+        "route_mix_label": _satellite_route_mix_label(
+            compute_service_route_count,
+            network_service_route_count,
+            network_queue_route_count,
         ),
         "active_link_count": int(
             _first_float(kpi_slice, "active_link_count", default=float(link_counts.get("active", 0)))
@@ -359,12 +395,17 @@ def _route_context_by_satellite(
                 {
                     "service_user_ids": set(),
                     "next_hop_ids": set(),
+                    "primary_route_id": "",
+                    "primary_flow_id": "",
                     "route_count": 0,
                     "available_route_count": 0,
                     "compute_service_route_count": 0,
                     "network_service_route_count": 0,
                 },
             )
+            if not entry["primary_route_id"]:
+                entry["primary_route_id"] = _str(route.get("route_id"))
+                entry["primary_flow_id"] = _str(route.get("flow_id"))
             entry["route_count"] = int(entry["route_count"]) + 1
             if bool(route.get("available")):
                 entry["available_route_count"] = int(entry["available_route_count"]) + 1
@@ -456,6 +497,101 @@ def _user_request_state(
     if compute_routes:
         return "COMPUTE_SERVICE_READY"
     return "NETWORK_SERVICE_READY"
+
+
+def _platform_type_label(platform_type: str) -> str:
+    if platform_type == "GROUND_STATION":
+        return "Ground station"
+    if platform_type == "GROUND_USER_TERMINAL":
+        return "Ground user terminal"
+    return platform_type
+
+
+def _request_state_label(request_state: str) -> str:
+    if request_state == "IDLE":
+        return "Idle"
+    if request_state == "NETWORK_WAITING":
+        return "Waiting for network route"
+    if request_state == "COMPUTE_SERVICE_ACTIVE":
+        return "Compute service active"
+    if request_state == "COMPUTE_SERVICE_READY":
+        return "Compute service route ready"
+    if request_state == "NETWORK_SERVICE_READY":
+        return "Network service route ready"
+    return request_state
+
+
+def _network_queue_reason(
+    routes: Sequence[Mapping[str, Any]],
+    available_routes: Sequence[Mapping[str, Any]],
+    waiting_routes: Sequence[Mapping[str, Any]],
+    selected_route: Mapping[str, Any] | None,
+) -> str:
+    if not routes:
+        return "NO_BUSINESS_REQUEST"
+    if not waiting_routes:
+        return "NO_QUEUE"
+    if available_routes:
+        return "PARTIAL_ROUTE_WAITING"
+    if selected_route is None:
+        return "NO_SELECTED_ROUTE"
+    path = _route_path(selected_route)
+    if not path:
+        return "NO_ROUTE_PATH"
+    demand = _optional_float(selected_route.get("demand_capacity"))
+    capacity = _optional_float(selected_route.get("capacity"))
+    if demand is not None and capacity is not None and capacity < demand:
+        return "ROUTE_CAPACITY_BELOW_DEMAND"
+    return "ROUTE_UNAVAILABLE"
+
+
+def _network_queue_reason_label(reason: str) -> str:
+    if reason == "NO_BUSINESS_REQUEST":
+        return "No current business request"
+    if reason == "NO_QUEUE":
+        return "No network queue"
+    if reason == "PARTIAL_ROUTE_WAITING":
+        return "Some requests are waiting"
+    if reason == "NO_SELECTED_ROUTE":
+        return "No selected route"
+    if reason == "NO_ROUTE_PATH":
+        return "No feasible path"
+    if reason == "ROUTE_CAPACITY_BELOW_DEMAND":
+        return "Route capacity below demand"
+    if reason == "ROUTE_UNAVAILABLE":
+        return "Route unavailable"
+    return reason
+
+
+def _route_next_hop_after_user(path: Sequence[str], user_id: str) -> str:
+    for index, node_id in enumerate(path):
+        if node_id == user_id and index + 1 < len(path):
+            return path[index + 1]
+    return ""
+
+
+def _route_path_label(path: Sequence[str]) -> str:
+    return " -> ".join(path)
+
+
+def _satellite_resource_role_label(resource_role: str) -> str:
+    if resource_role == "COMPUTE_NODE":
+        return "Satellite compute node"
+    if resource_role == "SATELLITE_ONLY":
+        return "Satellite platform"
+    return resource_role
+
+
+def _satellite_route_mix_label(
+    compute_service_route_count: int,
+    network_service_route_count: int,
+    network_queue_route_count: int,
+) -> str:
+    return (
+        f"compute={max(0, compute_service_route_count)}; "
+        f"network={max(0, network_service_route_count)}; "
+        f"queued={max(0, network_queue_route_count)}"
+    )
 
 
 def _route_business_type(

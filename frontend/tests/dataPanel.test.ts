@@ -2261,16 +2261,22 @@ describe("buildUserBusinessRequestRows", () => {
           {
             user_id: "user-0",
             platform_type: "GROUND_USER_TERMINAL",
+            platform_type_label: "地面用户终端",
             cell_id: "cell-a",
             communication_route_count: 2,
             available_route_count: 1,
             compute_service_count: 1,
             network_queue_count: 0,
+            network_queue_reason: "NO_QUEUE",
+            network_queue_reason_label: "无网络排队",
             selected_satellite_id: "sat-0",
             destination_id: "compute-0",
             status: "ACTIVE/AVAILABLE",
             primary_route_id: "route-a",
             primary_flow_id: "flow-a",
+            primary_next_hop_id: "sat-0",
+            route_hop_count: 2,
+            route_path_label: "route-a: user-0 -> sat-0 -> compute-0",
             latency_s: 0.12,
             capacity_mbps: 80,
             loss_proxy_rate: 0.02,
@@ -2278,6 +2284,7 @@ describe("buildUserBusinessRequestRows", () => {
             active_business_type: "COMPUTE_SERVICE",
             active_business_label: "通信-计算服务",
             request_state: "COMPUTE_SERVICE_ACTIVE",
+            request_state_label: "计算服务进行中",
             path: ["user-0", "sat-0", "compute-0"]
           }
         ]
@@ -2290,10 +2297,10 @@ describe("buildUserBusinessRequestRows", () => {
     expect(rows.summaryLabel).toContain("window active 1");
     expect(rows.items[0]).toMatchObject({
       userId: "user-0",
-      platformTypeLabel: "GROUND_USER_TERMINAL / cell-a",
-      communicationLabel: "1 / 2 routes",
+      platformTypeLabel: "地面用户终端 / cell-a",
+      communicationLabel: "1 / 2 routes / next sat-0",
       computeLabel: "1 compute",
-      networkQueueLabel: "empty",
+      networkQueueLabel: "无网络排队",
       selectedSatelliteId: "sat-0",
       destinationId: "compute-0",
       statusLabel: "ACTIVE/AVAILABLE",
@@ -2594,16 +2601,22 @@ describe("buildSatelliteResourceRows", () => {
           {
             satellite_id: "sat-0",
             status: "BUSY",
+            resource_role: "COMPUTE_NODE",
+            resource_role_label: "Satellite compute node",
             service_user_ids: ["user-0", "user-1"],
             service_user_count: 2,
             primary_service_user_id: "user-0",
             next_hop_ids: ["compute-0", "sat-1"],
             next_hop_count: 2,
             primary_next_hop_id: "compute-0",
+            primary_route_id: "route-a",
+            primary_flow_id: "flow-a",
             route_count: 2,
             available_route_count: 1,
+            network_queue_route_count: 1,
             compute_service_route_count: 1,
             network_service_route_count: 1,
+            route_mix_label: "compute=1; network=1; queued=1",
             active_link_count: 3,
             active_access_link_count: 1,
             active_space_link_count: 2,
@@ -2632,15 +2645,15 @@ describe("buildSatelliteResourceRows", () => {
     expect(rows.sourceLabel).toBe("backend satellite_service_summary_v1");
     expect(rows.items[0]).toMatchObject({
       satelliteId: "sat-0",
-      statusLabel: "BUSY",
+      statusLabel: "BUSY / Satellite compute node",
       loadLabel: "64%",
       serviceObjectLabel: "user-0, user-1 / 2 routes",
       nextHopLabel: "compute-0, sat-1 / 2 routes",
       cpuFp32Label: "64 / 100 GFLOPS",
       cpuFp64Label: "2 / 8 GFLOPS",
       npuLabel: "4 / 10 TOPS",
-      taskLabel: "2 running / 7 done / compute 1 / network 1",
-      networkLabel: "links 3 / access 1 / space 2 / routes 2"
+      taskLabel: "2 running / 7 done / compute=1; network=1; queued=1",
+      networkLabel: "links 3 / access 1 / space 2 / routes 2 / queued 1 / primary route-a"
     });
   });
 
