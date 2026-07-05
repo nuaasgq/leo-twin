@@ -2266,6 +2266,80 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
     linear-gradient(180deg, #121922 0%, #0d131a 100%);
 }
 
+.data-panel-grid .data-panel-configuration-explanation {
+  grid-column: span 2;
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.data-panel-config-explanation-meta,
+.data-panel-config-explanation-surfaces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.data-panel-config-explanation-meta span,
+.data-panel-config-explanation-surfaces span {
+  min-width: 0;
+  max-width: 100%;
+  border: 1px solid #263a48;
+  border-radius: 5px;
+  padding: 5px 7px;
+  background: #0b1219;
+  color: var(--app-muted);
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+
+.data-panel-config-explanation-sections {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.data-panel-config-explanation-section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 0.72fr);
+  gap: 8px;
+  min-width: 0;
+  border-top: 1px solid #213442;
+  padding-top: 7px;
+}
+
+.data-panel-config-explanation-section div {
+  min-width: 0;
+}
+
+.data-panel-config-explanation-section strong,
+.data-panel-config-explanation-section small,
+.data-panel-config-explanation-section span {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.data-panel-config-explanation-section strong {
+  color: var(--app-text);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.data-panel-config-explanation-section small,
+.data-panel-config-explanation-section span {
+  color: var(--app-muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.data-panel-config-explanation-section span {
+  white-space: normal;
+}
+
 .data-panel-detail-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);

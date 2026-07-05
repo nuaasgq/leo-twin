@@ -83,6 +83,11 @@ capabilities such as packet-level simulation or external simulator integration.
 The frontend should use this object for product explanations rather than
 inferring model meaning locally.
 
+The standalone dashboard renders a compact `configuration_explanation_v2`
+section in the auxiliary model analysis area. It summarizes configuration
+surfaces, deterministic policy, model boundaries, and per-section current
+values directly from the backend object.
+
 Each field schema includes:
 
 - path

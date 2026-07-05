@@ -5,6 +5,56 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Dashboard Configuration Explanation v1
+
+- Branch: `feature/T197-dashboard-configuration-explanation-v1`
+- Commit: pending in this commit
+- Scope: render the backend-owned `backend_summary.configuration_explanation_v2`
+  in the standalone dashboard's auxiliary model analysis area. The new compact
+  panel shows the explanation source/schema, configuration surfaces,
+  deterministic config policy, forbidden integration boundary, packet-level
+  simulation boundary, and per-section current values/excluded semantics. This
+  keeps configuration/model explanations backend-owned and avoids frontend
+  semantic inference. The task does not change backend model behavior, runtime
+  control, Event Kernel behavior, config upload/apply workflows, or dashboard
+  architecture.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/user_configuration_schema_v2.md`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 25 files / 295 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- dataPanel.test.ts appCssLayout.test.js`
+    - Result: passed, 25 files / 295 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing `DataPanel` chunk-size
+      warning after minification.
+  - `git diff --check`
+    - Result: passed. Git still reported the pre-existing CRLF warning for
+      local runtime/config drift in `configs/generated_full_system_demo.json`
+      and `configs/sees_control.yaml`.
+- Problems encountered:
+  - TypeScript initially kept readonly string-array current values in the
+    generic display value union after `Array.isArray`; the formatter now
+    explicitly handles object/readonly-array values and returns a string.
+  - The working tree still contains unrelated local runtime/config drift in
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`;
+    these files are intentionally left unstaged and unchanged by this task.
+- Known remaining issues / follow-up:
+  - The panel is compact. A later dashboard task can add a full model
+    assumptions/detail drawer that expands every backend section and source
+    field.
+  - User-provided YAML/JSON validation and guarded apply remain future work.
+
 ## 2026-07-06 - Configuration Explanation Summary v2
 
 - Branch: `feature/T196-config-explanation-summary-v2`

@@ -6,6 +6,7 @@ import {
   buildComputeResourcePoolModeNote,
   buildDataPanelComputeVectorTail,
   buildDataPanelConfiguredScale,
+  buildDataPanelConfigurationExplanationDisplay,
   buildDataPanelDetailScopeNotes,
   buildDataPanelDisplaySummary,
   buildDataPanelExportCatalogDisplay,
@@ -884,6 +885,112 @@ describe("buildDataPanelUserConfigurationFieldSections", () => {
     expect(sections[2]?.sampleFields[0]?.label).toBe(
       "ui.visualization.coverage · 覆盖显示"
     );
+  });
+});
+
+describe("buildDataPanelConfigurationExplanationDisplay", () => {
+  it("summarizes backend-owned configuration explanation v2", () => {
+    const display = buildDataPanelConfigurationExplanationDisplay({
+      version: "v2",
+      explanation_id: "leo_twin.configuration_explanation.v2",
+      schema_id: "sees.user_configuration.v2",
+      source: "BACKEND_DERIVED_SUMMARY",
+      frontend_policy: "CONTROL_PANEL_KEY_FIELDS_ONLY",
+      mutation_policy: "READ_ONLY_EXPLANATION",
+      configuration_surfaces: [
+        {
+          surface: "CONTROL_PANEL_KEY_FIELDS",
+          purpose: "Expose high-impact parameters.",
+          source: "configuration_surface_summary.key_fields"
+        },
+        {
+          surface: "CURRENT_EFFECTIVE_CONFIG_EXPORT",
+          purpose: "Expose normalized config and stable hash.",
+          source: "/scenario/user-config/export"
+        }
+      ],
+      section_explanations: [
+        {
+          section: "scenario",
+          title: "星座、用户和算力规模",
+          source_fields: ["scenario.satellite_count", "scenario.user_count"],
+          current_values: {
+            satellite_count: 1200,
+            user_count: 100,
+            constellation_profile: "CUSTOM_WALKER",
+            ignored_null: null
+          },
+          model_semantics: "Scenario fields define deterministic scale.",
+          excluded_semantics: ["SGP4", "RF_LINK_BUDGET"]
+        },
+        {
+          section: "traffic",
+          title: "业务需求生成",
+          source_fields: ["scenario.traffic_model.*"],
+          current_values: {
+            traffic_class: "COMPUTE_SERVICE",
+            active_service_classes: ["DATA_TRANSFER", "COMPUTE_SERVICE"],
+            packet_level_simulation: false
+          },
+          model_semantics: "Traffic fields generate flow-level requests.",
+          excluded_semantics: ["PACKET_GENERATION"]
+        }
+      ],
+      determinism: {
+        seed_source: "runtime.seed",
+        ordered_generation: true,
+        unknown_key_policy: "REJECT",
+        defaulting_policy: "OMITTED_FIELDS_USE_BACKEND_DEFAULTS",
+        result_package_expectation: "config snapshot, events.jsonl, metrics.csv, summary.json"
+      },
+      forbidden_integrations: ["STK", "EXATA", "AFSIM", "DDS"],
+      packet_level_simulation: false,
+      model_boundary_note: "Read-only explanation."
+    });
+
+    expect(display).toMatchObject({
+      sourceLabel: "BACKEND_DERIVED_SUMMARY / sees.user_configuration.v2",
+      summaryLabel: "2 个配置入口 / 2 个语义分组 / READ_ONLY_EXPLANATION",
+      determinismLabel:
+        "seed runtime.seed / unknown REJECT / default OMITTED_FIELDS_USE_BACKEND_DEFAULTS",
+      boundaryLabel: "STK/EXATA/AFSIM/DDS 禁止；无包级仿真"
+    });
+    expect(display?.surfaces).toEqual([
+      {
+        surface: "CONTROL_PANEL_KEY_FIELDS",
+        label:
+          "CONTROL_PANEL_KEY_FIELDS · configuration_surface_summary.key_fields",
+        purpose: "Expose high-impact parameters."
+      },
+      {
+        surface: "CURRENT_EFFECTIVE_CONFIG_EXPORT",
+        label: "CURRENT_EFFECTIVE_CONFIG_EXPORT · /scenario/user-config/export",
+        purpose: "Expose normalized config and stable hash."
+      }
+    ]);
+    expect(display?.sections).toEqual([
+      {
+        section: "scenario",
+        title: "scenario · 星座、用户和算力规模",
+        currentValueLabel:
+          "satellite_count=1,200 / user_count=100 / constellation_profile=CUSTOM_WALKER",
+        sourceFieldsLabel: "scenario.satellite_count / scenario.user_count",
+        excludedSemanticsLabel: "排除 SGP4 / RF_LINK_BUDGET"
+      },
+      {
+        section: "traffic",
+        title: "traffic · 业务需求生成",
+        currentValueLabel:
+          "traffic_class=COMPUTE_SERVICE / active_service_classes=DATA_TRANSFER,COMPUTE_SERVICE / packet_level_simulation=false",
+        sourceFieldsLabel: "scenario.traffic_model.*",
+        excludedSemanticsLabel: "排除 PACKET_GENERATION"
+      }
+    ]);
+  });
+
+  it("returns null when configuration explanation is unavailable", () => {
+    expect(buildDataPanelConfigurationExplanationDisplay(null)).toBeNull();
+    expect(buildDataPanelConfigurationExplanationDisplay(undefined)).toBeNull();
   });
 });
 

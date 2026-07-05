@@ -14,6 +14,7 @@ import {
 } from "recharts";
 
 import {
+  ConfigurationExplanationV2,
   FidelitySummary,
   GeneratedScenarioConfig,
   TrafficDemandSummary,
@@ -196,6 +197,9 @@ export const DataPanel = memo(function DataPanel({
     userConfigurationExport,
     userConfigurationContractLoading,
     userConfigurationContractError
+  );
+  const configurationExplanationDisplay = buildDataPanelConfigurationExplanationDisplay(
+    generatedConfig?.backend_summary?.configuration_explanation_v2
   );
   const exportCatalogDisplay = buildDataPanelExportCatalogDisplay(runtimeExportCatalog);
   const exportCompareDisplay = buildDataPanelExportCompareDisplay(runtimeExportCompare);
@@ -1230,6 +1234,45 @@ export const DataPanel = memo(function DataPanel({
 
       <div className="data-panel-section-title secondary">辅助模型分析</div>
       <div className="data-panel-grid">
+        {configurationExplanationDisplay ? (
+          <section
+            className="dashboard-section data-panel-configuration-explanation"
+            aria-label="后端配置语义解释"
+          >
+            <div className="section-title">配置语义解释</div>
+            <div className="data-panel-source-note">
+              <span>{configurationExplanationDisplay.sourceLabel}</span>
+              <small>{configurationExplanationDisplay.summaryLabel}</small>
+            </div>
+            <div className="data-panel-config-explanation-meta">
+              <span>{configurationExplanationDisplay.determinismLabel}</span>
+              <span>{configurationExplanationDisplay.boundaryLabel}</span>
+            </div>
+            <div className="data-panel-config-explanation-surfaces">
+              {configurationExplanationDisplay.surfaces.map((surface) => (
+                <span key={surface.surface} title={surface.purpose}>
+                  {surface.label}
+                </span>
+              ))}
+            </div>
+            <div className="data-panel-config-explanation-sections">
+              {configurationExplanationDisplay.sections.map((section) => (
+                <div
+                  className="data-panel-config-explanation-section"
+                  key={section.section}
+                >
+                  <div>
+                    <strong>{section.title}</strong>
+                    <small>{section.currentValueLabel}</small>
+                  </div>
+                  <span title={section.sourceFieldsLabel}>
+                    {section.excludedSemanticsLabel}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
         <DomainSummary snapshot={snapshot} />
         <TopologyChangePanel snapshot={snapshot} />
         <LinkProtocolPanel snapshot={snapshot} />
@@ -4712,6 +4755,96 @@ export function buildDataPanelUserConfigurationFieldSections(
     });
   });
   return sectionDisplays;
+}
+
+export interface DataPanelConfigurationExplanationDisplay {
+  sourceLabel: string;
+  summaryLabel: string;
+  determinismLabel: string;
+  boundaryLabel: string;
+  surfaces: readonly DataPanelConfigurationExplanationSurfaceDisplay[];
+  sections: readonly DataPanelConfigurationExplanationSectionDisplay[];
+}
+
+export interface DataPanelConfigurationExplanationSurfaceDisplay {
+  surface: string;
+  label: string;
+  purpose: string;
+}
+
+export interface DataPanelConfigurationExplanationSectionDisplay {
+  section: string;
+  title: string;
+  currentValueLabel: string;
+  sourceFieldsLabel: string;
+  excludedSemanticsLabel: string;
+}
+
+export function buildDataPanelConfigurationExplanationDisplay(
+  explanation: ConfigurationExplanationV2 | null | undefined
+): DataPanelConfigurationExplanationDisplay | null {
+  if (explanation === null || explanation === undefined) {
+    return null;
+  }
+  const forbidden = explanation.forbidden_integrations.join("/");
+  return {
+    sourceLabel: `${explanation.source} / ${explanation.schema_id}`,
+    summaryLabel: `${formatCount(explanation.configuration_surfaces.length)} 个配置入口 / ${formatCount(
+      explanation.section_explanations.length
+    )} 个语义分组 / ${explanation.mutation_policy}`,
+    determinismLabel: `seed ${explanation.determinism.seed_source} / unknown ${explanation.determinism.unknown_key_policy} / default ${explanation.determinism.defaulting_policy}`,
+    boundaryLabel: `${forbidden} 禁止；${
+      explanation.packet_level_simulation ? "含包级仿真" : "无包级仿真"
+    }`,
+    surfaces: explanation.configuration_surfaces.map((surface) => ({
+      surface: surface.surface,
+      label: `${surface.surface} · ${surface.source}`,
+      purpose: surface.purpose
+    })),
+    sections: explanation.section_explanations.map((section) => ({
+      section: section.section,
+      title: `${section.section} · ${section.title}`,
+      currentValueLabel: formatConfigurationExplanationCurrentValues(
+        section.current_values
+      ),
+      sourceFieldsLabel: section.source_fields.join(" / "),
+      excludedSemanticsLabel:
+        section.excluded_semantics.length > 0
+          ? `排除 ${section.excluded_semantics.join(" / ")}`
+          : "无额外排除项"
+    }))
+  };
+}
+
+function formatConfigurationExplanationCurrentValues(
+  values: ConfigurationExplanationV2["section_explanations"][number]["current_values"]
+): string {
+  const entries = Object.entries(values).filter(([, value]) => value !== null);
+  if (entries.length === 0) {
+    return "当前值等待后端同步";
+  }
+  return entries
+    .slice(0, 4)
+    .map(([key, value]) => `${key}=${formatConfigurationExplanationValue(value)}`)
+    .join(" / ");
+}
+
+function formatConfigurationExplanationValue(
+  value: string | number | boolean | readonly string[] | null
+): string {
+  if (Array.isArray(value)) {
+    return value.join(",");
+  }
+  if (value !== null && typeof value === "object") {
+    return [...value].join(",");
+  }
+  if (typeof value === "number") {
+    return Number.isInteger(value) ? formatCount(value) : formatPreciseMetricValue(value);
+  }
+  if (typeof value === "boolean") {
+    return value ? "true" : "false";
+  }
+  return value ?? "null";
 }
 
 export interface DataPanelExportHistoryDisplay {
