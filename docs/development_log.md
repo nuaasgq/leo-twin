@@ -5405,3 +5405,29 @@ change.
 - Recommended follow-up:
   - Add browser-level route smoke once Playwright/browser automation is adopted
     for CI.
+
+## 2026-07-05 - Runtime Health Compute Vector Check v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: make runtime health smoke assert that backend compute resource summary
+  reports `resource_model=ComputeResourceVector`, and include the resource
+  model in human and JSON smoke output.
+- Changed files/modules:
+  - `scripts/smoke_runtime_health.ps1`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\smoke_runtime_health.ps1 -JsonSummary -ExpectedSatelliteCount 120 -ExpectedUserCount 100 -ExpectedComputeNodeCount 120 -ExpectedTrafficClass COMPUTE_SERVICE`
+    - Result: passed; JSON output included
+      `compute_resource_model=ComputeResourceVector`.
+- Problems encountered:
+  - None. This validates backend summary semantics only.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The smoke check does not yet validate individual CPU/GPU/NPU/memory/storage
+    vector capacities.
+- Recommended follow-up:
+  - Add expected resource-vector dimensions once acceptance configs declare
+    them explicitly.

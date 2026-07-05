@@ -90,6 +90,9 @@ if ($null -eq $backendSummary.traffic_demand_summary) {
 if ($null -eq $backendSummary.compute_resource_summary) {
     throw "Backend runtime status is missing generated_config.backend_summary.compute_resource_summary."
 }
+if ([string]$backendSummary.compute_resource_summary.resource_model -ne "ComputeResourceVector") {
+    throw "Backend compute resource summary resource_model was '$($backendSummary.compute_resource_summary.resource_model)', expected ComputeResourceVector."
+}
 
 $consoleCheck = Assert-HttpOk -Name "Frontend console" -Url $FrontendUrl
 $dashboardCheck = Assert-HttpOk -Name "Frontend dashboard" -Url $DashboardUrl
@@ -126,6 +129,7 @@ $summary = [ordered]@{
     constellation_profile = $backendSummary.derived_constellation_summary.profile
     traffic_class = $trafficClass
     compute_node_count = $computeNodeCount
+    compute_resource_model = $backendSummary.compute_resource_summary.resource_model
     console_url = $FrontendUrl
     console_ms = $consoleCheck.ElapsedMs
     dashboard_url = $DashboardUrl
@@ -141,7 +145,7 @@ else {
     Write-Host "  simulation status: $($summary.simulation_status)"
     Write-Host "  constellation: $($summary.satellite_count) satellites / $($summary.user_count) users / $($summary.constellation_profile)"
     Write-Host "  traffic class: $($summary.traffic_class)"
-    Write-Host "  compute nodes: $($summary.compute_node_count)"
+    Write-Host "  compute nodes: $($summary.compute_node_count) / $($summary.compute_resource_model)"
     Write-Host "  runtime status: $($summary.runtime_status_ms) ms"
     Write-Host "  console: $($summary.console_url) ($($summary.console_ms) ms)"
     Write-Host "  dashboard: $($summary.dashboard_url) ($($summary.dashboard_ms) ms)"
