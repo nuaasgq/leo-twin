@@ -1,5 +1,7 @@
 import { ScenarioConfig } from "../../core/event_types";
 
+const SMALL_SCALE_FULL_ICON_LIMIT = 120;
+
 export interface VisualLayerLimits {
   showSatellites: boolean;
   satelliteIconRenderLimit: number;
@@ -51,9 +53,12 @@ export function visualLayerLimits(
   const showLinks = visualization?.links ?? true;
   const showUsers = visualization?.users ?? true;
   const showMetrics = visualization?.metrics ?? true;
+  const configuredSatelliteCount = configuredVisualSatelliteCount(scenarioConfig);
   return {
     showSatellites,
-    satelliteIconRenderLimit: showSatellites ? 96 : 0,
+    satelliteIconRenderLimit: showSatellites
+      ? satelliteIconRenderLimit(configuredSatelliteCount)
+      : 0,
     satelliteModelRenderLimit: showSatellites ? 32 : 0,
     orbitTrackRenderLimit: showSatellites && showMetrics ? 48 : 0,
     beamRenderLimit: showSatellites && showMetrics ? 1 : 0,
@@ -61,6 +66,24 @@ export function visualLayerLimits(
     linkRenderLimit: showLinks ? 96 : 0,
     routeRenderLimit: showLinks && showMetrics ? 8 : 0
   };
+}
+
+export function satelliteIconRenderLimit(configuredSatelliteCount = 0): number {
+  if (configuredSatelliteCount > 0 && configuredSatelliteCount <= SMALL_SCALE_FULL_ICON_LIMIT) {
+    return configuredSatelliteCount;
+  }
+  return SMALL_SCALE_FULL_ICON_LIMIT;
+}
+
+function configuredVisualSatelliteCount(
+  scenarioConfig: ScenarioConfig | null | undefined
+): number {
+  const count =
+    scenarioConfig?.backend_summary?.derived_constellation_summary?.satellite_count ??
+    scenarioConfig?.scenario?.satellite_count ??
+    scenarioConfig?.satellites?.length ??
+    0;
+  return Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0;
 }
 
 export function applyLocalVisualLayerLimits(

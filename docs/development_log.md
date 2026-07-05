@@ -5,6 +5,42 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Dashboard Usability Firebreak v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending in this commit
+- Scope: fix several high-friction frontend observability issues without
+  changing runtime or Event Kernel behavior.
+- Changed files/modules:
+  - `frontend/src/3d/cesium/renderLimits.ts`
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/visualLayerLimits.test.ts`
+  - `frontend/tests/appSurface.test.ts`
+  - `frontend/tests/appCssLayout.test.js`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `pnpm --dir frontend test -- visualLayerLimits.test.ts appSurface.test.ts appCssLayout.test.js satelliteVisuals.test.ts`
+    - Result: passed, 25 files / 246 tests.
+  - Bundled Node:
+    `pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The 3D view kept satellite icon rendering capped at 96, so a 120-satellite
+    scenario looked incomplete even though all satellites remained selectable.
+  - The backpressure dismissal key included volatile per-tick samples, causing
+    the yellow pressure notice to reappear after every backend refresh.
+  - The standalone dashboard relied on an internal scroll container under a
+    fixed-height shell, which made full-page scrolling unreliable.
+- Known remaining issues:
+  - Large scenarios still intentionally render a bounded subset of satellite
+    icons to preserve 1200-node responsiveness; the backend remains the source
+    of truth for full counts.
+- Recommended follow-up:
+  - Add a compact visual budget indicator near the layer toggles so users can
+    distinguish full small-scale rendering from large-scale bounded rendering.
+
 ## 2026-07-05 - Configuration File-Only Scope v1
 
 - Branch: `feature/T164-dashboard-observability-v1`

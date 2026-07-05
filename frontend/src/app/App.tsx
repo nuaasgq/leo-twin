@@ -879,11 +879,6 @@ export function shouldShowBackpressureNotice(
 
 export function backpressureNoticeDismissKey(summary: RuntimeBackpressureSummary): string {
   return [
-    formatMilliseconds(summary.tick_duration_ms),
-    formatMilliseconds(summary.tick_budget_ms),
-    formatInteger(summary.queue_depth),
-    formatInteger(summary.processed_event_count),
-    formatInteger(summary.deferred_event_count),
     String(summary.overloaded),
     String(summary.first_tick_heavy),
     summary.bottleneck_component,

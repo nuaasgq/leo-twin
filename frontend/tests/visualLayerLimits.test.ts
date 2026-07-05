@@ -4,6 +4,7 @@ import { ScenarioConfig } from "../src/core/event_types";
 import {
   DEFAULT_LOCAL_VISUAL_LAYERS,
   applyLocalVisualLayerLimits,
+  satelliteIconRenderLimit,
   visualLayerControlSummary,
   visualLayerLimits,
   visualSatelliteModelRenderSatellites
@@ -13,7 +14,7 @@ describe("visualLayerLimits", () => {
   it("enables bounded network visual layers by default", () => {
     expect(visualLayerLimits(null)).toEqual({
       showSatellites: true,
-      satelliteIconRenderLimit: 96,
+      satelliteIconRenderLimit: 120,
       satelliteModelRenderLimit: 32,
       orbitTrackRenderLimit: 48,
       beamRenderLimit: 1,
@@ -61,7 +62,7 @@ describe("visualLayerLimits", () => {
 
     expect(visualLayerLimits(config)).toEqual({
       showSatellites: true,
-      satelliteIconRenderLimit: 96,
+      satelliteIconRenderLimit: 120,
       satelliteModelRenderLimit: 32,
       orbitTrackRenderLimit: 0,
       beamRenderLimit: 0,
@@ -117,6 +118,18 @@ describe("visualLayerLimits", () => {
       applyLocalVisualLayerLimits(disabledLimits, DEFAULT_LOCAL_VISUAL_LAYERS)
     ).toEqual(disabledLimits);
   });
+
+  it("shows every satellite icon for small 120-satellite scenarios", () => {
+    const config: ScenarioConfig = {
+      scenario: {
+        satellite_count: 120
+      }
+    };
+
+    expect(visualLayerLimits(config).satelliteIconRenderLimit).toBe(120);
+    expect(satelliteIconRenderLimit(72)).toBe(72);
+    expect(satelliteIconRenderLimit(1200)).toBe(120);
+  });
 });
 
 describe("visualLayerControlSummary", () => {
@@ -124,7 +137,7 @@ describe("visualLayerControlSummary", () => {
     expect(visualLayerControlSummary(null)).toEqual([
       { label: "国界", value: "显示", detail: "Natural Earth 国家边界" },
       { label: "点位", value: "显示", detail: "全部卫星点位" },
-      { label: "图标", value: "≤96", detail: "卫星图标上限" },
+      { label: "图标", value: "≤120", detail: "卫星图标上限" },
       { label: "模型", value: "≤32", detail: "GLB 模型上限，选中卫星优先" },
       { label: "轨迹", value: "≤48", detail: "轨道轨迹上限" },
       { label: "波束", value: "≤1", detail: "选中卫星覆盖波束" },

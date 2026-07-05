@@ -38,7 +38,7 @@ body {
 
 body[data-frontend-surface="dashboard"] {
   overflow-x: hidden;
-  overflow-y: hidden;
+  overflow-y: auto;
 }
 
 body[data-frontend-surface="dashboard"] #root {
@@ -60,8 +60,8 @@ body[data-frontend-surface="dashboard"] #root {
 body[data-frontend-surface="dashboard"] .app-shell {
   grid-template-rows: 66px minmax(0, 1fr);
   min-height: 100vh;
-  height: 100vh;
-  overflow: hidden;
+  height: auto;
+  overflow: visible;
 }
 
 .topbar {
@@ -497,9 +497,11 @@ body[data-frontend-surface="dashboard"] .app-shell {
 }
 
 .fidelity-notice.dashboard {
-  top: 14px;
-  right: 18px;
-  left: 18px;
+  position: relative;
+  top: auto;
+  right: auto;
+  left: auto;
+  margin: 14px 18px 0;
 }
 
 .fidelity-notice span,
@@ -542,7 +544,7 @@ body[data-frontend-surface="dashboard"] .app-shell {
 }
 
 .fidelity-notice.completion.dashboard {
-  top: 92px;
+  top: auto;
 }
 
 .fidelity-notice.completion span {
@@ -1326,7 +1328,7 @@ body[data-frontend-surface="dashboard"] .app-shell {
 body[data-frontend-surface="dashboard"] .dashboard-page {
   height: auto;
   min-height: 0;
-  overflow-y: auto;
+  overflow-y: visible;
   overflow-x: hidden;
 }
 
@@ -3147,7 +3149,7 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
   body[data-frontend-surface="dashboard"] .app-shell {
     grid-template-rows: auto minmax(0, 1fr);
     min-height: 100vh;
-    height: 100vh;
+    height: auto;
   }
 
   .topbar {
@@ -3191,8 +3193,7 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .fidelity-notice.control,
-  .fidelity-notice.dashboard {
+  .fidelity-notice.control {
     right: 12px;
     left: 12px;
   }

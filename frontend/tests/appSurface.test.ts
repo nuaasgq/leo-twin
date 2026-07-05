@@ -357,11 +357,22 @@ describe("backpressure notice", () => {
     );
   });
 
-  it("changes the dismiss key when backend pressure details change", () => {
+  it("keeps the dismiss key stable across volatile tick samples", () => {
+    expect(backpressureNoticeDismissKey(summary)).toBe(
+      backpressureNoticeDismissKey({
+        ...summary,
+        tick_duration_ms: 1500,
+        queue_depth: 64,
+        processed_event_count: 256
+      })
+    );
+  });
+
+  it("changes the dismiss key when the backend reports a different bottleneck", () => {
     expect(backpressureNoticeDismissKey(summary)).not.toBe(
       backpressureNoticeDismissKey({
         ...summary,
-        tick_duration_ms: 1500
+        bottleneck_component: "stream_cursor_delivery"
       })
     );
   });

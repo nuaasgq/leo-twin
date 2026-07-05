@@ -4,11 +4,15 @@ import { describe, expect, it } from "vitest";
 describe("dashboard scroll layout CSS", () => {
   const appCss = readFileSync("src/app/App.css", "utf8");
 
-  it("keeps the standalone dashboard as the scroll container", () => {
+  it("allows page-level scrolling for the standalone dashboard", () => {
+    expect(appCss).toContain('body[data-frontend-surface="dashboard"]');
+    expect(appCss).toContain("overflow-y: auto;");
     expect(appCss).toContain('body[data-frontend-surface="dashboard"] .app-shell');
     expect(appCss).toContain("grid-template-rows: 66px minmax(0, 1fr);");
+    expect(appCss).toContain("height: auto;");
+    expect(appCss).toContain("overflow: visible;");
     expect(appCss).toContain('body[data-frontend-surface="dashboard"] .dashboard-page');
-    expect(appCss).toContain("overflow-y: auto;");
+    expect(appCss).toContain("overflow-y: visible;");
   });
 
   it("keeps user and satellite detail tables visibly scrollable", () => {
@@ -24,5 +28,11 @@ describe("dashboard scroll layout CSS", () => {
     expect(appCss).toContain("grid-template-columns: repeat(4, minmax(0, 1fr));");
     expect(appCss).toContain(".data-panel-observability-note.limit");
     expect(appCss).toContain(".data-panel-observability-note.history");
+  });
+
+  it("keeps dashboard notices in document flow instead of covering panel content", () => {
+    expect(appCss).toContain(".fidelity-notice.dashboard");
+    expect(appCss).toContain("position: relative;");
+    expect(appCss).toContain("margin: 14px 18px 0;");
   });
 });
