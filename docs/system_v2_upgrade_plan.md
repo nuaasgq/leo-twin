@@ -246,6 +246,12 @@ Tasks:
   - Scope: formulas, assumptions, boundary conditions, deterministic seed,
     expected outputs.
   - Depends on: V2-070.
+  - Status: T218 adds
+    `leo_twin.model_verification_report_template.v1`, a deterministic
+    report-template service that consumes the benchmark scenario matrix plus
+    network and compute contracts to produce per-scenario boundary conditions,
+    determinism plans, formula checks, expected outputs, evidence checklists,
+    known limitations, and review decision values.
 - V2-072: Add benchmark acceptance tests.
   - Scope: deterministic summaries, KPI ranges, scale policy behavior.
   - Depends on: V2-070, V2-071.

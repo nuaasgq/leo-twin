@@ -5,6 +5,45 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Model Verification Report Template v1
+
+- Branch: `feature/T218-model-verification-report-template-v1`
+- Commit: pending in this commit
+- Scope: advance V2-071 by adding a deterministic model verification report
+  template service. The template consumes the benchmark scenario matrix plus
+  existing network and compute contracts to produce per-scenario boundary
+  conditions, determinism plans, network KPI formula checks, compute
+  service-time checks, expected outputs, evidence checklists, known
+  limitations, and review decision values.
+- Changed files/modules:
+  - `src/leo_twin/services/model_verification_report.py`
+  - `tests/unit/test_model_verification_report_template_v1.py`
+  - `docs/model_verification_report_template_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src/leo_twin/services/model_verification_report.py`
+    - Result: passed.
+  - `python -m pytest tests/unit/test_model_verification_report_template_v1.py -q`
+    - Result: passed, 6 tests.
+  - `python -m pytest tests/unit/test_benchmark_scenario_matrix_v1.py tests/unit/test_model_verification_report_template_v1.py -q`
+    - Result: passed, 14 tests.
+  - `python -m pytest tests/integration/test_product_acceptance_scenarios.py::test_acceptance_scenarios_leave_event_kernel_unchanged -q`
+    - Result: passed, 1 test.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - This task intentionally creates a report template and evidence checklist
+    only. It does not run simulations, generate result packages, or change
+    model behavior.
+  - Local runtime/generated config files remain dirty and are intentionally not
+    included in this task.
+- Known remaining issues / follow-up:
+  - V2-072 should use this template to add benchmark acceptance tests for
+    deterministic summaries, KPI ranges, and scale policy behavior.
+  - V2-073 should connect completed benchmark runs to exportable result
+    packages with config snapshot, events, metrics, summary, and runtime logs.
+
 ## 2026-07-06 - Benchmark Scenario Matrix v1
 
 - Branch: `feature/T217-benchmark-scenario-matrix-v1`
