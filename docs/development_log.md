@@ -4062,3 +4062,34 @@ change.
 - Recommended follow-up:
   - Add backend per-satellite vector usage slices once compute workload
     lifecycle metrics are expanded beyond FP32.
+
+## 2026-07-05 - Network KPI Acceptance v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add integration acceptance coverage for flow-level network quality
+  proxies used by the dashboard. The default integration demo must expose
+  non-zero effective loss and delay-variation proxies, and the UDP +
+  SLOTTED_ALOHA variant must carry its configured 8% route loss into metrics.
+- Changed files/modules:
+  - `tests/integration/test_full_system_demo.py`
+  - `docs/development_log.md`
+- Validation:
+  - `PYTHONPATH=src python -m pytest tests/integration/test_full_system_demo.py::test_network_stack_trace_uses_configured_protocols -q`
+    - Result: passed, 1 test.
+- Problems encountered:
+  - Initial ad-hoc inspection command failed because the local Python process
+    did not include `src` on `PYTHONPATH`; rerunning with `PYTHONPATH=src`
+    confirmed the metrics path and guided the test assertions.
+  - No production model code changed; the task records a regression guard for
+    existing backend KPI semantics.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - This test confirms integration-demo quality proxies, but it does not make
+    the model more physically accurate and does not introduce packet-level
+    loss or jitter simulation.
+- Recommended follow-up:
+  - Add route-quality scenario presets that let users deliberately choose
+    low-load, congested, lossy, or high-variation network conditions from the
+    control panel without changing the Event Kernel.

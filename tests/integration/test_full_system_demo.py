@@ -135,6 +135,11 @@ def test_network_stack_trace_uses_configured_protocols() -> None:
         for trace in result.network_stack_traces
         for layer in trace.layers
     )
+    assert result.metrics_summary["network_quality_effective_loss_proxy_rate"] > 0.0
+    assert (
+        result.metrics_summary["network_quality_effective_delay_variation_proxy_s"]
+        > 0.0
+    )
 
     udp_result = run_integration_demo(
         replace(
@@ -184,6 +189,20 @@ def test_network_stack_trace_uses_configured_protocols() -> None:
     assert custom_data_link_attributes["medium_access_efficiency"] == "0.620000"
     assert custom_data_link_attributes["collision_loss_rate"] == "0.080000"
     assert custom_data_link_attributes["contention_delay_s"] == "0.004000"
+    assert (
+        round(udp_result.metrics_summary["network_quality_route_loss_proxy_rate"], 6)
+        == 0.08
+    )
+    assert (
+        udp_result.metrics_summary["network_quality_effective_loss_proxy_rate"]
+        > 0.0
+    )
+    assert (
+        udp_result.metrics_summary[
+            "network_quality_effective_delay_variation_proxy_s"
+        ]
+        > 0.0
+    )
     assert udp_result.metrics_summary["route_latency_avg"] < result.metrics_summary[
         "route_latency_avg"
     ]
