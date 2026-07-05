@@ -3969,3 +3969,30 @@ change.
 - Recommended follow-up:
   - Add a segmented control for selecting FP32, FP64, GPU, NPU, memory, or
     storage trend lines in the compute chart.
+
+## 2026-07-05 - Frontend Visual Verification Script v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a single PowerShell verification script for frontend visual work.
+  The script verifies bundled visual assets, runs the relevant globe/dashboard
+  frontend test set, and builds the frontend.
+- Changed files/modules:
+  - `scripts/verify_frontend_visuals.ps1`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; powershell -ExecutionPolicy Bypass -File scripts\verify_frontend_visuals.ps1`
+    - Result: passed; verified 4 visual assets, 24 frontend test files / 178
+      tests passed, and frontend build passed.
+- Problems encountered:
+  - None. The script expects `pnpm` to be available on PATH and reports a clear
+    error if it is missing.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The script is still a code-level visual acceptance check; it does not take
+    browser screenshots.
+- Recommended follow-up:
+  - Add optional Playwright screenshot verification once the local browser
+    automation path is stable.
