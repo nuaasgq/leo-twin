@@ -160,6 +160,10 @@ Tasks:
 - V2-033: Add cache/offload/migration contracts.
   - Scope: contracts and observability only; behavior can be later.
   - Depends on: V2-032.
+  - Status: T216 adds `cache_offload_migration_contract_v1` to schema and
+    backend-derived summary. It defines cache lookup/fill, task offload, and
+    service migration observability fields while explicitly keeping behavior
+    disabled for v1.
 
 ### WS5. Runtime Scale and Stability v2
 

@@ -5,6 +5,52 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Cache Offload Migration Contracts v1
+
+- Branch: `feature/T216-cache-offload-migration-contracts-v1`
+- Commit: pending in this commit
+- Scope: advance V2-033 with a product-level
+  `cache_offload_migration_contract_v1`. The contract defines deterministic
+  action families for cache lookup, cache fill, task offload, and service
+  migration, including eligibility fields, decision fields, runtime
+  observability fields, statuses, deterministic inputs, and excluded semantics.
+  The backend-derived summary now exposes the contract with behavior flags set
+  to disabled, so the frontend can explain the roadmap vocabulary without
+  implying active runtime behavior.
+- Changed files/modules:
+  - `src/leo_twin/schema/cache_offload_migration_contract.py`
+  - `src/leo_twin/schema/__init__.py`
+  - `src/leo_twin/services/derived_summary.py`
+  - `tests/unit/test_cache_offload_migration_contract_v1.py`
+  - `tests/unit/test_backend_derived_summary.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `docs/cache_offload_migration_contract_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src/leo_twin/schema/cache_offload_migration_contract.py src/leo_twin/services/derived_summary.py`
+    - Result: passed.
+  - `python -m pytest tests/unit/test_cache_offload_migration_contract_v1.py tests/unit/test_backend_derived_summary.py -q`
+    - Result: passed, 12 tests.
+  - `python -m pytest tests/unit/test_compute_resource_contract_v2.py::test_backend_summary_exposes_compute_resource_contract_v2 -q`
+    - Result: passed, 1 test.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - This task intentionally does not implement cache, offload, or migration
+    behavior. It adds a contract and a backend-derived explanation surface only,
+    matching V2-033 scope.
+  - Local runtime/generated config files remain dirty and are intentionally not
+    included in this task.
+- Known remaining issues / follow-up:
+  - Future tasks should emit runtime observability fields when cache/offload/
+    migration decisions become active.
+  - A dashboard model assumptions panel should display this contract alongside
+    compute resource and service placement contracts.
+
 ## 2026-07-06 - Compute Task Timeline Summary v1
 
 - Branch: `feature/T215-compute-task-timeline-summary-v1`

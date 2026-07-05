@@ -10,6 +10,9 @@ from leo_twin.models.compute import ComputeResourceVector
 from leo_twin.models.orbit import ConstellationAllocation
 from leo_twin.models.traffic import TrafficClass, TrafficDestinationType
 from leo_twin.services.configuration_schema import USER_CONFIGURATION_SCHEMA_V2_ID
+from leo_twin.schema.cache_offload_migration_contract import (
+    cache_offload_migration_contract_v1_to_dict,
+)
 from leo_twin.schema.compute_resource_contract import compute_resource_contract_v2_to_dict
 from leo_twin.schema.network_model_contract import network_model_contract_v2_to_dict
 from leo_twin.schema.service_placement_contract import (
@@ -184,6 +187,17 @@ def build_backend_derived_summary(
             "all configured satellite compute nodes remain candidates."
         ),
     }
+    cache_offload_migration_contract = cache_offload_migration_contract_v1_to_dict()
+    cache_offload_migration_contract["configured_observability"] = {
+        "compute_node_count": compute_node_count,
+        "cache_behavior_enabled": False,
+        "offload_behavior_enabled": False,
+        "migration_behavior_enabled": False,
+        "observability_source": (
+            "Future fields will be derived from service_latency_history_v1, "
+            "compute_task_timeline_summary_v1, and node_detail_summary_v1."
+        ),
+    }
     coverage_summary = {
         "coverage_model": "DETERMINISTIC_GEOMETRIC_FOOTPRINT",
         "fidelity_level": "DISPLAY_APPROXIMATION",
@@ -223,6 +237,7 @@ def build_backend_derived_summary(
         "compute_resource_summary": compute_summary,
         "compute_resource_contract_v2": compute_resource_contract,
         "service_placement_contract_v2": service_placement_contract,
+        "cache_offload_migration_contract_v1": cache_offload_migration_contract,
         "coverage_beam_summary": coverage_summary,
         "network_model_contract_v2": network_model_contract,
         "configuration_explanation_v2": _configuration_explanation_v2(

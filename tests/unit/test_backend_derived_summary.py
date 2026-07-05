@@ -145,6 +145,29 @@ def test_backend_derived_summary_is_deterministic_and_frontend_ready() -> None:
         "capacity_unit": "GFLOPS FP32",
         "compatibility_note": "Legacy scalar capacity maps to cpu_gflops_fp32.",
     }
+    cache_offload_migration = first["cache_offload_migration_contract_v1"]
+    assert isinstance(cache_offload_migration, dict)
+    assert cache_offload_migration["contract_id"] == (
+        "leo_twin.cache_offload_migration_contract.v1"
+    )
+    assert cache_offload_migration["configured_observability"] == {
+        "compute_node_count": 300,
+        "cache_behavior_enabled": False,
+        "offload_behavior_enabled": False,
+        "migration_behavior_enabled": False,
+        "observability_source": (
+            "Future fields will be derived from service_latency_history_v1, "
+            "compute_task_timeline_summary_v1, and node_detail_summary_v1."
+        ),
+    }
+    assert tuple(
+        item["action"] for item in cache_offload_migration["action_contracts"]
+    ) == (
+        "CACHE_LOOKUP",
+        "CACHE_FILL",
+        "TASK_OFFLOAD",
+        "SERVICE_MIGRATION",
+    )
     assert first["coverage_beam_summary"] == {
         "coverage_model": "DETERMINISTIC_GEOMETRIC_FOOTPRINT",
         "fidelity_level": "DISPLAY_APPROXIMATION",

@@ -308,6 +308,7 @@ export interface BackendDerivedSummary {
   compute_resource_summary?: ComputeResourceSummary;
   compute_resource_contract_v2?: ComputeResourceContractV2;
   service_placement_contract_v2?: ServicePlacementContractV2;
+  cache_offload_migration_contract_v1?: CacheOffloadMigrationContractV1;
   coverage_beam_summary?: CoverageBeamSummary;
   network_model_contract_v2?: NetworkModelContractV2;
   fidelity_summary?: FidelitySummary;
@@ -433,6 +434,38 @@ export interface ServicePlacementConfiguredPolicyV2 {
   queue_state_source: string;
   max_queue_depth: number | null;
   candidate_count_policy: string;
+}
+
+export interface CacheOffloadMigrationContractV1 {
+  contract_id: string;
+  version: "v1" | string;
+  optimization_scope: string;
+  action_contracts: readonly ComputeServiceActionContractV1[];
+  canonical_statuses: readonly string[];
+  deterministic_inputs: readonly string[];
+  runtime_event_inputs: readonly string[];
+  runtime_state_outputs: readonly string[];
+  excluded_semantics: readonly string[];
+  model_note: string;
+  configured_observability?: CacheOffloadMigrationConfiguredObservabilityV1;
+}
+
+export interface ComputeServiceActionContractV1 {
+  action: string;
+  decision_model: string;
+  eligibility_fields: readonly string[];
+  decision_fields: readonly string[];
+  runtime_observability_fields: readonly string[];
+  excluded_semantics: readonly string[];
+  model_note: string;
+}
+
+export interface CacheOffloadMigrationConfiguredObservabilityV1 {
+  compute_node_count: number;
+  cache_behavior_enabled: boolean;
+  offload_behavior_enabled: boolean;
+  migration_behavior_enabled: boolean;
+  observability_source: string;
 }
 
 export interface NetworkModelContractV2 {
