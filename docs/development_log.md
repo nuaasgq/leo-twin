@@ -5,6 +5,62 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Dashboard User Config Preflight v1
+
+- Branch: `feature/T199-dashboard-user-config-preflight-v1`
+- Commit: pending in this commit
+- Scope: connect the dashboard user configuration panel to the backend
+  validate-only endpoint introduced in T198. The frontend now exposes
+  `validateUserConfigurationCandidate()` for
+  `POST /scenario/user-config/validate`, renders a JSON mapping preflight box
+  in the standalone dashboard, and displays accepted/rejected
+  `USER_CONFIGURATION_VALIDATION_REPORT` results including mutation policy,
+  normalized config hash, backend validation errors, and unknown/defaulting
+  policy. The UI is validate-only: it parses JSON and calls the preflight API,
+  but it does not send `CONFIG_UPDATE`, load templates, restore packages, write
+  files, initialize runtime, or apply candidate configuration.
+- Changed files/modules:
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/app/api.ts`
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/integration_demo.md`
+  - `docs/user_configuration_schema_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- api.test.ts dataPanel.test.ts appCssLayout.test.js`
+    - Result: passed, 25 files / 298 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing `DataPanel` chunk-size
+      warning after minification.
+  - `$env:PYTHONPATH='.'; python -m pytest tests/integration/test_config_control.py::test_control_plane_validates_user_configuration_without_applying -q`
+    - Result: passed.
+  - `git diff --check`
+    - Result: passed. Git still reported the pre-existing CRLF warning for
+      local runtime/config drift in `configs/generated_full_system_demo.json`
+      and `configs/sees_control.yaml`.
+- Problems encountered:
+  - None in implementation. The task intentionally keeps apply/import out of
+    scope so invalid configs cannot silently mutate runtime state.
+  - The working tree still contains unrelated local runtime/config drift in
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`;
+    these files are intentionally left unstaged and unchanged by this task.
+- Known remaining issues / follow-up:
+  - The preflight box currently accepts JSON mappings. A later task should add
+    file upload/YAML parsing and a guarded apply workflow that requires an
+    accepted preflight result.
+  - A future UI task should separate DataPanel into smaller lazy chunks; Vite
+    still reports the existing DataPanel chunk-size warning.
+
 ## 2026-07-06 - User Config Validation API v1
 
 - Branch: `feature/T198-user-config-validate-api-v1`

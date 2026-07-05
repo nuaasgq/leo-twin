@@ -12,6 +12,7 @@ import {
   loadUserConfigurationExport,
   loadUserConfigurationSchema,
   loadUserConfigurationTemplates,
+  validateUserConfigurationCandidate,
   runtimeExportArchiveHref,
   runtimeExportPackageArchiveHref,
   runtimeExportPackageCompareHref,
@@ -22,6 +23,7 @@ import {
   userConfigurationExportHref,
   userConfigurationSchemaHref,
   userConfigurationTemplatesHref,
+  userConfigurationValidateHref,
   runtimeApiErrorMessage
 } from "../src/app/api";
 
@@ -60,6 +62,7 @@ describe("runtime API diagnostics", () => {
     expect(userConfigurationSchemaHref()).toBe("/scenario/user-config/schema");
     expect(userConfigurationTemplatesHref()).toBe("/scenario/user-config/templates");
     expect(userConfigurationExportHref()).toBe("/scenario/user-config/export");
+    expect(userConfigurationValidateHref()).toBe("/scenario/user-config/validate");
   });
 
   it("loads runtime export package compare previews", async () => {
@@ -328,6 +331,63 @@ describe("runtime API diagnostics", () => {
     expect(fetchMock).toHaveBeenNthCalledWith(1, "/scenario/user-config/schema");
     expect(fetchMock).toHaveBeenNthCalledWith(2, "/scenario/user-config/templates");
     expect(fetchMock).toHaveBeenNthCalledWith(3, "/scenario/user-config/export");
+  });
+
+  it("validates user configuration candidates through the backend preflight endpoint", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        type: "USER_CONFIGURATION_VALIDATION_REPORT",
+        summary: {
+          version: "v1",
+          source: "BACKEND_USER_CONFIGURATION",
+          schema_id: "sees.user_configuration.v2",
+          validation_scope: "USER_PROVIDED_CONFIG_MAPPING",
+          format: "JSON_MAPPING",
+          mutation_policy: "VALIDATE_ONLY_NO_APPLY",
+          unknown_key_policy: "REJECT",
+          defaulting_policy: "OMITTED_FIELDS_USE_BACKEND_DEFAULTS",
+          ok: true,
+          error_count: 0,
+          errors: [],
+          normalized_config_hash: "sha256:normalized",
+          normalized_config: {
+            scenario: {
+              satellite_count: 72
+            }
+          },
+          apply_command: {
+            type: "RUNTIME_CONTROL",
+            action: "CONFIG_UPDATE",
+            requires_explicit_user_action: true
+          }
+        }
+      })
+    }));
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+
+    await expect(
+      validateUserConfigurationCandidate({
+        scenario: {
+          satellite_count: 72
+        }
+      })
+    ).resolves.toMatchObject({
+      ok: true,
+      mutation_policy: "VALIDATE_ONLY_NO_APPLY",
+      normalized_config_hash: "sha256:normalized"
+    });
+    expect(fetchMock).toHaveBeenCalledWith("/scenario/user-config/validate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        scenario: {
+          satellite_count: 72
+        }
+      })
+    });
   });
 
   it("includes endpoint and HTTP status when runtime status fails", async () => {

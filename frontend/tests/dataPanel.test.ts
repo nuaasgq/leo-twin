@@ -34,6 +34,7 @@ import {
   buildDataPanelTrafficDisplay,
   buildDataPanelUserConfigurationContractDisplay,
   buildDataPanelUserConfigurationFieldSections,
+  buildDataPanelUserConfigurationValidationDisplay,
   buildUserBusinessRequestInspector,
   buildDataPanelUserRequestHistory,
   buildRuntimeKpiTelemetrySamples,
@@ -885,6 +886,97 @@ describe("buildDataPanelUserConfigurationFieldSections", () => {
     expect(sections[2]?.sampleFields[0]?.label).toBe(
       "ui.visualization.coverage · 覆盖显示"
     );
+  });
+});
+
+describe("buildDataPanelUserConfigurationValidationDisplay", () => {
+  it("summarizes accepted and rejected validation reports", () => {
+    expect(
+      buildDataPanelUserConfigurationValidationDisplay({
+        version: "v1",
+        source: "BACKEND_USER_CONFIGURATION",
+        schema_id: "sees.user_configuration.v2",
+        validation_scope: "USER_PROVIDED_CONFIG_MAPPING",
+        format: "JSON_MAPPING",
+        mutation_policy: "VALIDATE_ONLY_NO_APPLY",
+        unknown_key_policy: "REJECT",
+        defaulting_policy: "OMITTED_FIELDS_USE_BACKEND_DEFAULTS",
+        ok: true,
+        error_count: 0,
+        errors: [],
+        normalized_config_hash:
+          "sha256:abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+        normalized_config: {
+          scenario: {
+            satellite_count: 72
+          }
+        },
+        apply_command: {
+          type: "RUNTIME_CONTROL",
+          action: "CONFIG_UPDATE",
+          requires_explicit_user_action: true
+        }
+      })
+    ).toEqual({
+      tone: "match",
+      statusLabel: "配置可通过预检",
+      detailLabel: "normalized abcdefabcdef",
+      metaLabels: [
+        "scope USER_PROVIDED_CONFIG_MAPPING",
+        "mutation VALIDATE_ONLY_NO_APPLY",
+        "unknown REJECT",
+        "default OMITTED_FIELDS_USE_BACKEND_DEFAULTS"
+      ],
+      errorLabels: []
+    });
+
+    expect(
+      buildDataPanelUserConfigurationValidationDisplay({
+        version: "v1",
+        source: "BACKEND_USER_CONFIGURATION",
+        schema_id: "sees.user_configuration.v2",
+        validation_scope: "USER_PROVIDED_CONFIG_MAPPING",
+        format: "JSON_MAPPING",
+        mutation_policy: "VALIDATE_ONLY_NO_APPLY",
+        unknown_key_policy: "REJECT",
+        defaulting_policy: "OMITTED_FIELDS_USE_BACKEND_DEFAULTS",
+        ok: false,
+        error_count: 1,
+        errors: [
+          {
+            source: "config_loader",
+            message: "unknown scenario keys: unsupported_compute_gpu"
+          }
+        ],
+        normalized_config_hash: null,
+        normalized_config: null,
+        apply_command: {
+          type: "RUNTIME_CONTROL",
+          action: "CONFIG_UPDATE",
+          requires_explicit_user_action: true
+        }
+      })
+    ).toMatchObject({
+      tone: "error",
+      statusLabel: "配置预检未通过",
+      detailLabel: "1 个错误",
+      errorLabels: ["config_loader: unknown scenario keys: unsupported_compute_gpu"]
+    });
+  });
+
+  it("reports pending, request error, and empty validation states", () => {
+    expect(buildDataPanelUserConfigurationValidationDisplay(null, true)).toMatchObject({
+      tone: "pending",
+      statusLabel: "后端预检中"
+    });
+    expect(
+      buildDataPanelUserConfigurationValidationDisplay(null, false, "HTTP 400")
+    ).toMatchObject({
+      tone: "error",
+      statusLabel: "预检请求失败",
+      errorLabels: ["HTTP 400"]
+    });
+    expect(buildDataPanelUserConfigurationValidationDisplay(null)).toBeNull();
   });
 });
 

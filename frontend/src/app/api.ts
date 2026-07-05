@@ -22,7 +22,9 @@ import {
   UserConfigurationSchemaEnvelope,
   UserConfigurationSchemaV2,
   UserConfigurationTemplateCatalogEnvelope,
-  UserConfigurationTemplateCatalogV1
+  UserConfigurationTemplateCatalogV1,
+  UserConfigurationValidationReportEnvelope,
+  UserConfigurationValidationReportV1
 } from "../core/event_types";
 
 export const DEFAULT_RUNTIME_EXPORT_ARCHIVE_ENDPOINT = "/runtime/export/archive";
@@ -30,6 +32,7 @@ export const DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT = "/runtime/export/package
 export const DEFAULT_USER_CONFIG_SCHEMA_ENDPOINT = "/scenario/user-config/schema";
 export const DEFAULT_USER_CONFIG_TEMPLATES_ENDPOINT = "/scenario/user-config/templates";
 export const DEFAULT_USER_CONFIG_EXPORT_ENDPOINT = "/scenario/user-config/export";
+export const DEFAULT_USER_CONFIG_VALIDATE_ENDPOINT = "/scenario/user-config/validate";
 
 export async function loadScenarioConfig(endpoint = "/scenario/config"): Promise<ScenarioConfig> {
   const response = await fetch(endpoint);
@@ -169,6 +172,23 @@ export async function loadUserConfigurationExport(
   return decodeUserConfigurationExport(await response.json()).summary;
 }
 
+export async function validateUserConfigurationCandidate(
+  candidate: unknown,
+  endpoint = DEFAULT_USER_CONFIG_VALIDATE_ENDPOINT
+): Promise<UserConfigurationValidationReportV1> {
+  const response = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(candidate)
+  });
+  if (!response.ok) {
+    throw new Error(`failed to validate user configuration from ${endpoint}: HTTP ${response.status}`);
+  }
+  return decodeUserConfigurationValidationReport(await response.json()).summary;
+}
+
 export function runtimeApiErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   if (
@@ -256,6 +276,12 @@ export function userConfigurationTemplatesHref(
 
 export function userConfigurationExportHref(
   endpoint = DEFAULT_USER_CONFIG_EXPORT_ENDPOINT
+): string {
+  return endpoint;
+}
+
+export function userConfigurationValidateHref(
+  endpoint = DEFAULT_USER_CONFIG_VALIDATE_ENDPOINT
 ): string {
   return endpoint;
 }
@@ -406,6 +432,22 @@ export function decodeUserConfigurationExport(value: unknown): UserConfiguration
     ...(value as Record<string, unknown>),
     summary: summary as UserConfigurationExportV1
   } as UserConfigurationExportEnvelope;
+}
+
+export function decodeUserConfigurationValidationReport(
+  value: unknown
+): UserConfigurationValidationReportEnvelope {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError("user configuration validation response must be an object");
+  }
+  const summary = (value as { summary?: unknown }).summary;
+  if (typeof summary !== "object" || summary === null || Array.isArray(summary)) {
+    throw new TypeError("user configuration validation response must include summary object");
+  }
+  return {
+    ...(value as Record<string, unknown>),
+    summary: summary as UserConfigurationValidationReportV1
+  } as UserConfigurationValidationReportEnvelope;
 }
 
 export function decodeRuntimeStatusEnvelope(value: unknown): RuntimeStatusEnvelope {

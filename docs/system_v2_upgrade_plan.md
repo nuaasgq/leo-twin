@@ -63,8 +63,8 @@ Tasks:
   - Output: no silent fallback on invalid keys.
   - Depends on: V2-001, V2-003.
   - Status: preflight validation API implemented in T198 as
-    `POST /scenario/user-config/validate`; guarded frontend upload/apply is
-    still pending.
+    `POST /scenario/user-config/validate`; dashboard JSON preflight UI
+    implemented in T199; guarded frontend upload/apply is still pending.
 
 ### WS2. Business Demand Model v2
 

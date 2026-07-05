@@ -1955,6 +1955,132 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
   color: var(--accent-cyan);
 }
 
+.data-panel-config-validate {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  border-top: 1px solid #213442;
+  padding-top: 8px;
+}
+
+.data-panel-config-validate-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.data-panel-config-validate-head div,
+.data-panel-config-validate-result div {
+  min-width: 0;
+}
+
+.data-panel-config-validate-head span,
+.data-panel-config-validate-head strong,
+.data-panel-config-validate-result span,
+.data-panel-config-validate-result strong {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.data-panel-config-validate-head span,
+.data-panel-config-validate-result span {
+  color: var(--app-muted);
+  font-size: 10px;
+}
+
+.data-panel-config-validate-head strong,
+.data-panel-config-validate-result strong {
+  margin-top: 3px;
+  color: var(--app-text);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.data-panel-config-validate-head button {
+  border: 1px solid #315061;
+  border-radius: 5px;
+  padding: 7px 10px;
+  background: #10202b;
+  color: var(--app-text);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.data-panel-config-validate-head button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.data-panel-config-validate textarea {
+  width: 100%;
+  min-height: 118px;
+  resize: vertical;
+  border: 1px solid #263a48;
+  border-radius: 6px;
+  padding: 8px;
+  background: #071018;
+  color: var(--app-text);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.data-panel-config-validate-result {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  border: 1px solid #2b4a57;
+  border-radius: 6px;
+  padding: 8px;
+  background: #09131a;
+}
+
+.data-panel-config-validate-result.match {
+  border-color: #2c5b48;
+  background: #0a1713;
+}
+
+.data-panel-config-validate-result.pending {
+  border-color: #365068;
+  background: #0d151d;
+}
+
+.data-panel-config-validate-result.error {
+  border-color: #663333;
+  background: #1a0d0d;
+}
+
+.data-panel-config-validate-meta,
+.data-panel-config-validate-errors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.data-panel-config-validate-meta span,
+.data-panel-config-validate-errors span {
+  min-width: 0;
+  max-width: 100%;
+  border: 1px solid #263a48;
+  border-radius: 5px;
+  padding: 5px 7px;
+  background: #0b1219;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.data-panel-config-validate-errors span {
+  border-color: #5c3434;
+  color: #ffd7d7;
+}
+
 .data-panel-export-compare {
   display: grid;
   gap: 8px;

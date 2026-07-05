@@ -631,6 +631,39 @@ export interface UserConfigurationExportEnvelope {
   summary: UserConfigurationExportV1;
 }
 
+export interface UserConfigurationValidationReportV1 {
+  version: "v1" | string;
+  source: string;
+  schema_id: string;
+  validation_scope: string;
+  format: string;
+  mutation_policy: string;
+  unknown_key_policy: string;
+  defaulting_policy: string;
+  ok: boolean;
+  error_count: number;
+  errors: readonly UserConfigurationValidationErrorV1[];
+  normalized_config_hash: string | null;
+  normalized_config: Record<string, unknown> | null;
+  apply_command: UserConfigurationValidationApplyCommandV1;
+}
+
+export interface UserConfigurationValidationErrorV1 {
+  source: string;
+  message: string;
+}
+
+export interface UserConfigurationValidationApplyCommandV1 {
+  type: string;
+  action: string;
+  requires_explicit_user_action: boolean;
+}
+
+export interface UserConfigurationValidationReportEnvelope {
+  type: "USER_CONFIGURATION_VALIDATION_REPORT" | string;
+  summary: UserConfigurationValidationReportV1;
+}
+
 export interface CoverageBeamSummary {
   coverage_model: string;
   fidelity_level?: string;

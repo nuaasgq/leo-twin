@@ -92,6 +92,11 @@ section in the auxiliary model analysis area. It summarizes configuration
 surfaces, deterministic policy, model boundaries, and per-section current
 values directly from the backend object.
 
+The dashboard user configuration panel also includes a JSON mapping preflight
+box. It calls `/scenario/user-config/validate`, displays accepted/rejected
+validation results, normalized config hash, and backend error messages, but it
+does not send `CONFIG_UPDATE` or mutate runtime state.
+
 Each field schema includes:
 
 - path

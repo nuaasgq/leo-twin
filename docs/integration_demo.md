@@ -178,7 +178,10 @@ accepted, but it never writes config files, initializes runtime state, or
 applies a `CONFIG_UPDATE`.
 The standalone dashboard also shows these links in the user configuration
 contract section so users can download the current full configuration and
-inspect the backend schema without editing runtime state.
+inspect the backend schema without editing runtime state. The dashboard also
+provides a JSON mapping preflight box that calls
+`POST /scenario/user-config/validate` and displays the validation report without
+applying the candidate configuration.
 
 Persisted package artifact routes:
 

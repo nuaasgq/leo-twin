@@ -42,7 +42,8 @@ import {
   RuntimeUserRequestSummaryV1,
   UserConfigurationExportV1,
   UserConfigurationSchemaV2,
-  UserConfigurationTemplateCatalogV1
+  UserConfigurationTemplateCatalogV1,
+  UserConfigurationValidationReportV1
 } from "../../core/event_types";
 import {
   runtimeExportArchiveHref,
@@ -53,7 +54,8 @@ import {
   runtimeExportRestorePreflightHref,
   userConfigurationExportHref,
   userConfigurationSchemaHref,
-  userConfigurationTemplatesHref
+  userConfigurationTemplatesHref,
+  userConfigurationValidateHref
 } from "../../app/api";
 import { runtimeSpeedFactorLabel } from "../../runtime_display";
 import { WorldSnapshot } from "../../state/snapshot_engine";
@@ -102,6 +104,16 @@ export interface RuntimeDetailPages {
 
 const USER_DETAIL_PAGE_SIZE = 80;
 const SATELLITE_DETAIL_PAGE_SIZE = 120;
+const DEFAULT_USER_CONFIGURATION_VALIDATE_TEXT = `{
+  "scenario": {
+    "satellite_count": 72,
+    "compute_nodes": 72
+  },
+  "runtime": {
+    "duration": 600,
+    "seed": 20260703
+  }
+}`;
 
 export const DataPanel = memo(function DataPanel({
   snapshot,
@@ -124,6 +136,7 @@ export const DataPanel = memo(function DataPanel({
   userConfigurationExport,
   userConfigurationContractLoading,
   userConfigurationContractError,
+  onUserConfigurationValidate,
   onRuntimeExportCompareSelect,
   onRuntimeExportRestore,
   displaySimTime,
@@ -150,6 +163,9 @@ export const DataPanel = memo(function DataPanel({
   userConfigurationExport?: UserConfigurationExportV1 | null;
   userConfigurationContractLoading?: boolean;
   userConfigurationContractError?: string | null;
+  onUserConfigurationValidate?: (
+    candidate: unknown
+  ) => Promise<UserConfigurationValidationReportV1>;
   onRuntimeExportCompareSelect?: (packageId: string) => void;
   onRuntimeExportRestore?: (packageId: string) => void;
   displaySimTime: number;
@@ -172,6 +188,15 @@ export const DataPanel = memo(function DataPanel({
   const [restoreConfirmPackageId, setRestoreConfirmPackageId] = useState<string | null>(
     null
   );
+  const [userConfigurationValidateText, setUserConfigurationValidateText] = useState(
+    DEFAULT_USER_CONFIGURATION_VALIDATE_TEXT
+  );
+  const [userConfigurationValidateReport, setUserConfigurationValidateReport] =
+    useState<UserConfigurationValidationReportV1 | null>(null);
+  const [userConfigurationValidatePending, setUserConfigurationValidatePending] =
+    useState(false);
+  const [userConfigurationValidateError, setUserConfigurationValidateError] =
+    useState<string | null>(null);
   const summary = buildDataPanelDisplaySummary(
     buildDataPanelSummary(snapshot),
     displaySimTime,
@@ -198,6 +223,12 @@ export const DataPanel = memo(function DataPanel({
     userConfigurationContractLoading,
     userConfigurationContractError
   );
+  const userConfigurationValidationDisplay =
+    buildDataPanelUserConfigurationValidationDisplay(
+      userConfigurationValidateReport,
+      userConfigurationValidatePending,
+      userConfigurationValidateError
+    );
   const configurationExplanationDisplay = buildDataPanelConfigurationExplanationDisplay(
     generatedConfig?.backend_summary?.configuration_explanation_v2
   );
@@ -368,6 +399,24 @@ export const DataPanel = memo(function DataPanel({
     runtimeStatus.satellite_kpi_slices_v1,
     runtimeStatus.satellite_kpi_history_v1
   );
+  const submitUserConfigurationValidation = async () => {
+    if (onUserConfigurationValidate === undefined || userConfigurationValidatePending) {
+      return;
+    }
+    setUserConfigurationValidatePending(true);
+    setUserConfigurationValidateError(null);
+    try {
+      const candidate = JSON.parse(userConfigurationValidateText) as unknown;
+      const report = await onUserConfigurationValidate(candidate);
+      setUserConfigurationValidateReport(report);
+    } catch (error) {
+      setUserConfigurationValidateReport(null);
+      const message = error instanceof Error ? error.message : String(error);
+      setUserConfigurationValidateError(`配置预检失败：${message}`);
+    } finally {
+      setUserConfigurationValidatePending(false);
+    }
+  };
 
   return (
     <section className="data-panel" aria-label="独立数据态势面板">
@@ -474,6 +523,54 @@ export const DataPanel = memo(function DataPanel({
                 export
               </a>
             </div>
+          </div>
+          <div className="data-panel-config-validate" aria-label="用户配置预检">
+            <div className="data-panel-config-validate-head">
+              <div>
+                <span>配置预检</span>
+                <strong>JSON 映射只校验，不应用</strong>
+              </div>
+              <button
+                type="button"
+                disabled={
+                  onUserConfigurationValidate === undefined ||
+                  userConfigurationValidatePending
+                }
+                onClick={() => {
+                  void submitUserConfigurationValidation();
+                }}
+              >
+                {userConfigurationValidatePending ? "预检中" : "预检"}
+              </button>
+            </div>
+            <textarea
+              aria-label="待预检用户配置 JSON"
+              spellCheck={false}
+              value={userConfigurationValidateText}
+              onChange={(event) => setUserConfigurationValidateText(event.target.value)}
+            />
+            {userConfigurationValidationDisplay ? (
+              <div
+                className={`data-panel-config-validate-result ${userConfigurationValidationDisplay.tone}`}
+              >
+                <div>
+                  <span>{userConfigurationValidationDisplay.statusLabel}</span>
+                  <strong>{userConfigurationValidationDisplay.detailLabel}</strong>
+                </div>
+                <div className="data-panel-config-validate-meta">
+                  {userConfigurationValidationDisplay.metaLabels.map((label) => (
+                    <span key={label}>{label}</span>
+                  ))}
+                </div>
+                {userConfigurationValidationDisplay.errorLabels.length > 0 ? (
+                  <div className="data-panel-config-validate-errors">
+                    {userConfigurationValidationDisplay.errorLabels.map((label) => (
+                      <span key={label}>{label}</span>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </div>
           {userConfigurationContractDisplay.fieldSections.length > 0 ? (
             <div
@@ -4755,6 +4852,57 @@ export function buildDataPanelUserConfigurationFieldSections(
     });
   });
   return sectionDisplays;
+}
+
+export interface DataPanelUserConfigurationValidationDisplay {
+  tone: "match" | "pending" | "error";
+  statusLabel: string;
+  detailLabel: string;
+  metaLabels: readonly string[];
+  errorLabels: readonly string[];
+}
+
+export function buildDataPanelUserConfigurationValidationDisplay(
+  report: UserConfigurationValidationReportV1 | null | undefined,
+  pending = false,
+  error: string | null | undefined = null
+): DataPanelUserConfigurationValidationDisplay | null {
+  if (pending) {
+    return {
+      tone: "pending",
+      statusLabel: "后端预检中",
+      detailLabel: "正在校验 JSON 映射，不会应用配置",
+      metaLabels: ["mutation VALIDATE_ONLY_NO_APPLY"],
+      errorLabels: []
+    };
+  }
+  if (error !== null && error !== undefined) {
+    return {
+      tone: "error",
+      statusLabel: "预检请求失败",
+      detailLabel: error,
+      metaLabels: ["mutation none", `endpoint ${userConfigurationValidateHref()}`],
+      errorLabels: [error]
+    };
+  }
+  if (report === null || report === undefined) {
+    return null;
+  }
+  const normalizedHash = report.normalized_config_hash ?? "";
+  return {
+    tone: report.ok ? "match" : "error",
+    statusLabel: report.ok ? "配置可通过预检" : "配置预检未通过",
+    detailLabel: report.ok
+      ? `normalized ${shortRuntimeHash(normalizedHash)}`
+      : `${formatCount(report.error_count)} 个错误`,
+    metaLabels: [
+      `scope ${report.validation_scope}`,
+      `mutation ${report.mutation_policy}`,
+      `unknown ${report.unknown_key_policy}`,
+      `default ${report.defaulting_policy}`
+    ],
+    errorLabels: report.errors.map((item) => `${item.source}: ${item.message}`)
+  };
 }
 
 export interface DataPanelConfigurationExplanationDisplay {

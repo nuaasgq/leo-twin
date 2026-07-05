@@ -19,7 +19,8 @@ import {
   ScenarioConfig,
   UserConfigurationExportV1,
   UserConfigurationSchemaV2,
-  UserConfigurationTemplateCatalogV1
+  UserConfigurationTemplateCatalogV1,
+  UserConfigurationValidationReportV1
 } from "../core/event_types";
 import { SnapshotEngine, WorldSnapshot, useWorldSnapshot } from "../state/snapshot_engine";
 import { runtimeSpeedFactorLabel } from "../runtime_display";
@@ -40,7 +41,8 @@ import {
   loadUserConfigurationExport,
   loadUserConfigurationSchema,
   loadUserConfigurationTemplates,
-  runtimeApiErrorMessage
+  runtimeApiErrorMessage,
+  validateUserConfigurationCandidate
 } from "./api";
 import type { RuntimeDetailPages } from "../dashboard/data_panel/DataPanel";
 import "./App.css";
@@ -354,6 +356,13 @@ export function App() {
     }
     setUserConfigurationContractLoading(false);
   }, []);
+
+  const validateUserConfiguration = useCallback(
+    async (candidate: unknown): Promise<UserConfigurationValidationReportV1> => {
+      return validateUserConfigurationCandidate(candidate);
+    },
+    []
+  );
 
   const loadControlState = useCallback(async () => {
     const [scenario, runtime, visibleSnapshot] = await Promise.all([
@@ -905,6 +914,7 @@ export function App() {
               userConfigurationExport={userConfigurationExport}
               userConfigurationContractLoading={userConfigurationContractLoading}
               userConfigurationContractError={userConfigurationContractError}
+              onUserConfigurationValidate={validateUserConfiguration}
               onRuntimeExportCompareSelect={refreshRuntimeExportCompare}
               onRuntimeExportRestore={restoreRuntimeExportPackage}
               displaySimTime={displaySimTime}
