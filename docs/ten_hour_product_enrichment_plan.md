@@ -437,6 +437,10 @@ The following issue-sized slices have now been delivered on
   - Runtime health smoke now verifies backend-derived constellation, traffic,
     and compute summaries and reports satellite count, user count, profile,
     traffic class, and compute node count.
+- `test(runtime): add expected health summary checks`
+  - Maps to suggestions 91-95.
+  - Runtime health smoke now supports opt-in expected satellite count, user
+    count, and traffic class assertions for acceptance scenario checks.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected

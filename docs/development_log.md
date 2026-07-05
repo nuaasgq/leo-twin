@@ -5007,3 +5007,30 @@ change.
 - Recommended follow-up:
   - Add optional expected-value parameters for satellite count, user count, and
     traffic class once acceptance scenarios are selected by script.
+
+## 2026-07-05 - Runtime Health Expected Summary v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add optional expected-value checks to
+  `scripts/smoke_runtime_health.ps1` for satellite count, user count, and
+  traffic class. Defaults remain non-strict so the smoke script still works for
+  ad-hoc local scenarios.
+- Changed files/modules:
+  - `scripts/smoke_runtime_health.ps1`
+  - `docs/integration_demo.md`
+  - `docs/product_acceptance_scenarios.md`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\smoke_runtime_health.ps1 -JsonSummary -ExpectedSatelliteCount 120 -ExpectedUserCount 100 -ExpectedTrafficClass COMPUTE_SERVICE`
+    - Result: passed against the local running demo services.
+- Problems encountered:
+  - None. Expected-value checks are opt-in and read-only.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - Expected values are command-line parameters rather than scenario YAML driven.
+- Recommended follow-up:
+  - Load expected counts from acceptance scenario YAML when acceptance scenario
+    selection is automated.

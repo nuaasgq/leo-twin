@@ -2,7 +2,10 @@ param(
     [int]$BackendPort = 8765,
     [int]$FrontendPort = 5173,
     [int]$TimeoutSeconds = 3,
-    [switch]$JsonSummary
+    [switch]$JsonSummary,
+    [int]$ExpectedSatelliteCount = -1,
+    [int]$ExpectedUserCount = -1,
+    [string]$ExpectedTrafficClass = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -79,6 +82,20 @@ if ($null -eq $backendSummary.compute_resource_summary) {
 $consoleCheck = Assert-HttpOk -Name "Frontend console" -Url $FrontendUrl
 $dashboardCheck = Assert-HttpOk -Name "Frontend dashboard" -Url $DashboardUrl
 
+$satelliteCount = [int]$backendSummary.derived_constellation_summary.satellite_count
+$userCount = [int]$runtimeStatus.generated_config.user_count
+$trafficClass = [string]$backendSummary.traffic_demand_summary.traffic_class
+
+if ($ExpectedSatelliteCount -ge 0 -and $satelliteCount -ne $ExpectedSatelliteCount) {
+    throw "Expected satellite_count=$ExpectedSatelliteCount, got $satelliteCount."
+}
+if ($ExpectedUserCount -ge 0 -and $userCount -ne $ExpectedUserCount) {
+    throw "Expected user_count=$ExpectedUserCount, got $userCount."
+}
+if ($ExpectedTrafficClass -and $trafficClass -ne $ExpectedTrafficClass) {
+    throw "Expected traffic_class=$ExpectedTrafficClass, got $trafficClass."
+}
+
 $summary = [ordered]@{
     ok = $true
     runtime_status_url = $RuntimeStatusUrl
@@ -86,10 +103,10 @@ $summary = [ordered]@{
     lifecycle_state = $runtimeStatus.status.lifecycle_state
     simulation_status = $runtimeStatus.status.status
     session_id = $runtimeStatus.status.session_id
-    satellite_count = $backendSummary.derived_constellation_summary.satellite_count
-    user_count = $runtimeStatus.generated_config.user_count
+    satellite_count = $satelliteCount
+    user_count = $userCount
     constellation_profile = $backendSummary.derived_constellation_summary.profile
-    traffic_class = $backendSummary.traffic_demand_summary.traffic_class
+    traffic_class = $trafficClass
     compute_node_count = $backendSummary.compute_resource_summary.compute_node_count
     console_url = $FrontendUrl
     console_ms = $consoleCheck.ElapsedMs
