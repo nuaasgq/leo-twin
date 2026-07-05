@@ -92,6 +92,8 @@ describe("runtime status contract fixture", () => {
       service_placement_bottleneck_resource: "cpu_gflops_fp32",
       service_placement_candidate_count: 4,
       service_placement_capable_candidate_count: 4,
+      service_placement_candidate_queue_label:
+        "sat-00001:PLACED/available=0s/q=0/finish=124s",
       first_sample_sim_time: 120,
       last_sample_sim_time: 124,
       complete: true,

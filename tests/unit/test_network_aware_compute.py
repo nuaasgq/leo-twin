@@ -150,6 +150,10 @@ def test_route_aware_compute_uses_route_endpoint_node_when_present() -> None:
     assert decision.bottleneck_resource == "cpu_gflops_fp32"
     assert decision.candidate_count == 1
     assert decision.capable_candidate_count == 1
+    assert (
+        decision.candidate_queue_label
+        == "node-a:PLACED/available=0s/q=0/finish=6s"
+    )
 
 
 def test_route_aware_compute_applies_scheduling_policy_to_ready_batch() -> None:

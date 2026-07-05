@@ -68,9 +68,16 @@ runtime emits it:
 - `service_placement_bottleneck_resource`
 - `service_placement_candidate_count`
 - `service_placement_capable_candidate_count`
+- `service_placement_candidate_queue_label`
 
 The same placement metadata is passed through backend-owned user request
 summaries when service history is available.
+
+`service_placement_candidate_queue_label` is a bounded, deterministic
+observability string. It lists at most the first five candidate nodes after
+normalization by node id, including placement status, candidate `available_at`,
+queued task count, and either finish time or rejection reason. Larger candidate
+sets append `+N more` instead of expanding every node into runtime history.
 
 ## Rejection Reasons
 

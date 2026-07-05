@@ -93,6 +93,9 @@ def test_compute_service_lifecycle_emits_component_metrics() -> None:
     assert decisions[0].bottleneck_resource == "cpu_gflops_fp32"
     assert decisions[0].candidate_count == 1
     assert decisions[0].capable_candidate_count == 1
+    assert decisions[0].candidate_queue_label == (
+        "node-a:PLACED/available=0s/q=0/finish=6s"
+    )
 
     records = {
         record.metric_name: record.value
@@ -139,6 +142,9 @@ def test_compute_service_lifecycle_emits_component_metrics() -> None:
                     "service_placement_bottleneck_resource": "cpu_gflops_fp32",
                     "service_placement_candidate_count": 1,
                     "service_placement_capable_candidate_count": 1,
+                    "service_placement_candidate_queue_label": (
+                        "node-a:PLACED/available=0s/q=0/finish=6s"
+                    ),
                     "first_sample_sim_time": 6.0,
                 "last_sample_sim_time": 6.0,
                 "component_timeline": [

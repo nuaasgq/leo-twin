@@ -1295,6 +1295,7 @@ export interface RuntimeUserRequestItemV1 {
   service_placement_bottleneck_resource?: string;
   service_placement_candidate_count?: number | null;
   service_placement_capable_candidate_count?: number | null;
+  service_placement_candidate_queue_label?: string;
   active_business_type?: string;
   active_business_label?: string;
   request_state?: string;
@@ -1558,6 +1559,7 @@ export interface RuntimeServiceLatencyHistoryItemV1 {
   service_placement_bottleneck_resource?: string;
   service_placement_candidate_count?: number;
   service_placement_capable_candidate_count?: number;
+  service_placement_candidate_queue_label?: string;
   first_sample_sim_time?: number;
   last_sample_sim_time?: number;
   component_timeline?: readonly RuntimeServiceLatencyComponentSampleV1[];

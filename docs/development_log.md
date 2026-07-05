@@ -5,6 +5,67 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Service Placement Observability v1
+
+- Branch: `feature/T214-service-placement-observability-v1`
+- Commit: pending in this commit
+- Scope: enrich the existing Service Placement Model v2 runtime observability
+  without changing placement decisions. Route-aware compute decisions now carry
+  a bounded, deterministic `service_placement_candidate_queue_label` that
+  summarizes up to five candidate nodes by node id, placement status,
+  `available_at`, queued task count, and finish/rejection detail. Metrics
+  service latency history, runtime user summaries, node detail cards, frontend
+  runtime contract types, and dashboard placement labels consume the backend
+  field directly.
+- Changed files/modules:
+  - `src/leo_twin/models/compute/network_aware.py`
+  - `src/leo_twin/services/metrics/collector.py`
+  - `src/leo_twin/services/runtime_observability.py`
+  - `tests/unit/test_network_aware_compute.py`
+  - `tests/unit/test_metrics_module.py`
+  - `tests/unit/test_runtime_observability.py`
+  - `tests/integration/test_compute_service_lifecycle.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `frontend/tests/runtimeContractFixture.test.ts`
+  - `frontend/tests/fixtures/runtimeStatus.contract.json`
+  - `docs/service_placement_model_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src/leo_twin/models/compute/network_aware.py src/leo_twin/services/metrics/collector.py src/leo_twin/services/runtime_observability.py`
+    - Result: passed.
+  - `python -m pytest tests/unit/test_network_aware_compute.py tests/unit/test_metrics_module.py::test_service_latency_history_includes_placement_candidate_queue_label tests/unit/test_runtime_observability.py tests/integration/test_compute_service_lifecycle.py -q`
+    - Result: passed, 14 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- dataPanel.test.ts runtimeContractFixture.test.ts`
+    - Result: passed, 25 files / 312 tests. The project script currently runs
+      the full frontend Vitest suite for this invocation.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing `DataPanel` chunk-size
+      warning after minification.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - Service placement contract and runtime behavior already existed in the
+    current codebase, so this task was narrowed from a duplicate contract task
+    to a bounded observability task.
+  - Candidate queue details can be large in high-scale scenarios; the emitted
+    label is capped to five normalized candidates and appends `+N more`.
+  - Local runtime/generated config files remain dirty and are intentionally not
+    included in this task.
+- Known remaining issues / follow-up:
+  - The label is a compact text summary, not a full candidate table or paged
+    placement-detail endpoint. A later dashboard task should add a dedicated
+    selected-request placement drawer with candidate rows and queue history.
+  - This task does not change placement policy, task queue discipline,
+    preemption, migration, cache/offload, or packet-level network behavior.
+
 ## 2026-07-06 - Compute Resource Bottleneck v1
 
 - Branch: `feature/T213-compute-resource-bottleneck-v1`

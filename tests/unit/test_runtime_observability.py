@@ -68,6 +68,10 @@ def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> No
                 "service_placement_bottleneck_resource": "gpu_tflops_fp32",
                 "service_placement_candidate_count": 3,
                 "service_placement_capable_candidate_count": 2,
+                "service_placement_candidate_queue_label": (
+                    "sat-0:QUEUED/available=4s/q=1/finish=6s; "
+                    "sat-1:PLACED/available=0s/q=0/finish=7s"
+                ),
                 "complete": False,
                 "input_network_latency_s": 0.1,
                 "compute_queue_delay_s": 0.02,
@@ -231,6 +235,10 @@ def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> No
                 "service_placement_bottleneck_resource": "gpu_tflops_fp32",
                 "service_placement_candidate_count": 3,
                 "service_placement_capable_candidate_count": 2,
+                "service_placement_candidate_queue_label": (
+                    "sat-0:QUEUED/available=4s/q=1/finish=6s; "
+                    "sat-1:PLACED/available=0s/q=0/finish=7s"
+                ),
                 "active_business_type": "COMPUTE_SERVICE",
                 "active_business_label": "通信-计算服务",
                 "request_state": "COMPUTE_SERVICE_ACTIVE",
@@ -382,7 +390,9 @@ def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> No
                         "label": "服务放置",
                         "value": (
                             "节点 sat-0 / QUEUED / 策略 MIN_ESTIMATED_FINISH_TIME / "
-                            "瓶颈 gpu_tflops_fp32 / 候选 2/3"
+                            "瓶颈 gpu_tflops_fp32 / 候选 2/3 / "
+                            "队列 sat-0:QUEUED/available=4s/q=1/finish=6s; "
+                            "sat-1:PLACED/available=0s/q=0/finish=7s"
                         ),
                         "tone": "resource",
                     },
@@ -400,7 +410,9 @@ def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> No
                 "label": "服务放置",
                 "value": (
                     "节点 sat-0 / QUEUED / 策略 MIN_ESTIMATED_FINISH_TIME / "
-                    "瓶颈 gpu_tflops_fp32 / 候选 2/3"
+                    "瓶颈 gpu_tflops_fp32 / 候选 2/3 / "
+                    "队列 sat-0:QUEUED/available=4s/q=1/finish=6s; "
+                    "sat-1:PLACED/available=0s/q=0/finish=7s"
                 ),
                 "tone": "resource",
             },

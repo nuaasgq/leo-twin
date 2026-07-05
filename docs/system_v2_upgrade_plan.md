@@ -146,6 +146,10 @@ Tasks:
   - Scope: deterministic service-to-satellite placement, capacity check,
     queue state, rejection reason.
   - Depends on: V2-030.
+  - Status: service placement contract/runtime already exists; T214 adds a
+    bounded backend-owned candidate queue observability label to service
+    latency history, user request summaries, node detail cards, and dashboard
+    placement labels.
 - V2-032: Add task queue and execution timeline v2.
   - Scope: queue delay, execution delay, resource bottleneck, deadline status.
   - Depends on: V2-031.

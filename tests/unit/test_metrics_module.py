@@ -1690,6 +1690,45 @@ def test_service_latency_history_includes_sorted_component_timeline() -> None:
     }
 
 
+def test_service_latency_history_includes_placement_candidate_queue_label() -> None:
+    collector = MetricsCollector()
+    collector.observe(
+        _event(
+            "metric-placement-queue",
+            8.0,
+            EventType.METRIC_SAMPLE,
+            MetricRecord(
+                metric_name="service.total_latency",
+                sim_time=8.0,
+                entity_id="svc-task",
+                value=4.0,
+                tags=(
+                    ("compute_node_id", "sat-a"),
+                    ("service_placement_status", "QUEUED"),
+                    ("service_placement_candidate_count", "2"),
+                    ("service_placement_capable_candidate_count", "1"),
+                    (
+                        "service_placement_candidate_queue_label",
+                        "sat-a:QUEUED/available=4s/q=1/finish=8s; "
+                        "sat-b:PLACED/available=0s/q=0/finish=9s",
+                    ),
+                ),
+            ),
+            "compute",
+        )
+    )
+
+    item = collector.service_latency_history()["items"][0]
+
+    assert item["compute_node_id"] == "sat-a"
+    assert item["service_placement_candidate_count"] == 2
+    assert item["service_placement_capable_candidate_count"] == 1
+    assert item["service_placement_candidate_queue_label"] == (
+        "sat-a:QUEUED/available=4s/q=1/finish=8s; "
+        "sat-b:PLACED/available=0s/q=0/finish=9s"
+    )
+
+
 def test_metrics_outputs_are_deterministic_and_have_expected_format(tmp_path) -> None:
     first = MetricsCollector()
     second = MetricsCollector()

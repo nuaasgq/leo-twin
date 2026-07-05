@@ -2804,6 +2804,8 @@ describe("buildDataPanelServiceLatencyRows", () => {
             service_placement_bottleneck_resource: "cpu_gflops_fp32",
             service_placement_candidate_count: 4,
             service_placement_capable_candidate_count: 2,
+            service_placement_candidate_queue_label:
+              "sat-00001:PLACED/available=0s/q=0/finish=8s",
             first_sample_sim_time: 6,
             last_sample_sim_time: 8,
             component_timeline: [
@@ -2859,9 +2861,10 @@ describe("buildDataPanelServiceLatencyRows", () => {
         taskId: "svc-00-compute_service-00000-task",
         taskLabel: "...vice-00000-task",
         traceTitle:
-          "task=svc-00-compute_service-00000-task / input=svc-00-compute_service-00000-input / output=svc-00-compute_service-00000-output / input_route=route:svc-00-compute_service-00000-input / output_route=route:svc-00-compute_service-00000-output / placement_node=sat-00001 / placement_status=PLACED / placement_policy=MIN_ESTIMATED_FINISH_TIME / placement_bottleneck=cpu_gflops_fp32 / placement_candidates=2/4 / first=6s / last=8s / timeline=input_network@6s=4,000 ms, compute_queue@6s=0 ms, compute_execution@7s=2,000 ms, output_network@8s=1,400 ms, total@8s=7,400 ms",
+          "task=svc-00-compute_service-00000-task / input=svc-00-compute_service-00000-input / output=svc-00-compute_service-00000-output / input_route=route:svc-00-compute_service-00000-input / output_route=route:svc-00-compute_service-00000-output / placement_node=sat-00001 / placement_status=PLACED / placement_policy=MIN_ESTIMATED_FINISH_TIME / placement_bottleneck=cpu_gflops_fp32 / placement_candidates=2/4 / placement_queue=sat-00001:PLACED/available=0s/q=0/finish=8s / first=6s / last=8s / timeline=input_network@6s=4,000 ms, compute_queue@6s=0 ms, compute_execution@7s=2,000 ms, output_network@8s=1,400 ms, total@8s=7,400 ms",
         statusLabel: "完整闭环",
-        placementLabel: "节点 sat-00001 / 已放置 / 瓶颈 cpu_gflops_fp32 / 候选 2/4",
+        placementLabel:
+          "节点 sat-00001 / 已放置 / 瓶颈 cpu_gflops_fp32 / 候选 2/4 / 队列 sat-00001:PLACED/available=0s/q=0/finish=8s",
         totalLatencyLabel: "7,400 ms",
         timeline: [
           {
@@ -3998,6 +4001,8 @@ describe("buildUserBusinessRequestRows", () => {
             service_placement_bottleneck_resource: "gpu_tflops_fp32",
             service_placement_candidate_count: 3,
             service_placement_capable_candidate_count: 2,
+            service_placement_candidate_queue_label:
+              "sat-0:QUEUED/available=4s/q=1/finish=6s",
             active_business_type: "COMPUTE_SERVICE",
             active_business_label: "通信-计算服务",
             request_state: "COMPUTE_SERVICE_ACTIVE",
@@ -4020,7 +4025,8 @@ describe("buildUserBusinessRequestRows", () => {
       networkQueueLabel: "无网络排队",
       selectedSatelliteId: "sat-0",
       destinationId: "compute-0",
-      placementLabel: "节点 sat-0 / 排队 / 瓶颈 gpu_tflops_fp32 / 候选 2/3",
+      placementLabel:
+        "节点 sat-0 / 排队 / 瓶颈 gpu_tflops_fp32 / 候选 2/3 / 队列 sat-0:QUEUED/available=4s/q=1/finish=6s",
       statusLabel: "ACTIVE/AVAILABLE",
       latencyCapacityLabel: "0.12 s / 80 Mbps",
       serviceLabel:

@@ -2106,6 +2106,7 @@ _SERVICE_PLACEMENT_METADATA_TAGS = (
     "service_placement_bottleneck_resource",
     "service_placement_candidate_count",
     "service_placement_capable_candidate_count",
+    "service_placement_candidate_queue_label",
 )
 
 
@@ -2169,6 +2170,10 @@ def _service_latency_history_item(
                 "service_placement_capable_candidate_count": _service_metadata_int(
                     metadata,
                     "service_placement_capable_candidate_count",
+                ),
+                "service_placement_candidate_queue_label": metadata.get(
+                    "service_placement_candidate_queue_label",
+                    "",
                 ),
             }
         )

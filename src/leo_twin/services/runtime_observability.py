@@ -451,6 +451,7 @@ def _service_placement_detail_fields(
         "service_placement_bottleneck_resource",
         "service_placement_candidate_count",
         "service_placement_capable_candidate_count",
+        "service_placement_candidate_queue_label",
     )
     if not any(key in service_detail for key in keys):
         return {}
@@ -470,6 +471,9 @@ def _service_placement_detail_fields(
         ),
         "service_placement_capable_candidate_count": _optional_int(
             service_detail.get("service_placement_capable_candidate_count")
+        ),
+        "service_placement_candidate_queue_label": _str(
+            service_detail.get("service_placement_candidate_queue_label")
         ),
     }
 
@@ -752,6 +756,9 @@ def _user_placement_label(item: Mapping[str, Any]) -> str:
         if candidate_count is not None
         else ""
     )
+    candidate_queue_label = _str(
+        item.get("service_placement_candidate_queue_label")
+    )
     return _join_non_empty(
         f"节点 {compute_node_id}",
         _str(item.get("service_placement_status")),
@@ -762,6 +769,7 @@ def _user_placement_label(item: Mapping[str, Any]) -> str:
         if _str(item.get("service_placement_bottleneck_resource"))
         else "",
         candidate_label,
+        f"队列 {candidate_queue_label}" if candidate_queue_label else "",
         separator=" / ",
     )
 

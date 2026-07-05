@@ -4007,7 +4007,8 @@ function backendUserPlacementLabel(item: RuntimeUserRequestItemV1): string {
     policy: item.service_placement_policy,
     bottleneckResource: item.service_placement_bottleneck_resource,
     candidateCount: item.service_placement_candidate_count,
-    capableCandidateCount: item.service_placement_capable_candidate_count
+    capableCandidateCount: item.service_placement_capable_candidate_count,
+    candidateQueueLabel: item.service_placement_candidate_queue_label
   });
 }
 
@@ -4837,6 +4838,9 @@ function serviceLatencyPlacementTrace(
       ? `placement_candidates=${formatCount(
           item.service_placement_capable_candidate_count ?? 0
         )}/${formatCount(item.service_placement_candidate_count)}`
+      : "",
+    item.service_placement_candidate_queue_label
+      ? `placement_queue=${item.service_placement_candidate_queue_label}`
       : ""
   ].filter((part) => part.length > 0);
   return parts.join(" / ");
@@ -4851,7 +4855,8 @@ function serviceLatencyPlacementLabel(
     policy: item.service_placement_policy,
     bottleneckResource: item.service_placement_bottleneck_resource,
     candidateCount: item.service_placement_candidate_count,
-    capableCandidateCount: item.service_placement_capable_candidate_count
+    capableCandidateCount: item.service_placement_capable_candidate_count,
+    candidateQueueLabel: item.service_placement_candidate_queue_label
   });
 }
 
@@ -4862,13 +4867,15 @@ function servicePlacementLabel(fields: {
   bottleneckResource?: string;
   candidateCount?: number | null;
   capableCandidateCount?: number | null;
+  candidateQueueLabel?: string;
 }): string {
   if (
     !fields.computeNodeId &&
     !fields.status &&
     !fields.policy &&
     !fields.bottleneckResource &&
-    typeof fields.candidateCount !== "number"
+    typeof fields.candidateCount !== "number" &&
+    !fields.candidateQueueLabel
   ) {
     return "无计算放置";
   }
@@ -4880,7 +4887,8 @@ function servicePlacementLabel(fields: {
       ? `候选 ${formatCount(fields.capableCandidateCount ?? 0)}/${formatCount(
           fields.candidateCount
         )}`
-      : null
+      : null,
+    fields.candidateQueueLabel ? `队列 ${fields.candidateQueueLabel}` : null
   ].filter((value): value is string => value !== null);
   return parts.length > 0 ? parts.join(" / ") : "无计算放置";
 }

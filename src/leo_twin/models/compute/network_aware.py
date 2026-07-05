@@ -12,6 +12,7 @@ from leo_twin.models.compute.scheduling import (
     ComputeWorkloadItem,
 )
 from leo_twin.models.compute.placement import (
+    ServicePlacementCandidate,
     ServicePlacementDecision as ComputeServicePlacementDecision,
     ServicePlacementQueueState,
     place_compute_service,
@@ -54,6 +55,7 @@ class TaskPlacementDecision:
     bottleneck_resource: str = "none"
     candidate_count: int = 0
     capable_candidate_count: int = 0
+    candidate_queue_label: str = ""
     rejection_reason: str = ""
 
 
@@ -335,6 +337,9 @@ class RouteAwareComputeEngine(SimulationModule):
             bottleneck_resource=placement.bottleneck_resource or "none",
             candidate_count=placement.candidate_count,
             capable_candidate_count=placement.capable_candidate_count,
+            candidate_queue_label=_placement_candidate_queue_label(
+                placement.candidates
+            ),
             rejection_reason=(
                 "" if placement.rejection_reason is None else placement.rejection_reason.value
             ),
@@ -685,7 +690,41 @@ def _service_placement_tags(
             "service_placement_capable_candidate_count",
             str(decision.capable_candidate_count),
         ),
+        ("service_placement_candidate_queue_label", decision.candidate_queue_label),
     )
+
+
+def _placement_candidate_queue_label(
+    candidates: tuple[ServicePlacementCandidate, ...],
+    limit: int = 5,
+) -> str:
+    ordered = tuple(sorted(candidates, key=lambda candidate: candidate.node_id))
+    parts: list[str] = []
+    for candidate in ordered[: max(0, limit)]:
+        status = candidate.status.value
+        queue = f"q={candidate.queued_task_count}"
+        available = f"available={_format_seconds(candidate.available_at)}s"
+        if candidate.rejection_reason is not None:
+            detail = f"reject={candidate.rejection_reason.value}"
+        else:
+            finish = (
+                f"finish={_format_seconds(candidate.finish_time or 0.0)}s"
+                if candidate.finish_time is not None
+                else "finish=unknown"
+            )
+            detail = finish
+        parts.append(
+            f"{candidate.node_id}:{status}/{available}/{queue}/{detail}"
+        )
+    hidden = max(0, len(ordered) - max(0, limit))
+    if hidden > 0:
+        parts.append(f"+{hidden} more")
+    return "; ".join(parts)
+
+
+def _format_seconds(value: float) -> str:
+    formatted = f"{float(value):.3f}".rstrip("0").rstrip(".")
+    return formatted or "0"
 
 
 def _compute_node_state(
