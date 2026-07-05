@@ -348,6 +348,7 @@ class DemoControlPlane:
         status["metrics_summary"] = self._metrics_summary_json()
         status["kpi_time_series_v1"] = self._kpi_time_series_json()
         status["satellite_kpi_slices_v1"] = self._satellite_kpi_slices_json()
+        status["satellite_kpi_history_v1"] = self._satellite_kpi_history_json()
         status["stream_diagnostics_v1"] = self._stream_diagnostics_json()
         return status
 
@@ -388,6 +389,19 @@ class DemoControlPlane:
                 "slices": (),
             }
         return dict(self._runtime_context.metrics.satellite_kpi_slices())
+
+    def _satellite_kpi_history_json(self) -> dict[str, Any]:
+        if self._runtime_context is None:
+            return {
+                "version": "v1",
+                "mode": "RECENT_COMPUTE_LIMITED",
+                "slice_limit": 64,
+                "sample_limit": 32,
+                "satellite_count": 0,
+                "series_count": 0,
+                "series": (),
+            }
+        return dict(self._runtime_context.metrics.satellite_kpi_history())
 
     def _stream_diagnostics_json(self) -> dict[str, Any]:
         loop = self._require_advance_loop()

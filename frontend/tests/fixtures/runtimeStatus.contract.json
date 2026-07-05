@@ -107,6 +107,46 @@
         }
       ]
     },
+    "satellite_kpi_history_v1": {
+      "version": "v1",
+      "mode": "RECENT_COMPUTE_LIMITED",
+      "slice_limit": 64,
+      "sample_limit": 32,
+      "satellite_count": 1200,
+      "series_count": 1,
+      "series": [
+        {
+          "satellite_id": "sat-00001",
+          "sample_count": 2,
+          "samples": [
+            {
+              "sim_time": 116,
+              "compute_load_ratio": 0.52,
+              "compute_capacity_gflops_fp32": 100,
+              "compute_used_gflops_fp32": 52,
+              "compute_capacity_gpu_tflops_fp32": 2.5,
+              "compute_used_gpu_tflops_fp32": 1.2,
+              "compute_capacity_npu_tops_int8": 12,
+              "compute_used_npu_tops_int8": 5,
+              "compute_capacity_memory_gb": 32,
+              "compute_used_memory_gb": 8
+            },
+            {
+              "sim_time": 120,
+              "compute_load_ratio": 0.65,
+              "compute_capacity_gflops_fp32": 100,
+              "compute_used_gflops_fp32": 65,
+              "compute_capacity_gpu_tflops_fp32": 2.5,
+              "compute_used_gpu_tflops_fp32": 1.5,
+              "compute_capacity_npu_tops_int8": 12,
+              "compute_used_npu_tops_int8": 6,
+              "compute_capacity_memory_gb": 32,
+              "compute_used_memory_gb": 10
+            }
+          ]
+        }
+      ]
+    },
     "stream_diagnostics_v1": {
       "version": "v1",
       "advance_loop_state": "RUNNING",

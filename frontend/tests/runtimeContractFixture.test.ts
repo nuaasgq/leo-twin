@@ -31,6 +31,16 @@ describe("runtime status contract fixture", () => {
       compute_used_memory_gb: 10,
       compute_load_ratio: 0.65
     });
+    expect(status.satellite_kpi_history_v1?.series[0]).toMatchObject({
+      satellite_id: "sat-00001",
+      sample_count: 2
+    });
+    expect(status.satellite_kpi_history_v1?.series[0].samples[1]).toMatchObject({
+      sim_time: 120,
+      compute_load_ratio: 0.65,
+      compute_used_gpu_tflops_fp32: 1.5,
+      compute_used_npu_tops_int8: 6
+    });
   });
 
   it("keeps generated config backend summaries aligned with frontend types", () => {

@@ -21,6 +21,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   ComputeResourceSummary,
+  RuntimeSatelliteKpiHistoryV1,
   RuntimeSatelliteKpiSlicesV1,
   SatelliteState
 } from "../../core/event_types";
@@ -86,6 +87,7 @@ import {
   SelectedSatelliteResourceHistoryPoint,
   appendSelectedSatelliteResourceHistory,
   selectedSatelliteDetailSummary,
+  selectedSatelliteResourceHistoryFromBackend,
   selectedSatelliteResourceHistoryPoints,
   selectedSatelliteResourceUsageRows
 } from "./satelliteDetailSummary";
@@ -94,6 +96,7 @@ export interface CesiumGlobeProps {
   snapshot: WorldSnapshot;
   displaySimTime: number;
   satelliteKpiSlices?: RuntimeSatelliteKpiSlicesV1 | null;
+  satelliteKpiHistory?: RuntimeSatelliteKpiHistoryV1 | null;
 }
 
 const LOCAL_VISUAL_LAYER_OPTIONS: readonly {
@@ -114,7 +117,8 @@ const LOCAL_VISUAL_LAYER_OPTIONS: readonly {
 export function CesiumGlobe({
   snapshot,
   displaySimTime,
-  satelliteKpiSlices
+  satelliteKpiSlices,
+  satelliteKpiHistory
 }: CesiumGlobeProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const viewerRef = useRef<Viewer | null>(null);
@@ -219,6 +223,14 @@ export function CesiumGlobe({
       snapshot.scenario_config,
       satelliteKpiSlices
     ]
+  );
+  const backendSelectedResourceHistory = useMemo(
+    () =>
+      selectedSatelliteResourceHistoryFromBackend(
+        satelliteKpiHistory,
+        activeSelectedSatelliteId
+      ),
+    [satelliteKpiHistory, activeSelectedSatelliteId]
   );
   const layerSummary = useMemo(
     () => visualLayerControlSummary(snapshot.scenario_config, localLayers),
@@ -388,13 +400,16 @@ export function CesiumGlobe({
 
   useEffect(() => {
     setSelectedResourceHistory((history) =>
-      appendSelectedSatelliteResourceHistory(
-        history,
-        selectedDetailSummary,
-        selectedSatellite?.sim_time ?? 0
-      )
+      backendSelectedResourceHistory.length > 0
+        ? backendSelectedResourceHistory
+        : appendSelectedSatelliteResourceHistory(
+            history,
+            selectedDetailSummary,
+            selectedSatellite?.sim_time ?? 0
+          )
     );
   }, [
+    backendSelectedResourceHistory,
     selectedDetailSummary?.satelliteId,
     selectedSatellite?.sim_time,
     selectedDetailSummary?.computeSummary?.utilizationPercent

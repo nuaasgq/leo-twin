@@ -31,6 +31,7 @@ from leo_twin.models.compute.contracts import COMPUTE_NODE_UPDATE
 MetricSummary = dict[str, str | float | int | bool]
 KpiSample = dict[str, float]
 SatelliteKpiSlice = dict[str, str | float | int]
+SatelliteKpiHistorySample = dict[str, float]
 ReplayPayload = str | int | float | bool | None | list["ReplayPayload"] | dict[str, "ReplayPayload"]
 ReplayEvent = dict[str, ReplayPayload]
 
@@ -62,6 +63,7 @@ class MetricsCollector:
         event_log_sample_interval: int = 1,
         event_log_segment_size: int | None = None,
         kpi_sample_limit: int = 240,
+        satellite_kpi_history_limit: int = 32,
         satellite_position_scale_to_km: float = 1.0,
     ) -> None:
         if not module_name:
@@ -73,6 +75,7 @@ class MetricsCollector:
         _require_positive_int(metric_sample_interval, "metric_sample_interval")
         _require_positive_int(event_log_sample_interval, "event_log_sample_interval")
         _require_positive_int(kpi_sample_limit, "kpi_sample_limit")
+        _require_positive_int(satellite_kpi_history_limit, "satellite_kpi_history_limit")
         _require_optional_positive_int(
             event_log_segment_size,
             "event_log_segment_size",
@@ -89,10 +92,15 @@ class MetricsCollector:
         self._event_log_sample_interval = event_log_sample_interval
         self._event_log_segment_size = event_log_segment_size
         self._kpi_sample_limit = kpi_sample_limit
+        self._satellite_kpi_history_limit = satellite_kpi_history_limit
         self._satellite_position_scale_to_km = float(satellite_position_scale_to_km)
         self._records: deque[MetricRecord] = deque(maxlen=record_limit)
         self._event_log: deque[ReplayEvent] = deque(maxlen=event_log_limit)
         self._kpi_samples: deque[KpiSample] = deque(maxlen=kpi_sample_limit)
+        self._satellite_kpi_history: dict[
+            str,
+            deque[SatelliteKpiHistorySample],
+        ] = {}
         self._event_counts: Counter[str] = Counter()
         self._satellite_status: dict[str, str] = {}
         self._satellite_altitudes_km: dict[str, float] = {}
@@ -298,6 +306,45 @@ class MetricsCollector:
             "satellite_count": len(satellite_ids),
             "slice_count": len(selected),
             "slices": selected,
+        }
+
+    def satellite_kpi_history(
+        self,
+        limit: int = 64,
+        sample_limit: int | None = None,
+    ) -> dict[str, Any]:
+        _require_positive_int(limit, "limit")
+        if sample_limit is None:
+            sample_limit = self._satellite_kpi_history_limit
+        _require_positive_int(sample_limit, "sample_limit")
+        selected_ids = sorted(
+            self._satellite_kpi_history,
+            key=lambda satellite_id: _satellite_kpi_history_sort_key(
+                satellite_id,
+                self._satellite_kpi_history[satellite_id],
+            ),
+        )[:limit]
+        series = []
+        for satellite_id in selected_ids:
+            samples = [
+                dict(sample)
+                for sample in self._satellite_kpi_history[satellite_id]
+            ][-sample_limit:]
+            series.append(
+                {
+                    "satellite_id": satellite_id,
+                    "sample_count": len(samples),
+                    "samples": samples,
+                }
+            )
+        return {
+            "version": "v1",
+            "mode": "RECENT_COMPUTE_LIMITED",
+            "slice_limit": limit,
+            "sample_limit": sample_limit,
+            "satellite_count": len(self._satellite_kpi_history),
+            "series_count": len(series),
+            "series": series,
         }
 
     def events_jsonl(self) -> str:
@@ -748,7 +795,24 @@ class MetricsCollector:
     def _observe_compute_node(self, event: SimEvent) -> tuple[MetricRecord, ...]:
         node = _require_payload(event.payload, ComputeNodeState, COMPUTE_NODE_UPDATE)
         self._compute_nodes[node.node_id] = node
+        if _is_satellite_id(node.node_id):
+            self._append_satellite_kpi_history_sample(node, event.sim_time)
         return ()
+
+    def _append_satellite_kpi_history_sample(
+        self,
+        node: ComputeNodeState,
+        sim_time: float,
+    ) -> None:
+        history = self._satellite_kpi_history.setdefault(
+            node.node_id,
+            deque(maxlen=self._satellite_kpi_history_limit),
+        )
+        sample = _satellite_kpi_history_sample(node, sim_time)
+        if history and history[-1]["sim_time"] == sample["sim_time"]:
+            history[-1] = sample
+            return
+        history.append(sample)
 
     def _observe_task(self, event: SimEvent, event_type: str) -> tuple[MetricRecord, ...]:
         task = _require_payload(event.payload, TaskState, event_type)
@@ -1478,6 +1542,81 @@ def _satellite_kpi_slice_sort_key(
         -float(item["active_link_count"]),
         str(item["satellite_id"]),
     )
+
+
+def _satellite_kpi_history_sort_key(
+    satellite_id: str,
+    history: deque[SatelliteKpiHistorySample],
+) -> tuple[float, float, str]:
+    if not history:
+        return (0.0, 0.0, satellite_id)
+    latest = history[-1]
+    return (
+        -float(latest["compute_load_ratio"]),
+        -float(latest["sim_time"]),
+        satellite_id,
+    )
+
+
+def _satellite_kpi_history_sample(
+    node: ComputeNodeState,
+    sim_time: float,
+) -> SatelliteKpiHistorySample:
+    used_fp32 = _compute_node_used_fp32(node)
+    return {
+        "sim_time": float(sim_time),
+        "compute_load_ratio": _compute_node_load_ratio(node, used_fp32),
+        "compute_capacity_gflops_fp32": max(0.0, float(node.capacity)),
+        "compute_used_gflops_fp32": used_fp32,
+        "compute_capacity_gflops_fp64": _compute_node_non_negative_field(
+            node,
+            "cpu_gflops_fp64",
+        ),
+        "compute_used_gflops_fp64": _compute_node_non_negative_field(
+            node,
+            "used_cpu_gflops_fp64",
+        ),
+        "compute_capacity_gpu_tflops_fp32": _compute_node_non_negative_field(
+            node,
+            "gpu_tflops_fp32",
+        ),
+        "compute_used_gpu_tflops_fp32": _compute_node_non_negative_field(
+            node,
+            "used_gpu_tflops_fp32",
+        ),
+        "compute_capacity_gpu_tflops_fp16": _compute_node_non_negative_field(
+            node,
+            "gpu_tflops_fp16",
+        ),
+        "compute_used_gpu_tflops_fp16": _compute_node_non_negative_field(
+            node,
+            "used_gpu_tflops_fp16",
+        ),
+        "compute_capacity_npu_tops_int8": _compute_node_non_negative_field(
+            node,
+            "npu_tops_int8",
+        ),
+        "compute_used_npu_tops_int8": _compute_node_non_negative_field(
+            node,
+            "used_npu_tops_int8",
+        ),
+        "compute_capacity_memory_gb": _compute_node_non_negative_field(
+            node,
+            "memory_gb",
+        ),
+        "compute_used_memory_gb": _compute_node_non_negative_field(
+            node,
+            "used_memory_gb",
+        ),
+        "compute_capacity_storage_gb": _compute_node_non_negative_field(
+            node,
+            "storage_gb",
+        ),
+        "compute_used_storage_gb": _compute_node_non_negative_field(
+            node,
+            "used_storage_gb",
+        ),
+    }
 
 
 def _route_constraint_sort_key(route: Route) -> tuple[int, float, float, int, str]:

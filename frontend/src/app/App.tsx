@@ -600,6 +600,7 @@ export function App() {
                   snapshot={snapshot}
                   displaySimTime={displaySimTime}
                   satelliteKpiSlices={runtimeStatus.satellite_kpi_slices_v1}
+                  satelliteKpiHistory={runtimeStatus.satellite_kpi_history_v1}
                 />
               </Suspense>
             </div>

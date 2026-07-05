@@ -27,6 +27,7 @@ import {
 import {
   selectedSatelliteDetailSummary,
   appendSelectedSatelliteResourceHistory,
+  selectedSatelliteResourceHistoryFromBackend,
   selectedSatelliteResourceHistoryPoints,
   selectedSatelliteResourceUsageRows
 } from "../src/3d/cesium/satelliteDetailSummary";
@@ -564,6 +565,61 @@ describe("selected satellite detail summary", () => {
         utilizationPercent: 0
       }
     ]);
+  });
+
+  it("builds selected satellite resource history from backend KPI samples", () => {
+    const history = selectedSatelliteResourceHistoryFromBackend(
+      {
+        version: "v1",
+        mode: "RECENT_COMPUTE_LIMITED",
+        slice_limit: 64,
+        sample_limit: 32,
+        satellite_count: 2,
+        series_count: 1,
+        series: [
+          {
+            satellite_id: "sat-a",
+            sample_count: 2,
+            samples: [
+              {
+                sim_time: 1,
+                compute_load_ratio: 0.25,
+                compute_used_gflops_fp32: 25
+              },
+              {
+                sim_time: 2,
+                compute_load_ratio: 1.25,
+                compute_used_gflops_fp32: 125
+              }
+            ]
+          }
+        ]
+      },
+      "sat-a"
+    );
+
+    expect(history).toEqual([
+      {
+        satelliteId: "sat-a",
+        simTime: 1,
+        utilizationPercent: 25
+      },
+      {
+        satelliteId: "sat-a",
+        simTime: 2,
+        utilizationPercent: 100
+      }
+    ]);
+    expect(
+      selectedSatelliteResourceHistoryFromBackend(
+        {
+          version: "v1",
+          mode: "RECENT_COMPUTE_LIMITED",
+          series: []
+        },
+        "sat-missing"
+      )
+    ).toEqual([]);
   });
 
   it("reports empty network and compute data without inventing values", () => {

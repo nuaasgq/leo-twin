@@ -327,12 +327,18 @@ The following issue-sized slices have now been delivered on
   - The selected satellite strip now renders a bounded local history sparkline
     for the current satellite's resource utilization, resetting the history
     when the operator switches satellites.
+- `feat(metrics): expose satellite kpi history`
+  - Maps to suggestions 53, 57, 58, 91, and the backend/frontend semantic
+    alignment slice.
+  - Runtime status now exposes bounded `satellite_kpi_history_v1` resource
+    samples from satellite compute-node observations, and the 3D control view
+    uses that backend history before falling back to local observation.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected
 satellite coverage/beam labels, compute vector KPI samples, and the frontend
 visual verification script. The remaining high-value product gaps are backend
-per-satellite vector time-series, richer route-quality provenance,
+richer route-quality provenance, full communication-compute lifecycle history,
 screenshot-based visual acceptance, and durable route-switch/reset end-to-end
 smoke tests.
 

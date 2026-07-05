@@ -3,6 +3,7 @@ import {
   GroundUserState,
   LinkState,
   Route,
+  RuntimeSatelliteKpiHistoryV1,
   RuntimeSatelliteKpiSlicesV1,
   RuntimeSatelliteKpiSliceV1,
   SatelliteState,
@@ -290,6 +291,28 @@ export function selectedSatelliteResourceHistoryPoints(
       return `${formatSvgNumber(x)},${formatSvgNumber(y)}`;
     })
     .join(" ");
+}
+
+export function selectedSatelliteResourceHistoryFromBackend(
+  history: RuntimeSatelliteKpiHistoryV1 | null | undefined,
+  satelliteId: string
+): readonly SelectedSatelliteResourceHistoryPoint[] {
+  if (!satelliteId) {
+    return [];
+  }
+  const series = history?.series.find((item) => item.satellite_id === satelliteId);
+  if (!series) {
+    return [];
+  }
+  return series.samples.map((sample) => ({
+    satelliteId,
+    simTime: finiteNumber(sample.sim_time),
+    utilizationPercent: clamp(
+      finiteNumber(sample.compute_load_ratio) * 100,
+      0,
+      100
+    )
+  }));
 }
 
 function backendRouteValue(

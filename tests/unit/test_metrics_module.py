@@ -1001,6 +1001,126 @@ def test_metrics_collector_publishes_satellite_kpi_slices() -> None:
     ] == ["sat-a"]
 
 
+def test_metrics_collector_publishes_bounded_satellite_kpi_history() -> None:
+    collector = MetricsCollector(satellite_kpi_history_limit=2)
+    for event in (
+        _event(
+            "compute-a-1",
+            1.0,
+            COMPUTE_NODE_UPDATE,
+            ComputeNodeState(
+                node_id="sat-a",
+                sim_time=1.0,
+                capacity=100.0,
+                available_capacity=80.0,
+                status="BUSY",
+                cpu_gflops_fp64=8.0,
+                gpu_tflops_fp32=2.5,
+                gpu_tflops_fp16=5.0,
+                npu_tops_int8=12.0,
+                memory_gb=32.0,
+                storage_gb=512.0,
+                used_cpu_gflops_fp32=20.0,
+                used_cpu_gflops_fp64=1.0,
+                used_gpu_tflops_fp32=0.5,
+                used_gpu_tflops_fp16=1.0,
+                used_npu_tops_int8=2.0,
+                used_memory_gb=4.0,
+                used_storage_gb=16.0,
+            ),
+            "compute",
+        ),
+        _event(
+            "compute-a-2",
+            2.0,
+            COMPUTE_NODE_UPDATE,
+            ComputeNodeState(
+                node_id="sat-a",
+                sim_time=2.0,
+                capacity=100.0,
+                available_capacity=50.0,
+                status="BUSY",
+                used_cpu_gflops_fp32=50.0,
+            ),
+            "compute",
+        ),
+        _event(
+            "compute-a-3",
+            3.0,
+            COMPUTE_NODE_UPDATE,
+            ComputeNodeState(
+                node_id="sat-a",
+                sim_time=3.0,
+                capacity=100.0,
+                available_capacity=30.0,
+                status="BUSY",
+                used_cpu_gflops_fp32=70.0,
+            ),
+            "compute",
+        ),
+        _event(
+            "compute-b-1",
+            3.0,
+            COMPUTE_NODE_UPDATE,
+            ComputeNodeState(
+                node_id="sat-b",
+                sim_time=3.0,
+                capacity=100.0,
+                available_capacity=90.0,
+                status="BUSY",
+                used_cpu_gflops_fp32=10.0,
+            ),
+            "compute",
+        ),
+        _event(
+            "compute-ground",
+            3.0,
+            COMPUTE_NODE_UPDATE,
+            ComputeNodeState(
+                node_id="ground-compute",
+                sim_time=3.0,
+                capacity=100.0,
+                available_capacity=10.0,
+                status="BUSY",
+                used_cpu_gflops_fp32=90.0,
+            ),
+            "compute",
+        ),
+    ):
+        collector.observe(event)
+
+    history = collector.satellite_kpi_history(limit=1)
+
+    assert history["version"] == "v1"
+    assert history["mode"] == "RECENT_COMPUTE_LIMITED"
+    assert history["slice_limit"] == 1
+    assert history["sample_limit"] == 2
+    assert history["satellite_count"] == 2
+    assert history["series_count"] == 1
+    series = history["series"][0]
+    assert series["satellite_id"] == "sat-a"
+    assert series["sample_count"] == 2
+    assert [sample["sim_time"] for sample in series["samples"]] == [2.0, 3.0]
+    assert series["samples"][-1] == {
+        "sim_time": 3.0,
+        "compute_load_ratio": 0.7,
+        "compute_capacity_gflops_fp32": 100.0,
+        "compute_used_gflops_fp32": 70.0,
+        "compute_capacity_gflops_fp64": 0.0,
+        "compute_used_gflops_fp64": 0.0,
+        "compute_capacity_gpu_tflops_fp32": 0.0,
+        "compute_used_gpu_tflops_fp32": 0.0,
+        "compute_capacity_gpu_tflops_fp16": 0.0,
+        "compute_used_gpu_tflops_fp16": 0.0,
+        "compute_capacity_npu_tops_int8": 0.0,
+        "compute_used_npu_tops_int8": 0.0,
+        "compute_capacity_memory_gb": 0.0,
+        "compute_used_memory_gb": 0.0,
+        "compute_capacity_storage_gb": 0.0,
+        "compute_used_storage_gb": 0.0,
+    }
+
+
 def test_metrics_collector_reports_compute_resource_pool_proxy() -> None:
     collector = MetricsCollector()
     for event in (

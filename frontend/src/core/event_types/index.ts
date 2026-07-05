@@ -398,6 +398,7 @@ export interface RuntimeStatusPayload {
   metrics_summary?: RuntimeMetricsSummary;
   kpi_time_series_v1?: RuntimeKpiTimeSeriesV1;
   satellite_kpi_slices_v1?: RuntimeSatelliteKpiSlicesV1;
+  satellite_kpi_history_v1?: RuntimeSatelliteKpiHistoryV1;
   stream_diagnostics_v1?: RuntimeStreamDiagnosticsV1;
   profiling_summary?: RuntimeProfilingSummary | null;
   backpressure_summary?: RuntimeBackpressureSummary | null;
@@ -469,6 +470,41 @@ export interface RuntimeSatelliteKpiSliceV1 {
   compute_load_ratio: number;
   running_task_count: number;
   finished_task_count: number;
+}
+
+export interface RuntimeSatelliteKpiHistoryV1 {
+  version: "v1" | string;
+  mode: string;
+  slice_limit?: number;
+  sample_limit?: number;
+  satellite_count?: number;
+  series_count?: number;
+  series: readonly RuntimeSatelliteKpiHistorySeriesV1[];
+}
+
+export interface RuntimeSatelliteKpiHistorySeriesV1 {
+  satellite_id: string;
+  sample_count?: number;
+  samples: readonly RuntimeSatelliteKpiHistorySampleV1[];
+}
+
+export interface RuntimeSatelliteKpiHistorySampleV1 {
+  sim_time: number;
+  compute_load_ratio: number;
+  compute_capacity_gflops_fp32?: number;
+  compute_used_gflops_fp32?: number;
+  compute_capacity_gflops_fp64?: number;
+  compute_used_gflops_fp64?: number;
+  compute_capacity_gpu_tflops_fp32?: number;
+  compute_used_gpu_tflops_fp32?: number;
+  compute_capacity_gpu_tflops_fp16?: number;
+  compute_used_gpu_tflops_fp16?: number;
+  compute_capacity_npu_tops_int8?: number;
+  compute_used_npu_tops_int8?: number;
+  compute_capacity_memory_gb?: number;
+  compute_used_memory_gb?: number;
+  compute_capacity_storage_gb?: number;
+  compute_used_storage_gb?: number;
 }
 
 export interface RuntimeStreamDiagnosticsV1 {

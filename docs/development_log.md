@@ -4284,3 +4284,47 @@ change.
 - Recommended follow-up:
   - Add backend-owned per-satellite resource history samples once runtime
     sampling policy and retention limits are formalized.
+
+## 2026-07-05 - Satellite KPI History v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a backend-owned bounded `satellite_kpi_history_v1` runtime status
+  field sourced from satellite `COMPUTE_NODE_UPDATE` observations. The 3D
+  control view now prefers backend-provided selected-satellite resource history
+  and keeps the frontend-local sparkline history as a compatibility fallback.
+- Changed files/modules:
+  - `src/leo_twin/services/metrics/collector.py`
+  - `examples/integration_demo/control_plane.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/3d/cesium/CesiumGlobe.tsx`
+  - `frontend/src/3d/cesium/satelliteDetailSummary.ts`
+  - `frontend/tests/fixtures/runtimeStatus.contract.json`
+  - `frontend/tests/runtimeContractFixture.test.ts`
+  - `frontend/tests/satelliteVisuals.test.ts`
+  - `tests/unit/test_metrics_module.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `PYTHONPATH=src python -m pytest tests/unit/test_metrics_module.py::test_metrics_collector_publishes_bounded_satellite_kpi_history tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer -q`
+    - Result: passed, 2 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- satelliteVisuals.test.ts runtimeContractFixture.test.ts`
+    - Result: passed, 25 files / 187 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - None. This is an observability/status-contract extension. It does not
+    change Event Kernel ordering, runtime advancement, compute scheduling, or
+    network model behavior.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - `satellite_kpi_history_v1` records bounded resource samples from
+    `COMPUTE_NODE_UPDATE`; it is not yet a full communication-compute lifecycle
+    trace with network input/output latency components.
+- Recommended follow-up:
+  - Add route-quality provenance labels or end-to-end reset/route-switch smoke
+    coverage before broadening lifecycle history.

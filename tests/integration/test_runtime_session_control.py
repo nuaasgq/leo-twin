@@ -219,6 +219,28 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
             "running_task_count",
             "finished_task_count",
         }.issubset(satellite_slices["slices"][0])
+    satellite_history = status_after_tick["satellite_kpi_history_v1"]
+    assert satellite_history["version"] == "v1"
+    assert satellite_history["mode"] == "RECENT_COMPUTE_LIMITED"
+    assert satellite_history["series_count"] == len(satellite_history["series"])
+    assert satellite_history["series_count"] <= satellite_history["satellite_count"]
+    assert satellite_history["slice_limit"] == 64
+    assert satellite_history["sample_limit"] == 32
+    if satellite_history["series"]:
+        assert {
+            "satellite_id",
+            "sample_count",
+            "samples",
+        }.issubset(satellite_history["series"][0])
+        assert satellite_history["series"][0]["samples"]
+        assert {
+            "sim_time",
+            "compute_load_ratio",
+            "compute_used_gflops_fp32",
+            "compute_used_gpu_tflops_fp32",
+            "compute_used_npu_tops_int8",
+            "compute_used_memory_gb",
+        }.issubset(satellite_history["series"][0]["samples"][-1])
 
     requested = control_plane.handle_raw_message(json.dumps({"command": "REQUEST_STATUS"}))
     assert requested["ok"] is True
