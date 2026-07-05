@@ -8,7 +8,9 @@ import {
   SCENARIO_SCALE_PRESETS,
   configPanelSectionTitles,
   generatedScenarioSummaryItems,
+  initializationControlPayload,
   networkControlPayload,
+  networkKeyControlPayload,
   orbitMotionExplanationItems,
   orbitControlPayload,
   pauseResumeControl,
@@ -834,6 +836,148 @@ describe("trafficControlPayload", () => {
       traffic_class: "BULK_DOWNLINK",
       destination_type: "GROUND_ENDPOINT",
       output_data_size: 3.5
+    });
+  });
+});
+
+describe("initializationControlPayload", () => {
+  it("sends key operational fields without overwriting detailed file-only settings", () => {
+    const payload = initializationControlPayload({
+      satellite_count: 120,
+      user_count: 500,
+      compute_nodes: 120,
+      compute_capacity: 40,
+      compute_cpu_gflops_fp64: 8,
+      compute_gpu_tflops_fp32: 2.5,
+      compute_gpu_tflops_fp16: 5,
+      compute_npu_tops_int8: 12,
+      compute_memory_gb: 32,
+      compute_storage_gb: 512,
+      compute_scheduling_policy: "FIFO",
+      mode: "ACCELERATED",
+      speed_factor: 10,
+      duration: 900,
+      seed: 1234,
+      orbit: {
+        update_interval_seconds: 30,
+        plane_count: 12,
+        altitude_km: 550,
+        inclination_deg: 53
+      },
+      traffic_model: {
+        flow_interval_seconds: 20,
+        task_interval_seconds: 30,
+        flow_demand_capacity: 80,
+        task_compute_demand: 60,
+        task_data_size: 16,
+        traffic_class: "COMPUTE_SERVICE",
+        destination_type: "COMPUTE_NODE",
+        output_data_size: 4
+      },
+      visualization: {
+        satellites: true,
+        links: true,
+        users: true,
+        metrics: true
+      },
+      network: {
+        application_protocol: "MQTT",
+        transport_protocol: "UDP",
+        transport_loss_rate: 0.03,
+        transport_congestion_window_segments: 64,
+        routing_protocol: "DISTANCE_VECTOR",
+        datalink_mac_protocol: "SLOTTED_ALOHA",
+        routing_latency_weight: 0.2,
+        routing_inverse_capacity_weight: 400,
+        routing_hop_weight: 1,
+        carrier_frequency_ghz: 22,
+        channel_bandwidth_mhz: 250,
+        rain_rate_mm_h: 8,
+        rain_attenuation_coefficient_db_per_km_per_mm_h: 0.012,
+        rain_effective_path_km: 4,
+        antenna_diameter_m: 0.55,
+        antenna_aperture_efficiency: 0.72,
+        transmit_power_dbw: 23,
+        system_loss_db: 1.5,
+        noise_temperature_k: 310
+      }
+    });
+
+    expect(payload).toMatchObject({
+      satellite_count: 120,
+      user_count: 500,
+      compute_nodes: 120,
+      compute_capacity: 40,
+      compute_gpu_tflops_fp32: 2.5,
+      compute_npu_tops_int8: 12,
+      mode: "ACCELERATED",
+      speed_factor: 10,
+      duration: 900,
+      seed: 1234,
+      application_protocol: "MQTT",
+      transport_protocol: "UDP",
+      transport_loss_rate: 0.03,
+      transport_congestion_window_segments: 64,
+      routing_protocol: "DISTANCE_VECTOR",
+      datalink_mac_protocol: "SLOTTED_ALOHA"
+    });
+    expect(payload.orbit).toEqual({
+      update_interval_seconds: 30,
+      plane_count: 12,
+      altitude_m: 550_000,
+      inclination_deg: 53
+    });
+    expect(payload.traffic_model).toEqual({
+      flow_interval_seconds: 20,
+      task_interval_seconds: 30,
+      flow_demand_capacity: 80,
+      task_compute_demand: 60,
+      task_data_size: 16,
+      traffic_class: "COMPUTE_SERVICE",
+      destination_type: "COMPUTE_NODE",
+      output_data_size: 4
+    });
+    expect(payload).not.toHaveProperty("compute_cpu_gflops_fp64");
+    expect(payload).not.toHaveProperty("compute_gpu_tflops_fp16");
+    expect(payload).not.toHaveProperty("compute_memory_gb");
+    expect(payload).not.toHaveProperty("compute_storage_gb");
+    expect(payload).not.toHaveProperty("routing_latency_weight");
+    expect(payload).not.toHaveProperty("carrier_frequency_hz");
+    expect(payload).not.toHaveProperty("rain_rate_mm_h");
+  });
+});
+
+describe("networkKeyControlPayload", () => {
+  it("keeps initialization network updates to protocol and quality keys", () => {
+    expect(
+      networkKeyControlPayload({
+        application_protocol: "MQTT",
+        transport_protocol: "UDP",
+        transport_loss_rate: 0.025,
+        transport_congestion_window_segments: 32,
+        routing_protocol: "DISTANCE_VECTOR",
+        datalink_mac_protocol: "SLOTTED_ALOHA",
+        routing_latency_weight: 0.2,
+        routing_inverse_capacity_weight: 400,
+        routing_hop_weight: 1,
+        carrier_frequency_ghz: 22.5,
+        channel_bandwidth_mhz: 250,
+        rain_rate_mm_h: 8,
+        rain_attenuation_coefficient_db_per_km_per_mm_h: 0.012,
+        rain_effective_path_km: 4.5,
+        antenna_diameter_m: 0.55,
+        antenna_aperture_efficiency: 0.72,
+        transmit_power_dbw: 23,
+        system_loss_db: 1.5,
+        noise_temperature_k: 310
+      })
+    ).toEqual({
+      application_protocol: "MQTT",
+      transport_protocol: "UDP",
+      transport_loss_rate: 0.025,
+      transport_congestion_window_segments: 32,
+      routing_protocol: "DISTANCE_VECTOR",
+      datalink_mac_protocol: "SLOTTED_ALOHA"
     });
   });
 });

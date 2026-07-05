@@ -85,6 +85,13 @@ export interface NetworkControlValues {
   noise_temperature_k: number;
 }
 
+export interface InitializationControlValues extends ScenarioControlValues {
+  mode: RuntimeMode;
+  speed_factor: number;
+  duration: number;
+  seed: number;
+}
+
 export interface ConfigPanelProps {
   scenario: ScenarioControlValues;
   runtime: RuntimeStatusPayload;
@@ -663,66 +670,65 @@ export function ConfigPanel({
       ? "参数已修改，重新初始化后刷新后端业务约束摘要。"
       : "初始化后显示后端业务约束摘要。";
   const handleInitialize = () =>
-    onRuntimeControl("INITIALIZE", {
-      satellite_count: satelliteCount,
-      user_count: userCount,
-      compute_nodes: computeNodes,
-      compute_capacity: computeCapacity,
-      compute_cpu_gflops_fp64: computeCpuFp64,
-      compute_gpu_tflops_fp32: computeGpuFp32,
-      compute_gpu_tflops_fp16: computeGpuFp16,
-      compute_npu_tops_int8: computeNpuInt8,
-      compute_memory_gb: computeMemoryGb,
-      compute_storage_gb: computeStorageGb,
-      compute_scheduling_policy: computeSchedulingPolicy,
-      mode: runtimeMode,
-      speed_factor: speedFactor,
-      duration: durationSeconds,
-      seed,
-      orbit: orbitControlPayload({
-        update_interval_seconds: orbitUpdateIntervalSeconds,
-        plane_count: orbitPlaneCount,
-        altitude_km: orbitAltitudeKm,
-        inclination_deg: orbitInclinationDeg
-      }),
-      traffic_model: trafficControlPayload({
-        flow_interval_seconds: flowIntervalSeconds,
-        task_interval_seconds: taskIntervalSeconds,
-        flow_demand_capacity: flowDemandCapacity,
-        task_compute_demand: taskComputeDemand,
-        task_data_size: taskDataSize,
-        traffic_class: trafficClass,
-        destination_type: effectiveTrafficDestinationType,
-        output_data_size: trafficOutputDataSize
-      }),
-      visualization: visualizationControlPayload({
-        satellites: showSatellites,
-        users: showUsers,
-        links: showLinks,
-        metrics: showMetrics
-      }),
-      ...networkControlPayload({
-        application_protocol: applicationProtocol,
-        transport_protocol: transportProtocol,
-        transport_loss_rate: transportLossRate,
-        transport_congestion_window_segments: transportCongestionWindow,
-        routing_protocol: routingProtocol,
-        datalink_mac_protocol: dataLinkProtocol,
-        routing_latency_weight: routingLatencyWeight,
-        routing_inverse_capacity_weight: routingInverseCapacityWeight,
-        routing_hop_weight: routingHopWeight,
-        carrier_frequency_ghz: carrierFrequencyGhz,
-        channel_bandwidth_mhz: channelBandwidthMhz,
-        rain_rate_mm_h: rainRate,
-        rain_attenuation_coefficient_db_per_km_per_mm_h: rainCoefficient,
-        rain_effective_path_km: rainPathKm,
-        antenna_diameter_m: antennaDiameterM,
-        antenna_aperture_efficiency: antennaApertureEfficiency,
-        transmit_power_dbw: transmitPowerDbw,
-        system_loss_db: systemLossDb,
-        noise_temperature_k: noiseTemperatureK
+    onRuntimeControl(
+      "INITIALIZE",
+      initializationControlPayload({
+        satellite_count: satelliteCount,
+        user_count: userCount,
+        compute_nodes: computeNodes,
+        compute_capacity: computeCapacity,
+        compute_gpu_tflops_fp32: computeGpuFp32,
+        compute_npu_tops_int8: computeNpuInt8,
+        compute_scheduling_policy: computeSchedulingPolicy,
+        mode: runtimeMode,
+        speed_factor: speedFactor,
+        duration: durationSeconds,
+        seed,
+        orbit: {
+          update_interval_seconds: orbitUpdateIntervalSeconds,
+          plane_count: orbitPlaneCount,
+          altitude_km: orbitAltitudeKm,
+          inclination_deg: orbitInclinationDeg
+        },
+        traffic_model: {
+          flow_interval_seconds: flowIntervalSeconds,
+          task_interval_seconds: taskIntervalSeconds,
+          flow_demand_capacity: flowDemandCapacity,
+          task_compute_demand: taskComputeDemand,
+          task_data_size: taskDataSize,
+          traffic_class: trafficClass,
+          destination_type: effectiveTrafficDestinationType,
+          output_data_size: trafficOutputDataSize
+        },
+        visualization: {
+          satellites: showSatellites,
+          users: showUsers,
+          links: showLinks,
+          metrics: showMetrics
+        },
+        network: {
+          application_protocol: applicationProtocol,
+          transport_protocol: transportProtocol,
+          transport_loss_rate: transportLossRate,
+          transport_congestion_window_segments: transportCongestionWindow,
+          routing_protocol: routingProtocol,
+          datalink_mac_protocol: dataLinkProtocol,
+          routing_latency_weight: routingLatencyWeight,
+          routing_inverse_capacity_weight: routingInverseCapacityWeight,
+          routing_hop_weight: routingHopWeight,
+          carrier_frequency_ghz: carrierFrequencyGhz,
+          channel_bandwidth_mhz: channelBandwidthMhz,
+          rain_rate_mm_h: rainRate,
+          rain_attenuation_coefficient_db_per_km_per_mm_h: rainCoefficient,
+          rain_effective_path_km: rainPathKm,
+          antenna_diameter_m: antennaDiameterM,
+          antenna_aperture_efficiency: antennaApertureEfficiency,
+          transmit_power_dbw: transmitPowerDbw,
+          system_loss_db: systemLossDb,
+          noise_temperature_k: noiseTemperatureK
+        }
       })
-    });
+    );
 
   return (
     <section className="config-panel" aria-label="仿真配置与控制面板">
@@ -2070,6 +2076,46 @@ export function trafficControlPayload(traffic: TrafficControlValues): Record<str
     traffic_class: traffic.traffic_class ?? "COMPUTE_SERVICE",
     destination_type: traffic.destination_type ?? "COMPUTE_NODE",
     output_data_size: traffic.output_data_size ?? 0
+  };
+}
+
+export function initializationControlPayload(
+  values: InitializationControlValues
+): Record<string, unknown> {
+  const payload: Record<string, unknown> = {
+    satellite_count: values.satellite_count,
+    user_count: values.user_count,
+    compute_nodes: values.compute_nodes,
+    compute_capacity: values.compute_capacity,
+    compute_scheduling_policy: values.compute_scheduling_policy,
+    mode: values.mode,
+    speed_factor: values.speed_factor,
+    duration: values.duration,
+    seed: values.seed,
+    orbit: orbitControlPayload(values.orbit),
+    traffic_model: trafficControlPayload(values.traffic_model),
+    visualization: visualizationControlPayload(values.visualization),
+    ...networkKeyControlPayload(values.network)
+  };
+  if (values.compute_gpu_tflops_fp32 !== undefined) {
+    payload.compute_gpu_tflops_fp32 = values.compute_gpu_tflops_fp32;
+  }
+  if (values.compute_npu_tops_int8 !== undefined) {
+    payload.compute_npu_tops_int8 = values.compute_npu_tops_int8;
+  }
+  return payload;
+}
+
+export function networkKeyControlPayload(
+  network: NetworkControlValues
+): Record<string, unknown> {
+  return {
+    application_protocol: network.application_protocol,
+    transport_protocol: network.transport_protocol,
+    transport_loss_rate: network.transport_loss_rate,
+    transport_congestion_window_segments: network.transport_congestion_window_segments,
+    routing_protocol: network.routing_protocol,
+    datalink_mac_protocol: network.datalink_mac_protocol
   };
 }
 

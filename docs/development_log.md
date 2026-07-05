@@ -6167,3 +6167,40 @@ change.
   - Add a backend-owned per-user request lifecycle table so the dashboard can
     show queue state, selected satellite, next hop, and flow/service state
     without deriving those fields from route paths.
+
+## 2026-07-05 - Frontend Sparse Initialization Payload v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: align frontend initialization with the new backend configuration
+  surface. `ConfigPanel` now builds an initialization payload through
+  `initializationControlPayload()`, sending key operational fields while
+  omitting file-only advanced fields such as FP64/FP16/memory/storage details,
+  physical channel parameters, and routing weights. The full
+  `networkControlPayload()` remains available for explicit advanced update
+  paths.
+- Changed files/modules:
+  - `src/leo_twin/services/configuration_view.py`
+  - `frontend/src/config_panel/ConfigPanel.tsx`
+  - `frontend/tests/configPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_configuration_view.py -q`
+    - Result: passed, 2 tests.
+  - `pnpm --dir frontend exec vitest run configPanel.test.ts`
+    - Result: passed, 1 file / 33 tests.
+  - `pnpm --dir frontend test`
+    - Result: passed, 25 files / 209 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - None in implementation. The main design constraint is that the UI still
+    visually contains some advanced controls; this commit only prevents
+    initialization from overwriting advanced file-only settings by default.
+- Known remaining issues:
+  - The frontend layout still needs a true key/basic versus advanced grouping.
+  - There is not yet a launcher option to boot from an arbitrary user detailed
+    config file.
+- Recommended follow-up:
+  - Add a visible configuration mode split in the control panel and a backend
+    startup option for a user-selected detailed config file.
