@@ -470,6 +470,22 @@ describe("runtime progress clock", () => {
     expect(runtimeProgressSimTime(next, 3_000)).toBe(4);
   });
 
+  it("keeps the shared progress clock across dashboard attach route changes", () => {
+    const first = defaultRuntimeProgressAnchor(runningStatus, 1_000);
+    const attached = nextRuntimeProgressAnchor(
+      first,
+      2,
+      { ...runningStatus, last_action: "REQUEST_STATUS" },
+      3_000
+    );
+
+    expect(surfaceFromPathname("/dashboard")).toBe("dashboard");
+    expect(surfaceFromPathname("/")).toBe("control");
+    expect(shouldResetWorldBeforeStreamConnect("ATTACH", 0)).toBe(false);
+    expect(attached).toBe(first);
+    expect(selectRuntimeDisplaySimTime(runningStatus, 2, attached, 3_000)).toBe(4);
+  });
+
   it("resets the shared display clock after reset or initialization", () => {
     const first = defaultRuntimeProgressAnchor(runningStatus, 1_000);
     const next = nextRuntimeProgressAnchor(

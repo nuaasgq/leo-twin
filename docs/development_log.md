@@ -4367,3 +4367,33 @@ change.
 - Recommended follow-up:
   - Add screenshot-based visual acceptance for the 3D console/dashboard or a
     durable reset/route-switch smoke test.
+
+## 2026-07-05 - Dashboard Attach Progress Smoke v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a frontend regression test that locks the intended route-switch
+  behavior: dashboard/control surface changes are treated as ATTACH, do not
+  reset local stream state, and do not roll back the shared display progress
+  clock while the backend runtime is already running.
+- Changed files/modules:
+  - `frontend/tests/appSurface.test.ts`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- appSurface.test.ts`
+    - Result: passed, 25 files / 189 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - None. This is a test-only guard for existing route attach/progress behavior.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - This is a unit-level frontend guard, not a browser-driven end-to-end smoke
+    test against a running backend.
+- Recommended follow-up:
+  - Add Playwright/browser smoke coverage for initialize, start, dashboard
+    switch, pause, stop, and reset once the local launcher is stable.

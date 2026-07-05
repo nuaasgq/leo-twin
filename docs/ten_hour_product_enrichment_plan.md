@@ -338,13 +338,18 @@ The following issue-sized slices have now been delivered on
   - Runtime status now exposes structured `network_quality_provenance_v1`, and
     the data panel uses it to explain throughput, latency, loss, and
     delay-variation proxy sources without introducing packet-level simulation.
+- `test(frontend): lock dashboard attach progress`
+  - Maps to suggestions 1, 2, 10, and 92.
+  - Frontend tests now guard that dashboard/control route switches attach to an
+    already running runtime without resetting local stream state or rolling back
+    the shared display progress clock.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected
 satellite coverage/beam labels, compute vector KPI samples, and the frontend
 visual verification script. The remaining high-value product gaps are backend
 full communication-compute lifecycle history, screenshot-based visual
-acceptance, and durable route-switch/reset end-to-end smoke tests.
+acceptance, and browser-driven reset/control end-to-end smoke tests.
 
 ## Acceptance Gates
 
