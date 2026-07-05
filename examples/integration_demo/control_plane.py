@@ -346,6 +346,45 @@ class DemoControlPlane:
             "bytes": _control_int(record.get("archive_bytes")),
         }
 
+    def runtime_export_package_compare(
+        self,
+        package_id: str,
+        output_root: str | Path = "artifacts/runtime_exports",
+        *,
+        diff_limit: int = 32,
+    ) -> dict[str, Any]:
+        artifact = self.runtime_export_package_artifact(
+            package_id,
+            "config_snapshot.json",
+            output_root,
+        )
+        package_snapshot = json.loads(
+            Path(str(artifact["path"])).read_text(encoding="utf-8")
+        )
+        if not isinstance(package_snapshot, dict):
+            raise RuntimeExportArtifactError(
+                f"runtime export package {package_id!r} has invalid config snapshot"
+            )
+        generated_config = self._generated_config_json()
+        current_snapshot = {
+            "type": "RUNTIME_CONFIG_SNAPSHOT",
+            "status": _runtime_export_status_snapshot(
+                self._status_json(generated_config)
+            ),
+            "config": self._controller.config_json(),
+            "generated_config": generated_config,
+        }
+        summary = _runtime_export_package_compare_summary(
+            package_id,
+            package_snapshot,
+            current_snapshot,
+            diff_limit=diff_limit,
+        )
+        return {
+            "type": "RUNTIME_EXPORT_PACKAGE_COMPARE",
+            "summary": summary,
+        }
+
     def visible_snapshot(self) -> dict[str, JsonValue]:
         session = self._require_session()
         if self._initialized and session.lifecycle_state in {
@@ -1349,6 +1388,122 @@ def _runtime_export_content_type(filename: str) -> str:
     if filename.endswith(".zip"):
         return "application/zip"
     return "application/octet-stream"
+
+
+def _runtime_export_package_compare_summary(
+    package_id: str,
+    package_snapshot: dict[str, Any],
+    current_snapshot: dict[str, Any],
+    *,
+    diff_limit: int,
+) -> dict[str, Any]:
+    sections = ("config", "generated_config")
+    section_summaries: list[dict[str, Any]] = []
+    differences: list[dict[str, Any]] = []
+    for section in sections:
+        section_differences = _runtime_export_section_differences(
+            section,
+            package_snapshot.get(section),
+            current_snapshot.get(section),
+        )
+        section_summaries.append(
+            {
+                "section": section,
+                "diff_count": len(section_differences),
+                "matches": len(section_differences) == 0,
+            }
+        )
+        differences.extend(section_differences)
+    differences = sorted(
+        differences,
+        key=lambda item: (str(item["section"]), str(item["path"])),
+    )
+    normalized_limit = max(0, diff_limit)
+    limited_differences = tuple(differences[:normalized_limit])
+    package_manifest_hash = _runtime_export_snapshot_manifest_hash(package_snapshot)
+    current_manifest_hash = _runtime_export_snapshot_manifest_hash(current_snapshot)
+    summary: dict[str, Any] = {
+        "version": "v1",
+        "source": "BACKEND_RUNTIME_EXPORT_COMPARE",
+        "comparison_scope": "CONFIG_AND_GENERATED_CONFIG",
+        "package_id": package_id,
+        "compatibility": "MATCH" if not differences else "DIFFERENT",
+        "same_config": section_summaries[0]["matches"],
+        "same_generated_config": section_summaries[1]["matches"],
+        "same_manifest_hash": (
+            bool(package_manifest_hash)
+            and package_manifest_hash == current_manifest_hash
+        ),
+        "package_manifest_hash": package_manifest_hash,
+        "current_manifest_hash": current_manifest_hash,
+        "diff_count": len(differences),
+        "diff_limit": normalized_limit,
+        "diff_truncated": len(differences) > normalized_limit,
+        "sections": tuple(section_summaries),
+        "differences": stable_json_payload(limited_differences),
+    }
+    summary["compare_hash"] = stable_hash_payload(summary)
+    return summary
+
+
+def _runtime_export_section_differences(
+    section: str,
+    package_value: object,
+    current_value: object,
+) -> list[dict[str, Any]]:
+    package_flat = _runtime_export_flatten_json(package_value)
+    current_flat = _runtime_export_flatten_json(current_value)
+    differences: list[dict[str, Any]] = []
+    for path in sorted(set(package_flat) | set(current_flat)):
+        package_missing = path not in package_flat
+        current_missing = path not in current_flat
+        if (
+            not package_missing
+            and not current_missing
+            and package_flat[path] == current_flat[path]
+        ):
+            continue
+        differences.append(
+            {
+                "section": section,
+                "path": path,
+                "package_missing": package_missing,
+                "current_missing": current_missing,
+                "package_value": None if package_missing else package_flat[path],
+                "current_value": None if current_missing else current_flat[path],
+            }
+        )
+    return differences
+
+
+def _runtime_export_flatten_json(value: object, prefix: str = "$") -> dict[str, Any]:
+    if isinstance(value, dict):
+        if not value:
+            return {prefix: {}}
+        flattened: dict[str, Any] = {}
+        for key in sorted(value):
+            flattened.update(
+                _runtime_export_flatten_json(value[key], f"{prefix}.{key}")
+            )
+        return flattened
+    if isinstance(value, (list, tuple)):
+        if not value:
+            return {prefix: []}
+        flattened = {}
+        for index, item in enumerate(value):
+            flattened.update(_runtime_export_flatten_json(item, f"{prefix}[{index}]"))
+        return flattened
+    return {prefix: stable_json_payload(value)}
+
+
+def _runtime_export_snapshot_manifest_hash(snapshot: dict[str, Any]) -> str:
+    status = snapshot.get("status")
+    if not isinstance(status, dict):
+        return ""
+    manifest = status.get("reproducibility_manifest_v1")
+    if not isinstance(manifest, dict):
+        return ""
+    return str(manifest.get("manifest_hash", ""))
 
 
 def _runtime_export_manifest_state_value(

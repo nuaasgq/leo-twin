@@ -3,12 +3,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   loadRuntimeExportCatalog,
   loadRuntimeExportHistory,
+  loadRuntimeExportPackageCompare,
   loadRuntimeNodeDetails,
   loadRuntimeSatelliteDetails,
   loadRuntimeState,
   loadRuntimeUserDetails,
   runtimeExportArchiveHref,
   runtimeExportPackageArchiveHref,
+  runtimeExportPackageCompareHref,
   runtimeExportPackageFileHref,
   runtimeExportPackageManifestHref,
   runtimeExportPackageRecordHref,
@@ -35,9 +37,56 @@ describe("runtime API diagnostics", () => {
     expect(runtimeExportPackageArchiveHref("pkg 1")).toBe(
       "/runtime/export/packages/pkg%201/archive"
     );
+    expect(runtimeExportPackageCompareHref("pkg 1")).toBe(
+      "/runtime/export/packages/pkg%201/compare"
+    );
     expect(runtimeExportPackageFileHref("pkg 1", "events 1.jsonl")).toBe(
       "/runtime/export/packages/pkg%201/files/events%201.jsonl"
     );
+  });
+
+  it("loads runtime export package compare previews", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        type: "RUNTIME_EXPORT_PACKAGE_COMPARE",
+        summary: {
+          version: "v1",
+          source: "BACKEND_RUNTIME_EXPORT_COMPARE",
+          comparison_scope: "CONFIG_AND_GENERATED_CONFIG",
+          package_id: "pkg",
+          compatibility: "DIFFERENT",
+          same_config: false,
+          same_generated_config: false,
+          same_manifest_hash: false,
+          package_manifest_hash: "sha256:old",
+          current_manifest_hash: "sha256:new",
+          diff_count: 1,
+          diff_limit: 32,
+          diff_truncated: false,
+          sections: [{ section: "generated_config", diff_count: 1, matches: false }],
+          differences: [
+            {
+              section: "generated_config",
+              path: "$.satellite_count",
+              package_missing: false,
+              current_missing: false,
+              package_value: 72,
+              current_value: 120
+            }
+          ],
+          compare_hash: "sha256:compare"
+        }
+      })
+    }));
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+
+    await expect(loadRuntimeExportPackageCompare("pkg")).resolves.toMatchObject({
+      compatibility: "DIFFERENT",
+      diff_count: 1,
+      differences: [{ path: "$.satellite_count" }]
+    });
+    expect(fetchMock).toHaveBeenCalledWith("/runtime/export/packages/pkg/compare");
   });
 
   it("loads runtime export history summaries", async () => {

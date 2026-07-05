@@ -5,6 +5,62 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Runtime Export Compare Preview v1
+
+- Branch: `feature/T186-runtime-export-compare-preview-v1`
+- Commit: pending in this commit
+- Scope: add a deterministic read-only compare preview for persisted runtime
+  export packages. The demo backend now serves
+  `/runtime/export/packages/{package_id}/compare`, reads the package
+  `config_snapshot.json`, and compares its `config` and `generated_config`
+  sections with the current backend runtime configuration. The response reports
+  compatibility, section-level match flags, manifest hash equality, diff counts,
+  a bounded list of changed JSON paths, and a stable compare hash. The dashboard
+  catalog row exposes a `对比` link to this preview. This task does not restore
+  scenarios, mutate configuration, modify Event Kernel behavior, or change
+  runtime progression/model logic.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/app/api.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/integration_demo.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/integration/test_runtime_session_control.py::test_demo_adapter_serves_persisted_runtime_export_artifacts tests/integration/test_runtime_session_control.py::test_demo_adapter_persists_runtime_export_catalog tests/integration/test_runtime_session_control.py::test_demo_server_stream_query_parses_cursor_options -q`
+    - Result: passed, 3 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- api.test.ts dataPanel.test.ts appSurface.test.ts`
+    - Result: passed, 25 files / 275 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing `DataPanel` chunk-size
+      warning after minification.
+  - `git diff --check`
+    - Result: passed. Git still reported the pre-existing CRLF warning for
+      local runtime/config drift in `configs/generated_full_system_demo.json`
+      and `configs/sees_control.yaml`.
+- Problems encountered:
+  - The compare endpoint must not trigger package regeneration or restore. It
+    was implemented as a pure read of catalog-registered `config_snapshot.json`
+    plus the current controller/generated config, with a bounded diff list to
+    avoid large responses for future full user configurations.
+  - The working tree still contains unrelated local runtime/config drift in
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`;
+    these files were intentionally left unstaged and unchanged by this task.
+- Known remaining issues / follow-up:
+  - The dashboard currently opens the compare preview JSON. A follow-up
+    dashboard task should render the compare summary inline and add a guarded
+    "restore from package" preflight flow that remains read-only until the user
+    explicitly confirms configuration replacement.
+
 ## 2026-07-06 - Runtime Export Artifact Routes v1
 
 - Branch: `feature/T185-runtime-export-artifact-routes-v1`

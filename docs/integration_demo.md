@@ -89,6 +89,7 @@ Endpoints:
 - `GET /runtime/export/archive`
 - `GET /runtime/export/packages/{package_id}`
 - `GET /runtime/export/packages/{package_id}/manifest`
+- `GET /runtime/export/packages/{package_id}/compare`
 - `GET /runtime/export/packages/{package_id}/archive`
 - `GET /runtime/export/packages/{package_id}/files/{filename}`
 - `WS /stream/events`
@@ -142,6 +143,7 @@ Persisted package artifact routes:
 ```text
 http://127.0.0.1:8765/runtime/export/packages/{package_id}
 http://127.0.0.1:8765/runtime/export/packages/{package_id}/manifest
+http://127.0.0.1:8765/runtime/export/packages/{package_id}/compare
 http://127.0.0.1:8765/runtime/export/packages/{package_id}/archive
 http://127.0.0.1:8765/runtime/export/packages/{package_id}/files/events.jsonl
 ```
@@ -149,6 +151,12 @@ http://127.0.0.1:8765/runtime/export/packages/{package_id}/files/events.jsonl
 These routes serve catalog-registered files from the export root. They do not
 create a new export package and reject filenames that are not present in the
 persisted catalog record.
+
+The compare route reads the package `config_snapshot.json` and compares its
+`config` and `generated_config` sections with the current backend runtime
+configuration. It returns a deterministic summary with compatibility status,
+diff counts, and a limited set of changed JSON paths. It does not restore or
+mutate the current scenario.
 
 ## Frontend
 

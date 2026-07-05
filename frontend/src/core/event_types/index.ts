@@ -699,6 +699,45 @@ export interface RuntimeExportCatalogEnvelope {
   summary: RuntimeExportCatalogV1;
 }
 
+export interface RuntimeExportPackageCompareV1 {
+  version: "v1" | string;
+  source: string;
+  comparison_scope: string;
+  package_id: string;
+  compatibility: "MATCH" | "DIFFERENT" | string;
+  same_config: boolean;
+  same_generated_config: boolean;
+  same_manifest_hash: boolean;
+  package_manifest_hash: string;
+  current_manifest_hash: string;
+  diff_count: number;
+  diff_limit: number;
+  diff_truncated: boolean;
+  sections: readonly RuntimeExportPackageCompareSectionV1[];
+  differences: readonly RuntimeExportPackageCompareDifferenceV1[];
+  compare_hash: string;
+}
+
+export interface RuntimeExportPackageCompareSectionV1 {
+  section: string;
+  diff_count: number;
+  matches: boolean;
+}
+
+export interface RuntimeExportPackageCompareDifferenceV1 {
+  section: string;
+  path: string;
+  package_missing: boolean;
+  current_missing: boolean;
+  package_value: unknown;
+  current_value: unknown;
+}
+
+export interface RuntimeExportPackageCompareEnvelope {
+  type: "RUNTIME_EXPORT_PACKAGE_COMPARE" | string;
+  summary: RuntimeExportPackageCompareV1;
+}
+
 export interface StateSnapshot {
   event_count?: number;
   last_sim_time?: number;

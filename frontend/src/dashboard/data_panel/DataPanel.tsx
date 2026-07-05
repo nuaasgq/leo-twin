@@ -40,6 +40,7 @@ import {
 import {
   runtimeExportArchiveHref,
   runtimeExportPackageArchiveHref,
+  runtimeExportPackageCompareHref,
   runtimeExportPackageManifestHref,
   runtimeExportPackageRecordHref
 } from "../../app/api";
@@ -401,6 +402,7 @@ export const DataPanel = memo(function DataPanel({
                     ) : (
                       <em>无归档</em>
                     )}
+                    <a href={row.compareHref}>对比</a>
                   </span>
                 </div>
               ))
@@ -4377,6 +4379,7 @@ export interface DataPanelExportCatalogRow {
   recordHref: string;
   manifestHref: string;
   archiveHref: string | null;
+  compareHref: string;
 }
 
 export function buildDataPanelExportCatalogDisplay(
@@ -4417,7 +4420,8 @@ export function buildDataPanelExportCatalogDisplay(
         manifestHref: runtimeExportPackageManifestHref(record.package_id),
         archiveHref: record.archive_filename
           ? runtimeExportPackageArchiveHref(record.package_id)
-          : null
+          : null,
+        compareHref: runtimeExportPackageCompareHref(record.package_id)
       };
     });
   return {

@@ -944,6 +944,10 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
         package_id,
         export_root,
     )
+    matched_compare = control_plane.runtime_export_package_compare(
+        package_id,
+        export_root,
+    )
 
     assert record["type"] == "RUNTIME_EXPORT_PACKAGE_RECORD"
     assert record["summary"]["export_type"] == "ARCHIVE"
@@ -957,6 +961,40 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
     assert Path(str(archive_artifact["path"])) == Path(str(exported["archive"]["path"]))
     assert archive_artifact["filename"].endswith(".zip")
     assert archive_artifact["sha256"] == exported["archive"]["sha256"]
+    assert matched_compare["type"] == "RUNTIME_EXPORT_PACKAGE_COMPARE"
+    assert matched_compare["summary"]["compatibility"] == "MATCH"
+    assert matched_compare["summary"]["diff_count"] == 0
+    assert matched_compare["summary"]["same_config"] is True
+    assert matched_compare["summary"]["same_generated_config"] is True
+    assert matched_compare["summary"]["compare_hash"].startswith("sha256:")
+
+    control_plane.handle_raw_message(
+        json.dumps(
+            {
+                "type": "CONFIG_UPDATE",
+                "payload": {
+                    "satellite_count": 3,
+                    "user_count": 2,
+                },
+            }
+        )
+    )
+    changed_compare = control_plane.runtime_export_package_compare(
+        package_id,
+        export_root,
+    )
+    changed_summary = changed_compare["summary"]
+    assert changed_summary["compatibility"] == "DIFFERENT"
+    assert changed_summary["diff_count"] >= 2
+    assert changed_summary["same_config"] is False
+    assert changed_summary["same_generated_config"] is False
+    assert {
+        (item["section"], item["path"])
+        for item in changed_summary["differences"]
+    } >= {
+        ("config", "$.scenario.satellite_count"),
+        ("generated_config", "$.satellite_count"),
+    }
 
     with pytest.raises(RuntimeExportArtifactError):
         control_plane.runtime_export_package_artifact(
@@ -993,6 +1031,9 @@ def test_demo_server_stream_query_parses_cursor_options() -> None:
     assert _runtime_export_package_route(
         "/runtime/export/packages/pkg%201/manifest"
     ) == ("pkg 1", "manifest", None)
+    assert _runtime_export_package_route(
+        "/runtime/export/packages/pkg%201/compare"
+    ) == ("pkg 1", "compare", None)
     assert _runtime_export_package_route(
         "/runtime/export/packages/pkg-1/archive"
     ) == ("pkg-1", "archive", None)

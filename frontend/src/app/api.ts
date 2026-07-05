@@ -6,6 +6,8 @@ import {
   RuntimeExportCatalogV1,
   RuntimeExportHistoryEnvelope,
   RuntimeExportHistoryV1,
+  RuntimeExportPackageCompareEnvelope,
+  RuntimeExportPackageCompareV1,
   RuntimeNodeDetailPageV1,
   RuntimeSatelliteServiceSummaryV1,
   RuntimeStatusEnvelope,
@@ -102,6 +104,18 @@ export async function loadRuntimeExportCatalog(
   return decodeRuntimeExportCatalog(await response.json()).summary;
 }
 
+export async function loadRuntimeExportPackageCompare(
+  packageId: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): Promise<RuntimeExportPackageCompareV1> {
+  const url = runtimeExportPackageCompareHref(packageId, endpoint);
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`failed to load runtime export package compare from ${url}: HTTP ${response.status}`);
+  }
+  return decodeRuntimeExportPackageCompare(await response.json()).summary;
+}
+
 export function runtimeApiErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   if (
@@ -149,6 +163,13 @@ export function runtimeExportPackageArchiveHref(
   endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
 ): string {
   return `${runtimeExportPackageRecordHref(packageId, endpoint)}/archive`;
+}
+
+export function runtimeExportPackageCompareHref(
+  packageId: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): string {
+  return `${runtimeExportPackageRecordHref(packageId, endpoint)}/compare`;
 }
 
 export function runtimeExportPackageFileHref(
@@ -231,6 +252,22 @@ export function decodeRuntimeExportCatalog(value: unknown): RuntimeExportCatalog
     ...(value as Record<string, unknown>),
     summary: summary as RuntimeExportCatalogV1
   } as RuntimeExportCatalogEnvelope;
+}
+
+export function decodeRuntimeExportPackageCompare(
+  value: unknown
+): RuntimeExportPackageCompareEnvelope {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError("runtime export package compare response must be an object");
+  }
+  const summary = (value as { summary?: unknown }).summary;
+  if (typeof summary !== "object" || summary === null || Array.isArray(summary)) {
+    throw new TypeError("runtime export package compare response must include summary object");
+  }
+  return {
+    ...(value as Record<string, unknown>),
+    summary: summary as RuntimeExportPackageCompareV1
+  } as RuntimeExportPackageCompareEnvelope;
 }
 
 export function decodeRuntimeStatusEnvelope(value: unknown): RuntimeStatusEnvelope {
