@@ -413,7 +413,10 @@ export function App() {
     eventCount: displayEventCount,
     runtimeStatus
   });
-  const connectionDiagnostics = connectionDiagnosticItems(connectionHealth);
+  const connectionDiagnostics = connectionDiagnosticItems(
+    connectionHealth,
+    runtimeStatus.stream_diagnostics_v1
+  );
   const fidelitySummary = selectFidelitySummary(runtimeStatus, generatedConfig, snapshot);
 
   const sendRuntimeControl = useCallback(
@@ -479,7 +482,7 @@ export function App() {
           <div className="connection-diagnostics" aria-label="连接诊断">
             {connectionDiagnostics.map((item) => (
               <span className={`connection-diagnostic ${item.status}`} key={item.channel}>
-                <small>{item.label}</small>
+                <small>{item.detail === undefined ? item.label : `${item.label} · ${item.detail}`}</small>
                 <strong>{item.statusLabel}</strong>
               </span>
             ))}
@@ -1273,17 +1276,23 @@ export interface ConnectionDiagnosticItem {
   label: string;
   status: RuntimeConnectionStatus;
   statusLabel: string;
+  detail?: string;
 }
 
 export function connectionDiagnosticItems(
-  health: RuntimeConnectionHealth
+  health: RuntimeConnectionHealth,
+  streamDiagnostics?: RuntimeStatusPayload["stream_diagnostics_v1"]
 ): readonly ConnectionDiagnosticItem[] {
-  return (["http", "control", "events", "state"] as const).map((channel) => ({
-    channel,
-    label: connectionChannelLabel(channel),
-    status: health[channel],
-    statusLabel: connectionStatusLabel(health[channel])
-  }));
+  return (["http", "control", "events", "state"] as const).map((channel) => {
+    const detail = connectionDiagnosticDetail(channel, streamDiagnostics);
+    return {
+      channel,
+      label: connectionChannelLabel(channel),
+      status: health[channel],
+      statusLabel: connectionStatusLabel(health[channel]),
+      ...(detail === undefined ? {} : { detail })
+    };
+  });
 }
 
 function connectionChannelLabel(channel: RuntimeConnectionChannel): string {
@@ -1310,6 +1319,31 @@ function connectionStatusLabel(status: RuntimeConnectionStatus): string {
     return "正常";
   }
   return "异常";
+}
+
+function connectionDiagnosticDetail(
+  channel: RuntimeConnectionChannel,
+  streamDiagnostics: RuntimeStatusPayload["stream_diagnostics_v1"] | undefined
+): string | undefined {
+  if (streamDiagnostics === undefined) {
+    return undefined;
+  }
+  const stream =
+    channel === "events"
+      ? streamDiagnostics.event_stream
+      : channel === "state"
+        ? streamDiagnostics.state_stream
+        : undefined;
+  if (stream === undefined) {
+    return undefined;
+  }
+  const dropped =
+    stream.total_dropped_count > 0
+      ? ` / 丢弃 ${formatInteger(stream.total_dropped_count)}`
+      : "";
+  return `游标 ${formatInteger(stream.next_cursor)} / 留存 ${formatInteger(
+    stream.retained_count
+  )}${dropped}`;
 }
 
 function runtimeStatusIsProgressing(status: RuntimeStatusPayload): boolean {

@@ -3512,3 +3512,36 @@ change.
 - Recommended follow-up:
   - Bind `stream_diagnostics_v1` into the topbar diagnostics row so users can
     see cursor lag, retained records, and dropped records without opening logs.
+
+## 2026-07-05 - Frontend Stream Diagnostics Binding v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: bind backend `stream_diagnostics_v1` into the topbar connection
+  diagnostics row so event/state stream cells show cursor, retained, and
+  dropped record counts when runtime status provides them.
+- Changed files/modules:
+  - `frontend/src/app/App.tsx`
+  - `frontend/tests/appSurface.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- appSurface.test.ts`
+    - Result: passed, 24 files / 168 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+  - `git diff --check`
+    - Result: passed with warnings only for the existing uncommitted
+      runtime/generated config files.
+- Problems encountered:
+  - The diagnostics row needed to remain compact, so cursor details are appended
+    to the channel label and rely on existing overflow/ellipsis styling.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The row shows retained and dropped records, but not consumer-side lag per
+    browser tab.
+- Recommended follow-up:
+  - Add a frontend-side stream cursor tracker so the diagnostics row can compare
+    backend latest cursor with the browser's last consumed cursor.

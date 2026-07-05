@@ -320,6 +320,61 @@ describe("connectionDiagnosticItems", () => {
       { channel: "state", label: "状态", status: "idle", statusLabel: "空闲" }
     ]);
   });
+
+  it("adds stream cursor details when backend diagnostics are available", () => {
+    expect(
+      connectionDiagnosticItems(
+        {
+          http: "live",
+          control: "live",
+          events: "live",
+          state: "live"
+        },
+        {
+          version: "v1",
+          advance_loop_state: "RUNNING",
+          tick_count: 12,
+          event_stream: {
+            name: "events",
+            next_cursor: 4200,
+            oldest_cursor: 4000,
+            retained_count: 201,
+            total_dropped_count: 0,
+            max_items: 100000,
+            max_batch_size: 100000,
+            overflow_risk: false
+          },
+          state_stream: {
+            name: "state",
+            next_cursor: 88,
+            oldest_cursor: 80,
+            retained_count: 9,
+            total_dropped_count: 3,
+            max_items: 100000,
+            max_batch_size: 100000,
+            overflow_risk: true
+          }
+        }
+      )
+    ).toEqual([
+      { channel: "http", label: "HTTP", status: "live", statusLabel: "正常" },
+      { channel: "control", label: "控制", status: "live", statusLabel: "正常" },
+      {
+        channel: "events",
+        label: "事件",
+        status: "live",
+        statusLabel: "正常",
+        detail: "游标 4,200 / 留存 201"
+      },
+      {
+        channel: "state",
+        label: "状态",
+        status: "live",
+        statusLabel: "正常",
+        detail: "游标 88 / 留存 9 / 丢弃 3"
+      }
+    ]);
+  });
 });
 
 describe("runtime progress clock", () => {
