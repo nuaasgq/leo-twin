@@ -5,6 +5,39 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Backpressure Notice Dismissal v1
+
+- Branch: `feature/T250-backpressure-notice-dismissal-v1`
+- Commit: pending in this commit
+- Scope: make runtime pressure warnings dismissible across page refreshes for
+  the same stable backend pressure identity. The frontend now persists the
+  dismissed backpressure notice key in browser session storage, restores it on
+  App initialization, clears it once the pressure warning is no longer visible,
+  and handles storage failures without breaking the UI.
+- Changed files/modules:
+  - `frontend/src/app/App.tsx`
+  - `frontend/tests/appSurface.test.ts`
+  - `docs/backpressure_notice_dismissal_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test -- appSurface.test.ts`
+    - Result: passed, 26 test files / 352 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. The command includes TypeScript checking; Vite reported
+      the existing `DataPanel` chunk size warning after minification.
+- Problems encountered and handling:
+  - Backpressure notices already had a stable dismiss key, but the dismissal was
+    React-state-only. Refreshing the page discarded that state. The fix reuses
+    the same stable key in `sessionStorage` while preserving existing behavior
+    that clears the dismissal when the warning condition disappears.
+  - Existing local runtime/generated config files remain dirty and are
+    intentionally not included in this task.
+- Known remaining issues / follow-up:
+  - Notice persistence remains browser-session scoped. Cross-browser or
+    user-account-level notice preferences would require a separate product
+    preference contract.
+
 ## 2026-07-06 - Completion Notice Dismissal v1
 
 - Branch: `feature/T249-completion-notice-refresh-v1`

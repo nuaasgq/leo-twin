@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  BACKPRESSURE_NOTICE_DISMISS_STORAGE_KEY,
   backpressureNoticeDismissKey,
   backpressureNoticeText,
   bodySurfaceAttribute,
+  clearBackpressureNoticeDismissKey,
   clearCompletionNoticeDismissKey,
   COMPLETION_NOTICE_DISMISS_STORAGE_KEY,
   completionNoticeDismissKey,
@@ -23,6 +25,7 @@ import {
   runtimeDetailRequestPlan,
   runtimeWebSocketErrorMessage,
   runtimeStatusRequiresStreams,
+  readBackpressureNoticeDismissKey,
   readCompletionNoticeDismissKey,
   scenarioWithRuntimeConfig,
   selectRuntimeExportComparePackageId,
@@ -37,6 +40,7 @@ import {
   shouldShowFidelityNotice,
   standaloneDashboardHref,
   surfaceFromPathname,
+  writeBackpressureNoticeDismissKey,
   writeCompletionNoticeDismissKey
 } from "../src/app/App";
 import {
@@ -658,6 +662,48 @@ describe("backpressure notice", () => {
         summary
       )
     ).toBe(false);
+  });
+
+  it("persists dismissed pressure notices across page refreshes", () => {
+    const values = new Map<string, string>();
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        values.set(key, value);
+      },
+      removeItem: (key: string) => {
+        values.delete(key);
+      }
+    };
+    const dismissKey = backpressureNoticeDismissKey(summary);
+
+    expect(readBackpressureNoticeDismissKey(storage)).toBeNull();
+    writeBackpressureNoticeDismissKey(storage, dismissKey);
+    expect(values.get(BACKPRESSURE_NOTICE_DISMISS_STORAGE_KEY)).toBe(dismissKey);
+    expect(readBackpressureNoticeDismissKey(storage)).toBe(dismissKey);
+
+    clearBackpressureNoticeDismissKey(storage);
+    expect(readBackpressureNoticeDismissKey(storage)).toBeNull();
+  });
+
+  it("ignores unavailable pressure-notice storage", () => {
+    const failingStorage = {
+      getItem: () => {
+        throw new Error("storage unavailable");
+      },
+      setItem: () => {
+        throw new Error("storage unavailable");
+      },
+      removeItem: () => {
+        throw new Error("storage unavailable");
+      }
+    };
+
+    expect(readBackpressureNoticeDismissKey(failingStorage)).toBeNull();
+    expect(() =>
+      writeBackpressureNoticeDismissKey(failingStorage, "dismissed-key")
+    ).not.toThrow();
+    expect(() => clearBackpressureNoticeDismissKey(failingStorage)).not.toThrow();
   });
 });
 

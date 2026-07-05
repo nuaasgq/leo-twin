@@ -269,7 +269,9 @@ export function App() {
   const [userConfigurationContractError, setUserConfigurationContractError] =
     useState<string | null>(null);
   const [dismissedBackpressureNoticeKey, setDismissedBackpressureNoticeKey] =
-    useState<string | null>(null);
+    useState<string | null>(() =>
+      readBackpressureNoticeDismissKey(browserSessionStorage())
+    );
   const [dismissedCompletionNoticeKey, setDismissedCompletionNoticeKey] =
     useState<string | null>(() =>
       readCompletionNoticeDismissKey(browserSessionStorage())
@@ -1413,6 +1415,7 @@ export function App() {
 
   useEffect(() => {
     if (backpressureNoticeKeyForStatus === null) {
+      clearBackpressureNoticeDismissKey(browserSessionStorage());
       setDismissedBackpressureNoticeKey(null);
     }
   }, [backpressureNoticeKeyForStatus]);
@@ -1456,6 +1459,10 @@ export function App() {
   const dismissBackpressureNotice = useCallback(() => {
     if (backpressureNoticeKeyForStatus !== null) {
       setDismissedBackpressureNoticeKey(backpressureNoticeKeyForStatus);
+      writeBackpressureNoticeDismissKey(
+        browserSessionStorage(),
+        backpressureNoticeKeyForStatus
+      );
     }
   }, [backpressureNoticeKeyForStatus]);
   const dismissCompletionNotice = useCallback(() => {
@@ -2220,6 +2227,49 @@ export function backpressureNoticeDismissKey(summary: RuntimeBackpressureSummary
     summary.bottleneck_component,
     summary.recommended_action
   ].join("|");
+}
+
+export const BACKPRESSURE_NOTICE_DISMISS_STORAGE_KEY =
+  "leo_twin.backpressure_notice.dismissed_key";
+
+export function readBackpressureNoticeDismissKey(
+  storage: RuntimeNoticeStorage | null | undefined
+): string | null {
+  if (storage === null || storage === undefined) {
+    return null;
+  }
+  try {
+    return storage.getItem(BACKPRESSURE_NOTICE_DISMISS_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function writeBackpressureNoticeDismissKey(
+  storage: RuntimeNoticeStorage | null | undefined,
+  dismissKey: string | null | undefined
+): void {
+  if (storage === null || storage === undefined || !dismissKey) {
+    return;
+  }
+  try {
+    storage.setItem(BACKPRESSURE_NOTICE_DISMISS_STORAGE_KEY, dismissKey);
+  } catch {
+    // Ignore browser storage failures; the in-memory dismiss state still works.
+  }
+}
+
+export function clearBackpressureNoticeDismissKey(
+  storage: RuntimeNoticeStorage | null | undefined
+): void {
+  if (storage === null || storage === undefined) {
+    return;
+  }
+  try {
+    storage.removeItem(BACKPRESSURE_NOTICE_DISMISS_STORAGE_KEY);
+  } catch {
+    // Ignore browser storage failures; this is only a UI notice preference.
+  }
 }
 
 export function backpressureNoticeText(summary: RuntimeBackpressureSummary): string {

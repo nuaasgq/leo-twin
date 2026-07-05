@@ -438,6 +438,10 @@ Tasks:
     browser session storage, restores the dismissal after refresh, clears the
     persisted key when a new runtime becomes active, and keeps storage failures
     non-fatal.
+  - Status: T250 persists dismissed runtime backpressure notice keys in browser
+    session storage, restores the dismissal after refresh for the same stable
+    pressure identity, clears it once the warning condition disappears, and
+    keeps storage failures non-fatal.
 
 ## 4. Sequencing
 
