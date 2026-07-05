@@ -2065,6 +2065,7 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
 }
 
 .data-panel-config-validate-meta,
+.data-panel-config-readiness-tags,
 .data-panel-config-change-tags,
 .data-panel-config-validate-errors {
   display: flex;
@@ -2074,6 +2075,7 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
 }
 
 .data-panel-config-validate-meta span,
+.data-panel-config-readiness-tags span,
 .data-panel-config-change-tags span,
 .data-panel-config-validate-errors span {
   min-width: 0;
@@ -2084,6 +2086,12 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
   background: #0b1219;
   overflow-wrap: anywhere;
   white-space: normal;
+}
+
+.data-panel-config-readiness-tags span {
+  border-color: #51492d;
+  background: #141309;
+  color: #f0d989;
 }
 
 .data-panel-config-change-summary {

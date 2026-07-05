@@ -601,6 +601,16 @@ export const DataPanel = memo(function DataPanel({
                     <span key={label}>{label}</span>
                   ))}
                 </div>
+                {userConfigurationValidationDisplay.readinessLabels.length > 0 ? (
+                  <div
+                    className="data-panel-config-readiness-tags"
+                    aria-label="配置应用运行态就绪说明"
+                  >
+                    {userConfigurationValidationDisplay.readinessLabels.map((label) => (
+                      <span key={label}>{label}</span>
+                    ))}
+                  </div>
+                ) : null}
                 {userConfigurationValidationDisplay.changeLabels.length > 0 ? (
                   <div className="data-panel-config-change-summary">
                     <div className="data-panel-config-change-tags">
@@ -4918,6 +4928,7 @@ export interface DataPanelUserConfigurationValidationDisplay {
   statusLabel: string;
   detailLabel: string;
   metaLabels: readonly string[];
+  readinessLabels: readonly string[];
   changeLabels: readonly string[];
   changeRows: readonly DataPanelUserConfigurationChangeRow[];
   errorLabels: readonly string[];
@@ -4941,6 +4952,7 @@ export function buildDataPanelUserConfigurationValidationDisplay(
       statusLabel: "后端预检中",
       detailLabel: "正在校验 JSON 映射，不会应用配置",
       metaLabels: ["mutation VALIDATE_ONLY_NO_APPLY"],
+      readinessLabels: [],
       changeLabels: [],
       changeRows: [],
       errorLabels: []
@@ -4952,6 +4964,7 @@ export function buildDataPanelUserConfigurationValidationDisplay(
       statusLabel: "预检请求失败",
       detailLabel: error,
       metaLabels: ["mutation none", `endpoint ${userConfigurationValidateHref()}`],
+      readinessLabels: [],
       changeLabels: [],
       changeRows: [],
       errorLabels: [error]
@@ -4987,10 +5000,29 @@ export function buildDataPanelUserConfigurationValidationDisplay(
       `default ${report.defaulting_policy}`,
       ...applyLabels
     ],
+    readinessLabels: buildUserConfigurationApplyReadinessLabels(report),
     changeLabels: changeDisplay.labels,
     changeRows: changeDisplay.rows,
     errorLabels: report.errors.map((item) => `${item.source}: ${item.message}`)
   };
+}
+
+function buildUserConfigurationApplyReadinessLabels(
+  report: UserConfigurationValidationReportV1
+): readonly string[] {
+  const readiness = report.apply_readiness;
+  if (!report.ok || readiness === null || readiness === undefined) {
+    return [];
+  }
+  return [
+    readiness.can_apply ? `可应用 ${readiness.readiness}` : `不可应用 ${readiness.readiness}`,
+    `runtime ${readiness.controller_status}/${readiness.lifecycle_state}`,
+    `建议 ${readiness.recommended_action}`,
+    readiness.requires_confirmation ? "需要确认" : "无需额外确认",
+    `session ${readiness.session_effect}`,
+    `stream ${readiness.stream_effect}`,
+    readiness.reason
+  ];
 }
 
 function buildUserConfigurationChangeDisplay(

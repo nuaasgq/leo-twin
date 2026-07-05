@@ -181,7 +181,10 @@ applies a `CONFIG_UPDATE` by itself. Accepted reports include an
 that reinitializes the demo runtime session and reconnects streams. Accepted
 reports also include `change_summary`, a backend-generated diff between the
 current effective config and the normalized candidate, with deterministic
-field-path ordering and bounded preview rows.
+field-path ordering and bounded preview rows. Reports include
+`apply_readiness` as well, which records current controller/session lifecycle,
+recommended action, confirmation requirement, and the fact that applying a
+config rebuilds the session and stream buffers.
 The standalone dashboard also shows these links in the user configuration
 contract section so users can download the current full configuration and
 inspect the backend schema without editing runtime state. The dashboard also
@@ -191,7 +194,8 @@ auto-applying the candidate configuration. After a successful preflight, the
 dashboard can send the backend-normalized mapping through the existing
 `CONFIG_UPDATE` control channel. The preflight card renders the backend
 `change_summary` so users can see changed field counts, section counts, and
-bounded field-path previews before applying.
+bounded field-path previews before applying, and it renders `apply_readiness`
+so the runtime/session side effect is visible before the command is sent.
 
 Persisted package artifact routes:
 

@@ -236,6 +236,15 @@ class DemoControlPlane:
             if isinstance(normalized_config, dict)
             else None
         )
+        apply_readiness = (
+            _user_configuration_apply_readiness(
+                initialized=self._initialized,
+                controller_status=self._controller.snapshot().status.value,
+                lifecycle_state=self._require_session().lifecycle_state.value,
+            )
+            if isinstance(normalized_config, dict)
+            else None
+        )
         return {
             "type": "USER_CONFIGURATION_VALIDATION_REPORT",
             "summary": {
@@ -253,6 +262,7 @@ class DemoControlPlane:
                 "normalized_config_hash": normalized_hash,
                 "normalized_config": normalized_config,
                 "change_summary": change_summary,
+                "apply_readiness": apply_readiness,
                 "apply_command": _user_configuration_apply_command(),
             },
         }
@@ -1318,6 +1328,53 @@ def _flatten_config_paths(data: Mapping[str, Any]) -> dict[str, Any]:
 
     walk("", data)
     return flattened
+
+
+def _user_configuration_apply_readiness(
+    *,
+    initialized: bool,
+    controller_status: str,
+    lifecycle_state: str,
+) -> dict[str, Any]:
+    running = lifecycle_state == RuntimeLifecycleState.RUNNING.value
+    completed = lifecycle_state == RuntimeLifecycleState.COMPLETED.value
+    error = lifecycle_state == RuntimeLifecycleState.ERROR.value
+    session_exists = lifecycle_state != RuntimeLifecycleState.UNINITIALIZED.value
+    requires_confirmation = running or completed or error
+    if running:
+        readiness = "APPLY_ALLOWED_WITH_RUNNING_SESSION_REINIT"
+        recommended_action = "PAUSE_OR_STOP_BEFORE_APPLY"
+        reason = "runtime is running; applying config will stop and rebuild the live session"
+    elif completed:
+        readiness = "APPLY_ALLOWED_AFTER_COMPLETION_REINIT"
+        recommended_action = "APPLY_TO_START_NEW_SESSION"
+        reason = "runtime is completed; applying config will create a fresh initialized session"
+    elif error:
+        readiness = "APPLY_ALLOWED_AFTER_ERROR_REINIT"
+        recommended_action = "APPLY_TO_RECOVER_SESSION"
+        reason = "runtime is in error state; applying config rebuilds the session from validated config"
+    elif initialized or session_exists:
+        readiness = "APPLY_ALLOWED_REINITIALIZES_SESSION"
+        recommended_action = "APPLY_WHEN_READY"
+        reason = "runtime session exists; applying config will rebuild the initialized session"
+    else:
+        readiness = "APPLY_ALLOWED_UNINITIALIZED"
+        recommended_action = "APPLY_THEN_INITIALIZE"
+        reason = "runtime is not initialized; applying config prepares the next session"
+    return {
+        "version": "v1",
+        "source": "BACKEND_RUNTIME_STATUS",
+        "can_apply": True,
+        "readiness": readiness,
+        "requires_confirmation": requires_confirmation,
+        "recommended_action": recommended_action,
+        "reason": reason,
+        "runtime_initialized": initialized,
+        "controller_status": controller_status,
+        "lifecycle_state": lifecycle_state,
+        "session_effect": "REINITIALIZES_SESSION",
+        "stream_effect": "STOPS_AND_RECREATES_STREAM_BUFFERS",
+    }
 
 
 def _runtime_export_restore_result(

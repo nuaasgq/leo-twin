@@ -5,6 +5,56 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - User Config Apply Readiness v1
+
+- Branch: `feature/T203-user-config-apply-readiness-v1`
+- Commit: pending in this commit
+- Scope: add backend-owned runtime readiness semantics to user configuration
+  preflight reports and render them in the dashboard. Accepted
+  `USER_CONFIGURATION_VALIDATION_REPORT` payloads now include
+  `apply_readiness`, which records whether applying is allowed, current
+  controller/session lifecycle, confirmation recommendation, operator action,
+  and session/stream side effects. The dashboard renders those fields in the
+  preflight card before `CONFIG_UPDATE` can be sent.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `tests/integration/test_config_control.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/integration_demo.md`
+  - `docs/user_configuration_schema_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `$env:PYTHONPATH='.'; python -m pytest tests/integration/test_config_control.py::test_control_plane_validates_user_configuration_without_applying tests/integration/test_config_control.py::test_control_plane_applies_preflight_normalized_user_configuration tests/integration/test_config_control.py::test_control_plane_reports_running_apply_readiness -q`
+    - Result: passed, 3 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 25 files / 300 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing `DataPanel` chunk-size
+      warning after minification.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - A test exposed that small demo sessions can already be in
+    `lifecycle_state=INITIALIZED` while the control-plane `initialized` flag is
+    false. The readiness logic was adjusted to report based on the actual
+    session lifecycle as well as the control-plane flag.
+  - Local runtime/generated config files remain dirty and are intentionally not
+    included in this task.
+- Known remaining issues / follow-up:
+  - The readiness display is informational; a later task can add a dedicated
+    confirmation modal for running-session reinitialization.
+  - YAML/file upload and full diff filtering remain future configuration
+    workflow work.
+
 ## 2026-07-06 - Dashboard User Config Diff v1
 
 - Branch: `feature/T202-dashboard-user-config-diff-v1`

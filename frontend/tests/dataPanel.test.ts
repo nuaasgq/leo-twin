@@ -912,6 +912,20 @@ describe("buildDataPanelUserConfigurationValidationDisplay", () => {
             satellite_count: 72
           }
         },
+        apply_readiness: {
+          version: "v1",
+          source: "BACKEND_RUNTIME_STATUS",
+          can_apply: true,
+          readiness: "APPLY_ALLOWED_REINITIALIZES_SESSION",
+          requires_confirmation: false,
+          recommended_action: "APPLY_WHEN_READY",
+          reason: "runtime session exists; applying config will rebuild the initialized session",
+          runtime_initialized: false,
+          controller_status: "STOPPED",
+          lifecycle_state: "INITIALIZED",
+          session_effect: "REINITIALIZES_SESSION",
+          stream_effect: "STOPS_AND_RECREATES_STREAM_BUFFERS"
+        },
         apply_command: {
           type: "CONFIG_UPDATE",
           action: "CONFIG_UPDATE",
@@ -934,6 +948,15 @@ describe("buildDataPanelUserConfigurationValidationDisplay", () => {
         "apply CONFIG_UPDATE/CONFIG_UPDATE",
         "payload normalized_config",
         "effect REINITIALIZES_SESSION_AND_STREAMS"
+      ],
+      readinessLabels: [
+        "可应用 APPLY_ALLOWED_REINITIALIZES_SESSION",
+        "runtime STOPPED/INITIALIZED",
+        "建议 APPLY_WHEN_READY",
+        "无需额外确认",
+        "session REINITIALIZES_SESSION",
+        "stream STOPS_AND_RECREATES_STREAM_BUFFERS",
+        "runtime session exists; applying config will rebuild the initialized session"
       ],
       changeLabels: [],
       changeRows: [],
@@ -981,6 +1004,7 @@ describe("buildDataPanelUserConfigurationValidationDisplay", () => {
     expect(buildDataPanelUserConfigurationValidationDisplay(null, true)).toMatchObject({
       tone: "pending",
       statusLabel: "后端预检中",
+      readinessLabels: [],
       changeLabels: [],
       changeRows: []
     });
@@ -989,6 +1013,7 @@ describe("buildDataPanelUserConfigurationValidationDisplay", () => {
     ).toMatchObject({
       tone: "error",
       statusLabel: "预检请求失败",
+      readinessLabels: [],
       changeLabels: [],
       changeRows: [],
       errorLabels: ["HTTP 400"]

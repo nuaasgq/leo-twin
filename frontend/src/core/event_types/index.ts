@@ -646,6 +646,7 @@ export interface UserConfigurationValidationReportV1 {
   normalized_config_hash: string | null;
   normalized_config: Record<string, unknown> | null;
   change_summary?: UserConfigurationChangeSummaryV1 | null;
+  apply_readiness?: UserConfigurationApplyReadinessV1 | null;
   apply_command: UserConfigurationValidationApplyCommandV1;
 }
 
@@ -684,6 +685,21 @@ export interface UserConfigurationChangeItemV1 {
   change_type: string;
   current_value: unknown;
   candidate_value: unknown;
+}
+
+export interface UserConfigurationApplyReadinessV1 {
+  version: "v1" | string;
+  source: string;
+  can_apply: boolean;
+  readiness: string;
+  requires_confirmation: boolean;
+  recommended_action: string;
+  reason: string;
+  runtime_initialized: boolean;
+  controller_status: string;
+  lifecycle_state: string;
+  session_effect: string;
+  stream_effect: string;
 }
 
 export interface UserConfigurationValidationReportEnvelope {

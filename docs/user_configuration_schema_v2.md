@@ -69,7 +69,10 @@ The HTTP endpoints are read-only:
   accepted, the report includes an explicit `apply_command` that names
   `normalized_config` as the safe `CONFIG_UPDATE` payload source and a
   deterministic `change_summary` comparing the current effective config with
-  the accepted normalized candidate.
+  the accepted normalized candidate. It also includes `apply_readiness`, a
+  backend runtime-state summary describing whether the config can be applied
+  now, the current controller/session lifecycle state, recommended operator
+  action, and session/stream side effects.
 
 Configuration import remains an explicit control-plane action. Validated full
 or partial mappings use `CONFIG_UPDATE`, template loading uses `LOAD_TEMPLATE`,
@@ -119,6 +122,11 @@ The standalone dashboard renders this backend diff in the preflight result
 card. It shows the total changed field count, section counts, hidden preview
 count when applicable, and a bounded list of changed field paths before the
 user can press "应用配置".
+
+`apply_readiness` is also backend-owned. The dashboard renders it in the
+preflight card so users can see when applying will reinitialize an existing or
+running session, whether extra confirmation is recommended, and what will
+happen to stream buffers.
 
 Each field schema includes:
 

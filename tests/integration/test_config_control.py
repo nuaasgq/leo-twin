@@ -730,6 +730,20 @@ def test_control_plane_validates_user_configuration_without_applying(tmp_path) -
     assert accepted_summary["change_summary"]["changed_field_count"] > 0
     assert accepted_summary["change_summary"]["section_counts"]["scenario"] > 0
     assert accepted_summary["change_summary"]["section_counts"]["runtime"] > 0
+    assert accepted_summary["apply_readiness"] == {
+        "version": "v1",
+        "source": "BACKEND_RUNTIME_STATUS",
+        "can_apply": True,
+        "readiness": "APPLY_ALLOWED_REINITIALIZES_SESSION",
+        "requires_confirmation": False,
+        "recommended_action": "APPLY_WHEN_READY",
+        "reason": "runtime session exists; applying config will rebuild the initialized session",
+        "runtime_initialized": False,
+        "controller_status": "STOPPED",
+        "lifecycle_state": "INITIALIZED",
+        "session_effect": "REINITIALIZES_SESSION",
+        "stream_effect": "STOPS_AND_RECREATES_STREAM_BUFFERS",
+    }
     assert accepted_summary["apply_command"] == {
         "type": "CONFIG_UPDATE",
         "action": "CONFIG_UPDATE",
@@ -750,6 +764,7 @@ def test_control_plane_validates_user_configuration_without_applying(tmp_path) -
     assert rejected_summary["normalized_config_hash"] is None
     assert rejected_summary["normalized_config"] is None
     assert rejected_summary["change_summary"] is None
+    assert rejected_summary["apply_readiness"] is None
     assert "unknown scenario keys: unsupported_compute_gpu" in rejected_summary[
         "errors"
     ][0]["message"]
@@ -815,6 +830,45 @@ def test_control_plane_applies_preflight_normalized_user_configuration(tmp_path)
     assert applied["runtime"]["duration"] == 480
     assert applied["runtime"]["seed"] == 20260706
     assert control_plane.runtime_status()["status"]["initialized"] is True
+
+
+def test_control_plane_reports_running_apply_readiness(tmp_path) -> None:
+    control_plane = _small_control_plane(tmp_path / "sees_control.yaml")
+    control_plane.handle_raw_message(
+        json.dumps({"type": "RUNTIME_CONTROL", "action": "INITIALIZE"})
+    )
+    control_plane.handle_raw_message(
+        json.dumps({"type": "RUNTIME_CONTROL", "action": "START"})
+    )
+    try:
+        report = control_plane.user_configuration_validate(
+            {
+                "scenario": {
+                    "satellite_count": 72,
+                    "compute_nodes": 72,
+                },
+                "runtime": {
+                    "duration": 600,
+                    "seed": 20260703,
+                },
+            }
+        )
+        readiness = report["summary"]["apply_readiness"]
+
+        assert report["summary"]["ok"] is True
+        assert readiness["can_apply"] is True
+        assert readiness["runtime_initialized"] is True
+        assert readiness["controller_status"] == "RUNNING"
+        assert readiness["lifecycle_state"] == "RUNNING"
+        assert readiness["readiness"] == "APPLY_ALLOWED_WITH_RUNNING_SESSION_REINIT"
+        assert readiness["requires_confirmation"] is True
+        assert readiness["recommended_action"] == "PAUSE_OR_STOP_BEFORE_APPLY"
+        assert readiness["session_effect"] == "REINITIALIZES_SESSION"
+        assert readiness["stream_effect"] == "STOPS_AND_RECREATES_STREAM_BUFFERS"
+    finally:
+        control_plane.handle_raw_message(
+            json.dumps({"type": "RUNTIME_CONTROL", "action": "STOP"})
+        )
 
 
 def test_control_plane_rejects_template_load_after_initialization(tmp_path) -> None:
