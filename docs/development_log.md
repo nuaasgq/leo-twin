@@ -8672,3 +8672,58 @@ change.
   - Add backend section payloads for placement candidates and queue/resource
     timelines, then expose cursor navigation/search directly in the dashboard
     drawer.
+
+## 2026-07-05 - Runtime Reproducibility Manifest v1
+
+- Branch: `feature/T179-runtime-reproducibility-manifest-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a backend-owned runtime reproducibility manifest to the live demo
+  runtime status. The manifest records deterministic hashes for scenario,
+  control config, generated config, runtime state, metrics summary, and the
+  manifest itself. It also declares the expected text artifacts
+  `config_snapshot.json`, `events.jsonl`, `metrics.csv`, and `summary.json`
+  without changing Event Kernel behavior or live streaming progression. The
+  dashboard status contract now exposes this field and renders a compact
+  session/hash summary in the standalone data panel.
+- Changed files/modules:
+  - `src/leo_twin/services/runtime_reproducibility.py`
+  - `examples/integration_demo/control_plane.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/fixtures/runtimeStatus.contract.json`
+  - `frontend/tests/runtimeContractFixture.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `tests/unit/test_runtime_reproducibility.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_runtime_reproducibility.py -q`
+    - Result: passed, 2 tests.
+  - `python -m pytest tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer -q`
+    - Result: passed, 1 test.
+  - `python -m json.tool frontend/tests/fixtures/runtimeStatus.contract.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- dataPanel.test.ts runtimeContractFixture.test.ts`
+    - Result: passed, 25 files / 267 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Existing DataPanel chunk-size warning remains.
+- Problems encountered:
+  - The default shell did not have `node` on `PATH`; validation was rerun with
+    the bundled Codex Node/Pnpm paths.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - Live `/runtime/status` now declares reproducibility hashes and artifact
+    availability, but the demo server still does not provide a one-click
+    downloadable run package endpoint for `events.jsonl`, `metrics.csv`,
+    `summary.json`, and config snapshots.
+- Recommended follow-up:
+  - Add result package export v1 with an explicit `/runtime/export` or CLI
+    path that writes the manifest plus text artifacts into a deterministic run
+    directory.

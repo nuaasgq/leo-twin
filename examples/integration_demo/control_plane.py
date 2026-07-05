@@ -38,6 +38,9 @@ from leo_twin.services.runtime_observability import (
     build_runtime_satellite_service_summary,
     build_runtime_user_request_summary,
 )
+from leo_twin.services.runtime_reproducibility import (
+    build_runtime_reproducibility_manifest,
+)
 from leo_twin.services.scenario_builder import (
     scenario_builder_backend_summary,
     scenario_builder_config_from_sees_config,
@@ -129,11 +132,12 @@ class DemoControlPlane:
         return self._controller
 
     def runtime_status(self) -> dict[str, Any]:
+        generated_config = self._generated_config_json()
         return {
             "type": "RUNTIME_STATUS",
-            "status": self._status_json(),
+            "status": self._status_json(generated_config),
             "config": self._controller.config_json(),
-            "generated_config": self._generated_config_json(),
+            "generated_config": generated_config,
         }
 
     def runtime_user_details(self, cursor: int = 0, limit: int = 100) -> dict[str, Any]:
@@ -435,7 +439,10 @@ class DemoControlPlane:
         generated["backend_summary"] = backend_summary
         return generated
 
-    def _status_json(self) -> dict[str, Any]:
+    def _status_json(
+        self,
+        generated_config: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         runtime_status = self._require_session().get_status().to_dict()
         status = dict(runtime_status)
         status.update(self._controller.snapshot().to_json())
@@ -478,16 +485,30 @@ class DemoControlPlane:
             float(status["current_sim_time"]),
         )
         status["stream_diagnostics_v1"] = self._stream_diagnostics_json()
+        status["reproducibility_manifest_v1"] = (
+            build_runtime_reproducibility_manifest(
+                session_id=self._require_session().session_id,
+                runtime_status=status,
+                control_config=self._controller.config_json(),
+                generated_config=(
+                    generated_config
+                    if generated_config is not None
+                    else self._generated_config_json()
+                ),
+                metrics_summary=metrics_summary,
+            )
+        )
         return status
 
     def _ack(self, command: ControlCommand) -> dict[str, Any]:
+        generated_config = self._generated_config_json()
         return {
             "type": "CONTROL_ACK",
             "ok": True,
             "command": command.command.value,
-            "status": self._status_json(),
+            "status": self._status_json(generated_config),
             "config": self._controller.config_json(),
-            "generated_config": self._generated_config_json(),
+            "generated_config": generated_config,
         }
 
     def _metrics_summary_json(self) -> dict[str, Any]:

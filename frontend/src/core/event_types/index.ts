@@ -596,6 +596,39 @@ export interface RuntimeBackpressureSummary {
   recommended_action: string;
 }
 
+export interface RuntimeReproducibilityManifestV1 {
+  version: "v1" | string;
+  source: string;
+  manifest_id: string;
+  session_id: string;
+  seed?: number | string | null;
+  duration_s?: number | string | null;
+  runtime_mode?: string | null;
+  speed_factor?: number | string | null;
+  config_version?: number | string | null;
+  deterministic_replay?: boolean | null;
+  runtime_state?: Record<string, RuntimeMetricsSummaryValue | RuntimeMetricsSummary>;
+  scenario_hash: string;
+  control_config_hash: string;
+  generated_config_hash: string;
+  metrics_summary_hash: string;
+  runtime_state_hash: string;
+  manifest_hash: string;
+  artifact_policy: string;
+  artifact_policy_note?: string;
+  artifacts: readonly RuntimeReproducibilityArtifactV1[];
+  artifact_count?: number;
+  excluded_runtime_fields?: readonly string[];
+  notes?: readonly string[];
+}
+
+export interface RuntimeReproducibilityArtifactV1 {
+  name: string;
+  format: string;
+  status: string;
+  source: string;
+}
+
 export interface StateSnapshot {
   event_count?: number;
   last_sim_time?: number;
@@ -659,6 +692,7 @@ export interface RuntimeStatusPayload {
   satellite_service_summary_v1?: RuntimeSatelliteServiceSummaryV1;
   node_detail_summary_v1?: RuntimeNodeDetailSummaryV1;
   stream_diagnostics_v1?: RuntimeStreamDiagnosticsV1;
+  reproducibility_manifest_v1?: RuntimeReproducibilityManifestV1;
   profiling_summary?: RuntimeProfilingSummary | null;
   backpressure_summary?: RuntimeBackpressureSummary | null;
 }

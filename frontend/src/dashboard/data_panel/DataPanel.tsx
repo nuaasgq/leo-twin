@@ -24,6 +24,7 @@ import {
   RuntimeNodeDetailCardV1,
   RuntimeNodeDetailPageV1,
   RuntimeNodeDetailSummaryV1,
+  RuntimeReproducibilityManifestV1,
   RuntimeSatelliteServiceItemV1,
   RuntimeSatelliteServiceSummaryV1,
   RuntimeSatelliteKpiHistoryV1,
@@ -125,6 +126,9 @@ export const DataPanel = memo(function DataPanel({
   const configuredScale = buildDataPanelConfiguredScale(generatedConfig, fidelitySummary);
   const trafficSummary = generatedConfig?.backend_summary?.traffic_demand_summary;
   const trafficDisplay = buildDataPanelTrafficDisplay(trafficSummary);
+  const reproducibilityDisplay = buildDataPanelReproducibilityDisplay(
+    runtimeStatus.reproducibility_manifest_v1
+  );
   const runtimeProgress = buildDataPanelRuntimeProgress(summary.simTime, runtimeStatus.duration);
   const telemetry = buildDataPanelTelemetry(
     snapshot,
@@ -303,6 +307,15 @@ export const DataPanel = memo(function DataPanel({
               <small className="data-panel-runtime-note">{trafficDisplay.note}</small>
             ) : null}
           </div>
+          {reproducibilityDisplay ? (
+            <div className="data-panel-runtime-wide">
+              <span>复现清单</span>
+              <strong>{reproducibilityDisplay.primaryLabel}</strong>
+              <small className="data-panel-runtime-note">
+                {reproducibilityDisplay.secondaryLabel}
+              </small>
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -4223,6 +4236,28 @@ function runtimeModeLabel(mode: RuntimeStatusPayload["mode"]): string {
   return "实时模式";
 }
 
+export interface DataPanelReproducibilityDisplay {
+  primaryLabel: string;
+  secondaryLabel: string;
+}
+
+export function buildDataPanelReproducibilityDisplay(
+  manifest: RuntimeReproducibilityManifestV1 | null | undefined
+): DataPanelReproducibilityDisplay | null {
+  if (manifest === null || manifest === undefined) {
+    return null;
+  }
+  const shortHash = shortRuntimeHash(manifest.manifest_hash);
+  const artifactCount =
+    typeof manifest.artifact_count === "number"
+      ? manifest.artifact_count
+      : manifest.artifacts.length;
+  return {
+    primaryLabel: `${manifest.session_id} / ${shortHash}`,
+    secondaryLabel: `${manifest.artifact_policy} / ${artifactCount} artifacts`
+  };
+}
+
 export interface DataPanelTrafficDisplay {
   label: string;
   note: string | null;
@@ -4983,6 +5018,11 @@ function dataPanelRequestStateLabel(requestState: string): string {
     return "网络业务可达";
   }
   return requestState;
+}
+
+function shortRuntimeHash(hash: string): string {
+  const normalized = hash.startsWith("sha256:") ? hash.slice("sha256:".length) : hash;
+  return normalized.length <= 12 ? normalized : normalized.slice(0, 12);
 }
 
 function formatPercent(value: number): string {

@@ -27,6 +27,7 @@ from leo_twin.schema.config import (
     RuntimeMode,
     ScenarioConfig,
 )
+from leo_twin.services.runtime_reproducibility import stable_hash_payload
 
 
 class _Recorder(SimulationModule):
@@ -197,6 +198,26 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
     assert status["generated_config"]["backend_summary"]["fidelity_summary"] == status[
         "status"
     ]["fidelity_summary"]
+    manifest = status["status"]["reproducibility_manifest_v1"]
+    assert manifest["version"] == "v1"
+    assert manifest["source"] == "BACKEND_RUNTIME_STATUS"
+    assert manifest["session_id"] == "integration-demo-1234"
+    assert manifest["generated_config_hash"] == stable_hash_payload(
+        status["generated_config"]
+    )
+    assert manifest["runtime_state"]["current_sim_time"] == status["status"][
+        "current_sim_time"
+    ]
+    assert manifest["runtime_state"]["processed_event_count"] == status["status"][
+        "processed_event_count"
+    ]
+    assert "wall_clock_start_time" not in manifest["runtime_state"]
+    assert {artifact["name"] for artifact in manifest["artifacts"]} == {
+        "config_snapshot.json",
+        "events.jsonl",
+        "metrics.csv",
+        "summary.json",
+    }
 
     blocked = control_plane.handle_raw_message(
         json.dumps({"type": "RUNTIME_CONTROL", "action": "START"})

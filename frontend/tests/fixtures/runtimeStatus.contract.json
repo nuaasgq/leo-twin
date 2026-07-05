@@ -14,6 +14,77 @@
     "processed_event_count": 4096,
     "queued_event_count": 128,
     "deterministic_replay": false,
+    "reproducibility_manifest_v1": {
+      "version": "v1",
+      "source": "BACKEND_RUNTIME_STATUS",
+      "manifest_id": "leo_twin.runtime_reproducibility_manifest.v1",
+      "session_id": "integration-demo-20260705",
+      "seed": 20260705,
+      "duration_s": 600,
+      "runtime_mode": "REAL_TIME",
+      "speed_factor": 1,
+      "config_version": 2,
+      "deterministic_replay": false,
+      "runtime_state": {
+        "session_id": "integration-demo-20260705",
+        "lifecycle_state": "RUNNING",
+        "status": "RUNNING",
+        "mode": "REAL_TIME",
+        "speed_factor": 1,
+        "seed": 20260705,
+        "duration": 600,
+        "config_version": 2,
+        "last_action": "START",
+        "initialized": true,
+        "current_sim_time": 120,
+        "processed_event_count": 4096,
+        "queued_event_count": 128,
+        "deterministic_replay": false
+      },
+      "scenario_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "control_config_hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+      "generated_config_hash": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "metrics_summary_hash": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+      "runtime_state_hash": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+      "manifest_hash": "sha256:abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+      "artifact_policy": "LIVE_STATUS_MANIFEST_ONLY",
+      "artifact_policy_note": "Live runtime status exposes deterministic hashes and artifact availability; file package export is a separate batch path.",
+      "artifacts": [
+        {
+          "name": "config_snapshot.json",
+          "format": "json",
+          "status": "EMBEDDED_IN_RUNTIME_STATUS",
+          "source": "runtime_status.generated_config"
+        },
+        {
+          "name": "events.jsonl",
+          "format": "jsonl",
+          "status": "AVAILABLE_FOR_BATCH_EXPORT",
+          "source": "MetricsCollector.write_outputs"
+        },
+        {
+          "name": "metrics.csv",
+          "format": "csv",
+          "status": "AVAILABLE_FOR_BATCH_EXPORT",
+          "source": "MetricsCollector.write_outputs"
+        },
+        {
+          "name": "summary.json",
+          "format": "json",
+          "status": "AVAILABLE_FOR_BATCH_EXPORT",
+          "source": "MetricsCollector.write_outputs"
+        }
+      ],
+      "artifact_count": 4,
+      "excluded_runtime_fields": [
+        "wall_clock_start_time"
+      ],
+      "notes": [
+        "Event Kernel ordering is unchanged.",
+        "Live mode is reproducible through deterministic config and event outputs.",
+        "Batch exports use events.jsonl, metrics.csv, and summary.json."
+      ]
+    },
     "fidelity_summary": {
       "orbit_update_mode": "BATCH",
       "metrics_mode": "AGGREGATED",

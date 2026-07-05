@@ -14,6 +14,22 @@ describe("runtime status contract fixture", () => {
     expect(status.lifecycle_state).toBe("RUNNING");
     expect(status.fidelity_summary?.orbit_update_mode).toBe("BATCH");
     expect(status.fidelity_summary?.satellite_count).toBe(1200);
+    expect(status.reproducibility_manifest_v1).toMatchObject({
+      version: "v1",
+      source: "BACKEND_RUNTIME_STATUS",
+      manifest_id: "leo_twin.runtime_reproducibility_manifest.v1",
+      session_id: "integration-demo-20260705",
+      artifact_policy: "LIVE_STATUS_MANIFEST_ONLY",
+      artifact_count: 4
+    });
+    expect(status.reproducibility_manifest_v1?.manifest_hash).toMatch(/^sha256:/);
+    expect(status.reproducibility_manifest_v1?.runtime_state?.current_sim_time).toBe(120);
+    expect(status.reproducibility_manifest_v1?.artifacts.map((item) => item.name)).toEqual([
+      "config_snapshot.json",
+      "events.jsonl",
+      "metrics.csv",
+      "summary.json"
+    ]);
     expect(status.stream_diagnostics_v1?.event_stream.next_cursor).toBe(42);
     expect(status.kpi_time_series_v1?.samples[0]).toMatchObject({
       sim_time: 120,

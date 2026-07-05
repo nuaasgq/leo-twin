@@ -14,6 +14,7 @@ import {
   buildDataPanelNetworkKpiProvenanceItems,
   buildDataPanelNetworkKpiSource,
   buildDataPanelNodeDetailDrawerItems,
+  buildDataPanelReproducibilityDisplay,
   buildDataPanelRouteConstraints,
   buildDataPanelRuntimeProgress,
   buildDataPanelSatelliteResourceHistory,
@@ -571,6 +572,45 @@ describe("buildDataPanelRuntimeProgress", () => {
 
   it("clamps the data panel progress to the configured duration", () => {
     expect(buildDataPanelRuntimeProgress(900, 600).percentLabel).toBe("100%");
+  });
+});
+
+describe("buildDataPanelReproducibilityDisplay", () => {
+  it("summarizes backend runtime reproducibility manifest for the dashboard", () => {
+    expect(
+      buildDataPanelReproducibilityDisplay({
+        version: "v1",
+        source: "BACKEND_RUNTIME_STATUS",
+        manifest_id: "leo_twin.runtime_reproducibility_manifest.v1",
+        session_id: "integration-demo-7",
+        scenario_hash:
+          "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        control_config_hash:
+          "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        generated_config_hash:
+          "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        metrics_summary_hash:
+          "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+        runtime_state_hash:
+          "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+        manifest_hash:
+          "sha256:abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+        artifact_policy: "LIVE_STATUS_MANIFEST_ONLY",
+        artifacts: [
+          {
+            name: "events.jsonl",
+            format: "jsonl",
+            status: "AVAILABLE_FOR_BATCH_EXPORT",
+            source: "MetricsCollector.write_outputs"
+          }
+        ],
+        artifact_count: 4
+      })
+    ).toEqual({
+      primaryLabel: "integration-demo-7 / abcdefabcdef",
+      secondaryLabel: "LIVE_STATUS_MANIFEST_ONLY / 4 artifacts"
+    });
+    expect(buildDataPanelReproducibilityDisplay(undefined)).toBeNull();
   });
 });
 
