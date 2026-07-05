@@ -12,8 +12,10 @@ echo 6. Restart console
 echo 7. Stop services
 echo 8. Product acceptance verification (fast)
 echo 9. Product acceptance verification (with build)
+echo D. Collect diagnostics bundle
 echo.
-choice /C 123456789 /N /M "Select an action [1-9]: "
+choice /C 123456789D /N /M "Select an action [1-9,D]: "
+if errorlevel 10 goto diagnostics
 if errorlevel 9 goto acceptance_full
 if errorlevel 8 goto acceptance
 if errorlevel 7 goto stop
@@ -58,6 +60,10 @@ goto end
 
 :acceptance_full
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\verify_product_acceptance.ps1"
+goto end
+
+:diagnostics
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\collect_operator_diagnostics.ps1"
 goto end
 
 :end

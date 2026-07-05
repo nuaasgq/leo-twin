@@ -293,6 +293,11 @@ Tasks:
 - V2-082: Add operator diagnostics bundle.
   - Scope: logs, runtime status, latest config, stream diagnostics.
   - Depends on: V2-080, V2-081.
+  - Status: T223 adds `leo_twin.operator_diagnostics_bundle.v1` and
+    `scripts/collect_operator_diagnostics.ps1`. The collector writes launcher
+    health, runtime status, version info, user config export, runtime export
+    catalog, diagnostics manifest, and copied launcher logs under
+    `artifacts\operator_diagnostics`.
 - V2-083: Add user documentation v2.
   - Scope: quickstart, config guide, dashboard guide, troubleshooting.
   - Depends on: V2-001, V2-050, V2-081.

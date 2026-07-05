@@ -24,7 +24,8 @@ For normal Windows use, start from the repository root:
 
 The menu launcher lets you start the console, start the dashboard, inspect
 status, run a read-only smoke check, restart, stop services, or run product
-acceptance verification in fast or full-build mode. The direct
+acceptance verification in fast or full-build mode, and collect an operator
+diagnostics bundle. The direct
 `start_leo_twin.bat` path starts both backend and frontend, waits until both
 ports are ready, checks the backend `/runtime/status` endpoint and the frontend
 homepage over HTTP, then opens the frontend in the browser.
@@ -37,6 +38,7 @@ Other launcher commands:
 .\status_leo_twin.bat
 .\smoke_leo_twin.bat
 .\stop_leo_twin.bat
+.\diagnostics_leo_twin.bat
 .\scripts\sees_launcher.ps1 status
 .\scripts\sees_launcher.ps1 status -JsonSummary
 .\scripts\sees_launcher.ps1 health -JsonSummary
@@ -52,6 +54,14 @@ service consoles visible for manual inspection, run:
 
 ```powershell
 .\scripts\sees_launcher.ps1 start -VisibleWindows
+```
+
+To collect a support bundle with launcher health, runtime status, version info,
+current config export, export catalog, and launcher logs, run:
+
+```powershell
+.\diagnostics_leo_twin.bat
+.\scripts\collect_operator_diagnostics.ps1 -JsonSummary
 ```
 
 Troubleshooting notes: `docs\launcher_troubleshooting.md`.

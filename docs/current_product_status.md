@@ -11,6 +11,7 @@ Branch: `feature/T163-frontend-dashboard-compute-v2`
 - Dashboard-first startup: `.\dashboard_leo_twin.bat`
 - Status: `.\status_leo_twin.bat`
 - Machine-readable launcher health: `.\scripts\sees_launcher.ps1 status -JsonSummary`
+- Operator diagnostics bundle: `.\diagnostics_leo_twin.bat`
 - Read-only health smoke: `.\smoke_leo_twin.bat`
 - Mutating control-cycle smoke: `.\control_smoke_leo_twin.bat`
 
@@ -57,6 +58,9 @@ frontend test files / 197 tests.
   resource model.
 - Launcher health v2 reports backend/frontend port readiness, HTTP readiness,
   process ids, latest log paths, config paths, and recommended actions.
+- Operator diagnostics bundle captures launcher health, runtime status, version
+  info, user config export, export catalog, and launcher logs under
+  `artifacts\operator_diagnostics`.
 - Runtime control-cycle smoke validates 1200-node control responsiveness
   through the existing backend control websocket and resets the active session
   at the end.

@@ -5,6 +5,56 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Operator Diagnostics Bundle v1
+
+- Branch: `feature/T223-operator-diagnostics-bundle-v1`
+- Commit: pending in this commit
+- Scope: advance V2-082 by adding an operator diagnostics bundle contract and a
+  local collection script. The bundle captures launcher health, runtime status,
+  version info, user config export, runtime export catalog, diagnostics
+  manifest, and copied launcher logs under `artifacts\operator_diagnostics`.
+  A `diagnostics_leo_twin.bat` shortcut gives non-developer users a direct
+  collection entry point.
+- Changed files/modules:
+  - `src/leo_twin/services/operator_diagnostics.py`
+  - `tests/unit/test_operator_diagnostics_bundle_v1.py`
+  - `scripts/collect_operator_diagnostics.ps1`
+  - `diagnostics_leo_twin.bat`
+  - `leo_twin_launcher.bat`
+  - `docs/operator_diagnostics_bundle_v1.md`
+  - `docs/integration_demo.md`
+  - `docs/current_product_status.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src/leo_twin/services/operator_diagnostics.py`
+    - Result: passed.
+  - `python -m pytest tests/unit/test_operator_diagnostics_bundle_v1.py -q`
+    - Result: passed, 3 tests.
+  - `python -m pytest tests/unit/test_operator_diagnostics_bundle_v1.py tests/unit/test_launcher_health_v2.py tests/unit/test_build_info_v1.py -q`
+    - Result: passed, 8 tests.
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\collect_operator_diagnostics.ps1 -JsonSummary`
+    - Result: passed. The local run produced a `PARTIAL` diagnostics bundle
+      because the currently running backend process predates newer diagnostic
+      endpoints, while launcher health and runtime status were collected and
+      launcher logs were copied successfully.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - The collector is intentionally tolerant of unavailable backend endpoints:
+    it writes per-section error payloads instead of failing before creating a
+    bundle.
+  - The collection script writes runtime artifacts under `artifacts\`, which
+    are not committed.
+  - Local runtime/generated config files remain dirty and are intentionally not
+    included in this task.
+- Known remaining issues / follow-up:
+  - Stream diagnostics are included through runtime status when the backend is
+    reachable. A future task can add explicit stream cursor/backpressure files
+    to the bundle.
+  - V2-083 should turn the current scattered docs into a user-facing quickstart,
+    configuration guide, dashboard guide, and troubleshooting guide.
+
 ## 2026-07-06 - Launcher Health Check v2
 
 - Branch: `feature/T222-launcher-health-check-v2`
