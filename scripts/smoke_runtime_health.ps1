@@ -32,17 +32,23 @@ function Assert-HttpOk {
         [string]$Url
     )
 
+    $timer = [System.Diagnostics.Stopwatch]::StartNew()
     $response = Get-HttpResponse -Url $Url
+    $timer.Stop()
+    $elapsedMs = [math]::Round($timer.Elapsed.TotalMilliseconds, 2)
     $statusCode = [int]$response.StatusCode
     if ($statusCode -lt 200 -or $statusCode -ge 400) {
         throw "$Name returned HTTP $statusCode at $Url"
     }
-    Write-Status "$Name OK: $Url"
-    return $response
+    Write-Status "$Name OK: $Url ($elapsedMs ms)"
+    return @{
+        Response = $response
+        ElapsedMs = $elapsedMs
+    }
 }
 
-$runtimeResponse = Assert-HttpOk -Name "Backend runtime status" -Url $RuntimeStatusUrl
-$runtimeStatus = $runtimeResponse.Content | ConvertFrom-Json
+$runtimeCheck = Assert-HttpOk -Name "Backend runtime status" -Url $RuntimeStatusUrl
+$runtimeStatus = $runtimeCheck.Response.Content | ConvertFrom-Json
 
 if ($runtimeStatus.type -ne "RUNTIME_STATUS") {
     throw "Backend runtime status type was '$($runtimeStatus.type)', expected RUNTIME_STATUS."
@@ -60,17 +66,20 @@ if ($null -eq $runtimeStatus.generated_config.backend_summary) {
     throw "Backend runtime status is missing generated_config.backend_summary."
 }
 
-Assert-HttpOk -Name "Frontend console" -Url $FrontendUrl | Out-Null
-Assert-HttpOk -Name "Frontend dashboard" -Url $DashboardUrl | Out-Null
+$consoleCheck = Assert-HttpOk -Name "Frontend console" -Url $FrontendUrl
+$dashboardCheck = Assert-HttpOk -Name "Frontend dashboard" -Url $DashboardUrl
 
 $summary = [ordered]@{
     ok = $true
     runtime_status_url = $RuntimeStatusUrl
+    runtime_status_ms = $runtimeCheck.ElapsedMs
     lifecycle_state = $runtimeStatus.status.lifecycle_state
     simulation_status = $runtimeStatus.status.status
     session_id = $runtimeStatus.status.session_id
     console_url = $FrontendUrl
+    console_ms = $consoleCheck.ElapsedMs
     dashboard_url = $DashboardUrl
+    dashboard_ms = $dashboardCheck.ElapsedMs
 }
 
 if ($JsonSummary) {
@@ -80,6 +89,7 @@ else {
     Write-Host "Runtime health smoke passed."
     Write-Host "  lifecycle_state: $($summary.lifecycle_state)"
     Write-Host "  simulation status: $($summary.simulation_status)"
-    Write-Host "  console: $($summary.console_url)"
-    Write-Host "  dashboard: $($summary.dashboard_url)"
+    Write-Host "  runtime status: $($summary.runtime_status_ms) ms"
+    Write-Host "  console: $($summary.console_url) ($($summary.console_ms) ms)"
+    Write-Host "  dashboard: $($summary.dashboard_url) ($($summary.dashboard_ms) ms)"
 }

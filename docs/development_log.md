@@ -4951,3 +4951,30 @@ change.
 - Recommended follow-up:
   - Add endpoint timing fields if runtime smoke becomes part of performance
     acceptance.
+
+## 2026-07-05 - Runtime Health Endpoint Timing v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: extend `scripts/smoke_runtime_health.ps1` with endpoint latency
+  timings for backend `/runtime/status`, frontend console, and frontend
+  dashboard. Human-readable output now prints milliseconds, and `-JsonSummary`
+  includes `runtime_status_ms`, `console_ms`, and `dashboard_ms`.
+- Changed files/modules:
+  - `scripts/smoke_runtime_health.ps1`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\smoke_runtime_health.ps1`
+    - Result: passed; printed endpoint timings.
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\smoke_runtime_health.ps1 -JsonSummary`
+    - Result: passed; emitted JSON timing fields.
+- Problems encountered:
+  - None. Timing is observational only and does not affect runtime control.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - These timings are local smoke observations, not benchmark-grade performance
+    measurements.
+- Recommended follow-up:
+  - Add threshold checks only after stable local/CI baselines are established.

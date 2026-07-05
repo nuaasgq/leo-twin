@@ -428,6 +428,10 @@ The following issue-sized slices have now been delivered on
   - `scripts/smoke_runtime_health.ps1 -JsonSummary` now emits structured
     health output for automation while preserving human-readable output by
     default.
+- `test(runtime): add health endpoint timings`
+  - Maps to suggestions 18, 91, 94, and 95.
+  - Runtime health smoke now reports backend status, console, and dashboard
+    endpoint timings in both human-readable and JSON outputs.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected
