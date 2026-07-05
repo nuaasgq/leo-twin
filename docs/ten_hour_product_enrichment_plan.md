@@ -398,6 +398,11 @@ The following issue-sized slices have now been delivered on
     PATH entry when it is launched with the bundled `pnpm.cmd` dependency path,
     keeping dashboard/service-timeline visual checks runnable from a narrower
     shell environment.
+- `feat(launcher): add dashboard open surface`
+  - Maps to suggestions 18, 91, 93, and 95.
+  - `scripts/sees_launcher.ps1` now accepts `-OpenSurface dashboard` and
+    reports both console and dashboard URLs from `status`, reducing manual
+    navigation for dashboard-first validation.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected

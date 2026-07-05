@@ -4,13 +4,20 @@ param(
     [int]$BackendPort = 8765,
     [int]$FrontendPort = 5173,
     [switch]$NoBrowser,
-    [switch]$VisibleWindows
+    [switch]$VisibleWindows,
+    [ValidateSet("console", "dashboard")]
+    [string]$OpenSurface = "console"
 )
 
 $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $BackendUrl = "http://127.0.0.1:$BackendPort"
 $FrontendUrl = "http://127.0.0.1:$FrontendPort"
+$DashboardUrl = "$FrontendUrl/dashboard"
+$OpenFrontendUrl = $FrontendUrl
+if ($OpenSurface -eq "dashboard") {
+    $OpenFrontendUrl = $DashboardUrl
+}
 $BackendHealthUrl = "$BackendUrl/health"
 $RuntimeStatusUrl = "$BackendUrl/runtime/status"
 $FrontendHealthUrl = "$FrontendUrl/"
@@ -227,6 +234,8 @@ function Show-Status {
         }
     }
     Write-Host "Launcher logs: $LauncherLogDir"
+    Write-Host "Console URL: $FrontendUrl"
+    Write-Host "Dashboard URL: $DashboardUrl"
 }
 
 function Start-ServiceWindow {
@@ -299,11 +308,12 @@ function Start-Sees {
 
     Write-Host "Backend:  $BackendUrl"
     Write-Host "Frontend: $FrontendUrl"
+    Write-Host "Dashboard: $DashboardUrl"
     Write-Host "Backend health:  $RuntimeStatusUrl"
     Write-Host "Frontend health: $FrontendHealthUrl"
     Write-Host "Launcher logs:   $LauncherLogDir"
     if ((-not $NoBrowser) -and $frontendReady) {
-        Start-Process $FrontendUrl
+        Start-Process $OpenFrontendUrl
     }
     if (-not $backendReady -or -not $frontendReady) {
         Show-LogTail -Name "Backend stdout" -Path $backendLogs.Out

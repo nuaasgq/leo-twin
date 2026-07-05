@@ -43,6 +43,12 @@ service consoles visible for manual inspection, run:
 .\scripts\sees_launcher.ps1 start -VisibleWindows
 ```
 
+To open the standalone dashboard directly after startup or restart, run:
+
+```powershell
+.\scripts\sees_launcher.ps1 restart -OpenSurface dashboard
+```
+
 ## Backend
 
 ```powershell

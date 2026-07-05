@@ -4774,3 +4774,33 @@ change.
 - Recommended follow-up:
   - Add a broader one-command local dev launcher that starts backend/frontend
     services and runs smoke checks without requiring manual command assembly.
+
+## 2026-07-05 - Launcher Dashboard Surface v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: make the Windows launcher more direct for dashboard-first workflows.
+  `scripts/sees_launcher.ps1` now accepts `-OpenSurface console|dashboard`,
+  opens `/dashboard` when requested, and prints both console and dashboard URLs
+  from `status`.
+- Changed files/modules:
+  - `scripts/sees_launcher.ps1`
+  - `docs/integration_demo.md`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\sees_launcher.ps1 status -OpenSurface dashboard`
+    - Result: passed; reported healthy backend/frontend on local ports and
+      printed both `http://127.0.0.1:5173` and
+      `http://127.0.0.1:5173/dashboard`.
+- Problems encountered:
+  - None. This is a launcher/UI workflow improvement and does not alter runtime
+    services or simulation behavior.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The launcher remains PowerShell/Windows oriented; there is no cross-platform
+    dev-service manager yet.
+- Recommended follow-up:
+  - Add a smoke command that verifies initialize/start/pause/reset after the
+    launcher reports both services healthy.
