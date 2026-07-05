@@ -10,6 +10,7 @@ import {
   buildDataPanelDisplaySummary,
   buildDataPanelExportCatalogDisplay,
   buildDataPanelExportCompareDisplay,
+  buildDataPanelExportCompareStatus,
   buildDataPanelExportHistoryDisplay,
   buildDataPanelNetworkFormulaInputs,
   buildDataPanelNetworkComponentTail,
@@ -835,6 +836,56 @@ describe("buildDataPanelExportCompareDisplay", () => {
 
   it("returns null before package compare preview is loaded", () => {
     expect(buildDataPanelExportCompareDisplay(undefined)).toBeNull();
+  });
+});
+
+describe("buildDataPanelExportCompareStatus", () => {
+  const display = {
+    packageId: "pkg-1",
+    tone: "different" as const,
+    statusLabel: "配置不同",
+    summaryLabel: "pkg-1 / 差异 2 项",
+    configLabel: "config 不同",
+    generatedConfigLabel: "generated 不同",
+    hashLabel: "compare abcdefabcdef",
+    diffRows: [
+      {
+        section: "config",
+        path: "$.scenario.satellite_count",
+        valueLabel: "72 -> 120",
+        title: "config $.scenario.satellite_count: 72 -> 120"
+      }
+    ]
+  };
+
+  it("prefers loading and error state over stale compare display", () => {
+    expect(buildDataPanelExportCompareStatus(display, "pkg-2", true, null)).toEqual({
+      tone: "pending",
+      statusLabel: "正在加载对比",
+      summaryLabel: "pkg-2",
+      metaLabels: ["只读预览", "不修改当前配置"],
+      diffRows: []
+    });
+    expect(
+      buildDataPanelExportCompareStatus(display, "pkg-2", false, "后端 404")
+    ).toEqual({
+      tone: "error",
+      statusLabel: "对比加载失败",
+      summaryLabel: "pkg-2",
+      metaLabels: ["后端 404"],
+      diffRows: []
+    });
+  });
+
+  it("maps loaded compare display into dashboard status", () => {
+    expect(buildDataPanelExportCompareStatus(display, "pkg-1", false, null)).toEqual({
+      tone: "different",
+      statusLabel: "配置不同",
+      summaryLabel: "pkg-1 / 差异 2 项",
+      metaLabels: ["config 不同", "generated 不同", "compare abcdefabcdef"],
+      diffRows: display.diffRows
+    });
+    expect(buildDataPanelExportCompareStatus(null, null, false, null)).toBeNull();
   });
 });
 

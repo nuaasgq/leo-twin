@@ -110,6 +110,12 @@ export function App() {
     useState<RuntimeExportCatalogV1 | null>(null);
   const [runtimeExportCompare, setRuntimeExportCompare] =
     useState<RuntimeExportPackageCompareV1 | null>(null);
+  const [runtimeExportComparePackageId, setRuntimeExportComparePackageId] =
+    useState<string | null>(null);
+  const [runtimeExportCompareLoading, setRuntimeExportCompareLoading] = useState(false);
+  const [runtimeExportCompareError, setRuntimeExportCompareError] = useState<string | null>(
+    null
+  );
   const [dismissedBackpressureNoticeKey, setDismissedBackpressureNoticeKey] =
     useState<string | null>(null);
   const [dismissedCompletionNoticeKey, setDismissedCompletionNoticeKey] =
@@ -214,25 +220,44 @@ export function App() {
     });
   }, []);
 
+  const refreshRuntimeExportCompare = useCallback(async (packageId: string) => {
+    setRuntimeExportComparePackageId(packageId);
+    setRuntimeExportCompareLoading(true);
+    setRuntimeExportCompareError(null);
+    try {
+      setRuntimeExportCompare(await loadRuntimeExportPackageCompare(packageId));
+    } catch (error) {
+      setRuntimeExportCompare(null);
+      setRuntimeExportCompareError(runtimeExportCompareErrorMessage(error));
+    } finally {
+      setRuntimeExportCompareLoading(false);
+    }
+  }, []);
+
   const refreshRuntimeExportCatalog = useCallback(async () => {
     try {
       const catalog = await loadRuntimeExportCatalog();
       setRuntimeExportCatalog(catalog);
-      const packageId = catalog.latest_export?.package_id ?? catalog.records[0]?.package_id;
-      if (packageId === undefined) {
+      const packageId = selectRuntimeExportComparePackageId(
+        catalog,
+        runtimeExportComparePackageId
+      );
+      if (packageId === null) {
         setRuntimeExportCompare(null);
+        setRuntimeExportComparePackageId(null);
+        setRuntimeExportCompareLoading(false);
+        setRuntimeExportCompareError(null);
         return;
       }
-      try {
-        setRuntimeExportCompare(await loadRuntimeExportPackageCompare(packageId));
-      } catch {
-        setRuntimeExportCompare(null);
-      }
+      void refreshRuntimeExportCompare(packageId);
     } catch {
       setRuntimeExportCatalog(null);
       setRuntimeExportCompare(null);
+      setRuntimeExportComparePackageId(null);
+      setRuntimeExportCompareLoading(false);
+      setRuntimeExportCompareError(null);
     }
-  }, []);
+  }, [refreshRuntimeExportCompare, runtimeExportComparePackageId]);
 
   const loadControlState = useCallback(async () => {
     const [scenario, runtime, visibleSnapshot] = await Promise.all([
@@ -709,6 +734,10 @@ export function App() {
               runtimeDetailPages={runtimeDetailPages}
               runtimeExportCatalog={runtimeExportCatalog}
               runtimeExportCompare={runtimeExportCompare}
+              runtimeExportComparePackageId={runtimeExportComparePackageId}
+              runtimeExportCompareLoading={runtimeExportCompareLoading}
+              runtimeExportCompareError={runtimeExportCompareError}
+              onRuntimeExportCompareSelect={refreshRuntimeExportCompare}
               displaySimTime={displaySimTime}
               displayEventCount={displayEventCount}
               onNavigateControl={(event) => navigateWithinApp(event, "/")}
@@ -843,6 +872,20 @@ export function bodySurfaceAttribute(surface: FrontendSurface): FrontendSurface 
 export function standaloneDashboardHref(origin: string): string {
   const normalizedOrigin = origin.endsWith("/") ? origin.slice(0, -1) : origin;
   return `${normalizedOrigin}/dashboard`;
+}
+
+export function selectRuntimeExportComparePackageId(
+  catalog: RuntimeExportCatalogV1 | null,
+  selectedPackageId: string | null
+): string | null {
+  if (catalog === null || catalog.records.length === 0) {
+    return null;
+  }
+  const packageIds = new Set(catalog.records.map((record) => record.package_id));
+  if (selectedPackageId !== null && packageIds.has(selectedPackageId)) {
+    return selectedPackageId;
+  }
+  return catalog.latest_export?.package_id ?? catalog.records[0]?.package_id ?? null;
 }
 
 export interface RuntimeRibbonSummary {
@@ -1880,6 +1923,11 @@ export function controlErrorMessage(error: string | undefined): string {
     ].join("");
   }
   return error;
+}
+
+export function runtimeExportCompareErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  return `复盘包配置对比加载失败：${message}`;
 }
 
 type RuntimeWebSocketChannel = "control" | "events" | "state";

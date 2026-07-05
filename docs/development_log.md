@@ -5,6 +5,53 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Dashboard Selected Export Compare v1
+
+- Branch: `feature/T188-dashboard-selected-export-compare-v1`
+- Commit: pending in this commit
+- Scope: make the standalone dashboard compare any catalog-listed runtime export
+  package, not only the latest package. The app keeps a selected package id,
+  preserves it across catalog refreshes when the package still exists, loads
+  `/runtime/export/packages/{package_id}/compare` on demand, and reports
+  loading/error states in the data panel. Catalog rows now provide a `对比`
+  button for the inline summary plus a `JSON` link for the raw preview. This is
+  frontend-only, read-only observation behavior; it does not restore packages,
+  mutate configuration, modify Event Kernel behavior, or change model logic.
+- Changed files/modules:
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/appSurface.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- appSurface.test.ts dataPanel.test.ts api.test.ts`
+    - Result: passed, 25 files / 282 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing `DataPanel` chunk-size
+      warning after minification.
+  - `git diff --check`
+    - Result: passed. Git still reported the pre-existing CRLF warning for
+      local runtime/config drift in `configs/generated_full_system_demo.json`
+      and `configs/sees_control.yaml`.
+- Problems encountered:
+  - Catalog refresh can otherwise overwrite a user's selected compare target
+    with the latest package. A pure selection helper now preserves the selected
+    package when it still appears in the catalog and falls back to the latest
+    package only when necessary.
+  - The working tree still contains unrelated local runtime/config drift in
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`;
+    these files were intentionally left unstaged and unchanged by this task.
+- Known remaining issues / follow-up:
+  - The compare summary is still embedded above the catalog. A follow-up can
+    move it into a dedicated selected-package drawer with a guarded restore
+    preflight once the restore flow is designed.
+
 ## 2026-07-06 - Dashboard Export Compare Summary v1
 
 - Branch: `feature/T187-dashboard-export-compare-summary-v1`

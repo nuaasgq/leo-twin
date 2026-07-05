@@ -16,9 +16,11 @@ import {
   nextRuntimeProgressAnchor,
   runtimeProgressSimTime,
   runtimeStatusArmsCompletionNotice,
+  runtimeExportCompareErrorMessage,
   runtimeWebSocketErrorMessage,
   runtimeStatusRequiresStreams,
   scenarioWithRuntimeConfig,
+  selectRuntimeExportComparePackageId,
   selectRuntimeDisplayEventCount,
   selectRuntimeDisplaySimTime,
   selectFidelitySummary,
@@ -39,6 +41,7 @@ import {
   FidelitySummary,
   GeneratedScenarioConfig,
   RuntimeBackpressureSummary,
+  RuntimeExportCatalogV1,
   RuntimeStatusPayload
 } from "../src/core/event_types";
 import { WorldSnapshot } from "../src/state/snapshot_engine";
@@ -69,6 +72,70 @@ describe("standaloneDashboardHref", () => {
     );
     expect(standaloneDashboardHref("http://127.0.0.1:5173/")).toBe(
       "http://127.0.0.1:5173/dashboard"
+    );
+  });
+
+  it("selects a stable runtime export package for dashboard compare", () => {
+    const catalog: RuntimeExportCatalogV1 = {
+      version: "v1",
+      source: "BACKEND_RUNTIME_EXPORT",
+      catalog_scope: "RUNTIME_EXPORT_ROOT",
+      catalog_file: "artifacts/runtime_exports/runtime_export_catalog_v1.json",
+      export_root: "artifacts/runtime_exports",
+      record_count: 2,
+      catalog_hash: "sha256:catalog",
+      latest_export: {
+        catalog_key: "ARCHIVE:pkg-latest",
+        export_type: "ARCHIVE",
+        package_id: "pkg-latest",
+        package_dir: "artifacts/runtime_exports/pkg-latest",
+        relative_package_dir: "pkg-latest",
+        file_count: 6,
+        manifest_hash: "sha256:latest",
+        current_sim_time: 20,
+        processed_event_count: 200,
+        files: [],
+        archive_filename: "pkg-latest.zip",
+        archive_sha256: "sha256:archive",
+        archive_bytes: 1024
+      },
+      records: [
+        {
+          catalog_key: "PACKAGE:pkg-old",
+          export_type: "PACKAGE",
+          package_id: "pkg-old",
+          package_dir: "artifacts/runtime_exports/pkg-old",
+          relative_package_dir: "pkg-old",
+          file_count: 5,
+          manifest_hash: "sha256:old",
+          current_sim_time: 10,
+          processed_event_count: 100,
+          files: []
+        },
+        {
+          catalog_key: "ARCHIVE:pkg-latest",
+          export_type: "ARCHIVE",
+          package_id: "pkg-latest",
+          package_dir: "artifacts/runtime_exports/pkg-latest",
+          relative_package_dir: "pkg-latest",
+          file_count: 6,
+          manifest_hash: "sha256:latest",
+          current_sim_time: 20,
+          processed_event_count: 200,
+          files: []
+        }
+      ]
+    };
+
+    expect(selectRuntimeExportComparePackageId(catalog, null)).toBe("pkg-latest");
+    expect(selectRuntimeExportComparePackageId(catalog, "pkg-old")).toBe("pkg-old");
+    expect(selectRuntimeExportComparePackageId(catalog, "missing")).toBe("pkg-latest");
+    expect(selectRuntimeExportComparePackageId({ ...catalog, records: [] }, null)).toBeNull();
+  });
+
+  it("formats runtime export compare errors for dashboard display", () => {
+    expect(runtimeExportCompareErrorMessage(new Error("HTTP 404"))).toBe(
+      "复盘包配置对比加载失败：HTTP 404"
     );
   });
 });

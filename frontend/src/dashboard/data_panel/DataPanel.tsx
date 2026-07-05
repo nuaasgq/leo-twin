@@ -100,6 +100,10 @@ export const DataPanel = memo(function DataPanel({
   runtimeDetailPages,
   runtimeExportCatalog,
   runtimeExportCompare,
+  runtimeExportComparePackageId,
+  runtimeExportCompareLoading,
+  runtimeExportCompareError,
+  onRuntimeExportCompareSelect,
   displaySimTime,
   displayEventCount,
   onNavigateControl
@@ -110,6 +114,10 @@ export const DataPanel = memo(function DataPanel({
   runtimeDetailPages?: RuntimeDetailPages | null;
   runtimeExportCatalog?: RuntimeExportCatalogV1 | null;
   runtimeExportCompare?: RuntimeExportPackageCompareV1 | null;
+  runtimeExportComparePackageId?: string | null;
+  runtimeExportCompareLoading?: boolean;
+  runtimeExportCompareError?: string | null;
+  onRuntimeExportCompareSelect?: (packageId: string) => void;
   displaySimTime: number;
   displayEventCount: number;
   onNavigateControl: (event: MouseEvent<HTMLAnchorElement>) => void;
@@ -148,6 +156,12 @@ export const DataPanel = memo(function DataPanel({
   );
   const exportCatalogDisplay = buildDataPanelExportCatalogDisplay(runtimeExportCatalog);
   const exportCompareDisplay = buildDataPanelExportCompareDisplay(runtimeExportCompare);
+  const exportCompareStatus = buildDataPanelExportCompareStatus(
+    exportCompareDisplay,
+    runtimeExportComparePackageId,
+    runtimeExportCompareLoading,
+    runtimeExportCompareError
+  );
   const runtimeProgress = buildDataPanelRuntimeProgress(summary.simTime, runtimeStatus.duration);
   const telemetry = buildDataPanelTelemetry(
     snapshot,
@@ -371,24 +385,24 @@ export const DataPanel = memo(function DataPanel({
             <span>{exportCatalogDisplay.sourceLabel}</span>
             <small>{exportCatalogDisplay.summaryLabel}</small>
           </div>
-          {exportCompareDisplay ? (
+          {exportCompareStatus ? (
             <div
-              className={`data-panel-export-compare ${exportCompareDisplay.tone}`}
+              className={`data-panel-export-compare ${exportCompareStatus.tone}`}
               aria-label="复盘包配置对比摘要"
             >
               <div>
                 <span>配置对比</span>
-                <strong>{exportCompareDisplay.statusLabel}</strong>
-                <small>{exportCompareDisplay.summaryLabel}</small>
+                <strong>{exportCompareStatus.statusLabel}</strong>
+                <small>{exportCompareStatus.summaryLabel}</small>
               </div>
               <div className="data-panel-export-compare-meta">
-                <span>{exportCompareDisplay.configLabel}</span>
-                <span>{exportCompareDisplay.generatedConfigLabel}</span>
-                <span>{exportCompareDisplay.hashLabel}</span>
+                {exportCompareStatus.metaLabels.map((label) => (
+                  <span key={label}>{label}</span>
+                ))}
               </div>
-              {exportCompareDisplay.diffRows.length > 0 ? (
+              {exportCompareStatus.diffRows.length > 0 ? (
                 <div className="data-panel-export-compare-diffs">
-                  {exportCompareDisplay.diffRows.map((row) => (
+                  {exportCompareStatus.diffRows.map((row) => (
                     <span key={`${row.section}:${row.path}`} title={row.title}>
                       {row.section} {row.path} <strong>{row.valueLabel}</strong>
                     </span>
@@ -432,7 +446,16 @@ export const DataPanel = memo(function DataPanel({
                     ) : (
                       <em>无归档</em>
                     )}
-                    <a href={row.compareHref}>对比</a>
+                    <button
+                      type="button"
+                      className={
+                        row.packageId === runtimeExportComparePackageId ? "selected" : ""
+                      }
+                      onClick={() => onRuntimeExportCompareSelect?.(row.packageId)}
+                    >
+                      对比
+                    </button>
+                    <a href={row.compareHref}>JSON</a>
                   </span>
                 </div>
               ))
@@ -4474,6 +4497,14 @@ export interface DataPanelExportCompareDisplay {
   diffRows: readonly DataPanelExportCompareDiffRow[];
 }
 
+export interface DataPanelExportCompareStatus {
+  tone: "match" | "different" | "pending" | "error";
+  statusLabel: string;
+  summaryLabel: string;
+  metaLabels: readonly string[];
+  diffRows: readonly DataPanelExportCompareDiffRow[];
+}
+
 export interface DataPanelExportCompareDiffRow {
   section: string;
   path: string;
@@ -4514,6 +4545,42 @@ export function buildDataPanelExportCompareDisplay(
     generatedConfigLabel: `generated ${compare.same_generated_config ? "一致" : "不同"}`,
     hashLabel: `compare ${shortRuntimeHash(compare.compare_hash)}`,
     diffRows
+  };
+}
+
+export function buildDataPanelExportCompareStatus(
+  display: DataPanelExportCompareDisplay | null,
+  selectedPackageId: string | null | undefined,
+  loading = false,
+  error: string | null | undefined = null
+): DataPanelExportCompareStatus | null {
+  if (loading) {
+    return {
+      tone: "pending",
+      statusLabel: "正在加载对比",
+      summaryLabel: selectedPackageId ?? "等待复盘包选择",
+      metaLabels: ["只读预览", "不修改当前配置"],
+      diffRows: []
+    };
+  }
+  if (error !== null && error !== undefined) {
+    return {
+      tone: "error",
+      statusLabel: "对比加载失败",
+      summaryLabel: selectedPackageId ?? "未知复盘包",
+      metaLabels: [error],
+      diffRows: []
+    };
+  }
+  if (display === null) {
+    return null;
+  }
+  return {
+    tone: display.tone,
+    statusLabel: display.statusLabel,
+    summaryLabel: display.summaryLabel,
+    metaLabels: [display.configLabel, display.generatedConfigLabel, display.hashLabel],
+    diffRows: display.diffRows
   };
 }
 

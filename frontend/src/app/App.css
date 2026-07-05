@@ -1910,6 +1910,16 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
   background: #19160e;
 }
 
+.data-panel-export-compare.pending {
+  border-color: #365068;
+  background: #0d151d;
+}
+
+.data-panel-export-compare.error {
+  border-color: #663333;
+  background: #1a0d0d;
+}
+
 .data-panel-export-compare div {
   min-width: 0;
 }
@@ -1998,6 +2008,7 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
 }
 
 .data-panel-export-catalog-actions a,
+.data-panel-export-catalog-actions button,
 .data-panel-export-catalog-actions em {
   border: 1px solid #2a4658;
   border-radius: 5px;
@@ -2009,6 +2020,17 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
   font-weight: 800;
   line-height: 1;
   text-decoration: none;
+}
+
+.data-panel-export-catalog-actions button {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.data-panel-export-catalog-actions button.selected {
+  border-color: #6bc7ff;
+  background: #102638;
+  color: #ffffff;
 }
 
 .data-panel-export-catalog-actions em {
