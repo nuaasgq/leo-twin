@@ -116,6 +116,9 @@ export interface RuntimeDetailPages {
 }
 
 export interface RuntimeDetailCursorControls {
+  users?: RuntimeDetailCursorControl | null;
+  satellites?: RuntimeDetailCursorControl | null;
+  routes?: RuntimeDetailCursorControl | null;
   services?: RuntimeDetailCursorControl | null;
   computeNodes?: RuntimeDetailCursorControl | null;
 }
@@ -389,9 +392,11 @@ export const DataPanel = memo(function DataPanel({
     snapshot,
     runtimeStatus.metrics_summary
   );
-  const routeExplanations = buildDataPanelRouteExplanationRows(
-    selectRuntimeRouteExplanationSummary(runtimeStatus, runtimeDetailPages)
+  const routeExplanationSummary = selectRuntimeRouteExplanationSummary(
+    runtimeStatus,
+    runtimeDetailPages
   );
+  const routeExplanations = buildDataPanelRouteExplanationRows(routeExplanationSummary);
   const filteredRouteExplanations = filterRouteExplanationRows(
     routeExplanations,
     {
@@ -1137,6 +1142,8 @@ export const DataPanel = memo(function DataPanel({
           <RouteConstraintTable rows={routeConstraints} />
           <RouteExplanationTable
             rows={filteredRouteExplanations}
+            page={routeExplanationSummary}
+            control={runtimeDetailCursorControls?.routes}
             filterValue={routeExplanationFilter}
             onFilterChange={setRouteExplanationFilter}
             availabilityFilter={routeExplanationAvailabilityFilter}
@@ -1593,6 +1600,12 @@ export const DataPanel = memo(function DataPanel({
             </div>
             <small>{userBusinessRequests.summaryLabel}</small>
           </div>
+          <BackendCursorPager
+            label="用户后端页"
+            page={userRequestSummary}
+            totalCount={userRequestSummary?.user_count ?? filteredUserBusinessRequests.items.length}
+            control={runtimeDetailCursorControls?.users}
+          />
           <DetailPaginationControls
             page={userDetailWindow}
             label="用户明细"
@@ -1620,6 +1633,15 @@ export const DataPanel = memo(function DataPanel({
             </div>
             <small>{satelliteResourceRows.summaryLabel}</small>
           </div>
+          <BackendCursorPager
+            label="卫星后端页"
+            page={satelliteServiceSummary}
+            totalCount={
+              satelliteServiceSummary?.satellite_count ??
+              filteredSatelliteResourceRows.items.length
+            }
+            control={runtimeDetailCursorControls?.satellites}
+          />
           <DetailPaginationControls
             page={satelliteDetailWindow}
             label="卫星明细"
@@ -1889,6 +1911,8 @@ function RouteConstraintTable({ rows }: { rows: DataPanelRouteConstraintRows }) 
 
 function RouteExplanationTable({
   rows,
+  page,
+  control,
   filterValue,
   onFilterChange,
   availabilityFilter,
@@ -1899,6 +1923,8 @@ function RouteExplanationTable({
   onBottleneckFilterChange
 }: {
   rows: DataPanelRouteExplanationRows;
+  page: RuntimeRouteExplanationSummaryV1 | null | undefined;
+  control?: RuntimeDetailCursorControl | null;
   filterValue: string;
   onFilterChange: (value: string) => void;
   availabilityFilter: DataPanelRouteExplanationAvailabilityFilter;
@@ -1930,6 +1956,12 @@ function RouteExplanationTable({
       <div className="data-panel-route-explanations">
         {controls}
         <div className="data-panel-route-source">{rows.sourceLabel}</div>
+        <BackendCursorPager
+          label="路由后端页"
+          page={page}
+          totalCount={page?.route_count ?? rows.items.length}
+          control={control}
+        />
         <div className="data-panel-route-empty">{emptyLabel}</div>
       </div>
     );
@@ -1939,6 +1971,12 @@ function RouteExplanationTable({
       {controls}
       <div className="data-panel-route-table explanations" aria-label="后端路由解释明细">
         <div className="data-panel-route-source">{rows.sourceLabel}</div>
+        <BackendCursorPager
+          label="路由后端页"
+          page={page}
+          totalCount={page?.route_count ?? rows.items.length}
+          control={control}
+        />
         <div className="data-panel-route-row header">
           <span>路由</span>
           <span>业务</span>
@@ -2196,6 +2234,9 @@ function BackendCursorPager({
 }: {
   label: string;
   page:
+    | RuntimeUserRequestSummaryV1
+    | RuntimeSatelliteServiceSummaryV1
+    | RuntimeRouteExplanationSummaryV1
     | RuntimeServiceDetailPageV1
     | RuntimeComputeNodeDetailPageV1
     | null
@@ -2203,7 +2244,14 @@ function BackendCursorPager({
   totalCount: number;
   control?: RuntimeDetailCursorControl | null;
 }) {
-  if (page === null || page === undefined) {
+  if (
+    page === null ||
+    page === undefined ||
+    page.cursor === undefined ||
+    page.limit === undefined ||
+    page.next_cursor === undefined ||
+    page.has_more === undefined
+  ) {
     return null;
   }
   const display = buildDataPanelBackendCursorDisplay(page, totalCount);
@@ -7658,14 +7706,17 @@ export function buildDataPanelComputeNodeDetailRows(
 }
 
 export function buildDataPanelBackendCursorDisplay(
-  page: Pick<
-    RuntimeServiceDetailPageV1 | RuntimeComputeNodeDetailPageV1,
-    "cursor" | "limit" | "next_cursor" | "has_more" | "item_count"
-  >,
+  page: {
+    cursor?: number;
+    limit?: number;
+    next_cursor?: number;
+    has_more?: boolean;
+    item_count: number;
+  },
   totalCount: number
 ): DataPanelBackendCursorDisplay {
-  const cursor = normalizeNonNegativeInteger(page.cursor);
-  const limit = Math.max(1, normalizeNonNegativeInteger(page.limit));
+  const cursor = normalizeNonNegativeInteger(page.cursor ?? 0);
+  const limit = Math.max(1, normalizeNonNegativeInteger(page.limit ?? 1));
   const itemCount = normalizeNonNegativeInteger(page.item_count);
   const total = normalizeNonNegativeInteger(totalCount);
   const start = itemCount === 0 ? 0 : cursor + 1;
@@ -7674,16 +7725,16 @@ export function buildDataPanelBackendCursorDisplay(
     itemCount === 0
       ? `0 / ${formatCount(total)}`
       : `${formatCount(start)}-${formatCount(end)} / ${formatCount(total)}`;
-  const nextCursor = normalizeNonNegativeInteger(page.next_cursor);
+  const nextCursor = normalizeNonNegativeInteger(page.next_cursor ?? 0);
   return {
     rangeLabel,
-    statusLabel: page.has_more
+    statusLabel: page.has_more === true
       ? `下一游标 ${formatCount(nextCursor)}`
       : "当前已到最后一页",
     previousCursor: Math.max(0, cursor - limit),
     nextCursor,
     canPrevious: cursor > 0,
-    canNext: page.has_more
+    canNext: page.has_more === true
   };
 }
 

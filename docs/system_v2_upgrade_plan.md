@@ -267,6 +267,10 @@ Tasks:
     separate cursor state for these two backend pages, shows current row range,
     previous/next/refresh actions, and resets the cursors on config-version
     changes without altering backend pagination semantics.
+  - Status: T241 extends visible backend cursor controls to user, satellite,
+    and route detail pages. The dashboard detail refresh loop now preserves
+    active cursors for all five visible detail collections while hiding cursor
+    controls for legacy summaries that do not carry cursor metadata.
 - V2-054: Add model assumptions panel.
   - Scope: backend-derived model caveats, fidelity mode, KPI provenance.
   - Depends on: V2-003, V2-021.

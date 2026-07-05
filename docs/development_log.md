@@ -5,6 +5,46 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Dashboard Core Detail Cursor Controls v1
+
+- Branch: `feature/T241-dashboard-core-detail-cursors-v1`
+- Commit: pending in this commit
+- Scope: complete the first visible backend cursor-control pass for the
+  standalone dashboard detail collections. User, satellite, route, service,
+  and compute-node pages now have active cursor state in `App.tsx`; the detail
+  refresh loop preserves those cursors; and the dashboard shows backend page
+  range plus previous/next/refresh actions where cursor metadata is available.
+- Changed files/modules:
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `docs/dashboard_core_detail_cursor_controls_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test -- dataPanel.test.ts appSurface.test.ts`
+    - Result: passed, 26 test files / 341 tests.
+  - `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed using the Codex bundled Node.js runtime.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite reported the existing `DataPanel` chunk size
+      warning after minification.
+  - `python -m pytest tests/integration/test_benchmark_acceptance_v1.py -q`
+    - Result: passed, 9 tests.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - User, satellite, and route runtime status summaries keep cursor metadata
+    optional for compatibility. The dashboard hides backend cursor controls
+    when those fields are absent, avoiding fake pagination for legacy data.
+  - Existing local runtime/generated config files remain dirty and are
+    intentionally not included in this task.
+- Known remaining issues / follow-up:
+  - Add filter-aware backend cursor requests so searches can span beyond the
+    active backend page.
+  - Add detail-by-id endpoints for selected entities.
+  - Split DataPanel into smaller lazy sections to address the current chunk
+    warning.
+
 ## 2026-07-06 - Dashboard Service and Compute Cursor Controls v1
 
 - Branch: `feature/T240-dashboard-service-compute-cursors-v1`
