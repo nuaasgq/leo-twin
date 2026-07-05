@@ -62,6 +62,7 @@ Default local surfaces:
 - Backend status: `http://127.0.0.1:8765/runtime/status`
 
 Launcher logs are written to `artifacts\launcher`.
+Troubleshooting notes are in `docs\launcher_troubleshooting.md`.
 
 ## Run Tests
 

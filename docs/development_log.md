@@ -5275,3 +5275,31 @@ change.
 - Recommended follow-up:
   - Add a dry-run mode for menu branch validation if batch menu complexity
     increases.
+
+## 2026-07-05 - Launcher Troubleshooting Guide v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add `docs/launcher_troubleshooting.md` covering common local launcher
+  failures and non-destructive checks for frontend blank page, dashboard not
+  opening, stuck controls, occupied ports, missing Node/Pnpm, dashboard-first
+  startup, logs, and read-only smoke validation.
+- Changed files/modules:
+  - `docs/launcher_troubleshooting.md`
+  - `README.md`
+  - `docs/integration_demo.md`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `git diff --check`
+    - Result: passed, with only the pre-existing local runtime config CRLF
+      warnings.
+- Problems encountered:
+  - None. This is documentation for existing launcher and smoke-check behavior.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The guide is local Windows focused because the current launcher is
+    PowerShell/batch based.
+- Recommended follow-up:
+  - Add screenshots or a short GIF once the UI stabilizes further.

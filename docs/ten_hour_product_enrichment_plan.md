@@ -476,6 +476,11 @@ The following issue-sized slices have now been delivered on
   - Maps to suggestions 91-95.
   - The launcher menu now separates fast acceptance without frontend build from
     full acceptance with build.
+- `docs(launcher): add troubleshooting guide`
+  - Maps to suggestions 18, 91, and 95.
+  - Launcher troubleshooting now documents non-destructive status/smoke checks,
+    common frontend/backend startup symptoms, logs, Node/Pnpm issues, and
+    dashboard-first startup.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected

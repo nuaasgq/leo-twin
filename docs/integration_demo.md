@@ -50,6 +50,8 @@ service consoles visible for manual inspection, run:
 .\scripts\sees_launcher.ps1 start -VisibleWindows
 ```
 
+Troubleshooting notes: `docs\launcher_troubleshooting.md`.
+
 To open the standalone dashboard directly after startup or restart, run:
 
 ```powershell
