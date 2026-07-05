@@ -5,6 +5,36 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Large-Scale User Config Template v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending in this commit
+- Scope: add a user-facing 1200-satellite detailed YAML template that keeps
+  the frontend focused on key controls while advanced users can edit the full
+  backend contract. The template uses BATCH orbit updates, bounded ISL
+  candidates, workload smoothing, mixed flow-level traffic, and per-satellite
+  compute resource vectors.
+- Changed files/modules:
+  - `configs/templates/sees_user_large_scale_1200.example.yaml`
+  - `src/leo_twin/services/configuration_view.py`
+  - `tests/unit/test_configuration_view.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_configuration_view.py -q`
+    - Result: passed, 4 tests.
+  - `python -m pytest tests/integration/test_config_control.py::test_initialize_writes_config_and_start_gates_streams tests/integration/test_config_control.py::test_frontend_control_messages_are_processed -q`
+    - Result: passed, 2 tests.
+  - `git diff --check -- configs/templates/sees_user_large_scale_1200.example.yaml src/leo_twin/services/configuration_view.py tests/unit/test_configuration_view.py`
+    - Result: passed.
+- Problems encountered:
+  - The first template text assertion expected the forbidden external-simulator
+    list on one line; the template comment was adjusted so the user-facing
+    warning is explicit and testable.
+- Known remaining issues / follow-up:
+  - The frontend lists backend template profiles, but it still does not load a
+    selected template into the running config. That should be a separate
+    backend endpoint plus UI workflow.
+
 ## 2026-07-05 - Continuous Access Link Refresh v1
 
 - Branch: `feature/T164-dashboard-observability-v1`

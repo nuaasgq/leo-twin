@@ -1,0 +1,115 @@
+# SEES / LEO-Twin large-scale 1200-satellite user configuration template.
+#
+# Purpose:
+# - Product-scale interactive scenario for validating 1200 satellites without
+#   reintroducing per-satellite orbit floods or all-pairs space-space links.
+# - The frontend should expose only key operational controls. This file keeps
+#   the full backend contract for advanced users and repeatable experiments.
+# - Deterministic flow-level simulation only. Do not configure or expect
+#   STK, EXATA, AFSIM, DDS, packet-level simulation, or RF propagation.
+# - Dashboard loss, jitter, throughput, and latency are flow-level proxy
+#   metrics derived from routes, flows, pressure, and completed services.
+
+scenario:
+  # In the product model every satellite is a compute-capable platform. Keep
+  # compute_nodes aligned with satellite_count unless the experiment explicitly
+  # studies partial onboard compute deployment.
+  satellite_count: 1200
+  user_count: 1200
+  compute_nodes: 1200
+
+  # Per-satellite compute resource vector. The scalar compute_capacity remains
+  # the legacy CPU FP32 GFLOPS field; vector fields drive resource dashboards.
+  compute_capacity: 60.0
+  compute_cpu_gflops_fp64: 12.0
+  compute_gpu_tflops_fp32: 2.5
+  compute_gpu_tflops_fp16: 5.0
+  compute_npu_tops_int8: 16.0
+  compute_memory_gb: 48.0
+  compute_storage_gb: 1024.0
+
+  ground_station_count: 6
+  cell_count: 240
+  compute_scheduling_policy: FIFO
+
+  # Large scenarios should avoid time-0 workload bursts. RATE_LIMITED spreads
+  # initial generated flows/tasks across a deterministic startup window.
+  initial_workload_smoothing_enabled: true
+  initial_workload_window_s: 60.0
+  max_initial_events_per_tick: 16
+  workload_smoothing_mode: RATE_LIMITED
+
+  orbit:
+    # Approximate Starlink shell-1-like altitude/inclination. This is a
+    # simplified deterministic orbit model, not SGP4 and not exact Starlink
+    # fidelity.
+    update_interval_seconds: 30
+    plane_count: 40
+    altitude_m: 550000.0
+    inclination_deg: 53.0
+    orbit_update_mode: BATCH
+
+  traffic_model:
+    # Mixed user workload. COMPUTE_SERVICE creates correlated input flow +
+    # task + output metadata. Other classes create normal flow-level demand.
+    flow_interval_seconds: 10
+    task_interval_seconds: 10
+    flow_demand_capacity: 120.0
+    task_compute_demand: 80.0
+    task_data_size: 24.0
+    traffic_class: COMPUTE_SERVICE
+    destination_type: COMPUTE_NODE
+    output_data_size: 6.0
+    data_transfer_weight: 2.0
+    telemetry_weight: 1.0
+    bulk_downlink_weight: 1.0
+    compute_service_weight: 3.0
+
+network:
+  # Flow-level protocol profile. These select deterministic internal
+  # abstractions only; no external network simulator is used.
+  application_protocol: TASK_OFFLOAD_FLOW
+  transport_protocol: UDP
+  routing_protocol: DISTANCE_VECTOR
+  datalink_mac_protocol: SLOTTED_ALOHA
+
+  # Non-zero loss and routing weights make KPI proxy movement observable while
+  # staying deterministic and flow-level.
+  transport_loss_rate: 0.015
+  transport_congestion_window_segments: 0
+  routing_latency_weight: 0.35
+  routing_inverse_capacity_weight: 250.0
+  routing_hop_weight: 1.0
+
+  carrier_frequency_hz: 20000000000.0
+  channel_bandwidth_hz: 150000000.0
+  rain_rate_mm_h: 4.0
+  rain_attenuation_coefficient_db_per_km_per_mm_h: 0.008
+  rain_effective_path_km: 3.0
+  antenna_diameter_m: 0.45
+  antenna_aperture_efficiency: 0.65
+  transmit_power_dbw: 20.0
+  system_loss_db: 1.0
+  noise_temperature_k: 290.0
+
+  # BOUNDED_CANDIDATE avoids all-pairs ISL computation at 1200 satellites.
+  space_link_mode: BOUNDED_CANDIDATE
+  max_space_link_candidates_per_satellite: 4
+  batch_space_link_update_limit: 999
+
+runtime:
+  # REAL_TIME keeps speed_factor at 1.0. Switch to ACCELERATED before
+  # initialization for replay-style analysis.
+  mode: REAL_TIME
+  speed_factor: 1.0
+  seed: 20260705
+  duration: 600
+
+ui:
+  visualization:
+    satellites: true
+    links: true
+    users: true
+    metrics: true
+  update_frequency_hz: 20
+  dashboard_layout: right_panel

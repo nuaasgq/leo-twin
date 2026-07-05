@@ -228,6 +228,15 @@ _TEMPLATE_PROFILES = (
             "resources for dashboard validation."
         ),
     },
+    {
+        "id": "large_scale_1200sat",
+        "label": "1200-satellite scale mode",
+        "path": "configs/templates/sees_user_large_scale_1200.example.yaml",
+        "purpose": (
+            "Scale-safe batch orbit and bounded ISL template for large "
+            "interactive scenarios."
+        ),
+    },
 )
 
 

@@ -58,6 +58,15 @@ def test_user_configuration_view_is_deterministic_and_frontend_ready() -> None:
                 "resources for dashboard validation."
             ),
         },
+        {
+            "id": "large_scale_1200sat",
+            "label": "1200-satellite scale mode",
+            "path": "configs/templates/sees_user_large_scale_1200.example.yaml",
+            "purpose": (
+                "Scale-safe batch orbit and bounded ISL template for large "
+                "interactive scenarios."
+            ),
+        },
     )
     assert first["key_field_count"] == len(first["key_fields"])
     assert first["detailed_field_count"] > first["key_field_count"]
@@ -140,6 +149,32 @@ def test_dynamic_observability_user_config_template_loads() -> None:
     assert config.network.transport_loss_rate == 0.02
     assert config.runtime.mode == "ACCELERATED"
     assert config.runtime.speed_factor == 10.0
+
+
+def test_large_scale_1200_user_config_template_loads() -> None:
+    template_path = "configs/templates/sees_user_large_scale_1200.example.yaml"
+    template_text = Path(template_path).read_text(encoding="utf-8")
+    config = load_config(template_path)
+
+    assert "large-scale 1200-satellite" in template_text
+    assert "BOUNDED_CANDIDATE avoids all-pairs ISL" in template_text
+    assert "STK, EXATA, AFSIM, DDS" in template_text
+    assert config.scenario.satellite_count == 1200
+    assert config.scenario.user_count == 1200
+    assert config.scenario.compute_nodes == 1200
+    assert config.scenario.orbit.orbit_update_mode == "BATCH"
+    assert config.scenario.orbit.plane_count == 40
+    assert config.scenario.initial_workload_smoothing_enabled is True
+    assert config.scenario.traffic_model.service_mix_weights() == {
+        "DATA_TRANSFER": 2.0,
+        "TELEMETRY": 1.0,
+        "BULK_DOWNLINK": 1.0,
+        "COMPUTE_SERVICE": 3.0,
+    }
+    assert config.network.space_link_mode == "BOUNDED_CANDIDATE"
+    assert config.network.max_space_link_candidates_per_satellite == 4
+    assert config.runtime.mode == "REAL_TIME"
+    assert config.runtime.speed_factor == 1.0
 
 
 def _field(summary: dict[str, object], path: str) -> dict[str, object]:
