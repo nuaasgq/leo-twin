@@ -271,7 +271,9 @@ export function App() {
   const [dismissedBackpressureNoticeKey, setDismissedBackpressureNoticeKey] =
     useState<string | null>(null);
   const [dismissedCompletionNoticeKey, setDismissedCompletionNoticeKey] =
-    useState<string | null>(null);
+    useState<string | null>(() =>
+      readCompletionNoticeDismissKey(browserSessionStorage())
+    );
   const [completionNoticeArmed, setCompletionNoticeArmed] = useState(false);
   const [runtimeProgressAnchor, setRuntimeProgressAnchor] = useState<RuntimeProgressAnchor>(() =>
     defaultRuntimeProgressAnchor(defaultRuntimeStatus())
@@ -1416,14 +1418,10 @@ export function App() {
   }, [backpressureNoticeKeyForStatus]);
 
   useEffect(() => {
-    if (completionNoticeKeyForStatus === null) {
-      setDismissedCompletionNoticeKey(null);
-    }
-  }, [completionNoticeKeyForStatus]);
-
-  useEffect(() => {
     if (runtimeStatusArmsCompletionNotice(runtimeStatus)) {
       setCompletionNoticeArmed(true);
+      clearCompletionNoticeDismissKey(browserSessionStorage());
+      setDismissedCompletionNoticeKey(null);
     }
   }, [runtimeStatus.status, runtimeStatus.lifecycle_state]);
 
@@ -1463,6 +1461,10 @@ export function App() {
   const dismissCompletionNotice = useCallback(() => {
     if (completionNoticeKeyForStatus !== null) {
       setDismissedCompletionNoticeKey(completionNoticeKeyForStatus);
+      writeCompletionNoticeDismissKey(
+        browserSessionStorage(),
+        completionNoticeKeyForStatus
+      );
     }
   }, [completionNoticeKeyForStatus]);
 
@@ -2084,6 +2086,66 @@ export function completionNoticeDismissKey(runtimeStatus: RuntimeStatusPayload):
     runtimeStatus.current_sim_time ?? 0,
     runtimeStatus.processed_event_count ?? 0
   ].join("|");
+}
+
+export const COMPLETION_NOTICE_DISMISS_STORAGE_KEY =
+  "leo_twin.completion_notice.dismissed_key";
+
+type RuntimeNoticeStorage = {
+  getItem: (key: string) => string | null;
+  setItem: (key: string, value: string) => void;
+  removeItem: (key: string) => void;
+};
+
+export function readCompletionNoticeDismissKey(
+  storage: RuntimeNoticeStorage | null | undefined
+): string | null {
+  if (storage === null || storage === undefined) {
+    return null;
+  }
+  try {
+    return storage.getItem(COMPLETION_NOTICE_DISMISS_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function writeCompletionNoticeDismissKey(
+  storage: RuntimeNoticeStorage | null | undefined,
+  dismissKey: string | null | undefined
+): void {
+  if (storage === null || storage === undefined || !dismissKey) {
+    return;
+  }
+  try {
+    storage.setItem(COMPLETION_NOTICE_DISMISS_STORAGE_KEY, dismissKey);
+  } catch {
+    // Ignore browser storage failures; the in-memory dismiss state still works.
+  }
+}
+
+export function clearCompletionNoticeDismissKey(
+  storage: RuntimeNoticeStorage | null | undefined
+): void {
+  if (storage === null || storage === undefined) {
+    return;
+  }
+  try {
+    storage.removeItem(COMPLETION_NOTICE_DISMISS_STORAGE_KEY);
+  } catch {
+    // Ignore browser storage failures; this is only a UI notice preference.
+  }
+}
+
+function browserSessionStorage(): RuntimeNoticeStorage | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
 }
 
 function CompletionNotice({

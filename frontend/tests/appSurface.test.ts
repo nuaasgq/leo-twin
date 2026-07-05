@@ -4,6 +4,8 @@ import {
   backpressureNoticeDismissKey,
   backpressureNoticeText,
   bodySurfaceAttribute,
+  clearCompletionNoticeDismissKey,
+  COMPLETION_NOTICE_DISMISS_STORAGE_KEY,
   completionNoticeDismissKey,
   completionNoticeDetail,
   completionNoticeText,
@@ -21,6 +23,7 @@ import {
   runtimeDetailRequestPlan,
   runtimeWebSocketErrorMessage,
   runtimeStatusRequiresStreams,
+  readCompletionNoticeDismissKey,
   scenarioWithRuntimeConfig,
   selectRuntimeExportComparePackageId,
   selectRuntimeDisplayEventCount,
@@ -33,7 +36,8 @@ import {
   shouldShowCompletionNotice,
   shouldShowFidelityNotice,
   standaloneDashboardHref,
-  surfaceFromPathname
+  surfaceFromPathname,
+  writeCompletionNoticeDismissKey
 } from "../src/app/App";
 import {
   runtimeEffectiveSpeedFactor,
@@ -462,6 +466,48 @@ describe("completion notice", () => {
         lifecycle_state: "PAUSED"
       })
     ).toBe(true);
+  });
+
+  it("persists dismissed completed notices across page refreshes", () => {
+    const values = new Map<string, string>();
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => {
+        values.set(key, value);
+      },
+      removeItem: (key: string) => {
+        values.delete(key);
+      }
+    };
+    const dismissKey = completionNoticeDismissKey(completedStatus);
+
+    expect(readCompletionNoticeDismissKey(storage)).toBeNull();
+    writeCompletionNoticeDismissKey(storage, dismissKey);
+    expect(values.get(COMPLETION_NOTICE_DISMISS_STORAGE_KEY)).toBe(dismissKey);
+    expect(readCompletionNoticeDismissKey(storage)).toBe(dismissKey);
+
+    clearCompletionNoticeDismissKey(storage);
+    expect(readCompletionNoticeDismissKey(storage)).toBeNull();
+  });
+
+  it("ignores unavailable completed-notice storage", () => {
+    const failingStorage = {
+      getItem: () => {
+        throw new Error("storage unavailable");
+      },
+      setItem: () => {
+        throw new Error("storage unavailable");
+      },
+      removeItem: () => {
+        throw new Error("storage unavailable");
+      }
+    };
+
+    expect(readCompletionNoticeDismissKey(failingStorage)).toBeNull();
+    expect(() =>
+      writeCompletionNoticeDismissKey(failingStorage, "dismissed-key")
+    ).not.toThrow();
+    expect(() => clearCompletionNoticeDismissKey(failingStorage)).not.toThrow();
   });
 });
 

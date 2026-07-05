@@ -5,6 +5,39 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Completion Notice Dismissal v1
+
+- Branch: `feature/T249-completion-notice-refresh-v1`
+- Commit: pending in this commit
+- Scope: fix the page-refresh bug where the simulation-completed notice could
+  reappear after the user had dismissed it. The frontend now persists the
+  dismissed completion notice key in browser session storage, restores it on
+  App initialization, and clears it when a new runtime becomes active.
+- Changed files/modules:
+  - `frontend/src/app/App.tsx`
+  - `frontend/tests/appSurface.test.ts`
+  - `docs/completion_notice_dismissal_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test -- appSurface.test.ts`
+    - Result: passed, 26 test files / 350 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. The command includes TypeScript checking; Vite reported
+      the existing `DataPanel` chunk size warning after minification.
+- Problems encountered and handling:
+  - The App already prevented completed notices unless the page session had
+    observed an active runtime, but the dismissal key itself was held only in
+    React state. A page refresh discarded that state. The fix keeps the
+    dismissal key in `sessionStorage` for the current browser session and
+    handles storage exceptions without failing the UI.
+  - Existing local runtime/generated config files remain dirty and are
+    intentionally not included in this task.
+- Known remaining issues / follow-up:
+  - Backpressure notices remain session-local in React state. If users want
+    identical refresh behavior for those notices, handle it as a separate
+    notice-policy task.
+
 ## 2026-07-06 - Dashboard Exact Detail Request Status v1
 
 - Branch: `feature/T248-exact-detail-request-status-v1`

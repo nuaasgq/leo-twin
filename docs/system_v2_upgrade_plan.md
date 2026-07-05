@@ -432,6 +432,12 @@ Tasks:
     guide covering startup, health checks, configuration, console/dashboard
     usage, result export, diagnostics bundles, benchmark acceptance, and current
     model boundaries.
+- V2-084: Add surface notice persistence.
+  - Scope: operator-facing runtime notice dismissal across page refreshes.
+  - Status: T249 persists dismissed simulation-completed notice keys in
+    browser session storage, restores the dismissal after refresh, clears the
+    persisted key when a new runtime becomes active, and keeps storage failures
+    non-fatal.
 
 ## 4. Sequencing
 
