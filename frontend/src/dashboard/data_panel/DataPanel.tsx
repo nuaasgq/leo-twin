@@ -1,4 +1,4 @@
-import { memo, type MouseEvent } from "react";
+import { memo, useState, type MouseEvent } from "react";
 import {
   Area,
   AreaChart,
@@ -75,6 +75,8 @@ export const DataPanel = memo(function DataPanel({
   displayEventCount: number;
   onNavigateControl: (event: MouseEvent<HTMLAnchorElement>) => void;
 }) {
+  const [computeSeriesKey, setComputeSeriesKey] =
+    useState<DataPanelComputeSeriesKey>("computeUsedTflops");
   const summary = buildDataPanelDisplaySummary(
     buildDataPanelSummary(snapshot),
     displaySimTime,
@@ -111,6 +113,8 @@ export const DataPanel = memo(function DataPanel({
     runtimeStatus.metrics_summary
   );
   const latestTelemetry = telemetry[telemetry.length - 1];
+  const computeSeries = computeSeriesOption(computeSeriesKey);
+  const latestComputeValue = latestTelemetry[computeSeriesKey];
   const computePool = buildComputeResourcePool(
     snapshot,
     runtimeStatus.metrics_summary
@@ -310,8 +314,21 @@ export const DataPanel = memo(function DataPanel({
         <section className="dashboard-section data-panel-chart" aria-label="算力资源消耗曲线">
           <div className="section-title">算力资源消耗</div>
           <div className="data-panel-source-note">
-            <span>主指标 FP32</span>
+            <span>曲线指标 {computeSeries.label}</span>
             <small>{computePoolModeNote}</small>
+          </div>
+          <div className="data-panel-series-selector" role="group" aria-label="算力曲线指标">
+            {COMPUTE_SERIES_OPTIONS.map((option) => (
+              <button
+                type="button"
+                className={computeSeriesKey === option.key ? "active" : ""}
+                aria-pressed={computeSeriesKey === option.key}
+                key={option.key}
+                onClick={() => setComputeSeriesKey(option.key)}
+              >
+                {option.shortLabel}
+              </button>
+            ))}
           </div>
           {computeVectorTail.length > 0 ? (
             <div className="data-panel-resource-vector" aria-label="算力资源时序尾点">
@@ -325,7 +342,7 @@ export const DataPanel = memo(function DataPanel({
           <div className="data-panel-chart-kpis compact">
             <KpiPanel
               label="已消耗"
-              value={`${latestTelemetry.computeUsedTflops.toFixed(1)} TFLOPS`}
+              value={formatComputeSeriesValue(latestComputeValue, computeSeries.unit)}
             />
             <KpiPanel
               label="资源池"
@@ -341,8 +358,8 @@ export const DataPanel = memo(function DataPanel({
                 <Tooltip />
                 <Area
                   type="monotone"
-                  dataKey="computeUsedTflops"
-                  name="已消耗 TFLOPS"
+                  dataKey={computeSeriesKey}
+                  name={`${computeSeries.label} ${computeSeries.unit}`}
                   stroke="#f2bd45"
                   fill="#f2bd4540"
                   strokeWidth={2}
@@ -627,7 +644,74 @@ export interface DataPanelTelemetryPoint {
   lossPercent: number;
   jitterMs: number;
   computeUsedTflops: number;
+  computeCpuFp64Gflops: number;
+  computeGpuFp32Tflops: number;
+  computeGpuFp16Tflops: number;
+  computeNpuInt8Tops: number;
+  computeMemoryGb: number;
+  computeStorageGb: number;
 }
+
+export type DataPanelComputeSeriesKey =
+  | "computeUsedTflops"
+  | "computeCpuFp64Gflops"
+  | "computeGpuFp32Tflops"
+  | "computeGpuFp16Tflops"
+  | "computeNpuInt8Tops"
+  | "computeMemoryGb"
+  | "computeStorageGb";
+
+interface DataPanelComputeSeriesOption {
+  key: DataPanelComputeSeriesKey;
+  label: string;
+  shortLabel: string;
+  unit: string;
+}
+
+export const COMPUTE_SERIES_OPTIONS: readonly DataPanelComputeSeriesOption[] = [
+  {
+    key: "computeUsedTflops",
+    label: "FP32 主容量",
+    shortLabel: "FP32",
+    unit: "TFLOPS"
+  },
+  {
+    key: "computeCpuFp64Gflops",
+    label: "CPU FP64",
+    shortLabel: "FP64",
+    unit: "GFLOPS"
+  },
+  {
+    key: "computeGpuFp32Tflops",
+    label: "GPU FP32",
+    shortLabel: "GPU32",
+    unit: "TFLOPS"
+  },
+  {
+    key: "computeGpuFp16Tflops",
+    label: "GPU FP16",
+    shortLabel: "GPU16",
+    unit: "TFLOPS"
+  },
+  {
+    key: "computeNpuInt8Tops",
+    label: "NPU INT8",
+    shortLabel: "INT8",
+    unit: "TOPS"
+  },
+  {
+    key: "computeMemoryGb",
+    label: "内存",
+    shortLabel: "内存",
+    unit: "GB"
+  },
+  {
+    key: "computeStorageGb",
+    label: "存储",
+    shortLabel: "存储",
+    unit: "GB"
+  }
+];
 
 export interface NetworkQualityKpis {
   source: DataPanelNetworkKpiSource["sourceLabel"];
@@ -703,7 +787,7 @@ export function buildDataPanelTelemetry(
     "compute_resource_used_gflops_fp32"
   );
   const baseKpis = resolveNetworkQualityKpis(snapshot, backendMetrics);
-  const computePool = buildComputeResourcePool(snapshot);
+  const computePool = buildComputeResourcePool(snapshot, backendMetrics);
   const computeUsedTflops =
     backendComputeUsedGflops !== undefined
       ? backendComputeUsedGflops / 1000
@@ -717,7 +801,13 @@ export function buildDataPanelTelemetry(
       latencyMs: roundMetric(point.network_effective_latency_s * 1000),
       lossPercent: roundMetric(point.network_effective_loss_proxy_rate * 100),
       jitterMs: roundMetric(point.network_effective_delay_variation_s * 1000),
-      computeUsedTflops: roundMetric(point.compute_resource_used_gflops_fp32 / 1000)
+      computeUsedTflops: roundMetric(point.compute_resource_used_gflops_fp32 / 1000),
+      computeCpuFp64Gflops: roundMetric(point.compute_resource_used_gflops_fp64 ?? 0),
+      computeGpuFp32Tflops: roundMetric(point.compute_resource_used_gpu_tflops_fp32 ?? 0),
+      computeGpuFp16Tflops: roundMetric(point.compute_resource_used_gpu_tflops_fp16 ?? 0),
+      computeNpuInt8Tops: roundMetric(point.compute_resource_used_npu_tops_int8 ?? 0),
+      computeMemoryGb: roundMetric(point.compute_resource_used_memory_gb ?? 0),
+      computeStorageGb: roundMetric(point.compute_resource_used_storage_gb ?? 0)
     }));
   }
   const backendKpiSeries = snapshot.metrics_summary.network.kpiSeries ?? [];
@@ -732,12 +822,24 @@ export function buildDataPanelTelemetry(
         simTime: point.simTime,
         throughputMbps: roundMetric(point.throughputMbps),
         latencyMs: roundMetric(point.latencyMs),
-        lossPercent: roundMetric(point.lossPercent),
-        jitterMs: roundMetric(point.jitterMs),
-        computeUsedTflops: roundMetric(computeUsedTflops * envelope)
-      };
-    });
-  }
+      lossPercent: roundMetric(point.lossPercent),
+      jitterMs: roundMetric(point.jitterMs),
+      computeUsedTflops: roundMetric(computeUsedTflops * envelope),
+      computeCpuFp64Gflops: roundMetric(
+        computePool.vectorSummary.usedCpuFp64Gflops * envelope
+      ),
+      computeGpuFp32Tflops: roundMetric(
+        computePool.vectorSummary.usedGpuFp32Tflops * envelope
+      ),
+      computeGpuFp16Tflops: roundMetric(
+        computePool.vectorSummary.usedGpuFp16Tflops * envelope
+      ),
+      computeNpuInt8Tops: roundMetric(computePool.vectorSummary.usedNpuInt8Tops * envelope),
+      computeMemoryGb: roundMetric(computePool.vectorSummary.usedMemoryGb * envelope),
+      computeStorageGb: roundMetric(computePool.vectorSummary.usedStorageGb * envelope)
+    };
+  });
+}
   const eventSeries =
     snapshot.metrics_summary.system.eventSeries.length > 0
       ? snapshot.metrics_summary.system.eventSeries
@@ -767,7 +869,19 @@ export function buildDataPanelTelemetry(
       latencyMs: roundMetric(baseKpis.latencyMs * (0.92 + envelope * 0.08)),
       lossPercent: roundMetric(baseKpis.lossPercent * (0.7 + envelope * 0.3)),
       jitterMs: roundMetric(baseKpis.jitterMs * (0.75 + envelope * 0.25)),
-      computeUsedTflops: roundMetric(computeUsedTflops * envelope)
+      computeUsedTflops: roundMetric(computeUsedTflops * envelope),
+      computeCpuFp64Gflops: roundMetric(
+        computePool.vectorSummary.usedCpuFp64Gflops * envelope
+      ),
+      computeGpuFp32Tflops: roundMetric(
+        computePool.vectorSummary.usedGpuFp32Tflops * envelope
+      ),
+      computeGpuFp16Tflops: roundMetric(
+        computePool.vectorSummary.usedGpuFp16Tflops * envelope
+      ),
+      computeNpuInt8Tops: roundMetric(computePool.vectorSummary.usedNpuInt8Tops * envelope),
+      computeMemoryGb: roundMetric(computePool.vectorSummary.usedMemoryGb * envelope),
+      computeStorageGb: roundMetric(computePool.vectorSummary.usedStorageGb * envelope)
     };
   });
 }
@@ -1247,6 +1361,14 @@ function metricInput(
 
 function formatMetricMbps(value: number): string {
   return `${formatMetricValue(value)} Mbps`;
+}
+
+function computeSeriesOption(key: DataPanelComputeSeriesKey): DataPanelComputeSeriesOption {
+  return COMPUTE_SERIES_OPTIONS.find((option) => option.key === key) ?? COMPUTE_SERIES_OPTIONS[0];
+}
+
+function formatComputeSeriesValue(value: number, unit: string): string {
+  return `${formatMetricValue(value)} ${unit}`;
 }
 
 function formatRatioPercent(value: number): string {

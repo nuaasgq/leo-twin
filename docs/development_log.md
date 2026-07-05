@@ -3996,3 +3996,35 @@ change.
 - Recommended follow-up:
   - Add optional Playwright screenshot verification once the local browser
     automation path is stable.
+
+## 2026-07-05 - Dashboard Selectable Compute Series v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: make the standalone data panel compute chart selectable across backend
+  compute resource vector series. The default remains FP32 primary capacity, and
+  users can switch the trend line and current KPI to CPU FP64, GPU FP32/FP16,
+  NPU INT8, memory, or storage when those backend KPI fields are available.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 24 files / 180 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - None. Older FP32-only KPI samples remain compatible; optional resource
+    vector series fall back to zero until the backend provides those fields.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The chart displays one selected resource series at a time and does not yet
+    support multi-axis overlays or side-by-side resource comparison.
+- Recommended follow-up:
+  - Add a richer compare mode for multiple compute resources after backend
+    compute workload semantics are expanded.

@@ -15,6 +15,7 @@ import {
   buildDataPanelTelemetry,
   buildDataPanelTrafficDisplay,
   buildTopComputeNodeRows,
+  COMPUTE_SERIES_OPTIONS,
   resolveNetworkQualityKpis
 } from "../src/dashboard/data_panel/DataPanel";
 import { FidelitySummary, GeneratedScenarioConfig } from "../src/core/event_types";
@@ -744,6 +745,26 @@ describe("resolveNetworkQualityKpis", () => {
   });
 });
 
+describe("COMPUTE_SERIES_OPTIONS", () => {
+  it("keeps selectable compute chart series ordered by resource type", () => {
+    expect(
+      COMPUTE_SERIES_OPTIONS.map((option) => [
+        option.key,
+        option.shortLabel,
+        option.unit
+      ])
+    ).toEqual([
+      ["computeUsedTflops", "FP32", "TFLOPS"],
+      ["computeCpuFp64Gflops", "FP64", "GFLOPS"],
+      ["computeGpuFp32Tflops", "GPU32", "TFLOPS"],
+      ["computeGpuFp16Tflops", "GPU16", "TFLOPS"],
+      ["computeNpuInt8Tops", "INT8", "TOPS"],
+      ["computeMemoryGb", "\u5185\u5b58", "GB"],
+      ["computeStorageGb", "\u5b58\u50a8", "GB"]
+    ]);
+  });
+});
+
 describe("buildDataPanelTelemetry", () => {
   it("builds deterministic time-varying network and FP32 compute series", () => {
     const snapshot = makeSnapshot({
@@ -953,6 +974,45 @@ describe("buildDataPanelTelemetry", () => {
       lossPercent: 4,
       jitterMs: 6,
       computeUsedTflops: 2.5
+    });
+  });
+
+  it("maps backend compute vector KPI fields into telemetry points", () => {
+    const telemetry = buildDataPanelTelemetry(
+      makeSnapshot(),
+      20,
+      undefined,
+      {
+        version: "v1",
+        sample_count: 1,
+        samples: [
+          {
+            sim_time: 20,
+            network_effective_throughput_mbps: 150,
+            network_effective_latency_s: 0.11,
+            network_effective_loss_proxy_rate: 0.04,
+            network_effective_delay_variation_s: 0.006,
+            compute_resource_used_gflops_fp32: 2500,
+            compute_resource_used_gflops_fp64: 12,
+            compute_resource_used_gpu_tflops_fp32: 2.5,
+            compute_resource_used_gpu_tflops_fp16: 5,
+            compute_resource_used_npu_tops_int8: 8,
+            compute_resource_used_memory_gb: 16,
+            compute_resource_used_storage_gb: 32
+          }
+        ]
+      }
+    );
+
+    expect(telemetry).toHaveLength(1);
+    expect(telemetry[0]).toMatchObject({
+      computeUsedTflops: 2.5,
+      computeCpuFp64Gflops: 12,
+      computeGpuFp32Tflops: 2.5,
+      computeGpuFp16Tflops: 5,
+      computeNpuInt8Tops: 8,
+      computeMemoryGb: 16,
+      computeStorageGb: 32
     });
   });
 
