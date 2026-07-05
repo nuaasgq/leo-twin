@@ -9,10 +9,13 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Callable
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import parse_qs, unquote, urlsplit
 
 from examples.integration_demo.config import DEFAULT_CONFIG_PATH, DemoConfig, load_demo_config
-from examples.integration_demo.control_plane import DemoControlPlane
+from examples.integration_demo.control_plane import (
+    DemoControlPlane,
+    RuntimeExportArtifactError,
+)
 from examples.integration_demo.runtime import DemoRunResult, run_integration_demo
 from examples.integration_demo.serialization import (
     JsonValue,
@@ -157,6 +160,41 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                 return
             if path == "/runtime/export/catalog":
                 self._send_json(control_plane.runtime_export_catalog())
+                return
+            export_artifact_route = _runtime_export_package_route(path)
+            if export_artifact_route is not None:
+                package_id, artifact_kind, filename = export_artifact_route
+                try:
+                    if artifact_kind == "record":
+                        self._send_json(
+                            control_plane.runtime_export_package_record(package_id)
+                        )
+                        return
+                    if artifact_kind == "manifest":
+                        artifact = control_plane.runtime_export_package_artifact(
+                            package_id,
+                            "manifest.json",
+                        )
+                    elif artifact_kind == "archive":
+                        artifact = control_plane.runtime_export_package_archive_artifact(
+                            package_id,
+                        )
+                    elif artifact_kind == "file" and filename is not None:
+                        artifact = control_plane.runtime_export_package_artifact(
+                            package_id,
+                            filename,
+                        )
+                    else:
+                        self.send_error(404, "runtime export artifact not found")
+                        return
+                except RuntimeExportArtifactError as exc:
+                    self.send_error(404, str(exc))
+                    return
+                self._send_file(
+                    Path(artifact["path"]),
+                    content_type=str(artifact["content_type"]),
+                    download_name=str(artifact["filename"]),
+                )
                 return
             if path == "/runtime/export/archive":
                 try:
@@ -404,6 +442,25 @@ def _detail_query(query: dict[str, list[str]], *, default_limit: int) -> tuple[i
     if limit is None or limit <= 0:
         raise ValueError("limit must be positive")
     return cursor, min(limit, 5_000)
+
+
+def _runtime_export_package_route(
+    path: str,
+) -> tuple[str, str, str | None] | None:
+    prefix = "/runtime/export/packages/"
+    if not path.startswith(prefix):
+        return None
+    suffix = path[len(prefix) :].strip("/")
+    parts = [unquote(part) for part in suffix.split("/") if part]
+    if len(parts) == 1:
+        return parts[0], "record", None
+    if len(parts) == 2 and parts[1] == "manifest":
+        return parts[0], "manifest", None
+    if len(parts) == 2 and parts[1] == "archive":
+        return parts[0], "archive", None
+    if len(parts) == 3 and parts[1] == "files":
+        return parts[0], "file", parts[2]
+    return "", "missing", None
 
 
 def _optional_query_int(

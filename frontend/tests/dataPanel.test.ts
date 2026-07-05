@@ -708,7 +708,10 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           simTimeLabel: "12.5 s",
           eventCountLabel: "4,096",
           archiveLabel: "integration-demo-new.zip",
-          hashLabel: "abcdefabcdef"
+          hashLabel: "abcdefabcdef",
+          recordHref: "/runtime/export/packages/integration-demo-new",
+          manifestHref: "/runtime/export/packages/integration-demo-new/manifest",
+          archiveHref: "/runtime/export/packages/integration-demo-new/archive"
         },
         {
           key: "PACKAGE:old",
@@ -717,7 +720,10 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           simTimeLabel: "4 s",
           eventCountLabel: "100",
           archiveLabel: "未生成归档",
-          hashLabel: "111111111111"
+          hashLabel: "111111111111",
+          recordHref: "/runtime/export/packages/integration-demo-old",
+          manifestHref: "/runtime/export/packages/integration-demo-old/manifest",
+          archiveHref: null
         }
       ]
     });

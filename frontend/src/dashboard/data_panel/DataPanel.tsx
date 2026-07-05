@@ -37,7 +37,12 @@ import {
   RuntimeUserRequestItemV1,
   RuntimeUserRequestSummaryV1
 } from "../../core/event_types";
-import { runtimeExportArchiveHref } from "../../app/api";
+import {
+  runtimeExportArchiveHref,
+  runtimeExportPackageArchiveHref,
+  runtimeExportPackageManifestHref,
+  runtimeExportPackageRecordHref
+} from "../../app/api";
 import { runtimeSpeedFactorLabel } from "../../runtime_display";
 import { WorldSnapshot } from "../../state/snapshot_engine";
 import { ChannelHealthPanel } from "../channel_health/ChannelHealthPanel";
@@ -373,6 +378,7 @@ export const DataPanel = memo(function DataPanel({
               <span>事件数</span>
               <span>归档</span>
               <span>哈希</span>
+              <span>操作</span>
             </div>
             {exportCatalogDisplay.rows.length > 0 ? (
               exportCatalogDisplay.rows.map((row) => (
@@ -383,6 +389,19 @@ export const DataPanel = memo(function DataPanel({
                   <span>{row.eventCountLabel}</span>
                   <span title={row.archiveLabel}>{row.archiveLabel}</span>
                   <span title={row.hashLabel}>{row.hashLabel}</span>
+                  <span className="data-panel-export-catalog-actions">
+                    <a href={row.recordHref}>记录</a>
+                    <a href={row.manifestHref} download>
+                      清单
+                    </a>
+                    {row.archiveHref ? (
+                      <a href={row.archiveHref} download>
+                        归档
+                      </a>
+                    ) : (
+                      <em>无归档</em>
+                    )}
+                  </span>
                 </div>
               ))
             ) : (
@@ -4355,6 +4374,9 @@ export interface DataPanelExportCatalogRow {
   eventCountLabel: string;
   archiveLabel: string;
   hashLabel: string;
+  recordHref: string;
+  manifestHref: string;
+  archiveHref: string | null;
 }
 
 export function buildDataPanelExportCatalogDisplay(
@@ -4390,7 +4412,12 @@ export function buildDataPanelExportCatalogDisplay(
         simTimeLabel: `${formatPreciseMetricValue(record.current_sim_time)} s`,
         eventCountLabel: formatCount(record.processed_event_count),
         archiveLabel: record.archive_filename || "未生成归档",
-        hashLabel: shortRuntimeHash(exportHash)
+        hashLabel: shortRuntimeHash(exportHash),
+        recordHref: runtimeExportPackageRecordHref(record.package_id),
+        manifestHref: runtimeExportPackageManifestHref(record.package_id),
+        archiveHref: record.archive_filename
+          ? runtimeExportPackageArchiveHref(record.package_id)
+          : null
       };
     });
   return {

@@ -1843,7 +1843,7 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
     minmax(104px, 0.95fr)
     minmax(190px, 1.8fr);
   gap: 8px;
-  min-width: 760px;
+  min-width: 900px;
   align-items: center;
   border: 1px solid #223643;
   border-radius: 6px;
@@ -1898,7 +1898,8 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
     minmax(82px, 0.7fr)
     minmax(72px, 0.6fr)
     minmax(150px, 1.2fr)
-    minmax(92px, 0.75fr);
+    minmax(92px, 0.75fr)
+    minmax(150px, 1.1fr);
   gap: 8px;
   min-width: 760px;
   align-items: center;
@@ -1922,6 +1923,32 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.data-panel-export-catalog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  overflow: visible;
+  white-space: normal;
+}
+
+.data-panel-export-catalog-actions a,
+.data-panel-export-catalog-actions em {
+  border: 1px solid #2a4658;
+  border-radius: 5px;
+  padding: 3px 6px;
+  background: #101922;
+  color: var(--accent-cyan);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.data-panel-export-catalog-actions em {
+  color: var(--app-dim);
 }
 
 .data-panel-export-catalog-empty {

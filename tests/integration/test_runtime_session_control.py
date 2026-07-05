@@ -6,10 +6,19 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from examples.integration_demo.config import DemoConfig
-from examples.integration_demo.control_plane import DemoControlPlane
+from examples.integration_demo.control_plane import (
+    DemoControlPlane,
+    RuntimeExportArtifactError,
+)
 from examples.integration_demo.runtime import run_integration_demo
-from examples.integration_demo.server import _detail_query, _stream_query
+from examples.integration_demo.server import (
+    _detail_query,
+    _runtime_export_package_route,
+    _stream_query,
+)
 from leo_twin.core import SimulationKernel, SimulationModule
 from leo_twin.runtime import (
     ControlProtocol,
@@ -905,6 +914,66 @@ def test_demo_adapter_persists_runtime_export_catalog(tmp_path) -> None:
     control_plane.handle_raw_message(json.dumps({"type": "RUNTIME_CONTROL", "action": "STOP"}))
 
 
+def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> None:
+    export_root = tmp_path / "artifacts"
+    control_plane = DemoControlPlane.from_result(
+        run_integration_demo(_small_demo_config()),
+        config_output_path=tmp_path / "sees_control.yaml",
+        generated_config_output_path=tmp_path / "generated_full_system_demo.json",
+    )
+    control_plane.handle_raw_message(
+        json.dumps({"type": "RUNTIME_CONTROL", "action": "INITIALIZE"})
+    )
+    control_plane.handle_raw_message(json.dumps({"type": "RUNTIME_CONTROL", "action": "START"}))
+    control_plane._require_advance_loop().tick()
+
+    exported = control_plane.export_runtime_archive(export_root)
+    package_id = exported["package_id"]
+    record = control_plane.runtime_export_package_record(package_id, export_root)
+    manifest_artifact = control_plane.runtime_export_package_artifact(
+        package_id,
+        "manifest.json",
+        export_root,
+    )
+    events_artifact = control_plane.runtime_export_package_artifact(
+        package_id,
+        "events.jsonl",
+        export_root,
+    )
+    archive_artifact = control_plane.runtime_export_package_archive_artifact(
+        package_id,
+        export_root,
+    )
+
+    assert record["type"] == "RUNTIME_EXPORT_PACKAGE_RECORD"
+    assert record["summary"]["export_type"] == "ARCHIVE"
+    assert record["summary"]["package_id"] == package_id
+    assert Path(str(manifest_artifact["path"])).name == "manifest.json"
+    assert manifest_artifact["content_type"] == "application/json; charset=utf-8"
+    manifest = json.loads(Path(str(manifest_artifact["path"])).read_text(encoding="utf-8"))
+    assert manifest["manifest_hash"] == exported["manifest"]["manifest_hash"]
+    assert Path(str(events_artifact["path"])).name == "events.jsonl"
+    assert events_artifact["content_type"] == "application/x-ndjson; charset=utf-8"
+    assert Path(str(archive_artifact["path"])) == Path(str(exported["archive"]["path"]))
+    assert archive_artifact["filename"].endswith(".zip")
+    assert archive_artifact["sha256"] == exported["archive"]["sha256"]
+
+    with pytest.raises(RuntimeExportArtifactError):
+        control_plane.runtime_export_package_artifact(
+            package_id,
+            "../manifest.json",
+            export_root,
+        )
+    with pytest.raises(RuntimeExportArtifactError):
+        control_plane.runtime_export_package_artifact(
+            package_id,
+            "missing.json",
+            export_root,
+        )
+
+    control_plane.handle_raw_message(json.dumps({"type": "RUNTIME_CONTROL", "action": "STOP"}))
+
+
 def test_demo_server_stream_query_parses_cursor_options() -> None:
     assert _stream_query({"cursor": ["5"], "limit": ["10"]}) == (5, 10)
     assert _stream_query({}) == (0, None)
@@ -913,6 +982,20 @@ def test_demo_server_stream_query_parses_cursor_options() -> None:
         12,
     )
     assert _detail_query({}, default_limit=100) == (0, 100)
+    assert _runtime_export_package_route("/runtime/export/packages/pkg-1") == (
+        "pkg-1",
+        "record",
+        None,
+    )
+    assert _runtime_export_package_route(
+        "/runtime/export/packages/pkg-1/files/events.jsonl"
+    ) == ("pkg-1", "file", "events.jsonl")
+    assert _runtime_export_package_route(
+        "/runtime/export/packages/pkg%201/manifest"
+    ) == ("pkg 1", "manifest", None)
+    assert _runtime_export_package_route(
+        "/runtime/export/packages/pkg-1/archive"
+    ) == ("pkg-1", "archive", None)
 
 
 def _deterministic_sequence() -> tuple[tuple[dict[str, Any], ...], tuple[dict[str, Any], ...]]:

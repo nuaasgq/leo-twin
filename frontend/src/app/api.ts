@@ -16,6 +16,7 @@ import {
 } from "../core/event_types";
 
 export const DEFAULT_RUNTIME_EXPORT_ARCHIVE_ENDPOINT = "/runtime/export/archive";
+export const DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT = "/runtime/export/packages";
 
 export async function loadScenarioConfig(endpoint = "/scenario/config"): Promise<ScenarioConfig> {
   const response = await fetch(endpoint);
@@ -127,6 +128,37 @@ export function runtimeExportArchiveHref(
   endpoint = DEFAULT_RUNTIME_EXPORT_ARCHIVE_ENDPOINT
 ): string {
   return endpoint;
+}
+
+export function runtimeExportPackageRecordHref(
+  packageId: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): string {
+  return `${endpoint}/${encodeURIComponent(packageId)}`;
+}
+
+export function runtimeExportPackageManifestHref(
+  packageId: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): string {
+  return `${runtimeExportPackageRecordHref(packageId, endpoint)}/manifest`;
+}
+
+export function runtimeExportPackageArchiveHref(
+  packageId: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): string {
+  return `${runtimeExportPackageRecordHref(packageId, endpoint)}/archive`;
+}
+
+export function runtimeExportPackageFileHref(
+  packageId: string,
+  filename: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): string {
+  return `${runtimeExportPackageRecordHref(packageId, endpoint)}/files/${encodeURIComponent(
+    filename
+  )}`;
 }
 
 function decodeScenarioConfig(value: unknown): ScenarioConfig {

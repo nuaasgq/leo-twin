@@ -8,6 +8,10 @@ import {
   loadRuntimeState,
   loadRuntimeUserDetails,
   runtimeExportArchiveHref,
+  runtimeExportPackageArchiveHref,
+  runtimeExportPackageFileHref,
+  runtimeExportPackageManifestHref,
+  runtimeExportPackageRecordHref,
   runtimeApiErrorMessage
 } from "../src/app/api";
 
@@ -19,6 +23,21 @@ describe("runtime API diagnostics", () => {
   it("exposes the runtime export archive download endpoint", () => {
     expect(runtimeExportArchiveHref()).toBe("/runtime/export/archive");
     expect(runtimeExportArchiveHref("/custom/archive.zip")).toBe("/custom/archive.zip");
+  });
+
+  it("builds stable runtime export package artifact links", () => {
+    expect(runtimeExportPackageRecordHref("pkg 1")).toBe(
+      "/runtime/export/packages/pkg%201"
+    );
+    expect(runtimeExportPackageManifestHref("pkg 1")).toBe(
+      "/runtime/export/packages/pkg%201/manifest"
+    );
+    expect(runtimeExportPackageArchiveHref("pkg 1")).toBe(
+      "/runtime/export/packages/pkg%201/archive"
+    );
+    expect(runtimeExportPackageFileHref("pkg 1", "events 1.jsonl")).toBe(
+      "/runtime/export/packages/pkg%201/files/events%201.jsonl"
+    );
   });
 
   it("loads runtime export history summaries", async () => {

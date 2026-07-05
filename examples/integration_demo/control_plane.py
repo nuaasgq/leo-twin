@@ -89,6 +89,10 @@ _FRONTEND_EVENT_TYPES = frozenset(
 _RUNTIME_EXPORT_CATALOG_FILENAME = "runtime_export_catalog_v1.json"
 
 
+class RuntimeExportArtifactError(LookupError):
+    """Raised when a persisted runtime export artifact cannot be served safely."""
+
+
 @dataclass
 class DemoControlPlane:
     """Own the mutable control-plane state for a demo server instance."""
@@ -288,6 +292,58 @@ class DemoControlPlane:
         return {
             "type": "RUNTIME_EXPORT_CATALOG",
             "summary": _read_runtime_export_catalog(output_root),
+        }
+
+    def runtime_export_package_record(
+        self,
+        package_id: str,
+        output_root: str | Path = "artifacts/runtime_exports",
+    ) -> dict[str, Any]:
+        catalog = _read_runtime_export_catalog(output_root)
+        record = _runtime_export_catalog_package_record(catalog, package_id)
+        return {
+            "type": "RUNTIME_EXPORT_PACKAGE_RECORD",
+            "summary": record,
+        }
+
+    def runtime_export_package_artifact(
+        self,
+        package_id: str,
+        filename: str,
+        output_root: str | Path = "artifacts/runtime_exports",
+    ) -> dict[str, Any]:
+        catalog = _read_runtime_export_catalog(output_root)
+        record = _runtime_export_catalog_package_record(catalog, package_id)
+        file_record = _runtime_export_catalog_file(record, filename)
+        path = _runtime_export_catalog_file_path(output_root, record, file_record)
+        return {
+            "path": path,
+            "filename": file_record["filename"],
+            "content_type": _runtime_export_content_type(file_record["filename"]),
+            "sha256": file_record["sha256"],
+            "bytes": file_record["bytes"],
+        }
+
+    def runtime_export_package_archive_artifact(
+        self,
+        package_id: str,
+        output_root: str | Path = "artifacts/runtime_exports",
+    ) -> dict[str, Any]:
+        catalog = _read_runtime_export_catalog(output_root)
+        record = _runtime_export_catalog_package_record(catalog, package_id)
+        archive_filename = str(record.get("archive_filename", ""))
+        if not archive_filename:
+            raise RuntimeExportArtifactError(
+                f"runtime export package {package_id!r} has no archive"
+            )
+        package_dir = _runtime_export_catalog_package_dir(output_root, record)
+        path = _runtime_export_safe_child_file(package_dir, archive_filename)
+        return {
+            "path": path,
+            "filename": archive_filename,
+            "content_type": "application/zip",
+            "sha256": str(record.get("archive_sha256", "")),
+            "bytes": _control_int(record.get("archive_bytes")),
         }
 
     def visible_snapshot(self) -> dict[str, JsonValue]:
@@ -1192,6 +1248,107 @@ def _runtime_export_catalog_file_record(file_record: dict[str, Any]) -> dict[str
         "bytes": _control_int(file_record.get("bytes")),
         "sha256": str(file_record.get("sha256", "")),
     }
+
+
+def _runtime_export_catalog_package_record(
+    catalog: dict[str, Any],
+    package_id: str,
+) -> dict[str, Any]:
+    normalized_package_id = str(package_id)
+    if not normalized_package_id:
+        raise RuntimeExportArtifactError("runtime export package id is required")
+    matches = tuple(
+        dict(record)
+        for record in _control_records(catalog.get("records"))
+        if str(record.get("package_id", "")) == normalized_package_id
+    )
+    if not matches:
+        raise RuntimeExportArtifactError(
+            f"runtime export package {normalized_package_id!r} was not found"
+        )
+    return sorted(
+        matches,
+        key=lambda record: (
+            0 if str(record.get("export_type", "")) == "ARCHIVE" else 1,
+            str(record.get("catalog_key", "")),
+        ),
+    )[0]
+
+
+def _runtime_export_catalog_file(
+    record: dict[str, Any],
+    filename: str,
+) -> dict[str, Any]:
+    normalized_filename = str(filename)
+    if (
+        not normalized_filename
+        or "/" in normalized_filename
+        or "\\" in normalized_filename
+    ):
+        raise RuntimeExportArtifactError(
+            f"runtime export artifact filename {normalized_filename!r} is invalid"
+        )
+    for file_record in _control_records(record.get("files")):
+        if str(file_record.get("filename", "")) == normalized_filename:
+            return _runtime_export_catalog_file_record(file_record)
+    raise RuntimeExportArtifactError(
+        f"runtime export artifact {normalized_filename!r} was not found"
+    )
+
+
+def _runtime_export_catalog_file_path(
+    output_root: str | Path,
+    record: dict[str, Any],
+    file_record: dict[str, Any],
+) -> Path:
+    package_dir = _runtime_export_catalog_package_dir(output_root, record)
+    return _runtime_export_safe_child_file(package_dir, str(file_record["filename"]))
+
+
+def _runtime_export_catalog_package_dir(
+    output_root: str | Path,
+    record: dict[str, Any],
+) -> Path:
+    root = Path(output_root).resolve()
+    relative = str(record.get("relative_package_dir", ""))
+    if not relative:
+        raise RuntimeExportArtifactError("runtime export record has no package directory")
+    package_dir = (root / relative).resolve()
+    if package_dir != root and root not in package_dir.parents:
+        raise RuntimeExportArtifactError("runtime export package path escapes export root")
+    if not package_dir.is_dir():
+        raise RuntimeExportArtifactError(
+            f"runtime export package directory {package_dir} was not found"
+        )
+    return package_dir
+
+
+def _runtime_export_safe_child_file(package_dir: Path, filename: str) -> Path:
+    if not filename or "/" in filename or "\\" in filename:
+        raise RuntimeExportArtifactError(
+            f"runtime export artifact filename {filename!r} is invalid"
+        )
+    root = package_dir.resolve()
+    path = (root / filename).resolve()
+    if path.parent != root:
+        raise RuntimeExportArtifactError("runtime export artifact path escapes package")
+    if not path.is_file():
+        raise RuntimeExportArtifactError(
+            f"runtime export artifact {filename!r} was not found"
+        )
+    return path
+
+
+def _runtime_export_content_type(filename: str) -> str:
+    if filename.endswith(".json"):
+        return "application/json; charset=utf-8"
+    if filename.endswith(".jsonl"):
+        return "application/x-ndjson; charset=utf-8"
+    if filename.endswith(".csv"):
+        return "text/csv; charset=utf-8"
+    if filename.endswith(".zip"):
+        return "application/zip"
+    return "application/octet-stream"
 
 
 def _runtime_export_manifest_state_value(

@@ -5,6 +5,63 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Runtime Export Artifact Routes v1
+
+- Branch: `feature/T185-runtime-export-artifact-routes-v1`
+- Commit: pending in this commit
+- Scope: add read-only persisted export artifact routes so dashboard catalog
+  rows can open deterministic replay package records, manifests, registered
+  files, and already-created archives without creating a new export. The demo
+  server now serves `/runtime/export/packages/{package_id}`,
+  `/runtime/export/packages/{package_id}/manifest`,
+  `/runtime/export/packages/{package_id}/archive`, and
+  `/runtime/export/packages/{package_id}/files/{filename}` from the persisted
+  catalog with export-root path safety checks. The standalone dashboard catalog
+  rows now expose record, manifest, and archive actions. Event Kernel behavior,
+  runtime session progression, export package generation, and model logic are
+  unchanged.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `frontend/src/app/api.ts`
+  - `frontend/src/app/App.css`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/integration_demo.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/integration/test_runtime_session_control.py::test_demo_adapter_serves_persisted_runtime_export_artifacts tests/integration/test_runtime_session_control.py::test_demo_adapter_persists_runtime_export_catalog tests/integration/test_runtime_session_control.py::test_demo_server_stream_query_parses_cursor_options -q`
+    - Result: passed, 3 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- api.test.ts dataPanel.test.ts appSurface.test.ts`
+    - Result: passed, 25 files / 274 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing `DataPanel` chunk-size
+      warning after minification.
+  - `git diff --check`
+    - Result: passed. Git still reported the pre-existing CRLF warning for
+      local runtime/config drift in `configs/generated_full_system_demo.json`
+      and `configs/sees_control.yaml`.
+- Problems encountered:
+  - The existing catalog contains both `PACKAGE` and `ARCHIVE` records for the
+    same `package_id`; artifact lookup now deterministically prefers the
+    `ARCHIVE` record when present so archive metadata is available while still
+    serving the registered package files.
+  - The working tree still contains unrelated local runtime/config drift in
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`;
+    these files were intentionally left unstaged and unchanged by this task.
+- Known remaining issues / follow-up:
+  - Artifact routes are read-only downloads/openable JSON endpoints. A future
+    replay-browser task should add a scenario restore flow that loads a package
+    manifest and compares it with the current runtime configuration before
+    replay.
+
 ## 2026-07-05 - Dashboard Export Catalog View v1
 
 - Branch: `feature/T184-dashboard-export-catalog-view-v1`

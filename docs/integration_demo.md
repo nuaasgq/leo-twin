@@ -87,6 +87,10 @@ Endpoints:
 - `GET /runtime/export/catalog`
 - `GET /runtime/export/history`
 - `GET /runtime/export/archive`
+- `GET /runtime/export/packages/{package_id}`
+- `GET /runtime/export/packages/{package_id}/manifest`
+- `GET /runtime/export/packages/{package_id}/archive`
+- `GET /runtime/export/packages/{package_id}/files/{filename}`
 - `WS /stream/events`
 - `WS /stream/state`
 
@@ -132,6 +136,19 @@ Invoke-RestMethod http://127.0.0.1:8765/runtime/export/catalog
 The catalog endpoint reads `artifacts/runtime_exports/runtime_export_catalog_v1.json`.
 It persists package/archive metadata and hashes so previous exports remain
 discoverable after the backend process restarts.
+
+Persisted package artifact routes:
+
+```text
+http://127.0.0.1:8765/runtime/export/packages/{package_id}
+http://127.0.0.1:8765/runtime/export/packages/{package_id}/manifest
+http://127.0.0.1:8765/runtime/export/packages/{package_id}/archive
+http://127.0.0.1:8765/runtime/export/packages/{package_id}/files/events.jsonl
+```
+
+These routes serve catalog-registered files from the export root. They do not
+create a new export package and reject filenames that are not present in the
+persisted catalog record.
 
 ## Frontend
 
