@@ -30,6 +30,8 @@ Other launcher commands:
 ```powershell
 .\restart_leo_twin.bat
 .\dashboard_leo_twin.bat
+.\status_leo_twin.bat
+.\smoke_leo_twin.bat
 .\stop_leo_twin.bat
 .\scripts\sees_launcher.ps1 status
 ```

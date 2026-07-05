@@ -5158,3 +5158,32 @@ change.
 - Recommended follow-up:
   - Add a cross-platform launcher once non-Windows development becomes a
     supported workflow.
+
+## 2026-07-05 - Status And Smoke Batch Shortcuts v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add non-destructive Windows batch shortcuts for service status and
+  read-only runtime health smoke checks.
+- Changed files/modules:
+  - `status_leo_twin.bat`
+  - `smoke_leo_twin.bat`
+  - `README.md`
+  - `docs/integration_demo.md`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `cmd /c status_leo_twin.bat`
+    - Result: passed; reported backend/frontend health and URLs.
+  - `cmd /c smoke_leo_twin.bat`
+    - Result: passed; read-only runtime health smoke succeeded.
+- Problems encountered:
+  - None. Both shortcuts are non-destructive and do not start, stop, or reset
+    services.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - Windows batch shortcuts duplicate PowerShell entry points for convenience.
+- Recommended follow-up:
+  - Consider a small launcher menu only if users need a guided interactive
+    workflow.

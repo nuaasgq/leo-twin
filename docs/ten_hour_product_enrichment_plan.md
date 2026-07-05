@@ -459,6 +459,11 @@ The following issue-sized slices have now been delivered on
   - Maps to suggestions 18, 91, and 95.
   - `dashboard_leo_twin.bat` gives Windows users a direct dashboard-first
     launcher without typing PowerShell arguments.
+- `feat(launcher): add status and smoke shortcuts`
+  - Maps to suggestions 18, 91, and 95.
+  - `status_leo_twin.bat` and `smoke_leo_twin.bat` provide non-destructive
+    service-status and runtime-health checks without PowerShell argument
+    assembly.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected
