@@ -27,6 +27,7 @@ import {
   RuntimeStatusPayload,
   RuntimeUserRequestSummaryV1
 } from "../../core/event_types";
+import { runtimeSpeedFactorLabel } from "../../runtime_display";
 import { WorldSnapshot } from "../../state/snapshot_engine";
 import { ChannelHealthPanel } from "../channel_health/ChannelHealthPanel";
 import { CouplingFeedbackPanel } from "../coupling_feedback/CouplingFeedbackPanel";
@@ -183,7 +184,7 @@ export const DataPanel = memo(function DataPanel({
           </div>
           <div>
             <span>速度</span>
-            <strong>{runtimeStatus.speed_factor}x</strong>
+            <strong>{runtimeSpeedFactorLabel(runtimeStatus)}</strong>
           </div>
           <div>
             <span>配置规模</span>
@@ -2685,6 +2686,9 @@ function runtimeStatusLabel(status: RuntimeStatusPayload["status"]): string {
   }
   if (status === "PAUSED") {
     return "已暂停";
+  }
+  if (status === "COMPLETED") {
+    return "已完成";
   }
   return "已停止";
 }

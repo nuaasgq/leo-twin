@@ -6,6 +6,7 @@ import {
   RuntimeMode,
   RuntimeStatusPayload
 } from "../core/event_types";
+import { runtimeEffectiveSpeedFactor } from "../runtime_display";
 import { RuntimeAction } from "./controlClient";
 
 export interface ScenarioControlValues {
@@ -462,7 +463,12 @@ export function ConfigPanel({
   const [runtimeMode, setRuntimeMode] = useState<Exclude<RuntimeMode, "PAUSED">>(
     runtime.mode === "ACCELERATED" ? "ACCELERATED" : "REAL_TIME"
   );
-  const [speedFactor, setSpeedFactor] = useState(runtime.speed_factor);
+  const [speedFactor, setSpeedFactor] = useState(() =>
+    runtimeEffectiveSpeedFactor(
+      runtime.mode === "PAUSED" ? "REAL_TIME" : runtime.mode,
+      runtime.speed_factor
+    )
+  );
   const [durationSeconds, setDurationSeconds] = useState(runtime.duration);
   const [seed, setSeed] = useState(runtime.seed);
 
@@ -565,10 +571,14 @@ export function ConfigPanel({
   ]);
 
   useEffect(() => {
+    let nextRuntimeMode: Exclude<RuntimeMode, "PAUSED"> | null = null;
     if (runtime.mode !== "PAUSED") {
-      setRuntimeMode(runtime.mode);
+      nextRuntimeMode = runtime.mode;
+      setRuntimeMode(nextRuntimeMode);
     }
-    setSpeedFactor(runtime.speed_factor);
+    setSpeedFactor(
+      runtimeEffectiveSpeedFactor(nextRuntimeMode ?? runtimeMode, runtime.speed_factor)
+    );
     setDurationSeconds(runtime.duration);
     setSeed(runtime.seed);
   }, [runtime.mode, runtime.speed_factor, runtime.duration, runtime.seed]);
@@ -586,6 +596,8 @@ export function ConfigPanel({
   const startDisabled = startControlDisabled(runtime);
   const runtimeBusy = runtimeControlBusy(runtime);
   const executionParameterLocked = runtimeExecutionParametersLocked(runtime);
+  const speedControlDisabled = executionParameterLocked || runtimeMode === "REAL_TIME";
+  const effectiveSpeedFactor = runtimeEffectiveSpeedFactor(runtimeMode, speedFactor);
   const progressSummary = runtimeProgressSummary(progress);
   const visualizationLayerEffects = visualizationLayerEffectItems({
     satellites: showSatellites,
@@ -640,8 +652,19 @@ export function ConfigPanel({
     setRoutingInverseCapacityWeight(preset.routingInverseCapacityWeight);
     setRoutingHopWeight(preset.routingHopWeight);
   };
-  const handleSpeedFactorChange = (value: number) =>
+  const handleRuntimeModeChange = (value: Exclude<RuntimeMode, "PAUSED">) => {
+    setRuntimeMode(value);
+    if (value === "REAL_TIME") {
+      setSpeedFactor(1);
+    }
+  };
+  const handleSpeedFactorChange = (value: number) => {
+    if (runtimeMode === "REAL_TIME") {
+      setSpeedFactor(1);
+      return;
+    }
     setSpeedFactor(boundedInteger(value, 1, 100));
+  };
   const handleDurationSecondsChange = (value: number) =>
     setDurationSeconds(boundedInteger(value, 60, 86400));
   const handleTrafficClassChange = (value: string) => {
@@ -681,7 +704,7 @@ export function ConfigPanel({
         compute_npu_tops_int8: computeNpuInt8,
         compute_scheduling_policy: computeSchedulingPolicy,
         mode: runtimeMode,
-        speed_factor: speedFactor,
+        speed_factor: effectiveSpeedFactor,
         duration: durationSeconds,
         seed,
         orbit: {
@@ -787,7 +810,9 @@ export function ConfigPanel({
                 value={runtimeMode}
                 disabled={executionParameterLocked}
                 onChange={(event) =>
-                  setRuntimeMode(event.currentTarget.value as Exclude<RuntimeMode, "PAUSED">)
+                  handleRuntimeModeChange(
+                    event.currentTarget.value as Exclude<RuntimeMode, "PAUSED">
+                  )
                 }
               >
                 <option value="REAL_TIME">实时运行</option>
@@ -806,8 +831,8 @@ export function ConfigPanel({
                   min="1"
                   max="100"
                   step="1"
-                  value={speedFactor}
-                  disabled={executionParameterLocked}
+                  value={effectiveSpeedFactor}
+                  disabled={speedControlDisabled}
                   onChange={(event) => handleSpeedFactorChange(Number(event.currentTarget.value))}
                 />
                 <div className="unit-input">
@@ -817,8 +842,8 @@ export function ConfigPanel({
                     min="1"
                     max="100"
                     step="1"
-                    value={speedFactor}
-                    disabled={executionParameterLocked}
+                    value={effectiveSpeedFactor}
+                    disabled={speedControlDisabled}
                     onChange={(event) =>
                       handleSpeedFactorChange(Number(event.currentTarget.value))
                     }
@@ -2089,7 +2114,7 @@ export function initializationControlPayload(
     compute_capacity: values.compute_capacity,
     compute_scheduling_policy: values.compute_scheduling_policy,
     mode: values.mode,
-    speed_factor: values.speed_factor,
+    speed_factor: runtimeEffectiveSpeedFactor(values.mode, values.speed_factor),
     duration: values.duration,
     seed: values.seed,
     orbit: orbitControlPayload(values.orbit),
@@ -2478,6 +2503,9 @@ function runtimeStatusLabel(runtime: RuntimeStatusPayload): string {
   }
   if (runtime.status === "PAUSED") {
     return "已暂停";
+  }
+  if (runtime.status === "COMPLETED" || runtime.lifecycle_state === "COMPLETED") {
+    return "已完成";
   }
   if (runtime.last_action === "INITIALIZE") {
     return "已初始化";

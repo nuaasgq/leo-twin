@@ -6312,3 +6312,39 @@ change.
 - Recommended follow-up:
   - Add bounded pagination or virtualization for very large satellite detail
     tables, then continue with deeper business and network metric dynamics.
+
+## 2026-07-05 - Runtime Pacing UI Consistency v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: align frontend runtime mode semantics with the backend clock model.
+  Real-time mode now presents an effective 1x speed, disables speed-factor
+  editing, and normalizes initialization payloads to `speed_factor=1`.
+  Accelerated mode preserves the configured speed factor. Control-console,
+  3D surface, and standalone dashboard speed displays now use the same
+  effective-speed helper. Completed runtime states are displayed explicitly as
+  completed instead of being folded into a generic stopped/idle label.
+- Changed files/modules:
+  - `frontend/src/runtime_display.ts`
+  - `frontend/src/config_panel/ConfigPanel.tsx`
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/configPanel.test.ts`
+  - `frontend/tests/appSurface.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend exec vitest run configPanel.test.ts appSurface.test.ts dataPanel.test.ts`
+    - Result: passed, 3 files / 123 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The backend clock already ignored `speed_factor` in `REAL_TIME` mode; the
+    issue was frontend semantic drift. The fix is limited to display and
+    initialization payload normalization.
+- Known remaining issues:
+  - This pass does not change backend auto-completion logic, which is already
+    covered by runtime integration tests. A later UX pass can add an explicit
+    completion banner and restart guidance.
+- Recommended follow-up:
+  - Add a small completion notice on the control console and dashboard, then
+    continue with time-varying KPI explanation and larger-table virtualization.

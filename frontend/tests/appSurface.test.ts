@@ -24,6 +24,10 @@ import {
   surfaceFromPathname
 } from "../src/app/App";
 import {
+  runtimeEffectiveSpeedFactor,
+  runtimeSpeedFactorLabel
+} from "../src/runtime_display";
+import {
   FidelitySummary,
   GeneratedScenarioConfig,
   RuntimeBackpressureSummary,
@@ -173,6 +177,22 @@ describe("buildSurfaceSyncSummary", () => {
       statusLabel: "同步暂停"
     });
   });
+
+  it("labels completed runtime sync states explicitly", () => {
+    expect(
+      buildSurfaceSyncSummary({
+        displaySimTime: 600,
+        snapshotSimTime: 600,
+        eventCount: 100,
+        runtimeStatus: {
+          ...baseStatus,
+          status: "COMPLETED",
+          lifecycle_state: "COMPLETED",
+          last_action: "START"
+        }
+      }).statusLabel
+    ).toBe("同步完成");
+  });
 });
 
 describe("runtimeStatusRequiresStreams", () => {
@@ -191,6 +211,24 @@ describe("runtimeStatusRequiresStreams", () => {
     expect(runtimeStatusRequiresStreams({ ...baseStatus, status: "PAUSED" })).toBe(false);
     expect(runtimeStatusRequiresStreams({ ...baseStatus, status: "STOPPED" })).toBe(false);
     expect(runtimeStatusRequiresStreams(undefined)).toBe(false);
+  });
+});
+
+describe("runtime speed display", () => {
+  it("shows effective speed based on runtime mode", () => {
+    expect(runtimeEffectiveSpeedFactor("REAL_TIME", 25)).toBe(1);
+    expect(runtimeEffectiveSpeedFactor("ACCELERATED", 25)).toBe(25);
+    expect(
+      runtimeSpeedFactorLabel({
+        status: "RUNNING",
+        mode: "REAL_TIME",
+        speed_factor: 25,
+        seed: 20260703,
+        duration: 600,
+        config_version: 1,
+        last_action: "START"
+      })
+    ).toBe("1x");
   });
 });
 

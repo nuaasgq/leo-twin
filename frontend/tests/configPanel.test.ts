@@ -110,6 +110,58 @@ describe("ConfigPanel priority controls", () => {
     expect(markup).toMatch(/id="speed-factor-input"[^>]*disabled=""/);
   });
 
+  it("pins speed controls to 1x in real-time mode", () => {
+    const realtimeRuntime = {
+      ...runtimeStatus("STOPPED", true),
+      mode: "REAL_TIME",
+      speed_factor: 25
+    } as const;
+    const markup = renderToStaticMarkup(
+      createElement(ConfigPanel, {
+        scenario: defaultScenario(),
+        runtime: realtimeRuntime,
+        progress: {
+          sim_time: 0,
+          duration: 600,
+          event_count: 0
+        },
+        generatedConfig: null,
+        onRuntimeControl: () => undefined
+      })
+    );
+
+    expect(markup).toMatch(/id="speed-factor"(?=[^>]*disabled="")(?=[^>]*value="1")/);
+    expect(markup).toMatch(/id="speed-factor-input"(?=[^>]*disabled="")(?=[^>]*value="1")/);
+  });
+
+  it("shows completed runtime status distinctly", () => {
+    const markup = renderToStaticMarkup(
+      createElement(ConfigPanel, {
+        scenario: defaultScenario(),
+        runtime: {
+          status: "COMPLETED",
+          lifecycle_state: "COMPLETED",
+          mode: "REAL_TIME",
+          speed_factor: 1,
+          seed: 20260703,
+          duration: 600,
+          config_version: 1,
+          last_action: "START",
+          initialized: true
+        },
+        progress: {
+          sim_time: 600,
+          duration: 600,
+          event_count: 100
+        },
+        generatedConfig: null,
+        onRuntimeControl: () => undefined
+      })
+    );
+
+    expect(markup).toContain("已完成");
+  });
+
   it("renders quick scale presets for 72, 300, and 1200 satellite scenarios", () => {
     expect(SCENARIO_SCALE_PRESETS.map((preset) => preset.satelliteCount)).toEqual([
       72,
@@ -944,6 +996,28 @@ describe("initializationControlPayload", () => {
     expect(payload).not.toHaveProperty("routing_latency_weight");
     expect(payload).not.toHaveProperty("carrier_frequency_hz");
     expect(payload).not.toHaveProperty("rain_rate_mm_h");
+  });
+
+  it("normalizes speed factor by runtime mode for initialization", () => {
+    const scenario = defaultScenario();
+    expect(
+      initializationControlPayload({
+        ...scenario,
+        mode: "REAL_TIME",
+        speed_factor: 25,
+        duration: 600,
+        seed: 20260705
+      }).speed_factor
+    ).toBe(1);
+    expect(
+      initializationControlPayload({
+        ...scenario,
+        mode: "ACCELERATED",
+        speed_factor: 25,
+        duration: 600,
+        seed: 20260705
+      }).speed_factor
+    ).toBe(25);
   });
 });
 

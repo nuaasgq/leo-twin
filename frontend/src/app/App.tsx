@@ -15,6 +15,7 @@ import {
   ScenarioConfig
 } from "../core/event_types";
 import { SnapshotEngine, WorldSnapshot, useWorldSnapshot } from "../state/snapshot_engine";
+import { runtimeSpeedFactorLabel } from "../runtime_display";
 import { WorldStateReducer } from "../state/reducer";
 import { EventRouter } from "../stream/event_router";
 import { EventThrottleLayer } from "../stream/throttle_layer";
@@ -568,7 +569,7 @@ export function App() {
               <div className="surface-status-stack">
                 <div className={`surface-status ${runtimeStatus.status.toLowerCase()}`}>
                   <span>{runtimeStatusLabel(runtimeStatus.status)}</span>
-                  <strong>{runtimeStatus.speed_factor}x</strong>
+                  <strong>{runtimeSpeedFactorLabel(runtimeStatus)}</strong>
                 </div>
                 <a
                   className="surface-action-link"
@@ -1019,7 +1020,9 @@ export function buildSurfaceSyncSummary({
       ? "同步运行"
       : runtimeStatus.status === "PAUSED"
         ? "同步暂停"
-        : "同步待机";
+        : runtimeStatus.status === "COMPLETED" || runtimeStatus.lifecycle_state === "COMPLETED"
+          ? "同步完成"
+          : "同步待机";
   return {
     displayTimeLabel: `显示 ${formatDurationCompact(boundedDisplayTime)}`,
     snapshotTimeLabel: formatDurationCompact(boundedSnapshotTime),
@@ -1508,6 +1511,9 @@ function runtimeStatusLabel(status: RuntimeStatusPayload["status"]): string {
   }
   if (status === "PAUSED") {
     return "已暂停";
+  }
+  if (status === "COMPLETED") {
+    return "已完成";
   }
   return "已停止";
 }
