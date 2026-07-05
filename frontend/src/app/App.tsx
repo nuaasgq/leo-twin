@@ -46,6 +46,7 @@ import {
   loadUserConfigurationExport,
   loadUserConfigurationSchema,
   loadUserConfigurationTemplates,
+  RuntimeDetailQueryFilters,
   runtimeApiErrorMessage,
   validateUserConfigurationCandidate,
   validateUserConfigurationTextCandidate
@@ -72,6 +73,10 @@ type RuntimeDetailCursorKey =
 type RuntimeDetailCursorState = Record<RuntimeDetailCursorKey, number>;
 type RuntimeDetailCursorLoadingState = Record<RuntimeDetailCursorKey, boolean>;
 type RuntimeDetailCursorErrorState = Record<RuntimeDetailCursorKey, string | null>;
+type RuntimeDetailFilterState = Record<
+  "users" | "satellites" | "routes",
+  RuntimeDetailQueryFilters
+>;
 
 const DEFAULT_RUNTIME_CONNECTION_HEALTH: RuntimeConnectionHealth = {
   http: "connecting",
@@ -107,6 +112,12 @@ const DEFAULT_RUNTIME_DETAIL_CURSOR_ERRORS: RuntimeDetailCursorErrorState = {
   routes: null,
   services: null,
   computeNodes: null
+};
+
+const DEFAULT_RUNTIME_DETAIL_FILTERS: RuntimeDetailFilterState = {
+  users: {},
+  satellites: {},
+  routes: {}
 };
 
 const CesiumGlobe = lazy(async () => {
@@ -161,6 +172,8 @@ export function App() {
     useState<RuntimeDetailCursorLoadingState>(DEFAULT_RUNTIME_DETAIL_CURSOR_LOADING);
   const [runtimeDetailCursorErrors, setRuntimeDetailCursorErrors] =
     useState<RuntimeDetailCursorErrorState>(DEFAULT_RUNTIME_DETAIL_CURSOR_ERRORS);
+  const [runtimeDetailFilters, setRuntimeDetailFilters] =
+    useState<RuntimeDetailFilterState>(DEFAULT_RUNTIME_DETAIL_FILTERS);
   const [runtimeExportCatalog, setRuntimeExportCatalog] =
     useState<RuntimeExportCatalogV1 | null>(null);
   const [runtimeExportCompare, setRuntimeExportCompare] =
@@ -281,6 +294,7 @@ export function App() {
   useEffect(() => {
     setRuntimeDetailCursors(DEFAULT_RUNTIME_DETAIL_CURSORS);
     setRuntimeDetailCursorErrors(DEFAULT_RUNTIME_DETAIL_CURSOR_ERRORS);
+    setRuntimeDetailFilters(DEFAULT_RUNTIME_DETAIL_FILTERS);
   }, [runtimeStatus.config_version]);
 
   const refreshRuntimeDetails = useCallback(async (
@@ -294,12 +308,14 @@ export function App() {
         loadRuntimeUserDetails(
           runtimeDetailCursors.users,
           requestPlan.users.limit,
-          requestPlan.users.endpoint
+          requestPlan.users.endpoint,
+          runtimeDetailFilters.users
         ),
         loadRuntimeSatelliteDetails(
           runtimeDetailCursors.satellites,
           requestPlan.satellites.limit,
-          requestPlan.satellites.endpoint
+          requestPlan.satellites.endpoint,
+          runtimeDetailFilters.satellites
         ),
         loadRuntimeNodeDetails(
           0,
@@ -309,7 +325,8 @@ export function App() {
         loadRuntimeRouteDetails(
           runtimeDetailCursors.routes,
           requestPlan.routes.limit,
-          requestPlan.routes.endpoint
+          requestPlan.routes.endpoint,
+          runtimeDetailFilters.routes
         ),
         loadRuntimeServiceDetails(
           runtimeDetailCursors.services,
@@ -359,20 +376,26 @@ export function App() {
       services: services.status === "fulfilled" ? null : previous.services,
       computeNodes: computeNodes.status === "fulfilled" ? null : previous.computeNodes
     }));
-  }, [generatedConfig, runtimeDetailCursors]);
+  }, [generatedConfig, runtimeDetailCursors, runtimeDetailFilters]);
 
-  const refreshRuntimeUserDetailCursor = useCallback(async (cursor: number) => {
+  const refreshRuntimeUserDetailCursor = useCallback(async (
+    cursor: number,
+    filters: RuntimeDetailQueryFilters = runtimeDetailFilters.users
+  ) => {
     const requestPlan = runtimeDetailRequestPlan(
       generatedConfig?.backend_summary?.large_detail_pagination_contract_v2
     );
     const safeCursor = normalizeRuntimeDetailCursor(cursor);
+    const normalizedFilters = normalizeRuntimeDetailFilters(filters);
+    setRuntimeDetailFilters((previous) => ({ ...previous, users: normalizedFilters }));
     setRuntimeDetailCursorLoading((previous) => ({ ...previous, users: true }));
     setRuntimeDetailCursorErrors((previous) => ({ ...previous, users: null }));
     try {
       const page = await loadRuntimeUserDetails(
         safeCursor,
         requestPlan.users.limit,
-        requestPlan.users.endpoint
+        requestPlan.users.endpoint,
+        normalizedFilters
       );
       setRuntimeDetailPages((previous) => ({
         ...(previous ?? {}),
@@ -389,20 +412,29 @@ export function App() {
     } finally {
       setRuntimeDetailCursorLoading((previous) => ({ ...previous, users: false }));
     }
-  }, [generatedConfig, setConnectionChannel]);
+  }, [generatedConfig, runtimeDetailFilters.users, setConnectionChannel]);
 
-  const refreshRuntimeSatelliteDetailCursor = useCallback(async (cursor: number) => {
+  const refreshRuntimeSatelliteDetailCursor = useCallback(async (
+    cursor: number,
+    filters: RuntimeDetailQueryFilters = runtimeDetailFilters.satellites
+  ) => {
     const requestPlan = runtimeDetailRequestPlan(
       generatedConfig?.backend_summary?.large_detail_pagination_contract_v2
     );
     const safeCursor = normalizeRuntimeDetailCursor(cursor);
+    const normalizedFilters = normalizeRuntimeDetailFilters(filters);
+    setRuntimeDetailFilters((previous) => ({
+      ...previous,
+      satellites: normalizedFilters
+    }));
     setRuntimeDetailCursorLoading((previous) => ({ ...previous, satellites: true }));
     setRuntimeDetailCursorErrors((previous) => ({ ...previous, satellites: null }));
     try {
       const page = await loadRuntimeSatelliteDetails(
         safeCursor,
         requestPlan.satellites.limit,
-        requestPlan.satellites.endpoint
+        requestPlan.satellites.endpoint,
+        normalizedFilters
       );
       setRuntimeDetailPages((previous) => ({
         ...(previous ?? {}),
@@ -425,20 +457,26 @@ export function App() {
         satellites: false
       }));
     }
-  }, [generatedConfig, setConnectionChannel]);
+  }, [generatedConfig, runtimeDetailFilters.satellites, setConnectionChannel]);
 
-  const refreshRuntimeRouteDetailCursor = useCallback(async (cursor: number) => {
+  const refreshRuntimeRouteDetailCursor = useCallback(async (
+    cursor: number,
+    filters: RuntimeDetailQueryFilters = runtimeDetailFilters.routes
+  ) => {
     const requestPlan = runtimeDetailRequestPlan(
       generatedConfig?.backend_summary?.large_detail_pagination_contract_v2
     );
     const safeCursor = normalizeRuntimeDetailCursor(cursor);
+    const normalizedFilters = normalizeRuntimeDetailFilters(filters);
+    setRuntimeDetailFilters((previous) => ({ ...previous, routes: normalizedFilters }));
     setRuntimeDetailCursorLoading((previous) => ({ ...previous, routes: true }));
     setRuntimeDetailCursorErrors((previous) => ({ ...previous, routes: null }));
     try {
       const page = await loadRuntimeRouteDetails(
         safeCursor,
         requestPlan.routes.limit,
-        requestPlan.routes.endpoint
+        requestPlan.routes.endpoint,
+        normalizedFilters
       );
       setRuntimeDetailPages((previous) => ({
         ...(previous ?? {}),
@@ -455,7 +493,7 @@ export function App() {
     } finally {
       setRuntimeDetailCursorLoading((previous) => ({ ...previous, routes: false }));
     }
-  }, [generatedConfig, setConnectionChannel]);
+  }, [generatedConfig, runtimeDetailFilters.routes, setConnectionChannel]);
 
   const refreshRuntimeServiceDetailCursor = useCallback(async (cursor: number) => {
     const requestPlan = runtimeDetailRequestPlan(
@@ -1189,28 +1227,31 @@ export function App() {
                   loading: runtimeDetailCursorLoading.users,
                   error: runtimeDetailCursorErrors.users,
                   onCursorChange: refreshRuntimeUserDetailCursor,
-                  onRefresh: () =>
+                  onRefresh: (filters) =>
                     refreshRuntimeUserDetailCursor(
-                      runtimeDetailPages?.users?.cursor ?? runtimeDetailCursors.users
+                      runtimeDetailPages?.users?.cursor ?? runtimeDetailCursors.users,
+                      filters
                     )
                 },
                 satellites: {
                   loading: runtimeDetailCursorLoading.satellites,
                   error: runtimeDetailCursorErrors.satellites,
                   onCursorChange: refreshRuntimeSatelliteDetailCursor,
-                  onRefresh: () =>
+                  onRefresh: (filters) =>
                     refreshRuntimeSatelliteDetailCursor(
                       runtimeDetailPages?.satellites?.cursor ??
-                        runtimeDetailCursors.satellites
+                        runtimeDetailCursors.satellites,
+                      filters
                     )
                 },
                 routes: {
                   loading: runtimeDetailCursorLoading.routes,
                   error: runtimeDetailCursorErrors.routes,
                   onCursorChange: refreshRuntimeRouteDetailCursor,
-                  onRefresh: () =>
+                  onRefresh: (filters) =>
                     refreshRuntimeRouteDetailCursor(
-                      runtimeDetailPages?.routes?.cursor ?? runtimeDetailCursors.routes
+                      runtimeDetailPages?.routes?.cursor ?? runtimeDetailCursors.routes,
+                      filters
                     )
                 },
                 services: {
@@ -1502,6 +1543,23 @@ function normalizeRuntimeDetailCursor(cursor: number): number {
     return 0;
   }
   return Math.floor(cursor);
+}
+
+function normalizeRuntimeDetailFilters(
+  filters: RuntimeDetailQueryFilters
+): RuntimeDetailQueryFilters {
+  const query = filters.query?.trim();
+  const availability = filters.availability?.trim();
+  const businessType = filters.businessType?.trim();
+  const bottleneckComponent = filters.bottleneckComponent?.trim();
+  return {
+    ...(query ? { query } : {}),
+    ...(availability && availability !== "ALL" ? { availability } : {}),
+    ...(businessType && businessType !== "ALL" ? { businessType } : {}),
+    ...(bottleneckComponent && bottleneckComponent !== "ALL"
+      ? { bottleneckComponent }
+      : {})
+  };
 }
 
 export interface RuntimeRibbonSummary {

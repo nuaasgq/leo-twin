@@ -275,6 +275,10 @@ Tasks:
     dashboard detail observability notes. Users can now see that current text
     and structured filters apply only to the loaded backend page and local
     render window until filter-aware backend cursor requests are implemented.
+  - Status: T243 implements filter-aware backend cursor requests for user,
+    satellite, and route detail pages. The backend applies filters before
+    cursor pagination and the frontend sends active text/availability/business/
+    bottleneck filters during refresh and page-turn actions.
 - V2-054: Add model assumptions panel.
   - Scope: backend-derived model caveats, fidelity mode, KPI provenance.
   - Depends on: V2-003, V2-021.

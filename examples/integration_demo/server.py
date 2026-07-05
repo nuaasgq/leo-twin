@@ -240,7 +240,14 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                 except ValueError as exc:
                     self.send_error(400, str(exc))
                     return
-                self._send_json(control_plane.runtime_user_details(cursor, limit))
+                filters = _detail_filter_query(query)
+                self._send_json(
+                    control_plane.runtime_user_details(
+                        cursor,
+                        limit,
+                        query=filters["query"],
+                    )
+                )
                 return
             if path == "/runtime/details/satellites":
                 try:
@@ -248,7 +255,14 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                 except ValueError as exc:
                     self.send_error(400, str(exc))
                     return
-                self._send_json(control_plane.runtime_satellite_details(cursor, limit))
+                filters = _detail_filter_query(query)
+                self._send_json(
+                    control_plane.runtime_satellite_details(
+                        cursor,
+                        limit,
+                        query=filters["query"],
+                    )
+                )
                 return
             if path == "/runtime/details/nodes":
                 try:
@@ -264,7 +278,17 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                 except ValueError as exc:
                     self.send_error(400, str(exc))
                     return
-                self._send_json(control_plane.runtime_route_details(cursor, limit))
+                filters = _detail_filter_query(query)
+                self._send_json(
+                    control_plane.runtime_route_details(
+                        cursor,
+                        limit,
+                        query=filters["query"],
+                        availability=filters["availability"],
+                        business_type=filters["business_type"],
+                        bottleneck_component=filters["bottleneck_component"],
+                    )
+                )
                 return
             if path == "/runtime/details/services":
                 try:
@@ -554,6 +578,19 @@ def _detail_query(query: dict[str, list[str]], *, default_limit: int) -> tuple[i
     if limit is None or limit <= 0:
         raise ValueError("limit must be positive")
     return cursor, min(limit, 5_000)
+
+
+def _detail_filter_query(query: dict[str, list[str]]) -> dict[str, str]:
+    return {
+        "query": _first_query_value(query, "query", "").strip(),
+        "availability": _first_query_value(query, "availability", "ALL").strip(),
+        "business_type": _first_query_value(query, "business_type", "ALL").strip(),
+        "bottleneck_component": _first_query_value(
+            query,
+            "bottleneck_component",
+            "ALL",
+        ).strip(),
+    }
 
 
 def _runtime_export_package_route(

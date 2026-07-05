@@ -206,6 +206,7 @@ def build_runtime_user_request_summary(
     service_latency_history: Mapping[str, Any] | None = None,
     cursor: int = 0,
     limit: int = 1000,
+    query: str = "",
 ) -> dict[str, object]:
     """Build one deterministic page of per-user request detail rows."""
 
@@ -222,6 +223,7 @@ def build_runtime_user_request_summary(
         service_detail_lookup,
         cursor=cursor,
         limit=limit,
+        query=query,
     )
 
 
@@ -232,6 +234,7 @@ def build_runtime_satellite_service_summary(
     satellite_kpi_slices: Mapping[str, Any] | None = None,
     cursor: int = 0,
     limit: int = 1500,
+    query: str = "",
 ) -> dict[str, object]:
     """Build one deterministic page of per-satellite service detail rows."""
 
@@ -251,6 +254,7 @@ def build_runtime_satellite_service_summary(
         service_lookup,
         cursor=cursor,
         limit=limit,
+        query=query,
     )
 
 
@@ -260,6 +264,10 @@ def build_runtime_route_explanation_summary(
     service_latency_history: Mapping[str, Any] | None = None,
     cursor: int = 0,
     limit: int = 500,
+    query: str = "",
+    availability: str = "ALL",
+    business_type: str = "ALL",
+    bottleneck_component: str = "ALL",
 ) -> dict[str, object]:
     """Build backend-owned route explanation rows for dashboard consumers."""
 
@@ -268,46 +276,92 @@ def build_runtime_route_explanation_summary(
     routes = tuple(_records(snapshot.get("routes")))
     service_lookup = _service_lookup(service_latency_history)
     ordered_routes = tuple(sorted(routes, key=_route_explanation_sort_key))
+    route_items = tuple(
+        (route, _route_explanation_item(route, service_lookup))
+        for route in ordered_routes
+    )
+    filtered_route_items = tuple(
+        (route, item)
+        for route, item in route_items
+        if _route_explanation_matches_filter(
+            item,
+            query=query,
+            availability=availability,
+            business_type=business_type,
+            bottleneck_component=bottleneck_component,
+        )
+    )
     normalized_cursor = _page_cursor(cursor)
     normalized_limit = _page_limit(limit)
-    page_routes = ordered_routes[
+    page_route_items = filtered_route_items[
         normalized_cursor : normalized_cursor + normalized_limit
     ]
-    items = tuple(
-        _route_explanation_item(route, service_lookup) for route in page_routes
+    items = tuple(item for _, item in page_route_items)
+    next_cursor = min(len(filtered_route_items), normalized_cursor + len(items))
+    filter_active = _route_filter_is_active(
+        query=query,
+        availability=availability,
+        business_type=business_type,
+        bottleneck_component=bottleneck_component,
     )
-    next_cursor = min(len(ordered_routes), normalized_cursor + len(items))
-    return {
+    result: dict[str, object] = {
         "version": "v1",
         "source": "BACKEND_RUNTIME_SNAPSHOT",
-        "summary_scope": "ROUTE_EXPLANATION_WINDOW",
+        "summary_scope": (
+            "FILTERED_ROUTE_EXPLANATION_WINDOW"
+            if filter_active
+            else "ROUTE_EXPLANATION_WINDOW"
+        ),
         "cursor": normalized_cursor,
         "limit": normalized_limit,
         "next_cursor": next_cursor,
-        "has_more": next_cursor < len(ordered_routes),
-        "route_count": len(ordered_routes),
+        "has_more": next_cursor < len(filtered_route_items),
+        "route_count": len(filtered_route_items),
         "item_count": len(items),
         "available_route_count": sum(
-            1 for route in ordered_routes if bool(route.get("available"))
+            1 for route, _ in filtered_route_items if bool(route.get("available"))
         ),
         "blocked_route_count": sum(
-            1 for route in ordered_routes if not bool(route.get("available"))
+            1 for route, _ in filtered_route_items if not bool(route.get("available"))
         ),
         "over_demand_route_count": sum(
             1
-            for route in ordered_routes
+            for route, _ in filtered_route_items
             if _route_capacity_below_demand(route)
         ),
         "compute_service_route_count": sum(
-            1 for route in ordered_routes if _route_is_compute_service(route, service_lookup)
+            1
+            for route, _ in filtered_route_items
+            if _route_is_compute_service(route, service_lookup)
         ),
         "network_service_route_count": sum(
             1
-            for route in ordered_routes
+            for route, _ in filtered_route_items
             if not _route_is_compute_service(route, service_lookup)
         ),
         "items": items,
     }
+    if filter_active:
+        result.update(
+            {
+                "unfiltered_route_count": len(ordered_routes),
+                "filter_query": _normalized_filter_text(query),
+                "filter_availability": _normalized_filter_choice(
+                    availability,
+                    default="ALL",
+                ),
+                "filter_business_type": _normalized_filter_choice(
+                    business_type,
+                    default="ALL",
+                ),
+                "filter_bottleneck_component": _normalized_filter_choice(
+                    bottleneck_component,
+                    default="ALL",
+                ),
+                "filter_applied": True,
+            }
+        )
+    return result
 
 
 def build_runtime_service_detail_page(
@@ -408,6 +462,7 @@ def _user_request_summary(
     *,
     cursor: int,
     limit: int,
+    query: str,
 ) -> dict[str, object]:
     routes_by_user: dict[str, list[Mapping[str, Any]]] = {}
     for route in routes:
@@ -425,23 +480,7 @@ def _user_request_summary(
             key=_entity_sort_key,
         )
     )
-    active_count = 0
-    compute_count = 0
-    waiting_count = 0
-    for user_id in user_ids:
-        user_routes = tuple(routes_by_user.get(user_id, ()))
-        if user_routes:
-            active_count += 1
-        if any(_route_is_compute_service(route, service_lookup) for route in user_routes):
-            compute_count += 1
-        if any(not bool(route.get("available")) for route in user_routes):
-            waiting_count += 1
-    normalized_cursor = _page_cursor(cursor)
-    normalized_limit = _page_limit(limit)
-    page_user_ids = user_ids[
-        normalized_cursor : normalized_cursor + normalized_limit
-    ]
-    items = tuple(
+    all_items = tuple(
         _user_item(
             user_id,
             user_by_id.get(user_id),
@@ -449,18 +488,40 @@ def _user_request_summary(
             service_lookup,
             service_detail_lookup,
         )
-        for user_id in page_user_ids
+        for user_id in user_ids
     )
-    next_cursor = min(len(user_ids), normalized_cursor + len(items))
-    return {
+    filtered_items = tuple(
+        item for item in all_items if _detail_item_matches_query(item, query)
+    )
+    active_count = sum(
+        1 for item in filtered_items if item["communication_route_count"] > 0
+    )
+    compute_count = sum(
+        1 for item in filtered_items if item["compute_service_count"] > 0
+    )
+    waiting_count = sum(
+        1 for item in filtered_items if item["network_queue_count"] > 0
+    )
+    normalized_cursor = _page_cursor(cursor)
+    normalized_limit = _page_limit(limit)
+    items = filtered_items[
+        normalized_cursor : normalized_cursor + normalized_limit
+    ]
+    next_cursor = min(len(filtered_items), normalized_cursor + len(items))
+    filter_query = _normalized_filter_text(query)
+    result: dict[str, object] = {
         "version": "v1",
         "source": "BACKEND_RUNTIME_SNAPSHOT",
-        "summary_scope": "FULL_USER_SET_WITH_WINDOW_ITEMS",
+        "summary_scope": (
+            "FILTERED_USER_SET_WITH_WINDOW_ITEMS"
+            if filter_query
+            else "FULL_USER_SET_WITH_WINDOW_ITEMS"
+        ),
         "cursor": normalized_cursor,
         "limit": normalized_limit,
         "next_cursor": next_cursor,
-        "has_more": next_cursor < len(user_ids),
-        "user_count": len(user_ids),
+        "has_more": next_cursor < len(filtered_items),
+        "user_count": len(filtered_items),
         "item_count": len(items),
         "active_user_count": active_count,
         "compute_service_user_count": compute_count,
@@ -475,9 +536,18 @@ def _user_request_summary(
         "window_waiting_user_count": sum(
             1 for item in items if item["network_queue_count"] > 0
         ),
-        "hidden_user_count": max(0, len(user_ids) - len(items)),
+        "hidden_user_count": max(0, len(filtered_items) - len(items)),
         "items": items,
     }
+    if filter_query:
+        result.update(
+            {
+                "unfiltered_user_count": len(user_ids),
+                "filter_query": filter_query,
+                "filter_applied": True,
+            }
+        )
+    return result
 
 
 def _user_item(
@@ -1243,6 +1313,7 @@ def _satellite_service_summary(
     *,
     cursor: int,
     limit: int,
+    query: str,
 ) -> dict[str, object]:
     satellite_ids = tuple(
         sorted(
@@ -1263,12 +1334,7 @@ def _satellite_service_summary(
     }
     link_counts = _link_counts_by_satellite(links)
     route_context = _route_context_by_satellite(routes, service_lookup)
-    normalized_cursor = _page_cursor(cursor)
-    normalized_limit = _page_limit(limit)
-    page_satellite_ids = satellite_ids[
-        normalized_cursor : normalized_cursor + normalized_limit
-    ]
-    items = tuple(
+    all_items = tuple(
         _satellite_item(
             satellite_id,
             satellite_by_id.get(satellite_id),
@@ -1277,23 +1343,45 @@ def _satellite_service_summary(
             link_counts.get(satellite_id, {}),
             route_context.get(satellite_id, {}),
         )
-        for satellite_id in page_satellite_ids
+        for satellite_id in satellite_ids
     )
-    next_cursor = min(len(satellite_ids), normalized_cursor + len(items))
-    return {
+    filtered_items = tuple(
+        item for item in all_items if _detail_item_matches_query(item, query)
+    )
+    normalized_cursor = _page_cursor(cursor)
+    normalized_limit = _page_limit(limit)
+    items = filtered_items[
+        normalized_cursor : normalized_cursor + normalized_limit
+    ]
+    next_cursor = min(len(filtered_items), normalized_cursor + len(items))
+    filter_query = _normalized_filter_text(query)
+    result: dict[str, object] = {
         "version": "v1",
         "source": "BACKEND_RUNTIME_SNAPSHOT",
-        "summary_scope": "FULL_SATELLITE_SET_WITH_WINDOW_ITEMS",
+        "summary_scope": (
+            "FILTERED_SATELLITE_SET_WITH_WINDOW_ITEMS"
+            if filter_query
+            else "FULL_SATELLITE_SET_WITH_WINDOW_ITEMS"
+        ),
         "cursor": normalized_cursor,
         "limit": normalized_limit,
         "next_cursor": next_cursor,
-        "has_more": next_cursor < len(satellite_ids),
-        "satellite_count": len(satellite_ids),
+        "has_more": next_cursor < len(filtered_items),
+        "satellite_count": len(filtered_items),
         "item_count": len(items),
         "window_satellite_count": len(items),
-        "hidden_satellite_count": max(0, len(satellite_ids) - len(items)),
+        "hidden_satellite_count": max(0, len(filtered_items) - len(items)),
         "items": items,
     }
+    if filter_query:
+        result.update(
+            {
+                "unfiltered_satellite_count": len(satellite_ids),
+                "filter_query": filter_query,
+                "filter_applied": True,
+            }
+        )
+    return result
 
 
 def _satellite_item(
@@ -1621,6 +1709,82 @@ def _route_explanation_item(
             next_hop=next_hop,
         ),
     }
+
+
+def _detail_item_matches_query(item: Mapping[str, Any], query: str) -> bool:
+    normalized_query = _normalized_filter_text(query)
+    if not normalized_query:
+        return True
+    return normalized_query in " ".join(_filter_text_values(item)).lower()
+
+
+def _route_explanation_matches_filter(
+    item: Mapping[str, Any],
+    *,
+    query: str,
+    availability: str,
+    business_type: str,
+    bottleneck_component: str,
+) -> bool:
+    if not _detail_item_matches_query(item, query):
+        return False
+    availability_filter = _normalized_filter_choice(availability, default="ALL")
+    if availability_filter == "AVAILABLE" and not bool(item.get("available")):
+        return False
+    if availability_filter == "BLOCKED" and bool(item.get("available")):
+        return False
+    business_filter = _normalized_filter_choice(business_type, default="ALL")
+    if business_filter != "ALL" and _str(item.get("business_type")).upper() != business_filter:
+        return False
+    bottleneck_filter = _normalized_filter_choice(
+        bottleneck_component,
+        default="ALL",
+    )
+    if (
+        bottleneck_filter != "ALL"
+        and _str(item.get("bottleneck_component")).upper() != bottleneck_filter
+    ):
+        return False
+    return True
+
+
+def _route_filter_is_active(
+    *,
+    query: str,
+    availability: str,
+    business_type: str,
+    bottleneck_component: str,
+) -> bool:
+    return (
+        bool(_normalized_filter_text(query))
+        or _normalized_filter_choice(availability, default="ALL") != "ALL"
+        or _normalized_filter_choice(business_type, default="ALL") != "ALL"
+        or _normalized_filter_choice(bottleneck_component, default="ALL") != "ALL"
+    )
+
+
+def _normalized_filter_text(value: object) -> str:
+    return " ".join(_str(value).strip().lower().split())
+
+
+def _normalized_filter_choice(value: object, *, default: str) -> str:
+    normalized = _str(value).strip().upper()
+    return normalized or default
+
+
+def _filter_text_values(value: object) -> tuple[str, ...]:
+    if isinstance(value, Mapping):
+        values: list[str] = []
+        for key in sorted(value):
+            values.extend(_filter_text_values(value[key]))
+        return tuple(values)
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+        values = []
+        for item in value:
+            values.extend(_filter_text_values(item))
+        return tuple(values)
+    text = _str(value).strip()
+    return (text,) if text else ()
 
 
 def _route_bottleneck_reason(route: Mapping[str, Any]) -> str:

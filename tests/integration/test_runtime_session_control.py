@@ -15,6 +15,7 @@ from examples.integration_demo.control_plane import (
 )
 from examples.integration_demo.runtime import run_integration_demo
 from examples.integration_demo.server import (
+    _detail_filter_query,
     _detail_query,
     _runtime_export_package_route,
     _stream_query,
@@ -1189,6 +1190,25 @@ def test_demo_server_stream_query_parses_cursor_options() -> None:
         12,
     )
     assert _detail_query({}, default_limit=100) == (0, 100)
+    assert _detail_filter_query(
+        {
+            "query": [" sat-1 "],
+            "availability": ["BLOCKED"],
+            "business_type": ["DATA_TRANSFER"],
+            "bottleneck_component": ["AVAILABILITY"],
+        }
+    ) == {
+        "query": "sat-1",
+        "availability": "BLOCKED",
+        "business_type": "DATA_TRANSFER",
+        "bottleneck_component": "AVAILABILITY",
+    }
+    assert _detail_filter_query({}) == {
+        "query": "",
+        "availability": "ALL",
+        "business_type": "ALL",
+        "bottleneck_component": "ALL",
+    }
     assert _runtime_export_package_route("/runtime/export/packages/pkg-1") == (
         "pkg-1",
         "record",

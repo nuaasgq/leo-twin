@@ -1519,6 +1519,7 @@ export interface RuntimeUserRequestSummaryV1 {
   next_cursor?: number;
   has_more?: boolean;
   user_count: number;
+  unfiltered_user_count?: number;
   item_count: number;
   active_user_count: number;
   compute_service_user_count: number;
@@ -1528,6 +1529,8 @@ export interface RuntimeUserRequestSummaryV1 {
   window_compute_service_user_count?: number;
   window_waiting_user_count?: number;
   hidden_user_count: number;
+  filter_query?: string;
+  filter_applied?: boolean;
   items: readonly RuntimeUserRequestItemV1[];
 }
 
@@ -1540,12 +1543,18 @@ export interface RuntimeRouteExplanationSummaryV1 {
   next_cursor?: number;
   has_more?: boolean;
   route_count: number;
+  unfiltered_route_count?: number;
   item_count: number;
   available_route_count: number;
   blocked_route_count: number;
   over_demand_route_count: number;
   compute_service_route_count: number;
   network_service_route_count: number;
+  filter_query?: string;
+  filter_availability?: string;
+  filter_business_type?: string;
+  filter_bottleneck_component?: string;
+  filter_applied?: boolean;
   items: readonly RuntimeRouteExplanationItemV1[];
 }
 
@@ -1670,9 +1679,12 @@ export interface RuntimeSatelliteServiceSummaryV1 {
   next_cursor?: number;
   has_more?: boolean;
   satellite_count: number;
+  unfiltered_satellite_count?: number;
   item_count: number;
   window_satellite_count?: number;
   hidden_satellite_count: number;
+  filter_query?: string;
+  filter_applied?: boolean;
   items: readonly RuntimeSatelliteServiceItemV1[];
 }
 

@@ -340,12 +340,19 @@ class DemoControlPlane:
             response["summary"]["text_parse"] = text_parse
         return response
 
-    def runtime_user_details(self, cursor: int = 0, limit: int = 100) -> dict[str, Any]:
+    def runtime_user_details(
+        self,
+        cursor: int = 0,
+        limit: int = 100,
+        *,
+        query: str = "",
+    ) -> dict[str, Any]:
         summary = build_runtime_user_request_summary(
             self.visible_snapshot(),
             service_latency_history=self._service_latency_history_json(),
             cursor=cursor,
             limit=limit,
+            query=query,
         )
         return {
             "type": "RUNTIME_DETAIL_PAGE",
@@ -357,6 +364,8 @@ class DemoControlPlane:
         self,
         cursor: int = 0,
         limit: int = 120,
+        *,
+        query: str = "",
     ) -> dict[str, Any]:
         summary = build_runtime_satellite_service_summary(
             self.visible_snapshot(),
@@ -364,6 +373,7 @@ class DemoControlPlane:
             satellite_kpi_slices=self._satellite_kpi_slices_json(),
             cursor=cursor,
             limit=limit,
+            query=query,
         )
         return {
             "type": "RUNTIME_DETAIL_PAGE",
@@ -385,12 +395,25 @@ class DemoControlPlane:
             "summary": summary,
         }
 
-    def runtime_route_details(self, cursor: int = 0, limit: int = 100) -> dict[str, Any]:
+    def runtime_route_details(
+        self,
+        cursor: int = 0,
+        limit: int = 100,
+        *,
+        query: str = "",
+        availability: str = "ALL",
+        business_type: str = "ALL",
+        bottleneck_component: str = "ALL",
+    ) -> dict[str, Any]:
         summary = build_runtime_route_explanation_summary(
             self.visible_snapshot(),
             service_latency_history=self._service_latency_history_json(),
             cursor=cursor,
             limit=limit,
+            query=query,
+            availability=availability,
+            business_type=business_type,
+            bottleneck_component=bottleneck_component,
         )
         return {
             "type": "RUNTIME_DETAIL_PAGE",

@@ -5,6 +5,55 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Filter-Aware Detail Cursors v1
+
+- Branch: `feature/T243-filter-aware-detail-cursors-v1`
+- Commit: pending in this commit
+- Scope: make selected backend detail cursor endpoints filter-aware. User and
+  satellite detail pages now accept text `query`; route detail pages accept
+  text `query`, `availability`, `business_type`, and `bottleneck_component`.
+  The backend applies filters before cursor pagination and the frontend sends
+  the active dashboard filters during refresh and page-turn actions.
+- Changed files/modules:
+  - `src/leo_twin/services/runtime_observability.py`
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `frontend/src/app/api.ts`
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `tests/unit/test_runtime_observability.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/filter_aware_detail_cursors_v1.md`
+  - `docs/dashboard_filter_scope_notice_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_runtime_observability.py tests/integration/test_runtime_session_control.py tests/integration/test_live_runtime_streaming.py tests/integration/test_benchmark_acceptance_v1.py -q`
+    - Result: passed, 48 tests.
+  - `pnpm --dir frontend test -- dataPanel.test.ts api.test.ts appSurface.test.ts`
+    - Result: passed, 26 test files / 343 tests.
+  - `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed using the Codex bundled Node.js runtime.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite reported the existing `DataPanel` chunk size
+      warning after minification.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - Existing runtime observability tests assert exact unfiltered summary
+    objects. Filter metadata is emitted only when a filter is active, preserving
+    the legacy unfiltered response shape.
+  - Existing local runtime/generated config files remain dirty and are
+    intentionally not included in this task.
+- Known remaining issues / follow-up:
+  - Add service lifecycle and compute-node filter controls.
+  - Add detail-by-id endpoints for selected entities.
+  - Add backend filter metadata to a future large detail pagination contract
+    version.
+
 ## 2026-07-06 - Dashboard Filter Scope Notice v1
 
 - Branch: `feature/T242-dashboard-filter-scope-notice-v1`

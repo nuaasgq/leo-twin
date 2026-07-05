@@ -126,8 +126,15 @@ export interface RuntimeDetailCursorControls {
 export interface RuntimeDetailCursorControl {
   loading?: boolean;
   error?: string | null;
-  onCursorChange?: (cursor: number) => void;
-  onRefresh?: () => void;
+  onCursorChange?: (cursor: number, filters?: RuntimeDetailCursorFilters) => void;
+  onRefresh?: (filters?: RuntimeDetailCursorFilters) => void;
+}
+
+export interface RuntimeDetailCursorFilters {
+  query?: string;
+  availability?: string;
+  businessType?: string;
+  bottleneckComponent?: string;
 }
 
 const FALLBACK_USER_DETAIL_PAGE_SIZE = 80;
@@ -1149,6 +1156,12 @@ export const DataPanel = memo(function DataPanel({
             rows={filteredRouteExplanations}
             page={routeExplanationSummary}
             control={runtimeDetailCursorControls?.routes}
+            cursorFilters={{
+              query: routeExplanationFilter,
+              availability: routeExplanationAvailabilityFilter,
+              businessType: routeExplanationBusinessFilter,
+              bottleneckComponent: routeExplanationBottleneckFilter
+            }}
             filterValue={routeExplanationFilter}
             onFilterChange={setRouteExplanationFilter}
             availabilityFilter={routeExplanationAvailabilityFilter}
@@ -1610,6 +1623,7 @@ export const DataPanel = memo(function DataPanel({
             page={userRequestSummary}
             totalCount={userRequestSummary?.user_count ?? filteredUserBusinessRequests.items.length}
             control={runtimeDetailCursorControls?.users}
+            filters={detailFilter ? { query: detailFilter } : undefined}
           />
           <DetailPaginationControls
             page={userDetailWindow}
@@ -1646,6 +1660,7 @@ export const DataPanel = memo(function DataPanel({
               filteredSatelliteResourceRows.items.length
             }
             control={runtimeDetailCursorControls?.satellites}
+            filters={detailFilter ? { query: detailFilter } : undefined}
           />
           <DetailPaginationControls
             page={satelliteDetailWindow}
@@ -1918,6 +1933,7 @@ function RouteExplanationTable({
   rows,
   page,
   control,
+  cursorFilters,
   filterValue,
   onFilterChange,
   availabilityFilter,
@@ -1930,6 +1946,7 @@ function RouteExplanationTable({
   rows: DataPanelRouteExplanationRows;
   page: RuntimeRouteExplanationSummaryV1 | null | undefined;
   control?: RuntimeDetailCursorControl | null;
+  cursorFilters?: RuntimeDetailCursorFilters;
   filterValue: string;
   onFilterChange: (value: string) => void;
   availabilityFilter: DataPanelRouteExplanationAvailabilityFilter;
@@ -1966,6 +1983,7 @@ function RouteExplanationTable({
           page={page}
           totalCount={page?.route_count ?? rows.items.length}
           control={control}
+          filters={cursorFilters}
         />
         <div className="data-panel-route-empty">{emptyLabel}</div>
       </div>
@@ -1981,6 +1999,7 @@ function RouteExplanationTable({
           page={page}
           totalCount={page?.route_count ?? rows.items.length}
           control={control}
+          filters={cursorFilters}
         />
         <div className="data-panel-route-row header">
           <span>路由</span>
@@ -2235,7 +2254,8 @@ function BackendCursorPager({
   label,
   page,
   totalCount,
-  control
+  control,
+  filters
 }: {
   label: string;
   page:
@@ -2248,6 +2268,7 @@ function BackendCursorPager({
     | undefined;
   totalCount: number;
   control?: RuntimeDetailCursorControl | null;
+  filters?: RuntimeDetailCursorFilters;
 }) {
   if (
     page === null ||
@@ -2269,18 +2290,22 @@ function BackendCursorPager({
       <button
         type="button"
         disabled={!display.canPrevious || loading || !canUseControls}
-        onClick={() => control?.onCursorChange?.(display.previousCursor)}
+        onClick={() => control?.onCursorChange?.(display.previousCursor, filters)}
       >
         上一页
       </button>
       <button
         type="button"
         disabled={!display.canNext || loading || !canUseControls}
-        onClick={() => control?.onCursorChange?.(display.nextCursor)}
+        onClick={() => control?.onCursorChange?.(display.nextCursor, filters)}
       >
         下一页
       </button>
-      <button type="button" disabled={loading || !control?.onRefresh} onClick={control?.onRefresh}>
+      <button
+        type="button"
+        disabled={loading || !control?.onRefresh}
+        onClick={() => control?.onRefresh?.(filters)}
+      >
         刷新
       </button>
       <small>
@@ -3968,7 +3993,7 @@ export function buildDataPanelFilterScopeNotes(
       value: "当前后端页",
       detail: `${cursorScopes.join(
         "；"
-      )}。当前文本和结构筛选只作用于已读取后端页与本地渲染窗口；未读取行需要先用游标翻页，全量后端筛选另行实现。`,
+      )}。刷新或翻页会把当前筛选条件发送到后端详情端点；表格仍只渲染当前后端页与本地窗口。`,
       tone: "limit"
     }
   ];

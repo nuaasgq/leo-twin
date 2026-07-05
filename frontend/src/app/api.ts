@@ -39,6 +39,13 @@ export const DEFAULT_USER_CONFIG_VALIDATE_ENDPOINT = "/scenario/user-config/vali
 export const DEFAULT_USER_CONFIG_VALIDATE_TEXT_ENDPOINT =
   "/scenario/user-config/validate-text";
 
+export interface RuntimeDetailQueryFilters {
+  query?: string;
+  availability?: string;
+  businessType?: string;
+  bottleneckComponent?: string;
+}
+
 export async function loadScenarioConfig(endpoint = "/scenario/config"): Promise<ScenarioConfig> {
   const response = await fetch(endpoint);
   if (!response.ok) {
@@ -70,9 +77,10 @@ export async function loadRuntimeState(endpoint = "/runtime/status"): Promise<Ru
 export async function loadRuntimeUserDetails(
   cursor = 0,
   limit = 100,
-  endpoint = "/runtime/details/users"
+  endpoint = "/runtime/details/users",
+  filters: RuntimeDetailQueryFilters = {}
 ): Promise<RuntimeUserRequestSummaryV1> {
-  const page = await loadRuntimeDetailPage(endpoint, cursor, limit);
+  const page = await loadRuntimeDetailPage(endpoint, cursor, limit, filters);
   if (page.kind !== "users") {
     throw new TypeError(`runtime detail response kind must be users, got ${page.kind}`);
   }
@@ -82,9 +90,10 @@ export async function loadRuntimeUserDetails(
 export async function loadRuntimeSatelliteDetails(
   cursor = 0,
   limit = 120,
-  endpoint = "/runtime/details/satellites"
+  endpoint = "/runtime/details/satellites",
+  filters: RuntimeDetailQueryFilters = {}
 ): Promise<RuntimeSatelliteServiceSummaryV1> {
-  const page = await loadRuntimeDetailPage(endpoint, cursor, limit);
+  const page = await loadRuntimeDetailPage(endpoint, cursor, limit, filters);
   if (page.kind !== "satellites") {
     throw new TypeError(`runtime detail response kind must be satellites, got ${page.kind}`);
   }
@@ -106,9 +115,10 @@ export async function loadRuntimeNodeDetails(
 export async function loadRuntimeRouteDetails(
   cursor = 0,
   limit = 100,
-  endpoint = "/runtime/details/routes"
+  endpoint = "/runtime/details/routes",
+  filters: RuntimeDetailQueryFilters = {}
 ): Promise<RuntimeRouteExplanationSummaryV1> {
-  const page = await loadRuntimeDetailPage(endpoint, cursor, limit);
+  const page = await loadRuntimeDetailPage(endpoint, cursor, limit, filters);
   if (page.kind !== "routes") {
     throw new TypeError(`runtime detail response kind must be routes, got ${page.kind}`);
   }
@@ -365,16 +375,42 @@ function decodeScenarioConfig(value: unknown): ScenarioConfig {
 async function loadRuntimeDetailPage(
   endpoint: string,
   cursor: number,
-  limit: number
+  limit: number,
+  filters: RuntimeDetailQueryFilters = {}
 ): Promise<RuntimeDetailPageEnvelope> {
-  const url = `${endpoint}?cursor=${encodeURIComponent(String(cursor))}&limit=${encodeURIComponent(
-    String(limit)
-  )}`;
+  const params = new URLSearchParams({
+    cursor: String(cursor),
+    limit: String(limit)
+  });
+  appendRuntimeDetailFilterParams(params, filters);
+  const url = `${endpoint}?${params.toString()}`;
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`failed to load runtime details from ${url}: HTTP ${response.status}`);
   }
   return decodeRuntimeDetailPage(await response.json());
+}
+
+function appendRuntimeDetailFilterParams(
+  params: URLSearchParams,
+  filters: RuntimeDetailQueryFilters
+): void {
+  const query = filters.query?.trim();
+  if (query) {
+    params.set("query", query);
+  }
+  const availability = filters.availability?.trim();
+  if (availability && availability !== "ALL") {
+    params.set("availability", availability);
+  }
+  const businessType = filters.businessType?.trim();
+  if (businessType && businessType !== "ALL") {
+    params.set("business_type", businessType);
+  }
+  const bottleneckComponent = filters.bottleneckComponent?.trim();
+  if (bottleneckComponent && bottleneckComponent !== "ALL") {
+    params.set("bottleneck_component", bottleneckComponent);
+  }
 }
 
 export function decodeRuntimeDetailPage(value: unknown): RuntimeDetailPageEnvelope {

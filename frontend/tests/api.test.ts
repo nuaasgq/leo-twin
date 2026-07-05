@@ -586,6 +586,20 @@ describe("runtime API diagnostics", () => {
             items: [{ node_id: "sat-0" }]
           }
         })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          type: "RUNTIME_DETAIL_PAGE",
+          kind: "routes",
+          summary: {
+            version: "v1",
+            source: "BACKEND_RUNTIME_SNAPSHOT",
+            route_count: 1,
+            item_count: 1,
+            items: [{ route_id: "route-filtered" }]
+          }
+        })
       });
     vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
 
@@ -614,6 +628,17 @@ describe("runtime API diagnostics", () => {
       compute_node_count: 1,
       items: [{ node_id: "sat-0" }]
     });
+    await expect(
+      loadRuntimeRouteDetails(8, 60, "/runtime/details/routes", {
+        query: "sat-1",
+        availability: "BLOCKED",
+        businessType: "DATA_TRANSFER",
+        bottleneckComponent: "AVAILABILITY"
+      })
+    ).resolves.toMatchObject({
+      route_count: 1,
+      items: [{ route_id: "route-filtered" }]
+    });
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       "/runtime/details/users?cursor=2&limit=80"
@@ -637,6 +662,10 @@ describe("runtime API diagnostics", () => {
     expect(fetchMock).toHaveBeenNthCalledWith(
       6,
       "/runtime/details/compute-nodes?cursor=7&limit=50"
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      7,
+      "/runtime/details/routes?cursor=8&limit=60&query=sat-1&availability=BLOCKED&business_type=DATA_TRANSFER&bottleneck_component=AVAILABILITY"
     );
   });
 

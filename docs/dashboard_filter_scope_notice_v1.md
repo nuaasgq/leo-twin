@@ -5,13 +5,14 @@ Branch: `feature/T242-dashboard-filter-scope-notice-v1`
 
 ## Purpose
 
-This task makes dashboard filtering scope explicit for large backend cursor
+This task made dashboard filtering scope explicit for large backend cursor
 pages.
 
-The dashboard now has cursor controls for user, satellite, route, service, and
-compute-node detail pages. However, text and structured filters still operate
-on the currently loaded backend page and local render window. This task exposes
-that limitation directly in the existing detail scope notes.
+The dashboard has cursor controls for user, satellite, route, service, and
+compute-node detail pages. At the time of this task, text and structured
+filters still operated on the currently loaded backend page and local render
+window. T243 later added filter-aware backend cursor requests for user,
+satellite, and route detail pages.
 
 ## Behavior
 
@@ -21,8 +22,8 @@ that limitation directly in the existing detail scope notes.
   - satellites;
   - routes.
 - The note is hidden for legacy summaries without cursor metadata.
-- Existing local filtering, local pagination, and backend cursor reads remain
-  unchanged.
+- Existing local filtering, local pagination, and backend cursor reads remained
+  unchanged in this task.
 
 ## Boundaries
 
@@ -34,6 +35,7 @@ that limitation directly in the existing detail scope notes.
 
 ## Follow-Up
 
-- Add filter-aware backend cursor requests.
+- Filter-aware backend cursor requests for user, satellite, and route detail
+  pages were added in T243.
 - Persist filter context in backend detail endpoints.
 - Add entity detail-by-id endpoints for direct selection from filtered results.

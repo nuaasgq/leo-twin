@@ -7,6 +7,8 @@ from leo_twin.services.runtime_observability import (
     build_runtime_lifecycle_summaries,
     build_runtime_node_detail_page,
     build_runtime_route_explanation_summary,
+    build_runtime_satellite_service_summary,
+    build_runtime_user_request_summary,
 )
 
 
@@ -667,3 +669,100 @@ def test_runtime_user_summary_counts_full_set_when_items_are_limited() -> None:
     assert summary["window_compute_service_user_count"] == 1
     assert summary["window_waiting_user_count"] == 0
     assert summary["hidden_user_count"] == 2
+
+
+def test_runtime_detail_pages_apply_filters_before_cursor_pagination() -> None:
+    snapshot = {
+        "ground_users": [
+            {"user_id": "user-0", "status": "ACTIVE"},
+            {"user_id": "user-1", "status": "ACTIVE"},
+        ],
+        "satellites": [
+            {"satellite_id": "sat-0", "status": "ACTIVE"},
+            {"satellite_id": "sat-1", "status": "ACTIVE"},
+        ],
+        "compute_nodes": [
+            {"node_id": "sat-0", "capacity": 100.0, "available_capacity": 80.0},
+            {"node_id": "sat-1", "capacity": 100.0, "available_capacity": 30.0},
+        ],
+        "links": [
+            {"source_id": "sat-0", "target_id": "user-0", "availability": True},
+            {"source_id": "sat-1", "target_id": "user-1", "availability": True},
+        ],
+        "routes": [
+            {
+                "route_id": "route-compute",
+                "flow_id": "flow-compute",
+                "path": ["user-0", "sat-0", "compute-0"],
+                "capacity": 80.0,
+                "demand_capacity": 50.0,
+                "available": True,
+            },
+            {
+                "route_id": "route-blocked",
+                "flow_id": "flow-data",
+                "path": ["user-1", "sat-1", "service-1"],
+                "capacity": 30.0,
+                "demand_capacity": 20.0,
+                "available": False,
+            },
+        ],
+    }
+    service_history = {
+        "items": [
+            {
+                "task_id": "task-compute",
+                "input_flow_id": "flow-compute",
+                "compute_node_id": "sat-0",
+            }
+        ]
+    }
+
+    user_page = build_runtime_user_request_summary(
+        snapshot,
+        service_latency_history=service_history,
+        query="user-1",
+        cursor=0,
+        limit=10,
+    )
+    assert user_page["summary_scope"] == "FILTERED_USER_SET_WITH_WINDOW_ITEMS"
+    assert user_page["user_count"] == 1
+    assert user_page["unfiltered_user_count"] == 2
+    assert user_page["filter_query"] == "user-1"
+    assert user_page["filter_applied"] is True
+    assert user_page["items"][0]["user_id"] == "user-1"
+
+    satellite_page = build_runtime_satellite_service_summary(
+        snapshot,
+        service_latency_history=service_history,
+        query="sat-1",
+        cursor=0,
+        limit=10,
+    )
+    assert satellite_page["summary_scope"] == "FILTERED_SATELLITE_SET_WITH_WINDOW_ITEMS"
+    assert satellite_page["satellite_count"] == 1
+    assert satellite_page["unfiltered_satellite_count"] == 2
+    assert satellite_page["filter_query"] == "sat-1"
+    assert satellite_page["items"][0]["satellite_id"] == "sat-1"
+
+    route_page = build_runtime_route_explanation_summary(
+        snapshot,
+        service_latency_history=service_history,
+        query="sat-1",
+        availability="BLOCKED",
+        business_type="DATA_TRANSFER",
+        bottleneck_component="AVAILABILITY",
+        cursor=0,
+        limit=10,
+    )
+    assert route_page["summary_scope"] == "FILTERED_ROUTE_EXPLANATION_WINDOW"
+    assert route_page["route_count"] == 1
+    assert route_page["unfiltered_route_count"] == 2
+    assert route_page["available_route_count"] == 0
+    assert route_page["blocked_route_count"] == 1
+    assert route_page["filter_query"] == "sat-1"
+    assert route_page["filter_availability"] == "BLOCKED"
+    assert route_page["filter_business_type"] == "DATA_TRANSFER"
+    assert route_page["filter_bottleneck_component"] == "AVAILABILITY"
+    assert route_page["filter_applied"] is True
+    assert route_page["items"][0]["route_id"] == "route-blocked"
