@@ -6348,3 +6348,33 @@ change.
 - Recommended follow-up:
   - Add a small completion notice on the control console and dashboard, then
     continue with time-varying KPI explanation and larger-table virtualization.
+
+## 2026-07-05 - Runtime Completion Notice v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: make runtime completion visible on both the 3D control console and
+  standalone dashboard. When backend status or lifecycle state is `COMPLETED`,
+  the frontend now shows a distinct completion notice with configured
+  duration, final simulation time, processed event count, and reset guidance.
+  This is a frontend observability change only; backend runtime completion and
+  Event Kernel behavior are unchanged.
+- Changed files/modules:
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/appSurface.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend exec vitest run appSurface.test.ts`
+    - Result: passed, 1 file / 30 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - None. The notice is derived from existing runtime status fields and does
+    not introduce new control actions or backend protocol fields.
+- Known remaining issues:
+  - The notice does not yet provide a one-click restart flow. Users still use
+    the existing reset/initialize/start controls.
+- Recommended follow-up:
+  - Add bounded table virtualization or pagination for large user/satellite
+    detail inspection, then continue with time-varying KPI provenance work.

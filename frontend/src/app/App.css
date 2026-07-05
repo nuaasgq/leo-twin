@@ -514,6 +514,32 @@ body {
   line-height: 1.2;
 }
 
+.fidelity-notice.completion {
+  border-color: #2e6b7a;
+  background: rgba(10, 31, 39, 0.94);
+  color: #c8f5ff;
+}
+
+.fidelity-notice.completion.control {
+  top: 246px;
+}
+
+.fidelity-notice.completion.dashboard {
+  top: 92px;
+}
+
+.fidelity-notice.completion span {
+  color: #62d8f0;
+}
+
+.fidelity-notice.completion strong {
+  color: #e0fbff;
+}
+
+.fidelity-notice.completion small {
+  color: #a7cad2;
+}
+
 .fidelity-notice-dismiss {
   position: absolute;
   top: 7px;

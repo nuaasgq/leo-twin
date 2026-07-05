@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   backpressureNoticeDismissKey,
   backpressureNoticeText,
+  completionNoticeDetail,
+  completionNoticeText,
   buildRuntimeRibbonSummary,
   buildSurfaceSyncSummary,
   connectionDiagnosticItems,
@@ -19,6 +21,7 @@ import {
   selectFidelitySummary,
   shouldResetWorldBeforeStreamConnect,
   shouldShowBackpressureNotice,
+  shouldShowCompletionNotice,
   shouldShowFidelityNotice,
   standaloneDashboardHref,
   surfaceFromPathname
@@ -229,6 +232,36 @@ describe("runtime speed display", () => {
         last_action: "START"
       })
     ).toBe("1x");
+  });
+});
+
+describe("completion notice", () => {
+  const completedStatus: RuntimeStatusPayload = {
+    status: "COMPLETED",
+    lifecycle_state: "COMPLETED",
+    mode: "REAL_TIME",
+    speed_factor: 1,
+    seed: 20260703,
+    duration: 600,
+    config_version: 1,
+    last_action: "START",
+    current_sim_time: 600,
+    processed_event_count: 128
+  };
+
+  it("shows an explicit completed runtime notice", () => {
+    expect(shouldShowCompletionNotice(completedStatus)).toBe(true);
+    expect(shouldShowCompletionNotice({ ...completedStatus, status: "RUNNING" })).toBe(true);
+    expect(
+      shouldShowCompletionNotice({
+        ...completedStatus,
+        status: "RUNNING",
+        lifecycle_state: "RUNNING"
+      })
+    ).toBe(false);
+    expect(completionNoticeText(completedStatus)).toContain("仿真已完成");
+    expect(completionNoticeText(completedStatus)).toContain("配置时长");
+    expect(completionNoticeDetail(completedStatus)).toContain("事件数 128");
   });
 });
 

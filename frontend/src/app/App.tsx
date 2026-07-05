@@ -535,6 +535,7 @@ export function App() {
       {surface === "dashboard" ? (
         <section className="dashboard-page" aria-label="独立数据态势面板">
           <FidelityNotice summary={fidelitySummary} surface="dashboard" />
+          <CompletionNotice runtimeStatus={runtimeStatus} surface="dashboard" />
           <BackpressureNotice
             summary={backpressureSummary}
             surface="dashboard"
@@ -614,6 +615,7 @@ export function App() {
               </div>
             </div>
             <FidelityNotice summary={fidelitySummary} surface="control" />
+            <CompletionNotice runtimeStatus={runtimeStatus} surface="control" />
             <BackpressureNotice
               summary={backpressureSummary}
               surface="control"
@@ -797,6 +799,60 @@ function FidelityNotice({
       <span>规模精度策略</span>
       <strong>{fidelityNoticeText(summary)}</strong>
       <small>{fidelityNoticeDetail(summary)}</small>
+    </div>
+  );
+}
+
+export function shouldShowCompletionNotice(
+  runtimeStatus: RuntimeStatusPayload | null | undefined
+): boolean {
+  if (runtimeStatus === null || runtimeStatus === undefined) {
+    return false;
+  }
+  return (
+    runtimeStatus.status === "COMPLETED" ||
+    runtimeStatus.lifecycle_state === "COMPLETED"
+  );
+}
+
+export function completionNoticeText(runtimeStatus: RuntimeStatusPayload): string {
+  const elapsed = Math.max(
+    0,
+    finiteNumberOrZero(runtimeStatus.current_sim_time ?? runtimeStatus.duration)
+  );
+  const duration = Math.max(1, runtimeStatus.duration);
+  return `仿真已完成：达到配置时长 ${formatDurationCompact(duration)}，最终仿真时间 ${formatDurationCompact(
+    Math.min(elapsed, duration)
+  )}。`;
+}
+
+export function completionNoticeDetail(runtimeStatus: RuntimeStatusPayload): string {
+  const eventCount =
+    typeof runtimeStatus.processed_event_count === "number"
+      ? formatInteger(runtimeStatus.processed_event_count)
+      : "0";
+  return `后端推进循环已停止，事件流保持最终状态。事件数 ${eventCount}；重置后可重新初始化并开始下一轮仿真。`;
+}
+
+function CompletionNotice({
+  runtimeStatus,
+  surface
+}: {
+  runtimeStatus: RuntimeStatusPayload;
+  surface: "control" | "dashboard";
+}) {
+  if (!shouldShowCompletionNotice(runtimeStatus)) {
+    return null;
+  }
+  return (
+    <div
+      className={`fidelity-notice completion ${surface}`}
+      role="status"
+      aria-live="polite"
+    >
+      <span>仿真完成</span>
+      <strong>{completionNoticeText(runtimeStatus)}</strong>
+      <small>{completionNoticeDetail(runtimeStatus)}</small>
     </div>
   );
 }
