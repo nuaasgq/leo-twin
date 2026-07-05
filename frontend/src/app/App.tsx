@@ -113,6 +113,13 @@ export function App() {
     return () => window.removeEventListener("popstate", syncSurfaceFromLocation);
   }, []);
 
+  useEffect(() => {
+    document.body.dataset.frontendSurface = bodySurfaceAttribute(surface);
+    return () => {
+      delete document.body.dataset.frontendSurface;
+    };
+  }, [surface]);
+
   const navigateWithinApp = useCallback(
     (event: MouseEvent<HTMLAnchorElement>, pathname: string) => {
       if (
@@ -673,6 +680,10 @@ export function surfaceFromPathname(pathname: string): FrontendSurface {
   return pathname === "/dashboard" || pathname.startsWith("/dashboard/")
     ? "dashboard"
     : "control";
+}
+
+export function bodySurfaceAttribute(surface: FrontendSurface): FrontendSurface {
+  return surface;
 }
 
 export function standaloneDashboardHref(origin: string): string {

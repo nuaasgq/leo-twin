@@ -36,6 +36,16 @@ body {
   overflow: hidden;
 }
 
+body[data-frontend-surface="dashboard"] {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+body[data-frontend-surface="dashboard"] #root {
+  min-height: 100%;
+  height: auto;
+}
+
 .app-shell {
   display: grid;
   grid-template-rows: 66px minmax(0, 1fr);
@@ -45,6 +55,12 @@ body {
     radial-gradient(circle at 18% -8%, #123447 0, transparent 30%),
     radial-gradient(circle at 82% 0%, #17302a 0, transparent 28%),
     linear-gradient(180deg, #0b1117 0%, #070b10 100%);
+}
+
+body[data-frontend-surface="dashboard"] .app-shell {
+  grid-template-rows: 66px auto;
+  min-height: 100vh;
+  height: auto;
 }
 
 .topbar {
@@ -1304,6 +1320,11 @@ body {
     radial-gradient(circle at 12% 0%, #1a3646 0, transparent 28%),
     radial-gradient(circle at 92% 10%, #283116 0, transparent 26%),
     #080c11;
+}
+
+body[data-frontend-surface="dashboard"] .dashboard-page {
+  min-height: calc(100vh - 66px);
+  overflow: visible;
 }
 
 .dashboard-page-header {

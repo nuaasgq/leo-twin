@@ -6558,3 +6558,34 @@ change.
     dashboard needs history independent of status polling cadence.
   - Add backend row-window APIs or virtualized tables for large user and
     satellite drilldowns.
+
+## 2026-07-05 - Dashboard Document Scroll v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: make the standalone dashboard route use browser document scrolling
+  instead of being visually locked by the global full-screen control-console
+  layout. The app now annotates `body[data-frontend-surface]`; the dashboard
+  surface switches `body`, `#root`, `.app-shell`, and `.dashboard-page` to
+  document-flow scrolling while the 3D control surface keeps the existing
+  full-screen locked layout.
+- Changed files/modules:
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/appSurface.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend exec vitest run appSurface.test.ts`
+    - Result: passed, 1 file / 31 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed.
+  - `pnpm --dir frontend test`
+    - Result: passed, 25 files / 233 tests.
+- Problems encountered:
+  - None. The change is scoped to frontend layout state and CSS.
+- Known remaining issues:
+  - Large tables still render client-side rows already present in the runtime
+    status payload; backend row-window APIs remain a separate scale task.
+- Recommended follow-up:
+  - Add visual/manual browser checks for dashboard scrolling at desktop and
+    mobile viewports once the next dev server restart is requested.

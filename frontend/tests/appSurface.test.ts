@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   backpressureNoticeDismissKey,
   backpressureNoticeText,
+  bodySurfaceAttribute,
   completionNoticeDetail,
   completionNoticeText,
   buildRuntimeRibbonSummary,
@@ -47,6 +48,13 @@ describe("surfaceFromPathname", () => {
   it("selects the standalone dashboard surface", () => {
     expect(surfaceFromPathname("/dashboard")).toBe("dashboard");
     expect(surfaceFromPathname("/dashboard/network")).toBe("dashboard");
+  });
+});
+
+describe("bodySurfaceAttribute", () => {
+  it("keeps the body scroll mode tied to the active frontend surface", () => {
+    expect(bodySurfaceAttribute("control")).toBe("control");
+    expect(bodySurfaceAttribute("dashboard")).toBe("dashboard");
   });
 });
 
