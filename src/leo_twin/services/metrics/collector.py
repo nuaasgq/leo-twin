@@ -122,6 +122,7 @@ class MetricsCollector:
         self._task_start_times: dict[str, float] = {}
         self._task_durations: dict[str, float] = {}
         self._finished_tasks: dict[str, str] = {}
+        self._service_latency_components_by_task: dict[str, dict[str, float]] = {}
         self._last_sim_time = 0.0
         self._metric_event_sequence = 0
 
@@ -243,6 +244,7 @@ class MetricsCollector:
         summary.update(self._network_quality_summary(active_links, available_routes))
         summary.update(self._network_constraint_summary(active_links, available_routes))
         summary.update(self._compute_resource_summary())
+        summary.update(self._service_latency_summary())
         for event_type, count in sorted(self._event_counts.items()):
             summary[f"events.{event_type}.count"] = count
         return summary
@@ -427,7 +429,9 @@ class MetricsCollector:
         if event_type == COMPUTE_NODE_UPDATE:
             return self._observe_compute_node(event)
         if event_type == EventType.METRIC_SAMPLE:
-            return (_require_payload(event.payload, MetricRecord, "METRIC_SAMPLE"),)
+            record = _require_payload(event.payload, MetricRecord, "METRIC_SAMPLE")
+            self._observe_metric_sample_record(record)
+            return (record,)
         return ()
 
     def _derived_metric_records(
@@ -798,6 +802,18 @@ class MetricsCollector:
         if _is_satellite_id(node.node_id):
             self._append_satellite_kpi_history_sample(node, event.sim_time)
         return ()
+
+    def _observe_metric_sample_record(self, record: MetricRecord) -> None:
+        if not record.metric_name.startswith("service."):
+            return
+        if not isinstance(record.value, (int, float)) or not isfinite(record.value):
+            return
+        component = _service_latency_component_name(record.metric_name)
+        if component is None:
+            return
+        self._service_latency_components_by_task.setdefault(record.entity_id, {})[
+            component
+        ] = max(0.0, float(record.value))
 
     def _append_satellite_kpi_history_sample(
         self,
@@ -1494,6 +1510,37 @@ class MetricsCollector:
             ),
         }
 
+    def _service_latency_summary(self) -> MetricSummary:
+        components = tuple(self._service_latency_components_by_task.values())
+        complete_components = tuple(
+            item for item in components if "total" in item
+        )
+        return {
+            "service_latency_summary_source": "METRIC_SAMPLE",
+            "service_latency_model": "COMMUNICATION_COMPUTE_COMPONENT_PROXY",
+            "service_latency_task_count": len(components),
+            "service_latency_complete_count": len(complete_components),
+            "service_latency_input_network_avg_s": _average(
+                tuple(item["input_network"] for item in components if "input_network" in item)
+            ),
+            "service_latency_compute_queue_avg_s": _average(
+                tuple(item["compute_queue"] for item in components if "compute_queue" in item)
+            ),
+            "service_latency_compute_execution_avg_s": _average(
+                tuple(
+                    item["compute_execution"]
+                    for item in components
+                    if "compute_execution" in item
+                )
+            ),
+            "service_latency_output_network_avg_s": _average(
+                tuple(item["output_network"] for item in components if "output_network" in item)
+            ),
+            "service_latency_total_avg_s": _average(
+                tuple(item["total"] for item in complete_components)
+            ),
+        }
+
     def _deadline_missed_task_count(self) -> int:
         return sum(
             1
@@ -1617,6 +1664,17 @@ def _satellite_kpi_history_sample(
             "used_storage_gb",
         ),
     }
+
+
+def _service_latency_component_name(metric_name: str) -> str | None:
+    components = {
+        "service.input_network_latency": "input_network",
+        "service.compute_queue_delay": "compute_queue",
+        "service.compute_execution_delay": "compute_execution",
+        "service.output_network_latency": "output_network",
+        "service.total_latency": "total",
+    }
+    return components.get(metric_name)
 
 
 def _route_constraint_sort_key(route: Route) -> tuple[int, float, float, int, str]:

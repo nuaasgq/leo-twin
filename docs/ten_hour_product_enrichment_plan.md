@@ -348,13 +348,18 @@ The following issue-sized slices have now been delivered on
   - `scripts/verify_frontend_visuals.ps1` now verifies visual assets, globe and
     dashboard visual logic, runtime status contract decoding, dashboard attach
     progress behavior, and frontend build in one command.
+- `feat(metrics): summarize service latency components`
+  - Maps to suggestions 76-82 and the communication-compute lifecycle slice.
+  - Metrics summary now aggregates existing `service.*` lifecycle samples into
+    input-network, compute-queue, compute-execution, output-network, and total
+    service latency fields.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected
 satellite coverage/beam labels, compute vector KPI samples, and the frontend
 visual verification script. The remaining high-value product gaps are backend
-full communication-compute lifecycle history, screenshot pixel baselines, and
-browser-driven reset/control end-to-end smoke tests.
+dashboard rendering for communication-compute lifecycle components, screenshot
+pixel baselines, and browser-driven reset/control end-to-end smoke tests.
 
 ## Acceptance Gates
 

@@ -4426,3 +4426,35 @@ change.
 - Recommended follow-up:
   - Add optional browser screenshot checks once the local service launcher and
     browser smoke workflow are stable enough for repeatable CI-style runs.
+
+## 2026-07-05 - Service Latency Summary v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: aggregate existing communication-compute lifecycle `service.*`
+  `METRIC_SAMPLE` records into scalar metrics summary fields for input network
+  latency, compute queue delay, compute execution delay, output network
+  latency, and total service latency. This exposes lifecycle components through
+  the existing metrics summary path without adding packet-level simulation or
+  changing the compute/network lifecycle model.
+- Changed files/modules:
+  - `src/leo_twin/services/metrics/collector.py`
+  - `tests/integration/test_compute_service_lifecycle.py`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `PYTHONPATH=src python -m pytest tests/integration/test_compute_service_lifecycle.py tests/unit/test_metrics_module.py::test_metrics_collector_publishes_bounded_satellite_kpi_history -q`
+    - Result: passed, 2 tests.
+  - `PYTHONPATH=src python -m pytest tests/unit/test_metrics_module.py -q`
+    - Result: passed, 17 tests.
+- Problems encountered:
+  - None. The collector only observes existing `METRIC_SAMPLE` payloads and
+    does not schedule new simulation work or modify Event Kernel behavior.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The dashboard does not yet render a dedicated communication-compute
+    lifecycle card from these summary fields.
+- Recommended follow-up:
+  - Add a compact dashboard lifecycle panel or KPI row for service component
+    latency once the UI placement is agreed.

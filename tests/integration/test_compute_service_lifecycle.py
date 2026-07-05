@@ -101,3 +101,16 @@ def test_compute_service_lifecycle_emits_component_metrics() -> None:
         "service.output_network_latency": 1.4,
         "service.total_latency": 7.4,
     }
+    summary = metrics.summary()
+    assert summary["service_latency_summary_source"] == "METRIC_SAMPLE"
+    assert (
+        summary["service_latency_model"]
+        == "COMMUNICATION_COMPUTE_COMPONENT_PROXY"
+    )
+    assert summary["service_latency_task_count"] == 1
+    assert summary["service_latency_complete_count"] == 1
+    assert summary["service_latency_input_network_avg_s"] == 4.0
+    assert summary["service_latency_compute_queue_avg_s"] == 0.0
+    assert summary["service_latency_compute_execution_avg_s"] == 2.0
+    assert summary["service_latency_output_network_avg_s"] == 1.4
+    assert summary["service_latency_total_avg_s"] == 7.4
