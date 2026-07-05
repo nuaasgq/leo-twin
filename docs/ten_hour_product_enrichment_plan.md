@@ -464,6 +464,10 @@ The following issue-sized slices have now been delivered on
   - `status_leo_twin.bat` and `smoke_leo_twin.bat` provide non-destructive
     service-status and runtime-health checks without PowerShell argument
     assembly.
+- `feat(launcher): add interactive menu`
+  - Maps to suggestions 18, 91, and 95.
+  - `leo_twin_launcher.bat` provides a simple Windows menu for start console,
+    start dashboard, status, smoke health check, restart, and stop operations.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected

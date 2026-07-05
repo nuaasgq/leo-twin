@@ -5187,3 +5187,32 @@ change.
 - Recommended follow-up:
   - Consider a small launcher menu only if users need a guided interactive
     workflow.
+
+## 2026-07-05 - Interactive Launcher Menu v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add `leo_twin_launcher.bat`, an interactive Windows menu for common
+  local operations: start console, start dashboard, status, read-only smoke
+  health check, restart, and stop.
+- Changed files/modules:
+  - `leo_twin_launcher.bat`
+  - `README.md`
+  - `docs/integration_demo.md`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `cmd /c "echo 3| leo_twin_launcher.bat"`
+    - Result: passed; selected the non-destructive status action and reported
+      backend/frontend health and URLs.
+- Problems encountered:
+  - None. Validation used the status path only, so running backend/frontend
+    services were not restarted.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The menu is a Windows batch wrapper over the PowerShell launcher, not a GUI
+    installer.
+- Recommended follow-up:
+  - Add a desktop shortcut or packaged launcher only after the dev workflow is
+    stable.

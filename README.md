@@ -34,6 +34,7 @@ MVP-0 remains the historical foundation: it established the deterministic discre
 Windows one-command launcher:
 
 ```powershell
+.\leo_twin_launcher.bat
 .\start_leo_twin.bat
 ```
 

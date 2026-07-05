@@ -18,12 +18,15 @@ The demo uses `configs/integration_demo.yaml`.
 For normal Windows use, start from the repository root:
 
 ```powershell
+.\leo_twin_launcher.bat
 .\start_leo_twin.bat
 ```
 
-This starts both backend and frontend, waits until both ports are ready, checks
-the backend `/runtime/status` endpoint and the frontend homepage over HTTP,
-then opens the frontend in the browser.
+The menu launcher lets you start the console, start the dashboard, inspect
+status, run a read-only smoke check, restart, or stop services. The direct
+`start_leo_twin.bat` path starts both backend and frontend, waits until both
+ports are ready, checks the backend `/runtime/status` endpoint and the frontend
+homepage over HTTP, then opens the frontend in the browser.
 
 Other launcher commands:
 
