@@ -330,6 +330,12 @@ export const DataPanel = memo(function DataPanel({
   const networkKpiCredibilityDisplay = buildDataPanelNetworkKpiCredibilityDisplay(
     runtimeStatus.network_kpi_credibility_v1
   );
+  const modelAssumptionsDisplay = buildDataPanelModelAssumptionsDisplay(
+    generatedConfig?.backend_summary?.model_assumptions,
+    fidelitySummary,
+    networkKpiCredibilityDisplay,
+    configurationExplanationDisplay
+  );
   const networkFormulaInputs = buildDataPanelNetworkFormulaInputs(
     runtimeStatus.metrics_summary
   );
@@ -1611,6 +1617,36 @@ export const DataPanel = memo(function DataPanel({
                   <span title={section.sourcesLabel}>
                     {section.surfacesLabel}
                   </span>
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
+        {modelAssumptionsDisplay ? (
+          <section
+            className="dashboard-section data-panel-configuration-explanation data-panel-model-assumptions"
+            aria-label="后端模型假设与边界"
+          >
+            <div className="section-title">模型假设与边界</div>
+            <div className="data-panel-source-note">
+              <span>{modelAssumptionsDisplay.sourceLabel}</span>
+              <small>{modelAssumptionsDisplay.summaryLabel}</small>
+            </div>
+            <div className="data-panel-config-explanation-meta">
+              <span>{modelAssumptionsDisplay.boundaryLabel}</span>
+              <span>{modelAssumptionsDisplay.fidelityLabel}</span>
+            </div>
+            <div className="data-panel-config-explanation-sections">
+              {modelAssumptionsDisplay.rows.map((row) => (
+                <div
+                  className="data-panel-config-explanation-section"
+                  key={`${row.kind}:${row.label}`}
+                >
+                  <div>
+                    <strong>{row.label}</strong>
+                    <small>{row.detail}</small>
+                  </div>
+                  <span>{row.source}</span>
                 </div>
               ))}
             </div>
@@ -6364,6 +6400,21 @@ export interface DataPanelNetworkKpiCredibilityDisplay {
   caveats: readonly string[];
 }
 
+export interface DataPanelModelAssumptionsDisplay {
+  sourceLabel: string;
+  summaryLabel: string;
+  boundaryLabel: string;
+  fidelityLabel: string;
+  rows: readonly DataPanelModelAssumptionRow[];
+}
+
+export interface DataPanelModelAssumptionRow {
+  kind: "assumption" | "fidelity" | "kpi";
+  label: string;
+  detail: string;
+  source: string;
+}
+
 export interface DataPanelServiceLatencyDisplay {
   sourceLabel: string;
   modelLabel: string;
@@ -6694,6 +6745,93 @@ export function buildDataPanelNetworkKpiCredibilityDisplay(
       ...credibility.caveats.slice(0, 3),
       ...networkKpiCredibilityIssueLabels(credibility)
     ]
+  };
+}
+
+export function buildDataPanelModelAssumptionsDisplay(
+  modelAssumptions: readonly string[] | null | undefined,
+  fidelitySummary: FidelitySummary | null | undefined,
+  networkKpiCredibility: DataPanelNetworkKpiCredibilityDisplay | null | undefined,
+  configurationExplanation: DataPanelConfigurationExplanationDisplay | null | undefined
+): DataPanelModelAssumptionsDisplay | null {
+  const assumptions = (modelAssumptions ?? [])
+    .map((assumption) => assumption.trim())
+    .filter((assumption) => assumption.length > 0);
+  const fidelityWarnings = fidelitySummary?.fidelity_warnings ?? [];
+  const rows: DataPanelModelAssumptionRow[] = [
+    ...assumptions.map((assumption, index) => ({
+      kind: "assumption" as const,
+      label: `模型假设 ${formatCount(index + 1)}`,
+      detail: assumption,
+      source: "backend_summary.model_assumptions"
+    }))
+  ];
+  if (fidelitySummary !== null && fidelitySummary !== undefined) {
+    rows.push({
+      kind: "fidelity",
+      label: "规模保真策略",
+      detail: [
+        `orbit=${fidelitySummary.orbit_update_mode}`,
+        `metrics=${fidelitySummary.metrics_mode}`,
+        `space=${fidelitySummary.space_link_mode}`,
+        fidelitySummary.scale_limit_reason
+      ]
+        .filter((value) => value !== "")
+        .join(" / "),
+      source: "fidelity_summary"
+    });
+    rows.push(
+      ...fidelityWarnings.map((warning, index) => ({
+        kind: "fidelity" as const,
+        label: `规模提示 ${formatCount(index + 1)}`,
+        detail: warning,
+        source: "fidelity_summary.fidelity_warnings"
+      }))
+    );
+  }
+  if (networkKpiCredibility !== null && networkKpiCredibility !== undefined) {
+    rows.push({
+      kind: "kpi",
+      label: "KPI可信度",
+      detail: `${networkKpiCredibility.statusLabel} / ${networkKpiCredibility.summaryLabel}`,
+      source: "network_kpi_credibility_v1"
+    });
+    rows.push(
+      ...networkKpiCredibility.caveats.map((caveat, index) => ({
+        kind: "kpi" as const,
+        label: `KPI边界 ${formatCount(index + 1)}`,
+        detail: caveat,
+        source: "network_kpi_credibility_v1.caveats"
+      }))
+    );
+  }
+  if (
+    rows.length === 0 &&
+    (configurationExplanation === null || configurationExplanation === undefined)
+  ) {
+    return null;
+  }
+  const fidelityCount =
+    fidelitySummary === null || fidelitySummary === undefined
+      ? 0
+      : 1 + fidelityWarnings.length;
+  const kpiCount =
+    networkKpiCredibility === null || networkKpiCredibility === undefined
+      ? 0
+      : 1 + networkKpiCredibility.caveats.length;
+  return {
+    sourceLabel: "backend_summary.model_assumptions + runtime credibility",
+    summaryLabel: `${formatCount(assumptions.length)} 条假设 / ${formatCount(
+      fidelityCount
+    )} 条规模边界 / ${formatCount(kpiCount)} 条KPI边界`,
+    boundaryLabel: configurationExplanation?.boundaryLabel ?? "等待后端配置边界",
+    fidelityLabel:
+      fidelitySummary !== null && fidelitySummary !== undefined
+        ? `${fidelitySummary.current_scale_mode} / ${formatCount(
+            fidelitySummary.satellite_count
+          )} 星 / ${formatCount(fidelitySummary.user_count)} 用户`
+        : "等待后端保真策略",
+    rows
   };
 }
 

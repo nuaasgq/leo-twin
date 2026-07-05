@@ -225,6 +225,10 @@ Tasks:
 - V2-054: Add model assumptions panel.
   - Scope: backend-derived model caveats, fidelity mode, KPI provenance.
   - Depends on: V2-003, V2-021.
+  - Status: T229 adds a standalone dashboard model assumptions panel v1 that
+    combines backend `model_assumptions`, runtime fidelity warnings, network
+    KPI credibility, and configuration boundary labels without adding frontend
+    model inference.
 
 ### WS7. 3D Scene Productization v2
 

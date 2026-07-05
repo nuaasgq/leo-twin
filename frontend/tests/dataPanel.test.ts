@@ -24,6 +24,7 @@ import {
   buildDataPanelNetworkComponentTail,
   buildDataPanelNetworkKpiCaveats,
   buildDataPanelNetworkKpiCredibilityDisplay,
+  buildDataPanelModelAssumptionsDisplay,
   buildDataPanelNetworkKpiProvenanceItems,
   buildDataPanelNetworkKpiSource,
   buildDataPanelNodeDetailDrawerItems,
@@ -2738,6 +2739,114 @@ describe("buildDataPanelNetworkKpiCredibilityDisplay", () => {
   it("hides the credibility card until backend status provides the summary", () => {
     expect(buildDataPanelNetworkKpiCredibilityDisplay(null)).toBeNull();
     expect(buildDataPanelNetworkKpiCredibilityDisplay(undefined)).toBeNull();
+  });
+});
+
+describe("buildDataPanelModelAssumptionsDisplay", () => {
+  it("combines backend model assumptions, fidelity warnings, and KPI credibility", () => {
+    const display = buildDataPanelModelAssumptionsDisplay(
+      [
+        "Network behavior is flow-level, not packet-level.",
+        "Compute capacity is a deterministic abstract resource vector."
+      ],
+      {
+        orbit_update_mode: "BATCH",
+        metrics_mode: "AGGREGATED",
+        space_link_mode: "BOUNDED_CANDIDATE",
+        detailed_space_link_enabled: false,
+        space_link_candidate_policy: "SAME_PLANE_AND_ADJACENT_PLANE_BOUNDED_CANDIDATES",
+        max_space_link_candidates_per_satellite: 4,
+        batch_space_link_update_limit: 999,
+        scale_limit_reason: "satellite_count >= 300",
+        current_scale_mode: "LARGE_SCALE_AGGREGATED",
+        fidelity_warnings: [
+          "Orbit updates are batched.",
+          "Space-space links use bounded candidate updates."
+        ],
+        satellite_count: 1200,
+        user_count: 100
+      },
+      {
+        tone: "match",
+        statusLabel: "完整流级代理",
+        summaryLabel: "KPI 6/6 有运行值；来源字段 18/18 可观测",
+        metaLabels: ["模型 流级代理", "无包级指标"],
+        caveats: ["No packet-level simulation.", "Loss is pressure proxy."]
+      },
+      {
+        sourceLabel: "BACKEND_DERIVED_SUMMARY / sees.user_configuration.v2",
+        summaryLabel: "2 个配置入口 / 6 个语义分组 / READ_ONLY_EXPLANATION",
+        determinismLabel:
+          "seed runtime.seed / unknown REJECT / default OMITTED_FIELDS_USE_BACKEND_DEFAULTS",
+        boundaryLabel: "STK/EXATA/AFSIM/DDS 禁止；无包级仿真",
+        surfaces: [],
+        sections: []
+      }
+    );
+
+    expect(display).toMatchObject({
+      sourceLabel: "backend_summary.model_assumptions + runtime credibility",
+      summaryLabel: "2 条假设 / 3 条规模边界 / 3 条KPI边界",
+      boundaryLabel: "STK/EXATA/AFSIM/DDS 禁止；无包级仿真",
+      fidelityLabel: "LARGE_SCALE_AGGREGATED / 1,200 星 / 100 用户"
+    });
+    expect(display?.rows).toEqual([
+      {
+        kind: "assumption",
+        label: "模型假设 1",
+        detail: "Network behavior is flow-level, not packet-level.",
+        source: "backend_summary.model_assumptions"
+      },
+      {
+        kind: "assumption",
+        label: "模型假设 2",
+        detail: "Compute capacity is a deterministic abstract resource vector.",
+        source: "backend_summary.model_assumptions"
+      },
+      {
+        kind: "fidelity",
+        label: "规模保真策略",
+        detail:
+          "orbit=BATCH / metrics=AGGREGATED / space=BOUNDED_CANDIDATE / satellite_count >= 300",
+        source: "fidelity_summary"
+      },
+      {
+        kind: "fidelity",
+        label: "规模提示 1",
+        detail: "Orbit updates are batched.",
+        source: "fidelity_summary.fidelity_warnings"
+      },
+      {
+        kind: "fidelity",
+        label: "规模提示 2",
+        detail: "Space-space links use bounded candidate updates.",
+        source: "fidelity_summary.fidelity_warnings"
+      },
+      {
+        kind: "kpi",
+        label: "KPI可信度",
+        detail: "完整流级代理 / KPI 6/6 有运行值；来源字段 18/18 可观测",
+        source: "network_kpi_credibility_v1"
+      },
+      {
+        kind: "kpi",
+        label: "KPI边界 1",
+        detail: "No packet-level simulation.",
+        source: "network_kpi_credibility_v1.caveats"
+      },
+      {
+        kind: "kpi",
+        label: "KPI边界 2",
+        detail: "Loss is pressure proxy.",
+        source: "network_kpi_credibility_v1.caveats"
+      }
+    ]);
+  });
+
+  it("does not render a model panel before backend assumptions or boundaries exist", () => {
+    expect(
+      buildDataPanelModelAssumptionsDisplay(null, null, null, null)
+    ).toBeNull();
   });
 });
 
