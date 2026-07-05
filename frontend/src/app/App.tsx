@@ -10,6 +10,8 @@ import {
 import {
   FidelitySummary,
   GeneratedScenarioConfig,
+  LargeDetailPaginationCollectionV2,
+  LargeDetailPaginationContractV2,
   RuntimeExportCatalogV1,
   RuntimeExportPackageCompareV1,
   RuntimeExportRestoreCommandResultV1,
@@ -30,11 +32,14 @@ import { EventThrottleLayer } from "../stream/throttle_layer";
 import { WebSocketStreamClient } from "../stream/websocket_client";
 import {
   loadMetricsSnapshot,
+  loadRuntimeComputeNodeDetails,
   loadRuntimeExportCatalog,
   loadRuntimeExportPackageCompare,
   loadRuntimeExportRestorePreflight,
   loadRuntimeNodeDetails,
+  loadRuntimeRouteDetails,
   loadRuntimeSatelliteDetails,
+  loadRuntimeServiceDetails,
   loadRuntimeUserDetails,
   loadRuntimeState,
   loadScenarioConfig,
@@ -50,9 +55,7 @@ import "./App.css";
 
 const RUNTIME_STATUS_POLL_MS = 250;
 const RUNTIME_PROGRESS_TICK_MS = 100;
-const RUNTIME_DETAIL_USER_PAGE_LIMIT = 5000;
-const RUNTIME_DETAIL_SATELLITE_PAGE_LIMIT = 5000;
-const RUNTIME_DETAIL_NODE_PAGE_LIMIT = 5000;
+const RUNTIME_DETAIL_FALLBACK_LIMIT = 5000;
 const RUNTIME_EXPORT_CATALOG_POLL_MS = 2500;
 const USER_CONFIGURATION_CONTRACT_POLL_MS = 5000;
 
@@ -236,16 +239,52 @@ export function App() {
     [reducer, snapshotEngine]
   );
 
-  const refreshRuntimeDetails = useCallback(async () => {
-    const [users, satellites, nodes] = await Promise.allSettled([
-      loadRuntimeUserDetails(0, RUNTIME_DETAIL_USER_PAGE_LIMIT),
-      loadRuntimeSatelliteDetails(0, RUNTIME_DETAIL_SATELLITE_PAGE_LIMIT),
-      loadRuntimeNodeDetails(0, RUNTIME_DETAIL_NODE_PAGE_LIMIT)
+  const refreshRuntimeDetails = useCallback(async (
+    detailConfig: GeneratedScenarioConfig | null = generatedConfig
+  ) => {
+    const requestPlan = runtimeDetailRequestPlan(
+      detailConfig?.backend_summary?.large_detail_pagination_contract_v2
+    );
+    const [users, satellites, nodes, routes, services, computeNodes] =
+      await Promise.allSettled([
+        loadRuntimeUserDetails(
+          0,
+          requestPlan.users.limit,
+          requestPlan.users.endpoint
+        ),
+        loadRuntimeSatelliteDetails(
+          0,
+          requestPlan.satellites.limit,
+          requestPlan.satellites.endpoint
+        ),
+        loadRuntimeNodeDetails(
+          0,
+          requestPlan.nodes.limit,
+          requestPlan.nodes.endpoint
+        ),
+        loadRuntimeRouteDetails(
+          0,
+          requestPlan.routes.limit,
+          requestPlan.routes.endpoint
+        ),
+        loadRuntimeServiceDetails(
+          0,
+          requestPlan.services.limit,
+          requestPlan.services.endpoint
+        ),
+        loadRuntimeComputeNodeDetails(
+          0,
+          requestPlan.computeNodes.limit,
+          requestPlan.computeNodes.endpoint
+        )
     ]);
     if (
       users.status === "rejected" &&
       satellites.status === "rejected" &&
-      nodes.status === "rejected"
+      nodes.status === "rejected" &&
+      routes.status === "rejected" &&
+      services.status === "rejected" &&
+      computeNodes.status === "rejected"
     ) {
       setRuntimeDetailPages(null);
       return;
@@ -253,9 +292,12 @@ export function App() {
     setRuntimeDetailPages({
       users: users.status === "fulfilled" ? users.value : null,
       satellites: satellites.status === "fulfilled" ? satellites.value : null,
-      nodes: nodes.status === "fulfilled" ? nodes.value : null
+      nodes: nodes.status === "fulfilled" ? nodes.value : null,
+      routes: routes.status === "fulfilled" ? routes.value : null,
+      services: services.status === "fulfilled" ? services.value : null,
+      computeNodes: computeNodes.status === "fulfilled" ? computeNodes.value : null
     });
-  }, []);
+  }, [generatedConfig]);
 
   const refreshRuntimeExportCompare = useCallback(async (packageId: string) => {
     setRuntimeExportComparePackageId(packageId);
@@ -392,7 +434,7 @@ export function App() {
     snapshotEngine.applySnapshot(visibleSnapshot);
     snapshotEngine.publishNow();
     setConnectionChannel("http", "live");
-    void refreshRuntimeDetails();
+    void refreshRuntimeDetails(runtime.generated_config ?? null);
     void refreshRuntimeExportCatalog();
     void refreshUserConfigurationContract();
     return { scenario: effectiveScenario, runtime };
@@ -637,7 +679,7 @@ export function App() {
     let closed = false;
     const refreshDetails = () => {
       if (!closed) {
-        void refreshRuntimeDetails();
+        void refreshRuntimeDetails(generatedConfig);
       }
     };
     refreshDetails();
@@ -646,7 +688,7 @@ export function App() {
       closed = true;
       window.clearInterval(timer);
     };
-  }, [refreshRuntimeDetails, surface]);
+  }, [generatedConfig, refreshRuntimeDetails, surface]);
 
   useEffect(() => {
     if (surface !== "dashboard") {
@@ -1089,6 +1131,97 @@ export function selectRuntimeExportComparePackageId(
     return selectedPackageId;
   }
   return catalog.latest_export?.package_id ?? catalog.records[0]?.package_id ?? null;
+}
+
+export interface RuntimeDetailRequest {
+  endpoint: string;
+  limit: number;
+}
+
+export interface RuntimeDetailRequestPlan {
+  users: RuntimeDetailRequest;
+  satellites: RuntimeDetailRequest;
+  nodes: RuntimeDetailRequest;
+  routes: RuntimeDetailRequest;
+  services: RuntimeDetailRequest;
+  computeNodes: RuntimeDetailRequest;
+}
+
+export function runtimeDetailRequestPlan(
+  contract: LargeDetailPaginationContractV2 | null | undefined
+): RuntimeDetailRequestPlan {
+  const collections = new Map(
+    (contract?.collections ?? []).map((collection) => [
+      collection.collection,
+      collection
+    ])
+  );
+  const users = runtimeDetailCollectionRequest(
+    collections.get("ground_users"),
+    "/runtime/details/users"
+  );
+  const satellites = runtimeDetailCollectionRequest(
+    collections.get("satellites"),
+    "/runtime/details/satellites"
+  );
+  const routes = runtimeDetailCollectionRequest(
+    collections.get("routes"),
+    "/runtime/details/routes"
+  );
+  const services = runtimeDetailCollectionRequest(
+    collections.get("services"),
+    "/runtime/details/services"
+  );
+  const computeNodes = runtimeDetailCollectionRequest(
+    collections.get("compute_nodes"),
+    "/runtime/details/compute-nodes"
+  );
+  return {
+    users,
+    satellites,
+    routes,
+    services,
+    computeNodes,
+    nodes: {
+      endpoint: contract?.combined_node_endpoint?.endpoint ?? "/runtime/details/nodes",
+      limit: runtimeDetailNodeLimit(contract, users.limit, satellites.limit)
+    }
+  };
+}
+
+function runtimeDetailCollectionRequest(
+  collection: LargeDetailPaginationCollectionV2 | undefined,
+  fallbackEndpoint: string
+): RuntimeDetailRequest {
+  return {
+    endpoint: collection?.endpoint ?? fallbackEndpoint,
+    limit: runtimeDetailLimit(
+      collection?.recommended_limit,
+      collection?.max_limit ?? RUNTIME_DETAIL_FALLBACK_LIMIT
+    )
+  };
+}
+
+function runtimeDetailNodeLimit(
+  contract: LargeDetailPaginationContractV2 | null | undefined,
+  userLimit: number,
+  satelliteLimit: number
+): number {
+  if (contract === null || contract === undefined) {
+    return RUNTIME_DETAIL_FALLBACK_LIMIT;
+  }
+  return runtimeDetailLimit(
+    userLimit + satelliteLimit,
+    contract.cursor_model?.max_limit ?? RUNTIME_DETAIL_FALLBACK_LIMIT
+  );
+}
+
+function runtimeDetailLimit(value: number | undefined, maxLimit: number): number {
+  const normalizedMax = Math.max(1, Math.floor(maxLimit));
+  if (value === undefined || !Number.isFinite(value) || value <= 0) {
+    return Math.min(RUNTIME_DETAIL_FALLBACK_LIMIT, normalizedMax);
+  }
+  return Math.min(Math.max(1, Math.floor(value)), normalizedMax);
 }
 
 export interface RuntimeRibbonSummary {

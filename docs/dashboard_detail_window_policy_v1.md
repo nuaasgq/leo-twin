@@ -12,9 +12,12 @@ behavior or backend runtime state.
 
 ## Current Policy
 
-- User detail table page size: 80 rows.
-- Satellite resource table page size: 120 rows.
-- Combined active render budget: 200 rows.
+- User detail table page size comes from
+  `backend_summary.large_detail_pagination_contract_v2.collections` when
+  available, with a compatibility fallback of 80 rows.
+- Satellite resource table page size comes from the same backend contract when
+  available, with a compatibility fallback of 120 rows.
+- Combined active render budget is the active user and satellite page sizes.
 - The dashboard renders only the current user page and current satellite page.
 - Hidden rows remain reachable through the existing previous/next page
   controls and backend cursor summaries where available.
@@ -27,6 +30,7 @@ The dashboard now emits a `表格窗口化` note in the detail observability sec
 - current user table window
 - current satellite table window
 - configured render budget
+- render budget source
 - hidden rows waiting for pagination when the filter result exceeds the active
   windows
 
@@ -36,13 +40,13 @@ The dashboard now emits a `表格窗口化` note in the detail observability sec
 - It does not modify Event Kernel behavior.
 - It does not introduce packet-level network simulation.
 - It does not compute additional satellite links or task queues.
-- It does not replace future backend paging or true virtual scrolling.
+- It consumes backend paging contracts where available but does not implement
+  true continuous virtual scrolling.
 
 ## Follow-Up
 
-- Add backend cursor APIs for full user and satellite detail windows where
-  frontend fallback rows become too large.
 - Add table virtualization when the dashboard needs continuous scroll rather
   than page controls.
+- Bind service and compute-node detail pages to dedicated dashboard tables.
 - Split the large DataPanel bundle after the dashboard information architecture
   stabilizes.

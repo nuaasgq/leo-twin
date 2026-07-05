@@ -5,6 +5,51 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Dashboard Cursor Contract Binding v1
+
+- Branch: `feature/T238-dashboard-cursor-contract-binding-v1`
+- Commit: pending in this commit
+- Scope: advance V2-053 by binding the standalone dashboard and App runtime
+  detail refresh path to `leo_twin.large_detail_pagination_contract.v2`.
+  The frontend now uses backend contract endpoints and recommended limits for
+  users, satellites, routes, services, and compute nodes, requests all six
+  detail pages where available, prefers route cursor pages over bounded runtime
+  status route summaries, and displays the backend pagination contract as the
+  source of detail table budgets.
+- Changed files/modules:
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/app/api.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/appSurface.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/dashboard_cursor_contract_binding_v1.md`
+  - `docs/dashboard_detail_window_policy_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test -- dataPanel.test.ts api.test.ts appSurface.test.ts`
+    - Result: passed, 26 test files / 335 tests.
+  - `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed using the Codex bundled Node.js runtime.
+  - `python -m pytest tests/integration/test_benchmark_acceptance_v1.py -q`
+    - Result: passed, 9 tests.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - Existing dashboard tables were already paged, but their render budgets were
+    frontend constants. This task preserves the current layout and binds the
+    budgets to backend contract fields where available.
+  - Service and compute-node pages are fetched and typed, but dedicated
+    service/compute-node dashboard tables remain follow-up work to avoid a
+    larger layout rewrite in this task.
+  - Existing local runtime/generated config files remain dirty and are
+    intentionally not included in this task.
+- Known remaining issues / follow-up:
+  - Add UI controls for cursor navigation beyond the first backend page.
+  - Bind service and compute-node detail pages to dedicated dashboard tables.
+  - Add single-entity detail-by-id requests for user and satellite drawers.
+
 ## 2026-07-06 - Large Detail Pagination Contract v2
 
 - Branch: `feature/T237-large-detail-pagination-contract-v2`

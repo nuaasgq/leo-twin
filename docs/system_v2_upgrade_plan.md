@@ -250,6 +250,13 @@ Tasks:
     exposes the active user/satellite table render budget and verifies that
     1200-node scenarios render only the current bounded windows. True
     continuous virtual scrolling or backend cursor APIs remain follow-up work.
+  - Status: T238 binds the standalone dashboard and App runtime detail refresh
+    path to `leo_twin.large_detail_pagination_contract.v2`. The frontend now
+    reads backend endpoint metadata and recommended limits for users,
+    satellites, routes, services, and compute nodes, requests all six detail
+    pages where available, prefers route cursor pages over bounded status
+    summaries, and displays the backend pagination contract as the source of
+    detail table budgets while preserving compatibility fallbacks.
 - V2-054: Add model assumptions panel.
   - Scope: backend-derived model caveats, fidelity mode, KPI provenance.
   - Depends on: V2-003, V2-021.

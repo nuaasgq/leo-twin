@@ -18,6 +18,9 @@ import {
   DashboardInformationArchitectureV3,
   FidelitySummary,
   GeneratedScenarioConfig,
+  LargeDetailPaginationCollectionV2,
+  LargeDetailPaginationContractV2,
+  RuntimeComputeNodeDetailPageV1,
   TrafficDemandSummary,
   RuntimeExportCatalogV1,
   RuntimeExportPackageCompareV1,
@@ -39,6 +42,7 @@ import {
   RuntimeSatelliteServiceSummaryV1,
   RuntimeSatelliteKpiHistoryV1,
   RuntimeSatelliteKpiSlicesV1,
+  RuntimeServiceDetailPageV1,
   RuntimeServiceLatencyHistoryV1,
   RuntimeStatusPayload,
   RuntimeUserRequestHistoryV1,
@@ -106,10 +110,13 @@ export interface RuntimeDetailPages {
   users?: RuntimeUserRequestSummaryV1 | null;
   satellites?: RuntimeSatelliteServiceSummaryV1 | null;
   nodes?: RuntimeNodeDetailPageV1 | null;
+  routes?: RuntimeRouteExplanationSummaryV1 | null;
+  services?: RuntimeServiceDetailPageV1 | null;
+  computeNodes?: RuntimeComputeNodeDetailPageV1 | null;
 }
 
-const USER_DETAIL_PAGE_SIZE = 80;
-const SATELLITE_DETAIL_PAGE_SIZE = 120;
+const FALLBACK_USER_DETAIL_PAGE_SIZE = 80;
+const FALLBACK_SATELLITE_DETAIL_PAGE_SIZE = 120;
 const DEFAULT_USER_CONFIGURATION_VALIDATE_TEXT = `{
   "scenario": {
     "satellite_count": 72,
@@ -276,6 +283,9 @@ export const DataPanel = memo(function DataPanel({
     buildDataPanelInformationArchitectureDisplay(
       generatedConfig?.backend_summary?.dashboard_information_architecture_v3
     );
+  const detailPaginationContract =
+    generatedConfig?.backend_summary?.large_detail_pagination_contract_v2;
+  const detailPageSizes = buildDataPanelDetailPageSizes(detailPaginationContract);
   const exportCatalogDisplay = buildDataPanelExportCatalogDisplay(runtimeExportCatalog);
   const exportCompareDisplay = buildDataPanelExportCompareDisplay(runtimeExportCompare);
   const exportCompareStatus = buildDataPanelExportCompareStatus(
@@ -356,7 +366,7 @@ export const DataPanel = memo(function DataPanel({
     runtimeStatus.metrics_summary
   );
   const routeExplanations = buildDataPanelRouteExplanationRows(
-    runtimeStatus.route_explanation_summary_v1
+    selectRuntimeRouteExplanationSummary(runtimeStatus, runtimeDetailPages)
   );
   const filteredRouteExplanations = filterRouteExplanationRows(
     routeExplanations,
@@ -429,12 +439,12 @@ export const DataPanel = memo(function DataPanel({
   const userDetailWindow = paginateDetailRows(
     filteredUserBusinessRequests.items,
     userDetailPage,
-    USER_DETAIL_PAGE_SIZE
+    detailPageSizes.users
   );
   const satelliteDetailWindow = paginateDetailRows(
     filteredSatelliteResourceRows.items,
     satelliteDetailPage,
-    SATELLITE_DETAIL_PAGE_SIZE
+    detailPageSizes.satellites
   );
   const selectedUserDetailRow = selectUserBusinessRequestRow(
     userDetailWindow.items,
@@ -471,7 +481,12 @@ export const DataPanel = memo(function DataPanel({
       runtimeStatus.satellite_kpi_slices_v1,
       runtimeStatus.satellite_kpi_history_v1
     ),
-    buildDataPanelDetailWindowPolicyNote(userDetailWindow, satelliteDetailWindow)
+    ...buildDataPanelPaginationContractNotes(detailPaginationContract),
+    buildDataPanelDetailWindowPolicyNote(
+      userDetailWindow,
+      satelliteDetailWindow,
+      detailPaginationContract
+    )
   ];
   const submitUserConfigurationValidation = async () => {
     if (
@@ -1731,6 +1746,13 @@ export function selectRuntimeNodeDetailSummary(
   return runtimeStatus.node_detail_summary_v1;
 }
 
+export function selectRuntimeRouteExplanationSummary(
+  runtimeStatus: RuntimeStatusPayload,
+  runtimeDetailPages: RuntimeDetailPages | null | undefined
+): RuntimeRouteExplanationSummaryV1 | null | undefined {
+  return runtimeDetailPages?.routes ?? runtimeStatus.route_explanation_summary_v1;
+}
+
 export function runtimeNodeDetailPageToSummary(
   page: RuntimeNodeDetailPageV1
 ): RuntimeNodeDetailSummaryV1 {
@@ -2655,6 +2677,14 @@ export interface DetailRowPage<T> {
 
 export type RuntimeDetailSourceTone = "backend" | "mixed" | "snapshot";
 
+export interface DataPanelDetailPageSizes {
+  users: number;
+  satellites: number;
+  routes: number;
+  services: number;
+  computeNodes: number;
+}
+
 export interface RuntimeDetailSourceBadge {
   label: string;
   title: string;
@@ -2666,6 +2696,25 @@ export interface DataPanelDetailScopeNote {
   value: string;
   detail: string;
   tone: "backend" | "limit" | "history";
+}
+
+export function buildDataPanelDetailPageSizes(
+  contract: LargeDetailPaginationContractV2 | null | undefined
+): DataPanelDetailPageSizes {
+  const collections = detailPaginationCollections(contract);
+  return {
+    users: detailPaginationLimit(
+      collections.get("ground_users"),
+      FALLBACK_USER_DETAIL_PAGE_SIZE
+    ),
+    satellites: detailPaginationLimit(
+      collections.get("satellites"),
+      FALLBACK_SATELLITE_DETAIL_PAGE_SIZE
+    ),
+    routes: detailPaginationLimit(collections.get("routes"), 96),
+    services: detailPaginationLimit(collections.get("services"), 120),
+    computeNodes: detailPaginationLimit(collections.get("compute_nodes"), 120)
+  };
 }
 
 export interface DataPanelDetailInspector {
@@ -3640,6 +3689,48 @@ export function buildDataPanelDetailScopeNotes(
   ];
 }
 
+export function buildDataPanelPaginationContractNotes(
+  contract: LargeDetailPaginationContractV2 | null | undefined
+): readonly DataPanelDetailScopeNote[] {
+  if (contract === null || contract === undefined) {
+    return [
+      {
+        label: "后端分页契约",
+        value: "兼容模式",
+        detail:
+          "当前 backend_summary 未提供 large_detail_pagination_contract_v2，表格使用前端兼容窗口。",
+        tone: "limit"
+      }
+    ];
+  }
+  const collections = detailPaginationCollections(contract);
+  const labels = [
+    detailPaginationCollectionLabel(collections.get("ground_users"), "用户"),
+    detailPaginationCollectionLabel(collections.get("satellites"), "卫星"),
+    detailPaginationCollectionLabel(collections.get("routes"), "路由"),
+    detailPaginationCollectionLabel(collections.get("services"), "服务"),
+    detailPaginationCollectionLabel(collections.get("compute_nodes"), "算力")
+  ];
+  const hiddenCount = Array.from(collections.values()).reduce(
+    (total, collection) => total + Math.max(0, collection.hidden_count_estimate),
+    0
+  );
+  return [
+    {
+      label: "后端分页契约",
+      value: `${contract.active_profile_id} / ${contract.cursor_model.cursor_type}`,
+      detail: [
+        labels.join("；"),
+        `统一上限 ${formatCount(contract.cursor_model.max_limit)}`,
+        hiddenCount > 0
+          ? `估计隐藏 ${formatCount(hiddenCount)} 行通过后端游标读取`
+          : "当前估计规模不需要隐藏行"
+      ].join("；"),
+      tone: hiddenCount > 0 ? "limit" : "backend"
+    }
+  ];
+}
+
 export function filterUserBusinessRequestRows(
   rows: UserBusinessRequestRows,
   query: string
@@ -4002,12 +4093,17 @@ export function paginateDetailRows<T>(
 
 export function buildDataPanelDetailWindowPolicyNote(
   userPage: DetailRowPage<unknown>,
-  satellitePage: DetailRowPage<unknown>
+  satellitePage: DetailRowPage<unknown>,
+  contract: LargeDetailPaginationContractV2 | null | undefined = undefined
 ): DataPanelDetailScopeNote {
   const renderedRows = userPage.items.length + satellitePage.items.length;
   const totalRows = userPage.totalCount + satellitePage.totalCount;
   const hiddenRows = Math.max(0, totalRows - renderedRows);
   const configuredWindowRows = userPage.pageSize + satellitePage.pageSize;
+  const budgetSource =
+    contract === null || contract === undefined
+      ? "前端兼容窗口"
+      : `后端契约 ${contract.contract_id}`;
   return {
     label: "表格窗口化",
     value: `${formatCount(renderedRows)} / ${formatCount(totalRows)} 行渲染`,
@@ -4015,12 +4111,49 @@ export function buildDataPanelDetailWindowPolicyNote(
       `用户窗口 ${detailWindowRangeLabel(userPage)}`,
       `卫星窗口 ${detailWindowRangeLabel(satellitePage)}`,
       `渲染预算 ${formatCount(configuredWindowRows)} 行`,
+      `预算来源 ${budgetSource}`,
       hiddenRows > 0
         ? `隐藏 ${formatCount(hiddenRows)} 行等待翻页，避免大规模场景一次性展开 DOM。`
         : "当前筛选结果可在一屏窗口内完整渲染。"
     ].join("；"),
     tone: hiddenRows > 0 ? "limit" : "backend"
   };
+}
+
+function detailPaginationCollections(
+  contract: LargeDetailPaginationContractV2 | null | undefined
+): Map<string, LargeDetailPaginationCollectionV2> {
+  return new Map(
+    (contract?.collections ?? []).map((collection) => [
+      collection.collection,
+      collection
+    ])
+  );
+}
+
+function detailPaginationLimit(
+  collection: LargeDetailPaginationCollectionV2 | undefined,
+  fallback: number
+): number {
+  const recommended = collection?.recommended_limit;
+  const maxLimit = collection?.max_limit;
+  if (recommended === undefined || !Number.isFinite(recommended) || recommended <= 0) {
+    return fallback;
+  }
+  if (maxLimit === undefined || !Number.isFinite(maxLimit) || maxLimit <= 0) {
+    return Math.max(1, Math.floor(recommended));
+  }
+  return Math.max(1, Math.min(Math.floor(recommended), Math.floor(maxLimit)));
+}
+
+function detailPaginationCollectionLabel(
+  collection: LargeDetailPaginationCollectionV2 | undefined,
+  fallbackLabel: string
+): string {
+  if (collection === undefined) {
+    return `${fallbackLabel}未声明`;
+  }
+  return `${collection.label_zh} ${formatCount(collection.recommended_limit)} 行 @ ${collection.endpoint}`;
 }
 
 function detailWindowRangeLabel(page: DetailRowPage<unknown>): string {

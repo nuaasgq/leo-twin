@@ -18,6 +18,7 @@ import {
   runtimeStatusArmsCompletionNotice,
   runtimeExportCompareErrorMessage,
   runtimeExportRestorePreflightErrorMessage,
+  runtimeDetailRequestPlan,
   runtimeWebSocketErrorMessage,
   runtimeStatusRequiresStreams,
   scenarioWithRuntimeConfig,
@@ -141,6 +142,80 @@ describe("standaloneDashboardHref", () => {
     expect(runtimeExportRestorePreflightErrorMessage(new Error("HTTP 409"))).toBe(
       "复盘包恢复预检加载失败：HTTP 409"
     );
+  });
+});
+
+describe("runtimeDetailRequestPlan", () => {
+  it("uses backend pagination contract endpoints and recommended limits", () => {
+    const plan = runtimeDetailRequestPlan({
+      version: "v2",
+      contract_id: "leo_twin.large_detail_pagination_contract.v2",
+      source_policy_ids: {
+        scale_policy: "leo_twin.scale_policy.v2",
+        lod_snapshot_policy: "leo_twin.lod_snapshot_policy.v2"
+      },
+      active_profile_id: "large_1200",
+      active_scale_band: "LARGE_1200",
+      cursor_model: {
+        cursor_type: "zero_based_offset",
+        limit_type: "positive_int",
+        next_cursor_policy: "next",
+        has_more_policy: "has_more",
+        max_limit: 5000
+      },
+      collections: [
+        runtimeDetailCollection("ground_users", "/runtime/details/users", 120),
+        runtimeDetailCollection("satellites", "/runtime/details/satellites", 96),
+        runtimeDetailCollection("routes", "/runtime/details/routes", 64),
+        runtimeDetailCollection("services", "/runtime/details/services", 80),
+        runtimeDetailCollection(
+          "compute_nodes",
+          "/runtime/details/compute-nodes",
+          50
+        )
+      ],
+      combined_node_endpoint: {
+        kind: "nodes",
+        endpoint: "/runtime/details/nodes",
+        summary_type: "RuntimeNodeDetailPageV1",
+        composition: ["ground_users", "satellites"],
+        purpose: "combined nodes",
+        stable_ordering: "users then satellites"
+      },
+      frontend_policy: {
+        rendering: "cursor",
+        hidden_rows: "cursor",
+        raw_counts: "counts",
+        local_inference: "none"
+      },
+      determinism: {
+        ordering: "stable",
+        cursor_replay: "deterministic",
+        mutation_policy: "read-only"
+      },
+      event_kernel_policy: "NO_EVENT_KERNEL_BEHAVIOR_CHANGE"
+    });
+
+    expect(plan.users).toEqual({ endpoint: "/runtime/details/users", limit: 120 });
+    expect(plan.satellites).toEqual({
+      endpoint: "/runtime/details/satellites",
+      limit: 96
+    });
+    expect(plan.routes).toEqual({ endpoint: "/runtime/details/routes", limit: 64 });
+    expect(plan.services).toEqual({ endpoint: "/runtime/details/services", limit: 80 });
+    expect(plan.computeNodes).toEqual({
+      endpoint: "/runtime/details/compute-nodes",
+      limit: 50
+    });
+    expect(plan.nodes).toEqual({ endpoint: "/runtime/details/nodes", limit: 216 });
+  });
+
+  it("falls back to legacy full-window requests without a contract", () => {
+    expect(runtimeDetailRequestPlan(null)).toMatchObject({
+      users: { endpoint: "/runtime/details/users", limit: 5000 },
+      satellites: { endpoint: "/runtime/details/satellites", limit: 5000 },
+      nodes: { endpoint: "/runtime/details/nodes", limit: 5000 }
+    });
   });
 });
 
@@ -909,3 +984,33 @@ describe("scenarioWithRuntimeConfig", () => {
     });
   });
 });
+
+function runtimeDetailCollection(
+  collection: string,
+  endpoint: string,
+  recommendedLimit: number
+) {
+  return {
+    collection,
+    kind: collection,
+    label_zh: collection,
+    endpoint,
+    http_method: "GET",
+    query_parameters: ["cursor", "limit"],
+    response_envelope_type: "RUNTIME_DETAIL_PAGE",
+    summary_type: "RuntimeDetailSummary",
+    item_type: "RuntimeDetailItem",
+    stable_key: `${collection}_id`,
+    sort_policy: "stable id ascending",
+    count_field: `${collection}_count`,
+    estimated_total_count: recommendedLimit,
+    default_limit: 100,
+    recommended_limit: recommendedLimit,
+    max_limit: 5000,
+    cursor_required: false,
+    cursor_required_for_hidden_rows: false,
+    hidden_count_estimate: 0,
+    window_source: "lod_snapshot_policy_v2.detail_windows",
+    availability: "HTTP_CURSOR_ENDPOINT_AVAILABLE"
+  };
+}

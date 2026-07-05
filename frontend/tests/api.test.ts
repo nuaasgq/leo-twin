@@ -5,8 +5,11 @@ import {
   loadRuntimeExportHistory,
   loadRuntimeExportPackageCompare,
   loadRuntimeExportRestorePreflight,
+  loadRuntimeComputeNodeDetails,
   loadRuntimeNodeDetails,
+  loadRuntimeRouteDetails,
   loadRuntimeSatelliteDetails,
+  loadRuntimeServiceDetails,
   loadRuntimeState,
   loadRuntimeUserDetails,
   loadUserConfigurationExport,
@@ -476,7 +479,7 @@ describe("runtime API diagnostics", () => {
     );
   });
 
-  it("loads paginated runtime user and satellite detail pages", async () => {
+  it("loads paginated runtime detail pages", async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce({
@@ -541,6 +544,48 @@ describe("runtime API diagnostics", () => {
             ]
           }
         })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          type: "RUNTIME_DETAIL_PAGE",
+          kind: "routes",
+          summary: {
+            version: "v1",
+            source: "BACKEND_RUNTIME_SNAPSHOT",
+            route_count: 1,
+            item_count: 1,
+            items: [{ route_id: "route-0" }]
+          }
+        })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          type: "RUNTIME_DETAIL_PAGE",
+          kind: "services",
+          summary: {
+            version: "v1",
+            source: "SERVICE_LATENCY_HISTORY",
+            service_count: 1,
+            item_count: 1,
+            items: [{ service_id: "service-0" }]
+          }
+        })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          type: "RUNTIME_DETAIL_PAGE",
+          kind: "compute_nodes",
+          summary: {
+            version: "v1",
+            source: "BACKEND_RUNTIME_SNAPSHOT",
+            compute_node_count: 1,
+            item_count: 1,
+            items: [{ node_id: "sat-0" }]
+          }
+        })
       });
     vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
 
@@ -557,6 +602,18 @@ describe("runtime API diagnostics", () => {
       item_count: 1,
       items: [{ entity_id: "sat-0" }]
     });
+    await expect(loadRuntimeRouteDetails(5, 30)).resolves.toMatchObject({
+      route_count: 1,
+      items: [{ route_id: "route-0" }]
+    });
+    await expect(loadRuntimeServiceDetails(6, 40)).resolves.toMatchObject({
+      service_count: 1,
+      items: [{ service_id: "service-0" }]
+    });
+    await expect(loadRuntimeComputeNodeDetails(7, 50)).resolves.toMatchObject({
+      compute_node_count: 1,
+      items: [{ node_id: "sat-0" }]
+    });
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       "/runtime/details/users?cursor=2&limit=80"
@@ -568,6 +625,18 @@ describe("runtime API diagnostics", () => {
     expect(fetchMock).toHaveBeenNthCalledWith(
       3,
       "/runtime/details/nodes?cursor=4&limit=20"
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      4,
+      "/runtime/details/routes?cursor=5&limit=30"
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      5,
+      "/runtime/details/services?cursor=6&limit=40"
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      6,
+      "/runtime/details/compute-nodes?cursor=7&limit=50"
     );
   });
 

@@ -2,6 +2,7 @@ import { decodeStateSnapshot } from "../core/decoder";
 import {
   GeneratedScenarioConfig,
   RuntimeDetailPageEnvelope,
+  RuntimeComputeNodeDetailPageV1,
   RuntimeExportCatalogEnvelope,
   RuntimeExportCatalogV1,
   RuntimeExportHistoryEnvelope,
@@ -11,7 +12,9 @@ import {
   RuntimeExportRestorePreflightEnvelope,
   RuntimeExportRestorePreflightV1,
   RuntimeNodeDetailPageV1,
+  RuntimeRouteExplanationSummaryV1,
   RuntimeSatelliteServiceSummaryV1,
+  RuntimeServiceDetailPageV1,
   RuntimeStatusEnvelope,
   RuntimeStatusPayload,
   RuntimeUserRequestSummaryV1,
@@ -98,6 +101,44 @@ export async function loadRuntimeNodeDetails(
     throw new TypeError(`runtime detail response kind must be nodes, got ${page.kind}`);
   }
   return page.summary as RuntimeNodeDetailPageV1;
+}
+
+export async function loadRuntimeRouteDetails(
+  cursor = 0,
+  limit = 100,
+  endpoint = "/runtime/details/routes"
+): Promise<RuntimeRouteExplanationSummaryV1> {
+  const page = await loadRuntimeDetailPage(endpoint, cursor, limit);
+  if (page.kind !== "routes") {
+    throw new TypeError(`runtime detail response kind must be routes, got ${page.kind}`);
+  }
+  return page.summary as RuntimeRouteExplanationSummaryV1;
+}
+
+export async function loadRuntimeServiceDetails(
+  cursor = 0,
+  limit = 100,
+  endpoint = "/runtime/details/services"
+): Promise<RuntimeServiceDetailPageV1> {
+  const page = await loadRuntimeDetailPage(endpoint, cursor, limit);
+  if (page.kind !== "services") {
+    throw new TypeError(`runtime detail response kind must be services, got ${page.kind}`);
+  }
+  return page.summary as RuntimeServiceDetailPageV1;
+}
+
+export async function loadRuntimeComputeNodeDetails(
+  cursor = 0,
+  limit = 100,
+  endpoint = "/runtime/details/compute-nodes"
+): Promise<RuntimeComputeNodeDetailPageV1> {
+  const page = await loadRuntimeDetailPage(endpoint, cursor, limit);
+  if (page.kind !== "compute_nodes") {
+    throw new TypeError(
+      `runtime detail response kind must be compute_nodes, got ${page.kind}`
+    );
+  }
+  return page.summary as RuntimeComputeNodeDetailPageV1;
 }
 
 export async function loadRuntimeExportHistory(
@@ -342,8 +383,17 @@ export function decodeRuntimeDetailPage(value: unknown): RuntimeDetailPageEnvelo
   }
   const kind = (value as { kind?: unknown }).kind;
   const summary = (value as { summary?: unknown }).summary;
-  if (kind !== "users" && kind !== "satellites" && kind !== "nodes") {
-    throw new TypeError("runtime detail response kind must be users, satellites, or nodes");
+  if (
+    kind !== "users" &&
+    kind !== "satellites" &&
+    kind !== "nodes" &&
+    kind !== "routes" &&
+    kind !== "services" &&
+    kind !== "compute_nodes"
+  ) {
+    throw new TypeError(
+      "runtime detail response kind must be users, satellites, nodes, routes, services, or compute_nodes"
+    );
   }
   if (typeof summary !== "object" || summary === null || Array.isArray(summary)) {
     throw new TypeError("runtime detail response must include summary object");
@@ -355,6 +405,9 @@ export function decodeRuntimeDetailPage(value: unknown): RuntimeDetailPageEnvelo
       | RuntimeUserRequestSummaryV1
       | RuntimeSatelliteServiceSummaryV1
       | RuntimeNodeDetailPageV1
+      | RuntimeRouteExplanationSummaryV1
+      | RuntimeServiceDetailPageV1
+      | RuntimeComputeNodeDetailPageV1
   } as RuntimeDetailPageEnvelope;
 }
 

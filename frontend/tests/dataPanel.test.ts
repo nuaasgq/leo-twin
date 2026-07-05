@@ -11,6 +11,8 @@ import {
   buildDataPanelConfigurationExplanationDisplay,
   buildDataPanelInformationArchitectureDisplay,
   buildDataPanelDetailScopeNotes,
+  buildDataPanelDetailPageSizes,
+  buildDataPanelPaginationContractNotes,
   buildDataPanelDetailWindowPolicyNote,
   buildDataPanelDisplaySummary,
   buildDataPanelExportCatalogDisplay,
@@ -61,6 +63,7 @@ import {
   RuntimeDetailPages,
   runtimeNodeDetailPageToSummary,
   selectRuntimeNodeDetailSummary,
+  selectRuntimeRouteExplanationSummary,
   selectRuntimeSatelliteDetailCard,
   selectRuntimeSatelliteServiceSummary,
   selectRuntimeUserDetailCard,
@@ -281,6 +284,39 @@ describe("runtime detail page selection", () => {
           }
         ],
         satellites: []
+      },
+      route_explanation_summary_v1: {
+        version: "v1",
+        source: "BACKEND_RUNTIME_SNAPSHOT",
+        route_count: 1,
+        item_count: 1,
+        available_route_count: 1,
+        blocked_route_count: 0,
+        over_demand_route_count: 0,
+        compute_service_route_count: 0,
+        network_service_route_count: 1,
+        items: [
+          {
+            route_id: "route-status",
+            flow_id: "flow-status",
+            user_id: "user-status",
+            source_id: "user-status",
+            destination_id: "service-status",
+            selected_satellite_id: "sat-status",
+            primary_next_hop_id: "sat-status",
+            next_hop_ids: ["sat-status"],
+            hop_count: 1,
+            path_label: "user-status -> sat-status",
+            available: true,
+            route_pressure_proxy: 0,
+            business_type: "DATA_TRANSFER",
+            business_label: "数据传输",
+            bottleneck_component: "NONE",
+            bottleneck_reason: "NONE",
+            bottleneck_reason_label: "No bottleneck",
+            explanation_label: "status route"
+          }
+        ]
       }
     } as RuntimeStatusPayload;
     const detailPages: RuntimeDetailPages = {
@@ -327,6 +363,43 @@ describe("runtime detail page selection", () => {
             fields: [{ label: "负载", value: "65%", tone: "resource" }]
           }
         ]
+      },
+      routes: {
+        version: "v1",
+        source: "BACKEND_RUNTIME_SNAPSHOT",
+        cursor: 40,
+        limit: 40,
+        next_cursor: 41,
+        has_more: false,
+        route_count: 1,
+        item_count: 1,
+        available_route_count: 1,
+        blocked_route_count: 0,
+        over_demand_route_count: 0,
+        compute_service_route_count: 0,
+        network_service_route_count: 1,
+        items: [
+          {
+            route_id: "route-page",
+            flow_id: "flow-page",
+            user_id: "user-page",
+            source_id: "user-page",
+            destination_id: "service-page",
+            selected_satellite_id: "sat-page",
+            primary_next_hop_id: "sat-page",
+            next_hop_ids: ["sat-page"],
+            hop_count: 1,
+            path_label: "user-page -> sat-page",
+            available: true,
+            route_pressure_proxy: 0,
+            business_type: "DATA_TRANSFER",
+            business_label: "数据传输",
+            bottleneck_component: "NONE",
+            bottleneck_reason: "NONE",
+            bottleneck_reason_label: "No bottleneck",
+            explanation_label: "page route"
+          }
+        ]
       }
     };
 
@@ -340,10 +413,20 @@ describe("runtime detail page selection", () => {
     expect(
       selectRuntimeNodeDetailSummary(runtimeStatus, detailPages)?.satellites[0].title
     ).toBe("页面卫星");
+    expect(selectRuntimeRouteExplanationSummary(runtimeStatus, detailPages)?.cursor).toBe(
+      40
+    );
+    expect(
+      selectRuntimeRouteExplanationSummary(runtimeStatus, detailPages)?.items[0]
+        .route_id
+    ).toBe("route-page");
     expect(selectRuntimeUserRequestSummary(runtimeStatus, null)?.cursor).toBeUndefined();
     expect(selectRuntimeNodeDetailSummary(runtimeStatus, null)?.users[0].title).toBe(
       "状态用户"
     );
+    expect(
+      selectRuntimeRouteExplanationSummary(runtimeStatus, null)?.items[0].route_id
+    ).toBe("route-status");
   });
 });
 
@@ -5562,6 +5645,46 @@ describe("detail row filters", () => {
 });
 
 describe("paginateDetailRows", () => {
+  it("derives large detail table budgets from backend pagination contract", () => {
+    const contract = makeLargeDetailPaginationContract();
+
+    expect(buildDataPanelDetailPageSizes(contract)).toEqual({
+      users: 120,
+      satellites: 96,
+      routes: 64,
+      services: 80,
+      computeNodes: 50
+    });
+    expect(buildDataPanelPaginationContractNotes(contract)).toEqual([
+      {
+        label: "后端分页契约",
+        value: "large_1200 / zero_based_offset",
+        detail:
+          "用户节点状态明细 120 行 @ /runtime/details/users；卫星资源消耗明细 96 行 @ /runtime/details/satellites；路由与瓶颈明细 64 行 @ /runtime/details/routes；业务服务生命周期明细 80 行 @ /runtime/details/services；算力节点资源明细 50 行 @ /runtime/details/compute-nodes；统一上限 5,000；估计隐藏 1,178 行通过后端游标读取",
+        tone: "limit"
+      }
+    ]);
+  });
+
+  it("falls back to compatible table budgets without backend pagination contract", () => {
+    expect(buildDataPanelDetailPageSizes(null)).toEqual({
+      users: 80,
+      satellites: 120,
+      routes: 96,
+      services: 120,
+      computeNodes: 120
+    });
+    expect(buildDataPanelPaginationContractNotes(undefined)).toEqual([
+      {
+        label: "后端分页契约",
+        value: "兼容模式",
+        detail:
+          "当前 backend_summary 未提供 large_detail_pagination_contract_v2，表格使用前端兼容窗口。",
+        tone: "limit"
+      }
+    ]);
+  });
+
   it("returns a deterministic bounded window for large detail tables", () => {
     const items = Array.from({ length: 250 }, (_, index) => `row-${index}`);
 
@@ -5615,7 +5738,7 @@ describe("paginateDetailRows", () => {
       label: "表格窗口化",
       value: "200 / 1,500 行渲染",
       detail:
-        "用户窗口 1-80 / 300，上限 80；卫星窗口 241-360 / 1,200，上限 120；渲染预算 200 行；隐藏 1,300 行等待翻页，避免大规模场景一次性展开 DOM。",
+        "用户窗口 1-80 / 300，上限 80；卫星窗口 241-360 / 1,200，上限 120；渲染预算 200 行；预算来源 前端兼容窗口；隐藏 1,300 行等待翻页，避免大规模场景一次性展开 DOM。",
       tone: "limit"
     });
   });
@@ -5624,11 +5747,17 @@ describe("paginateDetailRows", () => {
     const userPage = paginateDetailRows(["user-0"], 0, 80);
     const satellitePage = paginateDetailRows([], 0, 120);
 
-    expect(buildDataPanelDetailWindowPolicyNote(userPage, satellitePage)).toEqual({
+    expect(
+      buildDataPanelDetailWindowPolicyNote(
+        userPage,
+        satellitePage,
+        makeLargeDetailPaginationContract()
+      )
+    ).toEqual({
       label: "表格窗口化",
       value: "1 / 1 行渲染",
       detail:
-        "用户窗口 1-1 / 1，上限 80；卫星窗口 0 / 0，上限 120；渲染预算 200 行；当前筛选结果可在一屏窗口内完整渲染。",
+        "用户窗口 1-1 / 1，上限 80；卫星窗口 0 / 0，上限 120；渲染预算 200 行；预算来源 后端契约 leo_twin.large_detail_pagination_contract.v2；当前筛选结果可在一屏窗口内完整渲染。",
       tone: "backend"
     });
   });
@@ -5652,6 +5781,118 @@ describe("buildRuntimeDetailSourceBadge", () => {
     });
   });
 });
+
+function makeLargeDetailPaginationContract() {
+  return {
+    version: "v2",
+    contract_id: "leo_twin.large_detail_pagination_contract.v2",
+    source_policy_ids: {
+      scale_policy: "leo_twin.scale_policy.v2",
+      lod_snapshot_policy: "leo_twin.lod_snapshot_policy.v2"
+    },
+    active_profile_id: "large_1200",
+    active_scale_band: "LARGE_1200",
+    cursor_model: {
+      cursor_type: "zero_based_offset",
+      limit_type: "positive_int",
+      next_cursor_policy: "min(total_count, cursor + returned_item_count)",
+      has_more_policy: "next_cursor < total_count",
+      max_limit: 5000
+    },
+    collections: [
+      makeLargeDetailPaginationCollection({
+        collection: "ground_users",
+        kind: "users",
+        label_zh: "用户节点状态明细",
+        endpoint: "/runtime/details/users",
+        recommended_limit: 120,
+        hidden_count_estimate: 280
+      }),
+      makeLargeDetailPaginationCollection({
+        collection: "satellites",
+        kind: "satellites",
+        label_zh: "卫星资源消耗明细",
+        endpoint: "/runtime/details/satellites",
+        recommended_limit: 96,
+        hidden_count_estimate: 880
+      }),
+      makeLargeDetailPaginationCollection({
+        collection: "routes",
+        kind: "routes",
+        label_zh: "路由与瓶颈明细",
+        endpoint: "/runtime/details/routes",
+        recommended_limit: 64,
+        hidden_count_estimate: 18
+      }),
+      makeLargeDetailPaginationCollection({
+        collection: "services",
+        kind: "services",
+        label_zh: "业务服务生命周期明细",
+        endpoint: "/runtime/details/services",
+        recommended_limit: 80,
+        hidden_count_estimate: 0
+      }),
+      makeLargeDetailPaginationCollection({
+        collection: "compute_nodes",
+        kind: "compute_nodes",
+        label_zh: "算力节点资源明细",
+        endpoint: "/runtime/details/compute-nodes",
+        recommended_limit: 50,
+        hidden_count_estimate: 0
+      })
+    ],
+    combined_node_endpoint: {
+      kind: "nodes",
+      endpoint: "/runtime/details/nodes",
+      summary_type: "RuntimeNodeDetailPageV1",
+      composition: ["ground_users", "satellites"],
+      purpose: "combined user and satellite node detail cards",
+      stable_ordering: "all users first, then satellites; each group sorted by stable id"
+    },
+    frontend_policy: {
+      rendering: "use backend cursor windows; do not render unbounded rows",
+      hidden_rows: "HIDDEN_ROWS_REQUIRE_BACKEND_CURSOR_OR_EXPLICIT_DETAIL_REQUEST",
+      raw_counts: "display total counts from summary count fields",
+      local_inference:
+        "frontend may format rows but must not invent pagination semantics"
+    },
+    determinism: {
+      ordering: "backend-owned stable ordering per collection",
+      cursor_replay: "same snapshot, cursor, and limit return identical rows",
+      mutation_policy: "read-only observation endpoints"
+    },
+    event_kernel_policy: "NO_EVENT_KERNEL_BEHAVIOR_CHANGE"
+  };
+}
+
+function makeLargeDetailPaginationCollection(overrides: {
+  collection: string;
+  kind: string;
+  label_zh: string;
+  endpoint: string;
+  recommended_limit: number;
+  hidden_count_estimate: number;
+}) {
+  return {
+    ...overrides,
+    http_method: "GET",
+    query_parameters: ["cursor", "limit"],
+    response_envelope_type: "RUNTIME_DETAIL_PAGE",
+    summary_type: "RuntimeDetailSummary",
+    item_type: "RuntimeDetailItem",
+    stable_key: `${overrides.kind}_id`,
+    sort_policy: "stable id ascending",
+    count_field: `${overrides.collection}_count`,
+    estimated_total_count:
+      overrides.recommended_limit + overrides.hidden_count_estimate,
+    default_limit: 100,
+    max_limit: 5000,
+    cursor_required: overrides.hidden_count_estimate > 0,
+    cursor_required_for_hidden_rows: true,
+    window_source: "lod_snapshot_policy_v2.detail_windows",
+    availability: "HTTP_CURSOR_ENDPOINT_AVAILABLE"
+  };
+}
 
 function makeSnapshot(overrides: Partial<WorldSnapshot> = {}): WorldSnapshot {
   return {
