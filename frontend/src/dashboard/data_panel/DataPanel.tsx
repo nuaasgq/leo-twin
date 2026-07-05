@@ -56,7 +56,8 @@ import {
   userConfigurationExportHref,
   userConfigurationSchemaHref,
   userConfigurationTemplatesHref,
-  userConfigurationValidateHref
+  userConfigurationValidateHref,
+  userConfigurationValidateTextHref
 } from "../../app/api";
 import { runtimeSpeedFactorLabel } from "../../runtime_display";
 import { WorldSnapshot } from "../../state/snapshot_engine";
@@ -115,6 +116,18 @@ const DEFAULT_USER_CONFIGURATION_VALIDATE_TEXT = `{
     "seed": 20260703
   }
 }`;
+const DEFAULT_USER_CONFIGURATION_VALIDATE_YAML_TEXT = `scenario:
+  satellite_count: 72
+  compute_nodes: 72
+runtime:
+  duration: 600
+  seed: 20260703
+`;
+export type UserConfigurationPreflightMode =
+  | "json_mapping"
+  | "auto_text"
+  | "yaml_text"
+  | "json_text";
 
 export const DataPanel = memo(function DataPanel({
   snapshot,
@@ -138,6 +151,7 @@ export const DataPanel = memo(function DataPanel({
   userConfigurationContractLoading,
   userConfigurationContractError,
   onUserConfigurationValidate,
+  onUserConfigurationValidateText,
   onUserConfigurationApply,
   onRuntimeExportCompareSelect,
   onRuntimeExportRestore,
@@ -168,6 +182,10 @@ export const DataPanel = memo(function DataPanel({
   onUserConfigurationValidate?: (
     candidate: unknown
   ) => Promise<UserConfigurationValidationReportV1>;
+  onUserConfigurationValidateText?: (
+    text: string,
+    format: "auto" | "json" | "yaml"
+  ) => Promise<UserConfigurationValidationReportV1>;
   onUserConfigurationApply?: (
     normalizedConfig: Record<string, unknown>,
     command: UserConfigurationValidationApplyCommandV1
@@ -197,6 +215,8 @@ export const DataPanel = memo(function DataPanel({
   const [userConfigurationValidateText, setUserConfigurationValidateText] = useState(
     DEFAULT_USER_CONFIGURATION_VALIDATE_TEXT
   );
+  const [userConfigurationPreflightMode, setUserConfigurationPreflightMode] =
+    useState<UserConfigurationPreflightMode>("json_mapping");
   const [userConfigurationValidateReport, setUserConfigurationValidateReport] =
     useState<UserConfigurationValidationReportV1 | null>(null);
   const [userConfigurationValidatePending, setUserConfigurationValidatePending] =
@@ -409,15 +429,29 @@ export const DataPanel = memo(function DataPanel({
     runtimeStatus.satellite_kpi_history_v1
   );
   const submitUserConfigurationValidation = async () => {
-    if (onUserConfigurationValidate === undefined || userConfigurationValidatePending) {
+    if (
+      userConfigurationValidatePending ||
+      !userConfigurationPreflightModeEnabled(
+        userConfigurationPreflightMode,
+        onUserConfigurationValidate,
+        onUserConfigurationValidateText
+      )
+    ) {
       return;
     }
     setUserConfigurationValidatePending(true);
     setUserConfigurationValidateError(null);
     setUserConfigurationApplyStatus(null);
     try {
-      const candidate = JSON.parse(userConfigurationValidateText) as unknown;
-      const report = await onUserConfigurationValidate(candidate);
+      const report =
+        userConfigurationPreflightMode === "json_mapping"
+          ? await onUserConfigurationValidate!(
+              JSON.parse(userConfigurationValidateText) as unknown
+            )
+          : await onUserConfigurationValidateText!(
+              userConfigurationValidateText,
+              userConfigurationTextEndpointFormat(userConfigurationPreflightMode)
+            );
       setUserConfigurationValidateReport(report);
     } catch (error) {
       setUserConfigurationValidateReport(null);
@@ -443,6 +477,13 @@ export const DataPanel = memo(function DataPanel({
   const userConfigurationApplyPayload = selectUserConfigurationApplyPayload(
     userConfigurationValidateReport
   );
+  const userConfigurationPreflightDisabled =
+    userConfigurationValidatePending ||
+    !userConfigurationPreflightModeEnabled(
+      userConfigurationPreflightMode,
+      onUserConfigurationValidate,
+      onUserConfigurationValidateText
+    );
 
   return (
     <section className="data-panel" aria-label="独立数据态势面板">
@@ -557,12 +598,40 @@ export const DataPanel = memo(function DataPanel({
                 <strong>预检通过后可显式应用</strong>
               </div>
               <div className="data-panel-config-validate-actions">
+                <select
+                  aria-label="用户配置预检格式"
+                  value={userConfigurationPreflightMode}
+                  disabled={userConfigurationValidatePending}
+                  onChange={(event) => {
+                    const nextMode = event.target.value as UserConfigurationPreflightMode;
+                    setUserConfigurationPreflightMode(nextMode);
+                    if (
+                      nextMode === "yaml_text" &&
+                      userConfigurationValidateText === DEFAULT_USER_CONFIGURATION_VALIDATE_TEXT
+                    ) {
+                      setUserConfigurationValidateText(
+                        DEFAULT_USER_CONFIGURATION_VALIDATE_YAML_TEXT
+                      );
+                    }
+                    if (
+                      nextMode === "json_mapping" &&
+                      userConfigurationValidateText ===
+                        DEFAULT_USER_CONFIGURATION_VALIDATE_YAML_TEXT
+                    ) {
+                      setUserConfigurationValidateText(
+                        DEFAULT_USER_CONFIGURATION_VALIDATE_TEXT
+                      );
+                    }
+                  }}
+                >
+                  <option value="json_mapping">JSON 映射</option>
+                  <option value="auto_text">自动文本</option>
+                  <option value="yaml_text">YAML 文本</option>
+                  <option value="json_text">JSON 文本</option>
+                </select>
                 <button
                   type="button"
-                  disabled={
-                    onUserConfigurationValidate === undefined ||
-                    userConfigurationValidatePending
-                  }
+                  disabled={userConfigurationPreflightDisabled}
                   onClick={() => {
                     void submitUserConfigurationValidation();
                   }}
@@ -583,7 +652,7 @@ export const DataPanel = memo(function DataPanel({
               </div>
             </div>
             <textarea
-              aria-label="待预检用户配置 JSON"
+              aria-label="待预检用户配置文本"
               spellCheck={false}
               value={userConfigurationValidateText}
               onChange={(event) => setUserConfigurationValidateText(event.target.value)}
@@ -4987,6 +5056,7 @@ export function buildDataPanelUserConfigurationValidationDisplay(
         ].filter((label): label is string => label !== null && label !== undefined)
       : [];
   const changeDisplay = buildUserConfigurationChangeDisplay(report);
+  const textParseLabels = buildUserConfigurationTextParseLabels(report);
   return {
     tone: report.ok ? "match" : "error",
     statusLabel: report.ok ? "配置可通过预检" : "配置预检未通过",
@@ -4998,6 +5068,7 @@ export function buildDataPanelUserConfigurationValidationDisplay(
       `mutation ${report.mutation_policy}`,
       `unknown ${report.unknown_key_policy}`,
       `default ${report.defaulting_policy}`,
+      ...textParseLabels,
       ...applyLabels
     ],
     readinessLabels: buildUserConfigurationApplyReadinessLabels(report),
@@ -5005,6 +5076,49 @@ export function buildDataPanelUserConfigurationValidationDisplay(
     changeRows: changeDisplay.rows,
     errorLabels: report.errors.map((item) => `${item.source}: ${item.message}`)
   };
+}
+
+export function userConfigurationTextEndpointFormat(
+  mode: UserConfigurationPreflightMode
+): "auto" | "json" | "yaml" {
+  if (mode === "yaml_text") {
+    return "yaml";
+  }
+  if (mode === "json_text") {
+    return "json";
+  }
+  return "auto";
+}
+
+export function userConfigurationPreflightModeEnabled(
+  mode: UserConfigurationPreflightMode,
+  mappingValidator:
+    | ((candidate: unknown) => Promise<UserConfigurationValidationReportV1>)
+    | undefined,
+  textValidator:
+    | ((text: string, format: "auto" | "json" | "yaml") => Promise<UserConfigurationValidationReportV1>)
+    | undefined
+): boolean {
+  if (mode === "json_mapping") {
+    return mappingValidator !== undefined;
+  }
+  return textValidator !== undefined;
+}
+
+function buildUserConfigurationTextParseLabels(
+  report: UserConfigurationValidationReportV1
+): readonly string[] {
+  const textParse = report.text_parse;
+  if (textParse === null || textParse === undefined) {
+    return [];
+  }
+  const detected = textParse.detected_format ?? "none";
+  return [
+    `text ${textParse.ok ? "parsed" : "parse_failed"}`,
+    `format ${detected}`,
+    `requested ${textParse.requested_format}`,
+    `endpoint ${userConfigurationValidateTextHref(textParse.requested_format as "auto" | "json" | "yaml")}`
+  ];
 }
 
 function buildUserConfigurationApplyReadinessLabels(

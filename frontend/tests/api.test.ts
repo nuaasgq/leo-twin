@@ -13,6 +13,7 @@ import {
   loadUserConfigurationSchema,
   loadUserConfigurationTemplates,
   validateUserConfigurationCandidate,
+  validateUserConfigurationTextCandidate,
   runtimeExportArchiveHref,
   runtimeExportPackageArchiveHref,
   runtimeExportPackageCompareHref,
@@ -24,6 +25,7 @@ import {
   userConfigurationSchemaHref,
   userConfigurationTemplatesHref,
   userConfigurationValidateHref,
+  userConfigurationValidateTextHref,
   runtimeApiErrorMessage
 } from "../src/app/api";
 
@@ -392,6 +394,75 @@ describe("runtime API diagnostics", () => {
         }
       })
     });
+  });
+
+  it("validates user configuration text through the backend text preflight endpoint", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        type: "USER_CONFIGURATION_VALIDATION_REPORT",
+        summary: {
+          version: "v1",
+          source: "BACKEND_USER_CONFIGURATION",
+          schema_id: "sees.user_configuration.v2",
+          validation_scope: "USER_PROVIDED_CONFIG_TEXT",
+          format: "YAML_TEXT",
+          mutation_policy: "VALIDATE_ONLY_NO_APPLY",
+          unknown_key_policy: "REJECT",
+          defaulting_policy: "OMITTED_FIELDS_USE_BACKEND_DEFAULTS",
+          ok: true,
+          error_count: 0,
+          errors: [],
+          normalized_config_hash: "sha256:normalized",
+          normalized_config: {
+            scenario: {
+              satellite_count: 72
+            }
+          },
+          text_parse: {
+            version: "v1",
+            source: "BACKEND_USER_CONFIGURATION",
+            requested_format: "yaml",
+            detected_format: "yaml",
+            ok: true
+          },
+          apply_command: {
+            type: "CONFIG_UPDATE",
+            action: "CONFIG_UPDATE",
+            payload_source: "normalized_config",
+            payload_format: "SEES_CONFIG_MAPPING",
+            requires_preflight_ok: true,
+            runtime_effect: "REINITIALIZES_SESSION_AND_STREAMS",
+            requires_explicit_user_action: true
+          }
+        }
+      })
+    }));
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+
+    await expect(
+      validateUserConfigurationTextCandidate("scenario:\n  satellite_count: 72\n", "yaml")
+    ).resolves.toMatchObject({
+      ok: true,
+      validation_scope: "USER_PROVIDED_CONFIG_TEXT",
+      text_parse: {
+        requested_format: "yaml",
+        detected_format: "yaml"
+      }
+    });
+    expect(userConfigurationValidateTextHref("yaml")).toBe(
+      "/scenario/user-config/validate-text?format=yaml"
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/scenario/user-config/validate-text?format=yaml",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8"
+        },
+        body: "scenario:\n  satellite_count: 72\n"
+      }
+    );
   });
 
   it("includes endpoint and HTTP status when runtime status fails", async () => {

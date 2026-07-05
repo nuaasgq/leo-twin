@@ -57,12 +57,15 @@ import {
   selectRuntimeUserRequestSummary,
   selectSatelliteResourceRow,
   selectUserConfigurationApplyPayload,
-  selectUserBusinessRequestRow
+  selectUserBusinessRequestRow,
+  userConfigurationPreflightModeEnabled,
+  userConfigurationTextEndpointFormat
 } from "../src/dashboard/data_panel/DataPanel";
 import {
   FidelitySummary,
   GeneratedScenarioConfig,
-  RuntimeStatusPayload
+  RuntimeStatusPayload,
+  UserConfigurationValidationReportV1
 } from "../src/core/event_types";
 import { WorldSnapshot } from "../src/state/snapshot_engine";
 
@@ -912,6 +915,13 @@ describe("buildDataPanelUserConfigurationValidationDisplay", () => {
             satellite_count: 72
           }
         },
+        text_parse: {
+          version: "v1",
+          source: "BACKEND_USER_CONFIGURATION",
+          requested_format: "yaml",
+          detected_format: "yaml",
+          ok: true
+        },
         apply_readiness: {
           version: "v1",
           source: "BACKEND_RUNTIME_STATUS",
@@ -945,6 +955,10 @@ describe("buildDataPanelUserConfigurationValidationDisplay", () => {
         "mutation VALIDATE_ONLY_NO_APPLY",
         "unknown REJECT",
         "default OMITTED_FIELDS_USE_BACKEND_DEFAULTS",
+        "text parsed",
+        "format yaml",
+        "requested yaml",
+        "endpoint /scenario/user-config/validate-text?format=yaml",
         "apply CONFIG_UPDATE/CONFIG_UPDATE",
         "payload normalized_config",
         "effect REINITIALIZES_SESSION_AND_STREAMS"
@@ -1150,6 +1164,31 @@ describe("buildDataPanelUserConfigurationValidationDisplay", () => {
         ok: false
       })
     ).toBeNull();
+  });
+
+  it("maps user configuration preflight modes to backend endpoint formats", () => {
+    const mappingValidator = async () =>
+      ({
+        ok: true
+      }) as UserConfigurationValidationReportV1;
+    const textValidator = async () =>
+      ({
+        ok: true
+      }) as UserConfigurationValidationReportV1;
+
+    expect(userConfigurationTextEndpointFormat("auto_text")).toBe("auto");
+    expect(userConfigurationTextEndpointFormat("yaml_text")).toBe("yaml");
+    expect(userConfigurationTextEndpointFormat("json_text")).toBe("json");
+    expect(userConfigurationTextEndpointFormat("json_mapping")).toBe("auto");
+    expect(
+      userConfigurationPreflightModeEnabled("json_mapping", mappingValidator, undefined)
+    ).toBe(true);
+    expect(
+      userConfigurationPreflightModeEnabled("yaml_text", mappingValidator, undefined)
+    ).toBe(false);
+    expect(
+      userConfigurationPreflightModeEnabled("yaml_text", undefined, textValidator)
+    ).toBe(true);
   });
 });
 

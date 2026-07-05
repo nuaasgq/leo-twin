@@ -5,6 +5,52 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Dashboard User Config Text Preflight v1
+
+- Branch: `feature/T205-dashboard-user-config-text-preflight-v1`
+- Commit: pending in this commit
+- Scope: connect the standalone dashboard configuration preflight panel to the
+  backend JSON/YAML text validation endpoint introduced in T204. The dashboard
+  now keeps the original JSON mapping mode and adds auto text, YAML text, and
+  JSON text modes. Text modes call
+  `POST /scenario/user-config/validate-text?format=...`; the preflight result
+  displays backend `text_parse` metadata and still applies only the normalized
+  config returned by the backend.
+- Changed files/modules:
+  - `frontend/src/app/api.ts`
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/integration_demo.md`
+  - `docs/user_configuration_schema_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- api.test.ts dataPanel.test.ts`
+    - Result: passed, 25 files / 302 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing `DataPanel` chunk-size
+      warning after minification.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - No implementation blocker. The task deliberately avoids adding file-system
+    upload or changing the apply command path; it only adds text validation
+    modes to the existing preflight card.
+  - Local runtime/generated config files remain dirty and are intentionally not
+    included in this task.
+- Known remaining issues / follow-up:
+  - A later task can add a richer file picker and full diff confirmation modal.
+  - Text mode uses the backend's deterministic simplified YAML parser, matching
+    the current config loader limitations.
+
 ## 2026-07-06 - User Config Text Preflight v1
 
 - Branch: `feature/T204-user-config-text-preflight-v1`

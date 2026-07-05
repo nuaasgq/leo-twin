@@ -42,7 +42,8 @@ import {
   loadUserConfigurationSchema,
   loadUserConfigurationTemplates,
   runtimeApiErrorMessage,
-  validateUserConfigurationCandidate
+  validateUserConfigurationCandidate,
+  validateUserConfigurationTextCandidate
 } from "./api";
 import type { RuntimeDetailPages } from "../dashboard/data_panel/DataPanel";
 import "./App.css";
@@ -360,6 +361,15 @@ export function App() {
   const validateUserConfiguration = useCallback(
     async (candidate: unknown): Promise<UserConfigurationValidationReportV1> => {
       return validateUserConfigurationCandidate(candidate);
+    },
+    []
+  );
+  const validateUserConfigurationText = useCallback(
+    async (
+      text: string,
+      format: "auto" | "json" | "yaml"
+    ): Promise<UserConfigurationValidationReportV1> => {
+      return validateUserConfigurationTextCandidate(text, format);
     },
     []
   );
@@ -927,6 +937,7 @@ export function App() {
               userConfigurationContractLoading={userConfigurationContractLoading}
               userConfigurationContractError={userConfigurationContractError}
               onUserConfigurationValidate={validateUserConfiguration}
+              onUserConfigurationValidateText={validateUserConfigurationText}
               onUserConfigurationApply={applyValidatedUserConfiguration}
               onRuntimeExportCompareSelect={refreshRuntimeExportCompare}
               onRuntimeExportRestore={restoreRuntimeExportPackage}

@@ -204,14 +204,16 @@ with `format=auto|json|yaml` and returns the same report plus `text_parse`.
 The standalone dashboard also shows these links in the user configuration
 contract section so users can download the current full configuration and
 inspect the backend schema without editing runtime state. The dashboard also
-provides a JSON mapping preflight box that calls
-`POST /scenario/user-config/validate` and displays the validation report without
-auto-applying the candidate configuration. After a successful preflight, the
-dashboard can send the backend-normalized mapping through the existing
-`CONFIG_UPDATE` control channel. The preflight card renders the backend
-`change_summary` so users can see changed field counts, section counts, and
-bounded field-path previews before applying, and it renders `apply_readiness`
-so the runtime/session side effect is visible before the command is sent.
+provides a JSON/YAML preflight box. JSON mapping mode calls
+`POST /scenario/user-config/validate`; auto/YAML/JSON text modes call
+`POST /scenario/user-config/validate-text`. The card displays the validation
+report without auto-applying the candidate configuration. After a successful
+preflight, the dashboard can send the backend-normalized mapping through the
+existing `CONFIG_UPDATE` control channel. The preflight card renders the
+backend `change_summary` so users can see changed field counts, section counts,
+and bounded field-path previews before applying, and it renders
+`apply_readiness` so the runtime/session side effect is visible before the
+command is sent.
 
 Persisted package artifact routes:
 

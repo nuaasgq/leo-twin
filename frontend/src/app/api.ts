@@ -33,6 +33,8 @@ export const DEFAULT_USER_CONFIG_SCHEMA_ENDPOINT = "/scenario/user-config/schema
 export const DEFAULT_USER_CONFIG_TEMPLATES_ENDPOINT = "/scenario/user-config/templates";
 export const DEFAULT_USER_CONFIG_EXPORT_ENDPOINT = "/scenario/user-config/export";
 export const DEFAULT_USER_CONFIG_VALIDATE_ENDPOINT = "/scenario/user-config/validate";
+export const DEFAULT_USER_CONFIG_VALIDATE_TEXT_ENDPOINT =
+  "/scenario/user-config/validate-text";
 
 export async function loadScenarioConfig(endpoint = "/scenario/config"): Promise<ScenarioConfig> {
   const response = await fetch(endpoint);
@@ -189,6 +191,25 @@ export async function validateUserConfigurationCandidate(
   return decodeUserConfigurationValidationReport(await response.json()).summary;
 }
 
+export async function validateUserConfigurationTextCandidate(
+  text: string,
+  format: "auto" | "json" | "yaml" = "auto",
+  endpoint = DEFAULT_USER_CONFIG_VALIDATE_TEXT_ENDPOINT
+): Promise<UserConfigurationValidationReportV1> {
+  const url = userConfigurationValidateTextHref(format, endpoint);
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8"
+    },
+    body: text
+  });
+  if (!response.ok) {
+    throw new Error(`failed to validate user configuration text from ${url}: HTTP ${response.status}`);
+  }
+  return decodeUserConfigurationValidationReport(await response.json()).summary;
+}
+
 export function runtimeApiErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   if (
@@ -284,6 +305,13 @@ export function userConfigurationValidateHref(
   endpoint = DEFAULT_USER_CONFIG_VALIDATE_ENDPOINT
 ): string {
   return endpoint;
+}
+
+export function userConfigurationValidateTextHref(
+  format: "auto" | "json" | "yaml" = "auto",
+  endpoint = DEFAULT_USER_CONFIG_VALIDATE_TEXT_ENDPOINT
+): string {
+  return `${endpoint}?format=${encodeURIComponent(format)}`;
 }
 
 function decodeScenarioConfig(value: unknown): ScenarioConfig {

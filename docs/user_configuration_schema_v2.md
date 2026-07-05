@@ -104,13 +104,15 @@ section in the auxiliary model analysis area. It summarizes configuration
 surfaces, deterministic policy, model boundaries, and per-section current
 values directly from the backend object.
 
-The dashboard user configuration panel also includes a JSON mapping preflight
-box. It calls `/scenario/user-config/validate`, displays accepted/rejected
-validation results, normalized config hash, backend error messages, and the
-backend-declared apply command. The dashboard only enables "apply" after a
-successful preflight, and it sends the backend-normalized config rather than the
-raw editor text. Applying a config reinitializes the session and reconnects
-runtime streams through the existing control plane.
+The dashboard user configuration panel also includes a JSON/YAML preflight
+box. In `JSON_MAPPING` mode it calls `/scenario/user-config/validate`; in
+`AUTO_TEXT`, `YAML_TEXT`, or `JSON_TEXT` mode it calls
+`/scenario/user-config/validate-text`. It displays accepted/rejected validation
+results, normalized config hash, backend error messages, text parse status when
+available, and the backend-declared apply command. The dashboard only enables
+"apply" after a successful preflight, and it sends the backend-normalized config
+rather than the raw editor text. Applying a config reinitializes the session
+and reconnects runtime streams through the existing control plane.
 
 The validation `change_summary` is backend-owned. It includes:
 

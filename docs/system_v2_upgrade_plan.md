@@ -69,7 +69,8 @@ Tasks:
     backend preflight diff summary implemented in T201; dashboard diff
     rendering implemented in T202; backend/runtime apply readiness and
     dashboard readiness rendering implemented in T203; backend JSON/YAML text
-    preflight endpoint implemented in T204.
+    preflight endpoint implemented in T204; dashboard JSON/YAML text preflight
+    mode implemented in T205.
 
 ### WS2. Business Demand Model v2
 

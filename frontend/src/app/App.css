@@ -2009,7 +2009,8 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
   font-weight: 900;
 }
 
-.data-panel-config-validate-actions button {
+.data-panel-config-validate-actions button,
+.data-panel-config-validate-actions select {
   border: 1px solid #315061;
   border-radius: 5px;
   padding: 7px 10px;
@@ -2020,7 +2021,12 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
   font-weight: 800;
 }
 
-.data-panel-config-validate-actions button:disabled {
+.data-panel-config-validate-actions select {
+  max-width: 120px;
+}
+
+.data-panel-config-validate-actions button:disabled,
+.data-panel-config-validate-actions select:disabled {
   cursor: not-allowed;
   opacity: 0.55;
 }
