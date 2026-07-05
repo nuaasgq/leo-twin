@@ -357,8 +357,12 @@ describe("runtime API diagnostics", () => {
             }
           },
           apply_command: {
-            type: "RUNTIME_CONTROL",
+            type: "CONFIG_UPDATE",
             action: "CONFIG_UPDATE",
+            payload_source: "normalized_config",
+            payload_format: "SEES_CONFIG_MAPPING",
+            requires_preflight_ok: true,
+            runtime_effect: "REINITIALIZES_SESSION_AND_STREAMS",
             requires_explicit_user_action: true
           }
         }

@@ -656,7 +656,12 @@ export interface UserConfigurationValidationErrorV1 {
 export interface UserConfigurationValidationApplyCommandV1 {
   type: string;
   action: string;
+  payload_source?: string;
+  payload_format?: string;
+  requires_preflight_ok?: boolean;
   requires_explicit_user_action: boolean;
+  runtime_effect?: string;
+  runtime_status_policy?: string;
 }
 
 export interface UserConfigurationValidationReportEnvelope {

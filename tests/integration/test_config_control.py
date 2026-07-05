@@ -725,9 +725,17 @@ def test_control_plane_validates_user_configuration_without_applying(tmp_path) -
     assert accepted_summary["normalized_config"]["scenario"]["satellite_count"] == 72
     assert accepted_summary["normalized_config"]["runtime"]["duration"] == 600
     assert accepted_summary["apply_command"] == {
-        "type": "RUNTIME_CONTROL",
+        "type": "CONFIG_UPDATE",
         "action": "CONFIG_UPDATE",
+        "payload_source": "normalized_config",
+        "payload_format": "SEES_CONFIG_MAPPING",
+        "requires_preflight_ok": True,
         "requires_explicit_user_action": True,
+        "runtime_effect": "REINITIALIZES_SESSION_AND_STREAMS",
+        "runtime_status_policy": (
+            "SAFE_WHEN_STOPPED_OR_UNINITIALIZED; "
+            "RUNNING_SESSION_IS_STOPPED_AND_REINITIALIZED_BY_BACKEND"
+        ),
     }
 
     rejected_summary = rejected["summary"]
@@ -740,6 +748,44 @@ def test_control_plane_validates_user_configuration_without_applying(tmp_path) -
     ][0]["message"]
     assert control_plane.controller.config_json() == before_config
     assert control_plane.runtime_status()["status"]["initialized"] is before_initialized
+
+
+def test_control_plane_applies_preflight_normalized_user_configuration(tmp_path) -> None:
+    control_plane = _small_control_plane(tmp_path / "sees_control.yaml")
+    accepted = control_plane.user_configuration_validate(
+        {
+            "scenario": {
+                "satellite_count": 84,
+                "compute_nodes": 84,
+                "compute_gpu_tflops_fp32": 1.5,
+            },
+            "runtime": {
+                "duration": 480,
+                "seed": 20260706,
+            },
+        }
+    )
+    normalized_config = accepted["summary"]["normalized_config"]
+
+    response = control_plane.handle_raw_message(
+        json.dumps(
+            {
+                "type": "CONFIG_UPDATE",
+                "payload": normalized_config,
+            }
+        )
+    )
+    applied = control_plane.controller.config_json()
+
+    assert accepted["summary"]["ok"] is True
+    assert response["ok"] is True
+    assert response["command"] == "INITIALIZE"
+    assert applied["scenario"]["satellite_count"] == 84
+    assert applied["scenario"]["compute_nodes"] == 84
+    assert applied["scenario"]["compute_gpu_tflops_fp32"] == 1.5
+    assert applied["runtime"]["duration"] == 480
+    assert applied["runtime"]["seed"] == 20260706
+    assert control_plane.runtime_status()["status"]["initialized"] is True
 
 
 def test_control_plane_rejects_template_load_after_initialization(tmp_path) -> None:

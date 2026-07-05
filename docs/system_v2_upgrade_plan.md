@@ -64,7 +64,8 @@ Tasks:
   - Depends on: V2-001, V2-003.
   - Status: preflight validation API implemented in T198 as
     `POST /scenario/user-config/validate`; dashboard JSON preflight UI
-    implemented in T199; guarded frontend upload/apply is still pending.
+    implemented in T199; guarded preflight-to-apply flow implemented in T200 by
+    sending backend-normalized config through explicit `CONFIG_UPDATE`.
 
 ### WS2. Business Demand Model v2
 

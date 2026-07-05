@@ -175,13 +175,18 @@ import still happens only through explicit control-plane commands such as
 `POST /scenario/user-config/validate` returns
 `USER_CONFIGURATION_VALIDATION_REPORT` with normalized config/hash when
 accepted, but it never writes config files, initializes runtime state, or
-applies a `CONFIG_UPDATE`.
+applies a `CONFIG_UPDATE` by itself. Accepted reports include an
+`apply_command` that declares `normalized_config` as the safe
+`CONFIG_UPDATE` payload source; applying it is a separate explicit user action
+that reinitializes the demo runtime session and reconnects streams.
 The standalone dashboard also shows these links in the user configuration
 contract section so users can download the current full configuration and
 inspect the backend schema without editing runtime state. The dashboard also
 provides a JSON mapping preflight box that calls
 `POST /scenario/user-config/validate` and displays the validation report without
-applying the candidate configuration.
+auto-applying the candidate configuration. After a successful preflight, the
+dashboard can send the backend-normalized mapping through the existing
+`CONFIG_UPDATE` control channel.
 
 Persisted package artifact routes:
 

@@ -43,6 +43,7 @@ import {
   UserConfigurationExportV1,
   UserConfigurationSchemaV2,
   UserConfigurationTemplateCatalogV1,
+  UserConfigurationValidationApplyCommandV1,
   UserConfigurationValidationReportV1
 } from "../../core/event_types";
 import {
@@ -137,6 +138,7 @@ export const DataPanel = memo(function DataPanel({
   userConfigurationContractLoading,
   userConfigurationContractError,
   onUserConfigurationValidate,
+  onUserConfigurationApply,
   onRuntimeExportCompareSelect,
   onRuntimeExportRestore,
   displaySimTime,
@@ -166,6 +168,10 @@ export const DataPanel = memo(function DataPanel({
   onUserConfigurationValidate?: (
     candidate: unknown
   ) => Promise<UserConfigurationValidationReportV1>;
+  onUserConfigurationApply?: (
+    normalizedConfig: Record<string, unknown>,
+    command: UserConfigurationValidationApplyCommandV1
+  ) => void;
   onRuntimeExportCompareSelect?: (packageId: string) => void;
   onRuntimeExportRestore?: (packageId: string) => void;
   displaySimTime: number;
@@ -197,6 +203,8 @@ export const DataPanel = memo(function DataPanel({
     useState(false);
   const [userConfigurationValidateError, setUserConfigurationValidateError] =
     useState<string | null>(null);
+  const [userConfigurationApplyStatus, setUserConfigurationApplyStatus] =
+    useState<string | null>(null);
   const summary = buildDataPanelDisplaySummary(
     buildDataPanelSummary(snapshot),
     displaySimTime,
@@ -227,7 +235,8 @@ export const DataPanel = memo(function DataPanel({
     buildDataPanelUserConfigurationValidationDisplay(
       userConfigurationValidateReport,
       userConfigurationValidatePending,
-      userConfigurationValidateError
+      userConfigurationValidateError,
+      userConfigurationApplyStatus
     );
   const configurationExplanationDisplay = buildDataPanelConfigurationExplanationDisplay(
     generatedConfig?.backend_summary?.configuration_explanation_v2
@@ -405,6 +414,7 @@ export const DataPanel = memo(function DataPanel({
     }
     setUserConfigurationValidatePending(true);
     setUserConfigurationValidateError(null);
+    setUserConfigurationApplyStatus(null);
     try {
       const candidate = JSON.parse(userConfigurationValidateText) as unknown;
       const report = await onUserConfigurationValidate(candidate);
@@ -417,6 +427,22 @@ export const DataPanel = memo(function DataPanel({
       setUserConfigurationValidatePending(false);
     }
   };
+  const applyUserConfigurationValidation = () => {
+    if (onUserConfigurationApply === undefined) {
+      return;
+    }
+    const payload = selectUserConfigurationApplyPayload(userConfigurationValidateReport);
+    if (payload === null || userConfigurationValidateReport === null) {
+      return;
+    }
+    onUserConfigurationApply(payload, userConfigurationValidateReport.apply_command);
+    setUserConfigurationApplyStatus(
+      `已发送 ${userConfigurationValidateReport.apply_command.type}/${userConfigurationValidateReport.apply_command.action}，后端将重建仿真 session`
+    );
+  };
+  const userConfigurationApplyPayload = selectUserConfigurationApplyPayload(
+    userConfigurationValidateReport
+  );
 
   return (
     <section className="data-panel" aria-label="独立数据态势面板">
@@ -528,20 +554,33 @@ export const DataPanel = memo(function DataPanel({
             <div className="data-panel-config-validate-head">
               <div>
                 <span>配置预检</span>
-                <strong>JSON 映射只校验，不应用</strong>
+                <strong>预检通过后可显式应用</strong>
               </div>
-              <button
-                type="button"
-                disabled={
-                  onUserConfigurationValidate === undefined ||
-                  userConfigurationValidatePending
-                }
-                onClick={() => {
-                  void submitUserConfigurationValidation();
-                }}
-              >
-                {userConfigurationValidatePending ? "预检中" : "预检"}
-              </button>
+              <div className="data-panel-config-validate-actions">
+                <button
+                  type="button"
+                  disabled={
+                    onUserConfigurationValidate === undefined ||
+                    userConfigurationValidatePending
+                  }
+                  onClick={() => {
+                    void submitUserConfigurationValidation();
+                  }}
+                >
+                  {userConfigurationValidatePending ? "预检中" : "预检"}
+                </button>
+                <button
+                  type="button"
+                  disabled={
+                    userConfigurationValidatePending ||
+                    onUserConfigurationApply === undefined ||
+                    userConfigurationApplyPayload === null
+                  }
+                  onClick={applyUserConfigurationValidation}
+                >
+                  应用配置
+                </button>
+              </div>
             </div>
             <textarea
               aria-label="待预检用户配置 JSON"
@@ -4865,7 +4904,8 @@ export interface DataPanelUserConfigurationValidationDisplay {
 export function buildDataPanelUserConfigurationValidationDisplay(
   report: UserConfigurationValidationReportV1 | null | undefined,
   pending = false,
-  error: string | null | undefined = null
+  error: string | null | undefined = null,
+  applyStatus: string | null | undefined = null
 ): DataPanelUserConfigurationValidationDisplay | null {
   if (pending) {
     return {
@@ -4889,6 +4929,18 @@ export function buildDataPanelUserConfigurationValidationDisplay(
     return null;
   }
   const normalizedHash = report.normalized_config_hash ?? "";
+  const applyCommand = report.apply_command;
+  const applyLabels =
+    report.ok && selectUserConfigurationApplyPayload(report) !== null
+      ? [
+          `apply ${applyCommand.type}/${applyCommand.action}`,
+          applyCommand.payload_source
+            ? `payload ${applyCommand.payload_source}`
+            : "payload unspecified",
+          applyCommand.runtime_effect ? `effect ${applyCommand.runtime_effect}` : null,
+          applyStatus
+        ].filter((label): label is string => label !== null && label !== undefined)
+      : [];
   return {
     tone: report.ok ? "match" : "error",
     statusLabel: report.ok ? "配置可通过预检" : "配置预检未通过",
@@ -4899,10 +4951,37 @@ export function buildDataPanelUserConfigurationValidationDisplay(
       `scope ${report.validation_scope}`,
       `mutation ${report.mutation_policy}`,
       `unknown ${report.unknown_key_policy}`,
-      `default ${report.defaulting_policy}`
+      `default ${report.defaulting_policy}`,
+      ...applyLabels
     ],
     errorLabels: report.errors.map((item) => `${item.source}: ${item.message}`)
   };
+}
+
+export function selectUserConfigurationApplyPayload(
+  report: UserConfigurationValidationReportV1 | null | undefined
+): Record<string, unknown> | null {
+  if (report === null || report === undefined || !report.ok) {
+    return null;
+  }
+  if (report.apply_command.requires_preflight_ok === false) {
+    return null;
+  }
+  if (report.apply_command.requires_explicit_user_action !== true) {
+    return null;
+  }
+  const payloadSource = report.apply_command.payload_source ?? "normalized_config";
+  if (payloadSource !== "normalized_config") {
+    return null;
+  }
+  if (
+    report.normalized_config === null ||
+    typeof report.normalized_config !== "object" ||
+    Array.isArray(report.normalized_config)
+  ) {
+    return null;
+  }
+  return report.normalized_config;
 }
 
 export interface DataPanelConfigurationExplanationDisplay {

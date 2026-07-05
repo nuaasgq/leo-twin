@@ -5,6 +5,63 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Dashboard User Config Apply v1
+
+- Branch: `feature/T200-dashboard-user-config-apply-v1`
+- Commit: pending in this commit
+- Scope: add the guarded apply step after dashboard user configuration
+  preflight. The backend validation report now declares the exact
+  `CONFIG_UPDATE` apply command, including `normalized_config` as the payload
+  source, payload format, explicit user-action requirement, preflight
+  requirement, and runtime/session side effect. The dashboard still never
+  auto-applies editor text: it enables "应用配置" only after a successful
+  backend preflight and sends the backend-normalized mapping through the
+  existing control channel.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `tests/integration/test_config_control.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/integration_demo.md`
+  - `docs/user_configuration_schema_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `$env:PYTHONPATH='.'; python -m pytest tests/integration/test_config_control.py::test_control_plane_validates_user_configuration_without_applying tests/integration/test_config_control.py::test_control_plane_applies_preflight_normalized_user_configuration -q`
+    - Result: passed, 2 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- api.test.ts dataPanel.test.ts`
+    - Result: passed, 25 files / 299 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - `$env:PYTHONPATH='.'; python -m pytest tests/unit/test_user_configuration_schema_v2.py tests/integration/test_config_control.py::test_control_plane_validates_user_configuration_without_applying tests/integration/test_config_control.py::test_control_plane_applies_preflight_normalized_user_configuration -q`
+    - Result: passed, 8 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing `DataPanel` chunk-size
+      warning after minification.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - The shell environment did not have `node` on PATH, so the first frontend
+    pnpm commands failed before running tests. The commands were rerun with the
+    bundled Codex Node/Pnpm paths.
+  - The first TypeScript check found `controlClient` used before declaration in
+    the new apply callback. The callback was moved after `controlClient`
+    creation and TypeScript passed.
+  - Local runtime/generated config files remain dirty and are intentionally not
+    included in this task.
+- Known remaining issues / follow-up:
+  - YAML/file upload and rich config diff review are still future work.
+  - Applying config reinitializes the runtime session through the current
+    `CONFIG_UPDATE` path; a later task can add a dedicated apply preflight
+    confirmation panel with runtime stopped/running warnings.
+
 ## 2026-07-06 - Dashboard User Config Preflight v1
 
 - Branch: `feature/T199-dashboard-user-config-preflight-v1`

@@ -56,6 +56,7 @@ import {
   selectRuntimeUserDetailCard,
   selectRuntimeUserRequestSummary,
   selectSatelliteResourceRow,
+  selectUserConfigurationApplyPayload,
   selectUserBusinessRequestRow
 } from "../src/dashboard/data_panel/DataPanel";
 import {
@@ -912,8 +913,12 @@ describe("buildDataPanelUserConfigurationValidationDisplay", () => {
           }
         },
         apply_command: {
-          type: "RUNTIME_CONTROL",
+          type: "CONFIG_UPDATE",
           action: "CONFIG_UPDATE",
+          payload_source: "normalized_config",
+          payload_format: "SEES_CONFIG_MAPPING",
+          requires_preflight_ok: true,
+          runtime_effect: "REINITIALIZES_SESSION_AND_STREAMS",
           requires_explicit_user_action: true
         }
       })
@@ -925,7 +930,10 @@ describe("buildDataPanelUserConfigurationValidationDisplay", () => {
         "scope USER_PROVIDED_CONFIG_MAPPING",
         "mutation VALIDATE_ONLY_NO_APPLY",
         "unknown REJECT",
-        "default OMITTED_FIELDS_USE_BACKEND_DEFAULTS"
+        "default OMITTED_FIELDS_USE_BACKEND_DEFAULTS",
+        "apply CONFIG_UPDATE/CONFIG_UPDATE",
+        "payload normalized_config",
+        "effect REINITIALIZES_SESSION_AND_STREAMS"
       ],
       errorLabels: []
     });
@@ -951,8 +959,11 @@ describe("buildDataPanelUserConfigurationValidationDisplay", () => {
         normalized_config_hash: null,
         normalized_config: null,
         apply_command: {
-          type: "RUNTIME_CONTROL",
+          type: "CONFIG_UPDATE",
           action: "CONFIG_UPDATE",
+          payload_source: "normalized_config",
+          payload_format: "SEES_CONFIG_MAPPING",
+          requires_preflight_ok: true,
           requires_explicit_user_action: true
         }
       })
@@ -977,6 +988,56 @@ describe("buildDataPanelUserConfigurationValidationDisplay", () => {
       errorLabels: ["HTTP 400"]
     });
     expect(buildDataPanelUserConfigurationValidationDisplay(null)).toBeNull();
+  });
+
+  it("selects only backend-normalized explicit apply payloads", () => {
+    const report = {
+      version: "v1",
+      source: "BACKEND_USER_CONFIGURATION",
+      schema_id: "sees.user_configuration.v2",
+      validation_scope: "USER_PROVIDED_CONFIG_MAPPING",
+      format: "JSON_MAPPING",
+      mutation_policy: "VALIDATE_ONLY_NO_APPLY",
+      unknown_key_policy: "REJECT",
+      defaulting_policy: "OMITTED_FIELDS_USE_BACKEND_DEFAULTS",
+      ok: true,
+      error_count: 0,
+      errors: [],
+      normalized_config_hash: "sha256:config",
+      normalized_config: {
+        scenario: {
+          satellite_count: 72
+        }
+      },
+      apply_command: {
+        type: "CONFIG_UPDATE",
+        action: "CONFIG_UPDATE",
+        payload_source: "normalized_config",
+        requires_preflight_ok: true,
+        requires_explicit_user_action: true
+      }
+    };
+
+    expect(selectUserConfigurationApplyPayload(report)).toEqual({
+      scenario: {
+        satellite_count: 72
+      }
+    });
+    expect(
+      selectUserConfigurationApplyPayload({
+        ...report,
+        apply_command: {
+          ...report.apply_command,
+          payload_source: "raw_text"
+        }
+      })
+    ).toBeNull();
+    expect(
+      selectUserConfigurationApplyPayload({
+        ...report,
+        ok: false
+      })
+    ).toBeNull();
   });
 });
 

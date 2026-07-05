@@ -550,6 +550,18 @@ export function App() {
     ]
   );
 
+  const applyValidatedUserConfiguration = useCallback(
+    (normalizedConfig: Record<string, unknown>) => {
+      setControlError(null);
+      setRuntimeStatus((previous) => ({
+        ...previous,
+        last_action: "CONFIG_UPDATE_PENDING"
+      }));
+      controlClient.sendConfigUpdate(normalizedConfig);
+    },
+    [controlClient]
+  );
+
   useEffect(() => {
     controlClient.connect();
     return () => controlClient.close();
@@ -915,6 +927,7 @@ export function App() {
               userConfigurationContractLoading={userConfigurationContractLoading}
               userConfigurationContractError={userConfigurationContractError}
               onUserConfigurationValidate={validateUserConfiguration}
+              onUserConfigurationApply={applyValidatedUserConfiguration}
               onRuntimeExportCompareSelect={refreshRuntimeExportCompare}
               onRuntimeExportRestore={restoreRuntimeExportPackage}
               displaySimTime={displaySimTime}

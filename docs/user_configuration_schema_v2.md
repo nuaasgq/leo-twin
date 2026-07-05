@@ -65,12 +65,14 @@ The HTTP endpoints are read-only:
   paths.
 - `/scenario/user-config/validate` accepts a JSON mapping and returns a
   validate-only `USER_CONFIGURATION_VALIDATION_REPORT` with normalized config
-  and stable hash when accepted. It does not apply the config.
+  and stable hash when accepted. It does not apply the config by itself. When
+  accepted, the report includes an explicit `apply_command` that names
+  `normalized_config` as the safe `CONFIG_UPDATE` payload source.
 
-Configuration import remains an explicit control-plane action. Partial updates
-use `CONFIG_UPDATE`, template loading uses `LOAD_TEMPLATE`, and package restore
-uses `RESTORE_EXPORT_PACKAGE`. The read-only endpoints do not write config
-files, initialize sessions, or mutate the runtime.
+Configuration import remains an explicit control-plane action. Validated full
+or partial mappings use `CONFIG_UPDATE`, template loading uses `LOAD_TEMPLATE`,
+and package restore uses `RESTORE_EXPORT_PACKAGE`. The read-only endpoints do
+not write config files, initialize sessions, or mutate the runtime.
 
 The standalone dashboard consumes the same read-only endpoints. It shows a
 compact contract summary plus a schema field browser grouped by backend
@@ -94,8 +96,11 @@ values directly from the backend object.
 
 The dashboard user configuration panel also includes a JSON mapping preflight
 box. It calls `/scenario/user-config/validate`, displays accepted/rejected
-validation results, normalized config hash, and backend error messages, but it
-does not send `CONFIG_UPDATE` or mutate runtime state.
+validation results, normalized config hash, backend error messages, and the
+backend-declared apply command. The dashboard only enables "apply" after a
+successful preflight, and it sends the backend-normalized config rather than the
+raw editor text. Applying a config reinitializes the session and reconnects
+runtime streams through the existing control plane.
 
 Each field schema includes:
 

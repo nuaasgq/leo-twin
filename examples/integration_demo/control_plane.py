@@ -243,11 +243,7 @@ class DemoControlPlane:
                 "errors": tuple(validation["errors"]),
                 "normalized_config_hash": normalized_hash,
                 "normalized_config": normalized_config,
-                "apply_command": {
-                    "type": "RUNTIME_CONTROL",
-                    "action": "CONFIG_UPDATE",
-                    "requires_explicit_user_action": True,
-                },
+                "apply_command": _user_configuration_apply_command(),
             },
         }
 
@@ -1223,6 +1219,22 @@ def _runtime_export_restore_control_payload(raw: str | bytes) -> dict[str, Any] 
     if not isinstance(payload, dict):
         raise RuntimeError("restore payload must be a mapping")
     return dict(payload)
+
+
+def _user_configuration_apply_command() -> dict[str, Any]:
+    return {
+        "type": "CONFIG_UPDATE",
+        "action": "CONFIG_UPDATE",
+        "payload_source": "normalized_config",
+        "payload_format": "SEES_CONFIG_MAPPING",
+        "requires_preflight_ok": True,
+        "requires_explicit_user_action": True,
+        "runtime_effect": "REINITIALIZES_SESSION_AND_STREAMS",
+        "runtime_status_policy": (
+            "SAFE_WHEN_STOPPED_OR_UNINITIALIZED; "
+            "RUNNING_SESSION_IS_STOPPED_AND_REINITIALIZED_BY_BACKEND"
+        ),
+    }
 
 
 def _runtime_export_restore_result(
