@@ -4557,3 +4557,35 @@ change.
 - Recommended follow-up:
   - Add bounded dashboard service trace rows with task id, complete state, and
     component latencies.
+
+## 2026-07-05 - Dashboard Service Trace Rows v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: bind `service_latency_history_v1` into the dashboard by showing a
+  bounded set of per-service trace labels in the compute resource panel. Rows
+  include compact task id, complete/partial status, and total latency, while
+  preserving the full task id as the element title.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 25 files / 192 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - None. The rows render only when `service_latency_history_v1` provides
+    items, preserving compact dashboard behavior for scenarios without service
+    traces.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The trace rows are compact labels, not an expandable lifecycle table.
+- Recommended follow-up:
+  - Add a dedicated service lifecycle drill-down when more per-service metadata
+    such as input/output flow ids is exposed to the frontend.

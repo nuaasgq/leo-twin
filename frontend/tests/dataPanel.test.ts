@@ -12,6 +12,7 @@ import {
   buildDataPanelRouteConstraints,
   buildDataPanelRuntimeProgress,
   buildDataPanelServiceLatencyDisplay,
+  buildDataPanelServiceLatencyRows,
   buildDataPanelSummary,
   buildDataPanelTelemetry,
   buildDataPanelTrafficDisplay,
@@ -760,6 +761,50 @@ describe("buildDataPanelServiceLatencyDisplay", () => {
         service_latency_input_network_avg_s: 4
       }).items
     ).toEqual([]);
+  });
+});
+
+describe("buildDataPanelServiceLatencyRows", () => {
+  it("formats bounded per-service latency trace rows", () => {
+    const rows = buildDataPanelServiceLatencyRows(
+      {
+        version: "v1",
+        mode: "RECENT_SERVICE_LIMITED",
+        service_count: 2,
+        service_limit: 32,
+        item_count: 2,
+        items: [
+          {
+            task_id: "svc-00-compute_service-00000-task",
+            complete: true,
+            input_network_latency_s: 4,
+            compute_queue_delay_s: 0,
+            compute_execution_delay_s: 2,
+            output_network_latency_s: 1.4,
+            total_latency_s: 7.4
+          },
+          {
+            task_id: "svc-short",
+            complete: false,
+            input_network_latency_s: 1,
+            compute_queue_delay_s: 0,
+            compute_execution_delay_s: 1,
+            output_network_latency_s: 0,
+            total_latency_s: 0
+          }
+        ]
+      },
+      1
+    );
+
+    expect(rows).toEqual([
+      {
+        taskId: "svc-00-compute_service-00000-task",
+        taskLabel: "...vice-00000-task",
+        statusLabel: "完整闭环",
+        totalLatencyLabel: "7,400 ms"
+      }
+    ]);
   });
 });
 

@@ -366,13 +366,18 @@ The following issue-sized slices have now been delivered on
   - Maps to suggestions 76-82 and the per-service lifecycle trace path.
   - Runtime status now exposes bounded `service_latency_history_v1` items from
     existing lifecycle component samples for future trace-row UI.
+- `feat(dashboard): show service trace rows`
+  - Maps to suggestions 76-82 and 91.
+  - The dashboard now renders bounded per-service trace labels from
+    `service_latency_history_v1` with task id, closed-loop state, and total
+    latency.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected
 satellite coverage/beam labels, compute vector KPI samples, and the frontend
 visual verification script. The remaining high-value product gaps are backend
-dashboard rendering for per-service lifecycle trace rows, screenshot pixel
-baselines, and browser-driven reset/control end-to-end smoke tests.
+input/output flow ids in service trace rows, screenshot pixel baselines, and
+browser-driven reset/control end-to-end smoke tests.
 
 ## Acceptance Gates
 

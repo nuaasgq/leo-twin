@@ -21,6 +21,7 @@ import {
   RuntimeMetricsSummary,
   RuntimeNetworkQualityProvenanceV1,
   RuntimeSatelliteKpiSlicesV1,
+  RuntimeServiceLatencyHistoryV1,
   RuntimeStatusPayload
 } from "../../core/event_types";
 import { WorldSnapshot } from "../../state/snapshot_engine";
@@ -112,6 +113,9 @@ export const DataPanel = memo(function DataPanel({
   );
   const serviceLatency = buildDataPanelServiceLatencyDisplay(
     runtimeStatus.metrics_summary
+  );
+  const serviceLatencyRows = buildDataPanelServiceLatencyRows(
+    runtimeStatus.service_latency_history_v1
   );
   const routeConstraints = buildDataPanelRouteConstraints(
     snapshot,
@@ -426,6 +430,16 @@ export const DataPanel = memo(function DataPanel({
                   </span>
                 ))}
               </div>
+              {serviceLatencyRows.length > 0 ? (
+                <div className="data-panel-formula-inputs" aria-label="通信计算服务轨迹">
+                  {serviceLatencyRows.map((row) => (
+                    <span key={row.taskId} title={row.taskId}>
+                      {row.taskLabel} <strong>{row.totalLatencyLabel}</strong>{" "}
+                      {row.statusLabel}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
             </>
           ) : null}
           <TopComputeNodeTable rows={topComputeNodes} />
@@ -1416,6 +1430,13 @@ function formatCount(value: number): string {
   return Math.round(value).toLocaleString("zh-CN");
 }
 
+function compactTaskId(taskId: string): string {
+  if (taskId.length <= 18) {
+    return taskId;
+  }
+  return `...${taskId.slice(-15)}`;
+}
+
 function formatPreciseMetricValue(value: number): string {
   return value.toLocaleString("zh-CN", {
     maximumFractionDigits: 3,
@@ -1588,6 +1609,13 @@ export interface DataPanelServiceLatencyDisplay {
   completeCountLabel: string;
   totalLatencyLabel: string;
   items: readonly DataPanelNetworkFormulaInput[];
+}
+
+export interface DataPanelServiceLatencyRow {
+  taskId: string;
+  taskLabel: string;
+  statusLabel: string;
+  totalLatencyLabel: string;
 }
 
 export interface DataPanelRouteConstraint {
@@ -1782,6 +1810,19 @@ export function buildDataPanelServiceLatencyDisplay(
     ),
     items: taskCount > 0 ? items : []
   };
+}
+
+export function buildDataPanelServiceLatencyRows(
+  history: RuntimeServiceLatencyHistoryV1 | null | undefined,
+  limit = 3
+): readonly DataPanelServiceLatencyRow[] {
+  const rowLimit = Math.max(0, Math.floor(limit));
+  return (history?.items ?? []).slice(0, rowLimit).map((item) => ({
+    taskId: item.task_id,
+    taskLabel: compactTaskId(item.task_id),
+    statusLabel: item.complete ? "完整闭环" : "未闭环",
+    totalLatencyLabel: formatMetricMilliseconds(item.total_latency_s)
+  }));
 }
 
 export function buildDataPanelRouteConstraints(
