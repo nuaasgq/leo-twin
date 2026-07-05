@@ -5,6 +5,46 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Dashboard User Config Diff v1
+
+- Branch: `feature/T202-dashboard-user-config-diff-v1`
+- Commit: pending in this commit
+- Scope: render the backend-owned user configuration `change_summary` inside
+  the dashboard preflight result card. The UI now shows total changed field
+  count, preview coverage, section counts, hidden preview count when present,
+  and bounded changed field rows before the user sends `CONFIG_UPDATE`. The
+  rendering remains driven by the backend report rather than local frontend
+  inference.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/integration_demo.md`
+  - `docs/user_configuration_schema_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 25 files / 300 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing `DataPanel` chunk-size
+      warning after minification.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - No implementation blocker. The row preview is intentionally bounded to keep
+    the existing dashboard layout stable.
+  - Local runtime/generated config files remain dirty and are intentionally not
+    included in this task.
+- Known remaining issues / follow-up:
+  - A richer diff confirmation modal, YAML upload, and full diff search/filter
+    remain future configuration workflow work.
+
 ## 2026-07-06 - User Config Preflight Diff v1
 
 - Branch: `feature/T201-user-config-preflight-diff-v1`

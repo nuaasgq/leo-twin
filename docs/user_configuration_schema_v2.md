@@ -115,6 +115,11 @@ The validation `change_summary` is backend-owned. It includes:
   candidate values, and change types;
 - `hidden_change_count`: fields omitted from the bounded preview.
 
+The standalone dashboard renders this backend diff in the preflight result
+card. It shows the total changed field count, section counts, hidden preview
+count when applicable, and a bounded list of changed field paths before the
+user can press "应用配置".
+
 Each field schema includes:
 
 - path

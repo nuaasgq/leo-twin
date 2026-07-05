@@ -935,6 +935,8 @@ describe("buildDataPanelUserConfigurationValidationDisplay", () => {
         "payload normalized_config",
         "effect REINITIALIZES_SESSION_AND_STREAMS"
       ],
+      changeLabels: [],
+      changeRows: [],
       errorLabels: []
     });
 
@@ -978,16 +980,101 @@ describe("buildDataPanelUserConfigurationValidationDisplay", () => {
   it("reports pending, request error, and empty validation states", () => {
     expect(buildDataPanelUserConfigurationValidationDisplay(null, true)).toMatchObject({
       tone: "pending",
-      statusLabel: "后端预检中"
+      statusLabel: "后端预检中",
+      changeLabels: [],
+      changeRows: []
     });
     expect(
       buildDataPanelUserConfigurationValidationDisplay(null, false, "HTTP 400")
     ).toMatchObject({
       tone: "error",
       statusLabel: "预检请求失败",
+      changeLabels: [],
+      changeRows: [],
       errorLabels: ["HTTP 400"]
     });
     expect(buildDataPanelUserConfigurationValidationDisplay(null)).toBeNull();
+  });
+
+  it("renders backend user configuration change summaries", () => {
+    const display = buildDataPanelUserConfigurationValidationDisplay({
+      version: "v1",
+      source: "BACKEND_USER_CONFIGURATION",
+      schema_id: "sees.user_configuration.v2",
+      validation_scope: "USER_PROVIDED_CONFIG_MAPPING",
+      format: "JSON_MAPPING",
+      mutation_policy: "VALIDATE_ONLY_NO_APPLY",
+      unknown_key_policy: "REJECT",
+      defaulting_policy: "OMITTED_FIELDS_USE_BACKEND_DEFAULTS",
+      ok: true,
+      error_count: 0,
+      errors: [],
+      normalized_config_hash:
+        "sha256:abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+      normalized_config: {
+        scenario: {
+          satellite_count: 84
+        }
+      },
+      change_summary: {
+        version: "v1",
+        source: "BACKEND_USER_CONFIGURATION",
+        baseline: "CURRENT_EFFECTIVE_SEES_CONFIG",
+        candidate: "NORMALIZED_USER_CONFIG",
+        changed_field_count: 3,
+        section_counts: {
+          runtime: 1,
+          scenario: 2
+        },
+        preview_limit: 24,
+        change_count: 3,
+        hidden_change_count: 0,
+        changes: [
+          {
+            path: "runtime.duration",
+            section: "runtime",
+            change_type: "CHANGED",
+            current_value: 120,
+            candidate_value: 600
+          },
+          {
+            path: "scenario.satellite_count",
+            section: "scenario",
+            change_type: "CHANGED",
+            current_value: 12,
+            candidate_value: 84
+          }
+        ]
+      },
+      apply_command: {
+        type: "CONFIG_UPDATE",
+        action: "CONFIG_UPDATE",
+        payload_source: "normalized_config",
+        requires_preflight_ok: true,
+        requires_explicit_user_action: true
+      }
+    });
+
+    expect(display).toMatchObject({
+      changeLabels: [
+        "变更 3 字段",
+        "预览 3 / 24",
+        "runtime 1",
+        "scenario 2"
+      ],
+      changeRows: [
+        {
+          path: "runtime.duration",
+          changeType: "CHANGED",
+          valueLabel: "120 -> 600"
+        },
+        {
+          path: "scenario.satellite_count",
+          changeType: "CHANGED",
+          valueLabel: "12 -> 84"
+        }
+      ]
+    });
   });
 
   it("selects only backend-normalized explicit apply payloads", () => {

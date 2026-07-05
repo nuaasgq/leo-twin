@@ -601,6 +601,26 @@ export const DataPanel = memo(function DataPanel({
                     <span key={label}>{label}</span>
                   ))}
                 </div>
+                {userConfigurationValidationDisplay.changeLabels.length > 0 ? (
+                  <div className="data-panel-config-change-summary">
+                    <div className="data-panel-config-change-tags">
+                      {userConfigurationValidationDisplay.changeLabels.map((label) => (
+                        <span key={label}>{label}</span>
+                      ))}
+                    </div>
+                    {userConfigurationValidationDisplay.changeRows.length > 0 ? (
+                      <div className="data-panel-config-change-list">
+                        {userConfigurationValidationDisplay.changeRows.map((row) => (
+                          <div key={row.path} className="data-panel-config-change-row">
+                            <span>{row.path}</span>
+                            <strong>{row.valueLabel}</strong>
+                            <small>{row.changeType}</small>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
                 {userConfigurationValidationDisplay.errorLabels.length > 0 ? (
                   <div className="data-panel-config-validate-errors">
                     {userConfigurationValidationDisplay.errorLabels.map((label) => (
@@ -4898,7 +4918,15 @@ export interface DataPanelUserConfigurationValidationDisplay {
   statusLabel: string;
   detailLabel: string;
   metaLabels: readonly string[];
+  changeLabels: readonly string[];
+  changeRows: readonly DataPanelUserConfigurationChangeRow[];
   errorLabels: readonly string[];
+}
+
+export interface DataPanelUserConfigurationChangeRow {
+  path: string;
+  changeType: string;
+  valueLabel: string;
 }
 
 export function buildDataPanelUserConfigurationValidationDisplay(
@@ -4913,6 +4941,8 @@ export function buildDataPanelUserConfigurationValidationDisplay(
       statusLabel: "后端预检中",
       detailLabel: "正在校验 JSON 映射，不会应用配置",
       metaLabels: ["mutation VALIDATE_ONLY_NO_APPLY"],
+      changeLabels: [],
+      changeRows: [],
       errorLabels: []
     };
   }
@@ -4922,6 +4952,8 @@ export function buildDataPanelUserConfigurationValidationDisplay(
       statusLabel: "预检请求失败",
       detailLabel: error,
       metaLabels: ["mutation none", `endpoint ${userConfigurationValidateHref()}`],
+      changeLabels: [],
+      changeRows: [],
       errorLabels: [error]
     };
   }
@@ -4941,6 +4973,7 @@ export function buildDataPanelUserConfigurationValidationDisplay(
           applyStatus
         ].filter((label): label is string => label !== null && label !== undefined)
       : [];
+  const changeDisplay = buildUserConfigurationChangeDisplay(report);
   return {
     tone: report.ok ? "match" : "error",
     statusLabel: report.ok ? "配置可通过预检" : "配置预检未通过",
@@ -4954,8 +4987,64 @@ export function buildDataPanelUserConfigurationValidationDisplay(
       `default ${report.defaulting_policy}`,
       ...applyLabels
     ],
+    changeLabels: changeDisplay.labels,
+    changeRows: changeDisplay.rows,
     errorLabels: report.errors.map((item) => `${item.source}: ${item.message}`)
   };
+}
+
+function buildUserConfigurationChangeDisplay(
+  report: UserConfigurationValidationReportV1
+): {
+  labels: readonly string[];
+  rows: readonly DataPanelUserConfigurationChangeRow[];
+} {
+  const summary = report.change_summary;
+  if (!report.ok || summary === null || summary === undefined) {
+    return { labels: [], rows: [] };
+  }
+  const sectionLabels = Object.entries(summary.section_counts)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([section, count]) => `${section} ${formatCount(count)}`);
+  const hiddenLabel =
+    summary.hidden_change_count > 0
+      ? `隐藏 ${formatCount(summary.hidden_change_count)} 项`
+      : null;
+  return {
+    labels: [
+      `变更 ${formatCount(summary.changed_field_count)} 字段`,
+      `预览 ${formatCount(summary.change_count)} / ${formatCount(summary.preview_limit)}`,
+      hiddenLabel,
+      ...sectionLabels
+    ].filter((label): label is string => label !== null),
+    rows: summary.changes.slice(0, 8).map((item) => ({
+      path: item.path,
+      changeType: item.change_type,
+      valueLabel: `${formatUserConfigurationChangeValue(
+        item.current_value
+      )} -> ${formatUserConfigurationChangeValue(item.candidate_value)}`
+    }))
+  };
+}
+
+function formatUserConfigurationChangeValue(value: unknown): string {
+  if (value === null || value === undefined) {
+    return "null";
+  }
+  if (typeof value === "string") {
+    return value;
+  }
+  if (typeof value === "number") {
+    return Number.isInteger(value) ? formatCount(value) : formatPreciseMetricValue(value);
+  }
+  if (typeof value === "boolean") {
+    return value ? "true" : "false";
+  }
+  const encoded = JSON.stringify(value);
+  if (typeof encoded !== "string") {
+    return String(value);
+  }
+  return encoded.length > 96 ? `${encoded.slice(0, 93)}...` : encoded;
 }
 
 export function selectUserConfigurationApplyPayload(

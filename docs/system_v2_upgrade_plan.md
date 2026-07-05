@@ -66,7 +66,8 @@ Tasks:
     `POST /scenario/user-config/validate`; dashboard JSON preflight UI
     implemented in T199; guarded preflight-to-apply flow implemented in T200 by
     sending backend-normalized config through explicit `CONFIG_UPDATE`;
-    backend preflight diff summary implemented in T201.
+    backend preflight diff summary implemented in T201; dashboard diff
+    rendering implemented in T202.
 
 ### WS2. Business Demand Model v2
 

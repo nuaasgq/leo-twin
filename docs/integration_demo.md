@@ -189,7 +189,9 @@ provides a JSON mapping preflight box that calls
 `POST /scenario/user-config/validate` and displays the validation report without
 auto-applying the candidate configuration. After a successful preflight, the
 dashboard can send the backend-normalized mapping through the existing
-`CONFIG_UPDATE` control channel.
+`CONFIG_UPDATE` control channel. The preflight card renders the backend
+`change_summary` so users can see changed field counts, section counts, and
+bounded field-path previews before applying.
 
 Persisted package artifact routes:
 
