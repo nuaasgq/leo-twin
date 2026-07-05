@@ -42,7 +42,16 @@
       "compute_resource_used_gpu_tflops_fp16": 5,
       "compute_resource_used_npu_tops_int8": 8,
       "compute_resource_used_memory_gb": 16,
-      "compute_resource_used_storage_gb": 32
+      "compute_resource_used_storage_gb": 32,
+      "service_latency_summary_source": "METRIC_SAMPLE",
+      "service_latency_model": "COMMUNICATION_COMPUTE_COMPONENT_PROXY",
+      "service_latency_task_count": 2,
+      "service_latency_complete_count": 1,
+      "service_latency_input_network_avg_s": 4,
+      "service_latency_compute_queue_avg_s": 0,
+      "service_latency_compute_execution_avg_s": 2,
+      "service_latency_output_network_avg_s": 1.4,
+      "service_latency_total_avg_s": 7.4
     },
     "network_quality_provenance_v1": {
       "version": "v1",

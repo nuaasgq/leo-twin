@@ -4491,3 +4491,30 @@ change.
 - Recommended follow-up:
   - Add selected service trace rows once backend exposes bounded per-service
     lifecycle histories.
+
+## 2026-07-05 - Runtime Contract Service Latency Fixture v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: extend the frontend runtime status contract fixture with
+  `service_latency_*` metrics summary fields and assert the service latency
+  model, task count, and total latency in the contract test.
+- Changed files/modules:
+  - `frontend/tests/fixtures/runtimeStatus.contract.json`
+  - `frontend/tests/runtimeContractFixture.test.ts`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_frontend_visuals.ps1`
+    - Result: passed; verified 4 frontend visual assets, 25 frontend test files
+      / 191 tests, and frontend build.
+- Problems encountered:
+  - None. This is a fixture/test contract update only.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The fixture is representative, not generated from a live server command.
+- Recommended follow-up:
+  - Add a fixture generation/update command once runtime contract versioning is
+    formalized.

@@ -358,6 +358,10 @@ The following issue-sized slices have now been delivered on
   - The dashboard now consumes backend `service_latency_*` summary fields and
     displays communication-compute component latency values in the compute
     resource panel when samples exist.
+- `test(frontend): add service latency contract fixture`
+  - Maps to suggestions 76-82 and 92.
+  - The runtime status fixture now locks the `service_latency_*` metrics summary
+    contract consumed by the dashboard service latency block.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected
