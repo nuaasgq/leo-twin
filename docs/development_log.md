@@ -4804,3 +4804,32 @@ change.
 - Recommended follow-up:
   - Add a smoke command that verifies initialize/start/pause/reset after the
     launcher reports both services healthy.
+
+## 2026-07-05 - README Local Workflow v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: make the repository landing page point users to the supported Windows
+  launcher, dashboard URL, backend runtime status URL, launcher logs, and
+  frontend visual/dashboard verification script.
+- Changed files/modules:
+  - `README.md`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\sees_launcher.ps1 status -OpenSurface dashboard`
+    - Result: passed; confirmed the documented console/dashboard URLs are
+      reported by the launcher.
+  - `git diff --check`
+    - Result: passed, with only the pre-existing local runtime config CRLF
+      warnings.
+- Problems encountered:
+  - None. This is documentation alignment with existing launcher behavior.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - README intentionally stays concise and links to the launcher path rather
+    than documenting every backend/frontend endpoint.
+- Recommended follow-up:
+  - Add a short troubleshooting table for occupied ports and missing Python or
+    pnpm once launcher smoke tests are formalized.

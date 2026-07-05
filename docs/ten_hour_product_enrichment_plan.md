@@ -403,6 +403,11 @@ The following issue-sized slices have now been delivered on
   - `scripts/sees_launcher.ps1` now accepts `-OpenSurface dashboard` and
     reports both console and dashboard URLs from `status`, reducing manual
     navigation for dashboard-first validation.
+- `docs(readme): document local launcher workflow`
+  - Maps to suggestions 18, 91, 93, and 95.
+  - The repository README now advertises the supported Windows launcher,
+    dashboard URL, backend runtime status URL, launcher logs, and the frontend
+    visual/dashboard verification command.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected

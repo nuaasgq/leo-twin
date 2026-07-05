@@ -29,6 +29,31 @@ MVP-0 remains the historical foundation: it established the deterministic discre
 - Domain modules must not call each other directly.
 - Cross-domain communication must use events only.
 
+## Run Locally
+
+Windows one-command launcher:
+
+```powershell
+.\start_leo_twin.bat
+```
+
+Useful launcher commands:
+
+```powershell
+.\restart_leo_twin.bat
+.\stop_leo_twin.bat
+.\scripts\sees_launcher.ps1 status
+.\scripts\sees_launcher.ps1 restart -OpenSurface dashboard
+```
+
+Default local surfaces:
+
+- Console: `http://127.0.0.1:5173`
+- Dashboard: `http://127.0.0.1:5173/dashboard`
+- Backend status: `http://127.0.0.1:8765/runtime/status`
+
+Launcher logs are written to `artifacts\launcher`.
+
 ## Run Tests
 
 ```powershell
@@ -41,4 +66,10 @@ Frontend:
 ```powershell
 pnpm --dir frontend test
 pnpm --dir frontend build
+```
+
+Frontend visual/dashboard verification:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_frontend_visuals.ps1
 ```
