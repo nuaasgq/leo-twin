@@ -125,7 +125,8 @@ Tasks:
   - Depends on: V2-022.
   - Status: backend `route_explanation_summary_v1` runtime status object
     implemented in T209; standalone dashboard route explanation table bound to
-    backend fields in T210.
+    backend fields in T210; dashboard text filter for route/user/satellite/
+    bottleneck/business search implemented in T211.
 
 ### WS4. Compute Network Model v2
 

@@ -5,6 +5,45 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Dashboard Route Explanation Filters v1
+
+- Branch: `feature/T211-dashboard-route-explanation-filters-v1`
+- Commit: pending in this commit
+- Scope: add a dedicated dashboard filter for backend-owned
+  `route_explanation_summary_v1` rows. The filter searches route id, flow id,
+  business label, next hop, capacity/demand label, route pressure, bottleneck
+  label, explanation label, and path label. This keeps route explanation
+  filtering separate from the existing user/satellite node detail filter.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 25 files / 310 tests. The project script currently runs
+      the full frontend Vitest suite for this invocation.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing `DataPanel` chunk-size
+      warning after minification.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - None in implementation. Empty states distinguish between waiting for
+    backend route explanations and a filter that matches zero rows.
+  - Local runtime/generated config files remain dirty and are intentionally not
+    included in this task.
+- Known remaining issues / follow-up:
+  - The filter is still a single text search. A later dashboard pass should add
+    structured chips/dropdowns for bottleneck component, business type, and
+    availability.
+
 ## 2026-07-06 - Dashboard Route Explanations v1
 
 - Branch: `feature/T210-dashboard-route-explanations-v1`

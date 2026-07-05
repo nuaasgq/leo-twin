@@ -201,6 +201,7 @@ export const DataPanel = memo(function DataPanel({
   const [computeSeriesKey, setComputeSeriesKey] =
     useState<DataPanelComputeSeriesKey>("computeUsedTflops");
   const [detailFilter, setDetailFilter] = useState("");
+  const [routeExplanationFilter, setRouteExplanationFilter] = useState("");
   const [userDetailPage, setUserDetailPage] = useState(0);
   const [satelliteDetailPage, setSatelliteDetailPage] = useState(0);
   const [selectedHistorySatelliteId, setSelectedHistorySatelliteId] = useState<string | null>(
@@ -332,6 +333,10 @@ export const DataPanel = memo(function DataPanel({
   );
   const routeExplanations = buildDataPanelRouteExplanationRows(
     runtimeStatus.route_explanation_summary_v1
+  );
+  const filteredRouteExplanations = filterRouteExplanationRows(
+    routeExplanations,
+    routeExplanationFilter
   );
   const latestTelemetry = telemetry[telemetry.length - 1];
   const computeSeries = computeSeriesOption(computeSeriesKey);
@@ -1059,7 +1064,11 @@ export const DataPanel = memo(function DataPanel({
             </ResponsiveContainer>
           </div>
           <RouteConstraintTable rows={routeConstraints} />
-          <RouteExplanationTable rows={routeExplanations} />
+          <RouteExplanationTable
+            rows={filteredRouteExplanations}
+            filterValue={routeExplanationFilter}
+            onFilterChange={setRouteExplanationFilter}
+          />
         </section>
 
         <section className="dashboard-section data-panel-chart" aria-label="算力资源消耗曲线">
@@ -1669,33 +1678,71 @@ function RouteConstraintTable({ rows }: { rows: DataPanelRouteConstraintRows }) 
   );
 }
 
-function RouteExplanationTable({ rows }: { rows: DataPanelRouteExplanationRows }) {
+function RouteExplanationTable({
+  rows,
+  filterValue,
+  onFilterChange
+}: {
+  rows: DataPanelRouteExplanationRows;
+  filterValue: string;
+  onFilterChange: (value: string) => void;
+}) {
   if (rows.items.length === 0) {
-    return <div className="data-panel-route-empty">等待后端路由解释</div>;
+    const emptyLabel = rows.sourceLabel.includes("筛选")
+      ? "没有匹配的路由解释"
+      : "等待后端路由解释";
+    return (
+      <div className="data-panel-route-explanations">
+        <div className="data-panel-route-filter">
+          <label htmlFor="data-panel-route-explanation-filter">路由筛选</label>
+          <input
+            id="data-panel-route-explanation-filter"
+            type="search"
+            value={filterValue}
+            onChange={(event) => onFilterChange(event.currentTarget.value)}
+            placeholder="用户 / 卫星 / 下一跳 / 瓶颈 / 业务"
+          />
+        </div>
+        <div className="data-panel-route-source">{rows.sourceLabel}</div>
+        <div className="data-panel-route-empty">{emptyLabel}</div>
+      </div>
+    );
   }
   return (
-    <div className="data-panel-route-table explanations" aria-label="后端路由解释明细">
-      <div className="data-panel-route-source">{rows.sourceLabel}</div>
-      <div className="data-panel-route-row header">
-        <span>路由</span>
-        <span>业务</span>
-        <span>下一跳</span>
-        <span>容量/需求</span>
-        <span>压力</span>
-        <span>瓶颈</span>
-        <span>解释</span>
+    <div className="data-panel-route-explanations">
+      <div className="data-panel-route-filter">
+        <label htmlFor="data-panel-route-explanation-filter">路由筛选</label>
+        <input
+          id="data-panel-route-explanation-filter"
+          type="search"
+          value={filterValue}
+          onChange={(event) => onFilterChange(event.currentTarget.value)}
+          placeholder="用户 / 卫星 / 下一跳 / 瓶颈 / 业务"
+        />
       </div>
-      {rows.items.map((row) => (
-        <div className="data-panel-route-row" key={row.routeId} title={row.pathLabel}>
-          <span>{row.routeId}</span>
-          <span>{row.businessLabel}</span>
-          <span>{row.nextHopLabel}</span>
-          <span>{row.capacityDemandLabel}</span>
-          <span>{row.pressureLabel}</span>
-          <span>{row.bottleneckLabel}</span>
-          <span>{row.explanationLabel}</span>
+      <div className="data-panel-route-table explanations" aria-label="后端路由解释明细">
+        <div className="data-panel-route-source">{rows.sourceLabel}</div>
+        <div className="data-panel-route-row header">
+          <span>路由</span>
+          <span>业务</span>
+          <span>下一跳</span>
+          <span>容量/需求</span>
+          <span>压力</span>
+          <span>瓶颈</span>
+          <span>解释</span>
         </div>
-      ))}
+        {rows.items.map((row) => (
+          <div className="data-panel-route-row" key={row.routeId} title={row.pathLabel}>
+            <span>{row.routeId}</span>
+            <span>{row.businessLabel}</span>
+            <span>{row.nextHopLabel}</span>
+            <span>{row.capacityDemandLabel}</span>
+            <span>{row.pressureLabel}</span>
+            <span>{row.bottleneckLabel}</span>
+            <span>{row.explanationLabel}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -6451,6 +6498,33 @@ function routeExplanationCapacityDemandLabel(
       ? formatMetricMbps(Math.max(0, demand))
       : "未声明";
   return `${capacityLabel} / ${demandLabel}`;
+}
+
+export function filterRouteExplanationRows(
+  rows: DataPanelRouteExplanationRows,
+  query: string
+): DataPanelRouteExplanationRows {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (normalizedQuery.length === 0) {
+    return rows;
+  }
+  const items = rows.items.filter((item) =>
+    [
+      item.routeId,
+      item.flowId,
+      item.businessLabel,
+      item.nextHopLabel,
+      item.capacityDemandLabel,
+      item.pressureLabel,
+      item.bottleneckLabel,
+      item.explanationLabel,
+      item.pathLabel
+    ].some((value) => value.toLowerCase().includes(normalizedQuery))
+  );
+  return {
+    sourceLabel: `${rows.sourceLabel} / 筛选 ${formatCount(items.length)}`,
+    items
+  };
 }
 
 function buildBackendRouteConstraint(

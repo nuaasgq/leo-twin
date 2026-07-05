@@ -46,6 +46,7 @@ import {
   buildTopComputeNodeRows,
   buildUserBusinessRequestRows,
   COMPUTE_SERIES_OPTIONS,
+  filterRouteExplanationRows,
   filterSatelliteResourceRows,
   filterUserBusinessRequestRows,
   paginateDetailRows,
@@ -680,6 +681,80 @@ describe("buildDataPanelRouteExplanationRows", () => {
       sourceLabel: "等待后端路由解释",
       items: []
     });
+  });
+
+  it("filters route explanation rows by business, bottleneck, next hop, or path", () => {
+    const rows = buildDataPanelRouteExplanationRows({
+      version: "v1",
+      source: "BACKEND_RUNTIME_SNAPSHOT",
+      route_count: 2,
+      item_count: 2,
+      available_route_count: 1,
+      blocked_route_count: 1,
+      over_demand_route_count: 1,
+      compute_service_route_count: 1,
+      network_service_route_count: 1,
+      items: [
+        {
+          route_id: "route-b",
+          flow_id: "flow-b",
+          user_id: "user-1",
+          source_id: "user-1",
+          destination_id: "service-0",
+          selected_satellite_id: "sat-0",
+          primary_next_hop_id: "sat-0",
+          next_hop_ids: ["sat-0", "sat-1", "service-0"],
+          hop_count: 3,
+          path_label: "user-1 -> sat-0 -> sat-1 -> service-0",
+          available: false,
+          capacity_mbps: 40,
+          demand_mbps: 60,
+          route_pressure_proxy: 1,
+          business_type: "DATA_TRANSFER",
+          business_label: "数据传输",
+          bottleneck_component: "CAPACITY",
+          bottleneck_reason: "ROUTE_CAPACITY_BELOW_DEMAND",
+          bottleneck_reason_label: "Route capacity below demand",
+          explanation_label: "capacity 40 Mbps < demand 60 Mbps"
+        },
+        {
+          route_id: "route-a",
+          flow_id: "flow-a",
+          user_id: "user-0",
+          source_id: "user-0",
+          destination_id: "compute-0",
+          selected_satellite_id: "sat-0",
+          primary_next_hop_id: "sat-0",
+          next_hop_ids: ["sat-0", "compute-0"],
+          hop_count: 2,
+          path_label: "user-0 -> sat-0 -> compute-0",
+          available: true,
+          capacity_mbps: 80,
+          demand_mbps: 60,
+          route_pressure_proxy: 0.75,
+          business_type: "COMPUTE_SERVICE",
+          business_label: "通信-计算服务",
+          bottleneck_component: "LOSS_PROXY",
+          bottleneck_reason: "ROUTE_LOSS_PROXY_POSITIVE",
+          bottleneck_reason_label: "Route loss proxy is positive",
+          explanation_label: "route has a positive flow-level loss proxy"
+        }
+      ]
+    });
+
+    expect(filterRouteExplanationRows(rows, "capacity").items.map((row) => row.routeId)).toEqual([
+      "route-b"
+    ]);
+    expect(filterRouteExplanationRows(rows, "计算").items.map((row) => row.routeId)).toEqual([
+      "route-a"
+    ]);
+    expect(filterRouteExplanationRows(rows, "compute-0").items.map((row) => row.routeId)).toEqual([
+      "route-a"
+    ]);
+    expect(filterRouteExplanationRows(rows, "  SAT-1 ").items.map((row) => row.routeId)).toEqual([
+      "route-b"
+    ]);
+    expect(filterRouteExplanationRows(rows, "").items).toBe(rows.items);
   });
 });
 

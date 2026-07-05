@@ -1901,6 +1901,39 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
   overflow-x: auto;
 }
 
+.data-panel-route-explanations {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.data-panel-route-filter {
+  display: grid;
+  grid-template-columns: auto minmax(180px, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.data-panel-route-filter label {
+  color: var(--app-muted);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.data-panel-route-filter input {
+  min-width: 0;
+  width: 100%;
+  border: 1px solid #2c4554;
+  border-radius: 5px;
+  padding: 6px 8px;
+  background: #0b141c;
+  color: var(--app-text);
+  font-size: 11px;
+  font-weight: 700;
+}
+
 .data-panel-route-source {
   min-width: 0;
   color: var(--accent-cyan);
