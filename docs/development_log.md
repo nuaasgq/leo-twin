@@ -5805,3 +5805,23 @@ change.
   - This is still jsdom/static-render coverage, not a real browser click test.
 - Recommended follow-up:
   - Add Playwright button-click smoke once an E2E harness exists.
+
+## 2026-07-05 - Current Product Status Test Count Refresh
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: update the current product status page after the pending-button
+  render regression test increased the frontend test count to 197.
+- Changed files/modules:
+  - `docs/current_product_status.md`
+  - `docs/development_log.md`
+- Validation:
+  - `git diff --check`
+    - Result: passed, with only pre-existing local runtime config CRLF
+      warnings.
+- Problems encountered:
+  - None. This is documentation-only.
+- Known remaining issues:
+  - The status page is manually maintained.
+- Recommended follow-up:
+  - Keep test counts synchronized after future frontend test additions.

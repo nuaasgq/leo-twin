@@ -553,6 +553,10 @@ The following issue-sized slices have now been delivered on
   - Maps to suggestions 14-18 and 91-95.
   - Static-render coverage now checks that pending runtime control states
     visibly disable initialize/start/stop/reset buttons in the ConfigPanel.
+- `docs(status): refresh frontend test count`
+  - Maps to suggestions 91-95.
+  - `docs/current_product_status.md` now reflects the latest 25-file / 197-test
+    frontend verification count after the pending-button render test.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected
