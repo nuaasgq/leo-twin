@@ -5431,3 +5431,35 @@ change.
 - Recommended follow-up:
   - Add expected resource-vector dimensions once acceptance configs declare
     them explicitly.
+
+## 2026-07-05 - Runtime Health Constellation Profile Expectation v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add optional `ExpectedConstellationProfile` checks to runtime health
+  and aggregate acceptance scripts, so acceptance commands can assert backend
+  derived constellation profile names such as `CUSTOM_WALKER`.
+- Changed files/modules:
+  - `scripts/smoke_runtime_health.ps1`
+  - `scripts/verify_product_acceptance.ps1`
+  - `README.md`
+  - `docs/integration_demo.md`
+  - `docs/product_acceptance_scenarios.md`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\smoke_runtime_health.ps1 -JsonSummary -ExpectedSatelliteCount 120 -ExpectedUserCount 100 -ExpectedComputeNodeCount 120 -ExpectedConstellationProfile CUSTOM_WALKER -ExpectedTrafficClass COMPUTE_SERVICE`
+    - Result: passed.
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_product_acceptance.ps1 -SkipBuild -ExpectedSatelliteCount 120 -ExpectedUserCount 100 -ExpectedComputeNodeCount 120 -ExpectedConstellationProfile CUSTOM_WALKER -ExpectedTrafficClass COMPUTE_SERVICE`
+    - Result: passed; staged runtime config guard, backend targeted tests,
+      frontend visual tests, and runtime smoke all passed.
+- Problems encountered:
+  - None. The new expected value is opt-in.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - Acceptance YAML currently does not declare a top-level constellation profile
+    field, so profile is usually passed explicitly for local checks.
+- Recommended follow-up:
+  - Add explicit `constellation_profile` to acceptance YAML if profile checks
+    become required in CI.

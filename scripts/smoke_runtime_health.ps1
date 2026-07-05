@@ -6,6 +6,7 @@ param(
     [int]$ExpectedSatelliteCount = -1,
     [int]$ExpectedUserCount = -1,
     [int]$ExpectedComputeNodeCount = -1,
+    [string]$ExpectedConstellationProfile = "",
     [string]$ExpectedTrafficClass = ""
 )
 
@@ -102,6 +103,7 @@ Assert-FrontendShell -Name "Frontend dashboard" -Check $dashboardCheck
 $satelliteCount = [int]$backendSummary.derived_constellation_summary.satellite_count
 $userCount = [int]$runtimeStatus.generated_config.user_count
 $computeNodeCount = [int]$backendSummary.compute_resource_summary.compute_node_count
+$constellationProfile = [string]$backendSummary.derived_constellation_summary.profile
 $trafficClass = [string]$backendSummary.traffic_demand_summary.traffic_class
 
 if ($ExpectedSatelliteCount -ge 0 -and $satelliteCount -ne $ExpectedSatelliteCount) {
@@ -112,6 +114,9 @@ if ($ExpectedUserCount -ge 0 -and $userCount -ne $ExpectedUserCount) {
 }
 if ($ExpectedComputeNodeCount -ge 0 -and $computeNodeCount -ne $ExpectedComputeNodeCount) {
     throw "Expected compute_node_count=$ExpectedComputeNodeCount, got $computeNodeCount."
+}
+if ($ExpectedConstellationProfile -and $constellationProfile -ne $ExpectedConstellationProfile) {
+    throw "Expected constellation_profile=$ExpectedConstellationProfile, got $constellationProfile."
 }
 if ($ExpectedTrafficClass -and $trafficClass -ne $ExpectedTrafficClass) {
     throw "Expected traffic_class=$ExpectedTrafficClass, got $trafficClass."
@@ -126,7 +131,7 @@ $summary = [ordered]@{
     session_id = $runtimeStatus.status.session_id
     satellite_count = $satelliteCount
     user_count = $userCount
-    constellation_profile = $backendSummary.derived_constellation_summary.profile
+    constellation_profile = $constellationProfile
     traffic_class = $trafficClass
     compute_node_count = $computeNodeCount
     compute_resource_model = $backendSummary.compute_resource_summary.resource_model

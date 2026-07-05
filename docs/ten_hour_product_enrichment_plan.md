@@ -503,6 +503,10 @@ The following issue-sized slices have now been delivered on
   - Maps to suggestions 51, 57, and 91-95.
   - Runtime health smoke now asserts `ComputeResourceVector` in backend compute
     summary and exposes the resource model in JSON output.
+- `test(runtime): add constellation profile expectation`
+  - Maps to suggestions 1, 4, 5, and 91-95.
+  - Runtime health and aggregate acceptance scripts can now assert backend
+    derived constellation profile names.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected

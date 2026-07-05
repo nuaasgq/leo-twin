@@ -6,6 +6,7 @@ param(
     [int]$ExpectedSatelliteCount = -1,
     [int]$ExpectedUserCount = -1,
     [int]$ExpectedComputeNodeCount = -1,
+    [string]$ExpectedConstellationProfile = "",
     [string]$ExpectedTrafficClass = ""
 )
 
@@ -58,6 +59,7 @@ print(json.dumps({
     'satellite_count': int(scenario.get('satellite_count', -1)),
     'user_count': int(scenario.get('user_count', -1)),
     'compute_node_count': int(scenario.get('compute_nodes', -1)),
+    'constellation_profile': str(scenario.get('constellation_profile', '')),
     'traffic_class': traffic_class,
 }, sort_keys=True))
 '@
@@ -92,6 +94,9 @@ try {
         }
         if ($ExpectedComputeNodeCount -lt 0) {
             $ExpectedComputeNodeCount = [int]$expectations.compute_node_count
+        }
+        if (-not $ExpectedConstellationProfile -and $expectations.constellation_profile) {
+            $ExpectedConstellationProfile = [string]$expectations.constellation_profile
         }
         if (-not $ExpectedTrafficClass -and $expectations.traffic_class) {
             $ExpectedTrafficClass = [string]$expectations.traffic_class
@@ -135,6 +140,9 @@ try {
         }
         if ($ExpectedComputeNodeCount -ge 0) {
             $smokeArgs += @("-ExpectedComputeNodeCount", "$ExpectedComputeNodeCount")
+        }
+        if ($ExpectedConstellationProfile) {
+            $smokeArgs += @("-ExpectedConstellationProfile", $ExpectedConstellationProfile)
         }
         if ($ExpectedTrafficClass) {
             $smokeArgs += @("-ExpectedTrafficClass", $ExpectedTrafficClass)
