@@ -16,6 +16,10 @@ $Assets = @(
     @{
         Path = "frontend\public\assets\nasa-satellite-kit\satellite-kit-radio-1.glb"
         Sha256 = "9b09e045fa455de38338748d66d12bee6a5d604427f33144cc39e8ff212b73d9"
+    },
+    @{
+        Path = "frontend\public\assets\natural-earth\ne_110m_admin_0_countries.geojson"
+        Sha256 = "6866c877d39cba9c357620878839b336d569f8c662d3cfab4cb1dbe2d39c977f"
     }
 )
 

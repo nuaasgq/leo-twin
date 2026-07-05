@@ -3746,3 +3746,31 @@ change.
 - Recommended follow-up:
   - Wire the asset verification script into a broader frontend acceptance
     command after the visual smoke workflow is stable.
+
+## 2026-07-05 - Natural Earth Asset Verification v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: include the bundled Natural Earth 1:110m country boundary GeoJSON in
+  the repository-level frontend visual asset verification script. This gives the
+  country overlay asset the same existence and SHA-256 guard as the satellite
+  GLB files.
+- Changed files/modules:
+  - `scripts/verify_frontend_assets.ps1`
+  - `docs/development_log.md`
+- Validation:
+  - `powershell -ExecutionPolicy Bypass -File scripts\verify_frontend_assets.ps1`
+    - Result: passed, verified 4 frontend visual assets.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- countryOverlays.test.ts`
+    - Result: passed, 24 files / 173 tests.
+- Problems encountered:
+  - None.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The country overlay still depends on Cesium/browser rendering for visual
+    confirmation; this task only verifies asset integrity.
+- Recommended follow-up:
+  - Add browser screenshot checks for opaque globe plus visible country
+    boundaries once the in-app browser connector is stable.
