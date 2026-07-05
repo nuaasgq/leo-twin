@@ -3619,3 +3619,33 @@ change.
 - Recommended follow-up:
   - Add an optional compact diagnostics popover if users need visible details
     without relying on hover.
+
+## 2026-07-05 - Dashboard Scale Summary Alignment v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: align the standalone data panel scale label with backend-derived
+  constellation and fidelity summaries. The dashboard now shows derived plane
+  count, satellites per plane, user count, and backend scale mode, and can fall
+  back to runtime fidelity status before generated config is present.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 24 files / 173 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - None beyond preserving the existing compact dashboard layout.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The data panel shows the scale mode label, but not yet a full expandable
+    explanation of each fidelity policy field.
+- Recommended follow-up:
+  - Add a small scale/fidelity details popover shared by the control console
+    and data dashboard.

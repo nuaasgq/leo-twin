@@ -14,6 +14,7 @@ import {
 } from "recharts";
 
 import {
+  FidelitySummary,
   GeneratedScenarioConfig,
   TrafficDemandSummary,
   RuntimeKpiTimeSeriesV1,
@@ -79,12 +80,12 @@ export const DataPanel = memo(function DataPanel({
     displaySimTime,
     displayEventCount
   );
-  const constellation = generatedConfig?.backend_summary?.derived_constellation_summary;
-  const configuredScale = generatedConfig
-    ? constellation
-      ? `${generatedConfig.satellite_count} 星 / ${constellation.plane_count} 面 / ${generatedConfig.user_count} 用户`
-      : `${generatedConfig.satellite_count} 星 / ${generatedConfig.user_count} 用户`
-    : "等待初始化";
+  const fidelitySummary =
+    runtimeStatus.fidelity_summary ??
+    generatedConfig?.backend_summary?.fidelity_summary ??
+    snapshot.fidelity_summary ??
+    null;
+  const configuredScale = buildDataPanelConfiguredScale(generatedConfig, fidelitySummary);
   const trafficSummary = generatedConfig?.backend_summary?.traffic_demand_summary;
   const trafficDisplay = buildDataPanelTrafficDisplay(trafficSummary);
   const runtimeProgress = buildDataPanelRuntimeProgress(summary.simTime, runtimeStatus.duration);
@@ -544,6 +545,57 @@ export function buildDataPanelRuntimeProgress(
     elapsedLabel: formatDurationCompact(elapsed),
     durationLabel: formatDurationCompact(duration)
   };
+}
+
+export function buildDataPanelConfiguredScale(
+  generatedConfig: GeneratedScenarioConfig | null,
+  fidelitySummary?: FidelitySummary | null
+): string {
+  const constellation = generatedConfig?.backend_summary?.derived_constellation_summary;
+  const satelliteCount =
+    constellation?.satellite_count ??
+    generatedConfig?.satellite_count ??
+    fidelitySummary?.satellite_count;
+  const userCount = generatedConfig?.user_count ?? fidelitySummary?.user_count;
+  if (satelliteCount === undefined && userCount === undefined) {
+    return "等待初始化";
+  }
+
+  const parts: string[] = [];
+  if (satelliteCount !== undefined) {
+    parts.push(`${formatCount(satelliteCount)} 星`);
+  }
+  if (constellation !== undefined) {
+    parts.push(`${formatCount(constellation.plane_count)} 面`);
+    parts.push(`${formatCount(constellation.satellites_per_plane)} 星/面`);
+  } else if (generatedConfig !== null && generatedConfig.orbit_plane_count > 0) {
+    parts.push(`${formatCount(generatedConfig.orbit_plane_count)} 面`);
+  }
+  if (userCount !== undefined) {
+    parts.push(`${formatCount(userCount)} 用户`);
+  }
+
+  const scaleMode = dataPanelScaleModeLabel(fidelitySummary?.current_scale_mode);
+  if (scaleMode !== null) {
+    parts.push(scaleMode);
+  }
+  return parts.join(" / ");
+}
+
+function dataPanelScaleModeLabel(mode: string | undefined): string | null {
+  if (mode === undefined || mode === "none" || mode === "NONE") {
+    return null;
+  }
+  if (mode === "LARGE_SCALE_AGGREGATED") {
+    return "大规模聚合";
+  }
+  if (mode === "MEDIUM_SCALE_BATCHED") {
+    return "中规模批量";
+  }
+  if (mode === "SMALL_SCALE_DETAILED") {
+    return "小规模详细";
+  }
+  return mode;
 }
 
 export interface DataPanelTelemetryPoint {
@@ -1134,6 +1186,10 @@ function formatMetricValue(value: number): string {
     maximumFractionDigits: 1,
     minimumFractionDigits: 0
   });
+}
+
+function formatCount(value: number): string {
+  return Math.round(value).toLocaleString("zh-CN");
 }
 
 function formatPreciseMetricValue(value: number): string {

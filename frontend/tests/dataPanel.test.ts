@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildComputeResourcePool,
+  buildDataPanelConfiguredScale,
   buildDataPanelDisplaySummary,
   buildDataPanelNetworkFormulaInputs,
   buildDataPanelNetworkKpiCaveats,
@@ -14,6 +15,7 @@ import {
   buildTopComputeNodeRows,
   resolveNetworkQualityKpis
 } from "../src/dashboard/data_panel/DataPanel";
+import { FidelitySummary, GeneratedScenarioConfig } from "../src/core/event_types";
 import { WorldSnapshot } from "../src/state/snapshot_engine";
 
 describe("buildDataPanelSummary", () => {
@@ -359,6 +361,57 @@ describe("buildDataPanelRuntimeProgress", () => {
 
   it("clamps the data panel progress to the configured duration", () => {
     expect(buildDataPanelRuntimeProgress(900, 600).percentLabel).toBe("100%");
+  });
+});
+
+describe("buildDataPanelConfiguredScale", () => {
+  const fidelitySummary: FidelitySummary = {
+    orbit_update_mode: "BATCH",
+    metrics_mode: "AGGREGATED",
+    space_link_mode: "BOUNDED_CANDIDATE",
+    detailed_space_link_enabled: false,
+    space_link_candidate_policy: "SAME_PLANE_AND_ADJACENT_PLANE_BOUNDED_CANDIDATES",
+    max_space_link_candidates_per_satellite: 4,
+    batch_space_link_update_limit: 999,
+    scale_limit_reason: "large scale",
+    current_scale_mode: "LARGE_SCALE_AGGREGATED",
+    fidelity_warnings: [],
+    satellite_count: 1200,
+    user_count: 100
+  };
+
+  it("uses backend-derived constellation summary when generated config is available", () => {
+    const generatedConfig = {
+      satellite_count: 1200,
+      user_count: 100,
+      orbit_plane_count: 40,
+      backend_summary: {
+        derived_constellation_summary: {
+          profile: "STARLINK_SHELL_1_LIKE",
+          satellite_count: 1200,
+          plane_count: 40,
+          satellites_per_plane: 30,
+          total_slots: 1200,
+          plane_count_explicit: false,
+          model_note: "Approximate Starlink Shell 1-like plane allocation."
+        },
+        fidelity_summary: fidelitySummary
+      }
+    } as GeneratedScenarioConfig;
+
+    expect(buildDataPanelConfiguredScale(generatedConfig, fidelitySummary)).toBe(
+      "1,200 星 / 40 面 / 30 星/面 / 100 用户 / 大规模聚合"
+    );
+  });
+
+  it("falls back to runtime fidelity summary before initialization config is present", () => {
+    expect(buildDataPanelConfiguredScale(null, fidelitySummary)).toBe(
+      "1,200 星 / 100 用户 / 大规模聚合"
+    );
+  });
+
+  it("shows waiting text when no backend scale source exists yet", () => {
+    expect(buildDataPanelConfiguredScale(null, null)).toBe("等待初始化");
   });
 });
 
