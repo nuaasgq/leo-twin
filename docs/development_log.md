@@ -5,6 +5,41 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Service Request Contract v2
+
+- Branch: `feature/T252-service-request-contract-v2`
+- Commit: pending in this commit
+- Scope: add the schema-level product contract for user business service
+  requests. `leo_twin.service_request_contract.v2` defines supported service
+  classes, required and reserved request fields, deterministic flow/task/output
+  id generation, current `TrafficDemandRecord` runtime mapping, and explicit
+  exclusions for packet traffic, stochastic retry, deadline scheduling,
+  duration holding behavior, payload content, and external simulators.
+- Changed files/modules:
+  - `src/leo_twin/schema/service_request_contract.py`
+  - `src/leo_twin/schema/__init__.py`
+  - `tests/unit/test_service_request_contract_v2.py`
+  - `docs/service_request_contract_v2.md`
+  - `docs/product_contracts.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_service_request_contract_v2.py tests/unit/test_traffic_demand_model.py tests/unit/test_product_contracts.py -q`
+    - Result: passed, 18 tests.
+- Problems encountered and handling:
+  - The contract intentionally distinguishes supported runtime fields from
+    reserved product fields. `duration_s`, `deadline_s`, and `retry_policy`
+    are included because V2 service requests need them, but current runtime
+    behavior does not yet implement duration holding, deadline-aware scheduling,
+    or retry execution.
+  - Existing local runtime/generated config files remain dirty and are
+    intentionally not included in this task.
+- Known remaining issues / follow-up:
+  - V2-011 should add deterministic arrival profiles such as burst, periodic,
+    diurnal, and region-weighted arrivals using this service request contract.
+  - V2-012 should extend service mix profiles and per-user active service state
+    on top of this contract.
+
 ## 2026-07-06 - Template Catalog Metadata v2
 
 - Branch: `feature/T251-template-catalog-metadata-v2`

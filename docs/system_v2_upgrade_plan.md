@@ -87,6 +87,12 @@ Tasks:
   - Scope: service id, user id, class, priority, destination policy, input size,
     output size, duration, deadline, retry policy, generated flow/task ids.
   - Output: schema/tests only.
+  - Status: T252 adds `leo_twin.service_request_contract.v2` as a schema-level
+    product contract. It defines supported service classes, required/reserved
+    service request fields, deterministic generated flow/task/output id
+    policies, current `TrafficDemandRecord` runtime mapping, and explicit
+    exclusions for packet traffic, stochastic retry, deadline scheduling, and
+    external simulators.
 - V2-011: Add deterministic arrival profile model.
   - Scope: periodic, burst, diurnal, and region-weighted arrivals using seed.
   - Output: unit tests for identical seed and config.

@@ -28,6 +28,20 @@ The canonical runtime contracts live in `leo_twin.schema.domain`.
 | `RuntimeConfigState` | Runtime mode, speed, seed, and duration | Control Plane | Runtime, Frontend |
 | `WorldSnapshot` | Observation-plane snapshot shared with frontend | Snapshot/Runtime | Frontend |
 
+## Business Service Request Contract
+
+`leo_twin.service_request_contract.v2` defines the product-level user business
+request above the existing runtime `FlowRequest`, `TaskRequest`, and
+`TrafficDemandRecord` objects. It records service id, user id, service class,
+priority, destination policy, input/output data size, duration, deadline, retry
+policy, and generated flow/task ids.
+
+The current runtime supports deterministic flow-level mapping for
+`DATA_TRANSFER`, `TELEMETRY`, `BULK_DOWNLINK`, and `COMPUTE_SERVICE`.
+`duration_s`, `deadline_s`, and `retry_policy` are contract fields, but current
+runtime behavior marks unsupported execution semantics as reserved rather than
+silently pretending deadline scheduling or retries exist.
+
 ## Compatibility Names
 
 `RouteState` is the canonical route contract.
