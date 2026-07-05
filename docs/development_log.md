@@ -5,6 +5,36 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - User Documentation v2
+
+- Branch: `feature/T224-user-documentation-v2`
+- Commit: pending in this commit
+- Scope: advance V2-083 by adding a consolidated user-facing guide for startup,
+  health checks, configuration, console/dashboard usage, result export,
+  operator diagnostics, benchmark acceptance, and current model boundaries.
+  README and current product status now point users to the guide.
+- Changed files/modules:
+  - `docs/user_guide_v2.md`
+  - `tests/unit/test_user_guide_v2_docs.py`
+  - `README.md`
+  - `docs/current_product_status.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_user_guide_v2_docs.py -q`
+    - Result: passed, 2 tests.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - Existing documentation was accurate but scattered. This task adds a stable
+    user entry point instead of moving or deleting existing specialized docs.
+  - Local runtime/generated config files remain dirty and are intentionally not
+    included in this task.
+- Known remaining issues / follow-up:
+  - A future documentation task should add screenshots or short videos after
+    the dashboard and 3D scene layout stabilizes further.
+  - Browser-rendered documentation links are not yet checked in CI.
+
 ## 2026-07-06 - Operator Diagnostics Bundle v1
 
 - Branch: `feature/T223-operator-diagnostics-bundle-v1`

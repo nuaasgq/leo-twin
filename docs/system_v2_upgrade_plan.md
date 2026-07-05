@@ -301,6 +301,10 @@ Tasks:
 - V2-083: Add user documentation v2.
   - Scope: quickstart, config guide, dashboard guide, troubleshooting.
   - Depends on: V2-001, V2-050, V2-081.
+  - Status: T224 adds `docs/user_guide_v2.md` as the consolidated user-facing
+    guide covering startup, health checks, configuration, console/dashboard
+    usage, result export, diagnostics bundles, benchmark acceptance, and current
+    model boundaries.
 
 ## 4. Sequencing
 

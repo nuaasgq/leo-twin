@@ -64,6 +64,7 @@ Default local surfaces:
 - Backend status: `http://127.0.0.1:8765/runtime/status`
 
 Launcher logs are written to `artifacts\launcher`.
+User guide v2 is available at `docs\user_guide_v2.md`.
 Troubleshooting notes are in `docs\launcher_troubleshooting.md`.
 Current product status is summarized in `docs\current_product_status.md`.
 

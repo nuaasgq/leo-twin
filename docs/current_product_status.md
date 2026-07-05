@@ -14,6 +14,7 @@ Branch: `feature/T163-frontend-dashboard-compute-v2`
 - Operator diagnostics bundle: `.\diagnostics_leo_twin.bat`
 - Read-only health smoke: `.\smoke_leo_twin.bat`
 - Mutating control-cycle smoke: `.\control_smoke_leo_twin.bat`
+- User guide: `docs\user_guide_v2.md`
 
 Default local URLs:
 
