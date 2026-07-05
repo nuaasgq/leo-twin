@@ -4745,3 +4745,32 @@ change.
 - Recommended follow-up:
   - Add a browser-driven dashboard smoke test that verifies service timeline
     rendering against a mocked runtime status response.
+
+## 2026-07-05 - Frontend Visual Verification Runtime Path v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: harden `scripts/verify_frontend_visuals.ps1` so it can run when
+  `pnpm.cmd` is available from a bundled runtime but `node.exe` is not already
+  on `PATH`. The script now detects a sibling `node\bin\node.exe` under the
+  same dependency root and prepends it before invoking frontend tests.
+- Changed files/modules:
+  - `scripts/verify_frontend_visuals.ps1`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - Bundled runtime PATH without bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\bin;C:\Windows\System32;C:\Windows;C:\Windows\System32\WindowsPowerShell\v1.0'; powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_frontend_visuals.ps1 -SkipBuild`
+    - Result: passed; verified 4 frontend visual assets and 25 frontend test
+      files / 193 tests.
+- Problems encountered:
+  - None. This is a developer-experience hardening step for the existing visual
+    verification script.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - If neither `pnpm` nor the bundled runtime `pnpm.cmd` is discoverable on
+    `PATH`, the script still fails fast with an actionable message.
+- Recommended follow-up:
+  - Add a broader one-command local dev launcher that starts backend/frontend
+    services and runs smoke checks without requiring manual command assembly.

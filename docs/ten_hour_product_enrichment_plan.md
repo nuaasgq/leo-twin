@@ -392,6 +392,12 @@ The following issue-sized slices have now been delivered on
   - The dashboard compute panel now renders backend-provided service
     `component_timeline` rows as compact visible stage chips while preserving
     compatibility for legacy status packets.
+- `test(frontend): harden visual verification runtime path`
+  - Maps to suggestions 92-95.
+  - The frontend visual verification script now repairs a missing `node.exe`
+    PATH entry when it is launched with the bundled `pnpm.cmd` dependency path,
+    keeping dashboard/service-timeline visual checks runnable from a narrower
+    shell environment.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected
