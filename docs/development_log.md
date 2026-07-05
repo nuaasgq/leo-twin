@@ -4153,3 +4153,35 @@ change.
 - Recommended follow-up:
   - Promote the remaining high-value gaps into issue-sized tasks before the
     next implementation batch.
+
+## 2026-07-05 - Runtime Contract Fixture v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a frontend runtime-status contract fixture and decoder test for
+  fields consumed by the console and dashboard. The fixture covers runtime
+  status, generated config, fidelity summary, KPI time series, satellite KPI
+  slices, stream diagnostics, and compute resource summary fields.
+- Changed files/modules:
+  - `frontend/src/app/api.ts`
+  - `frontend/tests/fixtures/runtimeStatus.contract.json`
+  - `frontend/tests/runtimeContractFixture.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- runtimeContractFixture.test.ts`
+    - Result: passed, 25 files / 185 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - None. The task exports the existing runtime status decoder for direct
+    testing and does not change backend payload shape or Event Kernel behavior.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The fixture is static; it should be regenerated or updated when backend
+    runtime contracts intentionally change.
+- Recommended follow-up:
+  - Add a backend-side fixture generation command once runtime contract
+    versioning is formalized.

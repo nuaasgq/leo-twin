@@ -64,7 +64,7 @@ function decodeScenarioConfig(value: unknown): ScenarioConfig {
   return value as ScenarioConfig;
 }
 
-function decodeRuntimeStatusEnvelope(value: unknown): RuntimeStatusEnvelope {
+export function decodeRuntimeStatusEnvelope(value: unknown): RuntimeStatusEnvelope {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     throw new TypeError("runtime status must be an object");
   }

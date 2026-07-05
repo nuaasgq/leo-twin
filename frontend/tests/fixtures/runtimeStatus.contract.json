@@ -1,0 +1,192 @@
+{
+  "type": "RUNTIME_STATUS",
+  "status": {
+    "status": "RUNNING",
+    "lifecycle_state": "RUNNING",
+    "mode": "REAL_TIME",
+    "speed_factor": 1,
+    "seed": 20260705,
+    "duration": 600,
+    "config_version": 2,
+    "last_action": "START",
+    "initialized": true,
+    "current_sim_time": 120,
+    "processed_event_count": 4096,
+    "queued_event_count": 128,
+    "deterministic_replay": false,
+    "fidelity_summary": {
+      "orbit_update_mode": "BATCH",
+      "metrics_mode": "AGGREGATED",
+      "space_link_mode": "BOUNDED_CANDIDATE",
+      "detailed_space_link_enabled": false,
+      "space_link_candidate_policy": "SAME_PLANE_AND_ADJACENT_PLANE_BOUNDED_CANDIDATES",
+      "max_space_link_candidates_per_satellite": 4,
+      "batch_space_link_update_limit": 999,
+      "scale_limit_reason": "satellite_count >= 300",
+      "current_scale_mode": "LARGE_SCALE_AGGREGATED",
+      "fidelity_warnings": [
+        "Orbit updates are batched.",
+        "Metrics are aggregated."
+      ],
+      "satellite_count": 1200,
+      "user_count": 100
+    },
+    "metrics_summary": {
+      "network_quality_effective_throughput_mbps": 180,
+      "network_quality_effective_latency_avg_s": 0.045,
+      "network_quality_effective_loss_proxy_rate": 0.05,
+      "network_quality_effective_delay_variation_proxy_s": 0.006,
+      "compute_resource_used_gflops_fp32": 1500,
+      "compute_resource_used_gflops_fp64": 12,
+      "compute_resource_used_gpu_tflops_fp32": 2.5,
+      "compute_resource_used_gpu_tflops_fp16": 5,
+      "compute_resource_used_npu_tops_int8": 8,
+      "compute_resource_used_memory_gb": 16,
+      "compute_resource_used_storage_gb": 32
+    },
+    "kpi_time_series_v1": {
+      "version": "v1",
+      "sample_count": 1,
+      "tail_sample_source": "CURRENT_METRICS_SUMMARY",
+      "tail_sample_source_label": "当前指标摘要同步",
+      "samples": [
+        {
+          "sim_time": 120,
+          "network_effective_throughput_mbps": 180,
+          "network_requested_route_demand_mbps": 200,
+          "network_demand_pressure_proxy": 0.9,
+          "network_effective_latency_s": 0.045,
+          "network_effective_loss_proxy_rate": 0.05,
+          "network_effective_delay_variation_s": 0.006,
+          "compute_resource_used_gflops_fp32": 1500,
+          "compute_resource_used_gflops_fp64": 12,
+          "compute_resource_used_gpu_tflops_fp32": 2.5,
+          "compute_resource_used_gpu_tflops_fp16": 5,
+          "compute_resource_used_npu_tops_int8": 8,
+          "compute_resource_used_memory_gb": 16,
+          "compute_resource_used_storage_gb": 32
+        }
+      ]
+    },
+    "satellite_kpi_slices_v1": {
+      "version": "v1",
+      "mode": "TOP_ACTIVITY_LIMITED",
+      "slice_limit": 64,
+      "satellite_count": 1200,
+      "slice_count": 1,
+      "slices": [
+        {
+          "satellite_id": "sat-00001",
+          "active_link_count": 4,
+          "active_access_link_count": 2,
+          "active_space_link_count": 2,
+          "route_count": 3,
+          "available_route_count": 2,
+          "route_capacity_mbps": 180,
+          "route_demand_mbps": 160,
+          "route_latency_avg_s": 0.045,
+          "route_delay_variation_proxy_s": 0.006,
+          "route_loss_proxy_rate": 0.025,
+          "compute_capacity_gflops_fp32": 100,
+          "compute_used_gflops_fp32": 65,
+          "compute_load_ratio": 0.65,
+          "running_task_count": 2,
+          "finished_task_count": 7
+        }
+      ]
+    },
+    "stream_diagnostics_v1": {
+      "version": "v1",
+      "advance_loop_state": "RUNNING",
+      "tick_count": 24,
+      "event_stream": {
+        "name": "events",
+        "next_cursor": 42,
+        "oldest_cursor": 10,
+        "retained_count": 32,
+        "total_dropped_count": 0,
+        "max_items": 2048,
+        "max_batch_size": 128,
+        "overflow_risk": false
+      },
+      "state_stream": {
+        "name": "state",
+        "next_cursor": 8,
+        "oldest_cursor": 1,
+        "retained_count": 7,
+        "total_dropped_count": 0,
+        "max_items": 512,
+        "max_batch_size": 16,
+        "overflow_risk": false
+      }
+    }
+  },
+  "generated_config": {
+    "seed": 20260705,
+    "satellite_count": 1200,
+    "user_count": 100,
+    "compute_node_count": 1200,
+    "flow_count": 10,
+    "compute_scheduling_policy": "FIFO",
+    "orbit_plane_count": 40,
+    "epoch": 0,
+    "semi_major_axis_km": 6921,
+    "eccentricity": 0,
+    "inclination_deg": 53,
+    "earth_radius_km": 6371,
+    "min_elevation_deg": 25,
+    "max_range_km": 2500,
+    "compute_capacity": 40,
+    "compute_cpu_gflops_fp64": 8,
+    "compute_gpu_tflops_fp32": 2.5,
+    "compute_gpu_tflops_fp16": 5,
+    "compute_npu_tops_int8": 12,
+    "compute_memory_gb": 32,
+    "compute_storage_gb": 512,
+    "demand_capacity": 80,
+    "task_compute_demand": 20,
+    "task_data_size": 10,
+    "traffic_class": "COMPUTE_SERVICE",
+    "traffic_destination_type": "COMPUTE_NODE",
+    "traffic_output_data_size": 1,
+    "application_protocol": "MQTT",
+    "transport_protocol": "UDP",
+    "transport_loss_rate": 0.03,
+    "transport_congestion_window_segments": 0,
+    "routing_protocol": "DISTANCE_VECTOR",
+    "datalink_mac_protocol": "SLOTTED_ALOHA",
+    "routing_latency_weight": 0.2,
+    "routing_inverse_capacity_weight": 400,
+    "routing_hop_weight": 1,
+    "backend_summary": {
+      "fidelity_summary": {
+        "orbit_update_mode": "BATCH",
+        "metrics_mode": "AGGREGATED",
+        "space_link_mode": "BOUNDED_CANDIDATE",
+        "detailed_space_link_enabled": false,
+        "space_link_candidate_policy": "SAME_PLANE_AND_ADJACENT_PLANE_BOUNDED_CANDIDATES",
+        "max_space_link_candidates_per_satellite": 4,
+        "batch_space_link_update_limit": 999,
+        "scale_limit_reason": "satellite_count >= 300",
+        "current_scale_mode": "LARGE_SCALE_AGGREGATED",
+        "fidelity_warnings": [
+          "Orbit updates are batched.",
+          "Metrics are aggregated."
+        ],
+        "satellite_count": 1200,
+        "user_count": 100
+      },
+      "compute_resource_summary": {
+        "resource_model": "ComputeResourceVector",
+        "node_role": "SATELLITE_HOSTED_COMPUTE",
+        "cpu_gflops_fp32_per_node": 40,
+        "cpu_gflops_fp64_per_node": 8,
+        "gpu_tflops_fp32_per_node": 2.5,
+        "gpu_tflops_fp16_per_node": 5,
+        "npu_tops_int8_per_node": 12,
+        "memory_gb_per_node": 32,
+        "storage_gb_per_node": 512
+      }
+    }
+  }
+}
