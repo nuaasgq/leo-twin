@@ -42,6 +42,23 @@ def test_user_configuration_view_is_deterministic_and_frontend_ready() -> None:
         first["template_config_file"]
         == "configs/templates/sees_user_detailed.example.yaml"
     )
+    assert first["template_profiles"] == (
+        {
+            "id": "baseline_72sat",
+            "label": "72-satellite baseline",
+            "path": "configs/templates/sees_user_detailed.example.yaml",
+            "purpose": "Executable baseline for full-contract editing.",
+        },
+        {
+            "id": "dynamic_observability_120sat",
+            "label": "120-satellite dynamic observability",
+            "path": "configs/templates/sees_user_dynamic_observability.example.yaml",
+            "purpose": (
+                "Mixed traffic, non-zero network proxies, and per-satellite compute "
+                "resources for dashboard validation."
+            ),
+        },
+    )
     assert first["key_field_count"] == len(first["key_fields"])
     assert first["detailed_field_count"] > first["key_field_count"]
     assert _field(first, "scenario.satellite_count") == {
@@ -84,6 +101,33 @@ def test_detailed_user_config_template_loads_with_full_contract() -> None:
     assert config.network.max_space_link_candidates_per_satellite == 4
     assert config.runtime.duration == 600
     assert config.ui.visualization.satellites is True
+
+
+def test_dynamic_observability_user_config_template_loads() -> None:
+    template_path = "configs/templates/sees_user_dynamic_observability.example.yaml"
+    template_text = Path(template_path).read_text(encoding="utf-8")
+    config = load_config(template_path)
+
+    assert "120-satellite scenario" in template_text
+    assert "flow-level proxy metrics" in template_text
+    assert "STK, EXATA, AFSIM, DDS" in template_text
+    assert config.scenario.satellite_count == 120
+    assert config.scenario.compute_nodes == 120
+    assert config.scenario.compute_capacity == 40.0
+    assert config.scenario.compute_gpu_tflops_fp32 == 2.0
+    assert config.scenario.compute_memory_gb == 32.0
+    assert config.scenario.initial_workload_smoothing_enabled is True
+    assert config.scenario.traffic_model.traffic_class == "COMPUTE_SERVICE"
+    assert config.scenario.traffic_model.service_mix_weights() == {
+        "DATA_TRANSFER": 2.0,
+        "TELEMETRY": 1.0,
+        "BULK_DOWNLINK": 1.0,
+        "COMPUTE_SERVICE": 2.0,
+    }
+    assert config.network.transport_protocol == "UDP"
+    assert config.network.transport_loss_rate == 0.02
+    assert config.runtime.mode == "ACCELERATED"
+    assert config.runtime.speed_factor == 10.0
 
 
 def _field(summary: dict[str, object], path: str) -> dict[str, object]:

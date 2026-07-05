@@ -1,0 +1,110 @@
+# SEES / LEO-Twin dynamic observability user configuration template.
+#
+# Purpose:
+# - 120-satellite scenario intended for dashboard validation and user demos.
+# - User-facing full contract: the frontend should still expose only key
+#   controls, while this file keeps detailed traffic, network, compute, and
+#   runtime parameters editable.
+# - Deterministic flow-level simulation only. Do not configure or expect
+#   STK, EXATA, AFSIM, DDS, packet-level simulation, or RF propagation.
+# - KPI loss, jitter, latency, and throughput are flow-level proxy metrics.
+
+scenario:
+  # In this product model each satellite is also a potential compute node.
+  satellite_count: 120
+  user_count: 600
+  compute_nodes: 120
+
+  # Per-satellite compute resources. compute_capacity is legacy CPU FP32
+  # capacity; the vector fields drive dashboard resource explanations.
+  compute_capacity: 40.0
+  compute_cpu_gflops_fp64: 8.0
+  compute_gpu_tflops_fp32: 2.0
+  compute_gpu_tflops_fp16: 4.0
+  compute_npu_tops_int8: 12.0
+  compute_memory_gb: 32.0
+  compute_storage_gb: 512.0
+
+  ground_station_count: 3
+  cell_count: 120
+  compute_scheduling_policy: FIFO
+
+  # Stagger initial demand so the first runtime tick is observable instead of
+  # being dominated by a time-0 workload burst.
+  initial_workload_smoothing_enabled: true
+  initial_workload_window_s: 12.0
+  max_initial_events_per_tick: 8
+  workload_smoothing_mode: RATE_LIMITED
+
+  orbit:
+    # Approximate Starlink shell-1-like altitude/inclination, not exact
+    # Starlink fidelity and not SGP4.
+    update_interval_seconds: 30
+    plane_count: 12
+    altitude_m: 529000.0
+    inclination_deg: 53.0
+    orbit_update_mode: null
+
+  traffic_model:
+    # Mixed user services. COMPUTE_SERVICE generates input flow + task +
+    # output metadata; other classes generate normal flow-level demand.
+    flow_interval_seconds: 10
+    task_interval_seconds: 10
+    flow_demand_capacity: 180.0
+    task_compute_demand: 60.0
+    task_data_size: 16.0
+    traffic_class: COMPUTE_SERVICE
+    destination_type: COMPUTE_NODE
+    output_data_size: 4.0
+    data_transfer_weight: 2.0
+    telemetry_weight: 1.0
+    bulk_downlink_weight: 1.0
+    compute_service_weight: 2.0
+
+network:
+  # Layered flow-level protocol profile. These names select deterministic
+  # abstractions inside LEO-Twin; no external network simulator is used.
+  application_protocol: TASK_OFFLOAD_FLOW
+  transport_protocol: UDP
+  routing_protocol: DISTANCE_VECTOR
+  datalink_mac_protocol: SLOTTED_ALOHA
+
+  # Non-zero values intentionally drive time-varying dashboard KPI proxies.
+  transport_loss_rate: 0.02
+  transport_congestion_window_segments: 0
+  routing_latency_weight: 0.25
+  routing_inverse_capacity_weight: 300.0
+  routing_hop_weight: 1.0
+
+  carrier_frequency_hz: 20000000000.0
+  channel_bandwidth_hz: 100000000.0
+  rain_rate_mm_h: 6.0
+  rain_attenuation_coefficient_db_per_km_per_mm_h: 0.01
+  rain_effective_path_km: 3.0
+  antenna_diameter_m: 0.45
+  antenna_aperture_efficiency: 0.65
+  transmit_power_dbw: 20.0
+  system_loss_db: 1.0
+  noise_temperature_k: 290.0
+
+  # null lets backend fidelity policy choose a scale-safe mode.
+  space_link_mode: null
+  max_space_link_candidates_per_satellite: 4
+  batch_space_link_update_limit: 999
+
+runtime:
+  # ACCELERATED is useful for demos and tests. Use REAL_TIME with
+  # speed_factor 1.0 for wall-clock operation.
+  mode: ACCELERATED
+  speed_factor: 10.0
+  seed: 20260705
+  duration: 600
+
+ui:
+  visualization:
+    satellites: true
+    links: true
+    users: true
+    metrics: true
+  update_frequency_hz: 20
+  dashboard_layout: right_panel

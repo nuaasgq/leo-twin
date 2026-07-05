@@ -5,6 +5,35 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - User Dynamic Observability Template v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending in this commit
+- Scope: add a detailed 120-satellite user configuration template for dynamic
+  dashboard observability and expose backend-owned template profiles through
+  the configuration surface summary.
+- Changed files/modules:
+  - `configs/templates/sees_user_dynamic_observability.example.yaml`
+  - `src/leo_twin/services/configuration_view.py`
+  - `tests/unit/test_configuration_view.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_configuration_view.py -q`
+    - Result: passed, 3 tests.
+- Problems encountered:
+  - `python -m pytest tests/integration/test_config_control.py::test_config_loads_correctly -q`
+    failed because the local runtime config `configs/sees_control.yaml` remains
+    intentionally dirty and has `compute_nodes=72`, while that test expects the
+    checked-in baseline value `10`. Per project rules, the local runtime config
+    was not reset or staged.
+- Known remaining issues:
+  - The frontend does not yet render a template-profile picker; the backend now
+    exposes deterministic `template_profiles` for a later UI binding task.
+  - Dynamic observability metrics remain deterministic flow-level proxies.
+- Recommended follow-up:
+  - Add a frontend affordance that links key UI controls to the detailed
+    template profiles without exposing every YAML field in the control panel.
+
 ## 2026-07-05 - Dashboard Detail Scroll and Fallback Completion v1
 
 - Branch: `feature/T164-dashboard-observability-v1`

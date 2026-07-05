@@ -212,6 +212,24 @@ _SECTION_PURPOSES = {
     "ui.visualization": "Layer visibility defaults.",
 }
 
+_TEMPLATE_PROFILES = (
+    {
+        "id": "baseline_72sat",
+        "label": "72-satellite baseline",
+        "path": "configs/templates/sees_user_detailed.example.yaml",
+        "purpose": "Executable baseline for full-contract editing.",
+    },
+    {
+        "id": "dynamic_observability_120sat",
+        "label": "120-satellite dynamic observability",
+        "path": "configs/templates/sees_user_dynamic_observability.example.yaml",
+        "purpose": (
+            "Mixed traffic, non-zero network proxies, and per-satellite compute "
+            "resources for dashboard validation."
+        ),
+    },
+)
+
 
 def build_user_configuration_view(config: SEESConfig) -> ConfigurationView:
     """Return a deterministic user-facing config surface contract."""
@@ -228,6 +246,7 @@ def build_user_configuration_view(config: SEESConfig) -> ConfigurationView:
         "source": "backend_sees_config",
         "detailed_config_file": "configs/sees_control.yaml",
         "template_config_file": "configs/templates/sees_user_detailed.example.yaml",
+        "template_profiles": _TEMPLATE_PROFILES,
         "frontend_policy": "CONTROL_PANEL_KEY_FIELDS_ONLY",
         "key_field_count": len(key_paths),
         "detailed_field_count": len(flattened),
