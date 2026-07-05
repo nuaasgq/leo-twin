@@ -3717,3 +3717,32 @@ change.
 - Recommended follow-up:
   - Add a dedicated asset verification script outside the frontend browser
     TypeScript build, then include it in CI or acceptance checks.
+
+## 2026-07-05 - Frontend Asset Verification Script v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a repository-level PowerShell verification script for bundled
+  frontend visual assets. The script checks that NASA Satellite Kit GLB files
+  exist and match the expected SHA-256 values without adding Node-specific
+  imports to frontend TypeScript tests.
+- Changed files/modules:
+  - `scripts/verify_frontend_assets.ps1`
+  - `docs/development_log.md`
+- Validation:
+  - `powershell -ExecutionPolicy Bypass -File scripts\verify_frontend_assets.ps1`
+    - Result: passed, verified 3 frontend visual assets.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- satelliteVisuals.test.ts`
+    - Result: passed, 24 files / 173 tests.
+- Problems encountered:
+  - None. This script is intentionally outside frontend TypeScript compilation
+    to keep the browser test/build target free of Node typings.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The script currently covers the bundled satellite GLB assets. Natural Earth
+    country overlay verification can be added separately.
+- Recommended follow-up:
+  - Wire the asset verification script into a broader frontend acceptance
+    command after the visual smoke workflow is stable.
