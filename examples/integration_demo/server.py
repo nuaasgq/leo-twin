@@ -155,6 +155,9 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
             if path == "/runtime/export/history":
                 self._send_json(control_plane.runtime_export_history())
                 return
+            if path == "/runtime/export/catalog":
+                self._send_json(control_plane.runtime_export_catalog())
+                return
             if path == "/runtime/export/archive":
                 try:
                     exported_archive = control_plane.export_runtime_archive()

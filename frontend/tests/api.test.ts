@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  loadRuntimeExportCatalog,
   loadRuntimeExportHistory,
   loadRuntimeNodeDetails,
   loadRuntimeSatelliteDetails,
@@ -56,6 +57,47 @@ describe("runtime API diagnostics", () => {
       latest_export: { export_type: "ARCHIVE", archive_filename: "pkg.zip" }
     });
     expect(fetchMock).toHaveBeenCalledWith("/runtime/export/history");
+  });
+
+  it("loads persisted runtime export catalogs", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        type: "RUNTIME_EXPORT_CATALOG",
+        summary: {
+          version: "v1",
+          source: "BACKEND_RUNTIME_EXPORT",
+          catalog_scope: "RUNTIME_EXPORT_ROOT",
+          catalog_file: "artifacts/runtime_exports/runtime_export_catalog_v1.json",
+          export_root: "artifacts/runtime_exports",
+          record_count: 1,
+          catalog_hash: "sha256:catalog",
+          latest_export: {
+            catalog_key: "ARCHIVE:pkg",
+            export_type: "ARCHIVE",
+            package_id: "pkg",
+            package_dir: "artifacts/runtime_exports/pkg",
+            relative_package_dir: "pkg",
+            file_count: 6,
+            manifest_hash: "sha256:manifest",
+            current_sim_time: 10,
+            processed_event_count: 20,
+            files: [],
+            archive_filename: "pkg.zip",
+            archive_sha256: "sha256:archive",
+            archive_bytes: 4096
+          },
+          records: []
+        }
+      })
+    }));
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+
+    await expect(loadRuntimeExportCatalog()).resolves.toMatchObject({
+      record_count: 1,
+      latest_export: { export_type: "ARCHIVE", archive_filename: "pkg.zip" }
+    });
+    expect(fetchMock).toHaveBeenCalledWith("/runtime/export/catalog");
   });
 
   it("includes endpoint and HTTP status when runtime status fails", async () => {

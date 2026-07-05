@@ -846,6 +846,65 @@ def test_demo_adapter_reports_runtime_export_history(tmp_path) -> None:
     control_plane.handle_raw_message(json.dumps({"type": "RUNTIME_CONTROL", "action": "STOP"}))
 
 
+def test_demo_adapter_persists_runtime_export_catalog(tmp_path) -> None:
+    export_root = tmp_path / "catalog"
+    control_plane = DemoControlPlane.from_result(
+        run_integration_demo(_small_demo_config()),
+        config_output_path=tmp_path / "sees_control.yaml",
+        generated_config_output_path=tmp_path / "generated_full_system_demo.json",
+    )
+    control_plane.handle_raw_message(
+        json.dumps({"type": "RUNTIME_CONTROL", "action": "INITIALIZE"})
+    )
+    control_plane.handle_raw_message(json.dumps({"type": "RUNTIME_CONTROL", "action": "START"}))
+    control_plane._require_advance_loop().tick()
+
+    exported = control_plane.export_runtime_archive(export_root)
+    catalog_path = export_root / "runtime_export_catalog_v1.json"
+    first_catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+    second_export = control_plane.export_runtime_archive(export_root)
+    second_catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+
+    assert catalog_path.exists()
+    assert first_catalog["version"] == "v1"
+    assert first_catalog["record_count"] == 2
+    assert first_catalog["catalog_hash"] == second_catalog["catalog_hash"]
+    assert first_catalog["latest_export"]["export_type"] == "ARCHIVE"
+    assert first_catalog["latest_export"]["package_id"] == exported["package_id"]
+    assert first_catalog["latest_export"]["archive_sha256"] == exported["archive"][
+        "sha256"
+    ]
+    assert second_export["export_catalog_record"]["catalog_key"] == first_catalog[
+        "latest_export"
+    ]["catalog_key"]
+    assert {item["export_type"] for item in first_catalog["records"]} == {
+        "PACKAGE",
+        "ARCHIVE",
+    }
+    package_record = next(
+        item for item in first_catalog["records"] if item["export_type"] == "PACKAGE"
+    )
+    assert {
+        "config_snapshot.json",
+        "events.jsonl",
+        "manifest.json",
+        "metrics.csv",
+        "summary.json",
+    } <= {item["filename"] for item in package_record["files"]}
+
+    restarted_control_plane = DemoControlPlane.from_result(
+        run_integration_demo(_small_demo_config()),
+        config_output_path=tmp_path / "restart_sees_control.yaml",
+        generated_config_output_path=tmp_path / "restart_generated_full_system_demo.json",
+    )
+    restarted_catalog = restarted_control_plane.runtime_export_catalog(export_root)
+
+    assert restarted_catalog["type"] == "RUNTIME_EXPORT_CATALOG"
+    assert restarted_catalog["summary"] == second_catalog
+
+    control_plane.handle_raw_message(json.dumps({"type": "RUNTIME_CONTROL", "action": "STOP"}))
+
+
 def test_demo_server_stream_query_parses_cursor_options() -> None:
     assert _stream_query({"cursor": ["5"], "limit": ["10"]}) == (5, 10)
     assert _stream_query({}) == (0, None)

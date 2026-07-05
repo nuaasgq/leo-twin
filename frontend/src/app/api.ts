@@ -2,6 +2,8 @@ import { decodeStateSnapshot } from "../core/decoder";
 import {
   GeneratedScenarioConfig,
   RuntimeDetailPageEnvelope,
+  RuntimeExportCatalogEnvelope,
+  RuntimeExportCatalogV1,
   RuntimeExportHistoryEnvelope,
   RuntimeExportHistoryV1,
   RuntimeNodeDetailPageV1,
@@ -89,6 +91,16 @@ export async function loadRuntimeExportHistory(
   return decodeRuntimeExportHistory(await response.json()).summary;
 }
 
+export async function loadRuntimeExportCatalog(
+  endpoint = "/runtime/export/catalog"
+): Promise<RuntimeExportCatalogV1> {
+  const response = await fetch(endpoint);
+  if (!response.ok) {
+    throw new Error(`failed to load runtime export catalog from ${endpoint}: HTTP ${response.status}`);
+  }
+  return decodeRuntimeExportCatalog(await response.json()).summary;
+}
+
 export function runtimeApiErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   if (
@@ -173,6 +185,20 @@ export function decodeRuntimeExportHistory(value: unknown): RuntimeExportHistory
     ...(value as Record<string, unknown>),
     summary: summary as RuntimeExportHistoryV1
   } as RuntimeExportHistoryEnvelope;
+}
+
+export function decodeRuntimeExportCatalog(value: unknown): RuntimeExportCatalogEnvelope {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError("runtime export catalog response must be an object");
+  }
+  const summary = (value as { summary?: unknown }).summary;
+  if (typeof summary !== "object" || summary === null || Array.isArray(summary)) {
+    throw new TypeError("runtime export catalog response must include summary object");
+  }
+  return {
+    ...(value as Record<string, unknown>),
+    summary: summary as RuntimeExportCatalogV1
+  } as RuntimeExportCatalogEnvelope;
 }
 
 export function decodeRuntimeStatusEnvelope(value: unknown): RuntimeStatusEnvelope {

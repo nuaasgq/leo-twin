@@ -659,6 +659,46 @@ export interface RuntimeExportHistoryEnvelope {
   summary: RuntimeExportHistoryV1;
 }
 
+export interface RuntimeExportCatalogV1 {
+  version: "v1" | string;
+  source: string;
+  catalog_scope: string;
+  catalog_file: string;
+  export_root: string;
+  record_count: number;
+  catalog_hash: string;
+  latest_export?: RuntimeExportCatalogRecordV1 | null;
+  records: readonly RuntimeExportCatalogRecordV1[];
+}
+
+export interface RuntimeExportCatalogRecordV1 {
+  catalog_key: string;
+  export_type: "PACKAGE" | "ARCHIVE" | string;
+  package_id: string;
+  package_dir: string;
+  relative_package_dir: string;
+  file_count: number;
+  manifest_hash: string;
+  current_sim_time: number;
+  processed_event_count: number;
+  files: readonly RuntimeExportCatalogFileV1[];
+  archive_filename?: string;
+  archive_sha256?: string;
+  archive_bytes?: number;
+}
+
+export interface RuntimeExportCatalogFileV1 {
+  name: string;
+  filename: string;
+  bytes: number;
+  sha256: string;
+}
+
+export interface RuntimeExportCatalogEnvelope {
+  type: "RUNTIME_EXPORT_CATALOG" | string;
+  summary: RuntimeExportCatalogV1;
+}
+
 export interface StateSnapshot {
   event_count?: number;
   last_sim_time?: number;

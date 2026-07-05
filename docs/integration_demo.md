@@ -84,6 +84,7 @@ Endpoints:
 - `GET /metrics/snapshot`
 - `GET /runtime/status`
 - `GET /runtime/export`
+- `GET /runtime/export/catalog`
 - `GET /runtime/export/history`
 - `GET /runtime/export/archive`
 - `WS /stream/events`
@@ -121,6 +122,16 @@ Invoke-RestMethod http://127.0.0.1:8765/runtime/export/history
 
 The runtime status payload also includes `runtime_export_history_v1`, which the
 dashboard uses to show the latest package or archive export.
+
+Persisted export catalog:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8765/runtime/export/catalog
+```
+
+The catalog endpoint reads `artifacts/runtime_exports/runtime_export_catalog_v1.json`.
+It persists package/archive metadata and hashes so previous exports remain
+discoverable after the backend process restarts.
 
 ## Frontend
 

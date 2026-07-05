@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 import zipfile
 from dataclasses import dataclass, field
@@ -42,6 +43,8 @@ from leo_twin.services.runtime_observability import (
 )
 from leo_twin.services.runtime_reproducibility import (
     build_runtime_reproducibility_manifest,
+    stable_hash_payload,
+    stable_json_payload,
 )
 from leo_twin.services.scenario_builder import (
     scenario_builder_backend_summary,
@@ -83,6 +86,7 @@ _FRONTEND_EVENT_TYPES = frozenset(
         "METRIC_SAMPLE",
     }
 )
+_RUNTIME_EXPORT_CATALOG_FILENAME = "runtime_export_catalog_v1.json"
 
 
 @dataclass
@@ -242,6 +246,11 @@ class DemoControlPlane:
                 "PACKAGE",
                 package,
             )
+        package["export_catalog_record"] = _write_runtime_export_catalog(
+            output_root,
+            "PACKAGE",
+            package,
+        )["latest_export"]
         return package
 
     def export_runtime_archive(
@@ -259,12 +268,26 @@ class DemoControlPlane:
             "ARCHIVE",
             archive_package,
         )
+        archive_package["export_catalog_record"] = _write_runtime_export_catalog(
+            output_root,
+            "ARCHIVE",
+            archive_package,
+        )["latest_export"]
         return archive_package
 
     def runtime_export_history(self) -> dict[str, Any]:
         return {
             "type": "RUNTIME_EXPORT_HISTORY",
             "summary": self._runtime_export_history_json(),
+        }
+
+    def runtime_export_catalog(
+        self,
+        output_root: str | Path = "artifacts/runtime_exports",
+    ) -> dict[str, Any]:
+        return {
+            "type": "RUNTIME_EXPORT_CATALOG",
+            "summary": _read_runtime_export_catalog(output_root),
         }
 
     def visible_snapshot(self) -> dict[str, JsonValue]:
@@ -1043,6 +1066,151 @@ def _write_runtime_export_archive(package_dir: Path, archive_path: Path) -> None
             info.compress_type = zipfile.ZIP_DEFLATED
             info.external_attr = 0o644 << 16
             archive.writestr(info, path.read_bytes())
+
+
+def _write_runtime_export_catalog(
+    output_root: str | Path,
+    export_type: str,
+    package: dict[str, Any],
+) -> dict[str, Any]:
+    root = Path(output_root)
+    root.mkdir(parents=True, exist_ok=True)
+    catalog_path = root / _RUNTIME_EXPORT_CATALOG_FILENAME
+    existing = _read_runtime_export_catalog(root)
+    record = _runtime_export_catalog_record(root, export_type, package)
+    records = {
+        str(item.get("catalog_key", "")): dict(item)
+        for item in _control_records(existing.get("records"))
+        if item.get("catalog_key")
+    }
+    records[record["catalog_key"]] = record
+    catalog = _runtime_export_catalog_document(
+        root,
+        catalog_path,
+        tuple(records[key] for key in sorted(records)),
+        record,
+    )
+    catalog_path.write_text(stable_json_pretty(catalog), encoding="utf-8")
+    return catalog
+
+
+def _read_runtime_export_catalog(output_root: str | Path) -> dict[str, Any]:
+    root = Path(output_root)
+    catalog_path = root / _RUNTIME_EXPORT_CATALOG_FILENAME
+    if not catalog_path.exists():
+        return _runtime_export_catalog_document(root, catalog_path, (), None)
+    loaded = json.loads(catalog_path.read_text(encoding="utf-8"))
+    if not isinstance(loaded, dict):
+        return _runtime_export_catalog_document(root, catalog_path, (), None)
+    records = tuple(
+        dict(record)
+        for record in _control_records(loaded.get("records"))
+        if record.get("catalog_key")
+    )
+    latest = loaded.get("latest_export")
+    latest_record = dict(latest) if isinstance(latest, dict) else None
+    return _runtime_export_catalog_document(
+        root,
+        catalog_path,
+        tuple(sorted(records, key=lambda item: str(item["catalog_key"]))),
+        latest_record,
+    )
+
+
+def _runtime_export_catalog_document(
+    root: Path,
+    catalog_path: Path,
+    records: tuple[dict[str, Any], ...],
+    latest_record: dict[str, Any] | None,
+) -> dict[str, Any]:
+    records_payload = stable_json_payload(records)
+    latest_payload = (
+        None if latest_record is None else stable_json_payload(latest_record)
+    )
+    document: dict[str, Any] = {
+        "version": "v1",
+        "source": "BACKEND_RUNTIME_EXPORT",
+        "catalog_scope": "RUNTIME_EXPORT_ROOT",
+        "catalog_file": str(catalog_path),
+        "export_root": str(root),
+        "record_count": len(records),
+        "latest_export": latest_payload,
+        "records": records_payload,
+    }
+    document["catalog_hash"] = stable_hash_payload(document)
+    return document
+
+
+def _runtime_export_catalog_record(
+    root: Path,
+    export_type: str,
+    package: dict[str, Any],
+) -> dict[str, Any]:
+    package_id = str(package.get("package_id", ""))
+    package_dir = Path(str(package.get("package_dir", "")))
+    manifest = package.get("manifest", {})
+    archive = package.get("archive")
+    record: dict[str, Any] = {
+        "catalog_key": f"{export_type}:{package_id}",
+        "export_type": export_type,
+        "package_id": package_id,
+        "package_dir": str(package_dir),
+        "relative_package_dir": _relative_runtime_export_path(root, package_dir),
+        "file_count": _control_int(package.get("file_count")),
+        "manifest_hash": (
+            str(manifest.get("manifest_hash", ""))
+            if isinstance(manifest, dict)
+            else ""
+        ),
+        "current_sim_time": _control_optional_float(
+            _runtime_export_manifest_state_value(manifest, "current_sim_time"),
+        )
+        or 0.0,
+        "processed_event_count": _control_int(
+            _runtime_export_manifest_state_value(manifest, "processed_event_count"),
+        ),
+        "files": tuple(
+            _runtime_export_catalog_file_record(file_record)
+            for file_record in _control_records(package.get("files"))
+        ),
+    }
+    if isinstance(archive, dict):
+        record.update(
+            {
+                "archive_filename": str(archive.get("filename", "")),
+                "archive_sha256": str(archive.get("sha256", "")),
+                "archive_bytes": _control_int(archive.get("bytes")),
+            }
+        )
+    return record
+
+
+def _runtime_export_catalog_file_record(file_record: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "name": str(file_record.get("name", "")),
+        "filename": str(file_record.get("filename", "")),
+        "bytes": _control_int(file_record.get("bytes")),
+        "sha256": str(file_record.get("sha256", "")),
+    }
+
+
+def _runtime_export_manifest_state_value(
+    manifest: object,
+    key: str,
+) -> object:
+    if not isinstance(manifest, dict):
+        return None
+    runtime_state = manifest.get("runtime_state")
+    if not isinstance(runtime_state, dict):
+        return None
+    return runtime_state.get(key)
+
+
+def _relative_runtime_export_path(root: Path, path: Path) -> str:
+    try:
+        return path.resolve().relative_to(root.resolve()).as_posix()
+    except ValueError:
+        return path.as_posix()
 
 
 def _network_quality_provenance_from_metrics(metrics: dict[str, Any]) -> dict[str, Any]:

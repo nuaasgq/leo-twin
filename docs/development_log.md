@@ -8868,3 +8868,53 @@ change.
 - Recommended follow-up:
   - Add persisted run catalog v1 under `artifacts/runtime_exports`, with a
     deterministic index file so users can review previous runs after restart.
+
+## 2026-07-05 - Runtime Export Catalog v1
+
+- Branch: `feature/T183-runtime-export-catalog-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a persisted deterministic runtime export catalog under
+  `artifacts/runtime_exports/runtime_export_catalog_v1.json`. Package and
+  archive exports now update the catalog with package id, export type,
+  manifest hash, simulation time, event count, file hashes, relative package
+  directory, and archive metadata when available. The demo backend exposes the
+  catalog via `GET /runtime/export/catalog`, and the frontend API layer has a
+  typed `loadRuntimeExportCatalog()` helper for future catalog UI work. Event
+  Kernel behavior, live streaming, model semantics, and result package files
+  remain unchanged.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/app/api.ts`
+  - `frontend/tests/api.test.ts`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/integration_demo.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/integration/test_runtime_session_control.py::test_demo_adapter_persists_runtime_export_catalog tests/integration/test_runtime_session_control.py::test_demo_adapter_reports_runtime_export_history tests/integration/test_runtime_session_control.py::test_demo_adapter_exports_deterministic_runtime_archive -q`
+    - Result: passed, 3 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- api.test.ts`
+    - Result: passed, 25 files / 271 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Existing DataPanel chunk-size warning remains.
+- Problems encountered:
+  - Archive exports create both the base package files and the ZIP archive, so
+    the persisted catalog intentionally records both `PACKAGE` and `ARCHIVE`
+    entries for the same package id.
+  - The first catalog implementation returned Python tuples while the persisted
+    JSON naturally returned lists. The catalog document is now normalized to
+    JSON-compatible payloads before hashing and returning.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The frontend can fetch the catalog through the API helper, but there is not
+    yet a dedicated catalog table or persisted-run browser in the dashboard.
+- Recommended follow-up:
+  - Add a dashboard export catalog view with a compact table of prior packages,
+    archive hashes, simulation time, and package ids.
