@@ -108,6 +108,8 @@ Tasks:
   - Scope: formula inputs for throughput, latency, loss proxy, jitter proxy.
   - Output: backend `network_kpi_provenance_v2`.
   - Depends on: V2-020.
+  - Status: provenance contract implemented earlier; backend
+    `network_kpi_credibility_v1` coverage/trust summary implemented in T206.
 - V2-022: Add time-varying flow-level network pressure.
   - Scope: deterministic demand/capacity pressure, route blocking, congestion
     proxy, loss proxy, delay variation proxy.

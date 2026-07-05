@@ -1014,6 +1014,7 @@ export interface RuntimeStatusPayload {
   metrics_summary?: RuntimeMetricsSummary;
   network_quality_provenance_v1?: RuntimeNetworkQualityProvenanceV1;
   network_kpi_provenance_v2?: RuntimeNetworkKpiProvenanceV2;
+  network_kpi_credibility_v1?: RuntimeNetworkKpiCredibilityV1;
   kpi_time_series_v1?: RuntimeKpiTimeSeriesV1;
   satellite_kpi_slices_v1?: RuntimeSatelliteKpiSlicesV1;
   satellite_kpi_history_v1?: RuntimeSatelliteKpiHistoryV1;
@@ -1109,6 +1110,29 @@ export interface RuntimeNetworkKpiSourceFieldV2 {
   field: string;
   current_value: string | number | boolean | null;
   value_source: string;
+}
+
+export interface RuntimeNetworkKpiCredibilityV1 {
+  version: "v1" | string;
+  credibility_id: string;
+  source: string;
+  provenance_id: string;
+  metric_model: string;
+  packet_level_simulation: boolean;
+  credibility_status: string;
+  kpi_count: number;
+  observed_kpi_count: number;
+  missing_kpi_count: number;
+  packet_level_metric_count: number;
+  flow_level_proxy_metric_count: number;
+  zero_value_kpi_count: number;
+  zero_value_explained_count: number;
+  source_field_count: number;
+  observed_source_field_count: number;
+  missing_source_field_count: number;
+  missing_metrics: readonly string[];
+  zero_unexplained_metrics: readonly string[];
+  caveats: readonly string[];
 }
 
 export interface RuntimeKpiTimeSeriesV1 {

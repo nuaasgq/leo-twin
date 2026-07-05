@@ -18,6 +18,7 @@ The integration demo runtime status now includes:
 
 ```text
 status.network_kpi_provenance_v2
+status.network_kpi_credibility_v1
 ```
 
 The existing field remains for compatibility:
@@ -71,8 +72,31 @@ All v2 KPI items are flow-level proxies:
 Frontend surfaces should use v2 provenance for product explanations once the
 dashboard migrates away from the v1 helper fields.
 
+## Credibility Summary v1
+
+`status.network_kpi_credibility_v1` is a compact backend-owned coverage and
+trust summary derived from `network_kpi_provenance_v2`. It does not change KPI
+formulas. It reports:
+
+- `credibility_status`: `COMPLETE_FLOW_LEVEL_PROXY`,
+  `PARTIAL_RUNTIME_VALUES`, `MISSING_RUNTIME_VALUES`, or
+  `INVALID_PACKET_LEVEL_METRIC`;
+- observed and missing KPI counts;
+- packet-level metric count, which must remain zero under the current product
+  constraints;
+- flow-level proxy metric count;
+- zero-valued KPI count and zero-explanation coverage;
+- source-field coverage from `metrics_summary`;
+- missing metric names and zero-valued KPI names that lack explicit
+  explanation;
+- caveats suitable for user-facing model trust displays.
+
+This field gives the frontend a single backend-derived signal for whether the
+network KPI panel is fully backed by runtime values or should be presented as a
+partial/missing proxy view.
+
 ## Follow-Up
 
 V2-022 should improve time-varying network pressure inputs while preserving this
-contract. Dashboard work can then consume `network_kpi_provenance_v2.kpis`
-instead of locally mapping individual metric keys.
+contract. Dashboard work can then consume `network_kpi_provenance_v2.kpis` and
+`network_kpi_credibility_v1` instead of locally mapping individual metric keys.

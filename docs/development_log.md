@@ -5,6 +5,51 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Network KPI Credibility v1
+
+- Branch: `feature/T206-network-kpi-credibility-v1`
+- Commit: pending in this commit
+- Scope: add backend-owned network KPI trust/coverage reporting. Runtime
+  status now exposes `network_kpi_credibility_v1`, derived from
+  `network_kpi_provenance_v2`, with observed/missing KPI counts,
+  packet-level metric guard status, flow-level proxy count, zero-value
+  explanation coverage, source-field coverage, missing metric names, and
+  user-facing caveats. This does not change KPI formulas or Event Kernel
+  behavior.
+- Changed files/modules:
+  - `src/leo_twin/services/network_kpi_provenance.py`
+  - `examples/integration_demo/control_plane.py`
+  - `tests/unit/test_network_kpi_provenance_v2.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `docs/network_kpi_provenance_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `$env:PYTHONPATH='.'; python -m pytest tests/unit/test_network_kpi_provenance_v2.py tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer -q`
+    - Result: passed, 3 tests.
+  - `python -m py_compile src/leo_twin/services/network_kpi_provenance.py examples/integration_demo/control_plane.py`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing `DataPanel` chunk-size
+      warning after minification.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - The first unit test expected a zero-valued KPI but the fixture had all KPI
+    runtime values positive. The fixture now sets route blocking ratio to zero
+    so the zero-value explanation path is covered deterministically.
+  - Local runtime/generated config files remain dirty and are intentionally not
+    included in this task.
+- Known remaining issues / follow-up:
+  - The dashboard type contract is ready, but the UI still needs a visible
+    `network_kpi_credibility_v1` trust badge/card.
+  - V2-022 time-varying network pressure remains the next model-fidelity step.
+
 ## 2026-07-06 - Dashboard User Config Text Preflight v1
 
 - Branch: `feature/T205-dashboard-user-config-text-preflight-v1`

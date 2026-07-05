@@ -3,7 +3,9 @@ from __future__ import annotations
 import json
 
 from leo_twin.services.network_kpi_provenance import (
+    NETWORK_KPI_CREDIBILITY_V1_ID,
     NETWORK_KPI_PROVENANCE_V2_ID,
+    build_network_kpi_credibility_v1,
     build_network_kpi_provenance_v2,
 )
 
@@ -30,7 +32,7 @@ def test_network_kpi_provenance_v2_binds_metrics_to_network_contract() -> None:
         "network_quality_latency_source": "COMPLETED_FLOW_LATENCY",
         "network_quality_latency_source_label": "completed flow latency",
         "network_quality_effective_loss_proxy_rate": 0.05,
-        "network_quality_route_blocking_ratio": 0.02,
+        "network_quality_route_blocking_ratio": 0.0,
         "network_quality_failed_flow_ratio": 0.0,
         "network_quality_congestion_loss_proxy_rate": 0.03,
         "network_quality_demand_loss_proxy_rate": 0.05,
@@ -100,6 +102,24 @@ def test_network_kpi_provenance_v2_binds_metrics_to_network_contract() -> None:
     assert delay_variation["current_value"] == 0.006
     assert delay_variation["observed_source"]["source"] == "FLOW_LATENCY_VARIATION"
 
+    credibility = build_network_kpi_credibility_v1(provenance)
+    assert credibility["version"] == "v1"
+    assert credibility["credibility_id"] == NETWORK_KPI_CREDIBILITY_V1_ID
+    assert credibility["source"] == "NETWORK_KPI_PROVENANCE_V2"
+    assert credibility["provenance_id"] == NETWORK_KPI_PROVENANCE_V2_ID
+    assert credibility["credibility_status"] == "COMPLETE_FLOW_LEVEL_PROXY"
+    assert credibility["kpi_count"] == 6
+    assert credibility["observed_kpi_count"] == 6
+    assert credibility["missing_kpi_count"] == 0
+    assert credibility["packet_level_simulation"] is False
+    assert credibility["packet_level_metric_count"] == 0
+    assert credibility["flow_level_proxy_metric_count"] == 6
+    assert credibility["zero_value_kpi_count"] >= 1
+    assert credibility["zero_value_explained_count"] == credibility["zero_value_kpi_count"]
+    assert credibility["missing_metrics"] == ()
+    assert credibility["zero_unexplained_metrics"] == ()
+    assert "flow-level proxies" in credibility["caveats"][0]
+
 
 def test_network_kpi_provenance_v2_reports_missing_runtime_values() -> None:
     provenance = build_network_kpi_provenance_v2({})
@@ -113,6 +133,14 @@ def test_network_kpi_provenance_v2_reports_missing_runtime_values() -> None:
     throughput = _kpi(provenance, "EFFECTIVE_THROUGHPUT")
     assert throughput["current_value"] is None
     assert throughput["observed_source"] == {"source": "", "label": ""}
+
+    credibility = build_network_kpi_credibility_v1(provenance)
+    assert credibility["credibility_status"] == "MISSING_RUNTIME_VALUES"
+    assert credibility["observed_kpi_count"] == 0
+    assert credibility["missing_kpi_count"] == credibility["kpi_count"]
+    assert credibility["missing_metrics"] == tuple(
+        item["metric"] for item in provenance["kpis"] if isinstance(item, dict)
+    )
 
 
 def _kpi(provenance: dict[str, object], metric: str) -> dict[str, object]:

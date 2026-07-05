@@ -12,8 +12,10 @@ from leo_twin.schema.network_model_contract import (
 
 
 NETWORK_KPI_PROVENANCE_V2_ID = "leo_twin.network_kpi_provenance.v2"
+NETWORK_KPI_CREDIBILITY_V1_ID = "leo_twin.network_kpi_credibility.v1"
 
 NetworkKpiProvenanceV2 = dict[str, object]
+NetworkKpiCredibilityV1 = dict[str, object]
 
 _SOURCE_KEYS_BY_METRIC = {
     "EFFECTIVE_THROUGHPUT": (
@@ -77,6 +79,83 @@ def build_network_kpi_provenance_v2(
         "provenance_note": _metric_string(metrics, "network_quality_provenance_note"),
         "kpi_count": len(kpis),
         "kpis": kpis,
+    }
+
+
+def build_network_kpi_credibility_v1(
+    provenance: Mapping[str, Any],
+) -> NetworkKpiCredibilityV1:
+    """Summarize KPI provenance coverage for product-facing trust reporting."""
+
+    if not isinstance(provenance, Mapping):
+        raise TypeError("provenance must be a mapping")
+    kpis = tuple(_records(provenance.get("kpis")))
+    observed = tuple(item for item in kpis if item.get("status") == "OBSERVED")
+    missing = tuple(item for item in kpis if item.get("status") != "OBSERVED")
+    packet_level_metrics = tuple(
+        item for item in kpis if item.get("packet_level_metric") is True
+    )
+    zero_value_kpis = tuple(
+        item for item in kpis if _is_zero_value(item.get("current_value"))
+    )
+    zero_value_explained = tuple(
+        item for item in zero_value_kpis if _has_zero_explanation(item)
+    )
+    source_field_records = tuple(
+        field
+        for item in kpis
+        for field in _records(item.get("source_fields"))
+    )
+    observed_source_fields = tuple(
+        field
+        for field in source_field_records
+        if field.get("value_source") == "METRICS_SUMMARY"
+    )
+    missing_source_fields = tuple(
+        field
+        for field in source_field_records
+        if field.get("value_source") != "METRICS_SUMMARY"
+    )
+    packet_level_simulation = provenance.get("packet_level_simulation") is True
+    credibility_status = _credibility_status(
+        kpi_count=len(kpis),
+        observed_count=len(observed),
+        missing_count=len(missing),
+        packet_level_metric_count=len(packet_level_metrics),
+        packet_level_simulation=packet_level_simulation,
+    )
+    zero_unexplained_metrics = tuple(
+        str(item.get("metric", ""))
+        for item in zero_value_kpis
+        if not _has_zero_explanation(item)
+    )
+    return {
+        "version": "v1",
+        "credibility_id": NETWORK_KPI_CREDIBILITY_V1_ID,
+        "source": "NETWORK_KPI_PROVENANCE_V2",
+        "provenance_id": str(provenance.get("provenance_id", "")),
+        "metric_model": str(provenance.get("metric_model", "")),
+        "packet_level_simulation": packet_level_simulation,
+        "credibility_status": credibility_status,
+        "kpi_count": len(kpis),
+        "observed_kpi_count": len(observed),
+        "missing_kpi_count": len(missing),
+        "packet_level_metric_count": len(packet_level_metrics),
+        "flow_level_proxy_metric_count": len(kpis) - len(packet_level_metrics),
+        "zero_value_kpi_count": len(zero_value_kpis),
+        "zero_value_explained_count": len(zero_value_explained),
+        "source_field_count": len(source_field_records),
+        "observed_source_field_count": len(observed_source_fields),
+        "missing_source_field_count": len(missing_source_fields),
+        "missing_metrics": tuple(str(item.get("metric", "")) for item in missing),
+        "zero_unexplained_metrics": zero_unexplained_metrics,
+        "caveats": _credibility_caveats(
+            credibility_status,
+            missing_count=len(missing),
+            packet_level_metric_count=len(packet_level_metrics),
+            packet_level_simulation=packet_level_simulation,
+            zero_unexplained_count=len(zero_unexplained_metrics),
+        ),
     }
 
 
@@ -176,8 +255,67 @@ def _metric_value(metrics: Mapping[str, Any], key: str) -> str | int | float | b
     return None
 
 
+def _is_zero_value(value: object) -> bool:
+    return (
+        not isinstance(value, bool)
+        and isinstance(value, (int, float))
+        and float(value) == 0.0
+    )
+
+
+def _has_zero_explanation(item: Mapping[str, Any]) -> bool:
+    zero_reason = item.get("zero_reason")
+    if isinstance(zero_reason, Mapping) and str(zero_reason.get("reason", "")):
+        return True
+    return bool(str(item.get("zero_value_semantics", "")))
+
+
+def _credibility_status(
+    *,
+    kpi_count: int,
+    observed_count: int,
+    missing_count: int,
+    packet_level_metric_count: int,
+    packet_level_simulation: bool,
+) -> str:
+    if packet_level_simulation or packet_level_metric_count > 0:
+        return "INVALID_PACKET_LEVEL_METRIC"
+    if kpi_count == 0 or observed_count == 0:
+        return "MISSING_RUNTIME_VALUES"
+    if missing_count > 0:
+        return "PARTIAL_RUNTIME_VALUES"
+    return "COMPLETE_FLOW_LEVEL_PROXY"
+
+
+def _credibility_caveats(
+    credibility_status: str,
+    *,
+    missing_count: int,
+    packet_level_metric_count: int,
+    packet_level_simulation: bool,
+    zero_unexplained_count: int,
+) -> tuple[str, ...]:
+    caveats = [
+        (
+            "Network KPI values are deterministic flow-level proxies, "
+            "not packet-level measurements."
+        )
+    ]
+    if missing_count > 0:
+        caveats.append(f"{missing_count} KPI runtime values are missing from metrics_summary.")
+    if packet_level_simulation or packet_level_metric_count > 0:
+        caveats.append("Packet-level network metrics are outside the current product contract.")
+    if zero_unexplained_count > 0:
+        caveats.append(f"{zero_unexplained_count} zero-valued KPI entries lack explicit zero reasons.")
+    caveats.append(f"credibility_status={credibility_status}")
+    return tuple(caveats)
+
+
 __all__ = [
+    "NETWORK_KPI_CREDIBILITY_V1_ID",
     "NETWORK_KPI_PROVENANCE_V2_ID",
+    "NetworkKpiCredibilityV1",
     "NetworkKpiProvenanceV2",
+    "build_network_kpi_credibility_v1",
     "build_network_kpi_provenance_v2",
 ]

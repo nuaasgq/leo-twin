@@ -298,6 +298,22 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
     assert loss_kpi["observed_source"]["source"] == network_provenance["sources"][
         "loss"
     ]["source"]
+    network_credibility = status_after_tick["network_kpi_credibility_v1"]
+    assert network_credibility["version"] == "v1"
+    assert network_credibility["credibility_id"] == (
+        "leo_twin.network_kpi_credibility.v1"
+    )
+    assert network_credibility["source"] == "NETWORK_KPI_PROVENANCE_V2"
+    assert network_credibility["provenance_id"] == (
+        network_provenance_v2["provenance_id"]
+    )
+    assert network_credibility["packet_level_simulation"] is False
+    assert network_credibility["packet_level_metric_count"] == 0
+    assert network_credibility["kpi_count"] == network_provenance_v2["kpi_count"]
+    assert network_credibility["observed_kpi_count"] == network_credibility["kpi_count"]
+    assert network_credibility["missing_kpi_count"] == 0
+    assert network_credibility["credibility_status"] == "COMPLETE_FLOW_LEVEL_PROXY"
+    assert network_credibility["missing_metrics"] == ()
     kpi_series = status_after_tick["kpi_time_series_v1"]
     assert kpi_series["version"] == "v1"
     assert kpi_series["sample_count"] == len(kpi_series["samples"])
