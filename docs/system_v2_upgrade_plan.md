@@ -202,6 +202,10 @@ Tasks:
 - V2-051: Add user detail drawer.
   - Scope: active service, selected satellite, route, queue, latency timeline.
   - Depends on: V2-023, V2-013.
+  - Status: T226 adds a deterministic user detail drawer v1 fallback view model
+    from `user_request_summary_v1` rows. It groups selected-user details into
+    business request, network/path/queue, and compute service sections while
+    still preferring backend `node_detail_summary_v1` cards when available.
 - V2-052: Add satellite detail drawer.
   - Scope: served users, next hops, compute resource vector, task queue,
     network KPIs, coverage summary.

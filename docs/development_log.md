@@ -5,6 +5,43 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Dashboard User Detail Drawer v1
+
+- Branch: `feature/T226-dashboard-user-detail-drawer-v1`
+- Commit: pending in this commit
+- Scope: advance V2-051 by adding a deterministic fallback view model for the
+  selected-user detail drawer. The dashboard still prefers backend
+  `node_detail_summary_v1` cards, but when they are unavailable it now groups
+  `user_request_summary_v1` rows into business request, network/path/queue, and
+  compute service sections.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/dashboard_user_detail_drawer_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 25 test files / 315 tests.
+  - `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite reported the existing large `DataPanel` chunk
+      warning after minification.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - Existing backend `node_detail_summary_v1` is already preferred when
+    available. This task therefore avoids duplicating backend semantics and only
+    improves the fallback drawer structure.
+  - Existing local runtime/generated config files remain dirty and are
+    intentionally not included in this task.
+- Known remaining issues / follow-up:
+  - V2-052 should add the equivalent satellite detail drawer v1.
+  - V2-053 should add virtualization or backend paging for large detail tables.
+  - Backend node detail cards should eventually carry richer latency timelines,
+    reducing the need for frontend fallback grouping.
+
 ## 2026-07-06 - Dashboard Information Architecture v3
 
 - Branch: `feature/T225-dashboard-information-architecture-v3`

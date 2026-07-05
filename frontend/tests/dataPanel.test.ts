@@ -41,6 +41,7 @@ import {
   buildDataPanelUserConfigurationFieldSections,
   buildDataPanelUserConfigurationValidationDisplay,
   buildUserBusinessRequestInspector,
+  buildUserDetailDrawerSectionsV1,
   buildDataPanelUserRequestHistory,
   buildRuntimeKpiTelemetrySamples,
   buildRuntimeDetailWindowNote,
@@ -4468,6 +4469,31 @@ describe("detail inspectors", () => {
     expect(buildUserBusinessRequestInspector(userRow)).toMatchObject({
       title: "用户 user-0",
       subtitle: "ACTIVE/AVAILABLE",
+      sections: [
+        {
+          sectionId: "business_request",
+          title: "业务请求",
+          fields: expect.arrayContaining([
+            { label: "活跃业务", value: userRow.serviceLabel },
+            { label: "目标卫星", value: userRow.selectedSatelliteId }
+          ])
+        },
+        {
+          sectionId: "network_path_queue",
+          title: "网络与队列",
+          fields: expect.arrayContaining([
+            { label: "网络队列", value: userRow.networkQueueLabel, tone: "normal" },
+            { label: "路径", value: userRow.pathLabel }
+          ])
+        },
+        {
+          sectionId: "compute_service",
+          title: "计算服务",
+          fields: expect.arrayContaining([
+            { label: "服务放置", value: userRow.placementLabel, tone: "resource" }
+          ])
+        }
+      ],
       fields: expect.arrayContaining([
         { label: "服务放置", value: userRow.placementLabel, tone: "resource" },
         { label: "路径", value: userRow.pathLabel }
@@ -4481,6 +4507,45 @@ describe("detail inspectors", () => {
         { label: "网络", value: satelliteRow.networkLabel }
       ])
     });
+  });
+
+  it("builds user detail drawer v1 sections from runtime request rows", () => {
+    expect(buildUserDetailDrawerSectionsV1(userRow)).toEqual([
+      {
+        sectionId: "business_request",
+        title: "业务请求",
+        fields: [
+          { label: "用户节点", value: "user-0" },
+          { label: "平台类型", value: "地面用户终端 / cell-a" },
+          { label: "活跃业务", value: "task-0 active / total 330 ms" },
+          { label: "请求状态", value: "ACTIVE/AVAILABLE" },
+          { label: "目标卫星", value: "sat-0" },
+          { label: "目标节点", value: "compute-0" }
+        ]
+      },
+      {
+        sectionId: "network_path_queue",
+        title: "网络与队列",
+        fields: [
+          { label: "通信路由", value: "1 / 2 routes / next sat-0" },
+          { label: "网络队列", value: "empty", tone: "normal" },
+          { label: "路径", value: "route-a: user-0 -> sat-0 -> compute-0" },
+          { label: "时延/容量", value: "0.12 s / 80 Mbps" }
+        ]
+      },
+      {
+        sectionId: "compute_service",
+        title: "计算服务",
+        fields: [
+          { label: "计算业务", value: "1 compute", tone: "resource" },
+          {
+            label: "服务放置",
+            value: "节点 sat-0 / 排队 / 瓶颈 gpu_tflops_fp32 / 候选 2/3",
+            tone: "resource"
+          }
+        ]
+      }
+    ]);
   });
 
   it("builds full drawer items without truncating detail field values", () => {
@@ -4498,6 +4563,7 @@ describe("detail inspectors", () => {
       emptyLabel: "当前窗口暂无选中用户节点"
     });
     expect(drawerItems[0].fields).toEqual(userInspector.fields);
+    expect(drawerItems[0].sections).toEqual(userInspector.sections);
     expect(drawerItems[1]).toMatchObject({
       kind: "satellite",
       title: "卫星 sat-0",

@@ -3715,6 +3715,7 @@ export function buildUserBusinessRequestInspector(
   return {
     title: `用户 ${row.userId}`,
     subtitle: row.statusLabel,
+    sections: buildUserDetailDrawerSectionsV1(row),
     fields: [
       { label: "平台", value: row.platformTypeLabel },
       { label: "通信", value: row.communicationLabel },
@@ -3728,6 +3729,61 @@ export function buildUserBusinessRequestInspector(
       { label: "路径", value: row.pathLabel }
     ]
   };
+}
+
+export function buildUserDetailDrawerSectionsV1(
+  row: UserBusinessRequestRow
+): readonly DataPanelNodeDetailSection[] {
+  return [
+    {
+      sectionId: "business_request",
+      title: "业务请求",
+      fields: [
+        { label: "用户节点", value: row.userId },
+        { label: "平台类型", value: row.platformTypeLabel },
+        { label: "活跃业务", value: row.serviceLabel },
+        { label: "请求状态", value: row.statusLabel },
+        { label: "目标卫星", value: row.selectedSatelliteId },
+        { label: "目标节点", value: row.destinationId }
+      ]
+    },
+    {
+      sectionId: "network_path_queue",
+      title: "网络与队列",
+      fields: [
+        { label: "通信路由", value: row.communicationLabel },
+        {
+          label: "网络队列",
+          value: row.networkQueueLabel,
+          tone: userNetworkQueueTone(row.networkQueueLabel)
+        },
+        { label: "路径", value: row.pathLabel },
+        { label: "时延/容量", value: row.latencyCapacityLabel }
+      ]
+    },
+    {
+      sectionId: "compute_service",
+      title: "计算服务",
+      fields: [
+        { label: "计算业务", value: row.computeLabel, tone: "resource" },
+        { label: "服务放置", value: row.placementLabel, tone: "resource" }
+      ]
+    }
+  ];
+}
+
+function userNetworkQueueTone(
+  queueLabel: string
+): DataPanelDetailInspectorField["tone"] {
+  const normalized = queueLabel.trim().toLowerCase();
+  if (
+    normalized.length === 0 ||
+    normalized === "empty" ||
+    normalized === "no network queue"
+  ) {
+    return "normal";
+  }
+  return "warning";
 }
 
 export function buildSatelliteResourceInspector(
