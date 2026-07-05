@@ -13,6 +13,9 @@ from leo_twin.models.traffic import (
     TrafficDemandBatch,
     TrafficDemandRecord,
     TrafficDestinationType,
+    TrafficServiceMixConfig,
+    TrafficServiceMixItem,
+    generate_traffic_service_mix,
 )
 from leo_twin.services.configuration_view import build_user_configuration_view
 from leo_twin.services.derived_summary import build_backend_derived_summary
@@ -471,6 +474,21 @@ def _initial_events(config: DemoConfig) -> tuple[SimEvent, ...]:
 
 
 def _traffic_demand_batch(config: DemoConfig) -> TrafficDemandBatch:
+    service_mix_weights = _traffic_service_mix_weights(config)
+    if service_mix_weights is not None:
+        return generate_traffic_service_mix(
+            TrafficServiceMixConfig(
+                items=tuple(
+                    _traffic_service_mix_item(config, traffic_class, weight)
+                    for traffic_class, weight in service_mix_weights
+                ),
+                total_request_count=_scheduled_task_count(config),
+                arrival_interval=_service_mix_arrival_interval_s(config),
+                start_time=0.15,
+                id_prefix="demo-service",
+            )
+        )
+
     records: list[TrafficDemandRecord] = []
     flow_index = 0
     traffic_class = TrafficClass(str(config.traffic_class))
@@ -518,6 +536,82 @@ def _traffic_demand_batch(config: DemoConfig) -> TrafficDemandBatch:
             )
             flow_index += 1
     return TrafficDemandBatch(records=tuple(records))
+
+
+def _traffic_service_mix_weights(
+    config: DemoConfig,
+) -> tuple[tuple[TrafficClass, float], ...] | None:
+    weights = (
+        (TrafficClass.DATA_TRANSFER, config.traffic_data_transfer_weight),
+        (TrafficClass.TELEMETRY, config.traffic_telemetry_weight),
+        (TrafficClass.BULK_DOWNLINK, config.traffic_bulk_downlink_weight),
+        (TrafficClass.COMPUTE_SERVICE, config.traffic_compute_service_weight),
+    )
+    if sum(weight for _, weight in weights) <= 0.0:
+        return None
+    return tuple(
+        (traffic_class, float(weight))
+        for traffic_class, weight in weights
+        if weight > 0.0
+    )
+
+
+def _traffic_service_mix_item(
+    config: DemoConfig,
+    traffic_class: TrafficClass,
+    weight: float,
+) -> TrafficServiceMixItem:
+    destination_type = _service_mix_destination_type(traffic_class)
+    return TrafficServiceMixItem(
+        traffic_class=traffic_class,
+        weight=weight,
+        source_ids=_service_mix_source_ids(config, traffic_class),
+        destination_ids=_traffic_target_ids(config, traffic_class, destination_type),
+        input_data_size=config.flow_demand_capacity,
+        output_data_size=(
+            config.traffic_output_data_size
+            if traffic_class
+            in {TrafficClass.BULK_DOWNLINK, TrafficClass.COMPUTE_SERVICE}
+            else 0.0
+        ),
+        priority=0,
+        destination_type=destination_type,
+        compute_demand=config.task_compute_demand,
+        input_data_mb=config.task_data_size,
+        output_data_mb=config.traffic_output_data_size,
+        output_destination_ids=_ground_user_ids(config),
+    )
+
+
+def _service_mix_destination_type(
+    traffic_class: TrafficClass,
+) -> TrafficDestinationType:
+    if traffic_class == TrafficClass.COMPUTE_SERVICE:
+        return TrafficDestinationType.COMPUTE_NODE
+    if traffic_class in {TrafficClass.TELEMETRY, TrafficClass.BULK_DOWNLINK}:
+        return TrafficDestinationType.GROUND_ENDPOINT
+    return TrafficDestinationType.SERVICE_ENDPOINT
+
+
+def _service_mix_source_ids(
+    config: DemoConfig,
+    traffic_class: TrafficClass,
+) -> tuple[str, ...]:
+    if traffic_class in {TrafficClass.TELEMETRY, TrafficClass.BULK_DOWNLINK}:
+        return tuple(f"sat-{index:03d}" for index in range(config.satellite_count))
+    return _ground_user_ids(config)
+
+
+def _ground_user_ids(config: DemoConfig) -> tuple[str, ...]:
+    return tuple(f"user-{index:04d}" for index in range(config.ground_user_count))
+
+
+def _service_mix_arrival_interval_s(config: DemoConfig) -> float:
+    total_request_count = _scheduled_task_count(config)
+    if total_request_count <= 1:
+        return 0.001
+    duration_window_s = max(0.001, float(config.duration_seconds) - 0.2)
+    return max(0.001, duration_window_s / float(total_request_count - 1))
 
 
 def _traffic_source_id(

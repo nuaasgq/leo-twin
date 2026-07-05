@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import Counter
 from math import pi
 
 import pytest
@@ -215,6 +216,47 @@ def test_demo_traffic_model_semantics_are_config_driven() -> None:
     assert demand_batch.records[0].destination_type == TrafficDestinationType.GROUND_ENDPOINT
     assert demand_batch.records[0].output_data_size == 4.5
     assert demand_batch.records[0].task is None
+
+
+def test_demo_service_mix_weights_drive_demand_generation() -> None:
+    config = _demo_config(
+        traffic_data_transfer_weight=2.0,
+        traffic_compute_service_weight=1.0,
+    )
+
+    scenario = build_demo_scenario(config)
+    demand_batch = _traffic_demand_batch(config)
+    class_counts = Counter(record.traffic_class for record in demand_batch.records)
+    task_count = sum(1 for record in demand_batch.records if record.task is not None)
+
+    assert len(demand_batch.records) == 4
+    assert class_counts == {
+        TrafficClass.DATA_TRANSFER: 3,
+        TrafficClass.COMPUTE_SERVICE: 1,
+    }
+    assert task_count == 1
+    assert all(
+        record.destination_type == TrafficDestinationType.SERVICE_ENDPOINT
+        for record in demand_batch.records
+        if record.traffic_class == TrafficClass.DATA_TRANSFER
+    )
+    assert any(
+        record.input_flow.source_id.startswith("user-")
+        and record.input_flow.target_id.startswith("ground-")
+        for record in demand_batch.records
+        if record.traffic_class == TrafficClass.DATA_TRANSFER
+    )
+    traffic_summary = scenario.frontend_config["backend_summary"][
+        "traffic_demand_summary"
+    ]
+    assert traffic_summary["service_mix_mode"] == "WEIGHTED_MIX"
+    assert traffic_summary["service_mix_generated_request_counts"] == {
+        "DATA_TRANSFER": 3,
+        "TELEMETRY": 0,
+        "BULK_DOWNLINK": 0,
+        "COMPUTE_SERVICE": 1,
+    }
+    assert traffic_summary["generated_task_count"] == 1
 
 
 def test_demo_initial_workload_uses_traffic_demand_records() -> None:

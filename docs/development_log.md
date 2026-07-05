@@ -6787,3 +6787,37 @@ change.
   - Connect service-mix weights to deterministic live user demand generation,
     then expose per-user active business state and per-satellite service-load
     summaries in the standalone dashboard.
+
+## 2026-07-05 - Integration Demo Service Mix Generation v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: connect explicit service-mix weights from `DemoConfig` to the
+  integration demo flow-level demand generator. Default zero-weight configs
+  keep the existing single `traffic_class` generation path. When one or more
+  weights are positive, the demo now uses the existing
+  `TrafficServiceMixConfig` / `generate_traffic_service_mix` contract to build
+  deterministic DATA_TRANSFER, TELEMETRY, BULK_DOWNLINK, and COMPUTE_SERVICE
+  request records. Per-class defaults keep compute traffic user-to-compute,
+  telemetry/downlink satellite-to-ground, and data transfer user-to-service.
+  Event Kernel behavior and packet-level semantics are unchanged.
+- Changed files/modules:
+  - `examples/integration_demo/scenario.py`
+  - `tests/unit/test_integration_demo_scenario.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_integration_demo_scenario.py tests/unit/test_backend_derived_summary.py -q`
+    - Result: passed, 24 tests.
+  - `python -m pytest tests/unit/test_traffic_demand_model.py tests/unit/test_backend_derived_summary.py tests/unit/test_integration_demo_scenario.py tests/unit/test_configuration_view.py tests/unit/test_scenario_builder.py tests/integration/test_config_control.py -k "not default_generated_scenario_config_file_loads and not config_loads_correctly" -q`
+    - Result: passed, 53 tests.
+- Problems encountered:
+  - The repository still has two local runtime config files whose values differ
+    from test baselines. They were left untouched and unstaged.
+- Known remaining issues:
+  - The service-mix generator is still flow-level and abstract. It does not
+    model packets, retransmissions, RF propagation, or packet queues.
+  - The summary reports aggregate mix counts; per-user active request state and
+    per-satellite service-load panels remain separate observability tasks.
+- Recommended follow-up:
+  - Emit deterministic per-user business state and per-satellite service-load
+    summaries into the dashboard snapshot stream.
