@@ -49,10 +49,12 @@ scenario:
 
   traffic_model:
     # Mixed services with higher demand and shorter intervals to produce
-    # visible flow-level pressure and service-latency movement.
-    flow_interval_seconds: 5
-    task_interval_seconds: 6
-    flow_demand_capacity: 320.0
+    # visible flow-level pressure and service-latency movement. The per-flow
+    # demand is intentionally below the post-MAC/transport path capacity so
+    # this preset exercises partial blocking instead of complete route loss.
+    flow_interval_seconds: 10
+    task_interval_seconds: 30
+    flow_demand_capacity: 80.0
     task_compute_demand: 90.0
     task_data_size: 32.0
     traffic_class: COMPUTE_SERVICE

@@ -177,8 +177,9 @@ def test_network_stress_120_user_config_template_loads() -> None:
     assert config.scenario.compute_nodes == 120
     assert config.scenario.initial_workload_smoothing_enabled is True
     assert config.scenario.orbit.update_interval_seconds == 20
-    assert config.scenario.traffic_model.flow_interval_seconds == 5
-    assert config.scenario.traffic_model.flow_demand_capacity == 320.0
+    assert config.scenario.traffic_model.flow_interval_seconds == 10
+    assert config.scenario.traffic_model.task_interval_seconds == 30
+    assert config.scenario.traffic_model.flow_demand_capacity == 80.0
     assert config.scenario.traffic_model.service_mix_weights() == {
         "DATA_TRANSFER": 3.0,
         "TELEMETRY": 1.0,

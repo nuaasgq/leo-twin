@@ -5,12 +5,16 @@ from pathlib import Path
 
 import pytest
 
-from examples.integration_demo.config import DemoConfig
+from examples.integration_demo.config import DemoConfig, demo_config_from_sees_config
 from examples.integration_demo.control_plane import DemoControlPlane
-from examples.integration_demo.runtime import run_integration_demo
+from examples.integration_demo.runtime import (
+    build_integration_demo_runtime,
+    run_integration_demo,
+)
 from leo_twin.core.config import ConfigValidationError, config_from_mapping, load_config
 from leo_twin.schema.config import OrbitParameters, RuntimeConfig, ScenarioConfig, SEESConfig
 from leo_twin.services.control import RuntimeController, ScaleSafetyChecker
+from leo_twin.services.configuration_view import load_user_configuration_template
 
 
 def test_config_loads_correctly() -> None:
@@ -662,6 +666,42 @@ def test_network_stress_template_status_polling_stays_stable(tmp_path) -> None:
         assert status["processed_event_count"] > 0
         assert status["kpi_time_series_v1"]["sample_count"] > 0
         assert status["satellite_kpi_slices_v1"]["slice_count"] >= 0
+
+
+def test_network_stress_template_exposes_nonzero_time_varying_network_kpis() -> None:
+    config = demo_config_from_sees_config(
+        load_user_configuration_template("network_stress_120sat"),
+        _small_demo_config(),
+    )
+    context = build_integration_demo_runtime(config)
+    for event in context.scenario.initial_events:
+        context.kernel.schedule_event(event)
+
+    processed_event_count = 0
+    for sim_time in range(1, 7):
+        processed_event_count += len(context.kernel.run(until_time=float(sim_time)))
+
+    summary = context.metrics.summary()
+    samples = context.metrics.kpi_time_series()["samples"]
+    sampled_network_values = {
+        (
+            round(float(sample["network_effective_throughput_mbps"]), 6),
+            round(float(sample["network_effective_loss_proxy_rate"]), 6),
+            round(float(sample["network_effective_delay_variation_s"]), 6),
+        )
+        for sample in samples
+        if float(sample["network_recent_flow_count"]) > 0.0
+    }
+
+    assert processed_event_count < 8_000
+    assert summary["routes_total"] > 0
+    assert summary["routes_available"] > 0
+    assert summary["routes_available"] < summary["routes_total"]
+    assert summary["network_quality_effective_throughput_mbps"] > 0.0
+    assert summary["network_quality_effective_latency_avg_s"] > 0.0
+    assert 0.0 < summary["network_quality_effective_loss_proxy_rate"] < 1.0
+    assert summary["network_quality_effective_delay_variation_proxy_s"] > 0.0
+    assert len(sampled_network_values) > 1
 
 
 def test_demo_control_plane_blocks_unsafe_scale_start(tmp_path) -> None:

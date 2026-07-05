@@ -5,6 +5,38 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Network Stress KPI Movement v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending in this commit
+- Scope: retune the 120-satellite network stress observability template so it
+  produces deterministic, time-varying flow-level KPI samples instead of an
+  early all-routes-blocked profile. The preset now uses an 80 Mbps per-flow
+  demand and a 30s mixed-service task interval, which keeps the live run
+  responsive while preserving visible partial route blocking, non-zero
+  throughput, latency, loss proxy, and delay-variation proxy. Event Kernel
+  behavior is unchanged.
+- Changed files/modules:
+  - `configs/templates/sees_user_network_stress_120.example.yaml`
+  - `tests/unit/test_configuration_view.py`
+  - `tests/integration/test_config_control.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_configuration_view.py tests/integration/test_config_control.py::test_control_plane_loads_user_config_template_before_initialization tests/integration/test_config_control.py::test_network_stress_template_status_polling_stays_stable tests/integration/test_config_control.py::test_network_stress_template_exposes_nonzero_time_varying_network_kpis -q`
+    - Result: passed, 10 tests.
+  - `git diff --check -- configs/templates/sees_user_network_stress_120.example.yaml tests/unit/test_configuration_view.py tests/integration/test_config_control.py docs/development_log.md`
+    - Result: passed.
+- Problems encountered:
+  - A local probe showed the previous 320 Mbps demand profile kept the stress
+    scenario in complete effective route loss for early dashboard windows. The
+    fix stays in scenario configuration and regression coverage rather than
+    changing route ordering, Event Kernel behavior, or adding packet-level
+    simulation.
+- Known remaining issues / follow-up:
+  - The network KPI model remains a flow-level proxy. A later network-fidelity
+    task should add clearer per-user request state, queue attribution, and
+    route/load explanations for the standalone dashboard.
+
 ## 2026-07-05 - Runtime Metrics Status Polling Stability v1
 
 - Branch: `feature/T164-dashboard-observability-v1`
