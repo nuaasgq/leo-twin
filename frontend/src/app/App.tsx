@@ -17,6 +17,7 @@ import {
   RuntimeExportRestoreCommandResultV1,
   RuntimeExportRestorePreflightV1,
   RuntimeBackpressureSummary,
+  RuntimeNodeDetailCardV1,
   RuntimeStatusPayload,
   ScenarioConfig,
   UserConfigurationExportV1,
@@ -38,8 +39,10 @@ import {
   loadRuntimeExportRestorePreflight,
   loadRuntimeNodeDetails,
   loadRuntimeRouteDetails,
+  loadRuntimeSatelliteDetail,
   loadRuntimeSatelliteDetails,
   loadRuntimeServiceDetails,
+  loadRuntimeUserDetail,
   loadRuntimeUserDetails,
   loadRuntimeState,
   loadScenarioConfig,
@@ -77,6 +80,10 @@ type RuntimeDetailFilterState = Record<
   RuntimeDetailCursorKey,
   RuntimeDetailQueryFilters
 >;
+type RuntimeSelectedNodeDetails = {
+  user: RuntimeNodeDetailCardV1 | null;
+  satellite: RuntimeNodeDetailCardV1 | null;
+};
 
 const DEFAULT_RUNTIME_CONNECTION_HEALTH: RuntimeConnectionHealth = {
   http: "connecting",
@@ -176,6 +183,11 @@ export function App() {
     useState<RuntimeDetailCursorErrorState>(DEFAULT_RUNTIME_DETAIL_CURSOR_ERRORS);
   const [runtimeDetailFilters, setRuntimeDetailFilters] =
     useState<RuntimeDetailFilterState>(DEFAULT_RUNTIME_DETAIL_FILTERS);
+  const [runtimeSelectedNodeDetails, setRuntimeSelectedNodeDetails] =
+    useState<RuntimeSelectedNodeDetails>({
+      user: null,
+      satellite: null
+    });
   const [runtimeExportCatalog, setRuntimeExportCatalog] =
     useState<RuntimeExportCatalogV1 | null>(null);
   const [runtimeExportCompare, setRuntimeExportCompare] =
@@ -297,6 +309,7 @@ export function App() {
     setRuntimeDetailCursors(DEFAULT_RUNTIME_DETAIL_CURSORS);
     setRuntimeDetailCursorErrors(DEFAULT_RUNTIME_DETAIL_CURSOR_ERRORS);
     setRuntimeDetailFilters(DEFAULT_RUNTIME_DETAIL_FILTERS);
+    setRuntimeSelectedNodeDetails({ user: null, satellite: null });
   }, [runtimeStatus.config_version]);
 
   const refreshRuntimeDetails = useCallback(async (
@@ -582,6 +595,65 @@ export function App() {
       }));
     }
   }, [generatedConfig, runtimeDetailFilters.computeNodes, setConnectionChannel]);
+
+  const refreshRuntimeUserEntityDetail = useCallback(async (userId: string | null) => {
+    const normalizedUserId = userId?.trim() ?? "";
+    if (!normalizedUserId) {
+      setRuntimeSelectedNodeDetails((previous) => ({ ...previous, user: null }));
+      return;
+    }
+    const requestPlan = runtimeDetailRequestPlan(
+      generatedConfig?.backend_summary?.large_detail_pagination_contract_v2
+    );
+    try {
+      const detail = await loadRuntimeUserDetail(
+        normalizedUserId,
+        requestPlan.users.endpoint
+      );
+      setRuntimeSelectedNodeDetails((previous) => ({
+        ...previous,
+        user: detail
+      }));
+      setConnectionChannel("http", "live");
+    } catch (error) {
+      setRuntimeSelectedNodeDetails((previous) => ({ ...previous, user: null }));
+      setConnectionChannel("http", "degraded");
+    }
+  }, [generatedConfig, setConnectionChannel]);
+
+  const refreshRuntimeSatelliteEntityDetail = useCallback(
+    async (satelliteId: string | null) => {
+      const normalizedSatelliteId = satelliteId?.trim() ?? "";
+      if (!normalizedSatelliteId) {
+        setRuntimeSelectedNodeDetails((previous) => ({
+          ...previous,
+          satellite: null
+        }));
+        return;
+      }
+      const requestPlan = runtimeDetailRequestPlan(
+        generatedConfig?.backend_summary?.large_detail_pagination_contract_v2
+      );
+      try {
+        const detail = await loadRuntimeSatelliteDetail(
+          normalizedSatelliteId,
+          requestPlan.satellites.endpoint
+        );
+        setRuntimeSelectedNodeDetails((previous) => ({
+          ...previous,
+          satellite: detail
+        }));
+        setConnectionChannel("http", "live");
+      } catch (error) {
+        setRuntimeSelectedNodeDetails((previous) => ({
+          ...previous,
+          satellite: null
+        }));
+        setConnectionChannel("http", "degraded");
+      }
+    },
+    [generatedConfig, setConnectionChannel]
+  );
 
   const refreshRuntimeExportCompare = useCallback(async (packageId: string) => {
     setRuntimeExportComparePackageId(packageId);
@@ -1295,9 +1367,10 @@ export function App() {
                       runtimeDetailPages?.computeNodes?.cursor ??
                         runtimeDetailCursors.computeNodes,
                       filters
-                    )
+                  )
                 }
               }}
+              runtimeSelectedNodeDetails={runtimeSelectedNodeDetails}
               runtimeExportCatalog={runtimeExportCatalog}
               runtimeExportCompare={runtimeExportCompare}
               runtimeExportComparePackageId={runtimeExportComparePackageId}
@@ -1321,6 +1394,8 @@ export function App() {
               onUserConfigurationApply={applyValidatedUserConfiguration}
               onRuntimeExportCompareSelect={refreshRuntimeExportCompare}
               onRuntimeExportRestore={restoreRuntimeExportPackage}
+              onRuntimeUserDetailSelect={refreshRuntimeUserEntityDetail}
+              onRuntimeSatelliteDetailSelect={refreshRuntimeSatelliteEntityDetail}
               displaySimTime={displaySimTime}
               displayEventCount={displayEventCount}
               onNavigateControl={(event) => navigateWithinApp(event, "/")}

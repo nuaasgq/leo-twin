@@ -234,6 +234,10 @@ Tasks:
     from `user_request_summary_v1` rows. It groups selected-user details into
     business request, network/path/queue, and compute service sections while
     still preferring backend `node_detail_summary_v1` cards when available.
+  - Status: T245 adds backend detail-by-id support for selected users. The
+    dashboard now requests `GET /runtime/details/users/<user_id>` on row
+    selection and prefers that exact backend-owned detail card over bounded
+    window summaries or frontend fallback rows.
 - V2-052: Add satellite detail drawer.
   - Scope: served users, next hops, compute resource vector, task queue,
     network KPIs, coverage summary.
@@ -243,6 +247,10 @@ Tasks:
     into service/routing, compute resource pool, and network/task sections
     while still preferring backend `node_detail_summary_v1` cards when
     available.
+  - Status: T245 adds backend detail-by-id support for selected satellites.
+    The dashboard now requests `GET /runtime/details/satellites/<satellite_id>`
+    on row selection and prefers that exact backend-owned detail card over
+    bounded window summaries or frontend fallback rows.
 - V2-053: Add virtualized large tables.
   - Scope: avoid rendering hundreds/thousands of rows directly.
   - Depends on: V2-043.

@@ -11,6 +11,8 @@ import {
   RuntimeExportPackageCompareV1,
   RuntimeExportRestorePreflightEnvelope,
   RuntimeExportRestorePreflightV1,
+  RuntimeEntityDetailEnvelopeV1,
+  RuntimeNodeDetailCardV1,
   RuntimeNodeDetailPageV1,
   RuntimeRouteExplanationSummaryV1,
   RuntimeSatelliteServiceSummaryV1,
@@ -98,6 +100,32 @@ export async function loadRuntimeSatelliteDetails(
     throw new TypeError(`runtime detail response kind must be satellites, got ${page.kind}`);
   }
   return page.summary as RuntimeSatelliteServiceSummaryV1;
+}
+
+export async function loadRuntimeUserDetail(
+  userId: string,
+  endpoint = "/runtime/details/users"
+): Promise<RuntimeNodeDetailCardV1> {
+  const detail = await loadRuntimeEntityDetail(runtimeDetailEntityHref(userId, endpoint));
+  if (detail.kind !== "user") {
+    throw new TypeError(`runtime entity detail kind must be user, got ${detail.kind}`);
+  }
+  return detail.summary;
+}
+
+export async function loadRuntimeSatelliteDetail(
+  satelliteId: string,
+  endpoint = "/runtime/details/satellites"
+): Promise<RuntimeNodeDetailCardV1> {
+  const detail = await loadRuntimeEntityDetail(
+    runtimeDetailEntityHref(satelliteId, endpoint)
+  );
+  if (detail.kind !== "satellite") {
+    throw new TypeError(
+      `runtime entity detail kind must be satellite, got ${detail.kind}`
+    );
+  }
+  return detail.summary;
 }
 
 export async function loadRuntimeNodeDetails(
@@ -291,6 +319,10 @@ export function runtimeExportArchiveHref(
   return endpoint;
 }
 
+export function runtimeDetailEntityHref(entityId: string, endpoint: string): string {
+  return `${endpoint.replace(/\/+$/, "")}/${encodeURIComponent(entityId)}`;
+}
+
 export function runtimeExportPackageRecordHref(
   packageId: string,
   endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
@@ -393,6 +425,16 @@ async function loadRuntimeDetailPage(
   return decodeRuntimeDetailPage(await response.json());
 }
 
+async function loadRuntimeEntityDetail(
+  endpoint: string
+): Promise<RuntimeEntityDetailEnvelopeV1> {
+  const response = await fetch(endpoint);
+  if (!response.ok) {
+    throw new Error(`failed to load runtime entity detail from ${endpoint}: HTTP ${response.status}`);
+  }
+  return decodeRuntimeEntityDetail(await response.json());
+}
+
 function appendRuntimeDetailFilterParams(
   params: URLSearchParams,
   filters: RuntimeDetailQueryFilters
@@ -447,6 +489,30 @@ export function decodeRuntimeDetailPage(value: unknown): RuntimeDetailPageEnvelo
       | RuntimeServiceDetailPageV1
       | RuntimeComputeNodeDetailPageV1
   } as RuntimeDetailPageEnvelope;
+}
+
+export function decodeRuntimeEntityDetail(value: unknown): RuntimeEntityDetailEnvelopeV1 {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError("runtime entity detail response must be an object");
+  }
+  const kind = (value as { kind?: unknown }).kind;
+  const entityId = (value as { entity_id?: unknown }).entity_id;
+  const summary = (value as { summary?: unknown }).summary;
+  if (kind !== "user" && kind !== "satellite") {
+    throw new TypeError("runtime entity detail kind must be user or satellite");
+  }
+  if (typeof entityId !== "string" || entityId.trim().length === 0) {
+    throw new TypeError("runtime entity detail response must include entity_id string");
+  }
+  if (typeof summary !== "object" || summary === null || Array.isArray(summary)) {
+    throw new TypeError("runtime entity detail response must include summary object");
+  }
+  return {
+    ...(value as Record<string, unknown>),
+    kind,
+    entity_id: entityId,
+    summary: summary as RuntimeNodeDetailCardV1
+  } as RuntimeEntityDetailEnvelopeV1;
 }
 
 export function decodeRuntimeExportHistory(value: unknown): RuntimeExportHistoryEnvelope {

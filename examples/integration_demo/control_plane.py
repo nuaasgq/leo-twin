@@ -55,8 +55,10 @@ from leo_twin.services.runtime_observability import (
     build_runtime_lifecycle_summaries,
     build_runtime_node_detail_page,
     build_runtime_route_explanation_summary,
+    build_runtime_satellite_detail_card,
     build_runtime_satellite_service_summary,
     build_runtime_service_detail_page,
+    build_runtime_user_detail_card,
     build_runtime_user_request_summary,
 )
 from leo_twin.services.runtime_reproducibility import (
@@ -360,6 +362,21 @@ class DemoControlPlane:
             "summary": summary,
         }
 
+    def runtime_user_detail(self, user_id: str) -> dict[str, Any]:
+        summary = build_runtime_user_detail_card(
+            self.visible_snapshot(),
+            user_id,
+            service_latency_history=self._service_latency_history_json(),
+        )
+        if summary is None:
+            raise KeyError(f"runtime user detail not found: {user_id}")
+        return {
+            "type": "RUNTIME_ENTITY_DETAIL",
+            "kind": "user",
+            "entity_id": str(summary["entity_id"]),
+            "summary": summary,
+        }
+
     def runtime_satellite_details(
         self,
         cursor: int = 0,
@@ -378,6 +395,22 @@ class DemoControlPlane:
         return {
             "type": "RUNTIME_DETAIL_PAGE",
             "kind": "satellites",
+            "summary": summary,
+        }
+
+    def runtime_satellite_detail(self, satellite_id: str) -> dict[str, Any]:
+        summary = build_runtime_satellite_detail_card(
+            self.visible_snapshot(),
+            satellite_id,
+            service_latency_history=self._service_latency_history_json(),
+            satellite_kpi_slices=self._satellite_kpi_slices_json(),
+        )
+        if summary is None:
+            raise KeyError(f"runtime satellite detail not found: {satellite_id}")
+        return {
+            "type": "RUNTIME_ENTITY_DETAIL",
+            "kind": "satellite",
+            "entity_id": str(summary["entity_id"]),
             "summary": summary,
         }
 

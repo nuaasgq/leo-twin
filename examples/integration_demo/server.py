@@ -234,6 +234,31 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                     download_name=str(archive["filename"]),
                 )
                 return
+            user_detail_id = _runtime_detail_entity_route(path, "/runtime/details/users")
+            if user_detail_id is not None:
+                if not user_detail_id:
+                    self.send_error(404, "runtime user detail not found")
+                    return
+                try:
+                    self._send_json(control_plane.runtime_user_detail(user_detail_id))
+                except KeyError as exc:
+                    self.send_error(404, str(exc))
+                return
+            satellite_detail_id = _runtime_detail_entity_route(
+                path,
+                "/runtime/details/satellites",
+            )
+            if satellite_detail_id is not None:
+                if not satellite_detail_id:
+                    self.send_error(404, "runtime satellite detail not found")
+                    return
+                try:
+                    self._send_json(
+                        control_plane.runtime_satellite_detail(satellite_detail_id)
+                    )
+                except KeyError as exc:
+                    self.send_error(404, str(exc))
+                return
             if path == "/runtime/details/users":
                 try:
                     cursor, limit = _detail_query(query, default_limit=100)
@@ -626,6 +651,17 @@ def _runtime_export_package_route(
     if len(parts) == 3 and parts[1] == "files":
         return parts[0], "file", parts[2]
     return "", "missing", None
+
+
+def _runtime_detail_entity_route(path: str, collection_path: str) -> str | None:
+    prefix = collection_path.rstrip("/") + "/"
+    if not path.startswith(prefix):
+        return None
+    suffix = path[len(prefix) :].strip("/")
+    parts = [unquote(part) for part in suffix.split("/") if part]
+    if len(parts) != 1:
+        return ""
+    return parts[0]
 
 
 def _optional_query_int(

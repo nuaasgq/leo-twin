@@ -8,9 +8,11 @@ import {
   loadRuntimeComputeNodeDetails,
   loadRuntimeNodeDetails,
   loadRuntimeRouteDetails,
+  loadRuntimeSatelliteDetail,
   loadRuntimeSatelliteDetails,
   loadRuntimeServiceDetails,
   loadRuntimeState,
+  loadRuntimeUserDetail,
   loadRuntimeUserDetails,
   loadUserConfigurationExport,
   loadUserConfigurationSchema,
@@ -24,6 +26,7 @@ import {
   runtimeExportPackageManifestHref,
   runtimeExportPackageRecordHref,
   runtimeExportRestorePreflightHref,
+  runtimeDetailEntityHref,
   userConfigurationExportHref,
   userConfigurationSchemaHref,
   userConfigurationTemplatesHref,
@@ -718,6 +721,59 @@ describe("runtime API diagnostics", () => {
     expect(fetchMock).toHaveBeenNthCalledWith(
       9,
       "/runtime/details/compute-nodes?cursor=10&limit=80&query=busy"
+    );
+  });
+
+  it("loads runtime user and satellite entity details by id", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          type: "RUNTIME_ENTITY_DETAIL",
+          kind: "user",
+          entity_id: "user-0001",
+          summary: {
+            entity_type: "USER",
+            entity_id: "user-0001",
+            title: "user detail",
+            subtitle: "ACTIVE",
+            fields: [{ label: "status", value: "ACTIVE" }]
+          }
+        })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          type: "RUNTIME_ENTITY_DETAIL",
+          kind: "satellite",
+          entity_id: "sat-001",
+          summary: {
+            entity_type: "SATELLITE",
+            entity_id: "sat-001",
+            title: "satellite detail",
+            subtitle: "ACTIVE",
+            fields: [{ label: "load", value: "20%" }]
+          }
+        })
+      });
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+
+    await expect(loadRuntimeUserDetail("user-0001")).resolves.toMatchObject({
+      entity_type: "USER",
+      entity_id: "user-0001"
+    });
+    await expect(loadRuntimeSatelliteDetail("sat-001")).resolves.toMatchObject({
+      entity_type: "SATELLITE",
+      entity_id: "sat-001"
+    });
+    expect(fetchMock).toHaveBeenNthCalledWith(1, "/runtime/details/users/user-0001");
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "/runtime/details/satellites/sat-001"
+    );
+    expect(runtimeDetailEntityHref("user/with space", "/runtime/details/users/")).toBe(
+      "/runtime/details/users/user%2Fwith%20space"
     );
   });
 

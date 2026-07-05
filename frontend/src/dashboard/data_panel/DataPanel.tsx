@@ -137,6 +137,11 @@ export interface RuntimeDetailCursorFilters {
   bottleneckComponent?: string;
 }
 
+export interface RuntimeSelectedNodeDetails {
+  user?: RuntimeNodeDetailCardV1 | null;
+  satellite?: RuntimeNodeDetailCardV1 | null;
+}
+
 const FALLBACK_USER_DETAIL_PAGE_SIZE = 80;
 const FALLBACK_SATELLITE_DETAIL_PAGE_SIZE = 120;
 const DEFAULT_USER_CONFIGURATION_VALIDATE_TEXT = `{
@@ -168,6 +173,7 @@ export const DataPanel = memo(function DataPanel({
   generatedConfig,
   runtimeDetailPages,
   runtimeDetailCursorControls,
+  runtimeSelectedNodeDetails,
   runtimeExportCatalog,
   runtimeExportCompare,
   runtimeExportComparePackageId,
@@ -189,6 +195,8 @@ export const DataPanel = memo(function DataPanel({
   onUserConfigurationApply,
   onRuntimeExportCompareSelect,
   onRuntimeExportRestore,
+  onRuntimeUserDetailSelect,
+  onRuntimeSatelliteDetailSelect,
   displaySimTime,
   displayEventCount,
   onNavigateControl
@@ -198,6 +206,7 @@ export const DataPanel = memo(function DataPanel({
   generatedConfig: GeneratedScenarioConfig | null;
   runtimeDetailPages?: RuntimeDetailPages | null;
   runtimeDetailCursorControls?: RuntimeDetailCursorControls | null;
+  runtimeSelectedNodeDetails?: RuntimeSelectedNodeDetails | null;
   runtimeExportCatalog?: RuntimeExportCatalogV1 | null;
   runtimeExportCompare?: RuntimeExportPackageCompareV1 | null;
   runtimeExportComparePackageId?: string | null;
@@ -227,6 +236,8 @@ export const DataPanel = memo(function DataPanel({
   ) => void;
   onRuntimeExportCompareSelect?: (packageId: string) => void;
   onRuntimeExportRestore?: (packageId: string) => void;
+  onRuntimeUserDetailSelect?: (userId: string | null) => void;
+  onRuntimeSatelliteDetailSelect?: (satelliteId: string | null) => void;
   displaySimTime: number;
   displayEventCount: number;
   onNavigateControl: (event: MouseEvent<HTMLAnchorElement>) => void;
@@ -496,13 +507,23 @@ export const DataPanel = memo(function DataPanel({
     runtimeStatus,
     runtimeDetailPages
   );
+  const selectedUserBackendDetail =
+    runtimeSelectedNodeDetails?.user?.entity_id === selectedDetailUserId
+      ? runtimeSelectedNodeDetails.user
+      : null;
+  const selectedSatelliteBackendDetail =
+    runtimeSelectedNodeDetails?.satellite?.entity_id === selectedDetailSatelliteId
+      ? runtimeSelectedNodeDetails.satellite
+      : null;
   const userDetailInspector = buildUserBusinessRequestInspector(
     selectedUserDetailRow,
-    nodeDetailSummary
+    nodeDetailSummary,
+    selectedUserBackendDetail
   );
   const satelliteDetailInspector = buildSatelliteResourceInspector(
     selectedSatelliteDetailRow,
-    nodeDetailSummary
+    nodeDetailSummary,
+    selectedSatelliteBackendDetail
   );
   const nodeDetailDrawerItems = buildDataPanelNodeDetailDrawerItems(
     userDetailInspector,
@@ -1588,6 +1609,8 @@ export const DataPanel = memo(function DataPanel({
             setSatelliteDetailPage(0);
             setSelectedDetailUserId(null);
             setSelectedDetailSatelliteId(null);
+            onRuntimeUserDetailSelect?.(null);
+            onRuntimeSatelliteDetailSelect?.(null);
           }}
         />
         <span>
@@ -1641,7 +1664,10 @@ export const DataPanel = memo(function DataPanel({
           <UserBusinessRequestTable
             rows={userDetailWindow.items}
             selectedUserId={selectedUserDetailRow?.userId ?? null}
-            onSelect={(row) => setSelectedDetailUserId(row.userId)}
+            onSelect={(row) => {
+              setSelectedDetailUserId(row.userId);
+              onRuntimeUserDetailSelect?.(row.userId);
+            }}
           />
         </section>
         <section className="dashboard-section data-panel-detail-table" aria-label="卫星资源消耗明细">
@@ -1680,7 +1706,10 @@ export const DataPanel = memo(function DataPanel({
           <SatelliteResourceTable
             rows={satelliteDetailWindow.items}
             selectedSatelliteId={selectedSatelliteDetailRow?.satelliteId ?? null}
-            onSelect={(row) => setSelectedDetailSatelliteId(row.satelliteId)}
+            onSelect={(row) => {
+              setSelectedDetailSatelliteId(row.satelliteId);
+              onRuntimeSatelliteDetailSelect?.(row.satelliteId);
+            }}
           />
         </section>
       </div>
@@ -4240,8 +4269,12 @@ export function selectRuntimeSatelliteDetailCard(
 
 export function buildUserBusinessRequestInspector(
   row: UserBusinessRequestRow | null | undefined,
-  backendDetailSummary: RuntimeNodeDetailSummaryV1 | null | undefined = undefined
+  backendDetailSummary: RuntimeNodeDetailSummaryV1 | null | undefined = undefined,
+  backendDetailCard: RuntimeNodeDetailCardV1 | null | undefined = undefined
 ): DataPanelDetailInspector {
+  if (backendDetailCard !== null && backendDetailCard !== undefined) {
+    return buildRuntimeNodeDetailInspector(backendDetailCard);
+  }
   if (row === null || row === undefined) {
     return {
       title: "用户详情",
@@ -4329,8 +4362,12 @@ function userNetworkQueueTone(
 
 export function buildSatelliteResourceInspector(
   row: SatelliteResourceRow | null | undefined,
-  backendDetailSummary: RuntimeNodeDetailSummaryV1 | null | undefined = undefined
+  backendDetailSummary: RuntimeNodeDetailSummaryV1 | null | undefined = undefined,
+  backendDetailCard: RuntimeNodeDetailCardV1 | null | undefined = undefined
 ): DataPanelDetailInspector {
+  if (backendDetailCard !== null && backendDetailCard !== undefined) {
+    return buildRuntimeNodeDetailInspector(backendDetailCard);
+  }
   if (row === null || row === undefined) {
     return {
       title: "卫星详情",

@@ -4948,6 +4948,35 @@ describe("detail inspectors", () => {
     });
   });
 
+  it("prefers explicit runtime entity detail cards", () => {
+    expect(
+      buildUserBusinessRequestInspector(userRow, undefined, {
+        entity_type: "USER",
+        entity_id: "user-0",
+        title: "explicit user detail",
+        subtitle: "EXACT_BY_ID",
+        fields: [{ label: "source", value: "entity endpoint", tone: "normal" }]
+      })
+    ).toMatchObject({
+      title: "explicit user detail",
+      subtitle: "EXACT_BY_ID",
+      fields: [{ label: "source", value: "entity endpoint", tone: "normal" }]
+    });
+    expect(
+      buildSatelliteResourceInspector(satelliteRow, undefined, {
+        entity_type: "SATELLITE",
+        entity_id: "sat-0",
+        title: "explicit satellite detail",
+        subtitle: "EXACT_BY_ID",
+        fields: [{ label: "source", value: "entity endpoint", tone: "resource" }]
+      })
+    ).toMatchObject({
+      title: "explicit satellite detail",
+      subtitle: "EXACT_BY_ID",
+      fields: [{ label: "source", value: "entity endpoint", tone: "resource" }]
+    });
+  });
+
   it("builds user and satellite detail inspector fields", () => {
     expect(buildUserBusinessRequestInspector(userRow)).toMatchObject({
       title: "用户 user-0",

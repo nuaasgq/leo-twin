@@ -7,7 +7,9 @@ from leo_twin.services.runtime_observability import (
     build_runtime_lifecycle_summaries,
     build_runtime_node_detail_page,
     build_runtime_route_explanation_summary,
+    build_runtime_satellite_detail_card,
     build_runtime_satellite_service_summary,
+    build_runtime_user_detail_card,
     build_runtime_user_request_summary,
 )
 
@@ -477,6 +479,27 @@ def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> No
     assert node_page["window_user_detail_count"] == 1
     assert node_page["window_satellite_detail_count"] == 1
     assert [item["entity_id"] for item in node_page["items"]] == ["user-1", "sat-0"]
+    user_detail_card = build_runtime_user_detail_card(
+        snapshot,
+        "user-1",
+        service_latency_history=service_history,
+    )
+    assert user_detail_card is not None
+    assert user_detail_card["entity_type"] == "USER"
+    assert user_detail_card["entity_id"] == "user-1"
+    assert user_detail_card["fields"][0]["label"] == "平台"
+    assert build_runtime_user_detail_card(snapshot, "missing-user") is None
+    satellite_detail_card = build_runtime_satellite_detail_card(
+        snapshot,
+        "sat-0",
+        service_latency_history=service_history,
+        satellite_kpi_slices=kpi_slices,
+    )
+    assert satellite_detail_card is not None
+    assert satellite_detail_card["entity_type"] == "SATELLITE"
+    assert satellite_detail_card["entity_id"] == "sat-0"
+    assert satellite_detail_card["fields"][0]["value"] == "75%"
+    assert build_runtime_satellite_detail_card(snapshot, "missing-sat") is None
     route_page = build_runtime_route_explanation_summary(
         snapshot,
         service_latency_history=service_history,

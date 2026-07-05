@@ -1707,6 +1707,13 @@ export interface RuntimeDetailPageEnvelope {
     | RuntimeComputeNodeDetailPageV1;
 }
 
+export interface RuntimeEntityDetailEnvelopeV1 {
+  type: "RUNTIME_ENTITY_DETAIL" | string;
+  kind: "user" | "satellite" | string;
+  entity_id: string;
+  summary: RuntimeNodeDetailCardV1;
+}
+
 export interface RuntimeNodeDetailPageV1 {
   version: "v1" | string;
   source: string;

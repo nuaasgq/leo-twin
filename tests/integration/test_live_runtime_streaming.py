@@ -242,6 +242,8 @@ def test_runtime_detail_pages_return_deterministic_windows(tmp_path: Path) -> No
     user_second = control_plane.runtime_user_details(cursor=2, limit=2)
     satellite_first = control_plane.runtime_satellite_details(cursor=0, limit=3)
     satellite_second = control_plane.runtime_satellite_details(cursor=3, limit=3)
+    user_detail = control_plane.runtime_user_detail("user-0001")
+    satellite_detail = control_plane.runtime_satellite_detail("sat-000")
     node_first = control_plane.runtime_node_details(cursor=0, limit=2)
     node_after_users = control_plane.runtime_node_details(
         cursor=user_first["summary"]["user_count"],
@@ -273,6 +275,11 @@ def test_runtime_detail_pages_return_deterministic_windows(tmp_path: Path) -> No
         "user-0001",
         "user-0002",
     ]
+    assert user_detail["type"] == "RUNTIME_ENTITY_DETAIL"
+    assert user_detail["kind"] == "user"
+    assert user_detail["entity_id"] == "user-0001"
+    assert user_detail["summary"]["entity_type"] == "USER"
+    assert user_detail["summary"]["entity_id"] == "user-0001"
 
     assert satellite_first["type"] == "RUNTIME_DETAIL_PAGE"
     assert satellite_first["kind"] == "satellites"
@@ -291,6 +298,11 @@ def test_runtime_detail_pages_return_deterministic_windows(tmp_path: Path) -> No
         "sat-004",
         "sat-005",
     ]
+    assert satellite_detail["type"] == "RUNTIME_ENTITY_DETAIL"
+    assert satellite_detail["kind"] == "satellite"
+    assert satellite_detail["entity_id"] == "sat-000"
+    assert satellite_detail["summary"]["entity_type"] == "SATELLITE"
+    assert satellite_detail["summary"]["entity_id"] == "sat-000"
 
     assert node_first["type"] == "RUNTIME_DETAIL_PAGE"
     assert node_first["kind"] == "nodes"

@@ -200,6 +200,97 @@ def build_runtime_node_detail_page(
     }
 
 
+def build_runtime_user_detail_card(
+    snapshot: Mapping[str, Any],
+    user_id: str,
+    *,
+    service_latency_history: Mapping[str, Any] | None = None,
+) -> dict[str, object] | None:
+    """Build one backend-owned user detail card by entity id."""
+
+    if not isinstance(snapshot, Mapping):
+        raise TypeError("snapshot must be a mapping")
+    normalized_user_id = _str(user_id).strip()
+    if not normalized_user_id:
+        return None
+    service_lookup = _service_lookup(service_latency_history)
+    service_detail_lookup = _service_detail_lookup(service_latency_history)
+    routes_by_user: dict[str, list[Mapping[str, Any]]] = {}
+    for route in _records(snapshot.get("routes")):
+        route_user_id = _route_user_id(route)
+        if route_user_id is None:
+            continue
+        routes_by_user.setdefault(route_user_id, []).append(route)
+    user_by_id = {
+        _str(user.get("user_id")): user
+        for user in _records(snapshot.get("ground_users"))
+        if _str(user.get("user_id"))
+    }
+    if normalized_user_id not in user_by_id and normalized_user_id not in routes_by_user:
+        return None
+    item = _user_item(
+        normalized_user_id,
+        user_by_id.get(normalized_user_id),
+        routes_by_user.get(normalized_user_id, ()),
+        service_lookup,
+        service_detail_lookup,
+    )
+    return _user_detail_card(item)
+
+
+def build_runtime_satellite_detail_card(
+    snapshot: Mapping[str, Any],
+    satellite_id: str,
+    *,
+    service_latency_history: Mapping[str, Any] | None = None,
+    satellite_kpi_slices: Mapping[str, Any] | None = None,
+) -> dict[str, object] | None:
+    """Build one backend-owned satellite detail card by entity id."""
+
+    if not isinstance(snapshot, Mapping):
+        raise TypeError("snapshot must be a mapping")
+    normalized_satellite_id = _str(satellite_id).strip()
+    if not normalized_satellite_id:
+        return None
+    service_lookup = _service_lookup(service_latency_history)
+    routes = tuple(_records(snapshot.get("routes")))
+    satellites = tuple(_records(snapshot.get("satellites")))
+    compute_nodes = tuple(_records(snapshot.get("compute_nodes")))
+    links = tuple(_records(snapshot.get("links")))
+    satellite_by_id = {
+        _str(item.get("satellite_id")): item
+        for item in satellites
+        if _str(item.get("satellite_id"))
+    }
+    node_by_id = {
+        _str(item.get("node_id")): item
+        for item in compute_nodes
+        if _str(item.get("node_id"))
+    }
+    slice_by_id = {
+        _str(item.get("satellite_id")): item
+        for item in _records((satellite_kpi_slices or {}).get("slices"))
+        if _str(item.get("satellite_id"))
+    }
+    if (
+        normalized_satellite_id not in satellite_by_id
+        and normalized_satellite_id not in node_by_id
+        and normalized_satellite_id not in slice_by_id
+    ):
+        return None
+    link_counts = _link_counts_by_satellite(links)
+    route_context = _route_context_by_satellite(routes, service_lookup)
+    item = _satellite_item(
+        normalized_satellite_id,
+        satellite_by_id.get(normalized_satellite_id),
+        node_by_id.get(normalized_satellite_id),
+        slice_by_id.get(normalized_satellite_id),
+        link_counts.get(normalized_satellite_id, {}),
+        route_context.get(normalized_satellite_id, {}),
+    )
+    return _satellite_detail_card(item)
+
+
 def build_runtime_user_request_summary(
     snapshot: Mapping[str, Any],
     *,

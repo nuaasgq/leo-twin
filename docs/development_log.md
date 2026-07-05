@@ -5,6 +5,56 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - User and Satellite Detail-by-ID v1
+
+- Branch: `feature/T245-user-satellite-detail-by-id-v1`
+- Commit: pending in this commit
+- Scope: make selected dashboard user and satellite inspectors request
+  backend-owned exact detail cards by entity id. The demo backend now exposes
+  `GET /runtime/details/users/<user_id>` and
+  `GET /runtime/details/satellites/<satellite_id>` while preserving the
+  existing cursor endpoints. The dashboard still renders local/window fallback
+  details immediately, then prefers the exact backend detail card when it
+  arrives.
+- Changed files/modules:
+  - `src/leo_twin/services/runtime_observability.py`
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `frontend/src/app/api.ts`
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `tests/unit/test_runtime_observability.py`
+  - `tests/integration/test_live_runtime_streaming.py`
+  - `docs/user_satellite_detail_by_id_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_runtime_observability.py tests/integration/test_live_runtime_streaming.py -q`
+    - Result: passed, 17 tests.
+  - `pnpm --dir frontend test -- api.test.ts dataPanel.test.ts`
+    - Result: passed, 26 test files / 345 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. The command includes TypeScript checking; Vite reported
+      the existing `DataPanel` chunk size warning after minification.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - One backend assertion initially used terminal mojibake text for the
+    Chinese `平台` field. The assertion was corrected to the actual field
+    value.
+  - The local shell did not have `node` on `PATH`; frontend validation used the
+    bundled Codex workspace Node/Pnpm paths.
+  - Existing local runtime/generated config files remain dirty and are
+    intentionally not included in this task.
+- Known remaining issues / follow-up:
+  - Add detail-by-id endpoints for routes, service lifecycle rows, and compute
+    nodes if users need exact inspectors for those table selections.
+  - Add visible loading/error affordances for exact detail requests if backend
+    latency becomes noticeable in larger scenarios.
+
 ## 2026-07-06 - Service and Compute Detail Filters v1
 
 - Branch: `feature/T244-service-compute-detail-filters-v1`
