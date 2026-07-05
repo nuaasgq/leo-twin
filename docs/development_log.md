@@ -5,6 +5,40 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Benchmark Acceptance Tests v1
+
+- Branch: `feature/T219-benchmark-acceptance-tests-v1`
+- Commit: pending in this commit
+- Scope: advance V2-072 by adding benchmark acceptance tests over the scenario
+  matrix and model verification report template. The tests verify matrix/report
+  alignment, deterministic backend summaries for 72/300/1200 baselines, scale
+  policy fidelity expectations, small-baseline runtime KPI safety ranges, and
+  exact expected-range binding back to config source fields.
+- Changed files/modules:
+  - `tests/integration/test_benchmark_acceptance_v1.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/integration/test_benchmark_acceptance_v1.py -q`
+    - Result: passed, 9 tests.
+  - `python -m pytest tests/unit/test_benchmark_scenario_matrix_v1.py tests/unit/test_model_verification_report_template_v1.py tests/integration/test_benchmark_acceptance_v1.py -q`
+    - Result: passed, 23 tests.
+  - `python -m pytest tests/integration/test_product_acceptance_scenarios.py::test_acceptance_scenarios_leave_event_kernel_unchanged -q`
+    - Result: passed, 1 test.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - To avoid duplicating the existing heavier 1200 runtime smoke, the new KPI
+    range runtime check runs only the 72-satellite baseline. The 300/1200
+    scenarios are still covered for deterministic summaries, config ranges, and
+    scale/fidelity policy expectations.
+  - Local runtime/generated config files remain dirty and are intentionally not
+    included in this task.
+- Known remaining issues / follow-up:
+  - V2-073 should export completed benchmark evidence into a result package.
+  - Later KPI acceptance can add scenario-specific nonzero ranges once the
+    benchmark expected outputs are calibrated from repeated deterministic runs.
+
 ## 2026-07-06 - Model Verification Report Template v1
 
 - Branch: `feature/T218-model-verification-report-template-v1`

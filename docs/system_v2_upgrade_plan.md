@@ -255,6 +255,11 @@ Tasks:
 - V2-072: Add benchmark acceptance tests.
   - Scope: deterministic summaries, KPI ranges, scale policy behavior.
   - Depends on: V2-070, V2-071.
+  - Status: T219 adds benchmark acceptance tests that align the report
+    template with the scenario matrix, verify deterministic backend summaries
+    for the 72/300/1200 baselines, check scale policy behavior against matrix
+    expectations, validate small-baseline runtime KPI safety ranges, and bind
+    expected numeric ranges back to their config sources.
 - V2-073: Add result package export.
   - Scope: config snapshot, events, metrics, summary, model assumptions,
     runtime logs.
