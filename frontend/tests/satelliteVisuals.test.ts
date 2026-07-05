@@ -26,6 +26,8 @@ import {
 } from "../src/3d/cesium/satelliteFollow";
 import {
   selectedSatelliteDetailSummary,
+  appendSelectedSatelliteResourceHistory,
+  selectedSatelliteResourceHistoryPoints,
   selectedSatelliteResourceUsageRows
 } from "../src/3d/cesium/satelliteDetailSummary";
 import {
@@ -483,6 +485,83 @@ describe("selected satellite detail summary", () => {
         capacityLabel: "3.5 TFLOPS",
         utilizationPercent: 71.42857142857143,
         utilizationLabel: "71.4%"
+      }
+    ]);
+  });
+
+  it("appends bounded selected satellite resource history and sparkline points", () => {
+    const first = selectedSatelliteDetailSummary({
+      satellite: satelliteA,
+      computeNode: {
+        node_id: "sat-a",
+        running_tasks: 1,
+        finished_tasks: 0,
+        capacity: 40,
+        available_capacity: 30,
+        status: "BUSY",
+        load_ratio: 0.25
+      },
+      links: [],
+      routes: [],
+      groundUsers: [],
+      scenarioConfig: null
+    });
+    const second = selectedSatelliteDetailSummary({
+      satellite: { ...satelliteA, sim_time: 2 },
+      computeNode: {
+        node_id: "sat-a",
+        running_tasks: 2,
+        finished_tasks: 0,
+        capacity: 40,
+        available_capacity: 20,
+        status: "BUSY",
+        load_ratio: 0.5
+      },
+      links: [],
+      routes: [],
+      groundUsers: [],
+      scenarioConfig: null
+    });
+    const switched = selectedSatelliteDetailSummary({
+      satellite: satelliteB,
+      computeNode: {
+        node_id: "sat-b",
+        running_tasks: 0,
+        finished_tasks: 0,
+        capacity: 40,
+        available_capacity: 40,
+        status: "IDLE",
+        load_ratio: 0
+      },
+      links: [],
+      routes: [],
+      groundUsers: [],
+      scenarioConfig: null
+    });
+
+    const firstHistory = appendSelectedSatelliteResourceHistory([], first, 1);
+    const duplicateHistory = appendSelectedSatelliteResourceHistory(firstHistory, first, 1);
+    const secondHistory = appendSelectedSatelliteResourceHistory(
+      duplicateHistory,
+      second,
+      2
+    );
+    const switchedHistory = appendSelectedSatelliteResourceHistory(
+      secondHistory,
+      switched,
+      1
+    );
+
+    expect(duplicateHistory).toBe(firstHistory);
+    expect(secondHistory.map((point) => point.utilizationPercent)).toEqual([25, 50]);
+    expect(selectedSatelliteResourceHistoryPoints(secondHistory, 100, 36)).toBe(
+      "0,27 100,18"
+    );
+    expect(switchedHistory).toEqual([
+      {
+        satelliteId: "sat-b",
+        simTime: 1,
+        utilizationPercent: 0
       }
     ]);
   });

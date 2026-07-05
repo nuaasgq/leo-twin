@@ -807,6 +807,50 @@ body {
   background: linear-gradient(90deg, #4fd37a, #f2bd45);
 }
 
+.selected-satellite-resource-history {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto 36px;
+  gap: 4px 8px;
+  min-width: 0;
+  border: 1px solid #243845;
+  border-radius: 6px;
+  padding: 6px;
+  background: #0b1219;
+}
+
+.selected-satellite-resource-history span,
+.selected-satellite-resource-history strong {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 10px;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selected-satellite-resource-history span {
+  color: var(--app-muted);
+}
+
+.selected-satellite-resource-history strong {
+  color: var(--accent-cyan);
+}
+
+.selected-satellite-resource-history svg {
+  grid-column: 1 / -1;
+  width: 100%;
+  height: 36px;
+}
+
+.selected-satellite-resource-history polyline {
+  fill: none;
+  stroke: #56a6ff;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
 .selected-satellite-resource-breakdown {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(122px, 1fr));

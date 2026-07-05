@@ -4251,3 +4251,36 @@ change.
 - Recommended follow-up:
   - Continue with selected-satellite resource sparkline samples or visual
     screenshot acceptance once the next implementation slice starts.
+
+## 2026-07-05 - Selected Satellite Resource Sparkline v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a bounded frontend observation history for the currently selected
+  satellite's backend-derived/snapshot-derived compute utilization and render a
+  compact sparkline in the selected satellite strip. The history resets when
+  the selected satellite changes and remains local to the control view.
+- Changed files/modules:
+  - `frontend/src/3d/cesium/CesiumGlobe.tsx`
+  - `frontend/src/3d/cesium/satelliteDetailSummary.ts`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/satelliteVisuals.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- satelliteVisuals.test.ts`
+    - Result: passed, 25 files / 186 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - None. This is a local frontend visual slice and does not change backend
+    payload shape, runtime advancement, or Event Kernel behavior.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The sparkline is a bounded frontend observation history, not a backend-owned
+    per-satellite resource time-series contract.
+- Recommended follow-up:
+  - Add backend-owned per-satellite resource history samples once runtime
+    sampling policy and retention limits are formalized.

@@ -321,14 +321,20 @@ The following issue-sized slices have now been delivered on
   - Backend satellite KPI slices now include optional compute vector usage
     fields, and the selected-satellite detail summary can use those fields when
     a compute-node snapshot is not present.
+- `feat(globe): add selected satellite resource sparkline`
+  - Maps to suggestions 53, 57, 58, and the selected satellite resource
+    inspector slice.
+  - The selected satellite strip now renders a bounded local history sparkline
+    for the current satellite's resource utilization, resetting the history
+    when the operator switches satellites.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected
 satellite coverage/beam labels, compute vector KPI samples, and the frontend
 visual verification script. The remaining high-value product gaps are backend
-per-satellite vector time-series, multi-resource chart comparison, richer
-route-quality provenance, screenshot-based visual acceptance, and durable
-route-switch/reset end-to-end smoke tests.
+per-satellite vector time-series, richer route-quality provenance,
+screenshot-based visual acceptance, and durable route-switch/reset end-to-end
+smoke tests.
 
 ## Acceptance Gates
 

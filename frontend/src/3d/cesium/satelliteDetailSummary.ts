@@ -47,6 +47,12 @@ export interface SelectedSatelliteResourceUsageRow {
   utilizationLabel: string;
 }
 
+export interface SelectedSatelliteResourceHistoryPoint {
+  satelliteId: string;
+  simTime: number;
+  utilizationPercent: number;
+}
+
 export function selectedSatelliteDetailSummary({
   satellite,
   computeNode,
@@ -238,6 +244,54 @@ export function selectedSatelliteResourceUsageRows(
   });
 }
 
+export function appendSelectedSatelliteResourceHistory(
+  currentHistory: readonly SelectedSatelliteResourceHistoryPoint[],
+  summary: SelectedSatelliteDetailSummary | null,
+  simTime: number,
+  maxPoints = 32
+): readonly SelectedSatelliteResourceHistoryPoint[] {
+  if (!summary?.computeSummary) {
+    return [];
+  }
+  const nextPoint = {
+    satelliteId: summary.satelliteId,
+    simTime,
+    utilizationPercent: clamp(summary.computeSummary.utilizationPercent, 0, 100)
+  };
+  const retainedHistory =
+    currentHistory[currentHistory.length - 1]?.satelliteId === summary.satelliteId
+      ? currentHistory
+      : [];
+  const previousPoint = retainedHistory[retainedHistory.length - 1];
+  if (
+    previousPoint?.simTime === nextPoint.simTime &&
+    previousPoint.utilizationPercent === nextPoint.utilizationPercent
+  ) {
+    return retainedHistory;
+  }
+  return [...retainedHistory, nextPoint].slice(-Math.max(2, Math.floor(maxPoints)));
+}
+
+export function selectedSatelliteResourceHistoryPoints(
+  history: readonly SelectedSatelliteResourceHistoryPoint[],
+  width = 100,
+  height = 36
+): string {
+  if (history.length === 0) {
+    return "";
+  }
+  const safeWidth = Math.max(1, width);
+  const safeHeight = Math.max(1, height);
+  return history
+    .map((point, index) => {
+      const x =
+        history.length === 1 ? safeWidth / 2 : (index * safeWidth) / (history.length - 1);
+      const y = safeHeight - (clamp(point.utilizationPercent, 0, 100) / 100) * safeHeight;
+      return `${formatSvgNumber(x)},${formatSvgNumber(y)}`;
+    })
+    .join(" ");
+}
+
 function backendRouteValue(
   slice: RuntimeSatelliteKpiSliceV1 | undefined,
   key: "route_latency_avg_s" | "route_loss_proxy_rate" | "route_delay_variation_proxy_s",
@@ -306,4 +360,8 @@ function formatNumber(value: number): string {
     maximumFractionDigits: 1,
     minimumFractionDigits: 0
   });
+}
+
+function formatSvgNumber(value: number): string {
+  return String(Math.round(value * 100) / 100);
 }

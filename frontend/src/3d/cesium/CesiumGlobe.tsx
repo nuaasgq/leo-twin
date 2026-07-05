@@ -83,7 +83,10 @@ import {
 } from "./satelliteFollow";
 import {
   SelectedSatelliteDetailSummary,
+  SelectedSatelliteResourceHistoryPoint,
+  appendSelectedSatelliteResourceHistory,
   selectedSatelliteDetailSummary,
+  selectedSatelliteResourceHistoryPoints,
   selectedSatelliteResourceUsageRows
 } from "./satelliteDetailSummary";
 
@@ -138,6 +141,9 @@ export function CesiumGlobe({
   );
   const [selectedSatelliteId, setSelectedSatelliteId] = useState("");
   const [selectedTrail, setSelectedTrail] = useState<readonly SatelliteInsetPoint[]>([]);
+  const [selectedResourceHistory, setSelectedResourceHistory] = useState<
+    readonly SelectedSatelliteResourceHistoryPoint[]
+  >([]);
   const displaySatellites = useMemo(
     () => projectSatelliteStates(snapshot.satellites, displaySimTime),
     [snapshot.satellites, displaySimTime]
@@ -381,6 +387,20 @@ export function CesiumGlobe({
   ]);
 
   useEffect(() => {
+    setSelectedResourceHistory((history) =>
+      appendSelectedSatelliteResourceHistory(
+        history,
+        selectedDetailSummary,
+        selectedSatellite?.sim_time ?? 0
+      )
+    );
+  }, [
+    selectedDetailSummary?.satelliteId,
+    selectedSatellite?.sim_time,
+    selectedDetailSummary?.computeSummary?.utilizationPercent
+  ]);
+
+  useEffect(() => {
     const viewer = viewerRef.current;
     if (!viewer || viewer.isDestroyed() || cameraMode !== "EARTH") {
       return;
@@ -497,7 +517,10 @@ export function CesiumGlobe({
           ))}
         </div>
         {selectedDetailSummary ? (
-          <SelectedSatelliteDetailStrip summary={selectedDetailSummary} />
+          <SelectedSatelliteDetailStrip
+            summary={selectedDetailSummary}
+            resourceHistory={selectedResourceHistory}
+          />
         ) : null}
       </div>
       {cameraMode === "SATELLITE" && selectedSatellite ? (
@@ -520,12 +543,20 @@ export function CesiumGlobe({
 }
 
 function SelectedSatelliteDetailStrip({
-  summary
+  summary,
+  resourceHistory
 }: {
   summary: SelectedSatelliteDetailSummary;
+  resourceHistory: readonly SelectedSatelliteResourceHistoryPoint[];
 }) {
   const utilization = summary.computeSummary?.utilizationPercent ?? 0;
   const resourceRows = selectedSatelliteResourceUsageRows(summary);
+  const visibleResourceHistory =
+    resourceHistory[resourceHistory.length - 1]?.satelliteId === summary.satelliteId
+      ? resourceHistory
+      : [];
+  const resourceHistoryPoints =
+    selectedSatelliteResourceHistoryPoints(visibleResourceHistory);
   return (
     <section className="selected-satellite-strip" aria-label="选中卫星态势">
       <div className="selected-satellite-strip-header">
@@ -557,6 +588,23 @@ function SelectedSatelliteDetailStrip({
         <div className="selected-satellite-resource-track" aria-hidden="true">
           <span style={{ width: `${Math.max(0, Math.min(100, utilization))}%` }} />
         </div>
+        {visibleResourceHistory.length > 1 ? (
+          <div
+            className="selected-satellite-resource-history"
+            aria-label="选中卫星资源负载历史"
+          >
+            <span>资源负载历史</span>
+            <strong>
+              {visibleResourceHistory[
+                visibleResourceHistory.length - 1
+              ].utilizationPercent.toFixed(1)}
+              %
+            </strong>
+            <svg viewBox="0 0 100 36" preserveAspectRatio="none" aria-hidden="true">
+              <polyline points={resourceHistoryPoints} />
+            </svg>
+          </div>
+        ) : null}
         {resourceRows.length > 0 ? (
           <div
             className="selected-satellite-resource-breakdown"
