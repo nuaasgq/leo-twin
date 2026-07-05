@@ -5,6 +5,31 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - System v2 Upgrade Roadmap v1
+
+- Branch: `feature/T165-system-v2-roadmap`
+- Commit: pending in this commit
+- Scope: establish the system v2 upgrade baseline around configuration-driven
+  scenarios, backend-owned model semantics, KPI provenance, runtime scale
+  policy, dashboard information architecture, 3D scene productization,
+  verification, result export, and operator delivery. This is a planning and
+  task sequencing change only; Event Kernel, runtime behavior, backend models,
+  and frontend rendering are unchanged.
+- Changed files/modules:
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `git diff --check docs/system_v2_upgrade_plan.md docs/development_log.md`
+    - Result: passed.
+- Problems encountered:
+  - The working tree already contained local runtime/config drift in
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+    These files were intentionally left unstaged and unchanged by this task.
+- Known remaining issues / follow-up:
+  - This task defines the v2 execution order but does not implement the first
+    behavior change. Recommended next commit: V2-001 Product Configuration
+    Schema v2, followed by V2-020, V2-030, and V2-070.
+
 ## 2026-07-05 - Dashboard Terminal Completion Notice Gate v1
 
 - Branch: `feature/T164-dashboard-observability-v1`
