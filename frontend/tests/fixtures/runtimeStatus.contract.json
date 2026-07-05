@@ -427,6 +427,82 @@
         "npu_tops_int8_per_node": 12,
         "memory_gb_per_node": 32,
         "storage_gb_per_node": 512
+      },
+      "compute_resource_contract_v2": {
+        "contract_id": "leo_twin.compute_resource_contract.v2",
+        "version": "v2",
+        "resource_model": "ComputeResourceVector",
+        "node_role": "SATELLITE_HOSTED_COMPUTE",
+        "resource_lanes": [
+          {
+            "lane": "CPU_FP32",
+            "capacity_field": "compute_capacity",
+            "unit": "GFLOPS FP32",
+            "node_state_capacity_field": "capacity",
+            "node_state_used_field": "used_cpu_gflops_fp32",
+            "node_state_available_field": "available_cpu_gflops_fp32",
+            "throughput_lane": true,
+            "compatibility_role": "legacy_scalar_capacity"
+          },
+          {
+            "lane": "GPU_FP32",
+            "capacity_field": "compute_gpu_tflops_fp32",
+            "unit": "TFLOPS FP32",
+            "node_state_capacity_field": "gpu_tflops_fp32",
+            "node_state_used_field": "used_gpu_tflops_fp32",
+            "node_state_available_field": "available_gpu_tflops_fp32",
+            "throughput_lane": true,
+            "compatibility_role": ""
+          }
+        ],
+        "task_demand_lanes": [
+          {
+            "lane": "CPU_OPS",
+            "demand_field": "cpu_ops",
+            "required_resource_lane": "CPU_FP32",
+            "unit": "operations",
+            "estimator_role": "cpu lane time; fallback to CPU_FP64 when FP32 is absent"
+          }
+        ],
+        "service_time_estimator": {
+          "estimator_id": "deterministic_bottleneck_resource_time.v1",
+          "model": "MAX_ACTIVE_RESOURCE_LANE_TIME",
+          "formula_summary": "Estimate each active processing lane time as operations divided by configured lane throughput; service_time is the maximum lane time.",
+          "bottleneck_policy": "The first lane reaching the maximum deterministic lane time is reported as bottleneck_resource.",
+          "capacity_limit_policy": "Memory and storage are capacity limits. They reject over-capacity tasks but do not add throughput time.",
+          "legacy_mapping": "ComputeNode.capacity maps to cpu_gflops_fp32; TaskRequest.compute_demand maps to cpu_ops with one legacy demand unit equal to one giga-operation.",
+          "excluded_semantics": [
+            "REAL_CODE_EXECUTION",
+            "CUDA_RUNTIME"
+          ]
+        },
+        "runtime_event_inputs": [
+          "TASK_ARRIVAL",
+          "TASK_START",
+          "TASK_FINISH",
+          "COMPUTE_NODE_UPDATE"
+        ],
+        "runtime_state_outputs": [
+          "ComputeNodeState",
+          "TaskState",
+          "MetricRecord"
+        ],
+        "deterministic_inputs": [
+          "scenario.compute_capacity",
+          "TaskRequest.cpu_ops"
+        ],
+        "model_note": "SEES compute resources are deterministic satellite-hosted capacity vectors. They estimate queue/execution timing but do not execute code.",
+        "configured_node_profile": {
+          "compute_node_count": 1200,
+          "legacy_capacity_per_node": 40,
+          "cpu_gflops_fp32_per_node": 40,
+          "cpu_gflops_fp64_per_node": 8,
+          "gpu_tflops_fp32_per_node": 2.5,
+          "gpu_tflops_fp16_per_node": 5,
+          "npu_tops_int8_per_node": 12,
+          "memory_gb_per_node": 32,
+          "storage_gb_per_node": 512
+        }
       }
     }
   }

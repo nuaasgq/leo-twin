@@ -9,6 +9,7 @@ from typing import Any
 from leo_twin.models.compute import ComputeResourceVector
 from leo_twin.models.orbit import ConstellationAllocation
 from leo_twin.models.traffic import TrafficClass, TrafficDestinationType
+from leo_twin.schema.compute_resource_contract import compute_resource_contract_v2_to_dict
 from leo_twin.schema.network_model_contract import network_model_contract_v2_to_dict
 
 
@@ -152,6 +153,18 @@ def build_backend_derived_summary(
         "capacity_unit": "GFLOPS FP32",
         "compatibility_note": "Legacy scalar capacity maps to cpu_gflops_fp32.",
     }
+    compute_resource_contract = compute_resource_contract_v2_to_dict()
+    compute_resource_contract["configured_node_profile"] = {
+        "compute_node_count": compute_node_count,
+        "legacy_capacity_per_node": compute_capacity,
+        "cpu_gflops_fp32_per_node": compute_vector.cpu_gflops_fp32,
+        "cpu_gflops_fp64_per_node": compute_vector.cpu_gflops_fp64,
+        "gpu_tflops_fp32_per_node": compute_vector.gpu_tflops_fp32,
+        "gpu_tflops_fp16_per_node": compute_vector.gpu_tflops_fp16,
+        "npu_tops_int8_per_node": compute_vector.npu_tops_int8,
+        "memory_gb_per_node": compute_vector.memory_gb,
+        "storage_gb_per_node": compute_vector.storage_gb,
+    }
     coverage_summary = {
         "coverage_model": "DETERMINISTIC_GEOMETRIC_FOOTPRINT",
         "fidelity_level": "DISPLAY_APPROXIMATION",
@@ -189,6 +202,7 @@ def build_backend_derived_summary(
         "derived_constellation_summary": constellation_summary,
         "traffic_demand_summary": traffic_summary,
         "compute_resource_summary": compute_summary,
+        "compute_resource_contract_v2": compute_resource_contract,
         "coverage_beam_summary": coverage_summary,
         "network_model_contract_v2": network_model_contract,
         "model_assumptions": _model_assumptions(

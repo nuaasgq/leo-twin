@@ -306,12 +306,69 @@ export interface BackendDerivedSummary {
   derived_constellation_summary?: ConstellationDerivedSummary;
   traffic_demand_summary?: TrafficDemandSummary;
   compute_resource_summary?: ComputeResourceSummary;
+  compute_resource_contract_v2?: ComputeResourceContractV2;
   coverage_beam_summary?: CoverageBeamSummary;
   network_model_contract_v2?: NetworkModelContractV2;
   fidelity_summary?: FidelitySummary;
   workload_smoothing_summary?: WorkloadSmoothingSummary;
   configuration_surface_summary?: ConfigurationSurfaceSummary;
   model_assumptions?: readonly string[];
+}
+
+export interface ComputeResourceContractV2 {
+  contract_id: string;
+  version: "v2" | string;
+  resource_model: string;
+  node_role: string;
+  resource_lanes: readonly ComputeResourceLaneContractV2[];
+  task_demand_lanes: readonly TaskDemandLaneContractV2[];
+  service_time_estimator: ComputeServiceTimeEstimatorContractV2;
+  runtime_event_inputs: readonly string[];
+  runtime_state_outputs: readonly string[];
+  deterministic_inputs: readonly string[];
+  model_note: string;
+  configured_node_profile?: ComputeResourceConfiguredNodeProfileV2;
+}
+
+export interface ComputeResourceLaneContractV2 {
+  lane: string;
+  capacity_field: string;
+  unit: string;
+  node_state_capacity_field: string;
+  node_state_used_field: string;
+  node_state_available_field: string;
+  throughput_lane: boolean;
+  compatibility_role: string;
+}
+
+export interface TaskDemandLaneContractV2 {
+  lane: string;
+  demand_field: string;
+  required_resource_lane: string;
+  unit: string;
+  estimator_role: string;
+}
+
+export interface ComputeServiceTimeEstimatorContractV2 {
+  estimator_id: string;
+  model: string;
+  formula_summary: string;
+  bottleneck_policy: string;
+  capacity_limit_policy: string;
+  legacy_mapping: string;
+  excluded_semantics: readonly string[];
+}
+
+export interface ComputeResourceConfiguredNodeProfileV2 {
+  compute_node_count: number;
+  legacy_capacity_per_node: number;
+  cpu_gflops_fp32_per_node: number;
+  cpu_gflops_fp64_per_node: number;
+  gpu_tflops_fp32_per_node: number;
+  gpu_tflops_fp16_per_node: number;
+  npu_tops_int8_per_node: number;
+  memory_gb_per_node: number;
+  storage_gb_per_node: number;
 }
 
 export interface NetworkModelContractV2 {

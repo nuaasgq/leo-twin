@@ -5,6 +5,58 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Compute Resource Contract v2
+
+- Branch: `feature/T169-compute-resource-contract-v2`
+- Commit: pending in this commit
+- Scope: implement V2-030 by adding a product-level
+  `leo_twin.compute_resource_contract.v2` contract. The contract formalizes
+  satellite-hosted `ComputeResourceVector` lanes, task demand lanes, legacy
+  `compute_capacity` / `compute_demand` compatibility, deterministic
+  bottleneck service-time estimation, memory/storage capacity-limit semantics,
+  excluded real-execution semantics, and the configured per-node resource
+  profile in backend-derived summaries. Event Kernel behavior, compute
+  scheduling behavior, and service-time formulas are unchanged.
+- Changed files/modules:
+  - `src/leo_twin/schema/compute_resource_contract.py`
+  - `src/leo_twin/schema/__init__.py`
+  - `src/leo_twin/services/derived_summary.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/tests/fixtures/runtimeStatus.contract.json`
+  - `frontend/tests/runtimeContractFixture.test.ts`
+  - `tests/unit/test_compute_resource_contract_v2.py`
+  - `docs/compute_resource_contract_v2.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_compute_resource_contract_v2.py tests/unit/test_compute_resource_model.py tests/unit/test_backend_derived_summary.py -q`
+    - Result: passed, 24 tests after aligning the CPU fallback wording in the
+      contract.
+  - `python -m pytest tests/integration/test_config_control.py::test_initialize_writes_config_and_start_gates_streams tests/integration/test_config_control.py::test_frontend_control_messages_are_processed -q`
+    - Result: passed, 2 tests.
+  - Combined backend target:
+    `python -m pytest tests/unit/test_compute_resource_contract_v2.py tests/unit/test_compute_resource_model.py tests/unit/test_backend_derived_summary.py tests/integration/test_config_control.py::test_initialize_writes_config_and_start_gates_streams tests/integration/test_config_control.py::test_frontend_control_messages_are_processed -q`
+    - Result: passed, 26 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- runtimeContractFixture.test.ts`
+    - Result: passed, 25 files / 261 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing `DataPanel` chunk-size
+      warning at about 502 kB after minification.
+  - `git diff --check src/leo_twin/schema/compute_resource_contract.py src/leo_twin/schema/__init__.py src/leo_twin/services/derived_summary.py frontend/src/core/event_types/index.ts frontend/tests/fixtures/runtimeStatus.contract.json frontend/tests/runtimeContractFixture.test.ts tests/unit/test_compute_resource_contract_v2.py docs/compute_resource_contract_v2.md docs/development_log.md`
+    - Result: passed.
+- Problems encountered:
+  - Initial test wording expected the phrase `fallback to CPU_FP64`, while the
+    contract text used `fall back to CPU_FP64`. The contract was normalized to
+    the shorter product term so future docs/tests use one phrase.
+  - The working tree still contains unrelated local runtime/config drift in
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`;
+    these files were intentionally left unstaged and unchanged by this task.
+- Known remaining issues / follow-up:
+  - V2-030 stabilizes the resource contract but does not add placement policy or
+    queue timeline semantics. Recommended next tasks: V2-031 service placement
+    model and V2-032 task queue/execution timeline v2.
+
 ## 2026-07-05 - Network KPI Provenance Contract v2
 
 - Branch: `feature/T168-kpi-provenance-contract-v2`

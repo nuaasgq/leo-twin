@@ -142,6 +142,22 @@ describe("runtime status contract fixture", () => {
       gpu_tflops_fp32_per_node: 2.5,
       npu_tops_int8_per_node: 12
     });
+    expect(generated?.backend_summary?.compute_resource_contract_v2).toMatchObject({
+      contract_id: "leo_twin.compute_resource_contract.v2",
+      resource_model: "ComputeResourceVector",
+      node_role: "SATELLITE_HOSTED_COMPUTE"
+    });
+    expect(
+      generated?.backend_summary?.compute_resource_contract_v2?.resource_lanes[0]
+    ).toMatchObject({
+      lane: "CPU_FP32",
+      capacity_field: "compute_capacity",
+      compatibility_role: "legacy_scalar_capacity"
+    });
+    expect(
+      generated?.backend_summary?.compute_resource_contract_v2?.configured_node_profile
+        ?.compute_node_count
+    ).toBe(1200);
   });
 
   it("rejects malformed runtime status envelopes before UI consumption", () => {
