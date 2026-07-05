@@ -60,6 +60,12 @@ Frontend visual/dashboard verification:
 .\scripts\verify_frontend_visuals.ps1
 ```
 
+Aggregate product acceptance verification:
+
+```powershell
+.\scripts\verify_product_acceptance.ps1
+```
+
 ## Limitations
 
 - These scenarios are smoke/acceptance inputs, not high-fidelity orbital or RF

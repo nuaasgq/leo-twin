@@ -418,6 +418,11 @@ The following issue-sized slices have now been delivered on
   - Product acceptance scenarios now include the read-only runtime health smoke,
     backend `component_timeline`, and dashboard service timeline rendering as
     documented acceptance checks.
+- `test(product): add aggregate acceptance verification`
+  - Maps to suggestions 91-95.
+  - `scripts/verify_product_acceptance.ps1` runs targeted backend service
+    timeline tests, frontend visual/dashboard verification, and read-only
+    runtime health smoke as one local acceptance command.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected

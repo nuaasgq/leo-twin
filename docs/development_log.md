@@ -4889,3 +4889,34 @@ change.
 - Recommended follow-up:
   - Add CI or a local aggregate acceptance script for runtime health, frontend
     visual checks, and targeted backend runtime tests.
+
+## 2026-07-05 - Product Acceptance Verification Script v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add `scripts/verify_product_acceptance.ps1`, a local aggregate
+  verification command that runs targeted service timeline backend tests,
+  frontend visual/dashboard verification, and the read-only runtime health
+  smoke check.
+- Changed files/modules:
+  - `scripts/verify_product_acceptance.ps1`
+  - `README.md`
+  - `docs/product_acceptance_scenarios.md`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_product_acceptance.ps1 -SkipBuild`
+    - Result: passed; backend targeted tests 2 passed, visual assets 4
+      verified, frontend test files 25 / tests 193 passed, and read-only
+      runtime health smoke passed.
+- Problems encountered:
+  - None. The aggregate script keeps runtime health smoke read-only and exposes
+    `-SkipBuild` for faster local loops.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The default command runs the frontend build through
+    `verify_frontend_visuals.ps1`; CI integration is still a follow-up.
+- Recommended follow-up:
+  - Add an optional isolated control smoke mode once config mutation can be
+    redirected to a temporary path.

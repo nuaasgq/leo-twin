@@ -74,3 +74,9 @@ Frontend visual/dashboard verification:
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_frontend_visuals.ps1
 ```
+
+Product acceptance verification:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_product_acceptance.ps1
+```
