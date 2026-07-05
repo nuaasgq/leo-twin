@@ -1877,6 +1877,63 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
   font-size: 11px;
 }
 
+.data-panel-export-catalog {
+  display: grid;
+  gap: 10px;
+  margin-top: -8px;
+}
+
+.data-panel-export-catalog-table {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.data-panel-export-catalog-row {
+  display: grid;
+  grid-template-columns:
+    minmax(74px, 0.55fr)
+    minmax(220px, 1.8fr)
+    minmax(82px, 0.7fr)
+    minmax(72px, 0.6fr)
+    minmax(150px, 1.2fr)
+    minmax(92px, 0.75fr);
+  gap: 8px;
+  min-width: 760px;
+  align-items: center;
+  border: 1px solid #223643;
+  border-radius: 6px;
+  padding: 7px 8px;
+  background: #0b1219;
+  color: var(--app-muted);
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+.data-panel-export-catalog-row.header {
+  background: #101922;
+  color: var(--accent-cyan);
+  font-weight: 800;
+}
+
+.data-panel-export-catalog-row span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.data-panel-export-catalog-empty {
+  display: grid;
+  min-height: 44px;
+  place-items: center;
+  border: 1px dashed #2d4050;
+  border-radius: 6px;
+  color: var(--app-muted);
+  font-size: 11px;
+}
+
 .data-panel-chart-kpis .kpi-panel {
   min-height: 76px;
   padding: 10px;

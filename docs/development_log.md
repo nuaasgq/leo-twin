@@ -5,6 +5,49 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Dashboard Export Catalog View v1
+
+- Branch: `feature/T184-dashboard-export-catalog-view-v1`
+- Commit: pending in this commit
+- Scope: add a dashboard view for the backend-persisted runtime export catalog.
+  The standalone data panel now loads `/runtime/export/catalog` as an optional
+  observation-plane source and renders a compact replay-package catalog with
+  export type, package id, simulation time, event count, archive name, and
+  short hash. This task is frontend-only and does not change Event Kernel,
+  runtime export semantics, models, or control protocol behavior.
+- Changed files/modules:
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `git diff --check`
+    - Result: passed. Git still reported the pre-existing CRLF warning for
+      local runtime/config drift in `configs/generated_full_system_demo.json`
+      and `configs/sees_control.yaml`.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- dataPanel.test.ts api.test.ts appSurface.test.ts`
+    - Result: passed, 25 files / 273 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing `DataPanel` chunk-size
+      warning after minification.
+- Problems encountered:
+  - PowerShell `Get-Content` displayed UTF-8 Chinese text as mojibake in the
+    terminal, so patches were applied using stable English identifiers and
+    verified with `rg`, which displayed the source text correctly.
+  - The working tree still contains unrelated local runtime/config drift in
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`;
+    these files were intentionally left unstaged and unchanged by this task.
+- Known remaining issues / follow-up:
+  - The catalog view is read-only and displays the latest persisted records.
+    Recommended next task: add explicit package-open/download actions per row
+    once the backend exposes stable per-package artifact routes.
+
 ## 2026-07-05 - Compute Resource Contract v2
 
 - Branch: `feature/T169-compute-resource-contract-v2`

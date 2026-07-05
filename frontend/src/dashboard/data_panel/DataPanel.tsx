@@ -17,6 +17,7 @@ import {
   FidelitySummary,
   GeneratedScenarioConfig,
   TrafficDemandSummary,
+  RuntimeExportCatalogV1,
   RuntimeKpiSampleV1,
   RuntimeKpiTimeSeriesV1,
   RuntimeExportHistoryV1,
@@ -90,6 +91,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeStatus,
   generatedConfig,
   runtimeDetailPages,
+  runtimeExportCatalog,
   displaySimTime,
   displayEventCount,
   onNavigateControl
@@ -98,6 +100,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeStatus: RuntimeStatusPayload;
   generatedConfig: GeneratedScenarioConfig | null;
   runtimeDetailPages?: RuntimeDetailPages | null;
+  runtimeExportCatalog?: RuntimeExportCatalogV1 | null;
   displaySimTime: number;
   displayEventCount: number;
   onNavigateControl: (event: MouseEvent<HTMLAnchorElement>) => void;
@@ -134,6 +137,7 @@ export const DataPanel = memo(function DataPanel({
   const exportHistoryDisplay = buildDataPanelExportHistoryDisplay(
     runtimeStatus.runtime_export_history_v1
   );
+  const exportCatalogDisplay = buildDataPanelExportCatalogDisplay(runtimeExportCatalog);
   const runtimeProgress = buildDataPanelRuntimeProgress(summary.simTime, runtimeStatus.duration);
   const telemetry = buildDataPanelTelemetry(
     snapshot,
@@ -349,6 +353,46 @@ export const DataPanel = memo(function DataPanel({
           <span>{summary.eventCount} 个离散事件</span>
         </div>
       </div>
+
+      {exportCatalogDisplay ? (
+        <section className="dashboard-section data-panel-export-catalog" aria-label="复盘包目录">
+          <div className="section-title">复盘包目录</div>
+          <div className="data-panel-source-note">
+            <span>{exportCatalogDisplay.sourceLabel}</span>
+            <small>{exportCatalogDisplay.summaryLabel}</small>
+          </div>
+          <div
+            className="data-panel-export-catalog-table"
+            role="table"
+            aria-label="后端持久化复盘包目录"
+          >
+            <div className="data-panel-export-catalog-row header" role="row">
+              <span>类型</span>
+              <span>包 ID</span>
+              <span>仿真时间</span>
+              <span>事件数</span>
+              <span>归档</span>
+              <span>哈希</span>
+            </div>
+            {exportCatalogDisplay.rows.length > 0 ? (
+              exportCatalogDisplay.rows.map((row) => (
+                <div className="data-panel-export-catalog-row" role="row" key={row.key}>
+                  <span>{row.typeLabel}</span>
+                  <span title={row.packageId}>{row.packageId}</span>
+                  <span>{row.simTimeLabel}</span>
+                  <span>{row.eventCountLabel}</span>
+                  <span title={row.archiveLabel}>{row.archiveLabel}</span>
+                  <span title={row.hashLabel}>{row.hashLabel}</span>
+                </div>
+              ))
+            ) : (
+              <div className="data-panel-export-catalog-empty" role="row">
+                后端 catalog 已连接，暂无已登记复盘包
+              </div>
+            )}
+          </div>
+        </section>
+      ) : null}
 
       <div className="data-panel-section-title">核心运行指标</div>
       <div className="data-panel-summary">
@@ -4294,6 +4338,67 @@ export function buildDataPanelExportHistoryDisplay(
     secondaryLabel: `t=${formatPreciseMetricValue(
       latest.current_sim_time
     )}s / events=${formatCount(latest.processed_event_count)} / ${shortRuntimeHash(exportHash)}`
+  };
+}
+
+export interface DataPanelExportCatalogDisplay {
+  sourceLabel: string;
+  summaryLabel: string;
+  rows: readonly DataPanelExportCatalogRow[];
+}
+
+export interface DataPanelExportCatalogRow {
+  key: string;
+  typeLabel: string;
+  packageId: string;
+  simTimeLabel: string;
+  eventCountLabel: string;
+  archiveLabel: string;
+  hashLabel: string;
+}
+
+export function buildDataPanelExportCatalogDisplay(
+  catalog: RuntimeExportCatalogV1 | null | undefined,
+  limit = 6
+): DataPanelExportCatalogDisplay | null {
+  if (catalog === null || catalog === undefined) {
+    return null;
+  }
+  const rows = [...catalog.records]
+    .sort((left, right) => {
+      if (right.current_sim_time !== left.current_sim_time) {
+        return right.current_sim_time - left.current_sim_time;
+      }
+      if (right.processed_event_count !== left.processed_event_count) {
+        return right.processed_event_count - left.processed_event_count;
+      }
+      if (left.catalog_key < right.catalog_key) {
+        return -1;
+      }
+      if (left.catalog_key > right.catalog_key) {
+        return 1;
+      }
+      return 0;
+    })
+    .slice(0, Math.max(0, limit))
+    .map((record) => {
+      const exportHash = record.archive_sha256 || record.manifest_hash;
+      return {
+        key: record.catalog_key,
+        typeLabel: record.export_type,
+        packageId: record.package_id,
+        simTimeLabel: `${formatPreciseMetricValue(record.current_sim_time)} s`,
+        eventCountLabel: formatCount(record.processed_event_count),
+        archiveLabel: record.archive_filename || "未生成归档",
+        hashLabel: shortRuntimeHash(exportHash)
+      };
+    });
+  return {
+    sourceLabel: `${catalog.source} / ${catalog.catalog_scope}`,
+    summaryLabel: `已登记 ${formatCount(catalog.record_count)} 条 / 显示 ${formatCount(
+      rows.length
+    )} 条 / catalog ${shortRuntimeHash(catalog.catalog_hash)}`,
+    rows
   };
 }
 

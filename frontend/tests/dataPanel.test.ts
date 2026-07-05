@@ -8,6 +8,7 @@ import {
   buildDataPanelConfiguredScale,
   buildDataPanelDetailScopeNotes,
   buildDataPanelDisplaySummary,
+  buildDataPanelExportCatalogDisplay,
   buildDataPanelExportHistoryDisplay,
   buildDataPanelNetworkFormulaInputs,
   buildDataPanelNetworkComponentTail,
@@ -647,6 +648,83 @@ describe("buildDataPanelExportHistoryDisplay", () => {
       secondaryLabel: "t=12s / events=40 / abcdefabcdef"
     });
     expect(buildDataPanelExportHistoryDisplay(undefined)).toBeNull();
+  });
+});
+
+describe("buildDataPanelExportCatalogDisplay", () => {
+  it("summarizes backend persisted export catalog rows in newest-first order", () => {
+    const display = buildDataPanelExportCatalogDisplay({
+      version: "v1",
+      source: "BACKEND_RUNTIME_EXPORT_CATALOG",
+      catalog_scope: "PERSISTED_EXPORT_PACKAGES",
+      catalog_file: "artifacts/runtime_exports/runtime_export_catalog_v1.json",
+      export_root: "artifacts/runtime_exports",
+      record_count: 2,
+      catalog_hash:
+        "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      latest_export: null,
+      records: [
+        {
+          catalog_key: "PACKAGE:old",
+          export_type: "PACKAGE",
+          package_id: "integration-demo-old",
+          package_dir: "artifacts/runtime_exports/old",
+          relative_package_dir: "old",
+          file_count: 5,
+          manifest_hash:
+            "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+          current_sim_time: 4,
+          processed_event_count: 100,
+          files: []
+        },
+        {
+          catalog_key: "ARCHIVE:new",
+          export_type: "ARCHIVE",
+          package_id: "integration-demo-new",
+          package_dir: "artifacts/runtime_exports/new",
+          relative_package_dir: "new",
+          file_count: 6,
+          manifest_hash:
+            "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+          current_sim_time: 12.5,
+          processed_event_count: 4096,
+          archive_filename: "integration-demo-new.zip",
+          archive_sha256:
+            "sha256:abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+          archive_bytes: 8192,
+          files: []
+        }
+      ]
+    });
+
+    expect(display).toMatchObject({
+      sourceLabel: "BACKEND_RUNTIME_EXPORT_CATALOG / PERSISTED_EXPORT_PACKAGES",
+      summaryLabel: "已登记 2 条 / 显示 2 条 / catalog cccccccccccc",
+      rows: [
+        {
+          key: "ARCHIVE:new",
+          typeLabel: "ARCHIVE",
+          packageId: "integration-demo-new",
+          simTimeLabel: "12.5 s",
+          eventCountLabel: "4,096",
+          archiveLabel: "integration-demo-new.zip",
+          hashLabel: "abcdefabcdef"
+        },
+        {
+          key: "PACKAGE:old",
+          typeLabel: "PACKAGE",
+          packageId: "integration-demo-old",
+          simTimeLabel: "4 s",
+          eventCountLabel: "100",
+          archiveLabel: "未生成归档",
+          hashLabel: "111111111111"
+        }
+      ]
+    });
+  });
+
+  it("returns null before backend catalog is loaded", () => {
+    expect(buildDataPanelExportCatalogDisplay(undefined)).toBeNull();
   });
 });
 

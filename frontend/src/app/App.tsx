@@ -10,6 +10,7 @@ import {
 import {
   FidelitySummary,
   GeneratedScenarioConfig,
+  RuntimeExportCatalogV1,
   RuntimeBackpressureSummary,
   RuntimeStatusPayload,
   ScenarioConfig
@@ -22,6 +23,7 @@ import { EventThrottleLayer } from "../stream/throttle_layer";
 import { WebSocketStreamClient } from "../stream/websocket_client";
 import {
   loadMetricsSnapshot,
+  loadRuntimeExportCatalog,
   loadRuntimeNodeDetails,
   loadRuntimeSatelliteDetails,
   loadRuntimeUserDetails,
@@ -37,6 +39,7 @@ const RUNTIME_PROGRESS_TICK_MS = 100;
 const RUNTIME_DETAIL_USER_PAGE_LIMIT = 5000;
 const RUNTIME_DETAIL_SATELLITE_PAGE_LIMIT = 5000;
 const RUNTIME_DETAIL_NODE_PAGE_LIMIT = 5000;
+const RUNTIME_EXPORT_CATALOG_POLL_MS = 2500;
 
 type RuntimeConnectionChannel = "http" | "control" | "events" | "state";
 type RuntimeConnectionStatus = "idle" | "connecting" | "live" | "degraded";
@@ -101,6 +104,8 @@ export function App() {
   const [runtimeDetailPages, setRuntimeDetailPages] = useState<RuntimeDetailPages | null>(
     null
   );
+  const [runtimeExportCatalog, setRuntimeExportCatalog] =
+    useState<RuntimeExportCatalogV1 | null>(null);
   const [dismissedBackpressureNoticeKey, setDismissedBackpressureNoticeKey] =
     useState<string | null>(null);
   const [dismissedCompletionNoticeKey, setDismissedCompletionNoticeKey] =
@@ -205,6 +210,14 @@ export function App() {
     });
   }, []);
 
+  const refreshRuntimeExportCatalog = useCallback(async () => {
+    try {
+      setRuntimeExportCatalog(await loadRuntimeExportCatalog());
+    } catch {
+      setRuntimeExportCatalog(null);
+    }
+  }, []);
+
   const loadControlState = useCallback(async () => {
     const [scenario, runtime, visibleSnapshot] = await Promise.all([
       loadScenarioConfig(),
@@ -224,8 +237,14 @@ export function App() {
     snapshotEngine.publishNow();
     setConnectionChannel("http", "live");
     void refreshRuntimeDetails();
+    void refreshRuntimeExportCatalog();
     return { scenario: effectiveScenario, runtime };
-  }, [refreshRuntimeDetails, setConnectionChannel, snapshotEngine]);
+  }, [
+    refreshRuntimeDetails,
+    refreshRuntimeExportCatalog,
+    setConnectionChannel,
+    snapshotEngine
+  ]);
 
   const handleRuntimeApiError = useCallback((error: unknown) => {
     setConnectionState("degraded");
@@ -441,6 +460,24 @@ export function App() {
   }, [refreshRuntimeDetails, surface]);
 
   useEffect(() => {
+    if (surface !== "dashboard") {
+      return;
+    }
+    let closed = false;
+    const refreshCatalog = () => {
+      if (!closed) {
+        void refreshRuntimeExportCatalog();
+      }
+    };
+    refreshCatalog();
+    const timer = window.setInterval(refreshCatalog, RUNTIME_EXPORT_CATALOG_POLL_MS);
+    return () => {
+      closed = true;
+      window.clearInterval(timer);
+    };
+  }, [refreshRuntimeExportCatalog, surface]);
+
+  useEffect(() => {
     let closed = false;
     loadControlState()
       .then(({ scenario, runtime }) => {
@@ -654,6 +691,7 @@ export function App() {
               runtimeStatus={runtimeStatus}
               generatedConfig={generatedConfig}
               runtimeDetailPages={runtimeDetailPages}
+              runtimeExportCatalog={runtimeExportCatalog}
               displaySimTime={displaySimTime}
               displayEventCount={displayEventCount}
               onNavigateControl={(event) => navigateWithinApp(event, "/")}
