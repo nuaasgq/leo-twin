@@ -30,6 +30,22 @@ describe("runtime status contract fixture", () => {
     expect(status.network_quality_provenance_v1?.sources.loss?.source).toBe(
       "PRESSURE_LOSS_PROXY"
     );
+    expect(status.network_kpi_provenance_v2).toMatchObject({
+      version: "v2",
+      provenance_id: "leo_twin.network_kpi_provenance.v2",
+      network_model_contract_id: "leo_twin.network_model_contract.v2",
+      metric_model: "FLOW_LEVEL_PROXY",
+      packet_level_simulation: false
+    });
+    expect(status.network_kpi_provenance_v2?.kpis[0]).toMatchObject({
+      metric: "EFFECTIVE_THROUGHPUT",
+      runtime_summary_key: "network_quality_effective_throughput_mbps",
+      current_value: 180,
+      packet_level_metric: false
+    });
+    expect(status.network_kpi_provenance_v2?.kpis[1].observed_source.source).toBe(
+      "PRESSURE_LOSS_PROXY"
+    );
     expect(status.metrics_summary).toMatchObject({
       service_latency_model: "COMMUNICATION_COMPUTE_COMPONENT_PROXY",
       service_latency_task_count: 2,

@@ -5,6 +5,50 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Network KPI Provenance Contract v2
+
+- Branch: `feature/T168-kpi-provenance-contract-v2`
+- Commit: pending in this commit
+- Scope: implement V2-021 by adding `network_kpi_provenance_v2` to runtime
+  status. The v2 provenance binds existing runtime `metrics_summary` values to
+  `leo_twin.network_model_contract.v2`, including current KPI values, runtime
+  summary keys, layer ownership, formula summaries, source-field values,
+  dominant observed source, zero reasons, and explicit non-packet-level
+  semantics. Existing `network_quality_provenance_v1` remains for compatibility.
+  Event Kernel behavior, routing/link behavior, and KPI formulas are unchanged.
+- Changed files/modules:
+  - `src/leo_twin/services/network_kpi_provenance.py`
+  - `examples/integration_demo/control_plane.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/tests/fixtures/runtimeStatus.contract.json`
+  - `frontend/tests/runtimeContractFixture.test.ts`
+  - `tests/unit/test_network_kpi_provenance_v2.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/network_kpi_provenance_v2.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_network_kpi_provenance_v2.py tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer -q`
+    - Result: passed, 3 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- runtimeContractFixture.test.ts`
+    - Result: passed, 25 files / 261 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing `DataPanel` chunk-size
+      warning at about 502 kB after minification.
+  - `git diff --check src/leo_twin/services/network_kpi_provenance.py examples/integration_demo/control_plane.py frontend/src/core/event_types/index.ts frontend/tests/fixtures/runtimeStatus.contract.json frontend/tests/runtimeContractFixture.test.ts tests/unit/test_network_kpi_provenance_v2.py tests/integration/test_runtime_session_control.py docs/network_kpi_provenance_v2.md docs/development_log.md`
+    - Result: passed.
+- Problems encountered:
+  - No implementation blocker. The working tree still contains unrelated local
+    runtime/config drift in `configs/generated_full_system_demo.json` and
+    `configs/sees_control.yaml`; these files were intentionally left unstaged
+    and unchanged by this task.
+- Known remaining issues / follow-up:
+  - The dashboard still primarily consumes v1 provenance helper labels. A
+    follow-up dashboard task can render `network_kpi_provenance_v2.kpis`
+    directly. V2-022 should improve the time-varying pressure inputs while
+    preserving this contract.
+
 ## 2026-07-05 - Network Model Contract v2
 
 - Branch: `feature/T167-network-model-contract-v2`

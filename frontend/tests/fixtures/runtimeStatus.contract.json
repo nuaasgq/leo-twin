@@ -88,6 +88,83 @@
         }
       }
     },
+    "network_kpi_provenance_v2": {
+      "version": "v2",
+      "provenance_id": "leo_twin.network_kpi_provenance.v2",
+      "source": "BACKEND_METRICS_SUMMARY",
+      "network_model_contract_id": "leo_twin.network_model_contract.v2",
+      "network_model_contract_version": "v2",
+      "metric_model": "FLOW_LEVEL_PROXY",
+      "packet_level_simulation": false,
+      "proxy_note": "Flow-level proxy only; no packet-level simulation is performed.",
+      "provenance_note": "Flow-level KPI provenance from route, link, and completed-flow state; no packet-level samples are used.",
+      "kpi_count": 2,
+      "kpis": [
+        {
+          "metric": "EFFECTIVE_THROUGHPUT",
+          "runtime_summary_key": "network_quality_effective_throughput_mbps",
+          "current_value": 180,
+          "status": "OBSERVED",
+          "display_name": "Effective throughput",
+          "layer": "NETWORK",
+          "unit": "Mbps",
+          "formula_summary": "Prefer delivered completed-flow throughput; fall back to loss-adjusted available route demand/capacity.",
+          "interpretation": "Flow-level carried or currently supportable throughput estimate for trend analysis.",
+          "zero_value_semantics": "No completed flow and no available route demand/capacity.",
+          "packet_level_metric": false,
+          "observed_source": {
+            "source": "COMPLETED_FLOW_CAPACITY",
+            "label": "宸插畬鎴愭祦瀹归噺"
+          },
+          "zero_reason": null,
+          "source_fields": [
+            {
+              "field": "network_quality_estimated_delivered_throughput_mbps",
+              "current_value": 180,
+              "value_source": "METRICS_SUMMARY"
+            },
+            {
+              "field": "network_quality_estimated_available_throughput_mbps",
+              "current_value": null,
+              "value_source": "MODEL_OR_CONFIG_STATE"
+            }
+          ]
+        },
+        {
+          "metric": "EFFECTIVE_LOSS_PROXY",
+          "runtime_summary_key": "network_quality_effective_loss_proxy_rate",
+          "current_value": 0.05,
+          "status": "OBSERVED",
+          "display_name": "Effective loss proxy",
+          "layer": "TRANSPORT",
+          "unit": "ratio",
+          "formula_summary": "Maximum of configured transport loss proxy, route blocking, failed flow ratio, congestion pressure loss, and demand pressure loss.",
+          "interpretation": "Flow-level loss/quality degradation proxy. It must not be read as packet loss.",
+          "zero_value_semantics": "No configured loss, no blocked routes, no failed flows, and no pressure-driven loss.",
+          "packet_level_metric": false,
+          "observed_source": {
+            "source": "PRESSURE_LOSS_PROXY",
+            "label": "涓氬姟鍘嬪姏鎹熻€椾唬鐞?"
+          },
+          "zero_reason": {
+            "reason": "POSITIVE_PROXY",
+            "label": "褰撳墠浠ｇ悊鎸囨爣涓烘鍊?"
+          },
+          "source_fields": [
+            {
+              "field": "network.transport_loss_rate",
+              "current_value": null,
+              "value_source": "MODEL_OR_CONFIG_STATE"
+            },
+            {
+              "field": "network_quality_route_blocking_ratio",
+              "current_value": null,
+              "value_source": "MODEL_OR_CONFIG_STATE"
+            }
+          ]
+        }
+      ]
+    },
     "kpi_time_series_v1": {
       "version": "v1",
       "sample_count": 1,

@@ -567,6 +567,7 @@ export interface RuntimeStatusPayload {
   configuration_surface_summary?: ConfigurationSurfaceSummary;
   metrics_summary?: RuntimeMetricsSummary;
   network_quality_provenance_v1?: RuntimeNetworkQualityProvenanceV1;
+  network_kpi_provenance_v2?: RuntimeNetworkKpiProvenanceV2;
   kpi_time_series_v1?: RuntimeKpiTimeSeriesV1;
   satellite_kpi_slices_v1?: RuntimeSatelliteKpiSlicesV1;
   satellite_kpi_history_v1?: RuntimeSatelliteKpiHistoryV1;
@@ -612,6 +613,53 @@ export interface RuntimeNetworkQualitySourceV1 {
 export interface RuntimeNetworkQualityZeroReasonV1 {
   reason: string;
   label: string;
+}
+
+export interface RuntimeNetworkKpiProvenanceV2 {
+  version: "v2" | string;
+  provenance_id: string;
+  source: string;
+  network_model_contract_id: string;
+  network_model_contract_version: string;
+  metric_model: string;
+  packet_level_simulation: boolean;
+  proxy_note?: string;
+  provenance_note?: string;
+  kpi_count: number;
+  kpis: readonly RuntimeNetworkKpiProvenanceItemV2[];
+}
+
+export interface RuntimeNetworkKpiProvenanceItemV2 {
+  metric: string;
+  runtime_summary_key: string;
+  current_value: string | number | boolean | null;
+  status: string;
+  display_name: string;
+  layer: string;
+  unit: string;
+  formula_summary: string;
+  interpretation: string;
+  zero_value_semantics: string;
+  packet_level_metric: boolean;
+  observed_source: RuntimeNetworkKpiObservedSourceV2;
+  zero_reason?: RuntimeNetworkKpiZeroReasonV2 | null;
+  source_fields: readonly RuntimeNetworkKpiSourceFieldV2[];
+}
+
+export interface RuntimeNetworkKpiObservedSourceV2 {
+  source: string;
+  label: string;
+}
+
+export interface RuntimeNetworkKpiZeroReasonV2 {
+  reason: string;
+  label: string;
+}
+
+export interface RuntimeNetworkKpiSourceFieldV2 {
+  field: string;
+  current_value: string | number | boolean | null;
+  value_source: string;
 }
 
 export interface RuntimeKpiTimeSeriesV1 {

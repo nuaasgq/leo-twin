@@ -27,6 +27,7 @@ from leo_twin.services.configuration_view import (
     build_user_configuration_view,
     load_user_configuration_template,
 )
+from leo_twin.services.network_kpi_provenance import build_network_kpi_provenance_v2
 from leo_twin.services.control import (
     RuntimeController,
     ScaleSafetyChecker,
@@ -442,6 +443,9 @@ class DemoControlPlane:
         metrics_summary = self._metrics_summary_json()
         status["metrics_summary"] = metrics_summary
         status["network_quality_provenance_v1"] = _network_quality_provenance_from_metrics(
+            metrics_summary
+        )
+        status["network_kpi_provenance_v2"] = build_network_kpi_provenance_v2(
             metrics_summary
         )
         status["kpi_time_series_v1"] = self._kpi_time_series_json()

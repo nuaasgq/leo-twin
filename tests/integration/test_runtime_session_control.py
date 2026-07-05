@@ -233,6 +233,35 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
         "delay_variation",
     }
     assert set(network_provenance["zero_reasons"]) == {"loss", "delay_variation"}
+    network_provenance_v2 = status_after_tick["network_kpi_provenance_v2"]
+    assert network_provenance_v2["version"] == "v2"
+    assert network_provenance_v2["provenance_id"] == (
+        "leo_twin.network_kpi_provenance.v2"
+    )
+    assert network_provenance_v2["network_model_contract_id"] == (
+        "leo_twin.network_model_contract.v2"
+    )
+    assert network_provenance_v2["packet_level_simulation"] is False
+    assert network_provenance_v2["kpi_count"] == len(network_provenance_v2["kpis"])
+    throughput_kpi = _runtime_kpi_provenance(
+        network_provenance_v2,
+        "EFFECTIVE_THROUGHPUT",
+    )
+    assert throughput_kpi["runtime_summary_key"] == (
+        "network_quality_effective_throughput_mbps"
+    )
+    assert throughput_kpi["current_value"] == status_after_tick["metrics_summary"][
+        "network_quality_effective_throughput_mbps"
+    ]
+    assert throughput_kpi["packet_level_metric"] is False
+    loss_kpi = _runtime_kpi_provenance(
+        network_provenance_v2,
+        "EFFECTIVE_LOSS_PROXY",
+    )
+    assert loss_kpi["zero_reason"] is not None
+    assert loss_kpi["observed_source"]["source"] == network_provenance["sources"][
+        "loss"
+    ]["source"]
     kpi_series = status_after_tick["kpi_time_series_v1"]
     assert kpi_series["version"] == "v1"
     assert kpi_series["sample_count"] == len(kpi_series["samples"])
@@ -773,6 +802,19 @@ def _small_demo_config() -> DemoConfig:
         backend_host="127.0.0.1",
         backend_port=8765,
     )
+
+
+def _runtime_kpi_provenance(
+    provenance: dict[str, object],
+    metric: str,
+) -> dict[str, object]:
+    kpis = provenance["kpis"]
+    assert isinstance(kpis, tuple)
+    for item in kpis:
+        assert isinstance(item, dict)
+        if item["metric"] == metric:
+            return item
+    raise AssertionError(f"missing KPI provenance {metric}")
 
 
 def _runtime_status_after_route_demand(config: DemoConfig, output_dir: Path) -> dict[str, Any]:
