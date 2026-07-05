@@ -19,6 +19,7 @@ import {
   TrafficDemandSummary,
   RuntimeExportCatalogV1,
   RuntimeExportPackageCompareV1,
+  RuntimeExportRestoreCommandResultV1,
   RuntimeExportRestorePreflightV1,
   RuntimeKpiSampleV1,
   RuntimeKpiTimeSeriesV1,
@@ -108,7 +109,11 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportRestorePreflight,
   runtimeExportRestorePreflightLoading,
   runtimeExportRestorePreflightError,
+  runtimeExportRestoreCommandPendingPackageId,
+  runtimeExportRestoreCommandError,
+  runtimeExportRestoreResult,
   onRuntimeExportCompareSelect,
+  onRuntimeExportRestore,
   displaySimTime,
   displayEventCount,
   onNavigateControl
@@ -125,7 +130,11 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportRestorePreflight?: RuntimeExportRestorePreflightV1 | null;
   runtimeExportRestorePreflightLoading?: boolean;
   runtimeExportRestorePreflightError?: string | null;
+  runtimeExportRestoreCommandPendingPackageId?: string | null;
+  runtimeExportRestoreCommandError?: string | null;
+  runtimeExportRestoreResult?: RuntimeExportRestoreCommandResultV1 | null;
   onRuntimeExportCompareSelect?: (packageId: string) => void;
+  onRuntimeExportRestore?: (packageId: string) => void;
   displaySimTime: number;
   displayEventCount: number;
   onNavigateControl: (event: MouseEvent<HTMLAnchorElement>) => void;
@@ -141,6 +150,9 @@ export const DataPanel = memo(function DataPanel({
   const [selectedHistoryUserId, setSelectedHistoryUserId] = useState<string | null>(null);
   const [selectedDetailUserId, setSelectedDetailUserId] = useState<string | null>(null);
   const [selectedDetailSatelliteId, setSelectedDetailSatelliteId] = useState<string | null>(
+    null
+  );
+  const [restoreConfirmPackageId, setRestoreConfirmPackageId] = useState<string | null>(
     null
   );
   const summary = buildDataPanelDisplaySummary(
@@ -178,6 +190,16 @@ export const DataPanel = memo(function DataPanel({
     runtimeExportComparePackageId,
     runtimeExportRestorePreflightLoading,
     runtimeExportRestorePreflightError
+  );
+  const exportRestoreActionDisplay = buildDataPanelExportRestoreActionDisplay(
+    exportRestorePreflightStatus,
+    {
+      selectedPackageId: runtimeExportComparePackageId,
+      armedPackageId: restoreConfirmPackageId,
+      pendingPackageId: runtimeExportRestoreCommandPendingPackageId,
+      commandError: runtimeExportRestoreCommandError,
+      result: runtimeExportRestoreResult
+    }
   );
   const runtimeProgress = buildDataPanelRuntimeProgress(summary.simTime, runtimeStatus.duration);
   const telemetry = buildDataPanelTelemetry(
@@ -448,6 +470,30 @@ export const DataPanel = memo(function DataPanel({
                   {exportRestorePreflightStatus.warningRows.map((warning) => (
                     <span key={warning}>{warning}</span>
                   ))}
+                </div>
+              ) : null}
+              {exportRestoreActionDisplay ? (
+                <div
+                  className={`data-panel-export-restore-actions ${exportRestoreActionDisplay.tone}`}
+                >
+                  <button
+                    type="button"
+                    disabled={exportRestoreActionDisplay.disabled}
+                    onClick={() => {
+                      if (exportRestoreActionDisplay.disabled) {
+                        return;
+                      }
+                      if (exportRestoreActionDisplay.requiresSecondClick) {
+                        setRestoreConfirmPackageId(exportRestoreActionDisplay.packageId);
+                        return;
+                      }
+                      setRestoreConfirmPackageId(null);
+                      onRuntimeExportRestore?.(exportRestoreActionDisplay.packageId);
+                    }}
+                  >
+                    {exportRestoreActionDisplay.buttonLabel}
+                  </button>
+                  <small>{exportRestoreActionDisplay.detailLabel}</small>
                 </div>
               ) : null}
             </div>
@@ -4551,6 +4597,8 @@ export interface DataPanelExportCompareStatus {
 
 export interface DataPanelExportRestorePreflightDisplay {
   packageId: string;
+  readiness: string;
+  canRestore: boolean;
   tone: "match" | "different" | "error";
   statusLabel: string;
   summaryLabel: string;
@@ -4560,10 +4608,22 @@ export interface DataPanelExportRestorePreflightDisplay {
 
 export interface DataPanelExportRestorePreflightStatus {
   tone: "match" | "different" | "pending" | "error";
+  packageId: string | null;
+  readiness: string | null;
+  canRestore: boolean;
   statusLabel: string;
   summaryLabel: string;
   metaLabels: readonly string[];
   warningRows: readonly string[];
+}
+
+export interface DataPanelExportRestoreActionDisplay {
+  packageId: string;
+  tone: "ready" | "confirm" | "pending" | "disabled" | "error" | "success";
+  buttonLabel: string;
+  detailLabel: string;
+  disabled: boolean;
+  requiresSecondClick: boolean;
 }
 
 export interface DataPanelExportCompareDiffRow {
@@ -4666,6 +4726,8 @@ export function buildDataPanelExportRestorePreflightDisplay(
   ];
   return {
     packageId: preflight.package_id,
+    readiness,
+    canRestore: preflight.can_restore,
     tone,
     statusLabel,
     summaryLabel: `${preflight.package_id} / config差异 ${formatCount(
@@ -4691,6 +4753,9 @@ export function buildDataPanelExportRestorePreflightStatus(
   if (loading) {
     return {
       tone: "pending",
+      packageId: selectedPackageId ?? null,
+      readiness: null,
+      canRestore: false,
       statusLabel: "正在加载预检",
       summaryLabel: selectedPackageId ?? "等待复盘包选择",
       metaLabels: ["只读预检", "不会修改当前配置"],
@@ -4700,6 +4765,9 @@ export function buildDataPanelExportRestorePreflightStatus(
   if (error !== null && error !== undefined) {
     return {
       tone: "error",
+      packageId: selectedPackageId ?? null,
+      readiness: "ERROR",
+      canRestore: false,
       statusLabel: "预检加载失败",
       summaryLabel: selectedPackageId ?? "未知复盘包",
       metaLabels: [error],
@@ -4711,10 +4779,103 @@ export function buildDataPanelExportRestorePreflightStatus(
   }
   return {
     tone: display.tone,
+    packageId: display.packageId,
+    readiness: display.readiness,
+    canRestore: display.canRestore,
     statusLabel: display.statusLabel,
     summaryLabel: display.summaryLabel,
     metaLabels: display.metaLabels,
     warningRows: display.warningRows
+  };
+}
+
+export function buildDataPanelExportRestoreActionDisplay(
+  status: DataPanelExportRestorePreflightStatus | null,
+  options: {
+    selectedPackageId?: string | null;
+    armedPackageId?: string | null;
+    pendingPackageId?: string | null;
+    commandError?: string | null;
+    result?: RuntimeExportRestoreCommandResultV1 | null;
+  } = {}
+): DataPanelExportRestoreActionDisplay | null {
+  if (status === null) {
+    return null;
+  }
+  const packageId = status.packageId ?? options.selectedPackageId ?? "";
+  if (packageId.length === 0) {
+    return null;
+  }
+  if (options.pendingPackageId === packageId) {
+    return {
+      packageId,
+      tone: "pending",
+      buttonLabel: "恢复中",
+      detailLabel: "正在通过控制通道恢复配置并重建运行时会话",
+      disabled: true,
+      requiresSecondClick: false
+    };
+  }
+  if (options.result?.package_id === packageId && options.result.restored) {
+    const rollbackLabel = options.result.rollback_package_id
+      ? `回滚包 ${shortRuntimeHash(options.result.rollback_package_id)}`
+      : "已生成回滚包";
+    return {
+      packageId,
+      tone: "success",
+      buttonLabel: "已恢复",
+      detailLabel: rollbackLabel,
+      disabled: true,
+      requiresSecondClick: false
+    };
+  }
+  if (options.commandError !== null && options.commandError !== undefined) {
+    return {
+      packageId,
+      tone: "error",
+      buttonLabel: "重试恢复",
+      detailLabel: options.commandError,
+      disabled: !status.canRestore || status.readiness !== "READY",
+      requiresSecondClick: true
+    };
+  }
+  if (!status.canRestore || status.readiness === "BLOCKED") {
+    return {
+      packageId,
+      tone: "disabled",
+      buttonLabel: "不可恢复",
+      detailLabel: "恢复预检未通过，请先选择其他复盘包或修复包内容",
+      disabled: true,
+      requiresSecondClick: false
+    };
+  }
+  if (status.readiness === "NO_CHANGE") {
+    return {
+      packageId,
+      tone: "disabled",
+      buttonLabel: "无需恢复",
+      detailLabel: "当前配置已经与该复盘包一致",
+      disabled: true,
+      requiresSecondClick: false
+    };
+  }
+  if (options.armedPackageId === packageId) {
+    return {
+      packageId,
+      tone: "confirm",
+      buttonLabel: "确认恢复并生成回滚包",
+      detailLabel: "将写入配置文件、停止当前流并重新初始化运行时",
+      disabled: false,
+      requiresSecondClick: false
+    };
+  }
+  return {
+    packageId,
+    tone: "ready",
+    buttonLabel: "恢复此复盘包",
+    detailLabel: "需要再次点击确认；后端会先生成当前配置回滚包",
+    disabled: false,
+    requiresSecondClick: true
   };
 }
 

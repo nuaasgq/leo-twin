@@ -188,6 +188,12 @@ reinitialization path used by `INITIALIZE`. The command response includes
 `restore_preflight` and `restore_result` summaries with package hashes,
 rollback package id, and whether config files and live streams were affected.
 
+The standalone dashboard surfaces this as a guarded two-click restore action
+inside the runtime export catalog. The first click arms the selected package;
+the second click sends `RESTORE_EXPORT_PACKAGE` through `/control` with
+`confirm_restore: true`. The read-only package, compare, and preflight links
+remain non-mutating.
+
 ## Frontend
 
 ```powershell

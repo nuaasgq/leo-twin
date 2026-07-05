@@ -1964,6 +1964,54 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
   font-size: 10px;
 }
 
+.data-panel-export-restore-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.data-panel-export-restore-actions button {
+  border: 1px solid #476273;
+  border-radius: 5px;
+  padding: 6px 9px;
+  background: #10202b;
+  color: var(--accent-cyan);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.data-panel-export-restore-actions.confirm button {
+  border-color: #d6a84c;
+  background: #322710;
+  color: #ffe0a3;
+}
+
+.data-panel-export-restore-actions.error button {
+  border-color: #994747;
+  background: #2b1111;
+  color: #ffd0d0;
+}
+
+.data-panel-export-restore-actions.success button,
+.data-panel-export-restore-actions.disabled button,
+.data-panel-export-restore-actions.pending button,
+.data-panel-export-restore-actions button:disabled {
+  border-color: #31404c;
+  background: #101922;
+  color: var(--app-dim);
+  cursor: not-allowed;
+}
+
+.data-panel-export-restore-actions small {
+  min-width: 180px;
+  flex: 1;
+  color: var(--app-muted);
+  overflow-wrap: anywhere;
+}
+
 .data-panel-export-catalog-row {
   display: grid;
   grid-template-columns:

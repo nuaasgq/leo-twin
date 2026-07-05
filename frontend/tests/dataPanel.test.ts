@@ -12,6 +12,7 @@ import {
   buildDataPanelExportCompareDisplay,
   buildDataPanelExportCompareStatus,
   buildDataPanelExportHistoryDisplay,
+  buildDataPanelExportRestoreActionDisplay,
   buildDataPanelExportRestorePreflightDisplay,
   buildDataPanelExportRestorePreflightStatus,
   buildDataPanelNetworkFormulaInputs,
@@ -926,6 +927,8 @@ describe("buildDataPanelExportRestorePreflightDisplay", () => {
       })
     ).toEqual({
       packageId: "pkg-same",
+      readiness: "NO_CHANGE",
+      canRestore: true,
       tone: "match",
       statusLabel: "无需恢复",
       summaryLabel: "pkg-same / config差异 0 / generated差异 0",
@@ -1034,7 +1037,7 @@ describe("buildDataPanelExportRestorePreflightDisplay", () => {
       preflight_hash:
         "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
     });
-    expect(buildDataPanelExportRestorePreflightStatus(display, "pkg-2", true)).toEqual({
+    expect(buildDataPanelExportRestorePreflightStatus(display, "pkg-2", true)).toMatchObject({
       tone: "pending",
       statusLabel: "正在加载预检",
       summaryLabel: "pkg-2",
@@ -1043,7 +1046,7 @@ describe("buildDataPanelExportRestorePreflightDisplay", () => {
     });
     expect(
       buildDataPanelExportRestorePreflightStatus(display, "pkg-2", false, "HTTP 404")
-    ).toEqual({
+    ).toMatchObject({
       tone: "error",
       statusLabel: "预检加载失败",
       summaryLabel: "pkg-2",
@@ -1055,6 +1058,84 @@ describe("buildDataPanelExportRestorePreflightDisplay", () => {
       statusLabel: "可恢复，需确认"
     });
     expect(buildDataPanelExportRestorePreflightStatus(null, null)).toBeNull();
+  });
+});
+
+describe("buildDataPanelExportRestoreActionDisplay", () => {
+  const readyStatus = {
+    tone: "different" as const,
+    packageId: "pkg-ready",
+    readiness: "READY",
+    canRestore: true,
+    statusLabel: "ready",
+    summaryLabel: "pkg-ready",
+    metaLabels: [],
+    warningRows: []
+  };
+
+  it("requires a second click before sending restore", () => {
+    expect(buildDataPanelExportRestoreActionDisplay(readyStatus)).toMatchObject({
+      packageId: "pkg-ready",
+      tone: "ready",
+      disabled: false,
+      requiresSecondClick: true
+    });
+    expect(
+      buildDataPanelExportRestoreActionDisplay(readyStatus, {
+        armedPackageId: "pkg-ready"
+      })
+    ).toMatchObject({
+      packageId: "pkg-ready",
+      tone: "confirm",
+      disabled: false,
+      requiresSecondClick: false
+    });
+  });
+
+  it("reports pending, success and blocked restore actions", () => {
+    expect(
+      buildDataPanelExportRestoreActionDisplay(readyStatus, {
+        pendingPackageId: "pkg-ready"
+      })
+    ).toMatchObject({
+      tone: "pending",
+      disabled: true
+    });
+    expect(
+      buildDataPanelExportRestoreActionDisplay(readyStatus, {
+        result: {
+          version: "v1",
+          source: "BACKEND_RUNTIME_EXPORT_RESTORE_COMMAND",
+          package_id: "pkg-ready",
+          readiness: "READY",
+          restored: true,
+          wrote_config_files: true,
+          reset_runtime_session: true,
+          stopped_live_streams: true,
+          preflight_hash: "sha256:preflight",
+          restored_config_hash: "sha256:old",
+          previous_config_hash: "sha256:new",
+          rollback_package_id: "rollback-pkg-1",
+          rollback_package_dir: "artifacts/runtime_exports/rollback-pkg-1",
+          rollback_catalog_key: "PACKAGE:rollback-pkg-1",
+          restore_result_hash: "sha256:result"
+        }
+      })
+    ).toMatchObject({
+      tone: "success",
+      disabled: true
+    });
+    expect(
+      buildDataPanelExportRestoreActionDisplay({
+        ...readyStatus,
+        readiness: "BLOCKED",
+        canRestore: false,
+        tone: "error"
+      })
+    ).toMatchObject({
+      tone: "disabled",
+      disabled: true
+    });
   });
 });
 

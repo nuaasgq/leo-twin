@@ -5,6 +5,61 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Dashboard Restore Command v1
+
+- Branch: `feature/T192-dashboard-restore-command-v1`
+- Commit: pending in this commit
+- Scope: connect the dashboard runtime export catalog to the backend restore
+  control command introduced in T191. The standalone dashboard now shows a
+  guarded two-click restore action for a selected export package, sends
+  `RESTORE_EXPORT_PACKAGE` over the existing `/control` WebSocket with
+  `confirm_restore: true`, tracks pending/error/success restore state, displays
+  rollback package feedback from the backend `restore_result`, and reloads the
+  runtime state/catalog after a successful restore. Read-only package, compare,
+  and preflight links remain non-mutating. This task does not modify Event
+  Kernel behavior, backend simulation models, packet/network fidelity, or the
+  overall frontend architecture.
+- Changed files/modules:
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/src/config_panel/controlClient.ts`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/controlClient.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/integration_demo.md`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- controlClient.test.ts dataPanel.test.ts appSurface.test.ts`
+    - Result: passed, 25 files / 288 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing `DataPanel` chunk-size
+      warning after minification.
+  - `git diff --check`
+    - Result: passed. Git still reported the pre-existing CRLF warning for
+      local runtime/config drift in `configs/generated_full_system_demo.json`
+      and `configs/sees_control.yaml`.
+- Problems encountered:
+  - Running `pnpm --dir frontend test ...` with the ambient PATH failed because
+    `node` was not available. The validation was rerun with the bundled Codex
+    Node/Pnpm paths and passed.
+  - The dashboard restore control needs to remain a write action, not a link.
+    The UI now uses a two-click button that dispatches the existing control
+    WebSocket command; the GET artifact and preflight routes stay read-only.
+  - The working tree still contains unrelated local runtime/config drift in
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`;
+    these files were intentionally left unstaged and unchanged by this task.
+- Known remaining issues / follow-up:
+  - The restore command restores configuration and reinitializes the live
+    runtime; it still does not replay archived event/metric timelines.
+  - A later task should add a compact post-restore audit card and optional
+    rollback command using the generated rollback package id.
+
 ## 2026-07-06 - Runtime Export Restore Command v1
 
 - Branch: `feature/T191-runtime-export-restore-command-v1`

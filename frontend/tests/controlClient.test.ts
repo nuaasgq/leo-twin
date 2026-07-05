@@ -26,6 +26,10 @@ describe("ControlChannelClient", () => {
     sockets[0].open();
     client.sendRuntimeControl("LOAD_TEMPLATE", { template_id: "network_stress_120sat" });
     client.sendRuntimeControl("SET_SPEED", { speed_factor: 25 });
+    client.sendRuntimeControl("RESTORE_EXPORT_PACKAGE", {
+      package_id: "pkg-1",
+      confirm_restore: true
+    });
     client.sendRuntimeControl("START");
     sockets[0].emit({
       type: "CONTROL_ACK",
@@ -61,6 +65,14 @@ describe("ControlChannelClient", () => {
         action: "SET_SPEED",
         payload: {
           speed_factor: 25
+        }
+      },
+      {
+        type: "RUNTIME_CONTROL",
+        action: "RESTORE_EXPORT_PACKAGE",
+        payload: {
+          package_id: "pkg-1",
+          confirm_restore: true
         }
       },
       {

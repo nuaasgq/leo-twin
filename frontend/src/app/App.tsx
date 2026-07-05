@@ -12,6 +12,7 @@ import {
   GeneratedScenarioConfig,
   RuntimeExportCatalogV1,
   RuntimeExportPackageCompareV1,
+  RuntimeExportRestoreCommandResultV1,
   RuntimeExportRestorePreflightV1,
   RuntimeBackpressureSummary,
   RuntimeStatusPayload,
@@ -124,6 +125,14 @@ export function App() {
     useState(false);
   const [runtimeExportRestorePreflightError, setRuntimeExportRestorePreflightError] =
     useState<string | null>(null);
+  const [
+    runtimeExportRestoreCommandPendingPackageId,
+    setRuntimeExportRestoreCommandPendingPackageId
+  ] = useState<string | null>(null);
+  const [runtimeExportRestoreCommandError, setRuntimeExportRestoreCommandError] =
+    useState<string | null>(null);
+  const [runtimeExportRestoreResult, setRuntimeExportRestoreResult] =
+    useState<RuntimeExportRestoreCommandResultV1 | null>(null);
   const [dismissedBackpressureNoticeKey, setDismissedBackpressureNoticeKey] =
     useState<string | null>(null);
   const [dismissedCompletionNoticeKey, setDismissedCompletionNoticeKey] =
@@ -234,6 +243,8 @@ export function App() {
     setRuntimeExportRestorePreflightLoading(true);
     setRuntimeExportCompareError(null);
     setRuntimeExportRestorePreflightError(null);
+    setRuntimeExportRestoreCommandError(null);
+    setRuntimeExportRestoreResult(null);
     const [compare, preflight] = await Promise.allSettled([
       loadRuntimeExportPackageCompare(packageId),
       loadRuntimeExportRestorePreflight(packageId)
@@ -272,6 +283,9 @@ export function App() {
         setRuntimeExportRestorePreflightLoading(false);
         setRuntimeExportCompareError(null);
         setRuntimeExportRestorePreflightError(null);
+        setRuntimeExportRestoreCommandPendingPackageId(null);
+        setRuntimeExportRestoreCommandError(null);
+        setRuntimeExportRestoreResult(null);
         return;
       }
       void refreshRuntimeExportCompare(packageId);
@@ -284,6 +298,9 @@ export function App() {
       setRuntimeExportRestorePreflightLoading(false);
       setRuntimeExportCompareError(null);
       setRuntimeExportRestorePreflightError(null);
+      setRuntimeExportRestoreCommandPendingPackageId(null);
+      setRuntimeExportRestoreCommandError(null);
+      setRuntimeExportRestoreResult(null);
     }
   }, [refreshRuntimeExportCompare, runtimeExportComparePackageId]);
 
@@ -376,11 +393,30 @@ export function App() {
           handleControlMessage(message, setRuntimeStatus);
           handleGeneratedConfig(message, setGeneratedConfig);
           if (message.ok === false) {
+            if (message.command === "RESTORE_EXPORT_PACKAGE") {
+              setRuntimeExportRestoreCommandPendingPackageId(null);
+              setRuntimeExportRestoreCommandError(controlErrorMessage(message.error));
+            }
             setControlError(controlErrorMessage(message.error));
             return;
           }
           if (message.ok === true) {
             setControlError(null);
+            if (message.command === "RESTORE_EXPORT_PACKAGE") {
+              setRuntimeExportRestoreCommandPendingPackageId(null);
+              setRuntimeExportRestoreCommandError(null);
+              if (message.restore_result !== undefined) {
+                setRuntimeExportRestoreResult(message.restore_result);
+              }
+              if (message.restore_preflight !== undefined) {
+                setRuntimeExportRestorePreflight(message.restore_preflight);
+              }
+              closeStreams();
+              loadControlState()
+                .then(({ scenario }) => resetWorld(scenario))
+                .catch(handleRuntimeApiError);
+              return;
+            }
           }
           if (
             message.type === "RUNTIME_STATUS" &&
@@ -659,6 +695,23 @@ export function App() {
     },
     [controlClient]
   );
+  const restoreRuntimeExportPackage = useCallback(
+    (packageId: string) => {
+      setControlError(null);
+      setRuntimeExportRestoreCommandError(null);
+      setRuntimeExportRestoreResult(null);
+      setRuntimeExportRestoreCommandPendingPackageId(packageId);
+      setRuntimeStatus((previous) => ({
+        ...previous,
+        last_action: "RESTORE_EXPORT_PACKAGE_PENDING"
+      }));
+      controlClient.sendRuntimeControl("RESTORE_EXPORT_PACKAGE", {
+        package_id: packageId,
+        confirm_restore: true
+      });
+    },
+    [controlClient]
+  );
   const dismissBackpressureNotice = useCallback(() => {
     if (backpressureNoticeKeyForStatus !== null) {
       setDismissedBackpressureNoticeKey(backpressureNoticeKeyForStatus);
@@ -768,7 +821,13 @@ export function App() {
               runtimeExportRestorePreflight={runtimeExportRestorePreflight}
               runtimeExportRestorePreflightLoading={runtimeExportRestorePreflightLoading}
               runtimeExportRestorePreflightError={runtimeExportRestorePreflightError}
+              runtimeExportRestoreCommandPendingPackageId={
+                runtimeExportRestoreCommandPendingPackageId
+              }
+              runtimeExportRestoreCommandError={runtimeExportRestoreCommandError}
+              runtimeExportRestoreResult={runtimeExportRestoreResult}
               onRuntimeExportCompareSelect={refreshRuntimeExportCompare}
+              onRuntimeExportRestore={restoreRuntimeExportPackage}
               displaySimTime={displaySimTime}
               displayEventCount={displayEventCount}
               onNavigateControl={(event) => navigateWithinApp(event, "/")}

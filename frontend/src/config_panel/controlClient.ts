@@ -1,4 +1,9 @@
-import { GeneratedScenarioConfig, RuntimeStatusPayload } from "../core/event_types";
+import {
+  GeneratedScenarioConfig,
+  RuntimeExportRestoreCommandResultV1,
+  RuntimeExportRestorePreflightV1,
+  RuntimeStatusPayload
+} from "../core/event_types";
 import { websocketUrl } from "../stream/websocket_client";
 
 export type RuntimeAction =
@@ -10,15 +15,19 @@ export type RuntimeAction =
   | "RESET"
   | "SET_SPEED"
   | "SET_MODE"
-  | "LOAD_TEMPLATE";
+  | "LOAD_TEMPLATE"
+  | "RESTORE_EXPORT_PACKAGE";
 
 export interface ControlAck {
   type: "CONTROL_ACK" | "RUNTIME_STATUS";
   ok?: boolean;
+  command?: string;
   error?: string;
   status?: RuntimeStatusPayload;
   config?: unknown;
   generated_config?: GeneratedScenarioConfig;
+  restore_preflight?: RuntimeExportRestorePreflightV1;
+  restore_result?: RuntimeExportRestoreCommandResultV1;
 }
 
 export interface ControlWebSocketLike {

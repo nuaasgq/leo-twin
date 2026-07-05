@@ -769,6 +769,24 @@ export interface RuntimeExportRestorePreflightEnvelope {
   summary: RuntimeExportRestorePreflightV1;
 }
 
+export interface RuntimeExportRestoreCommandResultV1 {
+  version: "v1" | string;
+  source: string;
+  package_id: string;
+  readiness: string;
+  restored: boolean;
+  wrote_config_files: boolean;
+  reset_runtime_session: boolean;
+  stopped_live_streams: boolean;
+  preflight_hash: string;
+  restored_config_hash: string;
+  previous_config_hash: string;
+  rollback_package_id: string;
+  rollback_package_dir: string;
+  rollback_catalog_key: string;
+  restore_result_hash: string;
+}
+
 export interface StateSnapshot {
   event_count?: number;
   last_sim_time?: number;
