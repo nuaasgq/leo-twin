@@ -234,8 +234,13 @@ export function CesiumGlobe({
     [satelliteKpiHistory, activeSelectedSatelliteId]
   );
   const layerSummary = useMemo(
-    () => visualLayerControlSummary(snapshot.scenario_config, localLayers),
-    [snapshot.scenario_config, localLayers]
+    () =>
+      visualLayerControlSummary(
+        snapshot.scenario_config,
+        localLayers,
+        globeVisualMode
+      ),
+    [snapshot.scenario_config, localLayers, globeVisualMode]
   );
 
   useEffect(() => {

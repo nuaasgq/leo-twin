@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   OPAQUE_GLOBE_BASE_COLOR_HEX,
+  earthVisualPolicyV2LayerSummary,
+  earthVisualPolicyV2Summary,
   applyOpaqueGlobeVisualPolicy,
   applyTranslucentGlobeVisualPolicy,
   opaqueGlobeVisualPolicySummary,
@@ -99,6 +101,50 @@ describe("opaque globe visual policy", () => {
       globeTranslucency: true,
       frontFaceAlpha: 0.38,
       backFaceAlpha: 0.18
+    });
+  });
+});
+
+describe("earth visual policy v2", () => {
+  it("summarizes the opaque default using the scene asset manifest", () => {
+    expect(earthVisualPolicyV2Summary()).toEqual({
+      version: "v2",
+      policy_id: "leo_twin.earth_visual_policy.v2",
+      default_mode: "OPAQUE",
+      active_mode: "OPAQUE",
+      earth_texture_asset_id: "earth.texture.cesium.natural_earth_ii",
+      country_boundary_asset_id: "earth.boundaries.natural_earth_110m_admin_0",
+      country_borders_visible: true,
+      far_side_occlusion: "ENABLED",
+      satellite_depth_test_required: true,
+      country_label_depth_test_required: true,
+      day_night_mode: "DISABLED_OPTIONAL_FUTURE",
+      asset_manifest_id: "leo_twin.3d_asset_manifest.v1",
+      visual_only: true,
+      no_simulation_semantics: true
+    });
+    expect(earthVisualPolicyV2LayerSummary()).toEqual({
+      label: "地球",
+      value: "不透明 / v2",
+      detail: "NaturalEarthII / 国界显示 / 背面遮挡开启 / 日夜关闭"
+    });
+  });
+
+  it("reports translucent observation as an explicit non-default visual mode", () => {
+    expect(earthVisualPolicyV2Summary("TRANSLUCENT", false)).toMatchObject({
+      default_mode: "OPAQUE",
+      active_mode: "TRANSLUCENT",
+      country_borders_visible: false,
+      far_side_occlusion: "DISABLED_FOR_TRANSLUCENT_OBSERVATION",
+      satellite_depth_test_required: false,
+      country_label_depth_test_required: false,
+      visual_only: true,
+      no_simulation_semantics: true
+    });
+    expect(earthVisualPolicyV2LayerSummary("TRANSLUCENT", false)).toEqual({
+      label: "地球",
+      value: "透明观测 / v2",
+      detail: "NaturalEarthII / 国界隐藏 / 背面遮挡关闭 / 日夜关闭"
     });
   });
 });

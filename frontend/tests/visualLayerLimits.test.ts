@@ -140,6 +140,11 @@ describe("visualLayerControlSummary", () => {
         value: "v1 / 6 项",
         detail: "地球底图 1 / 国界 1 / 模型 3 / 图标 1 / SHA 4"
       },
+      {
+        label: "地球",
+        value: "不透明 / v2",
+        detail: "NaturalEarthII / 国界显示 / 背面遮挡开启 / 日夜关闭"
+      },
       { label: "国界", value: "显示", detail: "Natural Earth 国家边界" },
       { label: "点位", value: "显示", detail: "全部卫星点位" },
       { label: "图标", value: "≤120", detail: "卫星图标上限" },
@@ -162,10 +167,27 @@ describe("visualLayerControlSummary", () => {
     });
 
     expect(summary.find((item) => item.label === "国界")?.value).toBe("隐藏");
+    expect(summary.find((item) => item.label === "地球")?.detail).toBe(
+      "NaturalEarthII / 国界隐藏 / 背面遮挡开启 / 日夜关闭"
+    );
     expect(summary.find((item) => item.label === "图标")?.value).toBe("隐藏");
     expect(summary.find((item) => item.label === "波束")?.value).toBe("隐藏");
     expect(summary.find((item) => item.label === "链路")?.value).toBe("隐藏");
     expect(summary.find((item) => item.label === "模型")?.value).toBe("≤32");
+  });
+
+  it("reports translucent observation mode in the layer summary", () => {
+    const summary = visualLayerControlSummary(
+      null,
+      DEFAULT_LOCAL_VISUAL_LAYERS,
+      "TRANSLUCENT"
+    );
+
+    expect(summary.find((item) => item.label === "地球")).toEqual({
+      label: "地球",
+      value: "透明观测 / v2",
+      detail: "NaturalEarthII / 国界显示 / 背面遮挡关闭 / 日夜关闭"
+    });
   });
 });
 

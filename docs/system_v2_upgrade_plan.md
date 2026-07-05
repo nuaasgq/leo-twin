@@ -247,6 +247,11 @@ Tasks:
   - Scope: opaque default, country borders, day/night optional, no far-side
     satellites through globe unless explicitly enabled.
   - Depends on: V2-060.
+  - Status: T231 adds `leo_twin.earth_visual_policy.v2` as a deterministic
+    frontend observation-layer policy. The 3D layer summary now reports the
+    active opaque/transparent Earth mode, country-border visibility, far-side
+    occlusion behavior, disabled day/night mode, and source asset manifest
+    binding without changing simulation semantics.
 - V2-062: Add selected-satellite coverage visualization v2.
   - Scope: deterministic footprint and honeycomb multi-beam visualization;
     no RF propagation.

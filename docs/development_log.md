@@ -5,6 +5,49 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Earth Visual Policy v2
+
+- Branch: `feature/T231-earth-visual-policy-v2`
+- Commit: pending in this commit
+- Scope: advance V2-061 by adding a deterministic Earth visual policy summary
+  for the Cesium 3D scene. The policy binds the active opaque/transparent globe
+  mode to the 3D asset manifest, country-border visibility, far-side occlusion
+  behavior, disabled day/night mode, and visual-only semantics.
+- Changed files/modules:
+  - `frontend/src/3d/cesium/globeVisualPolicy.ts`
+  - `frontend/src/3d/cesium/renderLimits.ts`
+  - `frontend/src/3d/cesium/CesiumGlobe.tsx`
+  - `frontend/tests/globeVisualPolicy.test.ts`
+  - `frontend/tests/visualLayerLimits.test.ts`
+  - `docs/earth_visual_policy_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test -- globeVisualPolicy.test.ts visualLayerLimits.test.ts sceneAssetManifest.test.ts satelliteVisuals.test.ts countryOverlays.test.ts`
+    - Result: passed, 26 test files / 327 tests.
+  - `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite reported the existing large `DataPanel` chunk
+      warning after minification.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - The task intentionally keeps the policy in the observation layer. It does
+    not add lighting, terrain, RF, orbit, link, or backend runtime behavior.
+  - The `TRANSLUCENT` globe mode remains available only as an explicit operator
+    observation mode; the default product policy remains opaque with far-side
+    occlusion enabled.
+  - Existing local runtime/generated config files remain dirty and are
+    intentionally not included in this task.
+- Known remaining issues / follow-up:
+  - Add selected-satellite coverage visualization v2 with deterministic
+    footprint and multi-beam display.
+  - Add screenshot-based visual regression for default opaque Earth and
+    transparent observation mode.
+  - Higher-resolution Earth imagery should only be introduced through the asset
+    manifest license/hash gate.
+
 ## 2026-07-06 - 3D Asset Manifest v1
 
 - Branch: `feature/T230-3d-asset-manifest-v1`
