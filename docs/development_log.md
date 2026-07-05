@@ -8727,3 +8727,41 @@ change.
   - Add result package export v1 with an explicit `/runtime/export` or CLI
     path that writes the manifest plus text artifacts into a deterministic run
     directory.
+
+## 2026-07-05 - Runtime Result Package Export v1
+
+- Branch: `feature/T180-runtime-result-package-export-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a live runtime result-package export path for the integration demo
+  backend. `DemoControlPlane.export_runtime_package()` now writes a
+  deterministic package directory containing `manifest.json`,
+  `config_snapshot.json`, `events.jsonl`, `metrics.csv`, and `summary.json`,
+  while preserving any existing segmented event-log files produced by the
+  metrics collector. The demo HTTP server exposes this through
+  `GET /runtime/export`. Event Kernel behavior, live stream progression, and
+  frontend architecture remain unchanged.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/integration_demo.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/integration/test_runtime_session_control.py::test_demo_adapter_exports_runtime_result_package -q`
+    - Result: passed, 1 test.
+  - `python -m pytest tests/unit/test_runtime_reproducibility.py tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer tests/integration/test_runtime_session_control.py::test_demo_adapter_exposes_cursor_batches tests/integration/test_runtime_session_control.py::test_demo_adapter_exports_runtime_result_package -q`
+    - Result: passed, 5 tests.
+- Problems encountered:
+  - The metrics collector may also write segmented files such as
+    `events-000001.jsonl`; the export test now requires the core package files
+    and permits those existing supplemental event segments.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - `/runtime/export` currently writes to the backend filesystem and returns
+    file paths/hashes. It does not yet stream a zip archive or provide frontend
+    download controls.
+- Recommended follow-up:
+  - Add a frontend export action plus a backend archive/download response that
+    packages the deterministic result directory without exposing arbitrary
+    filesystem paths.

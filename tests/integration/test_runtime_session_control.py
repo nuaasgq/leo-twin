@@ -710,6 +710,59 @@ def test_demo_adapter_exposes_cursor_batches(tmp_path) -> None:
     control_plane.handle_raw_message(json.dumps({"type": "RUNTIME_CONTROL", "action": "STOP"}))
 
 
+def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
+    control_plane = DemoControlPlane.from_result(
+        run_integration_demo(_small_demo_config()),
+        config_output_path=tmp_path / "sees_control.yaml",
+        generated_config_output_path=tmp_path / "generated_full_system_demo.json",
+    )
+    control_plane.handle_raw_message(
+        json.dumps({"type": "RUNTIME_CONTROL", "action": "INITIALIZE"})
+    )
+    control_plane.handle_raw_message(json.dumps({"type": "RUNTIME_CONTROL", "action": "START"}))
+    control_plane._require_advance_loop().tick()
+
+    exported = control_plane.export_runtime_package(tmp_path / "exports")
+    package_dir = tmp_path / "exports" / exported["package_id"]
+    files = {record["filename"]: record for record in exported["files"]}
+
+    assert exported["type"] == "RUNTIME_EXPORT"
+    assert exported["ok"] is True
+    assert Path(exported["package_dir"]) == package_dir
+    assert {
+        "config_snapshot.json",
+        "events.jsonl",
+        "manifest.json",
+        "metrics.csv",
+        "summary.json",
+    } <= set(files)
+    for record in files.values():
+        path = Path(record["path"])
+        assert path.exists()
+        assert path.parent == package_dir
+        assert record["bytes"] == len(path.read_bytes())
+        assert record["sha256"].startswith("sha256:")
+
+    manifest = json.loads((package_dir / "manifest.json").read_text(encoding="utf-8"))
+    config_snapshot = json.loads(
+        (package_dir / "config_snapshot.json").read_text(encoding="utf-8")
+    )
+    summary = json.loads((package_dir / "summary.json").read_text(encoding="utf-8"))
+
+    assert manifest == exported["manifest"]
+    assert manifest["source"] == "BACKEND_RUNTIME_STATUS"
+    assert config_snapshot["type"] == "RUNTIME_CONFIG_SNAPSHOT"
+    assert config_snapshot["generated_config"]["seed"] == 1234
+    assert config_snapshot["status"]["reproducibility_manifest_v1"] == manifest
+    assert summary["event_count"] >= 1
+    assert (package_dir / "metrics.csv").read_text(encoding="utf-8").startswith(
+        "sim_time,metric_name,entity_id,value,tags\n"
+    )
+    assert (package_dir / "events.jsonl").read_text(encoding="utf-8")
+
+    control_plane.handle_raw_message(json.dumps({"type": "RUNTIME_CONTROL", "action": "STOP"}))
+
+
 def test_demo_server_stream_query_parses_cursor_options() -> None:
     assert _stream_query({"cursor": ["5"], "limit": ["10"]}) == (5, 10)
     assert _stream_query({}) == (0, None)

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -65,7 +66,7 @@ from examples.integration_demo.runtime import (
     finalize_integration_demo_run,
     run_integration_demo,
 )
-from examples.integration_demo.serialization import JsonValue, event_to_json
+from examples.integration_demo.serialization import JsonValue, event_to_json, stable_json_pretty
 
 
 _FRONTEND_EVENT_TYPES = frozenset(
@@ -183,6 +184,53 @@ class DemoControlPlane:
             "type": "RUNTIME_DETAIL_PAGE",
             "kind": "nodes",
             "summary": summary,
+        }
+
+    def export_runtime_package(
+        self,
+        output_root: str | Path = "artifacts/runtime_exports",
+    ) -> dict[str, Any]:
+        if self._runtime_context is None:
+            raise RuntimeError("runtime metrics are unavailable for export")
+        self._require_advance_loop().publish_pending()
+        generated_config = self._generated_config_json()
+        status = self._status_json(generated_config)
+        package_id = _runtime_export_package_id(
+            self._require_session().session_id,
+            status,
+        )
+        package_dir = Path(output_root) / package_id
+        package_dir.mkdir(parents=True, exist_ok=True)
+
+        written_files = dict(self._runtime_context.metrics.write_outputs(package_dir))
+        config_snapshot = {
+            "type": "RUNTIME_CONFIG_SNAPSHOT",
+            "status": status,
+            "config": self._controller.config_json(),
+            "generated_config": generated_config,
+        }
+        config_snapshot_path = package_dir / "config_snapshot.json"
+        manifest_path = package_dir / "manifest.json"
+        config_snapshot_path.write_text(
+            stable_json_pretty(config_snapshot), encoding="utf-8"
+        )
+        manifest = dict(status["reproducibility_manifest_v1"])
+        manifest_path.write_text(stable_json_pretty(manifest), encoding="utf-8")
+        written_files["config_snapshot"] = config_snapshot_path
+        written_files["manifest"] = manifest_path
+
+        files = tuple(
+            _runtime_export_file_record(name, path)
+            for name, path in sorted(written_files.items())
+        )
+        return {
+            "type": "RUNTIME_EXPORT",
+            "ok": True,
+            "package_id": package_id,
+            "package_dir": str(package_dir),
+            "file_count": len(files),
+            "files": files,
+            "manifest": manifest,
         }
 
     def visible_snapshot(self) -> dict[str, JsonValue]:
@@ -839,6 +887,32 @@ def _stream_buffer_diagnostics(name: str, stream: StreamBuffer[Any]) -> dict[str
         "max_items": stream.policy.max_items,
         "max_batch_size": stream.policy.max_batch_size,
         "overflow_risk": snapshot.total_dropped_count > 0,
+    }
+
+
+def _runtime_export_package_id(session_id: str, status: dict[str, Any]) -> str:
+    sim_time = _control_optional_float(status.get("current_sim_time")) or 0.0
+    event_count = _control_int(status.get("processed_event_count"))
+    sim_token = f"{sim_time:012.3f}".replace(".", "p")
+    return (
+        f"{_safe_runtime_export_token(session_id)}-"
+        f"t{sim_token}-e{event_count:08d}"
+    )
+
+
+def _safe_runtime_export_token(value: str) -> str:
+    safe = re.sub(r"[^A-Za-z0-9_.-]+", "-", value.strip())
+    return safe.strip(".-") or "runtime-session"
+
+
+def _runtime_export_file_record(name: str, path: Path) -> dict[str, Any]:
+    data = path.read_bytes()
+    return {
+        "name": name,
+        "filename": path.name,
+        "path": str(path),
+        "bytes": len(data),
+        "sha256": f"sha256:{hashlib.sha256(data).hexdigest()}",
     }
 
 

@@ -82,6 +82,8 @@ Endpoints:
 
 - `GET /scenario/config`
 - `GET /metrics/snapshot`
+- `GET /runtime/status`
+- `GET /runtime/export`
 - `WS /stream/events`
 - `WS /stream/state`
 
@@ -90,6 +92,16 @@ Replay artifacts:
 ```powershell
 python run_demo.py --no-server --write-replay artifacts/integration_demo
 ```
+
+Live runtime export:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8765/runtime/export
+```
+
+The live export writes a deterministic result package under
+`artifacts/runtime_exports`. Each package contains `manifest.json`,
+`config_snapshot.json`, `events.jsonl`, `metrics.csv`, and `summary.json`.
 
 ## Frontend
 

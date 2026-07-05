@@ -146,6 +146,12 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
             if path == "/runtime/status":
                 self._send_json(control_plane.runtime_status())
                 return
+            if path == "/runtime/export":
+                try:
+                    self._send_json(control_plane.export_runtime_package())
+                except RuntimeError as exc:
+                    self.send_error(409, str(exc))
+                return
             if path == "/runtime/details/users":
                 try:
                     cursor, limit = _detail_query(query, default_limit=100)
