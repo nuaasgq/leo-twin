@@ -4093,3 +4093,37 @@ change.
   - Add route-quality scenario presets that let users deliberately choose
     low-load, congested, lossy, or high-variation network conditions from the
     control panel without changing the Event Kernel.
+
+## 2026-07-05 - Network Quality Presets v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add user-facing network quality presets to the configuration panel.
+  The presets drive existing backend-consumed fields only: flow demand,
+  application/transport protocol, transport loss, congestion window, routing
+  protocol, MAC protocol, and routing cost weights. Presets cover stable
+  low-load, congested demand, lossy access, and high delay-variation scenarios.
+- Changed files/modules:
+  - `frontend/src/config_panel/ConfigPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/configPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- configPanel.test.ts`
+    - Result: passed, 24 files / 182 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - None. The presets reuse existing control-plane payload fields and do not
+    add backend schema, protocol-stack logic, packet-level simulation, or Event
+    Kernel changes.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - Preset names are frontend affordances; backend summaries do not yet echo a
+    selected preset id because no new backend field was introduced.
+- Recommended follow-up:
+  - Add backend-derived route-quality summary fields once the product contract
+    needs to persist preset provenance across sessions.

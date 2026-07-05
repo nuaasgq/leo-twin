@@ -135,6 +135,22 @@ export interface ScenarioScalePreset {
   computeNodeCount: number;
 }
 
+export interface NetworkQualityPreset {
+  id: string;
+  label: string;
+  detail: string;
+  flowDemandCapacity: number;
+  applicationProtocol: string;
+  transportProtocol: string;
+  transportLossRate: number;
+  transportCongestionWindowSegments: number;
+  routingProtocol: string;
+  datalinkMacProtocol: string;
+  routingLatencyWeight: number;
+  routingInverseCapacityWeight: number;
+  routingHopWeight: number;
+}
+
 export const SCENARIO_SCALE_PRESETS: readonly ScenarioScalePreset[] = [
   {
     id: "demo-72",
@@ -168,10 +184,86 @@ export const SCENARIO_SCALE_PRESETS: readonly ScenarioScalePreset[] = [
   }
 ];
 
+export const NETWORK_QUALITY_PRESETS: readonly NetworkQualityPreset[] = [
+  {
+    id: "stable-low-load",
+    label: "稳定低负载",
+    detail: "TCP / TDMA / 低需求",
+    flowDemandCapacity: 10,
+    applicationProtocol: "TASK_OFFLOAD_FLOW",
+    transportProtocol: "TCP",
+    transportLossRate: 0,
+    transportCongestionWindowSegments: 0,
+    routingProtocol: "LINK_STATE",
+    datalinkMacProtocol: "TDMA",
+    routingLatencyWeight: 1,
+    routingInverseCapacityWeight: 0,
+    routingHopWeight: 0
+  },
+  {
+    id: "congested-demand",
+    label: "拥塞压力",
+    detail: "高需求 / TCP 窗口",
+    flowDemandCapacity: 450,
+    applicationProtocol: "TASK_OFFLOAD_FLOW",
+    transportProtocol: "TCP",
+    transportLossRate: 0.02,
+    transportCongestionWindowSegments: 24,
+    routingProtocol: "LINK_STATE",
+    datalinkMacProtocol: "TDMA",
+    routingLatencyWeight: 1,
+    routingInverseCapacityWeight: 200,
+    routingHopWeight: 0.2
+  },
+  {
+    id: "lossy-access",
+    label: "有损接入",
+    detail: "UDP / ALOHA / 损耗",
+    flowDemandCapacity: 80,
+    applicationProtocol: "MQTT",
+    transportProtocol: "UDP",
+    transportLossRate: 0.03,
+    transportCongestionWindowSegments: 0,
+    routingProtocol: "DISTANCE_VECTOR",
+    datalinkMacProtocol: "SLOTTED_ALOHA",
+    routingLatencyWeight: 0.2,
+    routingInverseCapacityWeight: 400,
+    routingHopWeight: 1
+  },
+  {
+    id: "delay-variation",
+    label: "高时延波动",
+    detail: "容量偏好 / CSMA",
+    flowDemandCapacity: 120,
+    applicationProtocol: "HTTP",
+    transportProtocol: "TCP",
+    transportLossRate: 0.01,
+    transportCongestionWindowSegments: 12,
+    routingProtocol: "SHORTEST_PATH",
+    datalinkMacProtocol: "CSMA_CA",
+    routingLatencyWeight: 0.1,
+    routingInverseCapacityWeight: 800,
+    routingHopWeight: 3
+  }
+];
+
 export interface ScenarioScaleSelection {
   satelliteCount: number;
   userCount: number;
   computeNodes: number;
+}
+
+export interface NetworkQualitySelection {
+  flowDemandCapacity: number;
+  applicationProtocol: string;
+  transportProtocol: string;
+  transportLossRate: number;
+  transportCongestionWindowSegments: number;
+  routingProtocol: string;
+  datalinkMacProtocol: string;
+  routingLatencyWeight: number;
+  routingInverseCapacityWeight: number;
+  routingHopWeight: number;
 }
 
 export function selectedScenarioScalePreset(
@@ -184,6 +276,15 @@ export function selectedScenarioScalePreset(
         preset.userCount === selection.userCount &&
         preset.computeNodeCount === selection.computeNodes
     ) ?? null
+  );
+}
+
+export function selectedNetworkQualityPreset(
+  selection: NetworkQualitySelection
+): NetworkQualityPreset | null {
+  return (
+    NETWORK_QUALITY_PRESETS.find((preset) => networkQualityPresetMatches(preset, selection)) ??
+    null
   );
 }
 
@@ -490,6 +591,20 @@ export function ConfigPanel({
   };
   const activeScalePreset = selectedScenarioScalePreset(scaleSelection);
   const scalePresetSummary = scalePresetSummaryItems(scaleSelection, generatedConfig);
+  const networkQualitySelection = {
+    flowDemandCapacity,
+    applicationProtocol,
+    transportProtocol,
+    transportLossRate,
+    transportCongestionWindowSegments: transportCongestionWindow,
+    routingProtocol,
+    datalinkMacProtocol: dataLinkProtocol,
+    routingLatencyWeight,
+    routingInverseCapacityWeight,
+    routingHopWeight
+  };
+  const activeNetworkQualityPreset =
+    selectedNetworkQualityPreset(networkQualitySelection);
   const handleSatelliteCountChange = (value: number) => {
     const nextCount = boundedInteger(value, 12, 10000);
     setSatelliteCount(nextCount);
@@ -503,6 +618,18 @@ export function ConfigPanel({
     setSatelliteCount(preset.satelliteCount);
     setUserCount(preset.userCount);
     setComputeNodes(preset.computeNodeCount);
+  };
+  const handleNetworkQualityPreset = (preset: NetworkQualityPreset) => {
+    setFlowDemandCapacity(preset.flowDemandCapacity);
+    setApplicationProtocol(preset.applicationProtocol);
+    setTransportProtocol(preset.transportProtocol);
+    setTransportLossRate(preset.transportLossRate);
+    setTransportCongestionWindow(preset.transportCongestionWindowSegments);
+    setRoutingProtocol(preset.routingProtocol);
+    setDataLinkProtocol(preset.datalinkMacProtocol);
+    setRoutingLatencyWeight(preset.routingLatencyWeight);
+    setRoutingInverseCapacityWeight(preset.routingInverseCapacityWeight);
+    setRoutingHopWeight(preset.routingHopWeight);
   };
   const handleSpeedFactorChange = (value: number) =>
     setSpeedFactor(boundedInteger(value, 1, 100));
@@ -1259,6 +1386,19 @@ export function ConfigPanel({
 
         <section className="config-section" aria-label={CONFIG_PANEL_SECTION_LABELS.network}>
           <div className="config-section-title">{CONFIG_PANEL_SECTION_LABELS.network}</div>
+      <div className="scale-preset-grid network-quality-preset-grid" aria-label="网络质量预设">
+        {NETWORK_QUALITY_PRESETS.map((preset) => (
+          <button
+            type="button"
+            key={preset.id}
+            className={activeNetworkQualityPreset?.id === preset.id ? "active" : ""}
+            onClick={() => handleNetworkQualityPreset(preset)}
+          >
+            <span>{preset.label}</span>
+            <small>{preset.detail}</small>
+          </button>
+        ))}
+      </div>
       <div className="control-group">
         <label className="control-label" htmlFor="application-protocol">
           应用协议
@@ -1938,6 +2078,32 @@ function generatedConfigMatchesSelection(
     generatedConfig.user_count === selection.userCount &&
     generatedConfig.compute_node_count === selection.computeNodes
   );
+}
+
+function networkQualityPresetMatches(
+  preset: NetworkQualityPreset,
+  selection: NetworkQualitySelection
+): boolean {
+  return (
+    preset.flowDemandCapacity === selection.flowDemandCapacity &&
+    preset.applicationProtocol === selection.applicationProtocol &&
+    preset.transportProtocol === selection.transportProtocol &&
+    nearlyEqual(preset.transportLossRate, selection.transportLossRate) &&
+    preset.transportCongestionWindowSegments ===
+      selection.transportCongestionWindowSegments &&
+    preset.routingProtocol === selection.routingProtocol &&
+    preset.datalinkMacProtocol === selection.datalinkMacProtocol &&
+    nearlyEqual(preset.routingLatencyWeight, selection.routingLatencyWeight) &&
+    nearlyEqual(
+      preset.routingInverseCapacityWeight,
+      selection.routingInverseCapacityWeight
+    ) &&
+    nearlyEqual(preset.routingHopWeight, selection.routingHopWeight)
+  );
+}
+
+function nearlyEqual(left: number, right: number): boolean {
+  return Math.abs(left - right) < 1e-9;
 }
 
 function boundedInteger(value: number, min: number, max: number): number {

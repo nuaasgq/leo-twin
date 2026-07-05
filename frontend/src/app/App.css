@@ -2085,6 +2085,10 @@ body {
   background: #102633;
 }
 
+.network-quality-preset-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .scale-preset-grid span,
 .scale-preset-grid small {
   min-width: 0;

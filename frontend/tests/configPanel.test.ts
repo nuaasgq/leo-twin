@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import {
   ConfigPanel,
+  NETWORK_QUALITY_PRESETS,
   SCENARIO_SCALE_PRESETS,
   configPanelSectionTitles,
   generatedScenarioSummaryItems,
@@ -13,6 +14,7 @@ import {
   pauseResumeControl,
   runtimeProgressSummary,
   scalePresetSummaryItems,
+  selectedNetworkQualityPreset,
   selectedScenarioScalePreset,
   startControlDisabled,
   trafficControlPayload,
@@ -114,6 +116,51 @@ describe("ConfigPanel priority controls", () => {
     expect(markup).toContain("1200 星");
     expect(markup).toContain("规模稳定");
     expect(markup).toContain("自定义规模");
+  });
+
+  it("renders network quality presets for route-quality scenarios", () => {
+    expect(NETWORK_QUALITY_PRESETS.map((preset) => preset.id)).toEqual([
+      "stable-low-load",
+      "congested-demand",
+      "lossy-access",
+      "delay-variation"
+    ]);
+    expect(
+      selectedNetworkQualityPreset({
+        flowDemandCapacity: NETWORK_QUALITY_PRESETS[2].flowDemandCapacity,
+        applicationProtocol: NETWORK_QUALITY_PRESETS[2].applicationProtocol,
+        transportProtocol: NETWORK_QUALITY_PRESETS[2].transportProtocol,
+        transportLossRate: NETWORK_QUALITY_PRESETS[2].transportLossRate,
+        transportCongestionWindowSegments:
+          NETWORK_QUALITY_PRESETS[2].transportCongestionWindowSegments,
+        routingProtocol: NETWORK_QUALITY_PRESETS[2].routingProtocol,
+        datalinkMacProtocol: NETWORK_QUALITY_PRESETS[2].datalinkMacProtocol,
+        routingLatencyWeight: NETWORK_QUALITY_PRESETS[2].routingLatencyWeight,
+        routingInverseCapacityWeight:
+          NETWORK_QUALITY_PRESETS[2].routingInverseCapacityWeight,
+        routingHopWeight: NETWORK_QUALITY_PRESETS[2].routingHopWeight
+      })?.id
+    ).toBe("lossy-access");
+
+    const markup = renderToStaticMarkup(
+      createElement(ConfigPanel, {
+        scenario: defaultScenario(),
+        runtime: runtimeStatus("STOPPED", true),
+        progress: {
+          sim_time: 0,
+          duration: 600,
+          event_count: 0
+        },
+        generatedConfig: null,
+        onRuntimeControl: () => undefined
+      })
+    );
+
+    expect(markup).toContain('aria-label="网络质量预设"');
+    expect(markup).toContain("稳定低负载");
+    expect(markup).toContain("拥塞压力");
+    expect(markup).toContain("有损接入");
+    expect(markup).toContain("高时延波动");
   });
 
   it("renders compute resource vector inputs for satellite-hosted nodes", () => {
