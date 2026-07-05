@@ -1,4 +1,5 @@
 import { ScenarioConfig } from "../../core/event_types";
+import { selectedCoverageVisualPolicyV2LayerSummary } from "../beam_renderer/beamEntities";
 import { scene3dAssetManifestSummary } from "../assets/assetManifest";
 import {
   GlobeVisualMode,
@@ -143,6 +144,10 @@ export function visualLayerControlSummary(
   return [
     scene3dAssetManifestSummary(),
     earthVisualPolicyV2LayerSummary(globeVisualMode, localLayers.countryOverlays),
+    selectedCoverageVisualPolicyV2LayerSummary(
+      scenarioConfig,
+      localLayers.coverageBeams
+    ),
     {
       label: "国界",
       value: localLayers.countryOverlays ? "显示" : "隐藏",

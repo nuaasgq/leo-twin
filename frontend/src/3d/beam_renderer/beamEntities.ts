@@ -9,6 +9,8 @@ const DEFAULT_BEAM_LENGTH_METERS = 600_000;
 const DEFAULT_BEAM_RADIUS_METERS = 160_000;
 const BEAM_CELL_SPACING_RATIO = 0.52;
 const BEAM_CELL_RADIUS_RATIO = 0.34;
+const SELECTED_COVERAGE_VISUAL_POLICY_V2_ID =
+  "leo_twin.selected_coverage_visual_policy.v2";
 
 export interface BeamRenderOptions {
   beamLengthMeters: number;
@@ -38,6 +40,30 @@ export interface CoverageUserIntersectionSummary {
   label: string;
   coveredUserLabel: string;
   note: string;
+}
+
+export interface SelectedCoverageVisualPolicyV2Summary {
+  version: "v2";
+  policy_id: string;
+  selected_satellite_detail_mode: string;
+  coverage_model: string;
+  fidelity_level: string;
+  beam_pattern: string;
+  footprint_intersection_policy: string;
+  beam_cell_count: number;
+  beam_radius_m: number;
+  beam_length_m: number;
+  global_beam_render_limit: number;
+  local_layer_enabled: boolean;
+  excluded_physics: readonly string[];
+  visual_only: true;
+  no_access_semantics: true;
+}
+
+export interface SelectedCoverageVisualPolicyV2LayerSummary {
+  label: string;
+  value: string;
+  detail: string;
 }
 
 export interface BeamCellFootprint {
@@ -169,6 +195,62 @@ export function coverageBeamDisplaySummary(
     note:
       coverage?.model_note ??
       "确定性几何可视化足迹；未进行 RF 传播、天线方向图或链路预算仿真。"
+  };
+}
+
+export function selectedCoverageVisualPolicyV2Summary(
+  scenarioConfig: ScenarioConfig | null | undefined,
+  localLayerEnabled = true
+): SelectedCoverageVisualPolicyV2Summary {
+  const coverage = scenarioConfig?.backend_summary?.coverage_beam_summary;
+  const geometry = resolveBeamGeometryOptions(scenarioConfig);
+  return {
+    version: "v2",
+    policy_id: SELECTED_COVERAGE_VISUAL_POLICY_V2_ID,
+    selected_satellite_detail_mode:
+      coverage?.selected_satellite_detail_mode ?? "SELECTED_SATELLITE_ONLY",
+    coverage_model: coverage?.coverage_model ?? "DETERMINISTIC_GEOMETRIC_FOOTPRINT",
+    fidelity_level: coverage?.fidelity_level ?? "DISPLAY_APPROXIMATION",
+    beam_pattern:
+      coverage?.beam_pattern ?? "CENTER_PLUS_HEX_RING_VISUAL_APPROXIMATION",
+    footprint_intersection_policy:
+      coverage?.footprint_intersection_policy ??
+      "VISUAL_GEOMETRIC_CONTAINMENT_ONLY",
+    beam_cell_count: geometry.beamCellCount,
+    beam_radius_m: geometry.beamRadiusMeters,
+    beam_length_m: geometry.beamLengthMeters,
+    global_beam_render_limit: boundedInteger(
+      coverage?.global_beam_render_limit,
+      1,
+      0,
+      1
+    ),
+    local_layer_enabled: localLayerEnabled,
+    excluded_physics: coverage?.excluded_physics ?? [
+      "RF_PROPAGATION",
+      "ANTENNA_PATTERN",
+      "LINK_BUDGET",
+      "INTERFERENCE"
+    ],
+    visual_only: true,
+    no_access_semantics: true
+  };
+}
+
+export function selectedCoverageVisualPolicyV2LayerSummary(
+  scenarioConfig: ScenarioConfig | null | undefined,
+  localLayerEnabled = true
+): SelectedCoverageVisualPolicyV2LayerSummary {
+  const summary = selectedCoverageVisualPolicyV2Summary(
+    scenarioConfig,
+    localLayerEnabled
+  );
+  return {
+    label: "覆盖",
+    value: `${localLayerEnabled ? "选中卫星" : "隐藏"} / ${summary.version}`,
+    detail: `蜂窝 ${summary.beam_cell_count} / 半径 ${formatKilometers(
+      summary.beam_radius_m
+    )} km / RF排除 / 接入无语义`
   };
 }
 

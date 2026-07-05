@@ -256,6 +256,11 @@ Tasks:
   - Scope: deterministic footprint and honeycomb multi-beam visualization;
     no RF propagation.
   - Depends on: V2-061.
+  - Status: T232 formalizes the existing selected-satellite coverage renderer
+    as `leo_twin.selected_coverage_visual_policy.v2`. The 3D layer summary now
+    exposes backend-derived footprint radius, bounded honeycomb beam count,
+    selected-satellite-only detail mode, RF exclusions, and no-access-semantics
+    boundaries.
 - V2-063: Add selected-satellite camera/detail mode v2.
   - Scope: follow camera, inset, local motion trail, resource overlay.
   - Depends on: V2-052, V2-062.

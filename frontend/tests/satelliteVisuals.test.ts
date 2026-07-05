@@ -21,7 +21,9 @@ import {
   coverageBeamDisplaySummary,
   coverageUserIntersectionSummary,
   resolveBeamGeometryOptions,
-  selectedCoverageBeamSatellites
+  selectedCoverageBeamSatellites,
+  selectedCoverageVisualPolicyV2LayerSummary,
+  selectedCoverageVisualPolicyV2Summary
 } from "../src/3d/beam_renderer/beamEntities";
 import {
   appendSatelliteInsetTrail,
@@ -280,6 +282,64 @@ describe("selected satellite coverage beams", () => {
       intersectionPolicyLabel: "判定策略 仅视觉几何包含"
     });
     expect(coverageBeamDisplaySummary(null).note).toContain("未进行 RF");
+  });
+
+  it("exposes selected-satellite coverage visual policy v2 from backend summary", () => {
+    const config = {
+      backend_summary: {
+        coverage_beam_summary: coverageSummary({
+          default_beam_count: 4,
+          beam_length_m: 700_000,
+          beam_radius_m: 220_000,
+          global_beam_render_limit: 1
+        })
+      }
+    };
+
+    expect(selectedCoverageVisualPolicyV2Summary(config)).toEqual({
+      version: "v2",
+      policy_id: "leo_twin.selected_coverage_visual_policy.v2",
+      selected_satellite_detail_mode: "SELECTED_SATELLITE_ONLY",
+      coverage_model: "DETERMINISTIC_GEOMETRIC_FOOTPRINT",
+      fidelity_level: "DISPLAY_APPROXIMATION",
+      beam_pattern: "CENTER_PLUS_HEX_RING_VISUAL_APPROXIMATION",
+      footprint_intersection_policy: "VISUAL_GEOMETRIC_CONTAINMENT_ONLY",
+      beam_cell_count: 4,
+      beam_radius_m: 220_000,
+      beam_length_m: 700_000,
+      global_beam_render_limit: 1,
+      local_layer_enabled: true,
+      excluded_physics: [
+        "RF_PROPAGATION",
+        "ANTENNA_PATTERN",
+        "LINK_BUDGET",
+        "INTERFERENCE"
+      ],
+      visual_only: true,
+      no_access_semantics: true
+    });
+    expect(selectedCoverageVisualPolicyV2LayerSummary(config)).toEqual({
+      label: "覆盖",
+      value: "选中卫星 / v2",
+      detail: "蜂窝 4 / 半径 220 km / RF排除 / 接入无语义"
+    });
+  });
+
+  it("keeps coverage visual policy deterministic when the local layer is hidden", () => {
+    expect(selectedCoverageVisualPolicyV2Summary(null, false)).toMatchObject({
+      beam_cell_count: 7,
+      beam_radius_m: 160_000,
+      beam_length_m: 600_000,
+      global_beam_render_limit: 1,
+      local_layer_enabled: false,
+      visual_only: true,
+      no_access_semantics: true
+    });
+    expect(selectedCoverageVisualPolicyV2LayerSummary(null, false)).toEqual({
+      label: "覆盖",
+      value: "隐藏 / v2",
+      detail: "蜂窝 7 / 半径 160 km / RF排除 / 接入无语义"
+    });
   });
 
   it("counts positioned ground users inside the selected visual footprint", () => {

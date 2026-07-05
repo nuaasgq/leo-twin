@@ -5,6 +5,50 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Selected Coverage Visual Policy v2
+
+- Branch: `feature/T232-selected-coverage-visual-policy-v2`
+- Commit: pending in this commit
+- Scope: advance V2-062 by formalizing the selected-satellite coverage display
+  as `leo_twin.selected_coverage_visual_policy.v2`. The frontend now exposes a
+  deterministic policy summary derived from backend `coverage_beam_summary`,
+  including selected-satellite-only detail mode, bounded honeycomb beam count,
+  footprint radius/length, RF exclusions, local layer visibility, and
+  no-access-semantics boundaries.
+- Changed files/modules:
+  - `frontend/src/3d/beam_renderer/beamEntities.ts`
+  - `frontend/src/3d/cesium/renderLimits.ts`
+  - `frontend/tests/satelliteVisuals.test.ts`
+  - `frontend/tests/visualLayerLimits.test.ts`
+  - `docs/selected_coverage_visual_policy_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test -- satelliteVisuals.test.ts visualLayerLimits.test.ts globeVisualPolicy.test.ts sceneAssetManifest.test.ts countryOverlays.test.ts`
+    - Result: passed, 26 test files / 329 tests.
+  - `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite reported the existing large `DataPanel` chunk
+      warning after minification.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - Existing selected-satellite footprint and honeycomb-cell rendering already
+    existed, so this task intentionally productizes and tests the policy
+    boundary instead of rewriting the renderer.
+  - The policy remains visual-only and explicitly excludes RF propagation,
+    antenna-pattern simulation, link-budget calculation, interference modeling,
+    and access-decision semantics.
+  - Existing local runtime/generated config files remain dirty and are
+    intentionally not included in this task.
+- Known remaining issues / follow-up:
+  - Add screenshot regression for selected-satellite footprint and beam cells.
+  - Bind richer per-beam inspection to a selected-satellite detail surface after
+    the V2-063 camera/detail mode work.
+  - Coverage display still uses deterministic geometric containment, not a
+    physical communication coverage model.
+
 ## 2026-07-06 - Earth Visual Policy v2
 
 - Branch: `feature/T231-earth-visual-policy-v2`

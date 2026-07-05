@@ -145,6 +145,11 @@ describe("visualLayerControlSummary", () => {
         value: "不透明 / v2",
         detail: "NaturalEarthII / 国界显示 / 背面遮挡开启 / 日夜关闭"
       },
+      {
+        label: "覆盖",
+        value: "选中卫星 / v2",
+        detail: "蜂窝 7 / 半径 160 km / RF排除 / 接入无语义"
+      },
       { label: "国界", value: "显示", detail: "Natural Earth 国家边界" },
       { label: "点位", value: "显示", detail: "全部卫星点位" },
       { label: "图标", value: "≤120", detail: "卫星图标上限" },
@@ -172,6 +177,11 @@ describe("visualLayerControlSummary", () => {
     );
     expect(summary.find((item) => item.label === "图标")?.value).toBe("隐藏");
     expect(summary.find((item) => item.label === "波束")?.value).toBe("隐藏");
+    expect(summary.find((item) => item.label === "覆盖")).toEqual({
+      label: "覆盖",
+      value: "隐藏 / v2",
+      detail: "蜂窝 7 / 半径 160 km / RF排除 / 接入无语义"
+    });
     expect(summary.find((item) => item.label === "链路")?.value).toBe("隐藏");
     expect(summary.find((item) => item.label === "模型")?.value).toBe("≤32");
   });
