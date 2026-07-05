@@ -74,6 +74,15 @@ sections, including key control-panel fields and detailed file-only fields, so
 users can understand which settings belong in the UI and which belong in the
 full YAML/JSON configuration file.
 
+Backend-generated scenario summaries also expose
+`backend_summary.configuration_explanation_v2`. This read-only object maps the
+accepted configuration surfaces and sections (`scenario`, `traffic`, `network`,
+`compute`, `runtime`, and `ui`) to current backend model semantics, current
+available values, deterministic/reproducibility policies, and explicit excluded
+capabilities such as packet-level simulation or external simulator integration.
+The frontend should use this object for product explanations rather than
+inferring model meaning locally.
+
 Each field schema includes:
 
 - path

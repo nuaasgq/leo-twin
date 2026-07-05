@@ -5,6 +5,62 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Configuration Explanation Summary v2
+
+- Branch: `feature/T196-config-explanation-summary-v2`
+- Commit: pending in this commit
+- Scope: implement V2-003 by adding backend-owned
+  `backend_summary.configuration_explanation_v2`. The new read-only summary
+  maps accepted configuration surfaces and sections (`scenario`, `traffic`,
+  `network`, `compute`, `runtime`, and `ui`) to current backend model
+  semantics, current available values, deterministic/reproducibility policy,
+  and explicit excluded capabilities. Runtime values are passed from the
+  integration demo and scenario builder where available. Frontend runtime
+  contract types and the runtime status contract fixture now include the new
+  field. This task does not mutate configuration, add upload/apply behavior,
+  change Event Kernel behavior, or alter simulation model execution.
+- Changed files/modules:
+  - `src/leo_twin/services/derived_summary.py`
+  - `src/leo_twin/services/scenario_builder.py`
+  - `examples/integration_demo/scenario.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/tests/fixtures/runtimeStatus.contract.json`
+  - `frontend/tests/runtimeContractFixture.test.ts`
+  - `tests/unit/test_backend_derived_summary.py`
+  - `tests/unit/test_integration_demo_scenario.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/user_configuration_schema_v2.md`
+  - `docs/development_log.md`
+- Validation:
+  - `$env:PYTHONPATH='.'; python -m pytest tests/unit/test_backend_derived_summary.py tests/unit/test_integration_demo_scenario.py::test_demo_scenario_auto_allocates_starlink_like_planes_when_not_explicit tests/unit/test_scenario_builder.py::test_scenario_builder_config_from_sees_config_maps_control_plane_fields -q`
+    - Result: passed, 12 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- runtimeContractFixture.test.ts`
+    - Result: passed, 25 files / 293 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing `DataPanel` chunk-size
+      warning after minification.
+  - `git diff --check`
+    - Result: passed. Git still reported the pre-existing CRLF warning for
+      local runtime/config drift in `configs/generated_full_system_demo.json`
+      and `configs/sees_control.yaml`.
+- Problems encountered:
+  - `build_backend_derived_summary` previously did not receive runtime fields.
+    The new parameters are optional for compatibility, and the demo/scenario
+    builder paths now pass current runtime mode, speed, duration, and seed.
+  - The working tree still contains unrelated local runtime/config drift in
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`;
+    these files are intentionally left unstaged and unchanged by this task.
+- Known remaining issues / follow-up:
+  - The dashboard types can now consume `configuration_explanation_v2`, but no
+    dedicated UI panel renders the full explanation yet.
+  - A later guarded config import task should use the same schema/explanation
+    contracts to validate user YAML/JSON before applying changes.
+
 ## 2026-07-06 - Dashboard Config Field Browser v1
 
 - Branch: `feature/T195-dashboard-config-field-browser-v1`

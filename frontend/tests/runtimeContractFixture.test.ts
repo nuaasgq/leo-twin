@@ -244,6 +244,24 @@ describe("runtime status contract fixture", () => {
       generated?.backend_summary?.service_placement_contract_v2?.configured_policy
         ?.compute_node_count
     ).toBe(1200);
+    expect(generated?.backend_summary?.configuration_explanation_v2).toMatchObject({
+      version: "v2",
+      explanation_id: "leo_twin.configuration_explanation.v2",
+      schema_id: "sees.user_configuration.v2",
+      source: "BACKEND_DERIVED_SUMMARY",
+      frontend_policy: "CONTROL_PANEL_KEY_FIELDS_ONLY",
+      mutation_policy: "READ_ONLY_EXPLANATION",
+      packet_level_simulation: false
+    });
+    expect(
+      generated?.backend_summary?.configuration_explanation_v2?.section_explanations.map(
+        (section) => section.section
+      )
+    ).toEqual(["scenario", "runtime"]);
+    expect(
+      generated?.backend_summary?.configuration_explanation_v2?.determinism
+        .unknown_key_policy
+    ).toBe("REJECT");
   });
 
   it("rejects malformed runtime status envelopes before UI consumption", () => {

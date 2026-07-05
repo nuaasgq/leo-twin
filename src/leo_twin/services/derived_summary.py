@@ -9,6 +9,7 @@ from typing import Any
 from leo_twin.models.compute import ComputeResourceVector
 from leo_twin.models.orbit import ConstellationAllocation
 from leo_twin.models.traffic import TrafficClass, TrafficDestinationType
+from leo_twin.services.configuration_schema import USER_CONFIGURATION_SCHEMA_V2_ID
 from leo_twin.schema.compute_resource_contract import compute_resource_contract_v2_to_dict
 from leo_twin.schema.network_model_contract import network_model_contract_v2_to_dict
 from leo_twin.schema.service_placement_contract import (
@@ -56,6 +57,10 @@ def build_backend_derived_summary(
     beam_radius_m: float = 160_000.0,
     beam_length_m: float = 600_000.0,
     phase_policy: str = "DETERMINISTIC_PLANE_SLOT_PHASE",
+    runtime_mode: str | None = None,
+    runtime_speed_factor: float | None = None,
+    runtime_duration_seconds: int | float | None = None,
+    runtime_seed: int | None = None,
 ) -> BackendDerivedSummary:
     """Build deterministic backend-owned explanations for frontend display."""
 
@@ -220,6 +225,19 @@ def build_backend_derived_summary(
         "service_placement_contract_v2": service_placement_contract,
         "coverage_beam_summary": coverage_summary,
         "network_model_contract_v2": network_model_contract,
+        "configuration_explanation_v2": _configuration_explanation_v2(
+            constellation_summary=constellation_summary,
+            traffic_summary=traffic_summary,
+            compute_summary=compute_summary,
+            network_model_contract=network_model_contract,
+            satellite_count=satellite_count,
+            user_count=user_count,
+            compute_node_count=compute_node_count,
+            runtime_mode=runtime_mode,
+            runtime_speed_factor=runtime_speed_factor,
+            runtime_duration_seconds=runtime_duration_seconds,
+            runtime_seed=runtime_seed,
+        ),
         "model_assumptions": _model_assumptions(
             constellation_summary,
             satellite_count=satellite_count,
@@ -520,6 +538,237 @@ def _traffic_lifecycle_summary(
         "requires_compute_node_destination": False,
         "compatibility_note": "该业务类型按流级网络业务执行，不生成计算任务。",
         "lifecycle_note": "网络流完成即完成本次业务；不触发星上计算任务生命周期。",
+    }
+
+
+def _configuration_explanation_v2(
+    *,
+    constellation_summary: Mapping[str, Any],
+    traffic_summary: Mapping[str, object],
+    compute_summary: Mapping[str, object],
+    network_model_contract: Mapping[str, object],
+    satellite_count: int,
+    user_count: int,
+    compute_node_count: int,
+    runtime_mode: str | None,
+    runtime_speed_factor: float | None,
+    runtime_duration_seconds: int | float | None,
+    runtime_seed: int | None,
+) -> dict[str, object]:
+    protocol_profile = network_model_contract.get("configured_protocol_profile", {})
+    if not isinstance(protocol_profile, Mapping):
+        protocol_profile = {}
+    runtime_values: dict[str, object] = {}
+    if runtime_mode is not None:
+        runtime_values["runtime.mode"] = str(runtime_mode)
+    if runtime_speed_factor is not None:
+        runtime_values["runtime.speed_factor"] = float(runtime_speed_factor)
+    if runtime_duration_seconds is not None:
+        runtime_values["runtime.duration"] = float(runtime_duration_seconds)
+    if runtime_seed is not None:
+        runtime_values["runtime.seed"] = int(runtime_seed)
+    return {
+        "version": "v2",
+        "explanation_id": "leo_twin.configuration_explanation.v2",
+        "schema_id": USER_CONFIGURATION_SCHEMA_V2_ID,
+        "source": "BACKEND_DERIVED_SUMMARY",
+        "frontend_policy": "CONTROL_PANEL_KEY_FIELDS_ONLY",
+        "mutation_policy": "READ_ONLY_EXPLANATION",
+        "configuration_surfaces": (
+            {
+                "surface": "CONTROL_PANEL_KEY_FIELDS",
+                "purpose": (
+                    "Expose the small set of high-impact parameters for quick "
+                    "interactive scenario setup."
+                ),
+                "source": "configuration_surface_summary.key_fields",
+            },
+            {
+                "surface": "DETAILED_YAML_JSON_FILE",
+                "purpose": (
+                    "Carry the full deterministic scenario configuration, "
+                    "including file-only model and fidelity parameters."
+                ),
+                "source": "configuration_surface_summary.user_config_schema_v2.fields",
+            },
+            {
+                "surface": "APPROVED_TEMPLATE_CATALOG",
+                "purpose": (
+                    "Provide executable user-facing scenario templates with "
+                    "comments and known scale/fidelity intent."
+                ),
+                "source": "/scenario/user-config/templates",
+            },
+            {
+                "surface": "CURRENT_EFFECTIVE_CONFIG_EXPORT",
+                "purpose": (
+                    "Expose the normalized effective configuration and stable "
+                    "hash for reproducible runs."
+                ),
+                "source": "/scenario/user-config/export",
+            },
+        ),
+        "section_explanations": (
+            {
+                "section": "scenario",
+                "title": "星座、用户和算力规模",
+                "source_fields": (
+                    "scenario.satellite_count",
+                    "scenario.user_count",
+                    "scenario.compute_nodes",
+                    "scenario.orbit.*",
+                ),
+                "current_values": {
+                    "satellite_count": satellite_count,
+                    "user_count": user_count,
+                    "compute_node_count": compute_node_count,
+                    "constellation_profile": constellation_summary.get("profile"),
+                    "plane_count": constellation_summary.get("plane_count"),
+                    "satellites_per_plane": constellation_summary.get(
+                        "satellites_per_plane"
+                    ),
+                    "altitude_m": constellation_summary.get("altitude_m"),
+                    "inclination_deg": constellation_summary.get("inclination_deg"),
+                },
+                "model_semantics": (
+                    "Scenario fields define deterministic constellation allocation, "
+                    "ground-user scale, and satellite-hosted compute-node scale."
+                ),
+                "excluded_semantics": ("SGP4", "EXTERNAL_EPHEMERIS", "RF_LINK_BUDGET"),
+            },
+            {
+                "section": "traffic",
+                "title": "业务需求生成",
+                "source_fields": (
+                    "scenario.traffic_model.*",
+                    "network.application_protocol",
+                ),
+                "current_values": {
+                    "traffic_class": traffic_summary.get("traffic_class"),
+                    "destination_type": traffic_summary.get("destination_type"),
+                    "generated_flow_count": traffic_summary.get("generated_flow_count"),
+                    "generated_task_count": traffic_summary.get("generated_task_count"),
+                    "arrival_model": traffic_summary.get("arrival_model"),
+                    "service_mix_mode": traffic_summary.get("service_mix_mode"),
+                    "active_service_classes": traffic_summary.get(
+                        "active_service_classes"
+                    ),
+                },
+                "model_semantics": (
+                    "Traffic fields generate deterministic flow-level service "
+                    "requests; compute-service traffic links input flow metadata "
+                    "to task generation."
+                ),
+                "excluded_semantics": ("PACKET_GENERATION", "UNSEEDED_RANDOM_TRAFFIC"),
+            },
+            {
+                "section": "network",
+                "title": "网络协议和 KPI 来源",
+                "source_fields": (
+                    "network.application_protocol",
+                    "network.transport_protocol",
+                    "network.routing_protocol",
+                    "network.datalink_mac_protocol",
+                    "network.space_link_mode",
+                ),
+                "current_values": {
+                    "application_protocol": protocol_profile.get("application_protocol"),
+                    "transport_protocol": protocol_profile.get("transport_protocol"),
+                    "routing_protocol": protocol_profile.get("routing_protocol"),
+                    "datalink_mac_protocol": protocol_profile.get(
+                        "datalink_mac_protocol"
+                    ),
+                },
+                "model_semantics": (
+                    "Network fields select deterministic flow-level protocol, "
+                    "routing, data-link, and channel abstractions used by KPI "
+                    "provenance."
+                ),
+                "excluded_semantics": (
+                    "PACKET_LEVEL_SIMULATION",
+                    "EXATA_GLOMOSIM",
+                    "RF_PROPAGATION_SOLVER",
+                ),
+            },
+            {
+                "section": "compute",
+                "title": "星上算力资源",
+                "source_fields": (
+                    "scenario.compute_capacity",
+                    "scenario.compute_*",
+                    "scenario.compute_scheduling_policy",
+                ),
+                "current_values": {
+                    "resource_model": compute_summary.get("resource_model"),
+                    "node_role": compute_summary.get("node_role"),
+                    "compute_node_count": compute_summary.get("compute_node_count"),
+                    "cpu_gflops_fp32_per_node": compute_summary.get(
+                        "cpu_gflops_fp32_per_node"
+                    ),
+                    "gpu_tflops_fp32_per_node": compute_summary.get(
+                        "gpu_tflops_fp32_per_node"
+                    ),
+                    "npu_tops_int8_per_node": compute_summary.get(
+                        "npu_tops_int8_per_node"
+                    ),
+                },
+                "model_semantics": (
+                    "Compute fields describe deterministic satellite-hosted "
+                    "resource vectors and queue/execution timing proxies."
+                ),
+                "excluded_semantics": (
+                    "REAL_CODE_EXECUTION",
+                    "CUDA_RUNTIME",
+                    "POWER_THERMAL_MODEL",
+                ),
+            },
+            {
+                "section": "runtime",
+                "title": "运行时控制和复现",
+                "source_fields": (
+                    "runtime.mode",
+                    "runtime.speed_factor",
+                    "runtime.seed",
+                    "runtime.duration",
+                ),
+                "current_values": runtime_values,
+                "model_semantics": (
+                    "Runtime fields control deterministic pacing, seed, and "
+                    "terminal duration; simulation time remains owned by the "
+                    "event kernel."
+                ),
+                "excluded_semantics": ("DOMAIN_LOGIC_IN_EVENT_KERNEL",),
+            },
+            {
+                "section": "ui",
+                "title": "界面展示偏好",
+                "source_fields": ("ui.visualization.*",),
+                "current_values": {
+                    "semantic_owner": "backend_summary",
+                    "ui_role": "render backend-owned state and explanations",
+                },
+                "model_semantics": (
+                    "UI fields control initial rendering preferences only; "
+                    "they do not define simulation model semantics."
+                ),
+                "excluded_semantics": ("FRONTEND_MODEL_INFERENCE",),
+            },
+        ),
+        "determinism": {
+            "seed_source": "runtime.seed",
+            "ordered_generation": True,
+            "unknown_key_policy": "REJECT",
+            "defaulting_policy": "OMITTED_FIELDS_USE_BACKEND_DEFAULTS",
+            "result_package_expectation": (
+                "config snapshot, events.jsonl, metrics.csv, summary.json"
+            ),
+        },
+        "forbidden_integrations": ("STK", "EXATA", "AFSIM", "DDS"),
+        "packet_level_simulation": False,
+        "model_boundary_note": (
+            "This object explains how accepted configuration drives current "
+            "backend model semantics; it is not a mutable configuration API."
+        ),
     }
 
 

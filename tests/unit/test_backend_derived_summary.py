@@ -395,6 +395,118 @@ def test_traffic_summary_rejects_compute_service_non_compute_destination() -> No
         )
 
 
+def test_configuration_explanation_v2_binds_config_to_backend_semantics() -> None:
+    allocation = AutoPlaneAllocator.allocate(satellite_count=72, plane_count=12)
+
+    first = build_backend_derived_summary(
+        constellation=allocation,
+        satellite_count=72,
+        user_count=100,
+        compute_node_count=72,
+        compute_capacity=40.0,
+        flow_count=24,
+        demand_capacity=80.0,
+        task_compute_demand=30.0,
+        task_data_size=12.0,
+        application_protocol="TASK_OFFLOAD_FLOW",
+        transport_protocol="TCP",
+        routing_protocol="LINK_STATE",
+        datalink_mac_protocol="TDMA",
+        traffic_class="COMPUTE_SERVICE",
+        traffic_destination_type="COMPUTE_NODE",
+        compute_gpu_tflops_fp32=2.5,
+        compute_npu_tops_int8=12.0,
+        orbit_altitude_m=550_000.0,
+        orbit_inclination_deg=53.0,
+        runtime_mode="REAL_TIME",
+        runtime_speed_factor=1.0,
+        runtime_duration_seconds=600,
+        runtime_seed=20260703,
+    )["configuration_explanation_v2"]
+    second = build_backend_derived_summary(
+        constellation=allocation,
+        satellite_count=72,
+        user_count=100,
+        compute_node_count=72,
+        compute_capacity=40.0,
+        flow_count=24,
+        demand_capacity=80.0,
+        task_compute_demand=30.0,
+        task_data_size=12.0,
+        application_protocol="TASK_OFFLOAD_FLOW",
+        transport_protocol="TCP",
+        routing_protocol="LINK_STATE",
+        datalink_mac_protocol="TDMA",
+        traffic_class="COMPUTE_SERVICE",
+        traffic_destination_type="COMPUTE_NODE",
+        compute_gpu_tflops_fp32=2.5,
+        compute_npu_tops_int8=12.0,
+        orbit_altitude_m=550_000.0,
+        orbit_inclination_deg=53.0,
+        runtime_mode="REAL_TIME",
+        runtime_speed_factor=1.0,
+        runtime_duration_seconds=600,
+        runtime_seed=20260703,
+    )["configuration_explanation_v2"]
+
+    assert first == second
+    assert first["version"] == "v2"
+    assert first["explanation_id"] == "leo_twin.configuration_explanation.v2"
+    assert first["schema_id"] == "sees.user_configuration.v2"
+    assert first["source"] == "BACKEND_DERIVED_SUMMARY"
+    assert first["frontend_policy"] == "CONTROL_PANEL_KEY_FIELDS_ONLY"
+    assert first["mutation_policy"] == "READ_ONLY_EXPLANATION"
+    assert [surface["surface"] for surface in first["configuration_surfaces"]] == [
+        "CONTROL_PANEL_KEY_FIELDS",
+        "DETAILED_YAML_JSON_FILE",
+        "APPROVED_TEMPLATE_CATALOG",
+        "CURRENT_EFFECTIVE_CONFIG_EXPORT",
+    ]
+    sections = {
+        section["section"]: section
+        for section in first["section_explanations"]
+    }
+    assert tuple(sections) == ("scenario", "traffic", "network", "compute", "runtime", "ui")
+    assert sections["scenario"]["current_values"]["satellite_count"] == 72
+    assert sections["scenario"]["current_values"]["plane_count"] == 12
+    assert sections["traffic"]["current_values"] == {
+        "traffic_class": "COMPUTE_SERVICE",
+        "destination_type": "COMPUTE_NODE",
+        "generated_flow_count": 24,
+        "generated_task_count": 24,
+        "arrival_model": "DETERMINISTIC_INTERVAL",
+        "service_mix_mode": "SINGLE_CLASS",
+        "active_service_classes": ["COMPUTE_SERVICE"],
+    }
+    assert sections["network"]["current_values"] == {
+        "application_protocol": "TASK_OFFLOAD_FLOW",
+        "transport_protocol": "TCP",
+        "routing_protocol": "LINK_STATE",
+        "datalink_mac_protocol": "TDMA",
+    }
+    assert sections["compute"]["current_values"]["compute_node_count"] == 72
+    assert sections["compute"]["current_values"]["gpu_tflops_fp32_per_node"] == 2.5
+    assert sections["compute"]["current_values"]["npu_tops_int8_per_node"] == 12.0
+    assert sections["runtime"]["current_values"] == {
+        "runtime.mode": "REAL_TIME",
+        "runtime.speed_factor": 1.0,
+        "runtime.duration": 600.0,
+        "runtime.seed": 20260703,
+    }
+    assert first["determinism"] == {
+        "seed_source": "runtime.seed",
+        "ordered_generation": True,
+        "unknown_key_policy": "REJECT",
+        "defaulting_policy": "OMITTED_FIELDS_USE_BACKEND_DEFAULTS",
+        "result_package_expectation": (
+            "config snapshot, events.jsonl, metrics.csv, summary.json"
+        ),
+    }
+    assert first["forbidden_integrations"] == ("STK", "EXATA", "AFSIM", "DDS")
+    assert first["packet_level_simulation"] is False
+    assert "not a mutable configuration API" in first["model_boundary_note"]
+
+
 def test_scale_fidelity_summary_reports_large_scale_degradation() -> None:
     summary = build_scale_fidelity_summary(
         ScaleFidelityConfig(

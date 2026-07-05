@@ -105,6 +105,19 @@ def test_demo_scenario_auto_allocates_starlink_like_planes_when_not_explicit() -
     assert backend_summary["compute_resource_summary"]["node_role"] == (
         "SATELLITE_HOSTED_COMPUTE"
     )
+    explanation = backend_summary["configuration_explanation_v2"]
+    assert explanation["schema_id"] == "sees.user_configuration.v2"
+    assert explanation["frontend_policy"] == "CONTROL_PANEL_KEY_FIELDS_ONLY"
+    runtime_section = {
+        section["section"]: section
+        for section in explanation["section_explanations"]
+    }["runtime"]
+    assert runtime_section["current_values"] == {
+        "runtime.mode": "REAL_TIME",
+        "runtime.speed_factor": 1.0,
+        "runtime.duration": 120.0,
+        "runtime.seed": 1234,
+    }
     assert scenario.frontend_config["scenario"]["orbit"]["plane_count"] == 30
     assert scenario.orbit_elements[30].raan_deg == pytest.approx(
         scenario.orbit_elements[0].raan_deg

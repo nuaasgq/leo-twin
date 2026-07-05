@@ -313,7 +313,46 @@ export interface BackendDerivedSummary {
   fidelity_summary?: FidelitySummary;
   workload_smoothing_summary?: WorkloadSmoothingSummary;
   configuration_surface_summary?: ConfigurationSurfaceSummary;
+  configuration_explanation_v2?: ConfigurationExplanationV2;
   model_assumptions?: readonly string[];
+}
+
+export interface ConfigurationExplanationV2 {
+  version: "v2" | string;
+  explanation_id: string;
+  schema_id: string;
+  source: string;
+  frontend_policy: string;
+  mutation_policy: string;
+  configuration_surfaces: readonly ConfigurationExplanationSurfaceV2[];
+  section_explanations: readonly ConfigurationSectionExplanationV2[];
+  determinism: ConfigurationExplanationDeterminismV2;
+  forbidden_integrations: readonly string[];
+  packet_level_simulation: boolean;
+  model_boundary_note: string;
+}
+
+export interface ConfigurationExplanationSurfaceV2 {
+  surface: string;
+  purpose: string;
+  source: string;
+}
+
+export interface ConfigurationSectionExplanationV2 {
+  section: string;
+  title: string;
+  source_fields: readonly string[];
+  current_values: Record<string, string | number | boolean | null | readonly string[]>;
+  model_semantics: string;
+  excluded_semantics: readonly string[];
+}
+
+export interface ConfigurationExplanationDeterminismV2 {
+  seed_source: string;
+  ordered_generation: boolean;
+  unknown_key_policy: string;
+  defaulting_policy: string;
+  result_package_expectation: string;
 }
 
 export interface ComputeResourceContractV2 {

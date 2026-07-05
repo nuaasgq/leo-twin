@@ -763,6 +763,81 @@
           "max_queue_depth": null,
           "candidate_count_policy": "Route path compute nodes are preferred when available; otherwise all configured satellite compute nodes remain candidates."
         }
+      },
+      "configuration_explanation_v2": {
+        "version": "v2",
+        "explanation_id": "leo_twin.configuration_explanation.v2",
+        "schema_id": "sees.user_configuration.v2",
+        "source": "BACKEND_DERIVED_SUMMARY",
+        "frontend_policy": "CONTROL_PANEL_KEY_FIELDS_ONLY",
+        "mutation_policy": "READ_ONLY_EXPLANATION",
+        "configuration_surfaces": [
+          {
+            "surface": "CONTROL_PANEL_KEY_FIELDS",
+            "purpose": "Expose high-impact parameters for quick scenario setup.",
+            "source": "configuration_surface_summary.key_fields"
+          },
+          {
+            "surface": "DETAILED_YAML_JSON_FILE",
+            "purpose": "Carry the full deterministic scenario configuration.",
+            "source": "configuration_surface_summary.user_config_schema_v2.fields"
+          }
+        ],
+        "section_explanations": [
+          {
+            "section": "scenario",
+            "title": "星座、用户和算力规模",
+            "source_fields": [
+              "scenario.satellite_count",
+              "scenario.user_count",
+              "scenario.compute_nodes"
+            ],
+            "current_values": {
+              "satellite_count": 1200,
+              "user_count": 100,
+              "compute_node_count": 1200
+            },
+            "model_semantics": "Scenario fields define deterministic constellation and node scale.",
+            "excluded_semantics": [
+              "SGP4",
+              "RF_LINK_BUDGET"
+            ]
+          },
+          {
+            "section": "runtime",
+            "title": "运行时控制和复现",
+            "source_fields": [
+              "runtime.mode",
+              "runtime.seed",
+              "runtime.duration"
+            ],
+            "current_values": {
+              "runtime.mode": "REAL_TIME",
+              "runtime.speed_factor": 1,
+              "runtime.duration": 600,
+              "runtime.seed": 20260703
+            },
+            "model_semantics": "Runtime fields control deterministic pacing, seed, and terminal duration.",
+            "excluded_semantics": [
+              "DOMAIN_LOGIC_IN_EVENT_KERNEL"
+            ]
+          }
+        ],
+        "determinism": {
+          "seed_source": "runtime.seed",
+          "ordered_generation": true,
+          "unknown_key_policy": "REJECT",
+          "defaulting_policy": "OMITTED_FIELDS_USE_BACKEND_DEFAULTS",
+          "result_package_expectation": "config snapshot, events.jsonl, metrics.csv, summary.json"
+        },
+        "forbidden_integrations": [
+          "STK",
+          "EXATA",
+          "AFSIM",
+          "DDS"
+        ],
+        "packet_level_simulation": false,
+        "model_boundary_note": "This object explains how accepted configuration drives backend model semantics; it is not a mutable configuration API."
       }
     }
   }

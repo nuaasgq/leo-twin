@@ -282,6 +282,10 @@ def _backend_summary(
         orbit_altitude_m=config.orbit_altitude_m,
         orbit_inclination_deg=config.orbit_inclination_deg,
         phase_policy="SLOT_INDEX_PHASE_WITH_PLANE_OFFSET",
+        runtime_mode=config.runtime_mode,
+        runtime_speed_factor=config.runtime_speed_factor,
+        runtime_duration_seconds=config.duration_seconds,
+        runtime_seed=config.seed,
     )
     summary["fidelity_summary"] = _fidelity_summary(config)
     summary["workload_smoothing_summary"] = _workload_smoothing_summary(config)

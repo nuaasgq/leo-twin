@@ -405,6 +405,10 @@ def scenario_builder_backend_summary(
         orbit_altitude_m=(config.semi_major_axis_km - config.earth_radius_km) * 1000.0,
         orbit_inclination_deg=config.inclination_deg,
         phase_policy="SEEDED_RAAN_AND_MEAN_ANOMALY_OFFSETS",
+        runtime_mode=str(config.runtime.mode),
+        runtime_speed_factor=config.runtime.speed_factor,
+        runtime_duration_seconds=config.runtime.duration,
+        runtime_seed=config.runtime.seed,
     )
 
 

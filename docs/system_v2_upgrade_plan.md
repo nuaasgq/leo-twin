@@ -55,6 +55,9 @@ Tasks:
     traffic, compute, runtime, fidelity.
   - Output: `backend_summary.configuration_explanation_v2`.
   - Depends on: V2-001.
+  - Status: implemented in T196 as a read-only backend-derived explanation
+    contract that maps accepted config sections to current model semantics and
+    explicit exclusions.
 - V2-004: Add import/export config workflow.
   - Scope: frontend upload/download for user config, backend validation errors.
   - Output: no silent fallback on invalid keys.
@@ -379,4 +382,3 @@ For model-affecting tasks, also include:
 - formula inputs;
 - known limitations;
 - benchmark or acceptance scenario impact.
-
