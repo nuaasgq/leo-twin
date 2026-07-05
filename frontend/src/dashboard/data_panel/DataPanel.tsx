@@ -1513,16 +1513,23 @@ export function buildDataPanelTelemetry(
   );
   if (runtimeKpiSeries.length > 0) {
     return runtimeKpiSeries.map((point) => {
+      const useRecentWindow = runtimeKpiSampleHasRecentFlowSamples(point);
       const throughputMbps =
-        point.network_recent_delivered_throughput_mbps ??
-        point.network_effective_throughput_mbps;
+        useRecentWindow && point.network_recent_delivered_throughput_mbps !== undefined
+          ? point.network_recent_delivered_throughput_mbps
+          : point.network_effective_throughput_mbps;
       const latencySeconds =
-        point.network_recent_latency_s ?? point.network_effective_latency_s;
+        useRecentWindow && point.network_recent_latency_s !== undefined
+          ? point.network_recent_latency_s
+          : point.network_effective_latency_s;
       const lossRate =
-        point.network_recent_loss_proxy_rate ?? point.network_effective_loss_proxy_rate;
+        useRecentWindow && point.network_recent_loss_proxy_rate !== undefined
+          ? point.network_recent_loss_proxy_rate
+          : point.network_effective_loss_proxy_rate;
       const delayVariationSeconds =
-        point.network_recent_delay_variation_s ??
-        point.network_effective_delay_variation_s;
+        useRecentWindow && point.network_recent_delay_variation_s !== undefined
+          ? point.network_recent_delay_variation_s
+          : point.network_effective_delay_variation_s;
       return {
         timeLabel: formatDurationCompact(point.sim_time),
         simTime: point.sim_time,
@@ -1614,6 +1621,15 @@ export function buildDataPanelTelemetry(
       computeStorageGb: roundMetric(computePool.vectorSummary.usedStorageGb * envelope)
     };
   });
+}
+
+function runtimeKpiSampleHasRecentFlowSamples(point: RuntimeKpiSampleV1): boolean {
+  const recentFlowCount = point.network_recent_flow_count;
+  return (
+    typeof recentFlowCount === "number" &&
+    Number.isFinite(recentFlowCount) &&
+    recentFlowCount > 0
+  );
 }
 
 export function buildDataPanelComputeVectorTail(

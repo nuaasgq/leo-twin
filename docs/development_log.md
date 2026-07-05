@@ -5,6 +5,33 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Dashboard Recent KPI Empty-Window Fallback v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending in this commit
+- Scope: prevent empty recent-flow KPI windows from overriding backend
+  effective network KPIs in the standalone dashboard charts. Recent
+  throughput, latency, loss proxy, and jitter proxy now take precedence only
+  when the backend reports `network_recent_flow_count > 0`.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `pnpm --dir frontend test -- dataPanel.test.ts appSurface.test.ts`
+    - Result: passed, 25 files / 256 tests.
+  - `git diff --check -- frontend/src/dashboard/data_panel/DataPanel.tsx frontend/tests/dataPanel.test.ts`
+    - Result: passed.
+- Problems encountered:
+  - A read-only subagent review confirmed the symptom was not only refresh
+    cadence; the frontend was also allowing zero-sample recent-window values
+    to flatten otherwise valid backend effective KPIs.
+- Known remaining issues / follow-up:
+  - Backend network links still need a bounded continuous refresh path so
+    route latency and jitter proxies can change during long stretches without
+    access start/end events.
+
 ## 2026-07-05 - Dashboard Detail Window Visibility v2
 
 - Branch: `feature/T164-dashboard-observability-v1`
