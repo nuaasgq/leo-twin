@@ -82,9 +82,15 @@ def test_backend_derived_summary_is_deterministic_and_frontend_ready() -> None:
         "destination_type": "COMPUTE_NODE",
         "destination_type_label": "星上算力节点",
         "generated_flow_count": 1200,
+        "generated_task_count": 1200,
+        "generated_output_flow_metadata_count": 1200,
         "arrival_model": "DETERMINISTIC_INTERVAL",
+        "source_selection_policy": "ROUND_ROBIN_GROUND_USERS",
+        "destination_selection_policy": "ROUND_ROBIN_COMPUTE_NODES",
         "input_data_size_mb": 2.0,
         "output_data_size_mb": 0.0,
+        "total_input_data_mb": 2400.0,
+        "total_output_data_mb": 0.0,
         "priority": 0,
         "demand_capacity_mbps": 25.0,
         "task_compute_demand": 20.0,
@@ -94,6 +100,8 @@ def test_backend_derived_summary_is_deterministic_and_frontend_ready() -> None:
         "compatibility_note": "通信-计算服务要求目的类型为星上算力节点。",
         "lifecycle_note": "输入流完成后触发计算任务；输出数据大小作为结果流元数据保留。",
         "arrival_interval_seconds": 60.0,
+        "system_request_rate_per_minute": 1.0,
+        "average_user_request_rate_per_minute": 0.001,
     }
     assert first["compute_resource_summary"] == {
         "resource_model": "ComputeResourceVector",
@@ -275,7 +283,14 @@ def test_traffic_summary_uses_explicit_traffic_model_fields() -> None:
     assert summary["traffic_class_label"] == "批量下传"
     assert summary["destination_type"] == "GROUND_ENDPOINT"
     assert summary["destination_type_label"] == "地面端"
+    assert summary["generated_flow_count"] == 10
+    assert summary["generated_task_count"] == 0
+    assert summary["generated_output_flow_metadata_count"] == 0
+    assert summary["source_selection_policy"] == "ROUND_ROBIN_GROUND_USERS"
+    assert summary["destination_selection_policy"] == "ROUND_ROBIN_GROUND_ENDPOINTS"
     assert summary["output_data_size_mb"] == 4.5
+    assert summary["total_input_data_mb"] == 20.0
+    assert summary["total_output_data_mb"] == 45.0
     assert summary["input_data_size_mb"] == 2.0
     assert summary["demand_capacity_mbps"] == 25.0
     assert summary["execution_shape"] == "FLOW_ONLY"

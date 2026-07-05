@@ -6656,3 +6656,43 @@ change.
 - Recommended follow-up:
   - Add acceptance scenarios proving KPI component tails vary over time for
     different traffic demand and transport profiles.
+
+## 2026-07-05 - Traffic Generation Summary v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: enrich backend `traffic_demand_summary` with deterministic business
+  generation semantics: generated flow count, generated compute task count,
+  generated output-flow metadata count, source/destination round-robin policy,
+  total input/output data volume, system request rate per minute, and average
+  per-user request rate per minute when an arrival interval is available. The
+  standalone dashboard now includes these backend-derived semantics in the
+  traffic display note. Traffic generation behavior and Event Kernel behavior
+  are unchanged.
+- Changed files/modules:
+  - `src/leo_twin/services/derived_summary.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `tests/unit/test_backend_derived_summary.py`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_backend_derived_summary.py -q`
+    - Result: passed, 8 tests.
+  - `pnpm --dir frontend exec vitest run dataPanel.test.ts`
+    - Result: passed, 1 file / 73 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed.
+  - `pnpm --dir frontend test`
+    - Result: passed, 25 files / 236 tests.
+- Problems encountered:
+  - None. This is a backend-derived summary and frontend explanation change;
+    it does not add packet-level traffic or new config fields.
+- Known remaining issues:
+  - The product still supports one configured traffic profile at a time through
+    the current SEES config. Mixed per-user service portfolios remain a later
+    traffic model v2 task.
+- Recommended follow-up:
+  - Add explicit service-mix configuration fields and deterministic per-user
+    demand summaries for DATA_TRANSFER, TELEMETRY, BULK_DOWNLINK, and
+    COMPUTE_SERVICE mixes.

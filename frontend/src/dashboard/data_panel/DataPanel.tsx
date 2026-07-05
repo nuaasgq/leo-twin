@@ -3243,7 +3243,7 @@ export function buildDataPanelTrafficDisplay(
   }
   return {
     label: dataPanelTrafficLabel(traffic),
-    note: traffic.lifecycle_note ?? traffic.compatibility_note ?? null
+    note: buildDataPanelTrafficNote(traffic)
   };
 }
 
@@ -3841,6 +3841,50 @@ function dataPanelTrafficLabel(traffic: TrafficDemandSummary): string {
             ? "服务端点"
             : destinationType);
   return `${classLabel} / ${destinationLabel} / ${executionLabel}`;
+}
+
+function buildDataPanelTrafficNote(traffic: TrafficDemandSummary): string | null {
+  const parts: string[] = [];
+  const semanticNote = traffic.lifecycle_note ?? traffic.compatibility_note;
+  if (semanticNote) {
+    parts.push(semanticNote);
+  }
+  const taskCount = traffic.generated_task_count;
+  const outputFlowCount = traffic.generated_output_flow_metadata_count;
+  if (typeof taskCount === "number" || typeof outputFlowCount === "number") {
+    parts.push(
+      `生成 ${formatCount(traffic.generated_flow_count)} 流 / ${formatCount(
+        Math.max(0, taskCount ?? 0)
+      )} 任务 / ${formatCount(Math.max(0, outputFlowCount ?? 0))} 结果流元数据`
+    );
+  }
+  if (
+    typeof traffic.total_input_data_mb === "number" ||
+    typeof traffic.total_output_data_mb === "number"
+  ) {
+    parts.push(
+      `数据 ${formatMetricValue(Math.max(0, traffic.total_input_data_mb ?? 0))} MB 输入 / ${formatMetricValue(
+        Math.max(0, traffic.total_output_data_mb ?? 0)
+      )} MB 输出`
+    );
+  }
+  if (typeof traffic.system_request_rate_per_minute === "number") {
+    parts.push(
+      `速率 ${formatPreciseMetricValue(
+        Math.max(0, traffic.system_request_rate_per_minute)
+      )} 次/分钟 / 单用户 ${formatPreciseMetricValue(
+        Math.max(0, traffic.average_user_request_rate_per_minute ?? 0)
+      )} 次/分钟`
+    );
+  }
+  if (traffic.source_selection_policy || traffic.destination_selection_policy) {
+    parts.push(
+      `源/目的 ${traffic.source_selection_policy ?? "未声明"} -> ${
+        traffic.destination_selection_policy ?? "未声明"
+      }`
+    );
+  }
+  return parts.length === 0 ? null : parts.join("；");
 }
 
 function formatPercent(value: number): string {

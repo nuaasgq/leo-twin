@@ -76,9 +76,21 @@ def build_backend_derived_summary(
         "destination_type": selected_destination_type.value,
         "destination_type_label": _traffic_destination_label(selected_destination_type),
         "generated_flow_count": flow_count,
+        "generated_task_count": (
+            flow_count if selected_traffic_class == TrafficClass.COMPUTE_SERVICE else 0
+        ),
+        "generated_output_flow_metadata_count": (
+            flow_count if selected_traffic_class == TrafficClass.COMPUTE_SERVICE else 0
+        ),
         "arrival_model": "DETERMINISTIC_INTERVAL",
+        "source_selection_policy": "ROUND_ROBIN_GROUND_USERS",
+        "destination_selection_policy": _traffic_destination_policy(
+            selected_destination_type,
+        ),
         "input_data_size_mb": task_data_size,
         "output_data_size_mb": float(traffic_output_data_size),
+        "total_input_data_mb": float(flow_count * task_data_size),
+        "total_output_data_mb": float(flow_count * traffic_output_data_size),
         "priority": 0,
         "demand_capacity_mbps": demand_capacity,
         "task_compute_demand": task_compute_demand,
@@ -88,7 +100,13 @@ def build_backend_derived_summary(
         ),
     }
     if arrival_interval_seconds is not None:
-        traffic_summary["arrival_interval_seconds"] = float(arrival_interval_seconds)
+        arrival_interval = float(arrival_interval_seconds)
+        system_rate = 60.0 / arrival_interval if arrival_interval > 0.0 else 0.0
+        traffic_summary["arrival_interval_seconds"] = arrival_interval
+        traffic_summary["system_request_rate_per_minute"] = system_rate
+        traffic_summary["average_user_request_rate_per_minute"] = (
+            system_rate / float(user_count) if user_count > 0 else 0.0
+        )
 
     compute_summary = {
         "resource_model": "ComputeResourceVector",
@@ -299,6 +317,16 @@ def _traffic_destination_label(destination_type: TrafficDestinationType) -> str:
         TrafficDestinationType.SERVICE_ENDPOINT: "服务端点",
     }
     return labels[destination_type]
+
+
+def _traffic_destination_policy(destination_type: TrafficDestinationType) -> str:
+    policies = {
+        TrafficDestinationType.COMPUTE_NODE: "ROUND_ROBIN_COMPUTE_NODES",
+        TrafficDestinationType.GROUND_ENDPOINT: "ROUND_ROBIN_GROUND_ENDPOINTS",
+        TrafficDestinationType.SATELLITE: "ROUND_ROBIN_SATELLITES",
+        TrafficDestinationType.SERVICE_ENDPOINT: "ROUND_ROBIN_SERVICE_ENDPOINTS",
+    }
+    return policies[destination_type]
 
 
 def _traffic_lifecycle_summary(

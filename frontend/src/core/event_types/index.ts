@@ -237,9 +237,15 @@ export interface TrafficDemandSummary {
   destination_type: string;
   destination_type_label?: string;
   generated_flow_count: number;
+  generated_task_count?: number;
+  generated_output_flow_metadata_count?: number;
   arrival_model: string;
+  source_selection_policy?: string;
+  destination_selection_policy?: string;
   input_data_size_mb: number;
   output_data_size_mb: number;
+  total_input_data_mb?: number;
+  total_output_data_mb?: number;
   priority: number;
   demand_capacity_mbps: number;
   task_compute_demand: number;
@@ -249,6 +255,8 @@ export interface TrafficDemandSummary {
   compatibility_note?: string;
   lifecycle_note?: string;
   arrival_interval_seconds?: number;
+  system_request_rate_per_minute?: number;
+  average_user_request_rate_per_minute?: number;
 }
 
 export interface ComputeResourceSummary {

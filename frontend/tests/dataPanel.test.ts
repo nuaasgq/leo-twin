@@ -477,6 +477,43 @@ describe("buildDataPanelTrafficDisplay", () => {
       note: null
     });
   });
+
+  it("summarizes backend traffic generation semantics when provided", () => {
+    const display = buildDataPanelTrafficDisplay({
+      traffic_class: "COMPUTE_SERVICE",
+      traffic_class_label: "通信-计算服务",
+      destination_type: "COMPUTE_NODE",
+      destination_type_label: "星上算力节点",
+      generated_flow_count: 120,
+      generated_task_count: 120,
+      generated_output_flow_metadata_count: 120,
+      arrival_model: "DETERMINISTIC_INTERVAL",
+      source_selection_policy: "ROUND_ROBIN_GROUND_USERS",
+      destination_selection_policy: "ROUND_ROBIN_COMPUTE_NODES",
+      input_data_size_mb: 2,
+      output_data_size_mb: 0.5,
+      total_input_data_mb: 240,
+      total_output_data_mb: 60,
+      priority: 0,
+      demand_capacity_mbps: 25,
+      task_compute_demand: 20,
+      execution_shape: "FLOW_THEN_COMPUTE_TASK",
+      execution_label: "输入流 + 计算任务",
+      requires_compute_node_destination: true,
+      lifecycle_note: "输入流完成后触发计算任务。",
+      arrival_interval_seconds: 60,
+      system_request_rate_per_minute: 1,
+      average_user_request_rate_per_minute: 0.001
+    });
+
+    expect(display.label).toBe("通信-计算服务 / 星上算力节点 / 输入流 + 计算任务");
+    expect(display.note).toContain("生成 120 流 / 120 任务 / 120 结果流元数据");
+    expect(display.note).toContain("数据 240 MB 输入 / 60 MB 输出");
+    expect(display.note).toContain("速率 1 次/分钟 / 单用户 0.001 次/分钟");
+    expect(display.note).toContain(
+      "源/目的 ROUND_ROBIN_GROUND_USERS -> ROUND_ROBIN_COMPUTE_NODES"
+    );
+  });
 });
 
 describe("buildDataPanelNetworkKpiSource", () => {
