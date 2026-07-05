@@ -9,6 +9,7 @@ from typing import Any
 from leo_twin.models.compute import ComputeResourceVector
 from leo_twin.models.orbit import ConstellationAllocation
 from leo_twin.models.traffic import TrafficClass, TrafficDestinationType
+from leo_twin.schema.network_model_contract import network_model_contract_v2_to_dict
 
 
 BackendDerivedSummary = dict[str, object]
@@ -28,6 +29,9 @@ def build_backend_derived_summary(
     task_compute_demand: float,
     task_data_size: float,
     application_protocol: str,
+    transport_protocol: str = "TCP",
+    routing_protocol: str = "LINK_STATE",
+    datalink_mac_protocol: str = "TDMA",
     traffic_class: TrafficClass | str | None = None,
     traffic_destination_type: TrafficDestinationType | str | None = None,
     traffic_output_data_size: float = 0.0,
@@ -173,12 +177,20 @@ def build_backend_derived_summary(
             "counts for visualization only; they are not access decisions."
         ),
     }
+    network_model_contract = network_model_contract_v2_to_dict()
+    network_model_contract["configured_protocol_profile"] = {
+        "application_protocol": str(application_protocol),
+        "transport_protocol": str(transport_protocol),
+        "routing_protocol": str(routing_protocol),
+        "datalink_mac_protocol": str(datalink_mac_protocol),
+    }
 
     return {
         "derived_constellation_summary": constellation_summary,
         "traffic_demand_summary": traffic_summary,
         "compute_resource_summary": compute_summary,
         "coverage_beam_summary": coverage_summary,
+        "network_model_contract_v2": network_model_contract,
         "model_assumptions": _model_assumptions(
             constellation_summary,
             satellite_count=satellite_count,

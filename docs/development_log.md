@@ -5,6 +5,49 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Network Model Contract v2
+
+- Branch: `feature/T167-network-model-contract-v2`
+- Commit: pending in this commit
+- Scope: implement V2-020 by adding a product-level network model contract v2.
+  The contract defines canonical application, transport, network/routing,
+  data-link, physical, and channel layer boundaries; user-facing KPI provenance
+  semantics for throughput, latency, loss proxy, delay-variation proxy, route
+  blocking, and congestion pressure; explicit excluded capabilities; and the
+  configured protocol profile inside backend-derived summaries. This is a
+  schema/documentation/summary contract change only. Event Kernel behavior,
+  route computation, link updates, and metric formulas are unchanged.
+- Changed files/modules:
+  - `src/leo_twin/schema/network_model_contract.py`
+  - `src/leo_twin/schema/__init__.py`
+  - `src/leo_twin/services/derived_summary.py`
+  - `src/leo_twin/services/scenario_builder.py`
+  - `examples/integration_demo/scenario.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `tests/unit/test_network_model_contract_v2.py`
+  - `docs/network_model_contract_v2.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_network_model_contract_v2.py tests/unit/test_backend_derived_summary.py -q`
+    - Result: passed, 13 tests.
+  - `python -m pytest tests/unit/test_network_stack_runtime.py tests/integration/test_config_control.py::test_initialize_writes_config_and_start_gates_streams tests/integration/test_config_control.py::test_frontend_control_messages_are_processed -q`
+    - Result: passed, 10 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing `DataPanel` chunk-size
+      warning at about 502 kB after minification.
+  - `git diff --check examples/integration_demo/scenario.py frontend/src/core/event_types/index.ts src/leo_twin/schema/__init__.py src/leo_twin/schema/network_model_contract.py src/leo_twin/services/derived_summary.py src/leo_twin/services/scenario_builder.py tests/unit/test_network_model_contract_v2.py docs/network_model_contract_v2.md docs/development_log.md`
+    - Result: passed.
+- Problems encountered:
+  - No behavior blocker. The working tree still contains unrelated local
+    runtime/config drift in `configs/generated_full_system_demo.json` and
+    `configs/sees_control.yaml`; these files were intentionally left unstaged
+    and unchanged by this task.
+- Known remaining issues / follow-up:
+  - V2-020 defines the network semantics. V2-021 should bind runtime KPI
+    provenance directly to this contract so dashboard explanations and status
+    fields reference the same backend source of truth.
+
 ## 2026-07-05 - Product Configuration Schema v2
 
 - Branch: `feature/T166-product-config-schema-v2`

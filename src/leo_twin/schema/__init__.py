@@ -51,6 +51,16 @@ from leo_twin.schema.network import (
     GroundUserProfile,
     SatelliteProfile,
 )
+from leo_twin.schema.network_model_contract import (
+    NETWORK_MODEL_CONTRACT_V2_ID,
+    NetworkKpiKind,
+    NetworkKpiSemanticContract,
+    NetworkLayerSemanticContract,
+    NetworkModelContractV2,
+    NetworkModelFidelity,
+    default_network_model_contract_v2,
+    network_model_contract_v2_to_dict,
+)
 from leo_twin.schema.sim_event import SimEvent
 
 __all__ = [
@@ -78,7 +88,13 @@ __all__ = [
     "LinkMedium",
     "MODULE_DEPENDENCIES",
     "MetricRecord",
+    "NETWORK_MODEL_CONTRACT_V2_ID",
     "NetworkLayer",
+    "NetworkKpiKind",
+    "NetworkKpiSemanticContract",
+    "NetworkLayerSemanticContract",
+    "NetworkModelContractV2",
+    "NetworkModelFidelity",
     "OrbitBatchState",
     "OrbitFidelity",
     "OrbitalElementSet",
@@ -98,4 +114,6 @@ __all__ = [
     "TransportState",
     "TransportProtocol",
     "WorldSnapshot",
+    "default_network_model_contract_v2",
+    "network_model_contract_v2_to_dict",
 ]

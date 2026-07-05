@@ -307,10 +307,55 @@ export interface BackendDerivedSummary {
   traffic_demand_summary?: TrafficDemandSummary;
   compute_resource_summary?: ComputeResourceSummary;
   coverage_beam_summary?: CoverageBeamSummary;
+  network_model_contract_v2?: NetworkModelContractV2;
   fidelity_summary?: FidelitySummary;
   workload_smoothing_summary?: WorkloadSmoothingSummary;
   configuration_surface_summary?: ConfigurationSurfaceSummary;
   model_assumptions?: readonly string[];
+}
+
+export interface NetworkModelContractV2 {
+  contract_id: string;
+  version: "v2" | string;
+  fidelity: string;
+  packet_level_simulation: boolean;
+  layer_contracts: readonly NetworkLayerContractV2[];
+  kpi_contracts: readonly NetworkKpiContractV2[];
+  event_inputs: readonly string[];
+  deterministic_inputs: readonly string[];
+  excluded_capabilities: readonly string[];
+  model_note: string;
+  configured_protocol_profile?: NetworkConfiguredProtocolProfileV2;
+}
+
+export interface NetworkLayerContractV2 {
+  layer: string;
+  product_name: string;
+  responsibility: string;
+  input_contracts: readonly string[];
+  output_contracts: readonly string[];
+  state_sources: readonly string[];
+  excluded_semantics: readonly string[];
+}
+
+export interface NetworkKpiContractV2 {
+  metric: string;
+  runtime_summary_key: string;
+  display_name: string;
+  layer: string;
+  unit: string;
+  source_fields: readonly string[];
+  formula_summary: string;
+  interpretation: string;
+  zero_value_semantics: string;
+  packet_level_metric: boolean;
+}
+
+export interface NetworkConfiguredProtocolProfileV2 {
+  application_protocol: string;
+  transport_protocol: string;
+  routing_protocol: string;
+  datalink_mac_protocol: string;
 }
 
 export interface ConfigurationSurfaceSummary {
