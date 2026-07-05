@@ -38,12 +38,16 @@ Other launcher commands:
 .\smoke_leo_twin.bat
 .\stop_leo_twin.bat
 .\scripts\sees_launcher.ps1 status
+.\scripts\sees_launcher.ps1 status -JsonSummary
+.\scripts\sees_launcher.ps1 health -JsonSummary
 ```
 
 If the browser does not open automatically, run `.\scripts\sees_launcher.ps1
 status` and open `http://127.0.0.1:5173` after the frontend reports running.
-The launcher writes backend and frontend logs to `artifacts\launcher` and shows
-the last log lines when either service fails its HTTP health check. To keep the
+The launcher writes backend and frontend logs to `artifacts\launcher`; the
+launcher health summary reports backend/frontend port readiness, HTTP
+readiness, process ids, latest log paths, and config paths. It also shows the
+last log lines when either service fails its HTTP health check. To keep the
 service consoles visible for manual inspection, run:
 
 ```powershell

@@ -1,10 +1,11 @@
 param(
-    [ValidateSet("start", "stop", "restart", "status")]
+    [ValidateSet("start", "stop", "restart", "status", "health")]
     [string]$Action = "start",
     [int]$BackendPort = 8765,
     [int]$FrontendPort = 5173,
     [switch]$NoBrowser,
     [switch]$VisibleWindows,
+    [switch]$JsonSummary,
     [ValidateSet("console", "dashboard")]
     [string]$OpenSurface = "console"
 )
@@ -22,6 +23,9 @@ $BackendHealthUrl = "$BackendUrl/health"
 $RuntimeStatusUrl = "$BackendUrl/runtime/status"
 $FrontendHealthUrl = "$FrontendUrl/"
 $LauncherLogDir = Join-Path $RepoRoot "artifacts\launcher"
+$ScenarioConfigPath = Join-Path $RepoRoot "configs\integration_demo.yaml"
+$ControlConfigPath = Join-Path $RepoRoot "configs\sees_control.yaml"
+$GeneratedConfigPath = Join-Path $RepoRoot "configs\generated_full_system_demo.json"
 
 function Get-InvocationPrefix {
     param(
@@ -215,25 +219,168 @@ function Show-LogTail {
     }
 }
 
+function Get-LatestLauncherLogPath {
+    param(
+        [string]$Name,
+        [string]$Stream
+    )
+
+    if (-not (Test-Path -LiteralPath $LauncherLogDir)) {
+        return ""
+    }
+    $match = Get-ChildItem -Path $LauncherLogDir -Filter "*-$Name.$Stream.log" -ErrorAction SilentlyContinue |
+        Sort-Object LastWriteTimeUtc -Descending |
+        Select-Object -First 1
+    if ($null -eq $match) {
+        return ""
+    }
+    return $match.FullName
+}
+
+function New-ServiceHealthEntry {
+    param(
+        [string]$Service,
+        [string]$Role,
+        [int]$Port,
+        [string]$Url,
+        [string]$HealthUrl,
+        [string]$LogName
+    )
+
+    $processes = @(Get-ListeningProcesses -Port $Port)
+    $listening = $processes.Count -gt 0
+    $httpHealthy = $false
+    if ($listening) {
+        $httpHealthy = Test-HttpEndpoint -Url $HealthUrl -TimeoutSeconds 2
+    }
+    $readiness = "STOPPED"
+    if ($listening -and $httpHealthy) {
+        $readiness = "READY"
+    }
+    elseif ($listening) {
+        $readiness = "PORT_ONLY"
+    }
+    return [ordered]@{
+        service = $Service
+        role = $Role
+        port = $Port
+        url = $Url
+        health_url = $HealthUrl
+        listening = $listening
+        http_healthy = $httpHealthy
+        readiness = $readiness
+        process_ids = @($processes | Select-Object -ExpandProperty Id)
+        process_names = @($processes | Select-Object -ExpandProperty ProcessName)
+        process_count = $processes.Count
+        stdout_log = Get-LatestLauncherLogPath -Name $LogName -Stream "out"
+        stderr_log = Get-LatestLauncherLogPath -Name $LogName -Stream "err"
+    }
+}
+
+function Get-LauncherHealthSummary {
+    $services = @(
+        (New-ServiceHealthEntry `
+            -Service "backend" `
+            -Role "SEES demo backend" `
+            -Port $BackendPort `
+            -Url $BackendUrl `
+            -HealthUrl $RuntimeStatusUrl `
+            -LogName "backend")
+        (New-ServiceHealthEntry `
+            -Service "frontend" `
+            -Role "React observability frontend" `
+            -Port $FrontendPort `
+            -Url $FrontendUrl `
+            -HealthUrl $FrontendHealthUrl `
+            -LogName "frontend")
+    )
+    $readyCount = @($services | Where-Object { $_.readiness -eq "READY" }).Count
+    $stoppedCount = @($services | Where-Object { $_.readiness -eq "STOPPED" }).Count
+    $overall = "DEGRADED"
+    if ($readyCount -eq $services.Count) {
+        $overall = "HEALTHY"
+    }
+    elseif ($stoppedCount -eq $services.Count) {
+        $overall = "STOPPED"
+    }
+    $actions = @()
+    if ($overall -eq "HEALTHY") {
+        $actions += "Open frontend URL or run smoke_runtime_health.ps1."
+    }
+    elseif ($overall -eq "STOPPED") {
+        $actions += "Run scripts\sees_launcher.ps1 start."
+    }
+    else {
+        $actions += "Inspect artifacts\launcher logs for unhealthy services."
+        $actions += "Run scripts\sees_launcher.ps1 restart if stale processes own the ports."
+        foreach ($service in $services) {
+            if ($service.readiness -eq "PORT_ONLY") {
+                $actions += "$($service.service) port is open but HTTP health failed."
+            }
+            elseif ($service.readiness -eq "STOPPED") {
+                $actions += "$($service.service) is not listening on its configured port."
+            }
+        }
+    }
+    return [ordered]@{
+        type = "LAUNCHER_HEALTH"
+        health_id = "leo_twin.launcher_health.v2"
+        version = "v2"
+        overall_status = $overall
+        ready_service_count = $readyCount
+        service_count = $services.Count
+        services = $services
+        paths = [ordered]@{
+            repo_root = $RepoRoot
+            launcher_log_dir = $LauncherLogDir
+            config_path = $ScenarioConfigPath
+            control_config_path = $ControlConfigPath
+            generated_config_path = $GeneratedConfigPath
+        }
+        console_url = $FrontendUrl
+        dashboard_url = $DashboardUrl
+        diagnostic_commands = @(
+            "scripts\sees_launcher.ps1 status",
+            "scripts\sees_launcher.ps1 status -JsonSummary",
+            "scripts\smoke_runtime_health.ps1",
+            "scripts\sees_launcher.ps1 restart"
+        )
+        recommended_actions = $actions
+        constraints = [ordered]@{
+            event_kernel_frozen = $true
+            packet_level_simulation = $false
+            forbidden_integrations = @("STK", "EXATA", "AFSIM", "DDS")
+        }
+    }
+}
+
 function Show-Status {
-    foreach ($entry in @(
-        @{ Name = "Backend"; Port = $BackendPort; Url = $BackendUrl; HealthUrl = $RuntimeStatusUrl },
-        @{ Name = "Frontend"; Port = $FrontendPort; Url = $FrontendUrl; HealthUrl = $FrontendHealthUrl }
-    )) {
-        $processes = @(Get-ListeningProcesses -Port $entry.Port)
-        if ($processes.Count -eq 0) {
-            Write-Host "$($entry.Name): stopped on port $($entry.Port)"
+    $summary = Get-LauncherHealthSummary
+    if ($JsonSummary) {
+        $summary | ConvertTo-Json -Depth 8
+        return
+    }
+    foreach ($entry in $summary.services) {
+        if (-not $entry.listening) {
+            Write-Host "$($entry.service): stopped on port $($entry.port)"
             continue
         }
         $healthText = "HTTP unhealthy"
-        if (Test-HttpEndpoint -Url $entry.HealthUrl -TimeoutSeconds 2) {
+        if ($entry.http_healthy) {
             $healthText = "HTTP healthy"
         }
-        foreach ($process in $processes) {
-            Write-Host "$($entry.Name): running at $($entry.Url) via $($process.ProcessName) [$($process.Id)] - $healthText"
+        foreach ($index in 0..([Math]::Max(0, $entry.process_count - 1))) {
+            if ($entry.process_count -eq 0) {
+                break
+            }
+            Write-Host "$($entry.service): running at $($entry.url) via $($entry.process_names[$index]) [$($entry.process_ids[$index])] - $healthText"
         }
     }
+    Write-Host "Overall launcher health: $($summary.overall_status)"
     Write-Host "Launcher logs: $LauncherLogDir"
+    Write-Host "Config path: $ScenarioConfigPath"
+    Write-Host "Control config path: $ControlConfigPath"
+    Write-Host "Generated config path: $GeneratedConfigPath"
     Write-Host "Console URL: $FrontendUrl"
     Write-Host "Dashboard URL: $DashboardUrl"
     Write-Host "Smoke check: .\smoke_leo_twin.bat"
@@ -341,6 +488,9 @@ switch ($Action) {
         Start-Sees
     }
     "status" {
+        Show-Status
+    }
+    "health" {
         Show-Status
     }
 }

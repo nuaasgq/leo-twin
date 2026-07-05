@@ -285,6 +285,11 @@ Tasks:
     state, runtime diagnostics, endpoint list, and hard product constraints.
 - V2-081: Add launcher health check v2.
   - Scope: port status, backend/frontend readiness, config path, log paths.
+  - Status: T222 adds `leo_twin.launcher_health.v2`, a tested launcher health
+    summary contract plus `scripts/sees_launcher.ps1 status -JsonSummary` and
+    `health -JsonSummary`. The summary reports backend/frontend port and HTTP
+    readiness, process ids, latest log paths, config paths, generated config
+    path, and recommended actions.
 - V2-082: Add operator diagnostics bundle.
   - Scope: logs, runtime status, latest config, stream diagnostics.
   - Depends on: V2-080, V2-081.

@@ -5,6 +5,50 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Launcher Health Check v2
+
+- Branch: `feature/T222-launcher-health-check-v2`
+- Commit: pending in this commit
+- Scope: advance V2-081 by adding a launcher health summary contract and
+  machine-readable launcher health output. The health summary reports
+  backend/frontend port readiness, HTTP readiness, process ids, process names,
+  latest stdout/stderr log paths, repository/config/generated-config paths, and
+  recommended diagnostic actions. `scripts/sees_launcher.ps1` now supports
+  `status -JsonSummary` and `health -JsonSummary` in addition to the existing
+  human-readable status path.
+- Changed files/modules:
+  - `src/leo_twin/services/launcher_health.py`
+  - `tests/unit/test_launcher_health_v2.py`
+  - `scripts/sees_launcher.ps1`
+  - `docs/launcher_health_check_v2.md`
+  - `docs/integration_demo.md`
+  - `docs/current_product_status.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src/leo_twin/services/launcher_health.py`
+    - Result: passed.
+  - `python -m pytest tests/unit/test_launcher_health_v2.py -q`
+    - Result: passed, 3 tests.
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\sees_launcher.ps1 status -JsonSummary`
+    - Result: passed. The local backend and frontend were both reported as
+      `HEALTHY`.
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\sees_launcher.ps1 health -JsonSummary | ConvertFrom-Json | ConvertTo-Json -Depth 8`
+    - Result: passed.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - The launcher already had start/stop/status and basic HTTP waits. This task
+    keeps that flow and adds a structured health summary rather than replacing
+    the launcher.
+  - Local runtime/generated config files remain dirty and are intentionally not
+    included in this task.
+- Known remaining issues / follow-up:
+  - V2-082 should bundle launcher health, runtime status, latest config, stream
+    diagnostics, and selected logs into an operator diagnostics package.
+  - The JSON summary reports current local process state; tests validate the
+    stable contract separately from live port occupancy.
+
 ## 2026-07-06 - Version Build Info Endpoint v1
 
 - Branch: `feature/T221-version-build-info-endpoint-v1`
