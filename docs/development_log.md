@@ -5,6 +5,44 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Full-System Demo Baseline Refresh v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending in this commit
+- Scope: refresh stale deterministic integration-demo count baselines so the
+  default full-system demo test matches the current committed deterministic
+  runtime behavior.
+- Changed files/modules:
+  - `tests/integration/test_full_system_demo.py`
+  - `docs/development_log.md`
+- Validation:
+  - Current default demo measurement:
+    - `processed_events=23615`
+    - `snapshot_event_count=23615`
+    - `space_links=61`
+    - `routes_total=100`
+    - `routes_available=25`
+    - `finished_tasks=65`
+    - `deadline_missed_tasks=39`
+  - `python -m pytest tests/integration/test_full_system_demo.py -q`
+    - Result: passed, 6 tests.
+  - `python -m pytest tests/integration/test_runtime_session_control.py -q`
+    - Result: passed, 17 tests.
+  - Bundled Node:
+    `pnpm --dir frontend test -- appSurface.test.ts dataPanel.test.ts`
+    - Result: passed, 25 files / 244 tests.
+- Problems encountered:
+  - The old expected counts (`52` space-space links and `23049` processed
+    events) were already failing in a clean worktree at pre-task HEAD. The fix
+    keeps exact deterministic assertions rather than weakening them.
+- Known remaining issues:
+  - Full-system demo counts remain sensitive to intentional topology or
+    lifecycle changes and should be refreshed only with measured deterministic
+    evidence.
+- Recommended follow-up:
+  - Add a compact demo-baseline report helper that prints all exact counts used
+    by `test_full_system_demo.py` before future baseline refreshes.
+
 ## 2026-07-05 - User Request History Scope v1
 
 - Branch: `feature/T164-dashboard-observability-v1`

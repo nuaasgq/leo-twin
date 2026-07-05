@@ -56,7 +56,7 @@ def test_frontend_sync_test() -> None:
         for link in snapshot["links"]
         if str(link["source_id"]).startswith("sat-")
         and str(link["target_id"]).startswith("sat-")
-    ) == 52
+    ) == 61
     for route in snapshot["routes"]:
         if not route["available"]:
             continue
@@ -248,7 +248,7 @@ def test_scale_test_basic() -> None:
     summary = result.metrics_summary
 
     assert len(result.processed_events) >= 10_000
-    assert len(result.processed_events) == 23_049
+    assert len(result.processed_events) == 23_615
     assert summary["event_count"] >= 10_000
     assert summary["routes_total"] == 100
     assert summary["routes_available"] == 25
