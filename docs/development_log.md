@@ -3587,3 +3587,35 @@ change.
 - Recommended follow-up:
   - Add a small diagnostics detail surface explaining stream lag, overflow, and
     dropped records in Chinese for non-developer users.
+
+## 2026-07-05 - Stream Diagnostics Explanation v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add Chinese tooltip and accessibility descriptions to the existing
+  topbar connection diagnostics so users can understand stream cursor lag,
+  retained records, dropped records, and buffer overflow risk without changing
+  the frontend layout or backend protocol.
+- Changed files/modules:
+  - `frontend/src/app/App.tsx`
+  - `frontend/tests/appSurface.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- appSurface.test.ts`
+    - Result: passed, 24 files / 170 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The Windows terminal displayed existing UTF-8 Chinese strings as mojibake
+    in one command output. Files were reread with UTF-8 encoding before editing,
+    and tests confirmed the intended Chinese strings.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The explanation is exposed as hover/title text and aria labels. It is not
+    yet a dedicated visible drawer for touch-only users.
+- Recommended follow-up:
+  - Add an optional compact diagnostics popover if users need visible details
+    without relying on hover.

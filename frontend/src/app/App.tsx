@@ -497,7 +497,12 @@ export function App() {
           </div>
           <div className="connection-diagnostics" aria-label="连接诊断">
             {connectionDiagnostics.map((item) => (
-              <span className={`connection-diagnostic ${item.status}`} key={item.channel}>
+              <span
+                aria-label={item.description ?? `${item.label}：${item.statusLabel}`}
+                className={`connection-diagnostic ${item.status}`}
+                key={item.channel}
+                title={item.description}
+              >
                 <small>{item.detail === undefined ? item.label : `${item.label} · ${item.detail}`}</small>
                 <strong>{item.statusLabel}</strong>
               </span>
@@ -1293,6 +1298,7 @@ export interface ConnectionDiagnosticItem {
   status: RuntimeConnectionStatus;
   statusLabel: string;
   detail?: string;
+  description?: string;
 }
 
 export function connectionDiagnosticItems(
@@ -1302,12 +1308,19 @@ export function connectionDiagnosticItems(
 ): readonly ConnectionDiagnosticItem[] {
   return (["http", "control", "events", "state"] as const).map((channel) => {
     const detail = connectionDiagnosticDetail(channel, streamDiagnostics, consumerCursors);
+    const description = connectionDiagnosticDescription(
+      channel,
+      health[channel],
+      streamDiagnostics,
+      consumerCursors
+    );
     return {
       channel,
       label: connectionChannelLabel(channel),
       status: health[channel],
       statusLabel: connectionStatusLabel(health[channel]),
-      ...(detail === undefined ? {} : { detail })
+      ...(detail === undefined ? {} : { detail }),
+      ...(description === undefined ? {} : { description })
     };
   });
 }
@@ -1370,6 +1383,43 @@ function connectionDiagnosticDetail(
   return `游标 ${formatInteger(stream.next_cursor)} / 留存 ${formatInteger(
     stream.retained_count
   )}${consumed}${lag}${dropped}`;
+}
+
+function connectionDiagnosticDescription(
+  channel: RuntimeConnectionChannel,
+  status: RuntimeConnectionStatus,
+  streamDiagnostics: RuntimeStatusPayload["stream_diagnostics_v1"] | undefined,
+  consumerCursors: RuntimeStreamConsumerCursors | undefined
+): string | undefined {
+  const label = connectionChannelLabel(channel);
+  const statusLabel = connectionStatusLabel(status);
+  const stream =
+    channel === "events"
+      ? streamDiagnostics?.event_stream
+      : channel === "state"
+        ? streamDiagnostics?.state_stream
+        : undefined;
+  if (stream === undefined) {
+    return undefined;
+  }
+  const consumedCursor =
+    channel === "events" || channel === "state" ? consumerCursors?.[channel] : undefined;
+  const lag =
+    consumedCursor === undefined ? undefined : Math.max(0, stream.next_cursor - consumedCursor);
+  const consumedText =
+    consumedCursor === undefined
+      ? "浏览器消费游标尚未上报"
+      : `浏览器已消费到 ${formatInteger(consumedCursor)}，滞后 ${formatInteger(lag ?? 0)} 条`;
+  const droppedText =
+    stream.total_dropped_count > 0
+      ? `累计丢弃 ${formatInteger(stream.total_dropped_count)} 条`
+      : "未发生丢弃";
+  const overflowText = stream.overflow_risk
+    ? "当前接近缓冲区上限，可能需要降低刷新频率或检查后端推进速度"
+    : "当前没有缓冲区溢出风险";
+  return `${label}流诊断：连接${statusLabel}，后端下一游标 ${formatInteger(
+    stream.next_cursor
+  )}，留存 ${formatInteger(stream.retained_count)} 条，${consumedText}，${droppedText}。${overflowText}。`;
 }
 
 function runtimeStatusIsProgressing(status: RuntimeStatusPayload): boolean {
