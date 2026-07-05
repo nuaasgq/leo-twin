@@ -5,6 +5,60 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Compute Task Timeline Summary v1
+
+- Branch: `feature/T215-compute-task-timeline-summary-v1`
+- Commit: pending in this commit
+- Scope: advance V2-032 by adding a backend-owned
+  `compute_task_timeline_summary_v1` to runtime status. The summary is derived
+  from existing `service_latency_history_v1` and exposes task count, complete
+  task count, queued task count, aggregate queue delay, aggregate execution
+  delay, averages, and bounded recent task stage rows. The standalone dashboard
+  consumes this backend summary in the compute resource panel instead of
+  deriving task-level queue/execution totals locally.
+- Changed files/modules:
+  - `src/leo_twin/services/runtime_observability.py`
+  - `tests/unit/test_runtime_observability.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `frontend/tests/runtimeContractFixture.test.ts`
+  - `frontend/tests/fixtures/runtimeStatus.contract.json`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src/leo_twin/services/runtime_observability.py`
+    - Result: passed.
+  - `python -m pytest tests/unit/test_runtime_observability.py -q`
+    - Result: passed, 3 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- dataPanel.test.ts runtimeContractFixture.test.ts`
+    - Result: passed, 25 files / 313 tests. The project script currently runs
+      the full frontend Vitest suite for this invocation.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing `DataPanel` chunk-size
+      warning after minification.
+  - `python -m pytest tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer -q`
+    - Result: passed, 1 test.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - Existing service latency history already had component timelines, so the
+    new summary is deliberately a backend-owned aggregation/explanation layer
+    rather than a duplicate per-service trace.
+  - Local runtime/generated config files remain dirty and are intentionally not
+    included in this task.
+- Known remaining issues / follow-up:
+  - The summary is still derived from recent service latency history. It is not
+    yet a full task queue ledger with per-node queue depth samples, deadlines,
+    preemption, migration, or cache/offload state.
+  - A later V2-032/V2-033 task should add a dedicated queue ledger contract and
+    selected-task detail drawer once the runtime emits richer task queue events.
+
 ## 2026-07-06 - Service Placement Observability v1
 
 - Branch: `feature/T214-service-placement-observability-v1`

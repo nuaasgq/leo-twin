@@ -143,6 +143,19 @@ describe("runtime status contract fixture", () => {
         route_id: "route:svc-00001-output"
       }
     ]);
+    expect(status.compute_task_timeline_summary_v1).toMatchObject({
+      version: "v1",
+      source: "SERVICE_LATENCY_HISTORY",
+      task_count: 1,
+      queued_task_count: 0,
+      total_compute_execution_delay_s: 2
+    });
+    expect(status.compute_task_timeline_summary_v1?.items[0]).toMatchObject({
+      task_id: "svc-00001-task",
+      compute_node_id: "sat-00001",
+      queue_state: "NO_QUEUE",
+      stage_count: 2
+    });
     expect(status.node_detail_summary_v1).toMatchObject({
       version: "v1",
       source: "BACKEND_RUNTIME_STATUS",

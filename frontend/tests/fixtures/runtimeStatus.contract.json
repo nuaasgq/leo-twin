@@ -450,6 +450,52 @@
         }
       ]
     },
+    "compute_task_timeline_summary_v1": {
+      "version": "v1",
+      "source": "SERVICE_LATENCY_HISTORY",
+      "summary_scope": "RECENT_COMPUTE_TASK_QUEUE_EXECUTION",
+      "task_count": 1,
+      "item_count": 1,
+      "complete_task_count": 1,
+      "queued_task_count": 0,
+      "total_compute_queue_delay_s": 0,
+      "total_compute_execution_delay_s": 2,
+      "avg_compute_queue_delay_s": 0,
+      "avg_compute_execution_delay_s": 2,
+      "items": [
+        {
+          "task_id": "svc-00001-task",
+          "compute_node_id": "sat-00001",
+          "placement_status": "PLACED",
+          "placement_bottleneck_resource": "cpu_gflops_fp32",
+          "queue_delay_s": 0,
+          "execution_delay_s": 2,
+          "total_latency_s": 7.4,
+          "complete": true,
+          "queue_state": "NO_QUEUE",
+          "queue_state_label": "No compute queue",
+          "first_sample_sim_time": 120,
+          "last_sample_sim_time": 124,
+          "stage_count": 2,
+          "stages": [
+            {
+              "component": "compute_queue",
+              "label": "Compute queue",
+              "sample_sim_time": 121,
+              "duration_s": 0,
+              "route_id": "route:svc-00001-input"
+            },
+            {
+              "component": "compute_execution",
+              "label": "Compute execution",
+              "sample_sim_time": 122,
+              "duration_s": 2,
+              "route_id": "route:svc-00001-input"
+            }
+          ]
+        }
+      ]
+    },
     "node_detail_summary_v1": {
       "version": "v1",
       "source": "BACKEND_RUNTIME_STATUS",

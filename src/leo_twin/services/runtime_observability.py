@@ -42,10 +42,50 @@ def build_runtime_lifecycle_summaries(
         "user_request_summary_v1": user_summary,
         "satellite_service_summary_v1": satellite_summary,
         "route_explanation_summary_v1": route_explanation_summary,
+        "compute_task_timeline_summary_v1": build_runtime_compute_task_timeline_summary(
+            service_latency_history
+        ),
         "node_detail_summary_v1": build_runtime_node_detail_summary(
             user_summary,
             satellite_summary,
         ),
+    }
+
+
+def build_runtime_compute_task_timeline_summary(
+    service_latency_history: Mapping[str, Any] | None,
+    *,
+    limit: int = 8,
+) -> dict[str, object]:
+    """Build backend-owned compute queue/execution timeline summary rows."""
+
+    items = tuple(_records((service_latency_history or {}).get("items")))
+    ordered_items = tuple(sorted(items, key=_compute_task_timeline_sort_key))
+    bounded_limit = _page_limit(limit)
+    rows = tuple(
+        _compute_task_timeline_item(item) for item in ordered_items[:bounded_limit]
+    )
+    queue_delays = tuple(
+        _float(item.get("compute_queue_delay_s")) for item in ordered_items
+    )
+    execution_delays = tuple(
+        _float(item.get("compute_execution_delay_s")) for item in ordered_items
+    )
+    return {
+        "version": "v1",
+        "source": "SERVICE_LATENCY_HISTORY",
+        "summary_scope": "RECENT_COMPUTE_TASK_QUEUE_EXECUTION",
+        "task_count": len(ordered_items),
+        "item_count": len(rows),
+        "complete_task_count": sum(1 for item in ordered_items if bool(item.get("complete"))),
+        "queued_task_count": sum(
+            1 for item in ordered_items if _float(item.get("compute_queue_delay_s")) > 0.0
+        ),
+        "total_compute_queue_delay_s": sum(queue_delays),
+        "total_compute_execution_delay_s": sum(execution_delays),
+        "avg_compute_queue_delay_s": _average(queue_delays),
+        "avg_compute_execution_delay_s": _average(execution_delays),
+        "items": rows,
     }
 
 
@@ -818,6 +858,72 @@ def _satellite_network_label(item: Mapping[str, Any]) -> str:
     return _join_non_empty(link_part, route_part, queue_part, kpi_part, separator=" / ")
 
 
+def _compute_task_timeline_sort_key(item: Mapping[str, Any]) -> tuple[float, str]:
+    return (
+        -_float(item.get("last_sample_sim_time")),
+        _str(item.get("task_id")),
+    )
+
+
+def _compute_task_timeline_item(item: Mapping[str, Any]) -> dict[str, object]:
+    queue_delay = _float(item.get("compute_queue_delay_s"))
+    execution_delay = _float(item.get("compute_execution_delay_s"))
+    total_latency = _float(item.get("total_latency_s"))
+    stages = tuple(
+        _compute_task_stage(stage)
+        for stage in _records(item.get("component_timeline"))
+        if _str(stage.get("component")) in {
+            "input_network",
+            "compute_queue",
+            "compute_execution",
+            "output_network",
+            "total",
+        }
+    )
+    return {
+        "task_id": _str(item.get("task_id")),
+        "compute_node_id": _str(item.get("compute_node_id")),
+        "placement_status": _str(item.get("service_placement_status")),
+        "placement_bottleneck_resource": _str(
+            item.get("service_placement_bottleneck_resource")
+        ),
+        "queue_delay_s": queue_delay,
+        "execution_delay_s": execution_delay,
+        "total_latency_s": total_latency,
+        "complete": bool(item.get("complete")),
+        "queue_state": "QUEUED" if queue_delay > 0.0 else "NO_QUEUE",
+        "queue_state_label": (
+            "Compute queue waiting" if queue_delay > 0.0 else "No compute queue"
+        ),
+        "first_sample_sim_time": _optional_float(item.get("first_sample_sim_time")),
+        "last_sample_sim_time": _optional_float(item.get("last_sample_sim_time")),
+        "stage_count": len(stages),
+        "stages": stages,
+    }
+
+
+def _compute_task_stage(stage: Mapping[str, Any]) -> dict[str, object]:
+    component = _str(stage.get("component"))
+    return {
+        "component": component,
+        "label": _compute_task_stage_label(component),
+        "sample_sim_time": _optional_float(stage.get("sample_sim_time")),
+        "duration_s": _float(stage.get("duration_s")),
+        "route_id": _str(stage.get("route_id")),
+    }
+
+
+def _compute_task_stage_label(component: str) -> str:
+    labels = {
+        "input_network": "Input network",
+        "compute_queue": "Compute queue",
+        "compute_execution": "Compute execution",
+        "output_network": "Output network",
+        "total": "Total service latency",
+    }
+    return labels.get(component, component)
+
+
 def _compact_entity_list(values: tuple[str, ...], total_count: int, unit: str) -> str:
     normalized = tuple(value for value in values if value)
     total = max(total_count, len(normalized))
@@ -856,6 +962,10 @@ def _string_sequence(value: object) -> tuple[str, ...]:
 def _count(value: object) -> int:
     parsed = _optional_int(value)
     return max(0, parsed or 0)
+
+
+def _average(values: tuple[float, ...]) -> float:
+    return sum(values) / len(values) if values else 0.0
 
 
 def _satellite_service_summary(

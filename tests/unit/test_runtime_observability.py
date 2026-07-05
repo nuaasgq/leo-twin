@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from leo_twin.services.runtime_observability import (
+    build_runtime_compute_task_timeline_summary,
     build_runtime_lifecycle_summaries,
     build_runtime_node_detail_page,
 )
@@ -112,6 +113,8 @@ def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> No
     )
 
     assert first == second
+    assert first["compute_task_timeline_summary_v1"]["task_count"] == 1
+    assert first["compute_task_timeline_summary_v1"]["queued_task_count"] == 1
     assert first["route_explanation_summary_v1"] == {
         "version": "v1",
         "source": "BACKEND_RUNTIME_SNAPSHOT",
@@ -469,6 +472,114 @@ def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> No
     assert node_page["window_user_detail_count"] == 1
     assert node_page["window_satellite_detail_count"] == 1
     assert [item["entity_id"] for item in node_page["items"]] == ["user-1", "sat-0"]
+
+
+def test_compute_task_timeline_summary_is_backend_owned_and_deterministic() -> None:
+    history = {
+        "items": [
+            {
+                "task_id": "task-b",
+                "compute_node_id": "sat-b",
+                "service_placement_status": "PLACED",
+                "service_placement_bottleneck_resource": "cpu_gflops_fp32",
+                "complete": True,
+                "first_sample_sim_time": 5.0,
+                "last_sample_sim_time": 9.0,
+                "compute_queue_delay_s": 0.0,
+                "compute_execution_delay_s": 2.0,
+                "total_latency_s": 6.0,
+                "component_timeline": [
+                    {
+                        "component": "compute_execution",
+                        "sample_sim_time": 7.0,
+                        "duration_s": 2.0,
+                    },
+                    {
+                        "component": "total",
+                        "sample_sim_time": 9.0,
+                        "duration_s": 6.0,
+                    },
+                ],
+            },
+            {
+                "task_id": "task-a",
+                "compute_node_id": "sat-a",
+                "service_placement_status": "QUEUED",
+                "service_placement_bottleneck_resource": "gpu_tflops_fp32",
+                "complete": False,
+                "first_sample_sim_time": 2.0,
+                "last_sample_sim_time": 12.0,
+                "compute_queue_delay_s": 3.0,
+                "compute_execution_delay_s": 4.0,
+                "total_latency_s": 0.0,
+                "component_timeline": [
+                    {
+                        "component": "compute_queue",
+                        "sample_sim_time": 6.0,
+                        "duration_s": 3.0,
+                    },
+                    {
+                        "component": "compute_execution",
+                        "sample_sim_time": 10.0,
+                        "duration_s": 4.0,
+                    },
+                    {
+                        "component": "ignored_debug_stage",
+                        "sample_sim_time": 11.0,
+                        "duration_s": 1.0,
+                    },
+                ],
+            },
+        ],
+    }
+
+    first = build_runtime_compute_task_timeline_summary(history)
+    second = build_runtime_compute_task_timeline_summary(history)
+
+    assert first == second
+    assert first["version"] == "v1"
+    assert first["source"] == "SERVICE_LATENCY_HISTORY"
+    assert first["summary_scope"] == "RECENT_COMPUTE_TASK_QUEUE_EXECUTION"
+    assert first["task_count"] == 2
+    assert first["item_count"] == 2
+    assert first["complete_task_count"] == 1
+    assert first["queued_task_count"] == 1
+    assert first["total_compute_queue_delay_s"] == 3.0
+    assert first["total_compute_execution_delay_s"] == 6.0
+    assert first["avg_compute_queue_delay_s"] == 1.5
+    assert first["avg_compute_execution_delay_s"] == 3.0
+    assert first["items"][0] == {
+        "task_id": "task-a",
+        "compute_node_id": "sat-a",
+        "placement_status": "QUEUED",
+        "placement_bottleneck_resource": "gpu_tflops_fp32",
+        "queue_delay_s": 3.0,
+        "execution_delay_s": 4.0,
+        "total_latency_s": 0.0,
+        "complete": False,
+        "queue_state": "QUEUED",
+        "queue_state_label": "Compute queue waiting",
+        "first_sample_sim_time": 2.0,
+        "last_sample_sim_time": 12.0,
+        "stage_count": 2,
+        "stages": (
+            {
+                "component": "compute_queue",
+                "label": "Compute queue",
+                "sample_sim_time": 6.0,
+                "duration_s": 3.0,
+                "route_id": "",
+            },
+            {
+                "component": "compute_execution",
+                "label": "Compute execution",
+                "sample_sim_time": 10.0,
+                "duration_s": 4.0,
+                "route_id": "",
+            },
+        ),
+    }
+    assert build_runtime_compute_task_timeline_summary(None)["task_count"] == 0
 
 
 def test_runtime_user_summary_counts_full_set_when_items_are_limited() -> None:

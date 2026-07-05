@@ -5,6 +5,7 @@ import {
   buildComputeResourcePoolFromRuntime,
   buildComputeResourcePoolModeNote,
   buildDataPanelComputeBottleneckDisplay,
+  buildDataPanelComputeTaskTimelineDisplay,
   buildDataPanelComputeVectorTail,
   buildDataPanelConfiguredScale,
   buildDataPanelConfigurationExplanationDisplay,
@@ -3631,6 +3632,73 @@ describe("buildDataPanelComputeBottleneckDisplay", () => {
         compute_resource_bottleneck_label: "No compute resource capacity"
       })
     ).toBeNull();
+  });
+});
+
+describe("buildDataPanelComputeTaskTimelineDisplay", () => {
+  it("formats backend-owned compute task timeline summary", () => {
+    expect(
+      buildDataPanelComputeTaskTimelineDisplay({
+        version: "v1",
+        source: "SERVICE_LATENCY_HISTORY",
+        summary_scope: "RECENT_COMPUTE_TASK_QUEUE_EXECUTION",
+        task_count: 2,
+        item_count: 2,
+        complete_task_count: 1,
+        queued_task_count: 1,
+        total_compute_queue_delay_s: 3,
+        total_compute_execution_delay_s: 6,
+        avg_compute_queue_delay_s: 1.5,
+        avg_compute_execution_delay_s: 3,
+        items: [
+          {
+            task_id: "svc-00-compute_service-00000-task",
+            compute_node_id: "sat-00001",
+            placement_status: "QUEUED",
+            placement_bottleneck_resource: "gpu_tflops_fp32",
+            queue_delay_s: 3,
+            execution_delay_s: 4,
+            total_latency_s: 0,
+            complete: false,
+            queue_state: "QUEUED",
+            queue_state_label: "Compute queue waiting",
+            first_sample_sim_time: 2,
+            last_sample_sim_time: 12,
+            stage_count: 2,
+            stages: [
+              {
+                component: "compute_queue",
+                label: "Compute queue",
+                sample_sim_time: 6,
+                duration_s: 3
+              },
+              {
+                component: "compute_execution",
+                label: "Compute execution",
+                sample_sim_time: 10,
+                duration_s: 4
+              }
+            ]
+          }
+        ]
+      })
+    ).toEqual({
+      sourceLabel: "后端计算任务时间线",
+      summaryLabel: "2 shown / 2 total / 1 complete",
+      queuedTaskLabel: "1",
+      totalQueueDelayLabel: "3,000 ms",
+      totalExecutionDelayLabel: "6,000 ms",
+      items: [
+        {
+          taskId: "svc-00-compute_service-00000-task",
+          taskLabel: "...vice-00000-task",
+          nodeLabel: "节点 sat-00001",
+          queueExecutionLabel: "3,000 ms / 4,000 ms",
+          traceTitle:
+            "task=svc-00-compute_service-00000-task / node=sat-00001 / placement=QUEUED / bottleneck=gpu_tflops_fp32 / queue=3,000 ms / execution=4,000 ms / state=QUEUED / stages=compute_queue@6s=3,000 ms, compute_execution@10s=4,000 ms"
+        }
+      ]
+    });
   });
 });
 

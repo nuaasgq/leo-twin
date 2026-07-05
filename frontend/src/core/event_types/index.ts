@@ -1019,6 +1019,7 @@ export interface RuntimeStatusPayload {
   satellite_kpi_slices_v1?: RuntimeSatelliteKpiSlicesV1;
   satellite_kpi_history_v1?: RuntimeSatelliteKpiHistoryV1;
   service_latency_history_v1?: RuntimeServiceLatencyHistoryV1;
+  compute_task_timeline_summary_v1?: RuntimeComputeTaskTimelineSummaryV1;
   user_request_summary_v1?: RuntimeUserRequestSummaryV1;
   user_request_history_v1?: RuntimeUserRequestHistoryV1;
   satellite_service_summary_v1?: RuntimeSatelliteServiceSummaryV1;
@@ -1578,6 +1579,46 @@ export interface RuntimeServiceLatencyComponentSampleV1 {
   duration_s: number;
   input_flow_id?: string;
   output_flow_id?: string;
+  route_id?: string;
+}
+
+export interface RuntimeComputeTaskTimelineSummaryV1 {
+  version: "v1" | string;
+  source: string;
+  summary_scope: string;
+  task_count: number;
+  item_count: number;
+  complete_task_count: number;
+  queued_task_count: number;
+  total_compute_queue_delay_s: number;
+  total_compute_execution_delay_s: number;
+  avg_compute_queue_delay_s: number;
+  avg_compute_execution_delay_s: number;
+  items: readonly RuntimeComputeTaskTimelineItemV1[];
+}
+
+export interface RuntimeComputeTaskTimelineItemV1 {
+  task_id: string;
+  compute_node_id?: string;
+  placement_status?: string;
+  placement_bottleneck_resource?: string;
+  queue_delay_s: number;
+  execution_delay_s: number;
+  total_latency_s: number;
+  complete: boolean;
+  queue_state: string;
+  queue_state_label: string;
+  first_sample_sim_time?: number | null;
+  last_sample_sim_time?: number | null;
+  stage_count: number;
+  stages: readonly RuntimeComputeTaskTimelineStageV1[];
+}
+
+export interface RuntimeComputeTaskTimelineStageV1 {
+  component: string;
+  label: string;
+  sample_sim_time?: number | null;
+  duration_s: number;
   route_id?: string;
 }
 

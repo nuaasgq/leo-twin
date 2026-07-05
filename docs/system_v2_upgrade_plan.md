@@ -153,6 +153,10 @@ Tasks:
 - V2-032: Add task queue and execution timeline v2.
   - Scope: queue delay, execution delay, resource bottleneck, deadline status.
   - Depends on: V2-031.
+  - Status: T215 adds backend-owned `compute_task_timeline_summary_v1` derived
+    from service latency history, exposing task count, queued task count,
+    aggregate queue/execution delay, and bounded recent task stage rows to the
+    dashboard without changing the compute scheduling policy.
 - V2-033: Add cache/offload/migration contracts.
   - Scope: contracts and observability only; behavior can be later.
   - Depends on: V2-032.

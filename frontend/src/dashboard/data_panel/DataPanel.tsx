@@ -22,6 +22,7 @@ import {
   RuntimeExportPackageCompareV1,
   RuntimeExportRestoreCommandResultV1,
   RuntimeExportRestorePreflightV1,
+  RuntimeComputeTaskTimelineSummaryV1,
   RuntimeKpiSampleV1,
   RuntimeKpiTimeSeriesV1,
   RuntimeExportHistoryV1,
@@ -335,6 +336,9 @@ export const DataPanel = memo(function DataPanel({
   );
   const serviceLatencyRows = buildDataPanelServiceLatencyRows(
     runtimeStatus.service_latency_history_v1
+  );
+  const computeTaskTimeline = buildDataPanelComputeTaskTimelineDisplay(
+    runtimeStatus.compute_task_timeline_summary_v1
   );
   const routeConstraints = buildDataPanelRouteConstraints(
     snapshot,
@@ -1210,6 +1214,38 @@ export const DataPanel = memo(function DataPanel({
                   </span>
                 ))}
               </div>
+              {computeTaskTimeline.items.length > 0 ? (
+                <>
+                  <div className="data-panel-source-note">
+                    <span>{computeTaskTimeline.sourceLabel}</span>
+                    <small>{computeTaskTimeline.summaryLabel}</small>
+                  </div>
+                  <div className="data-panel-formula-inputs" aria-label="计算任务队列执行摘要">
+                    <span>
+                      排队任务 <strong>{computeTaskTimeline.queuedTaskLabel}</strong>
+                    </span>
+                    <span>
+                      排队总量 <strong>{computeTaskTimeline.totalQueueDelayLabel}</strong>
+                    </span>
+                    <span>
+                      执行总量 <strong>{computeTaskTimeline.totalExecutionDelayLabel}</strong>
+                    </span>
+                  </div>
+                  <div className="data-panel-service-timeline" aria-label="计算任务队列执行时间线">
+                    {computeTaskTimeline.items.map((item) => (
+                      <span
+                        className="data-panel-service-segment"
+                        key={item.taskId}
+                        title={item.traceTitle}
+                      >
+                        <small>{item.taskLabel}</small>
+                        <strong>{item.queueExecutionLabel}</strong>
+                        <em>{item.nodeLabel}</em>
+                      </span>
+                    ))}
+                  </div>
+                </>
+              ) : null}
               {serviceLatencyRows.length > 0 ? (
                 <div className="data-panel-formula-inputs" aria-label="通信计算服务轨迹">
                   {serviceLatencyRows.map((row) => (
@@ -4824,6 +4860,34 @@ function serviceLatencyTraceTitle(
   return parts.join(" / ");
 }
 
+function computeTaskTimelineTraceTitle(
+  item: RuntimeComputeTaskTimelineSummaryV1["items"][number]
+): string {
+  const stages = item.stages
+    .map((stage) => {
+      const time =
+        typeof stage.sample_sim_time === "number"
+          ? `@${formatMetricValue(stage.sample_sim_time)}s`
+          : "";
+      return `${stage.component}${time}=${formatMetricMilliseconds(stage.duration_s)}`;
+    })
+    .join(", ");
+  return [
+    `task=${item.task_id}`,
+    item.compute_node_id ? `node=${item.compute_node_id}` : "",
+    item.placement_status ? `placement=${item.placement_status}` : "",
+    item.placement_bottleneck_resource
+      ? `bottleneck=${item.placement_bottleneck_resource}`
+      : "",
+    `queue=${formatMetricMilliseconds(item.queue_delay_s)}`,
+    `execution=${formatMetricMilliseconds(item.execution_delay_s)}`,
+    `state=${item.queue_state}`,
+    stages ? `stages=${stages}` : ""
+  ]
+    .filter((part) => part.length > 0)
+    .join(" / ");
+}
+
 function serviceLatencyPlacementTrace(
   item: RuntimeServiceLatencyHistoryV1["items"][number]
 ): string {
@@ -6095,6 +6159,23 @@ export interface DataPanelServiceLatencyTimelineItem {
   traceTitle: string;
 }
 
+export interface DataPanelComputeTaskTimelineDisplay {
+  sourceLabel: string;
+  summaryLabel: string;
+  queuedTaskLabel: string;
+  totalQueueDelayLabel: string;
+  totalExecutionDelayLabel: string;
+  items: readonly DataPanelComputeTaskTimelineRow[];
+}
+
+export interface DataPanelComputeTaskTimelineRow {
+  taskId: string;
+  taskLabel: string;
+  nodeLabel: string;
+  queueExecutionLabel: string;
+  traceTitle: string;
+}
+
 export interface DataPanelRouteConstraint {
   routeId: string;
   flowId: string;
@@ -6601,6 +6682,38 @@ export function buildDataPanelServiceLatencyRows(
     totalLatencyLabel: formatMetricMilliseconds(item.total_latency_s),
     timeline: serviceLatencyTimelineItems(item)
   }));
+}
+
+export function buildDataPanelComputeTaskTimelineDisplay(
+  summary: RuntimeComputeTaskTimelineSummaryV1 | null | undefined,
+  limit = 4
+): DataPanelComputeTaskTimelineDisplay {
+  const items = (summary?.items ?? []).slice(0, Math.max(0, Math.floor(limit)));
+  return {
+    sourceLabel: "后端计算任务时间线",
+    summaryLabel:
+      summary === null || summary === undefined
+        ? "等待服务时间线"
+        : `${formatCount(summary.item_count)} shown / ${formatCount(
+            summary.task_count
+          )} total / ${formatCount(summary.complete_task_count)} complete`,
+    queuedTaskLabel: formatCount(summary?.queued_task_count ?? 0),
+    totalQueueDelayLabel: formatMetricMilliseconds(
+      summary?.total_compute_queue_delay_s ?? 0
+    ),
+    totalExecutionDelayLabel: formatMetricMilliseconds(
+      summary?.total_compute_execution_delay_s ?? 0
+    ),
+    items: items.map((item) => ({
+      taskId: item.task_id,
+      taskLabel: compactTaskId(item.task_id),
+      nodeLabel: item.compute_node_id ? `节点 ${item.compute_node_id}` : "无节点",
+      queueExecutionLabel: `${formatMetricMilliseconds(
+        item.queue_delay_s
+      )} / ${formatMetricMilliseconds(item.execution_delay_s)}`,
+      traceTitle: computeTaskTimelineTraceTitle(item)
+    }))
+  };
 }
 
 export function buildDataPanelRouteConstraints(
