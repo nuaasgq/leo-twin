@@ -4185,3 +4185,43 @@ change.
 - Recommended follow-up:
   - Add a backend-side fixture generation command once runtime contract
     versioning is formalized.
+
+## 2026-07-05 - Satellite KPI Slice Resource Vector v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: extend backend runtime satellite KPI slices with compute resource
+  vector fields for CPU FP64, GPU FP32/FP16, NPU INT8, memory, and storage. The
+  selected-satellite detail summary can now build resource rows from backend
+  satellite KPI slices when a compute-node snapshot is not present.
+- Changed files/modules:
+  - `src/leo_twin/services/metrics/collector.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/3d/cesium/satelliteDetailSummary.ts`
+  - `frontend/tests/fixtures/runtimeStatus.contract.json`
+  - `frontend/tests/runtimeContractFixture.test.ts`
+  - `frontend/tests/satelliteVisuals.test.ts`
+  - `tests/unit/test_metrics_module.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/development_log.md`
+- Validation:
+  - `PYTHONPATH=src python -m pytest tests/unit/test_metrics_module.py::test_metrics_collector_publishes_satellite_kpi_slices tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer -q`
+    - Result: passed, 2 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- satelliteVisuals.test.ts runtimeContractFixture.test.ts`
+    - Result: passed, 25 files / 185 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - None. MetricsCollector remains a read-only observation service; the change
+    adds optional summary fields and does not alter compute scheduling,
+    runtime advancement, or Event Kernel behavior.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - Satellite KPI slices still report current aggregate resource usage only;
+    they do not yet provide per-satellite history windows.
+- Recommended follow-up:
+  - Add bounded per-satellite resource sparkline samples for the selected
+    satellite after runtime sampling policy is formalized.

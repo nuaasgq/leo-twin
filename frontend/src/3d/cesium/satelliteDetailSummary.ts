@@ -100,7 +100,10 @@ export function selectedSatelliteDetailSummary({
     groundUsers,
     scenarioConfig
   );
-  const computeSummary = satelliteComputeSummary(computeNode, computeResourceSummary);
+  const computeSummary = satelliteComputeSummary(
+    computeNode ?? computeNodeFromBackendSlice(backendSlice),
+    computeResourceSummary
+  );
   const activeLinkCount = backendSlice?.active_link_count ?? activeLinks.length;
   const activeAccessLinkCount =
     backendSlice?.active_access_link_count ?? activeAccessLinks.length;
@@ -185,6 +188,35 @@ export function selectedSatelliteDetailSummary({
       backendSlice !== undefined
         ? "链路、路由和算力优先来自后端 runtime satellite KPI 切片；不是 packet-level 仿真。"
         : "链路、路由和算力为后端 snapshot 的流级聚合态势；不是 packet-level 仿真。"
+  };
+}
+
+function computeNodeFromBackendSlice(
+  slice: RuntimeSatelliteKpiSliceV1 | undefined
+): Parameters<typeof satelliteComputeSummary>[0] | null {
+  if (slice === undefined) {
+    return null;
+  }
+  const fp32Capacity = Math.max(0, finiteNumber(slice.compute_capacity_gflops_fp32));
+  const fp32Used = Math.max(0, finiteNumber(slice.compute_used_gflops_fp32));
+  return {
+    capacity: fp32Capacity,
+    available_capacity: Math.max(0, fp32Capacity - fp32Used),
+    load_ratio: clamp(finiteNumber(slice.compute_load_ratio), 0, 1),
+    status: slice.running_task_count > 0 || fp32Used > 0 ? "BUSY" : "IDLE",
+    cpu_gflops_fp64: slice.compute_capacity_gflops_fp64 ?? 0,
+    gpu_tflops_fp32: slice.compute_capacity_gpu_tflops_fp32 ?? 0,
+    gpu_tflops_fp16: slice.compute_capacity_gpu_tflops_fp16 ?? 0,
+    npu_tops_int8: slice.compute_capacity_npu_tops_int8 ?? 0,
+    memory_gb: slice.compute_capacity_memory_gb ?? 0,
+    storage_gb: slice.compute_capacity_storage_gb ?? 0,
+    used_cpu_gflops_fp32: fp32Used,
+    used_cpu_gflops_fp64: slice.compute_used_gflops_fp64 ?? 0,
+    used_gpu_tflops_fp32: slice.compute_used_gpu_tflops_fp32 ?? 0,
+    used_gpu_tflops_fp16: slice.compute_used_gpu_tflops_fp16 ?? 0,
+    used_npu_tops_int8: slice.compute_used_npu_tops_int8 ?? 0,
+    used_memory_gb: slice.compute_used_memory_gb ?? 0,
+    used_storage_gb: slice.compute_used_storage_gb ?? 0
   };
 }
 

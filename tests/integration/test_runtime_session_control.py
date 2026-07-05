@@ -213,6 +213,9 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
             "route_latency_avg_s",
             "route_loss_proxy_rate",
             "compute_load_ratio",
+            "compute_used_gpu_tflops_fp32",
+            "compute_used_npu_tops_int8",
+            "compute_used_memory_gb",
             "running_task_count",
             "finished_task_count",
         }.issubset(satellite_slices["slices"][0])

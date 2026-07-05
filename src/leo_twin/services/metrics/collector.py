@@ -870,6 +870,54 @@ class MetricsCollector:
             "route_loss_proxy_rate": _average(route_loss_values),
             "compute_capacity_gflops_fp32": compute_capacity,
             "compute_used_gflops_fp32": compute_used,
+            "compute_capacity_gflops_fp64": _compute_node_non_negative_field(
+                node,
+                "cpu_gflops_fp64",
+            ),
+            "compute_used_gflops_fp64": _compute_node_non_negative_field(
+                node,
+                "used_cpu_gflops_fp64",
+            ),
+            "compute_capacity_gpu_tflops_fp32": _compute_node_non_negative_field(
+                node,
+                "gpu_tflops_fp32",
+            ),
+            "compute_used_gpu_tflops_fp32": _compute_node_non_negative_field(
+                node,
+                "used_gpu_tflops_fp32",
+            ),
+            "compute_capacity_gpu_tflops_fp16": _compute_node_non_negative_field(
+                node,
+                "gpu_tflops_fp16",
+            ),
+            "compute_used_gpu_tflops_fp16": _compute_node_non_negative_field(
+                node,
+                "used_gpu_tflops_fp16",
+            ),
+            "compute_capacity_npu_tops_int8": _compute_node_non_negative_field(
+                node,
+                "npu_tops_int8",
+            ),
+            "compute_used_npu_tops_int8": _compute_node_non_negative_field(
+                node,
+                "used_npu_tops_int8",
+            ),
+            "compute_capacity_memory_gb": _compute_node_non_negative_field(
+                node,
+                "memory_gb",
+            ),
+            "compute_used_memory_gb": _compute_node_non_negative_field(
+                node,
+                "used_memory_gb",
+            ),
+            "compute_capacity_storage_gb": _compute_node_non_negative_field(
+                node,
+                "storage_gb",
+            ),
+            "compute_used_storage_gb": _compute_node_non_negative_field(
+                node,
+                "used_storage_gb",
+            ),
             "compute_load_ratio": compute_load,
             "running_task_count": max(0, int(self._running_tasks_by_node[satellite_id])),
             "finished_task_count": max(0, int(self._finished_tasks_by_node[satellite_id])),
@@ -1514,6 +1562,18 @@ def _compute_node_load_ratio(
         return _clamp_probability(float(load_ratio))
     capacity = max(0.0, float(node.capacity))
     return _clamp_probability(used_fp32 / capacity) if capacity > 0.0 else 0.0
+
+
+def _compute_node_non_negative_field(
+    node: ComputeNodeState | None,
+    field_name: str,
+) -> float:
+    if node is None:
+        return 0.0
+    value = getattr(node, field_name, 0.0)
+    if isinstance(value, (int, float)) and isfinite(value):
+        return max(0.0, float(value))
+    return 0.0
 
 
 def _compute_resource_total(

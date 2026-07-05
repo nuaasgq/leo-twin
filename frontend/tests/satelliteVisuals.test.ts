@@ -541,6 +541,18 @@ describe("selected satellite detail summary", () => {
             route_loss_proxy_rate: 0.025,
             compute_capacity_gflops_fp32: 100,
             compute_used_gflops_fp32: 65,
+            compute_capacity_gflops_fp64: 8,
+            compute_used_gflops_fp64: 2,
+            compute_capacity_gpu_tflops_fp32: 2.5,
+            compute_used_gpu_tflops_fp32: 1.5,
+            compute_capacity_gpu_tflops_fp16: 5,
+            compute_used_gpu_tflops_fp16: 3,
+            compute_capacity_npu_tops_int8: 12,
+            compute_used_npu_tops_int8: 6,
+            compute_capacity_memory_gb: 32,
+            compute_used_memory_gb: 10,
+            compute_capacity_storage_gb: 512,
+            compute_used_storage_gb: 64,
             compute_load_ratio: 0.65,
             running_task_count: 2,
             finished_task_count: 7
@@ -561,6 +573,23 @@ describe("selected satellite detail summary", () => {
       runningTaskLabel: "任务 运行 2 / 完成 7",
       resourceModelLabel: "RuntimeSatelliteKpiSlicesV1"
     });
+    expect(summary.computeSummary).toMatchObject({
+      resourceModelLabel: "ComputeResourceVector",
+      cpuVectorLabel: "CPU FP32 100 GFLOPS / FP64 8 GFLOPS",
+      gpuVectorLabel: "GPU FP32 2.5 TFLOPS / FP16 5 TFLOPS",
+      npuVectorLabel: "NPU INT8 12 TOPS"
+    });
+    expect(
+      selectedSatelliteResourceUsageRows(summary, 3).map((row) => [
+        row.label,
+        row.usedLabel,
+        row.capacityLabel
+      ])
+    ).toEqual([
+      ["CPU FP32", "65 GFLOPS", "100 GFLOPS"],
+      ["CPU FP64", "2 GFLOPS", "8 GFLOPS"],
+      ["GPU FP32", "1.5 TFLOPS", "2.5 TFLOPS"]
+    ]);
     expect(summary.note).toContain("runtime satellite KPI");
   });
 });

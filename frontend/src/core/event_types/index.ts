@@ -454,6 +454,18 @@ export interface RuntimeSatelliteKpiSliceV1 {
   route_loss_proxy_rate: number;
   compute_capacity_gflops_fp32: number;
   compute_used_gflops_fp32: number;
+  compute_capacity_gflops_fp64?: number;
+  compute_used_gflops_fp64?: number;
+  compute_capacity_gpu_tflops_fp32?: number;
+  compute_used_gpu_tflops_fp32?: number;
+  compute_capacity_gpu_tflops_fp16?: number;
+  compute_used_gpu_tflops_fp16?: number;
+  compute_capacity_npu_tops_int8?: number;
+  compute_used_npu_tops_int8?: number;
+  compute_capacity_memory_gb?: number;
+  compute_used_memory_gb?: number;
+  compute_capacity_storage_gb?: number;
+  compute_used_storage_gb?: number;
   compute_load_ratio: number;
   running_task_count: number;
   finished_task_count: number;

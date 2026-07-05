@@ -26,6 +26,9 @@ describe("runtime status contract fixture", () => {
       satellite_id: "sat-00001",
       active_link_count: 4,
       route_loss_proxy_rate: 0.025,
+      compute_used_gpu_tflops_fp32: 1.5,
+      compute_used_npu_tops_int8: 6,
+      compute_used_memory_gb: 10,
       compute_load_ratio: 0.65
     });
   });
