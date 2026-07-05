@@ -271,6 +271,10 @@ Tasks:
     and route detail pages. The dashboard detail refresh loop now preserves
     active cursors for all five visible detail collections while hiding cursor
     controls for legacy summaries that do not carry cursor metadata.
+  - Status: T242 adds a backend-cursor-derived filter scope notice to the
+    dashboard detail observability notes. Users can now see that current text
+    and structured filters apply only to the loaded backend page and local
+    render window until filter-aware backend cursor requests are implemented.
 - V2-054: Add model assumptions panel.
   - Scope: backend-derived model caveats, fidelity mode, KPI provenance.
   - Depends on: V2-003, V2-021.

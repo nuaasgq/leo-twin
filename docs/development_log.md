@@ -5,6 +5,44 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Dashboard Filter Scope Notice v1
+
+- Branch: `feature/T242-dashboard-filter-scope-notice-v1`
+- Commit: pending in this commit
+- Scope: make dashboard filtering scope explicit after the backend cursor
+  controls were added. The detail observability notes now include a
+  backend-cursor-derived filter scope notice for user, satellite, and route
+  pages, explaining that current filters apply only to the loaded backend page
+  and local render window until filter-aware backend cursor requests exist.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/dashboard_filter_scope_notice_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 26 test files / 343 tests.
+  - `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed using the Codex bundled Node.js runtime.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite reported the existing `DataPanel` chunk size
+      warning after minification.
+  - `python -m pytest tests/integration/test_benchmark_acceptance_v1.py -q`
+    - Result: passed, 9 tests.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - Current filters are frontend-local and do not search unloaded backend pages.
+    This task intentionally adds product transparency first and leaves backend
+    filter-aware cursor queries as a separate task.
+  - Existing local runtime/generated config files remain dirty and are
+    intentionally not included in this task.
+- Known remaining issues / follow-up:
+  - Implement filter-aware backend cursor requests.
+  - Add detail-by-id endpoints for selected entities.
+  - Split large dashboard sections into smaller lazy chunks.
+
 ## 2026-07-06 - Dashboard Core Detail Cursor Controls v1
 
 - Branch: `feature/T241-dashboard-core-detail-cursors-v1`

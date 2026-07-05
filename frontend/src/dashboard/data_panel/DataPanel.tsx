@@ -510,6 +510,11 @@ export const DataPanel = memo(function DataPanel({
       runtimeStatus.satellite_kpi_slices_v1,
       runtimeStatus.satellite_kpi_history_v1
     ),
+    ...buildDataPanelFilterScopeNotes(
+      userRequestSummary,
+      satelliteServiceSummary,
+      routeExplanationSummary
+    ),
     ...buildDataPanelPaginationContractNotes(detailPaginationContract),
     buildDataPanelDetailWindowPolicyNote(
       userDetailWindow,
@@ -3942,6 +3947,64 @@ export function buildDataPanelDetailScopeNotes(
       tone: "history"
     }
   ];
+}
+
+export function buildDataPanelFilterScopeNotes(
+  userSummary: RuntimeUserRequestSummaryV1 | null | undefined = undefined,
+  satelliteSummary: RuntimeSatelliteServiceSummaryV1 | null | undefined = undefined,
+  routeSummary: RuntimeRouteExplanationSummaryV1 | null | undefined = undefined
+): readonly DataPanelDetailScopeNote[] {
+  const cursorScopes = [
+    backendCursorScopeLabel("用户", userSummary, userSummary?.user_count),
+    backendCursorScopeLabel("卫星", satelliteSummary, satelliteSummary?.satellite_count),
+    backendCursorScopeLabel("路由", routeSummary, routeSummary?.route_count)
+  ].filter((scope): scope is string => scope !== null);
+  if (cursorScopes.length === 0) {
+    return [];
+  }
+  return [
+    {
+      label: "筛选作用域",
+      value: "当前后端页",
+      detail: `${cursorScopes.join(
+        "；"
+      )}。当前文本和结构筛选只作用于已读取后端页与本地渲染窗口；未读取行需要先用游标翻页，全量后端筛选另行实现。`,
+      tone: "limit"
+    }
+  ];
+}
+
+function backendCursorScopeLabel(
+  label: string,
+  summary:
+    | RuntimeUserRequestSummaryV1
+    | RuntimeSatelliteServiceSummaryV1
+    | RuntimeRouteExplanationSummaryV1
+    | null
+    | undefined,
+  totalCount: number | null | undefined
+): string | null {
+  if (
+    summary === null ||
+    summary === undefined ||
+    summary.cursor === undefined ||
+    summary.limit === undefined ||
+    summary.next_cursor === undefined ||
+    summary.has_more === undefined
+  ) {
+    return null;
+  }
+  const display = buildDataPanelBackendCursorDisplay(
+    {
+      cursor: summary.cursor,
+      limit: summary.limit,
+      next_cursor: summary.next_cursor,
+      has_more: summary.has_more,
+      item_count: summary.item_count
+    },
+    totalCount ?? summary.item_count
+  );
+  return `${label} ${display.rangeLabel}${display.canNext ? "，可继续翻页" : ""}`;
 }
 
 export function buildDataPanelPaginationContractNotes(

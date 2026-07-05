@@ -23,6 +23,7 @@ import {
   buildDataPanelExportRestoreActionDisplay,
   buildDataPanelExportRestorePreflightDisplay,
   buildDataPanelExportRestorePreflightStatus,
+  buildDataPanelFilterScopeNotes,
   buildDataPanelNetworkFormulaInputs,
   buildDataPanelNetworkComponentTail,
   buildDataPanelNetworkKpiCaveats,
@@ -5787,6 +5788,85 @@ describe("buildDataPanelDetailScopeNotes", () => {
         tone: "history"
       }
     ]);
+  });
+});
+
+describe("buildDataPanelFilterScopeNotes", () => {
+  it("explains that filtering is scoped to active backend cursor pages", () => {
+    expect(
+      buildDataPanelFilterScopeNotes(
+        {
+          version: "v1",
+          source: "BACKEND_RUNTIME_SNAPSHOT",
+          summary_scope: "USER_REQUEST_DETAIL_WINDOW",
+          cursor: 120,
+          limit: 120,
+          next_cursor: 240,
+          has_more: true,
+          user_count: 1200,
+          item_count: 120,
+          active_user_count: 80,
+          compute_service_user_count: 20,
+          waiting_user_count: 4,
+          hidden_user_count: 1080,
+          items: []
+        },
+        {
+          version: "v1",
+          source: "BACKEND_RUNTIME_SNAPSHOT",
+          summary_scope: "SATELLITE_SERVICE_DETAIL_WINDOW",
+          cursor: 0,
+          limit: 96,
+          next_cursor: 96,
+          has_more: true,
+          satellite_count: 1200,
+          item_count: 96,
+          hidden_satellite_count: 1104,
+          items: []
+        },
+        {
+          version: "v1",
+          source: "BACKEND_RUNTIME_SNAPSHOT",
+          summary_scope: "ROUTE_EXPLANATION_DETAIL_WINDOW",
+          cursor: 64,
+          limit: 64,
+          next_cursor: 100,
+          has_more: false,
+          route_count: 100,
+          item_count: 36,
+          available_route_count: 30,
+          blocked_route_count: 6,
+          over_demand_route_count: 2,
+          compute_service_route_count: 12,
+          network_service_route_count: 88,
+          items: []
+        }
+      )
+    ).toEqual([
+      {
+        label: "筛选作用域",
+        value: "当前后端页",
+        detail:
+          "用户 121-240 / 1,200，可继续翻页；卫星 1-96 / 1,200，可继续翻页；路由 65-100 / 100。当前文本和结构筛选只作用于已读取后端页与本地渲染窗口；未读取行需要先用游标翻页，全量后端筛选另行实现。",
+        tone: "limit"
+      }
+    ]);
+  });
+
+  it("omits the scope note for legacy summaries without cursor metadata", () => {
+    expect(
+      buildDataPanelFilterScopeNotes({
+        version: "v1",
+        source: "BACKEND_RUNTIME_STATUS",
+        user_count: 10,
+        item_count: 10,
+        active_user_count: 1,
+        compute_service_user_count: 0,
+        waiting_user_count: 0,
+        hidden_user_count: 0,
+        items: []
+      })
+    ).toEqual([]);
   });
 });
 
