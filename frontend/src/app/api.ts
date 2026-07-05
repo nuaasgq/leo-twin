@@ -2,6 +2,8 @@ import { decodeStateSnapshot } from "../core/decoder";
 import {
   GeneratedScenarioConfig,
   RuntimeDetailPageEnvelope,
+  RuntimeExportHistoryEnvelope,
+  RuntimeExportHistoryV1,
   RuntimeNodeDetailPageV1,
   RuntimeSatelliteServiceSummaryV1,
   RuntimeStatusEnvelope,
@@ -77,6 +79,16 @@ export async function loadRuntimeNodeDetails(
   return page.summary as RuntimeNodeDetailPageV1;
 }
 
+export async function loadRuntimeExportHistory(
+  endpoint = "/runtime/export/history"
+): Promise<RuntimeExportHistoryV1> {
+  const response = await fetch(endpoint);
+  if (!response.ok) {
+    throw new Error(`failed to load runtime export history from ${endpoint}: HTTP ${response.status}`);
+  }
+  return decodeRuntimeExportHistory(await response.json()).summary;
+}
+
 export function runtimeApiErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   if (
@@ -147,6 +159,20 @@ export function decodeRuntimeDetailPage(value: unknown): RuntimeDetailPageEnvelo
       | RuntimeSatelliteServiceSummaryV1
       | RuntimeNodeDetailPageV1
   } as RuntimeDetailPageEnvelope;
+}
+
+export function decodeRuntimeExportHistory(value: unknown): RuntimeExportHistoryEnvelope {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError("runtime export history response must be an object");
+  }
+  const summary = (value as { summary?: unknown }).summary;
+  if (typeof summary !== "object" || summary === null || Array.isArray(summary)) {
+    throw new TypeError("runtime export history response must include summary object");
+  }
+  return {
+    ...(value as Record<string, unknown>),
+    summary: summary as RuntimeExportHistoryV1
+  } as RuntimeExportHistoryEnvelope;
 }
 
 export function decodeRuntimeStatusEnvelope(value: unknown): RuntimeStatusEnvelope {

@@ -85,6 +85,42 @@
         "Batch exports use events.jsonl, metrics.csv, and summary.json."
       ]
     },
+    "runtime_export_history_v1": {
+      "version": "v1",
+      "source": "BACKEND_RUNTIME_STATUS",
+      "history_scope": "CURRENT_SESSION_RECENT_EXPORTS",
+      "history_limit": 8,
+      "export_count": 1,
+      "retained_count": 1,
+      "latest_export": {
+        "sequence": 1,
+        "export_type": "ARCHIVE",
+        "package_id": "integration-demo-20260705-t00000120p000-e00004096",
+        "package_dir": "artifacts/runtime_exports/integration-demo-20260705-t00000120p000-e00004096",
+        "file_count": 6,
+        "manifest_hash": "sha256:abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+        "current_sim_time": 120,
+        "processed_event_count": 4096,
+        "archive_filename": "integration-demo-20260705-t00000120p000-e00004096.zip",
+        "archive_sha256": "sha256:9999999999999999999999999999999999999999999999999999999999999999",
+        "archive_bytes": 4096
+      },
+      "items": [
+        {
+          "sequence": 1,
+          "export_type": "ARCHIVE",
+          "package_id": "integration-demo-20260705-t00000120p000-e00004096",
+          "package_dir": "artifacts/runtime_exports/integration-demo-20260705-t00000120p000-e00004096",
+          "file_count": 6,
+          "manifest_hash": "sha256:abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+          "current_sim_time": 120,
+          "processed_event_count": 4096,
+          "archive_filename": "integration-demo-20260705-t00000120p000-e00004096.zip",
+          "archive_sha256": "sha256:9999999999999999999999999999999999999999999999999999999999999999",
+          "archive_bytes": 4096
+        }
+      ]
+    },
     "fidelity_summary": {
       "orbit_update_mode": "BATCH",
       "metrics_mode": "AGGREGATED",

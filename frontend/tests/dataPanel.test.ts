@@ -8,6 +8,7 @@ import {
   buildDataPanelConfiguredScale,
   buildDataPanelDetailScopeNotes,
   buildDataPanelDisplaySummary,
+  buildDataPanelExportHistoryDisplay,
   buildDataPanelNetworkFormulaInputs,
   buildDataPanelNetworkComponentTail,
   buildDataPanelNetworkKpiCaveats,
@@ -611,6 +612,41 @@ describe("buildDataPanelReproducibilityDisplay", () => {
       secondaryLabel: "LIVE_STATUS_MANIFEST_ONLY / 4 artifacts"
     });
     expect(buildDataPanelReproducibilityDisplay(undefined)).toBeNull();
+  });
+});
+
+describe("buildDataPanelExportHistoryDisplay", () => {
+  it("summarizes the latest backend export history record", () => {
+    expect(
+      buildDataPanelExportHistoryDisplay({
+        version: "v1",
+        source: "BACKEND_RUNTIME_STATUS",
+        history_scope: "CURRENT_SESSION_RECENT_EXPORTS",
+        history_limit: 8,
+        export_count: 2,
+        retained_count: 2,
+        latest_export: {
+          sequence: 2,
+          export_type: "ARCHIVE",
+          package_id: "integration-demo-7-t00000012p000-e00000040",
+          package_dir: "artifacts/runtime_exports/demo",
+          file_count: 6,
+          manifest_hash:
+            "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+          current_sim_time: 12,
+          processed_event_count: 40,
+          archive_filename: "integration-demo-7.zip",
+          archive_sha256:
+            "sha256:abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+          archive_bytes: 4096
+        },
+        items: []
+      })
+    ).toEqual({
+      primaryLabel: "ARCHIVE / integration-demo-7.zip",
+      secondaryLabel: "t=12s / events=40 / abcdefabcdef"
+    });
+    expect(buildDataPanelExportHistoryDisplay(undefined)).toBeNull();
   });
 });
 

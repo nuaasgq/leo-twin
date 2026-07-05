@@ -8815,3 +8815,56 @@ change.
   - Add export UX feedback and a small `/runtime/export/history` summary so
     users can see the latest generated packages without inspecting backend
     logs or filesystem paths.
+
+## 2026-07-05 - Runtime Export History v1
+
+- Branch: `feature/T182-runtime-export-history-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add backend-owned recent runtime export history and surface it in the
+  dashboard. `DemoControlPlane` now records the current session's recent
+  package/archive exports with package id, export type, manifest hash,
+  simulation time, event count, and archive metadata when available. The
+  summary is exposed in runtime status as `runtime_export_history_v1` and via
+  `GET /runtime/export/history`. The standalone dashboard renders the latest
+  export as a compact runtime card. Event Kernel behavior, live advancement,
+  simulation models, and result package formats remain unchanged.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/app/api.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `frontend/tests/fixtures/runtimeStatus.contract.json`
+  - `frontend/tests/runtimeContractFixture.test.ts`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/integration_demo.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m json.tool frontend/tests/fixtures/runtimeStatus.contract.json`
+    - Result: passed.
+  - `python -m pytest tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer tests/integration/test_runtime_session_control.py::test_demo_adapter_reports_runtime_export_history tests/integration/test_runtime_session_control.py::test_demo_adapter_exports_deterministic_runtime_archive -q`
+    - Result: passed, 3 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- api.test.ts dataPanel.test.ts runtimeContractFixture.test.ts`
+    - Result: passed, 25 files / 270 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Existing DataPanel chunk-size warning remains.
+- Problems encountered:
+  - Adding export history to runtime status made repeated archive exports
+    unstable until `runtime_export_history_v1` was excluded from
+    `config_snapshot.json`'s stable export-status snapshot. Runtime status still
+    exposes the history; the exported package snapshot now remains stable.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - Export history is in-memory and scoped to the current backend process and
+    session. It is not yet persisted across backend restarts.
+- Recommended follow-up:
+  - Add persisted run catalog v1 under `artifacts/runtime_exports`, with a
+    deterministic index file so users can review previous runs after restart.

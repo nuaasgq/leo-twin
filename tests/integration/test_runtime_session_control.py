@@ -219,6 +219,11 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
         "metrics.csv",
         "summary.json",
     }
+    export_history = status["status"]["runtime_export_history_v1"]
+    assert export_history["version"] == "v1"
+    assert export_history["source"] == "BACKEND_RUNTIME_STATUS"
+    assert export_history["retained_count"] == 0
+    assert export_history["latest_export"] is None
 
     blocked = control_plane.handle_raw_message(
         json.dumps({"type": "RUNTIME_CONTROL", "action": "START"})
@@ -798,6 +803,45 @@ def test_demo_adapter_exports_deterministic_runtime_archive(tmp_path) -> None:
             assert info.date_time == (2026, 1, 1, 0, 0, 0)
         manifest = json.loads(archive.read("manifest.json").decode("utf-8"))
         assert manifest["manifest_hash"] == first["manifest"]["manifest_hash"]
+
+    control_plane.handle_raw_message(json.dumps({"type": "RUNTIME_CONTROL", "action": "STOP"}))
+
+
+def test_demo_adapter_reports_runtime_export_history(tmp_path) -> None:
+    control_plane = DemoControlPlane.from_result(
+        run_integration_demo(_small_demo_config()),
+        config_output_path=tmp_path / "sees_control.yaml",
+        generated_config_output_path=tmp_path / "generated_full_system_demo.json",
+    )
+    control_plane.handle_raw_message(
+        json.dumps({"type": "RUNTIME_CONTROL", "action": "INITIALIZE"})
+    )
+    control_plane.handle_raw_message(json.dumps({"type": "RUNTIME_CONTROL", "action": "START"}))
+    control_plane._require_advance_loop().tick()
+
+    package = control_plane.export_runtime_package(tmp_path / "history")
+    archive = control_plane.export_runtime_archive(tmp_path / "history")
+    history = control_plane.runtime_export_history()
+    status_history = control_plane.runtime_status()["status"]["runtime_export_history_v1"]
+
+    assert history["type"] == "RUNTIME_EXPORT_HISTORY"
+    assert history["summary"] == status_history
+    assert status_history["version"] == "v1"
+    assert status_history["history_scope"] == "CURRENT_SESSION_RECENT_EXPORTS"
+    assert status_history["export_count"] == 2
+    assert status_history["retained_count"] == 2
+    assert [item["export_type"] for item in status_history["items"]] == [
+        "PACKAGE",
+        "ARCHIVE",
+    ]
+    assert status_history["items"][0]["package_id"] == package["package_id"]
+    latest = status_history["latest_export"]
+    assert latest["export_type"] == "ARCHIVE"
+    assert latest["package_id"] == archive["package_id"]
+    assert latest["archive_filename"].endswith(".zip")
+    assert latest["archive_sha256"] == archive["archive"]["sha256"]
+    assert latest["current_sim_time"] >= 0.0
+    assert latest["processed_event_count"] >= 0
 
     control_plane.handle_raw_message(json.dumps({"type": "RUNTIME_CONTROL", "action": "STOP"}))
 

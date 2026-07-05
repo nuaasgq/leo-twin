@@ -152,6 +152,9 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                 except RuntimeError as exc:
                     self.send_error(409, str(exc))
                 return
+            if path == "/runtime/export/history":
+                self._send_json(control_plane.runtime_export_history())
+                return
             if path == "/runtime/export/archive":
                 try:
                     exported_archive = control_plane.export_runtime_archive()

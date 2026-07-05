@@ -84,6 +84,7 @@ Endpoints:
 - `GET /metrics/snapshot`
 - `GET /runtime/status`
 - `GET /runtime/export`
+- `GET /runtime/export/history`
 - `GET /runtime/export/archive`
 - `WS /stream/events`
 - `WS /stream/state`
@@ -111,6 +112,15 @@ The live export writes a deterministic result package under
 `config_snapshot.json`, `events.jsonl`, `metrics.csv`, and `summary.json`.
 The archive endpoint returns the same package as a ZIP download with stable
 entry ordering and fixed ZIP metadata.
+
+Recent export history:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8765/runtime/export/history
+```
+
+The runtime status payload also includes `runtime_export_history_v1`, which the
+dashboard uses to show the latest package or archive export.
 
 ## Frontend
 

@@ -19,6 +19,7 @@ import {
   TrafficDemandSummary,
   RuntimeKpiSampleV1,
   RuntimeKpiTimeSeriesV1,
+  RuntimeExportHistoryV1,
   RuntimeMetricsSummary,
   RuntimeNetworkQualityProvenanceV1,
   RuntimeNodeDetailCardV1,
@@ -129,6 +130,9 @@ export const DataPanel = memo(function DataPanel({
   const trafficDisplay = buildDataPanelTrafficDisplay(trafficSummary);
   const reproducibilityDisplay = buildDataPanelReproducibilityDisplay(
     runtimeStatus.reproducibility_manifest_v1
+  );
+  const exportHistoryDisplay = buildDataPanelExportHistoryDisplay(
+    runtimeStatus.runtime_export_history_v1
   );
   const runtimeProgress = buildDataPanelRuntimeProgress(summary.simTime, runtimeStatus.duration);
   const telemetry = buildDataPanelTelemetry(
@@ -317,6 +321,15 @@ export const DataPanel = memo(function DataPanel({
               <strong>{reproducibilityDisplay.primaryLabel}</strong>
               <small className="data-panel-runtime-note">
                 {reproducibilityDisplay.secondaryLabel}
+              </small>
+            </div>
+          ) : null}
+          {exportHistoryDisplay ? (
+            <div className="data-panel-runtime-wide">
+              <span>最近导出</span>
+              <strong>{exportHistoryDisplay.primaryLabel}</strong>
+              <small className="data-panel-runtime-note">
+                {exportHistoryDisplay.secondaryLabel}
               </small>
             </div>
           ) : null}
@@ -4259,6 +4272,28 @@ export function buildDataPanelReproducibilityDisplay(
   return {
     primaryLabel: `${manifest.session_id} / ${shortHash}`,
     secondaryLabel: `${manifest.artifact_policy} / ${artifactCount} artifacts`
+  };
+}
+
+export interface DataPanelExportHistoryDisplay {
+  primaryLabel: string;
+  secondaryLabel: string;
+}
+
+export function buildDataPanelExportHistoryDisplay(
+  history: RuntimeExportHistoryV1 | null | undefined
+): DataPanelExportHistoryDisplay | null {
+  const latest = history?.latest_export;
+  if (latest === null || latest === undefined) {
+    return null;
+  }
+  const exportName = latest.archive_filename || latest.package_id;
+  const exportHash = latest.archive_sha256 || latest.manifest_hash;
+  return {
+    primaryLabel: `${latest.export_type} / ${exportName}`,
+    secondaryLabel: `t=${formatPreciseMetricValue(
+      latest.current_sim_time
+    )}s / events=${formatCount(latest.processed_event_count)} / ${shortRuntimeHash(exportHash)}`
   };
 }
 

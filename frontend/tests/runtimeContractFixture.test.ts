@@ -30,6 +30,19 @@ describe("runtime status contract fixture", () => {
       "metrics.csv",
       "summary.json"
     ]);
+    expect(status.runtime_export_history_v1).toMatchObject({
+      version: "v1",
+      source: "BACKEND_RUNTIME_STATUS",
+      history_scope: "CURRENT_SESSION_RECENT_EXPORTS",
+      export_count: 1,
+      retained_count: 1
+    });
+    expect(status.runtime_export_history_v1?.latest_export).toMatchObject({
+      export_type: "ARCHIVE",
+      archive_filename: "integration-demo-20260705-t00000120p000-e00004096.zip",
+      current_sim_time: 120,
+      processed_event_count: 4096
+    });
     expect(status.stream_diagnostics_v1?.event_stream.next_cursor).toBe(42);
     expect(status.kpi_time_series_v1?.samples[0]).toMatchObject({
       sim_time: 120,

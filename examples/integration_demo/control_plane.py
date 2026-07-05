@@ -103,6 +103,9 @@ class DemoControlPlane:
         default_factory=dict
     )
     _user_request_history_limit: int = 32
+    _export_history: list[dict[str, Any]] = field(default_factory=list)
+    _export_history_limit: int = 8
+    _export_sequence: int = 0
 
     @classmethod
     def from_result(
@@ -190,6 +193,8 @@ class DemoControlPlane:
     def export_runtime_package(
         self,
         output_root: str | Path = "artifacts/runtime_exports",
+        *,
+        record_history: bool = True,
     ) -> dict[str, Any]:
         if self._runtime_context is None:
             raise RuntimeError("runtime metrics are unavailable for export")
@@ -223,7 +228,7 @@ class DemoControlPlane:
             _runtime_export_file_record(name, path)
             for name, path in sorted(written_files.items())
         )
-        return {
+        package = {
             "type": "RUNTIME_EXPORT",
             "ok": True,
             "package_id": package_id,
@@ -232,19 +237,35 @@ class DemoControlPlane:
             "files": files,
             "manifest": manifest,
         }
+        if record_history:
+            package["export_history_record"] = self._record_runtime_export(
+                "PACKAGE",
+                package,
+            )
+        return package
 
     def export_runtime_archive(
         self,
         output_root: str | Path = "artifacts/runtime_exports",
     ) -> dict[str, Any]:
-        package = self.export_runtime_package(output_root)
+        package = self.export_runtime_package(output_root, record_history=False)
         package_dir = Path(str(package["package_dir"]))
         archive_path = package_dir / f"{package['package_id']}.zip"
         _write_runtime_export_archive(package_dir, archive_path)
         archive_record = _runtime_export_file_record("archive", archive_path)
         archive_package = dict(package)
         archive_package["archive"] = archive_record
+        archive_package["export_history_record"] = self._record_runtime_export(
+            "ARCHIVE",
+            archive_package,
+        )
         return archive_package
+
+    def runtime_export_history(self) -> dict[str, Any]:
+        return {
+            "type": "RUNTIME_EXPORT_HISTORY",
+            "summary": self._runtime_export_history_json(),
+        }
 
     def visible_snapshot(self) -> dict[str, JsonValue]:
         session = self._require_session()
@@ -422,6 +443,8 @@ class DemoControlPlane:
     def _install_runtime_session(self, config: DemoConfig) -> None:
         self._stop_advance_loop()
         self._user_request_history.clear()
+        self._export_history.clear()
+        self._export_sequence = 0
         sees_config = demo_config_to_sees_config(config)
         fidelity_summary = _fidelity_summary_from_demo_config(config)
 
@@ -559,6 +582,7 @@ class DemoControlPlane:
                 metrics_summary=metrics_summary,
             )
         )
+        status["runtime_export_history_v1"] = self._runtime_export_history_json()
         return status
 
     def _ack(self, command: ControlCommand) -> dict[str, Any]:
@@ -727,6 +751,60 @@ class DemoControlPlane:
                 name="state",
                 stream=loop.snapshot_stream,
             ),
+        }
+
+    def _record_runtime_export(
+        self,
+        export_type: str,
+        package: dict[str, Any],
+    ) -> dict[str, Any]:
+        self._export_sequence += 1
+        status = self._require_session().get_status().to_dict()
+        manifest = package.get("manifest", {})
+        archive = package.get("archive")
+        record: dict[str, Any] = {
+            "sequence": self._export_sequence,
+            "export_type": export_type,
+            "package_id": str(package.get("package_id", "")),
+            "package_dir": str(package.get("package_dir", "")),
+            "file_count": _control_int(package.get("file_count")),
+            "manifest_hash": (
+                str(manifest.get("manifest_hash", ""))
+                if isinstance(manifest, dict)
+                else ""
+            ),
+            "current_sim_time": _control_optional_float(
+                status.get("current_sim_time"),
+            )
+            or 0.0,
+            "processed_event_count": _control_int(
+                status.get("processed_event_count"),
+            ),
+        }
+        if isinstance(archive, dict):
+            record.update(
+                {
+                    "archive_filename": str(archive.get("filename", "")),
+                    "archive_sha256": str(archive.get("sha256", "")),
+                    "archive_bytes": _control_int(archive.get("bytes")),
+                }
+            )
+        self._export_history.append(record)
+        del self._export_history[: max(0, len(self._export_history) - self._export_history_limit)]
+        return dict(record)
+
+    def _runtime_export_history_json(self) -> dict[str, Any]:
+        items = tuple(dict(item) for item in self._export_history)
+        latest = dict(items[-1]) if items else None
+        return {
+            "version": "v1",
+            "source": "BACKEND_RUNTIME_STATUS",
+            "history_scope": "CURRENT_SESSION_RECENT_EXPORTS",
+            "history_limit": self._export_history_limit,
+            "export_count": self._export_sequence,
+            "retained_count": len(items),
+            "latest_export": latest,
+            "items": items,
         }
 
     def _nack(self, command: str, error: str) -> dict[str, Any]:
@@ -934,6 +1012,7 @@ def _runtime_export_status_snapshot(status: dict[str, Any]) -> dict[str, Any]:
     for key in (
         "backpressure_summary",
         "profiling_summary",
+        "runtime_export_history_v1",
         "stream_diagnostics_v1",
     ):
         snapshot.pop(key, None)
@@ -941,6 +1020,7 @@ def _runtime_export_status_snapshot(status: dict[str, Any]) -> dict[str, Any]:
     snapshot["excluded_export_status_fields"] = (
         "backpressure_summary",
         "profiling_summary",
+        "runtime_export_history_v1",
         "stream_diagnostics_v1",
     )
     return snapshot

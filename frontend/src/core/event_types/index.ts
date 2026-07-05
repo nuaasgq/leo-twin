@@ -629,6 +629,36 @@ export interface RuntimeReproducibilityArtifactV1 {
   source: string;
 }
 
+export interface RuntimeExportHistoryV1 {
+  version: "v1" | string;
+  source: string;
+  history_scope: string;
+  history_limit: number;
+  export_count: number;
+  retained_count: number;
+  latest_export?: RuntimeExportHistoryRecordV1 | null;
+  items: readonly RuntimeExportHistoryRecordV1[];
+}
+
+export interface RuntimeExportHistoryRecordV1 {
+  sequence: number;
+  export_type: "PACKAGE" | "ARCHIVE" | string;
+  package_id: string;
+  package_dir: string;
+  file_count: number;
+  manifest_hash: string;
+  current_sim_time: number;
+  processed_event_count: number;
+  archive_filename?: string;
+  archive_sha256?: string;
+  archive_bytes?: number;
+}
+
+export interface RuntimeExportHistoryEnvelope {
+  type: "RUNTIME_EXPORT_HISTORY" | string;
+  summary: RuntimeExportHistoryV1;
+}
+
 export interface StateSnapshot {
   event_count?: number;
   last_sim_time?: number;
@@ -693,6 +723,7 @@ export interface RuntimeStatusPayload {
   node_detail_summary_v1?: RuntimeNodeDetailSummaryV1;
   stream_diagnostics_v1?: RuntimeStreamDiagnosticsV1;
   reproducibility_manifest_v1?: RuntimeReproducibilityManifestV1;
+  runtime_export_history_v1?: RuntimeExportHistoryV1;
   profiling_summary?: RuntimeProfilingSummary | null;
   backpressure_summary?: RuntimeBackpressureSummary | null;
 }
