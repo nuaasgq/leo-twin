@@ -33,6 +33,7 @@ import {
   buildDataPanelSatelliteResourceHistory,
   buildDataPanelServiceLatencyDisplay,
   buildDataPanelServiceLatencyRows,
+  buildSatelliteDetailDrawerSectionsV1,
   buildSatelliteResourceInspector,
   buildDataPanelSummary,
   buildDataPanelTelemetry,
@@ -4502,6 +4503,32 @@ describe("detail inspectors", () => {
     expect(buildSatelliteResourceInspector(satelliteRow)).toMatchObject({
       title: "卫星 sat-0",
       subtitle: "BUSY / Satellite compute node",
+      sections: [
+        {
+          sectionId: "service_routing",
+          title: "服务与路由",
+          fields: expect.arrayContaining([
+            { label: "服务对象", value: satelliteRow.serviceObjectLabel },
+            { label: "下一跳节点", value: satelliteRow.nextHopLabel }
+          ])
+        },
+        {
+          sectionId: "compute_resource_pool",
+          title: "算力资源池",
+          fields: expect.arrayContaining([
+            { label: "CPU FP32", value: satelliteRow.cpuFp32Label, tone: "resource" },
+            { label: "GPU", value: satelliteRow.gpuLabel, tone: "resource" }
+          ])
+        },
+        {
+          sectionId: "network_task_context",
+          title: "网络与任务",
+          fields: expect.arrayContaining([
+            { label: "任务队列", value: satelliteRow.taskLabel },
+            { label: "网络KPI", value: satelliteRow.networkLabel, tone: "normal" }
+          ])
+        }
+      ],
       fields: expect.arrayContaining([
         { label: "GPU", value: satelliteRow.gpuLabel, tone: "resource" },
         { label: "网络", value: satelliteRow.networkLabel }
@@ -4548,6 +4575,56 @@ describe("detail inspectors", () => {
     ]);
   });
 
+  it("builds satellite detail drawer v1 sections from runtime resource rows", () => {
+    expect(buildSatelliteDetailDrawerSectionsV1(satelliteRow)).toEqual([
+      {
+        sectionId: "service_routing",
+        title: "服务与路由",
+        fields: [
+          { label: "卫星节点", value: "sat-0" },
+          { label: "运行状态", value: "BUSY / Satellite compute node" },
+          { label: "服务对象", value: "user-0, user-1" },
+          { label: "下一跳节点", value: "compute-0" }
+        ]
+      },
+      {
+        sectionId: "compute_resource_pool",
+        title: "算力资源池",
+        fields: [
+          { label: "负载", value: "75%", tone: "resource" },
+          { label: "CPU FP32", value: "75 / 100 GFLOPS", tone: "resource" },
+          { label: "CPU FP64", value: "2 / 8 GFLOPS", tone: "resource" },
+          {
+            label: "GPU",
+            value: "GPU32 1 / 2 TFLOPS · GPU16 2 / 4 TFLOPS",
+            tone: "resource"
+          },
+          { label: "NPU", value: "6 / 12 TOPS", tone: "resource" },
+          { label: "内存/存储", value: "10 / 32 GB · 64 / 512 GB", tone: "resource" }
+        ]
+      },
+      {
+        sectionId: "network_task_context",
+        title: "网络与任务",
+        fields: [
+          { label: "任务队列", value: "运行 2 / 完成 7" },
+          { label: "网络KPI", value: "route 2 / available 1", tone: "normal" }
+        ]
+      }
+    ]);
+
+    expect(
+      buildSatelliteDetailDrawerSectionsV1({
+        ...satelliteRow,
+        networkLabel: "links 3 / queued 1 / loss 2%"
+      })[2].fields[1]
+    ).toEqual({
+      label: "网络KPI",
+      value: "links 3 / queued 1 / loss 2%",
+      tone: "warning"
+    });
+  });
+
   it("builds full drawer items without truncating detail field values", () => {
     const userInspector = buildUserBusinessRequestInspector(userRow);
     const satelliteInspector = buildSatelliteResourceInspector(satelliteRow);
@@ -4570,6 +4647,7 @@ describe("detail inspectors", () => {
       emptyLabel: "当前窗口暂无选中卫星节点"
     });
     expect(drawerItems[1].fields).toEqual(satelliteInspector.fields);
+    expect(drawerItems[1].sections).toEqual(satelliteInspector.sections);
     expect(
       buildDataPanelNodeDetailDrawerItems(
         {

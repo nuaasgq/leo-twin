@@ -210,6 +210,11 @@ Tasks:
   - Scope: served users, next hops, compute resource vector, task queue,
     network KPIs, coverage summary.
   - Depends on: V2-023, V2-032.
+  - Status: T227 adds a deterministic satellite detail drawer v1 fallback view
+    model from satellite resource rows. It groups selected-satellite details
+    into service/routing, compute resource pool, and network/task sections
+    while still preferring backend `node_detail_summary_v1` cards when
+    available.
 - V2-053: Add virtualized large tables.
   - Scope: avoid rendering hundreds/thousands of rows directly.
   - Depends on: V2-043.

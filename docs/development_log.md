@@ -5,6 +5,44 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Dashboard Satellite Detail Drawer v1
+
+- Branch: `feature/T227-dashboard-satellite-detail-drawer-v1`
+- Commit: pending in this commit
+- Scope: advance V2-052 by adding a deterministic fallback view model for the
+  selected-satellite detail drawer. The dashboard still prefers backend
+  `node_detail_summary_v1` cards, but when they are unavailable it now groups
+  satellite resource rows into service/routing, compute resource pool, and
+  network/task sections.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/dashboard_satellite_detail_drawer_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 25 test files / 316 tests.
+  - `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite reported the existing large `DataPanel` chunk
+      warning after minification.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - Existing satellite resource rows already combine backend service summaries,
+    KPI slices, and snapshot fallbacks. This task reuses those rows instead of
+    introducing new network or compute semantics.
+  - Existing local runtime/generated config files remain dirty and are
+    intentionally not included in this task.
+- Known remaining issues / follow-up:
+  - V2-053 should add virtualization or backend paging for large detail tables.
+  - Backend `node_detail_summary_v1` should eventually expose selected
+    satellite coverage, beam, and resource timeline sections directly.
+  - DataPanel remains a large chunk; future frontend architecture work should
+    split large dashboard panels without changing runtime semantics.
+
 ## 2026-07-06 - Dashboard User Detail Drawer v1
 
 - Branch: `feature/T226-dashboard-user-detail-drawer-v1`

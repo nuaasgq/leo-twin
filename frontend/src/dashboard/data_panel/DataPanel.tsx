@@ -3807,6 +3807,7 @@ export function buildSatelliteResourceInspector(
   return {
     title: `卫星 ${row.satelliteId}`,
     subtitle: row.statusLabel,
+    sections: buildSatelliteDetailDrawerSectionsV1(row),
     fields: [
       { label: "负载", value: row.loadLabel, tone: "resource" },
       { label: "服务对象", value: row.serviceObjectLabel },
@@ -3820,6 +3821,62 @@ export function buildSatelliteResourceInspector(
       { label: "网络", value: row.networkLabel }
     ]
   };
+}
+
+export function buildSatelliteDetailDrawerSectionsV1(
+  row: SatelliteResourceRow
+): readonly DataPanelNodeDetailSection[] {
+  return [
+    {
+      sectionId: "service_routing",
+      title: "服务与路由",
+      fields: [
+        { label: "卫星节点", value: row.satelliteId },
+        { label: "运行状态", value: row.statusLabel },
+        { label: "服务对象", value: row.serviceObjectLabel },
+        { label: "下一跳节点", value: row.nextHopLabel }
+      ]
+    },
+    {
+      sectionId: "compute_resource_pool",
+      title: "算力资源池",
+      fields: [
+        { label: "负载", value: row.loadLabel, tone: "resource" },
+        { label: "CPU FP32", value: row.cpuFp32Label, tone: "resource" },
+        { label: "CPU FP64", value: row.cpuFp64Label, tone: "resource" },
+        { label: "GPU", value: row.gpuLabel, tone: "resource" },
+        { label: "NPU", value: row.npuLabel, tone: "resource" },
+        { label: "内存/存储", value: row.memoryStorageLabel, tone: "resource" }
+      ]
+    },
+    {
+      sectionId: "network_task_context",
+      title: "网络与任务",
+      fields: [
+        { label: "任务队列", value: row.taskLabel },
+        {
+          label: "网络KPI",
+          value: row.networkLabel,
+          tone: satelliteNetworkContextTone(row.networkLabel)
+        }
+      ]
+    }
+  ];
+}
+
+function satelliteNetworkContextTone(
+  networkLabel: string
+): DataPanelDetailInspectorField["tone"] {
+  const normalized = networkLabel.trim().toLowerCase();
+  if (
+    normalized.includes("queued") ||
+    normalized.includes("blocked") ||
+    normalized.includes("loss") ||
+    normalized.includes("不可达")
+  ) {
+    return "warning";
+  }
+  return "normal";
 }
 
 export function buildDataPanelNodeDetailDrawerItems(
