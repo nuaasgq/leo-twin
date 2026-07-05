@@ -785,6 +785,12 @@ def test_metrics_collector_publishes_backend_kpi_time_series() -> None:
         "network_pressure_delay_variation_s": 0.0,
         "network_effective_available_throughput_mbps": 100.0,
         "network_flow_delivered_capacity_mbps": 0.0,
+        "network_time_adjusted_delivered_throughput_mbps": 0.0,
+        "network_time_pressure_period_s": 120.0,
+        "network_time_pressure_phase": pytest.approx(1 / 60),
+        "network_time_pressure_factor": 0.0,
+        "network_time_pressure_loss_proxy_rate": 0.0,
+        "network_time_pressure_delay_variation_s": 0.0,
         "network_recent_window_s": 60.0,
         "network_recent_flow_count": 0.0,
         "network_recent_delivered_throughput_mbps": 0.0,
@@ -897,6 +903,70 @@ def test_metrics_collector_kpi_time_series_accepts_runtime_sim_time_tail() -> No
     assert series["samples"][-1]["network_effective_loss_proxy_rate"] == 0.12
 
 
+def test_metrics_collector_uses_runtime_sim_time_for_time_varying_pressure() -> None:
+    collector = MetricsCollector(metric_sample_interval=100)
+    for route_id, flow_id, sim_time, latency in (
+        ("route-a", "flow-a", 1.0, 0.04),
+        ("route-b", "flow-b", 1.0, 0.04),
+    ):
+        collector.observe(
+            _event(
+                route_id,
+                sim_time,
+                EventType.ROUTE_UPDATE,
+                Route(
+                    route_id=route_id,
+                    flow_id=flow_id,
+                    path=("user-a", "sat-a", "user-b"),
+                    latency=latency,
+                    capacity=100.0,
+                    available=True,
+                ),
+                "network",
+            )
+        )
+    for flow_id, route_id, sim_time, latency in (
+        ("flow-a", "route-a", 2.0, 0.04),
+        ("flow-b", "route-b", 2.0, 0.04),
+    ):
+        collector.observe(
+            _event(
+                flow_id,
+                sim_time,
+                EventType.FLOW_COMPLETE,
+                FlowState(
+                    flow_id=flow_id,
+                    route_id=route_id,
+                    source_id="user-a",
+                    target_id="user-b",
+                    status="complete",
+                    latency=latency,
+                    capacity=90.0,
+                ),
+                "network",
+            )
+        )
+
+    early_tail = collector.kpi_time_series(sim_time=2.0)["samples"][-1]
+    peak_tail = collector.kpi_time_series(sim_time=60.0)["samples"][-1]
+
+    assert early_tail["network_time_pressure_factor"] < peak_tail[
+        "network_time_pressure_factor"
+    ]
+    assert early_tail["network_time_pressure_loss_proxy_rate"] == 0.0
+    assert peak_tail["network_time_pressure_loss_proxy_rate"] > 0.0
+    assert peak_tail["network_effective_loss_proxy_rate"] > early_tail[
+        "network_effective_loss_proxy_rate"
+    ]
+    assert peak_tail["network_effective_delay_variation_s"] > early_tail[
+        "network_effective_delay_variation_s"
+    ]
+    assert peak_tail["network_effective_throughput_mbps"] < early_tail[
+        "network_effective_throughput_mbps"
+    ]
+    assert peak_tail["network_time_pressure_phase"] == pytest.approx(0.5)
+
+
 def test_metrics_collector_kpi_time_series_prepends_initial_baseline_for_single_sample() -> None:
     collector = MetricsCollector()
     collector.observe(
@@ -924,6 +994,8 @@ def test_metrics_collector_kpi_time_series_prepends_initial_baseline_for_single_
     assert series["samples"][0]["network_effective_throughput_mbps"] == 0.0
     assert series["samples"][0]["network_effective_loss_proxy_rate"] == 0.0
     assert series["samples"][0]["network_recent_window_s"] == 60.0
+    assert series["samples"][0]["network_time_pressure_period_s"] == 120.0
+    assert series["samples"][0]["network_time_pressure_factor"] == 0.0
     assert series["samples"][1]["sim_time"] == 2.0
     assert series["samples"][1]["network_effective_throughput_mbps"] == pytest.approx(
         88.0

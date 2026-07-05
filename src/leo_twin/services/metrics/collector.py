@@ -38,6 +38,7 @@ ReplayEvent = dict[str, ReplayPayload]
 
 _CSV_FIELDS = ("sim_time", "metric_name", "entity_id", "value", "tags")
 _RECENT_FLOW_KPI_WINDOW_S = 60.0
+_NETWORK_TIME_PRESSURE_PERIOD_S = 120.0
 
 
 class _MetricEventScheduler(Protocol):
@@ -261,7 +262,13 @@ class MetricsCollector:
             "task_duration_min": min(self._task_durations.values(), default=0.0),
             "unique_satellites": len(self._satellite_status),
         }
-        summary.update(self._network_quality_summary(active_links, available_routes))
+        summary.update(
+            self._network_quality_summary(
+                active_links,
+                available_routes,
+                sim_time=self._last_sim_time,
+            )
+        )
         summary.update(self._network_constraint_summary(active_links, available_routes))
         summary.update(self._compute_resource_summary())
         summary.update(self._service_latency_summary())
@@ -545,6 +552,7 @@ class MetricsCollector:
             summary = self._network_quality_summary(
                 self._active_link_states(),
                 self._available_routes(),
+                sim_time=sim_time,
             )
             fields = (
                 (
@@ -619,6 +627,7 @@ class MetricsCollector:
         network_summary = self._network_quality_summary(
             self._active_link_states(),
             self._available_routes(),
+            sim_time=sim_time,
         )
         recent_flow_quality = self._recent_flow_quality(sim_time)
         recent_flow_count = int(
@@ -712,6 +721,28 @@ class MetricsCollector:
             ),
             "network_flow_delivered_capacity_mbps": float(
                 network_summary["network_quality_flow_delivered_capacity_mbps"]
+            ),
+            "network_time_adjusted_delivered_throughput_mbps": float(
+                network_summary[
+                    "network_quality_time_adjusted_delivered_throughput_mbps"
+                ]
+            ),
+            "network_time_pressure_period_s": float(
+                network_summary["network_quality_time_pressure_period_s"]
+            ),
+            "network_time_pressure_phase": float(
+                network_summary["network_quality_time_pressure_phase"]
+            ),
+            "network_time_pressure_factor": float(
+                network_summary["network_quality_time_pressure_factor"]
+            ),
+            "network_time_pressure_loss_proxy_rate": float(
+                network_summary["network_quality_time_pressure_loss_proxy_rate"]
+            ),
+            "network_time_pressure_delay_variation_s": float(
+                network_summary[
+                    "network_quality_time_pressure_delay_variation_proxy_s"
+                ]
             ),
             "network_recent_window_s": float(_RECENT_FLOW_KPI_WINDOW_S),
             "network_recent_flow_count": float(recent_flow_count),
@@ -1255,7 +1286,10 @@ class MetricsCollector:
         self,
         active_links: tuple[LinkState, ...],
         available_routes: tuple[Route, ...],
+        *,
+        sim_time: float | None = None,
     ) -> MetricSummary:
+        summary_time = self._last_sim_time if sim_time is None else max(0.0, float(sim_time))
         route_latencies = tuple(route.latency for route in available_routes)
         route_latency_avg = _average(route_latencies)
         delay_variation_proxy = max(
@@ -1312,6 +1346,16 @@ class MetricsCollector:
             if offered_route_capacity > 0.0
             else 0.0
         )
+        flow_pressure_proxy = (
+            throughput_pressure_proxy if flow_quality["successful_count"] > 1 else 0.0
+        )
+        time_pressure_factor = _network_time_pressure_factor(
+            summary_time,
+            max(demand_pressure_proxy, flow_pressure_proxy, congestion_proxy),
+        )
+        time_pressure_loss_proxy_rate = _network_time_pressure_loss_proxy_rate(
+            time_pressure_factor
+        )
         pressure_loss_proxy_rate = (
             _congestion_loss_proxy_rate(throughput_pressure_proxy)
             if flow_quality["successful_count"] > 1
@@ -1320,16 +1364,26 @@ class MetricsCollector:
         pressure_loss_proxy_rate = max(
             pressure_loss_proxy_rate,
             demand_loss_proxy_rate,
+            time_pressure_loss_proxy_rate,
         )
         effective_loss_proxy_rate = _clamp_probability(
             max(loss_proxy_rate, pressure_loss_proxy_rate)
         )
         flow_latency_avg = _average(flow_quality["latencies"])
         effective_latency_avg = flow_latency_avg or route_latency_avg
+        time_pressure_delay_variation_proxy = (
+            effective_latency_avg * max(0.0, time_pressure_factor - 0.4) * 0.2
+            if effective_latency_avg > 0.0
+            else 0.0
+        )
         pressure_delay_variation_proxy = (
             effective_latency_avg * max(0.0, throughput_pressure_proxy - 0.75) * 0.1
             if flow_quality["successful_count"] > 1
             else 0.0
+        )
+        pressure_delay_variation_proxy = max(
+            pressure_delay_variation_proxy,
+            time_pressure_delay_variation_proxy,
         )
         flow_latency_variation_proxy = _standard_deviation(flow_quality["latencies"])
         effective_delay_variation_proxy = max(
@@ -1340,8 +1394,11 @@ class MetricsCollector:
         effective_available_throughput = offered_route_capacity * (
             1.0 - effective_loss_proxy_rate
         )
+        time_adjusted_completed_throughput = completed_route_capacity * (
+            1.0 - time_pressure_loss_proxy_rate
+        )
         effective_throughput = (
-            completed_route_capacity
+            time_adjusted_completed_throughput
             if completed_route_capacity > 0.0
             else effective_available_throughput
         )
@@ -1362,6 +1419,7 @@ class MetricsCollector:
                 ("ROUTE_LOSS_RATE", route_loss_proxy_rate),
                 ("CONGESTION_LOSS_PROXY", congestion_loss_proxy_rate),
                 ("PRESSURE_LOSS_PROXY", pressure_loss_proxy_rate),
+                ("TIME_PRESSURE_LOSS_PROXY", time_pressure_loss_proxy_rate),
             )
         )
         delay_variation_source = _dominant_proxy_source(
@@ -1369,6 +1427,7 @@ class MetricsCollector:
                 ("ROUTE_LATENCY_VARIATION", delay_variation_proxy),
                 ("FLOW_LATENCY_VARIATION", flow_latency_variation_proxy),
                 ("PRESSURE_DELAY_VARIATION", pressure_delay_variation_proxy),
+                ("TIME_PRESSURE_DELAY_VARIATION", time_pressure_delay_variation_proxy),
             )
         )
         loss_zero_reason = _network_quality_loss_zero_reason(
@@ -1425,13 +1484,29 @@ class MetricsCollector:
             "network_quality_flow_delivered_capacity_mbps": float(
                 completed_route_capacity
             ),
+            "network_quality_time_adjusted_delivered_throughput_mbps": float(
+                time_adjusted_completed_throughput
+            ),
             "network_quality_throughput_pressure_proxy": float(
                 throughput_pressure_proxy
             ),
             "network_quality_demand_pressure_proxy": float(demand_pressure_proxy),
+            "network_quality_time_pressure_period_s": float(
+                _NETWORK_TIME_PRESSURE_PERIOD_S
+            ),
+            "network_quality_time_pressure_phase": float(
+                _network_time_pressure_phase(summary_time)
+            ),
+            "network_quality_time_pressure_factor": float(time_pressure_factor),
+            "network_quality_time_pressure_loss_proxy_rate": float(
+                time_pressure_loss_proxy_rate
+            ),
             "network_quality_demand_loss_proxy_rate": float(demand_loss_proxy_rate),
             "network_quality_pressure_loss_proxy_rate": float(
                 pressure_loss_proxy_rate
+            ),
+            "network_quality_time_pressure_delay_variation_proxy_s": float(
+                time_pressure_delay_variation_proxy
             ),
             "network_quality_pressure_delay_variation_proxy_s": float(
                 pressure_delay_variation_proxy
@@ -1893,6 +1968,12 @@ def _baseline_kpi_sample(sim_time: float) -> KpiSample:
         "network_pressure_delay_variation_s": 0.0,
         "network_effective_available_throughput_mbps": 0.0,
         "network_flow_delivered_capacity_mbps": 0.0,
+        "network_time_adjusted_delivered_throughput_mbps": 0.0,
+        "network_time_pressure_period_s": float(_NETWORK_TIME_PRESSURE_PERIOD_S),
+        "network_time_pressure_phase": 0.0,
+        "network_time_pressure_factor": 0.0,
+        "network_time_pressure_loss_proxy_rate": 0.0,
+        "network_time_pressure_delay_variation_s": 0.0,
         "network_recent_window_s": float(_RECENT_FLOW_KPI_WINDOW_S),
         "network_recent_flow_count": 0.0,
         "network_recent_delivered_throughput_mbps": 0.0,
@@ -2272,6 +2353,28 @@ def _congestion_loss_proxy_rate(utilization: float) -> float:
     return _clamp_probability((utilization - 0.8) * 0.5)
 
 
+def _network_time_pressure_phase(sim_time: float) -> float:
+    if _NETWORK_TIME_PRESSURE_PERIOD_S <= 0.0:
+        return 0.0
+    return (max(0.0, float(sim_time)) % _NETWORK_TIME_PRESSURE_PERIOD_S) / (
+        _NETWORK_TIME_PRESSURE_PERIOD_S
+    )
+
+
+def _network_time_pressure_factor(sim_time: float, load_pressure: float) -> float:
+    pressure = _clamp_probability(load_pressure)
+    if pressure <= 0.0:
+        return 0.0
+    phase = _network_time_pressure_phase(sim_time)
+    triangular_wave = 1.0 - abs((2.0 * phase) - 1.0)
+    envelope = 0.45 + (0.55 * triangular_wave)
+    return _clamp_probability(pressure * envelope)
+
+
+def _network_time_pressure_loss_proxy_rate(time_pressure_factor: float) -> float:
+    return _clamp_probability(max(0.0, time_pressure_factor - 0.55) * 0.2)
+
+
 def _dominant_proxy_source(sources: tuple[tuple[str, float], ...]) -> str:
     selected_name = ""
     selected_value = -1.0
@@ -2294,9 +2397,11 @@ def _network_quality_source_label(source: str) -> str:
         "ROUTE_LOSS_RATE": "路由损耗率",
         "CONGESTION_LOSS_PROXY": "链路拥塞损耗代理",
         "PRESSURE_LOSS_PROXY": "业务压力损耗代理",
+        "TIME_PRESSURE_LOSS_PROXY": "时间窗口压力损耗代理",
         "ROUTE_LATENCY_VARIATION": "路由时延离散度",
         "FLOW_LATENCY_VARIATION": "流完成时延离散度",
         "PRESSURE_DELAY_VARIATION": "业务压力时延扰动",
+        "TIME_PRESSURE_DELAY_VARIATION": "时间窗口压力时延扰动",
     }
     return labels.get(source, source)
 

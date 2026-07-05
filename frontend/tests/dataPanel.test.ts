@@ -2501,6 +2501,31 @@ describe("buildDataPanelNetworkComponentTail", () => {
   it("hides component tail fields until backend time-series samples exist", () => {
     expect(buildDataPanelNetworkComponentTail(undefined)).toEqual([]);
   });
+
+  it("shows backend time-pressure components when runtime samples provide them", () => {
+    expect(
+      buildDataPanelNetworkComponentTail({
+        version: "v1",
+        samples: [
+          {
+            sim_time: 60,
+            network_effective_throughput_mbps: 170,
+            network_effective_latency_s: 0.12,
+            network_effective_loss_proxy_rate: 0.07,
+            network_effective_delay_variation_s: 0.014,
+            network_time_pressure_factor: 0.9,
+            network_time_pressure_loss_proxy_rate: 0.07,
+            network_time_pressure_delay_variation_s: 0.004,
+            compute_resource_used_gflops_fp32: 12
+          }
+        ]
+      })
+    ).toEqual([
+      { label: "样本时间压力", value: "90%" },
+      { label: "样本时间损耗", value: "7%" },
+      { label: "样本时间抖动", value: "4 ms" }
+    ]);
+  });
 });
 
 describe("buildDataPanelServiceLatencyDisplay", () => {

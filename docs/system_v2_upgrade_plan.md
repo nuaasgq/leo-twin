@@ -116,6 +116,8 @@ Tasks:
     proxy, loss proxy, delay variation proxy.
   - Output: tests proving KPI movement under stress and stability under low load.
   - Depends on: V2-021.
+  - Status: deterministic simulation-time pressure factor and tail-sample
+    decomposition implemented in T208.
 - V2-023: Add route explanation records.
   - Scope: selected route, alternative count, bottleneck reason, next hop,
     blocked reason.

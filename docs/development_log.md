@@ -5,6 +5,67 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Network Pressure Dynamics v1
+
+- Branch: `feature/T208-network-pressure-dynamics-v1`
+- Commit: pending in this commit
+- Scope: add deterministic simulation-time pressure dynamics to flow-level
+  network KPI proxies. `MetricsCollector.kpi_time_series(sim_time=...)` now
+  uses the provided runtime simulation time for the current tail sample and
+  exposes time-window pressure factor, phase, pressure loss proxy,
+  pressure delay-variation proxy, and time-adjusted delivered throughput. The
+  Network Model Contract v2 source fields and dashboard tail decomposition were
+  updated so frontend explanations are backend-owned. This remains a
+  flow-level proxy model and does not introduce packet-level simulation or Event
+  Kernel changes.
+- Changed files/modules:
+  - `src/leo_twin/services/metrics/collector.py`
+  - `src/leo_twin/schema/network_model_contract.py`
+  - `tests/unit/test_metrics_module.py`
+  - `tests/unit/test_network_model_contract_v2.py`
+  - `tests/unit/test_network_kpi_provenance_v2.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/network_kpi_provenance_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `$env:PYTHONPATH='.'; python -m pytest tests/unit/test_metrics_module.py tests/unit/test_network_model_contract_v2.py tests/unit/test_network_kpi_provenance_v2.py -q`
+    - Result: passed, 28 tests.
+  - `$env:PYTHONPATH='.'; python -m pytest tests/integration/test_runtime_session_control.py::test_runtime_kpi_series_changes_with_configured_flow_demand tests/integration/test_runtime_session_control.py::test_runtime_kpi_series_exposes_initial_baseline_for_single_live_sample tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer tests/integration/test_config_control.py::test_network_stress_template_exposes_nonzero_time_varying_network_kpis -q`
+    - Result: passed, 4 tests.
+  - `python -m py_compile src/leo_twin/services/metrics/collector.py src/leo_twin/schema/network_model_contract.py`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 25 files / 307 tests. The project script currently runs
+      the full frontend Vitest suite for this invocation.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing `DataPanel` chunk-size
+      warning after minification.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - The first time-pressure formula allowed a single completed flow to create
+    positive delay variation in an existing low-scope unit fixture. The formula
+    now requires demand pressure, link congestion, or more than one successful
+    flow before completed-flow throughput pressure contributes to time pressure.
+  - The initial dynamic test used unequal flow latencies, so normal
+    flow-latency variation masked the time-pressure variation. The test now uses
+    equal flow latencies to isolate the time-window pressure term.
+  - Local runtime/generated config files remain dirty and are intentionally not
+    included in this task.
+- Known remaining issues / follow-up:
+  - The dynamic pressure is still a deterministic product proxy, not a validated
+    RF or packet network model.
+  - V2-023 should add route explanation records so users can see which route,
+    bottleneck, and next-hop choices produced each KPI trend.
+
 ## 2026-07-06 - Dashboard Network KPI Credibility v1
 
 - Branch: `feature/T207-dashboard-network-kpi-credibility-v1`

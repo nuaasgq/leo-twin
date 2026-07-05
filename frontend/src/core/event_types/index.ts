@@ -1167,6 +1167,12 @@ export interface RuntimeKpiSampleV1 {
   network_pressure_delay_variation_s?: number;
   network_effective_available_throughput_mbps?: number;
   network_flow_delivered_capacity_mbps?: number;
+  network_time_adjusted_delivered_throughput_mbps?: number;
+  network_time_pressure_period_s?: number;
+  network_time_pressure_phase?: number;
+  network_time_pressure_factor?: number;
+  network_time_pressure_loss_proxy_rate?: number;
+  network_time_pressure_delay_variation_s?: number;
   network_recent_window_s?: number;
   network_recent_flow_count?: number;
   network_recent_delivered_throughput_mbps?: number;

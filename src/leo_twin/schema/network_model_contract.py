@@ -373,10 +373,12 @@ def _default_kpi_contracts() -> tuple[NetworkKpiSemanticContract, ...]:
                 "network_quality_delay_variation_proxy_s",
                 "network_quality_flow_latency_variation_proxy_s",
                 "network_quality_pressure_delay_variation_proxy_s",
+                "network_quality_time_pressure_delay_variation_proxy_s",
             ),
             formula_summary=(
                 "Maximum of route latency spread, recent flow latency variation, "
-                "and pressure-driven delay variation proxy."
+                "pressure-driven delay variation proxy, and deterministic time-window "
+                "pressure variation."
             ),
             interpretation=(
                 "Represents flow-level delay variation for dashboard trend analysis, "
@@ -417,10 +419,12 @@ def _default_kpi_contracts() -> tuple[NetworkKpiSemanticContract, ...]:
                 "network_quality_failed_flow_ratio",
                 "network_quality_congestion_loss_proxy_rate",
                 "network_quality_demand_loss_proxy_rate",
+                "network_quality_time_pressure_loss_proxy_rate",
             ),
             formula_summary=(
                 "Maximum of configured transport loss proxy, route blocking, failed "
-                "flow ratio, congestion pressure loss, and demand pressure loss."
+                "flow ratio, congestion pressure loss, demand pressure loss, and "
+                "deterministic time-window pressure loss."
             ),
             interpretation=(
                 "Flow-level loss/quality degradation proxy. It must not be read as "
@@ -439,12 +443,13 @@ def _default_kpi_contracts() -> tuple[NetworkKpiSemanticContract, ...]:
             unit="Mbps",
             source_fields=(
                 "network_quality_estimated_delivered_throughput_mbps",
+                "network_quality_time_adjusted_delivered_throughput_mbps",
                 "network_quality_estimated_available_throughput_mbps",
                 "network_quality_available_route_demand_mbps",
             ),
             formula_summary=(
-                "Prefer delivered completed-flow throughput; fall back to loss-adjusted "
-                "available route demand/capacity."
+                "Prefer completed-flow throughput adjusted by deterministic time-window "
+                "pressure; fall back to loss-adjusted available route demand/capacity."
             ),
             interpretation=(
                 "Flow-level carried or currently supportable throughput estimate for "

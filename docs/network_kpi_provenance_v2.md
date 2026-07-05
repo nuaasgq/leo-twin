@@ -9,8 +9,10 @@ Network KPI Provenance v2 binds runtime network KPI values to the Network Model
 Contract v2. It makes the source of throughput, latency, loss proxy, and
 delay-variation proxy explicit for users and frontend displays.
 
-This task does not change KPI formulas. It adds a structured runtime contract
-for explaining existing values.
+The original provenance task added a structured runtime contract for explaining
+existing values. T208 extends the flow-level proxy formulas with deterministic
+time-window pressure fields while preserving the same provenance contract and
+the packet-level exclusion.
 
 ## Runtime Status Field
 
@@ -64,10 +66,29 @@ Each item in `kpis` includes:
 
 All v2 KPI items are flow-level proxies:
 
-- throughput is a delivered-flow or available-route throughput estimate;
+- throughput is a completed-flow or available-route throughput estimate,
+  optionally adjusted by deterministic time-window pressure;
 - latency is completed-flow or available-route flow latency;
 - loss is a flow-level quality degradation proxy, not packet loss;
 - delay variation is a flow-level delay variation proxy, not packet jitter.
+
+## Time-Varying Pressure v1
+
+Runtime KPI samples now include deterministic time-window pressure fields:
+
+- `network_quality_time_pressure_period_s`
+- `network_quality_time_pressure_phase`
+- `network_quality_time_pressure_factor`
+- `network_quality_time_pressure_loss_proxy_rate`
+- `network_quality_time_pressure_delay_variation_proxy_s`
+- `network_quality_time_adjusted_delivered_throughput_mbps`
+
+The time pressure factor uses simulation time, not wall-clock time, and is
+derived from existing flow-level demand, completed-flow throughput pressure, and
+link congestion pressure. It does not introduce random behavior or packet-level
+simulation. The pressure fields are included in Network Model Contract v2 source
+fields for effective throughput, effective loss proxy, and effective
+delay-variation proxy.
 
 Frontend surfaces should use v2 provenance for product explanations once the
 dashboard migrates away from the v1 helper fields.
@@ -103,7 +124,7 @@ metric names, and backend caveats.
 
 ## Follow-Up
 
-V2-022 should improve time-varying network pressure inputs while preserving this
+V2-022 added deterministic time-window pressure inputs while preserving this
 contract. A later dashboard pass can render the full
 `network_kpi_provenance_v2.kpis` table instead of only the compact
 `network_kpi_credibility_v1` trust summary.

@@ -6225,6 +6225,17 @@ export function buildDataPanelNetworkComponentTail(
       sample.network_pressure_delay_variation_s,
       "样本压力抖动",
       formatMetricMilliseconds
+    ),
+    sampleMetricInput(sample.network_time_pressure_factor, "样本时间压力", formatRatioPercent),
+    sampleMetricInput(
+      sample.network_time_pressure_loss_proxy_rate,
+      "样本时间损耗",
+      formatRatioPercent
+    ),
+    sampleMetricInput(
+      sample.network_time_pressure_delay_variation_s,
+      "样本时间抖动",
+      formatMetricMilliseconds
     )
   ].filter((input): input is DataPanelNetworkFormulaInput => input !== null);
 }
