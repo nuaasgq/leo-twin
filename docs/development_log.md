@@ -5,6 +5,58 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Compute Resource Bottleneck v1
+
+- Branch: `feature/T213-compute-resource-bottleneck-v1`
+- Commit: pending in this commit
+- Scope: add a backend-owned compute resource bottleneck summary to runtime
+  metrics and display it in the standalone data dashboard. The summary selects
+  the most constrained resource vector dimension deterministically across CPU
+  FP32/FP64, GPU FP32/FP16, NPU INT8, memory, and storage, and exposes resource,
+  label, utilization, used/total/available, and pressure status fields. The
+  dashboard consumes those fields directly instead of deriving product semantics
+  locally.
+- Changed files/modules:
+  - `src/leo_twin/services/metrics/collector.py`
+  - `tests/unit/test_metrics_module.py`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src/leo_twin/services/metrics/collector.py`
+    - Result: passed.
+  - `python -m pytest tests/unit/test_metrics_module.py::test_metrics_collector_reports_compute_resource_pool_proxy tests/unit/test_metrics_module.py::test_metrics_collector_reports_estimated_vector_resource_usage -q`
+    - Result: passed, 2 tests.
+  - `python -m pytest tests/unit/test_metrics_module.py -q`
+    - Result: passed, 22 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 25 files / 312 tests. The project script currently runs
+      the full frontend Vitest suite for this invocation.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing `DataPanel` chunk-size
+      warning after minification.
+- Problems encountered and handling:
+  - Frontend tests initially failed because `metricString()` already existed in
+    `DataPanel.tsx`; the duplicate helper was removed and the existing trimmed
+    helper is reused.
+  - A metrics regression test caught that legacy scalar nodes expose default
+    zero-valued CPU vector usage fields. Bottleneck CPU FP32 usage now uses
+    explicit vector usage only for `RESOURCE_VECTOR_ESTIMATED` nodes and falls
+    back to `capacity - available_capacity` for scalar compatibility nodes.
+  - Local runtime/generated config files remain dirty and are intentionally not
+    included in this task.
+- Known remaining issues / follow-up:
+  - This task reports resource bottlenecks from current aggregate usage only. It
+    does not add service placement, task queueing, offload, cache, or migration
+    behavior; those remain planned V2-031/V2-032 follow-up tasks.
+
 ## 2026-07-06 - Dashboard Route Explanation Facets v1
 
 - Branch: `feature/T212-dashboard-route-explanation-facets-v1`

@@ -1746,6 +1746,76 @@ class MetricsCollector:
             node.resource_usage_mode == "RESOURCE_VECTOR_ESTIMATED"
             for node in nodes
         )
+        available_cpu_fp32 = _compute_resource_total(
+            nodes,
+            "available_cpu_gflops_fp32",
+        )
+        used_cpu_fp32 = _compute_resource_total(
+            nodes,
+            "used_cpu_gflops_fp32",
+        )
+        total_fp64 = _compute_resource_total(nodes, "cpu_gflops_fp64")
+        available_fp64 = _compute_resource_total(
+            nodes,
+            "available_cpu_gflops_fp64",
+        )
+        used_fp64 = _compute_resource_total(nodes, "used_cpu_gflops_fp64")
+        total_gpu_fp32 = _compute_resource_total(nodes, "gpu_tflops_fp32")
+        available_gpu_fp32 = _compute_resource_total(
+            nodes,
+            "available_gpu_tflops_fp32",
+        )
+        used_gpu_fp32 = _compute_resource_total(
+            nodes,
+            "used_gpu_tflops_fp32",
+        )
+        total_gpu_fp16 = _compute_resource_total(nodes, "gpu_tflops_fp16")
+        available_gpu_fp16 = _compute_resource_total(
+            nodes,
+            "available_gpu_tflops_fp16",
+        )
+        used_gpu_fp16 = _compute_resource_total(
+            nodes,
+            "used_gpu_tflops_fp16",
+        )
+        total_npu_int8 = _compute_resource_total(nodes, "npu_tops_int8")
+        available_npu_int8 = _compute_resource_total(
+            nodes,
+            "available_npu_tops_int8",
+        )
+        used_npu_int8 = _compute_resource_total(nodes, "used_npu_tops_int8")
+        total_memory = _compute_resource_total(nodes, "memory_gb")
+        available_memory = _compute_resource_total(nodes, "available_memory_gb")
+        used_memory = _compute_resource_total(nodes, "used_memory_gb")
+        total_storage = _compute_resource_total(nodes, "storage_gb")
+        available_storage = _compute_resource_total(nodes, "available_storage_gb")
+        used_storage = _compute_resource_total(nodes, "used_storage_gb")
+        bottleneck = _compute_resource_bottleneck(
+            (
+                (
+                    "cpu_gflops_fp32",
+                    "CPU FP32 GFLOPS",
+                    total,
+                    _compute_cpu_fp32_bottleneck_used(nodes),
+                ),
+                ("cpu_gflops_fp64", "CPU FP64 GFLOPS", total_fp64, used_fp64),
+                (
+                    "gpu_tflops_fp32",
+                    "GPU FP32 TFLOPS",
+                    total_gpu_fp32,
+                    used_gpu_fp32,
+                ),
+                (
+                    "gpu_tflops_fp16",
+                    "GPU FP16 TFLOPS",
+                    total_gpu_fp16,
+                    used_gpu_fp16,
+                ),
+                ("npu_tops_int8", "NPU INT8 TOPS", total_npu_int8, used_npu_int8),
+                ("memory_gb", "Memory GB", total_memory, used_memory),
+                ("storage_gb", "Storage GB", total_storage, used_storage),
+            )
+        )
         return {
             "compute_resource_node_count": len(nodes),
             "compute_resource_busy_nodes": busy_nodes,
@@ -1753,92 +1823,43 @@ class MetricsCollector:
             "compute_resource_total_gflops_fp32": total,
             "compute_resource_available_gflops_fp32": available,
             "compute_resource_used_gflops_fp32": used,
-            "compute_resource_available_cpu_gflops_fp32": _compute_resource_total(
-                nodes,
-                "available_cpu_gflops_fp32",
-            ),
-            "compute_resource_used_cpu_gflops_fp32": _compute_resource_total(
-                nodes,
-                "used_cpu_gflops_fp32",
-            ),
-            "compute_resource_total_gflops_fp64": _compute_resource_total(
-                nodes,
-                "cpu_gflops_fp64",
-            ),
-            "compute_resource_available_gflops_fp64": _compute_resource_total(
-                nodes,
-                "available_cpu_gflops_fp64",
-            ),
-            "compute_resource_used_gflops_fp64": _compute_resource_total(
-                nodes,
-                "used_cpu_gflops_fp64",
-            ),
-            "compute_resource_total_gpu_tflops_fp32": _compute_resource_total(
-                nodes,
-                "gpu_tflops_fp32",
-            ),
-            "compute_resource_available_gpu_tflops_fp32": _compute_resource_total(
-                nodes,
-                "available_gpu_tflops_fp32",
-            ),
-            "compute_resource_used_gpu_tflops_fp32": _compute_resource_total(
-                nodes,
-                "used_gpu_tflops_fp32",
-            ),
-            "compute_resource_total_gpu_tflops_fp16": _compute_resource_total(
-                nodes,
-                "gpu_tflops_fp16",
-            ),
-            "compute_resource_available_gpu_tflops_fp16": _compute_resource_total(
-                nodes,
-                "available_gpu_tflops_fp16",
-            ),
-            "compute_resource_used_gpu_tflops_fp16": _compute_resource_total(
-                nodes,
-                "used_gpu_tflops_fp16",
-            ),
-            "compute_resource_total_npu_tops_int8": _compute_resource_total(
-                nodes,
-                "npu_tops_int8",
-            ),
-            "compute_resource_available_npu_tops_int8": _compute_resource_total(
-                nodes,
-                "available_npu_tops_int8",
-            ),
-            "compute_resource_used_npu_tops_int8": _compute_resource_total(
-                nodes,
-                "used_npu_tops_int8",
-            ),
-            "compute_resource_total_memory_gb": _compute_resource_total(
-                nodes,
-                "memory_gb",
-            ),
-            "compute_resource_available_memory_gb": _compute_resource_total(
-                nodes,
-                "available_memory_gb",
-            ),
-            "compute_resource_used_memory_gb": _compute_resource_total(
-                nodes,
-                "used_memory_gb",
-            ),
-            "compute_resource_total_storage_gb": _compute_resource_total(
-                nodes,
-                "storage_gb",
-            ),
-            "compute_resource_available_storage_gb": _compute_resource_total(
-                nodes,
-                "available_storage_gb",
-            ),
-            "compute_resource_used_storage_gb": _compute_resource_total(
-                nodes,
-                "used_storage_gb",
-            ),
+            "compute_resource_available_cpu_gflops_fp32": available_cpu_fp32,
+            "compute_resource_used_cpu_gflops_fp32": used_cpu_fp32,
+            "compute_resource_total_gflops_fp64": total_fp64,
+            "compute_resource_available_gflops_fp64": available_fp64,
+            "compute_resource_used_gflops_fp64": used_fp64,
+            "compute_resource_total_gpu_tflops_fp32": total_gpu_fp32,
+            "compute_resource_available_gpu_tflops_fp32": available_gpu_fp32,
+            "compute_resource_used_gpu_tflops_fp32": used_gpu_fp32,
+            "compute_resource_total_gpu_tflops_fp16": total_gpu_fp16,
+            "compute_resource_available_gpu_tflops_fp16": available_gpu_fp16,
+            "compute_resource_used_gpu_tflops_fp16": used_gpu_fp16,
+            "compute_resource_total_npu_tops_int8": total_npu_int8,
+            "compute_resource_available_npu_tops_int8": available_npu_int8,
+            "compute_resource_used_npu_tops_int8": used_npu_int8,
+            "compute_resource_total_memory_gb": total_memory,
+            "compute_resource_available_memory_gb": available_memory,
+            "compute_resource_used_memory_gb": used_memory,
+            "compute_resource_total_storage_gb": total_storage,
+            "compute_resource_available_storage_gb": available_storage,
+            "compute_resource_used_storage_gb": used_storage,
             "compute_resource_vector_capacity_reported": True,
             "compute_resource_vector_utilization_mode": (
                 "RESOURCE_VECTOR_ESTIMATED"
                 if vector_usage_reported
                 else "SCALAR_FP32_AVAILABLE_ONLY"
             ),
+            "compute_resource_vector_dimension_count": 7,
+            "compute_resource_vector_active_dimension_count": bottleneck[
+                "active_dimension_count"
+            ],
+            "compute_resource_bottleneck_resource": bottleneck["resource"],
+            "compute_resource_bottleneck_label": bottleneck["label"],
+            "compute_resource_bottleneck_utilization": bottleneck["utilization"],
+            "compute_resource_bottleneck_used": bottleneck["used"],
+            "compute_resource_bottleneck_total": bottleneck["total"],
+            "compute_resource_bottleneck_available": bottleneck["available"],
+            "compute_resource_bottleneck_status": bottleneck["status"],
             "compute_resource_utilization": float(utilization),
             "compute_resource_unit": "GFLOPS FP32",
             "compute_resource_proxy_note": (
@@ -2243,9 +2264,27 @@ def _compute_node_used_fp32(node: ComputeNodeState | None) -> float:
     used = getattr(node, "used_cpu_gflops_fp32", None)
     if isinstance(used, (int, float)) and isfinite(used):
         return max(0.0, float(used))
+    return _compute_node_legacy_used_fp32(node)
+
+
+def _compute_node_legacy_used_fp32(node: ComputeNodeState | None) -> float:
+    if node is None:
+        return 0.0
     capacity = max(0.0, float(node.capacity))
     available = max(0.0, min(capacity, float(node.available_capacity)))
     return capacity - available
+
+
+def _compute_cpu_fp32_bottleneck_used(
+    nodes: tuple[ComputeNodeState, ...],
+) -> float:
+    used = 0.0
+    for node in nodes:
+        if node.resource_usage_mode == "RESOURCE_VECTOR_ESTIMATED":
+            used += _compute_node_non_negative_field(node, "used_cpu_gflops_fp32")
+        else:
+            used += _compute_node_legacy_used_fp32(node)
+    return float(used)
 
 
 def _compute_node_load_ratio(
@@ -2280,6 +2319,63 @@ def _compute_resource_total(
     return float(
         sum(max(0.0, float(getattr(node, field_name))) for node in nodes)
     )
+
+
+def _compute_resource_bottleneck(
+    resources: tuple[tuple[str, str, float, float], ...],
+) -> dict[str, str | float | int]:
+    active = tuple(
+        (
+            resource,
+            label,
+            max(0.0, float(total)),
+            max(0.0, float(used)),
+        )
+        for resource, label, total, used in resources
+        if total > 0.0
+    )
+    if not active:
+        return {
+            "resource": "none",
+            "label": "No compute resource capacity",
+            "utilization": 0.0,
+            "used": 0.0,
+            "total": 0.0,
+            "available": 0.0,
+            "status": "IDLE",
+            "active_dimension_count": 0,
+        }
+
+    ranked = tuple(
+        (
+            min(used, total) / total,
+            min(used, total),
+            -index,
+            resource,
+            label,
+            total,
+        )
+        for index, (resource, label, total, used) in enumerate(active)
+    )
+    utilization, used, _rank, resource, label, total = max(ranked)
+    if utilization >= 0.9:
+        status = "SATURATED"
+    elif utilization >= 0.7:
+        status = "PRESSURED"
+    elif utilization > 0.0:
+        status = "NORMAL"
+    else:
+        status = "IDLE"
+    return {
+        "resource": resource,
+        "label": label,
+        "utilization": float(utilization),
+        "used": float(used),
+        "total": float(total),
+        "available": float(max(0.0, total - used)),
+        "status": status,
+        "active_dimension_count": len(active),
+    }
 
 
 def _json_scalar(value: str | int | float | bool) -> str:

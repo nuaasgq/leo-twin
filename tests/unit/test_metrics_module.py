@@ -1428,6 +1428,15 @@ def test_metrics_collector_reports_compute_resource_pool_proxy() -> None:
         summary["compute_resource_vector_utilization_mode"]
         == "SCALAR_FP32_AVAILABLE_ONLY"
     )
+    assert summary["compute_resource_vector_dimension_count"] == 7
+    assert summary["compute_resource_vector_active_dimension_count"] == 7
+    assert summary["compute_resource_bottleneck_resource"] == "cpu_gflops_fp32"
+    assert summary["compute_resource_bottleneck_label"] == "CPU FP32 GFLOPS"
+    assert summary["compute_resource_bottleneck_utilization"] == pytest.approx(0.5)
+    assert summary["compute_resource_bottleneck_used"] == 15.0
+    assert summary["compute_resource_bottleneck_total"] == 30.0
+    assert summary["compute_resource_bottleneck_available"] == 15.0
+    assert summary["compute_resource_bottleneck_status"] == "NORMAL"
     assert summary["compute_resource_utilization"] == pytest.approx(0.5)
     assert summary["compute_resource_unit"] == "GFLOPS FP32"
     assert summary["compute_resource_proxy_note"] == (
@@ -1481,6 +1490,13 @@ def test_metrics_collector_reports_estimated_vector_resource_usage() -> None:
     assert summary["compute_resource_used_memory_gb"] == 4.0
     assert summary["compute_resource_available_storage_gb"] == 1.5
     assert summary["compute_resource_used_storage_gb"] == 0.5
+    assert summary["compute_resource_bottleneck_resource"] == "gpu_tflops_fp32"
+    assert summary["compute_resource_bottleneck_label"] == "GPU FP32 TFLOPS"
+    assert summary["compute_resource_bottleneck_utilization"] == pytest.approx(1.0)
+    assert summary["compute_resource_bottleneck_used"] == 2.0
+    assert summary["compute_resource_bottleneck_total"] == 2.0
+    assert summary["compute_resource_bottleneck_available"] == 0.0
+    assert summary["compute_resource_bottleneck_status"] == "SATURATED"
 
 
 def test_metrics_collector_scales_satellite_positions_for_orbit_kpis() -> None:

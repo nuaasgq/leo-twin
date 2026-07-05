@@ -2503,6 +2503,37 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
   overflow-wrap: anywhere;
 }
 
+.data-panel-compute-bottleneck {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 3px 10px;
+  align-items: center;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid #30424f;
+  border-radius: 6px;
+  background: rgba(18, 28, 36, 0.72);
+  color: var(--app-text);
+  font-size: 12px;
+}
+
+.data-panel-compute-bottleneck span,
+.data-panel-compute-bottleneck small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.data-panel-compute-bottleneck strong {
+  color: #f2bd45;
+  font-size: 14px;
+}
+
+.data-panel-compute-bottleneck small {
+  grid-column: 1 / -1;
+  color: var(--app-muted);
+  font-size: 11px;
+}
+
 .data-panel-compute-node-table {
   display: grid;
   gap: 4px;

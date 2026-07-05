@@ -307,6 +307,9 @@ export const DataPanel = memo(function DataPanel({
   const computeVectorTail = buildDataPanelComputeVectorTail(
     runtimeStatus.kpi_time_series_v1
   );
+  const computeBottleneck = buildDataPanelComputeBottleneckDisplay(
+    runtimeStatus.metrics_summary
+  );
   const networkKpiSource = buildDataPanelNetworkKpiSource(
     snapshot,
     runtimeStatus.metrics_summary,
@@ -1114,6 +1117,15 @@ export const DataPanel = memo(function DataPanel({
                   {item.label} {item.value}
                 </span>
               ))}
+            </div>
+          ) : null}
+          {computeBottleneck ? (
+            <div className="data-panel-compute-bottleneck" aria-label="算力资源瓶颈摘要">
+              <span>瓶颈 {computeBottleneck.label}</span>
+              <strong>{computeBottleneck.utilizationLabel}</strong>
+              <small>
+                {computeBottleneck.statusLabel} / {computeBottleneck.detailLabel}
+              </small>
             </div>
           ) : null}
           <div className="data-panel-chart-kpis compact">
@@ -2372,6 +2384,13 @@ export interface DataPanelComputeVectorTailItem {
   value: string;
 }
 
+export interface DataPanelComputeBottleneckDisplay {
+  label: string;
+  utilizationLabel: string;
+  statusLabel: string;
+  detailLabel: string;
+}
+
 export interface ComputeResourcePoolSlice {
   name: string;
   value: number;
@@ -2729,6 +2748,31 @@ export function buildDataPanelComputeVectorTail(
     computeVectorTailItem("内存", tail.compute_resource_used_memory_gb, "GB"),
     computeVectorTailItem("存储", tail.compute_resource_used_storage_gb, "GB")
   ].filter((item): item is DataPanelComputeVectorTailItem => item !== null);
+}
+
+export function buildDataPanelComputeBottleneckDisplay(
+  backendMetrics: RuntimeMetricsSummary | null | undefined
+): DataPanelComputeBottleneckDisplay | null {
+  const resource = metricString(backendMetrics, "compute_resource_bottleneck_resource");
+  const label = metricString(backendMetrics, "compute_resource_bottleneck_label");
+  if (!resource || resource === "none" || !label) {
+    return null;
+  }
+  const utilization =
+    metricNumber(backendMetrics, "compute_resource_bottleneck_utilization") ?? 0;
+  const used = metricNumber(backendMetrics, "compute_resource_bottleneck_used") ?? 0;
+  const total = metricNumber(backendMetrics, "compute_resource_bottleneck_total") ?? 0;
+  const available =
+    metricNumber(backendMetrics, "compute_resource_bottleneck_available") ?? 0;
+  const status = metricString(backendMetrics, "compute_resource_bottleneck_status");
+  return {
+    label,
+    utilizationLabel: formatRatioPercent(clampRatio(utilization)),
+    statusLabel: formatComputeBottleneckStatus(status),
+    detailLabel: `已用 ${formatMetricValue(used)} / 总量 ${formatMetricValue(
+      total
+    )}，可用 ${formatMetricValue(available)}`
+  };
 }
 
 export function buildComputeResourcePoolFromRuntime(
@@ -4723,6 +4767,21 @@ function formatComputeSeriesValue(value: number, unit: string): string {
 
 function formatRatioPercent(value: number): string {
   return `${formatMetricValue(value * 100)}%`;
+}
+
+function formatComputeBottleneckStatus(status: string | undefined): string {
+  switch (status) {
+    case "SATURATED":
+      return "饱和";
+    case "PRESSURED":
+      return "受压";
+    case "NORMAL":
+      return "正常";
+    case "IDLE":
+      return "空闲";
+    default:
+      return "状态未知";
+  }
 }
 
 function formatMetricValue(value: number): string {

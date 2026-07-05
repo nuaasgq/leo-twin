@@ -138,6 +138,10 @@ Tasks:
 - V2-030: Stabilize compute resource vector v2.
   - Scope: FP32, FP64, FP16, INT8, memory, storage, compatibility rules.
   - Output: schema docs and unit tests.
+  - Status: compute resource vector schema/summary already exists; T213 adds
+    backend-owned bottleneck resource, utilization, available/used/total, and
+    pressure status fields to runtime metrics, with the standalone dashboard
+    consuming those fields instead of inferring bottlenecks locally.
 - V2-031: Add service placement model.
   - Scope: deterministic service-to-satellite placement, capacity check,
     queue state, rejection reason.

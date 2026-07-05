@@ -4,6 +4,7 @@ import {
   buildComputeResourcePool,
   buildComputeResourcePoolFromRuntime,
   buildComputeResourcePoolModeNote,
+  buildDataPanelComputeBottleneckDisplay,
   buildDataPanelComputeVectorTail,
   buildDataPanelConfiguredScale,
   buildDataPanelConfigurationExplanationDisplay,
@@ -3596,6 +3597,37 @@ describe("buildDataPanelComputeVectorTail", () => {
         ]
       })
     ).toEqual([]);
+  });
+});
+
+describe("buildDataPanelComputeBottleneckDisplay", () => {
+  it("formats backend-owned compute resource bottleneck summary", () => {
+    expect(
+      buildDataPanelComputeBottleneckDisplay({
+        compute_resource_bottleneck_resource: "gpu_tflops_fp32",
+        compute_resource_bottleneck_label: "GPU FP32 TFLOPS",
+        compute_resource_bottleneck_utilization: 0.875,
+        compute_resource_bottleneck_used: 3.5,
+        compute_resource_bottleneck_total: 4,
+        compute_resource_bottleneck_available: 0.5,
+        compute_resource_bottleneck_status: "PRESSURED"
+      })
+    ).toEqual({
+      label: "GPU FP32 TFLOPS",
+      utilizationLabel: "87.5%",
+      statusLabel: "受压",
+      detailLabel: "已用 3.5 / 总量 4，可用 0.5"
+    });
+  });
+
+  it("stays hidden when backend has no bottleneck summary", () => {
+    expect(buildDataPanelComputeBottleneckDisplay({})).toBeNull();
+    expect(
+      buildDataPanelComputeBottleneckDisplay({
+        compute_resource_bottleneck_resource: "none",
+        compute_resource_bottleneck_label: "No compute resource capacity"
+      })
+    ).toBeNull();
   });
 });
 
