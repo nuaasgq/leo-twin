@@ -65,6 +65,7 @@ import {
   filterRouteExplanationRows,
   filterSatelliteResourceRows,
   filterUserBusinessRequestRows,
+  appendExactDetailStatusToInspector,
   paginateDetailRows,
   resolveNetworkQualityKpis,
   RuntimeDetailPages,
@@ -81,6 +82,7 @@ import {
   selectRuntimeUserDetailCard,
   selectRuntimeUserRequestSummary,
   selectSatelliteResourceRow,
+  selectExactDetailRequestStatus,
   selectUserConfigurationApplyPayload,
   selectUserBusinessRequestRow,
   userConfigurationPreflightModeEnabled,
@@ -4981,6 +4983,60 @@ describe("detail inspectors", () => {
       subtitle: "EXACT_BY_ID",
       fields: [{ label: "source", value: "entity endpoint", tone: "resource" }]
     });
+  });
+
+  it("appends exact detail request status only for the selected entity", () => {
+    const inspector = {
+      title: "route-a",
+      subtitle: "exact route",
+      fields: [{ label: "route", value: "route-a" }]
+    };
+    const loadingStatus = selectExactDetailRequestStatus(
+      { entityId: "route-a", loading: true, error: null },
+      "route-a"
+    );
+
+    expect(loadingStatus).toEqual({
+      entityId: "route-a",
+      loading: true,
+      error: null
+    });
+    expect(
+      appendExactDetailStatusToInspector(inspector, loadingStatus).fields[0]
+    ).toEqual({
+      label: "精确详情",
+      value: "正在读取后端精确详情",
+      tone: "resource"
+    });
+    expect(
+      appendExactDetailStatusToInspector(inspector, {
+        entityId: "route-a",
+        loading: false,
+        error: "后端精确详情读取失败"
+      }).fields[0]
+    ).toEqual({
+      label: "精确详情",
+      value: "后端精确详情读取失败",
+      tone: "warning"
+    });
+    expect(
+      appendExactDetailStatusToInspector(inspector, {
+        entityId: "route-a",
+        loading: false,
+        error: null
+      }).fields[0]
+    ).toEqual({
+      label: "精确详情",
+      value: "后端精确详情已同步",
+      tone: "resource"
+    });
+    expect(
+      selectExactDetailRequestStatus(
+        { entityId: "route-a", loading: true, error: null },
+        "route-b"
+      )
+    ).toBeNull();
+    expect(appendExactDetailStatusToInspector(inspector, null)).toBe(inspector);
   });
 
   it("builds exact route service and compute-node inspectors", () => {

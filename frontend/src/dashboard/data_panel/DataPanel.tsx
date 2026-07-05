@@ -148,6 +148,20 @@ export interface RuntimeSelectedNodeDetails {
   computeNode?: RuntimeComputeNodeDetailItemV1 | null;
 }
 
+export interface RuntimeExactDetailRequestState {
+  entityId?: string | null;
+  loading?: boolean;
+  error?: string | null;
+}
+
+export interface RuntimeSelectedNodeDetailRequests {
+  user?: RuntimeExactDetailRequestState | null;
+  satellite?: RuntimeExactDetailRequestState | null;
+  route?: RuntimeExactDetailRequestState | null;
+  service?: RuntimeExactDetailRequestState | null;
+  computeNode?: RuntimeExactDetailRequestState | null;
+}
+
 const FALLBACK_USER_DETAIL_PAGE_SIZE = 80;
 const FALLBACK_SATELLITE_DETAIL_PAGE_SIZE = 120;
 const DEFAULT_USER_CONFIGURATION_VALIDATE_TEXT = `{
@@ -180,6 +194,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeDetailPages,
   runtimeDetailCursorControls,
   runtimeSelectedNodeDetails,
+  runtimeSelectedNodeDetailRequests,
   runtimeExportCatalog,
   runtimeExportCompare,
   runtimeExportComparePackageId,
@@ -216,6 +231,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeDetailPages?: RuntimeDetailPages | null;
   runtimeDetailCursorControls?: RuntimeDetailCursorControls | null;
   runtimeSelectedNodeDetails?: RuntimeSelectedNodeDetails | null;
+  runtimeSelectedNodeDetailRequests?: RuntimeSelectedNodeDetailRequests | null;
   runtimeExportCatalog?: RuntimeExportCatalogV1 | null;
   runtimeExportCompare?: RuntimeExportPackageCompareV1 | null;
   runtimeExportComparePackageId?: string | null;
@@ -558,31 +574,71 @@ export const DataPanel = memo(function DataPanel({
     runtimeSelectedNodeDetails?.computeNode?.node_id === selectedComputeNodeDetailId
       ? runtimeSelectedNodeDetails.computeNode
       : null;
+  const userDetailRequestStatus = selectExactDetailRequestStatus(
+    runtimeSelectedNodeDetailRequests?.user,
+    selectedDetailUserId
+  );
+  const satelliteDetailRequestStatus = selectExactDetailRequestStatus(
+    runtimeSelectedNodeDetailRequests?.satellite,
+    selectedDetailSatelliteId
+  );
+  const routeDetailRequestStatus = selectExactDetailRequestStatus(
+    runtimeSelectedNodeDetailRequests?.route,
+    selectedRouteDetailId
+  );
+  const serviceDetailRequestStatus = selectExactDetailRequestStatus(
+    runtimeSelectedNodeDetailRequests?.service,
+    selectedServiceDetailId
+  );
+  const computeNodeDetailRequestStatus = selectExactDetailRequestStatus(
+    runtimeSelectedNodeDetailRequests?.computeNode,
+    selectedComputeNodeDetailId
+  );
   const userDetailInspector = buildUserBusinessRequestInspector(
     selectedUserDetailRow,
     nodeDetailSummary,
     selectedUserBackendDetail
+  );
+  const displayedUserDetailInspector = appendExactDetailStatusToInspector(
+    userDetailInspector,
+    userDetailRequestStatus
   );
   const satelliteDetailInspector = buildSatelliteResourceInspector(
     selectedSatelliteDetailRow,
     nodeDetailSummary,
     selectedSatelliteBackendDetail
   );
+  const displayedSatelliteDetailInspector = appendExactDetailStatusToInspector(
+    satelliteDetailInspector,
+    satelliteDetailRequestStatus
+  );
   const routeDetailInspector = buildRouteExplanationDetailInspector(
     selectedRouteDetailRow,
     selectedRouteBackendDetail
+  );
+  const displayedRouteDetailInspector = appendExactDetailStatusToInspector(
+    routeDetailInspector,
+    routeDetailRequestStatus
   );
   const serviceDetailInspector = buildServiceLifecycleDetailInspector(
     selectedServiceDetailRow,
     selectedServiceBackendDetail
   );
+  const displayedServiceDetailInspector = appendExactDetailStatusToInspector(
+    serviceDetailInspector,
+    serviceDetailRequestStatus
+  );
   const computeNodeDetailInspector = buildComputeNodeExactDetailInspector(
     selectedComputeNodeDetailRow,
     selectedComputeNodeBackendDetail
   );
+  const displayedComputeNodeDetailInspector = appendExactDetailStatusToInspector(
+    computeNodeDetailInspector,
+    computeNodeDetailRequestStatus
+  );
   const nodeDetailDrawerItems = buildDataPanelNodeDetailDrawerItems(
-    userDetailInspector,
-    satelliteDetailInspector
+    displayedUserDetailInspector,
+    displayedSatelliteDetailInspector
   );
   const userSourceBadge = buildRuntimeDetailSourceBadge(userBusinessRequests.sourceLabel);
   const satelliteSourceBadge = buildRuntimeDetailSourceBadge(satelliteResourceRows.sourceLabel);
@@ -1270,7 +1326,7 @@ export const DataPanel = memo(function DataPanel({
               onRuntimeRouteDetailSelect?.(row.routeId);
             }}
           />
-          <ExactDetailInspectorGrid items={[routeDetailInspector]} />
+          <ExactDetailInspectorGrid items={[displayedRouteDetailInspector]} />
         </section>
 
         <section className="dashboard-section data-panel-chart" aria-label="算力资源消耗曲线">
@@ -1488,7 +1544,7 @@ export const DataPanel = memo(function DataPanel({
             }}
           />
           <ExactDetailInspectorGrid
-            items={[serviceDetailInspector, computeNodeDetailInspector]}
+            items={[displayedServiceDetailInspector, displayedComputeNodeDetailInspector]}
           />
           <div className="data-panel-chart-body compact">
             {computePool.totalTflops > 0 ? (
@@ -1726,8 +1782,8 @@ export const DataPanel = memo(function DataPanel({
         ))}
       </div>
       <DetailInspectorGrid
-        user={userDetailInspector}
-        satellite={satelliteDetailInspector}
+        user={displayedUserDetailInspector}
+        satellite={displayedSatelliteDetailInspector}
       />
       <DetailInspectorDrawer items={nodeDetailDrawerItems} />
       <div className="data-panel-detail-grid">
@@ -4419,6 +4475,69 @@ export function selectComputeNodeDetailRow(
   selectedNodeId: string | null | undefined
 ): DataPanelComputeNodeDetailRow | null {
   return rows.find((row) => row.nodeId === selectedNodeId) ?? rows[0] ?? null;
+}
+
+export function selectExactDetailRequestStatus(
+  status: RuntimeExactDetailRequestState | null | undefined,
+  selectedEntityId: string | null | undefined
+): RuntimeExactDetailRequestState | null {
+  if (status === null || status === undefined) {
+    return null;
+  }
+  const statusEntityId = (status.entityId ?? "").trim();
+  const selectedId = (selectedEntityId ?? "").trim();
+  if (!statusEntityId || statusEntityId !== selectedId) {
+    return null;
+  }
+  return {
+    entityId: statusEntityId,
+    loading: status.loading === true,
+    error: status.error ?? null
+  };
+}
+
+export function appendExactDetailStatusToInspector(
+  inspector: DataPanelDetailInspector,
+  status: RuntimeExactDetailRequestState | null | undefined
+): DataPanelDetailInspector {
+  const field = exactDetailStatusField(status);
+  if (field === null) {
+    return inspector;
+  }
+  return {
+    ...inspector,
+    fields: [field, ...inspector.fields]
+  };
+}
+
+function exactDetailStatusField(
+  status: RuntimeExactDetailRequestState | null | undefined
+): DataPanelDetailInspectorField | null {
+  if (status === null || status === undefined) {
+    return null;
+  }
+  if (status.loading === true) {
+    return {
+      label: "精确详情",
+      value: "正在读取后端精确详情",
+      tone: "resource"
+    };
+  }
+  if (status.error) {
+    return {
+      label: "精确详情",
+      value: status.error,
+      tone: "warning"
+    };
+  }
+  if ((status.entityId ?? "").trim()) {
+    return {
+      label: "精确详情",
+      value: "后端精确详情已同步",
+      tone: "resource"
+    };
+  }
+  return null;
 }
 
 export function selectRuntimeUserDetailCard(

@@ -303,6 +303,10 @@ Tasks:
     the dashboard requests the backend exact row on selection and prefers it
     over the current cursor-window fallback in small exact-detail inspector
     cards.
+  - Status: T248 adds visible exact-detail request status for users,
+    satellites, routes, services, and compute nodes. The dashboard now shows
+    backend exact-detail loading, synchronized, and error states from App-owned
+    request state while ignoring stale status for previously selected entities.
 - V2-054: Add model assumptions panel.
   - Scope: backend-derived model caveats, fidelity mode, KPI provenance.
   - Depends on: V2-003, V2-021.

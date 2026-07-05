@@ -93,6 +93,18 @@ type RuntimeSelectedNodeDetails = {
   service: RuntimeServiceDetailItemV1 | null;
   computeNode: RuntimeComputeNodeDetailItemV1 | null;
 };
+type RuntimeExactDetailRequestState = {
+  entityId: string | null;
+  loading: boolean;
+  error: string | null;
+};
+type RuntimeSelectedNodeDetailRequests = {
+  user: RuntimeExactDetailRequestState;
+  satellite: RuntimeExactDetailRequestState;
+  route: RuntimeExactDetailRequestState;
+  service: RuntimeExactDetailRequestState;
+  computeNode: RuntimeExactDetailRequestState;
+};
 
 const DEFAULT_RUNTIME_CONNECTION_HEALTH: RuntimeConnectionHealth = {
   http: "connecting",
@@ -137,6 +149,24 @@ const DEFAULT_RUNTIME_DETAIL_FILTERS: RuntimeDetailFilterState = {
   services: {},
   computeNodes: {}
 };
+
+function defaultRuntimeExactDetailRequest(): RuntimeExactDetailRequestState {
+  return {
+    entityId: null,
+    loading: false,
+    error: null
+  };
+}
+
+function defaultRuntimeSelectedNodeDetailRequests(): RuntimeSelectedNodeDetailRequests {
+  return {
+    user: defaultRuntimeExactDetailRequest(),
+    satellite: defaultRuntimeExactDetailRequest(),
+    route: defaultRuntimeExactDetailRequest(),
+    service: defaultRuntimeExactDetailRequest(),
+    computeNode: defaultRuntimeExactDetailRequest()
+  };
+}
 
 const CesiumGlobe = lazy(async () => {
   const module = await import("../3d/cesium/CesiumGlobe");
@@ -200,6 +230,10 @@ export function App() {
       service: null,
       computeNode: null
     });
+  const [runtimeSelectedNodeDetailRequests, setRuntimeSelectedNodeDetailRequests] =
+    useState<RuntimeSelectedNodeDetailRequests>(() =>
+      defaultRuntimeSelectedNodeDetailRequests()
+    );
   const [runtimeExportCatalog, setRuntimeExportCatalog] =
     useState<RuntimeExportCatalogV1 | null>(null);
   const [runtimeExportCompare, setRuntimeExportCompare] =
@@ -328,6 +362,7 @@ export function App() {
       service: null,
       computeNode: null
     });
+    setRuntimeSelectedNodeDetailRequests(defaultRuntimeSelectedNodeDetailRequests());
   }, [runtimeStatus.config_version]);
 
   const refreshRuntimeDetails = useCallback(async (
@@ -618,8 +653,16 @@ export function App() {
     const normalizedUserId = userId?.trim() ?? "";
     if (!normalizedUserId) {
       setRuntimeSelectedNodeDetails((previous) => ({ ...previous, user: null }));
+      setRuntimeSelectedNodeDetailRequests((previous) => ({
+        ...previous,
+        user: defaultRuntimeExactDetailRequest()
+      }));
       return;
     }
+    setRuntimeSelectedNodeDetailRequests((previous) => ({
+      ...previous,
+      user: { entityId: normalizedUserId, loading: true, error: null }
+    }));
     const requestPlan = runtimeDetailRequestPlan(
       generatedConfig?.backend_summary?.large_detail_pagination_contract_v2
     );
@@ -632,9 +675,21 @@ export function App() {
         ...previous,
         user: detail
       }));
+      setRuntimeSelectedNodeDetailRequests((previous) => ({
+        ...previous,
+        user: { entityId: normalizedUserId, loading: false, error: null }
+      }));
       setConnectionChannel("http", "live");
     } catch (error) {
       setRuntimeSelectedNodeDetails((previous) => ({ ...previous, user: null }));
+      setRuntimeSelectedNodeDetailRequests((previous) => ({
+        ...previous,
+        user: {
+          entityId: normalizedUserId,
+          loading: false,
+          error: runtimeApiErrorMessage(error)
+        }
+      }));
       setConnectionChannel("http", "degraded");
     }
   }, [generatedConfig, setConnectionChannel]);
@@ -647,8 +702,16 @@ export function App() {
           ...previous,
           satellite: null
         }));
+        setRuntimeSelectedNodeDetailRequests((previous) => ({
+          ...previous,
+          satellite: defaultRuntimeExactDetailRequest()
+        }));
         return;
       }
+      setRuntimeSelectedNodeDetailRequests((previous) => ({
+        ...previous,
+        satellite: { entityId: normalizedSatelliteId, loading: true, error: null }
+      }));
       const requestPlan = runtimeDetailRequestPlan(
         generatedConfig?.backend_summary?.large_detail_pagination_contract_v2
       );
@@ -661,11 +724,23 @@ export function App() {
           ...previous,
           satellite: detail
         }));
+        setRuntimeSelectedNodeDetailRequests((previous) => ({
+          ...previous,
+          satellite: { entityId: normalizedSatelliteId, loading: false, error: null }
+        }));
         setConnectionChannel("http", "live");
       } catch (error) {
         setRuntimeSelectedNodeDetails((previous) => ({
           ...previous,
           satellite: null
+        }));
+        setRuntimeSelectedNodeDetailRequests((previous) => ({
+          ...previous,
+          satellite: {
+            entityId: normalizedSatelliteId,
+            loading: false,
+            error: runtimeApiErrorMessage(error)
+          }
         }));
         setConnectionChannel("http", "degraded");
       }
@@ -677,8 +752,16 @@ export function App() {
     const normalizedRouteId = routeId?.trim() ?? "";
     if (!normalizedRouteId) {
       setRuntimeSelectedNodeDetails((previous) => ({ ...previous, route: null }));
+      setRuntimeSelectedNodeDetailRequests((previous) => ({
+        ...previous,
+        route: defaultRuntimeExactDetailRequest()
+      }));
       return;
     }
+    setRuntimeSelectedNodeDetailRequests((previous) => ({
+      ...previous,
+      route: { entityId: normalizedRouteId, loading: true, error: null }
+    }));
     const requestPlan = runtimeDetailRequestPlan(
       generatedConfig?.backend_summary?.large_detail_pagination_contract_v2
     );
@@ -691,9 +774,21 @@ export function App() {
         ...previous,
         route: detail
       }));
+      setRuntimeSelectedNodeDetailRequests((previous) => ({
+        ...previous,
+        route: { entityId: normalizedRouteId, loading: false, error: null }
+      }));
       setConnectionChannel("http", "live");
     } catch (error) {
       setRuntimeSelectedNodeDetails((previous) => ({ ...previous, route: null }));
+      setRuntimeSelectedNodeDetailRequests((previous) => ({
+        ...previous,
+        route: {
+          entityId: normalizedRouteId,
+          loading: false,
+          error: runtimeApiErrorMessage(error)
+        }
+      }));
       setConnectionChannel("http", "degraded");
     }
   }, [generatedConfig, setConnectionChannel]);
@@ -703,8 +798,16 @@ export function App() {
       const normalizedServiceId = serviceId?.trim() ?? "";
       if (!normalizedServiceId) {
         setRuntimeSelectedNodeDetails((previous) => ({ ...previous, service: null }));
+        setRuntimeSelectedNodeDetailRequests((previous) => ({
+          ...previous,
+          service: defaultRuntimeExactDetailRequest()
+        }));
         return;
       }
+      setRuntimeSelectedNodeDetailRequests((previous) => ({
+        ...previous,
+        service: { entityId: normalizedServiceId, loading: true, error: null }
+      }));
       const requestPlan = runtimeDetailRequestPlan(
         generatedConfig?.backend_summary?.large_detail_pagination_contract_v2
       );
@@ -717,9 +820,21 @@ export function App() {
           ...previous,
           service: detail
         }));
+        setRuntimeSelectedNodeDetailRequests((previous) => ({
+          ...previous,
+          service: { entityId: normalizedServiceId, loading: false, error: null }
+        }));
         setConnectionChannel("http", "live");
       } catch (error) {
         setRuntimeSelectedNodeDetails((previous) => ({ ...previous, service: null }));
+        setRuntimeSelectedNodeDetailRequests((previous) => ({
+          ...previous,
+          service: {
+            entityId: normalizedServiceId,
+            loading: false,
+            error: runtimeApiErrorMessage(error)
+          }
+        }));
         setConnectionChannel("http", "degraded");
       }
     },
@@ -734,8 +849,16 @@ export function App() {
           ...previous,
           computeNode: null
         }));
+        setRuntimeSelectedNodeDetailRequests((previous) => ({
+          ...previous,
+          computeNode: defaultRuntimeExactDetailRequest()
+        }));
         return;
       }
+      setRuntimeSelectedNodeDetailRequests((previous) => ({
+        ...previous,
+        computeNode: { entityId: normalizedNodeId, loading: true, error: null }
+      }));
       const requestPlan = runtimeDetailRequestPlan(
         generatedConfig?.backend_summary?.large_detail_pagination_contract_v2
       );
@@ -748,11 +871,23 @@ export function App() {
           ...previous,
           computeNode: detail
         }));
+        setRuntimeSelectedNodeDetailRequests((previous) => ({
+          ...previous,
+          computeNode: { entityId: normalizedNodeId, loading: false, error: null }
+        }));
         setConnectionChannel("http", "live");
       } catch (error) {
         setRuntimeSelectedNodeDetails((previous) => ({
           ...previous,
           computeNode: null
+        }));
+        setRuntimeSelectedNodeDetailRequests((previous) => ({
+          ...previous,
+          computeNode: {
+            entityId: normalizedNodeId,
+            loading: false,
+            error: runtimeApiErrorMessage(error)
+          }
         }));
         setConnectionChannel("http", "degraded");
       }
@@ -1476,6 +1611,7 @@ export function App() {
                 }
               }}
               runtimeSelectedNodeDetails={runtimeSelectedNodeDetails}
+              runtimeSelectedNodeDetailRequests={runtimeSelectedNodeDetailRequests}
               runtimeExportCatalog={runtimeExportCatalog}
               runtimeExportCompare={runtimeExportCompare}
               runtimeExportComparePackageId={runtimeExportComparePackageId}

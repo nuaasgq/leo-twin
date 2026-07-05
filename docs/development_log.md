@@ -5,6 +5,40 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Dashboard Exact Detail Request Status v1
+
+- Branch: `feature/T248-exact-detail-request-status-v1`
+- Commit: pending in this commit
+- Scope: add visible loading, synchronized, and error status for exact-detail
+  requests in the standalone dashboard. App now tracks request state for user,
+  satellite, route, service, and compute-node exact-detail endpoints, and
+  DataPanel prepends the matching status to the currently selected inspector
+  only when the request entity id matches the active selection.
+- Changed files/modules:
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/dashboard_exact_detail_request_status_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test -- dataPanel.test.ts api.test.ts appSurface.test.ts`
+    - Result: passed, 26 test files / 348 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. The command includes TypeScript checking; Vite reported
+      the existing `DataPanel` chunk size warning after minification.
+- Problems encountered and handling:
+  - Exact-detail payloads and request lifecycle were previously stored as one
+    implicit success state, so slow or failed detail calls looked identical to
+    the local cursor-window fallback. The fix keeps request status separate from
+    payload state and scopes status by selected entity id to avoid stale status
+    bleed-through.
+  - Existing local runtime/generated config files remain dirty and are
+    intentionally not included in this task.
+- Known remaining issues / follow-up:
+  - The dashboard still uses full DataPanel chunk loading. Bundle splitting
+    remains a dedicated frontend performance task.
+
 ## 2026-07-06 - Dashboard Exact Detail Binding v1
 
 - Branch: `feature/T247-route-service-compute-exact-inspector-v1`
