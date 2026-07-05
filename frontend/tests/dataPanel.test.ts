@@ -2092,6 +2092,64 @@ describe("buildUserBusinessRequestRows", () => {
     });
   });
 
+  it("fills backend-hidden users from snapshot fallback rows", () => {
+    const rows = buildUserBusinessRequestRows(
+      makeSnapshot({
+        ground_users: [
+          { user_id: "user-0", status: "ACTIVE" },
+          { user_id: "user-1", status: "ACTIVE" }
+        ],
+        routes: [
+          {
+            route_id: "route-user-1",
+            flow_id: "flow-user-1",
+            path: ["user-1", "sat-1", "compute-1"],
+            latency: 0.2,
+            capacity: 40,
+            available: true
+          }
+        ]
+      }),
+      undefined,
+      {
+        version: "v1",
+        source: "BACKEND_RUNTIME_SNAPSHOT",
+        user_count: 2,
+        item_count: 1,
+        active_user_count: 1,
+        compute_service_user_count: 0,
+        waiting_user_count: 0,
+        hidden_user_count: 1,
+        items: [
+          {
+            user_id: "user-0",
+            platform_type: "GROUND_USER_TERMINAL",
+            communication_route_count: 1,
+            available_route_count: 1,
+            compute_service_count: 0,
+            network_queue_count: 0,
+            selected_satellite_id: "sat-0",
+            destination_id: "service-0",
+            status: "ACTIVE/AVAILABLE",
+            primary_route_id: "route-backend",
+            primary_flow_id: "flow-backend",
+            path: ["user-0", "sat-0", "service-0"]
+          }
+        ]
+      }
+    );
+
+    expect(rows.sourceLabel).toContain("快照补齐");
+    expect(rows.summaryLabel).toContain("补齐 1");
+    expect(rows.items.map((row) => row.userId)).toEqual(["user-0", "user-1"]);
+    expect(rows.items[0].pathLabel).toContain("route-backend");
+    expect(rows.items[1]).toMatchObject({
+      userId: "user-1",
+      selectedSatelliteId: "sat-1",
+      destinationId: "compute-1"
+    });
+  });
+
   it("shows per-user node status and service latency linkage", () => {
     const rows = buildUserBusinessRequestRows(
       makeSnapshot({
@@ -2360,6 +2418,79 @@ describe("buildSatelliteResourceRows", () => {
       npuLabel: "4 / 10 TOPS",
       taskLabel: "2 running / 7 done / compute 1 / network 1",
       networkLabel: "links 3 / access 1 / space 2 / routes 2"
+    });
+  });
+
+  it("fills backend-hidden satellites from snapshot fallback rows", () => {
+    const rows = buildSatelliteResourceRows(
+      makeSnapshot({
+        satellites: Array.from({ length: 120 }, (_, index) => ({
+          satellite_id: `sat-${index}`,
+          sim_time: 10,
+          position: [7_000_000, 0, 0],
+          status: "ACTIVE"
+        })),
+        compute_nodes: Array.from({ length: 120 }, (_, index) => ({
+          node_id: `sat-${index}`,
+          running_tasks: index % 4,
+          finished_tasks: index,
+          capacity: 100,
+          available_capacity: 80,
+          status: "ACTIVE",
+          load_ratio: 0.2
+        }))
+      }),
+      undefined,
+      {
+        version: "v1",
+        source: "BACKEND_RUNTIME_SNAPSHOT",
+        satellite_count: 120,
+        item_count: 1,
+        hidden_satellite_count: 119,
+        items: [
+          {
+            satellite_id: "sat-0",
+            status: "BUSY",
+            service_user_ids: ["user-0"],
+            next_hop_ids: [],
+            route_count: 1,
+            available_route_count: 1,
+            active_link_count: 1,
+            active_access_link_count: 1,
+            active_space_link_count: 0,
+            compute_load_ratio: 0.5,
+            compute_capacity_gflops_fp32: 100,
+            compute_used_gflops_fp32: 50,
+            compute_capacity_gflops_fp64: 0,
+            compute_used_gflops_fp64: 0,
+            compute_capacity_gpu_tflops_fp32: 0,
+            compute_used_gpu_tflops_fp32: 0,
+            compute_capacity_gpu_tflops_fp16: 0,
+            compute_used_gpu_tflops_fp16: 0,
+            compute_capacity_npu_tops_int8: 0,
+            compute_used_npu_tops_int8: 0,
+            compute_capacity_memory_gb: 0,
+            compute_used_memory_gb: 0,
+            compute_capacity_storage_gb: 0,
+            compute_used_storage_gb: 0,
+            running_task_count: 1,
+            finished_task_count: 0
+          }
+        ]
+      }
+    );
+
+    expect(rows.sourceLabel).toContain("快照补齐");
+    expect(rows.summaryLabel).toContain("补齐 119");
+    expect(rows.items).toHaveLength(120);
+    expect(rows.items[0]).toMatchObject({
+      satelliteId: "sat-0",
+      statusLabel: "BUSY",
+      cpuFp32Label: "50 / 100 GFLOPS"
+    });
+    expect(rows.items[119]).toMatchObject({
+      satelliteId: "sat-119",
+      cpuFp32Label: "20 / 100 GFLOPS"
     });
   });
 

@@ -5,6 +5,46 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Dashboard Detail Scroll and Fallback Completion v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending in this commit
+- Scope: make the standalone `/dashboard` page use a stable page-level scroll
+  container, increase the visible detail-table area, and ensure backend-limited
+  user/satellite summaries are completed with deterministic snapshot fallback
+  rows before pagination.
+- Changed files/modules:
+  - `frontend/src/app/App.css`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/appCssLayout.test.js`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `pnpm --dir frontend test -- appCssLayout.test.js appSurface.test.ts dataPanel.test.ts`
+    - Result: passed, 25 files / 238 tests.
+  - Bundled Node:
+    `pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - Importing `App.css?raw` from a TypeScript test was transformed to an empty
+    string under the current Vitest setup, while using `node:fs` from a
+    TypeScript test failed the frontend `tsc` build because Node types are not
+    part of the app tsconfig. The CSS contract test was moved to a JavaScript
+    Vitest file so build-time TypeScript remains browser-only.
+  - A limited satellite-service summary fixture omitted `next_hop_ids`; the
+    frontend now defensively treats missing service-user and next-hop arrays as
+    empty arrays.
+- Known remaining issues:
+  - Detail rows still depend on backend summary limits plus snapshot fallback;
+    this is not a server-side full-detail API yet.
+  - The visual design remains the existing dense dashboard layout, not a full
+    dashboard redesign.
+- Recommended follow-up:
+  - Add backend cursor/pagination endpoints for full user-node and
+    satellite-node detail tables when scenarios exceed frontend memory-friendly
+    limits.
+
 ## 2026-07-05 - Dynamic Network Stress Acceptance v1
 
 - Branch: `feature/T164-dashboard-observability-v1`

@@ -1819,8 +1819,20 @@ export function buildUserBusinessRequestRows(
   limit = 1000
 ): UserBusinessRequestRows {
   if (backendSummary?.items?.length) {
-    return buildBackendUserBusinessRequestRows(backendSummary, limit);
+    return mergeUserBusinessRequestRows(
+      buildBackendUserBusinessRequestRows(backendSummary, limit),
+      buildSnapshotUserBusinessRequestRows(snapshot, serviceHistory, limit),
+      limit
+    );
   }
+  return buildSnapshotUserBusinessRequestRows(snapshot, serviceHistory, limit);
+}
+
+function buildSnapshotUserBusinessRequestRows(
+  snapshot: WorldSnapshot,
+  serviceHistory: RuntimeServiceLatencyHistoryV1 | null | undefined = undefined,
+  limit = 1000
+): UserBusinessRequestRows {
   const serviceLookup = buildServiceFlowLookup(serviceHistory);
   const routesByUser = buildRoutesByUser(snapshot.routes);
   const userIds = Array.from(
@@ -1961,8 +1973,20 @@ export function buildSatelliteResourceRows(
   limit = 1500
 ): SatelliteResourceRows {
   if (backendSummary?.items?.length) {
-    return buildBackendSatelliteResourceRows(backendSummary, limit);
+    return mergeSatelliteResourceRows(
+      buildBackendSatelliteResourceRows(backendSummary, limit),
+      buildSnapshotSatelliteResourceRows(snapshot, backendSlices, limit),
+      limit
+    );
   }
+  return buildSnapshotSatelliteResourceRows(snapshot, backendSlices, limit);
+}
+
+function buildSnapshotSatelliteResourceRows(
+  snapshot: WorldSnapshot,
+  backendSlices: RuntimeSatelliteKpiSlicesV1 | null | undefined = undefined,
+  limit = 1500
+): SatelliteResourceRows {
   const satelliteById = new Map(snapshot.satellites.map((satellite) => [satellite.satellite_id, satellite]));
   const nodeById = new Map(snapshot.compute_nodes.map((node) => [node.node_id, node]));
   const sliceById = new Map(
@@ -2203,6 +2227,78 @@ export function paginateDetailRows<T>(
   };
 }
 
+function mergeUserBusinessRequestRows(
+  backendRows: UserBusinessRequestRows,
+  snapshotRows: UserBusinessRequestRows,
+  limit: number
+): UserBusinessRequestRows {
+  const mergedItems = mergeRowsByEntityId(
+    backendRows.items,
+    snapshotRows.items,
+    (row) => row.userId,
+    limit
+  );
+  const addedCount = Math.max(0, mergedItems.length - backendRows.items.length);
+  if (addedCount === 0) {
+    return {
+      ...backendRows,
+      items: mergedItems
+    };
+  }
+  return {
+    sourceLabel: `${backendRows.sourceLabel} + 快照补齐`,
+    summaryLabel: `${backendRows.summaryLabel} / 补齐 ${formatCount(
+      addedCount
+    )} / 显示 ${formatCount(mergedItems.length)}`,
+    items: mergedItems
+  };
+}
+
+function mergeSatelliteResourceRows(
+  backendRows: SatelliteResourceRows,
+  snapshotRows: SatelliteResourceRows,
+  limit: number
+): SatelliteResourceRows {
+  const mergedItems = mergeRowsByEntityId(
+    backendRows.items,
+    snapshotRows.items,
+    (row) => row.satelliteId,
+    limit
+  );
+  const addedCount = Math.max(0, mergedItems.length - backendRows.items.length);
+  if (addedCount === 0) {
+    return {
+      ...backendRows,
+      items: mergedItems
+    };
+  }
+  return {
+    sourceLabel: `${backendRows.sourceLabel} + 快照补齐`,
+    summaryLabel: `${backendRows.summaryLabel} / 补齐 ${formatCount(
+      addedCount
+    )} / 显示 ${formatCount(mergedItems.length)}`,
+    items: mergedItems
+  };
+}
+
+function mergeRowsByEntityId<T>(
+  backendItems: readonly T[],
+  snapshotItems: readonly T[],
+  entityId: (item: T) => string,
+  limit: number
+): readonly T[] {
+  const merged = new Map<string, T>();
+  for (const item of snapshotItems) {
+    merged.set(entityId(item), item);
+  }
+  for (const item of backendItems) {
+    merged.set(entityId(item), item);
+  }
+  return Array.from(merged.values())
+    .sort((left, right) => compareEntityId(entityId(left), entityId(right)))
+    .slice(0, Math.max(0, limit));
+}
+
 export function buildRuntimeDetailSourceBadge(sourceLabel: string): RuntimeDetailSourceBadge {
   const normalized = sourceLabel.toLowerCase();
   const hasBackend = normalized.includes("backend") || sourceLabel.includes("后端");
@@ -2313,12 +2409,12 @@ function buildBackendSatelliteResourceRows(
       loadPercent: roundMetric(loadRatio * 100),
       loadLabel: `${formatMetricValue(loadRatio * 100)}%`,
       serviceObjectLabel: compactBackendEntityLabel(
-        item.service_user_ids,
+        item.service_user_ids ?? [],
         item.service_user_count ?? item.route_count,
         "users"
       ),
       nextHopLabel: compactBackendEntityLabel(
-        item.next_hop_ids,
+        item.next_hop_ids ?? [],
         item.next_hop_count ?? item.route_count,
         "hops"
       ),

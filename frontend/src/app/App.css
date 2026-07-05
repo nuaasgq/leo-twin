@@ -38,7 +38,7 @@ body {
 
 body[data-frontend-surface="dashboard"] {
   overflow-x: hidden;
-  overflow-y: auto;
+  overflow-y: hidden;
 }
 
 body[data-frontend-surface="dashboard"] #root {
@@ -58,9 +58,10 @@ body[data-frontend-surface="dashboard"] #root {
 }
 
 body[data-frontend-surface="dashboard"] .app-shell {
-  grid-template-rows: 66px auto;
+  grid-template-rows: 66px minmax(0, 1fr);
   min-height: 100vh;
-  height: auto;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .topbar {
@@ -1323,8 +1324,10 @@ body[data-frontend-surface="dashboard"] .app-shell {
 }
 
 body[data-frontend-surface="dashboard"] .dashboard-page {
-  min-height: calc(100vh - 66px);
-  overflow: visible;
+  height: auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .dashboard-page-header {
@@ -1984,8 +1987,8 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
   grid-template-rows: auto auto auto minmax(0, 1fr);
   gap: 10px;
   min-width: 0;
-  min-height: 320px;
-  max-height: 520px;
+  min-height: 420px;
+  max-height: min(720px, 72vh);
   overflow: hidden;
   border: 1px solid #2b3a45;
   border-radius: 8px;
@@ -3040,6 +3043,12 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
   .app-shell {
     min-height: 100%;
     height: auto;
+  }
+
+  body[data-frontend-surface="dashboard"] .app-shell {
+    grid-template-rows: auto minmax(0, 1fr);
+    min-height: 100vh;
+    height: 100vh;
   }
 
   .topbar {
