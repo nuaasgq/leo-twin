@@ -8,6 +8,7 @@ from typing import Any
 
 from leo_twin.schema.config import SEESConfig, config_to_dict
 from leo_twin.schema.config_loader import ConfigValidationError, load_config
+from leo_twin.services.configuration_schema import build_user_configuration_schema_v2
 
 
 ConfigurationView = dict[str, object]
@@ -280,6 +281,8 @@ def build_user_configuration_view(config: SEESConfig) -> ConfigurationView:
     file_only_fields = tuple(path for path in flattened if path not in key_path_set)
     return {
         "version": "v1",
+        "schema_version": "v2",
+        "schema_id": "sees.user_configuration.v2",
         "source": "backend_sees_config",
         "detailed_config_file": "configs/sees_control.yaml",
         "template_config_file": "configs/templates/sees_user_detailed.example.yaml",
@@ -297,6 +300,7 @@ def build_user_configuration_view(config: SEESConfig) -> ConfigurationView:
         ),
         "file_only_sections": _file_only_section_summaries(file_only_fields),
         "file_only_fields": file_only_fields,
+        "user_config_schema_v2": build_user_configuration_schema_v2(config),
         "notes": (
             "The control panel should expose key_fields for common operation.",
             "Advanced users should edit the detailed config file or template for full control.",

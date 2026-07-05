@@ -315,6 +315,8 @@ export interface BackendDerivedSummary {
 
 export interface ConfigurationSurfaceSummary {
   version: "v1" | string;
+  schema_version?: "v2" | string;
+  schema_id?: string;
   source: string;
   detailed_config_file: string;
   template_config_file: string;
@@ -326,6 +328,7 @@ export interface ConfigurationSurfaceSummary {
   detailed_file_sections: readonly ConfigurationSurfaceSection[];
   file_only_sections?: readonly ConfigurationSurfaceSection[];
   file_only_fields: readonly string[];
+  user_config_schema_v2?: UserConfigurationSchemaV2;
   notes?: readonly string[];
 }
 
@@ -351,6 +354,66 @@ export interface ConfigurationSurfaceSection {
   purpose: string;
   field_count: number;
   example_paths: readonly string[];
+}
+
+export interface UserConfigurationSchemaV2 {
+  version: "v2" | string;
+  schema_id: string;
+  source: string;
+  format: string;
+  unknown_key_policy: string;
+  defaulting_policy: string;
+  frontend_policy: string;
+  forbidden_integrations: readonly string[];
+  packet_level_simulation: boolean;
+  field_count: number;
+  key_field_count: number;
+  file_only_field_count: number;
+  root_sections: readonly UserConfigurationSchemaSectionV2[];
+  fields: readonly UserConfigurationFieldSchemaV2[];
+  templates: readonly UserConfigurationTemplateReferenceV2[];
+  examples: readonly UserConfigurationExampleV2[];
+  notes?: readonly string[];
+}
+
+export interface UserConfigurationSchemaSectionV2 {
+  path: string;
+  purpose: string;
+}
+
+export interface UserConfigurationFieldSchemaV2 {
+  path: string;
+  section: string;
+  label: string;
+  description: string;
+  value_type: string;
+  default_value: string | number | boolean | null;
+  current_value: string | number | boolean | null;
+  required_in_effective_config: boolean;
+  required_in_user_file: boolean;
+  editable_surface: string;
+  validation_rules: readonly string[];
+  enum_values?: readonly string[];
+  nullable?: boolean;
+  unit?: string;
+  minimum?: number;
+  maximum?: number;
+  exclusive_minimum?: number;
+  exclusive_maximum?: number;
+}
+
+export interface UserConfigurationTemplateReferenceV2 {
+  id: string;
+  path: string;
+  scale: string;
+  comment_policy: string;
+}
+
+export interface UserConfigurationExampleV2 {
+  id: string;
+  purpose: string;
+  mapping: Record<string, unknown>;
+  expected: string;
 }
 
 export interface CoverageBeamSummary {

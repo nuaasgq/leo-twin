@@ -5,6 +5,51 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Product Configuration Schema v2
+
+- Branch: `feature/T166-product-config-schema-v2`
+- Commit: pending in this commit
+- Scope: implement V2-001 by adding a backend-owned, machine-readable user
+  configuration schema v2 for the full `SEESConfig` surface. The schema now
+  exposes deterministic field paths, defaults, current values, enum values,
+  numeric constraints, key-control vs detailed-file edit surfaces, template
+  references, accepted/rejected examples, and validation reporting. Existing
+  `configuration_surface_summary.version` remains `v1` for compatibility while
+  carrying `schema_version: v2` and `user_config_schema_v2`. Event Kernel and
+  runtime model behavior are unchanged.
+- Changed files/modules:
+  - `src/leo_twin/services/configuration_schema.py`
+  - `src/leo_twin/services/configuration_view.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `tests/unit/test_user_configuration_schema_v2.py`
+  - `docs/user_configuration_schema_v2.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_user_configuration_schema_v2.py tests/unit/test_configuration_view.py -q`
+    - Result: passed, 13 tests.
+  - `python -m pytest tests/integration/test_config_control.py::test_initialize_writes_config_and_start_gates_streams tests/integration/test_config_control.py::test_frontend_control_messages_are_processed -q`
+    - Result: passed, 2 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- configPanel.test.ts`
+    - Result: passed, 25 files / 261 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing `DataPanel` chunk-size
+      warning at about 502 kB after minification.
+  - `git diff --check src/leo_twin/services/configuration_schema.py src/leo_twin/services/configuration_view.py frontend/src/core/event_types/index.ts tests/unit/test_user_configuration_schema_v2.py docs/user_configuration_schema_v2.md docs/development_log.md`
+    - Result: passed.
+- Problems encountered:
+  - Direct `pnpm --dir frontend test -- configPanel.test.ts` failed in the
+    default PowerShell environment because `node` was not on `PATH`. The same
+    command passed after using the bundled Codex Node/Pnpm paths.
+  - The working tree still contains unrelated local runtime/config drift in
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+    These files were intentionally left unstaged and unchanged by this task.
+- Known remaining issues / follow-up:
+  - V2-001 defines and exposes the schema contract; the next task should add
+    V2-003/V2-004 style import/export UX or proceed to V2-020 Network Model
+    Contract v2 so KPI provenance can reference stable network semantics.
+
 ## 2026-07-05 - System v2 Upgrade Roadmap v1
 
 - Branch: `feature/T165-system-v2-roadmap`
