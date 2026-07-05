@@ -5,6 +5,44 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Recent KPI Zero-Reason Transparency v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending in this commit
+- Scope: expose backend-owned zero-reason labels for recent-window network KPI
+  samples and display those explanations in the standalone dashboard so users
+  can tell whether 0 loss/jitter means no recent completed-flow sample, no
+  triggered loss proxy, or a positive proxy value.
+- Changed files/modules:
+  - `src/leo_twin/services/metrics/collector.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `tests/unit/test_metrics_module.py`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_metrics_module.py -q`
+    - Result: passed, 21 tests.
+  - Bundled Node:
+    `pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 25 files / 242 tests.
+  - `python -m pytest tests/integration/test_runtime_session_control.py -q`
+    - Result: passed, 16 tests.
+  - Bundled Node:
+    `pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - Existing PowerShell output can show Chinese source as mojibake when read
+    without `-Encoding utf8`; edits were made against UTF-8 reads and kept
+    narrowly scoped.
+- Known remaining issues:
+  - Metrics remain deterministic flow-level proxies, not packet-level loss or
+    jitter. The new fields explain the proxy state; they do not add a more
+    detailed network model.
+- Recommended follow-up:
+  - Add dashboard copy for per-user and per-satellite observability limits so
+    users can distinguish full detail rows from capped KPI history slices.
+
 ## 2026-07-05 - Frontend Template Profile Binding v1
 
 - Branch: `feature/T164-dashboard-observability-v1`

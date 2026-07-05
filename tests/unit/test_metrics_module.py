@@ -790,7 +790,15 @@ def test_metrics_collector_publishes_backend_kpi_time_series() -> None:
         "network_recent_delivered_throughput_mbps": 0.0,
         "network_recent_latency_s": 0.0,
         "network_recent_loss_proxy_rate": 0.0,
+        "network_recent_loss_zero_reason": "NO_RECENT_FLOW_SAMPLE",
+        "network_recent_loss_zero_reason_label": (
+            "最近窗口暂无完成流，零值仅表示窗口未形成样本"
+        ),
         "network_recent_delay_variation_s": 0.0,
+        "network_recent_delay_variation_zero_reason": "NO_RECENT_FLOW_SAMPLE",
+        "network_recent_delay_variation_zero_reason_label": (
+            "最近窗口暂无完成流，零值仅表示窗口未形成样本"
+        ),
         "compute_resource_used_gflops_fp32": 30.0,
         "compute_resource_used_gflops_fp64": 4.0,
         "compute_resource_used_gpu_tflops_fp32": 1.5,
@@ -973,7 +981,14 @@ def test_metrics_collector_reports_recent_flow_kpi_window() -> None:
     assert recent["network_recent_delivered_throughput_mbps"] == 140.0
     assert recent["network_recent_latency_s"] == pytest.approx(0.15)
     assert recent["network_recent_loss_proxy_rate"] == pytest.approx(1 / 3)
+    assert recent["network_recent_loss_zero_reason"] == "POSITIVE_PROXY"
+    assert recent["network_recent_loss_zero_reason_label"] == "当前代理指标为正值"
     assert recent["network_recent_delay_variation_s"] == pytest.approx(0.05)
+    assert recent["network_recent_delay_variation_zero_reason"] == "POSITIVE_PROXY"
+    assert (
+        recent["network_recent_delay_variation_zero_reason_label"]
+        == "当前代理指标为正值"
+    )
     assert recent["network_flow_delivered_capacity_mbps"] == pytest.approx(140.0)
     assert recent["network_flow_delay_variation_s"] == pytest.approx(0.05)
 
@@ -981,6 +996,17 @@ def test_metrics_collector_reports_recent_flow_kpi_window() -> None:
     assert expired["network_recent_flow_count"] == 0.0
     assert expired["network_recent_delivered_throughput_mbps"] == 0.0
     assert expired["network_recent_latency_s"] == 0.0
+    assert expired["network_recent_loss_zero_reason"] == "NO_RECENT_FLOW_SAMPLE"
+    assert expired["network_recent_loss_zero_reason_label"] == (
+        "最近窗口暂无完成流，零值仅表示窗口未形成样本"
+    )
+    assert (
+        expired["network_recent_delay_variation_zero_reason"]
+        == "NO_RECENT_FLOW_SAMPLE"
+    )
+    assert expired["network_recent_delay_variation_zero_reason_label"] == (
+        "最近窗口暂无完成流，零值仅表示窗口未形成样本"
+    )
 
 
 def test_metrics_collector_publishes_satellite_kpi_slices() -> None:

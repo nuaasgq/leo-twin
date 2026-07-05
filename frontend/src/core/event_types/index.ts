@@ -542,7 +542,11 @@ export interface RuntimeKpiSampleV1 {
   network_recent_delivered_throughput_mbps?: number;
   network_recent_latency_s?: number;
   network_recent_loss_proxy_rate?: number;
+  network_recent_loss_zero_reason?: string;
+  network_recent_loss_zero_reason_label?: string;
   network_recent_delay_variation_s?: number;
+  network_recent_delay_variation_zero_reason?: string;
+  network_recent_delay_variation_zero_reason_label?: string;
   compute_resource_used_gflops_fp32: number;
   compute_resource_used_gflops_fp64?: number;
   compute_resource_used_gpu_tflops_fp32?: number;

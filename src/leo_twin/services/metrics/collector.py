@@ -29,7 +29,7 @@ from leo_twin.models.compute.contracts import COMPUTE_NODE_UPDATE
 
 
 MetricSummary = dict[str, str | float | int | bool]
-KpiSample = dict[str, float]
+KpiSample = dict[str, str | float]
 SatelliteKpiSlice = dict[str, str | float | int]
 SatelliteKpiHistorySample = dict[str, float]
 ReplayPayload = str | int | float | bool | None | list["ReplayPayload"] | dict[str, "ReplayPayload"]
@@ -586,6 +586,20 @@ class MetricsCollector:
             if recent_flow_count == 0
             else float(recent_flow_quality["failed_count"]) / recent_flow_count
         )
+        recent_flow_delay_variation_s = _standard_deviation(
+            recent_flow_quality["latencies"]
+        )
+        recent_loss_zero_reason = _network_recent_loss_zero_reason(
+            recent_flow_loss_proxy_rate,
+            recent_flow_count=recent_flow_count,
+        )
+        recent_delay_variation_zero_reason = (
+            _network_recent_delay_variation_zero_reason(
+                recent_flow_delay_variation_s,
+                recent_flow_count=recent_flow_count,
+                recent_latency_count=len(recent_flow_quality["latencies"]),
+            )
+        )
         compute_summary = self._compute_resource_summary()
         return {
             "sim_time": float(sim_time),
@@ -662,8 +676,18 @@ class MetricsCollector:
             ),
             "network_recent_latency_s": _average(recent_flow_quality["latencies"]),
             "network_recent_loss_proxy_rate": float(recent_flow_loss_proxy_rate),
-            "network_recent_delay_variation_s": _standard_deviation(
-                recent_flow_quality["latencies"]
+            "network_recent_loss_zero_reason": recent_loss_zero_reason,
+            "network_recent_loss_zero_reason_label": _network_quality_zero_reason_label(
+                recent_loss_zero_reason
+            ),
+            "network_recent_delay_variation_s": recent_flow_delay_variation_s,
+            "network_recent_delay_variation_zero_reason": (
+                recent_delay_variation_zero_reason
+            ),
+            "network_recent_delay_variation_zero_reason_label": (
+                _network_quality_zero_reason_label(
+                    recent_delay_variation_zero_reason
+                )
             ),
             "compute_resource_used_gflops_fp32": float(
                 compute_summary["compute_resource_used_gflops_fp32"]
@@ -1826,7 +1850,15 @@ def _baseline_kpi_sample(sim_time: float) -> KpiSample:
         "network_recent_delivered_throughput_mbps": 0.0,
         "network_recent_latency_s": 0.0,
         "network_recent_loss_proxy_rate": 0.0,
+        "network_recent_loss_zero_reason": "NO_RECENT_FLOW_SAMPLE",
+        "network_recent_loss_zero_reason_label": _network_quality_zero_reason_label(
+            "NO_RECENT_FLOW_SAMPLE"
+        ),
         "network_recent_delay_variation_s": 0.0,
+        "network_recent_delay_variation_zero_reason": "NO_RECENT_FLOW_SAMPLE",
+        "network_recent_delay_variation_zero_reason_label": (
+            _network_quality_zero_reason_label("NO_RECENT_FLOW_SAMPLE")
+        ),
         "compute_resource_used_gflops_fp32": 0.0,
         "compute_resource_used_gflops_fp64": 0.0,
         "compute_resource_used_gpu_tflops_fp32": 0.0,
@@ -2206,6 +2238,33 @@ def _network_quality_delay_variation_zero_reason(
     return "NO_LATENCY_VARIATION"
 
 
+def _network_recent_loss_zero_reason(
+    recent_loss_proxy_rate: float,
+    *,
+    recent_flow_count: int,
+) -> str:
+    if recent_loss_proxy_rate > 0.0:
+        return "POSITIVE_PROXY"
+    if recent_flow_count == 0:
+        return "NO_RECENT_FLOW_SAMPLE"
+    return "NO_RECENT_FLOW_LOSS"
+
+
+def _network_recent_delay_variation_zero_reason(
+    recent_delay_variation_proxy: float,
+    *,
+    recent_flow_count: int,
+    recent_latency_count: int,
+) -> str:
+    if recent_delay_variation_proxy > 0.0:
+        return "POSITIVE_PROXY"
+    if recent_flow_count == 0 or recent_latency_count == 0:
+        return "NO_RECENT_FLOW_SAMPLE"
+    if recent_latency_count <= 1:
+        return "INSUFFICIENT_RECENT_FLOW_LATENCY_SAMPLE"
+    return "NO_RECENT_FLOW_LATENCY_VARIATION"
+
+
 def _network_quality_zero_reason_label(reason: str) -> str:
     labels = {
         "POSITIVE_PROXY": "当前代理指标为正值",
@@ -2215,6 +2274,12 @@ def _network_quality_zero_reason_label(reason: str) -> str:
         ),
         "INSUFFICIENT_VARIATION_SAMPLE": "时延样本不足，无法形成离散度代理",
         "NO_LATENCY_VARIATION": "路由/流时延样本未产生变化",
+        "NO_RECENT_FLOW_SAMPLE": "最近窗口暂无完成流，零值仅表示窗口未形成样本",
+        "NO_RECENT_FLOW_LOSS": "最近窗口完成流均成功，未触发失败流损耗代理",
+        "INSUFFICIENT_RECENT_FLOW_LATENCY_SAMPLE": (
+            "最近窗口时延样本不足，无法形成抖动代理"
+        ),
+        "NO_RECENT_FLOW_LATENCY_VARIATION": "最近窗口完成流时延未产生变化",
     }
     return labels.get(reason, reason)
 

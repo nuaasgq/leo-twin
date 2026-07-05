@@ -3267,6 +3267,8 @@ function formatNetworkQualityProvenanceNote(
   }；丢包 ${loss ?? "未声明"}；抖动 ${jitter ?? "未声明"}。`;
 }
 
+const POSITIVE_PROXY_REASON_LABEL = "当前代理指标为正值";
+
 function positiveMetric(value: number | undefined): number | undefined {
   return value !== undefined && value > 0 ? value : undefined;
 }
@@ -3475,9 +3477,11 @@ export function buildDataPanelNetworkKpiCaveats(
   backendKpiTimeSeries: RuntimeKpiTimeSeriesV1 | null | undefined = undefined,
   networkProvenance: RuntimeNetworkQualityProvenanceV1 | null | undefined = undefined
 ): readonly string[] {
+  const latestSample = latestRuntimeKpiSample(backendKpiTimeSeries);
   if (
     (metrics === null || metrics === undefined) &&
-    (networkProvenance === null || networkProvenance === undefined)
+    (networkProvenance === null || networkProvenance === undefined) &&
+    latestSample === null
   ) {
     return buildDataPanelKpiTailCaveats(backendKpiTimeSeries);
   }
@@ -3491,14 +3495,23 @@ export function buildDataPanelNetworkKpiCaveats(
   const lossReason =
     networkProvenance?.zero_reasons.loss?.label ||
     metricString(metrics, "network_quality_loss_zero_reason_label");
-  if (lossReason && lossReason !== "当前代理指标为正值") {
+  if (lossReason && lossReason !== POSITIVE_PROXY_REASON_LABEL) {
     caveats.push(`丢包率：${lossReason}`);
   }
   const jitterReason =
     networkProvenance?.zero_reasons.delay_variation?.label ||
     metricString(metrics, "network_quality_delay_variation_zero_reason_label");
-  if (jitterReason && jitterReason !== "当前代理指标为正值") {
+  if (jitterReason && jitterReason !== POSITIVE_PROXY_REASON_LABEL) {
     caveats.push(`抖动：${jitterReason}`);
+  }
+  const recentLossReason = latestSample?.network_recent_loss_zero_reason_label;
+  if (recentLossReason && recentLossReason !== POSITIVE_PROXY_REASON_LABEL) {
+    caveats.push(`最近窗口丢包率：${recentLossReason}`);
+  }
+  const recentJitterReason =
+    latestSample?.network_recent_delay_variation_zero_reason_label;
+  if (recentJitterReason && recentJitterReason !== POSITIVE_PROXY_REASON_LABEL) {
+    caveats.push(`最近窗口抖动：${recentJitterReason}`);
   }
   caveats.push(...buildDataPanelKpiTailCaveats(backendKpiTimeSeries));
   return caveats;
@@ -3523,6 +3536,37 @@ export function buildDataPanelNetworkKpiProvenanceItems(
       ? "图表优先使用后端最近窗口内完成流的吞吐、时延、丢包代理和抖动代理。"
       : "图表使用后端累计有效指标或快照估算值。"
   });
+  if (latestSample !== null && hasRecentWindow) {
+    const recentFlowCount = latestSample.network_recent_flow_count;
+    if (typeof recentFlowCount === "number" && Number.isFinite(recentFlowCount)) {
+      items.push({
+        label: "窗口样本",
+        value: `${formatPreciseMetricValue(Math.max(0, recentFlowCount))} 条完成流`,
+        title: "最近窗口 KPI 只统计该时间窗内已经完成的流；窗口内无完成流时曲线可能保持 0。"
+      });
+    }
+    if (
+      latestSample.network_recent_loss_zero_reason_label &&
+      latestSample.network_recent_loss_zero_reason_label !== POSITIVE_PROXY_REASON_LABEL
+    ) {
+      items.push({
+        label: "窗口丢包",
+        value: latestSample.network_recent_loss_zero_reason_label,
+        title: "该说明来自后端最近窗口 KPI 样本，不代表包级丢包。"
+      });
+    }
+    if (
+      latestSample.network_recent_delay_variation_zero_reason_label &&
+      latestSample.network_recent_delay_variation_zero_reason_label !==
+        POSITIVE_PROXY_REASON_LABEL
+    ) {
+      items.push({
+        label: "窗口抖动",
+        value: latestSample.network_recent_delay_variation_zero_reason_label,
+        title: "该说明来自后端最近窗口 KPI 样本，不代表包级抖动。"
+      });
+    }
+  }
 
   const sourceItems = (
     [

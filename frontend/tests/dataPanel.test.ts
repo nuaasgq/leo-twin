@@ -789,7 +789,9 @@ describe("buildDataPanelNetworkKpiProvenanceItems", () => {
             network_recent_delivered_throughput_mbps: 65,
             network_recent_latency_s: 0.18,
             network_recent_loss_proxy_rate: 0.25,
+            network_recent_loss_zero_reason_label: "当前代理指标为正值",
             network_recent_delay_variation_s: 0.012,
+            network_recent_delay_variation_zero_reason_label: "当前代理指标为正值",
             compute_resource_used_gflops_fp32: 2500
           }
         ]
@@ -798,10 +800,50 @@ describe("buildDataPanelNetworkKpiProvenanceItems", () => {
 
     expect(items.map((item) => [item.label, item.value])).toEqual([
       ["曲线窗口", "最近 1分0秒 完成流"],
+      ["窗口样本", "3 条完成流"],
       ["吞吐", "已完成流容量"],
       ["时延", "已完成流时延"],
       ["丢包", "近期失败流比例"],
       ["抖动", "近期流时延离散度"],
+      ["语义", "流级代理 / 非包级"]
+    ]);
+  });
+
+  it("surfaces recent-window zero reasons from backend KPI samples", () => {
+    const items = buildDataPanelNetworkKpiProvenanceItems(
+      {
+        network_quality_metric_model: "FLOW_LEVEL_PROXY"
+      },
+      {
+        version: "v1",
+        samples: [
+          {
+            sim_time: 70,
+            network_effective_throughput_mbps: 150,
+            network_effective_latency_s: 0.11,
+            network_effective_loss_proxy_rate: 0,
+            network_effective_delay_variation_s: 0,
+            network_recent_window_s: 60,
+            network_recent_flow_count: 0,
+            network_recent_delivered_throughput_mbps: 0,
+            network_recent_latency_s: 0,
+            network_recent_loss_proxy_rate: 0,
+            network_recent_loss_zero_reason_label:
+              "最近窗口暂无完成流，零值仅表示窗口未形成样本",
+            network_recent_delay_variation_s: 0,
+            network_recent_delay_variation_zero_reason_label:
+              "最近窗口暂无完成流，零值仅表示窗口未形成样本",
+            compute_resource_used_gflops_fp32: 2500
+          }
+        ]
+      }
+    );
+
+    expect(items.map((item) => [item.label, item.value])).toEqual([
+      ["曲线窗口", "最近 1分0秒 完成流"],
+      ["窗口样本", "0 条完成流"],
+      ["窗口丢包", "最近窗口暂无完成流，零值仅表示窗口未形成样本"],
+      ["窗口抖动", "最近窗口暂无完成流，零值仅表示窗口未形成样本"],
       ["语义", "流级代理 / 非包级"]
     ]);
   });
