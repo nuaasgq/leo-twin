@@ -5,6 +5,51 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Runtime Guardrails v2
+
+- Branch: `feature/T236-runtime-guardrails-v2`
+- Commit: pending in this commit
+- Scope: advance V2-042 by adding backend-owned
+  `leo_twin.runtime_guardrails.v2`. The policy derives from
+  `scale_policy_v2`, `lod_snapshot_policy_v2`, and existing scale safety
+  estimates to report event volume, memory use, stream backlog risk,
+  `ALLOW` / `DEGRADE` / `REFUSE` decisions, refusal/degrade reasons, and
+  runtime actions.
+- Changed files/modules:
+  - `src/leo_twin/services/runtime_guardrails_v2.py`
+  - `src/leo_twin/services/derived_summary.py`
+  - `tests/unit/test_runtime_guardrails_v2.py`
+  - `tests/unit/test_backend_derived_summary.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `docs/runtime_guardrails_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_runtime_guardrails_v2.py tests/unit/test_lod_snapshot_policy_v2.py tests/unit/test_backend_derived_summary.py -q`
+    - Result: passed, 25 tests.
+  - `python -m pytest tests/integration/test_benchmark_acceptance_v1.py -q`
+    - Result: passed, 9 tests.
+  - `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed using the Codex bundled Node.js runtime after the user
+      shell PATH did not expose `node`.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - This task intentionally exposes runtime guardrails as a backend-derived
+    policy contract without changing the Event Kernel, live session loop, or
+    stream buffer behavior.
+  - Frontend protocol types were extended so later dashboard work can consume
+    `runtime_guardrails_v2` instead of inferring runtime safety locally.
+  - Existing local runtime/generated config files remain dirty and are
+    intentionally not included in this task.
+- Known remaining issues / follow-up:
+  - V2-043 should add backend cursor/detail contracts for hidden users,
+    satellites, routes, services, and compute nodes.
+  - A later runtime-control task should apply guardrail `REFUSE` decisions to
+    start-time control paths where appropriate.
+  - Dashboard v3 should display `decision`, `degrade_reasons`, and
+    `refusal_reasons` from this backend summary.
+
 ## 2026-07-06 - LOD Snapshot Policy v2
 
 - Branch: `feature/T235-lod-snapshot-policy-v2`

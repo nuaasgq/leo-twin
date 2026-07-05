@@ -194,6 +194,13 @@ Tasks:
   - Scope: event volume estimate, memory estimate, stream backlog estimate,
     explicit refusal/degrade reason.
   - Depends on: V2-040.
+  - Status: T236 adds backend-owned `leo_twin.runtime_guardrails.v2`.
+    The guardrail summary derives from `scale_policy_v2`,
+    `lod_snapshot_policy_v2`, and existing scale safety estimates. It reports
+    configured counts, runtime limits, event/memory/stream backlog estimates,
+    scale safety violations/risks, explicit `ALLOW` / `DEGRADE` / `REFUSE`
+    decisions, runtime actions, and a no-Event-Kernel-change policy in backend
+    derived summaries.
 - V2-043: Add large detail pagination contract.
   - Scope: users, satellites, routes, services, compute nodes.
   - Depends on: V2-041.

@@ -392,6 +392,81 @@ export interface LodSampledHistoryV2 {
   source: string;
 }
 
+export interface RuntimeGuardrailsV2 {
+  version: "v2" | string;
+  guardrail_id: string;
+  source_policy_ids: {
+    scale_policy: string;
+    lod_snapshot_policy: string;
+  };
+  active_profile_id: string;
+  active_scale_band: string;
+  configured_counts: {
+    satellite_count: number;
+    user_count: number;
+    compute_node_count: number;
+  };
+  runtime_config: RuntimeGuardrailConfigSummaryV2;
+  limits: RuntimeGuardrailLimitsV2;
+  estimates: RuntimeGuardrailEstimatesV2;
+  scale_safety_report: RuntimeGuardrailScaleSafetyReportV2;
+  decision: "ALLOW" | "DEGRADE" | "REFUSE" | string;
+  degrade_reasons: readonly string[];
+  refusal_reasons: readonly string[];
+  runtime_actions: RuntimeGuardrailActionsV2;
+  event_kernel_policy: string;
+}
+
+export interface RuntimeGuardrailConfigSummaryV2 {
+  simulation_duration_seconds: number;
+  tick_interval_seconds: number;
+  average_events_per_entity_per_tick: number;
+  partition_count: number;
+  snapshot_interval_events: number;
+}
+
+export interface RuntimeGuardrailLimitsV2 {
+  max_event_count: number;
+  max_memory_bytes: number;
+  event_stream_max_items: number;
+  state_stream_max_items: number;
+  stream_max_batch_size: number;
+}
+
+export interface RuntimeGuardrailEstimatesV2 {
+  event_volume: number;
+  memory_bytes: number;
+  interactions_per_tick: number;
+  queue_depth: number;
+  computation_per_tick: number;
+  stream_backlog: {
+    event_stream: RuntimeGuardrailStreamBacklogV2;
+    state_stream: RuntimeGuardrailStreamBacklogV2;
+  };
+}
+
+export interface RuntimeGuardrailStreamBacklogV2 {
+  name: string;
+  estimated_items: number;
+  max_items: number;
+  max_batch_size: number;
+  overflow_risk: boolean;
+  expected_dropped_without_cursor: number;
+  cursor_required: boolean;
+}
+
+export interface RuntimeGuardrailScaleSafetyReportV2 {
+  allowed: boolean;
+  violations: readonly string[];
+  risks: readonly string[];
+}
+
+export interface RuntimeGuardrailActionsV2 {
+  pre_run_check: string;
+  operator_message: string;
+  fallback: string;
+}
+
 export interface BackendDerivedSummary {
   derived_constellation_summary?: ConstellationDerivedSummary;
   traffic_demand_summary?: TrafficDemandSummary;
@@ -404,6 +479,7 @@ export interface BackendDerivedSummary {
   fidelity_summary?: FidelitySummary;
   scale_policy_v2?: ScalePolicyV2;
   lod_snapshot_policy_v2?: LodSnapshotPolicyV2;
+  runtime_guardrails_v2?: RuntimeGuardrailsV2;
   workload_smoothing_summary?: WorkloadSmoothingSummary;
   configuration_surface_summary?: ConfigurationSurfaceSummary;
   dashboard_information_architecture_v3?: DashboardInformationArchitectureV3;

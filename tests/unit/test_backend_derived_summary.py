@@ -224,6 +224,24 @@ def test_backend_derived_summary_is_deterministic_and_frontend_ready() -> None:
         "LOD snapshot policy v2 uses HIDDEN_ROWS_REMAIN_WINDOWED" in assumption
         for assumption in first["model_assumptions"]
     )
+    runtime_guardrails = first["runtime_guardrails_v2"]
+    assert isinstance(runtime_guardrails, dict)
+    assert runtime_guardrails["guardrail_id"] == "leo_twin.runtime_guardrails.v2"
+    assert runtime_guardrails["active_profile_id"] == "medium_300"
+    assert runtime_guardrails["decision"] == "DEGRADE"
+    assert runtime_guardrails["source_policy_ids"] == {
+        "scale_policy": "leo_twin.scale_policy.v2",
+        "lod_snapshot_policy": "leo_twin.lod_snapshot_policy.v2",
+    }
+    assert runtime_guardrails["refusal_reasons"] == ()
+    assert runtime_guardrails["estimates"]["event_volume"] > 0
+    assert runtime_guardrails["estimates"]["stream_backlog"]["event_stream"][
+        "cursor_required"
+    ] is True
+    assert any(
+        "Runtime guardrails v2 classify pre-run execution as DEGRADE" in assumption
+        for assumption in first["model_assumptions"]
+    )
     assert any(
         "Coverage beams are bounded geometric visualization footprints" in assumption
         for assumption in first["model_assumptions"]
