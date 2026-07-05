@@ -95,8 +95,15 @@ This field gives the frontend a single backend-derived signal for whether the
 network KPI panel is fully backed by runtime values or should be presented as a
 partial/missing proxy view.
 
+The standalone dashboard consumes this field directly in the network KPI panel.
+It renders a compact trust card from backend values rather than inferring KPI
+credibility locally. The card reports status, KPI coverage, source-field
+coverage, proxy/packet guard counts, zero-value explanation coverage, missing
+metric names, and backend caveats.
+
 ## Follow-Up
 
 V2-022 should improve time-varying network pressure inputs while preserving this
-contract. Dashboard work can then consume `network_kpi_provenance_v2.kpis` and
-`network_kpi_credibility_v1` instead of locally mapping individual metric keys.
+contract. A later dashboard pass can render the full
+`network_kpi_provenance_v2.kpis` table instead of only the compact
+`network_kpi_credibility_v1` trust summary.

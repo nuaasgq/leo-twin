@@ -5,6 +5,44 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Dashboard Network KPI Credibility v1
+
+- Branch: `feature/T207-dashboard-network-kpi-credibility-v1`
+- Commit: pending in this commit
+- Scope: render the backend-owned `network_kpi_credibility_v1` summary in the
+  standalone dashboard network KPI section. The UI now shows trusted,
+  partial, missing, and invalid packet-level states from backend status fields,
+  including KPI coverage, source-field coverage, flow-level proxy count,
+  packet-level guard count, zero-value explanation coverage, missing metrics,
+  and backend caveats. This does not change frontend architecture, KPI formulas,
+  runtime control, or Event Kernel behavior.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/network_kpi_provenance_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 25 files / 306 tests. The project script currently runs
+      the full frontend Vitest suite for this invocation.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+- Problems encountered and handling:
+  - The user shell did not have `node` on `PATH`, so the first `pnpm` attempt
+    failed before tests started. Re-ran with the bundled Codex Node/Pnpm runtime
+    and validation passed.
+  - Local runtime/generated config files remain dirty and are intentionally not
+    included in this task.
+- Known remaining issues / follow-up:
+  - V2-022 should make the network pressure inputs more time-varying so the
+    now-visible credibility card is paired with richer KPI dynamics.
+  - A future dashboard pass can render the full `network_kpi_provenance_v2.kpis`
+    table instead of only the compact trust summary.
+
 ## 2026-07-06 - Network KPI Credibility v1
 
 - Branch: `feature/T206-network-kpi-credibility-v1`

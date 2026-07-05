@@ -19,6 +19,7 @@ import {
   buildDataPanelNetworkFormulaInputs,
   buildDataPanelNetworkComponentTail,
   buildDataPanelNetworkKpiCaveats,
+  buildDataPanelNetworkKpiCredibilityDisplay,
   buildDataPanelNetworkKpiProvenanceItems,
   buildDataPanelNetworkKpiSource,
   buildDataPanelNodeDetailDrawerItems,
@@ -2321,6 +2322,119 @@ describe("buildDataPanelNetworkKpiProvenanceItems", () => {
       ["抖动", "structured-jitter"],
       ["语义", "流级代理 / 非包级"]
     ]);
+  });
+});
+
+describe("buildDataPanelNetworkKpiCredibilityDisplay", () => {
+  it("formats complete backend network KPI credibility as a trusted flow-level proxy", () => {
+    expect(
+      buildDataPanelNetworkKpiCredibilityDisplay({
+        version: "v1",
+        credibility_id: "leo_twin.network_kpi_credibility.v1",
+        source: "NETWORK_KPI_PROVENANCE_V2",
+        provenance_id: "leo_twin.network_kpi_provenance.v2",
+        metric_model: "FLOW_LEVEL_PROXY",
+        packet_level_simulation: false,
+        credibility_status: "COMPLETE_FLOW_LEVEL_PROXY",
+        kpi_count: 6,
+        observed_kpi_count: 6,
+        missing_kpi_count: 0,
+        packet_level_metric_count: 0,
+        flow_level_proxy_metric_count: 6,
+        zero_value_kpi_count: 2,
+        zero_value_explained_count: 2,
+        source_field_count: 18,
+        observed_source_field_count: 18,
+        missing_source_field_count: 0,
+        missing_metrics: [],
+        zero_unexplained_metrics: [],
+        caveats: ["All network KPIs are flow-level proxies.", "No packet-level simulation."]
+      })
+    ).toEqual({
+      tone: "match",
+      statusLabel: "完整流级代理",
+      summaryLabel: "KPI 6/6 有运行值；来源字段 18/18 可观测",
+      metaLabels: [
+        "模型 流级代理",
+        "流级代理 6",
+        "无包级指标",
+        "零值解释 2/2",
+        "缺失 KPI 0"
+      ],
+      caveats: ["All network KPIs are flow-level proxies.", "No packet-level simulation."]
+    });
+  });
+
+  it("surfaces missing runtime KPI values from backend credibility fields", () => {
+    const display = buildDataPanelNetworkKpiCredibilityDisplay({
+      version: "v1",
+      credibility_id: "leo_twin.network_kpi_credibility.v1",
+      source: "NETWORK_KPI_PROVENANCE_V2",
+      provenance_id: "leo_twin.network_kpi_provenance.v2",
+      metric_model: "FLOW_LEVEL_PROXY",
+      packet_level_simulation: false,
+      credibility_status: "PARTIAL_RUNTIME_VALUES",
+      kpi_count: 6,
+      observed_kpi_count: 4,
+      missing_kpi_count: 2,
+      packet_level_metric_count: 0,
+      flow_level_proxy_metric_count: 6,
+      zero_value_kpi_count: 1,
+      zero_value_explained_count: 0,
+      source_field_count: 18,
+      observed_source_field_count: 12,
+      missing_source_field_count: 6,
+      missing_metrics: ["network_effective_loss_proxy_rate", "network_effective_jitter_s"],
+      zero_unexplained_metrics: ["network_effective_loss_proxy_rate"],
+      caveats: ["Missing runtime KPI values."]
+    });
+
+    expect(display).toMatchObject({
+      tone: "different",
+      statusLabel: "部分运行值",
+      summaryLabel: "KPI 4/6 有运行值；来源字段 12/18 可观测"
+    });
+    expect(display?.metaLabels).toContain("缺失 KPI 2");
+    expect(display?.caveats).toContain(
+      "缺失指标：network_effective_loss_proxy_rate, network_effective_jitter_s"
+    );
+    expect(display?.caveats).toContain(
+      "零值未解释：network_effective_loss_proxy_rate"
+    );
+  });
+
+  it("marks packet-level KPI declarations as invalid for the current product mode", () => {
+    const display = buildDataPanelNetworkKpiCredibilityDisplay({
+      version: "v1",
+      credibility_id: "leo_twin.network_kpi_credibility.v1",
+      source: "NETWORK_KPI_PROVENANCE_V2",
+      provenance_id: "leo_twin.network_kpi_provenance.v2",
+      metric_model: "FLOW_LEVEL_PROXY",
+      packet_level_simulation: false,
+      credibility_status: "INVALID_PACKET_LEVEL_METRIC",
+      kpi_count: 6,
+      observed_kpi_count: 6,
+      missing_kpi_count: 0,
+      packet_level_metric_count: 1,
+      flow_level_proxy_metric_count: 5,
+      zero_value_kpi_count: 0,
+      zero_value_explained_count: 0,
+      source_field_count: 18,
+      observed_source_field_count: 18,
+      missing_source_field_count: 0,
+      missing_metrics: [],
+      zero_unexplained_metrics: [],
+      caveats: ["Packet-level metric is not allowed."]
+    });
+
+    expect(display?.tone).toBe("error");
+    expect(display?.statusLabel).toBe("包级指标越界");
+    expect(display?.metaLabels).toContain("包级指标 1");
+  });
+
+  it("hides the credibility card until backend status provides the summary", () => {
+    expect(buildDataPanelNetworkKpiCredibilityDisplay(null)).toBeNull();
+    expect(buildDataPanelNetworkKpiCredibilityDisplay(undefined)).toBeNull();
   });
 });
 

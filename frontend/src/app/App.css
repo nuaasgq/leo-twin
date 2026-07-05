@@ -1736,6 +1736,83 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
   font-weight: 800;
 }
 
+.data-panel-kpi-credibility {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  border: 1px solid #2b4a57;
+  border-radius: 7px;
+  padding: 9px 10px;
+  background: #09131a;
+}
+
+.data-panel-kpi-credibility.match {
+  border-color: #2c5b48;
+  background: #0a1713;
+}
+
+.data-panel-kpi-credibility.different {
+  border-color: #6a5a2c;
+  background: #19160e;
+}
+
+.data-panel-kpi-credibility.pending {
+  border-color: #365068;
+  background: #0d151d;
+}
+
+.data-panel-kpi-credibility.error {
+  border-color: #663333;
+  background: #1a0d0d;
+}
+
+.data-panel-kpi-credibility div {
+  min-width: 0;
+}
+
+.data-panel-kpi-credibility span,
+.data-panel-kpi-credibility small {
+  color: var(--app-muted);
+  font-size: 10px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.data-panel-kpi-credibility strong {
+  display: block;
+  min-width: 0;
+  margin-top: 3px;
+  overflow: hidden;
+  color: var(--app-text);
+  font-size: 13px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.data-panel-kpi-credibility-meta,
+.data-panel-kpi-credibility-caveats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.data-panel-kpi-credibility-meta span,
+.data-panel-kpi-credibility-caveats span {
+  min-width: 0;
+  border: 1px solid #263a48;
+  border-radius: 5px;
+  padding: 5px 7px;
+  background: #0b1219;
+}
+
+.data-panel-kpi-credibility-caveats span {
+  border-color: #3b3440;
+  background: #18141a;
+  color: #d9b889;
+}
+
 .data-panel-kpi-caveats span {
   min-width: 0;
   border: 1px solid #3b3440;

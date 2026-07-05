@@ -26,6 +26,7 @@ import {
   RuntimeKpiTimeSeriesV1,
   RuntimeExportHistoryV1,
   RuntimeMetricsSummary,
+  RuntimeNetworkKpiCredibilityV1,
   RuntimeNetworkQualityProvenanceV1,
   RuntimeNodeDetailCardV1,
   RuntimeNodeDetailPageV1,
@@ -308,6 +309,9 @@ export const DataPanel = memo(function DataPanel({
     runtimeStatus.metrics_summary,
     runtimeStatus.kpi_time_series_v1,
     runtimeStatus.network_quality_provenance_v1
+  );
+  const networkKpiCredibilityDisplay = buildDataPanelNetworkKpiCredibilityDisplay(
+    runtimeStatus.network_kpi_credibility_v1
   );
   const networkFormulaInputs = buildDataPanelNetworkFormulaInputs(
     runtimeStatus.metrics_summary
@@ -941,6 +945,30 @@ export const DataPanel = memo(function DataPanel({
                   {item.label} <strong>{item.value}</strong>
                 </span>
               ))}
+            </div>
+          ) : null}
+          {networkKpiCredibilityDisplay ? (
+            <div
+              className={`data-panel-kpi-credibility ${networkKpiCredibilityDisplay.tone}`}
+              aria-label="网络KPI可信度摘要"
+            >
+              <div>
+                <span>后端可信度</span>
+                <strong>{networkKpiCredibilityDisplay.statusLabel}</strong>
+                <small>{networkKpiCredibilityDisplay.summaryLabel}</small>
+              </div>
+              <div className="data-panel-kpi-credibility-meta">
+                {networkKpiCredibilityDisplay.metaLabels.map((label) => (
+                  <span key={label}>{label}</span>
+                ))}
+              </div>
+              {networkKpiCredibilityDisplay.caveats.length > 0 ? (
+                <div className="data-panel-kpi-credibility-caveats">
+                  {networkKpiCredibilityDisplay.caveats.map((caveat) => (
+                    <span key={caveat}>{caveat}</span>
+                  ))}
+                </div>
+              ) : null}
             </div>
           ) : null}
           {networkKpiSource.caveats.length > 0 ? (
@@ -5764,6 +5792,20 @@ export interface DataPanelNetworkKpiProvenanceItem {
   title: string;
 }
 
+export type DataPanelNetworkKpiCredibilityTone =
+  | "match"
+  | "different"
+  | "pending"
+  | "error";
+
+export interface DataPanelNetworkKpiCredibilityDisplay {
+  tone: DataPanelNetworkKpiCredibilityTone;
+  statusLabel: string;
+  summaryLabel: string;
+  metaLabels: readonly string[];
+  caveats: readonly string[];
+}
+
 export interface DataPanelServiceLatencyDisplay {
   sourceLabel: string;
   modelLabel: string;
@@ -5999,6 +6041,110 @@ export function buildDataPanelNetworkKpiProvenanceItems(
     });
   }
   return items;
+}
+
+export function buildDataPanelNetworkKpiCredibilityDisplay(
+  credibility: RuntimeNetworkKpiCredibilityV1 | null | undefined
+): DataPanelNetworkKpiCredibilityDisplay | null {
+  if (credibility === null || credibility === undefined) {
+    return null;
+  }
+  const kpiCount = Math.max(0, credibility.kpi_count);
+  const observedKpiCount = clampCount(credibility.observed_kpi_count, kpiCount);
+  const sourceFieldCount = Math.max(0, credibility.source_field_count);
+  const observedSourceFieldCount = clampCount(
+    credibility.observed_source_field_count,
+    sourceFieldCount
+  );
+  const zeroValueKpiCount = Math.max(0, credibility.zero_value_kpi_count);
+  const zeroValueExplainedCount = clampCount(
+    credibility.zero_value_explained_count,
+    zeroValueKpiCount
+  );
+  const packetLevelMetricCount = Math.max(0, credibility.packet_level_metric_count);
+  const flowLevelProxyMetricCount = Math.max(0, credibility.flow_level_proxy_metric_count);
+  return {
+    tone: networkKpiCredibilityTone(credibility.credibility_status),
+    statusLabel: networkKpiCredibilityStatusLabel(credibility.credibility_status),
+    summaryLabel: `KPI ${formatCount(observedKpiCount)}/${formatCount(
+      kpiCount
+    )} 有运行值；来源字段 ${formatCount(observedSourceFieldCount)}/${formatCount(
+      sourceFieldCount
+    )} 可观测`,
+    metaLabels: [
+      `模型 ${networkKpiMetricModelLabel(credibility.metric_model)}`,
+      `流级代理 ${formatCount(flowLevelProxyMetricCount)}`,
+      packetLevelMetricCount === 0
+        ? "无包级指标"
+        : `包级指标 ${formatCount(packetLevelMetricCount)}`,
+      `零值解释 ${formatCount(zeroValueExplainedCount)}/${formatCount(
+        zeroValueKpiCount
+      )}`,
+      `缺失 KPI ${formatCount(Math.max(0, credibility.missing_kpi_count))}`
+    ],
+    caveats: [
+      ...credibility.caveats.slice(0, 3),
+      ...networkKpiCredibilityIssueLabels(credibility)
+    ]
+  };
+}
+
+function clampCount(value: number, maxValue: number): number {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  return Math.min(Math.max(0, value), Math.max(0, maxValue));
+}
+
+function networkKpiCredibilityTone(status: string): DataPanelNetworkKpiCredibilityTone {
+  if (status === "COMPLETE_FLOW_LEVEL_PROXY") {
+    return "match";
+  }
+  if (status === "PARTIAL_RUNTIME_VALUES") {
+    return "different";
+  }
+  if (status === "MISSING_RUNTIME_VALUES") {
+    return "pending";
+  }
+  return "error";
+}
+
+function networkKpiCredibilityStatusLabel(status: string): string {
+  if (status === "COMPLETE_FLOW_LEVEL_PROXY") {
+    return "完整流级代理";
+  }
+  if (status === "PARTIAL_RUNTIME_VALUES") {
+    return "部分运行值";
+  }
+  if (status === "MISSING_RUNTIME_VALUES") {
+    return "运行值缺失";
+  }
+  if (status === "INVALID_PACKET_LEVEL_METRIC") {
+    return "包级指标越界";
+  }
+  return "可信度未知";
+}
+
+function networkKpiMetricModelLabel(metricModel: string): string {
+  if (metricModel === "FLOW_LEVEL_PROXY") {
+    return "流级代理";
+  }
+  return metricModel || "未知";
+}
+
+function networkKpiCredibilityIssueLabels(
+  credibility: RuntimeNetworkKpiCredibilityV1
+): readonly string[] {
+  const labels: string[] = [];
+  if (credibility.missing_metrics.length > 0) {
+    labels.push(`缺失指标：${credibility.missing_metrics.slice(0, 4).join(", ")}`);
+  }
+  if (credibility.zero_unexplained_metrics.length > 0) {
+    labels.push(
+      `零值未解释：${credibility.zero_unexplained_metrics.slice(0, 4).join(", ")}`
+    );
+  }
+  return labels;
 }
 
 function buildDataPanelKpiTailCaveats(
