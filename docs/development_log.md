@@ -5,6 +5,53 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Dashboard Export Compare Summary v1
+
+- Branch: `feature/T187-dashboard-export-compare-summary-v1`
+- Commit: pending in this commit
+- Scope: render the latest persisted runtime export package compare preview
+  directly in the standalone dashboard. The app now loads
+  `/runtime/export/packages/{package_id}/compare` for the latest catalog record
+  as an optional observation-plane source, and the data panel displays whether
+  the package config matches the current runtime config, section-level match
+  labels, compare hash, diff count, and a bounded set of changed JSON paths.
+  This is frontend-only on top of the existing read-only compare endpoint; it
+  does not restore packages, mutate configuration, modify Event Kernel
+  behavior, or change simulation/model logic.
+- Changed files/modules:
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- api.test.ts dataPanel.test.ts appSurface.test.ts`
+    - Result: passed, 25 files / 278 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing `DataPanel` chunk-size
+      warning after minification.
+  - `git diff --check`
+    - Result: passed. Git still reported the pre-existing CRLF warning for
+      local runtime/config drift in `configs/generated_full_system_demo.json`
+      and `configs/sees_control.yaml`.
+- Problems encountered:
+  - The first helper draft could have displayed the backend `diff_limit` rather
+    than the number of rows actually rendered by the dashboard. The display was
+    corrected to report the visible diff row count when the frontend applies a
+    tighter display limit.
+  - The working tree still contains unrelated local runtime/config drift in
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`;
+    these files were intentionally left unstaged and unchanged by this task.
+- Known remaining issues / follow-up:
+  - The compare summary is read-only and only tracks the latest catalog record.
+    Recommended next task: add a selected-package compare drawer and then a
+    guarded restore preflight that remains explicit and reversible.
+
 ## 2026-07-06 - Runtime Export Compare Preview v1
 
 - Branch: `feature/T186-runtime-export-compare-preview-v1`

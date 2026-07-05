@@ -18,6 +18,7 @@ import {
   GeneratedScenarioConfig,
   TrafficDemandSummary,
   RuntimeExportCatalogV1,
+  RuntimeExportPackageCompareV1,
   RuntimeKpiSampleV1,
   RuntimeKpiTimeSeriesV1,
   RuntimeExportHistoryV1,
@@ -98,6 +99,7 @@ export const DataPanel = memo(function DataPanel({
   generatedConfig,
   runtimeDetailPages,
   runtimeExportCatalog,
+  runtimeExportCompare,
   displaySimTime,
   displayEventCount,
   onNavigateControl
@@ -107,6 +109,7 @@ export const DataPanel = memo(function DataPanel({
   generatedConfig: GeneratedScenarioConfig | null;
   runtimeDetailPages?: RuntimeDetailPages | null;
   runtimeExportCatalog?: RuntimeExportCatalogV1 | null;
+  runtimeExportCompare?: RuntimeExportPackageCompareV1 | null;
   displaySimTime: number;
   displayEventCount: number;
   onNavigateControl: (event: MouseEvent<HTMLAnchorElement>) => void;
@@ -144,6 +147,7 @@ export const DataPanel = memo(function DataPanel({
     runtimeStatus.runtime_export_history_v1
   );
   const exportCatalogDisplay = buildDataPanelExportCatalogDisplay(runtimeExportCatalog);
+  const exportCompareDisplay = buildDataPanelExportCompareDisplay(runtimeExportCompare);
   const runtimeProgress = buildDataPanelRuntimeProgress(summary.simTime, runtimeStatus.duration);
   const telemetry = buildDataPanelTelemetry(
     snapshot,
@@ -367,6 +371,32 @@ export const DataPanel = memo(function DataPanel({
             <span>{exportCatalogDisplay.sourceLabel}</span>
             <small>{exportCatalogDisplay.summaryLabel}</small>
           </div>
+          {exportCompareDisplay ? (
+            <div
+              className={`data-panel-export-compare ${exportCompareDisplay.tone}`}
+              aria-label="复盘包配置对比摘要"
+            >
+              <div>
+                <span>配置对比</span>
+                <strong>{exportCompareDisplay.statusLabel}</strong>
+                <small>{exportCompareDisplay.summaryLabel}</small>
+              </div>
+              <div className="data-panel-export-compare-meta">
+                <span>{exportCompareDisplay.configLabel}</span>
+                <span>{exportCompareDisplay.generatedConfigLabel}</span>
+                <span>{exportCompareDisplay.hashLabel}</span>
+              </div>
+              {exportCompareDisplay.diffRows.length > 0 ? (
+                <div className="data-panel-export-compare-diffs">
+                  {exportCompareDisplay.diffRows.map((row) => (
+                    <span key={`${row.section}:${row.path}`} title={row.title}>
+                      {row.section} {row.path} <strong>{row.valueLabel}</strong>
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
           <div
             className="data-panel-export-catalog-table"
             role="table"
@@ -4431,6 +4461,80 @@ export function buildDataPanelExportCatalogDisplay(
     )} 条 / catalog ${shortRuntimeHash(catalog.catalog_hash)}`,
     rows
   };
+}
+
+export interface DataPanelExportCompareDisplay {
+  packageId: string;
+  tone: "match" | "different";
+  statusLabel: string;
+  summaryLabel: string;
+  configLabel: string;
+  generatedConfigLabel: string;
+  hashLabel: string;
+  diffRows: readonly DataPanelExportCompareDiffRow[];
+}
+
+export interface DataPanelExportCompareDiffRow {
+  section: string;
+  path: string;
+  valueLabel: string;
+  title: string;
+}
+
+export function buildDataPanelExportCompareDisplay(
+  compare: RuntimeExportPackageCompareV1 | null | undefined,
+  limit = 4
+): DataPanelExportCompareDisplay | null {
+  if (compare === null || compare === undefined) {
+    return null;
+  }
+  const displayLimit = Math.max(0, limit);
+  const diffRows = compare.differences.slice(0, displayLimit).map((item) => {
+    const valueLabel = `${formatRuntimeExportDiffValue(
+      item.package_value
+    )} -> ${formatRuntimeExportDiffValue(item.current_value)}`;
+    return {
+      section: item.section,
+      path: item.path,
+      valueLabel,
+      title: `${item.section} ${item.path}: ${valueLabel}`
+    };
+  });
+  const match = compare.compatibility === "MATCH" && compare.diff_count === 0;
+  const visibleDiffLabel =
+    compare.diff_count > diffRows.length ? ` / 显示 ${formatCount(diffRows.length)} 项` : "";
+  return {
+    packageId: compare.package_id,
+    tone: match ? "match" : "different",
+    statusLabel: match ? "配置一致" : "配置不同",
+    summaryLabel: `${compare.package_id} / 差异 ${formatCount(
+      compare.diff_count
+    )} 项${visibleDiffLabel}`,
+    configLabel: `config ${compare.same_config ? "一致" : "不同"}`,
+    generatedConfigLabel: `generated ${compare.same_generated_config ? "一致" : "不同"}`,
+    hashLabel: `compare ${shortRuntimeHash(compare.compare_hash)}`,
+    diffRows
+  };
+}
+
+function formatRuntimeExportDiffValue(value: unknown): string {
+  if (value === null) {
+    return "null";
+  }
+  if (value === undefined) {
+    return "undefined";
+  }
+  if (typeof value === "string") {
+    return value.length > 36 ? `${value.slice(0, 33)}...` : value;
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  const serialized = JSON.stringify(value);
+  if (serialized === undefined) {
+    return String(value);
+  }
+  return serialized.length > 36 ? `${serialized.slice(0, 33)}...` : serialized;
 }
 
 export interface DataPanelTrafficDisplay {

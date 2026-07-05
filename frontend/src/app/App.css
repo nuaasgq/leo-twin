@@ -1890,6 +1890,70 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
   overflow-x: auto;
 }
 
+.data-panel-export-compare {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  border: 1px solid #2b4a57;
+  border-radius: 7px;
+  padding: 9px 10px;
+  background: #09131a;
+}
+
+.data-panel-export-compare.match {
+  border-color: #2c5b48;
+  background: #0a1713;
+}
+
+.data-panel-export-compare.different {
+  border-color: #6a5a2c;
+  background: #19160e;
+}
+
+.data-panel-export-compare div {
+  min-width: 0;
+}
+
+.data-panel-export-compare span,
+.data-panel-export-compare small {
+  color: var(--app-muted);
+  font-size: 10px;
+}
+
+.data-panel-export-compare strong {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--app-text);
+  font-size: 13px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.data-panel-export-compare-meta,
+.data-panel-export-compare-diffs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.data-panel-export-compare-meta span,
+.data-panel-export-compare-diffs span {
+  min-width: 0;
+  border: 1px solid #263a48;
+  border-radius: 5px;
+  padding: 5px 7px;
+  background: #0b1219;
+  overflow-wrap: anywhere;
+}
+
+.data-panel-export-compare-diffs strong {
+  display: inline;
+  color: var(--accent-cyan);
+  font-size: 10px;
+}
+
 .data-panel-export-catalog-row {
   display: grid;
   grid-template-columns:

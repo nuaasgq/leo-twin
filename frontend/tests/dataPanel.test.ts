@@ -9,6 +9,7 @@ import {
   buildDataPanelDetailScopeNotes,
   buildDataPanelDisplaySummary,
   buildDataPanelExportCatalogDisplay,
+  buildDataPanelExportCompareDisplay,
   buildDataPanelExportHistoryDisplay,
   buildDataPanelNetworkFormulaInputs,
   buildDataPanelNetworkComponentTail,
@@ -733,6 +734,107 @@ describe("buildDataPanelExportCatalogDisplay", () => {
 
   it("returns null before backend catalog is loaded", () => {
     expect(buildDataPanelExportCatalogDisplay(undefined)).toBeNull();
+  });
+});
+
+describe("buildDataPanelExportCompareDisplay", () => {
+  it("summarizes matching package compare previews", () => {
+    expect(
+      buildDataPanelExportCompareDisplay({
+        version: "v1",
+        source: "BACKEND_RUNTIME_EXPORT_COMPARE",
+        comparison_scope: "CONFIG_AND_GENERATED_CONFIG",
+        package_id: "pkg-match",
+        compatibility: "MATCH",
+        same_config: true,
+        same_generated_config: true,
+        same_manifest_hash: true,
+        package_manifest_hash: "sha256:old",
+        current_manifest_hash: "sha256:old",
+        diff_count: 0,
+        diff_limit: 32,
+        diff_truncated: false,
+        sections: [],
+        differences: [],
+        compare_hash:
+          "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      })
+    ).toEqual({
+      packageId: "pkg-match",
+      tone: "match",
+      statusLabel: "配置一致",
+      summaryLabel: "pkg-match / 差异 0 项",
+      configLabel: "config 一致",
+      generatedConfigLabel: "generated 一致",
+      hashLabel: "compare aaaaaaaaaaaa",
+      diffRows: []
+    });
+  });
+
+  it("summarizes changed package compare previews with bounded diff rows", () => {
+    expect(
+      buildDataPanelExportCompareDisplay(
+        {
+          version: "v1",
+          source: "BACKEND_RUNTIME_EXPORT_COMPARE",
+          comparison_scope: "CONFIG_AND_GENERATED_CONFIG",
+          package_id: "pkg-diff",
+          compatibility: "DIFFERENT",
+          same_config: false,
+          same_generated_config: false,
+          same_manifest_hash: false,
+          package_manifest_hash: "sha256:old",
+          current_manifest_hash: "sha256:new",
+          diff_count: 3,
+          diff_limit: 2,
+          diff_truncated: true,
+          sections: [
+            { section: "config", diff_count: 1, matches: false },
+            { section: "generated_config", diff_count: 2, matches: false }
+          ],
+          differences: [
+            {
+              section: "config",
+              path: "$.scenario.satellite_count",
+              package_missing: false,
+              current_missing: false,
+              package_value: 72,
+              current_value: 120
+            },
+            {
+              section: "generated_config",
+              path: "$.satellite_count",
+              package_missing: false,
+              current_missing: false,
+              package_value: 72,
+              current_value: 120
+            }
+          ],
+          compare_hash:
+            "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        1
+      )
+    ).toMatchObject({
+      packageId: "pkg-diff",
+      tone: "different",
+      statusLabel: "配置不同",
+      summaryLabel: "pkg-diff / 差异 3 项 / 显示 1 项",
+      configLabel: "config 不同",
+      generatedConfigLabel: "generated 不同",
+      hashLabel: "compare bbbbbbbbbbbb",
+      diffRows: [
+        {
+          section: "config",
+          path: "$.scenario.satellite_count",
+          valueLabel: "72 -> 120"
+        }
+      ]
+    });
+  });
+
+  it("returns null before package compare preview is loaded", () => {
+    expect(buildDataPanelExportCompareDisplay(undefined)).toBeNull();
   });
 });
 

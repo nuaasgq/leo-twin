@@ -11,6 +11,7 @@ import {
   FidelitySummary,
   GeneratedScenarioConfig,
   RuntimeExportCatalogV1,
+  RuntimeExportPackageCompareV1,
   RuntimeBackpressureSummary,
   RuntimeStatusPayload,
   ScenarioConfig
@@ -24,6 +25,7 @@ import { WebSocketStreamClient } from "../stream/websocket_client";
 import {
   loadMetricsSnapshot,
   loadRuntimeExportCatalog,
+  loadRuntimeExportPackageCompare,
   loadRuntimeNodeDetails,
   loadRuntimeSatelliteDetails,
   loadRuntimeUserDetails,
@@ -106,6 +108,8 @@ export function App() {
   );
   const [runtimeExportCatalog, setRuntimeExportCatalog] =
     useState<RuntimeExportCatalogV1 | null>(null);
+  const [runtimeExportCompare, setRuntimeExportCompare] =
+    useState<RuntimeExportPackageCompareV1 | null>(null);
   const [dismissedBackpressureNoticeKey, setDismissedBackpressureNoticeKey] =
     useState<string | null>(null);
   const [dismissedCompletionNoticeKey, setDismissedCompletionNoticeKey] =
@@ -212,9 +216,21 @@ export function App() {
 
   const refreshRuntimeExportCatalog = useCallback(async () => {
     try {
-      setRuntimeExportCatalog(await loadRuntimeExportCatalog());
+      const catalog = await loadRuntimeExportCatalog();
+      setRuntimeExportCatalog(catalog);
+      const packageId = catalog.latest_export?.package_id ?? catalog.records[0]?.package_id;
+      if (packageId === undefined) {
+        setRuntimeExportCompare(null);
+        return;
+      }
+      try {
+        setRuntimeExportCompare(await loadRuntimeExportPackageCompare(packageId));
+      } catch {
+        setRuntimeExportCompare(null);
+      }
     } catch {
       setRuntimeExportCatalog(null);
+      setRuntimeExportCompare(null);
     }
   }, []);
 
@@ -692,6 +708,7 @@ export function App() {
               generatedConfig={generatedConfig}
               runtimeDetailPages={runtimeDetailPages}
               runtimeExportCatalog={runtimeExportCatalog}
+              runtimeExportCompare={runtimeExportCompare}
               displaySimTime={displaySimTime}
               displayEventCount={displayEventCount}
               onNavigateControl={(event) => navigateWithinApp(event, "/")}
