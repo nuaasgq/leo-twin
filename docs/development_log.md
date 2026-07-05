@@ -5129,3 +5129,32 @@ change.
 - Recommended follow-up:
   - Add disposable acceptance launch mode before using config-derived expected
     values as strict defaults in CI.
+
+## 2026-07-05 - Dashboard Launcher Batch v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add `dashboard_leo_twin.bat`, a Windows launcher shortcut that starts
+  the normal backend/frontend services and opens the standalone dashboard
+  surface through `scripts/sees_launcher.ps1 start -OpenSurface dashboard`.
+- Changed files/modules:
+  - `dashboard_leo_twin.bat`
+  - `README.md`
+  - `docs/integration_demo.md`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `git diff --check`
+    - Result: passed, with only the pre-existing local runtime config CRLF
+      warnings.
+- Problems encountered:
+  - The new batch file was not executed during validation to avoid restarting
+    the currently running local backend/frontend services.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The batch file remains Windows-specific, matching the existing launcher
+    approach.
+- Recommended follow-up:
+  - Add a cross-platform launcher once non-Windows development becomes a
+    supported workflow.
