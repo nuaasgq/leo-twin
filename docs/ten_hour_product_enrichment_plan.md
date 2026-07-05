@@ -538,6 +538,12 @@ Latest full local acceptance run:
   timeline tests, frontend visual/dashboard tests, frontend build, and
   read-only runtime health smoke.
 
+Current handoff summary:
+
+- `docs/current_product_status.md` records local entry points, acceptance
+  command, latest full verification result, current product signals, and
+  remaining gaps.
+
 ## Acceptance Gates
 
 - Existing backend runtime/session tests pass.

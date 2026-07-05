@@ -5573,3 +5573,29 @@ change.
     not relaunch an isolated backend from an acceptance YAML.
 - Recommended follow-up:
   - Add disposable acceptance launch mode for strict per-scenario verification.
+
+## 2026-07-05 - Current Product Status Summary v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add `docs/current_product_status.md`, a short handoff page covering
+  local entry points, acceptance command, latest full local verification result,
+  current product signals, and remaining gaps.
+- Changed files/modules:
+  - `docs/current_product_status.md`
+  - `README.md`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `git diff --check`
+    - Result: passed, with only the pre-existing local runtime config CRLF
+      warnings.
+- Problems encountered:
+  - None. This is documentation consolidation only.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The status page is manually maintained; it is not generated from scripts.
+- Recommended follow-up:
+  - Update the status page after the next substantial backend or frontend
+    milestone.

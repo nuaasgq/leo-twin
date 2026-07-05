@@ -63,6 +63,7 @@ Default local surfaces:
 
 Launcher logs are written to `artifacts\launcher`.
 Troubleshooting notes are in `docs\launcher_troubleshooting.md`.
+Current product status is summarized in `docs\current_product_status.md`.
 
 ## Run Tests
 
