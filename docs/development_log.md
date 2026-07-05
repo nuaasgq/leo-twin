@@ -5,6 +5,35 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Runtime Parameter Lock v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending in this commit
+- Scope: prevent UI/runtime semantic drift by locking execution parameters
+  after a runtime session has been initialized, even before START is pressed.
+- Changed files/modules:
+  - `frontend/src/config_panel/ConfigPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/configPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `pnpm --dir frontend test -- configPanel.test.ts`
+    - Result: passed, 25 files / 247 tests.
+  - Bundled Node:
+    `pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The UI already disabled speed/mode while `RUNNING`, but allowed users to
+    alter runtime mode, speed, duration, and seed after initialization while
+    the backend session still retained the initialized values.
+- Known remaining issues:
+  - Changing initialized execution parameters now requires RESET and
+    re-initialization; a future preview/apply flow could make that clearer.
+- Recommended follow-up:
+  - Add backend status fields that explicitly report which configuration
+    version is bound to the current session.
+
 ## 2026-07-05 - Dashboard Usability Firebreak v1
 
 - Branch: `feature/T164-dashboard-observability-v1`

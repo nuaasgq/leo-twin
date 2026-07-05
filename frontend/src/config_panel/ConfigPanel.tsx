@@ -597,7 +597,8 @@ export function ConfigPanel({
   const pauseResume = pauseResumeControl(runtime);
   const startDisabled = startControlDisabled(runtime);
   const runtimeBusy = runtimeControlBusy(runtime);
-  const executionParameterLocked = runtimeExecutionParametersLocked(runtime);
+  const executionLockReason = runtimeExecutionParameterLockReason(runtime);
+  const executionParameterLocked = executionLockReason !== null;
   const speedControlDisabled = executionParameterLocked || runtimeMode === "REAL_TIME";
   const effectiveSpeedFactor = runtimeEffectiveSpeedFactor(runtimeMode, speedFactor);
   const progressSummary = runtimeProgressSummary(progress);
@@ -905,6 +906,11 @@ export function ConfigPanel({
               />
             </div>
           </div>
+          {executionLockReason !== null ? (
+            <div className="execution-lock-note" role="status">
+              {executionLockReason}
+            </div>
+          ) : null}
 
           <div className="runtime-progress" aria-label="仿真进度">
             <div className="summary-title-row">
@@ -2056,11 +2062,22 @@ export function runtimeControlBusy(runtime: RuntimeStatusPayload): boolean {
 }
 
 export function runtimeExecutionParametersLocked(runtime: RuntimeStatusPayload): boolean {
-  return (
-    runtimeControlBusy(runtime) ||
-    runtime.status === "RUNNING" ||
-    runtime.lifecycle_state === "RUNNING"
-  );
+  return runtimeExecutionParameterLockReason(runtime) !== null;
+}
+
+export function runtimeExecutionParameterLockReason(
+  runtime: RuntimeStatusPayload
+): string | null {
+  if (runtimeControlBusy(runtime)) {
+    return "控制命令处理中，暂时锁定运行模式、倍率、时长和种子。";
+  }
+  if (runtime.status === "RUNNING" || runtime.lifecycle_state === "RUNNING") {
+    return "仿真运行中，运行模式、倍率、时长和种子已锁定。";
+  }
+  if (runtime.initialized === true) {
+    return "当前仿真 session 已初始化，运行模式、倍率、时长和种子已绑定；如需修改请先重置，再重新初始化。";
+  }
+  return null;
 }
 
 export function runtimeProgressSummary(

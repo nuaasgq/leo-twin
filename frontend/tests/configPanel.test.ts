@@ -15,6 +15,7 @@ import {
   orbitMotionExplanationItems,
   orbitControlPayload,
   pauseResumeControl,
+  runtimeExecutionParameterLockReason,
   runtimeExecutionParametersLocked,
   runtimeProgressSummary,
   runtimeControlBusy,
@@ -109,6 +110,33 @@ describe("ConfigPanel priority controls", () => {
     expect(markup).toMatch(/id="runtime-mode"[^>]*disabled=""/);
     expect(markup).toMatch(/id="speed-factor"[^>]*disabled=""/);
     expect(markup).toMatch(/id="speed-factor-input"[^>]*disabled=""/);
+  });
+
+  it("locks execution parameters after initialization before start", () => {
+    const initializedRuntime = runtimeStatus("STOPPED", true);
+    const editableRuntime = runtimeStatus("STOPPED", false);
+    const markup = renderToStaticMarkup(
+      createElement(ConfigPanel, {
+        scenario: defaultScenario(),
+        runtime: initializedRuntime,
+        progress: {
+          sim_time: 0,
+          duration: 600,
+          event_count: 0
+        },
+        generatedConfig: null,
+        onRuntimeControl: () => undefined
+      })
+    );
+
+    expect(runtimeExecutionParametersLocked(initializedRuntime)).toBe(true);
+    expect(runtimeExecutionParameterLockReason(initializedRuntime)).toContain(
+      "session 已初始化"
+    );
+    expect(runtimeExecutionParametersLocked(editableRuntime)).toBe(false);
+    expect(markup).toContain("如需修改请先重置，再重新初始化");
+    expect(markup).toMatch(/id="runtime-mode"[^>]*disabled=""/);
+    expect(markup).toMatch(/id="duration-seconds-input"[^>]*disabled=""/);
   });
 
   it("pins speed controls to 1x in real-time mode", () => {
