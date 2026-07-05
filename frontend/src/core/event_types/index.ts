@@ -423,6 +423,12 @@ export interface RuntimeKpiSampleV1 {
   network_effective_loss_proxy_rate: number;
   network_effective_delay_variation_s: number;
   compute_resource_used_gflops_fp32: number;
+  compute_resource_used_gflops_fp64?: number;
+  compute_resource_used_gpu_tflops_fp32?: number;
+  compute_resource_used_gpu_tflops_fp16?: number;
+  compute_resource_used_npu_tops_int8?: number;
+  compute_resource_used_memory_gb?: number;
+  compute_resource_used_storage_gb?: number;
 }
 
 export interface RuntimeSatelliteKpiSlicesV1 {

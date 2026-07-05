@@ -3905,3 +3905,36 @@ change.
 - Recommended follow-up:
   - Add actual rendered entity counters from the render caches when a visual
     smoke/instrumentation pass is added.
+
+## 2026-07-05 - Runtime KPI Compute Vector Samples v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: extend runtime KPI time-series samples with compute resource vector
+  usage fields beyond FP32: CPU FP64, GPU FP32/FP16, NPU INT8, memory, and
+  storage. MetricsCollector also emits derived compute resource metric records
+  for these used-resource dimensions on compute-node updates.
+- Changed files/modules:
+  - `src/leo_twin/services/metrics/collector.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `tests/unit/test_metrics_module.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_metrics_module.py::test_metrics_collector_publishes_backend_kpi_time_series tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer -q`
+    - Result: passed, 2 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - None. The change reuses existing compute resource summary fields and does
+    not alter compute scheduling or Event Kernel behavior.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The dashboard still renders the FP32-equivalent compute time-series as the
+    primary chart. The new vector sample fields are available for a later
+    selectable multi-resource chart.
+- Recommended follow-up:
+  - Add dashboard series selectors for CPU FP64, GPU FP32/FP16, NPU INT8,
+    memory, and storage usage from `kpi_time_series_v1`.

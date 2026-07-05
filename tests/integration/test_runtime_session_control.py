@@ -185,6 +185,12 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
         "network_effective_loss_proxy_rate",
         "network_effective_delay_variation_s",
         "compute_resource_used_gflops_fp32",
+        "compute_resource_used_gflops_fp64",
+        "compute_resource_used_gpu_tflops_fp32",
+        "compute_resource_used_gpu_tflops_fp16",
+        "compute_resource_used_npu_tops_int8",
+        "compute_resource_used_memory_gb",
+        "compute_resource_used_storage_gb",
     }.issubset(kpi_series["samples"][-1])
     latest_kpi_sample = kpi_series["samples"][-1]
     assert latest_kpi_sample["network_effective_loss_proxy_rate"] == status_after_tick[

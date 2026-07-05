@@ -430,14 +430,33 @@ class MetricsCollector:
             )
         if event_type == COMPUTE_NODE_UPDATE:
             compute_summary = self._compute_resource_summary()
-            records.append(
+            fields = (
+                ("compute.resource.used_gflops_fp32", "compute_resource_used_gflops_fp32"),
+                ("compute.resource.used_gflops_fp64", "compute_resource_used_gflops_fp64"),
+                (
+                    "compute.resource.used_gpu_tflops_fp32",
+                    "compute_resource_used_gpu_tflops_fp32",
+                ),
+                (
+                    "compute.resource.used_gpu_tflops_fp16",
+                    "compute_resource_used_gpu_tflops_fp16",
+                ),
+                (
+                    "compute.resource.used_npu_tops_int8",
+                    "compute_resource_used_npu_tops_int8",
+                ),
+                ("compute.resource.used_memory_gb", "compute_resource_used_memory_gb"),
+                ("compute.resource.used_storage_gb", "compute_resource_used_storage_gb"),
+            )
+            records.extend(
                 MetricRecord(
-                    metric_name="compute.resource.used_gflops_fp32",
+                    metric_name=metric_name,
                     sim_time=sim_time,
                     entity_id="system",
-                    value=float(compute_summary["compute_resource_used_gflops_fp32"]),
+                    value=float(compute_summary[summary_key]),
                     tags=(("source", "metrics_summary"),),
                 )
+                for metric_name, summary_key in fields
             )
         return tuple(records)
 
@@ -478,6 +497,24 @@ class MetricsCollector:
             ),
             "compute_resource_used_gflops_fp32": float(
                 compute_summary["compute_resource_used_gflops_fp32"]
+            ),
+            "compute_resource_used_gflops_fp64": float(
+                compute_summary["compute_resource_used_gflops_fp64"]
+            ),
+            "compute_resource_used_gpu_tflops_fp32": float(
+                compute_summary["compute_resource_used_gpu_tflops_fp32"]
+            ),
+            "compute_resource_used_gpu_tflops_fp16": float(
+                compute_summary["compute_resource_used_gpu_tflops_fp16"]
+            ),
+            "compute_resource_used_npu_tops_int8": float(
+                compute_summary["compute_resource_used_npu_tops_int8"]
+            ),
+            "compute_resource_used_memory_gb": float(
+                compute_summary["compute_resource_used_memory_gb"]
+            ),
+            "compute_resource_used_storage_gb": float(
+                compute_summary["compute_resource_used_storage_gb"]
             ),
         }
 

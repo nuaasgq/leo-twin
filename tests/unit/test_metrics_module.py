@@ -743,6 +743,13 @@ def test_metrics_collector_publishes_backend_kpi_time_series() -> None:
                 capacity=50.0,
                 available_capacity=20.0,
                 status="BUSY",
+                used_cpu_gflops_fp64=4.0,
+                used_gpu_tflops_fp32=1.5,
+                used_gpu_tflops_fp16=3.0,
+                used_npu_tops_int8=6.0,
+                used_memory_gb=8.0,
+                used_storage_gb=12.0,
+                resource_usage_mode="RESOURCE_VECTOR_ESTIMATED",
             ),
             "compute",
         )
@@ -763,11 +770,25 @@ def test_metrics_collector_publishes_backend_kpi_time_series() -> None:
         "network_effective_loss_proxy_rate": 0.0,
         "network_effective_delay_variation_s": 0.0,
         "compute_resource_used_gflops_fp32": 30.0,
+        "compute_resource_used_gflops_fp64": 4.0,
+        "compute_resource_used_gpu_tflops_fp32": 1.5,
+        "compute_resource_used_gpu_tflops_fp16": 3.0,
+        "compute_resource_used_npu_tops_int8": 6.0,
+        "compute_resource_used_memory_gb": 8.0,
+        "compute_resource_used_storage_gb": 12.0,
     }
     assert _last_record(
         compute_records,
         "compute.resource.used_gflops_fp32",
     ).value == 30.0
+    assert _last_record(
+        compute_records,
+        "compute.resource.used_gpu_tflops_fp32",
+    ).value == 1.5
+    assert _last_record(
+        compute_records,
+        "compute.resource.used_npu_tops_int8",
+    ).value == 6.0
 
 
 def test_metrics_collector_kpi_time_series_refreshes_current_tail_sample() -> None:
