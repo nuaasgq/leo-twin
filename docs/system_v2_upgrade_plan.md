@@ -97,6 +97,11 @@ Tasks:
   - Scope: periodic, burst, diurnal, and region-weighted arrivals using seed.
   - Output: unit tests for identical seed and config.
   - Depends on: V2-010.
+  - Status: T253 extends `TrafficDemandProfile` with
+    `TrafficArrivalProfile` values `PERIODIC`, `BURST`, `DIURNAL`, and
+    `REGION_WEIGHTED`. It preserves periodic defaults, adds deterministic burst
+    grouping, diurnal inter-arrival variation, seeded weighted source/
+    destination selection, and unit tests for deterministic replay.
 - V2-012: Add service mix profiles.
   - Scope: telemetry, bulk downlink, data transfer, compute service, emergency.
   - Output: summary counts and per-user active service state.

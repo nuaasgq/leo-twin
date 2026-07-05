@@ -5,6 +5,40 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Traffic Arrival Profiles v2
+
+- Branch: `feature/T253-traffic-arrival-profiles-v2`
+- Commit: pending in this commit
+- Scope: implement deterministic traffic arrival profiles for V2-011. The
+  traffic demand model now supports `PERIODIC`, `BURST`, `DIURNAL`, and
+  `REGION_WEIGHTED` profiles. Existing periodic behavior remains the default.
+  Burst arrivals group requests with configured burst spacing, diurnal arrivals
+  vary inter-arrival spacing over a configured period, and region-weighted
+  profiles use seeded deterministic weighted source/destination selection.
+- Changed files/modules:
+  - `src/leo_twin/models/traffic/demand.py`
+  - `src/leo_twin/models/traffic/__init__.py`
+  - `tests/unit/test_traffic_demand_model.py`
+  - `docs/traffic_arrival_profiles_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_traffic_demand_model.py -q`
+    - Result: passed, 11 tests.
+  - `python -m pytest tests/unit/test_traffic_demand_model.py tests/unit/test_service_request_contract_v2.py tests/unit/test_integration_demo_scenario.py -q`
+    - Result: passed, 30 tests.
+- Problems encountered and handling:
+  - Initial exact-value assertions for diurnal arrival times and seeded weighted
+    destination selection were based on hand estimates. The tests were rerun
+    against the deterministic algorithm and updated to lock the actual seeded
+    output sequences.
+  - Existing local runtime/generated config files remain dirty and are
+    intentionally not included in this task.
+- Known remaining issues / follow-up:
+  - Service mix expansion still uses periodic arrivals. V2-012 should allow
+    service mix profiles to choose these arrival profiles explicitly and expose
+    per-user active service state.
+
 ## 2026-07-06 - Service Request Contract v2
 
 - Branch: `feature/T252-service-request-contract-v2`

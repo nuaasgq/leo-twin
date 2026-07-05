@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
-from math import isfinite
+from math import cos, isfinite, pi
+from random import Random
 from typing import Any
 
 from leo_twin.schema import EventType, FlowRequest, SimEvent, TaskRequest
@@ -26,6 +27,15 @@ class TrafficDestinationType(StrEnum):
     SATELLITE = "SATELLITE"
     COMPUTE_NODE = "COMPUTE_NODE"
     SERVICE_ENDPOINT = "SERVICE_ENDPOINT"
+
+
+class TrafficArrivalProfile(StrEnum):
+    """Deterministic arrival and endpoint-selection profile."""
+
+    PERIODIC = "PERIODIC"
+    BURST = "BURST"
+    DIURNAL = "DIURNAL"
+    REGION_WEIGHTED = "REGION_WEIGHTED"
 
 
 @dataclass(frozen=True)
@@ -53,6 +63,15 @@ class TrafficDemandProfile:
     application_id: str | None = None
     id_prefix: str = "traffic"
     output_destination_ids: tuple[str, ...] = ()
+    arrival_profile: TrafficArrivalProfile | str = TrafficArrivalProfile.PERIODIC
+    seed: int = 0
+    burst_size: int = 1
+    burst_spacing: float = 0.0
+    diurnal_period: float = 86_400.0
+    diurnal_peak_time: float = 0.0
+    diurnal_amplitude: float = 0.0
+    source_region_weights: tuple[float, ...] = ()
+    destination_region_weights: tuple[float, ...] = ()
 
     def __post_init__(self) -> None:
         if not isinstance(self.traffic_class, TrafficClass):
@@ -78,6 +97,12 @@ class TrafficDemandProfile:
             "output_destination_ids",
             _normalize_str_tuple(self.output_destination_ids, "output_destination_ids"),
         )
+        if not isinstance(self.arrival_profile, TrafficArrivalProfile):
+            object.__setattr__(
+                self,
+                "arrival_profile",
+                TrafficArrivalProfile(str(self.arrival_profile)),
+            )
         _require_non_negative_int(self.request_count, "request_count")
         _require_positive_number(self.arrival_interval, "arrival_interval")
         _require_non_negative_number(self.input_data_size, "input_data_size")
@@ -85,6 +110,30 @@ class TrafficDemandProfile:
         _require_int(self.priority, "priority")
         _require_non_negative_number(self.start_time, "start_time")
         _require_non_negative_number(self.compute_demand, "compute_demand")
+        _require_int(self.seed, "seed")
+        _require_positive_int(self.burst_size, "burst_size")
+        _require_non_negative_number(self.burst_spacing, "burst_spacing")
+        _require_positive_number(self.diurnal_period, "diurnal_period")
+        _require_non_negative_number(self.diurnal_peak_time, "diurnal_peak_time")
+        _require_probability(self.diurnal_amplitude, "diurnal_amplitude")
+        object.__setattr__(
+            self,
+            "source_region_weights",
+            _normalize_weight_tuple(
+                self.source_region_weights,
+                "source_region_weights",
+                expected_length=len(self.source_ids),
+            ),
+        )
+        object.__setattr__(
+            self,
+            "destination_region_weights",
+            _normalize_weight_tuple(
+                self.destination_region_weights,
+                "destination_region_weights",
+                expected_length=len(self.destination_ids),
+            ),
+        )
         for field_name in (
             "cpu_ops",
             "fp32_ops",
@@ -504,14 +553,29 @@ def _generate_profile_records(
 ) -> tuple[TrafficDemandRecord, ...]:
     records: list[TrafficDemandRecord] = []
     application_id = profile.application_id or profile.traffic_class.value
+    arrival_times = _arrival_times(profile)
     for request_index in range(profile.request_count):
-        source_id = profile.source_ids[request_index % len(profile.source_ids)]
-        target_id = profile.destination_ids[request_index % len(profile.destination_ids)]
+        source_id = _select_profile_id(
+            profile.source_ids,
+            profile.source_region_weights,
+            request_index=request_index,
+            profile_index=profile_index,
+            seed=profile.seed,
+            salt=17,
+        )
+        target_id = _select_profile_id(
+            profile.destination_ids,
+            profile.destination_region_weights,
+            request_index=request_index,
+            profile_index=profile_index,
+            seed=profile.seed,
+            salt=31,
+        )
         base_id = (
             f"{profile.id_prefix}-{profile_index:02d}-"
             f"{profile.traffic_class.value.lower()}-{request_index:05d}"
         )
-        arrival_time = profile.start_time + request_index * profile.arrival_interval
+        arrival_time = arrival_times[request_index]
         flow_id = (
             f"{base_id}-input"
             if profile.traffic_class == TrafficClass.COMPUTE_SERVICE
@@ -548,6 +612,78 @@ def _generate_profile_records(
                 )
             )
     return tuple(records)
+
+
+def _arrival_times(profile: TrafficDemandProfile) -> tuple[float, ...]:
+    if profile.request_count == 0:
+        return ()
+    if profile.arrival_profile == TrafficArrivalProfile.BURST:
+        return tuple(
+            profile.start_time
+            + (index // profile.burst_size) * profile.arrival_interval
+            + (index % profile.burst_size) * profile.burst_spacing
+            for index in range(profile.request_count)
+        )
+    if profile.arrival_profile == TrafficArrivalProfile.DIURNAL:
+        return _diurnal_arrival_times(profile)
+    return tuple(
+        profile.start_time + index * profile.arrival_interval
+        for index in range(profile.request_count)
+    )
+
+
+def _diurnal_arrival_times(profile: TrafficDemandProfile) -> tuple[float, ...]:
+    times = [profile.start_time]
+    current_time = profile.start_time
+    for _ in range(1, profile.request_count):
+        phase = 2.0 * pi * ((current_time - profile.diurnal_peak_time) / profile.diurnal_period)
+        peak_factor = (1.0 + cos(phase)) / 2.0
+        interval = profile.arrival_interval * (
+            1.0 - profile.diurnal_amplitude * peak_factor
+        )
+        current_time += interval
+        times.append(current_time)
+    return tuple(times)
+
+
+def _select_profile_id(
+    ids: tuple[str, ...],
+    weights: tuple[float, ...],
+    *,
+    request_index: int,
+    profile_index: int,
+    seed: int,
+    salt: int,
+) -> str:
+    if not weights:
+        return ids[request_index % len(ids)]
+    index = _weighted_index(
+        weights,
+        seed=seed,
+        profile_index=profile_index,
+        request_index=request_index,
+        salt=salt,
+    )
+    return ids[index]
+
+
+def _weighted_index(
+    weights: tuple[float, ...],
+    *,
+    seed: int,
+    profile_index: int,
+    request_index: int,
+    salt: int,
+) -> int:
+    total = sum(weights)
+    rng = Random(seed * 1_000_003 + profile_index * 10_007 + request_index * 101 + salt)
+    draw = rng.random() * total
+    cursor = 0.0
+    for index, weight in enumerate(weights):
+        cursor += weight
+        if draw <= cursor:
+            return index
+    return len(weights) - 1
 
 
 def _compute_service_record(
@@ -615,6 +751,26 @@ def _normalize_str_tuple(values: tuple[str, ...], field_name: str) -> tuple[str,
     return normalized
 
 
+def _normalize_weight_tuple(
+    values: tuple[float, ...],
+    field_name: str,
+    *,
+    expected_length: int,
+) -> tuple[float, ...]:
+    if not isinstance(values, tuple):
+        raise TypeError(f"{field_name} must be a tuple")
+    normalized = tuple(float(value) for value in values)
+    if not normalized:
+        return ()
+    if len(normalized) != expected_length:
+        raise ValueError(f"{field_name} length must match endpoint ids")
+    if any(not isfinite(value) or value < 0.0 for value in normalized):
+        raise ValueError(f"{field_name} values must be finite and non-negative")
+    if sum(normalized) <= 0.0:
+        raise ValueError(f"{field_name} must contain at least one positive weight")
+    return normalized
+
+
 def _require_non_empty_str(value: str, field_name: str) -> None:
     if not isinstance(value, str) or not value:
         raise TypeError(f"{field_name} must be a non-empty str")
@@ -631,6 +787,12 @@ def _require_non_negative_int(value: Any, field_name: str) -> None:
         raise ValueError(f"{field_name} must be non-negative")
 
 
+def _require_positive_int(value: Any, field_name: str) -> None:
+    _require_int(value, field_name)
+    if value <= 0:
+        raise ValueError(f"{field_name} must be positive")
+
+
 def _require_positive_number(value: Any, field_name: str) -> None:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise TypeError(f"{field_name} must be an int or float")
@@ -645,8 +807,17 @@ def _require_non_negative_number(value: Any, field_name: str) -> None:
         raise ValueError(f"{field_name} must be finite and non-negative")
 
 
+def _require_probability(value: Any, field_name: str) -> None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise TypeError(f"{field_name} must be an int or float")
+    numeric = float(value)
+    if not isfinite(numeric) or numeric < 0.0 or numeric > 1.0:
+        raise ValueError(f"{field_name} must be between 0 and 1")
+
+
 __all__ = [
     "ComputeOutputFlowMetadata",
+    "TrafficArrivalProfile",
     "TrafficClass",
     "TrafficDemandBatch",
     "TrafficDemandConfig",

@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from leo_twin.models.traffic import (
+    TrafficArrivalProfile,
     TrafficClass,
     TrafficDemandConfig,
     TrafficDemandModel,
@@ -304,6 +305,106 @@ def test_service_mix_weight_ties_are_allocated_by_item_order() -> None:
     assert generate_traffic_service_mix(config) == generate_traffic_service_mix(config)
 
 
+def test_burst_arrival_profile_groups_requests_deterministically() -> None:
+    profile = TrafficDemandProfile(
+        traffic_class=TrafficClass.DATA_TRANSFER,
+        source_ids=("user-a",),
+        destination_ids=("gateway-a",),
+        request_count=7,
+        arrival_interval=20.0,
+        input_data_size=1.0,
+        start_time=3.0,
+        arrival_profile=TrafficArrivalProfile.BURST,
+        burst_size=3,
+        burst_spacing=0.5,
+    )
+
+    batch = generate_traffic_demand((profile,))
+
+    assert tuple(record.arrival_time for record in batch.records) == (
+        3.0,
+        3.5,
+        4.0,
+        23.0,
+        23.5,
+        24.0,
+        43.0,
+    )
+
+
+def test_diurnal_arrival_profile_is_deterministic_and_time_varying() -> None:
+    profile = TrafficDemandProfile(
+        traffic_class=TrafficClass.TELEMETRY,
+        source_ids=("sensor-a",),
+        destination_ids=("gateway-a",),
+        request_count=5,
+        arrival_interval=10.0,
+        input_data_size=1.0,
+        arrival_profile=TrafficArrivalProfile.DIURNAL,
+        diurnal_period=40.0,
+        diurnal_peak_time=0.0,
+        diurnal_amplitude=0.5,
+    )
+
+    first = generate_traffic_demand((profile,))
+    second = generate_traffic_demand((profile,))
+    arrival_times = tuple(round(record.arrival_time, 6) for record in first.records)
+
+    assert first == second
+    assert arrival_times == (0.0, 5.0, 10.732233, 18.519147, 28.451816)
+    assert arrival_times != (0.0, 10.0, 20.0, 30.0, 40.0)
+
+
+def test_region_weighted_profile_uses_seeded_endpoint_selection() -> None:
+    profile = TrafficDemandProfile(
+        traffic_class=TrafficClass.DATA_TRANSFER,
+        source_ids=("region-low", "region-high"),
+        destination_ids=("gateway-a", "gateway-b"),
+        request_count=8,
+        arrival_interval=1.0,
+        input_data_size=1.0,
+        arrival_profile=TrafficArrivalProfile.REGION_WEIGHTED,
+        seed=42,
+        source_region_weights=(0.05, 0.95),
+        destination_region_weights=(0.2, 0.8),
+    )
+
+    first = generate_traffic_demand((profile,))
+    second = generate_traffic_demand((profile,))
+
+    assert first == second
+    assert tuple(flow.source_id for flow in first.flow_requests) == (
+        "region-high",
+        "region-high",
+        "region-high",
+        "region-high",
+        "region-high",
+        "region-high",
+        "region-low",
+        "region-high",
+    )
+    assert tuple(flow.target_id for flow in first.flow_requests) == (
+        "gateway-b",
+        "gateway-b",
+        "gateway-b",
+        "gateway-b",
+        "gateway-a",
+        "gateway-a",
+        "gateway-b",
+        "gateway-b",
+    )
+    assert tuple(record.arrival_time for record in first.records) == (
+        0.0,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0,
+        7.0,
+    )
+
+
 def test_traffic_demand_profile_rejects_invalid_parameters() -> None:
     with pytest.raises(ValueError, match="arrival_interval"):
         TrafficDemandProfile(
@@ -334,6 +435,39 @@ def test_traffic_demand_profile_rejects_invalid_parameters() -> None:
             arrival_interval=1.0,
             input_data_size=1.0,
             priority=True,
+        )
+
+    with pytest.raises(ValueError, match="burst_size"):
+        TrafficDemandProfile(
+            traffic_class=TrafficClass.DATA_TRANSFER,
+            source_ids=("user-a",),
+            destination_ids=("gateway-a",),
+            request_count=1,
+            arrival_interval=1.0,
+            input_data_size=1.0,
+            burst_size=0,
+        )
+
+    with pytest.raises(ValueError, match="diurnal_amplitude"):
+        TrafficDemandProfile(
+            traffic_class=TrafficClass.DATA_TRANSFER,
+            source_ids=("user-a",),
+            destination_ids=("gateway-a",),
+            request_count=1,
+            arrival_interval=1.0,
+            input_data_size=1.0,
+            diurnal_amplitude=1.5,
+        )
+
+    with pytest.raises(ValueError, match="source_region_weights"):
+        TrafficDemandProfile(
+            traffic_class=TrafficClass.DATA_TRANSFER,
+            source_ids=("user-a", "user-b"),
+            destination_ids=("gateway-a",),
+            request_count=1,
+            arrival_interval=1.0,
+            input_data_size=1.0,
+            source_region_weights=(1.0,),
         )
 
 

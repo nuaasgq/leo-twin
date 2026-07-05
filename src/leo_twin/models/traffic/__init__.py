@@ -2,6 +2,7 @@
 
 from leo_twin.models.traffic.demand import (
     ComputeOutputFlowMetadata,
+    TrafficArrivalProfile,
     TrafficClass,
     TrafficDemandBatch,
     TrafficDemandConfig,
@@ -17,6 +18,7 @@ from leo_twin.models.traffic.demand import (
 
 __all__ = [
     "ComputeOutputFlowMetadata",
+    "TrafficArrivalProfile",
     "TrafficClass",
     "TrafficDemandBatch",
     "TrafficDemandConfig",
