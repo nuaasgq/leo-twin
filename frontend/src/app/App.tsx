@@ -33,12 +33,18 @@ const RUNTIME_PROGRESS_TICK_MS = 100;
 type RuntimeConnectionChannel = "http" | "control" | "events" | "state";
 type RuntimeConnectionStatus = "idle" | "connecting" | "live" | "degraded";
 type RuntimeConnectionHealth = Record<RuntimeConnectionChannel, RuntimeConnectionStatus>;
+type RuntimeStreamConsumerCursors = Record<"events" | "state", number>;
 
 const DEFAULT_RUNTIME_CONNECTION_HEALTH: RuntimeConnectionHealth = {
   http: "connecting",
   control: "connecting",
   events: "idle",
   state: "idle"
+};
+
+const DEFAULT_RUNTIME_STREAM_CONSUMER_CURSORS: RuntimeStreamConsumerCursors = {
+  events: 0,
+  state: 0
 };
 
 const CesiumGlobe = lazy(async () => {
@@ -78,6 +84,8 @@ export function App() {
   const [connectionHealth, setConnectionHealth] = useState<RuntimeConnectionHealth>(
     DEFAULT_RUNTIME_CONNECTION_HEALTH
   );
+  const [streamConsumerCursors, setStreamConsumerCursors] =
+    useState<RuntimeStreamConsumerCursors>(DEFAULT_RUNTIME_STREAM_CONSUMER_CURSORS);
   const [scenarioConfig, setScenarioConfig] = useState<ScenarioConfig | null>(null);
   const [generatedConfig, setGeneratedConfig] = useState<GeneratedScenarioConfig | null>(null);
   const [controlError, setControlError] = useState<string | null>(null);
@@ -139,6 +147,7 @@ export function App() {
     streamRouterRef.current = null;
     setConnectionChannel("events", "idle");
     setConnectionChannel("state", "idle");
+    setStreamConsumerCursors(DEFAULT_RUNTIME_STREAM_CONSUMER_CURSORS);
   }, [setConnectionChannel]);
 
   const resetWorld = useCallback(
@@ -212,6 +221,12 @@ export function App() {
           setConnectionState("degraded");
           setConnectionChannel(issue.channel, "degraded");
           setControlError(runtimeWebSocketErrorMessage(issue.channel));
+        },
+        onCursorAdvance: (advance) => {
+          setStreamConsumerCursors((previous) => ({
+            ...previous,
+            [advance.channel]: advance.nextCursor
+          }));
         }
       });
       streamRouterRef.current = router;
@@ -415,7 +430,8 @@ export function App() {
   });
   const connectionDiagnostics = connectionDiagnosticItems(
     connectionHealth,
-    runtimeStatus.stream_diagnostics_v1
+    runtimeStatus.stream_diagnostics_v1,
+    streamConsumerCursors
   );
   const fidelitySummary = selectFidelitySummary(runtimeStatus, generatedConfig, snapshot);
 
@@ -1281,10 +1297,11 @@ export interface ConnectionDiagnosticItem {
 
 export function connectionDiagnosticItems(
   health: RuntimeConnectionHealth,
-  streamDiagnostics?: RuntimeStatusPayload["stream_diagnostics_v1"]
+  streamDiagnostics?: RuntimeStatusPayload["stream_diagnostics_v1"],
+  consumerCursors?: RuntimeStreamConsumerCursors
 ): readonly ConnectionDiagnosticItem[] {
   return (["http", "control", "events", "state"] as const).map((channel) => {
-    const detail = connectionDiagnosticDetail(channel, streamDiagnostics);
+    const detail = connectionDiagnosticDetail(channel, streamDiagnostics, consumerCursors);
     return {
       channel,
       label: connectionChannelLabel(channel),
@@ -1323,7 +1340,8 @@ function connectionStatusLabel(status: RuntimeConnectionStatus): string {
 
 function connectionDiagnosticDetail(
   channel: RuntimeConnectionChannel,
-  streamDiagnostics: RuntimeStatusPayload["stream_diagnostics_v1"] | undefined
+  streamDiagnostics: RuntimeStatusPayload["stream_diagnostics_v1"] | undefined,
+  consumerCursors: RuntimeStreamConsumerCursors | undefined
 ): string | undefined {
   if (streamDiagnostics === undefined) {
     return undefined;
@@ -1337,13 +1355,21 @@ function connectionDiagnosticDetail(
   if (stream === undefined) {
     return undefined;
   }
+  const consumedCursor =
+    channel === "events" || channel === "state" ? consumerCursors?.[channel] : undefined;
+  const consumed =
+    consumedCursor === undefined ? "" : ` / 已收 ${formatInteger(consumedCursor)}`;
+  const lag =
+    consumedCursor === undefined
+      ? ""
+      : ` / 滞后 ${formatInteger(Math.max(0, stream.next_cursor - consumedCursor))}`;
   const dropped =
     stream.total_dropped_count > 0
       ? ` / 丢弃 ${formatInteger(stream.total_dropped_count)}`
       : "";
   return `游标 ${formatInteger(stream.next_cursor)} / 留存 ${formatInteger(
     stream.retained_count
-  )}${dropped}`;
+  )}${consumed}${lag}${dropped}`;
 }
 
 function runtimeStatusIsProgressing(status: RuntimeStatusPayload): boolean {

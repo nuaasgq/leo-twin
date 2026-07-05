@@ -13,6 +13,7 @@ export interface StreamClientOptions {
   createWebSocket?: WebSocketFactory;
   onConnectionOpen?: (channel: WebSocketChannel, url: string) => void;
   onConnectionIssue?: (issue: WebSocketConnectionIssue) => void;
+  onCursorAdvance?: (advance: WebSocketCursorAdvance) => void;
 }
 
 export type WebSocketFactory = (url: string) => WebSocketLike;
@@ -25,6 +26,14 @@ export interface WebSocketConnectionIssue {
   code?: number;
   reason?: string;
   wasClean?: boolean;
+}
+
+export interface WebSocketCursorAdvance {
+  channel: WebSocketChannel;
+  cursor?: number;
+  nextCursor: number;
+  overflow?: boolean;
+  droppedCount?: number;
 }
 
 export interface WebSocketLike {
@@ -43,6 +52,7 @@ export class WebSocketStreamClient {
   private readonly createWebSocket: WebSocketFactory;
   private readonly onConnectionOpen: (channel: WebSocketChannel, url: string) => void;
   private readonly onConnectionIssue: (issue: WebSocketConnectionIssue) => void;
+  private readonly onCursorAdvance: (advance: WebSocketCursorAdvance) => void;
   private readonly playbackLayer: EventPlaybackLayer | null;
   private readonly stateStreamEnabled: boolean;
   private eventSocket: WebSocketLike | null = null;
@@ -64,6 +74,7 @@ export class WebSocketStreamClient {
     this.createWebSocket = options.createWebSocket ?? ((url) => new WebSocket(url));
     this.onConnectionOpen = options.onConnectionOpen ?? (() => undefined);
     this.onConnectionIssue = options.onConnectionIssue ?? (() => undefined);
+    this.onCursorAdvance = options.onCursorAdvance ?? (() => undefined);
   }
 
   connect(): void {
@@ -71,7 +82,11 @@ export class WebSocketStreamClient {
     this.eventSocket = this.createWebSocket(this.eventUrl);
     this.attachDiagnostics(this.eventSocket, "events", this.eventUrl);
     this.eventSocket.onmessage = (message) => {
-      const events = decodeStreamEvents(message.data);
+      const decoded = decodeStreamEventMessage(message.data);
+      if (decoded.cursorAdvance !== undefined) {
+        this.onCursorAdvance({ channel: "events", ...decoded.cursorAdvance });
+      }
+      const events = decoded.events;
       if (events.length === 0) {
         return;
       }
@@ -90,7 +105,13 @@ export class WebSocketStreamClient {
       this.attachDiagnostics(this.stateSocket, "state", this.stateUrl);
       this.stateSocket.onmessage = (message) => {
         try {
-          this.router.routeRawStateMessage(parseJsonMessage(message.data));
+          const decoded = decodeStateStreamMessage(message.data);
+          if (decoded.cursorAdvance !== undefined) {
+            this.onCursorAdvance({ channel: "state", ...decoded.cursorAdvance });
+          }
+          for (const item of decoded.items) {
+            this.router.routeRawStateMessage(item);
+          }
         } catch (error) {
           console.warn("ignored invalid state stream message", error);
         }
@@ -174,21 +195,78 @@ function parseJsonMessage(data: string): unknown {
   return JSON.parse(data);
 }
 
-function decodeStreamEvents(data: string): readonly SimEvent[] {
+interface DecodedEventStreamMessage {
+  events: readonly SimEvent[];
+  cursorAdvance?: Omit<WebSocketCursorAdvance, "channel">;
+}
+
+interface DecodedStateStreamMessage {
+  items: readonly unknown[];
+  cursorAdvance?: Omit<WebSocketCursorAdvance, "channel">;
+}
+
+function decodeStreamEventMessage(data: string): DecodedEventStreamMessage {
   try {
     const parsed = parseJsonMessage(data);
-    const items = Array.isArray(parsed) ? parsed : [parsed];
+    const envelope = streamCursorEnvelope(parsed);
+    const rawItems = envelope?.items ?? (Array.isArray(parsed) ? parsed : [parsed]);
     const events: SimEvent[] = [];
-    for (const item of items) {
+    for (const item of rawItems) {
       try {
         events.push(decodeSimEvent(item));
       } catch (error) {
         console.warn("ignored invalid event stream message", error);
       }
     }
-    return events;
+    return {
+      events,
+      ...(envelope?.cursorAdvance === undefined ? {} : { cursorAdvance: envelope.cursorAdvance })
+    };
   } catch (error) {
     console.warn("ignored malformed event stream payload", error);
-    return [];
+    return { events: [] };
   }
+}
+
+function decodeStateStreamMessage(data: string): DecodedStateStreamMessage {
+  const parsed = parseJsonMessage(data);
+  const envelope = streamCursorEnvelope(parsed);
+  const items = envelope?.items ?? [parsed];
+  return {
+    items,
+    ...(envelope?.cursorAdvance === undefined ? {} : { cursorAdvance: envelope.cursorAdvance })
+  };
+}
+
+function streamCursorEnvelope(
+  value: unknown
+): { items: readonly unknown[]; cursorAdvance?: Omit<WebSocketCursorAdvance, "channel"> } | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return null;
+  }
+  const record = value as Record<string, unknown>;
+  if (!Array.isArray(record.items)) {
+    return null;
+  }
+  const nextCursor =
+    typeof record.next_cursor === "number" && Number.isFinite(record.next_cursor)
+      ? record.next_cursor
+      : undefined;
+  const cursorAdvance =
+    nextCursor === undefined
+      ? undefined
+      : {
+          ...(typeof record.cursor === "number" && Number.isFinite(record.cursor)
+            ? { cursor: record.cursor }
+            : {}),
+          nextCursor,
+          ...(typeof record.overflow === "boolean" ? { overflow: record.overflow } : {}),
+          ...(typeof record.dropped_count === "number" && Number.isFinite(record.dropped_count)
+            ? { droppedCount: record.dropped_count }
+            : {})
+        };
+  return {
+    items: record.items,
+    ...(cursorAdvance === undefined ? {} : { cursorAdvance })
+  };
 }

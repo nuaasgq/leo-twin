@@ -236,7 +236,7 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                 cursor = int(batch["next_cursor"])
                 items = batch["items"]
                 if items:
-                    self._send_ws_json(items)  # type: ignore[arg-type]
+                    self._send_ws_json(batch)  # type: ignore[arg-type]
                 if _live_stream_finished(control_plane.runtime_lifecycle_state(), bool(items)):
                     return
                 time.sleep(_WEBSOCKET_STREAM_INTERVAL_SECONDS)
@@ -250,8 +250,8 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                 )
                 cursor = int(batch["next_cursor"])
                 items = batch["items"]
-                for snapshot in items:
-                    self._send_ws_json(snapshot)  # type: ignore[arg-type]
+                if items:
+                    self._send_ws_json(batch)  # type: ignore[arg-type]
                 if _live_stream_finished(control_plane.runtime_lifecycle_state(), bool(items)):
                     return
                 time.sleep(_WEBSOCKET_STREAM_INTERVAL_SECONDS)

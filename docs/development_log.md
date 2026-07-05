@@ -3545,3 +3545,45 @@ change.
 - Recommended follow-up:
   - Add a frontend-side stream cursor tracker so the diagnostics row can compare
     backend latest cursor with the browser's last consumed cursor.
+
+## 2026-07-05 - WebSocket Cursor Envelope v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: send cursor batch envelopes on live WebSocket event/state streams and
+  make the frontend stream client consume both the new envelope format and the
+  legacy array/single-snapshot formats. The main app now tracks browser-side
+  consumed cursors for event and state streams, then compares them with backend
+  stream diagnostics in the connection diagnostics row.
+- Changed files/modules:
+  - `examples/integration_demo/server.py`
+  - `frontend/src/stream/websocket_client/index.ts`
+  - `frontend/src/app/App.tsx`
+  - `frontend/tests/websocketClient.test.ts`
+  - `frontend/tests/appSurface.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- websocketClient.test.ts appSurface.test.ts`
+    - Result: passed, 24 files / 170 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+  - `python -m pytest tests/integration/test_runtime_session_control.py::test_demo_adapter_exposes_cursor_batches -q`
+    - Result: passed.
+  - `python -m pytest tests/integration/test_live_runtime_streaming.py::test_large_batch_runtime_keeps_snapshot_and_controls_responsive -q`
+    - Result: passed.
+- Problems encountered:
+  - An initial backend validation command referenced a stale test node name and
+    pytest reported it was not found. The test file was inspected and the
+    correct large-scale runtime responsiveness test was rerun successfully.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - WebSocket state streams now send batch envelopes, but the frontend keeps
+    compatibility with legacy single-snapshot messages.
+  - Consumer cursor tracking is browser-local stream state, not a server-side
+    multi-consumer registry.
+- Recommended follow-up:
+  - Add a small diagnostics detail surface explaining stream lag, overflow, and
+    dropped records in Chinese for non-developer users.

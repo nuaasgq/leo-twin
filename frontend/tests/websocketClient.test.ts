@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { EventRouter } from "../src/stream/event_router";
 import { ObservabilityStore } from "../src/stream/state_store";
 import {
+  WebSocketCursorAdvance,
   WebSocketConnectionIssue,
   WebSocketLike,
   WebSocketStreamClient
@@ -53,6 +54,60 @@ describe("WebSocketStreamClient", () => {
     client.connect();
 
     expect(sockets.map((socket) => socket.url)).toEqual(["ws://test/events"]);
+    client.close();
+  });
+
+  it("consumes cursor envelopes from event and state websocket streams", () => {
+    const sockets: MockSocket[] = [];
+    const cursorAdvances: WebSocketCursorAdvance[] = [];
+    const store = new ObservabilityStore();
+    const router = new EventRouter(store);
+    const client = new WebSocketStreamClient(router, {
+      eventUrl: "ws://test/events",
+      stateUrl: "ws://test/state",
+      batchSize: 2,
+      flushIntervalMs: 10_000,
+      createWebSocket: (url) => {
+        const socket = new MockSocket(url);
+        sockets.push(socket);
+        return socket;
+      },
+      onCursorAdvance: (advance) => cursorAdvances.push(advance)
+    });
+
+    client.connect();
+    sockets[0].emit({
+      cursor: 0,
+      next_cursor: 2,
+      overflow: false,
+      dropped_count: 0,
+      items: [orbitEvent("sat-1", 1), orbitEvent("sat-2", 2)]
+    });
+    sockets[1].emit({
+      cursor: 0,
+      next_cursor: 1,
+      overflow: false,
+      dropped_count: 0,
+      items: []
+    });
+
+    expect(store.getSnapshot().satellites.size).toBe(2);
+    expect(cursorAdvances).toEqual([
+      {
+        channel: "events",
+        cursor: 0,
+        nextCursor: 2,
+        overflow: false,
+        droppedCount: 0
+      },
+      {
+        channel: "state",
+        cursor: 0,
+        nextCursor: 1,
+        overflow: false,
+        droppedCount: 0
+      }
+    ]);
     client.close();
   });
 
