@@ -486,6 +486,11 @@ The following issue-sized slices have now been delivered on
     generated runtime config.
   - `scripts/check_no_runtime_config_staged.ps1` fails if the known local
     runtime config files are staged before commit.
+- `test(product): run staging guard in acceptance`
+  - Maps to suggestions 91-95 and the project rule to avoid committing local
+    generated runtime config.
+  - Aggregate product acceptance verification now runs the staged runtime config
+    guard before backend/frontend/runtime smoke checks.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected

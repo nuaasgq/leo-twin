@@ -5328,3 +5328,30 @@ change.
 - Recommended follow-up:
   - Add this guard to the aggregate acceptance command or a pre-commit hook if
     the team wants automated enforcement.
+
+## 2026-07-05 - Product Acceptance Staging Guard v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: run `scripts/check_no_runtime_config_staged.ps1` at the start of
+  `scripts/verify_product_acceptance.ps1` so aggregate acceptance fails before
+  tests if local runtime config files are staged.
+- Changed files/modules:
+  - `scripts/verify_product_acceptance.ps1`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_product_acceptance.ps1 -SkipBuild -ExpectedSatelliteCount 120 -ExpectedUserCount 100 -ExpectedComputeNodeCount 120 -ExpectedTrafficClass COMPUTE_SERVICE`
+    - Result: passed; guard reported no staged runtime/local config files,
+      backend targeted tests 2 passed, frontend visual tests 193 passed, and
+      runtime health smoke passed.
+- Problems encountered:
+  - None. The guard only inspects staged files and leaves dirty local runtime
+    configs untouched.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The guard is enforced by the aggregate script, not by Git itself.
+- Recommended follow-up:
+  - Add a pre-commit hook installer only if the team wants local Git hook
+    enforcement.

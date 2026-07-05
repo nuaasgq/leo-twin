@@ -72,6 +72,15 @@ Push-Location $RepoRoot
 try {
     $env:PYTHONPATH = "src;."
     $python = Get-PythonCommand
+    Invoke-CheckedCommand "powershell" @(
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        (Join-Path $PSScriptRoot "check_no_runtime_config_staged.ps1"),
+        "-RepoRoot",
+        $RepoRoot
+    )
     if ($AcceptanceConfig) {
         $resolvedConfig = Resolve-Path -LiteralPath $AcceptanceConfig
         $expectations = Get-AcceptanceExpectations -Python $python -ConfigPath $resolvedConfig.Path
