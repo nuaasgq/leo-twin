@@ -25,6 +25,7 @@ import {
   COMPUTE_SERIES_OPTIONS,
   filterSatelliteResourceRows,
   filterUserBusinessRequestRows,
+  paginateDetailRows,
   resolveNetworkQualityKpis
 } from "../src/dashboard/data_panel/DataPanel";
 import { FidelitySummary, GeneratedScenarioConfig } from "../src/core/event_types";
@@ -2254,6 +2255,45 @@ describe("detail row filters", () => {
     expect(filterSatelliteResourceRows(rows, "user-1").items.map((row) => row.satelliteId)).toEqual([
       "sat-1"
     ]);
+  });
+});
+
+describe("paginateDetailRows", () => {
+  it("returns a deterministic bounded window for large detail tables", () => {
+    const items = Array.from({ length: 250 }, (_, index) => `row-${index}`);
+
+    expect(paginateDetailRows(items, 1, 100)).toEqual({
+      items: items.slice(100, 200),
+      totalCount: 250,
+      pageIndex: 1,
+      pageSize: 100,
+      pageCount: 3,
+      startIndex: 100,
+      endIndex: 200
+    });
+  });
+
+  it("clamps out-of-range pages and handles empty tables", () => {
+    const items = Array.from({ length: 25 }, (_, index) => index);
+    expect(paginateDetailRows(items, 9, 10)).toMatchObject({
+      items: [20, 21, 22, 23, 24],
+      pageIndex: 2,
+      pageCount: 3,
+      startIndex: 20,
+      endIndex: 25
+    });
+    expect(paginateDetailRows([], 4, 10)).toMatchObject({
+      items: [],
+      totalCount: 0,
+      pageIndex: 0,
+      pageCount: 1,
+      startIndex: 0,
+      endIndex: 0
+    });
+  });
+
+  it("rejects invalid page sizes", () => {
+    expect(() => paginateDetailRows([1, 2, 3], 0, 0)).toThrow(RangeError);
   });
 });
 

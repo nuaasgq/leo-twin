@@ -1903,7 +1903,7 @@ body {
 
 .data-panel-detail-table {
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto minmax(0, 1fr);
   gap: 10px;
   min-width: 0;
   min-height: 320px;
@@ -1914,6 +1914,48 @@ body {
   padding: 14px;
   background:
     linear-gradient(180deg, #121922 0%, #0d131a 100%);
+}
+
+.data-panel-detail-pager {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  border: 1px solid #263a48;
+  border-radius: 6px;
+  padding: 7px 8px;
+  background: #0b1219;
+  color: var(--app-muted);
+  font-size: 10px;
+}
+
+.data-panel-detail-pager span,
+.data-panel-detail-pager strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.data-panel-detail-pager strong {
+  color: var(--app-text);
+}
+
+.data-panel-detail-pager button {
+  border: 1px solid #314656;
+  border-radius: 5px;
+  padding: 5px 8px;
+  background: #101922;
+  color: var(--app-text);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.data-panel-detail-pager button:disabled {
+  cursor: default;
+  opacity: 0.45;
 }
 
 .data-panel-table-scroll {
@@ -3140,5 +3182,9 @@ body {
 
   .data-panel-detail-toolbar {
     grid-template-columns: 1fr;
+  }
+
+  .data-panel-detail-pager {
+    grid-template-columns: 1fr 1fr;
   }
 }

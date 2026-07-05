@@ -66,6 +66,9 @@ export interface DataPanelSummary {
   couplingHealth: number;
 }
 
+const USER_DETAIL_PAGE_SIZE = 80;
+const SATELLITE_DETAIL_PAGE_SIZE = 120;
+
 export const DataPanel = memo(function DataPanel({
   snapshot,
   runtimeStatus,
@@ -84,6 +87,8 @@ export const DataPanel = memo(function DataPanel({
   const [computeSeriesKey, setComputeSeriesKey] =
     useState<DataPanelComputeSeriesKey>("computeUsedTflops");
   const [detailFilter, setDetailFilter] = useState("");
+  const [userDetailPage, setUserDetailPage] = useState(0);
+  const [satelliteDetailPage, setSatelliteDetailPage] = useState(0);
   const summary = buildDataPanelDisplaySummary(
     buildDataPanelSummary(snapshot),
     displaySimTime,
@@ -156,6 +161,16 @@ export const DataPanel = memo(function DataPanel({
   const filteredSatelliteResourceRows = filterSatelliteResourceRows(
     satelliteResourceRows,
     detailFilter
+  );
+  const userDetailWindow = paginateDetailRows(
+    filteredUserBusinessRequests.items,
+    userDetailPage,
+    USER_DETAIL_PAGE_SIZE
+  );
+  const satelliteDetailWindow = paginateDetailRows(
+    filteredSatelliteResourceRows.items,
+    satelliteDetailPage,
+    SATELLITE_DETAIL_PAGE_SIZE
   );
   const userSourceBadge = buildRuntimeDetailSourceBadge(userBusinessRequests.sourceLabel);
   const satelliteSourceBadge = buildRuntimeDetailSourceBadge(satelliteResourceRows.sourceLabel);
@@ -534,7 +549,11 @@ export const DataPanel = memo(function DataPanel({
           type="search"
           value={detailFilter}
           placeholder="user-0 / sat-0 / compute"
-          onChange={(event) => setDetailFilter(event.currentTarget.value)}
+          onChange={(event) => {
+            setDetailFilter(event.currentTarget.value);
+            setUserDetailPage(0);
+            setSatelliteDetailPage(0);
+          }}
         />
         <span>
           {filteredUserBusinessRequests.items.length} 个用户 /{" "}
@@ -556,7 +575,13 @@ export const DataPanel = memo(function DataPanel({
             </div>
             <small>{userBusinessRequests.summaryLabel}</small>
           </div>
-          <UserBusinessRequestTable rows={filteredUserBusinessRequests.items} />
+          <DetailPaginationControls
+            page={userDetailWindow}
+            label="用户明细"
+            onPrevious={() => setUserDetailPage(Math.max(0, userDetailWindow.pageIndex - 1))}
+            onNext={() => setUserDetailPage(userDetailWindow.pageIndex + 1)}
+          />
+          <UserBusinessRequestTable rows={userDetailWindow.items} />
         </section>
         <section className="dashboard-section data-panel-detail-table" aria-label="卫星资源消耗明细">
           <div className="section-title">卫星资源消耗</div>
@@ -572,7 +597,15 @@ export const DataPanel = memo(function DataPanel({
             </div>
             <small>{satelliteResourceRows.summaryLabel}</small>
           </div>
-          <SatelliteResourceTable rows={filteredSatelliteResourceRows.items} />
+          <DetailPaginationControls
+            page={satelliteDetailWindow}
+            label="卫星明细"
+            onPrevious={() =>
+              setSatelliteDetailPage(Math.max(0, satelliteDetailWindow.pageIndex - 1))
+            }
+            onNext={() => setSatelliteDetailPage(satelliteDetailWindow.pageIndex + 1)}
+          />
+          <SatelliteResourceTable rows={satelliteDetailWindow.items} />
         </section>
       </div>
     </section>
@@ -632,6 +665,46 @@ function TopComputeNodeTable({ rows }: { rows: readonly TopComputeNodeRow[] }) {
           <span>{row.taskLabel}</span>
         </div>
       ))}
+    </div>
+  );
+}
+
+function DetailPaginationControls<T>({
+  page,
+  label,
+  onPrevious,
+  onNext
+}: {
+  page: DetailRowPage<T>;
+  label: string;
+  onPrevious: () => void;
+  onNext: () => void;
+}) {
+  if (page.totalCount <= page.pageSize) {
+    return (
+      <div className="data-panel-detail-pager">
+        <span>{label}</span>
+        <strong>显示全部 {formatCount(page.totalCount)} 行</strong>
+      </div>
+    );
+  }
+  return (
+    <div className="data-panel-detail-pager">
+      <span>{label}</span>
+      <strong>
+        {formatCount(page.startIndex + 1)}-{formatCount(page.endIndex)} /{" "}
+        {formatCount(page.totalCount)}
+      </strong>
+      <button type="button" disabled={page.pageIndex <= 0} onClick={onPrevious}>
+        上一页
+      </button>
+      <button
+        type="button"
+        disabled={page.pageIndex >= page.pageCount - 1}
+        onClick={onNext}
+      >
+        下一页
+      </button>
     </div>
   );
 }
@@ -1025,6 +1098,16 @@ export interface SatelliteResourceRow {
   memoryStorageLabel: string;
   taskLabel: string;
   networkLabel: string;
+}
+
+export interface DetailRowPage<T> {
+  items: readonly T[];
+  totalCount: number;
+  pageIndex: number;
+  pageSize: number;
+  pageCount: number;
+  startIndex: number;
+  endIndex: number;
 }
 
 export type RuntimeDetailSourceTone = "backend" | "mixed" | "snapshot";
@@ -1689,6 +1772,32 @@ export function filterSatelliteResourceRows(
     ...rows,
     summaryLabel: `${rows.summaryLabel} / 筛选 ${formatCount(items.length)}`,
     items
+  };
+}
+
+export function paginateDetailRows<T>(
+  items: readonly T[],
+  pageIndex: number,
+  pageSize: number
+): DetailRowPage<T> {
+  if (!Number.isFinite(pageSize) || pageSize <= 0) {
+    throw new RangeError("pageSize must be a positive finite number");
+  }
+  const normalizedPageSize = Math.max(1, Math.floor(pageSize));
+  const totalCount = items.length;
+  const pageCount = Math.max(1, Math.ceil(totalCount / normalizedPageSize));
+  const requestedPage = Number.isFinite(pageIndex) ? Math.floor(pageIndex) : 0;
+  const clampedPage = Math.min(Math.max(0, requestedPage), pageCount - 1);
+  const startIndex = totalCount === 0 ? 0 : clampedPage * normalizedPageSize;
+  const endIndex = Math.min(totalCount, startIndex + normalizedPageSize);
+  return {
+    items: items.slice(startIndex, endIndex),
+    totalCount,
+    pageIndex: clampedPage,
+    pageSize: normalizedPageSize,
+    pageCount,
+    startIndex,
+    endIndex
   };
 }
 

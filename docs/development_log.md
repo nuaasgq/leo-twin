@@ -6378,3 +6378,34 @@ change.
 - Recommended follow-up:
   - Add bounded table virtualization or pagination for large user/satellite
     detail inspection, then continue with time-varying KPI provenance work.
+
+## 2026-07-05 - Dashboard Detail Pagination v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: reduce standalone dashboard detail-table render pressure in medium
+  and large scenarios by adding deterministic client-side pagination windows
+  for user-node and satellite-resource details. User details render 80 rows per
+  page and satellite details render 120 rows per page; filtering resets both
+  tables to the first page while preserving the backend-owned row source.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend exec vitest run dataPanel.test.ts`
+    - Result: passed, 1 file / 61 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - None. The pagination helper is pure and deterministic; the UI change is
+    limited to the standalone dashboard detail tables.
+- Known remaining issues:
+  - Pagination is client-side over rows already delivered to the frontend. It
+    reduces DOM render pressure but does not reduce backend status payload
+    size. Backend pagination or virtualized rendering remains a later scale
+    task.
+- Recommended follow-up:
+  - Add backend row-window APIs or virtualized table rendering if 1200+
+    satellite inspection still produces payload or rendering pressure.
