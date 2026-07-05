@@ -258,6 +258,7 @@ def build_user_configuration_view(config: SEESConfig) -> ConfigurationView:
             _section_summary(section, flattened)
             for section in sorted(_SECTION_PURPOSES)
         ),
+        "file_only_sections": _file_only_section_summaries(file_only_fields),
         "file_only_fields": file_only_fields,
         "notes": (
             "The control panel should expose key_fields for common operation.",
@@ -265,6 +266,37 @@ def build_user_configuration_view(config: SEESConfig) -> ConfigurationView:
             "This summary is derived from SEESConfig and is the backend source of truth.",
         ),
     }
+
+
+def _file_only_section_summaries(
+    file_only_fields: tuple[str, ...],
+) -> tuple[dict[str, object], ...]:
+    by_section: dict[str, list[str]] = {
+        section: [] for section in _SECTION_PURPOSES
+    }
+    for path in file_only_fields:
+        by_section[_most_specific_section(path)].append(path)
+    return tuple(
+        {
+            "section": section,
+            "purpose": _SECTION_PURPOSES[section],
+            "field_count": len(paths),
+            "example_paths": tuple(paths[:6]),
+        }
+        for section, paths in sorted(by_section.items())
+        if paths
+    )
+
+
+def _most_specific_section(path: str) -> str:
+    candidates = tuple(
+        section
+        for section in _SECTION_PURPOSES
+        if path == section or path.startswith(f"{section}.")
+    )
+    if not candidates:
+        return path.split(".", maxsplit=1)[0]
+    return max(candidates, key=len)
 
 
 def _key_field(path: str, value: object) -> dict[str, object]:

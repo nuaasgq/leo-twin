@@ -675,6 +675,23 @@ describe("configurationTemplateSummaryItems", () => {
           detailed_field_count: 75,
           key_fields: [],
           detailed_file_sections: [],
+          file_only_sections: [
+            {
+              section: "scenario.traffic_model",
+              purpose: "Flow-level user business generation model.",
+              field_count: 4,
+              example_paths: [
+                "scenario.traffic_model.data_transfer_weight",
+                "scenario.traffic_model.telemetry_weight"
+              ]
+            },
+            {
+              section: "network",
+              purpose: "Flow-level protocol, link budget, routing, and ISL fidelity inputs.",
+              field_count: 10,
+              example_paths: ["network.carrier_frequency_hz", "network.channel_bandwidth_hz"]
+            }
+          ],
           file_only_fields: [],
           template_profiles: [
             {
@@ -704,6 +721,18 @@ describe("configurationTemplateSummaryItems", () => {
         label: "前端配置策略",
         value: "CONTROL_PANEL_KEY_FIELDS_ONLY",
         detail: "29 个关键字段 / 75 个完整字段"
+      },
+      {
+        label: "YAML 专用：业务生成",
+        value: "4 个字段",
+        detail:
+          "Flow-level user business generation model. 示例：scenario.traffic_model.data_transfer_weight, scenario.traffic_model.telemetry_weight"
+      },
+      {
+        label: "YAML 专用：网络",
+        value: "10 个字段",
+        detail:
+          "Flow-level protocol, link budget, routing, and ISL fidelity inputs. 示例：network.carrier_frequency_hz, network.channel_bandwidth_hz"
       },
       {
         label: "72-satellite baseline",
@@ -748,6 +777,14 @@ describe("configurationTemplateSummaryItems", () => {
           detailed_field_count: 75,
           key_fields: [],
           detailed_file_sections: [],
+          file_only_sections: [
+            {
+              section: "network",
+              purpose: "Flow-level protocol, link budget, routing, and ISL fidelity inputs.",
+              field_count: 10,
+              example_paths: ["network.carrier_frequency_hz"]
+            }
+          ],
           file_only_fields: [],
           template_profiles: [
             {
@@ -776,6 +813,8 @@ describe("configurationTemplateSummaryItems", () => {
     );
 
     expect(markup).toContain("详细配置模板");
+    expect(markup).toContain("YAML 专用：网络");
+    expect(markup).toContain("network.carrier_frequency_hz");
     expect(markup).toContain("120-satellite dynamic observability");
     expect(markup).toContain("configs/templates/sees_user_dynamic_observability.example.yaml");
   });

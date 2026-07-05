@@ -5,6 +5,40 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Configuration File-Only Scope v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending in this commit
+- Scope: expose backend-owned `file_only_sections` in the configuration
+  surface summary so the control panel can show which detailed YAML sections
+  remain file-only while the UI continues to expose key operational controls.
+- Changed files/modules:
+  - `src/leo_twin/services/configuration_view.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/config_panel/ConfigPanel.tsx`
+  - `tests/unit/test_configuration_view.py`
+  - `frontend/tests/configPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_configuration_view.py -q`
+    - Result: passed, 3 tests.
+  - Bundled Node:
+    `pnpm --dir frontend test -- configPanel.test.ts`
+    - Result: passed, 25 files / 244 tests.
+  - Bundled Node:
+    `pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The existing summary listed all `file_only_fields` but did not group them
+    for users. The new `file_only_sections` is exclusive by most-specific
+    config section, so counts do not double-count nested paths.
+- Known remaining issues:
+  - This is a transparency feature only; it does not yet load a selected YAML
+    template into the form.
+- Recommended follow-up:
+  - Add a backend-controlled template apply/preview endpoint so advanced users
+    can choose a detailed template without exposing every field in the main UI.
+
 ## 2026-07-05 - Full-System Demo Baseline Refresh v1
 
 - Branch: `feature/T164-dashboard-observability-v1`

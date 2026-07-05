@@ -324,6 +324,7 @@ export interface ConfigurationSurfaceSummary {
   detailed_field_count: number;
   key_fields: readonly ConfigurationSurfaceField[];
   detailed_file_sections: readonly ConfigurationSurfaceSection[];
+  file_only_sections?: readonly ConfigurationSurfaceSection[];
   file_only_fields: readonly string[];
   notes?: readonly string[];
 }

@@ -74,6 +74,18 @@ def test_user_configuration_view_is_deterministic_and_frontend_ready() -> None:
     assert _field(first, "runtime.duration")["unit"] == "s"
     assert "scenario.compute_gpu_tflops_fp16" in first["file_only_fields"]
     assert "network.carrier_frequency_hz" in first["file_only_fields"]
+    file_only_sections = {
+        section["section"]: section for section in first["file_only_sections"]
+    }
+    assert file_only_sections["scenario"]["field_count"] >= 1
+    assert "scenario.compute_gpu_tflops_fp16" in file_only_sections["scenario"][
+        "example_paths"
+    ]
+    assert file_only_sections["scenario.traffic_model"]["field_count"] >= 4
+    assert file_only_sections["network"]["field_count"] >= 8
+    assert "network.carrier_frequency_hz" in file_only_sections["network"][
+        "example_paths"
+    ]
     assert {
         section["section"]
         for section in first["detailed_file_sections"]

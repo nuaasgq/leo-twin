@@ -1975,6 +1975,7 @@ export function configurationTemplateSummaryItems(
     return [];
   }
   const profiles = surface.template_profiles ?? [];
+  const fileOnlySections = surface.file_only_sections ?? [];
   return [
     {
       label: "详细配置文件",
@@ -1988,12 +1989,30 @@ export function configurationTemplateSummaryItems(
         surface.detailed_field_count
       )} 个完整字段`
     },
+    ...fileOnlySections.map((section) => ({
+      label: `YAML 专用：${configurationSectionDisplayLabel(section.section)}`,
+      value: `${formatInteger(section.field_count)} 个字段`,
+      detail: `${section.purpose} 示例：${section.example_paths.slice(0, 3).join(", ")}`
+    })),
     ...profiles.map((profile) => ({
       label: profile.label,
       value: profile.path,
       detail: profile.purpose
     }))
   ];
+}
+
+function configurationSectionDisplayLabel(section: string): string {
+  const labels: Record<string, string> = {
+    scenario: "场景",
+    "scenario.orbit": "轨道",
+    "scenario.traffic_model": "业务生成",
+    network: "网络",
+    runtime: "运行时",
+    ui: "界面",
+    "ui.visualization": "可视化"
+  };
+  return labels[section] ?? section;
 }
 
 export interface PauseResumeControl {
