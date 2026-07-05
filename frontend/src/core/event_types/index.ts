@@ -819,6 +819,10 @@ export interface ConfigurationTemplateProfile {
   label: string;
   path: string;
   purpose: string;
+  scale?: string;
+  expected_kpi_behavior?: string;
+  fidelity_mode?: string;
+  recommended_use?: string;
 }
 
 export interface ConfigurationSurfaceField {

@@ -666,6 +666,19 @@ def test_control_plane_exposes_user_configuration_contract_api(tmp_path) -> None
         "network_stress_120sat",
         "large_scale_1200sat",
     ]
+    template_by_id = {
+        item["id"]: item for item in template_summary["templates"] if isinstance(item, dict)
+    }
+    assert template_by_id["dynamic_observability_120sat"]["scale"] == (
+        "120 satellites, 120 compute nodes, mixed communication/compute demand."
+    )
+    assert template_by_id["network_stress_120sat"]["expected_kpi_behavior"] == (
+        "Non-zero loss and jitter proxies with route pressure and recent-flow "
+        "KPI variation."
+    )
+    assert template_by_id["large_scale_1200sat"]["fidelity_mode"] == (
+        "LARGE_SCALE_BATCH_ORBIT_BOUNDED_ISL"
+    )
 
     export_summary = exported["summary"]
     assert exported["type"] == "USER_CONFIGURATION_EXPORT"

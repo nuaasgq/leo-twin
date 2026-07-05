@@ -5,6 +5,48 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Template Catalog Metadata v2
+
+- Branch: `feature/T251-template-catalog-metadata-v2`
+- Commit: pending in this commit
+- Scope: complete the user-facing template catalog metadata required by V2-002.
+  Backend-approved template profiles now include scale, expected KPI behavior,
+  fidelity mode, and recommended-use fields. The same metadata is exposed
+  through the configuration surface summary, template catalog endpoint, and
+  schema template references. The frontend template list consumes these
+  backend-owned fields instead of inferring template semantics locally.
+- Changed files/modules:
+  - `src/leo_twin/services/configuration_view.py`
+  - `src/leo_twin/services/configuration_schema.py`
+  - `tests/unit/test_configuration_view.py`
+  - `tests/unit/test_user_configuration_schema_v2.py`
+  - `tests/integration/test_config_control.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/config_panel/ConfigPanel.tsx`
+  - `frontend/tests/configPanel.test.ts`
+  - `docs/template_catalog_metadata_v2.md`
+  - `docs/user_configuration_schema_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_configuration_view.py tests/unit/test_user_configuration_schema_v2.py tests/integration/test_config_control.py::test_control_plane_exposes_user_configuration_contract_api -q`
+    - Result: passed, 14 tests.
+  - `pnpm --dir frontend test -- configPanel.test.ts api.test.ts`
+    - Result: passed, 26 test files / 353 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. The command includes TypeScript checking; Vite reported
+      the existing `DataPanel` chunk size warning after minification.
+- Problems encountered and handling:
+  - The first targeted pytest command used an outdated integration test name and
+    reported `not found`. The actual contract test was located with `rg` and
+    rerun with the correct test id.
+  - Existing local runtime/generated config files remain dirty and are
+    intentionally not included in this task.
+- Known remaining issues / follow-up:
+  - Template metadata is descriptive. A future task can add a pre-load template
+    preview diff that compares the selected template with the current effective
+    config before sending `LOAD_TEMPLATE`.
+
 ## 2026-07-06 - Backpressure Notice Dismissal v1
 
 - Branch: `feature/T250-backpressure-notice-dismissal-v1`

@@ -50,6 +50,11 @@ Tasks:
   - Scope: scenario name, purpose, scale, expected KPI behavior, fidelity mode.
   - Output: backend template endpoint and frontend selector metadata.
   - Depends on: V2-001.
+  - Status: T251 extends backend-approved user configuration template profiles
+    with scale, expected KPI behavior, fidelity mode, and recommended-use
+    metadata, exposes the fields through schema/templates/configuration-surface
+    summaries, and displays them in the frontend template selector without
+    local semantic inference.
 - V2-003: Add config explanation summary.
   - Scope: backend-generated text/structured explanation for orbit, network,
     traffic, compute, runtime, fidelity.

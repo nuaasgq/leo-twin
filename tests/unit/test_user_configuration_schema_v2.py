@@ -65,6 +65,14 @@ def test_user_configuration_schema_v2_covers_full_effective_config() -> None:
     assert "routing_requires_at_least_one_positive_weight" in fields[
         "network.routing_latency_weight"
     ]["validation_rules"]
+    templates = {template["id"]: template for template in schema["templates"]}
+    assert templates["baseline_72sat"]["fidelity_mode"] == (
+        "SMALL_SCALE_PER_SATELLITE_ORBIT"
+    )
+    assert templates["network_stress_120sat"]["expected_kpi_behavior"] == (
+        "Non-zero loss, jitter, and route-pressure proxies."
+    )
+    assert templates["large_scale_1200sat"]["scale"] == "1200 satellites"
 
 
 def test_user_configuration_schema_v2_validation_accepts_minimal_user_config() -> None:

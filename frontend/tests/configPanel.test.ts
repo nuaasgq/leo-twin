@@ -6,6 +6,7 @@ import {
   ConfigPanel,
   NETWORK_QUALITY_PRESETS,
   SCENARIO_SCALE_PRESETS,
+  configurationTemplateProfileDetail,
   configurationTemplateSummaryItems,
   configPanelSectionTitles,
   generatedScenarioSummaryItems,
@@ -749,13 +750,21 @@ describe("configurationTemplateSummaryItems", () => {
               id: "baseline_72sat",
               label: "72-satellite baseline",
               path: "configs/templates/sees_user_detailed.example.yaml",
-              purpose: "Executable baseline for full-contract editing."
+              purpose: "Executable baseline for full-contract editing.",
+              scale: "72 satellites, 72 compute nodes, baseline user demand.",
+              expected_kpi_behavior: "Stable baseline KPI curves.",
+              fidelity_mode: "SMALL_SCALE_PER_SATELLITE_ORBIT",
+              recommended_use: "Start here for deterministic smoke tests."
             },
             {
               id: "dynamic_observability_120sat",
               label: "120-satellite dynamic observability",
               path: "configs/templates/sees_user_dynamic_observability.example.yaml",
-              purpose: "Mixed traffic and non-zero network proxies."
+              purpose: "Mixed traffic and non-zero network proxies.",
+              scale: "120 satellites, 120 compute nodes.",
+              expected_kpi_behavior: "Visible time-varying KPI movement.",
+              fidelity_mode: "MEDIUM_SCALE_DYNAMIC_OBSERVABILITY",
+              recommended_use: "Use for dashboard validation."
             }
           ]
         }
@@ -788,16 +797,35 @@ describe("configurationTemplateSummaryItems", () => {
       {
         label: "72-satellite baseline",
         value: "configs/templates/sees_user_detailed.example.yaml",
-        detail: "Executable baseline for full-contract editing.",
+        detail:
+          "Executable baseline for full-contract editing. | 规模: 72 satellites, 72 compute nodes, baseline user demand. | 保真: SMALL_SCALE_PER_SATELLITE_ORBIT | KPI: Stable baseline KPI curves. | 用途: Start here for deterministic smoke tests.",
         templateId: "baseline_72sat"
       },
       {
         label: "120-satellite dynamic observability",
         value: "configs/templates/sees_user_dynamic_observability.example.yaml",
-        detail: "Mixed traffic and non-zero network proxies.",
+        detail:
+          "Mixed traffic and non-zero network proxies. | 规模: 120 satellites, 120 compute nodes. | 保真: MEDIUM_SCALE_DYNAMIC_OBSERVABILITY | KPI: Visible time-varying KPI movement. | 用途: Use for dashboard validation.",
         templateId: "dynamic_observability_120sat"
       }
     ]);
+  });
+
+  it("summarizes backend template metadata for users", () => {
+    expect(
+      configurationTemplateProfileDetail({
+        purpose: "Stress route pressure.",
+        scale: "120 satellites",
+        fidelity_mode: "MEDIUM_SCALE_NETWORK_STRESS",
+        expected_kpi_behavior: "Loss and jitter proxies move over time.",
+        recommended_use: "Use for KPI provenance checks."
+      })
+    ).toBe(
+      "Stress route pressure. | 规模: 120 satellites | 保真: MEDIUM_SCALE_NETWORK_STRESS | KPI: Loss and jitter proxies move over time. | 用途: Use for KPI provenance checks."
+    );
+    expect(configurationTemplateProfileDetail({ purpose: "Baseline." })).toBe(
+      "Baseline."
+    );
   });
 
   it("renders backend template profiles in the control panel", () => {

@@ -221,6 +221,13 @@ _TEMPLATE_PROFILES = (
         "label": "72-satellite baseline",
         "path": "configs/templates/sees_user_detailed.example.yaml",
         "purpose": "Executable baseline for full-contract editing.",
+        "scale": "72 satellites, 72 compute nodes, baseline user demand.",
+        "expected_kpi_behavior": (
+            "Stable low-to-medium pressure KPI curves for validating the full "
+            "configuration contract."
+        ),
+        "fidelity_mode": "SMALL_SCALE_PER_SATELLITE_ORBIT",
+        "recommended_use": "Start here for deterministic smoke tests and full YAML editing.",
     },
     {
         "id": "dynamic_observability_120sat",
@@ -230,6 +237,13 @@ _TEMPLATE_PROFILES = (
             "Mixed traffic, non-zero network proxies, and per-satellite compute "
             "resources for dashboard validation."
         ),
+        "scale": "120 satellites, 120 compute nodes, mixed communication/compute demand.",
+        "expected_kpi_behavior": (
+            "Visible time-varying throughput, latency, loss proxy, jitter proxy, "
+            "and compute resource movement."
+        ),
+        "fidelity_mode": "MEDIUM_SCALE_DYNAMIC_OBSERVABILITY",
+        "recommended_use": "Use for dashboard data-panel validation and operator demos.",
     },
     {
         "id": "network_stress_120sat",
@@ -239,6 +253,13 @@ _TEMPLATE_PROFILES = (
             "Higher flow-level demand, loss, rain, and routing pressure for "
             "validating changing network KPI curves."
         ),
+        "scale": "120 satellites with elevated user demand and network pressure.",
+        "expected_kpi_behavior": (
+            "Non-zero loss and jitter proxies with route pressure and recent-flow "
+            "KPI variation."
+        ),
+        "fidelity_mode": "MEDIUM_SCALE_NETWORK_STRESS",
+        "recommended_use": "Use when checking KPI provenance, congestion, and stress behavior.",
     },
     {
         "id": "large_scale_1200sat",
@@ -248,6 +269,13 @@ _TEMPLATE_PROFILES = (
             "Scale-safe batch orbit and bounded ISL template for large "
             "interactive scenarios."
         ),
+        "scale": "1200 satellites with batched orbit updates and bounded ISL candidates.",
+        "expected_kpi_behavior": (
+            "Aggregated large-scale metrics with explicit fidelity degradation "
+            "and bounded detail windows."
+        ),
+        "fidelity_mode": "LARGE_SCALE_BATCH_ORBIT_BOUNDED_ISL",
+        "recommended_use": "Use for 1200-node responsiveness and scale-fidelity checks.",
     },
 )
 

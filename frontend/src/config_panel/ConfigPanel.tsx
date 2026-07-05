@@ -2019,10 +2019,30 @@ export function configurationTemplateSummaryItems(
     ...profiles.map((profile) => ({
       label: profile.label,
       value: profile.path,
-      detail: profile.purpose,
+      detail: configurationTemplateProfileDetail(profile),
       templateId: profile.id
     }))
   ];
+}
+
+export function configurationTemplateProfileDetail(
+  profile: {
+    purpose: string;
+    scale?: string;
+    expected_kpi_behavior?: string;
+    fidelity_mode?: string;
+    recommended_use?: string;
+  }
+): string {
+  return [
+    profile.purpose,
+    profile.scale ? `规模: ${profile.scale}` : null,
+    profile.fidelity_mode ? `保真: ${profile.fidelity_mode}` : null,
+    profile.expected_kpi_behavior ? `KPI: ${profile.expected_kpi_behavior}` : null,
+    profile.recommended_use ? `用途: ${profile.recommended_use}` : null
+  ]
+    .filter((item): item is string => typeof item === "string" && item.length > 0)
+    .join(" | ");
 }
 
 function configurationSectionDisplayLabel(section: string): string {

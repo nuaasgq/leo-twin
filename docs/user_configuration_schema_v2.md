@@ -60,7 +60,10 @@ The HTTP endpoints are read-only:
 - `/scenario/user-config/schema` returns the current backend-derived schema v2,
   including defaults and current values.
 - `/scenario/user-config/templates` returns the approved executable template
-  catalog and the control command needed to load a template.
+  catalog and the control command needed to load a template. Each template
+  profile includes backend-owned metadata for scenario scale, expected KPI
+  behavior, fidelity mode, and recommended use, so the frontend can explain
+  template semantics without local inference.
 - `/scenario/user-config/export` returns the current effective `SEESConfig`
   JSON mapping, a stable config hash, validation status, and supported import
   paths.
