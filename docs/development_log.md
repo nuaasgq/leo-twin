@@ -5521,3 +5521,27 @@ change.
 - Recommended follow-up:
   - Add deeper static analysis only if dynamic plugin loading becomes part of
     the architecture.
+
+## 2026-07-05 - README Guard Commands v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: document the forbidden runtime import guard next to the runtime config
+  staging guard in `README.md` so local pre-commit checks are discoverable.
+- Changed files/modules:
+  - `README.md`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `git diff --check`
+    - Result: passed, with only the pre-existing local runtime config CRLF
+      warnings.
+- Problems encountered:
+  - None. This is documentation only.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The README documents manual guard commands; hook installation is not
+    automated.
+- Recommended follow-up:
+  - Add a single pre-commit aggregate command if more guard scripts are added.

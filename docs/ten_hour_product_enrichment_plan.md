@@ -516,6 +516,10 @@ The following issue-sized slices have now been delivered on
   - Aggregate product acceptance now runs a static import guard for forbidden
     STK/EXATA/GloMoSim/AFSIM/DDS runtime packages before backend/frontend
     checks.
+- `docs(readme): document guard commands`
+  - Maps to suggestions 91-95.
+  - README now lists both runtime config staging and forbidden runtime import
+    guard commands for local pre-commit checks.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected

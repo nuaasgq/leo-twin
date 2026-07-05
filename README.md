@@ -96,4 +96,5 @@ Before committing local development work:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\check_no_runtime_config_staged.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\check_forbidden_runtime_imports.ps1
 ```
