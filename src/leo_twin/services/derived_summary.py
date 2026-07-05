@@ -21,6 +21,7 @@ from leo_twin.schema.service_placement_contract import (
 from leo_twin.services.dashboard_information_architecture import (
     dashboard_information_architecture_v3_to_dict,
 )
+from leo_twin.services.scale_policy_v2 import scale_policy_v2_to_dict
 
 
 BackendDerivedSummary = dict[str, object]
@@ -233,6 +234,10 @@ def build_backend_derived_summary(
         "routing_protocol": str(routing_protocol),
         "datalink_mac_protocol": str(datalink_mac_protocol),
     }
+    scale_policy = scale_policy_v2_to_dict(
+        satellite_count=satellite_count,
+        user_count=user_count,
+    )
 
     return {
         "derived_constellation_summary": constellation_summary,
@@ -243,6 +248,7 @@ def build_backend_derived_summary(
         "cache_offload_migration_contract_v1": cache_offload_migration_contract,
         "coverage_beam_summary": coverage_summary,
         "network_model_contract_v2": network_model_contract,
+        "scale_policy_v2": scale_policy,
         "dashboard_information_architecture_v3": (
             dashboard_information_architecture_v3_to_dict()
         ),
@@ -263,6 +269,7 @@ def build_backend_derived_summary(
             constellation_summary,
             satellite_count=satellite_count,
             user_count=user_count,
+            scale_policy=scale_policy,
         ),
     }
 
@@ -798,13 +805,16 @@ def _model_assumptions(
     *,
     satellite_count: int,
     user_count: int,
+    scale_policy: Mapping[str, Any],
 ) -> tuple[str, ...]:
     profile = str(constellation_summary.get("profile", "CUSTOM_WALKER"))
+    scale_band = str(scale_policy.get("active_scale_band", "UNKNOWN"))
     assumptions = [
         "Orbit allocation is deterministic and simplified; no SGP4 or external ephemeris is used.",
         "Network behavior is flow-level, not packet-level.",
         "Compute capacity is a deterministic abstract resource vector, not real execution.",
         "Coverage beams are bounded geometric visualization footprints, not RF antenna patterns.",
+        f"Scale policy v2 classifies this scenario as {scale_band} for fidelity and LOD decisions.",
         f"Scenario scale uses {satellite_count} satellites and {user_count} users from backend config.",
     ]
     if profile == "STARLINK_SHELL_1_LIKE":

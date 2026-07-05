@@ -174,6 +174,13 @@ Tasks:
 - V2-040: Define scale policy v2.
   - Scope: 72, 300, 1200, 3000, 6000, 12000 profile rules.
   - Output: fidelity summary, explicit frontend notices, tests.
+  - Status: T234 adds backend-owned `leo_twin.scale_policy.v2` with six
+    product scale profiles (`baseline_72`, `medium_300`, `large_1200`,
+    `xl_3000`, `xxl_6000`, `extreme_12000`). The policy is included in
+    backend derived summaries and records orbit update mode, metrics mode,
+    space-link mode, snapshot LOD policy, detail-window policy, frontend
+    rendering policy, runtime guardrail policy, and result reproducibility
+    expectations without changing Event Kernel or runtime behavior.
 - V2-041: Add LOD snapshot policy.
   - Scope: detail windows, top-K summaries, sampled histories, raw counts.
   - Depends on: V2-040.

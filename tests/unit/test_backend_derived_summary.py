@@ -193,8 +193,20 @@ def test_backend_derived_summary_is_deterministic_and_frontend_ready() -> None:
             "counts for visualization only; they are not access decisions."
         ),
     }
+    scale_policy = first["scale_policy_v2"]
+    assert isinstance(scale_policy, dict)
+    assert scale_policy["policy_id"] == "leo_twin.scale_policy.v2"
+    assert scale_policy["profile_targets"] == (72, 300, 1200, 3000, 6000, 12000)
+    assert scale_policy["active_profile_id"] == "medium_300"
+    assert scale_policy["active_scale_band"] == "MEDIUM_300"
+    assert scale_policy["packet_level_simulation"] is False
+    assert scale_policy["event_kernel_policy"] == "NO_EVENT_KERNEL_BEHAVIOR_CHANGE"
     assert any(
         "not exact Starlink fidelity" in assumption
+        for assumption in first["model_assumptions"]
+    )
+    assert any(
+        "Scale policy v2 classifies this scenario as MEDIUM_300" in assumption
         for assumption in first["model_assumptions"]
     )
     assert any(

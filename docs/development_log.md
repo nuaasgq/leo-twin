@@ -5,6 +5,44 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Scale Policy v2
+
+- Branch: `feature/T234-scale-policy-v2`
+- Commit: pending in this commit
+- Scope: advance V2-040 by adding backend-owned
+  `leo_twin.scale_policy.v2`. The policy defines six product scale profiles
+  for 72, 300, 1200, 3000, 6000, and 12000 satellites and exposes the active
+  profile through backend derived summaries.
+- Changed files/modules:
+  - `src/leo_twin/services/scale_policy_v2.py`
+  - `src/leo_twin/services/derived_summary.py`
+  - `tests/unit/test_scale_policy_v2.py`
+  - `tests/unit/test_backend_derived_summary.py`
+  - `docs/scale_policy_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_scale_policy_v2.py tests/unit/test_backend_derived_summary.py -q`
+    - Result: passed, 22 tests.
+  - `python -m pytest tests/integration/test_benchmark_acceptance_v1.py -q`
+    - Result: passed, 9 tests.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - Existing scale fidelity services already selected the active runtime modes,
+    so this task keeps behavior unchanged and adds the product profile matrix as
+    a deterministic explanation contract.
+  - The 3000, 6000, and 12000 profiles are explicit guardrail profiles, not
+    claims of full-detail interactive fidelity.
+  - Existing local runtime/generated config files remain dirty and are
+    intentionally not included in this task.
+- Known remaining issues / follow-up:
+  - V2-041 should bind snapshot LOD behavior to these profile names.
+  - V2-042 should attach event, memory, stream backlog, and refusal/degrade
+    guardrails to the active profile.
+  - V2-043 should add backend cursor/detail contracts for large user,
+    satellite, route, service, and compute-node tables.
+
 ## 2026-07-06 - Satellite Camera Detail Policy v2
 
 - Branch: `feature/T233-satellite-camera-detail-policy-v2`
