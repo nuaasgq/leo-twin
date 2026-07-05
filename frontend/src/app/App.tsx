@@ -103,6 +103,7 @@ export function App() {
     useState<string | null>(null);
   const [dismissedCompletionNoticeKey, setDismissedCompletionNoticeKey] =
     useState<string | null>(null);
+  const [completionNoticeArmed, setCompletionNoticeArmed] = useState(false);
   const [runtimeProgressAnchor, setRuntimeProgressAnchor] = useState<RuntimeProgressAnchor>(() =>
     defaultRuntimeProgressAnchor(defaultRuntimeStatus())
   );
@@ -501,7 +502,11 @@ export function App() {
   const backpressureNoticeDismissed =
     backpressureNoticeKeyForStatus !== null &&
     backpressureNoticeKeyForStatus === dismissedBackpressureNoticeKey;
-  const completionNoticeKeyForStatus = shouldShowCompletionNotice(runtimeStatus)
+  const showCompletionNotice = shouldShowRuntimeCompletionNotice(
+    runtimeStatus,
+    completionNoticeArmed
+  );
+  const completionNoticeKeyForStatus = showCompletionNotice
     ? completionNoticeDismissKey(runtimeStatus)
     : null;
   const completionNoticeDismissed =
@@ -519,6 +524,12 @@ export function App() {
       setDismissedCompletionNoticeKey(null);
     }
   }, [completionNoticeKeyForStatus]);
+
+  useEffect(() => {
+    if (runtimeStatusArmsCompletionNotice(runtimeStatus)) {
+      setCompletionNoticeArmed(true);
+    }
+  }, [runtimeStatus.status, runtimeStatus.lifecycle_state]);
 
   const sendRuntimeControl = useCallback(
     (action: RuntimeAction, payload: Record<string, unknown> = {}) => {
@@ -609,7 +620,7 @@ export function App() {
         <section className="dashboard-page" aria-label="独立数据态势面板">
           <FidelityNotice summary={fidelitySummary} surface="dashboard" />
           <CompletionNotice
-            runtimeStatus={runtimeStatus}
+            runtimeStatus={showCompletionNotice ? runtimeStatus : null}
             surface="dashboard"
             dismissed={completionNoticeDismissed}
             onDismiss={dismissCompletionNotice}
@@ -695,7 +706,7 @@ export function App() {
             </div>
             <FidelityNotice summary={fidelitySummary} surface="control" />
             <CompletionNotice
-              runtimeStatus={runtimeStatus}
+              runtimeStatus={showCompletionNotice ? runtimeStatus : null}
               surface="control"
               dismissed={completionNoticeDismissed}
               onDismiss={dismissCompletionNotice}
@@ -903,6 +914,24 @@ export function shouldShowCompletionNotice(
   );
 }
 
+export function runtimeStatusArmsCompletionNotice(
+  runtimeStatus: RuntimeStatusPayload
+): boolean {
+  return (
+    runtimeStatus.status === "RUNNING" ||
+    runtimeStatus.status === "PAUSED" ||
+    runtimeStatus.lifecycle_state === "RUNNING" ||
+    runtimeStatus.lifecycle_state === "PAUSED"
+  );
+}
+
+export function shouldShowRuntimeCompletionNotice(
+  runtimeStatus: RuntimeStatusPayload,
+  completionNoticeArmed: boolean
+): boolean {
+  return completionNoticeArmed && shouldShowCompletionNotice(runtimeStatus);
+}
+
 export function completionNoticeText(runtimeStatus: RuntimeStatusPayload): string {
   const elapsed = Math.max(
     0,
@@ -937,12 +966,16 @@ function CompletionNotice({
   dismissed,
   onDismiss
 }: {
-  runtimeStatus: RuntimeStatusPayload;
+  runtimeStatus: RuntimeStatusPayload | null;
   surface: "control" | "dashboard";
   dismissed?: boolean;
   onDismiss?: () => void;
 }) {
-  if (dismissed === true || !shouldShowCompletionNotice(runtimeStatus)) {
+  if (
+    runtimeStatus === null ||
+    dismissed === true ||
+    !shouldShowCompletionNotice(runtimeStatus)
+  ) {
     return null;
   }
   return (

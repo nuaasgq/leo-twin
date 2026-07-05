@@ -5,6 +5,40 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Dashboard Terminal Completion Notice Gate v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending in this commit
+- Scope: prevent the simulation-completed notice from reappearing after a page
+  refresh when the backend runtime is already in a terminal `COMPLETED` state.
+  The frontend now arms the completion banner only after the current page
+  session has observed `RUNNING` or `PAUSED`; attaching to an already completed
+  backend session still shows completed status in normal runtime fields, but no
+  transient completion pop-up/banner. Event Kernel, runtime protocol, and
+  backend simulation behavior are unchanged.
+- Changed files/modules:
+  - `frontend/src/app/App.tsx`
+  - `frontend/tests/appSurface.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- appSurface.test.ts`
+    - Result: passed, 25 files / 261 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing `DataPanel` chunk-size
+      warning at about 502 kB after minification.
+  - `git diff --check frontend/src/app/App.tsx frontend/tests/appSurface.test.ts docs/development_log.md`
+    - Result: passed.
+- Problems encountered:
+  - The previous completion banner was purely derived from backend terminal
+    status, so a browser refresh looked like a fresh notification even though
+    the completion had already happened before page load.
+- Known remaining issues / follow-up:
+  - Completion notice dismissal remains in-memory while a run is active. This
+    task intentionally solves the terminal refresh case without adding
+    persistent browser storage.
+
 ## 2026-07-05 - Dashboard Terminal Backpressure Suppression v1
 
 - Branch: `feature/T164-dashboard-observability-v1`

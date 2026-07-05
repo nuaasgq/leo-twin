@@ -15,6 +15,7 @@ import {
   fidelityNoticeText,
   nextRuntimeProgressAnchor,
   runtimeProgressSimTime,
+  runtimeStatusArmsCompletionNotice,
   runtimeWebSocketErrorMessage,
   runtimeStatusRequiresStreams,
   scenarioWithRuntimeConfig,
@@ -23,6 +24,7 @@ import {
   selectFidelitySummary,
   shouldResetWorldBeforeStreamConnect,
   shouldShowBackpressureNotice,
+  shouldShowRuntimeCompletionNotice,
   shouldShowRuntimeBackpressureNotice,
   shouldShowCompletionNotice,
   shouldShowFidelityNotice,
@@ -294,6 +296,26 @@ describe("completion notice", () => {
     expect(completionNoticeDismissKey(completedStatus)).not.toBe(
       completionNoticeDismissKey({ ...completedStatus, processed_event_count: 256 })
     );
+  });
+
+  it("only shows the completed notice after this page session observed active runtime", () => {
+    expect(runtimeStatusArmsCompletionNotice(completedStatus)).toBe(false);
+    expect(shouldShowRuntimeCompletionNotice(completedStatus, false)).toBe(false);
+    expect(shouldShowRuntimeCompletionNotice(completedStatus, true)).toBe(true);
+    expect(
+      runtimeStatusArmsCompletionNotice({
+        ...completedStatus,
+        status: "RUNNING",
+        lifecycle_state: "RUNNING"
+      })
+    ).toBe(true);
+    expect(
+      runtimeStatusArmsCompletionNotice({
+        ...completedStatus,
+        status: "PAUSED",
+        lifecycle_state: "PAUSED"
+      })
+    ).toBe(true);
   });
 });
 
