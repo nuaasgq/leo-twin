@@ -586,23 +586,23 @@ def test_control_plane_loads_user_config_template_before_initialization(
     assert ack["status"]["initialized"] is False
     assert ack["status"]["last_action"] == "CONFIG_UPDATE"
     assert ack["config"]["scenario"]["satellite_count"] == 120
-    assert ack["config"]["scenario"]["user_count"] == 900
-    assert ack["config"]["network"]["transport_loss_rate"] == 0.06
-    assert ack["config"]["runtime"]["duration"] == 900
+    assert ack["config"]["scenario"]["user_count"] == 240
+    assert ack["config"]["network"]["transport_loss_rate"] == 0.05
+    assert ack["config"]["runtime"]["duration"] == 600
     assert ack["generated_config"]["satellite_count"] == 120
-    assert ack["generated_config"]["user_count"] == 900
-    assert ack["generated_config"]["transport_loss_rate"] == 0.06
+    assert ack["generated_config"]["user_count"] == 240
+    assert ack["generated_config"]["transport_loss_rate"] == 0.05
     assert ack["generated_config"]["backend_summary"][
         "configuration_surface_summary"
     ]["template_profiles"][2]["id"] == "network_stress_120sat"
     assert control_plane.result.config.satellite_count == 120
-    assert control_plane.result.config.ground_user_count == 900
-    assert control_plane.result.config.transport_loss_rate == 0.06
+    assert control_plane.result.config.ground_user_count == 240
+    assert control_plane.result.config.transport_loss_rate == 0.05
     assert "satellite_count: 120" in config_path.read_text(encoding="utf-8")
-    assert "transport_loss_rate: 0.06" in config_path.read_text(encoding="utf-8")
+    assert "transport_loss_rate: 0.05" in config_path.read_text(encoding="utf-8")
     generated_config = json.loads(generated_config_path.read_text(encoding="utf-8"))
     assert generated_config["satellite_count"] == 120
-    assert generated_config["transport_loss_rate"] == 0.06
+    assert generated_config["transport_loss_rate"] == 0.05
 
     initialize_ack = control_plane.handle_raw_message(
         json.dumps({"type": "RUNTIME_CONTROL", "action": "INITIALIZE"})
@@ -632,6 +632,36 @@ def test_control_plane_rejects_template_load_after_initialization(tmp_path) -> N
     assert ack["ok"] is False
     assert "reset first" in ack["error"]
     assert ack["status"]["initialized"] is True
+
+
+def test_network_stress_template_status_polling_stays_stable(tmp_path) -> None:
+    control_plane = _small_control_plane(tmp_path / "sees_control.yaml")
+    load_ack = control_plane.handle_raw_message(
+        json.dumps(
+            {
+                "type": "RUNTIME_CONTROL",
+                "action": "LOAD_TEMPLATE",
+                "payload": {"template_id": "network_stress_120sat"},
+            }
+        )
+    )
+    initialize_ack = control_plane.handle_raw_message(
+        json.dumps({"type": "RUNTIME_CONTROL", "action": "INITIALIZE"})
+    )
+    start_ack = control_plane.handle_raw_message(
+        json.dumps({"type": "RUNTIME_CONTROL", "action": "START"})
+    )
+
+    assert load_ack["ok"] is True
+    assert initialize_ack["ok"] is True
+    assert start_ack["ok"] is True
+    for _ in range(8):
+        control_plane._require_advance_loop().tick()
+        status = control_plane.runtime_status()["status"]
+        assert status["lifecycle_state"] == "RUNNING"
+        assert status["processed_event_count"] > 0
+        assert status["kpi_time_series_v1"]["sample_count"] > 0
+        assert status["satellite_kpi_slices_v1"]["slice_count"] >= 0
 
 
 def test_demo_control_plane_blocks_unsafe_scale_start(tmp_path) -> None:

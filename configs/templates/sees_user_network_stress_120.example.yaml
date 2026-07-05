@@ -14,7 +14,7 @@
 
 scenario:
   satellite_count: 120
-  user_count: 900
+  user_count: 240
   compute_nodes: 120
 
   # Every satellite is modeled as a compute-capable platform. The scalar
@@ -52,7 +52,7 @@ scenario:
     # visible flow-level pressure and service-latency movement.
     flow_interval_seconds: 5
     task_interval_seconds: 6
-    flow_demand_capacity: 420.0
+    flow_demand_capacity: 320.0
     task_compute_demand: 90.0
     task_data_size: 32.0
     traffic_class: COMPUTE_SERVICE
@@ -73,7 +73,7 @@ network:
 
   # Intentional non-zero proxy stress. Loss, rain, route capacity pressure,
   # and hop/latency tradeoffs make dashboard KPI curves easier to validate.
-  transport_loss_rate: 0.06
+  transport_loss_rate: 0.05
   transport_congestion_window_segments: 0
   routing_latency_weight: 0.2
   routing_inverse_capacity_weight: 500.0
@@ -81,7 +81,7 @@ network:
 
   carrier_frequency_hz: 20000000000.0
   channel_bandwidth_hz: 80000000.0
-  rain_rate_mm_h: 12.0
+  rain_rate_mm_h: 10.0
   rain_attenuation_coefficient_db_per_km_per_mm_h: 0.018
   rain_effective_path_km: 5.0
   antenna_diameter_m: 0.35
@@ -101,7 +101,7 @@ runtime:
   mode: ACCELERATED
   speed_factor: 5.0
   seed: 20260705
-  duration: 900
+  duration: 600
 
 ui:
   visualization:

@@ -10,6 +10,7 @@ from collections.abc import Mapping
 from dataclasses import fields, is_dataclass
 from math import isfinite
 from pathlib import Path
+from threading import RLock
 from typing import Any, Protocol
 
 from leo_twin.models.orbit import ground_track_point
@@ -133,6 +134,7 @@ class MetricsCollector:
         ] = {}
         self._last_sim_time = 0.0
         self._metric_event_sequence = 0
+        self._lock = RLock()
 
     def name(self) -> str:
         return self._module_name
@@ -150,6 +152,10 @@ class MetricsCollector:
     def observe(self, event: SimEvent) -> tuple[MetricRecord, ...]:
         """Observe one event outside the kernel dispatch path."""
 
+        with self._lock:
+            return self._observe_unlocked(event)
+
+    def _observe_unlocked(self, event: SimEvent) -> tuple[MetricRecord, ...]:
         event_type = _event_type_name(event.event_type)
         self._event_counts[event_type] += 1
         event_count = sum(self._event_counts.values())
@@ -186,12 +192,18 @@ class MetricsCollector:
         return tuple(records)
 
     def records(self) -> tuple[MetricRecord, ...]:
-        return tuple(self._records)
+        with self._lock:
+            return tuple(self._records)
 
     def event_log(self) -> tuple[ReplayEvent, ...]:
-        return tuple(dict(event) for event in self._event_log)
+        with self._lock:
+            return tuple(dict(event) for event in self._event_log)
 
     def summary(self) -> MetricSummary:
+        with self._lock:
+            return self._summary_unlocked()
+
+    def _summary_unlocked(self) -> MetricSummary:
         active_links = self._active_link_states()
         available_routes = self._available_routes()
         summary: MetricSummary = {
@@ -258,6 +270,10 @@ class MetricsCollector:
         return summary
 
     def metrics_csv(self) -> str:
+        with self._lock:
+            return self._metrics_csv_unlocked()
+
+    def _metrics_csv_unlocked(self) -> str:
         output = io.StringIO()
         writer = csv.DictWriter(output, fieldnames=_CSV_FIELDS, lineterminator="\n")
         writer.writeheader()
@@ -281,6 +297,13 @@ class MetricsCollector:
         return json.dumps(self.summary(), sort_keys=True, indent=2) + "\n"
 
     def kpi_time_series(
+        self,
+        sim_time: float | None = None,
+    ) -> dict[str, str | int | list[KpiSample]]:
+        with self._lock:
+            return self._kpi_time_series_unlocked(sim_time)
+
+    def _kpi_time_series_unlocked(
         self,
         sim_time: float | None = None,
     ) -> dict[str, str | int | list[KpiSample]]:
@@ -322,6 +345,13 @@ class MetricsCollector:
         self,
         limit: int = 64,
     ) -> dict[str, str | int | list[SatelliteKpiSlice]]:
+        with self._lock:
+            return self._satellite_kpi_slices_unlocked(limit)
+
+    def _satellite_kpi_slices_unlocked(
+        self,
+        limit: int = 64,
+    ) -> dict[str, str | int | list[SatelliteKpiSlice]]:
         _require_positive_int(limit, "limit")
         satellite_ids = self._satellite_ids_for_kpi_slices()
         slices = [self._satellite_kpi_slice(satellite_id) for satellite_id in satellite_ids]
@@ -337,6 +367,14 @@ class MetricsCollector:
         }
 
     def satellite_kpi_history(
+        self,
+        limit: int = 64,
+        sample_limit: int | None = None,
+    ) -> dict[str, Any]:
+        with self._lock:
+            return self._satellite_kpi_history_unlocked(limit, sample_limit)
+
+    def _satellite_kpi_history_unlocked(
         self,
         limit: int = 64,
         sample_limit: int | None = None,
@@ -376,6 +414,10 @@ class MetricsCollector:
         }
 
     def service_latency_history(self, limit: int = 32) -> dict[str, Any]:
+        with self._lock:
+            return self._service_latency_history_unlocked(limit)
+
+    def _service_latency_history_unlocked(self, limit: int = 32) -> dict[str, Any]:
         _require_positive_int(limit, "limit")
         selected = sorted(
             self._service_latency_components_by_task.items(),
@@ -401,26 +443,28 @@ class MetricsCollector:
         }
 
     def events_jsonl(self) -> str:
-        return _events_jsonl(tuple(self._event_log))
+        with self._lock:
+            return _events_jsonl(tuple(self._event_log))
 
     def events_jsonl_segments(
         self,
         events_per_segment: int | None = None,
     ) -> tuple[str, ...]:
-        segment_size = (
-            self._event_log_segment_size
-            if events_per_segment is None
-            else events_per_segment
-        )
-        if segment_size is None:
-            segment_size = len(self._event_log) or 1
-        _require_positive_int(segment_size, "events_per_segment")
+        with self._lock:
+            segment_size = (
+                self._event_log_segment_size
+                if events_per_segment is None
+                else events_per_segment
+            )
+            if segment_size is None:
+                segment_size = len(self._event_log) or 1
+            _require_positive_int(segment_size, "events_per_segment")
 
-        events = tuple(self._event_log)
-        return tuple(
-            _events_jsonl(events[index : index + segment_size])
-            for index in range(0, len(events), segment_size)
-        )
+            events = tuple(self._event_log)
+            return tuple(
+                _events_jsonl(events[index : index + segment_size])
+                for index in range(0, len(events), segment_size)
+            )
 
     def write_outputs(self, output_dir: str | Path) -> Mapping[str, Path]:
         output_path = Path(output_dir)

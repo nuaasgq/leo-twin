@@ -5,6 +5,43 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Runtime Metrics Status Polling Stability v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending in this commit
+- Scope: make runtime status polling stable while the server-side advance loop
+  is running. `MetricsCollector` now uses a lightweight re-entrant lock around
+  public write/read entry points so status summaries, KPI series, satellite
+  KPI slices, histories, and output formatting cannot iterate internal
+  dictionaries while the live loop is mutating them. The 120-satellite network
+  stress template was also reduced from 900 to 240 users and from 900s to
+  600s so it remains an interactive pressure scenario rather than a heavy
+  startup load. Event Kernel behavior is unchanged.
+- Changed files/modules:
+  - `src/leo_twin/services/metrics/collector.py`
+  - `configs/templates/sees_user_network_stress_120.example.yaml`
+  - `tests/unit/test_configuration_view.py`
+  - `tests/integration/test_config_control.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_metrics_module.py::test_metrics_collector_publishes_satellite_kpi_slices tests/unit/test_metrics_module.py::test_metrics_outputs_are_deterministic_and_have_expected_format tests/unit/test_configuration_view.py tests/integration/test_config_control.py::test_control_plane_loads_user_config_template_before_initialization tests/integration/test_config_control.py::test_network_stress_template_status_polling_stays_stable -q`
+    - Result: passed, 11 tests.
+  - `git diff --check -- src/leo_twin/services/metrics/collector.py configs/templates/sees_user_network_stress_120.example.yaml tests/unit/test_configuration_view.py tests/integration/test_config_control.py docs/development_log.md`
+    - Result: passed.
+- Problems encountered:
+  - A live probe of the network stress template reproduced
+    `RuntimeError: dictionary changed size during iteration` from
+    `MetricsCollector.satellite_kpi_slices()` while runtime status polling
+    overlapped with backend advancement. The fix was scoped to the metrics
+    observation layer.
+- Known remaining issues / follow-up:
+  - The stress template is now responsive, but early samples can still show
+    complete route blocking depending on current flow-level routing pressure.
+    The next task should tune the demand/routing profile or improve route
+    availability semantics so dashboard throughput, latency, loss proxy, and
+    delay-variation curves all show useful movement without packet-level
+    simulation.
+
 ## 2026-07-05 - User Config Template Loader v1
 
 - Branch: `feature/T164-dashboard-observability-v1`

@@ -173,12 +173,12 @@ def test_network_stress_120_user_config_template_loads() -> None:
     assert "flow-level proxy" in template_text
     assert "STK, EXATA, AFSIM, DDS" in template_text
     assert config.scenario.satellite_count == 120
-    assert config.scenario.user_count == 900
+    assert config.scenario.user_count == 240
     assert config.scenario.compute_nodes == 120
     assert config.scenario.initial_workload_smoothing_enabled is True
     assert config.scenario.orbit.update_interval_seconds == 20
     assert config.scenario.traffic_model.flow_interval_seconds == 5
-    assert config.scenario.traffic_model.flow_demand_capacity == 420.0
+    assert config.scenario.traffic_model.flow_demand_capacity == 320.0
     assert config.scenario.traffic_model.service_mix_weights() == {
         "DATA_TRANSFER": 3.0,
         "TELEMETRY": 1.0,
@@ -186,13 +186,13 @@ def test_network_stress_120_user_config_template_loads() -> None:
         "COMPUTE_SERVICE": 3.0,
     }
     assert config.network.transport_protocol == "UDP"
-    assert config.network.transport_loss_rate == 0.06
-    assert config.network.rain_rate_mm_h == 12.0
+    assert config.network.transport_loss_rate == 0.05
+    assert config.network.rain_rate_mm_h == 10.0
     assert config.network.routing_inverse_capacity_weight == 500.0
     assert config.network.space_link_mode == "BOUNDED_CANDIDATE"
     assert config.runtime.mode == "ACCELERATED"
     assert config.runtime.speed_factor == 5.0
-    assert config.runtime.duration == 900
+    assert config.runtime.duration == 600
 
 
 def test_user_configuration_templates_load_by_backend_profile_id() -> None:
@@ -208,9 +208,9 @@ def test_user_configuration_templates_load_by_backend_profile_id() -> None:
     config = load_user_configuration_template("network_stress_120sat")
 
     assert config.scenario.satellite_count == 120
-    assert config.scenario.user_count == 900
-    assert config.network.transport_loss_rate == 0.06
-    assert config.runtime.duration == 900
+    assert config.scenario.user_count == 240
+    assert config.network.transport_loss_rate == 0.05
+    assert config.runtime.duration == 600
 
 
 def test_user_configuration_template_loader_rejects_unknown_ids() -> None:
