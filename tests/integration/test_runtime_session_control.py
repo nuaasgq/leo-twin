@@ -333,6 +333,17 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
     user_history = status_after_tick["user_request_history_v1"]
     assert user_history["version"] == "v1"
     assert user_history["mode"] == "RECENT_USER_REQUEST_LIMITED"
+    assert user_history["source"] == "BACKEND_RUNTIME_STATUS"
+    assert user_history["history_scope"] == "STATUS_POLL_SAMPLED_VISIBLE_USERS"
+    assert (
+        user_history["sample_policy"]
+        == "ONE_SAMPLE_PER_RUNTIME_STATUS_PER_VISIBLE_USER"
+    )
+    assert user_history["summary_item_count"] == user_summary["item_count"]
+    assert user_history["hidden_user_count"] == user_summary["hidden_user_count"]
+    assert user_history["history_user_count"] == len(
+        control_plane._user_request_history
+    )
     assert user_history["series_count"] == len(user_history["series"])
     assert user_history["user_count"] >= user_history["series_count"]
     assert user_history["series"]

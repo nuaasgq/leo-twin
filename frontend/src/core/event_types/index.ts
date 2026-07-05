@@ -594,8 +594,14 @@ export interface RuntimeUserRequestItemV1 {
 export interface RuntimeUserRequestHistoryV1 {
   version: "v1" | string;
   mode: string;
+  source?: string;
+  history_scope?: string;
+  sample_policy?: string;
   sample_limit?: number;
   user_count?: number;
+  summary_item_count?: number;
+  hidden_user_count?: number;
+  history_user_count?: number;
   series_count?: number;
   series: readonly RuntimeUserRequestHistorySeriesV1[];
 }

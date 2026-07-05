@@ -2279,8 +2279,14 @@ describe("buildDataPanelUserRequestHistory", () => {
   const history = {
     version: "v1",
     mode: "RECENT_USER_REQUEST_LIMITED",
+    source: "BACKEND_RUNTIME_STATUS",
+    history_scope: "STATUS_POLL_SAMPLED_VISIBLE_USERS",
+    sample_policy: "ONE_SAMPLE_PER_RUNTIME_STATUS_PER_VISIBLE_USER",
     sample_limit: 3,
     user_count: 2,
+    summary_item_count: 2,
+    hidden_user_count: 1,
+    history_user_count: 2,
     series_count: 2,
     series: [
       {
@@ -2342,6 +2348,9 @@ describe("buildDataPanelUserRequestHistory", () => {
     expect(display.sourceLabel).toBe("后端 user_request_history_v1");
     expect(display.selectedUserId).toBe("user-2");
     expect(display.availableUserIds).toEqual(["user-2", "user-10"]);
+    expect(display.summaryLabel).toContain("状态轮询采样");
+    expect(display.summaryLabel).toContain("1 个用户未进入历史窗口");
+    expect(display.summaryLabel).toContain("单用户上限 3 点");
     expect(display.points).toEqual([
       {
         timeLabel: "3秒",

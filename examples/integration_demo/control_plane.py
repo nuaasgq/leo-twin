@@ -468,11 +468,24 @@ class DemoControlPlane:
                 }
             )
         series = tuple(series_items)
+        summary_user_count = 0
+        summary_item_count = 0
+        hidden_user_count = 0
+        if isinstance(user_summary, dict):
+            summary_user_count = _control_int(user_summary.get("user_count"))
+            summary_item_count = _control_int(user_summary.get("item_count"))
+            hidden_user_count = _control_int(user_summary.get("hidden_user_count"))
         return {
             "version": "v1",
             "mode": "RECENT_USER_REQUEST_LIMITED",
+            "source": "BACKEND_RUNTIME_STATUS",
+            "history_scope": "STATUS_POLL_SAMPLED_VISIBLE_USERS",
+            "sample_policy": "ONE_SAMPLE_PER_RUNTIME_STATUS_PER_VISIBLE_USER",
             "sample_limit": self._user_request_history_limit,
-            "user_count": len(self._user_request_history),
+            "user_count": summary_user_count or len(self._user_request_history),
+            "summary_item_count": summary_item_count,
+            "hidden_user_count": hidden_user_count,
+            "history_user_count": len(self._user_request_history),
             "series_count": len(series),
             "series": series,
         }

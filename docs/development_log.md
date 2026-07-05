@@ -5,6 +5,43 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - User Request History Scope v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending in this commit
+- Scope: make user business history sampling explicit by adding backend
+  `source`, `history_scope`, `sample_policy`, `summary_item_count`,
+  `hidden_user_count`, and `history_user_count` fields to
+  `user_request_history_v1`, then displaying the sampling scope and hidden-user
+  count in the standalone dashboard history summary.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `tests/integration/test_runtime_session_control.py`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/integration/test_runtime_session_control.py -q`
+    - Result: passed, 17 tests.
+  - Bundled Node:
+    `pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 25 files / 244 tests.
+  - Bundled Node:
+    `pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - User request history is sampled when runtime status is built; it is not a
+    complete append-only business log. The new fields make that limitation
+    explicit instead of hiding it behind the chart.
+- Known remaining issues:
+  - Hidden users that are not present in backend-visible summary rows still do
+    not get per-user history series.
+- Recommended follow-up:
+  - Add backend-owned server-side user history pagination or selected-user
+    history tracking so large scenarios can inspect arbitrary users without
+    pushing every user's history to the frontend.
+
 ## 2026-07-05 - Runtime Mode Mapping Completion v1
 
 - Branch: `feature/T164-dashboard-observability-v1`

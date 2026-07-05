@@ -1981,13 +1981,44 @@ export function buildDataPanelUserRequestHistory(
 
   return {
     sourceLabel: "后端 user_request_history_v1",
-    summaryLabel: `${selectedSeries.user_id} / ${formatCount(points.length)} 个样本 / ${
-      history?.mode ?? "UNKNOWN"
-    }`,
+    summaryLabel: userRequestHistorySummaryLabel(
+      selectedSeries.user_id,
+      points.length,
+      history
+    ),
     selectedUserId: selectedSeries.user_id,
     availableUserIds,
     points
   };
+}
+
+function userRequestHistorySummaryLabel(
+  selectedUserId: string,
+  pointCount: number,
+  history: RuntimeUserRequestHistoryV1 | null | undefined
+): string {
+  const parts = [
+    selectedUserId,
+    `${formatCount(pointCount)} 个样本`,
+    history?.mode ?? "UNKNOWN"
+  ];
+  if (history?.history_scope === "STATUS_POLL_SAMPLED_VISIBLE_USERS") {
+    parts.push("状态轮询采样");
+  }
+  if (
+    typeof history?.hidden_user_count === "number" &&
+    Number.isFinite(history.hidden_user_count) &&
+    history.hidden_user_count > 0
+  ) {
+    parts.push(`${formatCount(history.hidden_user_count)} 个用户未进入历史窗口`);
+  }
+  if (
+    typeof history?.sample_limit === "number" &&
+    Number.isFinite(history.sample_limit)
+  ) {
+    parts.push(`单用户上限 ${formatCount(history.sample_limit)} 点`);
+  }
+  return parts.join(" / ");
 }
 
 export function buildSatelliteResourceRows(
