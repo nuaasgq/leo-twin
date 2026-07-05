@@ -601,6 +601,15 @@ export interface RuntimeUserRequestItemV1 {
   capacity_mbps?: number | null;
   loss_proxy_rate?: number | null;
   service_state?: string;
+  service_task_id?: string;
+  service_complete?: boolean;
+  service_total_latency_s?: number | null;
+  input_network_latency_s?: number | null;
+  compute_queue_delay_s?: number | null;
+  compute_execution_delay_s?: number | null;
+  output_network_latency_s?: number | null;
+  input_route_id?: string;
+  output_route_id?: string;
   active_business_type?: string;
   active_business_label?: string;
   request_state?: string;

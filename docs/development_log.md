@@ -5,6 +5,43 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - User Service Latency Detail v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending in this commit
+- Scope: expose structured communication-compute service latency components
+  in backend-owned user detail rows and render them in the standalone
+  dashboard service column. User details now include service task id,
+  completion flag, total latency, input-network latency, compute queue delay,
+  compute execution delay, output-network latency, and input/output route ids
+  when `service_latency_history_v1` contains them. Event Kernel behavior is
+  unchanged.
+- Changed files/modules:
+  - `src/leo_twin/services/runtime_observability.py`
+  - `tests/unit/test_runtime_observability.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_runtime_observability.py -q`
+    - Result: passed, 2 tests.
+  - Bundled Node/Pnpm: `pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 25 files / 256 tests.
+  - Bundled Node/Pnpm: `pnpm --dir frontend build`
+    - Result: passed with the existing Vite warning that `DataPanel` is larger
+      than 500 kB after minification.
+  - `git diff --check -- src/leo_twin/services/runtime_observability.py tests/unit/test_runtime_observability.py frontend/src/core/event_types/index.ts frontend/src/dashboard/data_panel/DataPanel.tsx frontend/tests/dataPanel.test.ts`
+    - Result: passed.
+- Problems encountered:
+  - Frontend build initially failed because the new helper referenced
+    `RuntimeUserRequestItemV1` without importing the type. The import was added
+    and the build passed.
+- Known remaining issues / follow-up:
+  - Service latency details are still rendered in one compact table cell. A
+    later dashboard task should add expandable per-user service traces or a
+    side panel for full component timelines.
+
 ## 2026-07-05 - Runtime Detail Semantics v2
 
 - Branch: `feature/T164-dashboard-observability-v1`

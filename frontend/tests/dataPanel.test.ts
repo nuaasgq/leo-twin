@@ -2281,6 +2281,15 @@ describe("buildUserBusinessRequestRows", () => {
             capacity_mbps: 80,
             loss_proxy_rate: 0.02,
             service_state: "task-0/330ms/RUNNING",
+            service_task_id: "task-0",
+            service_complete: false,
+            service_total_latency_s: 0.33,
+            input_network_latency_s: 0.12,
+            compute_queue_delay_s: 0.01,
+            compute_execution_delay_s: 0.2,
+            output_network_latency_s: 0,
+            input_route_id: "route-a",
+            output_route_id: "route-out",
             active_business_type: "COMPUTE_SERVICE",
             active_business_label: "通信-计算服务",
             request_state: "COMPUTE_SERVICE_ACTIVE",
@@ -2305,7 +2314,8 @@ describe("buildUserBusinessRequestRows", () => {
       destinationId: "compute-0",
       statusLabel: "ACTIVE/AVAILABLE",
       latencyCapacityLabel: "0.12 s / 80 Mbps",
-      serviceLabel: "通信-计算服务 / 计算服务进行中 / task-0/330ms/RUNNING"
+      serviceLabel:
+        "通信-计算服务 / 计算服务进行中 / task-0 active / total 330 ms / in 120 ms + queue 10 ms + exec 200 ms / input route-a / output route-out"
     });
   });
 

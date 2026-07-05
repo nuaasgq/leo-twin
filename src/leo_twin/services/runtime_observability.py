@@ -50,12 +50,14 @@ def build_runtime_user_request_summary(
     if not isinstance(snapshot, Mapping):
         raise TypeError("snapshot must be a mapping")
     service_lookup = _service_lookup(service_latency_history)
+    service_detail_lookup = _service_detail_lookup(service_latency_history)
     routes = tuple(_records(snapshot.get("routes")))
     users = tuple(_records(snapshot.get("ground_users")))
     return _user_request_summary(
         users,
         routes,
         service_lookup,
+        service_detail_lookup,
         cursor=cursor,
         limit=limit,
     )
@@ -94,6 +96,7 @@ def _user_request_summary(
     users: tuple[Mapping[str, Any], ...],
     routes: tuple[Mapping[str, Any], ...],
     service_lookup: Mapping[str, str],
+    service_detail_lookup: Mapping[str, Mapping[str, Any]],
     *,
     cursor: int,
     limit: int,
@@ -131,7 +134,13 @@ def _user_request_summary(
         normalized_cursor : normalized_cursor + normalized_limit
     ]
     items = tuple(
-        _user_item(user_id, user_by_id.get(user_id), routes_by_user.get(user_id, ()), service_lookup)
+        _user_item(
+            user_id,
+            user_by_id.get(user_id),
+            routes_by_user.get(user_id, ()),
+            service_lookup,
+            service_detail_lookup,
+        )
         for user_id in page_user_ids
     )
     next_cursor = min(len(user_ids), normalized_cursor + len(items))
@@ -168,6 +177,7 @@ def _user_item(
     user: Mapping[str, Any] | None,
     routes: Sequence[Mapping[str, Any]],
     service_lookup: Mapping[str, str],
+    service_detail_lookup: Mapping[str, Mapping[str, Any]],
 ) -> dict[str, object]:
     ordered_routes = tuple(sorted(routes, key=_route_sort_key))
     available_routes = tuple(route for route in ordered_routes if bool(route.get("available")))
@@ -186,6 +196,7 @@ def _user_item(
         selected_path[-1] if selected_route is not None and selected_path else None
     )
     flow_id = _str(selected_route.get("flow_id")) if selected_route is not None else ""
+    service_detail = service_detail_lookup.get(flow_id, {})
     platform_type = (
         "GROUND_STATION" if user_id.startswith("ground-station") else "GROUND_USER_TERMINAL"
     )
@@ -224,6 +235,25 @@ def _user_item(
         "capacity_mbps": _float(selected_route.get("capacity")) if selected_route is not None else None,
         "loss_proxy_rate": _optional_float(selected_route.get("loss_rate")) if selected_route is not None else None,
         "service_state": service_lookup.get(flow_id, ""),
+        "service_task_id": _str(service_detail.get("task_id")),
+        "service_complete": bool(service_detail.get("complete", False)),
+        "service_total_latency_s": _optional_float(
+            service_detail.get("total_latency_s")
+        ),
+        "input_network_latency_s": _optional_float(
+            service_detail.get("input_network_latency_s")
+        ),
+        "compute_queue_delay_s": _optional_float(
+            service_detail.get("compute_queue_delay_s")
+        ),
+        "compute_execution_delay_s": _optional_float(
+            service_detail.get("compute_execution_delay_s")
+        ),
+        "output_network_latency_s": _optional_float(
+            service_detail.get("output_network_latency_s")
+        ),
+        "input_route_id": _str(service_detail.get("input_route_id")),
+        "output_route_id": _str(service_detail.get("output_route_id")),
         "active_business_type": _route_business_type(selected_route, service_lookup),
         "active_business_label": _route_business_label(selected_route, service_lookup),
         "request_state": request_state,
@@ -668,6 +698,20 @@ def _service_lookup(history: Mapping[str, Any] | None) -> dict[str, str]:
             flow_id = _str(item.get(key))
             if flow_id:
                 lookup[flow_id] = label
+    return lookup
+
+
+def _service_detail_lookup(
+    history: Mapping[str, Any] | None,
+) -> dict[str, Mapping[str, Any]]:
+    lookup: dict[str, Mapping[str, Any]] = {}
+    if history is None:
+        return lookup
+    for item in _records(history.get("items")):
+        for key in ("input_flow_id", "output_flow_id"):
+            flow_id = _str(item.get(key))
+            if flow_id:
+                lookup[flow_id] = item
     return lookup
 
 

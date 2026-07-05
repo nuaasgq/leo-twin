@@ -27,6 +27,7 @@ import {
   RuntimeServiceLatencyHistoryV1,
   RuntimeStatusPayload,
   RuntimeUserRequestHistoryV1,
+  RuntimeUserRequestItemV1,
   RuntimeUserRequestSummaryV1
 } from "../../core/event_types";
 import { runtimeSpeedFactorLabel } from "../../runtime_display";
@@ -2610,10 +2611,11 @@ function buildBackendUserBusinessRequestRows(
       item.request_state_label ||
       (item.request_state ? dataPanelRequestStateLabel(item.request_state) : "");
     const queueReason = item.network_queue_reason_label || "";
+    const serviceLatencyLabel = backendUserServiceLatencyLabel(item);
     const serviceLabel = [
       businessLabel,
       requestState,
-      item.service_state || item.primary_flow_id
+      serviceLatencyLabel || item.service_state || item.primary_flow_id
     ]
       .filter((value) => value !== "")
       .join(" / ") || "no service";
@@ -2678,6 +2680,39 @@ function buildBackendUserBusinessRequestRows(
     }`,
     items
   };
+}
+
+function backendUserServiceLatencyLabel(item: RuntimeUserRequestItemV1): string {
+  const totalLatency = finiteOptionalMetric(item.service_total_latency_s);
+  const componentValues: readonly [string, number | null | undefined][] = [
+    ["in", item.input_network_latency_s],
+    ["queue", item.compute_queue_delay_s],
+    ["exec", item.compute_execution_delay_s],
+    ["out", item.output_network_latency_s]
+  ];
+  const components = componentValues
+    .map(([label, value]) => {
+      const parsed = finiteOptionalMetric(value);
+      return parsed > 0 ? `${label} ${formatMetricMilliseconds(parsed)}` : null;
+    })
+    .filter((value): value is string => value !== null);
+  if (totalLatency <= 0 && components.length === 0) {
+    return "";
+  }
+  const stateLabel = item.service_complete === true ? "complete" : "active";
+  const taskLabel = item.service_task_id ? `${item.service_task_id} ${stateLabel}` : stateLabel;
+  const routeParts = [
+    item.input_route_id ? `input ${item.input_route_id}` : null,
+    item.output_route_id ? `output ${item.output_route_id}` : null
+  ].filter((value): value is string => value !== null);
+  return [
+    taskLabel,
+    totalLatency > 0 ? `total ${formatMetricMilliseconds(totalLatency)}` : null,
+    components.length > 0 ? components.join(" + ") : null,
+    routeParts.length > 0 ? routeParts.join(" / ") : null
+  ]
+    .filter((value): value is string => value !== null)
+    .join(" / ");
 }
 
 function buildBackendSatelliteResourceRows(
