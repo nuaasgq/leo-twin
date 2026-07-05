@@ -4518,3 +4518,42 @@ change.
 - Recommended follow-up:
   - Add a fixture generation/update command once runtime contract versioning is
     formalized.
+
+## 2026-07-05 - Service Latency History Contract v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: expose a bounded `service_latency_history_v1` runtime status field
+  derived from the existing communication-compute service latency components
+  tracked by `MetricsCollector`. The field is sorted deterministically and
+  limited to recent service items so future UI trace rows can consume it safely.
+- Changed files/modules:
+  - `src/leo_twin/services/metrics/collector.py`
+  - `examples/integration_demo/control_plane.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/tests/fixtures/runtimeStatus.contract.json`
+  - `frontend/tests/runtimeContractFixture.test.ts`
+  - `tests/integration/test_compute_service_lifecycle.py`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `PYTHONPATH=src python -m pytest tests/integration/test_compute_service_lifecycle.py tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer -q`
+    - Result: passed, 2 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- runtimeContractFixture.test.ts`
+    - Result: passed, 25 files / 191 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The first lifecycle test expectation used a shortened task id; the actual
+    traffic demand id is `svc-00-compute_service-00000-task`. The test was
+    corrected to assert the deterministic product id.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The dashboard does not yet render per-service trace rows from
+    `service_latency_history_v1`; it currently displays aggregate components.
+- Recommended follow-up:
+  - Add bounded dashboard service trace rows with task id, complete state, and
+    component latencies.

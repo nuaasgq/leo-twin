@@ -191,6 +191,24 @@
         }
       ]
     },
+    "service_latency_history_v1": {
+      "version": "v1",
+      "mode": "RECENT_SERVICE_LIMITED",
+      "service_count": 1,
+      "service_limit": 32,
+      "item_count": 1,
+      "items": [
+        {
+          "task_id": "svc-00001-task",
+          "complete": true,
+          "input_network_latency_s": 4,
+          "compute_queue_delay_s": 0,
+          "compute_execution_delay_s": 2,
+          "output_network_latency_s": 1.4,
+          "total_latency_s": 7.4
+        }
+      ]
+    },
     "stream_diagnostics_v1": {
       "version": "v1",
       "advance_loop_state": "RUNNING",

@@ -35,6 +35,11 @@ describe("runtime status contract fixture", () => {
       service_latency_task_count: 2,
       service_latency_total_avg_s: 7.4
     });
+    expect(status.service_latency_history_v1?.items[0]).toMatchObject({
+      task_id: "svc-00001-task",
+      complete: true,
+      total_latency_s: 7.4
+    });
     expect(status.satellite_kpi_slices_v1?.slices[0]).toMatchObject({
       satellite_id: "sat-00001",
       active_link_count: 4,

@@ -400,6 +400,7 @@ export interface RuntimeStatusPayload {
   kpi_time_series_v1?: RuntimeKpiTimeSeriesV1;
   satellite_kpi_slices_v1?: RuntimeSatelliteKpiSlicesV1;
   satellite_kpi_history_v1?: RuntimeSatelliteKpiHistoryV1;
+  service_latency_history_v1?: RuntimeServiceLatencyHistoryV1;
   stream_diagnostics_v1?: RuntimeStreamDiagnosticsV1;
   profiling_summary?: RuntimeProfilingSummary | null;
   backpressure_summary?: RuntimeBackpressureSummary | null;
@@ -538,6 +539,25 @@ export interface RuntimeSatelliteKpiHistorySampleV1 {
   compute_used_memory_gb?: number;
   compute_capacity_storage_gb?: number;
   compute_used_storage_gb?: number;
+}
+
+export interface RuntimeServiceLatencyHistoryV1 {
+  version: "v1" | string;
+  mode: string;
+  service_count?: number;
+  service_limit?: number;
+  item_count?: number;
+  items: readonly RuntimeServiceLatencyHistoryItemV1[];
+}
+
+export interface RuntimeServiceLatencyHistoryItemV1 {
+  task_id: string;
+  complete: boolean;
+  input_network_latency_s: number;
+  compute_queue_delay_s: number;
+  compute_execution_delay_s: number;
+  output_network_latency_s: number;
+  total_latency_s: number;
 }
 
 export interface RuntimeStreamDiagnosticsV1 {

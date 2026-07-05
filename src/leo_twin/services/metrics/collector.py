@@ -349,6 +349,25 @@ class MetricsCollector:
             "series": series,
         }
 
+    def service_latency_history(self, limit: int = 32) -> dict[str, Any]:
+        _require_positive_int(limit, "limit")
+        selected = sorted(
+            self._service_latency_components_by_task.items(),
+            key=_service_latency_history_sort_key,
+        )[:limit]
+        services = [
+            _service_latency_history_item(task_id, components)
+            for task_id, components in selected
+        ]
+        return {
+            "version": "v1",
+            "mode": "RECENT_SERVICE_LIMITED",
+            "service_count": len(self._service_latency_components_by_task),
+            "service_limit": limit,
+            "item_count": len(services),
+            "items": services,
+        }
+
     def events_jsonl(self) -> str:
         return _events_jsonl(tuple(self._event_log))
 
@@ -1675,6 +1694,28 @@ def _service_latency_component_name(metric_name: str) -> str | None:
         "service.total_latency": "total",
     }
     return components.get(metric_name)
+
+
+def _service_latency_history_sort_key(
+    item: tuple[str, dict[str, float]],
+) -> tuple[float, str]:
+    task_id, components = item
+    return (-float(components.get("total", 0.0)), task_id)
+
+
+def _service_latency_history_item(
+    task_id: str,
+    components: dict[str, float],
+) -> dict[str, str | float | bool]:
+    return {
+        "task_id": task_id,
+        "complete": "total" in components,
+        "input_network_latency_s": float(components.get("input_network", 0.0)),
+        "compute_queue_delay_s": float(components.get("compute_queue", 0.0)),
+        "compute_execution_delay_s": float(components.get("compute_execution", 0.0)),
+        "output_network_latency_s": float(components.get("output_network", 0.0)),
+        "total_latency_s": float(components.get("total", 0.0)),
+    }
 
 
 def _route_constraint_sort_key(route: Route) -> tuple[int, float, float, int, str]:

@@ -362,13 +362,17 @@ The following issue-sized slices have now been delivered on
   - Maps to suggestions 76-82 and 92.
   - The runtime status fixture now locks the `service_latency_*` metrics summary
     contract consumed by the dashboard service latency block.
+- `feat(metrics): expose service latency history`
+  - Maps to suggestions 76-82 and the per-service lifecycle trace path.
+  - Runtime status now exposes bounded `service_latency_history_v1` items from
+    existing lifecycle component samples for future trace-row UI.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected
 satellite coverage/beam labels, compute vector KPI samples, and the frontend
 visual verification script. The remaining high-value product gaps are backend
-per-service lifecycle trace histories, screenshot pixel baselines, and
-browser-driven reset/control end-to-end smoke tests.
+dashboard rendering for per-service lifecycle trace rows, screenshot pixel
+baselines, and browser-driven reset/control end-to-end smoke tests.
 
 ## Acceptance Gates
 

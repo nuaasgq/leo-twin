@@ -114,3 +114,22 @@ def test_compute_service_lifecycle_emits_component_metrics() -> None:
     assert summary["service_latency_compute_execution_avg_s"] == 2.0
     assert summary["service_latency_output_network_avg_s"] == 1.4
     assert summary["service_latency_total_avg_s"] == 7.4
+    history = metrics.service_latency_history()
+    assert history == {
+        "version": "v1",
+        "mode": "RECENT_SERVICE_LIMITED",
+        "service_count": 1,
+        "service_limit": 32,
+        "item_count": 1,
+        "items": [
+            {
+                "task_id": "svc-00-compute_service-00000-task",
+                "complete": True,
+                "input_network_latency_s": 4.0,
+                "compute_queue_delay_s": 0.0,
+                "compute_execution_delay_s": 2.0,
+                "output_network_latency_s": 1.4,
+                "total_latency_s": 7.4,
+            }
+        ],
+    }
