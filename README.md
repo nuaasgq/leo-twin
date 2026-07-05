@@ -48,11 +48,13 @@ Useful launcher commands:
 .\dashboard_leo_twin.bat
 .\status_leo_twin.bat
 .\smoke_leo_twin.bat
+.\control_smoke_leo_twin.bat
 .\stop_leo_twin.bat
 .\scripts\sees_launcher.ps1 status
 .\scripts\sees_launcher.ps1 restart -OpenSurface dashboard
 .\scripts\smoke_runtime_health.ps1
 .\scripts\smoke_runtime_health.ps1 -JsonSummary
+.\scripts\smoke_runtime_control_cycle.ps1
 ```
 
 Default local surfaces:
@@ -91,6 +93,13 @@ Product acceptance verification:
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_product_acceptance.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_product_acceptance.ps1 -ExpectedSatelliteCount 120 -ExpectedUserCount 100 -ExpectedComputeNodeCount 120 -ExpectedConstellationProfile CUSTOM_WALKER -ExpectedTrafficClass COMPUTE_SERVICE
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_product_acceptance.ps1 -AcceptanceConfig configs\acceptance\small_demo_72sat.yaml
+```
+
+Control-cycle smoke verification. This mutates the running backend session by
+initializing, starting, pausing, resuming, stopping, and resetting it:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\smoke_runtime_control_cycle.ps1
 ```
 
 Before committing local development work:

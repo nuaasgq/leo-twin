@@ -20,6 +20,12 @@ For non-destructive checks:
 .\smoke_leo_twin.bat
 ```
 
+For a control-path check that intentionally mutates the running backend session:
+
+```powershell
+.\control_smoke_leo_twin.bat
+```
+
 Expected URLs:
 
 - Console: `http://127.0.0.1:5173`
@@ -32,7 +38,7 @@ Expected URLs:
 | --- | --- | --- |
 | Browser opens but page is blank | Run `.\status_leo_twin.bat` | If frontend is stopped, run `.\restart_leo_twin.bat`. |
 | Dashboard does not open automatically | Run `.\scripts\sees_launcher.ps1 status` | Open the Dashboard URL printed by status. |
-| Buttons stay in starting/stopping state | Run `.\smoke_leo_twin.bat` | If backend smoke fails, inspect `artifacts\launcher\*-backend.err.log`. |
+| Buttons stay in starting/stopping state | Run `.\smoke_leo_twin.bat`, then `.\control_smoke_leo_twin.bat` | If health passes but control smoke fails, restart services and inspect `artifacts\launcher\*-backend.err.log`. |
 | Port is already occupied | Run `.\restart_leo_twin.bat` | The launcher stops listeners on configured backend/frontend ports before restart. |
 | `node` is not recognized | Run `.\scripts\verify_frontend_visuals.ps1` | The script repairs bundled Node PATH when launched from the bundled `pnpm.cmd` path. |
 | Need dashboard-first startup | Run `.\dashboard_leo_twin.bat` | This starts services and opens `/dashboard`. |
@@ -61,4 +67,14 @@ Use the aggregate acceptance command after both services are already running:
 
 ```powershell
 .\scripts\verify_product_acceptance.ps1 -SkipBuild
+```
+
+## Control-Path Validation
+
+The control-cycle smoke opens the existing control websocket and exercises
+INITIALIZE, START, PAUSE, RESUME, STOP, and RESET. It is intended for diagnosing
+button pending states and will reset the current demo session:
+
+```powershell
+.\scripts\smoke_runtime_control_cycle.ps1 -JsonSummary
 ```

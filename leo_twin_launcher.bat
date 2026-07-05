@@ -7,16 +7,18 @@ echo 1. Start console
 echo 2. Start dashboard
 echo 3. Status
 echo 4. Smoke health check
-echo 5. Restart console
-echo 6. Stop services
-echo 7. Product acceptance verification (fast)
-echo 8. Product acceptance verification (with build)
+echo 5. Smoke control cycle
+echo 6. Restart console
+echo 7. Stop services
+echo 8. Product acceptance verification (fast)
+echo 9. Product acceptance verification (with build)
 echo.
-choice /C 12345678 /N /M "Select an action [1-8]: "
-if errorlevel 8 goto acceptance_full
-if errorlevel 7 goto acceptance
-if errorlevel 6 goto stop
-if errorlevel 5 goto restart
+choice /C 123456789 /N /M "Select an action [1-9]: "
+if errorlevel 9 goto acceptance_full
+if errorlevel 8 goto acceptance
+if errorlevel 7 goto stop
+if errorlevel 6 goto restart
+if errorlevel 5 goto control_smoke
 if errorlevel 4 goto smoke
 if errorlevel 3 goto status
 if errorlevel 2 goto dashboard
@@ -36,6 +38,10 @@ goto end
 
 :smoke
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\smoke_runtime_health.ps1"
+goto end
+
+:control_smoke
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\smoke_runtime_control_cycle.ps1"
 goto end
 
 :restart

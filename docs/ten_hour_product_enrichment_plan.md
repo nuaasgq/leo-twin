@@ -525,6 +525,11 @@ The following issue-sized slices have now been delivered on
   - `scripts/pre_commit_checks.ps1` now runs the staged runtime config guard,
     forbidden runtime import guard, and `git diff --check` through one local
     pre-commit entry point.
+- `test(runtime): add control cycle smoke`
+  - Maps to suggestions 14-18 and 91-95.
+  - `scripts/smoke_runtime_control_cycle.ps1` and `control_smoke_leo_twin.bat`
+    exercise INITIALIZE, START, PAUSE, RESUME, STOP, and RESET through the
+    existing control websocket for a scale-safe 1200-satellite scenario.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected

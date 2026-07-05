@@ -5628,3 +5628,42 @@ change.
 - Recommended follow-up:
   - Add an optional hook installer only if the team wants enforced local
     pre-commit behavior.
+
+## 2026-07-05 - Runtime Control Cycle Smoke v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a developer/user smoke command that exercises the existing
+  runtime control websocket through INITIALIZE, START, PAUSE, RESUME, STOP,
+  and RESET for large-scale-safe 1200-satellite scenarios.
+- Changed files/modules:
+  - `scripts/smoke_runtime_control_cycle.ps1`
+  - `control_smoke_leo_twin.bat`
+  - `leo_twin_launcher.bat`
+  - `README.md`
+  - `docs/launcher_troubleshooting.md`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\smoke_runtime_control_cycle.ps1 -JsonSummary`
+    - Result: passed.
+    - Scenario: 1200 satellites / 20 users / 1200 compute nodes.
+    - START advanced simulation time from 0 to 0.58.
+    - PAUSE held simulation time at 0.58 across the pause wait.
+    - RESUME advanced simulation time to 0.84.
+    - STOP returned `STOPPED`.
+    - RESET returned lifecycle `INITIALIZED` with `initialized=false`.
+  - `cmd /c control_smoke_leo_twin.bat`
+    - Result: passed.
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\smoke_runtime_health.ps1 -ExpectedSatelliteCount 1200 -ExpectedUserCount 20 -ExpectedComputeNodeCount 1200 -ExpectedConstellationProfile CUSTOM_WALKER -ExpectedTrafficClass COMPUTE_SERVICE`
+    - Result: passed.
+- Problems encountered:
+  - None during implementation.
+  - This smoke intentionally mutates the running backend session and is kept
+    separate from the read-only health smoke.
+- Known remaining issues:
+  - This verifies backend control responsiveness through HTTP/websocket paths;
+    it does not click the browser UI.
+- Recommended follow-up:
+  - Add browser-driven Playwright control smoke when a browser E2E harness is
+    introduced.
