@@ -5,6 +5,50 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Runtime Mode Mapping Completion v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending in this commit
+- Scope: preserve initialized runtime `mode` and `speed_factor` when the
+  integration demo control plane rebuilds `DemoConfig`, so the live
+  `SimulationSession` no longer runs as `REAL_TIME/1x` while the UI reports
+  `ACCELERATED/Nx`. The generated scenario runtime block now also reflects the
+  active runtime mode and speed factor.
+- Changed files/modules:
+  - `examples/integration_demo/config.py`
+  - `examples/integration_demo/scenario.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/integration/test_runtime_session_control.py -q`
+    - Result: passed, 17 tests.
+  - `python -m pytest tests/unit/test_configuration_view.py -q`
+    - Result: passed, 3 tests.
+  - Bundled Node:
+    `pnpm --dir frontend test -- configPanel.test.ts appSurface.test.ts`
+    - Result: passed, 25 files / 244 tests.
+  - Manual focused script:
+    - Initialized demo runtime with `ACCELERATED`, `speed_factor=20`, and
+      `duration=4`.
+    - Verified the installed `SimulationSession.runtime_config` was
+      `ACCELERATED/20.0`.
+    - Verified one deterministic control step reached `COMPLETED` at
+      `current_sim_time=4.0`.
+- Problems encountered:
+  - `python -m pytest tests/integration/test_full_system_demo.py -q` failed on
+    two existing deterministic baseline counts (`52` expected space-space links
+    but `61` observed, and `23049` expected processed events but `23615`
+    observed). A temporary clean worktree at pre-task HEAD `b3e397b` reproduced
+    the same failures, so this was isolated as an existing baseline issue and
+    not changed in this task.
+- Known remaining issues:
+  - The integration demo still has stale full-system demo count expectations
+    that should be audited separately from runtime control semantics.
+- Recommended follow-up:
+  - Add a dedicated acceptance test for UI-visible completion state using a
+    short accelerated scenario and stream polling, then refresh or explain the
+    stale `test_full_system_demo.py` count baselines in a separate commit.
+
 ## 2026-07-05 - Dashboard Detail Scope Notice v1
 
 - Branch: `feature/T164-dashboard-observability-v1`

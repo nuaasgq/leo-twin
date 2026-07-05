@@ -463,6 +463,63 @@ def test_runtime_kpi_series_exposes_initial_baseline_for_single_live_sample(
     assert samples[-1]["network_requested_route_demand_mbps"] > 0.0
 
 
+def test_demo_initialize_preserves_runtime_mode_speed_and_completes_duration(
+    tmp_path,
+) -> None:
+    control_plane = DemoControlPlane.from_result(
+        run_integration_demo(
+            replace(
+                _small_demo_config(),
+                duration_seconds=4,
+                orbit_tick_seconds=1,
+                network_slot_seconds=1,
+                flow_interval_seconds=1,
+                task_interval_seconds=1,
+            )
+        ),
+        config_output_path=tmp_path / "sees_control.yaml",
+        generated_config_output_path=tmp_path / "generated_full_system_demo.json",
+    )
+    initialized = control_plane.handle_raw_message(
+        json.dumps(
+            {
+                "type": "RUNTIME_CONTROL",
+                "action": "INITIALIZE",
+                "payload": {
+                    "mode": "ACCELERATED",
+                    "speed_factor": 20,
+                    "duration": 4,
+                    "orbit": {"update_interval_seconds": 1},
+                    "traffic_model": {
+                        "flow_interval_seconds": 1,
+                        "task_interval_seconds": 1,
+                    },
+                },
+            }
+        )
+    )
+
+    assert initialized["ok"] is True
+    session_config = control_plane._require_session().runtime_config
+    assert session_config.mode == RuntimeMode.ACCELERATED
+    assert session_config.speed_factor == 20.0
+
+    started = control_plane.handle_raw_message(
+        json.dumps({"type": "RUNTIME_CONTROL", "action": "START"})
+    )
+    assert started["ok"] is True
+    control_plane._require_advance_loop().stop()
+    control_plane._require_session().advance_control_step()
+    control_plane._require_advance_loop().publish_pending()
+
+    completed = control_plane.runtime_status()["status"]
+    assert completed["status"] == "COMPLETED"
+    assert completed["lifecycle_state"] == "COMPLETED"
+    assert completed["mode"] == "ACCELERATED"
+    assert completed["speed_factor"] == 20.0
+    assert completed["current_sim_time"] == 4.0
+
+
 def test_session_registry_owns_multiple_sessions() -> None:
     registry = SimulationSessionRegistry()
     first = registry.create(

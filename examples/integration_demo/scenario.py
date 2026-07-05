@@ -161,8 +161,8 @@ def build_demo_scenario(config: DemoConfig) -> DemoScenario:
                 "batch_space_link_update_limit": config.batch_space_link_update_limit,
             },
             "runtime": {
-                "mode": "REAL_TIME",
-                "speed_factor": 1.0,
+                "mode": config.runtime_mode,
+                "speed_factor": config.runtime_speed_factor,
                 "seed": config.seed,
                 "duration": config.duration_seconds,
                 "status": "STOPPED",

@@ -51,6 +51,8 @@ class DemoConfig:
     scenario_config: str
     backend_host: str
     backend_port: int
+    runtime_mode: str = RuntimeMode.REAL_TIME.value
+    runtime_speed_factor: float = 1.0
     compute_capacity: float = 10.0
     compute_cpu_gflops_fp64: float = 0.0
     compute_gpu_tflops_fp32: float = 0.0
@@ -366,8 +368,8 @@ def demo_config_to_sees_config(config: DemoConfig) -> SEESConfig:
             batch_space_link_update_limit=config.batch_space_link_update_limit,
         ),
         runtime=RuntimeConfig(
-            mode=RuntimeMode.REAL_TIME,
-            speed_factor=1.0,
+            mode=RuntimeMode(str(config.runtime_mode)),
+            speed_factor=config.runtime_speed_factor,
             seed=config.seed,
             duration=config.duration_seconds,
         ),
@@ -443,6 +445,8 @@ def demo_config_from_sees_config(
         scenario_config=base.scenario_config,
         backend_host=base.backend_host,
         backend_port=base.backend_port,
+        runtime_mode=config.runtime.mode.value,
+        runtime_speed_factor=config.runtime.speed_factor,
         application_protocol=config.network.application_protocol.value,
         transport_protocol=config.network.transport_protocol.value,
         routing_protocol=config.network.routing_protocol.value,
