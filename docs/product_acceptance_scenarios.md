@@ -36,11 +36,29 @@ The integration acceptance test verifies:
 - Runtime `INITIALIZE` succeeds.
 - Runtime can start and advance a short live tick.
 - Runtime status and generated backend summary exist.
+- Runtime health smoke can read backend `/runtime/status`, frontend console,
+  and frontend dashboard without mutating configuration.
 - State stream contains satellites.
 - Fidelity summary exists and reports the expected scale mode.
 - Pause, stop, and reset remain controllable.
 - Derived constellation summary is deterministic for the same config.
+- Communication-compute service metrics expose component latency summary and
+  bounded per-service `component_timeline` rows.
+- The dashboard renders service latency components, per-service trace rows, and
+  visible component timeline chips from backend-provided runtime status fields.
 - The Event Kernel remains free of domain-specific batch orbit logic.
+
+Local read-only health smoke:
+
+```powershell
+.\scripts\smoke_runtime_health.ps1
+```
+
+Frontend visual/dashboard verification:
+
+```powershell
+.\scripts\verify_frontend_visuals.ps1
+```
 
 ## Limitations
 

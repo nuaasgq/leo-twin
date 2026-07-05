@@ -413,6 +413,11 @@ The following issue-sized slices have now been delivered on
   - `scripts/smoke_runtime_health.ps1` verifies backend `/runtime/status`,
     required generated summary fields, frontend console, and dashboard without
     issuing control commands or mutating runtime configuration.
+- `docs(acceptance): add service timeline checks`
+  - Maps to suggestions 76-82 and 91-95.
+  - Product acceptance scenarios now include the read-only runtime health smoke,
+    backend `component_timeline`, and dashboard service timeline rendering as
+    documented acceptance checks.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected

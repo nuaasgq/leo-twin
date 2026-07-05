@@ -4862,3 +4862,30 @@ change.
 - Recommended follow-up:
   - Add an opt-in control smoke test that uses a disposable config path or
     isolated test server so it cannot mutate local runtime configuration.
+
+## 2026-07-05 - Product Acceptance Service Timeline v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: update product acceptance scenarios so service timeline and local
+  read-only runtime health smoke are part of the documented acceptance surface.
+  The acceptance checks now mention backend `component_timeline` fields and
+  dashboard service timeline rendering.
+- Changed files/modules:
+  - `docs/product_acceptance_scenarios.md`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `git diff --check`
+    - Result: passed, with only the pre-existing local runtime config CRLF
+      warnings.
+- Problems encountered:
+  - None. This is acceptance documentation only.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The acceptance document references smoke/visual verification commands but
+    does not yet define a CI job that runs them.
+- Recommended follow-up:
+  - Add CI or a local aggregate acceptance script for runtime health, frontend
+    visual checks, and targeted backend runtime tests.
