@@ -10,6 +10,7 @@ import {
   buildDataPanelConfiguredScale,
   buildDataPanelConfigurationExplanationDisplay,
   buildDataPanelInformationArchitectureDisplay,
+  buildDataPanelBackendCursorDisplay,
   buildDataPanelDetailScopeNotes,
   buildDataPanelDetailPageSizes,
   buildDataPanelPaginationContractNotes,
@@ -507,6 +508,52 @@ describe("runtime detail page selection", () => {
     expect(selectRuntimeComputeNodeDetailPage(detailPages)?.items[0].node_id).toBe(
       "sat-page"
     );
+  });
+});
+
+describe("buildDataPanelBackendCursorDisplay", () => {
+  it("summarizes backend cursor windows and navigation cursors", () => {
+    expect(
+      buildDataPanelBackendCursorDisplay(
+        {
+          cursor: 80,
+          limit: 40,
+          next_cursor: 120,
+          has_more: true,
+          item_count: 40
+        },
+        180
+      )
+    ).toEqual({
+      rangeLabel: "81-120 / 180",
+      statusLabel: "下一游标 120",
+      previousCursor: 40,
+      nextCursor: 120,
+      canPrevious: true,
+      canNext: true
+    });
+  });
+
+  it("handles empty or terminal backend cursor windows deterministically", () => {
+    expect(
+      buildDataPanelBackendCursorDisplay(
+        {
+          cursor: -5,
+          limit: 0,
+          next_cursor: 0,
+          has_more: false,
+          item_count: 0
+        },
+        0
+      )
+    ).toEqual({
+      rangeLabel: "0 / 0",
+      statusLabel: "当前已到最后一页",
+      previousCursor: 0,
+      nextCursor: 0,
+      canPrevious: false,
+      canNext: false
+    });
   });
 });
 

@@ -63,6 +63,9 @@ type RuntimeConnectionChannel = "http" | "control" | "events" | "state";
 type RuntimeConnectionStatus = "idle" | "connecting" | "live" | "degraded";
 type RuntimeConnectionHealth = Record<RuntimeConnectionChannel, RuntimeConnectionStatus>;
 type RuntimeStreamConsumerCursors = Record<"events" | "state", number>;
+type RuntimeDetailCursorState = Record<"services" | "computeNodes", number>;
+type RuntimeDetailCursorLoadingState = Record<"services" | "computeNodes", boolean>;
+type RuntimeDetailCursorErrorState = Record<"services" | "computeNodes", string | null>;
 
 const DEFAULT_RUNTIME_CONNECTION_HEALTH: RuntimeConnectionHealth = {
   http: "connecting",
@@ -74,6 +77,21 @@ const DEFAULT_RUNTIME_CONNECTION_HEALTH: RuntimeConnectionHealth = {
 const DEFAULT_RUNTIME_STREAM_CONSUMER_CURSORS: RuntimeStreamConsumerCursors = {
   events: 0,
   state: 0
+};
+
+const DEFAULT_RUNTIME_DETAIL_CURSORS: RuntimeDetailCursorState = {
+  services: 0,
+  computeNodes: 0
+};
+
+const DEFAULT_RUNTIME_DETAIL_CURSOR_LOADING: RuntimeDetailCursorLoadingState = {
+  services: false,
+  computeNodes: false
+};
+
+const DEFAULT_RUNTIME_DETAIL_CURSOR_ERRORS: RuntimeDetailCursorErrorState = {
+  services: null,
+  computeNodes: null
 };
 
 const CesiumGlobe = lazy(async () => {
@@ -122,6 +140,12 @@ export function App() {
   const [runtimeDetailPages, setRuntimeDetailPages] = useState<RuntimeDetailPages | null>(
     null
   );
+  const [runtimeDetailCursors, setRuntimeDetailCursors] =
+    useState<RuntimeDetailCursorState>(DEFAULT_RUNTIME_DETAIL_CURSORS);
+  const [runtimeDetailCursorLoading, setRuntimeDetailCursorLoading] =
+    useState<RuntimeDetailCursorLoadingState>(DEFAULT_RUNTIME_DETAIL_CURSOR_LOADING);
+  const [runtimeDetailCursorErrors, setRuntimeDetailCursorErrors] =
+    useState<RuntimeDetailCursorErrorState>(DEFAULT_RUNTIME_DETAIL_CURSOR_ERRORS);
   const [runtimeExportCatalog, setRuntimeExportCatalog] =
     useState<RuntimeExportCatalogV1 | null>(null);
   const [runtimeExportCompare, setRuntimeExportCompare] =
@@ -239,6 +263,11 @@ export function App() {
     [reducer, snapshotEngine]
   );
 
+  useEffect(() => {
+    setRuntimeDetailCursors(DEFAULT_RUNTIME_DETAIL_CURSORS);
+    setRuntimeDetailCursorErrors(DEFAULT_RUNTIME_DETAIL_CURSOR_ERRORS);
+  }, [runtimeStatus.config_version]);
+
   const refreshRuntimeDetails = useCallback(async (
     detailConfig: GeneratedScenarioConfig | null = generatedConfig
   ) => {
@@ -268,12 +297,12 @@ export function App() {
           requestPlan.routes.endpoint
         ),
         loadRuntimeServiceDetails(
-          0,
+          runtimeDetailCursors.services,
           requestPlan.services.limit,
           requestPlan.services.endpoint
         ),
         loadRuntimeComputeNodeDetails(
-          0,
+          runtimeDetailCursors.computeNodes,
           requestPlan.computeNodes.limit,
           requestPlan.computeNodes.endpoint
         )
@@ -297,7 +326,82 @@ export function App() {
       services: services.status === "fulfilled" ? services.value : null,
       computeNodes: computeNodes.status === "fulfilled" ? computeNodes.value : null
     });
-  }, [generatedConfig]);
+    setRuntimeDetailCursors((previous) => ({
+      services: services.status === "fulfilled" ? services.value.cursor : previous.services,
+      computeNodes:
+        computeNodes.status === "fulfilled" ? computeNodes.value.cursor : previous.computeNodes
+    }));
+    setRuntimeDetailCursorErrors((previous) => ({
+      services: services.status === "fulfilled" ? null : previous.services,
+      computeNodes: computeNodes.status === "fulfilled" ? null : previous.computeNodes
+    }));
+  }, [generatedConfig, runtimeDetailCursors]);
+
+  const refreshRuntimeServiceDetailCursor = useCallback(async (cursor: number) => {
+    const requestPlan = runtimeDetailRequestPlan(
+      generatedConfig?.backend_summary?.large_detail_pagination_contract_v2
+    );
+    const safeCursor = normalizeRuntimeDetailCursor(cursor);
+    setRuntimeDetailCursorLoading((previous) => ({ ...previous, services: true }));
+    setRuntimeDetailCursorErrors((previous) => ({ ...previous, services: null }));
+    try {
+      const page = await loadRuntimeServiceDetails(
+        safeCursor,
+        requestPlan.services.limit,
+        requestPlan.services.endpoint
+      );
+      setRuntimeDetailPages((previous) => ({
+        ...(previous ?? {}),
+        services: page
+      }));
+      setRuntimeDetailCursors((previous) => ({ ...previous, services: page.cursor }));
+      setConnectionChannel("http", "live");
+    } catch (error) {
+      setRuntimeDetailCursorErrors((previous) => ({
+        ...previous,
+        services: runtimeApiErrorMessage(error)
+      }));
+      setConnectionChannel("http", "degraded");
+    } finally {
+      setRuntimeDetailCursorLoading((previous) => ({ ...previous, services: false }));
+    }
+  }, [generatedConfig, setConnectionChannel]);
+
+  const refreshRuntimeComputeNodeDetailCursor = useCallback(async (cursor: number) => {
+    const requestPlan = runtimeDetailRequestPlan(
+      generatedConfig?.backend_summary?.large_detail_pagination_contract_v2
+    );
+    const safeCursor = normalizeRuntimeDetailCursor(cursor);
+    setRuntimeDetailCursorLoading((previous) => ({ ...previous, computeNodes: true }));
+    setRuntimeDetailCursorErrors((previous) => ({ ...previous, computeNodes: null }));
+    try {
+      const page = await loadRuntimeComputeNodeDetails(
+        safeCursor,
+        requestPlan.computeNodes.limit,
+        requestPlan.computeNodes.endpoint
+      );
+      setRuntimeDetailPages((previous) => ({
+        ...(previous ?? {}),
+        computeNodes: page
+      }));
+      setRuntimeDetailCursors((previous) => ({
+        ...previous,
+        computeNodes: page.cursor
+      }));
+      setConnectionChannel("http", "live");
+    } catch (error) {
+      setRuntimeDetailCursorErrors((previous) => ({
+        ...previous,
+        computeNodes: runtimeApiErrorMessage(error)
+      }));
+      setConnectionChannel("http", "degraded");
+    } finally {
+      setRuntimeDetailCursorLoading((previous) => ({
+        ...previous,
+        computeNodes: false
+      }));
+    }
+  }, [generatedConfig, setConnectionChannel]);
 
   const refreshRuntimeExportCompare = useCallback(async (packageId: string) => {
     setRuntimeExportComparePackageId(packageId);
@@ -960,6 +1064,27 @@ export function App() {
               runtimeStatus={runtimeStatus}
               generatedConfig={generatedConfig}
               runtimeDetailPages={runtimeDetailPages}
+              runtimeDetailCursorControls={{
+                services: {
+                  loading: runtimeDetailCursorLoading.services,
+                  error: runtimeDetailCursorErrors.services,
+                  onCursorChange: refreshRuntimeServiceDetailCursor,
+                  onRefresh: () =>
+                    refreshRuntimeServiceDetailCursor(
+                      runtimeDetailPages?.services?.cursor ?? runtimeDetailCursors.services
+                    )
+                },
+                computeNodes: {
+                  loading: runtimeDetailCursorLoading.computeNodes,
+                  error: runtimeDetailCursorErrors.computeNodes,
+                  onCursorChange: refreshRuntimeComputeNodeDetailCursor,
+                  onRefresh: () =>
+                    refreshRuntimeComputeNodeDetailCursor(
+                      runtimeDetailPages?.computeNodes?.cursor ??
+                        runtimeDetailCursors.computeNodes
+                    )
+                }
+              }}
               runtimeExportCatalog={runtimeExportCatalog}
               runtimeExportCompare={runtimeExportCompare}
               runtimeExportComparePackageId={runtimeExportComparePackageId}
@@ -1222,6 +1347,13 @@ function runtimeDetailLimit(value: number | undefined, maxLimit: number): number
     return Math.min(RUNTIME_DETAIL_FALLBACK_LIMIT, normalizedMax);
   }
   return Math.min(Math.max(1, Math.floor(value)), normalizedMax);
+}
+
+function normalizeRuntimeDetailCursor(cursor: number): number {
+  if (!Number.isFinite(cursor) || cursor <= 0) {
+    return 0;
+  }
+  return Math.floor(cursor);
 }
 
 export interface RuntimeRibbonSummary {

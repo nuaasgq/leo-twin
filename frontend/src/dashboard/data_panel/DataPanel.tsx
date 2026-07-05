@@ -115,6 +115,18 @@ export interface RuntimeDetailPages {
   computeNodes?: RuntimeComputeNodeDetailPageV1 | null;
 }
 
+export interface RuntimeDetailCursorControls {
+  services?: RuntimeDetailCursorControl | null;
+  computeNodes?: RuntimeDetailCursorControl | null;
+}
+
+export interface RuntimeDetailCursorControl {
+  loading?: boolean;
+  error?: string | null;
+  onCursorChange?: (cursor: number) => void;
+  onRefresh?: () => void;
+}
+
 const FALLBACK_USER_DETAIL_PAGE_SIZE = 80;
 const FALLBACK_SATELLITE_DETAIL_PAGE_SIZE = 120;
 const DEFAULT_USER_CONFIGURATION_VALIDATE_TEXT = `{
@@ -145,6 +157,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeStatus,
   generatedConfig,
   runtimeDetailPages,
+  runtimeDetailCursorControls,
   runtimeExportCatalog,
   runtimeExportCompare,
   runtimeExportComparePackageId,
@@ -174,6 +187,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeStatus: RuntimeStatusPayload;
   generatedConfig: GeneratedScenarioConfig | null;
   runtimeDetailPages?: RuntimeDetailPages | null;
+  runtimeDetailCursorControls?: RuntimeDetailCursorControls | null;
   runtimeExportCatalog?: RuntimeExportCatalogV1 | null;
   runtimeExportCompare?: RuntimeExportPackageCompareV1 | null;
   runtimeExportComparePackageId?: string | null;
@@ -358,15 +372,17 @@ export const DataPanel = memo(function DataPanel({
   const serviceLatencyRows = buildDataPanelServiceLatencyRows(
     runtimeStatus.service_latency_history_v1
   );
+  const serviceDetailPage = selectRuntimeServiceDetailPage(runtimeDetailPages);
   const serviceDetailRows = buildDataPanelServiceDetailRows(
-    selectRuntimeServiceDetailPage(runtimeDetailPages),
+    serviceDetailPage,
     detailPageSizes.services
   );
   const computeTaskTimeline = buildDataPanelComputeTaskTimelineDisplay(
     runtimeStatus.compute_task_timeline_summary_v1
   );
+  const computeNodeDetailPage = selectRuntimeComputeNodeDetailPage(runtimeDetailPages);
   const computeNodeDetailRows = buildDataPanelComputeNodeDetailRows(
-    selectRuntimeComputeNodeDetailPage(runtimeDetailPages),
+    computeNodeDetailPage,
     detailPageSizes.computeNodes
   );
   const routeConstraints = buildDataPanelRouteConstraints(
@@ -1313,9 +1329,17 @@ export const DataPanel = memo(function DataPanel({
               ) : null}
             </>
           ) : null}
-          <ServiceDetailPageTable rows={serviceDetailRows} />
+          <ServiceDetailPageTable
+            rows={serviceDetailRows}
+            page={serviceDetailPage}
+            control={runtimeDetailCursorControls?.services}
+          />
           <TopComputeNodeTable rows={topComputeNodes} />
-          <ComputeNodeDetailPageTable rows={computeNodeDetailRows} />
+          <ComputeNodeDetailPageTable
+            rows={computeNodeDetailRows}
+            page={computeNodeDetailPage}
+            control={runtimeDetailCursorControls?.computeNodes}
+          />
           <div className="data-panel-chart-body compact">
             {computePool.totalTflops > 0 ? (
               <ResponsiveContainer width="100%" height={160}>
@@ -2053,9 +2077,27 @@ function TopComputeNodeTable({ rows }: { rows: readonly TopComputeNodeRow[] }) {
   );
 }
 
-function ServiceDetailPageTable({ rows }: { rows: DataPanelServiceDetailRows }) {
+function ServiceDetailPageTable({
+  rows,
+  page,
+  control
+}: {
+  rows: DataPanelServiceDetailRows;
+  page: RuntimeServiceDetailPageV1 | null | undefined;
+  control?: RuntimeDetailCursorControl | null;
+}) {
   if (rows.items.length === 0) {
-    return <div className="data-panel-route-empty">{rows.summaryLabel}</div>;
+    return (
+      <div className="data-panel-route-empty">
+        {rows.summaryLabel}
+        <BackendCursorPager
+          label="服务生命周期"
+          page={page}
+          totalCount={page?.service_count ?? 0}
+          control={control}
+        />
+      </div>
+    );
   }
   return (
     <div
@@ -2063,6 +2105,12 @@ function ServiceDetailPageTable({ rows }: { rows: DataPanelServiceDetailRows }) 
       aria-label="服务生命周期游标明细"
     >
       <div className="data-panel-route-source">{rows.sourceLabel}</div>
+      <BackendCursorPager
+        label="服务生命周期"
+        page={page}
+        totalCount={page?.service_count ?? rows.items.length}
+        control={control}
+      />
       <div className="data-panel-route-row header">
         <span>服务</span>
         <span>状态</span>
@@ -2086,16 +2134,36 @@ function ServiceDetailPageTable({ rows }: { rows: DataPanelServiceDetailRows }) 
 }
 
 function ComputeNodeDetailPageTable({
-  rows
+  rows,
+  page,
+  control
 }: {
   rows: DataPanelComputeNodeDetailRows;
+  page: RuntimeComputeNodeDetailPageV1 | null | undefined;
+  control?: RuntimeDetailCursorControl | null;
 }) {
   if (rows.items.length === 0) {
-    return <div className="data-panel-compute-empty">{rows.summaryLabel}</div>;
+    return (
+      <div className="data-panel-compute-empty">
+        {rows.summaryLabel}
+        <BackendCursorPager
+          label="算力节点"
+          page={page}
+          totalCount={page?.compute_node_count ?? 0}
+          control={control}
+        />
+      </div>
+    );
   }
   return (
     <div className="data-panel-compute-node-table detail" aria-label="算力节点游标明细">
       <div className="data-panel-route-source">{rows.sourceLabel}</div>
+      <BackendCursorPager
+        label="算力节点"
+        page={page}
+        totalCount={page?.compute_node_count ?? rows.items.length}
+        control={control}
+      />
       <div className="data-panel-compute-node-row header">
         <span>节点</span>
         <span>状态</span>
@@ -2116,6 +2184,56 @@ function ComputeNodeDetailPageTable({
           <span>{row.taskLabel}</span>
         </div>
       ))}
+    </div>
+  );
+}
+
+function BackendCursorPager({
+  label,
+  page,
+  totalCount,
+  control
+}: {
+  label: string;
+  page:
+    | RuntimeServiceDetailPageV1
+    | RuntimeComputeNodeDetailPageV1
+    | null
+    | undefined;
+  totalCount: number;
+  control?: RuntimeDetailCursorControl | null;
+}) {
+  if (page === null || page === undefined) {
+    return null;
+  }
+  const display = buildDataPanelBackendCursorDisplay(page, totalCount);
+  const loading = control?.loading === true;
+  const canUseControls = typeof control?.onCursorChange === "function";
+  return (
+    <div className="data-panel-detail-pager backend-cursor" aria-label={`${label}后端游标`}>
+      <span>{label}</span>
+      <strong>{display.rangeLabel}</strong>
+      <button
+        type="button"
+        disabled={!display.canPrevious || loading || !canUseControls}
+        onClick={() => control?.onCursorChange?.(display.previousCursor)}
+      >
+        上一页
+      </button>
+      <button
+        type="button"
+        disabled={!display.canNext || loading || !canUseControls}
+        onClick={() => control?.onCursorChange?.(display.nextCursor)}
+      >
+        下一页
+      </button>
+      <button type="button" disabled={loading || !control?.onRefresh} onClick={control?.onRefresh}>
+        刷新
+      </button>
+      <small>
+        {loading ? "正在读取后端页" : display.statusLabel}
+        {control?.error ? ` / ${control.error}` : ""}
+      </small>
     </div>
   );
 }
@@ -5275,6 +5393,13 @@ function formatCount(value: number): string {
   return Math.round(value).toLocaleString("zh-CN");
 }
 
+function normalizeNonNegativeInteger(value: number): number {
+  if (!Number.isFinite(value) || value <= 0) {
+    return 0;
+  }
+  return Math.floor(value);
+}
+
 function compactTaskId(taskId: string): string {
   if (taskId.length <= 18) {
     return taskId;
@@ -6802,6 +6927,15 @@ export interface DataPanelComputeNodeDetailRow {
   traceTitle: string;
 }
 
+export interface DataPanelBackendCursorDisplay {
+  rangeLabel: string;
+  statusLabel: string;
+  previousCursor: number;
+  nextCursor: number;
+  canPrevious: boolean;
+  canNext: boolean;
+}
+
 export interface DataPanelRouteConstraint {
   routeId: string;
   flowId: string;
@@ -7520,6 +7654,36 @@ export function buildDataPanelComputeNodeDetailRows(
       page.busy_compute_node_count
     )}${page.has_more ? " / 可继续游标读取" : ""}`,
     items
+  };
+}
+
+export function buildDataPanelBackendCursorDisplay(
+  page: Pick<
+    RuntimeServiceDetailPageV1 | RuntimeComputeNodeDetailPageV1,
+    "cursor" | "limit" | "next_cursor" | "has_more" | "item_count"
+  >,
+  totalCount: number
+): DataPanelBackendCursorDisplay {
+  const cursor = normalizeNonNegativeInteger(page.cursor);
+  const limit = Math.max(1, normalizeNonNegativeInteger(page.limit));
+  const itemCount = normalizeNonNegativeInteger(page.item_count);
+  const total = normalizeNonNegativeInteger(totalCount);
+  const start = itemCount === 0 ? 0 : cursor + 1;
+  const end = Math.min(total, cursor + itemCount);
+  const rangeLabel =
+    itemCount === 0
+      ? `0 / ${formatCount(total)}`
+      : `${formatCount(start)}-${formatCount(end)} / ${formatCount(total)}`;
+  const nextCursor = normalizeNonNegativeInteger(page.next_cursor);
+  return {
+    rangeLabel,
+    statusLabel: page.has_more
+      ? `下一游标 ${formatCount(nextCursor)}`
+      : "当前已到最后一页",
+    previousCursor: Math.max(0, cursor - limit),
+    nextCursor,
+    canPrevious: cursor > 0,
+    canNext: page.has_more
   };
 }
 

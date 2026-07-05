@@ -2850,6 +2850,11 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
   font-size: 10px;
 }
 
+.data-panel-detail-pager.backend-cursor {
+  grid-template-columns: minmax(0, 1fr) auto auto auto auto;
+  margin: 4px 0 6px;
+}
+
 .data-panel-detail-pager span,
 .data-panel-detail-pager strong,
 .data-panel-detail-pager small {

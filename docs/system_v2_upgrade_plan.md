@@ -262,6 +262,11 @@ Tasks:
     tables. The dashboard now exposes service state, placement, network and
     compute latency splits, node resource vectors, and task counts from
     backend-owned detail pages without adding frontend-local model inference.
+  - Status: T240 adds visible backend cursor controls for the service
+    lifecycle and compute-node resource dashboard tables. The frontend keeps
+    separate cursor state for these two backend pages, shows current row range,
+    previous/next/refresh actions, and resets the cursors on config-version
+    changes without altering backend pagination semantics.
 - V2-054: Add model assumptions panel.
   - Scope: backend-derived model caveats, fidelity mode, KPI provenance.
   - Depends on: V2-003, V2-021.
