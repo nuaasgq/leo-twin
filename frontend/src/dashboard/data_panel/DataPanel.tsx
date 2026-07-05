@@ -251,6 +251,10 @@ export const DataPanel = memo(function DataPanel({
     selectedSatelliteDetailRow,
     nodeDetailSummary
   );
+  const nodeDetailDrawerItems = buildDataPanelNodeDetailDrawerItems(
+    userDetailInspector,
+    satelliteDetailInspector
+  );
   const userSourceBadge = buildRuntimeDetailSourceBadge(userBusinessRequests.sourceLabel);
   const satelliteSourceBadge = buildRuntimeDetailSourceBadge(satelliteResourceRows.sourceLabel);
   const detailScopeNotes = buildDataPanelDetailScopeNotes(
@@ -844,6 +848,7 @@ export const DataPanel = memo(function DataPanel({
         user={userDetailInspector}
         satellite={satelliteDetailInspector}
       />
+      <DetailInspectorDrawer items={nodeDetailDrawerItems} />
       <div className="data-panel-detail-grid">
         <section className="dashboard-section data-panel-detail-table" aria-label="用户节点状态明细">
           <div className="section-title">用户节点状态</div>
@@ -1119,6 +1124,50 @@ function DetailInspectorGrid({
         fields={satellite.fields}
       />
     </div>
+  );
+}
+
+function DetailInspectorDrawer({
+  items
+}: {
+  items: readonly DataPanelNodeDetailDrawerItem[];
+}) {
+  return (
+    <section className="data-panel-node-detail-drawer" aria-label="选中节点完整详情">
+      <div className="data-panel-node-detail-drawer-header">
+        <div>
+          <span>选中节点详情</span>
+          <small>后端节点详情页优先，旧运行时状态自动回退</small>
+        </div>
+      </div>
+      <div className="data-panel-node-detail-drawer-grid">
+        {items.map((item) => (
+          <div className="data-panel-node-detail-drawer-card" key={item.kind}>
+            <div className="data-panel-node-detail-drawer-title">
+              <span>{item.title}</span>
+              <small>{item.subtitle}</small>
+            </div>
+            {item.fields.length === 0 ? (
+              <div className="data-panel-node-detail-drawer-empty">{item.emptyLabel}</div>
+            ) : (
+              <dl className="data-panel-node-detail-drawer-fields">
+                {item.fields.map((field) => (
+                  <div
+                    className={`data-panel-node-detail-drawer-field ${
+                      field.tone ?? "normal"
+                    }`}
+                    key={field.label}
+                  >
+                    <dt>{field.label}</dt>
+                    <dd title={field.value}>{field.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -1662,6 +1711,14 @@ export interface DataPanelDetailInspectorField {
   label: string;
   value: string;
   tone?: "normal" | "warning" | "resource";
+}
+
+export interface DataPanelNodeDetailDrawerItem {
+  kind: "user" | "satellite";
+  title: string;
+  subtitle: string;
+  emptyLabel: string;
+  fields: readonly DataPanelDetailInspectorField[];
 }
 
 export function buildDataPanelTelemetry(
@@ -2746,6 +2803,28 @@ export function buildSatelliteResourceInspector(
       { label: "网络", value: row.networkLabel }
     ]
   };
+}
+
+export function buildDataPanelNodeDetailDrawerItems(
+  user: DataPanelDetailInspector,
+  satellite: DataPanelDetailInspector
+): readonly DataPanelNodeDetailDrawerItem[] {
+  return [
+    {
+      kind: "user",
+      title: user.title,
+      subtitle: user.subtitle,
+      emptyLabel: "当前窗口暂无选中用户节点",
+      fields: user.fields
+    },
+    {
+      kind: "satellite",
+      title: satellite.title,
+      subtitle: satellite.subtitle,
+      emptyLabel: "当前窗口暂无选中卫星节点",
+      fields: satellite.fields
+    }
+  ];
 }
 
 function buildRuntimeNodeDetailInspector(

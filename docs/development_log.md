@@ -8583,3 +8583,42 @@ change.
   - Build a dashboard node-detail drawer that uses the node page cursor model
     for virtual scrolling and then extend backend cards with candidate and
     queue-history detail sections.
+
+## 2026-07-05 - Dashboard Node Detail Drawer v1
+
+- Branch: `feature/T177-dashboard-node-detail-drawer-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a full-width selected-node detail drawer to the standalone
+  dashboard data panel. The existing compact user/satellite inspector cards
+  remain for quick scanning, while the new drawer shows the same backend-owned
+  selected user and satellite fields in a scrollable, wrapping layout so long
+  route paths, service placement strings, and network/resource labels are not
+  visually truncated. No backend model, Event Kernel, route logic, or frontend
+  routing architecture was changed.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 25 files / 266 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Existing DataPanel chunk-size warning remains.
+- Problems encountered:
+  - None in implementation. Existing local runtime config drift remains
+    untouched and unstaged.
+- Known remaining issues:
+  - The drawer still displays the selected user and selected satellite cards
+    from the current table windows. It is not yet a virtualized all-node drawer
+    with cursor navigation, placement candidate lists, or per-node timeline
+    charts.
+- Recommended follow-up:
+  - Add cursor navigation and search over `/runtime/details/nodes` directly
+    from the drawer, then extend backend node cards with candidate and
+    queue-history detail sections.

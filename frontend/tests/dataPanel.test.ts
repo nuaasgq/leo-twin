@@ -13,6 +13,7 @@ import {
   buildDataPanelNetworkKpiCaveats,
   buildDataPanelNetworkKpiProvenanceItems,
   buildDataPanelNetworkKpiSource,
+  buildDataPanelNodeDetailDrawerItems,
   buildDataPanelRouteConstraints,
   buildDataPanelRuntimeProgress,
   buildDataPanelSatelliteResourceHistory,
@@ -2663,6 +2664,29 @@ describe("detail inspectors", () => {
         { label: "网络", value: satelliteRow.networkLabel }
       ])
     });
+  });
+
+  it("builds full drawer items without truncating detail field values", () => {
+    const userInspector = buildUserBusinessRequestInspector(userRow);
+    const satelliteInspector = buildSatelliteResourceInspector(satelliteRow);
+    const drawerItems = buildDataPanelNodeDetailDrawerItems(
+      userInspector,
+      satelliteInspector
+    );
+
+    expect(drawerItems).toHaveLength(2);
+    expect(drawerItems[0]).toMatchObject({
+      kind: "user",
+      title: "用户 user-0",
+      emptyLabel: "当前窗口暂无选中用户节点"
+    });
+    expect(drawerItems[0].fields).toEqual(userInspector.fields);
+    expect(drawerItems[1]).toMatchObject({
+      kind: "satellite",
+      title: "卫星 sat-0",
+      emptyLabel: "当前窗口暂无选中卫星节点"
+    });
+    expect(drawerItems[1].fields).toEqual(satelliteInspector.fields);
   });
 
   it("returns empty inspector shells when no row is visible", () => {
