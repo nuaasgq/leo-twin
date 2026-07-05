@@ -32,6 +32,7 @@ import {
   RuntimeNodeDetailPageV1,
   RuntimeNodeDetailSummaryV1,
   RuntimeReproducibilityManifestV1,
+  RuntimeRouteExplanationSummaryV1,
   RuntimeSatelliteServiceItemV1,
   RuntimeSatelliteServiceSummaryV1,
   RuntimeSatelliteKpiHistoryV1,
@@ -328,6 +329,9 @@ export const DataPanel = memo(function DataPanel({
   const routeConstraints = buildDataPanelRouteConstraints(
     snapshot,
     runtimeStatus.metrics_summary
+  );
+  const routeExplanations = buildDataPanelRouteExplanationRows(
+    runtimeStatus.route_explanation_summary_v1
   );
   const latestTelemetry = telemetry[telemetry.length - 1];
   const computeSeries = computeSeriesOption(computeSeriesKey);
@@ -1055,6 +1059,7 @@ export const DataPanel = memo(function DataPanel({
             </ResponsiveContainer>
           </div>
           <RouteConstraintTable rows={routeConstraints} />
+          <RouteExplanationTable rows={routeExplanations} />
         </section>
 
         <section className="dashboard-section data-panel-chart" aria-label="算力资源消耗曲线">
@@ -1658,6 +1663,37 @@ function RouteConstraintTable({ rows }: { rows: DataPanelRouteConstraintRows }) 
           <span>{row.capacityLabel}</span>
           <span>{row.demandLossLabel}</span>
           <span>{row.bottleneckLabel}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function RouteExplanationTable({ rows }: { rows: DataPanelRouteExplanationRows }) {
+  if (rows.items.length === 0) {
+    return <div className="data-panel-route-empty">等待后端路由解释</div>;
+  }
+  return (
+    <div className="data-panel-route-table explanations" aria-label="后端路由解释明细">
+      <div className="data-panel-route-source">{rows.sourceLabel}</div>
+      <div className="data-panel-route-row header">
+        <span>路由</span>
+        <span>业务</span>
+        <span>下一跳</span>
+        <span>容量/需求</span>
+        <span>压力</span>
+        <span>瓶颈</span>
+        <span>解释</span>
+      </div>
+      {rows.items.map((row) => (
+        <div className="data-panel-route-row" key={row.routeId} title={row.pathLabel}>
+          <span>{row.routeId}</span>
+          <span>{row.businessLabel}</span>
+          <span>{row.nextHopLabel}</span>
+          <span>{row.capacityDemandLabel}</span>
+          <span>{row.pressureLabel}</span>
+          <span>{row.bottleneckLabel}</span>
+          <span>{row.explanationLabel}</span>
         </div>
       ))}
     </div>
@@ -5850,6 +5886,23 @@ export interface DataPanelRouteConstraintRows {
   items: readonly DataPanelRouteConstraint[];
 }
 
+export interface DataPanelRouteExplanationRow {
+  routeId: string;
+  flowId: string;
+  businessLabel: string;
+  nextHopLabel: string;
+  capacityDemandLabel: string;
+  pressureLabel: string;
+  bottleneckLabel: string;
+  explanationLabel: string;
+  pathLabel: string;
+}
+
+export interface DataPanelRouteExplanationRows {
+  sourceLabel: string;
+  items: readonly DataPanelRouteExplanationRow[];
+}
+
 type SnapshotRoute = WorldSnapshot["routes"][number];
 type SnapshotLink = WorldSnapshot["links"][number];
 
@@ -6343,6 +6396,61 @@ export function buildDataPanelRouteConstraints(
     sourceLabel: "快照路由明细",
     items
   };
+}
+
+export function buildDataPanelRouteExplanationRows(
+  summary: RuntimeRouteExplanationSummaryV1 | null | undefined,
+  limit = 6
+): DataPanelRouteExplanationRows {
+  if (summary === null || summary === undefined) {
+    return {
+      sourceLabel: "等待后端路由解释",
+      items: []
+    };
+  }
+  const rowLimit = Math.max(0, Math.floor(limit));
+  const visibleCount = Math.min(rowLimit, summary.items.length);
+  const hiddenLabel =
+    summary.route_count > visibleCount
+      ? ` / 显示 ${formatCount(visibleCount)} 条`
+      : "";
+  return {
+    sourceLabel: `后端路由解释 ${formatCount(summary.item_count)}/${formatCount(
+      summary.route_count
+    )} 条；阻塞 ${formatCount(summary.blocked_route_count)} / 超需求 ${formatCount(
+      summary.over_demand_route_count
+    )}${hiddenLabel}`,
+    items: summary.items.slice(0, rowLimit).map((item) => ({
+      routeId: item.route_id || "未声明",
+      flowId: item.flow_id || "未声明",
+      businessLabel: item.business_label || item.business_type || "未声明",
+      nextHopLabel: item.primary_next_hop_id || "无",
+      capacityDemandLabel: routeExplanationCapacityDemandLabel(
+        item.capacity_mbps,
+        item.demand_mbps
+      ),
+      pressureLabel: formatRatioPercent(Math.max(0, item.route_pressure_proxy)),
+      bottleneckLabel:
+        item.bottleneck_reason_label || item.bottleneck_component || "未声明",
+      explanationLabel: item.explanation_label || "后端未提供解释",
+      pathLabel: item.path_label || item.next_hop_ids.join(" -> ")
+    }))
+  };
+}
+
+function routeExplanationCapacityDemandLabel(
+  capacity: number | null | undefined,
+  demand: number | null | undefined
+): string {
+  const capacityLabel =
+    typeof capacity === "number" && Number.isFinite(capacity)
+      ? formatMetricMbps(Math.max(0, capacity))
+      : "未声明";
+  const demandLabel =
+    typeof demand === "number" && Number.isFinite(demand)
+      ? formatMetricMbps(Math.max(0, demand))
+      : "未声明";
+  return `${capacityLabel} / ${demandLabel}`;
 }
 
 function buildBackendRouteConstraint(

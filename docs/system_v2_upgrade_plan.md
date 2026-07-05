@@ -124,7 +124,8 @@ Tasks:
   - Output: backend-owned detail rows for users/satellites.
   - Depends on: V2-022.
   - Status: backend `route_explanation_summary_v1` runtime status object
-    implemented in T209.
+    implemented in T209; standalone dashboard route explanation table bound to
+    backend fields in T210.
 
 ### WS4. Compute Network Model v2
 

@@ -5,6 +5,45 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Dashboard Route Explanations v1
+
+- Branch: `feature/T210-dashboard-route-explanations-v1`
+- Commit: pending in this commit
+- Scope: render backend-owned `route_explanation_summary_v1` records in the
+  standalone dashboard network KPI section. The dashboard now shows a route
+  explanation table with route id, business type, next hop, capacity/demand,
+  route pressure, bottleneck reason, explanation label, and path tooltip. The
+  display is derived from runtime status and keeps the existing layout and
+  route-constraint table.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 25 files / 309 tests. The project script currently runs
+      the full frontend Vitest suite for this invocation.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing `DataPanel` chunk-size
+      warning after minification.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - None in implementation. The table reuses existing route-table styling to
+    avoid broad dashboard layout changes.
+  - Local runtime/generated config files remain dirty and are intentionally not
+    included in this task.
+- Known remaining issues / follow-up:
+  - The table is read-only and limited to the backend status window. A later
+    dashboard pass should add filters for bottleneck, user, satellite, and
+    business type.
+
 ## 2026-07-06 - Route Explanation Records v1
 
 - Branch: `feature/T209-route-explanation-records-v1`

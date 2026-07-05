@@ -25,6 +25,7 @@ import {
   buildDataPanelNodeDetailDrawerItems,
   buildDataPanelReproducibilityDisplay,
   buildDataPanelRouteConstraints,
+  buildDataPanelRouteExplanationRows,
   buildDataPanelRuntimeProgress,
   buildDataPanelSatelliteResourceHistory,
   buildDataPanelServiceLatencyDisplay,
@@ -572,6 +573,112 @@ describe("buildDataPanelDisplaySummary", () => {
     expect(buildDataPanelDisplaySummary(summary, 18, 42)).toMatchObject({
       simTime: 24,
       eventCount: 120
+    });
+  });
+});
+
+describe("buildDataPanelRouteExplanationRows", () => {
+  it("formats backend route explanation records for the dashboard", () => {
+    expect(
+      buildDataPanelRouteExplanationRows({
+        version: "v1",
+        source: "BACKEND_RUNTIME_SNAPSHOT",
+        summary_scope: "ROUTE_EXPLANATION_WINDOW",
+        cursor: 0,
+        limit: 500,
+        next_cursor: 2,
+        has_more: false,
+        route_count: 2,
+        item_count: 2,
+        available_route_count: 1,
+        blocked_route_count: 1,
+        over_demand_route_count: 1,
+        compute_service_route_count: 1,
+        network_service_route_count: 1,
+        items: [
+          {
+            route_id: "route-b",
+            flow_id: "flow-b",
+            user_id: "user-1",
+            source_id: "user-1",
+            destination_id: "service-0",
+            selected_satellite_id: "sat-0",
+            primary_next_hop_id: "sat-0",
+            next_hop_ids: ["sat-0", "sat-1", "service-0"],
+            hop_count: 3,
+            path_label: "user-1 -> sat-0 -> sat-1 -> service-0",
+            available: false,
+            capacity_mbps: 40,
+            demand_mbps: 60,
+            latency_s: 0.2,
+            loss_proxy_rate: 0.05,
+            route_pressure_proxy: 1,
+            business_type: "DATA_TRANSFER",
+            business_label: "数据传输",
+            bottleneck_component: "CAPACITY",
+            bottleneck_reason: "ROUTE_CAPACITY_BELOW_DEMAND",
+            bottleneck_reason_label: "Route capacity below demand",
+            explanation_label: "capacity 40 Mbps < demand 60 Mbps"
+          },
+          {
+            route_id: "route-a",
+            flow_id: "flow-a",
+            user_id: "user-0",
+            source_id: "user-0",
+            destination_id: "compute-0",
+            selected_satellite_id: "sat-0",
+            primary_next_hop_id: "sat-0",
+            next_hop_ids: ["sat-0", "compute-0"],
+            hop_count: 2,
+            path_label: "user-0 -> sat-0 -> compute-0",
+            available: true,
+            capacity_mbps: 80,
+            demand_mbps: 60,
+            latency_s: 0.1,
+            loss_proxy_rate: 0.01,
+            route_pressure_proxy: 0.75,
+            business_type: "COMPUTE_SERVICE",
+            business_label: "通信-计算服务",
+            bottleneck_component: "LOSS_PROXY",
+            bottleneck_reason: "ROUTE_LOSS_PROXY_POSITIVE",
+            bottleneck_reason_label: "Route loss proxy is positive",
+            explanation_label: "route has a positive flow-level loss proxy"
+          }
+        ]
+      })
+    ).toEqual({
+      sourceLabel: "后端路由解释 2/2 条；阻塞 1 / 超需求 1",
+      items: [
+        {
+          routeId: "route-b",
+          flowId: "flow-b",
+          businessLabel: "数据传输",
+          nextHopLabel: "sat-0",
+          capacityDemandLabel: "40 Mbps / 60 Mbps",
+          pressureLabel: "100%",
+          bottleneckLabel: "Route capacity below demand",
+          explanationLabel: "capacity 40 Mbps < demand 60 Mbps",
+          pathLabel: "user-1 -> sat-0 -> sat-1 -> service-0"
+        },
+        {
+          routeId: "route-a",
+          flowId: "flow-a",
+          businessLabel: "通信-计算服务",
+          nextHopLabel: "sat-0",
+          capacityDemandLabel: "80 Mbps / 60 Mbps",
+          pressureLabel: "75%",
+          bottleneckLabel: "Route loss proxy is positive",
+          explanationLabel: "route has a positive flow-level loss proxy",
+          pathLabel: "user-0 -> sat-0 -> compute-0"
+        }
+      ]
+    });
+  });
+
+  it("waits for backend route explanations before rendering rows", () => {
+    expect(buildDataPanelRouteExplanationRows(undefined)).toEqual({
+      sourceLabel: "等待后端路由解释",
+      items: []
     });
   });
 });
