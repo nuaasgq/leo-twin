@@ -14,6 +14,7 @@ from examples.integration_demo.runtime import (
 from leo_twin.core.config import ConfigValidationError, config_from_mapping, load_config
 from leo_twin.schema.config import OrbitParameters, RuntimeConfig, ScenarioConfig, SEESConfig
 from leo_twin.services.control import RuntimeController, ScaleSafetyChecker
+from leo_twin.services.configuration_schema import USER_CONFIGURATION_SCHEMA_V2_ID
 from leo_twin.services.configuration_view import load_user_configuration_template
 
 
@@ -614,6 +615,76 @@ def test_control_plane_loads_user_config_template_before_initialization(
     assert initialize_ack["ok"] is True
     assert initialize_ack["status"]["initialized"] is True
     assert initialize_ack["generated_config"]["satellite_count"] == 120
+
+
+def test_control_plane_exposes_user_configuration_contract_api(tmp_path) -> None:
+    control_plane = _small_control_plane(tmp_path / "sees_control.yaml")
+    update_ack = control_plane.handle_raw_message(
+        json.dumps(
+            {
+                "type": "CONFIG_UPDATE",
+                "payload": {
+                    "satellite_count": 96,
+                    "user_count": 144,
+                    "compute_gpu_tflops_fp32": 2.5,
+                    "duration": 900,
+                },
+            }
+        )
+    )
+
+    schema = control_plane.user_configuration_schema()
+    templates = control_plane.user_configuration_templates()
+    exported = control_plane.user_configuration_export()
+
+    assert update_ack["ok"] is True
+    assert schema["type"] == "USER_CONFIGURATION_SCHEMA_V2"
+    assert schema["summary"]["schema_id"] == USER_CONFIGURATION_SCHEMA_V2_ID
+    assert schema["summary"]["unknown_key_policy"] == "REJECT"
+    schema_fields = {
+        field["path"]: field
+        for field in schema["summary"]["fields"]
+        if isinstance(field, dict)
+    }
+    assert schema_fields["scenario.satellite_count"]["current_value"] == 96
+    assert schema_fields["scenario.compute_gpu_tflops_fp32"]["current_value"] == 2.5
+    assert schema_fields["runtime.duration"]["current_value"] == 900
+
+    assert templates["type"] == "USER_CONFIGURATION_TEMPLATE_CATALOG"
+    template_summary = templates["summary"]
+    assert template_summary["schema_id"] == USER_CONFIGURATION_SCHEMA_V2_ID
+    assert template_summary["mutation_policy"] == "READ_ONLY_CATALOG"
+    assert template_summary["load_command"] == {
+        "type": "RUNTIME_CONTROL",
+        "action": "LOAD_TEMPLATE",
+        "payload_key": "template_id",
+        "requires_uninitialized_runtime": True,
+    }
+    assert [item["id"] for item in template_summary["templates"]] == [
+        "baseline_72sat",
+        "dynamic_observability_120sat",
+        "network_stress_120sat",
+        "large_scale_1200sat",
+    ]
+
+    export_summary = exported["summary"]
+    assert exported["type"] == "USER_CONFIGURATION_EXPORT"
+    assert export_summary["schema_id"] == USER_CONFIGURATION_SCHEMA_V2_ID
+    assert export_summary["export_scope"] == "CURRENT_EFFECTIVE_SEES_CONFIG"
+    assert export_summary["format"] == "JSON_MAPPING"
+    assert export_summary["validation_ok"] is True
+    assert export_summary["validation_error_count"] == 0
+    assert export_summary["config_hash"].startswith("sha256:")
+    assert export_summary["config"]["scenario"]["satellite_count"] == 96
+    assert export_summary["config"]["scenario"]["user_count"] == 144
+    assert export_summary["config"]["runtime"]["duration"] == 900
+    assert "CONFIG_UPDATE control message for partial updates" in export_summary[
+        "import_paths"
+    ]
+    json.dumps(schema, sort_keys=True)
+    json.dumps(templates, sort_keys=True)
+    json.dumps(exported, sort_keys=True)
+    assert control_plane.runtime_status()["status"]["initialized"] is True
 
 
 def test_control_plane_rejects_template_load_after_initialization(tmp_path) -> None:

@@ -38,6 +38,9 @@ The backend exposes the schema through:
 - `build_user_configuration_schema_v2(config)`
 - `validate_user_configuration_mapping_v2(raw)`
 - `configuration_surface_summary.user_config_schema_v2`
+- `GET /scenario/user-config/schema`
+- `GET /scenario/user-config/templates`
+- `GET /scenario/user-config/export`
 
 Important contract fields:
 
@@ -49,6 +52,21 @@ Important contract fields:
 - `fields`: deterministic ordered field schemas
 - `templates`: executable user template references
 - `examples`: accepted/rejected validation examples
+
+The HTTP endpoints are read-only:
+
+- `/scenario/user-config/schema` returns the current backend-derived schema v2,
+  including defaults and current values.
+- `/scenario/user-config/templates` returns the approved executable template
+  catalog and the control command needed to load a template.
+- `/scenario/user-config/export` returns the current effective `SEESConfig`
+  JSON mapping, a stable config hash, validation status, and supported import
+  paths.
+
+Configuration import remains an explicit control-plane action. Partial updates
+use `CONFIG_UPDATE`, template loading uses `LOAD_TEMPLATE`, and package restore
+uses `RESTORE_EXPORT_PACKAGE`. The read-only endpoints do not write config
+files, initialize sessions, or mutate the runtime.
 
 Each field schema includes:
 

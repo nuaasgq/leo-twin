@@ -5,6 +5,54 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - User Config Contract API v1
+
+- Branch: `feature/T193-user-config-contract-api-v1`
+- Commit: pending in this commit
+- Scope: expose the existing backend-owned user configuration schema v2 as
+  stable read-only integration demo API endpoints. The demo control plane now
+  serves the current schema, approved executable template catalog, and current
+  effective SEES config export with a stable config hash and validation status.
+  New endpoints are `/scenario/user-config/schema`,
+  `/scenario/user-config/templates`, and `/scenario/user-config/export`.
+  Configuration import remains explicit through existing control-plane commands
+  (`CONFIG_UPDATE`, `LOAD_TEMPLATE`, and `RESTORE_EXPORT_PACKAGE`). This task
+  does not modify Event Kernel behavior, model fidelity, frontend rendering, or
+  runtime session advancement.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `tests/integration/test_config_control.py`
+  - `docs/user_configuration_schema_v2.md`
+  - `docs/integration_demo.md`
+  - `docs/development_log.md`
+- Validation:
+  - `$env:PYTHONPATH='.'; pytest tests/integration/test_config_control.py::test_control_plane_exposes_user_configuration_contract_api tests/unit/test_user_configuration_schema_v2.py tests/unit/test_configuration_view.py -q`
+    - Result: passed, 14 tests.
+  - `$env:PYTHONPATH='.'; pytest tests/integration/test_config_control.py -q`
+    - Result: failed only in `test_config_loads_correctly` because the
+      pre-existing local runtime config drift in `configs/sees_control.yaml`
+      has `scenario.compute_nodes: 72` while the committed test baseline expects
+      `10`. This file is explicitly excluded from task commits and was not
+      reset.
+  - `git diff --check`
+    - Result: passed. Git still reported the pre-existing CRLF warning for
+      local runtime/config drift in `configs/generated_full_system_demo.json`
+      and `configs/sees_control.yaml`.
+- Problems encountered:
+  - The full config-control integration file depends on the mutable local
+    `configs/sees_control.yaml`. The task-specific test uses a temporary config
+    output path and passes, so the new API contract is verified without
+    touching local runtime state.
+  - The API is intentionally read-only. Validation and import semantics are
+    surfaced through the schema/export payloads, but mutation remains limited to
+    explicit control-plane commands.
+- Known remaining issues / follow-up:
+  - The frontend does not yet display a dedicated user configuration API panel
+    or download button for `/scenario/user-config/export`.
+  - A later task should add a guarded upload/validate flow for user-provided
+    YAML/JSON before applying it through `CONFIG_UPDATE`.
+
 ## 2026-07-06 - Dashboard Restore Command v1
 
 - Branch: `feature/T192-dashboard-restore-command-v1`

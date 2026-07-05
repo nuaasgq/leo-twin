@@ -124,6 +124,15 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
             if path == result.config.scenario_config:
                 self._send_json(result.scenario.frontend_config)
                 return
+            if path == "/scenario/user-config/schema":
+                self._send_json(control_plane.user_configuration_schema())
+                return
+            if path == "/scenario/user-config/templates":
+                self._send_json(control_plane.user_configuration_templates())
+                return
+            if path == "/scenario/user-config/export":
+                self._send_json(control_plane.user_configuration_export())
+                return
             if path == result.config.metrics_snapshot:
                 self._send_json(control_plane.visible_snapshot())
                 return

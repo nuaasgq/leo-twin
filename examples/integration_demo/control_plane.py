@@ -30,8 +30,14 @@ from leo_twin.schema.config_loader import (
 from leo_twin.models.orbit import KeplerianOrbitEngine
 from leo_twin.schema import SatelliteState
 from leo_twin.schema.config import SEESConfig, config_to_dict
+from leo_twin.services.configuration_schema import (
+    USER_CONFIGURATION_SCHEMA_V2_ID,
+    build_user_configuration_schema_v2,
+    validate_user_configuration_mapping_v2,
+)
 from leo_twin.services.configuration_view import (
     build_user_configuration_view,
+    configuration_template_profiles,
     load_user_configuration_template,
 )
 from leo_twin.services.network_kpi_provenance import build_network_kpi_provenance_v2
@@ -156,6 +162,61 @@ class DemoControlPlane:
             "status": self._status_json(generated_config),
             "config": self._controller.config_json(),
             "generated_config": generated_config,
+        }
+
+    def user_configuration_schema(self) -> dict[str, Any]:
+        return {
+            "type": "USER_CONFIGURATION_SCHEMA_V2",
+            "summary": build_user_configuration_schema_v2(self._controller.config),
+        }
+
+    def user_configuration_templates(self) -> dict[str, Any]:
+        templates = configuration_template_profiles()
+        return {
+            "type": "USER_CONFIGURATION_TEMPLATE_CATALOG",
+            "summary": {
+                "version": "v1",
+                "source": "BACKEND_USER_CONFIGURATION",
+                "schema_id": USER_CONFIGURATION_SCHEMA_V2_ID,
+                "catalog_scope": "APPROVED_EXECUTABLE_TEMPLATES",
+                "mutation_policy": "READ_ONLY_CATALOG",
+                "template_count": len(templates),
+                "templates": templates,
+                "load_command": {
+                    "type": "RUNTIME_CONTROL",
+                    "action": "LOAD_TEMPLATE",
+                    "payload_key": "template_id",
+                    "requires_uninitialized_runtime": True,
+                },
+            },
+        }
+
+    def user_configuration_export(self) -> dict[str, Any]:
+        config = self._controller.config_json()
+        validation = validate_user_configuration_mapping_v2(config)
+        return {
+            "type": "USER_CONFIGURATION_EXPORT",
+            "summary": {
+                "version": "v1",
+                "source": "BACKEND_USER_CONFIGURATION",
+                "schema_id": USER_CONFIGURATION_SCHEMA_V2_ID,
+                "export_scope": "CURRENT_EFFECTIVE_SEES_CONFIG",
+                "format": "JSON_MAPPING",
+                "yaml_config_file": str(self._config_output_path),
+                "generated_config_file": str(self._generated_config_output_path),
+                "unknown_key_policy": "REJECT",
+                "defaulting_policy": "OMITTED_FIELDS_USE_BACKEND_DEFAULTS",
+                "import_paths": (
+                    "CONFIG_UPDATE control message for partial updates",
+                    "LOAD_TEMPLATE control message for approved templates",
+                    "RESTORE_EXPORT_PACKAGE control message for exported runtime packages",
+                ),
+                "config_hash": stable_hash_payload(config),
+                "validation_ok": bool(validation["ok"]),
+                "validation_error_count": int(validation["error_count"]),
+                "validation_errors": tuple(validation["errors"]),
+                "config": config,
+            },
         }
 
     def runtime_user_details(self, cursor: int = 0, limit: int = 100) -> dict[str, Any]:

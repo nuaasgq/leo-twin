@@ -81,6 +81,9 @@ http://127.0.0.1:8765
 Endpoints:
 
 - `GET /scenario/config`
+- `GET /scenario/user-config/schema`
+- `GET /scenario/user-config/templates`
+- `GET /scenario/user-config/export`
 - `GET /metrics/snapshot`
 - `GET /runtime/status`
 - `GET /runtime/export`
@@ -138,6 +141,20 @@ Invoke-RestMethod http://127.0.0.1:8765/runtime/export/catalog
 The catalog endpoint reads `artifacts/runtime_exports/runtime_export_catalog_v1.json`.
 It persists package/archive metadata and hashes so previous exports remain
 discoverable after the backend process restarts.
+
+User configuration contract:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8765/scenario/user-config/schema
+Invoke-RestMethod http://127.0.0.1:8765/scenario/user-config/templates
+Invoke-RestMethod http://127.0.0.1:8765/scenario/user-config/export
+```
+
+These endpoints are backend-owned and read-only. They expose the full
+user-facing configuration schema v2, the approved executable template catalog,
+and the current effective SEES config export with a stable hash and validation
+status. Configuration import still happens only through explicit control-plane
+commands such as `CONFIG_UPDATE`, `LOAD_TEMPLATE`, or `RESTORE_EXPORT_PACKAGE`.
 
 Persisted package artifact routes:
 
