@@ -11,6 +11,9 @@ from leo_twin.models.orbit import ConstellationAllocation
 from leo_twin.models.traffic import TrafficClass, TrafficDestinationType
 from leo_twin.schema.compute_resource_contract import compute_resource_contract_v2_to_dict
 from leo_twin.schema.network_model_contract import network_model_contract_v2_to_dict
+from leo_twin.schema.service_placement_contract import (
+    service_placement_contract_v2_to_dict,
+)
 
 
 BackendDerivedSummary = dict[str, object]
@@ -165,6 +168,17 @@ def build_backend_derived_summary(
         "memory_gb_per_node": compute_vector.memory_gb,
         "storage_gb_per_node": compute_vector.storage_gb,
     }
+    service_placement_contract = service_placement_contract_v2_to_dict()
+    service_placement_contract["configured_policy"] = {
+        "compute_node_count": compute_node_count,
+        "default_policy": service_placement_contract["default_policy"],
+        "queue_state_source": "RouteAwareComputeEngine._available_at",
+        "max_queue_depth": None,
+        "candidate_count_policy": (
+            "Route path compute nodes are preferred when available; otherwise "
+            "all configured satellite compute nodes remain candidates."
+        ),
+    }
     coverage_summary = {
         "coverage_model": "DETERMINISTIC_GEOMETRIC_FOOTPRINT",
         "fidelity_level": "DISPLAY_APPROXIMATION",
@@ -203,6 +217,7 @@ def build_backend_derived_summary(
         "traffic_demand_summary": traffic_summary,
         "compute_resource_summary": compute_summary,
         "compute_resource_contract_v2": compute_resource_contract,
+        "service_placement_contract_v2": service_placement_contract,
         "coverage_beam_summary": coverage_summary,
         "network_model_contract_v2": network_model_contract,
         "model_assumptions": _model_assumptions(

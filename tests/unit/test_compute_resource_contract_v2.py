@@ -12,6 +12,7 @@ from leo_twin.models.compute import (
 from leo_twin.models.orbit import AutoPlaneAllocator
 from leo_twin.schema import (
     COMPUTE_RESOURCE_CONTRACT_V2_ID,
+    SERVICE_PLACEMENT_CONTRACT_V2_ID,
     ComputeResourceLaneKind,
     TaskDemandLaneKind,
     compute_resource_contract_v2_to_dict,
@@ -144,6 +145,11 @@ def test_backend_summary_exposes_compute_resource_contract_v2() -> None:
         "memory_gb_per_node": 32.0,
         "storage_gb_per_node": 512.0,
     }
+
+    service_placement = summary["service_placement_contract_v2"]
+    assert isinstance(service_placement, dict)
+    assert service_placement["contract_id"] == SERVICE_PLACEMENT_CONTRACT_V2_ID
+    assert service_placement["configured_policy"]["compute_node_count"] == 72
 
 
 def _resource_lanes(contract: dict[str, object]) -> dict[str, dict[str, object]]:

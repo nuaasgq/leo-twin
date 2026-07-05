@@ -307,6 +307,7 @@ export interface BackendDerivedSummary {
   traffic_demand_summary?: TrafficDemandSummary;
   compute_resource_summary?: ComputeResourceSummary;
   compute_resource_contract_v2?: ComputeResourceContractV2;
+  service_placement_contract_v2?: ServicePlacementContractV2;
   coverage_beam_summary?: CoverageBeamSummary;
   network_model_contract_v2?: NetworkModelContractV2;
   fidelity_summary?: FidelitySummary;
@@ -369,6 +370,30 @@ export interface ComputeResourceConfiguredNodeProfileV2 {
   npu_tops_int8_per_node: number;
   memory_gb_per_node: number;
   storage_gb_per_node: number;
+}
+
+export interface ServicePlacementContractV2 {
+  contract_id: string;
+  version: "v2" | string;
+  placement_model: string;
+  default_policy: string;
+  candidate_source: string;
+  candidate_order: readonly string[];
+  decision_fields: readonly string[];
+  rejection_reasons: readonly string[];
+  queue_semantics: string;
+  deterministic_inputs: readonly string[];
+  excluded_semantics: readonly string[];
+  model_note: string;
+  configured_policy?: ServicePlacementConfiguredPolicyV2;
+}
+
+export interface ServicePlacementConfiguredPolicyV2 {
+  compute_node_count: number;
+  default_policy: string;
+  queue_state_source: string;
+  max_queue_depth: number | null;
+  candidate_count_policy: string;
 }
 
 export interface NetworkModelContractV2 {

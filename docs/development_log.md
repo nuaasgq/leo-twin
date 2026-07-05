@@ -8253,3 +8253,57 @@ change.
   - Add a user-facing "network stress scenario" preset or acceptance config that
     combines mixed demand, higher flow demand, and transport loss to exercise
     throughput, latency, loss proxy, and delay-variation charts over time.
+
+## 2026-07-05 - Service Placement Model v2
+
+- Branch: `feature/T170-service-placement-model-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a product-level, deterministic communication-compute service
+  placement contract and pure model for selecting satellite-hosted compute
+  nodes. The model chooses by minimum estimated finish time with deterministic
+  tie-breaks, consumes explicit queue state, reports queue delay and execution
+  delay, and exposes canonical rejection reasons. Backend-derived summaries now
+  include `service_placement_contract_v2`, and frontend runtime contract types
+  accept the new backend-owned semantics. Event Kernel behavior, packet-level
+  simulation, and runtime frontend layout are unchanged.
+- Changed files/modules:
+  - `src/leo_twin/schema/service_placement_contract.py`
+  - `src/leo_twin/models/compute/placement.py`
+  - `src/leo_twin/schema/__init__.py`
+  - `src/leo_twin/models/compute/__init__.py`
+  - `src/leo_twin/services/derived_summary.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/tests/fixtures/runtimeStatus.contract.json`
+  - `frontend/tests/runtimeContractFixture.test.ts`
+  - `tests/unit/test_service_placement_model_v2.py`
+  - `tests/unit/test_compute_resource_contract_v2.py`
+  - `docs/service_placement_model_v2.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_service_placement_model_v2.py tests/unit/test_compute_resource_contract_v2.py tests/unit/test_backend_derived_summary.py -q`
+    - Result: passed, 20 tests.
+  - `python -m pytest tests/unit/test_compute_scheduling_runtime.py tests/unit/test_network_aware_compute.py -q`
+    - Result: passed, 15 tests.
+  - `python -m pytest tests/integration/test_config_control.py::test_initialize_writes_config_and_start_gates_streams tests/integration/test_config_control.py::test_frontend_control_messages_are_processed -q`
+    - Result: passed, 2 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- runtimeContractFixture.test.ts`
+    - Result: passed, 25 files / 261 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Existing DataPanel chunk-size warning remains.
+- Problems encountered:
+  - Initial queue-state unit test expected a queued node when two candidates had
+    identical finish times. The contract tie-breaks by earlier `start_time`, so
+    the test data was corrected to make the queued node genuinely finish first.
+  - Existing local runtime config drift remains untouched and unstaged.
+- Known remaining issues:
+  - `RouteAwareComputeEngine` still has a local node-selection helper. A later
+    localized task should replace that helper with `place_compute_service()`
+    once runtime regression tests are prepared.
+  - Placement remains a deterministic flow-level abstraction. It does not model
+    packets, RF behavior, preemption, service migration, power, or thermal
+    constraints.
+- Recommended follow-up:
+  - Wire Service Placement Model v2 into the route-aware compute runtime and
+    emit per-task placement decisions into the dashboard observability stream.

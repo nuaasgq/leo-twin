@@ -72,6 +72,15 @@ from leo_twin.schema.network_model_contract import (
     default_network_model_contract_v2,
     network_model_contract_v2_to_dict,
 )
+from leo_twin.schema.service_placement_contract import (
+    SERVICE_PLACEMENT_CONTRACT_V2_ID,
+    ServicePlacementContractV2,
+    ServicePlacementDecisionStatus,
+    ServicePlacementPolicy,
+    ServicePlacementRejectionReason,
+    default_service_placement_contract_v2,
+    service_placement_contract_v2_to_dict,
+)
 from leo_twin.schema.sim_event import SimEvent
 
 __all__ = [
@@ -122,8 +131,13 @@ __all__ = [
     "RuntimeConfigState",
     "RuntimeMode",
     "RuntimeStatus",
+    "SERVICE_PLACEMENT_CONTRACT_V2_ID",
     "SatelliteState",
     "SatelliteProfile",
+    "ServicePlacementContractV2",
+    "ServicePlacementDecisionStatus",
+    "ServicePlacementPolicy",
+    "ServicePlacementRejectionReason",
     "SimEvent",
     "TaskRequest",
     "TaskState",
@@ -135,5 +149,7 @@ __all__ = [
     "compute_resource_contract_v2_to_dict",
     "default_compute_resource_contract_v2",
     "default_network_model_contract_v2",
+    "default_service_placement_contract_v2",
     "network_model_contract_v2_to_dict",
+    "service_placement_contract_v2_to_dict",
 ]

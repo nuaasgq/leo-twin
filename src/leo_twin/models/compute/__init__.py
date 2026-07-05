@@ -6,6 +6,12 @@ from leo_twin.models.compute.network_aware import (
     RouteAwareComputeEngine,
     TaskPlacementDecision,
 )
+from leo_twin.models.compute.placement import (
+    ServicePlacementCandidate,
+    ServicePlacementDecision,
+    ServicePlacementQueueState,
+    place_compute_service,
+)
 from leo_twin.models.compute.resources import (
     ComputeResourceVector,
     ComputeServiceTimeEstimate,
@@ -34,11 +40,15 @@ __all__ = [
     "ComputeServiceTimeEstimate",
     "ComputeWorkloadItem",
     "RouteAwareComputeEngine",
+    "ServicePlacementCandidate",
+    "ServicePlacementDecision",
+    "ServicePlacementQueueState",
     "TaskResourceDemand",
     "TaskPlacementDecision",
     "compute_node_resource_usage_fields",
     "compute_resource_vector_from_node",
     "estimate_compute_service_time",
     "estimate_task_service_time",
+    "place_compute_service",
     "task_resource_demand_from_request",
 ]

@@ -503,6 +503,58 @@
           "memory_gb_per_node": 32,
           "storage_gb_per_node": 512
         }
+      },
+      "service_placement_contract_v2": {
+        "contract_id": "leo_twin.service_placement_contract.v2",
+        "version": "v2",
+        "placement_model": "DETERMINISTIC_MIN_ESTIMATED_FINISH_TIME",
+        "default_policy": "MIN_ESTIMATED_FINISH_TIME",
+        "candidate_source": "Route path compute nodes when network context is available; otherwise all configured satellite-hosted compute nodes.",
+        "candidate_order": [
+          "finish_time",
+          "start_time",
+          "node_id"
+        ],
+        "decision_fields": [
+          "task_id",
+          "status",
+          "selected_node_id",
+          "ready_time",
+          "start_time",
+          "finish_time",
+          "queue_delay",
+          "execution_delay",
+          "bottleneck_resource",
+          "rejection_reason"
+        ],
+        "rejection_reasons": [
+          "NO_NODES",
+          "NO_CAPABLE_NODE",
+          "CAPACITY_LIMIT_EXCEEDED",
+          "QUEUE_LIMIT_EXCEEDED"
+        ],
+        "queue_semantics": "A node queue state supplies available_at and queued_task_count. A selected request is QUEUED when start_time is later than ready_time.",
+        "deterministic_inputs": [
+          "TaskRequest.resource_demand",
+          "ComputeNode.resource_vector",
+          "ServicePlacementQueueState.available_at",
+          "ServicePlacementQueueState.queued_task_count",
+          "service_placement_policy",
+          "max_queue_depth"
+        ],
+        "excluded_semantics": [
+          "PREEMPTION",
+          "THREAD_LEVEL_EXECUTION",
+          "PACKET_LEVEL_QUEUEING"
+        ],
+        "model_note": "Service placement is a deterministic flow-level abstraction. It chooses satellite compute nodes using estimated finish time and explicit queue state, but does not execute code or model packets.",
+        "configured_policy": {
+          "compute_node_count": 1200,
+          "default_policy": "MIN_ESTIMATED_FINISH_TIME",
+          "queue_state_source": "RouteAwareComputeEngine._available_at",
+          "max_queue_depth": null,
+          "candidate_count_policy": "Route path compute nodes are preferred when available; otherwise all configured satellite compute nodes remain candidates."
+        }
       }
     }
   }

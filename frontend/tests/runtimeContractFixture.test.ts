@@ -158,6 +158,15 @@ describe("runtime status contract fixture", () => {
       generated?.backend_summary?.compute_resource_contract_v2?.configured_node_profile
         ?.compute_node_count
     ).toBe(1200);
+    expect(generated?.backend_summary?.service_placement_contract_v2).toMatchObject({
+      contract_id: "leo_twin.service_placement_contract.v2",
+      default_policy: "MIN_ESTIMATED_FINISH_TIME",
+      placement_model: "DETERMINISTIC_MIN_ESTIMATED_FINISH_TIME"
+    });
+    expect(
+      generated?.backend_summary?.service_placement_contract_v2?.configured_policy
+        ?.compute_node_count
+    ).toBe(1200);
   });
 
   it("rejects malformed runtime status envelopes before UI consumption", () => {
