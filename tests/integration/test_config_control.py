@@ -520,6 +520,19 @@ def test_initialize_writes_config_and_start_gates_streams(tmp_path) -> None:
     assert init_ack["generated_config"]["backend_summary"]["compute_resource_summary"][
         "total_npu_tops_int8"
     ] == 0.0
+    configuration_surface = init_ack["generated_config"]["backend_summary"][
+        "configuration_surface_summary"
+    ]
+    assert configuration_surface == init_ack["status"]["configuration_surface_summary"]
+    assert configuration_surface["frontend_policy"] == "CONTROL_PANEL_KEY_FIELDS_ONLY"
+    assert configuration_surface["template_config_file"] == (
+        "configs/templates/sees_user_detailed.example.yaml"
+    )
+    assert any(
+        field["path"] == "scenario.satellite_count" and field["value"] == 24
+        for field in configuration_surface["key_fields"]
+    )
+    assert "network.carrier_frequency_hz" in configuration_surface["file_only_fields"]
     assert control_plane.result.config.satellite_count == 24
     assert control_plane.result.processed_events == ()
     assert control_plane.stream_events() == ()

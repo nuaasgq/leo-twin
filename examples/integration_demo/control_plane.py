@@ -22,6 +22,7 @@ from leo_twin.schema.config_loader import write_config
 from leo_twin.models.orbit import KeplerianOrbitEngine
 from leo_twin.schema import SatelliteState
 from leo_twin.schema.config import SEESConfig
+from leo_twin.services.configuration_view import build_user_configuration_view
 from leo_twin.services.control import (
     RuntimeController,
     ScaleSafetyChecker,
@@ -327,6 +328,9 @@ class DemoControlPlane:
         backend_summary["fidelity_summary"] = _fidelity_summary_from_sees_config(
             self._controller.config
         )
+        backend_summary["configuration_surface_summary"] = build_user_configuration_view(
+            self._controller.config
+        )
         generated["backend_summary"] = backend_summary
         return generated
 
@@ -345,6 +349,9 @@ class DemoControlPlane:
             status["status"] = runtime_status["status"]
         status["initialized"] = self._initialized
         status["fidelity_summary"] = _fidelity_summary_from_sees_config(
+            self._controller.config
+        )
+        status["configuration_surface_summary"] = build_user_configuration_view(
             self._controller.config
         )
         metrics_summary = self._metrics_summary_json()

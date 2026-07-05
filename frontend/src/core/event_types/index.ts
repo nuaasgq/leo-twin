@@ -296,7 +296,39 @@ export interface BackendDerivedSummary {
   coverage_beam_summary?: CoverageBeamSummary;
   fidelity_summary?: FidelitySummary;
   workload_smoothing_summary?: WorkloadSmoothingSummary;
+  configuration_surface_summary?: ConfigurationSurfaceSummary;
   model_assumptions?: readonly string[];
+}
+
+export interface ConfigurationSurfaceSummary {
+  version: "v1" | string;
+  source: string;
+  detailed_config_file: string;
+  template_config_file: string;
+  frontend_policy: string;
+  key_field_count: number;
+  detailed_field_count: number;
+  key_fields: readonly ConfigurationSurfaceField[];
+  detailed_file_sections: readonly ConfigurationSurfaceSection[];
+  file_only_fields: readonly string[];
+  notes?: readonly string[];
+}
+
+export interface ConfigurationSurfaceField {
+  path: string;
+  label: string;
+  section: string;
+  value: string | number | boolean | null;
+  role: string;
+  editable_in_ui: boolean;
+  unit?: string;
+}
+
+export interface ConfigurationSurfaceSection {
+  section: string;
+  purpose: string;
+  field_count: number;
+  example_paths: readonly string[];
 }
 
 export interface CoverageBeamSummary {
@@ -402,6 +434,7 @@ export interface RuntimeStatusPayload {
   deterministic_replay?: boolean;
   last_error?: string | null;
   fidelity_summary?: FidelitySummary;
+  configuration_surface_summary?: ConfigurationSurfaceSummary;
   metrics_summary?: RuntimeMetricsSummary;
   network_quality_provenance_v1?: RuntimeNetworkQualityProvenanceV1;
   kpi_time_series_v1?: RuntimeKpiTimeSeriesV1;

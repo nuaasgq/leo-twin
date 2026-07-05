@@ -93,6 +93,10 @@ def test_demo_scenario_auto_allocates_starlink_like_planes_when_not_explicit() -
         "orbital_period_model_note": (
             "Simplified circular-orbit period estimate; no SGP4 or external ephemeris."
         ),
+        "orbital_velocity_km_s": pytest.approx(7.600538),
+        "orbital_velocity_model_note": (
+            "Simplified circular-orbit speed estimate; no SGP4 or external ephemeris."
+        ),
         "inclination_deg": 53.0,
     }
     assert backend_summary["derived_constellation_summary"] == summary

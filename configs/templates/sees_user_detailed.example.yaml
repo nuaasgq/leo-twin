@@ -1,0 +1,76 @@
+# SEES detailed user configuration template.
+# The frontend should expose only key operational fields; advanced users can
+# copy this template and edit the full backend contract explicitly.
+
+scenario:
+  satellite_count: 72
+  user_count: 1000
+  compute_nodes: 72
+  compute_capacity: 10.0
+  compute_cpu_gflops_fp64: 0.0
+  compute_gpu_tflops_fp32: 0.0
+  compute_gpu_tflops_fp16: 0.0
+  compute_npu_tops_int8: 0.0
+  compute_memory_gb: 0.0
+  compute_storage_gb: 0.0
+  ground_station_count: 3
+  cell_count: 100
+  compute_scheduling_policy: FIFO
+  initial_workload_smoothing_enabled: false
+  initial_workload_window_s: 0.0
+  max_initial_events_per_tick: 0
+  workload_smoothing_mode: NONE
+  orbit:
+    update_interval_seconds: 60
+    plane_count: 12
+    altitude_m: 550000.0
+    inclination_deg: 53.0
+    orbit_update_mode: null
+  traffic_model:
+    flow_interval_seconds: 60
+    task_interval_seconds: 60
+    flow_demand_capacity: 25.0
+    task_compute_demand: 20.0
+    task_data_size: 10.0
+    traffic_class: COMPUTE_SERVICE
+    destination_type: COMPUTE_NODE
+    output_data_size: 0.0
+
+network:
+  application_protocol: TASK_OFFLOAD_FLOW
+  transport_protocol: TCP
+  routing_protocol: LINK_STATE
+  datalink_mac_protocol: TDMA
+  transport_loss_rate: 0.0
+  transport_congestion_window_segments: 0
+  routing_latency_weight: 1.0
+  routing_inverse_capacity_weight: 0.0
+  routing_hop_weight: 0.0
+  carrier_frequency_hz: 20000000000.0
+  channel_bandwidth_hz: 100000000.0
+  rain_rate_mm_h: 0.0
+  rain_attenuation_coefficient_db_per_km_per_mm_h: 0.0
+  rain_effective_path_km: 0.0
+  antenna_diameter_m: 0.45
+  antenna_aperture_efficiency: 0.65
+  transmit_power_dbw: 20.0
+  system_loss_db: 1.0
+  noise_temperature_k: 290.0
+  space_link_mode: null
+  max_space_link_candidates_per_satellite: 4
+  batch_space_link_update_limit: 999
+
+runtime:
+  mode: REAL_TIME
+  speed_factor: 1.0
+  seed: 20260703
+  duration: 600
+
+ui:
+  visualization:
+    satellites: true
+    links: true
+    users: true
+    metrics: true
+  update_frequency_hz: 20
+  dashboard_layout: right_panel

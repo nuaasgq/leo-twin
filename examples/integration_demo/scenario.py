@@ -14,6 +14,7 @@ from leo_twin.models.traffic import (
     TrafficDemandRecord,
     TrafficDestinationType,
 )
+from leo_twin.services.configuration_view import build_user_configuration_view
 from leo_twin.services.derived_summary import build_backend_derived_summary
 from leo_twin.services.scale_fidelity import (
     ScaleFidelityConfig,
@@ -30,7 +31,7 @@ from leo_twin.schema import (
     TaskRequest,
 )
 
-from examples.integration_demo.config import DemoConfig
+from examples.integration_demo.config import DemoConfig, demo_config_to_sees_config
 
 
 _EARTH_RADIUS_KM = 6371.0
@@ -274,6 +275,9 @@ def _backend_summary(
     )
     summary["fidelity_summary"] = _fidelity_summary(config)
     summary["workload_smoothing_summary"] = _workload_smoothing_summary(config)
+    summary["configuration_surface_summary"] = build_user_configuration_view(
+        demo_config_to_sees_config(config)
+    )
     return summary
 
 

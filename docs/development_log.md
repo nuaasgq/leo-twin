@@ -6065,3 +6065,60 @@ change.
 - Recommended follow-up:
   - Implement the detailed user-facing scenario configuration contract and add
     backend-owned per-user request lifecycle summaries.
+
+## 2026-07-05 - User Configuration Surface Contract v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a backend-owned configuration surface summary so the product can
+  keep a detailed user-facing config file while the frontend exposes only key
+  operational fields. The summary is attached to runtime status and generated
+  backend summaries, and a non-runtime template config is added under
+  `configs/templates/`.
+- Changed files/modules:
+  - `src/leo_twin/services/configuration_view.py`
+  - `configs/templates/sees_user_detailed.example.yaml`
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/scenario.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `tests/unit/test_configuration_view.py`
+  - `tests/unit/test_integration_demo_scenario.py`
+  - `tests/integration/test_config_control.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_configuration_view.py tests/unit/test_backend_derived_summary.py tests/unit/test_integration_demo_scenario.py tests/integration/test_config_control.py::test_initialize_writes_config_and_start_gates_streams tests/integration/test_config_control.py::test_frontend_control_messages_are_processed -q`
+    - Result: passed, 26 tests.
+  - `pnpm --dir frontend exec vitest run runtimeContractFixture.test.ts configPanel.test.ts`
+    - Result: passed, 2 files / 34 tests.
+  - `pnpm --dir frontend test`
+    - Result: passed, 25 files / 207 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - `python -m pytest tests/unit/test_configuration_view.py tests/integration/test_config_control.py -q`
+    initially hit the known local runtime config drift in
+    `configs/sees_control.yaml`: `test_config_loads_correctly` expects
+    `compute_nodes=10`, while the local uncommitted runtime state currently has
+    `compute_nodes=72`. The file was intentionally not reset or staged.
+  - `tests/unit/test_integration_demo_scenario.py` still expected the older
+    constellation summary without `orbital_velocity_km_s`. The backend summary
+    already emits that field and the frontend consumes it, so the test baseline
+    was updated.
+- Parallel investigation notes:
+  - Configuration entry points are `DemoControlPlane.handle_raw_message()`,
+    `RuntimeController.initialize()`, `merge_config_update()`, and
+    `ConfigPanel` initialization payload construction.
+  - KPI flatness is mainly caused by missing flow-level link occupancy and
+    release events; a follow-up network task should add deterministic
+    non-packet-level link pressure so latency, jitter, loss, throughput, and
+    resource curves vary with simulated load.
+- Known remaining issues:
+  - The frontend still sends a broad initialization payload. A follow-up should
+    make the payload sparse so hidden advanced fields from a detailed config
+    file are not overwritten by frontend defaults.
+  - The default launcher still starts from `configs/integration_demo.yaml`; a
+    future task should add an explicit user config path for detailed scenario
+    files instead of treating `configs/sees_control.yaml` as a template.
+- Recommended follow-up:
+  - Implement frontend sparse initialization payloads and a launcher option for
+    a user-selected detailed config file.
