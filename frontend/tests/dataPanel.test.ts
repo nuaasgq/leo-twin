@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildComputeResourcePool,
+  buildComputeResourcePoolModeNote,
   buildDataPanelConfiguredScale,
   buildDataPanelDisplaySummary,
   buildDataPanelNetworkFormulaInputs,
@@ -1154,6 +1155,9 @@ describe("buildComputeResourcePool", () => {
       utilizationMode: "SNAPSHOT_SCALAR_FP32_AVAILABLE_ONLY"
     });
     expect(pool.slices.map((slice) => slice.name)).toEqual(["已消耗 FP32", "可用 FP32"]);
+    expect(buildComputeResourcePoolModeNote(pool)).toBe(
+      "兼容模式：FP32 主容量来自旧标量；其他资源向量来自节点快照或默认值。"
+    );
   });
 
   it("prefers backend compute resource vector summary when available", () => {
@@ -1209,6 +1213,9 @@ describe("buildComputeResourcePool", () => {
         utilizationMode: "RESOURCE_VECTOR_ESTIMATED"
       }
     });
+    expect(buildComputeResourcePoolModeNote(pool)).toBe(
+      "后端资源向量：CPU FP32/FP64、GPU FP32/FP16、NPU INT8、内存、存储。"
+    );
   });
 });
 

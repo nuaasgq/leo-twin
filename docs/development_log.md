@@ -3774,3 +3774,36 @@ change.
 - Recommended follow-up:
   - Add browser screenshot checks for opaque globe plus visible country
     boundaries once the in-app browser connector is stable.
+
+## 2026-07-05 - Dashboard Compute Vector Wording v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: clarify standalone dashboard compute-resource wording so FP32 is
+  presented as the primary capacity metric, while FP64, GPU FP32/FP16, NPU
+  INT8, memory, and storage are explicitly shown as the resource vector. This
+  avoids implying that the product only models single-precision compute.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 24 files / 173 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - Existing backend and selected-satellite views already expose the resource
+    vector; the issue was mostly dashboard wording, so the change stayed
+    frontend-only.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The compute time-series chart still tracks FP32-equivalent primary
+    consumption. Separate FP64/GPU/NPU time-series can be added later if backend
+    publishes per-resource history.
+- Recommended follow-up:
+  - Add backend time-series samples for compute resource vector dimensions, then
+    render them as selectable dashboard series.

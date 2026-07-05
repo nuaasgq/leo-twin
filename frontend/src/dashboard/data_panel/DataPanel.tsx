@@ -112,6 +112,7 @@ export const DataPanel = memo(function DataPanel({
     snapshot,
     runtimeStatus.metrics_summary
   );
+  const computePoolModeNote = buildComputeResourcePoolModeNote(computePool);
   const topComputeNodes = buildTopComputeNodeRows(
     snapshot,
     runtimeStatus.satellite_kpi_slices_v1
@@ -303,8 +304,12 @@ export const DataPanel = memo(function DataPanel({
           <RouteConstraintTable rows={routeConstraints} />
         </section>
 
-        <section className="dashboard-section data-panel-chart" aria-label="算力消耗曲线">
-          <div className="section-title">FP32 算力消耗</div>
+        <section className="dashboard-section data-panel-chart" aria-label="算力资源消耗曲线">
+          <div className="section-title">算力资源消耗</div>
+          <div className="data-panel-source-note">
+            <span>主指标 FP32</span>
+            <small>{computePoolModeNote}</small>
+          </div>
           <div className="data-panel-chart-kpis compact">
             <KpiPanel
               label="已消耗"
@@ -313,7 +318,7 @@ export const DataPanel = memo(function DataPanel({
             <KpiPanel
               label="资源池"
               value={`${computePool.totalTflops.toFixed(1)} TFLOPS`}
-              detail={`单精度 FP32 / ${computePool.usedPercent.toFixed(1)}%`}
+              detail={`FP32 主容量 / ${computePool.usedPercent.toFixed(1)}%`}
             />
           </div>
           <div className="data-panel-chart-body compact">
@@ -336,7 +341,11 @@ export const DataPanel = memo(function DataPanel({
         </section>
 
         <section className="dashboard-section data-panel-chart" aria-label="算力资源池消耗饼图">
-          <div className="section-title">FP32 资源池</div>
+          <div className="section-title">算力资源向量池</div>
+          <div className="data-panel-source-note">
+            <span>饼图 FP32</span>
+            <small>下方同步展示 FP64、GPU FP32/FP16、NPU INT8、内存和存储。</small>
+          </div>
           <div className="data-panel-chart-kpis compact">
             <KpiPanel
               label="可用"
@@ -856,6 +865,13 @@ export function buildComputeResourcePool(
       }
     ]
   };
+}
+
+export function buildComputeResourcePoolModeNote(pool: ComputeResourcePool): string {
+  if (pool.vectorSummary.utilizationMode === "RESOURCE_VECTOR_ESTIMATED") {
+    return "后端资源向量：CPU FP32/FP64、GPU FP32/FP16、NPU INT8、内存、存储。";
+  }
+  return "兼容模式：FP32 主容量来自旧标量；其他资源向量来自节点快照或默认值。";
 }
 
 export function buildTopComputeNodeRows(
