@@ -3807,3 +3807,35 @@ change.
 - Recommended follow-up:
   - Add backend time-series samples for compute resource vector dimensions, then
     render them as selectable dashboard series.
+
+## 2026-07-05 - Coverage Beam Semantic Labels v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: expose backend coverage-beam semantics in the selected-satellite
+  local inset. The inset now shows beam pattern, coverage fidelity, and visual
+  footprint intersection policy in addition to footprint radius, beam length,
+  and bounded honeycomb beam count.
+- Changed files/modules:
+  - `frontend/src/3d/beam_renderer/beamEntities.ts`
+  - `frontend/src/3d/cesium/CesiumGlobe.tsx`
+  - `frontend/tests/satelliteVisuals.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- satelliteVisuals.test.ts`
+    - Result: passed, 24 files / 173 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - Existing coverage geometry was already bounded and deterministic. The gap
+    was missing product-facing labels in the selected-satellite view.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The coverage beam remains a deterministic visual footprint, not RF
+    propagation or an antenna-pattern simulation.
+- Recommended follow-up:
+  - Add a visible selected-satellite coverage legend explaining footprint,
+    honeycomb cells, and covered-user counting in one compact panel.

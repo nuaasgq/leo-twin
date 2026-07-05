@@ -679,6 +679,9 @@ function SatelliteInset({
         <span>{coverageSummary.footprintRadiusLabel}</span>
         <span>{coverageSummary.beamLengthLabel}</span>
         <span>{coverageSummary.beamCountLabel}</span>
+        <span>{coverageSummary.beamPatternLabel}</span>
+        <span>{coverageSummary.fidelityLabel}</span>
+        <span>{coverageSummary.intersectionPolicyLabel}</span>
         <span>{coverageSummary.modelLabel}</span>
         <span className="coverage-note">{coverageSummary.note}</span>
         <span>{coverageUserSummary.label}</span>

@@ -23,6 +23,9 @@ export interface CoverageBeamDisplaySummary {
   footprintRadiusLabel: string;
   beamLengthLabel: string;
   beamCountLabel: string;
+  beamPatternLabel: string;
+  fidelityLabel: string;
+  intersectionPolicyLabel: string;
   modelLabel: string;
   note: string;
 }
@@ -157,6 +160,11 @@ export function coverageBeamDisplaySummary(
     footprintRadiusLabel: `覆盖半径 ${formatKilometers(geometry.beamRadiusMeters)} km`,
     beamLengthLabel: `波束长度 ${formatKilometers(geometry.beamLengthMeters)} km`,
     beamCountLabel: `蜂窝波束 ${geometry.beamCellCount} 个`,
+    beamPatternLabel: `波束模式 ${formatBeamPattern(coverage?.beam_pattern)}`,
+    fidelityLabel: `覆盖保真 ${formatCoverageFidelityLevel(coverage?.fidelity_level)}`,
+    intersectionPolicyLabel: `判定策略 ${formatCoverageIntersectionPolicy(
+      coverage?.footprint_intersection_policy
+    )}`,
     modelLabel: coverage?.coverage_model ?? "DETERMINISTIC_GEOMETRIC_FOOTPRINT",
     note:
       coverage?.model_note ??
@@ -420,4 +428,25 @@ function formatKilometers(valueMeters: number): string {
     maximumFractionDigits: 1,
     minimumFractionDigits: 0
   });
+}
+
+function formatBeamPattern(value: string | undefined): string {
+  if (value === "CENTER_PLUS_HEX_RING_VISUAL_APPROXIMATION") {
+    return "中心 + 六邻区蜂窝";
+  }
+  return value ?? "中心 + 六邻区蜂窝";
+}
+
+function formatCoverageFidelityLevel(value: string | undefined): string {
+  if (value === "DISPLAY_APPROXIMATION") {
+    return "显示近似";
+  }
+  return value ?? "显示近似";
+}
+
+function formatCoverageIntersectionPolicy(value: string | undefined): string {
+  if (value === "VISUAL_GEOMETRIC_CONTAINMENT_ONLY") {
+    return "仅视觉几何包含";
+  }
+  return value ?? "仅视觉几何包含";
 }

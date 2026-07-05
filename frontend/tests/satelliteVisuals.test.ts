@@ -169,13 +169,19 @@ describe("selected satellite coverage beams", () => {
       footprintRadiusLabel: "覆盖半径 220 km",
       beamLengthLabel: "波束长度 700 km",
       beamCountLabel: "蜂窝波束 4 个",
+      beamPatternLabel: "波束模式 中心 + 六邻区蜂窝",
+      fidelityLabel: "覆盖保真 显示近似",
+      intersectionPolicyLabel: "判定策略 仅视觉几何包含",
       modelLabel: "DETERMINISTIC_GEOMETRIC_FOOTPRINT",
       note: "backend note"
     });
     expect(coverageBeamDisplaySummary(null)).toMatchObject({
       footprintRadiusLabel: "覆盖半径 160 km",
       beamLengthLabel: "波束长度 600 km",
-      beamCountLabel: "蜂窝波束 7 个"
+      beamCountLabel: "蜂窝波束 7 个",
+      beamPatternLabel: "波束模式 中心 + 六邻区蜂窝",
+      fidelityLabel: "覆盖保真 显示近似",
+      intersectionPolicyLabel: "判定策略 仅视觉几何包含"
     });
     expect(coverageBeamDisplaySummary(null).note).toContain("未进行 RF");
   });
