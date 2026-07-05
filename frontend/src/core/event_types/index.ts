@@ -960,6 +960,13 @@ export interface RuntimeNodeDetailCardV1 {
   entity_id: string;
   title: string;
   subtitle: string;
+  sections?: readonly RuntimeNodeDetailSectionV1[];
+  fields: readonly RuntimeNodeDetailFieldV1[];
+}
+
+export interface RuntimeNodeDetailSectionV1 {
+  section_id: string;
+  title: string;
   fields: readonly RuntimeNodeDetailFieldV1[];
 }
 

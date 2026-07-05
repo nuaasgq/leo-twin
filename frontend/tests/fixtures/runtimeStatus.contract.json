@@ -354,6 +354,30 @@
           "entity_id": "user-00001",
           "title": "用户 user-00001",
           "subtitle": "COMPUTE_SERVICE_ACTIVE",
+          "sections": [
+            {
+              "section_id": "compute_placement",
+              "title": "计算与队列",
+              "fields": [
+                {
+                  "label": "服务放置",
+                  "value": "节点 sat-00001 / PLACED / 瓶颈 cpu_gflops_fp32 / 候选 4/4",
+                  "tone": "resource"
+                }
+              ]
+            },
+            {
+              "section_id": "business_path",
+              "title": "业务链路",
+              "fields": [
+                {
+                  "label": "路径",
+                  "value": "user-00001 -> sat-00001 -> compute-00001",
+                  "tone": "normal"
+                }
+              ]
+            }
+          ],
           "fields": [
             {
               "label": "服务放置",
@@ -374,6 +398,30 @@
           "entity_id": "sat-00001",
           "title": "卫星 sat-00001",
           "subtitle": "BUSY / Satellite compute node",
+          "sections": [
+            {
+              "section_id": "compute_resources",
+              "title": "算力资源",
+              "fields": [
+                {
+                  "label": "负载",
+                  "value": "65%",
+                  "tone": "resource"
+                }
+              ]
+            },
+            {
+              "section_id": "network_state",
+              "title": "网络状态",
+              "fields": [
+                {
+                  "label": "网络",
+                  "value": "链路 4 / 路由 2",
+                  "tone": "normal"
+                }
+              ]
+            }
+          ],
           "fields": [
             {
               "label": "负载",

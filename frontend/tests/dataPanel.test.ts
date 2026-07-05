@@ -2601,6 +2601,15 @@ describe("detail inspectors", () => {
           entity_id: "user-0",
           title: "后端用户 user-0",
           subtitle: "COMPUTE_SERVICE_ACTIVE",
+          sections: [
+            {
+              section_id: "compute_placement",
+              title: "计算与队列",
+              fields: [
+                { label: "服务放置", value: "后端节点 sat-0", tone: "resource" }
+              ]
+            }
+          ],
           fields: [
             { label: "服务放置", value: "后端节点 sat-0", tone: "resource" },
             { label: "路径", value: "backend route path" }
@@ -2613,6 +2622,15 @@ describe("detail inspectors", () => {
           entity_id: "sat-0",
           title: "后端卫星 sat-0",
           subtitle: "COMPUTE_NODE",
+          sections: [
+            {
+              section_id: "compute_resources",
+              title: "算力资源",
+              fields: [
+                { label: "CPU FP32", value: "80 / 100 GFLOPS", tone: "resource" }
+              ]
+            }
+          ],
           fields: [
             { label: "CPU FP32", value: "80 / 100 GFLOPS", tone: "resource" },
             { label: "网络", value: "链路 4 / 路由 2", tone: "normal" }
@@ -2632,6 +2650,13 @@ describe("detail inspectors", () => {
     expect(buildUserBusinessRequestInspector(userRow, backendDetailSummary)).toMatchObject({
       title: "后端用户 user-0",
       subtitle: "COMPUTE_SERVICE_ACTIVE",
+      sections: [
+        {
+          sectionId: "compute_placement",
+          title: "计算与队列",
+          fields: [{ label: "服务放置", value: "后端节点 sat-0", tone: "resource" }]
+        }
+      ],
       fields: expect.arrayContaining([
         { label: "服务放置", value: "后端节点 sat-0", tone: "resource" },
         { label: "路径", value: "backend route path", tone: "normal" }
@@ -2640,6 +2665,13 @@ describe("detail inspectors", () => {
     expect(buildSatelliteResourceInspector(satelliteRow, backendDetailSummary)).toMatchObject({
       title: "后端卫星 sat-0",
       subtitle: "COMPUTE_NODE",
+      sections: [
+        {
+          sectionId: "compute_resources",
+          title: "算力资源",
+          fields: [{ label: "CPU FP32", value: "80 / 100 GFLOPS", tone: "resource" }]
+        }
+      ],
       fields: expect.arrayContaining([
         { label: "CPU FP32", value: "80 / 100 GFLOPS", tone: "resource" },
         { label: "网络", value: "链路 4 / 路由 2", tone: "normal" }
@@ -2687,6 +2719,27 @@ describe("detail inspectors", () => {
       emptyLabel: "当前窗口暂无选中卫星节点"
     });
     expect(drawerItems[1].fields).toEqual(satelliteInspector.fields);
+    expect(
+      buildDataPanelNodeDetailDrawerItems(
+        {
+          ...userInspector,
+          sections: [
+            {
+              sectionId: "business_path",
+              title: "业务链路",
+              fields: [{ label: "路径", value: userRow.pathLabel }]
+            }
+          ]
+        },
+        satelliteInspector
+      )[0].sections
+    ).toEqual([
+      {
+        sectionId: "business_path",
+        title: "业务链路",
+        fields: [{ label: "路径", value: userRow.pathLabel }]
+      }
+    ]);
   });
 
   it("returns empty inspector shells when no row is visible", () => {

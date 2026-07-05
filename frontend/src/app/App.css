@@ -2288,15 +2288,37 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
   font-size: 11px;
 }
 
-.data-panel-node-detail-drawer-fields {
+.data-panel-node-detail-drawer-sections {
   display: grid;
-  gap: 6px;
+  gap: 10px;
   max-height: 260px;
   min-width: 0;
   overflow: auto;
   scrollbar-gutter: stable;
-  margin: 0;
   padding-right: 2px;
+}
+
+.data-panel-node-detail-drawer-section {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  border: 1px solid #1c303b;
+  border-radius: 6px;
+  padding: 8px;
+  background: #081017;
+}
+
+.data-panel-node-detail-drawer-section-title {
+  color: var(--accent-cyan);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.data-panel-node-detail-drawer-fields {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
 }
 
 .data-panel-node-detail-drawer-field {

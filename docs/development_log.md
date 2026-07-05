@@ -8622,3 +8622,53 @@ change.
   - Add cursor navigation and search over `/runtime/details/nodes` directly
     from the drawer, then extend backend node cards with candidate and
     queue-history detail sections.
+
+## 2026-07-05 - Backend Node Detail Sections v1
+
+- Branch: `feature/T178-node-detail-sections-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add backend-owned semantic `sections` to user and satellite node
+  detail cards while keeping flat `fields` for backward compatibility. User
+  cards are grouped into identity, business path, and compute/queue placement
+  sections. Satellite cards are grouped into service/routing, compute
+  resources, and network state sections. The dashboard detail drawer now
+  renders sections when available and falls back to flat fields for older
+  runtime payloads. Event Kernel behavior, simulation models, route logic, and
+  packet-level semantics remain unchanged.
+- Changed files/modules:
+  - `src/leo_twin/services/runtime_observability.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/fixtures/runtimeStatus.contract.json`
+  - `frontend/tests/runtimeContractFixture.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `tests/unit/test_runtime_observability.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_runtime_observability.py -q`
+    - Result: passed, 2 tests.
+  - `python -m pytest tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer -q`
+    - Result: passed, 1 test.
+  - `python -m json.tool frontend/tests/fixtures/runtimeStatus.contract.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- dataPanel.test.ts runtimeContractFixture.test.ts`
+    - Result: passed, 25 files / 266 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Existing DataPanel chunk-size warning remains.
+- Problems encountered:
+  - None in implementation. Existing local runtime config drift remains
+    untouched and unstaged.
+- Known remaining issues:
+  - Sections group currently available summary fields only. They do not yet
+    contain full placement candidate lists, queue history samples, or per-node
+    resource timeline series.
+- Recommended follow-up:
+  - Add backend section payloads for placement candidates and queue/resource
+    timelines, then expose cursor navigation/search directly in the dashboard
+    drawer.

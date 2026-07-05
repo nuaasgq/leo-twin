@@ -275,6 +275,54 @@ def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> No
         "entity_id": "user-0",
         "title": "用户 user-0",
         "subtitle": "ACTIVE/AVAILABLE",
+        "sections": (
+            {
+                "section_id": "identity",
+                "title": "节点身份",
+                "fields": (
+                    {"label": "平台", "value": "Ground user terminal / cell-a", "tone": "normal"},
+                    {"label": "通信", "value": "1 / 1 条路由 / 下一跳 sat-0", "tone": "normal"},
+                ),
+            },
+            {
+                "section_id": "business_path",
+                "title": "业务链路",
+                "fields": (
+                    {"label": "目标卫星", "value": "sat-0", "tone": "normal"},
+                    {"label": "目标节点", "value": "compute-0", "tone": "normal"},
+                    {"label": "时延/容量", "value": "0.1 s / 80 Mbps", "tone": "normal"},
+                    {
+                        "label": "服务链路",
+                        "value": (
+                            "通信-计算服务 / Compute service active / task-0 / "
+                            "task-0/310ms/RUNNING"
+                        ),
+                        "tone": "normal",
+                    },
+                    {
+                        "label": "路径",
+                        "value": "user-0 -> sat-0 -> compute-0",
+                        "tone": "normal",
+                    },
+                ),
+            },
+            {
+                "section_id": "compute_placement",
+                "title": "计算与队列",
+                "fields": (
+                    {"label": "计算", "value": "1 条计算业务", "tone": "resource"},
+                    {"label": "网络队列", "value": "队列空", "tone": "normal"},
+                    {
+                        "label": "服务放置",
+                        "value": (
+                            "节点 sat-0 / QUEUED / 策略 MIN_ESTIMATED_FINISH_TIME / "
+                            "瓶颈 gpu_tflops_fp32 / 候选 2/3"
+                        ),
+                        "tone": "resource",
+                    },
+                ),
+            },
+        ),
         "fields": (
             {"label": "平台", "value": "Ground user terminal / cell-a", "tone": "normal"},
             {"label": "通信", "value": "1 / 1 条路由 / 下一跳 sat-0", "tone": "normal"},
@@ -317,6 +365,11 @@ def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> No
         "value": "链路 2 / 接入 1 / 星间 1 / 路由 1/2 / 排队 1 / 时延 0.045 s / 损耗 2%",
         "tone": "normal",
     }
+    assert [section["section_id"] for section in node_detail_summary["satellites"][0]["sections"]] == [
+        "service_routing",
+        "compute_resources",
+        "network_state",
+    ]
     node_page = build_runtime_node_detail_page(
         snapshot,
         service_latency_history=service_history,

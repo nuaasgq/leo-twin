@@ -123,6 +123,17 @@ describe("runtime status contract fixture", () => {
       entity_id: "user-00001",
       title: "用户 user-00001"
     });
+    expect(status.node_detail_summary_v1?.users[0].sections?.[0]).toMatchObject({
+      section_id: "compute_placement",
+      title: "计算与队列",
+      fields: [
+        {
+          label: "服务放置",
+          value: "节点 sat-00001 / PLACED / 瓶颈 cpu_gflops_fp32 / 候选 4/4",
+          tone: "resource"
+        }
+      ]
+    });
     expect(status.node_detail_summary_v1?.users[0].fields).toEqual([
       {
         label: "服务放置",
@@ -140,6 +151,9 @@ describe("runtime status contract fixture", () => {
       value: "65%",
       tone: "resource"
     });
+    expect(status.node_detail_summary_v1?.satellites[0].sections?.[1].title).toBe(
+      "网络状态"
+    );
     expect(status.satellite_kpi_slices_v1?.slices[0]).toMatchObject({
       satellite_id: "sat-00001",
       active_link_count: 4,

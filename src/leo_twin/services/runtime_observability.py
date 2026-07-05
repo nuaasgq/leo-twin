@@ -431,50 +431,194 @@ def _user_detail_card(item: Mapping[str, Any]) -> dict[str, object]:
     queue_reason = _str(item.get("network_queue_reason_label")) or _str(
         item.get("network_queue_reason")
     )
+    platform_field = _detail_field(
+        "平台",
+        _join_non_empty(
+            _str(item.get("platform_type_label"))
+            or _str(item.get("platform_type")),
+            cell_id,
+            separator=" / ",
+        ),
+    )
+    communication_field = _detail_field("通信", communication)
+    compute_field = _detail_field(
+        "计算",
+        f"{compute_service_count} 条计算业务"
+        if compute_service_count > 0
+        else "无计算业务",
+        tone="resource",
+    )
+    queue_field = _detail_field(
+        "网络队列",
+        f"{queue_count} 条 / {queue_reason}" if queue_count > 0 else "队列空",
+        tone="warning" if queue_count > 0 else "normal",
+    )
+    target_satellite_field = _detail_field(
+        "目标卫星",
+        _str(item.get("selected_satellite_id")),
+    )
+    target_node_field = _detail_field("目标节点", _str(item.get("destination_id")))
+    placement_field = _detail_field(
+        "服务放置",
+        _user_placement_label(item),
+        tone="resource",
+    )
+    latency_capacity_field = _detail_field(
+        "时延/容量",
+        _user_latency_capacity_label(item),
+    )
+    service_link_field = _detail_field("服务链路", _user_service_label(item))
+    path_field = _detail_field(
+        "路径",
+        _str(item.get("route_path_label"))
+        or _route_path_label(_string_sequence(item.get("path"))),
+    )
+    fields = (
+        platform_field,
+        communication_field,
+        compute_field,
+        queue_field,
+        target_satellite_field,
+        target_node_field,
+        placement_field,
+        latency_capacity_field,
+        service_link_field,
+        path_field,
+    )
     return {
         "entity_type": "USER",
         "entity_id": user_id,
         "title": f"用户 {user_id}",
         "subtitle": _str(item.get("status")) or "IDLE",
-        "fields": (
-            _detail_field(
-                "平台",
-                _join_non_empty(
-                    _str(item.get("platform_type_label"))
-                    or _str(item.get("platform_type")),
-                    cell_id,
-                    separator=" / ",
+        "sections": (
+            _detail_section("identity", "节点身份", (platform_field, communication_field)),
+            _detail_section(
+                "business_path",
+                "业务链路",
+                (
+                    target_satellite_field,
+                    target_node_field,
+                    latency_capacity_field,
+                    service_link_field,
+                    path_field,
                 ),
             ),
-            _detail_field("通信", communication),
-            _detail_field(
-                "计算",
-                f"{compute_service_count} 条计算业务"
-                if compute_service_count > 0
-                else "无计算业务",
-                tone="resource",
-            ),
-            _detail_field(
-                "网络队列",
-                f"{queue_count} 条 / {queue_reason}" if queue_count > 0 else "队列空",
-                tone="warning" if queue_count > 0 else "normal",
-            ),
-            _detail_field("目标卫星", _str(item.get("selected_satellite_id"))),
-            _detail_field("目标节点", _str(item.get("destination_id"))),
-            _detail_field("服务放置", _user_placement_label(item), tone="resource"),
-            _detail_field("时延/容量", _user_latency_capacity_label(item)),
-            _detail_field("服务链路", _user_service_label(item)),
-            _detail_field(
-                "路径",
-                _str(item.get("route_path_label"))
-                or _route_path_label(_string_sequence(item.get("path"))),
+            _detail_section(
+                "compute_placement",
+                "计算与队列",
+                (compute_field, queue_field, placement_field),
             ),
         ),
+        "fields": fields,
     }
 
 
 def _satellite_detail_card(item: Mapping[str, Any]) -> dict[str, object]:
     satellite_id = _str(item.get("satellite_id"))
+    load_field = _detail_field(
+        "负载",
+        _ratio_percent_label(_float(item.get("compute_load_ratio"))),
+        tone="resource",
+    )
+    service_object_field = _detail_field(
+        "服务对象",
+        _compact_entity_list(
+            _string_sequence(item.get("service_user_ids")),
+            _count(item.get("service_user_count")),
+            "用户",
+        ),
+    )
+    next_hop_field = _detail_field(
+        "下一跳",
+        _compact_entity_list(
+            _string_sequence(item.get("next_hop_ids")),
+            _count(item.get("next_hop_count")),
+            "跳",
+        ),
+    )
+    cpu_fp32_field = _detail_field(
+        "CPU FP32",
+        _resource_usage_label(
+            _float(item.get("compute_used_gflops_fp32")),
+            _float(item.get("compute_capacity_gflops_fp32")),
+            "GFLOPS",
+        ),
+        tone="resource",
+    )
+    cpu_fp64_field = _detail_field(
+        "CPU FP64",
+        _resource_usage_label(
+            _float(item.get("compute_used_gflops_fp64")),
+            _float(item.get("compute_capacity_gflops_fp64")),
+            "GFLOPS",
+        ),
+        tone="resource",
+    )
+    gpu_field = _detail_field(
+        "GPU",
+        (
+            "FP32 "
+            + _resource_usage_label(
+                _float(item.get("compute_used_gpu_tflops_fp32")),
+                _float(item.get("compute_capacity_gpu_tflops_fp32")),
+                "TFLOPS",
+            )
+            + " / FP16 "
+            + _resource_usage_label(
+                _float(item.get("compute_used_gpu_tflops_fp16")),
+                _float(item.get("compute_capacity_gpu_tflops_fp16")),
+                "TFLOPS",
+            )
+        ),
+        tone="resource",
+    )
+    npu_field = _detail_field(
+        "NPU",
+        _resource_usage_label(
+            _float(item.get("compute_used_npu_tops_int8")),
+            _float(item.get("compute_capacity_npu_tops_int8")),
+            "TOPS",
+        ),
+        tone="resource",
+    )
+    memory_storage_field = _detail_field(
+        "内存/存储",
+        (
+            "内存 "
+            + _resource_usage_label(
+                _float(item.get("compute_used_memory_gb")),
+                _float(item.get("compute_capacity_memory_gb")),
+                "GB",
+            )
+            + " / 存储 "
+            + _resource_usage_label(
+                _float(item.get("compute_used_storage_gb")),
+                _float(item.get("compute_capacity_storage_gb")),
+                "GB",
+            )
+        ),
+        tone="resource",
+    )
+    task_field = _detail_field(
+        "任务",
+        (
+            f"{_count(item.get('running_task_count'))} 运行 / "
+            f"{_count(item.get('finished_task_count'))} 完成"
+        ),
+    )
+    network_field = _detail_field("网络", _satellite_network_label(item))
+    fields = (
+        load_field,
+        service_object_field,
+        next_hop_field,
+        cpu_fp32_field,
+        cpu_fp64_field,
+        gpu_field,
+        npu_field,
+        memory_storage_field,
+        task_field,
+        network_field,
+    )
     return {
         "entity_type": "SATELLITE",
         "entity_id": satellite_id,
@@ -484,100 +628,27 @@ def _satellite_detail_card(item: Mapping[str, Any]) -> dict[str, object]:
             _str(item.get("resource_role_label")),
             separator=" / ",
         ),
-        "fields": (
-            _detail_field(
-                "负载",
-                _ratio_percent_label(_float(item.get("compute_load_ratio"))),
-                tone="resource",
+        "sections": (
+            _detail_section(
+                "service_routing",
+                "服务与路由",
+                (service_object_field, next_hop_field, task_field),
             ),
-            _detail_field(
-                "服务对象",
-                _compact_entity_list(
-                    _string_sequence(item.get("service_user_ids")),
-                    _count(item.get("service_user_count")),
-                    "用户",
-                ),
-            ),
-            _detail_field(
-                "下一跳",
-                _compact_entity_list(
-                    _string_sequence(item.get("next_hop_ids")),
-                    _count(item.get("next_hop_count")),
-                    "跳",
-                ),
-            ),
-            _detail_field(
-                "CPU FP32",
-                _resource_usage_label(
-                    _float(item.get("compute_used_gflops_fp32")),
-                    _float(item.get("compute_capacity_gflops_fp32")),
-                    "GFLOPS",
-                ),
-                tone="resource",
-            ),
-            _detail_field(
-                "CPU FP64",
-                _resource_usage_label(
-                    _float(item.get("compute_used_gflops_fp64")),
-                    _float(item.get("compute_capacity_gflops_fp64")),
-                    "GFLOPS",
-                ),
-                tone="resource",
-            ),
-            _detail_field(
-                "GPU",
+            _detail_section(
+                "compute_resources",
+                "算力资源",
                 (
-                    "FP32 "
-                    + _resource_usage_label(
-                        _float(item.get("compute_used_gpu_tflops_fp32")),
-                        _float(item.get("compute_capacity_gpu_tflops_fp32")),
-                        "TFLOPS",
-                    )
-                    + " / FP16 "
-                    + _resource_usage_label(
-                        _float(item.get("compute_used_gpu_tflops_fp16")),
-                        _float(item.get("compute_capacity_gpu_tflops_fp16")),
-                        "TFLOPS",
-                    )
-                ),
-                tone="resource",
-            ),
-            _detail_field(
-                "NPU",
-                _resource_usage_label(
-                    _float(item.get("compute_used_npu_tops_int8")),
-                    _float(item.get("compute_capacity_npu_tops_int8")),
-                    "TOPS",
-                ),
-                tone="resource",
-            ),
-            _detail_field(
-                "内存/存储",
-                (
-                    "内存 "
-                    + _resource_usage_label(
-                        _float(item.get("compute_used_memory_gb")),
-                        _float(item.get("compute_capacity_memory_gb")),
-                        "GB",
-                    )
-                    + " / 存储 "
-                    + _resource_usage_label(
-                        _float(item.get("compute_used_storage_gb")),
-                        _float(item.get("compute_capacity_storage_gb")),
-                        "GB",
-                    )
-                ),
-                tone="resource",
-            ),
-            _detail_field(
-                "任务",
-                (
-                    f"{_count(item.get('running_task_count'))} 运行 / "
-                    f"{_count(item.get('finished_task_count'))} 完成"
+                    load_field,
+                    cpu_fp32_field,
+                    cpu_fp64_field,
+                    gpu_field,
+                    npu_field,
+                    memory_storage_field,
                 ),
             ),
-            _detail_field("网络", _satellite_network_label(item)),
+            _detail_section("network_state", "网络状态", (network_field,)),
         ),
+        "fields": fields,
     }
 
 
@@ -588,6 +659,18 @@ def _detail_field(label: str, value: object, *, tone: str = "normal") -> dict[st
         "tone": tone,
     }
     return field
+
+
+def _detail_section(
+    section_id: str,
+    title: str,
+    fields: tuple[dict[str, str], ...],
+) -> dict[str, object]:
+    return {
+        "section_id": section_id,
+        "title": title,
+        "fields": fields,
+    }
 
 
 def _detail_value(value: object) -> str:

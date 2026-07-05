@@ -1150,19 +1150,34 @@ function DetailInspectorDrawer({
             {item.fields.length === 0 ? (
               <div className="data-panel-node-detail-drawer-empty">{item.emptyLabel}</div>
             ) : (
-              <dl className="data-panel-node-detail-drawer-fields">
-                {item.fields.map((field) => (
-                  <div
-                    className={`data-panel-node-detail-drawer-field ${
-                      field.tone ?? "normal"
-                    }`}
-                    key={field.label}
+              <div className="data-panel-node-detail-drawer-sections">
+                {(item.sections.length > 0
+                  ? item.sections
+                  : [{ sectionId: "fields", title: "节点详情", fields: item.fields }]
+                ).map((section) => (
+                  <section
+                    className="data-panel-node-detail-drawer-section"
+                    key={section.sectionId}
                   >
-                    <dt>{field.label}</dt>
-                    <dd title={field.value}>{field.value}</dd>
-                  </div>
+                    <div className="data-panel-node-detail-drawer-section-title">
+                      {section.title}
+                    </div>
+                    <dl className="data-panel-node-detail-drawer-fields">
+                      {section.fields.map((field) => (
+                        <div
+                          className={`data-panel-node-detail-drawer-field ${
+                            field.tone ?? "normal"
+                          }`}
+                          key={`${section.sectionId}:${field.label}`}
+                        >
+                          <dt>{field.label}</dt>
+                          <dd title={field.value}>{field.value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </section>
                 ))}
-              </dl>
+              </div>
             )}
           </div>
         ))}
@@ -1704,6 +1719,7 @@ export interface DataPanelDetailScopeNote {
 export interface DataPanelDetailInspector {
   title: string;
   subtitle: string;
+  sections?: readonly DataPanelNodeDetailSection[];
   fields: readonly DataPanelDetailInspectorField[];
 }
 
@@ -1718,6 +1734,13 @@ export interface DataPanelNodeDetailDrawerItem {
   title: string;
   subtitle: string;
   emptyLabel: string;
+  sections: readonly DataPanelNodeDetailSection[];
+  fields: readonly DataPanelDetailInspectorField[];
+}
+
+export interface DataPanelNodeDetailSection {
+  sectionId: string;
+  title: string;
   fields: readonly DataPanelDetailInspectorField[];
 }
 
@@ -2815,6 +2838,7 @@ export function buildDataPanelNodeDetailDrawerItems(
       title: user.title,
       subtitle: user.subtitle,
       emptyLabel: "当前窗口暂无选中用户节点",
+      sections: user.sections ?? [],
       fields: user.fields
     },
     {
@@ -2822,6 +2846,7 @@ export function buildDataPanelNodeDetailDrawerItems(
       title: satellite.title,
       subtitle: satellite.subtitle,
       emptyLabel: "当前窗口暂无选中卫星节点",
+      sections: satellite.sections ?? [],
       fields: satellite.fields
     }
   ];
@@ -2833,6 +2858,15 @@ function buildRuntimeNodeDetailInspector(
   return {
     title: card.title,
     subtitle: card.subtitle,
+    sections: (card.sections ?? []).map((section) => ({
+      sectionId: section.section_id,
+      title: section.title,
+      fields: section.fields.map((field) => ({
+        label: field.label,
+        value: field.value,
+        tone: runtimeNodeDetailFieldTone(field.tone)
+      }))
+    })),
     fields: card.fields.map((field) => ({
       label: field.label,
       value: field.value,
