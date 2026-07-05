@@ -5096,3 +5096,36 @@ change.
 - Recommended follow-up:
   - Add an isolated acceptance runner that launches a disposable backend using
     the selected YAML before running strict expected-value checks.
+
+## 2026-07-05 - Runtime Health Compute Count Expectation v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: extend runtime health and aggregate acceptance scripts with
+  `ExpectedComputeNodeCount`, and read `scenario.compute_nodes` from acceptance
+  YAML alongside satellite/user counts.
+- Changed files/modules:
+  - `scripts/smoke_runtime_health.ps1`
+  - `scripts/verify_product_acceptance.ps1`
+  - `README.md`
+  - `docs/integration_demo.md`
+  - `docs/product_acceptance_scenarios.md`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\smoke_runtime_health.ps1 -JsonSummary -ExpectedSatelliteCount 120 -ExpectedUserCount 100 -ExpectedComputeNodeCount 120 -ExpectedTrafficClass COMPUTE_SERVICE`
+    - Result: passed.
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_product_acceptance.ps1 -SkipBuild -AcceptanceConfig configs\acceptance\small_demo_72sat.yaml -ExpectedSatelliteCount 120 -ExpectedUserCount 100 -ExpectedComputeNodeCount 120 -ExpectedTrafficClass COMPUTE_SERVICE`
+    - Result: passed; backend targeted tests 2 passed, visual assets 4
+      verified, frontend test files 25 / tests 193 passed, and runtime smoke
+      passed with expected compute node count.
+- Problems encountered:
+  - None. The new expected value is opt-in and read-only.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - Acceptance YAML values are only used as expected smoke values; the running
+    backend is not automatically relaunched with that config.
+- Recommended follow-up:
+  - Add disposable acceptance launch mode before using config-derived expected
+    values as strict defaults in CI.

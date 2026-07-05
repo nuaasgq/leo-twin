@@ -451,6 +451,10 @@ The following issue-sized slices have now been delivered on
   - Aggregate product acceptance verification can now read minimal expected
     satellite count, user count, and traffic class values from acceptance YAML,
     while still allowing explicit CLI overrides.
+- `test(runtime): add compute count expectation`
+  - Maps to suggestions 51, 76-82, and 91-95.
+  - Runtime health and aggregate acceptance scripts now support expected compute
+    node count checks and read `scenario.compute_nodes` from acceptance YAML.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected

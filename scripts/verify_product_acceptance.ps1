@@ -5,6 +5,7 @@ param(
     [string]$AcceptanceConfig = "",
     [int]$ExpectedSatelliteCount = -1,
     [int]$ExpectedUserCount = -1,
+    [int]$ExpectedComputeNodeCount = -1,
     [string]$ExpectedTrafficClass = ""
 )
 
@@ -56,6 +57,7 @@ traffic_class = 'COMPUTE_SERVICE' if application_protocol == 'TASK_OFFLOAD_FLOW'
 print(json.dumps({
     'satellite_count': int(scenario.get('satellite_count', -1)),
     'user_count': int(scenario.get('user_count', -1)),
+    'compute_node_count': int(scenario.get('compute_nodes', -1)),
     'traffic_class': traffic_class,
 }, sort_keys=True))
 '@
@@ -78,6 +80,9 @@ try {
         }
         if ($ExpectedUserCount -lt 0) {
             $ExpectedUserCount = [int]$expectations.user_count
+        }
+        if ($ExpectedComputeNodeCount -lt 0) {
+            $ExpectedComputeNodeCount = [int]$expectations.compute_node_count
         }
         if (-not $ExpectedTrafficClass -and $expectations.traffic_class) {
             $ExpectedTrafficClass = [string]$expectations.traffic_class
@@ -118,6 +123,9 @@ try {
         }
         if ($ExpectedUserCount -ge 0) {
             $smokeArgs += @("-ExpectedUserCount", "$ExpectedUserCount")
+        }
+        if ($ExpectedComputeNodeCount -ge 0) {
+            $smokeArgs += @("-ExpectedComputeNodeCount", "$ExpectedComputeNodeCount")
         }
         if ($ExpectedTrafficClass) {
             $smokeArgs += @("-ExpectedTrafficClass", $ExpectedTrafficClass)

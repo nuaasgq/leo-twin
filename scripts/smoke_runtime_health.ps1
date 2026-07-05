@@ -5,6 +5,7 @@ param(
     [switch]$JsonSummary,
     [int]$ExpectedSatelliteCount = -1,
     [int]$ExpectedUserCount = -1,
+    [int]$ExpectedComputeNodeCount = -1,
     [string]$ExpectedTrafficClass = ""
 )
 
@@ -84,6 +85,7 @@ $dashboardCheck = Assert-HttpOk -Name "Frontend dashboard" -Url $DashboardUrl
 
 $satelliteCount = [int]$backendSummary.derived_constellation_summary.satellite_count
 $userCount = [int]$runtimeStatus.generated_config.user_count
+$computeNodeCount = [int]$backendSummary.compute_resource_summary.compute_node_count
 $trafficClass = [string]$backendSummary.traffic_demand_summary.traffic_class
 
 if ($ExpectedSatelliteCount -ge 0 -and $satelliteCount -ne $ExpectedSatelliteCount) {
@@ -91,6 +93,9 @@ if ($ExpectedSatelliteCount -ge 0 -and $satelliteCount -ne $ExpectedSatelliteCou
 }
 if ($ExpectedUserCount -ge 0 -and $userCount -ne $ExpectedUserCount) {
     throw "Expected user_count=$ExpectedUserCount, got $userCount."
+}
+if ($ExpectedComputeNodeCount -ge 0 -and $computeNodeCount -ne $ExpectedComputeNodeCount) {
+    throw "Expected compute_node_count=$ExpectedComputeNodeCount, got $computeNodeCount."
 }
 if ($ExpectedTrafficClass -and $trafficClass -ne $ExpectedTrafficClass) {
     throw "Expected traffic_class=$ExpectedTrafficClass, got $trafficClass."
@@ -107,7 +112,7 @@ $summary = [ordered]@{
     user_count = $userCount
     constellation_profile = $backendSummary.derived_constellation_summary.profile
     traffic_class = $trafficClass
-    compute_node_count = $backendSummary.compute_resource_summary.compute_node_count
+    compute_node_count = $computeNodeCount
     console_url = $FrontendUrl
     console_ms = $consoleCheck.ElapsedMs
     dashboard_url = $DashboardUrl

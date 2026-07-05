@@ -54,7 +54,7 @@ After the launcher reports both services healthy, run a read-only smoke check:
 ```powershell
 .\scripts\smoke_runtime_health.ps1
 .\scripts\smoke_runtime_health.ps1 -JsonSummary
-.\scripts\smoke_runtime_health.ps1 -ExpectedSatelliteCount 120 -ExpectedUserCount 100 -ExpectedTrafficClass COMPUTE_SERVICE
+.\scripts\smoke_runtime_health.ps1 -ExpectedSatelliteCount 120 -ExpectedUserCount 100 -ExpectedComputeNodeCount 120 -ExpectedTrafficClass COMPUTE_SERVICE
 ```
 
 ## Backend
