@@ -159,6 +159,9 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
             if path == "/runtime/status":
                 self._send_json(control_plane.runtime_status())
                 return
+            if path in {"/runtime/version", "/version"}:
+                self._send_json(control_plane.version_info())
+                return
             if path == "/runtime/export":
                 try:
                     self._send_json(control_plane.export_runtime_package())

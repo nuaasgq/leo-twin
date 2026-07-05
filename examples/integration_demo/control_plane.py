@@ -71,6 +71,7 @@ from leo_twin.services.scale_fidelity import (
     ScaleFidelityConfig,
     build_scale_fidelity_summary,
 )
+from leo_twin.services.build_info import build_version_info_v1
 
 from examples.integration_demo.config import (
     DemoConfig,
@@ -379,6 +380,12 @@ class DemoControlPlane:
             "type": "RUNTIME_DETAIL_PAGE",
             "kind": "nodes",
             "summary": summary,
+        }
+
+    def version_info(self) -> dict[str, Any]:
+        return {
+            "type": "VERSION_INFO",
+            "summary": build_version_info_v1(),
         }
 
     def export_runtime_package(

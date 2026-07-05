@@ -279,6 +279,10 @@ Tasks:
 
 - V2-080: Add version and build info endpoint.
   - Scope: git commit, branch, frontend build, backend version.
+  - Status: T221 adds `leo_twin.version_info.v1` and exposes it through
+    `DemoControlPlane.version_info()`, `GET /runtime/version`, and `GET /version`.
+    The payload reports backend/frontend versions, git commit/branch/dirty
+    state, runtime diagnostics, endpoint list, and hard product constraints.
 - V2-081: Add launcher health check v2.
   - Scope: port status, backend/frontend readiness, config path, log paths.
 - V2-082: Add operator diagnostics bundle.

@@ -5,6 +5,45 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Version Build Info Endpoint v1
+
+- Branch: `feature/T221-version-build-info-endpoint-v1`
+- Commit: pending in this commit
+- Scope: advance V2-080 by adding a backend-owned version/build information
+  payload and exposing it through `DemoControlPlane.version_info()`,
+  `GET /runtime/version`, and `GET /version`. The payload reports backend and
+  frontend versions, git commit/branch/dirty state, Python runtime diagnostics,
+  diagnostic endpoint list, and hard project constraints.
+- Changed files/modules:
+  - `src/leo_twin/services/build_info.py`
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `tests/unit/test_build_info_v1.py`
+  - `tests/integration/test_version_info_endpoint.py`
+  - `docs/version_info_endpoint_v1.md`
+  - `docs/integration_demo.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src/leo_twin/services/build_info.py examples/integration_demo/control_plane.py examples/integration_demo/server.py`
+    - Result: passed.
+  - `python -m pytest tests/unit/test_build_info_v1.py tests/integration/test_version_info_endpoint.py -q`
+    - Result: passed, 3 tests.
+  - `python -m pytest tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer -q`
+    - Result: passed, 1 test.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - The working tree intentionally still contains local runtime/generated config
+    changes, so the live endpoint may report `git.dirty=true` in this local
+    environment. Tests pass explicit git values where deterministic output is
+    required.
+  - This endpoint is read-only and does not mutate runtime state.
+- Known remaining issues / follow-up:
+  - V2-081 should add launcher health checks for backend/frontend readiness,
+    ports, config path, and log paths.
+  - Future packaged builds can replace `0.0.0` versions with release metadata.
+
 ## 2026-07-06 - Result Package Export Contract v1
 
 - Branch: `feature/T220-result-package-export-v1`

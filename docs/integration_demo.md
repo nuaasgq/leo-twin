@@ -88,6 +88,7 @@ Endpoints:
 - `GET /metrics/snapshot`
 - `GET /runtime/status`
 - `GET /runtime/export`
+- `GET /runtime/version`
 - `GET /runtime/export/catalog`
 - `GET /runtime/export/history`
 - `GET /runtime/export/archive`
