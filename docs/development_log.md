@@ -5,6 +5,58 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Dashboard User Config Contract v1
+
+- Branch: `feature/T194-dashboard-user-config-contract-v1`
+- Commit: pending in this commit
+- Scope: surface the backend-owned user configuration contract API in the
+  standalone dashboard. The frontend now loads
+  `/scenario/user-config/schema`, `/scenario/user-config/templates`, and
+  `/scenario/user-config/export`, displays schema field counts, key-field
+  counts, template count, current config hash, validation status, and exposes
+  read-only JSON links/download for schema, templates, and current effective
+  config export. This task is read-only from the UI perspective: it does not
+  introduce config upload, apply user files, mutate runtime config, modify
+  Event Kernel behavior, or change simulation/model logic.
+- Changed files/modules:
+  - `frontend/src/app/api.ts`
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/integration_demo.md`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- api.test.ts dataPanel.test.ts appSurface.test.ts`
+    - Result: passed, 25 files / 292 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing `DataPanel` chunk-size
+      warning after minification.
+  - `git diff --check`
+    - Result: passed. Git still reported the pre-existing CRLF warning for
+      local runtime/config drift in `configs/generated_full_system_demo.json`
+      and `configs/sees_control.yaml`.
+- Problems encountered:
+  - The dashboard already had backend-derived configuration summaries in
+    generated config, but those were indirect. This task uses the direct
+    read-only contract endpoints added by T193, keeping backend semantics as
+    the source of truth.
+  - The working tree still contains unrelated local runtime/config drift in
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`;
+    these files were intentionally left unstaged and unchanged by this task.
+- Known remaining issues / follow-up:
+  - Users can inspect and download the current full config, but there is still
+    no guarded upload/validate/apply workflow for user-provided YAML/JSON.
+  - The dashboard only shows a compact contract summary; a later task should
+    add an expandable field browser grouped by schema section.
+
 ## 2026-07-06 - User Config Contract API v1
 
 - Branch: `feature/T193-user-config-contract-api-v1`

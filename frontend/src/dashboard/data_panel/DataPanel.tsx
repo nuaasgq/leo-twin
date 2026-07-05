@@ -38,7 +38,10 @@ import {
   RuntimeStatusPayload,
   RuntimeUserRequestHistoryV1,
   RuntimeUserRequestItemV1,
-  RuntimeUserRequestSummaryV1
+  RuntimeUserRequestSummaryV1,
+  UserConfigurationExportV1,
+  UserConfigurationSchemaV2,
+  UserConfigurationTemplateCatalogV1
 } from "../../core/event_types";
 import {
   runtimeExportArchiveHref,
@@ -46,7 +49,10 @@ import {
   runtimeExportPackageCompareHref,
   runtimeExportPackageManifestHref,
   runtimeExportPackageRecordHref,
-  runtimeExportRestorePreflightHref
+  runtimeExportRestorePreflightHref,
+  userConfigurationExportHref,
+  userConfigurationSchemaHref,
+  userConfigurationTemplatesHref
 } from "../../app/api";
 import { runtimeSpeedFactorLabel } from "../../runtime_display";
 import { WorldSnapshot } from "../../state/snapshot_engine";
@@ -112,6 +118,11 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportRestoreCommandPendingPackageId,
   runtimeExportRestoreCommandError,
   runtimeExportRestoreResult,
+  userConfigurationSchema,
+  userConfigurationTemplates,
+  userConfigurationExport,
+  userConfigurationContractLoading,
+  userConfigurationContractError,
   onRuntimeExportCompareSelect,
   onRuntimeExportRestore,
   displaySimTime,
@@ -133,6 +144,11 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportRestoreCommandPendingPackageId?: string | null;
   runtimeExportRestoreCommandError?: string | null;
   runtimeExportRestoreResult?: RuntimeExportRestoreCommandResultV1 | null;
+  userConfigurationSchema?: UserConfigurationSchemaV2 | null;
+  userConfigurationTemplates?: UserConfigurationTemplateCatalogV1 | null;
+  userConfigurationExport?: UserConfigurationExportV1 | null;
+  userConfigurationContractLoading?: boolean;
+  userConfigurationContractError?: string | null;
   onRuntimeExportCompareSelect?: (packageId: string) => void;
   onRuntimeExportRestore?: (packageId: string) => void;
   displaySimTime: number;
@@ -173,6 +189,13 @@ export const DataPanel = memo(function DataPanel({
   );
   const exportHistoryDisplay = buildDataPanelExportHistoryDisplay(
     runtimeStatus.runtime_export_history_v1
+  );
+  const userConfigurationContractDisplay = buildDataPanelUserConfigurationContractDisplay(
+    userConfigurationSchema,
+    userConfigurationTemplates,
+    userConfigurationExport,
+    userConfigurationContractLoading,
+    userConfigurationContractError
   );
   const exportCatalogDisplay = buildDataPanelExportCatalogDisplay(runtimeExportCatalog);
   const exportCompareDisplay = buildDataPanelExportCompareDisplay(runtimeExportCompare);
@@ -416,6 +439,40 @@ export const DataPanel = memo(function DataPanel({
           <span>{summary.eventCount} 个离散事件</span>
         </div>
       </div>
+
+      {userConfigurationContractDisplay ? (
+        <section
+          className="dashboard-section data-panel-config-contract"
+          aria-label="用户配置契约"
+        >
+          <div className="section-title">用户配置契约</div>
+          <div className="data-panel-source-note">
+            <span>{userConfigurationContractDisplay.sourceLabel}</span>
+            <small>{userConfigurationContractDisplay.summaryLabel}</small>
+          </div>
+          <div
+            className={`data-panel-export-compare ${userConfigurationContractDisplay.tone}`}
+          >
+            <div>
+              <span>配置 schema v2</span>
+              <strong>{userConfigurationContractDisplay.statusLabel}</strong>
+              <small>{userConfigurationContractDisplay.detailLabel}</small>
+            </div>
+            <div className="data-panel-export-compare-meta">
+              {userConfigurationContractDisplay.metaLabels.map((label) => (
+                <span key={label}>{label}</span>
+              ))}
+            </div>
+            <div className="data-panel-export-catalog-actions">
+              <a href={userConfigurationContractDisplay.schemaHref}>schema</a>
+              <a href={userConfigurationContractDisplay.templatesHref}>templates</a>
+              <a href={userConfigurationContractDisplay.exportHref} download>
+                export
+              </a>
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       {exportCatalogDisplay ? (
         <section className="dashboard-section data-panel-export-catalog" aria-label="复盘包目录">
@@ -4478,6 +4535,83 @@ export function buildDataPanelReproducibilityDisplay(
   return {
     primaryLabel: `${manifest.session_id} / ${shortHash}`,
     secondaryLabel: `${manifest.artifact_policy} / ${artifactCount} artifacts`
+  };
+}
+
+export interface DataPanelUserConfigurationContractDisplay {
+  tone: "match" | "pending" | "error";
+  sourceLabel: string;
+  summaryLabel: string;
+  statusLabel: string;
+  detailLabel: string;
+  metaLabels: readonly string[];
+  schemaHref: string;
+  templatesHref: string;
+  exportHref: string;
+}
+
+export function buildDataPanelUserConfigurationContractDisplay(
+  schema: UserConfigurationSchemaV2 | null | undefined,
+  templates: UserConfigurationTemplateCatalogV1 | null | undefined,
+  exported: UserConfigurationExportV1 | null | undefined,
+  loading = false,
+  error: string | null | undefined = null
+): DataPanelUserConfigurationContractDisplay | null {
+  if (loading && schema == null && templates == null && exported == null) {
+    return {
+      tone: "pending",
+      sourceLabel: "BACKEND_USER_CONFIGURATION",
+      summaryLabel: "正在加载 schema、模板目录和当前配置导出",
+      statusLabel: "加载中",
+      detailLabel: "只读接口，不会修改当前配置",
+      metaLabels: ["schema pending", "templates pending", "export pending"],
+      schemaHref: userConfigurationSchemaHref(),
+      templatesHref: userConfigurationTemplatesHref(),
+      exportHref: userConfigurationExportHref()
+    };
+  }
+  if (error !== null && error !== undefined && schema == null && exported == null) {
+    return {
+      tone: "error",
+      sourceLabel: "BACKEND_USER_CONFIGURATION",
+      summaryLabel: error,
+      statusLabel: "配置契约加载失败",
+      detailLabel: "请检查后端 /scenario/user-config/* 只读接口",
+      metaLabels: [error],
+      schemaHref: userConfigurationSchemaHref(),
+      templatesHref: userConfigurationTemplatesHref(),
+      exportHref: userConfigurationExportHref()
+    };
+  }
+  if (schema == null && templates == null && exported == null) {
+    return null;
+  }
+  const schemaId = schema?.schema_id ?? templates?.schema_id ?? exported?.schema_id ?? "unknown";
+  const fieldCount = schema?.field_count ?? 0;
+  const keyFieldCount = schema?.key_field_count ?? 0;
+  const templateCount = templates?.template_count ?? schema?.templates.length ?? 0;
+  const configHash = exported?.config_hash ?? "";
+  const validationOk = exported?.validation_ok ?? false;
+  const source = exported?.source ?? templates?.source ?? schema?.source ?? "BACKEND_USER_CONFIGURATION";
+  return {
+    tone: validationOk || exported === null ? "match" : "error",
+    sourceLabel: `${source} / ${schemaId}`,
+    summaryLabel: `字段 ${formatCount(fieldCount)} / 关键 ${formatCount(
+      keyFieldCount
+    )} / 模板 ${formatCount(templateCount)}`,
+    statusLabel: validationOk || exported === null ? "当前配置可复现" : "当前配置校验异常",
+    detailLabel: exported
+      ? `config ${shortRuntimeHash(configHash)} / ${exported.export_scope}`
+      : "等待当前配置导出",
+    metaLabels: [
+      `unknown ${schema?.unknown_key_policy ?? exported?.unknown_key_policy ?? "REJECT"}`,
+      `default ${schema?.defaulting_policy ?? exported?.defaulting_policy ?? "BACKEND"}`,
+      `validation ${validationOk ? "ok" : exported === null ? "pending" : "failed"}`,
+      `format ${schema?.format ?? exported?.format ?? "YAML_OR_JSON_MAPPING"}`
+    ],
+    schemaHref: userConfigurationSchemaHref(),
+    templatesHref: userConfigurationTemplatesHref(),
+    exportHref: userConfigurationExportHref()
   };
 }
 

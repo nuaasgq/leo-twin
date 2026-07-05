@@ -543,6 +543,55 @@ export interface UserConfigurationExampleV2 {
   expected: string;
 }
 
+export interface UserConfigurationSchemaEnvelope {
+  type: "USER_CONFIGURATION_SCHEMA_V2" | string;
+  summary: UserConfigurationSchemaV2;
+}
+
+export interface UserConfigurationTemplateCatalogV1 {
+  version: "v1" | string;
+  source: string;
+  schema_id: string;
+  catalog_scope: string;
+  mutation_policy: string;
+  template_count: number;
+  templates: readonly ConfigurationTemplateProfile[];
+  load_command: {
+    type: string;
+    action: string;
+    payload_key: string;
+    requires_uninitialized_runtime: boolean;
+  };
+}
+
+export interface UserConfigurationTemplateCatalogEnvelope {
+  type: "USER_CONFIGURATION_TEMPLATE_CATALOG" | string;
+  summary: UserConfigurationTemplateCatalogV1;
+}
+
+export interface UserConfigurationExportV1 {
+  version: "v1" | string;
+  source: string;
+  schema_id: string;
+  export_scope: string;
+  format: string;
+  yaml_config_file: string;
+  generated_config_file: string;
+  unknown_key_policy: string;
+  defaulting_policy: string;
+  import_paths: readonly string[];
+  config_hash: string;
+  validation_ok: boolean;
+  validation_error_count: number;
+  validation_errors: readonly Record<string, string>[];
+  config: Record<string, unknown>;
+}
+
+export interface UserConfigurationExportEnvelope {
+  type: "USER_CONFIGURATION_EXPORT" | string;
+  summary: UserConfigurationExportV1;
+}
+
 export interface CoverageBeamSummary {
   coverage_model: string;
   fidelity_level?: string;

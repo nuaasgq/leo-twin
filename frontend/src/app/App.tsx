@@ -16,7 +16,10 @@ import {
   RuntimeExportRestorePreflightV1,
   RuntimeBackpressureSummary,
   RuntimeStatusPayload,
-  ScenarioConfig
+  ScenarioConfig,
+  UserConfigurationExportV1,
+  UserConfigurationSchemaV2,
+  UserConfigurationTemplateCatalogV1
 } from "../core/event_types";
 import { SnapshotEngine, WorldSnapshot, useWorldSnapshot } from "../state/snapshot_engine";
 import { runtimeSpeedFactorLabel } from "../runtime_display";
@@ -34,6 +37,9 @@ import {
   loadRuntimeUserDetails,
   loadRuntimeState,
   loadScenarioConfig,
+  loadUserConfigurationExport,
+  loadUserConfigurationSchema,
+  loadUserConfigurationTemplates,
   runtimeApiErrorMessage
 } from "./api";
 import type { RuntimeDetailPages } from "../dashboard/data_panel/DataPanel";
@@ -45,6 +51,7 @@ const RUNTIME_DETAIL_USER_PAGE_LIMIT = 5000;
 const RUNTIME_DETAIL_SATELLITE_PAGE_LIMIT = 5000;
 const RUNTIME_DETAIL_NODE_PAGE_LIMIT = 5000;
 const RUNTIME_EXPORT_CATALOG_POLL_MS = 2500;
+const USER_CONFIGURATION_CONTRACT_POLL_MS = 5000;
 
 type RuntimeConnectionChannel = "http" | "control" | "events" | "state";
 type RuntimeConnectionStatus = "idle" | "connecting" | "live" | "degraded";
@@ -133,6 +140,16 @@ export function App() {
     useState<string | null>(null);
   const [runtimeExportRestoreResult, setRuntimeExportRestoreResult] =
     useState<RuntimeExportRestoreCommandResultV1 | null>(null);
+  const [userConfigurationSchema, setUserConfigurationSchema] =
+    useState<UserConfigurationSchemaV2 | null>(null);
+  const [userConfigurationTemplates, setUserConfigurationTemplates] =
+    useState<UserConfigurationTemplateCatalogV1 | null>(null);
+  const [userConfigurationExport, setUserConfigurationExport] =
+    useState<UserConfigurationExportV1 | null>(null);
+  const [userConfigurationContractLoading, setUserConfigurationContractLoading] =
+    useState(false);
+  const [userConfigurationContractError, setUserConfigurationContractError] =
+    useState<string | null>(null);
   const [dismissedBackpressureNoticeKey, setDismissedBackpressureNoticeKey] =
     useState<string | null>(null);
   const [dismissedCompletionNoticeKey, setDismissedCompletionNoticeKey] =
@@ -304,6 +321,40 @@ export function App() {
     }
   }, [refreshRuntimeExportCompare, runtimeExportComparePackageId]);
 
+  const refreshUserConfigurationContract = useCallback(async () => {
+    setUserConfigurationContractLoading(true);
+    setUserConfigurationContractError(null);
+    const [schema, templates, exported] = await Promise.allSettled([
+      loadUserConfigurationSchema(),
+      loadUserConfigurationTemplates(),
+      loadUserConfigurationExport()
+    ]);
+    if (schema.status === "fulfilled") {
+      setUserConfigurationSchema(schema.value);
+    }
+    if (templates.status === "fulfilled") {
+      setUserConfigurationTemplates(templates.value);
+    }
+    if (exported.status === "fulfilled") {
+      setUserConfigurationExport(exported.value);
+    }
+    const failures = [schema, templates, exported].filter(
+      (item) => item.status === "rejected"
+    );
+    if (failures.length === 3) {
+      setUserConfigurationSchema(null);
+      setUserConfigurationTemplates(null);
+      setUserConfigurationExport(null);
+    }
+    if (failures.length > 0) {
+      const firstFailure = failures[0];
+      if (firstFailure.status === "rejected") {
+        setUserConfigurationContractError(userConfigurationContractErrorMessage(firstFailure.reason));
+      }
+    }
+    setUserConfigurationContractLoading(false);
+  }, []);
+
   const loadControlState = useCallback(async () => {
     const [scenario, runtime, visibleSnapshot] = await Promise.all([
       loadScenarioConfig(),
@@ -324,10 +375,12 @@ export function App() {
     setConnectionChannel("http", "live");
     void refreshRuntimeDetails();
     void refreshRuntimeExportCatalog();
+    void refreshUserConfigurationContract();
     return { scenario: effectiveScenario, runtime };
   }, [
     refreshRuntimeDetails,
     refreshRuntimeExportCatalog,
+    refreshUserConfigurationContract,
     setConnectionChannel,
     snapshotEngine
   ]);
@@ -583,6 +636,27 @@ export function App() {
   }, [refreshRuntimeExportCatalog, surface]);
 
   useEffect(() => {
+    if (surface !== "dashboard") {
+      return;
+    }
+    let closed = false;
+    const refreshContract = () => {
+      if (!closed) {
+        void refreshUserConfigurationContract();
+      }
+    };
+    refreshContract();
+    const timer = window.setInterval(
+      refreshContract,
+      USER_CONFIGURATION_CONTRACT_POLL_MS
+    );
+    return () => {
+      closed = true;
+      window.clearInterval(timer);
+    };
+  }, [refreshUserConfigurationContract, surface]);
+
+  useEffect(() => {
     let closed = false;
     loadControlState()
       .then(({ scenario, runtime }) => {
@@ -826,6 +900,11 @@ export function App() {
               }
               runtimeExportRestoreCommandError={runtimeExportRestoreCommandError}
               runtimeExportRestoreResult={runtimeExportRestoreResult}
+              userConfigurationSchema={userConfigurationSchema}
+              userConfigurationTemplates={userConfigurationTemplates}
+              userConfigurationExport={userConfigurationExport}
+              userConfigurationContractLoading={userConfigurationContractLoading}
+              userConfigurationContractError={userConfigurationContractError}
               onRuntimeExportCompareSelect={refreshRuntimeExportCompare}
               onRuntimeExportRestore={restoreRuntimeExportPackage}
               displaySimTime={displaySimTime}
@@ -2023,6 +2102,11 @@ export function runtimeExportCompareErrorMessage(error: unknown): string {
 export function runtimeExportRestorePreflightErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   return `复盘包恢复预检加载失败：${message}`;
+}
+
+export function userConfigurationContractErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  return `用户配置契约加载失败：${message}`;
 }
 
 type RuntimeWebSocketChannel = "control" | "events" | "state";

@@ -1890,6 +1890,11 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
   overflow-x: auto;
 }
 
+.data-panel-config-contract {
+  display: grid;
+  gap: 10px;
+}
+
 .data-panel-export-compare {
   display: grid;
   gap: 8px;

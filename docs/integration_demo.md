@@ -155,6 +155,9 @@ user-facing configuration schema v2, the approved executable template catalog,
 and the current effective SEES config export with a stable hash and validation
 status. Configuration import still happens only through explicit control-plane
 commands such as `CONFIG_UPDATE`, `LOAD_TEMPLATE`, or `RESTORE_EXPORT_PACKAGE`.
+The standalone dashboard also shows these links in the user configuration
+contract section so users can download the current full configuration and
+inspect the backend schema without editing runtime state.
 
 Persisted package artifact routes:
 

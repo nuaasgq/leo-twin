@@ -9,6 +9,9 @@ import {
   loadRuntimeSatelliteDetails,
   loadRuntimeState,
   loadRuntimeUserDetails,
+  loadUserConfigurationExport,
+  loadUserConfigurationSchema,
+  loadUserConfigurationTemplates,
   runtimeExportArchiveHref,
   runtimeExportPackageArchiveHref,
   runtimeExportPackageCompareHref,
@@ -16,6 +19,9 @@ import {
   runtimeExportPackageManifestHref,
   runtimeExportPackageRecordHref,
   runtimeExportRestorePreflightHref,
+  userConfigurationExportHref,
+  userConfigurationSchemaHref,
+  userConfigurationTemplatesHref,
   runtimeApiErrorMessage
 } from "../src/app/api";
 
@@ -48,6 +54,12 @@ describe("runtime API diagnostics", () => {
     expect(runtimeExportPackageFileHref("pkg 1", "events 1.jsonl")).toBe(
       "/runtime/export/packages/pkg%201/files/events%201.jsonl"
     );
+  });
+
+  it("exposes stable user configuration contract links", () => {
+    expect(userConfigurationSchemaHref()).toBe("/scenario/user-config/schema");
+    expect(userConfigurationTemplatesHref()).toBe("/scenario/user-config/templates");
+    expect(userConfigurationExportHref()).toBe("/scenario/user-config/export");
   });
 
   it("loads runtime export package compare previews", async () => {
@@ -215,6 +227,107 @@ describe("runtime API diagnostics", () => {
       latest_export: { export_type: "ARCHIVE", archive_filename: "pkg.zip" }
     });
     expect(fetchMock).toHaveBeenCalledWith("/runtime/export/catalog");
+  });
+
+  it("loads user configuration contract payloads", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          type: "USER_CONFIGURATION_SCHEMA_V2",
+          summary: {
+            version: "v2",
+            schema_id: "sees.user_configuration.v2",
+            source: "backend_sees_config",
+            format: "YAML_OR_JSON_MAPPING",
+            unknown_key_policy: "REJECT",
+            defaulting_policy: "OMITTED_FIELDS_USE_BACKEND_DEFAULTS",
+            frontend_policy: "CONTROL_PANEL_KEY_FIELDS_ONLY",
+            forbidden_integrations: ["STK", "EXATA", "AFSIM", "DDS"],
+            packet_level_simulation: false,
+            field_count: 42,
+            key_field_count: 12,
+            file_only_field_count: 30,
+            root_sections: [],
+            fields: [],
+            templates: [],
+            examples: []
+          }
+        })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          type: "USER_CONFIGURATION_TEMPLATE_CATALOG",
+          summary: {
+            version: "v1",
+            source: "BACKEND_USER_CONFIGURATION",
+            schema_id: "sees.user_configuration.v2",
+            catalog_scope: "APPROVED_EXECUTABLE_TEMPLATES",
+            mutation_policy: "READ_ONLY_CATALOG",
+            template_count: 1,
+            templates: [
+              {
+                id: "baseline_72sat",
+                label: "72-satellite baseline",
+                path: "configs/templates/sees_user_detailed.example.yaml",
+                purpose: "Baseline"
+              }
+            ],
+            load_command: {
+              type: "RUNTIME_CONTROL",
+              action: "LOAD_TEMPLATE",
+              payload_key: "template_id",
+              requires_uninitialized_runtime: true
+            }
+          }
+        })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          type: "USER_CONFIGURATION_EXPORT",
+          summary: {
+            version: "v1",
+            source: "BACKEND_USER_CONFIGURATION",
+            schema_id: "sees.user_configuration.v2",
+            export_scope: "CURRENT_EFFECTIVE_SEES_CONFIG",
+            format: "JSON_MAPPING",
+            yaml_config_file: "configs/sees_control.yaml",
+            generated_config_file: "configs/generated_full_system_demo.json",
+            unknown_key_policy: "REJECT",
+            defaulting_policy: "OMITTED_FIELDS_USE_BACKEND_DEFAULTS",
+            import_paths: ["CONFIG_UPDATE control message for partial updates"],
+            config_hash: "sha256:config",
+            validation_ok: true,
+            validation_error_count: 0,
+            validation_errors: [],
+            config: {
+              scenario: {
+                satellite_count: 72
+              }
+            }
+          }
+        })
+      });
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+
+    await expect(loadUserConfigurationSchema()).resolves.toMatchObject({
+      schema_id: "sees.user_configuration.v2",
+      field_count: 42
+    });
+    await expect(loadUserConfigurationTemplates()).resolves.toMatchObject({
+      template_count: 1,
+      mutation_policy: "READ_ONLY_CATALOG"
+    });
+    await expect(loadUserConfigurationExport()).resolves.toMatchObject({
+      config_hash: "sha256:config",
+      validation_ok: true
+    });
+    expect(fetchMock).toHaveBeenNthCalledWith(1, "/scenario/user-config/schema");
+    expect(fetchMock).toHaveBeenNthCalledWith(2, "/scenario/user-config/templates");
+    expect(fetchMock).toHaveBeenNthCalledWith(3, "/scenario/user-config/export");
   });
 
   it("includes endpoint and HTTP status when runtime status fails", async () => {

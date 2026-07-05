@@ -31,6 +31,7 @@ import {
   buildDataPanelSummary,
   buildDataPanelTelemetry,
   buildDataPanelTrafficDisplay,
+  buildDataPanelUserConfigurationContractDisplay,
   buildUserBusinessRequestInspector,
   buildDataPanelUserRequestHistory,
   buildRuntimeKpiTelemetrySamples,
@@ -618,6 +619,104 @@ describe("buildDataPanelReproducibilityDisplay", () => {
       secondaryLabel: "LIVE_STATUS_MANIFEST_ONLY / 4 artifacts"
     });
     expect(buildDataPanelReproducibilityDisplay(undefined)).toBeNull();
+  });
+});
+
+describe("buildDataPanelUserConfigurationContractDisplay", () => {
+  it("summarizes backend user configuration schema, templates and export", () => {
+    const display = buildDataPanelUserConfigurationContractDisplay(
+      {
+        version: "v2",
+        schema_id: "sees.user_configuration.v2",
+        source: "backend_sees_config",
+        format: "YAML_OR_JSON_MAPPING",
+        unknown_key_policy: "REJECT",
+        defaulting_policy: "OMITTED_FIELDS_USE_BACKEND_DEFAULTS",
+        frontend_policy: "CONTROL_PANEL_KEY_FIELDS_ONLY",
+        forbidden_integrations: ["STK", "EXATA", "AFSIM", "DDS"],
+        packet_level_simulation: false,
+        field_count: 42,
+        key_field_count: 12,
+        file_only_field_count: 30,
+        root_sections: [],
+        fields: [],
+        templates: [],
+        examples: []
+      },
+      {
+        version: "v1",
+        source: "BACKEND_USER_CONFIGURATION",
+        schema_id: "sees.user_configuration.v2",
+        catalog_scope: "APPROVED_EXECUTABLE_TEMPLATES",
+        mutation_policy: "READ_ONLY_CATALOG",
+        template_count: 4,
+        templates: [],
+        load_command: {
+          type: "RUNTIME_CONTROL",
+          action: "LOAD_TEMPLATE",
+          payload_key: "template_id",
+          requires_uninitialized_runtime: true
+        }
+      },
+      {
+        version: "v1",
+        source: "BACKEND_USER_CONFIGURATION",
+        schema_id: "sees.user_configuration.v2",
+        export_scope: "CURRENT_EFFECTIVE_SEES_CONFIG",
+        format: "JSON_MAPPING",
+        yaml_config_file: "configs/sees_control.yaml",
+        generated_config_file: "configs/generated_full_system_demo.json",
+        unknown_key_policy: "REJECT",
+        defaulting_policy: "OMITTED_FIELDS_USE_BACKEND_DEFAULTS",
+        import_paths: ["CONFIG_UPDATE control message for partial updates"],
+        config_hash:
+          "sha256:abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd",
+        validation_ok: true,
+        validation_error_count: 0,
+        validation_errors: [],
+        config: { scenario: { satellite_count: 72 } }
+      }
+    );
+
+    expect(display).toMatchObject({
+      tone: "match",
+      sourceLabel: "BACKEND_USER_CONFIGURATION / sees.user_configuration.v2",
+      summaryLabel: "字段 42 / 关键 12 / 模板 4",
+      statusLabel: "当前配置可复现",
+      detailLabel: "config abcdefabcdef / CURRENT_EFFECTIVE_SEES_CONFIG",
+      schemaHref: "/scenario/user-config/schema",
+      templatesHref: "/scenario/user-config/templates",
+      exportHref: "/scenario/user-config/export"
+    });
+    expect(display?.metaLabels).toEqual([
+      "unknown REJECT",
+      "default OMITTED_FIELDS_USE_BACKEND_DEFAULTS",
+      "validation ok",
+      "format YAML_OR_JSON_MAPPING"
+    ]);
+  });
+
+  it("reports loading and error states for user configuration contract", () => {
+    expect(
+      buildDataPanelUserConfigurationContractDisplay(null, null, null, true)
+    ).toMatchObject({
+      tone: "pending",
+      statusLabel: "加载中"
+    });
+    expect(
+      buildDataPanelUserConfigurationContractDisplay(
+        null,
+        null,
+        null,
+        false,
+        "HTTP 503"
+      )
+    ).toMatchObject({
+      tone: "error",
+      statusLabel: "配置契约加载失败",
+      summaryLabel: "HTTP 503"
+    });
+    expect(buildDataPanelUserConfigurationContractDisplay(null, null, null)).toBeNull();
   });
 });
 

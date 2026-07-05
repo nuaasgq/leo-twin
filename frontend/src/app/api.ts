@@ -16,11 +16,20 @@ import {
   RuntimeStatusPayload,
   RuntimeUserRequestSummaryV1,
   ScenarioConfig,
-  StateSnapshot
+  StateSnapshot,
+  UserConfigurationExportEnvelope,
+  UserConfigurationExportV1,
+  UserConfigurationSchemaEnvelope,
+  UserConfigurationSchemaV2,
+  UserConfigurationTemplateCatalogEnvelope,
+  UserConfigurationTemplateCatalogV1
 } from "../core/event_types";
 
 export const DEFAULT_RUNTIME_EXPORT_ARCHIVE_ENDPOINT = "/runtime/export/archive";
 export const DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT = "/runtime/export/packages";
+export const DEFAULT_USER_CONFIG_SCHEMA_ENDPOINT = "/scenario/user-config/schema";
+export const DEFAULT_USER_CONFIG_TEMPLATES_ENDPOINT = "/scenario/user-config/templates";
+export const DEFAULT_USER_CONFIG_EXPORT_ENDPOINT = "/scenario/user-config/export";
 
 export async function loadScenarioConfig(endpoint = "/scenario/config"): Promise<ScenarioConfig> {
   const response = await fetch(endpoint);
@@ -130,6 +139,36 @@ export async function loadRuntimeExportRestorePreflight(
   return decodeRuntimeExportRestorePreflight(await response.json()).summary;
 }
 
+export async function loadUserConfigurationSchema(
+  endpoint = DEFAULT_USER_CONFIG_SCHEMA_ENDPOINT
+): Promise<UserConfigurationSchemaV2> {
+  const response = await fetch(endpoint);
+  if (!response.ok) {
+    throw new Error(`failed to load user configuration schema from ${endpoint}: HTTP ${response.status}`);
+  }
+  return decodeUserConfigurationSchema(await response.json()).summary;
+}
+
+export async function loadUserConfigurationTemplates(
+  endpoint = DEFAULT_USER_CONFIG_TEMPLATES_ENDPOINT
+): Promise<UserConfigurationTemplateCatalogV1> {
+  const response = await fetch(endpoint);
+  if (!response.ok) {
+    throw new Error(`failed to load user configuration templates from ${endpoint}: HTTP ${response.status}`);
+  }
+  return decodeUserConfigurationTemplates(await response.json()).summary;
+}
+
+export async function loadUserConfigurationExport(
+  endpoint = DEFAULT_USER_CONFIG_EXPORT_ENDPOINT
+): Promise<UserConfigurationExportV1> {
+  const response = await fetch(endpoint);
+  if (!response.ok) {
+    throw new Error(`failed to load user configuration export from ${endpoint}: HTTP ${response.status}`);
+  }
+  return decodeUserConfigurationExport(await response.json()).summary;
+}
+
 export function runtimeApiErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   if (
@@ -201,6 +240,24 @@ export function runtimeExportPackageFileHref(
   return `${runtimeExportPackageRecordHref(packageId, endpoint)}/files/${encodeURIComponent(
     filename
   )}`;
+}
+
+export function userConfigurationSchemaHref(
+  endpoint = DEFAULT_USER_CONFIG_SCHEMA_ENDPOINT
+): string {
+  return endpoint;
+}
+
+export function userConfigurationTemplatesHref(
+  endpoint = DEFAULT_USER_CONFIG_TEMPLATES_ENDPOINT
+): string {
+  return endpoint;
+}
+
+export function userConfigurationExportHref(
+  endpoint = DEFAULT_USER_CONFIG_EXPORT_ENDPOINT
+): string {
+  return endpoint;
 }
 
 function decodeScenarioConfig(value: unknown): ScenarioConfig {
@@ -305,6 +362,50 @@ export function decodeRuntimeExportRestorePreflight(
     ...(value as Record<string, unknown>),
     summary: summary as RuntimeExportRestorePreflightV1
   } as RuntimeExportRestorePreflightEnvelope;
+}
+
+export function decodeUserConfigurationSchema(value: unknown): UserConfigurationSchemaEnvelope {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError("user configuration schema response must be an object");
+  }
+  const summary = (value as { summary?: unknown }).summary;
+  if (typeof summary !== "object" || summary === null || Array.isArray(summary)) {
+    throw new TypeError("user configuration schema response must include summary object");
+  }
+  return {
+    ...(value as Record<string, unknown>),
+    summary: summary as UserConfigurationSchemaV2
+  } as UserConfigurationSchemaEnvelope;
+}
+
+export function decodeUserConfigurationTemplates(
+  value: unknown
+): UserConfigurationTemplateCatalogEnvelope {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError("user configuration template catalog response must be an object");
+  }
+  const summary = (value as { summary?: unknown }).summary;
+  if (typeof summary !== "object" || summary === null || Array.isArray(summary)) {
+    throw new TypeError("user configuration template catalog response must include summary object");
+  }
+  return {
+    ...(value as Record<string, unknown>),
+    summary: summary as UserConfigurationTemplateCatalogV1
+  } as UserConfigurationTemplateCatalogEnvelope;
+}
+
+export function decodeUserConfigurationExport(value: unknown): UserConfigurationExportEnvelope {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError("user configuration export response must be an object");
+  }
+  const summary = (value as { summary?: unknown }).summary;
+  if (typeof summary !== "object" || summary === null || Array.isArray(summary)) {
+    throw new TypeError("user configuration export response must include summary object");
+  }
+  return {
+    ...(value as Record<string, unknown>),
+    summary: summary as UserConfigurationExportV1
+  } as UserConfigurationExportEnvelope;
 }
 
 export function decodeRuntimeStatusEnvelope(value: unknown): RuntimeStatusEnvelope {
