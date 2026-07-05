@@ -21,6 +21,7 @@ import {
   RuntimeKpiTimeSeriesV1,
   RuntimeMetricsSummary,
   RuntimeNetworkQualityProvenanceV1,
+  RuntimeSatelliteServiceItemV1,
   RuntimeSatelliteServiceSummaryV1,
   RuntimeSatelliteKpiHistoryV1,
   RuntimeSatelliteKpiSlicesV1,
@@ -2779,17 +2780,20 @@ function buildBackendSatelliteResourceRows(
           item.network_service_route_count ?? 0
         )}`
       }`,
-      networkLabel: `links ${formatCount(item.active_link_count)} / access ${formatCount(
-        item.active_access_link_count
-      )} / space ${formatCount(item.active_space_link_count)} / routes ${formatCount(
-        item.route_count
-      )}${
+      networkLabel: [
+        `links ${formatCount(item.active_link_count)} / access ${formatCount(
+          item.active_access_link_count
+        )} / space ${formatCount(item.active_space_link_count)} / routes ${formatCount(
+          item.route_count
+        )}`,
         item.network_queue_route_count !== undefined
-          ? ` / queued ${formatCount(item.network_queue_route_count)}`
-          : ""
-      }${
-        item.primary_route_id ? ` / primary ${item.primary_route_id}` : ""
-      }`
+          ? `queued ${formatCount(item.network_queue_route_count)}`
+          : null,
+        backendSatelliteRouteKpiLabel(item),
+        item.primary_route_id ? `primary ${item.primary_route_id}` : null
+      ]
+        .filter((value): value is string => value !== null && value !== "")
+        .join(" / ")
     };
   });
   const hiddenCount = Math.max(
@@ -2809,6 +2813,20 @@ function buildBackendSatelliteResourceRows(
     }`,
     items
   };
+}
+
+function backendSatelliteRouteKpiLabel(item: RuntimeSatelliteServiceItemV1): string {
+  const capacity = finiteOptionalMetric(item.route_capacity_mbps);
+  const demand = finiteOptionalMetric(item.route_demand_mbps);
+  const latency = finiteOptionalMetric(item.route_latency_avg_s);
+  const loss = finiteOptionalMetric(item.route_loss_proxy_rate);
+  const parts = [
+    capacity > 0 ? `cap ${formatMetricValue(capacity)} Mbps` : null,
+    demand > 0 ? `demand ${formatMetricValue(demand)} Mbps` : null,
+    latency > 0 ? `lat ${formatMetricMilliseconds(latency)}` : null,
+    loss > 0 ? `loss ${formatMetricValue(loss * 100)}%` : null
+  ].filter((value): value is string => value !== null);
+  return parts.join(" / ");
 }
 
 function compactBackendEntityLabel(

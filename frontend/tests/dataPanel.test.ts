@@ -2627,6 +2627,11 @@ describe("buildSatelliteResourceRows", () => {
             compute_service_route_count: 1,
             network_service_route_count: 1,
             route_mix_label: "compute=1; network=1; queued=1",
+            route_capacity_mbps: 120,
+            route_demand_mbps: 100,
+            route_latency_avg_s: 0.045,
+            route_delay_variation_proxy_s: 0.004,
+            route_loss_proxy_rate: 0.02,
             active_link_count: 3,
             active_access_link_count: 1,
             active_space_link_count: 2,
@@ -2663,7 +2668,8 @@ describe("buildSatelliteResourceRows", () => {
       cpuFp64Label: "2 / 8 GFLOPS",
       npuLabel: "4 / 10 TOPS",
       taskLabel: "2 running / 7 done / compute=1; network=1; queued=1",
-      networkLabel: "links 3 / access 1 / space 2 / routes 2 / queued 1 / primary route-a"
+      networkLabel:
+        "links 3 / access 1 / space 2 / routes 2 / queued 1 / cap 120 Mbps / demand 100 Mbps / lat 45 ms / loss 2% / primary route-a"
     });
   });
 

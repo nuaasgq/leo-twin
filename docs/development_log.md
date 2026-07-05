@@ -5,6 +5,40 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Satellite Route KPI Detail v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending in this commit
+- Scope: expose satellite-level route KPI fields in backend-owned satellite
+  detail rows and render them in the standalone dashboard network column.
+  Satellite detail rows now include route capacity, route demand, average route
+  latency, route delay-variation proxy, and route loss proxy from existing
+  `satellite_kpi_slices_v1` data. No new network model or packet-level
+  simulation was introduced. Event Kernel behavior is unchanged.
+- Changed files/modules:
+  - `src/leo_twin/services/runtime_observability.py`
+  - `tests/unit/test_runtime_observability.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_runtime_observability.py -q`
+    - Result: passed, 2 tests.
+  - Bundled Node/Pnpm: `pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 25 files / 256 tests.
+  - Bundled Node/Pnpm: `pnpm --dir frontend build`
+    - Result: passed with the existing Vite warning that `DataPanel` is larger
+      than 500 kB after minification.
+  - `git diff --check -- src/leo_twin/services/runtime_observability.py tests/unit/test_runtime_observability.py frontend/src/core/event_types/index.ts frontend/src/dashboard/data_panel/DataPanel.tsx frontend/tests/dataPanel.test.ts`
+    - Result: passed.
+- Problems encountered:
+  - None beyond the existing DataPanel chunk-size warning.
+- Known remaining issues / follow-up:
+  - Satellite route KPI fields are current-snapshot aggregates. A later task
+    should add satellite route KPI history if users need per-satellite network
+    trend curves instead of current detail rows.
+
 ## 2026-07-05 - User Service Latency Detail v1
 
 - Branch: `feature/T164-dashboard-observability-v1`

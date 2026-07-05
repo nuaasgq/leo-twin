@@ -698,6 +698,11 @@ export interface RuntimeSatelliteServiceItemV1 {
   compute_service_route_count?: number;
   network_service_route_count?: number;
   route_mix_label?: string;
+  route_capacity_mbps?: number;
+  route_demand_mbps?: number;
+  route_latency_avg_s?: number;
+  route_delay_variation_proxy_s?: number;
+  route_loss_proxy_rate?: number;
   active_link_count: number;
   active_access_link_count: number;
   active_space_link_count: number;

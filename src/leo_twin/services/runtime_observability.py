@@ -380,6 +380,14 @@ def _satellite_item(
             network_service_route_count,
             network_queue_route_count,
         ),
+        "route_capacity_mbps": _first_float(kpi_slice, "route_capacity_mbps"),
+        "route_demand_mbps": _first_float(kpi_slice, "route_demand_mbps"),
+        "route_latency_avg_s": _first_float(kpi_slice, "route_latency_avg_s"),
+        "route_delay_variation_proxy_s": _first_float(
+            kpi_slice,
+            "route_delay_variation_proxy_s",
+        ),
+        "route_loss_proxy_rate": _first_float(kpi_slice, "route_loss_proxy_rate"),
         "active_link_count": int(
             _first_float(kpi_slice, "active_link_count", default=float(link_counts.get("active", 0)))
         ),
