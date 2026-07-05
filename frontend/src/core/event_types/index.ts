@@ -249,6 +249,11 @@ export interface TrafficDemandSummary {
   priority: number;
   demand_capacity_mbps: number;
   task_compute_demand: number;
+  service_mix_mode?: string;
+  service_mix_weights?: Record<string, number>;
+  service_mix_normalized_weights?: Record<string, number>;
+  active_service_classes?: readonly string[];
+  service_mix_generated_request_counts?: Record<string, number>;
   execution_shape?: string;
   execution_label?: string;
   requires_compute_node_destination?: boolean;

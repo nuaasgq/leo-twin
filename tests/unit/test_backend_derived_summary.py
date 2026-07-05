@@ -94,6 +94,26 @@ def test_backend_derived_summary_is_deterministic_and_frontend_ready() -> None:
         "priority": 0,
         "demand_capacity_mbps": 25.0,
         "task_compute_demand": 20.0,
+        "service_mix_mode": "SINGLE_CLASS",
+        "service_mix_weights": {
+            "DATA_TRANSFER": 0.0,
+            "TELEMETRY": 0.0,
+            "BULK_DOWNLINK": 0.0,
+            "COMPUTE_SERVICE": 1.0,
+        },
+        "service_mix_normalized_weights": {
+            "DATA_TRANSFER": 0.0,
+            "TELEMETRY": 0.0,
+            "BULK_DOWNLINK": 0.0,
+            "COMPUTE_SERVICE": 1.0,
+        },
+        "active_service_classes": ["COMPUTE_SERVICE"],
+        "service_mix_generated_request_counts": {
+            "DATA_TRANSFER": 0,
+            "TELEMETRY": 0,
+            "BULK_DOWNLINK": 0,
+            "COMPUTE_SERVICE": 1200,
+        },
         "execution_shape": "FLOW_THEN_COMPUTE_TASK",
         "execution_label": "输入流 + 计算任务",
         "requires_compute_node_destination": True,
@@ -293,11 +313,66 @@ def test_traffic_summary_uses_explicit_traffic_model_fields() -> None:
     assert summary["total_output_data_mb"] == 45.0
     assert summary["input_data_size_mb"] == 2.0
     assert summary["demand_capacity_mbps"] == 25.0
+    assert summary["service_mix_mode"] == "SINGLE_CLASS"
+    assert summary["service_mix_weights"] == {
+        "DATA_TRANSFER": 0.0,
+        "TELEMETRY": 0.0,
+        "BULK_DOWNLINK": 1.0,
+        "COMPUTE_SERVICE": 0.0,
+    }
+    assert summary["active_service_classes"] == ["BULK_DOWNLINK"]
+    assert summary["service_mix_generated_request_counts"] == {
+        "DATA_TRANSFER": 0,
+        "TELEMETRY": 0,
+        "BULK_DOWNLINK": 10,
+        "COMPUTE_SERVICE": 0,
+    }
     assert summary["execution_shape"] == "FLOW_ONLY"
     assert summary["execution_label"] == "流级网络业务"
     assert summary["requires_compute_node_destination"] is False
     assert summary["compatibility_note"] == "该业务类型按流级网络业务执行，不生成计算任务。"
     assert summary["lifecycle_note"] == "网络流完成即完成本次业务；不触发星上计算任务生命周期。"
+
+
+def test_traffic_summary_exposes_weighted_service_mix() -> None:
+    allocation = AutoPlaneAllocator.allocate(satellite_count=12, plane_count=3)
+
+    summary = build_backend_derived_summary(
+        constellation=allocation,
+        satellite_count=12,
+        user_count=20,
+        compute_node_count=4,
+        compute_capacity=40.0,
+        flow_count=10,
+        demand_capacity=25.0,
+        task_compute_demand=20.0,
+        task_data_size=2.0,
+        application_protocol="TASK_OFFLOAD_FLOW",
+        traffic_data_transfer_weight=2.0,
+        traffic_compute_service_weight=1.0,
+    )["traffic_demand_summary"]
+
+    assert summary["service_mix_mode"] == "WEIGHTED_MIX"
+    assert summary["service_mix_weights"] == {
+        "DATA_TRANSFER": 2.0,
+        "TELEMETRY": 0.0,
+        "BULK_DOWNLINK": 0.0,
+        "COMPUTE_SERVICE": 1.0,
+    }
+    assert summary["service_mix_normalized_weights"]["DATA_TRANSFER"] == pytest.approx(
+        2.0 / 3.0
+    )
+    assert summary["service_mix_normalized_weights"]["COMPUTE_SERVICE"] == pytest.approx(
+        1.0 / 3.0
+    )
+    assert summary["active_service_classes"] == ["DATA_TRANSFER", "COMPUTE_SERVICE"]
+    assert summary["service_mix_generated_request_counts"] == {
+        "DATA_TRANSFER": 7,
+        "TELEMETRY": 0,
+        "BULK_DOWNLINK": 0,
+        "COMPUTE_SERVICE": 3,
+    }
+    assert summary["generated_task_count"] == 3
 
 
 def test_traffic_summary_rejects_compute_service_non_compute_destination() -> None:

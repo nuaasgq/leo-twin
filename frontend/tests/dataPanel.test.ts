@@ -497,6 +497,20 @@ describe("buildDataPanelTrafficDisplay", () => {
       priority: 0,
       demand_capacity_mbps: 25,
       task_compute_demand: 20,
+      service_mix_mode: "WEIGHTED_MIX",
+      service_mix_normalized_weights: {
+        DATA_TRANSFER: 0.6666666667,
+        TELEMETRY: 0,
+        BULK_DOWNLINK: 0,
+        COMPUTE_SERVICE: 0.3333333333
+      },
+      active_service_classes: ["DATA_TRANSFER", "COMPUTE_SERVICE"],
+      service_mix_generated_request_counts: {
+        DATA_TRANSFER: 80,
+        TELEMETRY: 0,
+        BULK_DOWNLINK: 0,
+        COMPUTE_SERVICE: 40
+      },
       execution_shape: "FLOW_THEN_COMPUTE_TASK",
       execution_label: "输入流 + 计算任务",
       requires_compute_node_destination: true,
@@ -507,6 +521,9 @@ describe("buildDataPanelTrafficDisplay", () => {
     });
 
     expect(display.label).toBe("通信-计算服务 / 星上算力节点 / 输入流 + 计算任务");
+    expect(display.note).toContain(
+      "业务组合: 数据传输 66.7% / 80 请求 + 通信-计算服务 33.3% / 40 请求"
+    );
     expect(display.note).toContain("生成 120 流 / 120 任务 / 120 结果流元数据");
     expect(display.note).toContain("数据 240 MB 输入 / 60 MB 输出");
     expect(display.note).toContain("速率 1 次/分钟 / 单用户 0.001 次/分钟");

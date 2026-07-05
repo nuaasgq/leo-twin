@@ -70,6 +70,10 @@ class DemoConfig:
     traffic_class: str = "COMPUTE_SERVICE"
     traffic_destination_type: str = "COMPUTE_NODE"
     traffic_output_data_size: float = 0.0
+    traffic_data_transfer_weight: float = 0.0
+    traffic_telemetry_weight: float = 0.0
+    traffic_bulk_downlink_weight: float = 0.0
+    traffic_compute_service_weight: float = 0.0
     application_protocol: str = "TASK_OFFLOAD_FLOW"
     transport_protocol: str = "TCP"
     routing_protocol: str = "LINK_STATE"
@@ -190,6 +194,26 @@ def load_demo_config(path: str | Path = DEFAULT_CONFIG_PATH) -> DemoConfig:
             "traffic_output_data_size",
             0.0,
         ),
+        traffic_data_transfer_weight=_optional_float(
+            scenario,
+            "traffic_data_transfer_weight",
+            0.0,
+        ),
+        traffic_telemetry_weight=_optional_float(
+            scenario,
+            "traffic_telemetry_weight",
+            0.0,
+        ),
+        traffic_bulk_downlink_weight=_optional_float(
+            scenario,
+            "traffic_bulk_downlink_weight",
+            0.0,
+        ),
+        traffic_compute_service_weight=_optional_float(
+            scenario,
+            "traffic_compute_service_weight",
+            0.0,
+        ),
         cell_count=_int(scenario, "cell_count"),
         state_snapshot_interval_events=_int(
             scenario,
@@ -305,6 +329,10 @@ def demo_config_to_sees_config(config: DemoConfig) -> SEESConfig:
                 traffic_class=config.traffic_class,
                 destination_type=config.traffic_destination_type,
                 output_data_size=config.traffic_output_data_size,
+                data_transfer_weight=config.traffic_data_transfer_weight,
+                telemetry_weight=config.traffic_telemetry_weight,
+                bulk_downlink_weight=config.traffic_bulk_downlink_weight,
+                compute_service_weight=config.traffic_compute_service_weight,
             ),
         ),
         network=NetworkProfile(
@@ -398,6 +426,14 @@ def demo_config_from_sees_config(
         traffic_class=config.scenario.traffic_model.traffic_class.value,
         traffic_destination_type=config.scenario.traffic_model.destination_type.value,
         traffic_output_data_size=config.scenario.traffic_model.output_data_size,
+        traffic_data_transfer_weight=(
+            config.scenario.traffic_model.data_transfer_weight
+        ),
+        traffic_telemetry_weight=config.scenario.traffic_model.telemetry_weight,
+        traffic_bulk_downlink_weight=config.scenario.traffic_model.bulk_downlink_weight,
+        traffic_compute_service_weight=(
+            config.scenario.traffic_model.compute_service_weight
+        ),
         cell_count=config.scenario.cell_count,
         state_snapshot_interval_events=base.state_snapshot_interval_events,
         metric_sample_interval=base.metric_sample_interval,

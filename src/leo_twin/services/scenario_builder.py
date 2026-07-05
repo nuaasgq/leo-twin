@@ -100,6 +100,10 @@ class FullSystemScenarioBuilderConfig:
     traffic_class: str = TrafficClass.COMPUTE_SERVICE.value
     traffic_destination_type: str = TrafficDestinationType.COMPUTE_NODE.value
     traffic_output_data_size: float = 0.0
+    traffic_data_transfer_weight: float = 0.0
+    traffic_telemetry_weight: float = 0.0
+    traffic_bulk_downlink_weight: float = 0.0
+    traffic_compute_service_weight: float = 0.0
 
     def __post_init__(self) -> None:
         _require_int(self.seed, "seed")
@@ -262,6 +266,14 @@ class FullSystemScenarioBuilderConfig:
             self.traffic_output_data_size,
             "traffic_output_data_size",
         )
+        for field_name in (
+            "traffic_data_transfer_weight",
+            "traffic_telemetry_weight",
+            "traffic_bulk_downlink_weight",
+            "traffic_compute_service_weight",
+        ):
+            _require_non_negative_number(getattr(self, field_name), field_name)
+            object.__setattr__(self, field_name, float(getattr(self, field_name)))
 
 
 @dataclass(frozen=True)
@@ -377,6 +389,10 @@ def scenario_builder_backend_summary(
         traffic_class=config.traffic_class,
         traffic_destination_type=config.traffic_destination_type,
         traffic_output_data_size=config.traffic_output_data_size,
+        traffic_data_transfer_weight=config.traffic_data_transfer_weight,
+        traffic_telemetry_weight=config.traffic_telemetry_weight,
+        traffic_bulk_downlink_weight=config.traffic_bulk_downlink_weight,
+        traffic_compute_service_weight=config.traffic_compute_service_weight,
         compute_cpu_gflops_fp64=config.compute_cpu_gflops_fp64,
         compute_gpu_tflops_fp32=config.compute_gpu_tflops_fp32,
         compute_gpu_tflops_fp16=config.compute_gpu_tflops_fp16,
@@ -443,6 +459,14 @@ def scenario_builder_config_from_sees_config(
         traffic_class=config.scenario.traffic_model.traffic_class.value,
         traffic_destination_type=config.scenario.traffic_model.destination_type.value,
         traffic_output_data_size=config.scenario.traffic_model.output_data_size,
+        traffic_data_transfer_weight=(
+            config.scenario.traffic_model.data_transfer_weight
+        ),
+        traffic_telemetry_weight=config.scenario.traffic_model.telemetry_weight,
+        traffic_bulk_downlink_weight=config.scenario.traffic_model.bulk_downlink_weight,
+        traffic_compute_service_weight=(
+            config.scenario.traffic_model.compute_service_weight
+        ),
         application_protocol=config.network.application_protocol.value,
         transport_protocol=config.network.transport_protocol.value,
         routing_protocol=config.network.routing_protocol.value,

@@ -6728,3 +6728,62 @@ change.
 - Recommended follow-up:
   - Add SEES config service-mix fields and backend-derived service-mix summary
     once the contract is stable.
+
+## 2026-07-05 - SEES Traffic Service Mix Config Summary v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: wire the deterministic traffic service-mix contract into user-facing
+  configuration and backend-derived summaries without changing runtime event
+  behavior. `TrafficModel` now accepts flat service-mix weight fields for
+  DATA_TRANSFER, TELEMETRY, BULK_DOWNLINK, and COMPUTE_SERVICE. When all
+  weights are zero, the backend preserves the existing single `traffic_class`
+  behavior. The derived traffic summary now reports service-mix mode, raw
+  weights, normalized weights, active service classes, and deterministic
+  request-count allocation. Integration demo config conversion and frontend
+  data-panel display consume the backend fields.
+- Changed files/modules:
+  - `src/leo_twin/schema/config.py`
+  - `src/leo_twin/schema/config_loader.py`
+  - `src/leo_twin/services/derived_summary.py`
+  - `src/leo_twin/services/scenario_builder.py`
+  - `examples/integration_demo/config.py`
+  - `examples/integration_demo/scenario.py`
+  - `configs/templates/sees_user_detailed.example.yaml`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `tests/unit/test_backend_derived_summary.py`
+  - `tests/unit/test_configuration_view.py`
+  - `tests/unit/test_scenario_builder.py`
+  - `tests/unit/test_integration_demo_scenario.py`
+  - `tests/integration/test_config_control.py`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_backend_derived_summary.py tests/unit/test_configuration_view.py tests/unit/test_scenario_builder.py tests/unit/test_integration_demo_scenario.py tests/integration/test_config_control.py -k "not default_generated_scenario_config_file_loads and not config_loads_correctly" -q`
+    - Result: passed, 44 tests.
+  - `python -m pytest tests/unit/test_backend_derived_summary.py tests/unit/test_configuration_view.py tests/unit/test_scenario_builder.py tests/unit/test_integration_demo_scenario.py tests/integration/test_config_control.py -q`
+    - Result: 44 passed, 2 failed due existing local runtime config drift in
+      `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+      Those files are explicitly excluded from this task and were not modified
+      or staged.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 25 files / 236 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The normal shell could not find `node`, so frontend validation was rerun
+    using the Codex bundled Node/Pnpm path.
+  - Two full target backend tests still read local runtime-generated config
+    files whose values differ from the repository baseline; per project rule,
+    those files were left untouched and unstaged.
+- Known remaining issues:
+  - The live traffic generator still needs a separate task to consume mixed
+    service weights for actual runtime demand generation. This task exposes and
+    validates the configuration/summary contract only.
+- Recommended follow-up:
+  - Connect service-mix weights to deterministic live user demand generation,
+    then expose per-user active business state and per-satellite service-load
+    summaries in the standalone dashboard.

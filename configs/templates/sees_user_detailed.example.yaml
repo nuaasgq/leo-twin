@@ -64,6 +64,13 @@ scenario:
     traffic_class: COMPUTE_SERVICE
     destination_type: COMPUTE_NODE
     output_data_size: 0.0
+    # Optional deterministic service mix weights. Leave all weights at 0.0 to
+    # preserve the single traffic_class mode above. Set multiple weights to
+    # describe mixed user services without changing the frontend key controls.
+    data_transfer_weight: 0.0
+    telemetry_weight: 0.0
+    bulk_downlink_weight: 0.0
+    compute_service_weight: 0.0
 
 network:
   # Layered flow-level network profile. These protocol names affect deterministic

@@ -306,6 +306,10 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
         "traffic_class": "BULK_DOWNLINK",
         "destination_type": "GROUND_ENDPOINT",
         "output_data_size": 3.5,
+        "data_transfer_weight": 0.0,
+        "telemetry_weight": 0.0,
+        "bulk_downlink_weight": 0.0,
+        "compute_service_weight": 0.0,
     }
     assert control_plane.result.scenario.frontend_config["network"] == {
         "application_protocol": "MQTT",

@@ -114,6 +114,10 @@ class TrafficModel:
     traffic_class: TrafficClassConfig = TrafficClassConfig.COMPUTE_SERVICE
     destination_type: TrafficDestinationTypeConfig = TrafficDestinationTypeConfig.COMPUTE_NODE
     output_data_size: float = 0.0
+    data_transfer_weight: float = 0.0
+    telemetry_weight: float = 0.0
+    bulk_downlink_weight: float = 0.0
+    compute_service_weight: float = 0.0
 
     def __post_init__(self) -> None:
         _require_positive_int(self.flow_interval_seconds, "traffic_model.flow_interval_seconds")
@@ -133,16 +137,44 @@ class TrafficModel:
                 "destination_type",
                 TrafficDestinationTypeConfig(str(self.destination_type)),
             )
+        for field_name in (
+            "data_transfer_weight",
+            "telemetry_weight",
+            "bulk_downlink_weight",
+            "compute_service_weight",
+        ):
+            _require_non_negative_finite(
+                getattr(self, field_name),
+                f"traffic_model.{field_name}",
+            )
+            object.__setattr__(self, field_name, float(getattr(self, field_name)))
+        service_mix_total_weight = sum(self.service_mix_weights().values())
         if (
-            self.traffic_class == TrafficClassConfig.COMPUTE_SERVICE
+            (
+                self.compute_service_weight > 0.0
+                or (
+                    service_mix_total_weight == 0.0
+                    and self.traffic_class == TrafficClassConfig.COMPUTE_SERVICE
+                )
+            )
             and self.destination_type != TrafficDestinationTypeConfig.COMPUTE_NODE
         ):
             raise ValueError(
                 "traffic_model.destination_type must be COMPUTE_NODE "
-                "when traffic_model.traffic_class is COMPUTE_SERVICE"
+                "when compute service traffic is enabled"
             )
         _require_non_negative_finite(self.output_data_size, "traffic_model.output_data_size")
         object.__setattr__(self, "output_data_size", float(self.output_data_size))
+
+    def service_mix_weights(self) -> dict[str, float]:
+        """Return deterministic traffic-class service mix weights."""
+
+        return {
+            TrafficClassConfig.DATA_TRANSFER.value: self.data_transfer_weight,
+            TrafficClassConfig.TELEMETRY.value: self.telemetry_weight,
+            TrafficClassConfig.BULK_DOWNLINK.value: self.bulk_downlink_weight,
+            TrafficClassConfig.COMPUTE_SERVICE.value: self.compute_service_weight,
+        }
 
 
 @dataclass(frozen=True)

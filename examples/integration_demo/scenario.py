@@ -262,6 +262,10 @@ def _backend_summary(
         traffic_class=config.traffic_class,
         traffic_destination_type=config.traffic_destination_type,
         traffic_output_data_size=config.traffic_output_data_size,
+        traffic_data_transfer_weight=config.traffic_data_transfer_weight,
+        traffic_telemetry_weight=config.traffic_telemetry_weight,
+        traffic_bulk_downlink_weight=config.traffic_bulk_downlink_weight,
+        traffic_compute_service_weight=config.traffic_compute_service_weight,
         compute_cpu_gflops_fp64=config.compute_cpu_gflops_fp64,
         compute_gpu_tflops_fp32=config.compute_gpu_tflops_fp32,
         compute_gpu_tflops_fp16=config.compute_gpu_tflops_fp16,
@@ -570,6 +574,10 @@ def _traffic_frontend_config(config: DemoConfig) -> dict[str, object]:
         "traffic_class": config.traffic_class,
         "destination_type": config.traffic_destination_type,
         "output_data_size": config.traffic_output_data_size,
+        "data_transfer_weight": config.traffic_data_transfer_weight,
+        "telemetry_weight": config.traffic_telemetry_weight,
+        "bulk_downlink_weight": config.traffic_bulk_downlink_weight,
+        "compute_service_weight": config.traffic_compute_service_weight,
     }
     if _workload_smoothing_should_be_exposed(config):
         traffic.update(

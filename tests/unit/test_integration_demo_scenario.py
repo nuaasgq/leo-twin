@@ -170,6 +170,10 @@ def test_demo_flow_and_task_demands_are_config_driven() -> None:
         "traffic_class": "COMPUTE_SERVICE",
         "destination_type": "COMPUTE_NODE",
         "output_data_size": 0.0,
+        "data_transfer_weight": 0.0,
+        "telemetry_weight": 0.0,
+        "bulk_downlink_weight": 0.0,
+        "compute_service_weight": 0.0,
     }
 
 

@@ -3845,6 +3845,10 @@ function dataPanelTrafficLabel(traffic: TrafficDemandSummary): string {
 
 function buildDataPanelTrafficNote(traffic: TrafficDemandSummary): string | null {
   const parts: string[] = [];
+  const serviceMixNote = buildTrafficServiceMixNote(traffic);
+  if (serviceMixNote) {
+    parts.push(serviceMixNote);
+  }
   const semanticNote = traffic.lifecycle_note ?? traffic.compatibility_note;
   if (semanticNote) {
     parts.push(semanticNote);
@@ -3885,6 +3889,41 @@ function buildDataPanelTrafficNote(traffic: TrafficDemandSummary): string | null
     );
   }
   return parts.length === 0 ? null : parts.join("；");
+}
+
+function buildTrafficServiceMixNote(traffic: TrafficDemandSummary): string | null {
+  const activeClasses = traffic.active_service_classes ?? [];
+  const normalizedWeights = traffic.service_mix_normalized_weights;
+  if (activeClasses.length === 0 || !normalizedWeights) {
+    return null;
+  }
+  const modeLabel =
+    traffic.service_mix_mode === "WEIGHTED_MIX" ? "业务组合" : "单业务";
+  const counts = traffic.service_mix_generated_request_counts ?? {};
+  const classParts = activeClasses.map((trafficClass) => {
+    const share = Math.max(0, normalizedWeights[trafficClass] ?? 0);
+    const requestCount = counts[trafficClass];
+    const countText =
+      typeof requestCount === "number" ? ` / ${formatCount(requestCount)} 请求` : "";
+    return `${trafficClassLabel(trafficClass)} ${formatMetricValue(share * 100)}%${countText}`;
+  });
+  return `${modeLabel}: ${classParts.join(" + ")}`;
+}
+
+function trafficClassLabel(trafficClass: string): string {
+  if (trafficClass === "COMPUTE_SERVICE" || trafficClass === "TASK_OFFLOAD_FLOW") {
+    return "通信-计算服务";
+  }
+  if (trafficClass === "DATA_TRANSFER") {
+    return "数据传输";
+  }
+  if (trafficClass === "TELEMETRY") {
+    return "遥测";
+  }
+  if (trafficClass === "BULK_DOWNLINK") {
+    return "批量下传";
+  }
+  return trafficClass;
 }
 
 function formatPercent(value: number): string {

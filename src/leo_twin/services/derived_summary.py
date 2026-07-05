@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from math import isfinite
 from typing import Any
 
 from leo_twin.models.compute import ComputeResourceVector
@@ -30,6 +31,10 @@ def build_backend_derived_summary(
     traffic_class: TrafficClass | str | None = None,
     traffic_destination_type: TrafficDestinationType | str | None = None,
     traffic_output_data_size: float = 0.0,
+    traffic_data_transfer_weight: float = 0.0,
+    traffic_telemetry_weight: float = 0.0,
+    traffic_bulk_downlink_weight: float = 0.0,
+    traffic_compute_service_weight: float = 0.0,
     compute_cpu_gflops_fp64: float = 0.0,
     compute_gpu_tflops_fp32: float = 0.0,
     compute_gpu_tflops_fp16: float = 0.0,
@@ -60,6 +65,22 @@ def build_backend_derived_summary(
         selected_traffic_class,
         traffic_destination_type,
     )
+    service_mix_summary = _traffic_service_mix_summary(
+        selected_traffic_class,
+        selected_destination_type,
+        flow_count=flow_count,
+        data_transfer_weight=traffic_data_transfer_weight,
+        telemetry_weight=traffic_telemetry_weight,
+        bulk_downlink_weight=traffic_bulk_downlink_weight,
+        compute_service_weight=traffic_compute_service_weight,
+    )
+    service_mix_request_counts = service_mix_summary[
+        "service_mix_generated_request_counts"
+    ]
+    assert isinstance(service_mix_request_counts, dict)
+    compute_service_request_count = int(
+        service_mix_request_counts[TrafficClass.COMPUTE_SERVICE.value]
+    )
     compute_vector = ComputeResourceVector(
         cpu_gflops_fp32=compute_capacity,
         cpu_gflops_fp64=compute_cpu_gflops_fp64,
@@ -76,12 +97,8 @@ def build_backend_derived_summary(
         "destination_type": selected_destination_type.value,
         "destination_type_label": _traffic_destination_label(selected_destination_type),
         "generated_flow_count": flow_count,
-        "generated_task_count": (
-            flow_count if selected_traffic_class == TrafficClass.COMPUTE_SERVICE else 0
-        ),
-        "generated_output_flow_metadata_count": (
-            flow_count if selected_traffic_class == TrafficClass.COMPUTE_SERVICE else 0
-        ),
+        "generated_task_count": compute_service_request_count,
+        "generated_output_flow_metadata_count": compute_service_request_count,
         "arrival_model": "DETERMINISTIC_INTERVAL",
         "source_selection_policy": "ROUND_ROBIN_GROUND_USERS",
         "destination_selection_policy": _traffic_destination_policy(
@@ -94,6 +111,7 @@ def build_backend_derived_summary(
         "priority": 0,
         "demand_capacity_mbps": demand_capacity,
         "task_compute_demand": task_compute_demand,
+        **service_mix_summary,
         **_traffic_lifecycle_summary(
             selected_traffic_class,
             selected_destination_type,
@@ -297,6 +315,114 @@ def _selected_destination_type(
     if isinstance(destination_type, TrafficDestinationType):
         return destination_type
     return TrafficDestinationType(str(destination_type))
+
+
+_TRAFFIC_CLASS_ORDER = (
+    TrafficClass.DATA_TRANSFER,
+    TrafficClass.TELEMETRY,
+    TrafficClass.BULK_DOWNLINK,
+    TrafficClass.COMPUTE_SERVICE,
+)
+
+
+def _traffic_service_mix_summary(
+    selected_traffic_class: TrafficClass,
+    selected_destination_type: TrafficDestinationType,
+    *,
+    flow_count: int,
+    data_transfer_weight: float,
+    telemetry_weight: float,
+    bulk_downlink_weight: float,
+    compute_service_weight: float,
+) -> dict[str, object]:
+    raw_weights = {
+        TrafficClass.DATA_TRANSFER.value: _non_negative_float(
+            data_transfer_weight,
+            "traffic_data_transfer_weight",
+        ),
+        TrafficClass.TELEMETRY.value: _non_negative_float(
+            telemetry_weight,
+            "traffic_telemetry_weight",
+        ),
+        TrafficClass.BULK_DOWNLINK.value: _non_negative_float(
+            bulk_downlink_weight,
+            "traffic_bulk_downlink_weight",
+        ),
+        TrafficClass.COMPUTE_SERVICE.value: _non_negative_float(
+            compute_service_weight,
+            "traffic_compute_service_weight",
+        ),
+    }
+    total_weight = sum(raw_weights.values())
+    effective_weights = dict(raw_weights)
+    if total_weight == 0.0:
+        effective_weights[selected_traffic_class.value] = 1.0
+        total_weight = 1.0
+    if (
+        effective_weights[TrafficClass.COMPUTE_SERVICE.value] > 0.0
+        and selected_destination_type != TrafficDestinationType.COMPUTE_NODE
+    ):
+        raise ValueError(
+            "COMPUTE_SERVICE service mix requires destination_type=COMPUTE_NODE"
+        )
+
+    normalized_weights = {
+        traffic_class.value: effective_weights[traffic_class.value] / total_weight
+        for traffic_class in _TRAFFIC_CLASS_ORDER
+    }
+    active_classes = [
+        traffic_class.value
+        for traffic_class in _TRAFFIC_CLASS_ORDER
+        if normalized_weights[traffic_class.value] > 0.0
+    ]
+    return {
+        "service_mix_mode": (
+            "WEIGHTED_MIX" if len(active_classes) > 1 else "SINGLE_CLASS"
+        ),
+        "service_mix_weights": {
+            traffic_class.value: effective_weights[traffic_class.value]
+            for traffic_class in _TRAFFIC_CLASS_ORDER
+        },
+        "service_mix_normalized_weights": normalized_weights,
+        "active_service_classes": active_classes,
+        "service_mix_generated_request_counts": _service_mix_request_counts(
+            flow_count,
+            normalized_weights,
+        ),
+    }
+
+
+def _service_mix_request_counts(
+    flow_count: int,
+    normalized_weights: Mapping[str, float],
+) -> dict[str, int]:
+    count = max(0, int(flow_count))
+    floor_counts: dict[str, int] = {}
+    fractions: list[tuple[float, int, str]] = []
+    assigned = 0
+    for order, traffic_class in enumerate(_TRAFFIC_CLASS_ORDER):
+        class_name = traffic_class.value
+        exact = count * float(normalized_weights[class_name])
+        base = int(exact)
+        floor_counts[class_name] = base
+        assigned += base
+        fractions.append((exact - base, order, class_name))
+    remaining = count - assigned
+    for _, _, class_name in sorted(fractions, key=lambda item: (-item[0], item[1]))[
+        :remaining
+    ]:
+        floor_counts[class_name] += 1
+    return {
+        traffic_class.value: floor_counts[traffic_class.value]
+        for traffic_class in _TRAFFIC_CLASS_ORDER
+    }
+
+
+def _non_negative_float(value: float, field_name: str) -> float:
+    numeric = float(value)
+    if not isfinite(numeric) or numeric < 0.0:
+        raise ValueError(f"{field_name} must be a non-negative finite number")
+    return numeric
 
 
 def _traffic_class_label(traffic_class: TrafficClass) -> str:

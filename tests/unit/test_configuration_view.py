@@ -71,9 +71,16 @@ def test_detailed_user_config_template_loads_with_full_contract() -> None:
     assert "frontend control panel should expose only key operational controls" in template_text
     assert "STK, EXATA, AFSIM, DDS" in template_text
     assert "flow-level proxy metrics" in template_text
+    assert "service mix weights" in template_text
     assert config.scenario.satellite_count == 72
     assert config.scenario.compute_nodes == 72
     assert config.scenario.traffic_model.traffic_class == "COMPUTE_SERVICE"
+    assert config.scenario.traffic_model.service_mix_weights() == {
+        "DATA_TRANSFER": 0.0,
+        "TELEMETRY": 0.0,
+        "BULK_DOWNLINK": 0.0,
+        "COMPUTE_SERVICE": 0.0,
+    }
     assert config.network.max_space_link_candidates_per_satellite == 4
     assert config.runtime.duration == 600
     assert config.ui.visualization.satellites is True
