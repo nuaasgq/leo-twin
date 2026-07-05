@@ -5825,3 +5825,57 @@ change.
   - The status page is manually maintained.
 - Recommended follow-up:
   - Keep test counts synchronized after future frontend test additions.
+
+## 2026-07-05 - Runtime Compute Vector Control Smoke Coverage
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: diagnose and guard the reported UI initialization failure where 72
+  satellites with compute resource vector fields returned
+  `unknown config update keys`; add opt-in compute-vector coverage to the
+  runtime control-cycle smoke and widen its default timeout for 1200-node
+  control ACKs.
+- Changed files/modules:
+  - `scripts/smoke_runtime_control_cycle.ps1`
+  - `README.md`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - Direct source-level `DemoControlPlane` probe with 72 satellites and
+    compute vector fields:
+    - Result: passed, `ok=true`, `satellite_count=72`,
+      `compute_gpu_tflops_fp32=2.0`.
+  - Running backend probe before restart:
+    - Result: failed with `unknown config update keys:
+      compute_cpu_gflops_fp64, compute_gpu_tflops_fp16,
+      compute_gpu_tflops_fp32, compute_memory_gb, compute_npu_tops_int8,
+      compute_storage_gb`, confirming the live process had stale control-plane
+      code.
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\sees_launcher.ps1 restart -OpenSurface console -NoBrowser`
+    - Result: backend and frontend restarted.
+  - Running backend probe after restart:
+    - Result: passed, `ok=true`, `last_action=INITIALIZE`,
+      `satellite_count=72`, `compute_gpu_tflops_fp32=2.0`,
+      `total_gpu_tflops_fp32=144.0`.
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\smoke_runtime_control_cycle.ps1 -JsonSummary`
+    - Result: passed for 1200 satellites / 20 users / 1200 compute nodes with
+      `include_compute_vector=false`.
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\smoke_runtime_control_cycle.ps1 -SatelliteCount 72 -UserCount 1000 -ComputeNodeCount 72 -IncludeComputeVector -JsonSummary`
+    - Result: passed for 72 satellites / 1000 users / 72 compute nodes with
+      `include_compute_vector=true`.
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\smoke_runtime_health.ps1 -ExpectedSatelliteCount 72 -ExpectedUserCount 1000 -ExpectedComputeNodeCount 72 -ExpectedConstellationProfile CUSTOM_WALKER -ExpectedTrafficClass COMPUTE_SERVICE`
+    - Result: passed.
+- Problems encountered:
+  - The live backend process was stale relative to the current branch code.
+  - A first attempt to put compute-vector fields into the default 1200-node
+    smoke made the diagnostic too heavy and caused an HTTP timeout. The final
+    script keeps the default 1200 smoke lean and uses `-IncludeComputeVector`
+    for the 72-node UI-contract check.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - Browser may need a refresh if it was open before the service restart.
+- Recommended follow-up:
+  - Run `scripts\smoke_runtime_control_cycle.ps1 -SatelliteCount 72 -UserCount
+    1000 -ComputeNodeCount 72 -IncludeComputeVector` after backend restarts to
+    confirm the UI initialization payload is accepted.

@@ -101,6 +101,7 @@ initializing, starting, pausing, resuming, stopping, and resetting it:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\smoke_runtime_control_cycle.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\smoke_runtime_control_cycle.ps1 -SatelliteCount 72 -UserCount 1000 -ComputeNodeCount 72 -IncludeComputeVector
 ```
 
 Before committing local development work:

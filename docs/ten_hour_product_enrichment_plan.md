@@ -557,6 +557,12 @@ The following issue-sized slices have now been delivered on
   - Maps to suggestions 91-95.
   - `docs/current_product_status.md` now reflects the latest 25-file / 197-test
     frontend verification count after the pending-button render test.
+- `test(runtime): include compute vector in control smoke`
+  - Maps to suggestions 51, 76-82, and 91-95.
+  - The runtime control-cycle smoke now has an opt-in `-IncludeComputeVector`
+    payload path so stale backend processes or regressed control-plane
+    whitelists are caught by the same field set used by the UI initialization
+    button.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected

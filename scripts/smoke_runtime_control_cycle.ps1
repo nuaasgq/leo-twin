@@ -1,9 +1,10 @@
 param(
     [int]$BackendPort = 8765,
-    [int]$TimeoutSeconds = 10,
+    [int]$TimeoutSeconds = 30,
     [int]$SatelliteCount = 1200,
     [int]$UserCount = 20,
     [int]$ComputeNodeCount = 1200,
+    [switch]$IncludeComputeVector,
     [switch]$JsonSummary
 )
 
@@ -123,10 +124,11 @@ function Wait-ForRuntimeCondition {
 }
 
 function New-ScaleSafeInitializePayload {
-    return @{
+    $payload = @{
         satellite_count = $SatelliteCount
         user_count = $UserCount
         compute_nodes = $ComputeNodeCount
+        compute_capacity = 10
         duration = 120
         orbit = @{
             update_interval_seconds = 60
@@ -144,6 +146,15 @@ function New-ScaleSafeInitializePayload {
         mode = "ACCELERATED"
         speed_factor = 20
     }
+    if ($IncludeComputeVector) {
+        $payload.compute_cpu_gflops_fp64 = 4
+        $payload.compute_gpu_tflops_fp32 = 2
+        $payload.compute_gpu_tflops_fp16 = 4
+        $payload.compute_npu_tops_int8 = 16
+        $payload.compute_memory_gb = 32
+        $payload.compute_storage_gb = 512
+    }
+    return $payload
 }
 
 $socket = [System.Net.WebSockets.ClientWebSocket]::new()
@@ -213,6 +224,7 @@ try {
         satellite_count = $SatelliteCount
         user_count = $UserCount
         compute_node_count = $ComputeNodeCount
+        include_compute_vector = [bool]$IncludeComputeVector
         initialized_lifecycle = $initializeAck.status.lifecycle_state
         start_sim_time = [double]$startAck.status.current_sim_time
         running_sim_time = $runningSimTime
@@ -228,6 +240,7 @@ try {
     else {
         Write-Host "Runtime control cycle smoke passed."
         Write-Host "  scenario: $SatelliteCount satellites / $UserCount users / $ComputeNodeCount compute nodes"
+        Write-Host "  compute vector payload: $([bool]$IncludeComputeVector)"
         Write-Host "  running sim time: $runningSimTime"
         Write-Host "  paused sim time: $pausedSimTime"
         Write-Host "  resumed sim time: $resumedSimTime"
