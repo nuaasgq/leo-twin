@@ -191,6 +191,29 @@ describe("ConfigPanel priority controls", () => {
     expect(markup).toContain("已完成");
   });
 
+  it("shows completed when lifecycle is completed even if legacy status is running", () => {
+    const markup = renderToStaticMarkup(
+      createElement(ConfigPanel, {
+        scenario: defaultScenario(),
+        runtime: {
+          ...runtimeStatus("RUNNING", true),
+          lifecycle_state: "COMPLETED",
+          current_sim_time: 600
+        },
+        progress: {
+          sim_time: 600,
+          duration: 600,
+          event_count: 100
+        },
+        generatedConfig: null,
+        onRuntimeControl: () => undefined
+      })
+    );
+
+    expect(markup).toContain("已完成");
+    expect(markup).not.toContain("运行中");
+  });
+
   it("renders quick scale presets for 72, 300, and 1200 satellite scenarios", () => {
     expect(SCENARIO_SCALE_PRESETS.map((preset) => preset.satelliteCount)).toEqual([
       72,

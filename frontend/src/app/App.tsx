@@ -576,7 +576,7 @@ export function App() {
               </div>
               <div className="surface-status-stack">
                 <div className={`surface-status ${runtimeStatus.status.toLowerCase()}`}>
-                  <span>{runtimeStatusLabel(runtimeStatus.status)}</span>
+                  <span>{runtimeStatusLabel(runtimeStatus)}</span>
                   <strong>{runtimeSpeedFactorLabel(runtimeStatus)}</strong>
                 </div>
                 <a
@@ -1078,12 +1078,12 @@ export function buildSurfaceSyncSummary({
   const boundedSnapshotTime = Math.max(0, snapshotSimTime);
   const deltaSeconds = boundedDisplayTime - boundedSnapshotTime;
   const statusLabel =
-    runtimeStatus.status === "RUNNING"
-      ? "同步运行"
-      : runtimeStatus.status === "PAUSED"
-        ? "同步暂停"
-        : runtimeStatus.status === "COMPLETED" || runtimeStatus.lifecycle_state === "COMPLETED"
-          ? "同步完成"
+    runtimeStatus.status === "COMPLETED" || runtimeStatus.lifecycle_state === "COMPLETED"
+      ? "同步完成"
+      : runtimeStatus.status === "RUNNING"
+        ? "同步运行"
+        : runtimeStatus.status === "PAUSED"
+          ? "同步暂停"
           : "同步待机";
   return {
     displayTimeLabel: `显示 ${formatDurationCompact(boundedDisplayTime)}`,
@@ -1567,15 +1567,18 @@ function finiteNumberOrZero(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
-function runtimeStatusLabel(status: RuntimeStatusPayload["status"]): string {
-  if (status === "RUNNING") {
+function runtimeStatusLabel(runtimeStatus: RuntimeStatusPayload): string {
+  if (
+    runtimeStatus.status === "COMPLETED" ||
+    runtimeStatus.lifecycle_state === "COMPLETED"
+  ) {
+    return "已完成";
+  }
+  if (runtimeStatus.status === "RUNNING") {
     return "运行中";
   }
-  if (status === "PAUSED") {
+  if (runtimeStatus.status === "PAUSED") {
     return "已暂停";
-  }
-  if (status === "COMPLETED") {
-    return "已完成";
   }
   return "已停止";
 }

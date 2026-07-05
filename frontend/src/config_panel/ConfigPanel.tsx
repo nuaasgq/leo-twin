@@ -2071,6 +2071,9 @@ export function runtimeExecutionParameterLockReason(
   if (runtimeControlBusy(runtime)) {
     return "控制命令处理中，暂时锁定运行模式、倍率、时长和种子。";
   }
+  if (runtime.status === "COMPLETED" || runtime.lifecycle_state === "COMPLETED") {
+    return "仿真已完成，运行模式、倍率、时长和种子已锁定；如需重新配置请先重置，再重新初始化。";
+  }
   if (runtime.status === "RUNNING" || runtime.lifecycle_state === "RUNNING") {
     return "仿真运行中，运行模式、倍率、时长和种子已锁定。";
   }
@@ -2587,14 +2590,14 @@ function runtimeStatusLabel(runtime: RuntimeStatusPayload): string {
   if (runtime.last_action === "INIT") {
     return "未初始化";
   }
+  if (runtime.status === "COMPLETED" || runtime.lifecycle_state === "COMPLETED") {
+    return "已完成";
+  }
   if (runtime.status === "RUNNING") {
     return "运行中";
   }
   if (runtime.status === "PAUSED") {
     return "已暂停";
-  }
-  if (runtime.status === "COMPLETED" || runtime.lifecycle_state === "COMPLETED") {
-    return "已完成";
   }
   if (runtime.last_action === "INITIALIZE") {
     return "已初始化";

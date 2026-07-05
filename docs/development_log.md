@@ -5,6 +5,45 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Runtime Completion State Consistency v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending in this commit
+- Scope: make completed runtime sessions authoritative across legacy demo
+  stream paths and frontend status labels, even if the older controller still
+  reports `RUNNING`.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/config_panel/ConfigPanel.tsx`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/appSurface.test.ts`
+  - `frontend/tests/configPanel.test.ts`
+  - `tests/integration/test_live_runtime_streaming.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/integration/test_live_runtime_streaming.py -q`
+    - Result: passed, 11 tests.
+  - Bundled Node:
+    `pnpm --dir frontend test -- appSurface.test.ts configPanel.test.ts dataPanel.test.ts`
+    - Result: passed, 25 files / 249 tests.
+  - Bundled Node:
+    `pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - `SimulationSession` correctly reaches `COMPLETED`, but legacy demo stream
+    helpers were gated by `RuntimeController.snapshot().status`, which can
+    remain `RUNNING` after the session has completed.
+  - Some frontend labels checked `status === RUNNING` before checking
+    `lifecycle_state === COMPLETED`, so mixed status payloads could still look
+    active.
+- Known remaining issues:
+  - The older `RuntimeController` enum still has no native `COMPLETED` state;
+    the session lifecycle remains the product runtime source of truth.
+- Recommended follow-up:
+  - Add a small backend status helper that exposes one canonical effective
+    status field for all HTTP, WebSocket, and dashboard consumers.
+
 ## 2026-07-05 - Visual Layer Budget Explanation v1
 
 - Branch: `feature/T164-dashboard-observability-v1`

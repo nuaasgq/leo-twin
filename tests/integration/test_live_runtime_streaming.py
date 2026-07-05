@@ -274,6 +274,43 @@ def test_demo_runtime_status_completes_at_configured_duration(tmp_path: Path) ->
     assert kpi_series["samples"][-1]["sim_time"] == 2.0
 
 
+def test_legacy_live_streams_stop_after_session_completion(tmp_path: Path) -> None:
+    control_plane = _control_plane(tmp_path)
+    initialized = control_plane.handle_raw_message(
+        json.dumps(
+            {
+                "type": "RUNTIME_CONTROL",
+                "action": "INITIALIZE",
+                "payload": {
+                    "duration": 2,
+                    "orbit": {"update_interval_seconds": 1},
+                    "traffic_model": {
+                        "flow_interval_seconds": 1,
+                        "task_interval_seconds": 1,
+                    },
+                },
+            }
+        )
+    )
+    assert initialized["ok"] is True
+    started = control_plane.handle_raw_message(
+        json.dumps({"type": "RUNTIME_CONTROL", "action": "START"})
+    )
+    assert started["ok"] is True
+    control_plane._require_advance_loop().stop()
+
+    for _ in range(4):
+        control_plane._require_session().advance_control_step()
+        control_plane._require_advance_loop().publish_pending()
+
+    assert control_plane._require_session().get_status().lifecycle_state == (
+        RuntimeLifecycleState.COMPLETED
+    )
+    assert control_plane.controller.snapshot().status == "RUNNING"
+    assert control_plane.stream_events() == ()
+    assert control_plane.stream_snapshots() == ()
+
+
 def test_server_side_advance_loop_stops_at_configured_duration() -> None:
     session = SimulationSession(
         session_id="duration-loop-test",

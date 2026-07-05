@@ -225,7 +225,7 @@ export const DataPanel = memo(function DataPanel({
         <div className="data-panel-runtime">
           <div>
             <span>运行状态</span>
-            <strong>{runtimeStatusLabel(runtimeStatus.status)}</strong>
+            <strong>{runtimeStatusLabel(runtimeStatus)}</strong>
           </div>
           <div>
             <span>仿真模式</span>
@@ -3476,15 +3476,18 @@ function couplingHealthScore(signals: {
   return Math.round((values.filter(Boolean).length / values.length) * 100);
 }
 
-function runtimeStatusLabel(status: RuntimeStatusPayload["status"]): string {
-  if (status === "RUNNING") {
+function runtimeStatusLabel(runtimeStatus: RuntimeStatusPayload): string {
+  if (
+    runtimeStatus.status === "COMPLETED" ||
+    runtimeStatus.lifecycle_state === "COMPLETED"
+  ) {
+    return "已完成";
+  }
+  if (runtimeStatus.status === "RUNNING") {
     return "运行中";
   }
-  if (status === "PAUSED") {
+  if (runtimeStatus.status === "PAUSED") {
     return "已暂停";
-  }
-  if (status === "COMPLETED") {
-    return "已完成";
   }
   return "已停止";
 }

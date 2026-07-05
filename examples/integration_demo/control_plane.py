@@ -139,7 +139,7 @@ class DemoControlPlane:
         return _initial_snapshot(self._result)
 
     def stream_events(self) -> tuple[dict[str, JsonValue], ...]:
-        if not self._initialized or self._controller.snapshot().status != "RUNNING":
+        if not self._live_stream_active():
             return ()
         self._require_advance_loop().publish_pending()
         batch = self._require_advance_loop().event_stream.read_after(0)
@@ -150,7 +150,7 @@ class DemoControlPlane:
         )
 
     def stream_snapshots(self) -> tuple[dict[str, JsonValue], ...]:
-        if not self._initialized or self._controller.snapshot().status != "RUNNING":
+        if not self._live_stream_active():
             return ()
         loop = self._require_advance_loop()
         loop.publish_pending()
@@ -323,6 +323,12 @@ class DemoControlPlane:
 
     def runtime_lifecycle_state(self) -> RuntimeLifecycleState:
         return self._require_session().lifecycle_state
+
+    def _live_stream_active(self) -> bool:
+        return (
+            self._initialized
+            and self._require_session().lifecycle_state == RuntimeLifecycleState.RUNNING
+        )
 
     def _stop_advance_loop(self) -> None:
         if self._advance_loop is not None:

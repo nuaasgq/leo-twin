@@ -204,6 +204,22 @@ describe("buildSurfaceSyncSummary", () => {
       }).statusLabel
     ).toBe("同步完成");
   });
+
+  it("prioritizes completed lifecycle over legacy running status", () => {
+    expect(
+      buildSurfaceSyncSummary({
+        displaySimTime: 600,
+        snapshotSimTime: 600,
+        eventCount: 100,
+        runtimeStatus: {
+          ...baseStatus,
+          status: "RUNNING",
+          lifecycle_state: "COMPLETED",
+          last_action: "START"
+        }
+      }).statusLabel
+    ).toBe("同步完成");
+  });
 });
 
 describe("runtimeStatusRequiresStreams", () => {
