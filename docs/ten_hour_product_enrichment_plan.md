@@ -387,13 +387,18 @@ The following issue-sized slices have now been delivered on
     for input network, compute queue, compute execution, output network, and
     total latency; dashboard trace labels expose the timeline without a layout
     redesign.
+- `feat(dashboard): show service trace timeline`
+  - Maps to suggestions 76-82 and 91.
+  - The dashboard compute panel now renders backend-provided service
+    `component_timeline` rows as compact visible stage chips while preserving
+    compatibility for legacy status packets.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected
 satellite coverage/beam labels, compute vector KPI samples, and the frontend
 visual verification script. The remaining high-value product gaps are backend
-service-trace drill-down tables, screenshot pixel baselines, and browser-driven
-reset/control end-to-end smoke tests.
+service-trace drill-down filtering, screenshot pixel baselines, and
+browser-driven reset/control end-to-end smoke tests.
 
 ## Acceptance Gates
 

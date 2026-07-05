@@ -837,9 +837,70 @@ describe("buildDataPanelServiceLatencyRows", () => {
         traceTitle:
           "task=svc-00-compute_service-00000-task / input=svc-00-compute_service-00000-input / output=svc-00-compute_service-00000-output / input_route=route:svc-00-compute_service-00000-input / output_route=route:svc-00-compute_service-00000-output / first=6s / last=8s / timeline=input_network@6s=4,000 ms, compute_queue@6s=0 ms, compute_execution@7s=2,000 ms, output_network@8s=1,400 ms, total@8s=7,400 ms",
         statusLabel: "完整闭环",
-        totalLatencyLabel: "7,400 ms"
+        totalLatencyLabel: "7,400 ms",
+        timeline: [
+          {
+            component: "input_network",
+            label: "输入网络",
+            timeLabel: "6s",
+            durationLabel: "4,000 ms",
+            traceTitle: "component=input_network / time=6s / duration=4,000 ms"
+          },
+          {
+            component: "compute_queue",
+            label: "计算排队",
+            timeLabel: "6s",
+            durationLabel: "0 ms",
+            traceTitle: "component=compute_queue / time=6s / duration=0 ms"
+          },
+          {
+            component: "compute_execution",
+            label: "计算执行",
+            timeLabel: "7s",
+            durationLabel: "2,000 ms",
+            traceTitle: "component=compute_execution / time=7s / duration=2,000 ms"
+          },
+          {
+            component: "output_network",
+            label: "输出网络",
+            timeLabel: "8s",
+            durationLabel: "1,400 ms",
+            traceTitle: "component=output_network / time=8s / duration=1,400 ms"
+          },
+          {
+            component: "total",
+            label: "总延迟",
+            timeLabel: "8s",
+            durationLabel: "7,400 ms",
+            traceTitle: "component=total / time=8s / duration=7,400 ms"
+          }
+        ]
       }
     ]);
+  });
+
+  it("keeps legacy service rows when component timeline is absent", () => {
+    const rows = buildDataPanelServiceLatencyRows({
+      version: "v1",
+      mode: "RECENT_SERVICE_LIMITED",
+      items: [
+        {
+          task_id: "svc-legacy",
+          complete: true,
+          input_network_latency_s: 1,
+          compute_queue_delay_s: 0,
+          compute_execution_delay_s: 1,
+          output_network_latency_s: 0,
+          total_latency_s: 2
+        }
+      ]
+    });
+
+    expect(rows[0]).toMatchObject({
+      taskId: "svc-legacy",
+      totalLatencyLabel: "2,000 ms",
+      timeline: []
+    });
   });
 });
 

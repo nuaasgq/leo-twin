@@ -440,6 +440,23 @@ export const DataPanel = memo(function DataPanel({
                   ))}
                 </div>
               ) : null}
+              {serviceLatencyRows.some((row) => row.timeline.length > 0) ? (
+                <div className="data-panel-service-timeline" aria-label="服务阶段时间线">
+                  {serviceLatencyRows.map((row) =>
+                    row.timeline.map((segment) => (
+                      <span
+                        key={`${row.taskId}:${segment.component}`}
+                        className="data-panel-service-segment"
+                        title={segment.traceTitle}
+                      >
+                        <small>{segment.label}</small>
+                        <strong>{segment.durationLabel}</strong>
+                        <em>{segment.timeLabel}</em>
+                      </span>
+                    ))
+                  )}
+                </div>
+              ) : null}
             </>
           ) : null}
           <TopComputeNodeTable rows={topComputeNodes} />
@@ -1474,6 +1491,52 @@ function serviceLatencyComponentTimeline(
   return `timeline=${labels.join(", ")}`;
 }
 
+function serviceLatencyTimelineItems(
+  item: RuntimeServiceLatencyHistoryV1["items"][number]
+): readonly DataPanelServiceLatencyTimelineItem[] {
+  return (item.component_timeline ?? []).map((component) => {
+    const timeLabel =
+      typeof component.sample_sim_time === "number"
+        ? `${formatMetricValue(component.sample_sim_time)}s`
+        : "n/a";
+    const durationLabel = formatMetricMilliseconds(component.duration_s);
+    const routeLabel = component.route_id ? `route=${component.route_id}` : "";
+    const metricLabel = component.metric_name ? `metric=${component.metric_name}` : "";
+    return {
+      component: component.component,
+      label: serviceLatencyComponentLabel(component.component),
+      timeLabel,
+      durationLabel,
+      traceTitle: [
+        `component=${component.component}`,
+        metricLabel,
+        `time=${timeLabel}`,
+        `duration=${durationLabel}`,
+        routeLabel
+      ]
+        .filter((part) => part.length > 0)
+        .join(" / ")
+    };
+  });
+}
+
+function serviceLatencyComponentLabel(component: string): string {
+  switch (component) {
+    case "input_network":
+      return "输入网络";
+    case "compute_queue":
+      return "计算排队";
+    case "compute_execution":
+      return "计算执行";
+    case "output_network":
+      return "输出网络";
+    case "total":
+      return "总延迟";
+    default:
+      return component;
+  }
+}
+
 function formatPreciseMetricValue(value: number): string {
   return value.toLocaleString("zh-CN", {
     maximumFractionDigits: 3,
@@ -1654,6 +1717,15 @@ export interface DataPanelServiceLatencyRow {
   traceTitle: string;
   statusLabel: string;
   totalLatencyLabel: string;
+  timeline: readonly DataPanelServiceLatencyTimelineItem[];
+}
+
+export interface DataPanelServiceLatencyTimelineItem {
+  component: string;
+  label: string;
+  timeLabel: string;
+  durationLabel: string;
+  traceTitle: string;
 }
 
 export interface DataPanelRouteConstraint {
@@ -1860,7 +1932,8 @@ export function buildDataPanelServiceLatencyRows(
     taskLabel: compactTaskId(item.task_id),
     traceTitle: serviceLatencyTraceTitle(item),
     statusLabel: item.complete ? "完整闭环" : "未闭环",
-    totalLatencyLabel: formatMetricMilliseconds(item.total_latency_s)
+    totalLatencyLabel: formatMetricMilliseconds(item.total_latency_s),
+    timeline: serviceLatencyTimelineItems(item)
   }));
 }
 

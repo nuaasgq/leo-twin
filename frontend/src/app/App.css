@@ -1553,6 +1553,50 @@ body {
   font-weight: 700;
 }
 
+.data-panel-service-timeline {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  gap: 6px;
+  min-width: 0;
+}
+
+.data-panel-service-segment {
+  min-width: 0;
+  border: 1px solid #21445a;
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: #081721;
+  color: var(--app-muted);
+  font-size: 10px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.data-panel-service-segment small,
+.data-panel-service-segment strong,
+.data-panel-service-segment em {
+  display: block;
+  min-width: 0;
+}
+
+.data-panel-service-segment small {
+  color: var(--accent-cyan);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.data-panel-service-segment strong {
+  color: var(--app-text);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.data-panel-service-segment em {
+  color: var(--app-subtle);
+  font-size: 9px;
+  font-style: normal;
+}
+
 .data-panel-route-table {
   display: grid;
   gap: 4px;

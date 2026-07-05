@@ -4712,3 +4712,36 @@ change.
 - Recommended follow-up:
   - Add a bounded lifecycle detail table or drawer with component rows when the
     UI has room for a richer service-inspection interaction.
+
+## 2026-07-05 - Dashboard Service Trace Timeline v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: render the backend-provided `service_latency_history_v1`
+  `component_timeline` as visible compact stage chips in the dashboard compute
+  panel. The existing service trace row remains in place, and legacy runtime
+  status packets without component timelines still render as before.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 25 files / 193 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - None. The UI uses the existing backend contract and does not infer service
+    timing semantics locally.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The timeline is a compact stage-chip row, not an interactive drill-down
+    drawer with filtering or per-service expansion.
+- Recommended follow-up:
+  - Add a browser-driven dashboard smoke test that verifies service timeline
+    rendering against a mocked runtime status response.
