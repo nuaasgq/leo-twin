@@ -84,6 +84,7 @@ Endpoints:
 - `GET /metrics/snapshot`
 - `GET /runtime/status`
 - `GET /runtime/export`
+- `GET /runtime/export/archive`
 - `WS /stream/events`
 - `WS /stream/state`
 
@@ -99,9 +100,17 @@ Live runtime export:
 Invoke-RestMethod http://127.0.0.1:8765/runtime/export
 ```
 
+Downloadable archive:
+
+```text
+http://127.0.0.1:8765/runtime/export/archive
+```
+
 The live export writes a deterministic result package under
 `artifacts/runtime_exports`. Each package contains `manifest.json`,
 `config_snapshot.json`, `events.jsonl`, `metrics.csv`, and `summary.json`.
+The archive endpoint returns the same package as a ZIP download with stable
+entry ordering and fixed ZIP metadata.
 
 ## Frontend
 

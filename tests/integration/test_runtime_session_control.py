@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import zipfile
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
@@ -759,6 +760,44 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
         "sim_time,metric_name,entity_id,value,tags\n"
     )
     assert (package_dir / "events.jsonl").read_text(encoding="utf-8")
+
+    control_plane.handle_raw_message(json.dumps({"type": "RUNTIME_CONTROL", "action": "STOP"}))
+
+
+def test_demo_adapter_exports_deterministic_runtime_archive(tmp_path) -> None:
+    control_plane = DemoControlPlane.from_result(
+        run_integration_demo(_small_demo_config()),
+        config_output_path=tmp_path / "sees_control.yaml",
+        generated_config_output_path=tmp_path / "generated_full_system_demo.json",
+    )
+    control_plane.handle_raw_message(
+        json.dumps({"type": "RUNTIME_CONTROL", "action": "INITIALIZE"})
+    )
+    control_plane.handle_raw_message(json.dumps({"type": "RUNTIME_CONTROL", "action": "START"}))
+    control_plane._require_advance_loop().tick()
+
+    first = control_plane.export_runtime_archive(tmp_path / "archives")
+    second = control_plane.export_runtime_archive(tmp_path / "archives")
+    archive_record = first["archive"]
+    archive_path = Path(archive_record["path"])
+
+    assert archive_path.exists()
+    assert archive_record["filename"].endswith(".zip")
+    assert archive_record["sha256"] == second["archive"]["sha256"]
+    with zipfile.ZipFile(archive_path) as archive:
+        names = archive.namelist()
+        assert names == sorted(names)
+        assert {
+            "config_snapshot.json",
+            "events.jsonl",
+            "manifest.json",
+            "metrics.csv",
+            "summary.json",
+        } <= set(names)
+        for info in archive.infolist():
+            assert info.date_time == (2026, 1, 1, 0, 0, 0)
+        manifest = json.loads(archive.read("manifest.json").decode("utf-8"))
+        assert manifest["manifest_hash"] == first["manifest"]["manifest_hash"]
 
     control_plane.handle_raw_message(json.dumps({"type": "RUNTIME_CONTROL", "action": "STOP"}))
 

@@ -11,6 +11,8 @@ import {
   StateSnapshot
 } from "../core/event_types";
 
+export const DEFAULT_RUNTIME_EXPORT_ARCHIVE_ENDPOINT = "/runtime/export/archive";
+
 export async function loadScenarioConfig(endpoint = "/scenario/config"): Promise<ScenarioConfig> {
   const response = await fetch(endpoint);
   if (!response.ok) {
@@ -95,6 +97,12 @@ export function runtimeApiErrorMessage(error: unknown): string {
     return `后端接口格式不符合前端契约：${message}`;
   }
   return `运行状态刷新失败：${message}`;
+}
+
+export function runtimeExportArchiveHref(
+  endpoint = DEFAULT_RUNTIME_EXPORT_ARCHIVE_ENDPOINT
+): string {
+  return endpoint;
 }
 
 function decodeScenarioConfig(value: unknown): ScenarioConfig {

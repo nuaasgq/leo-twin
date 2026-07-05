@@ -152,6 +152,19 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                 except RuntimeError as exc:
                     self.send_error(409, str(exc))
                 return
+            if path == "/runtime/export/archive":
+                try:
+                    exported_archive = control_plane.export_runtime_archive()
+                except RuntimeError as exc:
+                    self.send_error(409, str(exc))
+                    return
+                archive = exported_archive["archive"]
+                self._send_file(
+                    Path(str(archive["path"])),
+                    content_type="application/zip",
+                    download_name=str(archive["filename"]),
+                )
+                return
             if path == "/runtime/details/users":
                 try:
                     cursor, limit = _detail_query(query, default_limit=100)
@@ -203,6 +216,25 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
             self.send_response(200)
             self._cors_headers()
             self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+
+        def _send_file(
+            self,
+            path: Path,
+            *,
+            content_type: str,
+            download_name: str,
+        ) -> None:
+            data = path.read_bytes()
+            self.send_response(200)
+            self._cors_headers()
+            self.send_header("Content-Type", content_type)
+            self.send_header(
+                "Content-Disposition",
+                f'attachment; filename="{download_name}"',
+            )
             self.send_header("Content-Length", str(len(data)))
             self.end_headers()
             self.wfile.write(data)

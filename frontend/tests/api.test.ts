@@ -5,12 +5,18 @@ import {
   loadRuntimeSatelliteDetails,
   loadRuntimeState,
   loadRuntimeUserDetails,
+  runtimeExportArchiveHref,
   runtimeApiErrorMessage
 } from "../src/app/api";
 
 describe("runtime API diagnostics", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it("exposes the runtime export archive download endpoint", () => {
+    expect(runtimeExportArchiveHref()).toBe("/runtime/export/archive");
+    expect(runtimeExportArchiveHref("/custom/archive.zip")).toBe("/custom/archive.zip");
   });
 
   it("includes endpoint and HTTP status when runtime status fails", async () => {

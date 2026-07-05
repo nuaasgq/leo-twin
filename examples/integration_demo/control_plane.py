@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -192,7 +193,6 @@ class DemoControlPlane:
     ) -> dict[str, Any]:
         if self._runtime_context is None:
             raise RuntimeError("runtime metrics are unavailable for export")
-        self._require_advance_loop().publish_pending()
         generated_config = self._generated_config_json()
         status = self._status_json(generated_config)
         package_id = _runtime_export_package_id(
@@ -205,7 +205,7 @@ class DemoControlPlane:
         written_files = dict(self._runtime_context.metrics.write_outputs(package_dir))
         config_snapshot = {
             "type": "RUNTIME_CONFIG_SNAPSHOT",
-            "status": status,
+            "status": _runtime_export_status_snapshot(status),
             "config": self._controller.config_json(),
             "generated_config": generated_config,
         }
@@ -232,6 +232,19 @@ class DemoControlPlane:
             "files": files,
             "manifest": manifest,
         }
+
+    def export_runtime_archive(
+        self,
+        output_root: str | Path = "artifacts/runtime_exports",
+    ) -> dict[str, Any]:
+        package = self.export_runtime_package(output_root)
+        package_dir = Path(str(package["package_dir"]))
+        archive_path = package_dir / f"{package['package_id']}.zip"
+        _write_runtime_export_archive(package_dir, archive_path)
+        archive_record = _runtime_export_file_record("archive", archive_path)
+        archive_package = dict(package)
+        archive_package["archive"] = archive_record
+        return archive_package
 
     def visible_snapshot(self) -> dict[str, JsonValue]:
         session = self._require_session()
@@ -914,6 +927,42 @@ def _runtime_export_file_record(name: str, path: Path) -> dict[str, Any]:
         "bytes": len(data),
         "sha256": f"sha256:{hashlib.sha256(data).hexdigest()}",
     }
+
+
+def _runtime_export_status_snapshot(status: dict[str, Any]) -> dict[str, Any]:
+    snapshot = dict(status)
+    for key in (
+        "backpressure_summary",
+        "profiling_summary",
+        "stream_diagnostics_v1",
+    ):
+        snapshot.pop(key, None)
+    snapshot["export_status_policy"] = "STABLE_RUNTIME_STATUS_WITHOUT_STREAM_DIAGNOSTICS"
+    snapshot["excluded_export_status_fields"] = (
+        "backpressure_summary",
+        "profiling_summary",
+        "stream_diagnostics_v1",
+    )
+    return snapshot
+
+
+def _write_runtime_export_archive(package_dir: Path, archive_path: Path) -> None:
+    entries = tuple(
+        path
+        for path in sorted(package_dir.iterdir(), key=lambda item: item.name)
+        if path.is_file() and path != archive_path
+    )
+    with zipfile.ZipFile(
+        archive_path,
+        "w",
+        compression=zipfile.ZIP_DEFLATED,
+        compresslevel=9,
+    ) as archive:
+        for path in entries:
+            info = zipfile.ZipInfo(path.name, date_time=(2026, 1, 1, 0, 0, 0))
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.external_attr = 0o644 << 16
+            archive.writestr(info, path.read_bytes())
 
 
 def _network_quality_provenance_from_metrics(metrics: dict[str, Any]) -> dict[str, Any]:

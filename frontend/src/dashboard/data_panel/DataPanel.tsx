@@ -35,6 +35,7 @@ import {
   RuntimeUserRequestItemV1,
   RuntimeUserRequestSummaryV1
 } from "../../core/event_types";
+import { runtimeExportArchiveHref } from "../../app/api";
 import { runtimeSpeedFactorLabel } from "../../runtime_display";
 import { WorldSnapshot } from "../../state/snapshot_engine";
 import { ChannelHealthPanel } from "../channel_health/ChannelHealthPanel";
@@ -280,6 +281,9 @@ export const DataPanel = memo(function DataPanel({
           <div className="data-panel-actions">
             <a href="/" className="data-panel-action" onClick={onNavigateControl}>
               返回三维控制台
+            </a>
+            <a href={runtimeExportArchiveHref()} className="data-panel-action" download>
+              导出复盘包
             </a>
           </div>
         </div>

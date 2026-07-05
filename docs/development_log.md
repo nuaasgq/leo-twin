@@ -8765,3 +8765,53 @@ change.
   - Add a frontend export action plus a backend archive/download response that
     packages the deterministic result directory without exposing arbitrary
     filesystem paths.
+
+## 2026-07-05 - Runtime Export Download v1
+
+- Branch: `feature/T181-runtime-export-download-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a browser-downloadable deterministic runtime export archive.
+  `DemoControlPlane.export_runtime_archive()` now wraps the existing result
+  package in a ZIP file with stable entry ordering and fixed ZIP metadata, and
+  the demo server exposes it through `GET /runtime/export/archive` with
+  `application/zip` and `Content-Disposition`. The standalone dashboard adds a
+  `导出复盘包` action that links to the archive endpoint through the existing
+  `/runtime` proxy. Event Kernel behavior, live stream progression, and
+  simulation models remain unchanged.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `frontend/src/app/api.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/api.test.ts`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/integration_demo.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/integration/test_runtime_session_control.py::test_demo_adapter_exports_runtime_result_package tests/integration/test_runtime_session_control.py::test_demo_adapter_exports_deterministic_runtime_archive -q`
+    - Result: passed, 2 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- api.test.ts dataPanel.test.ts`
+    - Result: passed, 25 files / 268 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Existing DataPanel chunk-size warning remains.
+- Problems encountered:
+  - Repeated archive exports initially produced different ZIP hashes because
+    `config_snapshot.json` included volatile runtime diagnostics
+    (`profiling_summary`, `backpressure_summary`, and
+    `stream_diagnostics_v1`). The export snapshot now records a stable status
+    policy and excludes those fields while keeping manifest/config/metrics
+    outputs deterministic.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The browser action is a direct download link. It does not yet show
+    frontend progress, success/failure toast feedback, or export history.
+- Recommended follow-up:
+  - Add export UX feedback and a small `/runtime/export/history` summary so
+    users can see the latest generated packages without inspecting backend
+    logs or filesystem paths.
