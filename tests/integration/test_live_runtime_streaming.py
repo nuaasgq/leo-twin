@@ -81,6 +81,13 @@ def test_reset_replaces_session_and_clears_stream_buffers(tmp_path: Path) -> Non
     assert reset_ack["status"]["last_action"] == "RESET"
     assert reset_ack["status"]["initialized"] is False
     assert reset_ack["status"]["lifecycle_state"] == "INITIALIZED"
+    reset_user_history = reset_ack["status"]["user_request_history_v1"]
+    assert reset_user_history["series"]
+    assert all(
+        sample["sim_time"] == 0.0
+        for series in reset_user_history["series"]
+        for sample in series["samples"]
+    )
     assert control_plane.advance_loop_snapshot()["event_stream"]["retained_count"] == 0
     assert control_plane.advance_loop_snapshot()["snapshot_stream"]["retained_count"] == 0
     assert control_plane.stream_event_batch(cursor=0)["items"] == []

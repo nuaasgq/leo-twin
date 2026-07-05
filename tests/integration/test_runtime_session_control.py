@@ -327,6 +327,34 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
         "capacity_mbps",
         "path",
     }.issubset(user_summary["items"][0])
+    user_history = status_after_tick["user_request_history_v1"]
+    assert user_history["version"] == "v1"
+    assert user_history["mode"] == "RECENT_USER_REQUEST_LIMITED"
+    assert user_history["series_count"] == len(user_history["series"])
+    assert user_history["user_count"] >= user_history["series_count"]
+    assert user_history["series"]
+    assert {
+        "user_id",
+        "sample_count",
+        "samples",
+    }.issubset(user_history["series"][0])
+    assert user_history["series"][0]["samples"]
+    assert {
+        "sim_time",
+        "communication_route_count",
+        "available_route_count",
+        "compute_service_count",
+        "network_queue_count",
+        "selected_satellite_id",
+        "destination_id",
+        "status",
+        "primary_route_id",
+        "primary_flow_id",
+        "latency_s",
+        "capacity_mbps",
+        "loss_proxy_rate",
+        "service_state",
+    }.issubset(user_history["series"][0]["samples"][-1])
     satellite_service_summary = status_after_tick["satellite_service_summary_v1"]
     assert satellite_service_summary["version"] == "v1"
     assert satellite_service_summary["source"] == "BACKEND_RUNTIME_SNAPSHOT"

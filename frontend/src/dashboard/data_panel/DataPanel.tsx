@@ -26,6 +26,7 @@ import {
   RuntimeSatelliteKpiSlicesV1,
   RuntimeServiceLatencyHistoryV1,
   RuntimeStatusPayload,
+  RuntimeUserRequestHistoryV1,
   RuntimeUserRequestSummaryV1
 } from "../../core/event_types";
 import { runtimeSpeedFactorLabel } from "../../runtime_display";
@@ -93,6 +94,7 @@ export const DataPanel = memo(function DataPanel({
   const [selectedHistorySatelliteId, setSelectedHistorySatelliteId] = useState<string | null>(
     null
   );
+  const [selectedHistoryUserId, setSelectedHistoryUserId] = useState<string | null>(null);
   const summary = buildDataPanelDisplaySummary(
     buildDataPanelSummary(snapshot),
     displaySimTime,
@@ -158,6 +160,12 @@ export const DataPanel = memo(function DataPanel({
     runtimeStatus.service_latency_history_v1,
     runtimeStatus.user_request_summary_v1
   );
+  const userRequestHistory = buildDataPanelUserRequestHistory(
+    runtimeStatus.user_request_history_v1,
+    selectedHistoryUserId
+  );
+  const latestUserRequestHistoryPoint =
+    userRequestHistory.points[userRequestHistory.points.length - 1];
   const satelliteResourceRows = buildSatelliteResourceRows(
     snapshot,
     runtimeStatus.satellite_kpi_slices_v1,
@@ -545,6 +553,94 @@ export const DataPanel = memo(function DataPanel({
               </ResponsiveContainer>
             ) : (
               <div className="data-panel-empty-chart">等待算力快照</div>
+            )}
+          </div>
+        </section>
+
+        <section className="dashboard-section data-panel-chart" aria-label="用户业务历史曲线">
+          <div className="section-title">用户业务历史</div>
+          <div className="data-panel-source-note">
+            <span>{userRequestHistory.sourceLabel}</span>
+            <small>{userRequestHistory.summaryLabel}</small>
+          </div>
+          <div className="data-panel-history-selector">
+            <label htmlFor="data-panel-history-user">用户</label>
+            <select
+              id="data-panel-history-user"
+              value={userRequestHistory.selectedUserId ?? ""}
+              disabled={userRequestHistory.availableUserIds.length === 0}
+              onChange={(event) => setSelectedHistoryUserId(event.currentTarget.value)}
+            >
+              {userRequestHistory.availableUserIds.length === 0 ? (
+                <option value="">等待后端历史</option>
+              ) : (
+                userRequestHistory.availableUserIds.map((userId) => (
+                  <option key={userId} value={userId}>
+                    {userId}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+          {latestUserRequestHistoryPoint !== undefined ? (
+            <div className="data-panel-chart-kpis compact">
+              <KpiPanel
+                label="可用路由"
+                value={`${latestUserRequestHistoryPoint.availableRouteCount}/${latestUserRequestHistoryPoint.communicationRouteCount}`}
+              />
+              <KpiPanel
+                label="时延"
+                value={`${latestUserRequestHistoryPoint.latencyMs.toFixed(2)} ms`}
+              />
+            </div>
+          ) : null}
+          {latestUserRequestHistoryPoint !== undefined ? (
+            <div className="data-panel-resource-vector">
+              <span>目标 {latestUserRequestHistoryPoint.selectedSatelliteId}</span>
+              <span>流 {latestUserRequestHistoryPoint.primaryFlowId}</span>
+              <span>队列 {latestUserRequestHistoryPoint.networkQueueCount}</span>
+              <span>丢包代理 {latestUserRequestHistoryPoint.lossPercent.toFixed(2)}%</span>
+            </div>
+          ) : null}
+          <div className="data-panel-chart-body compact">
+            {userRequestHistory.points.length > 0 ? (
+              <ResponsiveContainer width="100%" height={160}>
+                <LineChart data={userRequestHistory.points}>
+                  <XAxis dataKey="timeLabel" hide />
+                  <YAxis yAxisId="route" width={38} />
+                  <YAxis yAxisId="latency" orientation="right" width={42} />
+                  <Tooltip />
+                  <Line
+                    yAxisId="route"
+                    type="monotone"
+                    dataKey="availableRouteCount"
+                    name="可用路由"
+                    stroke="#4fd37a"
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                  <Line
+                    yAxisId="route"
+                    type="monotone"
+                    dataKey="networkQueueCount"
+                    name="网络队列"
+                    stroke="#ef6f6c"
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                  <Line
+                    yAxisId="latency"
+                    type="monotone"
+                    dataKey="latencyMs"
+                    name="时延 ms"
+                    stroke="#56a6ff"
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="data-panel-empty-chart">等待后端用户业务历史</div>
             )}
           </div>
         </section>
@@ -1192,6 +1288,32 @@ export interface UserBusinessRequestRow {
   pathLabel: string;
 }
 
+export interface DataPanelUserRequestHistory {
+  sourceLabel: string;
+  summaryLabel: string;
+  selectedUserId: string | null;
+  availableUserIds: readonly string[];
+  points: readonly DataPanelUserRequestHistoryPoint[];
+}
+
+export interface DataPanelUserRequestHistoryPoint {
+  timeLabel: string;
+  simTime: number;
+  communicationRouteCount: number;
+  availableRouteCount: number;
+  computeServiceCount: number;
+  networkQueueCount: number;
+  latencyMs: number;
+  capacityMbps: number;
+  lossPercent: number;
+  selectedSatelliteId: string;
+  destinationId: string;
+  statusLabel: string;
+  primaryRouteId: string;
+  primaryFlowId: string;
+  serviceLabel: string;
+}
+
 export interface SatelliteResourceRows {
   sourceLabel: string;
   summaryLabel: string;
@@ -1750,6 +1872,73 @@ export function buildUserBusinessRequestRows(
       hiddenCount > 0 ? ` / 另有 ${formatCount(hiddenCount)} 个未显示` : ""
     }`,
     items
+  };
+}
+
+export function buildDataPanelUserRequestHistory(
+  history: RuntimeUserRequestHistoryV1 | null | undefined,
+  selectedUserId: string | null | undefined = undefined,
+  sampleLimit = 24
+): DataPanelUserRequestHistory {
+  const orderedSeries = (history?.series ?? [])
+    .filter((series) => series.samples.length > 0)
+    .slice()
+    .sort((left, right) =>
+      left.user_id.localeCompare(right.user_id, "zh-CN", { numeric: true })
+    );
+  if (orderedSeries.length === 0) {
+    return {
+      sourceLabel: "等待后端 user_request_history_v1",
+      summaryLabel: "暂无用户业务历史",
+      selectedUserId: null,
+      availableUserIds: [],
+      points: []
+    };
+  }
+
+  const availableUserIds = orderedSeries.map((series) => series.user_id);
+  const requestedId = selectedUserId ?? "";
+  const selectedSeries =
+    orderedSeries.find((series) => series.user_id === requestedId) ?? orderedSeries[0];
+  const normalizedLimit = Math.max(1, Math.floor(sampleLimit));
+  const points = selectedSeries.samples.slice(-normalizedLimit).map((sample) => ({
+    timeLabel: formatDurationCompact(sample.sim_time),
+    simTime: roundMetric(sample.sim_time),
+    communicationRouteCount: Math.max(
+      0,
+      Math.round(finiteMetric(sample.communication_route_count))
+    ),
+    availableRouteCount: Math.max(
+      0,
+      Math.round(finiteMetric(sample.available_route_count))
+    ),
+    computeServiceCount: Math.max(
+      0,
+      Math.round(finiteMetric(sample.compute_service_count))
+    ),
+    networkQueueCount: Math.max(
+      0,
+      Math.round(finiteMetric(sample.network_queue_count))
+    ),
+    latencyMs: roundMetric(finiteOptionalMetric(sample.latency_s, 0) * 1000),
+    capacityMbps: roundMetric(finiteOptionalMetric(sample.capacity_mbps, 0)),
+    lossPercent: roundMetric(finiteOptionalMetric(sample.loss_proxy_rate, 0) * 100),
+    selectedSatelliteId: sample.selected_satellite_id || "未选择",
+    destinationId: sample.destination_id || "未声明",
+    statusLabel: sample.status || "UNKNOWN",
+    primaryRouteId: sample.primary_route_id || "none",
+    primaryFlowId: sample.primary_flow_id || "none",
+    serviceLabel: sample.service_state || "无服务状态"
+  }));
+
+  return {
+    sourceLabel: "后端 user_request_history_v1",
+    summaryLabel: `${selectedSeries.user_id} / ${formatCount(points.length)} 个样本 / ${
+      history?.mode ?? "UNKNOWN"
+    }`,
+    selectedUserId: selectedSeries.user_id,
+    availableUserIds,
+    points
   };
 }
 

@@ -442,6 +442,7 @@ export interface RuntimeStatusPayload {
   satellite_kpi_history_v1?: RuntimeSatelliteKpiHistoryV1;
   service_latency_history_v1?: RuntimeServiceLatencyHistoryV1;
   user_request_summary_v1?: RuntimeUserRequestSummaryV1;
+  user_request_history_v1?: RuntimeUserRequestHistoryV1;
   satellite_service_summary_v1?: RuntimeSatelliteServiceSummaryV1;
   stream_diagnostics_v1?: RuntimeStreamDiagnosticsV1;
   profiling_summary?: RuntimeProfilingSummary | null;
@@ -544,6 +545,38 @@ export interface RuntimeUserRequestItemV1 {
   loss_proxy_rate?: number | null;
   service_state?: string;
   path: readonly string[];
+}
+
+export interface RuntimeUserRequestHistoryV1 {
+  version: "v1" | string;
+  mode: string;
+  sample_limit?: number;
+  user_count?: number;
+  series_count?: number;
+  series: readonly RuntimeUserRequestHistorySeriesV1[];
+}
+
+export interface RuntimeUserRequestHistorySeriesV1 {
+  user_id: string;
+  sample_count?: number;
+  samples: readonly RuntimeUserRequestHistorySampleV1[];
+}
+
+export interface RuntimeUserRequestHistorySampleV1 {
+  sim_time: number;
+  communication_route_count: number;
+  available_route_count: number;
+  compute_service_count: number;
+  network_queue_count: number;
+  selected_satellite_id?: string;
+  destination_id?: string;
+  status: string;
+  primary_route_id?: string;
+  primary_flow_id?: string;
+  latency_s?: number | null;
+  capacity_mbps?: number | null;
+  loss_proxy_rate?: number | null;
+  service_state?: string;
 }
 
 export interface RuntimeSatelliteServiceSummaryV1 {

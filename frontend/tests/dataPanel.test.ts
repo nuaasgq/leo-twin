@@ -19,6 +19,7 @@ import {
   buildDataPanelSummary,
   buildDataPanelTelemetry,
   buildDataPanelTrafficDisplay,
+  buildDataPanelUserRequestHistory,
   buildRuntimeKpiTelemetrySamples,
   buildRuntimeDetailSourceBadge,
   buildSatelliteResourceRows,
@@ -2072,6 +2073,130 @@ describe("buildUserBusinessRequestRows", () => {
       networkQueueLabel: "队列空",
       selectedSatelliteId: "未选择",
       statusLabel: "IDLE"
+    });
+  });
+});
+
+describe("buildDataPanelUserRequestHistory", () => {
+  const history = {
+    version: "v1",
+    mode: "RECENT_USER_REQUEST_LIMITED",
+    sample_limit: 3,
+    user_count: 2,
+    series_count: 2,
+    series: [
+      {
+        user_id: "user-10",
+        samples: [
+          {
+            sim_time: 1,
+            communication_route_count: 2,
+            available_route_count: 1,
+            compute_service_count: 1,
+            network_queue_count: 1,
+            selected_satellite_id: "sat-3",
+            destination_id: "compute-0",
+            status: "ACTIVE/WAITING_ROUTE",
+            primary_route_id: "route-10-a",
+            primary_flow_id: "flow-10-a",
+            latency_s: 0.12,
+            capacity_mbps: 80,
+            loss_proxy_rate: 0.02,
+            service_state: "task-10/120ms/RUNNING"
+          },
+          {
+            sim_time: 2,
+            communication_route_count: 3,
+            available_route_count: 2,
+            compute_service_count: 1,
+            network_queue_count: 0,
+            selected_satellite_id: "sat-4",
+            destination_id: "compute-1",
+            status: "ACTIVE/AVAILABLE",
+            primary_route_id: "route-10-b",
+            primary_flow_id: "flow-10-b",
+            latency_s: 0.08,
+            capacity_mbps: 120,
+            loss_proxy_rate: 0.01,
+            service_state: "task-10/80ms/RUNNING"
+          }
+        ]
+      },
+      {
+        user_id: "user-2",
+        samples: [
+          {
+            sim_time: 3,
+            communication_route_count: 1,
+            available_route_count: 1,
+            compute_service_count: 0,
+            network_queue_count: 0,
+            status: "ACTIVE/AVAILABLE"
+          }
+        ]
+      }
+    ]
+  };
+
+  it("defaults to the first deterministic user series", () => {
+    const display = buildDataPanelUserRequestHistory(history);
+
+    expect(display.sourceLabel).toBe("后端 user_request_history_v1");
+    expect(display.selectedUserId).toBe("user-2");
+    expect(display.availableUserIds).toEqual(["user-2", "user-10"]);
+    expect(display.points).toEqual([
+      {
+        timeLabel: "3秒",
+        simTime: 3,
+        communicationRouteCount: 1,
+        availableRouteCount: 1,
+        computeServiceCount: 0,
+        networkQueueCount: 0,
+        latencyMs: 0,
+        capacityMbps: 0,
+        lossPercent: 0,
+        selectedSatelliteId: "未选择",
+        destinationId: "未声明",
+        statusLabel: "ACTIVE/AVAILABLE",
+        primaryRouteId: "none",
+        primaryFlowId: "none",
+        serviceLabel: "无服务状态"
+      }
+    ]);
+  });
+
+  it("uses explicit user selection and maps route quality fields", () => {
+    const display = buildDataPanelUserRequestHistory(history, "user-10", 1);
+
+    expect(display.selectedUserId).toBe("user-10");
+    expect(display.points).toEqual([
+      {
+        timeLabel: "2秒",
+        simTime: 2,
+        communicationRouteCount: 3,
+        availableRouteCount: 2,
+        computeServiceCount: 1,
+        networkQueueCount: 0,
+        latencyMs: 80,
+        capacityMbps: 120,
+        lossPercent: 1,
+        selectedSatelliteId: "sat-4",
+        destinationId: "compute-1",
+        statusLabel: "ACTIVE/AVAILABLE",
+        primaryRouteId: "route-10-b",
+        primaryFlowId: "flow-10-b",
+        serviceLabel: "task-10/80ms/RUNNING"
+      }
+    ]);
+  });
+
+  it("falls back to an empty display when user history is unavailable", () => {
+    expect(buildDataPanelUserRequestHistory(undefined)).toEqual({
+      sourceLabel: "等待后端 user_request_history_v1",
+      summaryLabel: "暂无用户业务历史",
+      selectedUserId: null,
+      availableUserIds: [],
+      points: []
     });
   });
 });

@@ -6517,3 +6517,44 @@ change.
 - Recommended follow-up:
   - Add per-user business/request time-series drilldowns and backend row-window
     APIs for large-scale dashboard inspection.
+
+## 2026-07-05 - User Request History Dashboard v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a backend-owned, bounded `user_request_history_v1` runtime status
+  field and display it on the standalone dashboard. The control plane now keeps
+  a deterministic per-user recent history window derived from backend
+  `user_request_summary_v1`; reset and re-initialization clear old history. The
+  dashboard lets users select one user and inspect available routes, network
+  queue count, latency, target satellite, primary flow, and loss proxy over
+  simulation time. Event Kernel behavior is unchanged.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `tests/integration/test_runtime_session_control.py`
+  - `tests/integration/test_live_runtime_streaming.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_runtime_observability.py tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer tests/integration/test_live_runtime_streaming.py::test_reset_replaces_session_and_clears_stream_buffers -q`
+    - Result: passed, 3 tests.
+  - `pnpm --dir frontend exec vitest run dataPanel.test.ts`
+    - Result: passed, 1 file / 70 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The Codex bundled Python runtime does not include `pytest`, so backend
+    validation used the system Python 3.14 interpreter already available on the
+    workstation.
+- Known remaining issues:
+  - `user_request_history_v1` is a recent runtime status window, not a full
+    archival query API. It samples status when runtime status is requested.
+  - Metrics remain flow-level proxies; no packet-level queueing, RF loss, or
+    retransmission model was introduced.
+- Recommended follow-up:
+  - Move user history sampling into a dedicated observability service if the
+    dashboard needs history independent of status polling cadence.
+  - Add backend row-window APIs or virtualized tables for large user and
+    satellite drilldowns.

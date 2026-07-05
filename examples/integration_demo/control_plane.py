@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import re
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -84,6 +85,10 @@ class DemoControlPlane:
     _runtime_context: DemoRuntimeContext | None = None
     _advance_loop: SessionAdvanceLoop | None = None
     _initialized: bool = False
+    _user_request_history: dict[str, list[dict[str, object]]] = field(
+        default_factory=dict
+    )
+    _user_request_history_limit: int = 32
 
     @classmethod
     def from_result(
@@ -263,6 +268,7 @@ class DemoControlPlane:
 
     def _install_runtime_session(self, config: DemoConfig) -> None:
         self._stop_advance_loop()
+        self._user_request_history.clear()
         sees_config = demo_config_to_sees_config(config)
         fidelity_summary = _fidelity_summary_from_demo_config(config)
 
@@ -364,12 +370,15 @@ class DemoControlPlane:
         status["satellite_kpi_slices_v1"] = self._satellite_kpi_slices_json()
         status["satellite_kpi_history_v1"] = self._satellite_kpi_history_json()
         status["service_latency_history_v1"] = self._service_latency_history_json()
-        status.update(
-            build_runtime_lifecycle_summaries(
-                self.visible_snapshot(),
-                service_latency_history=status["service_latency_history_v1"],
-                satellite_kpi_slices=status["satellite_kpi_slices_v1"],
-            )
+        lifecycle_summaries = build_runtime_lifecycle_summaries(
+            self.visible_snapshot(),
+            service_latency_history=status["service_latency_history_v1"],
+            satellite_kpi_slices=status["satellite_kpi_slices_v1"],
+        )
+        status.update(lifecycle_summaries)
+        status["user_request_history_v1"] = self._user_request_history_json(
+            lifecycle_summaries["user_request_summary_v1"],
+            float(status["current_sim_time"]),
         )
         status["stream_diagnostics_v1"] = self._stream_diagnostics_json()
         return status
@@ -438,6 +447,72 @@ class DemoControlPlane:
             }
         return dict(self._runtime_context.metrics.service_latency_history())
 
+    def _user_request_history_json(
+        self,
+        user_summary: object,
+        sim_time: float,
+    ) -> dict[str, Any]:
+        if isinstance(user_summary, dict):
+            self._append_user_request_history(user_summary, sim_time)
+        user_ids = sorted(self._user_request_history, key=_control_entity_sort_key)
+        series_items: list[dict[str, object]] = []
+        for user_id in user_ids:
+            samples = tuple(
+                self._user_request_history[user_id][-self._user_request_history_limit :]
+            )
+            series_items.append(
+                {
+                    "user_id": user_id,
+                    "sample_count": len(samples),
+                    "samples": samples,
+                }
+            )
+        series = tuple(series_items)
+        return {
+            "version": "v1",
+            "mode": "RECENT_USER_REQUEST_LIMITED",
+            "sample_limit": self._user_request_history_limit,
+            "user_count": len(self._user_request_history),
+            "series_count": len(series),
+            "series": series,
+        }
+
+    def _append_user_request_history(
+        self,
+        user_summary: dict[str, Any],
+        sim_time: float,
+    ) -> None:
+        for item in _control_records(user_summary.get("items")):
+            user_id = _control_string(item.get("user_id"))
+            if not user_id:
+                continue
+            sample = {
+                "sim_time": sim_time,
+                "communication_route_count": _control_int(
+                    item.get("communication_route_count")
+                ),
+                "available_route_count": _control_int(item.get("available_route_count")),
+                "compute_service_count": _control_int(item.get("compute_service_count")),
+                "network_queue_count": _control_int(item.get("network_queue_count")),
+                "selected_satellite_id": _control_string(
+                    item.get("selected_satellite_id")
+                ),
+                "destination_id": _control_string(item.get("destination_id")),
+                "status": _control_string(item.get("status")),
+                "primary_route_id": _control_string(item.get("primary_route_id")),
+                "primary_flow_id": _control_string(item.get("primary_flow_id")),
+                "latency_s": _control_optional_float(item.get("latency_s")),
+                "capacity_mbps": _control_optional_float(item.get("capacity_mbps")),
+                "loss_proxy_rate": _control_optional_float(item.get("loss_proxy_rate")),
+                "service_state": _control_string(item.get("service_state")),
+            }
+            history = self._user_request_history.setdefault(user_id, [])
+            if history and history[-1]["sim_time"] == sim_time:
+                history[-1] = sample
+            else:
+                history.append(sample)
+            del history[: max(0, len(history) - self._user_request_history_limit)]
+
     def _stream_diagnostics_json(self) -> dict[str, Any]:
         loop = self._require_advance_loop()
         snapshot = loop.snapshot()
@@ -478,6 +553,42 @@ class DemoControlPlane:
         if self._advance_loop is None:
             raise RuntimeError("runtime advance loop is not installed")
         return self._advance_loop
+
+
+def _control_records(value: object) -> tuple[dict[str, Any], ...]:
+    if not isinstance(value, (list, tuple)):
+        return ()
+    return tuple(item for item in value if isinstance(item, dict))
+
+
+def _control_string(value: object) -> str:
+    return value if isinstance(value, str) else ""
+
+
+def _control_int(value: object) -> int:
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+    return 0
+
+
+def _control_optional_float(value: object) -> float | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    return None
+
+
+def _control_entity_sort_key(value: str) -> tuple[tuple[int, object], ...]:
+    return tuple(
+        (0, int(token)) if token.isdigit() else (1, token)
+        for token in re.split(r"(\d+)", value)
+        if token
+    )
 
 
 def _initial_snapshot(result: DemoRunResult) -> dict[str, JsonValue]:
