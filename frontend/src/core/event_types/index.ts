@@ -560,11 +560,16 @@ export interface RuntimeKpiSampleV1 {
 export interface RuntimeUserRequestSummaryV1 {
   version: "v1" | string;
   source: string;
+  summary_scope?: string;
   user_count: number;
   item_count: number;
   active_user_count: number;
   compute_service_user_count: number;
   waiting_user_count: number;
+  window_user_count?: number;
+  window_active_user_count?: number;
+  window_compute_service_user_count?: number;
+  window_waiting_user_count?: number;
   hidden_user_count: number;
   items: readonly RuntimeUserRequestItemV1[];
 }
@@ -636,8 +641,10 @@ export interface RuntimeUserRequestHistorySampleV1 {
 export interface RuntimeSatelliteServiceSummaryV1 {
   version: "v1" | string;
   source: string;
+  summary_scope?: string;
   satellite_count: number;
   item_count: number;
+  window_satellite_count?: number;
   hidden_satellite_count: number;
   items: readonly RuntimeSatelliteServiceItemV1[];
 }

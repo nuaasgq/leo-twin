@@ -2206,23 +2206,34 @@ export function buildDataPanelDetailScopeNotes(
   const notes: DataPanelDetailScopeNote[] = [];
   if (userSummary !== null && userSummary !== undefined) {
     const hiddenUsers = Math.max(0, userSummary.hidden_user_count);
-    const backendItems = Math.max(0, userSummary.item_count);
+    const backendItems = Math.max(
+      0,
+      userSummary.window_user_count ?? userSummary.item_count
+    );
     const totalUsers = Math.max(0, userSummary.user_count);
+    const fullCountDetail = `全量活跃 ${formatCount(
+      userSummary.active_user_count
+    )} / 算力业务 ${formatCount(
+      userSummary.compute_service_user_count
+    )} / 排队 ${formatCount(userSummary.waiting_user_count)}。`;
     notes.push({
       label: "用户明细",
       value: `${formatCount(userRows.items.length)} / ${formatCount(totalUsers)} 行`,
       detail:
         hiddenUsers > 0
-          ? `后端摘要返回 ${formatCount(backendItems)} 行，隐藏 ${formatCount(
+          ? `${fullCountDetail} 后端窗口返回 ${formatCount(backendItems)} 行，隐藏 ${formatCount(
               hiddenUsers
             )} 行；表格已用快照补齐可见用户。`
-          : `后端摘要覆盖 ${formatCount(backendItems)} 个用户节点。`,
+          : `${fullCountDetail} 后端摘要覆盖 ${formatCount(backendItems)} 个用户节点。`,
       tone: hiddenUsers > 0 ? "limit" : "backend"
     });
   }
   if (satelliteSummary !== null && satelliteSummary !== undefined) {
     const hiddenSatellites = Math.max(0, satelliteSummary.hidden_satellite_count);
-    const backendItems = Math.max(0, satelliteSummary.item_count);
+    const backendItems = Math.max(
+      0,
+      satelliteSummary.window_satellite_count ?? satelliteSummary.item_count
+    );
     const totalSatellites = Math.max(0, satelliteSummary.satellite_count);
     notes.push({
       label: "卫星明细",
@@ -2231,7 +2242,7 @@ export function buildDataPanelDetailScopeNotes(
       )} 行`,
       detail:
         hiddenSatellites > 0
-          ? `后端服务摘要返回 ${formatCount(backendItems)} 行，隐藏 ${formatCount(
+          ? `后端窗口返回 ${formatCount(backendItems)} 行，隐藏 ${formatCount(
               hiddenSatellites
             )} 行；表格已用快照补齐卫星与算力节点。`
           : `后端服务摘要覆盖 ${formatCount(backendItems)} 颗卫星。`,
@@ -2543,10 +2554,19 @@ function buildBackendUserBusinessRequestRows(
     summary.hidden_user_count,
     Math.max(0, summary.items.length - items.length)
   );
+  const windowCount = Math.max(0, summary.window_user_count ?? summary.item_count);
+  const windowActiveCount = Math.max(
+    0,
+    summary.window_active_user_count ?? summary.active_user_count
+  );
   return {
     sourceLabel: "backend user_request_summary_v1",
-    summaryLabel: `${formatCount(items.length)} users / active ${formatCount(
+    summaryLabel: `${formatCount(items.length)} shown / ${formatCount(
+      summary.user_count
+    )} total / active ${formatCount(
       summary.active_user_count
+    )} total / window active ${formatCount(windowActiveCount)} / window ${formatCount(
+      windowCount
     )} / compute ${formatCount(summary.compute_service_user_count)}${
       hiddenCount > 0 ? ` / hidden ${formatCount(hiddenCount)}` : ""
     }`,
@@ -2624,11 +2644,17 @@ function buildBackendSatelliteResourceRows(
     summary.hidden_satellite_count,
     Math.max(0, summary.items.length - items.length)
   );
+  const windowCount = Math.max(
+    0,
+    summary.window_satellite_count ?? summary.item_count
+  );
   return {
     sourceLabel: "backend satellite_service_summary_v1",
-    summaryLabel: `${formatCount(items.length)} / ${formatCount(
+    summaryLabel: `${formatCount(items.length)} shown / ${formatCount(
       summary.satellite_count
-    )} satellites${hiddenCount > 0 ? ` / hidden ${formatCount(hiddenCount)}` : ""}`,
+    )} total / window ${formatCount(windowCount)}${
+      hiddenCount > 0 ? ` / hidden ${formatCount(hiddenCount)}` : ""
+    }`,
     items
   };
 }

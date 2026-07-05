@@ -91,11 +91,16 @@ def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> No
     assert first["user_request_summary_v1"] == {
         "version": "v1",
         "source": "BACKEND_RUNTIME_SNAPSHOT",
+        "summary_scope": "FULL_USER_SET_WITH_WINDOW_ITEMS",
         "user_count": 2,
         "item_count": 2,
         "active_user_count": 2,
         "compute_service_user_count": 1,
         "waiting_user_count": 1,
+        "window_user_count": 2,
+        "window_active_user_count": 2,
+        "window_compute_service_user_count": 1,
+        "window_waiting_user_count": 1,
         "hidden_user_count": 0,
         "items": (
             {
@@ -144,6 +149,10 @@ def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> No
             },
         ),
     }
+    assert first["satellite_service_summary_v1"][
+        "summary_scope"
+    ] == "FULL_SATELLITE_SET_WITH_WINDOW_ITEMS"
+    assert first["satellite_service_summary_v1"]["window_satellite_count"] == 2
     assert first["satellite_service_summary_v1"]["items"][0] == {
         "satellite_id": "sat-0",
         "status": "BUSY",
@@ -178,3 +187,50 @@ def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> No
         "running_task_count": 2,
         "finished_task_count": 7,
     }
+
+
+def test_runtime_user_summary_counts_full_set_when_items_are_limited() -> None:
+    snapshot = {
+        "ground_users": [
+            {"user_id": "user-0", "status": "ACTIVE"},
+            {"user_id": "user-1", "status": "ACTIVE"},
+            {"user_id": "user-2", "status": "ACTIVE"},
+        ],
+        "routes": [
+            {
+                "route_id": "route-0",
+                "flow_id": "flow-0",
+                "path": ["user-0", "sat-0", "compute-0"],
+                "available": True,
+            },
+            {
+                "route_id": "route-1",
+                "flow_id": "flow-1",
+                "path": ["user-1", "sat-1", "service-0"],
+                "available": False,
+            },
+            {
+                "route_id": "route-2",
+                "flow_id": "flow-2",
+                "path": ["user-2", "sat-2", "compute-2"],
+                "available": True,
+            },
+        ],
+    }
+
+    summary = build_runtime_lifecycle_summaries(
+        snapshot,
+        service_latency_history={"items": [{"task_id": "task-0", "input_flow_id": "flow-2"}]},
+        user_limit=1,
+    )["user_request_summary_v1"]
+
+    assert summary["user_count"] == 3
+    assert summary["item_count"] == 1
+    assert summary["active_user_count"] == 3
+    assert summary["compute_service_user_count"] == 2
+    assert summary["waiting_user_count"] == 1
+    assert summary["window_user_count"] == 1
+    assert summary["window_active_user_count"] == 1
+    assert summary["window_compute_service_user_count"] == 1
+    assert summary["window_waiting_user_count"] == 0
+    assert summary["hidden_user_count"] == 2

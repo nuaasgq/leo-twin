@@ -69,21 +69,40 @@ def _user_request_summary(
             key=_entity_sort_key,
         )
     )
+    active_count = 0
+    compute_count = 0
+    waiting_count = 0
+    for user_id in user_ids:
+        user_routes = tuple(routes_by_user.get(user_id, ()))
+        if user_routes:
+            active_count += 1
+        if any(_route_is_compute_service(route, service_lookup) for route in user_routes):
+            compute_count += 1
+        if any(not bool(route.get("available")) for route in user_routes):
+            waiting_count += 1
     items = tuple(
         _user_item(user_id, user_by_id.get(user_id), routes_by_user.get(user_id, ()), service_lookup)
         for user_id in user_ids[: max(0, limit)]
     )
-    active_count = sum(1 for item in items if item["communication_route_count"] > 0)
-    compute_count = sum(1 for item in items if item["compute_service_count"] > 0)
-    waiting_count = sum(1 for item in items if item["network_queue_count"] > 0)
     return {
         "version": "v1",
         "source": "BACKEND_RUNTIME_SNAPSHOT",
+        "summary_scope": "FULL_USER_SET_WITH_WINDOW_ITEMS",
         "user_count": len(user_ids),
         "item_count": len(items),
         "active_user_count": active_count,
         "compute_service_user_count": compute_count,
         "waiting_user_count": waiting_count,
+        "window_user_count": len(items),
+        "window_active_user_count": sum(
+            1 for item in items if item["communication_route_count"] > 0
+        ),
+        "window_compute_service_user_count": sum(
+            1 for item in items if item["compute_service_count"] > 0
+        ),
+        "window_waiting_user_count": sum(
+            1 for item in items if item["network_queue_count"] > 0
+        ),
         "hidden_user_count": max(0, len(user_ids) - len(items)),
         "items": items,
     }
@@ -181,8 +200,10 @@ def _satellite_service_summary(
     return {
         "version": "v1",
         "source": "BACKEND_RUNTIME_SNAPSHOT",
+        "summary_scope": "FULL_SATELLITE_SET_WITH_WINDOW_ITEMS",
         "satellite_count": len(satellite_ids),
         "item_count": len(items),
+        "window_satellite_count": len(items),
         "hidden_satellite_count": max(0, len(satellite_ids) - len(items)),
         "items": items,
     }

@@ -2091,6 +2091,10 @@ describe("buildUserBusinessRequestRows", () => {
         active_user_count: 1,
         compute_service_user_count: 1,
         waiting_user_count: 0,
+        window_user_count: 1,
+        window_active_user_count: 1,
+        window_compute_service_user_count: 1,
+        window_waiting_user_count: 0,
         hidden_user_count: 0,
         items: [
           {
@@ -2120,7 +2124,9 @@ describe("buildUserBusinessRequestRows", () => {
     );
 
     expect(rows.sourceLabel).toBe("backend user_request_summary_v1");
-    expect(rows.summaryLabel).toContain("active 1");
+    expect(rows.summaryLabel).toContain("1 shown / 1 total");
+    expect(rows.summaryLabel).toContain("active 1 total");
+    expect(rows.summaryLabel).toContain("window active 1");
     expect(rows.items[0]).toMatchObject({
       userId: "user-0",
       platformTypeLabel: "GROUND_USER_TERMINAL / cell-a",
@@ -2159,9 +2165,13 @@ describe("buildUserBusinessRequestRows", () => {
         source: "BACKEND_RUNTIME_SNAPSHOT",
         user_count: 2,
         item_count: 1,
-        active_user_count: 1,
+        active_user_count: 2,
         compute_service_user_count: 0,
         waiting_user_count: 0,
+        window_user_count: 1,
+        window_active_user_count: 1,
+        window_compute_service_user_count: 0,
+        window_waiting_user_count: 0,
         hidden_user_count: 1,
         items: [
           {
@@ -2820,6 +2830,10 @@ describe("buildDataPanelDetailScopeNotes", () => {
         active_user_count: 80,
         compute_service_user_count: 20,
         waiting_user_count: 4,
+        window_user_count: 1000,
+        window_active_user_count: 64,
+        window_compute_service_user_count: 12,
+        window_waiting_user_count: 3,
         hidden_user_count: 200,
         items: []
       },
@@ -2828,6 +2842,7 @@ describe("buildDataPanelDetailScopeNotes", () => {
         source: "BACKEND_RUNTIME_SNAPSHOT",
         satellite_count: 1200,
         item_count: 1000,
+        window_satellite_count: 1000,
         hidden_satellite_count: 200,
         items: []
       },
@@ -2856,8 +2871,9 @@ describe("buildDataPanelDetailScopeNotes", () => {
       ["卫星KPI切片", "64 / 1,200 切片", "limit"],
       ["单星历史", "64 / 1,200 条序列", "history"]
     ]);
-    expect(notes[0].detail).toContain("后端摘要返回 1,000 行，隐藏 200 行");
-    expect(notes[1].detail).toContain("后端服务摘要返回 1,000 行，隐藏 200 行");
+    expect(notes[0].detail).toContain("全量活跃 80 / 算力业务 20 / 排队 4");
+    expect(notes[0].detail).toContain("后端窗口返回 1,000 行，隐藏 200 行");
+    expect(notes[1].detail).toContain("后端窗口返回 1,000 行，隐藏 200 行");
     expect(notes[2].detail).toContain("TOP_ACTIVITY_LIMITED，上限 64");
     expect(notes[2].detail).toContain("不等同于全量卫星明细");
     expect(notes[3].detail).toContain("卫星上限 64 / 单星样本上限 32");

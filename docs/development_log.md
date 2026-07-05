@@ -5,6 +5,43 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Runtime Detail Scope Counts v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending in this commit
+- Scope: separate full-set observability counts from bounded dashboard item
+  windows for user request and satellite service summaries.
+- Changed files/modules:
+  - `src/leo_twin/services/runtime_observability.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `tests/unit/test_runtime_observability.py`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_runtime_observability.py -q`
+    - Result: passed, 2 tests.
+  - `python -m pytest tests/integration/test_runtime_session_control.py -q`
+    - Result: passed, 17 tests.
+  - Bundled Node:
+    `pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 25 files / 249 tests.
+  - Bundled Node:
+    `pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - `active_user_count`, `compute_service_user_count`, and
+    `waiting_user_count` were derived from the returned item window. In large
+    cases this made bounded windows look like full-system totals.
+- Known remaining issues:
+  - The dashboard still receives bounded item windows through `/runtime/status`;
+    a server-side paginated details endpoint is still needed for true full-table
+    browsing.
+- Recommended follow-up:
+  - Add deterministic `/runtime/details/users` and
+    `/runtime/details/satellites` cursor endpoints, then switch the dashboard
+    tables to server-side pagination.
+
 ## 2026-07-05 - Runtime Completion State Consistency v1
 
 - Branch: `feature/T164-dashboard-observability-v1`
