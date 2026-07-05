@@ -228,6 +228,11 @@ def test_demo_service_mix_weights_drive_demand_generation() -> None:
     demand_batch = _traffic_demand_batch(config)
     class_counts = Counter(record.traffic_class for record in demand_batch.records)
     task_count = sum(1 for record in demand_batch.records if record.task is not None)
+    compute_records = tuple(
+        record
+        for record in demand_batch.records
+        if record.traffic_class == TrafficClass.COMPUTE_SERVICE
+    )
 
     assert len(demand_batch.records) == 4
     assert class_counts == {
@@ -257,6 +262,10 @@ def test_demo_service_mix_weights_drive_demand_generation() -> None:
         "COMPUTE_SERVICE": 1,
     }
     assert traffic_summary["generated_task_count"] == 1
+    assert len(compute_records) == 1
+    assert compute_records[0].task is not None
+    assert compute_records[0].task.flow_id == compute_records[0].input_flow.flow_id
+    assert compute_records[0].task.task_id != compute_records[0].input_flow.flow_id
 
 
 def test_demo_initial_workload_uses_traffic_demand_records() -> None:

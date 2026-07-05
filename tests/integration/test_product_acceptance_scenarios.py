@@ -109,6 +109,73 @@ def test_product_acceptance_scenario_runtime_smoke(
     assert reset_ack["status"]["lifecycle_state"] == "INITIALIZED"
 
 
+def test_network_stress_acceptance_scenario_drives_dynamic_kpis(
+    tmp_path: Path,
+) -> None:
+    config = load_config(
+        PROJECT_ROOT / "configs/acceptance/network_stress_dynamic_72sat.yaml"
+    )
+    control_plane = _control_plane(tmp_path, "network_stress_dynamic_72sat")
+
+    initialize_ack = control_plane.handle_raw_message(
+        json.dumps(
+            {
+                "type": "RUNTIME_CONTROL",
+                "action": "INITIALIZE",
+                "payload": config_to_dict(config),
+            }
+        )
+    )
+
+    traffic_summary = initialize_ack["generated_config"]["backend_summary"][
+        "traffic_demand_summary"
+    ]
+    assert initialize_ack["ok"] is True
+    assert traffic_summary["service_mix_mode"] == "WEIGHTED_MIX"
+    assert traffic_summary["service_mix_generated_request_counts"] == {
+        "DATA_TRANSFER": 4,
+        "TELEMETRY": 2,
+        "BULK_DOWNLINK": 2,
+        "COMPUTE_SERVICE": 4,
+    }
+
+    start_ack = control_plane.handle_raw_message(
+        json.dumps({"type": "RUNTIME_CONTROL", "action": "START"})
+    )
+    assert start_ack["ok"] is True
+    for _ in range(2):
+        assert control_plane._require_session().advance_control_step()
+        control_plane._require_advance_loop().publish_pending()
+
+    status = control_plane.runtime_status()["status"]
+    samples = status["kpi_time_series_v1"]["samples"]
+    active_samples = [
+        sample
+        for sample in samples
+        if sample["network_requested_route_demand_mbps"] > 0.0
+    ]
+    compute_samples = [
+        sample
+        for sample in samples
+        if sample["compute_resource_used_gflops_fp32"] > 0.0
+    ]
+
+    assert status["current_sim_time"] > 0.0
+    assert len(samples) > 1
+    assert active_samples
+    assert compute_samples
+    assert active_samples[-1]["network_effective_throughput_mbps"] > 0.0
+    assert active_samples[-1]["network_effective_latency_s"] > 0.0
+    assert active_samples[-1]["network_effective_loss_proxy_rate"] > 0.0
+    assert active_samples[-1]["network_effective_delay_variation_s"] > 0.0
+    assert (
+        status["metrics_summary"]["network_quality_requested_route_demand_mbps"] > 0.0
+    )
+    assert (
+        status["metrics_summary"]["network_quality_effective_loss_proxy_rate"] > 0.0
+    )
+
+
 def test_acceptance_scenarios_leave_event_kernel_unchanged() -> None:
     kernel_source = (PROJECT_ROOT / "src/leo_twin/core/kernel.py").read_text(
         encoding="utf-8"

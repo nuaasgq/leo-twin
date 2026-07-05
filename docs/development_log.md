@@ -5,6 +5,52 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Dynamic Network Stress Acceptance v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending in this commit
+- Scope: add a user-facing acceptance scenario that drives deterministic
+  time-varying network KPI pressure from configuration, and fix the
+  service-mix compute path where `task_id` can differ from the input
+  `flow_id`.
+- Changed files/modules:
+  - `configs/acceptance/network_stress_dynamic_72sat.yaml`
+  - `src/leo_twin/models/compute/network_aware.py`
+  - `tests/unit/test_network_aware_compute.py`
+  - `tests/unit/test_integration_demo_scenario.py`
+  - `tests/integration/test_product_acceptance_scenarios.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_network_aware_compute.py -q`
+    - Result: passed, 10 tests.
+  - `python -m pytest tests/unit/test_network_aware_compute.py tests/unit/test_integration_demo_scenario.py::test_demo_service_mix_weights_drive_demand_generation tests/integration/test_product_acceptance_scenarios.py::test_network_stress_acceptance_scenario_drives_dynamic_kpis -q`
+    - Result: passed, 12 tests.
+  - Manual runtime probe using
+    `configs/acceptance/network_stress_dynamic_72sat.yaml` with deterministic
+    `advance_control_step()`:
+    - Result: initialization and start passed; KPI samples showed non-zero
+      requested route demand, throughput, latency, loss proxy, delay
+      variation, and compute FP32 resource usage.
+- Problems encountered:
+  - The weighted service-mix scenario generated compute tasks whose
+    `task_id` is intentionally different from the input flow ID. A route
+    refresh during input transfer could re-key the internal transfer table by
+    `flow_id`, causing a later scheduler lookup by `task_id` to fail. The
+    compute engine now canonicalizes transferring tasks by `task_id` while
+    retaining `flow_id` lookup compatibility.
+  - Fast repeated calls to the live `SessionAdvanceLoop.tick()` in
+    `REAL_TIME` mode do not advance wall-clock paced simulation time. The
+    acceptance test uses the existing deterministic `SimulationSession`
+    control-step path instead.
+- Known remaining issues:
+  - Network loss, jitter, and latency remain deterministic flow-level proxies,
+    not packet-level measurements.
+  - The new acceptance scenario is a stress/demo profile and is not intended
+    to represent exact Starlink or EXATA fidelity.
+- Recommended follow-up:
+  - Add dashboard scrollable per-user and per-satellite detail tables backed by
+    the existing runtime observability summaries.
+
 ## 2026-07-05 - Frontend Per-Resource Usage Binding v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`

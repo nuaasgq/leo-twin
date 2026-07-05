@@ -38,6 +38,7 @@ def _task(
     compute_demand: float = 20.0,
     data_size: float = 10.0,
     deadline: float | None = None,
+    flow_id: str | None = None,
 ) -> TaskRequest:
     return TaskRequest(
         task_id=task_id,
@@ -46,6 +47,7 @@ def _task(
         compute_demand=compute_demand,
         data_size=data_size,
         deadline=deadline,
+        flow_id=flow_id,
     )
 
 
@@ -282,6 +284,53 @@ def test_route_recovery_restarts_transfer_with_latest_route() -> None:
     ] == [
         (EventType.TASK_START.value, 6.0),
         (EventType.TASK_FINISH.value, 8.0),
+    ]
+
+
+def test_route_aware_compute_tracks_transfer_by_task_id_when_input_flow_differs() -> None:
+    kernel = SimulationKernel()
+    engine = RouteAwareComputeEngine(nodes=(ComputeNode("node-a", capacity=10.0),))
+    sink = MetricsSink()
+    kernel.register_module(engine)
+    kernel.register_module(sink)
+    kernel.schedule_event(
+        _event(
+            "route-up",
+            EventType.ROUTE_UPDATE.value,
+            _route(flow_id="svc-input", latency=2.0, capacity=5.0),
+        )
+    )
+    kernel.schedule_event(
+        _event(
+            "task",
+            EventType.TASK_ARRIVAL.value,
+            _task(task_id="svc-task", flow_id="svc-input"),
+        )
+    )
+    kernel.schedule_event(
+        _event(
+            "route-refreshed",
+            EventType.ROUTE_UPDATE.value,
+            _route(flow_id="svc-input", latency=0.0, capacity=10.0),
+            2.0,
+        )
+    )
+
+    kernel.run()
+
+    decision = engine.scheduled_tasks()[0]
+    assert engine.pending_tasks() == ()
+    assert decision.task_id == "svc-task"
+    assert decision.route_id == "route-svc-input"
+    assert decision.ready_time == 3.0
+    assert decision.transfer_time == 1.0
+    assert [
+        (event.event_type, event.payload.task_id, event.payload.flow_id)
+        for event in sink.events
+        if event.event_type in {EventType.TASK_START.value, EventType.TASK_FINISH.value}
+    ] == [
+        (EventType.TASK_START.value, "svc-task", "svc-input"),
+        (EventType.TASK_FINISH.value, "svc-task", "svc-input"),
     ]
 
 

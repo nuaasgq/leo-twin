@@ -1,0 +1,79 @@
+# Product acceptance scenario: 72-satellite dynamic network stress.
+# Purpose: drive backend KPI time-series movement with flow-level mixed demand.
+# Semantics: loss and jitter are deterministic flow-level proxies, not packet loss.
+scenario:
+  satellite_count: 72
+  user_count: 180
+  compute_nodes: 72
+  compute_capacity: 40.0
+  compute_cpu_gflops_fp64: 8.0
+  compute_gpu_tflops_fp32: 2.0
+  compute_gpu_tflops_fp16: 4.0
+  compute_npu_tops_int8: 12.0
+  compute_memory_gb: 32.0
+  compute_storage_gb: 512.0
+  ground_station_count: 3
+  cell_count: 100
+  compute_scheduling_policy: FIFO
+  initial_workload_smoothing_enabled: true
+  initial_workload_window_s: 8.0
+  max_initial_events_per_tick: 8
+  workload_smoothing_mode: RATE_LIMITED
+  orbit:
+    update_interval_seconds: 30
+    plane_count: 12
+    altitude_m: 529000.0
+    inclination_deg: 53.0
+    orbit_update_mode: PER_SATELLITE
+  traffic_model:
+    flow_interval_seconds: 10
+    task_interval_seconds: 10
+    flow_demand_capacity: 260.0
+    task_compute_demand: 60.0
+    task_data_size: 16.0
+    traffic_class: COMPUTE_SERVICE
+    destination_type: COMPUTE_NODE
+    output_data_size: 4.0
+    data_transfer_weight: 2.0
+    telemetry_weight: 1.0
+    bulk_downlink_weight: 1.0
+    compute_service_weight: 2.0
+
+network:
+  application_protocol: TASK_OFFLOAD_FLOW
+  transport_protocol: UDP
+  routing_protocol: DISTANCE_VECTOR
+  datalink_mac_protocol: SLOTTED_ALOHA
+  transport_loss_rate: 0.03
+  transport_congestion_window_segments: 0
+  routing_latency_weight: 0.2
+  routing_inverse_capacity_weight: 400.0
+  routing_hop_weight: 1.0
+  carrier_frequency_hz: 20000000000.0
+  channel_bandwidth_hz: 100000000.0
+  rain_rate_mm_h: 8.0
+  rain_attenuation_coefficient_db_per_km_per_mm_h: 0.01
+  rain_effective_path_km: 3.0
+  antenna_diameter_m: 0.45
+  antenna_aperture_efficiency: 0.65
+  transmit_power_dbw: 20.0
+  system_loss_db: 1.0
+  noise_temperature_k: 290.0
+  space_link_mode: DETAILED_SMALL_SCALE
+  max_space_link_candidates_per_satellite: 4
+  batch_space_link_update_limit: 999
+
+runtime:
+  mode: REAL_TIME
+  speed_factor: 1.0
+  seed: 20260705
+  duration: 120
+
+ui:
+  visualization:
+    satellites: true
+    links: true
+    users: true
+    metrics: true
+  update_frequency_hz: 20
+  dashboard_layout: right_panel

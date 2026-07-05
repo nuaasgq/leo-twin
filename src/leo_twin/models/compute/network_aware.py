@@ -194,13 +194,15 @@ class RouteAwareComputeEngine(SimulationModule):
         ready_workloads: list[ComputeWorkloadItem] = []
         ready_routes: dict[str, Route] = {}
 
-        for task_id in sorted(self._transferring_tasks):
-            transfer = self._transferring_tasks[task_id]
+        for transfer_key in sorted(self._transferring_tasks):
+            transfer = self._transferring_tasks[transfer_key]
+            task_id = transfer.task.task_id
             if transfer.ready_time > dispatch_time:
                 continue
             route = self._routes_by_flow.get(_input_flow_id(transfer.task))
             if route is None or not route.available or route.capacity <= 0:
                 self._pending_tasks[task_id] = transfer.task
+                self._transferring_tasks.pop(transfer_key, None)
                 self._transferring_tasks.pop(task_id, None)
                 continue
             ready_workloads.append(
@@ -246,26 +248,31 @@ class RouteAwareComputeEngine(SimulationModule):
         dispatch_time: float,
         kernel: SimulationKernel,
     ) -> None:
-        transfer = self._transferring_tasks.get(route.flow_id)
+        transfer_key = route.flow_id
+        transfer = self._transferring_tasks.get(transfer_key)
         if transfer is None:
-            transfer = next(
-                (
-                    item
-                    for item in self._transferring_tasks.values()
-                    if _input_flow_id(item.task) == route.flow_id
-                ),
-                None,
-            )
+            for key, item in self._transferring_tasks.items():
+                if _input_flow_id(item.task) == route.flow_id:
+                    transfer_key = key
+                    transfer = item
+                    break
         if transfer is None:
             return
+        task_id = transfer.task.task_id
         if not route.available or route.capacity <= 0:
-            self._pending_tasks[transfer.task.task_id] = transfer.task
-            self._transferring_tasks.pop(transfer.task.task_id, None)
+            self._pending_tasks[task_id] = transfer.task
+            self._transferring_tasks.pop(transfer_key, None)
+            self._transferring_tasks.pop(task_id, None)
             return
         if transfer.route == route:
+            if transfer_key != task_id:
+                self._transferring_tasks.pop(transfer_key, None)
+                self._transferring_tasks[task_id] = transfer
             return
         ready_time = self._ready_time(transfer.task, route, dispatch_time)
-        self._transferring_tasks[route.flow_id] = _TransferringTask(
+        self._transferring_tasks.pop(transfer_key, None)
+        self._transferring_tasks.pop(task_id, None)
+        self._transferring_tasks[task_id] = _TransferringTask(
             task=transfer.task,
             route=route,
             ready_time=ready_time,
