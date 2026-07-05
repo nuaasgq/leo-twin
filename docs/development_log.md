@@ -6204,3 +6204,48 @@ change.
 - Recommended follow-up:
   - Add a visible configuration mode split in the control panel and a backend
     startup option for a user-selected detailed config file.
+
+## 2026-07-05 - Backend Runtime Lifecycle Summaries v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add backend-owned per-user request and per-satellite service
+  summaries for the standalone dashboard. Runtime status now includes
+  `user_request_summary_v1` and `satellite_service_summary_v1`, built from the
+  current backend snapshot plus service latency and satellite KPI summaries.
+  The DataPanel prefers these backend summaries and falls back to the existing
+  snapshot-derived rows when the backend fields are absent.
+- Changed files/modules:
+  - `src/leo_twin/services/runtime_observability.py`
+  - `examples/integration_demo/control_plane.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `tests/unit/test_runtime_observability.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_runtime_observability.py tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer -q`
+    - Result: passed, 2 tests.
+  - `pnpm --dir frontend exec vitest run dataPanel.test.ts runtimeContractFixture.test.ts`
+    - Result: passed, 2 files / 58 tests.
+  - `python -m pytest tests/unit/test_runtime_observability.py tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer tests/integration/test_runtime_session_control.py::test_runtime_kpi_series_changes_with_configured_flow_demand tests/integration/test_live_runtime_streaming.py::test_http_cursor_batches_return_incremental_events -q`
+    - Result: passed, 4 tests.
+  - `pnpm --dir frontend test`
+    - Result: passed, 25 files / 211 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - None in implementation. The main design choice was to keep the new
+    summary builder pure and snapshot-based so it does not add events or alter
+    Event Kernel behavior.
+- Known remaining issues:
+  - The summaries are flow-level lifecycle summaries. They expose waiting route
+    counts and service associations but do not implement packet-level queues,
+    retransmission, interference, or RF-layer behavior.
+  - The frontend table still formats some backend fields into display labels;
+    a later UI pass can localize these labels more cleanly when the control
+    panel is split into key/basic and advanced sections.
+- Recommended follow-up:
+  - Add dashboard filters/sticky table headers and a visible source badge for
+    backend lifecycle summaries on the user and satellite detail tables.

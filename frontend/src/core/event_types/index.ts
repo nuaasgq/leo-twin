@@ -441,6 +441,8 @@ export interface RuntimeStatusPayload {
   satellite_kpi_slices_v1?: RuntimeSatelliteKpiSlicesV1;
   satellite_kpi_history_v1?: RuntimeSatelliteKpiHistoryV1;
   service_latency_history_v1?: RuntimeServiceLatencyHistoryV1;
+  user_request_summary_v1?: RuntimeUserRequestSummaryV1;
+  satellite_service_summary_v1?: RuntimeSatelliteServiceSummaryV1;
   stream_diagnostics_v1?: RuntimeStreamDiagnosticsV1;
   profiling_summary?: RuntimeProfilingSummary | null;
   backpressure_summary?: RuntimeBackpressureSummary | null;
@@ -504,6 +506,76 @@ export interface RuntimeKpiSampleV1 {
   compute_resource_used_npu_tops_int8?: number;
   compute_resource_used_memory_gb?: number;
   compute_resource_used_storage_gb?: number;
+}
+
+export interface RuntimeUserRequestSummaryV1 {
+  version: "v1" | string;
+  source: string;
+  user_count: number;
+  item_count: number;
+  active_user_count: number;
+  compute_service_user_count: number;
+  waiting_user_count: number;
+  hidden_user_count: number;
+  items: readonly RuntimeUserRequestItemV1[];
+}
+
+export interface RuntimeUserRequestItemV1 {
+  user_id: string;
+  platform_type: string;
+  cell_id?: string;
+  communication_route_count: number;
+  available_route_count: number;
+  compute_service_count: number;
+  network_queue_count: number;
+  selected_satellite_id?: string;
+  destination_id?: string;
+  status: string;
+  primary_route_id?: string;
+  primary_flow_id?: string;
+  latency_s?: number | null;
+  capacity_mbps?: number | null;
+  loss_proxy_rate?: number | null;
+  service_state?: string;
+  path: readonly string[];
+}
+
+export interface RuntimeSatelliteServiceSummaryV1 {
+  version: "v1" | string;
+  source: string;
+  satellite_count: number;
+  item_count: number;
+  hidden_satellite_count: number;
+  items: readonly RuntimeSatelliteServiceItemV1[];
+}
+
+export interface RuntimeSatelliteServiceItemV1 {
+  satellite_id: string;
+  status: string;
+  service_user_ids: readonly string[];
+  next_hop_ids: readonly string[];
+  route_count: number;
+  available_route_count: number;
+  active_link_count: number;
+  active_access_link_count: number;
+  active_space_link_count: number;
+  compute_load_ratio: number;
+  compute_capacity_gflops_fp32: number;
+  compute_used_gflops_fp32: number;
+  compute_capacity_gflops_fp64: number;
+  compute_used_gflops_fp64: number;
+  compute_capacity_gpu_tflops_fp32: number;
+  compute_used_gpu_tflops_fp32: number;
+  compute_capacity_gpu_tflops_fp16: number;
+  compute_used_gpu_tflops_fp16: number;
+  compute_capacity_npu_tops_int8: number;
+  compute_used_npu_tops_int8: number;
+  compute_capacity_memory_gb: number;
+  compute_used_memory_gb: number;
+  compute_capacity_storage_gb: number;
+  compute_used_storage_gb: number;
+  running_task_count: number;
+  finished_task_count: number;
 }
 
 export interface RuntimeSatelliteKpiSlicesV1 {

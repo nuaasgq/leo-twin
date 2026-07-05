@@ -27,6 +27,7 @@ from leo_twin.services.control import (
     RuntimeController,
     ScaleSafetyChecker,
 )
+from leo_twin.services.runtime_observability import build_runtime_lifecycle_summaries
 from leo_twin.services.scenario_builder import (
     scenario_builder_backend_summary,
     scenario_builder_config_from_sees_config,
@@ -363,6 +364,13 @@ class DemoControlPlane:
         status["satellite_kpi_slices_v1"] = self._satellite_kpi_slices_json()
         status["satellite_kpi_history_v1"] = self._satellite_kpi_history_json()
         status["service_latency_history_v1"] = self._service_latency_history_json()
+        status.update(
+            build_runtime_lifecycle_summaries(
+                self.visible_snapshot(),
+                service_latency_history=status["service_latency_history_v1"],
+                satellite_kpi_slices=status["satellite_kpi_slices_v1"],
+            )
+        )
         status["stream_diagnostics_v1"] = self._stream_diagnostics_json()
         return status
 

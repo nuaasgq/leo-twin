@@ -1817,6 +1817,61 @@ describe("buildTopComputeNodeRows", () => {
 });
 
 describe("buildUserBusinessRequestRows", () => {
+  it("prefers backend user request summaries when available", () => {
+    const rows = buildUserBusinessRequestRows(
+      makeSnapshot({
+        ground_users: [{ user_id: "user-0", status: "ACTIVE" }]
+      }),
+      undefined,
+      {
+        version: "v1",
+        source: "BACKEND_RUNTIME_SNAPSHOT",
+        user_count: 1,
+        item_count: 1,
+        active_user_count: 1,
+        compute_service_user_count: 1,
+        waiting_user_count: 0,
+        hidden_user_count: 0,
+        items: [
+          {
+            user_id: "user-0",
+            platform_type: "GROUND_USER_TERMINAL",
+            cell_id: "cell-a",
+            communication_route_count: 2,
+            available_route_count: 1,
+            compute_service_count: 1,
+            network_queue_count: 0,
+            selected_satellite_id: "sat-0",
+            destination_id: "compute-0",
+            status: "ACTIVE/AVAILABLE",
+            primary_route_id: "route-a",
+            primary_flow_id: "flow-a",
+            latency_s: 0.12,
+            capacity_mbps: 80,
+            loss_proxy_rate: 0.02,
+            service_state: "task-0/330ms/RUNNING",
+            path: ["user-0", "sat-0", "compute-0"]
+          }
+        ]
+      }
+    );
+
+    expect(rows.sourceLabel).toBe("backend user_request_summary_v1");
+    expect(rows.summaryLabel).toContain("active 1");
+    expect(rows.items[0]).toMatchObject({
+      userId: "user-0",
+      platformTypeLabel: "GROUND_USER_TERMINAL / cell-a",
+      communicationLabel: "1 / 2 routes",
+      computeLabel: "1 compute",
+      networkQueueLabel: "empty",
+      selectedSatelliteId: "sat-0",
+      destinationId: "compute-0",
+      statusLabel: "ACTIVE/AVAILABLE",
+      latencyCapacityLabel: "0.12 s / 80 Mbps",
+      serviceLabel: "task-0/330ms/RUNNING"
+    });
+  });
+
   it("shows per-user node status and service latency linkage", () => {
     const rows = buildUserBusinessRequestRows(
       makeSnapshot({
@@ -1900,6 +1955,64 @@ describe("buildUserBusinessRequestRows", () => {
 });
 
 describe("buildSatelliteResourceRows", () => {
+  it("prefers backend satellite service summaries when available", () => {
+    const rows = buildSatelliteResourceRows(
+      makeSnapshot(),
+      undefined,
+      {
+        version: "v1",
+        source: "BACKEND_RUNTIME_SNAPSHOT",
+        satellite_count: 1,
+        item_count: 1,
+        hidden_satellite_count: 0,
+        items: [
+          {
+            satellite_id: "sat-0",
+            status: "BUSY",
+            service_user_ids: ["user-0", "user-1"],
+            next_hop_ids: ["compute-0", "sat-1"],
+            route_count: 2,
+            available_route_count: 1,
+            active_link_count: 3,
+            active_access_link_count: 1,
+            active_space_link_count: 2,
+            compute_load_ratio: 0.64,
+            compute_capacity_gflops_fp32: 100,
+            compute_used_gflops_fp32: 64,
+            compute_capacity_gflops_fp64: 8,
+            compute_used_gflops_fp64: 2,
+            compute_capacity_gpu_tflops_fp32: 2,
+            compute_used_gpu_tflops_fp32: 1,
+            compute_capacity_gpu_tflops_fp16: 4,
+            compute_used_gpu_tflops_fp16: 2,
+            compute_capacity_npu_tops_int8: 10,
+            compute_used_npu_tops_int8: 4,
+            compute_capacity_memory_gb: 32,
+            compute_used_memory_gb: 8,
+            compute_capacity_storage_gb: 512,
+            compute_used_storage_gb: 64,
+            running_task_count: 2,
+            finished_task_count: 7
+          }
+        ]
+      }
+    );
+
+    expect(rows.sourceLabel).toBe("backend satellite_service_summary_v1");
+    expect(rows.items[0]).toMatchObject({
+      satelliteId: "sat-0",
+      statusLabel: "BUSY",
+      loadLabel: "64%",
+      serviceObjectLabel: "user-0, user-1 / 2 routes",
+      nextHopLabel: "compute-0, sat-1 / 2 routes",
+      cpuFp32Label: "64 / 100 GFLOPS",
+      cpuFp64Label: "2 / 8 GFLOPS",
+      npuLabel: "4 / 10 TOPS",
+      taskLabel: "2 running / 7 done",
+      networkLabel: "links 3 / access 1 / space 2 / routes 2"
+    });
+  });
+
   it("keeps 120 satellites visible in deterministic id order", () => {
     const rows = buildSatelliteResourceRows(
       makeSnapshot({

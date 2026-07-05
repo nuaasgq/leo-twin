@@ -308,6 +308,46 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
             "compute_used_npu_tops_int8",
             "compute_used_memory_gb",
         }.issubset(satellite_history["series"][0]["samples"][-1])
+    user_summary = status_after_tick["user_request_summary_v1"]
+    assert user_summary["version"] == "v1"
+    assert user_summary["source"] == "BACKEND_RUNTIME_SNAPSHOT"
+    assert user_summary["item_count"] == len(user_summary["items"])
+    assert user_summary["user_count"] >= user_summary["item_count"]
+    assert user_summary["items"]
+    assert {
+        "user_id",
+        "platform_type",
+        "communication_route_count",
+        "compute_service_count",
+        "network_queue_count",
+        "selected_satellite_id",
+        "destination_id",
+        "status",
+        "latency_s",
+        "capacity_mbps",
+        "path",
+    }.issubset(user_summary["items"][0])
+    satellite_service_summary = status_after_tick["satellite_service_summary_v1"]
+    assert satellite_service_summary["version"] == "v1"
+    assert satellite_service_summary["source"] == "BACKEND_RUNTIME_SNAPSHOT"
+    assert satellite_service_summary["item_count"] == len(
+        satellite_service_summary["items"]
+    )
+    assert satellite_service_summary["satellite_count"] >= satellite_service_summary[
+        "item_count"
+    ]
+    if satellite_service_summary["items"]:
+        assert {
+            "satellite_id",
+            "service_user_ids",
+            "next_hop_ids",
+            "route_count",
+            "active_link_count",
+            "compute_load_ratio",
+            "compute_used_gflops_fp32",
+            "running_task_count",
+            "finished_task_count",
+        }.issubset(satellite_service_summary["items"][0])
 
     speed_change = control_plane.handle_raw_message(
         json.dumps(

@@ -21,9 +21,11 @@ import {
   RuntimeKpiTimeSeriesV1,
   RuntimeMetricsSummary,
   RuntimeNetworkQualityProvenanceV1,
+  RuntimeSatelliteServiceSummaryV1,
   RuntimeSatelliteKpiSlicesV1,
   RuntimeServiceLatencyHistoryV1,
-  RuntimeStatusPayload
+  RuntimeStatusPayload,
+  RuntimeUserRequestSummaryV1
 } from "../../core/event_types";
 import { WorldSnapshot } from "../../state/snapshot_engine";
 import { ChannelHealthPanel } from "../channel_health/ChannelHealthPanel";
@@ -137,11 +139,13 @@ export const DataPanel = memo(function DataPanel({
   );
   const userBusinessRequests = buildUserBusinessRequestRows(
     snapshot,
-    runtimeStatus.service_latency_history_v1
+    runtimeStatus.service_latency_history_v1,
+    runtimeStatus.user_request_summary_v1
   );
   const satelliteResourceRows = buildSatelliteResourceRows(
     snapshot,
-    runtimeStatus.satellite_kpi_slices_v1
+    runtimeStatus.satellite_kpi_slices_v1,
+    runtimeStatus.satellite_service_summary_v1
   );
 
   return (
@@ -1397,8 +1401,12 @@ export function buildTopComputeNodeRows(
 export function buildUserBusinessRequestRows(
   snapshot: WorldSnapshot,
   serviceHistory: RuntimeServiceLatencyHistoryV1 | null | undefined = undefined,
+  backendSummary: RuntimeUserRequestSummaryV1 | null | undefined = undefined,
   limit = 1000
 ): UserBusinessRequestRows {
+  if (backendSummary?.items?.length) {
+    return buildBackendUserBusinessRequestRows(backendSummary, limit);
+  }
   const serviceLookup = buildServiceFlowLookup(serviceHistory);
   const routesByUser = buildRoutesByUser(snapshot.routes);
   const userIds = Array.from(
@@ -1468,8 +1476,12 @@ export function buildUserBusinessRequestRows(
 export function buildSatelliteResourceRows(
   snapshot: WorldSnapshot,
   backendSlices: RuntimeSatelliteKpiSlicesV1 | null | undefined = undefined,
+  backendSummary: RuntimeSatelliteServiceSummaryV1 | null | undefined = undefined,
   limit = 1500
 ): SatelliteResourceRows {
+  if (backendSummary?.items?.length) {
+    return buildBackendSatelliteResourceRows(backendSummary, limit);
+  }
   const satelliteById = new Map(snapshot.satellites.map((satellite) => [satellite.satellite_id, satellite]));
   const nodeById = new Map(snapshot.compute_nodes.map((node) => [node.node_id, node]));
   const sliceById = new Map(
@@ -1567,6 +1579,153 @@ export function buildSatelliteResourceRows(
     )} 颗卫星${hiddenCount > 0 ? ` / 另有 ${formatCount(hiddenCount)} 颗未显示` : ""}`,
     items
   };
+}
+
+function buildBackendUserBusinessRequestRows(
+  summary: RuntimeUserRequestSummaryV1,
+  limit: number
+): UserBusinessRequestRows {
+  const items = summary.items.slice(0, Math.max(0, limit)).map((item) => {
+    const latencyCapacityLabel =
+      typeof item.latency_s === "number" && typeof item.capacity_mbps === "number"
+        ? `${formatPreciseMetricValue(item.latency_s)} s / ${formatMetricValue(
+            item.capacity_mbps
+          )} Mbps`
+        : "no route";
+    const cellLabel = item.cell_id ? ` / ${item.cell_id}` : "";
+    const serviceLabel = item.service_state || item.primary_flow_id || "no service";
+    return {
+      userId: item.user_id,
+      platformTypeLabel: `${item.platform_type}${cellLabel}`,
+      communicationLabel:
+        item.communication_route_count > 0
+          ? `${formatCount(item.available_route_count)} / ${formatCount(
+              item.communication_route_count
+            )} routes`
+          : "idle",
+      computeLabel:
+        item.compute_service_count > 0
+          ? `${formatCount(item.compute_service_count)} compute`
+          : "no compute",
+      networkQueueLabel:
+        item.network_queue_count > 0
+          ? `${formatCount(item.network_queue_count)} waiting`
+          : "empty",
+      selectedSatelliteId: item.selected_satellite_id || "none",
+      destinationId: item.destination_id || "none",
+      statusLabel: item.status || "IDLE",
+      latencyCapacityLabel,
+      serviceLabel,
+      pathLabel:
+        item.path.length > 0
+          ? `${item.primary_route_id || item.primary_flow_id || item.user_id}: ${item.path.join(
+              " -> "
+            )}`
+          : `${item.user_id}: no active route`
+    };
+  });
+  const hiddenCount = Math.max(
+    summary.hidden_user_count,
+    Math.max(0, summary.items.length - items.length)
+  );
+  return {
+    sourceLabel: "backend user_request_summary_v1",
+    summaryLabel: `${formatCount(items.length)} users / active ${formatCount(
+      summary.active_user_count
+    )} / compute ${formatCount(summary.compute_service_user_count)}${
+      hiddenCount > 0 ? ` / hidden ${formatCount(hiddenCount)}` : ""
+    }`,
+    items
+  };
+}
+
+function buildBackendSatelliteResourceRows(
+  summary: RuntimeSatelliteServiceSummaryV1,
+  limit: number
+): SatelliteResourceRows {
+  const items = summary.items.slice(0, Math.max(0, limit)).map((item) => {
+    const loadRatio = clampRatio(finiteMetric(item.compute_load_ratio));
+    return {
+      satelliteId: item.satellite_id,
+      statusLabel: item.status,
+      loadPercent: roundMetric(loadRatio * 100),
+      loadLabel: `${formatMetricValue(loadRatio * 100)}%`,
+      serviceObjectLabel: compactBackendEntityLabel(
+        item.service_user_ids,
+        item.route_count,
+        "users"
+      ),
+      nextHopLabel: compactBackendEntityLabel(item.next_hop_ids, item.route_count, "hops"),
+      cpuFp32Label: resourceUsageLabel(
+        item.compute_used_gflops_fp32,
+        item.compute_capacity_gflops_fp32,
+        "GFLOPS"
+      ),
+      cpuFp64Label: resourceUsageLabel(
+        item.compute_used_gflops_fp64,
+        item.compute_capacity_gflops_fp64,
+        "GFLOPS"
+      ),
+      gpuLabel: `FP32 ${resourceUsageLabel(
+        item.compute_used_gpu_tflops_fp32,
+        item.compute_capacity_gpu_tflops_fp32,
+        "TFLOPS"
+      )} / FP16 ${resourceUsageLabel(
+        item.compute_used_gpu_tflops_fp16,
+        item.compute_capacity_gpu_tflops_fp16,
+        "TFLOPS"
+      )}`,
+      npuLabel: resourceUsageLabel(
+        item.compute_used_npu_tops_int8,
+        item.compute_capacity_npu_tops_int8,
+        "TOPS"
+      ),
+      memoryStorageLabel: `memory ${resourceUsageLabel(
+        item.compute_used_memory_gb,
+        item.compute_capacity_memory_gb,
+        "GB"
+      )} / storage ${resourceUsageLabel(
+        item.compute_used_storage_gb,
+        item.compute_capacity_storage_gb,
+        "GB"
+      )}`,
+      taskLabel: `${formatCount(item.running_task_count)} running / ${formatCount(
+        item.finished_task_count
+      )} done`,
+      networkLabel: `links ${formatCount(item.active_link_count)} / access ${formatCount(
+        item.active_access_link_count
+      )} / space ${formatCount(item.active_space_link_count)} / routes ${formatCount(
+        item.route_count
+      )}`
+    };
+  });
+  const hiddenCount = Math.max(
+    summary.hidden_satellite_count,
+    Math.max(0, summary.items.length - items.length)
+  );
+  return {
+    sourceLabel: "backend satellite_service_summary_v1",
+    summaryLabel: `${formatCount(items.length)} / ${formatCount(
+      summary.satellite_count
+    )} satellites${hiddenCount > 0 ? ` / hidden ${formatCount(hiddenCount)}` : ""}`,
+    items
+  };
+}
+
+function compactBackendEntityLabel(
+  values: readonly string[],
+  totalCount: number,
+  emptyLabel: string,
+  limit = 3
+): string {
+  if (values.length === 0) {
+    return `${emptyLabel} 0`;
+  }
+  const ordered = values.slice().sort(compareEntityId);
+  const visible = ordered.slice(0, Math.max(1, limit)).join(", ");
+  const hiddenCount = Math.max(0, ordered.length - limit);
+  const suffix = hiddenCount > 0 ? ` +${formatCount(hiddenCount)}` : "";
+  return `${visible}${suffix} / ${formatCount(totalCount)} routes`;
 }
 
 function buildSnapshotTopComputeNodeRows(snapshot: WorldSnapshot): readonly TopComputeNodeRow[] {
