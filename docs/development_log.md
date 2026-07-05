@@ -8543,3 +8543,43 @@ change.
   - Bind `loadRuntimeNodeDetails()` into a dashboard detail drawer with virtual
     scrolling and add a richer backend node-detail payload for placement
     candidate lists and resource timeline slices.
+
+## 2026-07-05 - Dashboard Node Detail Binding v1
+
+- Branch: `feature/T176-dashboard-node-detail-binding-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: bind the dedicated `/runtime/details/nodes` detail-card endpoint into
+  the frontend dashboard data path. `App` now refreshes user, satellite, and
+  node detail pages together using partial-failure tolerant loading, so older
+  backends can still provide user/satellite pages while node details fall back
+  to `runtimeStatus.node_detail_summary_v1`. `DataPanel` now prefers the
+  dedicated node detail page for selected user/satellite inspector cards and
+  falls back to runtime status when the page is unavailable.
+- Changed files/modules:
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- dataPanel.test.ts api.test.ts appSurface.test.ts`
+    - Result: passed, 25 files / 265 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Existing DataPanel chunk-size warning remains.
+- Problems encountered:
+  - TypeScript required the test node-detail page to be non-null before passing
+    it into the page-to-summary helper; the test was made explicit with a
+    non-null assertion.
+  - Existing local runtime config drift remains untouched and unstaged.
+- Known remaining issues:
+  - The UI still renders compact inspector cards. It does not yet provide a
+    full drawer, virtualized all-node table, placement candidate list, or
+    per-node resource timeline drill-down.
+- Recommended follow-up:
+  - Build a dashboard node-detail drawer that uses the node page cursor model
+    for virtual scrolling and then extend backend cards with candidate and
+    queue-history detail sections.

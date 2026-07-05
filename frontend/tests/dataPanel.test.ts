@@ -35,6 +35,9 @@ import {
   filterUserBusinessRequestRows,
   paginateDetailRows,
   resolveNetworkQualityKpis,
+  RuntimeDetailPages,
+  runtimeNodeDetailPageToSummary,
+  selectRuntimeNodeDetailSummary,
   selectRuntimeSatelliteDetailCard,
   selectRuntimeSatelliteServiceSummary,
   selectRuntimeUserDetailCard,
@@ -235,9 +238,25 @@ describe("runtime detail page selection", () => {
         item_count: 1,
         hidden_satellite_count: 1,
         items: []
+      },
+      node_detail_summary_v1: {
+        version: "v1",
+        source: "BACKEND_RUNTIME_STATUS",
+        user_detail_count: 1,
+        satellite_detail_count: 0,
+        users: [
+          {
+            entity_type: "USER",
+            entity_id: "user-status",
+            title: "状态用户",
+            subtitle: "STATUS",
+            fields: []
+          }
+        ],
+        satellites: []
       }
     } as RuntimeStatusPayload;
-    const detailPages = {
+    const detailPages: RuntimeDetailPages = {
       users: {
         ...runtimeStatus.user_request_summary_v1!,
         cursor: 80,
@@ -249,6 +268,38 @@ describe("runtime detail page selection", () => {
         cursor: 120,
         item_count: 120,
         hidden_satellite_count: 0
+      },
+      nodes: {
+        version: "v1",
+        source: "BACKEND_RUNTIME_STATUS",
+        summary_scope: "COMBINED_USER_SATELLITE_NODE_DETAIL_WINDOW",
+        cursor: 0,
+        limit: 2,
+        next_cursor: 2,
+        has_more: false,
+        node_count: 2,
+        user_count: 1,
+        satellite_count: 1,
+        item_count: 2,
+        hidden_node_count: 0,
+        window_user_detail_count: 1,
+        window_satellite_detail_count: 1,
+        items: [
+          {
+            entity_type: "USER",
+            entity_id: "user-page",
+            title: "页面用户",
+            subtitle: "PAGE",
+            fields: [{ label: "路径", value: "page path", tone: "normal" }]
+          },
+          {
+            entity_type: "SATELLITE",
+            entity_id: "sat-page",
+            title: "页面卫星",
+            subtitle: "PAGE",
+            fields: [{ label: "负载", value: "65%", tone: "resource" }]
+          }
+        ]
       }
     };
 
@@ -256,7 +307,16 @@ describe("runtime detail page selection", () => {
     expect(selectRuntimeSatelliteServiceSummary(runtimeStatus, detailPages)?.cursor).toBe(
       120
     );
+    expect(runtimeNodeDetailPageToSummary(detailPages.nodes!).users[0].title).toBe(
+      "页面用户"
+    );
+    expect(
+      selectRuntimeNodeDetailSummary(runtimeStatus, detailPages)?.satellites[0].title
+    ).toBe("页面卫星");
     expect(selectRuntimeUserRequestSummary(runtimeStatus, null)?.cursor).toBeUndefined();
+    expect(selectRuntimeNodeDetailSummary(runtimeStatus, null)?.users[0].title).toBe(
+      "状态用户"
+    );
   });
 });
 

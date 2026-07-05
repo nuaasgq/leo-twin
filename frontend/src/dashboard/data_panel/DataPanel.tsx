@@ -22,6 +22,7 @@ import {
   RuntimeMetricsSummary,
   RuntimeNetworkQualityProvenanceV1,
   RuntimeNodeDetailCardV1,
+  RuntimeNodeDetailPageV1,
   RuntimeNodeDetailSummaryV1,
   RuntimeSatelliteServiceItemV1,
   RuntimeSatelliteServiceSummaryV1,
@@ -75,6 +76,7 @@ export interface DataPanelSummary {
 export interface RuntimeDetailPages {
   users?: RuntimeUserRequestSummaryV1 | null;
   satellites?: RuntimeSatelliteServiceSummaryV1 | null;
+  nodes?: RuntimeNodeDetailPageV1 | null;
 }
 
 const USER_DETAIL_PAGE_SIZE = 80;
@@ -237,13 +239,17 @@ export const DataPanel = memo(function DataPanel({
     satelliteDetailWindow.items,
     selectedDetailSatelliteId
   );
+  const nodeDetailSummary = selectRuntimeNodeDetailSummary(
+    runtimeStatus,
+    runtimeDetailPages
+  );
   const userDetailInspector = buildUserBusinessRequestInspector(
     selectedUserDetailRow,
-    runtimeStatus.node_detail_summary_v1
+    nodeDetailSummary
   );
   const satelliteDetailInspector = buildSatelliteResourceInspector(
     selectedSatelliteDetailRow,
-    runtimeStatus.node_detail_summary_v1
+    nodeDetailSummary
   );
   const userSourceBadge = buildRuntimeDetailSourceBadge(userBusinessRequests.sourceLabel);
   const satelliteSourceBadge = buildRuntimeDetailSourceBadge(satelliteResourceRows.sourceLabel);
@@ -927,6 +933,36 @@ export function selectRuntimeSatelliteServiceSummary(
   runtimeDetailPages: RuntimeDetailPages | null | undefined
 ): RuntimeSatelliteServiceSummaryV1 | null | undefined {
   return runtimeDetailPages?.satellites ?? runtimeStatus.satellite_service_summary_v1;
+}
+
+export function selectRuntimeNodeDetailSummary(
+  runtimeStatus: RuntimeStatusPayload,
+  runtimeDetailPages: RuntimeDetailPages | null | undefined
+): RuntimeNodeDetailSummaryV1 | null | undefined {
+  if (runtimeDetailPages?.nodes !== null && runtimeDetailPages?.nodes !== undefined) {
+    return runtimeNodeDetailPageToSummary(runtimeDetailPages.nodes);
+  }
+  return runtimeStatus.node_detail_summary_v1;
+}
+
+export function runtimeNodeDetailPageToSummary(
+  page: RuntimeNodeDetailPageV1
+): RuntimeNodeDetailSummaryV1 {
+  const users = page.items.filter(
+    (card) => card.entity_type === "USER"
+  );
+  const satellites = page.items.filter(
+    (card) => card.entity_type === "SATELLITE"
+  );
+  return {
+    version: page.version,
+    source: page.source,
+    summary_scope: page.summary_scope,
+    user_detail_count: page.window_user_detail_count ?? users.length,
+    satellite_detail_count: page.window_satellite_detail_count ?? satellites.length,
+    users,
+    satellites
+  };
 }
 
 type RuntimeDetailWindowKind = "users" | "satellites";
