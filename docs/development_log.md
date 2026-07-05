@@ -5545,3 +5545,31 @@ change.
     automated.
 - Recommended follow-up:
   - Add a single pre-commit aggregate command if more guard scripts are added.
+
+## 2026-07-05 - Full Product Acceptance Verification Run
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: record the latest full aggregate product acceptance verification run
+  after launcher, smoke, runtime guard, and service timeline slices.
+- Changed files/modules:
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_product_acceptance.ps1 -ExpectedSatelliteCount 120 -ExpectedUserCount 100 -ExpectedComputeNodeCount 120 -ExpectedConstellationProfile CUSTOM_WALKER -ExpectedTrafficClass COMPUTE_SERVICE`
+    - Result: passed.
+    - Runtime config staging guard: passed.
+    - Forbidden runtime import guard: passed.
+    - Backend targeted tests: 2 passed.
+    - Frontend visual/dashboard tests: 25 files / 193 tests passed.
+    - Frontend build: passed.
+    - Read-only runtime health smoke: passed.
+- Problems encountered:
+  - None in this full verification run.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - Full verification used the currently running local demo services; it did
+    not relaunch an isolated backend from an acceptance YAML.
+- Recommended follow-up:
+  - Add disposable acceptance launch mode for strict per-scenario verification.

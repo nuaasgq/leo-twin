@@ -528,6 +528,16 @@ visual verification script. The remaining high-value product gaps are backend
 service-trace drill-down filtering, screenshot pixel baselines, and
 browser-driven reset/control end-to-end smoke tests.
 
+Latest full local acceptance run:
+
+- Command:
+  `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_product_acceptance.ps1 -ExpectedSatelliteCount 120 -ExpectedUserCount 100 -ExpectedComputeNodeCount 120 -ExpectedConstellationProfile CUSTOM_WALKER -ExpectedTrafficClass COMPUTE_SERVICE`
+- Result: passed.
+- Coverage:
+  runtime config staging guard, forbidden runtime import guard, backend service
+  timeline tests, frontend visual/dashboard tests, frontend build, and
+  read-only runtime health smoke.
+
 ## Acceptance Gates
 
 - Existing backend runtime/session tests pass.
