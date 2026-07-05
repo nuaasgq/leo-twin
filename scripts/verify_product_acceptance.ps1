@@ -83,6 +83,15 @@ try {
         "-RepoRoot",
         $RepoRoot
     )
+    Invoke-CheckedCommand "powershell" @(
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        (Join-Path $PSScriptRoot "check_forbidden_runtime_imports.ps1"),
+        "-RepoRoot",
+        $RepoRoot
+    )
     if ($AcceptanceConfig) {
         $resolvedConfig = Resolve-Path -LiteralPath $AcceptanceConfig
         $expectations = Get-AcceptanceExpectations -Python $python -ConfigPath $resolvedConfig.Path

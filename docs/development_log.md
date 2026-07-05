@@ -5490,3 +5490,34 @@ change.
 - Recommended follow-up:
   - Add repository-wide static checks for forbidden simulator/runtime names if
     the project needs CI enforcement.
+
+## 2026-07-05 - Forbidden Runtime Import Guard v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add `scripts/check_forbidden_runtime_imports.ps1` to scan source,
+  examples, tests, and frontend code for actual `import`/`from` statements that
+  pull in forbidden STK/EXATA/GloMoSim/AFSIM/DDS runtime packages. The guard is
+  also run by aggregate product acceptance verification.
+- Changed files/modules:
+  - `scripts/check_forbidden_runtime_imports.ps1`
+  - `scripts/verify_product_acceptance.ps1`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\check_forbidden_runtime_imports.ps1`
+    - Result: passed.
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_product_acceptance.ps1 -SkipBuild -ExpectedSatelliteCount 120 -ExpectedUserCount 100 -ExpectedComputeNodeCount 120 -ExpectedConstellationProfile CUSTOM_WALKER -ExpectedTrafficClass COMPUTE_SERVICE`
+    - Result: passed; aggregate acceptance ran runtime config guard, forbidden
+      import guard, backend targeted tests, frontend visual tests, and runtime
+      health smoke.
+- Problems encountered:
+  - The repository contains legitimate forbidden-name strings in reviewer and
+    auto-fix rules, so the guard intentionally scans only import/from lines.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The guard catches direct imports, not arbitrary dynamic loading strings.
+- Recommended follow-up:
+  - Add deeper static analysis only if dynamic plugin loading becomes part of
+    the architecture.

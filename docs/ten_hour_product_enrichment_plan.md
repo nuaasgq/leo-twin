@@ -511,6 +511,11 @@ The following issue-sized slices have now been delivered on
   - Maps to suggestions 66-75 and 91-95, plus the external-simulator ban.
   - Runtime health smoke now rejects forbidden STK/EXATA/AFSIM/DDS markers and
     reports orbit model plus application/transport/routing protocols.
+- `test(product): add forbidden import guard`
+  - Maps to suggestions 91-95 and the external-simulator ban.
+  - Aggregate product acceptance now runs a static import guard for forbidden
+    STK/EXATA/GloMoSim/AFSIM/DDS runtime packages before backend/frontend
+    checks.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected
