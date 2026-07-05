@@ -724,6 +724,12 @@ def test_control_plane_validates_user_configuration_without_applying(tmp_path) -
     assert accepted_summary["normalized_config_hash"].startswith("sha256:")
     assert accepted_summary["normalized_config"]["scenario"]["satellite_count"] == 72
     assert accepted_summary["normalized_config"]["runtime"]["duration"] == 600
+    assert accepted_summary["change_summary"]["source"] == "BACKEND_USER_CONFIGURATION"
+    assert accepted_summary["change_summary"]["baseline"] == "CURRENT_EFFECTIVE_SEES_CONFIG"
+    assert accepted_summary["change_summary"]["candidate"] == "NORMALIZED_USER_CONFIG"
+    assert accepted_summary["change_summary"]["changed_field_count"] > 0
+    assert accepted_summary["change_summary"]["section_counts"]["scenario"] > 0
+    assert accepted_summary["change_summary"]["section_counts"]["runtime"] > 0
     assert accepted_summary["apply_command"] == {
         "type": "CONFIG_UPDATE",
         "action": "CONFIG_UPDATE",
@@ -743,6 +749,7 @@ def test_control_plane_validates_user_configuration_without_applying(tmp_path) -
     assert rejected_summary["error_count"] == 1
     assert rejected_summary["normalized_config_hash"] is None
     assert rejected_summary["normalized_config"] is None
+    assert rejected_summary["change_summary"] is None
     assert "unknown scenario keys: unsupported_compute_gpu" in rejected_summary[
         "errors"
     ][0]["message"]
@@ -766,6 +773,8 @@ def test_control_plane_applies_preflight_normalized_user_configuration(tmp_path)
         }
     )
     normalized_config = accepted["summary"]["normalized_config"]
+    change_summary = accepted["summary"]["change_summary"]
+    changed_paths = [item["path"] for item in change_summary["changes"]]
 
     response = control_plane.handle_raw_message(
         json.dumps(
@@ -778,6 +787,26 @@ def test_control_plane_applies_preflight_normalized_user_configuration(tmp_path)
     applied = control_plane.controller.config_json()
 
     assert accepted["summary"]["ok"] is True
+    assert change_summary["changed_field_count"] >= 5
+    assert change_summary["hidden_change_count"] == max(
+        0,
+        change_summary["changed_field_count"] - change_summary["change_count"],
+    )
+    assert changed_paths == sorted(changed_paths)
+    assert "scenario.satellite_count" in changed_paths
+    assert "scenario.compute_gpu_tflops_fp32" in changed_paths
+    assert "runtime.duration" in changed_paths
+    assert next(
+        item
+        for item in change_summary["changes"]
+        if item["path"] == "scenario.satellite_count"
+    ) == {
+        "path": "scenario.satellite_count",
+        "section": "scenario",
+        "change_type": "CHANGED",
+        "current_value": 12,
+        "candidate_value": 84,
+    }
     assert response["ok"] is True
     assert response["command"] == "INITIALIZE"
     assert applied["scenario"]["satellite_count"] == 84

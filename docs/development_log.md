@@ -5,6 +5,46 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - User Config Preflight Diff v1
+
+- Branch: `feature/T201-user-config-preflight-diff-v1`
+- Commit: pending in this commit
+- Scope: enrich backend user configuration preflight with a deterministic
+  `change_summary`. Accepted validation reports now compare the current
+  effective `SEESConfig` with the backend-normalized candidate and report
+  changed field count, root-section counts, sorted bounded preview rows,
+  current/candidate values, change type, and hidden preview count. Rejected
+  validation reports return `change_summary: null`. Frontend event types were
+  extended so a later dashboard task can render the backend-owned diff without
+  inferring it locally.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `tests/integration/test_config_control.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `docs/integration_demo.md`
+  - `docs/user_configuration_schema_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `$env:PYTHONPATH='.'; python -m pytest tests/integration/test_config_control.py::test_control_plane_validates_user_configuration_without_applying tests/integration/test_config_control.py::test_control_plane_applies_preflight_normalized_user_configuration -q`
+    - Result: passed, 2 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - Candidate configs are normalized against backend defaults, so omitted fields
+    can intentionally appear as changes relative to the currently loaded demo
+    config. Tests assert deterministic ordering and key changed paths instead of
+    assuming an exact total change count.
+  - Local runtime/generated config files remain dirty and are intentionally not
+    included in this task.
+- Known remaining issues / follow-up:
+  - Dashboard rendering of `change_summary` should be implemented as the next
+    frontend slice.
+  - The diff is a bounded leaf-field preview, not a full interactive diff UI.
+
 ## 2026-07-06 - Dashboard User Config Apply v1
 
 - Branch: `feature/T200-dashboard-user-config-apply-v1`

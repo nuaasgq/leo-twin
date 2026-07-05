@@ -67,7 +67,9 @@ The HTTP endpoints are read-only:
   validate-only `USER_CONFIGURATION_VALIDATION_REPORT` with normalized config
   and stable hash when accepted. It does not apply the config by itself. When
   accepted, the report includes an explicit `apply_command` that names
-  `normalized_config` as the safe `CONFIG_UPDATE` payload source.
+  `normalized_config` as the safe `CONFIG_UPDATE` payload source and a
+  deterministic `change_summary` comparing the current effective config with
+  the accepted normalized candidate.
 
 Configuration import remains an explicit control-plane action. Validated full
 or partial mappings use `CONFIG_UPDATE`, template loading uses `LOAD_TEMPLATE`,
@@ -101,6 +103,17 @@ backend-declared apply command. The dashboard only enables "apply" after a
 successful preflight, and it sends the backend-normalized config rather than the
 raw editor text. Applying a config reinitializes the session and reconnects
 runtime streams through the existing control plane.
+
+The validation `change_summary` is backend-owned. It includes:
+
+- `baseline`: the current effective `SEESConfig`;
+- `candidate`: the normalized user config after backend defaults are applied;
+- `changed_field_count`: total changed leaf fields;
+- `section_counts`: deterministic root-section counts such as `scenario` or
+  `runtime`;
+- `changes`: a sorted bounded preview of changed field paths, current values,
+  candidate values, and change types;
+- `hidden_change_count`: fields omitted from the bounded preview.
 
 Each field schema includes:
 

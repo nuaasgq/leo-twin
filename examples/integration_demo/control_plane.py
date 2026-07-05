@@ -6,6 +6,7 @@ import hashlib
 import json
 import re
 import zipfile
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -227,6 +228,14 @@ class DemoControlPlane:
             if isinstance(normalized_config, dict)
             else None
         )
+        change_summary = (
+            _user_configuration_change_summary(
+                self._controller.config_json(),
+                normalized_config,
+            )
+            if isinstance(normalized_config, dict)
+            else None
+        )
         return {
             "type": "USER_CONFIGURATION_VALIDATION_REPORT",
             "summary": {
@@ -243,6 +252,7 @@ class DemoControlPlane:
                 "errors": tuple(validation["errors"]),
                 "normalized_config_hash": normalized_hash,
                 "normalized_config": normalized_config,
+                "change_summary": change_summary,
                 "apply_command": _user_configuration_apply_command(),
             },
         }
@@ -1235,6 +1245,79 @@ def _user_configuration_apply_command() -> dict[str, Any]:
             "RUNNING_SESSION_IS_STOPPED_AND_REINITIALIZED_BY_BACKEND"
         ),
     }
+
+
+def _user_configuration_change_summary(
+    current_config: Mapping[str, Any],
+    candidate_config: Mapping[str, Any],
+    *,
+    preview_limit: int = 24,
+) -> dict[str, Any]:
+    current = _flatten_config_paths(current_config)
+    candidate = _flatten_config_paths(candidate_config)
+    all_paths = sorted(set(current) | set(candidate))
+    changes: list[dict[str, Any]] = []
+    section_counts: dict[str, int] = {}
+    sentinel = object()
+    for path in all_paths:
+        current_value = current.get(path, sentinel)
+        candidate_value = candidate.get(path, sentinel)
+        if current_value == candidate_value:
+            continue
+        section = path.split(".", 1)[0]
+        section_counts[section] = section_counts.get(section, 0) + 1
+        if len(changes) >= preview_limit:
+            continue
+        if current_value is sentinel:
+            change_type = "ADDED"
+            current_json: Any = None
+        else:
+            change_type = "CHANGED"
+            current_json = current_value
+        if candidate_value is sentinel:
+            change_type = "REMOVED"
+            candidate_json: Any = None
+        else:
+            candidate_json = candidate_value
+        changes.append(
+            {
+                "path": path,
+                "section": section,
+                "change_type": change_type,
+                "current_value": current_json,
+                "candidate_value": candidate_json,
+            }
+        )
+    changed_field_count = sum(section_counts.values())
+    return {
+        "version": "v1",
+        "source": "BACKEND_USER_CONFIGURATION",
+        "baseline": "CURRENT_EFFECTIVE_SEES_CONFIG",
+        "candidate": "NORMALIZED_USER_CONFIG",
+        "changed_field_count": changed_field_count,
+        "section_counts": {
+            section: section_counts[section] for section in sorted(section_counts)
+        },
+        "preview_limit": preview_limit,
+        "change_count": len(changes),
+        "hidden_change_count": max(0, changed_field_count - len(changes)),
+        "changes": tuple(changes),
+    }
+
+
+def _flatten_config_paths(data: Mapping[str, Any]) -> dict[str, Any]:
+    flattened: dict[str, Any] = {}
+
+    def walk(prefix: str, value: Any) -> None:
+        if isinstance(value, Mapping):
+            for key in sorted(value):
+                child_path = f"{prefix}.{key}" if prefix else str(key)
+                walk(child_path, value[key])
+            return
+        flattened[prefix] = value
+
+    walk("", data)
+    return flattened
 
 
 def _runtime_export_restore_result(

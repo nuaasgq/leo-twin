@@ -645,6 +645,7 @@ export interface UserConfigurationValidationReportV1 {
   errors: readonly UserConfigurationValidationErrorV1[];
   normalized_config_hash: string | null;
   normalized_config: Record<string, unknown> | null;
+  change_summary?: UserConfigurationChangeSummaryV1 | null;
   apply_command: UserConfigurationValidationApplyCommandV1;
 }
 
@@ -662,6 +663,27 @@ export interface UserConfigurationValidationApplyCommandV1 {
   requires_explicit_user_action: boolean;
   runtime_effect?: string;
   runtime_status_policy?: string;
+}
+
+export interface UserConfigurationChangeSummaryV1 {
+  version: "v1" | string;
+  source: string;
+  baseline: string;
+  candidate: string;
+  changed_field_count: number;
+  section_counts: Record<string, number>;
+  preview_limit: number;
+  change_count: number;
+  hidden_change_count: number;
+  changes: readonly UserConfigurationChangeItemV1[];
+}
+
+export interface UserConfigurationChangeItemV1 {
+  path: string;
+  section: string;
+  change_type: string;
+  current_value: unknown;
+  candidate_value: unknown;
 }
 
 export interface UserConfigurationValidationReportEnvelope {
