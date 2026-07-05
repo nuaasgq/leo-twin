@@ -41,6 +41,11 @@ change.
     - Result: passed, 25 files / 261 tests.
   - Bundled Node/Pnpm:
     `pnpm --dir frontend build`
+    - Result: passed. Existing DataPanel chunk-size warning remains.
+  - `python -m pytest tests/integration/test_config_control.py::test_initialize_writes_config_and_start_gates_streams tests/integration/test_config_control.py::test_frontend_control_messages_are_processed -q`
+    - Result: passed, 2 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
     - Result: passed. Vite still reports the existing `DataPanel` chunk-size
       warning at about 502 kB after minification.
   - `git diff --check src/leo_twin/schema/compute_resource_contract.py src/leo_twin/schema/__init__.py src/leo_twin/services/derived_summary.py frontend/src/core/event_types/index.ts frontend/tests/fixtures/runtimeStatus.contract.json frontend/tests/runtimeContractFixture.test.ts tests/unit/test_compute_resource_contract_v2.py docs/compute_resource_contract_v2.md docs/development_log.md`
@@ -8307,3 +8312,49 @@ change.
 - Recommended follow-up:
   - Wire Service Placement Model v2 into the route-aware compute runtime and
     emit per-task placement decisions into the dashboard observability stream.
+
+## 2026-07-05 - Route-Aware Service Placement Runtime v1
+
+- Branch: `feature/T171-route-aware-placement-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: connect `RouteAwareComputeEngine` to Service Placement Model v2. The
+  runtime now keeps the existing deterministic workload ordering, then calls
+  `place_compute_service()` for node placement using route candidate nodes and
+  explicit node `available_at` queue state. Service latency history now carries
+  backend-owned placement metadata, and user request summaries pass it through
+  when available. Frontend contract types and fixture tests were updated, but
+  frontend layout was not changed. Event Kernel behavior and packet-level
+  semantics are unchanged.
+- Changed files/modules:
+  - `src/leo_twin/models/compute/network_aware.py`
+  - `src/leo_twin/services/metrics/collector.py`
+  - `src/leo_twin/services/runtime_observability.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/tests/fixtures/runtimeStatus.contract.json`
+  - `frontend/tests/runtimeContractFixture.test.ts`
+  - `tests/unit/test_network_aware_compute.py`
+  - `tests/integration/test_compute_service_lifecycle.py`
+  - `tests/unit/test_runtime_observability.py`
+  - `docs/service_placement_model_v2.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_network_aware_compute.py tests/integration/test_compute_service_lifecycle.py tests/unit/test_metrics_module.py::test_service_latency_history_includes_sorted_component_timeline tests/unit/test_runtime_observability.py::test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned tests/unit/test_service_placement_model_v2.py tests/unit/test_compute_scheduling_runtime.py -q`
+    - Result: passed, 24 tests.
+  - `python -m json.tool frontend/tests/fixtures/runtimeStatus.contract.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- runtimeContractFixture.test.ts`
+    - Result: passed, 25 files / 261 tests.
+- Problems encountered:
+  - Service history tests were intentionally updated because runtime metrics now
+    include placement metadata. Legacy metric samples without placement tags
+    remain compatible and do not emit empty placement fields.
+  - Existing local runtime config drift remains untouched and unstaged.
+- Known remaining issues:
+  - The dashboard layout does not yet display the new placement fields in
+    visible user/satellite rows.
+  - Placement still uses flow-level deterministic queue state only. It does not
+    model packet queues, preemption, migration, power, or thermal constraints.
+- Recommended follow-up:
+  - Add dashboard table columns/detail drawer fields for selected compute node,
+    placement status, bottleneck resource, and candidate count.

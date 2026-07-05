@@ -88,6 +88,11 @@ def test_compute_service_lifecycle_emits_component_metrics() -> None:
     assert decisions[0].ready_time == 4.0
     assert decisions[0].start_time == 4.0
     assert decisions[0].finish_time == 6.0
+    assert decisions[0].placement_policy == "MIN_ESTIMATED_FINISH_TIME"
+    assert decisions[0].placement_status == "PLACED"
+    assert decisions[0].bottleneck_resource == "cpu_gflops_fp32"
+    assert decisions[0].candidate_count == 1
+    assert decisions[0].capable_candidate_count == 1
 
     records = {
         record.metric_name: record.value
@@ -122,13 +127,19 @@ def test_compute_service_lifecycle_emits_component_metrics() -> None:
         "service_limit": 32,
         "item_count": 1,
         "items": [
-            {
-                "task_id": "svc-00-compute_service-00000-task",
-                "input_flow_id": "svc-00-compute_service-00000-input",
-                "output_flow_id": "svc-00-compute_service-00000-output",
-                "input_route_id": "route:svc-00-compute_service-00000-input",
-                "output_route_id": "route:svc-00-compute_service-00000-output",
-                "first_sample_sim_time": 6.0,
+                {
+                    "task_id": "svc-00-compute_service-00000-task",
+                    "input_flow_id": "svc-00-compute_service-00000-input",
+                    "output_flow_id": "svc-00-compute_service-00000-output",
+                    "input_route_id": "route:svc-00-compute_service-00000-input",
+                    "output_route_id": "route:svc-00-compute_service-00000-output",
+                    "compute_node_id": "node-a",
+                    "service_placement_status": "PLACED",
+                    "service_placement_policy": "MIN_ESTIMATED_FINISH_TIME",
+                    "service_placement_bottleneck_resource": "cpu_gflops_fp32",
+                    "service_placement_candidate_count": 1,
+                    "service_placement_capable_candidate_count": 1,
+                    "first_sample_sim_time": 6.0,
                 "last_sample_sim_time": 6.0,
                 "component_timeline": [
                     {

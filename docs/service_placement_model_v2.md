@@ -52,6 +52,26 @@ with `ComputeResourceVector`.
 - `rejection_reason` when rejected.
 - Per-candidate deterministic evaluation summaries.
 
+## Runtime Integration
+
+`RouteAwareComputeEngine` uses `place_compute_service()` for route-aware
+compute node selection. The existing scheduling runtime still orders ready
+workloads first, then each task's node placement is selected by the v2 placement
+model.
+
+Runtime service latency history includes placement metadata when the compute
+runtime emits it:
+
+- `compute_node_id`
+- `service_placement_status`
+- `service_placement_policy`
+- `service_placement_bottleneck_resource`
+- `service_placement_candidate_count`
+- `service_placement_capable_candidate_count`
+
+The same placement metadata is passed through backend-owned user request
+summaries when service history is available.
+
 ## Rejection Reasons
 
 - `NO_NODES`
@@ -70,5 +90,6 @@ node and timing outputs are identical. Candidate nodes are normalized by
 - The model is flow-level and deterministic only.
 - It does not model packet queues, retransmission, RF propagation, thermal
   limits, power limits, preemption, service migration, or real code execution.
-- Runtime integration remains incremental. `RouteAwareComputeEngine` can reuse
-  this model in a later task to replace its local `_select_node()` logic.
+- Queue state currently uses the route-aware compute runtime's deterministic
+  node `available_at` state. It does not model preemptive queue disciplines or
+  packet-level network queues.

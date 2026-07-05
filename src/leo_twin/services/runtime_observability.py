@@ -254,11 +254,45 @@ def _user_item(
         ),
         "input_route_id": _str(service_detail.get("input_route_id")),
         "output_route_id": _str(service_detail.get("output_route_id")),
+        **_service_placement_detail_fields(service_detail),
         "active_business_type": _route_business_type(selected_route, service_lookup),
         "active_business_label": _route_business_label(selected_route, service_lookup),
         "request_state": request_state,
         "request_state_label": _request_state_label(request_state),
         "path": selected_path,
+    }
+
+
+def _service_placement_detail_fields(
+    service_detail: Mapping[str, Any],
+) -> dict[str, object]:
+    keys = (
+        "compute_node_id",
+        "service_placement_status",
+        "service_placement_policy",
+        "service_placement_bottleneck_resource",
+        "service_placement_candidate_count",
+        "service_placement_capable_candidate_count",
+    )
+    if not any(key in service_detail for key in keys):
+        return {}
+    return {
+        "compute_node_id": _str(service_detail.get("compute_node_id")),
+        "service_placement_status": _str(
+            service_detail.get("service_placement_status")
+        ),
+        "service_placement_policy": _str(
+            service_detail.get("service_placement_policy")
+        ),
+        "service_placement_bottleneck_resource": _str(
+            service_detail.get("service_placement_bottleneck_resource")
+        ),
+        "service_placement_candidate_count": _optional_int(
+            service_detail.get("service_placement_candidate_count")
+        ),
+        "service_placement_capable_candidate_count": _optional_int(
+            service_detail.get("service_placement_capable_candidate_count")
+        ),
     }
 
 
@@ -752,6 +786,14 @@ def _optional_float(value: object) -> float | None:
         return None
     if isinstance(value, (int, float)):
         return float(value)
+    return None
+
+
+def _optional_int(value: object) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
     return None
 
 

@@ -144,6 +144,12 @@ def test_route_aware_compute_uses_route_endpoint_node_when_present() -> None:
     assert decision.node_id == "node-a"
     assert decision.start_time == 4.0
     assert decision.finish_time == 6.0
+    assert decision.placement_policy == "MIN_ESTIMATED_FINISH_TIME"
+    assert decision.placement_status == "PLACED"
+    assert decision.queue_delay == 0.0
+    assert decision.bottleneck_resource == "cpu_gflops_fp32"
+    assert decision.candidate_count == 1
+    assert decision.capable_candidate_count == 1
 
 
 def test_route_aware_compute_applies_scheduling_policy_to_ready_batch() -> None:

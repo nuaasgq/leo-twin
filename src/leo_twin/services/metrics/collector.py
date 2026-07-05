@@ -1032,6 +1032,10 @@ class MetricsCollector:
                 metadata["input_route_id"] = route_id
             elif component in {"output_network", "total"}:
                 metadata["output_route_id"] = route_id
+        for key in _SERVICE_PLACEMENT_METADATA_TAGS:
+            value = tags.get(key)
+            if isinstance(value, str) and value:
+                metadata[key] = value
         self._service_latency_timeline_by_task.setdefault(record.entity_id, {})[
             component
         ] = sample
@@ -1993,6 +1997,15 @@ _SERVICE_LATENCY_COMPONENT_ORDER = (
     "total",
 )
 
+_SERVICE_PLACEMENT_METADATA_TAGS = (
+    "compute_node_id",
+    "service_placement_status",
+    "service_placement_policy",
+    "service_placement_bottleneck_resource",
+    "service_placement_candidate_count",
+    "service_placement_capable_candidate_count",
+)
+
 
 def _service_latency_component_rank(component: str) -> int:
     try:
@@ -2015,7 +2028,7 @@ def _service_latency_history_item(
     times: dict[str, float],
     timeline: dict[str, dict[str, str | float]],
 ) -> dict[str, Any]:
-    return {
+    item: dict[str, Any] = {
         "task_id": task_id,
         "input_flow_id": metadata.get("input_flow_id", ""),
         "output_flow_id": metadata.get("output_flow_id", ""),
@@ -2031,6 +2044,40 @@ def _service_latency_history_item(
         "output_network_latency_s": float(components.get("output_network", 0.0)),
         "total_latency_s": float(components.get("total", 0.0)),
     }
+    if any(metadata.get(key) for key in _SERVICE_PLACEMENT_METADATA_TAGS):
+        item.update(
+            {
+                "compute_node_id": metadata.get("compute_node_id", ""),
+                "service_placement_status": metadata.get(
+                    "service_placement_status",
+                    "",
+                ),
+                "service_placement_policy": metadata.get(
+                    "service_placement_policy",
+                    "",
+                ),
+                "service_placement_bottleneck_resource": metadata.get(
+                    "service_placement_bottleneck_resource",
+                    "",
+                ),
+                "service_placement_candidate_count": _service_metadata_int(
+                    metadata,
+                    "service_placement_candidate_count",
+                ),
+                "service_placement_capable_candidate_count": _service_metadata_int(
+                    metadata,
+                    "service_placement_capable_candidate_count",
+                ),
+            }
+        )
+    return item
+
+
+def _service_metadata_int(metadata: Mapping[str, str], key: str) -> int:
+    try:
+        return max(0, int(metadata.get(key, "0")))
+    except ValueError:
+        return 0
 
 
 def _service_latency_component_timeline(

@@ -848,6 +848,12 @@ export interface RuntimeUserRequestItemV1 {
   output_network_latency_s?: number | null;
   input_route_id?: string;
   output_route_id?: string;
+  compute_node_id?: string;
+  service_placement_status?: string;
+  service_placement_policy?: string;
+  service_placement_bottleneck_resource?: string;
+  service_placement_candidate_count?: number | null;
+  service_placement_capable_candidate_count?: number | null;
   active_business_type?: string;
   active_business_label?: string;
   request_state?: string;
@@ -1053,6 +1059,12 @@ export interface RuntimeServiceLatencyHistoryItemV1 {
   output_flow_id?: string;
   input_route_id?: string;
   output_route_id?: string;
+  compute_node_id?: string;
+  service_placement_status?: string;
+  service_placement_policy?: string;
+  service_placement_bottleneck_resource?: string;
+  service_placement_candidate_count?: number;
+  service_placement_capable_candidate_count?: number;
   first_sample_sim_time?: number;
   last_sample_sim_time?: number;
   component_timeline?: readonly RuntimeServiceLatencyComponentSampleV1[];

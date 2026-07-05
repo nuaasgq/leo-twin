@@ -11,9 +11,13 @@ from leo_twin.models.compute.scheduling import (
     ComputeSchedulingRuntime,
     ComputeWorkloadItem,
 )
+from leo_twin.models.compute.placement import (
+    ServicePlacementDecision as ComputeServicePlacementDecision,
+    ServicePlacementQueueState,
+    place_compute_service,
+)
 from leo_twin.models.compute.resources import (
     compute_node_resource_usage_fields,
-    estimate_task_service_time,
 )
 from leo_twin.models.traffic import ComputeOutputFlowMetadata
 from leo_twin.schema import (
@@ -44,6 +48,13 @@ class TaskPlacementDecision:
     transfer_time: float
     compute_time: float
     status: str
+    placement_status: str = "PLACED"
+    placement_policy: str = "MIN_ESTIMATED_FINISH_TIME"
+    queue_delay: float = 0.0
+    bottleneck_resource: str = "none"
+    candidate_count: int = 0
+    capable_candidate_count: int = 0
+    rejection_reason: str = ""
 
 
 @dataclass(frozen=True)
@@ -293,21 +304,40 @@ class RouteAwareComputeEngine(SimulationModule):
         route: Route,
         ready_time: float,
     ) -> TaskPlacementDecision:
-        node, start_time, finish_time, compute_time = self._select_node(
+        placement = self._select_node(
             task,
             route,
             ready_time,
         )
+        if (
+            placement.selected_node_id is None
+            or placement.start_time is None
+            or placement.finish_time is None
+            or placement.execution_delay is None
+        ):
+            raise ValueError(
+                f"no capable compute node for task {task.task_id}: "
+                f"{placement.rejection_reason}"
+            )
         return TaskPlacementDecision(
             task_id=task.task_id,
-            node_id=node.node_id,
+            node_id=placement.selected_node_id,
             route_id=route.route_id,
             ready_time=ready_time,
-            start_time=start_time,
-            finish_time=finish_time,
+            start_time=placement.start_time,
+            finish_time=placement.finish_time,
             transfer_time=_transfer_time(task, route),
-            compute_time=compute_time,
-            status=_decision_status(task, finish_time),
+            compute_time=placement.execution_delay,
+            status=_decision_status(task, placement.finish_time),
+            placement_status=placement.status.value,
+            placement_policy=placement.policy.value,
+            queue_delay=float(placement.queue_delay or 0.0),
+            bottleneck_resource=placement.bottleneck_resource or "none",
+            candidate_count=placement.candidate_count,
+            capable_candidate_count=placement.capable_candidate_count,
+            rejection_reason=(
+                "" if placement.rejection_reason is None else placement.rejection_reason.value
+            ),
         )
 
     def _select_node(
@@ -315,18 +345,21 @@ class RouteAwareComputeEngine(SimulationModule):
         task: TaskRequest,
         route: Route,
         ready_time: float,
-    ) -> tuple[ComputeNode, float, float, float]:
+    ) -> ComputeServicePlacementDecision:
         candidates = self._candidate_nodes(route)
-        scored: list[tuple[float, float, str, ComputeNode, float]] = []
-        for compute_node in candidates:
-            start_time = max(self._available_at[compute_node.node_id], ready_time)
-            compute_time = estimate_task_service_time(compute_node, task).service_time
-            finish_time = start_time + compute_time
-            scored.append(
-                (finish_time, start_time, compute_node.node_id, compute_node, compute_time)
+        queue_states = tuple(
+            ServicePlacementQueueState(
+                node_id=compute_node.node_id,
+                available_at=self._available_at[compute_node.node_id],
             )
-        finish_time, start_time, _, node, compute_time = min(scored)
-        return node, start_time, finish_time, compute_time
+            for compute_node in candidates
+        )
+        return place_compute_service(
+            task,
+            candidates,
+            queue_states=queue_states,
+            ready_time=ready_time,
+        )
 
     def _candidate_nodes(self, route: Route) -> tuple[ComputeNode, ...]:
         routed_node_ids = set(route.path)
@@ -511,12 +544,11 @@ class RouteAwareComputeEngine(SimulationModule):
     ) -> None:
         if task.flow_id is None:
             return
-        queue_delay = max(0.0, decision.start_time - decision.ready_time)
         tags = (
             ("task_id", task.task_id),
             ("input_flow_id", _input_flow_id(task)),
             ("route_id", decision.route_id),
-        )
+        ) + _service_placement_tags(decision)
         records = (
             MetricRecord(
                 metric_name="service.input_network_latency",
@@ -529,7 +561,7 @@ class RouteAwareComputeEngine(SimulationModule):
                 metric_name="service.compute_queue_delay",
                 sim_time=decision.finish_time,
                 entity_id=task.task_id,
-                value=queue_delay,
+                value=decision.queue_delay,
                 tags=tags,
             ),
             MetricRecord(
@@ -582,10 +614,9 @@ class RouteAwareComputeEngine(SimulationModule):
             return
         output_latency = route.latency + state.metadata.data_size / route.capacity
         decision = state.decision
-        queue_delay = max(0.0, decision.start_time - decision.ready_time)
         total_latency = (
             decision.transfer_time
-            + queue_delay
+            + decision.queue_delay
             + decision.compute_time
             + output_latency
         )
@@ -594,7 +625,7 @@ class RouteAwareComputeEngine(SimulationModule):
             ("input_flow_id", state.metadata.input_flow_id),
             ("output_flow_id", state.metadata.flow_id),
             ("route_id", route.route_id),
-        )
+        ) + _service_placement_tags(decision)
         records = (
             MetricRecord(
                 metric_name="service.output_network_latency",
@@ -639,6 +670,22 @@ def _finish_status(decision: TaskPlacementDecision) -> str:
     if decision.status == "DEADLINE_MISSED":
         return "DEADLINE_MISSED"
     return "FINISHED"
+
+
+def _service_placement_tags(
+    decision: TaskPlacementDecision,
+) -> tuple[tuple[str, str], ...]:
+    return (
+        ("compute_node_id", decision.node_id),
+        ("service_placement_status", decision.placement_status),
+        ("service_placement_policy", decision.placement_policy),
+        ("service_placement_bottleneck_resource", decision.bottleneck_resource),
+        ("service_placement_candidate_count", str(decision.candidate_count)),
+        (
+            "service_placement_capable_candidate_count",
+            str(decision.capable_candidate_count),
+        ),
+    )
 
 
 def _compute_node_state(
