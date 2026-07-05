@@ -6028,3 +6028,40 @@ change.
 - Recommended follow-up:
   - Add backend-owned per-user request lifecycle summaries so the dashboard can
     show request state transitions without deriving them from route paths.
+
+## 2026-07-05 - Five-Hour Upgrade Plan and Dashboard Node Detail v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: start the requested five-hour module refinement flow with a committed
+  plan and the first bounded frontend observability task. The standalone
+  dashboard page is now the vertical scroll container, user status rows cover
+  every known user node even when idle, and satellite rows include service
+  object and next-hop context derived from existing route snapshots.
+- Changed files/modules:
+  - `docs/five_hour_module_upgrade_plan.md`
+  - `frontend/src/app/App.css`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test`
+    - Result: passed, 25 files / 207 tests.
+  - `pnpm --dir frontend exec vitest run dataPanel.test.ts`
+    - Result: passed, 1 file / 53 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The existing standalone dashboard used nested overflow with a hidden parent
+    container, which could make the page appear not scrollable. The dashboard
+    page now owns vertical scrolling while large tables keep local scroll.
+- Known remaining issues:
+  - User and satellite node details are still derived from existing snapshot
+    paths and runtime KPI slices. A follow-up backend summary contract should
+    become the source of truth for request lifecycle, queue state, selected
+    satellite, and next-hop semantics.
+  - Network KPI time variation is not changed in this task; Hour 4 of the plan
+    isolates that work as a backend metrics/model task.
+- Recommended follow-up:
+  - Implement the detailed user-facing scenario configuration contract and add
+    backend-owned per-user request lifecycle summaries.

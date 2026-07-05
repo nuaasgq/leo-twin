@@ -1817,10 +1817,10 @@ describe("buildTopComputeNodeRows", () => {
 });
 
 describe("buildUserBusinessRequestRows", () => {
-  it("shows per-user route requests and service latency linkage", () => {
+  it("shows per-user node status and service latency linkage", () => {
     const rows = buildUserBusinessRequestRows(
       makeSnapshot({
-        ground_users: [{ user_id: "user-0", status: "ACTIVE" }],
+        ground_users: [{ user_id: "user-0", cell_id: "cell-a", status: "ACTIVE" }],
         routes: [
           {
             route_id: "route-1",
@@ -1852,16 +1852,49 @@ describe("buildUserBusinessRequestRows", () => {
       }
     );
 
-    expect(rows.sourceLabel).toBe("快照路由 + 后端服务延迟历史");
+    expect(rows.sourceLabel).toBe("快照用户/路由 + 后端服务延迟历史");
     expect(rows.items[0]).toMatchObject({
-      requestId: "flow-input",
       userId: "user-0",
+      platformTypeLabel: "地面用户终端 / cell-a",
+      communicationLabel: "1 / 1 条",
+      computeLabel: "1 条计算业务",
+      networkQueueLabel: "队列空",
+      selectedSatelliteId: "sat-0",
       destinationId: "compute-0",
-      trafficTypeLabel: "计算服务",
-      statusLabel: "传输可用",
-      latencyLabel: "0.12 s",
-      capacityLabel: "80 Mbps",
+      statusLabel: "ACTIVE / 业务可达",
+      latencyCapacityLabel: "0.12 s / 80 Mbps",
       serviceLabel: "task-service-0 / 330 ms / 进行中"
+    });
+  });
+
+  it("keeps idle users visible even when they have no current route", () => {
+    const rows = buildUserBusinessRequestRows(
+      makeSnapshot({
+        ground_users: [
+          { user_id: "user-0", status: "ACTIVE" },
+          { user_id: "user-1", status: "IDLE" }
+        ],
+        routes: [
+          {
+            route_id: "route-1",
+            flow_id: "flow-1",
+            path: ["user-0", "sat-0", "service-0"],
+            latency: 0.2,
+            capacity: 40,
+            available: true
+          }
+        ]
+      })
+    );
+
+    expect(rows.items.map((row) => row.userId)).toEqual(["user-0", "user-1"]);
+    expect(rows.items[1]).toMatchObject({
+      userId: "user-1",
+      communicationLabel: "无通信业务",
+      computeLabel: "无计算业务",
+      networkQueueLabel: "队列空",
+      selectedSatelliteId: "未选择",
+      statusLabel: "IDLE"
     });
   });
 });
@@ -1897,7 +1930,7 @@ describe("buildSatelliteResourceRows", () => {
     });
   });
 
-  it("merges backend satellite KPI slices into resource and network labels", () => {
+  it("merges backend satellite KPI slices into resource, service, and network labels", () => {
     const rows = buildSatelliteResourceRows(
       makeSnapshot({
         satellites: [
@@ -1917,6 +1950,24 @@ describe("buildSatelliteResourceRows", () => {
             available_capacity: 95,
             status: "ACTIVE",
             load_ratio: 0.05
+          }
+        ],
+        routes: [
+          {
+            route_id: "route-a",
+            flow_id: "flow-a",
+            path: ["user-0", "sat-0", "sat-1", "service-0"],
+            latency: 0.1,
+            capacity: 80,
+            available: true
+          },
+          {
+            route_id: "route-b",
+            flow_id: "flow-b",
+            path: ["user-1", "sat-0", "compute-0"],
+            latency: 0.2,
+            capacity: 40,
+            available: true
           }
         ]
       }),
@@ -1963,6 +2014,8 @@ describe("buildSatelliteResourceRows", () => {
       cpuFp32Label: "64 / 100 GFLOPS",
       cpuFp64Label: "2 / 8 GFLOPS",
       npuLabel: "4 / 10 TOPS",
+      serviceObjectLabel: "user-0, user-1 / 关联 2 条",
+      nextHopLabel: "compute-0, sat-1 / 关联 2 条",
       taskLabel: "2 运行 / 7 完成"
     });
     expect(rows.items[0].networkLabel).toContain("链路 4 / 路由 3");

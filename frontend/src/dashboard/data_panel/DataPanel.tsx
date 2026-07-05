@@ -510,10 +510,10 @@ export const DataPanel = memo(function DataPanel({
         <SystemHealth snapshot={snapshot} />
       </div>
 
-      <div className="data-panel-section-title">业务请求与卫星资源明细</div>
+      <div className="data-panel-section-title">用户节点与卫星运行明细</div>
       <div className="data-panel-detail-grid">
-        <section className="dashboard-section data-panel-detail-table" aria-label="用户业务请求明细">
-          <div className="section-title">用户业务请求</div>
+        <section className="dashboard-section data-panel-detail-table" aria-label="用户节点状态明细">
+          <div className="section-title">用户节点状态</div>
           <div className="data-panel-source-note">
             <span>{userBusinessRequests.sourceLabel}</span>
             <small>{userBusinessRequests.summaryLabel}</small>
@@ -592,31 +592,33 @@ function TopComputeNodeTable({ rows }: { rows: readonly TopComputeNodeRow[] }) {
 
 function UserBusinessRequestTable({ rows }: { rows: readonly UserBusinessRequestRow[] }) {
   if (rows.length === 0) {
-    return <div className="data-panel-detail-empty">等待业务请求快照</div>;
+    return <div className="data-panel-detail-empty">等待用户节点快照</div>;
   }
   return (
     <div className="data-panel-table-scroll">
       <div className="data-panel-business-row header">
-        <span>用户</span>
-        <span>请求</span>
-        <span>类型</span>
+        <span>节点编号</span>
+        <span>平台类型</span>
+        <span>通信业务</span>
+        <span>计算业务</span>
+        <span>网络队列</span>
+        <span>目标卫星</span>
+        <span>目标节点</span>
         <span>状态</span>
-        <span>时延</span>
-        <span>容量</span>
-        <span>需求/损耗</span>
-        <span>目的地</span>
+        <span>时延/容量</span>
         <span>服务链路</span>
       </div>
       {rows.map((row) => (
-        <div className="data-panel-business-row" key={row.routeId} title={row.pathLabel}>
+        <div className="data-panel-business-row" key={row.userId} title={row.pathLabel}>
           <span>{row.userId}</span>
-          <span>{row.requestId}</span>
-          <span>{row.trafficTypeLabel}</span>
-          <span>{row.statusLabel}</span>
-          <span>{row.latencyLabel}</span>
-          <span>{row.capacityLabel}</span>
-          <span>{row.demandLossLabel}</span>
+          <span>{row.platformTypeLabel}</span>
+          <span>{row.communicationLabel}</span>
+          <span>{row.computeLabel}</span>
+          <span>{row.networkQueueLabel}</span>
+          <span>{row.selectedSatelliteId}</span>
           <span>{row.destinationId}</span>
+          <span>{row.statusLabel}</span>
+          <span>{row.latencyCapacityLabel}</span>
           <span>{row.serviceLabel}</span>
         </div>
       ))}
@@ -634,6 +636,8 @@ function SatelliteResourceTable({ rows }: { rows: readonly SatelliteResourceRow[
         <span>卫星</span>
         <span>状态</span>
         <span>负载</span>
+        <span>服务对象</span>
+        <span>下一跳</span>
         <span>CPU FP32</span>
         <span>CPU FP64</span>
         <span>GPU</span>
@@ -647,6 +651,8 @@ function SatelliteResourceTable({ rows }: { rows: readonly SatelliteResourceRow[
           <span>{row.satelliteId}</span>
           <span>{row.statusLabel}</span>
           <span>{row.loadLabel}</span>
+          <span>{row.serviceObjectLabel}</span>
+          <span>{row.nextHopLabel}</span>
           <span>{row.cpuFp32Label}</span>
           <span>{row.cpuFp64Label}</span>
           <span>{row.gpuLabel}</span>
@@ -940,15 +946,15 @@ export interface UserBusinessRequestRows {
 }
 
 export interface UserBusinessRequestRow {
-  routeId: string;
-  requestId: string;
   userId: string;
+  platformTypeLabel: string;
+  communicationLabel: string;
+  computeLabel: string;
+  networkQueueLabel: string;
+  selectedSatelliteId: string;
   destinationId: string;
-  trafficTypeLabel: string;
   statusLabel: string;
-  latencyLabel: string;
-  capacityLabel: string;
-  demandLossLabel: string;
+  latencyCapacityLabel: string;
   serviceLabel: string;
   pathLabel: string;
 }
@@ -964,6 +970,8 @@ export interface SatelliteResourceRow {
   statusLabel: string;
   loadPercent: number;
   loadLabel: string;
+  serviceObjectLabel: string;
+  nextHopLabel: string;
   cpuFp32Label: string;
   cpuFp64Label: string;
   gpuLabel: string;
@@ -1392,35 +1400,67 @@ export function buildUserBusinessRequestRows(
   limit = 1000
 ): UserBusinessRequestRows {
   const serviceLookup = buildServiceFlowLookup(serviceHistory);
-  const candidates = snapshot.routes
-    .filter((route) => routeUserId(route) !== null)
-    .sort(compareUserBusinessRoute);
-  const items = candidates.slice(0, Math.max(0, limit)).map((route) => {
-    const userId = routeUserId(route) ?? "未绑定用户";
-    const destinationId = route.path[route.path.length - 1] ?? "未完成";
-    const serviceLabel = serviceLookup.get(route.flow_id) ?? "未关联计算服务";
+  const routesByUser = buildRoutesByUser(snapshot.routes);
+  const userIds = Array.from(
+    new Set([
+      ...snapshot.ground_users.map((user) => user.user_id),
+      ...Array.from(routesByUser.keys())
+    ])
+  ).sort(compareEntityId);
+  const groundUserById = new Map(snapshot.ground_users.map((user) => [user.user_id, user]));
+  const items = userIds.slice(0, Math.max(0, limit)).map((userId) => {
+    const user = groundUserById.get(userId);
+    const routes = (routesByUser.get(userId) ?? []).slice().sort(compareUserBusinessRoute);
+    const availableRoutes = routes.filter((route) => route.available);
+    const computeRoutes = routes.filter((route) => routeIsComputeService(route, serviceLookup));
+    const waitingRoutes = routes.filter((route) => !route.available);
+    const selectedRoute = selectUserPrimaryRoute(routes, serviceLookup);
+    const selectedSatelliteId = selectedRoute ? routeFirstSatellite(selectedRoute) : null;
+    const destinationId = selectedRoute?.path[selectedRoute.path.length - 1] ?? "未选择";
+    const serviceLabel =
+      selectedRoute !== null
+        ? serviceLookup.get(selectedRoute.flow_id) ?? selectedRoute.flow_id
+        : "无业务";
+    const latencyCapacityLabel =
+      selectedRoute !== null
+        ? `${formatPreciseMetricValue(selectedRoute.latency)} s / ${formatMetricValue(
+            selectedRoute.capacity
+          )} Mbps`
+        : "无链路";
     return {
-      routeId: route.route_id,
-      requestId: route.flow_id,
       userId,
+      platformTypeLabel: userPlatformTypeLabel(user),
+      communicationLabel:
+        routes.length > 0
+          ? `${formatCount(availableRoutes.length)} / ${formatCount(routes.length)} 条`
+          : "无通信业务",
+      computeLabel:
+        computeRoutes.length > 0 ? `${formatCount(computeRoutes.length)} 条计算业务` : "无计算业务",
+      networkQueueLabel:
+        waitingRoutes.length > 0 ? `${formatCount(waitingRoutes.length)} 条等待` : "队列空",
+      selectedSatelliteId: selectedSatelliteId ?? "未选择",
       destinationId,
-      trafficTypeLabel: serviceLookup.has(route.flow_id) ? "计算服务" : "数据传输",
-      statusLabel: route.available ? "传输可用" : "等待路由",
-      latencyLabel: `${formatPreciseMetricValue(route.latency)} s`,
-      capacityLabel: `${formatMetricValue(route.capacity)} Mbps`,
-      demandLossLabel: routeDemandLossLabel(route),
+      statusLabel: userRouteStatusLabel(user?.status, routes, availableRoutes),
+      latencyCapacityLabel,
       serviceLabel,
-      pathLabel: route.path.length > 0 ? route.path.join(" -> ") : "无路径"
+      pathLabel:
+        selectedRoute !== null && selectedRoute.path.length > 0
+          ? `${selectedRoute.route_id}: ${selectedRoute.path.join(" -> ")}`
+          : `${userId}: no active route`
     };
   });
-  const hiddenCount = Math.max(0, candidates.length - items.length);
+  const hiddenCount = Math.max(0, userIds.length - items.length);
+  const usersWithTraffic = items.filter((row) => row.communicationLabel !== "无通信业务").length;
+  const usersWithCompute = items.filter((row) => row.computeLabel !== "无计算业务").length;
   return {
     sourceLabel: serviceHistory?.items?.length
-      ? "快照路由 + 后端服务延迟历史"
-      : "快照路由",
-    summaryLabel: `${formatCount(items.length)} 条业务请求 / ${formatCount(
-      snapshot.ground_users.length
-    )} 个用户${hiddenCount > 0 ? ` / 另有 ${formatCount(hiddenCount)} 条未显示` : ""}`,
+      ? "快照用户/路由 + 后端服务延迟历史"
+      : "快照用户/路由",
+    summaryLabel: `${formatCount(items.length)} 个用户节点 / 通信 ${formatCount(
+      usersWithTraffic
+    )} / 计算 ${formatCount(usersWithCompute)}${
+      hiddenCount > 0 ? ` / 另有 ${formatCount(hiddenCount)} 个未显示` : ""
+    }`,
     items
   };
 }
@@ -1436,6 +1476,7 @@ export function buildSatelliteResourceRows(
     (backendSlices?.slices ?? []).map((slice) => [slice.satellite_id, slice])
   );
   const networkById = buildSatelliteNetworkFallbacks(snapshot);
+  const routeContextBySatellite = buildSatelliteRouteContexts(snapshot.routes);
   const satelliteIds = Array.from(
     new Set([
       ...snapshot.satellites.map((satellite) => satellite.satellite_id),
@@ -1448,6 +1489,7 @@ export function buildSatelliteResourceRows(
     const node = nodeById.get(satelliteId);
     const slice = sliceById.get(satelliteId);
     const network = networkById.get(satelliteId);
+    const routeContext = routeContextBySatellite.get(satelliteId);
     const cpuFp32Capacity = Math.max(
       0,
       finiteOptionalMetric(slice?.compute_capacity_gflops_fp32, node?.capacity)
@@ -1480,6 +1522,8 @@ export function buildSatelliteResourceRows(
       statusLabel: node?.status ?? satellite?.status ?? "ACTIVE",
       loadPercent: roundMetric(loadRatio * 100),
       loadLabel: `${formatMetricValue(loadRatio * 100)}%`,
+      serviceObjectLabel: routeContext?.serviceObjectLabel ?? "无服务对象",
+      nextHopLabel: routeContext?.nextHopLabel ?? "无下一跳",
       cpuFp32Label: resourceUsageLabel(cpuFp32Used, cpuFp32Capacity, "GFLOPS"),
       cpuFp64Label: resourceUsageLabel(
         finiteOptionalMetric(slice?.compute_used_gflops_fp64, node?.used_cpu_gflops_fp64, 0),
@@ -1596,8 +1640,87 @@ function buildServiceFlowLookup(
   return lookup;
 }
 
+function buildRoutesByUser(
+  routes: readonly SnapshotRoute[]
+): ReadonlyMap<string, readonly SnapshotRoute[]> {
+  const mutable = new Map<string, SnapshotRoute[]>();
+  for (const route of routes) {
+    const userId = routeUserId(route);
+    if (userId === null) {
+      continue;
+    }
+    const rows = mutable.get(userId) ?? [];
+    rows.push(route);
+    mutable.set(userId, rows);
+  }
+  return mutable;
+}
+
 function routeUserId(route: SnapshotRoute): string | null {
   return route.path.find((item) => item.startsWith("user-")) ?? null;
+}
+
+function routeFirstSatellite(route: SnapshotRoute): string | null {
+  return route.path.find((item) => item.startsWith("sat-")) ?? null;
+}
+
+function routeIsComputeService(
+  route: SnapshotRoute,
+  serviceLookup: ReadonlyMap<string, string>
+): boolean {
+  if (serviceLookup.has(route.flow_id)) {
+    return true;
+  }
+  return route.path.some(
+    (item) => item.startsWith("compute-") || item.includes("compute")
+  );
+}
+
+function selectUserPrimaryRoute(
+  routes: readonly SnapshotRoute[],
+  serviceLookup: ReadonlyMap<string, string>
+): SnapshotRoute | null {
+  if (routes.length === 0) {
+    return null;
+  }
+  return routes.slice().sort((left, right) => {
+    const leftCompute = routeIsComputeService(left, serviceLookup) ? 1 : 0;
+    const rightCompute = routeIsComputeService(right, serviceLookup) ? 1 : 0;
+    if (leftCompute !== rightCompute) {
+      return rightCompute - leftCompute;
+    }
+    if (left.available !== right.available) {
+      return Number(right.available) - Number(left.available);
+    }
+    const latencyDelta = left.latency - right.latency;
+    if (latencyDelta !== 0) {
+      return latencyDelta;
+    }
+    return left.route_id.localeCompare(right.route_id, "zh-CN", { numeric: true });
+  })[0];
+}
+
+function userPlatformTypeLabel(
+  user: WorldSnapshot["ground_users"][number] | undefined
+): string {
+  if (user?.cell_id) {
+    return `地面用户终端 / ${user.cell_id}`;
+  }
+  return "地面用户终端";
+}
+
+function userRouteStatusLabel(
+  userStatus: string | undefined,
+  routes: readonly SnapshotRoute[],
+  availableRoutes: readonly SnapshotRoute[]
+): string {
+  if (routes.length === 0) {
+    return userStatus ?? "空闲";
+  }
+  if (availableRoutes.length > 0) {
+    return userStatus ? `${userStatus} / 业务可达` : "业务可达";
+  }
+  return userStatus ? `${userStatus} / 等待路由` : "等待路由";
 }
 
 function compareUserBusinessRoute(left: SnapshotRoute, right: SnapshotRoute): number {
@@ -1608,6 +1731,76 @@ function compareUserBusinessRoute(left: SnapshotRoute, right: SnapshotRoute): nu
     return userDelta;
   }
   return left.route_id.localeCompare(right.route_id, "zh-CN", { numeric: true });
+}
+
+interface SatelliteRouteContext {
+  serviceObjectLabel: string;
+  nextHopLabel: string;
+}
+
+function buildSatelliteRouteContexts(
+  routes: readonly SnapshotRoute[]
+): ReadonlyMap<string, SatelliteRouteContext> {
+  const mutable = new Map<
+    string,
+    {
+      users: Set<string>;
+      nextHops: Set<string>;
+      routeCount: number;
+    }
+  >();
+  const ensure = (satelliteId: string) => {
+    let entry = mutable.get(satelliteId);
+    if (entry === undefined) {
+      entry = {
+        users: new Set<string>(),
+        nextHops: new Set<string>(),
+        routeCount: 0
+      };
+      mutable.set(satelliteId, entry);
+    }
+    return entry;
+  };
+  for (const route of routes.slice().sort(compareUserBusinessRoute)) {
+    const userId = routeUserId(route);
+    route.path.forEach((nodeId, index) => {
+      if (!nodeId.startsWith("sat-")) {
+        return;
+      }
+      const entry = ensure(nodeId);
+      entry.routeCount += 1;
+      if (userId !== null) {
+        entry.users.add(userId);
+      }
+      const nextHop = route.path[index + 1] ?? "终点";
+      entry.nextHops.add(nextHop);
+    });
+  }
+  return new Map(
+    Array.from(mutable.entries()).map(([satelliteId, entry]) => [
+      satelliteId,
+      {
+        serviceObjectLabel: compactEntitySetLabel(entry.users, "用户", entry.routeCount),
+        nextHopLabel: compactEntitySetLabel(entry.nextHops, "下一跳", entry.routeCount)
+      }
+    ])
+  );
+}
+
+function compactEntitySetLabel(
+  values: ReadonlySet<string>,
+  emptyLabel: string,
+  totalCount: number,
+  limit = 3
+): string {
+  if (values.size === 0) {
+    return `${emptyLabel} 0`;
+  }
+  const ordered = Array.from(values).sort(compareEntityId);
+  const visible = ordered.slice(0, Math.max(1, limit)).join(", ");
+  const hiddenCount = Math.max(0, ordered.length - limit);
+  const suffix = hiddenCount > 0 ? ` +${formatCount(hiddenCount)}` : "";
+  return `${visible}${suffix} / 关联 ${formatCount(totalCount)} 条`;
 }
 
 interface SatelliteNetworkFallback {
