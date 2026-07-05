@@ -95,6 +95,9 @@ export const DataPanel = memo(function DataPanel({
     runtimeStatus.metrics_summary,
     runtimeStatus.kpi_time_series_v1
   );
+  const computeVectorTail = buildDataPanelComputeVectorTail(
+    runtimeStatus.kpi_time_series_v1
+  );
   const networkKpiSource = buildDataPanelNetworkKpiSource(
     snapshot,
     runtimeStatus.metrics_summary,
@@ -310,6 +313,15 @@ export const DataPanel = memo(function DataPanel({
             <span>主指标 FP32</span>
             <small>{computePoolModeNote}</small>
           </div>
+          {computeVectorTail.length > 0 ? (
+            <div className="data-panel-resource-vector" aria-label="算力资源时序尾点">
+              {computeVectorTail.map((item) => (
+                <span key={item.label}>
+                  {item.label} {item.value}
+                </span>
+              ))}
+            </div>
+          ) : null}
           <div className="data-panel-chart-kpis compact">
             <KpiPanel
               label="已消耗"
@@ -625,6 +637,11 @@ export interface NetworkQualityKpis {
   jitterMs: number;
 }
 
+export interface DataPanelComputeVectorTailItem {
+  label: string;
+  value: string;
+}
+
 export interface ComputeResourcePoolSlice {
   name: string;
   value: number;
@@ -753,6 +770,45 @@ export function buildDataPanelTelemetry(
       computeUsedTflops: roundMetric(computeUsedTflops * envelope)
     };
   });
+}
+
+export function buildDataPanelComputeVectorTail(
+  backendKpiTimeSeries: RuntimeKpiTimeSeriesV1 | null | undefined
+): readonly DataPanelComputeVectorTailItem[] {
+  const tail = backendKpiTimeSeries?.samples.at(-1);
+  if (tail === undefined) {
+    return [];
+  }
+  return [
+    computeVectorTailItem("CPU FP64", tail.compute_resource_used_gflops_fp64, "GFLOPS"),
+    computeVectorTailItem(
+      "GPU FP32",
+      tail.compute_resource_used_gpu_tflops_fp32,
+      "TFLOPS"
+    ),
+    computeVectorTailItem(
+      "GPU FP16",
+      tail.compute_resource_used_gpu_tflops_fp16,
+      "TFLOPS"
+    ),
+    computeVectorTailItem("NPU INT8", tail.compute_resource_used_npu_tops_int8, "TOPS"),
+    computeVectorTailItem("内存", tail.compute_resource_used_memory_gb, "GB"),
+    computeVectorTailItem("存储", tail.compute_resource_used_storage_gb, "GB")
+  ].filter((item): item is DataPanelComputeVectorTailItem => item !== null);
+}
+
+function computeVectorTailItem(
+  label: string,
+  value: number | undefined,
+  unit: string
+): DataPanelComputeVectorTailItem | null {
+  if (value === undefined || !Number.isFinite(value)) {
+    return null;
+  }
+  return {
+    label,
+    value: `${formatMetricValue(Math.max(0, value))} ${unit}`
+  };
 }
 
 export function resolveNetworkQualityKpis(

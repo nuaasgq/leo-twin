@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildComputeResourcePool,
   buildComputeResourcePoolModeNote,
+  buildDataPanelComputeVectorTail,
   buildDataPanelConfiguredScale,
   buildDataPanelDisplaySummary,
   buildDataPanelNetworkFormulaInputs,
@@ -1095,6 +1096,59 @@ describe("buildDataPanelTelemetry", () => {
     );
 
     expect(telemetry[0].throughputMbps).toBe(88);
+  });
+});
+
+describe("buildDataPanelComputeVectorTail", () => {
+  it("formats compute resource vector usage from the latest backend KPI sample", () => {
+    expect(
+      buildDataPanelComputeVectorTail({
+        version: "v1",
+        sample_count: 1,
+        tail_sample_source: "CURRENT_METRICS_SUMMARY",
+        samples: [
+          {
+            sim_time: 12,
+            network_effective_throughput_mbps: 80,
+            network_effective_latency_s: 0.08,
+            network_effective_loss_proxy_rate: 0.01,
+            network_effective_delay_variation_s: 0.002,
+            compute_resource_used_gflops_fp32: 1500,
+            compute_resource_used_gflops_fp64: 12,
+            compute_resource_used_gpu_tflops_fp32: 2.5,
+            compute_resource_used_gpu_tflops_fp16: 5,
+            compute_resource_used_npu_tops_int8: 8,
+            compute_resource_used_memory_gb: 16,
+            compute_resource_used_storage_gb: 32
+          }
+        ]
+      })
+    ).toEqual([
+      { label: "CPU FP64", value: "12 GFLOPS" },
+      { label: "GPU FP32", value: "2.5 TFLOPS" },
+      { label: "GPU FP16", value: "5 TFLOPS" },
+      { label: "NPU INT8", value: "8 TOPS" },
+      { label: "内存", value: "16 GB" },
+      { label: "存储", value: "32 GB" }
+    ]);
+  });
+
+  it("keeps old FP32-only backend KPI samples compatible", () => {
+    expect(
+      buildDataPanelComputeVectorTail({
+        version: "v1",
+        samples: [
+          {
+            sim_time: 12,
+            network_effective_throughput_mbps: 80,
+            network_effective_latency_s: 0.08,
+            network_effective_loss_proxy_rate: 0.01,
+            network_effective_delay_variation_s: 0.002,
+            compute_resource_used_gflops_fp32: 1500
+          }
+        ]
+      })
+    ).toEqual([]);
   });
 });
 

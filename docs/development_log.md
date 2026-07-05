@@ -3938,3 +3938,34 @@ change.
 - Recommended follow-up:
   - Add dashboard series selectors for CPU FP64, GPU FP32/FP16, NPU INT8,
     memory, and storage usage from `kpi_time_series_v1`.
+
+## 2026-07-05 - Dashboard Compute Vector Tail v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: consume the new runtime KPI compute resource vector fields in the
+  standalone data panel. The compute chart now shows the latest KPI tail usage
+  for CPU FP64, GPU FP32/FP16, NPU INT8, memory, and storage alongside the FP32
+  primary time-series.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 24 files / 178 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - None. The UI remains compatible with older FP32-only KPI samples by hiding
+    the vector tail when optional fields are absent.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The main chart is still FP32-primary; the vector values are shown as latest
+    tail labels rather than separate trend lines.
+- Recommended follow-up:
+  - Add a segmented control for selecting FP32, FP64, GPU, NPU, memory, or
+    storage trend lines in the compute chart.
