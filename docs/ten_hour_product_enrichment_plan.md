@@ -408,6 +408,11 @@ The following issue-sized slices have now been delivered on
   - The repository README now advertises the supported Windows launcher,
     dashboard URL, backend runtime status URL, launcher logs, and the frontend
     visual/dashboard verification command.
+- `test(runtime): add read-only health smoke script`
+  - Maps to suggestions 18, 91, 93, 94, and 95.
+  - `scripts/smoke_runtime_health.ps1` verifies backend `/runtime/status`,
+    required generated summary fields, frontend console, and dashboard without
+    issuing control commands or mutating runtime configuration.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected

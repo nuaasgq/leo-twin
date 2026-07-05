@@ -49,6 +49,12 @@ To open the standalone dashboard directly after startup or restart, run:
 .\scripts\sees_launcher.ps1 restart -OpenSurface dashboard
 ```
 
+After the launcher reports both services healthy, run a read-only smoke check:
+
+```powershell
+.\scripts\smoke_runtime_health.ps1
+```
+
 ## Backend
 
 ```powershell

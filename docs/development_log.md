@@ -4833,3 +4833,32 @@ change.
 - Recommended follow-up:
   - Add a short troubleshooting table for occupied ports and missing Python or
     pnpm once launcher smoke tests are formalized.
+
+## 2026-07-05 - Runtime Health Smoke Script v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a read-only local health smoke script for already running services.
+  `scripts/smoke_runtime_health.ps1` validates backend `/runtime/status`,
+  required runtime/generated summary fields, frontend console URL, and
+  standalone dashboard URL without sending control commands or mutating config.
+- Changed files/modules:
+  - `scripts/smoke_runtime_health.ps1`
+  - `README.md`
+  - `docs/integration_demo.md`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\smoke_runtime_health.ps1`
+    - Result: passed; backend `/runtime/status`, frontend console, and
+      dashboard returned HTTP success against the local running services.
+- Problems encountered:
+  - None. The script is read-only and intentionally avoids `/control` commands.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - This smoke check verifies service health and contract presence, not
+    initialize/start/pause/reset behavior.
+- Recommended follow-up:
+  - Add an opt-in control smoke test that uses a disposable config path or
+    isolated test server so it cannot mutate local runtime configuration.

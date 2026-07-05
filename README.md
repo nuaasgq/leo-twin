@@ -44,6 +44,7 @@ Useful launcher commands:
 .\stop_leo_twin.bat
 .\scripts\sees_launcher.ps1 status
 .\scripts\sees_launcher.ps1 restart -OpenSurface dashboard
+.\scripts\smoke_runtime_health.ps1
 ```
 
 Default local surfaces:
