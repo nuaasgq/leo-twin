@@ -92,6 +92,10 @@ def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> No
         "version": "v1",
         "source": "BACKEND_RUNTIME_SNAPSHOT",
         "summary_scope": "FULL_USER_SET_WITH_WINDOW_ITEMS",
+        "cursor": 0,
+        "limit": 1000,
+        "next_cursor": 2,
+        "has_more": False,
         "user_count": 2,
         "item_count": 2,
         "active_user_count": 2,
@@ -152,6 +156,10 @@ def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> No
     assert first["satellite_service_summary_v1"][
         "summary_scope"
     ] == "FULL_SATELLITE_SET_WITH_WINDOW_ITEMS"
+    assert first["satellite_service_summary_v1"]["cursor"] == 0
+    assert first["satellite_service_summary_v1"]["limit"] == 1500
+    assert first["satellite_service_summary_v1"]["next_cursor"] == 2
+    assert first["satellite_service_summary_v1"]["has_more"] is False
     assert first["satellite_service_summary_v1"]["window_satellite_count"] == 2
     assert first["satellite_service_summary_v1"]["items"][0] == {
         "satellite_id": "sat-0",
@@ -225,6 +233,10 @@ def test_runtime_user_summary_counts_full_set_when_items_are_limited() -> None:
     )["user_request_summary_v1"]
 
     assert summary["user_count"] == 3
+    assert summary["cursor"] == 0
+    assert summary["limit"] == 1
+    assert summary["next_cursor"] == 1
+    assert summary["has_more"] is True
     assert summary["item_count"] == 1
     assert summary["active_user_count"] == 3
     assert summary["compute_service_user_count"] == 2

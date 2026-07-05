@@ -28,7 +28,11 @@ from leo_twin.services.control import (
     RuntimeController,
     ScaleSafetyChecker,
 )
-from leo_twin.services.runtime_observability import build_runtime_lifecycle_summaries
+from leo_twin.services.runtime_observability import (
+    build_runtime_lifecycle_summaries,
+    build_runtime_satellite_service_summary,
+    build_runtime_user_request_summary,
+)
 from leo_twin.services.scenario_builder import (
     scenario_builder_backend_summary,
     scenario_builder_config_from_sees_config,
@@ -125,6 +129,37 @@ class DemoControlPlane:
             "status": self._status_json(),
             "config": self._controller.config_json(),
             "generated_config": self._generated_config_json(),
+        }
+
+    def runtime_user_details(self, cursor: int = 0, limit: int = 100) -> dict[str, Any]:
+        summary = build_runtime_user_request_summary(
+            self.visible_snapshot(),
+            service_latency_history=self._service_latency_history_json(),
+            cursor=cursor,
+            limit=limit,
+        )
+        return {
+            "type": "RUNTIME_DETAIL_PAGE",
+            "kind": "users",
+            "summary": summary,
+        }
+
+    def runtime_satellite_details(
+        self,
+        cursor: int = 0,
+        limit: int = 120,
+    ) -> dict[str, Any]:
+        summary = build_runtime_satellite_service_summary(
+            self.visible_snapshot(),
+            service_latency_history=self._service_latency_history_json(),
+            satellite_kpi_slices=self._satellite_kpi_slices_json(),
+            cursor=cursor,
+            limit=limit,
+        )
+        return {
+            "type": "RUNTIME_DETAIL_PAGE",
+            "kind": "satellites",
+            "summary": summary,
         }
 
     def visible_snapshot(self) -> dict[str, JsonValue]:

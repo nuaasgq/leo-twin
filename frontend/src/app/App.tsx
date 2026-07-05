@@ -22,14 +22,19 @@ import { EventThrottleLayer } from "../stream/throttle_layer";
 import { WebSocketStreamClient } from "../stream/websocket_client";
 import {
   loadMetricsSnapshot,
+  loadRuntimeSatelliteDetails,
+  loadRuntimeUserDetails,
   loadRuntimeState,
   loadScenarioConfig,
   runtimeApiErrorMessage
 } from "./api";
+import type { RuntimeDetailPages } from "../dashboard/data_panel/DataPanel";
 import "./App.css";
 
 const RUNTIME_STATUS_POLL_MS = 250;
 const RUNTIME_PROGRESS_TICK_MS = 100;
+const RUNTIME_DETAIL_USER_PAGE_LIMIT = 1000;
+const RUNTIME_DETAIL_SATELLITE_PAGE_LIMIT = 1500;
 
 type RuntimeConnectionChannel = "http" | "control" | "events" | "state";
 type RuntimeConnectionStatus = "idle" | "connecting" | "live" | "degraded";
@@ -91,6 +96,9 @@ export function App() {
   const [generatedConfig, setGeneratedConfig] = useState<GeneratedScenarioConfig | null>(null);
   const [controlError, setControlError] = useState<string | null>(null);
   const [runtimeStatus, setRuntimeStatus] = useState<RuntimeStatusPayload>(defaultRuntimeStatus());
+  const [runtimeDetailPages, setRuntimeDetailPages] = useState<RuntimeDetailPages | null>(
+    null
+  );
   const [dismissedBackpressureNoticeKey, setDismissedBackpressureNoticeKey] =
     useState<string | null>(null);
   const [runtimeProgressAnchor, setRuntimeProgressAnchor] = useState<RuntimeProgressAnchor>(() =>
@@ -171,6 +179,18 @@ export function App() {
     [reducer, snapshotEngine]
   );
 
+  const refreshRuntimeDetails = useCallback(async () => {
+    try {
+      const [users, satellites] = await Promise.all([
+        loadRuntimeUserDetails(0, RUNTIME_DETAIL_USER_PAGE_LIMIT),
+        loadRuntimeSatelliteDetails(0, RUNTIME_DETAIL_SATELLITE_PAGE_LIMIT)
+      ]);
+      setRuntimeDetailPages({ users, satellites });
+    } catch {
+      setRuntimeDetailPages(null);
+    }
+  }, []);
+
   const loadControlState = useCallback(async () => {
     const [scenario, runtime, visibleSnapshot] = await Promise.all([
       loadScenarioConfig(),
@@ -189,8 +209,9 @@ export function App() {
     snapshotEngine.applySnapshot(visibleSnapshot);
     snapshotEngine.publishNow();
     setConnectionChannel("http", "live");
+    void refreshRuntimeDetails();
     return { scenario: effectiveScenario, runtime };
-  }, [setConnectionChannel, snapshotEngine]);
+  }, [refreshRuntimeDetails, setConnectionChannel, snapshotEngine]);
 
   const handleRuntimeApiError = useCallback((error: unknown) => {
     setConnectionState("degraded");
@@ -381,7 +402,29 @@ export function App() {
       closed = true;
       window.clearInterval(timer);
     };
-  }, [handleRuntimeApiError, runtimeStatus.status, runtimeStatus.lifecycle_state]);
+  }, [
+    handleRuntimeApiError,
+    runtimeStatus.status,
+    runtimeStatus.lifecycle_state
+  ]);
+
+  useEffect(() => {
+    if (surface !== "dashboard") {
+      return;
+    }
+    let closed = false;
+    const refreshDetails = () => {
+      if (!closed) {
+        void refreshRuntimeDetails();
+      }
+    };
+    refreshDetails();
+    const timer = window.setInterval(refreshDetails, 1000);
+    return () => {
+      closed = true;
+      window.clearInterval(timer);
+    };
+  }, [refreshRuntimeDetails, surface]);
 
   useEffect(() => {
     let closed = false;
@@ -560,6 +603,7 @@ export function App() {
               snapshot={snapshot}
               runtimeStatus={runtimeStatus}
               generatedConfig={generatedConfig}
+              runtimeDetailPages={runtimeDetailPages}
               displaySimTime={displaySimTime}
               displayEventCount={displayEventCount}
               onNavigateControl={(event) => navigateWithinApp(event, "/")}

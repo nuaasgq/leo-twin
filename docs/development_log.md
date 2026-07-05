@@ -5,6 +5,49 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-05 - Runtime Detail Pagination API v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending in this commit
+- Scope: add deterministic server-side detail page APIs for user request and
+  satellite service rows, then let the standalone dashboard consume those
+  pages as an optional enhancement over `/runtime/status`.
+- Changed files/modules:
+  - `src/leo_twin/services/runtime_observability.py`
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `frontend/src/app/api.ts`
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `tests/unit/test_runtime_observability.py`
+  - `tests/integration/test_live_runtime_streaming.py`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_runtime_observability.py tests/integration/test_live_runtime_streaming.py -q`
+    - Result: passed, 14 tests.
+  - Bundled Node:
+    `pnpm --dir frontend test -- api.test.ts dataPanel.test.ts appSurface.test.ts`
+    - Result: passed, 25 files / 252 tests.
+  - Bundled Node:
+    `pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The first integration test expectation assumed `user-000` IDs, but the
+    real deterministic demo order starts with `ground-station-00` followed by
+    zero-padded `user-0000`; the test was corrected to match the actual product
+    contract.
+- Known remaining issues:
+  - The dashboard currently refreshes the first user/satellite detail pages and
+    still uses local pagination plus snapshot fallback. True remote page
+    controls for arbitrary cursors remain a follow-up.
+- Recommended follow-up:
+  - Wire the table pager controls directly to `/runtime/details/users` and
+    `/runtime/details/satellites` cursors so large deployments can browse
+    beyond the first backend page without relying on snapshot fallback.
+
 ## 2026-07-05 - Runtime Detail Scope Counts v1
 
 - Branch: `feature/T164-dashboard-observability-v1`

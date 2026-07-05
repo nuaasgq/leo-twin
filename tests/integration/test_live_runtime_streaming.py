@@ -236,6 +236,53 @@ def test_http_cursor_batches_return_incremental_events(tmp_path: Path) -> None:
     assert second["items"] != first["items"]
 
 
+def test_runtime_detail_pages_return_deterministic_windows(tmp_path: Path) -> None:
+    control_plane = _initialized_running_control_plane(tmp_path)
+    user_first = control_plane.runtime_user_details(cursor=0, limit=2)
+    user_second = control_plane.runtime_user_details(cursor=2, limit=2)
+    satellite_first = control_plane.runtime_satellite_details(cursor=0, limit=3)
+    satellite_second = control_plane.runtime_satellite_details(cursor=3, limit=3)
+
+    user_first_summary = user_first["summary"]
+    user_second_summary = user_second["summary"]
+    satellite_first_summary = satellite_first["summary"]
+    satellite_second_summary = satellite_second["summary"]
+
+    assert user_first["type"] == "RUNTIME_DETAIL_PAGE"
+    assert user_first["kind"] == "users"
+    assert user_first_summary["cursor"] == 0
+    assert user_first_summary["limit"] == 2
+    assert user_first_summary["next_cursor"] == 2
+    assert user_first_summary["has_more"] is True
+    assert [item["user_id"] for item in user_first_summary["items"]] == [
+        "ground-station-00",
+        "user-0000",
+    ]
+    assert user_second_summary["cursor"] == 2
+    assert [item["user_id"] for item in user_second_summary["items"]] == [
+        "user-0001",
+        "user-0002",
+    ]
+
+    assert satellite_first["type"] == "RUNTIME_DETAIL_PAGE"
+    assert satellite_first["kind"] == "satellites"
+    assert satellite_first_summary["cursor"] == 0
+    assert satellite_first_summary["limit"] == 3
+    assert satellite_first_summary["next_cursor"] == 3
+    assert satellite_first_summary["has_more"] is True
+    assert [item["satellite_id"] for item in satellite_first_summary["items"]] == [
+        "sat-000",
+        "sat-001",
+        "sat-002",
+    ]
+    assert satellite_second_summary["cursor"] == 3
+    assert [item["satellite_id"] for item in satellite_second_summary["items"]] == [
+        "sat-003",
+        "sat-004",
+        "sat-005",
+    ]
+
+
 def test_demo_runtime_status_completes_at_configured_duration(tmp_path: Path) -> None:
     control_plane = _control_plane(tmp_path)
     initialized = control_plane.handle_raw_message(

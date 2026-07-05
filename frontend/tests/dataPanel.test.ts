@@ -31,9 +31,15 @@ import {
   filterSatelliteResourceRows,
   filterUserBusinessRequestRows,
   paginateDetailRows,
-  resolveNetworkQualityKpis
+  resolveNetworkQualityKpis,
+  selectRuntimeSatelliteServiceSummary,
+  selectRuntimeUserRequestSummary
 } from "../src/dashboard/data_panel/DataPanel";
-import { FidelitySummary, GeneratedScenarioConfig } from "../src/core/event_types";
+import {
+  FidelitySummary,
+  GeneratedScenarioConfig,
+  RuntimeStatusPayload
+} from "../src/core/event_types";
 import { WorldSnapshot } from "../src/state/snapshot_engine";
 
 describe("buildDataPanelSummary", () => {
@@ -191,6 +197,59 @@ describe("buildDataPanelSummary", () => {
     expect(summary.averageRouteHops).toBe(0);
     expect(summary.maxRouteHops).toBe(0);
     expect(summary.couplingHealth).toBe(0);
+  });
+});
+
+describe("runtime detail page selection", () => {
+  it("prefers server-side detail pages over bounded runtime status summaries", () => {
+    const runtimeStatus = {
+      status: "RUNNING",
+      mode: "REAL_TIME",
+      speed_factor: 1,
+      seed: 1,
+      duration: 600,
+      config_version: 1,
+      last_action: "START",
+      user_request_summary_v1: {
+        version: "v1",
+        source: "BACKEND_RUNTIME_SNAPSHOT",
+        user_count: 2,
+        item_count: 1,
+        active_user_count: 1,
+        compute_service_user_count: 0,
+        waiting_user_count: 0,
+        hidden_user_count: 1,
+        items: []
+      },
+      satellite_service_summary_v1: {
+        version: "v1",
+        source: "BACKEND_RUNTIME_SNAPSHOT",
+        satellite_count: 2,
+        item_count: 1,
+        hidden_satellite_count: 1,
+        items: []
+      }
+    } as RuntimeStatusPayload;
+    const detailPages = {
+      users: {
+        ...runtimeStatus.user_request_summary_v1!,
+        cursor: 80,
+        item_count: 80,
+        hidden_user_count: 0
+      },
+      satellites: {
+        ...runtimeStatus.satellite_service_summary_v1!,
+        cursor: 120,
+        item_count: 120,
+        hidden_satellite_count: 0
+      }
+    };
+
+    expect(selectRuntimeUserRequestSummary(runtimeStatus, detailPages)?.cursor).toBe(80);
+    expect(selectRuntimeSatelliteServiceSummary(runtimeStatus, detailPages)?.cursor).toBe(
+      120
+    );
+    expect(selectRuntimeUserRequestSummary(runtimeStatus, null)?.cursor).toBeUndefined();
   });
 });
 

@@ -14,36 +14,80 @@ def build_runtime_lifecycle_summaries(
     *,
     service_latency_history: Mapping[str, Any] | None = None,
     satellite_kpi_slices: Mapping[str, Any] | None = None,
+    user_cursor: int = 0,
     user_limit: int = 1000,
+    satellite_cursor: int = 0,
     satellite_limit: int = 1500,
 ) -> RuntimeObservabilitySummary:
     """Build deterministic per-user and per-satellite lifecycle summaries."""
+
+    return {
+        "user_request_summary_v1": build_runtime_user_request_summary(
+            snapshot,
+            service_latency_history=service_latency_history,
+            cursor=user_cursor,
+            limit=user_limit,
+        ),
+        "satellite_service_summary_v1": build_runtime_satellite_service_summary(
+            snapshot,
+            service_latency_history=service_latency_history,
+            satellite_kpi_slices=satellite_kpi_slices,
+            cursor=satellite_cursor,
+            limit=satellite_limit,
+        ),
+    }
+
+
+def build_runtime_user_request_summary(
+    snapshot: Mapping[str, Any],
+    *,
+    service_latency_history: Mapping[str, Any] | None = None,
+    cursor: int = 0,
+    limit: int = 1000,
+) -> dict[str, object]:
+    """Build one deterministic page of per-user request detail rows."""
 
     if not isinstance(snapshot, Mapping):
         raise TypeError("snapshot must be a mapping")
     service_lookup = _service_lookup(service_latency_history)
     routes = tuple(_records(snapshot.get("routes")))
     users = tuple(_records(snapshot.get("ground_users")))
+    return _user_request_summary(
+        users,
+        routes,
+        service_lookup,
+        cursor=cursor,
+        limit=limit,
+    )
+
+
+def build_runtime_satellite_service_summary(
+    snapshot: Mapping[str, Any],
+    *,
+    service_latency_history: Mapping[str, Any] | None = None,
+    satellite_kpi_slices: Mapping[str, Any] | None = None,
+    cursor: int = 0,
+    limit: int = 1500,
+) -> dict[str, object]:
+    """Build one deterministic page of per-satellite service detail rows."""
+
+    if not isinstance(snapshot, Mapping):
+        raise TypeError("snapshot must be a mapping")
+    service_lookup = _service_lookup(service_latency_history)
+    routes = tuple(_records(snapshot.get("routes")))
     compute_nodes = tuple(_records(snapshot.get("compute_nodes")))
     satellites = tuple(_records(snapshot.get("satellites")))
     links = tuple(_records(snapshot.get("links")))
-    return {
-        "user_request_summary_v1": _user_request_summary(
-            users,
-            routes,
-            service_lookup,
-            limit=user_limit,
-        ),
-        "satellite_service_summary_v1": _satellite_service_summary(
-            satellites,
-            compute_nodes,
-            routes,
-            links,
-            satellite_kpi_slices,
-            service_lookup,
-            limit=satellite_limit,
-        ),
-    }
+    return _satellite_service_summary(
+        satellites,
+        compute_nodes,
+        routes,
+        links,
+        satellite_kpi_slices,
+        service_lookup,
+        cursor=cursor,
+        limit=limit,
+    )
 
 
 def _user_request_summary(
@@ -51,6 +95,7 @@ def _user_request_summary(
     routes: tuple[Mapping[str, Any], ...],
     service_lookup: Mapping[str, str],
     *,
+    cursor: int,
     limit: int,
 ) -> dict[str, object]:
     routes_by_user: dict[str, list[Mapping[str, Any]]] = {}
@@ -80,14 +125,24 @@ def _user_request_summary(
             compute_count += 1
         if any(not bool(route.get("available")) for route in user_routes):
             waiting_count += 1
+    normalized_cursor = _page_cursor(cursor)
+    normalized_limit = _page_limit(limit)
+    page_user_ids = user_ids[
+        normalized_cursor : normalized_cursor + normalized_limit
+    ]
     items = tuple(
         _user_item(user_id, user_by_id.get(user_id), routes_by_user.get(user_id, ()), service_lookup)
-        for user_id in user_ids[: max(0, limit)]
+        for user_id in page_user_ids
     )
+    next_cursor = min(len(user_ids), normalized_cursor + len(items))
     return {
         "version": "v1",
         "source": "BACKEND_RUNTIME_SNAPSHOT",
         "summary_scope": "FULL_USER_SET_WITH_WINDOW_ITEMS",
+        "cursor": normalized_cursor,
+        "limit": normalized_limit,
+        "next_cursor": next_cursor,
+        "has_more": next_cursor < len(user_ids),
         "user_count": len(user_ids),
         "item_count": len(items),
         "active_user_count": active_count,
@@ -165,6 +220,7 @@ def _satellite_service_summary(
     satellite_kpi_slices: Mapping[str, Any] | None,
     service_lookup: Mapping[str, str],
     *,
+    cursor: int,
     limit: int,
 ) -> dict[str, object]:
     satellite_ids = tuple(
@@ -186,6 +242,11 @@ def _satellite_service_summary(
     }
     link_counts = _link_counts_by_satellite(links)
     route_context = _route_context_by_satellite(routes, service_lookup)
+    normalized_cursor = _page_cursor(cursor)
+    normalized_limit = _page_limit(limit)
+    page_satellite_ids = satellite_ids[
+        normalized_cursor : normalized_cursor + normalized_limit
+    ]
     items = tuple(
         _satellite_item(
             satellite_id,
@@ -195,12 +256,17 @@ def _satellite_service_summary(
             link_counts.get(satellite_id, {}),
             route_context.get(satellite_id, {}),
         )
-        for satellite_id in satellite_ids[: max(0, limit)]
+        for satellite_id in page_satellite_ids
     )
+    next_cursor = min(len(satellite_ids), normalized_cursor + len(items))
     return {
         "version": "v1",
         "source": "BACKEND_RUNTIME_SNAPSHOT",
         "summary_scope": "FULL_SATELLITE_SET_WITH_WINDOW_ITEMS",
+        "cursor": normalized_cursor,
+        "limit": normalized_limit,
+        "next_cursor": next_cursor,
+        "has_more": next_cursor < len(satellite_ids),
         "satellite_count": len(satellite_ids),
         "item_count": len(items),
         "window_satellite_count": len(items),
@@ -521,6 +587,18 @@ def _first_float(
 
 def _clamp_ratio(value: float) -> float:
     return max(0.0, min(1.0, value))
+
+
+def _page_cursor(value: int) -> int:
+    if not isinstance(value, int):
+        raise TypeError("cursor must be an int")
+    return max(0, value)
+
+
+def _page_limit(value: int) -> int:
+    if not isinstance(value, int):
+        raise TypeError("limit must be an int")
+    return max(1, value)
 
 
 def _entity_sort_key(value: str) -> tuple[object, ...]:

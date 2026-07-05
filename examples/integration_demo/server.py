@@ -146,6 +146,22 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
             if path == "/runtime/status":
                 self._send_json(control_plane.runtime_status())
                 return
+            if path == "/runtime/details/users":
+                try:
+                    cursor, limit = _detail_query(query, default_limit=100)
+                except ValueError as exc:
+                    self.send_error(400, str(exc))
+                    return
+                self._send_json(control_plane.runtime_user_details(cursor, limit))
+                return
+            if path == "/runtime/details/satellites":
+                try:
+                    cursor, limit = _detail_query(query, default_limit=120)
+                except ValueError as exc:
+                    self.send_error(400, str(exc))
+                    return
+                self._send_json(control_plane.runtime_satellite_details(cursor, limit))
+                return
             self.send_error(404, "not found")
 
         def log_message(self, format: str, *args: object) -> None:
@@ -326,6 +342,16 @@ def _stream_query(query: dict[str, list[str]]) -> tuple[int, int | None]:
     if limit is not None and limit <= 0:
         raise ValueError("limit must be positive")
     return cursor, limit
+
+
+def _detail_query(query: dict[str, list[str]], *, default_limit: int) -> tuple[int, int]:
+    cursor = _optional_query_int(query, "cursor", 0)
+    limit = _optional_query_int(query, "limit", default_limit)
+    if cursor < 0:
+        raise ValueError("cursor must be non-negative")
+    if limit is None or limit <= 0:
+        raise ValueError("limit must be positive")
+    return cursor, min(limit, 5_000)
 
 
 def _optional_query_int(

@@ -68,6 +68,11 @@ export interface DataPanelSummary {
   couplingHealth: number;
 }
 
+export interface RuntimeDetailPages {
+  users?: RuntimeUserRequestSummaryV1 | null;
+  satellites?: RuntimeSatelliteServiceSummaryV1 | null;
+}
+
 const USER_DETAIL_PAGE_SIZE = 80;
 const SATELLITE_DETAIL_PAGE_SIZE = 120;
 
@@ -75,6 +80,7 @@ export const DataPanel = memo(function DataPanel({
   snapshot,
   runtimeStatus,
   generatedConfig,
+  runtimeDetailPages,
   displaySimTime,
   displayEventCount,
   onNavigateControl
@@ -82,6 +88,7 @@ export const DataPanel = memo(function DataPanel({
   snapshot: WorldSnapshot;
   runtimeStatus: RuntimeStatusPayload;
   generatedConfig: GeneratedScenarioConfig | null;
+  runtimeDetailPages?: RuntimeDetailPages | null;
   displaySimTime: number;
   displayEventCount: number;
   onNavigateControl: (event: MouseEvent<HTMLAnchorElement>) => void;
@@ -158,10 +165,18 @@ export const DataPanel = memo(function DataPanel({
     snapshot,
     runtimeStatus.satellite_kpi_slices_v1
   );
+  const userRequestSummary = selectRuntimeUserRequestSummary(
+    runtimeStatus,
+    runtimeDetailPages
+  );
+  const satelliteServiceSummary = selectRuntimeSatelliteServiceSummary(
+    runtimeStatus,
+    runtimeDetailPages
+  );
   const userBusinessRequests = buildUserBusinessRequestRows(
     snapshot,
     runtimeStatus.service_latency_history_v1,
-    runtimeStatus.user_request_summary_v1
+    userRequestSummary
   );
   const userRequestHistory = buildDataPanelUserRequestHistory(
     runtimeStatus.user_request_history_v1,
@@ -172,7 +187,7 @@ export const DataPanel = memo(function DataPanel({
   const satelliteResourceRows = buildSatelliteResourceRows(
     snapshot,
     runtimeStatus.satellite_kpi_slices_v1,
-    runtimeStatus.satellite_service_summary_v1
+    satelliteServiceSummary
   );
   const satelliteResourceHistory = buildDataPanelSatelliteResourceHistory(
     runtimeStatus.satellite_kpi_history_v1,
@@ -203,8 +218,8 @@ export const DataPanel = memo(function DataPanel({
   const detailScopeNotes = buildDataPanelDetailScopeNotes(
     userBusinessRequests,
     satelliteResourceRows,
-    runtimeStatus.user_request_summary_v1,
-    runtimeStatus.satellite_service_summary_v1,
+    userRequestSummary,
+    satelliteServiceSummary,
     runtimeStatus.satellite_kpi_slices_v1,
     runtimeStatus.satellite_kpi_history_v1
   );
@@ -850,6 +865,20 @@ export const DataPanel = memo(function DataPanel({
     </section>
   );
 });
+
+export function selectRuntimeUserRequestSummary(
+  runtimeStatus: RuntimeStatusPayload,
+  runtimeDetailPages: RuntimeDetailPages | null | undefined
+): RuntimeUserRequestSummaryV1 | null | undefined {
+  return runtimeDetailPages?.users ?? runtimeStatus.user_request_summary_v1;
+}
+
+export function selectRuntimeSatelliteServiceSummary(
+  runtimeStatus: RuntimeStatusPayload,
+  runtimeDetailPages: RuntimeDetailPages | null | undefined
+): RuntimeSatelliteServiceSummaryV1 | null | undefined {
+  return runtimeDetailPages?.satellites ?? runtimeStatus.satellite_service_summary_v1;
+}
 
 function RouteConstraintTable({ rows }: { rows: DataPanelRouteConstraintRows }) {
   if (rows.items.length === 0) {

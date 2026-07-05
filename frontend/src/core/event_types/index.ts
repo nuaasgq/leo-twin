@@ -561,6 +561,10 @@ export interface RuntimeUserRequestSummaryV1 {
   version: "v1" | string;
   source: string;
   summary_scope?: string;
+  cursor?: number;
+  limit?: number;
+  next_cursor?: number;
+  has_more?: boolean;
   user_count: number;
   item_count: number;
   active_user_count: number;
@@ -642,11 +646,21 @@ export interface RuntimeSatelliteServiceSummaryV1 {
   version: "v1" | string;
   source: string;
   summary_scope?: string;
+  cursor?: number;
+  limit?: number;
+  next_cursor?: number;
+  has_more?: boolean;
   satellite_count: number;
   item_count: number;
   window_satellite_count?: number;
   hidden_satellite_count: number;
   items: readonly RuntimeSatelliteServiceItemV1[];
+}
+
+export interface RuntimeDetailPageEnvelope {
+  type: "RUNTIME_DETAIL_PAGE" | string;
+  kind: "users" | "satellites" | string;
+  summary: RuntimeUserRequestSummaryV1 | RuntimeSatelliteServiceSummaryV1;
 }
 
 export interface RuntimeSatelliteServiceItemV1 {
