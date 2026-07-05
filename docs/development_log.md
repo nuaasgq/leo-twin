@@ -5934,3 +5934,41 @@ change.
     failures, starting with the generated config defaults versus fixture
     expectations, then the route demand and constellation summary expectation
     drift.
+
+## 2026-07-05 - Live Advance Empty-Gap Progression Fix
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: fix the live runtime issue where event count could freeze while the
+  server-side advance loop kept ticking. The runtime now remembers the last
+  requested advance target so bounded live ticks can cross intervals with no
+  discrete events instead of repeatedly retrying the same time window.
+- Changed files/modules:
+  - `src/leo_twin/runtime/session.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/integration/test_runtime_session_control.py tests/integration/test_live_runtime_streaming.py`
+    - Result: passed, 24 passed.
+  - `python -m pytest tests/unit/test_metrics_module.py`
+    - Result: passed, 19 passed.
+  - `pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 25 frontend test files / 200 tests passed.
+  - `pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - Runtime status showed `deterministic_replay=false` and `RUNNING`, but
+    `tick_count` kept increasing while recent ticks processed zero events and
+    the queue still contained future events. This proved the issue was bounded
+    live advancement over an empty event interval, not a precomputed replay
+    path.
+- Known remaining issues:
+  - Event count is still discrete by design and will remain flat between
+    scheduled events. The frontend progress clock can move smoothly, but new
+    event records only appear when the DES reaches the next event time.
+  - Existing local runtime config files remain modified and are intentionally
+    excluded from the commit scope.
+- Recommended follow-up:
+  - Add a runtime diagnostic field for `next_queued_event_sim_time` so the UI
+    can explain when event count is flat because the next event is in the
+    future.

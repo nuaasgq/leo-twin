@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import time
+from collections.abc import Callable
 from dataclasses import dataclass, replace
 from threading import RLock
 from time import perf_counter
@@ -71,6 +73,7 @@ class SimulationSession:
         snapshot_max_frequency_hz: float | None = None,
         deterministic_replay: bool = False,
         control_step_seconds: float = 1.0,
+        clock_time_fn: Callable[[], float] = time.time,
     ) -> None:
         if not session_id:
             raise ValueError("session_id must be non-empty")
@@ -84,10 +87,12 @@ class SimulationSession:
         self._snapshot_max_frequency_hz = snapshot_max_frequency_hz
         self._deterministic_replay = deterministic_replay
         self._control_step_seconds = float(control_step_seconds)
+        self._clock_time_fn = clock_time_fn
         self._clock = SimulationClockController(
             runtime_config.mode,
             runtime_config.speed_factor,
             deterministic_replay=deterministic_replay,
+            time_fn=clock_time_fn,
         )
         self._kernel: KernelPort | None = None
         self._tick_observer: RuntimeTickObserver | None = None
@@ -99,6 +104,7 @@ class SimulationSession:
         self._last_profiling_summary: dict[str, object] | None = None
         self._last_backpressure_summary: dict[str, object] | None = None
         self._terminal_sim_time: float | None = None
+        self._last_advance_target = 0.0
         self._lock = RLock()
 
     @property
@@ -147,6 +153,7 @@ class SimulationSession:
                 self._runtime_config.mode,
                 self._runtime_config.speed_factor,
                 deterministic_replay=self._deterministic_replay,
+                time_fn=self._clock_time_fn,
             )
             try:
                 spec = self._kernel_factory(self._scenario_config, self._runtime_config)
@@ -164,6 +171,7 @@ class SimulationSession:
                 self._last_profiling_summary = None
                 self._last_backpressure_summary = None
                 self._terminal_sim_time = None
+                self._last_advance_target = 0.0
                 self._lifecycle_state = RuntimeLifecycleState.INITIALIZED
                 self._last_error = None
                 self._config_version += 1
@@ -180,6 +188,7 @@ class SimulationSession:
             self._require_kernel()
             if self._lifecycle_state == RuntimeLifecycleState.STOPPED:
                 raise RuntimeError("stopped session must be reset before start")
+            self._last_advance_target = self._current_sim_time()
             self._lifecycle_state = RuntimeLifecycleState.RUNNING
             self._clock.start(self._current_sim_time())
             self.advance_control_step()
@@ -194,6 +203,7 @@ class SimulationSession:
             self._require_kernel()
             if self._lifecycle_state == RuntimeLifecycleState.STOPPED:
                 raise RuntimeError("stopped session must be reset before start")
+            self._last_advance_target = self._current_sim_time()
             self._lifecycle_state = RuntimeLifecycleState.RUNNING
             self._clock.start(self._current_sim_time())
             return self.get_status()
@@ -210,6 +220,7 @@ class SimulationSession:
             self._require_kernel()
             if self._lifecycle_state != RuntimeLifecycleState.PAUSED:
                 raise RuntimeError("only a paused session can be resumed")
+            self._last_advance_target = self._current_sim_time()
             self._lifecycle_state = RuntimeLifecycleState.RUNNING
             self._clock.resume(self._current_sim_time())
             self.advance_control_step()
@@ -222,6 +233,7 @@ class SimulationSession:
             self._require_kernel()
             if self._lifecycle_state != RuntimeLifecycleState.PAUSED:
                 raise RuntimeError("only a paused session can be resumed")
+            self._last_advance_target = self._current_sim_time()
             self._lifecycle_state = RuntimeLifecycleState.RUNNING
             self._clock.resume(self._current_sim_time())
             return self.get_status()
@@ -232,6 +244,7 @@ class SimulationSession:
             kernel.stop()
             self._clock.stop()
             self._terminal_sim_time = None
+            self._last_advance_target = self._current_sim_time()
             self._lifecycle_state = RuntimeLifecycleState.STOPPED
             return self.get_status()
 
@@ -263,8 +276,9 @@ class SimulationSession:
         with self._lock:
             if self._lifecycle_state != RuntimeLifecycleState.RUNNING:
                 return ()
+            base = self._advance_target_base()
             target = self._clock.target_sim_time(
-                self._current_sim_time(),
+                base,
                 wall_time=wall_time,
             )
             return self._run_until(target)
@@ -277,10 +291,10 @@ class SimulationSession:
         with self._lock:
             if self._lifecycle_state != RuntimeLifecycleState.RUNNING:
                 return ()
-            current = self._current_sim_time()
-            wall_target = self._clock.target_sim_time(current)
+            base = self._advance_target_base()
+            wall_target = self._clock.target_sim_time(base)
             bounded_target = self._clock.deterministic_target(
-                current,
+                base,
                 max_delta_seconds,
             )
             return self._run_until(min(wall_target, bounded_target))
@@ -289,8 +303,9 @@ class SimulationSession:
         with self._lock:
             if self._lifecycle_state != RuntimeLifecycleState.RUNNING:
                 return ()
+            base = self._advance_target_base()
             target = self._clock.deterministic_target(
-                self._current_sim_time(),
+                base,
                 self._control_step_seconds,
             )
             return self._run_until(target)
@@ -386,6 +401,11 @@ class SimulationSession:
                 observer.reset()
             events = kernel.run(until_time=effective_target)
             self._processed_events.extend(events)
+            if effective_target is not None:
+                self._last_advance_target = max(
+                    self._last_advance_target,
+                    float(effective_target),
+                )
             snapshot_started = perf_counter()
             self._snapshot_stream.ingest(events)
             if self._duration_target_reached(effective_target):
@@ -419,6 +439,9 @@ class SimulationSession:
             return 0.0
         return self._kernel.get_current_time()
 
+    def _advance_target_base(self) -> float:
+        return max(self._current_sim_time(), self._last_advance_target)
+
     def _duration_limited_target(self, target: float | None) -> float | None:
         duration = float(self._runtime_config.duration)
         if target is None:
@@ -444,6 +467,7 @@ class SimulationSession:
 
     def _complete_at_runtime_duration(self) -> None:
         self._terminal_sim_time = float(self._runtime_config.duration)
+        self._last_advance_target = self._terminal_sim_time
         if self._lifecycle_state == RuntimeLifecycleState.RUNNING:
             self._lifecycle_state = RuntimeLifecycleState.COMPLETED
 

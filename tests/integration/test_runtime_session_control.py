@@ -120,6 +120,33 @@ def test_session_completes_at_configured_duration_without_draining_future_events
     assert [event.event_id for event in session.processed_events] == [0, 1, 2]
 
 
+def test_bounded_live_advance_crosses_empty_event_gap() -> None:
+    wall_time = [0.0]
+    session = SimulationSession(
+        session_id="gap-session",
+        runtime_config=RuntimeConfig(seed=7, duration=10),
+        scenario_config=_scenario_config(),
+        kernel_factory=_gap_kernel_factory,
+        snapshot_interval_events=1,
+        deterministic_replay=False,
+        control_step_seconds=1.0,
+        clock_time_fn=lambda: wall_time[0],
+    )
+    session.initialize()
+    session.start_live()
+
+    for target_time in (1.0, 2.0, 3.0, 4.0):
+        wall_time[0] = target_time
+        session.advance_bounded(1.0)
+
+    assert [event.event_id for event in session.processed_events] == [0]
+
+    wall_time[0] = 5.0
+    session.advance_bounded(1.0)
+
+    assert [event.event_id for event in session.processed_events] == [0, 5]
+
+
 def test_repeated_deterministic_run_produces_same_status_and_snapshots() -> None:
     first_statuses, first_snapshots = _deterministic_sequence()
     second_statuses, second_snapshots = _deterministic_sequence()
@@ -493,6 +520,20 @@ def _kernel_factory(
     return RuntimeKernelSpec(
         kernel=kernel,
         initial_events=tuple(_event(index, float(index)) for index in range(5)),
+        snapshot_projector=_Projector([]),
+        initial_snapshot={"event_ids": [], "event_count": 0, "last_sim_time": 0.0},
+    )
+
+
+def _gap_kernel_factory(
+    _scenario_config: ScenarioConfig,
+    _runtime_config: RuntimeConfig,
+) -> RuntimeKernelSpec:
+    kernel = SimulationKernel()
+    kernel.register_module(_Recorder())
+    return RuntimeKernelSpec(
+        kernel=kernel,
+        initial_events=(_event(0, 0.0), _event(5, 5.0)),
         snapshot_projector=_Projector([]),
         initial_snapshot={"event_ids": [], "event_count": 0, "last_sim_time": 0.0},
     )
