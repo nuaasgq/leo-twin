@@ -5216,3 +5216,33 @@ change.
 - Recommended follow-up:
   - Add a desktop shortcut or packaged launcher only after the dev workflow is
     stable.
+
+## 2026-07-05 - Launcher Acceptance Menu Option v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: extend `leo_twin_launcher.bat` with a product acceptance verification
+  menu option that runs `scripts/verify_product_acceptance.ps1 -SkipBuild`.
+- Changed files/modules:
+  - `leo_twin_launcher.bat`
+  - `README.md`
+  - `docs/integration_demo.md`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `cmd /c "echo 3| leo_twin_launcher.bat"`
+    - Result: passed; menu still selected the non-destructive status action and
+      reported backend/frontend health and URLs.
+- Problems encountered:
+  - None. The acceptance option was not executed through the menu in this slice
+    to avoid repeating the longer validation path; the underlying script was
+    validated in previous slices.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The menu acceptance option uses `-SkipBuild` for fast local feedback; full
+    build validation remains available by running the PowerShell script
+    directly without `-SkipBuild`.
+- Recommended follow-up:
+  - Add a second menu option for full acceptance with build only if users ask
+    for it.

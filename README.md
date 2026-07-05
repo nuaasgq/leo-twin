@@ -38,6 +38,9 @@ Windows one-command launcher:
 .\start_leo_twin.bat
 ```
 
+The menu launcher includes console/dashboard startup, status, read-only health
+smoke, restart/stop, and product acceptance verification.
+
 Useful launcher commands:
 
 ```powershell

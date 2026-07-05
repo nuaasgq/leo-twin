@@ -9,8 +9,10 @@ echo 3. Status
 echo 4. Smoke health check
 echo 5. Restart console
 echo 6. Stop services
+echo 7. Product acceptance verification
 echo.
-choice /C 123456 /N /M "Select an action [1-6]: "
+choice /C 1234567 /N /M "Select an action [1-7]: "
+if errorlevel 7 goto acceptance
 if errorlevel 6 goto stop
 if errorlevel 5 goto restart
 if errorlevel 4 goto smoke
@@ -40,6 +42,10 @@ goto end
 
 :stop
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\sees_launcher.ps1" stop
+goto end
+
+:acceptance
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\verify_product_acceptance.ps1" -SkipBuild
 goto end
 
 :end
