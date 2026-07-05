@@ -6409,3 +6409,40 @@ change.
 - Recommended follow-up:
   - Add backend row-window APIs or virtualized table rendering if 1200+
     satellite inspection still produces payload or rendering pressure.
+
+## 2026-07-05 - Recent Flow KPI Window v1
+
+- Branch: `feature/T164-dashboard-observability-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: make dashboard network KPI curves less cumulative/static by adding a
+  deterministic recent-flow window to backend KPI samples. The metrics
+  collector now records `FLOW_COMPLETE` times and emits 60-second recent
+  window fields for delivered throughput, completed flow count, average
+  latency, loss proxy, and delay variation. The standalone dashboard prefers
+  these recent-window fields when present and falls back to the existing
+  effective cumulative fields for compatibility.
+- Changed files/modules:
+  - `src/leo_twin/services/metrics/collector.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `tests/unit/test_metrics_module.py`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_metrics_module.py::test_metrics_collector_publishes_backend_kpi_time_series tests/unit/test_metrics_module.py::test_metrics_collector_kpi_time_series_refreshes_current_tail_sample tests/unit/test_metrics_module.py::test_metrics_collector_kpi_time_series_accepts_runtime_sim_time_tail tests/unit/test_metrics_module.py::test_metrics_collector_reports_recent_flow_kpi_window -q`
+    - Result: passed, 4 tests.
+  - `pnpm --dir frontend exec vitest run dataPanel.test.ts`
+    - Result: passed, 1 file / 62 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - None. The implementation is constrained to Metrics Agent observation state
+    and frontend chart selection. It does not alter Event Kernel behavior,
+    network routing, or packet-level semantics.
+- Known remaining issues:
+  - Recent-window throughput is still a flow-level proxy based on completed
+    flow capacity in the trailing window. It is not packet throughput,
+    retransmission loss, or RF jitter.
+- Recommended follow-up:
+  - Add visible KPI provenance labels beside the dashboard charts so users can
+    distinguish recent-flow proxy metrics from packet-level metrics.

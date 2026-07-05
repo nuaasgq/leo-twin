@@ -769,6 +769,12 @@ def test_metrics_collector_publishes_backend_kpi_time_series() -> None:
         "network_effective_latency_s": 0.02,
         "network_effective_loss_proxy_rate": 0.0,
         "network_effective_delay_variation_s": 0.0,
+        "network_recent_window_s": 60.0,
+        "network_recent_flow_count": 0.0,
+        "network_recent_delivered_throughput_mbps": 0.0,
+        "network_recent_latency_s": 0.0,
+        "network_recent_loss_proxy_rate": 0.0,
+        "network_recent_delay_variation_s": 0.0,
         "compute_resource_used_gflops_fp32": 30.0,
         "compute_resource_used_gflops_fp64": 4.0,
         "compute_resource_used_gpu_tflops_fp32": 1.5,
@@ -863,6 +869,62 @@ def test_metrics_collector_kpi_time_series_accepts_runtime_sim_time_tail() -> No
     assert series["sample_count"] == 2
     assert series["samples"][-1]["sim_time"] == 5.0
     assert series["samples"][-1]["network_effective_loss_proxy_rate"] == 0.12
+
+
+def test_metrics_collector_reports_recent_flow_kpi_window() -> None:
+    collector = MetricsCollector(metric_sample_interval=100)
+    collector.observe(
+        _event(
+            "route-a",
+            1.0,
+            EventType.ROUTE_UPDATE,
+            Route(
+                route_id="route-a",
+                flow_id="flow-a",
+                path=("user-a", "sat-a", "user-b"),
+                latency=0.1,
+                capacity=100.0,
+                available=True,
+            ),
+            "network",
+        )
+    )
+    for flow_id, sim_time, latency, capacity, status in (
+        ("flow-a", 10.0, 0.1, 80.0, "complete"),
+        ("flow-b", 40.0, 0.2, 60.0, "complete"),
+        ("flow-c", 50.0, None, 0.0, "blocked"),
+    ):
+        collector.observe(
+            _event(
+                flow_id,
+                sim_time,
+                EventType.FLOW_COMPLETE,
+                FlowState(
+                    flow_id=flow_id,
+                    route_id="route-a",
+                    source_id="user-a",
+                    target_id="user-b",
+                    status=status,
+                    route_path=("user-a", "sat-a", "user-b"),
+                    latency=latency,
+                    capacity=capacity,
+                ),
+                "network",
+            )
+        )
+
+    recent = collector.kpi_time_series(sim_time=70.0)["samples"][-1]
+    assert recent["network_recent_window_s"] == 60.0
+    assert recent["network_recent_flow_count"] == 3.0
+    assert recent["network_recent_delivered_throughput_mbps"] == 140.0
+    assert recent["network_recent_latency_s"] == pytest.approx(0.15)
+    assert recent["network_recent_loss_proxy_rate"] == pytest.approx(1 / 3)
+    assert recent["network_recent_delay_variation_s"] == pytest.approx(0.05)
+
+    expired = collector.kpi_time_series(sim_time=111.0)["samples"][-1]
+    assert expired["network_recent_flow_count"] == 0.0
+    assert expired["network_recent_delivered_throughput_mbps"] == 0.0
+    assert expired["network_recent_latency_s"] == 0.0
 
 
 def test_metrics_collector_publishes_satellite_kpi_slices() -> None:

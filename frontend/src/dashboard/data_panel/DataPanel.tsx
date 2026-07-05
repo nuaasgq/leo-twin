@@ -1139,21 +1139,33 @@ export function buildDataPanelTelemetry(
     displaySimTime
   );
   if (runtimeKpiSeries.length > 0) {
-    return runtimeKpiSeries.map((point) => ({
-      timeLabel: formatDurationCompact(point.sim_time),
-      simTime: point.sim_time,
-      throughputMbps: roundMetric(point.network_effective_throughput_mbps),
-      latencyMs: roundMetric(point.network_effective_latency_s * 1000),
-      lossPercent: roundMetric(point.network_effective_loss_proxy_rate * 100),
-      jitterMs: roundMetric(point.network_effective_delay_variation_s * 1000),
-      computeUsedTflops: roundMetric(point.compute_resource_used_gflops_fp32 / 1000),
-      computeCpuFp64Gflops: roundMetric(point.compute_resource_used_gflops_fp64 ?? 0),
-      computeGpuFp32Tflops: roundMetric(point.compute_resource_used_gpu_tflops_fp32 ?? 0),
-      computeGpuFp16Tflops: roundMetric(point.compute_resource_used_gpu_tflops_fp16 ?? 0),
-      computeNpuInt8Tops: roundMetric(point.compute_resource_used_npu_tops_int8 ?? 0),
-      computeMemoryGb: roundMetric(point.compute_resource_used_memory_gb ?? 0),
-      computeStorageGb: roundMetric(point.compute_resource_used_storage_gb ?? 0)
-    }));
+    return runtimeKpiSeries.map((point) => {
+      const throughputMbps =
+        point.network_recent_delivered_throughput_mbps ??
+        point.network_effective_throughput_mbps;
+      const latencySeconds =
+        point.network_recent_latency_s ?? point.network_effective_latency_s;
+      const lossRate =
+        point.network_recent_loss_proxy_rate ?? point.network_effective_loss_proxy_rate;
+      const delayVariationSeconds =
+        point.network_recent_delay_variation_s ??
+        point.network_effective_delay_variation_s;
+      return {
+        timeLabel: formatDurationCompact(point.sim_time),
+        simTime: point.sim_time,
+        throughputMbps: roundMetric(throughputMbps),
+        latencyMs: roundMetric(latencySeconds * 1000),
+        lossPercent: roundMetric(lossRate * 100),
+        jitterMs: roundMetric(delayVariationSeconds * 1000),
+        computeUsedTflops: roundMetric(point.compute_resource_used_gflops_fp32 / 1000),
+        computeCpuFp64Gflops: roundMetric(point.compute_resource_used_gflops_fp64 ?? 0),
+        computeGpuFp32Tflops: roundMetric(point.compute_resource_used_gpu_tflops_fp32 ?? 0),
+        computeGpuFp16Tflops: roundMetric(point.compute_resource_used_gpu_tflops_fp16 ?? 0),
+        computeNpuInt8Tops: roundMetric(point.compute_resource_used_npu_tops_int8 ?? 0),
+        computeMemoryGb: roundMetric(point.compute_resource_used_memory_gb ?? 0),
+        computeStorageGb: roundMetric(point.compute_resource_used_storage_gb ?? 0)
+      };
+    });
   }
   const backendKpiSeries = snapshot.metrics_summary.network.kpiSeries ?? [];
   if (backendKpiSeries.length > 0) {

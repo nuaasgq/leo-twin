@@ -36,6 +36,7 @@ ReplayPayload = str | int | float | bool | None | list["ReplayPayload"] | dict[s
 ReplayEvent = dict[str, ReplayPayload]
 
 _CSV_FIELDS = ("sim_time", "metric_name", "entity_id", "value", "tags")
+_RECENT_FLOW_KPI_WINDOW_S = 60.0
 
 
 class _MetricEventScheduler(Protocol):
@@ -114,6 +115,7 @@ class MetricsCollector:
         self._routes: dict[str, Route] = {}
         self._route_latency_history: dict[str, deque[float]] = {}
         self._completed_flows: dict[str, FlowState] = {}
+        self._completed_flow_times: dict[str, float] = {}
         self._compute_nodes: dict[str, ComputeNodeState] = {}
         self._running_tasks: set[str] = set()
         self._task_node_ids: dict[str, str] = {}
@@ -564,6 +566,16 @@ class MetricsCollector:
             self._active_link_states(),
             self._available_routes(),
         )
+        recent_flow_quality = self._recent_flow_quality(sim_time)
+        recent_flow_count = int(
+            recent_flow_quality["successful_count"]
+            + recent_flow_quality["failed_count"]
+        )
+        recent_flow_loss_proxy_rate = (
+            0.0
+            if recent_flow_count == 0
+            else float(recent_flow_quality["failed_count"]) / recent_flow_count
+        )
         compute_summary = self._compute_resource_summary()
         return {
             "sim_time": float(sim_time),
@@ -584,6 +596,16 @@ class MetricsCollector:
             ),
             "network_effective_delay_variation_s": float(
                 network_summary["network_quality_effective_delay_variation_proxy_s"]
+            ),
+            "network_recent_window_s": float(_RECENT_FLOW_KPI_WINDOW_S),
+            "network_recent_flow_count": float(recent_flow_count),
+            "network_recent_delivered_throughput_mbps": float(
+                recent_flow_quality["capacity_sum"]
+            ),
+            "network_recent_latency_s": _average(recent_flow_quality["latencies"]),
+            "network_recent_loss_proxy_rate": float(recent_flow_loss_proxy_rate),
+            "network_recent_delay_variation_s": _standard_deviation(
+                recent_flow_quality["latencies"]
             ),
             "compute_resource_used_gflops_fp32": float(
                 compute_summary["compute_resource_used_gflops_fp32"]
@@ -819,6 +841,7 @@ class MetricsCollector:
     def _observe_flow(self, event: SimEvent) -> tuple[MetricRecord, ...]:
         flow = _require_payload(event.payload, FlowState, "FLOW_COMPLETE")
         self._completed_flows[flow.flow_id] = flow
+        self._completed_flow_times[flow.flow_id] = float(event.sim_time)
         return (
             MetricRecord(
                 metric_name="flow.status",
@@ -1423,6 +1446,44 @@ class MetricsCollector:
             elif route is not None and route.available:
                 capacity_sum += float(route.capacity)
 
+        total = successful_count + failed_count
+        success_ratio = 0.0 if total == 0 else successful_count / total
+        return {
+            "successful_count": successful_count,
+            "failed_count": failed_count,
+            "success_ratio": float(success_ratio),
+            "latencies": tuple(latencies),
+            "capacity_sum": float(capacity_sum),
+        }
+
+    def _recent_flow_quality(
+        self,
+        sim_time: float,
+        window_seconds: float = _RECENT_FLOW_KPI_WINDOW_S,
+    ) -> dict[str, float | int | tuple[float, ...]]:
+        cutoff = float(sim_time) - max(0.0, float(window_seconds))
+        successful_count = 0
+        failed_count = 0
+        latencies: list[float] = []
+        capacity_sum = 0.0
+        for flow_id in sorted(self._completed_flows):
+            completion_time = self._completed_flow_times.get(flow_id)
+            if completion_time is None or completion_time < cutoff:
+                continue
+            flow = self._completed_flows[flow_id]
+            route = self._routes.get(flow.route_id)
+            if _flow_is_failed(flow):
+                failed_count += 1
+                continue
+            successful_count += 1
+            if flow.latency is not None:
+                latencies.append(float(flow.latency))
+            elif route is not None and route.available:
+                latencies.append(float(route.latency))
+            if flow.capacity is not None:
+                capacity_sum += float(flow.capacity)
+            elif route is not None and route.available:
+                capacity_sum += float(route.capacity)
         total = successful_count + failed_count
         success_ratio = 0.0 if total == 0 else successful_count / total
         return {

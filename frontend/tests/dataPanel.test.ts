@@ -1220,6 +1220,40 @@ describe("buildDataPanelTelemetry", () => {
     });
   });
 
+  it("uses recent flow-window KPI fields for time-varying network charts", () => {
+    const telemetry = buildDataPanelTelemetry(
+      makeSnapshot(),
+      20,
+      undefined,
+      {
+        version: "v1",
+        sample_count: 1,
+        samples: [
+          {
+            sim_time: 20,
+            network_effective_throughput_mbps: 150,
+            network_effective_latency_s: 0.11,
+            network_effective_loss_proxy_rate: 0.04,
+            network_effective_delay_variation_s: 0.006,
+            network_recent_delivered_throughput_mbps: 65,
+            network_recent_latency_s: 0.18,
+            network_recent_loss_proxy_rate: 0.25,
+            network_recent_delay_variation_s: 0.012,
+            compute_resource_used_gflops_fp32: 2500
+          }
+        ]
+      }
+    );
+
+    expect(telemetry).toHaveLength(1);
+    expect(telemetry[0]).toMatchObject({
+      throughputMbps: 65,
+      latencyMs: 180,
+      lossPercent: 25,
+      jitterMs: 12
+    });
+  });
+
   it("extends backend runtime KPI telemetry to the displayed simulation time", () => {
     const telemetry = buildDataPanelTelemetry(
       makeSnapshot(),
