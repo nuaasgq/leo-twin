@@ -4589,3 +4589,41 @@ change.
 - Recommended follow-up:
   - Add a dedicated service lifecycle drill-down when more per-service metadata
     such as input/output flow ids is exposed to the frontend.
+
+## 2026-07-05 - Service Trace Metadata v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: carry existing service `METRIC_SAMPLE` tag metadata into
+  `service_latency_history_v1`, including input flow id, output flow id, input
+  route id, and output route id. The dashboard trace row title now exposes
+  these ids while keeping the visible row compact.
+- Changed files/modules:
+  - `src/leo_twin/services/metrics/collector.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/fixtures/runtimeStatus.contract.json`
+  - `frontend/tests/runtimeContractFixture.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `tests/integration/test_compute_service_lifecycle.py`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `PYTHONPATH=src python -m pytest tests/integration/test_compute_service_lifecycle.py -q`
+    - Result: passed, 1 test.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- dataPanel.test.ts runtimeContractFixture.test.ts`
+    - Result: passed, 25 files / 192 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - None. The collector reads existing MetricRecord tags and does not alter
+    RouteAwareComputeEngine or network behavior.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - Trace rows remain compact labels; no expandable detail table exists yet.
+- Recommended follow-up:
+  - Add a dedicated lifecycle details table or drawer once service traces carry
+    timestamps and per-component status.

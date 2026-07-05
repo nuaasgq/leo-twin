@@ -37,6 +37,10 @@ describe("runtime status contract fixture", () => {
     });
     expect(status.service_latency_history_v1?.items[0]).toMatchObject({
       task_id: "svc-00001-task",
+      input_flow_id: "svc-00001-input",
+      output_flow_id: "svc-00001-output",
+      input_route_id: "route:svc-00001-input",
+      output_route_id: "route:svc-00001-output",
       complete: true,
       total_latency_s: 7.4
     });

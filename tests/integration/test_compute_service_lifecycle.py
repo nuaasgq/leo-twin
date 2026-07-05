@@ -124,6 +124,10 @@ def test_compute_service_lifecycle_emits_component_metrics() -> None:
         "items": [
             {
                 "task_id": "svc-00-compute_service-00000-task",
+                "input_flow_id": "svc-00-compute_service-00000-input",
+                "output_flow_id": "svc-00-compute_service-00000-output",
+                "input_route_id": "route:svc-00-compute_service-00000-input",
+                "output_route_id": "route:svc-00-compute_service-00000-output",
                 "complete": True,
                 "input_network_latency_s": 4.0,
                 "compute_queue_delay_s": 0.0,

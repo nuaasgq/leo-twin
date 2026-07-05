@@ -371,12 +371,17 @@ The following issue-sized slices have now been delivered on
   - The dashboard now renders bounded per-service trace labels from
     `service_latency_history_v1` with task id, closed-loop state, and total
     latency.
+- `feat(metrics): include service trace metadata`
+  - Maps to suggestions 76-82.
+  - Service trace history now carries input/output flow ids and route ids from
+    existing metric tags, and dashboard trace labels expose them in hover
+    titles.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected
 satellite coverage/beam labels, compute vector KPI samples, and the frontend
 visual verification script. The remaining high-value product gaps are backend
-input/output flow ids in service trace rows, screenshot pixel baselines, and
+timestamped service trace detail views, screenshot pixel baselines, and
 browser-driven reset/control end-to-end smoke tests.
 
 ## Acceptance Gates

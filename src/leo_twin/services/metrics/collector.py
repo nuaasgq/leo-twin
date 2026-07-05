@@ -123,6 +123,7 @@ class MetricsCollector:
         self._task_durations: dict[str, float] = {}
         self._finished_tasks: dict[str, str] = {}
         self._service_latency_components_by_task: dict[str, dict[str, float]] = {}
+        self._service_latency_metadata_by_task: dict[str, dict[str, str]] = {}
         self._last_sim_time = 0.0
         self._metric_event_sequence = 0
 
@@ -356,7 +357,11 @@ class MetricsCollector:
             key=_service_latency_history_sort_key,
         )[:limit]
         services = [
-            _service_latency_history_item(task_id, components)
+            _service_latency_history_item(
+                task_id,
+                components,
+                self._service_latency_metadata_by_task.get(task_id, {}),
+            )
             for task_id, components in selected
         ]
         return {
@@ -833,6 +838,18 @@ class MetricsCollector:
         self._service_latency_components_by_task.setdefault(record.entity_id, {})[
             component
         ] = max(0.0, float(record.value))
+        metadata = self._service_latency_metadata_by_task.setdefault(record.entity_id, {})
+        tags = dict(record.tags)
+        for key in ("input_flow_id", "output_flow_id"):
+            value = tags.get(key)
+            if isinstance(value, str) and value:
+                metadata[key] = value
+        route_id = tags.get("route_id")
+        if isinstance(route_id, str) and route_id:
+            if component in {"input_network", "compute_queue", "compute_execution"}:
+                metadata["input_route_id"] = route_id
+            elif component in {"output_network", "total"}:
+                metadata["output_route_id"] = route_id
 
     def _append_satellite_kpi_history_sample(
         self,
@@ -1706,9 +1723,14 @@ def _service_latency_history_sort_key(
 def _service_latency_history_item(
     task_id: str,
     components: dict[str, float],
+    metadata: dict[str, str],
 ) -> dict[str, str | float | bool]:
     return {
         "task_id": task_id,
+        "input_flow_id": metadata.get("input_flow_id", ""),
+        "output_flow_id": metadata.get("output_flow_id", ""),
+        "input_route_id": metadata.get("input_route_id", ""),
+        "output_route_id": metadata.get("output_route_id", ""),
         "complete": "total" in components,
         "input_network_latency_s": float(components.get("input_network", 0.0)),
         "compute_queue_delay_s": float(components.get("compute_queue", 0.0)),

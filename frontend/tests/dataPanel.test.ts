@@ -776,6 +776,10 @@ describe("buildDataPanelServiceLatencyRows", () => {
         items: [
           {
             task_id: "svc-00-compute_service-00000-task",
+            input_flow_id: "svc-00-compute_service-00000-input",
+            output_flow_id: "svc-00-compute_service-00000-output",
+            input_route_id: "route:svc-00-compute_service-00000-input",
+            output_route_id: "route:svc-00-compute_service-00000-output",
             complete: true,
             input_network_latency_s: 4,
             compute_queue_delay_s: 0,
@@ -801,6 +805,8 @@ describe("buildDataPanelServiceLatencyRows", () => {
       {
         taskId: "svc-00-compute_service-00000-task",
         taskLabel: "...vice-00000-task",
+        traceTitle:
+          "task=svc-00-compute_service-00000-task / input=svc-00-compute_service-00000-input / output=svc-00-compute_service-00000-output / input_route=route:svc-00-compute_service-00000-input / output_route=route:svc-00-compute_service-00000-output",
         statusLabel: "完整闭环",
         totalLatencyLabel: "7,400 ms"
       }

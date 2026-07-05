@@ -433,7 +433,7 @@ export const DataPanel = memo(function DataPanel({
               {serviceLatencyRows.length > 0 ? (
                 <div className="data-panel-formula-inputs" aria-label="通信计算服务轨迹">
                   {serviceLatencyRows.map((row) => (
-                    <span key={row.taskId} title={row.taskId}>
+                    <span key={row.taskId} title={row.traceTitle}>
                       {row.taskLabel} <strong>{row.totalLatencyLabel}</strong>{" "}
                       {row.statusLabel}
                     </span>
@@ -1437,6 +1437,19 @@ function compactTaskId(taskId: string): string {
   return `...${taskId.slice(-15)}`;
 }
 
+function serviceLatencyTraceTitle(
+  item: RuntimeServiceLatencyHistoryV1["items"][number]
+): string {
+  const parts = [
+    `task=${item.task_id}`,
+    item.input_flow_id ? `input=${item.input_flow_id}` : "",
+    item.output_flow_id ? `output=${item.output_flow_id}` : "",
+    item.input_route_id ? `input_route=${item.input_route_id}` : "",
+    item.output_route_id ? `output_route=${item.output_route_id}` : ""
+  ].filter((part) => part.length > 0);
+  return parts.join(" / ");
+}
+
 function formatPreciseMetricValue(value: number): string {
   return value.toLocaleString("zh-CN", {
     maximumFractionDigits: 3,
@@ -1614,6 +1627,7 @@ export interface DataPanelServiceLatencyDisplay {
 export interface DataPanelServiceLatencyRow {
   taskId: string;
   taskLabel: string;
+  traceTitle: string;
   statusLabel: string;
   totalLatencyLabel: string;
 }
@@ -1820,6 +1834,7 @@ export function buildDataPanelServiceLatencyRows(
   return (history?.items ?? []).slice(0, rowLimit).map((item) => ({
     taskId: item.task_id,
     taskLabel: compactTaskId(item.task_id),
+    traceTitle: serviceLatencyTraceTitle(item),
     statusLabel: item.complete ? "完整闭环" : "未闭环",
     totalLatencyLabel: formatMetricMilliseconds(item.total_latency_s)
   }));
