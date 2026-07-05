@@ -166,6 +166,28 @@ confirmation, config hashes, diff counts, warnings, and the next action. It is
 strictly read-only: it does not write config files, stop the current runtime, or
 replace the active scenario.
 
+Runtime export restore is intentionally a control-plane command, not a GET
+route. Send it through the existing `/control` WebSocket only after inspecting
+the preflight result:
+
+```json
+{
+  "type": "RUNTIME_CONTROL",
+  "action": "RESTORE_EXPORT_PACKAGE",
+  "payload": {
+    "package_id": "runtime-export-...",
+    "confirm_restore": true
+  }
+}
+```
+
+When the package is restorable, the backend first writes a rollback export
+package for the current runtime configuration, then restores
+`config_snapshot.config` through the same configuration validation and session
+reinitialization path used by `INITIALIZE`. The command response includes
+`restore_preflight` and `restore_result` summaries with package hashes,
+rollback package id, and whether config files and live streams were affected.
+
 ## Frontend
 
 ```powershell

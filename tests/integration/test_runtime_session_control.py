@@ -1042,6 +1042,106 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
     control_plane.handle_raw_message(json.dumps({"type": "RUNTIME_CONTROL", "action": "STOP"}))
 
 
+def test_demo_adapter_restores_runtime_export_package_with_rollback(tmp_path) -> None:
+    export_root = tmp_path / "restore-artifacts"
+    control_plane = DemoControlPlane.from_result(
+        run_integration_demo(_small_demo_config()),
+        config_output_path=tmp_path / "sees_control.yaml",
+        generated_config_output_path=tmp_path / "generated_full_system_demo.json",
+    )
+    control_plane.handle_raw_message(
+        json.dumps({"type": "RUNTIME_CONTROL", "action": "INITIALIZE"})
+    )
+    control_plane.handle_raw_message(json.dumps({"type": "RUNTIME_CONTROL", "action": "START"}))
+    control_plane._require_advance_loop().tick()
+
+    original = control_plane.export_runtime_archive(export_root)
+    package_id = original["package_id"]
+    control_plane.handle_raw_message(
+        json.dumps(
+            {
+                "type": "CONFIG_UPDATE",
+                "payload": {
+                    "satellite_count": 3,
+                    "user_count": 2,
+                },
+            }
+        )
+    )
+    assert control_plane.controller.config.scenario.satellite_count == 3
+    assert control_plane.controller.config.scenario.user_count == 2
+
+    missing_confirmation = control_plane.handle_raw_message(
+        json.dumps(
+            {
+                "type": "RUNTIME_CONTROL",
+                "action": "RESTORE_EXPORT_PACKAGE",
+                "payload": {
+                    "package_id": package_id,
+                    "output_root": str(export_root),
+                },
+            }
+        )
+    )
+
+    assert missing_confirmation["ok"] is False
+    assert missing_confirmation["command"] == "RESTORE_EXPORT_PACKAGE"
+    assert "confirm_restore=true" in missing_confirmation["error"]
+    assert control_plane.controller.config.scenario.satellite_count == 3
+
+    restored = control_plane.handle_raw_message(
+        json.dumps(
+            {
+                "type": "RUNTIME_CONTROL",
+                "action": "RESTORE_EXPORT_PACKAGE",
+                "payload": {
+                    "package_id": package_id,
+                    "output_root": str(export_root),
+                    "confirm_restore": True,
+                },
+            }
+        )
+    )
+
+    assert restored["type"] == "CONTROL_ACK"
+    assert restored["ok"] is True
+    assert restored["command"] == "RESTORE_EXPORT_PACKAGE"
+    assert restored["config"]["scenario"]["satellite_count"] == 6
+    assert restored["config"]["scenario"]["user_count"] == 8
+    assert restored["generated_config"]["satellite_count"] == 6
+    assert restored["status"]["initialized"] is True
+    assert restored["status"]["lifecycle_state"] == "INITIALIZED"
+
+    restore_result = restored["restore_result"]
+    assert restore_result["source"] == "BACKEND_RUNTIME_EXPORT_RESTORE_COMMAND"
+    assert restore_result["package_id"] == package_id
+    assert restore_result["readiness"] == "READY"
+    assert restore_result["restored"] is True
+    assert restore_result["wrote_config_files"] is True
+    assert restore_result["reset_runtime_session"] is True
+    assert restore_result["stopped_live_streams"] is True
+    assert restore_result["preflight_hash"].startswith("sha256:")
+    assert restore_result["restore_result_hash"].startswith("sha256:")
+    rollback_package_id = restore_result["rollback_package_id"]
+    assert rollback_package_id
+    assert rollback_package_id != package_id
+
+    rollback_snapshot = json.loads(
+        (export_root / rollback_package_id / "config_snapshot.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert rollback_snapshot["config"]["scenario"]["satellite_count"] == 3
+    assert rollback_snapshot["config"]["scenario"]["user_count"] == 2
+
+    post_restore_preflight = control_plane.runtime_export_package_restore_preflight(
+        package_id,
+        export_root,
+    )
+    assert post_restore_preflight["summary"]["readiness"] == "NO_CHANGE"
+    assert not control_plane.stream_event_batch(cursor=0, limit=10)["items"]
+
+
 def test_demo_server_stream_query_parses_cursor_options() -> None:
     assert _stream_query({"cursor": ["5"], "limit": ["10"]}) == (5, 10)
     assert _stream_query({}) == (0, None)

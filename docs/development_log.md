@@ -5,6 +5,57 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Runtime Export Restore Command v1
+
+- Branch: `feature/T191-runtime-export-restore-command-v1`
+- Commit: pending in this commit
+- Scope: add an explicit control-plane restore command for persisted runtime
+  export packages. `RESTORE_EXPORT_PACKAGE` is accepted only through the
+  existing runtime control message path, requires `confirm_restore: true`, runs
+  the existing restore preflight, writes a rollback export package for the
+  current runtime configuration before mutation, then restores
+  `config_snapshot.config` through deterministic SEES config validation,
+  config-file write, generated-config write, and clean runtime session
+  reinstallation. GET artifact and preflight routes remain read-only. This task
+  does not modify Event Kernel behavior, frontend rendering, simulation models,
+  or packet/network fidelity.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/integration_demo.md`
+  - `docs/development_log.md`
+- Validation:
+  - `$env:PYTHONPATH='.'; pytest tests/integration/test_runtime_session_control.py -q`
+    - Result: passed, 23 tests.
+  - `$env:PYTHONPATH='.'; pytest tests/integration/test_live_runtime_streaming.py -q`
+    - Result: passed, 12 tests.
+  - `git diff --check`
+    - Result: passed. Git still reported the pre-existing CRLF warning for
+      local runtime/config drift in `configs/generated_full_system_demo.json`
+      and `configs/sees_control.yaml`.
+- Problems encountered:
+  - Running `pytest tests/integration/test_runtime_session_control.py -q`
+    directly with the system Python environment failed during collection because
+    `examples` was not on `PYTHONPATH`. The validation was rerun with
+    `PYTHONPATH=.` and passed.
+  - The new restore assertion initially compared an empty JSON list to an empty
+    tuple. The test was corrected to assert empty-batch semantics instead of a
+    Python container type.
+  - The restore implementation was tightened to apply the fully validated and
+    default-filled `SEESConfig` mapping rather than merging a raw package dict
+    over the current config.
+  - The working tree still contains unrelated local runtime/config drift in
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`;
+    these files were intentionally left unstaged and unchanged by this task.
+- Known remaining issues / follow-up:
+  - The dashboard can inspect restore preflight results, but it still does not
+    expose a guarded restore confirmation button. A future frontend task should
+    invoke `RESTORE_EXPORT_PACKAGE` through the control WebSocket and present
+    the rollback package id after success.
+  - Runtime export restore currently restores configuration and restarts the
+    session; it does not replay exported event/metric timelines into the live
+    runtime.
+
 ## 2026-07-06 - Dashboard Restore Preflight Summary v1
 
 - Branch: `feature/T190-dashboard-restore-preflight-summary-v1`

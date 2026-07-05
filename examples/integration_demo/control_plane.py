@@ -29,7 +29,7 @@ from leo_twin.schema.config_loader import (
 )
 from leo_twin.models.orbit import KeplerianOrbitEngine
 from leo_twin.schema import SatelliteState
-from leo_twin.schema.config import SEESConfig
+from leo_twin.schema.config import SEESConfig, config_to_dict
 from leo_twin.services.configuration_view import (
     build_user_configuration_view,
     load_user_configuration_template,
@@ -91,6 +91,7 @@ _FRONTEND_EVENT_TYPES = frozenset(
     }
 )
 _RUNTIME_EXPORT_CATALOG_FILENAME = "runtime_export_catalog_v1.json"
+_RUNTIME_EXPORT_RESTORE_COMMAND = "RESTORE_EXPORT_PACKAGE"
 
 
 class RuntimeExportArtifactError(LookupError):
@@ -435,6 +436,76 @@ class DemoControlPlane:
             "summary": summary,
         }
 
+    def restore_runtime_export_package(
+        self,
+        package_id: str,
+        output_root: str | Path = "artifacts/runtime_exports",
+        *,
+        confirm_restore: bool = False,
+        diff_limit: int = 32,
+    ) -> dict[str, Any]:
+        if not confirm_restore:
+            raise RuntimeError("restore requires confirm_restore=true")
+        preflight = self.runtime_export_package_restore_preflight(
+            package_id,
+            output_root,
+            diff_limit=diff_limit,
+        )
+        preflight_summary = preflight["summary"]
+        readiness = str(preflight_summary.get("readiness", ""))
+        if readiness == "BLOCKED" or not bool(preflight_summary.get("can_restore")):
+            blocked_reasons = tuple(preflight_summary.get("blocked_reasons", ()))
+            detail = "; ".join(str(item) for item in blocked_reasons) or readiness
+            raise RuntimeError(f"runtime export restore is blocked: {detail}")
+
+        restore_result = _runtime_export_restore_result(
+            package_id,
+            preflight_summary,
+            restored=False,
+            rollback_package=None,
+        )
+        if readiness == "READY":
+            loop = self._advance_loop
+            self._stop_advance_loop()
+            if loop is not None:
+                loop.publish_pending()
+            rollback_package = self.export_runtime_package(output_root)
+            package_snapshot = self._runtime_export_package_config_snapshot(
+                package_id,
+                output_root,
+            )
+            package_config = package_snapshot.get("config")
+            if not isinstance(package_config, dict):
+                raise RuntimeExportArtifactError(
+                    f"runtime export package {package_id!r} has invalid config"
+                )
+            restored_config = config_from_mapping(package_config)
+            self._controller.initialize(config_to_dict(restored_config))
+            write_config(self._config_output_path, self._controller.config)
+            write_full_system_scenario_builder_config(
+                self._generated_config_output_path,
+                scenario_builder_config_from_sees_config(self._controller.config),
+            )
+            updated_demo_config = demo_config_from_sees_config(
+                self._controller.config,
+                self._base_config,
+            )
+            self._install_runtime_session(updated_demo_config)
+            if self._runtime_context is not None:
+                self._result = finalize_integration_demo_run(self._runtime_context, ())
+            self._initialized = True
+            restore_result = _runtime_export_restore_result(
+                package_id,
+                preflight_summary,
+                restored=True,
+                rollback_package=rollback_package,
+            )
+
+        response = self._ack_for_command_name(_RUNTIME_EXPORT_RESTORE_COMMAND)
+        response["restore_preflight"] = preflight_summary
+        response["restore_result"] = restore_result
+        return response
+
     def visible_snapshot(self) -> dict[str, JsonValue]:
         session = self._require_session()
         if self._initialized and session.lifecycle_state in {
@@ -493,6 +564,10 @@ class DemoControlPlane:
     def handle_raw_message(self, raw: str | bytes) -> dict[str, Any]:
         command_name = "UNKNOWN"
         try:
+            restore_payload = _runtime_export_restore_control_payload(raw)
+            if restore_payload is not None:
+                command_name = _RUNTIME_EXPORT_RESTORE_COMMAND
+                return self._restore_runtime_export_package(restore_payload)
             command = parse_control_command(raw)
             command_name = command.command.value
             if command.command == RuntimeCommand.INITIALIZE:
@@ -607,6 +682,24 @@ class DemoControlPlane:
             self._result = finalize_integration_demo_run(self._runtime_context, ())
         self._initialized = False
         return self._ack(ControlCommand(RuntimeCommand.RESET, payload))
+
+    def _restore_runtime_export_package(self, payload: dict[str, Any]) -> dict[str, Any]:
+        package_id = payload.get("package_id")
+        if not isinstance(package_id, str) or not package_id.strip():
+            raise RuntimeError("package_id is required")
+        output_root = payload.get("output_root", "artifacts/runtime_exports")
+        if not isinstance(output_root, str):
+            raise RuntimeError("output_root must be a string")
+        confirm_restore = payload.get("confirm_restore") is True
+        raw_diff_limit = payload.get("diff_limit", 32)
+        if isinstance(raw_diff_limit, bool) or not isinstance(raw_diff_limit, int):
+            raise RuntimeError("diff_limit must be an integer")
+        return self.restore_runtime_export_package(
+            package_id.strip(),
+            output_root,
+            confirm_restore=confirm_restore,
+            diff_limit=raw_diff_limit,
+        )
 
     def _install_runtime_session(self, config: DemoConfig) -> None:
         self._stop_advance_loop()
@@ -754,11 +847,14 @@ class DemoControlPlane:
         return status
 
     def _ack(self, command: ControlCommand) -> dict[str, Any]:
+        return self._ack_for_command_name(command.command.value)
+
+    def _ack_for_command_name(self, command_name: str) -> dict[str, Any]:
         generated_config = self._generated_config_json()
         return {
             "type": "CONTROL_ACK",
             "ok": True,
-            "command": command.command.value,
+            "command": command_name,
             "status": self._status_json(generated_config),
             "config": self._controller.config_json(),
             "generated_config": generated_config,
@@ -998,6 +1094,75 @@ class DemoControlPlane:
         if self._advance_loop is None:
             raise RuntimeError("runtime advance loop is not installed")
         return self._advance_loop
+
+    def _runtime_export_package_config_snapshot(
+        self,
+        package_id: str,
+        output_root: str | Path,
+    ) -> dict[str, Any]:
+        artifact = self.runtime_export_package_artifact(
+            package_id,
+            "config_snapshot.json",
+            output_root,
+        )
+        package_snapshot = json.loads(
+            Path(str(artifact["path"])).read_text(encoding="utf-8")
+        )
+        if not isinstance(package_snapshot, dict):
+            raise RuntimeExportArtifactError(
+                f"runtime export package {package_id!r} has invalid config snapshot"
+            )
+        return package_snapshot
+
+
+def _runtime_export_restore_control_payload(raw: str | bytes) -> dict[str, Any] | None:
+    text = raw.decode("utf-8") if isinstance(raw, bytes) else raw
+    data = json.loads(text)
+    if not isinstance(data, dict):
+        return None
+    raw_command = data.get("command", data.get("action"))
+    if (
+        data.get("type") != "RUNTIME_CONTROL"
+        or str(raw_command) != _RUNTIME_EXPORT_RESTORE_COMMAND
+    ):
+        return None
+    payload = data.get("payload", {})
+    if not isinstance(payload, dict):
+        raise RuntimeError("restore payload must be a mapping")
+    return dict(payload)
+
+
+def _runtime_export_restore_result(
+    package_id: str,
+    preflight_summary: dict[str, Any],
+    *,
+    restored: bool,
+    rollback_package: dict[str, Any] | None,
+) -> dict[str, Any]:
+    result: dict[str, Any] = {
+        "version": "v1",
+        "source": "BACKEND_RUNTIME_EXPORT_RESTORE_COMMAND",
+        "package_id": package_id,
+        "readiness": str(preflight_summary.get("readiness", "")),
+        "restored": restored,
+        "wrote_config_files": restored,
+        "reset_runtime_session": restored,
+        "stopped_live_streams": restored,
+        "preflight_hash": str(preflight_summary.get("preflight_hash", "")),
+        "restored_config_hash": str(preflight_summary.get("package_config_hash", "")),
+        "previous_config_hash": str(preflight_summary.get("current_config_hash", "")),
+        "rollback_package_id": "",
+        "rollback_package_dir": "",
+        "rollback_catalog_key": "",
+    }
+    if rollback_package is not None:
+        result["rollback_package_id"] = str(rollback_package.get("package_id", ""))
+        result["rollback_package_dir"] = str(rollback_package.get("package_dir", ""))
+        catalog_record = rollback_package.get("export_catalog_record")
+        if isinstance(catalog_record, dict):
+            result["rollback_catalog_key"] = str(catalog_record.get("catalog_key", ""))
+    result["restore_result_hash"] = stable_hash_payload(result)
+    return result
 
 
 def _control_records(value: object) -> tuple[dict[str, Any], ...]:
