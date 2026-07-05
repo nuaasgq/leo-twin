@@ -481,6 +481,11 @@ The following issue-sized slices have now been delivered on
   - Launcher troubleshooting now documents non-destructive status/smoke checks,
     common frontend/backend startup symptoms, logs, Node/Pnpm issues, and
     dashboard-first startup.
+- `test(git): add runtime config staging guard`
+  - Maps to suggestions 91-95 and the project rule to avoid committing local
+    generated runtime config.
+  - `scripts/check_no_runtime_config_staged.ps1` fails if the known local
+    runtime config files are staged before commit.
 
 Completed earlier slices in this thread also cover stream diagnostics, opaque
 Earth rendering, country boundary assets, visual layer explanations, selected

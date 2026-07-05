@@ -5303,3 +5303,28 @@ change.
     PowerShell/batch based.
 - Recommended follow-up:
   - Add screenshots or a short GIF once the UI stabilizes further.
+
+## 2026-07-05 - Runtime Config Staging Guard v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add `scripts/check_no_runtime_config_staged.ps1`, a commit-safety
+  helper that fails when `configs/generated_full_system_demo.json` or
+  `configs/sees_control.yaml` are staged.
+- Changed files/modules:
+  - `scripts/check_no_runtime_config_staged.ps1`
+  - `README.md`
+  - `docs/development_log.md`
+  - `docs/ten_hour_product_enrichment_plan.md`
+- Validation:
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\check_no_runtime_config_staged.ps1`
+    - Result: passed; no runtime/local config files were staged.
+- Problems encountered:
+  - None. The script only inspects staged files.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The guard is manual and not installed as a Git hook.
+- Recommended follow-up:
+  - Add this guard to the aggregate acceptance command or a pre-commit hook if
+    the team wants automated enforcement.
