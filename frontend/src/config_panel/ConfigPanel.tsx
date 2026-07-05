@@ -578,6 +578,7 @@ export function ConfigPanel({
   const pauseResume = pauseResumeControl(runtime);
   const startDisabled = startControlDisabled(runtime);
   const runtimeBusy = runtimeControlBusy(runtime);
+  const executionParameterLocked = runtimeExecutionParametersLocked(runtime);
   const progressSummary = runtimeProgressSummary(progress);
   const visualizationLayerEffects = visualizationLayerEffectItems({
     satellites: showSatellites,
@@ -778,6 +779,7 @@ export function ConfigPanel({
               <select
                 id="runtime-mode"
                 value={runtimeMode}
+                disabled={executionParameterLocked}
                 onChange={(event) =>
                   setRuntimeMode(event.currentTarget.value as Exclude<RuntimeMode, "PAUSED">)
                 }
@@ -799,6 +801,7 @@ export function ConfigPanel({
                   max="100"
                   step="1"
                   value={speedFactor}
+                  disabled={executionParameterLocked}
                   onChange={(event) => handleSpeedFactorChange(Number(event.currentTarget.value))}
                 />
                 <div className="unit-input">
@@ -809,6 +812,7 @@ export function ConfigPanel({
                     max="100"
                     step="1"
                     value={speedFactor}
+                    disabled={executionParameterLocked}
                     onChange={(event) =>
                       handleSpeedFactorChange(Number(event.currentTarget.value))
                     }
@@ -830,6 +834,7 @@ export function ConfigPanel({
                   max="86400"
                   step="60"
                   value={durationSeconds}
+                  disabled={executionParameterLocked}
                   onChange={(event) =>
                     handleDurationSecondsChange(Number(event.currentTarget.value))
                   }
@@ -842,6 +847,7 @@ export function ConfigPanel({
                     max="86400"
                     step="60"
                     value={durationSeconds}
+                    disabled={executionParameterLocked}
                     onChange={(event) =>
                       handleDurationSecondsChange(Number(event.currentTarget.value))
                     }
@@ -861,6 +867,7 @@ export function ConfigPanel({
                 min="0"
                 step="1"
                 value={seed}
+                disabled={executionParameterLocked}
                 onChange={(event) => setSeed(Number(event.currentTarget.value))}
               />
             </div>
@@ -1943,6 +1950,14 @@ export function startControlDisabled(runtime: RuntimeStatusPayload): boolean {
 
 export function runtimeControlBusy(runtime: RuntimeStatusPayload): boolean {
   return typeof runtime.last_action === "string" && runtime.last_action.endsWith("_PENDING");
+}
+
+export function runtimeExecutionParametersLocked(runtime: RuntimeStatusPayload): boolean {
+  return (
+    runtimeControlBusy(runtime) ||
+    runtime.status === "RUNNING" ||
+    runtime.lifecycle_state === "RUNNING"
+  );
 }
 
 export function runtimeProgressSummary(

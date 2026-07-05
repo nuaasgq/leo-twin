@@ -99,12 +99,28 @@ def test_set_speed_factor_changes_accelerated_progression() -> None:
     slow = _initialized_session(mode=RuntimeMode.ACCELERATED, speed_factor=1.0)
     fast = _initialized_session(mode=RuntimeMode.ACCELERATED, speed_factor=3.0)
 
-    assert slow.start().current_sim_time == 1.0
+    assert slow.set_speed_factor(4.0).speed_factor == 4.0
+    assert slow.start().current_sim_time == 4.0
     assert fast.start().current_sim_time == 3.0
 
-    slow.set_speed_factor(4.0)
-    slow.advance_control_step()
-    assert slow.get_status().current_sim_time == 4.0
+
+def test_running_session_rejects_speed_factor_changes() -> None:
+    session = _initialized_session(mode=RuntimeMode.ACCELERATED, speed_factor=1.0)
+    session.start()
+
+    try:
+        session.set_speed_factor(4.0)
+    except RuntimeError as exc:
+        assert "cannot be changed while the session is running" in str(exc)
+    else:
+        raise AssertionError("running sessions must reject live speed changes")
+
+    ack = ControlProtocol(session).handle(
+        json.dumps({"command": "SET_SPEED", "payload": {"speed_factor": 4.0}})
+    )
+    assert ack["ok"] is False
+    assert "cannot be changed while the session is running" in ack["error"]
+    assert ack["status"]["speed_factor"] == 1.0
 
 
 def test_session_completes_at_configured_duration_without_draining_future_events() -> None:
@@ -292,6 +308,19 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
             "compute_used_npu_tops_int8",
             "compute_used_memory_gb",
         }.issubset(satellite_history["series"][0]["samples"][-1])
+
+    speed_change = control_plane.handle_raw_message(
+        json.dumps(
+            {
+                "type": "RUNTIME_CONTROL",
+                "action": "SET_SPEED",
+                "payload": {"speed_factor": 5},
+            }
+        )
+    )
+    assert speed_change["ok"] is False
+    assert "cannot be changed while runtime is running" in speed_change["error"]
+    assert control_plane.runtime_status()["status"]["speed_factor"] == 1.0
 
     requested = control_plane.handle_raw_message(json.dumps({"command": "REQUEST_STATUS"}))
     assert requested["ok"] is True

@@ -50,6 +50,12 @@ export function selectedDisplaySatellite(
   );
 }
 
+export function selectableSatelliteTargets(
+  satellites: readonly SatelliteState[]
+): readonly SatelliteState[] {
+  return satellites.slice();
+}
+
 export function appendSatelliteInsetTrail(
   currentTrail: readonly SatelliteInsetPoint[],
   satellite: SatelliteState | null,

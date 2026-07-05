@@ -80,6 +80,7 @@ import {
   appendSatelliteInsetTrail,
   satelliteAltitudeKm,
   satelliteComputeSummary,
+  selectableSatelliteTargets,
   selectedDisplaySatellite
 } from "./satelliteFollow";
 import {
@@ -153,7 +154,7 @@ export function CesiumGlobe({
     [snapshot.satellites, displaySimTime]
   );
   const selectableSatellites = useMemo(
-    () => displaySatellites.slice(0, 96),
+    () => selectableSatelliteTargets(displaySatellites),
     [displaySatellites]
   );
   const selectedSatellite = useMemo(

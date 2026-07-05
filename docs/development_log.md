@@ -5972,3 +5972,59 @@ change.
   - Add a runtime diagnostic field for `next_queued_event_sim_time` so the UI
     can explain when event count is flat because the next event is in the
     future.
+
+## 2026-07-05 - Runtime Control and Dashboard Detail Usability
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: align live runtime control semantics and dashboard observability after
+  120/1200-satellite UI feedback. Running sessions now reject direct speed and
+  mode changes; the frontend locks execution parameters while running; target
+  satellite selection covers every satellite in the snapshot; the yellow
+  runtime pressure notice is dismissible; the dashboard adds scrollable
+  per-user business request and per-satellite resource detail tables.
+- Changed files/modules:
+  - `src/leo_twin/runtime/session.py`
+  - `src/leo_twin/services/control/runtime.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `tests/integration/test_config_control.py`
+  - `frontend/src/config_panel/ConfigPanel.tsx`
+  - `frontend/src/3d/cesium/CesiumGlobe.tsx`
+  - `frontend/src/3d/cesium/satelliteFollow.ts`
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/configPanel.test.ts`
+  - `frontend/tests/appSurface.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `frontend/tests/satelliteVisuals.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/integration/test_runtime_session_control.py tests/integration/test_config_control.py -k "not test_config_loads_correctly"`
+    - Result: passed, 24 passed / 1 deselected.
+  - `python -m pytest tests/integration/test_runtime_session_control.py tests/integration/test_config_control.py`
+    - Result: failed only on `test_config_loads_correctly` because local
+      `configs/sees_control.yaml` currently contains runtime scenario state
+      with `satellite_count=120` while the test baseline expects 72.
+  - `pnpm --dir frontend exec vitest run configPanel.test.ts appSurface.test.ts dataPanel.test.ts satelliteVisuals.test.ts`
+    - Result: passed, 4 files / 133 tests.
+  - `pnpm --dir frontend test`
+    - Result: passed, 25 files / 206 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The local PowerShell PATH did not expose `node` for Vitest. The Codex
+    bundled Node/pnpm paths were used for frontend tests and build.
+  - The full target backend command is blocked by intentionally unstaged local
+    runtime config drift in `configs/sees_control.yaml`; that file was not
+    reset or staged.
+- Known remaining issues:
+  - Backend full-suite validation in this worktree still needs a separate
+    config-baseline cleanup task before `test_config_loads_correctly` can pass
+    without excluding the known local runtime config assertion.
+  - The new dashboard business request table reflects flow-level route/service
+    records already emitted by the backend; it does not introduce packet-level
+    request simulation.
+- Recommended follow-up:
+  - Add backend-owned per-user request lifecycle summaries so the dashboard can
+    show request state transitions without deriving them from route paths.

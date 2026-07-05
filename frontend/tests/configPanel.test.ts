@@ -12,6 +12,7 @@ import {
   orbitMotionExplanationItems,
   orbitControlPayload,
   pauseResumeControl,
+  runtimeExecutionParametersLocked,
   runtimeProgressSummary,
   runtimeControlBusy,
   scalePresetSummaryItems,
@@ -83,6 +84,28 @@ describe("ConfigPanel priority controls", () => {
     expect(markup).toContain('id="compute-node-count-input"');
     expect(markup).toContain('id="speed-factor-input"');
     expect(markup).toContain('id="duration-seconds-input"');
+  });
+
+  it("locks execution parameters while the runtime is running", () => {
+    const runningRuntime = runtimeStatus("RUNNING", true);
+    const markup = renderToStaticMarkup(
+      createElement(ConfigPanel, {
+        scenario: defaultScenario(),
+        runtime: runningRuntime,
+        progress: {
+          sim_time: 10,
+          duration: 600,
+          event_count: 5
+        },
+        generatedConfig: null,
+        onRuntimeControl: () => undefined
+      })
+    );
+
+    expect(runtimeExecutionParametersLocked(runningRuntime)).toBe(true);
+    expect(markup).toMatch(/id="runtime-mode"[^>]*disabled=""/);
+    expect(markup).toMatch(/id="speed-factor"[^>]*disabled=""/);
+    expect(markup).toMatch(/id="speed-factor-input"[^>]*disabled=""/);
   });
 
   it("renders quick scale presets for 72, 300, and 1200 satellite scenarios", () => {

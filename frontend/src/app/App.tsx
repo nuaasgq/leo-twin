@@ -90,6 +90,8 @@ export function App() {
   const [generatedConfig, setGeneratedConfig] = useState<GeneratedScenarioConfig | null>(null);
   const [controlError, setControlError] = useState<string | null>(null);
   const [runtimeStatus, setRuntimeStatus] = useState<RuntimeStatusPayload>(defaultRuntimeStatus());
+  const [dismissedBackpressureNoticeKey, setDismissedBackpressureNoticeKey] =
+    useState<string | null>(null);
   const [runtimeProgressAnchor, setRuntimeProgressAnchor] = useState<RuntimeProgressAnchor>(() =>
     defaultRuntimeProgressAnchor(defaultRuntimeStatus())
   );
@@ -434,6 +436,20 @@ export function App() {
     streamConsumerCursors
   );
   const fidelitySummary = selectFidelitySummary(runtimeStatus, generatedConfig, snapshot);
+  const backpressureSummary = runtimeStatus.backpressure_summary ?? null;
+  const backpressureNoticeKeyForStatus =
+    backpressureSummary !== null && shouldShowBackpressureNotice(backpressureSummary)
+      ? backpressureNoticeDismissKey(backpressureSummary)
+      : null;
+  const backpressureNoticeDismissed =
+    backpressureNoticeKeyForStatus !== null &&
+    backpressureNoticeKeyForStatus === dismissedBackpressureNoticeKey;
+
+  useEffect(() => {
+    if (backpressureNoticeKeyForStatus === null) {
+      setDismissedBackpressureNoticeKey(null);
+    }
+  }, [backpressureNoticeKeyForStatus]);
 
   const sendRuntimeControl = useCallback(
     (action: RuntimeAction, payload: Record<string, unknown> = {}) => {
@@ -446,6 +462,11 @@ export function App() {
     },
     [controlClient]
   );
+  const dismissBackpressureNotice = useCallback(() => {
+    if (backpressureNoticeKeyForStatus !== null) {
+      setDismissedBackpressureNoticeKey(backpressureNoticeKeyForStatus);
+    }
+  }, [backpressureNoticeKeyForStatus]);
 
   return (
     <main className="app-shell">
@@ -513,7 +534,12 @@ export function App() {
       {surface === "dashboard" ? (
         <section className="dashboard-page" aria-label="独立数据态势面板">
           <FidelityNotice summary={fidelitySummary} surface="dashboard" />
-          <BackpressureNotice summary={runtimeStatus.backpressure_summary ?? null} surface="dashboard" />
+          <BackpressureNotice
+            summary={backpressureSummary}
+            surface="dashboard"
+            dismissed={backpressureNoticeDismissed}
+            onDismiss={dismissBackpressureNotice}
+          />
           <Suspense
             fallback={
               <div className="surface-loading" role="status">
@@ -587,7 +613,12 @@ export function App() {
               </div>
             </div>
             <FidelityNotice summary={fidelitySummary} surface="control" />
-            <BackpressureNotice summary={runtimeStatus.backpressure_summary ?? null} surface="control" />
+            <BackpressureNotice
+              summary={backpressureSummary}
+              surface="control"
+              dismissed={backpressureNoticeDismissed}
+              onDismiss={dismissBackpressureNotice}
+            />
             <div className="globe-panel">
               <Suspense
                 fallback={
@@ -778,6 +809,20 @@ export function shouldShowBackpressureNotice(
   return summary.overloaded || summary.first_tick_heavy;
 }
 
+export function backpressureNoticeDismissKey(summary: RuntimeBackpressureSummary): string {
+  return [
+    formatMilliseconds(summary.tick_duration_ms),
+    formatMilliseconds(summary.tick_budget_ms),
+    formatInteger(summary.queue_depth),
+    formatInteger(summary.processed_event_count),
+    formatInteger(summary.deferred_event_count),
+    String(summary.overloaded),
+    String(summary.first_tick_heavy),
+    summary.bottleneck_component,
+    summary.recommended_action
+  ].join("|");
+}
+
 export function backpressureNoticeText(summary: RuntimeBackpressureSummary): string {
   return [
     `运行压力：最近推进 ${formatMilliseconds(summary.tick_duration_ms)}，`,
@@ -796,17 +841,29 @@ function backpressureNoticeDetail(summary: RuntimeBackpressureSummary): string {
 
 function BackpressureNotice({
   summary,
-  surface
+  surface,
+  dismissed,
+  onDismiss
 }: {
   summary: RuntimeBackpressureSummary | null;
   surface: "control" | "dashboard";
+  dismissed?: boolean;
+  onDismiss?: () => void;
 }) {
-  if (summary === null || !shouldShowBackpressureNotice(summary)) {
+  if (summary === null || dismissed === true || !shouldShowBackpressureNotice(summary)) {
     return null;
   }
   return (
     <div className={`fidelity-notice backpressure ${surface}`} role="status" aria-live="polite">
-      <span>运行后压提示</span>
+      <button
+        type="button"
+        className="fidelity-notice-dismiss"
+        aria-label="关闭运行压力提示"
+        onClick={onDismiss}
+      >
+        x
+      </button>
+      <span>运行压力提示</span>
       <strong>{backpressureNoticeText(summary)}</strong>
       <small>{backpressureNoticeDetail(summary)}</small>
     </div>

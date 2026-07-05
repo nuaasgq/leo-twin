@@ -135,6 +135,14 @@ export const DataPanel = memo(function DataPanel({
     snapshot,
     runtimeStatus.satellite_kpi_slices_v1
   );
+  const userBusinessRequests = buildUserBusinessRequestRows(
+    snapshot,
+    runtimeStatus.service_latency_history_v1
+  );
+  const satelliteResourceRows = buildSatelliteResourceRows(
+    snapshot,
+    runtimeStatus.satellite_kpi_slices_v1
+  );
 
   return (
     <section className="data-panel" aria-label="独立数据态势面板">
@@ -501,6 +509,26 @@ export const DataPanel = memo(function DataPanel({
         <GroundTrackPanel snapshot={snapshot} />
         <SystemHealth snapshot={snapshot} />
       </div>
+
+      <div className="data-panel-section-title">业务请求与卫星资源明细</div>
+      <div className="data-panel-detail-grid">
+        <section className="dashboard-section data-panel-detail-table" aria-label="用户业务请求明细">
+          <div className="section-title">用户业务请求</div>
+          <div className="data-panel-source-note">
+            <span>{userBusinessRequests.sourceLabel}</span>
+            <small>{userBusinessRequests.summaryLabel}</small>
+          </div>
+          <UserBusinessRequestTable rows={userBusinessRequests.items} />
+        </section>
+        <section className="dashboard-section data-panel-detail-table" aria-label="卫星资源消耗明细">
+          <div className="section-title">卫星资源消耗</div>
+          <div className="data-panel-source-note">
+            <span>{satelliteResourceRows.sourceLabel}</span>
+            <small>{satelliteResourceRows.summaryLabel}</small>
+          </div>
+          <SatelliteResourceTable rows={satelliteResourceRows.items} />
+        </section>
+      </div>
     </section>
   );
 });
@@ -556,6 +584,76 @@ function TopComputeNodeTable({ rows }: { rows: readonly TopComputeNodeRow[] }) {
           <span>{row.loadLabel}</span>
           <span>{row.fp32Label}</span>
           <span>{row.taskLabel}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function UserBusinessRequestTable({ rows }: { rows: readonly UserBusinessRequestRow[] }) {
+  if (rows.length === 0) {
+    return <div className="data-panel-detail-empty">等待业务请求快照</div>;
+  }
+  return (
+    <div className="data-panel-table-scroll">
+      <div className="data-panel-business-row header">
+        <span>用户</span>
+        <span>请求</span>
+        <span>类型</span>
+        <span>状态</span>
+        <span>时延</span>
+        <span>容量</span>
+        <span>需求/损耗</span>
+        <span>目的地</span>
+        <span>服务链路</span>
+      </div>
+      {rows.map((row) => (
+        <div className="data-panel-business-row" key={row.routeId} title={row.pathLabel}>
+          <span>{row.userId}</span>
+          <span>{row.requestId}</span>
+          <span>{row.trafficTypeLabel}</span>
+          <span>{row.statusLabel}</span>
+          <span>{row.latencyLabel}</span>
+          <span>{row.capacityLabel}</span>
+          <span>{row.demandLossLabel}</span>
+          <span>{row.destinationId}</span>
+          <span>{row.serviceLabel}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SatelliteResourceTable({ rows }: { rows: readonly SatelliteResourceRow[] }) {
+  if (rows.length === 0) {
+    return <div className="data-panel-detail-empty">等待卫星算力快照</div>;
+  }
+  return (
+    <div className="data-panel-table-scroll">
+      <div className="data-panel-satellite-resource-row header">
+        <span>卫星</span>
+        <span>状态</span>
+        <span>负载</span>
+        <span>CPU FP32</span>
+        <span>CPU FP64</span>
+        <span>GPU</span>
+        <span>NPU</span>
+        <span>内存/存储</span>
+        <span>业务</span>
+        <span>网络</span>
+      </div>
+      {rows.map((row) => (
+        <div className="data-panel-satellite-resource-row" key={row.satelliteId}>
+          <span>{row.satelliteId}</span>
+          <span>{row.statusLabel}</span>
+          <span>{row.loadLabel}</span>
+          <span>{row.cpuFp32Label}</span>
+          <span>{row.cpuFp64Label}</span>
+          <span>{row.gpuLabel}</span>
+          <span>{row.npuLabel}</span>
+          <span>{row.memoryStorageLabel}</span>
+          <span>{row.taskLabel}</span>
+          <span>{row.networkLabel}</span>
         </div>
       ))}
     </div>
@@ -833,6 +931,46 @@ export interface TopComputeNodeRow {
   loadLabel: string;
   fp32Label: string;
   taskLabel: string;
+}
+
+export interface UserBusinessRequestRows {
+  sourceLabel: string;
+  summaryLabel: string;
+  items: readonly UserBusinessRequestRow[];
+}
+
+export interface UserBusinessRequestRow {
+  routeId: string;
+  requestId: string;
+  userId: string;
+  destinationId: string;
+  trafficTypeLabel: string;
+  statusLabel: string;
+  latencyLabel: string;
+  capacityLabel: string;
+  demandLossLabel: string;
+  serviceLabel: string;
+  pathLabel: string;
+}
+
+export interface SatelliteResourceRows {
+  sourceLabel: string;
+  summaryLabel: string;
+  items: readonly SatelliteResourceRow[];
+}
+
+export interface SatelliteResourceRow {
+  satelliteId: string;
+  statusLabel: string;
+  loadPercent: number;
+  loadLabel: string;
+  cpuFp32Label: string;
+  cpuFp64Label: string;
+  gpuLabel: string;
+  npuLabel: string;
+  memoryStorageLabel: string;
+  taskLabel: string;
+  networkLabel: string;
 }
 
 export function buildDataPanelTelemetry(
@@ -1248,6 +1386,145 @@ export function buildTopComputeNodeRows(
     .slice(0, Math.max(0, limit));
 }
 
+export function buildUserBusinessRequestRows(
+  snapshot: WorldSnapshot,
+  serviceHistory: RuntimeServiceLatencyHistoryV1 | null | undefined = undefined,
+  limit = 1000
+): UserBusinessRequestRows {
+  const serviceLookup = buildServiceFlowLookup(serviceHistory);
+  const candidates = snapshot.routes
+    .filter((route) => routeUserId(route) !== null)
+    .sort(compareUserBusinessRoute);
+  const items = candidates.slice(0, Math.max(0, limit)).map((route) => {
+    const userId = routeUserId(route) ?? "未绑定用户";
+    const destinationId = route.path[route.path.length - 1] ?? "未完成";
+    const serviceLabel = serviceLookup.get(route.flow_id) ?? "未关联计算服务";
+    return {
+      routeId: route.route_id,
+      requestId: route.flow_id,
+      userId,
+      destinationId,
+      trafficTypeLabel: serviceLookup.has(route.flow_id) ? "计算服务" : "数据传输",
+      statusLabel: route.available ? "传输可用" : "等待路由",
+      latencyLabel: `${formatPreciseMetricValue(route.latency)} s`,
+      capacityLabel: `${formatMetricValue(route.capacity)} Mbps`,
+      demandLossLabel: routeDemandLossLabel(route),
+      serviceLabel,
+      pathLabel: route.path.length > 0 ? route.path.join(" -> ") : "无路径"
+    };
+  });
+  const hiddenCount = Math.max(0, candidates.length - items.length);
+  return {
+    sourceLabel: serviceHistory?.items?.length
+      ? "快照路由 + 后端服务延迟历史"
+      : "快照路由",
+    summaryLabel: `${formatCount(items.length)} 条业务请求 / ${formatCount(
+      snapshot.ground_users.length
+    )} 个用户${hiddenCount > 0 ? ` / 另有 ${formatCount(hiddenCount)} 条未显示` : ""}`,
+    items
+  };
+}
+
+export function buildSatelliteResourceRows(
+  snapshot: WorldSnapshot,
+  backendSlices: RuntimeSatelliteKpiSlicesV1 | null | undefined = undefined,
+  limit = 1500
+): SatelliteResourceRows {
+  const satelliteById = new Map(snapshot.satellites.map((satellite) => [satellite.satellite_id, satellite]));
+  const nodeById = new Map(snapshot.compute_nodes.map((node) => [node.node_id, node]));
+  const sliceById = new Map(
+    (backendSlices?.slices ?? []).map((slice) => [slice.satellite_id, slice])
+  );
+  const networkById = buildSatelliteNetworkFallbacks(snapshot);
+  const satelliteIds = Array.from(
+    new Set([
+      ...snapshot.satellites.map((satellite) => satellite.satellite_id),
+      ...snapshot.compute_nodes.map((node) => node.node_id),
+      ...(backendSlices?.slices ?? []).map((slice) => slice.satellite_id)
+    ])
+  ).sort(compareEntityId);
+  const items = satelliteIds.slice(0, Math.max(0, limit)).map((satelliteId) => {
+    const satellite = satelliteById.get(satelliteId);
+    const node = nodeById.get(satelliteId);
+    const slice = sliceById.get(satelliteId);
+    const network = networkById.get(satelliteId);
+    const cpuFp32Capacity = Math.max(
+      0,
+      finiteOptionalMetric(slice?.compute_capacity_gflops_fp32, node?.capacity)
+    );
+    const cpuFp32Used = Math.max(
+      0,
+      finiteOptionalMetric(
+        slice?.compute_used_gflops_fp32,
+        node?.used_cpu_gflops_fp32,
+        cpuFp32Capacity - finiteOptionalMetric(node?.available_capacity, cpuFp32Capacity)
+      )
+    );
+    const loadRatio = clampRatio(
+      finiteOptionalMetric(
+        slice?.compute_load_ratio,
+        node?.load_ratio,
+        cpuFp32Capacity > 0 ? cpuFp32Used / cpuFp32Capacity : 0
+      )
+    );
+    const runningTasks = Math.max(
+      0,
+      Math.round(finiteOptionalMetric(slice?.running_task_count, node?.running_tasks, 0))
+    );
+    const finishedTasks = Math.max(
+      0,
+      Math.round(finiteOptionalMetric(slice?.finished_task_count, node?.finished_tasks, 0))
+    );
+    return {
+      satelliteId,
+      statusLabel: node?.status ?? satellite?.status ?? "ACTIVE",
+      loadPercent: roundMetric(loadRatio * 100),
+      loadLabel: `${formatMetricValue(loadRatio * 100)}%`,
+      cpuFp32Label: resourceUsageLabel(cpuFp32Used, cpuFp32Capacity, "GFLOPS"),
+      cpuFp64Label: resourceUsageLabel(
+        finiteOptionalMetric(slice?.compute_used_gflops_fp64, node?.used_cpu_gflops_fp64, 0),
+        finiteOptionalMetric(slice?.compute_capacity_gflops_fp64, node?.cpu_gflops_fp64, 0),
+        "GFLOPS"
+      ),
+      gpuLabel: `FP32 ${resourceUsageLabel(
+        finiteOptionalMetric(slice?.compute_used_gpu_tflops_fp32, node?.used_gpu_tflops_fp32, 0),
+        finiteOptionalMetric(slice?.compute_capacity_gpu_tflops_fp32, node?.gpu_tflops_fp32, 0),
+        "TFLOPS"
+      )} / FP16 ${resourceUsageLabel(
+        finiteOptionalMetric(slice?.compute_used_gpu_tflops_fp16, node?.used_gpu_tflops_fp16, 0),
+        finiteOptionalMetric(slice?.compute_capacity_gpu_tflops_fp16, node?.gpu_tflops_fp16, 0),
+        "TFLOPS"
+      )}`,
+      npuLabel: resourceUsageLabel(
+        finiteOptionalMetric(slice?.compute_used_npu_tops_int8, node?.used_npu_tops_int8, 0),
+        finiteOptionalMetric(slice?.compute_capacity_npu_tops_int8, node?.npu_tops_int8, 0),
+        "TOPS"
+      ),
+      memoryStorageLabel: `内存 ${resourceUsageLabel(
+        finiteOptionalMetric(slice?.compute_used_memory_gb, node?.used_memory_gb, 0),
+        finiteOptionalMetric(slice?.compute_capacity_memory_gb, node?.memory_gb, 0),
+        "GB"
+      )} / 存储 ${resourceUsageLabel(
+        finiteOptionalMetric(slice?.compute_used_storage_gb, node?.used_storage_gb, 0),
+        finiteOptionalMetric(slice?.compute_capacity_storage_gb, node?.storage_gb, 0),
+        "GB"
+      )}`,
+      taskLabel: `${runningTasks} 运行 / ${finishedTasks} 完成`,
+      networkLabel: satelliteNetworkLabel(slice, network)
+    };
+  });
+  const hiddenCount = Math.max(0, satelliteIds.length - items.length);
+  return {
+    sourceLabel: backendSlices?.slices?.length
+      ? "后端卫星KPI切片 + 快照算力节点"
+      : "快照算力节点",
+    summaryLabel: `${formatCount(items.length)} / ${formatCount(
+      satelliteIds.length
+    )} 颗卫星${hiddenCount > 0 ? ` / 另有 ${formatCount(hiddenCount)} 颗未显示` : ""}`,
+    items
+  };
+}
+
 function buildSnapshotTopComputeNodeRows(snapshot: WorldSnapshot): readonly TopComputeNodeRow[] {
   return snapshot.compute_nodes
     .map((node) => {
@@ -1299,6 +1576,152 @@ function compareTopComputeNodeRows(
     return taskDelta;
   }
   return left.nodeId.localeCompare(right.nodeId);
+}
+
+function buildServiceFlowLookup(
+  history: RuntimeServiceLatencyHistoryV1 | null | undefined
+): ReadonlyMap<string, string> {
+  const lookup = new Map<string, string>();
+  for (const item of history?.items ?? []) {
+    const label = `${compactTaskId(item.task_id)} / ${formatMetricMilliseconds(
+      item.total_latency_s
+    )} / ${item.complete ? "闭环" : "进行中"}`;
+    if (item.input_flow_id) {
+      lookup.set(item.input_flow_id, label);
+    }
+    if (item.output_flow_id) {
+      lookup.set(item.output_flow_id, label);
+    }
+  }
+  return lookup;
+}
+
+function routeUserId(route: SnapshotRoute): string | null {
+  return route.path.find((item) => item.startsWith("user-")) ?? null;
+}
+
+function compareUserBusinessRoute(left: SnapshotRoute, right: SnapshotRoute): number {
+  const userDelta = (routeUserId(left) ?? "").localeCompare(routeUserId(right) ?? "", "zh-CN", {
+    numeric: true
+  });
+  if (userDelta !== 0) {
+    return userDelta;
+  }
+  return left.route_id.localeCompare(right.route_id, "zh-CN", { numeric: true });
+}
+
+interface SatelliteNetworkFallback {
+  activeLinkCount: number;
+  routeCount: number;
+  routeCapacityMbps: number;
+  routeLatencyAvgS: number;
+  routeLossProxyRate: number;
+}
+
+function buildSatelliteNetworkFallbacks(
+  snapshot: WorldSnapshot
+): ReadonlyMap<string, SatelliteNetworkFallback> {
+  const mutable = new Map<
+    string,
+    {
+      activeLinkCount: number;
+      routeCount: number;
+      routeCapacityMbps: number;
+      routeLatencies: number[];
+      routeLossRates: number[];
+    }
+  >();
+  const ensure = (satelliteId: string) => {
+    let entry = mutable.get(satelliteId);
+    if (entry === undefined) {
+      entry = {
+        activeLinkCount: 0,
+        routeCount: 0,
+        routeCapacityMbps: 0,
+        routeLatencies: [],
+        routeLossRates: []
+      };
+      mutable.set(satelliteId, entry);
+    }
+    return entry;
+  };
+  for (const link of snapshot.links) {
+    if (!link.availability) {
+      continue;
+    }
+    if (link.source_id.startsWith("sat-")) {
+      ensure(link.source_id).activeLinkCount += 1;
+    }
+    if (link.target_id.startsWith("sat-")) {
+      ensure(link.target_id).activeLinkCount += 1;
+    }
+  }
+  for (const route of snapshot.routes) {
+    const satelliteIds = new Set(route.path.filter((item) => item.startsWith("sat-")));
+    for (const satelliteId of satelliteIds) {
+      const entry = ensure(satelliteId);
+      entry.routeCount += 1;
+      if (route.available) {
+        entry.routeCapacityMbps += Math.max(0, route.capacity);
+        entry.routeLatencies.push(Math.max(0, route.latency));
+        entry.routeLossRates.push(clampRatio(route.loss_rate ?? 0));
+      }
+    }
+  }
+  return new Map(
+    Array.from(mutable.entries()).map(([satelliteId, entry]) => [
+      satelliteId,
+      {
+        activeLinkCount: entry.activeLinkCount,
+        routeCount: entry.routeCount,
+        routeCapacityMbps: roundMetric(entry.routeCapacityMbps),
+        routeLatencyAvgS: roundMetric(average(entry.routeLatencies)),
+        routeLossProxyRate: roundMetric(average(entry.routeLossRates))
+      }
+    ])
+  );
+}
+
+function satelliteNetworkLabel(
+  slice: RuntimeSatelliteKpiSlicesV1["slices"][number] | undefined,
+  fallback: SatelliteNetworkFallback | undefined
+): string {
+  if (slice !== undefined) {
+    return `链路 ${slice.active_link_count} / 路由 ${slice.route_count} / ${formatMetricValue(
+      slice.route_capacity_mbps
+    )} Mbps / ${formatMetricMilliseconds(slice.route_latency_avg_s)} / 损耗 ${formatMetricValue(
+      slice.route_loss_proxy_rate * 100
+    )}%`;
+  }
+  if (fallback === undefined) {
+    return "链路 0 / 路由 0";
+  }
+  return `链路 ${fallback.activeLinkCount} / 路由 ${fallback.routeCount} / ${formatMetricValue(
+    fallback.routeCapacityMbps
+  )} Mbps / ${formatMetricMilliseconds(fallback.routeLatencyAvgS)} / 损耗 ${formatMetricValue(
+    fallback.routeLossProxyRate * 100
+  )}%`;
+}
+
+function resourceUsageLabel(used: number, capacity: number, unit: string): string {
+  return `${formatMetricValue(Math.max(0, used))} / ${formatMetricValue(
+    Math.max(0, capacity)
+  )} ${unit}`;
+}
+
+function finiteOptionalMetric(
+  ...values: readonly (number | null | undefined)[]
+): number {
+  for (const value of values) {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value;
+    }
+  }
+  return 0;
+}
+
+function compareEntityId(left: string, right: string): number {
+  return left.localeCompare(right, "zh-CN", { numeric: true });
 }
 
 function buildComputeResourceVectorPoolSummary(

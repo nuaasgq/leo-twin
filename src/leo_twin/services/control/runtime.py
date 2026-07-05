@@ -210,11 +210,19 @@ class RuntimeController:
         return self.snapshot()
 
     def set_speed_factor(self, speed_factor: float) -> RuntimeSnapshot:
+        if self._status == RuntimeStatus.RUNNING:
+            raise RuntimeError(
+                "speed factor cannot be changed while runtime is running; pause or stop first"
+            )
         self.apply_config(merge_config_update(self._config, {"speed_factor": speed_factor}))
         self._last_action = RuntimeAction.SET_SPEED.value
         return self.snapshot()
 
     def set_mode(self, mode: RuntimeMode | str) -> RuntimeSnapshot:
+        if self._status == RuntimeStatus.RUNNING:
+            raise RuntimeError(
+                "runtime mode cannot be changed while runtime is running; pause or stop first"
+            )
         self.apply_config(merge_config_update(self._config, {"mode": str(mode)}))
         self._last_action = RuntimeAction.SET_MODE.value
         if self._clock.mode == RuntimeMode.PAUSED:

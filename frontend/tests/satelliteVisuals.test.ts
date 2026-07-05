@@ -22,6 +22,7 @@ import {
   satelliteComputeSummary,
   satelliteAltitudeKm,
   satelliteInsetPoint,
+  selectableSatelliteTargets,
   selectedDisplaySatellite
 } from "../src/3d/cesium/satelliteFollow";
 import {
@@ -246,6 +247,18 @@ describe("satellite follow inset", () => {
     expect(insetPoint.x).toBeCloseTo(84, 3);
     expect(insetPoint.y).toBeCloseTo(50.026, 3);
     expect(satelliteAltitudeKm(satelliteA)).toBeCloseTo(629, 6);
+  });
+
+  it("keeps every snapshot satellite selectable for follow mode", () => {
+    const satellites = Array.from({ length: 120 }, (_, index) => ({
+      ...satelliteA,
+      satellite_id: `sat-${index}`,
+    }));
+
+    const selectable = selectableSatelliteTargets(satellites);
+
+    expect(selectable).toHaveLength(120);
+    expect(selectable[119].satellite_id).toBe("sat-119");
   });
 
   it("appends incremental motion and resets when the followed satellite changes", () => {

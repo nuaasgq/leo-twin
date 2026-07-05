@@ -132,7 +132,14 @@ def test_runtime_mode_switching_works() -> None:
     assert accelerated.mode == "ACCELERATED"
     assert controller.handle_action("SET_SPEED", {"speed_factor": 25}).speed_factor == 25
     assert controller.handle_action("START").status == "RUNNING"
+    try:
+        controller.handle_action("SET_SPEED", {"speed_factor": 50})
+    except RuntimeError as exc:
+        assert "cannot be changed while runtime is running" in str(exc)
+    else:
+        raise AssertionError("running runtime controller must reject live speed changes")
     assert controller.handle_action("PAUSE").status == "PAUSED"
+    assert controller.handle_action("SET_SPEED", {"speed_factor": 10}).speed_factor == 10
     assert controller.handle_action("STOP").status == "STOPPED"
 
 

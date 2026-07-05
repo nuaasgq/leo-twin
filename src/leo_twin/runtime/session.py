@@ -256,6 +256,10 @@ class SimulationSession:
 
     def set_speed_factor(self, value: float) -> RuntimeStatus:
         with self._lock:
+            if self._lifecycle_state == RuntimeLifecycleState.RUNNING:
+                raise RuntimeError(
+                    "speed factor cannot be changed while the session is running; pause or stop first"
+                )
             current = self._current_sim_time()
             self._runtime_config = replace(self._runtime_config, speed_factor=float(value))
             self._clock.set_speed_factor(self._runtime_config.speed_factor, current)
@@ -264,6 +268,10 @@ class SimulationSession:
 
     def set_mode(self, mode: RuntimeMode | str) -> RuntimeStatus:
         with self._lock:
+            if self._lifecycle_state == RuntimeLifecycleState.RUNNING:
+                raise RuntimeError(
+                    "runtime mode cannot be changed while the session is running; pause or stop first"
+                )
             current = self._current_sim_time()
             self._runtime_config = replace(self._runtime_config, mode=RuntimeMode(str(mode)))
             self._clock.set_mode(self._runtime_config.mode, current)

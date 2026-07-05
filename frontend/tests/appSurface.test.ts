@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  backpressureNoticeDismissKey,
   backpressureNoticeText,
   buildRuntimeRibbonSummary,
   buildSurfaceSyncSummary,
@@ -271,8 +272,18 @@ describe("backpressure notice", () => {
 
   it("renders overload text from backend-provided backpressure fields", () => {
     expect(shouldShowBackpressureNotice(summary)).toBe(true);
+    expect(backpressureNoticeDismissKey(summary)).toContain("flow_arrival_processing");
     expect(backpressureNoticeText(summary)).toBe(
       "运行压力：最近推进 1,234.4 ms，预算 1,000 ms。瓶颈组件：flow_arrival_processing。"
+    );
+  });
+
+  it("changes the dismiss key when backend pressure details change", () => {
+    expect(backpressureNoticeDismissKey(summary)).not.toBe(
+      backpressureNoticeDismissKey({
+        ...summary,
+        tick_duration_ms: 1500
+      })
     );
   });
 

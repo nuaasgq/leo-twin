@@ -18,7 +18,9 @@ import {
   buildDataPanelTelemetry,
   buildDataPanelTrafficDisplay,
   buildRuntimeKpiTelemetrySamples,
+  buildSatelliteResourceRows,
   buildTopComputeNodeRows,
+  buildUserBusinessRequestRows,
   COMPUTE_SERIES_OPTIONS,
   resolveNetworkQualityKpis
 } from "../src/dashboard/data_panel/DataPanel";
@@ -1811,6 +1813,160 @@ describe("buildTopComputeNodeRows", () => {
       loadLabel: "60%",
       fp32Label: "30 / 50 GFLOPS"
     });
+  });
+});
+
+describe("buildUserBusinessRequestRows", () => {
+  it("shows per-user route requests and service latency linkage", () => {
+    const rows = buildUserBusinessRequestRows(
+      makeSnapshot({
+        ground_users: [{ user_id: "user-0", status: "ACTIVE" }],
+        routes: [
+          {
+            route_id: "route-1",
+            flow_id: "flow-input",
+            path: ["user-0", "sat-0", "compute-0"],
+            latency: 0.12,
+            capacity: 80,
+            demand_capacity: 60,
+            loss_rate: 0.02,
+            available: true
+          }
+        ]
+      }),
+      {
+        version: "v1",
+        mode: "RECENT_LIMITED",
+        items: [
+          {
+            task_id: "task-service-0",
+            input_flow_id: "flow-input",
+            complete: false,
+            input_network_latency_s: 0.12,
+            compute_queue_delay_s: 0.01,
+            compute_execution_delay_s: 0.2,
+            output_network_latency_s: 0,
+            total_latency_s: 0.33
+          }
+        ]
+      }
+    );
+
+    expect(rows.sourceLabel).toBe("快照路由 + 后端服务延迟历史");
+    expect(rows.items[0]).toMatchObject({
+      requestId: "flow-input",
+      userId: "user-0",
+      destinationId: "compute-0",
+      trafficTypeLabel: "计算服务",
+      statusLabel: "传输可用",
+      latencyLabel: "0.12 s",
+      capacityLabel: "80 Mbps",
+      serviceLabel: "task-service-0 / 330 ms / 进行中"
+    });
+  });
+});
+
+describe("buildSatelliteResourceRows", () => {
+  it("keeps 120 satellites visible in deterministic id order", () => {
+    const rows = buildSatelliteResourceRows(
+      makeSnapshot({
+        satellites: Array.from({ length: 120 }, (_, index) => ({
+          satellite_id: `sat-${index}`,
+          sim_time: 10,
+          position: [7_000_000, 0, 0],
+          status: "ACTIVE"
+        })),
+        compute_nodes: Array.from({ length: 120 }, (_, index) => ({
+          node_id: `sat-${index}`,
+          running_tasks: index % 3,
+          finished_tasks: index,
+          capacity: 100,
+          available_capacity: 75,
+          status: "ACTIVE",
+          load_ratio: 0.25
+        }))
+      })
+    );
+
+    expect(rows.items).toHaveLength(120);
+    expect(rows.items[0].satelliteId).toBe("sat-0");
+    expect(rows.items[119]).toMatchObject({
+      satelliteId: "sat-119",
+      cpuFp32Label: "25 / 100 GFLOPS",
+      loadLabel: "25%"
+    });
+  });
+
+  it("merges backend satellite KPI slices into resource and network labels", () => {
+    const rows = buildSatelliteResourceRows(
+      makeSnapshot({
+        satellites: [
+          {
+            satellite_id: "sat-0",
+            sim_time: 10,
+            position: [7_000_000, 0, 0],
+            status: "ACTIVE"
+          }
+        ],
+        compute_nodes: [
+          {
+            node_id: "sat-0",
+            running_tasks: 0,
+            finished_tasks: 0,
+            capacity: 100,
+            available_capacity: 95,
+            status: "ACTIVE",
+            load_ratio: 0.05
+          }
+        ]
+      }),
+      {
+        version: "v1",
+        mode: "TOP_ACTIVITY_LIMITED",
+        slices: [
+          {
+            satellite_id: "sat-0",
+            active_link_count: 4,
+            active_access_link_count: 2,
+            active_space_link_count: 2,
+            route_count: 3,
+            available_route_count: 2,
+            route_capacity_mbps: 120,
+            route_demand_mbps: 100,
+            route_latency_avg_s: 0.045,
+            route_delay_variation_proxy_s: 0.005,
+            route_loss_proxy_rate: 0.02,
+            compute_capacity_gflops_fp32: 100,
+            compute_used_gflops_fp32: 64,
+            compute_capacity_gflops_fp64: 8,
+            compute_used_gflops_fp64: 2,
+            compute_capacity_gpu_tflops_fp32: 2,
+            compute_used_gpu_tflops_fp32: 1,
+            compute_capacity_npu_tops_int8: 10,
+            compute_used_npu_tops_int8: 4,
+            compute_capacity_memory_gb: 32,
+            compute_used_memory_gb: 8,
+            compute_capacity_storage_gb: 512,
+            compute_used_storage_gb: 64,
+            compute_load_ratio: 0.64,
+            running_task_count: 2,
+            finished_task_count: 7
+          }
+        ]
+      }
+    );
+
+    expect(rows.sourceLabel).toBe("后端卫星KPI切片 + 快照算力节点");
+    expect(rows.items[0]).toMatchObject({
+      satelliteId: "sat-0",
+      loadLabel: "64%",
+      cpuFp32Label: "64 / 100 GFLOPS",
+      cpuFp64Label: "2 / 8 GFLOPS",
+      npuLabel: "4 / 10 TOPS",
+      taskLabel: "2 运行 / 7 完成"
+    });
+    expect(rows.items[0].networkLabel).toContain("链路 4 / 路由 3");
+    expect(rows.items[0].memoryStorageLabel).toContain("内存 8 / 32 GB");
   });
 });
 
