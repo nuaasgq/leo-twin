@@ -202,6 +202,12 @@ export const DataPanel = memo(function DataPanel({
     useState<DataPanelComputeSeriesKey>("computeUsedTflops");
   const [detailFilter, setDetailFilter] = useState("");
   const [routeExplanationFilter, setRouteExplanationFilter] = useState("");
+  const [routeExplanationAvailabilityFilter, setRouteExplanationAvailabilityFilter] =
+    useState<DataPanelRouteExplanationAvailabilityFilter>("ALL");
+  const [routeExplanationBusinessFilter, setRouteExplanationBusinessFilter] =
+    useState("ALL");
+  const [routeExplanationBottleneckFilter, setRouteExplanationBottleneckFilter] =
+    useState("ALL");
   const [userDetailPage, setUserDetailPage] = useState(0);
   const [satelliteDetailPage, setSatelliteDetailPage] = useState(0);
   const [selectedHistorySatelliteId, setSelectedHistorySatelliteId] = useState<string | null>(
@@ -336,7 +342,12 @@ export const DataPanel = memo(function DataPanel({
   );
   const filteredRouteExplanations = filterRouteExplanationRows(
     routeExplanations,
-    routeExplanationFilter
+    {
+      query: routeExplanationFilter,
+      availability: routeExplanationAvailabilityFilter,
+      businessType: routeExplanationBusinessFilter,
+      bottleneckComponent: routeExplanationBottleneckFilter
+    }
   );
   const latestTelemetry = telemetry[telemetry.length - 1];
   const computeSeries = computeSeriesOption(computeSeriesKey);
@@ -1068,6 +1079,12 @@ export const DataPanel = memo(function DataPanel({
             rows={filteredRouteExplanations}
             filterValue={routeExplanationFilter}
             onFilterChange={setRouteExplanationFilter}
+            availabilityFilter={routeExplanationAvailabilityFilter}
+            onAvailabilityFilterChange={setRouteExplanationAvailabilityFilter}
+            businessFilter={routeExplanationBusinessFilter}
+            onBusinessFilterChange={setRouteExplanationBusinessFilter}
+            bottleneckFilter={routeExplanationBottleneckFilter}
+            onBottleneckFilterChange={setRouteExplanationBottleneckFilter}
           />
         </section>
 
@@ -1681,28 +1698,45 @@ function RouteConstraintTable({ rows }: { rows: DataPanelRouteConstraintRows }) 
 function RouteExplanationTable({
   rows,
   filterValue,
-  onFilterChange
+  onFilterChange,
+  availabilityFilter,
+  onAvailabilityFilterChange,
+  businessFilter,
+  onBusinessFilterChange,
+  bottleneckFilter,
+  onBottleneckFilterChange
 }: {
   rows: DataPanelRouteExplanationRows;
   filterValue: string;
   onFilterChange: (value: string) => void;
+  availabilityFilter: DataPanelRouteExplanationAvailabilityFilter;
+  onAvailabilityFilterChange: (
+    value: DataPanelRouteExplanationAvailabilityFilter
+  ) => void;
+  businessFilter: string;
+  onBusinessFilterChange: (value: string) => void;
+  bottleneckFilter: string;
+  onBottleneckFilterChange: (value: string) => void;
 }) {
+  const controls = (
+    <RouteExplanationFilterControls
+      filterValue={filterValue}
+      onFilterChange={onFilterChange}
+      availabilityFilter={availabilityFilter}
+      onAvailabilityFilterChange={onAvailabilityFilterChange}
+      businessFilter={businessFilter}
+      onBusinessFilterChange={onBusinessFilterChange}
+      bottleneckFilter={bottleneckFilter}
+      onBottleneckFilterChange={onBottleneckFilterChange}
+    />
+  );
   if (rows.items.length === 0) {
     const emptyLabel = rows.sourceLabel.includes("筛选")
       ? "没有匹配的路由解释"
       : "等待后端路由解释";
     return (
       <div className="data-panel-route-explanations">
-        <div className="data-panel-route-filter">
-          <label htmlFor="data-panel-route-explanation-filter">路由筛选</label>
-          <input
-            id="data-panel-route-explanation-filter"
-            type="search"
-            value={filterValue}
-            onChange={(event) => onFilterChange(event.currentTarget.value)}
-            placeholder="用户 / 卫星 / 下一跳 / 瓶颈 / 业务"
-          />
-        </div>
+        {controls}
         <div className="data-panel-route-source">{rows.sourceLabel}</div>
         <div className="data-panel-route-empty">{emptyLabel}</div>
       </div>
@@ -1710,16 +1744,7 @@ function RouteExplanationTable({
   }
   return (
     <div className="data-panel-route-explanations">
-      <div className="data-panel-route-filter">
-        <label htmlFor="data-panel-route-explanation-filter">路由筛选</label>
-        <input
-          id="data-panel-route-explanation-filter"
-          type="search"
-          value={filterValue}
-          onChange={(event) => onFilterChange(event.currentTarget.value)}
-          placeholder="用户 / 卫星 / 下一跳 / 瓶颈 / 业务"
-        />
-      </div>
+      {controls}
       <div className="data-panel-route-table explanations" aria-label="后端路由解释明细">
         <div className="data-panel-route-source">{rows.sourceLabel}</div>
         <div className="data-panel-route-row header">
@@ -1743,6 +1768,93 @@ function RouteExplanationTable({
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function RouteExplanationFilterControls({
+  filterValue,
+  onFilterChange,
+  availabilityFilter,
+  onAvailabilityFilterChange,
+  businessFilter,
+  onBusinessFilterChange,
+  bottleneckFilter,
+  onBottleneckFilterChange
+}: {
+  filterValue: string;
+  onFilterChange: (value: string) => void;
+  availabilityFilter: DataPanelRouteExplanationAvailabilityFilter;
+  onAvailabilityFilterChange: (
+    value: DataPanelRouteExplanationAvailabilityFilter
+  ) => void;
+  businessFilter: string;
+  onBusinessFilterChange: (value: string) => void;
+  bottleneckFilter: string;
+  onBottleneckFilterChange: (value: string) => void;
+}) {
+  return (
+    <div className="data-panel-route-filter">
+      <label className="data-panel-route-filter-field" htmlFor="data-panel-route-explanation-filter">
+        <span>路由筛选</span>
+        <input
+          id="data-panel-route-explanation-filter"
+          type="search"
+          value={filterValue}
+          onChange={(event) => onFilterChange(event.currentTarget.value)}
+          placeholder="用户 / 卫星 / 下一跳 / 路径"
+        />
+      </label>
+      <label
+        className="data-panel-route-filter-field"
+        htmlFor="data-panel-route-availability-filter"
+      >
+        <span>可用性</span>
+        <select
+          id="data-panel-route-availability-filter"
+          value={availabilityFilter}
+          onChange={(event) =>
+            onAvailabilityFilterChange(
+              event.currentTarget.value as DataPanelRouteExplanationAvailabilityFilter
+            )
+          }
+        >
+          <option value="ALL">全部</option>
+          <option value="AVAILABLE">可用</option>
+          <option value="BLOCKED">阻塞</option>
+        </select>
+      </label>
+      <label className="data-panel-route-filter-field" htmlFor="data-panel-route-business-filter">
+        <span>业务</span>
+        <select
+          id="data-panel-route-business-filter"
+          value={businessFilter}
+          onChange={(event) => onBusinessFilterChange(event.currentTarget.value)}
+        >
+          <option value="ALL">全部</option>
+          <option value="COMPUTE_SERVICE">通信-计算</option>
+          <option value="DATA_TRANSFER">数据传输</option>
+          <option value="BULK_DOWNLINK">批量下传</option>
+        </select>
+      </label>
+      <label
+        className="data-panel-route-filter-field"
+        htmlFor="data-panel-route-bottleneck-filter"
+      >
+        <span>瓶颈</span>
+        <select
+          id="data-panel-route-bottleneck-filter"
+          value={bottleneckFilter}
+          onChange={(event) => onBottleneckFilterChange(event.currentTarget.value)}
+        >
+          <option value="ALL">全部</option>
+          <option value="CAPACITY">容量</option>
+          <option value="AVAILABILITY">可用性</option>
+          <option value="LOSS_PROXY">损耗代理</option>
+          <option value="PATH">路径</option>
+          <option value="NONE">无瓶颈</option>
+        </select>
+      </label>
     </div>
   );
 }
@@ -5936,13 +6048,29 @@ export interface DataPanelRouteConstraintRows {
 export interface DataPanelRouteExplanationRow {
   routeId: string;
   flowId: string;
+  available: boolean;
+  availabilityLabel: string;
+  businessType: string;
   businessLabel: string;
   nextHopLabel: string;
   capacityDemandLabel: string;
   pressureLabel: string;
+  bottleneckComponent: string;
   bottleneckLabel: string;
   explanationLabel: string;
   pathLabel: string;
+}
+
+export type DataPanelRouteExplanationAvailabilityFilter =
+  | "ALL"
+  | "AVAILABLE"
+  | "BLOCKED";
+
+export interface DataPanelRouteExplanationFilter {
+  query?: string;
+  availability?: DataPanelRouteExplanationAvailabilityFilter;
+  businessType?: string;
+  bottleneckComponent?: string;
 }
 
 export interface DataPanelRouteExplanationRows {
@@ -6470,6 +6598,9 @@ export function buildDataPanelRouteExplanationRows(
     items: summary.items.slice(0, rowLimit).map((item) => ({
       routeId: item.route_id || "未声明",
       flowId: item.flow_id || "未声明",
+      available: item.available,
+      availabilityLabel: item.available ? "可用" : "阻塞",
+      businessType: item.business_type || "UNKNOWN",
       businessLabel: item.business_label || item.business_type || "未声明",
       nextHopLabel: item.primary_next_hop_id || "无",
       capacityDemandLabel: routeExplanationCapacityDemandLabel(
@@ -6477,6 +6608,7 @@ export function buildDataPanelRouteExplanationRows(
         item.demand_mbps
       ),
       pressureLabel: formatRatioPercent(Math.max(0, item.route_pressure_proxy)),
+      bottleneckComponent: item.bottleneck_component || "UNKNOWN",
       bottleneckLabel:
         item.bottleneck_reason_label || item.bottleneck_component || "未声明",
       explanationLabel: item.explanation_label || "后端未提供解释",
@@ -6502,25 +6634,52 @@ function routeExplanationCapacityDemandLabel(
 
 export function filterRouteExplanationRows(
   rows: DataPanelRouteExplanationRows,
-  query: string
+  filter: string | DataPanelRouteExplanationFilter
 ): DataPanelRouteExplanationRows {
-  const normalizedQuery = query.trim().toLowerCase();
-  if (normalizedQuery.length === 0) {
+  const criteria =
+    typeof filter === "string"
+      ? { query: filter }
+      : filter;
+  const normalizedQuery = (criteria.query ?? "").trim().toLowerCase();
+  const availability = criteria.availability ?? "ALL";
+  const businessType = criteria.businessType ?? "ALL";
+  const bottleneckComponent = criteria.bottleneckComponent ?? "ALL";
+  if (
+    normalizedQuery.length === 0 &&
+    availability === "ALL" &&
+    businessType === "ALL" &&
+    bottleneckComponent === "ALL"
+  ) {
     return rows;
   }
-  const items = rows.items.filter((item) =>
-    [
-      item.routeId,
-      item.flowId,
-      item.businessLabel,
-      item.nextHopLabel,
-      item.capacityDemandLabel,
-      item.pressureLabel,
-      item.bottleneckLabel,
-      item.explanationLabel,
-      item.pathLabel
-    ].some((value) => value.toLowerCase().includes(normalizedQuery))
-  );
+  const items = rows.items.filter((item) => {
+    const availabilityMatches =
+      availability === "ALL" ||
+      (availability === "AVAILABLE" && item.available) ||
+      (availability === "BLOCKED" && !item.available);
+    const businessMatches =
+      businessType === "ALL" || item.businessType === businessType;
+    const bottleneckMatches =
+      bottleneckComponent === "ALL" ||
+      item.bottleneckComponent === bottleneckComponent;
+    const textMatches =
+      normalizedQuery.length === 0 ||
+      [
+        item.routeId,
+        item.flowId,
+        item.availabilityLabel,
+        item.businessType,
+        item.businessLabel,
+        item.nextHopLabel,
+        item.capacityDemandLabel,
+        item.pressureLabel,
+        item.bottleneckComponent,
+        item.bottleneckLabel,
+        item.explanationLabel,
+        item.pathLabel
+      ].some((value) => value.toLowerCase().includes(normalizedQuery));
+    return availabilityMatches && businessMatches && bottleneckMatches && textMatches;
+  });
   return {
     sourceLabel: `${rows.sourceLabel} / 筛选 ${formatCount(items.length)}`,
     items

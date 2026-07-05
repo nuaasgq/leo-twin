@@ -126,7 +126,8 @@ Tasks:
   - Status: backend `route_explanation_summary_v1` runtime status object
     implemented in T209; standalone dashboard route explanation table bound to
     backend fields in T210; dashboard text filter for route/user/satellite/
-    bottleneck/business search implemented in T211.
+    bottleneck/business search implemented in T211; structured availability,
+    business-type, and bottleneck filters implemented in T212.
 
 ### WS4. Compute Network Model v2
 

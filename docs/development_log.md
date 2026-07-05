@@ -5,6 +5,47 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-06 - Dashboard Route Explanation Facets v1
+
+- Branch: `feature/T212-dashboard-route-explanation-facets-v1`
+- Commit: pending in this commit
+- Scope: upgrade the dashboard route explanation filters from a single text
+  search to structured controls. The table now preserves backend route
+  availability, business type, and bottleneck component fields in its display
+  model and supports combined filtering by text, availability, business type,
+  and bottleneck type. This keeps the dashboard aligned with backend-owned
+  route semantics rather than deriving product meaning locally.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test -- dataPanel.test.ts`
+    - Result: passed, 25 files / 310 tests. The project script currently runs
+      the full frontend Vitest suite for this invocation.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing `DataPanel` chunk-size
+      warning after minification.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered and handling:
+  - None in implementation. The text filter remains backward compatible through
+    `filterRouteExplanationRows(rows, string)` while structured criteria use a
+    typed filter object.
+  - Local runtime/generated config files remain dirty and are intentionally not
+    included in this task.
+- Known remaining issues / follow-up:
+  - Filter options are currently fixed to the known route explanation enums. A
+    later backend/frontend contract can expose enum catalogs if product variants
+    expand.
+
 ## 2026-07-06 - Dashboard Route Explanation Filters v1
 
 - Branch: `feature/T211-dashboard-route-explanation-filters-v1`

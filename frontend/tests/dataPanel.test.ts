@@ -653,10 +653,14 @@ describe("buildDataPanelRouteExplanationRows", () => {
         {
           routeId: "route-b",
           flowId: "flow-b",
+          available: false,
+          availabilityLabel: "阻塞",
+          businessType: "DATA_TRANSFER",
           businessLabel: "数据传输",
           nextHopLabel: "sat-0",
           capacityDemandLabel: "40 Mbps / 60 Mbps",
           pressureLabel: "100%",
+          bottleneckComponent: "CAPACITY",
           bottleneckLabel: "Route capacity below demand",
           explanationLabel: "capacity 40 Mbps < demand 60 Mbps",
           pathLabel: "user-1 -> sat-0 -> sat-1 -> service-0"
@@ -664,10 +668,14 @@ describe("buildDataPanelRouteExplanationRows", () => {
         {
           routeId: "route-a",
           flowId: "flow-a",
+          available: true,
+          availabilityLabel: "可用",
+          businessType: "COMPUTE_SERVICE",
           businessLabel: "通信-计算服务",
           nextHopLabel: "sat-0",
           capacityDemandLabel: "80 Mbps / 60 Mbps",
           pressureLabel: "75%",
+          bottleneckComponent: "LOSS_PROXY",
           bottleneckLabel: "Route loss proxy is positive",
           explanationLabel: "route has a positive flow-level loss proxy",
           pathLabel: "user-0 -> sat-0 -> compute-0"
@@ -754,6 +762,30 @@ describe("buildDataPanelRouteExplanationRows", () => {
     expect(filterRouteExplanationRows(rows, "  SAT-1 ").items.map((row) => row.routeId)).toEqual([
       "route-b"
     ]);
+    expect(
+      filterRouteExplanationRows(rows, {
+        query: "",
+        availability: "BLOCKED",
+        businessType: "DATA_TRANSFER",
+        bottleneckComponent: "CAPACITY"
+      }).items.map((row) => row.routeId)
+    ).toEqual(["route-b"]);
+    expect(
+      filterRouteExplanationRows(rows, {
+        query: "compute",
+        availability: "AVAILABLE",
+        businessType: "COMPUTE_SERVICE",
+        bottleneckComponent: "LOSS_PROXY"
+      }).items.map((row) => row.routeId)
+    ).toEqual(["route-a"]);
+    expect(
+      filterRouteExplanationRows(rows, {
+        query: "",
+        availability: "AVAILABLE",
+        businessType: "DATA_TRANSFER",
+        bottleneckComponent: "ALL"
+      }).items
+    ).toEqual([]);
     expect(filterRouteExplanationRows(rows, "").items).toBe(rows.items);
   });
 });
