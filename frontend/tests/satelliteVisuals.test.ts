@@ -65,7 +65,12 @@ describe("satellite model entities", () => {
     ]);
     for (const asset of NASA_SATELLITE_KIT_MODEL_PARTS) {
       expect(asset.uri).toMatch(/^\/assets\/nasa-satellite-kit\/.+\.glb$/);
+      expect(asset.sourceFile).toMatch(/^Satellite Kit .+\.glb$/);
+      expect(asset.sha256).toMatch(/^[a-f0-9]{64}$/);
     }
+    expect(new Set(NASA_SATELLITE_KIT_MODEL_PARTS.map((asset) => asset.sha256)).size).toBe(
+      NASA_SATELLITE_KIT_MODEL_PARTS.length
+    );
   });
 });
 

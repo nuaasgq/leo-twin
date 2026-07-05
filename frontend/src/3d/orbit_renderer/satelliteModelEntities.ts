@@ -22,20 +22,28 @@ const NASA_SATELLITE_KIT_MAXIMUM_SCALE = 180_000;
 export interface SatelliteModelAsset {
   idSuffix: string;
   uri: string;
+  sourceFile: string;
+  sha256: string;
 }
 
 export const NASA_SATELLITE_KIT_MODEL_PARTS: readonly SatelliteModelAsset[] = [
   {
     idSuffix: "body",
-    uri: "/assets/nasa-satellite-kit/satellite-kit-body-2.glb"
+    uri: "/assets/nasa-satellite-kit/satellite-kit-body-2.glb",
+    sourceFile: "Satellite Kit body 2.glb",
+    sha256: "175936434483f7b4d83d47fb36f8a2f900bea68b5ec231aa9ca84967432475b7"
   },
   {
     idSuffix: "wings",
-    uri: "/assets/nasa-satellite-kit/satellite-kit-wings-2.glb"
+    uri: "/assets/nasa-satellite-kit/satellite-kit-wings-2.glb",
+    sourceFile: "Satellite Kit wings 2.glb",
+    sha256: "b4b6d84ad0356a83dcbe640fda5a1c603c024e84591a65f650f662d3ef34bed1"
   },
   {
     idSuffix: "radio",
-    uri: "/assets/nasa-satellite-kit/satellite-kit-radio-1.glb"
+    uri: "/assets/nasa-satellite-kit/satellite-kit-radio-1.glb",
+    sourceFile: "Satellite Kit radio 1.glb",
+    sha256: "9b09e045fa455de38338748d66d12bee6a5d604427f33144cc39e8ff212b73d9"
   }
 ];
 

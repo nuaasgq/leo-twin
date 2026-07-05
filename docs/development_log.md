@@ -3682,3 +3682,38 @@ change.
 - Recommended follow-up:
   - Add an in-app visual smoke check for opaque globe, country overlay, and
     selected satellite model rendering.
+
+## 2026-07-05 - Satellite Model Asset Manifest v1
+
+- Branch: `feature/T163-frontend-dashboard-compute-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: enrich the bundled NASA Satellite Kit model asset definitions with
+  source filenames and SHA-256 manifest values, and extend satellite visual
+  tests so model URIs, source metadata, and hash strings are stable. This keeps
+  the primary satellite model path explicit and reduces the chance of silently
+  falling back to only point markers.
+- Changed files/modules:
+  - `frontend/src/3d/orbit_renderer/satelliteModelEntities.ts`
+  - `frontend/tests/satelliteVisuals.test.ts`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend test -- satelliteVisuals.test.ts`
+    - Result: passed, 24 files / 173 tests.
+  - Bundled Node:
+    `$env:PATH='<codex-runtime>\dependencies\node\bin;<codex-runtime>\dependencies\bin;' + $env:PATH; pnpm --dir frontend build`
+    - Result: passed.
+- Problems encountered:
+  - The first test attempt used Node `fs`/`crypto` imports to verify file bytes,
+    but the frontend TypeScript test scope does not include Node typings and
+    the build failed. The test was revised to a frontend-compatible static
+    manifest check.
+  - Existing runtime/generated config files remain locally modified and are
+    intentionally excluded from this commit scope.
+- Known remaining issues:
+  - The test validates the manifest fields, not file bytes. A separate
+    repo-level Node or PowerShell asset verification script would be better for
+    byte-for-byte integrity checks.
+- Recommended follow-up:
+  - Add a dedicated asset verification script outside the frontend browser
+    TypeScript build, then include it in CI or acceptance checks.
