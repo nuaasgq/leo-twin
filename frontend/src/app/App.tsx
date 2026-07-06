@@ -15,6 +15,7 @@ import {
   RuntimeExportCatalogV1,
   RuntimeExportDiagnosticsBundleV1,
   RuntimeExportPackageCompareV1,
+  RuntimeExportRouteDetailIndexV1,
   RuntimeExportReviewSummaryV1,
   RuntimeExportRestoreCommandResultV1,
   RuntimeExportRestorePreflightV1,
@@ -46,6 +47,7 @@ import {
   loadRuntimeExportDiagnosticsBundle,
   loadRuntimeExportManifest,
   loadRuntimeExportPackageCompare,
+  loadRuntimeExportRouteDetailIndex,
   loadRuntimeExportReviewSummary,
   loadRuntimeExportRestorePreflight,
   loadRuntimeNodeDetails,
@@ -262,6 +264,8 @@ export function App() {
     useState<RuntimeReproducibilityManifestV1 | null>(null);
   const [runtimeExportDiagnosticsBundle, setRuntimeExportDiagnosticsBundle] =
     useState<RuntimeExportDiagnosticsBundleV1 | null>(null);
+  const [runtimeExportRouteDetailIndex, setRuntimeExportRouteDetailIndex] =
+    useState<RuntimeExportRouteDetailIndexV1 | null>(null);
   const [runtimeExportComparePackageId, setRuntimeExportComparePackageId] =
     useState<string | null>(null);
   const [runtimeExportCompareLoading, setRuntimeExportCompareLoading] = useState(false);
@@ -279,6 +283,10 @@ export function App() {
   const [runtimeExportDiagnosticsBundleLoading, setRuntimeExportDiagnosticsBundleLoading] =
     useState(false);
   const [runtimeExportDiagnosticsBundleError, setRuntimeExportDiagnosticsBundleError] =
+    useState<string | null>(null);
+  const [runtimeExportRouteDetailIndexLoading, setRuntimeExportRouteDetailIndexLoading] =
+    useState(false);
+  const [runtimeExportRouteDetailIndexError, setRuntimeExportRouteDetailIndexError] =
     useState<string | null>(null);
   const [runtimeExportRestorePreflight, setRuntimeExportRestorePreflight] =
     useState<RuntimeExportRestorePreflightV1 | null>(null);
@@ -1056,22 +1064,32 @@ export function App() {
     setRuntimeExportReviewSummaryLoading(true);
     setRuntimeExportManifestLoading(true);
     setRuntimeExportDiagnosticsBundleLoading(true);
+    setRuntimeExportRouteDetailIndexLoading(true);
     setRuntimeExportRestorePreflightLoading(true);
     setRuntimeExportCompareError(null);
     setRuntimeExportReviewSummaryError(null);
     setRuntimeExportManifestError(null);
     setRuntimeExportDiagnosticsBundleError(null);
+    setRuntimeExportRouteDetailIndexError(null);
     setRuntimeExportRestorePreflightError(null);
     setRuntimeExportRestoreCommandError(null);
     setRuntimeExportRestoreResult(null);
-    const [compare, reviewSummary, manifest, diagnosticsBundle, preflight] =
+    const [
+      compare,
+      reviewSummary,
+      manifest,
+      diagnosticsBundle,
+      routeDetailIndex,
+      preflight
+    ] =
       await Promise.allSettled([
-      loadRuntimeExportPackageCompare(packageId),
-      loadRuntimeExportReviewSummary(packageId),
-      loadRuntimeExportManifest(packageId),
-      loadRuntimeExportDiagnosticsBundle(packageId),
-      loadRuntimeExportRestorePreflight(packageId)
-    ]);
+        loadRuntimeExportPackageCompare(packageId),
+        loadRuntimeExportReviewSummary(packageId),
+        loadRuntimeExportManifest(packageId),
+        loadRuntimeExportDiagnosticsBundle(packageId),
+        loadRuntimeExportRouteDetailIndex(packageId),
+        loadRuntimeExportRestorePreflight(packageId)
+      ]);
     if (compare.status === "fulfilled") {
       setRuntimeExportCompare(compare.value);
     } else {
@@ -1100,6 +1118,14 @@ export function App() {
         runtimeExportDiagnosticsBundleErrorMessage(diagnosticsBundle.reason)
       );
     }
+    if (routeDetailIndex.status === "fulfilled") {
+      setRuntimeExportRouteDetailIndex(routeDetailIndex.value);
+    } else {
+      setRuntimeExportRouteDetailIndex(null);
+      setRuntimeExportRouteDetailIndexError(
+        runtimeExportRouteDetailIndexErrorMessage(routeDetailIndex.reason)
+      );
+    }
     if (preflight.status === "fulfilled") {
       setRuntimeExportRestorePreflight(preflight.value);
     } else {
@@ -1112,6 +1138,7 @@ export function App() {
     setRuntimeExportReviewSummaryLoading(false);
     setRuntimeExportManifestLoading(false);
     setRuntimeExportDiagnosticsBundleLoading(false);
+    setRuntimeExportRouteDetailIndexLoading(false);
     setRuntimeExportRestorePreflightLoading(false);
   }, []);
 
@@ -1128,17 +1155,20 @@ export function App() {
         setRuntimeExportReviewSummary(null);
         setRuntimeExportManifest(null);
         setRuntimeExportDiagnosticsBundle(null);
+        setRuntimeExportRouteDetailIndex(null);
         setRuntimeExportRestorePreflight(null);
         setRuntimeExportComparePackageId(null);
         setRuntimeExportCompareLoading(false);
         setRuntimeExportReviewSummaryLoading(false);
         setRuntimeExportManifestLoading(false);
         setRuntimeExportDiagnosticsBundleLoading(false);
+        setRuntimeExportRouteDetailIndexLoading(false);
         setRuntimeExportRestorePreflightLoading(false);
         setRuntimeExportCompareError(null);
         setRuntimeExportReviewSummaryError(null);
         setRuntimeExportManifestError(null);
         setRuntimeExportDiagnosticsBundleError(null);
+        setRuntimeExportRouteDetailIndexError(null);
         setRuntimeExportRestorePreflightError(null);
         setRuntimeExportRestoreCommandPendingPackageId(null);
         setRuntimeExportRestoreCommandError(null);
@@ -1152,17 +1182,20 @@ export function App() {
       setRuntimeExportReviewSummary(null);
       setRuntimeExportManifest(null);
       setRuntimeExportDiagnosticsBundle(null);
+      setRuntimeExportRouteDetailIndex(null);
       setRuntimeExportRestorePreflight(null);
       setRuntimeExportComparePackageId(null);
       setRuntimeExportCompareLoading(false);
       setRuntimeExportReviewSummaryLoading(false);
       setRuntimeExportManifestLoading(false);
       setRuntimeExportDiagnosticsBundleLoading(false);
+      setRuntimeExportRouteDetailIndexLoading(false);
       setRuntimeExportRestorePreflightLoading(false);
       setRuntimeExportCompareError(null);
       setRuntimeExportReviewSummaryError(null);
       setRuntimeExportManifestError(null);
       setRuntimeExportDiagnosticsBundleError(null);
+      setRuntimeExportRouteDetailIndexError(null);
       setRuntimeExportRestorePreflightError(null);
       setRuntimeExportRestoreCommandPendingPackageId(null);
       setRuntimeExportRestoreCommandError(null);
@@ -1841,6 +1874,7 @@ export function App() {
               runtimeExportReviewSummary={runtimeExportReviewSummary}
               runtimeExportManifest={runtimeExportManifest}
               runtimeExportDiagnosticsBundle={runtimeExportDiagnosticsBundle}
+              runtimeExportRouteDetailIndex={runtimeExportRouteDetailIndex}
               runtimeExportComparePackageId={runtimeExportComparePackageId}
               runtimeExportCompareLoading={runtimeExportCompareLoading}
               runtimeExportCompareError={runtimeExportCompareError}
@@ -1852,6 +1886,8 @@ export function App() {
                 runtimeExportDiagnosticsBundleLoading
               }
               runtimeExportDiagnosticsBundleError={runtimeExportDiagnosticsBundleError}
+              runtimeExportRouteDetailIndexLoading={runtimeExportRouteDetailIndexLoading}
+              runtimeExportRouteDetailIndexError={runtimeExportRouteDetailIndexError}
               runtimeExportRestorePreflight={runtimeExportRestorePreflight}
               runtimeExportRestorePreflightLoading={runtimeExportRestorePreflightLoading}
               runtimeExportRestorePreflightError={runtimeExportRestorePreflightError}
@@ -3315,6 +3351,11 @@ export function runtimeExportManifestErrorMessage(error: unknown): string {
 export function runtimeExportDiagnosticsBundleErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   return `复盘包诊断包加载失败：${message}`;
+}
+
+export function runtimeExportRouteDetailIndexErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  return `复盘包路由证据索引加载失败：${message}`;
 }
 
 export function runtimeExportRestorePreflightErrorMessage(error: unknown): string {

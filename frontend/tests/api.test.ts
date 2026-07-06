@@ -6,6 +6,7 @@ import {
   loadRuntimeExportHistory,
   loadRuntimeExportManifest,
   loadRuntimeExportPackageCompare,
+  loadRuntimeExportRouteDetailIndex,
   loadRuntimeExportReviewSummary,
   loadRuntimeExportRestorePreflight,
   loadRuntimeComputeNodeDetail,
@@ -289,6 +290,81 @@ describe("runtime API diagnostics", () => {
     });
     expect(fetchMock).toHaveBeenCalledWith(
       "/runtime/export/packages/pkg/files/diagnostics_bundle_v1.json"
+    );
+  });
+
+  it("loads runtime export route detail indexes", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        type: "RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_V1",
+        version: "v1",
+        index_id: "leo_twin.runtime_export_route_detail_index.v1",
+        source: "BACKEND_RUNTIME_EXPORT",
+        index_scope: "ROUTE_EXPLANATION_WINDOW_EXPORT",
+        package_id: "pkg",
+        package_dir: "artifacts/runtime_exports/pkg",
+        route_model: "FLOW_LEVEL_ROUTE_PROXY",
+        packet_level_simulation: false,
+        all_pairs_computation: false,
+        route_summary: {
+          source: "BACKEND_RUNTIME_SNAPSHOT",
+          summary_scope: "ROUTE_EXPLANATION_WINDOW",
+          cursor: 0,
+          limit: 500,
+          next_cursor: 1,
+          has_more: false,
+          route_count: 1,
+          indexed_route_count: 1,
+          hidden_route_count: 0,
+          available_route_count: 1,
+          blocked_route_count: 0,
+          over_demand_route_count: 0,
+          compute_service_route_count: 1,
+          network_service_route_count: 0
+        },
+        route_trust: {
+          version: "v1",
+          trust_id: "leo_twin.route_provenance_trust.v1",
+          source: "config_snapshot.status.route_provenance_trust_summary_v1",
+          evidence_present: true,
+          route_model: "FLOW_LEVEL_ROUTE_PROXY",
+          packet_level_simulation: false,
+          all_pairs_computation: false,
+          trust_status: "COMPLETE_FLOW_LEVEL_ROUTE_PROXY",
+          route_count: 1,
+          assessed_route_count: 1,
+          hidden_route_count: 0,
+          available_route_count: 1,
+          blocked_route_count: 0,
+          over_demand_route_count: 0,
+          explained_route_count: 1,
+          missing_explanation_count: 0,
+          path_context_route_count: 1,
+          next_hop_route_count: 1,
+          loss_proxy_route_count: 0,
+          bottleneck_components: [],
+          sample_route_ids: ["route-0"],
+          caveats: []
+        },
+        route_ids: ["route-0"],
+        sample_route_ids: ["route-0"],
+        indexed_sample_route_ids: ["route-0"],
+        missing_sample_route_ids: [],
+        source_order_policy: "route_explanation_summary_v1.items order is preserved",
+        routes: [{ route_id: "route-0" }],
+        route_detail_index_hash: "sha256:route"
+      })
+    }));
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+
+    await expect(loadRuntimeExportRouteDetailIndex("pkg")).resolves.toMatchObject({
+      package_id: "pkg",
+      route_summary: { route_count: 1 },
+      routes: [{ route_id: "route-0" }]
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/runtime/export/packages/pkg/files/route_detail_index_v1.json"
     );
   });
 

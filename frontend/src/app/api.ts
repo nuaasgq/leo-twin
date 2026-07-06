@@ -10,6 +10,7 @@ import {
   RuntimeExportHistoryV1,
   RuntimeExportPackageCompareEnvelope,
   RuntimeExportPackageCompareV1,
+  RuntimeExportRouteDetailIndexV1,
   RuntimeExportReviewSummaryV1,
   RuntimeExportRestorePreflightEnvelope,
   RuntimeExportRestorePreflightV1,
@@ -326,6 +327,22 @@ export async function loadRuntimeExportDiagnosticsBundle(
     throw new Error(`failed to load runtime export diagnostics bundle from ${url}: HTTP ${response.status}`);
   }
   return decodeRuntimeExportDiagnosticsBundle(await response.json());
+}
+
+export async function loadRuntimeExportRouteDetailIndex(
+  packageId: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): Promise<RuntimeExportRouteDetailIndexV1> {
+  const url = runtimeExportPackageFileHref(
+    packageId,
+    "route_detail_index_v1.json",
+    endpoint
+  );
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`failed to load runtime export route detail index from ${url}: HTTP ${response.status}`);
+  }
+  return decodeRuntimeExportRouteDetailIndex(await response.json());
 }
 
 export async function loadRuntimeExportRestorePreflight(
@@ -770,6 +787,29 @@ export function decodeRuntimeExportDiagnosticsBundle(
     );
   }
   return value as RuntimeExportDiagnosticsBundleV1;
+}
+
+export function decodeRuntimeExportRouteDetailIndex(
+  value: unknown
+): RuntimeExportRouteDetailIndexV1 {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError("runtime export route detail index response must be an object");
+  }
+  if (
+    typeof (value as { package_id?: unknown }).package_id !== "string" ||
+    typeof (value as { route_summary?: unknown }).route_summary !== "object" ||
+    (value as { route_summary?: unknown }).route_summary === null ||
+    Array.isArray((value as { route_summary?: unknown }).route_summary) ||
+    typeof (value as { route_trust?: unknown }).route_trust !== "object" ||
+    (value as { route_trust?: unknown }).route_trust === null ||
+    Array.isArray((value as { route_trust?: unknown }).route_trust) ||
+    !Array.isArray((value as { routes?: unknown }).routes)
+  ) {
+    throw new TypeError(
+      "runtime export route detail index response must include package_id, route_summary, route_trust, and routes"
+    );
+  }
+  return value as RuntimeExportRouteDetailIndexV1;
 }
 
 export function decodeRuntimeExportRestorePreflight(

@@ -27,6 +27,8 @@ import {
   buildDataPanelExportManifestInspectorStatus,
   buildDataPanelExportReviewSummaryDisplay,
   buildDataPanelExportReviewSummaryStatus,
+  buildDataPanelExportRouteDetailIndexDisplay,
+  buildDataPanelExportRouteDetailIndexStatus,
   buildDataPanelExportRestoreActionDisplay,
   buildDataPanelExportRestorePreflightDisplay,
   buildDataPanelExportRestorePreflightStatus,
@@ -2466,6 +2468,119 @@ describe("buildDataPanelExportCompareDisplay", () => {
       summaryLabel: "pkg-next",
       metaLabels: ["HTTP 404"],
       diagnosticsHref: null
+    });
+  });
+
+  it("summarizes runtime export route detail indexes for dashboard review", () => {
+    const display = buildDataPanelExportRouteDetailIndexDisplay({
+      type: "RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_V1",
+      version: "v1",
+      index_id: "leo_twin.runtime_export_route_detail_index.v1",
+      source: "BACKEND_RUNTIME_EXPORT",
+      index_scope: "ROUTE_EXPLANATION_WINDOW_EXPORT",
+      package_id: "pkg-review",
+      package_dir: "artifacts/runtime_exports/pkg-review",
+      route_model: "FLOW_LEVEL_ROUTE_PROXY",
+      packet_level_simulation: false,
+      all_pairs_computation: false,
+      route_summary: {
+        source: "BACKEND_RUNTIME_SNAPSHOT",
+        summary_scope: "ROUTE_EXPLANATION_WINDOW",
+        cursor: 0,
+        limit: 500,
+        next_cursor: 2,
+        has_more: false,
+        route_count: 2,
+        indexed_route_count: 2,
+        hidden_route_count: 0,
+        available_route_count: 1,
+        blocked_route_count: 1,
+        over_demand_route_count: 0,
+        compute_service_route_count: 1,
+        network_service_route_count: 1
+      },
+      route_trust: {
+        version: "v1",
+        trust_id: "leo_twin.route_provenance_trust.v1",
+        source: "config_snapshot.status.route_provenance_trust_summary_v1",
+        evidence_present: true,
+        route_model: "FLOW_LEVEL_ROUTE_PROXY",
+        packet_level_simulation: false,
+        all_pairs_computation: false,
+        trust_status: "COMPLETE_FLOW_LEVEL_ROUTE_PROXY",
+        route_count: 2,
+        assessed_route_count: 2,
+        hidden_route_count: 0,
+        available_route_count: 1,
+        blocked_route_count: 1,
+        over_demand_route_count: 0,
+        explained_route_count: 2,
+        missing_explanation_count: 0,
+        path_context_route_count: 2,
+        next_hop_route_count: 2,
+        loss_proxy_route_count: 1,
+        bottleneck_components: ["LOSS_PROXY"],
+        sample_route_ids: ["route-a", "route-b"],
+        caveats: []
+      },
+      route_ids: ["route-a", "route-b"],
+      sample_route_ids: ["route-a", "route-b"],
+      indexed_sample_route_ids: ["route-a", "route-b"],
+      missing_sample_route_ids: [],
+      source_order_policy: "route_explanation_summary_v1.items order is preserved",
+      routes: [
+        _runtimeExportRouteIndexRoute("route-a", true),
+        _runtimeExportRouteIndexRoute("route-b", false)
+      ],
+      route_detail_index_hash:
+        "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd"
+    });
+
+    expect(display).toMatchObject({
+      packageId: "pkg-review",
+      tone: "match",
+      statusLabel: "路由证据可复盘",
+      summaryLabel: "pkg-review / indexed 2/2 / hidden 0 / cdcdcdcdcdcd",
+      metaLabels: [
+        "samples 2/2",
+        "missing samples 0",
+        "available 1",
+        "blocked 1",
+        "compute 1",
+        "network 1"
+      ],
+      boundaryLabels: [
+        "FLOW_LEVEL_ROUTE_PROXY",
+        "无包级仿真",
+        "无全对全路由计算",
+        "route_explanation_summary_v1.items order is preserved"
+      ],
+      indexHref:
+        "/runtime/export/packages/pkg-review/files/route_detail_index_v1.json"
+    });
+    expect(display?.routeRows).toMatchObject([
+      { routeId: "route-a", pathLabel: "user-0 -> sat-0", available: true },
+      { routeId: "route-b", pathLabel: "user-0 -> sat-0", available: false }
+    ]);
+    expect(
+      buildDataPanelExportRouteDetailIndexStatus(display, "pkg-review", false, null)
+    ).toBe(display);
+    expect(
+      buildDataPanelExportRouteDetailIndexStatus(display, "pkg-next", true, null)
+    ).toMatchObject({
+      tone: "pending",
+      statusLabel: "正在加载路由证据索引",
+      summaryLabel: "pkg-next",
+      indexHref: null
+    });
+    expect(
+      buildDataPanelExportRouteDetailIndexStatus(display, "pkg-next", false, "HTTP 404")
+    ).toMatchObject({
+      tone: "error",
+      statusLabel: "路由证据索引加载失败",
+      summaryLabel: "pkg-next",
+      metaLabels: ["HTTP 404"],
+      indexHref: null
     });
   });
 
@@ -8503,6 +8618,38 @@ function makeLargeDetailPaginationCollection(overrides: {
     cursor_required_for_hidden_rows: true,
     window_source: "lod_snapshot_policy_v2.detail_windows",
     availability: "HTTP_CURSOR_ENDPOINT_AVAILABLE"
+  };
+}
+
+function _runtimeExportRouteIndexRoute(routeId: string, available: boolean) {
+  return {
+    route_id: routeId,
+    flow_id: `flow-${routeId}`,
+    user_id: "user-0",
+    source_id: "user-0",
+    destination_id: "sat-0",
+    selected_satellite_id: "sat-0",
+    primary_next_hop_id: "sat-0",
+    next_hop_ids: ["sat-0"],
+    hop_count: 1,
+    path: [],
+    path_label: "user-0 -> sat-0",
+    available,
+    capacity_mbps: available ? 80 : 40,
+    demand_mbps: 60,
+    latency_s: available ? 0.1 : 0.2,
+    loss_proxy_rate: available ? 0.01 : 0.05,
+    route_pressure_proxy: available ? 0.75 : 1,
+    business_type: available ? "COMPUTE_SERVICE" : "DATA_TRANSFER",
+    business_label: available ? "compute service" : "data transfer",
+    bottleneck_component: available ? "LOSS_PROXY" : "AVAILABILITY",
+    bottleneck_reason: available ? "ROUTE_LOSS_PROXY_POSITIVE" : "ROUTE_UNAVAILABLE",
+    bottleneck_reason_label: available
+      ? "Route loss proxy is positive"
+      : "Route unavailable",
+    explanation_label: available
+      ? "route has a positive flow-level loss proxy"
+      : "route is unavailable"
   };
 }
 

@@ -148,6 +148,10 @@ It reports:
 The route detail index preserves the current backend route explanation window.
 It does not replay events, recompute paths, compute all satellite pairs, or
 simulate packets.
+The standalone dashboard loads the selected package's
+`route_detail_index_v1.json` through the package file endpoint and renders a
+read-only route evidence drawer with indexed route counts, route-trust sample
+coverage, model-boundary labels, sample route rows, and a direct JSON link.
 
 ## Diagnostics Bundle
 

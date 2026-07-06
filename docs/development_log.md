@@ -13342,3 +13342,50 @@ change.
 - Recommended follow-up:
   - Add a dashboard export-side viewer for `route_detail_index_v1.json` with
     route id search and links back to live route detail endpoints.
+
+## 2026-07-06 - Dashboard Route Detail Index Viewer v1
+
+- Branch: `feature/T279-dashboard-route-detail-index-viewer-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: complete the dashboard side of the T278 result-package route evidence
+  flow. The frontend now defines `RuntimeExportRouteDetailIndexV1`, loads
+  `route_detail_index_v1.json` for the selected runtime export package through
+  the existing package file endpoint, and renders a read-only route evidence
+  drawer in the standalone dashboard export review area. The drawer shows
+  indexed route counts, route-trust sample coverage, model-boundary labels,
+  sample route rows, and a direct JSON link. It does not infer route semantics
+  locally, recompute routes, replay events, or change backend/runtime behavior.
+- Changed files/modules:
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/app/api.ts`
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/dashboard_model_trust_evidence_workspace_v1.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with bundled Codex Node/Pnpm runtime.
+  - `pnpm --dir frontend test api.test.ts dataPanel.test.ts`
+    - Result: passed, 2 test files and 185 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing large DataPanel chunk
+      warning after minification; no functional build error.
+- Problems encountered:
+  - Existing frontend files still contain historical mojibake text in several
+    dashboard labels. The new route detail index labels were added as direct
+    user-facing strings without rewriting unrelated localization text.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The route detail index drawer shows a bounded sample of route rows; it does
+    not yet provide route id search, paging, or live route detail cross-links.
+  - `route_detail_index_v1.json` itself still indexes the exported route window
+    only, so hidden routes require a later backend/package pagination task.
+- Recommended follow-up:
+  - Add route id search and row actions that open the live route detail endpoint
+    when the referenced route still exists in the current runtime.

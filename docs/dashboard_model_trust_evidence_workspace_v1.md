@@ -27,7 +27,8 @@ The workspace uses existing frontend view models and runtime payloads:
 - `runtimeStatus.network_kpi_provenance_v2`
 - `runtimeStatus.route_provenance_trust_summary_v1`
 - `runtimeStatus.reproducibility_manifest_v1`
-- runtime export catalog, review summary, and diagnostics bundle data
+- runtime export catalog, review summary, route detail index, and diagnostics
+  bundle data
 - `/runtime/status`
 
 ## Evidence Rows
@@ -40,6 +41,12 @@ Rows are emitted in a deterministic order:
 4. KPI formula provenance
 5. route explanation provenance
 6. replay/export evidence
+
+The replay/export evidence lane now uses `route_detail_index_v1.json` when a
+selected result package provides it. The dashboard treats it as backend-owned
+route evidence: it displays indexed route counts, route trust sample coverage,
+model-boundary labels, and sample route rows without recomputing routes in the
+frontend.
 7. runtime evidence
 
 Each row has a tone:

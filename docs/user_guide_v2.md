@@ -142,6 +142,10 @@ Each result package contains:
 - `review_summary_v1.json`
 - `diagnostics_bundle_v1.json`
 
+The standalone dashboard export review area can load the selected package's
+route detail index and show the route evidence counts, route-trust sample
+coverage, and sample route rows without rerunning the simulation.
+
 Export catalog:
 
 ```powershell

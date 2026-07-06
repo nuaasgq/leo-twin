@@ -1325,6 +1325,71 @@ export interface RuntimeExportDiagnosticsBundleV1 {
   diagnostics_hash: string;
 }
 
+export interface RuntimeExportRouteDetailIndexV1 {
+  type: "RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_V1" | string;
+  version: "v1" | string;
+  index_id: string;
+  source: string;
+  index_scope: string;
+  package_id: string;
+  package_dir: string;
+  route_model: string;
+  packet_level_simulation: boolean;
+  all_pairs_computation: boolean;
+  route_summary: RuntimeExportRouteDetailIndexSummaryV1;
+  route_trust: RuntimeExportRouteTrustEvidenceV1;
+  route_ids: readonly string[];
+  sample_route_ids: readonly string[];
+  indexed_sample_route_ids: readonly string[];
+  missing_sample_route_ids: readonly string[];
+  source_order_policy: string;
+  routes: readonly RuntimeExportRouteDetailIndexRouteV1[];
+  route_detail_index_hash: string;
+}
+
+export interface RuntimeExportRouteDetailIndexSummaryV1 {
+  source: string;
+  summary_scope: string;
+  cursor: number;
+  limit: number;
+  next_cursor: number;
+  has_more: boolean;
+  route_count: number;
+  indexed_route_count: number;
+  hidden_route_count: number;
+  available_route_count: number;
+  blocked_route_count: number;
+  over_demand_route_count: number;
+  compute_service_route_count: number;
+  network_service_route_count: number;
+}
+
+export interface RuntimeExportRouteDetailIndexRouteV1 {
+  route_id: string;
+  flow_id: string;
+  user_id: string;
+  source_id: string;
+  destination_id: string;
+  selected_satellite_id: string;
+  primary_next_hop_id: string;
+  next_hop_ids: readonly string[];
+  hop_count: number;
+  path: readonly string[];
+  path_label: string;
+  available: boolean;
+  capacity_mbps: number;
+  demand_mbps: number;
+  latency_s: number;
+  loss_proxy_rate: number;
+  route_pressure_proxy: number;
+  business_type: string;
+  business_label: string;
+  bottleneck_component: string;
+  bottleneck_reason: string;
+  bottleneck_reason_label: string;
+  explanation_label: string;
+}
+
 export interface RuntimeExportDiagnosticsPackageV1 {
   package_id: string;
   package_dir: string;

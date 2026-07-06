@@ -203,6 +203,9 @@ Tasks:
     The artifact preserves the exported route explanation window,
     route-trust sample route ids, indexed route ids, and compact route evidence
     rows without recomputing paths or adding packet-level behavior.
+  - Status: T279 loads `route_detail_index_v1.json` in the standalone
+    dashboard export review surface and renders indexed route counts,
+    route-trust sample coverage, model-boundary labels, and sample route rows.
 
 ### WS4. Compute Network Model v2
 
@@ -497,7 +500,9 @@ Tasks:
     warning for older packages that lack
     `route_provenance_trust_summary_v1`. T278 adds
     `route_detail_index_v1.json` as a package artifact so route trust samples
-    can be reviewed against exported route explanation rows.
+    can be reviewed against exported route explanation rows. T279 renders the
+    selected package's route detail index in the dashboard as a read-only route
+    evidence drawer.
 
 ### WS9. Delivery and Operations v2
 

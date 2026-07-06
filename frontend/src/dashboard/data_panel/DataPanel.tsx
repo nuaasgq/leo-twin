@@ -27,6 +27,8 @@ import {
   RuntimeExportCatalogRecordV1,
   RuntimeExportDiagnosticsBundleV1,
   RuntimeExportPackageCompareV1,
+  RuntimeExportRouteDetailIndexRouteV1,
+  RuntimeExportRouteDetailIndexV1,
   RuntimeExportReviewSummaryV1,
   RuntimeExportRestoreCommandResultV1,
   RuntimeExportRestorePreflightV1,
@@ -218,6 +220,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportReviewSummary,
   runtimeExportManifest,
   runtimeExportDiagnosticsBundle,
+  runtimeExportRouteDetailIndex,
   runtimeExportComparePackageId,
   runtimeExportCompareLoading,
   runtimeExportCompareError,
@@ -227,6 +230,8 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportManifestError,
   runtimeExportDiagnosticsBundleLoading,
   runtimeExportDiagnosticsBundleError,
+  runtimeExportRouteDetailIndexLoading,
+  runtimeExportRouteDetailIndexError,
   runtimeExportRestorePreflight,
   runtimeExportRestorePreflightLoading,
   runtimeExportRestorePreflightError,
@@ -265,6 +270,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportReviewSummary?: RuntimeExportReviewSummaryV1 | null;
   runtimeExportManifest?: RuntimeReproducibilityManifestV1 | null;
   runtimeExportDiagnosticsBundle?: RuntimeExportDiagnosticsBundleV1 | null;
+  runtimeExportRouteDetailIndex?: RuntimeExportRouteDetailIndexV1 | null;
   runtimeExportComparePackageId?: string | null;
   runtimeExportCompareLoading?: boolean;
   runtimeExportCompareError?: string | null;
@@ -274,6 +280,8 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportManifestError?: string | null;
   runtimeExportDiagnosticsBundleLoading?: boolean;
   runtimeExportDiagnosticsBundleError?: string | null;
+  runtimeExportRouteDetailIndexLoading?: boolean;
+  runtimeExportRouteDetailIndexError?: string | null;
   runtimeExportRestorePreflight?: RuntimeExportRestorePreflightV1 | null;
   runtimeExportRestorePreflightLoading?: boolean;
   runtimeExportRestorePreflightError?: string | null;
@@ -431,6 +439,15 @@ export const DataPanel = memo(function DataPanel({
     runtimeExportComparePackageId,
     runtimeExportDiagnosticsBundleLoading,
     runtimeExportDiagnosticsBundleError
+  );
+  const exportRouteDetailIndexDisplay = buildDataPanelExportRouteDetailIndexDisplay(
+    runtimeExportRouteDetailIndex
+  );
+  const exportRouteDetailIndexStatus = buildDataPanelExportRouteDetailIndexStatus(
+    exportRouteDetailIndexDisplay,
+    runtimeExportComparePackageId,
+    runtimeExportRouteDetailIndexLoading,
+    runtimeExportRouteDetailIndexError
   );
   const exportManifestInspectorDisplay = buildDataPanelExportManifestInspectorDisplay(
     runtimeExportManifest,
@@ -1246,6 +1263,52 @@ export const DataPanel = memo(function DataPanel({
                 <div className="data-panel-export-diagnostics-actions">
                   {exportDiagnosticsStatus.actionLabels.map((label) => (
                     <span key={label}>{label}</span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+          {exportRouteDetailIndexStatus ? (
+            <div
+              className={`data-panel-export-diagnostics-drawer ${exportRouteDetailIndexStatus.tone}`}
+              aria-label="复盘包路由证据索引"
+            >
+              <div className="data-panel-export-diagnostics-header">
+                <div>
+                  <span>路由证据索引</span>
+                  <strong>{exportRouteDetailIndexStatus.statusLabel}</strong>
+                  <small>{exportRouteDetailIndexStatus.summaryLabel}</small>
+                </div>
+                {exportRouteDetailIndexStatus.indexHref ? (
+                  <a href={exportRouteDetailIndexStatus.indexHref}>
+                    route index JSON
+                  </a>
+                ) : null}
+              </div>
+              <div className="data-panel-export-compare-meta">
+                {exportRouteDetailIndexStatus.metaLabels.map((label) => (
+                  <span key={label}>{label}</span>
+                ))}
+              </div>
+              {exportRouteDetailIndexStatus.boundaryLabels.length > 0 ? (
+                <div className="data-panel-export-diagnostics-boundaries">
+                  {exportRouteDetailIndexStatus.boundaryLabels.map((label) => (
+                    <span key={label}>{label}</span>
+                  ))}
+                </div>
+              ) : null}
+              {exportRouteDetailIndexStatus.routeRows.length > 0 ? (
+                <div className="data-panel-export-diagnostics-findings">
+                  {exportRouteDetailIndexStatus.routeRows.map((row) => (
+                    <span
+                      className={row.available ? "info" : "warn"}
+                      key={row.routeId}
+                      title={row.title}
+                    >
+                      <strong>{row.routeId}</strong>
+                      {row.pathLabel}
+                      <small>{row.metricLabel}</small>
+                    </span>
                   ))}
                 </div>
               ) : null}
@@ -8768,6 +8831,35 @@ export interface DataPanelExportDiagnosticsFindingRow {
   tone: "info" | "warn" | "error";
 }
 
+export interface DataPanelExportRouteDetailIndexDisplay {
+  packageId: string;
+  tone: "match" | "different";
+  statusLabel: string;
+  summaryLabel: string;
+  metaLabels: readonly string[];
+  boundaryLabels: readonly string[];
+  routeRows: readonly DataPanelExportRouteDetailIndexRouteRow[];
+  indexHref: string;
+}
+
+export interface DataPanelExportRouteDetailIndexStatus {
+  tone: "match" | "different" | "pending" | "error";
+  statusLabel: string;
+  summaryLabel: string;
+  metaLabels: readonly string[];
+  boundaryLabels: readonly string[];
+  routeRows: readonly DataPanelExportRouteDetailIndexRouteRow[];
+  indexHref: string | null;
+}
+
+export interface DataPanelExportRouteDetailIndexRouteRow {
+  routeId: string;
+  pathLabel: string;
+  metricLabel: string;
+  available: boolean;
+  title: string;
+}
+
 export interface DataPanelExportManifestInspectorDisplay {
   packageId: string;
   tone: "match" | "different";
@@ -8991,6 +9083,102 @@ export function buildDataPanelExportDiagnosticsStatus(
       findingRows: [],
       actionLabels: [],
       diagnosticsHref: null
+    };
+  }
+  if (display === null) {
+    return null;
+  }
+  return display;
+}
+
+export function buildDataPanelExportRouteDetailIndexDisplay(
+  index: RuntimeExportRouteDetailIndexV1 | null | undefined,
+  routeLimit = 5
+): DataPanelExportRouteDetailIndexDisplay | null {
+  if (index === null || index === undefined) {
+    return null;
+  }
+  const summary = index.route_summary;
+  const sampleCount = index.sample_route_ids.length;
+  const indexedSampleCount = index.indexed_sample_route_ids.length;
+  const missingSampleCount = index.missing_sample_route_ids.length;
+  const evidenceComplete =
+    index.packet_level_simulation === false &&
+    index.all_pairs_computation === false &&
+    missingSampleCount === 0;
+  const routeRows = index.routes
+    .slice(0, Math.max(0, routeLimit))
+    .map(buildDataPanelExportRouteDetailIndexRouteRow);
+  return {
+    packageId: index.package_id,
+    tone: evidenceComplete ? "match" : "different",
+    statusLabel: evidenceComplete ? "路由证据可复盘" : "路由证据需核对",
+    summaryLabel: `${index.package_id} / indexed ${formatCount(
+      summary.indexed_route_count
+    )}/${formatCount(summary.route_count)} / hidden ${formatCount(
+      summary.hidden_route_count
+    )} / ${shortRuntimeHash(index.route_detail_index_hash)}`,
+    metaLabels: [
+      `samples ${formatCount(indexedSampleCount)}/${formatCount(sampleCount)}`,
+      `missing samples ${formatCount(missingSampleCount)}`,
+      `available ${formatCount(summary.available_route_count)}`,
+      `blocked ${formatCount(summary.blocked_route_count)}`,
+      `compute ${formatCount(summary.compute_service_route_count)}`,
+      `network ${formatCount(summary.network_service_route_count)}`
+    ],
+    boundaryLabels: [
+      index.route_model || "UNKNOWN_ROUTE_MODEL",
+      index.packet_level_simulation ? "包含包级仿真" : "无包级仿真",
+      index.all_pairs_computation ? "包含全对全计算" : "无全对全路由计算",
+      index.source_order_policy
+    ],
+    routeRows,
+    indexHref: runtimeExportPackageFileHref(index.package_id, "route_detail_index_v1.json")
+  };
+}
+
+function buildDataPanelExportRouteDetailIndexRouteRow(
+  route: RuntimeExportRouteDetailIndexRouteV1
+): DataPanelExportRouteDetailIndexRouteRow {
+  return {
+    routeId: route.route_id,
+    pathLabel: route.path_label || `${route.source_id} -> ${route.destination_id}`,
+    metricLabel: `${route.available ? "available" : "blocked"} / ${formatPreciseMetricValue(
+      route.latency_s
+    )} s / ${formatPreciseMetricValue(route.capacity_mbps)} Mbps / loss ${formatPreciseMetricValue(
+      route.loss_proxy_rate
+    )}`,
+    available: route.available,
+    title: `${route.flow_id} / ${route.business_type} / ${route.bottleneck_component} / ${route.explanation_label}`
+  };
+}
+
+export function buildDataPanelExportRouteDetailIndexStatus(
+  display: DataPanelExportRouteDetailIndexDisplay | null,
+  selectedPackageId: string | null | undefined,
+  loading = false,
+  error: string | null | undefined = null
+): DataPanelExportRouteDetailIndexStatus | null {
+  if (loading) {
+    return {
+      tone: "pending",
+      statusLabel: "正在加载路由证据索引",
+      summaryLabel: selectedPackageId ?? "等待复盘包选择",
+      metaLabels: ["只读索引", "不重算路由"],
+      boundaryLabels: [],
+      routeRows: [],
+      indexHref: null
+    };
+  }
+  if (error !== null && error !== undefined) {
+    return {
+      tone: "error",
+      statusLabel: "路由证据索引加载失败",
+      summaryLabel: selectedPackageId ?? "未知复盘包",
+      metaLabels: [error],
+      boundaryLabels: [],
+      routeRows: [],
+      indexHref: null
     };
   }
   if (display === null) {
