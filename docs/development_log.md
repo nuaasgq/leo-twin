@@ -13778,3 +13778,50 @@ change.
   - Add an optional one-click "compare with live" action that loads both
     package and live details for a selected route while preserving the current
     explicit package/live separation.
+
+## 2026-07-06 - Dashboard Route Compare Action v1
+
+- Branch: `feature/T287-dashboard-route-compare-action-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add an explicit `compare with live` row action to the standalone
+  dashboard package route evidence drawer. The action requests the package-owned
+  route detail and the current live runtime route detail for the same route id,
+  then reuses the T286 package-vs-live comparison card. The existing separate
+  `package route detail` and `live route detail` actions remain available. No
+  route model, Event Kernel, result package endpoint, or backend behavior
+  changed.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/dashboard_model_trust_evidence_workspace_v1.md`
+  - `docs/result_package_contract_v1.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_result_package_contract_v1.py tests/unit/test_user_guide_v2_docs.py -q`
+    - Result: passed, 11 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with bundled Codex Node/Pnpm runtime.
+  - `pnpm --dir frontend test api.test.ts dataPanel.test.ts`
+    - Result: passed, 2 test files and 191 tests.
+  - `git diff --check`
+    - Result: passed for task files. Git reported existing CRLF warnings for
+      the unstaged runtime config drift files.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing large DataPanel chunk
+      warning after minification; no functional build error.
+- Problems encountered:
+  - No product code blocker. The implementation reuses existing App request
+    callbacks and does not introduce a new backend endpoint.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The comparison action is still row-scoped. It does not batch compare all
+    package route rows against live runtime state.
+  - If the live runtime no longer contains that route id, the existing live
+    detail request error path is used.
+- Recommended follow-up:
+  - Add package route compare request status copy near the comparison card so
+    users can see whether a missing comparison is caused by package detail,
+    live detail, or route-id mismatch.

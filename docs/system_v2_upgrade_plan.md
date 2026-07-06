@@ -237,6 +237,10 @@ Tasks:
     runtime route detail share the same route id, the frontend compares
     availability, business, path, next hop, KPI proxy, pressure, and bottleneck
     fields without recomputing routes.
+  - Status: T287 adds a `compare with live` row action to package route
+    evidence. The action loads package-owned route detail and live runtime
+    route detail for the selected route id together, then lets the T286
+    comparison card render the field-level result.
 
 ### WS4. Compute Network Model v2
 

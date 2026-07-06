@@ -1506,6 +1506,20 @@ export const DataPanel = memo(function DataPanel({
                       </button>
                       <button
                         type="button"
+                        disabled={
+                          !onRuntimeExportRouteDetailItemSelect ||
+                          !onRuntimeRouteDetailSelect
+                        }
+                        onClick={() => {
+                          onRuntimeExportRouteDetailItemSelect?.(row.routeId);
+                          setSelectedRouteDetailId(row.routeId);
+                          onRuntimeRouteDetailSelect?.(row.routeId);
+                        }}
+                      >
+                        {row.compareActionLabel}
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => {
                           setSelectedRouteDetailId(row.routeId);
                           onRuntimeRouteDetailSelect?.(row.routeId);
@@ -9137,6 +9151,7 @@ export interface DataPanelExportRouteDetailIndexRouteRow {
   available: boolean;
   title: string;
   packageDetailHref: string;
+  compareActionLabel: string;
   liveDetailActionLabel: string;
 }
 
@@ -9769,6 +9784,7 @@ function buildDataPanelExportRouteDetailIndexRouteRow(
     available: route.available,
     title: `${route.flow_id} / ${route.business_type} / ${route.bottleneck_component} / ${route.explanation_label}`,
     packageDetailHref: runtimeExportPackageRouteDetailHref(packageId, route.route_id),
+    compareActionLabel: "compare with live",
     liveDetailActionLabel: "live route detail"
   };
 }

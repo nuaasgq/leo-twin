@@ -48,7 +48,9 @@ result package provides route evidence. The dashboard treats it as
 backend-owned route evidence: it displays indexed route counts, export-window
 policy, cursor controls, backend-filtered route rows, availability/business/
 bottleneck filters, and row actions for both package-owned route detail review
-and existing live route detail comparison. Package detail actions read
+and existing live route detail comparison. A `compare with live` action can
+load both detail channels for the selected route in one click. Package detail
+actions read
 `/runtime/export/packages/{package_id}/routes/{route_id}` and render the
 exported row summary in the dashboard, so replay review does not depend on
 live runtime state. The live action remains a current-runtime comparison when

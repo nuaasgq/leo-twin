@@ -2644,6 +2644,7 @@ describe("buildDataPanelExportCompareDisplay", () => {
           pathLabel: "user-0 -> sat-1",
           packageDetailHref:
             "/runtime/export/packages/pkg-review/routes/route-c",
+          compareActionLabel: "compare with live",
           liveDetailActionLabel: "live route detail"
         }
       ]

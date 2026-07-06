@@ -159,9 +159,10 @@ The standalone dashboard loads the selected package's route evidence through
 route evidence drawer with indexed route counts, export-window policy,
 server-filtered sample route rows, cursor controls, route evidence search,
 availability/business/bottleneck filters, package-owned route-detail rendering,
-row actions for live route-detail lookup, and direct JSON links. The full
-`route_detail_index_v1.json` file remains downloadable, but it is not fetched
-by the dashboard by default. The package route-detail action reads
+row actions for live route-detail lookup, a `compare with live` action that
+loads both route detail channels for the selected route, and direct JSON links.
+The full `route_detail_index_v1.json` file remains downloadable, but it is not
+fetched by the dashboard by default. The package route-detail action reads
 `GET /runtime/export/packages/{package_id}/routes/{route_id}` and displays the
 exported row as replay evidence. The live route-detail action is a read-only
 comparison aid: it uses the current runtime detail endpoint when the same route
