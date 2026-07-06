@@ -17001,3 +17001,55 @@ change.
   - Add artifact links from benchmark detail rows to audit index,
     `network_kpi_benchmark_validation_v1.json`, route trust evidence, and
     scenario review artifacts where available.
+
+## 2026-07-07 - T348 dashboard benchmark artifact links v1
+
+- Branch: `feature/T348-dashboard-benchmark-artifact-links-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: add direct package artifact links to the dashboard benchmark gate
+  detail rows from T347. Expected-range rows link to
+  `export_package_audit_index_v1.json`, fidelity rows link to
+  `config_snapshot.json`, route/trust rows link to
+  `route_detail_index_v1.json`, KPI rows link to
+  `network_kpi_benchmark_validation_v1.json`, and scenario rows link to
+  `scenario_review_bundle_v1.json`. These links open read-only exported
+  evidence through the existing package file endpoint; they do not replay
+  packages, recompute KPI values, re-evaluate benchmark rules, or mutate
+  result-package artifacts. No Event Kernel, simulation model, backend API
+  route, result-package generation, or frontend architecture behavior changed.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `.\node_modules\.bin\tsc.cmd --noEmit -p tsconfig.json` from
+    `frontend`
+    - Result: passed with the bundled Codex Node runtime path.
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 192 tests.
+  - `pnpm --dir frontend test dataPanel.test.ts api.test.ts appSurface.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 3 test
+      files and 279 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path; Vite
+      reported the existing large `DataPanel` chunk warning.
+  - `git diff --check`
+    - Result: passed; Git emitted CRLF warnings for the existing unstaged
+      runtime config drift.
+- Problems encountered:
+  - No implementation blocker. The only validation noise was the existing
+    local runtime config CRLF warning and the existing large `DataPanel` build
+    chunk warning.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - Links point to artifact files, not to JSON anchors inside those files.
+  - Route/trust rows open `route_detail_index_v1.json`; a later task can link
+    exact sampled route ids when backend binding rows expose them.
+- Recommended follow-up:
+  - Add artifact-aware benchmark row drill-down filters so opening a linked
+    artifact can preserve the row context, such as KPI check id or route trust
+    sample id.

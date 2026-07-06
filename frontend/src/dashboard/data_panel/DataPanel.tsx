@@ -218,6 +218,10 @@ const ROUTE_COMPARISON_REVIEW_REPORT_FILENAME =
 const SERVICE_TRACE_COMPARISON_REVIEW_REPORT_FILENAME =
   "service_trace_comparison_review_report_v1.json";
 const EXPORT_PACKAGE_AUDIT_INDEX_FILENAME = "export_package_audit_index_v1.json";
+const ROUTE_DETAIL_INDEX_FILENAME = "route_detail_index_v1.json";
+const NETWORK_KPI_BENCHMARK_VALIDATION_FILENAME =
+  "network_kpi_benchmark_validation_v1.json";
+const CONFIG_SNAPSHOT_FILENAME = "config_snapshot.json";
 const PACKAGE_HANDOFF_REPORT_FILENAME = "package_handoff_report_v1.md";
 const SCENARIO_REVIEW_BUNDLE_FILENAME = "scenario_review_bundle_v1.json";
 const DEFAULT_USER_CONFIGURATION_VALIDATE_TEXT = `{
@@ -3005,6 +3009,14 @@ export const DataPanel = memo(function DataPanel({
                                 <em>{row.observedLabel}</em>
                                 {row.issueLabel.length > 0 ? (
                                   <em>{row.issueLabel}</em>
+                                ) : null}
+                                {row.artifactHref !== null ? (
+                                  <a
+                                    href={row.artifactHref}
+                                    title={row.artifactTitle}
+                                  >
+                                    {row.artifactLabel}
+                                  </a>
                                 ) : null}
                               </div>
                             )
@@ -11420,6 +11432,9 @@ export interface DataPanelExportBenchmarkGateRow {
   observedLabel: string;
   issueLabel: string;
   hashLabel: string;
+  artifactLabel: string;
+  artifactHref: string | null;
+  artifactTitle: string;
 }
 
 export interface DataPanelExportPackageAuditIndexDisplay {
@@ -12518,12 +12533,13 @@ function buildDataPanelExportBenchmarkGateDisplay(
       binding?.binding_hash ?? gateCheck?.check_hash ?? ""
     )}`,
     evidenceLabels,
-    rows: buildAcceptanceBenchmarkGateRows(binding, gateCheck),
+    rows: buildAcceptanceBenchmarkGateRows(report.package_id, binding, gateCheck),
     warningLabels: Array.from(new Set(warningLabels))
   };
 }
 
 function buildAcceptanceBenchmarkGateRows(
+  packageId: string,
   binding:
     | NonNullable<RuntimeExportPackageAuditIndexV1["benchmark_acceptance_binding_v1"]>
     | undefined,
@@ -12542,24 +12558,26 @@ function buildAcceptanceBenchmarkGateRows(
         expectedLabel: "expected PASS for a standard benchmark package",
         observedLabel: gateCheck.summary,
         issueLabel: gateCheck.issue_labels.join(", "),
-        hashLabel: shortRuntimeHash(gateCheck.check_hash)
+        hashLabel: shortRuntimeHash(gateCheck.check_hash),
+        ...acceptanceBenchmarkArtifactLink(packageId, EXPORT_PACKAGE_AUDIT_INDEX_FILENAME)
       }
     ];
   }
   return [
     ...binding.expected_range_results.map((result) =>
-      buildAcceptanceBenchmarkResultRow("expected range", result)
+      buildAcceptanceBenchmarkResultRow(packageId, "expected range", result)
     ),
     ...binding.fidelity_results.map((result) =>
-      buildAcceptanceBenchmarkResultRow("fidelity", result)
+      buildAcceptanceBenchmarkResultRow(packageId, "fidelity", result)
     ),
     ...binding.runtime_status_results.map((result) =>
-      buildAcceptanceBenchmarkResultRow("runtime status", result)
+      buildAcceptanceBenchmarkResultRow(packageId, "runtime status", result)
     )
   ];
 }
 
 function buildAcceptanceBenchmarkResultRow(
+  packageId: string,
   groupLabel: string,
   result: {
     metric?: string;
@@ -12578,6 +12596,7 @@ function buildAcceptanceBenchmarkResultRow(
     result_hash: string;
   }
 ): DataPanelExportBenchmarkGateRow {
+  const artifactFilename = acceptanceBenchmarkArtifactFilename(groupLabel, result);
   return {
     tone: acceptanceBenchmarkGateTone(result.status),
     groupLabel,
@@ -12586,7 +12605,54 @@ function buildAcceptanceBenchmarkResultRow(
     expectedLabel: acceptanceBenchmarkExpectedLabel(result),
     observedLabel: acceptanceBenchmarkObservedLabel(result),
     issueLabel: result.issue_labels.join(", "),
-    hashLabel: shortRuntimeHash(result.result_hash)
+    hashLabel: shortRuntimeHash(result.result_hash),
+    ...acceptanceBenchmarkArtifactLink(packageId, artifactFilename)
+  };
+}
+
+function acceptanceBenchmarkArtifactFilename(
+  groupLabel: string,
+  result: {
+    metric?: string;
+    check_id?: string;
+    source?: string;
+  }
+): string {
+  const text = [
+    groupLabel,
+    result.metric ?? "",
+    result.check_id ?? "",
+    result.source ?? ""
+  ]
+    .join(" ")
+    .toLowerCase();
+  if (text.includes("network_kpi") || text.includes("kpi")) {
+    return NETWORK_KPI_BENCHMARK_VALIDATION_FILENAME;
+  }
+  if (text.includes("route") || text.includes("trust")) {
+    return ROUTE_DETAIL_INDEX_FILENAME;
+  }
+  if (text.includes("fidelity")) {
+    return CONFIG_SNAPSHOT_FILENAME;
+  }
+  if (text.includes("scenario")) {
+    return SCENARIO_REVIEW_BUNDLE_FILENAME;
+  }
+  return EXPORT_PACKAGE_AUDIT_INDEX_FILENAME;
+}
+
+function acceptanceBenchmarkArtifactLink(
+  packageId: string,
+  filename: string
+): Pick<
+  DataPanelExportBenchmarkGateRow,
+  "artifactLabel" | "artifactHref" | "artifactTitle"
+> {
+  return {
+    artifactLabel: filename,
+    artifactHref:
+      packageId.length > 0 ? runtimeExportPackageFileHref(packageId, filename) : null,
+    artifactTitle: `${filename} contains the backend-owned evidence for this benchmark row.`
   };
 }
 

@@ -4213,6 +4213,14 @@ describe("buildDataPanelExportCatalogDisplay", () => {
               actual: "PASS",
               issue_labels: [],
               result_hash: "sha256:runtime"
+            },
+            {
+              check_id: "runtime_status.network_kpi",
+              status: "PASS",
+              expected: "PASS",
+              actual: "PASS",
+              issue_labels: [],
+              result_hash: "sha256:kpi"
             }
           ],
           issue_labels: [],
@@ -4235,7 +4243,7 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         "identity 6",
         "range 1 pass / 0 warn / 0 fail",
         "fidelity 1 pass / 0 warn / 0 fail",
-        "runtime 1 pass / 0 warn / 0 fail",
+        "runtime 2 pass / 0 warn / 0 fail",
         "binding binding",
         "check benchmark-ch"
       ],
@@ -4248,7 +4256,10 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           expectedLabel: "expected 1-100000 events",
           observedLabel: "observed 4096 events",
           issueLabel: "",
-          hashLabel: "range"
+          hashLabel: "range",
+          artifactLabel: "export_package_audit_index_v1.json",
+          artifactHref:
+            "/runtime/export/packages/pkg-standard/files/export_package_audit_index_v1.json"
         },
         {
           tone: "match",
@@ -4258,7 +4269,10 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           expectedLabel: "expected PER_SATELLITE",
           observedLabel: "observed PER_SATELLITE",
           issueLabel: "",
-          hashLabel: "fidelity"
+          hashLabel: "fidelity",
+          artifactLabel: "config_snapshot.json",
+          artifactHref:
+            "/runtime/export/packages/pkg-standard/files/config_snapshot.json"
         },
         {
           tone: "match",
@@ -4268,7 +4282,23 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           expectedLabel: "expected PASS",
           observedLabel: "observed PASS",
           issueLabel: "",
-          hashLabel: "runtime"
+          hashLabel: "runtime",
+          artifactLabel: "route_detail_index_v1.json",
+          artifactHref:
+            "/runtime/export/packages/pkg-standard/files/route_detail_index_v1.json"
+        },
+        {
+          tone: "match",
+          groupLabel: "runtime status",
+          itemLabel: "runtime_status.network_kpi",
+          statusLabel: "PASS",
+          expectedLabel: "expected PASS",
+          observedLabel: "observed PASS",
+          issueLabel: "",
+          hashLabel: "kpi",
+          artifactLabel: "network_kpi_benchmark_validation_v1.json",
+          artifactHref:
+            "/runtime/export/packages/pkg-standard/files/network_kpi_benchmark_validation_v1.json"
         }
       ],
       warningLabels: []

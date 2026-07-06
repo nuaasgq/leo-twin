@@ -3282,6 +3282,25 @@ button.data-panel-route-row {
   white-space: nowrap;
 }
 
+.data-panel-export-benchmark-gate-rows a {
+  justify-self: start;
+  min-width: 0;
+  border: 1px solid #2a4658;
+  border-radius: 5px;
+  padding: 4px 6px;
+  background: #101922;
+  color: var(--accent-cyan);
+  font-size: 10px;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+  text-decoration: none;
+}
+
+.data-panel-export-benchmark-gate-rows a:hover {
+  border-color: #4b7490;
+  background: #0c1a24;
+}
+
 .data-panel-export-route-compare-rows {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));

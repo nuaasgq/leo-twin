@@ -792,7 +792,11 @@ Tasks:
     with per-check detail rows for expected-range, fidelity, and runtime-status
     results, showing status, expected value or range, observed value, issue
     label, and result hash as read-only projections of backend package
-    evidence.
+    evidence. T348 adds direct evidence links to those benchmark rows, mapping
+    expected-range checks to the audit index, fidelity checks to
+    `config_snapshot.json`, route/trust checks to `route_detail_index_v1.json`,
+    KPI checks to `network_kpi_benchmark_validation_v1.json`, and scenario
+    checks to `scenario_review_bundle_v1.json`.
 
 ### WS9. Delivery and Operations v2
 

@@ -565,7 +565,12 @@ per-check rows for each expected-range, fidelity, and runtime-status result,
 including group, item name, status, expected value/range, observed value,
 issue labels, and result hash. These rows are display projections of the
 backend binding; they do not recompute KPI values or re-evaluate benchmark
-rules in the browser.
+rules in the browser. Each row also links to the package artifact that carries
+the closest backend evidence: expected-range rows link to
+`export_package_audit_index_v1.json`, fidelity rows link to
+`config_snapshot.json`, route/trust rows link to `route_detail_index_v1.json`,
+KPI rows link to `network_kpi_benchmark_validation_v1.json`, and scenario rows
+link to `scenario_review_bundle_v1.json`.
 
 For operator handoff, the demo backend also exposes the generated Markdown
 handoff report:
