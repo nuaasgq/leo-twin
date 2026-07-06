@@ -8,6 +8,7 @@ from typing import Any
 from leo_twin.schema.service_lifecycle_trace_contract import (
     SERVICE_LIFECYCLE_TRACE_CONTRACT_V2_ID,
 )
+from leo_twin.services.runtime_reproducibility import stable_hash_payload
 
 
 RuntimeObservabilitySummary = dict[str, object]
@@ -2417,7 +2418,7 @@ def _route_explanation_item(
     capacity = _optional_float(route.get("capacity"))
     demand = _optional_float(route.get("demand_capacity"))
     available = bool(route.get("available"))
-    return {
+    item: dict[str, object] = {
         "route_id": _str(route.get("route_id")),
         "flow_id": _str(route.get("flow_id")),
         "user_id": user_id,
@@ -2452,6 +2453,8 @@ def _route_explanation_item(
             next_hop=next_hop,
         ),
     }
+    item["detail_hash"] = stable_hash_payload(item)
+    return item
 
 
 def _detail_item_matches_query(item: Mapping[str, Any], query: str) -> bool:

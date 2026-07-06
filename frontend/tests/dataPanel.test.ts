@@ -2974,6 +2974,8 @@ describe("buildDataPanelExportCompareDisplay", () => {
     };
     const changedLiveRoute = {
       ...packageRoute,
+      detail_hash:
+        "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
       latency_s: 0.25,
       bottleneck_component: "CAPACITY",
       bottleneck_reason: "ROUTE_CAPACITY_PRESSURE",
@@ -2995,7 +2997,8 @@ describe("buildDataPanelExportCompareDisplay", () => {
       comparison_status: "DIFFERENT",
       package_route_detail_hash:
         "sha256:abababababababababababababababababababababababababababababababab",
-      live_route_detail_hash: "",
+      live_route_detail_hash:
+        "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
       matched_field_count: 10,
       different_field_count: 2,
       compared_fields: [

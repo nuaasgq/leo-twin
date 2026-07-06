@@ -147,6 +147,7 @@ def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> No
         "network_service_route_count": 1,
         "items": (
             {
+                "detail_hash": "sha256:1d608b1ae33256db4e3dd6121cc878e823d7b4eb50c78fec7a328ddb2828c20b",
                 "route_id": "route-b",
                 "flow_id": "flow-b",
                 "user_id": "user-1",
@@ -171,6 +172,7 @@ def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> No
                 "explanation_label": "route is unavailable in the current snapshot",
             },
             {
+                "detail_hash": "sha256:3e859162f792ca841fcccac4fea9498fe548d69129cd24362116048c958eb535",
                 "route_id": "route-a",
                 "flow_id": "flow-a",
                 "user_id": "user-0",
@@ -553,6 +555,12 @@ def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> No
     assert route_detail_item is not None
     assert route_detail_item["route_id"] == "route-a"
     assert route_detail_item["business_type"] == "COMPUTE_SERVICE"
+    assert route_detail_item["detail_hash"].startswith("sha256:")
+    assert route_detail_item == build_runtime_route_detail_item(
+        snapshot,
+        "route-a",
+        service_latency_history=service_history,
+    )
     assert build_runtime_route_detail_item(snapshot, "missing-route") is None
     service_detail_item = build_runtime_service_detail_item(service_history, "task-0")
     assert service_detail_item is not None
@@ -580,6 +588,7 @@ def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> No
     assert route_page["has_more"] is False
     assert route_page["item_count"] == 1
     assert route_page["items"][0]["route_id"] == "route-a"
+    assert route_page["items"][0]["detail_hash"] == route_detail_item["detail_hash"]
     service_page = build_runtime_service_detail_page(
         service_history,
         cursor=0,

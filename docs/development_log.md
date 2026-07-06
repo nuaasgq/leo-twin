@@ -14091,3 +14091,57 @@ change.
 - Recommended follow-up:
   - Add backend live route detail hashing so saved package-vs-live review
     reports can include both package and live detail hashes.
+
+## 2026-07-06 - Live Route Detail Hash v1
+
+- Branch: `feature/T293-live-route-detail-hash-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a backend-generated stable `detail_hash` to live route detail
+  rows and use it when dashboard-saved package-vs-live route comparison review
+  reports are created. The hash is computed from the backend-owned route
+  explanation item payload and appears in both live route detail pages and exact
+  route detail responses. The frontend route comparison save record now fills
+  `live_route_detail_hash` from that backend field. No Event Kernel behavior,
+  route recomputation, network model logic, or packet-level simulation behavior
+  changed.
+- Changed files/modules:
+  - `src/leo_twin/services/runtime_observability.py`
+  - `tests/unit/test_runtime_observability.py`
+  - `tests/integration/test_live_runtime_streaming.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/dashboard_model_trust_evidence_workspace_v1.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_runtime_observability.py tests/integration/test_live_runtime_streaming.py -q`
+    - Result: passed, 20 tests.
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed, 1 test file and 169 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with bundled Codex Node/Pnpm runtime.
+  - `python -m pytest tests/unit/test_runtime_observability.py tests/integration/test_live_runtime_streaming.py tests/unit/test_user_guide_v2_docs.py -q`
+    - Result: passed, 22 tests.
+  - `pnpm --dir frontend test api.test.ts dataPanel.test.ts`
+    - Result: passed, 2 test files and 194 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing large DataPanel chunk
+      warning after minification; no functional build error.
+  - `git diff --check`
+    - Result: passed for task files.
+- Problems encountered:
+  - The existing runtime observability unit test compares the complete route
+    explanation summary payload, so the expected rows were updated to include
+    deterministic `detail_hash` values.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The hash identifies the route detail payload, not a packet trace or route
+    recomputation proof.
+  - Historical exported archives remain unchanged; only newly served live
+    route details expose the hash.
+- Recommended follow-up:
+  - Surface the saved review report artifact in the dashboard manifest/artifact
+    inspector after a save completes.

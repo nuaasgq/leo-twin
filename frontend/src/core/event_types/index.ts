@@ -1904,6 +1904,7 @@ export interface RuntimeRouteExplanationSummaryV1 {
 }
 
 export interface RuntimeRouteExplanationItemV1 {
+  detail_hash?: string;
   route_id: string;
   flow_id: string;
   user_id: string;

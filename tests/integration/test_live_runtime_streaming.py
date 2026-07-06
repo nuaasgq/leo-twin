@@ -339,6 +339,10 @@ def test_runtime_detail_pages_return_deterministic_windows(tmp_path: Path) -> No
         assert route_detail["kind"] == "route"
         assert route_detail["entity_id"] == first_route_id
         assert route_detail["summary"]["route_id"] == first_route_id
+        assert route_detail["summary"]["detail_hash"].startswith("sha256:")
+        assert route_detail["summary"]["detail_hash"] == route_first["summary"][
+            "items"
+        ][0]["detail_hash"]
 
     assert service_first["type"] == "RUNTIME_DETAIL_PAGE"
     assert service_first["kind"] == "services"

@@ -9939,7 +9939,7 @@ export function buildDataPanelExportRouteComparisonReviewRecord(
     route_id: comparison.routeId,
     comparison_status: differentFields.length === 0 ? "MATCH" : "DIFFERENT",
     package_route_detail_hash: packageItem.item_hash,
-    live_route_detail_hash: "",
+    live_route_detail_hash: liveDetail.detail_hash ?? "",
     matched_field_count: comparedFields.length - differentFields.length,
     different_field_count: differentFields.length,
     compared_fields: comparedFields,

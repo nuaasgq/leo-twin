@@ -265,6 +265,9 @@ Tasks:
     comparison card. The action converts the visible comparison rows into the
     backend report record schema and posts them to the T291 save endpoint,
     preserving backend ownership of the artifact.
+  - Status: T293 adds backend-generated `detail_hash` to live route detail
+    rows. Dashboard-saved route comparison review reports now include both the
+    package route detail hash and live route detail hash.
 
 ### WS4. Compute Network Model v2
 
