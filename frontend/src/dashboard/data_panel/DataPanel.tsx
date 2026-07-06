@@ -43,7 +43,7 @@ import {
   RuntimeExportRestoreCommandResultV1,
   RuntimeExportRestorePreflightV1,
   RuntimeComputeTaskTimelineSummaryV1,
-  RuntimeExportUserServiceRequestSummaryArtifactV2,
+  RuntimeExportUserServiceRequestPageV1,
   RuntimeExportUserServiceRequestEvidenceV2,
   RuntimeKpiSampleV1,
   RuntimeKpiTimeSeriesV1,
@@ -254,7 +254,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportDiagnosticsBundle,
   runtimeExportServiceLifecycleTrace,
   runtimeExportServiceTracePage,
-  runtimeExportUserServiceRequestArtifact,
+  runtimeExportUserServiceRequestPage,
   runtimeExportRouteDetailIndex,
   runtimeExportRouteDetailPage,
   runtimeExportRouteDetailItem,
@@ -274,8 +274,8 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportDiagnosticsBundleError,
   runtimeExportServiceLifecycleTraceLoading,
   runtimeExportServiceLifecycleTraceError,
-  runtimeExportUserServiceRequestArtifactLoading,
-  runtimeExportUserServiceRequestArtifactError,
+  runtimeExportUserServiceRequestPageLoading,
+  runtimeExportUserServiceRequestPageError,
   runtimeExportRouteDetailIndexLoading,
   runtimeExportRouteDetailIndexError,
   runtimeExportRouteDetailItemLoading,
@@ -312,6 +312,7 @@ export const DataPanel = memo(function DataPanel({
   onRuntimeExportCompareSelect,
   onRuntimeExportRouteDetailPageQueryChange,
   onRuntimeExportServiceTracePageQueryChange,
+  onRuntimeExportUserServiceRequestPageQueryChange,
   onRuntimeExportRouteDetailItemSelect,
   onRuntimeExportRouteComparisonReviewSave,
   onRuntimeExportScenarioReviewChecklistSave,
@@ -340,7 +341,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportDiagnosticsBundle?: RuntimeExportDiagnosticsBundleV1 | null;
   runtimeExportServiceLifecycleTrace?: RuntimeServiceLifecycleTraceV2 | null;
   runtimeExportServiceTracePage?: RuntimeExportServiceTracePageV1 | null;
-  runtimeExportUserServiceRequestArtifact?: RuntimeExportUserServiceRequestSummaryArtifactV2 | null;
+  runtimeExportUserServiceRequestPage?: RuntimeExportUserServiceRequestPageV1 | null;
   runtimeExportRouteDetailIndex?: RuntimeExportRouteDetailIndexV1 | null;
   runtimeExportRouteDetailPage?: RuntimeExportRouteDetailPageV1 | null;
   runtimeExportRouteDetailItem?: RuntimeExportRouteDetailItemV1 | null;
@@ -360,8 +361,8 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportDiagnosticsBundleError?: string | null;
   runtimeExportServiceLifecycleTraceLoading?: boolean;
   runtimeExportServiceLifecycleTraceError?: string | null;
-  runtimeExportUserServiceRequestArtifactLoading?: boolean;
-  runtimeExportUserServiceRequestArtifactError?: string | null;
+  runtimeExportUserServiceRequestPageLoading?: boolean;
+  runtimeExportUserServiceRequestPageError?: string | null;
   runtimeExportRouteDetailIndexLoading?: boolean;
   runtimeExportRouteDetailIndexError?: string | null;
   runtimeExportRouteDetailItemLoading?: boolean;
@@ -409,6 +410,9 @@ export const DataPanel = memo(function DataPanel({
   ) => void;
   onRuntimeExportServiceTracePageQueryChange?: (
     request: DataPanelExportServiceTracePageRequest
+  ) => void;
+  onRuntimeExportUserServiceRequestPageQueryChange?: (
+    request: DataPanelExportUserServiceRequestPageRequest
   ) => void;
   onRuntimeExportRouteDetailItemSelect?: (routeId: string | null) => void;
   onRuntimeExportRouteComparisonReviewSave?: (
@@ -460,6 +464,18 @@ export const DataPanel = memo(function DataPanel({
   const [exportServiceTraceFilter, setExportServiceTraceFilter] = useState("");
   const [exportUserServiceRequestFilter, setExportUserServiceRequestFilter] =
     useState("");
+  const [
+    exportUserServiceRequestClassFilter,
+    setExportUserServiceRequestClassFilter
+  ] = useState("ALL");
+  const [
+    exportUserServiceRequestTerminalFilter,
+    setExportUserServiceRequestTerminalFilter
+  ] = useState("ALL");
+  const [
+    exportUserServiceRequestWaitingFilter,
+    setExportUserServiceRequestWaitingFilter
+  ] = useState("ALL");
   const [exportServiceTraceTerminalFilter, setExportServiceTraceTerminalFilter] =
     useState<DataPanelServiceTraceTerminalFilter>("ALL");
   const [exportServiceTraceComputeNodeFilter, setExportServiceTraceComputeNodeFilter] =
@@ -535,6 +551,9 @@ export const DataPanel = memo(function DataPanel({
     setExportScenarioReviewChecklistDraft({});
     setExportServiceTraceFilter("");
     setExportUserServiceRequestFilter("");
+    setExportUserServiceRequestClassFilter("ALL");
+    setExportUserServiceRequestTerminalFilter("ALL");
+    setExportUserServiceRequestWaitingFilter("ALL");
     setExportServiceTraceTerminalFilter("ALL");
     setExportServiceTraceComputeNodeFilter("");
     setExportServiceTraceStageFilter("ALL");
@@ -699,11 +718,16 @@ export const DataPanel = memo(function DataPanel({
     );
   const exportUserServiceRequestStatus =
     buildDataPanelExportUserServiceRequestStatus(
-      runtimeExportUserServiceRequestArtifact,
+      runtimeExportUserServiceRequestPage,
       runtimeExportComparePackageId,
-      runtimeExportUserServiceRequestArtifactLoading,
-      runtimeExportUserServiceRequestArtifactError,
-      exportUserServiceRequestFilter
+      runtimeExportUserServiceRequestPageLoading,
+      runtimeExportUserServiceRequestPageError,
+      {
+        query: exportUserServiceRequestFilter,
+        serviceClass: exportUserServiceRequestClassFilter,
+        terminalState: exportUserServiceRequestTerminalFilter,
+        networkWaiting: exportUserServiceRequestWaitingFilter
+      }
     );
   const exportRouteDetailIndexDisplay =
     buildDataPanelExportRouteDetailPageDisplay(runtimeExportRouteDetailPage) ??
@@ -765,6 +789,24 @@ export const DataPanel = memo(function DataPanel({
       return;
     }
     setExportServiceTracePageCursor(cursor);
+  };
+  const requestRuntimeExportUserServiceRequestPage = (
+    cursor: number,
+    filterOverrides: DataPanelUserServiceRequestFilter = {}
+  ) => {
+    onRuntimeExportUserServiceRequestPageQueryChange?.({
+      cursor,
+      limit: exportUserServiceRequestStatus?.pageLimit ?? 5,
+      filters: {
+        query: filterOverrides.query ?? exportUserServiceRequestFilter,
+        serviceClass:
+          filterOverrides.serviceClass ?? exportUserServiceRequestClassFilter,
+        terminalState:
+          filterOverrides.terminalState ?? exportUserServiceRequestTerminalFilter,
+        networkWaiting:
+          filterOverrides.networkWaiting ?? exportUserServiceRequestWaitingFilter
+      }
+    });
   };
   const exportManifestInspectorDisplay = buildDataPanelExportManifestInspectorDisplay(
     runtimeExportManifest,
@@ -1920,8 +1962,104 @@ export const DataPanel = memo(function DataPanel({
                   label="User service filter"
                   value={exportUserServiceRequestFilter}
                   placeholder="user / service / sat / compute"
-                  onChange={setExportUserServiceRequestFilter}
+                  onChange={(query) => {
+                    setExportUserServiceRequestFilter(query);
+                    requestRuntimeExportUserServiceRequestPage(0, { query });
+                  }}
                 />
+                <label
+                  className="data-panel-export-route-index-search"
+                  htmlFor="data-panel-export-user-service-class"
+                >
+                  <span>service class</span>
+                  <select
+                    id="data-panel-export-user-service-class"
+                    value={exportUserServiceRequestClassFilter}
+                    onChange={(event) => {
+                      const serviceClass = event.currentTarget.value;
+                      setExportUserServiceRequestClassFilter(serviceClass);
+                      requestRuntimeExportUserServiceRequestPage(0, {
+                        serviceClass
+                      });
+                    }}
+                  >
+                    <option value="ALL">ALL</option>
+                    <option value="DATA_TRANSFER">DATA_TRANSFER</option>
+                    <option value="TELEMETRY">TELEMETRY</option>
+                    <option value="BULK_DOWNLINK">BULK_DOWNLINK</option>
+                    <option value="COMPUTE_SERVICE">COMPUTE_SERVICE</option>
+                  </select>
+                </label>
+                <label
+                  className="data-panel-export-route-index-search"
+                  htmlFor="data-panel-export-user-terminal-state"
+                >
+                  <span>terminal state</span>
+                  <select
+                    id="data-panel-export-user-terminal-state"
+                    value={exportUserServiceRequestTerminalFilter}
+                    onChange={(event) => {
+                      const terminalState = event.currentTarget.value;
+                      setExportUserServiceRequestTerminalFilter(terminalState);
+                      requestRuntimeExportUserServiceRequestPage(0, {
+                        terminalState
+                      });
+                    }}
+                  >
+                    <option value="ALL">ALL</option>
+                    <option value="ACTIVE">ACTIVE</option>
+                    <option value="RUNNING">RUNNING</option>
+                    <option value="WAITING_NETWORK">WAITING_NETWORK</option>
+                    <option value="COMPLETED">COMPLETED</option>
+                    <option value="FAILED">FAILED</option>
+                    <option value="IDLE">IDLE</option>
+                  </select>
+                </label>
+                <label
+                  className="data-panel-export-route-index-search"
+                  htmlFor="data-panel-export-user-network-waiting"
+                >
+                  <span>network waiting</span>
+                  <select
+                    id="data-panel-export-user-network-waiting"
+                    value={exportUserServiceRequestWaitingFilter}
+                    onChange={(event) => {
+                      const networkWaiting = event.currentTarget.value;
+                      setExportUserServiceRequestWaitingFilter(networkWaiting);
+                      requestRuntimeExportUserServiceRequestPage(0, {
+                        networkWaiting
+                      });
+                    }}
+                  >
+                    <option value="ALL">ALL</option>
+                    <option value="WAITING">WAITING</option>
+                    <option value="READY">READY</option>
+                  </select>
+                </label>
+                <div className="data-panel-export-route-index-pager">
+                  <button
+                    type="button"
+                    disabled={!exportUserServiceRequestStatus.canPreviousPage}
+                    onClick={() =>
+                      requestRuntimeExportUserServiceRequestPage(
+                        exportUserServiceRequestStatus.previousCursor
+                      )
+                    }
+                  >
+                    Previous
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!exportUserServiceRequestStatus.canNextPage}
+                    onClick={() =>
+                      requestRuntimeExportUserServiceRequestPage(
+                        exportUserServiceRequestStatus.nextCursor
+                      )
+                    }
+                  >
+                    Next
+                  </button>
+                </div>
                 <span>{exportUserServiceRequestStatus.filterLabel}</span>
               </div>
               <UserBusinessRequestTable
@@ -11806,6 +11944,12 @@ export interface DataPanelExportUserServiceRequestStatus {
   artifactHref: string | null;
   rows: readonly UserBusinessRequestRow[];
   filterLabel: string;
+  pageCursor: number;
+  pageLimit: number;
+  previousCursor: number;
+  nextCursor: number;
+  canPreviousPage: boolean;
+  canNextPage: boolean;
 }
 
 export interface DataPanelExportServiceLifecycleTraceStatusOptions
@@ -11883,6 +12027,12 @@ export interface DataPanelExportServiceTracePageRequest {
   cursor: number;
   limit?: number;
   filters?: DataPanelServiceTraceFilter;
+}
+
+export interface DataPanelExportUserServiceRequestPageRequest {
+  cursor: number;
+  limit?: number;
+  filters?: DataPanelUserServiceRequestFilter;
 }
 
 export interface DataPanelExportRouteDetailItemDisplay {
@@ -12401,95 +12551,209 @@ export function buildDataPanelExportServiceLifecycleTraceStatus(
 }
 
 export function buildDataPanelExportUserServiceRequestStatus(
-  artifact: RuntimeExportUserServiceRequestSummaryArtifactV2 | null | undefined,
+  page: RuntimeExportUserServiceRequestPageV1 | null | undefined,
   selectedPackageId: string | null | undefined,
   loading = false,
   error: string | null | undefined = null,
-  filter = "",
-  rowLimit = 80
+  _filter: DataPanelUserServiceRequestFilter = {}
 ): DataPanelExportUserServiceRequestStatus | null {
+  const emptyPage = dataPanelExportUserServiceRequestPageFields(0, 5, 0);
   if (loading) {
     return {
       tone: "pending",
-      statusLabel: "loading user services artifact",
+      statusLabel: "loading user service requests",
       summaryLabel: selectedPackageId ?? "waiting for package selection",
-      metaLabels: ["read-only artifact", "no service recompute"],
+      metaLabels: ["server-side artifact page", "no service recompute"],
       artifactHref: null,
       rows: [],
-      filterLabel: "all user services / 0 shown"
+      filterLabel: "all user services / backend artifact page 0 / 0",
+      ...emptyPage
     };
   }
   if (error !== null && error !== undefined) {
     return {
       tone: "error",
-      statusLabel: "user services artifact load failed",
+      statusLabel: "user service request page load failed",
       summaryLabel: selectedPackageId ?? "unknown package",
       metaLabels: [error],
       artifactHref: null,
       rows: [],
-      filterLabel: "all user services / 0 shown"
+      filterLabel: "all user services / backend artifact page 0 / 0",
+      ...emptyPage
     };
   }
-  if (artifact === null || artifact === undefined) {
+  if (page === null || page === undefined) {
     return null;
   }
-  const summary = artifact.summary;
-  const allRows = buildBackendUserBusinessRequestRows(
-    summary,
-    summary.items.length
-  );
-  const filteredRows = filterUserBusinessRequestRows(allRows, filter);
-  const displayLimit = Math.max(1, Math.floor(rowLimit));
-  const rows = filteredRows.items.slice(0, displayLimit);
-  const hiddenDisplayRows = Math.max(0, filteredRows.items.length - rows.length);
-  const evidence = artifact.evidence;
-  const policy = artifact.user_service_request_export_policy ?? {};
+  const summary = runtimeExportUserServiceRequestPageToSummary(page);
+  const rows = buildBackendUserBusinessRequestRows(summary, page.items.length).items;
+  const policy = page.user_service_request_export_policy ?? {};
   const policyLabel =
     typeof policy.policy === "string"
       ? policy.policy
       : "EXPORT_USER_SERVICE_REQUEST_WINDOW";
   const tone =
-    summary.packet_level_simulation || summary.frontend_inference_required
+    page.packet_level_simulation || page.frontend_inference_required
       ? "different"
       : "match";
-  const packageId = selectedPackageId ?? artifact.package_id;
-  const filterLabel = filter.trim()
-    ? `filter "${filter.trim()}" / ${formatCount(rows.length)} shown / ${formatCount(
-        filteredRows.items.length
-      )} matched${hiddenDisplayRows > 0 ? ` / hidden display ${formatCount(hiddenDisplayRows)}` : ""}`
-    : `all user services / ${formatCount(rows.length)} shown / ${formatCount(
-        filteredRows.items.length
-      )} artifact rows${
-        hiddenDisplayRows > 0 ? ` / hidden display ${formatCount(hiddenDisplayRows)}` : ""
-      }`;
+  const packageId = selectedPackageId ?? page.package_id;
+  const pageFields = dataPanelExportUserServiceRequestBackendPageFields(page);
   return {
     tone,
     statusLabel:
-      summary.hidden_request_count > 0
+      page.hidden_request_count > 0
         ? "user services windowed"
-        : "user services exported",
-    summaryLabel: `${artifact.package_id} / requests ${formatCount(
-      summary.request_count
-    )} / exported ${formatCount(summary.items.length)} / active ${formatCount(
-      summary.active_request_count
+        : "user services paged",
+    summaryLabel: `${page.package_id} / requests ${formatCount(
+      page.request_count
+    )} / page ${formatCount(page.item_count)} / active ${formatCount(
+      page.active_request_count
     )}`,
     metaLabels: [
-      `model ${summary.request_model}`,
-      `compute ${formatCount(summary.compute_request_count)}`,
-      `network waiting ${formatCount(summary.network_waiting_request_count)}`,
-      `hidden ${formatCount(summary.hidden_request_count)}`,
-      artifact.artifact_window_only ? "artifact window only" : "full artifact",
+      `model ${page.request_model}`,
+      `compute ${formatCount(page.compute_request_count)}`,
+      `network waiting ${formatCount(page.network_waiting_request_count)}`,
+      `hidden ${formatCount(page.hidden_request_count)}`,
+      page.artifact_window_only ? "artifact window only" : "full artifact",
       `policy ${policyLabel}`,
-      `artifact ${shortRuntimeHash(artifact.artifact_hash)}`,
-      evidence ? `summary ${shortRuntimeHash(evidence.summary_hash)}` : ""
+      `artifact ${shortRuntimeHash(page.artifact_hash)}`,
+      `summary ${shortRuntimeHash(page.summary_hash)}`,
+      `page ${shortRuntimeHash(page.page_hash)}`
     ].filter((label) => label.length > 0),
     artifactHref: runtimeExportPackageFileHref(
       packageId,
       "user_service_request_summary_v2.json"
     ),
     rows,
-    filterLabel
+    filterLabel: dataPanelExportUserServiceRequestBackendFilterLabel(page),
+    ...pageFields
   };
+}
+
+function runtimeExportUserServiceRequestPageToSummary(
+  page: RuntimeExportUserServiceRequestPageV1
+): RuntimeUserServiceRequestSummaryV2 {
+  return {
+    version: "v2",
+    source: page.source,
+    summary_scope: page.summary_scope,
+    cursor: page.cursor,
+    limit: page.limit,
+    next_cursor: page.next_cursor,
+    has_more: page.has_more,
+    user_count: page.request_count,
+    unfiltered_user_count: page.unfiltered_request_count,
+    item_count: page.item_count,
+    active_user_count: page.active_request_count,
+    compute_service_user_count: page.compute_request_count,
+    waiting_user_count: page.network_waiting_request_count,
+    window_user_count: page.item_count,
+    window_active_user_count: page.items.filter((item) => item.request_active).length,
+    window_compute_service_user_count: page.items.filter(
+      (item) => item.compute_request_active
+    ).length,
+    window_waiting_user_count: page.items.filter((item) => item.network_waiting)
+      .length,
+    hidden_user_count: page.hidden_request_count,
+    filter_query: page.filters.query,
+    filter_applied: page.filter_applied,
+    request_model: page.request_model,
+    route_model: page.route_model,
+    compute_model: page.compute_model,
+    packet_level_simulation: page.packet_level_simulation,
+    frontend_inference_required: page.frontend_inference_required,
+    request_count: page.request_count,
+    active_request_count: page.active_request_count,
+    communication_request_count: page.communication_request_count,
+    compute_request_count: page.compute_request_count,
+    network_waiting_request_count: page.network_waiting_request_count,
+    completed_request_count: Math.max(0, page.request_count - page.active_request_count),
+    hidden_request_count: page.hidden_request_count,
+    window_request_count: page.item_count,
+    window_active_request_count: page.items.filter((item) => item.request_active)
+      .length,
+    window_compute_request_count: page.items.filter(
+      (item) => item.compute_request_active
+    ).length,
+    window_network_waiting_request_count: page.items.filter(
+      (item) => item.network_waiting
+    ).length,
+    unfiltered_request_count: page.unfiltered_request_count,
+    items: page.items
+  };
+}
+
+function dataPanelExportUserServiceRequestBackendPageFields(
+  page: RuntimeExportUserServiceRequestPageV1
+): Pick<
+  DataPanelExportUserServiceRequestStatus,
+  | "pageCursor"
+  | "pageLimit"
+  | "previousCursor"
+  | "nextCursor"
+  | "canPreviousPage"
+  | "canNextPage"
+> {
+  const pageLimit = Math.max(1, Math.floor(page.limit));
+  const pageCursor = Math.max(0, Math.floor(page.cursor));
+  return {
+    pageCursor,
+    pageLimit,
+    previousCursor: Math.max(0, pageCursor - pageLimit),
+    nextCursor: Math.max(page.next_cursor, pageCursor),
+    canPreviousPage: pageCursor > 0,
+    canNextPage: page.has_more
+  };
+}
+
+function dataPanelExportUserServiceRequestPageFields(
+  cursor: number | null | undefined,
+  limit: number | null | undefined,
+  totalCount: number
+): Pick<
+  DataPanelExportUserServiceRequestStatus,
+  | "pageCursor"
+  | "pageLimit"
+  | "previousCursor"
+  | "nextCursor"
+  | "canPreviousPage"
+  | "canNextPage"
+> {
+  const pageLimit = Math.max(1, Math.floor(limit ?? 5));
+  const boundedTotal = Math.max(0, Math.floor(totalCount));
+  const maxCursor =
+    boundedTotal === 0 ? 0 : Math.floor((boundedTotal - 1) / pageLimit) * pageLimit;
+  const pageCursor = Math.min(Math.max(0, Math.floor(cursor ?? 0)), maxCursor);
+  return {
+    pageCursor,
+    pageLimit,
+    previousCursor: Math.max(0, pageCursor - pageLimit),
+    nextCursor: Math.min(pageCursor + pageLimit, maxCursor),
+    canPreviousPage: pageCursor > 0,
+    canNextPage: pageCursor + pageLimit < boundedTotal
+  };
+}
+
+function dataPanelExportUserServiceRequestBackendFilterLabel(
+  page: RuntimeExportUserServiceRequestPageV1
+): string {
+  const filters = [
+    page.filters.query ? `query ${page.filters.query}` : "",
+    page.filters.service_class !== "ALL"
+      ? `class ${page.filters.service_class}`
+      : "",
+    page.filters.terminal_state !== "ALL"
+      ? `state ${page.filters.terminal_state}`
+      : "",
+    page.filters.network_waiting !== "ALL"
+      ? `network ${page.filters.network_waiting}`
+      : ""
+  ].filter((item) => item.length > 0);
+  const pageStart = page.request_count === 0 ? 0 : page.cursor + 1;
+  const pageEnd = Math.min(page.cursor + page.item_count, page.request_count);
+  return `${filters.length > 0 ? filters.join(" / ") : "all user services"} / backend artifact page ${formatCount(
+    pageStart
+  )}-${formatCount(pageEnd)} / ${formatCount(page.request_count)}`;
 }
 
 export function runtimeExportServiceTracePageToLifecycleTrace(
@@ -14223,6 +14487,13 @@ export interface DataPanelServiceTraceFilter {
   computeNodeId?: string;
   stageKind?: DataPanelServiceTraceStageFilter | string;
   terminalReason?: DataPanelServiceTraceTerminalReasonFilter | string;
+}
+
+export interface DataPanelUserServiceRequestFilter {
+  query?: string;
+  serviceClass?: string;
+  terminalState?: string;
+  networkWaiting?: string;
 }
 
 export interface DataPanelServiceLifecycleTraceStageRow {

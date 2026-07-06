@@ -225,6 +225,25 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                             )
                         )
                         return
+                    if artifact_kind == "user-service-requests":
+                        try:
+                            cursor, limit = _detail_query(query, default_limit=100)
+                        except ValueError as exc:
+                            self.send_error(400, str(exc))
+                            return
+                        filters = _user_service_request_filter_query(query)
+                        self._send_json(
+                            control_plane.runtime_export_package_user_service_requests(
+                                package_id,
+                                cursor=cursor,
+                                limit=limit,
+                                query=filters["query"],
+                                service_class=filters["service_class"],
+                                terminal_state=filters["terminal_state"],
+                                network_waiting=filters["network_waiting"],
+                            )
+                        )
+                        return
                     if artifact_kind == "routes":
                         try:
                             cursor, limit = _detail_query(query, default_limit=100)
@@ -829,6 +848,21 @@ def _service_trace_filter_query(query: dict[str, list[str]]) -> dict[str, str]:
     }
 
 
+def _user_service_request_filter_query(
+    query: dict[str, list[str]],
+) -> dict[str, str]:
+    return {
+        "query": _first_query_value(query, "query", "").strip(),
+        "service_class": _first_query_value(query, "service_class", "ALL").strip(),
+        "terminal_state": _first_query_value(query, "terminal_state", "ALL").strip(),
+        "network_waiting": _first_query_value(
+            query,
+            "network_waiting",
+            "ALL",
+        ).strip(),
+    }
+
+
 def _runtime_export_package_route(
     path: str,
 ) -> tuple[str, str, str | None] | None:
@@ -855,6 +889,8 @@ def _runtime_export_package_route(
         return parts[0], "archive", None
     if len(parts) == 2 and parts[1] == "service-traces":
         return parts[0], "service-traces", None
+    if len(parts) == 2 and parts[1] == "user-service-requests":
+        return parts[0], "user-service-requests", None
     if len(parts) == 2 and parts[1] == "routes":
         return parts[0], "routes", None
     if len(parts) == 3 and parts[1] == "routes":

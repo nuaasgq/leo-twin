@@ -20,6 +20,7 @@ import {
   loadRuntimeExportServiceLifecycleTrace,
   loadRuntimeExportServiceTracePage,
   loadRuntimeExportUserServiceRequestSummaryArtifact,
+  loadRuntimeExportUserServiceRequestPage,
   loadRuntimeComputeNodeDetail,
   loadRuntimeComputeNodeDetails,
   loadRuntimeNodeDetails,
@@ -51,6 +52,7 @@ import {
   runtimeExportPackageRouteDetailsHref,
   runtimeExportPackageRouteDetailHref,
   runtimeExportPackageServiceTracesHref,
+  runtimeExportPackageUserServiceRequestsHref,
   runtimeExportPackageReviewSummaryHref,
   runtimeExportRouteComparisonReviewReportHref,
   runtimeExportScenarioReviewChecklistHref,
@@ -144,6 +146,21 @@ describe("runtime API diagnostics", () => {
       )
     ).toBe(
       "/runtime/export/packages/pkg%201/service-traces?cursor=0&limit=5&query=route+run&terminal_state=RUNNING&compute_node_id=sat-00003&stage_kind=OUTPUT_NETWORK&terminal_reason=OUTPUT_NETWORK_PENDING"
+    );
+    expect(
+      runtimeExportPackageUserServiceRequestsHref(
+        "pkg 1",
+        0,
+        5,
+        {
+          query: "sat 1",
+          serviceClass: "COMPUTE_SERVICE",
+          terminalState: "WAITING_NETWORK",
+          networkWaiting: "WAITING"
+        }
+      )
+    ).toBe(
+      "/runtime/export/packages/pkg%201/user-service-requests?cursor=0&limit=5&query=sat+1&terminal_state=WAITING_NETWORK&service_class=COMPUTE_SERVICE&network_waiting=WAITING"
     );
   });
 
@@ -500,6 +517,82 @@ describe("runtime API diagnostics", () => {
     });
     expect(fetchMock).toHaveBeenCalledWith(
       "/runtime/export/packages/pkg/service-traces?cursor=0&limit=1&query=route-run&terminal_state=RUNNING&compute_node_id=sat-00003&stage_kind=OUTPUT_NETWORK&terminal_reason=OUTPUT_NETWORK_PENDING"
+    );
+  });
+
+  it("loads runtime export user service request pages", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        type: "RUNTIME_EXPORT_USER_SERVICE_REQUEST_PAGE_V1",
+        version: "v1",
+        page_id: "leo_twin.runtime_export_user_service_request_page.v1",
+        source: "BACKEND_RUNTIME_EXPORT",
+        package_id: "pkg",
+        artifact_type: "RUNTIME_EXPORT_USER_SERVICE_REQUEST_SUMMARY_V2",
+        artifact_source: "user_service_request_summary_v2.json",
+        artifact_policy: "STANDALONE_RUNTIME_EXPORT_ARTIFACT",
+        artifact_window_only: true,
+        artifact_hash:
+          "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+        summary_hash:
+          "sha256:abababababababababababababababababababababababababababababababab",
+        request_model: "FLOW_LEVEL_USER_SERVICE_REQUEST_PROXY",
+        route_model: "FLOW_LEVEL_ROUTE_PROXY",
+        compute_model: "TASK_RESOURCE_DEMAND_PROXY",
+        packet_level_simulation: false,
+        frontend_inference_required: false,
+        summary_scope: "USER_SERVICE_REQUEST_WINDOW",
+        export_cursor: 0,
+        export_limit: 100,
+        export_next_cursor: 1,
+        export_has_more: false,
+        cursor: 0,
+        limit: 1,
+        next_cursor: 1,
+        has_more: false,
+        request_count: 1,
+        item_count: 1,
+        unfiltered_request_count: 1,
+        active_request_count: 1,
+        compute_request_count: 1,
+        communication_request_count: 1,
+        network_waiting_request_count: 0,
+        hidden_request_count: 0,
+        filter_applied: true,
+        filters: {
+          query: "sat-run",
+          service_class: "COMPUTE_SERVICE",
+          terminal_state: "RUNNING",
+          network_waiting: "READY"
+        },
+        boundary_conditions: ["NO_SERVICE_RECOMPUTE"],
+        items: [{ user_id: "user-00001", service_class: "COMPUTE_SERVICE" }],
+        page_hash:
+          "sha256:efefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefef"
+      })
+    }));
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+
+    await expect(
+      loadRuntimeExportUserServiceRequestPage("pkg", 0, 1, {
+        query: "sat-run",
+        serviceClass: "COMPUTE_SERVICE",
+        terminalState: "RUNNING",
+        networkWaiting: "READY"
+      })
+    ).resolves.toMatchObject({
+      package_id: "pkg",
+      artifact_window_only: true,
+      request_count: 1,
+      filters: {
+        service_class: "COMPUTE_SERVICE",
+        network_waiting: "READY"
+      },
+      items: [{ user_id: "user-00001" }]
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/runtime/export/packages/pkg/user-service-requests?cursor=0&limit=1&query=sat-run&terminal_state=RUNNING&service_class=COMPUTE_SERVICE&network_waiting=READY"
     );
   });
 

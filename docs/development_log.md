@@ -16029,3 +16029,65 @@ change.
   - Add a server-side package endpoint for paged/filterable
     `user_service_request_summary_v2.json` review when export windows exceed
     the current frontend display budget.
+
+## 2026-07-06 - User Service Request Package Page v1
+
+- Branch: `feature/T331-user-service-request-package-page-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a package-owned server-side page endpoint for persisted
+  `user_service_request_summary_v2.json` review and bind the standalone
+  dashboard export drawer to that endpoint. The dashboard now requests
+  `/runtime/export/packages/{package_id}/user-service-requests` with cursor,
+  text query, service-class, terminal-state, and network-waiting filters instead
+  of loading the full user-service artifact by default. Raw
+  `user_service_request_summary_v2.json` remains linked for audit/download.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `frontend/src/app/api.ts`
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m compileall -q src\leo_twin\services\result_package_contract.py examples\integration_demo\control_plane.py examples\integration_demo\server.py`
+    - Result: passed.
+  - `python -m pytest tests\unit\test_result_package_contract_v1.py::test_runtime_export_user_service_request_page_v1_filters_artifact_window tests\unit\test_result_package_contract_v1.py::test_result_package_contract_v1_is_deterministic_json_ready -q`
+    - Result: passed, 2 tests.
+  - `python -m pytest tests\integration\test_runtime_session_control.py -q`
+    - Result: passed, 23 tests.
+  - `pnpm --dir frontend test api.test.ts dataPanel.test.ts appSurface.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 3 test
+      files and 265 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path. Vite
+      reported the existing large DataPanel chunk warning.
+- Problems encountered:
+  - A remembered direct pytest selector for route parsing did not exist as a
+    standalone test; the route assertion is inside
+    `test_runtime_session_control.py`, so the full file was run and passed.
+  - TypeScript caught one missing `hidden_request_count` field in the frontend
+    adapter that turns the backend page object into the existing user-service
+    table summary shape. The adapter was corrected rather than loosening types.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The page endpoint only filters rows inside the already exported artifact
+    window. It does not recover rows beyond the runtime export limit.
+  - The artifact still reflects the current flow-level request-state proxy. It
+    does not add packet-level traffic, RF modeling, or new business-generation
+    behavior.
+- Recommended follow-up:
+  - Continue the industrial v2 demonstrable loop with backend-owned scenario
+    review navigation that links package user-service pages, service lifecycle
+    pages, route evidence pages, and live runtime detail pages through shared
+    request/route/trace ids.

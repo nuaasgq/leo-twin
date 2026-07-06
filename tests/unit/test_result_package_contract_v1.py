@@ -18,6 +18,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_ROUTE_DETAIL_PAGE_V1_ID,
     RUNTIME_EXPORT_SERVICE_TRACE_PAGE_V1_ID,
     RUNTIME_EXPORT_REVIEW_SUMMARY_V1_ID,
+    RUNTIME_EXPORT_USER_SERVICE_REQUEST_PAGE_V1_ID,
     RUNTIME_EXPORT_USER_SERVICE_REQUEST_SUMMARY_V2_ID,
     RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID,
     build_runtime_export_diagnostics_bundle_v1,
@@ -34,6 +35,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_scenario_review_bundle_v1,
     build_runtime_export_scenario_review_checklist_v1,
     build_runtime_export_service_trace_page_v1,
+    build_runtime_export_user_service_request_page_v1,
     build_runtime_export_user_service_request_summary_v2,
     result_package_contract_v1_to_dict,
     summarize_result_package_record_v1,
@@ -78,6 +80,10 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
     )
     assert (
         "GET /runtime/export/packages/{package_id}/review-completion"
+        in first["source_endpoints"]
+    )
+    assert (
+        "GET /runtime/export/packages/{package_id}/user-service-requests"
         in first["source_endpoints"]
     )
     assert (
@@ -410,6 +416,74 @@ def test_runtime_export_user_service_request_summary_v2_is_deterministic() -> No
     assert first["evidence"]["exported_request_count"] == 2
     assert first["evidence"]["packet_level_simulation"] is False
     assert first["artifact_hash"].startswith("sha256:")
+    assert "NO_SERVICE_RECOMPUTE" in first["boundary_conditions"]
+
+
+def test_runtime_export_user_service_request_page_v1_filters_artifact_window() -> None:
+    artifact = {
+        "type": "RUNTIME_EXPORT_USER_SERVICE_REQUEST_SUMMARY_V2",
+        "version": "v2",
+        "artifact_id": RUNTIME_EXPORT_USER_SERVICE_REQUEST_SUMMARY_V2_ID,
+        "source": "BACKEND_RUNTIME_EXPORT",
+        "artifact_policy": "STANDALONE_RUNTIME_EXPORT_ARTIFACT",
+        "artifact_window_only": True,
+        "package_id": "pkg-1",
+        "summary": _user_service_request_summary(),
+        "user_service_request_export_policy": _user_service_request_export_policy(),
+        "evidence": {
+            "summary_hash": "sha256:user-service-summary",
+        },
+        "boundary_conditions": ("NO_SERVICE_RECOMPUTE",),
+        "artifact_hash": "sha256:user-service-artifact",
+    }
+
+    first = build_runtime_export_user_service_request_page_v1(
+        artifact,
+        package_id="pkg-1",
+        cursor=0,
+        limit=1,
+        query="sat-1",
+        service_class="DATA_TRANSFER",
+        terminal_state="WAITING_NETWORK",
+        network_waiting="WAITING",
+    )
+    second = build_runtime_export_user_service_request_page_v1(
+        dict(reversed(tuple(artifact.items()))),
+        package_id="pkg-1",
+        cursor=0,
+        limit=1,
+        query="sat-1",
+        service_class="DATA_TRANSFER",
+        terminal_state="WAITING_NETWORK",
+        network_waiting="WAITING",
+    )
+
+    assert first == second
+    assert first["page_id"] == RUNTIME_EXPORT_USER_SERVICE_REQUEST_PAGE_V1_ID
+    assert first["package_id"] == "pkg-1"
+    assert first["artifact_window_only"] is True
+    assert first["artifact_hash"] == "sha256:user-service-artifact"
+    assert first["summary_hash"] == "sha256:user-service-summary"
+    assert first["request_model"] == "FLOW_LEVEL_USER_SERVICE_REQUEST_PROXY"
+    assert first["cursor"] == 0
+    assert first["limit"] == 1
+    assert first["next_cursor"] == 1
+    assert first["has_more"] is False
+    assert first["request_count"] == 1
+    assert first["unfiltered_request_count"] == 2
+    assert first["item_count"] == 1
+    assert first["network_waiting_request_count"] == 1
+    assert first["filter_applied"] is True
+    assert first["filters"] == {
+        "query": "sat-1",
+        "service_class": "DATA_TRANSFER",
+        "terminal_state": "WAITING_NETWORK",
+        "network_waiting": "WAITING",
+    }
+    assert first["items"][0]["user_id"] == "user-1"
+    assert first["items"][0]["request_id"] == "flow-1"
+    assert first["items"][0]["network_waiting"] is True
+    assert first["page_hash"].startswith("sha256:")
     assert "NO_SERVICE_RECOMPUTE" in first["boundary_conditions"]
 
 

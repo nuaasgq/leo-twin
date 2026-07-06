@@ -270,11 +270,21 @@ that policy into the artifact, and reports `artifact_window_only=true`. The
 artifact is sourced from backend runtime status only; it does not inspect the
 current runtime session, replay events, recompute business/service state, or
 mutate the package.
-The standalone dashboard loads this artifact from the selected package and
-renders a read-only user-service request view using the same row semantics as
-the live `user_service_request_summary_v2` dashboard table. The view supports a
-local text filter over the persisted artifact window and links back to the raw
-`user_service_request_summary_v2.json` file for audit.
+The demo backend exposes a package-owned user-service request page endpoint:
+
+```text
+GET /runtime/export/packages/{package_id}/user-service-requests
+```
+
+The endpoint returns `RUNTIME_EXPORT_USER_SERVICE_REQUEST_PAGE_V1` with cursor,
+limit, optional text query, service class, terminal state, and network-waiting
+filters. It reads only the persisted `user_service_request_summary_v2.json`
+artifact window and reports artifact hashes, page hash, filter fields, and
+no-replay/no-recompute boundaries. It does not inspect the current runtime
+session, replay events, recompute business/service state, or mutate the
+package. The standalone dashboard uses this endpoint by default for offline
+per-user request review, while the raw `user_service_request_summary_v2.json`
+file remains linked for audit/download.
 
 `route_comparison_review` also declares the deterministic
 `RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1` report template. The

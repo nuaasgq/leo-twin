@@ -141,7 +141,12 @@ Tasks:
     T330 adds a read-only dashboard artifact view for
     `user_service_request_summary_v2.json`, loading the persisted package file
     and reusing the live v2 user-service table semantics for offline
-    per-user request review.
+    per-user request review. T331 adds the package-owned
+    `/runtime/export/packages/{package_id}/user-service-requests` page endpoint
+    and binds the dashboard export review drawer to backend cursor reads,
+    service-class filtering, terminal-state filtering, and network-waiting
+    filtering so large user-service artifacts are not loaded fully in the
+    browser by default.
 - V2-013: Add service lifecycle trace.
   - Scope: input flow, queue, compute, output flow, terminal state.
   - Output: timeline records for dashboard and result export.

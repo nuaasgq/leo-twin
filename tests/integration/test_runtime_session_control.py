@@ -1278,6 +1278,49 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
         "user_service_request_summary_v2"
     ]
     assert user_service_request["evidence"]["evidence_present"] is True
+    user_service_request_page = (
+        control_plane.runtime_export_package_user_service_requests(
+            package_id,
+            export_root,
+            cursor=0,
+            limit=1,
+        )
+    )
+    assert (
+        user_service_request_page["type"]
+        == "RUNTIME_EXPORT_USER_SERVICE_REQUEST_PAGE_V1"
+    )
+    assert user_service_request_page["source"] == "BACKEND_RUNTIME_EXPORT_PACKAGE"
+    assert user_service_request_page["package_id"] == package_id
+    assert user_service_request_page["artifact_window_only"] is True
+    assert user_service_request_page["artifact_hash"] == (
+        user_service_request["artifact_hash"]
+    )
+    assert user_service_request_page["unfiltered_request_count"] == len(
+        user_service_request["summary"]["items"]
+    )
+    assert user_service_request_page["item_count"] == min(
+        1,
+        len(user_service_request["summary"]["items"]),
+    )
+    assert user_service_request_page["page_hash"].startswith("sha256:")
+    filtered_user_service_page = (
+        control_plane.runtime_export_package_user_service_requests(
+            package_id,
+            export_root,
+            cursor=0,
+            limit=5,
+            service_class="COMPUTE_SERVICE",
+        )
+    )
+    assert filtered_user_service_page["filters"]["service_class"] == (
+        "COMPUTE_SERVICE"
+    )
+    assert filtered_user_service_page["filter_applied"] is True
+    assert all(
+        item["service_class"] == "COMPUTE_SERVICE"
+        for item in filtered_user_service_page["items"]
+    )
     service_trace_page = control_plane.runtime_export_package_service_traces(
         package_id,
         export_root,
@@ -1707,6 +1750,9 @@ def test_demo_server_stream_query_parses_cursor_options() -> None:
     assert _runtime_export_package_route(
         "/runtime/export/packages/pkg%201/service-traces"
     ) == ("pkg 1", "service-traces", None)
+    assert _runtime_export_package_route(
+        "/runtime/export/packages/pkg%201/user-service-requests"
+    ) == ("pkg 1", "user-service-requests", None)
     assert _runtime_export_package_route(
         "/runtime/export/packages/pkg%201/routes"
     ) == ("pkg 1", "routes", None)

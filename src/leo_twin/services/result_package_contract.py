@@ -55,6 +55,9 @@ RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_V1_ID = (
 RUNTIME_EXPORT_USER_SERVICE_REQUEST_SUMMARY_V2_ID = (
     "leo_twin.runtime_export_user_service_request_summary.v2"
 )
+RUNTIME_EXPORT_USER_SERVICE_REQUEST_PAGE_V1_ID = (
+    "leo_twin.runtime_export_user_service_request_page.v1"
+)
 USER_CONFIGURATION_AUDIT_BINDING_V1_ID = (
     "leo_twin.user_configuration_audit_binding.v1"
 )
@@ -112,6 +115,7 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
             "GET /runtime/export/packages/{package_id}/review-completion",
             "GET /runtime/export/packages/{package_id}/handoff-report",
             "GET /runtime/export/packages/{package_id}/service-traces",
+            "GET /runtime/export/packages/{package_id}/user-service-requests",
             "GET /runtime/export/packages/{package_id}/routes",
             "GET /runtime/export/packages/{package_id}/routes/{route_id}",
             "POST /runtime/export/packages/{package_id}/route-comparison-review-report",
@@ -1204,6 +1208,128 @@ def build_runtime_export_service_trace_page_v1(
             if trace["terminal_state"] == "INCOMPLETE"
         ),
         "hidden_trace_count": max(0, len(filtered_traces) - len(items)),
+        "filter_applied": filter_applied,
+        "filters": normalized_filters,
+        "boundary_conditions": (
+            "ARTIFACT_WINDOW_ONLY",
+            "NO_EVENT_REPLAY",
+            "NO_SERVICE_RECOMPUTE",
+            "NO_PACKAGE_MUTATION",
+        ),
+        "items": items,
+    }
+    page["page_hash"] = stable_hash_payload(page)
+    return page
+
+
+def build_runtime_export_user_service_request_page_v1(
+    user_service_request_export: Mapping[str, Any],
+    *,
+    package_id: str = "",
+    cursor: int = 0,
+    limit: int = 100,
+    query: str = "",
+    service_class: str = "ALL",
+    terminal_state: str = "ALL",
+    network_waiting: str = "ALL",
+) -> dict[str, object]:
+    """Build a deterministic page from an exported user-service artifact."""
+
+    if not isinstance(user_service_request_export, Mapping):
+        raise TypeError("user_service_request_export must be a mapping")
+    summary = _mapping(user_service_request_export.get("summary"))
+    requests = tuple(
+        _runtime_export_user_service_request_record(item)
+        for item in _records(summary.get("items"))
+    )
+    filtered_requests = tuple(
+        request
+        for request in requests
+        if _runtime_export_user_service_request_matches_filter(
+            request,
+            query=query,
+            service_class=service_class,
+            terminal_state=terminal_state,
+            network_waiting=network_waiting,
+        )
+    )
+    normalized_cursor = _page_cursor(cursor)
+    normalized_limit = _page_limit(limit)
+    items = filtered_requests[
+        normalized_cursor : normalized_cursor + normalized_limit
+    ]
+    next_cursor = min(len(filtered_requests), normalized_cursor + len(items))
+    normalized_filters = _runtime_export_user_service_request_filter_summary(
+        query=query,
+        service_class=service_class,
+        terminal_state=terminal_state,
+        network_waiting=network_waiting,
+    )
+    filter_applied = _runtime_export_user_service_request_filter_applied(
+        normalized_filters
+    )
+    page: dict[str, object] = {
+        "type": "RUNTIME_EXPORT_USER_SERVICE_REQUEST_PAGE_V1",
+        "version": "v1",
+        "page_id": RUNTIME_EXPORT_USER_SERVICE_REQUEST_PAGE_V1_ID,
+        "source": "BACKEND_RUNTIME_EXPORT_PACKAGE",
+        "package_id": str(package_id or user_service_request_export.get("package_id", "")),
+        "artifact_type": str(user_service_request_export.get("type", "")),
+        "artifact_source": str(user_service_request_export.get("source", "")),
+        "artifact_policy": str(user_service_request_export.get("artifact_policy", "")),
+        "user_service_request_export_policy": dict(
+            _mapping(
+                user_service_request_export.get(
+                    "user_service_request_export_policy"
+                )
+            )
+        ),
+        "artifact_window_only": _bool(
+            user_service_request_export.get("artifact_window_only")
+        ),
+        "artifact_hash": str(user_service_request_export.get("artifact_hash", "")),
+        "summary_hash": str(
+            _mapping(user_service_request_export.get("evidence")).get(
+                "summary_hash",
+                "",
+            )
+        ),
+        "request_model": str(summary.get("request_model", "")),
+        "route_model": str(summary.get("route_model", "")),
+        "compute_model": str(summary.get("compute_model", "")),
+        "packet_level_simulation": _bool(summary.get("packet_level_simulation")),
+        "frontend_inference_required": _bool(
+            summary.get("frontend_inference_required")
+        ),
+        "summary_scope": str(summary.get("summary_scope", "")),
+        "export_cursor": _integer(summary.get("cursor")),
+        "export_limit": _integer(summary.get("limit")),
+        "export_next_cursor": _integer(summary.get("next_cursor")),
+        "export_has_more": _bool(summary.get("has_more")),
+        "cursor": normalized_cursor,
+        "limit": normalized_limit,
+        "next_cursor": next_cursor,
+        "has_more": next_cursor < len(filtered_requests),
+        "request_count": len(filtered_requests),
+        "item_count": len(items),
+        "unfiltered_request_count": len(requests),
+        "active_request_count": sum(
+            1 for request in filtered_requests if request["request_active"]
+        ),
+        "compute_request_count": sum(
+            1
+            for request in filtered_requests
+            if str(request["service_class"]).upper() == "COMPUTE_SERVICE"
+        ),
+        "communication_request_count": sum(
+            1
+            for request in filtered_requests
+            if str(request["service_class"]).upper() != "COMPUTE_SERVICE"
+        ),
+        "network_waiting_request_count": sum(
+            1 for request in filtered_requests if request["network_waiting"]
+        ),
+        "hidden_request_count": max(0, len(filtered_requests) - len(items)),
         "filter_applied": filter_applied,
         "filters": normalized_filters,
         "boundary_conditions": (
@@ -2449,6 +2575,106 @@ def _runtime_export_service_trace_record(
     }
 
 
+def _runtime_export_user_service_request_record(
+    item: Mapping[str, Any],
+) -> dict[str, object]:
+    path = _string_tuple(item.get("path"))
+    return {
+        "detail_hash": str(item.get("detail_hash", "")),
+        "user_id": str(item.get("user_id", "")),
+        "platform_type": str(item.get("platform_type", "")),
+        "platform_type_label": str(item.get("platform_type_label", "")),
+        "cell_id": str(item.get("cell_id", "")),
+        "status": str(item.get("status", "")),
+        "request_id": str(item.get("request_id", "")),
+        "service_request_id": str(item.get("service_request_id", "")),
+        "service_class": str(item.get("service_class", "")),
+        "service_class_label": str(item.get("service_class_label", "")),
+        "business_type": str(item.get("business_type", "")),
+        "business_label": str(item.get("business_label", "")),
+        "request_active": _bool(item.get("request_active")),
+        "communication_request_active": _bool(
+            item.get("communication_request_active")
+        ),
+        "compute_request_active": _bool(item.get("compute_request_active")),
+        "network_waiting": _bool(item.get("network_waiting"))
+        or _integer(item.get("network_queue_depth")) > 0
+        or _integer(item.get("network_queue_count")) > 0,
+        "terminal_state": str(item.get("terminal_state", "")),
+        "terminal_state_label": str(item.get("terminal_state_label", "")),
+        "route_id": str(item.get("route_id", "")),
+        "flow_id": str(item.get("flow_id", "")),
+        "task_id": str(item.get("task_id", "")),
+        "target_node_id": str(item.get("target_node_id", "")),
+        "selected_satellite_id": str(item.get("selected_satellite_id", "")),
+        "destination_id": str(item.get("destination_id", "")),
+        "next_hop_id": str(item.get("next_hop_id", "")),
+        "compute_node_id": str(item.get("compute_node_id", "")),
+        "network_queue_depth": _integer(item.get("network_queue_depth")),
+        "network_queue_count": _integer(item.get("network_queue_count")),
+        "network_queue_reason": str(item.get("network_queue_reason", "")),
+        "network_queue_reason_label": str(
+            item.get("network_queue_reason_label", "")
+        ),
+        "route_available": _bool(item.get("route_available")),
+        "communication_route_count": _integer(
+            item.get("communication_route_count")
+        ),
+        "available_route_count": _integer(item.get("available_route_count")),
+        "compute_service_count": _integer(item.get("compute_service_count")),
+        "latency_s": _number(item.get("latency_s")),
+        "capacity_mbps": _number(item.get("capacity_mbps")),
+        "loss_proxy_rate": _number(item.get("loss_proxy_rate")),
+        "service_state": str(item.get("service_state", "")),
+        "service_task_id": str(item.get("service_task_id", "")),
+        "service_complete": _bool(item.get("service_complete")),
+        "service_total_latency_s": _number(item.get("service_total_latency_s")),
+        "input_network_latency_s": _number(item.get("input_network_latency_s")),
+        "compute_queue_delay_s": _number(item.get("compute_queue_delay_s")),
+        "compute_execution_delay_s": _number(
+            item.get("compute_execution_delay_s")
+        ),
+        "output_network_latency_s": _number(item.get("output_network_latency_s")),
+        "input_route_id": str(item.get("input_route_id", "")),
+        "output_route_id": str(item.get("output_route_id", "")),
+        "service_placement_status": str(
+            item.get("service_placement_status", "")
+        ),
+        "service_placement_policy": str(
+            item.get("service_placement_policy", "")
+        ),
+        "service_placement_bottleneck_resource": str(
+            item.get("service_placement_bottleneck_resource", "")
+        ),
+        "service_placement_candidate_count": _integer(
+            item.get("service_placement_candidate_count")
+        ),
+        "service_placement_capable_candidate_count": _integer(
+            item.get("service_placement_capable_candidate_count")
+        ),
+        "service_placement_candidate_queue_label": str(
+            item.get("service_placement_candidate_queue_label", "")
+        ),
+        "input_output_coupled": _bool(item.get("input_output_coupled")),
+        "latency_components_observed": _bool(
+            item.get("latency_components_observed")
+        ),
+        "route_model": str(item.get("route_model", "")),
+        "service_model": str(item.get("service_model", "")),
+        "packet_level_simulation": _bool(item.get("packet_level_simulation")),
+        "status_digest": str(item.get("status_digest", "")),
+        "active_business_type": str(item.get("active_business_type", "")),
+        "active_business_label": str(item.get("active_business_label", "")),
+        "request_state": str(item.get("request_state", "")),
+        "request_state_label": str(item.get("request_state_label", "")),
+        "path": path,
+        "route_path_label": str(item.get("route_path_label", "")),
+        "primary_route_id": str(item.get("primary_route_id", "")),
+        "primary_flow_id": str(item.get("primary_flow_id", "")),
+        "primary_next_hop_id": str(item.get("primary_next_hop_id", "")),
+    }
+
+
 def _runtime_export_service_trace_stage_record(
     stage: Mapping[str, Any],
 ) -> dict[str, object]:
@@ -2724,6 +2950,138 @@ def _runtime_export_service_trace_search_text(trace: Mapping[str, Any]) -> str:
         ),
     )
     return " ".join(values).lower()
+
+
+def _runtime_export_user_service_request_matches_filter(
+    request: Mapping[str, Any],
+    *,
+    query: str,
+    service_class: str,
+    terminal_state: str,
+    network_waiting: str,
+) -> bool:
+    normalized_service_class = _normalized_filter_value(service_class, "ALL")
+    if (
+        normalized_service_class
+        and normalized_service_class != "ALL"
+        and str(request.get("service_class", "")).strip().upper()
+        != normalized_service_class
+    ):
+        return False
+    normalized_terminal_state = _runtime_export_user_service_request_code(
+        terminal_state,
+        "ALL",
+    )
+    if (
+        normalized_terminal_state != "ALL"
+        and _runtime_export_user_service_request_code(
+            request.get("terminal_state"),
+            "",
+        )
+        != normalized_terminal_state
+    ):
+        return False
+    normalized_waiting = str(network_waiting or "ALL").strip().upper()
+    if normalized_waiting in {"YES", "TRUE", "WAITING"} and not _bool(
+        request.get("network_waiting")
+    ):
+        return False
+    if normalized_waiting in {"NO", "FALSE", "READY"} and _bool(
+        request.get("network_waiting")
+    ):
+        return False
+    terms = _search_terms(query)
+    if not terms:
+        return True
+    haystack = _runtime_export_user_service_request_search_text(request)
+    return all(term in haystack for term in terms)
+
+
+def _runtime_export_user_service_request_filter_summary(
+    *,
+    query: str,
+    service_class: str,
+    terminal_state: str,
+    network_waiting: str,
+) -> dict[str, str]:
+    return {
+        "query": _normalized_search_query(query),
+        "service_class": _normalized_filter_value(service_class, "ALL"),
+        "terminal_state": _runtime_export_user_service_request_code(
+            terminal_state,
+            "ALL",
+        ),
+        "network_waiting": _runtime_export_user_service_waiting_filter(
+            network_waiting
+        ),
+    }
+
+
+def _runtime_export_user_service_request_filter_applied(
+    filters: Mapping[str, Any],
+) -> bool:
+    return (
+        str(filters.get("query", "")).strip() != ""
+        or str(filters.get("service_class", "ALL")).upper() != "ALL"
+        or str(filters.get("terminal_state", "ALL")).upper() != "ALL"
+        or str(filters.get("network_waiting", "ALL")).upper() != "ALL"
+    )
+
+
+def _runtime_export_user_service_request_search_text(
+    request: Mapping[str, Any],
+) -> str:
+    values = (
+        str(request.get("user_id", "")),
+        str(request.get("request_id", "")),
+        str(request.get("service_request_id", "")),
+        str(request.get("service_class", "")),
+        str(request.get("service_class_label", "")),
+        str(request.get("business_type", "")),
+        str(request.get("business_label", "")),
+        str(request.get("terminal_state", "")),
+        str(request.get("terminal_state_label", "")),
+        str(request.get("route_id", "")),
+        str(request.get("flow_id", "")),
+        str(request.get("task_id", "")),
+        str(request.get("target_node_id", "")),
+        str(request.get("selected_satellite_id", "")),
+        str(request.get("destination_id", "")),
+        str(request.get("next_hop_id", "")),
+        str(request.get("compute_node_id", "")),
+        str(request.get("network_queue_reason", "")),
+        str(request.get("network_queue_reason_label", "")),
+        str(request.get("service_state", "")),
+        str(request.get("status_digest", "")),
+        str(request.get("route_path_label", "")),
+        *_string_tuple(request.get("path")),
+    )
+    return " ".join(values).lower()
+
+
+def _runtime_export_user_service_waiting_filter(value: object) -> str:
+    normalized = str(value or "ALL").strip().upper()
+    if normalized in {"YES", "TRUE", "WAITING"}:
+        return "WAITING"
+    if normalized in {"NO", "FALSE", "READY"}:
+        return "READY"
+    return "ALL"
+
+
+def _runtime_export_user_service_request_code(value: object, default: str) -> str:
+    normalized = "_".join(
+        part
+        for part in (
+            str(value or default)
+            .strip()
+            .upper()
+            .replace("-", "_")
+            .replace("/", "_")
+            .split()
+        )
+        if part
+    )
+    return normalized or default
 
 
 def _runtime_export_service_trace_terminal_state(value: object) -> str:

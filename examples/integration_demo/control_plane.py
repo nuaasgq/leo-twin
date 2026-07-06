@@ -92,6 +92,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_scenario_review_bundle_v1,
     build_runtime_export_scenario_review_checklist_v1,
     build_runtime_export_service_trace_page_v1,
+    build_runtime_export_user_service_request_page_v1,
     build_runtime_export_user_service_request_summary_v2,
 )
 from leo_twin.services.scenario_builder import (
@@ -984,6 +985,35 @@ class DemoControlPlane:
             compute_node_id=compute_node_id,
             stage_kind=stage_kind,
             terminal_reason=terminal_reason,
+        )
+
+    def runtime_export_package_user_service_requests(
+        self,
+        package_id: str,
+        output_root: str | Path = "artifacts/runtime_exports",
+        *,
+        cursor: int = 0,
+        limit: int = 100,
+        query: str = "",
+        service_class: str = "ALL",
+        terminal_state: str = "ALL",
+        network_waiting: str = "ALL",
+    ) -> dict[str, Any]:
+        user_service_request_export = (
+            self._runtime_export_package_user_service_request_export(
+                package_id,
+                output_root,
+            )
+        )
+        return build_runtime_export_user_service_request_page_v1(
+            user_service_request_export,
+            package_id=package_id,
+            cursor=cursor,
+            limit=limit,
+            query=query,
+            service_class=service_class,
+            terminal_state=terminal_state,
+            network_waiting=network_waiting,
         )
 
     def runtime_export_package_review_completion(
@@ -2249,6 +2279,25 @@ class DemoControlPlane:
                 f"runtime export package {package_id!r} has invalid service trace export"
             )
         return service_trace_export
+
+    def _runtime_export_package_user_service_request_export(
+        self,
+        package_id: str,
+        output_root: str | Path,
+    ) -> dict[str, Any]:
+        artifact = self.runtime_export_package_artifact(
+            package_id,
+            _RUNTIME_EXPORT_USER_SERVICE_REQUEST_SUMMARY_FILENAME,
+            output_root,
+        )
+        user_service_request_export = json.loads(
+            Path(str(artifact["path"])).read_text(encoding="utf-8")
+        )
+        if not isinstance(user_service_request_export, dict):
+            raise RuntimeExportArtifactError(
+                f"runtime export package {package_id!r} has invalid user service request export"
+            )
+        return user_service_request_export
 
 
 def _runtime_export_restore_control_payload(raw: str | bytes) -> dict[str, Any] | None:

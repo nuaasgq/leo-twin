@@ -25,6 +25,7 @@ import {
   RuntimeExportRouteDetailPageV1,
   RuntimeExportServiceTracePageV1,
   RuntimeExportReviewSummaryV1,
+  RuntimeExportUserServiceRequestPageV1,
   RuntimeExportUserServiceRequestSummaryArtifactV2,
   RuntimeExportRestorePreflightEnvelope,
   RuntimeExportRestorePreflightV1,
@@ -78,6 +79,8 @@ export interface RuntimeDetailQueryFilters {
   computeNodeId?: string;
   stageKind?: string;
   terminalReason?: string;
+  serviceClass?: string;
+  networkWaiting?: string;
 }
 
 export interface RuntimeExportRouteComparisonReviewReportRequest {
@@ -389,6 +392,27 @@ export async function loadRuntimeExportUserServiceRequestSummaryArtifact(
     throw new Error(`failed to load runtime export user service request summary from ${url}: HTTP ${response.status}`);
   }
   return decodeRuntimeExportUserServiceRequestSummaryArtifact(await response.json());
+}
+
+export async function loadRuntimeExportUserServiceRequestPage(
+  packageId: string,
+  cursor = 0,
+  limit = 100,
+  filters: RuntimeDetailQueryFilters = {},
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): Promise<RuntimeExportUserServiceRequestPageV1> {
+  const url = runtimeExportPackageUserServiceRequestsHref(
+    packageId,
+    cursor,
+    limit,
+    filters,
+    endpoint
+  );
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`failed to load runtime export user service request page from ${url}: HTTP ${response.status}`);
+  }
+  return decodeRuntimeExportUserServiceRequestPage(await response.json());
 }
 
 export async function loadRuntimeExportServiceTracePage(
@@ -804,6 +828,21 @@ export function runtimeExportPackageServiceTracesHref(
   return `${runtimeExportPackageRecordHref(packageId, endpoint)}/service-traces?${params.toString()}`;
 }
 
+export function runtimeExportPackageUserServiceRequestsHref(
+  packageId: string,
+  cursor = 0,
+  limit = 100,
+  filters: RuntimeDetailQueryFilters = {},
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): string {
+  const params = new URLSearchParams({
+    cursor: String(cursor),
+    limit: String(limit)
+  });
+  appendRuntimeDetailFilterParams(params, filters);
+  return `${runtimeExportPackageRecordHref(packageId, endpoint)}/user-service-requests?${params.toString()}`;
+}
+
 export function runtimeExportPackageRouteDetailHref(
   packageId: string,
   routeId: string,
@@ -940,6 +979,14 @@ function appendRuntimeDetailFilterParams(
   const terminalReason = filters.terminalReason?.trim();
   if (terminalReason && terminalReason !== "ALL") {
     params.set("terminal_reason", terminalReason);
+  }
+  const serviceClass = filters.serviceClass?.trim();
+  if (serviceClass && serviceClass !== "ALL") {
+    params.set("service_class", serviceClass);
+  }
+  const networkWaiting = filters.networkWaiting?.trim();
+  if (networkWaiting && networkWaiting !== "ALL") {
+    params.set("network_waiting", networkWaiting);
   }
 }
 
@@ -1165,6 +1212,31 @@ export function decodeRuntimeExportUserServiceRequestSummaryArtifact(
     );
   }
   return value as RuntimeExportUserServiceRequestSummaryArtifactV2;
+}
+
+export function decodeRuntimeExportUserServiceRequestPage(
+  value: unknown
+): RuntimeExportUserServiceRequestPageV1 {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError(
+      "runtime export user service request page response must be an object"
+    );
+  }
+  if (
+    typeof (value as { package_id?: unknown }).package_id !== "string" ||
+    typeof (value as { artifact_hash?: unknown }).artifact_hash !== "string" ||
+    typeof (value as { filters?: unknown }).filters !== "object" ||
+    (value as { filters?: unknown }).filters === null ||
+    Array.isArray((value as { filters?: unknown }).filters) ||
+    typeof (value as { artifact_window_only?: unknown })
+      .artifact_window_only !== "boolean" ||
+    !Array.isArray((value as { items?: unknown }).items)
+  ) {
+    throw new TypeError(
+      "runtime export user service request page response must include package_id, artifact_hash, artifact_window_only, filters, and items"
+    );
+  }
+  return value as RuntimeExportUserServiceRequestPageV1;
 }
 
 export function decodeRuntimeExportRouteDetailIndex(

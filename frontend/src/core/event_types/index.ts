@@ -1471,6 +1471,55 @@ export interface RuntimeExportUserServiceRequestSummaryArtifactV2 {
   artifact_hash: string;
 }
 
+export interface RuntimeExportUserServiceRequestPageV1 {
+  type: "RUNTIME_EXPORT_USER_SERVICE_REQUEST_PAGE_V1" | string;
+  version: "v1" | string;
+  page_id: string;
+  source: string;
+  package_id: string;
+  artifact_type: string;
+  artifact_source: string;
+  artifact_policy: string;
+  user_service_request_export_policy?: Readonly<Record<string, unknown>>;
+  artifact_window_only: boolean;
+  artifact_hash: string;
+  summary_hash: string;
+  request_model: string;
+  route_model: string;
+  compute_model: string;
+  packet_level_simulation: boolean;
+  frontend_inference_required: boolean;
+  summary_scope: string;
+  export_cursor: number;
+  export_limit: number;
+  export_next_cursor: number;
+  export_has_more: boolean;
+  cursor: number;
+  limit: number;
+  next_cursor: number;
+  has_more: boolean;
+  request_count: number;
+  item_count: number;
+  unfiltered_request_count: number;
+  active_request_count: number;
+  compute_request_count: number;
+  communication_request_count: number;
+  network_waiting_request_count: number;
+  hidden_request_count: number;
+  filter_applied: boolean;
+  filters: RuntimeExportUserServiceRequestPageFiltersV1;
+  boundary_conditions: readonly string[];
+  items: readonly RuntimeUserServiceRequestItemV2[];
+  page_hash: string;
+}
+
+export interface RuntimeExportUserServiceRequestPageFiltersV1 {
+  query: string;
+  service_class: string;
+  terminal_state: string;
+  network_waiting: string;
+}
+
 export interface RuntimeExportRouteComparisonReviewV1 {
   version: "v1" | string;
   source: string;

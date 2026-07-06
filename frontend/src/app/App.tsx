@@ -23,7 +23,7 @@ import {
   RuntimeExportRouteDetailPageV1,
   RuntimeExportServiceTracePageV1,
   RuntimeExportReviewSummaryV1,
-  RuntimeExportUserServiceRequestSummaryArtifactV2,
+  RuntimeExportUserServiceRequestPageV1,
   RuntimeExportRestoreCommandResultV1,
   RuntimeExportRestorePreflightV1,
   RuntimeBackpressureSummary,
@@ -65,7 +65,7 @@ import {
   loadRuntimeExportReviewSummary,
   loadRuntimeExportRestorePreflight,
   loadRuntimeExportServiceTracePage,
-  loadRuntimeExportUserServiceRequestSummaryArtifact,
+  loadRuntimeExportUserServiceRequestPage,
   loadRuntimeNodeDetails,
   loadRuntimeRouteDetail,
   loadRuntimeRouteDetails,
@@ -94,6 +94,7 @@ import type {
   DataPanelExportRouteComparisonReviewSaveRequest,
   DataPanelExportScenarioReviewChecklistSaveRequest,
   DataPanelExportRouteDetailPageRequest,
+  DataPanelExportUserServiceRequestPageRequest,
   DataPanelExportServiceTracePageRequest,
   RuntimeDetailPages
 } from "../dashboard/data_panel/DataPanel";
@@ -302,9 +303,9 @@ export function App() {
   const [runtimeExportServiceTracePage, setRuntimeExportServiceTracePage] =
     useState<RuntimeExportServiceTracePageV1 | null>(null);
   const [
-    runtimeExportUserServiceRequestArtifact,
-    setRuntimeExportUserServiceRequestArtifact
-  ] = useState<RuntimeExportUserServiceRequestSummaryArtifactV2 | null>(null);
+    runtimeExportUserServiceRequestPage,
+    setRuntimeExportUserServiceRequestPage
+  ] = useState<RuntimeExportUserServiceRequestPageV1 | null>(null);
   const [runtimeExportRouteDetailPage, setRuntimeExportRouteDetailPage] =
     useState<RuntimeExportRouteDetailPageV1 | null>(null);
   const [runtimeExportRouteDetailItem, setRuntimeExportRouteDetailItem] =
@@ -354,12 +355,12 @@ export function App() {
     setRuntimeExportServiceLifecycleTraceError
   ] = useState<string | null>(null);
   const [
-    runtimeExportUserServiceRequestArtifactLoading,
-    setRuntimeExportUserServiceRequestArtifactLoading
+    runtimeExportUserServiceRequestPageLoading,
+    setRuntimeExportUserServiceRequestPageLoading
   ] = useState(false);
   const [
-    runtimeExportUserServiceRequestArtifactError,
-    setRuntimeExportUserServiceRequestArtifactError
+    runtimeExportUserServiceRequestPageError,
+    setRuntimeExportUserServiceRequestPageError
   ] = useState<string | null>(null);
   const [runtimeExportRouteDetailIndexLoading, setRuntimeExportRouteDetailIndexLoading] =
     useState(false);
@@ -1216,7 +1217,7 @@ export function App() {
     setRuntimeExportManifestLoading(true);
     setRuntimeExportDiagnosticsBundleLoading(true);
     setRuntimeExportServiceLifecycleTraceLoading(shouldLoadServiceLifecycleTrace);
-    setRuntimeExportUserServiceRequestArtifactLoading(
+    setRuntimeExportUserServiceRequestPageLoading(
       shouldLoadUserServiceRequestSummary
     );
     setRuntimeExportRouteDetailIndexLoading(true);
@@ -1232,8 +1233,8 @@ export function App() {
     setRuntimeExportServiceLifecycleTrace(null);
     setRuntimeExportServiceTracePage(null);
     setRuntimeExportServiceLifecycleTraceError(null);
-    setRuntimeExportUserServiceRequestArtifact(null);
-    setRuntimeExportUserServiceRequestArtifactError(null);
+    setRuntimeExportUserServiceRequestPage(null);
+    setRuntimeExportUserServiceRequestPageError(null);
     setRuntimeExportRouteDetailIndexError(null);
     setRuntimeExportRouteComparisonReviewReport(null);
     setRuntimeExportRouteComparisonReviewReportError(null);
@@ -1262,7 +1263,7 @@ export function App() {
       manifest,
       diagnosticsBundle,
       serviceTracePage,
-      userServiceRequestArtifact,
+      userServiceRequestPage,
       routeDetailPage,
       routeComparisonReviewReport,
       packageAuditIndex,
@@ -1279,7 +1280,7 @@ export function App() {
           ? loadRuntimeExportServiceTracePage(packageId, 0, 5)
           : Promise.resolve(null),
         shouldLoadUserServiceRequestSummary
-          ? loadRuntimeExportUserServiceRequestSummaryArtifact(packageId)
+          ? loadRuntimeExportUserServiceRequestPage(packageId, 0, 5)
           : Promise.resolve(null),
         loadRuntimeExportRouteDetailPage(packageId, 0, 5),
         shouldLoadReviewReport
@@ -1333,13 +1334,13 @@ export function App() {
         runtimeExportServiceLifecycleTraceErrorMessage(serviceTracePage.reason)
       );
     }
-    if (userServiceRequestArtifact.status === "fulfilled") {
-      setRuntimeExportUserServiceRequestArtifact(userServiceRequestArtifact.value);
+    if (userServiceRequestPage.status === "fulfilled") {
+      setRuntimeExportUserServiceRequestPage(userServiceRequestPage.value);
     } else {
-      setRuntimeExportUserServiceRequestArtifact(null);
-      setRuntimeExportUserServiceRequestArtifactError(
+      setRuntimeExportUserServiceRequestPage(null);
+      setRuntimeExportUserServiceRequestPageError(
         runtimeExportUserServiceRequestSummaryErrorMessage(
-          userServiceRequestArtifact.reason
+          userServiceRequestPage.reason
         )
       );
     }
@@ -1402,7 +1403,7 @@ export function App() {
     setRuntimeExportManifestLoading(false);
     setRuntimeExportDiagnosticsBundleLoading(false);
     setRuntimeExportServiceLifecycleTraceLoading(false);
-    setRuntimeExportUserServiceRequestArtifactLoading(false);
+    setRuntimeExportUserServiceRequestPageLoading(false);
     setRuntimeExportRouteDetailIndexLoading(false);
     setRuntimeExportRouteComparisonReviewReportLoading(false);
     setRuntimeExportPackageAuditIndexLoading(false);
@@ -1465,6 +1466,38 @@ export function App() {
     [runtimeExportComparePackageId]
   );
 
+  const refreshRuntimeExportUserServiceRequestPage = useCallback(
+    async (request: DataPanelExportUserServiceRequestPageRequest) => {
+      const packageId = runtimeExportComparePackageId;
+      if (packageId === null) {
+        return;
+      }
+      const cursor = Math.max(0, request.cursor);
+      const limit = request.limit ?? 5;
+      const filters: RuntimeDetailQueryFilters = request.filters ?? {};
+      setRuntimeExportUserServiceRequestPageLoading(true);
+      setRuntimeExportUserServiceRequestPageError(null);
+      try {
+        setRuntimeExportUserServiceRequestPage(
+          await loadRuntimeExportUserServiceRequestPage(
+            packageId,
+            cursor,
+            limit,
+            filters
+          )
+        );
+      } catch (error) {
+        setRuntimeExportUserServiceRequestPage(null);
+        setRuntimeExportUserServiceRequestPageError(
+          runtimeExportUserServiceRequestSummaryErrorMessage(error)
+        );
+      } finally {
+        setRuntimeExportUserServiceRequestPageLoading(false);
+      }
+    },
+    [runtimeExportComparePackageId]
+  );
+
   const refreshRuntimeExportRouteDetailItem = useCallback(
     async (routeId: string | null) => {
       const packageId = runtimeExportComparePackageId;
@@ -1516,7 +1549,7 @@ export function App() {
         setRuntimeExportDiagnosticsBundle(null);
         setRuntimeExportServiceLifecycleTrace(null);
         setRuntimeExportServiceTracePage(null);
-        setRuntimeExportUserServiceRequestArtifact(null);
+        setRuntimeExportUserServiceRequestPage(null);
         setRuntimeExportRouteDetailPage(null);
         setRuntimeExportRouteDetailItem(null);
         setRuntimeExportRouteDetailItemRouteId(null);
@@ -1547,7 +1580,7 @@ export function App() {
         setRuntimeExportManifestLoading(false);
         setRuntimeExportDiagnosticsBundleLoading(false);
         setRuntimeExportServiceLifecycleTraceLoading(false);
-        setRuntimeExportUserServiceRequestArtifactLoading(false);
+        setRuntimeExportUserServiceRequestPageLoading(false);
         setRuntimeExportRouteDetailIndexLoading(false);
         setRuntimeExportRouteComparisonReviewReportLoading(false);
         setRuntimeExportPackageAuditIndexLoading(false);
@@ -1558,7 +1591,7 @@ export function App() {
         setRuntimeExportManifestError(null);
         setRuntimeExportDiagnosticsBundleError(null);
         setRuntimeExportServiceLifecycleTraceError(null);
-        setRuntimeExportUserServiceRequestArtifactError(null);
+        setRuntimeExportUserServiceRequestPageError(null);
         setRuntimeExportRouteDetailIndexError(null);
         setRuntimeExportRouteComparisonReviewReportError(null);
         setRuntimeExportPackageAuditIndexError(null);
@@ -1579,7 +1612,7 @@ export function App() {
       setRuntimeExportDiagnosticsBundle(null);
       setRuntimeExportServiceLifecycleTrace(null);
       setRuntimeExportServiceTracePage(null);
-      setRuntimeExportUserServiceRequestArtifact(null);
+      setRuntimeExportUserServiceRequestPage(null);
       setRuntimeExportRouteDetailPage(null);
       setRuntimeExportRouteComparisonReviewReport(null);
       setRuntimeExportPackageAuditIndex(null);
@@ -1598,7 +1631,7 @@ export function App() {
       setRuntimeExportManifestLoading(false);
       setRuntimeExportDiagnosticsBundleLoading(false);
       setRuntimeExportServiceLifecycleTraceLoading(false);
-      setRuntimeExportUserServiceRequestArtifactLoading(false);
+      setRuntimeExportUserServiceRequestPageLoading(false);
       setRuntimeExportRouteDetailIndexLoading(false);
       setRuntimeExportRouteComparisonReviewReportLoading(false);
       setRuntimeExportPackageAuditIndexLoading(false);
@@ -1610,7 +1643,7 @@ export function App() {
       setRuntimeExportManifestError(null);
       setRuntimeExportDiagnosticsBundleError(null);
       setRuntimeExportServiceLifecycleTraceError(null);
-      setRuntimeExportUserServiceRequestArtifactError(null);
+      setRuntimeExportUserServiceRequestPageError(null);
       setRuntimeExportRouteDetailIndexError(null);
       setRuntimeExportRouteComparisonReviewReportError(null);
       setRuntimeExportPackageAuditIndexError(null);
@@ -2410,8 +2443,8 @@ export function App() {
               runtimeExportDiagnosticsBundle={runtimeExportDiagnosticsBundle}
               runtimeExportServiceLifecycleTrace={runtimeExportServiceLifecycleTrace}
               runtimeExportServiceTracePage={runtimeExportServiceTracePage}
-              runtimeExportUserServiceRequestArtifact={
-                runtimeExportUserServiceRequestArtifact
+              runtimeExportUserServiceRequestPage={
+                runtimeExportUserServiceRequestPage
               }
               runtimeExportRouteDetailPage={runtimeExportRouteDetailPage}
               runtimeExportRouteDetailItem={runtimeExportRouteDetailItem}
@@ -2441,11 +2474,11 @@ export function App() {
               runtimeExportServiceLifecycleTraceError={
                 runtimeExportServiceLifecycleTraceError
               }
-              runtimeExportUserServiceRequestArtifactLoading={
-                runtimeExportUserServiceRequestArtifactLoading
+              runtimeExportUserServiceRequestPageLoading={
+                runtimeExportUserServiceRequestPageLoading
               }
-              runtimeExportUserServiceRequestArtifactError={
-                runtimeExportUserServiceRequestArtifactError
+              runtimeExportUserServiceRequestPageError={
+                runtimeExportUserServiceRequestPageError
               }
               runtimeExportRouteDetailIndexLoading={runtimeExportRouteDetailIndexLoading}
               runtimeExportRouteDetailIndexError={runtimeExportRouteDetailIndexError}
@@ -2516,6 +2549,9 @@ export function App() {
               }
               onRuntimeExportServiceTracePageQueryChange={
                 refreshRuntimeExportServiceTracePage
+              }
+              onRuntimeExportUserServiceRequestPageQueryChange={
+                refreshRuntimeExportUserServiceRequestPage
               }
               onRuntimeExportRouteDetailItemSelect={refreshRuntimeExportRouteDetailItem}
               onRuntimeExportRouteComparisonReviewSave={
