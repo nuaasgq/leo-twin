@@ -137,6 +137,8 @@ It reports:
 - route model and model-boundary flags;
 - route summary counters copied from
   `config_snapshot.status.route_explanation_summary_v1`;
+- route detail export policy copied from
+  `config_snapshot.status.runtime_export_route_detail_policy_v1`;
 - route trust summary copied from
   `config_snapshot.status.route_provenance_trust_summary_v1`;
 - exported route ids, route-trust sample route ids, indexed sample ids, and
@@ -145,9 +147,13 @@ It reports:
   next hop, path label, capacity, demand, latency, loss proxy, business type,
   and bottleneck explanation.
 
-The route detail index preserves the current backend route explanation window.
-It does not replay events, recompute paths, compute all satellite pairs, or
-simulate packets.
+The route detail index preserves the export route explanation window. The demo
+backend rebuilds this window from `visible_snapshot.routes` during package
+creation with the same deterministic route explanation model and the existing
+detail endpoint max limit of 5000 rows. This keeps `/runtime/status` lightweight
+while making packages more useful for offline review. The artifact does not
+replay events, recompute paths, compute all satellite pairs, or simulate
+packets.
 The standalone dashboard loads the selected package's
 `route_detail_index_v1.json` through the package file endpoint and renders a
 read-only route evidence drawer with indexed route counts, route-trust sample
@@ -171,7 +177,8 @@ the exported index. Both endpoints read the persisted `route_detail_index_v1.jso
 artifact and include the source `route_detail_index_hash`; they do not inspect
 the current runtime session, replay events, recompute routes, or mutate the
 package. They only cover rows already present in the exported route detail
-index.
+index; if a scenario has more than the export limit, the policy and summary
+fields report the remaining hidden route count.
 
 ## Diagnostics Bundle
 

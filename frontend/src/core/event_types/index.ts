@@ -1337,6 +1337,7 @@ export interface RuntimeExportRouteDetailIndexV1 {
   packet_level_simulation: boolean;
   all_pairs_computation: boolean;
   route_summary: RuntimeExportRouteDetailIndexSummaryV1;
+  route_detail_export_policy?: RuntimeExportRouteDetailExportPolicyV1;
   route_trust: RuntimeExportRouteTrustEvidenceV1;
   route_ids: readonly string[];
   sample_route_ids: readonly string[];
@@ -1388,6 +1389,19 @@ export interface RuntimeExportRouteDetailIndexRouteV1 {
   bottleneck_reason: string;
   bottleneck_reason_label: string;
   explanation_label: string;
+}
+
+export interface RuntimeExportRouteDetailExportPolicyV1 {
+  version: "v1" | string;
+  source: string;
+  policy: string;
+  route_summary_source: string;
+  route_detail_limit: number;
+  route_count: number;
+  indexed_route_count: number;
+  hidden_route_count: number;
+  packet_level_simulation: boolean;
+  all_pairs_computation: boolean;
 }
 
 export interface RuntimeExportRouteDetailPageV1 {

@@ -6,6 +6,7 @@ from pathlib import Path
 from examples.integration_demo.config import DemoConfig
 from examples.integration_demo.control_plane import DemoControlPlane
 from examples.integration_demo.runtime import run_integration_demo
+from leo_twin.services.detail_pagination_contract import DETAIL_ENDPOINT_MAX_LIMIT
 from leo_twin.services.result_package_contract import (
     RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID,
     summarize_result_package_record_v1,
@@ -78,9 +79,19 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         "service_lifecycle_trace_v2"
     ]
     route_summary_status = config_snapshot["status"]["route_explanation_summary_v1"]
+    route_export_policy = config_snapshot["status"][
+        "runtime_export_route_detail_policy_v1"
+    ]
     route_trust_status = config_snapshot["status"]["route_provenance_trust_summary_v1"]
     assert route_trust_status["trust_id"] == "leo_twin.route_provenance_trust.v1"
+    assert route_summary_status["limit"] == DETAIL_ENDPOINT_MAX_LIMIT
+    assert route_export_policy["policy"] == "EXPORT_ROUTE_DETAIL_INDEX_WINDOW"
+    assert route_export_policy["route_detail_limit"] == DETAIL_ENDPOINT_MAX_LIMIT
+    assert route_export_policy["indexed_route_count"] == len(
+        route_summary_status["items"]
+    )
     assert route_detail_index["type"] == "RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_V1"
+    assert route_detail_index["route_detail_export_policy"] == route_export_policy
     assert route_detail_index["route_trust"]["trust_id"] == route_trust_status[
         "trust_id"
     ]

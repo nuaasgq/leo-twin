@@ -2500,6 +2500,18 @@ describe("buildDataPanelExportCompareDisplay", () => {
         compute_service_route_count: 1,
         network_service_route_count: 1
       },
+      route_detail_export_policy: {
+        version: "v1",
+        source: "BACKEND_RUNTIME_EXPORT",
+        policy: "EXPORT_ROUTE_DETAIL_INDEX_WINDOW",
+        route_summary_source: "visible_snapshot.routes",
+        route_detail_limit: 5000,
+        route_count: 2,
+        indexed_route_count: 2,
+        hidden_route_count: 0,
+        packet_level_simulation: false,
+        all_pairs_computation: false
+      },
       route_trust: {
         version: "v1",
         trust_id: "leo_twin.route_provenance_trust.v1",
@@ -2545,6 +2557,7 @@ describe("buildDataPanelExportCompareDisplay", () => {
       metaLabels: [
         "samples 2/2",
         "missing samples 0",
+        "export limit 5,000",
         "available 1",
         "blocked 1",
         "compute 1",
@@ -8735,6 +8748,18 @@ function _runtimeExportRouteDetailIndex(
       network_service_route_count: routes.filter(
         (route) => route.business_type !== "COMPUTE_SERVICE"
       ).length
+    },
+    route_detail_export_policy: {
+      version: "v1",
+      source: "BACKEND_RUNTIME_EXPORT",
+      policy: "EXPORT_ROUTE_DETAIL_INDEX_WINDOW",
+      route_summary_source: "visible_snapshot.routes",
+      route_detail_limit: 5000,
+      route_count: routes.length,
+      indexed_route_count: routes.length,
+      hidden_route_count: 0,
+      packet_level_simulation: false,
+      all_pairs_computation: false
     },
     route_trust: {
       version: "v1",

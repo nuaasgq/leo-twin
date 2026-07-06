@@ -9171,6 +9171,9 @@ export function buildDataPanelExportRouteDetailIndexDisplay(
     metaLabels: [
       `samples ${formatCount(indexedSampleCount)}/${formatCount(sampleCount)}`,
       `missing samples ${formatCount(missingSampleCount)}`,
+      index.route_detail_export_policy
+        ? `export limit ${formatCount(index.route_detail_export_policy.route_detail_limit)}`
+        : "export limit legacy",
       `available ${formatCount(summary.available_route_count)}`,
       `blocked ${formatCount(summary.blocked_route_count)}`,
       `compute ${formatCount(summary.compute_service_route_count)}`,

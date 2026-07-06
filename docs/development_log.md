@@ -13508,3 +13508,62 @@ change.
   - Extend runtime export creation so `route_detail_index_v1.json` can capture
     a configurable all-window route evidence export, or add a dedicated
     package-side route detail artifact for hidden rows.
+
+## 2026-07-06 - Runtime Export Route Detail Window v1
+
+- Branch: `feature/T282-route-detail-export-window-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: improve result-package route evidence coverage without changing live
+  runtime status, route computation, or Event Kernel behavior. Runtime package
+  export now rebuilds `config_snapshot.status.route_explanation_summary_v1`
+  from `visible_snapshot.routes` with the existing large-detail endpoint maximum
+  of 5000 rows, records the policy in
+  `runtime_export_route_detail_policy_v1`, and writes that policy into
+  `route_detail_index_v1.json`. `/runtime/status` remains a lightweight
+  dashboard-oriented window. The export still uses the flow-level route proxy;
+  it does not replay events, compute all satellite pairs, or simulate packets.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `src/leo_twin/services/result_package_contract.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/result_package_contract_v1.md`
+  - `docs/integration_demo.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile examples/integration_demo/control_plane.py src/leo_twin/services/result_package_contract.py`
+    - Result: passed.
+  - `python -m pytest tests/unit/test_result_package_contract_v1.py tests/integration/test_result_package_export_v1.py tests/integration/test_runtime_session_control.py::test_demo_adapter_exports_runtime_result_package tests/integration/test_runtime_session_control.py::test_demo_adapter_serves_persisted_runtime_export_artifacts -q`
+    - Result: passed, 12 tests.
+  - `python -m pytest tests/unit/test_result_package_contract_v1.py tests/integration/test_result_package_export_v1.py tests/integration/test_runtime_session_control.py::test_demo_adapter_exports_runtime_result_package tests/integration/test_runtime_session_control.py::test_demo_adapter_serves_persisted_runtime_export_artifacts tests/unit/test_user_guide_v2_docs.py -q`
+    - Result: passed, 14 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with bundled Codex Node/Pnpm runtime.
+  - `pnpm --dir frontend test api.test.ts dataPanel.test.ts`
+    - Result: passed, 2 test files and 188 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing large DataPanel chunk
+      warning after minification; no functional build error.
+- Problems encountered:
+  - The persisted-artifact integration test did not load `config_snapshot.json`
+    before checking the new export policy; fixed the test setup and kept the
+    production code unchanged.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The export window is capped at 5000 rows through the existing detail
+    endpoint maximum. Scenarios with more routes still need a multi-file or
+    cursor-sliced package export strategy.
+  - The frontend still loads the whole `route_detail_index_v1.json` file before
+    local filtering; it does not yet consume the package-owned route page
+    endpoint for server-side pagination.
+- Recommended follow-up:
+  - Add a package-side paginated route artifact set or make the dashboard route
+    index drawer load `/runtime/export/packages/{package_id}/routes` pages
+    directly for very large route evidence packages.

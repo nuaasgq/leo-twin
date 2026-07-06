@@ -278,6 +278,7 @@ def test_runtime_export_route_detail_index_v1_is_deterministic_and_review_ready(
         "type": "RUNTIME_CONFIG_SNAPSHOT",
         "status": {
             "route_explanation_summary_v1": _route_summary(),
+            "runtime_export_route_detail_policy_v1": _route_detail_export_policy(),
             "route_provenance_trust_summary_v1": _route_trust(),
         },
     }
@@ -301,6 +302,7 @@ def test_runtime_export_route_detail_index_v1_is_deterministic_and_review_ready(
     assert first["route_summary"]["route_count"] == 2
     assert first["route_summary"]["indexed_route_count"] == 2
     assert first["route_summary"]["hidden_route_count"] == 0
+    assert first["route_detail_export_policy"] == _route_detail_export_policy()
     assert first["route_ids"] == ("route-0", "route-1")
     assert first["sample_route_ids"] == ("route-0", "route-1")
     assert first["indexed_sample_route_ids"] == ("route-0", "route-1")
@@ -512,6 +514,21 @@ def _route_summary() -> dict[str, object]:
             _route_item("route-0", "flow-0", "user-0", "sat-0"),
             _route_item("route-1", "flow-1", "user-1", "sat-1"),
         ),
+    }
+
+
+def _route_detail_export_policy() -> dict[str, object]:
+    return {
+        "version": "v1",
+        "source": "BACKEND_RUNTIME_EXPORT",
+        "policy": "EXPORT_ROUTE_DETAIL_INDEX_WINDOW",
+        "route_summary_source": "visible_snapshot.routes",
+        "route_detail_limit": 5000,
+        "route_count": 2,
+        "indexed_route_count": 2,
+        "hidden_route_count": 0,
+        "packet_level_simulation": False,
+        "all_pairs_computation": False,
     }
 
 

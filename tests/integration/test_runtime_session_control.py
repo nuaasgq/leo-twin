@@ -40,6 +40,7 @@ from leo_twin.schema.config import (
     RuntimeMode,
     ScenarioConfig,
 )
+from leo_twin.services.detail_pagination_contract import DETAIL_ENDPOINT_MAX_LIMIT
 from leo_twin.services.runtime_reproducibility import stable_hash_payload
 
 
@@ -861,6 +862,14 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
     assert route_detail_index["route_summary"]["route_count"] == config_snapshot[
         "status"
     ]["route_explanation_summary_v1"]["route_count"]
+    assert config_snapshot["status"]["route_explanation_summary_v1"]["limit"] == (
+        DETAIL_ENDPOINT_MAX_LIMIT
+    )
+    route_export_policy = config_snapshot["status"][
+        "runtime_export_route_detail_policy_v1"
+    ]
+    assert route_export_policy["route_detail_limit"] == DETAIL_ENDPOINT_MAX_LIMIT
+    assert route_detail_index["route_detail_export_policy"] == route_export_policy
     assert route_detail_index["route_detail_index_hash"].startswith("sha256:")
     assert review_summary["type"] == "RUNTIME_EXPORT_REVIEW_SUMMARY_V1"
     assert review_summary["package_id"] == exported["package_id"]
@@ -1040,6 +1049,11 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
     exported = control_plane.export_runtime_archive(export_root)
     package_id = exported["package_id"]
     record = control_plane.runtime_export_package_record(package_id, export_root)
+    config_snapshot_artifact = control_plane.runtime_export_package_artifact(
+        package_id,
+        "config_snapshot.json",
+        export_root,
+    )
     manifest_artifact = control_plane.runtime_export_package_artifact(
         package_id,
         "manifest.json",
@@ -1086,6 +1100,9 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
     assert record["type"] == "RUNTIME_EXPORT_PACKAGE_RECORD"
     assert record["summary"]["export_type"] == "ARCHIVE"
     assert record["summary"]["package_id"] == package_id
+    config_snapshot = json.loads(
+        Path(str(config_snapshot_artifact["path"])).read_text(encoding="utf-8")
+    )
     assert Path(str(manifest_artifact["path"])).name == "manifest.json"
     assert manifest_artifact["content_type"] == "application/json; charset=utf-8"
     manifest = json.loads(Path(str(manifest_artifact["path"])).read_text(encoding="utf-8"))
@@ -1114,6 +1131,11 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
         Path(str(route_detail_index_artifact["path"])).read_text(encoding="utf-8")
     )
     assert route_detail_index["type"] == "RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_V1"
+    route_export_policy = config_snapshot["status"][
+        "runtime_export_route_detail_policy_v1"
+    ]
+    assert route_export_policy["route_detail_limit"] == DETAIL_ENDPOINT_MAX_LIMIT
+    assert route_detail_index["route_detail_export_policy"] == route_export_policy
     assert route_detail_index["route_detail_index_hash"].startswith("sha256:")
     route_page = control_plane.runtime_export_package_route_details(
         package_id,

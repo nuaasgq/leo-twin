@@ -179,8 +179,10 @@ next-hop context coverage, bottleneck components, hidden route windows, and
 flow-level route proxy caveats. It reuses `route_explanation_summary_v1`; it
 does not recompute routes or introduce all-pairs route analysis.
 
-Runtime exports also write `route_detail_index_v1.json`, which preserves the
-current route explanation window and route trust sample ids for offline review.
+Runtime exports also write `route_detail_index_v1.json`, which preserves an
+export route explanation window and route trust sample ids for offline review.
+The export window is rebuilt from `visible_snapshot.routes` during package
+creation with the deterministic route explanation model and a 5000-row maximum.
 It is an index of backend-owned route explanation rows, not a packet trace or
 route recomputation artifact.
 The persisted package can also serve that evidence through package-owned route
@@ -196,6 +198,9 @@ return deterministic `RUNTIME_EXPORT_ROUTE_DETAIL_PAGE_V1` or
 `RUNTIME_EXPORT_ROUTE_DETAIL_ITEM_V1` JSON. They are offline review endpoints:
 they do not use the current live runtime state, replay events, or recompute
 routes.
+If a run has more route rows than the export limit, the package reports the
+hidden count in `runtime_export_route_detail_policy_v1` and
+`route_detail_index_v1.json`.
 
 Service trace detail APIs:
 

@@ -366,6 +366,9 @@ def build_runtime_export_route_detail_index_v1(
     status = _mapping(config_snapshot.get("status"))
     route_summary = _mapping(status.get("route_explanation_summary_v1"))
     route_trust = _runtime_export_route_trust_evidence(status)
+    route_detail_export_policy = _mapping(
+        status.get("runtime_export_route_detail_policy_v1")
+    )
     route_items = tuple(
         _runtime_export_route_detail_record(item)
         for item in _records(route_summary.get("items"))
@@ -420,6 +423,7 @@ def build_runtime_export_route_detail_index_v1(
                 route_summary.get("network_service_route_count")
             ),
         },
+        "route_detail_export_policy": dict(route_detail_export_policy),
         "route_trust": route_trust,
         "route_ids": route_ids,
         "sample_route_ids": sample_route_ids,

@@ -42,6 +42,7 @@ from leo_twin.services.configuration_view import (
     configuration_template_profiles,
     load_user_configuration_template,
 )
+from leo_twin.services.detail_pagination_contract import DETAIL_ENDPOINT_MAX_LIMIT
 from leo_twin.services.network_kpi_provenance import (
     build_network_kpi_credibility_v1,
     build_network_kpi_provenance_v2,
@@ -57,6 +58,7 @@ from leo_twin.services.runtime_observability import (
     build_runtime_node_detail_page,
     build_runtime_route_detail_item,
     build_runtime_route_explanation_summary,
+    build_runtime_route_provenance_trust_summary,
     build_runtime_satellite_detail_card,
     build_runtime_satellite_service_summary,
     build_runtime_service_detail_item,
@@ -123,6 +125,7 @@ _RUNTIME_EXPORT_CATALOG_FILENAME = "runtime_export_catalog_v1.json"
 _RUNTIME_EXPORT_RESTORE_COMMAND = "RESTORE_EXPORT_PACKAGE"
 _SERVICE_LIFECYCLE_TRACE_EXPORT_FILENAME = "service_lifecycle_trace_v2.json"
 _RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_FILENAME = "route_detail_index_v1.json"
+_RUNTIME_EXPORT_ROUTE_DETAIL_LIMIT = DETAIL_ENDPOINT_MAX_LIMIT
 _RUNTIME_EXPORT_REVIEW_SUMMARY_FILENAME = "review_summary_v1.json"
 _RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_FILENAME = "diagnostics_bundle_v1.json"
 
@@ -623,9 +626,10 @@ class DemoControlPlane:
         package_dir.mkdir(parents=True, exist_ok=True)
 
         written_files = dict(self._runtime_context.metrics.write_outputs(package_dir))
+        export_status = self._runtime_export_status_json(status)
         config_snapshot = {
             "type": "RUNTIME_CONFIG_SNAPSHOT",
-            "status": _runtime_export_status_snapshot(status),
+            "status": export_status,
             "config": self._controller.config_json(),
             "generated_config": generated_config,
         }
@@ -1355,6 +1359,38 @@ class DemoControlPlane:
         )
         status["runtime_export_history_v1"] = self._runtime_export_history_json()
         return status
+
+    def _runtime_export_status_json(self, status: dict[str, Any]) -> dict[str, Any]:
+        export_status = _runtime_export_status_snapshot(status)
+        route_summary = self._runtime_export_route_explanation_summary()
+        export_status["route_explanation_summary_v1"] = route_summary
+        export_status["route_provenance_trust_summary_v1"] = (
+            build_runtime_route_provenance_trust_summary(route_summary)
+        )
+        export_status["runtime_export_route_detail_policy_v1"] = {
+            "version": "v1",
+            "source": "BACKEND_RUNTIME_EXPORT",
+            "policy": "EXPORT_ROUTE_DETAIL_INDEX_WINDOW",
+            "route_summary_source": "visible_snapshot.routes",
+            "route_detail_limit": _RUNTIME_EXPORT_ROUTE_DETAIL_LIMIT,
+            "route_count": route_summary["route_count"],
+            "indexed_route_count": route_summary["item_count"],
+            "hidden_route_count": max(
+                0,
+                int(route_summary["route_count"]) - int(route_summary["item_count"]),
+            ),
+            "packet_level_simulation": False,
+            "all_pairs_computation": False,
+        }
+        return export_status
+
+    def _runtime_export_route_explanation_summary(self) -> dict[str, Any]:
+        return build_runtime_route_explanation_summary(
+            self.visible_snapshot(),
+            service_latency_history=self._service_latency_history_json(),
+            cursor=0,
+            limit=_RUNTIME_EXPORT_ROUTE_DETAIL_LIMIT,
+        )
 
     def _ack(self, command: ControlCommand) -> dict[str, Any]:
         return self._ack_for_command_name(command.command.value)
