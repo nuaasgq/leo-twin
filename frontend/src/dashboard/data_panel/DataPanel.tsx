@@ -1161,6 +1161,13 @@ export const DataPanel = memo(function DataPanel({
       exportScenarioReviewChecklistDraft,
       runtimeExportPackageAuditIndex
     );
+  const exportReviewCompletionSummary =
+    buildDataPanelExportReviewCompletionSummary({
+      auditIndex: runtimeExportPackageAuditIndex,
+      routeReport: runtimeExportRouteComparisonReviewReport,
+      scenarioReviewBundle: runtimeExportScenarioReviewBundle,
+      scenarioReviewChecklist: runtimeExportScenarioReviewChecklist
+    });
   const exportRouteComparisonReviewReportStatus =
     buildDataPanelExportRouteComparisonReviewReportStatus(
       buildDataPanelExportRouteComparisonReviewReportDisplay(
@@ -2110,6 +2117,37 @@ export const DataPanel = memo(function DataPanel({
                       )
                     )}
                   </div>
+                </div>
+              ) : null}
+              {exportReviewCompletionSummary ? (
+                <div
+                  className={`data-panel-export-route-compare-card ${exportReviewCompletionSummary.tone}`}
+                >
+                  <div className="data-panel-export-diagnostics-header">
+                    <div>
+                      <span>Package review completion</span>
+                      <strong>
+                        {exportReviewCompletionSummary.statusLabel}
+                      </strong>
+                      <small>
+                        {exportReviewCompletionSummary.summaryLabel}
+                      </small>
+                    </div>
+                  </div>
+                  <div className="data-panel-export-compare-meta">
+                    {exportReviewCompletionSummary.evidenceLabels.map((label) => (
+                      <span key={label}>{label}</span>
+                    ))}
+                  </div>
+                  {exportReviewCompletionSummary.warningLabels.length > 0 ? (
+                    <div className="data-panel-export-diagnostics-findings">
+                      {exportReviewCompletionSummary.warningLabels.map((label) => (
+                        <span className="warn" key={label}>
+                          <strong>{label}</strong>
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
               {exportScenarioReviewBundleStatus ? (
@@ -9905,6 +9943,14 @@ export interface DataPanelExportScenarioReviewChecklistStatusDisplay {
   warningLabels: readonly string[];
 }
 
+export interface DataPanelExportReviewCompletionSummaryDisplay {
+  tone: "match" | "different" | "pending" | "error";
+  statusLabel: string;
+  summaryLabel: string;
+  evidenceLabels: readonly string[];
+  warningLabels: readonly string[];
+}
+
 export interface DataPanelExportPackageAuditIndexDisplay {
   packageId: string;
   tone: "match" | "different";
@@ -10537,6 +10583,93 @@ function scenarioReviewWorkflowEvidenceHash(
     default:
       return "";
   }
+}
+
+export function buildDataPanelExportReviewCompletionSummary({
+  auditIndex,
+  routeReport,
+  scenarioReviewBundle,
+  scenarioReviewChecklist
+}: {
+  auditIndex?: RuntimeExportPackageAuditIndexV1 | null;
+  routeReport?: RuntimeExportRouteComparisonReviewReportV1 | null;
+  scenarioReviewBundle?: RuntimeExportScenarioReviewBundleV1 | null;
+  scenarioReviewChecklist?: RuntimeExportScenarioReviewChecklistV1 | null;
+}): DataPanelExportReviewCompletionSummaryDisplay | null {
+  if (
+    auditIndex == null &&
+    routeReport == null &&
+    scenarioReviewBundle == null &&
+    scenarioReviewChecklist == null
+  ) {
+    return null;
+  }
+  const auditReady = auditIndex?.audit_status === "AUDIT_READY";
+  const routeReportPresent =
+    auditIndex?.route_comparison_review_report_present === true ||
+    routeReport !== null && routeReport !== undefined;
+  const routeReportReady =
+    routeReportPresent &&
+    (routeReport === null ||
+      routeReport === undefined ||
+      routeReport.error_count === 0);
+  const scenarioReady =
+    scenarioReviewBundle?.scenario_review_status === "SCENARIO_REVIEW_READY" &&
+    (scenarioReviewBundle?.scenario_review_warnings.length ?? 0) === 0;
+  const checklistPresent =
+    auditIndex?.scenario_review_checklist_present === true ||
+    scenarioReviewChecklist !== null && scenarioReviewChecklist !== undefined;
+  const checklistStatus =
+    scenarioReviewChecklist?.checklist_status ??
+    auditIndex?.scenario_review_checklist_status ??
+    "";
+  const checklistComplete = checklistStatus === "CHECKLIST_COMPLETE";
+  const warningLabels: string[] = [];
+  if (!auditReady) {
+    warningLabels.push("audit index not ready");
+  }
+  if (!routeReportPresent) {
+    warningLabels.push("route comparison review report missing");
+  } else if (!routeReportReady) {
+    warningLabels.push("route comparison review report has errors");
+  }
+  if (!scenarioReady) {
+    warningLabels.push("scenario review bundle not ready");
+  }
+  if (!checklistPresent) {
+    warningLabels.push("scenario review checklist missing");
+  } else if (!checklistComplete) {
+    warningLabels.push(`scenario review checklist ${checklistStatus || "not complete"}`);
+  }
+  const complete =
+    auditReady &&
+    routeReportReady &&
+    scenarioReady &&
+    checklistPresent &&
+    checklistComplete;
+  const tone = complete ? "match" : routeReportPresent || checklistPresent ? "different" : "pending";
+  return {
+    tone,
+    statusLabel: complete
+      ? "review package complete"
+      : "review package needs action",
+    summaryLabel: `${complete ? "ready" : "incomplete"} / audit ${
+      auditIndex?.audit_status ?? "missing"
+    } / checklist ${checklistStatus || "missing"}`,
+    evidenceLabels: [
+      `audit ${auditIndex?.audit_status ?? "missing"}`,
+      `route report ${routeReportPresent ? "saved" : "missing"}`,
+      `route records ${formatCount(routeReport?.record_count ?? 0)}`,
+      `scenario ${scenarioReviewBundle?.scenario_review_status ?? "missing"}`,
+      `checklist ${checklistStatus || "missing"}`,
+      `checklist records ${formatCount(
+        scenarioReviewChecklist?.record_count ??
+          auditIndex?.scenario_review_checklist_record_count ??
+          0
+      )}`
+    ],
+    warningLabels
+  };
 }
 
 export function buildDataPanelExportPackageAuditIndexDisplay(

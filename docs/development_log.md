@@ -15216,3 +15216,49 @@ change.
   - Add a compact package-review completion summary that combines saved route
     comparison report status and saved scenario checklist status in one
     operator-ready banner.
+
+## 2026-07-06 - Dashboard Review Completion Summary v1
+
+- Branch: `feature/T315-dashboard-review-completion-summary-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add an operator-facing package review completion banner to the
+  standalone dashboard package review area. The banner aggregates existing
+  backend-owned evidence from `export_package_audit_index_v1.json`,
+  `route_comparison_review_report_v1.json`,
+  `scenario_review_bundle_v1.json`, and
+  `scenario_review_checklist_v1.json`: audit readiness, route report presence,
+  route review errors, scenario review readiness, checklist presence,
+  checklist status, and checklist record count. This task does not alter Event
+  Kernel behavior, backend runtime models, export package read semantics,
+  route recomputation, service recomputation, packet-level simulation, or
+  external simulator integration.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/dashboard_model_trust_evidence_workspace_v1.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts appSurface.test.ts api.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 3 test
+      files and 256 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path. Vite
+      reported the existing large DataPanel chunk warning.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered:
+  - The normal PowerShell PATH may not expose `node`, so frontend validation
+    uses the bundled Codex Node/Pnpm runtime path.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The completion banner summarizes current package review evidence. It does
+    not yet create a separate backend `review_completion_v1.json` artifact.
+- Recommended follow-up:
+  - Promote the completion summary into a backend-owned export artifact or
+    audit-index subobject if future workflows need machine-readable handoff
+    gates outside the dashboard.

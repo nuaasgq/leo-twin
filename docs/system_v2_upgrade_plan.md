@@ -650,7 +650,11 @@ Tasks:
     checklist contract into the standalone dashboard guided review workflow:
     every review row can be marked reviewed, skipped, follow-up, or error with
     an operator note, saved through the backend endpoint, and reflected back
-    through refreshed catalog/audit-index evidence.
+    through refreshed catalog/audit-index evidence. T315 adds a dashboard
+    package-review completion summary that aggregates backend-owned audit
+    readiness, saved route comparison report presence, scenario review bundle
+    readiness, and checklist completion into one operator-facing handoff
+    signal.
 
 ### WS9. Delivery and Operations v2
 

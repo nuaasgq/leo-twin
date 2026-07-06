@@ -29,6 +29,7 @@ import {
   buildDataPanelExportReproducibilityBoundaryDisplay,
   buildDataPanelExportReviewSummaryDisplay,
   buildDataPanelExportReviewSummaryStatus,
+  buildDataPanelExportReviewCompletionSummary,
   buildDataPanelExportRouteDetailItemDisplay,
   buildDataPanelExportRouteDetailItemStatus,
   buildDataPanelExportPackageAuditIndexArtifactDisplay,
@@ -3037,6 +3038,129 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           evidence_hash: "sha256:review"
         }
       ]
+    });
+  });
+
+  it("summarizes package review completion evidence", () => {
+    const auditIndex = {
+      type: "RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1",
+      version: "v1",
+      audit_index_id: "leo_twin.runtime_export_package_audit_index.v1",
+      source: "BACKEND_RUNTIME_EXPORT_PACKAGE",
+      audit_scope: "RESULT_PACKAGE_LONG_TERM_AUDIT_INDEX",
+      package_id: "pkg-review",
+      package_dir: "artifacts/runtime_exports/pkg-review",
+      manifest_hash: "sha256:manifest",
+      control_config_hash: "sha256:control",
+      generated_config_hash: "sha256:generated",
+      runtime_state_hash: "sha256:runtime",
+      runtime_export_boundary_hash: "sha256:boundary",
+      boundary_alignment_hash: "sha256:alignment",
+      boundary_alignment_status: "ALIGNED",
+      boundary_alignment_warnings: [],
+      review_summary_hash: "sha256:review",
+      diagnostics_hash: "sha256:diagnostics",
+      route_comparison_review_report_hash: "sha256:route-report",
+      route_comparison_review_report_present: true,
+      scenario_review_checklist_hash: "sha256:checklist",
+      scenario_review_checklist_present: true,
+      scenario_review_checklist_record_count: 2,
+      scenario_review_checklist_status: "CHECKLIST_COMPLETE",
+      artifact_count: 2,
+      artifact_hashes: [],
+      required_artifact_filenames: [],
+      missing_required_artifact_filenames: [],
+      self_artifact_excluded_from_hashes: true,
+      audit_status: "AUDIT_READY",
+      audit_warnings: [],
+      forbidden_external_integrations: ["STK", "EXATA", "AFSIM", "DDS"],
+      packet_level_simulation: false,
+      event_replay_restore: false,
+      model_recomputation: false,
+      package_mutation_on_read: false,
+      audit_hash: "sha256:audit"
+    };
+    const routeReport = {
+      type: "RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1",
+      version: "v1",
+      report_id: "leo_twin.runtime_export_route_comparison_review_report.v1",
+      source: "OPERATOR_ROUTE_COMPARISON_REVIEW",
+      report_scope: "SELECTED_PACKAGE_VS_LIVE_ROUTE_COMPARISON_OUTCOMES",
+      package_id: "pkg-review",
+      package_dir: "artifacts/runtime_exports/pkg-review",
+      route_comparison_review: _runtimeExportRouteComparisonReview(),
+      record_count: 1,
+      match_count: 1,
+      different_count: 0,
+      unavailable_count: 0,
+      error_count: 0,
+      records: [],
+      ordering: "route_id ascending",
+      boundary_conditions: ["NO_ROUTE_RECOMPUTE"],
+      report_hash: "sha256:route-report"
+    };
+    const scenarioReviewBundle = {
+      scenario_review_status: "SCENARIO_REVIEW_READY",
+      scenario_review_warnings: []
+    };
+    const checklist = {
+      checklist_status: "CHECKLIST_COMPLETE",
+      record_count: 2,
+      checklist_hash: "sha256:checklist"
+    };
+
+    expect(
+      buildDataPanelExportReviewCompletionSummary({
+        auditIndex: auditIndex as any,
+        routeReport: routeReport as any,
+        scenarioReviewBundle: scenarioReviewBundle as any,
+        scenarioReviewChecklist: checklist as any
+      })
+    ).toEqual({
+      tone: "match",
+      statusLabel: "review package complete",
+      summaryLabel: "ready / audit AUDIT_READY / checklist CHECKLIST_COMPLETE",
+      evidenceLabels: [
+        "audit AUDIT_READY",
+        "route report saved",
+        "route records 1",
+        "scenario SCENARIO_REVIEW_READY",
+        "checklist CHECKLIST_COMPLETE",
+        "checklist records 2"
+      ],
+      warningLabels: []
+    });
+    expect(
+      buildDataPanelExportReviewCompletionSummary({
+        auditIndex: {
+          ...auditIndex,
+          route_comparison_review_report_present: false
+        } as any,
+        routeReport: null,
+        scenarioReviewBundle: scenarioReviewBundle as any,
+        scenarioReviewChecklist: checklist as any
+      })
+    ).toMatchObject({
+      tone: "different",
+      statusLabel: "review package needs action",
+      warningLabels: ["route comparison review report missing"]
+    });
+    expect(
+      buildDataPanelExportReviewCompletionSummary({
+        auditIndex: {
+          ...auditIndex,
+          scenario_review_checklist_status: "CHECKLIST_WARN"
+        } as any,
+        routeReport: routeReport as any,
+        scenarioReviewBundle: scenarioReviewBundle as any,
+        scenarioReviewChecklist: {
+          ...checklist,
+          checklist_status: "CHECKLIST_WARN"
+        } as any
+      })
+    ).toMatchObject({
+      tone: "different",
+      warningLabels: ["scenario review checklist CHECKLIST_WARN"]
     });
   });
 
