@@ -12460,3 +12460,47 @@ change.
 - Recommended follow-up:
   - Add a dedicated service trace browser with search, stage filters, and
     export shortcuts once the dashboard detail drawer usage pattern is stable.
+
+## 2026-07-06 - Service Trace Browser Filters v2
+
+- Branch: `feature/T262-service-trace-browser-filters-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add local browser filters for the standalone dashboard
+  `service_lifecycle_trace_v2` rows. The trace row model now carries the raw
+  backend `terminal_state`, and the dashboard can filter by keyword, terminal
+  state, and compute-node id while clearing stale exact-detail selection when a
+  filter changes. This is a frontend browsing task only; backend runtime
+  behavior, Event Kernel behavior, network routing, compute scheduling,
+  packet-level semantics, and export formats remain unchanged.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/service_lifecycle_trace_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed.
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed, 150 tests.
+  - `pnpm --dir frontend test`
+    - Result: passed, 360 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite reported the existing large DataPanel chunk warning.
+  - `git diff --check`
+    - Result: passed. Git reported CRLF normalization warnings for the existing
+      unstaged local runtime config drift.
+- Problems encountered:
+  - The trace panel contains existing localized text that is difficult to patch
+    safely through terminal output, so the filter bar was placed in the parent
+    service section immediately above the trace panel.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - Filtering is local to the current backend trace window. A future backend
+    cursor/query API can extend this to server-side trace search for very large
+    sessions.
+- Recommended follow-up:
+  - Add stage-kind filters and a per-trace export shortcut once backend trace
+    pagination/search semantics are defined.

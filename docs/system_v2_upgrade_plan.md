@@ -136,7 +136,10 @@ Tasks:
     T261 adds a service trace card to the dashboard detail drawer so the same
     backend exact detail can show lifecycle components, correlation ids,
     bounded route explanations, backend user/satellite cards, and compute-node
-    resource context in scrollable sections.
+    resource context in scrollable sections. T262 adds local service trace
+    browser filters for keyword, backend terminal state, and compute-node id so
+    users can locate a communication-compute lifecycle without paging through
+    unrelated trace rows.
 
 ### WS3. Network Semantics and KPI Trust v2
 

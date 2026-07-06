@@ -67,6 +67,7 @@ import {
   COMPUTE_SERIES_OPTIONS,
   filterRouteExplanationRows,
   filterSatelliteResourceRows,
+  filterServiceLifecycleTraceDisplay,
   filterUserBusinessRequestRows,
   appendExactDetailStatusToInspector,
   paginateDetailRows,
@@ -3562,6 +3563,130 @@ describe("buildDataPanelServiceLifecycleTraceDisplay", () => {
           "output_network@10s=0 ms PENDING flow=svc-01-compute_service-00000-output"
       }
     ]);
+  });
+
+  it("filters service lifecycle trace rows by query terminal state and compute node", () => {
+    const display = buildDataPanelServiceLifecycleTraceDisplay({
+      version: "v2",
+      source: "SERVICE_LATENCY_HISTORY",
+      source_summary: "service_latency_history_v1",
+      summary_scope: "SERVICE_LIFECYCLE_TRACE_WINDOW",
+      cursor: 0,
+      limit: 100,
+      next_cursor: 2,
+      has_more: false,
+      service_count: 2,
+      trace_count: 2,
+      complete_trace_count: 1,
+      running_trace_count: 1,
+      incomplete_trace_count: 0,
+      hidden_trace_count: 0,
+      items: [
+        {
+          trace_id: "trace:run",
+          service_id: "svc-run-compute_service-00000",
+          task_id: "svc-run-compute_service-00000-task",
+          service_class: "COMPUTE_SERVICE",
+          input_flow_id: "svc-run-compute_service-00000-input",
+          output_flow_id: "svc-run-compute_service-00000-output",
+          input_route_id: "route:run-input",
+          output_route_id: "route:run-output",
+          compute_node_id: "sat-00001",
+          placement_status: "PLACED",
+          input_network_latency_s: 1,
+          compute_queue_delay_s: 0.1,
+          compute_execution_delay_s: 2,
+          output_network_latency_s: 0,
+          total_latency_s: 0,
+          terminal_state: "RUNNING",
+          terminal_state_reason: "OUTPUT_NETWORK_PENDING",
+          stage_count: 4,
+          observed_stage_count: 3,
+          pending_stage_count: 1,
+          stages: [
+            {
+              stage_index: 0,
+              stage_id: "run:input_network",
+              component: "input_network",
+              stage_kind: "NETWORK",
+              stage_label: "Input network",
+              stage_status: "OBSERVED",
+              duration_s: 1,
+              flow_id: "svc-run-compute_service-00000-input",
+              route_id: "route:run-input"
+            }
+          ]
+        },
+        {
+          trace_id: "trace:done",
+          service_id: "svc-done-compute_service-00000",
+          task_id: "svc-done-compute_service-00000-task",
+          service_class: "COMPUTE_SERVICE",
+          input_flow_id: "svc-done-compute_service-00000-input",
+          output_flow_id: "svc-done-compute_service-00000-output",
+          input_route_id: "route:done-input",
+          output_route_id: "route:done-output",
+          compute_node_id: "sat-00002",
+          placement_status: "PLACED",
+          input_network_latency_s: 1,
+          compute_queue_delay_s: 0.1,
+          compute_execution_delay_s: 2,
+          output_network_latency_s: 1,
+          total_latency_s: 4.1,
+          terminal_state: "COMPLETE",
+          terminal_state_reason: "TOTAL_LATENCY_OBSERVED",
+          stage_count: 4,
+          observed_stage_count: 4,
+          pending_stage_count: 0,
+          stages: [
+            {
+              stage_index: 3,
+              stage_id: "done:output_network",
+              component: "output_network",
+              stage_kind: "NETWORK",
+              stage_label: "Output network",
+              stage_status: "OBSERVED",
+              duration_s: 1,
+              flow_id: "svc-done-compute_service-00000-output",
+              route_id: "route:done-output"
+            }
+          ]
+        }
+      ]
+    });
+
+    expect(display.items.map((row) => row.terminalState)).toEqual([
+      "RUNNING",
+      "COMPLETE"
+    ]);
+    expect(
+      filterServiceLifecycleTraceDisplay(display, "route:done").items.map(
+        (row) => row.traceId
+      )
+    ).toEqual(["trace:done"]);
+    expect(
+      filterServiceLifecycleTraceDisplay(display, {
+        terminalState: "RUNNING"
+      }).items.map((row) => row.traceId)
+    ).toEqual(["trace:run"]);
+    expect(
+      filterServiceLifecycleTraceDisplay(display, {
+        computeNodeId: " SAT-00002 "
+      }).items.map((row) => row.traceId)
+    ).toEqual(["trace:done"]);
+    expect(
+      filterServiceLifecycleTraceDisplay(display, {
+        query: "output network",
+        terminalState: "COMPLETE",
+        computeNodeId: "sat-00002"
+      }).items.map((row) => row.traceId)
+    ).toEqual(["trace:done"]);
+    expect(filterServiceLifecycleTraceDisplay(display, "")).toBe(display);
+    expect(
+      filterServiceLifecycleTraceDisplay(display, {
+        query: "not-present"
+      }).summaryLabel
+    ).toContain("筛选 0");
   });
 
   it("correlates a selected trace with user, route, satellite, and compute rows", () => {

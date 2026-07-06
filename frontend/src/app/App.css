@@ -1894,6 +1894,38 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
   font-style: normal;
 }
 
+.data-panel-service-trace-filters {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(120px, 0.45fr) minmax(150px, 0.65fr);
+  gap: 8px;
+  min-width: 0;
+  border: 1px solid #263a48;
+  border-radius: 7px;
+  padding: 8px;
+  background: #0b1219;
+}
+
+.data-panel-service-trace-filters label {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  color: var(--app-muted);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.data-panel-service-trace-filters input,
+.data-panel-service-trace-filters select {
+  min-width: 0;
+  width: 100%;
+  border: 1px solid #314656;
+  border-radius: 5px;
+  padding: 6px 7px;
+  background: #081016;
+  color: var(--app-text);
+  font: inherit;
+}
+
 .data-panel-route-table {
   display: grid;
   gap: 4px;
@@ -3272,6 +3304,7 @@ button.data-panel-satellite-resource-row:hover,
 @media (max-width: 900px) {
   .data-panel-detail-inspector-grid,
   .data-panel-detail-inspector-fields,
+  .data-panel-service-trace-filters,
   .data-panel-node-detail-drawer-grid {
     grid-template-columns: 1fr;
   }
