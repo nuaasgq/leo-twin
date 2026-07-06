@@ -679,7 +679,11 @@ export const DataPanel = memo(function DataPanel({
   );
   const nodeDetailDrawerItems = buildDataPanelNodeDetailDrawerItems(
     displayedUserDetailInspector,
-    displayedSatelliteDetailInspector
+    displayedSatelliteDetailInspector,
+    buildServiceTraceDetailDrawerItem(
+      selectedServiceTraceBackendDetail,
+      displayedServiceTraceCorrelationInspector
+    )
   );
   const userSourceBadge = buildRuntimeDetailSourceBadge(userBusinessRequests.sourceLabel);
   const satelliteSourceBadge = buildRuntimeDetailSourceBadge(satelliteResourceRows.sourceLabel);
@@ -3465,7 +3469,7 @@ export interface DataPanelDetailInspectorField {
 }
 
 export interface DataPanelNodeDetailDrawerItem {
-  kind: "user" | "satellite";
+  kind: "user" | "satellite" | "service_trace";
   title: string;
   subtitle: string;
   emptyLabel: string;
@@ -5416,9 +5420,10 @@ export function buildComputeNodeExactDetailInspector(
 
 export function buildDataPanelNodeDetailDrawerItems(
   user: DataPanelDetailInspector,
-  satellite: DataPanelDetailInspector
+  satellite: DataPanelDetailInspector,
+  serviceTrace: DataPanelNodeDetailDrawerItem | null | undefined = undefined
 ): readonly DataPanelNodeDetailDrawerItem[] {
-  return [
+  const items: DataPanelNodeDetailDrawerItem[] = [
     {
       kind: "user",
       title: user.title,
@@ -5436,6 +5441,271 @@ export function buildDataPanelNodeDetailDrawerItems(
       fields: satellite.fields
     }
   ];
+  if (serviceTrace !== null && serviceTrace !== undefined) {
+    items.push(serviceTrace);
+  }
+  return items;
+}
+
+export function buildServiceTraceDetailDrawerItem(
+  detail: RuntimeServiceTraceDetailV2 | null | undefined,
+  fallback: DataPanelDetailInspector
+): DataPanelNodeDetailDrawerItem {
+  if (detail === null || detail === undefined) {
+    return {
+      kind: "service_trace",
+      title: fallback.title,
+      subtitle: fallback.subtitle,
+      emptyLabel: "选择一条服务 trace 后显示后端精确详情",
+      sections: fallback.sections ?? [],
+      fields: fallback.fields
+    };
+  }
+  const trace = detail.trace;
+  const correlation = detail.correlation;
+  const computeNodeId = detail.compute_node?.node_id ?? correlation.compute_node_id;
+  const sections: DataPanelNodeDetailSection[] = [
+    {
+      sectionId: "service_trace_lifecycle",
+      title: "服务生命周期",
+      fields: [
+        { label: "trace", value: trace.trace_id },
+        { label: "服务", value: trace.service_id },
+        { label: "任务", value: trace.task_id || "无任务 id" },
+        {
+          label: "终态",
+          value: serviceLifecycleTerminalLabel(
+            trace.terminal_state,
+            trace.terminal_state_reason
+          )
+        },
+        {
+          label: "总时延",
+          value: formatMetricMilliseconds(trace.total_latency_s),
+          tone: "resource"
+        },
+        {
+          label: "输入网络",
+          value: formatMetricMilliseconds(trace.input_network_latency_s)
+        },
+        {
+          label: "计算排队",
+          value: formatMetricMilliseconds(trace.compute_queue_delay_s),
+          tone: "warning"
+        },
+        {
+          label: "计算执行",
+          value: formatMetricMilliseconds(trace.compute_execution_delay_s),
+          tone: "resource"
+        },
+        {
+          label: "输出网络",
+          value: formatMetricMilliseconds(trace.output_network_latency_s)
+        },
+        {
+          label: "阶段",
+          value: `${formatCount(trace.observed_stage_count)} observed / ${formatCount(
+            trace.pending_stage_count
+          )} pending / ${formatCount(trace.stage_count)} total`
+        }
+      ]
+    },
+    {
+      sectionId: "service_trace_correlation",
+      title: "关联对象",
+      fields: [
+        {
+          label: "用户",
+          value: formatLimitedIds(correlation.user_ids),
+          tone: correlation.user_count > 0 ? "resource" : "warning"
+        },
+        {
+          label: "卫星",
+          value: formatLimitedIds(correlation.satellite_ids),
+          tone: correlation.satellite_count > 0 ? "resource" : "warning"
+        },
+        {
+          label: "路由",
+          value: formatLimitedIds(correlation.route_ids),
+          tone: correlation.route_count > 0 ? "resource" : "warning"
+        },
+        {
+          label: "流",
+          value: formatLimitedIds(correlation.flow_ids)
+        },
+        {
+          label: "算力节点",
+          value: computeNodeId || "未放置",
+          tone: computeNodeId ? "resource" : "warning"
+        }
+      ]
+    }
+  ];
+  if (detail.routes.length > 0) {
+    sections.push({
+      sectionId: "service_trace_routes",
+      title: "路由解释",
+      fields: buildServiceTraceRouteFields(detail.routes)
+    });
+  }
+  sections.push(...buildServiceTraceNodeCardSections("user", detail.users));
+  sections.push(...buildServiceTraceNodeCardSections("satellite", detail.satellites));
+  if (detail.compute_node !== null && detail.compute_node !== undefined) {
+    sections.push({
+      sectionId: "service_trace_compute_node",
+      title: `算力节点 ${detail.compute_node.node_id}`,
+      fields: [
+        { label: "状态", value: detail.compute_node.status },
+        {
+          label: "负载",
+          value: formatRatioPercent(detail.compute_node.compute_load_ratio),
+          tone: "resource"
+        },
+        {
+          label: "CPU FP32",
+          value: resourceUsageLabel(
+            detail.compute_node.compute_used_gflops_fp32,
+            detail.compute_node.compute_capacity_gflops_fp32,
+            "GFLOPS"
+          ),
+          tone: "resource"
+        },
+        {
+          label: "GPU FP32",
+          value: resourceUsageLabel(
+            detail.compute_node.compute_used_gpu_tflops_fp32,
+            detail.compute_node.compute_capacity_gpu_tflops_fp32,
+            "TFLOPS"
+          ),
+          tone: "resource"
+        },
+        {
+          label: "内存",
+          value: resourceUsageLabel(
+            detail.compute_node.compute_used_memory_gb,
+            detail.compute_node.compute_capacity_memory_gb,
+            "GB"
+          ),
+          tone: "resource"
+        },
+        {
+          label: "任务",
+          value: `${formatCount(detail.compute_node.running_task_count)} 运行 / ${formatCount(
+            detail.compute_node.finished_task_count
+          )} 完成`
+        }
+      ]
+    });
+  }
+  return {
+    kind: "service_trace",
+    title: `服务 trace ${compactTaskId(correlation.service_id)}`,
+    subtitle: serviceLifecycleTerminalLabel(
+      trace.terminal_state,
+      trace.terminal_state_reason
+    ),
+    emptyLabel: "当前服务 trace 暂无后端精确详情",
+    sections,
+    fields: [
+      { label: "服务", value: correlation.service_id },
+      { label: "用户", value: formatLimitedIds(correlation.user_ids) },
+      { label: "卫星", value: formatLimitedIds(correlation.satellite_ids) },
+      {
+        label: "总时延",
+        value: formatMetricMilliseconds(trace.total_latency_s),
+        tone: "resource"
+      }
+    ]
+  };
+}
+
+function buildServiceTraceRouteFields(
+  routes: readonly RuntimeRouteExplanationItemV1[]
+): readonly DataPanelDetailInspectorField[] {
+  const visibleRoutes = routes.slice(0, 4);
+  const fields: DataPanelDetailInspectorField[] = visibleRoutes.map((route) => {
+    const tone: DataPanelDetailInspectorField["tone"] = route.available
+      ? "resource"
+      : "warning";
+    return {
+      label: route.route_id,
+      value: [
+        route.available ? "available" : "blocked",
+        route.path_label,
+        route.latency_s === null || route.latency_s === undefined
+          ? null
+          : formatMetricMilliseconds(route.latency_s),
+        `${formatMetricValue(route.route_pressure_proxy * 100)}% pressure`,
+        route.bottleneck_reason_label || route.explanation_label
+      ]
+        .filter((part): part is string => part !== null && part.length > 0)
+        .join(" / "),
+      tone
+    };
+  });
+  if (routes.length > visibleRoutes.length) {
+    return [
+      ...fields,
+      {
+        label: "更多路由",
+        value: `另有 ${formatCount(routes.length - visibleRoutes.length)} 条未展开`
+      }
+    ];
+  }
+  return fields;
+}
+
+function buildServiceTraceNodeCardSections(
+  prefix: "user" | "satellite",
+  cards: readonly RuntimeNodeDetailCardV1[]
+): readonly DataPanelNodeDetailSection[] {
+  const visibleCards = cards.slice(0, 3);
+  const sections = visibleCards.flatMap((card, index) => {
+    const inspector = buildRuntimeNodeDetailInspector(card);
+    const prefixLabel = prefix === "user" ? "用户" : "卫星";
+    return [
+      {
+        sectionId: `service_trace_${prefix}_${index}_summary`,
+        title: `${prefixLabel} ${card.entity_id}`,
+        fields:
+          inspector.fields.length > 0
+            ? inspector.fields
+            : [{ label: "状态", value: inspector.subtitle }]
+      },
+      ...(inspector.sections ?? []).map((section) => ({
+        sectionId: `service_trace_${prefix}_${index}_${section.sectionId}`,
+        title: section.title,
+        fields: section.fields
+      }))
+    ];
+  });
+  if (cards.length > visibleCards.length) {
+    const prefixLabel = prefix === "user" ? "用户" : "卫星";
+    return [
+      ...sections,
+      {
+        sectionId: `service_trace_${prefix}_hidden`,
+        title: `${prefixLabel}未展开`,
+        fields: [
+          {
+            label: "数量",
+            value: `另有 ${formatCount(cards.length - visibleCards.length)} 个节点`
+          }
+        ]
+      }
+    ];
+  }
+  return sections;
+}
+
+function formatLimitedIds(ids: readonly string[], limit = 6): string {
+  const normalizedIds = uniqueStrings(ids);
+  if (normalizedIds.length === 0) {
+    return "无";
+  }
+  const visibleIds = normalizedIds.slice(0, limit).join(" / ");
+  const hiddenCount = normalizedIds.length - Math.min(normalizedIds.length, limit);
+  return hiddenCount > 0 ? `${visibleIds} / +${formatCount(hiddenCount)}` : visibleIds;
 }
 
 function buildRuntimeNodeDetailInspector(

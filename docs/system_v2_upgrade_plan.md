@@ -133,6 +133,10 @@ Tasks:
     current dashboard window. T260 binds the dashboard selection path to that
     exact-detail API and displays backend-owned correlation ids first, with the
     existing visible-window correlation retained as a loading/error fallback.
+    T261 adds a service trace card to the dashboard detail drawer so the same
+    backend exact detail can show lifecycle components, correlation ids,
+    bounded route explanations, backend user/satellite cards, and compute-node
+    resource context in scrollable sections.
 
 ### WS3. Network Semantics and KPI Trust v2
 

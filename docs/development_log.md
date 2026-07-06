@@ -12415,3 +12415,48 @@ change.
   - Add a dedicated service trace detail drawer that renders backend-returned
     route explanations, user cards, satellite cards, and compute-node detail in
     a virtualized, scrollable layout.
+
+## 2026-07-06 - Service Trace Detail Drawer v2
+
+- Branch: `feature/T261-service-trace-detail-drawer-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: extend the standalone dashboard detail drawer with a service trace
+  card backed by the exact detail payload introduced in T259 and selected by
+  T260. The card groups lifecycle latency components, backend correlation ids,
+  bounded route explanation rows, backend user cards, backend satellite cards,
+  and compute-node resource context into scrollable sections. The existing
+  visible-window inspector remains the loading/error fallback. No backend
+  runtime behavior, Event Kernel behavior, network routing, compute scheduling,
+  packet-level semantics, or export formats were changed.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/service_lifecycle_trace_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed.
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed, 149 tests.
+  - `pnpm --dir frontend test`
+    - Result: passed, 359 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite reported the existing large DataPanel chunk warning.
+  - `git diff --check`
+    - Result: passed. Git reported CRLF normalization warnings for the existing
+      unstaged local runtime config drift.
+- Problems encountered:
+  - The first TypeScript pass widened a route field `tone` value to `string`.
+    The route drawer helper now explicitly uses the existing
+    `DataPanelDetailInspectorField["tone"]` type.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The drawer bounds route and backend node-card expansion to keep large-scale
+    dashboard rendering stable. It is not yet a dedicated full-screen,
+    virtualized trace browser.
+- Recommended follow-up:
+  - Add a dedicated service trace browser with search, stage filters, and
+    export shortcuts once the dashboard detail drawer usage pattern is stable.

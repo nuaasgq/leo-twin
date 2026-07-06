@@ -46,6 +46,7 @@ import {
   buildComputeNodeExactDetailInspector,
   buildRouteExplanationDetailInspector,
   buildServiceLifecycleDetailInspector,
+  buildServiceTraceDetailDrawerItem,
   buildSatelliteDetailDrawerSectionsV1,
   buildSatelliteResourceInspector,
   buildDataPanelSummary,
@@ -3839,6 +3840,168 @@ describe("buildDataPanelServiceLifecycleTraceDisplay", () => {
         { label: "compute node", value: "sat-00002", tone: "resource" }
       ])
     );
+  });
+
+  it("builds a backend exact service trace detail drawer", () => {
+    const item = buildServiceTraceDetailDrawerItem(
+      {
+        version: "v2",
+        source: "BACKEND_RUNTIME_DETAIL",
+        summary_scope: "SERVICE_TRACE_EXACT_DETAIL",
+        trace: {
+          trace_id: "trace:svc-02",
+          service_id: "svc-02-compute_service-00000",
+          task_id: "svc-02-compute_service-00000-task",
+          service_class: "COMPUTE_SERVICE",
+          input_flow_id: "svc-02-compute_service-00000-input",
+          output_flow_id: "svc-02-compute_service-00000-output",
+          input_route_id: "route:input-02",
+          output_route_id: "route:output-02",
+          compute_node_id: "sat-00002",
+          placement_status: "PLACED",
+          input_network_latency_s: 1,
+          compute_queue_delay_s: 0.2,
+          compute_execution_delay_s: 3,
+          output_network_latency_s: 1.5,
+          total_latency_s: 5.7,
+          terminal_state: "COMPLETE",
+          terminal_state_reason: "TOTAL_LATENCY_OBSERVED",
+          stage_count: 4,
+          observed_stage_count: 4,
+          pending_stage_count: 0,
+          stages: []
+        },
+        correlation: {
+          trace_id: "trace:svc-02",
+          service_id: "svc-02-compute_service-00000",
+          task_id: "svc-02-compute_service-00000-task",
+          flow_ids: [
+            "svc-02-compute_service-00000-input",
+            "svc-02-compute_service-00000-output"
+          ],
+          route_ids: ["route:input-02", "route:output-02"],
+          user_ids: ["user-7"],
+          satellite_ids: ["sat-00002"],
+          compute_node_id: "sat-00002",
+          route_count: 2,
+          user_count: 1,
+          satellite_count: 1,
+          compute_node_detail_available: true
+        },
+        routes: [
+          {
+            route_id: "route:input-02",
+            flow_id: "svc-02-compute_service-00000-input",
+            user_id: "user-7",
+            source_id: "user-7",
+            destination_id: "sat-00002",
+            selected_satellite_id: "sat-00002",
+            primary_next_hop_id: "sat-00002",
+            next_hop_ids: ["sat-00002"],
+            hop_count: 1,
+            path_label: "user-7 -> sat-00002",
+            available: true,
+            capacity_mbps: 100,
+            demand_mbps: 10,
+            latency_s: 1,
+            loss_proxy_rate: 0.01,
+            route_pressure_proxy: 0.1,
+            business_type: "COMPUTE_SERVICE",
+            business_label: "compute",
+            bottleneck_component: "NONE",
+            bottleneck_reason: "NONE",
+            bottleneck_reason_label: "no bottleneck",
+            explanation_label: "route ready"
+          }
+        ],
+        users: [
+          {
+            entity_type: "USER",
+            entity_id: "user-7",
+            title: "用户 user-7",
+            subtitle: "ACTIVE",
+            fields: [{ label: "业务", value: "compute", tone: "resource" }]
+          }
+        ],
+        satellites: [
+          {
+            entity_type: "SATELLITE",
+            entity_id: "sat-00002",
+            title: "卫星 sat-00002",
+            subtitle: "BUSY",
+            fields: [{ label: "负载", value: "42%", tone: "resource" }]
+          }
+        ],
+        compute_node: {
+          node_id: "sat-00002",
+          platform_type: "SATELLITE",
+          status: "BUSY",
+          compute_load_ratio: 0.42,
+          compute_capacity_gflops_fp32: 100,
+          compute_used_gflops_fp32: 42,
+          compute_available_gflops_fp32: 58,
+          compute_capacity_gflops_fp64: 50,
+          compute_used_gflops_fp64: 1,
+          compute_capacity_gpu_tflops_fp32: 2,
+          compute_used_gpu_tflops_fp32: 0.5,
+          compute_capacity_gpu_tflops_fp16: 4,
+          compute_used_gpu_tflops_fp16: 1,
+          compute_capacity_npu_tops_int8: 8,
+          compute_used_npu_tops_int8: 2,
+          compute_capacity_memory_gb: 32,
+          compute_used_memory_gb: 12,
+          compute_capacity_storage_gb: 256,
+          compute_used_storage_gb: 64,
+          running_task_count: 1,
+          finished_task_count: 3
+        }
+      },
+      { title: "fallback", subtitle: "loading", fields: [] }
+    );
+
+    expect(item).toMatchObject({
+      kind: "service_trace",
+      title: "服务 trace ...e_service-00000",
+      fields: expect.arrayContaining([
+        { label: "服务", value: "svc-02-compute_service-00000" },
+        { label: "用户", value: "user-7" },
+        { label: "卫星", value: "sat-00002" }
+      ])
+    });
+    expect(item.sections.map((section) => section.sectionId)).toEqual(
+      expect.arrayContaining([
+        "service_trace_lifecycle",
+        "service_trace_correlation",
+        "service_trace_routes",
+        "service_trace_user_0_summary",
+        "service_trace_satellite_0_summary",
+        "service_trace_compute_node"
+      ])
+    );
+    expect(
+      item.sections.find((section) => section.sectionId === "service_trace_routes")
+        ?.fields[0]
+    ).toMatchObject({
+      label: "route:input-02",
+      tone: "resource"
+    });
+  });
+
+  it("keeps the fallback inspector while service trace detail is loading", () => {
+    const item = buildServiceTraceDetailDrawerItem(null, {
+      title: "trace loading",
+      subtitle: "waiting",
+      fields: [{ label: "source", value: "visible window" }]
+    });
+
+    expect(item).toEqual({
+      kind: "service_trace",
+      title: "trace loading",
+      subtitle: "waiting",
+      emptyLabel: "选择一条服务 trace 后显示后端精确详情",
+      sections: [],
+      fields: [{ label: "source", value: "visible window" }]
+    });
   });
 
   it("returns a backend waiting state before trace v2 arrives", () => {

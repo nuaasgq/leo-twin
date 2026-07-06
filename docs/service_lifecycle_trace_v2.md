@@ -59,6 +59,13 @@ satellite, flow, and compute-node ids over the current visible table window.
 The previous visible-window correlation remains as a fallback while the detail
 request is loading or unavailable.
 
+The dashboard detail drawer also renders the selected backend exact trace as a
+service detail card. The card groups lifecycle latency components, correlation
+ids, bounded route explanations, backend user cards, backend satellite cards,
+and compute-node resource fields into scrollable sections. This keeps the
+standalone dashboard aligned with backend semantics without adding a new
+frontend-only business model.
+
 ## Lifecycle Stages
 
 Each trace row exposes these ordered stages:
