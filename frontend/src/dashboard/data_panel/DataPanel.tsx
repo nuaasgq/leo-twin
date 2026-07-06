@@ -47,6 +47,7 @@ import {
   RuntimeKpiTimeSeriesV1,
   RuntimeExportHistoryV1,
   RuntimeMetricsSummary,
+  RuntimeExportNetworkKpiBenchmarkValidationEvidenceV1,
   RuntimeNetworkKpiCredibilityV1,
   RuntimeNetworkKpiBenchmarkValidationV1,
   RuntimeNetworkKpiProvenanceV2,
@@ -10739,6 +10740,14 @@ export function buildDataPanelExportScenarioReviewBundleDisplay(
       )}`,
       `review ${shortRuntimeHash(bundle.review_summary.summary_hash)}`,
       `diagnostics ${shortRuntimeHash(bundle.diagnostics.diagnostics_hash)}`,
+      ...(bundle.network_kpi_benchmark_validation
+        ? [
+            `KPI benchmark ${bundle.network_kpi_benchmark_validation.validation_status}`,
+            `KPI benchmark ${shortRuntimeHash(
+              bundle.network_kpi_benchmark_validation.validation_hash
+            )}`
+          ]
+        : []),
       `audit ${bundle.audit_index.filename}`
     ],
     boundaryLabels: [
@@ -11244,6 +11253,19 @@ export function buildDataPanelExportPackageAuditIndexDisplay(
     diagnosticsLabels: [
       `review ${shortRuntimeHash(auditIndex.review_summary_hash)}`,
       `diagnostics ${shortRuntimeHash(auditIndex.diagnostics_hash)}`,
+      ...(auditIndex.network_kpi_benchmark_validation_present !== undefined
+        ? [
+            `KPI benchmark ${
+              auditIndex.network_kpi_benchmark_validation_status ?? "-"
+            }`,
+            `KPI failed ${formatCount(
+              auditIndex.network_kpi_benchmark_validation_failed_check_count ?? 0
+            )}`,
+            `KPI benchmark ${shortRuntimeHash(
+              auditIndex.network_kpi_benchmark_validation_hash ?? ""
+            )}`
+          ]
+        : []),
       `packet ${auditIndex.packet_level_simulation ? "yes" : "no"}`,
       `recompute ${auditIndex.model_recomputation ? "yes" : "no"}`
     ],
@@ -11941,6 +11963,20 @@ function runtimeExportRouteComparisonReviewLabels(
   ].filter((label) => label.length > 0);
 }
 
+function runtimeExportNetworkKpiBenchmarkValidationLabels(
+  validation: RuntimeExportNetworkKpiBenchmarkValidationEvidenceV1 | null | undefined
+): readonly string[] {
+  if (validation === null || validation === undefined) {
+    return [];
+  }
+  return [
+    `KPI benchmark ${validation.validation_status}`,
+    `KPI failed ${formatCount(validation.failed_check_count)}`,
+    `KPI checks ${formatCount(validation.check_count)}`,
+    `KPI benchmark ${shortRuntimeHash(validation.validation_hash)}`
+  ];
+}
+
 export function buildDataPanelExportReviewSummaryDisplay(
   summary: RuntimeExportReviewSummaryV1 | null | undefined
 ): DataPanelExportReviewSummaryDisplay | null {
@@ -11965,6 +12001,9 @@ export function buildDataPanelExportReviewSummaryDisplay(
       `算力 ${formatCount(Number(summary.scenario.compute_node_count) || 0)}`,
       `manifest ${shortRuntimeHash(summary.reproducibility.manifest_hash)}`,
       `summary ${shortRuntimeHash(summary.summary_hash)}`,
+      ...runtimeExportNetworkKpiBenchmarkValidationLabels(
+        summary.network_kpi_benchmark_validation
+      ),
       ...runtimeExportRouteComparisonReviewLabels(summary.route_comparison_review)
     ],
     artifactLabels: [
@@ -12052,6 +12091,9 @@ export function buildDataPanelExportDiagnosticsDisplay(
         : "无包级仿真",
       `禁用 ${diagnostics.model_boundaries.forbidden_external_integrations.join("/")}`,
       diagnostics.model_boundaries.diagnostics_policy,
+      ...runtimeExportNetworkKpiBenchmarkValidationLabels(
+        diagnostics.network_kpi_benchmark_validation
+      ),
       ...runtimeExportRouteComparisonReviewLabels(
         diagnostics.route_comparison_review
       )

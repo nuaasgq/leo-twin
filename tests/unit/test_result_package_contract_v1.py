@@ -5,6 +5,7 @@ import json
 from leo_twin.services.result_package_contract import (
     RESULT_PACKAGE_CONTRACT_V1_ID,
     RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1_ID,
+    RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_V1_ID,
     RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID,
     RUNTIME_EXPORT_PACKAGE_HANDOFF_REPORT_V1_ID,
     RUNTIME_EXPORT_PACKAGE_REVIEW_COMPLETION_V1_ID,
@@ -19,6 +20,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_REVIEW_SUMMARY_V1_ID,
     RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID,
     build_runtime_export_diagnostics_bundle_v1,
+    build_runtime_export_network_kpi_benchmark_validation_v1,
     build_runtime_export_package_audit_index_v1,
     build_runtime_export_package_handoff_report_v1,
     build_runtime_export_package_review_completion_v1,
@@ -61,6 +63,7 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
         "route_detail_index_v1.json",
         "review_summary_v1.json",
         "diagnostics_bundle_v1.json",
+        "network_kpi_benchmark_validation_v1.json",
         "scenario_review_bundle_v1.json",
         "export_package_audit_index_v1.json",
         "package_handoff_report_v1.md",
@@ -171,6 +174,7 @@ def test_result_package_summary_accepts_complete_package_record() -> None:
         "route_detail_index_v1.json",
         "review_summary_v1.json",
         "diagnostics_bundle_v1.json",
+        "network_kpi_benchmark_validation_v1.json",
         "scenario_review_bundle_v1.json",
         "export_package_audit_index_v1.json",
         "package_handoff_report_v1.md",
@@ -211,6 +215,9 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
             "queued_event_count": 3,
             "route_explanation_summary_v1": _route_summary(),
             "route_provenance_trust_summary_v1": _route_trust(),
+            "network_kpi_benchmark_validation_v1": (
+                _network_kpi_benchmark_validation()
+            ),
             "runtime_export_route_detail_policy_v1": _route_detail_export_policy(),
             "runtime_export_service_trace_policy_v1": _service_trace_export_policy(),
         },
@@ -235,6 +242,7 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
         "manifest.json",
         "metrics.csv",
         "diagnostics_bundle_v1.json",
+        "network_kpi_benchmark_validation_v1.json",
         "review_summary_v1.json",
         "route_detail_index_v1.json",
         "scenario_review_bundle_v1.json",
@@ -276,6 +284,12 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
     assert first["route_trust"]["all_pairs_computation"] is False
     assert first["route_trust"]["assessed_route_count"] == 2
     assert first["route_trust"]["sample_route_ids"] == ("route-0", "route-1")
+    assert first["network_kpi_benchmark_validation"]["evidence_present"] is True
+    assert first["network_kpi_benchmark_validation"]["validation_status"] == "PASS"
+    assert first["network_kpi_benchmark_validation"]["failed_check_count"] == 0
+    assert first["artifacts"][
+        "network_kpi_benchmark_validation_exported"
+    ] is True
     assert first["route_comparison_review"]["review_scope"] == (
         "PACKAGE_ROUTE_DETAIL_TO_LIVE_RUNTIME_ROUTE_DETAIL"
     )
@@ -306,6 +320,42 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
     )
 
 
+def test_runtime_export_network_kpi_benchmark_validation_v1_is_deterministic() -> None:
+    config_snapshot = {
+        "type": "RUNTIME_CONFIG_SNAPSHOT",
+        "status": {
+            "network_kpi_benchmark_validation_v1": (
+                _network_kpi_benchmark_validation()
+            ),
+        },
+        "config": {"seed": 7},
+        "generated_config": {"seed": 7, "satellite_count": 72},
+    }
+
+    first = build_runtime_export_network_kpi_benchmark_validation_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+    )
+    second = build_runtime_export_network_kpi_benchmark_validation_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=dict(reversed(tuple(config_snapshot.items()))),
+    )
+
+    assert first == second
+    assert first["artifact_id"] == (
+        RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_V1_ID
+    )
+    assert first["runtime_status_field"] == "network_kpi_benchmark_validation_v1"
+    assert first["validation"]["validation_status"] == "PASS"
+    assert first["evidence"]["evidence_present"] is True
+    assert first["evidence"]["validation_status"] == "PASS"
+    assert first["evidence"]["acceptable_for_demo_review"] is True
+    assert first["artifact_hash"].startswith("sha256:")
+    assert "NO_METRIC_RECOMPUTE" in first["boundary_conditions"]
+
+
 def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready() -> None:
     config_snapshot = {
         "type": "RUNTIME_CONFIG_SNAPSHOT",
@@ -316,6 +366,9 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
             "queued_event_count": 0,
             "route_explanation_summary_v1": _route_summary(),
             "route_provenance_trust_summary_v1": _route_trust(),
+            "network_kpi_benchmark_validation_v1": (
+                _network_kpi_benchmark_validation()
+            ),
             "runtime_export_route_detail_policy_v1": _route_detail_export_policy(),
             "runtime_export_service_trace_policy_v1": _service_trace_export_policy(),
         },
@@ -342,6 +395,7 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
         "package_handoff_report_v1.md",
         "manifest.json",
         "metrics.csv",
+        "network_kpi_benchmark_validation_v1.json",
         "review_summary_v1.json",
         "route_detail_index_v1.json",
         "scenario_review_bundle_v1.json",
@@ -386,6 +440,9 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
     assert first["route_trust"]["trust_status"] == "COMPLETE_FLOW_LEVEL_ROUTE_PROXY"
     assert first["route_trust"]["available_route_count"] == 2
     assert first["route_trust"]["bottleneck_components"] == ("capacity",)
+    assert first["network_kpi_benchmark_validation"]["evidence_present"] is True
+    assert first["network_kpi_benchmark_validation"]["validation_status"] == "PASS"
+    assert first["network_kpi_benchmark_validation"]["failed_check_count"] == 0
     assert first["route_comparison_review"]["live_route_detail_endpoint"] == (
         "GET /runtime/details/routes/{route_id}"
     )
@@ -446,6 +503,7 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
         "package_handoff_report_v1.md",
         "manifest.json",
         "metrics.csv",
+        "network_kpi_benchmark_validation_v1.json",
         "review_summary_v1.json",
         "route_detail_index_v1.json",
         "scenario_review_bundle_v1.json",
@@ -1239,6 +1297,7 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
         "package_handoff_report_v1.md",
         "manifest.json",
         "metrics.csv",
+        "network_kpi_benchmark_validation_v1.json",
         "review_summary_v1.json",
         "route_detail_index_v1.json",
         "scenario_review_bundle_v1.json",
@@ -1268,8 +1327,11 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
     assert diagnostics["package"]["package_complete"] is True
     assert {
         finding["code"] for finding in diagnostics["findings"]
-    } == {"ROUTE_TRUST_EVIDENCE_MISSING"}
-    assert diagnostics["finding_count"] == 1
+    } == {
+        "ROUTE_TRUST_EVIDENCE_MISSING",
+        "NETWORK_KPI_BENCHMARK_VALIDATION_MISSING",
+    }
+    assert diagnostics["finding_count"] == 2
 
 
 def _file(name: str, filename: str, sha256: str) -> dict[str, object]:
@@ -1477,6 +1539,39 @@ def _route_trust() -> dict[str, object]:
         "bottleneck_components": ("capacity",),
         "sample_route_ids": ("route-0", "route-1"),
         "caveats": ("Flow-level route proxy; no packet replay.",),
+    }
+
+
+def _network_kpi_benchmark_validation() -> dict[str, object]:
+    return {
+        "version": "v1",
+        "validation_id": "leo_twin.network_kpi_benchmark_validation.v1",
+        "source": "NETWORK_KPI_PROVENANCE_V2_AND_METRICS_SUMMARY",
+        "benchmark_profile": "FLOW_LEVEL_PROXY_RUNTIME_GUARDRAILS",
+        "provenance_id": "leo_twin.network_kpi_provenance.v2",
+        "metric_model": "FLOW_LEVEL_NETWORK_KPI_PROXY",
+        "packet_level_simulation": False,
+        "validation_status": "PASS",
+        "check_count": 3,
+        "passed_check_count": 3,
+        "warning_check_count": 0,
+        "failed_check_count": 0,
+        "missing_check_count": 0,
+        "checks": (
+            {
+                "check_id": "packet_level_guard",
+                "metric": "network_kpi_provenance_v2.packet_level_simulation",
+                "current_value": False,
+                "status": "PASS",
+                "severity": "FAIL",
+                "expectation": "no packet-level simulation",
+                "source": "network_kpi_provenance_v2",
+                "explanation": "flow-level proxy only",
+            },
+        ),
+        "caveats": (
+            "Benchmark validation v1 is a deterministic product guardrail.",
+        ),
     }
 
 

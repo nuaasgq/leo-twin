@@ -211,7 +211,10 @@ Tasks:
     T324 adds backend-owned `network_kpi_benchmark_validation_v1`, derived from
     `metrics_summary` and `network_kpi_provenance_v2`, and binds the dashboard
     to the PASS/WARN/FAIL/INSUFFICIENT_DATA guardrail summary for demo
-    acceptance.
+    acceptance. T325 exports the same guardrail evidence into
+    `network_kpi_benchmark_validation_v1.json` and surfaces compact status/hash
+    labels in result-package review, diagnostics, scenario review, and audit
+    sections so offline packages preserve KPI validation evidence.
 - V2-023: Add route explanation records.
   - Scope: selected route, alternative count, bottleneck reason, next hop,
     blocked reason.
@@ -685,7 +688,12 @@ Tasks:
     derived from the same completion evidence. T319 adds the corresponding
     dashboard package-review entry and frontend API helper, so selected export
     packages expose the handoff Markdown link next to backend completion
-    evidence without local handoff-rule inference.
+    evidence without local handoff-rule inference. T325 adds
+    `network_kpi_benchmark_validation_v1.json` as a runtime export artifact,
+    binds it into `review_summary_v1.json`, `diagnostics_bundle_v1.json`,
+    `scenario_review_bundle_v1.json`, `export_package_audit_index_v1.json`, and
+    `package_handoff_report_v1.md`, and lets the dashboard show backend-owned
+    KPI benchmark status/hash labels without recomputing KPI values.
 
 ### WS9. Delivery and Operations v2
 

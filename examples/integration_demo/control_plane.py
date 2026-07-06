@@ -79,6 +79,7 @@ from leo_twin.services.runtime_reproducibility import (
 )
 from leo_twin.services.result_package_contract import (
     build_runtime_export_diagnostics_bundle_v1,
+    build_runtime_export_network_kpi_benchmark_validation_v1,
     build_runtime_export_package_audit_index_v1,
     build_runtime_export_package_handoff_report_v1,
     build_runtime_export_reproducibility_boundary_v1,
@@ -140,6 +141,9 @@ _RUNTIME_EXPORT_ROUTE_DETAIL_LIMIT = DETAIL_ENDPOINT_MAX_LIMIT
 _RUNTIME_EXPORT_SERVICE_TRACE_LIMIT = DETAIL_ENDPOINT_MAX_LIMIT
 _RUNTIME_EXPORT_REVIEW_SUMMARY_FILENAME = "review_summary_v1.json"
 _RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_FILENAME = "diagnostics_bundle_v1.json"
+_RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_FILENAME = (
+    "network_kpi_benchmark_validation_v1.json"
+)
 _RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_FILENAME = "scenario_review_bundle_v1.json"
 _RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_FILENAME = "scenario_review_checklist_v1.json"
 _RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_FILENAME = (
@@ -688,10 +692,27 @@ class DemoControlPlane:
             stable_json_pretty(route_detail_index),
             encoding="utf-8",
         )
+        network_kpi_benchmark_validation_path = (
+            package_dir / _RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_FILENAME
+        )
+        network_kpi_benchmark_validation = (
+            build_runtime_export_network_kpi_benchmark_validation_v1(
+                package_id=package_id,
+                package_dir=str(package_dir),
+                config_snapshot=config_snapshot,
+            )
+        )
+        network_kpi_benchmark_validation_path.write_text(
+            stable_json_pretty(network_kpi_benchmark_validation),
+            encoding="utf-8",
+        )
         written_files["config_snapshot"] = config_snapshot_path
         written_files["manifest"] = manifest_path
         written_files["service_lifecycle_trace_v2"] = service_lifecycle_trace_path
         written_files["route_detail_index_v1"] = route_detail_index_path
+        written_files["network_kpi_benchmark_validation_v1"] = (
+            network_kpi_benchmark_validation_path
+        )
         review_summary_path = package_dir / _RUNTIME_EXPORT_REVIEW_SUMMARY_FILENAME
         diagnostics_bundle_path = (
             package_dir / _RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_FILENAME

@@ -1355,6 +1355,7 @@ export interface RuntimeExportReviewSummaryV1 {
   scenario: RuntimeExportReviewScenarioV1;
   runtime: RuntimeExportReviewRuntimeV1;
   route_trust?: RuntimeExportRouteTrustEvidenceV1;
+  network_kpi_benchmark_validation?: RuntimeExportNetworkKpiBenchmarkValidationEvidenceV1;
   route_comparison_review?: RuntimeExportRouteComparisonReviewV1;
   reproducibility: RuntimeExportReviewReproducibilityV1;
   reproducibility_boundary?: RuntimeExportReproducibilityBoundaryV1;
@@ -1402,6 +1403,25 @@ export interface RuntimeExportRouteTrustEvidenceV1 {
   bottleneck_components: readonly string[];
   sample_route_ids: readonly string[];
   caveats: readonly string[];
+}
+
+export interface RuntimeExportNetworkKpiBenchmarkValidationEvidenceV1 {
+  version: "v1" | string;
+  validation_id: string;
+  source: string;
+  evidence_present: boolean;
+  benchmark_profile: string;
+  metric_model: string;
+  validation_status: "PASS" | "WARN" | "FAIL" | "INSUFFICIENT_DATA" | string;
+  check_count: number;
+  passed_check_count: number;
+  warning_check_count: number;
+  failed_check_count: number;
+  missing_check_count: number;
+  packet_level_simulation: boolean;
+  acceptable_for_demo_review: boolean;
+  caveats: readonly string[];
+  validation_hash: string;
 }
 
 export interface RuntimeExportRouteComparisonReviewV1 {
@@ -1544,6 +1564,10 @@ export interface RuntimeExportPackageAuditIndexV1 {
   user_configuration_validation_ok?: boolean;
   review_summary_hash: string;
   diagnostics_hash: string;
+  network_kpi_benchmark_validation_hash?: string;
+  network_kpi_benchmark_validation_status?: string;
+  network_kpi_benchmark_validation_present?: boolean;
+  network_kpi_benchmark_validation_failed_check_count?: number;
   route_comparison_review_report_hash: string;
   route_comparison_review_report_present: boolean;
   scenario_review_checklist_hash?: string;
@@ -1599,6 +1623,9 @@ export interface RuntimeExportPackageReviewCompletionV1 {
   review_summary_hash: string;
   diagnostics_error_count: number;
   diagnostics_hash: string;
+  network_kpi_benchmark_validation_present?: boolean;
+  network_kpi_benchmark_validation_status?: string;
+  network_kpi_benchmark_validation_failed_check_count?: number;
   boundary_alignment_status: string;
   boundary_alignment_hash: string;
   user_configuration_validation_ok: boolean;
@@ -1640,6 +1667,7 @@ export interface RuntimeExportScenarioReviewBundleV1 {
   reproducibility: RuntimeExportScenarioReviewReproducibilityV1;
   review_summary: RuntimeExportScenarioReviewSummaryRefV1;
   diagnostics: RuntimeExportScenarioReviewDiagnosticsRefV1;
+  network_kpi_benchmark_validation?: RuntimeExportScenarioReviewNetworkKpiBenchmarkValidationRefV1;
   audit_index: RuntimeExportScenarioReviewAuditIndexRefV1;
   artifact_review: RuntimeExportScenarioReviewArtifactsV1;
   model_boundaries: RuntimeExportScenarioReviewModelBoundariesV1;
@@ -1685,6 +1713,15 @@ export interface RuntimeExportScenarioReviewDiagnosticsRefV1 {
   diagnostics_hash: string;
   finding_count: number;
   finding_labels: readonly RuntimeExportDiagnosticsFindingLabelV1[];
+}
+
+export interface RuntimeExportScenarioReviewNetworkKpiBenchmarkValidationRefV1 {
+  validation_id: string;
+  benchmark_profile: string;
+  validation_status: string;
+  failed_check_count: number;
+  validation_hash: string;
+  evidence_present: boolean;
 }
 
 export interface RuntimeExportDiagnosticsFindingLabelV1 {
@@ -1782,6 +1819,7 @@ export interface RuntimeExportReviewArtifactsV1 {
   missing_required_filenames: readonly string[];
   service_lifecycle_trace_exported: boolean;
   review_summary_exported: boolean;
+  network_kpi_benchmark_validation_exported?: boolean;
 }
 
 export interface RuntimeExportDiagnosticsBundleV1 {
@@ -1793,6 +1831,7 @@ export interface RuntimeExportDiagnosticsBundleV1 {
   package: RuntimeExportDiagnosticsPackageV1;
   runtime: RuntimeExportDiagnosticsRuntimeV1;
   route_trust?: RuntimeExportRouteTrustEvidenceV1;
+  network_kpi_benchmark_validation?: RuntimeExportNetworkKpiBenchmarkValidationEvidenceV1;
   route_comparison_review?: RuntimeExportRouteComparisonReviewV1;
   reproducibility: RuntimeExportDiagnosticsReproducibilityV1;
   reproducibility_boundary?: RuntimeExportReproducibilityBoundaryV1;

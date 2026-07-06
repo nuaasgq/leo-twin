@@ -152,6 +152,7 @@ Each result package contains:
 - `route_detail_index_v1.json`
 - `review_summary_v1.json`
 - `diagnostics_bundle_v1.json`
+- `network_kpi_benchmark_validation_v1.json`
 - `scenario_review_bundle_v1.json`
 - `export_package_audit_index_v1.json`
 

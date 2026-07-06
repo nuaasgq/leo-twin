@@ -49,6 +49,9 @@ RUNTIME_EXPORT_PACKAGE_REVIEW_COMPLETION_V1_ID = (
 RUNTIME_EXPORT_PACKAGE_HANDOFF_REPORT_V1_ID = (
     "leo_twin.runtime_export_package_handoff_report.v1"
 )
+RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_V1_ID = (
+    "leo_twin.runtime_export_network_kpi_benchmark_validation.v1"
+)
 USER_CONFIGURATION_AUDIT_BINDING_V1_ID = (
     "leo_twin.user_configuration_audit_binding.v1"
 )
@@ -141,6 +144,15 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
                 "content": (
                     "deterministic result-package diagnostics, artifact health, "
                     "and operator next actions"
+                ),
+            },
+            {
+                "logical_name": "network_kpi_benchmark_validation_v1",
+                "filename": "network_kpi_benchmark_validation_v1.json",
+                "format": "json",
+                "content": (
+                    "runtime network KPI benchmark guardrail evidence exported "
+                    "for offline review"
                 ),
             },
             {
@@ -266,6 +278,7 @@ def build_runtime_export_reproducibility_boundary_v1(
             "route_detail_index_v1.json",
             "review_summary_v1.json",
             "diagnostics_bundle_v1.json",
+            "network_kpi_benchmark_validation_v1.json",
             "scenario_review_bundle_v1.json",
         ),
         "route_detail_export": {
@@ -303,6 +316,43 @@ def build_runtime_export_reproducibility_boundary_v1(
     return boundary
 
 
+def build_runtime_export_network_kpi_benchmark_validation_v1(
+    *,
+    package_id: str,
+    package_dir: str,
+    config_snapshot: Mapping[str, Any],
+) -> dict[str, object]:
+    """Build offline review evidence for runtime network KPI guardrails."""
+
+    if not isinstance(config_snapshot, Mapping):
+        raise TypeError("config_snapshot must be a mapping")
+
+    status = _mapping(config_snapshot.get("status"))
+    validation = _mapping(status.get("network_kpi_benchmark_validation_v1"))
+    evidence = _runtime_export_network_kpi_validation_evidence(status)
+    artifact: dict[str, object] = {
+        "type": "RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_V1",
+        "version": "v1",
+        "artifact_id": RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_V1_ID,
+        "source": "BACKEND_RUNTIME_EXPORT",
+        "artifact_scope": "NETWORK_KPI_BENCHMARK_GUARDRAIL_REVIEW",
+        "package_id": str(package_id),
+        "package_dir": str(package_dir),
+        "runtime_status_field": "network_kpi_benchmark_validation_v1",
+        "validation": dict(validation),
+        "evidence": evidence,
+        "boundary_conditions": (
+            "READ_RUNTIME_STATUS_ONLY",
+            "NO_METRIC_RECOMPUTE",
+            "NO_EVENT_REPLAY",
+            "NO_PACKET_LEVEL_SIMULATION",
+            "NO_EXTERNAL_SIMULATOR_ARTIFACT",
+        ),
+    }
+    artifact["artifact_hash"] = stable_hash_payload(artifact)
+    return artifact
+
+
 def build_runtime_export_review_summary_v1(
     *,
     package_id: str,
@@ -337,6 +387,7 @@ def build_runtime_export_review_summary_v1(
         else "INCOMPLETE"
     )
     route_trust = _runtime_export_route_trust_evidence(status)
+    network_kpi_validation = _runtime_export_network_kpi_validation_evidence(status)
     route_comparison_review = _runtime_export_route_comparison_review_metadata()
     reproducibility_boundary = _runtime_export_reproducibility_boundary(
         status,
@@ -381,6 +432,7 @@ def build_runtime_export_review_summary_v1(
             "queued_event_count": _integer(status.get("queued_event_count")),
         },
         "route_trust": route_trust,
+        "network_kpi_benchmark_validation": network_kpi_validation,
         "route_comparison_review": route_comparison_review,
         "reproducibility": {
             "manifest_id": str(manifest.get("manifest_id", "")),
@@ -402,12 +454,16 @@ def build_runtime_export_review_summary_v1(
                 "service_lifecycle_trace_v2.json" in artifacts
             ),
             "review_summary_exported": "review_summary_v1.json" in artifacts,
+            "network_kpi_benchmark_validation_exported": (
+                "network_kpi_benchmark_validation_v1.json" in artifacts
+            ),
         },
         "review_notes": (
             "Use manifest.json and config_snapshot.json to verify deterministic inputs.",
             "Use events.jsonl, metrics.csv, and summary.json as replay evidence.",
             "Use service_lifecycle_trace_v2.json for communication-compute trace review.",
             "Use route_trust to inspect flow-level route explanation evidence.",
+            "Use network_kpi_benchmark_validation_v1.json to review KPI guardrail evidence.",
             "Use route_detail_index_v1.json to inspect exported route explanation rows.",
             "Use route_comparison_review to compare exported route rows with the current live runtime when available.",
             "This package does not contain packet captures or external simulator artifacts.",
@@ -457,6 +513,7 @@ def build_runtime_export_diagnostics_bundle_v1(
     review_status = str(review_summary.get("review_status", ""))
     package_complete = manifest_ok and not missing_required
     route_trust = _runtime_export_route_trust_evidence(status)
+    network_kpi_validation = _runtime_export_network_kpi_validation_evidence(status)
     route_comparison_review = _runtime_export_route_comparison_review_metadata()
     reproducibility_boundary = _runtime_export_reproducibility_boundary(
         status,
@@ -468,6 +525,7 @@ def build_runtime_export_diagnostics_bundle_v1(
         missing_required=missing_required,
         missing_recommended=missing_recommended,
         route_trust=route_trust,
+        network_kpi_validation=network_kpi_validation,
     )
     diagnostics: dict[str, object] = {
         "type": "RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1",
@@ -489,6 +547,7 @@ def build_runtime_export_diagnostics_bundle_v1(
             "queued_event_count": _integer(status.get("queued_event_count")),
         },
         "route_trust": route_trust,
+        "network_kpi_benchmark_validation": network_kpi_validation,
         "route_comparison_review": route_comparison_review,
         "reproducibility": {
             "manifest_id": manifest_id,
@@ -581,6 +640,9 @@ def build_runtime_export_scenario_review_bundle_v1(
         scenario_review_warnings.append("REVIEW_SUMMARY_NOT_READY")
     if any(str(item.get("severity", "")) == "ERROR" for item in findings):
         scenario_review_warnings.append("DIAGNOSTICS_HAS_ERROR_FINDINGS")
+    network_kpi_validation = _mapping(
+        review_summary.get("network_kpi_benchmark_validation")
+    )
 
     bundle: dict[str, object] = {
         "type": "RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1",
@@ -615,6 +677,20 @@ def build_runtime_export_scenario_review_bundle_v1(
             "finding_count": len(findings),
             "finding_labels": finding_labels,
         },
+        "network_kpi_benchmark_validation": {
+            "validation_id": str(network_kpi_validation.get("validation_id", "")),
+            "benchmark_profile": str(
+                network_kpi_validation.get("benchmark_profile", "")
+            ),
+            "validation_status": str(
+                network_kpi_validation.get("validation_status", "")
+            ),
+            "failed_check_count": _integer(
+                network_kpi_validation.get("failed_check_count")
+            ),
+            "validation_hash": str(network_kpi_validation.get("validation_hash", "")),
+            "evidence_present": network_kpi_validation.get("evidence_present") is True,
+        },
         "audit_index": {
             "audit_index_id": RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID,
             "filename": "export_package_audit_index_v1.json",
@@ -630,6 +706,7 @@ def build_runtime_export_scenario_review_bundle_v1(
                 "export_package_audit_index_v1.json",
                 "review_summary_v1.json",
                 "diagnostics_bundle_v1.json",
+                "network_kpi_benchmark_validation_v1.json",
                 "manifest.json",
                 "config_snapshot.json",
             ),
@@ -650,6 +727,7 @@ def build_runtime_export_scenario_review_bundle_v1(
             "export_package_audit_index_v1.json",
             "review_summary_v1.json",
             "diagnostics_bundle_v1.json",
+            "network_kpi_benchmark_validation_v1.json",
             "manifest.json",
             "config_snapshot.json",
             "events.jsonl",
@@ -1191,6 +1269,7 @@ def build_runtime_export_package_audit_index_v1(
         config_snapshot,
         user_configuration_export,
     )
+    network_kpi_validation = _runtime_export_network_kpi_validation_evidence(status)
     normalized_artifacts = tuple(
         sorted(
             (
@@ -1265,6 +1344,18 @@ def build_runtime_export_package_audit_index_v1(
         "user_configuration_validation_ok": user_config_binding["validation_ok"],
         "review_summary_hash": str(review_summary.get("summary_hash", "")),
         "diagnostics_hash": str(diagnostics_bundle.get("diagnostics_hash", "")),
+        "network_kpi_benchmark_validation_hash": str(
+            network_kpi_validation.get("validation_hash", "")
+        ),
+        "network_kpi_benchmark_validation_status": str(
+            network_kpi_validation.get("validation_status", "")
+        ),
+        "network_kpi_benchmark_validation_present": (
+            network_kpi_validation.get("evidence_present") is True
+        ),
+        "network_kpi_benchmark_validation_failed_check_count": _integer(
+            network_kpi_validation.get("failed_check_count")
+        ),
         "route_comparison_review_report_hash": str(route_report.get("report_hash", "")),
         "route_comparison_review_report_present": bool(route_report),
         "scenario_review_checklist_hash": str(
@@ -1326,6 +1417,9 @@ def build_runtime_export_package_review_completion_v1(
     checklist = _mapping(scenario_review_checklist)
     alignment = _mapping(runtime_export_boundary_alignment)
     user_config = _mapping(user_configuration_binding)
+    network_kpi_validation = _mapping(
+        diagnostics_bundle.get("network_kpi_benchmark_validation")
+    )
     artifact_filenames = tuple(
         sorted(
             str(record.get("filename", ""))
@@ -1398,6 +1492,15 @@ def build_runtime_export_package_review_completion_v1(
         "review_summary_hash": str(review_summary.get("summary_hash", "")),
         "diagnostics_error_count": diagnostics_error_count,
         "diagnostics_hash": str(diagnostics_bundle.get("diagnostics_hash", "")),
+        "network_kpi_benchmark_validation_present": (
+            network_kpi_validation.get("evidence_present") is True
+        ),
+        "network_kpi_benchmark_validation_status": str(
+            network_kpi_validation.get("validation_status", "")
+        ),
+        "network_kpi_benchmark_validation_failed_check_count": _integer(
+            network_kpi_validation.get("failed_check_count")
+        ),
         "boundary_alignment_status": str(alignment.get("alignment_status", "")),
         "boundary_alignment_hash": str(alignment.get("alignment_hash", "")),
         "user_configuration_validation_ok": user_configuration_validated,
@@ -1409,6 +1512,10 @@ def build_runtime_export_package_review_completion_v1(
             f"scenario_bundle {'present' if scenario_bundle_present else 'missing'}",
             f"checklist {checklist_status or 'missing'}",
             f"checklist_records {_integer(checklist.get('record_count'))}",
+            (
+                "network_kpi "
+                f"{network_kpi_validation.get('validation_status', 'missing')}"
+            ),
         ),
         "boundary_conditions": (
             "NO_EVENT_REPLAY",
@@ -1484,6 +1591,14 @@ def build_runtime_export_package_handoff_report_v1(
         ),
         f"- Review summary status: {completion.get('review_summary_status', '')}",
         f"- Diagnostics error count: {completion.get('diagnostics_error_count', 0)}",
+        (
+            "- Network KPI benchmark validation: "
+            f"{completion.get('network_kpi_benchmark_validation_status', '') or 'missing'}"
+        ),
+        (
+            "- Network KPI benchmark failed checks: "
+            f"{completion.get('network_kpi_benchmark_validation_failed_check_count', 0)}"
+        ),
         (
             "- Boundary alignment status: "
             f"{completion.get('boundary_alignment_status', '')}"
@@ -1657,6 +1772,7 @@ def _runtime_export_diagnostic_findings(
     missing_required: tuple[str, ...],
     missing_recommended: tuple[str, ...],
     route_trust: Mapping[str, Any],
+    network_kpi_validation: Mapping[str, Any],
 ) -> tuple[dict[str, object], ...]:
     findings: list[dict[str, object]] = []
     if not manifest_ok:
@@ -1713,6 +1829,44 @@ def _runtime_export_diagnostic_findings(
                 "ERROR",
                 "ROUTE_TRUST_ALL_PAIRS_DECLARED",
                 "route trust evidence declares all-pairs route computation, which is outside the v1 scale boundary.",
+            )
+        )
+    if network_kpi_validation.get("evidence_present") is not True:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "NETWORK_KPI_BENCHMARK_VALIDATION_MISSING",
+                "config_snapshot.status does not include network_kpi_benchmark_validation_v1.",
+            )
+        )
+    if network_kpi_validation.get("packet_level_simulation") is True:
+        findings.append(
+            _diagnostic_finding(
+                "ERROR",
+                "NETWORK_KPI_BENCHMARK_PACKET_LEVEL_DECLARED",
+                "network KPI benchmark evidence declares packet-level simulation, which is outside the v2 demo boundary.",
+            )
+        )
+    if str(network_kpi_validation.get("validation_status", "")) == "FAIL":
+        findings.append(
+            _diagnostic_finding(
+                "ERROR",
+                "NETWORK_KPI_BENCHMARK_VALIDATION_FAILED",
+                "network KPI benchmark guardrails reported failed checks.",
+            )
+        )
+    elif str(network_kpi_validation.get("validation_status", "")) in {
+        "WARN",
+        "INSUFFICIENT_DATA",
+    }:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "NETWORK_KPI_BENCHMARK_VALIDATION_NOT_PASS",
+                (
+                    "network KPI benchmark guardrails require operator review: "
+                    f"{network_kpi_validation.get('validation_status', '')}."
+                ),
             )
         )
     if not findings:
@@ -1946,6 +2100,62 @@ def _runtime_export_route_trust_evidence(
         "sample_route_ids": _string_tuple(route_trust.get("sample_route_ids")),
         "caveats": _string_tuple(route_trust.get("caveats")),
     }
+
+
+def _runtime_export_network_kpi_validation_evidence(
+    status: Mapping[str, Any],
+) -> dict[str, object]:
+    validation = _mapping(status.get("network_kpi_benchmark_validation_v1"))
+    evidence_present = bool(validation)
+    if not evidence_present:
+        evidence: dict[str, object] = {
+            "version": "v1",
+            "validation_id": "",
+            "source": "config_snapshot.status.network_kpi_benchmark_validation_v1",
+            "evidence_present": False,
+            "benchmark_profile": "UNKNOWN",
+            "metric_model": "UNKNOWN",
+            "validation_status": "MISSING_KPI_BENCHMARK_VALIDATION",
+            "check_count": 0,
+            "passed_check_count": 0,
+            "warning_check_count": 0,
+            "failed_check_count": 0,
+            "missing_check_count": 0,
+            "packet_level_simulation": False,
+            "acceptable_for_demo_review": False,
+            "caveats": (
+                "Runtime status did not expose network_kpi_benchmark_validation_v1.",
+            ),
+        }
+        evidence["validation_hash"] = stable_hash_payload(evidence)
+        return evidence
+
+    failed_check_count = _integer(validation.get("failed_check_count"))
+    validation_status = str(validation.get("validation_status", ""))
+    acceptable = (
+        failed_check_count == 0
+        and validation_status in {"PASS", "WARN", "INSUFFICIENT_DATA"}
+        and validation.get("packet_level_simulation") is not True
+    )
+    evidence = {
+        "version": "v1",
+        "validation_id": str(validation.get("validation_id", "")),
+        "source": "config_snapshot.status.network_kpi_benchmark_validation_v1",
+        "evidence_present": True,
+        "benchmark_profile": str(validation.get("benchmark_profile", "")),
+        "metric_model": str(validation.get("metric_model", "")),
+        "validation_status": validation_status,
+        "check_count": _integer(validation.get("check_count")),
+        "passed_check_count": _integer(validation.get("passed_check_count")),
+        "warning_check_count": _integer(validation.get("warning_check_count")),
+        "failed_check_count": failed_check_count,
+        "missing_check_count": _integer(validation.get("missing_check_count")),
+        "packet_level_simulation": validation.get("packet_level_simulation") is True,
+        "acceptable_for_demo_review": acceptable,
+        "caveats": _string_tuple(validation.get("caveats")),
+    }
+    evidence["validation_hash"] = stable_hash_payload(evidence)
+    return evidence
 
 
 def _runtime_export_route_detail_record(

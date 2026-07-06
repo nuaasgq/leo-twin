@@ -3907,6 +3907,25 @@ describe("buildDataPanelExportCompareDisplay", () => {
         queued_event_count: 8
       },
       route_comparison_review: _runtimeExportRouteComparisonReview(),
+      network_kpi_benchmark_validation: {
+        version: "v1",
+        validation_id: "leo_twin.network_kpi_benchmark_validation.v1",
+        source: "config_snapshot.status.network_kpi_benchmark_validation_v1",
+        evidence_present: true,
+        benchmark_profile: "FLOW_LEVEL_PROXY_RUNTIME_GUARDRAILS",
+        metric_model: "FLOW_LEVEL_NETWORK_KPI_PROXY",
+        validation_status: "PASS",
+        check_count: 12,
+        passed_check_count: 12,
+        warning_check_count: 0,
+        failed_check_count: 0,
+        missing_check_count: 0,
+        packet_level_simulation: false,
+        acceptable_for_demo_review: true,
+        caveats: [],
+        validation_hash:
+          "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd"
+      },
       reproducibility: {
         manifest_id: "leo_twin.runtime_reproducibility_manifest.v1",
         manifest_hash:
@@ -3956,6 +3975,10 @@ describe("buildDataPanelExportCompareDisplay", () => {
         "算力 2",
         "manifest 111111111111",
         "summary aaaaaaaaaaaa",
+        "KPI benchmark PASS",
+        "KPI failed 0",
+        "KPI checks 12",
+        "KPI benchmark cdcdcdcdcdcd",
         "route compare compare with live",
         "compare fields 12",
         "live runtime required",
@@ -4011,6 +4034,25 @@ describe("buildDataPanelExportCompareDisplay", () => {
         queued_event_count: 0
       },
       route_comparison_review: _runtimeExportRouteComparisonReview(),
+      network_kpi_benchmark_validation: {
+        version: "v1",
+        validation_id: "leo_twin.network_kpi_benchmark_validation.v1",
+        source: "config_snapshot.status.network_kpi_benchmark_validation_v1",
+        evidence_present: true,
+        benchmark_profile: "FLOW_LEVEL_PROXY_RUNTIME_GUARDRAILS",
+        metric_model: "FLOW_LEVEL_NETWORK_KPI_PROXY",
+        validation_status: "PASS",
+        check_count: 12,
+        passed_check_count: 12,
+        warning_check_count: 0,
+        failed_check_count: 0,
+        missing_check_count: 0,
+        packet_level_simulation: false,
+        acceptable_for_demo_review: true,
+        caveats: [],
+        validation_hash:
+          "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd"
+      },
       reproducibility: {
         manifest_id: "leo_twin.runtime_reproducibility_manifest.v1",
         manifest_ok: true,
@@ -4110,6 +4152,10 @@ describe("buildDataPanelExportCompareDisplay", () => {
     );
     expect(display?.modelBoundaryLabels).toContain("compare fields 12");
     expect(display?.modelBoundaryLabels).toContain("live runtime required");
+    expect(display?.modelBoundaryLabels).toContain("KPI benchmark PASS");
+    expect(display?.modelBoundaryLabels).toContain("KPI failed 0");
+    expect(display?.modelBoundaryLabels).toContain("KPI checks 12");
+    expect(display?.modelBoundaryLabels).toContain("KPI benchmark cdcdcdcdcdcd");
     expect(display?.modelBoundaryLabels).toContain(
       "report RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1"
     );

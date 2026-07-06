@@ -72,6 +72,11 @@ adding wall-clock data.
 diagnostics index. It summarizes package completeness, required/recommended
 artifact health, route trust evidence, reproducibility hashes, model boundaries,
 findings, and recommended next actions.
+`network_kpi_benchmark_validation_v1.json` is emitted as a deterministic
+offline review artifact for `network_kpi_benchmark_validation_v1`. It copies the
+runtime status validation object into the result package and adds compact
+evidence fields, a stable artifact hash, and explicit no-replay/no-recompute/
+no-packet/no-external-simulator boundary conditions.
 `scenario_review_bundle_v1.json` is emitted as a deterministic operator-facing
 review entry point. It binds the effective user configuration evidence,
 scenario scale, runtime progress, manifest hashes, review summary hash,
@@ -426,6 +431,8 @@ It reports:
 - runtime lifecycle state, simulation time, processed events, and queued events;
 - route trust evidence, including route model, trust status, assessed route
   count, explanation coverage, bottleneck components, and model-boundary flags;
+- network KPI benchmark validation evidence, including validation status,
+  failed-check count, packet-level exclusion, and validation hash;
 - route comparison review metadata for package-vs-live route diagnostics;
 - manifest id/hash plus config, generated-config, and review-summary hashes;
 - the package reproducibility boundary copied from
@@ -440,10 +447,17 @@ capture packets, introduce wall-clock fields, or call external simulators.
 If an older package lacks `route_provenance_trust_summary_v1`, the diagnostics
 bundle remains readable and emits a deterministic
 `ROUTE_TRUST_EVIDENCE_MISSING` warning instead of failing package export.
+If an older package lacks `network_kpi_benchmark_validation_v1`, the diagnostics
+bundle remains readable and emits a deterministic
+`NETWORK_KPI_BENCHMARK_VALIDATION_MISSING` warning. A `FAIL` validation status
+is recorded as an error finding because it violates the demo-loop KPI guardrail.
 The standalone dashboard loads the selected package's
 `diagnostics_bundle_v1.json` through the package file endpoint and renders its
 package completeness, artifact-health counters, findings, model boundaries, and
-recommended next actions as a read-only diagnostics drawer.
+recommended next actions as a read-only diagnostics drawer. The dashboard also
+shows compact KPI benchmark status/hash labels in export review, diagnostics,
+scenario review, and audit-index sections when the backend artifact provides
+them.
 The dashboard also loads the selected package's `manifest.json` and renders a
 read-only manifest inspector that shows stable manifest/scenario/config/
 generated/metrics/runtime hashes, catalog file hashes, diagnostics manifest

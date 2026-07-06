@@ -166,5 +166,8 @@ the network KPI section and indexes it into the model-trust evidence workspace.
 V2-022 added deterministic time-window pressure inputs while preserving this
 contract. T323 added per-KPI `formula_inputs` and `formula_trace` audit fields.
 T324 added `network_kpi_benchmark_validation_v1` runtime guardrails.
+T325 exports the same guardrail evidence as
+`network_kpi_benchmark_validation_v1.json` inside runtime result packages and
+binds compact status/hash labels into the dashboard export review surfaces.
 Future dashboard work can add filtering or a wider drawer for large
 KPI/source-field/input tables if additional KPI families are added.

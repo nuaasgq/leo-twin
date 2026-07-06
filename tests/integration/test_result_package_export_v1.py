@@ -8,6 +8,7 @@ from examples.integration_demo.control_plane import DemoControlPlane
 from examples.integration_demo.runtime import run_integration_demo
 from leo_twin.services.detail_pagination_contract import DETAIL_ENDPOINT_MAX_LIMIT
 from leo_twin.services.result_package_contract import (
+    RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_V1_ID,
     RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID,
     RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1_ID,
     RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID,
@@ -50,6 +51,7 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert (package_dir / "diagnostics_bundle_v1.json").exists()
     assert (package_dir / "review_summary_v1.json").exists()
     assert (package_dir / "route_detail_index_v1.json").exists()
+    assert (package_dir / "network_kpi_benchmark_validation_v1.json").exists()
     assert (package_dir / "service_lifecycle_trace_v2.json").exists()
     assert (package_dir / "scenario_review_bundle_v1.json").exists()
     assert (package_dir / "export_package_audit_index_v1.json").exists()
@@ -59,6 +61,7 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert "route_detail_index_v1.json" in filenames
     assert "review_summary_v1.json" in filenames
     assert "diagnostics_bundle_v1.json" in filenames
+    assert "network_kpi_benchmark_validation_v1.json" in filenames
     assert "scenario_review_bundle_v1.json" in filenames
     assert "export_package_audit_index_v1.json" in filenames
     assert "package_handoff_report_v1.md" in filenames
@@ -78,6 +81,11 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     )
     diagnostics_bundle = json.loads(
         (package_dir / "diagnostics_bundle_v1.json").read_text(encoding="utf-8")
+    )
+    network_kpi_benchmark_validation = json.loads(
+        (package_dir / "network_kpi_benchmark_validation_v1.json").read_text(
+            encoding="utf-8"
+        )
     )
     scenario_review_bundle = json.loads(
         (package_dir / "scenario_review_bundle_v1.json").read_text(
@@ -166,6 +174,15 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     )
     assert review_summary["route_trust"]["packet_level_simulation"] is False
     assert review_summary["route_trust"]["all_pairs_computation"] is False
+    assert review_summary["network_kpi_benchmark_validation"][
+        "validation_id"
+    ] == "leo_twin.network_kpi_benchmark_validation.v1"
+    assert review_summary["network_kpi_benchmark_validation"][
+        "evidence_present"
+    ] is True
+    assert review_summary["network_kpi_benchmark_validation"][
+        "failed_check_count"
+    ] == 0
     assert review_summary["reproducibility"]["manifest_hash"] == manifest[
         "manifest_hash"
     ]
@@ -182,6 +199,9 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert "diagnostics_bundle_v1.json" in review_summary["artifacts"][
         "artifact_filenames"
     ]
+    assert review_summary["artifacts"][
+        "network_kpi_benchmark_validation_exported"
+    ] is True
     assert diagnostics_bundle["type"] == "RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1"
     assert diagnostics_bundle["package"]["package_complete"] is True
     assert diagnostics_bundle["artifact_health"]["missing_required_filenames"] == []
@@ -192,6 +212,12 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         "trust_status"
     ]
     assert diagnostics_bundle["route_trust"]["evidence_present"] is True
+    assert diagnostics_bundle["network_kpi_benchmark_validation"][
+        "validation_hash"
+    ] == review_summary["network_kpi_benchmark_validation"]["validation_hash"]
+    assert diagnostics_bundle["network_kpi_benchmark_validation"][
+        "failed_check_count"
+    ] == 0
     assert diagnostics_bundle["reproducibility"]["manifest_hash"] == manifest[
         "manifest_hash"
     ]
@@ -201,6 +227,18 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert diagnostics_bundle["reproducibility_boundary"] == reproducibility_boundary
     assert diagnostics_bundle["model_boundaries"]["packet_level_simulation"] is False
     assert diagnostics_bundle["model_boundaries"]["event_replay_restore"] is False
+    assert network_kpi_benchmark_validation["artifact_id"] == (
+        RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_V1_ID
+    )
+    assert network_kpi_benchmark_validation["validation"] == (
+        config_snapshot["status"]["network_kpi_benchmark_validation_v1"]
+    )
+    assert network_kpi_benchmark_validation["evidence"][
+        "validation_hash"
+    ] == review_summary["network_kpi_benchmark_validation"]["validation_hash"]
+    assert "NO_METRIC_RECOMPUTE" in network_kpi_benchmark_validation[
+        "boundary_conditions"
+    ]
     assert scenario_review_bundle["bundle_id"] == (
         RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1_ID
     )
@@ -217,6 +255,12 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert scenario_review_bundle["diagnostics"]["diagnostics_hash"] == (
         diagnostics_bundle["diagnostics_hash"]
     )
+    assert scenario_review_bundle["network_kpi_benchmark_validation"][
+        "validation_hash"
+    ] == network_kpi_benchmark_validation["evidence"]["validation_hash"]
+    assert scenario_review_bundle["network_kpi_benchmark_validation"][
+        "evidence_present"
+    ] is True
     assert scenario_review_bundle["audit_index"]["filename"] == (
         "export_package_audit_index_v1.json"
     )
@@ -245,6 +289,16 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     )
     assert audit_index["user_configuration_binding_v1"]["binding_hash"].startswith(
         "sha256:"
+    )
+    assert audit_index["network_kpi_benchmark_validation_present"] is True
+    assert audit_index["network_kpi_benchmark_validation_status"] in {
+        "PASS",
+        "WARN",
+        "INSUFFICIENT_DATA",
+    }
+    assert audit_index["network_kpi_benchmark_validation_failed_check_count"] == 0
+    assert audit_index["network_kpi_benchmark_validation_hash"] == (
+        network_kpi_benchmark_validation["evidence"]["validation_hash"]
     )
     assert audit_index["route_comparison_review_report_present"] is False
     assert audit_index["route_comparison_review_report_hash"] == ""
@@ -481,6 +535,9 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         str(record["filename"]) for record in latest["files"]
     }
     assert "scenario_review_bundle_v1.json" in {
+        str(record["filename"]) for record in latest["files"]
+    }
+    assert "network_kpi_benchmark_validation_v1.json" in {
         str(record["filename"]) for record in latest["files"]
     }
 

@@ -14609,6 +14609,13 @@ change.
       files and 201 tests.
   - `pnpm --dir frontend exec tsc --noEmit`
     - Result: passed with the bundled Codex Node/Pnpm runtime path.
+  - `python -m pytest tests\unit\test_result_package_contract_v1.py tests\integration\test_result_package_export_v1.py -q`
+    - Result: passed, 19 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path. Vite
+      reported the existing large DataPanel chunk warning.
+  - `git diff --check -- <task files>`
+    - Result: passed.
   - `pnpm --dir frontend build`
     - Result: passed with the bundled Codex Node/Pnpm runtime path. Vite
       reported the existing large DataPanel chunk warning.
@@ -15724,3 +15731,57 @@ change.
 - Recommended follow-up:
   - Add a benchmark validation comparison card for saved result packages so
     exported runs can be reviewed against the same KPI guardrails offline.
+
+## 2026-07-06 - Result Package KPI Benchmark Validation Export v1
+
+- Branch: `feature/T325-result-package-kpi-validation-export-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: close the v2 demo-loop reproducibility gap for network KPI guardrails
+  by exporting runtime `network_kpi_benchmark_validation_v1` into a standalone
+  `network_kpi_benchmark_validation_v1.json` result-package artifact. The
+  artifact copies the backend runtime validation object, adds compact evidence
+  fields and a stable artifact hash, and records no-replay/no-recompute/
+  no-packet/no-external-simulator boundaries. Review summary, diagnostics
+  bundle, scenario review bundle, audit index, handoff report, and dashboard
+  export review labels now reference the same backend-owned KPI benchmark
+  evidence without recomputing metrics.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `examples/integration_demo/control_plane.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/network_kpi_provenance_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/user_guide_v2.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests\unit\test_result_package_contract_v1.py -q`
+    - Result: passed, 18 tests.
+  - `python -m pytest tests\integration\test_result_package_export_v1.py::test_runtime_export_package_satisfies_result_package_contract_v1 -q`
+    - Result: passed, 1 test.
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 1 test
+      file and 183 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path.
+- Problems encountered:
+  - Initial result-package contract tests still expected the older recommended
+    artifact list. The fixtures were updated to make
+    `network_kpi_benchmark_validation_v1.json` an explicit recommended
+    artifact and to keep old-package missing-evidence warnings deterministic.
+  - The first dashboard audit-index label pass showed empty KPI labels for old
+    package fixtures. The labels are now emitted only when the backend audit
+    index carries KPI benchmark fields, preserving backward compatibility.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The exported validation is still a deterministic demo-loop guardrail over
+    flow-level proxy KPIs. It does not validate packet-level loss, RF channel
+    physics, or external network simulator fidelity.
+- Recommended follow-up:
+  - Add a package-level benchmark comparison drawer that can compare multiple
+    saved result packages' KPI benchmark validation statuses and hashes.
