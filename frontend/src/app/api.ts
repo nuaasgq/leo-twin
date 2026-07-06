@@ -5,6 +5,7 @@ import {
   RuntimeComputeNodeDetailPageV1,
   RuntimeExportCatalogEnvelope,
   RuntimeExportCatalogV1,
+  RuntimeExportDiagnosticsBundleV1,
   RuntimeExportHistoryEnvelope,
   RuntimeExportHistoryV1,
   RuntimeExportPackageCompareEnvelope,
@@ -296,6 +297,22 @@ export async function loadRuntimeExportReviewSummary(
     throw new Error(`failed to load runtime export review summary from ${url}: HTTP ${response.status}`);
   }
   return decodeRuntimeExportReviewSummary(await response.json());
+}
+
+export async function loadRuntimeExportDiagnosticsBundle(
+  packageId: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): Promise<RuntimeExportDiagnosticsBundleV1> {
+  const url = runtimeExportPackageFileHref(
+    packageId,
+    "diagnostics_bundle_v1.json",
+    endpoint
+  );
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`failed to load runtime export diagnostics bundle from ${url}: HTTP ${response.status}`);
+  }
+  return decodeRuntimeExportDiagnosticsBundle(await response.json());
 }
 
 export async function loadRuntimeExportRestorePreflight(
@@ -700,6 +717,28 @@ export function decodeRuntimeExportReviewSummary(
     );
   }
   return value as RuntimeExportReviewSummaryV1;
+}
+
+export function decodeRuntimeExportDiagnosticsBundle(
+  value: unknown
+): RuntimeExportDiagnosticsBundleV1 {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError("runtime export diagnostics bundle response must be an object");
+  }
+  if (
+    typeof (value as { package?: unknown }).package !== "object" ||
+    (value as { package?: unknown }).package === null ||
+    Array.isArray((value as { package?: unknown }).package) ||
+    typeof (value as { artifact_health?: unknown }).artifact_health !== "object" ||
+    (value as { artifact_health?: unknown }).artifact_health === null ||
+    Array.isArray((value as { artifact_health?: unknown }).artifact_health) ||
+    !Array.isArray((value as { findings?: unknown }).findings)
+  ) {
+    throw new TypeError(
+      "runtime export diagnostics bundle response must include package, artifact_health, and findings"
+    );
+  }
+  return value as RuntimeExportDiagnosticsBundleV1;
 }
 
 export function decodeRuntimeExportRestorePreflight(

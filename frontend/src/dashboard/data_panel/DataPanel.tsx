@@ -25,6 +25,7 @@ import {
   RuntimeExportCatalogV1,
   RuntimeExportCatalogFileV1,
   RuntimeExportCatalogRecordV1,
+  RuntimeExportDiagnosticsBundleV1,
   RuntimeExportPackageCompareV1,
   RuntimeExportReviewSummaryV1,
   RuntimeExportRestoreCommandResultV1,
@@ -213,11 +214,14 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportCatalog,
   runtimeExportCompare,
   runtimeExportReviewSummary,
+  runtimeExportDiagnosticsBundle,
   runtimeExportComparePackageId,
   runtimeExportCompareLoading,
   runtimeExportCompareError,
   runtimeExportReviewSummaryLoading,
   runtimeExportReviewSummaryError,
+  runtimeExportDiagnosticsBundleLoading,
+  runtimeExportDiagnosticsBundleError,
   runtimeExportRestorePreflight,
   runtimeExportRestorePreflightLoading,
   runtimeExportRestorePreflightError,
@@ -254,11 +258,14 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportCatalog?: RuntimeExportCatalogV1 | null;
   runtimeExportCompare?: RuntimeExportPackageCompareV1 | null;
   runtimeExportReviewSummary?: RuntimeExportReviewSummaryV1 | null;
+  runtimeExportDiagnosticsBundle?: RuntimeExportDiagnosticsBundleV1 | null;
   runtimeExportComparePackageId?: string | null;
   runtimeExportCompareLoading?: boolean;
   runtimeExportCompareError?: string | null;
   runtimeExportReviewSummaryLoading?: boolean;
   runtimeExportReviewSummaryError?: string | null;
+  runtimeExportDiagnosticsBundleLoading?: boolean;
+  runtimeExportDiagnosticsBundleError?: string | null;
   runtimeExportRestorePreflight?: RuntimeExportRestorePreflightV1 | null;
   runtimeExportRestorePreflightLoading?: boolean;
   runtimeExportRestorePreflightError?: string | null;
@@ -407,6 +414,15 @@ export const DataPanel = memo(function DataPanel({
     runtimeExportCatalog,
     runtimeExportComparePackageId,
     runtimeExportReviewSummary
+  );
+  const exportDiagnosticsDisplay = buildDataPanelExportDiagnosticsDisplay(
+    runtimeExportDiagnosticsBundle
+  );
+  const exportDiagnosticsStatus = buildDataPanelExportDiagnosticsStatus(
+    exportDiagnosticsDisplay,
+    runtimeExportComparePackageId,
+    runtimeExportDiagnosticsBundleLoading,
+    runtimeExportDiagnosticsBundleError
   );
   const exportCompareDisplay = buildDataPanelExportCompareDisplay(runtimeExportCompare);
   const exportCompareStatus = buildDataPanelExportCompareStatus(
@@ -1140,6 +1156,59 @@ export const DataPanel = memo(function DataPanel({
                   )
                 )}
               </div>
+            </div>
+          ) : null}
+          {exportDiagnosticsStatus ? (
+            <div
+              className={`data-panel-export-diagnostics-drawer ${exportDiagnosticsStatus.tone}`}
+              aria-label="复盘包诊断抽屉"
+            >
+              <div className="data-panel-export-diagnostics-header">
+                <div>
+                  <span>诊断包</span>
+                  <strong>{exportDiagnosticsStatus.statusLabel}</strong>
+                  <small>{exportDiagnosticsStatus.summaryLabel}</small>
+                </div>
+                {exportDiagnosticsStatus.diagnosticsHref ? (
+                  <a href={exportDiagnosticsStatus.diagnosticsHref}>
+                    diagnostics JSON
+                  </a>
+                ) : null}
+              </div>
+              <div className="data-panel-export-compare-meta">
+                {exportDiagnosticsStatus.metaLabels.map((label) => (
+                  <span key={label}>{label}</span>
+                ))}
+              </div>
+              {exportDiagnosticsStatus.modelBoundaryLabels.length > 0 ? (
+                <div className="data-panel-export-diagnostics-boundaries">
+                  {exportDiagnosticsStatus.modelBoundaryLabels.map((label) => (
+                    <span key={label}>{label}</span>
+                  ))}
+                </div>
+              ) : null}
+              {exportDiagnosticsStatus.findingRows.length > 0 ? (
+                <div className="data-panel-export-diagnostics-findings">
+                  {exportDiagnosticsStatus.findingRows.map((row) => (
+                    <span
+                      className={row.tone}
+                      key={`${row.severity}:${row.code}:${row.message}`}
+                      title={row.message}
+                    >
+                      <strong>{row.severity}</strong>
+                      {row.code}
+                      <small>{row.message}</small>
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+              {exportDiagnosticsStatus.actionLabels.length > 0 ? (
+                <div className="data-panel-export-diagnostics-actions">
+                  {exportDiagnosticsStatus.actionLabels.map((label) => (
+                    <span key={label}>{label}</span>
+                  ))}
+                </div>
+              ) : null}
             </div>
           ) : null}
           {exportCompareStatus ? (
@@ -8508,6 +8577,36 @@ export interface DataPanelExportReviewSummaryStatus {
   artifactLabels: readonly string[];
 }
 
+export interface DataPanelExportDiagnosticsDisplay {
+  packageId: string;
+  tone: "match" | "different";
+  statusLabel: string;
+  summaryLabel: string;
+  metaLabels: readonly string[];
+  modelBoundaryLabels: readonly string[];
+  findingRows: readonly DataPanelExportDiagnosticsFindingRow[];
+  actionLabels: readonly string[];
+  diagnosticsHref: string;
+}
+
+export interface DataPanelExportDiagnosticsStatus {
+  tone: "match" | "different" | "pending" | "error";
+  statusLabel: string;
+  summaryLabel: string;
+  metaLabels: readonly string[];
+  modelBoundaryLabels: readonly string[];
+  findingRows: readonly DataPanelExportDiagnosticsFindingRow[];
+  actionLabels: readonly string[];
+  diagnosticsHref: string | null;
+}
+
+export interface DataPanelExportDiagnosticsFindingRow {
+  severity: string;
+  code: string;
+  message: string;
+  tone: "info" | "warn" | "error";
+}
+
 export interface DataPanelExportRestorePreflightDisplay {
   packageId: string;
   readiness: string;
@@ -8606,6 +8705,101 @@ export function buildDataPanelExportReviewSummaryStatus(
       summaryLabel: selectedPackageId ?? "未知复盘包",
       metaLabels: [error],
       artifactLabels: []
+    };
+  }
+  if (display === null) {
+    return null;
+  }
+  return display;
+}
+
+export function buildDataPanelExportDiagnosticsDisplay(
+  diagnostics: RuntimeExportDiagnosticsBundleV1 | null | undefined
+): DataPanelExportDiagnosticsDisplay | null {
+  if (diagnostics === null || diagnostics === undefined) {
+    return null;
+  }
+  const packageId = diagnostics.package.package_id;
+  const errorCount = diagnostics.findings.filter(
+    (finding) => finding.severity === "ERROR"
+  ).length;
+  const warnCount = diagnostics.findings.filter(
+    (finding) => finding.severity === "WARN"
+  ).length;
+  const complete = diagnostics.package.package_complete && errorCount === 0;
+  const missingRequired =
+    diagnostics.artifact_health.missing_required_filenames.length;
+  const missingRecommended =
+    diagnostics.artifact_health.missing_recommended_filenames.length;
+  return {
+    packageId,
+    tone: complete ? "match" : "different",
+    statusLabel: complete ? "诊断通过" : "需要处理",
+    summaryLabel: `${packageId} / findings ${formatCount(
+      diagnostics.finding_count
+    )} / artifacts ${formatCount(
+      diagnostics.artifact_health.artifact_count
+    )} / ${shortRuntimeHash(diagnostics.diagnostics_hash)}`,
+    metaLabels: [
+      `manifest ${diagnostics.reproducibility.manifest_ok ? "OK" : "异常"}`,
+      `必需缺失 ${formatCount(missingRequired)}`,
+      `推荐缺失 ${formatCount(missingRecommended)}`,
+      `ERROR ${formatCount(errorCount)}`,
+      `WARN ${formatCount(warnCount)}`,
+      `events ${formatCount(diagnostics.runtime.processed_event_count)}`
+    ],
+    modelBoundaryLabels: [
+      diagnostics.model_boundaries.event_kernel_policy,
+      diagnostics.model_boundaries.packet_level_simulation
+        ? "含包级仿真"
+        : "无包级仿真",
+      `禁用 ${diagnostics.model_boundaries.forbidden_external_integrations.join("/")}`,
+      diagnostics.model_boundaries.diagnostics_policy
+    ],
+    findingRows: diagnostics.findings.map((finding) => ({
+      severity: finding.severity,
+      code: finding.code,
+      message: finding.message,
+      tone:
+        finding.severity === "ERROR"
+          ? "error"
+          : finding.severity === "WARN"
+            ? "warn"
+            : "info"
+    })),
+    actionLabels: diagnostics.recommended_next_actions,
+    diagnosticsHref: runtimeExportPackageFileHref(packageId, "diagnostics_bundle_v1.json")
+  };
+}
+
+export function buildDataPanelExportDiagnosticsStatus(
+  display: DataPanelExportDiagnosticsDisplay | null,
+  selectedPackageId: string | null | undefined,
+  loading = false,
+  error: string | null | undefined = null
+): DataPanelExportDiagnosticsStatus | null {
+  if (loading) {
+    return {
+      tone: "pending",
+      statusLabel: "正在加载诊断包",
+      summaryLabel: selectedPackageId ?? "等待复盘包选择",
+      metaLabels: ["只读诊断", "不执行恢复或重放"],
+      modelBoundaryLabels: [],
+      findingRows: [],
+      actionLabels: [],
+      diagnosticsHref: null
+    };
+  }
+  if (error !== null && error !== undefined) {
+    return {
+      tone: "error",
+      statusLabel: "诊断包加载失败",
+      summaryLabel: selectedPackageId ?? "未知复盘包",
+      metaLabels: [error],
+      modelBoundaryLabels: [],
+      findingRows: [],
+      actionLabels: [],
+      diagnosticsHref: null
     };
   }
   if (display === null) {

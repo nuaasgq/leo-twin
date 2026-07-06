@@ -1280,6 +1280,72 @@ export interface RuntimeExportReviewArtifactsV1 {
   review_summary_exported: boolean;
 }
 
+export interface RuntimeExportDiagnosticsBundleV1 {
+  type: "RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1" | string;
+  version: "v1" | string;
+  bundle_id: string;
+  source: string;
+  diagnostics_scope: string;
+  package: RuntimeExportDiagnosticsPackageV1;
+  runtime: RuntimeExportDiagnosticsRuntimeV1;
+  reproducibility: RuntimeExportDiagnosticsReproducibilityV1;
+  artifact_health: RuntimeExportDiagnosticsArtifactHealthV1;
+  model_boundaries: RuntimeExportDiagnosticsModelBoundariesV1;
+  findings: readonly RuntimeExportDiagnosticsFindingV1[];
+  finding_count: number;
+  recommended_next_actions: readonly string[];
+  diagnostics_hash: string;
+}
+
+export interface RuntimeExportDiagnosticsPackageV1 {
+  package_id: string;
+  package_dir: string;
+  package_complete: boolean;
+  review_status: string;
+  contract_id: string;
+}
+
+export interface RuntimeExportDiagnosticsRuntimeV1 {
+  lifecycle_state: string;
+  current_sim_time: number;
+  processed_event_count: number;
+  queued_event_count: number;
+}
+
+export interface RuntimeExportDiagnosticsReproducibilityV1 {
+  manifest_id: string;
+  manifest_ok: boolean;
+  manifest_hash: string;
+  config_hash: string;
+  generated_config_hash: string;
+  review_summary_hash: string;
+}
+
+export interface RuntimeExportDiagnosticsArtifactHealthV1 {
+  artifact_count: number;
+  artifact_filenames: readonly string[];
+  required_filenames: readonly string[];
+  recommended_filenames: readonly string[];
+  present_required_filenames: readonly string[];
+  missing_required_filenames: readonly string[];
+  present_recommended_filenames: readonly string[];
+  missing_recommended_filenames: readonly string[];
+}
+
+export interface RuntimeExportDiagnosticsModelBoundariesV1 {
+  event_kernel_policy: string;
+  packet_level_simulation: boolean;
+  external_simulators: readonly string[];
+  forbidden_external_integrations: readonly string[];
+  diagnostics_policy: string;
+}
+
+export interface RuntimeExportDiagnosticsFindingV1 {
+  severity: "INFO" | "WARN" | "ERROR" | string;
+  code: string;
+  message: string;
+}
+
 export interface RuntimeExportRestorePreflightV1 {
   version: "v1" | string;
   source: string;

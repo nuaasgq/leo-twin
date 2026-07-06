@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   loadRuntimeExportCatalog,
+  loadRuntimeExportDiagnosticsBundle,
   loadRuntimeExportHistory,
   loadRuntimeExportPackageCompare,
   loadRuntimeExportReviewSummary,
@@ -180,6 +181,77 @@ describe("runtime API diagnostics", () => {
     });
     expect(fetchMock).toHaveBeenCalledWith(
       "/runtime/export/packages/pkg/review-summary"
+    );
+  });
+
+  it("loads runtime export diagnostics bundles", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        type: "RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1",
+        version: "v1",
+        bundle_id: "leo_twin.runtime_export_diagnostics_bundle.v1",
+        source: "BACKEND_RUNTIME_EXPORT",
+        diagnostics_scope: "RESULT_PACKAGE_OPERATOR_REVIEW",
+        package: {
+          package_id: "pkg",
+          package_dir: "artifacts/runtime_exports/pkg",
+          package_complete: true,
+          review_status: "REVIEW_READY",
+          contract_id: "leo_twin.result_package_contract.v1"
+        },
+        runtime: {
+          lifecycle_state: "STOPPED",
+          current_sim_time: 120,
+          processed_event_count: 200,
+          queued_event_count: 0
+        },
+        reproducibility: {
+          manifest_id: "leo_twin.runtime_reproducibility_manifest.v1",
+          manifest_ok: true,
+          manifest_hash: "sha256:manifest",
+          config_hash: "sha256:config",
+          generated_config_hash: "sha256:generated",
+          review_summary_hash: "sha256:summary"
+        },
+        artifact_health: {
+          artifact_count: 8,
+          artifact_filenames: ["diagnostics_bundle_v1.json"],
+          required_filenames: ["manifest.json"],
+          recommended_filenames: ["diagnostics_bundle_v1.json"],
+          present_required_filenames: ["manifest.json"],
+          missing_required_filenames: [],
+          present_recommended_filenames: ["diagnostics_bundle_v1.json"],
+          missing_recommended_filenames: []
+        },
+        model_boundaries: {
+          event_kernel_policy: "NO_EVENT_KERNEL_BEHAVIOR_CHANGE",
+          packet_level_simulation: false,
+          external_simulators: [],
+          forbidden_external_integrations: ["STK", "EXATA", "AFSIM", "DDS"],
+          diagnostics_policy: "Deterministic package index only."
+        },
+        findings: [
+          {
+            severity: "INFO",
+            code: "RESULT_PACKAGE_REVIEW_READY",
+            message: "ready"
+          }
+        ],
+        finding_count: 1,
+        recommended_next_actions: ["attach package"],
+        diagnostics_hash: "sha256:diagnostics"
+      })
+    }));
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+
+    await expect(loadRuntimeExportDiagnosticsBundle("pkg")).resolves.toMatchObject({
+      package: { package_id: "pkg", package_complete: true },
+      artifact_health: { artifact_count: 8 },
+      findings: [{ code: "RESULT_PACKAGE_REVIEW_READY" }]
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/runtime/export/packages/pkg/files/diagnostics_bundle_v1.json"
     );
   });
 

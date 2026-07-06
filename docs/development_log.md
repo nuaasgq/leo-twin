@@ -12913,3 +12913,55 @@ change.
   - Add a dashboard result-package diagnostics drawer that combines
     `diagnostics_bundle_v1.json`, review summary, compare, restore preflight,
     and manifest links into a single operator workflow.
+
+## 2026-07-06 - Dashboard Export Diagnostics Drawer v1
+
+- Branch: `feature/T271-dashboard-export-diagnostics-drawer-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: render the selected runtime export package's
+  `diagnostics_bundle_v1.json` in the standalone dashboard. The frontend now
+  defines a typed diagnostics-bundle contract, loads it through the existing
+  package file endpoint, keeps independent loading/error state alongside
+  compare/review/restore-preflight, and shows a read-only diagnostics drawer
+  with package completeness, artifact health counters, findings, model
+  boundaries, a JSON link, and recommended next actions. Backend runtime
+  behavior, result package generation, restore behavior, Event Kernel behavior,
+  model behavior, packet-level semantics, and external simulator integration
+  remain unchanged.
+- Changed files/modules:
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/app/api.ts`
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/appSurface.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed, using the bundled Node/Pnpm runtime because the shell
+      PATH does not expose `node`.
+  - `pnpm --dir frontend test api.test.ts appSurface.test.ts dataPanel.test.ts`
+    - Result: passed, 217 tests.
+  - `pnpm --dir frontend test`
+    - Result: passed, 366 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite reported the existing large DataPanel chunk warning.
+  - `python -m pytest tests/integration/test_result_package_export_v1.py tests/integration/test_runtime_session_control.py::test_demo_adapter_serves_persisted_runtime_export_artifacts -q`
+    - Result: passed, 2 tests.
+- Problems encountered:
+  - The diagnostics bundle is served through
+    `/runtime/export/packages/{package_id}/files/diagnostics_bundle_v1.json`,
+    so the frontend loader reuses `runtimeExportPackageFileHref` instead of
+    adding a backend route.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The drawer is compact and inline in the export catalog section. A future
+    task can promote it into a wider manifest/replay review workflow.
+- Recommended follow-up:
+  - Add a result package manifest inspector that cross-links manifest file
+    hashes, diagnostics findings, and artifact-health rows.

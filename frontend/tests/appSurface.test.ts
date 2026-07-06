@@ -21,6 +21,7 @@ import {
   runtimeProgressSimTime,
   runtimeStatusArmsCompletionNotice,
   runtimeExportCompareErrorMessage,
+  runtimeExportDiagnosticsBundleErrorMessage,
   runtimeExportReviewSummaryErrorMessage,
   runtimeExportRestorePreflightErrorMessage,
   runtimeDetailRequestPlan,
@@ -150,6 +151,9 @@ describe("standaloneDashboardHref", () => {
     );
     expect(runtimeExportReviewSummaryErrorMessage(new Error("HTTP 404"))).toBe(
       "复盘包审阅摘要加载失败：HTTP 404"
+    );
+    expect(runtimeExportDiagnosticsBundleErrorMessage(new Error("HTTP 404"))).toBe(
+      "复盘包诊断包加载失败：HTTP 404"
     );
     expect(runtimeExportRestorePreflightErrorMessage(new Error("HTTP 409"))).toBe(
       "复盘包恢复预检加载失败：HTTP 409"

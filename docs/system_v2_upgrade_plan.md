@@ -463,7 +463,9 @@ Tasks:
     `diagnostics_bundle_v1.json` and
     `leo_twin.runtime_export_diagnostics_bundle.v1` so each result package also
     has deterministic artifact-health findings, model-boundary declarations,
-    and operator next actions.
+    and operator next actions. T271 renders the selected package diagnostics
+    bundle in the standalone dashboard as a read-only diagnostics drawer next
+    to artifact health, compare, and restore-preflight context.
 
 ### WS9. Delivery and Operations v2
 

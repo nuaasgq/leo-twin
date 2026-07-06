@@ -137,6 +137,10 @@ It reports:
 
 The diagnostics bundle is an index artifact only. It does not replay events,
 capture packets, introduce wall-clock fields, or call external simulators.
+The standalone dashboard loads the selected package's
+`diagnostics_bundle_v1.json` through the package file endpoint and renders its
+package completeness, artifact-health counters, findings, model boundaries, and
+recommended next actions as a read-only diagnostics drawer.
 
 ## Hash Policy
 

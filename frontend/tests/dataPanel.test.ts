@@ -20,6 +20,8 @@ import {
   buildDataPanelExportCatalogDisplay,
   buildDataPanelExportCompareDisplay,
   buildDataPanelExportCompareStatus,
+  buildDataPanelExportDiagnosticsDisplay,
+  buildDataPanelExportDiagnosticsStatus,
   buildDataPanelExportHistoryDisplay,
   buildDataPanelExportReviewSummaryDisplay,
   buildDataPanelExportReviewSummaryStatus,
@@ -2319,6 +2321,146 @@ describe("buildDataPanelExportCompareDisplay", () => {
       summaryLabel: "pkg-next",
       metaLabels: ["HTTP 404"],
       artifactLabels: []
+    });
+  });
+
+  it("summarizes runtime export diagnostics bundles for dashboard review", () => {
+    const display = buildDataPanelExportDiagnosticsDisplay({
+      type: "RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1",
+      version: "v1",
+      bundle_id: "leo_twin.runtime_export_diagnostics_bundle.v1",
+      source: "BACKEND_RUNTIME_EXPORT",
+      diagnostics_scope: "RESULT_PACKAGE_OPERATOR_REVIEW",
+      package: {
+        package_id: "pkg-review",
+        package_dir: "artifacts/runtime_exports/pkg-review",
+        package_complete: true,
+        review_status: "REVIEW_READY",
+        contract_id: "leo_twin.result_package_contract.v1"
+      },
+      runtime: {
+        lifecycle_state: "STOPPED",
+        current_sim_time: 120,
+        processed_event_count: 4096,
+        queued_event_count: 0
+      },
+      reproducibility: {
+        manifest_id: "leo_twin.runtime_reproducibility_manifest.v1",
+        manifest_ok: true,
+        manifest_hash:
+          "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        config_hash: "sha256:config",
+        generated_config_hash: "sha256:generated",
+        review_summary_hash: "sha256:summary"
+      },
+      artifact_health: {
+        artifact_count: 8,
+        artifact_filenames: [
+          "config_snapshot.json",
+          "diagnostics_bundle_v1.json",
+          "events.jsonl",
+          "manifest.json",
+          "metrics.csv",
+          "review_summary_v1.json",
+          "service_lifecycle_trace_v2.json",
+          "summary.json"
+        ],
+        required_filenames: [
+          "config_snapshot.json",
+          "events.jsonl",
+          "manifest.json",
+          "metrics.csv",
+          "summary.json"
+        ],
+        recommended_filenames: [
+          "service_lifecycle_trace_v2.json",
+          "review_summary_v1.json",
+          "diagnostics_bundle_v1.json"
+        ],
+        present_required_filenames: [
+          "config_snapshot.json",
+          "events.jsonl",
+          "manifest.json",
+          "metrics.csv",
+          "summary.json"
+        ],
+        missing_required_filenames: [],
+        present_recommended_filenames: [
+          "service_lifecycle_trace_v2.json",
+          "review_summary_v1.json",
+          "diagnostics_bundle_v1.json"
+        ],
+        missing_recommended_filenames: []
+      },
+      model_boundaries: {
+        event_kernel_policy: "NO_EVENT_KERNEL_BEHAVIOR_CHANGE",
+        packet_level_simulation: false,
+        external_simulators: [],
+        forbidden_external_integrations: ["STK", "EXATA", "AFSIM", "DDS"],
+        diagnostics_policy: "Deterministic package index only."
+      },
+      findings: [
+        {
+          severity: "INFO",
+          code: "RESULT_PACKAGE_REVIEW_READY",
+          message: "Required artifacts, manifest id, and review summary are ready."
+        }
+      ],
+      finding_count: 1,
+      recommended_next_actions: ["Attach the package directory or deterministic archive."],
+      diagnostics_hash:
+        "sha256:abababababababababababababababababababababababababababababababab"
+    });
+
+    expect(display).toMatchObject({
+      packageId: "pkg-review",
+      tone: "match",
+      statusLabel: "诊断通过",
+      summaryLabel: "pkg-review / findings 1 / artifacts 8 / abababababab",
+      metaLabels: [
+        "manifest OK",
+        "必需缺失 0",
+        "推荐缺失 0",
+        "ERROR 0",
+        "WARN 0",
+        "events 4,096"
+      ],
+      findingRows: [
+        {
+          severity: "INFO",
+          code: "RESULT_PACKAGE_REVIEW_READY",
+          tone: "info"
+        }
+      ],
+      actionLabels: ["Attach the package directory or deterministic archive."],
+      diagnosticsHref:
+        "/runtime/export/packages/pkg-review/files/diagnostics_bundle_v1.json"
+    });
+    expect(display?.modelBoundaryLabels).toContain("无包级仿真");
+    expect(display?.modelBoundaryLabels).toContain("禁用 STK/EXATA/AFSIM/DDS");
+    expect(
+      buildDataPanelExportDiagnosticsStatus(display, "pkg-review", false, null)
+    ).toBe(display);
+    expect(
+      buildDataPanelExportDiagnosticsStatus(display, "pkg-next", true, null)
+    ).toEqual({
+      tone: "pending",
+      statusLabel: "正在加载诊断包",
+      summaryLabel: "pkg-next",
+      metaLabels: ["只读诊断", "不执行恢复或重放"],
+      modelBoundaryLabels: [],
+      findingRows: [],
+      actionLabels: [],
+      diagnosticsHref: null
+    });
+    expect(
+      buildDataPanelExportDiagnosticsStatus(display, "pkg-next", false, "HTTP 404")
+    ).toMatchObject({
+      tone: "error",
+      statusLabel: "诊断包加载失败",
+      summaryLabel: "pkg-next",
+      metaLabels: ["HTTP 404"],
+      diagnosticsHref: null
     });
   });
 
