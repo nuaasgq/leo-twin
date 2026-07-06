@@ -13872,3 +13872,55 @@ change.
 - Recommended follow-up:
   - Add route evidence comparison export metadata so package-vs-live
     diagnostics can be captured in a reproducibility review report.
+
+## 2026-07-06 - Route Comparison Review Metadata v1
+
+- Branch: `feature/T289-route-comparison-review-metadata-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add backend-owned `route_comparison_review` metadata to runtime result
+  packages. The metadata is included in `review_summary_v1.json`,
+  `diagnostics_bundle_v1.json`, `route_detail_index_v1.json`, route detail
+  pages, and exact package route detail items. It records the package and live
+  route detail endpoints, `compare with live` action label, compared fields,
+  live-runtime requirement, route-id alignment requirement, status reasons, and
+  no-recompute/no-replay/no-packet/no-mutation boundaries. The frontend type
+  contract and dashboard labels now consume this backend metadata. No route
+  model, Event Kernel behavior, or live comparison execution logic changed.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `docs/dashboard_model_trust_evidence_workspace_v1.md`
+  - `docs/result_package_contract_v1.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_result_package_contract_v1.py tests/unit/test_user_guide_v2_docs.py -q`
+    - Result: passed, 11 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with bundled Codex Node/Pnpm runtime.
+  - `pnpm --dir frontend test api.test.ts dataPanel.test.ts`
+    - Result: passed, 2 test files and 192 tests.
+  - `git diff --check`
+    - Result: passed for task files. Git reported existing CRLF warnings for
+      the unstaged runtime config drift files.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing large DataPanel chunk
+      warning after minification; no functional build error.
+- Problems encountered:
+  - No product code blocker. The metadata is deterministic and describes
+    review capability; it does not capture a transient live-runtime comparison
+    result.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - `route_comparison_review` documents comparison capability and boundaries,
+    but does not export individual package-vs-live diff results.
+  - Live runtime comparison still depends on the current runtime containing the
+    same route id.
+- Recommended follow-up:
+  - Add an operator review report section that can record selected route
+    comparison outcomes after users run package-vs-live diagnostics.

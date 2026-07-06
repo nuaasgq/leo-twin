@@ -245,6 +245,11 @@ Tasks:
     comparison card is not available, the dashboard explains whether it is
     waiting on package detail, waiting on live detail, blocked by an error, or
     comparing mismatched route ids.
+  - Status: T289 adds backend-owned `route_comparison_review` metadata to
+    review summaries, diagnostics bundles, route detail indexes, route pages,
+    and exact package route detail items. The metadata records comparison
+    endpoints, compared fields, live-runtime requirements, status reasons, and
+    no-recompute/no-replay boundaries.
 
 ### WS4. Compute Network Model v2
 

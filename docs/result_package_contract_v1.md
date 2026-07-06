@@ -94,6 +94,7 @@ It reports:
 - runtime lifecycle state, simulation time, processed events, and queued events;
 - route trust evidence derived from
   `config_snapshot.status.route_provenance_trust_summary_v1`;
+- route comparison review metadata for package-vs-live route diagnostics;
 - manifest id/hash plus config and generated-config hashes;
 - required artifact coverage and missing required filenames;
 - review notes explaining which artifacts support reproducibility review.
@@ -141,6 +142,8 @@ It reports:
   `config_snapshot.status.runtime_export_route_detail_policy_v1`;
 - route trust summary copied from
   `config_snapshot.status.route_provenance_trust_summary_v1`;
+- route comparison review metadata, including compared fields, live-runtime
+  requirement, status reasons, and no-recompute/no-replay boundaries;
 - exported route ids, route-trust sample route ids, indexed sample ids, and
   missing sample ids;
 - compact route explanation rows with flow id, user id, selected satellite,
@@ -184,11 +187,12 @@ The list endpoint returns `RUNTIME_EXPORT_ROUTE_DETAIL_PAGE_V1` with cursor,
 limit, optional query, availability, business type, and bottleneck filters. The
 exact endpoint returns `RUNTIME_EXPORT_ROUTE_DETAIL_ITEM_V1` for a route id in
 the exported index. Both endpoints read the persisted `route_detail_index_v1.json`
-artifact and include the source `route_detail_index_hash`; they do not inspect
-the current runtime session, replay events, recompute routes, or mutate the
-package. They only cover rows already present in the exported route detail
-index; if a scenario has more than the export limit, the policy and summary
-fields report the remaining hidden route count.
+artifact and include the source `route_detail_index_hash` plus
+`route_comparison_review` metadata; they do not inspect the current runtime
+session, replay events, recompute routes, or mutate the package. They only
+cover rows already present in the exported route detail index; if a scenario
+has more than the export limit, the policy and summary fields report the
+remaining hidden route count.
 
 ## Diagnostics Bundle
 
@@ -211,6 +215,7 @@ It reports:
 - runtime lifecycle state, simulation time, processed events, and queued events;
 - route trust evidence, including route model, trust status, assessed route
   count, explanation coverage, bottleneck components, and model-boundary flags;
+- route comparison review metadata for package-vs-live route diagnostics;
 - manifest id/hash plus config, generated-config, and review-summary hashes;
 - required and recommended artifact coverage;
 - explicit model boundaries: no Event Kernel behavior change, no packet-level

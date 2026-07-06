@@ -178,6 +178,7 @@ def build_runtime_export_review_summary_v1(
         else "INCOMPLETE"
     )
     route_trust = _runtime_export_route_trust_evidence(status)
+    route_comparison_review = _runtime_export_route_comparison_review_metadata()
     summary: dict[str, object] = {
         "type": "RUNTIME_EXPORT_REVIEW_SUMMARY_V1",
         "version": "v1",
@@ -217,6 +218,7 @@ def build_runtime_export_review_summary_v1(
             "queued_event_count": _integer(status.get("queued_event_count")),
         },
         "route_trust": route_trust,
+        "route_comparison_review": route_comparison_review,
         "reproducibility": {
             "manifest_id": str(manifest.get("manifest_id", "")),
             "manifest_hash": str(manifest.get("manifest_hash", "")),
@@ -240,6 +242,7 @@ def build_runtime_export_review_summary_v1(
             "Use service_lifecycle_trace_v2.json for communication-compute trace review.",
             "Use route_trust to inspect flow-level route explanation evidence.",
             "Use route_detail_index_v1.json to inspect exported route explanation rows.",
+            "Use route_comparison_review to compare exported route rows with the current live runtime when available.",
             "This package does not contain packet captures or external simulator artifacts.",
         ),
     }
@@ -287,6 +290,7 @@ def build_runtime_export_diagnostics_bundle_v1(
     review_status = str(review_summary.get("review_status", ""))
     package_complete = manifest_ok and not missing_required
     route_trust = _runtime_export_route_trust_evidence(status)
+    route_comparison_review = _runtime_export_route_comparison_review_metadata()
     findings = _runtime_export_diagnostic_findings(
         manifest_ok=manifest_ok,
         review_status=review_status,
@@ -314,6 +318,7 @@ def build_runtime_export_diagnostics_bundle_v1(
             "queued_event_count": _integer(status.get("queued_event_count")),
         },
         "route_trust": route_trust,
+        "route_comparison_review": route_comparison_review,
         "reproducibility": {
             "manifest_id": manifest_id,
             "manifest_ok": manifest_ok,
@@ -366,6 +371,7 @@ def build_runtime_export_route_detail_index_v1(
     status = _mapping(config_snapshot.get("status"))
     route_summary = _mapping(status.get("route_explanation_summary_v1"))
     route_trust = _runtime_export_route_trust_evidence(status)
+    route_comparison_review = _runtime_export_route_comparison_review_metadata()
     route_detail_export_policy = _mapping(
         status.get("runtime_export_route_detail_policy_v1")
     )
@@ -425,6 +431,7 @@ def build_runtime_export_route_detail_index_v1(
         },
         "route_detail_export_policy": dict(route_detail_export_policy),
         "route_trust": route_trust,
+        "route_comparison_review": route_comparison_review,
         "route_ids": route_ids,
         "sample_route_ids": sample_route_ids,
         "indexed_sample_route_ids": indexed_sample_route_ids,
@@ -486,6 +493,9 @@ def build_runtime_export_route_detail_page_v1(
         "route_detail_export_policy": dict(
             _mapping(route_detail_index.get("route_detail_export_policy"))
         ),
+        "route_comparison_review": dict(
+            _mapping(route_detail_index.get("route_comparison_review"))
+        ),
         "route_detail_index_hash": str(
             route_detail_index.get("route_detail_index_hash", "")
         ),
@@ -540,6 +550,9 @@ def build_runtime_export_route_detail_item_v1(
                 "index_id": str(route_detail_index.get("index_id", "")),
                 "route_detail_index_hash": str(
                     route_detail_index.get("route_detail_index_hash", "")
+                ),
+                "route_comparison_review": dict(
+                    _mapping(route_detail_index.get("route_comparison_review"))
                 ),
                 "route_id": normalized_route_id,
                 "route": route,
@@ -732,6 +745,52 @@ def _runtime_export_diagnostic_next_actions(
         "Attach the package directory or deterministic archive for review.",
         "Use manifest.json, review_summary_v1.json, and diagnostics_bundle_v1.json as the first inspection points.",
     )
+
+
+def _runtime_export_route_comparison_review_metadata() -> dict[str, object]:
+    return {
+        "version": "v1",
+        "source": "BACKEND_RUNTIME_EXPORT",
+        "review_scope": "PACKAGE_ROUTE_DETAIL_TO_LIVE_RUNTIME_ROUTE_DETAIL",
+        "package_route_detail_endpoint": (
+            "GET /runtime/export/packages/{package_id}/routes/{route_id}"
+        ),
+        "live_route_detail_endpoint": "GET /runtime/details/routes/{route_id}",
+        "compare_action": "compare with live",
+        "comparison_requires_live_runtime": True,
+        "route_id_alignment_required": True,
+        "exported_rows_only": True,
+        "compared_fields": (
+            "availability",
+            "business",
+            "flow",
+            "source_destination",
+            "selected_satellite",
+            "primary_next_hop",
+            "path",
+            "capacity_demand",
+            "latency",
+            "loss",
+            "pressure",
+            "bottleneck",
+        ),
+        "status_reasons": (
+            "PACKAGE_DETAIL_NOT_LOADED",
+            "PACKAGE_DETAIL_LOADING",
+            "PACKAGE_DETAIL_UNAVAILABLE",
+            "LIVE_DETAIL_NOT_LOADED",
+            "LIVE_DETAIL_LOADING",
+            "LIVE_DETAIL_UNAVAILABLE",
+            "ROUTE_ID_MISMATCH",
+        ),
+        "boundary_conditions": (
+            "NO_ROUTE_RECOMPUTE",
+            "NO_EVENT_REPLAY",
+            "NO_PACKET_CAPTURE",
+            "NO_PACKAGE_MUTATION",
+            "CURRENT_RUNTIME_MAY_DIFFER_FROM_EXPORTED_PACKAGE",
+        ),
+    }
 
 
 def _runtime_export_route_trust_evidence(

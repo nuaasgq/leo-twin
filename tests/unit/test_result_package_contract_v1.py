@@ -182,6 +182,11 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
     assert first["route_trust"]["all_pairs_computation"] is False
     assert first["route_trust"]["assessed_route_count"] == 2
     assert first["route_trust"]["sample_route_ids"] == ("route-0", "route-1")
+    assert first["route_comparison_review"]["review_scope"] == (
+        "PACKAGE_ROUTE_DETAIL_TO_LIVE_RUNTIME_ROUTE_DETAIL"
+    )
+    assert first["route_comparison_review"]["compare_action"] == "compare with live"
+    assert "ROUTE_ID_MISMATCH" in first["route_comparison_review"]["status_reasons"]
     assert "diagnostics_bundle_v1.json" in first["artifacts"]["artifact_filenames"]
     assert first["summary_hash"].startswith("sha256:")
     assert json.loads(json.dumps(first, sort_keys=True))["summary_id"] == (
@@ -258,6 +263,10 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
     assert first["route_trust"]["trust_status"] == "COMPLETE_FLOW_LEVEL_ROUTE_PROXY"
     assert first["route_trust"]["available_route_count"] == 2
     assert first["route_trust"]["bottleneck_components"] == ("capacity",)
+    assert first["route_comparison_review"]["live_route_detail_endpoint"] == (
+        "GET /runtime/details/routes/{route_id}"
+    )
+    assert first["route_comparison_review"]["exported_rows_only"] is True
     assert first["artifact_health"]["missing_required_filenames"] == ()
     assert first["artifact_health"]["missing_recommended_filenames"] == ()
     assert first["findings"] == (
@@ -307,6 +316,16 @@ def test_runtime_export_route_detail_index_v1_is_deterministic_and_review_ready(
     assert first["sample_route_ids"] == ("route-0", "route-1")
     assert first["indexed_sample_route_ids"] == ("route-0", "route-1")
     assert first["missing_sample_route_ids"] == ()
+    assert first["route_comparison_review"]["package_route_detail_endpoint"] == (
+        "GET /runtime/export/packages/{package_id}/routes/{route_id}"
+    )
+    assert first["route_comparison_review"]["boundary_conditions"] == (
+        "NO_ROUTE_RECOMPUTE",
+        "NO_EVENT_REPLAY",
+        "NO_PACKET_CAPTURE",
+        "NO_PACKAGE_MUTATION",
+        "CURRENT_RUNTIME_MAY_DIFFER_FROM_EXPORTED_PACKAGE",
+    )
     assert first["routes"][0]["route_id"] == "route-0"
     assert first["routes"][0]["path_label"] == "user-0 -> sat-0"
     assert first["route_detail_index_hash"].startswith("sha256:")
@@ -353,6 +372,7 @@ def test_runtime_export_route_detail_page_v1_filters_package_index() -> None:
     assert first["source"] == "BACKEND_RUNTIME_EXPORT_PACKAGE"
     assert first["package_id"] == "pkg-1"
     assert first["route_detail_export_policy"] == _route_detail_export_policy()
+    assert first["route_comparison_review"] == route_index["route_comparison_review"]
     assert first["route_detail_index_hash"] == route_index["route_detail_index_hash"]
     assert first["cursor"] == 0
     assert first["limit"] == 1
@@ -391,6 +411,7 @@ def test_runtime_export_route_detail_item_v1_reads_exact_package_route() -> None
     assert detail["source"] == "BACKEND_RUNTIME_EXPORT_PACKAGE"
     assert detail["package_id"] == "pkg-1"
     assert detail["route_detail_index_hash"] == route_index["route_detail_index_hash"]
+    assert detail["route_comparison_review"] == route_index["route_comparison_review"]
     assert detail["route_id"] == "route-1"
     assert detail["route"]["path_label"] == "user-1 -> sat-1"
     assert detail["item_hash"].startswith("sha256:")

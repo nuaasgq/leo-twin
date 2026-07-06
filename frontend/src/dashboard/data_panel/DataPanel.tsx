@@ -27,6 +27,7 @@ import {
   RuntimeExportCatalogRecordV1,
   RuntimeExportDiagnosticsBundleV1,
   RuntimeExportPackageCompareV1,
+  RuntimeExportRouteComparisonReviewV1,
   RuntimeExportRouteDetailItemV1,
   RuntimeExportRouteDetailIndexRouteV1,
   RuntimeExportRouteDetailIndexV1,
@@ -9303,6 +9304,21 @@ export interface DataPanelExportCompareDiffRow {
   title: string;
 }
 
+function runtimeExportRouteComparisonReviewLabels(
+  review: RuntimeExportRouteComparisonReviewV1 | null | undefined
+): readonly string[] {
+  if (review === null || review === undefined) {
+    return [];
+  }
+  return [
+    `route compare ${review.compare_action}`,
+    `compare fields ${formatCount(review.compared_fields.length)}`,
+    review.comparison_requires_live_runtime
+      ? "live runtime required"
+      : "offline route comparison"
+  ];
+}
+
 export function buildDataPanelExportReviewSummaryDisplay(
   summary: RuntimeExportReviewSummaryV1 | null | undefined
 ): DataPanelExportReviewSummaryDisplay | null {
@@ -9326,7 +9342,8 @@ export function buildDataPanelExportReviewSummaryDisplay(
       `用户 ${formatCount(Number(summary.scenario.user_count) || 0)}`,
       `算力 ${formatCount(Number(summary.scenario.compute_node_count) || 0)}`,
       `manifest ${shortRuntimeHash(summary.reproducibility.manifest_hash)}`,
-      `summary ${shortRuntimeHash(summary.summary_hash)}`
+      `summary ${shortRuntimeHash(summary.summary_hash)}`,
+      ...runtimeExportRouteComparisonReviewLabels(summary.route_comparison_review)
     ],
     artifactLabels: [
       `必需文件缺失 ${formatCount(missing.length)}`,
@@ -9412,7 +9429,10 @@ export function buildDataPanelExportDiagnosticsDisplay(
         ? "含包级仿真"
         : "无包级仿真",
       `禁用 ${diagnostics.model_boundaries.forbidden_external_integrations.join("/")}`,
-      diagnostics.model_boundaries.diagnostics_policy
+      diagnostics.model_boundaries.diagnostics_policy,
+      ...runtimeExportRouteComparisonReviewLabels(
+        diagnostics.route_comparison_review
+      )
     ],
     findingRows: diagnostics.findings.map((finding) => ({
       severity: finding.severity,
@@ -9507,7 +9527,8 @@ export function buildDataPanelExportRouteDetailIndexDisplay(
       `available ${formatCount(summary.available_route_count)}`,
       `blocked ${formatCount(summary.blocked_route_count)}`,
       `compute ${formatCount(summary.compute_service_route_count)}`,
-      `network ${formatCount(summary.network_service_route_count)}`
+      `network ${formatCount(summary.network_service_route_count)}`,
+      ...runtimeExportRouteComparisonReviewLabels(index.route_comparison_review)
     ],
     boundaryLabels: [
       index.route_model || "UNKNOWN_ROUTE_MODEL",
@@ -9566,7 +9587,8 @@ export function buildDataPanelExportRouteDetailPageDisplay(
       `available ${formatCount(page.available_route_count)}`,
       `blocked ${formatCount(page.blocked_route_count)}`,
       `compute ${formatCount(page.compute_service_route_count)}`,
-      `network ${formatCount(page.network_service_route_count)}`
+      `network ${formatCount(page.network_service_route_count)}`,
+      ...runtimeExportRouteComparisonReviewLabels(page.route_comparison_review)
     ],
     boundaryLabels: [
       page.index_scope || "ROUTE_DETAIL_PAGE",

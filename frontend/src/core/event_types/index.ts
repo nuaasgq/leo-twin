@@ -1243,6 +1243,7 @@ export interface RuntimeExportReviewSummaryV1 {
   scenario: RuntimeExportReviewScenarioV1;
   runtime: RuntimeExportReviewRuntimeV1;
   route_trust?: RuntimeExportRouteTrustEvidenceV1;
+  route_comparison_review?: RuntimeExportRouteComparisonReviewV1;
   reproducibility: RuntimeExportReviewReproducibilityV1;
   artifacts: RuntimeExportReviewArtifactsV1;
   review_notes: readonly string[];
@@ -1290,6 +1291,21 @@ export interface RuntimeExportRouteTrustEvidenceV1 {
   caveats: readonly string[];
 }
 
+export interface RuntimeExportRouteComparisonReviewV1 {
+  version: "v1" | string;
+  source: string;
+  review_scope: string;
+  package_route_detail_endpoint: string;
+  live_route_detail_endpoint: string;
+  compare_action: string;
+  comparison_requires_live_runtime: boolean;
+  route_id_alignment_required: boolean;
+  exported_rows_only: boolean;
+  compared_fields: readonly string[];
+  status_reasons: readonly string[];
+  boundary_conditions: readonly string[];
+}
+
 export interface RuntimeExportReviewReproducibilityV1 {
   manifest_id: string;
   manifest_hash: string;
@@ -1316,6 +1332,7 @@ export interface RuntimeExportDiagnosticsBundleV1 {
   package: RuntimeExportDiagnosticsPackageV1;
   runtime: RuntimeExportDiagnosticsRuntimeV1;
   route_trust?: RuntimeExportRouteTrustEvidenceV1;
+  route_comparison_review?: RuntimeExportRouteComparisonReviewV1;
   reproducibility: RuntimeExportDiagnosticsReproducibilityV1;
   artifact_health: RuntimeExportDiagnosticsArtifactHealthV1;
   model_boundaries: RuntimeExportDiagnosticsModelBoundariesV1;
@@ -1339,6 +1356,7 @@ export interface RuntimeExportRouteDetailIndexV1 {
   route_summary: RuntimeExportRouteDetailIndexSummaryV1;
   route_detail_export_policy?: RuntimeExportRouteDetailExportPolicyV1;
   route_trust: RuntimeExportRouteTrustEvidenceV1;
+  route_comparison_review?: RuntimeExportRouteComparisonReviewV1;
   route_ids: readonly string[];
   sample_route_ids: readonly string[];
   indexed_sample_route_ids: readonly string[];
@@ -1412,6 +1430,7 @@ export interface RuntimeExportRouteDetailPageV1 {
   package_id: string;
   index_id: string;
   route_detail_export_policy?: RuntimeExportRouteDetailExportPolicyV1;
+  route_comparison_review?: RuntimeExportRouteComparisonReviewV1;
   route_detail_index_hash: string;
   index_scope: string;
   cursor: number;
@@ -1446,6 +1465,7 @@ export interface RuntimeExportRouteDetailItemV1 {
   package_id: string;
   index_id: string;
   route_detail_index_hash: string;
+  route_comparison_review?: RuntimeExportRouteComparisonReviewV1;
   route_id: string;
   route: RuntimeExportRouteDetailIndexRouteV1;
   item_hash: string;

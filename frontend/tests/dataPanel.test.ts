@@ -2258,6 +2258,7 @@ describe("buildDataPanelExportCompareDisplay", () => {
         processed_event_count: 4096,
         queued_event_count: 8
       },
+      route_comparison_review: _runtimeExportRouteComparisonReview(),
       reproducibility: {
         manifest_id: "leo_twin.runtime_reproducibility_manifest.v1",
         manifest_hash:
@@ -2306,7 +2307,10 @@ describe("buildDataPanelExportCompareDisplay", () => {
         "用户 20",
         "算力 2",
         "manifest 111111111111",
-        "summary aaaaaaaaaaaa"
+        "summary aaaaaaaaaaaa",
+        "route compare compare with live",
+        "compare fields 12",
+        "live runtime required"
       ],
       artifactLabels: [
         "必需文件缺失 0",
@@ -2357,6 +2361,7 @@ describe("buildDataPanelExportCompareDisplay", () => {
         processed_event_count: 4096,
         queued_event_count: 0
       },
+      route_comparison_review: _runtimeExportRouteComparisonReview(),
       reproducibility: {
         manifest_id: "leo_twin.runtime_reproducibility_manifest.v1",
         manifest_ok: true,
@@ -2451,6 +2456,11 @@ describe("buildDataPanelExportCompareDisplay", () => {
     });
     expect(display?.modelBoundaryLabels).toContain("无包级仿真");
     expect(display?.modelBoundaryLabels).toContain("禁用 STK/EXATA/AFSIM/DDS");
+    expect(display?.modelBoundaryLabels).toContain(
+      "route compare compare with live"
+    );
+    expect(display?.modelBoundaryLabels).toContain("compare fields 12");
+    expect(display?.modelBoundaryLabels).toContain("live runtime required");
     expect(
       buildDataPanelExportDiagnosticsStatus(display, "pkg-review", false, null)
     ).toBe(display);
@@ -2671,7 +2681,10 @@ describe("buildDataPanelExportCompareDisplay", () => {
         "available 8",
         "blocked 4",
         "compute 7",
-        "network 5"
+        "network 5",
+        "route compare compare with live",
+        "compare fields 12",
+        "live runtime required"
       ],
       boundaryLabels: [
         "ROUTE_EXPLANATION_WINDOW_EXPORT",
@@ -8973,6 +8986,51 @@ function makeLargeDetailPaginationCollection(overrides: {
   };
 }
 
+function _runtimeExportRouteComparisonReview() {
+  return {
+    version: "v1",
+    source: "BACKEND_RUNTIME_EXPORT",
+    review_scope: "PACKAGE_ROUTE_DETAIL_TO_LIVE_RUNTIME_ROUTE_DETAIL",
+    package_route_detail_endpoint:
+      "GET /runtime/export/packages/{package_id}/routes/{route_id}",
+    live_route_detail_endpoint: "GET /runtime/details/routes/{route_id}",
+    compare_action: "compare with live",
+    comparison_requires_live_runtime: true,
+    route_id_alignment_required: true,
+    exported_rows_only: true,
+    compared_fields: [
+      "availability",
+      "business",
+      "flow",
+      "source_destination",
+      "selected_satellite",
+      "primary_next_hop",
+      "path",
+      "capacity_demand",
+      "latency",
+      "loss",
+      "pressure",
+      "bottleneck"
+    ],
+    status_reasons: [
+      "PACKAGE_DETAIL_NOT_LOADED",
+      "PACKAGE_DETAIL_LOADING",
+      "PACKAGE_DETAIL_UNAVAILABLE",
+      "LIVE_DETAIL_NOT_LOADED",
+      "LIVE_DETAIL_LOADING",
+      "LIVE_DETAIL_UNAVAILABLE",
+      "ROUTE_ID_MISMATCH"
+    ],
+    boundary_conditions: [
+      "NO_ROUTE_RECOMPUTE",
+      "NO_EVENT_REPLAY",
+      "NO_PACKET_CAPTURE",
+      "NO_PACKAGE_MUTATION",
+      "CURRENT_RUNTIME_MAY_DIFFER_FROM_EXPORTED_PACKAGE"
+    ]
+  };
+}
+
 function _runtimeExportRouteIndexRoute(routeId: string, available: boolean) {
   return {
     route_id: routeId,
@@ -9051,6 +9109,7 @@ function _runtimeExportRouteDetailIndex(
       packet_level_simulation: false,
       all_pairs_computation: false
     },
+    route_comparison_review: _runtimeExportRouteComparisonReview(),
     route_trust: {
       version: "v1",
       trust_id: "leo_twin.route_provenance_trust.v1",
@@ -9109,6 +9168,7 @@ function _runtimeExportRouteDetailPage(
       packet_level_simulation: false,
       all_pairs_computation: false
     },
+    route_comparison_review: _runtimeExportRouteComparisonReview(),
     route_detail_index_hash:
       "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
     index_scope: "ROUTE_EXPLANATION_WINDOW_EXPORT",
