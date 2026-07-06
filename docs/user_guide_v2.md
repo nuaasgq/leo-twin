@@ -151,7 +151,9 @@ compares against the current runtime route detail endpoint when the same route
 id is still present. Use `compare with live` to load both detail channels for
 the same route in one click. If both package and live details are loaded for
 the same route, the dashboard shows a package-vs-live comparison card with
-matched and different route fields.
+matched and different route fields. If the comparison is not ready, the same
+area explains whether package detail, live detail, or route-id mismatch is the
+reason.
 Runtime export rebuilds the package route evidence window with a 5000-row
 maximum; hidden rows beyond that limit are reported in the package policy.
 For package-owned review, use:

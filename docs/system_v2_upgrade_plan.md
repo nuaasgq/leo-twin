@@ -241,6 +241,10 @@ Tasks:
     evidence. The action loads package-owned route detail and live runtime
     route detail for the selected route id together, then lets the T286
     comparison card render the field-level result.
+  - Status: T288 adds package-vs-live comparison status diagnostics. When the
+    comparison card is not available, the dashboard explains whether it is
+    waiting on package detail, waiting on live detail, blocked by an error, or
+    comparing mismatched route ids.
 
 ### WS4. Compute Network Model v2
 

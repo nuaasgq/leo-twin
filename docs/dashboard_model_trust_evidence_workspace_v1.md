@@ -57,8 +57,10 @@ live runtime state. The live action remains a current-runtime comparison when
 the referenced route is still available. When both package and live details are
 loaded for the same route id, the dashboard shows a field-level
 package-vs-live comparison for availability, path, next hop, KPI proxy, and
-bottleneck context. The frontend does not recompute routes or download the full
-`route_detail_index_v1.json` by default.
+bottleneck context. If the comparison cannot be shown yet, a status card
+identifies whether package detail, live detail, or route-id alignment is the
+blocking condition. The frontend does not recompute routes or download the
+full `route_detail_index_v1.json` by default.
 7. runtime evidence
 
 Each row has a tone:

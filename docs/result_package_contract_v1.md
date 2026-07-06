@@ -169,7 +169,9 @@ comparison aid: it uses the current runtime detail endpoint when the same route
 id still exists, and it does not replay or mutate the exported package. When
 both details are loaded for the same route id, the dashboard renders a
 field-level package-vs-live comparison card so users can see which route
-semantics changed between the exported package and the current runtime.
+semantics changed between the exported package and the current runtime. If the
+comparison is not available, the dashboard reports whether package detail,
+live detail, or route-id mismatch is preventing the comparison.
 
 The demo backend also exposes package-owned route evidence endpoints:
 

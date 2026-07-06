@@ -13825,3 +13825,50 @@ change.
   - Add package route compare request status copy near the comparison card so
     users can see whether a missing comparison is caused by package detail,
     live detail, or route-id mismatch.
+
+## 2026-07-06 - Dashboard Route Compare Status v1
+
+- Branch: `feature/T288-dashboard-route-compare-status-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add package-vs-live route comparison status diagnostics to the
+  standalone dashboard export review drawer. When the comparison card is not
+  available, the dashboard now explains whether it is waiting for package route
+  detail, waiting for live runtime route detail, blocked by a package/live
+  request error, or looking at mismatched route ids. This reuses existing
+  frontend request state and does not change route models, Event Kernel,
+  result package endpoints, or backend behavior.
+- Changed files/modules:
+  - `frontend/src/app/App.css`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/dashboard_model_trust_evidence_workspace_v1.md`
+  - `docs/result_package_contract_v1.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_result_package_contract_v1.py tests/unit/test_user_guide_v2_docs.py -q`
+    - Result: passed, 11 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with bundled Codex Node/Pnpm runtime.
+  - `pnpm --dir frontend test api.test.ts dataPanel.test.ts`
+    - Result: passed, 2 test files and 192 tests.
+  - `git diff --check`
+    - Result: passed for task files. Git reported existing CRLF warnings for
+      the unstaged runtime config drift files.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing large DataPanel chunk
+      warning after minification; no functional build error.
+- Problems encountered:
+  - No product code blocker. The task added a pure display-state builder and
+    reused existing package/live route request state.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The status card diagnoses the selected route only; it does not summarize
+    package-vs-live comparison availability across all route rows.
+  - The comparison remains a formatted-field operator diagnostic, not a formal
+    numerical tolerance verifier.
+- Recommended follow-up:
+  - Add route evidence comparison export metadata so package-vs-live
+    diagnostics can be captured in a reproducibility review report.

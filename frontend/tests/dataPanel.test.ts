@@ -30,6 +30,7 @@ import {
   buildDataPanelExportRouteDetailItemDisplay,
   buildDataPanelExportRouteDetailItemStatus,
   buildDataPanelExportRouteLiveComparisonDisplay,
+  buildDataPanelExportRouteLiveComparisonStatus,
   buildDataPanelExportRouteDetailIndexDisplay,
   buildDataPanelExportRouteDetailPageDisplay,
   buildDataPanelExportRouteDetailIndexStatus,
@@ -2853,6 +2854,86 @@ describe("buildDataPanelExportCompareDisplay", () => {
         route_id: "route-b"
       })
     ).toBeNull();
+  });
+
+  it("explains package-live route comparison request status", () => {
+    const packageRoute = _runtimeExportRouteIndexRoute("route-a", true);
+    const packageItem = {
+      type: "RUNTIME_EXPORT_ROUTE_DETAIL_ITEM_V1",
+      version: "v1",
+      item_id: "leo_twin.runtime_export_route_detail_item.v1",
+      source: "BACKEND_RUNTIME_EXPORT_PACKAGE",
+      package_id: "pkg-review",
+      index_id: "leo_twin.runtime_export_route_detail_index.v1",
+      route_detail_index_hash:
+        "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+      route_id: "route-a",
+      route: packageRoute,
+      item_hash:
+        "sha256:abababababababababababababababababababababababababababababababab"
+    };
+    const comparison = buildDataPanelExportRouteLiveComparisonDisplay(
+      packageItem,
+      packageRoute
+    );
+
+    expect(
+      buildDataPanelExportRouteLiveComparisonStatus(
+        comparison,
+        packageItem,
+        null,
+        packageRoute,
+        { entityId: "route-a", loading: false, error: null }
+      )
+    ).toBeNull();
+    expect(
+      buildDataPanelExportRouteLiveComparisonStatus(
+        null,
+        null,
+        {
+          packageId: "pkg-review",
+          routeId: "route-a",
+          tone: "pending",
+          statusLabel: "loading package route detail",
+          summaryLabel: "pkg-review / route-a",
+          fields: [],
+          detailHref: null
+        },
+        null,
+        { entityId: "route-a", loading: true, error: null }
+      )
+    ).toMatchObject({
+      tone: "pending",
+      statusLabel: "waiting for package route detail",
+      summaryLabel: "package route-a / live route-a"
+    });
+    expect(
+      buildDataPanelExportRouteLiveComparisonStatus(
+        null,
+        packageItem,
+        null,
+        null,
+        { entityId: "route-a", loading: false, error: "HTTP 404" }
+      )
+    ).toMatchObject({
+      tone: "error",
+      statusLabel: "live route detail unavailable",
+      summaryLabel: "package route-a / live route-a",
+      notes: ["HTTP 404"]
+    });
+    expect(
+      buildDataPanelExportRouteLiveComparisonStatus(
+        null,
+        packageItem,
+        null,
+        { ...packageRoute, route_id: "route-b" },
+        { entityId: "route-b", loading: false, error: null }
+      )
+    ).toMatchObject({
+      tone: "different",
+      statusLabel: "route id mismatch",
+      summaryLabel: "package route-a / live route-b"
+    });
   });
 
   it("summarizes runtime export manifests with catalog and diagnostics integrity", () => {

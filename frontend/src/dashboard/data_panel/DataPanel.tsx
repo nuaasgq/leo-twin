@@ -854,6 +854,14 @@ export const DataPanel = memo(function DataPanel({
       runtimeExportRouteDetailItem,
       selectedRouteBackendDetail
     );
+  const exportRouteLiveComparisonStatus =
+    buildDataPanelExportRouteLiveComparisonStatus(
+      exportRouteLiveComparison,
+      runtimeExportRouteDetailItem,
+      exportRouteDetailItemStatus,
+      selectedRouteBackendDetail,
+      routeDetailRequestStatus
+    );
   const serviceDetailInspector = buildServiceLifecycleDetailInspector(
     selectedServiceDetailRow,
     selectedServiceBackendDetail
@@ -1586,6 +1594,24 @@ export const DataPanel = memo(function DataPanel({
                         </small>
                         <small title={row.liveValue}>live: {row.liveValue}</small>
                       </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {exportRouteLiveComparisonStatus ? (
+                <div
+                  className={`data-panel-export-route-compare-card ${exportRouteLiveComparisonStatus.tone}`}
+                >
+                  <div className="data-panel-export-diagnostics-header">
+                    <div>
+                      <span>Package vs live route</span>
+                      <strong>{exportRouteLiveComparisonStatus.statusLabel}</strong>
+                      <small>{exportRouteLiveComparisonStatus.summaryLabel}</small>
+                    </div>
+                  </div>
+                  <div className="data-panel-export-route-compare-note">
+                    {exportRouteLiveComparisonStatus.notes.map((note) => (
+                      <span key={note}>{note}</span>
                     ))}
                   </div>
                 </div>
@@ -9202,6 +9228,13 @@ export interface DataPanelExportRouteLiveComparisonRow {
   statusLabel: string;
 }
 
+export interface DataPanelExportRouteLiveComparisonStatus {
+  tone: "pending" | "error" | "different";
+  statusLabel: string;
+  summaryLabel: string;
+  notes: readonly string[];
+}
+
 export interface DataPanelExportManifestInspectorDisplay {
   packageId: string;
   tone: "match" | "different";
@@ -9704,6 +9737,105 @@ export function buildDataPanelExportRouteLiveComparisonDisplay(
       rows.length - differentCount
     )}/${formatCount(rows.length)} / differences ${formatCount(differentCount)}`,
     rows
+  };
+}
+
+export function buildDataPanelExportRouteLiveComparisonStatus(
+  comparison: DataPanelExportRouteLiveComparisonDisplay | null | undefined,
+  packageItem: RuntimeExportRouteDetailItemV1 | null | undefined,
+  packageStatus: DataPanelExportRouteDetailItemStatus | null | undefined,
+  liveDetail: RuntimeRouteExplanationItemV1 | null | undefined,
+  liveStatus: RuntimeExactDetailRequestState | null | undefined
+): DataPanelExportRouteLiveComparisonStatus | null {
+  if (comparison !== null && comparison !== undefined) {
+    return null;
+  }
+  const packageRouteId = packageItem?.route_id ?? packageStatus?.routeId ?? null;
+  const liveRouteId = liveDetail?.route_id ?? liveStatus?.entityId ?? null;
+  if (packageStatus?.tone === "pending") {
+    return routeComparisonStatus(
+      "pending",
+      "waiting for package route detail",
+      packageRouteId,
+      liveRouteId,
+      ["Package route detail is still loading."]
+    );
+  }
+  if (packageStatus?.tone === "error") {
+    return routeComparisonStatus(
+      "error",
+      "package route detail unavailable",
+      packageRouteId,
+      liveRouteId,
+      [packageStatus.fields[0]?.value ?? "Package route detail request failed."]
+    );
+  }
+  if (liveStatus?.loading === true) {
+    return routeComparisonStatus(
+      "pending",
+      "waiting for live route detail",
+      packageRouteId,
+      liveRouteId,
+      ["Live runtime route detail is still loading."]
+    );
+  }
+  if (liveStatus?.error) {
+    return routeComparisonStatus(
+      "error",
+      "live route detail unavailable",
+      packageRouteId,
+      liveRouteId,
+      [liveStatus.error]
+    );
+  }
+  if (packageItem !== null && packageItem !== undefined && liveDetail === null) {
+    return routeComparisonStatus(
+      "pending",
+      "live route detail not loaded",
+      packageRouteId,
+      liveRouteId,
+      ["Use compare with live or live route detail to load the current runtime route."]
+    );
+  }
+  if (liveDetail !== null && liveDetail !== undefined && packageItem === null) {
+    return routeComparisonStatus(
+      "pending",
+      "package route detail not loaded",
+      packageRouteId,
+      liveRouteId,
+      ["Use compare with live or package route detail to load the exported route."]
+    );
+  }
+  if (
+    packageItem !== null &&
+    packageItem !== undefined &&
+    liveDetail !== null &&
+    liveDetail !== undefined &&
+    packageItem.route_id !== liveDetail.route_id
+  ) {
+    return routeComparisonStatus(
+      "different",
+      "route id mismatch",
+      packageRouteId,
+      liveRouteId,
+      ["Package and live details refer to different route ids."]
+    );
+  }
+  return null;
+}
+
+function routeComparisonStatus(
+  tone: DataPanelExportRouteLiveComparisonStatus["tone"],
+  statusLabel: string,
+  packageRouteId: string | null,
+  liveRouteId: string | null,
+  notes: readonly string[]
+): DataPanelExportRouteLiveComparisonStatus {
+  return {
+    tone,
+    statusLabel,
+    summaryLabel: `package ${packageRouteId ?? "-"} / live ${liveRouteId ?? "-"}`,
+    notes
   };
 }
 

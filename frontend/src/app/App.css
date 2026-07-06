@@ -3044,6 +3044,16 @@ button.data-panel-route-row {
   background: #19160e;
 }
 
+.data-panel-export-route-compare-card.pending {
+  border-color: #365068;
+  background: #0d151d;
+}
+
+.data-panel-export-route-compare-card.error {
+  border-color: #663333;
+  background: #1a0d0d;
+}
+
 .data-panel-export-route-compare-rows {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
@@ -3084,6 +3094,25 @@ button.data-panel-route-row {
 }
 
 .data-panel-export-route-compare-rows small {
+  color: var(--app-muted);
+  font-size: 10px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.data-panel-export-route-compare-note {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.data-panel-export-route-compare-note span {
+  min-width: 0;
+  border: 1px solid #263a48;
+  border-radius: 5px;
+  padding: 5px 7px;
+  background: #0b1219;
   color: var(--app-muted);
   font-size: 10px;
   font-weight: 800;
