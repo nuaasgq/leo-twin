@@ -38,6 +38,7 @@ from leo_twin.services.configuration_schema import (
     validate_user_configuration_mapping_v2,
 )
 from leo_twin.services.configuration_view import (
+    build_user_configuration_reference,
     build_user_configuration_view,
     configuration_template_profiles,
     load_user_configuration_template,
@@ -234,6 +235,16 @@ class DemoControlPlane:
                     "requires_uninitialized_runtime": True,
                 },
             },
+        }
+
+    def user_configuration_reference(self) -> dict[str, Any]:
+        return {
+            "type": "USER_CONFIGURATION_REFERENCE_V1",
+            "summary": build_user_configuration_reference(
+                self._controller.config,
+                detailed_config_file=str(self._config_output_path),
+                generated_config_file=str(self._generated_config_output_path),
+            ),
         }
 
     def user_configuration_export(self) -> dict[str, Any]:

@@ -46,6 +46,11 @@ Tasks:
   - Scope: schema fields, validation rules, defaults, comments, examples.
   - Output: docs and tests for accepted/rejected configs.
   - Depends on: existing generated config and templates.
+  - Status: T320 adds backend-owned `USER_CONFIGURATION_REFERENCE_V1` through
+    `GET /scenario/user-config/reference`. The reference binds schema v2,
+    key UI fields, detailed file-only fields, template profiles,
+    validation/apply workflow, and model boundaries into one stable
+    configuration reference object for users and frontend surfaces.
 - V2-002: Add template catalog metadata.
   - Scope: scenario name, purpose, scale, expected KPI behavior, fidelity mode.
   - Output: backend template endpoint and frontend selector metadata.

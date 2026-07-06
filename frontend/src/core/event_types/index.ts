@@ -928,6 +928,80 @@ export interface UserConfigurationTemplateCatalogEnvelope {
   summary: UserConfigurationTemplateCatalogV1;
 }
 
+export interface UserConfigurationReferenceV1 {
+  version: "v1" | string;
+  reference_id: string;
+  source: string;
+  schema_id: string;
+  reference_scope: string;
+  format: string;
+  frontend_policy: string;
+  detailed_config_file: string;
+  generated_config_file: string;
+  template_config_file: string;
+  template_profiles: readonly ConfigurationTemplateProfile[];
+  unknown_key_policy: string;
+  defaulting_policy: string;
+  mutation_policy: {
+    ui_surface: string;
+    full_file_surface: string;
+    validate_endpoint: string;
+    apply_commands: readonly string[];
+  };
+  field_count: number;
+  key_field_count: number;
+  file_only_field_count: number;
+  section_count: number;
+  sections: readonly UserConfigurationReferenceSectionV1[];
+  fields: readonly UserConfigurationReferenceFieldV1[];
+  model_boundaries: {
+    event_kernel_policy: string;
+    packet_level_simulation: boolean;
+    external_simulators: boolean;
+    forbidden_integrations: readonly string[];
+    frontend_semantics_source: string;
+  };
+  operator_workflow: readonly string[];
+  notes: readonly string[];
+  reference_hash: string;
+}
+
+export interface UserConfigurationReferenceSectionV1 {
+  section: string;
+  purpose: string;
+  field_count: number;
+  key_field_count: number;
+  file_only_field_count: number;
+  key_paths: readonly string[];
+  file_only_paths: readonly string[];
+}
+
+export interface UserConfigurationReferenceFieldV1 {
+  path: string;
+  section: string;
+  label: string;
+  description: string;
+  value_type: string;
+  editable_surface: string;
+  ui_key_field: boolean;
+  default_value: unknown;
+  current_value: unknown;
+  required_in_user_file: boolean;
+  validation_rules: readonly string[];
+  unit?: string;
+  enum_values?: readonly string[];
+  nullable?: boolean;
+  minimum?: number;
+  maximum?: number;
+  exclusive_minimum?: number;
+  exclusive_maximum?: number;
+}
+
+export interface UserConfigurationReferenceEnvelope {
+  type: "USER_CONFIGURATION_REFERENCE_V1" | string;
+  summary: UserConfigurationReferenceV1;
+}
+
 export interface UserConfigurationExportV1 {
   version: "v1" | string;
   source: string;

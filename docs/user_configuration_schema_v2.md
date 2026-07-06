@@ -40,6 +40,7 @@ The backend exposes the schema through:
 - `configuration_surface_summary.user_config_schema_v2`
 - `GET /scenario/user-config/schema`
 - `GET /scenario/user-config/templates`
+- `GET /scenario/user-config/reference`
 - `GET /scenario/user-config/export`
 - `POST /scenario/user-config/validate`
 - `POST /scenario/user-config/validate-text`
@@ -64,6 +65,14 @@ The HTTP endpoints are read-only:
   profile includes backend-owned metadata for scenario scale, expected KPI
   behavior, fidelity mode, and recommended use, so the frontend can explain
   template semantics without local inference.
+- `/scenario/user-config/reference` returns
+  `USER_CONFIGURATION_REFERENCE_V1`, a backend-owned full configuration
+  reference package. It binds schema v2 fields, key UI fields, detailed
+  file-only fields, section summaries, template profiles, validation/apply
+  workflow, model boundaries, and a stable `reference_hash`. Use this endpoint
+  when a UI or document needs to explain "the frontend shows key fields, while
+  the full YAML/JSON file controls all model inputs" without re-deriving field
+  semantics locally.
 - `/scenario/user-config/export` returns the current effective `SEESConfig`
   JSON mapping, a stable config hash, validation status, and supported import
   paths.

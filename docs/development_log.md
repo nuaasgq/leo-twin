@@ -15467,3 +15467,59 @@ change.
 - Recommended follow-up:
   - Add an inline Markdown handoff drawer only if operators need to read the
     full report inside the dashboard instead of using the download link.
+
+## 2026-07-06 - User Configuration Reference v1
+
+- Branch: `feature/T320-user-config-reference-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add backend-owned `USER_CONFIGURATION_REFERENCE_V1` for full user
+  configuration guidance. The reference is exposed through
+  `GET /scenario/user-config/reference` and derives from `SEESConfig`, user
+  configuration schema v2, and the existing configuration surface summary. It
+  binds key UI fields, detailed file-only fields, section summaries, template
+  profiles, validation/apply workflow, model boundaries, and a stable
+  `reference_hash` without changing runtime semantics or Event Kernel
+  behavior. The frontend API gains a typed loader/href for later UI binding.
+- Changed files/modules:
+  - `src/leo_twin/services/configuration_view.py`
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `tests/unit/test_configuration_view.py`
+  - `tests/integration/test_config_control.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/app/api.ts`
+  - `frontend/tests/api.test.ts`
+  - `docs/user_configuration_schema_v2.md`
+  - `docs/user_guide_v2.md`
+  - `docs/integration_demo.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src\leo_twin\services\configuration_view.py examples\integration_demo\control_plane.py examples\integration_demo\server.py tests\unit\test_configuration_view.py tests\integration\test_config_control.py`
+    - Result: passed.
+  - `python -m pytest tests\unit\test_configuration_view.py tests\integration\test_config_control.py::test_control_plane_exposes_user_configuration_contract_api -q`
+    - Result: passed, 9 tests.
+  - `pnpm --dir frontend test api.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 1 test
+      file and 34 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path. Vite
+      reported the existing large DataPanel chunk warning.
+  - `python -m pytest tests\unit\test_configuration_view.py tests\unit\test_user_configuration_schema_v2.py tests\integration\test_config_control.py::test_control_plane_exposes_user_configuration_contract_api -q`
+    - Result: passed, 15 tests.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered:
+  - No implementation blocker. Build still reports the existing large
+    DataPanel chunk warning, which is outside this task's scope.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The dashboard has a typed loader for the reference but does not yet render
+    a dedicated full-configuration reference drawer.
+- Recommended follow-up:
+  - Bind `USER_CONFIGURATION_REFERENCE_V1` into the dashboard configuration
+    contract panel so advanced users can browse all file-only fields from the
+    UI.

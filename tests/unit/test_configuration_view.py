@@ -10,6 +10,7 @@ from leo_twin.schema.config import (
 )
 from leo_twin.schema.config_loader import ConfigValidationError, load_config
 from leo_twin.services.configuration_view import (
+    build_user_configuration_reference,
     build_user_configuration_view,
     configuration_template_profiles,
     load_user_configuration_template,
@@ -140,6 +141,62 @@ def test_user_configuration_view_is_deterministic_and_frontend_ready() -> None:
         section["section"]
         for section in first["detailed_file_sections"]
     } >= {"scenario", "scenario.orbit", "scenario.traffic_model", "network", "runtime", "ui"}
+
+
+def test_user_configuration_reference_v1_summarizes_full_file_contract() -> None:
+    config = SEESConfig(
+        scenario=ScenarioConfig(
+            satellite_count=300,
+            user_count=360,
+            compute_nodes=300,
+            compute_gpu_tflops_fp32=4.0,
+        ),
+        network=NetworkProfile(space_link_mode="BOUNDED_CANDIDATE"),
+        runtime=RuntimeConfig(duration=900, seed=20260706),
+    )
+
+    first = build_user_configuration_reference(
+        config,
+        detailed_config_file="tmp/sees_control.yaml",
+        generated_config_file="tmp/generated_full_system_demo.json",
+    )
+    second = build_user_configuration_reference(
+        config,
+        detailed_config_file="tmp/sees_control.yaml",
+        generated_config_file="tmp/generated_full_system_demo.json",
+    )
+
+    assert first == second
+    assert first["version"] == "v1"
+    assert first["reference_id"] == "sees.user_configuration_reference.v1"
+    assert first["source"] == "BACKEND_USER_CONFIGURATION"
+    assert first["schema_id"] == "sees.user_configuration.v2"
+    assert first["frontend_policy"] == "CONTROL_PANEL_KEY_FIELDS_ONLY"
+    assert first["detailed_config_file"] == "tmp/sees_control.yaml"
+    assert first["generated_config_file"] == "tmp/generated_full_system_demo.json"
+    assert first["field_count"] == len(first["fields"])
+    assert first["key_field_count"] > 0
+    assert first["file_only_field_count"] > 0
+    assert first["reference_hash"].startswith("sha256:")
+    assert first["model_boundaries"] == {
+        "event_kernel_policy": "NO_EVENT_KERNEL_BEHAVIOR_CHANGE",
+        "packet_level_simulation": False,
+        "external_simulators": False,
+        "forbidden_integrations": ("STK", "EXATA", "AFSIM", "DDS"),
+        "frontend_semantics_source": "BACKEND_USER_CONFIGURATION",
+    }
+    sections = {section["section"]: section for section in first["sections"]}
+    assert sections["scenario"]["key_field_count"] > 0
+    assert sections["network"]["file_only_field_count"] > 0
+    assert "scenario.compute_gpu_tflops_fp16" in sections["scenario"]["file_only_paths"]
+    fields = {field["path"]: field for field in first["fields"]}
+    assert fields["scenario.satellite_count"]["ui_key_field"] is True
+    assert fields["scenario.satellite_count"]["current_value"] == 300
+    assert fields["scenario.compute_gpu_tflops_fp16"]["ui_key_field"] is False
+    assert fields["network.space_link_mode"]["current_value"] == "BOUNDED_CANDIDATE"
+    assert "POST /scenario/user-config/validate-text" == first["mutation_policy"][
+        "validate_endpoint"
+    ]
 
 
 def test_detailed_user_config_template_loads_with_full_contract() -> None:

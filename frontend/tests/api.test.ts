@@ -34,6 +34,7 @@ import {
   loadRuntimeUserDetail,
   loadRuntimeUserDetails,
   loadUserConfigurationExport,
+  loadUserConfigurationReference,
   loadUserConfigurationSchema,
   loadUserConfigurationTemplates,
   validateUserConfigurationCandidate,
@@ -57,6 +58,7 @@ import {
   saveRuntimeExportRouteComparisonReviewReport,
   saveRuntimeExportScenarioReviewChecklist,
   userConfigurationExportHref,
+  userConfigurationReferenceHref,
   userConfigurationSchemaHref,
   userConfigurationTemplatesHref,
   userConfigurationValidateHref,
@@ -147,6 +149,7 @@ describe("runtime API diagnostics", () => {
   it("exposes stable user configuration contract links", () => {
     expect(userConfigurationSchemaHref()).toBe("/scenario/user-config/schema");
     expect(userConfigurationTemplatesHref()).toBe("/scenario/user-config/templates");
+    expect(userConfigurationReferenceHref()).toBe("/scenario/user-config/reference");
     expect(userConfigurationExportHref()).toBe("/scenario/user-config/export");
     expect(userConfigurationValidateHref()).toBe("/scenario/user-config/validate");
   });
@@ -1493,6 +1496,73 @@ describe("runtime API diagnostics", () => {
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({
+          type: "USER_CONFIGURATION_REFERENCE_V1",
+          summary: {
+            version: "v1",
+            reference_id: "sees.user_configuration_reference.v1",
+            source: "BACKEND_USER_CONFIGURATION",
+            schema_id: "sees.user_configuration.v2",
+            reference_scope: "FULL_USER_CONFIGURATION_FILE_AND_FRONTEND_SURFACE",
+            format: "YAML_OR_JSON_MAPPING",
+            frontend_policy: "CONTROL_PANEL_KEY_FIELDS_ONLY",
+            detailed_config_file: "configs/sees_control.yaml",
+            generated_config_file: "configs/generated_full_system_demo.json",
+            template_config_file: "configs/templates/sees_user_detailed.example.yaml",
+            template_profiles: [],
+            unknown_key_policy: "REJECT",
+            defaulting_policy: "OMITTED_FIELDS_USE_BACKEND_DEFAULTS",
+            mutation_policy: {
+              ui_surface: "KEY_FIELDS_ONLY",
+              full_file_surface: "DETAILED_CONFIG_FILE",
+              validate_endpoint: "POST /scenario/user-config/validate-text",
+              apply_commands: ["CONFIG_UPDATE"]
+            },
+            field_count: 42,
+            key_field_count: 12,
+            file_only_field_count: 30,
+            section_count: 1,
+            sections: [
+              {
+                section: "scenario",
+                purpose: "Scenario",
+                field_count: 10,
+                key_field_count: 4,
+                file_only_field_count: 6,
+                key_paths: ["scenario.satellite_count"],
+                file_only_paths: ["scenario.compute_gpu_tflops_fp16"]
+              }
+            ],
+            fields: [
+              {
+                path: "scenario.satellite_count",
+                section: "scenario",
+                label: "Satellite count",
+                description: "Primary constellation size",
+                value_type: "integer",
+                editable_surface: "CONTROL_PANEL_KEY_FIELD",
+                ui_key_field: true,
+                default_value: 72,
+                current_value: 96,
+                required_in_user_file: false,
+                validation_rules: ["integer"]
+              }
+            ],
+            model_boundaries: {
+              event_kernel_policy: "NO_EVENT_KERNEL_BEHAVIOR_CHANGE",
+              packet_level_simulation: false,
+              external_simulators: false,
+              forbidden_integrations: ["STK", "EXATA", "AFSIM", "DDS"],
+              frontend_semantics_source: "BACKEND_USER_CONFIGURATION"
+            },
+            operator_workflow: ["Use key fields first."],
+            notes: ["Reference is backend-owned."],
+            reference_hash: "sha256:reference"
+          }
+        })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
           type: "USER_CONFIGURATION_EXPORT",
           summary: {
             version: "v1",
@@ -1527,13 +1597,19 @@ describe("runtime API diagnostics", () => {
       template_count: 1,
       mutation_policy: "READ_ONLY_CATALOG"
     });
+    await expect(loadUserConfigurationReference()).resolves.toMatchObject({
+      reference_id: "sees.user_configuration_reference.v1",
+      field_count: 42,
+      model_boundaries: { packet_level_simulation: false }
+    });
     await expect(loadUserConfigurationExport()).resolves.toMatchObject({
       config_hash: "sha256:config",
       validation_ok: true
     });
     expect(fetchMock).toHaveBeenNthCalledWith(1, "/scenario/user-config/schema");
     expect(fetchMock).toHaveBeenNthCalledWith(2, "/scenario/user-config/templates");
-    expect(fetchMock).toHaveBeenNthCalledWith(3, "/scenario/user-config/export");
+    expect(fetchMock).toHaveBeenNthCalledWith(3, "/scenario/user-config/reference");
+    expect(fetchMock).toHaveBeenNthCalledWith(4, "/scenario/user-config/export");
   });
 
   it("validates user configuration candidates through the backend preflight endpoint", async () => {

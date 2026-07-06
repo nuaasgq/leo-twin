@@ -46,6 +46,8 @@ import {
   StateSnapshot,
   UserConfigurationExportEnvelope,
   UserConfigurationExportV1,
+  UserConfigurationReferenceEnvelope,
+  UserConfigurationReferenceV1,
   UserConfigurationSchemaEnvelope,
   UserConfigurationSchemaV2,
   UserConfigurationTemplateCatalogEnvelope,
@@ -58,6 +60,7 @@ export const DEFAULT_RUNTIME_EXPORT_ARCHIVE_ENDPOINT = "/runtime/export/archive"
 export const DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT = "/runtime/export/packages";
 export const DEFAULT_USER_CONFIG_SCHEMA_ENDPOINT = "/scenario/user-config/schema";
 export const DEFAULT_USER_CONFIG_TEMPLATES_ENDPOINT = "/scenario/user-config/templates";
+export const DEFAULT_USER_CONFIG_REFERENCE_ENDPOINT = "/scenario/user-config/reference";
 export const DEFAULT_USER_CONFIG_EXPORT_ENDPOINT = "/scenario/user-config/export";
 export const DEFAULT_USER_CONFIG_VALIDATE_ENDPOINT = "/scenario/user-config/validate";
 export const DEFAULT_USER_CONFIG_VALIDATE_TEXT_ENDPOINT =
@@ -595,6 +598,16 @@ export async function loadUserConfigurationTemplates(
   return decodeUserConfigurationTemplates(await response.json()).summary;
 }
 
+export async function loadUserConfigurationReference(
+  endpoint = DEFAULT_USER_CONFIG_REFERENCE_ENDPOINT
+): Promise<UserConfigurationReferenceV1> {
+  const response = await fetch(endpoint);
+  if (!response.ok) {
+    throw new Error(`failed to load user configuration reference from ${endpoint}: HTTP ${response.status}`);
+  }
+  return decodeUserConfigurationReference(await response.json()).summary;
+}
+
 export async function loadUserConfigurationExport(
   endpoint = DEFAULT_USER_CONFIG_EXPORT_ENDPOINT
 ): Promise<UserConfigurationExportV1> {
@@ -801,6 +814,12 @@ export function userConfigurationSchemaHref(
 
 export function userConfigurationTemplatesHref(
   endpoint = DEFAULT_USER_CONFIG_TEMPLATES_ENDPOINT
+): string {
+  return endpoint;
+}
+
+export function userConfigurationReferenceHref(
+  endpoint = DEFAULT_USER_CONFIG_REFERENCE_ENDPOINT
 ): string {
   return endpoint;
 }
@@ -1402,6 +1421,33 @@ export function decodeUserConfigurationTemplates(
     ...(value as Record<string, unknown>),
     summary: summary as UserConfigurationTemplateCatalogV1
   } as UserConfigurationTemplateCatalogEnvelope;
+}
+
+export function decodeUserConfigurationReference(
+  value: unknown
+): UserConfigurationReferenceEnvelope {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError("user configuration reference response must be an object");
+  }
+  const summary = (value as { summary?: unknown }).summary;
+  if (typeof summary !== "object" || summary === null || Array.isArray(summary)) {
+    throw new TypeError("user configuration reference response must include summary object");
+  }
+  if (
+    typeof (summary as { reference_id?: unknown }).reference_id !== "string" ||
+    typeof (summary as { schema_id?: unknown }).schema_id !== "string" ||
+    !Array.isArray((summary as { sections?: unknown }).sections) ||
+    !Array.isArray((summary as { fields?: unknown }).fields) ||
+    typeof (summary as { reference_hash?: unknown }).reference_hash !== "string"
+  ) {
+    throw new TypeError(
+      "user configuration reference must include reference_id, schema_id, sections, fields, and reference_hash"
+    );
+  }
+  return {
+    ...(value as Record<string, unknown>),
+    summary: summary as UserConfigurationReferenceV1
+  } as UserConfigurationReferenceEnvelope;
 }
 
 export function decodeUserConfigurationExport(value: unknown): UserConfigurationExportEnvelope {

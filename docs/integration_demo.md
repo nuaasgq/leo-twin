@@ -97,6 +97,7 @@ Endpoints:
 - `GET /scenario/config`
 - `GET /scenario/user-config/schema`
 - `GET /scenario/user-config/templates`
+- `GET /scenario/user-config/reference`
 - `GET /scenario/user-config/export`
 - `POST /scenario/user-config/validate`
 - `GET /metrics/snapshot`
@@ -235,6 +236,7 @@ User configuration contract:
 ```powershell
 Invoke-RestMethod http://127.0.0.1:8765/scenario/user-config/schema
 Invoke-RestMethod http://127.0.0.1:8765/scenario/user-config/templates
+Invoke-RestMethod http://127.0.0.1:8765/scenario/user-config/reference
 Invoke-RestMethod http://127.0.0.1:8765/scenario/user-config/export
 $candidate = @{
   scenario = @{
@@ -288,6 +290,10 @@ recommended action, confirmation requirement, and the fact that applying a
 config rebuilds the session and stream buffers.
 `POST /scenario/user-config/validate-text` accepts raw UTF-8 JSON/YAML text
 with `format=auto|json|yaml` and returns the same report plus `text_parse`.
+`GET /scenario/user-config/reference` returns the backend-owned full
+configuration reference object for docs and UI surfaces that need to explain
+key control fields versus detailed file-only fields without inferring field
+semantics locally.
 The standalone dashboard also shows these links in the user configuration
 contract section so users can download the current full configuration and
 inspect the backend schema without editing runtime state. The dashboard also

@@ -636,6 +636,7 @@ def test_control_plane_exposes_user_configuration_contract_api(tmp_path) -> None
 
     schema = control_plane.user_configuration_schema()
     templates = control_plane.user_configuration_templates()
+    reference = control_plane.user_configuration_reference()
     exported = control_plane.user_configuration_export()
 
     assert update_ack["ok"] is True
@@ -681,6 +682,37 @@ def test_control_plane_exposes_user_configuration_contract_api(tmp_path) -> None
         "LARGE_SCALE_BATCH_ORBIT_BOUNDED_ISL"
     )
 
+    assert reference["type"] == "USER_CONFIGURATION_REFERENCE_V1"
+    reference_summary = reference["summary"]
+    assert reference_summary["schema_id"] == USER_CONFIGURATION_SCHEMA_V2_ID
+    assert reference_summary["reference_id"] == "sees.user_configuration_reference.v1"
+    assert reference_summary["frontend_policy"] == "CONTROL_PANEL_KEY_FIELDS_ONLY"
+    assert reference_summary["reference_scope"] == (
+        "FULL_USER_CONFIGURATION_FILE_AND_FRONTEND_SURFACE"
+    )
+    assert reference_summary["detailed_config_file"] == str(
+        tmp_path / "sees_control.yaml"
+    )
+    assert reference_summary["field_count"] == len(reference_summary["fields"])
+    assert reference_summary["key_field_count"] > 0
+    assert reference_summary["file_only_field_count"] > 0
+    reference_fields = {
+        field["path"]: field
+        for field in reference_summary["fields"]
+        if isinstance(field, dict)
+    }
+    assert reference_fields["scenario.satellite_count"]["current_value"] == 96
+    assert reference_fields["scenario.satellite_count"]["ui_key_field"] is True
+    assert reference_fields["network.carrier_frequency_hz"]["ui_key_field"] is False
+    assert reference_summary["model_boundaries"]["packet_level_simulation"] is False
+    assert reference_summary["model_boundaries"]["forbidden_integrations"] == (
+        "STK",
+        "EXATA",
+        "AFSIM",
+        "DDS",
+    )
+    assert reference_summary["reference_hash"].startswith("sha256:")
+
     export_summary = exported["summary"]
     assert exported["type"] == "USER_CONFIGURATION_EXPORT"
     assert export_summary["schema_id"] == USER_CONFIGURATION_SCHEMA_V2_ID
@@ -697,6 +729,7 @@ def test_control_plane_exposes_user_configuration_contract_api(tmp_path) -> None
     ]
     json.dumps(schema, sort_keys=True)
     json.dumps(templates, sort_keys=True)
+    json.dumps(reference, sort_keys=True)
     json.dumps(exported, sort_keys=True)
     assert control_plane.runtime_status()["status"]["initialized"] is True
 

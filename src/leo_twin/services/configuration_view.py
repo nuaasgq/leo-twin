@@ -8,10 +8,15 @@ from typing import Any
 
 from leo_twin.schema.config import SEESConfig, config_to_dict
 from leo_twin.schema.config_loader import ConfigValidationError, load_config
-from leo_twin.services.configuration_schema import build_user_configuration_schema_v2
+from leo_twin.services.configuration_schema import (
+    USER_CONFIGURATION_SCHEMA_V2_ID,
+    build_user_configuration_schema_v2,
+)
+from leo_twin.services.runtime_reproducibility import stable_hash_payload
 
 
 ConfigurationView = dict[str, object]
+UserConfigurationReference = dict[str, object]
 
 _KEY_FIELD_PATHS = (
     "scenario.satellite_count",
@@ -337,6 +342,81 @@ def build_user_configuration_view(config: SEESConfig) -> ConfigurationView:
     }
 
 
+def build_user_configuration_reference(
+    config: SEESConfig,
+    *,
+    detailed_config_file: str = "configs/sees_control.yaml",
+    generated_config_file: str = "configs/generated_full_system_demo.json",
+) -> UserConfigurationReference:
+    """Return the backend-owned full user configuration reference package."""
+
+    if not isinstance(config, SEESConfig):
+        raise TypeError("config must be SEESConfig")
+    schema = build_user_configuration_schema_v2(config)
+    view = build_user_configuration_view(config)
+    fields = tuple(
+        field for field in schema["fields"] if isinstance(field, Mapping)
+    )
+    key_field_paths = tuple(str(field["path"]) for field in view["key_fields"])
+    key_field_set = frozenset(key_field_paths)
+    sections = tuple(
+        _reference_section(section, fields, key_field_set)
+        for section in sorted(_SECTION_PURPOSES)
+    )
+    reference: UserConfigurationReference = {
+        "version": "v1",
+        "reference_id": "sees.user_configuration_reference.v1",
+        "source": "BACKEND_USER_CONFIGURATION",
+        "schema_id": USER_CONFIGURATION_SCHEMA_V2_ID,
+        "reference_scope": "FULL_USER_CONFIGURATION_FILE_AND_FRONTEND_SURFACE",
+        "format": "YAML_OR_JSON_MAPPING",
+        "frontend_policy": "CONTROL_PANEL_KEY_FIELDS_ONLY",
+        "detailed_config_file": detailed_config_file,
+        "generated_config_file": generated_config_file,
+        "template_config_file": view["template_config_file"],
+        "template_profiles": configuration_template_profiles(),
+        "unknown_key_policy": schema["unknown_key_policy"],
+        "defaulting_policy": schema["defaulting_policy"],
+        "mutation_policy": {
+            "ui_surface": "KEY_FIELDS_ONLY",
+            "full_file_surface": "DETAILED_CONFIG_FILE",
+            "validate_endpoint": "POST /scenario/user-config/validate-text",
+            "apply_commands": (
+                "CONFIG_UPDATE",
+                "LOAD_TEMPLATE",
+                "RESTORE_EXPORT_PACKAGE",
+            ),
+        },
+        "field_count": schema["field_count"],
+        "key_field_count": view["key_field_count"],
+        "file_only_field_count": len(view["file_only_fields"]),
+        "section_count": len(sections),
+        "sections": sections,
+        "fields": tuple(_reference_field(field, key_field_set) for field in fields),
+        "model_boundaries": {
+            "event_kernel_policy": "NO_EVENT_KERNEL_BEHAVIOR_CHANGE",
+            "packet_level_simulation": False,
+            "external_simulators": False,
+            "forbidden_integrations": ("STK", "EXATA", "AFSIM", "DDS"),
+            "frontend_semantics_source": "BACKEND_USER_CONFIGURATION",
+        },
+        "operator_workflow": (
+            "Use the control panel for key operational fields.",
+            "Use the detailed YAML/JSON config file for full model inputs.",
+            "Validate text with POST /scenario/user-config/validate-text before applying.",
+            "Apply accepted templates with LOAD_TEMPLATE only before runtime start.",
+            "Keep runtime-generated config snapshots out of source commits unless scoped.",
+        ),
+        "notes": (
+            "This reference is derived from SEESConfig, user configuration schema v2, and the configuration surface summary.",
+            "The frontend should display key fields first and link to this reference for advanced editing.",
+            "All accepted values remain deterministic when runtime.seed and template version are fixed.",
+        ),
+    }
+    reference["reference_hash"] = stable_hash_payload(reference)
+    return reference
+
+
 def _template_profile_by_id(template_id: str) -> Mapping[str, str]:
     for profile in _TEMPLATE_PROFILES:
         if profile["id"] == template_id:
@@ -345,6 +425,61 @@ def _template_profile_by_id(template_id: str) -> Mapping[str, str]:
     raise ConfigValidationError(
         f"unknown configuration template_id: {template_id}; expected one of: {known}"
     )
+
+
+def _reference_section(
+    section: str,
+    fields: tuple[Mapping[str, object], ...],
+    key_field_set: frozenset[str],
+) -> dict[str, object]:
+    paths = tuple(
+        str(field["path"])
+        for field in fields
+        if str(field["path"]) == section or str(field["path"]).startswith(f"{section}.")
+    )
+    key_paths = tuple(path for path in paths if path in key_field_set)
+    file_only_paths = tuple(path for path in paths if path not in key_field_set)
+    return {
+        "section": section,
+        "purpose": _SECTION_PURPOSES[section],
+        "field_count": len(paths),
+        "key_field_count": len(key_paths),
+        "file_only_field_count": len(file_only_paths),
+        "key_paths": key_paths,
+        "file_only_paths": file_only_paths,
+    }
+
+
+def _reference_field(
+    field: Mapping[str, object],
+    key_field_set: frozenset[str],
+) -> dict[str, object]:
+    path = str(field["path"])
+    result: dict[str, object] = {
+        "path": path,
+        "section": str(field["section"]),
+        "label": str(field["label"]),
+        "description": str(field["description"]),
+        "value_type": str(field["value_type"]),
+        "editable_surface": str(field["editable_surface"]),
+        "ui_key_field": path in key_field_set,
+        "default_value": field.get("default_value"),
+        "current_value": field.get("current_value"),
+        "required_in_user_file": bool(field.get("required_in_user_file")),
+        "validation_rules": tuple(field.get("validation_rules", ())),
+    }
+    for optional_key in (
+        "unit",
+        "enum_values",
+        "nullable",
+        "minimum",
+        "maximum",
+        "exclusive_minimum",
+        "exclusive_maximum",
+    ):
+        if optional_key in field:
+            result[optional_key] = field[optional_key]
+    return result
 
 
 def _file_only_section_summaries(
