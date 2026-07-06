@@ -33,6 +33,7 @@ import {
   buildDataPanelExportRouteDetailItemDisplay,
   buildDataPanelExportRouteDetailItemStatus,
   buildDataPanelExportPackageAuditIndexArtifactDisplay,
+  buildDataPanelExportPackageHandoffReportArtifactDisplay,
   buildDataPanelExportPackageAuditIndexDisplay,
   buildDataPanelExportPackageAuditIndexStatus,
   buildDataPanelExportScenarioReviewChecklistStatus,
@@ -2269,7 +2270,7 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           package_id: "pkg-review",
           package_dir: "artifacts/runtime_exports/pkg-review",
           relative_package_dir: "pkg-review",
-          file_count: 2,
+          file_count: 3,
           manifest_hash:
             "sha256:1111111111111111111111111111111111111111111111111111111111111111",
           current_sim_time: 12,
@@ -2288,6 +2289,13 @@ describe("buildDataPanelExportCatalogDisplay", () => {
               bytes: 1024,
               sha256:
                 "sha256:9999999999999999999999999999999999999999999999999999999999999999"
+            },
+            {
+              name: "package_handoff_report_v1",
+              filename: "package_handoff_report_v1.md",
+              bytes: 3072,
+              sha256:
+                "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
             }
           ]
         }
@@ -2336,6 +2344,27 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         "/runtime/export/packages/pkg-review/files/export_package_audit_index_v1.json",
       artifactTitle:
         "export_package_audit_index_v1.json / 1 KiB / sha256:9999999999999999999999999999999999999999999999999999999999999999"
+    });
+
+    expect(
+      buildDataPanelExportPackageHandoffReportArtifactDisplay(
+        catalog,
+        "pkg-review",
+        "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      )
+    ).toEqual({
+      packageId: "pkg-review",
+      tone: "match",
+      statusLabel: "handoff report artifact present",
+      summaryLabel: "pkg-review / 3 KiB / file aaaaaaaaaaaa",
+      hashLabels: [
+        "catalog cccccccccccc",
+        "report aaaaaaaaaaaa",
+        "completion bbbbbbbbbbbb"
+      ],
+      artifactHref: "/runtime/export/packages/pkg-review/handoff-report",
+      artifactTitle:
+        "package_handoff_report_v1.md / 3 KiB / sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     });
 
     expect(
@@ -2391,10 +2420,39 @@ describe("buildDataPanelExportCatalogDisplay", () => {
     });
 
     expect(
+      buildDataPanelExportPackageHandoffReportArtifactDisplay(
+        {
+          ...catalog,
+          records: [
+            {
+              ...catalog.records[0],
+              file_count: 0,
+              files: []
+            }
+          ]
+        },
+        "pkg-review"
+      )
+    ).toMatchObject({
+      packageId: "pkg-review",
+      tone: "different",
+      statusLabel: "handoff report not saved",
+      artifactHref: null,
+      hashLabels: [
+        "catalog cccccccccccc",
+        "package PACKAGE",
+        "completion hash waiting"
+      ]
+    });
+
+    expect(
       buildDataPanelExportRouteComparisonReviewArtifactDisplay(undefined, "pkg-review")
     ).toBeNull();
     expect(
       buildDataPanelExportPackageAuditIndexArtifactDisplay(undefined, "pkg-review")
+    ).toBeNull();
+    expect(
+      buildDataPanelExportPackageHandoffReportArtifactDisplay(undefined, "pkg-review")
     ).toBeNull();
   });
 

@@ -7,6 +7,7 @@ import {
   loadRuntimeExportManifest,
   loadRuntimeExportPackageCompare,
   loadRuntimeExportPackageAuditIndex,
+  loadRuntimeExportPackageHandoffReport,
   loadRuntimeExportPackageReviewCompletion,
   loadRuntimeExportScenarioReviewBundle,
   loadRuntimeExportScenarioReviewChecklist,
@@ -42,6 +43,7 @@ import {
   runtimeExportPackageCompareHref,
   runtimeExportPackageFileHref,
   runtimeExportPackageManifestHref,
+  runtimeExportPackageHandoffReportHref,
   runtimeExportPackageReviewCompletionHref,
   runtimeExportPackageRecordHref,
   runtimeExportPackageRouteDetailsHref,
@@ -84,6 +86,9 @@ describe("runtime API diagnostics", () => {
     );
     expect(runtimeExportPackageReviewCompletionHref("pkg 1")).toBe(
       "/runtime/export/packages/pkg%201/review-completion"
+    );
+    expect(runtimeExportPackageHandoffReportHref("pkg 1")).toBe(
+      "/runtime/export/packages/pkg%201/handoff-report"
     );
     expect(runtimeExportPackageArchiveHref("pkg 1")).toBe(
       "/runtime/export/packages/pkg%201/archive"
@@ -1102,6 +1107,21 @@ describe("runtime API diagnostics", () => {
     });
     expect(fetchMock).toHaveBeenCalledWith(
       "/runtime/export/packages/pkg/review-completion"
+    );
+  });
+
+  it("loads runtime export package handoff reports", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      text: async () => "# Runtime Export Package Handoff Report v1\n"
+    }));
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+
+    await expect(loadRuntimeExportPackageHandoffReport("pkg")).resolves.toBe(
+      "# Runtime Export Package Handoff Report v1\n"
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/runtime/export/packages/pkg/handoff-report"
     );
   });
 

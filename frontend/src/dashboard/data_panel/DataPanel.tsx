@@ -83,6 +83,7 @@ import {
   runtimeExportPackageArchiveHref,
   runtimeExportPackageCompareHref,
   runtimeExportPackageFileHref,
+  runtimeExportPackageHandoffReportHref,
   runtimeExportPackageManifestHref,
   runtimeExportPackageRecordHref,
   runtimeExportPackageRouteDetailHref,
@@ -199,6 +200,7 @@ const FALLBACK_SATELLITE_DETAIL_PAGE_SIZE = 120;
 const ROUTE_COMPARISON_REVIEW_REPORT_FILENAME =
   "route_comparison_review_report_v1.json";
 const EXPORT_PACKAGE_AUDIT_INDEX_FILENAME = "export_package_audit_index_v1.json";
+const PACKAGE_HANDOFF_REPORT_FILENAME = "package_handoff_report_v1.md";
 const SCENARIO_REVIEW_BUNDLE_FILENAME = "scenario_review_bundle_v1.json";
 const DEFAULT_USER_CONFIGURATION_VALIDATE_TEXT = `{
   "scenario": {
@@ -1127,6 +1129,15 @@ export const DataPanel = memo(function DataPanel({
       runtimeExportCatalog,
       runtimeExportComparePackageId,
       runtimeExportRouteComparisonReviewSaveReportHash
+    );
+  const exportPackageHandoffReportArtifactDisplay =
+    buildDataPanelExportPackageHandoffReportArtifactDisplay(
+      runtimeExportCatalog,
+      runtimeExportComparePackageId,
+      runtimeExportPackageAuditIndex?.package_review_completion_hash ??
+        runtimeExportPackageAuditIndex?.package_review_completion_v1?.completion_hash ??
+        runtimeExportScenarioReviewChecklistSaveHash ??
+        null
     );
   const exportPackageAuditIndexStatus = buildDataPanelExportPackageAuditIndexStatus(
     buildDataPanelExportPackageAuditIndexDisplay(runtimeExportPackageAuditIndex),
@@ -2148,6 +2159,40 @@ export const DataPanel = memo(function DataPanel({
                       ))}
                     </div>
                   ) : null}
+                </div>
+              ) : null}
+              {exportPackageHandoffReportArtifactDisplay ? (
+                <div
+                  className={`data-panel-export-route-compare-card ${exportPackageHandoffReportArtifactDisplay.tone}`}
+                >
+                  <div className="data-panel-export-diagnostics-header">
+                    <div>
+                      <span>Package handoff report</span>
+                      <strong>
+                        {exportPackageHandoffReportArtifactDisplay.statusLabel}
+                      </strong>
+                      <small>
+                        {exportPackageHandoffReportArtifactDisplay.summaryLabel}
+                      </small>
+                    </div>
+                    {exportPackageHandoffReportArtifactDisplay.artifactHref ? (
+                      <a
+                        href={exportPackageHandoffReportArtifactDisplay.artifactHref}
+                        title={
+                          exportPackageHandoffReportArtifactDisplay.artifactTitle
+                        }
+                      >
+                        handoff report MD
+                      </a>
+                    ) : null}
+                  </div>
+                  <div className="data-panel-export-compare-meta">
+                    {exportPackageHandoffReportArtifactDisplay.hashLabels.map(
+                      (label) => (
+                        <span key={label}>{label}</span>
+                      )
+                    )}
+                  </div>
                 </div>
               ) : null}
               {exportScenarioReviewBundleStatus ? (
@@ -9900,6 +9945,16 @@ export interface DataPanelExportPackageAuditIndexArtifactDisplay {
   artifactTitle: string;
 }
 
+export interface DataPanelExportPackageHandoffReportArtifactDisplay {
+  packageId: string;
+  tone: "match" | "different";
+  statusLabel: string;
+  summaryLabel: string;
+  hashLabels: readonly string[];
+  artifactHref: string | null;
+  artifactTitle: string;
+}
+
 export interface DataPanelExportScenarioReviewBundleDisplay {
   packageId: string;
   tone: "match" | "different";
@@ -10208,6 +10263,67 @@ export function buildDataPanelExportPackageAuditIndexArtifactDisplay(
     artifactTitle: `${auditFile.filename} / ${formatRuntimeExportFileBytes(
       auditFile.bytes
     )} / ${auditFile.sha256}`
+  };
+}
+
+export function buildDataPanelExportPackageHandoffReportArtifactDisplay(
+  catalog: RuntimeExportCatalogV1 | null | undefined,
+  selectedPackageId: string | null | undefined,
+  completionHash: string | null | undefined = null
+): DataPanelExportPackageHandoffReportArtifactDisplay | null {
+  if (
+    catalog === null ||
+    catalog === undefined ||
+    selectedPackageId === null ||
+    selectedPackageId === undefined
+  ) {
+    return null;
+  }
+  const record = selectRuntimeExportCatalogRecordForPackage(catalog, selectedPackageId);
+  if (record === null) {
+    return null;
+  }
+  const handoffFile =
+    record.files.find(
+      (file) =>
+        file.filename === PACKAGE_HANDOFF_REPORT_FILENAME ||
+        file.name === "package_handoff_report_v1"
+    ) ?? null;
+  const completionHashLabel =
+    completionHash !== null && completionHash !== undefined && completionHash !== ""
+      ? `completion ${shortRuntimeHash(completionHash)}`
+      : "completion hash waiting";
+  if (handoffFile === null) {
+    return {
+      packageId: selectedPackageId,
+      tone: "different",
+      statusLabel: "handoff report not saved",
+      summaryLabel: `${selectedPackageId} / handoff file missing / ${completionHashLabel}`,
+      hashLabels: [
+        `catalog ${shortRuntimeHash(catalog.catalog_hash)}`,
+        `package ${record.export_type}`,
+        completionHashLabel
+      ],
+      artifactHref: null,
+      artifactTitle: `${PACKAGE_HANDOFF_REPORT_FILENAME} is not present in the selected package catalog.`
+    };
+  }
+  return {
+    packageId: selectedPackageId,
+    tone: "match",
+    statusLabel: "handoff report artifact present",
+    summaryLabel: `${selectedPackageId} / ${formatRuntimeExportFileBytes(
+      handoffFile.bytes
+    )} / file ${shortRuntimeHash(handoffFile.sha256)}`,
+    hashLabels: [
+      `catalog ${shortRuntimeHash(catalog.catalog_hash)}`,
+      `report ${shortRuntimeHash(handoffFile.sha256)}`,
+      completionHashLabel
+    ],
+    artifactHref: runtimeExportPackageHandoffReportHref(selectedPackageId),
+    artifactTitle: `${handoffFile.filename} / ${formatRuntimeExportFileBytes(
+      handoffFile.bytes
+    )} / ${handoffFile.sha256}`
   };
 }
 

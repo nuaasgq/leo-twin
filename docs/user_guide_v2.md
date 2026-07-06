@@ -251,6 +251,11 @@ Invoke-WebRequest `
   "http://127.0.0.1:8765/runtime/export/packages/<package_id>/handoff-report"
 ```
 
+The standalone dashboard also shows a `Package handoff report` card for the
+selected export package when `package_handoff_report_v1.md` is present in the
+backend catalog. Use the `handoff report MD` link there for the same report
+without manually constructing the URL.
+
 For package-owned review, use:
 
 ```powershell

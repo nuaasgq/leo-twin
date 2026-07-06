@@ -15425,3 +15425,45 @@ change.
 - Recommended follow-up:
   - Add a dashboard handoff-report drawer or download action if users want to
     inspect the Markdown report without opening the raw file.
+
+## 2026-07-06 - Dashboard Handoff Report UI v1
+
+- Branch: `feature/T319-dashboard-handoff-report-ui-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: expose the backend-generated `package_handoff_report_v1.md` artifact
+  in the standalone dashboard package-review area. The frontend adds a stable
+  `/handoff-report` href helper and text loader, then renders a `Package
+  handoff report` card from backend export catalog evidence next to the
+  backend-owned package review completion summary. The UI links to the
+  backend-served Markdown report and does not infer handoff rules locally.
+- Changed files/modules:
+  - `frontend/src/app/api.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/dashboard_model_trust_evidence_workspace_v1.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test api.test.ts dataPanel.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 2 test
+      files and 214 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path. Vite
+      reported the existing large DataPanel chunk warning.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered:
+  - No implementation blocker. Build still reports the existing large
+    DataPanel chunk warning, which is outside this task's scope.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The dashboard links to the Markdown report but does not yet render the full
+    Markdown contents inline.
+- Recommended follow-up:
+  - Add an inline Markdown handoff drawer only if operators need to read the
+    full report inside the dashboard instead of using the download link.

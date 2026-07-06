@@ -481,6 +481,18 @@ export async function loadRuntimeExportPackageReviewCompletion(
   return decodeRuntimeExportPackageReviewCompletionEnvelope(await response.json()).summary;
 }
 
+export async function loadRuntimeExportPackageHandoffReport(
+  packageId: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): Promise<string> {
+  const url = runtimeExportPackageHandoffReportHref(packageId, endpoint);
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`failed to load runtime export package handoff report from ${url}: HTTP ${response.status}`);
+  }
+  return response.text();
+}
+
 export async function loadRuntimeExportScenarioReviewBundle(
   packageId: string,
   endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
@@ -687,6 +699,13 @@ export function runtimeExportPackageReviewCompletionHref(
   endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
 ): string {
   return `${runtimeExportPackageRecordHref(packageId, endpoint)}/review-completion`;
+}
+
+export function runtimeExportPackageHandoffReportHref(
+  packageId: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): string {
+  return `${runtimeExportPackageRecordHref(packageId, endpoint)}/handoff-report`;
 }
 
 export function runtimeExportPackageArchiveHref(

@@ -663,7 +663,10 @@ Tasks:
     backend-generated `package_handoff_report_v1.md` artifact and
     `/runtime/export/packages/{package_id}/handoff-report` route so operators
     can download a deterministic human-readable package handoff summary
-    derived from the same completion evidence.
+    derived from the same completion evidence. T319 adds the corresponding
+    dashboard package-review entry and frontend API helper, so selected export
+    packages expose the handoff Markdown link next to backend completion
+    evidence without local handoff-rule inference.
 
 ### WS9. Delivery and Operations v2
 

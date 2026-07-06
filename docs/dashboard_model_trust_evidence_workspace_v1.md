@@ -117,7 +117,9 @@ same backend-owned audit evidence without replaying or recomputing the package.
 Operators who need a human-readable handoff file can use
 `GET /runtime/export/packages/{package_id}/handoff-report` to download
 `package_handoff_report_v1.md`, a deterministic Markdown report generated from
-that same completion evidence.
+that same completion evidence. The dashboard package-review area now surfaces
+the same Markdown link from the backend export catalog alongside the completion
+banner, so handoff review does not require manually constructing the URL.
 7. runtime evidence
 
 Each row has a tone:
