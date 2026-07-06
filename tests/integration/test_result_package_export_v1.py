@@ -12,6 +12,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1_ID,
     RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID,
     RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1_ID,
+    RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_V1_ID,
     RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID,
     summarize_result_package_record_v1,
 )
@@ -242,6 +243,9 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     )
     assert audit_index["route_comparison_review_report_present"] is False
     assert audit_index["route_comparison_review_report_hash"] == ""
+    assert audit_index["scenario_review_checklist_present"] is False
+    assert audit_index["scenario_review_checklist_hash"] == ""
+    assert audit_index["scenario_review_checklist_record_count"] == 0
     assert audit_index["self_artifact_excluded_from_hashes"] is True
     assert "ROUTE_COMPARISON_REVIEW_REPORT_NOT_SAVED" in audit_index["audit_warnings"]
     assert audit_index["audit_hash"].startswith("sha256:")
@@ -334,6 +338,7 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert updated_audit_index["runtime_export_boundary_hash"] == (
         reproducibility_boundary["boundary_hash"]
     )
+    assert updated_audit_index["scenario_review_checklist_present"] is False
     assert updated_audit_index["audit_status"] == "AUDIT_READY"
     assert updated_audit_index["audit_warnings"] == ()
     audit_artifact = control_plane.runtime_export_package_artifact(
@@ -349,10 +354,68 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
             encoding="utf-8"
         )
     ) == json.loads(json.dumps(updated_audit_index, sort_keys=True))
+
+    checklist_response = control_plane.runtime_export_package_scenario_review_checklist(
+        str(package["package_id"]),
+        {
+            "records": [
+                {
+                    "artifact_filename": "scenario_review_bundle_v1.json",
+                    "step_label": "Scenario bundle checked",
+                    "review_status": "REVIEWED",
+                    "operator_note": "validated scenario entry evidence",
+                    "evidence_hash": scenario_review_bundle["scenario_review_hash"],
+                },
+                {
+                    "artifact_filename": "export_package_audit_index_v1.json",
+                    "step_label": "Audit index checked",
+                    "review_status": "REVIEWED",
+                    "operator_note": "audit index includes route report evidence",
+                    "evidence_hash": updated_audit_index["audit_hash"],
+                },
+            ]
+        },
+        output_root,
+    )
+    checklist = checklist_response["summary"]
+    assert checklist_response["type"] == "RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST"
+    assert checklist["checklist_id"] == RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_V1_ID
+    assert checklist["record_count"] == 2
+    assert checklist["reviewed_count"] == 2
+    assert checklist["checklist_status"] == "CHECKLIST_COMPLETE"
+    assert checklist["scenario_review_hash"] == (
+        scenario_review_bundle["scenario_review_hash"]
+    )
+    checklist_path = package_dir / "scenario_review_checklist_v1.json"
+    assert checklist_path.exists()
+    assert json.loads(checklist_path.read_text(encoding="utf-8")) == json.loads(
+        json.dumps(checklist, sort_keys=True)
+    )
+    checklist_artifact = control_plane.runtime_export_package_artifact(
+        str(package["package_id"]),
+        "scenario_review_checklist_v1.json",
+        output_root,
+    )
+    assert checklist_artifact["sha256"] == checklist_response["artifact"]["sha256"]
+    checklist_audit = checklist_response["audit_index"]
+    assert checklist_audit["route_comparison_review_report_present"] is True
+    assert checklist_audit["scenario_review_checklist_present"] is True
+    assert checklist_audit["scenario_review_checklist_hash"] == (
+        checklist["checklist_hash"]
+    )
+    assert checklist_audit["scenario_review_checklist_record_count"] == 2
+    assert checklist_audit["scenario_review_checklist_status"] == (
+        "CHECKLIST_COMPLETE"
+    )
+    assert checklist_audit["audit_status"] == "AUDIT_READY"
+    assert checklist_audit["audit_warnings"] == ()
     catalog = control_plane.runtime_export_catalog(output_root)["summary"]
     latest = catalog["latest_export"]
     assert latest["file_count"] == len(latest["files"])
     assert "route_comparison_review_report_v1.json" in {
+        str(record["filename"]) for record in latest["files"]
+    }
+    assert "scenario_review_checklist_v1.json" in {
         str(record["filename"]) for record in latest["files"]
     }
     assert "export_package_audit_index_v1.json" in {

@@ -640,7 +640,13 @@ Tasks:
     artifact rows for scenario entry, audit index, review summary, diagnostics,
     manifest, configuration, route evidence, service trace, event evidence,
     metrics, and summary outputs, using backend package evidence to mark
-    available and missing review steps.
+    available and missing review steps. T313 adds
+    `scenario_review_checklist_v1.json` as the deterministic operator decision
+    record for that guided workflow. The backend persists reviewed/skipped/
+    follow-up/error status and operator notes through
+    `POST /runtime/export/packages/{package_id}/scenario-review-checklist`,
+    updates the export catalog, and regenerates the package audit index with
+    checklist presence, hash, status, and record count.
 
 ### WS9. Delivery and Operations v2
 

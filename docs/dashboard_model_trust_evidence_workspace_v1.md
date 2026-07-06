@@ -98,8 +98,12 @@ the audit index JSON to render the evidence groups directly, including
 schema/config/export/binding hashes and validation status for the user
 configuration. The scenario review card also renders ordered artifact workflow
 rows for configuration, manifest, diagnostics, audit, route, service trace,
-event, metric, and summary review. This lets operators inspect the package
-audit boundary without opening raw JSON.
+event, metric, and summary review. T313 adds
+`scenario_review_checklist_v1.json` as the backend-persisted operator decision
+record for those rows; after a checklist save, the audit index exposes
+checklist presence, hash, status, and record count. This lets operators inspect
+the package audit boundary without opening raw JSON, while a full editable
+checklist UI remains a follow-up task.
 7. runtime evidence
 
 Each row has a tone:

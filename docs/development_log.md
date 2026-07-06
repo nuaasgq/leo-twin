@@ -15064,7 +15064,7 @@ change.
 ## 2026-07-06 - Guided Scenario Review Workflow v1
 
 - Branch: `feature/T312-guided-scenario-review-workflow-v1`
-- Commit: pending commit note; final hash is reported after commit creation.
+- Commit: `5052c3e feat(frontend): add guided scenario review workflow`
 - Scope: expand the dashboard Scenario Review Bundle card into a guided
   artifact review workflow. The workflow derives ordered rows from
   `scenario_review_bundle_v1.json.recommended_review_order` and the bundle's
@@ -15105,3 +15105,62 @@ change.
 - Recommended follow-up:
   - Add operator checklist persistence for guided scenario review decisions,
     including reviewed/skipped status and reviewer notes per artifact step.
+
+## 2026-07-06 - Scenario Review Checklist v1
+
+- Branch: `feature/T313-scenario-review-checklist-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a deterministic operator checklist artifact for guided scenario
+  review. The backend now builds and persists
+  `scenario_review_checklist_v1.json` through
+  `POST /runtime/export/packages/{package_id}/scenario-review-checklist`,
+  stores reviewed/skipped/follow-up/error status and operator notes per
+  review step, updates the export catalog, and regenerates
+  `export_package_audit_index_v1.json` with checklist hash, presence, status,
+  and record count. The frontend API gains matching load/save helpers and
+  TypeScript contracts. This task does not alter Event Kernel behavior,
+  runtime models, package reads, route recomputation, service recomputation,
+  packet-level simulation, or external simulator integration.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/app/api.ts`
+  - `frontend/tests/api.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/dashboard_model_trust_evidence_workspace_v1.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src\leo_twin\services\result_package_contract.py examples\integration_demo\control_plane.py examples\integration_demo\server.py tests\unit\test_result_package_contract_v1.py tests\integration\test_result_package_export_v1.py tests\integration\test_runtime_session_control.py`
+    - Result: passed.
+  - `python -m pytest tests\unit\test_result_package_contract_v1.py::test_runtime_export_scenario_review_checklist_v1_is_deterministic tests\unit\test_result_package_contract_v1.py::test_runtime_export_package_audit_index_v1_is_deterministic tests\integration\test_runtime_session_control.py::test_demo_server_stream_query_parses_cursor_options -q`
+    - Result: passed, 3 tests.
+  - `python -m pytest tests\integration\test_result_package_export_v1.py -q`
+    - Result: passed, 1 test.
+  - `pnpm --dir frontend test api.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 1 test
+      file and 32 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered:
+  - The normal PowerShell PATH may not expose `node`, so frontend validation
+    uses the bundled Codex Node/Pnpm runtime path.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The dashboard does not yet expose a full editable checklist UI; this task
+    delivers the backend contract, persistence path, audit binding, and
+    frontend API helpers.
+  - Checklist saves update mutable package JSON artifacts and catalog records,
+    but they do not rewrite archive zip files created before the save.
+- Recommended follow-up:
+  - Bind the guided scenario review workflow to the checklist save API with
+    reviewed/skipped/follow-up controls and local draft handling before POST.

@@ -277,6 +277,25 @@ endpoint saves selected operator review outcomes only; it does not compute
 route diffs by itself, replay events, recompute routes, or update existing
 archive zip files.
 
+`scenario_review_bundle_v1.json` also declares a guided package review order.
+The demo backend can persist operator decisions for that guided flow through:
+
+```text
+POST /runtime/export/packages/{package_id}/scenario-review-checklist
+```
+
+The request body is a JSON object with a `records` array. Each record may
+include `artifact_filename`, `step_label`, `review_status`, `operator_note`,
+`status_reason`, and `evidence_hash`. Accepted review statuses are
+`REVIEWED`, `SKIPPED`, `NEEDS_FOLLOWUP`, and `ERROR`; invalid statuses are
+recorded deterministically as `ERROR`. The backend writes
+`scenario_review_checklist_v1.json`, sorts records by the backend-provided
+review order, computes `checklist_hash`, updates the export catalog, and
+regenerates `export_package_audit_index_v1.json` with checklist presence,
+hash, status, and record count. The checklist records operator decisions only;
+it does not replay events, recompute models, mutate package files on read, or
+rewrite archives created before the save.
+
 ## Package Audit Index
 
 Runtime exports include a compact long-term audit index artifact:
@@ -296,13 +315,15 @@ package manifest hash, config/generated/runtime hashes, runtime export boundary
 hash, boundary-alignment hash/status/warnings, user configuration audit binding,
 user configuration schema id, user configuration config/export hashes,
 validation status, review summary hash, diagnostics hash, optional route
-comparison review report hash, and the SHA-256 hashes of package artifacts. The
+comparison review report hash, optional scenario review checklist hash/status,
+and the SHA-256 hashes of package artifacts. The
 audit index excludes its own file from `artifact_hashes` to avoid a circular
 self-hash and excludes archive zip files because archives are generated after
 the package evidence files. It is regenerated when a route comparison review
-report is saved, so the report hash, user configuration binding, scenario review
-bundle file hash, and the preflight-derived boundary alignment evidence become
-part of the long-term package audit trail.
+report or scenario review checklist is saved, so the report hash, checklist
+hash, user configuration binding, scenario review bundle file hash, and the
+preflight-derived boundary alignment evidence become part of the long-term
+package audit trail.
 
 The audit index is read-only evidence. It does not replay events, recompute
 routes or services, mutate packages on read, capture packets, or call external

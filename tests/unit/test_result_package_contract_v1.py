@@ -9,6 +9,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1_ID,
     RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID,
     RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1_ID,
+    RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_V1_ID,
     RUNTIME_EXPORT_ROUTE_DETAIL_ITEM_V1_ID,
     RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_V1_ID,
     RUNTIME_EXPORT_ROUTE_DETAIL_PAGE_V1_ID,
@@ -24,6 +25,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_route_detail_page_v1,
     build_runtime_export_review_summary_v1,
     build_runtime_export_scenario_review_bundle_v1,
+    build_runtime_export_scenario_review_checklist_v1,
     build_runtime_export_service_trace_page_v1,
     result_package_contract_v1_to_dict,
     summarize_result_package_record_v1,
@@ -65,6 +67,10 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
     )
     assert (
         "GET /runtime/export/packages/{package_id}/service-traces"
+        in first["source_endpoints"]
+    )
+    assert (
+        "POST /runtime/export/packages/{package_id}/scenario-review-checklist"
         in first["source_endpoints"]
     )
     assert "LIVE_EVENT_REPLAY_RESTORE" in first["excluded_semantics"]
@@ -512,6 +518,82 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
     )
 
 
+def test_runtime_export_scenario_review_checklist_v1_is_deterministic() -> None:
+    scenario_review_bundle = {
+        "bundle_id": RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1_ID,
+        "scenario_review_hash": "sha256:scenario-review",
+        "recommended_review_order": (
+            "scenario_review_bundle_v1.json",
+            "export_package_audit_index_v1.json",
+            "review_summary_v1.json",
+        ),
+        "artifact_review": {
+            "artifact_filenames": (
+                "export_package_audit_index_v1.json",
+                "scenario_review_bundle_v1.json",
+                "review_summary_v1.json",
+            )
+        },
+    }
+    records = (
+        {
+            "step_label": "Audit index checked",
+            "artifact_filename": "export_package_audit_index_v1.json",
+            "review_status": "needs_followup",
+            "operator_note": "route report still needs reviewer sign-off",
+            "evidence_hash": "sha256:audit",
+        },
+        {
+            "step_label": "Scenario entry checked",
+            "artifact_filename": "scenario_review_bundle_v1.json",
+            "review_status": "reviewed",
+            "operator_note": "configuration binding is present",
+            "evidence_hash": "sha256:scenario",
+        },
+        {
+            "step_label": "Summary intentionally skipped",
+            "artifact_filename": "review_summary_v1.json",
+            "review_status": "skipped",
+            "status_reason": "already covered by diagnostics",
+        },
+    )
+
+    first = build_runtime_export_scenario_review_checklist_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        scenario_review_bundle=scenario_review_bundle,
+        records=records,
+    )
+    second = build_runtime_export_scenario_review_checklist_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        scenario_review_bundle=scenario_review_bundle,
+        records=tuple(reversed(records)),
+    )
+
+    assert first == second
+    assert first["checklist_id"] == RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_V1_ID
+    assert first["package_id"] == "pkg-1"
+    assert first["scenario_review_hash"] == "sha256:scenario-review"
+    assert first["record_count"] == 3
+    assert first["reviewed_count"] == 1
+    assert first["skipped_count"] == 1
+    assert first["followup_count"] == 1
+    assert first["error_count"] == 0
+    assert first["checklist_status"] == "CHECKLIST_WARN"
+    assert [record["artifact_filename"] for record in first["records"]] == [
+        "scenario_review_bundle_v1.json",
+        "export_package_audit_index_v1.json",
+        "review_summary_v1.json",
+    ]
+    assert first["records"][0]["review_status"] == "REVIEWED"
+    assert first["records"][0]["record_hash"].startswith("sha256:")
+    assert first["checklist_hash"].startswith("sha256:")
+    assert json.loads(json.dumps(first, sort_keys=True))["checklist_id"] == (
+        RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_V1_ID
+    )
+
+
 def test_runtime_export_route_detail_index_v1_is_deterministic_and_review_ready() -> None:
     config_snapshot = {
         "type": "RUNTIME_CONFIG_SNAPSHOT",
@@ -863,6 +945,12 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
         "report_hash": "sha256:route-report",
         "runtime_export_boundary_alignment_v1": alignment,
     }
+    scenario_review_checklist = {
+        "checklist_id": RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_V1_ID,
+        "checklist_hash": "sha256:scenario-checklist",
+        "checklist_status": "CHECKLIST_COMPLETE",
+        "record_count": 2,
+    }
     user_configuration_export = {
         "version": "v1",
         "source": "BACKEND_USER_CONFIGURATION",
@@ -915,6 +1003,11 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
             "route_comparison_review_report_v1.json",
             "sha256:route-report-file",
         ),
+        _file(
+            "scenario_review_checklist_v1",
+            "scenario_review_checklist_v1.json",
+            "sha256:scenario-checklist-file",
+        ),
     )
 
     first = build_runtime_export_package_audit_index_v1(
@@ -926,6 +1019,7 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
         diagnostics_bundle=diagnostics_bundle,
         artifact_records=artifact_records,
         route_comparison_review_report=route_report,
+        scenario_review_checklist=scenario_review_checklist,
         user_configuration_export=user_configuration_export,
     )
     second = build_runtime_export_package_audit_index_v1(
@@ -937,6 +1031,7 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
         diagnostics_bundle=diagnostics_bundle,
         artifact_records=tuple(reversed(artifact_records)),
         route_comparison_review_report=route_report,
+        scenario_review_checklist=scenario_review_checklist,
         user_configuration_export=user_configuration_export,
     )
 
@@ -958,6 +1053,10 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
     )
     assert first["route_comparison_review_report_hash"] == "sha256:route-report"
     assert first["route_comparison_review_report_present"] is True
+    assert first["scenario_review_checklist_hash"] == "sha256:scenario-checklist"
+    assert first["scenario_review_checklist_present"] is True
+    assert first["scenario_review_checklist_record_count"] == 2
+    assert first["scenario_review_checklist_status"] == "CHECKLIST_COMPLETE"
     assert first["self_artifact_excluded_from_hashes"] is True
     assert [item["filename"] for item in first["artifact_hashes"]] == [
         "config_snapshot.json",
@@ -965,6 +1064,7 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
         "manifest.json",
         "metrics.csv",
         "route_comparison_review_report_v1.json",
+        "scenario_review_checklist_v1.json",
         "summary.json",
     ]
     assert first["audit_hash"].startswith("sha256:")

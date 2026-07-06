@@ -498,6 +498,24 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                     except RuntimeError as exc:
                         self.send_error(400, str(exc))
                     return
+                if artifact_kind == "scenario-review-checklist":
+                    try:
+                        payload = self._read_json_body()
+                        if not isinstance(payload, dict):
+                            raise ValueError("request body must be a JSON object")
+                        self._send_json(
+                            control_plane.runtime_export_package_scenario_review_checklist(
+                                package_id,
+                                payload,
+                            )
+                        )
+                    except ValueError as exc:
+                        self.send_error(400, str(exc))
+                    except RuntimeExportArtifactError as exc:
+                        self.send_error(404, str(exc))
+                    except RuntimeError as exc:
+                        self.send_error(400, str(exc))
+                    return
             if path == "/scenario/user-config/validate":
                 try:
                     payload = self._read_json_body()
@@ -819,6 +837,8 @@ def _runtime_export_package_route(
         return parts[0], "route-detail", parts[2]
     if len(parts) == 2 and parts[1] == "route-comparison-review-report":
         return parts[0], "route-comparison-review-report", None
+    if len(parts) == 2 and parts[1] == "scenario-review-checklist":
+        return parts[0], "scenario-review-checklist", None
     if len(parts) == 3 and parts[1] == "files":
         return parts[0], "file", parts[2]
     return "", "missing", None

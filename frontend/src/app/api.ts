@@ -12,6 +12,9 @@ import {
   RuntimeExportPackageCompareV1,
   RuntimeExportPackageAuditIndexV1,
   RuntimeExportScenarioReviewBundleV1,
+  RuntimeExportScenarioReviewChecklistEnvelope,
+  RuntimeExportScenarioReviewChecklistRecordV1,
+  RuntimeExportScenarioReviewChecklistV1,
   RuntimeExportRouteComparisonReviewReportEnvelope,
   RuntimeExportRouteComparisonReviewReportRecordV1,
   RuntimeExportRouteComparisonReviewReportV1,
@@ -71,6 +74,10 @@ export interface RuntimeDetailQueryFilters {
 
 export interface RuntimeExportRouteComparisonReviewReportRequest {
   records: readonly Partial<RuntimeExportRouteComparisonReviewReportRecordV1>[];
+}
+
+export interface RuntimeExportScenarioReviewChecklistRequest {
+  records: readonly Partial<RuntimeExportScenarioReviewChecklistRecordV1>[];
 }
 
 export async function loadScenarioConfig(endpoint = "/scenario/config"): Promise<ScenarioConfig> {
@@ -476,6 +483,22 @@ export async function loadRuntimeExportScenarioReviewBundle(
   return decodeRuntimeExportScenarioReviewBundle(await response.json());
 }
 
+export async function loadRuntimeExportScenarioReviewChecklist(
+  packageId: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): Promise<RuntimeExportScenarioReviewChecklistV1> {
+  const url = runtimeExportPackageFileHref(
+    packageId,
+    "scenario_review_checklist_v1.json",
+    endpoint
+  );
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`failed to load runtime export scenario review checklist from ${url}: HTTP ${response.status}`);
+  }
+  return decodeRuntimeExportScenarioReviewChecklist(await response.json());
+}
+
 export async function saveRuntimeExportRouteComparisonReviewReport(
   packageId: string,
   request: RuntimeExportRouteComparisonReviewReportRequest,
@@ -493,6 +516,25 @@ export async function saveRuntimeExportRouteComparisonReviewReport(
     throw new Error(`failed to save runtime export route comparison review report to ${url}: HTTP ${response.status}`);
   }
   return decodeRuntimeExportRouteComparisonReviewReport(await response.json()).summary;
+}
+
+export async function saveRuntimeExportScenarioReviewChecklist(
+  packageId: string,
+  request: RuntimeExportScenarioReviewChecklistRequest,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): Promise<RuntimeExportScenarioReviewChecklistV1> {
+  const url = runtimeExportScenarioReviewChecklistHref(packageId, endpoint);
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(request)
+  });
+  if (!response.ok) {
+    throw new Error(`failed to save runtime export scenario review checklist to ${url}: HTTP ${response.status}`);
+  }
+  return decodeRuntimeExportScenarioReviewChecklistResponse(await response.json()).summary;
 }
 
 export async function loadRuntimeExportRestorePreflight(
@@ -702,6 +744,13 @@ export function runtimeExportRouteComparisonReviewReportHref(
   endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
 ): string {
   return `${runtimeExportPackageRecordHref(packageId, endpoint)}/route-comparison-review-report`;
+}
+
+export function runtimeExportScenarioReviewChecklistHref(
+  packageId: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): string {
+  return `${runtimeExportPackageRecordHref(packageId, endpoint)}/scenario-review-checklist`;
 }
 
 export function userConfigurationSchemaHref(
@@ -1142,6 +1191,56 @@ export function decodeRuntimeExportRouteComparisonReviewReportArtifact(
     );
   }
   return value as RuntimeExportRouteComparisonReviewReportV1;
+}
+
+export function decodeRuntimeExportScenarioReviewChecklistResponse(
+  value: unknown
+): RuntimeExportScenarioReviewChecklistEnvelope {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError(
+      "runtime export scenario review checklist response must be an object"
+    );
+  }
+  const summary = (value as { summary?: unknown }).summary;
+  const artifact = (value as { artifact?: unknown }).artifact;
+  if (
+    typeof summary !== "object" ||
+    summary === null ||
+    Array.isArray(summary) ||
+    typeof (summary as { checklist_id?: unknown }).checklist_id !== "string" ||
+    !Array.isArray((summary as { records?: unknown }).records) ||
+    typeof artifact !== "object" ||
+    artifact === null ||
+    Array.isArray(artifact)
+  ) {
+    throw new TypeError(
+      "runtime export scenario review checklist response must include summary checklist_id, records, and artifact"
+    );
+  }
+  return {
+    ...(value as Record<string, unknown>),
+    summary: summary as RuntimeExportScenarioReviewChecklistV1,
+    artifact: artifact as RuntimeExportScenarioReviewChecklistEnvelope["artifact"]
+  } as RuntimeExportScenarioReviewChecklistEnvelope;
+}
+
+export function decodeRuntimeExportScenarioReviewChecklist(
+  value: unknown
+): RuntimeExportScenarioReviewChecklistV1 {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError("runtime export scenario review checklist must be an object");
+  }
+  if (
+    typeof (value as { checklist_id?: unknown }).checklist_id !== "string" ||
+    typeof (value as { package_id?: unknown }).package_id !== "string" ||
+    !Array.isArray((value as { records?: unknown }).records) ||
+    typeof (value as { checklist_hash?: unknown }).checklist_hash !== "string"
+  ) {
+    throw new TypeError(
+      "runtime export scenario review checklist must include checklist_id, package_id, records, and checklist_hash"
+    );
+  }
+  return value as RuntimeExportScenarioReviewChecklistV1;
 }
 
 export function decodeRuntimeExportPackageAuditIndex(

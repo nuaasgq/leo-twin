@@ -83,6 +83,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_route_detail_page_v1,
     build_runtime_export_review_summary_v1,
     build_runtime_export_scenario_review_bundle_v1,
+    build_runtime_export_scenario_review_checklist_v1,
     build_runtime_export_service_trace_page_v1,
 )
 from leo_twin.services.scenario_builder import (
@@ -135,6 +136,7 @@ _RUNTIME_EXPORT_SERVICE_TRACE_LIMIT = DETAIL_ENDPOINT_MAX_LIMIT
 _RUNTIME_EXPORT_REVIEW_SUMMARY_FILENAME = "review_summary_v1.json"
 _RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_FILENAME = "diagnostics_bundle_v1.json"
 _RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_FILENAME = "scenario_review_bundle_v1.json"
+_RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_FILENAME = "scenario_review_checklist_v1.json"
 _RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_FILENAME = (
     "route_comparison_review_report_v1.json"
 )
@@ -1004,6 +1006,74 @@ class DemoControlPlane:
             "catalog_record": catalog_record,
         }
 
+    def runtime_export_package_scenario_review_checklist(
+        self,
+        package_id: str,
+        payload: Mapping[str, Any],
+        output_root: str | Path = "artifacts/runtime_exports",
+    ) -> dict[str, Any]:
+        if not isinstance(payload, Mapping):
+            raise RuntimeError("scenario review checklist payload must be an object")
+        raw_records = payload.get("records", ())
+        if raw_records is None:
+            raw_records = ()
+        if not isinstance(raw_records, (list, tuple)):
+            raise RuntimeError("scenario review checklist records must be a list")
+        records: list[Mapping[str, Any]] = []
+        for record in raw_records:
+            if not isinstance(record, Mapping):
+                raise RuntimeError("scenario review checklist records must be objects")
+            records.append(record)
+        catalog = _read_runtime_export_catalog(output_root)
+        catalog_record = _runtime_export_catalog_package_record(catalog, package_id)
+        package_dir = _runtime_export_catalog_package_dir(output_root, catalog_record)
+        scenario_review_artifact = self.runtime_export_package_artifact(
+            package_id,
+            _RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_FILENAME,
+            output_root,
+        )
+        scenario_review_bundle = json.loads(
+            Path(str(scenario_review_artifact["path"])).read_text(encoding="utf-8")
+        )
+        if not isinstance(scenario_review_bundle, Mapping):
+            raise RuntimeExportArtifactError(
+                f"runtime export package {package_id!r} has invalid scenario review bundle"
+            )
+        checklist = build_runtime_export_scenario_review_checklist_v1(
+            package_id=package_id,
+            package_dir=str(package_dir),
+            scenario_review_bundle=scenario_review_bundle,
+            records=tuple(records),
+        )
+        checklist_path = package_dir / _RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_FILENAME
+        checklist_path.write_text(stable_json_pretty(checklist), encoding="utf-8")
+        artifact = _runtime_export_file_record(
+            "scenario_review_checklist_v1",
+            checklist_path,
+        )
+        catalog_record = _upsert_runtime_export_catalog_file(
+            output_root,
+            package_id,
+            artifact,
+        )
+        audit_index, audit_artifact = self._write_runtime_export_package_audit_index(
+            package_id,
+            package_dir,
+        )
+        catalog_record = _upsert_runtime_export_catalog_file(
+            output_root,
+            package_id,
+            audit_artifact,
+        )
+        return {
+            "type": "RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST",
+            "summary": checklist,
+            "artifact": _runtime_export_catalog_file_record(artifact),
+            "audit_index": audit_index,
+            "audit_artifact": _runtime_export_catalog_file_record(audit_artifact),
+            "catalog_record": catalog_record,
+        }
+
     def _write_runtime_export_package_audit_index(
         self,
         package_id: str,
@@ -1055,6 +1125,16 @@ class DemoControlPlane:
             raw_route_report = json.loads(route_report_path.read_text(encoding="utf-8"))
             if isinstance(raw_route_report, Mapping):
                 route_report = raw_route_report
+        scenario_checklist: Mapping[str, Any] | None = None
+        scenario_checklist_path = (
+            package_dir / _RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_FILENAME
+        )
+        if scenario_checklist_path.is_file():
+            raw_scenario_checklist = json.loads(
+                scenario_checklist_path.read_text(encoding="utf-8")
+            )
+            if isinstance(raw_scenario_checklist, Mapping):
+                scenario_checklist = raw_scenario_checklist
         artifact_records = tuple(
             _runtime_export_file_record(path.stem, path)
             for path in sorted(package_dir.iterdir(), key=lambda item: item.name)
@@ -1071,6 +1151,7 @@ class DemoControlPlane:
             diagnostics_bundle=diagnostics_bundle,
             artifact_records=artifact_records,
             route_comparison_review_report=route_report,
+            scenario_review_checklist=scenario_checklist,
             runtime_export_boundary_alignment=runtime_export_boundary_alignment,
             user_configuration_export=self.user_configuration_export()["summary"],
         )

@@ -8,6 +8,7 @@ import {
   loadRuntimeExportPackageCompare,
   loadRuntimeExportPackageAuditIndex,
   loadRuntimeExportScenarioReviewBundle,
+  loadRuntimeExportScenarioReviewChecklist,
   loadRuntimeExportRouteComparisonReviewReport,
   loadRuntimeExportRouteDetailIndex,
   loadRuntimeExportRouteDetailItem,
@@ -46,9 +47,11 @@ import {
   runtimeExportPackageServiceTracesHref,
   runtimeExportPackageReviewSummaryHref,
   runtimeExportRouteComparisonReviewReportHref,
+  runtimeExportScenarioReviewChecklistHref,
   runtimeExportRestorePreflightHref,
   runtimeDetailEntityHref,
   saveRuntimeExportRouteComparisonReviewReport,
+  saveRuntimeExportScenarioReviewChecklist,
   userConfigurationExportHref,
   userConfigurationSchemaHref,
   userConfigurationTemplatesHref,
@@ -94,6 +97,9 @@ describe("runtime API diagnostics", () => {
     );
     expect(runtimeExportRouteComparisonReviewReportHref("pkg 1")).toBe(
       "/runtime/export/packages/pkg%201/route-comparison-review-report"
+    );
+    expect(runtimeExportScenarioReviewChecklistHref("pkg 1")).toBe(
+      "/runtime/export/packages/pkg%201/scenario-review-checklist"
     );
     expect(
       runtimeExportPackageRouteDetailsHref(
@@ -884,6 +890,94 @@ describe("runtime API diagnostics", () => {
     );
   });
 
+  it("saves runtime export scenario review checklists", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        type: "RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST",
+        summary: {
+          type: "RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_V1",
+          version: "v1",
+          checklist_id: "leo_twin.runtime_export_scenario_review_checklist.v1",
+          source: "OPERATOR_SCENARIO_REVIEW_CHECKLIST",
+          checklist_scope: "SCENARIO_REVIEW_BUNDLE_OPERATOR_DECISIONS",
+          package_id: "pkg",
+          package_dir: "artifacts/runtime_exports/pkg",
+          scenario_review_bundle_id: "leo_twin.runtime_export_scenario_review_bundle.v1",
+          scenario_review_hash: "sha256:scenario-review",
+          record_count: 1,
+          reviewed_count: 1,
+          skipped_count: 0,
+          followup_count: 0,
+          error_count: 0,
+          checklist_status: "CHECKLIST_COMPLETE",
+          records: [
+            {
+              artifact_filename: "scenario_review_bundle_v1.json",
+              step_label: "Scenario bundle checked",
+              review_status: "REVIEWED",
+              status_reason: "",
+              operator_note: "reviewed",
+              evidence_hash: "sha256:scenario-review",
+              review_order_index: 0,
+              record_hash: "sha256:record"
+            }
+          ],
+          ordering: "recommended_review_order ascending",
+          boundary_conditions: ["NO_EVENT_REPLAY"],
+          checklist_hash: "sha256:checklist"
+        },
+        artifact: {
+          name: "scenario_review_checklist_v1",
+          filename: "scenario_review_checklist_v1.json",
+          bytes: 256,
+          sha256: "sha256:artifact"
+        }
+      })
+    }));
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+
+    await expect(
+      saveRuntimeExportScenarioReviewChecklist("pkg", {
+        records: [
+          {
+            artifact_filename: "scenario_review_bundle_v1.json",
+            step_label: "Scenario bundle checked",
+            review_status: "REVIEWED",
+            operator_note: "reviewed",
+            evidence_hash: "sha256:scenario-review"
+          }
+        ]
+      })
+    ).resolves.toMatchObject({
+      package_id: "pkg",
+      record_count: 1,
+      reviewed_count: 1,
+      checklist_status: "CHECKLIST_COMPLETE",
+      checklist_hash: "sha256:checklist"
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/runtime/export/packages/pkg/scenario-review-checklist",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          records: [
+            {
+              artifact_filename: "scenario_review_bundle_v1.json",
+              step_label: "Scenario bundle checked",
+              review_status: "REVIEWED",
+              operator_note: "reviewed",
+              evidence_hash: "sha256:scenario-review"
+            }
+          ]
+        })
+      }
+    );
+  });
+
   it("loads runtime export package audit index artifacts", async () => {
     const fetchMock = vi.fn(async () => ({
       ok: true,
@@ -907,6 +1001,10 @@ describe("runtime API diagnostics", () => {
         diagnostics_hash: "sha256:diagnostics",
         route_comparison_review_report_hash: "sha256:report",
         route_comparison_review_report_present: true,
+        scenario_review_checklist_hash: "sha256:checklist",
+        scenario_review_checklist_present: true,
+        scenario_review_checklist_record_count: 1,
+        scenario_review_checklist_status: "CHECKLIST_COMPLETE",
         artifact_count: 1,
         artifact_hashes: [
           {
@@ -935,6 +1033,7 @@ describe("runtime API diagnostics", () => {
       package_id: "pkg",
       audit_status: "AUDIT_READY",
       route_comparison_review_report_hash: "sha256:report",
+      scenario_review_checklist_hash: "sha256:checklist",
       artifact_hashes: [{ filename: "manifest.json" }]
     });
     expect(fetchMock).toHaveBeenCalledWith(
@@ -1041,6 +1140,55 @@ describe("runtime API diagnostics", () => {
     });
     expect(fetchMock).toHaveBeenCalledWith(
       "/runtime/export/packages/pkg/files/scenario_review_bundle_v1.json"
+    );
+  });
+
+  it("loads runtime export scenario review checklist artifacts", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        type: "RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_V1",
+        version: "v1",
+        checklist_id: "leo_twin.runtime_export_scenario_review_checklist.v1",
+        source: "OPERATOR_SCENARIO_REVIEW_CHECKLIST",
+        checklist_scope: "SCENARIO_REVIEW_BUNDLE_OPERATOR_DECISIONS",
+        package_id: "pkg",
+        package_dir: "artifacts/runtime_exports/pkg",
+        scenario_review_bundle_id: "leo_twin.runtime_export_scenario_review_bundle.v1",
+        scenario_review_hash: "sha256:scenario-review",
+        record_count: 1,
+        reviewed_count: 1,
+        skipped_count: 0,
+        followup_count: 0,
+        error_count: 0,
+        checklist_status: "CHECKLIST_COMPLETE",
+        records: [
+          {
+            artifact_filename: "scenario_review_bundle_v1.json",
+            step_label: "Scenario bundle checked",
+            review_status: "REVIEWED",
+            status_reason: "",
+            operator_note: "reviewed",
+            evidence_hash: "sha256:scenario-review",
+            review_order_index: 0,
+            record_hash: "sha256:record"
+          }
+        ],
+        ordering: "recommended_review_order ascending",
+        boundary_conditions: ["NO_EVENT_REPLAY"],
+        checklist_hash: "sha256:checklist"
+      })
+    }));
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+
+    await expect(loadRuntimeExportScenarioReviewChecklist("pkg")).resolves.toMatchObject({
+      package_id: "pkg",
+      record_count: 1,
+      checklist_status: "CHECKLIST_COMPLETE",
+      checklist_hash: "sha256:checklist"
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/runtime/export/packages/pkg/files/scenario_review_checklist_v1.json"
     );
   });
 

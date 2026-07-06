@@ -260,6 +260,33 @@ saved operator report can be audited later. It also regenerates
 report hash while preserving the exported package's user configuration binding
 evidence.
 
+Guided scenario review checklist:
+
+```powershell
+$checklistBody = @{
+  records = @(
+    @{
+      artifact_filename = "scenario_review_bundle_v1.json"
+      step_label = "Scenario bundle checked"
+      review_status = "REVIEWED"
+      operator_note = "user configuration and package entry evidence reviewed"
+      evidence_hash = "<scenario_review_hash>"
+    }
+  )
+} | ConvertTo-Json -Depth 5
+Invoke-RestMethod `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body $checklistBody `
+  "http://127.0.0.1:8765/runtime/export/packages/<package_id>/scenario-review-checklist"
+```
+
+This writes `scenario_review_checklist_v1.json`, updates the export catalog,
+and regenerates `export_package_audit_index_v1.json` with the checklist hash,
+status, and record count. It records operator decisions only; it does not
+replay events, recompute routes or services, mutate packages on read, or update
+archives that were created before the save.
+
 Package audit index:
 
 ```powershell

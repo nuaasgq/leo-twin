@@ -19,6 +19,9 @@ RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1_ID = (
 RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1_ID = (
     "leo_twin.runtime_export_scenario_review_bundle.v1"
 )
+RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_V1_ID = (
+    "leo_twin.runtime_export_scenario_review_checklist.v1"
+)
 RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_V1_ID = (
     "leo_twin.runtime_export_route_detail_index.v1"
 )
@@ -98,6 +101,7 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
             "GET /runtime/export/packages/{package_id}/routes",
             "GET /runtime/export/packages/{package_id}/routes/{route_id}",
             "POST /runtime/export/packages/{package_id}/route-comparison-review-report",
+            "POST /runtime/export/packages/{package_id}/scenario-review-checklist",
             "GET /runtime/export/packages/{package_id}/files/{filename}",
         ),
         "catalog_filename": "runtime_export_catalog_v1.json",
@@ -646,6 +650,101 @@ def build_runtime_export_scenario_review_bundle_v1(
     return bundle
 
 
+def build_runtime_export_scenario_review_checklist_v1(
+    *,
+    package_id: str,
+    package_dir: str,
+    scenario_review_bundle: Mapping[str, Any],
+    records: tuple[Mapping[str, Any], ...] = (),
+) -> dict[str, object]:
+    """Build a deterministic operator checklist for scenario review decisions."""
+
+    if not isinstance(scenario_review_bundle, Mapping):
+        raise TypeError("scenario_review_bundle must be a mapping")
+    review_order = _string_tuple(
+        scenario_review_bundle.get("recommended_review_order")
+    )
+    artifact_review = _mapping(scenario_review_bundle.get("artifact_review"))
+    known_artifacts = frozenset(_string_tuple(artifact_review.get("artifact_filenames")))
+    normalized_records = tuple(
+        sorted(
+            (
+                _runtime_export_scenario_review_checklist_record(
+                    record,
+                    review_order=review_order,
+                    known_artifacts=known_artifacts,
+                )
+                for record in records
+            ),
+            key=lambda item: (
+                _runtime_export_scenario_review_order_index(
+                    str(item["artifact_filename"]),
+                    review_order,
+                ),
+                str(item["artifact_filename"]),
+                str(item["step_label"]),
+                str(item["review_status"]),
+                str(item["operator_note"]),
+            ),
+        )
+    )
+    reviewed_count = sum(
+        1 for record in normalized_records if record["review_status"] == "REVIEWED"
+    )
+    skipped_count = sum(
+        1 for record in normalized_records if record["review_status"] == "SKIPPED"
+    )
+    followup_count = sum(
+        1
+        for record in normalized_records
+        if record["review_status"] == "NEEDS_FOLLOWUP"
+    )
+    error_count = sum(
+        1 for record in normalized_records if record["review_status"] == "ERROR"
+    )
+    checklist_status = "CHECKLIST_EMPTY"
+    if normalized_records and reviewed_count == len(normalized_records):
+        checklist_status = "CHECKLIST_COMPLETE"
+    elif error_count or followup_count:
+        checklist_status = "CHECKLIST_WARN"
+    elif normalized_records:
+        checklist_status = "CHECKLIST_PARTIAL"
+    checklist: dict[str, object] = {
+        "type": "RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_V1",
+        "version": "v1",
+        "checklist_id": RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_V1_ID,
+        "source": "OPERATOR_SCENARIO_REVIEW_CHECKLIST",
+        "checklist_scope": "SCENARIO_REVIEW_BUNDLE_OPERATOR_DECISIONS",
+        "package_id": str(package_id),
+        "package_dir": str(package_dir),
+        "scenario_review_bundle_id": str(
+            scenario_review_bundle.get("bundle_id", "")
+        ),
+        "scenario_review_hash": str(
+            scenario_review_bundle.get("scenario_review_hash", "")
+        ),
+        "record_count": len(normalized_records),
+        "reviewed_count": reviewed_count,
+        "skipped_count": skipped_count,
+        "followup_count": followup_count,
+        "error_count": error_count,
+        "checklist_status": checklist_status,
+        "records": normalized_records,
+        "ordering": (
+            "recommended_review_order ascending, then artifact_filename, "
+            "step_label, review_status, and operator_note ascending"
+        ),
+        "boundary_conditions": (
+            "NO_EVENT_REPLAY",
+            "NO_MODEL_RECOMPUTE",
+            "NO_PACKAGE_READ_MUTATION",
+            "OPERATOR_SUPPLIED_REVIEW_DECISIONS",
+        ),
+    }
+    checklist["checklist_hash"] = stable_hash_payload(checklist)
+    return checklist
+
+
 def build_runtime_export_route_detail_index_v1(
     *,
     package_id: str,
@@ -1047,6 +1146,7 @@ def build_runtime_export_package_audit_index_v1(
     diagnostics_bundle: Mapping[str, Any],
     artifact_records: tuple[Mapping[str, Any], ...] = (),
     route_comparison_review_report: Mapping[str, Any] | None = None,
+    scenario_review_checklist: Mapping[str, Any] | None = None,
     runtime_export_boundary_alignment: Mapping[str, Any] | None = None,
     user_configuration_export: Mapping[str, Any] | None = None,
 ) -> dict[str, object]:
@@ -1066,6 +1166,7 @@ def build_runtime_export_package_audit_index_v1(
     if not boundary:
         boundary = _runtime_export_reproducibility_boundary(status, manifest)
     route_report = _mapping(route_comparison_review_report)
+    scenario_checklist = _mapping(scenario_review_checklist)
     alignment = _mapping(runtime_export_boundary_alignment)
     if not alignment:
         alignment = _mapping(route_report.get("runtime_export_boundary_alignment_v1"))
@@ -1103,6 +1204,8 @@ def build_runtime_export_package_audit_index_v1(
         audit_warnings.append("ROUTE_COMPARISON_REVIEW_REPORT_NOT_SAVED")
     if not alignment:
         audit_warnings.append("BOUNDARY_ALIGNMENT_EVIDENCE_NOT_RECORDED")
+    if str(scenario_checklist.get("checklist_status", "")) == "CHECKLIST_WARN":
+        audit_warnings.append("SCENARIO_REVIEW_CHECKLIST_NEEDS_ATTENTION")
     if user_config_binding["validation_ok"] is not True:
         audit_warnings.append("USER_CONFIGURATION_EXPORT_NOT_VALIDATED")
     if any(str(item.get("severity", "")) == "ERROR" for item in diagnostics_findings):
@@ -1133,6 +1236,16 @@ def build_runtime_export_package_audit_index_v1(
         "diagnostics_hash": str(diagnostics_bundle.get("diagnostics_hash", "")),
         "route_comparison_review_report_hash": str(route_report.get("report_hash", "")),
         "route_comparison_review_report_present": bool(route_report),
+        "scenario_review_checklist_hash": str(
+            scenario_checklist.get("checklist_hash", "")
+        ),
+        "scenario_review_checklist_present": bool(scenario_checklist),
+        "scenario_review_checklist_record_count": _integer(
+            scenario_checklist.get("record_count")
+        ),
+        "scenario_review_checklist_status": str(
+            scenario_checklist.get("checklist_status", "")
+        ),
         "artifact_count": len(normalized_artifacts),
         "artifact_hashes": normalized_artifacts,
         "required_artifact_filenames": required_filenames,
@@ -1449,6 +1562,55 @@ def _runtime_export_route_comparison_review_metadata() -> dict[str, object]:
             "ordering": "route_id ascending, then comparison_status ascending",
         },
     }
+
+
+def _runtime_export_scenario_review_checklist_record(
+    record: Mapping[str, Any],
+    *,
+    review_order: tuple[str, ...],
+    known_artifacts: frozenset[str],
+) -> dict[str, object]:
+    artifact_filename = str(record.get("artifact_filename", "")).strip()
+    step_label = str(record.get("step_label", "")).strip()
+    raw_status = str(record.get("review_status", "")).strip().upper()
+    allowed_statuses = {"REVIEWED", "SKIPPED", "NEEDS_FOLLOWUP", "ERROR"}
+    review_status = raw_status if raw_status in allowed_statuses else "ERROR"
+    status_reason = str(record.get("status_reason", "")).strip()
+    if raw_status and raw_status not in allowed_statuses:
+        status_reason = f"INVALID_REVIEW_STATUS:{raw_status}"
+    if artifact_filename and known_artifacts and artifact_filename not in known_artifacts:
+        status_reason = status_reason or "ARTIFACT_NOT_LISTED_IN_SCENARIO_REVIEW_BUNDLE"
+    if not artifact_filename:
+        status_reason = status_reason or "ARTIFACT_FILENAME_REQUIRED"
+        review_status = "ERROR"
+    if not step_label:
+        step_label = artifact_filename or "unlabeled review step"
+    record_hash_source = {
+        "artifact_filename": artifact_filename,
+        "step_label": step_label,
+        "review_status": review_status,
+        "status_reason": status_reason,
+        "operator_note": str(record.get("operator_note", "")).strip(),
+        "evidence_hash": str(record.get("evidence_hash", "")).strip(),
+        "review_order_index": _runtime_export_scenario_review_order_index(
+            artifact_filename,
+            review_order,
+        ),
+    }
+    return {
+        **record_hash_source,
+        "record_hash": stable_hash_payload(record_hash_source),
+    }
+
+
+def _runtime_export_scenario_review_order_index(
+    artifact_filename: str,
+    review_order: tuple[str, ...],
+) -> int:
+    try:
+        return review_order.index(artifact_filename)
+    except ValueError:
+        return len(review_order) + 1
 
 
 def _runtime_export_route_trust_evidence(

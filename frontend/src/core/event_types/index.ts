@@ -1400,6 +1400,53 @@ export interface RuntimeExportRouteComparisonReviewReportRecordV1 {
   operator_note: string;
 }
 
+export interface RuntimeExportScenarioReviewChecklistEnvelope {
+  type: "RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST" | string;
+  summary: RuntimeExportScenarioReviewChecklistV1;
+  artifact: RuntimeExportCatalogFileV1;
+  audit_index?: RuntimeExportPackageAuditIndexV1;
+  audit_artifact?: RuntimeExportCatalogFileV1;
+  catalog_record?: RuntimeExportCatalogRecordV1;
+}
+
+export interface RuntimeExportScenarioReviewChecklistV1 {
+  type: "RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_V1" | string;
+  version: "v1" | string;
+  checklist_id: string;
+  source: string;
+  checklist_scope: string;
+  package_id: string;
+  package_dir: string;
+  scenario_review_bundle_id: string;
+  scenario_review_hash: string;
+  record_count: number;
+  reviewed_count: number;
+  skipped_count: number;
+  followup_count: number;
+  error_count: number;
+  checklist_status:
+    | "CHECKLIST_EMPTY"
+    | "CHECKLIST_PARTIAL"
+    | "CHECKLIST_COMPLETE"
+    | "CHECKLIST_WARN"
+    | string;
+  records: readonly RuntimeExportScenarioReviewChecklistRecordV1[];
+  ordering: string;
+  boundary_conditions: readonly string[];
+  checklist_hash: string;
+}
+
+export interface RuntimeExportScenarioReviewChecklistRecordV1 {
+  artifact_filename: string;
+  step_label: string;
+  review_status: "REVIEWED" | "SKIPPED" | "NEEDS_FOLLOWUP" | "ERROR" | string;
+  status_reason: string;
+  operator_note: string;
+  evidence_hash: string;
+  review_order_index: number;
+  record_hash: string;
+}
+
 export interface RuntimeExportPackageAuditIndexV1 {
   type: "RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1" | string;
   version: "v1" | string;
@@ -1425,6 +1472,10 @@ export interface RuntimeExportPackageAuditIndexV1 {
   diagnostics_hash: string;
   route_comparison_review_report_hash: string;
   route_comparison_review_report_present: boolean;
+  scenario_review_checklist_hash?: string;
+  scenario_review_checklist_present?: boolean;
+  scenario_review_checklist_record_count?: number;
+  scenario_review_checklist_status?: string;
   artifact_count: number;
   artifact_hashes: readonly RuntimeExportCatalogFileV1[];
   required_artifact_filenames: readonly string[];
