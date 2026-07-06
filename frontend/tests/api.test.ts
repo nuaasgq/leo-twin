@@ -721,7 +721,9 @@ describe("runtime API diagnostics", () => {
       loadRuntimeServiceTraceDetails(10, 75, "/runtime/details/service-traces", {
         query: "route:input",
         terminalState: "COMPLETE",
-        computeNodeId: "sat-a"
+        computeNodeId: "sat-a",
+        stageKind: "OUTPUT_NETWORK",
+        terminalReason: "TOTAL_LATENCY_OBSERVED"
       })
     ).resolves.toMatchObject({
       trace_count: 1,
@@ -773,7 +775,7 @@ describe("runtime API diagnostics", () => {
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
       10,
-      "/runtime/details/service-traces?cursor=10&limit=75&query=route%3Ainput&terminal_state=COMPLETE&compute_node_id=sat-a"
+      "/runtime/details/service-traces?cursor=10&limit=75&query=route%3Ainput&terminal_state=COMPLETE&compute_node_id=sat-a&stage_kind=OUTPUT_NETWORK&terminal_reason=TOTAL_LATENCY_OBSERVED"
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
       11,

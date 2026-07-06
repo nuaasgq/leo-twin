@@ -53,6 +53,8 @@ export interface RuntimeDetailQueryFilters {
   bottleneckComponent?: string;
   terminalState?: string;
   computeNodeId?: string;
+  stageKind?: string;
+  terminalReason?: string;
 }
 
 export async function loadScenarioConfig(endpoint = "/scenario/config"): Promise<ScenarioConfig> {
@@ -532,6 +534,14 @@ function appendRuntimeDetailFilterParams(
   const computeNodeId = filters.computeNodeId?.trim();
   if (computeNodeId) {
     params.set("compute_node_id", computeNodeId);
+  }
+  const stageKind = filters.stageKind?.trim();
+  if (stageKind && stageKind !== "ALL") {
+    params.set("stage_kind", stageKind);
+  }
+  const terminalReason = filters.terminalReason?.trim();
+  if (terminalReason && terminalReason !== "ALL") {
+    params.set("terminal_reason", terminalReason);
   }
 }
 

@@ -2013,6 +2013,10 @@ export interface RuntimeServiceLifecycleTraceV2 {
   hidden_trace_count: number;
   unfiltered_service_count?: number;
   filter_query?: string;
+  filter_terminal_state?: string;
+  filter_compute_node_id?: string;
+  filter_stage_kind?: string;
+  filter_terminal_reason?: string;
   filter_applied?: boolean;
   items: readonly RuntimeServiceLifecycleTraceItemV2[];
 }

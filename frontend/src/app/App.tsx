@@ -2053,6 +2053,8 @@ function normalizeRuntimeDetailFilters(
   const bottleneckComponent = filters.bottleneckComponent?.trim();
   const terminalState = filters.terminalState?.trim();
   const computeNodeId = filters.computeNodeId?.trim();
+  const stageKind = filters.stageKind?.trim();
+  const terminalReason = filters.terminalReason?.trim();
   return {
     ...(query ? { query } : {}),
     ...(availability && availability !== "ALL" ? { availability } : {}),
@@ -2061,7 +2063,9 @@ function normalizeRuntimeDetailFilters(
       ? { bottleneckComponent }
       : {}),
     ...(terminalState && terminalState !== "ALL" ? { terminalState } : {}),
-    ...(computeNodeId ? { computeNodeId } : {})
+    ...(computeNodeId ? { computeNodeId } : {}),
+    ...(stageKind && stageKind !== "ALL" ? { stageKind } : {}),
+    ...(terminalReason && terminalReason !== "ALL" ? { terminalReason } : {})
   };
 }
 

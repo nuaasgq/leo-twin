@@ -147,7 +147,9 @@ Tasks:
     endpoint while retaining local filtering as a temporary fallback. T265
     extends the same backend cursor endpoint with `stage_kind` and
     `terminal_reason` filters so lifecycle-stage and terminal-reason narrowing
-    happens before cursor slicing.
+    happens before cursor slicing. T266 binds those filters into the
+    standalone dashboard service trace browser and preserves the existing
+    server cursor reset behavior.
 
 ### WS3. Network Semantics and KPI Trust v2
 

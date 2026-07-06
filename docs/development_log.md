@@ -12655,3 +12655,53 @@ change.
 - Recommended follow-up:
   - Bind dashboard service trace controls to the new backend `stage_kind` and
     `terminal_reason` filters while preserving cursor reset behavior.
+
+## 2026-07-06 - Dashboard Service Trace Stage and Reason Filters v2
+
+- Branch: `feature/T266-dashboard-service-trace-stage-reason-filters-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: bind the standalone dashboard service trace browser to the backend
+  `stage_kind` and `terminal_reason` filters added in T265. The frontend API
+  client now encodes `stage_kind` and `terminal_reason`, App-level runtime
+  detail filters preserve those fields, and DataPanel exposes stage and
+  terminal-reason selectors that reset the backend cursor. The local fallback
+  filter keeps backend-aligned semantics by matching only observable lifecycle
+  stages where `stage_status` is not `UNKNOWN`. Backend runtime behavior,
+  Event Kernel behavior, network routing, compute scheduling, packet-level
+  semantics, and export formats remain unchanged.
+- Changed files/modules:
+  - `frontend/src/app/api.ts`
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/service_lifecycle_trace_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed, using the bundled Node/Pnpm runtime because the shell
+      PATH did not expose `node`.
+  - `pnpm --dir frontend test api.test.ts appSurface.test.ts dataPanel.test.ts`
+    - Result: passed, 212 tests.
+  - `pnpm --dir frontend test`
+    - Result: passed, 361 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite reported the existing large DataPanel chunk warning.
+- Problems encountered:
+  - The current shell could not resolve `node` from PATH, so validation used
+    the bundled workspace Node/Pnpm paths reported by Codex workspace
+    dependencies.
+  - Existing localized JSX text in `DataPanel.tsx` is displayed as mojibake in
+    the terminal, so the patch avoided rewriting existing labels and inserted
+    the new controls using stable ASCII context.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The service trace browser remains a compact row view. A future task can
+    add a larger virtualized trace browser for long sessions.
+- Recommended follow-up:
+  - Add a dedicated service trace export/action affordance for filtered trace
+    windows, or continue the v2 dashboard detail-browser virtual scrolling work.

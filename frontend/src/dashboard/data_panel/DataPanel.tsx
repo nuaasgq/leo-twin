@@ -144,6 +144,8 @@ export interface RuntimeDetailCursorFilters {
   bottleneckComponent?: string;
   terminalState?: string;
   computeNodeId?: string;
+  stageKind?: string;
+  terminalReason?: string;
 }
 
 export interface RuntimeSelectedNodeDetails {
@@ -296,6 +298,10 @@ export const DataPanel = memo(function DataPanel({
     useState<DataPanelServiceTraceTerminalFilter>("ALL");
   const [serviceTraceComputeNodeFilter, setServiceTraceComputeNodeFilter] =
     useState("");
+  const [serviceTraceStageFilter, setServiceTraceStageFilter] =
+    useState<DataPanelServiceTraceStageFilter>("ALL");
+  const [serviceTraceTerminalReasonFilter, setServiceTraceTerminalReasonFilter] =
+    useState<DataPanelServiceTraceTerminalReasonFilter>("ALL");
   const [computeNodeDetailFilter, setComputeNodeDetailFilter] = useState("");
   const [userDetailPage, setUserDetailPage] = useState(0);
   const [satelliteDetailPage, setSatelliteDetailPage] = useState(0);
@@ -458,7 +464,9 @@ export const DataPanel = memo(function DataPanel({
   const serviceTraceCursorFilters = serviceTraceDetailCursorFilters(
     serviceTraceFilter,
     serviceTraceTerminalFilter,
-    serviceTraceComputeNodeFilter
+    serviceTraceComputeNodeFilter,
+    serviceTraceStageFilter,
+    serviceTraceTerminalReasonFilter
   );
   const filteredServiceLifecycleTraceDisplay = filterServiceLifecycleTraceDisplay(
     serviceLifecycleTraceDisplay,
@@ -1601,6 +1609,8 @@ export const DataPanel = memo(function DataPanel({
             filterValue={serviceTraceFilter}
             terminalFilter={serviceTraceTerminalFilter}
             computeNodeFilter={serviceTraceComputeNodeFilter}
+            stageFilter={serviceTraceStageFilter}
+            terminalReasonFilter={serviceTraceTerminalReasonFilter}
             onFilterChange={(value) => {
               setServiceTraceFilter(value);
               setSelectedServiceTraceId(null);
@@ -1610,7 +1620,9 @@ export const DataPanel = memo(function DataPanel({
                 serviceTraceDetailCursorFilters(
                   value,
                   serviceTraceTerminalFilter,
-                  serviceTraceComputeNodeFilter
+                  serviceTraceComputeNodeFilter,
+                  serviceTraceStageFilter,
+                  serviceTraceTerminalReasonFilter
                 )
               );
             }}
@@ -1623,7 +1635,9 @@ export const DataPanel = memo(function DataPanel({
                 serviceTraceDetailCursorFilters(
                   serviceTraceFilter,
                   value,
-                  serviceTraceComputeNodeFilter
+                  serviceTraceComputeNodeFilter,
+                  serviceTraceStageFilter,
+                  serviceTraceTerminalReasonFilter
                 )
               );
             }}
@@ -1636,6 +1650,38 @@ export const DataPanel = memo(function DataPanel({
                 serviceTraceDetailCursorFilters(
                   serviceTraceFilter,
                   serviceTraceTerminalFilter,
+                  value,
+                  serviceTraceStageFilter,
+                  serviceTraceTerminalReasonFilter
+                )
+              );
+            }}
+            onStageFilterChange={(value) => {
+              setServiceTraceStageFilter(value);
+              setSelectedServiceTraceId(null);
+              onRuntimeServiceTraceDetailSelect?.(null);
+              runtimeDetailCursorControls?.serviceTraces?.onCursorChange?.(
+                0,
+                serviceTraceDetailCursorFilters(
+                  serviceTraceFilter,
+                  serviceTraceTerminalFilter,
+                  serviceTraceComputeNodeFilter,
+                  value,
+                  serviceTraceTerminalReasonFilter
+                )
+              );
+            }}
+            onTerminalReasonFilterChange={(value) => {
+              setServiceTraceTerminalReasonFilter(value);
+              setSelectedServiceTraceId(null);
+              onRuntimeServiceTraceDetailSelect?.(null);
+              runtimeDetailCursorControls?.serviceTraces?.onCursorChange?.(
+                0,
+                serviceTraceDetailCursorFilters(
+                  serviceTraceFilter,
+                  serviceTraceTerminalFilter,
+                  serviceTraceComputeNodeFilter,
+                  serviceTraceStageFilter,
                   value
                 )
               );
@@ -2658,16 +2704,26 @@ function ServiceTraceFilterControls({
   filterValue,
   terminalFilter,
   computeNodeFilter,
+  stageFilter,
+  terminalReasonFilter,
   onFilterChange,
   onTerminalFilterChange,
-  onComputeNodeFilterChange
+  onComputeNodeFilterChange,
+  onStageFilterChange,
+  onTerminalReasonFilterChange
 }: {
   filterValue: string;
   terminalFilter: DataPanelServiceTraceTerminalFilter;
   computeNodeFilter: string;
+  stageFilter: DataPanelServiceTraceStageFilter;
+  terminalReasonFilter: DataPanelServiceTraceTerminalReasonFilter;
   onFilterChange: (value: string) => void;
   onTerminalFilterChange: (value: DataPanelServiceTraceTerminalFilter) => void;
   onComputeNodeFilterChange: (value: string) => void;
+  onStageFilterChange: (value: DataPanelServiceTraceStageFilter) => void;
+  onTerminalReasonFilterChange: (
+    value: DataPanelServiceTraceTerminalReasonFilter
+  ) => void;
 }) {
   return (
     <div className="data-panel-service-trace-filters" role="group" aria-label="服务 trace 筛选">
@@ -2704,6 +2760,43 @@ function ServiceTraceFilterControls({
           placeholder="sat-00002"
           onChange={(event) => onComputeNodeFilterChange(event.currentTarget.value)}
         />
+      </label>
+      <label>
+        <span>阶段</span>
+        <select
+          value={stageFilter}
+          onChange={(event) =>
+            onStageFilterChange(
+              event.currentTarget.value as DataPanelServiceTraceStageFilter
+            )
+          }
+        >
+          <option value="ALL">全部阶段</option>
+          <option value="INPUT_NETWORK">输入网络</option>
+          <option value="COMPUTE_QUEUE">算力排队</option>
+          <option value="COMPUTE_EXECUTION">算力执行</option>
+          <option value="OUTPUT_NETWORK">输出网络</option>
+        </select>
+      </label>
+      <label>
+        <span>终态原因</span>
+        <select
+          value={terminalReasonFilter}
+          onChange={(event) =>
+            onTerminalReasonFilterChange(
+              event.currentTarget
+                .value as DataPanelServiceTraceTerminalReasonFilter
+            )
+          }
+        >
+          <option value="ALL">全部原因</option>
+          <option value="TOTAL_LATENCY_OBSERVED">总时延已观测</option>
+          <option value="OUTPUT_NETWORK_PENDING">输出网络待完成</option>
+          <option value="COMPONENTS_OBSERVED_BUT_TOTAL_MISSING">
+            部分阶段已观测
+          </option>
+          <option value="NO_COMPONENT_OBSERVATIONS">无阶段观测</option>
+        </select>
       </label>
     </div>
   );
@@ -8621,6 +8714,7 @@ export interface DataPanelServiceLifecycleTraceRow {
   flowIds: readonly string[];
   serviceLabel: string;
   terminalState: string;
+  terminalStateReason: string;
   terminalStateLabel: string;
   computeNodeLabel: string;
   networkLatencyLabel: string;
@@ -8636,14 +8730,33 @@ export type DataPanelServiceTraceTerminalFilter =
   | "COMPLETE"
   | "INCOMPLETE";
 
+export type DataPanelServiceTraceStageFilter =
+  | "ALL"
+  | "INPUT_NETWORK"
+  | "COMPUTE_QUEUE"
+  | "COMPUTE_EXECUTION"
+  | "OUTPUT_NETWORK";
+
+export type DataPanelServiceTraceTerminalReasonFilter =
+  | "ALL"
+  | "TOTAL_LATENCY_OBSERVED"
+  | "OUTPUT_NETWORK_PENDING"
+  | "COMPONENTS_OBSERVED_BUT_TOTAL_MISSING"
+  | "NO_COMPONENT_OBSERVATIONS";
+
 export interface DataPanelServiceTraceFilter {
   query?: string;
   terminalState?: DataPanelServiceTraceTerminalFilter | string;
   computeNodeId?: string;
+  stageKind?: DataPanelServiceTraceStageFilter | string;
+  terminalReason?: DataPanelServiceTraceTerminalReasonFilter | string;
 }
 
 export interface DataPanelServiceLifecycleTraceStageRow {
   stageId: string;
+  component: string;
+  stageKind: string;
+  stageStatus: string;
   label: string;
   statusLabel: string;
   durationLabel: string;
@@ -9370,6 +9483,7 @@ export function buildDataPanelServiceLifecycleTraceDisplay(
       flowIds,
       serviceLabel: compactTaskId(item.service_id || item.task_id),
       terminalState: item.terminal_state,
+      terminalStateReason: item.terminal_state_reason,
       terminalStateLabel: serviceLifecycleTerminalLabel(
         item.terminal_state,
         item.terminal_state_reason
@@ -9385,6 +9499,9 @@ export function buildDataPanelServiceLifecycleTraceDisplay(
       traceTitle: serviceLifecycleTraceTitle(item),
       stages: item.stages.map((stage) => ({
         stageId: stage.stage_id,
+        component: stage.component,
+        stageKind: stage.stage_kind,
+        stageStatus: stage.stage_status,
         label: serviceLifecycleStageLabel(stage.stage_label, stage.component),
         statusLabel: serviceLifecycleStageStatusLabel(stage.stage_status),
         durationLabel: formatMetricMilliseconds(stage.duration_s),
@@ -9414,12 +9531,22 @@ export function filterServiceLifecycleTraceDisplay(
       : normalizeServiceTraceTerminalFilter(filter.terminalState);
   const computeNodeFilter =
     typeof filter === "string" ? "" : (filter.computeNodeId ?? "");
+  const stageKind =
+    typeof filter === "string"
+      ? "ALL"
+      : normalizeServiceTraceStageFilter(filter.stageKind);
+  const terminalReason =
+    typeof filter === "string"
+      ? "ALL"
+      : normalizeServiceTraceTerminalReasonFilter(filter.terminalReason);
   const normalizedQuery = normalizeDetailFilter(query);
   const normalizedComputeNode = normalizeDetailFilter(computeNodeFilter);
   if (
     normalizedQuery.length === 0 &&
     terminalState === "ALL" &&
-    normalizedComputeNode.length === 0
+    normalizedComputeNode.length === 0 &&
+    stageKind === "ALL" &&
+    terminalReason === "ALL"
   ) {
     return display;
   }
@@ -9428,7 +9555,9 @@ export function filterServiceLifecycleTraceDisplay(
       row,
       normalizedQuery,
       terminalState,
-      normalizedComputeNode
+      normalizedComputeNode,
+      stageKind,
+      terminalReason
     )
   );
   return {
@@ -9441,14 +9570,18 @@ export function filterServiceLifecycleTraceDisplay(
 export function serviceTraceDetailCursorFilters(
   query: string,
   terminalState: DataPanelServiceTraceTerminalFilter,
-  computeNodeId: string
+  computeNodeId: string,
+  stageKind: DataPanelServiceTraceStageFilter = "ALL",
+  terminalReason: DataPanelServiceTraceTerminalReasonFilter = "ALL"
 ): RuntimeDetailCursorFilters {
   const normalizedQuery = query.trim();
   const normalizedComputeNodeId = computeNodeId.trim();
   return {
     ...(normalizedQuery ? { query: normalizedQuery } : {}),
     ...(terminalState !== "ALL" ? { terminalState } : {}),
-    ...(normalizedComputeNodeId ? { computeNodeId: normalizedComputeNodeId } : {})
+    ...(normalizedComputeNodeId ? { computeNodeId: normalizedComputeNodeId } : {}),
+    ...(stageKind !== "ALL" ? { stageKind } : {}),
+    ...(terminalReason !== "ALL" ? { terminalReason } : {})
   };
 }
 
@@ -9466,18 +9599,80 @@ function normalizeServiceTraceTerminalFilter(
   return "ALL";
 }
 
+function normalizeServiceTraceStageFilter(
+  value: string | null | undefined
+): DataPanelServiceTraceStageFilter {
+  const normalized = normalizeServiceTraceCode(value);
+  if (
+    normalized === "INPUT_NETWORK" ||
+    normalized === "COMPUTE_QUEUE" ||
+    normalized === "COMPUTE_EXECUTION" ||
+    normalized === "OUTPUT_NETWORK" ||
+    normalized === "ALL"
+  ) {
+    return normalized;
+  }
+  return "ALL";
+}
+
+function normalizeServiceTraceTerminalReasonFilter(
+  value: string | null | undefined
+): DataPanelServiceTraceTerminalReasonFilter {
+  const normalized = normalizeServiceTraceCode(value);
+  if (
+    normalized === "TOTAL_LATENCY_OBSERVED" ||
+    normalized === "OUTPUT_NETWORK_PENDING" ||
+    normalized === "COMPONENTS_OBSERVED_BUT_TOTAL_MISSING" ||
+    normalized === "NO_COMPONENT_OBSERVATIONS" ||
+    normalized === "ALL"
+  ) {
+    return normalized;
+  }
+  return "ALL";
+}
+
+function normalizeServiceTraceCode(value: string | null | undefined): string {
+  const normalized = (value ?? "")
+    .replace(/[_-]+/g, " ")
+    .trim()
+    .toUpperCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .join("_");
+  return normalized || "ALL";
+}
+
 function serviceLifecycleTraceMatchesFilter(
   row: DataPanelServiceLifecycleTraceRow,
   normalizedQuery: string,
   terminalState: DataPanelServiceTraceTerminalFilter,
-  normalizedComputeNode: string
+  normalizedComputeNode: string,
+  stageKind: DataPanelServiceTraceStageFilter,
+  terminalReason: DataPanelServiceTraceTerminalReasonFilter
 ): boolean {
   if (terminalState !== "ALL" && row.terminalState !== terminalState) {
     return false;
   }
   if (
+    terminalReason !== "ALL" &&
+    normalizeServiceTraceCode(row.terminalStateReason) !== terminalReason
+  ) {
+    return false;
+  }
+  if (
     normalizedComputeNode.length > 0 &&
     normalizeDetailFilter(row.computeNodeId) !== normalizedComputeNode
+  ) {
+    return false;
+  }
+  if (
+    stageKind !== "ALL" &&
+    !row.stages.some(
+      (stage) =>
+        (normalizeServiceTraceCode(stage.stageKind) === stageKind ||
+          normalizeServiceTraceCode(stage.component) === stageKind) &&
+        normalizeServiceTraceCode(stage.stageStatus) !== "UNKNOWN"
+    )
   ) {
     return false;
   }
@@ -9496,6 +9691,7 @@ function serviceLifecycleTraceMatchesFilter(
     row.primaryRouteId,
     row.serviceLabel,
     row.terminalState,
+    row.terminalStateReason,
     row.terminalStateLabel,
     row.computeNodeLabel,
     row.networkLatencyLabel,

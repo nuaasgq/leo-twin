@@ -90,6 +90,10 @@ The backend cursor endpoint also accepts raw `stage_kind` values such as
 `INPUT_NETWORK`, `COMPUTE_QUEUE`, `COMPUTE_EXECUTION`, and `OUTPUT_NETWORK`,
 plus raw `terminal_reason` values such as `TOTAL_LATENCY_OBSERVED` and
 `OUTPUT_NETWORK_PENDING`. These filters are applied before cursor slicing.
+The standalone dashboard exposes the same filters in the service trace browser
+and sends them to the backend cursor endpoint with cursor reset on every filter
+change. Local filtering remains a loading/error fallback and uses the same
+observable-stage rule for `stage_kind`.
 
 ## Lifecycle Stages
 

@@ -575,10 +575,20 @@ describe("runtime detail page selection", () => {
   });
 
   it("builds service trace backend cursor filters", () => {
-    expect(serviceTraceDetailCursorFilters(" route:input ", "COMPLETE", " sat-a ")).toEqual({
+    expect(
+      serviceTraceDetailCursorFilters(
+        " route:input ",
+        "COMPLETE",
+        " sat-a ",
+        "OUTPUT_NETWORK",
+        "TOTAL_LATENCY_OBSERVED"
+      )
+    ).toEqual({
       query: "route:input",
       terminalState: "COMPLETE",
-      computeNodeId: "sat-a"
+      computeNodeId: "sat-a",
+      stageKind: "OUTPUT_NETWORK",
+      terminalReason: "TOTAL_LATENCY_OBSERVED"
     });
     expect(serviceTraceDetailCursorFilters("", "ALL", "")).toEqual({});
   });
@@ -3596,6 +3606,7 @@ describe("buildDataPanelServiceLifecycleTraceDisplay", () => {
       ],
       primaryRouteId: "route:input",
       computeNodeId: "sat-00001",
+      terminalStateReason: "OUTPUT_NETWORK_PENDING",
       terminalStateLabel: "运行中 / OUTPUT_NETWORK_PENDING",
       computeNodeLabel: "算力 sat-00001",
       networkLatencyLabel: "4,000 ms / 0 ms",
@@ -3606,6 +3617,9 @@ describe("buildDataPanelServiceLifecycleTraceDisplay", () => {
     expect(display.items[0].stages).toEqual([
       {
         stageId: "svc-01:input_network",
+        component: "input_network",
+        stageKind: "INPUT_NETWORK",
+        stageStatus: "OBSERVED",
         label: "Input network",
         statusLabel: "已观测",
         durationLabel: "4,000 ms",
@@ -3614,6 +3628,9 @@ describe("buildDataPanelServiceLifecycleTraceDisplay", () => {
       },
       {
         stageId: "svc-01:output_network",
+        component: "output_network",
+        stageKind: "OUTPUT_NETWORK",
+        stageStatus: "PENDING",
         label: "Output network",
         statusLabel: "等待",
         durationLabel: "0 ms",
@@ -3734,9 +3751,21 @@ describe("buildDataPanelServiceLifecycleTraceDisplay", () => {
     ).toEqual(["trace:done"]);
     expect(
       filterServiceLifecycleTraceDisplay(display, {
+        stageKind: "output network"
+      }).items.map((row) => row.traceId)
+    ).toEqual(["trace:done"]);
+    expect(
+      filterServiceLifecycleTraceDisplay(display, {
+        terminalReason: "output-network-pending"
+      }).items.map((row) => row.traceId)
+    ).toEqual(["trace:run"]);
+    expect(
+      filterServiceLifecycleTraceDisplay(display, {
         query: "output network",
         terminalState: "COMPLETE",
-        computeNodeId: "sat-00002"
+        computeNodeId: "sat-00002",
+        stageKind: "OUTPUT_NETWORK",
+        terminalReason: "TOTAL_LATENCY_OBSERVED"
       }).items.map((row) => row.traceId)
     ).toEqual(["trace:done"]);
     expect(filterServiceLifecycleTraceDisplay(display, "")).toBe(display);

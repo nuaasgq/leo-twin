@@ -1896,7 +1896,12 @@ body[data-frontend-surface="dashboard"] .dashboard-page {
 
 .data-panel-service-trace-filters {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) minmax(120px, 0.45fr) minmax(150px, 0.65fr);
+  grid-template-columns:
+    minmax(180px, 1fr)
+    minmax(112px, 0.44fr)
+    minmax(140px, 0.56fr)
+    minmax(132px, 0.52fr)
+    minmax(150px, 0.6fr);
   gap: 8px;
   min-width: 0;
   border: 1px solid #263a48;
