@@ -15,6 +15,7 @@ import {
   RuntimeExportCatalogV1,
   RuntimeExportDiagnosticsBundleV1,
   RuntimeExportPackageCompareV1,
+  RuntimeExportRouteDetailItemV1,
   RuntimeExportRouteDetailPageV1,
   RuntimeExportReviewSummaryV1,
   RuntimeExportRestoreCommandResultV1,
@@ -47,6 +48,7 @@ import {
   loadRuntimeExportDiagnosticsBundle,
   loadRuntimeExportManifest,
   loadRuntimeExportPackageCompare,
+  loadRuntimeExportRouteDetailItem,
   loadRuntimeExportRouteDetailPage,
   loadRuntimeExportReviewSummary,
   loadRuntimeExportRestorePreflight,
@@ -269,6 +271,12 @@ export function App() {
     useState<RuntimeExportDiagnosticsBundleV1 | null>(null);
   const [runtimeExportRouteDetailPage, setRuntimeExportRouteDetailPage] =
     useState<RuntimeExportRouteDetailPageV1 | null>(null);
+  const [runtimeExportRouteDetailItem, setRuntimeExportRouteDetailItem] =
+    useState<RuntimeExportRouteDetailItemV1 | null>(null);
+  const [
+    runtimeExportRouteDetailItemRouteId,
+    setRuntimeExportRouteDetailItemRouteId
+  ] = useState<string | null>(null);
   const [runtimeExportComparePackageId, setRuntimeExportComparePackageId] =
     useState<string | null>(null);
   const [runtimeExportCompareLoading, setRuntimeExportCompareLoading] = useState(false);
@@ -290,6 +298,10 @@ export function App() {
   const [runtimeExportRouteDetailIndexLoading, setRuntimeExportRouteDetailIndexLoading] =
     useState(false);
   const [runtimeExportRouteDetailIndexError, setRuntimeExportRouteDetailIndexError] =
+    useState<string | null>(null);
+  const [runtimeExportRouteDetailItemLoading, setRuntimeExportRouteDetailItemLoading] =
+    useState(false);
+  const [runtimeExportRouteDetailItemError, setRuntimeExportRouteDetailItemError] =
     useState<string | null>(null);
   const [runtimeExportRestorePreflight, setRuntimeExportRestorePreflight] =
     useState<RuntimeExportRestorePreflightV1 | null>(null);
@@ -1074,6 +1086,10 @@ export function App() {
     setRuntimeExportManifestError(null);
     setRuntimeExportDiagnosticsBundleError(null);
     setRuntimeExportRouteDetailIndexError(null);
+    setRuntimeExportRouteDetailItem(null);
+    setRuntimeExportRouteDetailItemRouteId(null);
+    setRuntimeExportRouteDetailItemLoading(false);
+    setRuntimeExportRouteDetailItemError(null);
     setRuntimeExportRestorePreflightError(null);
     setRuntimeExportRestoreCommandError(null);
     setRuntimeExportRestoreResult(null);
@@ -1172,6 +1188,37 @@ export function App() {
     [runtimeExportComparePackageId]
   );
 
+  const refreshRuntimeExportRouteDetailItem = useCallback(
+    async (routeId: string | null) => {
+      const packageId = runtimeExportComparePackageId;
+      const normalizedRouteId = routeId?.trim() ?? "";
+      if (packageId === null || normalizedRouteId.length === 0) {
+        setRuntimeExportRouteDetailItem(null);
+        setRuntimeExportRouteDetailItemRouteId(null);
+        setRuntimeExportRouteDetailItemLoading(false);
+        setRuntimeExportRouteDetailItemError(null);
+        return;
+      }
+      setRuntimeExportRouteDetailItemRouteId(normalizedRouteId);
+      setRuntimeExportRouteDetailItem(null);
+      setRuntimeExportRouteDetailItemLoading(true);
+      setRuntimeExportRouteDetailItemError(null);
+      try {
+        setRuntimeExportRouteDetailItem(
+          await loadRuntimeExportRouteDetailItem(packageId, normalizedRouteId)
+        );
+      } catch (error) {
+        setRuntimeExportRouteDetailItem(null);
+        setRuntimeExportRouteDetailItemError(
+          runtimeExportRouteDetailItemErrorMessage(error)
+        );
+      } finally {
+        setRuntimeExportRouteDetailItemLoading(false);
+      }
+    },
+    [runtimeExportComparePackageId]
+  );
+
   const refreshRuntimeExportCatalog = useCallback(async () => {
     try {
       const catalog = await loadRuntimeExportCatalog();
@@ -1186,6 +1233,10 @@ export function App() {
         setRuntimeExportManifest(null);
         setRuntimeExportDiagnosticsBundle(null);
         setRuntimeExportRouteDetailPage(null);
+        setRuntimeExportRouteDetailItem(null);
+        setRuntimeExportRouteDetailItemRouteId(null);
+        setRuntimeExportRouteDetailItemLoading(false);
+        setRuntimeExportRouteDetailItemError(null);
         setRuntimeExportRestorePreflight(null);
         setRuntimeExportComparePackageId(null);
         setRuntimeExportCompareLoading(false);
@@ -1905,6 +1956,8 @@ export function App() {
               runtimeExportManifest={runtimeExportManifest}
               runtimeExportDiagnosticsBundle={runtimeExportDiagnosticsBundle}
               runtimeExportRouteDetailPage={runtimeExportRouteDetailPage}
+              runtimeExportRouteDetailItem={runtimeExportRouteDetailItem}
+              runtimeExportRouteDetailItemRouteId={runtimeExportRouteDetailItemRouteId}
               runtimeExportComparePackageId={runtimeExportComparePackageId}
               runtimeExportCompareLoading={runtimeExportCompareLoading}
               runtimeExportCompareError={runtimeExportCompareError}
@@ -1918,6 +1971,8 @@ export function App() {
               runtimeExportDiagnosticsBundleError={runtimeExportDiagnosticsBundleError}
               runtimeExportRouteDetailIndexLoading={runtimeExportRouteDetailIndexLoading}
               runtimeExportRouteDetailIndexError={runtimeExportRouteDetailIndexError}
+              runtimeExportRouteDetailItemLoading={runtimeExportRouteDetailItemLoading}
+              runtimeExportRouteDetailItemError={runtimeExportRouteDetailItemError}
               runtimeExportRestorePreflight={runtimeExportRestorePreflight}
               runtimeExportRestorePreflightLoading={runtimeExportRestorePreflightLoading}
               runtimeExportRestorePreflightError={runtimeExportRestorePreflightError}
@@ -1938,6 +1993,7 @@ export function App() {
               onRuntimeExportRouteDetailPageQueryChange={
                 refreshRuntimeExportRouteDetailPage
               }
+              onRuntimeExportRouteDetailItemSelect={refreshRuntimeExportRouteDetailItem}
               onRuntimeExportRestore={restoreRuntimeExportPackage}
               onRuntimeUserDetailSelect={refreshRuntimeUserEntityDetail}
               onRuntimeSatelliteDetailSelect={refreshRuntimeSatelliteEntityDetail}
@@ -3389,6 +3445,11 @@ export function runtimeExportDiagnosticsBundleErrorMessage(error: unknown): stri
 export function runtimeExportRouteDetailIndexErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   return `复盘包路由证据索引加载失败：${message}`;
+}
+
+export function runtimeExportRouteDetailItemErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  return `package route detail load failed: ${message}`;
 }
 
 export function runtimeExportRestorePreflightErrorMessage(error: unknown): string {

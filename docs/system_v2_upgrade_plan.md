@@ -227,6 +227,11 @@ Tasks:
     and bottleneck filters to the dashboard package route evidence drawer. The
     controls call the package-owned route page endpoint instead of filtering
     locally.
+  - Status: T285 adds package-owned exact route detail rendering to the
+    dashboard export review drawer. Selected package route rows now load
+    `/runtime/export/packages/{package_id}/routes/{route_id}` and display the
+    exported route evidence separately from live runtime route-detail
+    comparison.
 
 ### WS4. Compute Network Model v2
 

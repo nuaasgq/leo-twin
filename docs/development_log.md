@@ -13674,3 +13674,53 @@ change.
   - Add selected package route exact-detail rendering from
     `/runtime/export/packages/{package_id}/routes/{route_id}` so package review
     can inspect a route without relying on the live runtime detail endpoint.
+
+## 2026-07-06 - Dashboard Package Route Detail v1
+
+- Branch: `feature/T285-dashboard-package-route-detail-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add package-owned exact route detail rendering to the standalone
+  dashboard export review drawer. Route evidence rows now provide a
+  `package route detail` action that calls
+  `/runtime/export/packages/{package_id}/routes/{route_id}` and displays the
+  exported route evidence summary in the dashboard. The existing live runtime
+  route-detail action remains available as a separate current-runtime
+  comparison. No route model, Event Kernel, packet-level behavior, or result
+  package endpoint contract changed.
+- Changed files/modules:
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/dashboard_model_trust_evidence_workspace_v1.md`
+  - `docs/result_package_contract_v1.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_result_package_contract_v1.py tests/unit/test_user_guide_v2_docs.py -q`
+    - Result: passed, 11 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with bundled Codex Node/Pnpm runtime.
+  - `pnpm --dir frontend test api.test.ts dataPanel.test.ts`
+    - Result: passed, 2 test files and 190 tests.
+  - `git diff --check`
+    - Result: passed for task files. Git reported existing CRLF warnings for
+      the unstaged runtime config drift files.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing large DataPanel chunk
+      warning after minification; no functional build error.
+- Problems encountered:
+  - The first new frontend test expected `Compute service`, while the existing
+    fixture emits `compute service`. The test was corrected to assert the
+    actual backend-style fixture value; production code was unchanged.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - Package route detail rendering displays the exported route row summary; it
+    does not yet provide a deeper multi-section route provenance timeline.
+  - Package detail and live runtime detail are intentionally separate actions,
+    so users still need to click the live action for current-session comparison.
+- Recommended follow-up:
+  - Add a side-by-side package-vs-live route comparison card when both exact
+    details are available for the same route id.

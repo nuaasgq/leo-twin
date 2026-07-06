@@ -145,9 +145,10 @@ Each result package contains:
 The standalone dashboard export review area loads the selected package's
 server-side route evidence page and shows route evidence counts,
 export-window policy, cursor navigation, searchable/filterable route rows, and
-live route-detail lookup actions without rerunning the simulation. The live
-lookup only compares against the current runtime route detail endpoint when the
-same route id is still present.
+package route-detail review without rerunning the simulation. The package
+detail view reads the exported package itself. The separate live lookup only
+compares against the current runtime route detail endpoint when the same route
+id is still present.
 Runtime export rebuilds the package route evidence window with a 5000-row
 maximum; hidden rows beyond that limit are reported in the package policy.
 For package-owned review, use:

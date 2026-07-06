@@ -27,6 +27,8 @@ import {
   buildDataPanelExportManifestInspectorStatus,
   buildDataPanelExportReviewSummaryDisplay,
   buildDataPanelExportReviewSummaryStatus,
+  buildDataPanelExportRouteDetailItemDisplay,
+  buildDataPanelExportRouteDetailItemStatus,
   buildDataPanelExportRouteDetailIndexDisplay,
   buildDataPanelExportRouteDetailPageDisplay,
   buildDataPanelExportRouteDetailIndexStatus,
@@ -2696,6 +2698,93 @@ describe("buildDataPanelExportCompareDisplay", () => {
         packageDetailHref: "/runtime/export/packages/pkg-review/routes/route-b"
       }
     ]);
+  });
+
+  it("summarizes runtime export route detail items for package review", () => {
+    const display = buildDataPanelExportRouteDetailItemDisplay({
+      type: "RUNTIME_EXPORT_ROUTE_DETAIL_ITEM_V1",
+      version: "v1",
+      item_id: "leo_twin.runtime_export_route_detail_item.v1",
+      source: "BACKEND_RUNTIME_EXPORT_PACKAGE",
+      package_id: "pkg-review",
+      index_id: "leo_twin.runtime_export_route_detail_index.v1",
+      route_detail_index_hash:
+        "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+      route_id: "route-a",
+      route: _runtimeExportRouteIndexRoute("route-a", true),
+      item_hash:
+        "sha256:abababababababababababababababababababababababababababababababab"
+    });
+
+    expect(display).toMatchObject({
+      packageId: "pkg-review",
+      routeId: "route-a",
+      tone: "match",
+      statusLabel: "package route detail ready",
+      summaryLabel: "pkg-review / route-a / abababababab",
+      detailHref: "/runtime/export/packages/pkg-review/routes/route-a"
+    });
+    expect(display?.fields).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: "source",
+          value: "BACKEND_RUNTIME_EXPORT_PACKAGE"
+        }),
+        expect.objectContaining({ label: "flow", value: "flow-route-a" }),
+        expect.objectContaining({ label: "business", value: "compute service" }),
+        expect.objectContaining({
+          label: "source -> destination",
+          value: "user-0 -> sat-0"
+        }),
+        expect.objectContaining({ label: "path", value: "user-0 -> sat-0" })
+      ])
+    );
+    expect(
+      buildDataPanelExportRouteDetailItemStatus(
+        display,
+        "pkg-review",
+        "route-a",
+        false,
+        null
+      )
+    ).toBe(display);
+    expect(
+      buildDataPanelExportRouteDetailItemStatus(
+        display,
+        "pkg-review",
+        "route-b",
+        true,
+        null
+      )
+    ).toMatchObject({
+      tone: "pending",
+      statusLabel: "loading package route detail",
+      summaryLabel: "pkg-review / route-b",
+      detailHref: null
+    });
+    expect(
+      buildDataPanelExportRouteDetailItemStatus(
+        display,
+        "pkg-review",
+        "route-b",
+        false,
+        "HTTP 404"
+      )
+    ).toMatchObject({
+      tone: "error",
+      statusLabel: "package route detail load failed",
+      summaryLabel: "pkg-review / route-b",
+      detailHref: "/runtime/export/packages/pkg-review/routes/route-b"
+    });
+    expect(
+      buildDataPanelExportRouteDetailItemStatus(
+        display,
+        "pkg-other",
+        "route-a",
+        false,
+        null
+      )
+    ).toBeNull();
   });
 
   it("summarizes runtime export manifests with catalog and diagnostics integrity", () => {

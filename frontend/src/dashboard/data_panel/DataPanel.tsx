@@ -27,6 +27,7 @@ import {
   RuntimeExportCatalogRecordV1,
   RuntimeExportDiagnosticsBundleV1,
   RuntimeExportPackageCompareV1,
+  RuntimeExportRouteDetailItemV1,
   RuntimeExportRouteDetailIndexRouteV1,
   RuntimeExportRouteDetailIndexV1,
   RuntimeExportRouteDetailPageV1,
@@ -224,6 +225,8 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportDiagnosticsBundle,
   runtimeExportRouteDetailIndex,
   runtimeExportRouteDetailPage,
+  runtimeExportRouteDetailItem,
+  runtimeExportRouteDetailItemRouteId,
   runtimeExportComparePackageId,
   runtimeExportCompareLoading,
   runtimeExportCompareError,
@@ -235,6 +238,8 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportDiagnosticsBundleError,
   runtimeExportRouteDetailIndexLoading,
   runtimeExportRouteDetailIndexError,
+  runtimeExportRouteDetailItemLoading,
+  runtimeExportRouteDetailItemError,
   runtimeExportRestorePreflight,
   runtimeExportRestorePreflightLoading,
   runtimeExportRestorePreflightError,
@@ -251,6 +256,7 @@ export const DataPanel = memo(function DataPanel({
   onUserConfigurationApply,
   onRuntimeExportCompareSelect,
   onRuntimeExportRouteDetailPageQueryChange,
+  onRuntimeExportRouteDetailItemSelect,
   onRuntimeExportRestore,
   onRuntimeUserDetailSelect,
   onRuntimeSatelliteDetailSelect,
@@ -276,6 +282,8 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportDiagnosticsBundle?: RuntimeExportDiagnosticsBundleV1 | null;
   runtimeExportRouteDetailIndex?: RuntimeExportRouteDetailIndexV1 | null;
   runtimeExportRouteDetailPage?: RuntimeExportRouteDetailPageV1 | null;
+  runtimeExportRouteDetailItem?: RuntimeExportRouteDetailItemV1 | null;
+  runtimeExportRouteDetailItemRouteId?: string | null;
   runtimeExportComparePackageId?: string | null;
   runtimeExportCompareLoading?: boolean;
   runtimeExportCompareError?: string | null;
@@ -287,6 +295,8 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportDiagnosticsBundleError?: string | null;
   runtimeExportRouteDetailIndexLoading?: boolean;
   runtimeExportRouteDetailIndexError?: string | null;
+  runtimeExportRouteDetailItemLoading?: boolean;
+  runtimeExportRouteDetailItemError?: string | null;
   runtimeExportRestorePreflight?: RuntimeExportRestorePreflightV1 | null;
   runtimeExportRestorePreflightLoading?: boolean;
   runtimeExportRestorePreflightError?: string | null;
@@ -313,6 +323,7 @@ export const DataPanel = memo(function DataPanel({
   onRuntimeExportRouteDetailPageQueryChange?: (
     request: DataPanelExportRouteDetailPageRequest
   ) => void;
+  onRuntimeExportRouteDetailItemSelect?: (routeId: string | null) => void;
   onRuntimeExportRestore?: (packageId: string) => void;
   onRuntimeUserDetailSelect?: (userId: string | null) => void;
   onRuntimeSatelliteDetailSelect?: (satelliteId: string | null) => void;
@@ -476,6 +487,13 @@ export const DataPanel = memo(function DataPanel({
     runtimeExportComparePackageId,
     runtimeExportRouteDetailIndexLoading,
     runtimeExportRouteDetailIndexError
+  );
+  const exportRouteDetailItemStatus = buildDataPanelExportRouteDetailItemStatus(
+    buildDataPanelExportRouteDetailItemDisplay(runtimeExportRouteDetailItem),
+    runtimeExportComparePackageId,
+    runtimeExportRouteDetailItemRouteId,
+    runtimeExportRouteDetailItemLoading,
+    runtimeExportRouteDetailItemError
   );
   const requestRuntimeExportRouteDetailPage = (
     cursor: number,
@@ -1474,6 +1492,15 @@ export const DataPanel = memo(function DataPanel({
                       <a href={row.packageDetailHref}>package route JSON</a>
                       <button
                         type="button"
+                        disabled={!onRuntimeExportRouteDetailItemSelect}
+                        onClick={() => {
+                          onRuntimeExportRouteDetailItemSelect?.(row.routeId);
+                        }}
+                      >
+                        package route detail
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => {
                           setSelectedRouteDetailId(row.routeId);
                           onRuntimeRouteDetailSelect?.(row.routeId);
@@ -1483,6 +1510,37 @@ export const DataPanel = memo(function DataPanel({
                       </button>
                     </span>
                   ))}
+                </div>
+              ) : null}
+              {exportRouteDetailItemStatus ? (
+                <div
+                  className={`data-panel-export-route-detail-card ${exportRouteDetailItemStatus.tone}`}
+                >
+                  <div className="data-panel-export-diagnostics-header">
+                    <div>
+                      <span>Package route detail</span>
+                      <strong>{exportRouteDetailItemStatus.statusLabel}</strong>
+                      <small>{exportRouteDetailItemStatus.summaryLabel}</small>
+                    </div>
+                    {exportRouteDetailItemStatus.detailHref ? (
+                      <a href={exportRouteDetailItemStatus.detailHref}>
+                        route detail JSON
+                      </a>
+                    ) : null}
+                  </div>
+                  {exportRouteDetailItemStatus.fields.length > 0 ? (
+                    <dl className="data-panel-export-route-detail-fields">
+                      {exportRouteDetailItemStatus.fields.map((field) => (
+                        <div
+                          className={field.tone ?? "normal"}
+                          key={field.label}
+                        >
+                          <dt>{field.label}</dt>
+                          <dd title={field.value}>{field.value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  ) : null}
                 </div>
               ) : null}
             </div>
@@ -9060,6 +9118,26 @@ export interface DataPanelExportRouteDetailPageRequest {
   filters?: DataPanelRouteExplanationFilter;
 }
 
+export interface DataPanelExportRouteDetailItemDisplay {
+  packageId: string;
+  routeId: string;
+  tone: "match" | "different";
+  statusLabel: string;
+  summaryLabel: string;
+  fields: readonly DataPanelDetailInspectorField[];
+  detailHref: string;
+}
+
+export interface DataPanelExportRouteDetailItemStatus {
+  packageId: string | null;
+  routeId: string | null;
+  tone: "match" | "different" | "pending" | "error";
+  statusLabel: string;
+  summaryLabel: string;
+  fields: readonly DataPanelDetailInspectorField[];
+  detailHref: string | null;
+}
+
 export interface DataPanelExportManifestInspectorDisplay {
   packageId: string;
   tone: "match" | "different";
@@ -9410,6 +9488,116 @@ export function buildDataPanelExportRouteDetailPageDisplay(
     canNextPage: page.has_more,
     indexHref: runtimeExportPackageFileHref(page.package_id, "route_detail_index_v1.json")
   };
+}
+
+export function buildDataPanelExportRouteDetailItemDisplay(
+  item: RuntimeExportRouteDetailItemV1 | null | undefined
+): DataPanelExportRouteDetailItemDisplay | null {
+  if (item === null || item === undefined) {
+    return null;
+  }
+  const route = item.route;
+  const available = route.available;
+  return {
+    packageId: item.package_id,
+    routeId: item.route_id,
+    tone: available ? "match" : "different",
+    statusLabel: available
+      ? "package route detail ready"
+      : "package route detail blocked",
+    summaryLabel: `${item.package_id} / ${item.route_id} / ${shortRuntimeHash(
+      item.item_hash
+    )}`,
+    fields: [
+      { label: "source", value: item.source },
+      { label: "index hash", value: shortRuntimeHash(item.route_detail_index_hash) },
+      { label: "flow", value: route.flow_id },
+      { label: "business", value: route.business_label || route.business_type },
+      { label: "source -> destination", value: `${route.source_id} -> ${route.destination_id}` },
+      { label: "selected satellite", value: route.selected_satellite_id || "-" },
+      {
+        label: "next hops",
+        value:
+          route.next_hop_ids.length > 0
+            ? route.next_hop_ids.join(" / ")
+            : route.primary_next_hop_id || "-"
+      },
+      {
+        label: "capacity / demand",
+        value: routeExplanationCapacityDemandLabel(
+          route.capacity_mbps,
+          route.demand_mbps
+        )
+      },
+      {
+        label: "latency / loss",
+        value: `${formatMetricMilliseconds(route.latency_s)} / ${formatRatioPercent(
+          route.loss_proxy_rate
+        )}`,
+        tone: available ? "normal" : "warning"
+      },
+      {
+        label: "pressure",
+        value: formatRatioPercent(Math.max(0, route.route_pressure_proxy)),
+        tone: route.route_pressure_proxy > 1 ? "warning" : "normal"
+      },
+      {
+        label: "bottleneck",
+        value: route.bottleneck_reason_label || route.bottleneck_component,
+        tone: route.bottleneck_component === "NONE" ? "normal" : "warning"
+      },
+      { label: "path", value: route.path_label || route.path.join(" -> ") }
+    ],
+    detailHref: runtimeExportPackageRouteDetailHref(item.package_id, item.route_id)
+  };
+}
+
+export function buildDataPanelExportRouteDetailItemStatus(
+  display: DataPanelExportRouteDetailItemDisplay | null,
+  selectedPackageId: string | null | undefined,
+  selectedRouteId: string | null | undefined,
+  loading = false,
+  error: string | null | undefined = null
+): DataPanelExportRouteDetailItemStatus | null {
+  if (loading) {
+    return {
+      packageId: selectedPackageId ?? null,
+      routeId: selectedRouteId ?? null,
+      tone: "pending",
+      statusLabel: "loading package route detail",
+      summaryLabel: `${selectedPackageId ?? "package"} / ${
+        selectedRouteId ?? "route"
+      }`,
+      fields: [],
+      detailHref: null
+    };
+  }
+  if (error !== null && error !== undefined) {
+    return {
+      packageId: selectedPackageId ?? null,
+      routeId: selectedRouteId ?? null,
+      tone: "error",
+      statusLabel: "package route detail load failed",
+      summaryLabel: `${selectedPackageId ?? "package"} / ${
+        selectedRouteId ?? "route"
+      }`,
+      fields: [{ label: "error", value: error, tone: "warning" }],
+      detailHref:
+        selectedPackageId && selectedRouteId
+          ? runtimeExportPackageRouteDetailHref(selectedPackageId, selectedRouteId)
+          : null
+    };
+  }
+  if (display === null) {
+    return null;
+  }
+  if (selectedPackageId && display.packageId !== selectedPackageId) {
+    return null;
+  }
+  if (selectedRouteId && display.routeId !== selectedRouteId) {
+    return null;
+  }
+  return display;
 }
 
 export function filterRuntimeExportRouteDetailIndexRoutes(
