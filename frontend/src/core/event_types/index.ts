@@ -1371,6 +1371,11 @@ export interface RuntimeExportRouteComparisonReviewReportV1 {
   package_id: string;
   package_dir: string;
   route_comparison_review: RuntimeExportRouteComparisonReviewV1;
+  runtime_export_boundary_alignment_v1?: RuntimeExportBoundaryAlignmentV1;
+  boundary_alignment_hash?: string;
+  boundary_alignment_status?: string;
+  boundary_alignment_warnings?: readonly string[];
+  runtime_export_boundary_hash?: string;
   record_count: number;
   match_count: number;
   different_count: number;

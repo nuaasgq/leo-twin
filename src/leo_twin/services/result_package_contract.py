@@ -795,6 +795,7 @@ def build_runtime_export_route_comparison_review_report_v1(
     package_id: str,
     package_dir: str,
     route_comparison_review: Mapping[str, Any],
+    runtime_export_boundary_alignment: Mapping[str, Any] | None = None,
     records: tuple[Mapping[str, Any], ...] = (),
 ) -> dict[str, object]:
     """Build a deterministic operator report for selected route comparisons."""
@@ -802,6 +803,7 @@ def build_runtime_export_route_comparison_review_report_v1(
     if not isinstance(route_comparison_review, Mapping):
         raise TypeError("route_comparison_review must be a mapping")
     normalized_review = _mapping(route_comparison_review)
+    normalized_alignment = _mapping(runtime_export_boundary_alignment)
     normalized_records = tuple(
         sorted(
             (
@@ -844,6 +846,19 @@ def build_runtime_export_route_comparison_review_report_v1(
         "package_id": str(package_id),
         "package_dir": str(package_dir),
         "route_comparison_review": dict(normalized_review),
+        "runtime_export_boundary_alignment_v1": dict(normalized_alignment),
+        "boundary_alignment_hash": str(
+            normalized_alignment.get("alignment_hash", "")
+        ),
+        "boundary_alignment_status": str(
+            normalized_alignment.get("alignment_status", "")
+        ),
+        "boundary_alignment_warnings": _string_tuple(
+            normalized_alignment.get("warnings")
+        ),
+        "runtime_export_boundary_hash": str(
+            normalized_alignment.get("boundary_hash", "")
+        ),
         "record_count": len(normalized_records),
         "match_count": match_count,
         "different_count": different_count,

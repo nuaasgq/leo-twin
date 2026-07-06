@@ -9689,6 +9689,15 @@ export function buildDataPanelExportRouteComparisonReviewReportDisplay(
     report.error_count === 0 &&
     report.unavailable_count === 0 &&
     report.different_count === 0;
+  const boundaryAlignmentLabels =
+    report.boundary_alignment_hash !== undefined &&
+    report.boundary_alignment_hash.length > 0
+      ? [
+          `boundary alignment ${shortRuntimeHash(report.boundary_alignment_hash)}`,
+          `alignment status ${report.boundary_alignment_status ?? "-"}`,
+          `boundary ${shortRuntimeHash(report.runtime_export_boundary_hash ?? "")}`
+        ]
+      : ["boundary alignment not recorded"];
   const rows: DataPanelExportRouteComparisonReviewReportRow[] = pageRecords
     .map((record) => ({
       routeId: record.route_id,
@@ -9723,6 +9732,7 @@ export function buildDataPanelExportRouteComparisonReviewReportDisplay(
       `different ${formatCount(report.different_count)}`,
       `unavailable ${formatCount(report.unavailable_count)}`,
       `error ${formatCount(report.error_count)}`,
+      ...boundaryAlignmentLabels,
       `ordering ${report.ordering}`
     ],
     recordRows: rows,

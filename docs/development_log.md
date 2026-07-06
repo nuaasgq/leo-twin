@@ -14719,3 +14719,62 @@ change.
   - Extend the result-package review report to include the backend alignment
     hash so archived operator review records can cite the exact compare/
     preflight boundary evidence used during review.
+
+## 2026-07-06 - Export Review Report Boundary Alignment v1
+
+- Branch: `feature/T306-export-review-report-boundary-alignment-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: persist backend boundary-alignment evidence inside saved route
+  comparison review reports. The package-level
+  `POST /runtime/export/packages/{package_id}/route-comparison-review-report`
+  path now performs a read-only restore-preflight lookup, copies
+  `runtime_export_boundary_alignment_v1` into
+  `route_comparison_review_report_v1.json`, and records
+  `boundary_alignment_hash`, `boundary_alignment_status`,
+  `boundary_alignment_warnings`, and `runtime_export_boundary_hash`. The
+  dashboard report summary displays the alignment hash/status and boundary hash
+  when present, while older reports fall back to "boundary alignment not
+  recorded". This task does not alter Event Kernel behavior, restore execution,
+  route recomputation, model recomputation, packet-level simulation, or runtime
+  package reads.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `src/leo_twin/services/result_package_contract.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/dashboard_model_trust_evidence_workspace_v1.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_result_package_contract_v1.py::test_runtime_export_route_comparison_review_report_v1_is_deterministic tests/integration/test_result_package_export_v1.py -q`
+    - Result: passed, 2 tests.
+  - `python -m py_compile src/leo_twin/services/result_package_contract.py examples/integration_demo/control_plane.py`
+    - Result: passed.
+  - `pnpm --dir frontend test dataPanel.test.ts api.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 2 test
+      files and 204 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered:
+  - The normal PowerShell PATH may not expose `node`, so frontend validation
+    used the bundled Codex Node/Pnpm runtime path.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - Reports saved before this task do not contain boundary alignment evidence
+    and are displayed with the fallback "boundary alignment not recorded" label.
+  - `route_comparison_review_report_v1.json` is written into the package
+    directory and catalog, but existing archive zip files are intentionally not
+    rewritten by the save endpoint.
+- Recommended follow-up:
+  - Add a compact export-package audit index that lists manifest hash, boundary
+    alignment hash, route review report hash, diagnostics hash, and package
+    file hashes in one backend-owned artifact for long-term review.

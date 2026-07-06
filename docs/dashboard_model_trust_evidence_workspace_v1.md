@@ -80,7 +80,13 @@ read-only artifact and renders record counts, match/different/unavailable/error
 totals, route detail hash pairs, and operator notes. The report drawer supports
 local status filtering, text search across route id/status/hash/note fields, and
 offset pagination over the saved records. The frontend does not recompute routes
-or download the full `route_detail_index_v1.json` by default.
+or download the full `route_detail_index_v1.json` by default. Saved reports also
+record the backend restore-preflight `runtime_export_boundary_alignment_v1`
+evidence, including alignment hash, alignment status, warnings, and the runtime
+export boundary hash. This binds the operator's route comparison outcome to the
+same config-only restore, config/generated-config compare, persisted-artifact
+read, and no-replay/no-recompute/no-packet boundary used by package
+compare/preflight review.
 7. runtime evidence
 
 Each row has a tone:

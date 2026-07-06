@@ -2341,6 +2341,13 @@ describe("buildDataPanelExportCatalogDisplay", () => {
       package_id: "pkg-review",
       package_dir: "artifacts/runtime_exports/pkg-review",
       route_comparison_review: _runtimeExportRouteComparisonReview(),
+      runtime_export_boundary_alignment_v1: _runtimeExportBoundaryAlignment(),
+      boundary_alignment_hash:
+        "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      boundary_alignment_status: "ALIGNED",
+      boundary_alignment_warnings: [],
+      runtime_export_boundary_hash:
+        "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       record_count: 3,
       match_count: 1,
       different_count: 1,
@@ -2410,6 +2417,9 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         "different 1",
         "unavailable 1",
         "error 0",
+        "boundary alignment cccccccccccc",
+        "alignment status ALIGNED",
+        "boundary bbbbbbbbbbbb",
         "ordering route_id ascending, then comparison_status ascending"
       ],
       recordRows: [

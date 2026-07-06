@@ -909,10 +909,23 @@ class DemoControlPlane:
         catalog = _read_runtime_export_catalog(output_root)
         catalog_record = _runtime_export_catalog_package_record(catalog, package_id)
         package_dir = _runtime_export_catalog_package_dir(output_root, catalog_record)
+        preflight = self.runtime_export_package_restore_preflight(
+            package_id,
+            output_root,
+        )
+        preflight_summary = preflight.get("summary")
+        runtime_export_boundary_alignment: Mapping[str, Any] = {}
+        if isinstance(preflight_summary, Mapping):
+            raw_alignment = preflight_summary.get(
+                "runtime_export_boundary_alignment_v1"
+            )
+            if isinstance(raw_alignment, Mapping):
+                runtime_export_boundary_alignment = raw_alignment
         report = build_runtime_export_route_comparison_review_report_v1(
             package_id=package_id,
             package_dir=str(package_dir),
             route_comparison_review=route_comparison_review,
+            runtime_export_boundary_alignment=runtime_export_boundary_alignment,
             records=tuple(records),
         )
         report_path = package_dir / _RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_FILENAME

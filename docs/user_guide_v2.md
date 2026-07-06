@@ -193,13 +193,15 @@ After using `compare with live`, the package-vs-live route comparison card can
 save the currently displayed comparison into
 `route_comparison_review_report_v1.json`. The saved record includes the
 compared fields, different fields, package route detail hash, live route detail
-hash, status reason, and dashboard operator note. After the save completes, the
-dashboard package review area shows the report artifact from the backend export
-catalog with a direct JSON link and file hash. If the report artifact is
-available, the dashboard loads it read-only and summarizes saved record counts,
-MATCH/DIFFERENT/UNAVAILABLE/ERROR totals, route detail hash pairs, and operator
-notes. The report drawer can filter by status, search route id/status/hash/note
-text, and page through matching records without opening the raw JSON.
+hash, status reason, dashboard operator note, and the backend boundary
+alignment hash/status from the package restore-preflight evidence. After the
+save completes, the dashboard package review area shows the report artifact
+from the backend export catalog with a direct JSON link and file hash. If the
+report artifact is available, the dashboard loads it read-only and summarizes
+saved record counts, MATCH/DIFFERENT/UNAVAILABLE/ERROR totals, route detail
+hash pairs, boundary alignment evidence, and operator notes. The report drawer
+can filter by status, search route id/status/hash/note text, and page through
+matching records without opening the raw JSON.
 For package-owned review, use:
 
 ```powershell
@@ -229,7 +231,9 @@ The first two calls read the exported route detail index artifact. They do not
 require the current runtime to contain the same route id. The POST call writes
 `route_comparison_review_report_v1.json` into the selected package and updates
 the export catalog; it records supplied review outcomes and does not rerun a
-route comparison automatically.
+route comparison automatically. During that explicit save, the backend also
+records the package restore-preflight boundary alignment hash and status so the
+saved operator report can be audited later.
 
 Export catalog:
 

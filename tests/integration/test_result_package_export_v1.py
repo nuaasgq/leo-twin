@@ -210,6 +210,21 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert review_report["package_id"] == package["package_id"]
     assert review_report["record_count"] == 1
     assert review_report["different_count"] == 1
+    assert review_report["runtime_export_boundary_hash"] == (
+        reproducibility_boundary["boundary_hash"]
+    )
+    assert review_report["boundary_alignment_status"] == "ALIGNED"
+    assert review_report["boundary_alignment_warnings"] == ()
+    assert review_report["boundary_alignment_hash"].startswith("sha256:")
+    assert review_report["runtime_export_boundary_alignment_v1"][
+        "alignment_id"
+    ] == "leo_twin.runtime_export_boundary_alignment.v1"
+    assert review_report["runtime_export_boundary_alignment_v1"][
+        "boundary_hash"
+    ] == reproducibility_boundary["boundary_hash"]
+    assert review_report["runtime_export_boundary_alignment_v1"][
+        "preflight_scope"
+    ] == "CONFIG_RESTORE_PREVIEW_ONLY"
     assert review_report["records"][0]["different_fields"] == (
         "latency",
         "bottleneck",

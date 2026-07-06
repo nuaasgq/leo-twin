@@ -262,9 +262,15 @@ package's `route_detail_index_v1.json`, builds
 `route_comparison_review_report_v1.json` with stable ordering and a
 `report_hash`, writes it into the package directory, and updates
 `runtime_export_catalog_v1.json` so the artifact is retrievable through the
-normal `/files/route_comparison_review_report_v1.json` path. The endpoint saves
-selected operator review outcomes only; it does not compute route diffs by
-itself, replay events, recompute routes, or update existing archive zip files.
+normal `/files/route_comparison_review_report_v1.json` path. The report also
+copies the current backend `runtime_export_boundary_alignment_v1` evidence from
+the package restore-preflight path, including `boundary_alignment_hash`,
+`boundary_alignment_status`, `boundary_alignment_warnings`, and
+`runtime_export_boundary_hash`. This lets an archived operator report cite the
+exact compare/preflight boundary evidence used when the report was saved. The
+endpoint saves selected operator review outcomes only; it does not compute
+route diffs by itself, replay events, recompute routes, or update existing
+archive zip files.
 
 ## Diagnostics Bundle
 

@@ -604,6 +604,41 @@ def test_runtime_export_route_comparison_review_report_v1_is_deterministic() -> 
         },
     )
     review = route_index["route_comparison_review"]
+    runtime_export_boundary_alignment = {
+        "type": "RUNTIME_EXPORT_BOUNDARY_ALIGNMENT_V1",
+        "version": "v1",
+        "alignment_id": "leo_twin.runtime_export_boundary_alignment.v1",
+        "source": "BACKEND_RUNTIME_EXPORT_RESTORE_PREFLIGHT",
+        "alignment_scope": "PACKAGE_COMPARE_AND_RESTORE_BOUNDARY",
+        "package_id": "pkg-1",
+        "package_boundary_present": True,
+        "current_boundary_present": False,
+        "boundary_hash": "sha256:boundary-1",
+        "current_boundary_hash": "",
+        "boundary_hash_matches_current": False,
+        "boundary_id_aligned": True,
+        "restore_scope": "CONFIG_ONLY",
+        "compare_scope": "CONFIG_AND_GENERATED_CONFIG",
+        "read_scope": "PERSISTED_ARTIFACTS_ONLY",
+        "preflight_scope": "CONFIG_RESTORE_PREVIEW_ONLY",
+        "compare_scope_aligned": True,
+        "restore_scope_aligned": True,
+        "read_scope_aligned": True,
+        "preflight_scope_aligned": True,
+        "forbidden_behavior_inactive": True,
+        "event_replay_restore": False,
+        "live_event_replay_restore": False,
+        "recompute_on_read": False,
+        "route_recomputation": False,
+        "service_recomputation": False,
+        "package_mutation_on_read": False,
+        "packet_capture": False,
+        "packet_level_simulation": False,
+        "external_simulators": False,
+        "alignment_status": "ALIGNED",
+        "warnings": (),
+        "alignment_hash": "sha256:alignment-1",
+    }
     records = (
         {
             "route_id": "route-1",
@@ -630,12 +665,14 @@ def test_runtime_export_route_comparison_review_report_v1_is_deterministic() -> 
         package_id="pkg-1",
         package_dir="exports/pkg-1",
         route_comparison_review=review,
+        runtime_export_boundary_alignment=runtime_export_boundary_alignment,
         records=records,
     )
     second = build_runtime_export_route_comparison_review_report_v1(
         package_id="pkg-1",
         package_dir="exports/pkg-1",
         route_comparison_review=review,
+        runtime_export_boundary_alignment=runtime_export_boundary_alignment,
         records=tuple(reversed(records)),
     )
 
@@ -656,6 +693,13 @@ def test_runtime_export_route_comparison_review_report_v1_is_deterministic() -> 
     assert first["records"][1]["operator_note"] == (
         "capacity changed after runtime advanced"
     )
+    assert first["runtime_export_boundary_alignment_v1"] == (
+        runtime_export_boundary_alignment
+    )
+    assert first["boundary_alignment_hash"] == "sha256:alignment-1"
+    assert first["boundary_alignment_status"] == "ALIGNED"
+    assert first["boundary_alignment_warnings"] == ()
+    assert first["runtime_export_boundary_hash"] == "sha256:boundary-1"
     assert first["boundary_conditions"] == review["boundary_conditions"]
     assert first["report_hash"].startswith("sha256:")
     assert json.loads(json.dumps(first, sort_keys=True))["report_id"] == (

@@ -294,6 +294,11 @@ Tasks:
   - Status: T296 adds local status filtering, text search, and offset
     pagination to the saved route comparison review report drawer so large
     report artifacts can be inspected without opening raw JSON.
+  - Status: T306 records backend restore-preflight boundary alignment evidence
+    in `route_comparison_review_report_v1.json`, including alignment hash,
+    status, warnings, and runtime export boundary hash. The dashboard summary
+    shows these fields so archived operator route reviews can cite the exact
+    compare/preflight boundary evidence used during save.
 
 ### WS4. Compute Network Model v2
 
