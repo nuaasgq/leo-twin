@@ -16,6 +16,7 @@ The contract covers:
 - satellite detail rows;
 - route and bottleneck rows;
 - communication-compute service lifecycle rows;
+- communication-compute service trace rows;
 - satellite-hosted compute-node resource rows.
 
 This task adds a backend-owned contract and extends existing read-only detail
@@ -56,6 +57,7 @@ The contract records one collection entry for each large detail surface:
 | `satellites` | `/runtime/details/satellites` | `RuntimeSatelliteServiceSummaryV1` | `satellite_id` |
 | `routes` | `/runtime/details/routes` | `RuntimeRouteExplanationSummaryV1` | `route_id` |
 | `services` | `/runtime/details/services` | `RuntimeServiceDetailPageV1` | `task_id` |
+| `service_traces` | `/runtime/details/service-traces` | `RuntimeServiceLifecycleTraceV2` | `trace_id` |
 | `compute_nodes` | `/runtime/details/compute-nodes` | `RuntimeComputeNodeDetailPageV1` | `node_id` |
 
 The existing combined node-card endpoint remains available:
@@ -70,7 +72,14 @@ New endpoints added in this task:
 
 - `/runtime/details/routes`
 - `/runtime/details/services`
+- `/runtime/details/service-traces`
 - `/runtime/details/compute-nodes`
+
+`/runtime/details/service-traces` additionally accepts:
+
+- `query`
+- `terminal_state`
+- `compute_node_id`
 
 The endpoints are read-only observation surfaces. They reuse existing runtime
 snapshot, route explanation, service latency history, and satellite KPI slice

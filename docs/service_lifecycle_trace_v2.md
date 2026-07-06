@@ -45,12 +45,21 @@ Runtime detail APIs now expose a backend exact-detail path for one trace:
 
 `GET /runtime/details/service-traces/{trace_id}`
 
+They also expose a cursor-readable trace page:
+
+`GET /runtime/details/service-traces?cursor=0&limit=100&query=&terminal_state=ALL&compute_node_id=`
+
 The endpoint accepts the `trace:{service_id}` id, normalized `service_id`,
 `task_id`, input flow id, or output flow id. It returns
 `kind=service_trace`, the v2 trace, correlation ids, route explanation rows,
 user detail cards, satellite detail cards, and compute-node detail when
 available. The endpoint is read-only and derives all context from the current
 runtime snapshot plus `service_latency_history_v1`.
+
+The cursor-readable page returns `type=RUNTIME_DETAIL_PAGE`,
+`kind=service_traces`, and a `RuntimeServiceLifecycleTraceV2` summary. It uses
+the same deterministic ordering as the status trace and supports server-side
+filters for text query, raw `terminal_state`, and `compute_node_id`.
 
 The standalone dashboard selection path now calls this exact-detail endpoint
 for a selected service trace. When the backend detail matches the selected

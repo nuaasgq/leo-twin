@@ -385,6 +385,23 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                     )
                 )
                 return
+            if path == "/runtime/details/service-traces":
+                try:
+                    cursor, limit = _detail_query(query, default_limit=100)
+                except ValueError as exc:
+                    self.send_error(400, str(exc))
+                    return
+                filters = _service_trace_filter_query(query)
+                self._send_json(
+                    control_plane.runtime_service_trace_details(
+                        cursor,
+                        limit,
+                        query=filters["query"],
+                        terminal_state=filters["terminal_state"],
+                        compute_node_id=filters["compute_node_id"],
+                    )
+                )
+                return
             if path == "/runtime/details/compute-nodes":
                 try:
                     cursor, limit = _detail_query(query, default_limit=100)
@@ -682,6 +699,14 @@ def _detail_filter_query(query: dict[str, list[str]]) -> dict[str, str]:
             "bottleneck_component",
             "ALL",
         ).strip(),
+    }
+
+
+def _service_trace_filter_query(query: dict[str, list[str]]) -> dict[str, str]:
+    return {
+        "query": _first_query_value(query, "query", "").strip(),
+        "terminal_state": _first_query_value(query, "terminal_state", "ALL").strip(),
+        "compute_node_id": _first_query_value(query, "compute_node_id", "").strip(),
     }
 
 

@@ -251,6 +251,7 @@ def test_runtime_detail_pages_return_deterministic_windows(tmp_path: Path) -> No
     )
     route_first = control_plane.runtime_route_details(cursor=0, limit=2)
     service_first = control_plane.runtime_service_details(cursor=0, limit=2)
+    service_trace_first = control_plane.runtime_service_trace_details(cursor=0, limit=2)
     compute_node_first = control_plane.runtime_compute_node_details(cursor=0, limit=2)
 
     user_first_summary = user_first["summary"]
@@ -362,6 +363,32 @@ def test_runtime_detail_pages_return_deterministic_windows(tmp_path: Path) -> No
         assert service_trace_detail["summary"]["trace"]["task_id"] == first_service_id
         assert service_trace_detail["summary"]["correlation"]["route_count"] >= 0
         assert "flow_ids" in service_trace_detail["summary"]["correlation"]
+
+    assert service_trace_first["type"] == "RUNTIME_DETAIL_PAGE"
+    assert service_trace_first["kind"] == "service_traces"
+    assert service_trace_first["summary"]["version"] == "v2"
+    assert service_trace_first["summary"]["cursor"] == 0
+    assert service_trace_first["summary"]["limit"] == 2
+    if service_trace_first["summary"]["items"]:
+        first_trace = service_trace_first["summary"]["items"][0]
+        first_compute_node_id = first_trace["compute_node_id"]
+        filtered_trace = control_plane.runtime_service_trace_details(
+            cursor=0,
+            limit=2,
+            terminal_state=first_trace["terminal_state"],
+            compute_node_id=first_compute_node_id,
+        )
+        assert filtered_trace["summary"]["filter_terminal_state"] == first_trace[
+            "terminal_state"
+        ]
+        if first_compute_node_id:
+            assert (
+                filtered_trace["summary"]["filter_compute_node_id"]
+                == first_compute_node_id.lower()
+            )
+        assert filtered_trace["summary"]["items"][0]["trace_id"] == first_trace[
+            "trace_id"
+        ]
 
     assert compute_node_first["type"] == "RUNTIME_DETAIL_PAGE"
     assert compute_node_first["kind"] == "compute_nodes"

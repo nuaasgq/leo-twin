@@ -139,7 +139,10 @@ Tasks:
     resource context in scrollable sections. T262 adds local service trace
     browser filters for keyword, backend terminal state, and compute-node id so
     users can locate a communication-compute lifecycle without paging through
-    unrelated trace rows.
+    unrelated trace rows. T263 adds the backend cursor endpoint
+    `/runtime/details/service-traces` plus service-trace collection metadata in
+    `leo_twin.large_detail_pagination_contract.v2`, allowing server-side
+    filtering by query, raw terminal state, and compute-node id.
 
 ### WS3. Network Semantics and KPI Trust v2
 

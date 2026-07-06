@@ -167,13 +167,16 @@ bottleneck component, bottleneck reason, and a compact explanation label. It is
 derived from the runtime snapshot and service history; it does not change route
 selection or simulate packets.
 
-Exact service trace detail:
+Service trace detail APIs:
 
 ```text
+/runtime/details/service-traces?cursor=0&limit=100&query=&terminal_state=ALL&compute_node_id=
 /runtime/details/service-traces/{trace_id}
 ```
 
-The trace detail endpoint accepts a trace id, normalized service id, task id,
+The cursor endpoint returns deterministic `service_lifecycle_trace_v2` windows
+with optional server-side query, raw terminal-state, and compute-node filters.
+The exact trace endpoint accepts a trace id, normalized service id, task id,
 input flow id, or output flow id and returns the backend-owned trace with
 correlated user, route, satellite, and compute-node context.
 

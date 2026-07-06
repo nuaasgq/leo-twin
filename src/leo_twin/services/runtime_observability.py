@@ -114,6 +114,8 @@ def build_runtime_service_lifecycle_trace_v2(
     cursor: int = 0,
     limit: int = 100,
     query: str = "",
+    terminal_state: str = "ALL",
+    compute_node_id: str = "",
 ) -> dict[str, object]:
     """Build deterministic product-level communication-compute service traces."""
 
@@ -121,7 +123,14 @@ def build_runtime_service_lifecycle_trace_v2(
     ordered_items = tuple(sorted(items, key=_service_detail_sort_key))
     all_traces = tuple(_service_lifecycle_trace_item(item) for item in ordered_items)
     filtered_traces = tuple(
-        item for item in all_traces if _detail_item_matches_query(item, query)
+        item
+        for item in all_traces
+        if _service_lifecycle_trace_matches_filter(
+            item,
+            query=query,
+            terminal_state=terminal_state,
+            compute_node_id=compute_node_id,
+        )
     )
     normalized_cursor = _page_cursor(cursor)
     normalized_limit = _page_limit(limit)
@@ -130,6 +139,13 @@ def build_runtime_service_lifecycle_trace_v2(
     ]
     next_cursor = min(len(filtered_traces), normalized_cursor + len(traces))
     filter_query = _normalized_filter_text(query)
+    terminal_filter = _normalized_filter_choice(terminal_state, default="ALL")
+    compute_node_filter = _normalized_filter_text(compute_node_id)
+    filter_applied = _service_lifecycle_trace_filter_is_active(
+        query=query,
+        terminal_state=terminal_state,
+        compute_node_id=compute_node_id,
+    )
     result: dict[str, object] = {
         "version": "v2",
         "contract_id": SERVICE_LIFECYCLE_TRACE_CONTRACT_V2_ID,
@@ -137,7 +153,7 @@ def build_runtime_service_lifecycle_trace_v2(
         "source_summary": "service_latency_history_v1",
         "summary_scope": (
             "FILTERED_SERVICE_LIFECYCLE_TRACE_WINDOW"
-            if filter_query
+            if filter_applied
             else "SERVICE_LIFECYCLE_TRACE_WINDOW"
         ),
         "trace_model": "COMMUNICATION_COMPUTE_COMPONENT_PROXY",
@@ -159,14 +175,19 @@ def build_runtime_service_lifecycle_trace_v2(
         "hidden_trace_count": max(0, len(filtered_traces) - len(traces)),
         "items": traces,
     }
-    if filter_query:
+    if filter_applied:
         result.update(
             {
                 "unfiltered_service_count": len(ordered_items),
-                "filter_query": filter_query,
                 "filter_applied": True,
             }
         )
+        if filter_query:
+            result["filter_query"] = filter_query
+        if terminal_filter != "ALL":
+            result["filter_terminal_state"] = terminal_filter
+        if compute_node_filter:
+            result["filter_compute_node_id"] = compute_node_filter
     return result
 
 
@@ -2280,6 +2301,40 @@ def _detail_item_matches_query(item: Mapping[str, Any], query: str) -> bool:
     if not normalized_query:
         return True
     return normalized_query in " ".join(_filter_text_values(item)).lower()
+
+
+def _service_lifecycle_trace_matches_filter(
+    item: Mapping[str, Any],
+    *,
+    query: str,
+    terminal_state: str,
+    compute_node_id: str,
+) -> bool:
+    if not _detail_item_matches_query(item, query):
+        return False
+    terminal_filter = _normalized_filter_choice(terminal_state, default="ALL")
+    if terminal_filter != "ALL" and _str(item.get("terminal_state")).upper() != terminal_filter:
+        return False
+    compute_node_filter = _normalized_filter_text(compute_node_id)
+    if (
+        compute_node_filter
+        and _normalized_filter_text(item.get("compute_node_id")) != compute_node_filter
+    ):
+        return False
+    return True
+
+
+def _service_lifecycle_trace_filter_is_active(
+    *,
+    query: str,
+    terminal_state: str,
+    compute_node_id: str,
+) -> bool:
+    return (
+        bool(_normalized_filter_text(query))
+        or _normalized_filter_choice(terminal_state, default="ALL") != "ALL"
+        or bool(_normalized_filter_text(compute_node_id))
+    )
 
 
 def _route_explanation_matches_filter(

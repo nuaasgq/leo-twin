@@ -109,6 +109,28 @@ def large_detail_pagination_contract_v2_to_dict(
         ),
         _collection_contract(
             windows,
+            collection="service_traces",
+            window_collection="services",
+            kind="service_traces",
+            label_zh="通信-计算服务 trace",
+            endpoint="/runtime/details/service-traces",
+            summary_type="RuntimeServiceLifecycleTraceV2",
+            item_type="RuntimeServiceLifecycleTraceItemV2",
+            stable_key="trace_id",
+            sort_policy="latest service sample first, task id",
+            count_field="service_count",
+            estimated_total_count=service_count_estimate,
+            default_limit=100,
+            query_parameters=(
+                "cursor",
+                "limit",
+                "query",
+                "terminal_state",
+                "compute_node_id",
+            ),
+        ),
+        _collection_contract(
+            windows,
             collection="compute_nodes",
             kind="compute_nodes",
             label_zh="算力节点资源明细",
@@ -166,6 +188,7 @@ def _collection_contract(
     windows: Mapping[str, Mapping[str, object]],
     *,
     collection: str,
+    window_collection: str | None = None,
     kind: str,
     label_zh: str,
     endpoint: str,
@@ -176,8 +199,9 @@ def _collection_contract(
     count_field: str,
     estimated_total_count: int,
     default_limit: int,
+    query_parameters: tuple[str, ...] = ("cursor", "limit"),
 ) -> dict[str, object]:
-    window = windows[collection]
+    window = windows[window_collection or collection]
     recommended_limit = int(window["max_rows"])
     cursor_required_for_hidden_rows = bool(window["cursor_required_for_hidden_rows"])
     hidden_count_estimate = max(0, estimated_total_count - recommended_limit)
@@ -187,7 +211,7 @@ def _collection_contract(
         "label_zh": label_zh,
         "endpoint": endpoint,
         "http_method": "GET",
-        "query_parameters": ("cursor", "limit"),
+        "query_parameters": query_parameters,
         "response_envelope_type": "RUNTIME_DETAIL_PAGE",
         "summary_type": summary_type,
         "item_type": item_type,

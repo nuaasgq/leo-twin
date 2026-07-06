@@ -261,6 +261,7 @@ def test_backend_derived_summary_is_deterministic_and_frontend_ready() -> None:
         "satellites",
         "routes",
         "services",
+        "service_traces",
         "compute_nodes",
     )
     assert detail_collections["ground_users"]["endpoint"] == (
@@ -268,11 +269,14 @@ def test_backend_derived_summary_is_deterministic_and_frontend_ready() -> None:
     )
     assert detail_collections["routes"]["endpoint"] == "/runtime/details/routes"
     assert detail_collections["services"]["estimated_total_count"] == 1200
+    assert detail_collections["service_traces"]["endpoint"] == (
+        "/runtime/details/service-traces"
+    )
     assert detail_pagination["combined_node_endpoint"]["endpoint"] == (
         "/runtime/details/nodes"
     )
     assert any(
-        "Large detail pagination contract v2 exposes 5 cursor-backed collections"
+        "Large detail pagination contract v2 exposes 6 cursor-backed collections"
         in assumption
         for assumption in first["model_assumptions"]
     )

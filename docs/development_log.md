@@ -12504,3 +12504,56 @@ change.
 - Recommended follow-up:
   - Add stage-kind filters and a per-trace export shortcut once backend trace
     pagination/search semantics are defined.
+
+## 2026-07-06 - Service Trace Server Cursor v2
+
+- Branch: `feature/T263-service-trace-server-cursor-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a backend cursor-readable service trace detail page at
+  `/runtime/details/service-traces`. The endpoint returns
+  `RUNTIME_DETAIL_PAGE kind=service_traces` with a `RuntimeServiceLifecycleTraceV2`
+  summary and supports deterministic server-side filters for `query`, raw
+  `terminal_state`, and `compute_node_id`. The large detail pagination
+  contract now includes a `service_traces` collection that reuses the service
+  detail window budget and declares the new filter parameters. Exact trace
+  detail by id remains available at `/runtime/details/service-traces/{trace_id}`.
+  Event Kernel behavior, runtime advancement, network routing, compute
+  scheduling, packet-level semantics, and frontend rendering remain unchanged.
+- Changed files/modules:
+  - `src/leo_twin/services/runtime_observability.py`
+  - `src/leo_twin/services/detail_pagination_contract.py`
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `tests/unit/test_runtime_observability.py`
+  - `tests/unit/test_large_detail_pagination_contract_v2.py`
+  - `tests/unit/test_backend_derived_summary.py`
+  - `tests/integration/test_live_runtime_streaming.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/service_lifecycle_trace_v2.md`
+  - `docs/large_detail_pagination_contract_v2.md`
+  - `docs/integration_demo.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_runtime_observability.py::test_service_lifecycle_trace_v2_is_backend_owned_and_deterministic tests/integration/test_runtime_session_control.py::test_demo_server_stream_query_parses_cursor_options -q`
+    - Result: passed, 2 tests.
+  - `python -m pytest tests/integration/test_live_runtime_streaming.py::test_runtime_detail_pages_return_deterministic_windows -q`
+    - Result: passed, 1 test.
+  - `python -m pytest tests/unit/test_large_detail_pagination_contract_v2.py tests/unit/test_backend_derived_summary.py -q`
+    - Result: passed, 17 tests.
+  - `python -m pytest tests/unit/test_runtime_observability.py tests/unit/test_large_detail_pagination_contract_v2.py tests/unit/test_backend_derived_summary.py tests/integration/test_live_runtime_streaming.py::test_runtime_detail_pages_return_deterministic_windows tests/integration/test_runtime_session_control.py::test_demo_server_stream_query_parses_cursor_options -q`
+    - Result: passed, 26 tests.
+- Problems encountered:
+  - The existing `service_lifecycle_trace_v2` builder already supported text
+    query and cursor windows, so the task stayed localized to terminal-state
+    and compute-node filters plus demo server routing.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The standalone dashboard still uses local trace filtering from T262. A
+    follow-up frontend task should bind the trace browser to the new server
+    cursor endpoint.
+- Recommended follow-up:
+  - Bind the dashboard service trace browser controls to
+    `/runtime/details/service-traces` so large sessions can search beyond the
+    current status trace window.

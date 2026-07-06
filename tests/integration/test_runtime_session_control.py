@@ -19,6 +19,7 @@ from examples.integration_demo.server import (
     _detail_query,
     _runtime_detail_entity_route,
     _runtime_export_package_route,
+    _service_trace_filter_query,
     _stream_query,
 )
 from leo_twin.core import SimulationKernel, SimulationModule
@@ -1235,6 +1236,22 @@ def test_demo_server_stream_query_parses_cursor_options() -> None:
         "availability": "ALL",
         "business_type": "ALL",
         "bottleneck_component": "ALL",
+    }
+    assert _service_trace_filter_query(
+        {
+            "query": [" route:input "],
+            "terminal_state": ["complete"],
+            "compute_node_id": [" sat-a "],
+        }
+    ) == {
+        "query": "route:input",
+        "terminal_state": "complete",
+        "compute_node_id": "sat-a",
+    }
+    assert _service_trace_filter_query({}) == {
+        "query": "",
+        "terminal_state": "ALL",
+        "compute_node_id": "",
     }
     assert _runtime_detail_entity_route(
         "/runtime/details/service-traces/trace%3Asvc-00-compute_service-00000",

@@ -44,6 +44,19 @@ def test_large_detail_pagination_contract_v2_derives_large_scale_cursors() -> No
     assert collections["routes"]["recommended_limit"] == 96
     assert collections["routes"]["hidden_count_estimate"] == 144
     assert collections["services"]["endpoint"] == "/runtime/details/services"
+    assert collections["service_traces"]["endpoint"] == (
+        "/runtime/details/service-traces"
+    )
+    assert collections["service_traces"]["recommended_limit"] == (
+        collections["services"]["recommended_limit"]
+    )
+    assert collections["service_traces"]["query_parameters"] == (
+        "cursor",
+        "limit",
+        "query",
+        "terminal_state",
+        "compute_node_id",
+    )
     assert collections["compute_nodes"]["endpoint"] == (
         "/runtime/details/compute-nodes"
     )
@@ -94,6 +107,9 @@ def test_large_detail_pagination_contract_v2_reuses_supplied_policies() -> None:
     assert collections["satellites"]["recommended_limit"] == 80
     assert collections["routes"]["recommended_limit"] == 64
     assert collections["services"]["cursor_required_for_hidden_rows"] is True
+    assert collections["service_traces"]["hidden_count_estimate"] == (
+        collections["services"]["hidden_count_estimate"]
+    )
     assert collections["compute_nodes"]["hidden_count_estimate"] == 220
 
 

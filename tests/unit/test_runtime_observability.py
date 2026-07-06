@@ -784,6 +784,33 @@ def test_service_lifecycle_trace_v2_is_backend_owned_and_deterministic() -> None
     assert complete["trace_count"] == 1
     assert complete["items"][0]["terminal_state"] == "COMPLETE"
     assert complete["items"][0]["total_latency_s"] == 6.5
+    running = build_runtime_service_lifecycle_trace_v2(
+        history,
+        terminal_state="RUNNING",
+    )
+    assert running["summary_scope"] == "FILTERED_SERVICE_LIFECYCLE_TRACE_WINDOW"
+    assert running["filter_terminal_state"] == "RUNNING"
+    assert running["trace_count"] == 1
+    assert running["service_count"] == 1
+    assert running["items"][0]["service_id"] == "svc-01-compute_service-00000"
+    by_compute_node = build_runtime_service_lifecycle_trace_v2(
+        history,
+        cursor=0,
+        limit=1,
+        compute_node_id=" SAT-A ",
+    )
+    assert by_compute_node["filter_compute_node_id"] == "sat-a"
+    assert by_compute_node["trace_count"] == 1
+    assert by_compute_node["has_more"] is False
+    assert by_compute_node["items"][0]["terminal_state"] == "COMPLETE"
+    none = build_runtime_service_lifecycle_trace_v2(
+        history,
+        query="sat",
+        terminal_state="INCOMPLETE",
+    )
+    assert none["filter_applied"] is True
+    assert none["trace_count"] == 0
+    assert none["service_count"] == 0
 
 
 def test_runtime_service_trace_detail_correlates_backend_context() -> None:
