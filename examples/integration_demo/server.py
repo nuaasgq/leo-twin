@@ -195,6 +195,26 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                             )
                         )
                         return
+                    if artifact_kind == "service-traces":
+                        try:
+                            cursor, limit = _detail_query(query, default_limit=100)
+                        except ValueError as exc:
+                            self.send_error(400, str(exc))
+                            return
+                        filters = _service_trace_filter_query(query)
+                        self._send_json(
+                            control_plane.runtime_export_package_service_traces(
+                                package_id,
+                                cursor=cursor,
+                                limit=limit,
+                                query=filters["query"],
+                                terminal_state=filters["terminal_state"],
+                                compute_node_id=filters["compute_node_id"],
+                                stage_kind=filters["stage_kind"],
+                                terminal_reason=filters["terminal_reason"],
+                            )
+                        )
+                        return
                     if artifact_kind == "routes":
                         try:
                             cursor, limit = _detail_query(query, default_limit=100)
@@ -791,6 +811,8 @@ def _runtime_export_package_route(
         return parts[0], "restore-preflight", None
     if len(parts) == 2 and parts[1] == "archive":
         return parts[0], "archive", None
+    if len(parts) == 2 and parts[1] == "service-traces":
+        return parts[0], "service-traces", None
     if len(parts) == 2 and parts[1] == "routes":
         return parts[0], "routes", None
     if len(parts) == 3 and parts[1] == "routes":

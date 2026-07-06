@@ -155,7 +155,11 @@ Tasks:
     evidence without replaying the simulation. T298 adds local artifact
     filtering and deterministic local page controls to that export review card
     for trace text, terminal state, compute node, lifecycle stage, and terminal
-    reason while keeping the exported package read-only.
+    reason while keeping the exported package read-only. T299 adds
+    `/runtime/export/packages/{package_id}/service-traces` so persisted result
+    packages can serve deterministic backend pages over their exported
+    `service_lifecycle_trace_v2.json` artifact window without current-runtime
+    lookup, event replay, service recomputation, or package mutation.
 
 ### WS3. Network Semantics and KPI Trust v2
 

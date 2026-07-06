@@ -9,6 +9,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_ROUTE_DETAIL_ITEM_V1_ID,
     RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_V1_ID,
     RUNTIME_EXPORT_ROUTE_DETAIL_PAGE_V1_ID,
+    RUNTIME_EXPORT_SERVICE_TRACE_PAGE_V1_ID,
     RUNTIME_EXPORT_REVIEW_SUMMARY_V1_ID,
     RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID,
     build_runtime_export_diagnostics_bundle_v1,
@@ -17,6 +18,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_route_detail_index_v1,
     build_runtime_export_route_detail_page_v1,
     build_runtime_export_review_summary_v1,
+    build_runtime_export_service_trace_page_v1,
     result_package_contract_v1_to_dict,
     summarize_result_package_record_v1,
 )
@@ -48,6 +50,10 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
     assert "GET /runtime/export" in first["source_endpoints"]
     assert (
         "GET /runtime/export/packages/{package_id}/review-summary"
+        in first["source_endpoints"]
+    )
+    assert (
+        "GET /runtime/export/packages/{package_id}/service-traces"
         in first["source_endpoints"]
     )
     assert "LIVE_EVENT_REPLAY_RESTORE" in first["excluded_semantics"]
@@ -399,6 +405,83 @@ def test_runtime_export_route_detail_page_v1_filters_package_index() -> None:
     assert first["page_hash"].startswith("sha256:")
 
 
+def test_runtime_export_service_trace_page_v1_filters_artifact_window() -> None:
+    trace_export = _service_trace_export()
+
+    first = build_runtime_export_service_trace_page_v1(
+        trace_export,
+        package_id="pkg-1",
+        cursor=0,
+        limit=1,
+        query="route-run",
+        terminal_state="running",
+        compute_node_id=" sat-00003 ",
+        stage_kind="output-network",
+        terminal_reason="output_network_pending",
+    )
+    second = build_runtime_export_service_trace_page_v1(
+        trace_export,
+        package_id="pkg-1",
+        cursor=0,
+        limit=1,
+        query="route-run",
+        terminal_state="running",
+        compute_node_id=" sat-00003 ",
+        stage_kind="output-network",
+        terminal_reason="output_network_pending",
+    )
+
+    assert first == second
+    assert first["page_id"] == RUNTIME_EXPORT_SERVICE_TRACE_PAGE_V1_ID
+    assert first["type"] == "RUNTIME_EXPORT_SERVICE_TRACE_PAGE_V1"
+    assert first["source"] == "BACKEND_RUNTIME_EXPORT_PACKAGE"
+    assert first["package_id"] == "pkg-1"
+    assert first["artifact_window_only"] is True
+    assert first["artifact_type"] == "SERVICE_LIFECYCLE_TRACE_EXPORT_V2"
+    assert first["trace_contract_id"] == (
+        "leo_twin.service_lifecycle_trace_contract.v2"
+    )
+    assert first["trace_model"] == "COMMUNICATION_COMPUTE_COMPONENT_PROXY"
+    assert first["cursor"] == 0
+    assert first["limit"] == 1
+    assert first["next_cursor"] == 1
+    assert first["has_more"] is False
+    assert first["trace_count"] == 1
+    assert first["item_count"] == 1
+    assert first["unfiltered_trace_count"] == 3
+    assert first["complete_trace_count"] == 0
+    assert first["running_trace_count"] == 1
+    assert first["incomplete_trace_count"] == 0
+    assert first["filter_applied"] is True
+    assert first["filters"] == {
+        "query": "route-run",
+        "terminal_state": "RUNNING",
+        "compute_node_id": "sat-00003",
+        "stage_kind": "OUTPUT_NETWORK",
+        "terminal_reason": "OUTPUT_NETWORK_PENDING",
+    }
+    assert first["boundary_conditions"] == (
+        "ARTIFACT_WINDOW_ONLY",
+        "NO_EVENT_REPLAY",
+        "NO_SERVICE_RECOMPUTE",
+        "NO_PACKAGE_MUTATION",
+    )
+    assert first["items"][0]["trace_id"] == "trace:run"
+    assert first["items"][0]["compute_node_id"] == "sat-00003"
+    assert first["page_hash"].startswith("sha256:")
+
+    second_page = build_runtime_export_service_trace_page_v1(
+        trace_export,
+        package_id="pkg-1",
+        cursor=1,
+        limit=1,
+    )
+    assert second_page["trace_count"] == 3
+    assert second_page["item_count"] == 1
+    assert second_page["items"][0]["trace_id"] == "trace:run"
+    assert second_page["has_more"] is True
+
+
 def test_runtime_export_route_detail_item_v1_reads_exact_package_route() -> None:
     route_index = build_runtime_export_route_detail_index_v1(
         package_id="pkg-1",
@@ -568,6 +651,159 @@ def _file(name: str, filename: str, sha256: str) -> dict[str, object]:
         "path": f"exports/pkg-1/{filename}",
         "bytes": 10,
         "sha256": sha256,
+    }
+
+
+def _service_trace_export() -> dict[str, object]:
+    return {
+        "type": "SERVICE_LIFECYCLE_TRACE_EXPORT_V2",
+        "source": "BACKEND_RUNTIME_STATUS",
+        "artifact_policy": "STANDALONE_RUNTIME_EXPORT_ARTIFACT",
+        "summary": {
+            "version": "v2",
+            "contract_id": "leo_twin.service_lifecycle_trace_contract.v2",
+            "source": "SERVICE_LATENCY_HISTORY",
+            "source_summary": "service_latency_history_v1",
+            "summary_scope": "SERVICE_LIFECYCLE_TRACE_WINDOW",
+            "trace_model": "COMMUNICATION_COMPUTE_COMPONENT_PROXY",
+            "cursor": 0,
+            "limit": 100,
+            "next_cursor": 3,
+            "has_more": False,
+            "service_count": 3,
+            "trace_count": 3,
+            "complete_trace_count": 1,
+            "running_trace_count": 1,
+            "incomplete_trace_count": 1,
+            "hidden_trace_count": 0,
+            "items": (
+                _service_trace_item(
+                    trace_id="trace:done",
+                    service_id="svc-done",
+                    task_id="task-done",
+                    input_route_id="route-done-in",
+                    output_route_id="route-done-out",
+                    compute_node_id="sat-00002",
+                    terminal_state="COMPLETE",
+                    terminal_state_reason="TOTAL_LATENCY_OBSERVED",
+                ),
+                _service_trace_item(
+                    trace_id="trace:run",
+                    service_id="svc-run",
+                    task_id="task-run",
+                    input_route_id="route-run-in",
+                    output_route_id="",
+                    compute_node_id="sat-00003",
+                    terminal_state="RUNNING",
+                    terminal_state_reason="OUTPUT_NETWORK_PENDING",
+                ),
+                _service_trace_item(
+                    trace_id="trace:queued",
+                    service_id="svc-queued",
+                    task_id="task-queued",
+                    input_route_id="route-queued-in",
+                    output_route_id="",
+                    compute_node_id="sat-00004",
+                    terminal_state="INCOMPLETE",
+                    terminal_state_reason="NO_COMPONENT_OBSERVATIONS",
+                ),
+            ),
+        },
+    }
+
+
+def _service_trace_item(
+    *,
+    trace_id: str,
+    service_id: str,
+    task_id: str,
+    input_route_id: str,
+    output_route_id: str,
+    compute_node_id: str,
+    terminal_state: str,
+    terminal_state_reason: str,
+) -> dict[str, object]:
+    return {
+        "trace_id": trace_id,
+        "service_id": service_id,
+        "task_id": task_id,
+        "service_class": "COMPUTE_SERVICE",
+        "input_flow_id": f"{service_id}:input",
+        "output_flow_id": f"{service_id}:output",
+        "input_route_id": input_route_id,
+        "output_route_id": output_route_id,
+        "compute_node_id": compute_node_id,
+        "placement_status": "PLACED",
+        "input_network_latency_s": 1.0,
+        "compute_queue_delay_s": 0.25,
+        "compute_execution_delay_s": 2.0,
+        "output_network_latency_s": 1.0 if output_route_id else 0.0,
+        "total_latency_s": 4.25 if terminal_state == "COMPLETE" else 0.0,
+        "terminal_state": terminal_state,
+        "terminal_state_reason": terminal_state_reason,
+        "stage_count": 4,
+        "observed_stage_count": 4 if terminal_state == "COMPLETE" else 3,
+        "pending_stage_count": 0 if terminal_state == "COMPLETE" else 1,
+        "stages": (
+            _service_trace_stage(
+                trace_id,
+                0,
+                "input_network",
+                "NETWORK",
+                "Input network",
+                "OBSERVED",
+                input_route_id,
+            ),
+            _service_trace_stage(
+                trace_id,
+                1,
+                "compute_queue",
+                "COMPUTE_QUEUE",
+                "Compute queue",
+                "OBSERVED",
+                "",
+            ),
+            _service_trace_stage(
+                trace_id,
+                2,
+                "compute_execution",
+                "COMPUTE_EXECUTION",
+                "Compute execution",
+                "OBSERVED",
+                "",
+            ),
+            _service_trace_stage(
+                trace_id,
+                3,
+                "output_network",
+                "NETWORK",
+                "Output network",
+                "OBSERVED" if output_route_id else "PENDING",
+                output_route_id,
+            ),
+        ),
+    }
+
+
+def _service_trace_stage(
+    trace_id: str,
+    stage_index: int,
+    component: str,
+    stage_kind: str,
+    stage_label: str,
+    stage_status: str,
+    route_id: str,
+) -> dict[str, object]:
+    return {
+        "stage_index": stage_index,
+        "stage_id": f"{trace_id}:{component}",
+        "component": component,
+        "stage_kind": stage_kind,
+        "stage_label": stage_label,
+        "stage_status": stage_status,
+        "duration_s": 1.0 if stage_status == "OBSERVED" else 0.0,
+        "flow_id": f"{trace_id}:{component}:flow",
+        "route_id": route_id,
     }
 
 

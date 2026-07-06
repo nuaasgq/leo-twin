@@ -14380,3 +14380,53 @@ change.
 - Recommended follow-up:
   - Add backend-served persisted service-trace artifact pages if result
     packages grow beyond practical frontend memory limits.
+
+## 2026-07-06 - Runtime Export Service Trace Pages v1
+
+- Branch: `feature/T299-runtime-export-service-trace-pages-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a backend-served persisted result-package service trace page
+  endpoint. `RUNTIME_EXPORT_SERVICE_TRACE_PAGE_V1` pages and filters the
+  selected package's `service_lifecycle_trace_v2.json` artifact window by trace
+  text, terminal state, compute node id, lifecycle stage, and terminal reason.
+  The integration demo control plane exposes
+  `/runtime/export/packages/{package_id}/service-traces` through the existing
+  package route parser. The endpoint is read-only, marks
+  `artifact_window_only=true`, and does not inspect the current runtime,
+  replay events, recompute service lifecycle semantics, mutate packages,
+  modify Event Kernel behavior, or introduce packet-level simulation.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/result_package_contract_v1.md`
+  - `docs/service_lifecycle_trace_v2.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_result_package_contract_v1.py -q`
+    - Result: passed, 11 tests.
+  - `python -m pytest tests/integration/test_runtime_session_control.py::test_demo_adapter_serves_persisted_runtime_export_artifacts tests/integration/test_runtime_session_control.py::test_demo_server_stream_query_parses_cursor_options -q`
+    - Result: passed, 2 tests.
+  - `python -m pytest tests/integration/test_result_package_export_v1.py -q`
+    - Result: passed, 1 test.
+  - `python -m pytest tests/unit/test_user_guide_v2_docs.py -q`
+    - Result: passed, 2 tests.
+  - `git diff --check`
+    - Result: passed for task files.
+- Problems encountered:
+  - No product blocker at implementation time. Existing local runtime config
+    drift remains untouched and unstaged: `configs/generated_full_system_demo.json`
+    and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The endpoint pages only the service trace artifact window already exported
+    into `service_lifecycle_trace_v2.json`. If a future package needs traces
+    beyond that window, export creation must persist a larger or sharded trace
+    artifact.
+- Recommended follow-up:
+  - Bind the dashboard export service trace review card to
+    `/runtime/export/packages/{package_id}/service-traces` so large packages do
+    not need to load and filter the full JSON artifact in the browser.

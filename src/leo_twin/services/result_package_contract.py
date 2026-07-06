@@ -22,6 +22,9 @@ RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_V1_ID = (
 RUNTIME_EXPORT_ROUTE_DETAIL_PAGE_V1_ID = (
     "leo_twin.runtime_export_route_detail_page.v1"
 )
+RUNTIME_EXPORT_SERVICE_TRACE_PAGE_V1_ID = (
+    "leo_twin.runtime_export_service_trace_page.v1"
+)
 RUNTIME_EXPORT_ROUTE_DETAIL_ITEM_V1_ID = (
     "leo_twin.runtime_export_route_detail_item.v1"
 )
@@ -78,6 +81,7 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
             "GET /runtime/export/packages/{package_id}",
             "GET /runtime/export/packages/{package_id}/manifest",
             "GET /runtime/export/packages/{package_id}/review-summary",
+            "GET /runtime/export/packages/{package_id}/service-traces",
             "GET /runtime/export/packages/{package_id}/routes",
             "GET /runtime/export/packages/{package_id}/routes/{route_id}",
             "POST /runtime/export/packages/{package_id}/route-comparison-review-report",
@@ -524,6 +528,105 @@ def build_runtime_export_route_detail_page_v1(
             1
             for route in filtered_routes
             if str(route["business_type"]).upper() != "COMPUTE_SERVICE"
+        ),
+        "items": items,
+    }
+    page["page_hash"] = stable_hash_payload(page)
+    return page
+
+
+def build_runtime_export_service_trace_page_v1(
+    service_trace_export: Mapping[str, Any],
+    *,
+    package_id: str = "",
+    cursor: int = 0,
+    limit: int = 100,
+    query: str = "",
+    terminal_state: str = "ALL",
+    compute_node_id: str = "",
+    stage_kind: str = "ALL",
+    terminal_reason: str = "ALL",
+) -> dict[str, object]:
+    """Build a deterministic page from an exported service trace artifact."""
+
+    if not isinstance(service_trace_export, Mapping):
+        raise TypeError("service_trace_export must be a mapping")
+    summary = _mapping(service_trace_export.get("summary"))
+    traces = tuple(
+        _runtime_export_service_trace_record(item)
+        for item in _records(summary.get("items"))
+    )
+    filtered_traces = tuple(
+        trace
+        for trace in traces
+        if _runtime_export_service_trace_matches_filter(
+            trace,
+            query=query,
+            terminal_state=terminal_state,
+            compute_node_id=compute_node_id,
+            stage_kind=stage_kind,
+            terminal_reason=terminal_reason,
+        )
+    )
+    normalized_cursor = _page_cursor(cursor)
+    normalized_limit = _page_limit(limit)
+    items = filtered_traces[normalized_cursor : normalized_cursor + normalized_limit]
+    next_cursor = min(len(filtered_traces), normalized_cursor + len(items))
+    normalized_filters = _runtime_export_service_trace_filter_summary(
+        query=query,
+        terminal_state=terminal_state,
+        compute_node_id=compute_node_id,
+        stage_kind=stage_kind,
+        terminal_reason=terminal_reason,
+    )
+    filter_applied = _runtime_export_service_trace_filter_applied(
+        normalized_filters
+    )
+    page: dict[str, object] = {
+        "type": "RUNTIME_EXPORT_SERVICE_TRACE_PAGE_V1",
+        "version": "v1",
+        "page_id": RUNTIME_EXPORT_SERVICE_TRACE_PAGE_V1_ID,
+        "source": "BACKEND_RUNTIME_EXPORT_PACKAGE",
+        "package_id": str(package_id),
+        "artifact_type": str(service_trace_export.get("type", "")),
+        "artifact_source": str(service_trace_export.get("source", "")),
+        "artifact_policy": str(service_trace_export.get("artifact_policy", "")),
+        "artifact_window_only": True,
+        "trace_contract_id": str(summary.get("contract_id", "")),
+        "trace_model": str(summary.get("trace_model", "")),
+        "source_summary": str(summary.get("source_summary", "")),
+        "summary_scope": str(summary.get("summary_scope", "")),
+        "export_cursor": _integer(summary.get("cursor")),
+        "export_limit": _integer(summary.get("limit")),
+        "export_next_cursor": _integer(summary.get("next_cursor")),
+        "export_has_more": _bool(summary.get("has_more")),
+        "cursor": normalized_cursor,
+        "limit": normalized_limit,
+        "next_cursor": next_cursor,
+        "has_more": next_cursor < len(filtered_traces),
+        "service_count": len(filtered_traces),
+        "trace_count": len(filtered_traces),
+        "item_count": len(items),
+        "unfiltered_trace_count": len(traces),
+        "complete_trace_count": sum(
+            1 for trace in filtered_traces if trace["terminal_state"] == "COMPLETE"
+        ),
+        "running_trace_count": sum(
+            1 for trace in filtered_traces if trace["terminal_state"] == "RUNNING"
+        ),
+        "incomplete_trace_count": sum(
+            1
+            for trace in filtered_traces
+            if trace["terminal_state"] == "INCOMPLETE"
+        ),
+        "hidden_trace_count": max(0, len(filtered_traces) - len(items)),
+        "filter_applied": filter_applied,
+        "filters": normalized_filters,
+        "boundary_conditions": (
+            "ARTIFACT_WINDOW_ONLY",
+            "NO_EVENT_REPLAY",
+            "NO_SERVICE_RECOMPUTE",
+            "NO_PACKAGE_MUTATION",
         ),
         "items": items,
     }
@@ -992,6 +1095,60 @@ def _runtime_export_route_detail_record(
     }
 
 
+def _runtime_export_service_trace_record(
+    item: Mapping[str, Any],
+) -> dict[str, object]:
+    stages = tuple(
+        _runtime_export_service_trace_stage_record(stage)
+        for stage in _records(item.get("stages"))
+    )
+    return {
+        "trace_id": str(item.get("trace_id", "")),
+        "service_id": str(item.get("service_id", "")),
+        "task_id": str(item.get("task_id", "")),
+        "service_class": str(item.get("service_class", "")),
+        "input_flow_id": str(item.get("input_flow_id", "")),
+        "output_flow_id": str(item.get("output_flow_id", "")),
+        "input_route_id": str(item.get("input_route_id", "")),
+        "output_route_id": str(item.get("output_route_id", "")),
+        "compute_node_id": str(item.get("compute_node_id", "")),
+        "placement_status": str(item.get("placement_status", "")),
+        "input_network_latency_s": _number(item.get("input_network_latency_s")),
+        "compute_queue_delay_s": _number(item.get("compute_queue_delay_s")),
+        "compute_execution_delay_s": _number(item.get("compute_execution_delay_s")),
+        "output_network_latency_s": _number(item.get("output_network_latency_s")),
+        "total_latency_s": _number(item.get("total_latency_s")),
+        "terminal_state": _runtime_export_service_trace_code(
+            item.get("terminal_state"),
+            "INCOMPLETE",
+        ),
+        "terminal_state_reason": _runtime_export_service_trace_code(
+            item.get("terminal_state_reason"),
+            "NO_COMPONENT_OBSERVATIONS",
+        ),
+        "stage_count": _integer(item.get("stage_count", len(stages))),
+        "observed_stage_count": _integer(item.get("observed_stage_count")),
+        "pending_stage_count": _integer(item.get("pending_stage_count")),
+        "stages": stages,
+    }
+
+
+def _runtime_export_service_trace_stage_record(
+    stage: Mapping[str, Any],
+) -> dict[str, object]:
+    return {
+        "stage_index": _integer(stage.get("stage_index")),
+        "stage_id": str(stage.get("stage_id", "")),
+        "component": str(stage.get("component", "")),
+        "stage_kind": str(stage.get("stage_kind", "")),
+        "stage_label": str(stage.get("stage_label", "")),
+        "stage_status": str(stage.get("stage_status", "")),
+        "duration_s": _number(stage.get("duration_s")),
+        "flow_id": str(stage.get("flow_id", "")),
+        "route_id": str(stage.get("route_id", "")),
+    }
+
+
 def _runtime_export_route_comparison_report_record(
     record: Mapping[str, Any],
     route_comparison_review: Mapping[str, Any],
@@ -1127,6 +1284,179 @@ def _runtime_export_route_detail_search_text(route: Mapping[str, Any]) -> str:
         str(route.get("explanation_label", "")),
     )
     return " ".join(values).lower()
+
+
+def _runtime_export_service_trace_matches_filter(
+    trace: Mapping[str, Any],
+    *,
+    query: str,
+    terminal_state: str,
+    compute_node_id: str,
+    stage_kind: str,
+    terminal_reason: str,
+) -> bool:
+    normalized_terminal_state = _runtime_export_service_trace_terminal_state(
+        terminal_state
+    )
+    if (
+        normalized_terminal_state != "ALL"
+        and str(trace.get("terminal_state", "")).strip().upper()
+        != normalized_terminal_state
+    ):
+        return False
+    normalized_terminal_reason = _runtime_export_service_trace_terminal_reason(
+        terminal_reason
+    )
+    if (
+        normalized_terminal_reason != "ALL"
+        and _runtime_export_service_trace_code(trace.get("terminal_state_reason"), "")
+        != normalized_terminal_reason
+    ):
+        return False
+    normalized_compute_node = _normalized_search_query(compute_node_id)
+    if normalized_compute_node and _normalized_search_query(
+        str(trace.get("compute_node_id", ""))
+    ) != normalized_compute_node:
+        return False
+    normalized_stage_kind = _runtime_export_service_trace_stage_kind(stage_kind)
+    if normalized_stage_kind != "ALL" and not any(
+        _runtime_export_service_trace_stage_matches_filter(
+            stage,
+            normalized_stage_kind,
+        )
+        for stage in _records(trace.get("stages"))
+    ):
+        return False
+    terms = _search_terms(query)
+    if not terms:
+        return True
+    haystack = _runtime_export_service_trace_search_text(trace)
+    return all(term in haystack for term in terms)
+
+
+def _runtime_export_service_trace_stage_matches_filter(
+    stage: Mapping[str, Any],
+    stage_kind: str,
+) -> bool:
+    return (
+        _runtime_export_service_trace_stage_kind(stage.get("stage_kind")) == stage_kind
+        or _runtime_export_service_trace_stage_kind(stage.get("component"))
+        == stage_kind
+    )
+
+
+def _runtime_export_service_trace_filter_summary(
+    *,
+    query: str,
+    terminal_state: str,
+    compute_node_id: str,
+    stage_kind: str,
+    terminal_reason: str,
+) -> dict[str, str]:
+    return {
+        "query": _normalized_search_query(query),
+        "terminal_state": _runtime_export_service_trace_terminal_state(
+            terminal_state
+        ),
+        "compute_node_id": _normalized_search_query(compute_node_id),
+        "stage_kind": _runtime_export_service_trace_stage_kind(stage_kind),
+        "terminal_reason": _runtime_export_service_trace_terminal_reason(
+            terminal_reason
+        ),
+    }
+
+
+def _runtime_export_service_trace_filter_applied(
+    filters: Mapping[str, Any],
+) -> bool:
+    return (
+        str(filters.get("query", "")).strip() != ""
+        or str(filters.get("terminal_state", "ALL")).upper() != "ALL"
+        or str(filters.get("compute_node_id", "")).strip() != ""
+        or str(filters.get("stage_kind", "ALL")).upper() != "ALL"
+        or str(filters.get("terminal_reason", "ALL")).upper() != "ALL"
+    )
+
+
+def _runtime_export_service_trace_search_text(trace: Mapping[str, Any]) -> str:
+    stages = _records(trace.get("stages"))
+    values = (
+        str(trace.get("trace_id", "")),
+        str(trace.get("service_id", "")),
+        str(trace.get("task_id", "")),
+        str(trace.get("service_class", "")),
+        str(trace.get("input_flow_id", "")),
+        str(trace.get("output_flow_id", "")),
+        str(trace.get("input_route_id", "")),
+        str(trace.get("output_route_id", "")),
+        str(trace.get("compute_node_id", "")),
+        str(trace.get("placement_status", "")),
+        str(trace.get("terminal_state", "")),
+        str(trace.get("terminal_state_reason", "")),
+        *(
+            str(value)
+            for stage in stages
+            for value in (
+                stage.get("stage_id", ""),
+                stage.get("component", ""),
+                stage.get("stage_kind", ""),
+                stage.get("stage_label", ""),
+                stage.get("stage_status", ""),
+                stage.get("flow_id", ""),
+                stage.get("route_id", ""),
+            )
+        ),
+    )
+    return " ".join(values).lower()
+
+
+def _runtime_export_service_trace_terminal_state(value: object) -> str:
+    normalized = _runtime_export_service_trace_code(value, "ALL")
+    if normalized in {"ALL", "RUNNING", "COMPLETE", "INCOMPLETE"}:
+        return normalized
+    return "ALL"
+
+
+def _runtime_export_service_trace_stage_kind(value: object) -> str:
+    normalized = _runtime_export_service_trace_code(value, "ALL")
+    if normalized in {
+        "ALL",
+        "INPUT_NETWORK",
+        "COMPUTE_QUEUE",
+        "COMPUTE_EXECUTION",
+        "OUTPUT_NETWORK",
+    }:
+        return normalized
+    return "ALL"
+
+
+def _runtime_export_service_trace_terminal_reason(value: object) -> str:
+    normalized = _runtime_export_service_trace_code(value, "ALL")
+    if normalized in {
+        "ALL",
+        "TOTAL_LATENCY_OBSERVED",
+        "OUTPUT_NETWORK_PENDING",
+        "COMPONENTS_OBSERVED_BUT_TOTAL_MISSING",
+        "NO_COMPONENT_OBSERVATIONS",
+    }:
+        return normalized
+    return "ALL"
+
+
+def _runtime_export_service_trace_code(value: object, default: str) -> str:
+    normalized = "_".join(
+        part
+        for part in (
+            str(value or default)
+            .replace("_", " ")
+            .replace("-", " ")
+            .strip()
+            .upper()
+            .split()
+        )
+        if part
+    )
+    return normalized or default
 
 
 def _search_terms(query: str) -> tuple[str, ...]:

@@ -51,6 +51,17 @@ This is a read-only package review affordance: it does not replay the
 simulation, call live detail endpoints, mutate the export package, or infer new
 lifecycle semantics in the frontend.
 
+Persisted result packages also expose a backend-served artifact page:
+
+`GET /runtime/export/packages/{package_id}/service-traces?cursor=0&limit=100&query=&terminal_state=ALL&compute_node_id=&stage_kind=ALL&terminal_reason=ALL`
+
+The response type is `RUNTIME_EXPORT_SERVICE_TRACE_PAGE_V1`. It applies the
+same trace text, terminal-state, compute-node, lifecycle-stage, and
+terminal-reason filters to the package-owned `service_lifecycle_trace_v2.json`
+artifact window and returns deterministic page metadata plus a `page_hash`.
+The response marks `artifact_window_only=true`; hidden traces that were not
+exported into the package are not reconstructed by this endpoint.
+
 The dashboard service trace panel also supports selecting one trace and
 correlating it with currently visible user request rows, route explanations,
 satellite resource rows, and compute-node detail rows. The correlation uses the

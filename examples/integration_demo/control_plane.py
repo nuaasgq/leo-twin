@@ -80,6 +80,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_route_detail_index_v1,
     build_runtime_export_route_detail_page_v1,
     build_runtime_export_review_summary_v1,
+    build_runtime_export_service_trace_page_v1,
 )
 from leo_twin.services.scenario_builder import (
     scenario_builder_backend_summary,
@@ -823,6 +824,35 @@ class DemoControlPlane:
             availability=availability,
             business_type=business_type,
             bottleneck_component=bottleneck_component,
+        )
+
+    def runtime_export_package_service_traces(
+        self,
+        package_id: str,
+        output_root: str | Path = "artifacts/runtime_exports",
+        *,
+        cursor: int = 0,
+        limit: int = 100,
+        query: str = "",
+        terminal_state: str = "ALL",
+        compute_node_id: str = "",
+        stage_kind: str = "ALL",
+        terminal_reason: str = "ALL",
+    ) -> dict[str, Any]:
+        service_trace_export = self._runtime_export_package_service_trace_export(
+            package_id,
+            output_root,
+        )
+        return build_runtime_export_service_trace_page_v1(
+            service_trace_export,
+            package_id=package_id,
+            cursor=cursor,
+            limit=limit,
+            query=query,
+            terminal_state=terminal_state,
+            compute_node_id=compute_node_id,
+            stage_kind=stage_kind,
+            terminal_reason=terminal_reason,
         )
 
     def runtime_export_package_route_detail(
@@ -1738,6 +1768,25 @@ class DemoControlPlane:
                 f"runtime export package {package_id!r} has invalid route detail index"
             )
         return route_detail_index
+
+    def _runtime_export_package_service_trace_export(
+        self,
+        package_id: str,
+        output_root: str | Path,
+    ) -> dict[str, Any]:
+        artifact = self.runtime_export_package_artifact(
+            package_id,
+            _SERVICE_LIFECYCLE_TRACE_EXPORT_FILENAME,
+            output_root,
+        )
+        service_trace_export = json.loads(
+            Path(str(artifact["path"])).read_text(encoding="utf-8")
+        )
+        if not isinstance(service_trace_export, dict):
+            raise RuntimeExportArtifactError(
+                f"runtime export package {package_id!r} has invalid service trace export"
+            )
+        return service_trace_export
 
 
 def _runtime_export_restore_control_payload(raw: str | bytes) -> dict[str, Any] | None:

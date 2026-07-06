@@ -194,6 +194,20 @@ cover rows already present in the exported route detail index; if a scenario
 has more than the export limit, the policy and summary fields report the
 remaining hidden route count.
 
+The demo backend also exposes a package-owned service trace page endpoint:
+
+```text
+GET /runtime/export/packages/{package_id}/service-traces
+```
+
+The endpoint returns `RUNTIME_EXPORT_SERVICE_TRACE_PAGE_V1` with cursor, limit,
+optional text query, terminal state, compute node id, lifecycle stage, and
+terminal reason filters. It reads the persisted
+`service_lifecycle_trace_v2.json` artifact and reports
+`artifact_window_only=true`, because it pages and filters only the exported
+trace window already present in the package. It does not inspect the current
+runtime session, replay events, recompute services, or mutate the package.
+
 `route_comparison_review` also declares the deterministic
 `RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1` report template. The
 template defines the selected route comparison record schema, accepted status

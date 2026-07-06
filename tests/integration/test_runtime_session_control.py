@@ -1119,6 +1119,37 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
     )
     assert service_trace["type"] == "SERVICE_LIFECYCLE_TRACE_EXPORT_V2"
     assert service_trace["summary"]["version"] == "v2"
+    service_trace_page = control_plane.runtime_export_package_service_traces(
+        package_id,
+        export_root,
+        cursor=0,
+        limit=1,
+    )
+    assert service_trace_page["type"] == "RUNTIME_EXPORT_SERVICE_TRACE_PAGE_V1"
+    assert service_trace_page["source"] == "BACKEND_RUNTIME_EXPORT_PACKAGE"
+    assert service_trace_page["package_id"] == package_id
+    assert service_trace_page["artifact_window_only"] is True
+    assert service_trace_page["unfiltered_trace_count"] == len(
+        service_trace["summary"]["items"]
+    )
+    assert service_trace_page["item_count"] == min(
+        1,
+        len(service_trace["summary"]["items"]),
+    )
+    assert service_trace_page["page_hash"].startswith("sha256:")
+    filtered_service_trace_page = control_plane.runtime_export_package_service_traces(
+        package_id,
+        export_root,
+        cursor=0,
+        limit=5,
+        terminal_state="RUNNING",
+    )
+    assert filtered_service_trace_page["filters"]["terminal_state"] == "RUNNING"
+    assert filtered_service_trace_page["filter_applied"] is True
+    assert all(
+        item["terminal_state"] == "RUNNING"
+        for item in filtered_service_trace_page["items"]
+    )
     assert (
         Path(str(route_detail_index_artifact["path"])).name
         == "route_detail_index_v1.json"
@@ -1439,6 +1470,9 @@ def test_demo_server_stream_query_parses_cursor_options() -> None:
     assert _runtime_export_package_route(
         "/runtime/export/packages/pkg-1/archive"
     ) == ("pkg-1", "archive", None)
+    assert _runtime_export_package_route(
+        "/runtime/export/packages/pkg%201/service-traces"
+    ) == ("pkg 1", "service-traces", None)
     assert _runtime_export_package_route(
         "/runtime/export/packages/pkg%201/routes"
     ) == ("pkg 1", "routes", None)

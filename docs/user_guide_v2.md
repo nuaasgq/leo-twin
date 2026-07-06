@@ -182,6 +182,7 @@ For package-owned review, use:
 ```powershell
 Invoke-RestMethod "http://127.0.0.1:8765/runtime/export/packages/<package_id>/routes?cursor=0&limit=100"
 Invoke-RestMethod "http://127.0.0.1:8765/runtime/export/packages/<package_id>/routes/<route_id>"
+Invoke-RestMethod "http://127.0.0.1:8765/runtime/export/packages/<package_id>/service-traces?cursor=0&limit=100&terminal_state=RUNNING"
 $body = @{
   records = @(
     @{
