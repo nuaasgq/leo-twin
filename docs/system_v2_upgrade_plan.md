@@ -124,7 +124,10 @@ Tasks:
     runtime export artifact so offline result packages can inspect the same
     backend-owned lifecycle trace without parsing `config_snapshot.json`. T257
     binds `service_lifecycle_trace_v2` into the standalone dashboard service
-    section as backend-owned trace rows and stage segments.
+    section as backend-owned trace rows and stage segments. T258 adds selectable
+    service trace rows and a correlation inspector that links one trace to
+    visible user, route, satellite, and compute-node context through backend
+    flow ids, route ids, and compute node ids.
 
 ### WS3. Network Semantics and KPI Trust v2
 

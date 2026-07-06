@@ -39,6 +39,7 @@ import {
   buildDataPanelSatelliteResourceHistory,
   buildDataPanelServiceLatencyDisplay,
   buildDataPanelServiceLifecycleTraceDisplay,
+  buildServiceTraceCorrelationInspector,
   buildDataPanelServiceDetailRows,
   buildDataPanelServiceLatencyRows,
   buildDataPanelComputeNodeDetailRows,
@@ -76,6 +77,7 @@ import {
   selectRuntimeComputeNodeDetailPage,
   selectRouteExplanationRow,
   selectServiceDetailRow,
+  selectServiceLifecycleTraceRow,
   selectRuntimeRouteExplanationSummary,
   selectRuntimeSatelliteDetailCard,
   selectRuntimeSatelliteServiceSummary,
@@ -3524,6 +3526,15 @@ describe("buildDataPanelServiceLifecycleTraceDisplay", () => {
       traceId: "trace:svc-01",
       serviceId: "svc-01-compute_service-00000",
       serviceLabel: "...e_service-00000",
+      inputFlowId: "svc-01-compute_service-00000-input",
+      outputFlowId: "svc-01-compute_service-00000-output",
+      routeIds: ["route:input"],
+      flowIds: [
+        "svc-01-compute_service-00000-input",
+        "svc-01-compute_service-00000-output"
+      ],
+      primaryRouteId: "route:input",
+      computeNodeId: "sat-00001",
       terminalStateLabel: "运行中 / OUTPUT_NETWORK_PENDING",
       computeNodeLabel: "算力 sat-00001",
       networkLatencyLabel: "4,000 ms / 0 ms",
@@ -3549,6 +3560,148 @@ describe("buildDataPanelServiceLifecycleTraceDisplay", () => {
           "output_network@10s=0 ms PENDING flow=svc-01-compute_service-00000-output"
       }
     ]);
+  });
+
+  it("correlates a selected trace with user, route, satellite, and compute rows", () => {
+    const display = buildDataPanelServiceLifecycleTraceDisplay({
+      version: "v2",
+      source: "SERVICE_LATENCY_HISTORY",
+      source_summary: "service_latency_history_v1",
+      summary_scope: "SERVICE_LIFECYCLE_TRACE_WINDOW",
+      cursor: 0,
+      limit: 100,
+      next_cursor: 1,
+      has_more: false,
+      service_count: 1,
+      trace_count: 1,
+      complete_trace_count: 1,
+      running_trace_count: 0,
+      incomplete_trace_count: 0,
+      hidden_trace_count: 0,
+      items: [
+        {
+          trace_id: "trace:svc-02",
+          service_id: "svc-02-compute_service-00000",
+          task_id: "svc-02-compute_service-00000-task",
+          service_class: "COMPUTE_SERVICE",
+          input_flow_id: "svc-02-compute_service-00000-input",
+          output_flow_id: "svc-02-compute_service-00000-output",
+          input_route_id: "route:input-02",
+          output_route_id: "route:output-02",
+          compute_node_id: "sat-00002",
+          placement_status: "PLACED",
+          first_sample_sim_time: 2,
+          last_sample_sim_time: 9,
+          input_network_latency_s: 1,
+          compute_queue_delay_s: 0.2,
+          compute_execution_delay_s: 3,
+          output_network_latency_s: 1.5,
+          total_latency_s: 5.7,
+          terminal_state: "COMPLETE",
+          terminal_state_reason: "TOTAL_LATENCY_OBSERVED",
+          stage_count: 4,
+          observed_stage_count: 4,
+          pending_stage_count: 0,
+          stages: []
+        }
+      ]
+    });
+    const selected = selectServiceLifecycleTraceRow(
+      display.items,
+      "trace:svc-02"
+    );
+    const inspector = buildServiceTraceCorrelationInspector(
+      selected,
+      {
+        sourceLabel: "users",
+        summaryLabel: "1 user",
+        items: [
+          {
+            userId: "user-7",
+            platformTypeLabel: "terminal",
+            communicationLabel: "1 / 1 routes",
+            computeLabel: "1 compute",
+            networkQueueLabel: "empty",
+            selectedSatelliteId: "sat-00002",
+            destinationId: "sat-00002",
+            placementLabel: "sat-00002",
+            statusLabel: "ACTIVE",
+            latencyCapacityLabel: "1 s / 10 Mbps",
+            serviceLabel: "svc-02-compute_service-00000-input",
+            pathLabel: "route:input-02: user-7 -> sat-00002"
+          }
+        ]
+      },
+      {
+        sourceLabel: "routes",
+        items: [
+          {
+            routeId: "route:input-02",
+            flowId: "svc-02-compute_service-00000-input",
+            available: true,
+            availabilityLabel: "available",
+            businessType: "COMPUTE_SERVICE",
+            businessLabel: "compute",
+            nextHopLabel: "sat-00002",
+            capacityDemandLabel: "10 / 5 Mbps",
+            pressureLabel: "50%",
+            bottleneckComponent: "NONE",
+            bottleneckLabel: "none",
+            explanationLabel: "route ready",
+            pathLabel: "user-7 -> sat-00002 -> compute"
+          }
+        ]
+      },
+      {
+        sourceLabel: "satellites",
+        summaryLabel: "1 satellite",
+        items: [
+          {
+            satelliteId: "sat-00002",
+            statusLabel: "ACTIVE",
+            loadPercent: 42,
+            loadLabel: "42%",
+            serviceObjectLabel: "user-7",
+            nextHopLabel: "compute",
+            cpuFp32Label: "4 / 10 GFLOPS",
+            cpuFp64Label: "0 / 2 GFLOPS",
+            gpuLabel: "0 / 1 TFLOPS",
+            npuLabel: "0 / 1 TOPS",
+            memoryStorageLabel: "1 / 4 GB",
+            taskLabel: "1 running",
+            networkLabel: "1 link"
+          }
+        ]
+      },
+      {
+        sourceLabel: "compute",
+        summaryLabel: "1 node",
+        items: [
+          {
+            nodeId: "sat-00002",
+            statusLabel: "BUSY",
+            loadLabel: "42%",
+            fp32Label: "4 / 10 GFLOPS",
+            acceleratorLabel: "GPU 0 / 1 TFLOPS",
+            memoryStorageLabel: "1 / 4 GB",
+            taskLabel: "1 running",
+            traceTitle: "node=sat-00002"
+          }
+        ]
+      }
+    );
+
+    expect(selected?.serviceId).toBe("svc-02-compute_service-00000");
+    expect(inspector).toMatchObject({
+      title: "服务 trace ...e_service-00000",
+      subtitle: "完成 / TOTAL_LATENCY_OBSERVED",
+      fields: expect.arrayContaining([
+        { label: "用户", value: "user-7 / svc-02-compute_service-00000-input", tone: "resource" },
+        { label: "卫星", value: "sat-00002 / 42%", tone: "resource" },
+        { label: "算力节点", value: "sat-00002 / 42%", tone: "resource" },
+        { label: "下一跳", value: "sat-00002" }
+      ])
+    });
   });
 
   it("returns a backend waiting state before trace v2 arrives", () => {

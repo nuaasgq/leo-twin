@@ -35,6 +35,12 @@ field to render service rows and stage segments for input network, compute
 queue, compute execution, and output network. The dashboard does not infer
 lifecycle semantics locally; it only formats the backend-owned trace.
 
+The dashboard service trace panel also supports selecting one trace and
+correlating it with currently visible user request rows, route explanations,
+satellite resource rows, and compute-node detail rows. The correlation uses the
+backend trace's flow ids, route ids, and compute node id; it does not create new
+simulation state.
+
 ## Lifecycle Stages
 
 Each trace row exposes these ordered stages:

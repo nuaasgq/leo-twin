@@ -12279,3 +12279,43 @@ change.
   - Add a dedicated service trace drawer that can correlate one trace with user
     request rows, selected satellite resources, route explanation, and compute
     node detail.
+
+## 2026-07-06 - Dashboard Service Trace Correlation v2
+
+- Branch: `feature/T258-dashboard-service-trace-correlation-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: improve the standalone dashboard service trace surface by making
+  `service_lifecycle_trace_v2` rows selectable and correlating the selected
+  trace with visible user request rows, route explanation rows, satellite
+  resource rows, and compute-node detail rows. Selection also drives the
+  existing service, route, compute-node, and satellite detail callbacks when
+  the trace carries matching backend ids. This is a frontend semantic alignment
+  task only; backend runtime behavior, Event Kernel behavior, network routing,
+  compute scheduling, packet-level semantics, and result export formats remain
+  unchanged.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/service_lifecycle_trace_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed, 146 tests.
+  - `pnpm --dir frontend test`
+    - Result: passed, 356 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite reported the existing large DataPanel chunk warning.
+- Problems encountered:
+  - The default shell PATH still does not expose Node.js. Validation was run
+    with the Codex bundled Node.js and pnpm paths prepended to PATH.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - Correlation is limited to rows currently available in the dashboard window.
+    Large-scale hidden rows still require backend cursor navigation before they
+    can appear in the correlation inspector.
+- Recommended follow-up:
+  - Add backend-paged exact service trace detail endpoints so one selected trace
+    can fetch full user, route, satellite, and compute context even when those
+    rows are outside the current dashboard window.

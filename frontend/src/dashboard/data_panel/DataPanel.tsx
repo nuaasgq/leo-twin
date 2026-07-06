@@ -297,6 +297,9 @@ export const DataPanel = memo(function DataPanel({
   const [selectedServiceDetailId, setSelectedServiceDetailId] = useState<string | null>(
     null
   );
+  const [selectedServiceTraceId, setSelectedServiceTraceId] = useState<string | null>(
+    null
+  );
   const [selectedComputeNodeDetailId, setSelectedComputeNodeDetailId] = useState<
     string | null
   >(null);
@@ -434,6 +437,10 @@ export const DataPanel = memo(function DataPanel({
   const serviceLifecycleTraceDisplay = buildDataPanelServiceLifecycleTraceDisplay(
     runtimeStatus.service_lifecycle_trace_v2
   );
+  const selectedServiceTraceRow = selectServiceLifecycleTraceRow(
+    serviceLifecycleTraceDisplay.items,
+    selectedServiceTraceId
+  );
   const serviceDetailPage = selectRuntimeServiceDetailPage(runtimeDetailPages);
   const serviceDetailRows = buildDataPanelServiceDetailRows(
     serviceDetailPage,
@@ -513,6 +520,13 @@ export const DataPanel = memo(function DataPanel({
     snapshot,
     runtimeStatus.satellite_kpi_slices_v1,
     satelliteServiceSummary
+  );
+  const serviceTraceCorrelationInspector = buildServiceTraceCorrelationInspector(
+    selectedServiceTraceRow,
+    userBusinessRequests,
+    routeExplanations,
+    satelliteResourceRows,
+    computeNodeDetailRows
   );
   const userDetailWindowNote = buildRuntimeDetailWindowNote(
     userRequestSummary,
@@ -1530,7 +1544,27 @@ export const DataPanel = memo(function DataPanel({
               onRuntimeServiceDetailSelect?.(row.serviceId);
             }}
           />
-          <ServiceLifecycleTracePanel display={serviceLifecycleTraceDisplay} />
+          <ServiceLifecycleTracePanel
+            display={serviceLifecycleTraceDisplay}
+            selectedTraceId={selectedServiceTraceRow?.traceId ?? null}
+            onSelect={(row) => {
+              setSelectedServiceTraceId(row.traceId);
+              setSelectedServiceDetailId(row.serviceId);
+              onRuntimeServiceDetailSelect?.(row.serviceId);
+              if (row.primaryRouteId) {
+                setSelectedRouteDetailId(row.primaryRouteId);
+                onRuntimeRouteDetailSelect?.(row.primaryRouteId);
+              }
+              if (row.computeNodeId) {
+                setSelectedComputeNodeDetailId(row.computeNodeId);
+                onRuntimeComputeNodeDetailSelect?.(row.computeNodeId);
+                if (row.computeNodeId.startsWith("sat-")) {
+                  setSelectedDetailSatelliteId(row.computeNodeId);
+                  onRuntimeSatelliteDetailSelect?.(row.computeNodeId);
+                }
+              }
+            }}
+          />
           <TopComputeNodeTable rows={topComputeNodes} />
           <ComputeNodeDetailPageTable
             rows={computeNodeDetailRows}
@@ -1549,7 +1583,11 @@ export const DataPanel = memo(function DataPanel({
             }}
           />
           <ExactDetailInspectorGrid
-            items={[displayedServiceDetailInspector, displayedComputeNodeDetailInspector]}
+            items={[
+              displayedServiceDetailInspector,
+              serviceTraceCorrelationInspector,
+              displayedComputeNodeDetailInspector
+            ]}
           />
           <div className="data-panel-chart-body compact">
             {computePool.totalTflops > 0 ? (
@@ -2433,9 +2471,13 @@ function ServiceDetailPageTable({
 }
 
 function ServiceLifecycleTracePanel({
-  display
+  display,
+  selectedTraceId,
+  onSelect
 }: {
   display: DataPanelServiceLifecycleTraceDisplay;
+  selectedTraceId?: string | null;
+  onSelect?: (row: DataPanelServiceLifecycleTraceRow) => void;
 }) {
   if (display.items.length === 0) {
     return (
@@ -2464,14 +2506,22 @@ function ServiceLifecycleTracePanel({
         <span>总时延</span>
       </div>
       {display.items.map((row) => (
-        <div className="data-panel-route-row" key={row.traceId} title={row.traceTitle}>
+        <button
+          type="button"
+          className={`data-panel-route-row ${
+            row.traceId === selectedTraceId ? "selected" : ""
+          }`}
+          key={row.traceId}
+          title={row.traceTitle}
+          onClick={() => onSelect?.(row)}
+        >
           <span>{row.serviceLabel}</span>
           <span>{row.terminalStateLabel}</span>
           <span>{row.computeNodeLabel}</span>
           <span>{row.networkLatencyLabel}</span>
           <span>{row.computeLatencyLabel}</span>
           <span>{row.totalLatencyLabel}</span>
-        </div>
+        </button>
       ))}
       <div className="data-panel-service-timeline" aria-label="服务生命周期阶段">
         {display.items.flatMap((row) =>
@@ -4535,6 +4585,19 @@ export function selectServiceDetailRow(
   return rows.find((row) => row.serviceId === selectedServiceId) ?? rows[0] ?? null;
 }
 
+export function selectServiceLifecycleTraceRow(
+  rows: readonly DataPanelServiceLifecycleTraceRow[],
+  selectedTraceId: string | null | undefined
+): DataPanelServiceLifecycleTraceRow | null {
+  return (
+    rows.find(
+      (row) => row.traceId === selectedTraceId || row.serviceId === selectedTraceId
+    ) ??
+    rows[0] ??
+    null
+  );
+}
+
 export function selectComputeNodeDetailRow(
   rows: readonly DataPanelComputeNodeDetailRow[],
   selectedNodeId: string | null | undefined
@@ -4940,6 +5003,167 @@ export function buildServiceLifecycleDetailInspector(
       { label: "总时延", value: row.totalLatencyLabel }
     ]
   };
+}
+
+export function buildServiceTraceCorrelationInspector(
+  trace: DataPanelServiceLifecycleTraceRow | null | undefined,
+  users: UserBusinessRequestRows,
+  routes: DataPanelRouteExplanationRows,
+  satellites: SatelliteResourceRows,
+  computeNodes: DataPanelComputeNodeDetailRows
+): DataPanelDetailInspector {
+  if (trace === null || trace === undefined) {
+    return {
+      title: "服务 trace 关联",
+      subtitle: "选择一条 service_lifecycle_trace_v2",
+      fields: []
+    };
+  }
+  const matchedRoutes = routes.items.filter((route) =>
+    routeMatchesServiceTrace(route, trace)
+  );
+  const matchedUsers = users.items.filter((user) =>
+    userMatchesServiceTrace(user, trace, matchedRoutes)
+  );
+  const matchedSatellites = satellites.items.filter((satellite) =>
+    satelliteMatchesServiceTrace(satellite, trace, matchedRoutes, matchedUsers)
+  );
+  const computeNode =
+    computeNodes.items.find((node) => node.nodeId === trace.computeNodeId) ?? null;
+  const primaryRoute = matchedRoutes[0] ?? null;
+  const primaryUser = matchedUsers[0] ?? null;
+  const primarySatellite = matchedSatellites[0] ?? null;
+  return {
+    title: `服务 trace ${trace.serviceLabel}`,
+    subtitle: trace.terminalStateLabel,
+    fields: [
+      { label: "服务", value: trace.serviceId },
+      { label: "任务", value: trace.taskId || "无任务 id" },
+      {
+        label: "流",
+        value: trace.flowIds.length > 0 ? trace.flowIds.join(" / ") : "无流 id"
+      },
+      {
+        label: "路由",
+        value:
+          matchedRoutes.length > 0
+            ? matchedRoutes.map((route) => route.routeId).join(" / ")
+            : trace.routeIds.join(" / ") || "无路由",
+        tone: matchedRoutes.length > 0 ? "resource" : "warning"
+      },
+      {
+        label: "用户",
+        value: primaryUser
+          ? `${primaryUser.userId} / ${primaryUser.serviceLabel}`
+          : "未在当前用户窗口匹配",
+        tone: primaryUser ? "resource" : "warning"
+      },
+      {
+        label: "卫星",
+        value: primarySatellite
+          ? `${primarySatellite.satelliteId} / ${primarySatellite.loadLabel}`
+          : "未在当前卫星窗口匹配",
+        tone: primarySatellite ? "resource" : "warning"
+      },
+      {
+        label: "算力节点",
+        value: computeNode
+          ? `${computeNode.nodeId} / ${computeNode.loadLabel}`
+          : trace.computeNodeId || "未放置",
+        tone: computeNode || trace.computeNodeId ? "resource" : "warning"
+      },
+      {
+        label: "下一跳",
+        value: primaryRoute?.nextHopLabel ?? primarySatellite?.nextHopLabel ?? "未知"
+      },
+      {
+        label: "网络",
+        value: trace.networkLatencyLabel
+      },
+      {
+        label: "计算",
+        value: trace.computeLatencyLabel,
+        tone: trace.computeNodeId ? "resource" : "warning"
+      },
+      {
+        label: "阶段",
+        value: trace.stages
+          .map((stage) => `${stage.label}:${stage.statusLabel}`)
+          .join(" / ")
+      }
+    ]
+  };
+}
+
+function routeMatchesServiceTrace(
+  route: DataPanelRouteExplanationRow,
+  trace: DataPanelServiceLifecycleTraceRow
+): boolean {
+  return (
+    trace.routeIds.includes(route.routeId) ||
+    trace.flowIds.includes(route.flowId) ||
+    traceMatchValues(trace).some((value) =>
+      [route.routeId, route.flowId, route.pathLabel].some((candidate) =>
+        candidate.includes(value)
+      )
+    )
+  );
+}
+
+function userMatchesServiceTrace(
+  user: UserBusinessRequestRow,
+  trace: DataPanelServiceLifecycleTraceRow,
+  matchedRoutes: readonly DataPanelRouteExplanationRow[]
+): boolean {
+  const routeIds = matchedRoutes.map((route) => route.routeId);
+  const flowIds = matchedRoutes.map((route) => route.flowId);
+  const candidates = [
+    user.serviceLabel,
+    user.pathLabel,
+    user.selectedSatelliteId,
+    user.destinationId,
+    ...routeIds,
+    ...flowIds
+  ];
+  return traceMatchValues(trace).some((value) =>
+    candidates.some((candidate) => candidate.includes(value))
+  );
+}
+
+function satelliteMatchesServiceTrace(
+  satellite: SatelliteResourceRow,
+  trace: DataPanelServiceLifecycleTraceRow,
+  matchedRoutes: readonly DataPanelRouteExplanationRow[],
+  matchedUsers: readonly UserBusinessRequestRow[]
+): boolean {
+  if (satellite.satelliteId === trace.computeNodeId) {
+    return true;
+  }
+  const candidates = [
+    satellite.satelliteId,
+    satellite.serviceObjectLabel,
+    satellite.nextHopLabel,
+    satellite.taskLabel,
+    ...matchedRoutes.map((route) => route.pathLabel),
+    ...matchedUsers.map((user) => user.selectedSatelliteId)
+  ];
+  return traceMatchValues(trace).some((value) =>
+    candidates.some((candidate) => candidate.includes(value))
+  );
+}
+
+function traceMatchValues(trace: DataPanelServiceLifecycleTraceRow): readonly string[] {
+  return uniqueStrings([
+    trace.serviceId,
+    trace.taskId,
+    trace.computeNodeId,
+    trace.inputFlowId,
+    trace.outputFlowId,
+    trace.inputRouteId,
+    trace.outputRouteId,
+    ...trace.routeIds,
+    ...trace.flowIds
+  ]);
 }
 
 export function buildComputeNodeExactDetailInspector(
@@ -6227,6 +6451,20 @@ function compactTaskId(taskId: string): string {
     return taskId;
   }
   return `...${taskId.slice(-15)}`;
+}
+
+function uniqueStrings(values: readonly string[]): readonly string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const value of values) {
+    const normalized = value.trim();
+    if (!normalized || seen.has(normalized)) {
+      continue;
+    }
+    seen.add(normalized);
+    result.push(normalized);
+  }
+  return result;
 }
 
 function serviceLatencyTraceTitle(
@@ -7812,6 +8050,15 @@ export interface DataPanelServiceLifecycleTraceDisplay {
 export interface DataPanelServiceLifecycleTraceRow {
   traceId: string;
   serviceId: string;
+  taskId: string;
+  inputFlowId: string;
+  outputFlowId: string;
+  inputRouteId: string;
+  outputRouteId: string;
+  computeNodeId: string;
+  primaryRouteId: string;
+  routeIds: readonly string[];
+  flowIds: readonly string[];
   serviceLabel: string;
   terminalStateLabel: string;
   computeNodeLabel: string;
@@ -8519,31 +8766,58 @@ export function buildDataPanelServiceLifecycleTraceDisplay(
     };
   }
   const boundedLimit = Math.max(0, Math.floor(limit));
-  const items = trace.items.slice(0, boundedLimit).map((item) => ({
-    traceId: item.trace_id || `trace:${item.service_id}`,
-    serviceId: item.service_id,
-    serviceLabel: compactTaskId(item.service_id || item.task_id),
-    terminalStateLabel: serviceLifecycleTerminalLabel(
-      item.terminal_state,
-      item.terminal_state_reason
-    ),
-    computeNodeLabel: item.compute_node_id ? `算力 ${item.compute_node_id}` : "未放置",
-    networkLatencyLabel: `${formatMetricMilliseconds(
-      item.input_network_latency_s
-    )} / ${formatMetricMilliseconds(item.output_network_latency_s)}`,
-    computeLatencyLabel: `${formatMetricMilliseconds(
-      item.compute_queue_delay_s
-    )} / ${formatMetricMilliseconds(item.compute_execution_delay_s)}`,
-    totalLatencyLabel: formatMetricMilliseconds(item.total_latency_s),
-    traceTitle: serviceLifecycleTraceTitle(item),
-    stages: item.stages.map((stage) => ({
-      stageId: stage.stage_id,
-      label: serviceLifecycleStageLabel(stage.stage_label, stage.component),
-      statusLabel: serviceLifecycleStageStatusLabel(stage.stage_status),
-      durationLabel: formatMetricMilliseconds(stage.duration_s),
-      traceTitle: serviceLifecycleStageTitle(stage)
-    }))
-  }));
+  const items = trace.items.slice(0, boundedLimit).map((item) => {
+    const stageRouteIds = item.stages
+      .map((stage) => stage.route_id ?? "")
+      .filter((routeId) => routeId.length > 0);
+    const stageFlowIds = item.stages
+      .map((stage) => stage.flow_id ?? "")
+      .filter((flowId) => flowId.length > 0);
+    const routeIds = uniqueStrings([
+      item.input_route_id ?? "",
+      item.output_route_id ?? "",
+      ...stageRouteIds
+    ]);
+    const flowIds = uniqueStrings([
+      item.input_flow_id ?? "",
+      item.output_flow_id ?? "",
+      ...stageFlowIds
+    ]);
+    return {
+      traceId: item.trace_id || `trace:${item.service_id}`,
+      serviceId: item.service_id,
+      taskId: item.task_id,
+      inputFlowId: item.input_flow_id ?? "",
+      outputFlowId: item.output_flow_id ?? "",
+      inputRouteId: item.input_route_id ?? "",
+      outputRouteId: item.output_route_id ?? "",
+      computeNodeId: item.compute_node_id ?? "",
+      primaryRouteId: routeIds[0] ?? "",
+      routeIds,
+      flowIds,
+      serviceLabel: compactTaskId(item.service_id || item.task_id),
+      terminalStateLabel: serviceLifecycleTerminalLabel(
+        item.terminal_state,
+        item.terminal_state_reason
+      ),
+      computeNodeLabel: item.compute_node_id ? `算力 ${item.compute_node_id}` : "未放置",
+      networkLatencyLabel: `${formatMetricMilliseconds(
+        item.input_network_latency_s
+      )} / ${formatMetricMilliseconds(item.output_network_latency_s)}`,
+      computeLatencyLabel: `${formatMetricMilliseconds(
+        item.compute_queue_delay_s
+      )} / ${formatMetricMilliseconds(item.compute_execution_delay_s)}`,
+      totalLatencyLabel: formatMetricMilliseconds(item.total_latency_s),
+      traceTitle: serviceLifecycleTraceTitle(item),
+      stages: item.stages.map((stage) => ({
+        stageId: stage.stage_id,
+        label: serviceLifecycleStageLabel(stage.stage_label, stage.component),
+        statusLabel: serviceLifecycleStageStatusLabel(stage.stage_status),
+        durationLabel: formatMetricMilliseconds(stage.duration_s),
+        traceTitle: serviceLifecycleStageTitle(stage)
+      }))
+    };
+  });
   return {
     sourceLabel: `${trace.source_summary} -> service_lifecycle_trace_v2`,
     summaryLabel: `${formatCount(trace.trace_count)} trace / ${formatCount(
