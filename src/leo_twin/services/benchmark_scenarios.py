@@ -135,6 +135,7 @@ class BenchmarkScenarioSpec:
             "expected_ranges": tuple(
                 expected_range.to_dict() for expected_range in self.expected_ranges
             ),
+            "runtime_status_expectation": _runtime_status_expectation(),
             "acceptance_command": (
                 "powershell",
                 "-NoProfile",
@@ -244,6 +245,7 @@ def benchmark_scenario_matrix_v1_to_dict(
             "summary.json",
             "runtime log",
         ),
+        "runtime_status_expectation": _runtime_status_expectation(),
         "forbidden_integrations": ("STK", "EXATA", "AFSIM", "DDS"),
         "packet_level_simulation": False,
         "model_assumptions": (
@@ -273,6 +275,32 @@ def benchmark_scenario_ids() -> tuple[str, ...]:
     """Return shipped benchmark scenario ids in deterministic order."""
 
     return tuple(definition.scenario_id for definition in _SCENARIO_DEFINITIONS)
+
+
+def _runtime_status_expectation() -> dict[str, object]:
+    return {
+        "required_fields": (
+            "fidelity_summary",
+            "metrics_summary",
+            "network_kpi_provenance_v2",
+            "network_kpi_credibility_v1",
+            "route_explanation_summary_v1",
+            "route_provenance_trust_summary_v1",
+            "reproducibility_manifest_v1",
+        ),
+        "route_trust": {
+            "field": "route_provenance_trust_summary_v1",
+            "source": "route_explanation_summary_v1",
+            "route_model": "FLOW_LEVEL_ROUTE_PROXY",
+            "allowed_trust_statuses": (
+                "COMPLETE_FLOW_LEVEL_ROUTE_PROXY",
+                "PARTIAL_ROUTE_EXPLANATIONS",
+            ),
+            "packet_level_simulation": False,
+            "all_pairs_computation": False,
+            "minimum_assessed_route_count": 1,
+        },
+    }
 
 
 def _resolve_scenario(
@@ -485,4 +513,3 @@ def _expected_ranges(config: SEESConfig) -> tuple[BenchmarkExpectedRange, ...]:
         )
         for metric, value, unit, source in fields
     )
-

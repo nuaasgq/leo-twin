@@ -57,6 +57,25 @@ These ranges are acceptance guardrails, not claims of physical accuracy. They
 are intended to catch unintended drift in shipped benchmark inputs and backend
 derived semantics.
 
+## Runtime Status Expectations
+
+Each benchmark also exposes `runtime_status_expectation`. The current required
+fields include:
+
+- `fidelity_summary`
+- `metrics_summary`
+- `network_kpi_provenance_v2`
+- `network_kpi_credibility_v1`
+- `route_explanation_summary_v1`
+- `route_provenance_trust_summary_v1`
+- `reproducibility_manifest_v1`
+
+The route trust expectation requires `route_provenance_trust_summary_v1` to be
+derived from `route_explanation_summary_v1`, use the
+`FLOW_LEVEL_ROUTE_PROXY` model, forbid packet-level simulation, forbid all-pairs
+route/link computation, and assess at least one route after the benchmark
+runtime advances.
+
 ## Acceptance Command
 
 Each scenario records the command shape used for product acceptance:

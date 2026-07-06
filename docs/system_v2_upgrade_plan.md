@@ -192,6 +192,9 @@ Tasks:
     trust evidence workspace. It reports route explanation coverage, path and
     next-hop context coverage, bottleneck components, hidden route windows, and
     flow-level route proxy caveats without recomputing routes.
+  - Status: T276 adds benchmark acceptance for route trust across the standard
+    72/300/1200 scenarios and records the runtime status expectation in the
+    benchmark matrix and model verification report template.
 
 ### WS4. Compute Network Model v2
 

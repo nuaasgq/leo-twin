@@ -107,6 +107,7 @@ def _scenario_report_template(
     compute_contract: Mapping[str, Any],
 ) -> dict[str, object]:
     fidelity_summary = _mapping(scenario.get("fidelity_summary"))
+    runtime_status_expectation = _mapping(scenario.get("runtime_status_expectation"))
     return {
         "scenario_id": str(scenario.get("scenario_id", "")),
         "label": str(scenario.get("label", "")),
@@ -156,13 +157,10 @@ def _scenario_report_template(
             "result_artifact_expectation": tuple(
                 matrix.get("result_artifact_expectation", ())
             ),
-            "runtime_status_fields": (
-                "fidelity_summary",
-                "backend_summary",
-                "network_kpi_provenance_v2",
-                "network_kpi_credibility_v1",
-                "compute_task_timeline_summary_v1",
+            "runtime_status_fields": tuple(
+                runtime_status_expectation.get("required_fields", ())
             ),
+            "runtime_status_expectation": dict(runtime_status_expectation),
             "state_stream_fields": (
                 "WorldSnapshot.satellites",
                 "WorldSnapshot.fidelity_summary",
@@ -182,6 +180,14 @@ def _scenario_report_template(
             {
                 "evidence": "live_runtime_smoke",
                 "method": "initialize, start, advance one tick, pause, stop, reset",
+                "required": True,
+            },
+            {
+                "evidence": "route_trust_acceptance",
+                "method": (
+                    "check route_provenance_trust_summary_v1 against "
+                    "route_explanation_summary_v1 for every benchmark scenario"
+                ),
                 "required": True,
             },
             {

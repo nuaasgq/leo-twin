@@ -99,6 +99,8 @@ Each scenario should collect:
 - config loading result;
 - backend summary determinism result;
 - live runtime smoke result;
+- route trust acceptance result comparing `route_provenance_trust_summary_v1`
+  with `route_explanation_summary_v1`;
 - artifact manifest for config snapshot, `events.jsonl`, `metrics.csv`, and
   `summary.json`.
 

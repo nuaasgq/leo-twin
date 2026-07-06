@@ -13177,3 +13177,59 @@ change.
 - Recommended follow-up:
   - Add benchmark route trust acceptance checks and link route trust rows to
     exact route detail endpoints from the model trust evidence workspace.
+
+## 2026-07-06 - Benchmark Route Trust Acceptance v1
+
+- Branch: `feature/T276-benchmark-route-trust-acceptance-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: advance V2-023 and the verification lane by adding route trust
+  acceptance to the standard benchmark scenarios. The benchmark matrix now
+  records a `runtime_status_expectation` requiring
+  `route_provenance_trust_summary_v1`; the model verification report template
+  carries that expectation into expected outputs and evidence checklist; and
+  the benchmark acceptance test initializes, starts, advances, and validates
+  route trust consistency for the 72, 300, and 1200 satellite acceptance YAML
+  scenarios. Simulation behavior, Event Kernel behavior, route calculation,
+  packet-level semantics, all-pairs link computation, and external simulator
+  integration remain unchanged.
+- Changed files/modules:
+  - `src/leo_twin/services/benchmark_scenarios.py`
+  - `src/leo_twin/services/model_verification_report.py`
+  - `tests/integration/test_benchmark_acceptance_v1.py`
+  - `tests/unit/test_model_verification_report_template_v1.py`
+  - `docs/benchmark_scenario_matrix_v1.md`
+  - `docs/model_verification_report_template_v1.md`
+  - `docs/route_provenance_trust_summary_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_model_verification_report_template_v1.py -q`
+    - Result: passed, 6 tests.
+  - `python -m py_compile src/leo_twin/services/benchmark_scenarios.py src/leo_twin/services/model_verification_report.py`
+    - Result: passed.
+  - `python -m pytest tests/integration/test_benchmark_acceptance_v1.py -q`
+    - Result: passed, 15 tests. Runtime: about 276 seconds because the test now
+      initializes and advances all three standard benchmark scenarios,
+      including the 1200-satellite short scenario.
+  - `python -m pytest tests/integration/test_benchmark_acceptance_v1.py -q`
+    - Result: passed again after model-verification-template binding updates,
+      15 tests in about 287 seconds.
+- Problems encountered:
+  - An initial combined run of `tests/integration/test_benchmark_acceptance_v1.py`
+    and `tests/integration/test_product_acceptance_scenarios.py` printed all 17
+    tests passed but hit the 180-second command timeout before the process
+    returned. The benchmark acceptance file was rerun alone with a larger
+    timeout and completed successfully.
+  - Route trust runtime acceptance belongs to benchmark evidence, so the actual
+    semantic gate is kept in `test_benchmark_acceptance_v1.py` rather than
+    broadening the generic product smoke test.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - Benchmark route trust acceptance checks consistency and model boundaries; it
+    does not yet verify alternate candidate route quality.
+  - The 1200-satellite benchmark route trust gate is intentionally contract and
+    consistency based, not a high-fidelity routing validation.
+- Recommended follow-up:
+  - Link benchmark route trust evidence to exported result packages and exact
+    route detail endpoints for review workflows.

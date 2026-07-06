@@ -98,11 +98,25 @@ def test_model_verification_report_template_defines_expected_outputs_and_evidenc
     assert "metrics.csv" in outputs["result_artifact_expectation"]
     assert "summary.json" in outputs["result_artifact_expectation"]
     assert "network_kpi_provenance_v2" in outputs["runtime_status_fields"]
+    assert "route_provenance_trust_summary_v1" in outputs["runtime_status_fields"]
+    assert outputs["runtime_status_expectation"]["route_trust"] == {
+        "field": "route_provenance_trust_summary_v1",
+        "source": "route_explanation_summary_v1",
+        "route_model": "FLOW_LEVEL_ROUTE_PROXY",
+        "allowed_trust_statuses": (
+            "COMPLETE_FLOW_LEVEL_ROUTE_PROXY",
+            "PARTIAL_ROUTE_EXPLANATIONS",
+        ),
+        "packet_level_simulation": False,
+        "all_pairs_computation": False,
+        "minimum_assessed_route_count": 1,
+    }
     assert "WorldSnapshot.fidelity_summary" in outputs["state_stream_fields"]
     assert tuple(item["evidence"] for item in evidence) == (
         "config_load",
         "backend_summary_determinism",
         "live_runtime_smoke",
+        "route_trust_acceptance",
         "artifact_manifest",
     )
     assert all(item["required"] is True for item in evidence)

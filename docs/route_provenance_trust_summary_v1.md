@@ -67,9 +67,21 @@ workspace. Route evidence appears after KPI formula provenance and before
 replay/export evidence so users can see whether network path explanations are
 currently backed by backend route records.
 
+## Benchmark Acceptance
+
+T276 adds route trust acceptance to the standard benchmark scenarios:
+
+- `small_demo_72sat`
+- `medium_demo_300sat`
+- `scale_demo_1200sat_short`
+
+Each scenario must initialize, start, advance deterministically, and expose a
+`route_provenance_trust_summary_v1` that is consistent with
+`route_explanation_summary_v1`, uses `FLOW_LEVEL_ROUTE_PROXY`, and keeps
+`packet_level_simulation=false` and `all_pairs_computation=false`.
+
 ## Follow-Up
 
-- Add route explanation acceptance checks to benchmark scenarios.
 - Link route trust rows to exact route detail endpoints when a selected route
   is available.
 - Add a wider route provenance drawer if future routing policies expose

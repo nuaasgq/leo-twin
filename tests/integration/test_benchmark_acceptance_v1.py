@@ -51,6 +51,9 @@ def test_benchmark_acceptance_report_template_matches_matrix() -> None:
         assert report["expected_outputs"]["fidelity_expectation"] == scenario[
             "fidelity_expectation"
         ]
+        assert report["expected_outputs"]["runtime_status_expectation"] == scenario[
+            "runtime_status_expectation"
+        ]
 
 
 @pytest.mark.parametrize("scenario_id", benchmark_scenario_ids())
@@ -93,6 +96,73 @@ def test_benchmark_acceptance_scale_policy_matches_matrix(
         "metrics_mode": fidelity["metrics_mode"],
         "space_link_mode": fidelity["space_link_mode"],
     } == expected
+
+
+@pytest.mark.parametrize("scenario_id", benchmark_scenario_ids())
+def test_benchmark_acceptance_runtime_status_requires_route_trust(
+    scenario_id: str,
+) -> None:
+    scenario = benchmark_scenario_by_id(scenario_id, PROJECT_ROOT)
+    matrix = benchmark_scenario_matrix_v1_to_dict(PROJECT_ROOT)
+
+    assert scenario["runtime_status_expectation"] == matrix[
+        "runtime_status_expectation"
+    ]
+    expectation = scenario["runtime_status_expectation"]
+    route_trust = expectation["route_trust"]
+
+    assert "route_provenance_trust_summary_v1" in expectation["required_fields"]
+    assert route_trust == {
+        "field": "route_provenance_trust_summary_v1",
+        "source": "route_explanation_summary_v1",
+        "route_model": "FLOW_LEVEL_ROUTE_PROXY",
+        "allowed_trust_statuses": (
+            "COMPLETE_FLOW_LEVEL_ROUTE_PROXY",
+            "PARTIAL_ROUTE_EXPLANATIONS",
+        ),
+        "packet_level_simulation": False,
+        "all_pairs_computation": False,
+        "minimum_assessed_route_count": 1,
+    }
+
+
+@pytest.mark.parametrize("scenario_id", benchmark_scenario_ids())
+def test_benchmark_acceptance_route_trust_runtime_status_for_standard_scenarios(
+    tmp_path: Path,
+    scenario_id: str,
+) -> None:
+    scenario = benchmark_scenario_by_id(scenario_id, PROJECT_ROOT)
+    config = load_config(PROJECT_ROOT / str(scenario["config_path"]))
+    control_plane = _control_plane(tmp_path, f"{scenario_id}_route_trust")
+
+    initialize_ack = control_plane.handle_raw_message(
+        json.dumps(
+            {
+                "type": "RUNTIME_CONTROL",
+                "action": "INITIALIZE",
+                "payload": config_to_dict(config),
+            }
+        )
+    )
+    assert initialize_ack["ok"] is True
+
+    start_ack = control_plane.handle_raw_message(
+        json.dumps({"type": "RUNTIME_CONTROL", "action": "START"})
+    )
+    assert start_ack["ok"] is True
+    try:
+        for _ in range(2):
+            assert control_plane._require_session().advance_control_step()
+            control_plane._require_advance_loop().publish_pending()
+        status = control_plane.runtime_status()["status"]
+        _assert_benchmark_route_trust_status(
+            status,
+            scenario["runtime_status_expectation"],
+        )
+    finally:
+        control_plane.handle_raw_message(
+            json.dumps({"type": "RUNTIME_CONTROL", "action": "STOP"})
+        )
 
 
 def test_benchmark_acceptance_runtime_kpi_ranges_for_small_baseline(
@@ -207,6 +277,50 @@ def _assert_ratio(metrics: dict[str, object], key: str) -> None:
     value = metrics[key]
     assert isinstance(value, (int, float))
     assert 0.0 <= value <= 1.0
+
+
+def _assert_benchmark_route_trust_status(
+    status: dict[str, object],
+    expectation: object,
+) -> None:
+    assert isinstance(expectation, dict)
+    route_expectation = expectation["route_trust"]
+    assert isinstance(route_expectation, dict)
+    route_summary = status["route_explanation_summary_v1"]
+    route_trust = status["route_provenance_trust_summary_v1"]
+    assert isinstance(route_summary, dict)
+    assert isinstance(route_trust, dict)
+
+    assert route_trust["version"] == "v1"
+    assert route_trust["trust_id"] == "leo_twin.route_provenance_trust.v1"
+    assert route_trust["source"] == route_expectation["source"]
+    assert route_trust["route_model"] == route_expectation["route_model"]
+    assert route_trust["packet_level_simulation"] is route_expectation[
+        "packet_level_simulation"
+    ]
+    assert route_trust["all_pairs_computation"] is route_expectation[
+        "all_pairs_computation"
+    ]
+    assert route_trust["trust_status"] in route_expectation[
+        "allowed_trust_statuses"
+    ]
+    assert route_trust["route_count"] == route_summary["route_count"]
+    assert route_trust["window_item_count"] == route_summary["item_count"]
+    assert route_trust["assessed_route_count"] == route_summary["item_count"]
+    assert route_trust["hidden_route_count"] == route_trust["unassessed_route_count"]
+    assert int(route_trust["route_count"]) >= int(route_trust["assessed_route_count"])
+    assert route_trust["available_route_count"] == route_summary[
+        "available_route_count"
+    ]
+    assert route_trust["blocked_route_count"] == route_summary["blocked_route_count"]
+    assert int(route_trust["assessed_route_count"]) >= int(
+        route_expectation["minimum_assessed_route_count"]
+    )
+    assert int(route_trust["explained_route_count"]) >= 1
+    assert int(route_trust["observed_core_field_count"]) > 0
+    assert int(route_trust["core_field_count"]) >= int(
+        route_trust["observed_core_field_count"]
+    )
 
 
 def _control_plane(tmp_path: Path, scenario_id: str) -> DemoControlPlane:
