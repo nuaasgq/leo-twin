@@ -457,7 +457,9 @@ Tasks:
     package has a deterministic user-readable review entry point with scenario
     scale, runtime progress, manifest/config hashes, artifact coverage, and
     review readiness. The demo backend serves it at
-    `/runtime/export/packages/{package_id}/review-summary`.
+    `/runtime/export/packages/{package_id}/review-summary`. T268 binds the
+    selected package's review summary into the standalone dashboard as a
+    read-only card next to compare and restore-preflight context.
 
 ### WS9. Delivery and Operations v2
 

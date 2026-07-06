@@ -9,6 +9,7 @@ import {
   RuntimeExportHistoryV1,
   RuntimeExportPackageCompareEnvelope,
   RuntimeExportPackageCompareV1,
+  RuntimeExportReviewSummaryV1,
   RuntimeExportRestorePreflightEnvelope,
   RuntimeExportRestorePreflightV1,
   RuntimeEntityDetailEnvelopeV1,
@@ -283,6 +284,18 @@ export async function loadRuntimeExportPackageCompare(
     throw new Error(`failed to load runtime export package compare from ${url}: HTTP ${response.status}`);
   }
   return decodeRuntimeExportPackageCompare(await response.json()).summary;
+}
+
+export async function loadRuntimeExportReviewSummary(
+  packageId: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): Promise<RuntimeExportReviewSummaryV1> {
+  const url = runtimeExportPackageReviewSummaryHref(packageId, endpoint);
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`failed to load runtime export review summary from ${url}: HTTP ${response.status}`);
+  }
+  return decodeRuntimeExportReviewSummary(await response.json());
 }
 
 export async function loadRuntimeExportRestorePreflight(
@@ -668,6 +681,25 @@ export function decodeRuntimeExportPackageCompare(
     ...(value as Record<string, unknown>),
     summary: summary as RuntimeExportPackageCompareV1
   } as RuntimeExportPackageCompareEnvelope;
+}
+
+export function decodeRuntimeExportReviewSummary(
+  value: unknown
+): RuntimeExportReviewSummaryV1 {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError("runtime export review summary response must be an object");
+  }
+  if (
+    typeof (value as { package_id?: unknown }).package_id !== "string" ||
+    typeof (value as { artifacts?: unknown }).artifacts !== "object" ||
+    (value as { artifacts?: unknown }).artifacts === null ||
+    Array.isArray((value as { artifacts?: unknown }).artifacts)
+  ) {
+    throw new TypeError(
+      "runtime export review summary response must include package_id and artifacts"
+    );
+  }
+  return value as RuntimeExportReviewSummaryV1;
 }
 
 export function decodeRuntimeExportRestorePreflight(

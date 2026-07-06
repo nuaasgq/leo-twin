@@ -4,6 +4,7 @@ import {
   loadRuntimeExportCatalog,
   loadRuntimeExportHistory,
   loadRuntimeExportPackageCompare,
+  loadRuntimeExportReviewSummary,
   loadRuntimeExportRestorePreflight,
   loadRuntimeComputeNodeDetail,
   loadRuntimeComputeNodeDetails,
@@ -124,6 +125,62 @@ describe("runtime API diagnostics", () => {
       differences: [{ path: "$.satellite_count" }]
     });
     expect(fetchMock).toHaveBeenCalledWith("/runtime/export/packages/pkg/compare");
+  });
+
+  it("loads runtime export review summaries", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        type: "RUNTIME_EXPORT_REVIEW_SUMMARY_V1",
+        version: "v1",
+        summary_id: "leo_twin.runtime_export_review_summary.v1",
+        source: "BACKEND_RUNTIME_EXPORT",
+        summary_scope: "USER_READABLE_RESULT_PACKAGE_REVIEW",
+        package_id: "pkg",
+        package_dir: "artifacts/runtime_exports/pkg",
+        review_status: "REVIEW_READY",
+        scenario: {
+          seed: 1,
+          satellite_count: 72,
+          user_count: 20,
+          compute_node_count: 2,
+          duration_seconds: 120
+        },
+        runtime: {
+          lifecycle_state: "RUNNING",
+          current_sim_time: 10,
+          processed_event_count: 20,
+          queued_event_count: 3
+        },
+        reproducibility: {
+          manifest_id: "leo_twin.runtime_reproducibility_manifest.v1",
+          manifest_hash: "sha256:manifest",
+          config_hash: "sha256:config",
+          generated_config_hash: "sha256:generated",
+          event_kernel_policy: "NO_EVENT_KERNEL_BEHAVIOR_CHANGE"
+        },
+        artifacts: {
+          artifact_count: 7,
+          artifact_filenames: ["manifest.json"],
+          required_filenames: ["manifest.json"],
+          missing_required_filenames: [],
+          service_lifecycle_trace_exported: true,
+          review_summary_exported: true
+        },
+        review_notes: ["review"],
+        summary_hash: "sha256:summary"
+      })
+    }));
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+
+    await expect(loadRuntimeExportReviewSummary("pkg")).resolves.toMatchObject({
+      package_id: "pkg",
+      review_status: "REVIEW_READY",
+      artifacts: { artifact_count: 7 }
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/runtime/export/packages/pkg/review-summary"
+    );
   });
 
   it("loads runtime export restore preflight previews", async () => {

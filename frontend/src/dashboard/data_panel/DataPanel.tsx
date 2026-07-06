@@ -24,6 +24,7 @@ import {
   TrafficDemandSummary,
   RuntimeExportCatalogV1,
   RuntimeExportPackageCompareV1,
+  RuntimeExportReviewSummaryV1,
   RuntimeExportRestoreCommandResultV1,
   RuntimeExportRestorePreflightV1,
   RuntimeComputeTaskTimelineSummaryV1,
@@ -208,9 +209,12 @@ export const DataPanel = memo(function DataPanel({
   runtimeSelectedNodeDetailRequests,
   runtimeExportCatalog,
   runtimeExportCompare,
+  runtimeExportReviewSummary,
   runtimeExportComparePackageId,
   runtimeExportCompareLoading,
   runtimeExportCompareError,
+  runtimeExportReviewSummaryLoading,
+  runtimeExportReviewSummaryError,
   runtimeExportRestorePreflight,
   runtimeExportRestorePreflightLoading,
   runtimeExportRestorePreflightError,
@@ -246,9 +250,12 @@ export const DataPanel = memo(function DataPanel({
   runtimeSelectedNodeDetailRequests?: RuntimeSelectedNodeDetailRequests | null;
   runtimeExportCatalog?: RuntimeExportCatalogV1 | null;
   runtimeExportCompare?: RuntimeExportPackageCompareV1 | null;
+  runtimeExportReviewSummary?: RuntimeExportReviewSummaryV1 | null;
   runtimeExportComparePackageId?: string | null;
   runtimeExportCompareLoading?: boolean;
   runtimeExportCompareError?: string | null;
+  runtimeExportReviewSummaryLoading?: boolean;
+  runtimeExportReviewSummaryError?: string | null;
   runtimeExportRestorePreflight?: RuntimeExportRestorePreflightV1 | null;
   runtimeExportRestorePreflightLoading?: boolean;
   runtimeExportRestorePreflightError?: string | null;
@@ -384,6 +391,15 @@ export const DataPanel = memo(function DataPanel({
     generatedConfig?.backend_summary?.large_detail_pagination_contract_v2;
   const detailPageSizes = buildDataPanelDetailPageSizes(detailPaginationContract);
   const exportCatalogDisplay = buildDataPanelExportCatalogDisplay(runtimeExportCatalog);
+  const exportReviewSummaryDisplay = buildDataPanelExportReviewSummaryDisplay(
+    runtimeExportReviewSummary
+  );
+  const exportReviewSummaryStatus = buildDataPanelExportReviewSummaryStatus(
+    exportReviewSummaryDisplay,
+    runtimeExportComparePackageId,
+    runtimeExportReviewSummaryLoading,
+    runtimeExportReviewSummaryError
+  );
   const exportCompareDisplay = buildDataPanelExportCompareDisplay(runtimeExportCompare);
   const exportCompareStatus = buildDataPanelExportCompareStatus(
     exportCompareDisplay,
@@ -1058,6 +1074,30 @@ export const DataPanel = memo(function DataPanel({
             <span>{exportCatalogDisplay.sourceLabel}</span>
             <small>{exportCatalogDisplay.summaryLabel}</small>
           </div>
+          {exportReviewSummaryStatus ? (
+            <div
+              className={`data-panel-export-compare ${exportReviewSummaryStatus.tone}`}
+              aria-label="复盘包审阅摘要"
+            >
+              <div>
+                <span>审阅摘要</span>
+                <strong>{exportReviewSummaryStatus.statusLabel}</strong>
+                <small>{exportReviewSummaryStatus.summaryLabel}</small>
+              </div>
+              <div className="data-panel-export-compare-meta">
+                {exportReviewSummaryStatus.metaLabels.map((label) => (
+                  <span key={label}>{label}</span>
+                ))}
+              </div>
+              {exportReviewSummaryStatus.artifactLabels.length > 0 ? (
+                <div className="data-panel-export-compare-diffs">
+                  {exportReviewSummaryStatus.artifactLabels.map((label) => (
+                    <span key={label}>{label}</span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
           {exportCompareStatus ? (
             <div
               className={`data-panel-export-compare ${exportCompareStatus.tone}`}
@@ -8284,6 +8324,23 @@ export interface DataPanelExportCompareStatus {
   diffRows: readonly DataPanelExportCompareDiffRow[];
 }
 
+export interface DataPanelExportReviewSummaryDisplay {
+  packageId: string;
+  tone: "match" | "different";
+  statusLabel: string;
+  summaryLabel: string;
+  metaLabels: readonly string[];
+  artifactLabels: readonly string[];
+}
+
+export interface DataPanelExportReviewSummaryStatus {
+  tone: "match" | "different" | "pending" | "error";
+  statusLabel: string;
+  summaryLabel: string;
+  metaLabels: readonly string[];
+  artifactLabels: readonly string[];
+}
+
 export interface DataPanelExportRestorePreflightDisplay {
   packageId: string;
   readiness: string;
@@ -8320,6 +8377,74 @@ export interface DataPanelExportCompareDiffRow {
   path: string;
   valueLabel: string;
   title: string;
+}
+
+export function buildDataPanelExportReviewSummaryDisplay(
+  summary: RuntimeExportReviewSummaryV1 | null | undefined
+): DataPanelExportReviewSummaryDisplay | null {
+  if (summary === null || summary === undefined) {
+    return null;
+  }
+  const reviewReady = summary.review_status === "REVIEW_READY";
+  const missing = summary.artifacts.missing_required_filenames;
+  return {
+    packageId: summary.package_id,
+    tone: reviewReady ? "match" : "different",
+    statusLabel: reviewReady ? "可审阅" : "审阅不完整",
+    summaryLabel: `${summary.package_id} / ${formatCount(
+      summary.artifacts.artifact_count
+    )} 个文件 / ${formatPreciseMetricValue(
+      summary.runtime.current_sim_time
+    )} s / ${formatCount(summary.runtime.processed_event_count)} 事件`,
+    metaLabels: [
+      `seed ${summary.scenario.seed}`,
+      `卫星 ${formatCount(Number(summary.scenario.satellite_count) || 0)}`,
+      `用户 ${formatCount(Number(summary.scenario.user_count) || 0)}`,
+      `算力 ${formatCount(Number(summary.scenario.compute_node_count) || 0)}`,
+      `manifest ${shortRuntimeHash(summary.reproducibility.manifest_hash)}`,
+      `summary ${shortRuntimeHash(summary.summary_hash)}`
+    ],
+    artifactLabels: [
+      `必需文件缺失 ${formatCount(missing.length)}`,
+      `service trace ${
+        summary.artifacts.service_lifecycle_trace_exported ? "已导出" : "缺失"
+      }`,
+      `review summary ${
+        summary.artifacts.review_summary_exported ? "已导出" : "缺失"
+      }`,
+      ...missing.map((filename) => `缺失 ${filename}`)
+    ]
+  };
+}
+
+export function buildDataPanelExportReviewSummaryStatus(
+  display: DataPanelExportReviewSummaryDisplay | null,
+  selectedPackageId: string | null | undefined,
+  loading = false,
+  error: string | null | undefined = null
+): DataPanelExportReviewSummaryStatus | null {
+  if (loading) {
+    return {
+      tone: "pending",
+      statusLabel: "正在加载审阅摘要",
+      summaryLabel: selectedPackageId ?? "等待复盘包选择",
+      metaLabels: ["只读摘要", "不生成新导出包"],
+      artifactLabels: []
+    };
+  }
+  if (error !== null && error !== undefined) {
+    return {
+      tone: "error",
+      statusLabel: "审阅摘要加载失败",
+      summaryLabel: selectedPackageId ?? "未知复盘包",
+      metaLabels: [error],
+      artifactLabels: []
+    };
+  }
+  if (display === null) {
+    return null;
+  }
+  return display;
 }
 
 export function buildDataPanelExportCompareDisplay(

@@ -21,6 +21,7 @@ import {
   runtimeProgressSimTime,
   runtimeStatusArmsCompletionNotice,
   runtimeExportCompareErrorMessage,
+  runtimeExportReviewSummaryErrorMessage,
   runtimeExportRestorePreflightErrorMessage,
   runtimeDetailRequestPlan,
   runtimeWebSocketErrorMessage,
@@ -146,6 +147,9 @@ describe("standaloneDashboardHref", () => {
   it("formats runtime export compare errors for dashboard display", () => {
     expect(runtimeExportCompareErrorMessage(new Error("HTTP 404"))).toBe(
       "复盘包配置对比加载失败：HTTP 404"
+    );
+    expect(runtimeExportReviewSummaryErrorMessage(new Error("HTTP 404"))).toBe(
+      "复盘包审阅摘要加载失败：HTTP 404"
     );
     expect(runtimeExportRestorePreflightErrorMessage(new Error("HTTP 409"))).toBe(
       "复盘包恢复预检加载失败：HTTP 409"

@@ -20,6 +20,8 @@ import {
   buildDataPanelExportCompareDisplay,
   buildDataPanelExportCompareStatus,
   buildDataPanelExportHistoryDisplay,
+  buildDataPanelExportReviewSummaryDisplay,
+  buildDataPanelExportReviewSummaryStatus,
   buildDataPanelExportRestoreActionDisplay,
   buildDataPanelExportRestorePreflightDisplay,
   buildDataPanelExportRestorePreflightStatus,
@@ -2025,6 +2027,108 @@ describe("buildDataPanelExportCatalogDisplay", () => {
 });
 
 describe("buildDataPanelExportCompareDisplay", () => {
+  it("summarizes runtime export review summaries for dashboard review", () => {
+    const display = buildDataPanelExportReviewSummaryDisplay({
+      type: "RUNTIME_EXPORT_REVIEW_SUMMARY_V1",
+      version: "v1",
+      summary_id: "leo_twin.runtime_export_review_summary.v1",
+      source: "BACKEND_RUNTIME_EXPORT",
+      summary_scope: "USER_READABLE_RESULT_PACKAGE_REVIEW",
+      package_id: "pkg-review",
+      package_dir: "artifacts/runtime_exports/pkg-review",
+      review_status: "REVIEW_READY",
+      scenario: {
+        seed: 4321,
+        satellite_count: 72,
+        user_count: 20,
+        compute_node_count: 2,
+        duration_seconds: 120
+      },
+      runtime: {
+        lifecycle_state: "RUNNING",
+        current_sim_time: 12.5,
+        processed_event_count: 4096,
+        queued_event_count: 8
+      },
+      reproducibility: {
+        manifest_id: "leo_twin.runtime_reproducibility_manifest.v1",
+        manifest_hash:
+          "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        config_hash:
+          "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        generated_config_hash:
+          "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        event_kernel_policy: "NO_EVENT_KERNEL_BEHAVIOR_CHANGE"
+      },
+      artifacts: {
+        artifact_count: 7,
+        artifact_filenames: [
+          "config_snapshot.json",
+          "events.jsonl",
+          "manifest.json",
+          "metrics.csv",
+          "review_summary_v1.json",
+          "service_lifecycle_trace_v2.json",
+          "summary.json"
+        ],
+        required_filenames: [
+          "config_snapshot.json",
+          "events.jsonl",
+          "metrics.csv",
+          "summary.json",
+          "manifest.json"
+        ],
+        missing_required_filenames: [],
+        service_lifecycle_trace_exported: true,
+        review_summary_exported: true
+      },
+      review_notes: ["Use manifest.json"],
+      summary_hash:
+        "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    });
+
+    expect(display).toEqual({
+      packageId: "pkg-review",
+      tone: "match",
+      statusLabel: "可审阅",
+      summaryLabel: "pkg-review / 7 个文件 / 12.5 s / 4,096 事件",
+      metaLabels: [
+        "seed 4321",
+        "卫星 72",
+        "用户 20",
+        "算力 2",
+        "manifest 111111111111",
+        "summary aaaaaaaaaaaa"
+      ],
+      artifactLabels: [
+        "必需文件缺失 0",
+        "service trace 已导出",
+        "review summary 已导出"
+      ]
+    });
+    expect(
+      buildDataPanelExportReviewSummaryStatus(display, "pkg-review", false, null)
+    ).toBe(display);
+    expect(
+      buildDataPanelExportReviewSummaryStatus(display, "pkg-next", true, null)
+    ).toEqual({
+      tone: "pending",
+      statusLabel: "正在加载审阅摘要",
+      summaryLabel: "pkg-next",
+      metaLabels: ["只读摘要", "不生成新导出包"],
+      artifactLabels: []
+    });
+    expect(
+      buildDataPanelExportReviewSummaryStatus(display, "pkg-next", false, "HTTP 404")
+    ).toEqual({
+      tone: "error",
+      statusLabel: "审阅摘要加载失败",
+      summaryLabel: "pkg-next",
+      metaLabels: ["HTTP 404"],
+      artifactLabels: []
+    });
+  });
+
   it("summarizes matching package compare previews", () => {
     expect(
       buildDataPanelExportCompareDisplay({

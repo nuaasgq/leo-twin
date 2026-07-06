@@ -1231,6 +1231,55 @@ export interface RuntimeExportPackageCompareEnvelope {
   summary: RuntimeExportPackageCompareV1;
 }
 
+export interface RuntimeExportReviewSummaryV1 {
+  type: "RUNTIME_EXPORT_REVIEW_SUMMARY_V1" | string;
+  version: "v1" | string;
+  summary_id: string;
+  source: string;
+  summary_scope: string;
+  package_id: string;
+  package_dir: string;
+  review_status: "REVIEW_READY" | "INCOMPLETE" | string;
+  scenario: RuntimeExportReviewScenarioV1;
+  runtime: RuntimeExportReviewRuntimeV1;
+  reproducibility: RuntimeExportReviewReproducibilityV1;
+  artifacts: RuntimeExportReviewArtifactsV1;
+  review_notes: readonly string[];
+  summary_hash: string;
+}
+
+export interface RuntimeExportReviewScenarioV1 {
+  seed: number | string;
+  satellite_count: number | string;
+  user_count: number | string;
+  compute_node_count: number | string;
+  duration_seconds: number | string;
+}
+
+export interface RuntimeExportReviewRuntimeV1 {
+  lifecycle_state: string;
+  current_sim_time: number;
+  processed_event_count: number;
+  queued_event_count: number;
+}
+
+export interface RuntimeExportReviewReproducibilityV1 {
+  manifest_id: string;
+  manifest_hash: string;
+  config_hash: string;
+  generated_config_hash: string;
+  event_kernel_policy: string;
+}
+
+export interface RuntimeExportReviewArtifactsV1 {
+  artifact_count: number;
+  artifact_filenames: readonly string[];
+  required_filenames: readonly string[];
+  missing_required_filenames: readonly string[];
+  service_lifecycle_trace_exported: boolean;
+  review_summary_exported: boolean;
+}
+
 export interface RuntimeExportRestorePreflightV1 {
   version: "v1" | string;
   source: string;

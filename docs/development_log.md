@@ -12764,3 +12764,55 @@ change.
 - Recommended follow-up:
   - Add a dashboard review drawer for `review_summary_v1.json` and connect it
     to result package compare/restore context.
+
+## 2026-07-06 - Dashboard Export Review Summary v1
+
+- Branch: `feature/T268-dashboard-export-review-summary-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: render the selected runtime export package's
+  `review_summary_v1.json` directly in the standalone dashboard. App now loads
+  the review summary in parallel with package compare and restore preflight.
+  DataPanel shows a read-only review card with readiness, scenario scale,
+  runtime progress, manifest/summary hashes, and artifact coverage. The
+  existing JSON link remains available in the export catalog. Backend runtime
+  behavior, Event Kernel behavior, result package generation, restore behavior,
+  and model behavior remain unchanged.
+- Changed files/modules:
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/app/api.ts`
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/appSurface.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed, using the bundled Node/Pnpm runtime because the shell
+      PATH does not expose `node`.
+  - `pnpm --dir frontend test api.test.ts appSurface.test.ts dataPanel.test.ts`
+    - Result: passed, 214 tests.
+  - `pnpm --dir frontend test`
+    - Result: passed, 363 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite reported the existing large DataPanel chunk warning.
+  - `python -m pytest tests/integration/test_result_package_export_v1.py tests/integration/test_runtime_session_control.py::test_demo_adapter_serves_persisted_runtime_export_artifacts -q`
+    - Result: passed, 2 tests.
+- Problems encountered:
+  - `/runtime/export/packages/{package_id}/review-summary` serves the JSON
+    artifact directly rather than a `{summary: ...}` envelope, so the frontend
+    API uses a direct artifact decoder.
+  - Existing localized dashboard text still appears as mojibake in terminal
+    output; patches avoided rewriting existing labels outside the new review
+    card.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The review card is a compact summary. A future task can add a full
+    package-review drawer with artifact file health badges and links.
+- Recommended follow-up:
+  - Add a detailed result package review drawer that combines
+    `review_summary_v1`, compare, restore preflight, and manifest artifact
+    health into one operator workflow.

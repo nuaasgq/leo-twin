@@ -91,6 +91,9 @@ The persisted route
 `review_summary_v1.json` artifact from the package catalog.
 The standalone dashboard export catalog also links each package row to this
 review summary so users can inspect it without constructing the URL manually.
+The dashboard also loads the selected package's review summary as a read-only
+card, showing review readiness, scenario scale, runtime progress, manifest
+hashes, and artifact coverage alongside compare and restore-preflight context.
 
 The manifest id must be:
 
