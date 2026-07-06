@@ -4,6 +4,7 @@ import {
   loadRuntimeExportCatalog,
   loadRuntimeExportDiagnosticsBundle,
   loadRuntimeExportHistory,
+  loadRuntimeExportManifest,
   loadRuntimeExportPackageCompare,
   loadRuntimeExportReviewSummary,
   loadRuntimeExportRestorePreflight,
@@ -182,6 +183,42 @@ describe("runtime API diagnostics", () => {
     expect(fetchMock).toHaveBeenCalledWith(
       "/runtime/export/packages/pkg/review-summary"
     );
+  });
+
+  it("loads runtime export manifests", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        version: "v1",
+        source: "BACKEND_RUNTIME_STATUS",
+        manifest_id: "leo_twin.runtime_reproducibility_manifest.v1",
+        session_id: "integration-demo-1",
+        scenario_hash: "sha256:scenario",
+        control_config_hash: "sha256:config",
+        generated_config_hash: "sha256:generated",
+        metrics_summary_hash: "sha256:metrics",
+        runtime_state_hash: "sha256:runtime",
+        manifest_hash: "sha256:manifest",
+        artifact_policy: "LIVE_STATUS_MANIFEST_ONLY",
+        artifacts: [
+          {
+            name: "events.jsonl",
+            format: "jsonl",
+            status: "AVAILABLE_FOR_BATCH_EXPORT",
+            source: "MetricsCollector.write_outputs"
+          }
+        ],
+        artifact_count: 1
+      })
+    }));
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+
+    await expect(loadRuntimeExportManifest("pkg")).resolves.toMatchObject({
+      manifest_id: "leo_twin.runtime_reproducibility_manifest.v1",
+      manifest_hash: "sha256:manifest",
+      artifacts: [{ name: "events.jsonl" }]
+    });
+    expect(fetchMock).toHaveBeenCalledWith("/runtime/export/packages/pkg/manifest");
   });
 
   it("loads runtime export diagnostics bundles", async () => {

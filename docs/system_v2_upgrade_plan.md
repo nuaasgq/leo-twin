@@ -465,7 +465,10 @@ Tasks:
     has deterministic artifact-health findings, model-boundary declarations,
     and operator next actions. T271 renders the selected package diagnostics
     bundle in the standalone dashboard as a read-only diagnostics drawer next
-    to artifact health, compare, and restore-preflight context.
+    to artifact health, compare, and restore-preflight context. T272 renders
+    the selected package `manifest.json` as a manifest inspector with stable
+    hash rows, catalog file-hash cross-links, diagnostics manifest-hash
+    agreement, and artifact source/status rows.
 
 ### WS9. Delivery and Operations v2
 

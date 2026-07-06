@@ -141,6 +141,10 @@ The standalone dashboard loads the selected package's
 `diagnostics_bundle_v1.json` through the package file endpoint and renders its
 package completeness, artifact-health counters, findings, model boundaries, and
 recommended next actions as a read-only diagnostics drawer.
+The dashboard also loads the selected package's `manifest.json` and renders a
+read-only manifest inspector that shows stable manifest/scenario/config/
+generated/metrics/runtime hashes, catalog file hashes, diagnostics manifest
+hash agreement, and manifest artifact source/status rows.
 
 ## Hash Policy
 

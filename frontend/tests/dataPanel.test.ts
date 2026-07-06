@@ -23,6 +23,8 @@ import {
   buildDataPanelExportDiagnosticsDisplay,
   buildDataPanelExportDiagnosticsStatus,
   buildDataPanelExportHistoryDisplay,
+  buildDataPanelExportManifestInspectorDisplay,
+  buildDataPanelExportManifestInspectorStatus,
   buildDataPanelExportReviewSummaryDisplay,
   buildDataPanelExportReviewSummaryStatus,
   buildDataPanelExportRestoreActionDisplay,
@@ -2461,6 +2463,196 @@ describe("buildDataPanelExportCompareDisplay", () => {
       summaryLabel: "pkg-next",
       metaLabels: ["HTTP 404"],
       diagnosticsHref: null
+    });
+  });
+
+  it("summarizes runtime export manifests with catalog and diagnostics integrity", () => {
+    const display = buildDataPanelExportManifestInspectorDisplay(
+      {
+        version: "v1",
+        source: "BACKEND_RUNTIME_STATUS",
+        manifest_id: "leo_twin.runtime_reproducibility_manifest.v1",
+        session_id: "integration-demo-4321",
+        scenario_hash:
+          "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        control_config_hash:
+          "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        generated_config_hash:
+          "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        metrics_summary_hash:
+          "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+        runtime_state_hash:
+          "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+        manifest_hash:
+          "sha256:abababababababababababababababababababababababababababababababab",
+        artifact_policy: "LIVE_STATUS_MANIFEST_ONLY",
+        artifacts: [
+          {
+            name: "events.jsonl",
+            format: "jsonl",
+            status: "AVAILABLE_FOR_BATCH_EXPORT",
+            source: "MetricsCollector.write_outputs"
+          },
+          {
+            name: "manifest.json",
+            format: "json",
+            status: "AVAILABLE_FOR_BATCH_EXPORT",
+            source: "runtime_export"
+          }
+        ],
+        artifact_count: 2
+      },
+      "pkg-review",
+      {
+        version: "v1",
+        source: "BACKEND_RUNTIME_EXPORT_CATALOG",
+        catalog_scope: "PERSISTED_EXPORT_PACKAGES",
+        catalog_file: "artifacts/runtime_exports/runtime_export_catalog_v1.json",
+        export_root: "artifacts/runtime_exports",
+        record_count: 1,
+        catalog_hash:
+          "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        latest_export: null,
+        records: [
+          {
+            catalog_key: "ARCHIVE:pkg-review",
+            export_type: "ARCHIVE",
+            package_id: "pkg-review",
+            package_dir: "artifacts/runtime_exports/pkg-review",
+            relative_package_dir: "pkg-review",
+            file_count: 2,
+            manifest_hash:
+              "sha256:abababababababababababababababababababababababababababababababab",
+            current_sim_time: 120,
+            processed_event_count: 4096,
+            files: [
+              {
+                name: "events",
+                filename: "events.jsonl",
+                bytes: 2048,
+                sha256:
+                  "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+              },
+              {
+                name: "manifest",
+                filename: "manifest.json",
+                bytes: 512,
+                sha256:
+                  "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        type: "RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1",
+        version: "v1",
+        bundle_id: "leo_twin.runtime_export_diagnostics_bundle.v1",
+        source: "BACKEND_RUNTIME_EXPORT",
+        diagnostics_scope: "RESULT_PACKAGE_OPERATOR_REVIEW",
+        package: {
+          package_id: "pkg-review",
+          package_dir: "artifacts/runtime_exports/pkg-review",
+          package_complete: true,
+          review_status: "REVIEW_READY",
+          contract_id: "leo_twin.result_package_contract.v1"
+        },
+        runtime: {
+          lifecycle_state: "STOPPED",
+          current_sim_time: 120,
+          processed_event_count: 4096,
+          queued_event_count: 0
+        },
+        reproducibility: {
+          manifest_id: "leo_twin.runtime_reproducibility_manifest.v1",
+          manifest_ok: true,
+          manifest_hash:
+            "sha256:abababababababababababababababababababababababababababababababab",
+          config_hash: "sha256:config",
+          generated_config_hash: "sha256:generated",
+          review_summary_hash: "sha256:summary"
+        },
+        artifact_health: {
+          artifact_count: 2,
+          artifact_filenames: ["events.jsonl", "manifest.json"],
+          required_filenames: ["events.jsonl", "manifest.json"],
+          recommended_filenames: [],
+          present_required_filenames: ["events.jsonl", "manifest.json"],
+          missing_required_filenames: [],
+          present_recommended_filenames: [],
+          missing_recommended_filenames: []
+        },
+        model_boundaries: {
+          event_kernel_policy: "NO_EVENT_KERNEL_BEHAVIOR_CHANGE",
+          packet_level_simulation: false,
+          external_simulators: [],
+          forbidden_external_integrations: ["STK", "EXATA", "AFSIM", "DDS"],
+          diagnostics_policy: "Deterministic package index only."
+        },
+        findings: [],
+        finding_count: 0,
+        recommended_next_actions: [],
+        diagnostics_hash: "sha256:diagnostics"
+      }
+    );
+
+    expect(display).toMatchObject({
+      packageId: "pkg-review",
+      tone: "match",
+      statusLabel: "manifest 一致",
+      summaryLabel:
+        "pkg-review / LIVE_STATUS_MANIFEST_ONLY / 2 artifacts / abababababab",
+      hashLabels: [
+        "manifest abababababab",
+        "scenario 111111111111",
+        "config 222222222222",
+        "generated 333333333333",
+        "metrics 444444444444",
+        "runtime 555555555555"
+      ],
+      integrityLabels: [
+        "manifest id OK",
+        "diagnostics 一致",
+        "catalog manifest ffffffffffff",
+        "catalog artifact 缺失 0"
+      ],
+      artifactRows: [
+        {
+          name: "events.jsonl",
+          statusLabel: "jsonl / AVAILABLE_FOR_BATCH_EXPORT",
+          catalogPresent: true
+        },
+        {
+          name: "manifest.json",
+          statusLabel: "json / AVAILABLE_FOR_BATCH_EXPORT",
+          catalogPresent: true
+        }
+      ],
+      manifestHref: "/runtime/export/packages/pkg-review/manifest"
+    });
+    expect(display?.artifactRows[0]?.sourceLabel).toContain("eeeeeeeeeeee");
+    expect(
+      buildDataPanelExportManifestInspectorStatus(display, "pkg-review", false, null)
+    ).toBe(display);
+    expect(
+      buildDataPanelExportManifestInspectorStatus(display, "pkg-next", true, null)
+    ).toEqual({
+      tone: "pending",
+      statusLabel: "正在加载 manifest",
+      summaryLabel: "pkg-next",
+      hashLabels: ["只读 manifest", "不执行重放"],
+      integrityLabels: [],
+      artifactRows: [],
+      manifestHref: null
+    });
+    expect(
+      buildDataPanelExportManifestInspectorStatus(display, "pkg-next", false, "HTTP 404")
+    ).toMatchObject({
+      tone: "error",
+      statusLabel: "manifest 加载失败",
+      summaryLabel: "pkg-next",
+      hashLabels: ["HTTP 404"],
+      manifestHref: null
     });
   });
 

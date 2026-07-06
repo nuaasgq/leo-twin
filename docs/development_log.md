@@ -12965,3 +12965,54 @@ change.
 - Recommended follow-up:
   - Add a result package manifest inspector that cross-links manifest file
     hashes, diagnostics findings, and artifact-health rows.
+
+## 2026-07-06 - Dashboard Export Manifest Inspector v1
+
+- Branch: `feature/T272-dashboard-export-manifest-inspector-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: render the selected runtime export package's `manifest.json` in the
+  standalone dashboard. The frontend now defines a direct
+  `loadRuntimeExportManifest()` helper, keeps manifest loading/error state
+  beside compare/review/diagnostics/restore-preflight, and shows a read-only
+  manifest inspector with stable manifest, scenario, config, generated-config,
+  metrics, and runtime-state hashes. The inspector cross-checks diagnostics
+  manifest-hash agreement, catalog manifest file presence, catalog artifact
+  coverage, and manifest artifact source/status rows with file-hash links.
+  Backend runtime behavior, result package generation, restore behavior, Event
+  Kernel behavior, model behavior, packet-level semantics, and external
+  simulator integration remain unchanged.
+- Changed files/modules:
+  - `frontend/src/app/api.ts`
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/appSurface.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed, using the bundled Node/Pnpm runtime because the shell
+      PATH does not expose `node`.
+  - `pnpm --dir frontend test api.test.ts appSurface.test.ts dataPanel.test.ts`
+    - Result: passed, 219 tests.
+  - `pnpm --dir frontend test`
+    - Result: passed, 368 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite reported the existing large DataPanel chunk warning.
+  - `python -m pytest tests/integration/test_result_package_export_v1.py tests/integration/test_runtime_session_control.py::test_demo_adapter_serves_persisted_runtime_export_artifacts -q`
+    - Result: passed, 2 tests.
+- Problems encountered:
+  - Manifest JSON is served directly from `/runtime/export/packages/{id}/manifest`,
+    not as an envelope, so the frontend decoder validates the direct artifact
+    shape.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The manifest inspector is still inline in the export catalog section. A
+    future task can promote it into a wider result-review workspace.
+- Recommended follow-up:
+  - Add manifest-to-diagnostics navigation affordances and optional filtering
+    for large artifact lists once result packages accumulate more files.

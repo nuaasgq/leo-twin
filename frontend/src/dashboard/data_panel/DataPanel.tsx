@@ -214,12 +214,15 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportCatalog,
   runtimeExportCompare,
   runtimeExportReviewSummary,
+  runtimeExportManifest,
   runtimeExportDiagnosticsBundle,
   runtimeExportComparePackageId,
   runtimeExportCompareLoading,
   runtimeExportCompareError,
   runtimeExportReviewSummaryLoading,
   runtimeExportReviewSummaryError,
+  runtimeExportManifestLoading,
+  runtimeExportManifestError,
   runtimeExportDiagnosticsBundleLoading,
   runtimeExportDiagnosticsBundleError,
   runtimeExportRestorePreflight,
@@ -258,12 +261,15 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportCatalog?: RuntimeExportCatalogV1 | null;
   runtimeExportCompare?: RuntimeExportPackageCompareV1 | null;
   runtimeExportReviewSummary?: RuntimeExportReviewSummaryV1 | null;
+  runtimeExportManifest?: RuntimeReproducibilityManifestV1 | null;
   runtimeExportDiagnosticsBundle?: RuntimeExportDiagnosticsBundleV1 | null;
   runtimeExportComparePackageId?: string | null;
   runtimeExportCompareLoading?: boolean;
   runtimeExportCompareError?: string | null;
   runtimeExportReviewSummaryLoading?: boolean;
   runtimeExportReviewSummaryError?: string | null;
+  runtimeExportManifestLoading?: boolean;
+  runtimeExportManifestError?: string | null;
   runtimeExportDiagnosticsBundleLoading?: boolean;
   runtimeExportDiagnosticsBundleError?: string | null;
   runtimeExportRestorePreflight?: RuntimeExportRestorePreflightV1 | null;
@@ -423,6 +429,18 @@ export const DataPanel = memo(function DataPanel({
     runtimeExportComparePackageId,
     runtimeExportDiagnosticsBundleLoading,
     runtimeExportDiagnosticsBundleError
+  );
+  const exportManifestInspectorDisplay = buildDataPanelExportManifestInspectorDisplay(
+    runtimeExportManifest,
+    runtimeExportComparePackageId,
+    runtimeExportCatalog,
+    runtimeExportDiagnosticsBundle
+  );
+  const exportManifestInspectorStatus = buildDataPanelExportManifestInspectorStatus(
+    exportManifestInspectorDisplay,
+    runtimeExportComparePackageId,
+    runtimeExportManifestLoading,
+    runtimeExportManifestError
   );
   const exportCompareDisplay = buildDataPanelExportCompareDisplay(runtimeExportCompare);
   const exportCompareStatus = buildDataPanelExportCompareStatus(
@@ -1206,6 +1224,53 @@ export const DataPanel = memo(function DataPanel({
                 <div className="data-panel-export-diagnostics-actions">
                   {exportDiagnosticsStatus.actionLabels.map((label) => (
                     <span key={label}>{label}</span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+          {exportManifestInspectorStatus ? (
+            <div
+              className={`data-panel-export-manifest-inspector ${exportManifestInspectorStatus.tone}`}
+              aria-label="复盘包 manifest 检查器"
+            >
+              <div className="data-panel-export-diagnostics-header">
+                <div>
+                  <span>Manifest 检查器</span>
+                  <strong>{exportManifestInspectorStatus.statusLabel}</strong>
+                  <small>{exportManifestInspectorStatus.summaryLabel}</small>
+                </div>
+                {exportManifestInspectorStatus.manifestHref ? (
+                  <a href={exportManifestInspectorStatus.manifestHref}>
+                    manifest JSON
+                  </a>
+                ) : null}
+              </div>
+              <div className="data-panel-export-compare-meta">
+                {exportManifestInspectorStatus.hashLabels.map((label) => (
+                  <span key={label}>{label}</span>
+                ))}
+              </div>
+              {exportManifestInspectorStatus.integrityLabels.length > 0 ? (
+                <div className="data-panel-export-manifest-integrity">
+                  {exportManifestInspectorStatus.integrityLabels.map((label) => (
+                    <span key={label}>{label}</span>
+                  ))}
+                </div>
+              ) : null}
+              {exportManifestInspectorStatus.artifactRows.length > 0 ? (
+                <div className="data-panel-export-manifest-artifacts">
+                  {exportManifestInspectorStatus.artifactRows.map((row) => (
+                    <a
+                      href={row.href}
+                      key={row.name}
+                      title={row.title}
+                      className={row.catalogPresent ? "present" : "missing"}
+                    >
+                      <span>{row.name}</span>
+                      <strong>{row.statusLabel}</strong>
+                      <small>{row.sourceLabel}</small>
+                    </a>
                   ))}
                 </div>
               ) : null}
@@ -8607,6 +8672,36 @@ export interface DataPanelExportDiagnosticsFindingRow {
   tone: "info" | "warn" | "error";
 }
 
+export interface DataPanelExportManifestInspectorDisplay {
+  packageId: string;
+  tone: "match" | "different";
+  statusLabel: string;
+  summaryLabel: string;
+  hashLabels: readonly string[];
+  integrityLabels: readonly string[];
+  artifactRows: readonly DataPanelExportManifestArtifactRow[];
+  manifestHref: string;
+}
+
+export interface DataPanelExportManifestInspectorStatus {
+  tone: "match" | "different" | "pending" | "error";
+  statusLabel: string;
+  summaryLabel: string;
+  hashLabels: readonly string[];
+  integrityLabels: readonly string[];
+  artifactRows: readonly DataPanelExportManifestArtifactRow[];
+  manifestHref: string | null;
+}
+
+export interface DataPanelExportManifestArtifactRow {
+  name: string;
+  statusLabel: string;
+  sourceLabel: string;
+  href: string;
+  catalogPresent: boolean;
+  title: string;
+}
+
 export interface DataPanelExportRestorePreflightDisplay {
   packageId: string;
   readiness: string;
@@ -8800,6 +8895,116 @@ export function buildDataPanelExportDiagnosticsStatus(
       findingRows: [],
       actionLabels: [],
       diagnosticsHref: null
+    };
+  }
+  if (display === null) {
+    return null;
+  }
+  return display;
+}
+
+export function buildDataPanelExportManifestInspectorDisplay(
+  manifest: RuntimeReproducibilityManifestV1 | null | undefined,
+  selectedPackageId: string | null | undefined,
+  catalog: RuntimeExportCatalogV1 | null | undefined,
+  diagnostics: RuntimeExportDiagnosticsBundleV1 | null | undefined
+): DataPanelExportManifestInspectorDisplay | null {
+  if (
+    manifest === null ||
+    manifest === undefined ||
+    selectedPackageId === null ||
+    selectedPackageId === undefined
+  ) {
+    return null;
+  }
+  const record =
+    catalog === null || catalog === undefined
+      ? null
+      : selectRuntimeExportCatalogRecordForPackage(catalog, selectedPackageId);
+  const filesByName = new Map(
+    (record?.files ?? []).map((file) => [file.filename, file])
+  );
+  const manifestFile = filesByName.get("manifest.json") ?? null;
+  const diagnosticsManifestHash = diagnostics?.reproducibility.manifest_hash ?? "";
+  const diagnosticsMatch =
+    diagnosticsManifestHash === "" || diagnosticsManifestHash === manifest.manifest_hash;
+  const manifestIdOk =
+    manifest.manifest_id === "leo_twin.runtime_reproducibility_manifest.v1";
+  const artifactRows = [...manifest.artifacts]
+    .sort((left, right) => left.name.localeCompare(right.name))
+    .map((artifact) => {
+      const file = filesByName.get(artifact.name) ?? null;
+      const catalogHash = file ? ` / file ${shortRuntimeHash(file.sha256)}` : "";
+      return {
+        name: artifact.name,
+        statusLabel: `${artifact.format} / ${artifact.status}`,
+        sourceLabel: `${artifact.source}${catalogHash}`,
+        href: runtimeExportPackageFileHref(selectedPackageId, artifact.name),
+        catalogPresent: file !== null,
+        title: `${artifact.name} / ${artifact.status} / ${artifact.source}${
+          file ? ` / ${file.sha256}` : " / catalog missing"
+        }`
+      };
+    });
+  const catalogMissingCount = artifactRows.filter((row) => !row.catalogPresent).length;
+  const artifactCount =
+    typeof manifest.artifact_count === "number"
+      ? manifest.artifact_count
+      : manifest.artifacts.length;
+  const matched =
+    manifestIdOk && diagnosticsMatch && manifestFile !== null && catalogMissingCount === 0;
+  return {
+    packageId: selectedPackageId,
+    tone: matched ? "match" : "different",
+    statusLabel: matched ? "manifest 一致" : "manifest 需复核",
+    summaryLabel: `${selectedPackageId} / ${manifest.artifact_policy} / ${formatCount(
+      artifactCount
+    )} artifacts / ${shortRuntimeHash(manifest.manifest_hash)}`,
+    hashLabels: [
+      `manifest ${shortRuntimeHash(manifest.manifest_hash)}`,
+      `scenario ${shortRuntimeHash(manifest.scenario_hash)}`,
+      `config ${shortRuntimeHash(manifest.control_config_hash)}`,
+      `generated ${shortRuntimeHash(manifest.generated_config_hash)}`,
+      `metrics ${shortRuntimeHash(manifest.metrics_summary_hash)}`,
+      `runtime ${shortRuntimeHash(manifest.runtime_state_hash)}`
+    ],
+    integrityLabels: [
+      `manifest id ${manifestIdOk ? "OK" : "异常"}`,
+      `diagnostics ${diagnosticsMatch ? "一致" : "不一致"}`,
+      `catalog manifest ${manifestFile ? shortRuntimeHash(manifestFile.sha256) : "缺失"}`,
+      `catalog artifact 缺失 ${formatCount(catalogMissingCount)}`
+    ],
+    artifactRows,
+    manifestHref: runtimeExportPackageManifestHref(selectedPackageId)
+  };
+}
+
+export function buildDataPanelExportManifestInspectorStatus(
+  display: DataPanelExportManifestInspectorDisplay | null,
+  selectedPackageId: string | null | undefined,
+  loading = false,
+  error: string | null | undefined = null
+): DataPanelExportManifestInspectorStatus | null {
+  if (loading) {
+    return {
+      tone: "pending",
+      statusLabel: "正在加载 manifest",
+      summaryLabel: selectedPackageId ?? "等待复盘包选择",
+      hashLabels: ["只读 manifest", "不执行重放"],
+      integrityLabels: [],
+      artifactRows: [],
+      manifestHref: null
+    };
+  }
+  if (error !== null && error !== undefined) {
+    return {
+      tone: "error",
+      statusLabel: "manifest 加载失败",
+      summaryLabel: selectedPackageId ?? "未知复盘包",
+      hashLabels: [error],
+      integrityLabels: [],
+      artifactRows: [],
+      manifestHref: null
     };
   }
   if (display === null) {

@@ -13,6 +13,7 @@ import {
   RuntimeExportReviewSummaryV1,
   RuntimeExportRestorePreflightEnvelope,
   RuntimeExportRestorePreflightV1,
+  RuntimeReproducibilityManifestV1,
   RuntimeEntityDetailEnvelopeV1,
   RuntimeNodeDetailCardV1,
   RuntimeNodeDetailPageV1,
@@ -297,6 +298,18 @@ export async function loadRuntimeExportReviewSummary(
     throw new Error(`failed to load runtime export review summary from ${url}: HTTP ${response.status}`);
   }
   return decodeRuntimeExportReviewSummary(await response.json());
+}
+
+export async function loadRuntimeExportManifest(
+  packageId: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): Promise<RuntimeReproducibilityManifestV1> {
+  const url = runtimeExportPackageManifestHref(packageId, endpoint);
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`failed to load runtime export manifest from ${url}: HTTP ${response.status}`);
+  }
+  return decodeRuntimeExportManifest(await response.json());
 }
 
 export async function loadRuntimeExportDiagnosticsBundle(
@@ -717,6 +730,24 @@ export function decodeRuntimeExportReviewSummary(
     );
   }
   return value as RuntimeExportReviewSummaryV1;
+}
+
+export function decodeRuntimeExportManifest(
+  value: unknown
+): RuntimeReproducibilityManifestV1 {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError("runtime export manifest response must be an object");
+  }
+  if (
+    typeof (value as { manifest_id?: unknown }).manifest_id !== "string" ||
+    typeof (value as { manifest_hash?: unknown }).manifest_hash !== "string" ||
+    !Array.isArray((value as { artifacts?: unknown }).artifacts)
+  ) {
+    throw new TypeError(
+      "runtime export manifest response must include manifest_id, manifest_hash, and artifacts"
+    );
+  }
+  return value as RuntimeReproducibilityManifestV1;
 }
 
 export function decodeRuntimeExportDiagnosticsBundle(
