@@ -51,6 +51,10 @@ Tasks:
     key UI fields, detailed file-only fields, template profiles,
     validation/apply workflow, and model boundaries into one stable
     configuration reference object for users and frontend surfaces.
+    T321 binds that reference into the standalone dashboard configuration
+    contract card so the frontend displays the backend-owned reference hash,
+    file-only field count, and reference link rather than deriving the
+    advanced configuration explanation locally.
 - V2-002: Add template catalog metadata.
   - Scope: scenario name, purpose, scale, expected KPI behavior, fidelity mode.
   - Output: backend template endpoint and frontend selector metadata.

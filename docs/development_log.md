@@ -15523,3 +15523,45 @@ change.
   - Bind `USER_CONFIGURATION_REFERENCE_V1` into the dashboard configuration
     contract panel so advanced users can browse all file-only fields from the
     UI.
+
+## 2026-07-06 - Dashboard User Configuration Reference UI v1
+
+- Branch: `feature/T321-dashboard-user-config-reference-ui-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: bind the backend-owned `USER_CONFIGURATION_REFERENCE_V1` into the
+  standalone dashboard configuration contract surface. The dashboard now loads
+  `GET /scenario/user-config/reference` together with schema/templates/export,
+  displays the reference hash and file-only field count, and exposes a direct
+  reference link without deriving advanced configuration semantics locally.
+- Changed files/modules:
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/user_configuration_schema_v2.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test api.test.ts dataPanel.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 2 test
+      files and 215 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path. Vite
+      reported the existing large DataPanel chunk warning.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered:
+  - The new reference-section unit test initially omitted required
+    `UserConfigurationReferenceV1` fixture fields (`ui_key_field` and top-level
+    reference metadata). TypeScript caught the mismatch; the fixture was
+    aligned with the backend contract before final validation.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The dashboard links to the full backend reference but does not yet provide a
+    dedicated full-screen or drawer-style reference browser.
+- Recommended follow-up:
+  - Add a virtualized full-configuration reference drawer when the dashboard
+    moves from compact contract visibility to detailed operator browsing.

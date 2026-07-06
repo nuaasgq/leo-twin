@@ -73,6 +73,7 @@ import {
   RuntimeUserRequestItemV1,
   RuntimeUserRequestSummaryV1,
   UserConfigurationExportV1,
+  UserConfigurationReferenceV1,
   UserConfigurationSchemaV2,
   UserConfigurationTemplateCatalogV1,
   UserConfigurationValidationApplyCommandV1,
@@ -90,6 +91,7 @@ import {
   runtimeExportPackageReviewSummaryHref,
   runtimeExportRestorePreflightHref,
   userConfigurationExportHref,
+  userConfigurationReferenceHref,
   userConfigurationSchemaHref,
   userConfigurationTemplatesHref,
   userConfigurationValidateHref,
@@ -291,6 +293,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportRestoreResult,
   userConfigurationSchema,
   userConfigurationTemplates,
+  userConfigurationReference,
   userConfigurationExport,
   userConfigurationContractLoading,
   userConfigurationContractError,
@@ -373,6 +376,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportRestoreResult?: RuntimeExportRestoreCommandResultV1 | null;
   userConfigurationSchema?: UserConfigurationSchemaV2 | null;
   userConfigurationTemplates?: UserConfigurationTemplateCatalogV1 | null;
+  userConfigurationReference?: UserConfigurationReferenceV1 | null;
   userConfigurationExport?: UserConfigurationExportV1 | null;
   userConfigurationContractLoading?: boolean;
   userConfigurationContractError?: string | null;
@@ -576,6 +580,7 @@ export const DataPanel = memo(function DataPanel({
   const userConfigurationContractDisplay = buildDataPanelUserConfigurationContractDisplay(
     userConfigurationSchema,
     userConfigurationTemplates,
+    userConfigurationReference,
     userConfigurationExport,
     userConfigurationContractLoading,
     userConfigurationContractError
@@ -1404,6 +1409,7 @@ export const DataPanel = memo(function DataPanel({
             <div className="data-panel-export-catalog-actions">
               <a href={userConfigurationContractDisplay.schemaHref}>schema</a>
               <a href={userConfigurationContractDisplay.templatesHref}>templates</a>
+              <a href={userConfigurationContractDisplay.referenceHref}>reference</a>
               <a href={userConfigurationContractDisplay.exportHref} download>
                 export
               </a>
@@ -9359,6 +9365,7 @@ export interface DataPanelUserConfigurationContractDisplay {
   fieldSections: readonly DataPanelUserConfigurationFieldSectionDisplay[];
   schemaHref: string;
   templatesHref: string;
+  referenceHref: string;
   exportHref: string;
 }
 
@@ -9378,25 +9385,44 @@ export interface DataPanelUserConfigurationFieldDisplay {
 export function buildDataPanelUserConfigurationContractDisplay(
   schema: UserConfigurationSchemaV2 | null | undefined,
   templates: UserConfigurationTemplateCatalogV1 | null | undefined,
+  reference: UserConfigurationReferenceV1 | null | undefined,
   exported: UserConfigurationExportV1 | null | undefined,
   loading = false,
   error: string | null | undefined = null
 ): DataPanelUserConfigurationContractDisplay | null {
-  if (loading && schema == null && templates == null && exported == null) {
+  if (
+    loading &&
+    schema == null &&
+    templates == null &&
+    reference == null &&
+    exported == null
+  ) {
     return {
       tone: "pending",
       sourceLabel: "BACKEND_USER_CONFIGURATION",
       summaryLabel: "正在加载 schema、模板目录和当前配置导出",
       statusLabel: "加载中",
       detailLabel: "只读接口，不会修改当前配置",
-      metaLabels: ["schema pending", "templates pending", "export pending"],
+      metaLabels: [
+        "schema pending",
+        "templates pending",
+        "reference pending",
+        "export pending"
+      ],
       fieldSections: [],
       schemaHref: userConfigurationSchemaHref(),
       templatesHref: userConfigurationTemplatesHref(),
+      referenceHref: userConfigurationReferenceHref(),
       exportHref: userConfigurationExportHref()
     };
   }
-  if (error !== null && error !== undefined && schema == null && exported == null) {
+  if (
+    error !== null &&
+    error !== undefined &&
+    schema == null &&
+    reference == null &&
+    exported == null
+  ) {
     return {
       tone: "error",
       sourceLabel: "BACKEND_USER_CONFIGURATION",
@@ -9407,38 +9433,54 @@ export function buildDataPanelUserConfigurationContractDisplay(
       fieldSections: [],
       schemaHref: userConfigurationSchemaHref(),
       templatesHref: userConfigurationTemplatesHref(),
+      referenceHref: userConfigurationReferenceHref(),
       exportHref: userConfigurationExportHref()
     };
   }
-  if (schema == null && templates == null && exported == null) {
+  if (schema == null && templates == null && reference == null && exported == null) {
     return null;
   }
-  const schemaId = schema?.schema_id ?? templates?.schema_id ?? exported?.schema_id ?? "unknown";
-  const fieldCount = schema?.field_count ?? 0;
-  const keyFieldCount = schema?.key_field_count ?? 0;
+  const schemaId =
+    reference?.schema_id ??
+    schema?.schema_id ??
+    templates?.schema_id ??
+    exported?.schema_id ??
+    "unknown";
+  const fieldCount = reference?.field_count ?? schema?.field_count ?? 0;
+  const keyFieldCount = reference?.key_field_count ?? schema?.key_field_count ?? 0;
+  const fileOnlyFieldCount =
+    reference?.file_only_field_count ?? schema?.file_only_field_count ?? 0;
   const templateCount = templates?.template_count ?? schema?.templates.length ?? 0;
   const configHash = exported?.config_hash ?? "";
   const validationOk = exported?.validation_ok ?? false;
-  const source = exported?.source ?? templates?.source ?? schema?.source ?? "BACKEND_USER_CONFIGURATION";
+  const source =
+    reference?.source ??
+    exported?.source ??
+    templates?.source ??
+    schema?.source ??
+    "BACKEND_USER_CONFIGURATION";
   return {
-    tone: validationOk || exported === null ? "match" : "error",
+    tone: validationOk || exported == null ? "match" : "error",
     sourceLabel: `${source} / ${schemaId}`,
     summaryLabel: `字段 ${formatCount(fieldCount)} / 关键 ${formatCount(
       keyFieldCount
     )} / 模板 ${formatCount(templateCount)}`,
-    statusLabel: validationOk || exported === null ? "当前配置可复现" : "当前配置校验异常",
+    statusLabel: validationOk || exported == null ? "当前配置可复现" : "当前配置校验异常",
     detailLabel: exported
       ? `config ${shortRuntimeHash(configHash)} / ${exported.export_scope}`
       : "等待当前配置导出",
     metaLabels: [
       `unknown ${schema?.unknown_key_policy ?? exported?.unknown_key_policy ?? "REJECT"}`,
       `default ${schema?.defaulting_policy ?? exported?.defaulting_policy ?? "BACKEND"}`,
-      `validation ${validationOk ? "ok" : exported === null ? "pending" : "failed"}`,
-      `format ${schema?.format ?? exported?.format ?? "YAML_OR_JSON_MAPPING"}`
+      `validation ${validationOk ? "ok" : exported == null ? "pending" : "failed"}`,
+      `format ${reference?.format ?? schema?.format ?? exported?.format ?? "YAML_OR_JSON_MAPPING"}`,
+      `file-only ${formatCount(fileOnlyFieldCount)}`,
+      `reference ${shortRuntimeHash(reference?.reference_hash ?? "")}`
     ],
     fieldSections: buildDataPanelUserConfigurationFieldSections(schema),
     schemaHref: userConfigurationSchemaHref(),
     templatesHref: userConfigurationTemplatesHref(),
+    referenceHref: userConfigurationReferenceHref(),
     exportHref: userConfigurationExportHref()
   };
 }
@@ -9496,6 +9538,48 @@ export function buildDataPanelUserConfigurationFieldSections(
     });
   });
   return sectionDisplays;
+}
+
+export function buildDataPanelUserConfigurationReferenceFieldSections(
+  reference: UserConfigurationReferenceV1 | null | undefined
+): readonly DataPanelUserConfigurationFieldSectionDisplay[] {
+  if (
+    reference === null ||
+    reference === undefined ||
+    reference.sections.length === 0
+  ) {
+    return [];
+  }
+  const fieldsByPath = new Map(
+    reference.fields.map((field) => [field.path, field])
+  );
+  return reference.sections
+    .filter((section) => section.field_count > 0)
+    .map((section) => {
+      const samplePaths = [
+        ...section.key_paths.slice(0, 2),
+        ...section.file_only_paths.slice(0, 2)
+      ];
+      return {
+        sectionPath: section.section,
+        purpose: section.purpose,
+        metaLabels: [
+          `fields ${formatCount(section.field_count)}`,
+          `key ${formatCount(section.key_field_count)}`,
+          `file-only ${formatCount(section.file_only_field_count)}`
+        ],
+        sampleFields: samplePaths.map((path) => {
+          const field = fieldsByPath.get(path);
+          return {
+            path,
+            label: `${path} / ${field?.label ?? path}`,
+            description:
+              field?.description ??
+              "Backend-owned user configuration reference field."
+          };
+        })
+      };
+    });
 }
 
 export interface DataPanelUserConfigurationValidationDisplay {

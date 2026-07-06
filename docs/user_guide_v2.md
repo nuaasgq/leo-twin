@@ -79,6 +79,9 @@ Use `/scenario/user-config/reference` when you need the full backend-owned
 configuration reference: it lists key UI fields, detailed file-only fields,
 template profiles, validation/apply workflow, and model boundaries in one
 stable object. The control panel should still show only key operational fields.
+The standalone dashboard's configuration contract card links to this reference
+and shows its stable hash/file-only field count next to the schema, templates,
+and current export links.
 
 Minimal YAML example:
 

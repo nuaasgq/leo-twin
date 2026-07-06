@@ -89,6 +89,7 @@ import {
   buildDataPanelTrafficDisplay,
   buildDataPanelUserConfigurationContractDisplay,
   buildDataPanelUserConfigurationFieldSections,
+  buildDataPanelUserConfigurationReferenceFieldSections,
   buildDataPanelUserConfigurationValidationDisplay,
   buildUserBusinessRequestInspector,
   buildUserDetailDrawerSectionsV1,
@@ -1273,6 +1274,108 @@ describe("buildDataPanelUserConfigurationContractDisplay", () => {
       },
       {
         version: "v1",
+        reference_id: "sees.user_configuration_reference.v1",
+        source: "BACKEND_USER_CONFIGURATION",
+        schema_id: "sees.user_configuration.v2",
+        reference_scope: "FULL_USER_CONFIGURATION_FILE_AND_FRONTEND_SURFACE",
+        format: "YAML_OR_JSON_MAPPING",
+        frontend_policy: "CONTROL_PANEL_KEY_FIELDS_ONLY",
+        detailed_config_file: "configs/sees_control.yaml",
+        generated_config_file: "configs/generated_full_system_demo.json",
+        template_config_file: "configs/templates/sees_user_detailed.example.yaml",
+        template_profiles: [],
+        unknown_key_policy: "REJECT",
+        defaulting_policy: "OMITTED_FIELDS_USE_BACKEND_DEFAULTS",
+        mutation_policy: {
+          ui_surface: "KEY_FIELDS_ONLY",
+          full_file_surface: "DETAILED_CONFIG_FILE",
+          validate_endpoint: "POST /scenario/user-config/validate-text",
+          apply_commands: ["CONFIG_UPDATE", "LOAD_TEMPLATE"]
+        },
+        field_count: 42,
+        key_field_count: 12,
+        file_only_field_count: 30,
+        section_count: 2,
+        sections: [
+          {
+            section: "scenario",
+            purpose: "Scenario configuration reference",
+            field_count: 2,
+            key_field_count: 1,
+            file_only_field_count: 1,
+            key_paths: ["scenario.satellite_count"],
+            file_only_paths: ["scenario.compute_gpu_tflops_fp16"]
+          },
+          {
+            section: "network",
+            purpose: "Network configuration reference",
+            field_count: 1,
+            key_field_count: 0,
+            file_only_field_count: 1,
+            key_paths: [],
+            file_only_paths: ["network.carrier_frequency_hz"]
+          }
+        ],
+        fields: [
+          {
+            path: "scenario.satellite_count",
+            section: "scenario",
+            label: "Satellite count",
+            description: "Primary constellation size.",
+            value_type: "integer",
+            editable_surface: "CONTROL_PANEL_KEY_FIELD",
+            ui_key_field: true,
+            default_value: 72,
+            current_value: 120,
+            required_in_user_file: false,
+            validation_rules: ["minimum 1"],
+            minimum: 1
+          },
+          {
+            path: "scenario.compute_gpu_tflops_fp16",
+            section: "scenario",
+            label: "GPU FP16",
+            description: "Detailed file-only FP16 capacity.",
+            value_type: "number",
+            editable_surface: "DETAILED_CONFIG_FILE_ONLY",
+            ui_key_field: false,
+            default_value: 5,
+            current_value: 5,
+            required_in_user_file: false,
+            validation_rules: ["minimum 0"],
+            minimum: 0,
+            unit: "TFLOPS"
+          },
+          {
+            path: "network.carrier_frequency_hz",
+            section: "network",
+            label: "Carrier frequency",
+            description: "Detailed file-only carrier metadata.",
+            value_type: "number",
+            editable_surface: "DETAILED_CONFIG_FILE_ONLY",
+            ui_key_field: false,
+            default_value: 20000000000,
+            current_value: 20000000000,
+            required_in_user_file: false,
+            validation_rules: ["minimum 1"],
+            minimum: 1,
+            unit: "Hz"
+          }
+        ],
+        model_boundaries: {
+          event_kernel_policy: "NO_EVENT_KERNEL_BEHAVIOR_CHANGE",
+          packet_level_simulation: false,
+          external_simulators: false,
+          forbidden_integrations: ["STK", "EXATA", "AFSIM", "DDS"],
+          frontend_semantics_source: "BACKEND_USER_CONFIGURATION"
+        },
+        operator_workflow: ["Use control panel key fields first."],
+        notes: ["Reference is backend-owned."],
+        reference_hash:
+          "sha256:1212121212121212121212121212121212121212121212121212121212121212"
+      },
+      {
+        version: "v1",
         source: "BACKEND_USER_CONFIGURATION",
         schema_id: "sees.user_configuration.v2",
         export_scope: "CURRENT_EFFECTIVE_SEES_CONFIG",
@@ -1336,19 +1439,22 @@ describe("buildDataPanelUserConfigurationContractDisplay", () => {
       "unknown REJECT",
       "default OMITTED_FIELDS_USE_BACKEND_DEFAULTS",
       "validation ok",
-      "format YAML_OR_JSON_MAPPING"
+      "format YAML_OR_JSON_MAPPING",
+      "file-only 30",
+      "reference 121212121212"
     ]);
   });
 
   it("reports loading and error states for user configuration contract", () => {
     expect(
-      buildDataPanelUserConfigurationContractDisplay(null, null, null, true)
+      buildDataPanelUserConfigurationContractDisplay(null, null, null, null, true)
     ).toMatchObject({
       tone: "pending",
       statusLabel: "加载中"
     });
     expect(
       buildDataPanelUserConfigurationContractDisplay(
+        null,
         null,
         null,
         null,
@@ -1360,7 +1466,9 @@ describe("buildDataPanelUserConfigurationContractDisplay", () => {
       statusLabel: "配置契约加载失败",
       summaryLabel: "HTTP 503"
     });
-    expect(buildDataPanelUserConfigurationContractDisplay(null, null, null)).toBeNull();
+    expect(
+      buildDataPanelUserConfigurationContractDisplay(null, null, null, null)
+    ).toBeNull();
   });
 });
 
@@ -1442,6 +1550,140 @@ describe("buildDataPanelUserConfigurationFieldSections", () => {
     expect(sections[2]?.sampleFields[0]?.label).toBe(
       "ui.visualization.coverage · 覆盖显示"
     );
+  });
+});
+
+describe("buildDataPanelUserConfigurationReferenceFieldSections", () => {
+  it("summarizes backend-owned reference sections deterministically", () => {
+    const sections = buildDataPanelUserConfigurationReferenceFieldSections({
+      version: "v1",
+      reference_id: "sees.user_configuration.reference.v1",
+      source: "BACKEND_USER_CONFIGURATION_REFERENCE",
+      schema_id: "sees.user_configuration.v2",
+      reference_scope: "FULL_USER_CONFIGURATION_REFERENCE",
+      format: "YAML_OR_JSON_MAPPING",
+      frontend_policy: "CONTROL_PANEL_KEY_FIELDS_ONLY",
+      detailed_config_file: "configs/sees_control.yaml",
+      generated_config_file: "configs/generated_full_system_demo.json",
+      template_config_file: "configs/templates/sees_control.template.yaml",
+      template_profiles: [],
+      unknown_key_policy: "REJECT",
+      defaulting_policy: "OMITTED_FIELDS_USE_BACKEND_DEFAULTS",
+      mutation_policy: {
+        ui_surface: "KEY_FIELDS_ONLY",
+        full_file_surface: "YAML_OR_JSON_MAPPING",
+        validate_endpoint: "/scenario/user-config/validate",
+        apply_commands: ["CONFIG_UPDATE"]
+      },
+      field_count: 3,
+      key_field_count: 1,
+      file_only_field_count: 2,
+      section_count: 2,
+      sections: [
+        {
+          section: "scenario",
+          purpose: "Scenario scale and runtime controls.",
+          field_count: 2,
+          key_field_count: 1,
+          file_only_field_count: 1,
+          key_paths: ["scenario.satellite_count"],
+          file_only_paths: ["scenario.compute_gpu_tflops_fp32"]
+        },
+        {
+          section: "network",
+          purpose: "Network proxy settings.",
+          field_count: 1,
+          key_field_count: 0,
+          file_only_field_count: 1,
+          key_paths: [],
+          file_only_paths: ["network.loss_proxy_enabled"]
+        }
+      ],
+      fields: [
+        {
+          path: "scenario.satellite_count",
+          section: "scenario",
+          label: "Satellite count",
+          description: "Total satellite nodes.",
+          value_type: "number",
+          default_value: 72,
+          current_value: 72,
+          editable_surface: "CONTROL_PANEL_KEY_FIELD",
+          ui_key_field: true,
+          required_in_user_file: false,
+          validation_rules: ["minimum 1"]
+        },
+        {
+          path: "scenario.compute_gpu_tflops_fp32",
+          section: "scenario",
+          label: "FP32 GPU",
+          description: "Per-satellite FP32 GPU peak capacity.",
+          value_type: "number",
+          default_value: 0,
+          current_value: 0,
+          editable_surface: "DETAILED_CONFIG_FILE_ONLY",
+          ui_key_field: false,
+          required_in_user_file: false,
+          validation_rules: ["minimum 0"]
+        },
+        {
+          path: "network.loss_proxy_enabled",
+          section: "network",
+          label: "Loss proxy",
+          description: "Enables deterministic flow-level loss proxy.",
+          value_type: "boolean",
+          default_value: true,
+          current_value: true,
+          editable_surface: "DETAILED_CONFIG_FILE_ONLY",
+          ui_key_field: false,
+          required_in_user_file: false,
+          validation_rules: []
+        }
+      ],
+      model_boundaries: {
+        event_kernel_policy: "NO_EVENT_KERNEL_BEHAVIOR_CHANGE",
+        packet_level_simulation: false,
+        external_simulators: false,
+        forbidden_integrations: ["STK", "EXATA", "AFSIM", "DDS"],
+        frontend_semantics_source: "BACKEND_USER_CONFIGURATION"
+      },
+      operator_workflow: ["Edit key fields in the control panel first."],
+      notes: ["Detailed fields remain file-owned."],
+      reference_hash:
+        "sha256:1234123412341234123412341234123412341234123412341234123412341234"
+    });
+
+    expect(sections).toEqual([
+      {
+        sectionPath: "scenario",
+        purpose: "Scenario scale and runtime controls.",
+        metaLabels: ["fields 2", "key 1", "file-only 1"],
+        sampleFields: [
+          {
+            path: "scenario.satellite_count",
+            label: "scenario.satellite_count / Satellite count",
+            description: "Total satellite nodes."
+          },
+          {
+            path: "scenario.compute_gpu_tflops_fp32",
+            label: "scenario.compute_gpu_tflops_fp32 / FP32 GPU",
+            description: "Per-satellite FP32 GPU peak capacity."
+          }
+        ]
+      },
+      {
+        sectionPath: "network",
+        purpose: "Network proxy settings.",
+        metaLabels: ["fields 1", "key 0", "file-only 1"],
+        sampleFields: [
+          {
+            path: "network.loss_proxy_enabled",
+            label: "network.loss_proxy_enabled / Loss proxy",
+            description: "Enables deterministic flow-level loss proxy."
+          }
+        ]
+      }
+    ]);
   });
 });
 

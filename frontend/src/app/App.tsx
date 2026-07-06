@@ -36,6 +36,7 @@ import {
   RuntimeStatusPayload,
   ScenarioConfig,
   UserConfigurationExportV1,
+  UserConfigurationReferenceV1,
   UserConfigurationSchemaV2,
   UserConfigurationTemplateCatalogV1,
   UserConfigurationValidationReportV1
@@ -77,6 +78,7 @@ import {
   loadRuntimeState,
   loadScenarioConfig,
   loadUserConfigurationExport,
+  loadUserConfigurationReference,
   loadUserConfigurationSchema,
   loadUserConfigurationTemplates,
   RuntimeDetailQueryFilters,
@@ -421,6 +423,8 @@ export function App() {
     useState<UserConfigurationSchemaV2 | null>(null);
   const [userConfigurationTemplates, setUserConfigurationTemplates] =
     useState<UserConfigurationTemplateCatalogV1 | null>(null);
+  const [userConfigurationReference, setUserConfigurationReference] =
+    useState<UserConfigurationReferenceV1 | null>(null);
   const [userConfigurationExport, setUserConfigurationExport] =
     useState<UserConfigurationExportV1 | null>(null);
   const [userConfigurationContractLoading, setUserConfigurationContractLoading] =
@@ -1687,9 +1691,10 @@ export function App() {
   const refreshUserConfigurationContract = useCallback(async () => {
     setUserConfigurationContractLoading(true);
     setUserConfigurationContractError(null);
-    const [schema, templates, exported] = await Promise.allSettled([
+    const [schema, templates, reference, exported] = await Promise.allSettled([
       loadUserConfigurationSchema(),
       loadUserConfigurationTemplates(),
+      loadUserConfigurationReference(),
       loadUserConfigurationExport()
     ]);
     if (schema.status === "fulfilled") {
@@ -1698,15 +1703,19 @@ export function App() {
     if (templates.status === "fulfilled") {
       setUserConfigurationTemplates(templates.value);
     }
+    if (reference.status === "fulfilled") {
+      setUserConfigurationReference(reference.value);
+    }
     if (exported.status === "fulfilled") {
       setUserConfigurationExport(exported.value);
     }
-    const failures = [schema, templates, exported].filter(
+    const failures = [schema, templates, reference, exported].filter(
       (item) => item.status === "rejected"
     );
-    if (failures.length === 3) {
+    if (failures.length === 4) {
       setUserConfigurationSchema(null);
       setUserConfigurationTemplates(null);
+      setUserConfigurationReference(null);
       setUserConfigurationExport(null);
     }
     if (failures.length > 0) {
@@ -2441,6 +2450,7 @@ export function App() {
               runtimeExportRestoreResult={runtimeExportRestoreResult}
               userConfigurationSchema={userConfigurationSchema}
               userConfigurationTemplates={userConfigurationTemplates}
+              userConfigurationReference={userConfigurationReference}
               userConfigurationExport={userConfigurationExport}
               userConfigurationContractLoading={userConfigurationContractLoading}
               userConfigurationContractError={userConfigurationContractError}

@@ -126,6 +126,12 @@ available, and the backend-declared apply command. The dashboard only enables
 rather than the raw editor text. Applying a config reinitializes the session
 and reconnects runtime streams through the existing control plane.
 
+The same dashboard contract panel also consumes
+`GET /scenario/user-config/reference`. It surfaces the backend-owned reference
+hash, file-only field count, and a direct reference link beside the schema,
+template, and current export links so advanced users can inspect the complete
+configuration contract without the frontend inventing local semantics.
+
 The validation `change_summary` is backend-owned. It includes:
 
 - `baseline`: the current effective `SEESConfig`;
