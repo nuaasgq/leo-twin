@@ -646,7 +646,11 @@ Tasks:
     follow-up/error status and operator notes through
     `POST /runtime/export/packages/{package_id}/scenario-review-checklist`,
     updates the export catalog, and regenerates the package audit index with
-    checklist presence, hash, status, and record count.
+    checklist presence, hash, status, and record count. T314 binds that
+    checklist contract into the standalone dashboard guided review workflow:
+    every review row can be marked reviewed, skipped, follow-up, or error with
+    an operator note, saved through the backend endpoint, and reflected back
+    through refreshed catalog/audit-index evidence.
 
 ### WS9. Delivery and Operations v2
 

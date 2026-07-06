@@ -34,8 +34,11 @@ import {
   buildDataPanelExportPackageAuditIndexArtifactDisplay,
   buildDataPanelExportPackageAuditIndexDisplay,
   buildDataPanelExportPackageAuditIndexStatus,
+  buildDataPanelExportScenarioReviewChecklistStatus,
   buildDataPanelExportScenarioReviewBundleDisplay,
   buildDataPanelExportScenarioReviewBundleStatus,
+  buildDataPanelScenarioReviewChecklistDraft,
+  buildDataPanelScenarioReviewChecklistSaveRequest,
   buildDataPanelExportRouteComparisonReviewArtifactDisplay,
   buildDataPanelExportRouteComparisonReviewReportDisplay,
   buildDataPanelExportRouteComparisonReviewReportStatus,
@@ -2856,6 +2859,184 @@ describe("buildDataPanelExportCatalogDisplay", () => {
     ).toMatchObject({
       tone: "error",
       warningLabels: ["scenario review failed"]
+    });
+  });
+
+  it("builds scenario review checklist drafts and save payloads", () => {
+    const bundle = {
+      type: "RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1",
+      version: "v1",
+      bundle_id: "leo_twin.runtime_export_scenario_review_bundle.v1",
+      source: "BACKEND_RUNTIME_EXPORT_PACKAGE",
+      review_scope: "USER_CONFIGURATION_TO_RESULT_PACKAGE_REVIEW",
+      package_id: "pkg-review",
+      package_dir: "artifacts/runtime_exports/pkg-review",
+      scenario: {
+        seed: 7,
+        satellite_count: 72,
+        user_count: 20,
+        compute_node_count: 12,
+        duration_seconds: 120
+      },
+      runtime: {
+        lifecycle_state: "STOPPED",
+        current_sim_time: 120,
+        processed_event_count: 4200,
+        queued_event_count: 0
+      },
+      user_configuration: {
+        type: "USER_CONFIGURATION_AUDIT_BINDING_V1",
+        version: "v1",
+        binding_id: "leo_twin.user_configuration_audit_binding.v1",
+        source: "BACKEND_RUNTIME_EXPORT_PACKAGE",
+        schema_id: "sees.user_configuration.v2",
+        export_scope: "CURRENT_EFFECTIVE_SEES_CONFIG",
+        format: "JSON_MAPPING",
+        config_hash: "sha256:config",
+        export_hash: "sha256:export",
+        validation_ok: true,
+        validation_error_count: 0,
+        unknown_key_policy: "REJECT",
+        defaulting_policy: "OMITTED_FIELDS_USE_BACKEND_DEFAULTS",
+        import_paths: [],
+        binding_hash: "sha256:binding"
+      },
+      reproducibility: {
+        manifest_id: "leo_twin.runtime_reproducibility_manifest.v1",
+        manifest_hash: "sha256:manifest",
+        control_config_hash: "sha256:control",
+        generated_config_hash: "sha256:generated",
+        runtime_state_hash: "sha256:runtime",
+        metrics_summary_hash: "sha256:metrics",
+        runtime_export_boundary_hash: "sha256:boundary"
+      },
+      review_summary: {
+        summary_id: "leo_twin.runtime_export_review_summary.v1",
+        summary_hash: "sha256:review",
+        review_status: "REVIEW_READY"
+      },
+      diagnostics: {
+        bundle_id: "leo_twin.runtime_export_diagnostics_bundle.v1",
+        diagnostics_hash: "sha256:diagnostics",
+        finding_count: 0,
+        finding_labels: []
+      },
+      audit_index: {
+        audit_index_id: "leo_twin.runtime_export_package_audit_index.v1",
+        filename: "export_package_audit_index_v1.json",
+        hash_binding_direction:
+          "audit index records this scenario_review_bundle_v1.json file hash"
+      },
+      artifact_review: {
+        artifact_count: 3,
+        artifact_filenames: [
+          "scenario_review_bundle_v1.json",
+          "export_package_audit_index_v1.json",
+          "review_summary_v1.json"
+        ],
+        entrypoint_filenames: ["scenario_review_bundle_v1.json"]
+      },
+      model_boundaries: {
+        event_kernel_policy: "NO_EVENT_KERNEL_BEHAVIOR_CHANGE",
+        event_replay_restore: false,
+        model_recomputation: false,
+        route_recomputation: false,
+        service_recomputation: false,
+        packet_capture: false,
+        packet_level_simulation: false,
+        external_simulators: false,
+        forbidden_external_integrations: ["STK", "EXATA", "AFSIM", "DDS"]
+      },
+      recommended_review_order: [
+        "scenario_review_bundle_v1.json",
+        "export_package_audit_index_v1.json",
+        "review_summary_v1.json"
+      ],
+      scenario_review_status: "SCENARIO_REVIEW_READY",
+      scenario_review_warnings: [],
+      scenario_review_hash: "sha256:scenario-review"
+    };
+    const checklist = {
+      type: "RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_V1",
+      version: "v1",
+      checklist_id: "leo_twin.runtime_export_scenario_review_checklist.v1",
+      source: "OPERATOR_SCENARIO_REVIEW_CHECKLIST",
+      checklist_scope: "SCENARIO_REVIEW_BUNDLE_OPERATOR_DECISIONS",
+      package_id: "pkg-review",
+      package_dir: "artifacts/runtime_exports/pkg-review",
+      scenario_review_bundle_id:
+        "leo_twin.runtime_export_scenario_review_bundle.v1",
+      scenario_review_hash: "sha256:scenario-review",
+      record_count: 1,
+      reviewed_count: 1,
+      skipped_count: 0,
+      followup_count: 0,
+      error_count: 0,
+      checklist_status: "CHECKLIST_COMPLETE",
+      records: [
+        {
+          artifact_filename: "scenario_review_bundle_v1.json",
+          step_label: "1 scenario entry",
+          review_status: "REVIEWED",
+          status_reason: "",
+          operator_note: "checked scenario evidence",
+          evidence_hash: "sha256:scenario-review",
+          review_order_index: 0,
+          record_hash: "sha256:record"
+        }
+      ],
+      ordering: "recommended_review_order ascending",
+      boundary_conditions: ["NO_EVENT_REPLAY"],
+      checklist_hash: "sha256:checklist"
+    };
+    const display = buildDataPanelExportScenarioReviewBundleDisplay(bundle as any);
+    const draft = buildDataPanelScenarioReviewChecklistDraft(
+      bundle as any,
+      checklist as any
+    );
+
+    expect(draft["scenario_review_bundle_v1.json"]).toEqual({
+      reviewStatus: "REVIEWED",
+      operatorNote: "checked scenario evidence"
+    });
+    expect(draft["export_package_audit_index_v1.json"]).toEqual({
+      reviewStatus: "REVIEWED",
+      operatorNote: ""
+    });
+    expect(
+      buildDataPanelExportScenarioReviewChecklistStatus(checklist as any)
+    ).toMatchObject({
+      tone: "match",
+      statusLabel: "审核清单已完成",
+      warningLabels: []
+    });
+    const request = buildDataPanelScenarioReviewChecklistSaveRequest(
+      bundle as any,
+      display?.workflowRows.slice(0, 3) ?? [],
+      draft,
+      { audit_hash: "sha256:audit" } as any
+    );
+
+    expect(request).toMatchObject({
+      packageId: "pkg-review",
+      records: [
+        {
+          artifact_filename: "scenario_review_bundle_v1.json",
+          review_status: "REVIEWED",
+          operator_note: "checked scenario evidence",
+          evidence_hash: "sha256:scenario-review"
+        },
+        {
+          artifact_filename: "export_package_audit_index_v1.json",
+          review_status: "REVIEWED",
+          evidence_hash: "sha256:audit"
+        },
+        {
+          artifact_filename: "review_summary_v1.json",
+          review_status: "REVIEWED",
+          evidence_hash: "sha256:review"
+        }
+      ]
     });
   });
 

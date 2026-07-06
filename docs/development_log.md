@@ -15164,3 +15164,55 @@ change.
 - Recommended follow-up:
   - Bind the guided scenario review workflow to the checklist save API with
     reviewed/skipped/follow-up controls and local draft handling before POST.
+
+## 2026-07-06 - Dashboard Scenario Review Checklist UI v1
+
+- Branch: `feature/T314-dashboard-scenario-review-checklist-ui-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: bind the T313 scenario review checklist contract into the standalone
+  dashboard guided package review workflow. The dashboard now loads saved
+  `scenario_review_checklist_v1.json` when the export catalog lists it,
+  initializes editable per-artifact review statuses and operator notes, posts
+  checklist records through the backend save endpoint, and refreshes the export
+  catalog plus package audit index so checklist hash/status/count remain
+  backend-owned evidence. This task does not alter Event Kernel behavior,
+  backend runtime models, package read semantics, route recomputation, service
+  recomputation, packet-level simulation, or external simulator integration.
+- Changed files/modules:
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `frontend/tests/appSurface.test.ts`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/dashboard_model_trust_evidence_workspace_v1.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts appSurface.test.ts api.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 3 test
+      files and 255 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path. Vite
+      reported the existing large DataPanel chunk warning.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered:
+  - The first TypeScript pass found that the new checklist props were declared
+    but not destructured from the DataPanel parameter list. The props were
+    added to the destructuring list and `tsc --noEmit` then passed.
+  - The normal PowerShell PATH may not expose `node`, so frontend validation
+    uses the bundled Codex Node/Pnpm runtime path.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The checklist UI stores one current checklist artifact per package. It does
+    not yet provide local draft persistence across page refresh before save.
+  - Checklist saves update package JSON artifacts and catalog/audit records,
+    but they do not rewrite archive zip files created before the save.
+- Recommended follow-up:
+  - Add a compact package-review completion summary that combines saved route
+    comparison report status and saved scenario checklist status in one
+    operator-ready banner.

@@ -224,6 +224,12 @@ audit index, review summary, diagnostics, manifest, configuration, route
 evidence, service trace, event evidence, metrics, and summary artifacts,
 marking missing artifacts explicitly. It is also available through the same
 package file endpoint and does not replay events or recompute model state.
+The workflow includes an editable checklist. For each review row, the dashboard
+lets the operator choose `REVIEWED`, `SKIPPED`, `NEEDS_FOLLOWUP`, or `ERROR`,
+enter a short note, and save the checklist through the backend. After saving,
+the dashboard refreshes the catalog and audit index so
+`scenario_review_checklist_v1.json` and its hash/status/count are visible as
+backend-owned package evidence.
 For package-owned review, use:
 
 ```powershell

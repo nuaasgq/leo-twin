@@ -3205,6 +3205,87 @@ button.data-panel-route-row {
   white-space: nowrap;
 }
 
+.data-panel-export-scenario-checklist {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  border: 1px solid #263a48;
+  border-radius: 6px;
+  padding: 8px;
+  background: #081016;
+}
+
+.data-panel-export-scenario-checklist button {
+  border: 1px solid #3c5f72;
+  border-radius: 5px;
+  padding: 6px 9px;
+  background: #10202b;
+  color: var(--app-text);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.data-panel-export-scenario-checklist button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.data-panel-export-scenario-checklist-rows {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 7px;
+}
+
+.data-panel-export-scenario-checklist-rows label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  border: 1px solid #314656;
+  border-radius: 6px;
+  padding: 7px;
+  background: #0b1219;
+}
+
+.data-panel-export-scenario-checklist-rows label.different {
+  border-color: #6a5a2c;
+  background: #19160e;
+}
+
+.data-panel-export-scenario-checklist-rows label.pending {
+  border-color: #365068;
+  background: #0d151d;
+}
+
+.data-panel-export-scenario-checklist-rows label > span {
+  min-width: 0;
+  color: var(--app-text);
+  font-size: 11px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.data-panel-export-scenario-checklist-rows select,
+.data-panel-export-scenario-checklist-rows input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #263a48;
+  border-radius: 5px;
+  padding: 6px 7px;
+  background: #081016;
+  color: var(--app-text);
+  font-size: 11px;
+}
+
+.data-panel-export-scenario-checklist-rows small {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--app-muted);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .data-panel-export-restore-actions {
   display: flex;
   flex-wrap: wrap;

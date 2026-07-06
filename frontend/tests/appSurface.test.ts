@@ -21,6 +21,7 @@ import {
   runtimeProgressSimTime,
   runtimeStatusArmsCompletionNotice,
   runtimeExportCompareErrorMessage,
+  runtimeExportCatalogHasScenarioReviewChecklist,
   runtimeExportDiagnosticsBundleErrorMessage,
   runtimeExportManifestErrorMessage,
   runtimeExportReviewSummaryErrorMessage,
@@ -144,6 +145,50 @@ describe("standaloneDashboardHref", () => {
     expect(selectRuntimeExportComparePackageId(catalog, "pkg-old")).toBe("pkg-old");
     expect(selectRuntimeExportComparePackageId(catalog, "missing")).toBe("pkg-latest");
     expect(selectRuntimeExportComparePackageId({ ...catalog, records: [] }, null)).toBeNull();
+  });
+
+  it("detects persisted scenario review checklist artifacts from the catalog", () => {
+    const catalog: RuntimeExportCatalogV1 = {
+      version: "v1",
+      source: "BACKEND_RUNTIME_EXPORT",
+      catalog_scope: "RUNTIME_EXPORT_ROOT",
+      catalog_file: "artifacts/runtime_exports/runtime_export_catalog_v1.json",
+      export_root: "artifacts/runtime_exports",
+      record_count: 1,
+      catalog_hash: "sha256:catalog",
+      latest_export: null,
+      records: [
+        {
+          catalog_key: "PACKAGE:pkg-review",
+          export_type: "PACKAGE",
+          package_id: "pkg-review",
+          package_dir: "artifacts/runtime_exports/pkg-review",
+          relative_package_dir: "pkg-review",
+          file_count: 1,
+          manifest_hash: "sha256:manifest",
+          current_sim_time: 120,
+          processed_event_count: 4200,
+          files: [
+            {
+              name: "scenario_review_checklist_v1",
+              filename: "scenario_review_checklist_v1.json",
+              bytes: 256,
+              sha256: "sha256:checklist"
+            }
+          ]
+        }
+      ]
+    };
+
+    expect(runtimeExportCatalogHasScenarioReviewChecklist(catalog, "pkg-review")).toBe(
+      true
+    );
+    expect(runtimeExportCatalogHasScenarioReviewChecklist(catalog, "missing")).toBe(
+      false
+    );
+    expect(runtimeExportCatalogHasScenarioReviewChecklist(null, "pkg-review")).toBe(
+      false
+    );
   });
 
   it("formats runtime export compare errors for dashboard display", () => {

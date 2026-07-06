@@ -100,10 +100,12 @@ configuration. The scenario review card also renders ordered artifact workflow
 rows for configuration, manifest, diagnostics, audit, route, service trace,
 event, metric, and summary review. T313 adds
 `scenario_review_checklist_v1.json` as the backend-persisted operator decision
-record for those rows; after a checklist save, the audit index exposes
-checklist presence, hash, status, and record count. This lets operators inspect
-the package audit boundary without opening raw JSON, while a full editable
-checklist UI remains a follow-up task.
+record for those rows. The dashboard now exposes editable reviewed/skipped/
+follow-up/error controls and operator notes for each guided review row, posts
+them to the backend checklist endpoint, and refreshes the audit index so
+checklist presence, hash, status, and record count stay backend-owned evidence.
+This lets operators inspect and record the package audit boundary without
+opening raw JSON.
 7. runtime evidence
 
 Each row has a tone:

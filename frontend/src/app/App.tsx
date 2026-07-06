@@ -17,6 +17,7 @@ import {
   RuntimeExportPackageCompareV1,
   RuntimeExportPackageAuditIndexV1,
   RuntimeExportScenarioReviewBundleV1,
+  RuntimeExportScenarioReviewChecklistV1,
   RuntimeExportRouteComparisonReviewReportV1,
   RuntimeExportRouteDetailItemV1,
   RuntimeExportRouteDetailPageV1,
@@ -55,6 +56,7 @@ import {
   loadRuntimeExportPackageCompare,
   loadRuntimeExportPackageAuditIndex,
   loadRuntimeExportScenarioReviewBundle,
+  loadRuntimeExportScenarioReviewChecklist,
   loadRuntimeExportRouteComparisonReviewReport,
   loadRuntimeExportRouteDetailItem,
   loadRuntimeExportRouteDetailPage,
@@ -80,11 +82,13 @@ import {
   RuntimeDetailQueryFilters,
   runtimeApiErrorMessage,
   saveRuntimeExportRouteComparisonReviewReport,
+  saveRuntimeExportScenarioReviewChecklist as saveRuntimeExportScenarioReviewChecklistArtifact,
   validateUserConfigurationCandidate,
   validateUserConfigurationTextCandidate
 } from "./api";
 import type {
   DataPanelExportRouteComparisonReviewSaveRequest,
+  DataPanelExportScenarioReviewChecklistSaveRequest,
   DataPanelExportRouteDetailPageRequest,
   DataPanelExportServiceTracePageRequest,
   RuntimeDetailPages
@@ -100,6 +104,7 @@ const ROUTE_COMPARISON_REVIEW_REPORT_FILENAME =
   "route_comparison_review_report_v1.json";
 const EXPORT_PACKAGE_AUDIT_INDEX_FILENAME = "export_package_audit_index_v1.json";
 const SCENARIO_REVIEW_BUNDLE_FILENAME = "scenario_review_bundle_v1.json";
+const SCENARIO_REVIEW_CHECKLIST_FILENAME = "scenario_review_checklist_v1.json";
 const SERVICE_LIFECYCLE_TRACE_FILENAME = "service_lifecycle_trace_v2.json";
 
 type RuntimeConnectionChannel = "http" | "control" | "events" | "state";
@@ -305,6 +310,10 @@ export function App() {
     setRuntimeExportScenarioReviewBundle
   ] = useState<RuntimeExportScenarioReviewBundleV1 | null>(null);
   const [
+    runtimeExportScenarioReviewChecklist,
+    setRuntimeExportScenarioReviewChecklist
+  ] = useState<RuntimeExportScenarioReviewChecklistV1 | null>(null);
+  const [
     runtimeExportRouteDetailItemRouteId,
     setRuntimeExportRouteDetailItemRouteId
   ] = useState<string | null>(null);
@@ -363,6 +372,14 @@ export function App() {
     setRuntimeExportScenarioReviewBundleError
   ] = useState<string | null>(null);
   const [
+    runtimeExportScenarioReviewChecklistLoading,
+    setRuntimeExportScenarioReviewChecklistLoading
+  ] = useState(false);
+  const [
+    runtimeExportScenarioReviewChecklistError,
+    setRuntimeExportScenarioReviewChecklistError
+  ] = useState<string | null>(null);
+  const [
     runtimeExportRouteComparisonReviewSavePendingRouteId,
     setRuntimeExportRouteComparisonReviewSavePendingRouteId
   ] = useState<string | null>(null);
@@ -373,6 +390,18 @@ export function App() {
   const [
     runtimeExportRouteComparisonReviewSaveReportHash,
     setRuntimeExportRouteComparisonReviewSaveReportHash
+  ] = useState<string | null>(null);
+  const [
+    runtimeExportScenarioReviewChecklistSavePending,
+    setRuntimeExportScenarioReviewChecklistSavePending
+  ] = useState(false);
+  const [
+    runtimeExportScenarioReviewChecklistSaveError,
+    setRuntimeExportScenarioReviewChecklistSaveError
+  ] = useState<string | null>(null);
+  const [
+    runtimeExportScenarioReviewChecklistSaveHash,
+    setRuntimeExportScenarioReviewChecklistSaveHash
   ] = useState<string | null>(null);
   const [runtimeExportRestorePreflight, setRuntimeExportRestorePreflight] =
     useState<RuntimeExportRestorePreflightV1 | null>(null);
@@ -1155,6 +1184,8 @@ export function App() {
       runtimeExportCatalogHasPackageAuditIndex(exportCatalog, packageId);
     const shouldLoadScenarioReviewBundle =
       runtimeExportCatalogHasScenarioReviewBundle(exportCatalog, packageId);
+    const shouldLoadScenarioReviewChecklist =
+      runtimeExportCatalogHasScenarioReviewChecklist(exportCatalog, packageId);
     const shouldLoadServiceLifecycleTrace =
       runtimeExportCatalogHasServiceLifecycleTrace(exportCatalog, packageId);
     setRuntimeExportComparePackageId(packageId);
@@ -1167,6 +1198,7 @@ export function App() {
     setRuntimeExportRouteComparisonReviewReportLoading(shouldLoadReviewReport);
     setRuntimeExportPackageAuditIndexLoading(shouldLoadAuditIndex);
     setRuntimeExportScenarioReviewBundleLoading(shouldLoadScenarioReviewBundle);
+    setRuntimeExportScenarioReviewChecklistLoading(shouldLoadScenarioReviewChecklist);
     setRuntimeExportRestorePreflightLoading(true);
     setRuntimeExportCompareError(null);
     setRuntimeExportReviewSummaryError(null);
@@ -1182,6 +1214,8 @@ export function App() {
     setRuntimeExportPackageAuditIndexError(null);
     setRuntimeExportScenarioReviewBundle(null);
     setRuntimeExportScenarioReviewBundleError(null);
+    setRuntimeExportScenarioReviewChecklist(null);
+    setRuntimeExportScenarioReviewChecklistError(null);
     setRuntimeExportRouteDetailItem(null);
     setRuntimeExportRouteDetailItemRouteId(null);
     setRuntimeExportRouteDetailItemLoading(false);
@@ -1189,6 +1223,9 @@ export function App() {
     setRuntimeExportRouteComparisonReviewSavePendingRouteId(null);
     setRuntimeExportRouteComparisonReviewSaveError(null);
     setRuntimeExportRouteComparisonReviewSaveReportHash(null);
+    setRuntimeExportScenarioReviewChecklistSavePending(false);
+    setRuntimeExportScenarioReviewChecklistSaveError(null);
+    setRuntimeExportScenarioReviewChecklistSaveHash(null);
     setRuntimeExportRestorePreflightError(null);
     setRuntimeExportRestoreCommandError(null);
     setRuntimeExportRestoreResult(null);
@@ -1202,6 +1239,7 @@ export function App() {
       routeComparisonReviewReport,
       packageAuditIndex,
       scenarioReviewBundle,
+      scenarioReviewChecklist,
       preflight
     ] =
       await Promise.allSettled([
@@ -1221,6 +1259,9 @@ export function App() {
           : Promise.resolve(null),
         shouldLoadScenarioReviewBundle
           ? loadRuntimeExportScenarioReviewBundle(packageId)
+          : Promise.resolve(null),
+        shouldLoadScenarioReviewChecklist
+          ? loadRuntimeExportScenarioReviewChecklist(packageId)
           : Promise.resolve(null),
         loadRuntimeExportRestorePreflight(packageId)
       ]);
@@ -1297,6 +1338,16 @@ export function App() {
         runtimeExportScenarioReviewBundleErrorMessage(scenarioReviewBundle.reason)
       );
     }
+    if (scenarioReviewChecklist.status === "fulfilled") {
+      setRuntimeExportScenarioReviewChecklist(scenarioReviewChecklist.value);
+    } else {
+      setRuntimeExportScenarioReviewChecklist(null);
+      setRuntimeExportScenarioReviewChecklistError(
+        runtimeExportScenarioReviewChecklistErrorMessage(
+          scenarioReviewChecklist.reason
+        )
+      );
+    }
     if (preflight.status === "fulfilled") {
       setRuntimeExportRestorePreflight(preflight.value);
     } else {
@@ -1314,6 +1365,7 @@ export function App() {
     setRuntimeExportRouteComparisonReviewReportLoading(false);
     setRuntimeExportPackageAuditIndexLoading(false);
     setRuntimeExportScenarioReviewBundleLoading(false);
+    setRuntimeExportScenarioReviewChecklistLoading(false);
     setRuntimeExportRestorePreflightLoading(false);
   }, [runtimeExportCatalog]);
 
@@ -1436,9 +1488,15 @@ export function App() {
         setRuntimeExportScenarioReviewBundle(null);
         setRuntimeExportScenarioReviewBundleLoading(false);
         setRuntimeExportScenarioReviewBundleError(null);
+        setRuntimeExportScenarioReviewChecklist(null);
+        setRuntimeExportScenarioReviewChecklistLoading(false);
+        setRuntimeExportScenarioReviewChecklistError(null);
         setRuntimeExportRouteComparisonReviewSavePendingRouteId(null);
         setRuntimeExportRouteComparisonReviewSaveError(null);
         setRuntimeExportRouteComparisonReviewSaveReportHash(null);
+        setRuntimeExportScenarioReviewChecklistSavePending(false);
+        setRuntimeExportScenarioReviewChecklistSaveError(null);
+        setRuntimeExportScenarioReviewChecklistSaveHash(null);
         setRuntimeExportRestorePreflight(null);
         setRuntimeExportComparePackageId(null);
         setRuntimeExportCompareLoading(false);
@@ -1460,6 +1518,7 @@ export function App() {
         setRuntimeExportRouteComparisonReviewReportError(null);
         setRuntimeExportPackageAuditIndexError(null);
         setRuntimeExportScenarioReviewBundleError(null);
+        setRuntimeExportScenarioReviewChecklistError(null);
         setRuntimeExportRestorePreflightError(null);
         setRuntimeExportRestoreCommandPendingPackageId(null);
         setRuntimeExportRestoreCommandError(null);
@@ -1479,11 +1538,15 @@ export function App() {
       setRuntimeExportRouteComparisonReviewReport(null);
       setRuntimeExportPackageAuditIndex(null);
       setRuntimeExportScenarioReviewBundle(null);
+      setRuntimeExportScenarioReviewChecklist(null);
       setRuntimeExportRestorePreflight(null);
       setRuntimeExportComparePackageId(null);
       setRuntimeExportRouteComparisonReviewSavePendingRouteId(null);
       setRuntimeExportRouteComparisonReviewSaveError(null);
       setRuntimeExportRouteComparisonReviewSaveReportHash(null);
+      setRuntimeExportScenarioReviewChecklistSavePending(false);
+      setRuntimeExportScenarioReviewChecklistSaveError(null);
+      setRuntimeExportScenarioReviewChecklistSaveHash(null);
       setRuntimeExportCompareLoading(false);
       setRuntimeExportReviewSummaryLoading(false);
       setRuntimeExportManifestLoading(false);
@@ -1493,6 +1556,7 @@ export function App() {
       setRuntimeExportRouteComparisonReviewReportLoading(false);
       setRuntimeExportPackageAuditIndexLoading(false);
       setRuntimeExportScenarioReviewBundleLoading(false);
+      setRuntimeExportScenarioReviewChecklistLoading(false);
       setRuntimeExportRestorePreflightLoading(false);
       setRuntimeExportCompareError(null);
       setRuntimeExportReviewSummaryError(null);
@@ -1503,6 +1567,7 @@ export function App() {
       setRuntimeExportRouteComparisonReviewReportError(null);
       setRuntimeExportPackageAuditIndexError(null);
       setRuntimeExportScenarioReviewBundleError(null);
+      setRuntimeExportScenarioReviewChecklistError(null);
       setRuntimeExportRestorePreflightError(null);
       setRuntimeExportRestoreCommandPendingPackageId(null);
       setRuntimeExportRestoreCommandError(null);
@@ -1559,6 +1624,60 @@ export function App() {
       } finally {
         setRuntimeExportRouteComparisonReviewSavePendingRouteId(null);
         setRuntimeExportRouteComparisonReviewReportLoading(false);
+        setRuntimeExportPackageAuditIndexLoading(false);
+      }
+    },
+    []
+  );
+
+  const saveRuntimeExportScenarioReviewChecklist = useCallback(
+    async (request: DataPanelExportScenarioReviewChecklistSaveRequest) => {
+      if (!request.packageId.trim() || request.records.length === 0) {
+        return;
+      }
+      setRuntimeExportScenarioReviewChecklistSavePending(true);
+      setRuntimeExportScenarioReviewChecklistSaveError(null);
+      setRuntimeExportScenarioReviewChecklistSaveHash(null);
+      setRuntimeExportScenarioReviewChecklistLoading(true);
+      setRuntimeExportScenarioReviewChecklistError(null);
+      setRuntimeExportPackageAuditIndexLoading(true);
+      setRuntimeExportPackageAuditIndexError(null);
+      try {
+        const checklist = await saveRuntimeExportScenarioReviewChecklistArtifact(
+          request.packageId,
+          {
+            records: request.records
+          }
+        );
+        const [catalog, auditIndex] = await Promise.allSettled([
+          loadRuntimeExportCatalog(),
+          loadRuntimeExportPackageAuditIndex(request.packageId)
+        ]);
+        if (catalog.status === "fulfilled") {
+          setRuntimeExportCatalog(catalog.value);
+        }
+        if (auditIndex.status === "fulfilled") {
+          setRuntimeExportPackageAuditIndex(auditIndex.value);
+        } else {
+          setRuntimeExportPackageAuditIndex(null);
+          setRuntimeExportPackageAuditIndexError(
+            runtimeExportPackageAuditIndexErrorMessage(auditIndex.reason)
+          );
+        }
+        setRuntimeExportScenarioReviewChecklist(checklist);
+        setRuntimeExportScenarioReviewChecklistSaveHash(checklist.checklist_hash);
+      } catch (error) {
+        setRuntimeExportScenarioReviewChecklist(null);
+        setRuntimeExportPackageAuditIndex(null);
+        setRuntimeExportScenarioReviewChecklistError(
+          runtimeExportScenarioReviewChecklistErrorMessage(error)
+        );
+        setRuntimeExportScenarioReviewChecklistSaveError(
+          runtimeExportScenarioReviewChecklistSaveErrorMessage(error)
+        );
+      } finally {
+        setRuntimeExportScenarioReviewChecklistSavePending(false);
+        setRuntimeExportScenarioReviewChecklistLoading(false);
         setRuntimeExportPackageAuditIndexLoading(false);
       }
     },
@@ -2245,6 +2364,9 @@ export function App() {
               }
               runtimeExportPackageAuditIndex={runtimeExportPackageAuditIndex}
               runtimeExportScenarioReviewBundle={runtimeExportScenarioReviewBundle}
+              runtimeExportScenarioReviewChecklist={
+                runtimeExportScenarioReviewChecklist
+              }
               runtimeExportRouteDetailItemRouteId={runtimeExportRouteDetailItemRouteId}
               runtimeExportComparePackageId={runtimeExportComparePackageId}
               runtimeExportCompareLoading={runtimeExportCompareLoading}
@@ -2285,6 +2407,12 @@ export function App() {
               runtimeExportScenarioReviewBundleError={
                 runtimeExportScenarioReviewBundleError
               }
+              runtimeExportScenarioReviewChecklistLoading={
+                runtimeExportScenarioReviewChecklistLoading
+              }
+              runtimeExportScenarioReviewChecklistError={
+                runtimeExportScenarioReviewChecklistError
+              }
               runtimeExportRouteComparisonReviewSavePendingRouteId={
                 runtimeExportRouteComparisonReviewSavePendingRouteId
               }
@@ -2293,6 +2421,15 @@ export function App() {
               }
               runtimeExportRouteComparisonReviewSaveReportHash={
                 runtimeExportRouteComparisonReviewSaveReportHash
+              }
+              runtimeExportScenarioReviewChecklistSavePending={
+                runtimeExportScenarioReviewChecklistSavePending
+              }
+              runtimeExportScenarioReviewChecklistSaveError={
+                runtimeExportScenarioReviewChecklistSaveError
+              }
+              runtimeExportScenarioReviewChecklistSaveHash={
+                runtimeExportScenarioReviewChecklistSaveHash
               }
               runtimeExportRestorePreflight={runtimeExportRestorePreflight}
               runtimeExportRestorePreflightLoading={runtimeExportRestorePreflightLoading}
@@ -2320,6 +2457,9 @@ export function App() {
               onRuntimeExportRouteDetailItemSelect={refreshRuntimeExportRouteDetailItem}
               onRuntimeExportRouteComparisonReviewSave={
                 saveRuntimeExportRouteComparisonReview
+              }
+              onRuntimeExportScenarioReviewChecklistSave={
+                saveRuntimeExportScenarioReviewChecklist
               }
               onRuntimeExportRestore={restoreRuntimeExportPackage}
               onRuntimeUserDetailSelect={refreshRuntimeUserEntityDetail}
@@ -2523,6 +2663,22 @@ export function runtimeExportCatalogHasScenarioReviewBundle(
     (record) =>
       record.package_id === packageId &&
       record.files.some((file) => file.filename === SCENARIO_REVIEW_BUNDLE_FILENAME)
+  );
+}
+
+export function runtimeExportCatalogHasScenarioReviewChecklist(
+  catalog: RuntimeExportCatalogV1 | null,
+  packageId: string
+): boolean {
+  if (catalog === null) {
+    return false;
+  }
+  return catalog.records.some(
+    (record) =>
+      record.package_id === packageId &&
+      record.files.some(
+        (file) => file.filename === SCENARIO_REVIEW_CHECKLIST_FILENAME
+      )
   );
 }
 
@@ -3861,11 +4017,23 @@ export function runtimeExportScenarioReviewBundleErrorMessage(error: unknown): s
   return `scenario review bundle load failed: ${message}`;
 }
 
+export function runtimeExportScenarioReviewChecklistErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  return `scenario review checklist load failed: ${message}`;
+}
+
 export function runtimeExportRouteComparisonReviewSaveErrorMessage(
   error: unknown
 ): string {
   const message = error instanceof Error ? error.message : String(error);
   return `route comparison review report save failed: ${message}`;
+}
+
+export function runtimeExportScenarioReviewChecklistSaveErrorMessage(
+  error: unknown
+): string {
+  const message = error instanceof Error ? error.message : String(error);
+  return `scenario review checklist save failed: ${message}`;
 }
 
 export function runtimeExportRestorePreflightErrorMessage(error: unknown): string {

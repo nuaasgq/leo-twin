@@ -36,6 +36,8 @@ import {
   RuntimeExportRouteDetailPageV1,
   RuntimeExportReproducibilityBoundaryV1,
   RuntimeExportScenarioReviewBundleV1,
+  RuntimeExportScenarioReviewChecklistRecordV1,
+  RuntimeExportScenarioReviewChecklistV1,
   RuntimeExportServiceTracePageV1,
   RuntimeExportReviewSummaryV1,
   RuntimeExportRestoreCommandResultV1,
@@ -248,6 +250,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportRouteComparisonReviewReport,
   runtimeExportPackageAuditIndex,
   runtimeExportScenarioReviewBundle,
+  runtimeExportScenarioReviewChecklist,
   runtimeExportRouteDetailItemRouteId,
   runtimeExportComparePackageId,
   runtimeExportCompareLoading,
@@ -270,9 +273,14 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportPackageAuditIndexError,
   runtimeExportScenarioReviewBundleLoading,
   runtimeExportScenarioReviewBundleError,
+  runtimeExportScenarioReviewChecklistLoading,
+  runtimeExportScenarioReviewChecklistError,
   runtimeExportRouteComparisonReviewSavePendingRouteId,
   runtimeExportRouteComparisonReviewSaveError,
   runtimeExportRouteComparisonReviewSaveReportHash,
+  runtimeExportScenarioReviewChecklistSavePending,
+  runtimeExportScenarioReviewChecklistSaveError,
+  runtimeExportScenarioReviewChecklistSaveHash,
   runtimeExportRestorePreflight,
   runtimeExportRestorePreflightLoading,
   runtimeExportRestorePreflightError,
@@ -292,6 +300,7 @@ export const DataPanel = memo(function DataPanel({
   onRuntimeExportServiceTracePageQueryChange,
   onRuntimeExportRouteDetailItemSelect,
   onRuntimeExportRouteComparisonReviewSave,
+  onRuntimeExportScenarioReviewChecklistSave,
   onRuntimeExportRestore,
   onRuntimeUserDetailSelect,
   onRuntimeSatelliteDetailSelect,
@@ -323,6 +332,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportRouteComparisonReviewReport?: RuntimeExportRouteComparisonReviewReportV1 | null;
   runtimeExportPackageAuditIndex?: RuntimeExportPackageAuditIndexV1 | null;
   runtimeExportScenarioReviewBundle?: RuntimeExportScenarioReviewBundleV1 | null;
+  runtimeExportScenarioReviewChecklist?: RuntimeExportScenarioReviewChecklistV1 | null;
   runtimeExportRouteDetailItemRouteId?: string | null;
   runtimeExportComparePackageId?: string | null;
   runtimeExportCompareLoading?: boolean;
@@ -345,9 +355,14 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportPackageAuditIndexError?: string | null;
   runtimeExportScenarioReviewBundleLoading?: boolean;
   runtimeExportScenarioReviewBundleError?: string | null;
+  runtimeExportScenarioReviewChecklistLoading?: boolean;
+  runtimeExportScenarioReviewChecklistError?: string | null;
   runtimeExportRouteComparisonReviewSavePendingRouteId?: string | null;
   runtimeExportRouteComparisonReviewSaveError?: string | null;
   runtimeExportRouteComparisonReviewSaveReportHash?: string | null;
+  runtimeExportScenarioReviewChecklistSavePending?: boolean;
+  runtimeExportScenarioReviewChecklistSaveError?: string | null;
+  runtimeExportScenarioReviewChecklistSaveHash?: string | null;
   runtimeExportRestorePreflight?: RuntimeExportRestorePreflightV1 | null;
   runtimeExportRestorePreflightLoading?: boolean;
   runtimeExportRestorePreflightError?: string | null;
@@ -380,6 +395,9 @@ export const DataPanel = memo(function DataPanel({
   onRuntimeExportRouteDetailItemSelect?: (routeId: string | null) => void;
   onRuntimeExportRouteComparisonReviewSave?: (
     request: DataPanelExportRouteComparisonReviewSaveRequest
+  ) => void;
+  onRuntimeExportScenarioReviewChecklistSave?: (
+    request: DataPanelExportScenarioReviewChecklistSaveRequest
   ) => void;
   onRuntimeExportRestore?: (packageId: string) => void;
   onRuntimeUserDetailSelect?: (userId: string | null) => void;
@@ -417,6 +435,10 @@ export const DataPanel = memo(function DataPanel({
     setExportRouteReviewReportStatusFilter
   ] = useState<DataPanelRouteComparisonReviewReportStatusFilter>("ALL");
   const [exportRouteReviewReportPage, setExportRouteReviewReportPage] = useState(0);
+  const [
+    exportScenarioReviewChecklistDraft,
+    setExportScenarioReviewChecklistDraft
+  ] = useState<DataPanelScenarioReviewChecklistDraft>({});
   const [exportServiceTraceFilter, setExportServiceTraceFilter] = useState("");
   const [exportServiceTraceTerminalFilter, setExportServiceTraceTerminalFilter] =
     useState<DataPanelServiceTraceTerminalFilter>("ALL");
@@ -490,6 +512,7 @@ export const DataPanel = memo(function DataPanel({
     setExportRouteReviewReportFilter("");
     setExportRouteReviewReportStatusFilter("ALL");
     setExportRouteReviewReportPage(0);
+    setExportScenarioReviewChecklistDraft({});
     setExportServiceTraceFilter("");
     setExportServiceTraceTerminalFilter("ALL");
     setExportServiceTraceComputeNodeFilter("");
@@ -503,6 +526,17 @@ export const DataPanel = memo(function DataPanel({
     exportRouteReviewReportFilter,
     exportRouteReviewReportStatusFilter,
     runtimeExportRouteComparisonReviewReport?.report_hash
+  ]);
+  useEffect(() => {
+    setExportScenarioReviewChecklistDraft(
+      buildDataPanelScenarioReviewChecklistDraft(
+        runtimeExportScenarioReviewBundle,
+        runtimeExportScenarioReviewChecklist
+      )
+    );
+  }, [
+    runtimeExportScenarioReviewBundle?.scenario_review_hash,
+    runtimeExportScenarioReviewChecklist?.checklist_hash
   ]);
   useEffect(() => {
     setExportServiceTracePageCursor(0);
@@ -1108,6 +1142,24 @@ export const DataPanel = memo(function DataPanel({
       runtimeExportComparePackageId,
       runtimeExportScenarioReviewBundleLoading,
       runtimeExportScenarioReviewBundleError
+    );
+  const exportScenarioReviewChecklistStatus =
+    buildDataPanelExportScenarioReviewChecklistStatus(
+      runtimeExportScenarioReviewChecklist,
+      {
+        loading: runtimeExportScenarioReviewChecklistLoading,
+        error: runtimeExportScenarioReviewChecklistError,
+        savePending: runtimeExportScenarioReviewChecklistSavePending,
+        saveError: runtimeExportScenarioReviewChecklistSaveError,
+        latestSaveHash: runtimeExportScenarioReviewChecklistSaveHash
+      }
+    );
+  const exportScenarioReviewChecklistSaveRequest =
+    buildDataPanelScenarioReviewChecklistSaveRequest(
+      runtimeExportScenarioReviewBundle,
+      exportScenarioReviewBundleStatus?.workflowRows ?? [],
+      exportScenarioReviewChecklistDraft,
+      runtimeExportPackageAuditIndex
     );
   const exportRouteComparisonReviewReportStatus =
     buildDataPanelExportRouteComparisonReviewReportStatus(
@@ -2124,6 +2176,99 @@ export const DataPanel = memo(function DataPanel({
                         )}
                       </span>
                     ))}
+                  </div>
+                  <div className="data-panel-export-scenario-checklist">
+                    <div className="data-panel-export-diagnostics-header">
+                      <div>
+                        <span>审核清单</span>
+                        <strong>
+                          {exportScenarioReviewChecklistStatus.statusLabel}
+                        </strong>
+                        <small>
+                          {exportScenarioReviewChecklistStatus.summaryLabel}
+                        </small>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={
+                          exportScenarioReviewChecklistSaveRequest === null ||
+                          runtimeExportScenarioReviewChecklistSavePending === true ||
+                          onRuntimeExportScenarioReviewChecklistSave === undefined
+                        }
+                        onClick={() => {
+                          if (
+                            exportScenarioReviewChecklistSaveRequest !== null &&
+                            onRuntimeExportScenarioReviewChecklistSave !== undefined
+                          ) {
+                            onRuntimeExportScenarioReviewChecklistSave(
+                              exportScenarioReviewChecklistSaveRequest
+                            );
+                          }
+                        }}
+                      >
+                        保存审核清单
+                      </button>
+                    </div>
+                    <div className="data-panel-export-scenario-checklist-rows">
+                      {exportScenarioReviewBundleStatus.workflowRows.map((row) => {
+                        const draft =
+                          exportScenarioReviewChecklistDraft[row.detailLabel] ??
+                          defaultDataPanelScenarioReviewChecklistDraftEntry(row);
+                        return (
+                          <label
+                            className={row.tone}
+                            key={`checklist:${row.stepLabel}:${row.detailLabel}`}
+                          >
+                            <span>{row.stepLabel}</span>
+                            <select
+                              value={draft.reviewStatus}
+                              onChange={(event) =>
+                                setExportScenarioReviewChecklistDraft((previous) =>
+                                  updateDataPanelScenarioReviewChecklistDraft(
+                                    previous,
+                                    row.detailLabel,
+                                    {
+                                      reviewStatus: event.target
+                                        .value as DataPanelScenarioReviewChecklistStatus
+                                    }
+                                  )
+                                )
+                              }
+                            >
+                              <option value="REVIEWED">已审核</option>
+                              <option value="SKIPPED">跳过</option>
+                              <option value="NEEDS_FOLLOWUP">需跟进</option>
+                              <option value="ERROR">异常</option>
+                            </select>
+                            <input
+                              value={draft.operatorNote}
+                              onChange={(event) =>
+                                setExportScenarioReviewChecklistDraft((previous) =>
+                                  updateDataPanelScenarioReviewChecklistDraft(
+                                    previous,
+                                    row.detailLabel,
+                                    { operatorNote: event.target.value }
+                                  )
+                                )
+                              }
+                              placeholder="审核备注"
+                            />
+                            <small>{row.detailLabel}</small>
+                          </label>
+                        );
+                      })}
+                    </div>
+                    {exportScenarioReviewChecklistStatus.warningLabels.length > 0 ? (
+                      <div className="data-panel-export-diagnostics-findings">
+                        {exportScenarioReviewChecklistStatus.warningLabels.map(
+                          (label) => (
+                            <span className="warn" key={label}>
+                              <strong>{label}</strong>
+                            </span>
+                          )
+                        )}
+                      </div>
+                    ) : null}
                   </div>
                   {exportScenarioReviewBundleStatus.warningLabels.length > 0 ? (
                     <div className="data-panel-export-diagnostics-findings">
@@ -9753,6 +9898,13 @@ export interface DataPanelExportScenarioReviewWorkflowRow {
   tone: "match" | "different" | "pending";
 }
 
+export interface DataPanelExportScenarioReviewChecklistStatusDisplay {
+  tone: "match" | "different" | "pending" | "error";
+  statusLabel: string;
+  summaryLabel: string;
+  warningLabels: readonly string[];
+}
+
 export interface DataPanelExportPackageAuditIndexDisplay {
   packageId: string;
   tone: "match" | "different";
@@ -10194,6 +10346,196 @@ function scenarioReviewWorkflowStepLabel(filename: string): string | null {
       return "11 summary";
     default:
       return null;
+  }
+}
+
+export function buildDataPanelScenarioReviewChecklistDraft(
+  bundle: RuntimeExportScenarioReviewBundleV1 | null | undefined,
+  checklist: RuntimeExportScenarioReviewChecklistV1 | null | undefined
+): DataPanelScenarioReviewChecklistDraft {
+  if (bundle === null || bundle === undefined) {
+    return {};
+  }
+  const savedRecords = new Map(
+    (checklist?.records ?? []).map((record) => [record.artifact_filename, record])
+  );
+  return Object.fromEntries(
+    buildDataPanelScenarioReviewWorkflowRows(bundle).map((row) => {
+      const saved = savedRecords.get(row.detailLabel);
+      return [
+        row.detailLabel,
+        {
+          reviewStatus: normalizeDataPanelScenarioReviewChecklistStatus(
+            saved?.review_status,
+            row.tone === "match" ? "REVIEWED" : "NEEDS_FOLLOWUP"
+          ),
+          operatorNote: saved?.operator_note ?? ""
+        }
+      ];
+    })
+  );
+}
+
+export function defaultDataPanelScenarioReviewChecklistDraftEntry(
+  row: DataPanelExportScenarioReviewWorkflowRow
+): DataPanelScenarioReviewChecklistDraftEntry {
+  return {
+    reviewStatus: row.tone === "match" ? "REVIEWED" : "NEEDS_FOLLOWUP",
+    operatorNote: ""
+  };
+}
+
+export function updateDataPanelScenarioReviewChecklistDraft(
+  draft: DataPanelScenarioReviewChecklistDraft,
+  artifactFilename: string,
+  patch: Partial<DataPanelScenarioReviewChecklistDraftEntry>
+): DataPanelScenarioReviewChecklistDraft {
+  const previous = draft[artifactFilename] ?? {
+    reviewStatus: "NEEDS_FOLLOWUP",
+    operatorNote: ""
+  };
+  return {
+    ...draft,
+    [artifactFilename]: {
+      reviewStatus: patch.reviewStatus ?? previous.reviewStatus,
+      operatorNote: patch.operatorNote ?? previous.operatorNote
+    }
+  };
+}
+
+export function buildDataPanelScenarioReviewChecklistSaveRequest(
+  bundle: RuntimeExportScenarioReviewBundleV1 | null | undefined,
+  workflowRows: readonly DataPanelExportScenarioReviewWorkflowRow[],
+  draft: DataPanelScenarioReviewChecklistDraft,
+  auditIndex: RuntimeExportPackageAuditIndexV1 | null | undefined = null
+): DataPanelExportScenarioReviewChecklistSaveRequest | null {
+  if (bundle === null || bundle === undefined || workflowRows.length === 0) {
+    return null;
+  }
+  return {
+    packageId: bundle.package_id,
+    records: workflowRows.map((row) => {
+      const entry =
+        draft[row.detailLabel] ??
+        defaultDataPanelScenarioReviewChecklistDraftEntry(row);
+      return {
+        artifact_filename: row.detailLabel,
+        step_label: row.stepLabel,
+        review_status: entry.reviewStatus,
+        operator_note: entry.operatorNote.trim(),
+        status_reason:
+          row.tone === "match" ? "" : "ARTIFACT_MISSING_OR_DEGRADED_IN_PACKAGE",
+        evidence_hash: scenarioReviewWorkflowEvidenceHash(
+          bundle,
+          auditIndex,
+          row.detailLabel
+        )
+      };
+    })
+  };
+}
+
+export function buildDataPanelExportScenarioReviewChecklistStatus(
+  checklist: RuntimeExportScenarioReviewChecklistV1 | null | undefined,
+  options: {
+    loading?: boolean;
+    error?: string | null;
+    savePending?: boolean;
+    saveError?: string | null;
+    latestSaveHash?: string | null;
+  } = {}
+): DataPanelExportScenarioReviewChecklistStatusDisplay {
+  if (options.savePending === true) {
+    return {
+      tone: "pending",
+      statusLabel: "审核清单保存中",
+      summaryLabel: "waiting for backend checklist persistence",
+      warningLabels: []
+    };
+  }
+  if (options.saveError) {
+    return {
+      tone: "error",
+      statusLabel: "审核清单保存失败",
+      summaryLabel: options.saveError,
+      warningLabels: [options.saveError]
+    };
+  }
+  if (options.loading === true) {
+    return {
+      tone: "pending",
+      statusLabel: "审核清单加载中",
+      summaryLabel: "waiting for scenario_review_checklist_v1.json",
+      warningLabels: []
+    };
+  }
+  if (options.error) {
+    return {
+      tone: "error",
+      statusLabel: "审核清单加载失败",
+      summaryLabel: options.error,
+      warningLabels: [options.error]
+    };
+  }
+  if (checklist === null || checklist === undefined) {
+    return {
+      tone: "different",
+      statusLabel: "审核清单未保存",
+      summaryLabel: options.latestSaveHash
+        ? `last save ${shortRuntimeHash(options.latestSaveHash)}`
+        : "operator checklist has not been persisted",
+      warningLabels: ["scenario_review_checklist_v1.json missing"]
+    };
+  }
+  const complete = checklist.checklist_status === "CHECKLIST_COMPLETE";
+  return {
+    tone: complete ? "match" : "different",
+    statusLabel: complete ? "审核清单已完成" : "审核清单需检查",
+    summaryLabel: `${checklist.checklist_status} / records ${formatCount(
+      checklist.record_count
+    )} / checklist ${shortRuntimeHash(checklist.checklist_hash)}`,
+    warningLabels: complete ? [] : [checklist.checklist_status]
+  };
+}
+
+function normalizeDataPanelScenarioReviewChecklistStatus(
+  value: string | null | undefined,
+  fallback: DataPanelScenarioReviewChecklistStatus
+): DataPanelScenarioReviewChecklistStatus {
+  switch (String(value ?? "").toUpperCase()) {
+    case "REVIEWED":
+      return "REVIEWED";
+    case "SKIPPED":
+      return "SKIPPED";
+    case "NEEDS_FOLLOWUP":
+      return "NEEDS_FOLLOWUP";
+    case "ERROR":
+      return "ERROR";
+    default:
+      return fallback;
+  }
+}
+
+function scenarioReviewWorkflowEvidenceHash(
+  bundle: RuntimeExportScenarioReviewBundleV1,
+  auditIndex: RuntimeExportPackageAuditIndexV1 | null | undefined,
+  filename: string
+): string {
+  switch (filename) {
+    case SCENARIO_REVIEW_BUNDLE_FILENAME:
+      return bundle.scenario_review_hash;
+    case EXPORT_PACKAGE_AUDIT_INDEX_FILENAME:
+      return auditIndex?.audit_hash ?? "";
+    case "review_summary_v1.json":
+      return bundle.review_summary.summary_hash;
+    case "diagnostics_bundle_v1.json":
+      return bundle.diagnostics.diagnostics_hash;
+    case "manifest.json":
+      return bundle.reproducibility.manifest_hash;
+    case "config_snapshot.json":
+      return bundle.user_configuration.config_hash;
+    default:
+      return "";
   }
 }
 
@@ -10828,6 +11170,27 @@ export interface DataPanelExportRouteLiveComparisonStatus {
 export interface DataPanelExportRouteComparisonReviewSaveRequest {
   packageId: string;
   record: Partial<RuntimeExportRouteComparisonReviewReportRecordV1>;
+}
+
+export type DataPanelScenarioReviewChecklistStatus =
+  | "REVIEWED"
+  | "SKIPPED"
+  | "NEEDS_FOLLOWUP"
+  | "ERROR";
+
+export interface DataPanelScenarioReviewChecklistDraftEntry {
+  reviewStatus: DataPanelScenarioReviewChecklistStatus;
+  operatorNote: string;
+}
+
+export type DataPanelScenarioReviewChecklistDraft = Record<
+  string,
+  DataPanelScenarioReviewChecklistDraftEntry
+>;
+
+export interface DataPanelExportScenarioReviewChecklistSaveRequest {
+  packageId: string;
+  records: readonly Partial<RuntimeExportScenarioReviewChecklistRecordV1>[];
 }
 
 export interface DataPanelExportRouteComparisonReviewSaveStatus {
