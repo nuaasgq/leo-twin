@@ -142,7 +142,9 @@ Tasks:
     unrelated trace rows. T263 adds the backend cursor endpoint
     `/runtime/details/service-traces` plus service-trace collection metadata in
     `leo_twin.large_detail_pagination_contract.v2`, allowing server-side
-    filtering by query, raw terminal state, and compute-node id.
+    filtering by query, raw terminal state, and compute-node id. T264 binds the
+    dashboard service trace browser controls and pager to that server cursor
+    endpoint while retaining local filtering as a temporary fallback.
 
 ### WS3. Network Semantics and KPI Trust v2
 

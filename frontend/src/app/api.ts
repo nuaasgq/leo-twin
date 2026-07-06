@@ -20,6 +20,7 @@ import {
   RuntimeSatelliteServiceSummaryV1,
   RuntimeServiceDetailItemV1,
   RuntimeServiceDetailPageV1,
+  RuntimeServiceLifecycleTraceV2,
   RuntimeServiceTraceDetailV2,
   RuntimeStatusEnvelope,
   RuntimeStatusPayload,
@@ -50,6 +51,8 @@ export interface RuntimeDetailQueryFilters {
   availability?: string;
   businessType?: string;
   bottleneckComponent?: string;
+  terminalState?: string;
+  computeNodeId?: string;
 }
 
 export async function loadScenarioConfig(endpoint = "/scenario/config"): Promise<ScenarioConfig> {
@@ -179,6 +182,21 @@ export async function loadRuntimeServiceDetails(
     throw new TypeError(`runtime detail response kind must be services, got ${page.kind}`);
   }
   return page.summary as RuntimeServiceDetailPageV1;
+}
+
+export async function loadRuntimeServiceTraceDetails(
+  cursor = 0,
+  limit = 100,
+  endpoint = "/runtime/details/service-traces",
+  filters: RuntimeDetailQueryFilters = {}
+): Promise<RuntimeServiceLifecycleTraceV2> {
+  const page = await loadRuntimeDetailPage(endpoint, cursor, limit, filters);
+  if (page.kind !== "service_traces") {
+    throw new TypeError(
+      `runtime detail response kind must be service_traces, got ${page.kind}`
+    );
+  }
+  return page.summary as RuntimeServiceLifecycleTraceV2;
 }
 
 export async function loadRuntimeServiceDetail(
@@ -507,6 +525,14 @@ function appendRuntimeDetailFilterParams(
   if (bottleneckComponent && bottleneckComponent !== "ALL") {
     params.set("bottleneck_component", bottleneckComponent);
   }
+  const terminalState = filters.terminalState?.trim();
+  if (terminalState && terminalState !== "ALL") {
+    params.set("terminal_state", terminalState);
+  }
+  const computeNodeId = filters.computeNodeId?.trim();
+  if (computeNodeId) {
+    params.set("compute_node_id", computeNodeId);
+  }
 }
 
 export function decodeRuntimeDetailPage(value: unknown): RuntimeDetailPageEnvelope {
@@ -521,10 +547,11 @@ export function decodeRuntimeDetailPage(value: unknown): RuntimeDetailPageEnvelo
     kind !== "nodes" &&
     kind !== "routes" &&
     kind !== "services" &&
+    kind !== "service_traces" &&
     kind !== "compute_nodes"
   ) {
     throw new TypeError(
-      "runtime detail response kind must be users, satellites, nodes, routes, services, or compute_nodes"
+      "runtime detail response kind must be users, satellites, nodes, routes, services, service_traces, or compute_nodes"
     );
   }
   if (typeof summary !== "object" || summary === null || Array.isArray(summary)) {
@@ -539,6 +566,7 @@ export function decodeRuntimeDetailPage(value: unknown): RuntimeDetailPageEnvelo
       | RuntimeNodeDetailPageV1
       | RuntimeRouteExplanationSummaryV1
       | RuntimeServiceDetailPageV1
+      | RuntimeServiceLifecycleTraceV2
       | RuntimeComputeNodeDetailPageV1
   } as RuntimeDetailPageEnvelope;
 }

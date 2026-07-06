@@ -80,7 +80,9 @@ import {
   selectRouteExplanationRow,
   selectServiceDetailRow,
   selectServiceLifecycleTraceRow,
+  selectRuntimeServiceTracePage,
   serviceTraceDetailMatchesRow,
+  serviceTraceDetailCursorFilters,
   selectRuntimeRouteExplanationSummary,
   selectRuntimeSatelliteDetailCard,
   selectRuntimeSatelliteServiceSummary,
@@ -452,6 +454,47 @@ describe("runtime detail page selection", () => {
           }
         ]
       },
+      serviceTraces: {
+        version: "v2",
+        source: "SERVICE_LATENCY_HISTORY",
+        source_summary: "service_latency_history_v1",
+        summary_scope: "SERVICE_LIFECYCLE_TRACE_WINDOW",
+        cursor: 10,
+        limit: 20,
+        next_cursor: 11,
+        has_more: false,
+        service_count: 1,
+        trace_count: 1,
+        complete_trace_count: 1,
+        running_trace_count: 0,
+        incomplete_trace_count: 0,
+        hidden_trace_count: 0,
+        items: [
+          {
+            trace_id: "trace:service-page",
+            service_id: "service-page",
+            task_id: "task-page",
+            service_class: "COMPUTE_SERVICE",
+            input_flow_id: "service-page-input",
+            output_flow_id: "service-page-output",
+            input_route_id: "route-page-input",
+            output_route_id: "route-page-output",
+            compute_node_id: "sat-page",
+            placement_status: "PLACED",
+            input_network_latency_s: 0.1,
+            compute_queue_delay_s: 0.2,
+            compute_execution_delay_s: 0.3,
+            output_network_latency_s: 0.4,
+            total_latency_s: 1,
+            terminal_state: "COMPLETE",
+            terminal_state_reason: "TOTAL_LATENCY_OBSERVED",
+            stage_count: 0,
+            observed_stage_count: 0,
+            pending_stage_count: 0,
+            stages: []
+          }
+        ]
+      },
       computeNodes: {
         version: "v1",
         source: "BACKEND_RUNTIME_SNAPSHOT",
@@ -520,9 +563,24 @@ describe("runtime detail page selection", () => {
     expect(selectRuntimeServiceDetailPage(detailPages)?.items[0].service_id).toBe(
       "service-page"
     );
+    expect(
+      selectRuntimeServiceTracePage(runtimeStatus, detailPages)?.items[0].trace_id
+    ).toBe("trace:service-page");
+    expect(
+      selectRuntimeServiceTracePage(runtimeStatus, null)?.items[0].trace_id
+    ).toBeUndefined();
     expect(selectRuntimeComputeNodeDetailPage(detailPages)?.items[0].node_id).toBe(
       "sat-page"
     );
+  });
+
+  it("builds service trace backend cursor filters", () => {
+    expect(serviceTraceDetailCursorFilters(" route:input ", "COMPLETE", " sat-a ")).toEqual({
+      query: "route:input",
+      terminalState: "COMPLETE",
+      computeNodeId: "sat-a"
+    });
+    expect(serviceTraceDetailCursorFilters("", "ALL", "")).toEqual({});
   });
 });
 
@@ -6979,6 +7037,7 @@ describe("paginateDetailRows", () => {
       satellites: 96,
       routes: 64,
       services: 80,
+      serviceTraces: 120,
       computeNodes: 50
     });
     expect(buildDataPanelPaginationContractNotes(contract)).toEqual([
@@ -6998,6 +7057,7 @@ describe("paginateDetailRows", () => {
       satellites: 120,
       routes: 96,
       services: 120,
+      serviceTraces: 120,
       computeNodes: 120
     });
     expect(buildDataPanelPaginationContractNotes(undefined)).toEqual([

@@ -14,6 +14,7 @@ import {
   loadRuntimeSatelliteDetails,
   loadRuntimeServiceDetail,
   loadRuntimeServiceDetails,
+  loadRuntimeServiceTraceDetails,
   loadRuntimeServiceTraceDetail,
   loadRuntimeState,
   loadRuntimeUserDetail,
@@ -584,6 +585,21 @@ describe("runtime API diagnostics", () => {
         ok: true,
         json: async () => ({
           type: "RUNTIME_DETAIL_PAGE",
+          kind: "service_traces",
+          summary: {
+            version: "v2",
+            source: "SERVICE_LATENCY_HISTORY",
+            source_summary: "service_latency_history_v1",
+            service_count: 1,
+            trace_count: 1,
+            items: [{ trace_id: "trace:service-0" }]
+          }
+        })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          type: "RUNTIME_DETAIL_PAGE",
           kind: "compute_nodes",
           summary: {
             version: "v1",
@@ -626,6 +642,21 @@ describe("runtime API diagnostics", () => {
         ok: true,
         json: async () => ({
           type: "RUNTIME_DETAIL_PAGE",
+          kind: "service_traces",
+          summary: {
+            version: "v2",
+            source: "SERVICE_LATENCY_HISTORY",
+            source_summary: "service_latency_history_v1",
+            service_count: 1,
+            trace_count: 1,
+            items: [{ trace_id: "trace:filtered" }]
+          }
+        })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          type: "RUNTIME_DETAIL_PAGE",
           kind: "compute_nodes",
           summary: {
             version: "v1",
@@ -659,7 +690,11 @@ describe("runtime API diagnostics", () => {
       service_count: 1,
       items: [{ service_id: "service-0" }]
     });
-    await expect(loadRuntimeComputeNodeDetails(7, 50)).resolves.toMatchObject({
+    await expect(loadRuntimeServiceTraceDetails(7, 45)).resolves.toMatchObject({
+      service_count: 1,
+      items: [{ trace_id: "trace:service-0" }]
+    });
+    await expect(loadRuntimeComputeNodeDetails(8, 50)).resolves.toMatchObject({
       compute_node_count: 1,
       items: [{ node_id: "sat-0" }]
     });
@@ -683,7 +718,17 @@ describe("runtime API diagnostics", () => {
       items: [{ service_id: "service-filtered" }]
     });
     await expect(
-      loadRuntimeComputeNodeDetails(10, 80, "/runtime/details/compute-nodes", {
+      loadRuntimeServiceTraceDetails(10, 75, "/runtime/details/service-traces", {
+        query: "route:input",
+        terminalState: "COMPLETE",
+        computeNodeId: "sat-a"
+      })
+    ).resolves.toMatchObject({
+      trace_count: 1,
+      items: [{ trace_id: "trace:filtered" }]
+    });
+    await expect(
+      loadRuntimeComputeNodeDetails(11, 80, "/runtime/details/compute-nodes", {
         query: "busy"
       })
     ).resolves.toMatchObject({
@@ -712,19 +757,27 @@ describe("runtime API diagnostics", () => {
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
       6,
-      "/runtime/details/compute-nodes?cursor=7&limit=50"
+      "/runtime/details/service-traces?cursor=7&limit=45"
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
       7,
-      "/runtime/details/routes?cursor=8&limit=60&query=sat-1&availability=BLOCKED&business_type=DATA_TRANSFER&bottleneck_component=AVAILABILITY"
+      "/runtime/details/compute-nodes?cursor=8&limit=50"
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
       8,
-      "/runtime/details/services?cursor=9&limit=70&query=sat-1"
+      "/runtime/details/routes?cursor=8&limit=60&query=sat-1&availability=BLOCKED&business_type=DATA_TRANSFER&bottleneck_component=AVAILABILITY"
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
       9,
-      "/runtime/details/compute-nodes?cursor=10&limit=80&query=busy"
+      "/runtime/details/services?cursor=9&limit=70&query=sat-1"
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      10,
+      "/runtime/details/service-traces?cursor=10&limit=75&query=route%3Ainput&terminal_state=COMPLETE&compute_node_id=sat-a"
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      11,
+      "/runtime/details/compute-nodes?cursor=11&limit=80&query=busy"
     );
   });
 

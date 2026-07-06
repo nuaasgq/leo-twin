@@ -49,6 +49,7 @@ import {
   loadRuntimeSatelliteDetails,
   loadRuntimeServiceDetail,
   loadRuntimeServiceDetails,
+  loadRuntimeServiceTraceDetails,
   loadRuntimeServiceTraceDetail,
   loadRuntimeUserDetail,
   loadRuntimeUserDetails,
@@ -80,6 +81,7 @@ type RuntimeDetailCursorKey =
   | "satellites"
   | "routes"
   | "services"
+  | "serviceTraces"
   | "computeNodes";
 type RuntimeDetailCursorState = Record<RuntimeDetailCursorKey, number>;
 type RuntimeDetailCursorLoadingState = Record<RuntimeDetailCursorKey, boolean>;
@@ -127,6 +129,7 @@ const DEFAULT_RUNTIME_DETAIL_CURSORS: RuntimeDetailCursorState = {
   satellites: 0,
   routes: 0,
   services: 0,
+  serviceTraces: 0,
   computeNodes: 0
 };
 
@@ -135,6 +138,7 @@ const DEFAULT_RUNTIME_DETAIL_CURSOR_LOADING: RuntimeDetailCursorLoadingState = {
   satellites: false,
   routes: false,
   services: false,
+  serviceTraces: false,
   computeNodes: false
 };
 
@@ -143,6 +147,7 @@ const DEFAULT_RUNTIME_DETAIL_CURSOR_ERRORS: RuntimeDetailCursorErrorState = {
   satellites: null,
   routes: null,
   services: null,
+  serviceTraces: null,
   computeNodes: null
 };
 
@@ -151,6 +156,7 @@ const DEFAULT_RUNTIME_DETAIL_FILTERS: RuntimeDetailFilterState = {
   satellites: {},
   routes: {},
   services: {},
+  serviceTraces: {},
   computeNodes: {}
 };
 
@@ -382,7 +388,7 @@ export function App() {
     const requestPlan = runtimeDetailRequestPlan(
       detailConfig?.backend_summary?.large_detail_pagination_contract_v2
     );
-    const [users, satellites, nodes, routes, services, computeNodes] =
+    const [users, satellites, nodes, routes, services, serviceTraces, computeNodes] =
       await Promise.allSettled([
         loadRuntimeUserDetails(
           runtimeDetailCursors.users,
@@ -413,6 +419,12 @@ export function App() {
           requestPlan.services.endpoint,
           runtimeDetailFilters.services
         ),
+        loadRuntimeServiceTraceDetails(
+          runtimeDetailCursors.serviceTraces,
+          requestPlan.serviceTraces.limit,
+          requestPlan.serviceTraces.endpoint,
+          runtimeDetailFilters.serviceTraces
+        ),
         loadRuntimeComputeNodeDetails(
           runtimeDetailCursors.computeNodes,
           requestPlan.computeNodes.limit,
@@ -426,6 +438,7 @@ export function App() {
       nodes.status === "rejected" &&
       routes.status === "rejected" &&
       services.status === "rejected" &&
+      serviceTraces.status === "rejected" &&
       computeNodes.status === "rejected"
     ) {
       setRuntimeDetailPages(null);
@@ -437,6 +450,8 @@ export function App() {
       nodes: nodes.status === "fulfilled" ? nodes.value : null,
       routes: routes.status === "fulfilled" ? routes.value : null,
       services: services.status === "fulfilled" ? services.value : null,
+      serviceTraces:
+        serviceTraces.status === "fulfilled" ? serviceTraces.value : null,
       computeNodes: computeNodes.status === "fulfilled" ? computeNodes.value : null
     });
     setRuntimeDetailCursors((previous) => ({
@@ -447,6 +462,10 @@ export function App() {
           : previous.satellites,
       routes: routes.status === "fulfilled" ? routes.value.cursor ?? 0 : previous.routes,
       services: services.status === "fulfilled" ? services.value.cursor : previous.services,
+      serviceTraces:
+        serviceTraces.status === "fulfilled"
+          ? serviceTraces.value.cursor
+          : previous.serviceTraces,
       computeNodes:
         computeNodes.status === "fulfilled" ? computeNodes.value.cursor : previous.computeNodes
     }));
@@ -455,6 +474,8 @@ export function App() {
       satellites: satellites.status === "fulfilled" ? null : previous.satellites,
       routes: routes.status === "fulfilled" ? null : previous.routes,
       services: services.status === "fulfilled" ? null : previous.services,
+      serviceTraces:
+        serviceTraces.status === "fulfilled" ? null : previous.serviceTraces,
       computeNodes: computeNodes.status === "fulfilled" ? null : previous.computeNodes
     }));
   }, [generatedConfig, runtimeDetailCursors, runtimeDetailFilters]);
@@ -614,6 +635,57 @@ export function App() {
       setRuntimeDetailCursorLoading((previous) => ({ ...previous, services: false }));
     }
   }, [generatedConfig, runtimeDetailFilters.services, setConnectionChannel]);
+
+  const refreshRuntimeServiceTraceDetailCursor = useCallback(async (
+    cursor: number,
+    filters: RuntimeDetailQueryFilters = runtimeDetailFilters.serviceTraces
+  ) => {
+    const requestPlan = runtimeDetailRequestPlan(
+      generatedConfig?.backend_summary?.large_detail_pagination_contract_v2
+    );
+    const safeCursor = normalizeRuntimeDetailCursor(cursor);
+    const normalizedFilters = normalizeRuntimeDetailFilters(filters);
+    setRuntimeDetailFilters((previous) => ({
+      ...previous,
+      serviceTraces: normalizedFilters
+    }));
+    setRuntimeDetailCursorLoading((previous) => ({
+      ...previous,
+      serviceTraces: true
+    }));
+    setRuntimeDetailCursorErrors((previous) => ({
+      ...previous,
+      serviceTraces: null
+    }));
+    try {
+      const page = await loadRuntimeServiceTraceDetails(
+        safeCursor,
+        requestPlan.serviceTraces.limit,
+        requestPlan.serviceTraces.endpoint,
+        normalizedFilters
+      );
+      setRuntimeDetailPages((previous) => ({
+        ...(previous ?? {}),
+        serviceTraces: page
+      }));
+      setRuntimeDetailCursors((previous) => ({
+        ...previous,
+        serviceTraces: page.cursor
+      }));
+      setConnectionChannel("http", "live");
+    } catch (error) {
+      setRuntimeDetailCursorErrors((previous) => ({
+        ...previous,
+        serviceTraces: runtimeApiErrorMessage(error)
+      }));
+      setConnectionChannel("http", "degraded");
+    } finally {
+      setRuntimeDetailCursorLoading((previous) => ({
+        ...previous,
+        serviceTraces: false
+      }));
+    }
+  }, [generatedConfig, runtimeDetailFilters.serviceTraces, setConnectionChannel]);
 
   const refreshRuntimeComputeNodeDetailCursor = useCallback(async (
     cursor: number,
@@ -1662,6 +1734,17 @@ export function App() {
                       filters
                     )
                 },
+                serviceTraces: {
+                  loading: runtimeDetailCursorLoading.serviceTraces,
+                  error: runtimeDetailCursorErrors.serviceTraces,
+                  onCursorChange: refreshRuntimeServiceTraceDetailCursor,
+                  onRefresh: (filters) =>
+                    refreshRuntimeServiceTraceDetailCursor(
+                      runtimeDetailPages?.serviceTraces?.cursor ??
+                        runtimeDetailCursors.serviceTraces,
+                      filters
+                    )
+                },
                 computeNodes: {
                   loading: runtimeDetailCursorLoading.computeNodes,
                   error: runtimeDetailCursorErrors.computeNodes,
@@ -1868,6 +1951,7 @@ export interface RuntimeDetailRequestPlan {
   nodes: RuntimeDetailRequest;
   routes: RuntimeDetailRequest;
   services: RuntimeDetailRequest;
+  serviceTraces: RuntimeDetailRequest;
   computeNodes: RuntimeDetailRequest;
 }
 
@@ -1896,6 +1980,10 @@ export function runtimeDetailRequestPlan(
     collections.get("services"),
     "/runtime/details/services"
   );
+  const serviceTraces = runtimeDetailCollectionRequest(
+    collections.get("service_traces"),
+    "/runtime/details/service-traces"
+  );
   const computeNodes = runtimeDetailCollectionRequest(
     collections.get("compute_nodes"),
     "/runtime/details/compute-nodes"
@@ -1905,6 +1993,7 @@ export function runtimeDetailRequestPlan(
     satellites,
     routes,
     services,
+    serviceTraces,
     computeNodes,
     nodes: {
       endpoint: contract?.combined_node_endpoint?.endpoint ?? "/runtime/details/nodes",
@@ -1962,13 +2051,17 @@ function normalizeRuntimeDetailFilters(
   const availability = filters.availability?.trim();
   const businessType = filters.businessType?.trim();
   const bottleneckComponent = filters.bottleneckComponent?.trim();
+  const terminalState = filters.terminalState?.trim();
+  const computeNodeId = filters.computeNodeId?.trim();
   return {
     ...(query ? { query } : {}),
     ...(availability && availability !== "ALL" ? { availability } : {}),
     ...(businessType && businessType !== "ALL" ? { businessType } : {}),
     ...(bottleneckComponent && bottleneckComponent !== "ALL"
       ? { bottleneckComponent }
-      : {})
+      : {}),
+    ...(terminalState && terminalState !== "ALL" ? { terminalState } : {}),
+    ...(computeNodeId ? { computeNodeId } : {})
   };
 }
 

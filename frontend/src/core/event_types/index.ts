@@ -1701,6 +1701,7 @@ export interface RuntimeDetailPageEnvelope {
     | "nodes"
     | "routes"
     | "services"
+    | "service_traces"
     | "compute_nodes"
     | string;
   summary:
@@ -1709,6 +1710,7 @@ export interface RuntimeDetailPageEnvelope {
     | RuntimeNodeDetailPageV1
     | RuntimeRouteExplanationSummaryV1
     | RuntimeServiceDetailPageV1
+    | RuntimeServiceLifecycleTraceV2
     | RuntimeComputeNodeDetailPageV1;
 }
 

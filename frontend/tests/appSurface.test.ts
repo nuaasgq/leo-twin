@@ -177,6 +177,11 @@ describe("runtimeDetailRequestPlan", () => {
         runtimeDetailCollection("routes", "/runtime/details/routes", 64),
         runtimeDetailCollection("services", "/runtime/details/services", 80),
         runtimeDetailCollection(
+          "service_traces",
+          "/runtime/details/service-traces",
+          72
+        ),
+        runtimeDetailCollection(
           "compute_nodes",
           "/runtime/details/compute-nodes",
           50
@@ -211,6 +216,10 @@ describe("runtimeDetailRequestPlan", () => {
     });
     expect(plan.routes).toEqual({ endpoint: "/runtime/details/routes", limit: 64 });
     expect(plan.services).toEqual({ endpoint: "/runtime/details/services", limit: 80 });
+    expect(plan.serviceTraces).toEqual({
+      endpoint: "/runtime/details/service-traces",
+      limit: 72
+    });
     expect(plan.computeNodes).toEqual({
       endpoint: "/runtime/details/compute-nodes",
       limit: 50
@@ -222,6 +231,7 @@ describe("runtimeDetailRequestPlan", () => {
     expect(runtimeDetailRequestPlan(null)).toMatchObject({
       users: { endpoint: "/runtime/details/users", limit: 5000 },
       satellites: { endpoint: "/runtime/details/satellites", limit: 5000 },
+      serviceTraces: { endpoint: "/runtime/details/service-traces", limit: 5000 },
       nodes: { endpoint: "/runtime/details/nodes", limit: 5000 }
     });
   });

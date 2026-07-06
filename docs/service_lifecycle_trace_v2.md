@@ -75,8 +75,11 @@ and compute-node resource fields into scrollable sections. This keeps the
 standalone dashboard aligned with backend semantics without adding a new
 frontend-only business model.
 
-The service trace browser supports local filtering by trace keyword, backend
-terminal state, and compute-node id. The terminal-state filter uses the raw
+The service trace browser supports filtering by trace keyword, backend
+terminal state, and compute-node id. The dashboard now sends those controls to
+`/runtime/details/service-traces` and uses the returned cursor window when it
+is available, while retaining local filtering as a short-lived fallback during
+loading or backend unavailability. The terminal-state filter uses the raw
 backend `terminal_state` field on each trace row rather than parsing localized
 display labels.
 

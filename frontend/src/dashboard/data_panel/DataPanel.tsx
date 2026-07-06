@@ -117,6 +117,7 @@ export interface RuntimeDetailPages {
   nodes?: RuntimeNodeDetailPageV1 | null;
   routes?: RuntimeRouteExplanationSummaryV1 | null;
   services?: RuntimeServiceDetailPageV1 | null;
+  serviceTraces?: RuntimeServiceLifecycleTraceV2 | null;
   computeNodes?: RuntimeComputeNodeDetailPageV1 | null;
 }
 
@@ -125,6 +126,7 @@ export interface RuntimeDetailCursorControls {
   satellites?: RuntimeDetailCursorControl | null;
   routes?: RuntimeDetailCursorControl | null;
   services?: RuntimeDetailCursorControl | null;
+  serviceTraces?: RuntimeDetailCursorControl | null;
   computeNodes?: RuntimeDetailCursorControl | null;
 }
 
@@ -140,6 +142,8 @@ export interface RuntimeDetailCursorFilters {
   availability?: string;
   businessType?: string;
   bottleneckComponent?: string;
+  terminalState?: string;
+  computeNodeId?: string;
 }
 
 export interface RuntimeSelectedNodeDetails {
@@ -445,15 +449,20 @@ export const DataPanel = memo(function DataPanel({
     runtimeStatus.service_latency_history_v1
   );
   const serviceLifecycleTraceDisplay = buildDataPanelServiceLifecycleTraceDisplay(
-    runtimeStatus.service_lifecycle_trace_v2
+    selectRuntimeServiceTracePage(runtimeStatus, runtimeDetailPages)
+  );
+  const serviceTracePage = selectRuntimeServiceTracePage(
+    runtimeStatus,
+    runtimeDetailPages
+  );
+  const serviceTraceCursorFilters = serviceTraceDetailCursorFilters(
+    serviceTraceFilter,
+    serviceTraceTerminalFilter,
+    serviceTraceComputeNodeFilter
   );
   const filteredServiceLifecycleTraceDisplay = filterServiceLifecycleTraceDisplay(
     serviceLifecycleTraceDisplay,
-    {
-      query: serviceTraceFilter,
-      terminalState: serviceTraceTerminalFilter,
-      computeNodeId: serviceTraceComputeNodeFilter
-    }
+    serviceTraceCursorFilters
   );
   const selectedServiceTraceRow = selectServiceLifecycleTraceRow(
     filteredServiceLifecycleTraceDisplay.items,
@@ -1596,17 +1605,48 @@ export const DataPanel = memo(function DataPanel({
               setServiceTraceFilter(value);
               setSelectedServiceTraceId(null);
               onRuntimeServiceTraceDetailSelect?.(null);
+              runtimeDetailCursorControls?.serviceTraces?.onCursorChange?.(
+                0,
+                serviceTraceDetailCursorFilters(
+                  value,
+                  serviceTraceTerminalFilter,
+                  serviceTraceComputeNodeFilter
+                )
+              );
             }}
             onTerminalFilterChange={(value) => {
               setServiceTraceTerminalFilter(value);
               setSelectedServiceTraceId(null);
               onRuntimeServiceTraceDetailSelect?.(null);
+              runtimeDetailCursorControls?.serviceTraces?.onCursorChange?.(
+                0,
+                serviceTraceDetailCursorFilters(
+                  serviceTraceFilter,
+                  value,
+                  serviceTraceComputeNodeFilter
+                )
+              );
             }}
             onComputeNodeFilterChange={(value) => {
               setServiceTraceComputeNodeFilter(value);
               setSelectedServiceTraceId(null);
               onRuntimeServiceTraceDetailSelect?.(null);
+              runtimeDetailCursorControls?.serviceTraces?.onCursorChange?.(
+                0,
+                serviceTraceDetailCursorFilters(
+                  serviceTraceFilter,
+                  serviceTraceTerminalFilter,
+                  value
+                )
+              );
             }}
+          />
+          <BackendCursorPager
+            label="服务 trace"
+            page={serviceTracePage}
+            totalCount={serviceTracePage?.service_count ?? 0}
+            control={runtimeDetailCursorControls?.serviceTraces}
+            filters={serviceTraceCursorFilters}
           />
           <ServiceLifecycleTracePanel
             display={filteredServiceLifecycleTraceDisplay}
@@ -2130,6 +2170,13 @@ export function selectRuntimeServiceDetailPage(
   runtimeDetailPages: RuntimeDetailPages | null | undefined
 ): RuntimeServiceDetailPageV1 | null | undefined {
   return runtimeDetailPages?.services;
+}
+
+export function selectRuntimeServiceTracePage(
+  runtimeStatus: RuntimeStatusPayload,
+  runtimeDetailPages: RuntimeDetailPages | null | undefined
+): RuntimeServiceLifecycleTraceV2 | null | undefined {
+  return runtimeDetailPages?.serviceTraces ?? runtimeStatus.service_lifecycle_trace_v2;
 }
 
 export function selectRuntimeComputeNodeDetailPage(
@@ -2785,6 +2832,7 @@ function BackendCursorPager({
     | RuntimeSatelliteServiceSummaryV1
     | RuntimeRouteExplanationSummaryV1
     | RuntimeServiceDetailPageV1
+    | RuntimeServiceLifecycleTraceV2
     | RuntimeComputeNodeDetailPageV1
     | null
     | undefined;
@@ -3508,6 +3556,7 @@ export interface DataPanelDetailPageSizes {
   satellites: number;
   routes: number;
   services: number;
+  serviceTraces: number;
   computeNodes: number;
 }
 
@@ -3539,6 +3588,7 @@ export function buildDataPanelDetailPageSizes(
     ),
     routes: detailPaginationLimit(collections.get("routes"), 96),
     services: detailPaginationLimit(collections.get("services"), 120),
+    serviceTraces: detailPaginationLimit(collections.get("service_traces"), 120),
     computeNodes: detailPaginationLimit(collections.get("compute_nodes"), 120)
   };
 }
@@ -8588,7 +8638,7 @@ export type DataPanelServiceTraceTerminalFilter =
 
 export interface DataPanelServiceTraceFilter {
   query?: string;
-  terminalState?: DataPanelServiceTraceTerminalFilter;
+  terminalState?: DataPanelServiceTraceTerminalFilter | string;
   computeNodeId?: string;
 }
 
@@ -9359,7 +9409,9 @@ export function filterServiceLifecycleTraceDisplay(
 ): DataPanelServiceLifecycleTraceDisplay {
   const query = typeof filter === "string" ? filter : (filter.query ?? "");
   const terminalState =
-    typeof filter === "string" ? "ALL" : (filter.terminalState ?? "ALL");
+    typeof filter === "string"
+      ? "ALL"
+      : normalizeServiceTraceTerminalFilter(filter.terminalState);
   const computeNodeFilter =
     typeof filter === "string" ? "" : (filter.computeNodeId ?? "");
   const normalizedQuery = normalizeDetailFilter(query);
@@ -9384,6 +9436,34 @@ export function filterServiceLifecycleTraceDisplay(
     summaryLabel: `${display.summaryLabel} / 筛选 ${formatCount(items.length)}`,
     items
   };
+}
+
+export function serviceTraceDetailCursorFilters(
+  query: string,
+  terminalState: DataPanelServiceTraceTerminalFilter,
+  computeNodeId: string
+): RuntimeDetailCursorFilters {
+  const normalizedQuery = query.trim();
+  const normalizedComputeNodeId = computeNodeId.trim();
+  return {
+    ...(normalizedQuery ? { query: normalizedQuery } : {}),
+    ...(terminalState !== "ALL" ? { terminalState } : {}),
+    ...(normalizedComputeNodeId ? { computeNodeId: normalizedComputeNodeId } : {})
+  };
+}
+
+function normalizeServiceTraceTerminalFilter(
+  value: string | null | undefined
+): DataPanelServiceTraceTerminalFilter {
+  if (
+    value === "RUNNING" ||
+    value === "COMPLETE" ||
+    value === "INCOMPLETE" ||
+    value === "ALL"
+  ) {
+    return value;
+  }
+  return "ALL";
 }
 
 function serviceLifecycleTraceMatchesFilter(
@@ -9530,13 +9610,14 @@ export function buildDataPanelBackendCursorDisplay(
     limit?: number;
     next_cursor?: number;
     has_more?: boolean;
-    item_count: number;
+    item_count?: number;
+    trace_count?: number;
   },
   totalCount: number
 ): DataPanelBackendCursorDisplay {
   const cursor = normalizeNonNegativeInteger(page.cursor ?? 0);
   const limit = Math.max(1, normalizeNonNegativeInteger(page.limit ?? 1));
-  const itemCount = normalizeNonNegativeInteger(page.item_count);
+  const itemCount = normalizeNonNegativeInteger(page.item_count ?? page.trace_count ?? 0);
   const total = normalizeNonNegativeInteger(totalCount);
   const start = itemCount === 0 ? 0 : cursor + 1;
   const end = Math.min(total, cursor + itemCount);

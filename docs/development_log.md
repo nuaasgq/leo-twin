@@ -12557,3 +12557,53 @@ change.
   - Bind the dashboard service trace browser controls to
     `/runtime/details/service-traces` so large sessions can search beyond the
     current status trace window.
+
+## 2026-07-06 - Dashboard Service Trace Server Cursor v2
+
+- Branch: `feature/T264-dashboard-service-trace-server-cursor-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: bind the standalone dashboard service trace browser to the backend
+  `/runtime/details/service-traces` cursor endpoint introduced in T263. The
+  frontend API client now loads `RUNTIME_DETAIL_PAGE kind=service_traces`,
+  encodes `terminal_state` and `compute_node_id` query parameters, and the App
+  tracks service trace cursor/loading/error state alongside the existing detail
+  pages. DataPanel now prefers `runtimeDetailPages.serviceTraces`, sends trace
+  filter changes to the backend with cursor reset, and shows a backend cursor
+  pager for service traces while keeping local filtering as a fallback.
+  Backend runtime behavior, Event Kernel behavior, network routing, compute
+  scheduling, packet-level semantics, and export formats remain unchanged.
+- Changed files/modules:
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/app/api.ts`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/appSurface.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/service_lifecycle_trace_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed.
+  - `pnpm --dir frontend test api.test.ts appSurface.test.ts dataPanel.test.ts`
+    - Result: passed, 212 tests.
+  - `pnpm --dir frontend test`
+    - Result: passed, 361 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite reported the existing large DataPanel chunk warning.
+  - `git diff --check`
+    - Result: passed. Git reported CRLF normalization warnings for the existing
+      unstaged local runtime config drift.
+- Problems encountered:
+  - `RuntimeServiceLifecycleTraceV2` uses `trace_count` rather than
+    `item_count`, so the shared backend cursor display was generalized to use
+    either field.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The trace browser still renders the current page as simple rows. A future
+    task can add a dedicated full-screen virtualized trace browser.
+- Recommended follow-up:
+  - Add stage-kind and terminal-reason filters to the backend service trace
+    cursor endpoint and dashboard controls.
