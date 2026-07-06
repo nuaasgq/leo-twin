@@ -141,7 +141,11 @@ additional `service_lifecycle_trace_v2.json` observability artifact plus
 `route_detail_index_v1.json` for route evidence review,
 `review_summary_v1.json` for user-readable reproducibility review, and
 `diagnostics_bundle_v1.json` for deterministic package health, model boundary,
-and operator next-action review.
+and operator next-action review. It also writes
+`scenario_review_bundle_v1.json` as a compact operator entry point that binds
+the effective user configuration, review summary, diagnostics, manifest hashes,
+audit-index filename, and model-boundary evidence for reproducible scenario
+review.
 The archive endpoint returns the same package as a ZIP download with stable
 entry ordering and fixed ZIP metadata.
 

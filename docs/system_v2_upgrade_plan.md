@@ -626,7 +626,13 @@ Tasks:
     evidence into backend compare and restore-preflight summaries as
     `runtime_export_boundary_alignment_v1`, allowing API consumers and the
     dashboard to read alignment status, warnings, and alignment hash directly
-    from the compare/preflight responses.
+    from the compare/preflight responses. T310 adds
+    `scenario_review_bundle_v1.json` as a deterministic operator entry point
+    for each runtime export package. It binds user configuration evidence,
+    scenario scale, runtime progress, manifest/boundary hashes, review summary
+    hash, diagnostics hash, audit-index filename, model boundaries, and
+    recommended review order without replaying events or recomputing model
+    state.
 
 ### WS9. Delivery and Operations v2
 

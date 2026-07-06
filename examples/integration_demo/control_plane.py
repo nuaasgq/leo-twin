@@ -82,6 +82,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_route_detail_index_v1,
     build_runtime_export_route_detail_page_v1,
     build_runtime_export_review_summary_v1,
+    build_runtime_export_scenario_review_bundle_v1,
     build_runtime_export_service_trace_page_v1,
 )
 from leo_twin.services.scenario_builder import (
@@ -133,6 +134,7 @@ _RUNTIME_EXPORT_ROUTE_DETAIL_LIMIT = DETAIL_ENDPOINT_MAX_LIMIT
 _RUNTIME_EXPORT_SERVICE_TRACE_LIMIT = DETAIL_ENDPOINT_MAX_LIMIT
 _RUNTIME_EXPORT_REVIEW_SUMMARY_FILENAME = "review_summary_v1.json"
 _RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_FILENAME = "diagnostics_bundle_v1.json"
+_RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_FILENAME = "scenario_review_bundle_v1.json"
 _RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_FILENAME = (
     "route_comparison_review_report_v1.json"
 )
@@ -676,6 +678,9 @@ class DemoControlPlane:
         diagnostics_bundle_path = (
             package_dir / _RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_FILENAME
         )
+        scenario_review_bundle_path = (
+            package_dir / _RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_FILENAME
+        )
         audit_index_path = package_dir / _RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_FILENAME
         artifact_filenames = tuple(
             sorted(
@@ -684,6 +689,7 @@ class DemoControlPlane:
                     *written_files.values(),
                     review_summary_path,
                     diagnostics_bundle_path,
+                    scenario_review_bundle_path,
                     audit_index_path,
                 )
             )
@@ -713,6 +719,22 @@ class DemoControlPlane:
             encoding="utf-8",
         )
         written_files["diagnostics_bundle_v1"] = diagnostics_bundle_path
+        user_configuration_export = self.user_configuration_export()["summary"]
+        scenario_review_bundle = build_runtime_export_scenario_review_bundle_v1(
+            package_id=package_id,
+            package_dir=str(package_dir),
+            config_snapshot=config_snapshot,
+            manifest=manifest,
+            review_summary=review_summary,
+            diagnostics_bundle=diagnostics_bundle,
+            user_configuration_export=user_configuration_export,
+            artifact_filenames=artifact_filenames,
+        )
+        scenario_review_bundle_path.write_text(
+            stable_json_pretty(scenario_review_bundle),
+            encoding="utf-8",
+        )
+        written_files["scenario_review_bundle_v1"] = scenario_review_bundle_path
         audit_compare = _runtime_export_package_compare_summary(
             package_id,
             config_snapshot,
@@ -1038,6 +1060,7 @@ class DemoControlPlane:
             for path in sorted(package_dir.iterdir(), key=lambda item: item.name)
             if path.is_file()
             and path.name != _RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_FILENAME
+            and path.suffix.lower() != ".zip"
         )
         audit_index = build_runtime_export_package_audit_index_v1(
             package_id=package_id,

@@ -72,6 +72,11 @@ adding wall-clock data.
 diagnostics index. It summarizes package completeness, required/recommended
 artifact health, route trust evidence, reproducibility hashes, model boundaries,
 findings, and recommended next actions.
+`scenario_review_bundle_v1.json` is emitted as a deterministic operator-facing
+review entry point. It binds the effective user configuration evidence,
+scenario scale, runtime progress, manifest hashes, review summary hash,
+diagnostics hash, audit-index filename, model boundaries, and recommended
+review order into one compact JSON artifact.
 
 ## Review Summary
 
@@ -293,13 +298,43 @@ user configuration schema id, user configuration config/export hashes,
 validation status, review summary hash, diagnostics hash, optional route
 comparison review report hash, and the SHA-256 hashes of package artifacts. The
 audit index excludes its own file from `artifact_hashes` to avoid a circular
-self-hash. It is regenerated when a route comparison review report is saved, so
-the report hash, user configuration binding, and the preflight-derived boundary
-alignment evidence become part of the long-term package audit trail.
+self-hash and excludes archive zip files because archives are generated after
+the package evidence files. It is regenerated when a route comparison review
+report is saved, so the report hash, user configuration binding, scenario review
+bundle file hash, and the preflight-derived boundary alignment evidence become
+part of the long-term package audit trail.
 
 The audit index is read-only evidence. It does not replay events, recompute
 routes or services, mutate packages on read, capture packets, or call external
 simulators.
+
+## Scenario Review Bundle
+
+The scenario review bundle artifact has type:
+
+```text
+RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1
+```
+
+The bundle id is:
+
+```text
+leo_twin.runtime_export_scenario_review_bundle.v1
+```
+
+It reports:
+
+- package id and package directory;
+- scenario scale and runtime progress copied from `review_summary_v1.json`;
+- user configuration binding copied from the backend user configuration export;
+- manifest, generated config, runtime state, metrics, and boundary hashes;
+- review summary hash and diagnostics bundle hash;
+- the audit index filename that will record the scenario review bundle file hash;
+- deterministic model boundaries and recommended review order.
+
+The scenario review bundle is an entry-point index only. It does not replay
+events, recompute routes or services, mutate packages, capture packets, or call
+external simulators.
 
 ## Diagnostics Bundle
 

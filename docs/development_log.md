@@ -14901,7 +14901,7 @@ change.
 ## 2026-07-06 - User Configuration Audit Binding v1
 
 - Branch: `feature/T309-user-config-audit-binding-v1`
-- Commit: pending commit note; final hash is reported after commit creation.
+- Commit: `e33b421 feat(runtime): bind user config to audit index`
 - Scope: bind backend user configuration export evidence into
   `export_package_audit_index_v1.json` and the dashboard audit drawer. Runtime
   exports now pass `/scenario/user-config/export` summary evidence into the
@@ -14956,3 +14956,56 @@ change.
   - Add a scenario package/export action that downloads user configuration,
     runtime package audit index, and operator review notes as one reproducible
     review bundle.
+
+## 2026-07-06 - Scenario Review Bundle v1
+
+- Branch: `feature/T310-scenario-review-bundle-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a deterministic `scenario_review_bundle_v1.json` artifact to each
+  runtime export package as the operator-facing scenario review entry point.
+  The new bundle binds backend user configuration evidence, scenario scale,
+  runtime progress, manifest/boundary hashes, review summary hash, diagnostics
+  hash, audit-index filename, model boundaries, and recommended review order.
+  The package audit index now records the scenario review bundle file hash and
+  ignores archive zip files during artifact-hash scanning so repeated archive
+  exports remain deterministic. This task does not alter Event Kernel behavior,
+  runtime restore execution, route recomputation, service recomputation,
+  packet-level simulation, external simulator integrations, or frontend
+  architecture.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `src/leo_twin/services/result_package_contract.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/result_package_contract_v1.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/integration_demo.md`
+  - `docs/dashboard_model_trust_evidence_workspace_v1.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_result_package_contract_v1.py tests/integration/test_result_package_export_v1.py tests/integration/test_runtime_session_control.py::test_demo_adapter_exports_runtime_result_package tests/integration/test_runtime_session_control.py::test_demo_adapter_exports_deterministic_runtime_archive tests/integration/test_runtime_session_control.py::test_demo_adapter_persists_runtime_export_catalog tests/integration/test_runtime_session_control.py::test_demo_adapter_serves_persisted_runtime_export_artifacts tests/unit/test_user_guide_v2_docs.py -q`
+    - Result: passed, 21 tests.
+  - `python -m py_compile src/leo_twin/services/result_package_contract.py examples/integration_demo/control_plane.py tests/unit/test_result_package_contract_v1.py tests/integration/test_result_package_export_v1.py tests/integration/test_runtime_session_control.py`
+    - Result: passed.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered:
+  - The first implementation let the audit index see a previously generated
+    package archive zip during repeat archive export. That made archive and
+    catalog hashes change between identical exports. The fix excludes zip
+    archives from audit-index artifact scanning because archives are generated
+    after the package evidence files.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The frontend does not yet have a dedicated scenario review bundle drawer;
+    users can download the JSON through the existing package file endpoint.
+  - Route comparison review reports saved after package export update the audit
+    index, but they do not rewrite immutable archive zip files created before
+    the save.
+- Recommended follow-up:
+  - Add a dashboard scenario review entry-card that links
+    `scenario_review_bundle_v1.json`, audit index, review summary, diagnostics,
+    manifest, and config snapshot as one guided operator review flow.

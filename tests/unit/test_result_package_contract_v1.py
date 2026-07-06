@@ -8,6 +8,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID,
     RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1_ID,
     RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID,
+    RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1_ID,
     RUNTIME_EXPORT_ROUTE_DETAIL_ITEM_V1_ID,
     RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_V1_ID,
     RUNTIME_EXPORT_ROUTE_DETAIL_PAGE_V1_ID,
@@ -22,6 +23,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_route_detail_index_v1,
     build_runtime_export_route_detail_page_v1,
     build_runtime_export_review_summary_v1,
+    build_runtime_export_scenario_review_bundle_v1,
     build_runtime_export_service_trace_page_v1,
     result_package_contract_v1_to_dict,
     summarize_result_package_record_v1,
@@ -53,6 +55,7 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
         "route_detail_index_v1.json",
         "review_summary_v1.json",
         "diagnostics_bundle_v1.json",
+        "scenario_review_bundle_v1.json",
         "export_package_audit_index_v1.json",
     ]
     assert "GET /runtime/export" in first["source_endpoints"]
@@ -149,6 +152,8 @@ def test_result_package_summary_accepts_complete_package_record() -> None:
         "route_detail_index_v1.json",
         "review_summary_v1.json",
         "diagnostics_bundle_v1.json",
+        "scenario_review_bundle_v1.json",
+        "export_package_audit_index_v1.json",
     )
     assert summary["catalog_record_present"] is True
     assert summary["history_record_present"] is True
@@ -212,6 +217,7 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
         "diagnostics_bundle_v1.json",
         "review_summary_v1.json",
         "route_detail_index_v1.json",
+        "scenario_review_bundle_v1.json",
         "service_lifecycle_trace_v2.json",
         "summary.json",
     )
@@ -271,6 +277,9 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
         "boundary_conditions"
     ]
     assert "diagnostics_bundle_v1.json" in first["artifacts"]["artifact_filenames"]
+    assert "scenario_review_bundle_v1.json" in first["artifacts"][
+        "artifact_filenames"
+    ]
     assert first["summary_hash"].startswith("sha256:")
     assert json.loads(json.dumps(first, sort_keys=True))["summary_id"] == (
         RUNTIME_EXPORT_REVIEW_SUMMARY_V1_ID
@@ -309,10 +318,12 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
         "config_snapshot.json",
         "diagnostics_bundle_v1.json",
         "events.jsonl",
+        "export_package_audit_index_v1.json",
         "manifest.json",
         "metrics.csv",
         "review_summary_v1.json",
         "route_detail_index_v1.json",
+        "scenario_review_bundle_v1.json",
         "service_lifecycle_trace_v2.json",
         "summary.json",
     )
@@ -373,6 +384,131 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
     assert first["diagnostics_hash"].startswith("sha256:")
     assert json.loads(json.dumps(first, sort_keys=True))["bundle_id"] == (
         RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1_ID
+    )
+
+
+def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
+    config_snapshot = {
+        "type": "RUNTIME_CONFIG_SNAPSHOT",
+        "status": {
+            "lifecycle_state": "STOPPED",
+            "current_sim_time": 120,
+            "processed_event_count": 4200,
+            "queued_event_count": 0,
+            "route_explanation_summary_v1": _route_summary(),
+            "route_provenance_trust_summary_v1": _route_trust(),
+            "runtime_export_route_detail_policy_v1": _route_detail_export_policy(),
+            "runtime_export_service_trace_policy_v1": _service_trace_export_policy(),
+        },
+        "config": {"seed": 7, "duration_seconds": 120},
+        "generated_config": {
+            "seed": 7,
+            "satellite_count": 72,
+            "ground_user_count": 20,
+            "compute_node_count": 12,
+            "duration_seconds": 120,
+        },
+    }
+    manifest = {
+        "manifest_id": RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID,
+        "manifest_hash": "sha256:manifest",
+        "control_config_hash": "sha256:control",
+        "generated_config_hash": "sha256:generated",
+        "runtime_state_hash": "sha256:runtime",
+        "metrics_summary_hash": "sha256:metrics",
+    }
+    filenames = (
+        "config_snapshot.json",
+        "diagnostics_bundle_v1.json",
+        "events.jsonl",
+        "export_package_audit_index_v1.json",
+        "manifest.json",
+        "metrics.csv",
+        "review_summary_v1.json",
+        "route_detail_index_v1.json",
+        "scenario_review_bundle_v1.json",
+        "service_lifecycle_trace_v2.json",
+        "summary.json",
+    )
+    user_configuration_export = {
+        "version": "v1",
+        "source": "BACKEND_USER_CONFIGURATION",
+        "schema_id": "sees.user_configuration.v2",
+        "export_scope": "CURRENT_EFFECTIVE_SEES_CONFIG",
+        "format": "JSON_MAPPING",
+        "unknown_key_policy": "REJECT",
+        "defaulting_policy": "OMITTED_FIELDS_USE_BACKEND_DEFAULTS",
+        "import_paths": ("CONFIG_UPDATE control message for partial updates",),
+        "config_hash": "sha256:user-config",
+        "validation_ok": True,
+        "validation_error_count": 0,
+        "config": {"seed": 7},
+    }
+    review_summary = build_runtime_export_review_summary_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+        manifest=manifest,
+        artifact_filenames=filenames,
+    )
+    diagnostics_bundle = build_runtime_export_diagnostics_bundle_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+        manifest=manifest,
+        review_summary=review_summary,
+        artifact_filenames=filenames,
+    )
+
+    first = build_runtime_export_scenario_review_bundle_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+        manifest=manifest,
+        review_summary=review_summary,
+        diagnostics_bundle=diagnostics_bundle,
+        user_configuration_export=user_configuration_export,
+        artifact_filenames=filenames,
+    )
+    second = build_runtime_export_scenario_review_bundle_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+        manifest=manifest,
+        review_summary=review_summary,
+        diagnostics_bundle=diagnostics_bundle,
+        user_configuration_export=user_configuration_export,
+        artifact_filenames=tuple(reversed(filenames)),
+    )
+
+    assert first == second
+    assert first["bundle_id"] == RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1_ID
+    assert first["scenario_review_status"] == "SCENARIO_REVIEW_READY"
+    assert first["scenario_review_warnings"] == ()
+    assert first["scenario"]["satellite_count"] == 72
+    assert first["user_configuration"]["config_hash"] == "sha256:user-config"
+    assert first["user_configuration"]["validation_ok"] is True
+    assert first["user_configuration"]["binding_hash"].startswith("sha256:")
+    assert first["reproducibility"]["manifest_hash"] == "sha256:manifest"
+    assert first["reproducibility"]["runtime_export_boundary_hash"].startswith(
+        "sha256:"
+    )
+    assert first["review_summary"]["summary_hash"] == review_summary["summary_hash"]
+    assert first["diagnostics"]["diagnostics_hash"] == (
+        diagnostics_bundle["diagnostics_hash"]
+    )
+    assert first["audit_index"]["audit_index_id"] == (
+        RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID
+    )
+    assert first["model_boundaries"]["packet_level_simulation"] is False
+    assert first["model_boundaries"]["external_simulators"] is False
+    assert first["recommended_review_order"][0] == "scenario_review_bundle_v1.json"
+    assert "export_package_audit_index_v1.json" in first["artifact_review"][
+        "artifact_filenames"
+    ]
+    assert first["scenario_review_hash"].startswith("sha256:")
+    assert json.loads(json.dumps(first, sort_keys=True))["bundle_id"] == (
+        RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1_ID
     )
 
 
@@ -865,10 +1001,12 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
         "config_snapshot.json",
         "diagnostics_bundle_v1.json",
         "events.jsonl",
+        "export_package_audit_index_v1.json",
         "manifest.json",
         "metrics.csv",
         "review_summary_v1.json",
         "route_detail_index_v1.json",
+        "scenario_review_bundle_v1.json",
         "service_lifecycle_trace_v2.json",
         "summary.json",
     )

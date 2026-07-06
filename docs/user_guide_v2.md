@@ -141,6 +141,8 @@ Each result package contains:
 - `route_detail_index_v1.json`
 - `review_summary_v1.json`
 - `diagnostics_bundle_v1.json`
+- `scenario_review_bundle_v1.json`
+- `export_package_audit_index_v1.json`
 
 The standalone dashboard export review area loads the selected package's
 server-side route evidence page and shows route evidence counts,
@@ -211,6 +213,12 @@ while still keeping a direct JSON link for operator review. The Configuration
 section is backend-owned evidence from `/scenario/user-config/export`: it shows
 the schema id, config hash, export hash, binding hash, and validation status
 used for the exported package.
+Each new package also contains `scenario_review_bundle_v1.json`, a compact
+backend-generated review entry point that binds the effective user
+configuration, scenario scale, runtime progress, reproducibility hashes,
+review summary hash, diagnostics hash, audit-index filename, model boundaries,
+and recommended review order. It is available through the same package file
+endpoint and does not replay events or recompute model state.
 For package-owned review, use:
 
 ```powershell
@@ -251,6 +259,7 @@ Package audit index:
 
 ```powershell
 Invoke-RestMethod "http://127.0.0.1:8765/runtime/export/packages/<package_id>/files/export_package_audit_index_v1.json"
+Invoke-RestMethod "http://127.0.0.1:8765/runtime/export/packages/<package_id>/files/scenario_review_bundle_v1.json"
 ```
 
 Export catalog:

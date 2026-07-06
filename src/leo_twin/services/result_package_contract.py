@@ -16,6 +16,9 @@ RUNTIME_EXPORT_REVIEW_SUMMARY_V1_ID = "leo_twin.runtime_export_review_summary.v1
 RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1_ID = (
     "leo_twin.runtime_export_diagnostics_bundle.v1"
 )
+RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1_ID = (
+    "leo_twin.runtime_export_scenario_review_bundle.v1"
+)
 RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_V1_ID = (
     "leo_twin.runtime_export_route_detail_index.v1"
 )
@@ -129,6 +132,16 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
                 ),
             },
             {
+                "logical_name": "scenario_review_bundle_v1",
+                "filename": "scenario_review_bundle_v1.json",
+                "format": "json",
+                "content": (
+                    "operator scenario review entry that binds user "
+                    "configuration, reproducibility, diagnostics, and audit "
+                    "evidence"
+                ),
+            },
+            {
                 "logical_name": "export_package_audit_index_v1",
                 "filename": "export_package_audit_index_v1.json",
                 "format": "json",
@@ -232,6 +245,7 @@ def build_runtime_export_reproducibility_boundary_v1(
             "route_detail_index_v1.json",
             "review_summary_v1.json",
             "diagnostics_bundle_v1.json",
+            "scenario_review_bundle_v1.json",
         ),
         "route_detail_export": {
             "policy": str(route_policy.get("policy", "")),
@@ -498,6 +512,138 @@ def build_runtime_export_diagnostics_bundle_v1(
     }
     diagnostics["diagnostics_hash"] = stable_hash_payload(diagnostics)
     return diagnostics
+
+
+def build_runtime_export_scenario_review_bundle_v1(
+    *,
+    package_id: str,
+    package_dir: str,
+    config_snapshot: Mapping[str, Any],
+    manifest: Mapping[str, Any],
+    review_summary: Mapping[str, Any],
+    diagnostics_bundle: Mapping[str, Any],
+    user_configuration_export: Mapping[str, Any] | None = None,
+    artifact_filenames: tuple[str, ...] = (),
+) -> dict[str, object]:
+    """Build a deterministic operator entry point for scenario review."""
+
+    if not isinstance(config_snapshot, Mapping):
+        raise TypeError("config_snapshot must be a mapping")
+    if not isinstance(manifest, Mapping):
+        raise TypeError("manifest must be a mapping")
+    if not isinstance(review_summary, Mapping):
+        raise TypeError("review_summary must be a mapping")
+    if not isinstance(diagnostics_bundle, Mapping):
+        raise TypeError("diagnostics_bundle must be a mapping")
+
+    status = _mapping(config_snapshot.get("status"))
+    user_config_binding = _runtime_export_user_configuration_audit_binding(
+        config_snapshot,
+        user_configuration_export,
+    )
+    reproducibility_boundary = _runtime_export_reproducibility_boundary(
+        status,
+        manifest,
+    )
+    findings = _records(diagnostics_bundle.get("findings"))
+    finding_labels = tuple(
+        {
+            "severity": str(finding.get("severity", "")),
+            "code": str(finding.get("code", "")),
+        }
+        for finding in findings
+    )
+    scenario_review_warnings: list[str] = []
+    if user_config_binding["validation_ok"] is not True:
+        scenario_review_warnings.append("USER_CONFIGURATION_NOT_VALIDATED")
+    if str(review_summary.get("review_status", "")) != "REVIEW_READY":
+        scenario_review_warnings.append("REVIEW_SUMMARY_NOT_READY")
+    if any(str(item.get("severity", "")) == "ERROR" for item in findings):
+        scenario_review_warnings.append("DIAGNOSTICS_HAS_ERROR_FINDINGS")
+
+    bundle: dict[str, object] = {
+        "type": "RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1",
+        "version": "v1",
+        "bundle_id": RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1_ID,
+        "source": "BACKEND_RUNTIME_EXPORT_PACKAGE",
+        "review_scope": "USER_CONFIGURATION_TO_RESULT_PACKAGE_REVIEW",
+        "package_id": str(package_id),
+        "package_dir": str(package_dir),
+        "scenario": dict(_mapping(review_summary.get("scenario"))),
+        "runtime": dict(_mapping(review_summary.get("runtime"))),
+        "user_configuration": user_config_binding,
+        "reproducibility": {
+            "manifest_id": str(manifest.get("manifest_id", "")),
+            "manifest_hash": str(manifest.get("manifest_hash", "")),
+            "control_config_hash": str(manifest.get("control_config_hash", "")),
+            "generated_config_hash": str(manifest.get("generated_config_hash", "")),
+            "runtime_state_hash": str(manifest.get("runtime_state_hash", "")),
+            "metrics_summary_hash": str(manifest.get("metrics_summary_hash", "")),
+            "runtime_export_boundary_hash": str(
+                reproducibility_boundary.get("boundary_hash", "")
+            ),
+        },
+        "review_summary": {
+            "summary_id": str(review_summary.get("summary_id", "")),
+            "summary_hash": str(review_summary.get("summary_hash", "")),
+            "review_status": str(review_summary.get("review_status", "")),
+        },
+        "diagnostics": {
+            "bundle_id": str(diagnostics_bundle.get("bundle_id", "")),
+            "diagnostics_hash": str(diagnostics_bundle.get("diagnostics_hash", "")),
+            "finding_count": len(findings),
+            "finding_labels": finding_labels,
+        },
+        "audit_index": {
+            "audit_index_id": RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID,
+            "filename": "export_package_audit_index_v1.json",
+            "hash_binding_direction": (
+                "audit index records this scenario_review_bundle_v1.json file hash"
+            ),
+        },
+        "artifact_review": {
+            "artifact_count": len(tuple(artifact_filenames)),
+            "artifact_filenames": tuple(sorted(str(item) for item in artifact_filenames)),
+            "entrypoint_filenames": (
+                "scenario_review_bundle_v1.json",
+                "export_package_audit_index_v1.json",
+                "review_summary_v1.json",
+                "diagnostics_bundle_v1.json",
+                "manifest.json",
+                "config_snapshot.json",
+            ),
+        },
+        "model_boundaries": {
+            "event_kernel_policy": "NO_EVENT_KERNEL_BEHAVIOR_CHANGE",
+            "event_replay_restore": False,
+            "model_recomputation": False,
+            "route_recomputation": False,
+            "service_recomputation": False,
+            "packet_capture": False,
+            "packet_level_simulation": False,
+            "external_simulators": False,
+            "forbidden_external_integrations": ("STK", "EXATA", "AFSIM", "DDS"),
+        },
+        "recommended_review_order": (
+            "scenario_review_bundle_v1.json",
+            "export_package_audit_index_v1.json",
+            "review_summary_v1.json",
+            "diagnostics_bundle_v1.json",
+            "manifest.json",
+            "config_snapshot.json",
+            "events.jsonl",
+            "metrics.csv",
+            "summary.json",
+        ),
+        "scenario_review_status": (
+            "SCENARIO_REVIEW_READY"
+            if not scenario_review_warnings
+            else "SCENARIO_REVIEW_WARN"
+        ),
+        "scenario_review_warnings": tuple(scenario_review_warnings),
+    }
+    bundle["scenario_review_hash"] = stable_hash_payload(bundle)
+    return bundle
 
 
 def build_runtime_export_route_detail_index_v1(

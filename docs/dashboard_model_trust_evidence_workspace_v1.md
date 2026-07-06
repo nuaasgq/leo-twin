@@ -90,10 +90,13 @@ compare/preflight review. The package review area also surfaces
 `export_package_audit_index_v1.json` from the export catalog. That audit index
 binds manifest, boundary alignment, diagnostics, route review report, and
 user configuration export evidence into one backend-owned long-term review
-entry without route recomputation. The dashboard loads the audit index JSON and
-renders those evidence groups directly, including schema/config/export/binding
-hashes and validation status for the user configuration, so operators can
-inspect the package audit boundary without opening raw JSON.
+entry without route recomputation. Newer packages also include
+`scenario_review_bundle_v1.json` as the backend-generated operator entry point;
+the audit index records that file hash alongside the other package evidence.
+The dashboard loads the audit index JSON and renders those evidence groups
+directly, including schema/config/export/binding hashes and validation status
+for the user configuration, so operators can inspect the package audit boundary
+without opening raw JSON.
 7. runtime evidence
 
 Each row has a tone:

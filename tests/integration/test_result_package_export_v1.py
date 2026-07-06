@@ -11,6 +11,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID,
     RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1_ID,
     RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID,
+    RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1_ID,
     RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID,
     summarize_result_package_record_v1,
 )
@@ -49,12 +50,14 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert (package_dir / "review_summary_v1.json").exists()
     assert (package_dir / "route_detail_index_v1.json").exists()
     assert (package_dir / "service_lifecycle_trace_v2.json").exists()
+    assert (package_dir / "scenario_review_bundle_v1.json").exists()
     assert (package_dir / "export_package_audit_index_v1.json").exists()
     filenames = {str(record["filename"]) for record in package["files"]}
     assert "service_lifecycle_trace_v2.json" in filenames
     assert "route_detail_index_v1.json" in filenames
     assert "review_summary_v1.json" in filenames
     assert "diagnostics_bundle_v1.json" in filenames
+    assert "scenario_review_bundle_v1.json" in filenames
     assert "export_package_audit_index_v1.json" in filenames
 
     manifest = json.loads((package_dir / "manifest.json").read_text(encoding="utf-8"))
@@ -72,6 +75,11 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     )
     diagnostics_bundle = json.loads(
         (package_dir / "diagnostics_bundle_v1.json").read_text(encoding="utf-8")
+    )
+    scenario_review_bundle = json.loads(
+        (package_dir / "scenario_review_bundle_v1.json").read_text(
+            encoding="utf-8"
+        )
     )
     audit_index = json.loads(
         (package_dir / "export_package_audit_index_v1.json").read_text(
@@ -187,6 +195,29 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert diagnostics_bundle["reproducibility_boundary"] == reproducibility_boundary
     assert diagnostics_bundle["model_boundaries"]["packet_level_simulation"] is False
     assert diagnostics_bundle["model_boundaries"]["event_replay_restore"] is False
+    assert scenario_review_bundle["bundle_id"] == (
+        RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1_ID
+    )
+    assert scenario_review_bundle["scenario_review_status"] == (
+        "SCENARIO_REVIEW_READY"
+    )
+    assert scenario_review_bundle["user_configuration"]["schema_id"] == (
+        "sees.user_configuration.v2"
+    )
+    assert scenario_review_bundle["user_configuration"]["validation_ok"] is True
+    assert scenario_review_bundle["review_summary"]["summary_hash"] == (
+        review_summary["summary_hash"]
+    )
+    assert scenario_review_bundle["diagnostics"]["diagnostics_hash"] == (
+        diagnostics_bundle["diagnostics_hash"]
+    )
+    assert scenario_review_bundle["audit_index"]["filename"] == (
+        "export_package_audit_index_v1.json"
+    )
+    assert scenario_review_bundle["model_boundaries"][
+        "packet_level_simulation"
+    ] is False
+    assert scenario_review_bundle["scenario_review_hash"].startswith("sha256:")
     assert audit_index["audit_index_id"] == RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID
     assert audit_index["package_id"] == package["package_id"]
     assert audit_index["manifest_hash"] == manifest["manifest_hash"]
@@ -215,6 +246,9 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert "ROUTE_COMPARISON_REVIEW_REPORT_NOT_SAVED" in audit_index["audit_warnings"]
     assert audit_index["audit_hash"].startswith("sha256:")
     assert "export_package_audit_index_v1.json" not in {
+        str(record["filename"]) for record in audit_index["artifact_hashes"]
+    }
+    assert "scenario_review_bundle_v1.json" in {
         str(record["filename"]) for record in audit_index["artifact_hashes"]
     }
 
@@ -322,6 +356,9 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         str(record["filename"]) for record in latest["files"]
     }
     assert "export_package_audit_index_v1.json" in {
+        str(record["filename"]) for record in latest["files"]
+    }
+    assert "scenario_review_bundle_v1.json" in {
         str(record["filename"]) for record in latest["files"]
     }
 

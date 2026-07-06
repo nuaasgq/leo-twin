@@ -820,6 +820,7 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
         "metrics.csv",
         "review_summary_v1.json",
         "route_detail_index_v1.json",
+        "scenario_review_bundle_v1.json",
         "service_lifecycle_trace_v2.json",
         "summary.json",
     } <= set(files)
@@ -846,6 +847,9 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
     )
     diagnostics_bundle = json.loads(
         (package_dir / "diagnostics_bundle_v1.json").read_text(encoding="utf-8")
+    )
+    scenario_review_bundle = json.loads(
+        (package_dir / "scenario_review_bundle_v1.json").read_text(encoding="utf-8")
     )
 
     assert manifest == exported["manifest"]
@@ -914,6 +918,15 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
     assert diagnostics_bundle["reproducibility_boundary"] == reproducibility_boundary
     assert diagnostics_bundle["model_boundaries"]["event_replay_restore"] is False
     assert diagnostics_bundle["artifact_health"]["missing_required_filenames"] == []
+    assert scenario_review_bundle["type"] == (
+        "RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1"
+    )
+    assert scenario_review_bundle["scenario_review_status"] == "SCENARIO_REVIEW_READY"
+    assert scenario_review_bundle["user_configuration"]["validation_ok"] is True
+    assert scenario_review_bundle["audit_index"]["filename"] == (
+        "export_package_audit_index_v1.json"
+    )
+    assert scenario_review_bundle["scenario_review_hash"].startswith("sha256:")
     assert summary["event_count"] >= 1
     assert (package_dir / "metrics.csv").read_text(encoding="utf-8").startswith(
         "sim_time,metric_name,entity_id,value,tags\n"
@@ -954,6 +967,7 @@ def test_demo_adapter_exports_deterministic_runtime_archive(tmp_path) -> None:
             "metrics.csv",
             "review_summary_v1.json",
             "route_detail_index_v1.json",
+            "scenario_review_bundle_v1.json",
             "service_lifecycle_trace_v2.json",
             "summary.json",
         } <= set(names)
@@ -1050,6 +1064,7 @@ def test_demo_adapter_persists_runtime_export_catalog(tmp_path) -> None:
         "metrics.csv",
         "review_summary_v1.json",
         "route_detail_index_v1.json",
+        "scenario_review_bundle_v1.json",
         "summary.json",
     } <= {item["filename"] for item in package_record["files"]}
 
@@ -1115,6 +1130,11 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
     diagnostics_bundle_artifact = control_plane.runtime_export_package_artifact(
         package_id,
         "diagnostics_bundle_v1.json",
+        export_root,
+    )
+    scenario_review_bundle_artifact = control_plane.runtime_export_package_artifact(
+        package_id,
+        "scenario_review_bundle_v1.json",
         export_root,
     )
     archive_artifact = control_plane.runtime_export_package_archive_artifact(
@@ -1273,6 +1293,22 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
     assert diagnostics_bundle["reproducibility_boundary"] == reproducibility_boundary
     assert diagnostics_bundle["model_boundaries"]["event_replay_restore"] is False
     assert diagnostics_bundle["diagnostics_hash"].startswith("sha256:")
+    assert (
+        Path(str(scenario_review_bundle_artifact["path"])).name
+        == "scenario_review_bundle_v1.json"
+    )
+    assert (
+        scenario_review_bundle_artifact["content_type"]
+        == "application/json; charset=utf-8"
+    )
+    scenario_review_bundle = json.loads(
+        Path(str(scenario_review_bundle_artifact["path"])).read_text(encoding="utf-8")
+    )
+    assert scenario_review_bundle["type"] == (
+        "RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1"
+    )
+    assert scenario_review_bundle["scenario_review_status"] == "SCENARIO_REVIEW_READY"
+    assert scenario_review_bundle["scenario_review_hash"].startswith("sha256:")
     assert Path(str(archive_artifact["path"])) == Path(str(exported["archive"]["path"]))
     assert archive_artifact["filename"].endswith(".zip")
     assert archive_artifact["sha256"] == exported["archive"]["sha256"]
