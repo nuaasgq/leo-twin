@@ -803,10 +803,32 @@ def test_service_lifecycle_trace_v2_is_backend_owned_and_deterministic() -> None
     assert by_compute_node["trace_count"] == 1
     assert by_compute_node["has_more"] is False
     assert by_compute_node["items"][0]["terminal_state"] == "COMPLETE"
+    by_stage = build_runtime_service_lifecycle_trace_v2(
+        history,
+        stage_kind=" output network ",
+    )
+    assert by_stage["filter_stage_kind"] == "OUTPUT_NETWORK"
+    assert by_stage["trace_count"] == 2
+    assert all(
+        any(stage["stage_kind"] == "OUTPUT_NETWORK" for stage in item["stages"])
+        for item in by_stage["items"]
+    )
+    by_terminal_reason = build_runtime_service_lifecycle_trace_v2(
+        history,
+        terminal_reason=" output network pending ",
+    )
+    assert by_terminal_reason["filter_terminal_reason"] == "OUTPUT_NETWORK_PENDING"
+    assert by_terminal_reason["trace_count"] == 1
+    assert (
+        by_terminal_reason["items"][0]["terminal_state_reason"]
+        == "OUTPUT_NETWORK_PENDING"
+    )
     none = build_runtime_service_lifecycle_trace_v2(
         history,
         query="sat",
         terminal_state="INCOMPLETE",
+        stage_kind="INPUT_NETWORK",
+        terminal_reason="NO_COMPONENT_OBSERVATIONS",
     )
     assert none["filter_applied"] is True
     assert none["trace_count"] == 0

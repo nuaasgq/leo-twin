@@ -144,7 +144,10 @@ Tasks:
     `leo_twin.large_detail_pagination_contract.v2`, allowing server-side
     filtering by query, raw terminal state, and compute-node id. T264 binds the
     dashboard service trace browser controls and pager to that server cursor
-    endpoint while retaining local filtering as a temporary fallback.
+    endpoint while retaining local filtering as a temporary fallback. T265
+    extends the same backend cursor endpoint with `stage_kind` and
+    `terminal_reason` filters so lifecycle-stage and terminal-reason narrowing
+    happens before cursor slicing.
 
 ### WS3. Network Semantics and KPI Trust v2
 

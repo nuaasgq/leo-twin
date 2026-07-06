@@ -47,7 +47,7 @@ Runtime detail APIs now expose a backend exact-detail path for one trace:
 
 They also expose a cursor-readable trace page:
 
-`GET /runtime/details/service-traces?cursor=0&limit=100&query=&terminal_state=ALL&compute_node_id=`
+`GET /runtime/details/service-traces?cursor=0&limit=100&query=&terminal_state=ALL&compute_node_id=&stage_kind=ALL&terminal_reason=ALL`
 
 The endpoint accepts the `trace:{service_id}` id, normalized `service_id`,
 `task_id`, input flow id, or output flow id. It returns
@@ -60,6 +60,9 @@ The cursor-readable page returns `type=RUNTIME_DETAIL_PAGE`,
 `kind=service_traces`, and a `RuntimeServiceLifecycleTraceV2` summary. It uses
 the same deterministic ordering as the status trace and supports server-side
 filters for text query, raw `terminal_state`, and `compute_node_id`.
+It also supports backend-owned `stage_kind` and `terminal_reason` filters so
+dashboard consumers can narrow lifecycle windows by component stage and terminal
+reason without scanning hidden rows locally.
 
 The standalone dashboard selection path now calls this exact-detail endpoint
 for a selected service trace. When the backend detail matches the selected
@@ -82,6 +85,11 @@ is available, while retaining local filtering as a short-lived fallback during
 loading or backend unavailability. The terminal-state filter uses the raw
 backend `terminal_state` field on each trace row rather than parsing localized
 display labels.
+
+The backend cursor endpoint also accepts raw `stage_kind` values such as
+`INPUT_NETWORK`, `COMPUTE_QUEUE`, `COMPUTE_EXECUTION`, and `OUTPUT_NETWORK`,
+plus raw `terminal_reason` values such as `TOTAL_LATENCY_OBSERVED` and
+`OUTPUT_NETWORK_PENDING`. These filters are applied before cursor slicing.
 
 ## Lifecycle Stages
 

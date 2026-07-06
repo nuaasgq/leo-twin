@@ -12607,3 +12607,51 @@ change.
 - Recommended follow-up:
   - Add stage-kind and terminal-reason filters to the backend service trace
     cursor endpoint and dashboard controls.
+
+## 2026-07-06 - Service Trace Stage and Reason Filters v2
+
+- Branch: `feature/T265-service-trace-stage-reason-filters-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: extend the backend `/runtime/details/service-traces` cursor endpoint
+  with deterministic server-side `stage_kind` and `terminal_reason` filters.
+  The filters are applied before cursor slicing in
+  `RuntimeServiceLifecycleTraceV2`; `stage_kind` matches observable lifecycle
+  stages only, and both new filters normalize case, spaces, underscores, and
+  hyphens to stable code values. The demo control plane and HTTP query parser
+  pass the new filters through the existing `RUNTIME_DETAIL_PAGE
+  kind=service_traces` contract. Event Kernel behavior, runtime advancement,
+  network routing, compute scheduling, packet-level semantics, frontend
+  rendering, and export formats remain unchanged.
+- Changed files/modules:
+  - `src/leo_twin/services/runtime_observability.py`
+  - `src/leo_twin/services/detail_pagination_contract.py`
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `tests/unit/test_runtime_observability.py`
+  - `tests/unit/test_large_detail_pagination_contract_v2.py`
+  - `tests/integration/test_live_runtime_streaming.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/service_lifecycle_trace_v2.md`
+  - `docs/large_detail_pagination_contract_v2.md`
+  - `docs/integration_demo.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_runtime_observability.py::test_service_lifecycle_trace_v2_is_backend_owned_and_deterministic tests/integration/test_runtime_session_control.py::test_demo_server_stream_query_parses_cursor_options tests/integration/test_live_runtime_streaming.py::test_runtime_detail_pages_return_deterministic_windows tests/unit/test_large_detail_pagination_contract_v2.py -q`
+    - Result: passed, 9 tests.
+  - `python -m pytest tests/unit/test_runtime_observability.py tests/unit/test_large_detail_pagination_contract_v2.py tests/unit/test_backend_derived_summary.py tests/integration/test_live_runtime_streaming.py::test_runtime_detail_pages_return_deterministic_windows tests/integration/test_runtime_session_control.py::test_demo_server_stream_query_parses_cursor_options -q`
+    - Result: passed, 26 tests.
+  - `python -m pytest tests/integration/test_runtime_session_control.py tests/integration/test_live_runtime_streaming.py -q`
+    - Result: passed, 35 tests.
+- Problems encountered:
+  - A naive `stage_kind` filter would match every trace because each trace has
+    four stage placeholders. The implementation was narrowed to observable
+    stages where `stage_status` is not `UNKNOWN`.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The standalone dashboard does not yet expose dedicated `stage_kind` and
+    `terminal_reason` controls; this task only adds the backend contract.
+- Recommended follow-up:
+  - Bind dashboard service trace controls to the new backend `stage_kind` and
+    `terminal_reason` filters while preserving cursor reset behavior.

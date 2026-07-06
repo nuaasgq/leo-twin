@@ -56,6 +56,8 @@ def test_large_detail_pagination_contract_v2_derives_large_scale_cursors() -> No
         "query",
         "terminal_state",
         "compute_node_id",
+        "stage_kind",
+        "terminal_reason",
     )
     assert collections["compute_nodes"]["endpoint"] == (
         "/runtime/details/compute-nodes"

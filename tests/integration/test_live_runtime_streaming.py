@@ -377,6 +377,8 @@ def test_runtime_detail_pages_return_deterministic_windows(tmp_path: Path) -> No
             limit=2,
             terminal_state=first_trace["terminal_state"],
             compute_node_id=first_compute_node_id,
+            stage_kind=first_trace["stages"][0]["stage_kind"],
+            terminal_reason=first_trace["terminal_state_reason"],
         )
         assert filtered_trace["summary"]["filter_terminal_state"] == first_trace[
             "terminal_state"
@@ -386,6 +388,14 @@ def test_runtime_detail_pages_return_deterministic_windows(tmp_path: Path) -> No
                 filtered_trace["summary"]["filter_compute_node_id"]
                 == first_compute_node_id.lower()
             )
+        assert (
+            filtered_trace["summary"]["filter_stage_kind"]
+            == first_trace["stages"][0]["stage_kind"]
+        )
+        assert (
+            filtered_trace["summary"]["filter_terminal_reason"]
+            == first_trace["terminal_state_reason"]
+        )
         assert filtered_trace["summary"]["items"][0]["trace_id"] == first_trace[
             "trace_id"
         ]

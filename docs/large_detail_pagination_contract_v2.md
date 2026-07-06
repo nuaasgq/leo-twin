@@ -80,6 +80,8 @@ New endpoints added in this task:
 - `query`
 - `terminal_state`
 - `compute_node_id`
+- `stage_kind`
+- `terminal_reason`
 
 The endpoints are read-only observation surfaces. They reuse existing runtime
 snapshot, route explanation, service latency history, and satellite KPI slice

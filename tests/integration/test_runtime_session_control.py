@@ -1242,16 +1242,22 @@ def test_demo_server_stream_query_parses_cursor_options() -> None:
             "query": [" route:input "],
             "terminal_state": ["complete"],
             "compute_node_id": [" sat-a "],
+            "stage_kind": [" output_network "],
+            "terminal_reason": [" total_latency_observed "],
         }
     ) == {
         "query": "route:input",
         "terminal_state": "complete",
         "compute_node_id": "sat-a",
+        "stage_kind": "output_network",
+        "terminal_reason": "total_latency_observed",
     }
     assert _service_trace_filter_query({}) == {
         "query": "",
         "terminal_state": "ALL",
         "compute_node_id": "",
+        "stage_kind": "ALL",
+        "terminal_reason": "ALL",
     }
     assert _runtime_detail_entity_route(
         "/runtime/details/service-traces/trace%3Asvc-00-compute_service-00000",

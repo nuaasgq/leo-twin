@@ -127,6 +127,8 @@ def large_detail_pagination_contract_v2_to_dict(
                 "query",
                 "terminal_state",
                 "compute_node_id",
+                "stage_kind",
+                "terminal_reason",
             ),
         ),
         _collection_contract(

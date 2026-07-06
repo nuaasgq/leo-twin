@@ -170,12 +170,13 @@ selection or simulate packets.
 Service trace detail APIs:
 
 ```text
-/runtime/details/service-traces?cursor=0&limit=100&query=&terminal_state=ALL&compute_node_id=
+/runtime/details/service-traces?cursor=0&limit=100&query=&terminal_state=ALL&compute_node_id=&stage_kind=ALL&terminal_reason=ALL
 /runtime/details/service-traces/{trace_id}
 ```
 
 The cursor endpoint returns deterministic `service_lifecycle_trace_v2` windows
-with optional server-side query, raw terminal-state, and compute-node filters.
+with optional server-side query, raw terminal-state, compute-node, stage-kind,
+and terminal-reason filters.
 The exact trace endpoint accepts a trace id, normalized service id, task id,
 input flow id, or output flow id and returns the backend-owned trace with
 correlated user, route, satellite, and compute-node context.

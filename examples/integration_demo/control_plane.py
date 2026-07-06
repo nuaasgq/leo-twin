@@ -516,6 +516,8 @@ class DemoControlPlane:
         query: str = "",
         terminal_state: str = "ALL",
         compute_node_id: str = "",
+        stage_kind: str = "ALL",
+        terminal_reason: str = "ALL",
     ) -> dict[str, Any]:
         summary = build_runtime_service_lifecycle_trace_v2(
             self._service_latency_history_json(),
@@ -524,6 +526,8 @@ class DemoControlPlane:
             query=query,
             terminal_state=terminal_state,
             compute_node_id=compute_node_id,
+            stage_kind=stage_kind,
+            terminal_reason=terminal_reason,
         )
         return {
             "type": "RUNTIME_DETAIL_PAGE",

@@ -116,6 +116,8 @@ def build_runtime_service_lifecycle_trace_v2(
     query: str = "",
     terminal_state: str = "ALL",
     compute_node_id: str = "",
+    stage_kind: str = "ALL",
+    terminal_reason: str = "ALL",
 ) -> dict[str, object]:
     """Build deterministic product-level communication-compute service traces."""
 
@@ -130,6 +132,8 @@ def build_runtime_service_lifecycle_trace_v2(
             query=query,
             terminal_state=terminal_state,
             compute_node_id=compute_node_id,
+            stage_kind=stage_kind,
+            terminal_reason=terminal_reason,
         )
     )
     normalized_cursor = _page_cursor(cursor)
@@ -141,10 +145,17 @@ def build_runtime_service_lifecycle_trace_v2(
     filter_query = _normalized_filter_text(query)
     terminal_filter = _normalized_filter_choice(terminal_state, default="ALL")
     compute_node_filter = _normalized_filter_text(compute_node_id)
+    stage_filter = _normalized_filter_code(stage_kind, default="ALL")
+    terminal_reason_filter = _normalized_filter_code(
+        terminal_reason,
+        default="ALL",
+    )
     filter_applied = _service_lifecycle_trace_filter_is_active(
         query=query,
         terminal_state=terminal_state,
         compute_node_id=compute_node_id,
+        stage_kind=stage_kind,
+        terminal_reason=terminal_reason,
     )
     result: dict[str, object] = {
         "version": "v2",
@@ -188,6 +199,10 @@ def build_runtime_service_lifecycle_trace_v2(
             result["filter_terminal_state"] = terminal_filter
         if compute_node_filter:
             result["filter_compute_node_id"] = compute_node_filter
+        if stage_filter != "ALL":
+            result["filter_stage_kind"] = stage_filter
+        if terminal_reason_filter != "ALL":
+            result["filter_terminal_reason"] = terminal_reason_filter
     return result
 
 
@@ -2309,16 +2324,37 @@ def _service_lifecycle_trace_matches_filter(
     query: str,
     terminal_state: str,
     compute_node_id: str,
+    stage_kind: str,
+    terminal_reason: str,
 ) -> bool:
     if not _detail_item_matches_query(item, query):
         return False
     terminal_filter = _normalized_filter_choice(terminal_state, default="ALL")
     if terminal_filter != "ALL" and _str(item.get("terminal_state")).upper() != terminal_filter:
         return False
+    reason_filter = _normalized_filter_code(terminal_reason, default="ALL")
+    if (
+        reason_filter != "ALL"
+        and _normalized_filter_code(item.get("terminal_state_reason"), default="")
+        != reason_filter
+    ):
+        return False
     compute_node_filter = _normalized_filter_text(compute_node_id)
     if (
         compute_node_filter
         and _normalized_filter_text(item.get("compute_node_id")) != compute_node_filter
+    ):
+        return False
+    stage_filter = _normalized_filter_code(stage_kind, default="ALL")
+    if stage_filter != "ALL" and not any(
+        (
+            _normalized_filter_code(stage.get("stage_kind"), default="")
+            == stage_filter
+            or _normalized_filter_code(stage.get("component"), default="")
+            == stage_filter
+        )
+        and _str(stage.get("stage_status")).upper() != "UNKNOWN"
+        for stage in _records(item.get("stages"))
     ):
         return False
     return True
@@ -2329,11 +2365,15 @@ def _service_lifecycle_trace_filter_is_active(
     query: str,
     terminal_state: str,
     compute_node_id: str,
+    stage_kind: str,
+    terminal_reason: str,
 ) -> bool:
     return (
         bool(_normalized_filter_text(query))
         or _normalized_filter_choice(terminal_state, default="ALL") != "ALL"
         or bool(_normalized_filter_text(compute_node_id))
+        or _normalized_filter_code(stage_kind, default="ALL") != "ALL"
+        or _normalized_filter_code(terminal_reason, default="ALL") != "ALL"
     )
 
 
@@ -2388,6 +2428,13 @@ def _normalized_filter_text(value: object) -> str:
 
 def _normalized_filter_choice(value: object, *, default: str) -> str:
     normalized = _str(value).strip().upper()
+    return normalized or default
+
+
+def _normalized_filter_code(value: object, *, default: str) -> str:
+    normalized = "_".join(
+        _str(value).replace("_", " ").replace("-", " ").strip().upper().split()
+    )
     return normalized or default
 
 

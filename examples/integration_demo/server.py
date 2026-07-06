@@ -399,6 +399,8 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                         query=filters["query"],
                         terminal_state=filters["terminal_state"],
                         compute_node_id=filters["compute_node_id"],
+                        stage_kind=filters["stage_kind"],
+                        terminal_reason=filters["terminal_reason"],
                     )
                 )
                 return
@@ -707,6 +709,12 @@ def _service_trace_filter_query(query: dict[str, list[str]]) -> dict[str, str]:
         "query": _first_query_value(query, "query", "").strip(),
         "terminal_state": _first_query_value(query, "terminal_state", "ALL").strip(),
         "compute_node_id": _first_query_value(query, "compute_node_id", "").strip(),
+        "stage_kind": _first_query_value(query, "stage_kind", "ALL").strip(),
+        "terminal_reason": _first_query_value(
+            query,
+            "terminal_reason",
+            "ALL",
+        ).strip(),
     }
 
 
