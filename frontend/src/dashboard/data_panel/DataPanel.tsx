@@ -599,6 +599,8 @@ export const DataPanel = memo(function DataPanel({
     useState<string | null>(null);
   const [userConfigurationApplyStatus, setUserConfigurationApplyStatus] =
     useState<string | null>(null);
+  const [benchmarkEvidenceFocus, setBenchmarkEvidenceFocus] =
+    useState<DataPanelBenchmarkEvidenceFocus | null>(null);
   useEffect(() => {
     setExportRouteDetailIndexFilter("");
     setExportRouteDetailIndexAvailabilityFilter("ALL");
@@ -621,6 +623,7 @@ export const DataPanel = memo(function DataPanel({
     setExportServiceTraceStageFilter("ALL");
     setExportServiceTraceTerminalReasonFilter("ALL");
     setExportServiceTracePageCursor(0);
+    setBenchmarkEvidenceFocus(null);
   }, [runtimeExportComparePackageId]);
   useEffect(() => {
     setExportRouteReviewReportPage(0);
@@ -2991,6 +2994,40 @@ export const DataPanel = memo(function DataPanel({
                           )
                         )}
                       </div>
+                      {benchmarkEvidenceFocus ? (
+                        <div
+                          className={`data-panel-export-benchmark-focus ${benchmarkEvidenceFocus.tone}`}
+                        >
+                          <div className="data-panel-export-diagnostics-header">
+                            <div>
+                              <span>Benchmark evidence focus</span>
+                              <strong>{benchmarkEvidenceFocus.statusLabel}</strong>
+                              <small>{benchmarkEvidenceFocus.summaryLabel}</small>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setBenchmarkEvidenceFocus(null)}
+                            >
+                              clear
+                            </button>
+                          </div>
+                          <div className="data-panel-export-compare-meta">
+                            {benchmarkEvidenceFocus.metaLabels.map((label) => (
+                              <span key={`benchmark-focus:${label}`}>{label}</span>
+                            ))}
+                          </div>
+                          {benchmarkEvidenceFocus.artifactHref !== null ? (
+                            <div className="data-panel-export-compare-meta">
+                              <a
+                                href={benchmarkEvidenceFocus.artifactHref}
+                                title={benchmarkEvidenceFocus.artifactTitle}
+                              >
+                                {benchmarkEvidenceFocus.artifactLabel}
+                              </a>
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : null}
                       {exportAcceptanceReportStatus.benchmarkGate.rows.length >
                       0 ? (
                         <div className="data-panel-export-benchmark-gate-rows">
@@ -3020,6 +3057,16 @@ export const DataPanel = memo(function DataPanel({
                                     {row.artifactLabel}
                                   </a>
                                 ) : null}
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setBenchmarkEvidenceFocus(
+                                      buildDataPanelBenchmarkEvidenceFocus(row)
+                                    )
+                                  }
+                                >
+                                  focus evidence
+                                </button>
                               </div>
                             )
                           )}
@@ -11441,6 +11488,16 @@ export interface DataPanelExportBenchmarkGateRow {
   artifactTitle: string;
 }
 
+export interface DataPanelBenchmarkEvidenceFocus {
+  tone: "match" | "different" | "pending" | "error";
+  statusLabel: string;
+  summaryLabel: string;
+  metaLabels: readonly string[];
+  artifactLabel: string;
+  artifactHref: string | null;
+  artifactTitle: string;
+}
+
 export interface DataPanelExportPackageAuditIndexDisplay {
   packageId: string;
   tone: "match" | "different";
@@ -12631,6 +12688,29 @@ function acceptanceBenchmarkPointerLabel(pointer: string | undefined): string {
   return pointer !== undefined && pointer.length > 0
     ? `json ${pointer}`
     : "json pointer not recorded";
+}
+
+export function buildDataPanelBenchmarkEvidenceFocus(
+  row: DataPanelExportBenchmarkGateRow | null | undefined
+): DataPanelBenchmarkEvidenceFocus | null {
+  if (row === null || row === undefined) {
+    return null;
+  }
+  return {
+    tone: row.tone,
+    statusLabel: `${row.groupLabel} / ${row.itemLabel}`,
+    summaryLabel: `${row.statusLabel} / ${row.hashLabel}`,
+    metaLabels: [
+      row.contextLabel,
+      row.pointerLabel,
+      row.expectedLabel,
+      row.observedLabel,
+      row.issueLabel
+    ].filter((label) => label.length > 0),
+    artifactLabel: row.artifactLabel,
+    artifactHref: row.artifactHref,
+    artifactTitle: row.artifactTitle
+  };
 }
 
 function acceptanceBenchmarkContextLabel(result: {

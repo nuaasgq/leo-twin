@@ -18,6 +18,7 @@ import {
   buildDataPanelDisplaySummary,
   buildDataPanelExportArtifactHealthDisplay,
   buildDataPanelExportAcceptanceReportStatus,
+  buildDataPanelBenchmarkEvidenceFocus,
   buildDataPanelExportBoundaryAlignmentDisplay,
   buildDataPanelExportCatalogDisplay,
   buildDataPanelExportCompareDisplay,
@@ -4346,6 +4347,26 @@ describe("buildDataPanelExportCatalogDisplay", () => {
       ],
       warningLabels: []
     });
+
+    expect(
+      buildDataPanelBenchmarkEvidenceFocus(display?.benchmarkGate?.rows[3])
+    ).toEqual({
+      tone: "match",
+      statusLabel: "runtime status / runtime_status.network_kpi",
+      summaryLabel: "PASS / kpi",
+      metaLabels: [
+        "network KPI benchmark validation / network_kpi_benchmark_validation_v1",
+        "json /validation",
+        "expected PASS",
+        "observed PASS"
+      ],
+      artifactLabel: "network_kpi_benchmark_validation_v1.json",
+      artifactHref:
+        "/runtime/export/packages/pkg-standard/files/network_kpi_benchmark_validation_v1.json",
+      artifactTitle:
+        "network_kpi_benchmark_validation_v1.json / network_kpi_benchmark_validation contains the backend-owned evidence for this benchmark row."
+    });
+    expect(buildDataPanelBenchmarkEvidenceFocus(null)).toBeNull();
   });
 
   it("summarizes saved route comparison review report contents", () => {

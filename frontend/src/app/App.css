@@ -3225,6 +3225,36 @@ button.data-panel-route-row {
   background: #180c0c;
 }
 
+.data-panel-export-benchmark-focus {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  border: 1px solid #2b4a57;
+  border-radius: 6px;
+  padding: 8px;
+  background: #0b1219;
+}
+
+.data-panel-export-benchmark-focus.match {
+  border-color: #2c5b48;
+  background: #071611;
+}
+
+.data-panel-export-benchmark-focus.different {
+  border-color: #725b28;
+  background: #17140c;
+}
+
+.data-panel-export-benchmark-focus.pending {
+  border-color: #365068;
+  background: #0c141c;
+}
+
+.data-panel-export-benchmark-focus.error {
+  border-color: #663333;
+  background: #180c0c;
+}
+
 .data-panel-export-benchmark-gate-rows {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -3282,7 +3312,9 @@ button.data-panel-route-row {
   white-space: nowrap;
 }
 
-.data-panel-export-benchmark-gate-rows a {
+.data-panel-export-benchmark-gate-rows a,
+.data-panel-export-benchmark-gate-rows button,
+.data-panel-export-benchmark-focus button {
   justify-self: start;
   min-width: 0;
   border: 1px solid #2a4658;
@@ -3290,13 +3322,16 @@ button.data-panel-route-row {
   padding: 4px 6px;
   background: #101922;
   color: var(--accent-cyan);
+  cursor: pointer;
   font-size: 10px;
   font-weight: 900;
   overflow-wrap: anywhere;
   text-decoration: none;
 }
 
-.data-panel-export-benchmark-gate-rows a:hover {
+.data-panel-export-benchmark-gate-rows a:hover,
+.data-panel-export-benchmark-gate-rows button:hover,
+.data-panel-export-benchmark-focus button:hover {
   border-color: #4b7490;
   background: #0c1a24;
 }

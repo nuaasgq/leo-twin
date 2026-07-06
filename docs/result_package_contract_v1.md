@@ -585,7 +585,10 @@ fidelity rows use `config_snapshot.json`, route/trust rows use
 `evidence_context_label / evidence_context_id` for each row so operators can
 carry the selected benchmark check context into the linked evidence artifact.
 It displays `evidence_json_pointer` as the artifact-local path hint, but it
-does not parse or revalidate the artifact in the browser.
+does not parse or revalidate the artifact in the browser. Selecting a benchmark
+row stores a local dashboard review focus that shows the row status, artifact,
+context, JSON pointer, expected value, and observed value together, while the
+artifact link remains a normal read-only package file link.
 
 For operator handoff, the demo backend also exposes the generated Markdown
 handoff report:

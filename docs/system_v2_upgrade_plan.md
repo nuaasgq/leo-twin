@@ -806,7 +806,10 @@ Tasks:
     check without inventing that context in the browser. T351 adds backend
     `evidence_json_pointer` fields to those rows, giving operators an
     artifact-local JSON path hint for expected-range, fidelity, route-trust,
-    and KPI benchmark checks without browser-side recomputation.
+    and KPI benchmark checks without browser-side recomputation. T352 adds a
+    local dashboard review-focus state for benchmark rows, so selecting a row
+    displays the current artifact, context, JSON pointer, expected value, and
+    observed value together while preserving read-only package artifact links.
 
 ### WS9. Delivery and Operations v2
 

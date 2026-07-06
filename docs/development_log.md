@@ -17227,3 +17227,52 @@ change.
 - Recommended follow-up:
   - Add artifact panel state that can use `evidence_json_pointer` to prefilter
     or highlight the linked evidence path when a benchmark row is selected.
+
+## 2026-07-07 - T352 dashboard benchmark evidence focus v1
+
+- Branch: `feature/T352-dashboard-benchmark-evidence-focus-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: add local dashboard review-focus state for benchmark gate detail rows.
+  Selecting a benchmark row now records a read-only evidence focus that shows
+  row group, item, status, result hash, artifact filename/link, backend context,
+  JSON pointer, expected value, and observed value together. The original
+  package artifact link remains a normal read-only file link. The focus state is
+  cleared when the selected package changes. No Event Kernel, simulation model,
+  backend route, result-package generation, package replay, KPI recomputation,
+  or package mutation behavior changed.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `.\node_modules\.bin\tsc.cmd --noEmit -p tsconfig.json` from
+    `frontend`
+    - Result: passed with the bundled Codex Node runtime path.
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 192 tests.
+  - `pnpm --dir frontend test dataPanel.test.ts api.test.ts appSurface.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 3 test
+      files and 279 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path; Vite
+      reported the existing large `DataPanel` chunk warning.
+  - `git diff --check`
+    - Result: passed; Git emitted CRLF warnings for the existing unstaged
+      runtime config drift.
+- Problems encountered:
+  - No implementation blocker. The only validation noise was the existing
+    local runtime config CRLF warning and the existing large `DataPanel` build
+    chunk warning.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The focus card displays evidence context and pointer, but it does not yet
+    auto-scroll or highlight the JSON path inside a rendered artifact viewer.
+  - The focus state is local to the dashboard session and is not persisted into
+    result packages.
+- Recommended follow-up:
+  - Add an artifact viewer mode that can use the selected benchmark evidence
+    pointer to prefilter or highlight the linked JSON evidence path.
