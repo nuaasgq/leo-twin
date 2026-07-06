@@ -64,6 +64,9 @@ RUNTIME_EXPORT_PACKAGE_REVIEW_COMPLETION_V1_ID = (
 RUNTIME_EXPORT_PACKAGE_HANDOFF_REPORT_V1_ID = (
     "leo_twin.runtime_export_package_handoff_report.v1"
 )
+RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT_V1_ID = (
+    "leo_twin.runtime_export_package_acceptance_report.v1"
+)
 RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_V1_ID = (
     "leo_twin.runtime_export_network_kpi_benchmark_validation.v1"
 )
@@ -128,6 +131,7 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
             "GET /runtime/export/packages/{package_id}/manifest",
             "GET /runtime/export/packages/{package_id}/review-summary",
             "GET /runtime/export/packages/{package_id}/review-completion",
+            "GET /runtime/export/packages/{package_id}/acceptance-report",
             "GET /runtime/export/packages/{package_id}/handoff-report",
             "GET /runtime/export/packages/{package_id}/service-traces",
             "GET /runtime/export/packages/{package_id}/service-traces/{trace_id}",
@@ -2375,6 +2379,313 @@ def build_runtime_export_package_review_completion_v1(
     return completion
 
 
+def build_runtime_export_package_acceptance_report_v1(
+    *,
+    audit_index: Mapping[str, Any],
+) -> dict[str, object]:
+    """Build a deterministic pass/warn/fail acceptance report for one package."""
+
+    if not isinstance(audit_index, Mapping):
+        raise TypeError("audit_index must be a mapping")
+    audit = _mapping(audit_index)
+    completion = _mapping(audit.get("package_review_completion_v1"))
+    if not completion:
+        raise ValueError("audit_index has no package_review_completion_v1 object")
+
+    missing_required = _string_tuple(audit.get("missing_required_artifact_filenames"))
+    route_errors = _integer(completion.get("route_comparison_review_error_count"))
+    service_trace_errors = _integer(
+        completion.get("service_trace_comparison_review_error_count")
+    )
+    network_kpi_failed = _integer(
+        completion.get("network_kpi_benchmark_validation_failed_check_count")
+    )
+    boundary_issues = tuple(
+        field
+        for field in (
+            "packet_level_simulation",
+            "event_replay_restore",
+            "model_recomputation",
+            "package_mutation_on_read",
+        )
+        if audit.get(field) is not False
+    )
+    forbidden_integrations = _string_tuple(
+        audit.get("forbidden_external_integrations")
+    )
+    forbidden_missing = tuple(
+        item
+        for item in ("STK", "EXATA", "AFSIM", "DDS")
+        if item not in forbidden_integrations
+    )
+    service_trace_present = (
+        completion.get("service_trace_comparison_review_report_present") is True
+    )
+    checks = (
+        _runtime_export_acceptance_check(
+            "required_artifacts",
+            "FAIL" if missing_required else "PASS",
+            (
+                "required result package artifacts are present"
+                if not missing_required
+                else "required result package artifacts are missing"
+            ),
+            evidence_hash=str(audit.get("audit_hash", "")),
+            evidence_labels=(
+                f"artifact_count {_integer(audit.get('artifact_count'))}",
+                f"missing_required {len(missing_required)}",
+            ),
+            issue_labels=missing_required,
+            recommendation=(
+                "rerun runtime export after the scenario completes"
+                if missing_required
+                else "no action"
+            ),
+        ),
+        _runtime_export_acceptance_check(
+            "review_completion",
+            "PASS" if completion.get("handoff_ready") is True else "FAIL",
+            str(completion.get("completion_status", "")),
+            evidence_hash=str(completion.get("completion_hash", "")),
+            evidence_labels=_string_tuple(completion.get("evidence_labels")),
+            issue_labels=_string_tuple(completion.get("missing_or_warning_evidence")),
+            recommendation=(
+                "complete blocking review evidence before handoff"
+                if completion.get("handoff_ready") is not True
+                else "no action"
+            ),
+        ),
+        _runtime_export_acceptance_check(
+            "route_review",
+            (
+                "PASS"
+                if completion.get("route_comparison_review_report_present") is True
+                and route_errors == 0
+                else "FAIL"
+            ),
+            "route comparison review report is saved and error-free",
+            evidence_hash=str(
+                completion.get("route_comparison_review_report_hash", "")
+            ),
+            evidence_labels=(
+                "route_report "
+                f"{'saved' if completion.get('route_comparison_review_report_present') is True else 'missing'}",
+                f"route_errors {route_errors}",
+            ),
+            issue_labels=(
+                ()
+                if completion.get("route_comparison_review_report_present") is True
+                and route_errors == 0
+                else ("ROUTE_REVIEW_NOT_ACCEPTED",)
+            ),
+            recommendation=(
+                "save route comparison review report without error records"
+                if completion.get("route_comparison_review_report_present") is not True
+                or route_errors != 0
+                else "no action"
+            ),
+        ),
+        _runtime_export_acceptance_check(
+            "service_trace_review",
+            "FAIL" if service_trace_errors > 0 else "PASS" if service_trace_present else "WARN",
+            "service trace comparison review is optional but recommended",
+            evidence_hash=str(
+                completion.get("service_trace_comparison_review_report_hash", "")
+            ),
+            evidence_labels=(
+                f"service_trace_report {'saved' if service_trace_present else 'missing'}",
+                f"service_trace_errors {service_trace_errors}",
+            ),
+            issue_labels=(
+                ("SERVICE_TRACE_REVIEW_HAS_ERRORS",)
+                if service_trace_errors > 0
+                else () if service_trace_present else ("SERVICE_TRACE_REVIEW_OPTIONAL_MISSING",)
+            ),
+            recommendation=(
+                "save a service trace comparison review report for stronger handoff"
+                if not service_trace_present
+                else "no action"
+            ),
+        ),
+        _runtime_export_acceptance_check(
+            "scenario_review",
+            (
+                "PASS"
+                if completion.get("scenario_review_checklist_present") is True
+                and completion.get(
+                    "scenario_review_checklist_recommended_review_complete"
+                )
+                is True
+                else "FAIL"
+            ),
+            str(completion.get("scenario_review_checklist_status", "")) or "missing",
+            evidence_hash=str(completion.get("scenario_review_checklist_hash", "")),
+            evidence_labels=(
+                "scenario_checklist "
+                f"{completion.get('scenario_review_checklist_status', '') or 'missing'}",
+                (
+                    "scenario_recommended "
+                    f"{_integer(completion.get('scenario_review_checklist_reviewed_recommended_count'))}/"
+                    f"{_integer(completion.get('scenario_review_checklist_expected_review_count'))}"
+                ),
+            ),
+            issue_labels=(
+                ()
+                if completion.get("scenario_review_checklist_present") is True
+                and completion.get(
+                    "scenario_review_checklist_recommended_review_complete"
+                )
+                is True
+                else ("SCENARIO_REVIEW_NOT_ACCEPTED",)
+            ),
+            recommendation=(
+                "save a complete scenario review checklist"
+                if completion.get("scenario_review_checklist_present") is not True
+                or completion.get(
+                    "scenario_review_checklist_recommended_review_complete"
+                )
+                is not True
+                else "no action"
+            ),
+        ),
+        _runtime_export_acceptance_check(
+            "network_kpi_benchmark",
+            (
+                "PASS"
+                if str(
+                    completion.get("network_kpi_benchmark_validation_status", "")
+                )
+                == "PASS"
+                and network_kpi_failed == 0
+                else "WARN"
+            ),
+            str(completion.get("network_kpi_benchmark_validation_status", "")),
+            evidence_labels=(
+                "network_kpi "
+                f"{completion.get('network_kpi_benchmark_validation_status', 'missing')}",
+                f"network_kpi_failed {network_kpi_failed}",
+            ),
+            issue_labels=(
+                ()
+                if str(
+                    completion.get("network_kpi_benchmark_validation_status", "")
+                )
+                == "PASS"
+                and network_kpi_failed == 0
+                else ("NETWORK_KPI_BENCHMARK_NOT_PASS",)
+            ),
+            recommendation=(
+                "inspect network KPI benchmark validation evidence"
+                if str(
+                    completion.get("network_kpi_benchmark_validation_status", "")
+                )
+                != "PASS"
+                or network_kpi_failed != 0
+                else "no action"
+            ),
+        ),
+        _runtime_export_acceptance_check(
+            "model_boundary",
+            "FAIL" if boundary_issues else "PASS",
+            "model boundary exclusions are preserved",
+            evidence_hash=str(audit.get("runtime_export_boundary_hash", "")),
+            evidence_labels=(
+                f"boundary {completion.get('boundary_alignment_status', '')}",
+                f"violations {len(boundary_issues)}",
+            ),
+            issue_labels=boundary_issues,
+            recommendation=(
+                "remove replay/recompute/mutation/packet-level behavior"
+                if boundary_issues
+                else "no action"
+            ),
+        ),
+        _runtime_export_acceptance_check(
+            "user_configuration",
+            (
+                "PASS"
+                if completion.get("user_configuration_validation_ok") is True
+                else "FAIL"
+            ),
+            "user configuration binding is validated",
+            evidence_hash=str(audit.get("user_configuration_config_hash", "")),
+            evidence_labels=(
+                f"schema {audit.get('user_configuration_schema_id', '')}",
+                "validation "
+                f"{'ok' if completion.get('user_configuration_validation_ok') is True else 'failed'}",
+            ),
+            issue_labels=(
+                ()
+                if completion.get("user_configuration_validation_ok") is True
+                else ("USER_CONFIGURATION_NOT_VALIDATED",)
+            ),
+            recommendation=(
+                "fix user configuration validation before acceptance"
+                if completion.get("user_configuration_validation_ok") is not True
+                else "no action"
+            ),
+        ),
+        _runtime_export_acceptance_check(
+            "forbidden_integrations",
+            "FAIL" if forbidden_missing else "PASS",
+            "forbidden external simulator list is explicit",
+            evidence_hash=str(audit.get("audit_hash", "")),
+            evidence_labels=forbidden_integrations,
+            issue_labels=forbidden_missing,
+            recommendation=(
+                "restore forbidden integration declarations"
+                if forbidden_missing
+                else "no action"
+            ),
+        ),
+    )
+    fail_count = sum(1 for check in checks if check["status"] == "FAIL")
+    warn_count = sum(1 for check in checks if check["status"] == "WARN")
+    pass_count = sum(1 for check in checks if check["status"] == "PASS")
+    acceptance_status = "FAIL" if fail_count else "WARN" if warn_count else "PASS"
+    report: dict[str, object] = {
+        "type": "RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT_V1",
+        "version": "v1",
+        "acceptance_id": RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT_V1_ID,
+        "source": "BACKEND_RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX",
+        "acceptance_scope": "INDUSTRIAL_V2_DEMO_CLOSED_LOOP_ACCEPTANCE",
+        "package_id": str(audit.get("package_id", completion.get("package_id", ""))),
+        "package_dir": str(audit.get("package_dir", completion.get("package_dir", ""))),
+        "acceptance_status": acceptance_status,
+        "demo_closed_loop_ready": fail_count == 0,
+        "handoff_ready": completion.get("handoff_ready") is True,
+        "audit_status": str(audit.get("audit_status", "")),
+        "completion_status": str(completion.get("completion_status", "")),
+        "check_count": len(checks),
+        "pass_count": pass_count,
+        "warn_count": warn_count,
+        "fail_count": fail_count,
+        "checks": checks,
+        "operator_next_actions": tuple(
+            check["recommendation"]
+            for check in checks
+            if check["status"] != "PASS" and check["recommendation"] != "no action"
+        ),
+        "evidence_hashes": (
+            f"audit {audit.get('audit_hash', '')}",
+            f"completion {completion.get('completion_hash', '')}",
+            f"manifest {audit.get('manifest_hash', '')}",
+            f"boundary {audit.get('runtime_export_boundary_hash', '')}",
+            f"user_config {audit.get('user_configuration_config_hash', '')}",
+        ),
+        "boundary_conditions": (
+            "NO_EVENT_REPLAY",
+            "NO_MODEL_RECOMPUTE",
+            "NO_PACKAGE_READ_MUTATION",
+            "NO_PACKET_LEVEL_SIMULATION",
+            "NO_EXTERNAL_SIMULATOR_ARTIFACTS",
+            "BACKEND_OWNED_ACCEPTANCE_SUMMARY",
+        ),
+    }
+    report["acceptance_hash"] = stable_hash_payload(report)
+    return report
+
+
 def build_runtime_export_package_handoff_report_v1(
     *,
     audit_index: Mapping[str, Any],
@@ -2501,6 +2812,31 @@ def build_runtime_export_package_handoff_report_v1(
         ),
     ]
     return "\n".join(lines) + "\n"
+
+
+def _runtime_export_acceptance_check(
+    check_id: str,
+    status: str,
+    summary: str,
+    *,
+    evidence_hash: str = "",
+    evidence_labels: tuple[str, ...] = (),
+    issue_labels: tuple[str, ...] = (),
+    recommendation: str = "no action",
+) -> dict[str, object]:
+    check = {
+        "check_id": str(check_id),
+        "status": str(status),
+        "summary": str(summary),
+        "evidence_hash": str(evidence_hash),
+        "evidence_labels": _string_tuple(evidence_labels),
+        "issue_labels": _string_tuple(issue_labels),
+        "recommendation": str(recommendation),
+    }
+    return {
+        **check,
+        "check_hash": stable_hash_payload(check),
+    }
 
 
 def _runtime_export_user_configuration_audit_binding(

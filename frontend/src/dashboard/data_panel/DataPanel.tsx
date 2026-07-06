@@ -59,6 +59,7 @@ import {
   RuntimeNetworkKpiBenchmarkValidationV1,
   RuntimeNetworkKpiProvenanceV2,
   RuntimeNetworkQualityProvenanceV1,
+  RuntimeExportPackageAcceptanceReportV1,
   RuntimeExportPackageAuditIndexV1,
   RuntimeComputeNodeDetailItemV1,
   RuntimeNodeDetailCardV1,
@@ -271,6 +272,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportRouteComparisonReviewReport,
   runtimeExportServiceTraceComparisonReviewReport,
   runtimeExportPackageAuditIndex,
+  runtimeExportPackageAcceptanceReport,
   runtimeExportScenarioReviewBundle,
   runtimeExportScenarioReviewChecklist,
   runtimeExportScenarioReviewChecklistTemplate,
@@ -373,6 +375,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportRouteComparisonReviewReport?: RuntimeExportRouteComparisonReviewReportV1 | null;
   runtimeExportServiceTraceComparisonReviewReport?: RuntimeExportServiceTraceComparisonReviewReportPageV1 | null;
   runtimeExportPackageAuditIndex?: RuntimeExportPackageAuditIndexV1 | null;
+  runtimeExportPackageAcceptanceReport?: RuntimeExportPackageAcceptanceReportV1 | null;
   runtimeExportScenarioReviewBundle?: RuntimeExportScenarioReviewBundleV1 | null;
   runtimeExportScenarioReviewChecklist?: RuntimeExportScenarioReviewChecklistV1 | null;
   runtimeExportScenarioReviewChecklistTemplate?: RuntimeExportScenarioReviewChecklistTemplateV1 | null;
@@ -1455,6 +1458,10 @@ export const DataPanel = memo(function DataPanel({
       scenarioReviewBundle: runtimeExportScenarioReviewBundle,
       scenarioReviewChecklist: runtimeExportScenarioReviewChecklist
     });
+  const exportAcceptanceReportStatus =
+    buildDataPanelExportAcceptanceReportStatus(
+      runtimeExportPackageAcceptanceReport
+    );
   const exportRouteComparisonReviewReportStatus =
     buildDataPanelExportRouteComparisonReviewReportStatus(
       buildDataPanelExportRouteComparisonReviewReportDisplay(
@@ -2929,6 +2936,34 @@ export const DataPanel = memo(function DataPanel({
                       {exportReviewCompletionSummary.warningLabels.map((label) => (
                         <span className="warn" key={label}>
                           <strong>{label}</strong>
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+              {exportAcceptanceReportStatus ? (
+                <div
+                  className={`data-panel-export-route-compare-card ${exportAcceptanceReportStatus.tone}`}
+                >
+                  <div className="data-panel-export-diagnostics-header">
+                    <div>
+                      <span>Package acceptance report</span>
+                      <strong>{exportAcceptanceReportStatus.statusLabel}</strong>
+                      <small>{exportAcceptanceReportStatus.summaryLabel}</small>
+                    </div>
+                  </div>
+                  <div className="data-panel-export-compare-meta">
+                    {exportAcceptanceReportStatus.evidenceLabels.map((label) => (
+                      <span key={label}>{label}</span>
+                    ))}
+                  </div>
+                  {exportAcceptanceReportStatus.warningLabels.length > 0 ? (
+                    <div className="data-panel-export-diagnostics-findings">
+                      {exportAcceptanceReportStatus.warningLabels.map((label) => (
+                        <span className="warn" key={`acceptance:${label}`}>
+                          <strong>ACCEPT</strong>
+                          {label}
                         </span>
                       ))}
                     </div>
@@ -11282,6 +11317,14 @@ export interface DataPanelExportReviewCompletionSummaryDisplay {
   warningLabels: readonly string[];
 }
 
+export interface DataPanelExportAcceptanceReportStatusDisplay {
+  tone: "match" | "different" | "pending" | "error";
+  statusLabel: string;
+  summaryLabel: string;
+  evidenceLabels: readonly string[];
+  warningLabels: readonly string[];
+}
+
 export interface DataPanelExportPackageAuditIndexDisplay {
   packageId: string;
   tone: "match" | "different";
@@ -12268,6 +12311,52 @@ export function buildDataPanelExportReviewCompletionSummary({
       )}/${formatCount(checklistExpectedReviewCount)}`
     ],
     warningLabels
+  };
+}
+
+export function buildDataPanelExportAcceptanceReportStatus(
+  report: RuntimeExportPackageAcceptanceReportV1 | null | undefined
+): DataPanelExportAcceptanceReportStatusDisplay | null {
+  if (report === null || report === undefined) {
+    return null;
+  }
+  const failedChecks = report.checks.filter((check) => check.status === "FAIL");
+  const warnedChecks = report.checks.filter((check) => check.status === "WARN");
+  const tone =
+    report.acceptance_status === "PASS"
+      ? "match"
+      : report.acceptance_status === "WARN"
+        ? "pending"
+        : "different";
+  return {
+    tone,
+    statusLabel:
+      report.acceptance_status === "PASS"
+        ? "acceptance PASS"
+        : report.acceptance_status === "WARN"
+          ? "acceptance WARN"
+          : "acceptance FAIL",
+    summaryLabel: `${report.acceptance_status} / pass ${formatCount(
+      report.pass_count
+    )} / warn ${formatCount(report.warn_count)} / fail ${formatCount(
+      report.fail_count
+    )} / acceptance ${shortRuntimeHash(report.acceptance_hash)}`,
+    evidenceLabels: [
+      `closed loop ${report.demo_closed_loop_ready ? "ready" : "blocked"}`,
+      `handoff ${report.handoff_ready ? "ready" : "blocked"}`,
+      `checks ${formatCount(report.check_count)}`,
+      `completion ${report.completion_status}`,
+      `audit ${report.audit_status}`,
+      ...report.evidence_hashes.slice(0, 3).map((label) => {
+        const [prefix, hash] = label.split(" ", 2);
+        return `${prefix} ${shortRuntimeHash(hash ?? "")}`;
+      })
+    ],
+    warningLabels: [
+      ...failedChecks.map((check) => `${check.check_id}: ${check.summary}`),
+      ...warnedChecks.map((check) => `${check.check_id}: ${check.summary}`),
+      ...report.operator_next_actions.slice(0, 4)
+    ]
   };
 }
 

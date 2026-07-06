@@ -1902,6 +1902,12 @@ export interface RuntimeExportPackageReviewCompletionEnvelope {
   source_artifact: RuntimeExportCatalogFileV1;
 }
 
+export interface RuntimeExportPackageAcceptanceReportEnvelope {
+  type: "RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT" | string;
+  summary: RuntimeExportPackageAcceptanceReportV1;
+  source_artifact: RuntimeExportCatalogFileV1;
+}
+
 export interface RuntimeExportPackageReviewCompletionV1 {
   type: "RUNTIME_EXPORT_PACKAGE_REVIEW_COMPLETION_V1" | string;
   version: "v1" | string;
@@ -1950,6 +1956,41 @@ export interface RuntimeExportPackageReviewCompletionV1 {
   evidence_labels: readonly string[];
   boundary_conditions: readonly string[];
   completion_hash: string;
+}
+
+export interface RuntimeExportPackageAcceptanceReportV1 {
+  type: "RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT_V1" | string;
+  version: "v1" | string;
+  acceptance_id: string;
+  source: string;
+  acceptance_scope: string;
+  package_id: string;
+  package_dir: string;
+  acceptance_status: "PASS" | "WARN" | "FAIL" | string;
+  demo_closed_loop_ready: boolean;
+  handoff_ready: boolean;
+  audit_status: string;
+  completion_status: string;
+  check_count: number;
+  pass_count: number;
+  warn_count: number;
+  fail_count: number;
+  checks: readonly RuntimeExportPackageAcceptanceCheckV1[];
+  operator_next_actions: readonly string[];
+  evidence_hashes: readonly string[];
+  boundary_conditions: readonly string[];
+  acceptance_hash: string;
+}
+
+export interface RuntimeExportPackageAcceptanceCheckV1 {
+  check_id: string;
+  status: "PASS" | "WARN" | "FAIL" | string;
+  summary: string;
+  evidence_hash: string;
+  evidence_labels: readonly string[];
+  issue_labels: readonly string[];
+  recommendation: string;
+  check_hash: string;
 }
 
 export interface RuntimeExportUserConfigurationAuditBindingV1 {

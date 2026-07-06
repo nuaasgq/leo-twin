@@ -7,6 +7,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1_ID,
     RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_V1_ID,
     RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID,
+    RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT_V1_ID,
     RUNTIME_EXPORT_PACKAGE_HANDOFF_REPORT_V1_ID,
     RUNTIME_EXPORT_PACKAGE_REVIEW_COMPLETION_V1_ID,
     RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1_ID,
@@ -28,6 +29,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID,
     build_runtime_export_diagnostics_bundle_v1,
     build_runtime_export_network_kpi_benchmark_validation_v1,
+    build_runtime_export_package_acceptance_report_v1,
     build_runtime_export_package_audit_index_v1,
     build_runtime_export_package_handoff_report_v1,
     build_runtime_export_package_review_completion_v1,
@@ -90,6 +92,10 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
     )
     assert (
         "GET /runtime/export/packages/{package_id}/review-completion"
+        in first["source_endpoints"]
+    )
+    assert (
+        "GET /runtime/export/packages/{package_id}/acceptance-report"
         in first["source_endpoints"]
     )
     assert (
@@ -1855,6 +1861,125 @@ def test_runtime_export_package_handoff_report_v1_is_deterministic() -> None:
     assert "- No blocking evidence is missing." in first
     assert "- NO_EVENT_REPLAY" in first
     assert "external simulators" in first
+
+
+def test_runtime_export_package_acceptance_report_v1_marks_pass_warn_fail() -> None:
+    completion = {
+        "completion_id": RUNTIME_EXPORT_PACKAGE_REVIEW_COMPLETION_V1_ID,
+        "package_id": "pkg-1",
+        "package_dir": "exports/pkg-1",
+        "completion_status": "REVIEW_COMPLETE",
+        "handoff_ready": True,
+        "completion_hash": "sha256:completion",
+        "audit_status": "AUDIT_READY",
+        "route_comparison_review_report_present": True,
+        "route_comparison_review_error_count": 0,
+        "route_comparison_review_report_hash": "sha256:route-report",
+        "service_trace_comparison_review_report_present": True,
+        "service_trace_comparison_review_error_count": 0,
+        "service_trace_comparison_review_report_hash": "sha256:trace-report",
+        "scenario_review_checklist_present": True,
+        "scenario_review_checklist_status": "CHECKLIST_COMPLETE",
+        "scenario_review_checklist_record_count": 2,
+        "scenario_review_checklist_hash": "sha256:checklist",
+        "scenario_review_checklist_recommended_review_complete": True,
+        "scenario_review_checklist_reviewed_recommended_count": 2,
+        "scenario_review_checklist_expected_review_count": 2,
+        "network_kpi_benchmark_validation_status": "PASS",
+        "network_kpi_benchmark_validation_failed_check_count": 0,
+        "boundary_alignment_status": "ALIGNED",
+        "user_configuration_validation_ok": True,
+        "missing_or_warning_evidence": (),
+        "evidence_labels": ("audit AUDIT_READY", "route_report saved"),
+    }
+    audit_index = {
+        "audit_index_id": RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID,
+        "package_id": "pkg-1",
+        "package_dir": "exports/pkg-1",
+        "audit_hash": "sha256:audit",
+        "manifest_hash": "sha256:manifest",
+        "runtime_export_boundary_hash": "sha256:boundary",
+        "user_configuration_schema_id": "sees.user_configuration.v2",
+        "user_configuration_config_hash": "sha256:user-config",
+        "artifact_count": 9,
+        "missing_required_artifact_filenames": (),
+        "audit_status": "AUDIT_READY",
+        "audit_warnings": (),
+        "forbidden_external_integrations": ("STK", "EXATA", "AFSIM", "DDS"),
+        "packet_level_simulation": False,
+        "event_replay_restore": False,
+        "model_recomputation": False,
+        "package_mutation_on_read": False,
+        "package_review_completion_v1": completion,
+    }
+
+    first = build_runtime_export_package_acceptance_report_v1(
+        audit_index=audit_index,
+    )
+    second = build_runtime_export_package_acceptance_report_v1(
+        audit_index=json.loads(json.dumps(audit_index, sort_keys=True)),
+    )
+
+    assert first == second
+    assert first["acceptance_id"] == RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT_V1_ID
+    assert first["acceptance_status"] == "PASS"
+    assert first["demo_closed_loop_ready"] is True
+    assert first["pass_count"] == 9
+    assert first["warn_count"] == 0
+    assert first["fail_count"] == 0
+    assert [check["check_id"] for check in first["checks"]] == [
+        "required_artifacts",
+        "review_completion",
+        "route_review",
+        "service_trace_review",
+        "scenario_review",
+        "network_kpi_benchmark",
+        "model_boundary",
+        "user_configuration",
+        "forbidden_integrations",
+    ]
+    assert first["acceptance_hash"].startswith("sha256:")
+    assert json.loads(json.dumps(first, sort_keys=True))["acceptance_id"] == (
+        RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT_V1_ID
+    )
+
+    warn = build_runtime_export_package_acceptance_report_v1(
+        audit_index={
+            **audit_index,
+            "package_review_completion_v1": {
+                **completion,
+                "service_trace_comparison_review_report_present": False,
+                "service_trace_comparison_review_report_hash": "",
+            },
+        },
+    )
+    assert warn["acceptance_status"] == "WARN"
+    assert warn["demo_closed_loop_ready"] is True
+    assert warn["warn_count"] == 1
+    assert warn["operator_next_actions"] == (
+        "save a service trace comparison review report for stronger handoff",
+    )
+
+    failed = build_runtime_export_package_acceptance_report_v1(
+        audit_index={
+            **audit_index,
+            "missing_required_artifact_filenames": ("events.jsonl",),
+            "package_review_completion_v1": {
+                **completion,
+                "completion_status": "REVIEW_INCOMPLETE",
+                "handoff_ready": False,
+                "missing_or_warning_evidence": (
+                    "ROUTE_COMPARISON_REVIEW_REPORT_MISSING",
+                ),
+            },
+        },
+    )
+    assert failed["acceptance_status"] == "FAIL"
+    assert failed["demo_closed_loop_ready"] is False
+    assert failed["fail_count"] == 2
+    assert "complete blocking review evidence before handoff" in failed[
+        "operator_next_actions"
+    ]
 
 
 def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:

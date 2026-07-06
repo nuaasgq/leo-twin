@@ -772,7 +772,13 @@ Tasks:
     binds it into `review_summary_v1.json`, `diagnostics_bundle_v1.json`,
     `scenario_review_bundle_v1.json`, `export_package_audit_index_v1.json`, and
     `package_handoff_report_v1.md`, and lets the dashboard show backend-owned
-    KPI benchmark status/hash labels without recomputing KPI values.
+    KPI benchmark status/hash labels without recomputing KPI values. T344 adds
+    `GET /runtime/export/packages/{package_id}/acceptance-report`, a
+    backend-owned pass/warn/fail acceptance summary that binds audit evidence,
+    handoff completion, route review, service-trace review, scenario review,
+    network KPI benchmark status, model-boundary exclusions, user configuration
+    validation, and forbidden-integration declarations into one dashboard and
+    API signal for the industrial v2 demo closed loop.
 
 ### WS9. Delivery and Operations v2
 

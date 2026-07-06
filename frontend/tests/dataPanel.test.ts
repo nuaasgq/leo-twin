@@ -17,6 +17,7 @@ import {
   buildDataPanelDetailWindowPolicyNote,
   buildDataPanelDisplaySummary,
   buildDataPanelExportArtifactHealthDisplay,
+  buildDataPanelExportAcceptanceReportStatus,
   buildDataPanelExportBoundaryAlignmentDisplay,
   buildDataPanelExportCatalogDisplay,
   buildDataPanelExportCompareDisplay,
@@ -4047,6 +4048,81 @@ describe("buildDataPanelExportCatalogDisplay", () => {
       tone: "different",
       warningLabels: ["scenario review checklist CHECKLIST_WARN"]
     });
+  });
+
+  it("summarizes backend-owned package acceptance reports", () => {
+    expect(
+      buildDataPanelExportAcceptanceReportStatus({
+        type: "RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT_V1",
+        version: "v1",
+        acceptance_id: "leo_twin.runtime_export_package_acceptance_report.v1",
+        source: "BACKEND_RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX",
+        acceptance_scope: "INDUSTRIAL_V2_DEMO_CLOSED_LOOP_ACCEPTANCE",
+        package_id: "pkg-review",
+        package_dir: "artifacts/runtime_exports/pkg-review",
+        acceptance_status: "WARN",
+        demo_closed_loop_ready: true,
+        handoff_ready: true,
+        audit_status: "AUDIT_READY",
+        completion_status: "REVIEW_COMPLETE",
+        check_count: 2,
+        pass_count: 1,
+        warn_count: 1,
+        fail_count: 0,
+        checks: [
+          {
+            check_id: "review_completion",
+            status: "PASS",
+            summary: "REVIEW_COMPLETE",
+            evidence_hash: "sha256:completion",
+            evidence_labels: ["audit AUDIT_READY"],
+            issue_labels: [],
+            recommendation: "no action",
+            check_hash: "sha256:check-pass"
+          },
+          {
+            check_id: "service_trace_review",
+            status: "WARN",
+            summary: "service trace comparison review is optional but recommended",
+            evidence_hash: "",
+            evidence_labels: ["service_trace_report missing"],
+            issue_labels: ["SERVICE_TRACE_REVIEW_OPTIONAL_MISSING"],
+            recommendation:
+              "save a service trace comparison review report for stronger handoff",
+            check_hash: "sha256:check-warn"
+          }
+        ],
+        operator_next_actions: [
+          "save a service trace comparison review report for stronger handoff"
+        ],
+        evidence_hashes: [
+          "audit sha256:audit",
+          "completion sha256:completion",
+          "manifest sha256:manifest"
+        ],
+        boundary_conditions: ["BACKEND_OWNED_ACCEPTANCE_SUMMARY"],
+        acceptance_hash: "sha256:acceptance"
+      } as any)
+    ).toMatchObject({
+      tone: "pending",
+      statusLabel: "acceptance WARN",
+      summaryLabel: "WARN / pass 1 / warn 1 / fail 0 / acceptance acceptance",
+      evidenceLabels: [
+        "closed loop ready",
+        "handoff ready",
+        "checks 2",
+        "completion REVIEW_COMPLETE",
+        "audit AUDIT_READY",
+        "audit audit",
+        "completion completion",
+        "manifest manifest"
+      ],
+      warningLabels: [
+        "service_trace_review: service trace comparison review is optional but recommended",
+        "save a service trace comparison review report for stronger handoff"
+      ]
+    });
+    expect(buildDataPanelExportAcceptanceReportStatus(null)).toBeNull();
   });
 
   it("summarizes saved route comparison review report contents", () => {

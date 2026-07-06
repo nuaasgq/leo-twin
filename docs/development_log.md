@@ -16771,3 +16771,71 @@ change.
     add benchmark scenario acceptance summaries that bind configuration,
     runtime metrics, review artifacts, and model-boundary evidence into one
     user-facing pass/warn/fail report.
+
+## 2026-07-07 - T344 result package acceptance report v1
+
+- Branch: `feature/T344-result-package-acceptance-report-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: add a backend-owned pass/warn/fail acceptance report for the
+  industrial v2 demo closed loop. The new
+  `GET /runtime/export/packages/{package_id}/acceptance-report` route reads
+  `export_package_audit_index_v1.json` and returns deterministic
+  `runtime_export_package_acceptance_report_v1` evidence with
+  `acceptance_status`, `demo_closed_loop_ready`, pass/warn/fail counts, stable
+  per-check hashes, operator next actions, evidence hashes, and no-replay/
+  no-recompute/no-package-mutation boundaries. The dashboard loads this backend
+  output and displays a compact package acceptance card without deriving
+  product acceptance semantics locally. No Event Kernel, simulation model,
+  package replay, package write-on-read, or frontend architecture behavior
+  changed.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/app/api.ts`
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m compileall -q src\leo_twin\services\result_package_contract.py examples\integration_demo\control_plane.py examples\integration_demo\server.py`
+    - Result: passed.
+  - `python -m pytest tests\unit\test_result_package_contract_v1.py::test_result_package_contract_v1_is_deterministic_json_ready tests\unit\test_result_package_contract_v1.py::test_runtime_export_package_acceptance_report_v1_marks_pass_warn_fail tests\integration\test_result_package_export_v1.py::test_runtime_export_package_satisfies_result_package_contract_v1 tests\integration\test_runtime_session_control.py::test_demo_server_stream_query_parses_cursor_options -q`
+    - Result: passed, 4 tests.
+  - `.\node_modules\.bin\tsc.cmd --noEmit -p tsconfig.json` from
+    `frontend`
+    - Result: passed with the bundled Codex Node runtime path.
+  - `pnpm --dir frontend test dataPanel.test.ts api.test.ts appSurface.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 3 test
+      files and 278 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path; Vite
+      reported the existing large `DataPanel` chunk warning.
+  - `git diff --check`
+    - Result: passed; Git emitted CRLF warnings for the existing unstaged
+      runtime config drift and touched frontend files.
+- Problems encountered:
+  - The existing handoff completion summary is binary complete/incomplete, but
+    industrial demo acceptance needs a more nuanced pass/warn/fail signal. The
+    new report treats blocking evidence gaps as `FAIL`, optional service-trace
+    review absence and non-pass KPI benchmark evidence as `WARN`, and fully
+    complete review evidence as `PASS`.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The acceptance report is a compact status object, not a detailed benchmark
+    acceptance matrix. Future tasks should bind 72/300/1200 benchmark scenario
+    expectations and KPI ranges directly into acceptance checks.
+  - The dashboard shows top-level acceptance evidence and actions; a later UX
+    task can add a dedicated check table or drawer.
+- Recommended follow-up:
+  - Add benchmark-scenario acceptance binding so standard 72, 300, and 1200
+    scenario result packages include expected scale, KPI, and fidelity-policy
+    gates in the same backend-owned acceptance report.

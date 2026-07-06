@@ -1758,6 +1758,9 @@ def test_demo_server_stream_query_parses_cursor_options() -> None:
         "/runtime/export/packages/pkg%201/review-completion"
     ) == ("pkg 1", "review-completion", None)
     assert _runtime_export_package_route(
+        "/runtime/export/packages/pkg%201/acceptance-report"
+    ) == ("pkg 1", "acceptance-report", None)
+    assert _runtime_export_package_route(
         "/runtime/export/packages/pkg%201/handoff-report"
     ) == ("pkg 1", "handoff-report", None)
     assert _runtime_export_package_route(

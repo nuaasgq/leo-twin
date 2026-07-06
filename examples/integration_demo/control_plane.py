@@ -81,6 +81,7 @@ from leo_twin.services.runtime_reproducibility import (
 from leo_twin.services.result_package_contract import (
     build_runtime_export_diagnostics_bundle_v1,
     build_runtime_export_network_kpi_benchmark_validation_v1,
+    build_runtime_export_package_acceptance_report_v1,
     build_runtime_export_package_audit_index_v1,
     build_runtime_export_package_handoff_report_v1,
     build_runtime_export_reproducibility_boundary_v1,
@@ -1070,6 +1071,32 @@ class DemoControlPlane:
         return {
             "type": "RUNTIME_EXPORT_PACKAGE_REVIEW_COMPLETION",
             "summary": dict(completion),
+            "source_artifact": _runtime_export_catalog_file_record(audit_artifact),
+        }
+
+    def runtime_export_package_acceptance_report(
+        self,
+        package_id: str,
+        output_root: str | Path = "artifacts/runtime_exports",
+    ) -> dict[str, Any]:
+        audit_artifact = self.runtime_export_package_artifact(
+            package_id,
+            _RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_FILENAME,
+            output_root,
+        )
+        audit_index = json.loads(
+            Path(str(audit_artifact["path"])).read_text(encoding="utf-8")
+        )
+        if not isinstance(audit_index, Mapping):
+            raise RuntimeExportArtifactError(
+                f"runtime export package {package_id!r} has invalid audit index"
+            )
+        acceptance_report = build_runtime_export_package_acceptance_report_v1(
+            audit_index=audit_index,
+        )
+        return {
+            "type": "RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT",
+            "summary": acceptance_report,
             "source_artifact": _runtime_export_catalog_file_record(audit_artifact),
         }
 

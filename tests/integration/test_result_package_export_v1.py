@@ -9,6 +9,7 @@ from examples.integration_demo.runtime import run_integration_demo
 from leo_twin.services.detail_pagination_contract import DETAIL_ENDPOINT_MAX_LIMIT
 from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_V1_ID,
+    RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT_V1_ID,
     RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID,
     RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1_ID,
     RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID,
@@ -727,6 +728,37 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert completion_response["source_artifact"]["filename"] == (
         "export_package_audit_index_v1.json"
     )
+    acceptance_response = control_plane.runtime_export_package_acceptance_report(
+        str(package["package_id"]),
+        output_root,
+    )
+    acceptance_report = acceptance_response["summary"]
+    assert acceptance_response["type"] == "RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT"
+    assert acceptance_response["source_artifact"]["filename"] == (
+        "export_package_audit_index_v1.json"
+    )
+    assert acceptance_report["acceptance_id"] == (
+        RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT_V1_ID
+    )
+    assert acceptance_report["acceptance_status"] == "PASS"
+    assert acceptance_report["demo_closed_loop_ready"] is True
+    assert acceptance_report["handoff_ready"] is True
+    assert acceptance_report["completion_status"] == "REVIEW_COMPLETE"
+    assert acceptance_report["fail_count"] == 0
+    assert acceptance_report["warn_count"] == 0
+    assert acceptance_report["pass_count"] == acceptance_report["check_count"]
+    assert [check["check_id"] for check in acceptance_report["checks"]] == [
+        "required_artifacts",
+        "review_completion",
+        "route_review",
+        "service_trace_review",
+        "scenario_review",
+        "network_kpi_benchmark",
+        "model_boundary",
+        "user_configuration",
+        "forbidden_integrations",
+    ]
+    assert acceptance_report["acceptance_hash"].startswith("sha256:")
     handoff_artifact = control_plane.runtime_export_package_artifact(
         str(package["package_id"]),
         "package_handoff_report_v1.md",

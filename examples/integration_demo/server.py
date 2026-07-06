@@ -205,6 +205,13 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                             )
                         )
                         return
+                    if artifact_kind == "acceptance-report":
+                        self._send_json(
+                            control_plane.runtime_export_package_acceptance_report(
+                                package_id
+                            )
+                        )
+                        return
                     if artifact_kind == "service-traces":
                         try:
                             cursor, limit = _detail_query(query, default_limit=100)
@@ -954,6 +961,8 @@ def _runtime_export_package_route(
         return parts[0], "review-summary", None
     if len(parts) == 2 and parts[1] == "review-completion":
         return parts[0], "review-completion", None
+    if len(parts) == 2 and parts[1] == "acceptance-report":
+        return parts[0], "acceptance-report", None
     if len(parts) == 2 and parts[1] == "handoff-report":
         return parts[0], "handoff-report", None
     if len(parts) == 2 and parts[1] == "compare":

@@ -10,6 +10,8 @@ import {
   RuntimeExportHistoryV1,
   RuntimeExportPackageCompareEnvelope,
   RuntimeExportPackageCompareV1,
+  RuntimeExportPackageAcceptanceReportEnvelope,
+  RuntimeExportPackageAcceptanceReportV1,
   RuntimeExportPackageAuditIndexV1,
   RuntimeExportPackageReviewCompletionEnvelope,
   RuntimeExportPackageReviewCompletionV1,
@@ -600,6 +602,18 @@ export async function loadRuntimeExportPackageReviewCompletion(
   return decodeRuntimeExportPackageReviewCompletionEnvelope(await response.json()).summary;
 }
 
+export async function loadRuntimeExportPackageAcceptanceReport(
+  packageId: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): Promise<RuntimeExportPackageAcceptanceReportV1> {
+  const url = runtimeExportPackageAcceptanceReportHref(packageId, endpoint);
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`failed to load runtime export package acceptance report from ${url}: HTTP ${response.status}`);
+  }
+  return decodeRuntimeExportPackageAcceptanceReportEnvelope(await response.json()).summary;
+}
+
 export async function loadRuntimeExportPackageHandoffReport(
   packageId: string,
   endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
@@ -876,6 +890,13 @@ export function runtimeExportPackageReviewCompletionHref(
   endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
 ): string {
   return `${runtimeExportPackageRecordHref(packageId, endpoint)}/review-completion`;
+}
+
+export function runtimeExportPackageAcceptanceReportHref(
+  packageId: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): string {
+  return `${runtimeExportPackageRecordHref(packageId, endpoint)}/acceptance-report`;
 }
 
 export function runtimeExportPackageHandoffReportHref(
@@ -1810,6 +1831,40 @@ export function decodeRuntimeExportPackageReviewCompletionEnvelope(
     source_artifact:
       sourceArtifact as RuntimeExportPackageReviewCompletionEnvelope["source_artifact"]
   } as RuntimeExportPackageReviewCompletionEnvelope;
+}
+
+export function decodeRuntimeExportPackageAcceptanceReportEnvelope(
+  value: unknown
+): RuntimeExportPackageAcceptanceReportEnvelope {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError(
+      "runtime export package acceptance report response must be an object"
+    );
+  }
+  const summary = (value as { summary?: unknown }).summary;
+  const sourceArtifact = (value as { source_artifact?: unknown }).source_artifact;
+  if (
+    typeof summary !== "object" ||
+    summary === null ||
+    Array.isArray(summary) ||
+    typeof (summary as { acceptance_id?: unknown }).acceptance_id !== "string" ||
+    typeof (summary as { acceptance_hash?: unknown }).acceptance_hash !==
+      "string" ||
+    !Array.isArray((summary as { checks?: unknown }).checks) ||
+    typeof sourceArtifact !== "object" ||
+    sourceArtifact === null ||
+    Array.isArray(sourceArtifact)
+  ) {
+    throw new TypeError(
+      "runtime export package acceptance report response must include summary acceptance_id, acceptance_hash, checks, and source_artifact"
+    );
+  }
+  return {
+    ...(value as Record<string, unknown>),
+    summary: summary as RuntimeExportPackageAcceptanceReportV1,
+    source_artifact:
+      sourceArtifact as RuntimeExportPackageAcceptanceReportEnvelope["source_artifact"]
+  } as RuntimeExportPackageAcceptanceReportEnvelope;
 }
 
 export function decodeRuntimeExportScenarioReviewBundle(

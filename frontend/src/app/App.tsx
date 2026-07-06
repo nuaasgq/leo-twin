@@ -15,6 +15,7 @@ import {
   RuntimeExportCatalogV1,
   RuntimeExportDiagnosticsBundleV1,
   RuntimeExportPackageCompareV1,
+  RuntimeExportPackageAcceptanceReportV1,
   RuntimeExportPackageAuditIndexV1,
   RuntimeExportScenarioReviewBundleV1,
   RuntimeExportScenarioReviewChecklistV1,
@@ -59,6 +60,7 @@ import {
   loadRuntimeExportCatalog,
   loadRuntimeExportDiagnosticsBundle,
   loadRuntimeExportManifest,
+  loadRuntimeExportPackageAcceptanceReport,
   loadRuntimeExportPackageCompare,
   loadRuntimeExportPackageAuditIndex,
   loadRuntimeExportScenarioReviewBundle,
@@ -335,6 +337,10 @@ export function App() {
   ] = useState<RuntimeExportServiceTraceComparisonReviewReportPageV1 | null>(null);
   const [runtimeExportPackageAuditIndex, setRuntimeExportPackageAuditIndex] =
     useState<RuntimeExportPackageAuditIndexV1 | null>(null);
+  const [
+    runtimeExportPackageAcceptanceReport,
+    setRuntimeExportPackageAcceptanceReport
+  ] = useState<RuntimeExportPackageAcceptanceReportV1 | null>(null);
   const [
     runtimeExportScenarioReviewBundle,
     setRuntimeExportScenarioReviewBundle
@@ -1314,6 +1320,7 @@ export function App() {
     setRuntimeExportServiceTraceComparisonReviewReport(null);
     setRuntimeExportServiceTraceComparisonReviewReportError(null);
     setRuntimeExportPackageAuditIndex(null);
+    setRuntimeExportPackageAcceptanceReport(null);
     setRuntimeExportPackageAuditIndexError(null);
     setRuntimeExportScenarioReviewBundle(null);
     setRuntimeExportScenarioReviewBundleError(null);
@@ -1348,6 +1355,7 @@ export function App() {
       routeComparisonReviewReport,
       serviceTraceComparisonReviewReport,
       packageAuditIndex,
+      packageAcceptanceReport,
       scenarioReviewBundle,
       scenarioReviewChecklist,
       scenarioReviewChecklistTemplate,
@@ -1374,6 +1382,9 @@ export function App() {
           : Promise.resolve(null),
         shouldLoadAuditIndex
           ? loadRuntimeExportPackageAuditIndex(packageId)
+          : Promise.resolve(null),
+        shouldLoadAuditIndex
+          ? loadRuntimeExportPackageAcceptanceReport(packageId)
           : Promise.resolve(null),
         shouldLoadScenarioReviewBundle
           ? loadRuntimeExportScenarioReviewBundle(packageId)
@@ -1475,6 +1486,11 @@ export function App() {
       setRuntimeExportPackageAuditIndexError(
         runtimeExportPackageAuditIndexErrorMessage(packageAuditIndex.reason)
       );
+    }
+    if (packageAcceptanceReport.status === "fulfilled") {
+      setRuntimeExportPackageAcceptanceReport(packageAcceptanceReport.value);
+    } else {
+      setRuntimeExportPackageAcceptanceReport(null);
     }
     if (scenarioReviewBundle.status === "fulfilled") {
       setRuntimeExportScenarioReviewBundle(scenarioReviewBundle.value);
@@ -2728,6 +2744,9 @@ export function App() {
                 runtimeExportServiceTraceComparisonReviewReport
               }
               runtimeExportPackageAuditIndex={runtimeExportPackageAuditIndex}
+              runtimeExportPackageAcceptanceReport={
+                runtimeExportPackageAcceptanceReport
+              }
               runtimeExportScenarioReviewBundle={runtimeExportScenarioReviewBundle}
               runtimeExportScenarioReviewChecklist={
                 runtimeExportScenarioReviewChecklist

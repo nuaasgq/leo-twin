@@ -5,6 +5,7 @@ import {
   loadRuntimeExportDiagnosticsBundle,
   loadRuntimeExportHistory,
   loadRuntimeExportManifest,
+  loadRuntimeExportPackageAcceptanceReport,
   loadRuntimeExportPackageCompare,
   loadRuntimeExportPackageAuditIndex,
   loadRuntimeExportPackageHandoffReport,
@@ -51,6 +52,7 @@ import {
   runtimeExportPackageCompareHref,
   runtimeExportPackageFileHref,
   runtimeExportPackageManifestHref,
+  runtimeExportPackageAcceptanceReportHref,
   runtimeExportPackageHandoffReportHref,
   runtimeExportPackageReviewCompletionHref,
   runtimeExportPackageRecordHref,
@@ -102,6 +104,9 @@ describe("runtime API diagnostics", () => {
     );
     expect(runtimeExportPackageReviewCompletionHref("pkg 1")).toBe(
       "/runtime/export/packages/pkg%201/review-completion"
+    );
+    expect(runtimeExportPackageAcceptanceReportHref("pkg 1")).toBe(
+      "/runtime/export/packages/pkg%201/acceptance-report"
     );
     expect(runtimeExportPackageHandoffReportHref("pkg 1")).toBe(
       "/runtime/export/packages/pkg%201/handoff-report"
@@ -1660,6 +1665,67 @@ describe("runtime API diagnostics", () => {
     });
     expect(fetchMock).toHaveBeenCalledWith(
       "/runtime/export/packages/pkg/review-completion"
+    );
+  });
+
+  it("loads runtime export package acceptance reports", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        type: "RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT",
+        summary: {
+          type: "RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT_V1",
+          version: "v1",
+          acceptance_id:
+            "leo_twin.runtime_export_package_acceptance_report.v1",
+          source: "BACKEND_RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX",
+          acceptance_scope: "INDUSTRIAL_V2_DEMO_CLOSED_LOOP_ACCEPTANCE",
+          package_id: "pkg",
+          package_dir: "artifacts/runtime_exports/pkg",
+          acceptance_status: "PASS",
+          demo_closed_loop_ready: true,
+          handoff_ready: true,
+          audit_status: "AUDIT_READY",
+          completion_status: "REVIEW_COMPLETE",
+          check_count: 1,
+          pass_count: 1,
+          warn_count: 0,
+          fail_count: 0,
+          checks: [
+            {
+              check_id: "review_completion",
+              status: "PASS",
+              summary: "REVIEW_COMPLETE",
+              evidence_hash: "sha256:completion",
+              evidence_labels: ["audit AUDIT_READY"],
+              issue_labels: [],
+              recommendation: "no action",
+              check_hash: "sha256:check"
+            }
+          ],
+          operator_next_actions: [],
+          evidence_hashes: ["audit sha256:audit"],
+          boundary_conditions: ["BACKEND_OWNED_ACCEPTANCE_SUMMARY"],
+          acceptance_hash: "sha256:acceptance"
+        },
+        source_artifact: {
+          name: "export_package_audit_index_v1",
+          filename: "export_package_audit_index_v1.json",
+          bytes: 512,
+          sha256: "sha256:audit-artifact"
+        }
+      })
+    }));
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+
+    await expect(loadRuntimeExportPackageAcceptanceReport("pkg")).resolves.toMatchObject({
+      package_id: "pkg",
+      acceptance_status: "PASS",
+      demo_closed_loop_ready: true,
+      acceptance_hash: "sha256:acceptance"
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/runtime/export/packages/pkg/acceptance-report"
     );
   });
 

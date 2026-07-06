@@ -507,6 +507,31 @@ The endpoint reads `export_package_audit_index_v1.json` and returns its
 record. It does not replay events, recompute package evidence, or mutate the
 package.
 
+For tools and dashboard views that need a product-level pass/warn/fail signal,
+the demo backend exposes an acceptance report:
+
+```text
+GET /runtime/export/packages/{package_id}/acceptance-report
+```
+
+The response contains `runtime_export_package_acceptance_report_v1` with id:
+
+```text
+leo_twin.runtime_export_package_acceptance_report.v1
+```
+
+It is derived from the same `export_package_audit_index_v1.json` source
+artifact and reports `acceptance_status` (`PASS`, `WARN`, or `FAIL`),
+`demo_closed_loop_ready`, pass/warn/fail counts, a deterministic list of
+acceptance checks, operator next actions, evidence hashes, model-boundary
+conditions, and `acceptance_hash`. Required artifact gaps, incomplete handoff
+review, route-review errors, scenario-review gaps, model-boundary violations,
+invalid user configuration, or missing forbidden-integration declarations are
+failures. Optional service-trace review absence and non-pass KPI benchmark
+validation are warnings unless they contain explicit errors. The endpoint is
+read-only and does not replay events, recompute metrics, mutate packages on
+read, capture packets, or call external simulators.
+
 For operator handoff, the demo backend also exposes the generated Markdown
 handoff report:
 
