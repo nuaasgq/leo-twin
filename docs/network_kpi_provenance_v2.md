@@ -134,9 +134,37 @@ input audit, current selection trace, and zero-value reason or semantics. This
 keeps frontend explanations tied to the backend contract instead of local
 dashboard guesses.
 
+## Benchmark Validation v1
+
+`status.network_kpi_benchmark_validation_v1` is a backend-owned product
+guardrail summary for the current runtime KPI values. It is derived from
+`metrics_summary` and `network_kpi_provenance_v2`; it does not change formulas
+or simulation behavior. The validation profile is
+`FLOW_LEVEL_PROXY_RUNTIME_GUARDRAILS`.
+
+The checks cover:
+
+- packet-level simulation guard;
+- runtime KPI value coverage;
+- selected formula input coverage;
+- non-negative throughput, latency, and delay-variation proxy;
+- ratio bounds for loss proxy, route blocking, failed-flow ratio, and
+  congestion proxy;
+- positive throughput when route demand or available routes exist;
+- positive latency when available routes exist.
+
+Validation statuses are `PASS`, `WARN`, `FAIL`, or `INSUFFICIENT_DATA`.
+`WARN` highlights product-demonstration issues such as flat zero throughput
+under active demand. `FAIL` is reserved for hard guardrail violations such as
+out-of-range ratios or packet-level metrics.
+
+The standalone dashboard renders this validation as a compact benchmark card in
+the network KPI section and indexes it into the model-trust evidence workspace.
+
 ## Follow-Up
 
 V2-022 added deterministic time-window pressure inputs while preserving this
 contract. T323 added per-KPI `formula_inputs` and `formula_trace` audit fields.
+T324 added `network_kpi_benchmark_validation_v1` runtime guardrails.
 Future dashboard work can add filtering or a wider drawer for large
 KPI/source-field/input tables if additional KPI families are added.

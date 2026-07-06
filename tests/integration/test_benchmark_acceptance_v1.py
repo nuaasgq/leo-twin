@@ -112,6 +112,19 @@ def test_benchmark_acceptance_runtime_status_requires_route_trust(
     route_trust = expectation["route_trust"]
 
     assert "route_provenance_trust_summary_v1" in expectation["required_fields"]
+    assert "network_kpi_benchmark_validation_v1" in expectation["required_fields"]
+    assert expectation["network_kpi_benchmark_validation"] == {
+        "field": "network_kpi_benchmark_validation_v1",
+        "source": "network_kpi_provenance_v2 + metrics_summary",
+        "benchmark_profile": "FLOW_LEVEL_PROXY_RUNTIME_GUARDRAILS",
+        "allowed_validation_statuses": (
+            "PASS",
+            "WARN",
+            "INSUFFICIENT_DATA",
+        ),
+        "packet_level_simulation": False,
+        "maximum_failed_check_count": 0,
+    }
     assert route_trust == {
         "field": "route_provenance_trust_summary_v1",
         "source": "route_explanation_summary_v1",
@@ -156,6 +169,10 @@ def test_benchmark_acceptance_route_trust_runtime_status_for_standard_scenarios(
             control_plane._require_advance_loop().publish_pending()
         status = control_plane.runtime_status()["status"]
         _assert_benchmark_route_trust_status(
+            status,
+            scenario["runtime_status_expectation"],
+        )
+        _assert_benchmark_network_kpi_validation_status(
             status,
             scenario["runtime_status_expectation"],
         )
@@ -321,6 +338,32 @@ def _assert_benchmark_route_trust_status(
     assert int(route_trust["core_field_count"]) >= int(
         route_trust["observed_core_field_count"]
     )
+
+
+def _assert_benchmark_network_kpi_validation_status(
+    status: dict[str, object],
+    expectation: object,
+) -> None:
+    assert isinstance(expectation, dict)
+    kpi_expectation = expectation["network_kpi_benchmark_validation"]
+    assert isinstance(kpi_expectation, dict)
+    validation = status["network_kpi_benchmark_validation_v1"]
+    assert isinstance(validation, dict)
+
+    assert validation["version"] == "v1"
+    assert validation["validation_id"] == "leo_twin.network_kpi_benchmark_validation.v1"
+    assert validation["source"] == "NETWORK_KPI_PROVENANCE_V2_AND_METRICS_SUMMARY"
+    assert validation["benchmark_profile"] == kpi_expectation["benchmark_profile"]
+    assert validation["packet_level_simulation"] is kpi_expectation[
+        "packet_level_simulation"
+    ]
+    assert validation["validation_status"] in kpi_expectation[
+        "allowed_validation_statuses"
+    ]
+    assert int(validation["failed_check_count"]) <= int(
+        kpi_expectation["maximum_failed_check_count"]
+    )
+    assert int(validation["check_count"]) == len(validation["checks"])
 
 
 def _control_plane(tmp_path: Path, scenario_id: str) -> DemoControlPlane:

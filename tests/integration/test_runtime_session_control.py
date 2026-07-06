@@ -322,6 +322,29 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
     assert network_credibility["missing_kpi_count"] == 0
     assert network_credibility["credibility_status"] == "COMPLETE_FLOW_LEVEL_PROXY"
     assert network_credibility["missing_metrics"] == ()
+    network_benchmark_validation = status_after_tick[
+        "network_kpi_benchmark_validation_v1"
+    ]
+    assert network_benchmark_validation["version"] == "v1"
+    assert network_benchmark_validation["validation_id"] == (
+        "leo_twin.network_kpi_benchmark_validation.v1"
+    )
+    assert network_benchmark_validation["source"] == (
+        "NETWORK_KPI_PROVENANCE_V2_AND_METRICS_SUMMARY"
+    )
+    assert network_benchmark_validation["provenance_id"] == (
+        network_provenance_v2["provenance_id"]
+    )
+    assert network_benchmark_validation["packet_level_simulation"] is False
+    assert network_benchmark_validation["validation_status"] in {
+        "PASS",
+        "WARN",
+        "INSUFFICIENT_DATA",
+    }
+    assert network_benchmark_validation["failed_check_count"] == 0
+    assert network_benchmark_validation["check_count"] == len(
+        network_benchmark_validation["checks"]
+    )
     kpi_series = status_after_tick["kpi_time_series_v1"]
     assert kpi_series["version"] == "v1"
     assert kpi_series["sample_count"] == len(kpi_series["samples"])

@@ -44,6 +44,9 @@ from leo_twin.services.configuration_view import (
     load_user_configuration_template,
 )
 from leo_twin.services.detail_pagination_contract import DETAIL_ENDPOINT_MAX_LIMIT
+from leo_twin.services.network_kpi_benchmark_validation import (
+    build_network_kpi_benchmark_validation_v1,
+)
 from leo_twin.services.network_kpi_provenance import (
     build_network_kpi_credibility_v1,
     build_network_kpi_provenance_v2,
@@ -1762,6 +1765,12 @@ class DemoControlPlane:
         status["network_kpi_provenance_v2"] = network_kpi_provenance_v2
         status["network_kpi_credibility_v1"] = build_network_kpi_credibility_v1(
             network_kpi_provenance_v2
+        )
+        status["network_kpi_benchmark_validation_v1"] = (
+            build_network_kpi_benchmark_validation_v1(
+                metrics_summary,
+                network_kpi_provenance_v2,
+            )
         )
         status["kpi_time_series_v1"] = self._kpi_time_series_json()
         status["satellite_kpi_slices_v1"] = self._satellite_kpi_slices_json()

@@ -66,9 +66,18 @@ fields include:
 - `metrics_summary`
 - `network_kpi_provenance_v2`
 - `network_kpi_credibility_v1`
+- `network_kpi_benchmark_validation_v1`
 - `route_explanation_summary_v1`
 - `route_provenance_trust_summary_v1`
 - `reproducibility_manifest_v1`
+
+The network KPI benchmark expectation requires
+`network_kpi_benchmark_validation_v1` to be derived from
+`network_kpi_provenance_v2` and `metrics_summary`, use the
+`FLOW_LEVEL_PROXY_RUNTIME_GUARDRAILS` profile, forbid packet-level simulation,
+and report zero failed checks for standard runtime acceptance. `WARN` remains
+allowed because these guardrails are product-level flow-proxy checks, not
+physical RF or packet-level validation.
 
 The route trust expectation requires `route_provenance_trust_summary_v1` to be
 derived from `route_explanation_summary_v1`, use the

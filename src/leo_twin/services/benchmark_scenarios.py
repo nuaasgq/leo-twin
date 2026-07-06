@@ -284,10 +284,23 @@ def _runtime_status_expectation() -> dict[str, object]:
             "metrics_summary",
             "network_kpi_provenance_v2",
             "network_kpi_credibility_v1",
+            "network_kpi_benchmark_validation_v1",
             "route_explanation_summary_v1",
             "route_provenance_trust_summary_v1",
             "reproducibility_manifest_v1",
         ),
+        "network_kpi_benchmark_validation": {
+            "field": "network_kpi_benchmark_validation_v1",
+            "source": "network_kpi_provenance_v2 + metrics_summary",
+            "benchmark_profile": "FLOW_LEVEL_PROXY_RUNTIME_GUARDRAILS",
+            "allowed_validation_statuses": (
+                "PASS",
+                "WARN",
+                "INSUFFICIENT_DATA",
+            ),
+            "packet_level_simulation": False,
+            "maximum_failed_check_count": 0,
+        },
         "route_trust": {
             "field": "route_provenance_trust_summary_v1",
             "source": "route_explanation_summary_v1",

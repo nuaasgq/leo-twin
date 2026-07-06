@@ -48,6 +48,7 @@ import {
   RuntimeExportHistoryV1,
   RuntimeMetricsSummary,
   RuntimeNetworkKpiCredibilityV1,
+  RuntimeNetworkKpiBenchmarkValidationV1,
   RuntimeNetworkKpiProvenanceV2,
   RuntimeNetworkQualityProvenanceV1,
   RuntimeExportPackageAuditIndexV1,
@@ -825,6 +826,10 @@ export const DataPanel = memo(function DataPanel({
   const networkKpiCredibilityDisplay = buildDataPanelNetworkKpiCredibilityDisplay(
     runtimeStatus.network_kpi_credibility_v1
   );
+  const networkKpiBenchmarkValidationDisplay =
+    buildDataPanelNetworkKpiBenchmarkValidationDisplay(
+      runtimeStatus.network_kpi_benchmark_validation_v1
+    );
   const networkKpiFormulaInspector = buildDataPanelNetworkKpiFormulaInspector(
     runtimeStatus.network_kpi_provenance_v2,
     runtimeStatus.network_kpi_credibility_v1
@@ -842,6 +847,7 @@ export const DataPanel = memo(function DataPanel({
     configurationExplanation: configurationExplanationDisplay,
     modelAssumptions: modelAssumptionsDisplay,
     networkKpiCredibility: networkKpiCredibilityDisplay,
+    networkKpiBenchmarkValidation: networkKpiBenchmarkValidationDisplay,
     networkKpiFormulaInspector,
     routeProvenanceTrust: routeProvenanceTrustDisplay,
     fidelitySummary,
@@ -2991,6 +2997,30 @@ export const DataPanel = memo(function DataPanel({
                 <div className="data-panel-kpi-credibility-caveats">
                   {networkKpiCredibilityDisplay.caveats.map((caveat) => (
                     <span key={caveat}>{caveat}</span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+          {networkKpiBenchmarkValidationDisplay ? (
+            <div
+              className={`data-panel-kpi-credibility ${networkKpiBenchmarkValidationDisplay.tone}`}
+              aria-label="网络KPI基准验证"
+            >
+              <div>
+                <span>基准验证</span>
+                <strong>{networkKpiBenchmarkValidationDisplay.statusLabel}</strong>
+                <small>{networkKpiBenchmarkValidationDisplay.summaryLabel}</small>
+              </div>
+              <div className="data-panel-kpi-credibility-meta">
+                {networkKpiBenchmarkValidationDisplay.metaLabels.map((label) => (
+                  <span key={label}>{label}</span>
+                ))}
+              </div>
+              {networkKpiBenchmarkValidationDisplay.issueLabels.length > 0 ? (
+                <div className="data-panel-kpi-credibility-caveats">
+                  {networkKpiBenchmarkValidationDisplay.issueLabels.map((label) => (
+                    <span key={label}>{label}</span>
                   ))}
                 </div>
               ) : null}
@@ -13733,6 +13763,15 @@ export interface DataPanelNetworkKpiFormulaInspectorDisplay {
   rows: readonly DataPanelNetworkKpiFormulaRow[];
 }
 
+export interface DataPanelNetworkKpiBenchmarkValidationDisplay {
+  tone: DataPanelNetworkKpiCredibilityTone;
+  statusLabel: string;
+  summaryLabel: string;
+  metaLabels: readonly string[];
+  issueLabels: readonly string[];
+  caveats: readonly string[];
+}
+
 export interface DataPanelNetworkKpiFormulaRow {
   metric: string;
   displayName: string;
@@ -13776,6 +13815,7 @@ export interface DataPanelModelTrustEvidenceWorkspaceInput {
   configurationExplanation?: DataPanelConfigurationExplanationDisplay | null;
   modelAssumptions?: DataPanelModelAssumptionsDisplay | null;
   networkKpiCredibility?: DataPanelNetworkKpiCredibilityDisplay | null;
+  networkKpiBenchmarkValidation?: DataPanelNetworkKpiBenchmarkValidationDisplay | null;
   networkKpiFormulaInspector?: DataPanelNetworkKpiFormulaInspectorDisplay | null;
   routeProvenanceTrust?: DataPanelRouteProvenanceTrustDisplay | null;
   fidelitySummary?: FidelitySummary | null;
@@ -13802,6 +13842,7 @@ export interface DataPanelModelTrustEvidenceRow {
     | "configuration"
     | "fidelity"
     | "kpi"
+    | "benchmark"
     | "formula"
     | "route"
     | "replay"
@@ -14259,6 +14300,47 @@ export function buildDataPanelNetworkKpiCredibilityDisplay(
   };
 }
 
+export function buildDataPanelNetworkKpiBenchmarkValidationDisplay(
+  validation: RuntimeNetworkKpiBenchmarkValidationV1 | null | undefined
+): DataPanelNetworkKpiBenchmarkValidationDisplay | null {
+  if (validation === null || validation === undefined) {
+    return null;
+  }
+  const checkCount = Math.max(0, validation.check_count);
+  const passedCount = clampCount(validation.passed_check_count, checkCount);
+  const warningCount = Math.max(0, validation.warning_check_count);
+  const failedCount = Math.max(0, validation.failed_check_count);
+  const missingCount = Math.max(0, validation.missing_check_count);
+  const issueLabels = validation.checks
+    .filter((check) => check.status !== "PASS")
+    .slice(0, 4)
+    .map(
+      (check) =>
+        `${check.status} ${check.metric}: ${formatNetworkKpiValue(
+          check.current_value
+        )} / ${check.expectation}`
+    );
+  return {
+    tone: networkKpiBenchmarkValidationTone(validation.validation_status),
+    statusLabel: networkKpiBenchmarkValidationStatusLabel(
+      validation.validation_status
+    ),
+    summaryLabel: `检查 ${formatCount(passedCount)}/${formatCount(
+      checkCount
+    )} 通过；WARN ${formatCount(warningCount)} / FAIL ${formatCount(
+      failedCount
+    )} / 缺数据 ${formatCount(missingCount)}`,
+    metaLabels: [
+      `profile ${validation.benchmark_profile}`,
+      `模型 ${networkKpiMetricModelLabel(validation.metric_model)}`,
+      validation.packet_level_simulation ? "含包级仿真" : "无包级仿真",
+      `provenance ${shortRuntimeHash(validation.provenance_id)}`
+    ],
+    issueLabels,
+    caveats: validation.caveats.slice(0, 3)
+  };
+}
+
 export function buildDataPanelNetworkKpiFormulaInspector(
   provenance: RuntimeNetworkKpiProvenanceV2 | null | undefined,
   credibility: RuntimeNetworkKpiCredibilityV1 | null | undefined,
@@ -14518,6 +14600,8 @@ export function buildDataPanelModelTrustEvidenceWorkspace(
       input.configurationExplanation === undefined) &&
     (input.modelAssumptions === null || input.modelAssumptions === undefined) &&
     (input.networkKpiCredibility === null || input.networkKpiCredibility === undefined) &&
+    (input.networkKpiBenchmarkValidation === null ||
+      input.networkKpiBenchmarkValidation === undefined) &&
     (input.networkKpiFormulaInspector === null ||
       input.networkKpiFormulaInspector === undefined) &&
     (input.routeProvenanceTrust === null || input.routeProvenanceTrust === undefined) &&
@@ -14537,6 +14621,7 @@ export function buildDataPanelModelTrustEvidenceWorkspace(
     buildModelTrustConfigurationRow(input.configurationExplanation),
     buildModelTrustFidelityRow(input.fidelitySummary, input.modelAssumptions),
     buildModelTrustKpiRow(input.networkKpiCredibility),
+    buildModelTrustKpiBenchmarkRow(input.networkKpiBenchmarkValidation),
     buildModelTrustFormulaRow(input.networkKpiFormulaInspector),
     buildModelTrustRouteProvenanceRow(input.routeProvenanceTrust),
     buildModelTrustReplayRow(
@@ -14584,6 +14669,7 @@ export function buildDataPanelModelTrustEvidenceWorkspace(
     )} / 警告 ${formatCount(warningCount)} / 错误 ${formatCount(errorCount)}`,
     metaLabels: [
       input.configurationExplanation ? "配置语义已声明" : "配置语义待声明",
+      input.networkKpiBenchmarkValidation ? "KPI基准已验证" : "KPI基准待验证",
       input.networkKpiFormulaInspector ? "KPI公式可追踪" : "KPI公式待补齐",
       input.routeProvenanceTrust ? "路由证据可追踪" : "路由证据待补齐",
       input.reproducibilityManifest ? "manifest已生成" : "manifest待生成",
@@ -14678,6 +14764,31 @@ function buildModelTrustKpiRow(
     source: "network_kpi_credibility_v1",
     tone: networkKpiCredibility.tone,
     title: networkKpiCredibility.caveats.join(" / ") || networkKpiCredibility.summaryLabel
+  };
+}
+
+function buildModelTrustKpiBenchmarkRow(
+  validation: DataPanelNetworkKpiBenchmarkValidationDisplay | null | undefined
+): DataPanelModelTrustEvidenceRow {
+  if (validation === null || validation === undefined) {
+    return {
+      kind: "benchmark",
+      label: "KPI基准验证",
+      statusLabel: "等待基准验证",
+      detail: "未收到 network_kpi_benchmark_validation_v1。",
+      source: "network_kpi_benchmark_validation_v1",
+      tone: "pending",
+      title: "KPI基准验证必须由后端根据 metrics_summary 和 KPI provenance 生成。"
+    };
+  }
+  return {
+    kind: "benchmark",
+    label: "KPI基准验证",
+    statusLabel: validation.statusLabel,
+    detail: validation.summaryLabel,
+    source: "network_kpi_benchmark_validation_v1",
+    tone: validation.tone,
+    title: [...validation.issueLabels, ...validation.caveats].join(" / ")
   };
 }
 
@@ -14908,6 +15019,37 @@ function networkKpiCredibilityStatusLabel(status: string): string {
     return "包级指标越界";
   }
   return "可信度未知";
+}
+
+function networkKpiBenchmarkValidationTone(
+  status: string
+): DataPanelNetworkKpiCredibilityTone {
+  if (status === "PASS") {
+    return "match";
+  }
+  if (status === "WARN") {
+    return "different";
+  }
+  if (status === "INSUFFICIENT_DATA") {
+    return "pending";
+  }
+  return "error";
+}
+
+function networkKpiBenchmarkValidationStatusLabel(status: string): string {
+  if (status === "PASS") {
+    return "基准通过";
+  }
+  if (status === "WARN") {
+    return "基准告警";
+  }
+  if (status === "INSUFFICIENT_DATA") {
+    return "数据不足";
+  }
+  if (status === "FAIL") {
+    return "基准失败";
+  }
+  return "基准未知";
 }
 
 function networkKpiMetricModelLabel(metricModel: string): string {

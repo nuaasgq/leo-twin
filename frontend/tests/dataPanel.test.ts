@@ -59,6 +59,7 @@ import {
   buildDataPanelNetworkFormulaInputs,
   buildDataPanelNetworkComponentTail,
   buildDataPanelNetworkKpiCaveats,
+  buildDataPanelNetworkKpiBenchmarkValidationDisplay,
   buildDataPanelNetworkKpiCredibilityDisplay,
   buildDataPanelNetworkKpiFormulaInspector,
   buildDataPanelModelAssumptionsDisplay,
@@ -6546,6 +6547,81 @@ describe("buildDataPanelNetworkKpiProvenanceItems", () => {
 });
 
 describe("buildDataPanelNetworkKpiCredibilityDisplay", () => {
+  it("formats backend benchmark validation guardrails", () => {
+    const display = buildDataPanelNetworkKpiBenchmarkValidationDisplay({
+      version: "v1",
+      validation_id: "leo_twin.network_kpi_benchmark_validation.v1",
+      source: "NETWORK_KPI_PROVENANCE_V2_AND_METRICS_SUMMARY",
+      benchmark_profile: "FLOW_LEVEL_PROXY_RUNTIME_GUARDRAILS",
+      provenance_id: "leo_twin.network_kpi_provenance.v2",
+      metric_model: "FLOW_LEVEL_PROXY",
+      packet_level_simulation: false,
+      validation_status: "WARN",
+      check_count: 4,
+      passed_check_count: 2,
+      warning_check_count: 1,
+      failed_check_count: 0,
+      missing_check_count: 1,
+      checks: [
+        {
+          check_id: "packet_level_guard",
+          metric: "network_kpi_provenance_v2.packet_level_simulation",
+          current_value: false,
+          status: "PASS",
+          severity: "FAIL",
+          expectation: "packet-level simulation is forbidden",
+          source: "network_kpi_provenance_v2",
+          explanation: "Flow-level proxy only."
+        },
+        {
+          check_id: "active_demand_throughput_nonzero",
+          metric: "network_quality_effective_throughput_mbps",
+          current_value: 0,
+          status: "WARN",
+          severity: "WARN",
+          expectation: "throughput should be positive when activity exists",
+          source: "metrics_summary",
+          explanation: "Flat zero under active demand."
+        },
+        {
+          check_id: "selected_formula_input_coverage",
+          metric: "network_kpi_provenance_v2.kpis.formula_trace",
+          current_value: 0,
+          status: "MISSING",
+          severity: "WARN",
+          expectation: "selected inputs should be visible",
+          source: "network_kpi_provenance_v2.kpis.formula_trace",
+          explanation: "No selected inputs."
+        }
+      ],
+      caveats: [
+        "Benchmark validation v1 is a deterministic product guardrail.",
+        "validation_status=WARN"
+      ]
+    });
+
+    expect(display).toEqual({
+      tone: "different",
+      statusLabel: "基准告警",
+      summaryLabel: "检查 2/4 通过；WARN 1 / FAIL 0 / 缺数据 1",
+      metaLabels: [
+        "profile FLOW_LEVEL_PROXY_RUNTIME_GUARDRAILS",
+        "模型 流级代理",
+        "无包级仿真",
+        "provenance leo_twin.net"
+      ],
+      issueLabels: [
+        "WARN network_quality_effective_throughput_mbps: 0 / throughput should be positive when activity exists",
+        "MISSING network_kpi_provenance_v2.kpis.formula_trace: 0 / selected inputs should be visible"
+      ],
+      caveats: [
+        "Benchmark validation v1 is a deterministic product guardrail.",
+        "validation_status=WARN"
+      ]
+    });
+    expect(buildDataPanelNetworkKpiBenchmarkValidationDisplay(null)).toBeNull();
+  });
+
   it("renders per-KPI backend formula provenance for dashboard inspection", () => {
     const display = buildDataPanelNetworkKpiFormulaInspector(
       {
@@ -7077,6 +7153,14 @@ describe("buildDataPanelModelTrustEvidenceWorkspace", () => {
         metaLabels: ["模型 流级代理", "无包级指标"],
         caveats: ["No packet-level simulation."]
       },
+      networkKpiBenchmarkValidation: {
+        tone: "match",
+        statusLabel: "基准通过",
+        summaryLabel: "检查 12/12 通过；WARN 0 / FAIL 0 / 缺数据 0",
+        metaLabels: ["profile FLOW_LEVEL_PROXY_RUNTIME_GUARDRAILS"],
+        issueLabels: [],
+        caveats: ["Benchmark validation v1 is a deterministic product guardrail."]
+      },
       networkKpiFormulaInspector: {
         tone: "match",
         sourceLabel: "leo_twin.network_kpi_provenance.v2 / leo_twin.network_model_contract.v2",
@@ -7214,10 +7298,11 @@ describe("buildDataPanelModelTrustEvidenceWorkspace", () => {
       tone: "match",
       sourceLabel: "runtime status + backend summary + export diagnostics",
       statusLabel: "证据链完整",
-      summaryLabel: "7 类证据 / 7 类可用 / 0 类待补齐",
-      scoreLabel: "可用 7/7 / 警告 0 / 错误 0",
+      summaryLabel: "8 类证据 / 8 类可用 / 0 类待补齐",
+      scoreLabel: "可用 8/8 / 警告 0 / 错误 0",
       metaLabels: [
         "配置语义已声明",
+        "KPI基准已验证",
         "KPI公式可追踪",
         "路由证据可追踪",
         "manifest已生成",
@@ -7229,18 +7314,19 @@ describe("buildDataPanelModelTrustEvidenceWorkspace", () => {
       "configuration",
       "fidelity",
       "kpi",
+      "benchmark",
       "formula",
       "route",
       "replay",
       "runtime"
     ]);
-    expect(display?.rows[4]).toMatchObject({
+    expect(display?.rows[5]).toMatchObject({
       label: "路由解释可信度",
       statusLabel: "完整流级路由代理",
       tone: "match",
       source: "leo_twin.route_provenance_trust.v1 / route_explanation_summary_v1"
     });
-    expect(display?.rows[5]).toMatchObject({
+    expect(display?.rows[6]).toMatchObject({
       label: "复盘证据",
       statusLabel: "REVIEW_READY",
       tone: "match",
@@ -7344,11 +7430,12 @@ describe("buildDataPanelModelTrustEvidenceWorkspace", () => {
 
     expect(display?.tone).toBe("error");
     expect(display?.statusLabel).toBe("证据链存在错误");
-    expect(display?.summaryLabel).toBe("7 类证据 / 1 类可用 / 3 类待补齐");
+    expect(display?.summaryLabel).toBe("8 类证据 / 1 类可用 / 4 类待补齐");
     expect(display?.rows.map((row) => [row.kind, row.tone])).toEqual([
       ["configuration", "pending"],
       ["fidelity", "different"],
       ["kpi", "error"],
+      ["benchmark", "pending"],
       ["formula", "pending"],
       ["route", "pending"],
       ["replay", "error"],
@@ -7357,6 +7444,7 @@ describe("buildDataPanelModelTrustEvidenceWorkspace", () => {
     expect(display?.actionLabels).toEqual([
       "配置语义：等待后端解释",
       "KPI可信度：包级指标越界",
+      "KPI基准验证：等待基准验证",
       "KPI公式来源：等待公式证据",
       "路由解释可信度：等待路由证据",
       "复盘证据：INCOMPLETE",

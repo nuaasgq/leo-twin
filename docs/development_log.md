@@ -15616,7 +15616,7 @@ change.
 ## 2026-07-06 - Network KPI Formula Input Audit v1
 
 - Branch: `feature/T323-network-kpi-credibility-v1`
-- Commit: pending commit note; final hash is reported after commit creation.
+- Commit: `dea4972 feat(metrics): audit network kpi formula inputs`
 - Scope: enrich backend `network_kpi_provenance_v2.kpis` with auditable
   `formula_inputs` and `formula_trace` fields so throughput, latency, loss
   proxy, delay-variation proxy, route blocking, and congestion pressure can
@@ -15665,3 +15665,62 @@ change.
   - Use the new formula input audit as the basis for a benchmark validation
     view that compares expected KPI movement under low-load and stress
     scenarios.
+
+## 2026-07-06 - Network KPI Benchmark Validation v1
+
+- Branch: `feature/T324-network-kpi-benchmark-validation-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add backend-owned `network_kpi_benchmark_validation_v1` to runtime
+  status as a deterministic product guardrail for the industrial v2 demo loop.
+  The validation is derived from `metrics_summary` and
+  `network_kpi_provenance_v2`, checks packet-level exclusion, KPI value
+  coverage, selected formula-input coverage, non-negative KPI values, ratio
+  bounds, and flat-zero throughput/latency under active route demand. The
+  standalone dashboard now renders a compact benchmark validation card and
+  indexes the result into the model-trust evidence workspace.
+- Changed files/modules:
+  - `src/leo_twin/services/network_kpi_benchmark_validation.py`
+  - `src/leo_twin/services/benchmark_scenarios.py`
+  - `examples/integration_demo/control_plane.py`
+  - `tests/unit/test_network_kpi_benchmark_validation.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `tests/integration/test_benchmark_acceptance_v1.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/benchmark_scenario_matrix_v1.md`
+  - `docs/network_kpi_provenance_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests\unit\test_network_kpi_benchmark_validation.py tests\unit\test_network_kpi_provenance_v2.py tests\integration\test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer -q`
+    - Result: passed, 7 tests.
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 1 test
+      file and 183 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path.
+  - `python -m pytest tests\integration\test_benchmark_acceptance_v1.py -q`
+    - Result: passed, 15 tests. The full benchmark acceptance suite takes
+      about six minutes locally.
+  - `pnpm --dir frontend test api.test.ts dataPanel.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 2 test
+      files and 217 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path. Vite
+      reported the existing large DataPanel chunk warning.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered:
+  - The first validation status ordering treated no-runtime-data scenarios as
+    `WARN`; the product semantics were corrected to prioritize
+    `INSUFFICIENT_DATA` when missing checks are present.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - These checks are product demo guardrails for flow-level proxy KPIs. They do
+    not validate RF propagation, packet-level loss, or external network
+    simulator fidelity.
+- Recommended follow-up:
+  - Add a benchmark validation comparison card for saved result packages so
+    exported runs can be reviewed against the same KPI guardrails offline.

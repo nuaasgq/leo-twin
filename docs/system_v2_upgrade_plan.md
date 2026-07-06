@@ -208,6 +208,10 @@ Tasks:
   - Depends on: V2-021.
   - Status: deterministic simulation-time pressure factor and tail-sample
     decomposition implemented in T208.
+    T324 adds backend-owned `network_kpi_benchmark_validation_v1`, derived from
+    `metrics_summary` and `network_kpi_provenance_v2`, and binds the dashboard
+    to the PASS/WARN/FAIL/INSUFFICIENT_DATA guardrail summary for demo
+    acceptance.
 - V2-023: Add route explanation records.
   - Scope: selected route, alternative count, bottleneck reason, next hop,
     blocked reason.
