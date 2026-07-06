@@ -376,6 +376,13 @@ limited to saved report fields (`trace_id`, status, hashes, reason, note, and
 compared/different field names); it does not replay events or recompute service
 trace differences.
 
+When saved, `service_trace_comparison_review_report_v1.json` is included in the
+package audit index and handoff completion evidence. The audit/completion
+objects record its presence, `report_hash`, record count, and error count.
+Missing service-trace review reports are treated as optional evidence for this
+version; saved reports with `error_count > 0` produce an audit warning and a
+completion warning.
+
 `scenario_review_bundle_v1.json` also declares a guided package review order.
 The demo backend can persist operator decisions for that guided flow through:
 
@@ -434,11 +441,13 @@ leo_twin.runtime_export_package_review_completion.v1
 
 This object is the backend-owned handoff readiness summary for result-package
 review. It reports audit status, saved route-comparison report presence and
-error count, scenario-review bundle presence, checklist presence/status/count,
-review summary status, diagnostics error count, boundary-alignment status, user
-configuration validation, missing/warning evidence, and a deterministic
-`completion_hash`. It deliberately does not include `audit_hash`, so the audit
-index can hash the completion object without a self-reference.
+error count, optional saved service-trace comparison report presence/hash/count
+and error count, scenario-review bundle presence, checklist
+presence/status/count, review summary status, diagnostics error count,
+boundary-alignment status, user configuration validation, missing/warning
+evidence, and a deterministic `completion_hash`. It deliberately does not
+include `audit_hash`, so the audit index can hash the completion object without
+a self-reference.
 
 For tools that only need the handoff summary, the demo backend exposes the same
 object without returning the full audit index:
@@ -460,10 +469,11 @@ GET /runtime/export/packages/{package_id}/handoff-report
 ```
 
 The endpoint serves `package_handoff_report_v1.md`. The report summarizes
-completion status, handoff readiness, route-review evidence, scenario-review
-checklist state, diagnostics status, boundary alignment, user-configuration
-validation, missing evidence, completion hash, and model/replay boundaries. It
-is regenerated after route comparison review report or scenario review
+completion status, handoff readiness, route-review evidence, service-trace
+review evidence, scenario-review checklist state, diagnostics status, boundary
+alignment, user-configuration validation, missing evidence, completion hash,
+and model/replay boundaries. It is regenerated after route comparison review
+report, service trace comparison review report, or scenario review
 checklist saves so the human-readable handoff state follows the backend audit
 index. It does not replay events, recompute package evidence, mutate the
 package on read, capture packets, or call external simulators.

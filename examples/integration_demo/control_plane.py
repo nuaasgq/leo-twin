@@ -1448,6 +1448,17 @@ class DemoControlPlane:
             raw_route_report = json.loads(route_report_path.read_text(encoding="utf-8"))
             if isinstance(raw_route_report, Mapping):
                 route_report = raw_route_report
+        service_trace_report: Mapping[str, Any] | None = None
+        service_trace_report_path = (
+            package_dir
+            / _RUNTIME_EXPORT_SERVICE_TRACE_COMPARISON_REVIEW_REPORT_FILENAME
+        )
+        if service_trace_report_path.is_file():
+            raw_service_trace_report = json.loads(
+                service_trace_report_path.read_text(encoding="utf-8")
+            )
+            if isinstance(raw_service_trace_report, Mapping):
+                service_trace_report = raw_service_trace_report
         scenario_checklist: Mapping[str, Any] | None = None
         scenario_checklist_path = (
             package_dir / _RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_FILENAME
@@ -1477,6 +1488,7 @@ class DemoControlPlane:
             diagnostics_bundle=diagnostics_bundle,
             artifact_records=artifact_records,
             route_comparison_review_report=route_report,
+            service_trace_comparison_review_report=service_trace_report,
             scenario_review_checklist=scenario_checklist,
             runtime_export_boundary_alignment=runtime_export_boundary_alignment,
             user_configuration_export=self.user_configuration_export()["summary"],

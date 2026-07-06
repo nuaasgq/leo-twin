@@ -171,7 +171,9 @@ Tasks:
     hash and the live detail hash. T338 adds a backend cursor page for saved
     service trace comparison review report records and binds the dashboard
     review card to that backend page, so large reports can be inspected without
-    loading the whole JSON artifact for row navigation.
+    loading the whole JSON artifact for row navigation. T339 records saved
+    service trace comparison review reports in the audit index, package review
+    completion evidence, handoff Markdown report, and dashboard audit drawer.
 - V2-013: Add service lifecycle trace.
   - Scope: input flow, queue, compute, output flow, terminal state.
   - Output: timeline records for dashboard and result export.
@@ -240,6 +242,8 @@ Tasks:
     remaining live evidence gap by carrying the live exact service trace
     `detail_hash` into saved review records. T338 adds the saved report records
     page endpoint and dashboard row browser for backend-driven review paging.
+    T339 promotes the saved service trace report into backend audit/completion
+    evidence while keeping missing reports optional for compatibility.
 
 ### WS3. Network Semantics and KPI Trust v2
 

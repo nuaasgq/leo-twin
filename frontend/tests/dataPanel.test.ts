@@ -2975,6 +2975,11 @@ describe("buildDataPanelExportCatalogDisplay", () => {
       route_comparison_review_report_hash:
         "sha256:9999999999999999999999999999999999999999999999999999999999999999",
       route_comparison_review_report_present: true,
+      service_trace_comparison_review_report_hash:
+        "sha256:edededededededededededededededededededededededededededededededed",
+      service_trace_comparison_review_report_present: true,
+      service_trace_comparison_review_record_count: 2,
+      service_trace_comparison_review_error_count: 0,
       artifact_count: 3,
       artifact_hashes: [
         {
@@ -3058,6 +3063,12 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         "route report 999999999999",
         "event replay restore no",
         "package mutation no"
+      ],
+      serviceTraceReviewLabels: [
+        "service trace report present",
+        "service trace report edededededed",
+        "service trace records 2",
+        "service trace errors 0"
       ],
       artifactRows: [
         {
@@ -3614,6 +3625,10 @@ describe("buildDataPanelExportCatalogDisplay", () => {
       diagnostics_hash: "sha256:diagnostics",
       route_comparison_review_report_hash: "sha256:route-report",
       route_comparison_review_report_present: true,
+      service_trace_comparison_review_report_hash: "sha256:trace-report",
+      service_trace_comparison_review_report_present: true,
+      service_trace_comparison_review_record_count: 1,
+      service_trace_comparison_review_error_count: 0,
       scenario_review_checklist_hash: "sha256:checklist",
       scenario_review_checklist_present: true,
       scenario_review_checklist_record_count: 2,
@@ -3703,6 +3718,10 @@ describe("buildDataPanelExportCatalogDisplay", () => {
             route_comparison_review_report_hash: "sha256:route-report",
             route_comparison_review_record_count: 1,
             route_comparison_review_error_count: 0,
+            service_trace_comparison_review_report_present: true,
+            service_trace_comparison_review_report_hash: "sha256:trace-report",
+            service_trace_comparison_review_record_count: 1,
+            service_trace_comparison_review_error_count: 0,
             scenario_review_bundle_present: true,
             scenario_review_checklist_present: true,
             scenario_review_checklist_hash: "sha256:checklist",

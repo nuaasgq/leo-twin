@@ -1732,6 +1732,7 @@ def build_runtime_export_package_audit_index_v1(
     diagnostics_bundle: Mapping[str, Any],
     artifact_records: tuple[Mapping[str, Any], ...] = (),
     route_comparison_review_report: Mapping[str, Any] | None = None,
+    service_trace_comparison_review_report: Mapping[str, Any] | None = None,
     scenario_review_checklist: Mapping[str, Any] | None = None,
     runtime_export_boundary_alignment: Mapping[str, Any] | None = None,
     user_configuration_export: Mapping[str, Any] | None = None,
@@ -1752,6 +1753,7 @@ def build_runtime_export_package_audit_index_v1(
     if not boundary:
         boundary = _runtime_export_reproducibility_boundary(status, manifest)
     route_report = _mapping(route_comparison_review_report)
+    service_trace_report = _mapping(service_trace_comparison_review_report)
     scenario_checklist = _mapping(scenario_review_checklist)
     alignment = _mapping(runtime_export_boundary_alignment)
     if not alignment:
@@ -1790,6 +1792,8 @@ def build_runtime_export_package_audit_index_v1(
         audit_warnings.append("REQUIRED_AUDIT_ARTIFACTS_MISSING")
     if not route_report:
         audit_warnings.append("ROUTE_COMPARISON_REVIEW_REPORT_NOT_SAVED")
+    if service_trace_report and _integer(service_trace_report.get("error_count")) > 0:
+        audit_warnings.append("SERVICE_TRACE_COMPARISON_REVIEW_REPORT_HAS_ERRORS")
     if not alignment:
         audit_warnings.append("BOUNDARY_ALIGNMENT_EVIDENCE_NOT_RECORDED")
     if str(scenario_checklist.get("checklist_status", "")) == "CHECKLIST_WARN":
@@ -1808,6 +1812,7 @@ def build_runtime_export_package_audit_index_v1(
         diagnostics_bundle=diagnostics_bundle,
         artifact_records=normalized_artifacts,
         route_comparison_review_report=route_report,
+        service_trace_comparison_review_report=service_trace_report,
         scenario_review_checklist=scenario_checklist,
         runtime_export_boundary_alignment=alignment,
         user_configuration_binding=user_config_binding,
@@ -1865,6 +1870,16 @@ def build_runtime_export_package_audit_index_v1(
         ),
         "route_comparison_review_report_hash": str(route_report.get("report_hash", "")),
         "route_comparison_review_report_present": bool(route_report),
+        "service_trace_comparison_review_report_hash": str(
+            service_trace_report.get("report_hash", "")
+        ),
+        "service_trace_comparison_review_report_present": bool(service_trace_report),
+        "service_trace_comparison_review_record_count": _integer(
+            service_trace_report.get("record_count")
+        ),
+        "service_trace_comparison_review_error_count": _integer(
+            service_trace_report.get("error_count")
+        ),
         "scenario_review_checklist_hash": str(
             scenario_checklist.get("checklist_hash", "")
         ),
@@ -1909,6 +1924,7 @@ def build_runtime_export_package_review_completion_v1(
     diagnostics_bundle: Mapping[str, Any],
     artifact_records: tuple[Mapping[str, Any], ...] = (),
     route_comparison_review_report: Mapping[str, Any] | None = None,
+    service_trace_comparison_review_report: Mapping[str, Any] | None = None,
     scenario_review_checklist: Mapping[str, Any] | None = None,
     runtime_export_boundary_alignment: Mapping[str, Any] | None = None,
     user_configuration_binding: Mapping[str, Any] | None = None,
@@ -1921,6 +1937,7 @@ def build_runtime_export_package_review_completion_v1(
         raise TypeError("diagnostics_bundle must be a mapping")
 
     route_report = _mapping(route_comparison_review_report)
+    service_trace_report = _mapping(service_trace_comparison_review_report)
     checklist = _mapping(scenario_review_checklist)
     alignment = _mapping(runtime_export_boundary_alignment)
     user_config = _mapping(user_configuration_binding)
@@ -1941,6 +1958,13 @@ def build_runtime_export_package_review_completion_v1(
     route_report_present = bool(route_report)
     route_report_error_count = _integer(route_report.get("error_count"))
     route_report_ready = route_report_present and route_report_error_count == 0
+    service_trace_report_present = bool(service_trace_report)
+    service_trace_report_error_count = _integer(
+        service_trace_report.get("error_count")
+    )
+    service_trace_report_ready = (
+        not service_trace_report_present or service_trace_report_error_count == 0
+    )
     checklist_present = bool(checklist)
     checklist_status = str(checklist.get("checklist_status", ""))
     checklist_complete = checklist_present and checklist_status == "CHECKLIST_COMPLETE"
@@ -1957,6 +1981,8 @@ def build_runtime_export_package_review_completion_v1(
         missing_or_warning.append("ROUTE_COMPARISON_REVIEW_REPORT_MISSING")
     elif not route_report_ready:
         missing_or_warning.append("ROUTE_COMPARISON_REVIEW_REPORT_HAS_ERRORS")
+    if not service_trace_report_ready:
+        missing_or_warning.append("SERVICE_TRACE_COMPARISON_REVIEW_REPORT_HAS_ERRORS")
     if not scenario_bundle_present:
         missing_or_warning.append("SCENARIO_REVIEW_BUNDLE_MISSING")
     if not checklist_present:
@@ -1990,6 +2016,18 @@ def build_runtime_export_package_review_completion_v1(
         "route_comparison_review_report_hash": str(route_report.get("report_hash", "")),
         "route_comparison_review_record_count": _integer(route_report.get("record_count")),
         "route_comparison_review_error_count": route_report_error_count,
+        "service_trace_comparison_review_report_present": (
+            service_trace_report_present
+        ),
+        "service_trace_comparison_review_report_hash": str(
+            service_trace_report.get("report_hash", "")
+        ),
+        "service_trace_comparison_review_record_count": _integer(
+            service_trace_report.get("record_count")
+        ),
+        "service_trace_comparison_review_error_count": (
+            service_trace_report_error_count
+        ),
         "scenario_review_bundle_present": scenario_bundle_present,
         "scenario_review_checklist_present": checklist_present,
         "scenario_review_checklist_hash": str(checklist.get("checklist_hash", "")),
@@ -2016,6 +2054,11 @@ def build_runtime_export_package_review_completion_v1(
             f"audit {audit_status}",
             f"route_report {'saved' if route_report_present else 'missing'}",
             f"route_errors {route_report_error_count}",
+            (
+                "service_trace_report "
+                f"{'saved' if service_trace_report_present else 'optional_missing'}"
+            ),
+            f"service_trace_errors {service_trace_report_error_count}",
             f"scenario_bundle {'present' if scenario_bundle_present else 'missing'}",
             f"checklist {checklist_status or 'missing'}",
             f"checklist_records {_integer(checklist.get('record_count'))}",
@@ -2089,6 +2132,14 @@ def build_runtime_export_package_handoff_report_v1(
             f"{completion.get('route_comparison_review_error_count', 0)}"
         ),
         (
+            "- Service trace comparison review report present: "
+            f"{'true' if completion.get('service_trace_comparison_review_report_present') is True else 'false'}"
+        ),
+        (
+            "- Service trace comparison review error count: "
+            f"{completion.get('service_trace_comparison_review_error_count', 0)}"
+        ),
+        (
             "- Scenario review checklist status: "
             f"{completion.get('scenario_review_checklist_status', '') or 'missing'}"
         ),
@@ -2136,6 +2187,10 @@ def build_runtime_export_package_handoff_report_v1(
         (
             "- Route comparison review report hash: "
             f"{completion.get('route_comparison_review_report_hash', '')}"
+        ),
+        (
+            "- Service trace comparison review report hash: "
+            f"{completion.get('service_trace_comparison_review_report_hash', '')}"
         ),
         (
             "- Scenario review checklist hash: "

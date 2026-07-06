@@ -338,6 +338,10 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     )
     assert audit_index["route_comparison_review_report_present"] is False
     assert audit_index["route_comparison_review_report_hash"] == ""
+    assert audit_index["service_trace_comparison_review_report_present"] is False
+    assert audit_index["service_trace_comparison_review_report_hash"] == ""
+    assert audit_index["service_trace_comparison_review_record_count"] == 0
+    assert audit_index["service_trace_comparison_review_error_count"] == 0
     assert audit_index["scenario_review_checklist_present"] is False
     assert audit_index["scenario_review_checklist_hash"] == ""
     assert audit_index["scenario_review_checklist_record_count"] == 0
@@ -533,6 +537,25 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert service_trace_report_response["audit_index"]["audit_index_id"] == (
         RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID
     )
+    service_trace_audit_index = service_trace_report_response["audit_index"]
+    assert service_trace_audit_index[
+        "service_trace_comparison_review_report_present"
+    ] is True
+    assert service_trace_audit_index[
+        "service_trace_comparison_review_report_hash"
+    ] == service_trace_report["report_hash"]
+    assert service_trace_audit_index[
+        "service_trace_comparison_review_record_count"
+    ] == 1
+    assert service_trace_audit_index[
+        "service_trace_comparison_review_error_count"
+    ] == 0
+    assert service_trace_audit_index["package_review_completion_v1"][
+        "service_trace_comparison_review_report_present"
+    ] is True
+    assert service_trace_audit_index["package_review_completion_v1"][
+        "service_trace_comparison_review_report_hash"
+    ] == service_trace_report["report_hash"]
     service_trace_report_page = (
         control_plane.runtime_export_package_service_trace_comparison_review_report_records(
             str(package["package_id"]),
@@ -604,6 +627,12 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert checklist_artifact["sha256"] == checklist_response["artifact"]["sha256"]
     checklist_audit = checklist_response["audit_index"]
     assert checklist_audit["route_comparison_review_report_present"] is True
+    assert checklist_audit[
+        "service_trace_comparison_review_report_present"
+    ] is True
+    assert checklist_audit["service_trace_comparison_review_report_hash"] == (
+        service_trace_report["report_hash"]
+    )
     assert checklist_audit["scenario_review_checklist_present"] is True
     assert checklist_audit["scenario_review_checklist_hash"] == (
         checklist["checklist_hash"]
@@ -643,6 +672,10 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     )
     assert "Completion status: REVIEW_COMPLETE" in final_handoff_report
     assert "Handoff ready: true" in final_handoff_report
+    assert "Service trace comparison review report present: true" in (
+        final_handoff_report
+    )
+    assert service_trace_report["report_hash"] in final_handoff_report
     assert checklist_audit["package_review_completion_hash"] in final_handoff_report
     assert checklist_audit["audit_status"] == "AUDIT_READY"
     assert checklist_audit["audit_warnings"] == ()

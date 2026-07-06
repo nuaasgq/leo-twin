@@ -16414,7 +16414,7 @@ change.
 ## 2026-07-07 - Service Trace Review Report Page v1
 
 - Branch: `feature/T338-service-trace-review-page-v1`
-- Commit: pending commit note; final hash is reported after commit creation.
+- Commit: `1d8b960 feat(export): page service trace review reports`
 - Scope: add backend cursor paging for saved
   `service_trace_comparison_review_report_v1.json` records and bind the
   dashboard service trace review report card to that backend page. The existing
@@ -16466,3 +16466,57 @@ change.
   - Add service trace comparison review report evidence to audit/completion
     readiness fields once the operator workflow requires it as a mandatory
     handoff condition.
+
+## 2026-07-07 - Service Trace Review Audit Evidence v1
+
+- Branch: `feature/T339-service-trace-review-audit-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add saved service trace comparison review report evidence to the
+  result package audit index, package review completion object, handoff
+  Markdown report, and dashboard audit drawer. The evidence records report
+  presence, `report_hash`, record count, and error count. Missing service trace
+  review reports remain optional for compatibility; saved reports with
+  `error_count > 0` are surfaced as audit/completion warnings. No Event Kernel,
+  simulation model, replay, package read-mutation, or frontend architecture
+  behavior changed.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `examples/integration_demo/control_plane.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m compileall -q src\leo_twin\services\result_package_contract.py examples\integration_demo\control_plane.py`
+    - Result: passed.
+  - `python -m pytest tests\unit\test_result_package_contract_v1.py::test_runtime_export_package_review_completion_v1_reports_missing_evidence tests\unit\test_result_package_contract_v1.py::test_runtime_export_package_audit_index_v1_is_deterministic tests\integration\test_result_package_export_v1.py::test_runtime_export_package_satisfies_result_package_contract_v1 -q`
+    - Result: passed, 3 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path.
+  - `pnpm --dir frontend test dataPanel.test.ts api.test.ts appSurface.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 3 test
+      files and 274 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path; Vite
+      reported the existing large `DataPanel` chunk warning.
+- Problems encountered:
+  - The first backend target run exposed a unit-test expectation that did not
+    match deterministic filename sorting after adding the service trace report
+    artifact. The implementation already sorted by filename; the expected
+    artifact order was corrected.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - Service trace comparison reports are optional handoff evidence in this
+    version. Making them mandatory should be a separate product workflow
+    decision.
+  - The server still persists selected operator outcomes only; it does not
+    compute package/live service trace differences server-side.
+- Recommended follow-up:
+  - Add a scenario review workflow row for
+    `service_trace_comparison_review_report_v1.json` so operators can mark the
+    service-trace review artifact explicitly in the guided checklist.

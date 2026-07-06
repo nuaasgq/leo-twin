@@ -1755,6 +1755,10 @@ export interface RuntimeExportPackageAuditIndexV1 {
   user_service_request_summary_hidden_request_count?: number;
   route_comparison_review_report_hash: string;
   route_comparison_review_report_present: boolean;
+  service_trace_comparison_review_report_hash?: string;
+  service_trace_comparison_review_report_present?: boolean;
+  service_trace_comparison_review_record_count?: number;
+  service_trace_comparison_review_error_count?: number;
   scenario_review_checklist_hash?: string;
   scenario_review_checklist_present?: boolean;
   scenario_review_checklist_record_count?: number;
@@ -1799,6 +1803,10 @@ export interface RuntimeExportPackageReviewCompletionV1 {
   route_comparison_review_report_hash: string;
   route_comparison_review_record_count: number;
   route_comparison_review_error_count: number;
+  service_trace_comparison_review_report_present?: boolean;
+  service_trace_comparison_review_report_hash?: string;
+  service_trace_comparison_review_record_count?: number;
+  service_trace_comparison_review_error_count?: number;
   scenario_review_bundle_present: boolean;
   scenario_review_checklist_present: boolean;
   scenario_review_checklist_hash: string;

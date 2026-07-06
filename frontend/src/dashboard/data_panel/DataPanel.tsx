@@ -3165,6 +3165,11 @@ export const DataPanel = memo(function DataPanel({
                     {exportPackageAuditIndexStatus.routeReviewLabels.map((label) => (
                       <span key={label}>{label}</span>
                     ))}
+                    {exportPackageAuditIndexStatus.serviceTraceReviewLabels.map(
+                      (label) => (
+                        <span key={label}>{label}</span>
+                      )
+                    )}
                   </div>
                   <div className="data-panel-export-manifest-artifacts">
                     {exportPackageAuditIndexStatus.artifactRows.map((row) => (
@@ -11229,6 +11234,7 @@ export interface DataPanelExportPackageAuditIndexDisplay {
   boundaryLabels: readonly string[];
   diagnosticsLabels: readonly string[];
   routeReviewLabels: readonly string[];
+  serviceTraceReviewLabels: readonly string[];
   artifactRows: readonly DataPanelExportPackageAuditIndexArtifactRow[];
   artifactSummaryLabel: string;
   warningLabels: readonly string[];
@@ -11244,6 +11250,7 @@ export interface DataPanelExportPackageAuditIndexStatus {
   boundaryLabels: readonly string[];
   diagnosticsLabels: readonly string[];
   routeReviewLabels: readonly string[];
+  serviceTraceReviewLabels: readonly string[];
   artifactRows: readonly DataPanelExportPackageAuditIndexArtifactRow[];
   artifactSummaryLabel: string;
   warningLabels: readonly string[];
@@ -12196,6 +12203,22 @@ export function buildDataPanelExportPackageAuditIndexDisplay(
       `event replay restore ${auditIndex.event_replay_restore ? "yes" : "no"}`,
       `package mutation ${auditIndex.package_mutation_on_read ? "yes" : "no"}`
     ],
+    serviceTraceReviewLabels: [
+      `service trace report ${
+        auditIndex.service_trace_comparison_review_report_present === true
+          ? "present"
+          : "optional missing"
+      }`,
+      `service trace report ${shortRuntimeHash(
+        auditIndex.service_trace_comparison_review_report_hash ?? ""
+      )}`,
+      `service trace records ${formatCount(
+        auditIndex.service_trace_comparison_review_record_count ?? 0
+      )}`,
+      `service trace errors ${formatCount(
+        auditIndex.service_trace_comparison_review_error_count ?? 0
+      )}`
+    ],
     artifactRows,
     artifactSummaryLabel: `showing ${formatCount(artifactRows.length)} of ${formatCount(
       auditIndex.artifact_hashes.length
@@ -12221,6 +12244,7 @@ export function buildDataPanelExportPackageAuditIndexStatus(
       boundaryLabels: [],
       diagnosticsLabels: [],
       routeReviewLabels: [],
+      serviceTraceReviewLabels: [],
       artifactRows: [],
       artifactSummaryLabel: "waiting for audit index",
       warningLabels: []
@@ -12237,6 +12261,7 @@ export function buildDataPanelExportPackageAuditIndexStatus(
       boundaryLabels: [],
       diagnosticsLabels: [],
       routeReviewLabels: [],
+      serviceTraceReviewLabels: [],
       artifactRows: [],
       artifactSummaryLabel: "audit index unavailable",
       warningLabels: [error]
@@ -12255,6 +12280,7 @@ export function buildDataPanelExportPackageAuditIndexStatus(
     boundaryLabels: display.boundaryLabels,
     diagnosticsLabels: display.diagnosticsLabels,
     routeReviewLabels: display.routeReviewLabels,
+    serviceTraceReviewLabels: display.serviceTraceReviewLabels,
     artifactRows: display.artifactRows,
     artifactSummaryLabel: display.artifactSummaryLabel,
     warningLabels: display.warningLabels

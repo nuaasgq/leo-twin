@@ -1448,6 +1448,8 @@ def test_runtime_export_package_review_completion_v1_reports_missing_evidence() 
     assert completion["completion_status"] == "REVIEW_INCOMPLETE"
     assert completion["handoff_ready"] is False
     assert completion["route_comparison_review_report_present"] is False
+    assert completion["service_trace_comparison_review_report_present"] is False
+    assert completion["service_trace_comparison_review_error_count"] == 0
     assert completion["scenario_review_checklist_present"] is False
     assert completion["missing_or_warning_evidence"] == (
         "AUDIT_INDEX_NOT_READY",
@@ -1528,7 +1530,15 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
     route_report = {
         "report_id": RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID,
         "report_hash": "sha256:route-report",
+        "record_count": 1,
+        "error_count": 0,
         "runtime_export_boundary_alignment_v1": alignment,
+    }
+    service_trace_report = {
+        "report_id": RUNTIME_EXPORT_SERVICE_TRACE_COMPARISON_REVIEW_REPORT_V1_ID,
+        "report_hash": "sha256:service-trace-report",
+        "record_count": 2,
+        "error_count": 0,
     }
     scenario_review_checklist = {
         "checklist_id": RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_V1_ID,
@@ -1590,6 +1600,11 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
             "sha256:route-report-file",
         ),
         _file(
+            "service_trace_comparison_review_report_v1",
+            "service_trace_comparison_review_report_v1.json",
+            "sha256:service-trace-report-file",
+        ),
+        _file(
             "scenario_review_checklist_v1",
             "scenario_review_checklist_v1.json",
             "sha256:scenario-checklist-file",
@@ -1610,6 +1625,7 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
         diagnostics_bundle=diagnostics_bundle,
         artifact_records=artifact_records,
         route_comparison_review_report=route_report,
+        service_trace_comparison_review_report=service_trace_report,
         scenario_review_checklist=scenario_review_checklist,
         user_configuration_export=user_configuration_export,
     )
@@ -1622,6 +1638,7 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
         diagnostics_bundle=diagnostics_bundle,
         artifact_records=tuple(reversed(artifact_records)),
         route_comparison_review_report=route_report,
+        service_trace_comparison_review_report=service_trace_report,
         scenario_review_checklist=scenario_review_checklist,
         user_configuration_export=user_configuration_export,
     )
@@ -1644,6 +1661,12 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
     )
     assert first["route_comparison_review_report_hash"] == "sha256:route-report"
     assert first["route_comparison_review_report_present"] is True
+    assert first["service_trace_comparison_review_report_hash"] == (
+        "sha256:service-trace-report"
+    )
+    assert first["service_trace_comparison_review_report_present"] is True
+    assert first["service_trace_comparison_review_record_count"] == 2
+    assert first["service_trace_comparison_review_error_count"] == 0
     assert first["scenario_review_checklist_hash"] == "sha256:scenario-checklist"
     assert first["scenario_review_checklist_present"] is True
     assert first["scenario_review_checklist_record_count"] == 2
@@ -1653,6 +1676,9 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
     assert completion["completion_status"] == "REVIEW_COMPLETE"
     assert completion["handoff_ready"] is True
     assert completion["route_comparison_review_report_present"] is True
+    assert completion["service_trace_comparison_review_report_present"] is True
+    assert completion["service_trace_comparison_review_record_count"] == 2
+    assert completion["service_trace_comparison_review_error_count"] == 0
     assert completion["scenario_review_checklist_status"] == "CHECKLIST_COMPLETE"
     assert completion["missing_or_warning_evidence"] == ()
     assert completion["completion_hash"].startswith("sha256:")
@@ -1667,6 +1693,7 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
         "route_comparison_review_report_v1.json",
         "scenario_review_bundle_v1.json",
         "scenario_review_checklist_v1.json",
+        "service_trace_comparison_review_report_v1.json",
         "summary.json",
     ]
     assert first["audit_hash"].startswith("sha256:")
