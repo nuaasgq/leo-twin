@@ -67,8 +67,10 @@ template and its record schema, so selected package-vs-live comparison outcomes
 can be captured with deterministic ordering. The API layer can POST selected
 review records to the package-level route comparison review report endpoint,
 which writes `route_comparison_review_report_v1.json` and updates the export
-catalog. The frontend does not recompute routes or download the full
-`route_detail_index_v1.json` by default.
+catalog. The dashboard route comparison card exposes a save action for the
+currently displayed package-vs-live comparison and records the compared fields,
+different fields, package detail hash, and status reason. The frontend does not
+recompute routes or download the full `route_detail_index_v1.json` by default.
 7. runtime evidence
 
 Each row has a tone:

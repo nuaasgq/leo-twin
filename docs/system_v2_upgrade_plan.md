@@ -261,6 +261,10 @@ Tasks:
     `route_comparison_review_report_v1.json`, updates the export catalog, and
     the frontend API layer can post selected review records without changing
     dashboard layout.
+  - Status: T292 adds a dashboard save action on the package-vs-live route
+    comparison card. The action converts the visible comparison rows into the
+    backend report record schema and posts them to the T291 save endpoint,
+    preserving backend ownership of the artifact.
 
 ### WS4. Compute Network Model v2
 

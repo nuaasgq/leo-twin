@@ -29,6 +29,8 @@ import {
   buildDataPanelExportReviewSummaryStatus,
   buildDataPanelExportRouteDetailItemDisplay,
   buildDataPanelExportRouteDetailItemStatus,
+  buildDataPanelExportRouteComparisonReviewRecord,
+  buildDataPanelExportRouteComparisonReviewSaveStatus,
   buildDataPanelExportRouteLiveComparisonDisplay,
   buildDataPanelExportRouteLiveComparisonStatus,
   buildDataPanelExportRouteDetailIndexDisplay,
@@ -2951,6 +2953,94 @@ describe("buildDataPanelExportCompareDisplay", () => {
       tone: "different",
       statusLabel: "route id mismatch",
       summaryLabel: "package route-a / live route-b"
+    });
+  });
+
+  it("builds package-live route comparison review save records", () => {
+    const packageRoute = _runtimeExportRouteIndexRoute("route-a", true);
+    const packageItem = {
+      type: "RUNTIME_EXPORT_ROUTE_DETAIL_ITEM_V1",
+      version: "v1",
+      item_id: "leo_twin.runtime_export_route_detail_item.v1",
+      source: "BACKEND_RUNTIME_EXPORT_PACKAGE",
+      package_id: "pkg-review",
+      index_id: "leo_twin.runtime_export_route_detail_index.v1",
+      route_detail_index_hash:
+        "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+      route_id: "route-a",
+      route: packageRoute,
+      item_hash:
+        "sha256:abababababababababababababababababababababababababababababababab"
+    };
+    const changedLiveRoute = {
+      ...packageRoute,
+      latency_s: 0.25,
+      bottleneck_component: "CAPACITY",
+      bottleneck_reason: "ROUTE_CAPACITY_PRESSURE",
+      bottleneck_reason_label: "Route capacity pressure"
+    };
+    const comparison = buildDataPanelExportRouteLiveComparisonDisplay(
+      packageItem,
+      changedLiveRoute
+    );
+
+    expect(
+      buildDataPanelExportRouteComparisonReviewRecord(
+        packageItem,
+        changedLiveRoute,
+        comparison
+      )
+    ).toEqual({
+      route_id: "route-a",
+      comparison_status: "DIFFERENT",
+      package_route_detail_hash:
+        "sha256:abababababababababababababababababababababababababababababababab",
+      live_route_detail_hash: "",
+      matched_field_count: 10,
+      different_field_count: 2,
+      compared_fields: [
+        "availability",
+        "business",
+        "flow",
+        "source_destination",
+        "selected_satellite",
+        "primary_next_hop",
+        "path",
+        "capacity_demand",
+        "latency",
+        "loss",
+        "pressure",
+        "bottleneck"
+      ],
+      different_fields: ["latency", "bottleneck"],
+      status_reason: "FIELDS_DIFFER",
+      operator_note: "Saved from dashboard package-vs-live route comparison."
+    });
+    expect(
+      buildDataPanelExportRouteComparisonReviewSaveStatus(comparison, packageItem)
+    ).toMatchObject({
+      routeId: "route-a",
+      tone: "ready",
+      buttonLabel: "save review report",
+      disabled: false
+    });
+    expect(
+      buildDataPanelExportRouteComparisonReviewSaveStatus(comparison, packageItem, {
+        pendingRouteId: "route-a"
+      })
+    ).toMatchObject({
+      tone: "pending",
+      buttonLabel: "saving report",
+      disabled: true
+    });
+    expect(
+      buildDataPanelExportRouteComparisonReviewSaveStatus(comparison, packageItem, {
+        reportHash:
+          "sha256:1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+      })
+    ).toMatchObject({
+      tone: "success",
+      detailLabel: "saved 1234567890ab"
     });
   });
 

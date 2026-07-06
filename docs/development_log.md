@@ -14041,3 +14041,53 @@ change.
 - Recommended follow-up:
   - Add a small dashboard action to save the currently displayed route
     comparison card into `route_comparison_review_report_v1.json`.
+
+## 2026-07-06 - Dashboard Route Comparison Review Save Action v1
+
+- Branch: `feature/T292-dashboard-route-review-save-action-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: connect the dashboard package-vs-live route comparison card to the
+  route comparison review report save flow. The card now builds a deterministic
+  report record from the currently visible comparison rows, including compared
+  fields, different fields, package route detail hash, match/different status,
+  and a dashboard operator note. The App layer posts that selected record to
+  `POST /runtime/export/packages/{package_id}/route-comparison-review-report`,
+  shows pending/error/saved state, and lightly refreshes the export catalog
+  without clearing the active comparison card. No Event Kernel behavior, route
+  recomputation, backend model logic, or dashboard layout architecture changed.
+- Changed files/modules:
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/dashboard_model_trust_evidence_workspace_v1.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed, 1 test file and 169 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with bundled Codex Node/Pnpm runtime.
+  - `pnpm --dir frontend test api.test.ts dataPanel.test.ts`
+    - Result: passed, 2 test files and 194 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing large DataPanel chunk
+      warning after minification; no functional build error.
+  - `python -m pytest tests/unit/test_user_guide_v2_docs.py -q`
+    - Result: passed, 2 tests.
+  - `git diff --check`
+    - Result: passed for task files.
+- Problems encountered:
+  - The full export catalog refresh path would clear the active route
+    comparison card after saving, so the implementation uses a lightweight
+    catalog reload to keep the user context stable.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The save action records the currently visible route comparison only; it
+    does not batch-save all rows in a page.
+  - The saved record leaves `live_route_detail_hash` blank because the live
+    route detail endpoint does not expose an independent stable detail hash yet.
+- Recommended follow-up:
+  - Add backend live route detail hashing so saved package-vs-live review
+    reports can include both package and live detail hashes.

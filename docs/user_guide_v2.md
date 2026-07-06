@@ -160,6 +160,11 @@ declares the `RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1` template for
 recording selected route comparison outcomes with deterministic record ordering.
 Runtime export rebuilds the package route evidence window with a 5000-row
 maximum; hidden rows beyond that limit are reported in the package policy.
+After using `compare with live`, the package-vs-live route comparison card can
+save the currently displayed comparison into
+`route_comparison_review_report_v1.json`. The saved record includes the
+compared fields, different fields, package route detail hash, status reason,
+and dashboard operator note.
 For package-owned review, use:
 
 ```powershell
