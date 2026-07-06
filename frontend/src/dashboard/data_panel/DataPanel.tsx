@@ -310,7 +310,9 @@ export const DataPanel = memo(function DataPanel({
     command: UserConfigurationValidationApplyCommandV1
   ) => void;
   onRuntimeExportCompareSelect?: (packageId: string) => void;
-  onRuntimeExportRouteDetailPageQueryChange?: (query: string) => void;
+  onRuntimeExportRouteDetailPageQueryChange?: (
+    request: DataPanelExportRouteDetailPageRequest
+  ) => void;
   onRuntimeExportRestore?: (packageId: string) => void;
   onRuntimeUserDetailSelect?: (userId: string | null) => void;
   onRuntimeSatelliteDetailSelect?: (satelliteId: string | null) => void;
@@ -328,6 +330,16 @@ export const DataPanel = memo(function DataPanel({
   const [routeExplanationFilter, setRouteExplanationFilter] = useState("");
   const [exportRouteDetailIndexFilter, setExportRouteDetailIndexFilter] =
     useState("");
+  const [
+    exportRouteDetailIndexAvailabilityFilter,
+    setExportRouteDetailIndexAvailabilityFilter
+  ] = useState<DataPanelRouteExplanationAvailabilityFilter>("ALL");
+  const [exportRouteDetailIndexBusinessFilter, setExportRouteDetailIndexBusinessFilter] =
+    useState("ALL");
+  const [
+    exportRouteDetailIndexBottleneckFilter,
+    setExportRouteDetailIndexBottleneckFilter
+  ] = useState("ALL");
   const [routeExplanationAvailabilityFilter, setRouteExplanationAvailabilityFilter] =
     useState<DataPanelRouteExplanationAvailabilityFilter>("ALL");
   const [routeExplanationBusinessFilter, setRouteExplanationBusinessFilter] =
@@ -383,6 +395,9 @@ export const DataPanel = memo(function DataPanel({
     useState<string | null>(null);
   useEffect(() => {
     setExportRouteDetailIndexFilter("");
+    setExportRouteDetailIndexAvailabilityFilter("ALL");
+    setExportRouteDetailIndexBusinessFilter("ALL");
+    setExportRouteDetailIndexBottleneckFilter("ALL");
   }, [runtimeExportComparePackageId]);
   const summary = buildDataPanelDisplaySummary(
     buildDataPanelSummary(snapshot),
@@ -462,6 +477,25 @@ export const DataPanel = memo(function DataPanel({
     runtimeExportRouteDetailIndexLoading,
     runtimeExportRouteDetailIndexError
   );
+  const requestRuntimeExportRouteDetailPage = (
+    cursor: number,
+    filterOverrides: DataPanelRouteExplanationFilter = {}
+  ) => {
+    onRuntimeExportRouteDetailPageQueryChange?.({
+      cursor,
+      limit: exportRouteDetailIndexStatus?.pageLimit ?? 5,
+      filters: {
+        query: filterOverrides.query ?? exportRouteDetailIndexFilter,
+        availability:
+          filterOverrides.availability ?? exportRouteDetailIndexAvailabilityFilter,
+        businessType:
+          filterOverrides.businessType ?? exportRouteDetailIndexBusinessFilter,
+        bottleneckComponent:
+          filterOverrides.bottleneckComponent ??
+          exportRouteDetailIndexBottleneckFilter
+      }
+    });
+  };
   const exportManifestInspectorDisplay = buildDataPanelExportManifestInspectorDisplay(
     runtimeExportManifest,
     runtimeExportComparePackageId,
@@ -1324,11 +1358,105 @@ export const DataPanel = memo(function DataPanel({
                       onChange={(event) => {
                         const query = event.currentTarget.value;
                         setExportRouteDetailIndexFilter(query);
-                        onRuntimeExportRouteDetailPageQueryChange?.(query);
+                        requestRuntimeExportRouteDetailPage(0, { query });
                       }}
                       placeholder="route / user / satellite / service / bottleneck"
                     />
                   </label>
+                  <label
+                    className="data-panel-export-route-index-search"
+                    htmlFor="data-panel-export-route-index-availability"
+                  >
+                    <span>availability</span>
+                    <select
+                      id="data-panel-export-route-index-availability"
+                      value={exportRouteDetailIndexAvailabilityFilter}
+                      onChange={(event) => {
+                        const availability = event.currentTarget
+                          .value as DataPanelRouteExplanationAvailabilityFilter;
+                        setExportRouteDetailIndexAvailabilityFilter(availability);
+                        requestRuntimeExportRouteDetailPage(0, { availability });
+                      }}
+                    >
+                      <option value="ALL">ALL</option>
+                      <option value="AVAILABLE">AVAILABLE</option>
+                      <option value="BLOCKED">BLOCKED</option>
+                    </select>
+                  </label>
+                  <label
+                    className="data-panel-export-route-index-search"
+                    htmlFor="data-panel-export-route-index-business"
+                  >
+                    <span>business</span>
+                    <select
+                      id="data-panel-export-route-index-business"
+                      value={exportRouteDetailIndexBusinessFilter}
+                      onChange={(event) => {
+                        const businessType = event.currentTarget.value;
+                        setExportRouteDetailIndexBusinessFilter(businessType);
+                        requestRuntimeExportRouteDetailPage(0, { businessType });
+                      }}
+                    >
+                      <option value="ALL">ALL</option>
+                      <option value="COMPUTE_SERVICE">COMPUTE_SERVICE</option>
+                      <option value="DATA_TRANSFER">DATA_TRANSFER</option>
+                      <option value="BULK_DOWNLINK">BULK_DOWNLINK</option>
+                    </select>
+                  </label>
+                  <label
+                    className="data-panel-export-route-index-search"
+                    htmlFor="data-panel-export-route-index-bottleneck"
+                  >
+                    <span>bottleneck</span>
+                    <select
+                      id="data-panel-export-route-index-bottleneck"
+                      value={exportRouteDetailIndexBottleneckFilter}
+                      onChange={(event) => {
+                        const bottleneckComponent = event.currentTarget.value;
+                        setExportRouteDetailIndexBottleneckFilter(bottleneckComponent);
+                        requestRuntimeExportRouteDetailPage(0, {
+                          bottleneckComponent
+                        });
+                      }}
+                    >
+                      <option value="ALL">ALL</option>
+                      <option value="CAPACITY">CAPACITY</option>
+                      <option value="AVAILABILITY">AVAILABILITY</option>
+                      <option value="LOSS_PROXY">LOSS_PROXY</option>
+                      <option value="PATH">PATH</option>
+                      <option value="NONE">NONE</option>
+                    </select>
+                  </label>
+                  <div className="data-panel-export-route-index-pager">
+                    <button
+                      type="button"
+                      disabled={
+                        !exportRouteDetailIndexStatus.canPreviousPage ||
+                        !onRuntimeExportRouteDetailPageQueryChange
+                      }
+                      onClick={() =>
+                        requestRuntimeExportRouteDetailPage(
+                          exportRouteDetailIndexStatus.previousCursor
+                        )
+                      }
+                    >
+                      Previous
+                    </button>
+                    <button
+                      type="button"
+                      disabled={
+                        !exportRouteDetailIndexStatus.canNextPage ||
+                        !onRuntimeExportRouteDetailPageQueryChange
+                      }
+                      onClick={() =>
+                        requestRuntimeExportRouteDetailPage(
+                          exportRouteDetailIndexStatus.nextCursor
+                        )
+                      }
+                    >
+                      Next
+                    </button>
+                  </div>
                   <span>{exportRouteDetailIndexStatus.filterLabel}</span>
                 </div>
               ) : null}
@@ -8885,6 +9013,12 @@ export interface DataPanelExportRouteDetailIndexDisplay {
   boundaryLabels: readonly string[];
   routeRows: readonly DataPanelExportRouteDetailIndexRouteRow[];
   filterLabel: string;
+  pageCursor: number;
+  pageLimit: number;
+  previousCursor: number;
+  nextCursor: number;
+  canPreviousPage: boolean;
+  canNextPage: boolean;
   indexHref: string;
 }
 
@@ -8896,6 +9030,12 @@ export interface DataPanelExportRouteDetailIndexStatus {
   boundaryLabels: readonly string[];
   routeRows: readonly DataPanelExportRouteDetailIndexRouteRow[];
   filterLabel: string;
+  pageCursor: number;
+  pageLimit: number;
+  previousCursor: number;
+  nextCursor: number;
+  canPreviousPage: boolean;
+  canNextPage: boolean;
   indexHref: string | null;
 }
 
@@ -8912,6 +9052,12 @@ export interface DataPanelExportRouteDetailIndexRouteRow {
 export interface DataPanelExportRouteDetailIndexDisplayOptions {
   routeLimit?: number;
   query?: string;
+}
+
+export interface DataPanelExportRouteDetailPageRequest {
+  cursor: number;
+  limit?: number;
+  filters?: DataPanelRouteExplanationFilter;
 }
 
 export interface DataPanelExportManifestInspectorDisplay {
@@ -9202,6 +9348,12 @@ export function buildDataPanelExportRouteDetailIndexDisplay(
       routeRows.length,
       routeLimit
     ),
+    pageCursor: 0,
+    pageLimit: routeLimit,
+    previousCursor: 0,
+    nextCursor: routeRows.length,
+    canPreviousPage: false,
+    canNextPage: filteredRoutes.length > routeRows.length,
     indexHref: runtimeExportPackageFileHref(index.package_id, "route_detail_index_v1.json")
   };
 }
@@ -9250,6 +9402,12 @@ export function buildDataPanelExportRouteDetailPageDisplay(
     ],
     routeRows,
     filterLabel: buildRuntimeExportRouteDetailPageFilterLabel(page),
+    pageCursor: page.cursor,
+    pageLimit: page.limit,
+    previousCursor: Math.max(0, page.cursor - page.limit),
+    nextCursor: page.next_cursor,
+    canPreviousPage: page.cursor > 0,
+    canNextPage: page.has_more,
     indexHref: runtimeExportPackageFileHref(page.package_id, "route_detail_index_v1.json")
   };
 }
@@ -9369,6 +9527,12 @@ export function buildDataPanelExportRouteDetailIndexStatus(
       boundaryLabels: [],
       routeRows: [],
       filterLabel: "loading route evidence index",
+      pageCursor: 0,
+      pageLimit: 5,
+      previousCursor: 0,
+      nextCursor: 0,
+      canPreviousPage: false,
+      canNextPage: false,
       indexHref: null
     };
   }
@@ -9381,6 +9545,12 @@ export function buildDataPanelExportRouteDetailIndexStatus(
       boundaryLabels: [],
       routeRows: [],
       filterLabel: "route evidence index unavailable",
+      pageCursor: 0,
+      pageLimit: 5,
+      previousCursor: 0,
+      nextCursor: 0,
+      canPreviousPage: false,
+      canNextPage: false,
       indexHref: null
     };
   }

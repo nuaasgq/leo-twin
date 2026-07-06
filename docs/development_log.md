@@ -13625,3 +13625,52 @@ change.
   - Add cursor controls and filter dropdowns for package-owned route evidence
     pages so large result packages can be reviewed without opening the full
     index artifact.
+
+## 2026-07-06 - Dashboard Route Page Controls v1
+
+- Branch: `feature/T284-dashboard-route-page-controls-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add package route evidence page controls to the standalone dashboard.
+  The export review drawer now sends cursor previous/next requests and
+  availability, business type, and bottleneck filters to the package-owned
+  `/runtime/export/packages/{package_id}/routes` endpoint. The dashboard still
+  keeps the full `route_detail_index_v1.json` artifact as a direct review link
+  and does not recompute routes locally.
+- Changed files/modules:
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/dashboard_model_trust_evidence_workspace_v1.md`
+  - `docs/result_package_contract_v1.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_result_package_contract_v1.py tests/unit/test_user_guide_v2_docs.py -q`
+    - Result: passed, 11 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with bundled Codex Node/Pnpm runtime.
+  - `git diff --check`
+    - Result: passed for task files. Git reported existing CRLF warnings for
+      the unstaged runtime config drift files.
+  - `pnpm --dir frontend test api.test.ts dataPanel.test.ts`
+    - Result: passed, 2 test files and 189 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing large DataPanel chunk
+      warning after minification; no functional build error.
+- Problems encountered:
+  - No product code blocker. The only validation warning was the pre-existing
+    local runtime config drift CRLF notice for `configs/generated_full_system_demo.json`
+    and `configs/sees_control.yaml`; both files remain untouched and unstaged
+    for this task.
+- Known remaining issues:
+  - Package route page size remains fixed at 5 rows from the dashboard request.
+    A later UI task can expose page-size selection if operators need denser
+    package review.
+  - Filter options are intentionally fixed to the current backend-supported
+    enum-style values instead of deriving arbitrary values from package rows.
+- Recommended follow-up:
+  - Add selected package route exact-detail rendering from
+    `/runtime/export/packages/{package_id}/routes/{route_id}` so package review
+    can inspect a route without relying on the live runtime detail endpoint.

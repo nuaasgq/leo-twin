@@ -157,8 +157,9 @@ packets.
 The standalone dashboard loads the selected package's route evidence through
 `GET /runtime/export/packages/{package_id}/routes` and renders a read-only
 route evidence drawer with indexed route counts, export-window policy,
-server-filtered sample route rows, route evidence search, row actions for live
-route-detail lookup, and a direct JSON link. The full
+server-filtered sample route rows, cursor controls, route evidence search,
+availability/business/bottleneck filters, row actions for live route-detail
+lookup, and a direct JSON link. The full
 `route_detail_index_v1.json` file remains downloadable, but it is not fetched
 by the dashboard by default. The live route-detail action is a read-only
 comparison aid: it uses the current runtime detail endpoint when the same route

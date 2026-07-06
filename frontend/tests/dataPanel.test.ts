@@ -2677,6 +2677,12 @@ describe("buildDataPanelExportCompareDisplay", () => {
       ],
       filterLabel:
         "shown 2/12 / query sat-0 / AVAILABLE / COMPUTE_SERVICE / server page",
+      pageCursor: 0,
+      pageLimit: 2,
+      previousCursor: 0,
+      nextCursor: 2,
+      canPreviousPage: false,
+      canNextPage: true,
       indexHref:
         "/runtime/export/packages/pkg-review/files/route_detail_index_v1.json"
     });

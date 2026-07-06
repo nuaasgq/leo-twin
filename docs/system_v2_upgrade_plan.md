@@ -223,6 +223,10 @@ Tasks:
     requests now use backend package filters, and the full
     `route_detail_index_v1.json` artifact remains a direct review link rather
     than a default frontend payload.
+  - Status: T284 adds cursor previous/next controls and availability, business,
+    and bottleneck filters to the dashboard package route evidence drawer. The
+    controls call the package-owned route page endpoint instead of filtering
+    locally.
 
 ### WS4. Compute Network Model v2
 

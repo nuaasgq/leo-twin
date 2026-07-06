@@ -2876,7 +2876,7 @@ button.data-panel-route-row {
 
 .data-panel-export-route-index-tools {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) auto;
+  grid-template-columns: minmax(180px, 1.4fr) repeat(3, minmax(120px, 0.8fr)) auto;
   align-items: end;
   gap: 8px;
   min-width: 0;
@@ -2902,7 +2902,8 @@ button.data-panel-route-row {
   font-weight: 900;
 }
 
-.data-panel-export-route-index-search input {
+.data-panel-export-route-index-search input,
+.data-panel-export-route-index-search select {
   min-width: 0;
   width: 100%;
   border: 1px solid #2c4554;
@@ -2912,6 +2913,29 @@ button.data-panel-route-row {
   color: var(--app-text);
   font-size: 11px;
   font-weight: 700;
+}
+
+.data-panel-export-route-index-pager {
+  display: flex;
+  gap: 5px;
+  min-width: 0;
+}
+
+.data-panel-export-route-index-pager button {
+  min-width: 64px;
+  border: 1px solid #2a4658;
+  border-radius: 5px;
+  padding: 6px 8px;
+  background: #101922;
+  color: var(--accent-cyan);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.data-panel-export-route-index-pager button:disabled {
+  cursor: default;
+  opacity: 0.45;
 }
 
 .data-panel-export-diagnostics-findings a,

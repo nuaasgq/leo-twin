@@ -71,7 +71,10 @@ import {
   validateUserConfigurationCandidate,
   validateUserConfigurationTextCandidate
 } from "./api";
-import type { RuntimeDetailPages } from "../dashboard/data_panel/DataPanel";
+import type {
+  DataPanelExportRouteDetailPageRequest,
+  RuntimeDetailPages
+} from "../dashboard/data_panel/DataPanel";
 import "./App.css";
 
 const RUNTIME_STATUS_POLL_MS = 250;
@@ -1143,16 +1146,19 @@ export function App() {
   }, []);
 
   const refreshRuntimeExportRouteDetailPage = useCallback(
-    async (query: string) => {
+    async (request: DataPanelExportRouteDetailPageRequest) => {
       const packageId = runtimeExportComparePackageId;
       if (packageId === null) {
         return;
       }
+      const cursor = Math.max(0, request.cursor);
+      const limit = request.limit ?? 5;
+      const filters: RuntimeDetailQueryFilters = request.filters ?? {};
       setRuntimeExportRouteDetailIndexLoading(true);
       setRuntimeExportRouteDetailIndexError(null);
       try {
         setRuntimeExportRouteDetailPage(
-          await loadRuntimeExportRouteDetailPage(packageId, 0, 5, { query })
+          await loadRuntimeExportRouteDetailPage(packageId, cursor, limit, filters)
         );
       } catch (error) {
         setRuntimeExportRouteDetailPage(null);
