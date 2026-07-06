@@ -4013,7 +4013,11 @@ export function selectRuntimeUserRequestSummary(
   runtimeStatus: RuntimeStatusPayload,
   runtimeDetailPages: RuntimeDetailPages | null | undefined
 ): RuntimeUserRequestSummaryV1 | null | undefined {
-  return runtimeDetailPages?.users ?? runtimeStatus.user_request_summary_v1;
+  return (
+    runtimeDetailPages?.users ??
+    runtimeStatus.user_service_request_summary_v2 ??
+    runtimeStatus.user_request_summary_v1
+  );
 }
 
 export function selectRuntimeSatelliteServiceSummary(
@@ -8076,8 +8080,12 @@ function buildBackendUserBusinessRequestRows(
     0,
     summary.window_active_user_count ?? summary.active_user_count
   );
+  const sourceLabel =
+    summary.version === "v2"
+      ? "backend user_service_request_summary_v2"
+      : "backend user_request_summary_v1";
   return {
-    sourceLabel: "backend user_request_summary_v1",
+    sourceLabel,
     summaryLabel: `${formatCount(items.length)} shown / ${formatCount(
       summary.user_count
     )} total / active ${formatCount(

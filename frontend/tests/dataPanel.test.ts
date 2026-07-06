@@ -140,6 +140,7 @@ import {
   FidelitySummary,
   GeneratedScenarioConfig,
   RuntimeStatusPayload,
+  RuntimeUserServiceRequestSummaryV2,
   UserConfigurationValidationReportV1
 } from "../src/core/event_types";
 import { WorldSnapshot } from "../src/state/snapshot_engine";
@@ -321,6 +322,42 @@ describe("runtime detail page selection", () => {
         compute_service_user_count: 0,
         waiting_user_count: 0,
         hidden_user_count: 1,
+        items: []
+      },
+      user_service_request_summary_v2: {
+        version: "v2",
+        source: "BACKEND_RUNTIME_STATUS",
+        summary_scope: "USER_SERVICE_REQUEST_WINDOW",
+        request_model: "FLOW_LEVEL_USER_SERVICE_REQUEST_PROXY",
+        route_model: "FLOW_LEVEL_ROUTE_PROXY",
+        compute_model: "SERVICE_LIFECYCLE_PROXY",
+        packet_level_simulation: false,
+        frontend_inference_required: false,
+        cursor: 20,
+        limit: 100,
+        next_cursor: 21,
+        has_more: false,
+        user_count: 2,
+        request_count: 2,
+        item_count: 1,
+        active_user_count: 1,
+        active_request_count: 1,
+        communication_request_count: 1,
+        compute_service_user_count: 0,
+        compute_request_count: 0,
+        waiting_user_count: 0,
+        network_waiting_request_count: 0,
+        completed_request_count: 0,
+        window_user_count: 1,
+        window_request_count: 1,
+        window_active_user_count: 1,
+        window_active_request_count: 1,
+        window_compute_service_user_count: 0,
+        window_compute_request_count: 0,
+        window_waiting_user_count: 0,
+        window_network_waiting_request_count: 0,
+        hidden_user_count: 1,
+        hidden_request_count: 1,
         items: []
       },
       satellite_service_summary_v1: {
@@ -593,7 +630,10 @@ describe("runtime detail page selection", () => {
       selectRuntimeRouteExplanationSummary(runtimeStatus, detailPages)?.items[0]
         .route_id
     ).toBe("route-page");
-    expect(selectRuntimeUserRequestSummary(runtimeStatus, null)?.cursor).toBeUndefined();
+    expect(selectRuntimeUserRequestSummary(runtimeStatus, null)?.cursor).toBe(20);
+    expect(selectRuntimeUserRequestSummary(runtimeStatus, null)?.source).toBe(
+      "BACKEND_RUNTIME_STATUS"
+    );
     expect(selectRuntimeNodeDetailSummary(runtimeStatus, null)?.users[0].title).toBe(
       "状态用户"
     );
@@ -9824,6 +9864,100 @@ describe("buildUserBusinessRequestRows", () => {
       latencyCapacityLabel: "0.12 s / 80 Mbps",
       serviceLabel:
         "通信-计算服务 / 计算服务进行中 / task-0 active / total 330 ms / in 120 ms + queue 10 ms + exec 200 ms / input route-a / output route-out"
+    });
+  });
+
+  it("labels backend user service request v2 summaries", () => {
+    const backendSummary: RuntimeUserServiceRequestSummaryV2 = {
+      version: "v2",
+      source: "BACKEND_RUNTIME_STATUS",
+      request_model: "FLOW_LEVEL_USER_SERVICE_REQUEST_PROXY",
+      route_model: "FLOW_LEVEL_ROUTE_PROXY",
+      compute_model: "SERVICE_LIFECYCLE_PROXY",
+      packet_level_simulation: false,
+      frontend_inference_required: false,
+      user_count: 1,
+      request_count: 1,
+      item_count: 1,
+      active_user_count: 1,
+      active_request_count: 1,
+      communication_request_count: 1,
+      compute_service_user_count: 0,
+      compute_request_count: 0,
+      waiting_user_count: 0,
+      network_waiting_request_count: 0,
+      completed_request_count: 0,
+      window_user_count: 1,
+      window_request_count: 1,
+      window_active_user_count: 1,
+      window_active_request_count: 1,
+      window_compute_service_user_count: 0,
+      window_compute_request_count: 0,
+      window_waiting_user_count: 0,
+      window_network_waiting_request_count: 0,
+      hidden_user_count: 0,
+      hidden_request_count: 0,
+      items: [
+        {
+          user_id: "user-0",
+          platform_type: "GROUND_USER_TERMINAL",
+          communication_route_count: 1,
+          available_route_count: 1,
+          compute_service_count: 0,
+          network_queue_count: 0,
+          selected_satellite_id: "sat-0",
+          destination_id: "service-0",
+          status: "ACTIVE/AVAILABLE",
+          primary_route_id: "route-a",
+          primary_flow_id: "flow-a",
+          primary_next_hop_id: "sat-0",
+          active_business_type: "DATA_TRANSFER",
+          active_business_label: "Data transfer",
+          request_state: "NETWORK_SERVICE_READY",
+          request_state_label: "Network service route ready",
+          path: ["user-0", "sat-0", "service-0"],
+          request_id: "flow-a",
+          service_request_id: "flow-a",
+          service_class: "DATA_TRANSFER",
+          service_class_label: "Data transfer",
+          business_type: "DATA_TRANSFER",
+          business_label: "Data transfer",
+          request_active: true,
+          communication_request_active: true,
+          compute_request_active: false,
+          network_waiting: false,
+          terminal_state: "RUNNING_NETWORK_SERVICE",
+          terminal_state_label: "Running network service",
+          route_id: "route-a",
+          flow_id: "flow-a",
+          task_id: "",
+          target_node_id: "service-0",
+          next_hop_id: "sat-0",
+          network_queue_depth: 0,
+          route_available: true,
+          input_output_coupled: false,
+          latency_components_observed: false,
+          route_model: "FLOW_LEVEL_ROUTE_PROXY",
+          service_model: "FLOW_LEVEL_COMMUNICATION_COMPUTE_PROXY",
+          packet_level_simulation: false,
+          status_digest:
+            "DATA_TRANSFER/NETWORK_SERVICE_READY/RUNNING_NETWORK_SERVICE/sat-0"
+        }
+      ]
+    };
+
+    const rows = buildUserBusinessRequestRows(
+      makeSnapshot({
+        ground_users: [{ user_id: "user-0", status: "ACTIVE" }]
+      }),
+      undefined,
+      backendSummary
+    );
+
+    expect(rows.sourceLabel).toBe("backend user_service_request_summary_v2");
+    expect(rows.items[0]).toMatchObject({
+      userId: "user-0",
+      serviceLabel: "Data transfer / Network service route ready / flow-a"
     });
   });
 

@@ -15785,3 +15785,54 @@ change.
 - Recommended follow-up:
   - Add a package-level benchmark comparison drawer that can compare multiple
     saved result packages' KPI benchmark validation statuses and hashes.
+
+## 2026-07-06 - User Service Request Summary v2
+
+- Branch: `feature/T326-user-service-request-summary-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a backend-owned `user_service_request_summary_v2` runtime status
+  object so the standalone dashboard can display per-user business request
+  state from backend semantics rather than local inference. The new summary
+  reuses existing visible snapshot routes and `service_latency_history_v1`,
+  preserves `user_request_summary_v1`, and reports communication/compute
+  request class, terminal state, queue state, target satellite/node, lifecycle
+  correlation ids, model assumptions, field sources, and deterministic row
+  hashes.
+- Changed files/modules:
+  - `src/leo_twin/services/runtime_observability.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `tests/unit/test_runtime_observability.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m compileall -q src\leo_twin\services\runtime_observability.py`
+    - Result: passed.
+  - `python -m pytest tests\unit\test_runtime_observability.py tests\integration\test_runtime_session_control.py -q`
+    - Result: passed, 31 tests.
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 1 test
+      file and 184 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path. Vite
+      reported the existing large DataPanel chunk warning.
+- Problems encountered:
+  - The first new unit assertion used a stale mojibake expectation for the
+    compute-service label. The assertion was corrected to the runtime's actual
+    Chinese label, `通信-计算服务`.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The v2 summary is still a flow-level request-state proxy. It does not add
+    packet-level traffic, RF modeling, or new business-generation behavior.
+  - The server-side `/runtime/details/users` cursor endpoint still returns the
+    compatible v1 page; the live runtime status path is the first consumer of
+    v2 semantics.
+- Recommended follow-up:
+  - Add a server-side paginated `user_service_request_summary_v2` detail
+    endpoint so large user sets can browse the same v2 semantics without
+    relying on the bounded runtime status window.

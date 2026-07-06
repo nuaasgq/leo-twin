@@ -65,6 +65,12 @@ def build_runtime_lifecycle_summaries(
         cursor=user_cursor,
         limit=user_limit,
     )
+    user_service_summary = build_runtime_user_service_request_summary_v2(
+        snapshot,
+        service_latency_history=service_latency_history,
+        cursor=user_cursor,
+        limit=user_limit,
+    )
     satellite_summary = build_runtime_satellite_service_summary(
         snapshot,
         service_latency_history=service_latency_history,
@@ -78,6 +84,7 @@ def build_runtime_lifecycle_summaries(
     )
     return {
         "user_request_summary_v1": user_summary,
+        "user_service_request_summary_v2": user_service_summary,
         "satellite_service_summary_v1": satellite_summary,
         "route_explanation_summary_v1": route_explanation_summary,
         "route_provenance_trust_summary_v1": (
@@ -450,6 +457,33 @@ def build_runtime_user_request_summary(
     routes = tuple(_records(snapshot.get("routes")))
     users = tuple(_records(snapshot.get("ground_users")))
     return _user_request_summary(
+        users,
+        routes,
+        service_lookup,
+        service_detail_lookup,
+        cursor=cursor,
+        limit=limit,
+        query=query,
+    )
+
+
+def build_runtime_user_service_request_summary_v2(
+    snapshot: Mapping[str, Any],
+    *,
+    service_latency_history: Mapping[str, Any] | None = None,
+    cursor: int = 0,
+    limit: int = 1000,
+    query: str = "",
+) -> dict[str, object]:
+    """Build backend-owned per-user communication/compute request state rows."""
+
+    if not isinstance(snapshot, Mapping):
+        raise TypeError("snapshot must be a mapping")
+    service_lookup = _service_lookup(service_latency_history)
+    service_detail_lookup = _service_detail_lookup(service_latency_history)
+    routes = tuple(_records(snapshot.get("routes")))
+    users = tuple(_records(snapshot.get("ground_users")))
+    return _user_service_request_summary_v2(
         users,
         routes,
         service_lookup,
@@ -1038,16 +1072,12 @@ def build_runtime_compute_node_detail_item(
     )
 
 
-def _user_request_summary(
+def _user_request_items(
     users: tuple[Mapping[str, Any], ...],
     routes: tuple[Mapping[str, Any], ...],
     service_lookup: Mapping[str, str],
     service_detail_lookup: Mapping[str, Mapping[str, Any]],
-    *,
-    cursor: int,
-    limit: int,
-    query: str,
-) -> dict[str, object]:
+) -> tuple[dict[str, object], ...]:
     routes_by_user: dict[str, list[Mapping[str, Any]]] = {}
     for route in routes:
         user_id = _route_user_id(route)
@@ -1064,7 +1094,7 @@ def _user_request_summary(
             key=_entity_sort_key,
         )
     )
-    all_items = tuple(
+    return tuple(
         _user_item(
             user_id,
             user_by_id.get(user_id),
@@ -1073,6 +1103,24 @@ def _user_request_summary(
             service_detail_lookup,
         )
         for user_id in user_ids
+    )
+
+
+def _user_request_summary(
+    users: tuple[Mapping[str, Any], ...],
+    routes: tuple[Mapping[str, Any], ...],
+    service_lookup: Mapping[str, str],
+    service_detail_lookup: Mapping[str, Mapping[str, Any]],
+    *,
+    cursor: int,
+    limit: int,
+    query: str,
+) -> dict[str, object]:
+    all_items = _user_request_items(
+        users,
+        routes,
+        service_lookup,
+        service_detail_lookup,
     )
     filtered_items = tuple(
         item for item in all_items if _detail_item_matches_query(item, query)
@@ -1126,12 +1174,252 @@ def _user_request_summary(
     if filter_query:
         result.update(
             {
-                "unfiltered_user_count": len(user_ids),
+                "unfiltered_user_count": len(all_items),
                 "filter_query": filter_query,
                 "filter_applied": True,
             }
         )
     return result
+
+
+def _user_service_request_summary_v2(
+    users: tuple[Mapping[str, Any], ...],
+    routes: tuple[Mapping[str, Any], ...],
+    service_lookup: Mapping[str, str],
+    service_detail_lookup: Mapping[str, Mapping[str, Any]],
+    *,
+    cursor: int,
+    limit: int,
+    query: str,
+) -> dict[str, object]:
+    all_items = tuple(
+        _user_service_request_item_v2(item)
+        for item in _user_request_items(
+            users,
+            routes,
+            service_lookup,
+            service_detail_lookup,
+        )
+    )
+    filtered_items = tuple(
+        item for item in all_items if _detail_item_matches_query(item, query)
+    )
+    active_count = sum(1 for item in filtered_items if bool(item["request_active"]))
+    compute_count = sum(
+        1 for item in filtered_items if bool(item["compute_request_active"])
+    )
+    waiting_count = sum(1 for item in filtered_items if bool(item["network_waiting"]))
+    communication_count = sum(
+        1 for item in filtered_items if bool(item["communication_request_active"])
+    )
+    completed_count = sum(
+        1 for item in filtered_items if item["terminal_state"] == "COMPLETED"
+    )
+    normalized_cursor = _page_cursor(cursor)
+    normalized_limit = _page_limit(limit)
+    items = filtered_items[
+        normalized_cursor : normalized_cursor + normalized_limit
+    ]
+    next_cursor = min(len(filtered_items), normalized_cursor + len(items))
+    filter_query = _normalized_filter_text(query)
+    result: dict[str, object] = {
+        "version": "v2",
+        "source": "BACKEND_RUNTIME_STATUS",
+        "summary_scope": (
+            "FILTERED_USER_SERVICE_REQUEST_WINDOW"
+            if filter_query
+            else "USER_SERVICE_REQUEST_WINDOW"
+        ),
+        "request_model": "FLOW_LEVEL_USER_SERVICE_REQUEST_PROXY",
+        "route_model": "FLOW_LEVEL_ROUTE_PROXY",
+        "compute_model": "SERVICE_LIFECYCLE_PROXY",
+        "packet_level_simulation": False,
+        "frontend_inference_required": False,
+        "cursor": normalized_cursor,
+        "limit": normalized_limit,
+        "next_cursor": next_cursor,
+        "has_more": next_cursor < len(filtered_items),
+        "user_count": len(filtered_items),
+        "request_count": len(filtered_items),
+        "item_count": len(items),
+        "active_user_count": active_count,
+        "active_request_count": active_count,
+        "communication_request_count": communication_count,
+        "compute_service_user_count": compute_count,
+        "compute_request_count": compute_count,
+        "waiting_user_count": waiting_count,
+        "network_waiting_request_count": waiting_count,
+        "completed_request_count": completed_count,
+        "window_user_count": len(items),
+        "window_request_count": len(items),
+        "window_active_user_count": sum(
+            1 for item in items if bool(item["request_active"])
+        ),
+        "window_active_request_count": sum(
+            1 for item in items if bool(item["request_active"])
+        ),
+        "window_compute_service_user_count": sum(
+            1 for item in items if bool(item["compute_request_active"])
+        ),
+        "window_compute_request_count": sum(
+            1 for item in items if bool(item["compute_request_active"])
+        ),
+        "window_waiting_user_count": sum(
+            1 for item in items if bool(item["network_waiting"])
+        ),
+        "window_network_waiting_request_count": sum(
+            1 for item in items if bool(item["network_waiting"])
+        ),
+        "hidden_user_count": max(0, len(filtered_items) - len(items)),
+        "hidden_request_count": max(0, len(filtered_items) - len(items)),
+        "service_class_counts": _service_request_counts(
+            filtered_items,
+            "service_class",
+            "service_class",
+        ),
+        "terminal_state_counts": _service_request_counts(
+            filtered_items,
+            "terminal_state",
+            "terminal_state",
+        ),
+        "field_sources": {
+            "request_state": "route availability plus service lifecycle state",
+            "service_class": "selected route business type",
+            "selected_satellite_id": "selected route path first satellite",
+            "compute_node_id": "service_latency_history_v1 placement fields",
+            "latency_components": "service_latency_history_v1 component latencies",
+        },
+        "model_assumptions": (
+            "One row summarizes the current flow-level request state for one user.",
+            "Compute service rows are correlated by input/output flow id when lifecycle history is available.",
+            "Packet-level behavior is not simulated.",
+        ),
+        "items": items,
+    }
+    if filter_query:
+        result.update(
+            {
+                "unfiltered_user_count": len(all_items),
+                "unfiltered_request_count": len(all_items),
+                "filter_query": filter_query,
+                "filter_applied": True,
+            }
+        )
+    return result
+
+
+def _user_service_request_item_v2(item: Mapping[str, Any]) -> dict[str, object]:
+    row = dict(item)
+    service_class = _str(row.get("active_business_type")) or "NONE"
+    service_label = _str(row.get("active_business_label")) or service_class
+    terminal_state = _user_service_terminal_state(row)
+    request_id = _user_service_request_id(row)
+    row.update(
+        {
+            "request_id": request_id,
+            "service_request_id": request_id,
+            "service_class": service_class,
+            "service_class_label": service_label,
+            "business_type": service_class,
+            "business_label": service_label,
+            "request_active": terminal_state != "IDLE",
+            "communication_request_active": (
+                _count(row.get("communication_route_count")) > 0
+            ),
+            "compute_request_active": _count(row.get("compute_service_count")) > 0,
+            "network_waiting": _count(row.get("network_queue_count")) > 0,
+            "terminal_state": terminal_state,
+            "terminal_state_label": _user_service_terminal_state_label(
+                terminal_state
+            ),
+            "route_id": _str(row.get("primary_route_id")),
+            "flow_id": _str(row.get("primary_flow_id")),
+            "task_id": _str(row.get("service_task_id")),
+            "target_node_id": _str(row.get("destination_id")),
+            "next_hop_id": _str(row.get("primary_next_hop_id")),
+            "network_queue_depth": _count(row.get("network_queue_count")),
+            "route_available": _count(row.get("available_route_count")) > 0,
+            "input_output_coupled": bool(
+                _str(row.get("input_route_id")) or _str(row.get("output_route_id"))
+            ),
+            "latency_components_observed": any(
+                _optional_float(row.get(key)) is not None
+                for key in (
+                    "input_network_latency_s",
+                    "compute_queue_delay_s",
+                    "compute_execution_delay_s",
+                    "output_network_latency_s",
+                )
+            ),
+            "route_model": "FLOW_LEVEL_ROUTE_PROXY",
+            "service_model": "FLOW_LEVEL_COMMUNICATION_COMPUTE_PROXY",
+            "packet_level_simulation": False,
+        }
+    )
+    row["status_digest"] = _join_non_empty(
+        _str(row.get("service_class")),
+        _str(row.get("request_state")),
+        _str(row.get("terminal_state")),
+        _str(row.get("selected_satellite_id")) or "no-satellite",
+        separator="/",
+    )
+    row["detail_hash"] = stable_hash_payload(row)
+    return row
+
+
+def _user_service_request_id(item: Mapping[str, Any]) -> str:
+    task_id = _str(item.get("service_task_id"))
+    if task_id.endswith("-task"):
+        return task_id[: -len("-task")]
+    if task_id:
+        return task_id
+    flow_id = _str(item.get("primary_flow_id"))
+    if flow_id:
+        return flow_id
+    route_id = _str(item.get("primary_route_id"))
+    if route_id:
+        return route_id
+    user_id = _str(item.get("user_id")) or "unknown-user"
+    return f"{user_id}:idle"
+
+
+def _user_service_terminal_state(item: Mapping[str, Any]) -> str:
+    request_state = _str(item.get("request_state"))
+    if request_state == "IDLE":
+        return "IDLE"
+    if bool(item.get("service_complete")):
+        return "COMPLETED"
+    if _count(item.get("network_queue_count")) > 0:
+        return "WAITING_NETWORK"
+    if request_state.startswith("COMPUTE_SERVICE"):
+        return "RUNNING_COMPUTE_SERVICE"
+    return "RUNNING_NETWORK_SERVICE"
+
+
+def _user_service_terminal_state_label(terminal_state: str) -> str:
+    labels = {
+        "IDLE": "Idle",
+        "COMPLETED": "Completed",
+        "WAITING_NETWORK": "Waiting for network",
+        "RUNNING_COMPUTE_SERVICE": "Running compute service",
+        "RUNNING_NETWORK_SERVICE": "Running network service",
+    }
+    return labels.get(terminal_state, terminal_state)
+
+
+def _service_request_counts(
+    items: Sequence[Mapping[str, Any]],
+    source_key: str,
+    output_key: str,
+) -> tuple[dict[str, object], ...]:
+    counts: dict[str, int] = {}
+    for item in items:
+        key = _str(item.get(source_key)) or "UNKNOWN"
+        counts[key] = counts.get(key, 0) + 1
+    return tuple(
+        {output_key: key, "request_count": counts[key]}
+        for key in sorted(counts, key=_entity_sort_key)
+    )
 
 
 def _user_item(

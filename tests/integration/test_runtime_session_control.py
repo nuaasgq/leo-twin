@@ -442,6 +442,30 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
         "request_state",
         "path",
     }.issubset(user_summary["items"][0])
+    user_service_summary = status_after_tick["user_service_request_summary_v2"]
+    assert user_service_summary["version"] == "v2"
+    assert user_service_summary["source"] == "BACKEND_RUNTIME_STATUS"
+    assert user_service_summary["request_model"] == (
+        "FLOW_LEVEL_USER_SERVICE_REQUEST_PROXY"
+    )
+    assert user_service_summary["packet_level_simulation"] is False
+    assert user_service_summary["frontend_inference_required"] is False
+    assert user_service_summary["item_count"] == len(user_service_summary["items"])
+    assert user_service_summary["request_count"] >= user_service_summary["item_count"]
+    assert user_service_summary["items"]
+    assert {
+        "request_id",
+        "user_id",
+        "service_class",
+        "request_state",
+        "terminal_state",
+        "selected_satellite_id",
+        "target_node_id",
+        "network_queue_depth",
+        "route_model",
+        "service_model",
+        "detail_hash",
+    }.issubset(user_service_summary["items"][0])
     user_history = status_after_tick["user_request_history_v1"]
     assert user_history["version"] == "v1"
     assert user_history["mode"] == "RECENT_USER_REQUEST_LIMITED"

@@ -122,7 +122,11 @@ Tasks:
     propagates `emergency_weight` through user config, scenario builder,
     integration demo, backend-derived summaries, and service request contracts,
     and adds `TrafficDemandBatch.service_mix_summary()` with per-user active
-    service state rows.
+    service state rows. T326 adds runtime
+    `user_service_request_summary_v2` as a backend-owned per-user
+    communication/compute request state summary. The dashboard now prefers the
+    v2 runtime status object when no server-side user detail page is active,
+    while retaining `user_request_summary_v1` compatibility.
 - V2-013: Add service lifecycle trace.
   - Scope: input flow, queue, compute, output flow, terminal state.
   - Output: timeline records for dashboard and result export.

@@ -342,6 +342,64 @@ def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> No
             },
         ),
     }
+    user_service_summary = first["user_service_request_summary_v2"]
+    assert user_service_summary["version"] == "v2"
+    assert user_service_summary["source"] == "BACKEND_RUNTIME_STATUS"
+    assert user_service_summary["request_model"] == (
+        "FLOW_LEVEL_USER_SERVICE_REQUEST_PROXY"
+    )
+    assert user_service_summary["packet_level_simulation"] is False
+    assert user_service_summary["frontend_inference_required"] is False
+    assert user_service_summary["request_count"] == 2
+    assert user_service_summary["active_request_count"] == 2
+    assert user_service_summary["communication_request_count"] == 2
+    assert user_service_summary["compute_request_count"] == 1
+    assert user_service_summary["network_waiting_request_count"] == 1
+    assert user_service_summary["completed_request_count"] == 0
+    assert user_service_summary["service_class_counts"] == (
+        {"service_class": "COMPUTE_SERVICE", "request_count": 1},
+        {"service_class": "DATA_TRANSFER", "request_count": 1},
+    )
+    assert user_service_summary["terminal_state_counts"] == (
+        {"terminal_state": "RUNNING_COMPUTE_SERVICE", "request_count": 1},
+        {"terminal_state": "WAITING_NETWORK", "request_count": 1},
+    )
+    assert user_service_summary["items"][0] | {
+        "detail_hash": user_service_summary["items"][0]["detail_hash"]
+    } == {
+        **first["user_request_summary_v1"]["items"][0],
+        "detail_hash": user_service_summary["items"][0]["detail_hash"],
+        "request_id": "task-0",
+        "service_request_id": "task-0",
+        "service_class": "COMPUTE_SERVICE",
+        "service_class_label": "通信-计算服务",
+        "business_type": "COMPUTE_SERVICE",
+        "business_label": "通信-计算服务",
+        "request_active": True,
+        "communication_request_active": True,
+        "compute_request_active": True,
+        "network_waiting": False,
+        "terminal_state": "RUNNING_COMPUTE_SERVICE",
+        "terminal_state_label": "Running compute service",
+        "route_id": "route-a",
+        "flow_id": "flow-a",
+        "task_id": "task-0",
+        "target_node_id": "compute-0",
+        "next_hop_id": "sat-0",
+        "network_queue_depth": 0,
+        "route_available": True,
+        "input_output_coupled": True,
+        "latency_components_observed": True,
+        "route_model": "FLOW_LEVEL_ROUTE_PROXY",
+        "service_model": "FLOW_LEVEL_COMMUNICATION_COMPUTE_PROXY",
+        "packet_level_simulation": False,
+        "status_digest": (
+            "COMPUTE_SERVICE/COMPUTE_SERVICE_ACTIVE/"
+            "RUNNING_COMPUTE_SERVICE/sat-0"
+        ),
+    }
+    assert user_service_summary["items"][1]["request_id"] == "flow-b"
+    assert user_service_summary["items"][1]["terminal_state"] == "WAITING_NETWORK"
     assert first["satellite_service_summary_v1"][
         "summary_scope"
     ] == "FULL_SATELLITE_SET_WITH_WINDOW_ITEMS"

@@ -2185,6 +2185,7 @@ export interface RuntimeStatusPayload {
   service_lifecycle_trace_v2?: RuntimeServiceLifecycleTraceV2;
   compute_task_timeline_summary_v1?: RuntimeComputeTaskTimelineSummaryV1;
   user_request_summary_v1?: RuntimeUserRequestSummaryV1;
+  user_service_request_summary_v2?: RuntimeUserServiceRequestSummaryV2;
   user_request_history_v1?: RuntimeUserRequestHistoryV1;
   satellite_service_summary_v1?: RuntimeSatelliteServiceSummaryV1;
   route_explanation_summary_v1?: RuntimeRouteExplanationSummaryV1;
@@ -2568,6 +2569,67 @@ export interface RuntimeUserRequestItemV1 {
   request_state?: string;
   request_state_label?: string;
   path: readonly string[];
+}
+
+export interface RuntimeUserServiceRequestSummaryV2 extends RuntimeUserRequestSummaryV1 {
+  version: "v2" | string;
+  request_model: string;
+  route_model: string;
+  compute_model: string;
+  packet_level_simulation: boolean;
+  frontend_inference_required: boolean;
+  request_count: number;
+  active_request_count: number;
+  communication_request_count: number;
+  compute_request_count: number;
+  network_waiting_request_count: number;
+  completed_request_count: number;
+  window_request_count?: number;
+  window_active_request_count?: number;
+  window_compute_request_count?: number;
+  window_network_waiting_request_count?: number;
+  hidden_request_count: number;
+  unfiltered_request_count?: number;
+  service_class_counts?: readonly RuntimeRequestCountBucketV2[];
+  terminal_state_counts?: readonly RuntimeRequestCountBucketV2[];
+  field_sources?: Readonly<Record<string, string>>;
+  model_assumptions?: readonly string[];
+  items: readonly RuntimeUserServiceRequestItemV2[];
+}
+
+export interface RuntimeRequestCountBucketV2 {
+  service_class?: string;
+  terminal_state?: string;
+  request_count: number;
+}
+
+export interface RuntimeUserServiceRequestItemV2 extends RuntimeUserRequestItemV1 {
+  detail_hash?: string;
+  request_id: string;
+  service_request_id: string;
+  service_class: string;
+  service_class_label: string;
+  business_type: string;
+  business_label: string;
+  request_active: boolean;
+  communication_request_active: boolean;
+  compute_request_active: boolean;
+  network_waiting: boolean;
+  terminal_state: string;
+  terminal_state_label: string;
+  route_id: string;
+  flow_id: string;
+  task_id: string;
+  target_node_id: string;
+  next_hop_id: string;
+  network_queue_depth: number;
+  route_available: boolean;
+  input_output_coupled: boolean;
+  latency_components_observed: boolean;
+  route_model: string;
+  service_model: string;
+  packet_level_simulation: boolean;
+  status_digest: string;
 }
 
 export interface RuntimeUserRequestHistoryV1 {
