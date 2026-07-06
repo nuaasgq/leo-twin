@@ -17053,3 +17053,62 @@ change.
   - Add artifact-aware benchmark row drill-down filters so opening a linked
     artifact can preserve the row context, such as KPI check id or route trust
     sample id.
+
+## 2026-07-07 - T349 benchmark evidence artifact map v1
+
+- Branch: `feature/T349-benchmark-evidence-artifact-map-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: move benchmark-row evidence artifact mapping from frontend-only logic
+  into backend-owned result-package evidence. Each
+  `benchmark_acceptance_binding_v1` result row now includes
+  `evidence_artifact_filename` and `evidence_artifact_role`. Expected-range
+  rows point to `export_package_audit_index_v1.json`, fidelity rows point to
+  `config_snapshot.json`, route-trust rows point to
+  `route_detail_index_v1.json`, and network-KPI rows point to
+  `network_kpi_benchmark_validation_v1.json`. The dashboard consumes those
+  backend fields first and keeps the previous deterministic artifact mapping
+  only as compatibility fallback for older packages. No Event Kernel,
+  simulation model, backend route, result-package replay, KPI recomputation, or
+  package mutation behavior changed.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m compileall -q src\leo_twin\services\result_package_contract.py`
+    - Result: passed.
+  - `python -m pytest tests\unit\test_result_package_contract_v1.py::test_runtime_export_benchmark_acceptance_binding_v1_matches_standard_scenarios tests\unit\test_result_package_contract_v1.py::test_runtime_export_benchmark_acceptance_binding_v1_warns_for_custom_scenario -q`
+    - Result: passed, 2 tests.
+  - `.\node_modules\.bin\tsc.cmd --noEmit -p tsconfig.json` from
+    `frontend`
+    - Result: passed with the bundled Codex Node runtime path.
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 192 tests.
+  - `pnpm --dir frontend test dataPanel.test.ts api.test.ts appSurface.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 3 test
+      files and 279 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path; Vite
+      reported the existing large `DataPanel` chunk warning.
+  - `git diff --check`
+    - Result: passed; Git emitted CRLF warnings for the existing unstaged
+      runtime config drift.
+- Problems encountered:
+  - No implementation blocker. The only validation noise was the existing
+    local runtime config CRLF warning and the existing large `DataPanel` build
+    chunk warning.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - Artifact links still target files, not JSON anchors inside files.
+  - Backend result rows do not yet expose exact route ids or KPI check ids for
+    artifact-local filtering.
+- Recommended follow-up:
+  - Add benchmark evidence context ids, such as route sample ids and KPI check
+    ids, so dashboard drill-downs can filter linked artifacts to the exact
+    row context.

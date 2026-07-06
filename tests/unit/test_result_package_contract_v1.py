@@ -1921,6 +1921,24 @@ def test_runtime_export_benchmark_acceptance_binding_v1_matches_standard_scenari
             result["status"] == "PASS"
             for result in binding["runtime_status_results"]
         )
+        assert {
+            result["evidence_artifact_filename"]
+            for result in binding["expected_range_results"]
+        } == {"export_package_audit_index_v1.json"}
+        assert {
+            result["evidence_artifact_filename"]
+            for result in binding["fidelity_results"]
+        } == {"config_snapshot.json"}
+        runtime_artifacts = {
+            result["check_id"]: result["evidence_artifact_filename"]
+            for result in binding["runtime_status_results"]
+        }
+        assert runtime_artifacts == {
+            "runtime_status.route_trust": "route_detail_index_v1.json",
+            "runtime_status.network_kpi": (
+                "network_kpi_benchmark_validation_v1.json"
+            ),
+        }
         assert binding["binding_hash"].startswith("sha256:")
 
 

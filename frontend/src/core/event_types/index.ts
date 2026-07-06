@@ -2024,6 +2024,8 @@ export interface RuntimeExportBenchmarkAcceptanceResultV1 {
   check_id?: string;
   source?: string;
   status: "PASS" | "WARN" | "FAIL" | string;
+  evidence_artifact_filename?: string;
+  evidence_artifact_role?: string;
   observed_value?: number | string;
   minimum?: number;
   maximum?: number;

@@ -796,7 +796,11 @@ Tasks:
     expected-range checks to the audit index, fidelity checks to
     `config_snapshot.json`, route/trust checks to `route_detail_index_v1.json`,
     KPI checks to `network_kpi_benchmark_validation_v1.json`, and scenario
-    checks to `scenario_review_bundle_v1.json`.
+    checks to `scenario_review_bundle_v1.json`. T349 moves that artifact-map
+    semantic into the backend `benchmark_acceptance_binding_v1` result rows via
+    `evidence_artifact_filename` and `evidence_artifact_role`; the dashboard
+    now consumes those backend fields first and only falls back to the local
+    mapping for older packages.
 
 ### WS9. Delivery and Operations v2
 

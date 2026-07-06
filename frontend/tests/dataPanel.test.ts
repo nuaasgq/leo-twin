@@ -4191,6 +4191,8 @@ describe("buildDataPanelExportCatalogDisplay", () => {
               minimum: 1,
               maximum: 100000,
               unit: "events",
+              evidence_artifact_filename: "export_package_audit_index_v1.json",
+              evidence_artifact_role: "benchmark_acceptance_audit_index",
               issue_labels: [],
               result_hash: "sha256:range"
             }
@@ -4201,6 +4203,8 @@ describe("buildDataPanelExportCatalogDisplay", () => {
               status: "PASS",
               expected: "PER_SATELLITE",
               actual: "PER_SATELLITE",
+              evidence_artifact_filename: "config_snapshot.json",
+              evidence_artifact_role: "runtime_config_snapshot_status",
               issue_labels: [],
               result_hash: "sha256:fidelity"
             }
@@ -4211,6 +4215,8 @@ describe("buildDataPanelExportCatalogDisplay", () => {
               status: "PASS",
               expected: "PASS",
               actual: "PASS",
+              evidence_artifact_filename: "route_detail_index_v1.json",
+              evidence_artifact_role: "route_trust_evidence",
               issue_labels: [],
               result_hash: "sha256:runtime"
             },
@@ -4219,6 +4225,9 @@ describe("buildDataPanelExportCatalogDisplay", () => {
               status: "PASS",
               expected: "PASS",
               actual: "PASS",
+              evidence_artifact_filename:
+                "network_kpi_benchmark_validation_v1.json",
+              evidence_artifact_role: "network_kpi_benchmark_validation",
               issue_labels: [],
               result_hash: "sha256:kpi"
             }
@@ -4259,7 +4268,9 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           hashLabel: "range",
           artifactLabel: "export_package_audit_index_v1.json",
           artifactHref:
-            "/runtime/export/packages/pkg-standard/files/export_package_audit_index_v1.json"
+            "/runtime/export/packages/pkg-standard/files/export_package_audit_index_v1.json",
+          artifactTitle:
+            "export_package_audit_index_v1.json / benchmark_acceptance_audit_index contains the backend-owned evidence for this benchmark row."
         },
         {
           tone: "match",
@@ -4272,7 +4283,9 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           hashLabel: "fidelity",
           artifactLabel: "config_snapshot.json",
           artifactHref:
-            "/runtime/export/packages/pkg-standard/files/config_snapshot.json"
+            "/runtime/export/packages/pkg-standard/files/config_snapshot.json",
+          artifactTitle:
+            "config_snapshot.json / runtime_config_snapshot_status contains the backend-owned evidence for this benchmark row."
         },
         {
           tone: "match",
@@ -4285,7 +4298,9 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           hashLabel: "runtime",
           artifactLabel: "route_detail_index_v1.json",
           artifactHref:
-            "/runtime/export/packages/pkg-standard/files/route_detail_index_v1.json"
+            "/runtime/export/packages/pkg-standard/files/route_detail_index_v1.json",
+          artifactTitle:
+            "route_detail_index_v1.json / route_trust_evidence contains the backend-owned evidence for this benchmark row."
         },
         {
           tone: "match",
@@ -4298,7 +4313,9 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           hashLabel: "kpi",
           artifactLabel: "network_kpi_benchmark_validation_v1.json",
           artifactHref:
-            "/runtime/export/packages/pkg-standard/files/network_kpi_benchmark_validation_v1.json"
+            "/runtime/export/packages/pkg-standard/files/network_kpi_benchmark_validation_v1.json",
+          artifactTitle:
+            "network_kpi_benchmark_validation_v1.json / network_kpi_benchmark_validation contains the backend-owned evidence for this benchmark row."
         }
       ],
       warningLabels: []

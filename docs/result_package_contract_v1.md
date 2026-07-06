@@ -508,9 +508,12 @@ guardrails such as satellite count, user count, compute-node count, runtime
 duration, orbit update interval, and plane count. When a standard scenario is
 matched, it records exact expected-range results, fidelity-summary checks,
 route-trust status checks, network-KPI benchmark checks, and a deterministic
-`binding_hash`. Non-standard custom packages are not failed by this binding;
-they are reported as `NO_STANDARD_SCENARIO_MATCH` so the acceptance report can
-warn that benchmark-gated evidence is not attached.
+`binding_hash`. Each benchmark result row also records
+`evidence_artifact_filename` and `evidence_artifact_role` so consumers can open
+the backend-owned evidence artifact without locally mapping check ids to files.
+Non-standard custom packages are not failed by this binding; they are reported
+as `NO_STANDARD_SCENARIO_MATCH` so the acceptance report can warn that
+benchmark-gated evidence is not attached.
 
 For tools that only need the handoff summary, the demo backend exposes the same
 object without returning the full audit index:
@@ -565,12 +568,14 @@ per-check rows for each expected-range, fidelity, and runtime-status result,
 including group, item name, status, expected value/range, observed value,
 issue labels, and result hash. These rows are display projections of the
 backend binding; they do not recompute KPI values or re-evaluate benchmark
-rules in the browser. Each row also links to the package artifact that carries
-the closest backend evidence: expected-range rows link to
-`export_package_audit_index_v1.json`, fidelity rows link to
-`config_snapshot.json`, route/trust rows link to `route_detail_index_v1.json`,
-KPI rows link to `network_kpi_benchmark_validation_v1.json`, and scenario rows
-link to `scenario_review_bundle_v1.json`.
+rules in the browser. Each row also links to the package artifact identified by
+the backend result row's `evidence_artifact_filename` field. For compatibility
+with older packages that lack this field, the dashboard falls back to the
+previous deterministic mapping: expected-range rows use the audit index,
+fidelity rows use `config_snapshot.json`, route/trust rows use
+`route_detail_index_v1.json`, KPI rows use
+`network_kpi_benchmark_validation_v1.json`, and scenario rows use
+`scenario_review_bundle_v1.json`.
 
 For operator handoff, the demo backend also exposes the generated Markdown
 handoff report:

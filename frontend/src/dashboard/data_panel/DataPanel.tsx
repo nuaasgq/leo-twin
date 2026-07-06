@@ -12594,6 +12594,8 @@ function buildAcceptanceBenchmarkResultRow(
     unit?: string;
     issue_labels: readonly string[];
     result_hash: string;
+    evidence_artifact_filename?: string;
+    evidence_artifact_role?: string;
   }
 ): DataPanelExportBenchmarkGateRow {
   const artifactFilename = acceptanceBenchmarkArtifactFilename(groupLabel, result);
@@ -12606,7 +12608,11 @@ function buildAcceptanceBenchmarkResultRow(
     observedLabel: acceptanceBenchmarkObservedLabel(result),
     issueLabel: result.issue_labels.join(", "),
     hashLabel: shortRuntimeHash(result.result_hash),
-    ...acceptanceBenchmarkArtifactLink(packageId, artifactFilename)
+    ...acceptanceBenchmarkArtifactLink(
+      packageId,
+      artifactFilename,
+      result.evidence_artifact_role
+    )
   };
 }
 
@@ -12616,8 +12622,15 @@ function acceptanceBenchmarkArtifactFilename(
     metric?: string;
     check_id?: string;
     source?: string;
+    evidence_artifact_filename?: string;
   }
 ): string {
+  if (
+    result.evidence_artifact_filename !== undefined &&
+    result.evidence_artifact_filename.length > 0
+  ) {
+    return result.evidence_artifact_filename;
+  }
   const text = [
     groupLabel,
     result.metric ?? "",
@@ -12643,16 +12656,18 @@ function acceptanceBenchmarkArtifactFilename(
 
 function acceptanceBenchmarkArtifactLink(
   packageId: string,
-  filename: string
+  filename: string,
+  role = ""
 ): Pick<
   DataPanelExportBenchmarkGateRow,
   "artifactLabel" | "artifactHref" | "artifactTitle"
 > {
+  const roleLabel = role.length > 0 ? ` / ${role}` : "";
   return {
     artifactLabel: filename,
     artifactHref:
       packageId.length > 0 ? runtimeExportPackageFileHref(packageId, filename) : null,
-    artifactTitle: `${filename} contains the backend-owned evidence for this benchmark row.`
+    artifactTitle: `${filename}${roleLabel} contains the backend-owned evidence for this benchmark row.`
   };
 }
 
