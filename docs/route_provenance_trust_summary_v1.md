@@ -80,6 +80,19 @@ Each scenario must initialize, start, advance deterministically, and expose a
 `route_explanation_summary_v1`, uses `FLOW_LEVEL_ROUTE_PROXY`, and keeps
 `packet_level_simulation=false` and `all_pairs_computation=false`.
 
+## Result Package Evidence
+
+T277 indexes route trust evidence in runtime result packages:
+
+- `review_summary_v1.json.route_trust`
+- `diagnostics_bundle_v1.json.route_trust`
+
+Both fields are derived from
+`config_snapshot.status.route_provenance_trust_summary_v1`. The result package
+contract does not recompute routes. If an older package lacks the runtime
+status field, the diagnostics bundle reports `ROUTE_TRUST_EVIDENCE_MISSING`
+while preserving package export compatibility.
+
 ## Follow-Up
 
 - Link route trust rows to exact route detail endpoints when a selected route

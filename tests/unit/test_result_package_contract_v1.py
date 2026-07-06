@@ -110,6 +110,7 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
             "current_sim_time": 12.5,
             "processed_event_count": 42,
             "queued_event_count": 3,
+            "route_provenance_trust_summary_v1": _route_trust(),
         },
         "config": {"seed": 7, "duration_seconds": 120},
         "generated_config": {
@@ -164,6 +165,13 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
     }
     assert first["artifacts"]["missing_required_filenames"] == ()
     assert first["artifacts"]["review_summary_exported"] is True
+    assert first["route_trust"]["trust_id"] == "leo_twin.route_provenance_trust.v1"
+    assert first["route_trust"]["evidence_present"] is True
+    assert first["route_trust"]["route_model"] == "FLOW_LEVEL_ROUTE_PROXY"
+    assert first["route_trust"]["packet_level_simulation"] is False
+    assert first["route_trust"]["all_pairs_computation"] is False
+    assert first["route_trust"]["assessed_route_count"] == 2
+    assert first["route_trust"]["sample_route_ids"] == ("route-0", "route-1")
     assert "diagnostics_bundle_v1.json" in first["artifacts"]["artifact_filenames"]
     assert first["summary_hash"].startswith("sha256:")
     assert json.loads(json.dumps(first, sort_keys=True))["summary_id"] == (
@@ -179,6 +187,7 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
             "current_sim_time": 120,
             "processed_event_count": 4200,
             "queued_event_count": 0,
+            "route_provenance_trust_summary_v1": _route_trust(),
         },
         "config": {"seed": 7, "duration_seconds": 120},
         "generated_config": {
@@ -234,6 +243,9 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
     assert first["bundle_id"] == RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1_ID
     assert first["package"]["package_complete"] is True
     assert first["reproducibility"]["manifest_ok"] is True
+    assert first["route_trust"]["trust_status"] == "COMPLETE_FLOW_LEVEL_ROUTE_PROXY"
+    assert first["route_trust"]["available_route_count"] == 2
+    assert first["route_trust"]["bottleneck_components"] == ("capacity",)
     assert first["artifact_health"]["missing_required_filenames"] == ()
     assert first["artifact_health"]["missing_recommended_filenames"] == ()
     assert first["findings"] == (
@@ -249,6 +261,67 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
     )
 
 
+def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -> None:
+    config_snapshot = {
+        "type": "RUNTIME_CONFIG_SNAPSHOT",
+        "status": {
+            "lifecycle_state": "STOPPED",
+            "current_sim_time": 120,
+            "processed_event_count": 4200,
+            "queued_event_count": 0,
+        },
+        "config": {"seed": 7, "duration_seconds": 120},
+        "generated_config": {
+            "seed": 7,
+            "satellite_count": 72,
+            "ground_user_count": 20,
+            "compute_node_count": 12,
+            "duration_seconds": 120,
+        },
+    }
+    manifest = {
+        "manifest_id": RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID,
+        "manifest_hash": "sha256:manifest",
+        "config_hash": "sha256:config",
+        "generated_config_hash": "sha256:generated",
+    }
+    filenames = (
+        "config_snapshot.json",
+        "diagnostics_bundle_v1.json",
+        "events.jsonl",
+        "manifest.json",
+        "metrics.csv",
+        "review_summary_v1.json",
+        "service_lifecycle_trace_v2.json",
+        "summary.json",
+    )
+    review_summary = build_runtime_export_review_summary_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+        manifest=manifest,
+        artifact_filenames=filenames,
+    )
+
+    diagnostics = build_runtime_export_diagnostics_bundle_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+        manifest=manifest,
+        review_summary=review_summary,
+        artifact_filenames=filenames,
+    )
+
+    assert review_summary["route_trust"]["evidence_present"] is False
+    assert diagnostics["route_trust"]["trust_status"] == "MISSING_ROUTE_TRUST_EVIDENCE"
+    assert diagnostics["route_trust"]["evidence_present"] is False
+    assert diagnostics["package"]["package_complete"] is True
+    assert {
+        finding["code"] for finding in diagnostics["findings"]
+    } == {"ROUTE_TRUST_EVIDENCE_MISSING"}
+    assert diagnostics["finding_count"] == 1
+
+
 def _file(name: str, filename: str, sha256: str) -> dict[str, object]:
     return {
         "name": name,
@@ -256,4 +329,31 @@ def _file(name: str, filename: str, sha256: str) -> dict[str, object]:
         "path": f"exports/pkg-1/{filename}",
         "bytes": 10,
         "sha256": sha256,
+    }
+
+
+def _route_trust() -> dict[str, object]:
+    return {
+        "version": "v1",
+        "trust_id": "leo_twin.route_provenance_trust.v1",
+        "source": "route_explanation_summary_v1",
+        "route_model": "FLOW_LEVEL_ROUTE_PROXY",
+        "packet_level_simulation": False,
+        "all_pairs_computation": False,
+        "trust_status": "COMPLETE_FLOW_LEVEL_ROUTE_PROXY",
+        "route_count": 2,
+        "window_item_count": 2,
+        "assessed_route_count": 2,
+        "hidden_route_count": 0,
+        "available_route_count": 2,
+        "blocked_route_count": 0,
+        "over_demand_route_count": 1,
+        "explained_route_count": 2,
+        "missing_explanation_count": 0,
+        "path_context_route_count": 2,
+        "next_hop_route_count": 2,
+        "loss_proxy_route_count": 1,
+        "bottleneck_components": ("capacity",),
+        "sample_route_ids": ("route-0", "route-1"),
+        "caveats": ("Flow-level route proxy; no packet replay.",),
     }

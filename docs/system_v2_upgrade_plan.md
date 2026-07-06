@@ -195,6 +195,10 @@ Tasks:
   - Status: T276 adds benchmark acceptance for route trust across the standard
     72/300/1200 scenarios and records the runtime status expectation in the
     benchmark matrix and model verification report template.
+  - Status: T277 indexes the same route trust evidence into runtime export
+    `review_summary_v1.json` and `diagnostics_bundle_v1.json`, so result
+    packages can be reviewed without manually searching the full
+    `config_snapshot.status` object.
 
 ### WS4. Compute Network Model v2
 
@@ -484,7 +488,10 @@ Tasks:
     to artifact health, compare, and restore-preflight context. T272 renders
     the selected package `manifest.json` as a manifest inspector with stable
     hash rows, catalog file-hash cross-links, diagnostics manifest-hash
-    agreement, and artifact source/status rows.
+    agreement, and artifact source/status rows. T277 adds route trust evidence
+    to both review summary and diagnostics bundle, including a compatibility
+    warning for older packages that lack
+    `route_provenance_trust_summary_v1`.
 
 ### WS9. Delivery and Operations v2
 

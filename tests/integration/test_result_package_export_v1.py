@@ -72,8 +72,16 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert service_lifecycle_trace["summary"] == config_snapshot["status"][
         "service_lifecycle_trace_v2"
     ]
+    route_trust_status = config_snapshot["status"]["route_provenance_trust_summary_v1"]
+    assert route_trust_status["trust_id"] == "leo_twin.route_provenance_trust.v1"
     assert review_summary["type"] == "RUNTIME_EXPORT_REVIEW_SUMMARY_V1"
     assert review_summary["review_status"] == "REVIEW_READY"
+    assert review_summary["route_trust"]["trust_id"] == route_trust_status["trust_id"]
+    assert review_summary["route_trust"]["route_model"] == (
+        route_trust_status["route_model"]
+    )
+    assert review_summary["route_trust"]["packet_level_simulation"] is False
+    assert review_summary["route_trust"]["all_pairs_computation"] is False
     assert review_summary["reproducibility"]["manifest_hash"] == manifest[
         "manifest_hash"
     ]
@@ -86,6 +94,13 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert diagnostics_bundle["type"] == "RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1"
     assert diagnostics_bundle["package"]["package_complete"] is True
     assert diagnostics_bundle["artifact_health"]["missing_required_filenames"] == []
+    assert diagnostics_bundle["route_trust"]["trust_id"] == route_trust_status[
+        "trust_id"
+    ]
+    assert diagnostics_bundle["route_trust"]["trust_status"] == route_trust_status[
+        "trust_status"
+    ]
+    assert diagnostics_bundle["route_trust"]["evidence_present"] is True
     assert diagnostics_bundle["reproducibility"]["manifest_hash"] == manifest[
         "manifest_hash"
     ]

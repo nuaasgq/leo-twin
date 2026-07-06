@@ -62,11 +62,12 @@ Current runtime exports may also include additional deterministic artifacts.
 for offline communication-compute service lifecycle review.
 `review_summary_v1.json` is emitted as a user-readable review entry point for
 the package. It summarizes scenario scale, runtime progress, reproducibility
-hashes, artifact coverage, and review readiness without adding wall-clock data.
+hashes, artifact coverage, route trust evidence, and review readiness without
+adding wall-clock data.
 `diagnostics_bundle_v1.json` is emitted as a deterministic operator-facing
 diagnostics index. It summarizes package completeness, required/recommended
-artifact health, reproducibility hashes, model boundaries, findings, and
-recommended next actions.
+artifact health, route trust evidence, reproducibility hashes, model boundaries,
+findings, and recommended next actions.
 
 ## Review Summary
 
@@ -87,6 +88,8 @@ It reports:
 - package id and package directory;
 - scenario seed, satellite count, user count, compute-node count, and duration;
 - runtime lifecycle state, simulation time, processed events, and queued events;
+- route trust evidence derived from
+  `config_snapshot.status.route_provenance_trust_summary_v1`;
 - manifest id/hash plus config and generated-config hashes;
 - required artifact coverage and missing required filenames;
 - review notes explaining which artifacts support reproducibility review.
@@ -129,6 +132,8 @@ It reports:
 - package id, package directory, contract id, package completeness, and review
   status;
 - runtime lifecycle state, simulation time, processed events, and queued events;
+- route trust evidence, including route model, trust status, assessed route
+  count, explanation coverage, bottleneck components, and model-boundary flags;
 - manifest id/hash plus config, generated-config, and review-summary hashes;
 - required and recommended artifact coverage;
 - explicit model boundaries: no Event Kernel behavior change, no packet-level
@@ -137,6 +142,9 @@ It reports:
 
 The diagnostics bundle is an index artifact only. It does not replay events,
 capture packets, introduce wall-clock fields, or call external simulators.
+If an older package lacks `route_provenance_trust_summary_v1`, the diagnostics
+bundle remains readable and emits a deterministic
+`ROUTE_TRUST_EVIDENCE_MISSING` warning instead of failing package export.
 The standalone dashboard loads the selected package's
 `diagnostics_bundle_v1.json` through the package file endpoint and renders its
 package completeness, artifact-health counters, findings, model boundaries, and

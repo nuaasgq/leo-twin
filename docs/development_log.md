@@ -13233,3 +13233,61 @@ change.
 - Recommended follow-up:
   - Link benchmark route trust evidence to exported result packages and exact
     route detail endpoints for review workflows.
+
+## 2026-07-06 - Result Package Route Trust Evidence v1
+
+- Branch: `feature/T277-result-package-route-trust-evidence-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: advance V2-023 and the result-package replay lane by indexing existing
+  backend route trust evidence into runtime export review artifacts. The
+  result package review summary and diagnostics bundle now expose a deterministic
+  `route_trust` object derived only from
+  `config_snapshot.status.route_provenance_trust_summary_v1`. Older packages
+  without the runtime status field remain readable and receive a deterministic
+  `ROUTE_TRUST_EVIDENCE_MISSING` warning. Event Kernel behavior, route
+  calculation, packet-level simulation, all-pairs computation, and external
+  simulator integration remain unchanged.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/route_provenance_trust_summary_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src/leo_twin/services/result_package_contract.py`
+    - Result: passed.
+  - `python -m pytest tests/unit/test_result_package_contract_v1.py -q`
+    - Result: passed, 6 tests.
+  - `python -m pytest tests/integration/test_result_package_export_v1.py -q`
+    - Result: passed, 1 test.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: initial shell run failed because `node` was not on PATH; rerun
+      with the bundled Codex Node/Pnpm paths passed.
+  - `pnpm --dir frontend test api.test.ts dataPanel.test.ts`
+    - Result: initial shell run failed because `node` was not on PATH; rerun
+      with the bundled Codex Node/Pnpm paths passed, 2 test files and 183 tests.
+  - `python -m pytest tests/unit/test_result_package_contract_v1.py tests/integration/test_result_package_export_v1.py tests/unit/test_user_guide_v2_docs.py -q`
+    - Result: passed, 9 tests.
+  - `python -m pytest tests/integration/test_runtime_session_control.py::test_demo_adapter_exports_runtime_result_package tests/integration/test_runtime_session_control.py::test_demo_adapter_exports_deterministic_runtime_archive tests/integration/test_runtime_session_control.py::test_demo_adapter_serves_persisted_runtime_export_artifacts -q`
+    - Result: passed, 3 tests.
+  - `git diff --check`
+    - Result: passed for task files; Git reported existing line-ending warnings
+      for the two local runtime config drift files that remain unstaged.
+- Problems encountered:
+  - The default PowerShell environment did not expose `node`. Loaded the Codex
+    workspace dependency paths and reran the same frontend checks with the
+    bundled Node/Pnpm runtime.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - Result packages now index route trust summary counts, but they still do not
+    archive exact per-route detail pages or alternate candidate path evidence.
+  - The standalone dashboard export cards are type-ready for the new optional
+    field, but this task did not redesign the export UI.
+- Recommended follow-up:
+  - Add route detail artifact export or package-linked route detail endpoints
+    so a reviewer can drill from `route_trust.sample_route_ids` to exact route
+    records.

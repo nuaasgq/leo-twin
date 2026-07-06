@@ -160,6 +160,7 @@ def build_runtime_export_review_summary_v1(
         == RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID
         else "INCOMPLETE"
     )
+    route_trust = _runtime_export_route_trust_evidence(status)
     summary: dict[str, object] = {
         "type": "RUNTIME_EXPORT_REVIEW_SUMMARY_V1",
         "version": "v1",
@@ -198,6 +199,7 @@ def build_runtime_export_review_summary_v1(
             "processed_event_count": _integer(status.get("processed_event_count")),
             "queued_event_count": _integer(status.get("queued_event_count")),
         },
+        "route_trust": route_trust,
         "reproducibility": {
             "manifest_id": str(manifest.get("manifest_id", "")),
             "manifest_hash": str(manifest.get("manifest_hash", "")),
@@ -219,6 +221,7 @@ def build_runtime_export_review_summary_v1(
             "Use manifest.json and config_snapshot.json to verify deterministic inputs.",
             "Use events.jsonl, metrics.csv, and summary.json as replay evidence.",
             "Use service_lifecycle_trace_v2.json for communication-compute trace review.",
+            "Use route_trust to inspect flow-level route explanation evidence.",
             "This package does not contain packet captures or external simulator artifacts.",
         ),
     }
@@ -265,11 +268,13 @@ def build_runtime_export_diagnostics_bundle_v1(
     manifest_ok = manifest_id == RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID
     review_status = str(review_summary.get("review_status", ""))
     package_complete = manifest_ok and not missing_required
+    route_trust = _runtime_export_route_trust_evidence(status)
     findings = _runtime_export_diagnostic_findings(
         manifest_ok=manifest_ok,
         review_status=review_status,
         missing_required=missing_required,
         missing_recommended=missing_recommended,
+        route_trust=route_trust,
     )
     diagnostics: dict[str, object] = {
         "type": "RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1",
@@ -290,6 +295,7 @@ def build_runtime_export_diagnostics_bundle_v1(
             "processed_event_count": _integer(status.get("processed_event_count")),
             "queued_event_count": _integer(status.get("queued_event_count")),
         },
+        "route_trust": route_trust,
         "reproducibility": {
             "manifest_id": manifest_id,
             "manifest_ok": manifest_ok,
@@ -410,6 +416,7 @@ def _runtime_export_diagnostic_findings(
     review_status: str,
     missing_required: tuple[str, ...],
     missing_recommended: tuple[str, ...],
+    route_trust: Mapping[str, Any],
 ) -> tuple[dict[str, object], ...]:
     findings: list[dict[str, object]] = []
     if not manifest_ok:
@@ -442,6 +449,30 @@ def _runtime_export_diagnostic_findings(
                 "WARN",
                 "RECOMMENDED_ARTIFACTS_MISSING",
                 f"Missing recommended artifacts: {', '.join(missing_recommended)}.",
+            )
+        )
+    if route_trust.get("evidence_present") is not True:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "ROUTE_TRUST_EVIDENCE_MISSING",
+                "config_snapshot.status does not include route_provenance_trust_summary_v1.",
+            )
+        )
+    if route_trust.get("packet_level_simulation") is True:
+        findings.append(
+            _diagnostic_finding(
+                "ERROR",
+                "ROUTE_TRUST_PACKET_LEVEL_DECLARED",
+                "route trust evidence declares packet-level simulation, which is outside the v1 model boundary.",
+            )
+        )
+    if route_trust.get("all_pairs_computation") is True:
+        findings.append(
+            _diagnostic_finding(
+                "ERROR",
+                "ROUTE_TRUST_ALL_PAIRS_DECLARED",
+                "route trust evidence declares all-pairs route computation, which is outside the v1 scale boundary.",
             )
         )
     if not findings:
@@ -488,6 +519,75 @@ def _runtime_export_diagnostic_next_actions(
     )
 
 
+def _runtime_export_route_trust_evidence(
+    status: Mapping[str, Any],
+) -> dict[str, object]:
+    route_trust = _mapping(status.get("route_provenance_trust_summary_v1"))
+    evidence_present = bool(route_trust)
+    if not evidence_present:
+        return {
+            "version": "v1",
+            "trust_id": "",
+            "source": "config_snapshot.status.route_provenance_trust_summary_v1",
+            "evidence_present": False,
+            "route_model": "UNKNOWN",
+            "packet_level_simulation": False,
+            "all_pairs_computation": False,
+            "trust_status": "MISSING_ROUTE_TRUST_EVIDENCE",
+            "route_count": 0,
+            "assessed_route_count": 0,
+            "hidden_route_count": 0,
+            "available_route_count": 0,
+            "blocked_route_count": 0,
+            "over_demand_route_count": 0,
+            "explained_route_count": 0,
+            "missing_explanation_count": 0,
+            "path_context_route_count": 0,
+            "next_hop_route_count": 0,
+            "loss_proxy_route_count": 0,
+            "bottleneck_components": (),
+            "sample_route_ids": (),
+            "caveats": (
+                "Runtime status did not expose route_provenance_trust_summary_v1.",
+            ),
+        }
+    return {
+        "version": "v1",
+        "trust_id": str(route_trust.get("trust_id", "")),
+        "source": "config_snapshot.status.route_provenance_trust_summary_v1",
+        "evidence_present": True,
+        "route_summary_source": str(route_trust.get("source", "")),
+        "route_model": str(route_trust.get("route_model", "")),
+        "packet_level_simulation": _bool(route_trust.get("packet_level_simulation")),
+        "all_pairs_computation": _bool(route_trust.get("all_pairs_computation")),
+        "trust_status": str(route_trust.get("trust_status", "")),
+        "route_count": _integer(route_trust.get("route_count")),
+        "assessed_route_count": _integer(
+            route_trust.get("assessed_route_count", route_trust.get("window_item_count"))
+        ),
+        "hidden_route_count": _integer(route_trust.get("hidden_route_count")),
+        "available_route_count": _integer(route_trust.get("available_route_count")),
+        "blocked_route_count": _integer(route_trust.get("blocked_route_count")),
+        "over_demand_route_count": _integer(
+            route_trust.get("over_demand_route_count")
+        ),
+        "explained_route_count": _integer(route_trust.get("explained_route_count")),
+        "missing_explanation_count": _integer(
+            route_trust.get("missing_explanation_count")
+        ),
+        "path_context_route_count": _integer(
+            route_trust.get("path_context_route_count")
+        ),
+        "next_hop_route_count": _integer(route_trust.get("next_hop_route_count")),
+        "loss_proxy_route_count": _integer(route_trust.get("loss_proxy_route_count")),
+        "bottleneck_components": _string_tuple(
+            route_trust.get("bottleneck_components")
+        ),
+        "sample_route_ids": _string_tuple(route_trust.get("sample_route_ids")),
+        "caveats": _string_tuple(route_trust.get("caveats")),
+    }
+
+
 def _file_records(value: object) -> tuple[Mapping[str, Any], ...]:
     if not isinstance(value, (list, tuple)):
         return ()
@@ -524,3 +624,20 @@ def _number(value: object) -> float:
         return float(str(value))
     except (TypeError, ValueError):
         return 0.0
+
+
+def _bool(value: object) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    text = str(value).strip().lower()
+    if text in {"true", "1", "yes", "y"}:
+        return True
+    return False
+
+
+def _string_tuple(value: object) -> tuple[str, ...]:
+    if not isinstance(value, (list, tuple)):
+        return ()
+    return tuple(str(item) for item in value if str(item))

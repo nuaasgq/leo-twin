@@ -1242,6 +1242,7 @@ export interface RuntimeExportReviewSummaryV1 {
   review_status: "REVIEW_READY" | "INCOMPLETE" | string;
   scenario: RuntimeExportReviewScenarioV1;
   runtime: RuntimeExportReviewRuntimeV1;
+  route_trust?: RuntimeExportRouteTrustEvidenceV1;
   reproducibility: RuntimeExportReviewReproducibilityV1;
   artifacts: RuntimeExportReviewArtifactsV1;
   review_notes: readonly string[];
@@ -1261,6 +1262,32 @@ export interface RuntimeExportReviewRuntimeV1 {
   current_sim_time: number;
   processed_event_count: number;
   queued_event_count: number;
+}
+
+export interface RuntimeExportRouteTrustEvidenceV1 {
+  version: "v1" | string;
+  trust_id: string;
+  source: string;
+  evidence_present: boolean;
+  route_summary_source?: string;
+  route_model: string;
+  packet_level_simulation: boolean;
+  all_pairs_computation: boolean;
+  trust_status: string;
+  route_count: number;
+  assessed_route_count: number;
+  hidden_route_count: number;
+  available_route_count: number;
+  blocked_route_count: number;
+  over_demand_route_count: number;
+  explained_route_count: number;
+  missing_explanation_count: number;
+  path_context_route_count: number;
+  next_hop_route_count: number;
+  loss_proxy_route_count: number;
+  bottleneck_components: readonly string[];
+  sample_route_ids: readonly string[];
+  caveats: readonly string[];
 }
 
 export interface RuntimeExportReviewReproducibilityV1 {
@@ -1288,6 +1315,7 @@ export interface RuntimeExportDiagnosticsBundleV1 {
   diagnostics_scope: string;
   package: RuntimeExportDiagnosticsPackageV1;
   runtime: RuntimeExportDiagnosticsRuntimeV1;
+  route_trust?: RuntimeExportRouteTrustEvidenceV1;
   reproducibility: RuntimeExportDiagnosticsReproducibilityV1;
   artifact_health: RuntimeExportDiagnosticsArtifactHealthV1;
   model_boundaries: RuntimeExportDiagnosticsModelBoundariesV1;
