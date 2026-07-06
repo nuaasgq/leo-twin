@@ -169,7 +169,8 @@ dashboard package review area shows the report artifact from the backend export
 catalog with a direct JSON link and file hash. If the report artifact is
 available, the dashboard loads it read-only and summarizes saved record counts,
 MATCH/DIFFERENT/UNAVAILABLE/ERROR totals, route detail hash pairs, and operator
-notes.
+notes. The report drawer can filter by status, search route id/status/hash/note
+text, and page through matching records without opening the raw JSON.
 For package-owned review, use:
 
 ```powershell

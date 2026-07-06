@@ -2328,70 +2328,71 @@ describe("buildDataPanelExportCatalogDisplay", () => {
   });
 
   it("summarizes saved route comparison review report contents", () => {
+    const report = {
+      type: "RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1",
+      version: "v1",
+      report_id: "leo_twin.runtime_export_route_comparison_review_report.v1",
+      source: "OPERATOR_ROUTE_COMPARISON_REVIEW",
+      report_scope: "SELECTED_PACKAGE_VS_LIVE_ROUTE_COMPARISON_OUTCOMES",
+      package_id: "pkg-review",
+      package_dir: "artifacts/runtime_exports/pkg-review",
+      route_comparison_review: _runtimeExportRouteComparisonReview(),
+      record_count: 3,
+      match_count: 1,
+      different_count: 1,
+      unavailable_count: 1,
+      error_count: 0,
+      records: [
+        {
+          route_id: "route-a",
+          comparison_status: "MATCH",
+          package_route_detail_hash:
+            "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          live_route_detail_hash:
+            "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          matched_field_count: 12,
+          different_field_count: 0,
+          compared_fields: ["path", "latency"],
+          different_fields: [],
+          status_reason: "FIELDS_MATCH",
+          operator_note: "baseline route is aligned"
+        },
+        {
+          route_id: "route-b",
+          comparison_status: "DIFFERENT",
+          package_route_detail_hash:
+            "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          live_route_detail_hash:
+            "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          matched_field_count: 10,
+          different_field_count: 2,
+          compared_fields: ["path", "latency", "bottleneck"],
+          different_fields: ["latency", "bottleneck"],
+          status_reason: "FIELDS_DIFFER",
+          operator_note: ""
+        },
+        {
+          route_id: "route-c",
+          comparison_status: "UNAVAILABLE",
+          package_route_detail_hash:
+            "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          live_route_detail_hash: "",
+          matched_field_count: 0,
+          different_field_count: 0,
+          compared_fields: [],
+          different_fields: [],
+          status_reason: "LIVE_ROUTE_MISSING",
+          operator_note: "live route not available"
+        }
+      ],
+      ordering: "route_id ascending, then comparison_status ascending",
+      boundary_conditions: ["NO_ROUTE_RECOMPUTE"],
+      report_hash:
+        "sha256:9999999999999999999999999999999999999999999999999999999999999999"
+    };
     const display = buildDataPanelExportRouteComparisonReviewReportDisplay(
-      {
-        type: "RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1",
-        version: "v1",
-        report_id: "leo_twin.runtime_export_route_comparison_review_report.v1",
-        source: "OPERATOR_ROUTE_COMPARISON_REVIEW",
-        report_scope: "SELECTED_PACKAGE_VS_LIVE_ROUTE_COMPARISON_OUTCOMES",
-        package_id: "pkg-review",
-        package_dir: "artifacts/runtime_exports/pkg-review",
-        route_comparison_review: _runtimeExportRouteComparisonReview(),
-        record_count: 3,
-        match_count: 1,
-        different_count: 1,
-        unavailable_count: 1,
-        error_count: 0,
-        records: [
-          {
-            route_id: "route-a",
-            comparison_status: "MATCH",
-            package_route_detail_hash:
-              "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-            live_route_detail_hash:
-              "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-            matched_field_count: 12,
-            different_field_count: 0,
-            compared_fields: ["path", "latency"],
-            different_fields: [],
-            status_reason: "FIELDS_MATCH",
-            operator_note: "baseline route is aligned"
-          },
-          {
-            route_id: "route-b",
-            comparison_status: "DIFFERENT",
-            package_route_detail_hash:
-              "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-            live_route_detail_hash:
-              "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
-            matched_field_count: 10,
-            different_field_count: 2,
-            compared_fields: ["path", "latency", "bottleneck"],
-            different_fields: ["latency", "bottleneck"],
-            status_reason: "FIELDS_DIFFER",
-            operator_note: ""
-          },
-          {
-            route_id: "route-c",
-            comparison_status: "UNAVAILABLE",
-            package_route_detail_hash:
-              "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
-            live_route_detail_hash: "",
-            matched_field_count: 0,
-            different_field_count: 0,
-            compared_fields: [],
-            different_fields: [],
-            status_reason: "LIVE_ROUTE_MISSING",
-            operator_note: "live route not available"
-          }
-        ],
-        ordering: "route_id ascending, then comparison_status ascending",
-        boundary_conditions: ["NO_ROUTE_RECOMPUTE"],
-        report_hash:
-          "sha256:9999999999999999999999999999999999999999999999999999999999999999"
-      },
-      2
+      report,
+      { limit: 2 }
     );
 
     expect(display).toEqual({
@@ -2424,7 +2425,60 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         }
       ],
       reportHref:
-        "/runtime/export/packages/pkg-review/files/route_comparison_review_report_v1.json"
+        "/runtime/export/packages/pkg-review/files/route_comparison_review_report_v1.json",
+      filterLabel: "showing 1-2 of 3 filtered / total 3 / status ALL",
+      pageCursor: 0,
+      pageLimit: 2,
+      previousCursor: 0,
+      nextCursor: 2,
+      canPreviousPage: false,
+      canNextPage: true
+    });
+    expect(
+      buildDataPanelExportRouteComparisonReviewReportDisplay(
+        {
+          ...report,
+          records: [
+            ...report.records,
+            {
+              route_id: "route-d",
+              comparison_status: "ERROR",
+              package_route_detail_hash:
+                "sha256:abababababababababababababababababababababababababababababababab",
+              live_route_detail_hash: "",
+              matched_field_count: 0,
+              different_field_count: 0,
+              compared_fields: [],
+              different_fields: [],
+              status_reason: "LIVE_DETAIL_ERROR",
+              operator_note: "operator needs retry"
+            }
+          ],
+          record_count: 4,
+          error_count: 1
+        },
+        {
+          cursor: 0,
+          limit: 1,
+          query: "retry",
+          status: "ERROR"
+        }
+      )
+    ).toMatchObject({
+      summaryLabel:
+        "pkg-review / records 4 / different 1 / error 1 / 999999999999",
+      filterLabel: "showing 1-1 of 1 filtered / total 4 / status ERROR / query retry",
+      pageCursor: 0,
+      pageLimit: 1,
+      canPreviousPage: false,
+      canNextPage: false,
+      recordRows: [
+        {
+          routeId: "route-d",
+          statusLabel: "ERROR",
+          noteLabel: "operator needs retry"
+        }
+      ]
     });
     expect(
       buildDataPanelExportRouteComparisonReviewReportStatus(

@@ -14239,3 +14239,50 @@ change.
 - Recommended follow-up:
   - Add paginated/filterable route comparison review report records so large
     report artifacts can be reviewed without opening the raw JSON file.
+
+## 2026-07-06 - Dashboard Route Review Report Filter v1
+
+- Branch: `feature/T296-dashboard-review-report-filter-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add local status filtering, text search, and offset pagination to the
+  saved route comparison review report drawer. The dashboard can now inspect
+  large `route_comparison_review_report_v1.json` artifacts by filtering
+  MATCH/DIFFERENT/UNAVAILABLE/ERROR records and searching route id, status,
+  package/live detail hashes, status reason, compared fields, and operator
+  notes. The implementation is read-only over the saved report artifact and
+  does not change Event Kernel behavior, route recomputation, backend model
+  logic, packet simulation, or report artifact schema.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/dashboard_model_trust_evidence_workspace_v1.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed, 1 test file and 171 tests during focused iteration.
+  - `pnpm --dir frontend test api.test.ts dataPanel.test.ts`
+    - Result: passed, 2 test files and 197 tests.
+  - `python -m pytest tests/unit/test_user_guide_v2_docs.py -q`
+    - Result: passed, 2 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with bundled Codex Node/Pnpm runtime.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing large DataPanel chunk
+      warning after minification; no functional build error.
+  - `git diff --check`
+    - Result: passed for task files.
+- Problems encountered:
+  - The first test edit left a stale function-call fragment in
+    `frontend/tests/dataPanel.test.ts`; the syntax error was removed and the
+    target test suite passed.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - Filtering and pagination are local over the already loaded report artifact.
+    Very large report files may still need backend-side paginated artifact
+    serving in a later task.
+- Recommended follow-up:
+  - Add a backend-served paginated route comparison review report endpoint if
+    report artifacts grow beyond practical frontend memory limits.

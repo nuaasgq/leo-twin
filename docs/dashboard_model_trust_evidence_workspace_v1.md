@@ -77,9 +77,10 @@ dashboard export package view surfaces the catalog-owned
 report hash so the operator can verify that the review record is persisted.
 When the artifact exists, the dashboard also loads the saved report JSON as a
 read-only artifact and renders record counts, match/different/unavailable/error
-totals, route detail hash pairs, and operator notes for the visible records.
-The frontend does not recompute routes or download the full
-`route_detail_index_v1.json` by default.
+totals, route detail hash pairs, and operator notes. The report drawer supports
+local status filtering, text search across route id/status/hash/note fields, and
+offset pagination over the saved records. The frontend does not recompute routes
+or download the full `route_detail_index_v1.json` by default.
 7. runtime evidence
 
 Each row has a tone:

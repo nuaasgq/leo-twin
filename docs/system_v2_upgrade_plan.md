@@ -275,6 +275,9 @@ Tasks:
   - Status: T295 loads the saved route comparison review report artifact as a
     read-only dashboard drawer and summarizes record counts, status totals,
     route detail hash pairs, and operator notes without route recomputation.
+  - Status: T296 adds local status filtering, text search, and offset
+    pagination to the saved route comparison review report drawer so large
+    report artifacts can be inspected without opening raw JSON.
 
 ### WS4. Compute Network Model v2
 

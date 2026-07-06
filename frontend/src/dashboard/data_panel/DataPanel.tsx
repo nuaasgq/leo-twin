@@ -214,6 +214,12 @@ export type UserConfigurationPreflightMode =
   | "auto_text"
   | "yaml_text"
   | "json_text";
+type DataPanelRouteComparisonReviewReportStatusFilter =
+  | "ALL"
+  | "MATCH"
+  | "DIFFERENT"
+  | "UNAVAILABLE"
+  | "ERROR";
 
 export const DataPanel = memo(function DataPanel({
   snapshot,
@@ -372,6 +378,15 @@ export const DataPanel = memo(function DataPanel({
     exportRouteDetailIndexBottleneckFilter,
     setExportRouteDetailIndexBottleneckFilter
   ] = useState("ALL");
+  const [
+    exportRouteReviewReportFilter,
+    setExportRouteReviewReportFilter
+  ] = useState("");
+  const [
+    exportRouteReviewReportStatusFilter,
+    setExportRouteReviewReportStatusFilter
+  ] = useState<DataPanelRouteComparisonReviewReportStatusFilter>("ALL");
+  const [exportRouteReviewReportPage, setExportRouteReviewReportPage] = useState(0);
   const [routeExplanationAvailabilityFilter, setRouteExplanationAvailabilityFilter] =
     useState<DataPanelRouteExplanationAvailabilityFilter>("ALL");
   const [routeExplanationBusinessFilter, setRouteExplanationBusinessFilter] =
@@ -430,7 +445,17 @@ export const DataPanel = memo(function DataPanel({
     setExportRouteDetailIndexAvailabilityFilter("ALL");
     setExportRouteDetailIndexBusinessFilter("ALL");
     setExportRouteDetailIndexBottleneckFilter("ALL");
+    setExportRouteReviewReportFilter("");
+    setExportRouteReviewReportStatusFilter("ALL");
+    setExportRouteReviewReportPage(0);
   }, [runtimeExportComparePackageId]);
+  useEffect(() => {
+    setExportRouteReviewReportPage(0);
+  }, [
+    exportRouteReviewReportFilter,
+    exportRouteReviewReportStatusFilter,
+    runtimeExportRouteComparisonReviewReport?.report_hash
+  ]);
   const summary = buildDataPanelDisplaySummary(
     buildDataPanelSummary(snapshot),
     displaySimTime,
@@ -908,7 +933,13 @@ export const DataPanel = memo(function DataPanel({
   const exportRouteComparisonReviewReportStatus =
     buildDataPanelExportRouteComparisonReviewReportStatus(
       buildDataPanelExportRouteComparisonReviewReportDisplay(
-        runtimeExportRouteComparisonReviewReport
+        runtimeExportRouteComparisonReviewReport,
+        {
+          cursor: exportRouteReviewReportPage,
+          limit: 5,
+          query: exportRouteReviewReportFilter,
+          status: exportRouteReviewReportStatusFilter
+        }
       ),
       runtimeExportComparePackageId,
       runtimeExportRouteComparisonReviewReportLoading,
@@ -1754,6 +1785,81 @@ export const DataPanel = memo(function DataPanel({
                       )
                     )}
                   </div>
+                  {exportRouteComparisonReviewReportStatus.reportHref ? (
+                    <div className="data-panel-export-route-index-tools">
+                      <label
+                        className="data-panel-export-route-index-search"
+                        htmlFor="data-panel-export-review-report-filter"
+                      >
+                        <span>review record search</span>
+                        <input
+                          id="data-panel-export-review-report-filter"
+                          type="search"
+                          value={exportRouteReviewReportFilter}
+                          onChange={(event) => {
+                            setExportRouteReviewReportFilter(
+                              event.currentTarget.value
+                            );
+                          }}
+                          placeholder="route / status / hash / note"
+                        />
+                      </label>
+                      <label
+                        className="data-panel-export-route-index-search"
+                        htmlFor="data-panel-export-review-report-status"
+                      >
+                        <span>status</span>
+                        <select
+                          id="data-panel-export-review-report-status"
+                          value={exportRouteReviewReportStatusFilter}
+                          onChange={(event) => {
+                            setExportRouteReviewReportStatusFilter(
+                              event.currentTarget
+                                .value as DataPanelRouteComparisonReviewReportStatusFilter
+                            );
+                          }}
+                        >
+                          <option value="ALL">ALL</option>
+                          <option value="MATCH">MATCH</option>
+                          <option value="DIFFERENT">DIFFERENT</option>
+                          <option value="UNAVAILABLE">UNAVAILABLE</option>
+                          <option value="ERROR">ERROR</option>
+                        </select>
+                      </label>
+                      <div className="data-panel-export-route-index-pager">
+                        <button
+                          type="button"
+                          disabled={
+                            !exportRouteComparisonReviewReportStatus
+                              .canPreviousPage
+                          }
+                          onClick={() => {
+                            setExportRouteReviewReportPage(
+                              exportRouteComparisonReviewReportStatus.previousCursor
+                            );
+                          }}
+                        >
+                          Previous
+                        </button>
+                        <button
+                          type="button"
+                          disabled={
+                            !exportRouteComparisonReviewReportStatus.canNextPage
+                          }
+                          onClick={() => {
+                            setExportRouteReviewReportPage(
+                              exportRouteComparisonReviewReportStatus.nextCursor
+                            );
+                          }}
+                        >
+                          Next
+                        </button>
+                      </div>
+                      <span>
+                        {exportRouteComparisonReviewReportStatus.filterLabel}
+                      </span>
+                    </div>
+                  ) : null}
                   {exportRouteComparisonReviewReportStatus.recordRows.length > 0 ? (
                     <div className="data-panel-export-route-compare-rows">
                       {exportRouteComparisonReviewReportStatus.recordRows.map(
@@ -9084,6 +9190,13 @@ export interface DataPanelExportRouteComparisonReviewReportDisplay {
   metaLabels: readonly string[];
   recordRows: readonly DataPanelExportRouteComparisonReviewReportRow[];
   reportHref: string;
+  filterLabel: string;
+  pageCursor: number;
+  pageLimit: number;
+  previousCursor: number;
+  nextCursor: number;
+  canPreviousPage: boolean;
+  canNextPage: boolean;
 }
 
 export interface DataPanelExportRouteComparisonReviewReportStatus {
@@ -9093,6 +9206,13 @@ export interface DataPanelExportRouteComparisonReviewReportStatus {
   metaLabels: readonly string[];
   recordRows: readonly DataPanelExportRouteComparisonReviewReportRow[];
   reportHref: string | null;
+  filterLabel: string;
+  pageCursor: number;
+  pageLimit: number;
+  previousCursor: number;
+  nextCursor: number;
+  canPreviousPage: boolean;
+  canNextPage: boolean;
 }
 
 export interface DataPanelExportRouteComparisonReviewReportRow {
@@ -9101,6 +9221,13 @@ export interface DataPanelExportRouteComparisonReviewReportRow {
   statusLabel: string;
   hashLabel: string;
   noteLabel: string;
+}
+
+export interface DataPanelExportRouteComparisonReviewReportOptions {
+  cursor?: number;
+  limit?: number;
+  query?: string;
+  status?: DataPanelRouteComparisonReviewReportStatusFilter;
 }
 
 export function buildDataPanelExportCatalogDisplay(
@@ -9219,17 +9346,36 @@ export function buildDataPanelExportRouteComparisonReviewArtifactDisplay(
 
 export function buildDataPanelExportRouteComparisonReviewReportDisplay(
   report: RuntimeExportRouteComparisonReviewReportV1 | null | undefined,
-  limit = 5
+  options: DataPanelExportRouteComparisonReviewReportOptions = {}
 ): DataPanelExportRouteComparisonReviewReportDisplay | null {
   if (report === null || report === undefined) {
     return null;
   }
+  const pageLimit = Math.max(1, Math.floor(options.limit ?? 5));
+  const requestedCursor = Math.max(0, Math.floor(options.cursor ?? 0));
+  const statusFilter = options.status ?? "ALL";
+  const query = options.query?.trim() ?? "";
+  const normalizedQuery = query.toLowerCase();
+  const filteredRecords = report.records.filter((record) => {
+    if (statusFilter !== "ALL" && record.comparison_status !== statusFilter) {
+      return false;
+    }
+    if (normalizedQuery.length === 0) {
+      return true;
+    }
+    return routeComparisonReviewReportRecordMatchesQuery(record, normalizedQuery);
+  });
+  const maxStart =
+    filteredRecords.length === 0
+      ? 0
+      : Math.floor((filteredRecords.length - 1) / pageLimit) * pageLimit;
+  const pageCursor = Math.min(requestedCursor, maxStart);
+  const pageRecords = filteredRecords.slice(pageCursor, pageCursor + pageLimit);
   const reviewReady =
     report.error_count === 0 &&
     report.unavailable_count === 0 &&
     report.different_count === 0;
-  const rows: DataPanelExportRouteComparisonReviewReportRow[] = report.records
-    .slice(0, Math.max(0, limit))
+  const rows: DataPanelExportRouteComparisonReviewReportRow[] = pageRecords
     .map((record) => ({
       routeId: record.route_id,
       tone: record.comparison_status === "MATCH" ? "match" : "different",
@@ -9242,8 +9388,11 @@ export function buildDataPanelExportRouteComparisonReviewReportDisplay(
           ? record.operator_note
           : record.status_reason
     }));
-  const hiddenCount = Math.max(0, report.record_count - rows.length);
+  const hiddenCount = Math.max(0, filteredRecords.length - rows.length);
   const hiddenLabel = hiddenCount > 0 ? ` / hidden ${formatCount(hiddenCount)}` : "";
+  const visibleStart = rows.length === 0 ? 0 : pageCursor + 1;
+  const visibleEnd = pageCursor + rows.length;
+  const queryLabel = query.length > 0 ? ` / query ${query}` : "";
   return {
     packageId: report.package_id,
     tone: reviewReady ? "match" : "different",
@@ -9266,8 +9415,35 @@ export function buildDataPanelExportRouteComparisonReviewReportDisplay(
     reportHref: runtimeExportPackageFileHref(
       report.package_id,
       ROUTE_COMPARISON_REVIEW_REPORT_FILENAME
-    )
+    ),
+    filterLabel: `showing ${formatCount(visibleStart)}-${formatCount(
+      visibleEnd
+    )} of ${formatCount(filteredRecords.length)} filtered / total ${formatCount(
+      report.record_count
+    )} / status ${statusFilter}${queryLabel}`,
+    pageCursor,
+    pageLimit,
+    previousCursor: Math.max(0, pageCursor - pageLimit),
+    nextCursor: pageCursor + pageLimit,
+    canPreviousPage: pageCursor > 0,
+    canNextPage: pageCursor + pageLimit < filteredRecords.length
   };
+}
+
+function routeComparisonReviewReportRecordMatchesQuery(
+  record: RuntimeExportRouteComparisonReviewReportRecordV1,
+  normalizedQuery: string
+): boolean {
+  return [
+    record.route_id,
+    record.comparison_status,
+    record.package_route_detail_hash,
+    record.live_route_detail_hash,
+    record.status_reason,
+    record.operator_note,
+    ...record.compared_fields,
+    ...record.different_fields
+  ].some((value) => value.toLowerCase().includes(normalizedQuery));
 }
 
 export function buildDataPanelExportRouteComparisonReviewReportStatus(
@@ -9283,7 +9459,14 @@ export function buildDataPanelExportRouteComparisonReviewReportStatus(
       summaryLabel: selectedPackageId ?? "waiting for package selection",
       metaLabels: ["read-only artifact", "no route recomputation"],
       recordRows: [],
-      reportHref: null
+      reportHref: null,
+      filterLabel: "waiting for report artifact",
+      pageCursor: 0,
+      pageLimit: 0,
+      previousCursor: 0,
+      nextCursor: 0,
+      canPreviousPage: false,
+      canNextPage: false
     };
   }
   if (error !== null && error !== undefined) {
@@ -9293,7 +9476,14 @@ export function buildDataPanelExportRouteComparisonReviewReportStatus(
       summaryLabel: selectedPackageId ?? "unknown package",
       metaLabels: [error],
       recordRows: [],
-      reportHref: null
+      reportHref: null,
+      filterLabel: "report load failed",
+      pageCursor: 0,
+      pageLimit: 0,
+      previousCursor: 0,
+      nextCursor: 0,
+      canPreviousPage: false,
+      canNextPage: false
     };
   }
   if (display === null) {
@@ -9310,7 +9500,14 @@ export function buildDataPanelExportRouteComparisonReviewReportStatus(
       summaryLabel: selectedPackageId,
       metaLabels: [`loaded package ${display.packageId}`],
       recordRows: [],
-      reportHref: null
+      reportHref: null,
+      filterLabel: "selected package mismatch",
+      pageCursor: 0,
+      pageLimit: 0,
+      previousCursor: 0,
+      nextCursor: 0,
+      canPreviousPage: false,
+      canNextPage: false
     };
   }
   return display;
