@@ -721,6 +721,15 @@ export const DataPanel = memo(function DataPanel({
     runtimeExportRestorePreflightLoading,
     runtimeExportRestorePreflightError
   );
+  const exportBoundaryAlignmentDisplay =
+    buildDataPanelExportBoundaryAlignmentDisplay(
+      runtimeExportManifest,
+      runtimeExportReviewSummary,
+      runtimeExportDiagnosticsBundle,
+      runtimeExportCompare,
+      runtimeExportRestorePreflight,
+      runtimeExportComparePackageId
+    );
   const exportRestoreActionDisplay = buildDataPanelExportRestoreActionDisplay(
     exportRestorePreflightStatus,
     {
@@ -2186,6 +2195,45 @@ export const DataPanel = memo(function DataPanel({
                       <strong>{row.statusLabel}</strong>
                       <small>{row.sourceLabel}</small>
                     </a>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+          {exportBoundaryAlignmentDisplay ? (
+            <div
+              className={`data-panel-export-diagnostics-drawer ${exportBoundaryAlignmentDisplay.tone}`}
+              aria-label="复现边界与恢复判断一致性"
+            >
+              <div className="data-panel-export-diagnostics-header">
+                <div>
+                  <span>边界一致性</span>
+                  <strong>{exportBoundaryAlignmentDisplay.statusLabel}</strong>
+                  <small>{exportBoundaryAlignmentDisplay.summaryLabel}</small>
+                </div>
+              </div>
+              <div className="data-panel-export-compare-meta">
+                {exportBoundaryAlignmentDisplay.evidenceLabels.map((label) => (
+                  <span key={label}>{label}</span>
+                ))}
+              </div>
+              <div className="data-panel-export-diagnostics-boundaries">
+                {exportBoundaryAlignmentDisplay.compareLabels.map((label) => (
+                  <span key={label}>{label}</span>
+                ))}
+              </div>
+              <div className="data-panel-export-diagnostics-actions">
+                {exportBoundaryAlignmentDisplay.restoreLabels.map((label) => (
+                  <span key={label}>{label}</span>
+                ))}
+              </div>
+              {exportBoundaryAlignmentDisplay.warningLabels.length > 0 ? (
+                <div className="data-panel-export-diagnostics-findings">
+                  {exportBoundaryAlignmentDisplay.warningLabels.map((label) => (
+                    <span className="warn" key={label}>
+                      <strong>CHECK</strong>
+                      {label}
+                    </span>
                   ))}
                 </div>
               ) : null}
@@ -10133,6 +10181,17 @@ export interface DataPanelExportReproducibilityBoundaryDisplay {
   boundaryHref: string;
 }
 
+export interface DataPanelExportBoundaryAlignmentDisplay {
+  packageId: string;
+  tone: "match" | "different" | "pending";
+  statusLabel: string;
+  summaryLabel: string;
+  evidenceLabels: readonly string[];
+  compareLabels: readonly string[];
+  restoreLabels: readonly string[];
+  warningLabels: readonly string[];
+}
+
 export interface DataPanelExportRestorePreflightDisplay {
   packageId: string;
   readiness: string;
@@ -11478,6 +11537,166 @@ function selectRuntimeExportReproducibilityBoundary(
     diagnostics?.reproducibility_boundary ??
     null
   );
+}
+
+export function buildDataPanelExportBoundaryAlignmentDisplay(
+  manifest: RuntimeReproducibilityManifestV1 | null | undefined,
+  reviewSummary: RuntimeExportReviewSummaryV1 | null | undefined,
+  diagnostics: RuntimeExportDiagnosticsBundleV1 | null | undefined,
+  compare: RuntimeExportPackageCompareV1 | null | undefined,
+  preflight: RuntimeExportRestorePreflightV1 | null | undefined,
+  selectedPackageId: string | null | undefined
+): DataPanelExportBoundaryAlignmentDisplay | null {
+  if (selectedPackageId === null || selectedPackageId === undefined) {
+    return null;
+  }
+  const boundary = selectRuntimeExportReproducibilityBoundary(
+    manifest,
+    reviewSummary,
+    diagnostics
+  );
+  const warnings: string[] = [];
+  const compareLabels =
+    compare === null || compare === undefined
+      ? ["compare not loaded"]
+      : [
+          `compare ${compare.comparison_scope}`,
+          `package ${compare.package_id}`,
+          `same config ${compare.same_config ? "yes" : "no"}`,
+          `same generated ${compare.same_generated_config ? "yes" : "no"}`,
+          `compare ${shortRuntimeHash(compare.compare_hash)}`
+        ];
+  const restoreLabels =
+    preflight === null || preflight === undefined
+      ? ["restore preflight not loaded"]
+      : [
+          `preflight ${preflight.preflight_scope}`,
+          `readiness ${preflight.readiness}`,
+          `can restore ${preflight.can_restore ? "yes" : "no"}`,
+          `mutate current ${preflight.would_mutate_current_runtime ? "yes" : "no"}`,
+          `write config ${preflight.would_write_config_files ? "yes" : "no"}`
+        ];
+
+  if (boundary === null) {
+    warnings.push("runtime_export_reproducibility_boundary_v1 missing");
+    return {
+      packageId: selectedPackageId,
+      tone: "different",
+      statusLabel: "缺少复现边界",
+      summaryLabel: `${selectedPackageId} / compare+restore 缺少统一边界证据`,
+      evidenceLabels: ["manifest/review/diagnostics boundary missing"],
+      compareLabels,
+      restoreLabels,
+      warningLabels: warnings
+    };
+  }
+
+  const hashAgreement = runtimeExportBoundaryHashAgreement(
+    boundary,
+    manifest,
+    reviewSummary,
+    diagnostics
+  );
+  if (!hashAgreement) {
+    warnings.push("boundary hash mismatch across loaded artifacts");
+  }
+  if (
+    boundary.boundary_id !== "leo_twin.runtime_export_reproducibility_boundary.v1"
+  ) {
+    warnings.push("unexpected reproducibility boundary id");
+  }
+  if (boundary.restore_scope !== "CONFIG_ONLY") {
+    warnings.push(`restore scope is ${boundary.restore_scope}`);
+  }
+  if (boundary.compare_scope !== "CONFIG_AND_GENERATED_CONFIG") {
+    warnings.push(`compare scope is ${boundary.compare_scope}`);
+  }
+  if (boundary.read_scope !== "PERSISTED_ARTIFACTS_ONLY") {
+    warnings.push(`read scope is ${boundary.read_scope}`);
+  }
+  if (
+    boundary.event_replay_restore ||
+    boundary.live_event_replay_restore ||
+    boundary.recompute_on_read ||
+    boundary.route_recomputation ||
+    boundary.service_recomputation ||
+    boundary.package_mutation_on_read ||
+    boundary.packet_capture ||
+    boundary.packet_level_simulation ||
+    boundary.external_simulators
+  ) {
+    warnings.push("boundary enables replay, recompute, mutation, packet, or external simulator behavior");
+  }
+  if (compare === null || compare === undefined) {
+    warnings.push("package compare not loaded");
+  } else {
+    if (compare.package_id !== selectedPackageId) {
+      warnings.push("compare package does not match selected package");
+    }
+    if (compare.comparison_scope !== boundary.compare_scope) {
+      warnings.push("compare scope does not match boundary compare scope");
+    }
+  }
+  if (preflight === null || preflight === undefined) {
+    warnings.push("restore preflight not loaded");
+  } else {
+    if (preflight.package_id !== selectedPackageId) {
+      warnings.push("restore preflight package does not match selected package");
+    }
+    if (preflight.preflight_scope !== "CONFIG_RESTORE_PREVIEW_ONLY") {
+      warnings.push("restore preflight is not config restore preview only");
+    }
+    if (preflight.would_mutate_current_runtime) {
+      warnings.push("restore preflight would mutate current runtime during preview");
+    }
+  }
+
+  const pending =
+    compare === null ||
+    compare === undefined ||
+    preflight === null ||
+    preflight === undefined;
+  const tone = warnings.length === 0 ? "match" : pending ? "pending" : "different";
+  return {
+    packageId: selectedPackageId,
+    tone,
+    statusLabel:
+      warnings.length === 0
+        ? "恢复判断有边界证据"
+        : pending
+          ? "等待边界关联证据"
+          : "恢复判断需复核",
+    summaryLabel: `${selectedPackageId} / boundary ${shortRuntimeHash(
+      boundary.boundary_hash
+    )} / warnings ${formatCount(warnings.length)}`,
+    evidenceLabels: [
+      `boundary ${shortRuntimeHash(boundary.boundary_hash)}`,
+      `hash ${hashAgreement ? "一致" : "不一致"}`,
+      `restore ${boundary.restore_scope}`,
+      `compare ${boundary.compare_scope}`,
+      `read ${boundary.read_scope}`
+    ],
+    compareLabels,
+    restoreLabels,
+    warningLabels: warnings
+  };
+}
+
+function runtimeExportBoundaryHashAgreement(
+  boundary: RuntimeExportReproducibilityBoundaryV1,
+  manifest: RuntimeReproducibilityManifestV1 | null | undefined,
+  reviewSummary: RuntimeExportReviewSummaryV1 | null | undefined,
+  diagnostics: RuntimeExportDiagnosticsBundleV1 | null | undefined
+): boolean {
+  const boundaryHash = boundary.boundary_hash;
+  const knownHashes = [
+    manifest?.runtime_export_reproducibility_boundary_v1?.boundary_hash,
+    reviewSummary?.reproducibility_boundary?.boundary_hash,
+    reviewSummary?.reproducibility.boundary_hash,
+    diagnostics?.reproducibility_boundary?.boundary_hash,
+    diagnostics?.reproducibility.boundary_hash
+  ].filter((value): value is string => typeof value === "string" && value.length > 0);
+  return boundaryHash.length > 0 && knownHashes.every((hash) => hash === boundaryHash);
 }
 
 export function buildDataPanelExportCompareDisplay(

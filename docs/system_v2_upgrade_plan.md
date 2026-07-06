@@ -598,7 +598,10 @@ Tasks:
     boundaries from a single backend-owned object. T303 renders that same
     backend-owned boundary in the standalone dashboard export review area as a
     read-only card with hash agreement, restore/read/compare scope, export
-    windows, and boundary conditions before the manifest inspector.
+    windows, and boundary conditions before the manifest inspector. T304 adds a
+    neighboring compare/restore boundary alignment card so package compare and
+    restore-preflight evidence are checked against the same backend boundary
+    before users make restore decisions.
 
 ### WS9. Delivery and Operations v2
 

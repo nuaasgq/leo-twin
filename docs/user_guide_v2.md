@@ -180,7 +180,10 @@ simulator artifacts are outside the export contract. The dashboard export
 review area renders this boundary as a dedicated read-only card before the
 manifest inspector, including boundary hash agreement, restore/read/compare
 scope, route/service export windows, and no-replay/no-recompute/no-mutation
-conditions.
+conditions. The dashboard also cross-checks the loaded package compare and
+restore preflight results against the same boundary, so users can see whether a
+restore decision is backed by config-only restore, config/generated-config
+compare, persisted-artifact reads, and matching boundary hashes before acting.
 After using `compare with live`, the package-vs-live route comparison card can
 save the currently displayed comparison into
 `route_comparison_review_report_v1.json`. The saved record includes the

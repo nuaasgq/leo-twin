@@ -14624,3 +14624,45 @@ change.
   - Add package compare/restore-preflight boundary alignment checks so the
     dashboard can warn when a selected restore path is being reviewed without a
     matching reproducibility boundary object.
+
+## 2026-07-06 - Dashboard Export Boundary Alignment v1
+
+- Branch: `feature/T304-dashboard-export-boundary-alignment-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: connect package compare and restore-preflight review to the
+  backend-owned `runtime_export_reproducibility_boundary_v1`. The standalone
+  dashboard now builds a read-only boundary alignment card for the selected
+  result package. It checks whether the loaded boundary exists, whether
+  boundary hashes agree across manifest/review/diagnostics artifacts, whether
+  compare scope matches `CONFIG_AND_GENERATED_CONFIG`, whether restore
+  preflight is config-restore-preview only, and whether read/review paths
+  remain no-replay/no-recompute/no-package-mutation/no-packet/no-external-
+  simulator. This task does not alter runtime control, backend export
+  generation, Event Kernel behavior, package mutation, replay, recomputation,
+  restore execution, or packet-level simulation.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts api.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 2 test
+      files and 203 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path.
+- Problems encountered:
+  - No product blocker. The task used the bundled Codex Node/Pnpm runtime path
+    because the normal PowerShell PATH may not expose `node`.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The alignment card is frontend-only evidence presentation. Backend compare
+    and restore-preflight responses do not yet include the boundary object
+    directly; the dashboard cross-checks the boundary from already loaded
+    manifest/review/diagnostics artifacts.
+- Recommended follow-up:
+  - Add backend-owned boundary alignment fields to package compare and
+    restore-preflight summaries so API consumers outside the dashboard can make
+    the same evidence check without loading multiple artifacts.
