@@ -783,7 +783,12 @@ Tasks:
     adding `benchmark_acceptance_binding_v1` to the audit index and a
     `benchmark_scenario_gate` acceptance check. Standard benchmark packages now
     report exact-range, fidelity, route-trust, and KPI-gate evidence; custom
-    packages remain usable but show a benchmark-gate warning.
+    packages remain usable but show a benchmark-gate warning. T346 exposes that
+    backend-owned benchmark gate as a dedicated dashboard section inside the
+    package acceptance card, including matched scenario, benchmark matrix,
+    config path, identity-match count, expected-range/fidelity/runtime-status
+    pass-warn-fail summaries, issue labels, and evidence hashes without
+    locally re-deriving product acceptance semantics.
 
 ### WS9. Delivery and Operations v2
 

@@ -553,6 +553,15 @@ route-trust expectations, or KPI benchmark expectations. The endpoint is
 read-only and does not replay events, recompute metrics, mutate packages on
 read, capture packets, or call external simulators.
 
+The standalone dashboard renders this backend-owned benchmark gate as a
+dedicated section inside the package acceptance card. It uses
+`benchmark_acceptance_binding_v1` from the audit index when available, showing
+the matched scenario id, matrix id, config path, matched identity metric count,
+exact-range result summary, fidelity result summary, runtime-status result
+summary, and binding/check hashes. If only the acceptance report is available,
+the dashboard falls back to the `benchmark_scenario_gate` check without
+inferring standard-scenario semantics locally.
+
 For operator handoff, the demo backend also exposes the generated Markdown
 handoff report:
 

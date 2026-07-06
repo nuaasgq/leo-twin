@@ -3195,6 +3195,36 @@ button.data-panel-route-row {
   background: #1a0d0d;
 }
 
+.data-panel-export-benchmark-gate {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  border: 1px solid #2b4a57;
+  border-radius: 6px;
+  padding: 8px;
+  background: #081016;
+}
+
+.data-panel-export-benchmark-gate.match {
+  border-color: #2c5b48;
+  background: #071611;
+}
+
+.data-panel-export-benchmark-gate.different {
+  border-color: #725b28;
+  background: #17140c;
+}
+
+.data-panel-export-benchmark-gate.pending {
+  border-color: #365068;
+  background: #0c141c;
+}
+
+.data-panel-export-benchmark-gate.error {
+  border-color: #663333;
+  background: #180c0c;
+}
+
 .data-panel-export-route-compare-rows {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));

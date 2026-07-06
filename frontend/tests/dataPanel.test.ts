@@ -4117,12 +4117,130 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         "completion completion",
         "manifest manifest"
       ],
+      benchmarkGate: null,
       warningLabels: [
         "service_trace_review: service trace comparison review is optional but recommended",
         "save a service trace comparison review report for stronger handoff"
       ]
     });
     expect(buildDataPanelExportAcceptanceReportStatus(null)).toBeNull();
+  });
+
+  it("surfaces backend-owned benchmark gate evidence in package acceptance reports", () => {
+    const display = buildDataPanelExportAcceptanceReportStatus(
+      {
+        type: "RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT_V1",
+        version: "v1",
+        acceptance_id: "leo_twin.runtime_export_package_acceptance_report.v1",
+        source: "BACKEND_RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX",
+        acceptance_scope: "INDUSTRIAL_V2_DEMO_CLOSED_LOOP_ACCEPTANCE",
+        package_id: "pkg-standard",
+        package_dir: "artifacts/runtime_exports/pkg-standard",
+        acceptance_status: "PASS",
+        demo_closed_loop_ready: true,
+        handoff_ready: true,
+        audit_status: "AUDIT_READY",
+        completion_status: "REVIEW_COMPLETE",
+        check_count: 1,
+        pass_count: 1,
+        warn_count: 0,
+        fail_count: 0,
+        checks: [
+          {
+            check_id: "benchmark_scenario_gate",
+            status: "PASS",
+            summary: "standard benchmark scenario accepted",
+            evidence_hash: "sha256:benchmark",
+            evidence_labels: ["scenario small_demo_72sat"],
+            issue_labels: [],
+            recommendation: "no action",
+            check_hash: "sha256:benchmark-check"
+          }
+        ],
+        operator_next_actions: [],
+        evidence_hashes: ["benchmark sha256:benchmark"],
+        boundary_conditions: ["BACKEND_OWNED_ACCEPTANCE_SUMMARY"],
+        acceptance_hash: "sha256:acceptance"
+      } as any,
+      {
+        benchmark_acceptance_binding_v1: {
+          type: "RUNTIME_EXPORT_BENCHMARK_ACCEPTANCE_BINDING_V1",
+          version: "v1",
+          binding_id: "leo_twin.runtime_export_benchmark_acceptance_binding.v1",
+          source: "BACKEND_RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX",
+          matrix_id: "leo_twin.benchmark_scenario_matrix.v1",
+          binding_status: "BENCHMARK_MATCHED",
+          check_status: "PASS",
+          scenario_id: "small_demo_72sat",
+          label: "72 satellite closed-loop demo",
+          config_path: "configs/acceptance/small_demo_72sat.yaml",
+          scale_tier: "small",
+          matched_identity_metrics: [
+            "satellite_count",
+            "user_count",
+            "compute_node_count",
+            "runtime_duration_s",
+            "orbit_update_interval_s",
+            "plane_count"
+          ],
+          expected_range_results: [
+            {
+              metric: "event_count",
+              status: "PASS",
+              observed_value: 4096,
+              minimum: 1,
+              maximum: 100000,
+              unit: "events",
+              issue_labels: [],
+              result_hash: "sha256:range"
+            }
+          ],
+          fidelity_results: [
+            {
+              check_id: "orbit_update_mode",
+              status: "PASS",
+              expected: "PER_SATELLITE",
+              actual: "PER_SATELLITE",
+              issue_labels: [],
+              result_hash: "sha256:fidelity"
+            }
+          ],
+          runtime_status_results: [
+            {
+              check_id: "route_trust",
+              status: "PASS",
+              expected: "PASS",
+              actual: "PASS",
+              issue_labels: [],
+              result_hash: "sha256:runtime"
+            }
+          ],
+          issue_labels: [],
+          recommendation: "no action",
+          binding_hash: "sha256:binding"
+        }
+      } as any
+    );
+
+    expect(display?.benchmarkGate).toMatchObject({
+      tone: "match",
+      statusLabel: "standard benchmark PASS",
+      summaryLabel:
+        "72 satellite closed-loop demo / small / BENCHMARK_MATCHED / binding",
+      evidenceLabels: [
+        "status PASS",
+        "scenario small_demo_72sat",
+        "matrix leo_twin.benchmark_scenario_matrix.v1",
+        "config configs/acceptance/small_demo_72sat.yaml",
+        "identity 6",
+        "range 1 pass / 0 warn / 0 fail",
+        "fidelity 1 pass / 0 warn / 0 fail",
+        "runtime 1 pass / 0 warn / 0 fail",
+        "binding binding",
+        "check benchmark-ch"
+      ],
+      warningLabels: []
+    });
   });
 
   it("summarizes saved route comparison review report contents", () => {

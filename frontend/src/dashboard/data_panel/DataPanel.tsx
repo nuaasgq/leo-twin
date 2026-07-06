@@ -1460,7 +1460,8 @@ export const DataPanel = memo(function DataPanel({
     });
   const exportAcceptanceReportStatus =
     buildDataPanelExportAcceptanceReportStatus(
-      runtimeExportPackageAcceptanceReport
+      runtimeExportPackageAcceptanceReport,
+      runtimeExportPackageAuditIndex
     );
   const exportRouteComparisonReviewReportStatus =
     buildDataPanelExportRouteComparisonReviewReportStatus(
@@ -2958,6 +2959,57 @@ export const DataPanel = memo(function DataPanel({
                       <span key={label}>{label}</span>
                     ))}
                   </div>
+                  {exportAcceptanceReportStatus.benchmarkGate ? (
+                    <div
+                      className={`data-panel-export-benchmark-gate ${exportAcceptanceReportStatus.benchmarkGate.tone}`}
+                    >
+                      <div className="data-panel-export-diagnostics-header">
+                        <div>
+                          <span>Benchmark scenario gate</span>
+                          <strong>
+                            {
+                              exportAcceptanceReportStatus.benchmarkGate
+                                .statusLabel
+                            }
+                          </strong>
+                          <small>
+                            {
+                              exportAcceptanceReportStatus.benchmarkGate
+                                .summaryLabel
+                            }
+                          </small>
+                        </div>
+                      </div>
+                      <div className="data-panel-export-compare-meta">
+                        {exportAcceptanceReportStatus.benchmarkGate.evidenceLabels.map(
+                          (label) => (
+                            <span key={`benchmark-gate:${label}`}>{label}</span>
+                          )
+                        )}
+                      </div>
+                      {exportAcceptanceReportStatus.benchmarkGate.warningLabels
+                        .length > 0 ? (
+                        <div className="data-panel-export-diagnostics-findings">
+                          {exportAcceptanceReportStatus.benchmarkGate.warningLabels.map(
+                            (label) => (
+                              <span
+                                className={
+                                  exportAcceptanceReportStatus.benchmarkGate
+                                    ?.tone === "different"
+                                    ? "error"
+                                    : "warn"
+                                }
+                                key={`benchmark-gate-warning:${label}`}
+                              >
+                                <strong>BENCHMARK</strong>
+                                {label}
+                              </span>
+                            )
+                          )}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
                   {exportAcceptanceReportStatus.warningLabels.length > 0 ? (
                     <div className="data-panel-export-diagnostics-findings">
                       {exportAcceptanceReportStatus.warningLabels.map((label) => (
@@ -11322,6 +11374,15 @@ export interface DataPanelExportAcceptanceReportStatusDisplay {
   statusLabel: string;
   summaryLabel: string;
   evidenceLabels: readonly string[];
+  benchmarkGate: DataPanelExportBenchmarkGateDisplay | null;
+  warningLabels: readonly string[];
+}
+
+export interface DataPanelExportBenchmarkGateDisplay {
+  tone: "match" | "different" | "pending" | "error";
+  statusLabel: string;
+  summaryLabel: string;
+  evidenceLabels: readonly string[];
   warningLabels: readonly string[];
 }
 
@@ -12315,7 +12376,8 @@ export function buildDataPanelExportReviewCompletionSummary({
 }
 
 export function buildDataPanelExportAcceptanceReportStatus(
-  report: RuntimeExportPackageAcceptanceReportV1 | null | undefined
+  report: RuntimeExportPackageAcceptanceReportV1 | null | undefined,
+  auditIndex: RuntimeExportPackageAuditIndexV1 | null | undefined = null
 ): DataPanelExportAcceptanceReportStatusDisplay | null {
   if (report === null || report === undefined) {
     return null;
@@ -12352,12 +12414,131 @@ export function buildDataPanelExportAcceptanceReportStatus(
         return `${prefix} ${shortRuntimeHash(hash ?? "")}`;
       })
     ],
+    benchmarkGate: buildDataPanelExportBenchmarkGateDisplay(report, auditIndex),
     warningLabels: [
       ...failedChecks.map((check) => `${check.check_id}: ${check.summary}`),
       ...warnedChecks.map((check) => `${check.check_id}: ${check.summary}`),
       ...report.operator_next_actions.slice(0, 4)
     ]
   };
+}
+
+function buildDataPanelExportBenchmarkGateDisplay(
+  report: RuntimeExportPackageAcceptanceReportV1,
+  auditIndex: RuntimeExportPackageAuditIndexV1 | null | undefined
+): DataPanelExportBenchmarkGateDisplay | null {
+  const gateCheck = report.checks.find(
+    (check) => check.check_id === "benchmark_scenario_gate"
+  );
+  const binding = auditIndex?.benchmark_acceptance_binding_v1;
+  if (gateCheck === undefined && binding === undefined) {
+    return null;
+  }
+  const gateStatus =
+    binding?.check_status ?? gateCheck?.status ?? report.acceptance_status;
+  const tone = acceptanceBenchmarkGateTone(gateStatus);
+  const scenarioLabel =
+    binding !== undefined && binding.scenario_id.length > 0
+      ? `${binding.label || binding.scenario_id} / ${binding.scale_tier || "scale tier"}`
+      : "custom scenario / no standard benchmark match";
+  const evidenceLabels = [
+    `status ${gateStatus}`,
+    `scenario ${binding?.scenario_id || "custom"}`,
+    `matrix ${binding?.matrix_id ?? "not bound"}`,
+    `config ${binding?.config_path ?? "-"}`,
+    `identity ${formatCount(binding?.matched_identity_metrics.length ?? 0)}`,
+    `range ${acceptanceBenchmarkResultSummary(
+      binding?.expected_range_results ?? []
+    )}`,
+    `fidelity ${acceptanceBenchmarkResultSummary(
+      binding?.fidelity_results ?? []
+    )}`,
+    `runtime ${acceptanceBenchmarkResultSummary(
+      binding?.runtime_status_results ?? []
+    )}`,
+    `binding ${shortRuntimeHash(binding?.binding_hash ?? "")}`,
+    `check ${shortRuntimeHash(gateCheck?.check_hash ?? "")}`
+  ];
+  const warningLabels = [
+    ...(binding?.issue_labels ?? []),
+    ...acceptanceBenchmarkProblemLabels(binding?.expected_range_results ?? []),
+    ...acceptanceBenchmarkProblemLabels(binding?.fidelity_results ?? []),
+    ...acceptanceBenchmarkProblemLabels(binding?.runtime_status_results ?? []),
+    ...(gateCheck !== undefined && gateCheck.status !== "PASS"
+      ? [gateCheck.summary, ...gateCheck.issue_labels]
+      : [])
+  ];
+  return {
+    tone,
+    statusLabel:
+      gateStatus === "PASS"
+        ? "standard benchmark PASS"
+        : gateStatus === "WARN"
+          ? "benchmark gate WARN"
+          : gateStatus === "FAIL"
+            ? "benchmark gate FAIL"
+            : `benchmark gate ${gateStatus}`,
+    summaryLabel: `${scenarioLabel} / ${binding?.binding_status ?? "CHECK_FROM_REPORT"} / ${shortRuntimeHash(
+      binding?.binding_hash ?? gateCheck?.check_hash ?? ""
+    )}`,
+    evidenceLabels,
+    warningLabels: Array.from(new Set(warningLabels))
+  };
+}
+
+function acceptanceBenchmarkResultSummary(
+  results: readonly {
+    status: string;
+  }[]
+): string {
+  if (results.length === 0) {
+    return "0 checks";
+  }
+  const passCount = results.filter((result) => result.status === "PASS").length;
+  const warnCount = results.filter((result) => result.status === "WARN").length;
+  const failCount = results.filter((result) => result.status === "FAIL").length;
+  return `${formatCount(passCount)} pass / ${formatCount(warnCount)} warn / ${formatCount(failCount)} fail`;
+}
+
+function acceptanceBenchmarkProblemLabels(
+  results: readonly {
+    metric?: string;
+    check_id?: string;
+    source?: string;
+    status: string;
+    expected?: string;
+    actual?: string;
+    observed_value?: number | string;
+    issue_labels: readonly string[];
+  }[]
+): string[] {
+  return results
+    .filter((result) => result.status !== "PASS")
+    .map((result) => {
+      const name = result.metric ?? result.check_id ?? result.source ?? "benchmark";
+      const observed =
+        result.actual ?? result.observed_value ?? result.issue_labels.join(",");
+      const expected =
+        result.expected !== undefined && result.expected.length > 0
+          ? ` / expected ${result.expected}`
+          : "";
+      return `${result.status}: ${name}${expected} / observed ${String(observed)}`;
+    });
+}
+
+function acceptanceBenchmarkGateTone(
+  status: string
+): DataPanelExportBenchmarkGateDisplay["tone"] {
+  switch (status) {
+    case "PASS":
+      return "match";
+    case "WARN":
+      return "pending";
+    case "FAIL":
+      return "different";
+    default:
+      return "pending";
+  }
 }
 
 export function buildDataPanelExportPackageAuditIndexDisplay(

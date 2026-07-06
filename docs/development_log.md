@@ -16896,3 +16896,57 @@ change.
 - Recommended follow-up:
   - Add exported benchmark gate details to the dashboard acceptance card, with
     per-check rows for exact range, fidelity, route trust, and KPI status.
+
+## 2026-07-07 - T346 dashboard benchmark gate view v1
+
+- Branch: `feature/T346-dashboard-benchmark-gate-view-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: expose the backend-owned benchmark gate from T345 as a dedicated
+  dashboard section inside the result-package acceptance card. The dashboard
+  now reads `benchmark_acceptance_binding_v1` from
+  `export_package_audit_index_v1.json` when available and displays matched
+  scenario id, matrix id, config path, identity-match count, expected-range,
+  fidelity, runtime-status pass/warn/fail summaries, issue labels, and
+  binding/check hashes. If only the acceptance report is available, the
+  dashboard falls back to the `benchmark_scenario_gate` check. No Event Kernel,
+  simulation model, result-package contract generation, package replay,
+  package write-on-read, or frontend architecture behavior changed.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `.\node_modules\.bin\tsc.cmd --noEmit -p tsconfig.json` from
+    `frontend`
+    - Result: passed with the bundled Codex Node runtime path.
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 192 tests.
+  - `pnpm --dir frontend test dataPanel.test.ts api.test.ts appSurface.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 3 test
+      files and 279 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path; Vite
+      reported the existing large `DataPanel` chunk warning.
+  - `git diff --check`
+    - Result: passed; Git emitted CRLF warnings for the existing unstaged
+      runtime config drift.
+- Problems encountered:
+  - The initial DataPanel unit expectation used the untrimmed check hash label
+    `benchmark-check`; the shared frontend short-hash helper trims it to
+    `benchmark-ch`. The test was corrected to match the existing display
+    helper.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The dashboard benchmark gate currently summarizes exact-range, fidelity,
+    and runtime-status checks; it does not yet render a full per-check table or
+    drill-down drawer.
+  - The task only improves user-facing acceptance transparency. It does not
+    recalibrate KPI ranges or add new model fidelity.
+- Recommended follow-up:
+  - Add a benchmark gate drill-down table for each expected-range, fidelity,
+    route-trust, and KPI check, with direct links to the related package
+    artifacts.
