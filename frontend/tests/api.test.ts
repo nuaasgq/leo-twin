@@ -12,6 +12,7 @@ import {
   loadRuntimeExportScenarioReviewBundle,
   loadRuntimeExportScenarioReviewChecklist,
   loadRuntimeExportScenarioReviewChecklistTemplate,
+  loadRuntimeExportScenarioReviewChecklistTemplateComparison,
   loadRuntimeExportRouteComparisonReviewReport,
   loadRuntimeExportServiceTraceComparisonReviewReport,
   loadRuntimeExportServiceTraceComparisonReviewReportPage,
@@ -64,6 +65,7 @@ import {
   runtimeExportServiceTraceComparisonReviewReportRecordsHref,
   runtimeExportScenarioReviewChecklistHref,
   runtimeExportScenarioReviewChecklistTemplateHref,
+  runtimeExportScenarioReviewChecklistTemplateComparisonHref,
   runtimeExportRestorePreflightHref,
   runtimeDetailEntityHref,
   saveRuntimeExportRouteComparisonReviewReport,
@@ -138,6 +140,11 @@ describe("runtime API diagnostics", () => {
     );
     expect(runtimeExportScenarioReviewChecklistTemplateHref("pkg 1")).toBe(
       "/runtime/export/packages/pkg%201/scenario-review-checklist-template"
+    );
+    expect(
+      runtimeExportScenarioReviewChecklistTemplateComparisonHref("pkg 1")
+    ).toBe(
+      "/runtime/export/packages/pkg%201/scenario-review-checklist-template-comparison"
     );
     expect(
       runtimeExportPackageRouteDetailsHref(
@@ -1890,6 +1897,97 @@ describe("runtime API diagnostics", () => {
     });
     expect(fetchMock).toHaveBeenCalledWith(
       "/runtime/export/packages/pkg/scenario-review-checklist-template"
+    );
+  });
+
+  it("loads runtime export scenario review checklist template comparison", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        type: "RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_TEMPLATE_COMPARISON",
+        summary: {
+          type: "RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_TEMPLATE_COMPARISON_V1",
+          version: "v1",
+          comparison_id:
+            "leo_twin.runtime_export_scenario_review_checklist_template_comparison.v1",
+          source: "BACKEND_RUNTIME_EXPORT_PACKAGE",
+          comparison_scope: "SAVED_CHECKLIST_VS_LATEST_BACKEND_TEMPLATE",
+          package_id: "pkg",
+          package_dir: "exports/pkg",
+          scenario_review_hash: "sha256:scenario-review",
+          template_hash: "sha256:template",
+          template_status: "TEMPLATE_READY",
+          checklist_present: true,
+          checklist_hash: "sha256:checklist",
+          checklist_status: "CHECKLIST_COMPLETE",
+          comparison_status: "ALIGNED",
+          template_record_count: 1,
+          checklist_record_count: 1,
+          aligned_record_count: 1,
+          missing_checklist_record_count: 0,
+          evidence_hash_mismatch_count: 0,
+          operator_attention_count: 0,
+          extra_checklist_record_count: 0,
+          records: [
+            {
+              artifact_filename: "scenario_review_bundle_v1.json",
+              step_label: "1 scenario entry",
+              review_order_index: 0,
+              template_evidence_hash: "sha256:scenario-review",
+              template_record_hash: "sha256:template-record",
+              checklist_evidence_hash: "sha256:scenario-review",
+              checklist_record_hash: "sha256:checklist-record",
+              checklist_review_status: "REVIEWED",
+              comparison_status: "ALIGNED",
+              issue_labels: [],
+              comparison_record_hash: "sha256:comparison-record"
+            }
+          ],
+          extra_records: [],
+          boundary_conditions: ["NO_EVENT_REPLAY"],
+          comparison_hash: "sha256:comparison"
+        },
+        template: {
+          type: "RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_TEMPLATE_V1",
+          version: "v1",
+          template_id:
+            "leo_twin.runtime_export_scenario_review_checklist_template.v1",
+          source: "BACKEND_RUNTIME_EXPORT_PACKAGE",
+          package_id: "pkg",
+          package_dir: "exports/pkg",
+          scenario_review_hash: "sha256:scenario-review",
+          audit_hash: "sha256:audit",
+          expected_review_filenames: ["scenario_review_bundle_v1.json"],
+          expected_review_count: 1,
+          evidence_present_count: 1,
+          missing_evidence_filenames: [],
+          missing_evidence_count: 0,
+          template_status: "TEMPLATE_READY",
+          records: [],
+          record_policy: "template records prefill evidence",
+          boundary_conditions: ["NO_EVENT_REPLAY"],
+          template_hash: "sha256:template"
+        },
+        scenario_review_bundle_artifact: {
+          name: "scenario_review_bundle_v1",
+          filename: "scenario_review_bundle_v1.json",
+          bytes: 1024,
+          sha256: "sha256:scenario-file"
+        }
+      })
+    }));
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+
+    await expect(
+      loadRuntimeExportScenarioReviewChecklistTemplateComparison("pkg")
+    ).resolves.toMatchObject({
+      package_id: "pkg",
+      comparison_status: "ALIGNED",
+      aligned_record_count: 1,
+      comparison_hash: "sha256:comparison"
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/runtime/export/packages/pkg/scenario-review-checklist-template-comparison"
     );
   });
 

@@ -324,6 +324,16 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                         except RuntimeExportArtifactError as exc:
                             self.send_error(404, str(exc))
                         return
+                    elif artifact_kind == "scenario-review-checklist-template-comparison":
+                        try:
+                            self._send_json(
+                                control_plane.runtime_export_package_scenario_review_checklist_template_comparison(
+                                    package_id
+                                )
+                            )
+                        except RuntimeExportArtifactError as exc:
+                            self.send_error(404, str(exc))
+                        return
                     elif artifact_kind == "archive":
                         artifact = control_plane.runtime_export_package_archive_artifact(
                             package_id,
@@ -976,6 +986,11 @@ def _runtime_export_package_route(
         return parts[0], "scenario-review-checklist", None
     if len(parts) == 2 and parts[1] == "scenario-review-checklist-template":
         return parts[0], "scenario-review-checklist-template", None
+    if (
+        len(parts) == 2
+        and parts[1] == "scenario-review-checklist-template-comparison"
+    ):
+        return parts[0], "scenario-review-checklist-template-comparison", None
     if len(parts) == 3 and parts[1] == "files":
         return parts[0], "file", parts[2]
     return "", "missing", None

@@ -13,6 +13,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID,
     RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1_ID,
     RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_V1_ID,
+    RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_TEMPLATE_COMPARISON_V1_ID,
     RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_TEMPLATE_V1_ID,
     RUNTIME_EXPORT_SERVICE_TRACE_COMPARISON_REVIEW_REPORT_PAGE_V1_ID,
     RUNTIME_EXPORT_SERVICE_TRACE_COMPARISON_REVIEW_REPORT_V1_ID,
@@ -38,6 +39,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_review_summary_v1,
     build_runtime_export_scenario_review_bundle_v1,
     build_runtime_export_scenario_review_checklist_v1,
+    build_runtime_export_scenario_review_checklist_template_comparison_v1,
     build_runtime_export_scenario_review_checklist_template_v1,
     build_runtime_export_service_trace_comparison_review_report_page_v1,
     build_runtime_export_service_trace_comparison_review_report_v1,
@@ -112,6 +114,10 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
     )
     assert (
         "GET /runtime/export/packages/{package_id}/scenario-review-checklist-template"
+        in first["source_endpoints"]
+    )
+    assert (
+        "GET /runtime/export/packages/{package_id}/scenario-review-checklist-template-comparison"
         in first["source_endpoints"]
     )
     assert (
@@ -1013,6 +1019,105 @@ def test_runtime_export_scenario_review_checklist_template_v1_is_deterministic()
         "service_lifecycle_trace_v2.json",
         "service_trace_comparison_review_report_v1.json",
     )
+
+
+def test_runtime_export_scenario_review_checklist_template_comparison_v1_detects_drift() -> None:
+    template = {
+        "template_id": RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_TEMPLATE_V1_ID,
+        "scenario_review_hash": "sha256:scenario-review",
+        "template_hash": "sha256:template",
+        "template_status": "TEMPLATE_READY",
+        "records": (
+            {
+                "artifact_filename": "scenario_review_bundle_v1.json",
+                "step_label": "1 scenario entry",
+                "review_order_index": 0,
+                "evidence_hash": "sha256:scenario-review",
+                "template_record_hash": "sha256:template-record-a",
+            },
+            {
+                "artifact_filename": "review_summary_v1.json",
+                "step_label": "3 review summary",
+                "review_order_index": 1,
+                "evidence_hash": "sha256:review-new",
+                "template_record_hash": "sha256:template-record-b",
+            },
+        ),
+    }
+    checklist = {
+        "checklist_hash": "sha256:checklist",
+        "checklist_status": "CHECKLIST_COMPLETE",
+        "records": (
+            {
+                "artifact_filename": "scenario_review_bundle_v1.json",
+                "step_label": "1 scenario entry",
+                "review_order_index": 0,
+                "evidence_hash": "sha256:scenario-review",
+                "review_status": "REVIEWED",
+                "record_hash": "sha256:checklist-record-a",
+            },
+            {
+                "artifact_filename": "review_summary_v1.json",
+                "step_label": "3 review summary",
+                "review_order_index": 1,
+                "evidence_hash": "sha256:review-old",
+                "review_status": "REVIEWED",
+                "record_hash": "sha256:checklist-record-b",
+            },
+            {
+                "artifact_filename": "old_artifact.json",
+                "step_label": "old artifact",
+                "review_order_index": 99,
+                "evidence_hash": "sha256:old",
+                "review_status": "REVIEWED",
+                "record_hash": "sha256:old-record",
+            },
+        ),
+    }
+
+    first = build_runtime_export_scenario_review_checklist_template_comparison_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        scenario_review_checklist=checklist,
+        scenario_review_checklist_template=template,
+    )
+    second = build_runtime_export_scenario_review_checklist_template_comparison_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        scenario_review_checklist=checklist,
+        scenario_review_checklist_template=template,
+    )
+
+    assert first == second
+    assert first["comparison_id"] == (
+        RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_TEMPLATE_COMPARISON_V1_ID
+    )
+    assert first["comparison_status"] == "DRIFT"
+    assert first["checklist_present"] is True
+    assert first["aligned_record_count"] == 1
+    assert first["missing_checklist_record_count"] == 0
+    assert first["evidence_hash_mismatch_count"] == 1
+    assert first["operator_attention_count"] == 0
+    assert first["extra_checklist_record_count"] == 1
+    assert first["records"][0]["comparison_status"] == "ALIGNED"
+    assert first["records"][1]["comparison_status"] == "DRIFT"
+    assert first["records"][1]["issue_labels"] == ("EVIDENCE_HASH_MISMATCH",)
+    assert first["extra_records"][0]["comparison_status"] == "EXTRA"
+    assert first["comparison_hash"].startswith("sha256:")
+    assert json.loads(json.dumps(first, sort_keys=True))["comparison_id"] == (
+        RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_TEMPLATE_COMPARISON_V1_ID
+    )
+
+    missing = build_runtime_export_scenario_review_checklist_template_comparison_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        scenario_review_checklist=None,
+        scenario_review_checklist_template=template,
+    )
+    assert missing["comparison_status"] == "CHECKLIST_MISSING"
+    assert missing["checklist_present"] is False
+    assert missing["missing_checklist_record_count"] == 2
+    assert missing["records"][0]["comparison_status"] == "MISSING"
 
 
 def test_runtime_export_route_detail_index_v1_is_deterministic_and_review_ready() -> None:

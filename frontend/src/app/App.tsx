@@ -18,6 +18,7 @@ import {
   RuntimeExportPackageAuditIndexV1,
   RuntimeExportScenarioReviewBundleV1,
   RuntimeExportScenarioReviewChecklistV1,
+  RuntimeExportScenarioReviewChecklistTemplateComparisonV1,
   RuntimeExportScenarioReviewChecklistTemplateV1,
   RuntimeExportRouteComparisonReviewReportV1,
   RuntimeExportServiceTraceComparisonReviewReportPageV1,
@@ -62,6 +63,7 @@ import {
   loadRuntimeExportPackageAuditIndex,
   loadRuntimeExportScenarioReviewBundle,
   loadRuntimeExportScenarioReviewChecklist,
+  loadRuntimeExportScenarioReviewChecklistTemplateComparison,
   loadRuntimeExportScenarioReviewChecklistTemplate,
   loadRuntimeExportRouteComparisonReviewReport,
   loadRuntimeExportServiceTraceComparisonReviewReportPage,
@@ -345,6 +347,12 @@ export function App() {
     runtimeExportScenarioReviewChecklistTemplate,
     setRuntimeExportScenarioReviewChecklistTemplate
   ] = useState<RuntimeExportScenarioReviewChecklistTemplateV1 | null>(null);
+  const [
+    runtimeExportScenarioReviewChecklistTemplateComparison,
+    setRuntimeExportScenarioReviewChecklistTemplateComparison
+  ] = useState<RuntimeExportScenarioReviewChecklistTemplateComparisonV1 | null>(
+    null
+  );
   const [
     runtimeExportRouteDetailItemRouteId,
     setRuntimeExportRouteDetailItemRouteId
@@ -1311,6 +1319,7 @@ export function App() {
     setRuntimeExportScenarioReviewBundleError(null);
     setRuntimeExportScenarioReviewChecklist(null);
     setRuntimeExportScenarioReviewChecklistTemplate(null);
+    setRuntimeExportScenarioReviewChecklistTemplateComparison(null);
     setRuntimeExportScenarioReviewChecklistError(null);
     setRuntimeExportRouteDetailItem(null);
     setRuntimeExportRouteDetailItemRouteId(null);
@@ -1342,6 +1351,7 @@ export function App() {
       scenarioReviewBundle,
       scenarioReviewChecklist,
       scenarioReviewChecklistTemplate,
+      scenarioReviewChecklistTemplateComparison,
       preflight
     ] =
       await Promise.allSettled([
@@ -1373,6 +1383,9 @@ export function App() {
           : Promise.resolve(null),
         shouldLoadScenarioReviewBundle
           ? loadRuntimeExportScenarioReviewChecklistTemplate(packageId)
+          : Promise.resolve(null),
+        shouldLoadScenarioReviewBundle
+          ? loadRuntimeExportScenarioReviewChecklistTemplateComparison(packageId)
           : Promise.resolve(null),
         loadRuntimeExportRestorePreflight(packageId)
       ]);
@@ -1487,6 +1500,13 @@ export function App() {
       );
     } else {
       setRuntimeExportScenarioReviewChecklistTemplate(null);
+    }
+    if (scenarioReviewChecklistTemplateComparison.status === "fulfilled") {
+      setRuntimeExportScenarioReviewChecklistTemplateComparison(
+        scenarioReviewChecklistTemplateComparison.value
+      );
+    } else {
+      setRuntimeExportScenarioReviewChecklistTemplateComparison(null);
     }
     if (preflight.status === "fulfilled") {
       setRuntimeExportRestorePreflight(preflight.value);
@@ -2714,6 +2734,9 @@ export function App() {
               }
               runtimeExportScenarioReviewChecklistTemplate={
                 runtimeExportScenarioReviewChecklistTemplate
+              }
+              runtimeExportScenarioReviewChecklistTemplateComparison={
+                runtimeExportScenarioReviewChecklistTemplateComparison
               }
               runtimeExportRouteDetailItemRouteId={runtimeExportRouteDetailItemRouteId}
               runtimeExportComparePackageId={runtimeExportComparePackageId}

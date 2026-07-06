@@ -16700,3 +16700,74 @@ change.
 - Recommended follow-up:
   - Add an offline review report page that compares saved checklist records
     against the latest backend template and highlights drift by template hash.
+
+## 2026-07-07 - T343 scenario review checklist template comparison v1
+
+- Branch: `feature/T343-scenario-review-template-comparison-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: add a read-only backend comparison endpoint for saved scenario review
+  checklists versus the latest backend-generated template. The new
+  `GET /runtime/export/packages/{package_id}/scenario-review-checklist-template-comparison`
+  route returns deterministic
+  `scenario_review_checklist_template_comparison_v1` evidence with
+  `template_hash`, `checklist_hash`, `comparison_status`, aligned/missing/
+  drift/attention/extra counts, per-record issue labels, and a stable
+  `comparison_hash`. The dashboard loads this backend output and renders a
+  compact checklist-template alignment status without deriving drift semantics
+  locally. No Event Kernel, simulation model, package replay, package write-on-
+  read, or frontend architecture behavior changed.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/app/api.ts`
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m compileall -q src\leo_twin\services\result_package_contract.py examples\integration_demo\control_plane.py examples\integration_demo\server.py`
+    - Result: passed.
+  - `python -m pytest tests\unit\test_result_package_contract_v1.py::test_result_package_contract_v1_is_deterministic_json_ready tests\unit\test_result_package_contract_v1.py::test_runtime_export_scenario_review_checklist_template_v1_is_deterministic tests\unit\test_result_package_contract_v1.py::test_runtime_export_scenario_review_checklist_template_comparison_v1_detects_drift tests\integration\test_result_package_export_v1.py::test_runtime_export_package_satisfies_result_package_contract_v1 tests\integration\test_runtime_session_control.py::test_demo_server_stream_query_parses_cursor_options -q`
+    - Result: passed, 5 tests.
+  - `.\node_modules\.bin\tsc.cmd --noEmit -p tsconfig.json` from
+    `frontend`
+    - Result: passed with the bundled Codex Node runtime path.
+  - `pnpm --dir frontend test dataPanel.test.ts api.test.ts appSurface.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 3 test
+      files and 276 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path; Vite
+      reported the existing large `DataPanel` chunk warning.
+  - `git diff --check`
+    - Result: passed; Git emitted CRLF warnings for the existing unstaged
+      runtime config drift and touched frontend files.
+- Problems encountered:
+  - Saving `scenario_review_checklist_v1.json` refreshes
+    `export_package_audit_index_v1.json`, so a naive latest-template comparison
+    can report audit-index hash drift immediately after a successful checklist
+    save. The comparison now records
+    `AUDIT_INDEX_HASH_REFRESH_IS_NOT_TREATED_AS_CHECKLIST_DRIFT` and does not
+    count this backend audit-index refresh as checklist drift; underlying route,
+    service, scenario, configuration, metric, manifest, and summary evidence
+    hashes remain compared directly.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The comparison is a compact status object, not a paged report. If future
+    review packages grow to many artifacts, add a cursor-paged comparison
+    records endpoint.
+  - The dashboard currently shows top drift labels only; a later UX task can
+    add a dedicated comparison drawer with per-record filters.
+- Recommended follow-up:
+  - Start the next industrial v2 closed-loop task on result package acceptance:
+    add benchmark scenario acceptance summaries that bind configuration,
+    runtime metrics, review artifacts, and model-boundary evidence into one
+    user-facing pass/warn/fail report.

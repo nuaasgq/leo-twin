@@ -14,6 +14,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID,
     RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1_ID,
     RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_V1_ID,
+    RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_TEMPLATE_COMPARISON_V1_ID,
     RUNTIME_EXPORT_SERVICE_TRACE_COMPARISON_REVIEW_REPORT_V1_ID,
     RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID,
     summarize_result_package_record_v1,
@@ -692,6 +693,29 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert checklist_audit["package_review_completion_hash"] == (
         checklist_audit["package_review_completion_v1"]["completion_hash"]
     )
+    checklist_template_comparison_response = (
+        control_plane.runtime_export_package_scenario_review_checklist_template_comparison(
+            str(package["package_id"]),
+            output_root,
+        )
+    )
+    checklist_template_comparison = checklist_template_comparison_response["summary"]
+    assert checklist_template_comparison_response["type"] == (
+        "RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_TEMPLATE_COMPARISON"
+    )
+    assert checklist_template_comparison["comparison_id"] == (
+        RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_TEMPLATE_COMPARISON_V1_ID
+    )
+    assert checklist_template_comparison["comparison_status"] == "ALIGNED"
+    assert checklist_template_comparison["template_hash"].startswith("sha256:")
+    assert checklist_template_comparison["checklist_hash"] == (
+        checklist["checklist_hash"]
+    )
+    assert checklist_template_comparison["aligned_record_count"] == (
+        checklist_template_comparison["template_record_count"]
+    )
+    assert checklist_template_comparison["evidence_hash_mismatch_count"] == 0
+    assert checklist_template_comparison["comparison_hash"].startswith("sha256:")
     completion_response = control_plane.runtime_export_package_review_completion(
         str(package["package_id"]),
         output_root,

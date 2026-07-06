@@ -401,6 +401,27 @@ per backend-recommended review step. Each record pre-fills `artifact_filename`,
 and the audit index only; it does not replay events, recompute models, or write
 package files.
 
+After a checklist is saved, the demo backend can compare those operator
+decisions against the latest backend-generated template through:
+
+```text
+GET /runtime/export/packages/{package_id}/scenario-review-checklist-template-comparison
+```
+
+The response contains
+`scenario_review_checklist_template_comparison_v1`. It reports
+`template_hash`, `checklist_hash`, `comparison_status`, aligned/missing/drift/
+attention/extra record counts, and per-artifact issue labels such as
+`MISSING_CHECKLIST_RECORD`, `EVIDENCE_HASH_MISMATCH`,
+`OPERATOR_REVIEW_NOT_REVIEWED`, and `EXTRA_CHECKLIST_RECORD`. This endpoint is
+read-only: it loads persisted package evidence, the optional saved checklist,
+and a fresh backend template, then returns deterministic drift evidence without
+event replay, model recomputation, package mutation, or archive rewrite. The
+`export_package_audit_index_v1.json` hash can refresh when the checklist itself
+is saved, so that audit-index hash refresh is reported as a comparison boundary
+and is not treated as checklist drift; the underlying route, service, scenario,
+configuration, metric, and manifest evidence hashes remain compared directly.
+
 The demo backend can persist operator decisions for that guided flow through:
 
 ```text

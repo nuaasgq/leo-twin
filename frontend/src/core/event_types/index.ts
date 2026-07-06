@@ -1691,6 +1691,16 @@ export interface RuntimeExportScenarioReviewChecklistTemplateEnvelope {
   catalog_record?: RuntimeExportCatalogRecordV1;
 }
 
+export interface RuntimeExportScenarioReviewChecklistTemplateComparisonEnvelope {
+  type: "RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_TEMPLATE_COMPARISON" | string;
+  summary: RuntimeExportScenarioReviewChecklistTemplateComparisonV1;
+  template: RuntimeExportScenarioReviewChecklistTemplateV1;
+  scenario_review_bundle_artifact: RuntimeExportCatalogFileV1;
+  audit_artifact?: RuntimeExportCatalogFileV1;
+  checklist_artifact?: RuntimeExportCatalogFileV1;
+  catalog_record?: RuntimeExportCatalogRecordV1;
+}
+
 export interface RuntimeExportScenarioReviewChecklistV1 {
   type: "RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_V1" | string;
   version: "v1" | string;
@@ -1763,6 +1773,48 @@ export interface RuntimeExportScenarioReviewChecklistTemplateRecordV1 {
   evidence_source: string;
   review_order_index: number;
   template_record_hash: string;
+}
+
+export interface RuntimeExportScenarioReviewChecklistTemplateComparisonV1 {
+  type: "RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_TEMPLATE_COMPARISON_V1" | string;
+  version: "v1" | string;
+  comparison_id: string;
+  source: string;
+  comparison_scope: string;
+  package_id: string;
+  package_dir: string;
+  scenario_review_hash: string;
+  template_hash: string;
+  template_status: string;
+  checklist_present: boolean;
+  checklist_hash: string;
+  checklist_status: string;
+  comparison_status: "ALIGNED" | "DRIFT" | "TEMPLATE_WARN" | "CHECKLIST_MISSING" | string;
+  template_record_count: number;
+  checklist_record_count: number;
+  aligned_record_count: number;
+  missing_checklist_record_count: number;
+  evidence_hash_mismatch_count: number;
+  operator_attention_count: number;
+  extra_checklist_record_count: number;
+  records: readonly RuntimeExportScenarioReviewChecklistTemplateComparisonRecordV1[];
+  extra_records: readonly RuntimeExportScenarioReviewChecklistTemplateComparisonRecordV1[];
+  boundary_conditions: readonly string[];
+  comparison_hash: string;
+}
+
+export interface RuntimeExportScenarioReviewChecklistTemplateComparisonRecordV1 {
+  artifact_filename: string;
+  step_label: string;
+  review_order_index: number;
+  template_evidence_hash?: string;
+  template_record_hash?: string;
+  checklist_evidence_hash: string;
+  checklist_record_hash: string;
+  checklist_review_status: string;
+  comparison_status: "ALIGNED" | "MISSING" | "DRIFT" | "ATTENTION" | "EXTRA" | string;
+  issue_labels: readonly string[];
+  comparison_record_hash: string;
 }
 
 export interface RuntimeExportScenarioReviewChecklistRecordV1 {

@@ -92,6 +92,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_scenario_review_bundle_v1,
     build_runtime_export_scenario_review_checklist_v1,
     build_runtime_export_scenario_review_checklist_template_v1,
+    build_runtime_export_scenario_review_checklist_template_comparison_v1,
     build_runtime_export_service_trace_comparison_review_report_page_v1,
     build_runtime_export_service_trace_comparison_review_report_v1,
     build_runtime_export_service_trace_item_v1,
@@ -1450,6 +1451,53 @@ class DemoControlPlane:
         if audit_artifact is not None:
             response["audit_artifact"] = _runtime_export_catalog_file_record(
                 audit_artifact
+            )
+        return response
+
+    def runtime_export_package_scenario_review_checklist_template_comparison(
+        self,
+        package_id: str,
+        output_root: str | Path = "artifacts/runtime_exports",
+    ) -> dict[str, Any]:
+        template_response = self.runtime_export_package_scenario_review_checklist_template(
+            package_id,
+            output_root,
+        )
+        template = template_response["summary"]
+        catalog = _read_runtime_export_catalog(output_root)
+        catalog_record = _runtime_export_catalog_package_record(catalog, package_id)
+        package_dir = _runtime_export_catalog_package_dir(output_root, catalog_record)
+        checklist: Mapping[str, Any] = {}
+        checklist_artifact: Mapping[str, Any] | None = None
+        checklist_path = package_dir / _RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_FILENAME
+        if checklist_path.is_file():
+            checklist_artifact = _runtime_export_file_record(
+                "scenario_review_checklist_v1",
+                checklist_path,
+            )
+            loaded_checklist = json.loads(checklist_path.read_text(encoding="utf-8"))
+            if isinstance(loaded_checklist, Mapping):
+                checklist = loaded_checklist
+        comparison = build_runtime_export_scenario_review_checklist_template_comparison_v1(
+            package_id=package_id,
+            package_dir=str(package_dir),
+            scenario_review_checklist=checklist,
+            scenario_review_checklist_template=template,
+        )
+        response: dict[str, Any] = {
+            "type": "RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_TEMPLATE_COMPARISON",
+            "summary": comparison,
+            "template": template,
+            "scenario_review_bundle_artifact": template_response[
+                "scenario_review_bundle_artifact"
+            ],
+            "catalog_record": catalog_record,
+        }
+        if "audit_artifact" in template_response:
+            response["audit_artifact"] = template_response["audit_artifact"]
+        if checklist_artifact is not None:
+            response["checklist_artifact"] = _runtime_export_catalog_file_record(
+                checklist_artifact
             )
         return response
 

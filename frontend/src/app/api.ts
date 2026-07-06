@@ -17,6 +17,8 @@ import {
   RuntimeExportScenarioReviewChecklistEnvelope,
   RuntimeExportScenarioReviewChecklistRecordV1,
   RuntimeExportScenarioReviewChecklistTemplateEnvelope,
+  RuntimeExportScenarioReviewChecklistTemplateComparisonEnvelope,
+  RuntimeExportScenarioReviewChecklistTemplateComparisonV1,
   RuntimeExportScenarioReviewChecklistTemplateV1,
   RuntimeExportScenarioReviewChecklistV1,
   RuntimeExportRouteComparisonReviewReportEnvelope,
@@ -654,6 +656,23 @@ export async function loadRuntimeExportScenarioReviewChecklistTemplate(
   return decodeRuntimeExportScenarioReviewChecklistTemplateEnvelope(await response.json()).summary;
 }
 
+export async function loadRuntimeExportScenarioReviewChecklistTemplateComparison(
+  packageId: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): Promise<RuntimeExportScenarioReviewChecklistTemplateComparisonV1> {
+  const url = runtimeExportScenarioReviewChecklistTemplateComparisonHref(
+    packageId,
+    endpoint
+  );
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`failed to load runtime export scenario review checklist template comparison from ${url}: HTTP ${response.status}`);
+  }
+  return decodeRuntimeExportScenarioReviewChecklistTemplateComparisonEnvelope(
+    await response.json()
+  ).summary;
+}
+
 export async function saveRuntimeExportRouteComparisonReviewReport(
   packageId: string,
   request: RuntimeExportRouteComparisonReviewReportRequest,
@@ -998,6 +1017,13 @@ export function runtimeExportScenarioReviewChecklistTemplateHref(
   endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
 ): string {
   return `${runtimeExportPackageRecordHref(packageId, endpoint)}/scenario-review-checklist-template`;
+}
+
+export function runtimeExportScenarioReviewChecklistTemplateComparisonHref(
+  packageId: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): string {
+  return `${runtimeExportPackageRecordHref(packageId, endpoint)}/scenario-review-checklist-template-comparison`;
 }
 
 export function userConfigurationSchemaHref(
@@ -1691,6 +1717,47 @@ export function decodeRuntimeExportScenarioReviewChecklistTemplateEnvelope(
     scenario_review_bundle_artifact:
       scenarioReviewBundleArtifact as RuntimeExportScenarioReviewChecklistTemplateEnvelope["scenario_review_bundle_artifact"]
   } as RuntimeExportScenarioReviewChecklistTemplateEnvelope;
+}
+
+export function decodeRuntimeExportScenarioReviewChecklistTemplateComparisonEnvelope(
+  value: unknown
+): RuntimeExportScenarioReviewChecklistTemplateComparisonEnvelope {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError(
+      "runtime export scenario review checklist template comparison response must be an object"
+    );
+  }
+  const summary = (value as { summary?: unknown }).summary;
+  const template = (value as { template?: unknown }).template;
+  const scenarioReviewBundleArtifact = (
+    value as { scenario_review_bundle_artifact?: unknown }
+  ).scenario_review_bundle_artifact;
+  if (
+    typeof summary !== "object" ||
+    summary === null ||
+    Array.isArray(summary) ||
+    typeof (summary as { comparison_id?: unknown }).comparison_id !== "string" ||
+    typeof (summary as { comparison_hash?: unknown }).comparison_hash !==
+      "string" ||
+    !Array.isArray((summary as { records?: unknown }).records) ||
+    typeof template !== "object" ||
+    template === null ||
+    Array.isArray(template) ||
+    typeof scenarioReviewBundleArtifact !== "object" ||
+    scenarioReviewBundleArtifact === null ||
+    Array.isArray(scenarioReviewBundleArtifact)
+  ) {
+    throw new TypeError(
+      "runtime export scenario review checklist template comparison response must include summary comparison_id, records, comparison_hash, template, and scenario_review_bundle_artifact"
+    );
+  }
+  return {
+    ...(value as Record<string, unknown>),
+    summary: summary as RuntimeExportScenarioReviewChecklistTemplateComparisonV1,
+    template: template as RuntimeExportScenarioReviewChecklistTemplateV1,
+    scenario_review_bundle_artifact:
+      scenarioReviewBundleArtifact as RuntimeExportScenarioReviewChecklistTemplateComparisonEnvelope["scenario_review_bundle_artifact"]
+  } as RuntimeExportScenarioReviewChecklistTemplateComparisonEnvelope;
 }
 
 export function decodeRuntimeExportPackageAuditIndex(

@@ -25,6 +25,9 @@ RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_V1_ID = (
 RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_TEMPLATE_V1_ID = (
     "leo_twin.runtime_export_scenario_review_checklist_template.v1"
 )
+RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_TEMPLATE_COMPARISON_V1_ID = (
+    "leo_twin.runtime_export_scenario_review_checklist_template_comparison.v1"
+)
 RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_V1_ID = (
     "leo_twin.runtime_export_route_detail_index.v1"
 )
@@ -134,6 +137,7 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
             "POST /runtime/export/packages/{package_id}/route-comparison-review-report",
             "POST /runtime/export/packages/{package_id}/service-trace-comparison-review-report",
             "GET /runtime/export/packages/{package_id}/scenario-review-checklist-template",
+            "GET /runtime/export/packages/{package_id}/scenario-review-checklist-template-comparison",
             "POST /runtime/export/packages/{package_id}/scenario-review-checklist",
             "GET /runtime/export/packages/{package_id}/files/{filename}",
         ),
@@ -1068,6 +1072,101 @@ def build_runtime_export_scenario_review_checklist_template_v1(
     }
     template["template_hash"] = stable_hash_payload(template)
     return template
+
+
+def build_runtime_export_scenario_review_checklist_template_comparison_v1(
+    *,
+    package_id: str,
+    package_dir: str,
+    scenario_review_checklist: Mapping[str, Any] | None = None,
+    scenario_review_checklist_template: Mapping[str, Any],
+) -> dict[str, object]:
+    """Compare a saved operator checklist against the latest backend template."""
+
+    if not isinstance(scenario_review_checklist_template, Mapping):
+        raise TypeError("scenario_review_checklist_template must be a mapping")
+    checklist = _mapping(scenario_review_checklist)
+    template = _mapping(scenario_review_checklist_template)
+    template_records = _records(template.get("records"))
+    checklist_records = _records(checklist.get("records"))
+    checklist_by_filename = {
+        str(record.get("artifact_filename", "")): record
+        for record in checklist_records
+        if str(record.get("artifact_filename", ""))
+    }
+    template_filenames = tuple(
+        str(record.get("artifact_filename", ""))
+        for record in template_records
+        if str(record.get("artifact_filename", ""))
+    )
+    compared_records = tuple(
+        _runtime_export_scenario_review_template_comparison_record(
+            template_record,
+            checklist_by_filename.get(str(template_record.get("artifact_filename", ""))),
+        )
+        for template_record in template_records
+    )
+    extra_records = tuple(
+        _runtime_export_scenario_review_template_extra_record(record)
+        for record in checklist_records
+        if str(record.get("artifact_filename", "")) not in set(template_filenames)
+    )
+    checklist_present = bool(checklist)
+    missing_count = sum(
+        1 for record in compared_records if "MISSING_CHECKLIST_RECORD" in record["issue_labels"]
+    )
+    mismatch_count = sum(
+        1 for record in compared_records if "EVIDENCE_HASH_MISMATCH" in record["issue_labels"]
+    )
+    attention_count = sum(
+        1 for record in compared_records if "OPERATOR_REVIEW_NOT_REVIEWED" in record["issue_labels"]
+    )
+    aligned_count = sum(
+        1 for record in compared_records if record["comparison_status"] == "ALIGNED"
+    )
+    comparison_status = "ALIGNED"
+    if not checklist_present:
+        comparison_status = "CHECKLIST_MISSING"
+    elif str(template.get("template_status", "")) != "TEMPLATE_READY":
+        comparison_status = "TEMPLATE_WARN"
+    elif missing_count or mismatch_count or attention_count or extra_records:
+        comparison_status = "DRIFT"
+    comparison: dict[str, object] = {
+        "type": "RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_TEMPLATE_COMPARISON_V1",
+        "version": "v1",
+        "comparison_id": (
+            RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_TEMPLATE_COMPARISON_V1_ID
+        ),
+        "source": "BACKEND_RUNTIME_EXPORT_PACKAGE",
+        "comparison_scope": "SAVED_CHECKLIST_VS_LATEST_BACKEND_TEMPLATE",
+        "package_id": str(package_id),
+        "package_dir": str(package_dir),
+        "scenario_review_hash": str(template.get("scenario_review_hash", "")),
+        "template_hash": str(template.get("template_hash", "")),
+        "template_status": str(template.get("template_status", "")),
+        "checklist_present": checklist_present,
+        "checklist_hash": str(checklist.get("checklist_hash", "")),
+        "checklist_status": str(checklist.get("checklist_status", "")),
+        "comparison_status": comparison_status,
+        "template_record_count": len(template_records),
+        "checklist_record_count": len(checklist_records),
+        "aligned_record_count": aligned_count,
+        "missing_checklist_record_count": missing_count,
+        "evidence_hash_mismatch_count": mismatch_count,
+        "operator_attention_count": attention_count,
+        "extra_checklist_record_count": len(extra_records),
+        "records": compared_records,
+        "extra_records": extra_records,
+        "boundary_conditions": (
+            "NO_EVENT_REPLAY",
+            "NO_MODEL_RECOMPUTE",
+            "NO_PACKAGE_READ_MUTATION",
+            "BACKEND_GENERATED_TEMPLATE_COMPARISON",
+            "AUDIT_INDEX_HASH_REFRESH_IS_NOT_TREATED_AS_CHECKLIST_DRIFT",
+        ),
+    }
+    comparison["comparison_hash"] = stable_hash_payload(comparison)
+    return comparison
 
 
 def build_runtime_export_route_detail_index_v1(
@@ -2923,6 +3022,77 @@ def _runtime_export_scenario_review_checklist_template_record(
     return {
         **record,
         "template_record_hash": stable_hash_payload(record),
+    }
+
+
+def _runtime_export_scenario_review_template_comparison_record(
+    template_record: Mapping[str, Any],
+    checklist_record: Mapping[str, Any] | None,
+) -> dict[str, object]:
+    artifact_filename = str(template_record.get("artifact_filename", ""))
+    checklist = _mapping(checklist_record)
+    template_evidence_hash = str(template_record.get("evidence_hash", ""))
+    checklist_evidence_hash = str(checklist.get("evidence_hash", ""))
+    checklist_review_status = str(checklist.get("review_status", ""))
+    audit_index_refresh_only = (
+        artifact_filename == "export_package_audit_index_v1.json"
+        and bool(checklist)
+        and bool(checklist_evidence_hash)
+        and bool(template_evidence_hash)
+        and checklist_evidence_hash != template_evidence_hash
+    )
+    issue_labels: list[str] = []
+    if not checklist:
+        issue_labels.append("MISSING_CHECKLIST_RECORD")
+    if (
+        checklist
+        and checklist_evidence_hash != template_evidence_hash
+        and not audit_index_refresh_only
+    ):
+        issue_labels.append("EVIDENCE_HASH_MISMATCH")
+    if checklist and checklist_review_status != "REVIEWED":
+        issue_labels.append("OPERATOR_REVIEW_NOT_REVIEWED")
+    comparison_status = "ALIGNED"
+    if "MISSING_CHECKLIST_RECORD" in issue_labels:
+        comparison_status = "MISSING"
+    elif "EVIDENCE_HASH_MISMATCH" in issue_labels:
+        comparison_status = "DRIFT"
+    elif "OPERATOR_REVIEW_NOT_REVIEWED" in issue_labels:
+        comparison_status = "ATTENTION"
+    record = {
+        "artifact_filename": artifact_filename,
+        "step_label": str(template_record.get("step_label", "")),
+        "review_order_index": _integer(template_record.get("review_order_index")),
+        "template_evidence_hash": template_evidence_hash,
+        "template_record_hash": str(template_record.get("template_record_hash", "")),
+        "checklist_evidence_hash": checklist_evidence_hash,
+        "checklist_record_hash": str(checklist.get("record_hash", "")),
+        "checklist_review_status": checklist_review_status,
+        "comparison_status": comparison_status,
+        "issue_labels": tuple(issue_labels),
+    }
+    return {
+        **record,
+        "comparison_record_hash": stable_hash_payload(record),
+    }
+
+
+def _runtime_export_scenario_review_template_extra_record(
+    checklist_record: Mapping[str, Any],
+) -> dict[str, object]:
+    record = {
+        "artifact_filename": str(checklist_record.get("artifact_filename", "")),
+        "step_label": str(checklist_record.get("step_label", "")),
+        "review_order_index": _integer(checklist_record.get("review_order_index")),
+        "checklist_evidence_hash": str(checklist_record.get("evidence_hash", "")),
+        "checklist_record_hash": str(checklist_record.get("record_hash", "")),
+        "checklist_review_status": str(checklist_record.get("review_status", "")),
+        "comparison_status": "EXTRA",
+        "issue_labels": ("EXTRA_CHECKLIST_RECORD",),
+    }
+    return {
+        **record,
+        "comparison_record_hash": stable_hash_payload(record),
     }
 
 

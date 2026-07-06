@@ -182,7 +182,11 @@ Tasks:
     all submitted records being marked reviewed. T342 adds the backend
     `scenario-review-checklist-template` endpoint and dashboard binding so all
     recommended review rows and evidence hashes are prefilled by backend output
-    before the operator edits statuses and notes.
+    before the operator edits statuses and notes. T343 adds a read-only
+    `scenario-review-checklist-template-comparison` endpoint and dashboard
+    status display so saved operator checklists can be compared against the
+    latest backend template for missing records, evidence-hash drift, operator
+    attention, and extra stale records without replay or recomputation.
 - V2-013: Add service lifecycle trace.
   - Scope: input flow, queue, compute, output flow, terminal state.
   - Output: timeline records for dashboard and result export.

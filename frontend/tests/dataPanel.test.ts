@@ -46,6 +46,7 @@ import {
   buildDataPanelExportPackageAuditIndexDisplay,
   buildDataPanelExportPackageAuditIndexStatus,
   buildDataPanelExportScenarioReviewChecklistStatus,
+  buildDataPanelExportScenarioReviewChecklistTemplateComparisonStatus,
   buildDataPanelExportScenarioReviewBundleDisplay,
   buildDataPanelExportScenarioReviewBundleStatus,
   buildDataPanelScenarioReviewChecklistDraft,
@@ -3671,6 +3672,92 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         "RECOMMENDED_REVIEW_INCOMPLETE",
         "missing export_package_audit_index_v1.json",
         "missing service_trace_comparison_review_report_v1.json"
+      ]
+    });
+    expect(
+      buildDataPanelExportScenarioReviewChecklistTemplateComparisonStatus({
+        type: "RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_TEMPLATE_COMPARISON_V1",
+        version: "v1",
+        comparison_id:
+          "leo_twin.runtime_export_scenario_review_checklist_template_comparison.v1",
+        source: "BACKEND_RUNTIME_EXPORT_PACKAGE",
+        comparison_scope: "SAVED_CHECKLIST_VS_LATEST_BACKEND_TEMPLATE",
+        package_id: "pkg-review",
+        package_dir: "artifacts/runtime_exports/pkg-review",
+        scenario_review_hash: "sha256:scenario-review",
+        template_hash: "sha256:template",
+        template_status: "TEMPLATE_READY",
+        checklist_present: true,
+        checklist_hash: "sha256:checklist",
+        checklist_status: "CHECKLIST_COMPLETE",
+        comparison_status: "DRIFT",
+        template_record_count: 2,
+        checklist_record_count: 2,
+        aligned_record_count: 1,
+        missing_checklist_record_count: 0,
+        evidence_hash_mismatch_count: 1,
+        operator_attention_count: 0,
+        extra_checklist_record_count: 1,
+        records: [
+          {
+            artifact_filename: "scenario_review_bundle_v1.json",
+            step_label: "1 scenario entry",
+            review_order_index: 0,
+            template_evidence_hash: "sha256:scenario-review",
+            template_record_hash: "sha256:template-record-a",
+            checklist_evidence_hash: "sha256:scenario-review",
+            checklist_record_hash: "sha256:checklist-record-a",
+            checklist_review_status: "REVIEWED",
+            comparison_status: "ALIGNED",
+            issue_labels: [],
+            comparison_record_hash: "sha256:comparison-record-a"
+          },
+          {
+            artifact_filename: "export_package_audit_index_v1.json",
+            step_label: "2 audit index",
+            review_order_index: 1,
+            template_evidence_hash: "sha256:audit-new",
+            template_record_hash: "sha256:template-record-b",
+            checklist_evidence_hash: "sha256:audit-old",
+            checklist_record_hash: "sha256:checklist-record-b",
+            checklist_review_status: "REVIEWED",
+            comparison_status: "DRIFT",
+            issue_labels: ["EVIDENCE_HASH_MISMATCH"],
+            comparison_record_hash: "sha256:comparison-record-b"
+          }
+        ],
+        extra_records: [
+          {
+            artifact_filename: "old_artifact.json",
+            step_label: "old artifact",
+            review_order_index: 99,
+            checklist_evidence_hash: "sha256:old",
+            checklist_record_hash: "sha256:old-record",
+            checklist_review_status: "REVIEWED",
+            comparison_status: "EXTRA",
+            issue_labels: ["EXTRA_CHECKLIST_RECORD"],
+            comparison_record_hash: "sha256:extra-record"
+          }
+        ],
+        boundary_conditions: ["NO_EVENT_REPLAY"],
+        comparison_hash: "sha256:comparison"
+      } as any)
+    ).toMatchObject({
+      tone: "different",
+      statusLabel: "template drift detected",
+      summaryLabel: "DRIFT / aligned 1/2 / compare comparison",
+      evidenceLabels: [
+        "template template",
+        "checklist checklist",
+        "missing 0",
+        "drift 1",
+        "attention 0",
+        "extra 1"
+      ],
+      warningLabels: [
+        "DRIFT",
+        "export_package_audit_index_v1.json: EVIDENCE_HASH_MISMATCH",
+        "old_artifact.json: EXTRA_CHECKLIST_RECORD"
       ]
     });
     const request = buildDataPanelScenarioReviewChecklistSaveRequest(

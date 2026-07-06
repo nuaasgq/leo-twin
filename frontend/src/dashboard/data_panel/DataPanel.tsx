@@ -39,6 +39,7 @@ import {
   RuntimeExportReproducibilityBoundaryV1,
   RuntimeExportScenarioReviewBundleV1,
   RuntimeExportScenarioReviewChecklistRecordV1,
+  RuntimeExportScenarioReviewChecklistTemplateComparisonV1,
   RuntimeExportScenarioReviewChecklistTemplateV1,
   RuntimeExportScenarioReviewChecklistV1,
   RuntimeExportServiceTraceItemV1,
@@ -273,6 +274,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportScenarioReviewBundle,
   runtimeExportScenarioReviewChecklist,
   runtimeExportScenarioReviewChecklistTemplate,
+  runtimeExportScenarioReviewChecklistTemplateComparison,
   runtimeExportRouteDetailItemRouteId,
   runtimeExportServiceTraceItemTraceId,
   runtimeExportComparePackageId,
@@ -374,6 +376,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportScenarioReviewBundle?: RuntimeExportScenarioReviewBundleV1 | null;
   runtimeExportScenarioReviewChecklist?: RuntimeExportScenarioReviewChecklistV1 | null;
   runtimeExportScenarioReviewChecklistTemplate?: RuntimeExportScenarioReviewChecklistTemplateV1 | null;
+  runtimeExportScenarioReviewChecklistTemplateComparison?: RuntimeExportScenarioReviewChecklistTemplateComparisonV1 | null;
   runtimeExportRouteDetailItemRouteId?: string | null;
   runtimeExportServiceTraceItemTraceId?: string | null;
   runtimeExportComparePackageId?: string | null;
@@ -1432,6 +1435,10 @@ export const DataPanel = memo(function DataPanel({
         saveError: runtimeExportScenarioReviewChecklistSaveError,
         latestSaveHash: runtimeExportScenarioReviewChecklistSaveHash
       }
+    );
+  const exportScenarioReviewChecklistTemplateComparisonStatus =
+    buildDataPanelExportScenarioReviewChecklistTemplateComparisonStatus(
+      runtimeExportScenarioReviewChecklistTemplateComparison
     );
   const exportScenarioReviewChecklistSaveRequest =
     buildDataPanelScenarioReviewChecklistSaveRequest(
@@ -3059,6 +3066,43 @@ export const DataPanel = memo(function DataPanel({
                         保存审核清单
                       </button>
                     </div>
+                    {exportScenarioReviewChecklistTemplateComparisonStatus ? (
+                      <>
+                        <div className="data-panel-export-compare-meta">
+                          <span>
+                            {
+                              exportScenarioReviewChecklistTemplateComparisonStatus.statusLabel
+                            }
+                          </span>
+                          <span>
+                            {
+                              exportScenarioReviewChecklistTemplateComparisonStatus.summaryLabel
+                            }
+                          </span>
+                          {exportScenarioReviewChecklistTemplateComparisonStatus.evidenceLabels.map(
+                            (label) => (
+                              <span key={label}>{label}</span>
+                            )
+                          )}
+                        </div>
+                        {exportScenarioReviewChecklistTemplateComparisonStatus.warningLabels.length >
+                        0 ? (
+                          <div className="data-panel-export-diagnostics-findings">
+                            {exportScenarioReviewChecklistTemplateComparisonStatus.warningLabels.map(
+                              (label) => (
+                                <span
+                                  className="warn"
+                                  key={`template-comparison:${label}`}
+                                >
+                                  <strong>TEMPLATE</strong>
+                                  {label}
+                                </span>
+                              )
+                            )}
+                          </div>
+                        ) : null}
+                      </>
+                    ) : null}
                     <div className="data-panel-export-scenario-checklist-rows">
                       {exportScenarioReviewBundleStatus.workflowRows.map((row) => {
                         const draft =
@@ -11222,6 +11266,14 @@ export interface DataPanelExportScenarioReviewChecklistStatusDisplay {
   warningLabels: readonly string[];
 }
 
+export interface DataPanelExportScenarioReviewChecklistTemplateComparisonStatusDisplay {
+  tone: "match" | "different" | "pending" | "error";
+  statusLabel: string;
+  summaryLabel: string;
+  evidenceLabels: readonly string[];
+  warningLabels: readonly string[];
+}
+
 export interface DataPanelExportReviewCompletionSummaryDisplay {
   tone: "match" | "different" | "pending" | "error";
   statusLabel: string;
@@ -11999,6 +12051,56 @@ export function buildDataPanelExportScenarioReviewChecklistStatus(
           ...missingRecommended.map((filename) => `missing ${filename}`),
           ...attentionRecommended.map((filename) => `attention ${filename}`)
         ]
+  };
+}
+
+export function buildDataPanelExportScenarioReviewChecklistTemplateComparisonStatus(
+  comparison: RuntimeExportScenarioReviewChecklistTemplateComparisonV1 | null | undefined
+): DataPanelExportScenarioReviewChecklistTemplateComparisonStatusDisplay | null {
+  if (comparison === null || comparison === undefined) {
+    return null;
+  }
+  const aligned = comparison.comparison_status === "ALIGNED";
+  const missingChecklist = comparison.comparison_status === "CHECKLIST_MISSING";
+  const driftRecords = [
+    ...comparison.records,
+    ...comparison.extra_records
+  ].filter((record) => record.comparison_status !== "ALIGNED");
+  const warningLabels = aligned
+    ? []
+    : [
+        comparison.comparison_status,
+        ...driftRecords.slice(0, 5).map((record) => {
+          const issues =
+            record.issue_labels.length > 0
+              ? record.issue_labels.join(",")
+              : record.comparison_status;
+          return `${record.artifact_filename}: ${issues}`;
+        })
+      ];
+  return {
+    tone: aligned ? "match" : missingChecklist ? "pending" : "different",
+    statusLabel: aligned
+      ? "template aligned"
+      : missingChecklist
+        ? "checklist not saved"
+        : "template drift detected",
+    summaryLabel: `${comparison.comparison_status} / aligned ${formatCount(
+      comparison.aligned_record_count
+    )}/${formatCount(comparison.template_record_count)} / compare ${shortRuntimeHash(
+      comparison.comparison_hash
+    )}`,
+    evidenceLabels: [
+      `template ${shortRuntimeHash(comparison.template_hash)}`,
+      comparison.checklist_hash
+        ? `checklist ${shortRuntimeHash(comparison.checklist_hash)}`
+        : "checklist missing",
+      `missing ${formatCount(comparison.missing_checklist_record_count)}`,
+      `drift ${formatCount(comparison.evidence_hash_mismatch_count)}`,
+      `attention ${formatCount(comparison.operator_attention_count)}`,
+      `extra ${formatCount(comparison.extra_checklist_record_count)}`
+    ],
+    warningLabels
   };
 }
 
