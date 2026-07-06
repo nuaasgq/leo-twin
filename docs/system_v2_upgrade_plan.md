@@ -153,7 +153,13 @@ Tasks:
     T333 adds backend-owned `trace_id` correlation to user-service request rows,
     propagates it through runtime export package pages, and lets dashboard
     navigation open exact service lifecycle trace details when the current
-    runtime exposes the matching trace.
+    runtime exposes the matching trace. T334 adds the package-owned exact
+    service trace endpoint
+    `/runtime/export/packages/{package_id}/service-traces/{trace_id}` and binds
+    dashboard package review selections to that artifact-owned item, so an
+    exported user-service or service-trace row can open deterministic trace
+    evidence without live runtime availability, event replay, service
+    recomputation, or package mutation.
 - V2-013: Add service lifecycle trace.
   - Scope: input flow, queue, compute, output flow, terminal state.
   - Output: timeline records for dashboard and result export.
@@ -209,6 +215,10 @@ Tasks:
     `runtime_export_service_trace_policy_v1` so result packages explicitly
     record the service trace export limit, exported trace count, hidden trace
     count, artifact-window-only boundary, and no-replay/no-recompute policy.
+    T334 adds `RUNTIME_EXPORT_SERVICE_TRACE_ITEM_V1` and the package-owned
+    exact trace item read path, allowing a selected exported trace to be opened
+    as a deterministic package artifact detail while preserving the live exact
+    trace API only as optional current-runtime comparison context.
 
 ### WS3. Network Semantics and KPI Trust v2
 

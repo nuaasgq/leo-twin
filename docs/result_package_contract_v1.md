@@ -247,11 +247,12 @@ The demo backend also exposes a package-owned service trace page endpoint:
 
 ```text
 GET /runtime/export/packages/{package_id}/service-traces
+GET /runtime/export/packages/{package_id}/service-traces/{trace_id}
 ```
 
-The endpoint returns `RUNTIME_EXPORT_SERVICE_TRACE_PAGE_V1` with cursor, limit,
-optional text query, terminal state, compute node id, lifecycle stage, and
-terminal reason filters. It reads the persisted
+The page endpoint returns `RUNTIME_EXPORT_SERVICE_TRACE_PAGE_V1` with cursor,
+limit, optional text query, terminal state, compute node id, lifecycle stage,
+and terminal reason filters. It reads the persisted
 `service_lifecycle_trace_v2.json` artifact and reports
 `artifact_window_only=true`, because it pages and filters only the exported
 trace window already present in the package. It does not inspect the current
@@ -262,6 +263,17 @@ same policy into `service_lifecycle_trace_v2.json` and
 `RUNTIME_EXPORT_SERVICE_TRACE_PAGE_V1`. The default service trace export limit
 matches the large-detail maximum of 5000 rows; `hidden_trace_count` reports any
 trace rows outside that persisted artifact window.
+
+The exact endpoint returns `RUNTIME_EXPORT_SERVICE_TRACE_ITEM_V1` for one trace
+already present in the exported artifact window. It accepts the persisted
+`trace_id` and compatible lookup ids such as the unprefixed trace id, service
+id, task id, input flow id, or output flow id, but still returns the normalized
+artifact trace row and an `item_hash` computed from that package-owned detail.
+It has the same read-only boundary as the page endpoint: no current-runtime
+lookup, no event replay, no service recomputation, and no package mutation.
+The dashboard uses this endpoint when reviewing exported service traces so a
+result package can be inspected without requiring the live runtime session to
+still expose the same trace.
 
 `user_service_request_summary_v2.json` follows the same persisted-window
 boundary for user business request review. Runtime export records

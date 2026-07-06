@@ -225,6 +225,14 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                             )
                         )
                         return
+                    if artifact_kind == "service-trace" and filename is not None:
+                        self._send_json(
+                            control_plane.runtime_export_package_service_trace(
+                                package_id,
+                                filename,
+                            )
+                        )
+                        return
                     if artifact_kind == "user-service-requests":
                         try:
                             cursor, limit = _detail_query(query, default_limit=100)
@@ -889,6 +897,8 @@ def _runtime_export_package_route(
         return parts[0], "archive", None
     if len(parts) == 2 and parts[1] == "service-traces":
         return parts[0], "service-traces", None
+    if len(parts) == 3 and parts[1] == "service-traces":
+        return parts[0], "service-trace", parts[2]
     if len(parts) == 2 and parts[1] == "user-service-requests":
         return parts[0], "user-service-requests", None
     if len(parts) == 2 and parts[1] == "routes":

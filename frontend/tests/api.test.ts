@@ -18,6 +18,7 @@ import {
   loadRuntimeExportReviewSummary,
   loadRuntimeExportRestorePreflight,
   loadRuntimeExportServiceLifecycleTrace,
+  loadRuntimeExportServiceTraceItem,
   loadRuntimeExportServiceTracePage,
   loadRuntimeExportUserServiceRequestSummaryArtifact,
   loadRuntimeExportUserServiceRequestPage,
@@ -51,6 +52,7 @@ import {
   runtimeExportPackageRecordHref,
   runtimeExportPackageRouteDetailsHref,
   runtimeExportPackageRouteDetailHref,
+  runtimeExportPackageServiceTraceHref,
   runtimeExportPackageServiceTracesHref,
   runtimeExportPackageUserServiceRequestsHref,
   runtimeExportPackageReviewSummaryHref,
@@ -109,6 +111,9 @@ describe("runtime API diagnostics", () => {
     );
     expect(runtimeExportPackageRouteDetailHref("pkg 1", "route:input 1")).toBe(
       "/runtime/export/packages/pkg%201/routes/route%3Ainput%201"
+    );
+    expect(runtimeExportPackageServiceTraceHref("pkg 1", "trace:run 1")).toBe(
+      "/runtime/export/packages/pkg%201/service-traces/trace%3Arun%201"
     );
     expect(runtimeExportRouteComparisonReviewReportHref("pkg 1")).toBe(
       "/runtime/export/packages/pkg%201/route-comparison-review-report"
@@ -517,6 +522,66 @@ describe("runtime API diagnostics", () => {
     });
     expect(fetchMock).toHaveBeenCalledWith(
       "/runtime/export/packages/pkg/service-traces?cursor=0&limit=1&query=route-run&terminal_state=RUNNING&compute_node_id=sat-00003&stage_kind=OUTPUT_NETWORK&terminal_reason=OUTPUT_NETWORK_PENDING"
+    );
+  });
+
+  it("loads exact runtime export service trace items", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        type: "RUNTIME_EXPORT_SERVICE_TRACE_ITEM_V1",
+        version: "v1",
+        item_id: "leo_twin.runtime_export_service_trace_item.v1",
+        source: "BACKEND_RUNTIME_EXPORT_PACKAGE",
+        package_id: "pkg",
+        artifact_type: "SERVICE_LIFECYCLE_TRACE_EXPORT_V2",
+        artifact_source: "BACKEND_RUNTIME_STATUS",
+        artifact_policy: "STANDALONE_RUNTIME_EXPORT_ARTIFACT",
+        artifact_window_only: true,
+        trace_contract_id: "leo_twin.service_lifecycle_trace_contract.v2",
+        trace_model: "COMMUNICATION_COMPUTE_COMPONENT_PROXY",
+        source_summary: "service_latency_history_v1",
+        summary_scope: "SERVICE_LIFECYCLE_TRACE_ITEM",
+        trace_id: "trace:run",
+        trace: {
+          trace_id: "trace:run",
+          service_id: "svc-run",
+          task_id: "task-run",
+          service_class: "COMPUTE_SERVICE",
+          compute_node_id: "sat-00003",
+          input_network_latency_s: 0.12,
+          compute_queue_delay_s: 0.02,
+          compute_execution_delay_s: 0.4,
+          output_network_latency_s: 0.08,
+          total_latency_s: 0.62,
+          terminal_state: "RUNNING",
+          terminal_state_reason: "OUTPUT_NETWORK_PENDING",
+          stage_count: 4,
+          observed_stage_count: 3,
+          pending_stage_count: 1,
+          stages: []
+        },
+        boundary_conditions: [
+          "ARTIFACT_WINDOW_ONLY",
+          "NO_EVENT_REPLAY",
+          "NO_SERVICE_RECOMPUTE",
+          "NO_PACKAGE_MUTATION"
+        ],
+        item_hash: "sha256:trace-item"
+      })
+    }));
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+
+    await expect(
+      loadRuntimeExportServiceTraceItem("pkg", "trace:run")
+    ).resolves.toMatchObject({
+      package_id: "pkg",
+      trace_id: "trace:run",
+      artifact_window_only: true,
+      trace: { trace_id: "trace:run", compute_node_id: "sat-00003" }
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/runtime/export/packages/pkg/service-traces/trace%3Arun"
     );
   });
 

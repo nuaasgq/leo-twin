@@ -33,6 +33,8 @@ import {
   buildDataPanelExportReviewCompletionSummary,
   buildDataPanelExportRouteDetailItemDisplay,
   buildDataPanelExportRouteDetailItemStatus,
+  buildDataPanelExportServiceTraceItemDisplay,
+  buildDataPanelExportServiceTraceItemStatus,
   buildDataPanelExportPackageAuditIndexArtifactDisplay,
   buildDataPanelExportPackageHandoffReportArtifactDisplay,
   buildDataPanelExportPackageAuditIndexDisplay,
@@ -5083,6 +5085,134 @@ describe("buildDataPanelExportCompareDisplay", () => {
         display,
         "pkg-other",
         "route-a",
+        false,
+        null
+      )
+    ).toBeNull();
+  });
+
+  it("summarizes runtime export service trace items for package review", () => {
+    const display = buildDataPanelExportServiceTraceItemDisplay({
+      type: "RUNTIME_EXPORT_SERVICE_TRACE_ITEM_V1",
+      version: "v1",
+      item_id: "leo_twin.runtime_export_service_trace_item.v1",
+      source: "BACKEND_RUNTIME_EXPORT_PACKAGE",
+      package_id: "pkg-review",
+      artifact_type: "SERVICE_LIFECYCLE_TRACE_EXPORT_V2",
+      artifact_source: "BACKEND_RUNTIME_STATUS",
+      artifact_policy: "STANDALONE_RUNTIME_EXPORT_ARTIFACT",
+      artifact_window_only: true,
+      trace_contract_id: "leo_twin.service_lifecycle_trace_contract.v2",
+      trace_model: "COMMUNICATION_COMPUTE_COMPONENT_PROXY",
+      source_summary: "service_latency_history_v1",
+      summary_scope: "SERVICE_LIFECYCLE_TRACE_ITEM",
+      trace_id: "trace:run",
+      trace: {
+        trace_id: "trace:run",
+        service_id: "svc-run",
+        task_id: "task-run",
+        service_class: "COMPUTE_SERVICE",
+        input_flow_id: "flow-in",
+        output_flow_id: "flow-out",
+        input_route_id: "route-in",
+        output_route_id: "route-out",
+        compute_node_id: "sat-00003",
+        input_network_latency_s: 0.12,
+        compute_queue_delay_s: 0.02,
+        compute_execution_delay_s: 0.4,
+        output_network_latency_s: 0.08,
+        total_latency_s: 0.62,
+        terminal_state: "RUNNING",
+        terminal_state_reason: "OUTPUT_NETWORK_PENDING",
+        stage_count: 4,
+        observed_stage_count: 3,
+        pending_stage_count: 1,
+        stages: []
+      },
+      boundary_conditions: [
+        "ARTIFACT_WINDOW_ONLY",
+        "NO_EVENT_REPLAY",
+        "NO_SERVICE_RECOMPUTE",
+        "NO_PACKAGE_MUTATION"
+      ],
+      item_hash:
+        "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd"
+    });
+
+    expect(display).toMatchObject({
+      packageId: "pkg-review",
+      traceId: "trace:run",
+      tone: "different",
+      statusLabel: "package service trace needs review",
+      summaryLabel: "pkg-review / trace:run / cdcdcdcdcdcd",
+      detailHref:
+        "/runtime/export/packages/pkg-review/service-traces/trace%3Arun"
+    });
+    expect(display?.fields).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: "source",
+          value: "BACKEND_RUNTIME_EXPORT_PACKAGE"
+        }),
+        expect.objectContaining({
+          label: "service",
+          value: "svc-run / COMPUTE_SERVICE"
+        }),
+        expect.objectContaining({ label: "task", value: "task-run" }),
+        expect.objectContaining({ label: "compute node", value: "sat-00003" }),
+        expect.objectContaining({
+          label: "input",
+          value: "flow-in / route-in"
+        }),
+        expect.objectContaining({
+          label: "output",
+          value: "flow-out / route-out"
+        })
+      ])
+    );
+    expect(
+      buildDataPanelExportServiceTraceItemStatus(
+        display,
+        "pkg-review",
+        "trace:run",
+        false,
+        null
+      )
+    ).toBe(display);
+    expect(
+      buildDataPanelExportServiceTraceItemStatus(
+        display,
+        "pkg-review",
+        "trace:queued",
+        true,
+        null
+      )
+    ).toMatchObject({
+      tone: "pending",
+      statusLabel: "loading package service trace",
+      summaryLabel: "pkg-review / trace:queued",
+      detailHref: null
+    });
+    expect(
+      buildDataPanelExportServiceTraceItemStatus(
+        display,
+        "pkg-review",
+        "trace:queued",
+        false,
+        "HTTP 404"
+      )
+    ).toMatchObject({
+      tone: "error",
+      statusLabel: "package service trace load failed",
+      summaryLabel: "pkg-review / trace:queued",
+      detailHref:
+        "/runtime/export/packages/pkg-review/service-traces/trace%3Aqueued"
+    });
+    expect(
+      buildDataPanelExportServiceTraceItemStatus(
+        display,
+        "pkg-other",
+        "trace:run",
         false,
         null
       )

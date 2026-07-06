@@ -91,6 +91,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_review_summary_v1,
     build_runtime_export_scenario_review_bundle_v1,
     build_runtime_export_scenario_review_checklist_v1,
+    build_runtime_export_service_trace_item_v1,
     build_runtime_export_service_trace_page_v1,
     build_runtime_export_user_service_request_page_v1,
     build_runtime_export_user_service_request_summary_v2,
@@ -986,6 +987,27 @@ class DemoControlPlane:
             stage_kind=stage_kind,
             terminal_reason=terminal_reason,
         )
+
+    def runtime_export_package_service_trace(
+        self,
+        package_id: str,
+        trace_id: str,
+        output_root: str | Path = "artifacts/runtime_exports",
+    ) -> dict[str, Any]:
+        service_trace_export = self._runtime_export_package_service_trace_export(
+            package_id,
+            output_root,
+        )
+        detail = build_runtime_export_service_trace_item_v1(
+            service_trace_export,
+            trace_id,
+            package_id=package_id,
+        )
+        if detail is None:
+            raise RuntimeExportArtifactError(
+                f"runtime export package {package_id!r} service trace {trace_id!r} not found"
+            )
+        return detail
 
     def runtime_export_package_user_service_requests(
         self,

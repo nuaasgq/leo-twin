@@ -1342,6 +1342,18 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
         len(service_trace["summary"]["items"]),
     )
     assert service_trace_page["page_hash"].startswith("sha256:")
+    if service_trace_page["items"]:
+        service_trace_item = control_plane.runtime_export_package_service_trace(
+            package_id,
+            str(service_trace_page["items"][0]["trace_id"]),
+            export_root,
+        )
+        assert service_trace_item["type"] == "RUNTIME_EXPORT_SERVICE_TRACE_ITEM_V1"
+        assert service_trace_item["package_id"] == package_id
+        assert service_trace_item["trace"]["trace_id"] == service_trace_page["items"][0][
+            "trace_id"
+        ]
+        assert service_trace_item["item_hash"].startswith("sha256:")
     filtered_service_trace_page = control_plane.runtime_export_package_service_traces(
         package_id,
         export_root,
@@ -1750,6 +1762,9 @@ def test_demo_server_stream_query_parses_cursor_options() -> None:
     assert _runtime_export_package_route(
         "/runtime/export/packages/pkg%201/service-traces"
     ) == ("pkg 1", "service-traces", None)
+    assert _runtime_export_package_route(
+        "/runtime/export/packages/pkg%201/service-traces/trace%3Arun"
+    ) == ("pkg 1", "service-trace", "trace:run")
     assert _runtime_export_package_route(
         "/runtime/export/packages/pkg%201/user-service-requests"
     ) == ("pkg 1", "user-service-requests", None)

@@ -16196,3 +16196,58 @@ change.
   - Add a compact package-side exact service trace action for exported
     `service_lifecycle_trace_v2.json` rows, so package review can open a trace
     item directly without relying on live runtime availability.
+
+## 2026-07-07 - Package Service Trace Item v1
+
+- Branch: `feature/T334-package-service-trace-item-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a package-owned exact service trace item read path for exported
+  `service_lifecycle_trace_v2.json` rows. The demo backend now exposes
+  `/runtime/export/packages/{package_id}/service-traces/{trace_id}`, returning
+  `RUNTIME_EXPORT_SERVICE_TRACE_ITEM_V1` from the persisted artifact window
+  without live runtime lookup, event replay, service recomputation, or package
+  mutation. The dashboard export review surface can open the package-owned
+  exact trace item when a service trace row or correlated user-service row is
+  selected.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/app/api.ts`
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m compileall -q src\leo_twin\services\result_package_contract.py examples\integration_demo\control_plane.py examples\integration_demo\server.py`
+    - Result: passed.
+  - `python -m pytest tests\unit\test_result_package_contract_v1.py::test_runtime_export_service_trace_item_v1_reads_exact_package_trace tests\unit\test_result_package_contract_v1.py::test_runtime_export_service_trace_page_v1_filters_artifact_window tests\unit\test_result_package_contract_v1.py::test_result_package_contract_v1_is_deterministic_json_ready tests\integration\test_runtime_session_control.py::test_demo_adapter_exports_runtime_result_package -q`
+    - Result: passed, 4 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path.
+  - `pnpm --dir frontend test api.test.ts dataPanel.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 2 test
+      files and 223 tests.
+- Problems encountered:
+  - The package review surface already had live exact trace detail wiring, but
+    that path depends on the current runtime still exposing the same trace.
+    This task adds a separate artifact-owned item path instead of reusing live
+    detail lookup for package evidence.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - Exact package trace items are limited to the exported
+    `service_lifecycle_trace_v2.json` artifact window. Rows outside the export
+    limit remain represented by hidden-count policy fields, not item endpoints.
+  - Package-vs-live service trace comparison is not yet a field-level review
+    report; the package item and optional live exact detail are displayed as
+    adjacent review context.
+- Recommended follow-up:
+  - Add a service-trace package-vs-live comparison card and review-note
+    artifact, mirroring the route comparison review workflow.

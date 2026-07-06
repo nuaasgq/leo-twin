@@ -38,6 +38,7 @@ import {
   RuntimeExportScenarioReviewBundleV1,
   RuntimeExportScenarioReviewChecklistRecordV1,
   RuntimeExportScenarioReviewChecklistV1,
+  RuntimeExportServiceTraceItemV1,
   RuntimeExportServiceTracePageV1,
   RuntimeExportReviewSummaryV1,
   RuntimeExportRestoreCommandResultV1,
@@ -95,6 +96,7 @@ import {
   runtimeExportPackageRecordHref,
   runtimeExportPackageRouteDetailHref,
   runtimeExportPackageReviewSummaryHref,
+  runtimeExportPackageServiceTraceHref,
   runtimeExportRestorePreflightHref,
   userConfigurationExportHref,
   userConfigurationReferenceHref,
@@ -254,6 +256,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportDiagnosticsBundle,
   runtimeExportServiceLifecycleTrace,
   runtimeExportServiceTracePage,
+  runtimeExportServiceTraceItem,
   runtimeExportUserServiceRequestPage,
   runtimeExportRouteDetailIndex,
   runtimeExportRouteDetailPage,
@@ -263,6 +266,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportScenarioReviewBundle,
   runtimeExportScenarioReviewChecklist,
   runtimeExportRouteDetailItemRouteId,
+  runtimeExportServiceTraceItemTraceId,
   runtimeExportComparePackageId,
   runtimeExportCompareLoading,
   runtimeExportCompareError,
@@ -280,6 +284,8 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportRouteDetailIndexError,
   runtimeExportRouteDetailItemLoading,
   runtimeExportRouteDetailItemError,
+  runtimeExportServiceTraceItemLoading,
+  runtimeExportServiceTraceItemError,
   runtimeExportRouteComparisonReviewReportLoading,
   runtimeExportRouteComparisonReviewReportError,
   runtimeExportPackageAuditIndexLoading,
@@ -314,6 +320,7 @@ export const DataPanel = memo(function DataPanel({
   onRuntimeExportServiceTracePageQueryChange,
   onRuntimeExportUserServiceRequestPageQueryChange,
   onRuntimeExportRouteDetailItemSelect,
+  onRuntimeExportServiceTraceItemSelect,
   onRuntimeExportRouteComparisonReviewSave,
   onRuntimeExportScenarioReviewChecklistSave,
   onRuntimeExportRestore,
@@ -341,6 +348,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportDiagnosticsBundle?: RuntimeExportDiagnosticsBundleV1 | null;
   runtimeExportServiceLifecycleTrace?: RuntimeServiceLifecycleTraceV2 | null;
   runtimeExportServiceTracePage?: RuntimeExportServiceTracePageV1 | null;
+  runtimeExportServiceTraceItem?: RuntimeExportServiceTraceItemV1 | null;
   runtimeExportUserServiceRequestPage?: RuntimeExportUserServiceRequestPageV1 | null;
   runtimeExportRouteDetailIndex?: RuntimeExportRouteDetailIndexV1 | null;
   runtimeExportRouteDetailPage?: RuntimeExportRouteDetailPageV1 | null;
@@ -350,6 +358,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportScenarioReviewBundle?: RuntimeExportScenarioReviewBundleV1 | null;
   runtimeExportScenarioReviewChecklist?: RuntimeExportScenarioReviewChecklistV1 | null;
   runtimeExportRouteDetailItemRouteId?: string | null;
+  runtimeExportServiceTraceItemTraceId?: string | null;
   runtimeExportComparePackageId?: string | null;
   runtimeExportCompareLoading?: boolean;
   runtimeExportCompareError?: string | null;
@@ -367,6 +376,8 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportRouteDetailIndexError?: string | null;
   runtimeExportRouteDetailItemLoading?: boolean;
   runtimeExportRouteDetailItemError?: string | null;
+  runtimeExportServiceTraceItemLoading?: boolean;
+  runtimeExportServiceTraceItemError?: string | null;
   runtimeExportRouteComparisonReviewReportLoading?: boolean;
   runtimeExportRouteComparisonReviewReportError?: string | null;
   runtimeExportPackageAuditIndexLoading?: boolean;
@@ -415,6 +426,7 @@ export const DataPanel = memo(function DataPanel({
     request: DataPanelExportUserServiceRequestPageRequest
   ) => void;
   onRuntimeExportRouteDetailItemSelect?: (routeId: string | null) => void;
+  onRuntimeExportServiceTraceItemSelect?: (traceId: string | null) => void;
   onRuntimeExportRouteComparisonReviewSave?: (
     request: DataPanelExportRouteComparisonReviewSaveRequest
   ) => void;
@@ -716,6 +728,13 @@ export const DataPanel = memo(function DataPanel({
         backendPage: runtimeExportServiceTracePage ?? undefined
       }
     );
+  const exportServiceTraceItemStatus = buildDataPanelExportServiceTraceItemStatus(
+    buildDataPanelExportServiceTraceItemDisplay(runtimeExportServiceTraceItem),
+    runtimeExportComparePackageId,
+    runtimeExportServiceTraceItemTraceId,
+    runtimeExportServiceTraceItemLoading,
+    runtimeExportServiceTraceItemError
+  );
   const exportUserServiceRequestStatus =
     buildDataPanelExportUserServiceRequestStatus(
       runtimeExportUserServiceRequestPage,
@@ -849,6 +868,7 @@ export const DataPanel = memo(function DataPanel({
     const traceId = linkedReviewId(row.traceId);
     if (traceId) {
       setSelectedServiceTraceId(traceId);
+      onRuntimeExportServiceTraceItemSelect?.(traceId);
       onRuntimeServiceTraceDetailSelect?.(traceId);
     }
     const serviceQuery = userBusinessRequestServiceTraceQuery(row);
@@ -1990,7 +2010,58 @@ export const DataPanel = memo(function DataPanel({
               {exportServiceLifecycleTraceStatus.display ? (
                 <ServiceLifecycleTracePanel
                   display={exportServiceLifecycleTraceStatus.display}
+                  selectedTraceId={runtimeExportServiceTraceItemTraceId ?? null}
+                  onSelect={(row) => {
+                    setSelectedServiceTraceId(row.traceId);
+                    setSelectedServiceDetailId(row.serviceId);
+                    onRuntimeExportServiceTraceItemSelect?.(row.traceId);
+                    onRuntimeServiceTraceDetailSelect?.(row.traceId);
+                    onRuntimeServiceDetailSelect?.(row.serviceId);
+                    if (row.primaryRouteId) {
+                      setSelectedRouteDetailId(row.primaryRouteId);
+                      onRuntimeRouteDetailSelect?.(row.primaryRouteId);
+                    }
+                    if (row.computeNodeId) {
+                      setSelectedComputeNodeDetailId(row.computeNodeId);
+                      onRuntimeComputeNodeDetailSelect?.(row.computeNodeId);
+                      if (row.computeNodeId.startsWith("sat-")) {
+                        setSelectedDetailSatelliteId(row.computeNodeId);
+                        onRuntimeSatelliteDetailSelect?.(row.computeNodeId);
+                      }
+                    }
+                  }}
                 />
+              ) : null}
+              {exportServiceTraceItemStatus ? (
+                <div
+                  className={`data-panel-export-route-detail-card ${exportServiceTraceItemStatus.tone}`}
+                >
+                  <div className="data-panel-export-diagnostics-header">
+                    <div>
+                      <span>Package service trace detail</span>
+                      <strong>{exportServiceTraceItemStatus.statusLabel}</strong>
+                      <small>{exportServiceTraceItemStatus.summaryLabel}</small>
+                    </div>
+                    {exportServiceTraceItemStatus.detailHref ? (
+                      <a href={exportServiceTraceItemStatus.detailHref}>
+                        service trace item JSON
+                      </a>
+                    ) : null}
+                  </div>
+                  {exportServiceTraceItemStatus.fields.length > 0 ? (
+                    <dl className="data-panel-export-route-detail-fields">
+                      {exportServiceTraceItemStatus.fields.map((field) => (
+                        <div
+                          className={field.tone ?? "normal"}
+                          key={field.label}
+                        >
+                          <dt>{field.label}</dt>
+                          <dd title={field.value}>{field.value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  ) : null}
+                </div>
               ) : null}
             </div>
           ) : null}
@@ -12270,6 +12341,26 @@ export interface DataPanelExportRouteDetailItemStatus {
   detailHref: string | null;
 }
 
+export interface DataPanelExportServiceTraceItemDisplay {
+  packageId: string;
+  traceId: string;
+  tone: "match" | "different";
+  statusLabel: string;
+  summaryLabel: string;
+  fields: readonly DataPanelDetailInspectorField[];
+  detailHref: string;
+}
+
+export interface DataPanelExportServiceTraceItemStatus {
+  packageId: string | null;
+  traceId: string | null;
+  tone: "match" | "different" | "pending" | "error";
+  statusLabel: string;
+  summaryLabel: string;
+  fields: readonly DataPanelDetailInspectorField[];
+  detailHref: string | null;
+}
+
 export interface DataPanelExportRouteLiveComparisonDisplay {
   routeId: string;
   tone: "match" | "different";
@@ -13340,6 +13431,122 @@ export function buildDataPanelExportRouteDetailItemStatus(
     return null;
   }
   if (selectedRouteId && display.routeId !== selectedRouteId) {
+    return null;
+  }
+  return display;
+}
+
+export function buildDataPanelExportServiceTraceItemDisplay(
+  item: RuntimeExportServiceTraceItemV1 | null | undefined
+): DataPanelExportServiceTraceItemDisplay | null {
+  if (item === null || item === undefined) {
+    return null;
+  }
+  const trace = item.trace;
+  const complete = trace.terminal_state === "COMPLETE";
+  const traceId = item.trace_id || trace.trace_id;
+  const componentLatency = [
+    `input ${formatMetricMilliseconds(trace.input_network_latency_s)}`,
+    `queue ${formatMetricMilliseconds(trace.compute_queue_delay_s)}`,
+    `exec ${formatMetricMilliseconds(trace.compute_execution_delay_s)}`,
+    `output ${formatMetricMilliseconds(trace.output_network_latency_s)}`
+  ].join(" / ");
+  return {
+    packageId: item.package_id,
+    traceId,
+    tone: complete ? "match" : "different",
+    statusLabel: complete
+      ? "package service trace complete"
+      : "package service trace needs review",
+    summaryLabel: `${item.package_id} / ${traceId} / ${shortRuntimeHash(
+      item.item_hash
+    )}`,
+    fields: [
+      { label: "source", value: item.source },
+      { label: "trace model", value: item.trace_model || "-" },
+      { label: "service", value: `${trace.service_id} / ${trace.service_class}` },
+      { label: "task", value: trace.task_id || "-" },
+      { label: "terminal", value: trace.terminal_state },
+      {
+        label: "reason",
+        value: trace.terminal_state_reason || "-",
+        tone: complete ? "normal" : "warning"
+      },
+      { label: "compute node", value: trace.compute_node_id || "-" },
+      {
+        label: "input",
+        value: `${trace.input_flow_id || "-"} / ${trace.input_route_id || "-"}`
+      },
+      {
+        label: "output",
+        value: `${trace.output_flow_id || "-"} / ${trace.output_route_id || "-"}`
+      },
+      { label: "component latency", value: componentLatency },
+      {
+        label: "total latency",
+        value: formatMetricMilliseconds(trace.total_latency_s),
+        tone: complete ? "normal" : "warning"
+      },
+      {
+        label: "stages",
+        value: `${formatCount(trace.observed_stage_count)} observed / ${formatCount(
+          trace.pending_stage_count
+        )} pending / ${formatCount(trace.stage_count)} total`,
+        tone: trace.pending_stage_count > 0 ? "warning" : "normal"
+      },
+      {
+        label: "boundary",
+        value: item.boundary_conditions.join(" / ") || "-"
+      },
+      { label: "item hash", value: shortRuntimeHash(item.item_hash) }
+    ],
+    detailHref: runtimeExportPackageServiceTraceHref(item.package_id, traceId)
+  };
+}
+
+export function buildDataPanelExportServiceTraceItemStatus(
+  display: DataPanelExportServiceTraceItemDisplay | null,
+  selectedPackageId: string | null | undefined,
+  selectedTraceId: string | null | undefined,
+  loading = false,
+  error: string | null | undefined = null
+): DataPanelExportServiceTraceItemStatus | null {
+  if (loading) {
+    return {
+      packageId: selectedPackageId ?? null,
+      traceId: selectedTraceId ?? null,
+      tone: "pending",
+      statusLabel: "loading package service trace",
+      summaryLabel: `${selectedPackageId ?? "package"} / ${
+        selectedTraceId ?? "trace"
+      }`,
+      fields: [],
+      detailHref: null
+    };
+  }
+  if (error !== null && error !== undefined) {
+    return {
+      packageId: selectedPackageId ?? null,
+      traceId: selectedTraceId ?? null,
+      tone: "error",
+      statusLabel: "package service trace load failed",
+      summaryLabel: `${selectedPackageId ?? "package"} / ${
+        selectedTraceId ?? "trace"
+      }`,
+      fields: [{ label: "error", value: error, tone: "warning" }],
+      detailHref:
+        selectedPackageId && selectedTraceId
+          ? runtimeExportPackageServiceTraceHref(selectedPackageId, selectedTraceId)
+          : null
+    };
+  }
+  if (display === null) {
+    return null;
+  }
+  if (selectedPackageId && display.packageId !== selectedPackageId) {
+    return null;
+  }
+  if (selectedTraceId && display.traceId !== selectedTraceId) {
     return null;
   }
   return display;

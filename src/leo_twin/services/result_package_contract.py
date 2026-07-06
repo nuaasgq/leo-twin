@@ -31,6 +31,9 @@ RUNTIME_EXPORT_ROUTE_DETAIL_PAGE_V1_ID = (
 RUNTIME_EXPORT_SERVICE_TRACE_PAGE_V1_ID = (
     "leo_twin.runtime_export_service_trace_page.v1"
 )
+RUNTIME_EXPORT_SERVICE_TRACE_ITEM_V1_ID = (
+    "leo_twin.runtime_export_service_trace_item.v1"
+)
 RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1_ID = (
     "leo_twin.runtime_export_reproducibility_boundary.v1"
 )
@@ -115,6 +118,7 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
             "GET /runtime/export/packages/{package_id}/review-completion",
             "GET /runtime/export/packages/{package_id}/handoff-report",
             "GET /runtime/export/packages/{package_id}/service-traces",
+            "GET /runtime/export/packages/{package_id}/service-traces/{trace_id}",
             "GET /runtime/export/packages/{package_id}/user-service-requests",
             "GET /runtime/export/packages/{package_id}/routes",
             "GET /runtime/export/packages/{package_id}/routes/{route_id}",
@@ -1220,6 +1224,56 @@ def build_runtime_export_service_trace_page_v1(
     }
     page["page_hash"] = stable_hash_payload(page)
     return page
+
+
+def build_runtime_export_service_trace_item_v1(
+    service_trace_export: Mapping[str, Any],
+    trace_id: str,
+    *,
+    package_id: str = "",
+) -> dict[str, object] | None:
+    """Build one deterministic service trace detail from an exported package."""
+
+    if not isinstance(service_trace_export, Mapping):
+        raise TypeError("service_trace_export must be a mapping")
+    normalized_trace_id = str(trace_id).strip()
+    if not normalized_trace_id:
+        return None
+    summary = _mapping(service_trace_export.get("summary"))
+    for item in _records(summary.get("items")):
+        trace = _runtime_export_service_trace_record(item)
+        if normalized_trace_id in _runtime_export_service_trace_lookup_ids(trace):
+            detail: dict[str, object] = {
+                "type": "RUNTIME_EXPORT_SERVICE_TRACE_ITEM_V1",
+                "version": "v1",
+                "item_id": RUNTIME_EXPORT_SERVICE_TRACE_ITEM_V1_ID,
+                "source": "BACKEND_RUNTIME_EXPORT_PACKAGE",
+                "package_id": str(package_id or service_trace_export.get("package_id", "")),
+                "artifact_type": str(service_trace_export.get("type", "")),
+                "artifact_source": str(service_trace_export.get("source", "")),
+                "artifact_policy": str(
+                    service_trace_export.get("artifact_policy", "")
+                ),
+                "service_trace_export_policy": dict(
+                    _mapping(service_trace_export.get("service_trace_export_policy"))
+                ),
+                "artifact_window_only": True,
+                "trace_contract_id": str(summary.get("contract_id", "")),
+                "trace_model": str(summary.get("trace_model", "")),
+                "source_summary": str(summary.get("source_summary", "")),
+                "summary_scope": "SERVICE_LIFECYCLE_TRACE_ITEM",
+                "trace_id": str(trace.get("trace_id", "")),
+                "trace": trace,
+                "boundary_conditions": (
+                    "ARTIFACT_WINDOW_ONLY",
+                    "NO_EVENT_REPLAY",
+                    "NO_SERVICE_RECOMPUTE",
+                    "NO_PACKAGE_MUTATION",
+                ),
+            }
+            detail["item_hash"] = stable_hash_payload(detail)
+            return detail
+    return None
 
 
 def build_runtime_export_user_service_request_page_v1(
@@ -2951,6 +3005,28 @@ def _runtime_export_service_trace_search_text(trace: Mapping[str, Any]) -> str:
         ),
     )
     return " ".join(values).lower()
+
+
+def _runtime_export_service_trace_lookup_ids(
+    trace: Mapping[str, Any],
+) -> tuple[str, ...]:
+    values = (
+        str(trace.get("trace_id", "")),
+        str(trace.get("service_id", "")),
+        str(trace.get("trace_id", "")).removeprefix("trace:"),
+        str(trace.get("task_id", "")),
+        str(trace.get("input_flow_id", "")),
+        str(trace.get("output_flow_id", "")),
+    )
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for value in values:
+        normalized = value.strip()
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        ordered.append(normalized)
+    return tuple(ordered)
 
 
 def _runtime_export_user_service_request_matches_filter(

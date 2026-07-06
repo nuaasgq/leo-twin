@@ -16,6 +16,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_ROUTE_DETAIL_ITEM_V1_ID,
     RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_V1_ID,
     RUNTIME_EXPORT_ROUTE_DETAIL_PAGE_V1_ID,
+    RUNTIME_EXPORT_SERVICE_TRACE_ITEM_V1_ID,
     RUNTIME_EXPORT_SERVICE_TRACE_PAGE_V1_ID,
     RUNTIME_EXPORT_REVIEW_SUMMARY_V1_ID,
     RUNTIME_EXPORT_USER_SERVICE_REQUEST_PAGE_V1_ID,
@@ -34,6 +35,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_review_summary_v1,
     build_runtime_export_scenario_review_bundle_v1,
     build_runtime_export_scenario_review_checklist_v1,
+    build_runtime_export_service_trace_item_v1,
     build_runtime_export_service_trace_page_v1,
     build_runtime_export_user_service_request_page_v1,
     build_runtime_export_user_service_request_summary_v2,
@@ -92,6 +94,10 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
     )
     assert (
         "GET /runtime/export/packages/{package_id}/service-traces"
+        in first["source_endpoints"]
+    )
+    assert (
+        "GET /runtime/export/packages/{package_id}/service-traces/{trace_id}"
         in first["source_endpoints"]
     )
     assert (
@@ -1023,6 +1029,48 @@ def test_runtime_export_service_trace_page_v1_filters_artifact_window() -> None:
     assert second_page["item_count"] == 1
     assert second_page["items"][0]["trace_id"] == "trace:run"
     assert second_page["has_more"] is True
+
+
+def test_runtime_export_service_trace_item_v1_reads_exact_package_trace() -> None:
+    trace_export = _service_trace_export()
+
+    first = build_runtime_export_service_trace_item_v1(
+        trace_export,
+        "trace:run",
+        package_id="pkg-1",
+    )
+    second = build_runtime_export_service_trace_item_v1(
+        trace_export,
+        "run",
+        package_id="pkg-1",
+    )
+
+    assert first is not None
+    assert second is not None
+    assert first["item_id"] == RUNTIME_EXPORT_SERVICE_TRACE_ITEM_V1_ID
+    assert first["type"] == "RUNTIME_EXPORT_SERVICE_TRACE_ITEM_V1"
+    assert first["source"] == "BACKEND_RUNTIME_EXPORT_PACKAGE"
+    assert first["package_id"] == "pkg-1"
+    assert first["artifact_window_only"] is True
+    assert first["trace_id"] == "trace:run"
+    assert first["trace"]["trace_id"] == "trace:run"
+    assert first["trace"]["compute_node_id"] == "sat-00003"
+    assert first["trace"]["terminal_state"] == "RUNNING"
+    assert first["trace_contract_id"] == (
+        "leo_twin.service_lifecycle_trace_contract.v2"
+    )
+    assert first["boundary_conditions"] == (
+        "ARTIFACT_WINDOW_ONLY",
+        "NO_EVENT_REPLAY",
+        "NO_SERVICE_RECOMPUTE",
+        "NO_PACKAGE_MUTATION",
+    )
+    assert first["item_hash"].startswith("sha256:")
+    assert second["trace"]["trace_id"] == "trace:run"
+    assert (
+        build_runtime_export_service_trace_item_v1(trace_export, "missing")
+        is None
+    )
 
 
 def test_runtime_export_route_detail_item_v1_reads_exact_package_route() -> None:

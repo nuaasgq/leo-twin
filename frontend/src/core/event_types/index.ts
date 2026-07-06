@@ -2124,6 +2124,27 @@ export interface RuntimeExportServiceTracePageFiltersV1 {
   terminal_reason: string;
 }
 
+export interface RuntimeExportServiceTraceItemV1 {
+  type: "RUNTIME_EXPORT_SERVICE_TRACE_ITEM_V1" | string;
+  version: "v1" | string;
+  item_id: string;
+  source: string;
+  package_id: string;
+  artifact_type: string;
+  artifact_source: string;
+  artifact_policy: string;
+  service_trace_export_policy?: Readonly<Record<string, unknown>>;
+  artifact_window_only: boolean;
+  trace_contract_id: string;
+  trace_model: string;
+  source_summary: string;
+  summary_scope: string;
+  trace_id: string;
+  trace: RuntimeServiceLifecycleTraceItemV2;
+  boundary_conditions: readonly string[];
+  item_hash: string;
+}
+
 export interface RuntimeExportRouteDetailItemV1 {
   type: "RUNTIME_EXPORT_ROUTE_DETAIL_ITEM_V1" | string;
   version: "v1" | string;

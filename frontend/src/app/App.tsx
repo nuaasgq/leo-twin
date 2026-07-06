@@ -21,6 +21,7 @@ import {
   RuntimeExportRouteComparisonReviewReportV1,
   RuntimeExportRouteDetailItemV1,
   RuntimeExportRouteDetailPageV1,
+  RuntimeExportServiceTraceItemV1,
   RuntimeExportServiceTracePageV1,
   RuntimeExportReviewSummaryV1,
   RuntimeExportUserServiceRequestPageV1,
@@ -64,6 +65,7 @@ import {
   loadRuntimeExportRouteDetailPage,
   loadRuntimeExportReviewSummary,
   loadRuntimeExportRestorePreflight,
+  loadRuntimeExportServiceTraceItem,
   loadRuntimeExportServiceTracePage,
   loadRuntimeExportUserServiceRequestPage,
   loadRuntimeNodeDetails,
@@ -302,6 +304,8 @@ export function App() {
     useState<RuntimeServiceLifecycleTraceV2 | null>(null);
   const [runtimeExportServiceTracePage, setRuntimeExportServiceTracePage] =
     useState<RuntimeExportServiceTracePageV1 | null>(null);
+  const [runtimeExportServiceTraceItem, setRuntimeExportServiceTraceItem] =
+    useState<RuntimeExportServiceTraceItemV1 | null>(null);
   const [
     runtimeExportUserServiceRequestPage,
     setRuntimeExportUserServiceRequestPage
@@ -327,6 +331,10 @@ export function App() {
   const [
     runtimeExportRouteDetailItemRouteId,
     setRuntimeExportRouteDetailItemRouteId
+  ] = useState<string | null>(null);
+  const [
+    runtimeExportServiceTraceItemTraceId,
+    setRuntimeExportServiceTraceItemTraceId
   ] = useState<string | null>(null);
   const [runtimeExportComparePackageId, setRuntimeExportComparePackageId] =
     useState<string | null>(null);
@@ -370,6 +378,14 @@ export function App() {
     useState(false);
   const [runtimeExportRouteDetailItemError, setRuntimeExportRouteDetailItemError] =
     useState<string | null>(null);
+  const [
+    runtimeExportServiceTraceItemLoading,
+    setRuntimeExportServiceTraceItemLoading
+  ] = useState(false);
+  const [
+    runtimeExportServiceTraceItemError,
+    setRuntimeExportServiceTraceItemError
+  ] = useState<string | null>(null);
   const [
     runtimeExportRouteComparisonReviewReportLoading,
     setRuntimeExportRouteComparisonReviewReportLoading
@@ -1232,6 +1248,10 @@ export function App() {
     setRuntimeExportDiagnosticsBundleError(null);
     setRuntimeExportServiceLifecycleTrace(null);
     setRuntimeExportServiceTracePage(null);
+    setRuntimeExportServiceTraceItem(null);
+    setRuntimeExportServiceTraceItemTraceId(null);
+    setRuntimeExportServiceTraceItemLoading(false);
+    setRuntimeExportServiceTraceItemError(null);
     setRuntimeExportServiceLifecycleTraceError(null);
     setRuntimeExportUserServiceRequestPage(null);
     setRuntimeExportUserServiceRequestPageError(null);
@@ -1466,6 +1486,37 @@ export function App() {
     [runtimeExportComparePackageId]
   );
 
+  const refreshRuntimeExportServiceTraceItem = useCallback(
+    async (traceId: string | null) => {
+      const packageId = runtimeExportComparePackageId;
+      const normalizedTraceId = traceId?.trim() ?? "";
+      if (packageId === null || normalizedTraceId.length === 0) {
+        setRuntimeExportServiceTraceItem(null);
+        setRuntimeExportServiceTraceItemTraceId(null);
+        setRuntimeExportServiceTraceItemLoading(false);
+        setRuntimeExportServiceTraceItemError(null);
+        return;
+      }
+      setRuntimeExportServiceTraceItemTraceId(normalizedTraceId);
+      setRuntimeExportServiceTraceItem(null);
+      setRuntimeExportServiceTraceItemLoading(true);
+      setRuntimeExportServiceTraceItemError(null);
+      try {
+        setRuntimeExportServiceTraceItem(
+          await loadRuntimeExportServiceTraceItem(packageId, normalizedTraceId)
+        );
+      } catch (error) {
+        setRuntimeExportServiceTraceItem(null);
+        setRuntimeExportServiceTraceItemError(
+          runtimeExportServiceLifecycleTraceErrorMessage(error)
+        );
+      } finally {
+        setRuntimeExportServiceTraceItemLoading(false);
+      }
+    },
+    [runtimeExportComparePackageId]
+  );
+
   const refreshRuntimeExportUserServiceRequestPage = useCallback(
     async (request: DataPanelExportUserServiceRequestPageRequest) => {
       const packageId = runtimeExportComparePackageId;
@@ -1549,6 +1600,10 @@ export function App() {
         setRuntimeExportDiagnosticsBundle(null);
         setRuntimeExportServiceLifecycleTrace(null);
         setRuntimeExportServiceTracePage(null);
+        setRuntimeExportServiceTraceItem(null);
+        setRuntimeExportServiceTraceItemTraceId(null);
+        setRuntimeExportServiceTraceItemLoading(false);
+        setRuntimeExportServiceTraceItemError(null);
         setRuntimeExportUserServiceRequestPage(null);
         setRuntimeExportRouteDetailPage(null);
         setRuntimeExportRouteDetailItem(null);
@@ -1591,6 +1646,7 @@ export function App() {
         setRuntimeExportManifestError(null);
         setRuntimeExportDiagnosticsBundleError(null);
         setRuntimeExportServiceLifecycleTraceError(null);
+        setRuntimeExportServiceTraceItemError(null);
         setRuntimeExportUserServiceRequestPageError(null);
         setRuntimeExportRouteDetailIndexError(null);
         setRuntimeExportRouteComparisonReviewReportError(null);
@@ -1612,6 +1668,8 @@ export function App() {
       setRuntimeExportDiagnosticsBundle(null);
       setRuntimeExportServiceLifecycleTrace(null);
       setRuntimeExportServiceTracePage(null);
+      setRuntimeExportServiceTraceItem(null);
+      setRuntimeExportServiceTraceItemTraceId(null);
       setRuntimeExportUserServiceRequestPage(null);
       setRuntimeExportRouteDetailPage(null);
       setRuntimeExportRouteComparisonReviewReport(null);
@@ -1631,6 +1689,7 @@ export function App() {
       setRuntimeExportManifestLoading(false);
       setRuntimeExportDiagnosticsBundleLoading(false);
       setRuntimeExportServiceLifecycleTraceLoading(false);
+      setRuntimeExportServiceTraceItemLoading(false);
       setRuntimeExportUserServiceRequestPageLoading(false);
       setRuntimeExportRouteDetailIndexLoading(false);
       setRuntimeExportRouteComparisonReviewReportLoading(false);
@@ -1643,6 +1702,7 @@ export function App() {
       setRuntimeExportManifestError(null);
       setRuntimeExportDiagnosticsBundleError(null);
       setRuntimeExportServiceLifecycleTraceError(null);
+      setRuntimeExportServiceTraceItemError(null);
       setRuntimeExportUserServiceRequestPageError(null);
       setRuntimeExportRouteDetailIndexError(null);
       setRuntimeExportRouteComparisonReviewReportError(null);
@@ -2443,11 +2503,15 @@ export function App() {
               runtimeExportDiagnosticsBundle={runtimeExportDiagnosticsBundle}
               runtimeExportServiceLifecycleTrace={runtimeExportServiceLifecycleTrace}
               runtimeExportServiceTracePage={runtimeExportServiceTracePage}
+              runtimeExportServiceTraceItem={runtimeExportServiceTraceItem}
               runtimeExportUserServiceRequestPage={
                 runtimeExportUserServiceRequestPage
               }
               runtimeExportRouteDetailPage={runtimeExportRouteDetailPage}
               runtimeExportRouteDetailItem={runtimeExportRouteDetailItem}
+              runtimeExportServiceTraceItemTraceId={
+                runtimeExportServiceTraceItemTraceId
+              }
               runtimeExportRouteComparisonReviewReport={
                 runtimeExportRouteComparisonReviewReport
               }
@@ -2484,6 +2548,12 @@ export function App() {
               runtimeExportRouteDetailIndexError={runtimeExportRouteDetailIndexError}
               runtimeExportRouteDetailItemLoading={runtimeExportRouteDetailItemLoading}
               runtimeExportRouteDetailItemError={runtimeExportRouteDetailItemError}
+              runtimeExportServiceTraceItemLoading={
+                runtimeExportServiceTraceItemLoading
+              }
+              runtimeExportServiceTraceItemError={
+                runtimeExportServiceTraceItemError
+              }
               runtimeExportRouteComparisonReviewReportLoading={
                 runtimeExportRouteComparisonReviewReportLoading
               }
@@ -2554,6 +2624,9 @@ export function App() {
                 refreshRuntimeExportUserServiceRequestPage
               }
               onRuntimeExportRouteDetailItemSelect={refreshRuntimeExportRouteDetailItem}
+              onRuntimeExportServiceTraceItemSelect={
+                refreshRuntimeExportServiceTraceItem
+              }
               onRuntimeExportRouteComparisonReviewSave={
                 saveRuntimeExportRouteComparisonReview
               }

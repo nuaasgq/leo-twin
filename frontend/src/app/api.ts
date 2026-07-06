@@ -23,6 +23,7 @@ import {
   RuntimeExportRouteDetailIndexV1,
   RuntimeExportRouteDetailItemV1,
   RuntimeExportRouteDetailPageV1,
+  RuntimeExportServiceTraceItemV1,
   RuntimeExportServiceTracePageV1,
   RuntimeExportReviewSummaryV1,
   RuntimeExportUserServiceRequestPageV1,
@@ -436,6 +437,19 @@ export async function loadRuntimeExportServiceTracePage(
   return decodeRuntimeExportServiceTracePage(await response.json());
 }
 
+export async function loadRuntimeExportServiceTraceItem(
+  packageId: string,
+  traceId: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): Promise<RuntimeExportServiceTraceItemV1> {
+  const url = runtimeExportPackageServiceTraceHref(packageId, traceId, endpoint);
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`failed to load runtime export service trace item from ${url}: HTTP ${response.status}`);
+  }
+  return decodeRuntimeExportServiceTraceItem(await response.json());
+}
+
 export async function loadRuntimeExportRouteDetailIndex(
   packageId: string,
   endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
@@ -826,6 +840,16 @@ export function runtimeExportPackageServiceTracesHref(
   });
   appendRuntimeDetailFilterParams(params, filters);
   return `${runtimeExportPackageRecordHref(packageId, endpoint)}/service-traces?${params.toString()}`;
+}
+
+export function runtimeExportPackageServiceTraceHref(
+  packageId: string,
+  traceId: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): string {
+  return `${runtimeExportPackageRecordHref(packageId, endpoint)}/service-traces/${encodeURIComponent(
+    traceId
+  )}`;
 }
 
 export function runtimeExportPackageUserServiceRequestsHref(
@@ -1304,6 +1328,28 @@ export function decodeRuntimeExportServiceTracePage(
     );
   }
   return value as RuntimeExportServiceTracePageV1;
+}
+
+export function decodeRuntimeExportServiceTraceItem(
+  value: unknown
+): RuntimeExportServiceTraceItemV1 {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError("runtime export service trace item response must be an object");
+  }
+  if (
+    typeof (value as { package_id?: unknown }).package_id !== "string" ||
+    typeof (value as { trace_id?: unknown }).trace_id !== "string" ||
+    typeof (value as { trace?: unknown }).trace !== "object" ||
+    (value as { trace?: unknown }).trace === null ||
+    Array.isArray((value as { trace?: unknown }).trace) ||
+    typeof (value as { artifact_window_only?: unknown })
+      .artifact_window_only !== "boolean"
+  ) {
+    throw new TypeError(
+      "runtime export service trace item response must include package_id, trace_id, trace, and artifact_window_only"
+    );
+  }
+  return value as RuntimeExportServiceTraceItemV1;
 }
 
 export function decodeRuntimeExportRouteDetailItem(
