@@ -29,6 +29,7 @@ import {
   buildDataPanelExportReviewSummaryStatus,
   buildDataPanelExportRouteDetailItemDisplay,
   buildDataPanelExportRouteDetailItemStatus,
+  buildDataPanelExportRouteLiveComparisonDisplay,
   buildDataPanelExportRouteDetailIndexDisplay,
   buildDataPanelExportRouteDetailPageDisplay,
   buildDataPanelExportRouteDetailIndexStatus,
@@ -2784,6 +2785,72 @@ describe("buildDataPanelExportCompareDisplay", () => {
         false,
         null
       )
+    ).toBeNull();
+  });
+
+  it("compares package route details with live runtime route details", () => {
+    const packageRoute = _runtimeExportRouteIndexRoute("route-a", true);
+    const packageItem = {
+      type: "RUNTIME_EXPORT_ROUTE_DETAIL_ITEM_V1",
+      version: "v1",
+      item_id: "leo_twin.runtime_export_route_detail_item.v1",
+      source: "BACKEND_RUNTIME_EXPORT_PACKAGE",
+      package_id: "pkg-review",
+      index_id: "leo_twin.runtime_export_route_detail_index.v1",
+      route_detail_index_hash:
+        "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+      route_id: "route-a",
+      route: packageRoute,
+      item_hash:
+        "sha256:abababababababababababababababababababababababababababababababab"
+    };
+
+    expect(
+      buildDataPanelExportRouteLiveComparisonDisplay(packageItem, packageRoute)
+    ).toMatchObject({
+      routeId: "route-a",
+      tone: "match",
+      statusLabel: "package and live route match",
+      summaryLabel: "route-a / matched 12/12 / differences 0"
+    });
+
+    const changedLiveRoute = {
+      ...packageRoute,
+      latency_s: 0.25,
+      bottleneck_component: "CAPACITY",
+      bottleneck_reason_label: "Route capacity pressure"
+    };
+    const changedDisplay = buildDataPanelExportRouteLiveComparisonDisplay(
+      packageItem,
+      changedLiveRoute
+    );
+    expect(changedDisplay).toMatchObject({
+      routeId: "route-a",
+      tone: "different",
+      statusLabel: "package and live route differ",
+      summaryLabel: "route-a / matched 10/12 / differences 2"
+    });
+    expect(changedDisplay?.rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: "latency",
+          packageValue: "100 ms",
+          liveValue: "250 ms",
+          matches: false
+        }),
+        expect.objectContaining({
+          field: "bottleneck",
+          packageValue: "LOSS_PROXY",
+          liveValue: "CAPACITY",
+          matches: false
+        })
+      ])
+    );
+    expect(
+      buildDataPanelExportRouteLiveComparisonDisplay(packageItem, {
+        ...packageRoute,
+        route_id: "route-b"
+      })
     ).toBeNull();
   });
 

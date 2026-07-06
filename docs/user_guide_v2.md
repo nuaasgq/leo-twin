@@ -148,7 +148,9 @@ export-window policy, cursor navigation, searchable/filterable route rows, and
 package route-detail review without rerunning the simulation. The package
 detail view reads the exported package itself. The separate live lookup only
 compares against the current runtime route detail endpoint when the same route
-id is still present.
+id is still present. If both package and live details are loaded for the same
+route, the dashboard shows a package-vs-live comparison card with matched and
+different route fields.
 Runtime export rebuilds the package route evidence window with a 5000-row
 maximum; hidden rows beyond that limit are reported in the package policy.
 For package-owned review, use:

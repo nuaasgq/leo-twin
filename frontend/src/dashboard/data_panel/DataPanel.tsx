@@ -849,6 +849,11 @@ export const DataPanel = memo(function DataPanel({
     routeDetailInspector,
     routeDetailRequestStatus
   );
+  const exportRouteLiveComparison =
+    buildDataPanelExportRouteLiveComparisonDisplay(
+      runtimeExportRouteDetailItem,
+      selectedRouteBackendDetail
+    );
   const serviceDetailInspector = buildServiceLifecycleDetailInspector(
     selectedServiceDetailRow,
     selectedServiceBackendDetail
@@ -1541,6 +1546,34 @@ export const DataPanel = memo(function DataPanel({
                       ))}
                     </dl>
                   ) : null}
+                </div>
+              ) : null}
+              {exportRouteLiveComparison ? (
+                <div
+                  className={`data-panel-export-route-compare-card ${exportRouteLiveComparison.tone}`}
+                >
+                  <div className="data-panel-export-diagnostics-header">
+                    <div>
+                      <span>Package vs live route</span>
+                      <strong>{exportRouteLiveComparison.statusLabel}</strong>
+                      <small>{exportRouteLiveComparison.summaryLabel}</small>
+                    </div>
+                  </div>
+                  <div className="data-panel-export-route-compare-rows">
+                    {exportRouteLiveComparison.rows.map((row) => (
+                      <div
+                        className={row.matches ? "match" : "different"}
+                        key={row.field}
+                      >
+                        <span>{row.field}</span>
+                        <strong>{row.statusLabel}</strong>
+                        <small title={row.packageValue}>
+                          package: {row.packageValue}
+                        </small>
+                        <small title={row.liveValue}>live: {row.liveValue}</small>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ) : null}
             </div>
@@ -9138,6 +9171,22 @@ export interface DataPanelExportRouteDetailItemStatus {
   detailHref: string | null;
 }
 
+export interface DataPanelExportRouteLiveComparisonDisplay {
+  routeId: string;
+  tone: "match" | "different";
+  statusLabel: string;
+  summaryLabel: string;
+  rows: readonly DataPanelExportRouteLiveComparisonRow[];
+}
+
+export interface DataPanelExportRouteLiveComparisonRow {
+  field: string;
+  packageValue: string;
+  liveValue: string;
+  matches: boolean;
+  statusLabel: string;
+}
+
 export interface DataPanelExportManifestInspectorDisplay {
   packageId: string;
   tone: "match" | "different";
@@ -9598,6 +9647,77 @@ export function buildDataPanelExportRouteDetailItemStatus(
     return null;
   }
   return display;
+}
+
+export function buildDataPanelExportRouteLiveComparisonDisplay(
+  packageItem: RuntimeExportRouteDetailItemV1 | null | undefined,
+  liveDetail: RuntimeRouteExplanationItemV1 | null | undefined
+): DataPanelExportRouteLiveComparisonDisplay | null {
+  if (
+    packageItem === null ||
+    packageItem === undefined ||
+    liveDetail === null ||
+    liveDetail === undefined ||
+    packageItem.route_id !== liveDetail.route_id
+  ) {
+    return null;
+  }
+  const packageRoute = packageItem.route;
+  const rows = [
+    routeComparisonRow("availability", packageRoute.available ? "available" : "blocked", liveDetail.available ? "available" : "blocked"),
+    routeComparisonRow("business", packageRoute.business_type, liveDetail.business_type),
+    routeComparisonRow("flow", packageRoute.flow_id, liveDetail.flow_id),
+    routeComparisonRow("source -> destination", `${packageRoute.source_id} -> ${packageRoute.destination_id}`, `${liveDetail.source_id} -> ${liveDetail.destination_id}`),
+    routeComparisonRow("selected satellite", packageRoute.selected_satellite_id || "-", liveDetail.selected_satellite_id || "-"),
+    routeComparisonRow("primary next hop", packageRoute.primary_next_hop_id || "-", liveDetail.primary_next_hop_id || "-"),
+    routeComparisonRow("path", routePathComparisonLabel(packageRoute), routePathComparisonLabel(liveDetail)),
+    routeComparisonRow("capacity / demand", routeExplanationCapacityDemandLabel(packageRoute.capacity_mbps, packageRoute.demand_mbps), routeExplanationCapacityDemandLabel(liveDetail.capacity_mbps, liveDetail.demand_mbps)),
+    routeComparisonRow("latency", formatMetricMilliseconds(packageRoute.latency_s), formatMetricMilliseconds(liveDetail.latency_s ?? 0)),
+    routeComparisonRow("loss", formatRatioPercent(packageRoute.loss_proxy_rate), formatRatioPercent(liveDetail.loss_proxy_rate ?? 0)),
+    routeComparisonRow("pressure", formatRatioPercent(Math.max(0, packageRoute.route_pressure_proxy)), formatRatioPercent(Math.max(0, liveDetail.route_pressure_proxy))),
+    routeComparisonRow("bottleneck", packageRoute.bottleneck_component || "NONE", liveDetail.bottleneck_component || "NONE")
+  ];
+  const differentCount = rows.filter((row) => !row.matches).length;
+  return {
+    routeId: packageItem.route_id,
+    tone: differentCount === 0 ? "match" : "different",
+    statusLabel:
+      differentCount === 0
+        ? "package and live route match"
+        : "package and live route differ",
+    summaryLabel: `${packageItem.route_id} / matched ${formatCount(
+      rows.length - differentCount
+    )}/${formatCount(rows.length)} / differences ${formatCount(differentCount)}`,
+    rows
+  };
+}
+
+function routeComparisonRow(
+  field: string,
+  packageValue: string,
+  liveValue: string
+): DataPanelExportRouteLiveComparisonRow {
+  const matches = packageValue === liveValue;
+  return {
+    field,
+    packageValue,
+    liveValue,
+    matches,
+    statusLabel: matches ? "match" : "different"
+  };
+}
+
+function routePathComparisonLabel(
+  route: RuntimeExportRouteDetailIndexRouteV1 | RuntimeRouteExplanationItemV1
+): string {
+  const pathLabel = route.path_label;
+  if (typeof pathLabel === "string" && pathLabel.length > 0) {
+    return pathLabel;
+  }
+  if ("path" in route && Array.isArray(route.path)) {
+    return route.path.join(" -> ");
+  }
+  return "-";
 }
 
 export function filterRuntimeExportRouteDetailIndexRoutes(

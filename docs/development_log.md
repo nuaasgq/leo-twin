@@ -13724,3 +13724,57 @@ change.
 - Recommended follow-up:
   - Add a side-by-side package-vs-live route comparison card when both exact
     details are available for the same route id.
+
+## 2026-07-06 - Dashboard Route Package-Live Compare v1
+
+- Branch: `feature/T286-dashboard-route-compare-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a read-only package-vs-live route comparison card to the
+  standalone dashboard export review drawer. When the selected package route
+  detail from `/runtime/export/packages/{package_id}/routes/{route_id}` and
+  the current live runtime route detail have the same route id, the dashboard
+  compares availability, business, flow, source/destination, selected
+  satellite, primary next hop, path, capacity/demand, latency, loss, pressure,
+  and bottleneck fields. This is a frontend evidence-diagnostics task only; no
+  route model, Event Kernel, result package contract, or backend endpoint
+  behavior changed.
+- Changed files/modules:
+  - `frontend/src/app/App.css`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/dashboard_model_trust_evidence_workspace_v1.md`
+  - `docs/result_package_contract_v1.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_result_package_contract_v1.py tests/unit/test_user_guide_v2_docs.py -q`
+    - Result: passed, 11 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with bundled Codex Node/Pnpm runtime after fixing the
+      path comparison helper to respect the live route detail contract, which
+      does not guarantee a raw `path` array.
+  - `pnpm --dir frontend test api.test.ts dataPanel.test.ts`
+    - Result: passed, 2 test files and 191 tests.
+  - `git diff --check`
+    - Result: passed for task files. Git reported existing CRLF warnings for
+      the unstaged runtime config drift files.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing large DataPanel chunk
+      warning after minification; no functional build error.
+- Problems encountered:
+  - TypeScript correctly caught that `RuntimeRouteExplanationItemV1` may not
+    expose a raw `path` array. The comparison now uses `path_label` first and
+    only reads `path` when the object actually includes it.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The comparison appears only after users load both package and live details
+    for the same route id. It does not automatically fetch the live route after
+    package detail selection.
+  - Comparison uses formatted field values and is intended for operator
+    diagnosis, not as a formal numerical tolerance verifier.
+- Recommended follow-up:
+  - Add an optional one-click "compare with live" action that loads both
+    package and live details for a selected route while preserving the current
+    explicit package/live separation.

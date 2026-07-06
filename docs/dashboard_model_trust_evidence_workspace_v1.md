@@ -52,8 +52,11 @@ and existing live route detail comparison. Package detail actions read
 `/runtime/export/packages/{package_id}/routes/{route_id}` and render the
 exported row summary in the dashboard, so replay review does not depend on
 live runtime state. The live action remains a current-runtime comparison when
-the referenced route is still available. The frontend does not recompute routes
-or download the full `route_detail_index_v1.json` by default.
+the referenced route is still available. When both package and live details are
+loaded for the same route id, the dashboard shows a field-level
+package-vs-live comparison for availability, path, next hop, KPI proxy, and
+bottleneck context. The frontend does not recompute routes or download the full
+`route_detail_index_v1.json` by default.
 7. runtime evidence
 
 Each row has a tone:

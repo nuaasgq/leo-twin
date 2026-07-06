@@ -232,6 +232,11 @@ Tasks:
     `/runtime/export/packages/{package_id}/routes/{route_id}` and display the
     exported route evidence separately from live runtime route-detail
     comparison.
+  - Status: T286 adds a package-vs-live route comparison card in the dashboard
+    export review drawer. When the selected package route detail and live
+    runtime route detail share the same route id, the frontend compares
+    availability, business, path, next hop, KPI proxy, pressure, and bottleneck
+    fields without recomputing routes.
 
 ### WS4. Compute Network Model v2
 

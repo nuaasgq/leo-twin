@@ -165,7 +165,10 @@ by the dashboard by default. The package route-detail action reads
 `GET /runtime/export/packages/{package_id}/routes/{route_id}` and displays the
 exported row as replay evidence. The live route-detail action is a read-only
 comparison aid: it uses the current runtime detail endpoint when the same route
-id still exists, and it does not replay or mutate the exported package.
+id still exists, and it does not replay or mutate the exported package. When
+both details are loaded for the same route id, the dashboard renders a
+field-level package-vs-live comparison card so users can see which route
+semantics changed between the exported package and the current runtime.
 
 The demo backend also exposes package-owned route evidence endpoints:
 
