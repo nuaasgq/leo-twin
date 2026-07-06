@@ -14666,3 +14666,56 @@ change.
   - Add backend-owned boundary alignment fields to package compare and
     restore-preflight summaries so API consumers outside the dashboard can make
     the same evidence check without loading multiple artifacts.
+
+## 2026-07-06 - Runtime Export Boundary Alignment Fields v1
+
+- Branch: `feature/T305-runtime-export-boundary-alignment-fields-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add backend-owned `runtime_export_boundary_alignment_v1` evidence to
+  runtime export package compare and restore-preflight summaries. The alignment
+  object is derived from the persisted package reproducibility boundary and the
+  actual compare/preflight scopes. It reports boundary hash, optional current
+  boundary hash, restore/compare/read/preflight scope alignment, forbidden
+  replay/recompute/mutation/packet/external-simulator flags, deterministic
+  warnings, and an alignment hash. The dashboard type contract and boundary
+  alignment drawer now consume this backend field first and retain the previous
+  manifest/review/diagnostics cross-check as a fallback. This task does not
+  alter runtime control, restore execution, Event Kernel behavior, package
+  mutation, model recomputation, event replay, or packet-level simulation.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/integration/test_runtime_session_control.py::test_demo_adapter_exports_runtime_result_package tests/integration/test_runtime_session_control.py::test_demo_adapter_serves_persisted_runtime_export_artifacts tests/integration/test_result_package_export_v1.py tests/unit/test_user_guide_v2_docs.py -q`
+    - Result: passed, 5 tests.
+  - `pnpm --dir frontend test dataPanel.test.ts api.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 2 test
+      files and 204 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path. Vite
+      reported the existing large DataPanel chunk warning.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered:
+  - Existing Chinese UI text displays incorrectly in the PowerShell console
+    code page. The task avoided rewriting existing localized labels and used
+    narrow code anchors for frontend patches.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - Older result packages without `runtime_export_reproducibility_boundary_v1`
+    still report warning status and rely on existing fallback inspectors.
+  - The dashboard still renders the boundary alignment as read-only evidence;
+    restore execution remains a separate explicit control-plane action.
+- Recommended follow-up:
+  - Extend the result-package review report to include the backend alignment
+    hash so archived operator review records can cite the exact compare/
+    preflight boundary evidence used during review.

@@ -1282,6 +1282,29 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
     assert matched_compare["summary"]["same_config"] is True
     assert matched_compare["summary"]["same_generated_config"] is True
     assert matched_compare["summary"]["compare_hash"].startswith("sha256:")
+    matched_alignment = matched_compare["summary"][
+        "runtime_export_boundary_alignment_v1"
+    ]
+    assert matched_alignment["alignment_id"] == (
+        "leo_twin.runtime_export_boundary_alignment.v1"
+    )
+    assert matched_alignment["source"] == "BACKEND_RUNTIME_EXPORT_COMPARE"
+    assert matched_alignment["package_boundary_present"] is True
+    assert matched_alignment["boundary_hash"] == (
+        reproducibility_boundary["boundary_hash"]
+    )
+    assert matched_alignment["compare_scope_aligned"] is True
+    assert matched_alignment["restore_scope_aligned"] is True
+    assert matched_alignment["read_scope_aligned"] is True
+    assert matched_alignment["forbidden_behavior_inactive"] is True
+    assert matched_alignment["event_replay_restore"] is False
+    assert matched_alignment["recompute_on_read"] is False
+    assert matched_alignment["package_mutation_on_read"] is False
+    assert matched_alignment["packet_level_simulation"] is False
+    assert matched_alignment["external_simulators"] is False
+    assert matched_alignment["alignment_status"] == "ALIGNED"
+    assert matched_alignment["warnings"] == ()
+    assert matched_alignment["alignment_hash"].startswith("sha256:")
     matched_preflight_summary = matched_preflight["summary"]
     assert matched_preflight["type"] == "RUNTIME_EXPORT_RESTORE_PREFLIGHT"
     assert matched_preflight_summary["readiness"] == "NO_CHANGE"
@@ -1291,6 +1314,22 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
     assert matched_preflight_summary["would_reset_runtime_session"] is False
     assert matched_preflight_summary["config_diff_count"] == 0
     assert matched_preflight_summary["preflight_hash"].startswith("sha256:")
+    matched_preflight_alignment = matched_preflight_summary[
+        "runtime_export_boundary_alignment_v1"
+    ]
+    assert matched_preflight_alignment["source"] == (
+        "BACKEND_RUNTIME_EXPORT_RESTORE_PREFLIGHT"
+    )
+    assert matched_preflight_alignment["boundary_hash"] == (
+        reproducibility_boundary["boundary_hash"]
+    )
+    assert matched_preflight_alignment["preflight_scope"] == (
+        "CONFIG_RESTORE_PREVIEW_ONLY"
+    )
+    assert matched_preflight_alignment["preflight_scope_aligned"] is True
+    assert matched_preflight_alignment["forbidden_behavior_inactive"] is True
+    assert matched_preflight_alignment["alignment_status"] == "ALIGNED"
+    assert matched_preflight_alignment["warnings"] == ()
 
     control_plane.handle_raw_message(
         json.dumps(
@@ -1332,6 +1371,14 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
     assert changed_preflight_summary["would_reset_runtime_session"] is True
     assert changed_preflight_summary["config_diff_count"] >= 1
     assert changed_preflight_summary["compare_hash"] == changed_summary["compare_hash"]
+    changed_alignment = changed_summary["runtime_export_boundary_alignment_v1"]
+    assert changed_alignment["boundary_hash"] == (
+        reproducibility_boundary["boundary_hash"]
+    )
+    assert changed_alignment["alignment_status"] == "ALIGNED"
+    assert changed_preflight_summary["runtime_export_boundary_alignment_v1"][
+        "alignment_status"
+    ] == "ALIGNED"
     assert (
         "RESTORE_WOULD_REPLACE_RUNTIME_CONFIG_AND_REQUIRE_REINITIALIZATION"
         in changed_preflight_summary["warnings"]

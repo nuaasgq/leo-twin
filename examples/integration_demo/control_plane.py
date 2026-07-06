@@ -2594,6 +2594,182 @@ def _runtime_export_content_type(filename: str) -> str:
     return "application/octet-stream"
 
 
+_RUNTIME_EXPORT_BOUNDARY_ALIGNMENT_V1_ID = (
+    "leo_twin.runtime_export_boundary_alignment.v1"
+)
+_RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1_ID = (
+    "leo_twin.runtime_export_reproducibility_boundary.v1"
+)
+
+
+def _runtime_export_snapshot_boundary(snapshot: dict[str, Any]) -> dict[str, Any]:
+    status = snapshot.get("status")
+    if not isinstance(status, dict):
+        return {}
+    direct_boundary = status.get("runtime_export_reproducibility_boundary_v1")
+    if isinstance(direct_boundary, dict):
+        return dict(direct_boundary)
+    manifest = status.get("reproducibility_manifest_v1")
+    if isinstance(manifest, dict):
+        manifest_boundary = manifest.get("runtime_export_reproducibility_boundary_v1")
+        if isinstance(manifest_boundary, dict):
+            return dict(manifest_boundary)
+    return {}
+
+
+def _runtime_export_boundary_flag(value: object) -> bool:
+    return value is True
+
+
+def _runtime_export_boundary_alignment_summary(
+    package_id: str,
+    package_snapshot: dict[str, Any],
+    current_snapshot: dict[str, Any],
+    *,
+    source: str,
+    compare: dict[str, Any] | None = None,
+    preflight: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    package_boundary = _runtime_export_snapshot_boundary(package_snapshot)
+    current_boundary = _runtime_export_snapshot_boundary(current_snapshot)
+    package_boundary_present = bool(package_boundary)
+    current_boundary_present = bool(current_boundary)
+    boundary_hash = str(package_boundary.get("boundary_hash", ""))
+    current_boundary_hash = str(current_boundary.get("boundary_hash", ""))
+    compare_scope = str(
+        compare.get("comparison_scope", "") if compare is not None else ""
+    )
+    preflight_scope = str(
+        preflight.get("preflight_scope", "") if preflight is not None else ""
+    )
+    restore_scope = str(package_boundary.get("restore_scope", ""))
+    boundary_compare_scope = str(package_boundary.get("compare_scope", ""))
+    read_scope = str(package_boundary.get("read_scope", ""))
+    forbidden_flags = (
+        "event_replay_restore",
+        "live_event_replay_restore",
+        "recompute_on_read",
+        "route_recomputation",
+        "service_recomputation",
+        "package_mutation_on_read",
+        "packet_capture",
+        "packet_level_simulation",
+        "external_simulators",
+    )
+    forbidden_behavior_inactive = not any(
+        _runtime_export_boundary_flag(package_boundary.get(flag))
+        for flag in forbidden_flags
+    )
+    warnings: list[str] = []
+    if not package_boundary_present:
+        warnings.append("PACKAGE_RUNTIME_EXPORT_BOUNDARY_MISSING")
+    elif (
+        str(package_boundary.get("boundary_id", ""))
+        != _RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1_ID
+    ):
+        warnings.append("PACKAGE_RUNTIME_EXPORT_BOUNDARY_ID_UNEXPECTED")
+    if (
+        current_boundary_present
+        and boundary_hash
+        and current_boundary_hash
+        and boundary_hash != current_boundary_hash
+    ):
+        warnings.append("CURRENT_RUNTIME_EXPORT_BOUNDARY_HASH_DIFFERS")
+    if restore_scope and restore_scope != "CONFIG_ONLY":
+        warnings.append("RESTORE_SCOPE_NOT_CONFIG_ONLY")
+    if (
+        boundary_compare_scope
+        and boundary_compare_scope != "CONFIG_AND_GENERATED_CONFIG"
+    ):
+        warnings.append("BOUNDARY_COMPARE_SCOPE_NOT_CONFIG_AND_GENERATED_CONFIG")
+    if read_scope and read_scope != "PERSISTED_ARTIFACTS_ONLY":
+        warnings.append("READ_SCOPE_NOT_PERSISTED_ARTIFACTS_ONLY")
+    if compare is not None:
+        if str(compare.get("package_id", "")) != package_id:
+            warnings.append("COMPARE_PACKAGE_ID_MISMATCH")
+        if compare_scope != boundary_compare_scope:
+            warnings.append("COMPARE_SCOPE_DOES_NOT_MATCH_BOUNDARY")
+    if preflight is not None:
+        if str(preflight.get("package_id", "")) != package_id:
+            warnings.append("PREFLIGHT_PACKAGE_ID_MISMATCH")
+        if preflight_scope != "CONFIG_RESTORE_PREVIEW_ONLY":
+            warnings.append("PREFLIGHT_SCOPE_NOT_CONFIG_RESTORE_PREVIEW_ONLY")
+        if _runtime_export_boundary_flag(
+            preflight.get("would_mutate_current_runtime")
+        ):
+            warnings.append("PREFLIGHT_PREVIEW_WOULD_MUTATE_CURRENT_RUNTIME")
+    if not forbidden_behavior_inactive:
+        warnings.append("FORBIDDEN_BOUNDARY_BEHAVIOR_ENABLED")
+
+    alignment: dict[str, Any] = {
+        "type": "RUNTIME_EXPORT_BOUNDARY_ALIGNMENT_V1",
+        "version": "v1",
+        "alignment_id": _RUNTIME_EXPORT_BOUNDARY_ALIGNMENT_V1_ID,
+        "source": source,
+        "alignment_scope": "PACKAGE_COMPARE_AND_RESTORE_BOUNDARY",
+        "package_id": package_id,
+        "package_boundary_present": package_boundary_present,
+        "current_boundary_present": current_boundary_present,
+        "boundary_hash": boundary_hash,
+        "current_boundary_hash": current_boundary_hash,
+        "boundary_hash_matches_current": (
+            current_boundary_present
+            and bool(boundary_hash)
+            and boundary_hash == current_boundary_hash
+        ),
+        "boundary_id_aligned": (
+            str(package_boundary.get("boundary_id", ""))
+            == _RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1_ID
+        ),
+        "restore_scope": restore_scope,
+        "compare_scope": boundary_compare_scope,
+        "read_scope": read_scope,
+        "preflight_scope": preflight_scope,
+        "compare_scope_aligned": (
+            compare is None or compare_scope == boundary_compare_scope
+        ),
+        "restore_scope_aligned": restore_scope == "CONFIG_ONLY",
+        "read_scope_aligned": read_scope == "PERSISTED_ARTIFACTS_ONLY",
+        "preflight_scope_aligned": (
+            preflight is None or preflight_scope == "CONFIG_RESTORE_PREVIEW_ONLY"
+        ),
+        "forbidden_behavior_inactive": forbidden_behavior_inactive,
+        "event_replay_restore": _runtime_export_boundary_flag(
+            package_boundary.get("event_replay_restore")
+        ),
+        "live_event_replay_restore": _runtime_export_boundary_flag(
+            package_boundary.get("live_event_replay_restore")
+        ),
+        "recompute_on_read": _runtime_export_boundary_flag(
+            package_boundary.get("recompute_on_read")
+        ),
+        "route_recomputation": _runtime_export_boundary_flag(
+            package_boundary.get("route_recomputation")
+        ),
+        "service_recomputation": _runtime_export_boundary_flag(
+            package_boundary.get("service_recomputation")
+        ),
+        "package_mutation_on_read": _runtime_export_boundary_flag(
+            package_boundary.get("package_mutation_on_read")
+        ),
+        "packet_capture": _runtime_export_boundary_flag(
+            package_boundary.get("packet_capture")
+        ),
+        "packet_level_simulation": _runtime_export_boundary_flag(
+            package_boundary.get("packet_level_simulation")
+        ),
+        "external_simulators": _runtime_export_boundary_flag(
+            package_boundary.get("external_simulators")
+        ),
+        "alignment_status": (
+            "ALIGNED" if package_boundary_present and not warnings else "WARN"
+        ),
+        "warnings": tuple(warnings),
+    }
+    alignment["alignment_hash"] = stable_hash_payload(alignment)
+    return alignment
+
+
 def _runtime_export_package_compare_summary(
     package_id: str,
     package_snapshot: dict[str, Any],
@@ -2646,6 +2822,15 @@ def _runtime_export_package_compare_summary(
         "sections": tuple(section_summaries),
         "differences": stable_json_payload(limited_differences),
     }
+    summary["runtime_export_boundary_alignment_v1"] = (
+        _runtime_export_boundary_alignment_summary(
+            package_id,
+            package_snapshot,
+            current_snapshot,
+            source="BACKEND_RUNTIME_EXPORT_COMPARE",
+            compare=summary,
+        )
+    )
     summary["compare_hash"] = stable_hash_payload(summary)
     return summary
 
@@ -2717,6 +2902,16 @@ def _runtime_export_package_restore_preflight_summary(
         ),
         "next_action": _runtime_export_restore_preflight_next_action(readiness),
     }
+    summary["runtime_export_boundary_alignment_v1"] = (
+        _runtime_export_boundary_alignment_summary(
+            package_id,
+            package_snapshot,
+            current_snapshot,
+            source="BACKEND_RUNTIME_EXPORT_RESTORE_PREFLIGHT",
+            compare=compare,
+            preflight=summary,
+        )
+    )
     summary["preflight_hash"] = stable_hash_payload(summary)
     return summary
 

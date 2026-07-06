@@ -601,7 +601,11 @@ Tasks:
     windows, and boundary conditions before the manifest inspector. T304 adds a
     neighboring compare/restore boundary alignment card so package compare and
     restore-preflight evidence are checked against the same backend boundary
-    before users make restore decisions.
+    before users make restore decisions. T305 moves the same boundary-alignment
+    evidence into backend compare and restore-preflight summaries as
+    `runtime_export_boundary_alignment_v1`, allowing API consumers and the
+    dashboard to read alignment status, warnings, and alignment hash directly
+    from the compare/preflight responses.
 
 ### WS9. Delivery and Operations v2
 

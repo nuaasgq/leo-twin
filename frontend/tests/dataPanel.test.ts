@@ -4235,6 +4235,53 @@ describe("buildDataPanelExportCompareDisplay", () => {
     });
   });
 
+  it("uses backend boundary alignment when artifact boundary is not loaded", () => {
+    const backendAlignment = _runtimeExportBoundaryAlignment();
+    const display = buildDataPanelExportBoundaryAlignmentDisplay(
+      null,
+      null,
+      null,
+      {
+        version: "v1",
+        source: "BACKEND_RUNTIME_EXPORT_COMPARE",
+        comparison_scope: "CONFIG_AND_GENERATED_CONFIG",
+        package_id: "pkg-review",
+        compatibility: "MATCH",
+        same_config: true,
+        same_generated_config: true,
+        same_manifest_hash: true,
+        package_manifest_hash: "sha256:manifest",
+        current_manifest_hash: "sha256:manifest",
+        diff_count: 0,
+        diff_limit: 100,
+        diff_truncated: false,
+        sections: [],
+        differences: [],
+        runtime_export_boundary_alignment_v1: backendAlignment,
+        compare_hash: "sha256:comparehash"
+      },
+      null,
+      "pkg-review"
+    );
+
+    expect(display).toMatchObject({
+      packageId: "pkg-review",
+      tone: "match",
+      statusLabel: "后端边界证据一致",
+      summaryLabel: "pkg-review / backend boundary bbbbbbbbbbbb / warnings 0",
+      evidenceLabels: [
+        "source BACKEND_RUNTIME_EXPORT_COMPARE",
+        "backend ALIGNED",
+        "alignment cccccccccccc",
+        "backend boundary bbbbbbbbbbbb",
+        "restore CONFIG_ONLY",
+        "compare CONFIG_AND_GENERATED_CONFIG",
+        "read PERSISTED_ARTIFACTS_ONLY"
+      ],
+      warningLabels: []
+    });
+  });
+
   it("summarizes matching package compare previews", () => {
     expect(
       buildDataPanelExportCompareDisplay({
@@ -10221,6 +10268,53 @@ function _runtimeExportReproducibilityBoundary(
     boundary_hash:
       overrides.boundary_hash ??
       "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  };
+}
+
+function _runtimeExportBoundaryAlignment(
+  overrides: Partial<{
+    alignment_status: string;
+    boundary_hash: string;
+    warnings: string[];
+  }> = {}
+) {
+  return {
+    type: "RUNTIME_EXPORT_BOUNDARY_ALIGNMENT_V1",
+    version: "v1",
+    alignment_id: "leo_twin.runtime_export_boundary_alignment.v1",
+    source: "BACKEND_RUNTIME_EXPORT_COMPARE",
+    alignment_scope: "PACKAGE_COMPARE_AND_RESTORE_BOUNDARY",
+    package_id: "pkg-review",
+    package_boundary_present: true,
+    current_boundary_present: false,
+    boundary_hash:
+      overrides.boundary_hash ??
+      "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    current_boundary_hash: "",
+    boundary_hash_matches_current: false,
+    boundary_id_aligned: true,
+    restore_scope: "CONFIG_ONLY",
+    compare_scope: "CONFIG_AND_GENERATED_CONFIG",
+    read_scope: "PERSISTED_ARTIFACTS_ONLY",
+    preflight_scope: "",
+    compare_scope_aligned: true,
+    restore_scope_aligned: true,
+    read_scope_aligned: true,
+    preflight_scope_aligned: true,
+    forbidden_behavior_inactive: true,
+    event_replay_restore: false,
+    live_event_replay_restore: false,
+    recompute_on_read: false,
+    route_recomputation: false,
+    service_recomputation: false,
+    package_mutation_on_read: false,
+    packet_capture: false,
+    packet_level_simulation: false,
+    external_simulators: false,
+    alignment_status: overrides.alignment_status ?? "ALIGNED",
+    warnings: overrides.warnings ?? [],
+    alignment_hash:
+      "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
   };
 }
 

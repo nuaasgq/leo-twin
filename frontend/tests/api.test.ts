@@ -163,6 +163,41 @@ describe("runtime API diagnostics", () => {
               current_value: 120
             }
           ],
+          runtime_export_boundary_alignment_v1: {
+            type: "RUNTIME_EXPORT_BOUNDARY_ALIGNMENT_V1",
+            version: "v1",
+            alignment_id: "leo_twin.runtime_export_boundary_alignment.v1",
+            source: "BACKEND_RUNTIME_EXPORT_COMPARE",
+            alignment_scope: "PACKAGE_COMPARE_AND_RESTORE_BOUNDARY",
+            package_id: "pkg",
+            package_boundary_present: true,
+            current_boundary_present: false,
+            boundary_hash: "sha256:boundary",
+            current_boundary_hash: "",
+            boundary_hash_matches_current: false,
+            boundary_id_aligned: true,
+            restore_scope: "CONFIG_ONLY",
+            compare_scope: "CONFIG_AND_GENERATED_CONFIG",
+            read_scope: "PERSISTED_ARTIFACTS_ONLY",
+            preflight_scope: "",
+            compare_scope_aligned: true,
+            restore_scope_aligned: true,
+            read_scope_aligned: true,
+            preflight_scope_aligned: true,
+            forbidden_behavior_inactive: true,
+            event_replay_restore: false,
+            live_event_replay_restore: false,
+            recompute_on_read: false,
+            route_recomputation: false,
+            service_recomputation: false,
+            package_mutation_on_read: false,
+            packet_capture: false,
+            packet_level_simulation: false,
+            external_simulators: false,
+            alignment_status: "ALIGNED",
+            warnings: [],
+            alignment_hash: "sha256:alignment"
+          },
           compare_hash: "sha256:compare"
         }
       })
@@ -172,6 +207,7 @@ describe("runtime API diagnostics", () => {
     await expect(loadRuntimeExportPackageCompare("pkg")).resolves.toMatchObject({
       compatibility: "DIFFERENT",
       diff_count: 1,
+      runtime_export_boundary_alignment_v1: { alignment_status: "ALIGNED" },
       differences: [{ path: "$.satellite_count" }]
     });
     expect(fetchMock).toHaveBeenCalledWith("/runtime/export/packages/pkg/compare");
@@ -794,6 +830,41 @@ describe("runtime API diagnostics", () => {
           blocked_reasons: [],
           warnings: ["RESTORE_WOULD_REPLACE_RUNTIME_CONFIG_AND_REQUIRE_REINITIALIZATION"],
           next_action: "USER_CONFIRMATION_REQUIRED_BEFORE_RESTORE",
+          runtime_export_boundary_alignment_v1: {
+            type: "RUNTIME_EXPORT_BOUNDARY_ALIGNMENT_V1",
+            version: "v1",
+            alignment_id: "leo_twin.runtime_export_boundary_alignment.v1",
+            source: "BACKEND_RUNTIME_EXPORT_RESTORE_PREFLIGHT",
+            alignment_scope: "PACKAGE_COMPARE_AND_RESTORE_BOUNDARY",
+            package_id: "pkg",
+            package_boundary_present: true,
+            current_boundary_present: false,
+            boundary_hash: "sha256:boundary",
+            current_boundary_hash: "",
+            boundary_hash_matches_current: false,
+            boundary_id_aligned: true,
+            restore_scope: "CONFIG_ONLY",
+            compare_scope: "CONFIG_AND_GENERATED_CONFIG",
+            read_scope: "PERSISTED_ARTIFACTS_ONLY",
+            preflight_scope: "CONFIG_RESTORE_PREVIEW_ONLY",
+            compare_scope_aligned: true,
+            restore_scope_aligned: true,
+            read_scope_aligned: true,
+            preflight_scope_aligned: true,
+            forbidden_behavior_inactive: true,
+            event_replay_restore: false,
+            live_event_replay_restore: false,
+            recompute_on_read: false,
+            route_recomputation: false,
+            service_recomputation: false,
+            package_mutation_on_read: false,
+            packet_capture: false,
+            packet_level_simulation: false,
+            external_simulators: false,
+            alignment_status: "ALIGNED",
+            warnings: [],
+            alignment_hash: "sha256:alignment"
+          },
           preflight_hash: "sha256:preflight"
         }
       })
@@ -803,7 +874,8 @@ describe("runtime API diagnostics", () => {
     await expect(loadRuntimeExportRestorePreflight("pkg")).resolves.toMatchObject({
       readiness: "READY",
       requires_user_confirmation: true,
-      would_mutate_current_runtime: false
+      would_mutate_current_runtime: false,
+      runtime_export_boundary_alignment_v1: { preflight_scope_aligned: true }
     });
     expect(fetchMock).toHaveBeenCalledWith(
       "/runtime/export/packages/pkg/restore-preflight"

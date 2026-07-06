@@ -184,6 +184,11 @@ conditions. The dashboard also cross-checks the loaded package compare and
 restore preflight results against the same boundary, so users can see whether a
 restore decision is backed by config-only restore, config/generated-config
 compare, persisted-artifact reads, and matching boundary hashes before acting.
+New compare and restore-preflight API responses include
+`runtime_export_boundary_alignment_v1`, so the dashboard can show the backend
+alignment status, alignment hash, boundary hash, and warnings even before every
+review artifact has finished loading. Older packages or older backend responses
+still fall back to the manifest/review/diagnostics cross-check.
 After using `compare with live`, the package-vs-live route comparison card can
 save the currently displayed comparison into
 `route_comparison_review_report_v1.json`. The saved record includes the

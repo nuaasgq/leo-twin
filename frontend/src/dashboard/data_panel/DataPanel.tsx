@@ -11539,6 +11539,17 @@ function selectRuntimeExportReproducibilityBoundary(
   );
 }
 
+function selectRuntimeExportBoundaryAlignment(
+  compare: RuntimeExportPackageCompareV1 | null | undefined,
+  preflight: RuntimeExportRestorePreflightV1 | null | undefined
+) {
+  return (
+    preflight?.runtime_export_boundary_alignment_v1 ??
+    compare?.runtime_export_boundary_alignment_v1 ??
+    null
+  );
+}
+
 export function buildDataPanelExportBoundaryAlignmentDisplay(
   manifest: RuntimeReproducibilityManifestV1 | null | undefined,
   reviewSummary: RuntimeExportReviewSummaryV1 | null | undefined,
@@ -11555,7 +11566,16 @@ export function buildDataPanelExportBoundaryAlignmentDisplay(
     reviewSummary,
     diagnostics
   );
-  const warnings: string[] = [];
+  const backendAlignment = selectRuntimeExportBoundaryAlignment(compare, preflight);
+  const backendEvidenceLabels =
+    backendAlignment === null
+      ? []
+      : [
+          `backend ${backendAlignment.alignment_status}`,
+          `alignment ${shortRuntimeHash(backendAlignment.alignment_hash)}`,
+          `backend boundary ${shortRuntimeHash(backendAlignment.boundary_hash)}`
+        ];
+  const warnings: string[] = [...(backendAlignment?.warnings ?? [])];
   const compareLabels =
     compare === null || compare === undefined
       ? ["compare not loaded"]
@@ -11578,6 +11598,28 @@ export function buildDataPanelExportBoundaryAlignmentDisplay(
         ];
 
   if (boundary === null) {
+    if (backendAlignment !== null) {
+      const backendAligned =
+        backendAlignment.alignment_status === "ALIGNED" && warnings.length === 0;
+      return {
+        packageId: selectedPackageId,
+        tone: backendAligned ? "match" : "different",
+        statusLabel: backendAligned ? "后端边界证据一致" : "后端边界证据需复核",
+        summaryLabel: `${selectedPackageId} / backend boundary ${shortRuntimeHash(
+          backendAlignment.boundary_hash
+        )} / warnings ${formatCount(warnings.length)}`,
+        evidenceLabels: [
+          `source ${backendAlignment.source}`,
+          ...backendEvidenceLabels,
+          `restore ${backendAlignment.restore_scope || "-"}`,
+          `compare ${backendAlignment.compare_scope || "-"}`,
+          `read ${backendAlignment.read_scope || "-"}`
+        ],
+        compareLabels,
+        restoreLabels,
+        warningLabels: warnings
+      };
+    }
     warnings.push("runtime_export_reproducibility_boundary_v1 missing");
     return {
       packageId: selectedPackageId,
@@ -11670,6 +11712,7 @@ export function buildDataPanelExportBoundaryAlignmentDisplay(
       boundary.boundary_hash
     )} / warnings ${formatCount(warnings.length)}`,
     evidenceLabels: [
+      ...backendEvidenceLabels,
       `boundary ${shortRuntimeHash(boundary.boundary_hash)}`,
       `hash ${hashAgreement ? "一致" : "不一致"}`,
       `restore ${boundary.restore_scope}`,

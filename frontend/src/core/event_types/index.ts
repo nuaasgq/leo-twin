@@ -1193,6 +1193,42 @@ export interface RuntimeExportCatalogEnvelope {
   summary: RuntimeExportCatalogV1;
 }
 
+export interface RuntimeExportBoundaryAlignmentV1 {
+  type: "RUNTIME_EXPORT_BOUNDARY_ALIGNMENT_V1" | string;
+  version: "v1" | string;
+  alignment_id: string;
+  source: string;
+  alignment_scope: string;
+  package_id: string;
+  package_boundary_present: boolean;
+  current_boundary_present: boolean;
+  boundary_hash: string;
+  current_boundary_hash: string;
+  boundary_hash_matches_current: boolean;
+  boundary_id_aligned: boolean;
+  restore_scope: string;
+  compare_scope: string;
+  read_scope: string;
+  preflight_scope: string;
+  compare_scope_aligned: boolean;
+  restore_scope_aligned: boolean;
+  read_scope_aligned: boolean;
+  preflight_scope_aligned: boolean;
+  forbidden_behavior_inactive: boolean;
+  event_replay_restore: boolean;
+  live_event_replay_restore: boolean;
+  recompute_on_read: boolean;
+  route_recomputation: boolean;
+  service_recomputation: boolean;
+  package_mutation_on_read: boolean;
+  packet_capture: boolean;
+  packet_level_simulation: boolean;
+  external_simulators: boolean;
+  alignment_status: "ALIGNED" | "WARN" | string;
+  warnings: readonly string[];
+  alignment_hash: string;
+}
+
 export interface RuntimeExportPackageCompareV1 {
   version: "v1" | string;
   source: string;
@@ -1209,6 +1245,7 @@ export interface RuntimeExportPackageCompareV1 {
   diff_truncated: boolean;
   sections: readonly RuntimeExportPackageCompareSectionV1[];
   differences: readonly RuntimeExportPackageCompareDifferenceV1[];
+  runtime_export_boundary_alignment_v1?: RuntimeExportBoundaryAlignmentV1;
   compare_hash: string;
 }
 
@@ -1698,6 +1735,7 @@ export interface RuntimeExportRestorePreflightV1 {
   blocked_reasons: readonly string[];
   warnings: readonly string[];
   next_action: string;
+  runtime_export_boundary_alignment_v1?: RuntimeExportBoundaryAlignmentV1;
   preflight_hash: string;
 }
 
