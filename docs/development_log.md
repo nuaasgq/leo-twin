@@ -14531,3 +14531,51 @@ change.
 - Recommended follow-up:
   - Add a sharded `service_lifecycle_trace_v2` export format or manifest-linked
     trace segment files for very large result packages.
+
+## 2026-07-06 - Runtime Export Reproducibility Boundary v1
+
+- Branch: `feature/T302-runtime-export-reproducibility-boundary-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a backend-owned result-package reproducibility boundary object.
+  New exports now write `runtime_export_reproducibility_boundary_v1` into
+  `manifest.json`, `config_snapshot.status`, `review_summary_v1.json`, and
+  `diagnostics_bundle_v1.json`. The boundary records deterministic artifact
+  evidence, config-only restore scope, config/generated-config compare scope,
+  persisted-artifact read scope, export window counts, and explicit
+  no-live-event-replay, no-recompute-on-read, no-package-mutation-on-read,
+  no-packet-capture, no-packet-level-simulation, and no-external-simulator
+  boundaries. The manifest hash is recalculated after the boundary is attached;
+  the boundary hash remains separate so review and diagnostics artifacts can
+  cross-check it without creating a circular hash dependency.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `src/leo_twin/services/result_package_contract.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/result_package_contract_v1.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_result_package_contract_v1.py -q`
+    - Result: passed, 12 tests.
+  - `python -m pytest tests/integration/test_result_package_export_v1.py tests/integration/test_runtime_session_control.py::test_demo_adapter_exports_runtime_result_package tests/integration/test_runtime_session_control.py::test_demo_adapter_serves_persisted_runtime_export_artifacts -q`
+    - Result: passed, 3 tests after normalizing exported manifest tuple/list
+      payloads to JSON-compatible values.
+  - `python -m pytest tests/unit/test_result_package_contract_v1.py tests/integration/test_result_package_export_v1.py tests/integration/test_runtime_session_control.py::test_demo_adapter_exports_runtime_result_package tests/integration/test_runtime_session_control.py::test_demo_adapter_exports_deterministic_runtime_archive tests/integration/test_runtime_session_control.py::test_demo_adapter_serves_persisted_runtime_export_artifacts tests/unit/test_user_guide_v2_docs.py -q`
+    - Result: passed, 18 tests.
+- Problems encountered:
+  - The initial export response returned Python tuples in the in-memory
+    manifest while `manifest.json` naturally decoded them as JSON arrays. The
+    control-plane manifest helper now returns a JSON-compatible stable payload
+    so the API response and persisted artifact compare exactly.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The new boundary is available in backend result-package artifacts, but the
+    frontend manifest inspector does not yet render it as a dedicated section.
+- Recommended follow-up:
+  - Add a dashboard export review card for
+    `runtime_export_reproducibility_boundary_v1` so users can inspect
+    restore/read/replay/recompute boundaries without opening raw JSON.

@@ -118,6 +118,25 @@ The manifest id must be:
 leo_twin.runtime_reproducibility_manifest.v1
 ```
 
+New runtime exports also carry a unified reproducibility boundary object:
+
+```text
+leo_twin.runtime_export_reproducibility_boundary.v1
+```
+
+The boundary is written to `manifest.json` as
+`runtime_export_reproducibility_boundary_v1`, copied into
+`config_snapshot.status`, and surfaced by both `review_summary_v1.json` and
+`diagnostics_bundle_v1.json`. It records the backend-owned review boundary for
+the package: deterministic artifact evidence is available, restore is
+configuration-only, compare covers config and generated config, reads use
+persisted artifacts only, and the package does not perform live event replay
+restore, recomputation on read, package mutation on read, packet capture,
+packet-level simulation, or external simulator artifact binding. The manifest
+hash is calculated after the boundary is attached, while the boundary hash is
+reported separately so review and diagnostics artifacts can cross-check the
+same boundary without a circular manifest hash dependency.
+
 ## Route Detail Index
 
 The route detail index artifact has type:
@@ -260,6 +279,8 @@ It reports:
   count, explanation coverage, bottleneck components, and model-boundary flags;
 - route comparison review metadata for package-vs-live route diagnostics;
 - manifest id/hash plus config, generated-config, and review-summary hashes;
+- the package reproducibility boundary copied from
+  `config_snapshot.status.runtime_export_reproducibility_boundary_v1`;
 - required and recommended artifact coverage;
 - explicit model boundaries: no Event Kernel behavior change, no packet-level
   simulation, and no STK/EXATA/AFSIM/DDS integration;

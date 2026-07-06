@@ -42,6 +42,9 @@ from leo_twin.schema.config import (
 )
 from leo_twin.services.detail_pagination_contract import DETAIL_ENDPOINT_MAX_LIMIT
 from leo_twin.services.runtime_reproducibility import stable_hash_payload
+from leo_twin.services.result_package_contract import (
+    RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1_ID,
+)
 
 
 class _Recorder(SimulationModule):
@@ -850,6 +853,18 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
     assert config_snapshot["type"] == "RUNTIME_CONFIG_SNAPSHOT"
     assert config_snapshot["generated_config"]["seed"] == 1234
     assert config_snapshot["status"]["reproducibility_manifest_v1"] == manifest
+    reproducibility_boundary = config_snapshot["status"][
+        "runtime_export_reproducibility_boundary_v1"
+    ]
+    assert reproducibility_boundary["boundary_id"] == (
+        RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1_ID
+    )
+    assert reproducibility_boundary["restore_scope"] == "CONFIG_ONLY"
+    assert reproducibility_boundary["event_replay_restore"] is False
+    assert reproducibility_boundary["recompute_on_read"] is False
+    assert manifest["runtime_export_reproducibility_boundary_v1"] == (
+        reproducibility_boundary
+    )
     assert service_lifecycle_trace["type"] == "SERVICE_LIFECYCLE_TRACE_EXPORT_V2"
     assert service_lifecycle_trace["source"] == "BACKEND_RUNTIME_STATUS"
     assert service_lifecycle_trace["summary"] == config_snapshot["status"][
@@ -889,9 +904,15 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
     assert review_summary["reproducibility"]["manifest_hash"] == manifest[
         "manifest_hash"
     ]
+    assert review_summary["reproducibility"]["boundary_hash"] == (
+        reproducibility_boundary["boundary_hash"]
+    )
+    assert review_summary["reproducibility_boundary"] == reproducibility_boundary
     assert review_summary["artifacts"]["review_summary_exported"] is True
     assert diagnostics_bundle["type"] == "RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1"
     assert diagnostics_bundle["package"]["package_complete"] is True
+    assert diagnostics_bundle["reproducibility_boundary"] == reproducibility_boundary
+    assert diagnostics_bundle["model_boundaries"]["event_replay_restore"] is False
     assert diagnostics_bundle["artifact_health"]["missing_required_filenames"] == []
     assert summary["event_count"] >= 1
     assert (package_dir / "metrics.csv").read_text(encoding="utf-8").startswith(
@@ -1119,6 +1140,18 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
     assert manifest_artifact["content_type"] == "application/json; charset=utf-8"
     manifest = json.loads(Path(str(manifest_artifact["path"])).read_text(encoding="utf-8"))
     assert manifest["manifest_hash"] == exported["manifest"]["manifest_hash"]
+    assert config_snapshot["status"]["reproducibility_manifest_v1"] == manifest
+    reproducibility_boundary = config_snapshot["status"][
+        "runtime_export_reproducibility_boundary_v1"
+    ]
+    assert reproducibility_boundary["boundary_id"] == (
+        RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1_ID
+    )
+    assert reproducibility_boundary["compare_scope"] == "CONFIG_AND_GENERATED_CONFIG"
+    assert reproducibility_boundary["package_mutation_on_read"] is False
+    assert manifest["runtime_export_reproducibility_boundary_v1"] == (
+        reproducibility_boundary
+    )
     assert Path(str(events_artifact["path"])).name == "events.jsonl"
     assert events_artifact["content_type"] == "application/x-ndjson; charset=utf-8"
     assert (
@@ -1223,6 +1256,7 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
     )
     assert review_summary["type"] == "RUNTIME_EXPORT_REVIEW_SUMMARY_V1"
     assert review_summary["review_status"] == "REVIEW_READY"
+    assert review_summary["reproducibility_boundary"] == reproducibility_boundary
     assert review_summary["summary_hash"].startswith("sha256:")
     assert (
         Path(str(diagnostics_bundle_artifact["path"])).name
@@ -1236,6 +1270,8 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
         Path(str(diagnostics_bundle_artifact["path"])).read_text(encoding="utf-8")
     )
     assert diagnostics_bundle["type"] == "RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1"
+    assert diagnostics_bundle["reproducibility_boundary"] == reproducibility_boundary
+    assert diagnostics_bundle["model_boundaries"]["event_replay_restore"] is False
     assert diagnostics_bundle["diagnostics_hash"].startswith("sha256:")
     assert Path(str(archive_artifact["path"])) == Path(str(exported["archive"]["path"]))
     assert archive_artifact["filename"].endswith(".zip")

@@ -170,6 +170,13 @@ Service trace exports now use the same 5000-row default window and record
 `runtime_export_service_trace_policy_v1` in `config_snapshot.json`; the trace
 artifact and backend page response expose the same policy with exported and
 hidden trace counts.
+New exports also include `runtime_export_reproducibility_boundary_v1` in
+`manifest.json`, `config_snapshot.json`, `review_summary_v1.json`, and
+`diagnostics_bundle_v1.json`. This backend-owned boundary states that the
+package is deterministic artifact evidence, restore is config-only, package
+reads do not recompute model state, and live event replay restore, packet
+capture, packet-level simulation, package mutation on read, and external
+simulator artifacts are outside the export contract.
 After using `compare with live`, the package-vs-live route comparison card can
 save the currently displayed comparison into
 `route_comparison_review_report_v1.json`. The saved record includes the

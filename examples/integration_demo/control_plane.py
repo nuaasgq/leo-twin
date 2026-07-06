@@ -75,6 +75,7 @@ from leo_twin.services.runtime_reproducibility import (
 )
 from leo_twin.services.result_package_contract import (
     build_runtime_export_diagnostics_bundle_v1,
+    build_runtime_export_reproducibility_boundary_v1,
     build_runtime_export_route_comparison_review_report_v1,
     build_runtime_export_route_detail_item_v1,
     build_runtime_export_route_detail_index_v1,
@@ -644,7 +645,7 @@ class DemoControlPlane:
         config_snapshot_path.write_text(
             stable_json_pretty(config_snapshot), encoding="utf-8"
         )
-        manifest = dict(status["reproducibility_manifest_v1"])
+        manifest = dict(export_status["reproducibility_manifest_v1"])
         manifest_path.write_text(stable_json_pretty(manifest), encoding="utf-8")
         service_lifecycle_trace_path = (
             package_dir / _SERVICE_LIFECYCLE_TRACE_EXPORT_FILENAME
@@ -1489,6 +1490,11 @@ class DemoControlPlane:
             "service_recomputation": False,
             "packet_level_simulation": False,
         }
+        manifest = _runtime_export_manifest_with_boundary(export_status)
+        export_status["reproducibility_manifest_v1"] = manifest
+        export_status["runtime_export_reproducibility_boundary_v1"] = manifest[
+            "runtime_export_reproducibility_boundary_v1"
+        ]
         return export_status
 
     def _runtime_export_route_explanation_summary(self) -> dict[str, Any]:
@@ -2239,6 +2245,22 @@ def _runtime_export_status_snapshot(status: dict[str, Any]) -> dict[str, Any]:
         "stream_diagnostics_v1",
     )
     return snapshot
+
+
+def _runtime_export_manifest_with_boundary(status: dict[str, Any]) -> dict[str, Any]:
+    raw_manifest = status.get("reproducibility_manifest_v1")
+    manifest = dict(raw_manifest) if isinstance(raw_manifest, dict) else {}
+    manifest.pop("manifest_hash", None)
+    boundary = build_runtime_export_reproducibility_boundary_v1(
+        runtime_status=status,
+        manifest=manifest,
+    )
+    manifest["runtime_export_reproducibility_boundary_v1"] = stable_json_payload(
+        boundary
+    )
+    manifest["manifest_hash"] = stable_hash_payload(manifest)
+    payload = stable_json_payload(manifest)
+    return dict(payload) if isinstance(payload, dict) else {}
 
 
 def _runtime_service_lifecycle_trace_export(status: dict[str, Any]) -> dict[str, Any]:

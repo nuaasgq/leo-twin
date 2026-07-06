@@ -25,6 +25,9 @@ RUNTIME_EXPORT_ROUTE_DETAIL_PAGE_V1_ID = (
 RUNTIME_EXPORT_SERVICE_TRACE_PAGE_V1_ID = (
     "leo_twin.runtime_export_service_trace_page.v1"
 )
+RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1_ID = (
+    "leo_twin.runtime_export_reproducibility_boundary.v1"
+)
 RUNTIME_EXPORT_ROUTE_DETAIL_ITEM_V1_ID = (
     "leo_twin.runtime_export_route_detail_item.v1"
 )
@@ -135,6 +138,9 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
             "rollback_export": "write rollback package before applying restore",
             "event_replay": "not applied to live runtime in v1",
         },
+        "reproducibility_boundary_id": (
+            RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1_ID
+        ),
         "benchmark_binding": {
             "matrix_id": "leo_twin.benchmark_scenario_matrix.v1",
             "verification_template_id": "leo_twin.model_verification_report_template.v1",
@@ -150,6 +156,99 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
             "LIVE_EVENT_REPLAY_RESTORE",
         ),
     }
+
+
+def build_runtime_export_reproducibility_boundary_v1(
+    *,
+    runtime_status: Mapping[str, Any],
+    manifest: Mapping[str, Any],
+) -> dict[str, object]:
+    """Build the unified reproducibility boundary for runtime result packages."""
+
+    if not isinstance(runtime_status, Mapping):
+        raise TypeError("runtime_status must be a mapping")
+    if not isinstance(manifest, Mapping):
+        raise TypeError("manifest must be a mapping")
+
+    route_policy = _mapping(runtime_status.get("runtime_export_route_detail_policy_v1"))
+    service_policy = _mapping(
+        runtime_status.get("runtime_export_service_trace_policy_v1")
+    )
+    boundary: dict[str, object] = {
+        "type": "RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1",
+        "version": "v1",
+        "boundary_id": RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1_ID,
+        "source": "BACKEND_RUNTIME_EXPORT",
+        "boundary_scope": "RESULT_PACKAGE_REPRODUCIBILITY_AND_RESTORE_BOUNDARY",
+        "manifest_id": str(manifest.get("manifest_id", "")),
+        "control_config_hash": str(manifest.get("control_config_hash", "")),
+        "generated_config_hash": str(manifest.get("generated_config_hash", "")),
+        "runtime_state_hash": str(manifest.get("runtime_state_hash", "")),
+        "metrics_summary_hash": str(manifest.get("metrics_summary_hash", "")),
+        "deterministic_replay_evidence": True,
+        "runtime_deterministic_replay_enabled": _bool(
+            manifest.get("deterministic_replay")
+        ),
+        "restore_scope": "CONFIG_ONLY",
+        "compare_scope": "CONFIG_AND_GENERATED_CONFIG",
+        "read_scope": "PERSISTED_ARTIFACTS_ONLY",
+        "event_kernel_policy": "NO_EVENT_KERNEL_BEHAVIOR_CHANGE",
+        "event_replay_restore": False,
+        "live_event_replay_restore": False,
+        "recompute_on_read": False,
+        "route_recomputation": False,
+        "service_recomputation": False,
+        "package_mutation_on_read": False,
+        "packet_capture": False,
+        "packet_level_simulation": False,
+        "external_simulators": False,
+        "forbidden_external_integrations": ("STK", "EXATA", "AFSIM", "DDS"),
+        "required_evidence_artifacts": (
+            "config_snapshot.json",
+            "events.jsonl",
+            "metrics.csv",
+            "summary.json",
+            "manifest.json",
+        ),
+        "optional_evidence_artifacts": (
+            "service_lifecycle_trace_v2.json",
+            "route_detail_index_v1.json",
+            "review_summary_v1.json",
+            "diagnostics_bundle_v1.json",
+        ),
+        "route_detail_export": {
+            "policy": str(route_policy.get("policy", "")),
+            "route_detail_limit": _integer(route_policy.get("route_detail_limit")),
+            "route_count": _integer(route_policy.get("route_count")),
+            "indexed_route_count": _integer(route_policy.get("indexed_route_count")),
+            "hidden_route_count": _integer(route_policy.get("hidden_route_count")),
+            "artifact_window_only": True,
+        },
+        "service_trace_export": {
+            "policy": str(service_policy.get("policy", "")),
+            "service_trace_limit": _integer(service_policy.get("service_trace_limit")),
+            "service_count": _integer(service_policy.get("service_count")),
+            "exported_trace_count": _integer(
+                service_policy.get("exported_trace_count")
+            ),
+            "hidden_trace_count": _integer(service_policy.get("hidden_trace_count")),
+            "artifact_window_only": True,
+        },
+        "boundary_conditions": (
+            "DETERMINISTIC_ARTIFACT_REPLAY_EVIDENCE",
+            "CONFIG_ONLY_RESTORE",
+            "CONFIG_AND_GENERATED_CONFIG_COMPARE",
+            "PERSISTED_ARTIFACTS_ONLY_READ",
+            "NO_LIVE_EVENT_REPLAY_RESTORE",
+            "NO_RECOMPUTE_ON_COMPARE_OR_READ",
+            "NO_PACKAGE_MUTATION_ON_READ",
+            "NO_PACKET_CAPTURE",
+            "NO_PACKET_LEVEL_SIMULATION",
+            "NO_EXTERNAL_SIMULATOR_ARTIFACT",
+        ),
+    }
+    boundary["boundary_hash"] = stable_hash_payload(boundary)
+    return boundary
 
 
 def build_runtime_export_review_summary_v1(
@@ -187,6 +286,10 @@ def build_runtime_export_review_summary_v1(
     )
     route_trust = _runtime_export_route_trust_evidence(status)
     route_comparison_review = _runtime_export_route_comparison_review_metadata()
+    reproducibility_boundary = _runtime_export_reproducibility_boundary(
+        status,
+        manifest,
+    )
     summary: dict[str, object] = {
         "type": "RUNTIME_EXPORT_REVIEW_SUMMARY_V1",
         "version": "v1",
@@ -231,9 +334,13 @@ def build_runtime_export_review_summary_v1(
             "manifest_id": str(manifest.get("manifest_id", "")),
             "manifest_hash": str(manifest.get("manifest_hash", "")),
             "config_hash": str(manifest.get("config_hash", "")),
+            "control_config_hash": str(manifest.get("control_config_hash", "")),
             "generated_config_hash": str(manifest.get("generated_config_hash", "")),
+            "runtime_state_hash": str(manifest.get("runtime_state_hash", "")),
+            "boundary_hash": str(reproducibility_boundary.get("boundary_hash", "")),
             "event_kernel_policy": "NO_EVENT_KERNEL_BEHAVIOR_CHANGE",
         },
+        "reproducibility_boundary": reproducibility_boundary,
         "artifacts": {
             "artifact_count": len(artifacts),
             "artifact_filenames": artifacts,
@@ -299,6 +406,10 @@ def build_runtime_export_diagnostics_bundle_v1(
     package_complete = manifest_ok and not missing_required
     route_trust = _runtime_export_route_trust_evidence(status)
     route_comparison_review = _runtime_export_route_comparison_review_metadata()
+    reproducibility_boundary = _runtime_export_reproducibility_boundary(
+        status,
+        manifest,
+    )
     findings = _runtime_export_diagnostic_findings(
         manifest_ok=manifest_ok,
         review_status=review_status,
@@ -332,9 +443,13 @@ def build_runtime_export_diagnostics_bundle_v1(
             "manifest_ok": manifest_ok,
             "manifest_hash": str(manifest.get("manifest_hash", "")),
             "config_hash": str(manifest.get("config_hash", "")),
+            "control_config_hash": str(manifest.get("control_config_hash", "")),
             "generated_config_hash": str(manifest.get("generated_config_hash", "")),
+            "runtime_state_hash": str(manifest.get("runtime_state_hash", "")),
             "review_summary_hash": str(review_summary.get("summary_hash", "")),
+            "boundary_hash": str(reproducibility_boundary.get("boundary_hash", "")),
         },
+        "reproducibility_boundary": reproducibility_boundary,
         "artifact_health": {
             "artifact_count": len(artifacts),
             "artifact_filenames": artifacts,
@@ -350,6 +465,9 @@ def build_runtime_export_diagnostics_bundle_v1(
             "packet_level_simulation": False,
             "external_simulators": (),
             "forbidden_external_integrations": ("STK", "EXATA", "AFSIM", "DDS"),
+            "event_replay_restore": False,
+            "route_recomputation": False,
+            "service_recomputation": False,
             "diagnostics_policy": (
                 "Deterministic package index only; no event replay or packet capture."
             ),
@@ -815,6 +933,19 @@ def _contract_filenames(
         if isinstance(item, Mapping):
             filenames.append(str(item.get("filename", "")))
     return tuple(filename for filename in filenames if filename)
+
+
+def _runtime_export_reproducibility_boundary(
+    status: Mapping[str, Any],
+    manifest: Mapping[str, Any],
+) -> dict[str, object]:
+    boundary = status.get("runtime_export_reproducibility_boundary_v1")
+    if isinstance(boundary, Mapping):
+        return dict(boundary)
+    return build_runtime_export_reproducibility_boundary_v1(
+        runtime_status=status,
+        manifest=manifest,
+    )
 
 
 def _runtime_export_diagnostic_findings(

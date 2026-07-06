@@ -5,6 +5,7 @@ import json
 from leo_twin.services.result_package_contract import (
     RESULT_PACKAGE_CONTRACT_V1_ID,
     RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1_ID,
+    RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1_ID,
     RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID,
     RUNTIME_EXPORT_ROUTE_DETAIL_ITEM_V1_ID,
     RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_V1_ID,
@@ -13,6 +14,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_REVIEW_SUMMARY_V1_ID,
     RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID,
     build_runtime_export_diagnostics_bundle_v1,
+    build_runtime_export_reproducibility_boundary_v1,
     build_runtime_export_route_comparison_review_report_v1,
     build_runtime_export_route_detail_item_v1,
     build_runtime_export_route_detail_index_v1,
@@ -31,6 +33,9 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
     assert first == second
     assert first["contract_id"] == RESULT_PACKAGE_CONTRACT_V1_ID
     assert first["required_manifest_id"] == RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID
+    assert first["reproducibility_boundary_id"] == (
+        RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1_ID
+    )
     assert json.loads(json.dumps(first, sort_keys=True))["contract_id"] == (
         RESULT_PACKAGE_CONTRACT_V1_ID
     )
@@ -57,6 +62,56 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
         in first["source_endpoints"]
     )
     assert "LIVE_EVENT_REPLAY_RESTORE" in first["excluded_semantics"]
+
+
+def test_runtime_export_reproducibility_boundary_v1_is_deterministic() -> None:
+    route_policy = dict(_route_detail_export_policy())
+    route_policy["route_count"] = 3
+    route_policy["hidden_route_count"] = 1
+    service_policy = dict(_service_trace_export_policy())
+    service_policy["service_count"] = 5
+    service_policy["hidden_trace_count"] = 2
+    runtime_status = {
+        "runtime_export_route_detail_policy_v1": route_policy,
+        "runtime_export_service_trace_policy_v1": service_policy,
+    }
+    manifest = {
+        "manifest_id": RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID,
+        "control_config_hash": "sha256:control",
+        "generated_config_hash": "sha256:generated",
+        "runtime_state_hash": "sha256:state",
+        "metrics_summary_hash": "sha256:metrics",
+        "deterministic_replay": False,
+    }
+
+    first = build_runtime_export_reproducibility_boundary_v1(
+        runtime_status=runtime_status,
+        manifest=manifest,
+    )
+    second = build_runtime_export_reproducibility_boundary_v1(
+        runtime_status=dict(reversed(tuple(runtime_status.items()))),
+        manifest=dict(reversed(tuple(manifest.items()))),
+    )
+
+    assert first == second
+    assert first["boundary_id"] == RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1_ID
+    assert first["restore_scope"] == "CONFIG_ONLY"
+    assert first["compare_scope"] == "CONFIG_AND_GENERATED_CONFIG"
+    assert first["read_scope"] == "PERSISTED_ARTIFACTS_ONLY"
+    assert first["event_replay_restore"] is False
+    assert first["recompute_on_read"] is False
+    assert first["package_mutation_on_read"] is False
+    assert first["packet_capture"] is False
+    assert first["external_simulators"] is False
+    assert first["route_detail_export"]["hidden_route_count"] == 1
+    assert first["service_trace_export"]["hidden_trace_count"] == 2
+    assert "CONFIG_ONLY_RESTORE" in first["boundary_conditions"]
+    assert "NO_RECOMPUTE_ON_COMPARE_OR_READ" in first["boundary_conditions"]
+    assert "NO_PACKAGE_MUTATION_ON_READ" in first["boundary_conditions"]
+    assert first["boundary_hash"].startswith("sha256:")
+    assert json.loads(json.dumps(first, sort_keys=True))["boundary_id"] == (
+        RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1_ID
+    )
 
 
 def test_result_package_summary_accepts_complete_package_record() -> None:
@@ -128,6 +183,8 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
             "queued_event_count": 3,
             "route_explanation_summary_v1": _route_summary(),
             "route_provenance_trust_summary_v1": _route_trust(),
+            "runtime_export_route_detail_policy_v1": _route_detail_export_policy(),
+            "runtime_export_service_trace_policy_v1": _service_trace_export_policy(),
         },
         "config": {"seed": 7, "duration_seconds": 120},
         "generated_config": {
@@ -201,6 +258,15 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
     assert first["route_comparison_review"]["review_report_record_schema"][
         "status_values"
     ] == ("MATCH", "DIFFERENT", "UNAVAILABLE", "ERROR")
+    assert first["reproducibility_boundary"]["boundary_id"] == (
+        RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1_ID
+    )
+    assert first["reproducibility"]["boundary_hash"] == first[
+        "reproducibility_boundary"
+    ]["boundary_hash"]
+    assert "CONFIG_ONLY_RESTORE" in first["reproducibility_boundary"][
+        "boundary_conditions"
+    ]
     assert "diagnostics_bundle_v1.json" in first["artifacts"]["artifact_filenames"]
     assert first["summary_hash"].startswith("sha256:")
     assert json.loads(json.dumps(first, sort_keys=True))["summary_id"] == (
@@ -218,6 +284,8 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
             "queued_event_count": 0,
             "route_explanation_summary_v1": _route_summary(),
             "route_provenance_trust_summary_v1": _route_trust(),
+            "runtime_export_route_detail_policy_v1": _route_detail_export_policy(),
+            "runtime_export_service_trace_policy_v1": _service_trace_export_policy(),
         },
         "config": {"seed": 7, "duration_seconds": 120},
         "generated_config": {
@@ -274,6 +342,12 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
     assert first["bundle_id"] == RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1_ID
     assert first["package"]["package_complete"] is True
     assert first["reproducibility"]["manifest_ok"] is True
+    assert first["reproducibility_boundary"]["boundary_id"] == (
+        RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1_ID
+    )
+    assert first["reproducibility"]["boundary_hash"] == first[
+        "reproducibility_boundary"
+    ]["boundary_hash"]
     assert first["route_trust"]["trust_status"] == "COMPLETE_FLOW_LEVEL_ROUTE_PROXY"
     assert first["route_trust"]["available_route_count"] == 2
     assert first["route_trust"]["bottleneck_components"] == ("capacity",)
@@ -283,6 +357,9 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
     assert first["route_comparison_review"]["exported_rows_only"] is True
     assert first["artifact_health"]["missing_required_filenames"] == ()
     assert first["artifact_health"]["missing_recommended_filenames"] == ()
+    assert first["model_boundaries"]["event_replay_restore"] is False
+    assert first["model_boundaries"]["route_recomputation"] is False
+    assert first["model_boundaries"]["service_recomputation"] is False
     assert first["findings"] == (
         {
             "severity": "INFO",
@@ -663,20 +740,7 @@ def _service_trace_export() -> dict[str, object]:
         "type": "SERVICE_LIFECYCLE_TRACE_EXPORT_V2",
         "source": "BACKEND_RUNTIME_STATUS",
         "artifact_policy": "STANDALONE_RUNTIME_EXPORT_ARTIFACT",
-        "service_trace_export_policy": {
-            "version": "v1",
-            "source": "BACKEND_RUNTIME_EXPORT",
-            "policy": "EXPORT_SERVICE_TRACE_WINDOW",
-            "service_trace_source": "service_latency_history_v1",
-            "service_trace_limit": 5000,
-            "service_count": 3,
-            "exported_trace_count": 3,
-            "hidden_trace_count": 0,
-            "artifact_window_only": True,
-            "event_replay": False,
-            "service_recomputation": False,
-            "packet_level_simulation": False,
-        },
+        "service_trace_export_policy": _service_trace_export_policy(),
         "summary": {
             "version": "v2",
             "contract_id": "leo_twin.service_lifecycle_trace_contract.v2",
@@ -727,6 +791,23 @@ def _service_trace_export() -> dict[str, object]:
                 ),
             ),
         },
+    }
+
+
+def _service_trace_export_policy() -> dict[str, object]:
+    return {
+        "version": "v1",
+        "source": "BACKEND_RUNTIME_EXPORT",
+        "policy": "EXPORT_SERVICE_TRACE_WINDOW",
+        "service_trace_source": "service_latency_history_v1",
+        "service_trace_limit": 5000,
+        "service_count": 3,
+        "exported_trace_count": 3,
+        "hidden_trace_count": 0,
+        "artifact_window_only": True,
+        "event_replay": False,
+        "service_recomputation": False,
+        "packet_level_simulation": False,
     }
 
 

@@ -590,7 +590,12 @@ Tasks:
     `route_detail_index_v1.json` as a package artifact so route trust samples
     can be reviewed against exported route explanation rows. T279 renders the
     selected package's route detail index in the dashboard as a read-only route
-    evidence drawer.
+    evidence drawer. T302 adds
+    `leo_twin.runtime_export_reproducibility_boundary.v1` to result package
+    manifests, config snapshots, review summaries, and diagnostics bundles so
+    users can verify config-only restore, persisted-artifact reads, and
+    no-replay/no-recompute/no-mutation/no-packet/no-external-simulator
+    boundaries from a single backend-owned object.
 
 ### WS9. Delivery and Operations v2
 

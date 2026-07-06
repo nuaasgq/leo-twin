@@ -8,6 +8,7 @@ from examples.integration_demo.control_plane import DemoControlPlane
 from examples.integration_demo.runtime import run_integration_demo
 from leo_twin.services.detail_pagination_contract import DETAIL_ENDPOINT_MAX_LIMIT
 from leo_twin.services.result_package_contract import (
+    RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1_ID,
     RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID,
     RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID,
     summarize_result_package_record_v1,
@@ -73,8 +74,25 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert manifest["manifest_id"] == RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID
     assert manifest["manifest_hash"] == summary["manifest_hash"]
     assert config_snapshot["type"] == "RUNTIME_CONFIG_SNAPSHOT"
+    assert config_snapshot["status"]["reproducibility_manifest_v1"] == manifest
     assert config_snapshot["status"]["export_status_policy"] == (
         "STABLE_RUNTIME_STATUS_WITHOUT_STREAM_DIAGNOSTICS"
+    )
+    reproducibility_boundary = config_snapshot["status"][
+        "runtime_export_reproducibility_boundary_v1"
+    ]
+    assert reproducibility_boundary["boundary_id"] == (
+        RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1_ID
+    )
+    assert reproducibility_boundary["restore_scope"] == "CONFIG_ONLY"
+    assert reproducibility_boundary["event_replay_restore"] is False
+    assert reproducibility_boundary["recompute_on_read"] is False
+    assert reproducibility_boundary["package_mutation_on_read"] is False
+    assert "NO_LIVE_EVENT_REPLAY_RESTORE" in reproducibility_boundary[
+        "boundary_conditions"
+    ]
+    assert manifest["runtime_export_reproducibility_boundary_v1"] == (
+        reproducibility_boundary
     )
     assert service_lifecycle_trace["type"] == "SERVICE_LIFECYCLE_TRACE_EXPORT_V2"
     assert service_lifecycle_trace["summary"] == config_snapshot["status"][
@@ -129,6 +147,10 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert review_summary["reproducibility"]["manifest_hash"] == manifest[
         "manifest_hash"
     ]
+    assert review_summary["reproducibility"]["boundary_hash"] == (
+        reproducibility_boundary["boundary_hash"]
+    )
+    assert review_summary["reproducibility_boundary"] == reproducibility_boundary
     assert "review_summary_v1.json" in review_summary["artifacts"][
         "artifact_filenames"
     ]
@@ -151,7 +173,12 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert diagnostics_bundle["reproducibility"]["manifest_hash"] == manifest[
         "manifest_hash"
     ]
+    assert diagnostics_bundle["reproducibility"]["boundary_hash"] == (
+        reproducibility_boundary["boundary_hash"]
+    )
+    assert diagnostics_bundle["reproducibility_boundary"] == reproducibility_boundary
     assert diagnostics_bundle["model_boundaries"]["packet_level_simulation"] is False
+    assert diagnostics_bundle["model_boundaries"]["event_replay_restore"] is False
 
     review_report_response = (
         control_plane.runtime_export_package_route_comparison_review_report(
