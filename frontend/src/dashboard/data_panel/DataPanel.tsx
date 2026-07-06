@@ -808,6 +808,60 @@ export const DataPanel = memo(function DataPanel({
       }
     });
   };
+  const openRuntimeExportUserServiceRequestEvidence = (
+    row: UserBusinessRequestRow
+  ) => {
+    const userId = linkedReviewId(row.userId);
+    if (userId) {
+      setSelectedDetailUserId(userId);
+      onRuntimeUserDetailSelect?.(userId);
+    }
+    const satelliteId = linkedReviewId(row.selectedSatelliteId);
+    if (satelliteId && satelliteId.startsWith("sat-")) {
+      setSelectedDetailSatelliteId(satelliteId);
+      onRuntimeSatelliteDetailSelect?.(satelliteId);
+    }
+    const computeNodeId = linkedReviewId(row.computeNodeId);
+    if (computeNodeId) {
+      setSelectedComputeNodeDetailId(computeNodeId);
+      onRuntimeComputeNodeDetailSelect?.(computeNodeId);
+      if (computeNodeId.startsWith("sat-")) {
+        setSelectedDetailSatelliteId(computeNodeId);
+        onRuntimeSatelliteDetailSelect?.(computeNodeId);
+      }
+    }
+    const routeId = linkedReviewId(row.routeId);
+    if (routeId) {
+      setSelectedRouteDetailId(routeId);
+      setExportRouteDetailIndexFilter(routeId);
+      setExportRouteDetailIndexAvailabilityFilter("ALL");
+      setExportRouteDetailIndexBusinessFilter("ALL");
+      setExportRouteDetailIndexBottleneckFilter("ALL");
+      onRuntimeExportRouteDetailItemSelect?.(routeId);
+      onRuntimeRouteDetailSelect?.(routeId);
+      requestRuntimeExportRouteDetailPage(0, {
+        query: routeId,
+        availability: "ALL",
+        businessType: "ALL",
+        bottleneckComponent: "ALL"
+      });
+    }
+    const serviceQuery = userBusinessRequestServiceTraceQuery(row);
+    if (serviceQuery) {
+      setExportServiceTraceFilter(serviceQuery);
+      setExportServiceTraceTerminalFilter("ALL");
+      setExportServiceTraceComputeNodeFilter("");
+      setExportServiceTraceStageFilter("ALL");
+      setExportServiceTraceTerminalReasonFilter("ALL");
+      requestRuntimeExportServiceTracePage(0, {
+        query: serviceQuery,
+        terminalState: "ALL",
+        computeNodeId: "",
+        stageKind: "ALL",
+        terminalReason: "ALL"
+      });
+    }
+  };
   const exportManifestInspectorDisplay = buildDataPanelExportManifestInspectorDisplay(
     runtimeExportManifest,
     runtimeExportComparePackageId,
@@ -2064,6 +2118,8 @@ export const DataPanel = memo(function DataPanel({
               </div>
               <UserBusinessRequestTable
                 rows={exportUserServiceRequestStatus.rows}
+                selectedUserId={selectedDetailUserId}
+                onSelect={openRuntimeExportUserServiceRequestEvidence}
               />
             </div>
           ) : null}
@@ -5212,8 +5268,8 @@ function UserBusinessRequestTable({
           className={`data-panel-business-row ${
             row.userId === selectedUserId ? "selected" : ""
           }`}
-          key={row.userId}
-          title={row.pathLabel}
+          key={row.rowId ?? row.userId}
+          title={[row.pathLabel, row.correlationLabel].filter(Boolean).join(" / ")}
           onClick={() => onSelect?.(row)}
         >
           <span>{row.userId}</span>
@@ -5575,7 +5631,15 @@ export interface UserBusinessRequestRows {
 }
 
 export interface UserBusinessRequestRow {
+  rowId?: string;
   userId: string;
+  requestId?: string;
+  serviceRequestId?: string;
+  routeId?: string;
+  flowId?: string;
+  taskId?: string;
+  computeNodeId?: string;
+  nextHopId?: string;
   platformTypeLabel: string;
   communicationLabel: string;
   computeLabel: string;
@@ -5587,6 +5651,7 @@ export interface UserBusinessRequestRow {
   latencyCapacityLabel: string;
   serviceLabel: string;
   pathLabel: string;
+  correlationLabel?: string;
 }
 
 export interface DataPanelUserRequestHistory {
@@ -6244,6 +6309,22 @@ function buildSnapshotUserBusinessRequestRows(
     const computeRoutes = routes.filter((route) => routeIsComputeService(route, serviceLookup));
     const waitingRoutes = routes.filter((route) => !route.available);
     const selectedRoute = selectUserPrimaryRoute(routes, serviceLookup);
+    const routeId = selectedRoute?.route_id ?? "";
+    const flowId = selectedRoute?.flow_id ?? "";
+    const taskId = "";
+    const computeNodeId = "";
+    const nextHopId = selectedRoute?.path[1] ?? "";
+    const requestId = flowId;
+    const serviceRequestId = flowId;
+    const correlationLabel = userBusinessRequestCorrelationLabel({
+      requestId,
+      serviceRequestId,
+      routeId,
+      flowId,
+      taskId,
+      computeNodeId,
+      nextHopId
+    });
     const selectedSatelliteId = selectedRoute ? routeFirstSatellite(selectedRoute) : null;
     const destinationId = selectedRoute?.path[selectedRoute.path.length - 1] ?? "未选择";
     const serviceLabel =
@@ -6261,7 +6342,15 @@ function buildSnapshotUserBusinessRequestRows(
           )} Mbps`
         : "无链路";
     return {
+      rowId: userBusinessRequestRowId(userId, requestId, routeId, flowId),
       userId,
+      requestId,
+      serviceRequestId,
+      routeId,
+      flowId,
+      taskId,
+      computeNodeId,
+      nextHopId,
       platformTypeLabel: userPlatformTypeLabel(user),
       communicationLabel:
         routes.length > 0
@@ -6280,7 +6369,8 @@ function buildSnapshotUserBusinessRequestRows(
       pathLabel:
         selectedRoute !== null && selectedRoute.path.length > 0
           ? `${selectedRoute.route_id}: ${selectedRoute.path.join(" -> ")}`
-          : `${userId}: no active route`
+          : `${userId}: no active route`,
+      correlationLabel
     };
   });
   const hiddenCount = Math.max(0, userIds.length - items.length);
@@ -6795,6 +6885,13 @@ export function filterUserBusinessRequestRows(
   const items = rows.items.filter((item) =>
     [
       item.userId,
+      item.requestId,
+      item.serviceRequestId,
+      item.routeId,
+      item.flowId,
+      item.taskId,
+      item.computeNodeId,
+      item.nextHopId,
       item.platformTypeLabel,
       item.communicationLabel,
       item.computeLabel,
@@ -6805,8 +6902,9 @@ export function filterUserBusinessRequestRows(
       item.statusLabel,
       item.latencyCapacityLabel,
       item.serviceLabel,
-      item.pathLabel
-    ].some((value) => value.toLowerCase().includes(normalized))
+      item.pathLabel,
+      item.correlationLabel
+    ].some((value) => String(value ?? "").toLowerCase().includes(normalized))
   );
   return {
     ...rows,
@@ -8198,11 +8296,102 @@ function normalizeDetailFilter(query: string): string {
   return query.trim().toLowerCase();
 }
 
+function userBusinessRequestRowId(
+  userId: string,
+  requestId: string,
+  routeId: string,
+  flowId: string
+): string {
+  return [userId, requestId, routeId, flowId]
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0)
+    .join(":") || userId;
+}
+
+function userBusinessRequestCorrelationLabel({
+  requestId,
+  serviceRequestId,
+  routeId,
+  flowId,
+  taskId,
+  computeNodeId,
+  nextHopId
+}: {
+  requestId: string;
+  serviceRequestId: string;
+  routeId: string;
+  flowId: string;
+  taskId: string;
+  computeNodeId: string;
+  nextHopId: string;
+}): string {
+  return [
+    requestId ? `request ${requestId}` : "",
+    serviceRequestId && serviceRequestId !== requestId
+      ? `service ${serviceRequestId}`
+      : "",
+    routeId ? `route ${routeId}` : "",
+    flowId ? `flow ${flowId}` : "",
+    taskId ? `task ${taskId}` : "",
+    computeNodeId ? `compute ${computeNodeId}` : "",
+    nextHopId ? `next ${nextHopId}` : ""
+  ]
+    .filter((value) => value.length > 0)
+    .join(" / ");
+}
+
+function linkedReviewId(value: string | null | undefined): string | null {
+  const normalized = value?.trim() ?? "";
+  if (normalized.length === 0) {
+    return null;
+  }
+  const lowered = normalized.toLowerCase();
+  if (
+    lowered === "none" ||
+    lowered === "unknown" ||
+    lowered === "idle" ||
+    lowered === "no route" ||
+    lowered === "no service"
+  ) {
+    return null;
+  }
+  return normalized;
+}
+
+function userBusinessRequestServiceTraceQuery(
+  row: UserBusinessRequestRow
+): string {
+  return (
+    linkedReviewId(row.serviceRequestId) ??
+    linkedReviewId(row.requestId) ??
+    linkedReviewId(row.taskId) ??
+    linkedReviewId(row.flowId) ??
+    ""
+  );
+}
+
 function buildBackendUserBusinessRequestRows(
   summary: RuntimeUserRequestSummaryV1,
   limit: number
 ): UserBusinessRequestRows {
   const items = summary.items.slice(0, Math.max(0, limit)).map((item) => {
+    const requestId = item.request_id ?? item.primary_flow_id ?? item.service_task_id ?? "";
+    const serviceRequestId = item.service_request_id ?? requestId;
+    const routeId =
+      item.route_id ?? item.primary_route_id ?? item.input_route_id ?? item.output_route_id ?? "";
+    const flowId = item.flow_id ?? item.primary_flow_id ?? "";
+    const taskId = item.task_id ?? item.service_task_id ?? "";
+    const computeNodeId = item.compute_node_id ?? "";
+    const nextHopId = item.next_hop_id ?? item.primary_next_hop_id ?? "";
+    const correlationLabel = userBusinessRequestCorrelationLabel({
+      requestId,
+      serviceRequestId,
+      routeId,
+      flowId,
+      taskId,
+      computeNodeId,
+      nextHopId
+    });
     const latencyCapacityLabel =
       typeof item.latency_s === "number" && typeof item.capacity_mbps === "number"
         ? `${formatPreciseMetricValue(item.latency_s)} s / ${formatMetricValue(
@@ -8237,7 +8426,15 @@ function buildBackendUserBusinessRequestRows(
       ? ` / next ${item.primary_next_hop_id}`
       : "";
     return {
+      rowId: userBusinessRequestRowId(item.user_id, requestId, routeId, flowId),
       userId: item.user_id,
+      requestId,
+      serviceRequestId,
+      routeId,
+      flowId,
+      taskId,
+      computeNodeId,
+      nextHopId,
       platformTypeLabel: `${item.platform_type_label || item.platform_type}${cellLabel}`,
       communicationLabel:
         item.communication_route_count > 0
@@ -8262,7 +8459,8 @@ function buildBackendUserBusinessRequestRows(
           ? `${item.primary_route_id || item.primary_flow_id || item.user_id}: ${item.path.join(
               " -> "
             )}`
-          : `${item.user_id}: no active route`)
+          : `${item.user_id}: no active route`),
+      correlationLabel
     };
   });
   const hiddenCount = Math.max(
@@ -12618,7 +12816,8 @@ export function buildDataPanelExportUserServiceRequestStatus(
       `policy ${policyLabel}`,
       `artifact ${shortRuntimeHash(page.artifact_hash)}`,
       `summary ${shortRuntimeHash(page.summary_hash)}`,
-      `page ${shortRuntimeHash(page.page_hash)}`
+      `page ${shortRuntimeHash(page.page_hash)}`,
+      "row click links user/route/service evidence"
     ].filter((label) => label.length > 0),
     artifactHref: runtimeExportPackageFileHref(
       packageId,

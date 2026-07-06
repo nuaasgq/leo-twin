@@ -14662,6 +14662,9 @@ change.
       files and 203 tests.
   - `pnpm --dir frontend exec tsc --noEmit`
     - Result: passed with the bundled Codex Node/Pnpm runtime path.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path. Vite
+      reported the existing large DataPanel chunk warning.
 - Problems encountered:
   - No product blocker. The task used the bundled Codex Node/Pnpm runtime path
     because the normal PowerShell PATH may not expose `node`.
@@ -16091,3 +16094,48 @@ change.
     review navigation that links package user-service pages, service lifecycle
     pages, route evidence pages, and live runtime detail pages through shared
     request/route/trace ids.
+
+## 2026-07-07 - Scenario Review Navigation v1
+
+- Branch: `feature/T332-scenario-review-navigation-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: preserve backend-provided request, service-request, route, flow, task,
+  satellite, and compute-node correlation ids in dashboard user-service request
+  rows, then use those ids to make the selected export-package
+  user-service-request row a review navigation entry point. Selecting a row now
+  opens available live user/satellite/compute/route details, requests the
+  package-owned route detail, filters package route evidence by route id, and
+  filters package service lifecycle traces by the request/service/flow/task id
+  without loading or recomputing new model state.
+- Changed files/modules:
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts appSurface.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 2 test
+      files and 229 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path.
+- Problems encountered:
+  - Existing hand-written `UserBusinessRequestRow` test fixtures did not carry
+    the new correlation fields. The row type keeps these fields optional for
+    compatibility, while the backend/snapshot row builders populate them when
+    the source data provides ids.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The service-trace navigation filters package traces by available request,
+    service-request, task, or flow id; it does not create a new exact trace id
+    mapping if the backend artifact lacks one.
+  - Live detail lookups only resolve when the current runtime still exposes the
+    same ids as the selected export package row. No replay or package restore is
+    performed.
+- Recommended follow-up:
+  - Add backend-owned explicit `trace_id` correlation to
+    `user_service_request_summary_v2` rows so a package user-service row can
+    open an exact service lifecycle trace instead of using text-filtered trace
+    search.

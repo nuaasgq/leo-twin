@@ -285,6 +285,14 @@ session, replay events, recompute business/service state, or mutate the
 package. The standalone dashboard uses this endpoint by default for offline
 per-user request review, while the raw `user_service_request_summary_v2.json`
 file remains linked for audit/download.
+When a page row contains backend-provided `request_id`, `service_request_id`,
+`route_id`, `flow_id`, `task_id`, `selected_satellite_id`, or
+`compute_node_id` fields, the dashboard treats those fields as read-only
+navigation evidence. Selecting a row can filter the package-owned service trace
+and route evidence pages and can request matching live runtime detail cards
+when the current runtime still exposes the same ids. This navigation does not
+infer new business semantics in the frontend, replay events, recompute routes,
+or mutate the exported package.
 
 `route_comparison_review` also declares the deterministic
 `RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1` report template. The

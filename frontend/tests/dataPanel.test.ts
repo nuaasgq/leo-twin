@@ -4239,15 +4239,24 @@ describe("buildDataPanelExportCompareDisplay", () => {
         "policy EXPORT_USER_SERVICE_REQUEST_WINDOW",
         "artifact cdcdcdcdcdcd",
         "summary abababababab",
-        "page efefefefefef"
+        "page efefefefefef",
+        "row click links user/route/service evidence"
       ],
       artifactHref:
         "/runtime/export/packages/pkg-review/files/user_service_request_summary_v2.json",
       rows: [
         expect.objectContaining({
           userId: "user-00001",
+          requestId: "svc-00001",
+          serviceRequestId: "svc-00001",
+          routeId: "route-00001",
+          flowId: "flow-00001",
+          taskId: "task-00001",
+          computeNodeId: "sat-00001",
           computeLabel: "1 compute",
-          selectedSatelliteId: "sat-00001"
+          selectedSatelliteId: "sat-00001",
+          correlationLabel:
+            "request svc-00001 / route route-00001 / flow flow-00001 / task task-00001 / compute sat-00001 / next sat-00001"
         })
       ],
       filterLabel: "query sat-00001 / backend artifact page 1-1 / 2",

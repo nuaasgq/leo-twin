@@ -146,7 +146,10 @@ Tasks:
     and binds the dashboard export review drawer to backend cursor reads,
     service-class filtering, terminal-state filtering, and network-waiting
     filtering so large user-service artifacts are not loaded fully in the
-    browser by default.
+    browser by default. T332 preserves backend-provided request/route/flow/task
+    correlation ids in dashboard user-service rows and lets selected export
+    package rows drive package route evidence, package service-trace filtering,
+    and live runtime detail lookups without frontend business recomputation.
 - V2-013: Add service lifecycle trace.
   - Scope: input flow, queue, compute, output flow, terminal state.
   - Output: timeline records for dashboard and result export.

@@ -2660,6 +2660,13 @@ export interface RuntimeUserRequestItemV1 {
   selected_satellite_id?: string;
   destination_id?: string;
   status: string;
+  request_id?: string;
+  service_request_id?: string;
+  route_id?: string;
+  flow_id?: string;
+  task_id?: string;
+  target_node_id?: string;
+  next_hop_id?: string;
   primary_route_id?: string;
   primary_flow_id?: string;
   primary_next_hop_id?: string;
