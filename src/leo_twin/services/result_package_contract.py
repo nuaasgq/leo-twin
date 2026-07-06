@@ -849,6 +849,8 @@ def build_runtime_export_scenario_review_bundle_v1(
             "diagnostics_bundle_v1.json",
             "network_kpi_benchmark_validation_v1.json",
             "user_service_request_summary_v2.json",
+            "service_lifecycle_trace_v2.json",
+            "service_trace_comparison_review_report_v1.json",
             "manifest.json",
             "config_snapshot.json",
             "events.jsonl",
@@ -881,7 +883,12 @@ def build_runtime_export_scenario_review_checklist_v1(
         scenario_review_bundle.get("recommended_review_order")
     )
     artifact_review = _mapping(scenario_review_bundle.get("artifact_review"))
-    known_artifacts = frozenset(_string_tuple(artifact_review.get("artifact_filenames")))
+    known_artifacts = frozenset(
+        (
+            *_string_tuple(artifact_review.get("artifact_filenames")),
+            *review_order,
+        )
+    )
     normalized_records = tuple(
         sorted(
             (

@@ -761,6 +761,14 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
     assert "user_service_request_summary_v2.json" in first[
         "recommended_review_order"
     ]
+    assert "service_trace_comparison_review_report_v1.json" in first[
+        "recommended_review_order"
+    ]
+    assert first["recommended_review_order"].index(
+        "service_lifecycle_trace_v2.json"
+    ) < first["recommended_review_order"].index(
+        "service_trace_comparison_review_report_v1.json"
+    )
     assert "export_package_audit_index_v1.json" in first["artifact_review"][
         "artifact_filenames"
     ]
@@ -781,6 +789,7 @@ def test_runtime_export_scenario_review_checklist_v1_is_deterministic() -> None:
             "scenario_review_bundle_v1.json",
             "export_package_audit_index_v1.json",
             "review_summary_v1.json",
+            "service_trace_comparison_review_report_v1.json",
         ),
         "artifact_review": {
             "artifact_filenames": (
@@ -811,6 +820,13 @@ def test_runtime_export_scenario_review_checklist_v1_is_deterministic() -> None:
             "review_status": "skipped",
             "status_reason": "already covered by diagnostics",
         },
+        {
+            "step_label": "Service trace review checked",
+            "artifact_filename": "service_trace_comparison_review_report_v1.json",
+            "review_status": "reviewed",
+            "operator_note": "service trace comparison report is signed off",
+            "evidence_hash": "sha256:service-trace-report",
+        },
     )
 
     first = build_runtime_export_scenario_review_checklist_v1(
@@ -830,8 +846,8 @@ def test_runtime_export_scenario_review_checklist_v1_is_deterministic() -> None:
     assert first["checklist_id"] == RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_V1_ID
     assert first["package_id"] == "pkg-1"
     assert first["scenario_review_hash"] == "sha256:scenario-review"
-    assert first["record_count"] == 3
-    assert first["reviewed_count"] == 1
+    assert first["record_count"] == 4
+    assert first["reviewed_count"] == 2
     assert first["skipped_count"] == 1
     assert first["followup_count"] == 1
     assert first["error_count"] == 0
@@ -840,8 +856,10 @@ def test_runtime_export_scenario_review_checklist_v1_is_deterministic() -> None:
         "scenario_review_bundle_v1.json",
         "export_package_audit_index_v1.json",
         "review_summary_v1.json",
+        "service_trace_comparison_review_report_v1.json",
     ]
     assert first["records"][0]["review_status"] == "REVIEWED"
+    assert first["records"][3]["status_reason"] == ""
     assert first["records"][0]["record_hash"].startswith("sha256:")
     assert first["checklist_hash"].startswith("sha256:")
     assert json.loads(json.dumps(first, sort_keys=True))["checklist_id"] == (

@@ -16520,3 +16520,61 @@ change.
   - Add a scenario review workflow row for
     `service_trace_comparison_review_report_v1.json` so operators can mark the
     service-trace review artifact explicitly in the guided checklist.
+
+## 2026-07-07 - T340 service trace review checklist step v1
+
+- Branch: `feature/T340-service-trace-review-checklist-v1`
+- Commit: pending before task commit.
+- Scope: add the saved service trace comparison review report to the
+  backend-guided scenario review checklist flow. The backend now lists
+  `service_lifecycle_trace_v2.json` before
+  `service_trace_comparison_review_report_v1.json` in
+  `scenario_review_bundle_v1.json.recommended_review_order`; checklist
+  validation treats backend-recommended review artifacts as known artifacts
+  even when they are operator-saved after the original export package is
+  created. The dashboard now displays the service trace review report row and
+  uses the audit-index `service_trace_comparison_review_report_hash` as the
+  checklist evidence hash. No Event Kernel, simulation model, package replay,
+  or frontend architecture behavior changed.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m compileall -q src\leo_twin\services\result_package_contract.py`
+    - Result: passed.
+  - `python -m pytest tests\unit\test_result_package_contract_v1.py::test_runtime_export_scenario_review_bundle_v1_is_deterministic tests\unit\test_result_package_contract_v1.py::test_runtime_export_scenario_review_checklist_v1_is_deterministic tests\integration\test_result_package_export_v1.py::test_runtime_export_package_satisfies_result_package_contract_v1 -q`
+    - Result: passed, 3 tests.
+  - `.\node_modules\.bin\tsc.cmd --noEmit -p tsconfig.json` from
+    `frontend`
+    - Result: passed with the bundled Codex Node runtime path.
+  - `pnpm --dir frontend test dataPanel.test.ts api.test.ts appSurface.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 3 test
+      files and 274 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path; Vite
+      reported the existing large `DataPanel` chunk warning.
+  - `git diff --check`
+    - Result: passed; Git emitted line-ending warnings only for the existing
+      unstaged runtime config drift.
+- Problems encountered:
+  - `pnpm --dir frontend exec tsc --noEmit -p tsconfig.json` produced only a
+    terse pnpm "Already up to date" message, so the standalone typecheck was
+    verified by directly invoking `frontend\node_modules\.bin\tsc.cmd`.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - Service trace comparison reports remain optional handoff evidence in this
+    version. Making them mandatory should be a separate product workflow
+    decision.
+  - The scenario review checklist still records operator decisions; it does not
+    compute package/live service trace differences server-side.
+- Recommended follow-up:
+  - Add backend-owned checklist completeness expectations so the dashboard can
+    distinguish "all recommended steps reviewed" from "all submitted records
+    reviewed" without frontend inference.

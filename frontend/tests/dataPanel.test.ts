@@ -50,6 +50,7 @@ import {
   buildDataPanelExportScenarioReviewBundleStatus,
   buildDataPanelScenarioReviewChecklistDraft,
   buildDataPanelScenarioReviewChecklistSaveRequest,
+  updateDataPanelScenarioReviewChecklistDraft,
   buildDataPanelExportRouteComparisonReviewArtifactDisplay,
   buildDataPanelExportRouteComparisonReviewReportDisplay,
   buildDataPanelExportRouteComparisonReviewReportStatus,
@@ -3210,6 +3211,8 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           "manifest.json",
           "config_snapshot.json",
           "route_detail_index_v1.json",
+          "service_lifecycle_trace_v2.json",
+          "service_trace_comparison_review_report_v1.json",
           "user_service_request_summary_v2.json",
           "events.jsonl",
           "metrics.csv"
@@ -3235,6 +3238,8 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         "manifest.json",
         "config_snapshot.json",
         "route_detail_index_v1.json",
+        "service_lifecycle_trace_v2.json",
+        "service_trace_comparison_review_report_v1.json",
         "user_service_request_summary_v2.json",
         "events.jsonl",
         "metrics.csv",
@@ -3354,47 +3359,58 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           tone: "match"
         },
         {
-          stepLabel: "9 user services",
+          stepLabel: "8 service trace",
+          statusLabel: "available",
+          detailLabel: "service_lifecycle_trace_v2.json",
+          href:
+            "/runtime/export/packages/pkg-review/files/service_lifecycle_trace_v2.json",
+          title:
+            "8 service trace / service_lifecycle_trace_v2.json / package artifact available",
+          tone: "match"
+        },
+        {
+          stepLabel: "9 service trace review",
+          statusLabel: "available",
+          detailLabel: "service_trace_comparison_review_report_v1.json",
+          href:
+            "/runtime/export/packages/pkg-review/files/service_trace_comparison_review_report_v1.json",
+          title:
+            "9 service trace review / service_trace_comparison_review_report_v1.json / package artifact available",
+          tone: "match"
+        },
+        {
+          stepLabel: "10 user services",
           statusLabel: "available",
           detailLabel: "user_service_request_summary_v2.json",
           href:
             "/runtime/export/packages/pkg-review/files/user_service_request_summary_v2.json",
           title:
-            "9 user services / user_service_request_summary_v2.json / package artifact available",
+            "10 user services / user_service_request_summary_v2.json / package artifact available",
           tone: "match"
         },
         {
-          stepLabel: "10 event evidence",
+          stepLabel: "11 event evidence",
           statusLabel: "available",
           detailLabel: "events.jsonl",
           href: "/runtime/export/packages/pkg-review/files/events.jsonl",
-          title: "10 event evidence / events.jsonl / package artifact available",
+          title: "11 event evidence / events.jsonl / package artifact available",
           tone: "match"
         },
         {
-          stepLabel: "11 metrics",
+          stepLabel: "12 metrics",
           statusLabel: "available",
           detailLabel: "metrics.csv",
           href: "/runtime/export/packages/pkg-review/files/metrics.csv",
-          title: "11 metrics / metrics.csv / package artifact available",
+          title: "12 metrics / metrics.csv / package artifact available",
           tone: "match"
         },
         {
-          stepLabel: "12 summary",
+          stepLabel: "13 summary",
           statusLabel: "missing",
           detailLabel: "summary.json",
           href: null,
           title:
-            "12 summary / summary.json / not listed in scenario review bundle",
-          tone: "different"
-        },
-        {
-          stepLabel: "8 service trace",
-          statusLabel: "missing",
-          detailLabel: "service_lifecycle_trace_v2.json",
-          href: null,
-          title:
-            "8 service trace / service_lifecycle_trace_v2.json / not listed in scenario review bundle",
+            "13 summary / summary.json / not listed in scenario review bundle",
           tone: "different"
         }
       ],
@@ -3599,6 +3615,49 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           artifact_filename: "review_summary_v1.json",
           review_status: "REVIEWED",
           evidence_hash: "sha256:review"
+        }
+      ]
+    });
+    const auditBackedDisplay = buildDataPanelExportScenarioReviewBundleDisplay(
+      bundle as any,
+      {
+        audit_hash: "sha256:audit",
+        service_trace_comparison_review_report_present: true,
+        service_trace_comparison_review_report_hash: "sha256:trace-report"
+      } as any
+    );
+    const auditBackedDraft = updateDataPanelScenarioReviewChecklistDraft(
+      draft,
+      "service_trace_comparison_review_report_v1.json",
+      {
+        reviewStatus: "REVIEWED",
+        operatorNote: "trace review checked"
+      }
+    );
+    const serviceTraceReviewRequest =
+      buildDataPanelScenarioReviewChecklistSaveRequest(
+        bundle as any,
+        (auditBackedDisplay?.workflowRows ?? []).filter(
+          (row) =>
+            row.detailLabel === "service_trace_comparison_review_report_v1.json"
+        ),
+        auditBackedDraft,
+        {
+          audit_hash: "sha256:audit",
+          service_trace_comparison_review_report_present: true,
+          service_trace_comparison_review_report_hash: "sha256:trace-report"
+        } as any
+      );
+    expect(serviceTraceReviewRequest).toMatchObject({
+      packageId: "pkg-review",
+      records: [
+        {
+          artifact_filename: "service_trace_comparison_review_report_v1.json",
+          step_label: "9 service trace review",
+          review_status: "REVIEWED",
+          operator_note: "trace review checked",
+          status_reason: "",
+          evidence_hash: "sha256:trace-report"
         }
       ]
     });

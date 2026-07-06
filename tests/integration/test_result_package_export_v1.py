@@ -296,6 +296,9 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert scenario_review_bundle["model_boundaries"][
         "packet_level_simulation"
     ] is False
+    assert "service_trace_comparison_review_report_v1.json" in (
+        scenario_review_bundle["recommended_review_order"]
+    )
     assert scenario_review_bundle["scenario_review_hash"].startswith("sha256:")
     assert audit_index["audit_index_id"] == RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID
     assert audit_index["package_id"] == package["package_id"]
@@ -598,6 +601,13 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
                     "operator_note": "audit index includes route report evidence",
                     "evidence_hash": updated_audit_index["audit_hash"],
                 },
+                {
+                    "artifact_filename": "service_trace_comparison_review_report_v1.json",
+                    "step_label": "Service trace comparison review checked",
+                    "review_status": "REVIEWED",
+                    "operator_note": "service trace report evidence checked",
+                    "evidence_hash": service_trace_report["report_hash"],
+                },
             ]
         },
         output_root,
@@ -608,8 +618,8 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         "package_handoff_report_v1.md"
     )
     assert checklist["checklist_id"] == RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_V1_ID
-    assert checklist["record_count"] == 2
-    assert checklist["reviewed_count"] == 2
+    assert checklist["record_count"] == 3
+    assert checklist["reviewed_count"] == 3
     assert checklist["checklist_status"] == "CHECKLIST_COMPLETE"
     assert checklist["scenario_review_hash"] == (
         scenario_review_bundle["scenario_review_hash"]
@@ -637,7 +647,7 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert checklist_audit["scenario_review_checklist_hash"] == (
         checklist["checklist_hash"]
     )
-    assert checklist_audit["scenario_review_checklist_record_count"] == 2
+    assert checklist_audit["scenario_review_checklist_record_count"] == 3
     assert checklist_audit["scenario_review_checklist_status"] == (
         "CHECKLIST_COMPLETE"
     )

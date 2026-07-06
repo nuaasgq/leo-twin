@@ -384,7 +384,10 @@ version; saved reports with `error_count > 0` produce an audit warning and a
 completion warning.
 
 `scenario_review_bundle_v1.json` also declares a guided package review order.
-The demo backend can persist operator decisions for that guided flow through:
+The order includes the raw `service_lifecycle_trace_v2.json` evidence and the
+operator-saved `service_trace_comparison_review_report_v1.json` step when a
+package is reviewed. The demo backend can persist operator decisions for that
+guided flow through:
 
 ```text
 POST /runtime/export/packages/{package_id}/scenario-review-checklist

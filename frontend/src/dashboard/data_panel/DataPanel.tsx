@@ -1410,7 +1410,8 @@ export const DataPanel = memo(function DataPanel({
   const exportScenarioReviewBundleStatus =
     buildDataPanelExportScenarioReviewBundleStatus(
       buildDataPanelExportScenarioReviewBundleDisplay(
-        runtimeExportScenarioReviewBundle
+        runtimeExportScenarioReviewBundle,
+        runtimeExportPackageAuditIndex
       ),
       runtimeExportComparePackageId,
       runtimeExportScenarioReviewBundleLoading,
@@ -11588,7 +11589,8 @@ export function buildDataPanelExportPackageHandoffReportArtifactDisplay(
 }
 
 export function buildDataPanelExportScenarioReviewBundleDisplay(
-  bundle: RuntimeExportScenarioReviewBundleV1 | null | undefined
+  bundle: RuntimeExportScenarioReviewBundleV1 | null | undefined,
+  auditIndex: RuntimeExportPackageAuditIndexV1 | null | undefined = null
 ): DataPanelExportScenarioReviewBundleDisplay | null {
   if (bundle === null || bundle === undefined) {
     return null;
@@ -11659,7 +11661,7 @@ export function buildDataPanelExportScenarioReviewBundleDisplay(
       `packet ${bundle.model_boundaries.packet_level_simulation ? "yes" : "no"}`,
       `external ${bundle.model_boundaries.external_simulators ? "yes" : "no"}`
     ],
-    workflowRows: buildDataPanelScenarioReviewWorkflowRows(bundle),
+    workflowRows: buildDataPanelScenarioReviewWorkflowRows(bundle, auditIndex),
     warningLabels: [
       ...bundle.scenario_review_warnings,
       ...bundle.diagnostics.finding_labels
@@ -11721,13 +11723,15 @@ export function buildDataPanelExportScenarioReviewBundleStatus(
 }
 
 function buildDataPanelScenarioReviewWorkflowRows(
-  bundle: RuntimeExportScenarioReviewBundleV1
+  bundle: RuntimeExportScenarioReviewBundleV1,
+  auditIndex: RuntimeExportPackageAuditIndexV1 | null | undefined = null
 ): readonly DataPanelExportScenarioReviewWorkflowRow[] {
   const exported = new Set(bundle.artifact_review.artifact_filenames);
   const orderedFilenames = [
     ...bundle.recommended_review_order,
     "route_detail_index_v1.json",
     "service_lifecycle_trace_v2.json",
+    SERVICE_TRACE_COMPARISON_REVIEW_REPORT_FILENAME,
     "user_service_request_summary_v2.json"
   ];
   const seen = new Set<string>();
@@ -11744,7 +11748,8 @@ function buildDataPanelScenarioReviewWorkflowRows(
       const available =
         exported.has(filename) ||
         filename === SCENARIO_REVIEW_BUNDLE_FILENAME ||
-        filename === bundle.audit_index.filename;
+        filename === bundle.audit_index.filename ||
+        scenarioReviewWorkflowAuditArtifactAvailable(filename, auditIndex);
       const href = available
         ? runtimeExportPackageFileHref(bundle.package_id, filename)
         : null;
@@ -11779,16 +11784,32 @@ function scenarioReviewWorkflowStepLabel(filename: string): string | null {
       return "7 route evidence";
     case "service_lifecycle_trace_v2.json":
       return "8 service trace";
+    case SERVICE_TRACE_COMPARISON_REVIEW_REPORT_FILENAME:
+      return "9 service trace review";
     case "user_service_request_summary_v2.json":
-      return "9 user services";
+      return "10 user services";
     case "events.jsonl":
-      return "10 event evidence";
+      return "11 event evidence";
     case "metrics.csv":
-      return "11 metrics";
+      return "12 metrics";
     case "summary.json":
-      return "12 summary";
+      return "13 summary";
     default:
       return null;
+  }
+}
+
+function scenarioReviewWorkflowAuditArtifactAvailable(
+  filename: string,
+  auditIndex: RuntimeExportPackageAuditIndexV1 | null | undefined
+): boolean {
+  switch (filename) {
+    case ROUTE_COMPARISON_REVIEW_REPORT_FILENAME:
+      return auditIndex?.route_comparison_review_report_present === true;
+    case SERVICE_TRACE_COMPARISON_REVIEW_REPORT_FILENAME:
+      return auditIndex?.service_trace_comparison_review_report_present === true;
+    default:
+      return false;
   }
 }
 
@@ -11977,6 +11998,10 @@ function scenarioReviewWorkflowEvidenceHash(
       return bundle.reproducibility.manifest_hash;
     case "config_snapshot.json":
       return bundle.user_configuration.config_hash;
+    case ROUTE_COMPARISON_REVIEW_REPORT_FILENAME:
+      return auditIndex?.route_comparison_review_report_hash ?? "";
+    case SERVICE_TRACE_COMPARISON_REVIEW_REPORT_FILENAME:
+      return auditIndex?.service_trace_comparison_review_report_hash ?? "";
     default:
       return "";
   }
