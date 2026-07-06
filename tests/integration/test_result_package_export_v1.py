@@ -40,10 +40,17 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert (package_dir / "metrics.csv").exists()
     assert (package_dir / "summary.json").exists()
     assert (package_dir / "manifest.json").exists()
+    assert (package_dir / "service_lifecycle_trace_v2.json").exists()
+    assert "service_lifecycle_trace_v2.json" in {
+        str(record["filename"]) for record in package["files"]
+    }
 
     manifest = json.loads((package_dir / "manifest.json").read_text(encoding="utf-8"))
     config_snapshot = json.loads(
         (package_dir / "config_snapshot.json").read_text(encoding="utf-8")
+    )
+    service_lifecycle_trace = json.loads(
+        (package_dir / "service_lifecycle_trace_v2.json").read_text(encoding="utf-8")
     )
 
     assert manifest["manifest_id"] == RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID
@@ -52,6 +59,10 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert config_snapshot["status"]["export_status_policy"] == (
         "STABLE_RUNTIME_STATUS_WITHOUT_STREAM_DIAGNOSTICS"
     )
+    assert service_lifecycle_trace["type"] == "SERVICE_LIFECYCLE_TRACE_EXPORT_V2"
+    assert service_lifecycle_trace["summary"] == config_snapshot["status"][
+        "service_lifecycle_trace_v2"
+    ]
 
 
 def _base_demo_config() -> DemoConfig:

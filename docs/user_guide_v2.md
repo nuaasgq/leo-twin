@@ -137,6 +137,7 @@ Each result package contains:
 - `metrics.csv`
 - `summary.json`
 - `manifest.json`
+- `service_lifecycle_trace_v2.json`
 
 Export catalog:
 

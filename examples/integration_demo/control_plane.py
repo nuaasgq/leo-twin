@@ -112,6 +112,7 @@ _FRONTEND_EVENT_TYPES = frozenset(
 )
 _RUNTIME_EXPORT_CATALOG_FILENAME = "runtime_export_catalog_v1.json"
 _RUNTIME_EXPORT_RESTORE_COMMAND = "RESTORE_EXPORT_PACKAGE"
+_SERVICE_LIFECYCLE_TRACE_EXPORT_FILENAME = "service_lifecycle_trace_v2.json"
 
 
 class RuntimeExportArtifactError(LookupError):
@@ -577,8 +578,16 @@ class DemoControlPlane:
         )
         manifest = dict(status["reproducibility_manifest_v1"])
         manifest_path.write_text(stable_json_pretty(manifest), encoding="utf-8")
+        service_lifecycle_trace_path = (
+            package_dir / _SERVICE_LIFECYCLE_TRACE_EXPORT_FILENAME
+        )
+        service_lifecycle_trace_path.write_text(
+            stable_json_pretty(_runtime_service_lifecycle_trace_export(status)),
+            encoding="utf-8",
+        )
         written_files["config_snapshot"] = config_snapshot_path
         written_files["manifest"] = manifest_path
+        written_files["service_lifecycle_trace_v2"] = service_lifecycle_trace_path
 
         files = tuple(
             _runtime_export_file_record(name, path)
@@ -1886,6 +1895,25 @@ def _runtime_export_status_snapshot(status: dict[str, Any]) -> dict[str, Any]:
         "stream_diagnostics_v1",
     )
     return snapshot
+
+
+def _runtime_service_lifecycle_trace_export(status: dict[str, Any]) -> dict[str, Any]:
+    trace = status.get("service_lifecycle_trace_v2")
+    if not isinstance(trace, dict):
+        trace = {
+            "version": "v2",
+            "source": "SERVICE_LATENCY_HISTORY",
+            "summary_scope": "SERVICE_LIFECYCLE_TRACE_WINDOW",
+            "service_count": 0,
+            "trace_count": 0,
+            "items": (),
+        }
+    return {
+        "type": "SERVICE_LIFECYCLE_TRACE_EXPORT_V2",
+        "source": "BACKEND_RUNTIME_STATUS",
+        "artifact_policy": "STANDALONE_RUNTIME_EXPORT_ARTIFACT",
+        "summary": trace,
+    }
 
 
 def _write_runtime_export_archive(package_dir: Path, archive_path: Path) -> None:

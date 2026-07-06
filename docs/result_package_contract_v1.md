@@ -55,6 +55,10 @@ Every v1 runtime export package must include:
 | `summary.json` | JSON | metrics summary and aggregate runtime counters |
 | `manifest.json` | JSON | runtime reproducibility manifest with stable hashes |
 
+Current runtime exports may also include additional deterministic artifacts.
+`service_lifecycle_trace_v2.json` is emitted as an optional observability file
+for offline communication-compute service lifecycle review.
+
 The manifest id must be:
 
 ```text

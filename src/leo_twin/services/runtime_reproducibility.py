@@ -38,6 +38,12 @@ _LIVE_STATUS_ARTIFACTS: tuple[dict[str, str], ...] = (
         "status": "AVAILABLE_FOR_BATCH_EXPORT",
         "source": "MetricsCollector.write_outputs",
     },
+    {
+        "name": "service_lifecycle_trace_v2.json",
+        "format": "json",
+        "status": "AVAILABLE_FOR_BATCH_EXPORT",
+        "source": "runtime_status.service_lifecycle_trace_v2",
+    },
 )
 
 _RUNTIME_STATE_KEYS = (
@@ -138,7 +144,10 @@ def build_runtime_reproducibility_manifest(
         "notes": [
             "Event Kernel ordering is unchanged.",
             "Live mode is reproducible through deterministic config and event outputs.",
-            "Batch exports use events.jsonl, metrics.csv, and summary.json.",
+            (
+                "Batch exports use events.jsonl, metrics.csv, summary.json, and "
+                "service_lifecycle_trace_v2.json."
+            ),
         ],
     }
     base_manifest["manifest_hash"] = stable_hash_payload(base_manifest)

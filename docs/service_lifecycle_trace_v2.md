@@ -21,6 +21,15 @@ model. The runtime status now includes:
 
 `service_lifecycle_trace_v2`
 
+Runtime result exports also write a standalone deterministic artifact:
+
+`service_lifecycle_trace_v2.json`
+
+The export artifact has type `SERVICE_LIFECYCLE_TRACE_EXPORT_V2` and carries the
+same backend-owned `service_lifecycle_trace_v2` summary that is present in the
+stable export status snapshot. This keeps the trace available for offline
+review without requiring consumers to parse `config_snapshot.json`.
+
 ## Lifecycle Stages
 
 Each trace row exposes these ordered stages:

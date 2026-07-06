@@ -228,6 +228,7 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
         "events.jsonl",
         "metrics.csv",
         "summary.json",
+        "service_lifecycle_trace_v2.json",
     }
     export_history = status["status"]["runtime_export_history_v1"]
     assert export_history["version"] == "v1"
@@ -789,6 +790,7 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
         "events.jsonl",
         "manifest.json",
         "metrics.csv",
+        "service_lifecycle_trace_v2.json",
         "summary.json",
     } <= set(files)
     for record in files.values():
@@ -803,12 +805,20 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
         (package_dir / "config_snapshot.json").read_text(encoding="utf-8")
     )
     summary = json.loads((package_dir / "summary.json").read_text(encoding="utf-8"))
+    service_lifecycle_trace = json.loads(
+        (package_dir / "service_lifecycle_trace_v2.json").read_text(encoding="utf-8")
+    )
 
     assert manifest == exported["manifest"]
     assert manifest["source"] == "BACKEND_RUNTIME_STATUS"
     assert config_snapshot["type"] == "RUNTIME_CONFIG_SNAPSHOT"
     assert config_snapshot["generated_config"]["seed"] == 1234
     assert config_snapshot["status"]["reproducibility_manifest_v1"] == manifest
+    assert service_lifecycle_trace["type"] == "SERVICE_LIFECYCLE_TRACE_EXPORT_V2"
+    assert service_lifecycle_trace["source"] == "BACKEND_RUNTIME_STATUS"
+    assert service_lifecycle_trace["summary"] == config_snapshot["status"][
+        "service_lifecycle_trace_v2"
+    ]
     assert summary["event_count"] >= 1
     assert (package_dir / "metrics.csv").read_text(encoding="utf-8").startswith(
         "sim_time,metric_name,entity_id,value,tags\n"
@@ -846,6 +856,7 @@ def test_demo_adapter_exports_deterministic_runtime_archive(tmp_path) -> None:
             "events.jsonl",
             "manifest.json",
             "metrics.csv",
+            "service_lifecycle_trace_v2.json",
             "summary.json",
         } <= set(names)
         for info in archive.infolist():
@@ -980,6 +991,11 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
         "events.jsonl",
         export_root,
     )
+    service_trace_artifact = control_plane.runtime_export_package_artifact(
+        package_id,
+        "service_lifecycle_trace_v2.json",
+        export_root,
+    )
     archive_artifact = control_plane.runtime_export_package_archive_artifact(
         package_id,
         export_root,
@@ -1002,6 +1018,16 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
     assert manifest["manifest_hash"] == exported["manifest"]["manifest_hash"]
     assert Path(str(events_artifact["path"])).name == "events.jsonl"
     assert events_artifact["content_type"] == "application/x-ndjson; charset=utf-8"
+    assert (
+        Path(str(service_trace_artifact["path"])).name
+        == "service_lifecycle_trace_v2.json"
+    )
+    assert service_trace_artifact["content_type"] == "application/json; charset=utf-8"
+    service_trace = json.loads(
+        Path(str(service_trace_artifact["path"])).read_text(encoding="utf-8")
+    )
+    assert service_trace["type"] == "SERVICE_LIFECYCLE_TRACE_EXPORT_V2"
+    assert service_trace["summary"]["version"] == "v2"
     assert Path(str(archive_artifact["path"])) == Path(str(exported["archive"]["path"]))
     assert archive_artifact["filename"].endswith(".zip")
     assert archive_artifact["sha256"] == exported["archive"]["sha256"]

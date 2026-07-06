@@ -75,4 +75,5 @@ def test_runtime_reproducibility_manifest_is_deterministic_and_excludes_wall_clo
         "events.jsonl",
         "metrics.csv",
         "summary.json",
+        "service_lifecycle_trace_v2.json",
     ]

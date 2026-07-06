@@ -12194,3 +12194,46 @@ change.
 - Recommended follow-up:
   - Bind `service_lifecycle_trace_v2` into the dashboard service detail drawer
     and result export package so users can inspect each request end to end.
+
+## 2026-07-06 - Service Lifecycle Trace Export v2
+
+- Branch: `feature/T256-service-trace-export-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: complete the result-export half of V2-013 by writing
+  `service_lifecycle_trace_v2.json` as a standalone deterministic runtime
+  export artifact. The file wraps the backend-owned
+  `service_lifecycle_trace_v2` status summary with
+  `SERVICE_LIFECYCLE_TRACE_EXPORT_V2`, is included in package file records,
+  persisted catalog records, archive ZIPs, and artifact-serving paths, and is
+  declared in the runtime reproducibility manifest artifact list. Event Kernel
+  behavior, network routing, compute scheduling, packet-level semantics, and
+  frontend rendering remain unchanged.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `src/leo_twin/services/runtime_reproducibility.py`
+  - `tests/unit/test_runtime_reproducibility.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/integration_demo.md`
+  - `docs/result_package_contract_v1.md`
+  - `docs/service_lifecycle_trace_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/user_guide_v2.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_runtime_reproducibility.py tests/integration/test_result_package_export_v1.py tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer tests/integration/test_runtime_session_control.py::test_demo_adapter_exports_runtime_result_package tests/integration/test_runtime_session_control.py::test_demo_adapter_exports_deterministic_runtime_archive tests/integration/test_runtime_session_control.py::test_demo_adapter_serves_persisted_runtime_export_artifacts -q`
+    - Result: passed, 7 tests.
+  - `python -m pytest tests/unit/test_service_lifecycle_trace_contract_v2.py tests/unit/test_runtime_observability.py tests/integration/test_compute_service_lifecycle.py -q`
+    - Result: passed, 8 tests.
+- Problems encountered:
+  - The trace was already present in the stable export status snapshot, so the
+    implementation intentionally kept result package v1 required files
+    unchanged and added the trace as an additional deterministic artifact.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The export artifact is not yet rendered as a dedicated dashboard service
+    trace drawer; it is available for offline review and API consumers.
+- Recommended follow-up:
+  - Bind `service_lifecycle_trace_v2` into the dashboard service detail drawer
+    and add export/download affordances from the dashboard.

@@ -135,7 +135,8 @@ http://127.0.0.1:8765/runtime/export/archive
 
 The live export writes a deterministic result package under
 `artifacts/runtime_exports`. Each package contains `manifest.json`,
-`config_snapshot.json`, `events.jsonl`, `metrics.csv`, and `summary.json`.
+`config_snapshot.json`, `events.jsonl`, `metrics.csv`, `summary.json`, and the
+additional `service_lifecycle_trace_v2.json` observability artifact.
 The archive endpoint returns the same package as a ZIP download with stable
 entry ordering and fixed ZIP metadata.
 

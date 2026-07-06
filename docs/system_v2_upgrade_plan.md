@@ -120,7 +120,9 @@ Tasks:
     is derived from `service_latency_history_v1` and reports input network,
     compute queue, compute execution, output network, and terminal state
     fields without changing Event Kernel, network routing, or compute
-    scheduling.
+    scheduling. T256 adds `service_lifecycle_trace_v2.json` as a standalone
+    runtime export artifact so offline result packages can inspect the same
+    backend-owned lifecycle trace without parsing `config_snapshot.json`.
 
 ### WS3. Network Semantics and KPI Trust v2
 
