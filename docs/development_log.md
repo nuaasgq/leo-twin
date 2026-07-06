@@ -6554,7 +6554,7 @@ change.
 ## 2026-07-05 - Traffic Lifecycle Summary v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`
-- Commit: pending commit note; final hash is reported after commit creation.
+- Commit: `9131ed4 feat(export): open package service trace details`
 - Scope: make traffic execution shape, compatibility constraints, and lifecycle
   notes backend-derived summary fields consumed by the frontend.
 - Changed files/modules:
@@ -16251,3 +16251,47 @@ change.
 - Recommended follow-up:
   - Add a service-trace package-vs-live comparison card and review-note
     artifact, mirroring the route comparison review workflow.
+
+## 2026-07-07 - Service Trace Live Comparison v1
+
+- Branch: `feature/T335-service-trace-live-comparison-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a dashboard package-vs-live comparison card for selected exported
+  service traces. The card compares package-owned
+  `RUNTIME_EXPORT_SERVICE_TRACE_ITEM_V1` fields with the optional live
+  `RuntimeServiceTraceDetailV2` exact detail for the same trace id, showing
+  matched/different lifecycle fields, latency components, terminal state,
+  reason, compute node, flow/route ids, and stage counts. Loading, error,
+  not-loaded, and trace-id mismatch states are reported explicitly instead of
+  silently hiding comparison gaps.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 1 test
+      file and 188 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path.
+- Problems encountered:
+  - The existing selected live trace detail was keyed by the live trace table
+    selected row, but package review traces can be outside the current live
+    table window. The comparison now matches live exact detail directly by
+    package trace id.
+  - The first TypeScript run exposed a missing import for
+    `RuntimeServiceLifecycleTraceItemV2`; the import was added and TypeScript
+    then passed.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - This task renders a comparison card only. It does not yet persist
+    service-trace comparison review notes or hashes back into the result
+    package.
+  - The comparison depends on the current runtime exposing an exact live trace
+    with the same trace id; package evidence remains available even when live
+    comparison is unavailable.
+- Recommended follow-up:
+  - Add a backend-served service-trace comparison review artifact, mirroring
+    the existing route comparison review report save workflow.

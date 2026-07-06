@@ -70,6 +70,7 @@ import {
   RuntimeSatelliteKpiSlicesV1,
   RuntimeServiceDetailItemV1,
   RuntimeServiceDetailPageV1,
+  RuntimeServiceLifecycleTraceItemV2,
   RuntimeServiceLatencyHistoryV1,
   RuntimeServiceLifecycleTraceV2,
   RuntimeServiceTraceDetailV2,
@@ -1213,6 +1214,10 @@ export const DataPanel = memo(function DataPanel({
     runtimeSelectedNodeDetailRequests?.serviceTrace,
     selectedServiceTraceRow?.traceId ?? null
   );
+  const exportServiceTraceDetailRequestStatus = selectExactDetailRequestStatus(
+    runtimeSelectedNodeDetailRequests?.serviceTrace,
+    runtimeExportServiceTraceItemTraceId ?? null
+  );
   const computeNodeDetailRequestStatus = selectExactDetailRequestStatus(
     runtimeSelectedNodeDetailRequests?.computeNode,
     selectedComputeNodeDetailId
@@ -1271,6 +1276,28 @@ export const DataPanel = memo(function DataPanel({
         error: runtimeExportRouteComparisonReviewSaveError,
         reportHash: runtimeExportRouteComparisonReviewSaveReportHash
       }
+    );
+  const selectedExportServiceTraceBackendDetail =
+    runtimeExportServiceTraceItem !== null &&
+    runtimeExportServiceTraceItem !== undefined &&
+    serviceTraceDetailMatchesTraceId(
+      runtimeSelectedNodeDetails?.serviceTrace,
+      runtimeExportServiceTraceItem.trace_id || runtimeExportServiceTraceItem.trace.trace_id
+    )
+      ? runtimeSelectedNodeDetails?.serviceTrace ?? null
+      : null;
+  const exportServiceTraceLiveComparison =
+    buildDataPanelExportServiceTraceLiveComparisonDisplay(
+      runtimeExportServiceTraceItem,
+      selectedExportServiceTraceBackendDetail
+    );
+  const exportServiceTraceLiveComparisonStatus =
+    buildDataPanelExportServiceTraceLiveComparisonStatus(
+      exportServiceTraceLiveComparison,
+      runtimeExportServiceTraceItem,
+      exportServiceTraceItemStatus,
+      selectedExportServiceTraceBackendDetail,
+      exportServiceTraceDetailRequestStatus
     );
   const exportRouteComparisonReviewArtifactDisplay =
     buildDataPanelExportRouteComparisonReviewArtifactDisplay(
@@ -2061,6 +2088,60 @@ export const DataPanel = memo(function DataPanel({
                       ))}
                     </dl>
                   ) : null}
+                </div>
+              ) : null}
+              {exportServiceTraceLiveComparison ? (
+                <div
+                  className={`data-panel-export-route-compare-card ${exportServiceTraceLiveComparison.tone}`}
+                >
+                  <div className="data-panel-export-diagnostics-header">
+                    <div>
+                      <span>Package vs live service trace</span>
+                      <strong>
+                        {exportServiceTraceLiveComparison.statusLabel}
+                      </strong>
+                      <small>
+                        {exportServiceTraceLiveComparison.summaryLabel}
+                      </small>
+                    </div>
+                  </div>
+                  <div className="data-panel-export-route-compare-rows">
+                    {exportServiceTraceLiveComparison.rows.map((row) => (
+                      <div
+                        className={row.matches ? "match" : "different"}
+                        key={row.field}
+                      >
+                        <span>{row.field}</span>
+                        <strong>{row.statusLabel}</strong>
+                        <small title={row.packageValue}>
+                          package: {row.packageValue}
+                        </small>
+                        <small title={row.liveValue}>live: {row.liveValue}</small>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              {exportServiceTraceLiveComparisonStatus ? (
+                <div
+                  className={`data-panel-export-route-compare-card ${exportServiceTraceLiveComparisonStatus.tone}`}
+                >
+                  <div className="data-panel-export-diagnostics-header">
+                    <div>
+                      <span>Package vs live service trace</span>
+                      <strong>
+                        {exportServiceTraceLiveComparisonStatus.statusLabel}
+                      </strong>
+                      <small>
+                        {exportServiceTraceLiveComparisonStatus.summaryLabel}
+                      </small>
+                    </div>
+                  </div>
+                  <div className="data-panel-export-route-compare-note">
+                    {exportServiceTraceLiveComparisonStatus.notes.map((note) => (
+                      <span key={note}>{note}</span>
+                    ))}
+                  </div>
                 </div>
               ) : null}
             </div>
@@ -7687,6 +7768,32 @@ export function serviceTraceDetailMatchesRow(
   return rowIds.some((id) => detailIds.has(id));
 }
 
+export function serviceTraceDetailMatchesTraceId(
+  detail: RuntimeServiceTraceDetailV2 | null | undefined,
+  traceId: string | null | undefined
+): boolean {
+  if (detail === null || detail === undefined) {
+    return false;
+  }
+  const normalizedTraceId = traceId?.trim() ?? "";
+  if (normalizedTraceId.length === 0) {
+    return false;
+  }
+  const trace = detail.trace;
+  const correlation = detail.correlation;
+  return uniqueStrings([
+    trace.trace_id,
+    trace.service_id,
+    trace.task_id,
+    trace.input_flow_id ?? "",
+    trace.output_flow_id ?? "",
+    correlation.trace_id,
+    correlation.service_id,
+    correlation.task_id,
+    ...correlation.flow_ids
+  ]).includes(normalizedTraceId);
+}
+
 function routeMatchesServiceTrace(
   route: DataPanelRouteExplanationRow,
   trace: DataPanelServiceLifecycleTraceRow
@@ -12384,6 +12491,29 @@ export interface DataPanelExportRouteLiveComparisonStatus {
   notes: readonly string[];
 }
 
+export interface DataPanelExportServiceTraceLiveComparisonDisplay {
+  traceId: string;
+  tone: "match" | "different";
+  statusLabel: string;
+  summaryLabel: string;
+  rows: readonly DataPanelExportServiceTraceLiveComparisonRow[];
+}
+
+export interface DataPanelExportServiceTraceLiveComparisonRow {
+  field: string;
+  packageValue: string;
+  liveValue: string;
+  matches: boolean;
+  statusLabel: string;
+}
+
+export interface DataPanelExportServiceTraceLiveComparisonStatus {
+  tone: "pending" | "error" | "different";
+  statusLabel: string;
+  summaryLabel: string;
+  notes: readonly string[];
+}
+
 export interface DataPanelExportRouteComparisonReviewSaveRequest {
   packageId: string;
   record: Partial<RuntimeExportRouteComparisonReviewReportRecordV1>;
@@ -13679,6 +13809,149 @@ export function buildDataPanelExportRouteLiveComparisonStatus(
   return null;
 }
 
+export function buildDataPanelExportServiceTraceLiveComparisonDisplay(
+  packageItem: RuntimeExportServiceTraceItemV1 | null | undefined,
+  liveDetail: RuntimeServiceTraceDetailV2 | null | undefined
+): DataPanelExportServiceTraceLiveComparisonDisplay | null {
+  if (
+    packageItem === null ||
+    packageItem === undefined ||
+    liveDetail === null ||
+    liveDetail === undefined
+  ) {
+    return null;
+  }
+  const packageTrace = packageItem.trace;
+  const liveTrace = liveDetail.trace;
+  const packageTraceId = packageItem.trace_id || packageTrace.trace_id;
+  if (packageTraceId !== liveTrace.trace_id) {
+    return null;
+  }
+  const rows = [
+    serviceTraceComparisonRow("trace", packageTraceId, liveTrace.trace_id),
+    serviceTraceComparisonRow("service", packageTrace.service_id, liveTrace.service_id),
+    serviceTraceComparisonRow("task", packageTrace.task_id, liveTrace.task_id),
+    serviceTraceComparisonRow("class", packageTrace.service_class, liveTrace.service_class),
+    serviceTraceComparisonRow("terminal", packageTrace.terminal_state, liveTrace.terminal_state),
+    serviceTraceComparisonRow("reason", packageTrace.terminal_state_reason, liveTrace.terminal_state_reason),
+    serviceTraceComparisonRow("compute node", packageTrace.compute_node_id || "-", liveTrace.compute_node_id || "-"),
+    serviceTraceComparisonRow("input flow", packageTrace.input_flow_id || "-", liveTrace.input_flow_id || "-"),
+    serviceTraceComparisonRow("input route", packageTrace.input_route_id || "-", liveTrace.input_route_id || "-"),
+    serviceTraceComparisonRow("output flow", packageTrace.output_flow_id || "-", liveTrace.output_flow_id || "-"),
+    serviceTraceComparisonRow("output route", packageTrace.output_route_id || "-", liveTrace.output_route_id || "-"),
+    serviceTraceComparisonRow("input latency", formatMetricMilliseconds(packageTrace.input_network_latency_s), formatMetricMilliseconds(liveTrace.input_network_latency_s)),
+    serviceTraceComparisonRow("queue delay", formatMetricMilliseconds(packageTrace.compute_queue_delay_s), formatMetricMilliseconds(liveTrace.compute_queue_delay_s)),
+    serviceTraceComparisonRow("execution delay", formatMetricMilliseconds(packageTrace.compute_execution_delay_s), formatMetricMilliseconds(liveTrace.compute_execution_delay_s)),
+    serviceTraceComparisonRow("output latency", formatMetricMilliseconds(packageTrace.output_network_latency_s), formatMetricMilliseconds(liveTrace.output_network_latency_s)),
+    serviceTraceComparisonRow("total latency", formatMetricMilliseconds(packageTrace.total_latency_s), formatMetricMilliseconds(liveTrace.total_latency_s)),
+    serviceTraceComparisonRow("stage counts", serviceTraceStageCountLabel(packageTrace), serviceTraceStageCountLabel(liveTrace))
+  ];
+  const differentCount = rows.filter((row) => !row.matches).length;
+  return {
+    traceId: packageTraceId,
+    tone: differentCount === 0 ? "match" : "different",
+    statusLabel:
+      differentCount === 0
+        ? "package and live service trace match"
+        : "package and live service trace differ",
+    summaryLabel: `${packageTraceId} / matched ${formatCount(
+      rows.length - differentCount
+    )}/${formatCount(rows.length)} / differences ${formatCount(differentCount)}`,
+    rows
+  };
+}
+
+export function buildDataPanelExportServiceTraceLiveComparisonStatus(
+  comparison:
+    | DataPanelExportServiceTraceLiveComparisonDisplay
+    | null
+    | undefined,
+  packageItem: RuntimeExportServiceTraceItemV1 | null | undefined,
+  packageStatus: DataPanelExportServiceTraceItemStatus | null | undefined,
+  liveDetail: RuntimeServiceTraceDetailV2 | null | undefined,
+  liveStatus: RuntimeExactDetailRequestState | null | undefined
+): DataPanelExportServiceTraceLiveComparisonStatus | null {
+  if (comparison !== null && comparison !== undefined) {
+    return null;
+  }
+  const packageTraceId =
+    packageItem?.trace_id ??
+    packageItem?.trace.trace_id ??
+    packageStatus?.traceId ??
+    null;
+  const liveTraceId = liveDetail?.trace.trace_id ?? liveStatus?.entityId ?? null;
+  if (packageStatus?.tone === "pending") {
+    return serviceTraceComparisonStatus(
+      "pending",
+      "waiting for package service trace",
+      packageTraceId,
+      liveTraceId,
+      ["Package service trace detail is still loading."]
+    );
+  }
+  if (packageStatus?.tone === "error") {
+    return serviceTraceComparisonStatus(
+      "error",
+      "package service trace unavailable",
+      packageTraceId,
+      liveTraceId,
+      [packageStatus.fields[0]?.value ?? "Package service trace request failed."]
+    );
+  }
+  if (liveStatus?.loading === true) {
+    return serviceTraceComparisonStatus(
+      "pending",
+      "waiting for live service trace",
+      packageTraceId,
+      liveTraceId,
+      ["Live runtime service trace detail is still loading."]
+    );
+  }
+  if (liveStatus?.error) {
+    return serviceTraceComparisonStatus(
+      "error",
+      "live service trace unavailable",
+      packageTraceId,
+      liveTraceId,
+      [liveStatus.error]
+    );
+  }
+  if (packageItem !== null && packageItem !== undefined && liveDetail === null) {
+    return serviceTraceComparisonStatus(
+      "pending",
+      "live service trace not loaded",
+      packageTraceId,
+      liveTraceId,
+      ["Select the package trace row or use live trace detail to load the current runtime trace."]
+    );
+  }
+  if (liveDetail !== null && liveDetail !== undefined && packageItem === null) {
+    return serviceTraceComparisonStatus(
+      "pending",
+      "package service trace not loaded",
+      packageTraceId,
+      liveTraceId,
+      ["Select a package service trace row to load the exported artifact detail."]
+    );
+  }
+  if (
+    packageItem !== null &&
+    packageItem !== undefined &&
+    liveDetail !== null &&
+    liveDetail !== undefined &&
+    (packageItem.trace_id || packageItem.trace.trace_id) !== liveDetail.trace.trace_id
+  ) {
+    return serviceTraceComparisonStatus(
+      "different",
+      "service trace id mismatch",
+      packageTraceId,
+      liveTraceId,
+      ["Package and live details refer to different service trace ids."]
+    );
+  }
+  return null;
+}
+
 export function buildDataPanelExportRouteComparisonReviewRecord(
   packageItem: RuntimeExportRouteDetailItemV1 | null | undefined,
   liveDetail: RuntimeRouteExplanationItemV1 | null | undefined,
@@ -13817,6 +14090,44 @@ function routeComparisonRow(
     matches,
     statusLabel: matches ? "match" : "different"
   };
+}
+
+function serviceTraceComparisonStatus(
+  tone: DataPanelExportServiceTraceLiveComparisonStatus["tone"],
+  statusLabel: string,
+  packageTraceId: string | null,
+  liveTraceId: string | null,
+  notes: readonly string[]
+): DataPanelExportServiceTraceLiveComparisonStatus {
+  return {
+    tone,
+    statusLabel,
+    summaryLabel: `package ${packageTraceId ?? "-"} / live ${liveTraceId ?? "-"}`,
+    notes
+  };
+}
+
+function serviceTraceComparisonRow(
+  field: string,
+  packageValue: string,
+  liveValue: string
+): DataPanelExportServiceTraceLiveComparisonRow {
+  const matches = packageValue === liveValue;
+  return {
+    field,
+    packageValue,
+    liveValue,
+    matches,
+    statusLabel: matches ? "match" : "different"
+  };
+}
+
+function serviceTraceStageCountLabel(
+  trace: RuntimeServiceLifecycleTraceItemV2
+): string {
+  return `${formatCount(trace.observed_stage_count)} observed / ${formatCount(
+    trace.pending_stage_count
+  )} pending / ${formatCount(trace.stage_count)} total`;
 }
 
 function routePathComparisonLabel(

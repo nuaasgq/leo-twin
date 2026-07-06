@@ -35,6 +35,8 @@ import {
   buildDataPanelExportRouteDetailItemStatus,
   buildDataPanelExportServiceTraceItemDisplay,
   buildDataPanelExportServiceTraceItemStatus,
+  buildDataPanelExportServiceTraceLiveComparisonDisplay,
+  buildDataPanelExportServiceTraceLiveComparisonStatus,
   buildDataPanelExportPackageAuditIndexArtifactDisplay,
   buildDataPanelExportPackageHandoffReportArtifactDisplay,
   buildDataPanelExportPackageAuditIndexDisplay,
@@ -5217,6 +5219,275 @@ describe("buildDataPanelExportCompareDisplay", () => {
         null
       )
     ).toBeNull();
+  });
+
+  it("compares package service trace items with live runtime trace details", () => {
+    const packageItem = {
+      type: "RUNTIME_EXPORT_SERVICE_TRACE_ITEM_V1",
+      version: "v1",
+      item_id: "leo_twin.runtime_export_service_trace_item.v1",
+      source: "BACKEND_RUNTIME_EXPORT_PACKAGE",
+      package_id: "pkg-review",
+      artifact_type: "SERVICE_LIFECYCLE_TRACE_EXPORT_V2",
+      artifact_source: "BACKEND_RUNTIME_STATUS",
+      artifact_policy: "STANDALONE_RUNTIME_EXPORT_ARTIFACT",
+      artifact_window_only: true,
+      trace_contract_id: "leo_twin.service_lifecycle_trace_contract.v2",
+      trace_model: "COMMUNICATION_COMPUTE_COMPONENT_PROXY",
+      source_summary: "service_latency_history_v1",
+      summary_scope: "SERVICE_LIFECYCLE_TRACE_ITEM",
+      trace_id: "trace:run",
+      trace: {
+        trace_id: "trace:run",
+        service_id: "svc-run",
+        task_id: "task-run",
+        service_class: "COMPUTE_SERVICE",
+        input_flow_id: "flow-in",
+        output_flow_id: "flow-out",
+        input_route_id: "route-in",
+        output_route_id: "route-out",
+        compute_node_id: "sat-00003",
+        input_network_latency_s: 0.12,
+        compute_queue_delay_s: 0.02,
+        compute_execution_delay_s: 0.4,
+        output_network_latency_s: 0.08,
+        total_latency_s: 0.62,
+        terminal_state: "RUNNING",
+        terminal_state_reason: "OUTPUT_NETWORK_PENDING",
+        stage_count: 4,
+        observed_stage_count: 3,
+        pending_stage_count: 1,
+        stages: []
+      },
+      boundary_conditions: [
+        "ARTIFACT_WINDOW_ONLY",
+        "NO_EVENT_REPLAY",
+        "NO_SERVICE_RECOMPUTE",
+        "NO_PACKAGE_MUTATION"
+      ],
+      item_hash:
+        "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd"
+    };
+    const liveDetail = {
+      version: "v2",
+      source: "BACKEND_RUNTIME_DETAIL",
+      summary_scope: "SERVICE_TRACE_EXACT_DETAIL",
+      trace: packageItem.trace,
+      correlation: {
+        trace_id: "trace:run",
+        service_id: "svc-run",
+        task_id: "task-run",
+        flow_ids: ["flow-in", "flow-out"],
+        route_ids: ["route-in", "route-out"],
+        user_ids: ["user-0"],
+        satellite_ids: ["sat-00003"],
+        compute_node_id: "sat-00003",
+        route_count: 2,
+        user_count: 1,
+        satellite_count: 1,
+        compute_node_detail_available: true
+      },
+      routes: [],
+      users: [],
+      satellites: [],
+      compute_node: null
+    };
+
+    expect(
+      buildDataPanelExportServiceTraceLiveComparisonDisplay(
+        packageItem,
+        liveDetail
+      )
+    ).toMatchObject({
+      traceId: "trace:run",
+      tone: "match",
+      statusLabel: "package and live service trace match",
+      summaryLabel: "trace:run / matched 17/17 / differences 0"
+    });
+
+    const changedDisplay = buildDataPanelExportServiceTraceLiveComparisonDisplay(
+      packageItem,
+      {
+        ...liveDetail,
+        trace: {
+          ...liveDetail.trace,
+          terminal_state: "COMPLETE",
+          terminal_state_reason: "TOTAL_LATENCY_OBSERVED",
+          total_latency_s: 0.74,
+          pending_stage_count: 0,
+          observed_stage_count: 4
+        }
+      }
+    );
+    expect(changedDisplay).toMatchObject({
+      traceId: "trace:run",
+      tone: "different",
+      statusLabel: "package and live service trace differ",
+      summaryLabel: "trace:run / matched 13/17 / differences 4"
+    });
+    expect(changedDisplay?.rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: "terminal",
+          packageValue: "RUNNING",
+          liveValue: "COMPLETE",
+          matches: false
+        }),
+        expect.objectContaining({
+          field: "reason",
+          packageValue: "OUTPUT_NETWORK_PENDING",
+          liveValue: "TOTAL_LATENCY_OBSERVED",
+          matches: false
+        }),
+        expect.objectContaining({
+          field: "total latency",
+          packageValue: "620 ms",
+          liveValue: "740 ms",
+          matches: false
+        }),
+        expect.objectContaining({
+          field: "stage counts",
+          packageValue: "3 observed / 1 pending / 4 total",
+          liveValue: "4 observed / 0 pending / 4 total",
+          matches: false
+        })
+      ])
+    );
+    expect(
+      buildDataPanelExportServiceTraceLiveComparisonDisplay(packageItem, {
+        ...liveDetail,
+        trace: { ...liveDetail.trace, trace_id: "trace:other" }
+      })
+    ).toBeNull();
+  });
+
+  it("explains package-live service trace comparison request status", () => {
+    const packageItem = {
+      type: "RUNTIME_EXPORT_SERVICE_TRACE_ITEM_V1",
+      version: "v1",
+      item_id: "leo_twin.runtime_export_service_trace_item.v1",
+      source: "BACKEND_RUNTIME_EXPORT_PACKAGE",
+      package_id: "pkg-review",
+      artifact_type: "SERVICE_LIFECYCLE_TRACE_EXPORT_V2",
+      artifact_source: "BACKEND_RUNTIME_STATUS",
+      artifact_policy: "STANDALONE_RUNTIME_EXPORT_ARTIFACT",
+      artifact_window_only: true,
+      trace_contract_id: "leo_twin.service_lifecycle_trace_contract.v2",
+      trace_model: "COMMUNICATION_COMPUTE_COMPONENT_PROXY",
+      source_summary: "service_latency_history_v1",
+      summary_scope: "SERVICE_LIFECYCLE_TRACE_ITEM",
+      trace_id: "trace:run",
+      trace: {
+        trace_id: "trace:run",
+        service_id: "svc-run",
+        task_id: "task-run",
+        service_class: "COMPUTE_SERVICE",
+        input_flow_id: "flow-in",
+        output_flow_id: "flow-out",
+        input_route_id: "route-in",
+        output_route_id: "route-out",
+        compute_node_id: "sat-00003",
+        input_network_latency_s: 0.12,
+        compute_queue_delay_s: 0.02,
+        compute_execution_delay_s: 0.4,
+        output_network_latency_s: 0.08,
+        total_latency_s: 0.62,
+        terminal_state: "RUNNING",
+        terminal_state_reason: "OUTPUT_NETWORK_PENDING",
+        stage_count: 4,
+        observed_stage_count: 3,
+        pending_stage_count: 1,
+        stages: []
+      },
+      boundary_conditions: ["ARTIFACT_WINDOW_ONLY"],
+      item_hash: "sha256:item"
+    };
+    const liveDetail = {
+      version: "v2",
+      source: "BACKEND_RUNTIME_DETAIL",
+      summary_scope: "SERVICE_TRACE_EXACT_DETAIL",
+      trace: packageItem.trace,
+      correlation: {
+        trace_id: "trace:run",
+        service_id: "svc-run",
+        task_id: "task-run",
+        flow_ids: ["flow-in", "flow-out"],
+        route_ids: ["route-in", "route-out"],
+        user_ids: [],
+        satellite_ids: ["sat-00003"],
+        compute_node_id: "sat-00003",
+        route_count: 2,
+        user_count: 0,
+        satellite_count: 1,
+        compute_node_detail_available: true
+      },
+      routes: [],
+      users: [],
+      satellites: [],
+      compute_node: null
+    };
+    const comparison = buildDataPanelExportServiceTraceLiveComparisonDisplay(
+      packageItem,
+      liveDetail
+    );
+
+    expect(
+      buildDataPanelExportServiceTraceLiveComparisonStatus(
+        comparison,
+        packageItem,
+        null,
+        liveDetail,
+        { entityId: "trace:run", loading: false, error: null }
+      )
+    ).toBeNull();
+    expect(
+      buildDataPanelExportServiceTraceLiveComparisonStatus(
+        null,
+        null,
+        {
+          packageId: "pkg-review",
+          traceId: "trace:run",
+          tone: "pending",
+          statusLabel: "loading package service trace",
+          summaryLabel: "pkg-review / trace:run",
+          fields: [],
+          detailHref: null
+        },
+        null,
+        { entityId: "trace:run", loading: true, error: null }
+      )
+    ).toMatchObject({
+      tone: "pending",
+      statusLabel: "waiting for package service trace",
+      summaryLabel: "package trace:run / live trace:run"
+    });
+    expect(
+      buildDataPanelExportServiceTraceLiveComparisonStatus(
+        null,
+        packageItem,
+        null,
+        null,
+        { entityId: "trace:run", loading: false, error: "HTTP 404" }
+      )
+    ).toMatchObject({
+      tone: "error",
+      statusLabel: "live service trace unavailable",
+      summaryLabel: "package trace:run / live trace:run",
+      notes: ["HTTP 404"]
+    });
+    expect(
+      buildDataPanelExportServiceTraceLiveComparisonStatus(
+        null,
+        packageItem,
+        null,
+        { ...liveDetail, trace: { ...liveDetail.trace, trace_id: "trace:other" } },
+        { entityId: "trace:other", loading: false, error: null }
+      )
+    ).toMatchObject({
+      tone: "different",
+      statusLabel: "service trace id mismatch",
+      summaryLabel: "package trace:run / live trace:other"
+    });
   });
 
   it("compares package route details with live runtime route details", () => {
