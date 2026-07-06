@@ -15,6 +15,7 @@ from examples.integration_demo.control_plane import (
 )
 from examples.integration_demo.runtime import run_integration_demo
 from examples.integration_demo.server import (
+    _comparison_review_report_filter_query,
     _detail_filter_query,
     _detail_query,
     _runtime_detail_entity_route,
@@ -1726,6 +1727,15 @@ def test_demo_server_stream_query_parses_cursor_options() -> None:
         "stage_kind": "ALL",
         "terminal_reason": "ALL",
     }
+    assert _comparison_review_report_filter_query(
+        {
+            "query": [" operator note "],
+            "status": [" different "],
+        }
+    ) == {
+        "query": "operator note",
+        "status": "different",
+    }
     assert _runtime_detail_entity_route(
         "/runtime/details/service-traces/trace%3Asvc-00-compute_service-00000",
         "/runtime/details/service-traces",
@@ -1780,6 +1790,9 @@ def test_demo_server_stream_query_parses_cursor_options() -> None:
     assert _runtime_export_package_route(
         "/runtime/export/packages/pkg%201/service-trace-comparison-review-report"
     ) == ("pkg 1", "service-trace-comparison-review-report", None)
+    assert _runtime_export_package_route(
+        "/runtime/export/packages/pkg%201/service-trace-comparison-review-report/records"
+    ) == ("pkg 1", "service-trace-comparison-review-report-records", None)
     assert _runtime_export_package_route(
         "/runtime/export/packages/pkg%201/scenario-review-checklist"
     ) == ("pkg 1", "scenario-review-checklist", None)

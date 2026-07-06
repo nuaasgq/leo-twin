@@ -16358,7 +16358,7 @@ change.
 ## 2026-07-07 - Service Trace Detail Hash v1
 
 - Branch: `feature/T337-service-trace-detail-hash-v1`
-- Commit: pending commit note; final hash is reported after commit creation.
+- Commit: `9361732 feat(observability): hash service trace details`
 - Scope: add a backend-generated stable `detail_hash` to live
   `RuntimeServiceTraceDetailV2` exact detail and use that field when the
   dashboard saves package-vs-live service trace comparison review records. This
@@ -16410,3 +16410,59 @@ change.
   - Add backend-side paginated saved service trace comparison report review so
     large operator reports can be inspected without loading the whole JSON
     artifact into the dashboard.
+
+## 2026-07-07 - Service Trace Review Report Page v1
+
+- Branch: `feature/T338-service-trace-review-page-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add backend cursor paging for saved
+  `service_trace_comparison_review_report_v1.json` records and bind the
+  dashboard service trace review report card to that backend page. The existing
+  full JSON artifact read path and POST save path remain compatible. The new
+  read path filters only saved report fields and does not replay events,
+  recompute services, mutate packages on read, or change Event Kernel behavior.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/app/api.ts`
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m compileall -q src\leo_twin\services\result_package_contract.py examples\integration_demo\control_plane.py examples\integration_demo\server.py`
+    - Result: passed.
+  - `python -m pytest tests\unit\test_result_package_contract_v1.py::test_runtime_export_service_trace_comparison_review_report_page_v1_filters_records tests\integration\test_result_package_export_v1.py::test_runtime_export_package_satisfies_result_package_contract_v1 tests\integration\test_runtime_session_control.py::test_demo_server_stream_query_parses_cursor_options -q`
+    - Result: passed, 3 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path.
+  - `pnpm --dir frontend test api.test.ts dataPanel.test.ts appSurface.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 3 test
+      files and 274 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path; Vite
+      reported the existing large `DataPanel` chunk warning.
+- Problems encountered:
+  - The previous service trace report drawer only summarized the saved report.
+    This task adds row browsing without changing the existing full artifact
+    JSON link, so package review remains backwards compatible.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - Saved service trace comparison report differences are still produced from
+    selected dashboard evidence on save; the server does not compute
+    package/live field differences.
+  - The package audit index still treats service trace review reports as
+    cataloged artifact evidence, not as a dedicated handoff gate field.
+- Recommended follow-up:
+  - Add service trace comparison review report evidence to audit/completion
+    readiness fields once the operator workflow requires it as a mandatory
+    handoff condition.

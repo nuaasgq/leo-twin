@@ -19,7 +19,7 @@ import {
   RuntimeExportScenarioReviewBundleV1,
   RuntimeExportScenarioReviewChecklistV1,
   RuntimeExportRouteComparisonReviewReportV1,
-  RuntimeExportServiceTraceComparisonReviewReportV1,
+  RuntimeExportServiceTraceComparisonReviewReportPageV1,
   RuntimeExportRouteDetailItemV1,
   RuntimeExportRouteDetailPageV1,
   RuntimeExportServiceTraceItemV1,
@@ -62,7 +62,7 @@ import {
   loadRuntimeExportScenarioReviewBundle,
   loadRuntimeExportScenarioReviewChecklist,
   loadRuntimeExportRouteComparisonReviewReport,
-  loadRuntimeExportServiceTraceComparisonReviewReport,
+  loadRuntimeExportServiceTraceComparisonReviewReportPage,
   loadRuntimeExportRouteDetailItem,
   loadRuntimeExportRouteDetailPage,
   loadRuntimeExportReviewSummary,
@@ -98,6 +98,7 @@ import {
 import type {
   DataPanelExportRouteComparisonReviewSaveRequest,
   DataPanelExportServiceTraceComparisonReviewSaveRequest,
+  DataPanelExportServiceTraceComparisonReviewReportPageRequest,
   DataPanelExportScenarioReviewChecklistSaveRequest,
   DataPanelExportRouteDetailPageRequest,
   DataPanelExportUserServiceRequestPageRequest,
@@ -327,7 +328,7 @@ export function App() {
   const [
     runtimeExportServiceTraceComparisonReviewReport,
     setRuntimeExportServiceTraceComparisonReviewReport
-  ] = useState<RuntimeExportServiceTraceComparisonReviewReportV1 | null>(null);
+  ] = useState<RuntimeExportServiceTraceComparisonReviewReportPageV1 | null>(null);
   const [runtimeExportPackageAuditIndex, setRuntimeExportPackageAuditIndex] =
     useState<RuntimeExportPackageAuditIndexV1 | null>(null);
   const [
@@ -1351,7 +1352,7 @@ export function App() {
           ? loadRuntimeExportRouteComparisonReviewReport(packageId)
           : Promise.resolve(null),
         shouldLoadServiceTraceReviewReport
-          ? loadRuntimeExportServiceTraceComparisonReviewReport(packageId)
+          ? loadRuntimeExportServiceTraceComparisonReviewReportPage(packageId, 0, 5)
           : Promise.resolve(null),
         shouldLoadAuditIndex
           ? loadRuntimeExportPackageAuditIndex(packageId)
@@ -1541,6 +1542,40 @@ export function App() {
         );
       } finally {
         setRuntimeExportServiceLifecycleTraceLoading(false);
+      }
+    },
+    [runtimeExportComparePackageId]
+  );
+
+  const refreshRuntimeExportServiceTraceComparisonReviewReportPage = useCallback(
+    async (
+      request: DataPanelExportServiceTraceComparisonReviewReportPageRequest
+    ) => {
+      const packageId = runtimeExportComparePackageId;
+      if (packageId === null) {
+        return;
+      }
+      const cursor = Math.max(0, request.cursor);
+      const limit = request.limit ?? 5;
+      const filters = request.filters ?? {};
+      setRuntimeExportServiceTraceComparisonReviewReportLoading(true);
+      setRuntimeExportServiceTraceComparisonReviewReportError(null);
+      try {
+        setRuntimeExportServiceTraceComparisonReviewReport(
+          await loadRuntimeExportServiceTraceComparisonReviewReportPage(
+            packageId,
+            cursor,
+            limit,
+            filters
+          )
+        );
+      } catch (error) {
+        setRuntimeExportServiceTraceComparisonReviewReport(null);
+        setRuntimeExportServiceTraceComparisonReviewReportError(
+          runtimeExportServiceTraceComparisonReviewReportErrorMessage(error)
+        );
+      } finally {
+        setRuntimeExportServiceTraceComparisonReviewReportLoading(false);
       }
     },
     [runtimeExportComparePackageId]
@@ -1880,7 +1915,12 @@ export function App() {
             runtimeExportPackageAuditIndexErrorMessage(auditIndex.reason)
           );
         }
-        setRuntimeExportServiceTraceComparisonReviewReport(report);
+        const page = await loadRuntimeExportServiceTraceComparisonReviewReportPage(
+          request.packageId,
+          0,
+          5
+        );
+        setRuntimeExportServiceTraceComparisonReviewReport(page);
         setRuntimeExportServiceTraceComparisonReviewSaveReportHash(
           report.report_hash
         );
@@ -2768,6 +2808,9 @@ export function App() {
               }
               onRuntimeExportServiceTracePageQueryChange={
                 refreshRuntimeExportServiceTracePage
+              }
+              onRuntimeExportServiceTraceComparisonReviewReportPageQueryChange={
+                refreshRuntimeExportServiceTraceComparisonReviewReportPage
               }
               onRuntimeExportUserServiceRequestPageQueryChange={
                 refreshRuntimeExportUserServiceRequestPage

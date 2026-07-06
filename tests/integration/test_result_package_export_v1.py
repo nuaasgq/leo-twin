@@ -533,6 +533,29 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert service_trace_report_response["audit_index"]["audit_index_id"] == (
         RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID
     )
+    service_trace_report_page = (
+        control_plane.runtime_export_package_service_trace_comparison_review_report_records(
+            str(package["package_id"]),
+            output_root,
+            cursor=0,
+            limit=1,
+            query="integration test",
+            status="DIFFERENT",
+        )
+    )
+    assert service_trace_report_page["type"] == (
+        "RUNTIME_EXPORT_SERVICE_TRACE_COMPARISON_REVIEW_REPORT_PAGE_V1"
+    )
+    assert service_trace_report_page["report_hash"] == service_trace_report[
+        "report_hash"
+    ]
+    assert service_trace_report_page["record_count"] == 1
+    assert service_trace_report_page["item_count"] == 1
+    assert service_trace_report_page["filters"] == {
+        "query": "integration test",
+        "status": "DIFFERENT",
+    }
+    assert service_trace_report_page["records"][0]["trace_id"] == "trace:run"
 
     checklist_response = control_plane.runtime_export_package_scenario_review_checklist(
         str(package["package_id"]),

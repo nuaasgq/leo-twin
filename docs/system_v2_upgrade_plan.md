@@ -168,7 +168,10 @@ Tasks:
     report without event replay or service recomputation. T337 adds a
     backend-generated `detail_hash` to live exact service trace details, so
     saved package-vs-live service trace reports can cite both the package item
-    hash and the live detail hash.
+    hash and the live detail hash. T338 adds a backend cursor page for saved
+    service trace comparison review report records and binds the dashboard
+    review card to that backend page, so large reports can be inspected without
+    loading the whole JSON artifact for row navigation.
 - V2-013: Add service lifecycle trace.
   - Scope: input flow, queue, compute, output flow, terminal state.
   - Output: timeline records for dashboard and result export.
@@ -235,7 +238,8 @@ Tasks:
     the dashboard save action to the persisted package artifact, closing the
     review loop from trace evidence to saved operator report. T337 fills the
     remaining live evidence gap by carrying the live exact service trace
-    `detail_hash` into saved review records.
+    `detail_hash` into saved review records. T338 adds the saved report records
+    page endpoint and dashboard row browser for backend-driven review paging.
 
 ### WS3. Network Semantics and KPI Trust v2
 

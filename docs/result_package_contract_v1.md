@@ -363,6 +363,19 @@ copies the same restore-preflight boundary alignment evidence as the route
 review report. It does not replay events, recompute services, capture packets,
 mutate the package on read, or update existing archive zip files.
 
+Saved service trace review reports can also be read through a backend cursor
+page without loading the full JSON artifact:
+
+```text
+GET /runtime/export/packages/{package_id}/service-trace-comparison-review-report/records?cursor=0&limit=100&query=&status=ALL
+```
+
+The page returns the original `report_hash`, the current `page_hash`, filtered
+record counts, cursor metadata, and a bounded `records` window. Filtering is
+limited to saved report fields (`trace_id`, status, hashes, reason, note, and
+compared/different field names); it does not replay events or recompute service
+trace differences.
+
 `scenario_review_bundle_v1.json` also declares a guided package review order.
 The demo backend can persist operator decisions for that guided flow through:
 

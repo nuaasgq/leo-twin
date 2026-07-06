@@ -233,6 +233,26 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                             )
                         )
                         return
+                    if artifact_kind == "service-trace-comparison-review-report-records":
+                        try:
+                            cursor, limit = _detail_query(query, default_limit=100)
+                        except ValueError as exc:
+                            self.send_error(400, str(exc))
+                            return
+                        filters = _comparison_review_report_filter_query(query)
+                        report_records = (
+                            control_plane.runtime_export_package_service_trace_comparison_review_report_records
+                        )
+                        self._send_json(
+                            report_records(
+                                package_id,
+                                cursor=cursor,
+                                limit=limit,
+                                query=filters["query"],
+                                status=filters["status"],
+                            )
+                        )
+                        return
                     if artifact_kind == "user-service-requests":
                         try:
                             cursor, limit = _detail_query(query, default_limit=100)
@@ -874,6 +894,15 @@ def _service_trace_filter_query(query: dict[str, list[str]]) -> dict[str, str]:
     }
 
 
+def _comparison_review_report_filter_query(
+    query: dict[str, list[str]],
+) -> dict[str, str]:
+    return {
+        "query": _first_query_value(query, "query", "").strip(),
+        "status": _first_query_value(query, "status", "ALL").strip(),
+    }
+
+
 def _user_service_request_filter_query(
     query: dict[str, list[str]],
 ) -> dict[str, str]:
@@ -927,6 +956,12 @@ def _runtime_export_package_route(
         return parts[0], "route-comparison-review-report", None
     if len(parts) == 2 and parts[1] == "service-trace-comparison-review-report":
         return parts[0], "service-trace-comparison-review-report", None
+    if (
+        len(parts) == 3
+        and parts[1] == "service-trace-comparison-review-report"
+        and parts[2] == "records"
+    ):
+        return parts[0], "service-trace-comparison-review-report-records", None
     if len(parts) == 2 and parts[1] == "scenario-review-checklist":
         return parts[0], "scenario-review-checklist", None
     if len(parts) == 3 and parts[1] == "files":

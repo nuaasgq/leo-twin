@@ -38,6 +38,8 @@ import {
   buildDataPanelExportServiceTraceLiveComparisonDisplay,
   buildDataPanelExportServiceTraceLiveComparisonStatus,
   buildDataPanelExportServiceTraceComparisonReviewRecord,
+  buildDataPanelExportServiceTraceComparisonReviewReportDisplay,
+  buildDataPanelExportServiceTraceComparisonReviewReportStatus,
   buildDataPanelExportServiceTraceComparisonReviewSaveStatus,
   buildDataPanelExportPackageAuditIndexArtifactDisplay,
   buildDataPanelExportPackageHandoffReportArtifactDisplay,
@@ -3961,6 +3963,158 @@ describe("buildDataPanelExportCatalogDisplay", () => {
     ).toMatchObject({
       tone: "error",
       statusLabel: "saved review report load failed",
+      metaLabels: ["HTTP 500"]
+    });
+  });
+
+  it("summarizes backend-paged service trace comparison review report contents", () => {
+    const report = {
+      type: "RUNTIME_EXPORT_SERVICE_TRACE_COMPARISON_REVIEW_REPORT_PAGE_V1",
+      version: "v1",
+      page_id:
+        "leo_twin.runtime_export_service_trace_comparison_review_report_page.v1",
+      report_id:
+        "leo_twin.runtime_export_service_trace_comparison_review_report.v1",
+      report_type: "RUNTIME_EXPORT_SERVICE_TRACE_COMPARISON_REVIEW_REPORT_V1",
+      source: "BACKEND_RUNTIME_EXPORT_PACKAGE",
+      report_scope:
+        "SELECTED_PACKAGE_VS_LIVE_SERVICE_TRACE_COMPARISON_OUTCOMES",
+      package_id: "pkg-review",
+      package_dir: "artifacts/runtime_exports/pkg-review",
+      service_trace_comparison_review: {
+        version: "v1",
+        source: "BACKEND_RUNTIME_EXPORT",
+        review_scope: "PACKAGE_SERVICE_TRACE_TO_LIVE_RUNTIME_SERVICE_TRACE",
+        package_service_trace_endpoint:
+          "GET /runtime/export/packages/{package_id}/service-traces/{trace_id}",
+        live_service_trace_endpoint:
+          "GET /runtime/details/service-traces/{trace_id}",
+        compare_action: "compare with live service trace",
+        comparison_requires_live_runtime: true,
+        trace_id_alignment_required: true,
+        exported_rows_only: true,
+        compared_fields: ["terminal"],
+        status_reasons: ["TRACE_ID_MISMATCH"],
+        boundary_conditions: ["NO_SERVICE_RECOMPUTE"]
+      },
+      runtime_export_boundary_alignment_v1: _runtimeExportBoundaryAlignment(),
+      boundary_alignment_hash:
+        "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      boundary_alignment_status: "ALIGNED",
+      boundary_alignment_warnings: [],
+      runtime_export_boundary_hash:
+        "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      report_hash:
+        "sha256:9999999999999999999999999999999999999999999999999999999999999999",
+      report_record_count: 3,
+      record_count: 2,
+      unfiltered_record_count: 3,
+      match_count: 0,
+      different_count: 1,
+      unavailable_count: 1,
+      error_count: 0,
+      cursor: 1,
+      limit: 1,
+      next_cursor: 2,
+      has_more: false,
+      item_count: 1,
+      hidden_record_count: 1,
+      filter_applied: true,
+      filters: {
+        query: "operator",
+        status: "DIFFERENT"
+      },
+      records: [
+        {
+          trace_id: "trace:run",
+          comparison_status: "DIFFERENT",
+          package_trace_item_hash:
+            "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          live_trace_detail_hash:
+            "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          matched_field_count: 3,
+          different_field_count: 1,
+          compared_fields: ["terminal"],
+          different_fields: ["terminal"],
+          status_reason: "FIELDS_DIFFER",
+          operator_note: "operator reviewed"
+        }
+      ],
+      ordering: "trace_id ascending, then comparison_status ascending",
+      boundary_conditions: ["NO_SERVICE_RECOMPUTE"],
+      page_hash:
+        "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+    };
+    const display =
+      buildDataPanelExportServiceTraceComparisonReviewReportDisplay(report);
+
+    expect(display).toEqual({
+      packageId: "pkg-review",
+      tone: "different",
+      statusLabel: "saved trace comparisons need review",
+      summaryLabel:
+        "pkg-review / records 2 / different 1 / error 0 / 999999999999",
+      metaLabels: [
+        "match 0",
+        "different 1",
+        "unavailable 1",
+        "error 0",
+        "backend cursor page dddddddddddd",
+        "boundary alignment cccccccccccc",
+        "alignment status ALIGNED",
+        "boundary bbbbbbbbbbbb",
+        "ordering trace_id ascending, then comparison_status ascending"
+      ],
+      recordRows: [
+        {
+          traceId: "trace:run",
+          tone: "different",
+          statusLabel: "DIFFERENT",
+          hashLabel: "package aaaaaaaaaaaa / live bbbbbbbbbbbb",
+          noteLabel: "operator reviewed"
+        }
+      ],
+      reportHref:
+        "/runtime/export/packages/pkg-review/files/service_trace_comparison_review_report_v1.json",
+      filterLabel:
+        "showing 2-2 of 2 filtered / total 3 / status DIFFERENT / query operator",
+      pageCursor: 1,
+      pageLimit: 1,
+      previousCursor: 0,
+      nextCursor: 2,
+      canPreviousPage: true,
+      canNextPage: false
+    });
+    expect(
+      buildDataPanelExportServiceTraceComparisonReviewReportStatus(
+        display,
+        "pkg-review",
+        false,
+        null
+      )
+    ).toBe(display);
+    expect(
+      buildDataPanelExportServiceTraceComparisonReviewReportStatus(
+        null,
+        "pkg-review",
+        true,
+        null
+      )
+    ).toMatchObject({
+      tone: "pending",
+      statusLabel: "loading saved service trace review report",
+      recordRows: []
+    });
+    expect(
+      buildDataPanelExportServiceTraceComparisonReviewReportStatus(
+        null,
+        "pkg-review",
+        false,
+        "HTTP 500"
+      )
+    ).toMatchObject({
+      tone: "error",
+      statusLabel: "saved service trace review report load failed",
       metaLabels: ["HTTP 500"]
     });
   });

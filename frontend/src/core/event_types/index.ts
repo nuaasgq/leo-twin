@@ -1640,6 +1640,27 @@ export interface RuntimeExportServiceTraceComparisonReviewReportV1 {
   report_hash: string;
 }
 
+export interface RuntimeExportServiceTraceComparisonReviewReportPageV1
+  extends RuntimeExportServiceTraceComparisonReviewReportV1 {
+  type: "RUNTIME_EXPORT_SERVICE_TRACE_COMPARISON_REVIEW_REPORT_PAGE_V1" | string;
+  page_id: string;
+  report_type: string;
+  report_record_count: number;
+  unfiltered_record_count: number;
+  cursor: number;
+  limit: number;
+  next_cursor: number;
+  has_more: boolean;
+  item_count: number;
+  hidden_record_count: number;
+  filter_applied: boolean;
+  filters: {
+    query: string;
+    status: string;
+  };
+  page_hash: string;
+}
+
 export interface RuntimeExportServiceTraceComparisonReviewReportRecordV1 {
   trace_id: string;
   comparison_status: "MATCH" | "DIFFERENT" | "UNAVAILABLE" | "ERROR" | string;

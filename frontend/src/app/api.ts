@@ -21,6 +21,7 @@ import {
   RuntimeExportRouteComparisonReviewReportRecordV1,
   RuntimeExportRouteComparisonReviewReportV1,
   RuntimeExportServiceTraceComparisonReviewReportEnvelope,
+  RuntimeExportServiceTraceComparisonReviewReportPageV1,
   RuntimeExportServiceTraceComparisonReviewReportRecordV1,
   RuntimeExportServiceTraceComparisonReviewReportV1,
   RuntimeExportRouteDetailIndexV1,
@@ -539,6 +540,34 @@ export async function loadRuntimeExportServiceTraceComparisonReviewReport(
   return decodeRuntimeExportServiceTraceComparisonReviewReportArtifact(await response.json());
 }
 
+export async function loadRuntimeExportServiceTraceComparisonReviewReportPage(
+  packageId: string,
+  cursor = 0,
+  limit = 100,
+  filters: Pick<RuntimeDetailQueryFilters, "query"> & { status?: string } = {},
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): Promise<RuntimeExportServiceTraceComparisonReviewReportPageV1> {
+  const params = new URLSearchParams({
+    cursor: String(Math.max(0, Math.floor(cursor))),
+    limit: String(Math.max(1, Math.floor(limit)))
+  });
+  if (filters.query !== undefined && filters.query.trim().length > 0) {
+    params.set("query", filters.query.trim());
+  }
+  if (filters.status !== undefined && filters.status.trim().length > 0) {
+    params.set("status", filters.status.trim());
+  }
+  const url = `${runtimeExportServiceTraceComparisonReviewReportRecordsHref(
+    packageId,
+    endpoint
+  )}?${params.toString()}`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`failed to load runtime export service trace comparison review report page from ${url}: HTTP ${response.status}`);
+  }
+  return decodeRuntimeExportServiceTraceComparisonReviewReportPage(await response.json());
+}
+
 export async function loadRuntimeExportPackageAuditIndex(
   packageId: string,
   endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
@@ -931,6 +960,16 @@ export function runtimeExportServiceTraceComparisonReviewReportHref(
   endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
 ): string {
   return `${runtimeExportPackageRecordHref(packageId, endpoint)}/service-trace-comparison-review-report`;
+}
+
+export function runtimeExportServiceTraceComparisonReviewReportRecordsHref(
+  packageId: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): string {
+  return `${runtimeExportServiceTraceComparisonReviewReportHref(
+    packageId,
+    endpoint
+  )}/records`;
 }
 
 export function runtimeExportScenarioReviewChecklistHref(
@@ -1523,6 +1562,29 @@ export function decodeRuntimeExportServiceTraceComparisonReviewReportArtifact(
     );
   }
   return value as RuntimeExportServiceTraceComparisonReviewReportV1;
+}
+
+export function decodeRuntimeExportServiceTraceComparisonReviewReportPage(
+  value: unknown
+): RuntimeExportServiceTraceComparisonReviewReportPageV1 {
+  const report = decodeRuntimeExportServiceTraceComparisonReviewReportArtifact(
+    value
+  ) as RuntimeExportServiceTraceComparisonReviewReportPageV1;
+  if (
+    typeof report.page_id !== "string" ||
+    typeof report.cursor !== "number" ||
+    typeof report.limit !== "number" ||
+    typeof report.next_cursor !== "number" ||
+    typeof report.has_more !== "boolean" ||
+    typeof report.page_hash !== "string" ||
+    typeof report.filters !== "object" ||
+    report.filters === null
+  ) {
+    throw new TypeError(
+      "runtime export service trace comparison review report page must include page_id, cursor, limit, next_cursor, has_more, filters, and page_hash"
+    );
+  }
+  return report;
 }
 
 export function decodeRuntimeExportScenarioReviewChecklistResponse(

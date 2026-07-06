@@ -13,6 +13,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID,
     RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1_ID,
     RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_V1_ID,
+    RUNTIME_EXPORT_SERVICE_TRACE_COMPARISON_REVIEW_REPORT_PAGE_V1_ID,
     RUNTIME_EXPORT_SERVICE_TRACE_COMPARISON_REVIEW_REPORT_V1_ID,
     RUNTIME_EXPORT_ROUTE_DETAIL_ITEM_V1_ID,
     RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_V1_ID,
@@ -36,6 +37,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_review_summary_v1,
     build_runtime_export_scenario_review_bundle_v1,
     build_runtime_export_scenario_review_checklist_v1,
+    build_runtime_export_service_trace_comparison_review_report_page_v1,
     build_runtime_export_service_trace_comparison_review_report_v1,
     build_runtime_export_service_trace_item_v1,
     build_runtime_export_service_trace_page_v1,
@@ -1314,6 +1316,100 @@ def test_runtime_export_service_trace_comparison_review_report_v1_is_determinist
     assert json.loads(json.dumps(first, sort_keys=True))["report_id"] == (
         RUNTIME_EXPORT_SERVICE_TRACE_COMPARISON_REVIEW_REPORT_V1_ID
     )
+
+
+def test_runtime_export_service_trace_comparison_review_report_page_v1_filters_records() -> None:
+    service_trace_page = build_runtime_export_service_trace_page_v1(
+        _service_trace_export(),
+        package_id="pkg-1",
+    )
+    review = service_trace_page["service_trace_comparison_review"]
+    report = build_runtime_export_service_trace_comparison_review_report_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        service_trace_comparison_review=review,
+        records=(
+            {
+                "trace_id": "trace:done",
+                "comparison_status": "MATCH",
+                "package_trace_item_hash": "sha256:package-trace-0",
+                "live_trace_detail_hash": "sha256:live-trace-0",
+                "compared_fields": ("terminal", "total_latency"),
+                "different_fields": (),
+                "status_reason": "MATCHED",
+                "operator_note": "baseline aligned",
+            },
+            {
+                "trace_id": "trace:run",
+                "comparison_status": "DIFFERENT",
+                "package_trace_item_hash": "sha256:package-trace-1",
+                "live_trace_detail_hash": "sha256:live-trace-1",
+                "compared_fields": (
+                    "terminal",
+                    "reason",
+                    "total_latency",
+                    "stage_counts",
+                ),
+                "different_fields": ("stage_counts", "terminal"),
+                "status_reason": "FIELDS_DIFFER",
+                "operator_note": "trace finished after package export",
+            },
+            {
+                "trace_id": "trace:missing",
+                "comparison_status": "UNAVAILABLE",
+                "package_trace_item_hash": "sha256:package-trace-2",
+                "live_trace_detail_hash": "",
+                "compared_fields": (),
+                "different_fields": (),
+                "status_reason": "LIVE_TRACE_MISSING",
+                "operator_note": "live runtime no longer has trace",
+            },
+        ),
+    )
+
+    first_page = build_runtime_export_service_trace_comparison_review_report_page_v1(
+        report,
+        cursor=0,
+        limit=2,
+    )
+    second_page = build_runtime_export_service_trace_comparison_review_report_page_v1(
+        report,
+        cursor=2,
+        limit=2,
+    )
+    filtered = build_runtime_export_service_trace_comparison_review_report_page_v1(
+        report,
+        status="different",
+        query="after package",
+    )
+    repeated = build_runtime_export_service_trace_comparison_review_report_page_v1(
+        report,
+        status="different",
+        query="after package",
+    )
+
+    assert first_page["page_id"] == (
+        RUNTIME_EXPORT_SERVICE_TRACE_COMPARISON_REVIEW_REPORT_PAGE_V1_ID
+    )
+    assert first_page["report_hash"] == report["report_hash"]
+    assert first_page["record_count"] == 3
+    assert first_page["item_count"] == 2
+    assert first_page["next_cursor"] == 2
+    assert first_page["has_more"] is True
+    assert [record["trace_id"] for record in first_page["records"]] == [
+        "trace:done",
+        "trace:missing",
+    ]
+    assert [record["trace_id"] for record in second_page["records"]] == [
+        "trace:run",
+    ]
+    assert filtered == repeated
+    assert filtered["filter_applied"] is True
+    assert filtered["filters"] == {"query": "after package", "status": "DIFFERENT"}
+    assert filtered["record_count"] == 1
+    assert filtered["different_count"] == 1
+    assert filtered["records"][0]["trace_id"] == "trace:run"
+    assert filtered["page_hash"].startswith("sha256:")
 
 
 def test_runtime_export_package_review_completion_v1_reports_missing_evidence() -> None:
