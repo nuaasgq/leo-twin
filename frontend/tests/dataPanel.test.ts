@@ -4193,6 +4193,8 @@ describe("buildDataPanelExportCatalogDisplay", () => {
               unit: "events",
               evidence_artifact_filename: "export_package_audit_index_v1.json",
               evidence_artifact_role: "benchmark_acceptance_audit_index",
+              evidence_context_id: "benchmark.expected_range.event_count",
+              evidence_context_label: "expected range metric event_count",
               issue_labels: [],
               result_hash: "sha256:range"
             }
@@ -4205,6 +4207,8 @@ describe("buildDataPanelExportCatalogDisplay", () => {
               actual: "PER_SATELLITE",
               evidence_artifact_filename: "config_snapshot.json",
               evidence_artifact_role: "runtime_config_snapshot_status",
+              evidence_context_id: "fidelity_summary.orbit_update_mode",
+              evidence_context_label: "fidelity summary orbit_update_mode",
               issue_labels: [],
               result_hash: "sha256:fidelity"
             }
@@ -4217,6 +4221,8 @@ describe("buildDataPanelExportCatalogDisplay", () => {
               actual: "PASS",
               evidence_artifact_filename: "route_detail_index_v1.json",
               evidence_artifact_role: "route_trust_evidence",
+              evidence_context_id: "route_provenance_trust_summary_v1",
+              evidence_context_label: "route trust runtime status",
               issue_labels: [],
               result_hash: "sha256:runtime"
             },
@@ -4228,6 +4234,8 @@ describe("buildDataPanelExportCatalogDisplay", () => {
               evidence_artifact_filename:
                 "network_kpi_benchmark_validation_v1.json",
               evidence_artifact_role: "network_kpi_benchmark_validation",
+              evidence_context_id: "network_kpi_benchmark_validation_v1",
+              evidence_context_label: "network KPI benchmark validation",
               issue_labels: [],
               result_hash: "sha256:kpi"
             }
@@ -4266,6 +4274,8 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           observedLabel: "observed 4096 events",
           issueLabel: "",
           hashLabel: "range",
+          contextLabel:
+            "expected range metric event_count / benchmark.expected_range.event_count",
           artifactLabel: "export_package_audit_index_v1.json",
           artifactHref:
             "/runtime/export/packages/pkg-standard/files/export_package_audit_index_v1.json",
@@ -4281,6 +4291,8 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           observedLabel: "observed PER_SATELLITE",
           issueLabel: "",
           hashLabel: "fidelity",
+          contextLabel:
+            "fidelity summary orbit_update_mode / fidelity_summary.orbit_update_mode",
           artifactLabel: "config_snapshot.json",
           artifactHref:
             "/runtime/export/packages/pkg-standard/files/config_snapshot.json",
@@ -4296,6 +4308,8 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           observedLabel: "observed PASS",
           issueLabel: "",
           hashLabel: "runtime",
+          contextLabel:
+            "route trust runtime status / route_provenance_trust_summary_v1",
           artifactLabel: "route_detail_index_v1.json",
           artifactHref:
             "/runtime/export/packages/pkg-standard/files/route_detail_index_v1.json",
@@ -4311,6 +4325,8 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           observedLabel: "observed PASS",
           issueLabel: "",
           hashLabel: "kpi",
+          contextLabel:
+            "network KPI benchmark validation / network_kpi_benchmark_validation_v1",
           artifactLabel: "network_kpi_benchmark_validation_v1.json",
           artifactHref:
             "/runtime/export/packages/pkg-standard/files/network_kpi_benchmark_validation_v1.json",

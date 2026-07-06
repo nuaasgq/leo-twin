@@ -17112,3 +17112,62 @@ change.
   - Add benchmark evidence context ids, such as route sample ids and KPI check
     ids, so dashboard drill-downs can filter linked artifacts to the exact
     row context.
+
+## 2026-07-07 - T350 benchmark evidence context v1
+
+- Branch: `feature/T350-benchmark-evidence-context-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: add backend-owned row context metadata to
+  `benchmark_acceptance_binding_v1`. Each benchmark result row now includes
+  `evidence_context_id` and `evidence_context_label` alongside the T349
+  artifact filename/role fields. Expected-range rows expose
+  `benchmark.expected_range.<metric>`, fidelity rows expose
+  `fidelity_summary.<field>`, route-trust rows expose
+  `route_provenance_trust_summary_v1`, and network-KPI rows expose
+  `network_kpi_benchmark_validation_v1`. The dashboard displays those context
+  labels in the benchmark gate detail rows and keeps a compatibility fallback
+  for older packages. No Event Kernel, simulation model, backend route,
+  result-package replay, KPI recomputation, or package mutation behavior
+  changed.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m compileall -q src\leo_twin\services\result_package_contract.py`
+    - Result: passed.
+  - `python -m pytest tests\unit\test_result_package_contract_v1.py::test_runtime_export_benchmark_acceptance_binding_v1_matches_standard_scenarios tests\unit\test_result_package_contract_v1.py::test_runtime_export_benchmark_acceptance_binding_v1_warns_for_custom_scenario -q`
+    - Result: passed, 2 tests.
+  - `.\node_modules\.bin\tsc.cmd --noEmit -p tsconfig.json` from
+    `frontend`
+    - Result: passed with the bundled Codex Node runtime path.
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 192 tests.
+  - `pnpm --dir frontend test dataPanel.test.ts api.test.ts appSurface.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 3 test
+      files and 279 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path; Vite
+      reported the existing large `DataPanel` chunk warning.
+  - `git diff --check`
+    - Result: passed; Git emitted CRLF warnings for the existing unstaged
+      runtime config drift.
+- Problems encountered:
+  - No implementation blocker. The only validation noise was the existing
+    local runtime config CRLF warning and the existing large `DataPanel` build
+    chunk warning.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - Context ids are row-level pointers, not yet browser-side deep links into a
+    specific JSON path inside an artifact.
+  - Route trust rows still expose the route-trust summary context rather than
+    exact route sample ids.
+- Recommended follow-up:
+  - Add package artifact drill-down state so selecting a benchmark row can open
+    the relevant dashboard artifact panel with the context id preselected.

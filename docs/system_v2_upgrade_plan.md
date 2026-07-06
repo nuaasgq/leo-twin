@@ -800,7 +800,10 @@ Tasks:
     semantic into the backend `benchmark_acceptance_binding_v1` result rows via
     `evidence_artifact_filename` and `evidence_artifact_role`; the dashboard
     now consumes those backend fields first and only falls back to the local
-    mapping for older packages.
+    mapping for older packages. T350 adds backend-owned
+    `evidence_context_id` and `evidence_context_label` to the same benchmark
+    rows, so dashboard rows can show the artifact-local context for a selected
+    check without inventing that context in the browser.
 
 ### WS9. Delivery and Operations v2
 

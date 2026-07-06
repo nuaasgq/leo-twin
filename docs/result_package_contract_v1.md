@@ -511,9 +511,12 @@ route-trust status checks, network-KPI benchmark checks, and a deterministic
 `binding_hash`. Each benchmark result row also records
 `evidence_artifact_filename` and `evidence_artifact_role` so consumers can open
 the backend-owned evidence artifact without locally mapping check ids to files.
-Non-standard custom packages are not failed by this binding; they are reported
-as `NO_STANDARD_SCENARIO_MATCH` so the acceptance report can warn that
-benchmark-gated evidence is not attached.
+It also records `evidence_context_id` and `evidence_context_label`, which keep a
+stable row-level pointer such as `benchmark.expected_range.<metric>`,
+`fidelity_summary.<field>`, `route_provenance_trust_summary_v1`, or
+`network_kpi_benchmark_validation_v1`. Non-standard custom packages are not
+failed by this binding; they are reported as `NO_STANDARD_SCENARIO_MATCH` so
+the acceptance report can warn that benchmark-gated evidence is not attached.
 
 For tools that only need the handoff summary, the demo backend exposes the same
 object without returning the full audit index:
@@ -575,7 +578,9 @@ previous deterministic mapping: expected-range rows use the audit index,
 fidelity rows use `config_snapshot.json`, route/trust rows use
 `route_detail_index_v1.json`, KPI rows use
 `network_kpi_benchmark_validation_v1.json`, and scenario rows use
-`scenario_review_bundle_v1.json`.
+`scenario_review_bundle_v1.json`. When available, the dashboard also displays
+`evidence_context_label / evidence_context_id` for each row so operators can
+carry the selected benchmark check context into the linked evidence artifact.
 
 For operator handoff, the demo backend also exposes the generated Markdown
 handoff report:

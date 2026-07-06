@@ -3005,6 +3005,7 @@ export const DataPanel = memo(function DataPanel({
                                 <small>
                                   {row.statusLabel} / {row.hashLabel}
                                 </small>
+                                <em>{row.contextLabel}</em>
                                 <em>{row.expectedLabel}</em>
                                 <em>{row.observedLabel}</em>
                                 {row.issueLabel.length > 0 ? (
@@ -11432,6 +11433,7 @@ export interface DataPanelExportBenchmarkGateRow {
   observedLabel: string;
   issueLabel: string;
   hashLabel: string;
+  contextLabel: string;
   artifactLabel: string;
   artifactHref: string | null;
   artifactTitle: string;
@@ -12559,6 +12561,7 @@ function buildAcceptanceBenchmarkGateRows(
         observedLabel: gateCheck.summary,
         issueLabel: gateCheck.issue_labels.join(", "),
         hashLabel: shortRuntimeHash(gateCheck.check_hash),
+        contextLabel: `context ${gateCheck.check_id}`,
         ...acceptanceBenchmarkArtifactLink(packageId, EXPORT_PACKAGE_AUDIT_INDEX_FILENAME)
       }
     ];
@@ -12596,6 +12599,8 @@ function buildAcceptanceBenchmarkResultRow(
     result_hash: string;
     evidence_artifact_filename?: string;
     evidence_artifact_role?: string;
+    evidence_context_id?: string;
+    evidence_context_label?: string;
   }
 ): DataPanelExportBenchmarkGateRow {
   const artifactFilename = acceptanceBenchmarkArtifactFilename(groupLabel, result);
@@ -12608,12 +12613,35 @@ function buildAcceptanceBenchmarkResultRow(
     observedLabel: acceptanceBenchmarkObservedLabel(result),
     issueLabel: result.issue_labels.join(", "),
     hashLabel: shortRuntimeHash(result.result_hash),
+    contextLabel: acceptanceBenchmarkContextLabel(result),
     ...acceptanceBenchmarkArtifactLink(
       packageId,
       artifactFilename,
       result.evidence_artifact_role
     )
   };
+}
+
+function acceptanceBenchmarkContextLabel(result: {
+  metric?: string;
+  check_id?: string;
+  source?: string;
+  evidence_context_id?: string;
+  evidence_context_label?: string;
+}): string {
+  if (
+    result.evidence_context_label !== undefined &&
+    result.evidence_context_label.length > 0
+  ) {
+    return `${result.evidence_context_label} / ${result.evidence_context_id ?? "-"}`;
+  }
+  const contextId =
+    result.evidence_context_id ??
+    result.metric ??
+    result.check_id ??
+    result.source ??
+    "benchmark";
+  return `context ${contextId}`;
 }
 
 function acceptanceBenchmarkArtifactFilename(

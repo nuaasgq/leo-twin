@@ -3039,6 +3039,8 @@ def _runtime_export_benchmark_expected_range_result(
         "status": status,
         "evidence_artifact_filename": EXPORT_PACKAGE_AUDIT_INDEX_FILENAME,
         "evidence_artifact_role": "benchmark_acceptance_audit_index",
+        "evidence_context_id": f"benchmark.expected_range.{metric}",
+        "evidence_context_label": f"expected range metric {metric}",
         "observed_value": observed_value,
         "minimum": _number(expected_range.get("minimum")),
         "maximum": _number(expected_range.get("maximum")),
@@ -3067,6 +3069,8 @@ def _runtime_export_benchmark_fidelity_results(
             mismatch_label="BENCHMARK_FIDELITY_MISMATCH",
             evidence_artifact_filename=CONFIG_SNAPSHOT_FILENAME,
             evidence_artifact_role="runtime_config_snapshot_status",
+            evidence_context_id=f"fidelity_summary.{field}",
+            evidence_context_label=f"fidelity summary {field}",
         )
         for field in ("orbit_update_mode", "metrics_mode", "space_link_mode")
     )
@@ -3103,6 +3107,8 @@ def _runtime_export_benchmark_runtime_status_results(
             issue_label="BENCHMARK_ROUTE_TRUST_NOT_ACCEPTED",
             evidence_artifact_filename=ROUTE_DETAIL_INDEX_FILENAME,
             evidence_artifact_role="route_trust_evidence",
+            evidence_context_id=str(route_expectation.get("field", "")),
+            evidence_context_label="route trust runtime status",
         ),
         _runtime_export_benchmark_status_result(
             check_id="runtime_status.network_kpi",
@@ -3114,6 +3120,8 @@ def _runtime_export_benchmark_runtime_status_results(
             issue_label="BENCHMARK_NETWORK_KPI_NOT_ACCEPTED",
             evidence_artifact_filename=NETWORK_KPI_BENCHMARK_VALIDATION_FILENAME,
             evidence_artifact_role="network_kpi_benchmark_validation",
+            evidence_context_id=str(kpi_expectation.get("field", "")),
+            evidence_context_label="network KPI benchmark validation",
         ),
     )
 
@@ -3127,6 +3135,8 @@ def _runtime_export_benchmark_string_result(
     mismatch_label: str,
     evidence_artifact_filename: str,
     evidence_artifact_role: str,
+    evidence_context_id: str,
+    evidence_context_label: str,
 ) -> dict[str, object]:
     issue_labels: tuple[str, ...] = ()
     status = "PASS"
@@ -3141,6 +3151,8 @@ def _runtime_export_benchmark_string_result(
         "status": status,
         "evidence_artifact_filename": evidence_artifact_filename,
         "evidence_artifact_role": evidence_artifact_role,
+        "evidence_context_id": evidence_context_id,
+        "evidence_context_label": evidence_context_label,
         "expected": expected,
         "actual": actual,
         "issue_labels": issue_labels,
@@ -3162,12 +3174,16 @@ def _runtime_export_benchmark_status_result(
     issue_label: str,
     evidence_artifact_filename: str,
     evidence_artifact_role: str,
+    evidence_context_id: str,
+    evidence_context_label: str,
 ) -> dict[str, object]:
     result = {
         "check_id": check_id,
         "status": status,
         "evidence_artifact_filename": evidence_artifact_filename,
         "evidence_artifact_role": evidence_artifact_role,
+        "evidence_context_id": evidence_context_id,
+        "evidence_context_label": evidence_context_label,
         "expected": expected,
         "actual": actual,
         "observed_count": observed_count,

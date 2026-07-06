@@ -1925,10 +1925,22 @@ def test_runtime_export_benchmark_acceptance_binding_v1_matches_standard_scenari
             result["evidence_artifact_filename"]
             for result in binding["expected_range_results"]
         } == {"export_package_audit_index_v1.json"}
+        assert all(
+            str(result["evidence_context_id"]).startswith("benchmark.expected_range.")
+            for result in binding["expected_range_results"]
+        )
         assert {
             result["evidence_artifact_filename"]
             for result in binding["fidelity_results"]
         } == {"config_snapshot.json"}
+        assert {
+            result["evidence_context_id"]
+            for result in binding["fidelity_results"]
+        } == {
+            "fidelity_summary.orbit_update_mode",
+            "fidelity_summary.metrics_mode",
+            "fidelity_summary.space_link_mode",
+        }
         runtime_artifacts = {
             result["check_id"]: result["evidence_artifact_filename"]
             for result in binding["runtime_status_results"]
@@ -1938,6 +1950,14 @@ def test_runtime_export_benchmark_acceptance_binding_v1_matches_standard_scenari
             "runtime_status.network_kpi": (
                 "network_kpi_benchmark_validation_v1.json"
             ),
+        }
+        runtime_contexts = {
+            result["check_id"]: result["evidence_context_id"]
+            for result in binding["runtime_status_results"]
+        }
+        assert runtime_contexts == {
+            "runtime_status.route_trust": "route_provenance_trust_summary_v1",
+            "runtime_status.network_kpi": "network_kpi_benchmark_validation_v1",
         }
         assert binding["binding_hash"].startswith("sha256:")
 
