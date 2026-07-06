@@ -259,6 +259,11 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                             package_id,
                             "review_summary_v1.json",
                         )
+                    elif artifact_kind == "handoff-report":
+                        artifact = control_plane.runtime_export_package_artifact(
+                            package_id,
+                            "package_handoff_report_v1.md",
+                        )
                     elif artifact_kind == "archive":
                         artifact = control_plane.runtime_export_package_archive_artifact(
                             package_id,
@@ -832,6 +837,8 @@ def _runtime_export_package_route(
         return parts[0], "review-summary", None
     if len(parts) == 2 and parts[1] == "review-completion":
         return parts[0], "review-completion", None
+    if len(parts) == 2 and parts[1] == "handoff-report":
+        return parts[0], "handoff-report", None
     if len(parts) == 2 and parts[1] == "compare":
         return parts[0], "compare", None
     if len(parts) == 2 and parts[1] == "restore-preflight":

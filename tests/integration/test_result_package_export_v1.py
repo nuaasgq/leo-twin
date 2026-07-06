@@ -53,6 +53,7 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert (package_dir / "service_lifecycle_trace_v2.json").exists()
     assert (package_dir / "scenario_review_bundle_v1.json").exists()
     assert (package_dir / "export_package_audit_index_v1.json").exists()
+    assert (package_dir / "package_handoff_report_v1.md").exists()
     filenames = {str(record["filename"]) for record in package["files"]}
     assert "service_lifecycle_trace_v2.json" in filenames
     assert "route_detail_index_v1.json" in filenames
@@ -60,6 +61,7 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert "diagnostics_bundle_v1.json" in filenames
     assert "scenario_review_bundle_v1.json" in filenames
     assert "export_package_audit_index_v1.json" in filenames
+    assert "package_handoff_report_v1.md" in filenames
 
     manifest = json.loads((package_dir / "manifest.json").read_text(encoding="utf-8"))
     config_snapshot = json.loads(
@@ -86,6 +88,9 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         (package_dir / "export_package_audit_index_v1.json").read_text(
             encoding="utf-8"
         )
+    )
+    initial_handoff_report = (package_dir / "package_handoff_report_v1.md").read_text(
+        encoding="utf-8"
     )
 
     assert manifest["manifest_id"] == RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID
@@ -248,6 +253,11 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert audit_index["scenario_review_checklist_record_count"] == 0
     assert audit_index["package_review_completion_status"] == "REVIEW_INCOMPLETE"
     assert audit_index["package_review_completion_v1"]["handoff_ready"] is False
+    assert "Report id: leo_twin.runtime_export_package_handoff_report.v1" in (
+        initial_handoff_report
+    )
+    assert "Completion status: REVIEW_INCOMPLETE" in initial_handoff_report
+    assert "Handoff ready: false" in initial_handoff_report
     assert "ROUTE_COMPARISON_REVIEW_REPORT_MISSING" in audit_index[
         "package_review_completion_v1"
     ]["missing_or_warning_evidence"]
@@ -393,6 +403,9 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     )
     checklist = checklist_response["summary"]
     assert checklist_response["type"] == "RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST"
+    assert checklist_response["handoff_report_artifact"]["filename"] == (
+        "package_handoff_report_v1.md"
+    )
     assert checklist["checklist_id"] == RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_V1_ID
     assert checklist["record_count"] == 2
     assert checklist["reviewed_count"] == 2
@@ -440,6 +453,19 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert completion_response["source_artifact"]["filename"] == (
         "export_package_audit_index_v1.json"
     )
+    handoff_artifact = control_plane.runtime_export_package_artifact(
+        str(package["package_id"]),
+        "package_handoff_report_v1.md",
+        output_root,
+    )
+    assert handoff_artifact["content_type"] == "text/markdown; charset=utf-8"
+    assert handoff_artifact["filename"] == "package_handoff_report_v1.md"
+    final_handoff_report = Path(str(handoff_artifact["path"])).read_text(
+        encoding="utf-8"
+    )
+    assert "Completion status: REVIEW_COMPLETE" in final_handoff_report
+    assert "Handoff ready: true" in final_handoff_report
+    assert checklist_audit["package_review_completion_hash"] in final_handoff_report
     assert checklist_audit["audit_status"] == "AUDIT_READY"
     assert checklist_audit["audit_warnings"] == ()
     catalog = control_plane.runtime_export_catalog(output_root)["summary"]

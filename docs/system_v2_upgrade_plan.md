@@ -659,7 +659,11 @@ Tasks:
     consumers to read the same deterministic completion status and hash without
     re-deriving the rules locally. T317 exposes the same object through
     `GET /runtime/export/packages/{package_id}/review-completion`, so tools can
-    read handoff readiness without loading the full audit index.
+    read handoff readiness without loading the full audit index. T318 adds the
+    backend-generated `package_handoff_report_v1.md` artifact and
+    `/runtime/export/packages/{package_id}/handoff-report` route so operators
+    can download a deterministic human-readable package handoff summary
+    derived from the same completion evidence.
 
 ### WS9. Delivery and Operations v2
 

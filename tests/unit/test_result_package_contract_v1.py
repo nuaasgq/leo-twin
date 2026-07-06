@@ -6,6 +6,7 @@ from leo_twin.services.result_package_contract import (
     RESULT_PACKAGE_CONTRACT_V1_ID,
     RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1_ID,
     RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID,
+    RUNTIME_EXPORT_PACKAGE_HANDOFF_REPORT_V1_ID,
     RUNTIME_EXPORT_PACKAGE_REVIEW_COMPLETION_V1_ID,
     RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1_ID,
     RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID,
@@ -19,6 +20,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID,
     build_runtime_export_diagnostics_bundle_v1,
     build_runtime_export_package_audit_index_v1,
+    build_runtime_export_package_handoff_report_v1,
     build_runtime_export_package_review_completion_v1,
     build_runtime_export_reproducibility_boundary_v1,
     build_runtime_export_route_comparison_review_report_v1,
@@ -61,6 +63,7 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
         "diagnostics_bundle_v1.json",
         "scenario_review_bundle_v1.json",
         "export_package_audit_index_v1.json",
+        "package_handoff_report_v1.md",
     ]
     assert "GET /runtime/export" in first["source_endpoints"]
     assert (
@@ -69,6 +72,10 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
     )
     assert (
         "GET /runtime/export/packages/{package_id}/review-completion"
+        in first["source_endpoints"]
+    )
+    assert (
+        "GET /runtime/export/packages/{package_id}/handoff-report"
         in first["source_endpoints"]
     )
     assert (
@@ -166,6 +173,7 @@ def test_result_package_summary_accepts_complete_package_record() -> None:
         "diagnostics_bundle_v1.json",
         "scenario_review_bundle_v1.json",
         "export_package_audit_index_v1.json",
+        "package_handoff_report_v1.md",
     )
     assert summary["catalog_record_present"] is True
     assert summary["history_record_present"] is True
@@ -331,6 +339,7 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
         "diagnostics_bundle_v1.json",
         "events.jsonl",
         "export_package_audit_index_v1.json",
+        "package_handoff_report_v1.md",
         "manifest.json",
         "metrics.csv",
         "review_summary_v1.json",
@@ -434,6 +443,7 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
         "diagnostics_bundle_v1.json",
         "events.jsonl",
         "export_package_audit_index_v1.json",
+        "package_handoff_report_v1.md",
         "manifest.json",
         "metrics.csv",
         "review_summary_v1.json",
@@ -979,6 +989,62 @@ def test_runtime_export_package_review_completion_v1_reports_missing_evidence() 
     assert completion["completion_hash"].startswith("sha256:")
 
 
+def test_runtime_export_package_handoff_report_v1_is_deterministic() -> None:
+    audit_index = {
+        "audit_index_id": RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID,
+        "package_id": "pkg-1",
+        "audit_hash": "sha256:audit",
+        "manifest_hash": "sha256:manifest",
+        "runtime_export_boundary_hash": "sha256:boundary",
+        "package_review_completion_v1": {
+            "completion_id": RUNTIME_EXPORT_PACKAGE_REVIEW_COMPLETION_V1_ID,
+            "package_id": "pkg-1",
+            "completion_status": "REVIEW_COMPLETE",
+            "handoff_ready": True,
+            "completion_hash": "sha256:completion",
+            "audit_status": "AUDIT_READY",
+            "route_comparison_review_report_present": True,
+            "route_comparison_review_error_count": 0,
+            "route_comparison_review_report_hash": "sha256:route-report",
+            "scenario_review_checklist_status": "CHECKLIST_COMPLETE",
+            "scenario_review_checklist_record_count": 2,
+            "scenario_review_checklist_hash": "sha256:checklist",
+            "review_summary_status": "REVIEW_READY",
+            "review_summary_hash": "sha256:review",
+            "diagnostics_error_count": 0,
+            "diagnostics_hash": "sha256:diagnostics",
+            "boundary_alignment_status": "ALIGNED",
+            "user_configuration_validation_ok": True,
+            "missing_or_warning_evidence": (),
+            "evidence_labels": ("audit AUDIT_READY", "route_report saved"),
+            "boundary_conditions": (
+                "NO_EVENT_REPLAY",
+                "NO_MODEL_RECOMPUTE",
+                "NO_PACKAGE_READ_MUTATION",
+                "BACKEND_OWNED_HANDOFF_SUMMARY",
+            ),
+        },
+    }
+
+    first = build_runtime_export_package_handoff_report_v1(
+        audit_index=audit_index,
+    )
+    second = build_runtime_export_package_handoff_report_v1(
+        audit_index=json.loads(json.dumps(audit_index, sort_keys=True)),
+    )
+
+    assert first == second
+    assert first.startswith("# Runtime Export Package Handoff Report v1\n")
+    assert f"Report id: {RUNTIME_EXPORT_PACKAGE_HANDOFF_REPORT_V1_ID}" in first
+    assert "Package id: pkg-1" in first
+    assert "Completion status: REVIEW_COMPLETE" in first
+    assert "Handoff ready: true" in first
+    assert "Completion hash: sha256:completion" in first
+    assert "- No blocking evidence is missing." in first
+    assert "- NO_EVENT_REPLAY" in first
+    assert "external simulators" in first
+
+
 def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
     boundary = {
         "boundary_id": RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1_ID,
@@ -1170,6 +1236,7 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
         "diagnostics_bundle_v1.json",
         "events.jsonl",
         "export_package_audit_index_v1.json",
+        "package_handoff_report_v1.md",
         "manifest.json",
         "metrics.csv",
         "review_summary_v1.json",

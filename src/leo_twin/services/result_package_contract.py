@@ -46,6 +46,9 @@ RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID = (
 RUNTIME_EXPORT_PACKAGE_REVIEW_COMPLETION_V1_ID = (
     "leo_twin.runtime_export_package_review_completion.v1"
 )
+RUNTIME_EXPORT_PACKAGE_HANDOFF_REPORT_V1_ID = (
+    "leo_twin.runtime_export_package_handoff_report.v1"
+)
 USER_CONFIGURATION_AUDIT_BINDING_V1_ID = (
     "leo_twin.user_configuration_audit_binding.v1"
 )
@@ -101,6 +104,7 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
             "GET /runtime/export/packages/{package_id}/manifest",
             "GET /runtime/export/packages/{package_id}/review-summary",
             "GET /runtime/export/packages/{package_id}/review-completion",
+            "GET /runtime/export/packages/{package_id}/handoff-report",
             "GET /runtime/export/packages/{package_id}/service-traces",
             "GET /runtime/export/packages/{package_id}/routes",
             "GET /runtime/export/packages/{package_id}/routes/{route_id}",
@@ -157,6 +161,15 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
                     "long-term package audit index for manifest, boundary, "
                     "diagnostics, user configuration, review report, and "
                     "artifact hashes"
+                ),
+            },
+            {
+                "logical_name": "package_handoff_report_v1",
+                "filename": "package_handoff_report_v1.md",
+                "format": "markdown",
+                "content": (
+                    "operator-facing handoff report derived from backend "
+                    "package review completion evidence"
                 ),
             },
         ),
@@ -1406,6 +1419,114 @@ def build_runtime_export_package_review_completion_v1(
     }
     completion["completion_hash"] = stable_hash_payload(completion)
     return completion
+
+
+def build_runtime_export_package_handoff_report_v1(
+    *,
+    audit_index: Mapping[str, Any],
+) -> str:
+    """Build a deterministic operator-facing handoff report from audit evidence."""
+
+    if not isinstance(audit_index, Mapping):
+        raise TypeError("audit_index must be a mapping")
+    completion = _mapping(audit_index.get("package_review_completion_v1"))
+    if not completion:
+        raise ValueError("audit_index has no package_review_completion_v1 object")
+
+    missing_or_warning = _string_tuple(
+        completion.get("missing_or_warning_evidence")
+    )
+    evidence_labels = _string_tuple(completion.get("evidence_labels"))
+    boundary_conditions = _string_tuple(completion.get("boundary_conditions"))
+    handoff_ready = completion.get("handoff_ready") is True
+    follow_up_lines = (
+        tuple(f"- {item}" for item in missing_or_warning)
+        if missing_or_warning
+        else ("- No blocking evidence is missing.",)
+    )
+    evidence_lines = (
+        tuple(f"- {item}" for item in evidence_labels)
+        if evidence_labels
+        else ("- No compact evidence labels were recorded.",)
+    )
+    boundary_lines = (
+        tuple(f"- {item}" for item in boundary_conditions)
+        if boundary_conditions
+        else ("- No boundary conditions were recorded.",)
+    )
+    lines = [
+        "# Runtime Export Package Handoff Report v1",
+        "",
+        f"Report id: {RUNTIME_EXPORT_PACKAGE_HANDOFF_REPORT_V1_ID}",
+        f"Source audit index id: {audit_index.get('audit_index_id', '')}",
+        f"Package id: {completion.get('package_id', audit_index.get('package_id', ''))}",
+        f"Completion status: {completion.get('completion_status', '')}",
+        f"Handoff ready: {'true' if handoff_ready else 'false'}",
+        f"Completion hash: {completion.get('completion_hash', '')}",
+        "",
+        "## Review Evidence",
+        f"- Audit status: {completion.get('audit_status', '')}",
+        (
+            "- Route comparison review report present: "
+            f"{'true' if completion.get('route_comparison_review_report_present') is True else 'false'}"
+        ),
+        (
+            "- Route comparison review error count: "
+            f"{completion.get('route_comparison_review_error_count', 0)}"
+        ),
+        (
+            "- Scenario review checklist status: "
+            f"{completion.get('scenario_review_checklist_status', '') or 'missing'}"
+        ),
+        (
+            "- Scenario review checklist records: "
+            f"{completion.get('scenario_review_checklist_record_count', 0)}"
+        ),
+        f"- Review summary status: {completion.get('review_summary_status', '')}",
+        f"- Diagnostics error count: {completion.get('diagnostics_error_count', 0)}",
+        (
+            "- Boundary alignment status: "
+            f"{completion.get('boundary_alignment_status', '')}"
+        ),
+        (
+            "- User configuration validation ok: "
+            f"{'true' if completion.get('user_configuration_validation_ok') is True else 'false'}"
+        ),
+        "",
+        "## Evidence Labels",
+        *evidence_lines,
+        "",
+        "## Required Follow-up",
+        *follow_up_lines,
+        "",
+        "## Boundary Conditions",
+        *boundary_lines,
+        "",
+        "## Machine Evidence",
+        f"- Audit hash: {audit_index.get('audit_hash', '')}",
+        f"- Manifest hash: {audit_index.get('manifest_hash', '')}",
+        (
+            "- Runtime export boundary hash: "
+            f"{audit_index.get('runtime_export_boundary_hash', '')}"
+        ),
+        f"- Diagnostics hash: {completion.get('diagnostics_hash', '')}",
+        f"- Review summary hash: {completion.get('review_summary_hash', '')}",
+        (
+            "- Route comparison review report hash: "
+            f"{completion.get('route_comparison_review_report_hash', '')}"
+        ),
+        (
+            "- Scenario review checklist hash: "
+            f"{completion.get('scenario_review_checklist_hash', '')}"
+        ),
+        "",
+        (
+            "This report is generated from backend audit evidence. It does not "
+            "replay events, recompute models, mutate result packages on read, "
+            "capture packets, or call external simulators."
+        ),
+    ]
+    return "\n".join(lines) + "\n"
 
 
 def _runtime_export_user_configuration_audit_binding(

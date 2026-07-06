@@ -77,6 +77,10 @@ review entry point. It binds the effective user configuration evidence,
 scenario scale, runtime progress, manifest hashes, review summary hash,
 diagnostics hash, audit-index filename, model boundaries, and recommended
 review order into one compact JSON artifact.
+`package_handoff_report_v1.md` is emitted as a deterministic
+operator-facing Markdown handoff report. It is derived from the backend-owned
+package review completion evidence in `export_package_audit_index_v1.json` and
+is intended for human review handoff, not as a separate model source.
 
 ## Review Summary
 
@@ -352,6 +356,22 @@ The endpoint reads `export_package_audit_index_v1.json` and returns its
 `package_review_completion_v1` subobject plus the audit-index source artifact
 record. It does not replay events, recompute package evidence, or mutate the
 package.
+
+For operator handoff, the demo backend also exposes the generated Markdown
+handoff report:
+
+```text
+GET /runtime/export/packages/{package_id}/handoff-report
+```
+
+The endpoint serves `package_handoff_report_v1.md`. The report summarizes
+completion status, handoff readiness, route-review evidence, scenario-review
+checklist state, diagnostics status, boundary alignment, user-configuration
+validation, missing evidence, completion hash, and model/replay boundaries. It
+is regenerated after route comparison review report or scenario review
+checklist saves so the human-readable handoff state follows the backend audit
+index. It does not replay events, recompute package evidence, mutate the
+package on read, capture packets, or call external simulators.
 
 The audit index is read-only evidence. It does not replay events, recompute
 routes or services, mutate packages on read, capture packets, or call external

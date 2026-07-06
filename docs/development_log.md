@@ -15377,3 +15377,51 @@ change.
 - Recommended follow-up:
   - Add an optional Markdown handoff report if operators need a human-readable
     one-file review package summary.
+
+## 2026-07-06 - Runtime Package Handoff Report v1
+
+- Branch: `feature/T318-runtime-package-handoff-report-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a backend-generated `package_handoff_report_v1.md` artifact and
+  `GET /runtime/export/packages/{package_id}/handoff-report` route for
+  operator handoff. The report is generated from
+  `export_package_audit_index_v1.json.package_review_completion_v1`, includes
+  completion status, handoff readiness, evidence labels, missing evidence,
+  machine hashes, and no-replay/no-recompute/no-mutation boundaries. It does
+  not change Event Kernel behavior, runtime models, replay semantics, package
+  read mutation behavior, or external simulator constraints.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/result_package_contract_v1.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/dashboard_model_trust_evidence_workspace_v1.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src\leo_twin\services\result_package_contract.py examples\integration_demo\control_plane.py examples\integration_demo\server.py tests\unit\test_result_package_contract_v1.py tests\integration\test_result_package_export_v1.py tests\integration\test_runtime_session_control.py`
+    - Result: passed.
+  - `python -m pytest tests\unit\test_result_package_contract_v1.py tests\integration\test_result_package_export_v1.py tests\integration\test_runtime_session_control.py::test_demo_server_stream_query_parses_cursor_options -q`
+    - Result: passed, 19 tests.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered:
+  - Adding `package_handoff_report_v1.md` as a recommended artifact required
+    updating existing unit-test fixture filename lists so diagnostics no
+    longer reported the new recommended file as missing.
+  - The handoff report is intentionally generated from audit-index completion
+    evidence and served as a human-readable derivative; the machine source of
+    truth remains the audit index and completion hash.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The standalone dashboard does not yet render the Markdown handoff report
+    inline; operators can download it through the new route or the file
+    artifact path.
+- Recommended follow-up:
+  - Add a dashboard handoff-report drawer or download action if users want to
+    inspect the Markdown report without opening the raw file.

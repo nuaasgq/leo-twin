@@ -242,6 +242,15 @@ The same completion summary is available directly:
 Invoke-RestMethod "http://127.0.0.1:8765/runtime/export/packages/<package_id>/review-completion"
 ```
 
+For a human-readable handoff file, download the backend-generated Markdown
+report:
+
+```powershell
+Invoke-WebRequest `
+  -OutFile "package_handoff_report_v1.md" `
+  "http://127.0.0.1:8765/runtime/export/packages/<package_id>/handoff-report"
+```
+
 For package-owned review, use:
 
 ```powershell
@@ -301,7 +310,9 @@ Invoke-RestMethod `
 
 This writes `scenario_review_checklist_v1.json`, updates the export catalog,
 and regenerates `export_package_audit_index_v1.json` with the checklist hash,
-status, and record count. It records operator decisions only; it does not
+status, and record count. It also refreshes `package_handoff_report_v1.md` so
+the Markdown handoff state follows the backend audit completion evidence. It
+records operator decisions only; it does not
 replay events, recompute routes or services, mutate packages on read, or update
 archives that were created before the save.
 

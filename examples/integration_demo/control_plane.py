@@ -76,6 +76,7 @@ from leo_twin.services.runtime_reproducibility import (
 from leo_twin.services.result_package_contract import (
     build_runtime_export_diagnostics_bundle_v1,
     build_runtime_export_package_audit_index_v1,
+    build_runtime_export_package_handoff_report_v1,
     build_runtime_export_reproducibility_boundary_v1,
     build_runtime_export_route_comparison_review_report_v1,
     build_runtime_export_route_detail_item_v1,
@@ -141,6 +142,7 @@ _RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_FILENAME = (
     "route_comparison_review_report_v1.json"
 )
 _RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_FILENAME = "export_package_audit_index_v1.json"
+_RUNTIME_EXPORT_PACKAGE_HANDOFF_REPORT_FILENAME = "package_handoff_report_v1.md"
 
 
 class RuntimeExportArtifactError(LookupError):
@@ -684,6 +686,9 @@ class DemoControlPlane:
             package_dir / _RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_FILENAME
         )
         audit_index_path = package_dir / _RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_FILENAME
+        handoff_report_path = (
+            package_dir / _RUNTIME_EXPORT_PACKAGE_HANDOFF_REPORT_FILENAME
+        )
         artifact_filenames = tuple(
             sorted(
                 path.name
@@ -693,6 +698,7 @@ class DemoControlPlane:
                     diagnostics_bundle_path,
                     scenario_review_bundle_path,
                     audit_index_path,
+                    handoff_report_path,
                 )
             )
         )
@@ -747,7 +753,7 @@ class DemoControlPlane:
         runtime_export_boundary_alignment: Mapping[str, Any] = (
             raw_alignment if isinstance(raw_alignment, Mapping) else {}
         )
-        self._write_runtime_export_package_audit_index(
+        audit_index, audit_artifact = self._write_runtime_export_package_audit_index(
             package_id,
             package_dir,
             config_snapshot=config_snapshot,
@@ -756,7 +762,13 @@ class DemoControlPlane:
             diagnostics_bundle=diagnostics_bundle,
             runtime_export_boundary_alignment=runtime_export_boundary_alignment,
         )
+        _, handoff_artifact = self._write_runtime_export_package_handoff_report(
+            package_id,
+            package_dir,
+            audit_index=audit_index,
+        )
         written_files["export_package_audit_index_v1"] = audit_index_path
+        written_files["package_handoff_report_v1"] = handoff_report_path
 
         files = tuple(
             _runtime_export_file_record(name, path)
@@ -1025,12 +1037,25 @@ class DemoControlPlane:
             package_id,
             audit_artifact,
         )
+        _, handoff_artifact = self._write_runtime_export_package_handoff_report(
+            package_id,
+            package_dir,
+            audit_index=audit_index,
+        )
+        catalog_record = _upsert_runtime_export_catalog_file(
+            output_root,
+            package_id,
+            handoff_artifact,
+        )
         return {
             "type": "RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT",
             "summary": report,
             "artifact": _runtime_export_catalog_file_record(artifact),
             "audit_index": audit_index,
             "audit_artifact": _runtime_export_catalog_file_record(audit_artifact),
+            "handoff_report_artifact": _runtime_export_catalog_file_record(
+                handoff_artifact
+            ),
             "catalog_record": catalog_record,
         }
 
@@ -1093,12 +1118,25 @@ class DemoControlPlane:
             package_id,
             audit_artifact,
         )
+        _, handoff_artifact = self._write_runtime_export_package_handoff_report(
+            package_id,
+            package_dir,
+            audit_index=audit_index,
+        )
+        catalog_record = _upsert_runtime_export_catalog_file(
+            output_root,
+            package_id,
+            handoff_artifact,
+        )
         return {
             "type": "RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST",
             "summary": checklist,
             "artifact": _runtime_export_catalog_file_record(artifact),
             "audit_index": audit_index,
             "audit_artifact": _runtime_export_catalog_file_record(audit_artifact),
+            "handoff_report_artifact": _runtime_export_catalog_file_record(
+                handoff_artifact
+            ),
             "catalog_record": catalog_record,
         }
 
@@ -1167,7 +1205,10 @@ class DemoControlPlane:
             _runtime_export_file_record(path.stem, path)
             for path in sorted(package_dir.iterdir(), key=lambda item: item.name)
             if path.is_file()
-            and path.name != _RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_FILENAME
+            and path.name not in {
+                _RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_FILENAME,
+                _RUNTIME_EXPORT_PACKAGE_HANDOFF_REPORT_FILENAME,
+            }
             and path.suffix.lower() != ".zip"
         )
         audit_index = build_runtime_export_package_audit_index_v1(
@@ -1190,6 +1231,38 @@ class DemoControlPlane:
             audit_path,
         )
         return audit_index, audit_artifact
+
+    def _write_runtime_export_package_handoff_report(
+        self,
+        package_id: str,
+        package_dir: Path,
+        *,
+        audit_index: Mapping[str, Any] | None = None,
+    ) -> tuple[str, dict[str, Any]]:
+        if audit_index is None:
+            audit_artifact = self.runtime_export_package_artifact(
+                package_id,
+                _RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_FILENAME,
+                package_dir.parent,
+            )
+            raw_audit_index = json.loads(
+                Path(str(audit_artifact["path"])).read_text(encoding="utf-8")
+            )
+            if not isinstance(raw_audit_index, Mapping):
+                raise RuntimeExportArtifactError(
+                    f"runtime export package {package_id!r} has invalid audit index"
+                )
+            audit_index = raw_audit_index
+        report = build_runtime_export_package_handoff_report_v1(
+            audit_index=audit_index,
+        )
+        report_path = package_dir / _RUNTIME_EXPORT_PACKAGE_HANDOFF_REPORT_FILENAME
+        report_path.write_text(report, encoding="utf-8")
+        artifact = _runtime_export_file_record(
+            "package_handoff_report_v1",
+            report_path,
+        )
+        return report, artifact
 
     def runtime_export_package_archive_artifact(
         self,
@@ -2847,6 +2920,8 @@ def _runtime_export_content_type(filename: str) -> str:
         return "application/x-ndjson; charset=utf-8"
     if filename.endswith(".csv"):
         return "text/csv; charset=utf-8"
+    if filename.endswith(".md"):
+        return "text/markdown; charset=utf-8"
     if filename.endswith(".zip"):
         return "application/zip"
     return "application/octet-stream"

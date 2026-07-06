@@ -114,6 +114,10 @@ audit boundary without opening raw JSON first. Tools that only need that
 handoff summary can call
 `GET /runtime/export/packages/{package_id}/review-completion`, which reads the
 same backend-owned audit evidence without replaying or recomputing the package.
+Operators who need a human-readable handoff file can use
+`GET /runtime/export/packages/{package_id}/handoff-report` to download
+`package_handoff_report_v1.md`, a deterministic Markdown report generated from
+that same completion evidence.
 7. runtime evidence
 
 Each row has a tone:
