@@ -38,6 +38,7 @@ import {
   buildDataPanelNetworkKpiFormulaInspector,
   buildDataPanelModelAssumptionsDisplay,
   buildDataPanelModelTrustEvidenceWorkspace,
+  buildDataPanelRouteProvenanceTrustDisplay,
   buildDataPanelNetworkKpiProvenanceItems,
   buildDataPanelNetworkKpiSource,
   buildDataPanelNodeDetailDrawerItems,
@@ -3910,6 +3911,119 @@ describe("buildDataPanelModelAssumptionsDisplay", () => {
   });
 });
 
+describe("buildDataPanelRouteProvenanceTrustDisplay", () => {
+  it("formats backend route provenance trust fields for dashboard evidence", () => {
+    const display = buildDataPanelRouteProvenanceTrustDisplay({
+      version: "v1",
+      trust_id: "leo_twin.route_provenance_trust.v1",
+      source: "route_explanation_summary_v1",
+      route_model: "FLOW_LEVEL_ROUTE_PROXY",
+      packet_level_simulation: false,
+      all_pairs_computation: false,
+      trust_status: "COMPLETE_FLOW_LEVEL_ROUTE_PROXY",
+      summary_scope: "ROUTE_EXPLANATION_WINDOW",
+      route_count: 2,
+      window_item_count: 2,
+      assessed_route_count: 2,
+      hidden_route_count: 0,
+      unassessed_route_count: 0,
+      available_route_count: 1,
+      blocked_route_count: 1,
+      over_demand_route_count: 0,
+      compute_service_route_count: 1,
+      network_service_route_count: 1,
+      explained_route_count: 2,
+      missing_explanation_count: 0,
+      path_context_route_count: 2,
+      next_hop_route_count: 2,
+      loss_proxy_route_count: 1,
+      core_field_count: 16,
+      observed_core_field_count: 16,
+      missing_core_field_count: 0,
+      context_field_count: 18,
+      observed_context_field_count: 18,
+      missing_context_field_count: 0,
+      bottleneck_components: ["AVAILABILITY", "LOSS_PROXY"],
+      sample_route_ids: ["route-b", "route-a"],
+      caveats: [
+        "Route explanations are flow-level route proxies, not packet-level traces.",
+        "Route trust reuses route_explanation_summary_v1 and does not recompute paths."
+      ]
+    });
+
+    expect(display).toEqual({
+      tone: "match",
+      sourceLabel: "leo_twin.route_provenance_trust.v1 / route_explanation_summary_v1",
+      statusLabel: "完整流级路由代理",
+      summaryLabel: "路由 2/2 已解释；核心字段 16/16；上下文 18/18",
+      metaLabels: [
+        "模型 流级路由代理",
+        "无包级仿真",
+        "无全对链路计算",
+        "可用 1 / 阻塞 1",
+        "瓶颈 AVAILABILITY, LOSS_PROXY",
+        "窗口 2 路由"
+      ],
+      caveats: [
+        "Route explanations are flow-level route proxies, not packet-level traces.",
+        "Route trust reuses route_explanation_summary_v1 and does not recompute paths."
+      ]
+    });
+  });
+
+  it("surfaces partial route windows and missing context", () => {
+    const display = buildDataPanelRouteProvenanceTrustDisplay({
+      version: "v1",
+      trust_id: "leo_twin.route_provenance_trust.v1",
+      source: "route_explanation_summary_v1",
+      route_model: "FLOW_LEVEL_ROUTE_PROXY",
+      packet_level_simulation: false,
+      all_pairs_computation: false,
+      trust_status: "PARTIAL_ROUTE_EXPLANATIONS",
+      route_count: 3,
+      window_item_count: 1,
+      assessed_route_count: 1,
+      hidden_route_count: 2,
+      unassessed_route_count: 2,
+      available_route_count: 0,
+      blocked_route_count: 3,
+      over_demand_route_count: 1,
+      compute_service_route_count: 1,
+      network_service_route_count: 2,
+      explained_route_count: 1,
+      missing_explanation_count: 0,
+      path_context_route_count: 0,
+      next_hop_route_count: 0,
+      loss_proxy_route_count: 0,
+      core_field_count: 8,
+      observed_core_field_count: 8,
+      missing_core_field_count: 0,
+      context_field_count: 9,
+      observed_context_field_count: 3,
+      missing_context_field_count: 6,
+      bottleneck_components: ["PATH"],
+      sample_route_ids: ["route-partial"],
+      caveats: ["Only the current route window is listed; additional routes exist."]
+    });
+
+    expect(display?.tone).toBe("different");
+    expect(display?.statusLabel).toBe("路由解释部分覆盖");
+    expect(display?.summaryLabel).toBe("路由 1/3 已解释；核心字段 8/8；上下文 3/9");
+    expect(display?.metaLabels).toContain("隐藏 2 路由");
+    expect(display?.caveats).toEqual([
+      "Only the current route window is listed; additional routes exist.",
+      "未评估路由 2 条",
+      "缺少上下文字段 6 个",
+      "超需求路由 1 条"
+    ]);
+  });
+
+  it("hides route trust display until backend status provides the summary", () => {
+    expect(buildDataPanelRouteProvenanceTrustDisplay(null)).toBeNull();
+    expect(buildDataPanelRouteProvenanceTrustDisplay(undefined)).toBeNull();
+  });
+});
+
 describe("buildDataPanelModelTrustEvidenceWorkspace", () => {
   it("combines backend configuration, KPI, fidelity, replay, and runtime evidence", () => {
     const display = buildDataPanelModelTrustEvidenceWorkspace({
@@ -3954,6 +4068,16 @@ describe("buildDataPanelModelTrustEvidenceWorkspace", () => {
             tone: "observed",
             title: "throughput interpretation"
           }
+        ]
+      },
+      routeProvenanceTrust: {
+        tone: "match",
+        sourceLabel: "leo_twin.route_provenance_trust.v1 / route_explanation_summary_v1",
+        statusLabel: "完整流级路由代理",
+        summaryLabel: "路由 2/2 已解释；核心字段 16/16；上下文 18/18",
+        metaLabels: ["模型 流级路由代理", "无包级仿真"],
+        caveats: [
+          "Route explanations are flow-level route proxies, not packet-level traces."
         ]
       },
       fidelitySummary: {
@@ -4060,11 +4184,12 @@ describe("buildDataPanelModelTrustEvidenceWorkspace", () => {
       tone: "match",
       sourceLabel: "runtime status + backend summary + export diagnostics",
       statusLabel: "证据链完整",
-      summaryLabel: "6 类证据 / 6 类可用 / 0 类待补齐",
-      scoreLabel: "可用 6/6 / 警告 0 / 错误 0",
+      summaryLabel: "7 类证据 / 7 类可用 / 0 类待补齐",
+      scoreLabel: "可用 7/7 / 警告 0 / 错误 0",
       metaLabels: [
         "配置语义已声明",
         "KPI公式可追踪",
+        "路由证据可追踪",
         "manifest已生成",
         "诊断包已加载"
       ],
@@ -4075,10 +4200,17 @@ describe("buildDataPanelModelTrustEvidenceWorkspace", () => {
       "fidelity",
       "kpi",
       "formula",
+      "route",
       "replay",
       "runtime"
     ]);
     expect(display?.rows[4]).toMatchObject({
+      label: "路由解释可信度",
+      statusLabel: "完整流级路由代理",
+      tone: "match",
+      source: "leo_twin.route_provenance_trust.v1 / route_explanation_summary_v1"
+    });
+    expect(display?.rows[5]).toMatchObject({
       label: "复盘证据",
       statusLabel: "REVIEW_READY",
       tone: "match",
@@ -4182,12 +4314,13 @@ describe("buildDataPanelModelTrustEvidenceWorkspace", () => {
 
     expect(display?.tone).toBe("error");
     expect(display?.statusLabel).toBe("证据链存在错误");
-    expect(display?.summaryLabel).toBe("6 类证据 / 1 类可用 / 2 类待补齐");
+    expect(display?.summaryLabel).toBe("7 类证据 / 1 类可用 / 3 类待补齐");
     expect(display?.rows.map((row) => [row.kind, row.tone])).toEqual([
       ["configuration", "pending"],
       ["fidelity", "different"],
       ["kpi", "error"],
       ["formula", "pending"],
+      ["route", "pending"],
       ["replay", "error"],
       ["runtime", "error"]
     ]);
@@ -4195,6 +4328,7 @@ describe("buildDataPanelModelTrustEvidenceWorkspace", () => {
       "配置语义：等待后端解释",
       "KPI可信度：包级指标越界",
       "KPI公式来源：等待公式证据",
+      "路由解释可信度：等待路由证据",
       "复盘证据：INCOMPLETE",
       "运行证据：已停止",
       "ERROR MISSING_MANIFEST"

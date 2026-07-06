@@ -25,6 +25,7 @@ The workspace uses existing frontend view models and runtime payloads:
 - `runtimeStatus.fidelity_summary`
 - `runtimeStatus.network_kpi_credibility_v1`
 - `runtimeStatus.network_kpi_provenance_v2`
+- `runtimeStatus.route_provenance_trust_summary_v1`
 - `runtimeStatus.reproducibility_manifest_v1`
 - runtime export catalog, review summary, and diagnostics bundle data
 - `/runtime/status`
@@ -37,8 +38,9 @@ Rows are emitted in a deterministic order:
 2. fidelity boundary
 3. KPI credibility
 4. KPI formula provenance
-5. replay/export evidence
-6. runtime evidence
+5. route explanation provenance
+6. replay/export evidence
+7. runtime evidence
 
 Each row has a tone:
 
@@ -65,8 +67,7 @@ The overall workspace tone is derived deterministically from row tones:
 
 ## Follow-Up
 
-- Add route explanation evidence rows once route provenance has a compact
-  backend trust summary.
+- Link route explanation evidence rows to exact route detail endpoints.
 - Link each model assumption to a concrete verification report instance.
 - Promote result-review evidence into a wider workspace when exported package
   history becomes large.

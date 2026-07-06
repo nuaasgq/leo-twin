@@ -47,5 +47,4 @@ silently hidden.
 - Link each assumption to the future model verification report.
 - Split KPI credibility details into a drill-down panel when the network model
   gains more provenance fields.
-- Add route explanation evidence once route provenance has a backend trust
-  summary.
+- Link the route trust evidence row to exact route detail endpoints.

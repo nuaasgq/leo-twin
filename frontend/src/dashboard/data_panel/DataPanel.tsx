@@ -45,6 +45,7 @@ import {
   RuntimeRouteExplanationItemV1,
   RuntimeReproducibilityManifestV1,
   RuntimeRouteExplanationSummaryV1,
+  RuntimeRouteProvenanceTrustSummaryV1,
   RuntimeSatelliteServiceItemV1,
   RuntimeSatelliteServiceSummaryV1,
   RuntimeSatelliteKpiHistoryV1,
@@ -506,11 +507,15 @@ export const DataPanel = memo(function DataPanel({
     networkKpiCredibilityDisplay,
     configurationExplanationDisplay
   );
+  const routeProvenanceTrustDisplay = buildDataPanelRouteProvenanceTrustDisplay(
+    runtimeStatus.route_provenance_trust_summary_v1
+  );
   const modelTrustEvidenceWorkspace = buildDataPanelModelTrustEvidenceWorkspace({
     configurationExplanation: configurationExplanationDisplay,
     modelAssumptions: modelAssumptionsDisplay,
     networkKpiCredibility: networkKpiCredibilityDisplay,
     networkKpiFormulaInspector,
+    routeProvenanceTrust: routeProvenanceTrustDisplay,
     fidelitySummary,
     reproducibilityManifest: runtimeStatus.reproducibility_manifest_v1,
     exportCatalog: runtimeExportCatalog,
@@ -9443,6 +9448,15 @@ export interface DataPanelNetworkKpiFormulaRow {
   title: string;
 }
 
+export interface DataPanelRouteProvenanceTrustDisplay {
+  tone: DataPanelNetworkKpiCredibilityTone;
+  sourceLabel: string;
+  statusLabel: string;
+  summaryLabel: string;
+  metaLabels: readonly string[];
+  caveats: readonly string[];
+}
+
 export interface DataPanelModelAssumptionsDisplay {
   sourceLabel: string;
   summaryLabel: string;
@@ -9463,6 +9477,7 @@ export interface DataPanelModelTrustEvidenceWorkspaceInput {
   modelAssumptions?: DataPanelModelAssumptionsDisplay | null;
   networkKpiCredibility?: DataPanelNetworkKpiCredibilityDisplay | null;
   networkKpiFormulaInspector?: DataPanelNetworkKpiFormulaInspectorDisplay | null;
+  routeProvenanceTrust?: DataPanelRouteProvenanceTrustDisplay | null;
   fidelitySummary?: FidelitySummary | null;
   reproducibilityManifest?: RuntimeReproducibilityManifestV1 | null;
   exportCatalog?: RuntimeExportCatalogV1 | null;
@@ -9483,7 +9498,14 @@ export interface DataPanelModelTrustEvidenceWorkspaceDisplay {
 }
 
 export interface DataPanelModelTrustEvidenceRow {
-  kind: "configuration" | "fidelity" | "kpi" | "formula" | "replay" | "runtime";
+  kind:
+    | "configuration"
+    | "fidelity"
+    | "kpi"
+    | "formula"
+    | "route"
+    | "replay"
+    | "runtime";
   label: string;
   statusLabel: string;
   detail: string;
@@ -10011,6 +10033,55 @@ export function buildDataPanelNetworkKpiFormulaInspector(
   };
 }
 
+export function buildDataPanelRouteProvenanceTrustDisplay(
+  trust: RuntimeRouteProvenanceTrustSummaryV1 | null | undefined
+): DataPanelRouteProvenanceTrustDisplay | null {
+  if (trust === null || trust === undefined) {
+    return null;
+  }
+  const routeCount = Math.max(0, trust.route_count);
+  const explainedRouteCount = clampCount(trust.explained_route_count, routeCount);
+  const coreFieldCount = Math.max(0, trust.core_field_count);
+  const contextFieldCount = Math.max(0, trust.context_field_count);
+  const observedCoreFieldCount = clampCount(
+    trust.observed_core_field_count,
+    coreFieldCount
+  );
+  const observedContextFieldCount = clampCount(
+    trust.observed_context_field_count,
+    contextFieldCount
+  );
+  const hiddenRouteCount = Math.max(0, trust.hidden_route_count);
+  return {
+    tone: routeProvenanceTrustTone(trust.trust_status),
+    sourceLabel: `${trust.trust_id} / ${trust.source}`,
+    statusLabel: routeProvenanceTrustStatusLabel(trust.trust_status),
+    summaryLabel: `路由 ${formatCount(explainedRouteCount)}/${formatCount(
+      routeCount
+    )} 已解释；核心字段 ${formatCount(observedCoreFieldCount)}/${formatCount(
+      coreFieldCount
+    )}；上下文 ${formatCount(observedContextFieldCount)}/${formatCount(
+      contextFieldCount
+    )}`,
+    metaLabels: [
+      `模型 ${routeProvenanceTrustModelLabel(trust.route_model)}`,
+      trust.packet_level_simulation ? "含包级仿真" : "无包级仿真",
+      trust.all_pairs_computation ? "含全对链路计算" : "无全对链路计算",
+      `可用 ${formatCount(trust.available_route_count)} / 阻塞 ${formatCount(
+        trust.blocked_route_count
+      )}`,
+      `瓶颈 ${trust.bottleneck_components.length > 0 ? trust.bottleneck_components.join(", ") : "NONE"}`,
+      hiddenRouteCount > 0
+        ? `隐藏 ${formatCount(hiddenRouteCount)} 路由`
+        : `窗口 ${formatCount(trust.window_item_count)} 路由`
+    ],
+    caveats: [
+      ...trust.caveats.slice(0, 3),
+      ...routeProvenanceTrustIssueLabels(trust)
+    ]
+  };
+}
+
 export function buildDataPanelModelAssumptionsDisplay(
   modelAssumptions: readonly string[] | null | undefined,
   fidelitySummary: FidelitySummary | null | undefined,
@@ -10109,6 +10180,7 @@ export function buildDataPanelModelTrustEvidenceWorkspace(
     (input.networkKpiCredibility === null || input.networkKpiCredibility === undefined) &&
     (input.networkKpiFormulaInspector === null ||
       input.networkKpiFormulaInspector === undefined) &&
+    (input.routeProvenanceTrust === null || input.routeProvenanceTrust === undefined) &&
     (input.fidelitySummary === null || input.fidelitySummary === undefined) &&
     (input.reproducibilityManifest === null ||
       input.reproducibilityManifest === undefined) &&
@@ -10126,6 +10198,7 @@ export function buildDataPanelModelTrustEvidenceWorkspace(
     buildModelTrustFidelityRow(input.fidelitySummary, input.modelAssumptions),
     buildModelTrustKpiRow(input.networkKpiCredibility),
     buildModelTrustFormulaRow(input.networkKpiFormulaInspector),
+    buildModelTrustRouteProvenanceRow(input.routeProvenanceTrust),
     buildModelTrustReplayRow(
       input.reproducibilityManifest,
       input.exportCatalog,
@@ -10172,6 +10245,7 @@ export function buildDataPanelModelTrustEvidenceWorkspace(
     metaLabels: [
       input.configurationExplanation ? "配置语义已声明" : "配置语义待声明",
       input.networkKpiFormulaInspector ? "KPI公式可追踪" : "KPI公式待补齐",
+      input.routeProvenanceTrust ? "路由证据可追踪" : "路由证据待补齐",
       input.reproducibilityManifest ? "manifest已生成" : "manifest待生成",
       input.exportDiagnosticsBundle ? "诊断包已加载" : "诊断包待选择"
     ],
@@ -10292,6 +10366,31 @@ function buildModelTrustFormulaRow(
     source: networkKpiFormulaInspector.sourceLabel,
     tone: networkKpiFormulaInspector.tone,
     title: networkKpiFormulaInspector.rows.map((row) => row.title).join(" / ")
+  };
+}
+
+function buildModelTrustRouteProvenanceRow(
+  routeProvenanceTrust: DataPanelRouteProvenanceTrustDisplay | null | undefined
+): DataPanelModelTrustEvidenceRow {
+  if (routeProvenanceTrust === null || routeProvenanceTrust === undefined) {
+    return {
+      kind: "route",
+      label: "路由解释可信度",
+      statusLabel: "等待路由证据",
+      detail: "未收到 route_provenance_trust_summary_v1。",
+      source: "route_provenance_trust_summary_v1",
+      tone: "pending",
+      title: "路由解释可信摘要必须来自后端 route_explanation_summary_v1。"
+    };
+  }
+  return {
+    kind: "route",
+    label: "路由解释可信度",
+    statusLabel: routeProvenanceTrust.statusLabel,
+    detail: routeProvenanceTrust.summaryLabel,
+    source: routeProvenanceTrust.sourceLabel,
+    tone: routeProvenanceTrust.tone,
+    title: routeProvenanceTrust.caveats.join(" / ") || routeProvenanceTrust.summaryLabel
   };
 }
 
@@ -10476,6 +10575,58 @@ function networkKpiMetricModelLabel(metricModel: string): string {
     return "流级代理";
   }
   return metricModel || "未知";
+}
+
+function routeProvenanceTrustTone(status: string): DataPanelNetworkKpiCredibilityTone {
+  if (status === "COMPLETE_FLOW_LEVEL_ROUTE_PROXY") {
+    return "match";
+  }
+  if (status === "PARTIAL_ROUTE_EXPLANATIONS") {
+    return "different";
+  }
+  if (status === "MISSING_ROUTE_EXPLANATIONS") {
+    return "pending";
+  }
+  return "error";
+}
+
+function routeProvenanceTrustStatusLabel(status: string): string {
+  if (status === "COMPLETE_FLOW_LEVEL_ROUTE_PROXY") {
+    return "完整流级路由代理";
+  }
+  if (status === "PARTIAL_ROUTE_EXPLANATIONS") {
+    return "路由解释部分覆盖";
+  }
+  if (status === "MISSING_ROUTE_EXPLANATIONS") {
+    return "路由解释缺失";
+  }
+  return "路由可信度未知";
+}
+
+function routeProvenanceTrustModelLabel(routeModel: string): string {
+  if (routeModel === "FLOW_LEVEL_ROUTE_PROXY") {
+    return "流级路由代理";
+  }
+  return routeModel || "未知";
+}
+
+function routeProvenanceTrustIssueLabels(
+  trust: RuntimeRouteProvenanceTrustSummaryV1
+): readonly string[] {
+  const labels: string[] = [];
+  if (trust.missing_explanation_count > 0) {
+    labels.push(`缺少解释 ${formatCount(trust.missing_explanation_count)} 条`);
+  }
+  if (trust.hidden_route_count > 0) {
+    labels.push(`未评估路由 ${formatCount(trust.hidden_route_count)} 条`);
+  }
+  if (trust.missing_context_field_count > 0) {
+    labels.push(`缺少上下文字段 ${formatCount(trust.missing_context_field_count)} 个`);
+  }
+  if (trust.over_demand_route_count > 0) {
+    labels.push(`超需求路由 ${formatCount(trust.over_demand_route_count)} 条`);
+  }
+  return labels;
 }
 
 function formatNetworkKpiValue(value: string | number | boolean | null): string {

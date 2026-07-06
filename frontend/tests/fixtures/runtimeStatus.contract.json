@@ -121,6 +121,121 @@
         }
       ]
     },
+    "route_explanation_summary_v1": {
+      "version": "v1",
+      "source": "BACKEND_RUNTIME_SNAPSHOT",
+      "summary_scope": "ROUTE_EXPLANATION_WINDOW",
+      "cursor": 0,
+      "limit": 500,
+      "next_cursor": 2,
+      "has_more": false,
+      "route_count": 2,
+      "item_count": 2,
+      "available_route_count": 1,
+      "blocked_route_count": 1,
+      "over_demand_route_count": 0,
+      "compute_service_route_count": 1,
+      "network_service_route_count": 1,
+      "items": [
+        {
+          "route_id": "route:svc-00001-input",
+          "flow_id": "svc-00001-input",
+          "user_id": "user-00001",
+          "source_id": "user-00001",
+          "destination_id": "compute-00001",
+          "selected_satellite_id": "sat-00001",
+          "primary_next_hop_id": "sat-00001",
+          "next_hop_ids": [
+            "sat-00001",
+            "compute-00001"
+          ],
+          "hop_count": 2,
+          "path_label": "user-00001 -> sat-00001 -> compute-00001",
+          "available": true,
+          "capacity_mbps": 180,
+          "demand_mbps": 160,
+          "latency_s": 0.045,
+          "loss_proxy_rate": 0.025,
+          "route_pressure_proxy": 0.8888888889,
+          "business_type": "COMPUTE_SERVICE",
+          "business_label": "communication-compute service",
+          "bottleneck_component": "LOSS_PROXY",
+          "bottleneck_reason": "ROUTE_LOSS_PROXY_POSITIVE",
+          "bottleneck_reason_label": "Route loss proxy is positive",
+          "explanation_label": "route has a positive flow-level loss proxy"
+        },
+        {
+          "route_id": "route:blocked",
+          "flow_id": "flow-blocked",
+          "user_id": "user-00002",
+          "source_id": "user-00002",
+          "destination_id": "service-00002",
+          "selected_satellite_id": "sat-00002",
+          "primary_next_hop_id": "sat-00002",
+          "next_hop_ids": [
+            "sat-00002",
+            "service-00002"
+          ],
+          "hop_count": 2,
+          "path_label": "user-00002 -> sat-00002 -> service-00002",
+          "available": false,
+          "capacity_mbps": 40,
+          "demand_mbps": 30,
+          "latency_s": 0.2,
+          "loss_proxy_rate": 0,
+          "route_pressure_proxy": 1,
+          "business_type": "DATA_TRANSFER",
+          "business_label": "data transfer",
+          "bottleneck_component": "AVAILABILITY",
+          "bottleneck_reason": "ROUTE_UNAVAILABLE",
+          "bottleneck_reason_label": "Route unavailable",
+          "explanation_label": "route is unavailable in the current snapshot"
+        }
+      ]
+    },
+    "route_provenance_trust_summary_v1": {
+      "version": "v1",
+      "trust_id": "leo_twin.route_provenance_trust.v1",
+      "source": "route_explanation_summary_v1",
+      "route_model": "FLOW_LEVEL_ROUTE_PROXY",
+      "packet_level_simulation": false,
+      "all_pairs_computation": false,
+      "trust_status": "COMPLETE_FLOW_LEVEL_ROUTE_PROXY",
+      "summary_scope": "ROUTE_EXPLANATION_WINDOW",
+      "route_count": 2,
+      "window_item_count": 2,
+      "assessed_route_count": 2,
+      "hidden_route_count": 0,
+      "unassessed_route_count": 0,
+      "available_route_count": 1,
+      "blocked_route_count": 1,
+      "over_demand_route_count": 0,
+      "compute_service_route_count": 1,
+      "network_service_route_count": 1,
+      "explained_route_count": 2,
+      "missing_explanation_count": 0,
+      "path_context_route_count": 2,
+      "next_hop_route_count": 2,
+      "loss_proxy_route_count": 1,
+      "core_field_count": 16,
+      "observed_core_field_count": 16,
+      "missing_core_field_count": 0,
+      "context_field_count": 18,
+      "observed_context_field_count": 18,
+      "missing_context_field_count": 0,
+      "bottleneck_components": [
+        "AVAILABILITY",
+        "LOSS_PROXY"
+      ],
+      "sample_route_ids": [
+        "route:svc-00001-input",
+        "route:blocked"
+      ],
+      "caveats": [
+        "Route explanations are flow-level route proxies, not packet-level traces.",
+        "Route trust reuses route_explanation_summary_v1 and does not recompute paths."
+      ]
+    },
     "fidelity_summary": {
       "orbit_update_mode": "BATCH",
       "metrics_mode": "AGGREGATED",

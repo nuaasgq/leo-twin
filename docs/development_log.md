@@ -13110,3 +13110,70 @@ change.
 - Recommended follow-up:
   - Add backend route-provenance trust summary and link model assumptions to
     verification report evidence.
+
+## 2026-07-06 - Route Provenance Trust Summary v1
+
+- Branch: `feature/T275-route-provenance-trust-summary-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: advance V2-023 and the model-trust evidence track by adding
+  backend-owned `route_provenance_trust_summary_v1` to runtime observability.
+  The summary is derived from existing `route_explanation_summary_v1` rows and
+  reports route explanation coverage, path/next-hop context coverage,
+  bottleneck components, hidden route windows, and flow-level route proxy
+  caveats. The standalone dashboard model trust evidence workspace now renders
+  route explanation trust as its own evidence row. Route calculation, network
+  model behavior, Event Kernel behavior, packet-level semantics, all-pairs link
+  computation, and external simulator integration remain unchanged.
+- Changed files/modules:
+  - `src/leo_twin/services/runtime_observability.py`
+  - `tests/unit/test_runtime_observability.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `frontend/tests/runtimeContractFixture.test.ts`
+  - `frontend/tests/fixtures/runtimeStatus.contract.json`
+  - `docs/route_provenance_trust_summary_v1.md`
+  - `docs/dashboard_model_trust_evidence_workspace_v1.md`
+  - `docs/dashboard_model_assumptions_panel_v1.md`
+  - `docs/integration_demo.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_runtime_observability.py -q`
+    - Result: passed, 8 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed, using the bundled Node/Pnpm runtime because the shell
+      PATH does not expose `node`.
+  - `pnpm --dir frontend test dataPanel.test.ts runtimeContractFixture.test.ts`
+    - Result: passed, 2 test files and 165 tests.
+  - `pnpm --dir frontend test`
+    - Result: passed, 26 test files and 375 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing DataPanel chunk-size
+      warning after minification; no functional build error.
+  - `python -m json.tool frontend/tests/fixtures/runtimeStatus.contract.json`
+    - Result: passed.
+  - `python -m py_compile src/leo_twin/services/runtime_observability.py examples/integration_demo/control_plane.py`
+    - Result: passed.
+  - `python -m pytest tests/unit/test_runtime_observability.py tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer -q`
+    - Result: passed, 9 tests.
+- Problems encountered:
+  - Route explanation windows can be paginated. The implementation counts core
+    and context field coverage only for the assessed window and reports hidden
+    routes separately through `hidden_route_count` and `unassessed_route_count`.
+  - One attempted integration selector referenced a non-existent test name
+    (`test_runtime_status_exposes_business_and_node_detail_observability`).
+    The correct existing integration test is
+    `test_demo_server_adapter_uses_runtime_status_and_control_layer`, which
+    covers the runtime status observability payload and passed after rerun.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The trust summary does not verify alternate candidate routes yet; it only
+    summarizes the selected/exposed route explanation window.
+  - Benchmark acceptance tests do not yet assert route explanation trust across
+    standard 72/300/1200 scenarios.
+- Recommended follow-up:
+  - Add benchmark route trust acceptance checks and link route trust rows to
+    exact route detail endpoints from the model trust evidence workspace.

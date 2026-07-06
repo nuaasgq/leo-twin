@@ -187,6 +187,11 @@ Tasks:
     backend fields in T210; dashboard text filter for route/user/satellite/
     bottleneck/business search implemented in T211; structured availability,
     business-type, and bottleneck filters implemented in T212.
+  - Status: T275 adds backend-owned `route_provenance_trust_summary_v1`, derived
+    from `route_explanation_summary_v1`, and binds it into the dashboard model
+    trust evidence workspace. It reports route explanation coverage, path and
+    next-hop context coverage, bottleneck components, hidden route windows, and
+    flow-level route proxy caveats without recomputing routes.
 
 ### WS4. Compute Network Model v2
 

@@ -43,6 +43,27 @@ describe("runtime status contract fixture", () => {
       current_sim_time: 120,
       processed_event_count: 4096
     });
+    expect(status.route_explanation_summary_v1).toMatchObject({
+      version: "v1",
+      source: "BACKEND_RUNTIME_SNAPSHOT",
+      route_count: 2,
+      item_count: 2,
+      available_route_count: 1,
+      blocked_route_count: 1
+    });
+    expect(status.route_provenance_trust_summary_v1).toMatchObject({
+      version: "v1",
+      trust_id: "leo_twin.route_provenance_trust.v1",
+      source: "route_explanation_summary_v1",
+      route_model: "FLOW_LEVEL_ROUTE_PROXY",
+      packet_level_simulation: false,
+      all_pairs_computation: false,
+      trust_status: "COMPLETE_FLOW_LEVEL_ROUTE_PROXY",
+      route_count: 2,
+      explained_route_count: 2,
+      observed_core_field_count: 16,
+      observed_context_field_count: 18
+    });
     expect(status.stream_diagnostics_v1?.event_stream.next_cursor).toBe(42);
     expect(status.kpi_time_series_v1?.samples[0]).toMatchObject({
       sim_time: 120,

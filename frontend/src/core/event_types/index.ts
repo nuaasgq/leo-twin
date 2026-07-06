@@ -1460,6 +1460,7 @@ export interface RuntimeStatusPayload {
   user_request_history_v1?: RuntimeUserRequestHistoryV1;
   satellite_service_summary_v1?: RuntimeSatelliteServiceSummaryV1;
   route_explanation_summary_v1?: RuntimeRouteExplanationSummaryV1;
+  route_provenance_trust_summary_v1?: RuntimeRouteProvenanceTrustSummaryV1;
   node_detail_summary_v1?: RuntimeNodeDetailSummaryV1;
   stream_diagnostics_v1?: RuntimeStreamDiagnosticsV1;
   reproducibility_manifest_v1?: RuntimeReproducibilityManifestV1;
@@ -1701,6 +1702,41 @@ export interface RuntimeRouteExplanationItemV1 {
   bottleneck_reason: string;
   bottleneck_reason_label: string;
   explanation_label: string;
+}
+
+export interface RuntimeRouteProvenanceTrustSummaryV1 {
+  version: "v1" | string;
+  trust_id: string;
+  source: string;
+  route_model: string;
+  packet_level_simulation: boolean;
+  all_pairs_computation: boolean;
+  trust_status: string;
+  summary_scope?: string;
+  route_count: number;
+  window_item_count: number;
+  assessed_route_count: number;
+  hidden_route_count: number;
+  unassessed_route_count: number;
+  available_route_count: number;
+  blocked_route_count: number;
+  over_demand_route_count: number;
+  compute_service_route_count: number;
+  network_service_route_count: number;
+  explained_route_count: number;
+  missing_explanation_count: number;
+  path_context_route_count: number;
+  next_hop_route_count: number;
+  loss_proxy_route_count: number;
+  core_field_count: number;
+  observed_core_field_count: number;
+  missing_core_field_count: number;
+  context_field_count: number;
+  observed_context_field_count: number;
+  missing_context_field_count: number;
+  bottleneck_components: readonly string[];
+  sample_route_ids: readonly string[];
+  caveats: readonly string[];
 }
 
 export interface RuntimeUserRequestItemV1 {

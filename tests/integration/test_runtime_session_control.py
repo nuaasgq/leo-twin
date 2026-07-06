@@ -507,6 +507,27 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
             "bottleneck_reason_label",
             "explanation_label",
         }.issubset(route_explanation_summary["items"][0])
+    route_trust_summary = status_after_tick["route_provenance_trust_summary_v1"]
+    assert route_trust_summary["version"] == "v1"
+    assert route_trust_summary["source"] == "route_explanation_summary_v1"
+    assert route_trust_summary["route_model"] == "FLOW_LEVEL_ROUTE_PROXY"
+    assert route_trust_summary["packet_level_simulation"] is False
+    assert route_trust_summary["all_pairs_computation"] is False
+    assert route_trust_summary["route_count"] == route_explanation_summary["route_count"]
+    assert route_trust_summary["window_item_count"] == route_explanation_summary[
+        "item_count"
+    ]
+    assert route_trust_summary["available_route_count"] == route_explanation_summary[
+        "available_route_count"
+    ]
+    assert route_trust_summary["blocked_route_count"] == route_explanation_summary[
+        "blocked_route_count"
+    ]
+    assert route_trust_summary["trust_status"] in {
+        "COMPLETE_FLOW_LEVEL_ROUTE_PROXY",
+        "PARTIAL_ROUTE_EXPLANATIONS",
+        "MISSING_ROUTE_EXPLANATIONS",
+    }
     node_detail_summary = status_after_tick["node_detail_summary_v1"]
     assert node_detail_summary["version"] == "v1"
     assert node_detail_summary["source"] == "BACKEND_RUNTIME_STATUS"

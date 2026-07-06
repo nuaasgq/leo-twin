@@ -160,6 +160,7 @@ Runtime observability summaries:
   user_request_summary_v1
   satellite_service_summary_v1
   route_explanation_summary_v1
+  route_provenance_trust_summary_v1
   node_detail_summary_v1
   service_lifecycle_trace_v2
 ```
@@ -170,6 +171,12 @@ next hop, path, capacity, demand, latency, loss proxy, business type,
 bottleneck component, bottleneck reason, and a compact explanation label. It is
 derived from the runtime snapshot and service history; it does not change route
 selection or simulate packets.
+
+`route_provenance_trust_summary_v1` summarizes the route explanation window for
+dashboard model-trust surfaces. It reports route explanation coverage, path and
+next-hop context coverage, bottleneck components, hidden route windows, and
+flow-level route proxy caveats. It reuses `route_explanation_summary_v1`; it
+does not recompute routes or introduce all-pairs route analysis.
 
 Service trace detail APIs:
 

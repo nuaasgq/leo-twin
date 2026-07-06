@@ -23,6 +23,27 @@ _SERVICE_LIFECYCLE_DURATION_FIELDS = {
     "compute_execution": "compute_execution_delay_s",
     "output_network": "output_network_latency_s",
 }
+_ROUTE_TRUST_CORE_FIELDS = (
+    "route_id",
+    "flow_id",
+    "available",
+    "business_type",
+    "bottleneck_component",
+    "bottleneck_reason",
+    "bottleneck_reason_label",
+    "explanation_label",
+)
+_ROUTE_TRUST_CONTEXT_FIELDS = (
+    "path_label",
+    "primary_next_hop_id",
+    "selected_satellite_id",
+    "hop_count",
+    "capacity_mbps",
+    "demand_mbps",
+    "latency_s",
+    "loss_proxy_rate",
+    "route_pressure_proxy",
+)
 
 
 def build_runtime_lifecycle_summaries(
@@ -58,6 +79,9 @@ def build_runtime_lifecycle_summaries(
         "user_request_summary_v1": user_summary,
         "satellite_service_summary_v1": satellite_summary,
         "route_explanation_summary_v1": route_explanation_summary,
+        "route_provenance_trust_summary_v1": (
+            build_runtime_route_provenance_trust_summary(route_explanation_summary)
+        ),
         "compute_task_timeline_summary_v1": build_runtime_compute_task_timeline_summary(
             service_latency_history
         ),
@@ -570,6 +594,125 @@ def build_runtime_route_explanation_summary(
             }
         )
     return result
+
+
+def build_runtime_route_provenance_trust_summary(
+    route_explanation_summary: Mapping[str, Any] | None,
+) -> dict[str, object]:
+    """Build a compact backend-owned trust summary for route explanations."""
+
+    if route_explanation_summary is None:
+        route_explanation_summary = {}
+    items = tuple(_records(route_explanation_summary.get("items")))
+    route_count = max(_count(route_explanation_summary.get("route_count")), len(items))
+    assessed_route_count = len(items)
+    hidden_route_count = max(0, route_count - assessed_route_count)
+    core_field_count = assessed_route_count * len(_ROUTE_TRUST_CORE_FIELDS)
+    context_field_count = assessed_route_count * len(_ROUTE_TRUST_CONTEXT_FIELDS)
+    observed_core_field_count = sum(
+        1
+        for item in items
+        for field in _ROUTE_TRUST_CORE_FIELDS
+        if _route_trust_field_observed(item, field)
+    )
+    observed_context_field_count = sum(
+        1
+        for item in items
+        for field in _ROUTE_TRUST_CONTEXT_FIELDS
+        if _route_trust_field_observed(item, field)
+    )
+    explained_route_count = sum(
+        1
+        for item in items
+        if all(_route_trust_field_observed(item, field) for field in _ROUTE_TRUST_CORE_FIELDS)
+    )
+    path_context_route_count = sum(
+        1
+        for item in items
+        if _route_trust_field_observed(item, "path_label")
+        and _route_trust_field_observed(item, "hop_count")
+    )
+    next_hop_route_count = sum(
+        1 for item in items if _route_trust_field_observed(item, "primary_next_hop_id")
+    )
+    blocked_route_count = _count(route_explanation_summary.get("blocked_route_count"))
+    over_demand_route_count = _count(
+        route_explanation_summary.get("over_demand_route_count")
+    )
+    loss_proxy_route_count = sum(
+        1 for item in items if (_optional_float(item.get("loss_proxy_rate")) or 0.0) > 0.0
+    )
+    bottleneck_components = tuple(
+        sorted(
+            {
+                _str(item.get("bottleneck_component"))
+                for item in items
+                if _str(item.get("bottleneck_component"))
+            }
+        )
+    )
+    missing_core_field_count = max(0, core_field_count - observed_core_field_count)
+    trust_status = _route_trust_status(
+        route_count=assessed_route_count,
+        explained_route_count=explained_route_count,
+        missing_core_field_count=missing_core_field_count,
+        hidden_route_count=hidden_route_count,
+    )
+    caveats = _route_trust_caveats(
+        route_explanation_summary,
+        context_field_count=context_field_count,
+        observed_context_field_count=observed_context_field_count,
+    )
+    return {
+        "version": "v1",
+        "trust_id": "leo_twin.route_provenance_trust.v1",
+        "source": "route_explanation_summary_v1",
+        "route_model": "FLOW_LEVEL_ROUTE_PROXY",
+        "packet_level_simulation": False,
+        "all_pairs_computation": False,
+        "trust_status": trust_status,
+        "summary_scope": _str(route_explanation_summary.get("summary_scope")),
+        "route_count": route_count,
+        "window_item_count": assessed_route_count,
+        "assessed_route_count": assessed_route_count,
+        "hidden_route_count": hidden_route_count,
+        "unassessed_route_count": hidden_route_count,
+        "available_route_count": _count(
+            route_explanation_summary.get("available_route_count")
+        ),
+        "blocked_route_count": blocked_route_count,
+        "over_demand_route_count": over_demand_route_count,
+        "compute_service_route_count": _count(
+            route_explanation_summary.get("compute_service_route_count")
+        ),
+        "network_service_route_count": _count(
+            route_explanation_summary.get("network_service_route_count")
+        ),
+        "explained_route_count": explained_route_count,
+        "missing_explanation_count": max(
+            0,
+            assessed_route_count - explained_route_count,
+        ),
+        "path_context_route_count": path_context_route_count,
+        "next_hop_route_count": next_hop_route_count,
+        "loss_proxy_route_count": loss_proxy_route_count,
+        "core_field_count": core_field_count,
+        "observed_core_field_count": observed_core_field_count,
+        "missing_core_field_count": missing_core_field_count,
+        "context_field_count": context_field_count,
+        "observed_context_field_count": observed_context_field_count,
+        "missing_context_field_count": max(
+            0,
+            context_field_count - observed_context_field_count,
+        ),
+        "bottleneck_components": bottleneck_components,
+        "sample_route_ids": tuple(
+            _str(item.get("route_id"))
+            for item in items[:5]
+            if _str(item.get("route_id"))
+        ),
+        "caveats": caveats,
+    }
 
 
 def build_runtime_service_detail_page(
@@ -2420,6 +2563,64 @@ def _route_filter_is_active(
         or _normalized_filter_choice(business_type, default="ALL") != "ALL"
         or _normalized_filter_choice(bottleneck_component, default="ALL") != "ALL"
     )
+
+
+def _route_trust_field_observed(item: Mapping[str, Any], field: str) -> bool:
+    if field == "available":
+        return isinstance(item.get(field), bool)
+    if field == "hop_count":
+        return isinstance(item.get(field), int) and int(item[field]) >= 0
+    if field in {
+        "capacity_mbps",
+        "demand_mbps",
+        "latency_s",
+        "loss_proxy_rate",
+        "route_pressure_proxy",
+    }:
+        return _optional_float(item.get(field)) is not None
+    value = item.get(field)
+    if isinstance(value, str):
+        return bool(value.strip())
+    return value is not None
+
+
+def _route_trust_status(
+    *,
+    route_count: int,
+    explained_route_count: int,
+    missing_core_field_count: int,
+    hidden_route_count: int,
+) -> str:
+    if route_count <= 0:
+        return "MISSING_ROUTE_EXPLANATIONS"
+    if explained_route_count <= 0:
+        return "MISSING_ROUTE_EXPLANATIONS"
+    if (
+        missing_core_field_count > 0
+        or explained_route_count < route_count
+        or hidden_route_count > 0
+    ):
+        return "PARTIAL_ROUTE_EXPLANATIONS"
+    return "COMPLETE_FLOW_LEVEL_ROUTE_PROXY"
+
+
+def _route_trust_caveats(
+    route_explanation_summary: Mapping[str, Any],
+    *,
+    context_field_count: int,
+    observed_context_field_count: int,
+) -> tuple[str, ...]:
+    caveats = [
+        "Route explanations are flow-level route proxies, not packet-level traces.",
+        "Route trust reuses route_explanation_summary_v1 and does not recompute paths.",
+    ]
+    if bool(route_explanation_summary.get("filter_applied")):
+        caveats.append("Trust summary reflects the active route explanation filter.")
+    if bool(route_explanation_summary.get("has_more")):
+        caveats.append("Only the current route window is listed; additional routes exist.")
+    if observed_context_field_count < context_field_count:
+        caveats.append("Some route context fields are missing in the current snapshot.")
+    return tuple(caveats)
 
 
 def _normalized_filter_text(value: object) -> str:

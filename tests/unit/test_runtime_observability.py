@@ -12,6 +12,7 @@ from leo_twin.services.runtime_observability import (
     build_runtime_lifecycle_summaries,
     build_runtime_node_detail_page,
     build_runtime_route_explanation_summary,
+    build_runtime_route_provenance_trust_summary,
     build_runtime_satellite_detail_card,
     build_runtime_satellite_service_summary,
     build_runtime_user_detail_card,
@@ -193,6 +194,43 @@ def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> No
                 "bottleneck_reason_label": "Route loss proxy is positive",
                 "explanation_label": "route has a positive flow-level loss proxy",
             },
+        ),
+    }
+    assert first["route_provenance_trust_summary_v1"] == {
+        "version": "v1",
+        "trust_id": "leo_twin.route_provenance_trust.v1",
+        "source": "route_explanation_summary_v1",
+        "route_model": "FLOW_LEVEL_ROUTE_PROXY",
+        "packet_level_simulation": False,
+        "all_pairs_computation": False,
+        "trust_status": "COMPLETE_FLOW_LEVEL_ROUTE_PROXY",
+        "summary_scope": "ROUTE_EXPLANATION_WINDOW",
+        "route_count": 2,
+        "window_item_count": 2,
+        "assessed_route_count": 2,
+        "hidden_route_count": 0,
+        "unassessed_route_count": 0,
+        "available_route_count": 1,
+        "blocked_route_count": 1,
+        "over_demand_route_count": 0,
+        "compute_service_route_count": 1,
+        "network_service_route_count": 1,
+        "explained_route_count": 2,
+        "missing_explanation_count": 0,
+        "path_context_route_count": 2,
+        "next_hop_route_count": 2,
+        "loss_proxy_route_count": 2,
+        "core_field_count": 16,
+        "observed_core_field_count": 16,
+        "missing_core_field_count": 0,
+        "context_field_count": 18,
+        "observed_context_field_count": 18,
+        "missing_context_field_count": 0,
+        "bottleneck_components": ("AVAILABILITY", "LOSS_PROXY"),
+        "sample_route_ids": ("route-b", "route-a"),
+        "caveats": (
+            "Route explanations are flow-level route proxies, not packet-level traces.",
+            "Route trust reuses route_explanation_summary_v1 and does not recompute paths.",
         ),
     }
     assert first["user_request_summary_v1"] == {
@@ -1017,6 +1055,69 @@ def test_runtime_user_summary_counts_full_set_when_items_are_limited() -> None:
     assert summary["window_compute_service_user_count"] == 1
     assert summary["window_waiting_user_count"] == 0
     assert summary["hidden_user_count"] == 2
+
+
+def test_route_provenance_trust_summary_reports_partial_window_and_missing_context() -> None:
+    summary = build_runtime_route_provenance_trust_summary(
+        {
+            "version": "v1",
+            "source": "BACKEND_RUNTIME_SNAPSHOT",
+            "summary_scope": "FILTERED_ROUTE_EXPLANATION_WINDOW",
+            "route_count": 3,
+            "item_count": 1,
+            "available_route_count": 0,
+            "blocked_route_count": 3,
+            "over_demand_route_count": 1,
+            "compute_service_route_count": 1,
+            "network_service_route_count": 2,
+            "has_more": True,
+            "filter_applied": True,
+            "items": (
+                {
+                    "route_id": "route-partial",
+                    "flow_id": "flow-partial",
+                    "available": False,
+                    "business_type": "DATA_TRANSFER",
+                    "bottleneck_component": "PATH",
+                    "bottleneck_reason": "NO_ROUTE_PATH",
+                    "bottleneck_reason_label": "No feasible path",
+                    "explanation_label": "route has no path",
+                    "path_label": "",
+                    "primary_next_hop_id": "",
+                    "selected_satellite_id": "",
+                    "hop_count": 0,
+                    "capacity_mbps": None,
+                    "demand_mbps": 12.0,
+                    "latency_s": None,
+                    "loss_proxy_rate": None,
+                    "route_pressure_proxy": 1.0,
+                },
+            ),
+        }
+    )
+
+    assert summary["trust_status"] == "PARTIAL_ROUTE_EXPLANATIONS"
+    assert summary["route_count"] == 3
+    assert summary["assessed_route_count"] == 1
+    assert summary["hidden_route_count"] == 2
+    assert summary["explained_route_count"] == 1
+    assert summary["missing_explanation_count"] == 0
+    assert summary["path_context_route_count"] == 0
+    assert summary["next_hop_route_count"] == 0
+    assert summary["core_field_count"] == 8
+    assert summary["observed_core_field_count"] == 8
+    assert summary["context_field_count"] == 9
+    assert summary["observed_context_field_count"] == 3
+    assert summary["missing_context_field_count"] == 6
+    assert summary["bottleneck_components"] == ("PATH",)
+    assert summary["sample_route_ids"] == ("route-partial",)
+    assert summary["caveats"] == (
+        "Route explanations are flow-level route proxies, not packet-level traces.",
+        "Route trust reuses route_explanation_summary_v1 and does not recompute paths.",
+        "Trust summary reflects the active route explanation filter.",
+        "Only the current route window is listed; additional routes exist.",
+        "Some route context fields are missing in the current snapshot.",
+    )
 
 
 def test_runtime_detail_pages_apply_filters_before_cursor_pagination() -> None:
