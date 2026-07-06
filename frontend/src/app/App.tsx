@@ -15,6 +15,7 @@ import {
   RuntimeExportCatalogV1,
   RuntimeExportDiagnosticsBundleV1,
   RuntimeExportPackageCompareV1,
+  RuntimeExportRouteComparisonReviewReportV1,
   RuntimeExportRouteDetailItemV1,
   RuntimeExportRouteDetailPageV1,
   RuntimeExportReviewSummaryV1,
@@ -48,6 +49,7 @@ import {
   loadRuntimeExportDiagnosticsBundle,
   loadRuntimeExportManifest,
   loadRuntimeExportPackageCompare,
+  loadRuntimeExportRouteComparisonReviewReport,
   loadRuntimeExportRouteDetailItem,
   loadRuntimeExportRouteDetailPage,
   loadRuntimeExportReviewSummary,
@@ -86,6 +88,8 @@ const RUNTIME_PROGRESS_TICK_MS = 100;
 const RUNTIME_DETAIL_FALLBACK_LIMIT = 5000;
 const RUNTIME_EXPORT_CATALOG_POLL_MS = 2500;
 const USER_CONFIGURATION_CONTRACT_POLL_MS = 5000;
+const ROUTE_COMPARISON_REVIEW_REPORT_FILENAME =
+  "route_comparison_review_report_v1.json";
 
 type RuntimeConnectionChannel = "http" | "control" | "events" | "state";
 type RuntimeConnectionStatus = "idle" | "connecting" | "live" | "degraded";
@@ -276,6 +280,10 @@ export function App() {
   const [runtimeExportRouteDetailItem, setRuntimeExportRouteDetailItem] =
     useState<RuntimeExportRouteDetailItemV1 | null>(null);
   const [
+    runtimeExportRouteComparisonReviewReport,
+    setRuntimeExportRouteComparisonReviewReport
+  ] = useState<RuntimeExportRouteComparisonReviewReportV1 | null>(null);
+  const [
     runtimeExportRouteDetailItemRouteId,
     setRuntimeExportRouteDetailItemRouteId
   ] = useState<string | null>(null);
@@ -305,6 +313,14 @@ export function App() {
     useState(false);
   const [runtimeExportRouteDetailItemError, setRuntimeExportRouteDetailItemError] =
     useState<string | null>(null);
+  const [
+    runtimeExportRouteComparisonReviewReportLoading,
+    setRuntimeExportRouteComparisonReviewReportLoading
+  ] = useState(false);
+  const [
+    runtimeExportRouteComparisonReviewReportError,
+    setRuntimeExportRouteComparisonReviewReportError
+  ] = useState<string | null>(null);
   const [
     runtimeExportRouteComparisonReviewSavePendingRouteId,
     setRuntimeExportRouteComparisonReviewSavePendingRouteId
@@ -1087,19 +1103,28 @@ export function App() {
     [generatedConfig, setConnectionChannel]
   );
 
-  const refreshRuntimeExportCompare = useCallback(async (packageId: string) => {
+  const refreshRuntimeExportCompare = useCallback(async (
+    packageId: string,
+    catalogOverride: RuntimeExportCatalogV1 | null = null
+  ) => {
+    const exportCatalog = catalogOverride ?? runtimeExportCatalog;
+    const shouldLoadReviewReport =
+      runtimeExportCatalogHasRouteComparisonReviewReport(exportCatalog, packageId);
     setRuntimeExportComparePackageId(packageId);
     setRuntimeExportCompareLoading(true);
     setRuntimeExportReviewSummaryLoading(true);
     setRuntimeExportManifestLoading(true);
     setRuntimeExportDiagnosticsBundleLoading(true);
     setRuntimeExportRouteDetailIndexLoading(true);
+    setRuntimeExportRouteComparisonReviewReportLoading(shouldLoadReviewReport);
     setRuntimeExportRestorePreflightLoading(true);
     setRuntimeExportCompareError(null);
     setRuntimeExportReviewSummaryError(null);
     setRuntimeExportManifestError(null);
     setRuntimeExportDiagnosticsBundleError(null);
     setRuntimeExportRouteDetailIndexError(null);
+    setRuntimeExportRouteComparisonReviewReport(null);
+    setRuntimeExportRouteComparisonReviewReportError(null);
     setRuntimeExportRouteDetailItem(null);
     setRuntimeExportRouteDetailItemRouteId(null);
     setRuntimeExportRouteDetailItemLoading(false);
@@ -1116,6 +1141,7 @@ export function App() {
       manifest,
       diagnosticsBundle,
       routeDetailPage,
+      routeComparisonReviewReport,
       preflight
     ] =
       await Promise.allSettled([
@@ -1124,6 +1150,9 @@ export function App() {
         loadRuntimeExportManifest(packageId),
         loadRuntimeExportDiagnosticsBundle(packageId),
         loadRuntimeExportRouteDetailPage(packageId, 0, 5),
+        shouldLoadReviewReport
+          ? loadRuntimeExportRouteComparisonReviewReport(packageId)
+          : Promise.resolve(null),
         loadRuntimeExportRestorePreflight(packageId)
       ]);
     if (compare.status === "fulfilled") {
@@ -1162,6 +1191,18 @@ export function App() {
         runtimeExportRouteDetailIndexErrorMessage(routeDetailPage.reason)
       );
     }
+    if (routeComparisonReviewReport.status === "fulfilled") {
+      setRuntimeExportRouteComparisonReviewReport(
+        routeComparisonReviewReport.value
+      );
+    } else {
+      setRuntimeExportRouteComparisonReviewReport(null);
+      setRuntimeExportRouteComparisonReviewReportError(
+        runtimeExportRouteComparisonReviewReportErrorMessage(
+          routeComparisonReviewReport.reason
+        )
+      );
+    }
     if (preflight.status === "fulfilled") {
       setRuntimeExportRestorePreflight(preflight.value);
     } else {
@@ -1175,8 +1216,9 @@ export function App() {
     setRuntimeExportManifestLoading(false);
     setRuntimeExportDiagnosticsBundleLoading(false);
     setRuntimeExportRouteDetailIndexLoading(false);
+    setRuntimeExportRouteComparisonReviewReportLoading(false);
     setRuntimeExportRestorePreflightLoading(false);
-  }, []);
+  }, [runtimeExportCatalog]);
 
   const refreshRuntimeExportRouteDetailPage = useCallback(
     async (request: DataPanelExportRouteDetailPageRequest) => {
@@ -1259,6 +1301,9 @@ export function App() {
         setRuntimeExportRouteDetailItemRouteId(null);
         setRuntimeExportRouteDetailItemLoading(false);
         setRuntimeExportRouteDetailItemError(null);
+        setRuntimeExportRouteComparisonReviewReport(null);
+        setRuntimeExportRouteComparisonReviewReportLoading(false);
+        setRuntimeExportRouteComparisonReviewReportError(null);
         setRuntimeExportRouteComparisonReviewSavePendingRouteId(null);
         setRuntimeExportRouteComparisonReviewSaveError(null);
         setRuntimeExportRouteComparisonReviewSaveReportHash(null);
@@ -1269,19 +1314,21 @@ export function App() {
         setRuntimeExportManifestLoading(false);
         setRuntimeExportDiagnosticsBundleLoading(false);
         setRuntimeExportRouteDetailIndexLoading(false);
+        setRuntimeExportRouteComparisonReviewReportLoading(false);
         setRuntimeExportRestorePreflightLoading(false);
         setRuntimeExportCompareError(null);
         setRuntimeExportReviewSummaryError(null);
         setRuntimeExportManifestError(null);
         setRuntimeExportDiagnosticsBundleError(null);
         setRuntimeExportRouteDetailIndexError(null);
+        setRuntimeExportRouteComparisonReviewReportError(null);
         setRuntimeExportRestorePreflightError(null);
         setRuntimeExportRestoreCommandPendingPackageId(null);
         setRuntimeExportRestoreCommandError(null);
         setRuntimeExportRestoreResult(null);
         return;
       }
-      void refreshRuntimeExportCompare(packageId);
+      void refreshRuntimeExportCompare(packageId, catalog);
     } catch {
       setRuntimeExportCatalog(null);
       setRuntimeExportCompare(null);
@@ -1289,6 +1336,7 @@ export function App() {
       setRuntimeExportManifest(null);
       setRuntimeExportDiagnosticsBundle(null);
       setRuntimeExportRouteDetailPage(null);
+      setRuntimeExportRouteComparisonReviewReport(null);
       setRuntimeExportRestorePreflight(null);
       setRuntimeExportComparePackageId(null);
       setRuntimeExportRouteComparisonReviewSavePendingRouteId(null);
@@ -1299,12 +1347,14 @@ export function App() {
       setRuntimeExportManifestLoading(false);
       setRuntimeExportDiagnosticsBundleLoading(false);
       setRuntimeExportRouteDetailIndexLoading(false);
+      setRuntimeExportRouteComparisonReviewReportLoading(false);
       setRuntimeExportRestorePreflightLoading(false);
       setRuntimeExportCompareError(null);
       setRuntimeExportReviewSummaryError(null);
       setRuntimeExportManifestError(null);
       setRuntimeExportDiagnosticsBundleError(null);
       setRuntimeExportRouteDetailIndexError(null);
+      setRuntimeExportRouteComparisonReviewReportError(null);
       setRuntimeExportRestorePreflightError(null);
       setRuntimeExportRestoreCommandPendingPackageId(null);
       setRuntimeExportRestoreCommandError(null);
@@ -1321,6 +1371,8 @@ export function App() {
       setRuntimeExportRouteComparisonReviewSavePendingRouteId(routeId);
       setRuntimeExportRouteComparisonReviewSaveError(null);
       setRuntimeExportRouteComparisonReviewSaveReportHash(null);
+      setRuntimeExportRouteComparisonReviewReportLoading(true);
+      setRuntimeExportRouteComparisonReviewReportError(null);
       try {
         const report = await saveRuntimeExportRouteComparisonReviewReport(
           request.packageId,
@@ -1329,13 +1381,19 @@ export function App() {
           }
         );
         setRuntimeExportCatalog(await loadRuntimeExportCatalog());
+        setRuntimeExportRouteComparisonReviewReport(report);
         setRuntimeExportRouteComparisonReviewSaveReportHash(report.report_hash);
       } catch (error) {
+        setRuntimeExportRouteComparisonReviewReport(null);
+        setRuntimeExportRouteComparisonReviewReportError(
+          runtimeExportRouteComparisonReviewReportErrorMessage(error)
+        );
         setRuntimeExportRouteComparisonReviewSaveError(
           runtimeExportRouteComparisonReviewSaveErrorMessage(error)
         );
       } finally {
         setRuntimeExportRouteComparisonReviewSavePendingRouteId(null);
+        setRuntimeExportRouteComparisonReviewReportLoading(false);
       }
     },
     []
@@ -2014,6 +2072,9 @@ export function App() {
               runtimeExportDiagnosticsBundle={runtimeExportDiagnosticsBundle}
               runtimeExportRouteDetailPage={runtimeExportRouteDetailPage}
               runtimeExportRouteDetailItem={runtimeExportRouteDetailItem}
+              runtimeExportRouteComparisonReviewReport={
+                runtimeExportRouteComparisonReviewReport
+              }
               runtimeExportRouteDetailItemRouteId={runtimeExportRouteDetailItemRouteId}
               runtimeExportComparePackageId={runtimeExportComparePackageId}
               runtimeExportCompareLoading={runtimeExportCompareLoading}
@@ -2030,6 +2091,12 @@ export function App() {
               runtimeExportRouteDetailIndexError={runtimeExportRouteDetailIndexError}
               runtimeExportRouteDetailItemLoading={runtimeExportRouteDetailItemLoading}
               runtimeExportRouteDetailItemError={runtimeExportRouteDetailItemError}
+              runtimeExportRouteComparisonReviewReportLoading={
+                runtimeExportRouteComparisonReviewReportLoading
+              }
+              runtimeExportRouteComparisonReviewReportError={
+                runtimeExportRouteComparisonReviewReportError
+              }
               runtimeExportRouteComparisonReviewSavePendingRouteId={
                 runtimeExportRouteComparisonReviewSavePendingRouteId
               }
@@ -2220,6 +2287,22 @@ export function selectRuntimeExportComparePackageId(
     return selectedPackageId;
   }
   return catalog.latest_export?.package_id ?? catalog.records[0]?.package_id ?? null;
+}
+
+export function runtimeExportCatalogHasRouteComparisonReviewReport(
+  catalog: RuntimeExportCatalogV1 | null,
+  packageId: string
+): boolean {
+  if (catalog === null) {
+    return false;
+  }
+  return catalog.records.some(
+    (record) =>
+      record.package_id === packageId &&
+      record.files.some(
+        (file) => file.filename === ROUTE_COMPARISON_REVIEW_REPORT_FILENAME
+      )
+  );
 }
 
 export interface RuntimeDetailRequest {
@@ -3519,6 +3602,13 @@ export function runtimeExportRouteDetailIndexErrorMessage(error: unknown): strin
 export function runtimeExportRouteDetailItemErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   return `package route detail load failed: ${message}`;
+}
+
+export function runtimeExportRouteComparisonReviewReportErrorMessage(
+  error: unknown
+): string {
+  const message = error instanceof Error ? error.message : String(error);
+  return `route comparison review report load failed: ${message}`;
 }
 
 export function runtimeExportRouteComparisonReviewSaveErrorMessage(

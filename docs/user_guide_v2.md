@@ -166,7 +166,10 @@ save the currently displayed comparison into
 compared fields, different fields, package route detail hash, live route detail
 hash, status reason, and dashboard operator note. After the save completes, the
 dashboard package review area shows the report artifact from the backend export
-catalog with a direct JSON link and file hash.
+catalog with a direct JSON link and file hash. If the report artifact is
+available, the dashboard loads it read-only and summarizes saved record counts,
+MATCH/DIFFERENT/UNAVAILABLE/ERROR totals, route detail hash pairs, and operator
+notes.
 For package-owned review, use:
 
 ```powershell

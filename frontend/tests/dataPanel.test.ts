@@ -30,6 +30,8 @@ import {
   buildDataPanelExportRouteDetailItemDisplay,
   buildDataPanelExportRouteDetailItemStatus,
   buildDataPanelExportRouteComparisonReviewArtifactDisplay,
+  buildDataPanelExportRouteComparisonReviewReportDisplay,
+  buildDataPanelExportRouteComparisonReviewReportStatus,
   buildDataPanelExportRouteComparisonReviewRecord,
   buildDataPanelExportRouteComparisonReviewSaveStatus,
   buildDataPanelExportRouteLiveComparisonDisplay,
@@ -2323,6 +2325,139 @@ describe("buildDataPanelExportCatalogDisplay", () => {
     expect(
       buildDataPanelExportRouteComparisonReviewArtifactDisplay(undefined, "pkg-review")
     ).toBeNull();
+  });
+
+  it("summarizes saved route comparison review report contents", () => {
+    const display = buildDataPanelExportRouteComparisonReviewReportDisplay(
+      {
+        type: "RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1",
+        version: "v1",
+        report_id: "leo_twin.runtime_export_route_comparison_review_report.v1",
+        source: "OPERATOR_ROUTE_COMPARISON_REVIEW",
+        report_scope: "SELECTED_PACKAGE_VS_LIVE_ROUTE_COMPARISON_OUTCOMES",
+        package_id: "pkg-review",
+        package_dir: "artifacts/runtime_exports/pkg-review",
+        route_comparison_review: _runtimeExportRouteComparisonReview(),
+        record_count: 3,
+        match_count: 1,
+        different_count: 1,
+        unavailable_count: 1,
+        error_count: 0,
+        records: [
+          {
+            route_id: "route-a",
+            comparison_status: "MATCH",
+            package_route_detail_hash:
+              "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            live_route_detail_hash:
+              "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            matched_field_count: 12,
+            different_field_count: 0,
+            compared_fields: ["path", "latency"],
+            different_fields: [],
+            status_reason: "FIELDS_MATCH",
+            operator_note: "baseline route is aligned"
+          },
+          {
+            route_id: "route-b",
+            comparison_status: "DIFFERENT",
+            package_route_detail_hash:
+              "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            live_route_detail_hash:
+              "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+            matched_field_count: 10,
+            different_field_count: 2,
+            compared_fields: ["path", "latency", "bottleneck"],
+            different_fields: ["latency", "bottleneck"],
+            status_reason: "FIELDS_DIFFER",
+            operator_note: ""
+          },
+          {
+            route_id: "route-c",
+            comparison_status: "UNAVAILABLE",
+            package_route_detail_hash:
+              "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+            live_route_detail_hash: "",
+            matched_field_count: 0,
+            different_field_count: 0,
+            compared_fields: [],
+            different_fields: [],
+            status_reason: "LIVE_ROUTE_MISSING",
+            operator_note: "live route not available"
+          }
+        ],
+        ordering: "route_id ascending, then comparison_status ascending",
+        boundary_conditions: ["NO_ROUTE_RECOMPUTE"],
+        report_hash:
+          "sha256:9999999999999999999999999999999999999999999999999999999999999999"
+      },
+      2
+    );
+
+    expect(display).toEqual({
+      packageId: "pkg-review",
+      tone: "different",
+      statusLabel: "saved comparisons need review",
+      summaryLabel:
+        "pkg-review / records 3 / different 1 / error 0 / 999999999999 / hidden 1",
+      metaLabels: [
+        "match 1",
+        "different 1",
+        "unavailable 1",
+        "error 0",
+        "ordering route_id ascending, then comparison_status ascending"
+      ],
+      recordRows: [
+        {
+          routeId: "route-a",
+          tone: "match",
+          statusLabel: "MATCH",
+          hashLabel: "package aaaaaaaaaaaa / live bbbbbbbbbbbb",
+          noteLabel: "baseline route is aligned"
+        },
+        {
+          routeId: "route-b",
+          tone: "different",
+          statusLabel: "DIFFERENT",
+          hashLabel: "package cccccccccccc / live dddddddddddd",
+          noteLabel: "FIELDS_DIFFER"
+        }
+      ],
+      reportHref:
+        "/runtime/export/packages/pkg-review/files/route_comparison_review_report_v1.json"
+    });
+    expect(
+      buildDataPanelExportRouteComparisonReviewReportStatus(
+        display,
+        "pkg-review",
+        false,
+        null
+      )
+    ).toBe(display);
+    expect(
+      buildDataPanelExportRouteComparisonReviewReportStatus(
+        null,
+        "pkg-review",
+        true,
+        null
+      )
+    ).toMatchObject({
+      tone: "pending",
+      statusLabel: "loading saved review report",
+      recordRows: []
+    });
+    expect(
+      buildDataPanelExportRouteComparisonReviewReportStatus(
+        null,
+        "pkg-review",
+        false,
+        "HTTP 500"
+      )
+    ).toMatchObject({
+      tone: "error",
+      statusLabel: "saved review report load failed",
+      metaLabels: ["HTTP 500"]
+    });
   });
 });
 

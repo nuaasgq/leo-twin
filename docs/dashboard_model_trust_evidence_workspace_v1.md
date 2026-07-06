@@ -75,6 +75,9 @@ saved review reports can bind both sides of the comparison. After a save, the
 dashboard export package view surfaces the catalog-owned
 `route_comparison_review_report_v1.json` artifact link, file hash, and latest
 report hash so the operator can verify that the review record is persisted.
+When the artifact exists, the dashboard also loads the saved report JSON as a
+read-only artifact and renders record counts, match/different/unavailable/error
+totals, route detail hash pairs, and operator notes for the visible records.
 The frontend does not recompute routes or download the full
 `route_detail_index_v1.json` by default.
 7. runtime evidence

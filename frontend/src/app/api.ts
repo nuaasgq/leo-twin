@@ -388,6 +388,22 @@ export async function loadRuntimeExportRouteDetailItem(
   return decodeRuntimeExportRouteDetailItem(await response.json());
 }
 
+export async function loadRuntimeExportRouteComparisonReviewReport(
+  packageId: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): Promise<RuntimeExportRouteComparisonReviewReportV1> {
+  const url = runtimeExportPackageFileHref(
+    packageId,
+    "route_comparison_review_report_v1.json",
+    endpoint
+  );
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`failed to load runtime export route comparison review report from ${url}: HTTP ${response.status}`);
+  }
+  return decodeRuntimeExportRouteComparisonReviewReportArtifact(await response.json());
+}
+
 export async function saveRuntimeExportRouteComparisonReviewReport(
   packageId: string,
   request: RuntimeExportRouteComparisonReviewReportRequest,
@@ -977,6 +993,27 @@ export function decodeRuntimeExportRouteComparisonReviewReport(
     summary: summary as RuntimeExportRouteComparisonReviewReportV1,
     artifact: artifact as RuntimeExportRouteComparisonReviewReportEnvelope["artifact"]
   } as RuntimeExportRouteComparisonReviewReportEnvelope;
+}
+
+export function decodeRuntimeExportRouteComparisonReviewReportArtifact(
+  value: unknown
+): RuntimeExportRouteComparisonReviewReportV1 {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError(
+      "runtime export route comparison review report artifact must be an object"
+    );
+  }
+  if (
+    typeof (value as { report_id?: unknown }).report_id !== "string" ||
+    typeof (value as { package_id?: unknown }).package_id !== "string" ||
+    !Array.isArray((value as { records?: unknown }).records) ||
+    typeof (value as { report_hash?: unknown }).report_hash !== "string"
+  ) {
+    throw new TypeError(
+      "runtime export route comparison review report artifact must include report_id, package_id, records, and report_hash"
+    );
+  }
+  return value as RuntimeExportRouteComparisonReviewReportV1;
 }
 
 export function decodeRuntimeExportRestorePreflight(

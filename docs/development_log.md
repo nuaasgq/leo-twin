@@ -14189,3 +14189,53 @@ change.
   - Add a compact review report drawer that loads
     `route_comparison_review_report_v1.json` and summarizes saved record counts,
     match/different totals, and operator notes.
+
+## 2026-07-06 - Dashboard Route Review Report Drawer v1
+
+- Branch: `feature/T295-dashboard-review-report-drawer-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: load the saved `route_comparison_review_report_v1.json` artifact from
+  the runtime export package and render a compact read-only dashboard drawer.
+  The drawer summarizes saved record counts, MATCH/DIFFERENT/UNAVAILABLE/ERROR
+  totals, route detail hash pairs, and operator notes for visible records. The
+  App layer only fetches the report when the backend export catalog says the
+  artifact exists, so an unsaved review report remains a normal "not saved"
+  state rather than a load error. No Event Kernel behavior, route recomputation,
+  backend model logic, packet simulation, or package save semantics changed.
+- Changed files/modules:
+  - `frontend/src/app/api.ts`
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/dashboard_model_trust_evidence_workspace_v1.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test api.test.ts dataPanel.test.ts`
+    - Result: passed, 2 test files and 197 tests.
+  - `python -m pytest tests/unit/test_user_guide_v2_docs.py -q`
+    - Result: passed, 2 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with bundled Codex Node/Pnpm runtime after narrowing the
+      review-report row tone type.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing large DataPanel chunk
+      warning after minification; no functional build error.
+  - `git diff --check`
+    - Result: passed for task files.
+- Problems encountered:
+  - TypeScript initially inferred the route review report row tone as a wide
+    string. The builder now explicitly returns
+    `DataPanelExportRouteComparisonReviewReportRow[]`, preserving the intended
+    `match | different` union.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The drawer intentionally shows a compact window of records. Large saved
+    review reports still need pagination or filtering before they can be
+    inspected fully in the dashboard.
+- Recommended follow-up:
+  - Add paginated/filterable route comparison review report records so large
+    report artifacts can be reviewed without opening the raw JSON file.

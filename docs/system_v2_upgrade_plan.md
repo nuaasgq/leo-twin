@@ -272,6 +272,9 @@ Tasks:
     `route_comparison_review_report_v1.json` artifact in the dashboard package
     review area from the backend export catalog, including the direct JSON link,
     file hash, and latest saved report hash.
+  - Status: T295 loads the saved route comparison review report artifact as a
+    read-only dashboard drawer and summarizes record counts, status totals,
+    route detail hash pairs, and operator notes without route recomputation.
 
 ### WS4. Compute Network Model v2
 
