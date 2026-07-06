@@ -166,6 +166,10 @@ declares the `RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1` template for
 recording selected route comparison outcomes with deterministic record ordering.
 Runtime export rebuilds the package route evidence window with a 5000-row
 maximum; hidden rows beyond that limit are reported in the package policy.
+Service trace exports now use the same 5000-row default window and record
+`runtime_export_service_trace_policy_v1` in `config_snapshot.json`; the trace
+artifact and backend page response expose the same policy with exported and
+hidden trace counts.
 After using `compare with live`, the package-vs-live route comparison card can
 save the currently displayed comparison into
 `route_comparison_review_report_v1.json`. The saved record includes the

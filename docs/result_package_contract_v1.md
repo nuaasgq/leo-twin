@@ -207,6 +207,12 @@ terminal reason filters. It reads the persisted
 `artifact_window_only=true`, because it pages and filters only the exported
 trace window already present in the package. It does not inspect the current
 runtime session, replay events, recompute services, or mutate the package.
+Runtime export records the window boundary in
+`config_snapshot.status.runtime_export_service_trace_policy_v1` and copies the
+same policy into `service_lifecycle_trace_v2.json` and
+`RUNTIME_EXPORT_SERVICE_TRACE_PAGE_V1`. The default service trace export limit
+matches the large-detail maximum of 5000 rows; `hidden_trace_count` reports any
+trace rows outside that persisted artifact window.
 
 `route_comparison_review` also declares the deterministic
 `RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1` report template. The

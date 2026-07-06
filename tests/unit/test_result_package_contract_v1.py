@@ -437,6 +437,10 @@ def test_runtime_export_service_trace_page_v1_filters_artifact_window() -> None:
     assert first["source"] == "BACKEND_RUNTIME_EXPORT_PACKAGE"
     assert first["package_id"] == "pkg-1"
     assert first["artifact_window_only"] is True
+    assert first["service_trace_export_policy"]["policy"] == (
+        "EXPORT_SERVICE_TRACE_WINDOW"
+    )
+    assert first["service_trace_export_policy"]["service_trace_limit"] == 5000
     assert first["artifact_type"] == "SERVICE_LIFECYCLE_TRACE_EXPORT_V2"
     assert first["trace_contract_id"] == (
         "leo_twin.service_lifecycle_trace_contract.v2"
@@ -659,6 +663,20 @@ def _service_trace_export() -> dict[str, object]:
         "type": "SERVICE_LIFECYCLE_TRACE_EXPORT_V2",
         "source": "BACKEND_RUNTIME_STATUS",
         "artifact_policy": "STANDALONE_RUNTIME_EXPORT_ARTIFACT",
+        "service_trace_export_policy": {
+            "version": "v1",
+            "source": "BACKEND_RUNTIME_EXPORT",
+            "policy": "EXPORT_SERVICE_TRACE_WINDOW",
+            "service_trace_source": "service_latency_history_v1",
+            "service_trace_limit": 5000,
+            "service_count": 3,
+            "exported_trace_count": 3,
+            "hidden_trace_count": 0,
+            "artifact_window_only": True,
+            "event_replay": False,
+            "service_recomputation": False,
+            "packet_level_simulation": False,
+        },
         "summary": {
             "version": "v2",
             "contract_id": "leo_twin.service_lifecycle_trace_contract.v2",

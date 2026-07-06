@@ -14482,3 +14482,52 @@ change.
   - Add a package export policy for service trace window size or sharding so
     large result packages can expose more lifecycle evidence through the same
     page endpoint.
+
+## 2026-07-06 - Service Trace Export Policy v1
+
+- Branch: `feature/T301-service-trace-export-policy-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a backend-owned result-package service trace export policy. Runtime
+  export now rebuilds the package `service_lifecycle_trace_v2` window with the
+  same large-detail maximum used by route evidence, records
+  `runtime_export_service_trace_policy_v1` in `config_snapshot.status`, copies
+  that policy into `service_lifecycle_trace_v2.json`, and includes it in
+  `RUNTIME_EXPORT_SERVICE_TRACE_PAGE_V1` responses. The policy reports source,
+  export limit, service count, exported trace count, hidden trace count, and
+  artifact-window/no-replay/no-recompute boundaries. This task does not modify
+  Event Kernel behavior, live runtime service trace semantics, frontend layout,
+  route models, service recomputation, event replay, package mutation, or
+  packet-level simulation.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `src/leo_twin/services/result_package_contract.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/result_package_contract_v1.md`
+  - `docs/service_lifecycle_trace_v2.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_result_package_contract_v1.py -q`
+    - Result: passed, 11 tests.
+  - `python -m pytest tests/integration/test_result_package_export_v1.py -q`
+    - Result: passed, 1 test.
+  - `python -m pytest tests/integration/test_runtime_session_control.py::test_demo_adapter_exports_runtime_result_package tests/integration/test_runtime_session_control.py::test_demo_adapter_serves_persisted_runtime_export_artifacts -q`
+    - Result: passed, 2 tests.
+  - `python -m pytest tests/unit/test_user_guide_v2_docs.py -q`
+    - Result: passed, 2 tests.
+  - `git diff --check`
+    - Result: passed for task files.
+- Problems encountered:
+  - No product blocker at implementation time. Existing local runtime config
+    drift remains untouched and unstaged: `configs/generated_full_system_demo.json`
+    and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The service trace artifact remains a single JSON file. Scenarios exceeding
+    the 5000-row export window will need sharded or multi-file trace export to
+    preserve every trace row.
+- Recommended follow-up:
+  - Add a sharded `service_lifecycle_trace_v2` export format or manifest-linked
+    trace segment files for very large result packages.

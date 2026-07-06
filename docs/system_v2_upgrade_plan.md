@@ -162,7 +162,10 @@ Tasks:
     lookup, event replay, service recomputation, or package mutation. T300
     binds the dashboard export service trace review card to that backend page
     endpoint so filter and cursor actions no longer require loading the full
-    service trace JSON artifact in the browser.
+    service trace JSON artifact in the browser. T301 adds
+    `runtime_export_service_trace_policy_v1` so result packages explicitly
+    record the service trace export limit, exported trace count, hidden trace
+    count, artifact-window-only boundary, and no-replay/no-recompute policy.
 
 ### WS3. Network Semantics and KPI Trust v2
 

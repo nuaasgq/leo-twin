@@ -855,6 +855,18 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
     assert service_lifecycle_trace["summary"] == config_snapshot["status"][
         "service_lifecycle_trace_v2"
     ]
+    service_trace_export_policy = config_snapshot["status"][
+        "runtime_export_service_trace_policy_v1"
+    ]
+    assert service_trace_export_policy["service_trace_limit"] == (
+        DETAIL_ENDPOINT_MAX_LIMIT
+    )
+    assert service_trace_export_policy["exported_trace_count"] == (
+        service_lifecycle_trace["summary"]["trace_count"]
+    )
+    assert service_lifecycle_trace["service_trace_export_policy"] == (
+        service_trace_export_policy
+    )
     assert route_detail_index["type"] == "RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_V1"
     assert route_detail_index["route_trust"]["trust_id"] == config_snapshot["status"][
         "route_provenance_trust_summary_v1"
@@ -1119,6 +1131,14 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
     )
     assert service_trace["type"] == "SERVICE_LIFECYCLE_TRACE_EXPORT_V2"
     assert service_trace["summary"]["version"] == "v2"
+    service_trace_export_policy = config_snapshot["status"][
+        "runtime_export_service_trace_policy_v1"
+    ]
+    assert service_trace_export_policy["policy"] == "EXPORT_SERVICE_TRACE_WINDOW"
+    assert service_trace_export_policy["service_trace_limit"] == (
+        DETAIL_ENDPOINT_MAX_LIMIT
+    )
+    assert service_trace["service_trace_export_policy"] == service_trace_export_policy
     service_trace_page = control_plane.runtime_export_package_service_traces(
         package_id,
         export_root,
@@ -1129,6 +1149,9 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
     assert service_trace_page["source"] == "BACKEND_RUNTIME_EXPORT_PACKAGE"
     assert service_trace_page["package_id"] == package_id
     assert service_trace_page["artifact_window_only"] is True
+    assert service_trace_page["service_trace_export_policy"] == (
+        service_trace_export_policy
+    )
     assert service_trace_page["unfiltered_trace_count"] == len(
         service_trace["summary"]["items"]
     )

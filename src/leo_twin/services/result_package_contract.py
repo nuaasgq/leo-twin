@@ -591,6 +591,9 @@ def build_runtime_export_service_trace_page_v1(
         "artifact_type": str(service_trace_export.get("type", "")),
         "artifact_source": str(service_trace_export.get("source", "")),
         "artifact_policy": str(service_trace_export.get("artifact_policy", "")),
+        "service_trace_export_policy": dict(
+            _mapping(service_trace_export.get("service_trace_export_policy"))
+        ),
         "artifact_window_only": True,
         "trace_contract_id": str(summary.get("contract_id", "")),
         "trace_model": str(summary.get("trace_model", "")),

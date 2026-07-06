@@ -62,6 +62,11 @@ terminal-reason filters to the package-owned `service_lifecycle_trace_v2.json`
 artifact window and returns deterministic page metadata plus a `page_hash`.
 The response marks `artifact_window_only=true`; hidden traces that were not
 exported into the package are not reconstructed by this endpoint.
+The persisted export policy is recorded as
+`runtime_export_service_trace_policy_v1` in the package config snapshot and as
+`service_trace_export_policy` in the trace artifact and page response. It
+records the service trace source, export limit, exported trace count, hidden
+trace count, and no-replay/no-recompute model boundaries.
 
 The dashboard service trace panel also supports selecting one trace and
 correlating it with currently visible user request rows, route explanations,

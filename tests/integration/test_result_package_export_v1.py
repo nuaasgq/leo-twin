@@ -80,6 +80,20 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert service_lifecycle_trace["summary"] == config_snapshot["status"][
         "service_lifecycle_trace_v2"
     ]
+    service_trace_export_policy = config_snapshot["status"][
+        "runtime_export_service_trace_policy_v1"
+    ]
+    assert service_trace_export_policy["policy"] == "EXPORT_SERVICE_TRACE_WINDOW"
+    assert service_trace_export_policy["service_trace_limit"] == DETAIL_ENDPOINT_MAX_LIMIT
+    assert service_trace_export_policy["exported_trace_count"] == (
+        service_lifecycle_trace["summary"]["trace_count"]
+    )
+    assert service_trace_export_policy["hidden_trace_count"] == (
+        service_lifecycle_trace["summary"]["hidden_trace_count"]
+    )
+    assert service_lifecycle_trace["service_trace_export_policy"] == (
+        service_trace_export_policy
+    )
     route_summary_status = config_snapshot["status"]["route_explanation_summary_v1"]
     route_export_policy = config_snapshot["status"][
         "runtime_export_route_detail_policy_v1"

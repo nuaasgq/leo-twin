@@ -128,6 +128,7 @@ _RUNTIME_EXPORT_RESTORE_COMMAND = "RESTORE_EXPORT_PACKAGE"
 _SERVICE_LIFECYCLE_TRACE_EXPORT_FILENAME = "service_lifecycle_trace_v2.json"
 _RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_FILENAME = "route_detail_index_v1.json"
 _RUNTIME_EXPORT_ROUTE_DETAIL_LIMIT = DETAIL_ENDPOINT_MAX_LIMIT
+_RUNTIME_EXPORT_SERVICE_TRACE_LIMIT = DETAIL_ENDPOINT_MAX_LIMIT
 _RUNTIME_EXPORT_REVIEW_SUMMARY_FILENAME = "review_summary_v1.json"
 _RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_FILENAME = "diagnostics_bundle_v1.json"
 _RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_FILENAME = (
@@ -649,7 +650,7 @@ class DemoControlPlane:
             package_dir / _SERVICE_LIFECYCLE_TRACE_EXPORT_FILENAME
         )
         service_lifecycle_trace_path.write_text(
-            stable_json_pretty(_runtime_service_lifecycle_trace_export(status)),
+            stable_json_pretty(_runtime_service_lifecycle_trace_export(export_status)),
             encoding="utf-8",
         )
         route_detail_index_path = (
@@ -1472,6 +1473,22 @@ class DemoControlPlane:
             "packet_level_simulation": False,
             "all_pairs_computation": False,
         }
+        service_trace_summary = self._runtime_export_service_lifecycle_trace_summary()
+        export_status["service_lifecycle_trace_v2"] = service_trace_summary
+        export_status["runtime_export_service_trace_policy_v1"] = {
+            "version": "v1",
+            "source": "BACKEND_RUNTIME_EXPORT",
+            "policy": "EXPORT_SERVICE_TRACE_WINDOW",
+            "service_trace_source": "service_latency_history_v1",
+            "service_trace_limit": _RUNTIME_EXPORT_SERVICE_TRACE_LIMIT,
+            "service_count": service_trace_summary["service_count"],
+            "exported_trace_count": service_trace_summary["trace_count"],
+            "hidden_trace_count": service_trace_summary["hidden_trace_count"],
+            "artifact_window_only": True,
+            "event_replay": False,
+            "service_recomputation": False,
+            "packet_level_simulation": False,
+        }
         return export_status
 
     def _runtime_export_route_explanation_summary(self) -> dict[str, Any]:
@@ -1480,6 +1497,13 @@ class DemoControlPlane:
             service_latency_history=self._service_latency_history_json(),
             cursor=0,
             limit=_RUNTIME_EXPORT_ROUTE_DETAIL_LIMIT,
+        )
+
+    def _runtime_export_service_lifecycle_trace_summary(self) -> dict[str, Any]:
+        return build_runtime_service_lifecycle_trace_v2(
+            self._service_latency_history_json(),
+            cursor=0,
+            limit=_RUNTIME_EXPORT_SERVICE_TRACE_LIMIT,
         )
 
     def _ack(self, command: ControlCommand) -> dict[str, Any]:
@@ -2228,10 +2252,27 @@ def _runtime_service_lifecycle_trace_export(status: dict[str, Any]) -> dict[str,
             "trace_count": 0,
             "items": (),
         }
+    policy = status.get("runtime_export_service_trace_policy_v1")
+    if not isinstance(policy, dict):
+        policy = {
+            "version": "v1",
+            "source": "BACKEND_RUNTIME_EXPORT",
+            "policy": "EXPORT_SERVICE_TRACE_WINDOW",
+            "service_trace_source": "service_latency_history_v1",
+            "service_trace_limit": 0,
+            "service_count": int(trace.get("service_count", 0)),
+            "exported_trace_count": int(trace.get("trace_count", 0)),
+            "hidden_trace_count": int(trace.get("hidden_trace_count", 0)),
+            "artifact_window_only": True,
+            "event_replay": False,
+            "service_recomputation": False,
+            "packet_level_simulation": False,
+        }
     return {
         "type": "SERVICE_LIFECYCLE_TRACE_EXPORT_V2",
         "source": "BACKEND_RUNTIME_STATUS",
         "artifact_policy": "STANDALONE_RUNTIME_EXPORT_ARTIFACT",
+        "service_trace_export_policy": policy,
         "summary": trace,
     }
 
