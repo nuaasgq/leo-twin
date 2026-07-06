@@ -560,7 +560,12 @@ the matched scenario id, matrix id, config path, matched identity metric count,
 exact-range result summary, fidelity result summary, runtime-status result
 summary, and binding/check hashes. If only the acceptance report is available,
 the dashboard falls back to the `benchmark_scenario_gate` check without
-inferring standard-scenario semantics locally.
+inferring standard-scenario semantics locally. It also renders read-only
+per-check rows for each expected-range, fidelity, and runtime-status result,
+including group, item name, status, expected value/range, observed value,
+issue labels, and result hash. These rows are display projections of the
+backend binding; they do not recompute KPI values or re-evaluate benchmark
+rules in the browser.
 
 For operator handoff, the demo backend also exposes the generated Markdown
 handoff report:

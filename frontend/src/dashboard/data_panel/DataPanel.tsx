@@ -2987,6 +2987,30 @@ export const DataPanel = memo(function DataPanel({
                           )
                         )}
                       </div>
+                      {exportAcceptanceReportStatus.benchmarkGate.rows.length >
+                      0 ? (
+                        <div className="data-panel-export-benchmark-gate-rows">
+                          {exportAcceptanceReportStatus.benchmarkGate.rows.map(
+                            (row) => (
+                              <div
+                                className={row.tone}
+                                key={`benchmark-gate-row:${row.groupLabel}:${row.itemLabel}:${row.hashLabel}`}
+                              >
+                                <span>{row.groupLabel}</span>
+                                <strong>{row.itemLabel}</strong>
+                                <small>
+                                  {row.statusLabel} / {row.hashLabel}
+                                </small>
+                                <em>{row.expectedLabel}</em>
+                                <em>{row.observedLabel}</em>
+                                {row.issueLabel.length > 0 ? (
+                                  <em>{row.issueLabel}</em>
+                                ) : null}
+                              </div>
+                            )
+                          )}
+                        </div>
+                      ) : null}
                       {exportAcceptanceReportStatus.benchmarkGate.warningLabels
                         .length > 0 ? (
                         <div className="data-panel-export-diagnostics-findings">
@@ -11383,7 +11407,19 @@ export interface DataPanelExportBenchmarkGateDisplay {
   statusLabel: string;
   summaryLabel: string;
   evidenceLabels: readonly string[];
+  rows: readonly DataPanelExportBenchmarkGateRow[];
   warningLabels: readonly string[];
+}
+
+export interface DataPanelExportBenchmarkGateRow {
+  tone: "match" | "different" | "pending" | "error";
+  groupLabel: string;
+  itemLabel: string;
+  statusLabel: string;
+  expectedLabel: string;
+  observedLabel: string;
+  issueLabel: string;
+  hashLabel: string;
 }
 
 export interface DataPanelExportPackageAuditIndexDisplay {
@@ -12482,8 +12518,121 @@ function buildDataPanelExportBenchmarkGateDisplay(
       binding?.binding_hash ?? gateCheck?.check_hash ?? ""
     )}`,
     evidenceLabels,
+    rows: buildAcceptanceBenchmarkGateRows(binding, gateCheck),
     warningLabels: Array.from(new Set(warningLabels))
   };
+}
+
+function buildAcceptanceBenchmarkGateRows(
+  binding:
+    | NonNullable<RuntimeExportPackageAuditIndexV1["benchmark_acceptance_binding_v1"]>
+    | undefined,
+  gateCheck: RuntimeExportPackageAcceptanceReportV1["checks"][number] | undefined
+): readonly DataPanelExportBenchmarkGateRow[] {
+  if (binding === undefined) {
+    if (gateCheck === undefined) {
+      return [];
+    }
+    return [
+      {
+        tone: acceptanceBenchmarkGateTone(gateCheck.status),
+        groupLabel: "acceptance",
+        itemLabel: gateCheck.check_id,
+        statusLabel: gateCheck.status,
+        expectedLabel: "expected PASS for a standard benchmark package",
+        observedLabel: gateCheck.summary,
+        issueLabel: gateCheck.issue_labels.join(", "),
+        hashLabel: shortRuntimeHash(gateCheck.check_hash)
+      }
+    ];
+  }
+  return [
+    ...binding.expected_range_results.map((result) =>
+      buildAcceptanceBenchmarkResultRow("expected range", result)
+    ),
+    ...binding.fidelity_results.map((result) =>
+      buildAcceptanceBenchmarkResultRow("fidelity", result)
+    ),
+    ...binding.runtime_status_results.map((result) =>
+      buildAcceptanceBenchmarkResultRow("runtime status", result)
+    )
+  ];
+}
+
+function buildAcceptanceBenchmarkResultRow(
+  groupLabel: string,
+  result: {
+    metric?: string;
+    check_id?: string;
+    source?: string;
+    status: string;
+    expected?: string;
+    actual?: string;
+    observed_value?: number | string;
+    observed_count?: number;
+    minimum?: number;
+    maximum?: number;
+    minimum_count?: number;
+    unit?: string;
+    issue_labels: readonly string[];
+    result_hash: string;
+  }
+): DataPanelExportBenchmarkGateRow {
+  return {
+    tone: acceptanceBenchmarkGateTone(result.status),
+    groupLabel,
+    itemLabel: result.metric ?? result.check_id ?? result.source ?? "benchmark",
+    statusLabel: result.status,
+    expectedLabel: acceptanceBenchmarkExpectedLabel(result),
+    observedLabel: acceptanceBenchmarkObservedLabel(result),
+    issueLabel: result.issue_labels.join(", "),
+    hashLabel: shortRuntimeHash(result.result_hash)
+  };
+}
+
+function acceptanceBenchmarkExpectedLabel(result: {
+  expected?: string;
+  minimum?: number;
+  maximum?: number;
+  minimum_count?: number;
+  unit?: string;
+}): string {
+  if (result.expected !== undefined && result.expected.length > 0) {
+    return `expected ${result.expected}`;
+  }
+  if (result.minimum !== undefined || result.maximum !== undefined) {
+    const minimum = result.minimum !== undefined ? String(result.minimum) : "-";
+    const maximum = result.maximum !== undefined ? String(result.maximum) : "-";
+    const unit = result.unit !== undefined && result.unit.length > 0 ? ` ${result.unit}` : "";
+    return `expected ${minimum}-${maximum}${unit}`;
+  }
+  if (result.minimum_count !== undefined) {
+    return `expected count >= ${formatCount(result.minimum_count)}`;
+  }
+  return "expected backend benchmark guardrail";
+}
+
+function acceptanceBenchmarkObservedLabel(result: {
+  actual?: string;
+  observed_value?: number | string;
+  observed_count?: number;
+  unit?: string;
+  issue_labels: readonly string[];
+}): string {
+  if (result.actual !== undefined && result.actual.length > 0) {
+    return `observed ${result.actual}`;
+  }
+  if (result.observed_value !== undefined) {
+    const unit = result.unit !== undefined && result.unit.length > 0 ? ` ${result.unit}` : "";
+    return `observed ${String(result.observed_value)}${unit}`;
+  }
+  if (result.observed_count !== undefined) {
+    return `observed count ${formatCount(result.observed_count)}`;
+  }
+  if (result.issue_labels.length > 0) {
+    return `observed ${result.issue_labels.join(", ")}`;
+  }
+  return "observed PASS";
 }
 
 function acceptanceBenchmarkResultSummary(

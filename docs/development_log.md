@@ -16950,3 +16950,54 @@ change.
   - Add a benchmark gate drill-down table for each expected-range, fidelity,
     route-trust, and KPI check, with direct links to the related package
     artifacts.
+
+## 2026-07-07 - T347 dashboard benchmark gate detail rows v1
+
+- Branch: `feature/T347-dashboard-benchmark-gate-detail-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: expand the dashboard benchmark gate section from T346 with read-only
+  per-check rows. The result-package acceptance card now renders expected-range,
+  fidelity, and runtime-status benchmark results with group, item name, status,
+  expected value or range, observed value, issue labels, and result hash. The
+  rows are display projections of backend-owned
+  `benchmark_acceptance_binding_v1`; the browser does not recompute KPI values,
+  re-evaluate benchmark rules, replay packages, or mutate result-package
+  artifacts. No Event Kernel, simulation model, result-package generation, API
+  route, or frontend architecture behavior changed.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `.\node_modules\.bin\tsc.cmd --noEmit -p tsconfig.json` from
+    `frontend`
+    - Result: passed with the bundled Codex Node runtime path.
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 192 tests.
+  - `pnpm --dir frontend test dataPanel.test.ts api.test.ts appSurface.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 3 test
+      files and 279 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path; Vite
+      reported the existing large `DataPanel` chunk warning.
+  - `git diff --check`
+    - Result: passed; Git emitted CRLF warnings for the existing unstaged
+      runtime config drift.
+- Problems encountered:
+  - No implementation blocker. The only validation noise was the existing
+    local runtime config CRLF warning and the existing large `DataPanel` build
+    chunk warning.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - Detail rows do not yet link each check to the exact package artifact file.
+  - The dashboard still summarizes route trust and KPI evidence through backend
+    status rows; it does not provide a separate route/KPI evidence drill-down
+    from this card.
+- Recommended follow-up:
+  - Add artifact links from benchmark detail rows to audit index,
+    `network_kpi_benchmark_validation_v1.json`, route trust evidence, and
+    scenario review artifacts where available.

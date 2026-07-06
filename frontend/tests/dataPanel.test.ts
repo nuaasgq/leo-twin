@@ -4239,6 +4239,38 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         "binding binding",
         "check benchmark-ch"
       ],
+      rows: [
+        {
+          tone: "match",
+          groupLabel: "expected range",
+          itemLabel: "event_count",
+          statusLabel: "PASS",
+          expectedLabel: "expected 1-100000 events",
+          observedLabel: "observed 4096 events",
+          issueLabel: "",
+          hashLabel: "range"
+        },
+        {
+          tone: "match",
+          groupLabel: "fidelity",
+          itemLabel: "orbit_update_mode",
+          statusLabel: "PASS",
+          expectedLabel: "expected PER_SATELLITE",
+          observedLabel: "observed PER_SATELLITE",
+          issueLabel: "",
+          hashLabel: "fidelity"
+        },
+        {
+          tone: "match",
+          groupLabel: "runtime status",
+          itemLabel: "route_trust",
+          statusLabel: "PASS",
+          expectedLabel: "expected PASS",
+          observedLabel: "observed PASS",
+          issueLabel: "",
+          hashLabel: "runtime"
+        }
+      ],
       warningLabels: []
     });
   });

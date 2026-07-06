@@ -788,7 +788,11 @@ Tasks:
     package acceptance card, including matched scenario, benchmark matrix,
     config path, identity-match count, expected-range/fidelity/runtime-status
     pass-warn-fail summaries, issue labels, and evidence hashes without
-    locally re-deriving product acceptance semantics.
+    locally re-deriving product acceptance semantics. T347 expands that section
+    with per-check detail rows for expected-range, fidelity, and runtime-status
+    results, showing status, expected value or range, observed value, issue
+    label, and result hash as read-only projections of backend package
+    evidence.
 
 ### WS9. Delivery and Operations v2
 
