@@ -2897,6 +2897,81 @@ describe("buildDataPanelExportCompareDisplay", () => {
       statusLabel: "service trace artifact load failed",
       metaLabels: ["HTTP 404"]
     });
+    const pagedTrace = {
+      ...trace,
+      service_count: 3,
+      trace_count: 3,
+      complete_trace_count: 1,
+      running_trace_count: 1,
+      incomplete_trace_count: 1,
+      items: [
+        ...trace.items,
+        {
+          ...trace.items[0],
+          trace_id: "trace:queued",
+          service_id: "svc-queued",
+          task_id: "task-queued",
+          input_flow_id: "flow-queued-in",
+          output_flow_id: "flow-queued-out",
+          input_route_id: "route-queued-in",
+          output_route_id: "",
+          compute_node_id: "sat-00004",
+          terminal_state: "INCOMPLETE",
+          terminal_state_reason: "NO_COMPONENT_OBSERVATIONS",
+          observed_stage_count: 0,
+          pending_stage_count: 4,
+          total_latency_s: 0
+        }
+      ]
+    };
+    const pagedDisplay = buildDataPanelServiceLifecycleTraceDisplay(pagedTrace, 10);
+
+    expect(
+      buildDataPanelExportServiceLifecycleTraceStatus(
+        pagedDisplay,
+        pagedTrace,
+        "pkg-review",
+        false,
+        null,
+        { cursor: 1, limit: 1 }
+      )
+    ).toMatchObject({
+      filterLabel: "all service traces / local artifact page 2-2 / 3",
+      pageCursor: 1,
+      pageLimit: 1,
+      previousCursor: 0,
+      nextCursor: 2,
+      canPreviousPage: true,
+      canNextPage: true,
+      display: {
+        items: [expect.objectContaining({ traceId: "trace:run" })]
+      }
+    });
+    expect(
+      buildDataPanelExportServiceLifecycleTraceStatus(
+        pagedDisplay,
+        pagedTrace,
+        "pkg-review",
+        false,
+        null,
+        {
+          query: "route-run",
+          terminalState: "RUNNING",
+          computeNodeId: "sat-00003",
+          terminalReason: "OUTPUT_NETWORK_PENDING",
+          cursor: 0,
+          limit: 1
+        }
+      )
+    ).toMatchObject({
+      filterLabel:
+        "query route-run / state RUNNING / compute sat-00003 / reason OUTPUT_NETWORK_PENDING / local artifact page 1-1 / 1",
+      canPreviousPage: false,
+      canNextPage: false,
+      display: {
+        items: [expect.objectContaining({ traceId: "trace:run" })]
+      }
+    });
   });
 
   it("summarizes runtime export route detail indexes for dashboard review", () => {

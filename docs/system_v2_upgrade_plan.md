@@ -152,7 +152,10 @@ Tasks:
     server cursor reset behavior. T297 loads package-owned
     `service_lifecycle_trace_v2.json` in the dashboard export review area so
     offline result packages can inspect communication-compute service chain
-    evidence without replaying the simulation.
+    evidence without replaying the simulation. T298 adds local artifact
+    filtering and deterministic local page controls to that export review card
+    for trace text, terminal state, compute node, lifecycle stage, and terminal
+    reason while keeping the exported package read-only.
 
 ### WS3. Network Semantics and KPI Trust v2
 
