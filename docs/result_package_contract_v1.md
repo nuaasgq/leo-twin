@@ -386,8 +386,22 @@ completion warning.
 `scenario_review_bundle_v1.json` also declares a guided package review order.
 The order includes the raw `service_lifecycle_trace_v2.json` evidence and the
 operator-saved `service_trace_comparison_review_report_v1.json` step when a
-package is reviewed. The demo backend can persist operator decisions for that
-guided flow through:
+package is reviewed. Before operators save decisions, the demo backend can
+generate a deterministic edit template through:
+
+```text
+GET /runtime/export/packages/{package_id}/scenario-review-checklist-template
+```
+
+The response contains `scenario_review_checklist_template_v1` with one record
+per backend-recommended review step. Each record pre-fills `artifact_filename`,
+`step_label`, `review_order_index`, and `evidence_hash`; records default to
+`NEEDS_FOLLOWUP` so the operator remains responsible for the final
+`review_status` and `operator_note`. Template generation reads package artifacts
+and the audit index only; it does not replay events, recompute models, or write
+package files.
+
+The demo backend can persist operator decisions for that guided flow through:
 
 ```text
 POST /runtime/export/packages/{package_id}/scenario-review-checklist

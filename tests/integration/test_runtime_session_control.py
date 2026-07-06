@@ -1796,6 +1796,9 @@ def test_demo_server_stream_query_parses_cursor_options() -> None:
     assert _runtime_export_package_route(
         "/runtime/export/packages/pkg%201/scenario-review-checklist"
     ) == ("pkg 1", "scenario-review-checklist", None)
+    assert _runtime_export_package_route(
+        "/runtime/export/packages/pkg%201/scenario-review-checklist-template"
+    ) == ("pkg 1", "scenario-review-checklist-template", None)
 
 
 def _deterministic_sequence() -> tuple[tuple[dict[str, Any], ...], tuple[dict[str, Any], ...]]:

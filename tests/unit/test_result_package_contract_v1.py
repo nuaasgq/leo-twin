@@ -13,6 +13,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID,
     RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1_ID,
     RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_V1_ID,
+    RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_TEMPLATE_V1_ID,
     RUNTIME_EXPORT_SERVICE_TRACE_COMPARISON_REVIEW_REPORT_PAGE_V1_ID,
     RUNTIME_EXPORT_SERVICE_TRACE_COMPARISON_REVIEW_REPORT_V1_ID,
     RUNTIME_EXPORT_ROUTE_DETAIL_ITEM_V1_ID,
@@ -37,6 +38,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_review_summary_v1,
     build_runtime_export_scenario_review_bundle_v1,
     build_runtime_export_scenario_review_checklist_v1,
+    build_runtime_export_scenario_review_checklist_template_v1,
     build_runtime_export_service_trace_comparison_review_report_page_v1,
     build_runtime_export_service_trace_comparison_review_report_v1,
     build_runtime_export_service_trace_item_v1,
@@ -106,6 +108,10 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
     )
     assert (
         "POST /runtime/export/packages/{package_id}/service-trace-comparison-review-report"
+        in first["source_endpoints"]
+    )
+    assert (
+        "GET /runtime/export/packages/{package_id}/scenario-review-checklist-template"
         in first["source_endpoints"]
     )
     assert (
@@ -923,6 +929,90 @@ def test_runtime_export_scenario_review_checklist_v1_distinguishes_submitted_and
     )
     assert checklist["attention_recommended_review_filenames"] == ()
     assert checklist["checklist_hash"].startswith("sha256:")
+
+
+def test_runtime_export_scenario_review_checklist_template_v1_is_deterministic() -> None:
+    scenario_review_bundle = {
+        "bundle_id": RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1_ID,
+        "scenario_review_hash": "sha256:scenario-review",
+        "recommended_review_order": (
+            "scenario_review_bundle_v1.json",
+            "export_package_audit_index_v1.json",
+            "review_summary_v1.json",
+            "service_lifecycle_trace_v2.json",
+            "service_trace_comparison_review_report_v1.json",
+        ),
+        "review_summary": {"summary_hash": "sha256:review"},
+        "diagnostics": {"diagnostics_hash": "sha256:diagnostics"},
+        "reproducibility": {"manifest_hash": "sha256:manifest"},
+        "user_configuration": {"config_hash": "sha256:config"},
+    }
+    audit_index = {
+        "audit_hash": "sha256:audit",
+        "service_trace_comparison_review_report_hash": "sha256:trace-report",
+        "artifact_hashes": (
+            {
+                "name": "service_lifecycle_trace_v2",
+                "filename": "service_lifecycle_trace_v2.json",
+                "bytes": 2048,
+                "sha256": "sha256:trace-artifact",
+            },
+        ),
+    }
+
+    first = build_runtime_export_scenario_review_checklist_template_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        scenario_review_bundle=scenario_review_bundle,
+        audit_index=audit_index,
+    )
+    second = build_runtime_export_scenario_review_checklist_template_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        scenario_review_bundle=scenario_review_bundle,
+        audit_index={
+            **audit_index,
+            "artifact_hashes": tuple(reversed(audit_index["artifact_hashes"])),
+        },
+    )
+
+    assert first == second
+    assert first["template_id"] == (
+        RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_TEMPLATE_V1_ID
+    )
+    assert first["template_status"] == "TEMPLATE_READY"
+    assert first["expected_review_count"] == 5
+    assert first["evidence_present_count"] == 5
+    assert first["missing_evidence_filenames"] == ()
+    assert [record["artifact_filename"] for record in first["records"]] == [
+        "scenario_review_bundle_v1.json",
+        "export_package_audit_index_v1.json",
+        "review_summary_v1.json",
+        "service_lifecycle_trace_v2.json",
+        "service_trace_comparison_review_report_v1.json",
+    ]
+    assert first["records"][0]["step_label"] == "1 scenario entry"
+    assert first["records"][0]["review_status"] == "NEEDS_FOLLOWUP"
+    assert first["records"][1]["evidence_hash"] == "sha256:audit"
+    assert first["records"][3]["evidence_hash"] == "sha256:trace-artifact"
+    assert first["records"][3]["evidence_source"] == "AUDIT_INDEX_ARTIFACT_SHA256"
+    assert first["records"][4]["evidence_hash"] == "sha256:trace-report"
+    assert first["template_hash"].startswith("sha256:")
+    assert json.loads(json.dumps(first, sort_keys=True))["template_id"] == (
+        RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_TEMPLATE_V1_ID
+    )
+
+    missing_report = build_runtime_export_scenario_review_checklist_template_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        scenario_review_bundle=scenario_review_bundle,
+        audit_index={"audit_hash": "sha256:audit", "artifact_hashes": ()},
+    )
+    assert missing_report["template_status"] == "TEMPLATE_WARN"
+    assert missing_report["missing_evidence_filenames"] == (
+        "service_lifecycle_trace_v2.json",
+        "service_trace_comparison_review_report_v1.json",
+    )
 
 
 def test_runtime_export_route_detail_index_v1_is_deterministic_and_review_ready() -> None:

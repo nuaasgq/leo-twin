@@ -3592,6 +3592,55 @@ describe("buildDataPanelExportCatalogDisplay", () => {
       reviewStatus: "REVIEWED",
       operatorNote: ""
     });
+    const template = {
+      type: "RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_TEMPLATE_V1",
+      version: "v1",
+      template_id:
+        "leo_twin.runtime_export_scenario_review_checklist_template.v1",
+      source: "BACKEND_RUNTIME_EXPORT_PACKAGE",
+      template_scope: "SCENARIO_REVIEW_RECOMMENDED_STEPS_OPERATOR_TEMPLATE",
+      package_id: "pkg-review",
+      package_dir: "artifacts/runtime_exports/pkg-review",
+      scenario_review_bundle_id:
+        "leo_twin.runtime_export_scenario_review_bundle.v1",
+      scenario_review_hash: "sha256:scenario-review",
+      audit_hash: "sha256:audit",
+      expected_review_filenames: [
+        "scenario_review_bundle_v1.json",
+        "export_package_audit_index_v1.json"
+      ],
+      expected_review_count: 2,
+      evidence_present_count: 2,
+      missing_evidence_filenames: [],
+      missing_evidence_count: 0,
+      template_status: "TEMPLATE_READY",
+      records: [
+        {
+          artifact_filename: "export_package_audit_index_v1.json",
+          step_label: "2 audit index",
+          review_status: "NEEDS_FOLLOWUP",
+          status_reason: "OPERATOR_REVIEW_REQUIRED",
+          operator_note: "",
+          evidence_hash: "sha256:backend-audit",
+          evidence_present: true,
+          evidence_source: "BACKEND_REVIEW_EVIDENCE_HASH",
+          review_order_index: 1,
+          template_record_hash: "sha256:template-record"
+        }
+      ],
+      record_policy: "template records prefill evidence",
+      boundary_conditions: ["NO_EVENT_REPLAY"],
+      template_hash: "sha256:template"
+    };
+    const templateDraft = buildDataPanelScenarioReviewChecklistDraft(
+      bundle as any,
+      null,
+      template as any
+    );
+    expect(templateDraft["export_package_audit_index_v1.json"]).toEqual({
+      reviewStatus: "NEEDS_FOLLOWUP",
+      operatorNote: ""
+    });
     expect(
       buildDataPanelExportScenarioReviewChecklistStatus(checklist as any)
     ).toMatchObject({
@@ -3649,6 +3698,25 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           artifact_filename: "review_summary_v1.json",
           review_status: "REVIEWED",
           evidence_hash: "sha256:review"
+        }
+      ]
+    });
+    const templateRequest = buildDataPanelScenarioReviewChecklistSaveRequest(
+      bundle as any,
+      display?.workflowRows.slice(1, 2) ?? [],
+      templateDraft,
+      { audit_hash: "sha256:audit" } as any,
+      template as any
+    );
+    expect(templateRequest).toMatchObject({
+      packageId: "pkg-review",
+      records: [
+        {
+          artifact_filename: "export_package_audit_index_v1.json",
+          step_label: "2 audit index",
+          review_status: "NEEDS_FOLLOWUP",
+          status_reason: "OPERATOR_REVIEW_REQUIRED",
+          evidence_hash: "sha256:backend-audit"
         }
       ]
     });

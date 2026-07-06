@@ -39,6 +39,7 @@ import {
   RuntimeExportReproducibilityBoundaryV1,
   RuntimeExportScenarioReviewBundleV1,
   RuntimeExportScenarioReviewChecklistRecordV1,
+  RuntimeExportScenarioReviewChecklistTemplateV1,
   RuntimeExportScenarioReviewChecklistV1,
   RuntimeExportServiceTraceItemV1,
   RuntimeExportServiceTracePageV1,
@@ -271,6 +272,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportPackageAuditIndex,
   runtimeExportScenarioReviewBundle,
   runtimeExportScenarioReviewChecklist,
+  runtimeExportScenarioReviewChecklistTemplate,
   runtimeExportRouteDetailItemRouteId,
   runtimeExportServiceTraceItemTraceId,
   runtimeExportComparePackageId,
@@ -371,6 +373,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportPackageAuditIndex?: RuntimeExportPackageAuditIndexV1 | null;
   runtimeExportScenarioReviewBundle?: RuntimeExportScenarioReviewBundleV1 | null;
   runtimeExportScenarioReviewChecklist?: RuntimeExportScenarioReviewChecklistV1 | null;
+  runtimeExportScenarioReviewChecklistTemplate?: RuntimeExportScenarioReviewChecklistTemplateV1 | null;
   runtimeExportRouteDetailItemRouteId?: string | null;
   runtimeExportServiceTraceItemTraceId?: string | null;
   runtimeExportComparePackageId?: string | null;
@@ -627,12 +630,14 @@ export const DataPanel = memo(function DataPanel({
     setExportScenarioReviewChecklistDraft(
       buildDataPanelScenarioReviewChecklistDraft(
         runtimeExportScenarioReviewBundle,
-        runtimeExportScenarioReviewChecklist
+        runtimeExportScenarioReviewChecklist,
+        runtimeExportScenarioReviewChecklistTemplate
       )
     );
   }, [
     runtimeExportScenarioReviewBundle?.scenario_review_hash,
-    runtimeExportScenarioReviewChecklist?.checklist_hash
+    runtimeExportScenarioReviewChecklist?.checklist_hash,
+    runtimeExportScenarioReviewChecklistTemplate?.template_hash
   ]);
   useEffect(() => {
     setExportServiceTracePageCursor(0);
@@ -1433,7 +1438,8 @@ export const DataPanel = memo(function DataPanel({
       runtimeExportScenarioReviewBundle,
       exportScenarioReviewBundleStatus?.workflowRows ?? [],
       exportScenarioReviewChecklistDraft,
-      runtimeExportPackageAuditIndex
+      runtimeExportPackageAuditIndex,
+      runtimeExportScenarioReviewChecklistTemplate
     );
   const exportReviewCompletionSummary =
     buildDataPanelExportReviewCompletionSummary({
@@ -11815,7 +11821,8 @@ function scenarioReviewWorkflowAuditArtifactAvailable(
 
 export function buildDataPanelScenarioReviewChecklistDraft(
   bundle: RuntimeExportScenarioReviewBundleV1 | null | undefined,
-  checklist: RuntimeExportScenarioReviewChecklistV1 | null | undefined
+  checklist: RuntimeExportScenarioReviewChecklistV1 | null | undefined,
+  template: RuntimeExportScenarioReviewChecklistTemplateV1 | null | undefined = null
 ): DataPanelScenarioReviewChecklistDraft {
   if (bundle === null || bundle === undefined) {
     return {};
@@ -11823,17 +11830,23 @@ export function buildDataPanelScenarioReviewChecklistDraft(
   const savedRecords = new Map(
     (checklist?.records ?? []).map((record) => [record.artifact_filename, record])
   );
+  const templateRecords = new Map(
+    (template?.records ?? []).map((record) => [record.artifact_filename, record])
+  );
   return Object.fromEntries(
     buildDataPanelScenarioReviewWorkflowRows(bundle).map((row) => {
       const saved = savedRecords.get(row.detailLabel);
+      const templateRecord = templateRecords.get(row.detailLabel);
       return [
         row.detailLabel,
         {
           reviewStatus: normalizeDataPanelScenarioReviewChecklistStatus(
-            saved?.review_status,
-            row.tone === "match" ? "REVIEWED" : "NEEDS_FOLLOWUP"
+            saved?.review_status ?? templateRecord?.review_status,
+            templateRecord === undefined && row.tone === "match"
+              ? "REVIEWED"
+              : "NEEDS_FOLLOWUP"
           ),
-          operatorNote: saved?.operator_note ?? ""
+          operatorNote: saved?.operator_note ?? templateRecord?.operator_note ?? ""
         }
       ];
     })
@@ -11871,29 +11884,35 @@ export function buildDataPanelScenarioReviewChecklistSaveRequest(
   bundle: RuntimeExportScenarioReviewBundleV1 | null | undefined,
   workflowRows: readonly DataPanelExportScenarioReviewWorkflowRow[],
   draft: DataPanelScenarioReviewChecklistDraft,
-  auditIndex: RuntimeExportPackageAuditIndexV1 | null | undefined = null
+  auditIndex: RuntimeExportPackageAuditIndexV1 | null | undefined = null,
+  template: RuntimeExportScenarioReviewChecklistTemplateV1 | null | undefined = null
 ): DataPanelExportScenarioReviewChecklistSaveRequest | null {
   if (bundle === null || bundle === undefined || workflowRows.length === 0) {
     return null;
   }
+  const templateRecords = new Map(
+    (template?.records ?? []).map((record) => [record.artifact_filename, record])
+  );
   return {
     packageId: bundle.package_id,
     records: workflowRows.map((row) => {
       const entry =
         draft[row.detailLabel] ??
         defaultDataPanelScenarioReviewChecklistDraftEntry(row);
+      const templateRecord = templateRecords.get(row.detailLabel);
       return {
         artifact_filename: row.detailLabel,
-        step_label: row.stepLabel,
+        step_label: templateRecord?.step_label ?? row.stepLabel,
         review_status: entry.reviewStatus,
         operator_note: entry.operatorNote.trim(),
         status_reason:
-          row.tone === "match" ? "" : "ARTIFACT_MISSING_OR_DEGRADED_IN_PACKAGE",
-        evidence_hash: scenarioReviewWorkflowEvidenceHash(
-          bundle,
-          auditIndex,
-          row.detailLabel
-        )
+          entry.reviewStatus === "REVIEWED"
+            ? ""
+            : templateRecord?.status_reason ??
+              (row.tone === "match" ? "" : "ARTIFACT_MISSING_OR_DEGRADED_IN_PACKAGE"),
+        evidence_hash:
+          templateRecord?.evidence_hash ??
+          scenarioReviewWorkflowEvidenceHash(bundle, auditIndex, row.detailLabel)
       };
     })
   };

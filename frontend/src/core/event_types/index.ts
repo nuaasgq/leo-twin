@@ -1683,6 +1683,14 @@ export interface RuntimeExportScenarioReviewChecklistEnvelope {
   catalog_record?: RuntimeExportCatalogRecordV1;
 }
 
+export interface RuntimeExportScenarioReviewChecklistTemplateEnvelope {
+  type: "RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_TEMPLATE" | string;
+  summary: RuntimeExportScenarioReviewChecklistTemplateV1;
+  scenario_review_bundle_artifact: RuntimeExportCatalogFileV1;
+  audit_artifact?: RuntimeExportCatalogFileV1;
+  catalog_record?: RuntimeExportCatalogRecordV1;
+}
+
 export interface RuntimeExportScenarioReviewChecklistV1 {
   type: "RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_V1" | string;
   version: "v1" | string;
@@ -1719,6 +1727,42 @@ export interface RuntimeExportScenarioReviewChecklistV1 {
   ordering: string;
   boundary_conditions: readonly string[];
   checklist_hash: string;
+}
+
+export interface RuntimeExportScenarioReviewChecklistTemplateV1 {
+  type: "RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_TEMPLATE_V1" | string;
+  version: "v1" | string;
+  template_id: string;
+  source: string;
+  template_scope: string;
+  package_id: string;
+  package_dir: string;
+  scenario_review_bundle_id: string;
+  scenario_review_hash: string;
+  audit_hash: string;
+  expected_review_filenames: readonly string[];
+  expected_review_count: number;
+  evidence_present_count: number;
+  missing_evidence_filenames: readonly string[];
+  missing_evidence_count: number;
+  template_status: "TEMPLATE_READY" | "TEMPLATE_WARN" | string;
+  records: readonly RuntimeExportScenarioReviewChecklistTemplateRecordV1[];
+  record_policy: string;
+  boundary_conditions: readonly string[];
+  template_hash: string;
+}
+
+export interface RuntimeExportScenarioReviewChecklistTemplateRecordV1 {
+  artifact_filename: string;
+  step_label: string;
+  review_status: "NEEDS_FOLLOWUP" | string;
+  status_reason: string;
+  operator_note: string;
+  evidence_hash: string;
+  evidence_present: boolean;
+  evidence_source: string;
+  review_order_index: number;
+  template_record_hash: string;
 }
 
 export interface RuntimeExportScenarioReviewChecklistRecordV1 {

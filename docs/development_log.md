@@ -16582,7 +16582,7 @@ change.
 ## 2026-07-07 - T341 scenario review checklist completeness v1
 
 - Branch: `feature/T341-scenario-review-checklist-completeness-v1`
-- Commit: pending before task commit.
+- Commit: `cc0707a feat(export): track scenario review checklist completeness`
 - Scope: add backend-owned recommended-step completeness evidence to
   `scenario_review_checklist_v1.json`, audit index, package review completion,
   and dashboard status displays. The backend now reports submitted-record
@@ -16637,3 +16637,66 @@ change.
   - Add a backend-generated operator review template that pre-populates all
     recommended checklist rows with evidence hashes before the operator edits
     statuses and notes.
+
+## 2026-07-07 - T342 scenario review checklist template v1
+
+- Branch: `feature/T342-scenario-review-template-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: add a backend-generated operator review template for scenario review
+  checklists. The new
+  `GET /runtime/export/packages/{package_id}/scenario-review-checklist-template`
+  endpoint returns deterministic `scenario_review_checklist_template_v1`
+  records for every backend-recommended review step, including backend-prefilled
+  `step_label`, `review_order_index`, and `evidence_hash`. Template records
+  default to `NEEDS_FOLLOWUP` so the operator remains responsible for final
+  review status and notes. The dashboard loads the template, uses it to
+  initialize unsaved checklist rows, and uses template evidence hashes when
+  constructing the save payload. No Event Kernel, simulation model, package
+  replay, package write-on-read, or frontend architecture behavior changed.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/app/api.ts`
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m compileall -q src\leo_twin\services\result_package_contract.py examples\integration_demo\control_plane.py examples\integration_demo\server.py`
+    - Result: passed.
+  - `python -m pytest tests\unit\test_result_package_contract_v1.py::test_result_package_contract_v1_is_deterministic_json_ready tests\unit\test_result_package_contract_v1.py::test_runtime_export_scenario_review_checklist_template_v1_is_deterministic tests\integration\test_result_package_export_v1.py::test_runtime_export_package_satisfies_result_package_contract_v1 tests\integration\test_runtime_session_control.py::test_demo_server_stream_query_parses_cursor_options -q`
+    - Result: passed, 4 tests.
+  - `.\node_modules\.bin\tsc.cmd --noEmit -p tsconfig.json` from
+    `frontend`
+    - Result: passed with the bundled Codex Node runtime path.
+  - `pnpm --dir frontend test dataPanel.test.ts api.test.ts appSurface.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 3 test
+      files and 275 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path; Vite
+      reported the existing large `DataPanel` chunk warning.
+  - `git diff --check`
+    - Result: passed; Git emitted line-ending warnings for the existing
+      unstaged runtime config drift and the touched `frontend/src/app/App.tsx`.
+- Problems encountered:
+  - The template intentionally does not mark rows `REVIEWED`; it fills evidence
+    and leaves review decisions to the operator. This preserves the T341
+    distinction between backend-recommended coverage and operator decisions.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The template currently sources raw file evidence from the audit index file
+    hashes and product evidence from backend summary hashes. A later UX pass can
+    expose `evidence_source` labels directly in the checklist table.
+  - Template generation is read-only and does not persist a separate artifact.
+- Recommended follow-up:
+  - Add an offline review report page that compares saved checklist records
+    against the latest backend template and highlights drift by template hash.

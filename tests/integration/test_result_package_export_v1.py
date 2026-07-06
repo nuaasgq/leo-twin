@@ -583,34 +583,42 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     }
     assert service_trace_report_page["records"][0]["trace_id"] == "trace:run"
 
-    review_evidence_hashes = {
-        "scenario_review_bundle_v1.json": scenario_review_bundle[
-            "scenario_review_hash"
-        ],
-        "export_package_audit_index_v1.json": service_trace_audit_index["audit_hash"],
-        "review_summary_v1.json": review_summary["summary_hash"],
-        "diagnostics_bundle_v1.json": diagnostics_bundle["diagnostics_hash"],
-        "network_kpi_benchmark_validation_v1.json": (
-            network_kpi_benchmark_validation["evidence"]["validation_hash"]
-        ),
-        "user_service_request_summary_v2.json": (
-            user_service_request_summary["evidence"]["summary_hash"]
-        ),
-        "service_trace_comparison_review_report_v1.json": service_trace_report[
-            "report_hash"
-        ],
-        "manifest.json": manifest["manifest_hash"],
-        "config_snapshot.json": manifest["runtime_state_hash"],
-    }
+    checklist_template_response = (
+        control_plane.runtime_export_package_scenario_review_checklist_template(
+            str(package["package_id"]),
+            output_root,
+        )
+    )
+    checklist_template = checklist_template_response["summary"]
+    assert checklist_template_response["type"] == (
+        "RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_TEMPLATE"
+    )
+    assert checklist_template["expected_review_count"] == len(
+        scenario_review_bundle["recommended_review_order"]
+    )
+    assert checklist_template["template_status"] == "TEMPLATE_READY"
+    assert checklist_template["missing_evidence_filenames"] == ()
+    assert [record["artifact_filename"] for record in checklist_template["records"]] == (
+        list(scenario_review_bundle["recommended_review_order"])
+    )
+    assert checklist_template["records"][0]["evidence_hash"] == (
+        scenario_review_bundle["scenario_review_hash"]
+    )
+    assert any(
+        record["artifact_filename"]
+        == "service_trace_comparison_review_report_v1.json"
+        and record["evidence_hash"] == service_trace_report["report_hash"]
+        for record in checklist_template["records"]
+    )
     checklist_records = [
         {
-            "artifact_filename": filename,
-            "step_label": f"Review {filename}",
+            "artifact_filename": record["artifact_filename"],
+            "step_label": record["step_label"],
             "review_status": "REVIEWED",
             "operator_note": "recommended review step checked",
-            "evidence_hash": review_evidence_hashes.get(filename, ""),
+            "evidence_hash": record["evidence_hash"],
         }
-        for filename in scenario_review_bundle["recommended_review_order"]
+        for record in checklist_template["records"]
     ]
     checklist_response = control_plane.runtime_export_package_scenario_review_checklist(
         str(package["package_id"]),

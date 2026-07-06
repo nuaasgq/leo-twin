@@ -91,6 +91,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_review_summary_v1,
     build_runtime_export_scenario_review_bundle_v1,
     build_runtime_export_scenario_review_checklist_v1,
+    build_runtime_export_scenario_review_checklist_template_v1,
     build_runtime_export_service_trace_comparison_review_report_page_v1,
     build_runtime_export_service_trace_comparison_review_report_v1,
     build_runtime_export_service_trace_item_v1,
@@ -1396,6 +1397,61 @@ class DemoControlPlane:
             ),
             "catalog_record": catalog_record,
         }
+
+    def runtime_export_package_scenario_review_checklist_template(
+        self,
+        package_id: str,
+        output_root: str | Path = "artifacts/runtime_exports",
+    ) -> dict[str, Any]:
+        catalog = _read_runtime_export_catalog(output_root)
+        catalog_record = _runtime_export_catalog_package_record(catalog, package_id)
+        package_dir = _runtime_export_catalog_package_dir(output_root, catalog_record)
+        scenario_review_artifact = self.runtime_export_package_artifact(
+            package_id,
+            _RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_FILENAME,
+            output_root,
+        )
+        scenario_review_bundle = json.loads(
+            Path(str(scenario_review_artifact["path"])).read_text(encoding="utf-8")
+        )
+        if not isinstance(scenario_review_bundle, Mapping):
+            raise RuntimeExportArtifactError(
+                f"runtime export package {package_id!r} has invalid scenario review bundle"
+            )
+        audit_index: Mapping[str, Any] = {}
+        audit_artifact: Mapping[str, Any] | None = None
+        try:
+            audit_artifact = self.runtime_export_package_artifact(
+                package_id,
+                _RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_FILENAME,
+                output_root,
+            )
+            loaded_audit_index = json.loads(
+                Path(str(audit_artifact["path"])).read_text(encoding="utf-8")
+            )
+            if isinstance(loaded_audit_index, Mapping):
+                audit_index = loaded_audit_index
+        except RuntimeExportArtifactError:
+            audit_index = {}
+        template = build_runtime_export_scenario_review_checklist_template_v1(
+            package_id=package_id,
+            package_dir=str(package_dir),
+            scenario_review_bundle=scenario_review_bundle,
+            audit_index=audit_index,
+        )
+        response: dict[str, Any] = {
+            "type": "RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_TEMPLATE",
+            "summary": template,
+            "scenario_review_bundle_artifact": _runtime_export_catalog_file_record(
+                scenario_review_artifact
+            ),
+            "catalog_record": catalog_record,
+        }
+        if audit_artifact is not None:
+            response["audit_artifact"] = _runtime_export_catalog_file_record(
+                audit_artifact
+            )
+        return response
 
     def _write_runtime_export_package_audit_index(
         self,

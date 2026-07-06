@@ -16,6 +16,8 @@ import {
   RuntimeExportScenarioReviewBundleV1,
   RuntimeExportScenarioReviewChecklistEnvelope,
   RuntimeExportScenarioReviewChecklistRecordV1,
+  RuntimeExportScenarioReviewChecklistTemplateEnvelope,
+  RuntimeExportScenarioReviewChecklistTemplateV1,
   RuntimeExportScenarioReviewChecklistV1,
   RuntimeExportRouteComparisonReviewReportEnvelope,
   RuntimeExportRouteComparisonReviewReportRecordV1,
@@ -640,6 +642,18 @@ export async function loadRuntimeExportScenarioReviewChecklist(
   return decodeRuntimeExportScenarioReviewChecklist(await response.json());
 }
 
+export async function loadRuntimeExportScenarioReviewChecklistTemplate(
+  packageId: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): Promise<RuntimeExportScenarioReviewChecklistTemplateV1> {
+  const url = runtimeExportScenarioReviewChecklistTemplateHref(packageId, endpoint);
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`failed to load runtime export scenario review checklist template from ${url}: HTTP ${response.status}`);
+  }
+  return decodeRuntimeExportScenarioReviewChecklistTemplateEnvelope(await response.json()).summary;
+}
+
 export async function saveRuntimeExportRouteComparisonReviewReport(
   packageId: string,
   request: RuntimeExportRouteComparisonReviewReportRequest,
@@ -977,6 +991,13 @@ export function runtimeExportScenarioReviewChecklistHref(
   endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
 ): string {
   return `${runtimeExportPackageRecordHref(packageId, endpoint)}/scenario-review-checklist`;
+}
+
+export function runtimeExportScenarioReviewChecklistTemplateHref(
+  packageId: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): string {
+  return `${runtimeExportPackageRecordHref(packageId, endpoint)}/scenario-review-checklist-template`;
 }
 
 export function userConfigurationSchemaHref(
@@ -1635,6 +1656,41 @@ export function decodeRuntimeExportScenarioReviewChecklist(
     );
   }
   return value as RuntimeExportScenarioReviewChecklistV1;
+}
+
+export function decodeRuntimeExportScenarioReviewChecklistTemplateEnvelope(
+  value: unknown
+): RuntimeExportScenarioReviewChecklistTemplateEnvelope {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError(
+      "runtime export scenario review checklist template response must be an object"
+    );
+  }
+  const summary = (value as { summary?: unknown }).summary;
+  const scenarioReviewBundleArtifact = (
+    value as { scenario_review_bundle_artifact?: unknown }
+  ).scenario_review_bundle_artifact;
+  if (
+    typeof summary !== "object" ||
+    summary === null ||
+    Array.isArray(summary) ||
+    typeof (summary as { template_id?: unknown }).template_id !== "string" ||
+    !Array.isArray((summary as { records?: unknown }).records) ||
+    typeof (summary as { template_hash?: unknown }).template_hash !== "string" ||
+    typeof scenarioReviewBundleArtifact !== "object" ||
+    scenarioReviewBundleArtifact === null ||
+    Array.isArray(scenarioReviewBundleArtifact)
+  ) {
+    throw new TypeError(
+      "runtime export scenario review checklist template response must include summary template_id, records, template_hash, and scenario_review_bundle_artifact"
+    );
+  }
+  return {
+    ...(value as Record<string, unknown>),
+    summary: summary as RuntimeExportScenarioReviewChecklistTemplateV1,
+    scenario_review_bundle_artifact:
+      scenarioReviewBundleArtifact as RuntimeExportScenarioReviewChecklistTemplateEnvelope["scenario_review_bundle_artifact"]
+  } as RuntimeExportScenarioReviewChecklistTemplateEnvelope;
 }
 
 export function decodeRuntimeExportPackageAuditIndex(

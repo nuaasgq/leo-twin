@@ -179,7 +179,10 @@ Tasks:
     dashboard uses the audit-index report hash as the checklist evidence hash.
     T341 adds backend-owned checklist recommended-step completeness fields and
     makes handoff readiness require full recommended review coverage, not only
-    all submitted records being marked reviewed.
+    all submitted records being marked reviewed. T342 adds the backend
+    `scenario-review-checklist-template` endpoint and dashboard binding so all
+    recommended review rows and evidence hashes are prefilled by backend output
+    before the operator edits statuses and notes.
 - V2-013: Add service lifecycle trace.
   - Scope: input flow, queue, compute, output flow, terminal state.
   - Output: timeline records for dashboard and result export.

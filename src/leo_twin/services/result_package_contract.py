@@ -22,6 +22,9 @@ RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1_ID = (
 RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_V1_ID = (
     "leo_twin.runtime_export_scenario_review_checklist.v1"
 )
+RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_TEMPLATE_V1_ID = (
+    "leo_twin.runtime_export_scenario_review_checklist_template.v1"
+)
 RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_V1_ID = (
     "leo_twin.runtime_export_route_detail_index.v1"
 )
@@ -130,6 +133,7 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
             "GET /runtime/export/packages/{package_id}/routes/{route_id}",
             "POST /runtime/export/packages/{package_id}/route-comparison-review-report",
             "POST /runtime/export/packages/{package_id}/service-trace-comparison-review-report",
+            "GET /runtime/export/packages/{package_id}/scenario-review-checklist-template",
             "POST /runtime/export/packages/{package_id}/scenario-review-checklist",
             "GET /runtime/export/packages/{package_id}/files/{filename}",
         ),
@@ -994,6 +998,76 @@ def build_runtime_export_scenario_review_checklist_v1(
     }
     checklist["checklist_hash"] = stable_hash_payload(checklist)
     return checklist
+
+
+def build_runtime_export_scenario_review_checklist_template_v1(
+    *,
+    package_id: str,
+    package_dir: str,
+    scenario_review_bundle: Mapping[str, Any],
+    audit_index: Mapping[str, Any] | None = None,
+) -> dict[str, object]:
+    """Build a deterministic backend template for operator checklist editing."""
+
+    if not isinstance(scenario_review_bundle, Mapping):
+        raise TypeError("scenario_review_bundle must be a mapping")
+    audit = _mapping(audit_index)
+    review_order = _string_tuple(
+        scenario_review_bundle.get("recommended_review_order")
+    )
+    artifact_hashes = _runtime_export_artifact_hashes_by_filename(audit)
+    records = tuple(
+        _runtime_export_scenario_review_checklist_template_record(
+            filename,
+            index=index,
+            scenario_review_bundle=scenario_review_bundle,
+            audit_index=audit,
+            artifact_hashes=artifact_hashes,
+        )
+        for index, filename in enumerate(review_order)
+    )
+    missing_evidence = tuple(
+        str(record["artifact_filename"])
+        for record in records
+        if record["evidence_present"] is not True
+    )
+    template: dict[str, object] = {
+        "type": "RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_TEMPLATE_V1",
+        "version": "v1",
+        "template_id": RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_TEMPLATE_V1_ID,
+        "source": "BACKEND_RUNTIME_EXPORT_PACKAGE",
+        "template_scope": "SCENARIO_REVIEW_RECOMMENDED_STEPS_OPERATOR_TEMPLATE",
+        "package_id": str(package_id),
+        "package_dir": str(package_dir),
+        "scenario_review_bundle_id": str(
+            scenario_review_bundle.get("bundle_id", "")
+        ),
+        "scenario_review_hash": str(
+            scenario_review_bundle.get("scenario_review_hash", "")
+        ),
+        "audit_hash": str(audit.get("audit_hash", "")),
+        "expected_review_filenames": review_order,
+        "expected_review_count": len(review_order),
+        "evidence_present_count": len(records) - len(missing_evidence),
+        "missing_evidence_filenames": missing_evidence,
+        "missing_evidence_count": len(missing_evidence),
+        "template_status": (
+            "TEMPLATE_READY" if not missing_evidence else "TEMPLATE_WARN"
+        ),
+        "records": records,
+        "record_policy": (
+            "template records prefill step_label, evidence_hash, and "
+            "review_order_index; operators still choose review_status and note"
+        ),
+        "boundary_conditions": (
+            "NO_EVENT_REPLAY",
+            "NO_MODEL_RECOMPUTE",
+            "NO_PACKAGE_READ_MUTATION",
+            "BACKEND_GENERATED_OPERATOR_TEMPLATE",
+        ),
+    }
+    template["template_hash"] = stable_hash_payload(template)
+    return template
 
 
 def build_runtime_export_route_detail_index_v1(
@@ -2808,6 +2882,154 @@ def _runtime_export_scenario_review_checklist_record(
         **record_hash_source,
         "record_hash": stable_hash_payload(record_hash_source),
     }
+
+
+def _runtime_export_scenario_review_checklist_template_record(
+    artifact_filename: str,
+    *,
+    index: int,
+    scenario_review_bundle: Mapping[str, Any],
+    audit_index: Mapping[str, Any],
+    artifact_hashes: Mapping[str, str],
+) -> dict[str, object]:
+    evidence_hash = _runtime_export_scenario_review_evidence_hash(
+        artifact_filename,
+        scenario_review_bundle=scenario_review_bundle,
+        audit_index=audit_index,
+        artifact_hashes=artifact_hashes,
+    )
+    evidence_source = _runtime_export_scenario_review_evidence_source(
+        artifact_filename,
+        evidence_hash,
+    )
+    record = {
+        "artifact_filename": artifact_filename,
+        "step_label": _runtime_export_scenario_review_step_label(
+            artifact_filename,
+            index,
+        ),
+        "review_status": "NEEDS_FOLLOWUP",
+        "status_reason": (
+            "OPERATOR_REVIEW_REQUIRED"
+            if evidence_hash
+            else "EVIDENCE_HASH_NOT_AVAILABLE"
+        ),
+        "operator_note": "",
+        "evidence_hash": evidence_hash,
+        "evidence_present": bool(evidence_hash),
+        "evidence_source": evidence_source,
+        "review_order_index": index,
+    }
+    return {
+        **record,
+        "template_record_hash": stable_hash_payload(record),
+    }
+
+
+def _runtime_export_artifact_hashes_by_filename(
+    audit_index: Mapping[str, Any],
+) -> dict[str, str]:
+    return {
+        str(record.get("filename", "")): str(record.get("sha256", ""))
+        for record in _file_records(_mapping(audit_index).get("artifact_hashes"))
+        if str(record.get("filename", ""))
+    }
+
+
+def _runtime_export_scenario_review_evidence_hash(
+    artifact_filename: str,
+    *,
+    scenario_review_bundle: Mapping[str, Any],
+    audit_index: Mapping[str, Any],
+    artifact_hashes: Mapping[str, str],
+) -> str:
+    filename = str(artifact_filename)
+    if filename == "scenario_review_bundle_v1.json":
+        return str(scenario_review_bundle.get("scenario_review_hash", ""))
+    if filename == "export_package_audit_index_v1.json":
+        return str(audit_index.get("audit_hash", ""))
+    if filename == "review_summary_v1.json":
+        return str(_mapping(scenario_review_bundle.get("review_summary")).get("summary_hash", ""))
+    if filename == "diagnostics_bundle_v1.json":
+        return str(
+            _mapping(scenario_review_bundle.get("diagnostics")).get(
+                "diagnostics_hash",
+                "",
+            )
+        )
+    if filename == "network_kpi_benchmark_validation_v1.json":
+        return str(
+            _mapping(
+                scenario_review_bundle.get("network_kpi_benchmark_validation")
+            ).get("validation_hash", "")
+        )
+    if filename == "user_service_request_summary_v2.json":
+        return str(
+            _mapping(scenario_review_bundle.get("user_service_requests")).get(
+                "summary_hash",
+                "",
+            )
+        )
+    if filename == "route_comparison_review_report_v1.json":
+        return str(audit_index.get("route_comparison_review_report_hash", ""))
+    if filename == "service_trace_comparison_review_report_v1.json":
+        return str(
+            audit_index.get("service_trace_comparison_review_report_hash", "")
+        )
+    if filename == "manifest.json":
+        return str(
+            _mapping(scenario_review_bundle.get("reproducibility")).get(
+                "manifest_hash",
+                "",
+            )
+        )
+    if filename == "config_snapshot.json":
+        return str(
+            _mapping(scenario_review_bundle.get("user_configuration")).get(
+                "config_hash",
+                "",
+            )
+        )
+    return str(artifact_hashes.get(filename, ""))
+
+
+def _runtime_export_scenario_review_evidence_source(
+    artifact_filename: str,
+    evidence_hash: str,
+) -> str:
+    if not evidence_hash:
+        return "MISSING"
+    if artifact_filename in {
+        "events.jsonl",
+        "metrics.csv",
+        "summary.json",
+        "service_lifecycle_trace_v2.json",
+    }:
+        return "AUDIT_INDEX_ARTIFACT_SHA256"
+    return "BACKEND_REVIEW_EVIDENCE_HASH"
+
+
+def _runtime_export_scenario_review_step_label(
+    artifact_filename: str,
+    index: int,
+) -> str:
+    labels = {
+        "scenario_review_bundle_v1.json": "scenario entry",
+        "export_package_audit_index_v1.json": "audit index",
+        "review_summary_v1.json": "review summary",
+        "diagnostics_bundle_v1.json": "diagnostics",
+        "network_kpi_benchmark_validation_v1.json": "network KPI benchmark",
+        "user_service_request_summary_v2.json": "user services",
+        "service_lifecycle_trace_v2.json": "service trace",
+        "service_trace_comparison_review_report_v1.json": "service trace review",
+        "route_comparison_review_report_v1.json": "route review",
+        "manifest.json": "manifest",
+        "config_snapshot.json": "configuration",
+        "events.jsonl": "event evidence",
+        "metrics.csv": "metrics",
+        "summary.json": "summary",
+    }
+    return f"{index + 1} {labels.get(artifact_filename, artifact_filename)}"
 
 
 def _runtime_export_scenario_review_recommended_coverage(
