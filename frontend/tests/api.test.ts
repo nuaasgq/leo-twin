@@ -7,6 +7,8 @@ import {
   loadRuntimeExportManifest,
   loadRuntimeExportPackageCompare,
   loadRuntimeExportRouteDetailIndex,
+  loadRuntimeExportRouteDetailItem,
+  loadRuntimeExportRouteDetailPage,
   loadRuntimeExportReviewSummary,
   loadRuntimeExportRestorePreflight,
   loadRuntimeComputeNodeDetail,
@@ -34,6 +36,8 @@ import {
   runtimeExportPackageFileHref,
   runtimeExportPackageManifestHref,
   runtimeExportPackageRecordHref,
+  runtimeExportPackageRouteDetailsHref,
+  runtimeExportPackageRouteDetailHref,
   runtimeExportPackageReviewSummaryHref,
   runtimeExportRestorePreflightHref,
   runtimeDetailEntityHref,
@@ -76,6 +80,24 @@ describe("runtime API diagnostics", () => {
     );
     expect(runtimeExportPackageFileHref("pkg 1", "events 1.jsonl")).toBe(
       "/runtime/export/packages/pkg%201/files/events%201.jsonl"
+    );
+    expect(runtimeExportPackageRouteDetailHref("pkg 1", "route:input 1")).toBe(
+      "/runtime/export/packages/pkg%201/routes/route%3Ainput%201"
+    );
+    expect(
+      runtimeExportPackageRouteDetailsHref(
+        "pkg 1",
+        5,
+        10,
+        {
+          query: "sat 1",
+          availability: "AVAILABLE",
+          businessType: "COMPUTE_SERVICE",
+          bottleneckComponent: "CAPACITY"
+        }
+      )
+    ).toBe(
+      "/runtime/export/packages/pkg%201/routes?cursor=5&limit=10&query=sat+1&availability=AVAILABLE&business_type=COMPUTE_SERVICE&bottleneck_component=CAPACITY"
     );
   });
 
@@ -365,6 +387,88 @@ describe("runtime API diagnostics", () => {
     });
     expect(fetchMock).toHaveBeenCalledWith(
       "/runtime/export/packages/pkg/files/route_detail_index_v1.json"
+    );
+  });
+
+  it("loads runtime export route detail pages", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        type: "RUNTIME_EXPORT_ROUTE_DETAIL_PAGE_V1",
+        version: "v1",
+        page_id: "leo_twin.runtime_export_route_detail_page.v1",
+        source: "BACKEND_RUNTIME_EXPORT_PACKAGE",
+        package_id: "pkg",
+        index_id: "leo_twin.runtime_export_route_detail_index.v1",
+        route_detail_index_hash: "sha256:route",
+        index_scope: "ROUTE_EXPLANATION_WINDOW_EXPORT",
+        cursor: 0,
+        limit: 1,
+        next_cursor: 1,
+        has_more: false,
+        route_count: 1,
+        item_count: 1,
+        unfiltered_route_count: 1,
+        filter_applied: true,
+        filters: {
+          query: "sat-0",
+          availability: "AVAILABLE",
+          business_type: "COMPUTE_SERVICE",
+          bottleneck_component: "ALL"
+        },
+        available_route_count: 1,
+        blocked_route_count: 0,
+        compute_service_route_count: 1,
+        network_service_route_count: 0,
+        items: [{ route_id: "route-0" }],
+        page_hash: "sha256:page"
+      })
+    }));
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+
+    await expect(
+      loadRuntimeExportRouteDetailPage("pkg", 0, 1, {
+        query: "sat-0",
+        availability: "AVAILABLE",
+        businessType: "COMPUTE_SERVICE"
+      })
+    ).resolves.toMatchObject({
+      package_id: "pkg",
+      route_count: 1,
+      items: [{ route_id: "route-0" }]
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/runtime/export/packages/pkg/routes?cursor=0&limit=1&query=sat-0&availability=AVAILABLE&business_type=COMPUTE_SERVICE"
+    );
+  });
+
+  it("loads runtime export route detail items", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        type: "RUNTIME_EXPORT_ROUTE_DETAIL_ITEM_V1",
+        version: "v1",
+        item_id: "leo_twin.runtime_export_route_detail_item.v1",
+        source: "BACKEND_RUNTIME_EXPORT_PACKAGE",
+        package_id: "pkg",
+        index_id: "leo_twin.runtime_export_route_detail_index.v1",
+        route_detail_index_hash: "sha256:route",
+        route_id: "route:0",
+        route: { route_id: "route:0" },
+        item_hash: "sha256:item"
+      })
+    }));
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+
+    await expect(
+      loadRuntimeExportRouteDetailItem("pkg", "route:0")
+    ).resolves.toMatchObject({
+      package_id: "pkg",
+      route_id: "route:0",
+      route: { route_id: "route:0" }
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/runtime/export/packages/pkg/routes/route%3A0"
     );
   });
 

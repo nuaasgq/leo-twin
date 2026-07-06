@@ -2625,6 +2625,8 @@ describe("buildDataPanelExportCompareDisplay", () => {
         {
           routeId: "route-c",
           pathLabel: "user-0 -> sat-1",
+          packageDetailHref:
+            "/runtime/export/packages/pkg-review/routes/route-c",
           liveDetailActionLabel: "live route detail"
         }
       ]

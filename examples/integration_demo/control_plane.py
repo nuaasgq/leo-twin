@@ -73,7 +73,9 @@ from leo_twin.services.runtime_reproducibility import (
 )
 from leo_twin.services.result_package_contract import (
     build_runtime_export_diagnostics_bundle_v1,
+    build_runtime_export_route_detail_item_v1,
     build_runtime_export_route_detail_index_v1,
+    build_runtime_export_route_detail_page_v1,
     build_runtime_export_review_summary_v1,
 )
 from leo_twin.services.scenario_builder import (
@@ -788,6 +790,52 @@ class DemoControlPlane:
             "sha256": file_record["sha256"],
             "bytes": file_record["bytes"],
         }
+
+    def runtime_export_package_route_details(
+        self,
+        package_id: str,
+        output_root: str | Path = "artifacts/runtime_exports",
+        *,
+        cursor: int = 0,
+        limit: int = 100,
+        query: str = "",
+        availability: str = "ALL",
+        business_type: str = "ALL",
+        bottleneck_component: str = "ALL",
+    ) -> dict[str, Any]:
+        route_detail_index = self._runtime_export_package_route_detail_index(
+            package_id,
+            output_root,
+        )
+        return build_runtime_export_route_detail_page_v1(
+            route_detail_index,
+            cursor=cursor,
+            limit=limit,
+            query=query,
+            availability=availability,
+            business_type=business_type,
+            bottleneck_component=bottleneck_component,
+        )
+
+    def runtime_export_package_route_detail(
+        self,
+        package_id: str,
+        route_id: str,
+        output_root: str | Path = "artifacts/runtime_exports",
+    ) -> dict[str, Any]:
+        route_detail_index = self._runtime_export_package_route_detail_index(
+            package_id,
+            output_root,
+        )
+        detail = build_runtime_export_route_detail_item_v1(
+            route_detail_index,
+            route_id,
+        )
+        if detail is None:
+            raise RuntimeExportArtifactError(
+                f"runtime export package {package_id!r} route {route_id!r} not found"
+            )
+        return detail
 
     def runtime_export_package_archive_artifact(
         self,
@@ -1575,6 +1623,25 @@ class DemoControlPlane:
                 f"runtime export package {package_id!r} has invalid config snapshot"
             )
         return package_snapshot
+
+    def _runtime_export_package_route_detail_index(
+        self,
+        package_id: str,
+        output_root: str | Path,
+    ) -> dict[str, Any]:
+        artifact = self.runtime_export_package_artifact(
+            package_id,
+            _RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_FILENAME,
+            output_root,
+        )
+        route_detail_index = json.loads(
+            Path(str(artifact["path"])).read_text(encoding="utf-8")
+        )
+        if not isinstance(route_detail_index, dict):
+            raise RuntimeExportArtifactError(
+                f"runtime export package {package_id!r} has invalid route detail index"
+            )
+        return route_detail_index
 
 
 def _runtime_export_restore_control_payload(raw: str | bytes) -> dict[str, Any] | None:

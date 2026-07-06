@@ -19,6 +19,12 @@ RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1_ID = (
 RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_V1_ID = (
     "leo_twin.runtime_export_route_detail_index.v1"
 )
+RUNTIME_EXPORT_ROUTE_DETAIL_PAGE_V1_ID = (
+    "leo_twin.runtime_export_route_detail_page.v1"
+)
+RUNTIME_EXPORT_ROUTE_DETAIL_ITEM_V1_ID = (
+    "leo_twin.runtime_export_route_detail_item.v1"
+)
 
 
 _REQUIRED_FILE_SPECS: tuple[dict[str, object], ...] = (
@@ -69,6 +75,8 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
             "GET /runtime/export/packages/{package_id}",
             "GET /runtime/export/packages/{package_id}/manifest",
             "GET /runtime/export/packages/{package_id}/review-summary",
+            "GET /runtime/export/packages/{package_id}/routes",
+            "GET /runtime/export/packages/{package_id}/routes/{route_id}",
             "GET /runtime/export/packages/{package_id}/files/{filename}",
         ),
         "catalog_filename": "runtime_export_catalog_v1.json",
@@ -424,6 +432,116 @@ def build_runtime_export_route_detail_index_v1(
     return index
 
 
+def build_runtime_export_route_detail_page_v1(
+    route_detail_index: Mapping[str, Any],
+    *,
+    cursor: int = 0,
+    limit: int = 100,
+    query: str = "",
+    availability: str = "ALL",
+    business_type: str = "ALL",
+    bottleneck_component: str = "ALL",
+) -> dict[str, object]:
+    """Build a deterministic page from an exported route detail index."""
+
+    if not isinstance(route_detail_index, Mapping):
+        raise TypeError("route_detail_index must be a mapping")
+    routes = tuple(
+        _runtime_export_route_detail_record(item)
+        for item in _records(route_detail_index.get("routes"))
+    )
+    filtered_routes = tuple(
+        route
+        for route in routes
+        if _runtime_export_route_detail_matches_filter(
+            route,
+            query=query,
+            availability=availability,
+            business_type=business_type,
+            bottleneck_component=bottleneck_component,
+        )
+    )
+    normalized_cursor = _page_cursor(cursor)
+    normalized_limit = _page_limit(limit)
+    items = filtered_routes[normalized_cursor : normalized_cursor + normalized_limit]
+    next_cursor = min(len(filtered_routes), normalized_cursor + len(items))
+    normalized_filters = _runtime_export_route_detail_filter_summary(
+        query=query,
+        availability=availability,
+        business_type=business_type,
+        bottleneck_component=bottleneck_component,
+    )
+    filter_applied = _runtime_export_route_detail_filter_applied(normalized_filters)
+    page: dict[str, object] = {
+        "type": "RUNTIME_EXPORT_ROUTE_DETAIL_PAGE_V1",
+        "version": "v1",
+        "page_id": RUNTIME_EXPORT_ROUTE_DETAIL_PAGE_V1_ID,
+        "source": "BACKEND_RUNTIME_EXPORT_PACKAGE",
+        "package_id": str(route_detail_index.get("package_id", "")),
+        "index_id": str(route_detail_index.get("index_id", "")),
+        "route_detail_index_hash": str(
+            route_detail_index.get("route_detail_index_hash", "")
+        ),
+        "index_scope": str(route_detail_index.get("index_scope", "")),
+        "cursor": normalized_cursor,
+        "limit": normalized_limit,
+        "next_cursor": next_cursor,
+        "has_more": next_cursor < len(filtered_routes),
+        "route_count": len(filtered_routes),
+        "item_count": len(items),
+        "unfiltered_route_count": len(routes),
+        "filter_applied": filter_applied,
+        "filters": normalized_filters,
+        "available_route_count": sum(1 for route in filtered_routes if route["available"]),
+        "blocked_route_count": sum(1 for route in filtered_routes if not route["available"]),
+        "compute_service_route_count": sum(
+            1
+            for route in filtered_routes
+            if str(route["business_type"]).upper() == "COMPUTE_SERVICE"
+        ),
+        "network_service_route_count": sum(
+            1
+            for route in filtered_routes
+            if str(route["business_type"]).upper() != "COMPUTE_SERVICE"
+        ),
+        "items": items,
+    }
+    page["page_hash"] = stable_hash_payload(page)
+    return page
+
+
+def build_runtime_export_route_detail_item_v1(
+    route_detail_index: Mapping[str, Any],
+    route_id: str,
+) -> dict[str, object] | None:
+    """Build one deterministic route detail item from an exported package index."""
+
+    if not isinstance(route_detail_index, Mapping):
+        raise TypeError("route_detail_index must be a mapping")
+    normalized_route_id = str(route_id).strip()
+    if not normalized_route_id:
+        return None
+    for item in _records(route_detail_index.get("routes")):
+        route = _runtime_export_route_detail_record(item)
+        if str(route["route_id"]) == normalized_route_id:
+            detail: dict[str, object] = {
+                "type": "RUNTIME_EXPORT_ROUTE_DETAIL_ITEM_V1",
+                "version": "v1",
+                "item_id": RUNTIME_EXPORT_ROUTE_DETAIL_ITEM_V1_ID,
+                "source": "BACKEND_RUNTIME_EXPORT_PACKAGE",
+                "package_id": str(route_detail_index.get("package_id", "")),
+                "index_id": str(route_detail_index.get("index_id", "")),
+                "route_detail_index_hash": str(
+                    route_detail_index.get("route_detail_index_hash", "")
+                ),
+                "route_id": normalized_route_id,
+                "route": route,
+            }
+            detail["item_hash"] = stable_hash_payload(detail)
+            return detail
+    return None
+
+
 def summarize_result_package_record_v1(
     package: Mapping[str, Any],
 ) -> dict[str, object]:
@@ -708,6 +826,120 @@ def _runtime_export_route_detail_record(
         "bottleneck_reason_label": str(item.get("bottleneck_reason_label", "")),
         "explanation_label": str(item.get("explanation_label", "")),
     }
+
+
+def _runtime_export_route_detail_matches_filter(
+    route: Mapping[str, Any],
+    *,
+    query: str,
+    availability: str,
+    business_type: str,
+    bottleneck_component: str,
+) -> bool:
+    normalized_availability = str(availability or "ALL").strip().upper()
+    if normalized_availability == "AVAILABLE" and not _bool(route.get("available")):
+        return False
+    if normalized_availability == "BLOCKED" and _bool(route.get("available")):
+        return False
+    normalized_business_type = str(business_type or "ALL").strip().upper()
+    if (
+        normalized_business_type
+        and normalized_business_type != "ALL"
+        and str(route.get("business_type", "")).strip().upper()
+        != normalized_business_type
+    ):
+        return False
+    normalized_bottleneck = str(bottleneck_component or "ALL").strip().upper()
+    if (
+        normalized_bottleneck
+        and normalized_bottleneck != "ALL"
+        and str(route.get("bottleneck_component", "")).strip().upper()
+        != normalized_bottleneck
+    ):
+        return False
+    terms = _search_terms(query)
+    if not terms:
+        return True
+    haystack = _runtime_export_route_detail_search_text(route)
+    return all(term in haystack for term in terms)
+
+
+def _runtime_export_route_detail_filter_summary(
+    *,
+    query: str,
+    availability: str,
+    business_type: str,
+    bottleneck_component: str,
+) -> dict[str, str]:
+    return {
+        "query": _normalized_search_query(query),
+        "availability": _normalized_filter_value(availability, "ALL"),
+        "business_type": _normalized_filter_value(business_type, "ALL"),
+        "bottleneck_component": _normalized_filter_value(
+            bottleneck_component,
+            "ALL",
+        ),
+    }
+
+
+def _runtime_export_route_detail_filter_applied(
+    filters: Mapping[str, Any],
+) -> bool:
+    return (
+        str(filters.get("query", "")).strip() != ""
+        or str(filters.get("availability", "ALL")).upper() != "ALL"
+        or str(filters.get("business_type", "ALL")).upper() != "ALL"
+        or str(filters.get("bottleneck_component", "ALL")).upper() != "ALL"
+    )
+
+
+def _runtime_export_route_detail_search_text(route: Mapping[str, Any]) -> str:
+    values = (
+        str(route.get("route_id", "")),
+        str(route.get("flow_id", "")),
+        str(route.get("user_id", "")),
+        str(route.get("source_id", "")),
+        str(route.get("destination_id", "")),
+        str(route.get("selected_satellite_id", "")),
+        str(route.get("primary_next_hop_id", "")),
+        *_string_tuple(route.get("next_hop_ids")),
+        *_string_tuple(route.get("path")),
+        str(route.get("path_label", "")),
+        str(route.get("business_type", "")),
+        str(route.get("business_label", "")),
+        str(route.get("bottleneck_component", "")),
+        str(route.get("bottleneck_reason", "")),
+        str(route.get("bottleneck_reason_label", "")),
+        str(route.get("explanation_label", "")),
+    )
+    return " ".join(values).lower()
+
+
+def _search_terms(query: str) -> tuple[str, ...]:
+    normalized = _normalized_search_query(query)
+    if not normalized:
+        return ()
+    return tuple(part for part in normalized.split(" ") if part)
+
+
+def _normalized_search_query(query: str) -> str:
+    return " ".join(str(query or "").strip().lower().split())
+
+
+def _normalized_filter_value(value: str, default: str) -> str:
+    normalized = str(value or default).strip().upper()
+    return normalized or default
+
+
+def _page_cursor(cursor: int) -> int:
+    return max(0, _integer(cursor))
+
+
+def _page_limit(limit: int) -> int:
+    normalized_limit = _integer(limit)
+    if normalized_limit <= 0:
+        return 100
+    return min(5000, normalized_limit)
 
 
 def _records(value: object) -> tuple[Mapping[str, Any], ...]:

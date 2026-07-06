@@ -13439,3 +13439,72 @@ change.
   - Add package-side route detail pagination or exact route-id lookup so result
     packages can review hidden route rows without relying on current runtime
     state.
+
+## 2026-07-06 - Runtime Export Route Index Package Query v1
+
+- Branch: `feature/T281-route-index-package-query-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add package-owned route evidence query support for runtime result
+  packages. The backend now defines deterministic
+  `RUNTIME_EXPORT_ROUTE_DETAIL_PAGE_V1` and
+  `RUNTIME_EXPORT_ROUTE_DETAIL_ITEM_V1` payloads, exposes
+  `/runtime/export/packages/{package_id}/routes` and
+  `/runtime/export/packages/{package_id}/routes/{route_id}`, and reads the
+  persisted `route_detail_index_v1.json` artifact instead of the current live
+  runtime session. The frontend adds matching type/API helpers and dashboard
+  route rows now link to the package-owned route JSON while keeping the live
+  route-detail action as a comparison aid. No Event Kernel, route computation,
+  packet-level simulation, or external simulator behavior changed.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/app/api.ts`
+  - `frontend/src/app/App.css`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/result_package_contract_v1.md`
+  - `docs/integration_demo.md`
+  - `docs/dashboard_model_trust_evidence_workspace_v1.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src/leo_twin/services/result_package_contract.py examples/integration_demo/control_plane.py examples/integration_demo/server.py`
+    - Result: passed.
+  - `python -m pytest tests/unit/test_result_package_contract_v1.py -q`
+    - Result: passed, 9 tests.
+  - `python -m pytest tests/unit/test_result_package_contract_v1.py tests/integration/test_result_package_export_v1.py -q`
+    - Result: passed, 10 tests.
+  - `python -m pytest tests/integration/test_runtime_session_control.py::test_demo_adapter_serves_persisted_runtime_export_artifacts tests/integration/test_runtime_session_control.py::test_demo_server_stream_query_parses_cursor_options -q`
+    - Result: passed, 2 tests.
+  - `python -m pytest tests/unit/test_result_package_contract_v1.py tests/integration/test_result_package_export_v1.py tests/integration/test_runtime_session_control.py::test_demo_adapter_serves_persisted_runtime_export_artifacts tests/integration/test_runtime_session_control.py::test_demo_server_stream_query_parses_cursor_options tests/unit/test_user_guide_v2_docs.py -q`
+    - Result: passed, 14 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with bundled Codex Node/Pnpm runtime.
+  - `pnpm --dir frontend test api.test.ts dataPanel.test.ts`
+    - Result: passed, 2 test files and 188 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing large DataPanel chunk
+      warning after minification; no functional build error.
+- Problems encountered:
+  - The small integration demo can export an empty route detail index window.
+    The integration test now verifies stable empty-page behavior, while exact
+    route-id lookup is covered by deterministic unit tests with route fixtures.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - Package-owned route query endpoints only cover rows already present in
+    `route_detail_index_v1.json`. They do not yet export hidden route rows
+    beyond the runtime route explanation window captured in the package.
+  - The dashboard links to package route JSON but does not yet replace local
+    route-index filtering with server-side package pagination.
+- Recommended follow-up:
+  - Extend runtime export creation so `route_detail_index_v1.json` can capture
+    a configurable all-window route evidence export, or add a dedicated
+    package-side route detail artifact for hidden rows.

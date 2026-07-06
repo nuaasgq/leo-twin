@@ -74,6 +74,7 @@ import {
   runtimeExportPackageFileHref,
   runtimeExportPackageManifestHref,
   runtimeExportPackageRecordHref,
+  runtimeExportPackageRouteDetailHref,
   runtimeExportPackageReviewSummaryHref,
   runtimeExportRestorePreflightHref,
   userConfigurationExportHref,
@@ -1333,6 +1334,7 @@ export const DataPanel = memo(function DataPanel({
                       <strong>{row.routeId}</strong>
                       {row.pathLabel}
                       <small>{row.metricLabel}</small>
+                      <a href={row.packageDetailHref}>package route JSON</a>
                       <button
                         type="button"
                         onClick={() => {
@@ -8894,6 +8896,7 @@ export interface DataPanelExportRouteDetailIndexRouteRow {
   metricLabel: string;
   available: boolean;
   title: string;
+  packageDetailHref: string;
   liveDetailActionLabel: string;
 }
 
@@ -9153,7 +9156,9 @@ export function buildDataPanelExportRouteDetailIndexDisplay(
   const filteredRoutes = filterRuntimeExportRouteDetailIndexRoutes(index.routes, query);
   const routeRows = filteredRoutes
     .slice(0, routeLimit)
-    .map(buildDataPanelExportRouteDetailIndexRouteRow);
+    .map((route) =>
+      buildDataPanelExportRouteDetailIndexRouteRow(index.package_id, route)
+    );
   return {
     packageId: index.package_id,
     tone: evidenceComplete ? "match" : "different",
@@ -9205,6 +9210,7 @@ export function filterRuntimeExportRouteDetailIndexRoutes(
 }
 
 function buildDataPanelExportRouteDetailIndexRouteRow(
+  packageId: string,
   route: RuntimeExportRouteDetailIndexRouteV1
 ): DataPanelExportRouteDetailIndexRouteRow {
   return {
@@ -9217,6 +9223,7 @@ function buildDataPanelExportRouteDetailIndexRouteRow(
     )}`,
     available: route.available,
     title: `${route.flow_id} / ${route.business_type} / ${route.bottleneck_component} / ${route.explanation_label}`,
+    packageDetailHref: runtimeExportPackageRouteDetailHref(packageId, route.route_id),
     liveDetailActionLabel: "live route detail"
   };
 }

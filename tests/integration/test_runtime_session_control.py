@@ -1115,6 +1115,31 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
     )
     assert route_detail_index["type"] == "RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_V1"
     assert route_detail_index["route_detail_index_hash"].startswith("sha256:")
+    route_page = control_plane.runtime_export_package_route_details(
+        package_id,
+        export_root,
+        cursor=0,
+        limit=1,
+    )
+    assert route_page["type"] == "RUNTIME_EXPORT_ROUTE_DETAIL_PAGE_V1"
+    assert route_page["source"] == "BACKEND_RUNTIME_EXPORT_PACKAGE"
+    assert route_page["package_id"] == package_id
+    assert route_page["route_detail_index_hash"] == route_detail_index[
+        "route_detail_index_hash"
+    ]
+    assert route_page["item_count"] == min(1, len(route_detail_index["routes"]))
+    assert route_page["route_count"] == len(route_detail_index["routes"])
+    assert route_page["page_hash"].startswith("sha256:")
+    if route_page["items"]:
+        route_detail = control_plane.runtime_export_package_route_detail(
+            package_id,
+            route_page["items"][0]["route_id"],
+            export_root,
+        )
+        assert route_detail["type"] == "RUNTIME_EXPORT_ROUTE_DETAIL_ITEM_V1"
+        assert route_detail["source"] == "BACKEND_RUNTIME_EXPORT_PACKAGE"
+        assert route_detail["route"]["route_id"] == route_page["items"][0]["route_id"]
+        assert route_detail["item_hash"].startswith("sha256:")
     assert Path(str(review_summary_artifact["path"])).name == "review_summary_v1.json"
     assert review_summary_artifact["content_type"] == "application/json; charset=utf-8"
     review_summary = json.loads(
@@ -1392,6 +1417,12 @@ def test_demo_server_stream_query_parses_cursor_options() -> None:
     assert _runtime_export_package_route(
         "/runtime/export/packages/pkg-1/archive"
     ) == ("pkg-1", "archive", None)
+    assert _runtime_export_package_route(
+        "/runtime/export/packages/pkg%201/routes"
+    ) == ("pkg 1", "routes", None)
+    assert _runtime_export_package_route(
+        "/runtime/export/packages/pkg%201/routes/route%3Ainput-0"
+    ) == ("pkg 1", "route-detail", "route:input-0")
 
 
 def _deterministic_sequence() -> tuple[tuple[dict[str, Any], ...], tuple[dict[str, Any], ...]]:

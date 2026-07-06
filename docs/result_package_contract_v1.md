@@ -157,6 +157,22 @@ route-detail action is a read-only comparison aid: it uses the current runtime
 detail endpoint when the same route id still exists, and it does not replay or
 mutate the exported package.
 
+The demo backend also exposes package-owned route evidence endpoints:
+
+```text
+GET /runtime/export/packages/{package_id}/routes
+GET /runtime/export/packages/{package_id}/routes/{route_id}
+```
+
+The list endpoint returns `RUNTIME_EXPORT_ROUTE_DETAIL_PAGE_V1` with cursor,
+limit, optional query, availability, business type, and bottleneck filters. The
+exact endpoint returns `RUNTIME_EXPORT_ROUTE_DETAIL_ITEM_V1` for a route id in
+the exported index. Both endpoints read the persisted `route_detail_index_v1.json`
+artifact and include the source `route_detail_index_hash`; they do not inspect
+the current runtime session, replay events, recompute routes, or mutate the
+package. They only cover rows already present in the exported route detail
+index.
+
 ## Diagnostics Bundle
 
 The diagnostics bundle artifact has type:

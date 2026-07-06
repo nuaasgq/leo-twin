@@ -2914,6 +2914,7 @@ button.data-panel-route-row {
   font-weight: 700;
 }
 
+.data-panel-export-diagnostics-findings a,
 .data-panel-export-diagnostics-findings button {
   justify-self: start;
   border: 1px solid #2a4658;
@@ -2924,6 +2925,7 @@ button.data-panel-route-row {
   cursor: pointer;
   font-size: 10px;
   font-weight: 900;
+  text-decoration: none;
 }
 
 .data-panel-export-manifest-inspector {

@@ -195,6 +195,33 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                             )
                         )
                         return
+                    if artifact_kind == "routes":
+                        try:
+                            cursor, limit = _detail_query(query, default_limit=100)
+                        except ValueError as exc:
+                            self.send_error(400, str(exc))
+                            return
+                        filters = _detail_filter_query(query)
+                        self._send_json(
+                            control_plane.runtime_export_package_route_details(
+                                package_id,
+                                cursor=cursor,
+                                limit=limit,
+                                query=filters["query"],
+                                availability=filters["availability"],
+                                business_type=filters["business_type"],
+                                bottleneck_component=filters["bottleneck_component"],
+                            )
+                        )
+                        return
+                    if artifact_kind == "route-detail" and filename is not None:
+                        self._send_json(
+                            control_plane.runtime_export_package_route_detail(
+                                package_id,
+                                filename,
+                            )
+                        )
+                        return
                     if artifact_kind == "manifest":
                         artifact = control_plane.runtime_export_package_artifact(
                             package_id,
@@ -743,6 +770,10 @@ def _runtime_export_package_route(
         return parts[0], "restore-preflight", None
     if len(parts) == 2 and parts[1] == "archive":
         return parts[0], "archive", None
+    if len(parts) == 2 and parts[1] == "routes":
+        return parts[0], "routes", None
+    if len(parts) == 3 and parts[1] == "routes":
+        return parts[0], "route-detail", parts[2]
     if len(parts) == 3 and parts[1] == "files":
         return parts[0], "file", parts[2]
     return "", "missing", None

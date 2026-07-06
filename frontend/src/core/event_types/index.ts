@@ -1390,6 +1390,52 @@ export interface RuntimeExportRouteDetailIndexRouteV1 {
   explanation_label: string;
 }
 
+export interface RuntimeExportRouteDetailPageV1 {
+  type: "RUNTIME_EXPORT_ROUTE_DETAIL_PAGE_V1" | string;
+  version: "v1" | string;
+  page_id: string;
+  source: string;
+  package_id: string;
+  index_id: string;
+  route_detail_index_hash: string;
+  index_scope: string;
+  cursor: number;
+  limit: number;
+  next_cursor: number;
+  has_more: boolean;
+  route_count: number;
+  item_count: number;
+  unfiltered_route_count: number;
+  filter_applied: boolean;
+  filters: RuntimeExportRouteDetailPageFiltersV1;
+  available_route_count: number;
+  blocked_route_count: number;
+  compute_service_route_count: number;
+  network_service_route_count: number;
+  items: readonly RuntimeExportRouteDetailIndexRouteV1[];
+  page_hash: string;
+}
+
+export interface RuntimeExportRouteDetailPageFiltersV1 {
+  query: string;
+  availability: string;
+  business_type: string;
+  bottleneck_component: string;
+}
+
+export interface RuntimeExportRouteDetailItemV1 {
+  type: "RUNTIME_EXPORT_ROUTE_DETAIL_ITEM_V1" | string;
+  version: "v1" | string;
+  item_id: string;
+  source: string;
+  package_id: string;
+  index_id: string;
+  route_detail_index_hash: string;
+  route_id: string;
+  route: RuntimeExportRouteDetailIndexRouteV1;
+  item_hash: string;
+}
+
 export interface RuntimeExportDiagnosticsPackageV1 {
   package_id: string;
   package_dir: string;

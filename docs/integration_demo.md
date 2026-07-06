@@ -183,6 +183,19 @@ Runtime exports also write `route_detail_index_v1.json`, which preserves the
 current route explanation window and route trust sample ids for offline review.
 It is an index of backend-owned route explanation rows, not a packet trace or
 route recomputation artifact.
+The persisted package can also serve that evidence through package-owned route
+detail endpoints:
+
+```text
+/runtime/export/packages/{package_id}/routes?cursor=0&limit=100&query=&availability=ALL&business_type=ALL&bottleneck_component=ALL
+/runtime/export/packages/{package_id}/routes/{route_id}
+```
+
+These endpoints read `route_detail_index_v1.json` from the selected package and
+return deterministic `RUNTIME_EXPORT_ROUTE_DETAIL_PAGE_V1` or
+`RUNTIME_EXPORT_ROUTE_DETAIL_ITEM_V1` JSON. They are offline review endpoints:
+they do not use the current live runtime state, replay events, or recompute
+routes.
 
 Service trace detail APIs:
 

@@ -47,7 +47,9 @@ selected result package provides it. The dashboard treats it as backend-owned
 route evidence: it displays indexed route counts, route trust sample coverage,
 model-boundary labels, searchable sample route rows, and row actions that open
 the existing live route detail endpoint when the referenced route is still
-available in the current runtime. The frontend does not recompute routes.
+available in the current runtime. Each row can also link to the package-owned
+`/runtime/export/packages/{package_id}/routes/{route_id}` JSON so replay review
+does not depend on live runtime state. The frontend does not recompute routes.
 7. runtime evidence
 
 Each row has a tone:

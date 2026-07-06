@@ -209,6 +209,11 @@ Tasks:
   - Status: T280 adds route evidence search and row actions that request the
     existing live route detail endpoint for the selected route id, without
     recomputing paths or mutating exported packages.
+  - Status: T281 adds package-owned route evidence query endpoints for
+    persisted result packages. `/runtime/export/packages/{package_id}/routes`
+    and `/runtime/export/packages/{package_id}/routes/{route_id}` read
+    `route_detail_index_v1.json` directly and return deterministic package
+    review JSON without depending on the current runtime session.
 
 ### WS4. Compute Network Model v2
 

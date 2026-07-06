@@ -5,11 +5,15 @@ import json
 from leo_twin.services.result_package_contract import (
     RESULT_PACKAGE_CONTRACT_V1_ID,
     RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1_ID,
+    RUNTIME_EXPORT_ROUTE_DETAIL_ITEM_V1_ID,
     RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_V1_ID,
+    RUNTIME_EXPORT_ROUTE_DETAIL_PAGE_V1_ID,
     RUNTIME_EXPORT_REVIEW_SUMMARY_V1_ID,
     RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID,
     build_runtime_export_diagnostics_bundle_v1,
+    build_runtime_export_route_detail_item_v1,
     build_runtime_export_route_detail_index_v1,
+    build_runtime_export_route_detail_page_v1,
     build_runtime_export_review_summary_v1,
     result_package_contract_v1_to_dict,
     summarize_result_package_record_v1,
@@ -307,6 +311,86 @@ def test_runtime_export_route_detail_index_v1_is_deterministic_and_review_ready(
     assert json.loads(json.dumps(first, sort_keys=True))["index_id"] == (
         RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_V1_ID
     )
+
+
+def test_runtime_export_route_detail_page_v1_filters_package_index() -> None:
+    route_index = build_runtime_export_route_detail_index_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot={
+            "type": "RUNTIME_CONFIG_SNAPSHOT",
+            "status": {
+                "route_explanation_summary_v1": _route_summary(),
+                "route_provenance_trust_summary_v1": _route_trust(),
+            },
+        },
+    )
+
+    first = build_runtime_export_route_detail_page_v1(
+        route_index,
+        cursor=0,
+        limit=1,
+        query="sat-1 data",
+        availability="AVAILABLE",
+        business_type="DATA_TRANSFER",
+        bottleneck_component="CAPACITY",
+    )
+    second = build_runtime_export_route_detail_page_v1(
+        route_index,
+        cursor=0,
+        limit=1,
+        query="sat-1 data",
+        availability="AVAILABLE",
+        business_type="DATA_TRANSFER",
+        bottleneck_component="CAPACITY",
+    )
+
+    assert first == second
+    assert first["page_id"] == RUNTIME_EXPORT_ROUTE_DETAIL_PAGE_V1_ID
+    assert first["source"] == "BACKEND_RUNTIME_EXPORT_PACKAGE"
+    assert first["package_id"] == "pkg-1"
+    assert first["route_detail_index_hash"] == route_index["route_detail_index_hash"]
+    assert first["cursor"] == 0
+    assert first["limit"] == 1
+    assert first["route_count"] == 1
+    assert first["item_count"] == 1
+    assert first["unfiltered_route_count"] == 2
+    assert first["has_more"] is False
+    assert first["filter_applied"] is True
+    assert first["filters"] == {
+        "query": "sat-1 data",
+        "availability": "AVAILABLE",
+        "business_type": "DATA_TRANSFER",
+        "bottleneck_component": "CAPACITY",
+    }
+    assert first["items"][0]["route_id"] == "route-1"
+    assert first["page_hash"].startswith("sha256:")
+
+
+def test_runtime_export_route_detail_item_v1_reads_exact_package_route() -> None:
+    route_index = build_runtime_export_route_detail_index_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot={
+            "type": "RUNTIME_CONFIG_SNAPSHOT",
+            "status": {
+                "route_explanation_summary_v1": _route_summary(),
+                "route_provenance_trust_summary_v1": _route_trust(),
+            },
+        },
+    )
+
+    detail = build_runtime_export_route_detail_item_v1(route_index, "route-1")
+
+    assert detail is not None
+    assert detail["item_id"] == RUNTIME_EXPORT_ROUTE_DETAIL_ITEM_V1_ID
+    assert detail["source"] == "BACKEND_RUNTIME_EXPORT_PACKAGE"
+    assert detail["package_id"] == "pkg-1"
+    assert detail["route_detail_index_hash"] == route_index["route_detail_index_hash"]
+    assert detail["route_id"] == "route-1"
+    assert detail["route"]["path_label"] == "user-1 -> sat-1"
+    assert detail["item_hash"].startswith("sha256:")
+    assert build_runtime_export_route_detail_item_v1(route_index, "missing") is None
 
 
 def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -> None:

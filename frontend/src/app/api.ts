@@ -11,6 +11,8 @@ import {
   RuntimeExportPackageCompareEnvelope,
   RuntimeExportPackageCompareV1,
   RuntimeExportRouteDetailIndexV1,
+  RuntimeExportRouteDetailItemV1,
+  RuntimeExportRouteDetailPageV1,
   RuntimeExportReviewSummaryV1,
   RuntimeExportRestorePreflightEnvelope,
   RuntimeExportRestorePreflightV1,
@@ -345,6 +347,40 @@ export async function loadRuntimeExportRouteDetailIndex(
   return decodeRuntimeExportRouteDetailIndex(await response.json());
 }
 
+export async function loadRuntimeExportRouteDetailPage(
+  packageId: string,
+  cursor = 0,
+  limit = 100,
+  filters: RuntimeDetailQueryFilters = {},
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): Promise<RuntimeExportRouteDetailPageV1> {
+  const url = runtimeExportPackageRouteDetailsHref(
+    packageId,
+    cursor,
+    limit,
+    filters,
+    endpoint
+  );
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`failed to load runtime export route detail page from ${url}: HTTP ${response.status}`);
+  }
+  return decodeRuntimeExportRouteDetailPage(await response.json());
+}
+
+export async function loadRuntimeExportRouteDetailItem(
+  packageId: string,
+  routeId: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): Promise<RuntimeExportRouteDetailItemV1> {
+  const url = runtimeExportPackageRouteDetailHref(packageId, routeId, endpoint);
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`failed to load runtime export route detail item from ${url}: HTTP ${response.status}`);
+  }
+  return decodeRuntimeExportRouteDetailItem(await response.json());
+}
+
 export async function loadRuntimeExportRestorePreflight(
   packageId: string,
   endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
@@ -504,6 +540,31 @@ export function runtimeExportPackageFileHref(
 ): string {
   return `${runtimeExportPackageRecordHref(packageId, endpoint)}/files/${encodeURIComponent(
     filename
+  )}`;
+}
+
+export function runtimeExportPackageRouteDetailsHref(
+  packageId: string,
+  cursor = 0,
+  limit = 100,
+  filters: RuntimeDetailQueryFilters = {},
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): string {
+  const params = new URLSearchParams({
+    cursor: String(cursor),
+    limit: String(limit)
+  });
+  appendRuntimeDetailFilterParams(params, filters);
+  return `${runtimeExportPackageRecordHref(packageId, endpoint)}/routes?${params.toString()}`;
+}
+
+export function runtimeExportPackageRouteDetailHref(
+  packageId: string,
+  routeId: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): string {
+  return `${runtimeExportPackageRecordHref(packageId, endpoint)}/routes/${encodeURIComponent(
+    routeId
   )}`;
 }
 
@@ -810,6 +871,48 @@ export function decodeRuntimeExportRouteDetailIndex(
     );
   }
   return value as RuntimeExportRouteDetailIndexV1;
+}
+
+export function decodeRuntimeExportRouteDetailPage(
+  value: unknown
+): RuntimeExportRouteDetailPageV1 {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError("runtime export route detail page response must be an object");
+  }
+  if (
+    typeof (value as { package_id?: unknown }).package_id !== "string" ||
+    typeof (value as { route_detail_index_hash?: unknown })
+      .route_detail_index_hash !== "string" ||
+    typeof (value as { filters?: unknown }).filters !== "object" ||
+    (value as { filters?: unknown }).filters === null ||
+    Array.isArray((value as { filters?: unknown }).filters) ||
+    !Array.isArray((value as { items?: unknown }).items)
+  ) {
+    throw new TypeError(
+      "runtime export route detail page response must include package_id, route_detail_index_hash, filters, and items"
+    );
+  }
+  return value as RuntimeExportRouteDetailPageV1;
+}
+
+export function decodeRuntimeExportRouteDetailItem(
+  value: unknown
+): RuntimeExportRouteDetailItemV1 {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError("runtime export route detail item response must be an object");
+  }
+  if (
+    typeof (value as { package_id?: unknown }).package_id !== "string" ||
+    typeof (value as { route_id?: unknown }).route_id !== "string" ||
+    typeof (value as { route?: unknown }).route !== "object" ||
+    (value as { route?: unknown }).route === null ||
+    Array.isArray((value as { route?: unknown }).route)
+  ) {
+    throw new TypeError(
+      "runtime export route detail item response must include package_id, route_id, and route"
+    );
+  }
+  return value as RuntimeExportRouteDetailItemV1;
 }
 
 export function decodeRuntimeExportRestorePreflight(

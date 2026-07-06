@@ -147,6 +147,15 @@ route detail index and show the route evidence counts, route-trust sample
 coverage, searchable sample route rows, and live route-detail lookup actions
 without rerunning the simulation. The live lookup only compares against the
 current runtime route detail endpoint when the same route id is still present.
+For package-owned review, use:
+
+```powershell
+Invoke-RestMethod "http://127.0.0.1:8765/runtime/export/packages/<package_id>/routes?cursor=0&limit=100"
+Invoke-RestMethod "http://127.0.0.1:8765/runtime/export/packages/<package_id>/routes/<route_id>"
+```
+
+These calls read the exported route detail index artifact. They do not require
+the current runtime to contain the same route id.
 
 Export catalog:
 
