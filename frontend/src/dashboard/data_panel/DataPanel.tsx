@@ -73,6 +73,7 @@ import {
   RuntimeUserRequestItemV1,
   RuntimeUserRequestSummaryV1,
   UserConfigurationExportV1,
+  UserConfigurationReferenceFieldV1,
   UserConfigurationReferenceV1,
   UserConfigurationSchemaV2,
   UserConfigurationTemplateCatalogV1,
@@ -1560,6 +1561,96 @@ export const DataPanel = memo(function DataPanel({
                 </div>
               ))}
             </div>
+          ) : null}
+          {userConfigurationContractDisplay.referenceRows.length > 0 ? (
+            <details
+              className="data-panel-config-reference-browser"
+              aria-label="完整用户配置参考浏览"
+              open
+            >
+              <summary>
+                <div>
+                  <strong>完整配置参考</strong>
+                  <small>后端 reference 驱动，展示关键控件与文件专属字段</small>
+                </div>
+                <span>{userConfigurationContractDisplay.referenceRows.length} 字段</span>
+              </summary>
+              <div className="data-panel-config-reference-meta">
+                {userConfigurationContractDisplay.referenceSummaryLabels.map((label) => (
+                  <span key={label}>{label}</span>
+                ))}
+              </div>
+              {userConfigurationContractDisplay.referenceBoundaryLabels.length > 0 ? (
+                <div
+                  className="data-panel-config-reference-meta"
+                  aria-label="配置参考模型边界"
+                >
+                  {userConfigurationContractDisplay.referenceBoundaryLabels.map((label) => (
+                    <span key={label}>{label}</span>
+                  ))}
+                </div>
+              ) : null}
+              {userConfigurationContractDisplay.referenceWorkflowLabels.length > 0 ? (
+                <div
+                  className="data-panel-config-reference-meta"
+                  aria-label="配置参考操作流程"
+                >
+                  {userConfigurationContractDisplay.referenceWorkflowLabels.map((label) => (
+                    <span key={label}>{label}</span>
+                  ))}
+                </div>
+              ) : null}
+              {userConfigurationContractDisplay.referenceSections.length > 0 ? (
+                <div
+                  className="data-panel-config-reference-sections"
+                  aria-label="配置参考分区摘要"
+                >
+                  {userConfigurationContractDisplay.referenceSections.map((section) => (
+                    <div
+                      className="data-panel-config-reference-section"
+                      key={section.sectionPath}
+                    >
+                      <strong>{section.sectionPath}</strong>
+                      <small>{section.purpose}</small>
+                      <span>{section.metaLabels.join(" / ")}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              <div
+                className="data-panel-config-reference-table"
+                role="table"
+                aria-label="完整用户配置字段表"
+              >
+                <div className="data-panel-config-reference-row header" role="row">
+                  <span role="columnheader">路径</span>
+                  <span role="columnheader">分区</span>
+                  <span role="columnheader">名称</span>
+                  <span role="columnheader">类型</span>
+                  <span role="columnheader">编辑面</span>
+                  <span role="columnheader">当前值</span>
+                  <span role="columnheader">默认值</span>
+                  <span role="columnheader">校验</span>
+                </div>
+                {userConfigurationContractDisplay.referenceRows.map((field) => (
+                  <div
+                    className="data-panel-config-reference-row"
+                    key={field.path}
+                    role="row"
+                    title={field.description}
+                  >
+                    <span role="cell">{field.path}</span>
+                    <span role="cell">{field.section}</span>
+                    <span role="cell">{field.label}</span>
+                    <span role="cell">{field.typeLabel}</span>
+                    <span role="cell">{field.surfaceLabel}</span>
+                    <span role="cell">{field.currentValueLabel}</span>
+                    <span role="cell">{field.defaultValueLabel}</span>
+                    <span role="cell">{field.validationLabel}</span>
+                  </div>
+                ))}
+              </div>
+            </details>
           ) : null}
         </section>
       ) : null}
@@ -9363,6 +9454,11 @@ export interface DataPanelUserConfigurationContractDisplay {
   detailLabel: string;
   metaLabels: readonly string[];
   fieldSections: readonly DataPanelUserConfigurationFieldSectionDisplay[];
+  referenceSections: readonly DataPanelUserConfigurationFieldSectionDisplay[];
+  referenceRows: readonly DataPanelUserConfigurationReferenceRowDisplay[];
+  referenceSummaryLabels: readonly string[];
+  referenceBoundaryLabels: readonly string[];
+  referenceWorkflowLabels: readonly string[];
   schemaHref: string;
   templatesHref: string;
   referenceHref: string;
@@ -9380,6 +9476,18 @@ export interface DataPanelUserConfigurationFieldDisplay {
   path: string;
   label: string;
   description: string;
+}
+
+export interface DataPanelUserConfigurationReferenceRowDisplay {
+  path: string;
+  section: string;
+  label: string;
+  description: string;
+  typeLabel: string;
+  surfaceLabel: string;
+  defaultValueLabel: string;
+  currentValueLabel: string;
+  validationLabel: string;
 }
 
 export function buildDataPanelUserConfigurationContractDisplay(
@@ -9410,6 +9518,11 @@ export function buildDataPanelUserConfigurationContractDisplay(
         "export pending"
       ],
       fieldSections: [],
+      referenceSections: [],
+      referenceRows: [],
+      referenceSummaryLabels: [],
+      referenceBoundaryLabels: [],
+      referenceWorkflowLabels: [],
       schemaHref: userConfigurationSchemaHref(),
       templatesHref: userConfigurationTemplatesHref(),
       referenceHref: userConfigurationReferenceHref(),
@@ -9431,6 +9544,11 @@ export function buildDataPanelUserConfigurationContractDisplay(
       detailLabel: "请检查后端 /scenario/user-config/* 只读接口",
       metaLabels: [error],
       fieldSections: [],
+      referenceSections: [],
+      referenceRows: [],
+      referenceSummaryLabels: [],
+      referenceBoundaryLabels: [],
+      referenceWorkflowLabels: [],
       schemaHref: userConfigurationSchemaHref(),
       templatesHref: userConfigurationTemplatesHref(),
       referenceHref: userConfigurationReferenceHref(),
@@ -9478,6 +9596,11 @@ export function buildDataPanelUserConfigurationContractDisplay(
       `reference ${shortRuntimeHash(reference?.reference_hash ?? "")}`
     ],
     fieldSections: buildDataPanelUserConfigurationFieldSections(schema),
+    referenceSections: buildDataPanelUserConfigurationReferenceFieldSections(reference),
+    referenceRows: buildDataPanelUserConfigurationReferenceFieldRows(reference),
+    referenceSummaryLabels: buildDataPanelUserConfigurationReferenceSummaryLabels(reference),
+    referenceBoundaryLabels: buildDataPanelUserConfigurationReferenceBoundaryLabels(reference),
+    referenceWorkflowLabels: buildDataPanelUserConfigurationReferenceWorkflowLabels(reference),
     schemaHref: userConfigurationSchemaHref(),
     templatesHref: userConfigurationTemplatesHref(),
     referenceHref: userConfigurationReferenceHref(),
@@ -9564,9 +9687,9 @@ export function buildDataPanelUserConfigurationReferenceFieldSections(
         sectionPath: section.section,
         purpose: section.purpose,
         metaLabels: [
-          `fields ${formatCount(section.field_count)}`,
-          `key ${formatCount(section.key_field_count)}`,
-          `file-only ${formatCount(section.file_only_field_count)}`
+          `字段 ${formatCount(section.field_count)}`,
+          `关键 ${formatCount(section.key_field_count)}`,
+          `文件 ${formatCount(section.file_only_field_count)}`
         ],
         sampleFields: samplePaths.map((path) => {
           const field = fieldsByPath.get(path);
@@ -9580,6 +9703,132 @@ export function buildDataPanelUserConfigurationReferenceFieldSections(
         })
       };
     });
+}
+
+export function buildDataPanelUserConfigurationReferenceFieldRows(
+  reference: UserConfigurationReferenceV1 | null | undefined
+): readonly DataPanelUserConfigurationReferenceRowDisplay[] {
+  if (
+    reference === null ||
+    reference === undefined ||
+    reference.fields.length === 0
+  ) {
+    return [];
+  }
+  const sectionOrder = new Map(
+    reference.sections.map((section, index) => [section.section, index])
+  );
+  return [...reference.fields]
+    .sort((left, right) => {
+      const leftSection = sectionOrder.get(left.section) ?? Number.MAX_SAFE_INTEGER;
+      const rightSection = sectionOrder.get(right.section) ?? Number.MAX_SAFE_INTEGER;
+      if (leftSection !== rightSection) {
+        return leftSection - rightSection;
+      }
+      return left.path.localeCompare(right.path);
+    })
+    .map((field) => ({
+      path: field.path,
+      section: field.section || field.path.split(".")[0] || "root",
+      label: field.label,
+      description: field.description,
+      typeLabel: formatUserConfigurationReferenceType(field),
+      surfaceLabel: formatUserConfigurationReferenceSurface(field),
+      defaultValueLabel: formatUserConfigurationReferenceValue(field.default_value),
+      currentValueLabel: formatUserConfigurationReferenceValue(field.current_value),
+      validationLabel:
+        field.validation_rules.length > 0
+          ? field.validation_rules.join(" / ")
+          : "无额外规则"
+    }));
+}
+
+export function buildDataPanelUserConfigurationReferenceSummaryLabels(
+  reference: UserConfigurationReferenceV1 | null | undefined
+): readonly string[] {
+  if (reference === null || reference === undefined) {
+    return [];
+  }
+  return [
+    `reference ${shortRuntimeHash(reference.reference_hash)}`,
+    `分区 ${formatCount(reference.section_count)}`,
+    `字段 ${formatCount(reference.field_count)}`,
+    `关键 ${formatCount(reference.key_field_count)}`,
+    `文件 ${formatCount(reference.file_only_field_count)}`,
+    `模板 ${formatCount(reference.template_profiles.length)}`
+  ];
+}
+
+export function buildDataPanelUserConfigurationReferenceBoundaryLabels(
+  reference: UserConfigurationReferenceV1 | null | undefined
+): readonly string[] {
+  if (reference === null || reference === undefined) {
+    return [];
+  }
+  const boundaries = reference.model_boundaries;
+  return [
+    `语义源 ${boundaries.frontend_semantics_source}`,
+    `Event Kernel ${boundaries.event_kernel_policy}`,
+    boundaries.packet_level_simulation ? "包级仿真开启" : "无包级仿真",
+    boundaries.external_simulators ? "外部仿真器开启" : "无外部仿真器",
+    `禁用 ${boundaries.forbidden_integrations.join("/")}`
+  ];
+}
+
+export function buildDataPanelUserConfigurationReferenceWorkflowLabels(
+  reference: UserConfigurationReferenceV1 | null | undefined
+): readonly string[] {
+  if (reference === null || reference === undefined) {
+    return [];
+  }
+  return [
+    `UI ${reference.mutation_policy.ui_surface}`,
+    `完整文件 ${reference.mutation_policy.full_file_surface}`,
+    `校验 ${reference.mutation_policy.validate_endpoint}`,
+    `应用 ${reference.mutation_policy.apply_commands.join("/")}`,
+    ...reference.operator_workflow,
+    ...reference.notes
+  ];
+}
+
+function formatUserConfigurationReferenceType(
+  field: UserConfigurationReferenceFieldV1
+): string {
+  return [field.value_type, field.unit].filter(Boolean).join(" / ");
+}
+
+function formatUserConfigurationReferenceSurface(
+  field: UserConfigurationReferenceFieldV1
+): string {
+  const surface =
+    field.ui_key_field || field.editable_surface === "CONTROL_PANEL_KEY_FIELD"
+      ? "关键控件"
+      : "详细配置文件";
+  const required = field.required_in_user_file ? "文件必填" : "可省略";
+  return `${surface} / ${required}`;
+}
+
+function formatUserConfigurationReferenceValue(value: unknown): string {
+  if (value === undefined) {
+    return "未提供";
+  }
+  if (value === null) {
+    return "null";
+  }
+  if (typeof value === "number") {
+    return Number.isInteger(value) ? formatCount(value) : formatPreciseMetricValue(value);
+  }
+  if (typeof value === "boolean") {
+    return value ? "true" : "false";
+  }
+  if (typeof value === "string") {
+    return value.length > 0 ? value : "\"\"";
+  }
+  const encoded = JSON.stringify(value);
+  if (encoded === undefined) {
+    return String(value);
+  }
+  return encoded.length > 96 ? `${encoded.slice(0, 93)}...` : encoded;
 }
 
 export interface DataPanelUserConfigurationValidationDisplay {

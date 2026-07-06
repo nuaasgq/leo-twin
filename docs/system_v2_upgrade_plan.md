@@ -55,6 +55,9 @@ Tasks:
     contract card so the frontend displays the backend-owned reference hash,
     file-only field count, and reference link rather than deriving the
     advanced configuration explanation locally.
+    T322 adds a scrollable in-dashboard reference browser for the same backend
+    object, covering sections, field rows, edit surfaces, current/default
+    values, validation rules, model boundaries, and workflow notes.
 - V2-002: Add template catalog metadata.
   - Scope: scenario name, purpose, scale, expected KPI behavior, fidelity mode.
   - Output: backend template endpoint and frontend selector metadata.

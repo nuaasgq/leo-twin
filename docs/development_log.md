@@ -15527,7 +15527,7 @@ change.
 ## 2026-07-06 - Dashboard User Configuration Reference UI v1
 
 - Branch: `feature/T321-dashboard-user-config-reference-ui-v1`
-- Commit: pending commit note; final hash is reported after commit creation.
+- Commit: `070e956 feat(frontend): surface user configuration reference`
 - Scope: bind the backend-owned `USER_CONFIGURATION_REFERENCE_V1` into the
   standalone dashboard configuration contract surface. The dashboard now loads
   `GET /scenario/user-config/reference` together with schema/templates/export,
@@ -15565,3 +15565,50 @@ change.
 - Recommended follow-up:
   - Add a virtualized full-configuration reference drawer when the dashboard
     moves from compact contract visibility to detailed operator browsing.
+
+## 2026-07-06 - Dashboard Configuration Reference Browser v1
+
+- Branch: `feature/T322-dashboard-config-reference-browser-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: upgrade the standalone dashboard's user configuration contract panel
+  from a compact reference link to an in-dashboard, scrollable configuration
+  reference browser. The browser is driven by backend
+  `USER_CONFIGURATION_REFERENCE_V1` fields and displays section summaries,
+  field paths, value types, edit surfaces, current/default values, validation
+  rules, model boundaries, and workflow notes without changing backend
+  semantics or Event Kernel behavior.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/user_configuration_schema_v2.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 1 test
+      file and 182 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path.
+  - `pnpm --dir frontend test api.test.ts dataPanel.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 2 test
+      files and 216 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path. Vite
+      reported the existing large DataPanel chunk warning.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered:
+  - No implementation blocker. The change stayed in frontend/dashboard display
+    code and documentation; no runtime, Event Kernel, or generated config files
+    were modified for product behavior.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The browser is a bounded scrollable table, not a fully virtualized
+    drawer/page with filtering and search.
+- Recommended follow-up:
+  - Add field search, section filtering, and virtualization if the user
+    configuration contract grows enough that a simple scrollable table becomes
+    hard to navigate.

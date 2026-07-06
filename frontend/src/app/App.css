@@ -2411,6 +2411,147 @@ button.data-panel-route-row {
   color: var(--accent-cyan);
 }
 
+.data-panel-config-reference-browser {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  border-top: 1px solid #213442;
+  padding-top: 8px;
+}
+
+.data-panel-config-reference-browser summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  cursor: pointer;
+  list-style-position: inside;
+}
+
+.data-panel-config-reference-browser summary div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.data-panel-config-reference-browser summary strong,
+.data-panel-config-reference-browser summary small,
+.data-panel-config-reference-browser summary span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.data-panel-config-reference-browser summary strong {
+  color: var(--app-text);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.data-panel-config-reference-browser summary small,
+.data-panel-config-reference-browser summary span {
+  color: var(--app-muted);
+  font-size: 10px;
+}
+
+.data-panel-config-reference-meta,
+.data-panel-config-reference-sections {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.data-panel-config-reference-meta span,
+.data-panel-config-reference-section {
+  min-width: 0;
+  max-width: 100%;
+  border: 1px solid #263a48;
+  border-radius: 5px;
+  padding: 5px 7px;
+  background: #0b1219;
+  color: var(--app-muted);
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+
+.data-panel-config-reference-section {
+  display: grid;
+  gap: 2px;
+  flex: 1 1 180px;
+}
+
+.data-panel-config-reference-section strong,
+.data-panel-config-reference-section small,
+.data-panel-config-reference-section span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.data-panel-config-reference-section strong {
+  color: var(--accent-cyan);
+  font-size: 11px;
+}
+
+.data-panel-config-reference-table {
+  display: grid;
+  max-height: 360px;
+  min-width: 0;
+  overflow: auto;
+  border: 1px solid #263a48;
+  border-radius: 6px;
+  background: #081018;
+}
+
+.data-panel-config-reference-row {
+  display: grid;
+  grid-template-columns:
+    minmax(180px, 1.5fr)
+    minmax(90px, 0.7fr)
+    minmax(130px, 1fr)
+    minmax(90px, 0.7fr)
+    minmax(130px, 0.9fr)
+    minmax(120px, 0.8fr)
+    minmax(120px, 0.8fr)
+    minmax(160px, 1.1fr);
+  min-width: 1040px;
+  border-bottom: 1px solid #172632;
+}
+
+.data-panel-config-reference-row:last-child {
+  border-bottom: 0;
+}
+
+.data-panel-config-reference-row.header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #101c28;
+}
+
+.data-panel-config-reference-row span {
+  min-width: 0;
+  padding: 7px 8px;
+  border-right: 1px solid #172632;
+  color: var(--app-muted);
+  font-size: 10px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.data-panel-config-reference-row span:first-child,
+.data-panel-config-reference-row.header span {
+  color: var(--app-text);
+  font-weight: 800;
+}
+
+.data-panel-config-reference-row span:last-child {
+  border-right: 0;
+}
+
 .data-panel-config-validate {
   display: grid;
   gap: 8px;

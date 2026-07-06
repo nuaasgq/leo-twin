@@ -90,6 +90,7 @@ import {
   buildDataPanelUserConfigurationContractDisplay,
   buildDataPanelUserConfigurationFieldSections,
   buildDataPanelUserConfigurationReferenceFieldSections,
+  buildDataPanelUserConfigurationReferenceFieldRows,
   buildDataPanelUserConfigurationValidationDisplay,
   buildUserBusinessRequestInspector,
   buildUserDetailDrawerSectionsV1,
@@ -1443,6 +1444,56 @@ describe("buildDataPanelUserConfigurationContractDisplay", () => {
       "file-only 30",
       "reference 121212121212"
     ]);
+    expect(display?.referenceSummaryLabels).toEqual([
+      "reference 121212121212",
+      "分区 2",
+      "字段 42",
+      "关键 12",
+      "文件 30",
+      "模板 0"
+    ]);
+    expect(display?.referenceBoundaryLabels).toEqual([
+      "语义源 BACKEND_USER_CONFIGURATION",
+      "Event Kernel NO_EVENT_KERNEL_BEHAVIOR_CHANGE",
+      "无包级仿真",
+      "无外部仿真器",
+      "禁用 STK/EXATA/AFSIM/DDS"
+    ]);
+    expect(display?.referenceRows).toEqual([
+      {
+        path: "scenario.compute_gpu_tflops_fp16",
+        section: "scenario",
+        label: "GPU FP16",
+        description: "Detailed file-only FP16 capacity.",
+        typeLabel: "number / TFLOPS",
+        surfaceLabel: "详细配置文件 / 可省略",
+        defaultValueLabel: "5",
+        currentValueLabel: "5",
+        validationLabel: "minimum 0"
+      },
+      {
+        path: "scenario.satellite_count",
+        section: "scenario",
+        label: "Satellite count",
+        description: "Primary constellation size.",
+        typeLabel: "integer",
+        surfaceLabel: "关键控件 / 可省略",
+        defaultValueLabel: "72",
+        currentValueLabel: "120",
+        validationLabel: "minimum 1"
+      },
+      {
+        path: "network.carrier_frequency_hz",
+        section: "network",
+        label: "Carrier frequency",
+        description: "Detailed file-only carrier metadata.",
+        typeLabel: "number / Hz",
+        surfaceLabel: "详细配置文件 / 可省略",
+        defaultValueLabel: "20,000,000,000",
+        currentValueLabel: "20,000,000,000",
+        validationLabel: "minimum 1"
+      }
+    ]);
   });
 
   it("reports loading and error states for user configuration contract", () => {
@@ -1657,7 +1708,7 @@ describe("buildDataPanelUserConfigurationReferenceFieldSections", () => {
       {
         sectionPath: "scenario",
         purpose: "Scenario scale and runtime controls.",
-        metaLabels: ["fields 2", "key 1", "file-only 1"],
+        metaLabels: ["字段 2", "关键 1", "文件 1"],
         sampleFields: [
           {
             path: "scenario.satellite_count",
@@ -1674,7 +1725,7 @@ describe("buildDataPanelUserConfigurationReferenceFieldSections", () => {
       {
         sectionPath: "network",
         purpose: "Network proxy settings.",
-        metaLabels: ["fields 1", "key 0", "file-only 1"],
+        metaLabels: ["字段 1", "关键 0", "文件 1"],
         sampleFields: [
           {
             path: "network.loss_proxy_enabled",
@@ -1682,6 +1733,120 @@ describe("buildDataPanelUserConfigurationReferenceFieldSections", () => {
             description: "Enables deterministic flow-level loss proxy."
           }
         ]
+      }
+    ]);
+  });
+});
+
+describe("buildDataPanelUserConfigurationReferenceFieldRows", () => {
+  it("builds deterministic full reference table rows", () => {
+    const rows = buildDataPanelUserConfigurationReferenceFieldRows({
+      version: "v1",
+      reference_id: "sees.user_configuration.reference.v1",
+      source: "BACKEND_USER_CONFIGURATION_REFERENCE",
+      schema_id: "sees.user_configuration.v2",
+      reference_scope: "FULL_USER_CONFIGURATION_REFERENCE",
+      format: "YAML_OR_JSON_MAPPING",
+      frontend_policy: "CONTROL_PANEL_KEY_FIELDS_ONLY",
+      detailed_config_file: "configs/sees_control.yaml",
+      generated_config_file: "configs/generated_full_system_demo.json",
+      template_config_file: "configs/templates/sees_control.template.yaml",
+      template_profiles: [],
+      unknown_key_policy: "REJECT",
+      defaulting_policy: "OMITTED_FIELDS_USE_BACKEND_DEFAULTS",
+      mutation_policy: {
+        ui_surface: "KEY_FIELDS_ONLY",
+        full_file_surface: "YAML_OR_JSON_MAPPING",
+        validate_endpoint: "/scenario/user-config/validate",
+        apply_commands: ["CONFIG_UPDATE"]
+      },
+      field_count: 2,
+      key_field_count: 1,
+      file_only_field_count: 1,
+      section_count: 2,
+      sections: [
+        {
+          section: "network",
+          purpose: "Network proxy settings.",
+          field_count: 1,
+          key_field_count: 0,
+          file_only_field_count: 1,
+          key_paths: [],
+          file_only_paths: ["network.loss_proxy_enabled"]
+        },
+        {
+          section: "scenario",
+          purpose: "Scenario scale controls.",
+          field_count: 1,
+          key_field_count: 1,
+          file_only_field_count: 0,
+          key_paths: ["scenario.satellite_count"],
+          file_only_paths: []
+        }
+      ],
+      fields: [
+        {
+          path: "scenario.satellite_count",
+          section: "scenario",
+          label: "Satellite count",
+          description: "Total satellite nodes.",
+          value_type: "integer",
+          default_value: 72,
+          current_value: 120,
+          editable_surface: "CONTROL_PANEL_KEY_FIELD",
+          ui_key_field: true,
+          required_in_user_file: false,
+          validation_rules: ["minimum 1"]
+        },
+        {
+          path: "network.loss_proxy_enabled",
+          section: "network",
+          label: "Loss proxy",
+          description: "Enables deterministic flow-level loss proxy.",
+          value_type: "boolean",
+          default_value: true,
+          current_value: false,
+          editable_surface: "DETAILED_CONFIG_FILE_ONLY",
+          ui_key_field: false,
+          required_in_user_file: true,
+          validation_rules: []
+        }
+      ],
+      model_boundaries: {
+        event_kernel_policy: "NO_EVENT_KERNEL_BEHAVIOR_CHANGE",
+        packet_level_simulation: false,
+        external_simulators: false,
+        forbidden_integrations: ["STK", "EXATA", "AFSIM", "DDS"],
+        frontend_semantics_source: "BACKEND_USER_CONFIGURATION"
+      },
+      operator_workflow: [],
+      notes: [],
+      reference_hash:
+        "sha256:3434343434343434343434343434343434343434343434343434343434343434"
+    });
+
+    expect(rows).toEqual([
+      {
+        path: "network.loss_proxy_enabled",
+        section: "network",
+        label: "Loss proxy",
+        description: "Enables deterministic flow-level loss proxy.",
+        typeLabel: "boolean",
+        surfaceLabel: "详细配置文件 / 文件必填",
+        defaultValueLabel: "true",
+        currentValueLabel: "false",
+        validationLabel: "无额外规则"
+      },
+      {
+        path: "scenario.satellite_count",
+        section: "scenario",
+        label: "Satellite count",
+        description: "Total satellite nodes.",
+        typeLabel: "integer",
+        surfaceLabel: "关键控件 / 可省略",
+        defaultValueLabel: "72",
+        currentValueLabel: "120",
+        validationLabel: "minimum 1"
       }
     ]);
   });

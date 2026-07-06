@@ -81,7 +81,9 @@ template profiles, validation/apply workflow, and model boundaries in one
 stable object. The control panel should still show only key operational fields.
 The standalone dashboard's configuration contract card links to this reference
 and shows its stable hash/file-only field count next to the schema, templates,
-and current export links.
+and current export links. It also includes a scrollable reference browser for
+all backend-declared sections and fields, including the edit surface, current
+value, default value, and validation rules for each field.
 
 Minimal YAML example:
 
