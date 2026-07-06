@@ -632,7 +632,11 @@ Tasks:
     scenario scale, runtime progress, manifest/boundary hashes, review summary
     hash, diagnostics hash, audit-index filename, model boundaries, and
     recommended review order without replaying events or recomputing model
-    state.
+    state. T311 binds that artifact into the standalone dashboard package
+    review area as a Scenario Review Bundle card with scenario scale, user
+    configuration binding, reproducibility evidence, diagnostics evidence,
+    audit-index link, and explicit no-replay/no-recompute/no-packet boundary
+    labels.
 
 ### WS9. Delivery and Operations v2
 

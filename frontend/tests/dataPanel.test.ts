@@ -34,6 +34,8 @@ import {
   buildDataPanelExportPackageAuditIndexArtifactDisplay,
   buildDataPanelExportPackageAuditIndexDisplay,
   buildDataPanelExportPackageAuditIndexStatus,
+  buildDataPanelExportScenarioReviewBundleDisplay,
+  buildDataPanelExportScenarioReviewBundleStatus,
   buildDataPanelExportRouteComparisonReviewArtifactDisplay,
   buildDataPanelExportRouteComparisonReviewReportDisplay,
   buildDataPanelExportRouteComparisonReviewReportStatus,
@@ -2566,6 +2568,173 @@ describe("buildDataPanelExportCatalogDisplay", () => {
     ).toMatchObject({
       tone: "error",
       warningLabels: ["audit failed"]
+    });
+  });
+
+  it("summarizes scenario review bundles as a guided package entry", () => {
+    const bundle = {
+      type: "RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1",
+      version: "v1",
+      bundle_id: "leo_twin.runtime_export_scenario_review_bundle.v1",
+      source: "BACKEND_RUNTIME_EXPORT_PACKAGE",
+      review_scope: "USER_CONFIGURATION_TO_RESULT_PACKAGE_REVIEW",
+      package_id: "pkg-review",
+      package_dir: "artifacts/runtime_exports/pkg-review",
+      scenario: {
+        seed: 7,
+        satellite_count: 72,
+        user_count: 20,
+        compute_node_count: 12,
+        duration_seconds: 120
+      },
+      runtime: {
+        lifecycle_state: "STOPPED",
+        current_sim_time: 120,
+        processed_event_count: 4200,
+        queued_event_count: 0
+      },
+      user_configuration: {
+        type: "USER_CONFIGURATION_AUDIT_BINDING_V1",
+        version: "v1",
+        binding_id: "leo_twin.user_configuration_audit_binding.v1",
+        source: "BACKEND_RUNTIME_EXPORT_PACKAGE",
+        schema_id: "sees.user_configuration.v2",
+        export_scope: "CURRENT_EFFECTIVE_SEES_CONFIG",
+        format: "JSON_MAPPING",
+        config_hash:
+          "sha256:1212121212121212121212121212121212121212121212121212121212121212",
+        export_hash:
+          "sha256:1313131313131313131313131313131313131313131313131313131313131313",
+        validation_ok: true,
+        validation_error_count: 0,
+        unknown_key_policy: "REJECT",
+        defaulting_policy: "OMITTED_FIELDS_USE_BACKEND_DEFAULTS",
+        import_paths: ["CONFIG_UPDATE control message for partial updates"],
+        binding_hash:
+          "sha256:1414141414141414141414141414141414141414141414141414141414141414"
+      },
+      reproducibility: {
+        manifest_id: "leo_twin.runtime_reproducibility_manifest.v1",
+        manifest_hash:
+          "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        control_config_hash:
+          "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        generated_config_hash:
+          "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+        runtime_state_hash:
+          "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+        metrics_summary_hash:
+          "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+        runtime_export_boundary_hash:
+          "sha256:7777777777777777777777777777777777777777777777777777777777777777"
+      },
+      review_summary: {
+        summary_id: "leo_twin.runtime_export_review_summary.v1",
+        summary_hash:
+          "sha256:8888888888888888888888888888888888888888888888888888888888888888",
+        review_status: "REVIEW_READY"
+      },
+      diagnostics: {
+        bundle_id: "leo_twin.runtime_export_diagnostics_bundle.v1",
+        diagnostics_hash:
+          "sha256:9999999999999999999999999999999999999999999999999999999999999999",
+        finding_count: 1,
+        finding_labels: [{ severity: "INFO", code: "RESULT_PACKAGE_REVIEW_READY" }]
+      },
+      audit_index: {
+        audit_index_id: "leo_twin.runtime_export_package_audit_index.v1",
+        filename: "export_package_audit_index_v1.json",
+        hash_binding_direction:
+          "audit index records this scenario_review_bundle_v1.json file hash"
+      },
+      artifact_review: {
+        artifact_count: 8,
+        artifact_filenames: [
+          "scenario_review_bundle_v1.json",
+          "export_package_audit_index_v1.json"
+        ],
+        entrypoint_filenames: ["scenario_review_bundle_v1.json"]
+      },
+      model_boundaries: {
+        event_kernel_policy: "NO_EVENT_KERNEL_BEHAVIOR_CHANGE",
+        event_replay_restore: false,
+        model_recomputation: false,
+        route_recomputation: false,
+        service_recomputation: false,
+        packet_capture: false,
+        packet_level_simulation: false,
+        external_simulators: false,
+        forbidden_external_integrations: ["STK", "EXATA", "AFSIM", "DDS"]
+      },
+      recommended_review_order: ["scenario_review_bundle_v1.json"],
+      scenario_review_status: "SCENARIO_REVIEW_READY",
+      scenario_review_warnings: [],
+      scenario_review_hash:
+        "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    };
+
+    const display = buildDataPanelExportScenarioReviewBundleDisplay(bundle);
+
+    expect(display).toEqual({
+      packageId: "pkg-review",
+      tone: "match",
+      statusLabel: "scenario review ready",
+      summaryLabel:
+        "pkg-review / SCENARIO_REVIEW_READY / review aaaaaaaaaaaa",
+      bundleHref:
+        "/runtime/export/packages/pkg-review/files/scenario_review_bundle_v1.json",
+      scenarioLabels: [
+        "satellites 72",
+        "users 20",
+        "compute 12",
+        "duration 120 s",
+        "sim 120 s"
+      ],
+      configurationLabels: [
+        "schema sees.user_configuration.v2",
+        "config 121212121212",
+        "binding 141414141414",
+        "validation ok"
+      ],
+      evidenceLabels: [
+        "manifest 222222222222",
+        "boundary 777777777777",
+        "review 888888888888",
+        "diagnostics 999999999999",
+        "audit export_package_audit_index_v1.json"
+      ],
+      boundaryLabels: [
+        "event kernel NO_EVENT_KERNEL_BEHAVIOR_CHANGE",
+        "event replay no",
+        "recompute no",
+        "packet no",
+        "external no"
+      ],
+      warningLabels: []
+    });
+    expect(
+      buildDataPanelExportScenarioReviewBundleStatus(display, "pkg-review")
+    ).toMatchObject({
+      tone: "match",
+      bundleHref:
+        "/runtime/export/packages/pkg-review/files/scenario_review_bundle_v1.json"
+    });
+    expect(
+      buildDataPanelExportScenarioReviewBundleStatus(null, "pkg-review", true)
+    ).toMatchObject({
+      tone: "pending",
+      statusLabel: "loading scenario review"
+    });
+    expect(
+      buildDataPanelExportScenarioReviewBundleStatus(
+        null,
+        "pkg-review",
+        false,
+        "scenario review failed"
+      )
+    ).toMatchObject({
+      tone: "error",
+      warningLabels: ["scenario review failed"]
     });
   });
 

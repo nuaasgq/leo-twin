@@ -217,8 +217,10 @@ Each new package also contains `scenario_review_bundle_v1.json`, a compact
 backend-generated review entry point that binds the effective user
 configuration, scenario scale, runtime progress, reproducibility hashes,
 review summary hash, diagnostics hash, audit-index filename, model boundaries,
-and recommended review order. It is available through the same package file
-endpoint and does not replay events or recompute model state.
+and recommended review order. The dashboard loads it as a Scenario Review
+Bundle card in the package review area with direct links to the JSON evidence.
+It is also available through the same package file endpoint and does not replay
+events or recompute model state.
 For package-owned review, use:
 
 ```powershell

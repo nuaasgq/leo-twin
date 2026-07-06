@@ -11,6 +11,7 @@ import {
   RuntimeExportPackageCompareEnvelope,
   RuntimeExportPackageCompareV1,
   RuntimeExportPackageAuditIndexV1,
+  RuntimeExportScenarioReviewBundleV1,
   RuntimeExportRouteComparisonReviewReportEnvelope,
   RuntimeExportRouteComparisonReviewReportRecordV1,
   RuntimeExportRouteComparisonReviewReportV1,
@@ -457,6 +458,22 @@ export async function loadRuntimeExportPackageAuditIndex(
     throw new Error(`failed to load runtime export package audit index from ${url}: HTTP ${response.status}`);
   }
   return decodeRuntimeExportPackageAuditIndex(await response.json());
+}
+
+export async function loadRuntimeExportScenarioReviewBundle(
+  packageId: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): Promise<RuntimeExportScenarioReviewBundleV1> {
+  const url = runtimeExportPackageFileHref(
+    packageId,
+    "scenario_review_bundle_v1.json",
+    endpoint
+  );
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`failed to load runtime export scenario review bundle from ${url}: HTTP ${response.status}`);
+  }
+  return decodeRuntimeExportScenarioReviewBundle(await response.json());
 }
 
 export async function saveRuntimeExportRouteComparisonReviewReport(
@@ -1144,6 +1161,29 @@ export function decodeRuntimeExportPackageAuditIndex(
     );
   }
   return value as RuntimeExportPackageAuditIndexV1;
+}
+
+export function decodeRuntimeExportScenarioReviewBundle(
+  value: unknown
+): RuntimeExportScenarioReviewBundleV1 {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError("runtime export scenario review bundle must be an object");
+  }
+  if (
+    typeof (value as { bundle_id?: unknown }).bundle_id !== "string" ||
+    typeof (value as { package_id?: unknown }).package_id !== "string" ||
+    typeof (value as { user_configuration?: unknown }).user_configuration !==
+      "object" ||
+    (value as { user_configuration?: unknown }).user_configuration === null ||
+    Array.isArray((value as { user_configuration?: unknown }).user_configuration) ||
+    typeof (value as { scenario_review_hash?: unknown }).scenario_review_hash !==
+      "string"
+  ) {
+    throw new TypeError(
+      "runtime export scenario review bundle must include bundle_id, package_id, user_configuration, and scenario_review_hash"
+    );
+  }
+  return value as RuntimeExportScenarioReviewBundleV1;
 }
 
 export function decodeRuntimeExportRestorePreflight(

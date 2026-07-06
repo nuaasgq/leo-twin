@@ -35,6 +35,7 @@ import {
   RuntimeExportRouteDetailIndexV1,
   RuntimeExportRouteDetailPageV1,
   RuntimeExportReproducibilityBoundaryV1,
+  RuntimeExportScenarioReviewBundleV1,
   RuntimeExportServiceTracePageV1,
   RuntimeExportReviewSummaryV1,
   RuntimeExportRestoreCommandResultV1,
@@ -196,6 +197,7 @@ const FALLBACK_SATELLITE_DETAIL_PAGE_SIZE = 120;
 const ROUTE_COMPARISON_REVIEW_REPORT_FILENAME =
   "route_comparison_review_report_v1.json";
 const EXPORT_PACKAGE_AUDIT_INDEX_FILENAME = "export_package_audit_index_v1.json";
+const SCENARIO_REVIEW_BUNDLE_FILENAME = "scenario_review_bundle_v1.json";
 const DEFAULT_USER_CONFIGURATION_VALIDATE_TEXT = `{
   "scenario": {
     "satellite_count": 72,
@@ -245,6 +247,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportRouteDetailItem,
   runtimeExportRouteComparisonReviewReport,
   runtimeExportPackageAuditIndex,
+  runtimeExportScenarioReviewBundle,
   runtimeExportRouteDetailItemRouteId,
   runtimeExportComparePackageId,
   runtimeExportCompareLoading,
@@ -265,6 +268,8 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportRouteComparisonReviewReportError,
   runtimeExportPackageAuditIndexLoading,
   runtimeExportPackageAuditIndexError,
+  runtimeExportScenarioReviewBundleLoading,
+  runtimeExportScenarioReviewBundleError,
   runtimeExportRouteComparisonReviewSavePendingRouteId,
   runtimeExportRouteComparisonReviewSaveError,
   runtimeExportRouteComparisonReviewSaveReportHash,
@@ -317,6 +322,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportRouteDetailItem?: RuntimeExportRouteDetailItemV1 | null;
   runtimeExportRouteComparisonReviewReport?: RuntimeExportRouteComparisonReviewReportV1 | null;
   runtimeExportPackageAuditIndex?: RuntimeExportPackageAuditIndexV1 | null;
+  runtimeExportScenarioReviewBundle?: RuntimeExportScenarioReviewBundleV1 | null;
   runtimeExportRouteDetailItemRouteId?: string | null;
   runtimeExportComparePackageId?: string | null;
   runtimeExportCompareLoading?: boolean;
@@ -337,6 +343,8 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportRouteComparisonReviewReportError?: string | null;
   runtimeExportPackageAuditIndexLoading?: boolean;
   runtimeExportPackageAuditIndexError?: string | null;
+  runtimeExportScenarioReviewBundleLoading?: boolean;
+  runtimeExportScenarioReviewBundleError?: string | null;
   runtimeExportRouteComparisonReviewSavePendingRouteId?: string | null;
   runtimeExportRouteComparisonReviewSaveError?: string | null;
   runtimeExportRouteComparisonReviewSaveReportHash?: string | null;
@@ -1092,6 +1100,15 @@ export const DataPanel = memo(function DataPanel({
     runtimeExportPackageAuditIndexLoading,
     runtimeExportPackageAuditIndexError
   );
+  const exportScenarioReviewBundleStatus =
+    buildDataPanelExportScenarioReviewBundleStatus(
+      buildDataPanelExportScenarioReviewBundleDisplay(
+        runtimeExportScenarioReviewBundle
+      ),
+      runtimeExportComparePackageId,
+      runtimeExportScenarioReviewBundleLoading,
+      runtimeExportScenarioReviewBundleError
+    );
   const exportRouteComparisonReviewReportStatus =
     buildDataPanelExportRouteComparisonReviewReportStatus(
       buildDataPanelExportRouteComparisonReviewReportDisplay(
@@ -2041,6 +2058,66 @@ export const DataPanel = memo(function DataPanel({
                       )
                     )}
                   </div>
+                </div>
+              ) : null}
+              {exportScenarioReviewBundleStatus ? (
+                <div
+                  className={`data-panel-export-diagnostics-drawer ${exportScenarioReviewBundleStatus.tone}`}
+                >
+                  <div className="data-panel-export-diagnostics-header">
+                    <div>
+                      <span>Scenario review bundle</span>
+                      <strong>
+                        {exportScenarioReviewBundleStatus.statusLabel}
+                      </strong>
+                      <small>
+                        {exportScenarioReviewBundleStatus.summaryLabel}
+                      </small>
+                    </div>
+                    {exportScenarioReviewBundleStatus.bundleHref ? (
+                      <a href={exportScenarioReviewBundleStatus.bundleHref}>
+                        scenario review JSON
+                      </a>
+                    ) : null}
+                  </div>
+                  <div className="data-panel-export-compare-meta">
+                    {exportScenarioReviewBundleStatus.scenarioLabels.map(
+                      (label) => (
+                        <span key={label}>{label}</span>
+                      )
+                    )}
+                  </div>
+                  <div className="data-panel-export-diagnostics-actions">
+                    {exportScenarioReviewBundleStatus.configurationLabels.map(
+                      (label) => (
+                        <span key={label}>{label}</span>
+                      )
+                    )}
+                  </div>
+                  <div className="data-panel-export-diagnostics-boundaries">
+                    {exportScenarioReviewBundleStatus.evidenceLabels.map(
+                      (label) => (
+                        <span key={label}>{label}</span>
+                      )
+                    )}
+                  </div>
+                  <div className="data-panel-export-compare-meta">
+                    {exportScenarioReviewBundleStatus.boundaryLabels.map(
+                      (label) => (
+                        <span key={label}>{label}</span>
+                      )
+                    )}
+                  </div>
+                  {exportScenarioReviewBundleStatus.warningLabels.length > 0 ? (
+                    <div className="data-panel-export-diagnostics-findings">
+                      {exportScenarioReviewBundleStatus.warningLabels.map((label) => (
+                        <span className="warn" key={label}>
+                          <strong>REVIEW</strong>
+                          {label}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
               {exportPackageAuditIndexStatus ? (
@@ -9623,6 +9700,31 @@ export interface DataPanelExportPackageAuditIndexArtifactDisplay {
   artifactTitle: string;
 }
 
+export interface DataPanelExportScenarioReviewBundleDisplay {
+  packageId: string;
+  tone: "match" | "different";
+  statusLabel: string;
+  summaryLabel: string;
+  bundleHref: string;
+  scenarioLabels: readonly string[];
+  configurationLabels: readonly string[];
+  evidenceLabels: readonly string[];
+  boundaryLabels: readonly string[];
+  warningLabels: readonly string[];
+}
+
+export interface DataPanelExportScenarioReviewBundleStatus {
+  tone: "match" | "different" | "pending" | "error";
+  statusLabel: string;
+  summaryLabel: string;
+  bundleHref: string | null;
+  scenarioLabels: readonly string[];
+  configurationLabels: readonly string[];
+  evidenceLabels: readonly string[];
+  boundaryLabels: readonly string[];
+  warningLabels: readonly string[];
+}
+
 export interface DataPanelExportPackageAuditIndexDisplay {
   packageId: string;
   tone: "match" | "different";
@@ -9880,6 +9982,117 @@ export function buildDataPanelExportPackageAuditIndexArtifactDisplay(
     artifactTitle: `${auditFile.filename} / ${formatRuntimeExportFileBytes(
       auditFile.bytes
     )} / ${auditFile.sha256}`
+  };
+}
+
+export function buildDataPanelExportScenarioReviewBundleDisplay(
+  bundle: RuntimeExportScenarioReviewBundleV1 | null | undefined
+): DataPanelExportScenarioReviewBundleDisplay | null {
+  if (bundle === null || bundle === undefined) {
+    return null;
+  }
+  const ready =
+    bundle.scenario_review_status === "SCENARIO_REVIEW_READY" &&
+    bundle.scenario_review_warnings.length === 0 &&
+    bundle.user_configuration.validation_ok === true &&
+    bundle.model_boundaries.event_replay_restore === false &&
+    bundle.model_boundaries.model_recomputation === false &&
+    bundle.model_boundaries.packet_level_simulation === false &&
+    bundle.model_boundaries.external_simulators === false;
+  return {
+    packageId: bundle.package_id,
+    tone: ready ? "match" : "different",
+    statusLabel: ready ? "scenario review ready" : "scenario review needs check",
+    summaryLabel: `${bundle.package_id} / ${bundle.scenario_review_status} / review ${shortRuntimeHash(
+      bundle.scenario_review_hash
+    )}`,
+    bundleHref: runtimeExportPackageFileHref(
+      bundle.package_id,
+      SCENARIO_REVIEW_BUNDLE_FILENAME
+    ),
+    scenarioLabels: [
+      `satellites ${formatCount(bundle.scenario.satellite_count)}`,
+      `users ${formatCount(bundle.scenario.user_count)}`,
+      `compute ${formatCount(bundle.scenario.compute_node_count)}`,
+      `duration ${formatPreciseMetricValue(bundle.scenario.duration_seconds)} s`,
+      `sim ${formatPreciseMetricValue(bundle.runtime.current_sim_time)} s`
+    ],
+    configurationLabels: [
+      `schema ${bundle.user_configuration.schema_id}`,
+      `config ${shortRuntimeHash(bundle.user_configuration.config_hash)}`,
+      `binding ${shortRuntimeHash(bundle.user_configuration.binding_hash)}`,
+      `validation ${bundle.user_configuration.validation_ok ? "ok" : "check"}`
+    ],
+    evidenceLabels: [
+      `manifest ${shortRuntimeHash(bundle.reproducibility.manifest_hash)}`,
+      `boundary ${shortRuntimeHash(
+        bundle.reproducibility.runtime_export_boundary_hash
+      )}`,
+      `review ${shortRuntimeHash(bundle.review_summary.summary_hash)}`,
+      `diagnostics ${shortRuntimeHash(bundle.diagnostics.diagnostics_hash)}`,
+      `audit ${bundle.audit_index.filename}`
+    ],
+    boundaryLabels: [
+      `event kernel ${bundle.model_boundaries.event_kernel_policy}`,
+      `event replay ${bundle.model_boundaries.event_replay_restore ? "yes" : "no"}`,
+      `recompute ${bundle.model_boundaries.model_recomputation ? "yes" : "no"}`,
+      `packet ${bundle.model_boundaries.packet_level_simulation ? "yes" : "no"}`,
+      `external ${bundle.model_boundaries.external_simulators ? "yes" : "no"}`
+    ],
+    warningLabels: [
+      ...bundle.scenario_review_warnings,
+      ...bundle.diagnostics.finding_labels
+        .filter((finding) => finding.severity === "ERROR" || finding.severity === "WARN")
+        .map((finding) => `${finding.severity}:${finding.code}`)
+    ]
+  };
+}
+
+export function buildDataPanelExportScenarioReviewBundleStatus(
+  display: DataPanelExportScenarioReviewBundleDisplay | null,
+  selectedPackageId: string | null | undefined,
+  loading = false,
+  error: string | null | undefined = null
+): DataPanelExportScenarioReviewBundleStatus | null {
+  if (loading) {
+    return {
+      tone: "pending",
+      statusLabel: "loading scenario review",
+      summaryLabel: selectedPackageId ?? "waiting for package selection",
+      bundleHref: null,
+      scenarioLabels: ["backend scenario review artifact"],
+      configurationLabels: [],
+      evidenceLabels: [],
+      boundaryLabels: [],
+      warningLabels: []
+    };
+  }
+  if (error !== null && error !== undefined) {
+    return {
+      tone: "error",
+      statusLabel: "scenario review load failed",
+      summaryLabel: selectedPackageId ?? "unknown package",
+      bundleHref: null,
+      scenarioLabels: [error],
+      configurationLabels: [],
+      evidenceLabels: [],
+      boundaryLabels: [],
+      warningLabels: [error]
+    };
+  }
+  if (display === null) {
+    return null;
+  }
+  return {
+    tone: display.tone,
+    statusLabel: display.statusLabel,
+    summaryLabel: display.summaryLabel,
+    bundleHref: display.bundleHref,
+    scenarioLabels: display.scenarioLabels,
+    configurationLabels: display.configurationLabels,
+    evidenceLabels: display.evidenceLabels,
+    boundaryLabels: display.boundaryLabels,
+    warningLabels: display.warningLabels
   };
 }
 

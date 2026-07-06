@@ -1458,6 +1458,96 @@ export interface RuntimeExportUserConfigurationAuditBindingV1 {
   binding_hash: string;
 }
 
+export interface RuntimeExportScenarioReviewBundleV1 {
+  type: "RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1" | string;
+  version: "v1" | string;
+  bundle_id: string;
+  source: string;
+  review_scope: string;
+  package_id: string;
+  package_dir: string;
+  scenario: RuntimeExportScenarioReviewScenarioV1;
+  runtime: RuntimeExportScenarioReviewRuntimeV1;
+  user_configuration: RuntimeExportUserConfigurationAuditBindingV1;
+  reproducibility: RuntimeExportScenarioReviewReproducibilityV1;
+  review_summary: RuntimeExportScenarioReviewSummaryRefV1;
+  diagnostics: RuntimeExportScenarioReviewDiagnosticsRefV1;
+  audit_index: RuntimeExportScenarioReviewAuditIndexRefV1;
+  artifact_review: RuntimeExportScenarioReviewArtifactsV1;
+  model_boundaries: RuntimeExportScenarioReviewModelBoundariesV1;
+  recommended_review_order: readonly string[];
+  scenario_review_status: "SCENARIO_REVIEW_READY" | "SCENARIO_REVIEW_WARN" | string;
+  scenario_review_warnings: readonly string[];
+  scenario_review_hash: string;
+}
+
+export interface RuntimeExportScenarioReviewScenarioV1 {
+  seed: number;
+  satellite_count: number;
+  user_count: number;
+  compute_node_count: number;
+  duration_seconds: number;
+}
+
+export interface RuntimeExportScenarioReviewRuntimeV1 {
+  lifecycle_state: string;
+  current_sim_time: number;
+  processed_event_count: number;
+  queued_event_count: number;
+}
+
+export interface RuntimeExportScenarioReviewReproducibilityV1 {
+  manifest_id: string;
+  manifest_hash: string;
+  control_config_hash: string;
+  generated_config_hash: string;
+  runtime_state_hash: string;
+  metrics_summary_hash: string;
+  runtime_export_boundary_hash: string;
+}
+
+export interface RuntimeExportScenarioReviewSummaryRefV1 {
+  summary_id: string;
+  summary_hash: string;
+  review_status: string;
+}
+
+export interface RuntimeExportScenarioReviewDiagnosticsRefV1 {
+  bundle_id: string;
+  diagnostics_hash: string;
+  finding_count: number;
+  finding_labels: readonly RuntimeExportDiagnosticsFindingLabelV1[];
+}
+
+export interface RuntimeExportDiagnosticsFindingLabelV1 {
+  severity: string;
+  code: string;
+}
+
+export interface RuntimeExportScenarioReviewAuditIndexRefV1 {
+  audit_index_id: string;
+  filename: string;
+  hash_binding_direction: string;
+}
+
+export interface RuntimeExportScenarioReviewArtifactsV1 {
+  artifact_count: number;
+  artifact_filenames: readonly string[];
+  entrypoint_filenames: readonly string[];
+}
+
+export interface RuntimeExportScenarioReviewModelBoundariesV1 {
+  event_kernel_policy: string;
+  event_replay_restore: boolean;
+  model_recomputation: boolean;
+  route_recomputation: boolean;
+  service_recomputation: boolean;
+  packet_capture: boolean;
+  packet_level_simulation: boolean;
+  external_simulators: boolean;
+  forbidden_external_integrations: readonly string[];
+}
+
 export interface RuntimeExportReviewReproducibilityV1 {
   manifest_id: string;
   manifest_hash: string;

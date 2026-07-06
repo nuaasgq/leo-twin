@@ -93,10 +93,11 @@ user configuration export evidence into one backend-owned long-term review
 entry without route recomputation. Newer packages also include
 `scenario_review_bundle_v1.json` as the backend-generated operator entry point;
 the audit index records that file hash alongside the other package evidence.
-The dashboard loads the audit index JSON and renders those evidence groups
-directly, including schema/config/export/binding hashes and validation status
-for the user configuration, so operators can inspect the package audit boundary
-without opening raw JSON.
+The dashboard loads the scenario review bundle as a guided entry card and loads
+the audit index JSON to render the evidence groups directly, including
+schema/config/export/binding hashes and validation status for the user
+configuration, so operators can inspect the package audit boundary without
+opening raw JSON.
 7. runtime evidence
 
 Each row has a tone:
