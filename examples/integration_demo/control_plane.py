@@ -71,6 +71,7 @@ from leo_twin.services.runtime_observability import (
     build_runtime_service_trace_detail_item,
     build_runtime_user_detail_card,
     build_runtime_user_request_summary,
+    build_runtime_user_service_request_summary_v2,
 )
 from leo_twin.services.runtime_reproducibility import (
     build_runtime_reproducibility_manifest,
@@ -400,14 +401,25 @@ class DemoControlPlane:
         limit: int = 100,
         *,
         query: str = "",
+        summary_version: str = "v1",
     ) -> dict[str, Any]:
-        summary = build_runtime_user_request_summary(
-            self.visible_snapshot(),
-            service_latency_history=self._service_latency_history_json(),
-            cursor=cursor,
-            limit=limit,
-            query=query,
-        )
+        normalized_summary_version = str(summary_version).strip().lower()
+        if normalized_summary_version == "v2":
+            summary = build_runtime_user_service_request_summary_v2(
+                self.visible_snapshot(),
+                service_latency_history=self._service_latency_history_json(),
+                cursor=cursor,
+                limit=limit,
+                query=query,
+            )
+        else:
+            summary = build_runtime_user_request_summary(
+                self.visible_snapshot(),
+                service_latency_history=self._service_latency_history_json(),
+                cursor=cursor,
+                limit=limit,
+                query=query,
+            )
         return {
             "type": "RUNTIME_DETAIL_PAGE",
             "kind": "users",

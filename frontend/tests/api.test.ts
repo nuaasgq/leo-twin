@@ -2005,7 +2005,7 @@ describe("runtime API diagnostics", () => {
     });
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
-      "/runtime/details/users?cursor=2&limit=80"
+      "/runtime/details/users?cursor=2&limit=80&summary_version=v2"
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,

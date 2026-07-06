@@ -239,6 +239,11 @@ def test_http_cursor_batches_return_incremental_events(tmp_path: Path) -> None:
 def test_runtime_detail_pages_return_deterministic_windows(tmp_path: Path) -> None:
     control_plane = _initialized_running_control_plane(tmp_path)
     user_first = control_plane.runtime_user_details(cursor=0, limit=2)
+    user_service_first = control_plane.runtime_user_details(
+        cursor=0,
+        limit=2,
+        summary_version="v2",
+    )
     user_second = control_plane.runtime_user_details(cursor=2, limit=2)
     satellite_first = control_plane.runtime_satellite_details(cursor=0, limit=3)
     satellite_second = control_plane.runtime_satellite_details(cursor=3, limit=3)
@@ -255,6 +260,7 @@ def test_runtime_detail_pages_return_deterministic_windows(tmp_path: Path) -> No
     compute_node_first = control_plane.runtime_compute_node_details(cursor=0, limit=2)
 
     user_first_summary = user_first["summary"]
+    user_service_first_summary = user_service_first["summary"]
     user_second_summary = user_second["summary"]
     satellite_first_summary = satellite_first["summary"]
     satellite_second_summary = satellite_second["summary"]
@@ -263,6 +269,7 @@ def test_runtime_detail_pages_return_deterministic_windows(tmp_path: Path) -> No
 
     assert user_first["type"] == "RUNTIME_DETAIL_PAGE"
     assert user_first["kind"] == "users"
+    assert user_first_summary["version"] == "v1"
     assert user_first_summary["cursor"] == 0
     assert user_first_summary["limit"] == 2
     assert user_first_summary["next_cursor"] == 2
@@ -271,6 +278,25 @@ def test_runtime_detail_pages_return_deterministic_windows(tmp_path: Path) -> No
         "ground-station-00",
         "user-0000",
     ]
+    assert user_service_first["type"] == "RUNTIME_DETAIL_PAGE"
+    assert user_service_first["kind"] == "users"
+    assert user_service_first_summary["version"] == "v2"
+    assert user_service_first_summary["source"] == "BACKEND_RUNTIME_STATUS"
+    assert user_service_first_summary["cursor"] == 0
+    assert user_service_first_summary["limit"] == 2
+    assert user_service_first_summary["next_cursor"] == 2
+    assert user_service_first_summary["has_more"] is True
+    assert [item["user_id"] for item in user_service_first_summary["items"]] == [
+        "ground-station-00",
+        "user-0000",
+    ]
+    assert {
+        "request_id",
+        "service_class",
+        "terminal_state",
+        "target_node_id",
+        "detail_hash",
+    }.issubset(user_service_first_summary["items"][0])
     assert user_second_summary["cursor"] == 2
     assert [item["user_id"] for item in user_second_summary["items"]] == [
         "user-0001",

@@ -393,6 +393,11 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                         cursor,
                         limit,
                         query=filters["query"],
+                        summary_version=_first_query_value(
+                            query,
+                            "summary_version",
+                            "v1",
+                        ),
                     )
                 )
                 return

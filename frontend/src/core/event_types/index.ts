@@ -2704,6 +2704,7 @@ export interface RuntimeDetailPageEnvelope {
     | string;
   summary:
     | RuntimeUserRequestSummaryV1
+    | RuntimeUserServiceRequestSummaryV2
     | RuntimeSatelliteServiceSummaryV1
     | RuntimeNodeDetailPageV1
     | RuntimeRouteExplanationSummaryV1

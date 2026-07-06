@@ -126,7 +126,11 @@ Tasks:
     `user_service_request_summary_v2` as a backend-owned per-user
     communication/compute request state summary. The dashboard now prefers the
     v2 runtime status object when no server-side user detail page is active,
-    while retaining `user_request_summary_v1` compatibility.
+    while retaining `user_request_summary_v1` compatibility. T327 extends the
+    existing `/runtime/details/users` cursor endpoint with
+    `summary_version=v2`, allowing the standalone dashboard to request
+    server-side paginated v2 user service request pages while the default v1
+    endpoint remains backward compatible.
 - V2-013: Add service lifecycle trace.
   - Scope: input flow, queue, compute, output flow, terminal state.
   - Output: timeline records for dashboard and result export.

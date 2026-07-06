@@ -15836,3 +15836,55 @@ change.
   - Add a server-side paginated `user_service_request_summary_v2` detail
     endpoint so large user sets can browse the same v2 semantics without
     relying on the bounded runtime status window.
+
+## 2026-07-06 - User Service Request Detail Pages v2
+
+- Branch: `feature/T327-user-service-request-detail-pages-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: extend the existing user detail cursor endpoint so large dashboard
+  user tables can request backend-owned `user_service_request_summary_v2`
+  pages. `/runtime/details/users` remains v1 by default for compatibility;
+  `summary_version=v2` returns the v2 per-user communication/compute request
+  summary with the same cursor, limit, and query behavior.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `frontend/src/app/api.ts`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/api.test.ts`
+  - `tests/integration/test_live_runtime_streaming.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m compileall -q examples\integration_demo\control_plane.py examples\integration_demo\server.py src\leo_twin\services\runtime_observability.py`
+    - Result: passed.
+  - `python -m pytest tests\integration\test_live_runtime_streaming.py::test_runtime_detail_pages_return_deterministic_windows tests\integration\test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer -q`
+    - Result: passed, 2 tests.
+  - `pnpm --dir frontend test api.test.ts dataPanel.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 2 test
+      files and 218 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path. Vite
+      reported the existing large DataPanel chunk warning.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered:
+  - No Event Kernel, orbit, network, compute, or metrics model changes were
+    needed. The change stayed in the runtime adapter/API/frontend binding
+    surface.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The v2 pages still use the same flow-level request-state proxy as runtime
+    status. They do not add packet-level traffic, new demand generation, or RF
+    fidelity.
+  - The dashboard does not yet expose a visible switch between v1/v2 user
+    detail pages; it requests v2 by default and falls back only through the
+    existing runtime status/v1 compatibility path.
+- Recommended follow-up:
+  - Add explicit dashboard labels for paged v2 user-service data and then
+    extend export packages to include a bounded `user_service_request_summary_v2`
+    artifact for offline review.

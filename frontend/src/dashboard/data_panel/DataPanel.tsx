@@ -74,6 +74,7 @@ import {
   RuntimeUserRequestHistoryV1,
   RuntimeUserRequestItemV1,
   RuntimeUserRequestSummaryV1,
+  RuntimeUserServiceRequestSummaryV2,
   UserConfigurationExportV1,
   UserConfigurationReferenceFieldV1,
   UserConfigurationReferenceV1,
@@ -140,7 +141,7 @@ export interface DataPanelSummary {
 }
 
 export interface RuntimeDetailPages {
-  users?: RuntimeUserRequestSummaryV1 | null;
+  users?: RuntimeUserRequestSummaryV1 | RuntimeUserServiceRequestSummaryV2 | null;
   satellites?: RuntimeSatelliteServiceSummaryV1 | null;
   nodes?: RuntimeNodeDetailPageV1 | null;
   routes?: RuntimeRouteExplanationSummaryV1 | null;
@@ -4012,7 +4013,7 @@ export const DataPanel = memo(function DataPanel({
 export function selectRuntimeUserRequestSummary(
   runtimeStatus: RuntimeStatusPayload,
   runtimeDetailPages: RuntimeDetailPages | null | undefined
-): RuntimeUserRequestSummaryV1 | null | undefined {
+): RuntimeUserRequestSummaryV1 | RuntimeUserServiceRequestSummaryV2 | null | undefined {
   return (
     runtimeDetailPages?.users ??
     runtimeStatus.user_service_request_summary_v2 ??

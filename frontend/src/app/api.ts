@@ -42,6 +42,7 @@ import {
   RuntimeStatusEnvelope,
   RuntimeStatusPayload,
   RuntimeUserRequestSummaryV1,
+  RuntimeUserServiceRequestSummaryV2,
   ScenarioConfig,
   StateSnapshot,
   UserConfigurationExportEnvelope,
@@ -68,6 +69,7 @@ export const DEFAULT_USER_CONFIG_VALIDATE_TEXT_ENDPOINT =
 
 export interface RuntimeDetailQueryFilters {
   query?: string;
+  summaryVersion?: string;
   availability?: string;
   businessType?: string;
   bottleneckComponent?: string;
@@ -118,12 +120,15 @@ export async function loadRuntimeUserDetails(
   limit = 100,
   endpoint = "/runtime/details/users",
   filters: RuntimeDetailQueryFilters = {}
-): Promise<RuntimeUserRequestSummaryV1> {
-  const page = await loadRuntimeDetailPage(endpoint, cursor, limit, filters);
+): Promise<RuntimeUserRequestSummaryV1 | RuntimeUserServiceRequestSummaryV2> {
+  const page = await loadRuntimeDetailPage(endpoint, cursor, limit, {
+    summaryVersion: "v2",
+    ...filters
+  });
   if (page.kind !== "users") {
     throw new TypeError(`runtime detail response kind must be users, got ${page.kind}`);
   }
-  return page.summary as RuntimeUserRequestSummaryV1;
+  return page.summary as RuntimeUserRequestSummaryV1 | RuntimeUserServiceRequestSummaryV2;
 }
 
 export async function loadRuntimeSatelliteDetails(
@@ -886,6 +891,10 @@ function appendRuntimeDetailFilterParams(
   const query = filters.query?.trim();
   if (query) {
     params.set("query", query);
+  }
+  const summaryVersion = filters.summaryVersion?.trim();
+  if (summaryVersion) {
+    params.set("summary_version", summaryVersion);
   }
   const availability = filters.availability?.trim();
   if (availability && availability !== "ALL") {
