@@ -401,9 +401,16 @@ recorded deterministically as `ERROR`. The backend writes
 `scenario_review_checklist_v1.json`, sorts records by the backend-provided
 review order, computes `checklist_hash`, updates the export catalog, and
 regenerates `export_package_audit_index_v1.json` with checklist presence,
-hash, status, and record count. The checklist records operator decisions only;
-it does not replay events, recompute models, mutate package files on read, or
-rewrite archives created before the save.
+hash, status, and record count. `checklist_status` reports the submitted
+records only, while `recommended_review_complete`,
+`recommended_review_status`, `expected_review_count`,
+`reviewed_recommended_count`, `missing_recommended_review_filenames`, and
+`attention_recommended_review_filenames` report backend-owned coverage of the
+recommended review order. Handoff readiness uses the recommended-step coverage,
+so a checklist with all submitted records marked `REVIEWED` is still incomplete
+when backend-recommended artifacts are missing. The checklist records operator
+decisions only; it does not replay events, recompute models, mutate package
+files on read, or rewrite archives created before the save.
 
 ## Package Audit Index
 
@@ -446,7 +453,8 @@ This object is the backend-owned handoff readiness summary for result-package
 review. It reports audit status, saved route-comparison report presence and
 error count, optional saved service-trace comparison report presence/hash/count
 and error count, scenario-review bundle presence, checklist
-presence/status/count, review summary status, diagnostics error count,
+presence/status/count, recommended checklist coverage counts and missing or
+attention filenames, review summary status, diagnostics error count,
 boundary-alignment status, user configuration validation, missing/warning
 evidence, and a deterministic `completion_hash`. It deliberately does not
 include `audit_hash`, so the audit index can hash the completion object without

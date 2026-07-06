@@ -1698,6 +1698,17 @@ export interface RuntimeExportScenarioReviewChecklistV1 {
   skipped_count: number;
   followup_count: number;
   error_count: number;
+  submitted_records_complete?: boolean;
+  expected_review_filenames?: readonly string[];
+  expected_review_count?: number;
+  reviewed_recommended_filenames?: readonly string[];
+  reviewed_recommended_count?: number;
+  missing_recommended_review_filenames?: readonly string[];
+  missing_recommended_review_count?: number;
+  attention_recommended_review_filenames?: readonly string[];
+  attention_recommended_review_count?: number;
+  recommended_review_complete?: boolean;
+  recommended_review_status?: string;
   checklist_status:
     | "CHECKLIST_EMPTY"
     | "CHECKLIST_PARTIAL"
@@ -1763,6 +1774,14 @@ export interface RuntimeExportPackageAuditIndexV1 {
   scenario_review_checklist_present?: boolean;
   scenario_review_checklist_record_count?: number;
   scenario_review_checklist_status?: string;
+  scenario_review_checklist_recommended_review_complete?: boolean;
+  scenario_review_checklist_recommended_review_status?: string;
+  scenario_review_checklist_expected_review_count?: number;
+  scenario_review_checklist_reviewed_recommended_count?: number;
+  scenario_review_checklist_missing_recommended_review_count?: number;
+  scenario_review_checklist_attention_recommended_review_count?: number;
+  scenario_review_checklist_missing_recommended_review_filenames?: readonly string[];
+  scenario_review_checklist_attention_recommended_review_filenames?: readonly string[];
   package_review_completion_v1?: RuntimeExportPackageReviewCompletionV1;
   package_review_completion_status?: string;
   package_review_completion_hash?: string;
@@ -1812,6 +1831,15 @@ export interface RuntimeExportPackageReviewCompletionV1 {
   scenario_review_checklist_hash: string;
   scenario_review_checklist_status: string;
   scenario_review_checklist_record_count: number;
+  scenario_review_checklist_submitted_records_complete?: boolean;
+  scenario_review_checklist_recommended_review_complete?: boolean;
+  scenario_review_checklist_recommended_review_status?: string;
+  scenario_review_checklist_expected_review_count?: number;
+  scenario_review_checklist_reviewed_recommended_count?: number;
+  scenario_review_checklist_missing_recommended_review_count?: number;
+  scenario_review_checklist_attention_recommended_review_count?: number;
+  scenario_review_checklist_missing_recommended_review_filenames?: readonly string[];
+  scenario_review_checklist_attention_recommended_review_filenames?: readonly string[];
   review_summary_status: string;
   review_summary_hash: string;
   diagnostics_error_count: number;

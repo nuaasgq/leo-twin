@@ -925,8 +925,25 @@ def build_runtime_export_scenario_review_checklist_v1(
     error_count = sum(
         1 for record in normalized_records if record["review_status"] == "ERROR"
     )
+    submitted_records_complete = bool(
+        normalized_records and reviewed_count == len(normalized_records)
+    )
+    reviewed_recommended, missing_recommended, attention_recommended = (
+        _runtime_export_scenario_review_recommended_coverage(
+            review_order,
+            normalized_records,
+        )
+    )
+    recommended_review_complete = bool(
+        review_order and not missing_recommended and not attention_recommended
+    )
+    recommended_review_status = "RECOMMENDED_REVIEW_UNSPECIFIED"
+    if review_order and recommended_review_complete:
+        recommended_review_status = "RECOMMENDED_REVIEW_COMPLETE"
+    elif review_order:
+        recommended_review_status = "RECOMMENDED_REVIEW_INCOMPLETE"
     checklist_status = "CHECKLIST_EMPTY"
-    if normalized_records and reviewed_count == len(normalized_records):
+    if submitted_records_complete:
         checklist_status = "CHECKLIST_COMPLETE"
     elif error_count or followup_count:
         checklist_status = "CHECKLIST_WARN"
@@ -951,6 +968,17 @@ def build_runtime_export_scenario_review_checklist_v1(
         "skipped_count": skipped_count,
         "followup_count": followup_count,
         "error_count": error_count,
+        "submitted_records_complete": submitted_records_complete,
+        "expected_review_filenames": review_order,
+        "expected_review_count": len(review_order),
+        "reviewed_recommended_filenames": reviewed_recommended,
+        "reviewed_recommended_count": len(reviewed_recommended),
+        "missing_recommended_review_filenames": missing_recommended,
+        "missing_recommended_review_count": len(missing_recommended),
+        "attention_recommended_review_filenames": attention_recommended,
+        "attention_recommended_review_count": len(attention_recommended),
+        "recommended_review_complete": recommended_review_complete,
+        "recommended_review_status": recommended_review_status,
         "checklist_status": checklist_status,
         "records": normalized_records,
         "ordering": (
@@ -1805,6 +1833,12 @@ def build_runtime_export_package_audit_index_v1(
         audit_warnings.append("BOUNDARY_ALIGNMENT_EVIDENCE_NOT_RECORDED")
     if str(scenario_checklist.get("checklist_status", "")) == "CHECKLIST_WARN":
         audit_warnings.append("SCENARIO_REVIEW_CHECKLIST_NEEDS_ATTENTION")
+    if scenario_checklist and (
+        scenario_checklist.get("recommended_review_complete") is not True
+    ):
+        audit_warnings.append(
+            "SCENARIO_REVIEW_CHECKLIST_RECOMMENDED_STEPS_INCOMPLETE"
+        )
     if user_config_binding["validation_ok"] is not True:
         audit_warnings.append("USER_CONFIGURATION_EXPORT_NOT_VALIDATED")
     if any(str(item.get("severity", "")) == "ERROR" for item in diagnostics_findings):
@@ -1897,6 +1931,34 @@ def build_runtime_export_package_audit_index_v1(
         "scenario_review_checklist_status": str(
             scenario_checklist.get("checklist_status", "")
         ),
+        "scenario_review_checklist_recommended_review_complete": (
+            scenario_checklist.get("recommended_review_complete") is True
+        ),
+        "scenario_review_checklist_recommended_review_status": str(
+            scenario_checklist.get("recommended_review_status", "")
+        ),
+        "scenario_review_checklist_expected_review_count": _integer(
+            scenario_checklist.get("expected_review_count")
+        ),
+        "scenario_review_checklist_reviewed_recommended_count": _integer(
+            scenario_checklist.get("reviewed_recommended_count")
+        ),
+        "scenario_review_checklist_missing_recommended_review_count": _integer(
+            scenario_checklist.get("missing_recommended_review_count")
+        ),
+        "scenario_review_checklist_attention_recommended_review_count": _integer(
+            scenario_checklist.get("attention_recommended_review_count")
+        ),
+        "scenario_review_checklist_missing_recommended_review_filenames": (
+            _string_tuple(
+                scenario_checklist.get("missing_recommended_review_filenames")
+            )
+        ),
+        "scenario_review_checklist_attention_recommended_review_filenames": (
+            _string_tuple(
+                scenario_checklist.get("attention_recommended_review_filenames")
+            )
+        ),
         "package_review_completion_v1": package_review_completion,
         "package_review_completion_status": str(
             package_review_completion["completion_status"]
@@ -1974,7 +2036,28 @@ def build_runtime_export_package_review_completion_v1(
     )
     checklist_present = bool(checklist)
     checklist_status = str(checklist.get("checklist_status", ""))
-    checklist_complete = checklist_present and checklist_status == "CHECKLIST_COMPLETE"
+    checklist_submitted_records_complete = (
+        checklist.get("submitted_records_complete") is True
+    )
+    checklist_recommended_complete = (
+        checklist.get("recommended_review_complete") is True
+    )
+    checklist_expected_review_count = _integer(checklist.get("expected_review_count"))
+    checklist_reviewed_recommended_count = _integer(
+        checklist.get("reviewed_recommended_count")
+    )
+    checklist_missing_recommended = _string_tuple(
+        checklist.get("missing_recommended_review_filenames")
+    )
+    checklist_attention_recommended = _string_tuple(
+        checklist.get("attention_recommended_review_filenames")
+    )
+    checklist_complete = (
+        checklist_present
+        and checklist_status == "CHECKLIST_COMPLETE"
+        and checklist_submitted_records_complete
+        and checklist_recommended_complete
+    )
     scenario_bundle_present = "scenario_review_bundle_v1.json" in artifact_filenames
     review_summary_ready = str(review_summary.get("review_status", "")) == "REVIEW_READY"
     diagnostics_ready = diagnostics_error_count == 0
@@ -1994,8 +2077,10 @@ def build_runtime_export_package_review_completion_v1(
         missing_or_warning.append("SCENARIO_REVIEW_BUNDLE_MISSING")
     if not checklist_present:
         missing_or_warning.append("SCENARIO_REVIEW_CHECKLIST_MISSING")
-    elif not checklist_complete:
+    elif checklist_status != "CHECKLIST_COMPLETE":
         missing_or_warning.append("SCENARIO_REVIEW_CHECKLIST_NOT_COMPLETE")
+    elif not checklist_recommended_complete:
+        missing_or_warning.append("SCENARIO_REVIEW_RECOMMENDED_STEPS_INCOMPLETE")
     if not review_summary_ready:
         missing_or_warning.append("REVIEW_SUMMARY_NOT_READY")
     if not diagnostics_ready:
@@ -2040,6 +2125,33 @@ def build_runtime_export_package_review_completion_v1(
         "scenario_review_checklist_hash": str(checklist.get("checklist_hash", "")),
         "scenario_review_checklist_status": checklist_status,
         "scenario_review_checklist_record_count": _integer(checklist.get("record_count")),
+        "scenario_review_checklist_submitted_records_complete": (
+            checklist_submitted_records_complete
+        ),
+        "scenario_review_checklist_recommended_review_complete": (
+            checklist_recommended_complete
+        ),
+        "scenario_review_checklist_recommended_review_status": str(
+            checklist.get("recommended_review_status", "")
+        ),
+        "scenario_review_checklist_expected_review_count": (
+            checklist_expected_review_count
+        ),
+        "scenario_review_checklist_reviewed_recommended_count": (
+            checklist_reviewed_recommended_count
+        ),
+        "scenario_review_checklist_missing_recommended_review_count": len(
+            checklist_missing_recommended
+        ),
+        "scenario_review_checklist_attention_recommended_review_count": len(
+            checklist_attention_recommended
+        ),
+        "scenario_review_checklist_missing_recommended_review_filenames": (
+            checklist_missing_recommended
+        ),
+        "scenario_review_checklist_attention_recommended_review_filenames": (
+            checklist_attention_recommended
+        ),
         "review_summary_status": str(review_summary.get("review_status", "")),
         "review_summary_hash": str(review_summary.get("summary_hash", "")),
         "diagnostics_error_count": diagnostics_error_count,
@@ -2069,6 +2181,11 @@ def build_runtime_export_package_review_completion_v1(
             f"scenario_bundle {'present' if scenario_bundle_present else 'missing'}",
             f"checklist {checklist_status or 'missing'}",
             f"checklist_records {_integer(checklist.get('record_count'))}",
+            (
+                "checklist_recommended "
+                f"{checklist_reviewed_recommended_count}/"
+                f"{checklist_expected_review_count}"
+            ),
             (
                 "network_kpi "
                 f"{network_kpi_validation.get('validation_status', 'missing')}"
@@ -2691,6 +2808,28 @@ def _runtime_export_scenario_review_checklist_record(
         **record_hash_source,
         "record_hash": stable_hash_payload(record_hash_source),
     }
+
+
+def _runtime_export_scenario_review_recommended_coverage(
+    review_order: tuple[str, ...],
+    records: tuple[Mapping[str, Any], ...],
+) -> tuple[tuple[str, ...], tuple[str, ...], tuple[str, ...]]:
+    reviewed: list[str] = []
+    missing: list[str] = []
+    attention: list[str] = []
+    for filename in review_order:
+        matching_statuses = tuple(
+            str(record.get("review_status", ""))
+            for record in records
+            if str(record.get("artifact_filename", "")) == filename
+        )
+        if not matching_statuses:
+            missing.append(filename)
+        elif all(status == "REVIEWED" for status in matching_statuses):
+            reviewed.append(filename)
+        else:
+            attention.append(filename)
+    return tuple(reviewed), tuple(missing), tuple(attention)
 
 
 def _runtime_export_scenario_review_order_index(

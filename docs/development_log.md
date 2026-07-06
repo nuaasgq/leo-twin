@@ -16524,7 +16524,7 @@ change.
 ## 2026-07-07 - T340 service trace review checklist step v1
 
 - Branch: `feature/T340-service-trace-review-checklist-v1`
-- Commit: pending before task commit.
+- Commit: `099f60b feat(export): add service trace review checklist step`
 - Scope: add the saved service trace comparison review report to the
   backend-guided scenario review checklist flow. The backend now lists
   `service_lifecycle_trace_v2.json` before
@@ -16578,3 +16578,62 @@ change.
   - Add backend-owned checklist completeness expectations so the dashboard can
     distinguish "all recommended steps reviewed" from "all submitted records
     reviewed" without frontend inference.
+
+## 2026-07-07 - T341 scenario review checklist completeness v1
+
+- Branch: `feature/T341-scenario-review-checklist-completeness-v1`
+- Commit: pending before task commit.
+- Scope: add backend-owned recommended-step completeness evidence to
+  `scenario_review_checklist_v1.json`, audit index, package review completion,
+  and dashboard status displays. The backend now reports submitted-record
+  completion separately from recommended review coverage using
+  `submitted_records_complete`, `expected_review_count`,
+  `reviewed_recommended_count`, `missing_recommended_review_filenames`,
+  `attention_recommended_review_filenames`, `recommended_review_complete`, and
+  `recommended_review_status`. Handoff readiness now requires the checklist to
+  cover all backend-recommended review steps, not only that submitted records
+  are all marked `REVIEWED`. No Event Kernel, simulation model, package replay,
+  or frontend architecture behavior changed.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m compileall -q src\leo_twin\services\result_package_contract.py`
+    - Result: passed.
+  - `python -m pytest tests\unit\test_result_package_contract_v1.py::test_runtime_export_scenario_review_checklist_v1_is_deterministic tests\unit\test_result_package_contract_v1.py::test_runtime_export_scenario_review_checklist_v1_distinguishes_submitted_and_recommended_completion tests\unit\test_result_package_contract_v1.py::test_runtime_export_package_review_completion_v1_reports_missing_evidence tests\unit\test_result_package_contract_v1.py::test_runtime_export_package_review_completion_v1_requires_recommended_checklist_steps tests\unit\test_result_package_contract_v1.py::test_runtime_export_package_audit_index_v1_is_deterministic tests\integration\test_result_package_export_v1.py::test_runtime_export_package_satisfies_result_package_contract_v1 -q`
+    - Result: passed, 6 tests.
+  - `.\node_modules\.bin\tsc.cmd --noEmit -p tsconfig.json` from
+    `frontend`
+    - Result: passed with the bundled Codex Node runtime path.
+  - `pnpm --dir frontend test dataPanel.test.ts api.test.ts appSurface.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 3 test
+      files and 274 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path; Vite
+      reported the existing large `DataPanel` chunk warning.
+  - `git diff --check`
+    - Result: passed; Git emitted line-ending warnings only for the existing
+      unstaged runtime config drift.
+- Problems encountered:
+  - The implementation intentionally preserves `checklist_status` as submitted
+    record status for compatibility and adds separate recommended-step fields
+    for handoff readiness.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - Service trace comparison reports remain optional handoff evidence in this
+    version; if product policy makes them mandatory later, the recommended
+    review order and completion policy should be updated together.
+  - The checklist still records operator decisions; it does not compute
+    package/live differences server-side.
+- Recommended follow-up:
+  - Add a backend-generated operator review template that pre-populates all
+    recommended checklist rows with evidence hashes before the operator edits
+    statuses and notes.

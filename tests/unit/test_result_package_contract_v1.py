@@ -851,6 +851,17 @@ def test_runtime_export_scenario_review_checklist_v1_is_deterministic() -> None:
     assert first["skipped_count"] == 1
     assert first["followup_count"] == 1
     assert first["error_count"] == 0
+    assert first["submitted_records_complete"] is False
+    assert first["expected_review_count"] == 4
+    assert first["reviewed_recommended_count"] == 2
+    assert first["missing_recommended_review_count"] == 0
+    assert first["attention_recommended_review_filenames"] == (
+        "export_package_audit_index_v1.json",
+        "review_summary_v1.json",
+    )
+    assert first["attention_recommended_review_count"] == 2
+    assert first["recommended_review_complete"] is False
+    assert first["recommended_review_status"] == "RECOMMENDED_REVIEW_INCOMPLETE"
     assert first["checklist_status"] == "CHECKLIST_WARN"
     assert [record["artifact_filename"] for record in first["records"]] == [
         "scenario_review_bundle_v1.json",
@@ -865,6 +876,53 @@ def test_runtime_export_scenario_review_checklist_v1_is_deterministic() -> None:
     assert json.loads(json.dumps(first, sort_keys=True))["checklist_id"] == (
         RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_V1_ID
     )
+
+
+def test_runtime_export_scenario_review_checklist_v1_distinguishes_submitted_and_recommended_completion() -> None:
+    scenario_review_bundle = {
+        "bundle_id": RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1_ID,
+        "scenario_review_hash": "sha256:scenario-review",
+        "recommended_review_order": (
+            "scenario_review_bundle_v1.json",
+            "export_package_audit_index_v1.json",
+            "service_trace_comparison_review_report_v1.json",
+        ),
+        "artifact_review": {
+            "artifact_filenames": (
+                "scenario_review_bundle_v1.json",
+                "export_package_audit_index_v1.json",
+            )
+        },
+    }
+
+    checklist = build_runtime_export_scenario_review_checklist_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        scenario_review_bundle=scenario_review_bundle,
+        records=(
+            {
+                "step_label": "Scenario entry checked",
+                "artifact_filename": "scenario_review_bundle_v1.json",
+                "review_status": "REVIEWED",
+                "evidence_hash": "sha256:scenario",
+            },
+        ),
+    )
+
+    assert checklist["checklist_status"] == "CHECKLIST_COMPLETE"
+    assert checklist["submitted_records_complete"] is True
+    assert checklist["recommended_review_complete"] is False
+    assert checklist["recommended_review_status"] == "RECOMMENDED_REVIEW_INCOMPLETE"
+    assert checklist["expected_review_count"] == 3
+    assert checklist["reviewed_recommended_filenames"] == (
+        "scenario_review_bundle_v1.json",
+    )
+    assert checklist["missing_recommended_review_filenames"] == (
+        "export_package_audit_index_v1.json",
+        "service_trace_comparison_review_report_v1.json",
+    )
+    assert checklist["attention_recommended_review_filenames"] == ()
+    assert checklist["checklist_hash"].startswith("sha256:")
 
 
 def test_runtime_export_route_detail_index_v1_is_deterministic_and_review_ready() -> None:
@@ -1469,12 +1527,83 @@ def test_runtime_export_package_review_completion_v1_reports_missing_evidence() 
     assert completion["service_trace_comparison_review_report_present"] is False
     assert completion["service_trace_comparison_review_error_count"] == 0
     assert completion["scenario_review_checklist_present"] is False
+    assert completion[
+        "scenario_review_checklist_recommended_review_complete"
+    ] is False
+    assert completion["scenario_review_checklist_expected_review_count"] == 0
+    assert completion["scenario_review_checklist_reviewed_recommended_count"] == 0
     assert completion["missing_or_warning_evidence"] == (
         "AUDIT_INDEX_NOT_READY",
         "ROUTE_COMPARISON_REVIEW_REPORT_MISSING",
         "SCENARIO_REVIEW_CHECKLIST_MISSING",
     )
     assert completion["completion_hash"].startswith("sha256:")
+
+
+def test_runtime_export_package_review_completion_v1_requires_recommended_checklist_steps() -> None:
+    alignment = {"alignment_status": "ALIGNED", "alignment_hash": "sha256:alignment"}
+    completion = build_runtime_export_package_review_completion_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        audit_status="AUDIT_READY",
+        review_summary={
+            "summary_id": RUNTIME_EXPORT_REVIEW_SUMMARY_V1_ID,
+            "summary_hash": "sha256:review",
+            "review_status": "REVIEW_READY",
+        },
+        diagnostics_bundle={
+            "bundle_id": RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1_ID,
+            "diagnostics_hash": "sha256:diagnostics",
+            "findings": (),
+        },
+        artifact_records=(
+            _file(
+                "scenario_review_bundle_v1",
+                "scenario_review_bundle_v1.json",
+                "sha256:scenario-bundle-file",
+            ),
+        ),
+        route_comparison_review_report={
+            "report_hash": "sha256:route-report",
+            "record_count": 1,
+            "error_count": 0,
+        },
+        scenario_review_checklist={
+            "checklist_hash": "sha256:checklist",
+            "checklist_status": "CHECKLIST_COMPLETE",
+            "submitted_records_complete": True,
+            "record_count": 1,
+            "expected_review_count": 3,
+            "reviewed_recommended_count": 1,
+            "missing_recommended_review_filenames": (
+                "export_package_audit_index_v1.json",
+                "service_trace_comparison_review_report_v1.json",
+            ),
+            "attention_recommended_review_filenames": (),
+            "recommended_review_complete": False,
+            "recommended_review_status": "RECOMMENDED_REVIEW_INCOMPLETE",
+        },
+        runtime_export_boundary_alignment=alignment,
+        user_configuration_binding={"validation_ok": True},
+    )
+
+    assert completion["completion_status"] == "REVIEW_INCOMPLETE"
+    assert completion["handoff_ready"] is False
+    assert completion["scenario_review_checklist_status"] == "CHECKLIST_COMPLETE"
+    assert completion[
+        "scenario_review_checklist_recommended_review_complete"
+    ] is False
+    assert completion["scenario_review_checklist_expected_review_count"] == 3
+    assert completion["scenario_review_checklist_reviewed_recommended_count"] == 1
+    assert completion[
+        "scenario_review_checklist_missing_recommended_review_filenames"
+    ] == (
+        "export_package_audit_index_v1.json",
+        "service_trace_comparison_review_report_v1.json",
+    )
+    assert completion["missing_or_warning_evidence"] == (
+        "SCENARIO_REVIEW_RECOMMENDED_STEPS_INCOMPLETE",
+    )
 
 
 def test_runtime_export_package_handoff_report_v1_is_deterministic() -> None:
@@ -1562,7 +1691,16 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
         "checklist_id": RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_V1_ID,
         "checklist_hash": "sha256:scenario-checklist",
         "checklist_status": "CHECKLIST_COMPLETE",
+        "submitted_records_complete": True,
         "record_count": 2,
+        "expected_review_count": 2,
+        "reviewed_recommended_count": 2,
+        "missing_recommended_review_count": 0,
+        "attention_recommended_review_count": 0,
+        "missing_recommended_review_filenames": (),
+        "attention_recommended_review_filenames": (),
+        "recommended_review_complete": True,
+        "recommended_review_status": "RECOMMENDED_REVIEW_COMPLETE",
     }
     user_configuration_export = {
         "version": "v1",
@@ -1689,6 +1827,14 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
     assert first["scenario_review_checklist_present"] is True
     assert first["scenario_review_checklist_record_count"] == 2
     assert first["scenario_review_checklist_status"] == "CHECKLIST_COMPLETE"
+    assert first[
+        "scenario_review_checklist_recommended_review_complete"
+    ] is True
+    assert first["scenario_review_checklist_expected_review_count"] == 2
+    assert first["scenario_review_checklist_reviewed_recommended_count"] == 2
+    assert first[
+        "scenario_review_checklist_missing_recommended_review_filenames"
+    ] == ()
     completion = first["package_review_completion_v1"]
     assert completion["completion_id"] == RUNTIME_EXPORT_PACKAGE_REVIEW_COMPLETION_V1_ID
     assert completion["completion_status"] == "REVIEW_COMPLETE"
@@ -1698,6 +1844,11 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
     assert completion["service_trace_comparison_review_record_count"] == 2
     assert completion["service_trace_comparison_review_error_count"] == 0
     assert completion["scenario_review_checklist_status"] == "CHECKLIST_COMPLETE"
+    assert completion[
+        "scenario_review_checklist_recommended_review_complete"
+    ] is True
+    assert completion["scenario_review_checklist_expected_review_count"] == 2
+    assert completion["scenario_review_checklist_reviewed_recommended_count"] == 2
     assert completion["missing_or_warning_evidence"] == ()
     assert completion["completion_hash"].startswith("sha256:")
     assert first["package_review_completion_status"] == "REVIEW_COMPLETE"

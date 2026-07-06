@@ -11951,14 +11951,35 @@ export function buildDataPanelExportScenarioReviewChecklistStatus(
       warningLabels: ["scenario_review_checklist_v1.json missing"]
     };
   }
-  const complete = checklist.checklist_status === "CHECKLIST_COMPLETE";
+  const recommendedComplete =
+    checklist.recommended_review_complete ??
+    checklist.checklist_status === "CHECKLIST_COMPLETE";
+  const complete =
+    checklist.checklist_status === "CHECKLIST_COMPLETE" && recommendedComplete;
+  const expectedReviewCount =
+    checklist.expected_review_count ?? checklist.record_count;
+  const reviewedRecommendedCount =
+    checklist.reviewed_recommended_count ??
+    (recommendedComplete ? expectedReviewCount : 0);
+  const missingRecommended =
+    checklist.missing_recommended_review_filenames ?? [];
+  const attentionRecommended =
+    checklist.attention_recommended_review_filenames ?? [];
   return {
     tone: complete ? "match" : "different",
     statusLabel: complete ? "审核清单已完成" : "审核清单需检查",
     summaryLabel: `${checklist.checklist_status} / records ${formatCount(
       checklist.record_count
+    )} / recommended ${formatCount(reviewedRecommendedCount)}/${formatCount(
+      expectedReviewCount
     )} / checklist ${shortRuntimeHash(checklist.checklist_hash)}`,
-    warningLabels: complete ? [] : [checklist.checklist_status]
+    warningLabels: complete
+      ? []
+      : [
+          checklist.recommended_review_status ?? checklist.checklist_status,
+          ...missingRecommended.map((filename) => `missing ${filename}`),
+          ...attentionRecommended.map((filename) => `attention ${filename}`)
+        ]
   };
 }
 
@@ -12063,6 +12084,18 @@ export function buildDataPanelExportReviewCompletionSummary({
     auditIndex?.scenario_review_checklist_status ??
     "";
   const checklistComplete = checklistStatus === "CHECKLIST_COMPLETE";
+  const checklistRecommendedComplete =
+    auditIndex?.scenario_review_checklist_recommended_review_complete ??
+    scenarioReviewChecklist?.recommended_review_complete ??
+    checklistComplete;
+  const checklistExpectedReviewCount =
+    auditIndex?.scenario_review_checklist_expected_review_count ??
+    scenarioReviewChecklist?.expected_review_count ??
+    0;
+  const checklistReviewedRecommendedCount =
+    auditIndex?.scenario_review_checklist_reviewed_recommended_count ??
+    scenarioReviewChecklist?.reviewed_recommended_count ??
+    (checklistRecommendedComplete ? checklistExpectedReviewCount : 0);
   const warningLabels: string[] = [];
   if (!auditReady) {
     warningLabels.push("audit index not ready");
@@ -12079,13 +12112,16 @@ export function buildDataPanelExportReviewCompletionSummary({
     warningLabels.push("scenario review checklist missing");
   } else if (!checklistComplete) {
     warningLabels.push(`scenario review checklist ${checklistStatus || "not complete"}`);
+  } else if (!checklistRecommendedComplete) {
+    warningLabels.push("scenario review recommended steps incomplete");
   }
   const complete =
     auditReady &&
     routeReportReady &&
     scenarioReady &&
     checklistPresent &&
-    checklistComplete;
+    checklistComplete &&
+    checklistRecommendedComplete;
   const tone = complete ? "match" : routeReportPresent || checklistPresent ? "different" : "pending";
   return {
     tone,
@@ -12105,7 +12141,10 @@ export function buildDataPanelExportReviewCompletionSummary({
         scenarioReviewChecklist?.record_count ??
           auditIndex?.scenario_review_checklist_record_count ??
           0
-      )}`
+      )}`,
+      `checklist recommended ${formatCount(
+        checklistReviewedRecommendedCount
+      )}/${formatCount(checklistExpectedReviewCount)}`
     ],
     warningLabels
   };

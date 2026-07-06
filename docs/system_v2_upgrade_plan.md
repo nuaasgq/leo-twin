@@ -177,6 +177,9 @@ Tasks:
     T340 adds the service lifecycle trace and saved service trace comparison
     review report to the backend-guided scenario review checklist flow, and the
     dashboard uses the audit-index report hash as the checklist evidence hash.
+    T341 adds backend-owned checklist recommended-step completeness fields and
+    makes handoff readiness require full recommended review coverage, not only
+    all submitted records being marked reviewed.
 - V2-013: Add service lifecycle trace.
   - Scope: input flow, queue, compute, output flow, terminal state.
   - Output: timeline records for dashboard and result export.

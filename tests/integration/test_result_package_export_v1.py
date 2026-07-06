@@ -583,33 +583,38 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     }
     assert service_trace_report_page["records"][0]["trace_id"] == "trace:run"
 
+    review_evidence_hashes = {
+        "scenario_review_bundle_v1.json": scenario_review_bundle[
+            "scenario_review_hash"
+        ],
+        "export_package_audit_index_v1.json": service_trace_audit_index["audit_hash"],
+        "review_summary_v1.json": review_summary["summary_hash"],
+        "diagnostics_bundle_v1.json": diagnostics_bundle["diagnostics_hash"],
+        "network_kpi_benchmark_validation_v1.json": (
+            network_kpi_benchmark_validation["evidence"]["validation_hash"]
+        ),
+        "user_service_request_summary_v2.json": (
+            user_service_request_summary["evidence"]["summary_hash"]
+        ),
+        "service_trace_comparison_review_report_v1.json": service_trace_report[
+            "report_hash"
+        ],
+        "manifest.json": manifest["manifest_hash"],
+        "config_snapshot.json": manifest["runtime_state_hash"],
+    }
+    checklist_records = [
+        {
+            "artifact_filename": filename,
+            "step_label": f"Review {filename}",
+            "review_status": "REVIEWED",
+            "operator_note": "recommended review step checked",
+            "evidence_hash": review_evidence_hashes.get(filename, ""),
+        }
+        for filename in scenario_review_bundle["recommended_review_order"]
+    ]
     checklist_response = control_plane.runtime_export_package_scenario_review_checklist(
         str(package["package_id"]),
-        {
-            "records": [
-                {
-                    "artifact_filename": "scenario_review_bundle_v1.json",
-                    "step_label": "Scenario bundle checked",
-                    "review_status": "REVIEWED",
-                    "operator_note": "validated scenario entry evidence",
-                    "evidence_hash": scenario_review_bundle["scenario_review_hash"],
-                },
-                {
-                    "artifact_filename": "export_package_audit_index_v1.json",
-                    "step_label": "Audit index checked",
-                    "review_status": "REVIEWED",
-                    "operator_note": "audit index includes route report evidence",
-                    "evidence_hash": updated_audit_index["audit_hash"],
-                },
-                {
-                    "artifact_filename": "service_trace_comparison_review_report_v1.json",
-                    "step_label": "Service trace comparison review checked",
-                    "review_status": "REVIEWED",
-                    "operator_note": "service trace report evidence checked",
-                    "evidence_hash": service_trace_report["report_hash"],
-                },
-            ]
-        },
+        {"records": checklist_records},
         output_root,
     )
     checklist = checklist_response["summary"]
@@ -618,9 +623,18 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         "package_handoff_report_v1.md"
     )
     assert checklist["checklist_id"] == RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_V1_ID
-    assert checklist["record_count"] == 3
-    assert checklist["reviewed_count"] == 3
+    assert checklist["record_count"] == len(
+        scenario_review_bundle["recommended_review_order"]
+    )
+    assert checklist["reviewed_count"] == checklist["record_count"]
     assert checklist["checklist_status"] == "CHECKLIST_COMPLETE"
+    assert checklist["submitted_records_complete"] is True
+    assert checklist["recommended_review_complete"] is True
+    assert checklist["recommended_review_status"] == "RECOMMENDED_REVIEW_COMPLETE"
+    assert checklist["expected_review_count"] == checklist["record_count"]
+    assert checklist["reviewed_recommended_count"] == checklist["record_count"]
+    assert checklist["missing_recommended_review_filenames"] == ()
+    assert checklist["attention_recommended_review_filenames"] == ()
     assert checklist["scenario_review_hash"] == (
         scenario_review_bundle["scenario_review_hash"]
     )
@@ -647,9 +661,20 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert checklist_audit["scenario_review_checklist_hash"] == (
         checklist["checklist_hash"]
     )
-    assert checklist_audit["scenario_review_checklist_record_count"] == 3
+    assert checklist_audit["scenario_review_checklist_record_count"] == (
+        checklist["record_count"]
+    )
     assert checklist_audit["scenario_review_checklist_status"] == (
         "CHECKLIST_COMPLETE"
+    )
+    assert checklist_audit[
+        "scenario_review_checklist_recommended_review_complete"
+    ] is True
+    assert checklist_audit["scenario_review_checklist_expected_review_count"] == (
+        checklist["record_count"]
+    )
+    assert checklist_audit["scenario_review_checklist_reviewed_recommended_count"] == (
+        checklist["record_count"]
     )
     assert checklist_audit["package_review_completion_status"] == "REVIEW_COMPLETE"
     assert checklist_audit["package_review_completion_v1"]["handoff_ready"] is True

@@ -3552,6 +3552,15 @@ describe("buildDataPanelExportCatalogDisplay", () => {
       skipped_count: 0,
       followup_count: 0,
       error_count: 0,
+      submitted_records_complete: true,
+      expected_review_count: 1,
+      reviewed_recommended_count: 1,
+      missing_recommended_review_count: 0,
+      attention_recommended_review_count: 0,
+      missing_recommended_review_filenames: [],
+      attention_recommended_review_filenames: [],
+      recommended_review_complete: true,
+      recommended_review_status: "RECOMMENDED_REVIEW_COMPLETE",
       checklist_status: "CHECKLIST_COMPLETE",
       records: [
         {
@@ -3588,7 +3597,32 @@ describe("buildDataPanelExportCatalogDisplay", () => {
     ).toMatchObject({
       tone: "match",
       statusLabel: "审核清单已完成",
+      summaryLabel:
+        "CHECKLIST_COMPLETE / records 1 / recommended 1/1 / checklist checklist",
       warningLabels: []
+    });
+    expect(
+      buildDataPanelExportScenarioReviewChecklistStatus({
+        ...checklist,
+        expected_review_count: 3,
+        reviewed_recommended_count: 1,
+        missing_recommended_review_filenames: [
+          "export_package_audit_index_v1.json",
+          "service_trace_comparison_review_report_v1.json"
+        ],
+        missing_recommended_review_count: 2,
+        recommended_review_complete: false,
+        recommended_review_status: "RECOMMENDED_REVIEW_INCOMPLETE"
+      } as any)
+    ).toMatchObject({
+      tone: "different",
+      summaryLabel:
+        "CHECKLIST_COMPLETE / records 1 / recommended 1/3 / checklist checklist",
+      warningLabels: [
+        "RECOMMENDED_REVIEW_INCOMPLETE",
+        "missing export_package_audit_index_v1.json",
+        "missing service_trace_comparison_review_report_v1.json"
+      ]
     });
     const request = buildDataPanelScenarioReviewChecklistSaveRequest(
       bundle as any,
@@ -3692,6 +3726,13 @@ describe("buildDataPanelExportCatalogDisplay", () => {
       scenario_review_checklist_present: true,
       scenario_review_checklist_record_count: 2,
       scenario_review_checklist_status: "CHECKLIST_COMPLETE",
+      scenario_review_checklist_recommended_review_complete: true,
+      scenario_review_checklist_recommended_review_status:
+        "RECOMMENDED_REVIEW_COMPLETE",
+      scenario_review_checklist_expected_review_count: 2,
+      scenario_review_checklist_reviewed_recommended_count: 2,
+      scenario_review_checklist_missing_recommended_review_count: 0,
+      scenario_review_checklist_attention_recommended_review_count: 0,
       artifact_count: 2,
       artifact_hashes: [],
       required_artifact_filenames: [],
@@ -3732,6 +3773,10 @@ describe("buildDataPanelExportCatalogDisplay", () => {
     const checklist = {
       checklist_status: "CHECKLIST_COMPLETE",
       record_count: 2,
+      submitted_records_complete: true,
+      expected_review_count: 2,
+      reviewed_recommended_count: 2,
+      recommended_review_complete: true,
       checklist_hash: "sha256:checklist"
     };
 
@@ -3752,7 +3797,8 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         "route records 1",
         "scenario SCENARIO_REVIEW_READY",
         "checklist CHECKLIST_COMPLETE",
-        "checklist records 2"
+        "checklist records 2",
+        "checklist recommended 2/2"
       ],
       warningLabels: []
     });
