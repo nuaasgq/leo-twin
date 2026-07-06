@@ -43,13 +43,14 @@ rows used by the live dashboard. This lets offline result packages review
 input network, compute queue, compute execution, and output network evidence
 without replaying the simulation.
 
-The export review card supports local artifact filtering and paging over the
-loaded `service_lifecycle_trace_v2.json` window. Operators can filter by trace
-text, terminal state, compute node id, lifecycle stage, and terminal reason,
-then move through the filtered artifact rows with a deterministic local cursor.
-This is a read-only package review affordance: it does not replay the
-simulation, call live detail endpoints, mutate the export package, or infer new
-lifecycle semantics in the frontend.
+The export review card uses the backend package page when available instead of
+loading the full `service_lifecycle_trace_v2.json` artifact into the browser.
+Operators can filter by trace text, terminal state, compute node id, lifecycle
+stage, and terminal reason, then move through the backend-served artifact rows
+with deterministic cursor controls. The raw JSON link remains available for
+manual inspection. This is a read-only package review affordance: it does not
+replay the simulation, call live detail endpoints, mutate the export package,
+or infer new lifecycle semantics in the frontend.
 
 Persisted result packages also expose a backend-served artifact page:
 

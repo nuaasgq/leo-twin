@@ -34,6 +34,7 @@ import {
   RuntimeExportRouteDetailIndexRouteV1,
   RuntimeExportRouteDetailIndexV1,
   RuntimeExportRouteDetailPageV1,
+  RuntimeExportServiceTracePageV1,
   RuntimeExportReviewSummaryV1,
   RuntimeExportRestoreCommandResultV1,
   RuntimeExportRestorePreflightV1,
@@ -235,6 +236,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportManifest,
   runtimeExportDiagnosticsBundle,
   runtimeExportServiceLifecycleTrace,
+  runtimeExportServiceTracePage,
   runtimeExportRouteDetailIndex,
   runtimeExportRouteDetailPage,
   runtimeExportRouteDetailItem,
@@ -276,6 +278,7 @@ export const DataPanel = memo(function DataPanel({
   onUserConfigurationApply,
   onRuntimeExportCompareSelect,
   onRuntimeExportRouteDetailPageQueryChange,
+  onRuntimeExportServiceTracePageQueryChange,
   onRuntimeExportRouteDetailItemSelect,
   onRuntimeExportRouteComparisonReviewSave,
   onRuntimeExportRestore,
@@ -302,6 +305,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportManifest?: RuntimeReproducibilityManifestV1 | null;
   runtimeExportDiagnosticsBundle?: RuntimeExportDiagnosticsBundleV1 | null;
   runtimeExportServiceLifecycleTrace?: RuntimeServiceLifecycleTraceV2 | null;
+  runtimeExportServiceTracePage?: RuntimeExportServiceTracePageV1 | null;
   runtimeExportRouteDetailIndex?: RuntimeExportRouteDetailIndexV1 | null;
   runtimeExportRouteDetailPage?: RuntimeExportRouteDetailPageV1 | null;
   runtimeExportRouteDetailItem?: RuntimeExportRouteDetailItemV1 | null;
@@ -352,6 +356,9 @@ export const DataPanel = memo(function DataPanel({
   onRuntimeExportCompareSelect?: (packageId: string) => void;
   onRuntimeExportRouteDetailPageQueryChange?: (
     request: DataPanelExportRouteDetailPageRequest
+  ) => void;
+  onRuntimeExportServiceTracePageQueryChange?: (
+    request: DataPanelExportServiceTracePageRequest
   ) => void;
   onRuntimeExportRouteDetailItemSelect?: (routeId: string | null) => void;
   onRuntimeExportRouteComparisonReviewSave?: (
@@ -491,7 +498,8 @@ export const DataPanel = memo(function DataPanel({
     runtimeExportServiceLifecycleTrace?.source_summary,
     runtimeExportServiceLifecycleTrace?.trace_count,
     runtimeExportServiceLifecycleTrace?.cursor,
-    runtimeExportServiceLifecycleTrace?.next_cursor
+    runtimeExportServiceLifecycleTrace?.next_cursor,
+    runtimeExportServiceTracePage?.page_hash
   ]);
   const summary = buildDataPanelDisplaySummary(
     buildDataPanelSummary(snapshot),
@@ -560,26 +568,60 @@ export const DataPanel = memo(function DataPanel({
     runtimeExportDiagnosticsBundleLoading,
     runtimeExportDiagnosticsBundleError
   );
+  const exportServiceTraceForDisplay =
+    runtimeExportServiceTracePage === null ||
+    runtimeExportServiceTracePage === undefined
+      ? runtimeExportServiceLifecycleTrace
+      : runtimeExportServiceTracePageToLifecycleTrace(runtimeExportServiceTracePage);
   const exportServiceLifecycleTraceStatus =
     buildDataPanelExportServiceLifecycleTraceStatus(
-      runtimeExportServiceLifecycleTrace
+      exportServiceTraceForDisplay
         ? buildDataPanelServiceLifecycleTraceDisplay(
-            runtimeExportServiceLifecycleTrace,
-            runtimeExportServiceLifecycleTrace.items.length
+            exportServiceTraceForDisplay,
+            exportServiceTraceForDisplay.items.length
           )
         : null,
-      runtimeExportServiceLifecycleTrace,
+      exportServiceTraceForDisplay,
       runtimeExportComparePackageId,
       runtimeExportServiceLifecycleTraceLoading,
       runtimeExportServiceLifecycleTraceError,
       {
-        query: exportServiceTraceFilter,
-        terminalState: exportServiceTraceTerminalFilter,
-        computeNodeId: exportServiceTraceComputeNodeFilter,
-        stageKind: exportServiceTraceStageFilter,
-        terminalReason: exportServiceTraceTerminalReasonFilter,
-        cursor: exportServiceTracePageCursor,
-        limit: 5
+        query:
+          runtimeExportServiceTracePage === null ||
+          runtimeExportServiceTracePage === undefined
+            ? exportServiceTraceFilter
+            : "",
+        terminalState:
+          runtimeExportServiceTracePage === null ||
+          runtimeExportServiceTracePage === undefined
+            ? exportServiceTraceTerminalFilter
+            : "ALL",
+        computeNodeId:
+          runtimeExportServiceTracePage === null ||
+          runtimeExportServiceTracePage === undefined
+            ? exportServiceTraceComputeNodeFilter
+            : "",
+        stageKind:
+          runtimeExportServiceTracePage === null ||
+          runtimeExportServiceTracePage === undefined
+            ? exportServiceTraceStageFilter
+            : "ALL",
+        terminalReason:
+          runtimeExportServiceTracePage === null ||
+          runtimeExportServiceTracePage === undefined
+            ? exportServiceTraceTerminalReasonFilter
+            : "ALL",
+        cursor:
+          runtimeExportServiceTracePage === null ||
+          runtimeExportServiceTracePage === undefined
+            ? exportServiceTracePageCursor
+            : runtimeExportServiceTracePage.cursor,
+        limit:
+          runtimeExportServiceTracePage === null ||
+          runtimeExportServiceTracePage === undefined
+            ? 5
+            : runtimeExportServiceTracePage.limit,
+        backendPage: runtimeExportServiceTracePage ?? undefined
       }
     );
   const exportRouteDetailIndexDisplay =
@@ -618,6 +660,30 @@ export const DataPanel = memo(function DataPanel({
           exportRouteDetailIndexBottleneckFilter
       }
     });
+  };
+  const requestRuntimeExportServiceTracePage = (
+    cursor: number,
+    filterOverrides: DataPanelServiceTraceFilter = {}
+  ) => {
+    if (onRuntimeExportServiceTracePageQueryChange) {
+      onRuntimeExportServiceTracePageQueryChange({
+        cursor,
+        limit: exportServiceLifecycleTraceStatus?.pageLimit ?? 5,
+        filters: {
+          query: filterOverrides.query ?? exportServiceTraceFilter,
+          terminalState:
+            filterOverrides.terminalState ?? exportServiceTraceTerminalFilter,
+          computeNodeId:
+            filterOverrides.computeNodeId ?? exportServiceTraceComputeNodeFilter,
+          stageKind: filterOverrides.stageKind ?? exportServiceTraceStageFilter,
+          terminalReason:
+            filterOverrides.terminalReason ??
+            exportServiceTraceTerminalReasonFilter
+        }
+      });
+      return;
+    }
+    setExportServiceTracePageCursor(cursor);
   };
   const exportManifestInspectorDisplay = buildDataPanelExportManifestInspectorDisplay(
     runtimeExportManifest,
@@ -1520,23 +1586,29 @@ export const DataPanel = memo(function DataPanel({
                     terminalReasonFilter={exportServiceTraceTerminalReasonFilter}
                     onFilterChange={(value) => {
                       setExportServiceTraceFilter(value);
-                      setExportServiceTracePageCursor(0);
+                      requestRuntimeExportServiceTracePage(0, { query: value });
                     }}
                     onTerminalFilterChange={(value) => {
                       setExportServiceTraceTerminalFilter(value);
-                      setExportServiceTracePageCursor(0);
+                      requestRuntimeExportServiceTracePage(0, {
+                        terminalState: value
+                      });
                     }}
                     onComputeNodeFilterChange={(value) => {
                       setExportServiceTraceComputeNodeFilter(value);
-                      setExportServiceTracePageCursor(0);
+                      requestRuntimeExportServiceTracePage(0, {
+                        computeNodeId: value
+                      });
                     }}
                     onStageFilterChange={(value) => {
                       setExportServiceTraceStageFilter(value);
-                      setExportServiceTracePageCursor(0);
+                      requestRuntimeExportServiceTracePage(0, { stageKind: value });
                     }}
                     onTerminalReasonFilterChange={(value) => {
                       setExportServiceTraceTerminalReasonFilter(value);
-                      setExportServiceTracePageCursor(0);
+                      requestRuntimeExportServiceTracePage(0, {
+                        terminalReason: value
+                      });
                     }}
                   />
                   <div className="data-panel-export-route-index-pager">
@@ -1544,7 +1616,7 @@ export const DataPanel = memo(function DataPanel({
                       type="button"
                       disabled={!exportServiceLifecycleTraceStatus.canPreviousPage}
                       onClick={() =>
-                        setExportServiceTracePageCursor(
+                        requestRuntimeExportServiceTracePage(
                           exportServiceLifecycleTraceStatus.previousCursor
                         )
                       }
@@ -1555,7 +1627,7 @@ export const DataPanel = memo(function DataPanel({
                       type="button"
                       disabled={!exportServiceLifecycleTraceStatus.canNextPage}
                       onClick={() =>
-                        setExportServiceTracePageCursor(
+                        requestRuntimeExportServiceTracePage(
                           exportServiceLifecycleTraceStatus.nextCursor
                         )
                       }
@@ -9840,6 +9912,7 @@ export interface DataPanelExportServiceLifecycleTraceStatusOptions
   extends DataPanelServiceTraceFilter {
   cursor?: number;
   limit?: number;
+  backendPage?: RuntimeExportServiceTracePageV1 | null;
 }
 
 export interface DataPanelExportDiagnosticsFindingRow {
@@ -9904,6 +9977,12 @@ export interface DataPanelExportRouteDetailPageRequest {
   cursor: number;
   limit?: number;
   filters?: DataPanelRouteExplanationFilter;
+}
+
+export interface DataPanelExportServiceTracePageRequest {
+  cursor: number;
+  limit?: number;
+  filters?: DataPanelServiceTraceFilter;
 }
 
 export interface DataPanelExportRouteDetailItemDisplay {
@@ -10251,6 +10330,7 @@ export function buildDataPanelExportServiceLifecycleTraceStatus(
   }
   const packageId = selectedPackageId ?? "selected-package";
   const complete = trace.incomplete_trace_count === 0 && trace.running_trace_count === 0;
+  const backendPage = options.backendPage ?? null;
   const filter = {
     query: options.query ?? "",
     terminalState: normalizeServiceTraceTerminalFilter(options.terminalState),
@@ -10258,20 +10338,45 @@ export function buildDataPanelExportServiceLifecycleTraceStatus(
     stageKind: normalizeServiceTraceStageFilter(options.stageKind),
     terminalReason: normalizeServiceTraceTerminalReasonFilter(options.terminalReason)
   };
-  const filteredDisplay = filterServiceLifecycleTraceDisplay(display, filter);
-  const page = dataPanelExportServiceTracePageFields(
-    options.cursor,
-    options.limit,
-    filteredDisplay.items.length
-  );
-  const pageEnd = Math.min(page.pageCursor + page.pageLimit, filteredDisplay.items.length);
+  const filteredDisplay =
+    backendPage === null ? filterServiceLifecycleTraceDisplay(display, filter) : display;
+  const page =
+    backendPage === null
+      ? dataPanelExportServiceTracePageFields(
+          options.cursor,
+          options.limit,
+          filteredDisplay.items.length
+        )
+      : dataPanelExportServiceTraceBackendPageFields(backendPage);
+  const pageEnd =
+    backendPage === null
+      ? Math.min(page.pageCursor + page.pageLimit, filteredDisplay.items.length)
+      : Math.min(backendPage.cursor + backendPage.item_count, backendPage.trace_count);
   const pageDisplay = {
     ...filteredDisplay,
-    summaryLabel: `${filteredDisplay.summaryLabel} / artifact page ${
-      filteredDisplay.items.length === 0 ? 0 : page.pageCursor + 1
-    }-${pageEnd} of ${formatCount(filteredDisplay.items.length)}`,
-    items: filteredDisplay.items.slice(page.pageCursor, pageEnd)
+    summaryLabel: `${filteredDisplay.summaryLabel} / ${
+      backendPage === null ? "artifact page" : "backend artifact page"
+    } ${
+      trace.service_count === 0 ? 0 : page.pageCursor + 1
+    }-${pageEnd} of ${formatCount(trace.service_count)}`,
+    items:
+      backendPage === null
+        ? filteredDisplay.items.slice(page.pageCursor, pageEnd)
+        : filteredDisplay.items
   };
+  const metaLabels = [
+    `service ${formatCount(trace.service_count)}`,
+    `hidden ${formatCount(trace.hidden_trace_count)}`,
+    `cursor ${formatCount(trace.cursor)} -> ${formatCount(trace.next_cursor)}`,
+    trace.has_more ? "has more" : "complete window",
+    trace.trace_model ? `model ${trace.trace_model}` : "model unspecified"
+  ];
+  if (backendPage !== null) {
+    metaLabels.push(
+      backendPage.artifact_window_only ? "artifact window only" : "full trace window",
+      `page hash ${shortRuntimeHash(backendPage.page_hash)}`
+    );
+  }
   return {
     tone: complete ? "match" : "different",
     statusLabel: complete
@@ -10282,13 +10387,7 @@ export function buildDataPanelExportServiceLifecycleTraceStatus(
     )} / complete ${formatCount(trace.complete_trace_count)} / running ${formatCount(
       trace.running_trace_count
     )} / incomplete ${formatCount(trace.incomplete_trace_count)}`,
-    metaLabels: [
-      `service ${formatCount(trace.service_count)}`,
-      `hidden ${formatCount(trace.hidden_trace_count)}`,
-      `cursor ${formatCount(trace.cursor)} -> ${formatCount(trace.next_cursor)}`,
-      trace.has_more ? "has more" : "complete window",
-      trace.trace_model ? `model ${trace.trace_model}` : "model unspecified"
-    ],
+    metaLabels,
     traceHref:
       selectedPackageId === null || selectedPackageId === undefined
         ? null
@@ -10297,13 +10396,98 @@ export function buildDataPanelExportServiceLifecycleTraceStatus(
             "service_lifecycle_trace_v2.json"
           ),
     display: pageDisplay,
-    filterLabel: dataPanelExportServiceTraceFilterLabel(
-      filter,
-      filteredDisplay.items.length,
-      page
-    ),
+    filterLabel:
+      backendPage === null
+        ? dataPanelExportServiceTraceFilterLabel(
+            filter,
+            filteredDisplay.items.length,
+            page
+          )
+        : dataPanelExportServiceTraceBackendFilterLabel(backendPage),
     ...page
   };
+}
+
+export function runtimeExportServiceTracePageToLifecycleTrace(
+  page: RuntimeExportServiceTracePageV1
+): RuntimeServiceLifecycleTraceV2 {
+  return {
+    version: "v2",
+    contract_id: page.trace_contract_id,
+    source: page.source,
+    source_summary: `${page.source_summary} -> package service-traces page`,
+    summary_scope: page.summary_scope,
+    trace_model: page.trace_model,
+    cursor: page.cursor,
+    limit: page.limit,
+    next_cursor: page.next_cursor,
+    has_more: page.has_more,
+    service_count: page.trace_count,
+    trace_count: page.trace_count,
+    complete_trace_count: page.complete_trace_count,
+    running_trace_count: page.running_trace_count,
+    incomplete_trace_count: page.incomplete_trace_count,
+    hidden_trace_count: page.hidden_trace_count,
+    unfiltered_service_count: page.unfiltered_trace_count,
+    filter_query: page.filters.query || undefined,
+    filter_terminal_state:
+      page.filters.terminal_state !== "ALL"
+        ? page.filters.terminal_state
+        : undefined,
+    filter_compute_node_id: page.filters.compute_node_id || undefined,
+    filter_stage_kind:
+      page.filters.stage_kind !== "ALL" ? page.filters.stage_kind : undefined,
+    filter_terminal_reason:
+      page.filters.terminal_reason !== "ALL"
+        ? page.filters.terminal_reason
+        : undefined,
+    filter_applied: page.filter_applied,
+    items: page.items
+  };
+}
+
+function dataPanelExportServiceTraceBackendPageFields(
+  page: RuntimeExportServiceTracePageV1
+): Pick<
+  DataPanelExportServiceLifecycleTraceStatus,
+  | "pageCursor"
+  | "pageLimit"
+  | "previousCursor"
+  | "nextCursor"
+  | "canPreviousPage"
+  | "canNextPage"
+> {
+  const pageLimit = Math.max(1, Math.floor(page.limit));
+  const pageCursor = Math.max(0, Math.floor(page.cursor));
+  return {
+    pageCursor,
+    pageLimit,
+    previousCursor: Math.max(0, pageCursor - pageLimit),
+    nextCursor: Math.max(page.next_cursor, pageCursor),
+    canPreviousPage: pageCursor > 0,
+    canNextPage: page.has_more
+  };
+}
+
+function dataPanelExportServiceTraceBackendFilterLabel(
+  page: RuntimeExportServiceTracePageV1
+): string {
+  const filters = [
+    page.filters.query ? `query ${page.filters.query}` : "",
+    page.filters.terminal_state !== "ALL"
+      ? `state ${page.filters.terminal_state}`
+      : "",
+    page.filters.compute_node_id ? `compute ${page.filters.compute_node_id}` : "",
+    page.filters.stage_kind !== "ALL" ? `stage ${page.filters.stage_kind}` : "",
+    page.filters.terminal_reason !== "ALL"
+      ? `reason ${page.filters.terminal_reason}`
+      : ""
+  ].filter((item) => item.length > 0);
+  const pageStart = page.trace_count === 0 ? 0 : page.cursor + 1;
+  const pageEnd = Math.min(page.cursor + page.item_count, page.trace_count);
+  return `${filters.length > 0 ? filters.join(" / ") : "all service traces"} / backend artifact page ${formatCount(
+    pageStart
+  )}-${formatCount(pageEnd)} / ${formatCount(page.trace_count)}`;
 }
 
 function dataPanelExportServiceTracePageFields(

@@ -16,6 +16,7 @@ import {
   RuntimeExportRouteDetailIndexV1,
   RuntimeExportRouteDetailItemV1,
   RuntimeExportRouteDetailPageV1,
+  RuntimeExportServiceTracePageV1,
   RuntimeExportReviewSummaryV1,
   RuntimeExportRestorePreflightEnvelope,
   RuntimeExportRestorePreflightV1,
@@ -354,6 +355,27 @@ export async function loadRuntimeExportServiceLifecycleTrace(
   return decodeRuntimeServiceLifecycleTrace(await response.json());
 }
 
+export async function loadRuntimeExportServiceTracePage(
+  packageId: string,
+  cursor = 0,
+  limit = 100,
+  filters: RuntimeDetailQueryFilters = {},
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): Promise<RuntimeExportServiceTracePageV1> {
+  const url = runtimeExportPackageServiceTracesHref(
+    packageId,
+    cursor,
+    limit,
+    filters,
+    endpoint
+  );
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`failed to load runtime export service trace page from ${url}: HTTP ${response.status}`);
+  }
+  return decodeRuntimeExportServiceTracePage(await response.json());
+}
+
 export async function loadRuntimeExportRouteDetailIndex(
   packageId: string,
   endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
@@ -614,6 +636,21 @@ export function runtimeExportPackageRouteDetailsHref(
   });
   appendRuntimeDetailFilterParams(params, filters);
   return `${runtimeExportPackageRecordHref(packageId, endpoint)}/routes?${params.toString()}`;
+}
+
+export function runtimeExportPackageServiceTracesHref(
+  packageId: string,
+  cursor = 0,
+  limit = 100,
+  filters: RuntimeDetailQueryFilters = {},
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): string {
+  const params = new URLSearchParams({
+    cursor: String(cursor),
+    limit: String(limit)
+  });
+  appendRuntimeDetailFilterParams(params, filters);
+  return `${runtimeExportPackageRecordHref(packageId, endpoint)}/service-traces?${params.toString()}`;
 }
 
 export function runtimeExportPackageRouteDetailHref(
@@ -977,6 +1014,28 @@ export function decodeRuntimeExportRouteDetailPage(
     );
   }
   return value as RuntimeExportRouteDetailPageV1;
+}
+
+export function decodeRuntimeExportServiceTracePage(
+  value: unknown
+): RuntimeExportServiceTracePageV1 {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError("runtime export service trace page response must be an object");
+  }
+  if (
+    typeof (value as { package_id?: unknown }).package_id !== "string" ||
+    typeof (value as { filters?: unknown }).filters !== "object" ||
+    (value as { filters?: unknown }).filters === null ||
+    Array.isArray((value as { filters?: unknown }).filters) ||
+    typeof (value as { artifact_window_only?: unknown })
+      .artifact_window_only !== "boolean" ||
+    !Array.isArray((value as { items?: unknown }).items)
+  ) {
+    throw new TypeError(
+      "runtime export service trace page response must include package_id, artifact_window_only, filters, and items"
+    );
+  }
+  return value as RuntimeExportServiceTracePageV1;
 }
 
 export function decodeRuntimeExportRouteDetailItem(

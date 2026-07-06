@@ -159,7 +159,10 @@ Tasks:
     `/runtime/export/packages/{package_id}/service-traces` so persisted result
     packages can serve deterministic backend pages over their exported
     `service_lifecycle_trace_v2.json` artifact window without current-runtime
-    lookup, event replay, service recomputation, or package mutation.
+    lookup, event replay, service recomputation, or package mutation. T300
+    binds the dashboard export service trace review card to that backend page
+    endpoint so filter and cursor actions no longer require loading the full
+    service trace JSON artifact in the browser.
 
 ### WS3. Network Semantics and KPI Trust v2
 

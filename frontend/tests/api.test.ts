@@ -13,6 +13,7 @@ import {
   loadRuntimeExportReviewSummary,
   loadRuntimeExportRestorePreflight,
   loadRuntimeExportServiceLifecycleTrace,
+  loadRuntimeExportServiceTracePage,
   loadRuntimeComputeNodeDetail,
   loadRuntimeComputeNodeDetails,
   loadRuntimeNodeDetails,
@@ -40,6 +41,7 @@ import {
   runtimeExportPackageRecordHref,
   runtimeExportPackageRouteDetailsHref,
   runtimeExportPackageRouteDetailHref,
+  runtimeExportPackageServiceTracesHref,
   runtimeExportPackageReviewSummaryHref,
   runtimeExportRouteComparisonReviewReportHref,
   runtimeExportRestorePreflightHref,
@@ -105,6 +107,22 @@ describe("runtime API diagnostics", () => {
       )
     ).toBe(
       "/runtime/export/packages/pkg%201/routes?cursor=5&limit=10&query=sat+1&availability=AVAILABLE&business_type=COMPUTE_SERVICE&bottleneck_component=CAPACITY"
+    );
+    expect(
+      runtimeExportPackageServiceTracesHref(
+        "pkg 1",
+        0,
+        5,
+        {
+          query: "route run",
+          terminalState: "RUNNING",
+          computeNodeId: "sat-00003",
+          stageKind: "OUTPUT_NETWORK",
+          terminalReason: "OUTPUT_NETWORK_PENDING"
+        }
+      )
+    ).toBe(
+      "/runtime/export/packages/pkg%201/service-traces?cursor=0&limit=5&query=route+run&terminal_state=RUNNING&compute_node_id=sat-00003&stage_kind=OUTPUT_NETWORK&terminal_reason=OUTPUT_NETWORK_PENDING"
     );
   });
 
@@ -352,6 +370,78 @@ describe("runtime API diagnostics", () => {
     });
     expect(fetchMock).toHaveBeenCalledWith(
       "/runtime/export/packages/pkg/files/service_lifecycle_trace_v2.json"
+    );
+  });
+
+  it("loads runtime export service trace pages", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        type: "RUNTIME_EXPORT_SERVICE_TRACE_PAGE_V1",
+        version: "v1",
+        page_id: "leo_twin.runtime_export_service_trace_page.v1",
+        source: "BACKEND_RUNTIME_EXPORT_PACKAGE",
+        package_id: "pkg",
+        artifact_type: "SERVICE_LIFECYCLE_TRACE_EXPORT_V2",
+        artifact_source: "BACKEND_RUNTIME_STATUS",
+        artifact_policy: "STANDALONE_RUNTIME_EXPORT_ARTIFACT",
+        artifact_window_only: true,
+        trace_contract_id: "leo_twin.service_lifecycle_trace_contract.v2",
+        trace_model: "COMMUNICATION_COMPUTE_COMPONENT_PROXY",
+        source_summary: "service_latency_history_v1",
+        summary_scope: "SERVICE_LIFECYCLE_TRACE_WINDOW",
+        export_cursor: 0,
+        export_limit: 100,
+        export_next_cursor: 2,
+        export_has_more: false,
+        cursor: 0,
+        limit: 1,
+        next_cursor: 1,
+        has_more: false,
+        service_count: 1,
+        trace_count: 1,
+        item_count: 1,
+        unfiltered_trace_count: 2,
+        complete_trace_count: 0,
+        running_trace_count: 1,
+        incomplete_trace_count: 0,
+        hidden_trace_count: 0,
+        filter_applied: true,
+        filters: {
+          query: "route-run",
+          terminal_state: "RUNNING",
+          compute_node_id: "sat-00003",
+          stage_kind: "OUTPUT_NETWORK",
+          terminal_reason: "OUTPUT_NETWORK_PENDING"
+        },
+        boundary_conditions: [
+          "ARTIFACT_WINDOW_ONLY",
+          "NO_EVENT_REPLAY",
+          "NO_SERVICE_RECOMPUTE",
+          "NO_PACKAGE_MUTATION"
+        ],
+        items: [{ trace_id: "trace:run" }],
+        page_hash: "sha256:trace-page"
+      })
+    }));
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+
+    await expect(
+      loadRuntimeExportServiceTracePage("pkg", 0, 1, {
+        query: "route-run",
+        terminalState: "RUNNING",
+        computeNodeId: "sat-00003",
+        stageKind: "OUTPUT_NETWORK",
+        terminalReason: "OUTPUT_NETWORK_PENDING"
+      })
+    ).resolves.toMatchObject({
+      package_id: "pkg",
+      artifact_window_only: true,
+      trace_count: 1,
+      items: [{ trace_id: "trace:run" }]
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/runtime/export/packages/pkg/service-traces?cursor=0&limit=1&query=route-run&terminal_state=RUNNING&compute_node_id=sat-00003&stage_kind=OUTPUT_NETWORK&terminal_reason=OUTPUT_NETWORK_PENDING"
     );
   });
 

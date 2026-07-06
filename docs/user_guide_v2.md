@@ -148,11 +148,11 @@ export-window policy, cursor navigation, searchable/filterable route rows, and
 package route-detail review without rerunning the simulation. The package
 review area also loads `service_lifecycle_trace_v2.json` when it is present in
 the export catalog and displays a read-only communication-compute service chain
-review with trace counts, terminal-state totals, bounded stage rows, local
-artifact filters, and deterministic local page controls. These filters cover
-trace text, terminal state, compute node id, lifecycle stage, and terminal
-reason. The package detail view reads the exported package itself and does not
-rerun the simulation. The separate live lookup only
+review with trace counts, terminal-state totals, bounded stage rows,
+backend-served artifact filters, and deterministic page controls. These filters
+cover trace text, terminal state, compute node id, lifecycle stage, and
+terminal reason. The package detail view reads the exported package itself and
+does not rerun the simulation. The separate live lookup only
 compares against the current runtime route detail endpoint when the same route
 id is still present. Use `compare with live` to load both detail channels for
 the same route in one click. If both package and live details are loaded for

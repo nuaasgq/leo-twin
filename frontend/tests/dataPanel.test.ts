@@ -98,6 +98,7 @@ import {
   resolveNetworkQualityKpis,
   RuntimeDetailPages,
   runtimeNodeDetailPageToSummary,
+  runtimeExportServiceTracePageToLifecycleTrace,
   selectComputeNodeDetailRow,
   selectRuntimeNodeDetailSummary,
   selectRuntimeComputeNodeDetailPage,
@@ -2968,6 +2969,87 @@ describe("buildDataPanelExportCompareDisplay", () => {
         "query route-run / state RUNNING / compute sat-00003 / reason OUTPUT_NETWORK_PENDING / local artifact page 1-1 / 1",
       canPreviousPage: false,
       canNextPage: false,
+      display: {
+        items: [expect.objectContaining({ traceId: "trace:run" })]
+      }
+    });
+    const backendPage = {
+      type: "RUNTIME_EXPORT_SERVICE_TRACE_PAGE_V1",
+      version: "v1",
+      page_id: "leo_twin.runtime_export_service_trace_page.v1",
+      source: "BACKEND_RUNTIME_EXPORT_PACKAGE",
+      package_id: "pkg-review",
+      artifact_type: "SERVICE_LIFECYCLE_TRACE_EXPORT_V2",
+      artifact_source: "BACKEND_RUNTIME_STATUS",
+      artifact_policy: "STANDALONE_RUNTIME_EXPORT_ARTIFACT",
+      artifact_window_only: true,
+      trace_contract_id: "leo_twin.service_lifecycle_trace_contract.v2",
+      trace_model: "COMMUNICATION_COMPUTE_COMPONENT_PROXY",
+      source_summary: "service_latency_history_v1",
+      summary_scope: "SERVICE_LIFECYCLE_TRACE_WINDOW",
+      export_cursor: 0,
+      export_limit: 100,
+      export_next_cursor: 3,
+      export_has_more: false,
+      cursor: 1,
+      limit: 1,
+      next_cursor: 2,
+      has_more: true,
+      service_count: 3,
+      trace_count: 3,
+      item_count: 1,
+      unfiltered_trace_count: 3,
+      complete_trace_count: 1,
+      running_trace_count: 1,
+      incomplete_trace_count: 1,
+      hidden_trace_count: 2,
+      filter_applied: false,
+      filters: {
+        query: "",
+        terminal_state: "ALL",
+        compute_node_id: "",
+        stage_kind: "ALL",
+        terminal_reason: "ALL"
+      },
+      boundary_conditions: [
+        "ARTIFACT_WINDOW_ONLY",
+        "NO_EVENT_REPLAY",
+        "NO_SERVICE_RECOMPUTE",
+        "NO_PACKAGE_MUTATION"
+      ],
+      items: [pagedTrace.items[1]],
+      page_hash: "sha256:tracepage1234567890"
+    };
+    const backendTrace = runtimeExportServiceTracePageToLifecycleTrace(backendPage);
+    const backendDisplay = buildDataPanelServiceLifecycleTraceDisplay(
+      backendTrace,
+      backendTrace.items.length
+    );
+    expect(
+      buildDataPanelExportServiceLifecycleTraceStatus(
+        backendDisplay,
+        backendTrace,
+        "pkg-review",
+        false,
+        null,
+        {
+          backendPage,
+          cursor: backendPage.cursor,
+          limit: backendPage.limit
+        }
+      )
+    ).toMatchObject({
+      filterLabel: "all service traces / backend artifact page 2-2 / 3",
+      pageCursor: 1,
+      pageLimit: 1,
+      previousCursor: 0,
+      nextCursor: 2,
+      canPreviousPage: true,
+      canNextPage: true,
+      metaLabels: expect.arrayContaining([
+        "artifact window only",
+        "page hash tracepage123"
+      ]),
       display: {
         items: [expect.objectContaining({ traceId: "trace:run" })]
       }

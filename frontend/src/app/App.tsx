@@ -18,6 +18,7 @@ import {
   RuntimeExportRouteComparisonReviewReportV1,
   RuntimeExportRouteDetailItemV1,
   RuntimeExportRouteDetailPageV1,
+  RuntimeExportServiceTracePageV1,
   RuntimeExportReviewSummaryV1,
   RuntimeExportRestoreCommandResultV1,
   RuntimeExportRestorePreflightV1,
@@ -55,7 +56,7 @@ import {
   loadRuntimeExportRouteDetailPage,
   loadRuntimeExportReviewSummary,
   loadRuntimeExportRestorePreflight,
-  loadRuntimeExportServiceLifecycleTrace,
+  loadRuntimeExportServiceTracePage,
   loadRuntimeNodeDetails,
   loadRuntimeRouteDetail,
   loadRuntimeRouteDetails,
@@ -81,6 +82,7 @@ import {
 import type {
   DataPanelExportRouteComparisonReviewSaveRequest,
   DataPanelExportRouteDetailPageRequest,
+  DataPanelExportServiceTracePageRequest,
   RuntimeDetailPages
 } from "../dashboard/data_panel/DataPanel";
 import "./App.css";
@@ -280,6 +282,8 @@ export function App() {
     useState<RuntimeExportDiagnosticsBundleV1 | null>(null);
   const [runtimeExportServiceLifecycleTrace, setRuntimeExportServiceLifecycleTrace] =
     useState<RuntimeServiceLifecycleTraceV2 | null>(null);
+  const [runtimeExportServiceTracePage, setRuntimeExportServiceTracePage] =
+    useState<RuntimeExportServiceTracePageV1 | null>(null);
   const [runtimeExportRouteDetailPage, setRuntimeExportRouteDetailPage] =
     useState<RuntimeExportRouteDetailPageV1 | null>(null);
   const [runtimeExportRouteDetailItem, setRuntimeExportRouteDetailItem] =
@@ -1139,6 +1143,7 @@ export function App() {
     setRuntimeExportManifestError(null);
     setRuntimeExportDiagnosticsBundleError(null);
     setRuntimeExportServiceLifecycleTrace(null);
+    setRuntimeExportServiceTracePage(null);
     setRuntimeExportServiceLifecycleTraceError(null);
     setRuntimeExportRouteDetailIndexError(null);
     setRuntimeExportRouteComparisonReviewReport(null);
@@ -1158,7 +1163,7 @@ export function App() {
       reviewSummary,
       manifest,
       diagnosticsBundle,
-      serviceLifecycleTrace,
+      serviceTracePage,
       routeDetailPage,
       routeComparisonReviewReport,
       preflight
@@ -1169,7 +1174,7 @@ export function App() {
         loadRuntimeExportManifest(packageId),
         loadRuntimeExportDiagnosticsBundle(packageId),
         shouldLoadServiceLifecycleTrace
-          ? loadRuntimeExportServiceLifecycleTrace(packageId)
+          ? loadRuntimeExportServiceTracePage(packageId, 0, 5)
           : Promise.resolve(null),
         loadRuntimeExportRouteDetailPage(packageId, 0, 5),
         shouldLoadReviewReport
@@ -1205,12 +1210,13 @@ export function App() {
         runtimeExportDiagnosticsBundleErrorMessage(diagnosticsBundle.reason)
       );
     }
-    if (serviceLifecycleTrace.status === "fulfilled") {
-      setRuntimeExportServiceLifecycleTrace(serviceLifecycleTrace.value);
+    if (serviceTracePage.status === "fulfilled") {
+      setRuntimeExportServiceTracePage(serviceTracePage.value);
     } else {
+      setRuntimeExportServiceTracePage(null);
       setRuntimeExportServiceLifecycleTrace(null);
       setRuntimeExportServiceLifecycleTraceError(
-        runtimeExportServiceLifecycleTraceErrorMessage(serviceLifecycleTrace.reason)
+        runtimeExportServiceLifecycleTraceErrorMessage(serviceTracePage.reason)
       );
     }
     if (routeDetailPage.status === "fulfilled") {
@@ -1278,6 +1284,33 @@ export function App() {
     [runtimeExportComparePackageId]
   );
 
+  const refreshRuntimeExportServiceTracePage = useCallback(
+    async (request: DataPanelExportServiceTracePageRequest) => {
+      const packageId = runtimeExportComparePackageId;
+      if (packageId === null) {
+        return;
+      }
+      const cursor = Math.max(0, request.cursor);
+      const limit = request.limit ?? 5;
+      const filters: RuntimeDetailQueryFilters = request.filters ?? {};
+      setRuntimeExportServiceLifecycleTraceLoading(true);
+      setRuntimeExportServiceLifecycleTraceError(null);
+      try {
+        setRuntimeExportServiceTracePage(
+          await loadRuntimeExportServiceTracePage(packageId, cursor, limit, filters)
+        );
+      } catch (error) {
+        setRuntimeExportServiceTracePage(null);
+        setRuntimeExportServiceLifecycleTraceError(
+          runtimeExportServiceLifecycleTraceErrorMessage(error)
+        );
+      } finally {
+        setRuntimeExportServiceLifecycleTraceLoading(false);
+      }
+    },
+    [runtimeExportComparePackageId]
+  );
+
   const refreshRuntimeExportRouteDetailItem = useCallback(
     async (routeId: string | null) => {
       const packageId = runtimeExportComparePackageId;
@@ -1328,6 +1361,7 @@ export function App() {
         setRuntimeExportManifest(null);
         setRuntimeExportDiagnosticsBundle(null);
         setRuntimeExportServiceLifecycleTrace(null);
+        setRuntimeExportServiceTracePage(null);
         setRuntimeExportRouteDetailPage(null);
         setRuntimeExportRouteDetailItem(null);
         setRuntimeExportRouteDetailItemRouteId(null);
@@ -1370,6 +1404,7 @@ export function App() {
       setRuntimeExportManifest(null);
       setRuntimeExportDiagnosticsBundle(null);
       setRuntimeExportServiceLifecycleTrace(null);
+      setRuntimeExportServiceTracePage(null);
       setRuntimeExportRouteDetailPage(null);
       setRuntimeExportRouteComparisonReviewReport(null);
       setRuntimeExportRestorePreflight(null);
@@ -2108,6 +2143,7 @@ export function App() {
               runtimeExportManifest={runtimeExportManifest}
               runtimeExportDiagnosticsBundle={runtimeExportDiagnosticsBundle}
               runtimeExportServiceLifecycleTrace={runtimeExportServiceLifecycleTrace}
+              runtimeExportServiceTracePage={runtimeExportServiceTracePage}
               runtimeExportRouteDetailPage={runtimeExportRouteDetailPage}
               runtimeExportRouteDetailItem={runtimeExportRouteDetailItem}
               runtimeExportRouteComparisonReviewReport={
@@ -2169,6 +2205,9 @@ export function App() {
               onRuntimeExportCompareSelect={refreshRuntimeExportCompare}
               onRuntimeExportRouteDetailPageQueryChange={
                 refreshRuntimeExportRouteDetailPage
+              }
+              onRuntimeExportServiceTracePageQueryChange={
+                refreshRuntimeExportServiceTracePage
               }
               onRuntimeExportRouteDetailItemSelect={refreshRuntimeExportRouteDetailItem}
               onRuntimeExportRouteComparisonReviewSave={

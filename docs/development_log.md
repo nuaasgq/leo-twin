@@ -14430,3 +14430,55 @@ change.
   - Bind the dashboard export service trace review card to
     `/runtime/export/packages/{package_id}/service-traces` so large packages do
     not need to load and filter the full JSON artifact in the browser.
+
+## 2026-07-06 - Dashboard Export Service Trace Pages v1
+
+- Branch: `feature/T300-dashboard-export-service-trace-pages-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: bind the standalone dashboard export service trace review card to the
+  backend package-owned `/runtime/export/packages/{package_id}/service-traces`
+  page endpoint introduced in T299. The frontend API now decodes
+  `RUNTIME_EXPORT_SERVICE_TRACE_PAGE_V1`, the App layer loads and refreshes
+  package service trace pages, and the DataPanel filter/cursor controls request
+  backend-served artifact pages instead of filtering a fully loaded JSON file
+  in the browser. The raw `service_lifecycle_trace_v2.json` link remains
+  available for manual inspection. This task does not alter backend runtime
+  semantics, Event Kernel behavior, package artifacts, live service trace
+  endpoints, service recomputation, event replay, package mutation, or
+  packet-level simulation.
+- Changed files/modules:
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/app/api.ts`
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/service_lifecycle_trace_v2.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test api.test.ts dataPanel.test.ts`
+    - Result: passed, 2 test files and 200 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with bundled Codex Node/Pnpm runtime.
+  - `python -m pytest tests/unit/test_user_guide_v2_docs.py -q`
+    - Result: passed, 2 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing large DataPanel chunk
+      warning after minification; no functional build error.
+  - `git diff --check`
+    - Result: passed for task files.
+- Problems encountered:
+  - No product blocker at implementation time. Existing local runtime config
+    drift remains untouched and unstaged: `configs/generated_full_system_demo.json`
+    and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The frontend page endpoint still covers only the trace rows exported into
+    `service_lifecycle_trace_v2.json`. Export creation must persist a larger or
+    sharded artifact before the dashboard can inspect traces outside that
+    package window.
+- Recommended follow-up:
+  - Add a package export policy for service trace window size or sharding so
+    large result packages can expose more lifecycle evidence through the same
+    page endpoint.

@@ -1507,6 +1507,51 @@ export interface RuntimeExportRouteDetailPageFiltersV1 {
   bottleneck_component: string;
 }
 
+export interface RuntimeExportServiceTracePageV1 {
+  type: "RUNTIME_EXPORT_SERVICE_TRACE_PAGE_V1" | string;
+  version: "v1" | string;
+  page_id: string;
+  source: string;
+  package_id: string;
+  artifact_type: string;
+  artifact_source: string;
+  artifact_policy: string;
+  artifact_window_only: boolean;
+  trace_contract_id: string;
+  trace_model: string;
+  source_summary: string;
+  summary_scope: string;
+  export_cursor: number;
+  export_limit: number;
+  export_next_cursor: number;
+  export_has_more: boolean;
+  cursor: number;
+  limit: number;
+  next_cursor: number;
+  has_more: boolean;
+  service_count: number;
+  trace_count: number;
+  item_count: number;
+  unfiltered_trace_count: number;
+  complete_trace_count: number;
+  running_trace_count: number;
+  incomplete_trace_count: number;
+  hidden_trace_count: number;
+  filter_applied: boolean;
+  filters: RuntimeExportServiceTracePageFiltersV1;
+  boundary_conditions: readonly string[];
+  items: readonly RuntimeServiceLifecycleTraceItemV2[];
+  page_hash: string;
+}
+
+export interface RuntimeExportServiceTracePageFiltersV1 {
+  query: string;
+  terminal_state: string;
+  compute_node_id: string;
+  stage_kind: string;
+  terminal_reason: string;
+}
+
 export interface RuntimeExportRouteDetailItemV1 {
   type: "RUNTIME_EXPORT_ROUTE_DETAIL_ITEM_V1" | string;
   version: "v1" | string;
