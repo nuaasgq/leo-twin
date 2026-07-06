@@ -2609,6 +2609,7 @@ describe("runtime API diagnostics", () => {
             version: "v2",
             source: "BACKEND_RUNTIME_STATUS",
             summary_scope: "SERVICE_LIFECYCLE_TRACE_EXACT_DETAIL",
+            detail_hash: "sha256:service-trace-detail",
             trace: {
               trace_id: "trace:svc-0",
               service_id: "svc-0",

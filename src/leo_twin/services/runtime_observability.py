@@ -1013,7 +1013,7 @@ def build_runtime_service_trace_detail_item(
         if compute_node_id
         else None
     )
-    return {
+    detail: dict[str, object] = {
         "version": "v2",
         "source": "BACKEND_RUNTIME_STATUS",
         "summary_scope": "SERVICE_LIFECYCLE_TRACE_EXACT_DETAIL",
@@ -1037,6 +1037,8 @@ def build_runtime_service_trace_detail_item(
         "satellites": satellites,
         "compute_node": compute_node,
     }
+    detail["detail_hash"] = stable_hash_payload(detail)
+    return detail
 
 
 def build_runtime_compute_node_detail_item(

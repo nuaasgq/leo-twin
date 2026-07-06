@@ -16200,7 +16200,7 @@ change.
 ## 2026-07-07 - Package Service Trace Item v1
 
 - Branch: `feature/T334-package-service-trace-item-v1`
-- Commit: pending commit note; final hash is reported after commit creation.
+- Commit: `9131ed4 feat(export): open package service trace details`
 - Scope: add a package-owned exact service trace item read path for exported
   `service_lifecycle_trace_v2.json` rows. The demo backend now exposes
   `/runtime/export/packages/{package_id}/service-traces/{trace_id}`, returning
@@ -16255,7 +16255,7 @@ change.
 ## 2026-07-07 - Service Trace Live Comparison v1
 
 - Branch: `feature/T335-service-trace-live-comparison-v1`
-- Commit: pending commit note; final hash is reported after commit creation.
+- Commit: `b67a77a feat(frontend): compare package and live service traces`
 - Scope: add a dashboard package-vs-live comparison card for selected exported
   service traces. The card compares package-owned
   `RUNTIME_EXPORT_SERVICE_TRACE_ITEM_V1` fields with the optional live
@@ -16299,7 +16299,7 @@ change.
 ## 2026-07-07 - Service Trace Comparison Review Report v1
 
 - Branch: `feature/T336-service-trace-comparison-review-v1`
-- Commit: pending commit note; final hash is reported after commit creation.
+- Commit: `a4017d5 feat(export): save service trace comparison reviews`
 - Scope: add a backend-served package artifact for selected package-vs-live
   service trace comparison outcomes. The backend exposes
   `POST /runtime/export/packages/{package_id}/service-trace-comparison-review-report`,
@@ -16354,3 +16354,59 @@ change.
 - Recommended follow-up:
   - Add backend `detail_hash` to `RuntimeServiceTraceDetailV2` and include it
     in saved service trace comparison reports.
+
+## 2026-07-07 - Service Trace Detail Hash v1
+
+- Branch: `feature/T337-service-trace-detail-hash-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a backend-generated stable `detail_hash` to live
+  `RuntimeServiceTraceDetailV2` exact detail and use that field when the
+  dashboard saves package-vs-live service trace comparison review records. This
+  closes the T336 evidence gap where `live_trace_detail_hash` stayed empty even
+  when live exact trace detail was available. No Event Kernel behavior,
+  simulation model behavior, replay behavior, or package mutation-on-read
+  behavior changed.
+- Changed files/modules:
+  - `src/leo_twin/services/runtime_observability.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `tests/unit/test_runtime_observability.py`
+  - `tests/integration/test_live_runtime_streaming.py`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m compileall -q src\leo_twin\services\runtime_observability.py`
+    - Result: passed.
+  - `python -m pytest tests\unit\test_runtime_observability.py::test_runtime_service_trace_detail_correlates_backend_context tests\integration\test_live_runtime_streaming.py::test_runtime_detail_pages_return_deterministic_windows -q`
+    - Result: passed, 2 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path.
+  - `pnpm --dir frontend test dataPanel.test.ts api.test.ts appSurface.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 3 test
+      files and 272 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path; Vite
+      reported the existing large `DataPanel` chunk warning.
+  - `git diff --check`
+    - Result: passed for staged-scope content; Git also warned that the
+      untouched local runtime config drift files would be normalized if touched.
+- Problems encountered:
+  - TypeScript fixtures that hand-build `RuntimeServiceTraceDetailV2` needed the
+    new required `detail_hash` field to keep frontend tests aligned with the
+    backend-owned exact detail contract.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - Saved service trace reports still persist selected operator outcomes only;
+    package/live field differences are built client-side from visible evidence,
+    not recomputed server-side.
+  - Large saved service trace comparison reports are still full-artifact JSON
+    files; there is not yet a paginated backend read endpoint for the saved
+    report artifact.
+- Recommended follow-up:
+  - Add backend-side paginated saved service trace comparison report review so
+    large operator reports can be inspected without loading the whole JSON
+    artifact into the dashboard.

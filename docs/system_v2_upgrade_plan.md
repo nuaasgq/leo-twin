@@ -165,7 +165,10 @@ Tasks:
     persists selected service trace comparison outcomes as
     `service_trace_comparison_review_report_v1.json`, updates the export
     catalog/audit/handoff artifacts, and lets the dashboard save and reload the
-    report without event replay or service recomputation.
+    report without event replay or service recomputation. T337 adds a
+    backend-generated `detail_hash` to live exact service trace details, so
+    saved package-vs-live service trace reports can cite both the package item
+    hash and the live detail hash.
 - V2-013: Add service lifecycle trace.
   - Scope: input flow, queue, compute, output flow, terminal state.
   - Output: timeline records for dashboard and result export.
@@ -230,7 +233,9 @@ Tasks:
     notes when one side of the evidence is unavailable. T336 adds the
     backend-served service trace comparison review report save path and binds
     the dashboard save action to the persisted package artifact, closing the
-    review loop from trace evidence to saved operator report.
+    review loop from trace evidence to saved operator report. T337 fills the
+    remaining live evidence gap by carrying the live exact service trace
+    `detail_hash` into saved review records.
 
 ### WS3. Network Semantics and KPI Trust v2
 

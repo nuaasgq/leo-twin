@@ -356,10 +356,12 @@ The request body is a JSON object with a `records` array. The backend builds
 `/files/service_trace_comparison_review_report_v1.json`. The report records
 selected package-vs-live service trace outcomes for lifecycle fields such as
 terminal state, reason, compute node, flow/route ids, latency components, and
-stage counts. It copies the same restore-preflight boundary alignment evidence
-as the route review report. It does not replay events, recompute services,
-capture packets, mutate the package on read, or update existing archive zip
-files.
+stage counts. When the current live exact trace detail is available, the
+dashboard copies its backend-generated `detail_hash` into
+`live_trace_detail_hash`; unavailable live details keep that field empty. It
+copies the same restore-preflight boundary alignment evidence as the route
+review report. It does not replay events, recompute services, capture packets,
+mutate the package on read, or update existing archive zip files.
 
 `scenario_review_bundle_v1.json` also declares a guided package review order.
 The demo backend can persist operator decisions for that guided flow through:

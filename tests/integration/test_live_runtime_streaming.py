@@ -390,6 +390,7 @@ def test_runtime_detail_pages_return_deterministic_windows(tmp_path: Path) -> No
         assert service_trace_detail["type"] == "RUNTIME_ENTITY_DETAIL"
         assert service_trace_detail["kind"] == "service_trace"
         assert service_trace_detail["summary"]["version"] == "v2"
+        assert service_trace_detail["summary"]["detail_hash"].startswith("sha256:")
         assert service_trace_detail["summary"]["trace"]["task_id"] == first_service_id
         assert service_trace_detail["summary"]["correlation"]["route_count"] >= 0
         assert "flow_ids" in service_trace_detail["summary"]["correlation"]

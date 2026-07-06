@@ -3282,6 +3282,7 @@ export interface RuntimeServiceTraceDetailV2 {
   version: "v2" | string;
   source: string;
   summary_scope: string;
+  detail_hash: string;
   trace: RuntimeServiceLifecycleTraceItemV2;
   correlation: RuntimeServiceTraceCorrelationV2;
   routes: readonly RuntimeRouteExplanationItemV1[];

@@ -5274,6 +5274,7 @@ describe("buildDataPanelExportCompareDisplay", () => {
       version: "v2",
       source: "BACKEND_RUNTIME_DETAIL",
       summary_scope: "SERVICE_TRACE_EXACT_DETAIL",
+      detail_hash: "sha256:live-trace-detail",
       trace: packageItem.trace,
       correlation: {
         trace_id: "trace:run",
@@ -5408,6 +5409,7 @@ describe("buildDataPanelExportCompareDisplay", () => {
       version: "v2",
       source: "BACKEND_RUNTIME_DETAIL",
       summary_scope: "SERVICE_TRACE_EXACT_DETAIL",
+      detail_hash: "sha256:live-trace-detail",
       trace: packageItem.trace,
       correlation: {
         trace_id: "trace:run",
@@ -5537,6 +5539,7 @@ describe("buildDataPanelExportCompareDisplay", () => {
       version: "v2",
       source: "BACKEND_RUNTIME_DETAIL",
       summary_scope: "SERVICE_TRACE_EXACT_DETAIL",
+      detail_hash: "sha256:live-trace-detail",
       trace: {
         ...packageItem.trace,
         terminal_state: "COMPLETE",
@@ -5579,7 +5582,7 @@ describe("buildDataPanelExportCompareDisplay", () => {
       trace_id: "trace:run",
       comparison_status: "DIFFERENT",
       package_trace_item_hash: "sha256:package-trace",
-      live_trace_detail_hash: "",
+      live_trace_detail_hash: "sha256:live-trace-detail",
       matched_field_count: 13,
       different_field_count: 4,
       compared_fields: expect.arrayContaining([
@@ -9184,6 +9187,7 @@ describe("buildDataPanelServiceLifecycleTraceDisplay", () => {
       version: "v2",
       source: "BACKEND_RUNTIME_DETAIL",
       summary_scope: "SERVICE_TRACE_EXACT_DETAIL",
+      detail_hash: "sha256:live-trace-detail",
       trace: {
         trace_id: "trace:svc-02",
         service_id: "svc-02-compute_service-00000",
@@ -9273,6 +9277,7 @@ describe("buildDataPanelServiceLifecycleTraceDisplay", () => {
         version: "v2",
         source: "BACKEND_RUNTIME_DETAIL",
         summary_scope: "SERVICE_TRACE_EXACT_DETAIL",
+        detail_hash: "sha256:live-trace-detail",
         trace: {
           trace_id: "trace:svc-02",
           service_id: "svc-02-compute_service-00000",

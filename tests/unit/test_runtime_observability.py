@@ -1047,6 +1047,8 @@ def test_runtime_service_trace_detail_correlates_backend_context() -> None:
     assert first is not None
     assert first["version"] == "v2"
     assert first["summary_scope"] == "SERVICE_LIFECYCLE_TRACE_EXACT_DETAIL"
+    assert first["detail_hash"].startswith("sha256:")
+    assert first["detail_hash"] == second["detail_hash"]
     assert first["trace"]["trace_id"] == "trace:svc-00-compute_service-00000"
     assert first["trace"]["terminal_state"] == "COMPLETE"
     assert first["correlation"] == {
