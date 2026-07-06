@@ -1113,6 +1113,7 @@ export interface RuntimeReproducibilityManifestV1 {
   artifact_count?: number;
   excluded_runtime_fields?: readonly string[];
   notes?: readonly string[];
+  runtime_export_reproducibility_boundary_v1?: RuntimeExportReproducibilityBoundaryV1;
 }
 
 export interface RuntimeReproducibilityArtifactV1 {
@@ -1245,6 +1246,7 @@ export interface RuntimeExportReviewSummaryV1 {
   route_trust?: RuntimeExportRouteTrustEvidenceV1;
   route_comparison_review?: RuntimeExportRouteComparisonReviewV1;
   reproducibility: RuntimeExportReviewReproducibilityV1;
+  reproducibility_boundary?: RuntimeExportReproducibilityBoundaryV1;
   artifacts: RuntimeExportReviewArtifactsV1;
   review_notes: readonly string[];
   summary_hash: string;
@@ -1360,8 +1362,59 @@ export interface RuntimeExportReviewReproducibilityV1 {
   manifest_id: string;
   manifest_hash: string;
   config_hash: string;
+  control_config_hash?: string;
   generated_config_hash: string;
+  runtime_state_hash?: string;
+  boundary_hash?: string;
   event_kernel_policy: string;
+}
+
+export interface RuntimeExportReproducibilityBoundaryV1 {
+  type: "RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1" | string;
+  version: "v1" | string;
+  boundary_id: string;
+  source: string;
+  boundary_scope: string;
+  manifest_id: string;
+  control_config_hash: string;
+  generated_config_hash: string;
+  runtime_state_hash: string;
+  metrics_summary_hash: string;
+  deterministic_replay_evidence: boolean;
+  runtime_deterministic_replay_enabled: boolean;
+  restore_scope: string;
+  compare_scope: string;
+  read_scope: string;
+  event_kernel_policy: string;
+  event_replay_restore: boolean;
+  live_event_replay_restore: boolean;
+  recompute_on_read: boolean;
+  route_recomputation: boolean;
+  service_recomputation: boolean;
+  package_mutation_on_read: boolean;
+  packet_capture: boolean;
+  packet_level_simulation: boolean;
+  external_simulators: boolean;
+  forbidden_external_integrations: readonly string[];
+  required_evidence_artifacts: readonly string[];
+  optional_evidence_artifacts: readonly string[];
+  route_detail_export: RuntimeExportReproducibilityBoundaryWindowV1;
+  service_trace_export: RuntimeExportReproducibilityBoundaryWindowV1;
+  boundary_conditions: readonly string[];
+  boundary_hash: string;
+}
+
+export interface RuntimeExportReproducibilityBoundaryWindowV1 {
+  policy: string;
+  route_detail_limit?: number;
+  route_count?: number;
+  indexed_route_count?: number;
+  service_trace_limit?: number;
+  service_count?: number;
+  exported_trace_count?: number;
+  hidden_route_count?: number;
+  hidden_trace_count?: number;
+  artifact_window_only: boolean;
 }
 
 export interface RuntimeExportReviewArtifactsV1 {
@@ -1384,6 +1437,7 @@ export interface RuntimeExportDiagnosticsBundleV1 {
   route_trust?: RuntimeExportRouteTrustEvidenceV1;
   route_comparison_review?: RuntimeExportRouteComparisonReviewV1;
   reproducibility: RuntimeExportDiagnosticsReproducibilityV1;
+  reproducibility_boundary?: RuntimeExportReproducibilityBoundaryV1;
   artifact_health: RuntimeExportDiagnosticsArtifactHealthV1;
   model_boundaries: RuntimeExportDiagnosticsModelBoundariesV1;
   findings: readonly RuntimeExportDiagnosticsFindingV1[];
@@ -1586,8 +1640,11 @@ export interface RuntimeExportDiagnosticsReproducibilityV1 {
   manifest_ok: boolean;
   manifest_hash: string;
   config_hash: string;
+  control_config_hash?: string;
   generated_config_hash: string;
+  runtime_state_hash?: string;
   review_summary_hash: string;
+  boundary_hash?: string;
 }
 
 export interface RuntimeExportDiagnosticsArtifactHealthV1 {
@@ -1606,6 +1663,9 @@ export interface RuntimeExportDiagnosticsModelBoundariesV1 {
   packet_level_simulation: boolean;
   external_simulators: readonly string[];
   forbidden_external_integrations: readonly string[];
+  event_replay_restore?: boolean;
+  route_recomputation?: boolean;
+  service_recomputation?: boolean;
   diagnostics_policy: string;
 }
 

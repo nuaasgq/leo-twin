@@ -595,7 +595,10 @@ Tasks:
     manifests, config snapshots, review summaries, and diagnostics bundles so
     users can verify config-only restore, persisted-artifact reads, and
     no-replay/no-recompute/no-mutation/no-packet/no-external-simulator
-    boundaries from a single backend-owned object.
+    boundaries from a single backend-owned object. T303 renders that same
+    backend-owned boundary in the standalone dashboard export review area as a
+    read-only card with hash agreement, restore/read/compare scope, export
+    windows, and boundary conditions before the manifest inspector.
 
 ### WS9. Delivery and Operations v2
 

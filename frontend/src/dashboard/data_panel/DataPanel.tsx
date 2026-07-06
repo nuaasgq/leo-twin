@@ -34,6 +34,7 @@ import {
   RuntimeExportRouteDetailIndexRouteV1,
   RuntimeExportRouteDetailIndexV1,
   RuntimeExportRouteDetailPageV1,
+  RuntimeExportReproducibilityBoundaryV1,
   RuntimeExportServiceTracePageV1,
   RuntimeExportReviewSummaryV1,
   RuntimeExportRestoreCommandResultV1,
@@ -697,6 +698,13 @@ export const DataPanel = memo(function DataPanel({
     runtimeExportManifestLoading,
     runtimeExportManifestError
   );
+  const exportReproducibilityBoundaryDisplay =
+    buildDataPanelExportReproducibilityBoundaryDisplay(
+      runtimeExportManifest,
+      runtimeExportReviewSummary,
+      runtimeExportDiagnosticsBundle,
+      runtimeExportComparePackageId
+    );
   const exportCompareDisplay = buildDataPanelExportCompareDisplay(runtimeExportCompare);
   const exportCompareStatus = buildDataPanelExportCompareStatus(
     exportCompareDisplay,
@@ -2092,6 +2100,48 @@ export const DataPanel = memo(function DataPanel({
                   ) : null}
                 </div>
               ) : null}
+            </div>
+          ) : null}
+          {exportReproducibilityBoundaryDisplay ? (
+            <div
+              className={`data-panel-export-diagnostics-drawer ${exportReproducibilityBoundaryDisplay.tone}`}
+              aria-label="结果包复现边界"
+            >
+              <div className="data-panel-export-diagnostics-header">
+                <div>
+                  <span>复现边界</span>
+                  <strong>{exportReproducibilityBoundaryDisplay.statusLabel}</strong>
+                  <small>{exportReproducibilityBoundaryDisplay.summaryLabel}</small>
+                </div>
+                {exportReproducibilityBoundaryDisplay.boundaryHref ? (
+                  <a href={exportReproducibilityBoundaryDisplay.boundaryHref}>
+                    boundary source
+                  </a>
+                ) : null}
+              </div>
+              <div className="data-panel-export-compare-meta">
+                {exportReproducibilityBoundaryDisplay.scopeLabels.map((label) => (
+                  <span key={label}>{label}</span>
+                ))}
+              </div>
+              <div className="data-panel-export-diagnostics-boundaries">
+                {exportReproducibilityBoundaryDisplay.boundaryLabels.map((label) => (
+                  <span key={label}>{label}</span>
+                ))}
+              </div>
+              <div className="data-panel-export-diagnostics-actions">
+                {exportReproducibilityBoundaryDisplay.windowLabels.map((label) => (
+                  <span key={label}>{label}</span>
+                ))}
+              </div>
+              <div className="data-panel-export-diagnostics-findings">
+                {exportReproducibilityBoundaryDisplay.conditionLabels.map((label) => (
+                  <span className="info" key={label}>
+                    <strong>BOUNDARY</strong>
+                    {label}
+                  </span>
+                ))}
+              </div>
             </div>
           ) : null}
           {exportManifestInspectorStatus ? (
@@ -10071,6 +10121,18 @@ export interface DataPanelExportManifestArtifactRow {
   title: string;
 }
 
+export interface DataPanelExportReproducibilityBoundaryDisplay {
+  packageId: string;
+  tone: "match" | "different";
+  statusLabel: string;
+  summaryLabel: string;
+  scopeLabels: readonly string[];
+  boundaryLabels: readonly string[];
+  windowLabels: readonly string[];
+  conditionLabels: readonly string[];
+  boundaryHref: string;
+}
+
 export interface DataPanelExportRestorePreflightDisplay {
   packageId: string;
   readiness: string;
@@ -11318,6 +11380,104 @@ export function buildDataPanelExportManifestInspectorStatus(
     return null;
   }
   return display;
+}
+
+export function buildDataPanelExportReproducibilityBoundaryDisplay(
+  manifest: RuntimeReproducibilityManifestV1 | null | undefined,
+  reviewSummary: RuntimeExportReviewSummaryV1 | null | undefined,
+  diagnostics: RuntimeExportDiagnosticsBundleV1 | null | undefined,
+  selectedPackageId: string | null | undefined
+): DataPanelExportReproducibilityBoundaryDisplay | null {
+  if (selectedPackageId === null || selectedPackageId === undefined) {
+    return null;
+  }
+  const boundary = selectRuntimeExportReproducibilityBoundary(
+    manifest,
+    reviewSummary,
+    diagnostics
+  );
+  if (boundary === null) {
+    return null;
+  }
+  const boundaryHash = boundary.boundary_hash;
+  const knownHashes = [
+    manifest?.runtime_export_reproducibility_boundary_v1?.boundary_hash,
+    reviewSummary?.reproducibility_boundary?.boundary_hash,
+    reviewSummary?.reproducibility.boundary_hash,
+    diagnostics?.reproducibility_boundary?.boundary_hash,
+    diagnostics?.reproducibility.boundary_hash
+  ].filter((value): value is string => typeof value === "string" && value.length > 0);
+  const hashAgreement =
+    boundaryHash.length > 0 && knownHashes.every((hash) => hash === boundaryHash);
+  const forbiddenInactive =
+    boundary.event_replay_restore === false &&
+    boundary.live_event_replay_restore === false &&
+    boundary.recompute_on_read === false &&
+    boundary.route_recomputation === false &&
+    boundary.service_recomputation === false &&
+    boundary.package_mutation_on_read === false &&
+    boundary.packet_capture === false &&
+    boundary.packet_level_simulation === false &&
+    boundary.external_simulators === false;
+  const boundaryIdOk =
+    boundary.boundary_id === "leo_twin.runtime_export_reproducibility_boundary.v1";
+  const matched = boundaryIdOk && hashAgreement && forbiddenInactive;
+  const routeWindow = boundary.route_detail_export;
+  const serviceWindow = boundary.service_trace_export;
+  return {
+    packageId: selectedPackageId,
+    tone: matched ? "match" : "different",
+    statusLabel: matched ? "复现边界一致" : "复现边界需复核",
+    summaryLabel: `${selectedPackageId} / ${boundary.restore_scope} / ${boundary.compare_scope} / ${shortRuntimeHash(
+      boundaryHash
+    )}`,
+    scopeLabels: [
+      `restore ${boundary.restore_scope}`,
+      `compare ${boundary.compare_scope}`,
+      `read ${boundary.read_scope}`,
+      `manifest ${boundary.manifest_id || "-"}`,
+      `boundary ${shortRuntimeHash(boundaryHash)}`,
+      `hash ${hashAgreement ? "一致" : "不一致"}`
+    ],
+    boundaryLabels: [
+      boundary.event_kernel_policy,
+      boundary.deterministic_replay_evidence
+        ? "deterministic artifact evidence"
+        : "deterministic evidence missing",
+      boundary.event_replay_restore ? "event replay restore enabled" : "no event replay restore",
+      boundary.recompute_on_read ? "read recomputes model state" : "no recompute on read",
+      boundary.package_mutation_on_read ? "read mutates package" : "no package mutation on read",
+      boundary.packet_level_simulation ? "packet-level simulation" : "no packet-level simulation",
+      boundary.external_simulators ? "external simulators present" : "no external simulator artifacts"
+    ],
+    windowLabels: [
+      `route policy ${routeWindow.policy || "-"}`,
+      `routes ${formatCount(routeWindow.indexed_route_count ?? 0)}/${formatCount(
+        routeWindow.route_count ?? 0
+      )}`,
+      `hidden routes ${formatCount(routeWindow.hidden_route_count ?? 0)}`,
+      `service policy ${serviceWindow.policy || "-"}`,
+      `service traces ${formatCount(
+        serviceWindow.exported_trace_count ?? 0
+      )}/${formatCount(serviceWindow.service_count ?? 0)}`,
+      `hidden traces ${formatCount(serviceWindow.hidden_trace_count ?? 0)}`
+    ],
+    conditionLabels: boundary.boundary_conditions,
+    boundaryHref: runtimeExportPackageManifestHref(selectedPackageId)
+  };
+}
+
+function selectRuntimeExportReproducibilityBoundary(
+  manifest: RuntimeReproducibilityManifestV1 | null | undefined,
+  reviewSummary: RuntimeExportReviewSummaryV1 | null | undefined,
+  diagnostics: RuntimeExportDiagnosticsBundleV1 | null | undefined
+): RuntimeExportReproducibilityBoundaryV1 | null {
+  return (
+    manifest?.runtime_export_reproducibility_boundary_v1 ??
+    reviewSummary?.reproducibility_boundary ??
+    diagnostics?.reproducibility_boundary ??
+    null
+  );
 }
 
 export function buildDataPanelExportCompareDisplay(

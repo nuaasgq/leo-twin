@@ -14579,3 +14579,48 @@ change.
   - Add a dashboard export review card for
     `runtime_export_reproducibility_boundary_v1` so users can inspect
     restore/read/replay/recompute boundaries without opening raw JSON.
+
+## 2026-07-06 - Dashboard Export Reproducibility Boundary Card v1
+
+- Branch: `feature/T303-dashboard-export-repro-boundary-card-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: surface the T302 backend-owned
+  `runtime_export_reproducibility_boundary_v1` in the standalone dashboard
+  export review area. Frontend contracts now accept the boundary on manifest,
+  review summary, and diagnostics bundle payloads. The DataPanel builds a
+  read-only boundary card from the backend object, checks boundary hash
+  agreement across loaded artifacts, and displays restore/read/compare scope,
+  route and service trace export windows, and no-replay/no-recompute/
+  no-package-mutation/no-packet/no-external-simulator boundary conditions
+  before the manifest inspector. This task does not change backend runtime
+  behavior, result package generation, Event Kernel behavior, package mutation,
+  replay, recomputation, or packet-level simulation.
+- Changed files/modules:
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts api.test.ts`
+    - Result: initial shell attempt failed because `node` was not on PATH.
+      Retried with the bundled Codex Node/Pnpm runtime path; passed, 2 test
+      files and 201 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path.
+- Problems encountered:
+  - The normal PowerShell environment did not expose `node`. The task used
+    `codex_app.load_workspace_dependencies` and the bundled runtime paths for
+    deterministic frontend validation.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The card is read-only and only appears after the selected package manifest
+    or related review/diagnostics artifacts are loaded. Older packages without
+    `runtime_export_reproducibility_boundary_v1` still fall back to the
+    existing manifest and diagnostics inspectors.
+- Recommended follow-up:
+  - Add package compare/restore-preflight boundary alignment checks so the
+    dashboard can warn when a selected restore path is being reviewed without a
+    matching reproducibility boundary object.

@@ -25,6 +25,7 @@ import {
   buildDataPanelExportHistoryDisplay,
   buildDataPanelExportManifestInspectorDisplay,
   buildDataPanelExportManifestInspectorStatus,
+  buildDataPanelExportReproducibilityBoundaryDisplay,
   buildDataPanelExportReviewSummaryDisplay,
   buildDataPanelExportReviewSummaryStatus,
   buildDataPanelExportRouteDetailItemDisplay,
@@ -3798,6 +3799,226 @@ describe("buildDataPanelExportCompareDisplay", () => {
       hashLabels: ["HTTP 404"],
       manifestHref: null
     });
+  });
+
+  it("summarizes runtime export reproducibility boundary evidence", () => {
+    const boundary = {
+      type: "RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1",
+      version: "v1",
+      boundary_id: "leo_twin.runtime_export_reproducibility_boundary.v1",
+      source: "BACKEND_RUNTIME_EXPORT",
+      boundary_scope: "RESULT_PACKAGE_REPRODUCIBILITY_AND_RESTORE_BOUNDARY",
+      manifest_id: "leo_twin.runtime_reproducibility_manifest.v1",
+      control_config_hash:
+        "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+      generated_config_hash:
+        "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      runtime_state_hash:
+        "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+      metrics_summary_hash:
+        "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+      deterministic_replay_evidence: true,
+      runtime_deterministic_replay_enabled: false,
+      restore_scope: "CONFIG_ONLY",
+      compare_scope: "CONFIG_AND_GENERATED_CONFIG",
+      read_scope: "PERSISTED_ARTIFACTS_ONLY",
+      event_kernel_policy: "NO_EVENT_KERNEL_BEHAVIOR_CHANGE",
+      event_replay_restore: false,
+      live_event_replay_restore: false,
+      recompute_on_read: false,
+      route_recomputation: false,
+      service_recomputation: false,
+      package_mutation_on_read: false,
+      packet_capture: false,
+      packet_level_simulation: false,
+      external_simulators: false,
+      forbidden_external_integrations: ["STK", "EXATA", "AFSIM", "DDS"],
+      required_evidence_artifacts: [
+        "config_snapshot.json",
+        "events.jsonl",
+        "metrics.csv",
+        "summary.json",
+        "manifest.json"
+      ],
+      optional_evidence_artifacts: [
+        "service_lifecycle_trace_v2.json",
+        "route_detail_index_v1.json",
+        "review_summary_v1.json",
+        "diagnostics_bundle_v1.json"
+      ],
+      route_detail_export: {
+        policy: "EXPORT_ROUTE_DETAIL_INDEX_WINDOW",
+        route_detail_limit: 5000,
+        route_count: 20,
+        indexed_route_count: 12,
+        hidden_route_count: 8,
+        artifact_window_only: true
+      },
+      service_trace_export: {
+        policy: "EXPORT_SERVICE_TRACE_WINDOW",
+        service_trace_limit: 5000,
+        service_count: 7,
+        exported_trace_count: 5,
+        hidden_trace_count: 2,
+        artifact_window_only: true
+      },
+      boundary_conditions: [
+        "DETERMINISTIC_ARTIFACT_REPLAY_EVIDENCE",
+        "CONFIG_ONLY_RESTORE",
+        "NO_LIVE_EVENT_REPLAY_RESTORE",
+        "NO_RECOMPUTE_ON_COMPARE_OR_READ",
+        "NO_PACKAGE_MUTATION_ON_READ"
+      ],
+      boundary_hash:
+        "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    };
+
+    const display = buildDataPanelExportReproducibilityBoundaryDisplay(
+      {
+        version: "v1",
+        source: "BACKEND_RUNTIME_STATUS",
+        manifest_id: "leo_twin.runtime_reproducibility_manifest.v1",
+        session_id: "integration-demo-4321",
+        scenario_hash:
+          "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        control_config_hash:
+          "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+        generated_config_hash:
+          "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+        metrics_summary_hash:
+          "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+        runtime_state_hash:
+          "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+        manifest_hash:
+          "sha256:abababababababababababababababababababababababababababababababab",
+        artifact_policy: "LIVE_STATUS_MANIFEST_ONLY",
+        artifacts: [],
+        runtime_export_reproducibility_boundary_v1: boundary
+      },
+      {
+        type: "RUNTIME_EXPORT_REVIEW_SUMMARY_V1",
+        version: "v1",
+        summary_id: "leo_twin.runtime_export_review_summary.v1",
+        source: "BACKEND_RUNTIME_EXPORT",
+        summary_scope: "USER_READABLE_RESULT_PACKAGE_REVIEW",
+        package_id: "pkg-review",
+        package_dir: "artifacts/runtime_exports/pkg-review",
+        review_status: "REVIEW_READY",
+        scenario: {
+          seed: 4321,
+          satellite_count: 72,
+          user_count: 20,
+          compute_node_count: 2,
+          duration_seconds: 120
+        },
+        runtime: {
+          lifecycle_state: "STOPPED",
+          current_sim_time: 120,
+          processed_event_count: 4096,
+          queued_event_count: 0
+        },
+        reproducibility: {
+          manifest_id: "leo_twin.runtime_reproducibility_manifest.v1",
+          manifest_hash:
+            "sha256:abababababababababababababababababababababababababababababababab",
+          config_hash: "sha256:config",
+          generated_config_hash: "sha256:generated",
+          boundary_hash:
+            "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          event_kernel_policy: "NO_EVENT_KERNEL_BEHAVIOR_CHANGE"
+        },
+        reproducibility_boundary: boundary,
+        artifacts: {
+          artifact_count: 8,
+          artifact_filenames: ["manifest.json"],
+          required_filenames: ["manifest.json"],
+          missing_required_filenames: [],
+          service_lifecycle_trace_exported: true,
+          review_summary_exported: true
+        },
+        review_notes: [],
+        summary_hash:
+          "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      {
+        type: "RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1",
+        version: "v1",
+        bundle_id: "leo_twin.runtime_export_diagnostics_bundle.v1",
+        source: "BACKEND_RUNTIME_EXPORT",
+        diagnostics_scope: "RESULT_PACKAGE_OPERATOR_REVIEW",
+        package: {
+          package_id: "pkg-review",
+          package_dir: "artifacts/runtime_exports/pkg-review",
+          package_complete: true,
+          review_status: "REVIEW_READY",
+          contract_id: "leo_twin.result_package_contract.v1"
+        },
+        runtime: {
+          lifecycle_state: "STOPPED",
+          current_sim_time: 120,
+          processed_event_count: 4096,
+          queued_event_count: 0
+        },
+        reproducibility: {
+          manifest_id: "leo_twin.runtime_reproducibility_manifest.v1",
+          manifest_ok: true,
+          manifest_hash:
+            "sha256:abababababababababababababababababababababababababababababababab",
+          config_hash: "sha256:config",
+          generated_config_hash: "sha256:generated",
+          review_summary_hash: "sha256:summary",
+          boundary_hash:
+            "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        reproducibility_boundary: boundary,
+        artifact_health: {
+          artifact_count: 8,
+          artifact_filenames: ["manifest.json"],
+          required_filenames: ["manifest.json"],
+          recommended_filenames: [],
+          present_required_filenames: ["manifest.json"],
+          missing_required_filenames: [],
+          present_recommended_filenames: [],
+          missing_recommended_filenames: []
+        },
+        model_boundaries: {
+          event_kernel_policy: "NO_EVENT_KERNEL_BEHAVIOR_CHANGE",
+          packet_level_simulation: false,
+          external_simulators: [],
+          forbidden_external_integrations: ["STK", "EXATA", "AFSIM", "DDS"],
+          event_replay_restore: false,
+          route_recomputation: false,
+          service_recomputation: false,
+          diagnostics_policy: "Deterministic package index only."
+        },
+        findings: [],
+        finding_count: 0,
+        recommended_next_actions: [],
+        diagnostics_hash: "sha256:diagnostics"
+      },
+      "pkg-review"
+    );
+
+    expect(display).toMatchObject({
+      packageId: "pkg-review",
+      tone: "match",
+      statusLabel: "复现边界一致",
+      summaryLabel: "pkg-review / CONFIG_ONLY / CONFIG_AND_GENERATED_CONFIG / bbbbbbbbbbbb",
+      scopeLabels: [
+        "restore CONFIG_ONLY",
+        "compare CONFIG_AND_GENERATED_CONFIG",
+        "read PERSISTED_ARTIFACTS_ONLY",
+        "manifest leo_twin.runtime_reproducibility_manifest.v1",
+        "boundary bbbbbbbbbbbb",
+        "hash 一致"
+      ],
+      boundaryHref: "/runtime/export/packages/pkg-review/manifest"
+    });
+    expect(display?.boundaryLabels).toContain("no recompute on read");
+    expect(display?.boundaryLabels).toContain("no package mutation on read");
+    expect(display?.windowLabels).toContain("routes 12/20");
+    expect(display?.windowLabels).toContain("hidden traces 2");
+    expect(display?.conditionLabels).toContain("NO_RECOMPUTE_ON_COMPARE_OR_READ");
   });
 
   it("summarizes matching package compare previews", () => {

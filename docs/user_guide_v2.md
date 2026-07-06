@@ -176,7 +176,11 @@ New exports also include `runtime_export_reproducibility_boundary_v1` in
 package is deterministic artifact evidence, restore is config-only, package
 reads do not recompute model state, and live event replay restore, packet
 capture, packet-level simulation, package mutation on read, and external
-simulator artifacts are outside the export contract.
+simulator artifacts are outside the export contract. The dashboard export
+review area renders this boundary as a dedicated read-only card before the
+manifest inspector, including boundary hash agreement, restore/read/compare
+scope, route/service export windows, and no-replay/no-recompute/no-mutation
+conditions.
 After using `compare with live`, the package-vs-live route comparison card can
 save the currently displayed comparison into
 `route_comparison_review_report_v1.json`. The saved record includes the
