@@ -15220,7 +15220,7 @@ change.
 ## 2026-07-06 - Dashboard Review Completion Summary v1
 
 - Branch: `feature/T315-dashboard-review-completion-summary-v1`
-- Commit: pending commit note; final hash is reported after commit creation.
+- Commit: `59b6571 feat(frontend): summarize package review completion`
 - Scope: add an operator-facing package review completion banner to the
   standalone dashboard package review area. The banner aggregates existing
   backend-owned evidence from `export_package_audit_index_v1.json`,
@@ -15262,3 +15262,63 @@ change.
   - Promote the completion summary into a backend-owned export artifact or
     audit-index subobject if future workflows need machine-readable handoff
     gates outside the dashboard.
+
+## 2026-07-06 - Runtime Review Completion Contract v1
+
+- Branch: `feature/T316-runtime-review-completion-contract-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: move package-review handoff readiness semantics from frontend-only
+  aggregation into backend-owned audit evidence. The runtime result package
+  audit index now embeds `package_review_completion_v1` with deterministic
+  completion status, handoff readiness, audit warnings, route comparison report
+  presence/error count, scenario review bundle presence, scenario review
+  checklist presence/status/count, review summary status, diagnostics error
+  count, boundary alignment status, user configuration validation, missing or
+  warning evidence, and `completion_hash`. The dashboard completion banner now
+  prefers this backend object and falls back to local aggregation only for
+  older packages. This task does not alter Event Kernel behavior, runtime
+  models, package read semantics, route recomputation, service recomputation,
+  packet-level simulation, or external simulator integration.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/dashboard_model_trust_evidence_workspace_v1.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src\leo_twin\services\result_package_contract.py tests\unit\test_result_package_contract_v1.py tests\integration\test_result_package_export_v1.py`
+    - Result: passed.
+  - `python -m pytest tests\unit\test_result_package_contract_v1.py::test_runtime_export_package_review_completion_v1_reports_missing_evidence tests\unit\test_result_package_contract_v1.py::test_runtime_export_package_audit_index_v1_is_deterministic tests\integration\test_result_package_export_v1.py -q`
+    - Result: passed, 3 tests.
+  - `pnpm --dir frontend test dataPanel.test.ts api.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 2 test
+      files and 212 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path. Vite
+      reported the existing large DataPanel chunk warning.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered:
+  - The first audit-index unit test expected review completion to be complete,
+    but its fixture did not include `scenario_review_bundle_v1.json` or a
+    `REVIEW_READY` review summary. The fixture was corrected so the completion
+    rule is tested against complete evidence.
+  - The normal PowerShell PATH may not expose `node`, so frontend validation
+    uses the bundled Codex Node/Pnpm runtime path.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - Completion is embedded in the audit index, not emitted as a standalone
+    `review_completion_v1.json` file.
+- Recommended follow-up:
+  - Add a package-review handoff export endpoint or standalone artifact only
+    if downstream tools need to consume completion without loading the full
+    audit index.

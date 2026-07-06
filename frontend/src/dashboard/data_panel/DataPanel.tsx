@@ -10604,6 +10604,23 @@ export function buildDataPanelExportReviewCompletionSummary({
   ) {
     return null;
   }
+  const backendCompletion = auditIndex?.package_review_completion_v1;
+  if (backendCompletion !== undefined) {
+    return {
+      tone: backendCompletion.handoff_ready ? "match" : "different",
+      statusLabel: backendCompletion.handoff_ready
+        ? "review package complete"
+        : "review package needs action",
+      summaryLabel: `${backendCompletion.completion_status} / audit ${
+        backendCompletion.audit_status
+      } / completion ${shortRuntimeHash(backendCompletion.completion_hash)}`,
+      evidenceLabels: [
+        ...backendCompletion.evidence_labels,
+        `completion ${shortRuntimeHash(backendCompletion.completion_hash)}`
+      ],
+      warningLabels: backendCompletion.missing_or_warning_evidence
+    };
+  }
   const auditReady = auditIndex?.audit_status === "AUDIT_READY";
   const routeReportPresent =
     auditIndex?.route_comparison_review_report_present === true ||

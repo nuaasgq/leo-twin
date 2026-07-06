@@ -246,6 +246,14 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert audit_index["scenario_review_checklist_present"] is False
     assert audit_index["scenario_review_checklist_hash"] == ""
     assert audit_index["scenario_review_checklist_record_count"] == 0
+    assert audit_index["package_review_completion_status"] == "REVIEW_INCOMPLETE"
+    assert audit_index["package_review_completion_v1"]["handoff_ready"] is False
+    assert "ROUTE_COMPARISON_REVIEW_REPORT_MISSING" in audit_index[
+        "package_review_completion_v1"
+    ]["missing_or_warning_evidence"]
+    assert "SCENARIO_REVIEW_CHECKLIST_MISSING" in audit_index[
+        "package_review_completion_v1"
+    ]["missing_or_warning_evidence"]
     assert audit_index["self_artifact_excluded_from_hashes"] is True
     assert "ROUTE_COMPARISON_REVIEW_REPORT_NOT_SAVED" in audit_index["audit_warnings"]
     assert audit_index["audit_hash"].startswith("sha256:")
@@ -339,6 +347,12 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         reproducibility_boundary["boundary_hash"]
     )
     assert updated_audit_index["scenario_review_checklist_present"] is False
+    assert updated_audit_index["package_review_completion_status"] == (
+        "REVIEW_INCOMPLETE"
+    )
+    assert "SCENARIO_REVIEW_CHECKLIST_MISSING" in updated_audit_index[
+        "package_review_completion_v1"
+    ]["missing_or_warning_evidence"]
     assert updated_audit_index["audit_status"] == "AUDIT_READY"
     assert updated_audit_index["audit_warnings"] == ()
     audit_artifact = control_plane.runtime_export_package_artifact(
@@ -406,6 +420,14 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert checklist_audit["scenario_review_checklist_record_count"] == 2
     assert checklist_audit["scenario_review_checklist_status"] == (
         "CHECKLIST_COMPLETE"
+    )
+    assert checklist_audit["package_review_completion_status"] == "REVIEW_COMPLETE"
+    assert checklist_audit["package_review_completion_v1"]["handoff_ready"] is True
+    assert checklist_audit["package_review_completion_v1"][
+        "missing_or_warning_evidence"
+    ] == ()
+    assert checklist_audit["package_review_completion_hash"] == (
+        checklist_audit["package_review_completion_v1"]["completion_hash"]
     )
     assert checklist_audit["audit_status"] == "AUDIT_READY"
     assert checklist_audit["audit_warnings"] == ()

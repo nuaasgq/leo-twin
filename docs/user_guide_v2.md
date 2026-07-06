@@ -230,11 +230,12 @@ enter a short note, and save the checklist through the backend. After saving,
 the dashboard refreshes the catalog and audit index so
 `scenario_review_checklist_v1.json` and its hash/status/count are visible as
 backend-owned package evidence.
-The package review area also shows a completion banner that combines audit
-status, saved route comparison report presence, scenario review readiness, and
-checklist completion. Use that banner as the first operator-facing signal for
-whether a result package is ready for handoff, then inspect the underlying JSON
-links for evidence.
+The package review area also shows a completion banner sourced from
+`export_package_audit_index_v1.json.package_review_completion_v1` when that
+backend object is present. It combines audit status, saved route comparison
+report presence, scenario review readiness, and checklist completion. Use that
+banner as the first operator-facing signal for whether a result package is
+ready for handoff, then inspect the underlying JSON links for evidence.
 For package-owned review, use:
 
 ```powershell

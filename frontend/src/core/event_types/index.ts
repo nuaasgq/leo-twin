@@ -1476,6 +1476,9 @@ export interface RuntimeExportPackageAuditIndexV1 {
   scenario_review_checklist_present?: boolean;
   scenario_review_checklist_record_count?: number;
   scenario_review_checklist_status?: string;
+  package_review_completion_v1?: RuntimeExportPackageReviewCompletionV1;
+  package_review_completion_status?: string;
+  package_review_completion_hash?: string;
   artifact_count: number;
   artifact_hashes: readonly RuntimeExportCatalogFileV1[];
   required_artifact_filenames: readonly string[];
@@ -1489,6 +1492,40 @@ export interface RuntimeExportPackageAuditIndexV1 {
   model_recomputation: boolean;
   package_mutation_on_read: boolean;
   audit_hash: string;
+}
+
+export interface RuntimeExportPackageReviewCompletionV1 {
+  type: "RUNTIME_EXPORT_PACKAGE_REVIEW_COMPLETION_V1" | string;
+  version: "v1" | string;
+  completion_id: string;
+  source: string;
+  completion_scope: string;
+  package_id: string;
+  package_dir: string;
+  completion_status: "REVIEW_COMPLETE" | "REVIEW_INCOMPLETE" | string;
+  handoff_ready: boolean;
+  audit_status: string;
+  audit_warnings: readonly string[];
+  route_comparison_review_report_present: boolean;
+  route_comparison_review_report_hash: string;
+  route_comparison_review_record_count: number;
+  route_comparison_review_error_count: number;
+  scenario_review_bundle_present: boolean;
+  scenario_review_checklist_present: boolean;
+  scenario_review_checklist_hash: string;
+  scenario_review_checklist_status: string;
+  scenario_review_checklist_record_count: number;
+  review_summary_status: string;
+  review_summary_hash: string;
+  diagnostics_error_count: number;
+  diagnostics_hash: string;
+  boundary_alignment_status: string;
+  boundary_alignment_hash: string;
+  user_configuration_validation_ok: boolean;
+  missing_or_warning_evidence: readonly string[];
+  evidence_labels: readonly string[];
+  boundary_conditions: readonly string[];
+  completion_hash: string;
 }
 
 export interface RuntimeExportUserConfigurationAuditBindingV1 {

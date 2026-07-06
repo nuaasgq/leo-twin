@@ -316,7 +316,8 @@ hash, boundary-alignment hash/status/warnings, user configuration audit binding,
 user configuration schema id, user configuration config/export hashes,
 validation status, review summary hash, diagnostics hash, optional route
 comparison review report hash, optional scenario review checklist hash/status,
-and the SHA-256 hashes of package artifacts. The
+backend-owned package review completion status/hash, and the SHA-256 hashes of
+package artifacts. The
 audit index excludes its own file from `artifact_hashes` to avoid a circular
 self-hash and excludes archive zip files because archives are generated after
 the package evidence files. It is regenerated when a route comparison review
@@ -324,6 +325,21 @@ report or scenario review checklist is saved, so the report hash, checklist
 hash, user configuration binding, scenario review bundle file hash, and the
 preflight-derived boundary alignment evidence become part of the long-term
 package audit trail.
+
+The audit index embeds a machine-readable
+`package_review_completion_v1` object with id:
+
+```text
+leo_twin.runtime_export_package_review_completion.v1
+```
+
+This object is the backend-owned handoff readiness summary for result-package
+review. It reports audit status, saved route-comparison report presence and
+error count, scenario-review bundle presence, checklist presence/status/count,
+review summary status, diagnostics error count, boundary-alignment status, user
+configuration validation, missing/warning evidence, and a deterministic
+`completion_hash`. It deliberately does not include `audit_hash`, so the audit
+index can hash the completion object without a self-reference.
 
 The audit index is read-only evidence. It does not replay events, recompute
 routes or services, mutate packages on read, capture packets, or call external

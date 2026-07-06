@@ -654,7 +654,10 @@ Tasks:
     package-review completion summary that aggregates backend-owned audit
     readiness, saved route comparison report presence, scenario review bundle
     readiness, and checklist completion into one operator-facing handoff
-    signal.
+    signal. T316 moves that handoff readiness semantics into the backend audit
+    index as `package_review_completion_v1`, allowing dashboard and offline
+    consumers to read the same deterministic completion status and hash without
+    re-deriving the rules locally.
 
 ### WS9. Delivery and Operations v2
 

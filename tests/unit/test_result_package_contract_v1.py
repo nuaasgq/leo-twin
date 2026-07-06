@@ -6,6 +6,7 @@ from leo_twin.services.result_package_contract import (
     RESULT_PACKAGE_CONTRACT_V1_ID,
     RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1_ID,
     RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID,
+    RUNTIME_EXPORT_PACKAGE_REVIEW_COMPLETION_V1_ID,
     RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1_ID,
     RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID,
     RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1_ID,
@@ -18,6 +19,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID,
     build_runtime_export_diagnostics_bundle_v1,
     build_runtime_export_package_audit_index_v1,
+    build_runtime_export_package_review_completion_v1,
     build_runtime_export_reproducibility_boundary_v1,
     build_runtime_export_route_comparison_review_report_v1,
     build_runtime_export_route_detail_item_v1,
@@ -928,6 +930,51 @@ def test_runtime_export_route_comparison_review_report_v1_is_deterministic() -> 
     )
 
 
+def test_runtime_export_package_review_completion_v1_reports_missing_evidence() -> None:
+    completion = build_runtime_export_package_review_completion_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        audit_status="AUDIT_WARN",
+        audit_warnings=("ROUTE_COMPARISON_REVIEW_REPORT_NOT_SAVED",),
+        review_summary={
+            "summary_id": RUNTIME_EXPORT_REVIEW_SUMMARY_V1_ID,
+            "summary_hash": "sha256:review",
+            "review_status": "REVIEW_READY",
+        },
+        diagnostics_bundle={
+            "bundle_id": RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1_ID,
+            "diagnostics_hash": "sha256:diagnostics",
+            "findings": (),
+        },
+        artifact_records=(
+            _file(
+                "scenario_review_bundle_v1",
+                "scenario_review_bundle_v1.json",
+                "sha256:scenario-bundle-file",
+            ),
+        ),
+        route_comparison_review_report=None,
+        scenario_review_checklist=None,
+        runtime_export_boundary_alignment={
+            "alignment_status": "ALIGNED",
+            "alignment_hash": "sha256:alignment",
+        },
+        user_configuration_binding={"validation_ok": True},
+    )
+
+    assert completion["completion_id"] == RUNTIME_EXPORT_PACKAGE_REVIEW_COMPLETION_V1_ID
+    assert completion["completion_status"] == "REVIEW_INCOMPLETE"
+    assert completion["handoff_ready"] is False
+    assert completion["route_comparison_review_report_present"] is False
+    assert completion["scenario_review_checklist_present"] is False
+    assert completion["missing_or_warning_evidence"] == (
+        "AUDIT_INDEX_NOT_READY",
+        "ROUTE_COMPARISON_REVIEW_REPORT_MISSING",
+        "SCENARIO_REVIEW_CHECKLIST_MISSING",
+    )
+    assert completion["completion_hash"].startswith("sha256:")
+
+
 def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
     boundary = {
         "boundary_id": RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1_ID,
@@ -986,6 +1033,7 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
     review_summary = {
         "summary_id": RUNTIME_EXPORT_REVIEW_SUMMARY_V1_ID,
         "summary_hash": "sha256:review",
+        "review_status": "REVIEW_READY",
     }
     diagnostics_bundle = {
         "bundle_id": RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1_ID,
@@ -1007,6 +1055,11 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
             "scenario_review_checklist_v1",
             "scenario_review_checklist_v1.json",
             "sha256:scenario-checklist-file",
+        ),
+        _file(
+            "scenario_review_bundle_v1",
+            "scenario_review_bundle_v1.json",
+            "sha256:scenario-bundle-file",
         ),
     )
 
@@ -1057,6 +1110,16 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
     assert first["scenario_review_checklist_present"] is True
     assert first["scenario_review_checklist_record_count"] == 2
     assert first["scenario_review_checklist_status"] == "CHECKLIST_COMPLETE"
+    completion = first["package_review_completion_v1"]
+    assert completion["completion_id"] == RUNTIME_EXPORT_PACKAGE_REVIEW_COMPLETION_V1_ID
+    assert completion["completion_status"] == "REVIEW_COMPLETE"
+    assert completion["handoff_ready"] is True
+    assert completion["route_comparison_review_report_present"] is True
+    assert completion["scenario_review_checklist_status"] == "CHECKLIST_COMPLETE"
+    assert completion["missing_or_warning_evidence"] == ()
+    assert completion["completion_hash"].startswith("sha256:")
+    assert first["package_review_completion_status"] == "REVIEW_COMPLETE"
+    assert first["package_review_completion_hash"] == completion["completion_hash"]
     assert first["self_artifact_excluded_from_hashes"] is True
     assert [item["filename"] for item in first["artifact_hashes"]] == [
         "config_snapshot.json",
@@ -1064,6 +1127,7 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
         "manifest.json",
         "metrics.csv",
         "route_comparison_review_report_v1.json",
+        "scenario_review_bundle_v1.json",
         "scenario_review_checklist_v1.json",
         "summary.json",
     ]

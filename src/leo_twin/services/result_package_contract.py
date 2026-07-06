@@ -43,6 +43,9 @@ RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID = (
 RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID = (
     "leo_twin.runtime_export_package_audit_index.v1"
 )
+RUNTIME_EXPORT_PACKAGE_REVIEW_COMPLETION_V1_ID = (
+    "leo_twin.runtime_export_package_review_completion.v1"
+)
 USER_CONFIGURATION_AUDIT_BINDING_V1_ID = (
     "leo_twin.user_configuration_audit_binding.v1"
 )
@@ -1210,6 +1213,20 @@ def build_runtime_export_package_audit_index_v1(
         audit_warnings.append("USER_CONFIGURATION_EXPORT_NOT_VALIDATED")
     if any(str(item.get("severity", "")) == "ERROR" for item in diagnostics_findings):
         audit_warnings.append("DIAGNOSTICS_BUNDLE_HAS_ERROR_FINDINGS")
+    audit_status = "AUDIT_READY" if not audit_warnings else "AUDIT_WARN"
+    package_review_completion = build_runtime_export_package_review_completion_v1(
+        package_id=package_id,
+        package_dir=package_dir,
+        audit_status=audit_status,
+        audit_warnings=tuple(audit_warnings),
+        review_summary=review_summary,
+        diagnostics_bundle=diagnostics_bundle,
+        artifact_records=normalized_artifacts,
+        route_comparison_review_report=route_report,
+        scenario_review_checklist=scenario_checklist,
+        runtime_export_boundary_alignment=alignment,
+        user_configuration_binding=user_config_binding,
+    )
 
     audit_index: dict[str, object] = {
         "type": "RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1",
@@ -1246,12 +1263,19 @@ def build_runtime_export_package_audit_index_v1(
         "scenario_review_checklist_status": str(
             scenario_checklist.get("checklist_status", "")
         ),
+        "package_review_completion_v1": package_review_completion,
+        "package_review_completion_status": str(
+            package_review_completion["completion_status"]
+        ),
+        "package_review_completion_hash": str(
+            package_review_completion["completion_hash"]
+        ),
         "artifact_count": len(normalized_artifacts),
         "artifact_hashes": normalized_artifacts,
         "required_artifact_filenames": required_filenames,
         "missing_required_artifact_filenames": missing_required,
         "self_artifact_excluded_from_hashes": True,
-        "audit_status": "AUDIT_READY" if not audit_warnings else "AUDIT_WARN",
+        "audit_status": audit_status,
         "audit_warnings": tuple(audit_warnings),
         "forbidden_external_integrations": ("STK", "EXATA", "AFSIM", "DDS"),
         "packet_level_simulation": False,
@@ -1261,6 +1285,126 @@ def build_runtime_export_package_audit_index_v1(
     }
     audit_index["audit_hash"] = stable_hash_payload(audit_index)
     return audit_index
+
+
+def build_runtime_export_package_review_completion_v1(
+    *,
+    package_id: str,
+    package_dir: str,
+    audit_status: str,
+    audit_warnings: tuple[str, ...] = (),
+    review_summary: Mapping[str, Any],
+    diagnostics_bundle: Mapping[str, Any],
+    artifact_records: tuple[Mapping[str, Any], ...] = (),
+    route_comparison_review_report: Mapping[str, Any] | None = None,
+    scenario_review_checklist: Mapping[str, Any] | None = None,
+    runtime_export_boundary_alignment: Mapping[str, Any] | None = None,
+    user_configuration_binding: Mapping[str, Any] | None = None,
+) -> dict[str, object]:
+    """Build backend-owned package review handoff completion evidence."""
+
+    if not isinstance(review_summary, Mapping):
+        raise TypeError("review_summary must be a mapping")
+    if not isinstance(diagnostics_bundle, Mapping):
+        raise TypeError("diagnostics_bundle must be a mapping")
+
+    route_report = _mapping(route_comparison_review_report)
+    checklist = _mapping(scenario_review_checklist)
+    alignment = _mapping(runtime_export_boundary_alignment)
+    user_config = _mapping(user_configuration_binding)
+    artifact_filenames = tuple(
+        sorted(
+            str(record.get("filename", ""))
+            for record in _file_records(artifact_records)
+            if str(record.get("filename", ""))
+        )
+    )
+    diagnostics_findings = _records(diagnostics_bundle.get("findings"))
+    diagnostics_error_count = sum(
+        1 for finding in diagnostics_findings if str(finding.get("severity", "")) == "ERROR"
+    )
+    route_report_present = bool(route_report)
+    route_report_error_count = _integer(route_report.get("error_count"))
+    route_report_ready = route_report_present and route_report_error_count == 0
+    checklist_present = bool(checklist)
+    checklist_status = str(checklist.get("checklist_status", ""))
+    checklist_complete = checklist_present and checklist_status == "CHECKLIST_COMPLETE"
+    scenario_bundle_present = "scenario_review_bundle_v1.json" in artifact_filenames
+    review_summary_ready = str(review_summary.get("review_status", "")) == "REVIEW_READY"
+    diagnostics_ready = diagnostics_error_count == 0
+    boundary_aligned = str(alignment.get("alignment_status", "")) == "ALIGNED"
+    user_configuration_validated = user_config.get("validation_ok") is True
+    audit_ready = str(audit_status) == "AUDIT_READY"
+    missing_or_warning: list[str] = []
+    if not audit_ready:
+        missing_or_warning.append("AUDIT_INDEX_NOT_READY")
+    if not route_report_present:
+        missing_or_warning.append("ROUTE_COMPARISON_REVIEW_REPORT_MISSING")
+    elif not route_report_ready:
+        missing_or_warning.append("ROUTE_COMPARISON_REVIEW_REPORT_HAS_ERRORS")
+    if not scenario_bundle_present:
+        missing_or_warning.append("SCENARIO_REVIEW_BUNDLE_MISSING")
+    if not checklist_present:
+        missing_or_warning.append("SCENARIO_REVIEW_CHECKLIST_MISSING")
+    elif not checklist_complete:
+        missing_or_warning.append("SCENARIO_REVIEW_CHECKLIST_NOT_COMPLETE")
+    if not review_summary_ready:
+        missing_or_warning.append("REVIEW_SUMMARY_NOT_READY")
+    if not diagnostics_ready:
+        missing_or_warning.append("DIAGNOSTICS_HAS_ERROR_FINDINGS")
+    if not boundary_aligned:
+        missing_or_warning.append("BOUNDARY_ALIGNMENT_NOT_ALIGNED")
+    if not user_configuration_validated:
+        missing_or_warning.append("USER_CONFIGURATION_NOT_VALIDATED")
+    completion_ready = not missing_or_warning
+    completion: dict[str, object] = {
+        "type": "RUNTIME_EXPORT_PACKAGE_REVIEW_COMPLETION_V1",
+        "version": "v1",
+        "completion_id": RUNTIME_EXPORT_PACKAGE_REVIEW_COMPLETION_V1_ID,
+        "source": "BACKEND_RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX",
+        "completion_scope": "RESULT_PACKAGE_OPERATOR_HANDOFF_READINESS",
+        "package_id": str(package_id),
+        "package_dir": str(package_dir),
+        "completion_status": (
+            "REVIEW_COMPLETE" if completion_ready else "REVIEW_INCOMPLETE"
+        ),
+        "handoff_ready": completion_ready,
+        "audit_status": str(audit_status),
+        "audit_warnings": _string_tuple(audit_warnings),
+        "route_comparison_review_report_present": route_report_present,
+        "route_comparison_review_report_hash": str(route_report.get("report_hash", "")),
+        "route_comparison_review_record_count": _integer(route_report.get("record_count")),
+        "route_comparison_review_error_count": route_report_error_count,
+        "scenario_review_bundle_present": scenario_bundle_present,
+        "scenario_review_checklist_present": checklist_present,
+        "scenario_review_checklist_hash": str(checklist.get("checklist_hash", "")),
+        "scenario_review_checklist_status": checklist_status,
+        "scenario_review_checklist_record_count": _integer(checklist.get("record_count")),
+        "review_summary_status": str(review_summary.get("review_status", "")),
+        "review_summary_hash": str(review_summary.get("summary_hash", "")),
+        "diagnostics_error_count": diagnostics_error_count,
+        "diagnostics_hash": str(diagnostics_bundle.get("diagnostics_hash", "")),
+        "boundary_alignment_status": str(alignment.get("alignment_status", "")),
+        "boundary_alignment_hash": str(alignment.get("alignment_hash", "")),
+        "user_configuration_validation_ok": user_configuration_validated,
+        "missing_or_warning_evidence": tuple(missing_or_warning),
+        "evidence_labels": (
+            f"audit {audit_status}",
+            f"route_report {'saved' if route_report_present else 'missing'}",
+            f"route_errors {route_report_error_count}",
+            f"scenario_bundle {'present' if scenario_bundle_present else 'missing'}",
+            f"checklist {checklist_status or 'missing'}",
+            f"checklist_records {_integer(checklist.get('record_count'))}",
+        ),
+        "boundary_conditions": (
+            "NO_EVENT_REPLAY",
+            "NO_MODEL_RECOMPUTE",
+            "NO_PACKAGE_READ_MUTATION",
+            "BACKEND_OWNED_HANDOFF_SUMMARY",
+        ),
+    }
+    completion["completion_hash"] = stable_hash_payload(completion)
+    return completion
 
 
 def _runtime_export_user_configuration_audit_binding(

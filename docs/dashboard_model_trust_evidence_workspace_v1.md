@@ -104,11 +104,13 @@ record for those rows. The dashboard now exposes editable reviewed/skipped/
 follow-up/error controls and operator notes for each guided review row, posts
 them to the backend checklist endpoint, and refreshes the audit index so
 checklist presence, hash, status, and record count stay backend-owned evidence.
-The package review completion banner aggregates that checklist state with audit
-readiness, saved route comparison report presence, and scenario-review bundle
-readiness, so operators can see the handoff state before drilling into raw JSON.
-This lets operators inspect and record the package audit boundary without
-opening raw JSON first.
+The package review completion banner now prefers the backend-owned
+`package_review_completion_v1` object embedded in the audit index, falling back
+to local aggregation only for older packages. That object aggregates checklist
+state with audit readiness, saved route comparison report presence, and
+scenario-review bundle readiness, so operators can see the handoff state before
+drilling into raw JSON. This lets operators inspect and record the package
+audit boundary without opening raw JSON first.
 7. runtime evidence
 
 Each row has a tone:

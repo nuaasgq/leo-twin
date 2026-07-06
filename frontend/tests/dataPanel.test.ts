@@ -3134,6 +3134,60 @@ describe("buildDataPanelExportCatalogDisplay", () => {
       buildDataPanelExportReviewCompletionSummary({
         auditIndex: {
           ...auditIndex,
+          package_review_completion_v1: {
+            type: "RUNTIME_EXPORT_PACKAGE_REVIEW_COMPLETION_V1",
+            version: "v1",
+            completion_id:
+              "leo_twin.runtime_export_package_review_completion.v1",
+            source: "BACKEND_RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX",
+            completion_scope: "RESULT_PACKAGE_OPERATOR_HANDOFF_READINESS",
+            package_id: "pkg-review",
+            package_dir: "artifacts/runtime_exports/pkg-review",
+            completion_status: "REVIEW_COMPLETE",
+            handoff_ready: true,
+            audit_status: "AUDIT_READY",
+            audit_warnings: [],
+            route_comparison_review_report_present: true,
+            route_comparison_review_report_hash: "sha256:route-report",
+            route_comparison_review_record_count: 1,
+            route_comparison_review_error_count: 0,
+            scenario_review_bundle_present: true,
+            scenario_review_checklist_present: true,
+            scenario_review_checklist_hash: "sha256:checklist",
+            scenario_review_checklist_status: "CHECKLIST_COMPLETE",
+            scenario_review_checklist_record_count: 2,
+            review_summary_status: "REVIEW_READY",
+            review_summary_hash: "sha256:review",
+            diagnostics_error_count: 0,
+            diagnostics_hash: "sha256:diagnostics",
+            boundary_alignment_status: "ALIGNED",
+            boundary_alignment_hash: "sha256:alignment",
+            user_configuration_validation_ok: true,
+            missing_or_warning_evidence: [],
+            evidence_labels: ["backend completion evidence"],
+            boundary_conditions: ["BACKEND_OWNED_HANDOFF_SUMMARY"],
+            completion_hash: "sha256:backend-completion"
+          }
+        } as any,
+        routeReport: null,
+        scenarioReviewBundle: null,
+        scenarioReviewChecklist: null
+      })
+    ).toMatchObject({
+      tone: "match",
+      statusLabel: "review package complete",
+      summaryLabel:
+        "REVIEW_COMPLETE / audit AUDIT_READY / completion backend-comp",
+      evidenceLabels: [
+        "backend completion evidence",
+        "completion backend-comp"
+      ],
+      warningLabels: []
+    });
+    expect(
+      buildDataPanelExportReviewCompletionSummary({
+        auditIndex: {
+          ...auditIndex,
           route_comparison_review_report_present: false
         } as any,
         routeReport: null,
