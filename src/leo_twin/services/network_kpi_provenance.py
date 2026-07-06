@@ -47,6 +47,70 @@ _ZERO_REASON_KEYS_BY_METRIC = {
     ),
 }
 
+_FORMULA_SELECTION_POLICY_BY_METRIC = {
+    "CONGESTION_PRESSURE": (
+        "Report the current congestion-pressure runtime summary value and "
+        "declared link-utilization input."
+    ),
+    "EFFECTIVE_DELAY_VARIATION_PROXY": (
+        "Use the largest available route-spread, completed-flow variation, "
+        "pressure variation, or time-window pressure variation proxy."
+    ),
+    "EFFECTIVE_LATENCY": (
+        "Prefer completed-flow latency when present; otherwise use current "
+        "available-route latency."
+    ),
+    "EFFECTIVE_LOSS_PROXY": (
+        "Use the maximum available configured, route, failed-flow, congestion, "
+        "demand, and time-window pressure loss proxy."
+    ),
+    "EFFECTIVE_THROUGHPUT": (
+        "Prefer completed-flow throughput with deterministic pressure context; "
+        "otherwise use loss-adjusted available route demand/capacity."
+    ),
+    "ROUTE_BLOCKING_RATIO": (
+        "Report blocked route decisions divided by recent route decisions."
+    ),
+}
+
+_SELECTED_FIELDS_BY_SOURCE = {
+    ("EFFECTIVE_THROUGHPUT", "COMPLETED_FLOW_CAPACITY"): (
+        "network_quality_estimated_delivered_throughput_mbps",
+        "network_quality_time_adjusted_delivered_throughput_mbps",
+    ),
+    ("EFFECTIVE_THROUGHPUT", "AVAILABLE_ROUTE_CAPACITY"): (
+        "network_quality_estimated_available_throughput_mbps",
+        "network_quality_available_route_demand_mbps",
+    ),
+    ("EFFECTIVE_LATENCY", "COMPLETED_FLOW_LATENCY"): (
+        "network_quality_flow_latency_avg_s",
+    ),
+    ("EFFECTIVE_LATENCY", "AVAILABLE_ROUTE_LATENCY"): (
+        "network_quality_route_latency_avg_s",
+    ),
+    ("EFFECTIVE_LOSS_PROXY", "PRESSURE_LOSS_PROXY"): (
+        "network_quality_congestion_loss_proxy_rate",
+        "network_quality_demand_loss_proxy_rate",
+        "network_quality_time_pressure_loss_proxy_rate",
+    ),
+    ("EFFECTIVE_LOSS_PROXY", "ROUTE_BLOCKING_RATIO"): (
+        "network_quality_route_blocking_ratio",
+    ),
+    ("EFFECTIVE_LOSS_PROXY", "FAILED_FLOW_RATIO"): (
+        "network_quality_failed_flow_ratio",
+    ),
+    ("EFFECTIVE_DELAY_VARIATION_PROXY", "FLOW_LATENCY_VARIATION"): (
+        "network_quality_flow_latency_variation_proxy_s",
+    ),
+    ("EFFECTIVE_DELAY_VARIATION_PROXY", "ROUTE_LATENCY_SPREAD"): (
+        "network_quality_delay_variation_proxy_s",
+    ),
+    ("EFFECTIVE_DELAY_VARIATION_PROXY", "PRESSURE_DELAY_VARIATION"): (
+        "network_quality_pressure_delay_variation_proxy_s",
+        "network_quality_time_pressure_delay_variation_proxy_s",
+    ),
+}
+
 
 def build_network_kpi_provenance_v2(
     metrics: Mapping[str, Any],
@@ -169,6 +233,10 @@ def _kpi_provenance_item(
     current_value = _metric_value(metrics, runtime_key)
     observed_source = _observed_source(metric, metrics)
     zero_reason = _zero_reason(metric, metrics)
+    formula_inputs = tuple(
+        _formula_input_value(field, metric, observed_source, metrics)
+        for field in source_fields
+    )
     return {
         "metric": metric,
         "runtime_summary_key": runtime_key,
@@ -187,6 +255,16 @@ def _kpi_provenance_item(
             _source_field_value(field, metrics)
             for field in source_fields
         ),
+        "formula_inputs": formula_inputs,
+        "formula_trace": _formula_trace(
+            metric=metric,
+            runtime_key=runtime_key,
+            current_value=current_value,
+            observed_source=observed_source,
+            source_fields=source_fields,
+            formula_inputs=formula_inputs,
+            runtime_value_observed=runtime_key in metrics,
+        ),
     }
 
 
@@ -202,6 +280,94 @@ def _source_field_value(field: str, metrics: Mapping[str, Any]) -> dict[str, obj
         "current_value": None,
         "value_source": "MODEL_OR_CONFIG_STATE",
     }
+
+
+def _formula_input_value(
+    field: str,
+    metric: str,
+    observed_source: Mapping[str, str],
+    metrics: Mapping[str, Any],
+) -> dict[str, object]:
+    value_source = "METRICS_SUMMARY" if field in metrics else "MODEL_OR_CONFIG_STATE"
+    selected_fields = _selected_fields(metric, observed_source)
+    selected = field in selected_fields
+    observed = value_source == "METRICS_SUMMARY"
+    if selected and observed:
+        role = "SELECTED_RUNTIME_INPUT"
+        reason = (
+            f"selected by observed_source={observed_source.get('source', '')} "
+            "and observed in metrics_summary"
+        )
+    elif selected:
+        role = "SELECTED_DECLARED_INPUT"
+        reason = (
+            f"selected by observed_source={observed_source.get('source', '')} "
+            "but current value is not exposed in metrics_summary"
+        )
+    elif observed:
+        role = "OBSERVED_SUPPORTING_INPUT"
+        reason = "observed supporting formula input from metrics_summary"
+    else:
+        role = "DECLARED_SUPPORTING_INPUT"
+        reason = "declared by network model contract; current runtime value is not exposed"
+    return {
+        "field": field,
+        "current_value": _metric_value(metrics, field),
+        "value_source": value_source,
+        "observed": observed,
+        "selected_for_current_value": selected,
+        "role": role,
+        "selection_reason": reason,
+    }
+
+
+def _formula_trace(
+    *,
+    metric: str,
+    runtime_key: str,
+    current_value: object,
+    observed_source: Mapping[str, str],
+    source_fields: tuple[str, ...],
+    formula_inputs: tuple[Mapping[str, Any], ...],
+    runtime_value_observed: bool,
+) -> dict[str, object]:
+    selected_fields = _selected_fields(metric, observed_source)
+    observed_inputs = tuple(
+        item for item in formula_inputs if item.get("observed") is True
+    )
+    selected_inputs = tuple(
+        item for item in formula_inputs if item.get("selected_for_current_value") is True
+    )
+    selected_observed_inputs = tuple(
+        item
+        for item in selected_inputs
+        if item.get("observed") is True
+    )
+    return {
+        "selection_policy": _FORMULA_SELECTION_POLICY_BY_METRIC.get(
+            metric,
+            "Use the runtime summary key declared by the network model contract.",
+        ),
+        "runtime_summary_key": runtime_key,
+        "runtime_value_observed": runtime_value_observed,
+        "current_value": current_value,
+        "observed_source": str(observed_source.get("source", "")),
+        "observed_source_label": str(observed_source.get("label", "")),
+        "declared_input_count": len(source_fields),
+        "observed_input_count": len(observed_inputs),
+        "selected_input_count": len(selected_inputs),
+        "selected_observed_input_count": len(selected_observed_inputs),
+        "missing_input_count": max(0, len(source_fields) - len(observed_inputs)),
+        "selected_source_fields": selected_fields,
+    }
+
+
+def _selected_fields(
+    metric: str,
+    observed_source: Mapping[str, str],
+) -> tuple[str, ...]:
+    source = str(observed_source.get("source", ""))
+    return _SELECTED_FIELDS_BY_SOURCE.get((metric, source), ())
 
 
 def _observed_source(metric: str, metrics: Mapping[str, Any]) -> dict[str, str]:

@@ -88,6 +88,36 @@ def test_network_kpi_provenance_v2_binds_metrics_to_network_contract() -> None:
         "current_value": 180.0,
         "value_source": "METRICS_SUMMARY",
     }
+    throughput_inputs = _formula_inputs(throughput)
+    assert throughput_inputs[
+        "network_quality_estimated_delivered_throughput_mbps"
+    ]["role"] == "SELECTED_RUNTIME_INPUT"
+    assert throughput_inputs[
+        "network_quality_time_adjusted_delivered_throughput_mbps"
+    ]["selected_for_current_value"] is True
+    assert throughput_inputs[
+        "network_quality_available_route_demand_mbps"
+    ]["role"] == "OBSERVED_SUPPORTING_INPUT"
+    assert throughput["formula_trace"] == {
+        "selection_policy": (
+            "Prefer completed-flow throughput with deterministic pressure context; "
+            "otherwise use loss-adjusted available route demand/capacity."
+        ),
+        "runtime_summary_key": "network_quality_effective_throughput_mbps",
+        "runtime_value_observed": True,
+        "current_value": 180.0,
+        "observed_source": "COMPLETED_FLOW_CAPACITY",
+        "observed_source_label": "completed flow capacity",
+        "declared_input_count": 4,
+        "observed_input_count": 4,
+        "selected_input_count": 2,
+        "selected_observed_input_count": 2,
+        "missing_input_count": 0,
+        "selected_source_fields": (
+            "network_quality_estimated_delivered_throughput_mbps",
+            "network_quality_time_adjusted_delivered_throughput_mbps",
+        ),
+    }
 
     loss = _kpi(provenance, "EFFECTIVE_LOSS_PROXY")
     assert loss["current_value"] == 0.05
@@ -100,10 +130,25 @@ def test_network_kpi_provenance_v2_binds_metrics_to_network_contract() -> None:
         "MODEL_OR_CONFIG_STATE"
     )
     assert loss_fields["network_quality_failed_flow_ratio"]["current_value"] == 0.0
+    loss_inputs = _formula_inputs(loss)
+    assert loss_inputs["network.transport_loss_rate"]["role"] == (
+        "DECLARED_SUPPORTING_INPUT"
+    )
+    assert loss_inputs["network_quality_demand_loss_proxy_rate"]["role"] == (
+        "SELECTED_RUNTIME_INPUT"
+    )
+    assert loss_inputs[
+        "network_quality_time_pressure_loss_proxy_rate"
+    ]["selected_for_current_value"] is True
+    assert loss["formula_trace"]["selected_input_count"] == 3
 
     delay_variation = _kpi(provenance, "EFFECTIVE_DELAY_VARIATION_PROXY")
     assert delay_variation["current_value"] == 0.006
     assert delay_variation["observed_source"]["source"] == "FLOW_LATENCY_VARIATION"
+    delay_inputs = _formula_inputs(delay_variation)
+    assert delay_inputs[
+        "network_quality_flow_latency_variation_proxy_s"
+    ]["role"] == "SELECTED_RUNTIME_INPUT"
 
     credibility = build_network_kpi_credibility_v1(provenance)
     assert credibility["version"] == "v1"
@@ -136,6 +181,11 @@ def test_network_kpi_provenance_v2_reports_missing_runtime_values() -> None:
     throughput = _kpi(provenance, "EFFECTIVE_THROUGHPUT")
     assert throughput["current_value"] is None
     assert throughput["observed_source"] == {"source": "", "label": ""}
+    assert throughput["formula_trace"]["runtime_value_observed"] is False
+    assert throughput["formula_trace"]["observed_input_count"] == 0
+    assert throughput["formula_trace"]["missing_input_count"] == len(
+        throughput["formula_inputs"]
+    )
 
     credibility = build_network_kpi_credibility_v1(provenance)
     assert credibility["credibility_status"] == "MISSING_RUNTIME_VALUES"
@@ -163,4 +213,14 @@ def _source_fields(item: dict[str, object]) -> dict[str, dict[str, object]]:
     for source_field in source_fields:
         assert isinstance(source_field, dict)
         result[str(source_field["field"])] = source_field
+    return result
+
+
+def _formula_inputs(item: dict[str, object]) -> dict[str, dict[str, object]]:
+    formula_inputs = item["formula_inputs"]
+    assert isinstance(formula_inputs, tuple)
+    result: dict[str, dict[str, object]] = {}
+    for formula_input in formula_inputs:
+        assert isinstance(formula_input, dict)
+        result[str(formula_input["field"])] = formula_input
     return result

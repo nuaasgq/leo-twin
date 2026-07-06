@@ -61,6 +61,11 @@ Each item in `kpis` includes:
 - observed dominant source
 - zero reason when applicable
 - source-field values when present in `metrics_summary`
+- `formula_inputs`: backend-auditable formula inputs with current value,
+  observed flag, selected-for-current-value flag, role, and selection reason;
+- `formula_trace`: backend-owned selection policy, observed source, selected
+  source fields, input coverage counts, and missing-input count for the current
+  runtime value.
 
 ## KPI Semantics
 
@@ -124,12 +129,14 @@ metric names, and backend caveats.
 
 The dashboard also renders `network_kpi_provenance_v2.kpis` as a read-only KPI
 formula inspector. Each visible row shows the KPI display name, runtime value,
-owning layer, observed source, formula summary, source-field coverage, and
-zero-value reason or semantics. This keeps frontend explanations tied to the
-backend contract instead of local dashboard guesses.
+owning layer, observed source, formula summary, source-field coverage, formula
+input audit, current selection trace, and zero-value reason or semantics. This
+keeps frontend explanations tied to the backend contract instead of local
+dashboard guesses.
 
 ## Follow-Up
 
 V2-022 added deterministic time-window pressure inputs while preserving this
-contract. Future dashboard work can add filtering or a wider drawer for large
-KPI/source-field tables if additional KPI families are added.
+contract. T323 added per-KPI `formula_inputs` and `formula_trace` audit fields.
+Future dashboard work can add filtering or a wider drawer for large
+KPI/source-field/input tables if additional KPI families are added.

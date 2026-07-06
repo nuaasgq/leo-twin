@@ -3022,6 +3022,10 @@ export const DataPanel = memo(function DataPanel({
                     <small>{row.sourceLabel}</small>
                     <small>{row.formulaLabel}</small>
                     <small>{row.sourceFieldsLabel}</small>
+                    {row.formulaInputsLabel ? (
+                      <small>{row.formulaInputsLabel}</small>
+                    ) : null}
+                    {row.formulaTraceLabel ? <small>{row.formulaTraceLabel}</small> : null}
                     {row.zeroReasonLabel ? <small>{row.zeroReasonLabel}</small> : null}
                   </span>
                 ))}
@@ -13737,6 +13741,8 @@ export interface DataPanelNetworkKpiFormulaRow {
   sourceLabel: string;
   formulaLabel: string;
   sourceFieldsLabel: string;
+  formulaInputsLabel: string | null;
+  formulaTraceLabel: string | null;
   zeroReasonLabel: string | null;
   tone: "observed" | "missing" | "invalid";
   title: string;
@@ -14275,6 +14281,8 @@ export function buildDataPanelNetworkKpiFormulaInspector(
       .slice(0, 4)
       .map((field) => `${field.field}=${formatNetworkKpiValue(field.current_value)}`)
       .join(" / ")}`;
+    const formulaInputsLabel = formatNetworkKpiFormulaInputsLabel(kpi);
+    const formulaTraceLabel = formatNetworkKpiFormulaTraceLabel(kpi);
     const zeroReasonLabel =
       kpi.zero_reason && kpi.zero_reason.label
         ? `零值原因：${kpi.zero_reason.label}`
@@ -14294,6 +14302,8 @@ export function buildDataPanelNetworkKpiFormulaInspector(
       sourceLabel: `${kpi.observed_source.label || kpi.observed_source.source}`,
       formulaLabel: kpi.formula_summary,
       sourceFieldsLabel,
+      formulaInputsLabel,
+      formulaTraceLabel,
       zeroReasonLabel,
       tone,
       title: `${kpi.metric}: ${kpi.interpretation}`
@@ -14325,6 +14335,42 @@ export function buildDataPanelNetworkKpiFormulaInspector(
     ],
     rows
   };
+}
+
+function formatNetworkKpiFormulaInputsLabel(
+  kpi: RuntimeNetworkKpiProvenanceV2["kpis"][number]
+): string | null {
+  const inputs = kpi.formula_inputs ?? [];
+  if (inputs.length === 0) {
+    return null;
+  }
+  const selected = inputs.filter((input) => input.selected_for_current_value);
+  const observed = inputs.filter((input) => input.observed);
+  const visible = (selected.length > 0 ? selected : inputs).slice(0, 4);
+  const inputText = visible
+    .map((input) => {
+      const marker = input.selected_for_current_value ? "*" : "";
+      return `${marker}${input.field}=${formatNetworkKpiValue(input.current_value)}`;
+    })
+    .join(" / ");
+  return `输入审计 ${formatCount(selected.length)} 选中 / ${formatCount(
+    observed.length
+  )}/${formatCount(inputs.length)} 可观测：${inputText}`;
+}
+
+function formatNetworkKpiFormulaTraceLabel(
+  kpi: RuntimeNetworkKpiProvenanceV2["kpis"][number]
+): string | null {
+  const trace = kpi.formula_trace;
+  if (trace === undefined || trace === null) {
+    return null;
+  }
+  const sourceLabel = trace.observed_source_label || trace.observed_source || "未声明来源";
+  return `选择 ${sourceLabel}；选中可观测 ${formatCount(
+    Math.max(0, trace.selected_observed_input_count)
+  )}/${formatCount(Math.max(0, trace.selected_input_count))}；缺失输入 ${formatCount(
+    Math.max(0, trace.missing_input_count)
+  )}；${trace.selection_policy}`;
 }
 
 export function buildDataPanelRouteProvenanceTrustDisplay(

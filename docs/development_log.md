@@ -15569,7 +15569,7 @@ change.
 ## 2026-07-06 - Dashboard Configuration Reference Browser v1
 
 - Branch: `feature/T322-dashboard-config-reference-browser-v1`
-- Commit: pending commit note; final hash is reported after commit creation.
+- Commit: `de8e76b feat(frontend): add configuration reference browser`
 - Scope: upgrade the standalone dashboard's user configuration contract panel
   from a compact reference link to an in-dashboard, scrollable configuration
   reference browser. The browser is driven by backend
@@ -15612,3 +15612,56 @@ change.
   - Add field search, section filtering, and virtualization if the user
     configuration contract grows enough that a simple scrollable table becomes
     hard to navigate.
+
+## 2026-07-06 - Network KPI Formula Input Audit v1
+
+- Branch: `feature/T323-network-kpi-credibility-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: enrich backend `network_kpi_provenance_v2.kpis` with auditable
+  `formula_inputs` and `formula_trace` fields so throughput, latency, loss
+  proxy, delay-variation proxy, route blocking, and congestion pressure can
+  show current input values, observed/missing state, selected input flags,
+  selection policy, selected source fields, and input coverage counts. The
+  standalone dashboard formula inspector now displays the backend input audit
+  and current selection trace while preserving the existing source-field
+  summary and compatibility with older provenance objects.
+- Changed files/modules:
+  - `src/leo_twin/services/network_kpi_provenance.py`
+  - `tests/unit/test_network_kpi_provenance_v2.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/network_kpi_provenance_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests\unit\test_network_kpi_provenance_v2.py -q`
+    - Result: passed, 2 tests.
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 1 test
+      file and 182 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path.
+  - `python -m pytest tests\unit\test_network_kpi_provenance_v2.py tests\integration\test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer -q`
+    - Result: passed, 3 tests.
+  - `pnpm --dir frontend test api.test.ts dataPanel.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 2 test
+      files and 216 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path. Vite
+      reported the existing large DataPanel chunk warning.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered:
+  - TypeScript caught one hand-built test fixture that implemented
+    `DataPanelNetworkKpiFormulaRow` without the new optional display fields;
+    the fixture was updated with `null` values to preserve old-data behavior.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The formula audit explains current flow-level proxy inputs but still does
+    not make the network model a packet-level or high-fidelity RF simulator.
+- Recommended follow-up:
+  - Use the new formula input audit as the basis for a benchmark validation
+    view that compares expected KPI movement under low-load and stress
+    scenarios.

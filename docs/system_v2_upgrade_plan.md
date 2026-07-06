@@ -198,6 +198,9 @@ Tasks:
     T273 renders `network_kpi_provenance_v2.kpis` as a dashboard formula
     inspector with runtime value, layer, observed source, formula summary,
     source-field coverage, and zero-value semantics per KPI.
+    T323 adds backend-owned `formula_inputs` and `formula_trace` to each KPI
+    provenance item, and the dashboard displays the input audit and current
+    selection trace so KPI movement can be explained from backend values.
 - V2-022: Add time-varying flow-level network pressure.
   - Scope: deterministic demand/capacity pressure, route blocking, congestion
     proxy, loss proxy, delay variation proxy.

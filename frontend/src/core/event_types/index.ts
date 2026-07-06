@@ -2221,6 +2221,8 @@ export interface RuntimeNetworkKpiProvenanceItemV2 {
   observed_source: RuntimeNetworkKpiObservedSourceV2;
   zero_reason?: RuntimeNetworkKpiZeroReasonV2 | null;
   source_fields: readonly RuntimeNetworkKpiSourceFieldV2[];
+  formula_inputs?: readonly RuntimeNetworkKpiFormulaInputV2[];
+  formula_trace?: RuntimeNetworkKpiFormulaTraceV2;
 }
 
 export interface RuntimeNetworkKpiObservedSourceV2 {
@@ -2237,6 +2239,31 @@ export interface RuntimeNetworkKpiSourceFieldV2 {
   field: string;
   current_value: string | number | boolean | null;
   value_source: string;
+}
+
+export interface RuntimeNetworkKpiFormulaInputV2 {
+  field: string;
+  current_value: string | number | boolean | null;
+  value_source: string;
+  observed: boolean;
+  selected_for_current_value: boolean;
+  role: string;
+  selection_reason: string;
+}
+
+export interface RuntimeNetworkKpiFormulaTraceV2 {
+  selection_policy: string;
+  runtime_summary_key: string;
+  runtime_value_observed: boolean;
+  current_value: string | number | boolean | null;
+  observed_source: string;
+  observed_source_label: string;
+  declared_input_count: number;
+  observed_input_count: number;
+  selected_input_count: number;
+  selected_observed_input_count: number;
+  missing_input_count: number;
+  selected_source_fields: readonly string[];
 }
 
 export interface RuntimeNetworkKpiCredibilityV1 {

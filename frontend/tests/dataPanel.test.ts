@@ -6589,7 +6589,46 @@ describe("buildDataPanelNetworkKpiCredibilityDisplay", () => {
                 current_value: null,
                 value_source: "MODEL_OR_CONFIG_STATE"
               }
-            ]
+            ],
+            formula_inputs: [
+              {
+                field: "network_quality_estimated_delivered_throughput_mbps",
+                current_value: 180,
+                value_source: "METRICS_SUMMARY",
+                observed: true,
+                selected_for_current_value: true,
+                role: "SELECTED_RUNTIME_INPUT",
+                selection_reason:
+                  "selected by observed_source=COMPLETED_FLOW_CAPACITY and observed in metrics_summary"
+              },
+              {
+                field: "network_quality_available_route_demand_mbps",
+                current_value: null,
+                value_source: "MODEL_OR_CONFIG_STATE",
+                observed: false,
+                selected_for_current_value: false,
+                role: "DECLARED_SUPPORTING_INPUT",
+                selection_reason:
+                  "declared by network model contract; current runtime value is not exposed"
+              }
+            ],
+            formula_trace: {
+              selection_policy:
+                "Prefer completed-flow throughput with deterministic pressure context.",
+              runtime_summary_key: "network_quality_effective_throughput_mbps",
+              runtime_value_observed: true,
+              current_value: 180,
+              observed_source: "COMPLETED_FLOW_CAPACITY",
+              observed_source_label: "completed flow capacity",
+              declared_input_count: 2,
+              observed_input_count: 1,
+              selected_input_count: 1,
+              selected_observed_input_count: 1,
+              missing_input_count: 1,
+              selected_source_fields: [
+                "network_quality_estimated_delivered_throughput_mbps"
+              ]
+            }
           },
           {
             metric: "EFFECTIVE_LOSS_PROXY",
@@ -6669,6 +6708,10 @@ describe("buildDataPanelNetworkKpiCredibilityDisplay", () => {
           sourceLabel: "completed flow capacity",
           sourceFieldsLabel:
             "来源字段 1/2：network_quality_estimated_delivered_throughput_mbps=180 / network_quality_available_route_demand_mbps=-",
+          formulaInputsLabel:
+            "输入审计 1 选中 / 1/2 可观测：*network_quality_estimated_delivered_throughput_mbps=180",
+          formulaTraceLabel:
+            "选择 completed flow capacity；选中可观测 1/1；缺失输入 1；Prefer completed-flow throughput with deterministic pressure context.",
           tone: "observed"
         }
       ]
@@ -7049,6 +7092,8 @@ describe("buildDataPanelModelTrustEvidenceWorkspace", () => {
             sourceLabel: "completed flow capacity",
             formulaLabel: "min(delivered, route capacity)",
             sourceFieldsLabel: "来源字段 2/2",
+            formulaInputsLabel: null,
+            formulaTraceLabel: null,
             zeroReasonLabel: null,
             tone: "observed",
             title: "throughput interpretation"
