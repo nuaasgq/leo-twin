@@ -204,8 +204,10 @@ can filter by status, search route id/status/hash/note text, and page through
 matching records without opening the raw JSON. Each package also exposes
 `export_package_audit_index_v1.json`, which summarizes manifest, boundary
 alignment, diagnostics, route review report, and artifact file hashes in one
-read-only audit entry. The dashboard shows whether this audit index artifact is
-present and links to the JSON file from the package review area.
+read-only audit entry. The dashboard loads this audit index and displays it as
+a dedicated audit drawer with Manifest, Boundary, Diagnostics, Route Review,
+and Artifact Hash sections, while still keeping a direct JSON link for
+operator review.
 For package-owned review, use:
 
 ```powershell

@@ -305,6 +305,10 @@ Tasks:
     hash, optional route review report hash, and package artifact file hashes.
     The index is regenerated after route review report save and is surfaced in
     the dashboard package review area through the export catalog.
+  - Status: T308 loads `export_package_audit_index_v1.json` into the dashboard
+    package review area as a dedicated audit drawer. The drawer groups manifest,
+    boundary alignment, diagnostics, route review report, and artifact hash
+    evidence and refreshes after route comparison review report save.
 
 ### WS4. Compute Network Model v2
 

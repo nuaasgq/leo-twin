@@ -14609,6 +14609,9 @@ change.
       files and 201 tests.
   - `pnpm --dir frontend exec tsc --noEmit`
     - Result: passed with the bundled Codex Node/Pnpm runtime path.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path. Vite
+      reported the existing large DataPanel chunk warning.
 - Problems encountered:
   - The normal PowerShell environment did not expose `node`. The task used
     `codex_app.load_workspace_dependencies` and the bundled runtime paths for
@@ -14851,3 +14854,46 @@ change.
     `export_package_audit_index_v1.json` and displays manifest, boundary,
     diagnostics, route review report, and artifact hash sections without
     opening raw JSON.
+
+## 2026-07-06 - Dashboard Audit Index Drawer v1
+
+- Branch: `feature/T308-dashboard-audit-index-drawer-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: load and render `export_package_audit_index_v1.json` in the standalone
+  dashboard package review area. The App now treats audit index as a selected
+  package artifact alongside compare, manifest, diagnostics, route detail, and
+  saved route comparison review reports. It loads the audit index when the
+  catalog lists the artifact, clears the state for older packages, and reloads
+  it after a route comparison review report save. The DataPanel now renders a
+  dedicated read-only audit drawer with Manifest, Boundary, Diagnostics, Route
+  Review, and Artifact Hash sections, plus loading/error states and a direct
+  audit JSON link. This task does not alter backend package generation, Event
+  Kernel behavior, restore execution, route recomputation, model recomputation,
+  packet-level simulation, or package mutation.
+- Changed files/modules:
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/dashboard_model_trust_evidence_workspace_v1.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts api.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 2 test
+      files and 206 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path.
+- Problems encountered:
+  - The normal PowerShell PATH may not expose `node`, so frontend validation
+    used the bundled Codex Node/Pnpm runtime path.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The audit drawer displays a bounded artifact hash preview to keep the
+    dashboard compact; raw JSON remains linked for full audit review.
+  - Old packages without `export_package_audit_index_v1.json` continue to show
+    only the catalog-level missing artifact state.
+- Recommended follow-up:
+  - Add an operator-facing audit export summary button that copies the selected
+    audit index sections into a compact review note or Markdown report.

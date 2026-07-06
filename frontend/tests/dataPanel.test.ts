@@ -32,6 +32,8 @@ import {
   buildDataPanelExportRouteDetailItemDisplay,
   buildDataPanelExportRouteDetailItemStatus,
   buildDataPanelExportPackageAuditIndexArtifactDisplay,
+  buildDataPanelExportPackageAuditIndexDisplay,
+  buildDataPanelExportPackageAuditIndexStatus,
   buildDataPanelExportRouteComparisonReviewArtifactDisplay,
   buildDataPanelExportRouteComparisonReviewReportDisplay,
   buildDataPanelExportRouteComparisonReviewReportStatus,
@@ -2388,6 +2390,150 @@ describe("buildDataPanelExportCatalogDisplay", () => {
     expect(
       buildDataPanelExportPackageAuditIndexArtifactDisplay(undefined, "pkg-review")
     ).toBeNull();
+  });
+
+  it("summarizes loaded export package audit indexes by evidence section", () => {
+    const auditIndex = {
+      type: "RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1",
+      version: "v1",
+      audit_index_id: "leo_twin.runtime_export_package_audit_index.v1",
+      source: "BACKEND_RUNTIME_EXPORT_PACKAGE",
+      audit_scope: "RESULT_PACKAGE_LONG_TERM_AUDIT_INDEX",
+      package_id: "pkg-review",
+      package_dir: "artifacts/runtime_exports/pkg-review",
+      manifest_hash:
+        "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      control_config_hash:
+        "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+      generated_config_hash:
+        "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      runtime_state_hash:
+        "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+      runtime_export_boundary_hash:
+        "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+      boundary_alignment_hash:
+        "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+      boundary_alignment_status: "ALIGNED",
+      boundary_alignment_warnings: [],
+      review_summary_hash:
+        "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+      diagnostics_hash:
+        "sha256:8888888888888888888888888888888888888888888888888888888888888888",
+      route_comparison_review_report_hash:
+        "sha256:9999999999999999999999999999999999999999999999999999999999999999",
+      route_comparison_review_report_present: true,
+      artifact_count: 3,
+      artifact_hashes: [
+        {
+          name: "config_snapshot",
+          filename: "config_snapshot.json",
+          bytes: 1024,
+          sha256:
+            "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+          name: "manifest",
+          filename: "manifest.json",
+          bytes: 2048,
+          sha256:
+            "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        },
+        {
+          name: "diagnostics_bundle_v1",
+          filename: "diagnostics_bundle_v1.json",
+          bytes: 4096,
+          sha256:
+            "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        }
+      ],
+      required_artifact_filenames: ["config_snapshot.json", "manifest.json"],
+      missing_required_artifact_filenames: [],
+      self_artifact_excluded_from_hashes: true,
+      audit_status: "AUDIT_READY",
+      audit_warnings: [],
+      forbidden_external_integrations: ["STK", "EXATA", "AFSIM", "DDS"],
+      packet_level_simulation: false,
+      event_replay_restore: false,
+      model_recomputation: false,
+      package_mutation_on_read: false,
+      audit_hash:
+        "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+    };
+
+    const display = buildDataPanelExportPackageAuditIndexDisplay(auditIndex, 2);
+
+    expect(display).toEqual({
+      packageId: "pkg-review",
+      tone: "match",
+      statusLabel: "audit ready",
+      summaryLabel:
+        "pkg-review / AUDIT_READY / audit dddddddddddd / artifacts 3",
+      auditHref:
+        "/runtime/export/packages/pkg-review/files/export_package_audit_index_v1.json",
+      manifestLabels: [
+        "manifest 111111111111",
+        "control 222222222222",
+        "generated 333333333333",
+        "runtime 444444444444"
+      ],
+      boundaryLabels: [
+        "boundary 555555555555",
+        "alignment 666666666666",
+        "status ALIGNED",
+        "self hash excluded yes"
+      ],
+      diagnosticsLabels: [
+        "review 777777777777",
+        "diagnostics 888888888888",
+        "packet no",
+        "recompute no"
+      ],
+      routeReviewLabels: [
+        "route report present",
+        "route report 999999999999",
+        "event replay restore no",
+        "package mutation no"
+      ],
+      artifactRows: [
+        {
+          filename: "config_snapshot.json",
+          sizeLabel: "1 KiB",
+          hashLabel: "aaaaaaaaaaaa"
+        },
+        {
+          filename: "manifest.json",
+          sizeLabel: "2 KiB",
+          hashLabel: "bbbbbbbbbbbb"
+        }
+      ],
+      artifactSummaryLabel: "showing 2 of 3 artifact hashes / hidden 1",
+      warningLabels: []
+    });
+    expect(
+      buildDataPanelExportPackageAuditIndexStatus(display, "pkg-review")
+    ).toMatchObject({
+      tone: "match",
+      auditHref:
+        "/runtime/export/packages/pkg-review/files/export_package_audit_index_v1.json",
+      artifactSummaryLabel: "showing 2 of 3 artifact hashes / hidden 1"
+    });
+    expect(
+      buildDataPanelExportPackageAuditIndexStatus(null, "pkg-review", true)
+    ).toMatchObject({
+      tone: "pending",
+      statusLabel: "loading audit index"
+    });
+    expect(
+      buildDataPanelExportPackageAuditIndexStatus(
+        null,
+        "pkg-review",
+        false,
+        "audit failed"
+      )
+    ).toMatchObject({
+      tone: "error",
+      warningLabels: ["audit failed"]
+    });
   });
 
   it("summarizes saved route comparison review report contents", () => {

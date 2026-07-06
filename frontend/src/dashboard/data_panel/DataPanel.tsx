@@ -47,6 +47,7 @@ import {
   RuntimeNetworkKpiCredibilityV1,
   RuntimeNetworkKpiProvenanceV2,
   RuntimeNetworkQualityProvenanceV1,
+  RuntimeExportPackageAuditIndexV1,
   RuntimeComputeNodeDetailItemV1,
   RuntimeNodeDetailCardV1,
   RuntimeNodeDetailPageV1,
@@ -243,6 +244,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportRouteDetailPage,
   runtimeExportRouteDetailItem,
   runtimeExportRouteComparisonReviewReport,
+  runtimeExportPackageAuditIndex,
   runtimeExportRouteDetailItemRouteId,
   runtimeExportComparePackageId,
   runtimeExportCompareLoading,
@@ -261,6 +263,8 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportRouteDetailItemError,
   runtimeExportRouteComparisonReviewReportLoading,
   runtimeExportRouteComparisonReviewReportError,
+  runtimeExportPackageAuditIndexLoading,
+  runtimeExportPackageAuditIndexError,
   runtimeExportRouteComparisonReviewSavePendingRouteId,
   runtimeExportRouteComparisonReviewSaveError,
   runtimeExportRouteComparisonReviewSaveReportHash,
@@ -312,6 +316,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportRouteDetailPage?: RuntimeExportRouteDetailPageV1 | null;
   runtimeExportRouteDetailItem?: RuntimeExportRouteDetailItemV1 | null;
   runtimeExportRouteComparisonReviewReport?: RuntimeExportRouteComparisonReviewReportV1 | null;
+  runtimeExportPackageAuditIndex?: RuntimeExportPackageAuditIndexV1 | null;
   runtimeExportRouteDetailItemRouteId?: string | null;
   runtimeExportComparePackageId?: string | null;
   runtimeExportCompareLoading?: boolean;
@@ -330,6 +335,8 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportRouteDetailItemError?: string | null;
   runtimeExportRouteComparisonReviewReportLoading?: boolean;
   runtimeExportRouteComparisonReviewReportError?: string | null;
+  runtimeExportPackageAuditIndexLoading?: boolean;
+  runtimeExportPackageAuditIndexError?: string | null;
   runtimeExportRouteComparisonReviewSavePendingRouteId?: string | null;
   runtimeExportRouteComparisonReviewSaveError?: string | null;
   runtimeExportRouteComparisonReviewSaveReportHash?: string | null;
@@ -1079,6 +1086,12 @@ export const DataPanel = memo(function DataPanel({
       runtimeExportComparePackageId,
       runtimeExportRouteComparisonReviewSaveReportHash
     );
+  const exportPackageAuditIndexStatus = buildDataPanelExportPackageAuditIndexStatus(
+    buildDataPanelExportPackageAuditIndexDisplay(runtimeExportPackageAuditIndex),
+    runtimeExportComparePackageId,
+    runtimeExportPackageAuditIndexLoading,
+    runtimeExportPackageAuditIndexError
+  );
   const exportRouteComparisonReviewReportStatus =
     buildDataPanelExportRouteComparisonReviewReportStatus(
       buildDataPanelExportRouteComparisonReviewReportDisplay(
@@ -2028,6 +2041,64 @@ export const DataPanel = memo(function DataPanel({
                       )
                     )}
                   </div>
+                </div>
+              ) : null}
+              {exportPackageAuditIndexStatus ? (
+                <div
+                  className={`data-panel-export-diagnostics-drawer ${exportPackageAuditIndexStatus.tone}`}
+                >
+                  <div className="data-panel-export-diagnostics-header">
+                    <div>
+                      <span>Export package audit</span>
+                      <strong>{exportPackageAuditIndexStatus.statusLabel}</strong>
+                      <small>{exportPackageAuditIndexStatus.summaryLabel}</small>
+                    </div>
+                    {exportPackageAuditIndexStatus.auditHref ? (
+                      <a href={exportPackageAuditIndexStatus.auditHref}>
+                        audit JSON
+                      </a>
+                    ) : null}
+                  </div>
+                  <div className="data-panel-export-compare-meta">
+                    {exportPackageAuditIndexStatus.manifestLabels.map((label) => (
+                      <span key={label}>{label}</span>
+                    ))}
+                  </div>
+                  <div className="data-panel-export-diagnostics-boundaries">
+                    {exportPackageAuditIndexStatus.boundaryLabels.map((label) => (
+                      <span key={label}>{label}</span>
+                    ))}
+                  </div>
+                  <div className="data-panel-export-diagnostics-actions">
+                    {exportPackageAuditIndexStatus.diagnosticsLabels.map((label) => (
+                      <span key={label}>{label}</span>
+                    ))}
+                    {exportPackageAuditIndexStatus.routeReviewLabels.map((label) => (
+                      <span key={label}>{label}</span>
+                    ))}
+                  </div>
+                  <div className="data-panel-export-manifest-artifacts">
+                    {exportPackageAuditIndexStatus.artifactRows.map((row) => (
+                      <span key={row.filename} title={row.hashLabel}>
+                        <span>{row.filename}</span>
+                        <strong>{row.hashLabel}</strong>
+                        <small>{row.sizeLabel}</small>
+                      </span>
+                    ))}
+                  </div>
+                  <div className="data-panel-export-compare-meta">
+                    <span>{exportPackageAuditIndexStatus.artifactSummaryLabel}</span>
+                  </div>
+                  {exportPackageAuditIndexStatus.warningLabels.length > 0 ? (
+                    <div className="data-panel-export-diagnostics-findings">
+                      {exportPackageAuditIndexStatus.warningLabels.map((label) => (
+                        <span className="warn" key={label}>
+                          <strong>AUDIT</strong>
+                          {label}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
               {exportRouteComparisonReviewReportStatus ? (
@@ -9545,6 +9616,41 @@ export interface DataPanelExportPackageAuditIndexArtifactDisplay {
   artifactTitle: string;
 }
 
+export interface DataPanelExportPackageAuditIndexDisplay {
+  packageId: string;
+  tone: "match" | "different";
+  statusLabel: string;
+  summaryLabel: string;
+  auditHref: string;
+  manifestLabels: readonly string[];
+  boundaryLabels: readonly string[];
+  diagnosticsLabels: readonly string[];
+  routeReviewLabels: readonly string[];
+  artifactRows: readonly DataPanelExportPackageAuditIndexArtifactRow[];
+  artifactSummaryLabel: string;
+  warningLabels: readonly string[];
+}
+
+export interface DataPanelExportPackageAuditIndexStatus {
+  tone: "match" | "different" | "pending" | "error";
+  statusLabel: string;
+  summaryLabel: string;
+  auditHref: string | null;
+  manifestLabels: readonly string[];
+  boundaryLabels: readonly string[];
+  diagnosticsLabels: readonly string[];
+  routeReviewLabels: readonly string[];
+  artifactRows: readonly DataPanelExportPackageAuditIndexArtifactRow[];
+  artifactSummaryLabel: string;
+  warningLabels: readonly string[];
+}
+
+export interface DataPanelExportPackageAuditIndexArtifactRow {
+  filename: string;
+  sizeLabel: string;
+  hashLabel: string;
+}
+
 export interface DataPanelExportRouteComparisonReviewReportDisplay {
   packageId: string;
   tone: "match" | "different";
@@ -9765,6 +9871,137 @@ export function buildDataPanelExportPackageAuditIndexArtifactDisplay(
     artifactTitle: `${auditFile.filename} / ${formatRuntimeExportFileBytes(
       auditFile.bytes
     )} / ${auditFile.sha256}`
+  };
+}
+
+export function buildDataPanelExportPackageAuditIndexDisplay(
+  auditIndex: RuntimeExportPackageAuditIndexV1 | null | undefined,
+  limit = 8
+): DataPanelExportPackageAuditIndexDisplay | null {
+  if (auditIndex === null || auditIndex === undefined) {
+    return null;
+  }
+  const displayLimit = Math.max(0, Math.floor(limit));
+  const artifactRows = auditIndex.artifact_hashes
+    .slice(0, displayLimit)
+    .map((artifact) => ({
+      filename: artifact.filename,
+      sizeLabel: formatRuntimeExportFileBytes(artifact.bytes),
+      hashLabel: shortRuntimeHash(artifact.sha256)
+    }));
+  const hiddenArtifacts = Math.max(
+    0,
+    auditIndex.artifact_hashes.length - artifactRows.length
+  );
+  const warningLabels = [
+    ...auditIndex.audit_warnings,
+    ...auditIndex.boundary_alignment_warnings
+  ];
+  const ready =
+    auditIndex.audit_status === "AUDIT_READY" &&
+    warningLabels.length === 0 &&
+    auditIndex.packet_level_simulation === false &&
+    auditIndex.event_replay_restore === false &&
+    auditIndex.model_recomputation === false &&
+    auditIndex.package_mutation_on_read === false;
+  return {
+    packageId: auditIndex.package_id,
+    tone: ready ? "match" : "different",
+    statusLabel: ready ? "audit ready" : "audit needs review",
+    summaryLabel: `${auditIndex.package_id} / ${auditIndex.audit_status} / audit ${shortRuntimeHash(
+      auditIndex.audit_hash
+    )} / artifacts ${formatCount(auditIndex.artifact_count)}`,
+    auditHref: runtimeExportPackageFileHref(
+      auditIndex.package_id,
+      EXPORT_PACKAGE_AUDIT_INDEX_FILENAME
+    ),
+    manifestLabels: [
+      `manifest ${shortRuntimeHash(auditIndex.manifest_hash)}`,
+      `control ${shortRuntimeHash(auditIndex.control_config_hash)}`,
+      `generated ${shortRuntimeHash(auditIndex.generated_config_hash)}`,
+      `runtime ${shortRuntimeHash(auditIndex.runtime_state_hash)}`
+    ],
+    boundaryLabels: [
+      `boundary ${shortRuntimeHash(auditIndex.runtime_export_boundary_hash)}`,
+      `alignment ${shortRuntimeHash(auditIndex.boundary_alignment_hash)}`,
+      `status ${auditIndex.boundary_alignment_status || "-"}`,
+      `self hash excluded ${auditIndex.self_artifact_excluded_from_hashes ? "yes" : "no"}`
+    ],
+    diagnosticsLabels: [
+      `review ${shortRuntimeHash(auditIndex.review_summary_hash)}`,
+      `diagnostics ${shortRuntimeHash(auditIndex.diagnostics_hash)}`,
+      `packet ${auditIndex.packet_level_simulation ? "yes" : "no"}`,
+      `recompute ${auditIndex.model_recomputation ? "yes" : "no"}`
+    ],
+    routeReviewLabels: [
+      `route report ${
+        auditIndex.route_comparison_review_report_present ? "present" : "missing"
+      }`,
+      `route report ${shortRuntimeHash(
+        auditIndex.route_comparison_review_report_hash
+      )}`,
+      `event replay restore ${auditIndex.event_replay_restore ? "yes" : "no"}`,
+      `package mutation ${auditIndex.package_mutation_on_read ? "yes" : "no"}`
+    ],
+    artifactRows,
+    artifactSummaryLabel: `showing ${formatCount(artifactRows.length)} of ${formatCount(
+      auditIndex.artifact_hashes.length
+    )} artifact hashes${hiddenArtifacts > 0 ? ` / hidden ${formatCount(hiddenArtifacts)}` : ""}`,
+    warningLabels
+  };
+}
+
+export function buildDataPanelExportPackageAuditIndexStatus(
+  display: DataPanelExportPackageAuditIndexDisplay | null,
+  selectedPackageId: string | null | undefined,
+  loading = false,
+  error: string | null | undefined = null
+): DataPanelExportPackageAuditIndexStatus | null {
+  if (loading) {
+    return {
+      tone: "pending",
+      statusLabel: "loading audit index",
+      summaryLabel: selectedPackageId ?? "waiting for package selection",
+      auditHref: null,
+      manifestLabels: ["read-only audit artifact"],
+      boundaryLabels: [],
+      diagnosticsLabels: [],
+      routeReviewLabels: [],
+      artifactRows: [],
+      artifactSummaryLabel: "waiting for audit index",
+      warningLabels: []
+    };
+  }
+  if (error !== null && error !== undefined) {
+    return {
+      tone: "error",
+      statusLabel: "audit index load failed",
+      summaryLabel: selectedPackageId ?? "unknown package",
+      auditHref: null,
+      manifestLabels: [error],
+      boundaryLabels: [],
+      diagnosticsLabels: [],
+      routeReviewLabels: [],
+      artifactRows: [],
+      artifactSummaryLabel: "audit index unavailable",
+      warningLabels: [error]
+    };
+  }
+  if (display === null) {
+    return null;
+  }
+  return {
+    tone: display.tone,
+    statusLabel: display.statusLabel,
+    summaryLabel: display.summaryLabel,
+    auditHref: display.auditHref,
+    manifestLabels: display.manifestLabels,
+    boundaryLabels: display.boundaryLabels,
+    diagnosticsLabels: display.diagnosticsLabels,
+    routeReviewLabels: display.routeReviewLabels,
+    artifactRows: display.artifactRows,
+    artifactSummaryLabel: display.artifactSummaryLabel,
+    warningLabels: display.warningLabels
   };
 }
 
