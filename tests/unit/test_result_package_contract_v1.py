@@ -323,6 +323,7 @@ def test_runtime_export_route_detail_page_v1_filters_package_index() -> None:
             "type": "RUNTIME_CONFIG_SNAPSHOT",
             "status": {
                 "route_explanation_summary_v1": _route_summary(),
+                "runtime_export_route_detail_policy_v1": _route_detail_export_policy(),
                 "route_provenance_trust_summary_v1": _route_trust(),
             },
         },
@@ -351,6 +352,7 @@ def test_runtime_export_route_detail_page_v1_filters_package_index() -> None:
     assert first["page_id"] == RUNTIME_EXPORT_ROUTE_DETAIL_PAGE_V1_ID
     assert first["source"] == "BACKEND_RUNTIME_EXPORT_PACKAGE"
     assert first["package_id"] == "pkg-1"
+    assert first["route_detail_export_policy"] == _route_detail_export_policy()
     assert first["route_detail_index_hash"] == route_index["route_detail_index_hash"]
     assert first["cursor"] == 0
     assert first["limit"] == 1

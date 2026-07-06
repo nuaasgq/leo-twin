@@ -154,14 +154,15 @@ detail endpoint max limit of 5000 rows. This keeps `/runtime/status` lightweight
 while making packages more useful for offline review. The artifact does not
 replay events, recompute paths, compute all satellite pairs, or simulate
 packets.
-The standalone dashboard loads the selected package's
-`route_detail_index_v1.json` through the package file endpoint and renders a
-read-only route evidence drawer with indexed route counts, route-trust sample
-coverage, model-boundary labels, sample route rows, route evidence search, row
-actions for live route-detail lookup, and a direct JSON link. The live
-route-detail action is a read-only comparison aid: it uses the current runtime
-detail endpoint when the same route id still exists, and it does not replay or
-mutate the exported package.
+The standalone dashboard loads the selected package's route evidence through
+`GET /runtime/export/packages/{package_id}/routes` and renders a read-only
+route evidence drawer with indexed route counts, export-window policy,
+server-filtered sample route rows, route evidence search, row actions for live
+route-detail lookup, and a direct JSON link. The full
+`route_detail_index_v1.json` file remains downloadable, but it is not fetched
+by the dashboard by default. The live route-detail action is a read-only
+comparison aid: it uses the current runtime detail endpoint when the same route
+id still exists, and it does not replay or mutate the exported package.
 
 The demo backend also exposes package-owned route evidence endpoints:
 

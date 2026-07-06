@@ -15,7 +15,7 @@ import {
   RuntimeExportCatalogV1,
   RuntimeExportDiagnosticsBundleV1,
   RuntimeExportPackageCompareV1,
-  RuntimeExportRouteDetailIndexV1,
+  RuntimeExportRouteDetailPageV1,
   RuntimeExportReviewSummaryV1,
   RuntimeExportRestoreCommandResultV1,
   RuntimeExportRestorePreflightV1,
@@ -47,7 +47,7 @@ import {
   loadRuntimeExportDiagnosticsBundle,
   loadRuntimeExportManifest,
   loadRuntimeExportPackageCompare,
-  loadRuntimeExportRouteDetailIndex,
+  loadRuntimeExportRouteDetailPage,
   loadRuntimeExportReviewSummary,
   loadRuntimeExportRestorePreflight,
   loadRuntimeNodeDetails,
@@ -264,8 +264,8 @@ export function App() {
     useState<RuntimeReproducibilityManifestV1 | null>(null);
   const [runtimeExportDiagnosticsBundle, setRuntimeExportDiagnosticsBundle] =
     useState<RuntimeExportDiagnosticsBundleV1 | null>(null);
-  const [runtimeExportRouteDetailIndex, setRuntimeExportRouteDetailIndex] =
-    useState<RuntimeExportRouteDetailIndexV1 | null>(null);
+  const [runtimeExportRouteDetailPage, setRuntimeExportRouteDetailPage] =
+    useState<RuntimeExportRouteDetailPageV1 | null>(null);
   const [runtimeExportComparePackageId, setRuntimeExportComparePackageId] =
     useState<string | null>(null);
   const [runtimeExportCompareLoading, setRuntimeExportCompareLoading] = useState(false);
@@ -1079,7 +1079,7 @@ export function App() {
       reviewSummary,
       manifest,
       diagnosticsBundle,
-      routeDetailIndex,
+      routeDetailPage,
       preflight
     ] =
       await Promise.allSettled([
@@ -1087,7 +1087,7 @@ export function App() {
         loadRuntimeExportReviewSummary(packageId),
         loadRuntimeExportManifest(packageId),
         loadRuntimeExportDiagnosticsBundle(packageId),
-        loadRuntimeExportRouteDetailIndex(packageId),
+        loadRuntimeExportRouteDetailPage(packageId, 0, 5),
         loadRuntimeExportRestorePreflight(packageId)
       ]);
     if (compare.status === "fulfilled") {
@@ -1118,12 +1118,12 @@ export function App() {
         runtimeExportDiagnosticsBundleErrorMessage(diagnosticsBundle.reason)
       );
     }
-    if (routeDetailIndex.status === "fulfilled") {
-      setRuntimeExportRouteDetailIndex(routeDetailIndex.value);
+    if (routeDetailPage.status === "fulfilled") {
+      setRuntimeExportRouteDetailPage(routeDetailPage.value);
     } else {
-      setRuntimeExportRouteDetailIndex(null);
+      setRuntimeExportRouteDetailPage(null);
       setRuntimeExportRouteDetailIndexError(
-        runtimeExportRouteDetailIndexErrorMessage(routeDetailIndex.reason)
+        runtimeExportRouteDetailIndexErrorMessage(routeDetailPage.reason)
       );
     }
     if (preflight.status === "fulfilled") {
@@ -1142,6 +1142,30 @@ export function App() {
     setRuntimeExportRestorePreflightLoading(false);
   }, []);
 
+  const refreshRuntimeExportRouteDetailPage = useCallback(
+    async (query: string) => {
+      const packageId = runtimeExportComparePackageId;
+      if (packageId === null) {
+        return;
+      }
+      setRuntimeExportRouteDetailIndexLoading(true);
+      setRuntimeExportRouteDetailIndexError(null);
+      try {
+        setRuntimeExportRouteDetailPage(
+          await loadRuntimeExportRouteDetailPage(packageId, 0, 5, { query })
+        );
+      } catch (error) {
+        setRuntimeExportRouteDetailPage(null);
+        setRuntimeExportRouteDetailIndexError(
+          runtimeExportRouteDetailIndexErrorMessage(error)
+        );
+      } finally {
+        setRuntimeExportRouteDetailIndexLoading(false);
+      }
+    },
+    [runtimeExportComparePackageId]
+  );
+
   const refreshRuntimeExportCatalog = useCallback(async () => {
     try {
       const catalog = await loadRuntimeExportCatalog();
@@ -1155,7 +1179,7 @@ export function App() {
         setRuntimeExportReviewSummary(null);
         setRuntimeExportManifest(null);
         setRuntimeExportDiagnosticsBundle(null);
-        setRuntimeExportRouteDetailIndex(null);
+        setRuntimeExportRouteDetailPage(null);
         setRuntimeExportRestorePreflight(null);
         setRuntimeExportComparePackageId(null);
         setRuntimeExportCompareLoading(false);
@@ -1182,7 +1206,7 @@ export function App() {
       setRuntimeExportReviewSummary(null);
       setRuntimeExportManifest(null);
       setRuntimeExportDiagnosticsBundle(null);
-      setRuntimeExportRouteDetailIndex(null);
+      setRuntimeExportRouteDetailPage(null);
       setRuntimeExportRestorePreflight(null);
       setRuntimeExportComparePackageId(null);
       setRuntimeExportCompareLoading(false);
@@ -1874,7 +1898,7 @@ export function App() {
               runtimeExportReviewSummary={runtimeExportReviewSummary}
               runtimeExportManifest={runtimeExportManifest}
               runtimeExportDiagnosticsBundle={runtimeExportDiagnosticsBundle}
-              runtimeExportRouteDetailIndex={runtimeExportRouteDetailIndex}
+              runtimeExportRouteDetailPage={runtimeExportRouteDetailPage}
               runtimeExportComparePackageId={runtimeExportComparePackageId}
               runtimeExportCompareLoading={runtimeExportCompareLoading}
               runtimeExportCompareError={runtimeExportCompareError}
@@ -1905,6 +1929,9 @@ export function App() {
               onUserConfigurationValidateText={validateUserConfigurationText}
               onUserConfigurationApply={applyValidatedUserConfiguration}
               onRuntimeExportCompareSelect={refreshRuntimeExportCompare}
+              onRuntimeExportRouteDetailPageQueryChange={
+                refreshRuntimeExportRouteDetailPage
+              }
               onRuntimeExportRestore={restoreRuntimeExportPackage}
               onRuntimeUserDetailSelect={refreshRuntimeUserEntityDetail}
               onRuntimeSatelliteDetailSelect={refreshRuntimeSatelliteEntityDetail}

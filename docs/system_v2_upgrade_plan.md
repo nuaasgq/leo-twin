@@ -218,6 +218,11 @@ Tasks:
     export with the existing detail endpoint max limit of 5000 rows. The export
     policy is recorded in `runtime_export_route_detail_policy_v1` and
     `route_detail_index_v1.json`, while `/runtime/status` remains lightweight.
+  - Status: T283 changes the standalone dashboard route evidence drawer to load
+    `/runtime/export/packages/{package_id}/routes` pages by default. Search
+    requests now use backend package filters, and the full
+    `route_detail_index_v1.json` artifact remains a direct review link rather
+    than a default frontend payload.
 
 ### WS4. Compute Network Model v2
 

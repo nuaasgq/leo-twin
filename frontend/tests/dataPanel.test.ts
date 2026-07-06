@@ -28,6 +28,7 @@ import {
   buildDataPanelExportReviewSummaryDisplay,
   buildDataPanelExportReviewSummaryStatus,
   buildDataPanelExportRouteDetailIndexDisplay,
+  buildDataPanelExportRouteDetailPageDisplay,
   buildDataPanelExportRouteDetailIndexStatus,
   buildDataPanelExportRestoreActionDisplay,
   buildDataPanelExportRestorePreflightDisplay,
@@ -2644,6 +2645,51 @@ describe("buildDataPanelExportCompareDisplay", () => {
         }
       ]
     });
+  });
+
+  it("summarizes runtime export route detail pages for dashboard review", () => {
+    const page = _runtimeExportRouteDetailPage([
+      _runtimeExportRouteIndexRoute("route-a", true),
+      _runtimeExportRouteIndexRoute("route-b", false)
+    ]);
+
+    const display = buildDataPanelExportRouteDetailPageDisplay(page);
+
+    expect(display).toMatchObject({
+      packageId: "pkg-review",
+      tone: "match",
+      summaryLabel: "pkg-review / page 2/12 / total 20 / cdcdcdcdcdcd",
+      metaLabels: [
+        "server page 0-2",
+        "matched 12",
+        "export limit 5,000",
+        "available 8",
+        "blocked 4",
+        "compute 7",
+        "network 5"
+      ],
+      boundaryLabels: [
+        "ROUTE_EXPLANATION_WINDOW_EXPORT",
+        "BACKEND_RUNTIME_EXPORT_PACKAGE",
+        "server filter applied",
+        "EXPORT_ROUTE_DETAIL_INDEX_WINDOW",
+        "visible_snapshot.routes"
+      ],
+      filterLabel:
+        "shown 2/12 / query sat-0 / AVAILABLE / COMPUTE_SERVICE / server page",
+      indexHref:
+        "/runtime/export/packages/pkg-review/files/route_detail_index_v1.json"
+    });
+    expect(display?.routeRows).toMatchObject([
+      {
+        routeId: "route-a",
+        packageDetailHref: "/runtime/export/packages/pkg-review/routes/route-a"
+      },
+      {
+        routeId: "route-b",
+        packageDetailHref: "/runtime/export/packages/pkg-review/routes/route-b"
+      }
+    ]);
   });
 
   it("summarizes runtime export manifests with catalog and diagnostics integrity", () => {
@@ -8794,6 +8840,54 @@ function _runtimeExportRouteDetailIndex(
     routes,
     route_detail_index_hash:
       "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd"
+  };
+}
+
+function _runtimeExportRouteDetailPage(
+  routes: readonly ReturnType<typeof _runtimeExportRouteIndexRoute>[]
+) {
+  return {
+    type: "RUNTIME_EXPORT_ROUTE_DETAIL_PAGE_V1",
+    version: "v1",
+    page_id: "leo_twin.runtime_export_route_detail_page.v1",
+    source: "BACKEND_RUNTIME_EXPORT_PACKAGE",
+    package_id: "pkg-review",
+    index_id: "leo_twin.runtime_export_route_detail_index.v1",
+    route_detail_export_policy: {
+      version: "v1",
+      source: "BACKEND_RUNTIME_EXPORT",
+      policy: "EXPORT_ROUTE_DETAIL_INDEX_WINDOW",
+      route_summary_source: "visible_snapshot.routes",
+      route_detail_limit: 5000,
+      route_count: 20,
+      indexed_route_count: 20,
+      hidden_route_count: 0,
+      packet_level_simulation: false,
+      all_pairs_computation: false
+    },
+    route_detail_index_hash:
+      "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+    index_scope: "ROUTE_EXPLANATION_WINDOW_EXPORT",
+    cursor: 0,
+    limit: 2,
+    next_cursor: 2,
+    has_more: true,
+    route_count: 12,
+    item_count: routes.length,
+    unfiltered_route_count: 20,
+    filter_applied: true,
+    filters: {
+      query: "sat-0",
+      availability: "AVAILABLE",
+      business_type: "COMPUTE_SERVICE",
+      bottleneck_component: "ALL"
+    },
+    available_route_count: 8,
+    blocked_route_count: 4,
+    compute_service_route_count: 7,
+    network_service_route_count: 5,
+    items: routes,
+    page_hash: "sha256:page"
   };
 }
 

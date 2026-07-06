@@ -1,4 +1,4 @@
-import { memo, useState, type MouseEvent } from "react";
+import { memo, useEffect, useState, type MouseEvent } from "react";
 import {
   Area,
   AreaChart,
@@ -29,6 +29,7 @@ import {
   RuntimeExportPackageCompareV1,
   RuntimeExportRouteDetailIndexRouteV1,
   RuntimeExportRouteDetailIndexV1,
+  RuntimeExportRouteDetailPageV1,
   RuntimeExportReviewSummaryV1,
   RuntimeExportRestoreCommandResultV1,
   RuntimeExportRestorePreflightV1,
@@ -222,6 +223,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportManifest,
   runtimeExportDiagnosticsBundle,
   runtimeExportRouteDetailIndex,
+  runtimeExportRouteDetailPage,
   runtimeExportComparePackageId,
   runtimeExportCompareLoading,
   runtimeExportCompareError,
@@ -248,6 +250,7 @@ export const DataPanel = memo(function DataPanel({
   onUserConfigurationValidateText,
   onUserConfigurationApply,
   onRuntimeExportCompareSelect,
+  onRuntimeExportRouteDetailPageQueryChange,
   onRuntimeExportRestore,
   onRuntimeUserDetailSelect,
   onRuntimeSatelliteDetailSelect,
@@ -272,6 +275,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportManifest?: RuntimeReproducibilityManifestV1 | null;
   runtimeExportDiagnosticsBundle?: RuntimeExportDiagnosticsBundleV1 | null;
   runtimeExportRouteDetailIndex?: RuntimeExportRouteDetailIndexV1 | null;
+  runtimeExportRouteDetailPage?: RuntimeExportRouteDetailPageV1 | null;
   runtimeExportComparePackageId?: string | null;
   runtimeExportCompareLoading?: boolean;
   runtimeExportCompareError?: string | null;
@@ -306,6 +310,7 @@ export const DataPanel = memo(function DataPanel({
     command: UserConfigurationValidationApplyCommandV1
   ) => void;
   onRuntimeExportCompareSelect?: (packageId: string) => void;
+  onRuntimeExportRouteDetailPageQueryChange?: (query: string) => void;
   onRuntimeExportRestore?: (packageId: string) => void;
   onRuntimeUserDetailSelect?: (userId: string | null) => void;
   onRuntimeSatelliteDetailSelect?: (satelliteId: string | null) => void;
@@ -376,6 +381,9 @@ export const DataPanel = memo(function DataPanel({
     useState<string | null>(null);
   const [userConfigurationApplyStatus, setUserConfigurationApplyStatus] =
     useState<string | null>(null);
+  useEffect(() => {
+    setExportRouteDetailIndexFilter("");
+  }, [runtimeExportComparePackageId]);
   const summary = buildDataPanelDisplaySummary(
     buildDataPanelSummary(snapshot),
     displaySimTime,
@@ -443,12 +451,11 @@ export const DataPanel = memo(function DataPanel({
     runtimeExportDiagnosticsBundleLoading,
     runtimeExportDiagnosticsBundleError
   );
-  const exportRouteDetailIndexDisplay = buildDataPanelExportRouteDetailIndexDisplay(
-    runtimeExportRouteDetailIndex,
-    {
+  const exportRouteDetailIndexDisplay =
+    buildDataPanelExportRouteDetailPageDisplay(runtimeExportRouteDetailPage) ??
+    buildDataPanelExportRouteDetailIndexDisplay(runtimeExportRouteDetailIndex, {
       query: exportRouteDetailIndexFilter
-    }
-  );
+    });
   const exportRouteDetailIndexStatus = buildDataPanelExportRouteDetailIndexStatus(
     exportRouteDetailIndexDisplay,
     runtimeExportComparePackageId,
@@ -1314,9 +1321,11 @@ export const DataPanel = memo(function DataPanel({
                       id="data-panel-export-route-index-filter"
                       type="search"
                       value={exportRouteDetailIndexFilter}
-                      onChange={(event) =>
-                        setExportRouteDetailIndexFilter(event.currentTarget.value)
-                      }
+                      onChange={(event) => {
+                        const query = event.currentTarget.value;
+                        setExportRouteDetailIndexFilter(query);
+                        onRuntimeExportRouteDetailPageQueryChange?.(query);
+                      }}
                       placeholder="route / user / satellite / service / bottleneck"
                     />
                   </label>
@@ -9197,6 +9206,54 @@ export function buildDataPanelExportRouteDetailIndexDisplay(
   };
 }
 
+export function buildDataPanelExportRouteDetailPageDisplay(
+  page: RuntimeExportRouteDetailPageV1 | null | undefined
+): DataPanelExportRouteDetailIndexDisplay | null {
+  if (page === null || page === undefined) {
+    return null;
+  }
+  const policy = page.route_detail_export_policy;
+  const evidenceComplete =
+    policy === undefined ||
+    (policy.packet_level_simulation === false && policy.all_pairs_computation === false);
+  const routeRows = page.items.map((route) =>
+    buildDataPanelExportRouteDetailIndexRouteRow(page.package_id, route)
+  );
+  return {
+    packageId: page.package_id,
+    tone: evidenceComplete ? "match" : "different",
+    statusLabel: evidenceComplete
+      ? "package route evidence ready"
+      : "package route evidence needs review",
+    summaryLabel: `${page.package_id} / page ${formatCount(
+      page.item_count
+    )}/${formatCount(page.route_count)} / total ${formatCount(
+      page.unfiltered_route_count
+    )} / ${shortRuntimeHash(page.route_detail_index_hash)}`,
+    metaLabels: [
+      `server page ${formatCount(page.cursor)}-${formatCount(page.next_cursor)}`,
+      `matched ${formatCount(page.route_count)}`,
+      policy
+        ? `export limit ${formatCount(policy.route_detail_limit)}`
+        : "export limit legacy",
+      `available ${formatCount(page.available_route_count)}`,
+      `blocked ${formatCount(page.blocked_route_count)}`,
+      `compute ${formatCount(page.compute_service_route_count)}`,
+      `network ${formatCount(page.network_service_route_count)}`
+    ],
+    boundaryLabels: [
+      page.index_scope || "ROUTE_DETAIL_PAGE",
+      page.source,
+      page.filter_applied ? "server filter applied" : "server page unfiltered",
+      policy?.policy ?? "LEGACY_ROUTE_DETAIL_INDEX",
+      policy?.route_summary_source ?? "route_detail_index_v1.routes"
+    ],
+    routeRows,
+    filterLabel: buildRuntimeExportRouteDetailPageFilterLabel(page),
+    indexHref: runtimeExportPackageFileHref(page.package_id, "route_detail_index_v1.json")
+  };
+}
+
 export function filterRuntimeExportRouteDetailIndexRoutes(
   routes: readonly RuntimeExportRouteDetailIndexRouteV1[],
   query: string
@@ -9210,6 +9267,25 @@ export function filterRuntimeExportRouteDetailIndexRoutes(
     const haystack = runtimeExportRouteDetailIndexRouteSearchText(route);
     return queryParts.every((part) => haystack.includes(part));
   });
+}
+
+function buildRuntimeExportRouteDetailPageFilterLabel(
+  page: RuntimeExportRouteDetailPageV1
+): string {
+  const query = page.filters.query.trim();
+  const shownLabel = `shown ${formatCount(page.item_count)}/${formatCount(page.route_count)}`;
+  const filterLabels = [
+    query ? `query ${query}` : "",
+    page.filters.availability !== "ALL" ? page.filters.availability : "",
+    page.filters.business_type !== "ALL" ? page.filters.business_type : "",
+    page.filters.bottleneck_component !== "ALL"
+      ? page.filters.bottleneck_component
+      : ""
+  ].filter((label) => label.length > 0);
+  if (filterLabels.length === 0) {
+    return `${shownLabel} / total ${formatCount(page.unfiltered_route_count)} / server page`;
+  }
+  return `${shownLabel} / ${filterLabels.join(" / ")} / server page`;
 }
 
 function buildDataPanelExportRouteDetailIndexRouteRow(

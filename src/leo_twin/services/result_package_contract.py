@@ -483,6 +483,9 @@ def build_runtime_export_route_detail_page_v1(
         "source": "BACKEND_RUNTIME_EXPORT_PACKAGE",
         "package_id": str(route_detail_index.get("package_id", "")),
         "index_id": str(route_detail_index.get("index_id", "")),
+        "route_detail_export_policy": dict(
+            _mapping(route_detail_index.get("route_detail_export_policy"))
+        ),
         "route_detail_index_hash": str(
             route_detail_index.get("route_detail_index_hash", "")
         ),

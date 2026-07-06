@@ -1411,6 +1411,7 @@ export interface RuntimeExportRouteDetailPageV1 {
   source: string;
   package_id: string;
   index_id: string;
+  route_detail_export_policy?: RuntimeExportRouteDetailExportPolicyV1;
   route_detail_index_hash: string;
   index_scope: string;
   cursor: number;

@@ -13567,3 +13567,61 @@ change.
   - Add a package-side paginated route artifact set or make the dashboard route
     index drawer load `/runtime/export/packages/{package_id}/routes` pages
     directly for very large route evidence packages.
+
+## 2026-07-06 - Dashboard Route Page Consumer v1
+
+- Branch: `feature/T283-dashboard-route-page-consumer-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: move the dashboard route evidence drawer from default full
+  `route_detail_index_v1.json` loading to package-owned route evidence pages.
+  `App` now loads `/runtime/export/packages/{package_id}/routes?cursor=0&limit=5`
+  for the selected package, DataPanel renders `RUNTIME_EXPORT_ROUTE_DETAIL_PAGE_V1`,
+  and search input refreshes the backend page with a `query` filter. The full
+  `route_detail_index_v1.json` artifact remains a direct JSON link for manual
+  review. Backend route page payloads now carry `route_detail_export_policy`
+  so the frontend can keep showing export-window limits without downloading
+  the full index. No route model, Event Kernel, packet-level simulation, or
+  export artifact semantics changed.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `docs/result_package_contract_v1.md`
+  - `docs/dashboard_model_trust_evidence_workspace_v1.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src/leo_twin/services/result_package_contract.py`
+    - Result: passed.
+  - `python -m pytest tests/unit/test_result_package_contract_v1.py -q`
+    - Result: passed, 9 tests.
+  - `python -m pytest tests/unit/test_result_package_contract_v1.py tests/unit/test_user_guide_v2_docs.py -q`
+    - Result: passed, 11 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with bundled Codex Node/Pnpm runtime.
+  - `pnpm --dir frontend test api.test.ts dataPanel.test.ts`
+    - Result: passed, 2 test files and 189 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing large DataPanel chunk
+      warning after minification; no functional build error.
+- Problems encountered:
+  - A copied historical mojibake dashboard label produced an unterminated
+    TypeScript string in the new page display builder. Replaced the new page
+    status labels with ASCII product-status labels and left unrelated legacy
+    labels untouched.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The dashboard currently requests the first route evidence page with a fixed
+    row limit of 5. Cursor next/previous controls for package route evidence
+    still need a follow-up UI task.
+  - Search is server-side for the package page, but availability, business type,
+    and bottleneck filter controls are not yet exposed in the export drawer.
+- Recommended follow-up:
+  - Add cursor controls and filter dropdowns for package-owned route evidence
+    pages so large result packages can be reviewed without opening the full
+    index artifact.

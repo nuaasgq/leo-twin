@@ -42,14 +42,16 @@ Rows are emitted in a deterministic order:
 5. route explanation provenance
 6. replay/export evidence
 
-The replay/export evidence lane now uses `route_detail_index_v1.json` when a
-selected result package provides it. The dashboard treats it as backend-owned
-route evidence: it displays indexed route counts, route trust sample coverage,
-model-boundary labels, searchable sample route rows, and row actions that open
-the existing live route detail endpoint when the referenced route is still
+The replay/export evidence lane now uses the package-owned
+`/runtime/export/packages/{package_id}/routes` cursor endpoint when a selected
+result package provides route evidence. The dashboard treats it as
+backend-owned route evidence: it displays indexed route counts, export-window
+policy, searchable server-filtered route rows, and row actions that open the
+existing live route detail endpoint when the referenced route is still
 available in the current runtime. Each row can also link to the package-owned
 `/runtime/export/packages/{package_id}/routes/{route_id}` JSON so replay review
-does not depend on live runtime state. The frontend does not recompute routes.
+does not depend on live runtime state. The frontend does not recompute routes
+or download the full `route_detail_index_v1.json` by default.
 7. runtime evidence
 
 Each row has a tone:
