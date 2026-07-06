@@ -1049,6 +1049,7 @@ class DemoControlPlane:
             artifact_records=artifact_records,
             route_comparison_review_report=route_report,
             runtime_export_boundary_alignment=runtime_export_boundary_alignment,
+            user_configuration_export=self.user_configuration_export()["summary"],
         )
         audit_path = package_dir / _RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_FILENAME
         audit_path.write_text(stable_json_pretty(audit_index), encoding="utf-8")

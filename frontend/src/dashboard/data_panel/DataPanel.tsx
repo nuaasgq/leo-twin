@@ -2064,6 +2064,13 @@ export const DataPanel = memo(function DataPanel({
                       <span key={label}>{label}</span>
                     ))}
                   </div>
+                  <div className="data-panel-export-diagnostics-actions">
+                    {exportPackageAuditIndexStatus.configurationLabels.map(
+                      (label) => (
+                        <span key={label}>{label}</span>
+                      )
+                    )}
+                  </div>
                   <div className="data-panel-export-diagnostics-boundaries">
                     {exportPackageAuditIndexStatus.boundaryLabels.map((label) => (
                       <span key={label}>{label}</span>
@@ -9623,6 +9630,7 @@ export interface DataPanelExportPackageAuditIndexDisplay {
   summaryLabel: string;
   auditHref: string;
   manifestLabels: readonly string[];
+  configurationLabels: readonly string[];
   boundaryLabels: readonly string[];
   diagnosticsLabels: readonly string[];
   routeReviewLabels: readonly string[];
@@ -9637,6 +9645,7 @@ export interface DataPanelExportPackageAuditIndexStatus {
   summaryLabel: string;
   auditHref: string | null;
   manifestLabels: readonly string[];
+  configurationLabels: readonly string[];
   boundaryLabels: readonly string[];
   diagnosticsLabels: readonly string[];
   routeReviewLabels: readonly string[];
@@ -9897,6 +9906,7 @@ export function buildDataPanelExportPackageAuditIndexDisplay(
     ...auditIndex.audit_warnings,
     ...auditIndex.boundary_alignment_warnings
   ];
+  const userConfigBinding = auditIndex.user_configuration_binding_v1;
   const ready =
     auditIndex.audit_status === "AUDIT_READY" &&
     warningLabels.length === 0 &&
@@ -9920,6 +9930,21 @@ export function buildDataPanelExportPackageAuditIndexDisplay(
       `control ${shortRuntimeHash(auditIndex.control_config_hash)}`,
       `generated ${shortRuntimeHash(auditIndex.generated_config_hash)}`,
       `runtime ${shortRuntimeHash(auditIndex.runtime_state_hash)}`
+    ],
+    configurationLabels: [
+      `schema ${auditIndex.user_configuration_schema_id ?? userConfigBinding?.schema_id ?? "-"}`,
+      `config ${shortRuntimeHash(
+        auditIndex.user_configuration_config_hash ?? userConfigBinding?.config_hash ?? ""
+      )}`,
+      `export ${shortRuntimeHash(
+        auditIndex.user_configuration_export_hash ?? userConfigBinding?.export_hash ?? ""
+      )}`,
+      `binding ${shortRuntimeHash(userConfigBinding?.binding_hash ?? "")}`,
+      `validation ${
+        auditIndex.user_configuration_validation_ok ?? userConfigBinding?.validation_ok
+          ? "ok"
+          : "check"
+      }`
     ],
     boundaryLabels: [
       `boundary ${shortRuntimeHash(auditIndex.runtime_export_boundary_hash)}`,
@@ -9964,6 +9989,7 @@ export function buildDataPanelExportPackageAuditIndexStatus(
       summaryLabel: selectedPackageId ?? "waiting for package selection",
       auditHref: null,
       manifestLabels: ["read-only audit artifact"],
+      configurationLabels: [],
       boundaryLabels: [],
       diagnosticsLabels: [],
       routeReviewLabels: [],
@@ -9979,6 +10005,7 @@ export function buildDataPanelExportPackageAuditIndexStatus(
       summaryLabel: selectedPackageId ?? "unknown package",
       auditHref: null,
       manifestLabels: [error],
+      configurationLabels: [],
       boundaryLabels: [],
       diagnosticsLabels: [],
       routeReviewLabels: [],
@@ -9996,6 +10023,7 @@ export function buildDataPanelExportPackageAuditIndexStatus(
     summaryLabel: display.summaryLabel,
     auditHref: display.auditHref,
     manifestLabels: display.manifestLabels,
+    configurationLabels: display.configurationLabels,
     boundaryLabels: display.boundaryLabels,
     diagnosticsLabels: display.diagnosticsLabels,
     routeReviewLabels: display.routeReviewLabels,

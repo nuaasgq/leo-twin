@@ -1416,6 +1416,11 @@ export interface RuntimeExportPackageAuditIndexV1 {
   boundary_alignment_hash: string;
   boundary_alignment_status: string;
   boundary_alignment_warnings: readonly string[];
+  user_configuration_binding_v1?: RuntimeExportUserConfigurationAuditBindingV1;
+  user_configuration_schema_id?: string;
+  user_configuration_config_hash?: string;
+  user_configuration_export_hash?: string;
+  user_configuration_validation_ok?: boolean;
   review_summary_hash: string;
   diagnostics_hash: string;
   route_comparison_review_report_hash: string;
@@ -1433,6 +1438,24 @@ export interface RuntimeExportPackageAuditIndexV1 {
   model_recomputation: boolean;
   package_mutation_on_read: boolean;
   audit_hash: string;
+}
+
+export interface RuntimeExportUserConfigurationAuditBindingV1 {
+  type: "USER_CONFIGURATION_AUDIT_BINDING_V1" | string;
+  version: "v1" | string;
+  binding_id: string;
+  source: string;
+  schema_id: string;
+  export_scope: string;
+  format: string;
+  config_hash: string;
+  export_hash: string;
+  validation_ok: boolean;
+  validation_error_count: number;
+  unknown_key_policy: string;
+  defaulting_policy: string;
+  import_paths: readonly string[];
+  binding_hash: string;
 }
 
 export interface RuntimeExportReviewReproducibilityV1 {

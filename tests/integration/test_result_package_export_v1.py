@@ -194,6 +194,21 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         reproducibility_boundary["boundary_hash"]
     )
     assert audit_index["boundary_alignment_status"] == "ALIGNED"
+    user_config_export = control_plane.user_configuration_export()["summary"]
+    assert audit_index["user_configuration_schema_id"] == "sees.user_configuration.v2"
+    assert audit_index["user_configuration_config_hash"] == (
+        user_config_export["config_hash"]
+    )
+    assert audit_index["user_configuration_validation_ok"] is True
+    assert audit_index["user_configuration_binding_v1"]["binding_id"] == (
+        "leo_twin.user_configuration_audit_binding.v1"
+    )
+    assert audit_index["user_configuration_binding_v1"]["schema_id"] == (
+        "sees.user_configuration.v2"
+    )
+    assert audit_index["user_configuration_binding_v1"]["binding_hash"].startswith(
+        "sha256:"
+    )
     assert audit_index["route_comparison_review_report_present"] is False
     assert audit_index["route_comparison_review_report_hash"] == ""
     assert audit_index["self_artifact_excluded_from_hashes"] is True
@@ -278,6 +293,10 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert updated_audit_index["boundary_alignment_hash"] == (
         review_report["boundary_alignment_hash"]
     )
+    assert updated_audit_index["user_configuration_config_hash"] == (
+        user_config_export["config_hash"]
+    )
+    assert updated_audit_index["user_configuration_validation_ok"] is True
     assert updated_audit_index["runtime_export_boundary_hash"] == (
         reproducibility_boundary["boundary_hash"]
     )

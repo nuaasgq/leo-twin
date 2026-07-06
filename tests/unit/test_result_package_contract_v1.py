@@ -727,6 +727,24 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
         "report_hash": "sha256:route-report",
         "runtime_export_boundary_alignment_v1": alignment,
     }
+    user_configuration_export = {
+        "version": "v1",
+        "source": "BACKEND_USER_CONFIGURATION",
+        "schema_id": "sees.user_configuration.v2",
+        "export_scope": "CURRENT_EFFECTIVE_SEES_CONFIG",
+        "format": "JSON_MAPPING",
+        "unknown_key_policy": "REJECT",
+        "defaulting_policy": "OMITTED_FIELDS_USE_BACKEND_DEFAULTS",
+        "import_paths": (
+            "CONFIG_UPDATE control message for partial updates",
+            "LOAD_TEMPLATE control message for approved templates",
+        ),
+        "config_hash": "sha256:user-config",
+        "validation_ok": True,
+        "validation_error_count": 0,
+        "validation_errors": (),
+        "config": {"seed": 7},
+    }
     config_snapshot = {
         "type": "RUNTIME_CONFIG_SNAPSHOT",
         "status": {"runtime_export_reproducibility_boundary_v1": boundary},
@@ -772,6 +790,7 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
         diagnostics_bundle=diagnostics_bundle,
         artifact_records=artifact_records,
         route_comparison_review_report=route_report,
+        user_configuration_export=user_configuration_export,
     )
     second = build_runtime_export_package_audit_index_v1(
         package_id="pkg-1",
@@ -782,6 +801,7 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
         diagnostics_bundle=diagnostics_bundle,
         artifact_records=tuple(reversed(artifact_records)),
         route_comparison_review_report=route_report,
+        user_configuration_export=user_configuration_export,
     )
 
     assert first == second
@@ -791,6 +811,15 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
     assert first["manifest_hash"] == "sha256:manifest"
     assert first["runtime_export_boundary_hash"] == "sha256:boundary"
     assert first["boundary_alignment_hash"] == "sha256:alignment"
+    assert first["user_configuration_schema_id"] == "sees.user_configuration.v2"
+    assert first["user_configuration_config_hash"] == "sha256:user-config"
+    assert first["user_configuration_validation_ok"] is True
+    assert first["user_configuration_binding_v1"]["binding_id"] == (
+        "leo_twin.user_configuration_audit_binding.v1"
+    )
+    assert first["user_configuration_binding_v1"]["binding_hash"].startswith(
+        "sha256:"
+    )
     assert first["route_comparison_review_report_hash"] == "sha256:route-report"
     assert first["route_comparison_review_report_present"] is True
     assert first["self_artifact_excluded_from_hashes"] is True

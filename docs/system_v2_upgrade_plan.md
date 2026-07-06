@@ -309,6 +309,12 @@ Tasks:
     package review area as a dedicated audit drawer. The drawer groups manifest,
     boundary alignment, diagnostics, route review report, and artifact hash
     evidence and refreshes after route comparison review report save.
+  - Status: T309 binds backend user configuration export evidence into
+    `export_package_audit_index_v1.json`. The audit index now records the user
+    configuration schema id, config hash, export hash, validation status, and
+    deterministic binding hash. The dashboard audit drawer displays these
+    fields as a Configuration evidence section without deriving configuration
+    semantics locally.
 
 ### WS4. Compute Network Model v2
 

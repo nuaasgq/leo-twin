@@ -14897,3 +14897,62 @@ change.
 - Recommended follow-up:
   - Add an operator-facing audit export summary button that copies the selected
     audit index sections into a compact review note or Markdown report.
+
+## 2026-07-06 - User Configuration Audit Binding v1
+
+- Branch: `feature/T309-user-config-audit-binding-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: bind backend user configuration export evidence into
+  `export_package_audit_index_v1.json` and the dashboard audit drawer. Runtime
+  exports now pass `/scenario/user-config/export` summary evidence into the
+  audit index builder. The audit index records
+  `user_configuration_binding_v1`, schema id, config hash, export hash,
+  validation status, and a deterministic binding hash. The standalone dashboard
+  displays those fields as compact Configuration labels in the existing audit
+  drawer. This task does not alter Event Kernel behavior, runtime restore
+  execution, route recomputation, model recomputation, packet-level simulation,
+  or package mutation.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `src/leo_twin/services/result_package_contract.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/dashboard_model_trust_evidence_workspace_v1.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_result_package_contract_v1.py::test_runtime_export_package_audit_index_v1_is_deterministic tests/integration/test_result_package_export_v1.py tests/unit/test_user_guide_v2_docs.py -q`
+    - Result: passed, 4 tests.
+  - `python -m py_compile src/leo_twin/services/result_package_contract.py examples/integration_demo/control_plane.py`
+    - Result: passed.
+  - `pnpm --dir frontend test dataPanel.test.ts api.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 2 test
+      files and 206 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path. Vite
+      reported the existing large DataPanel chunk warning.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered:
+  - The normal PowerShell PATH may not expose `node`, so frontend validation
+    must use the bundled Codex Node/Pnpm runtime path.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The dashboard displays compact configuration binding labels; the full
+    effective user configuration remains available through
+    `/scenario/user-config/export` and the raw audit index JSON.
+  - Existing packages exported before this task do not contain
+    `user_configuration_binding_v1`; the drawer remains tolerant of missing
+    fields.
+- Recommended follow-up:
+  - Add a scenario package/export action that downloads user configuration,
+    runtime package audit index, and operator review notes as one reproducible
+    review bundle.

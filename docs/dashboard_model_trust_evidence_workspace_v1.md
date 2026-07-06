@@ -89,10 +89,11 @@ read, and no-replay/no-recompute/no-packet boundary used by package
 compare/preflight review. The package review area also surfaces
 `export_package_audit_index_v1.json` from the export catalog. That audit index
 binds manifest, boundary alignment, diagnostics, route review report, and
-artifact hashes into one backend-owned long-term review entry without route
-recomputation. The dashboard loads the audit index JSON and renders those
-evidence groups directly, so operators can inspect the package audit boundary
-without opening raw JSON.
+user configuration export evidence into one backend-owned long-term review
+entry without route recomputation. The dashboard loads the audit index JSON and
+renders those evidence groups directly, including schema/config/export/binding
+hashes and validation status for the user configuration, so operators can
+inspect the package audit boundary without opening raw JSON.
 7. runtime evidence
 
 Each row has a tone:

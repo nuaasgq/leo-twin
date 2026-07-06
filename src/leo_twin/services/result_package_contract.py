@@ -37,6 +37,10 @@ RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID = (
 RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID = (
     "leo_twin.runtime_export_package_audit_index.v1"
 )
+USER_CONFIGURATION_AUDIT_BINDING_V1_ID = (
+    "leo_twin.user_configuration_audit_binding.v1"
+)
+USER_CONFIGURATION_SCHEMA_V2_ID = "sees.user_configuration.v2"
 
 
 _REQUIRED_FILE_SPECS: tuple[dict[str, object], ...] = (
@@ -130,7 +134,8 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
                 "format": "json",
                 "content": (
                     "long-term package audit index for manifest, boundary, "
-                    "diagnostics, review report, and artifact hashes"
+                    "diagnostics, user configuration, review report, and "
+                    "artifact hashes"
                 ),
             },
         ),
@@ -897,6 +902,7 @@ def build_runtime_export_package_audit_index_v1(
     artifact_records: tuple[Mapping[str, Any], ...] = (),
     route_comparison_review_report: Mapping[str, Any] | None = None,
     runtime_export_boundary_alignment: Mapping[str, Any] | None = None,
+    user_configuration_export: Mapping[str, Any] | None = None,
 ) -> dict[str, object]:
     """Build a deterministic long-term audit index for a result package."""
 
@@ -917,6 +923,10 @@ def build_runtime_export_package_audit_index_v1(
     alignment = _mapping(runtime_export_boundary_alignment)
     if not alignment:
         alignment = _mapping(route_report.get("runtime_export_boundary_alignment_v1"))
+    user_config_binding = _runtime_export_user_configuration_audit_binding(
+        config_snapshot,
+        user_configuration_export,
+    )
     normalized_artifacts = tuple(
         sorted(
             (
@@ -947,6 +957,8 @@ def build_runtime_export_package_audit_index_v1(
         audit_warnings.append("ROUTE_COMPARISON_REVIEW_REPORT_NOT_SAVED")
     if not alignment:
         audit_warnings.append("BOUNDARY_ALIGNMENT_EVIDENCE_NOT_RECORDED")
+    if user_config_binding["validation_ok"] is not True:
+        audit_warnings.append("USER_CONFIGURATION_EXPORT_NOT_VALIDATED")
     if any(str(item.get("severity", "")) == "ERROR" for item in diagnostics_findings):
         audit_warnings.append("DIAGNOSTICS_BUNDLE_HAS_ERROR_FINDINGS")
 
@@ -966,6 +978,11 @@ def build_runtime_export_package_audit_index_v1(
         "boundary_alignment_hash": str(alignment.get("alignment_hash", "")),
         "boundary_alignment_status": str(alignment.get("alignment_status", "")),
         "boundary_alignment_warnings": _string_tuple(alignment.get("warnings")),
+        "user_configuration_binding_v1": user_config_binding,
+        "user_configuration_schema_id": str(user_config_binding["schema_id"]),
+        "user_configuration_config_hash": str(user_config_binding["config_hash"]),
+        "user_configuration_export_hash": str(user_config_binding["export_hash"]),
+        "user_configuration_validation_ok": user_config_binding["validation_ok"],
         "review_summary_hash": str(review_summary.get("summary_hash", "")),
         "diagnostics_hash": str(diagnostics_bundle.get("diagnostics_hash", "")),
         "route_comparison_review_report_hash": str(route_report.get("report_hash", "")),
@@ -985,6 +1002,38 @@ def build_runtime_export_package_audit_index_v1(
     }
     audit_index["audit_hash"] = stable_hash_payload(audit_index)
     return audit_index
+
+
+def _runtime_export_user_configuration_audit_binding(
+    config_snapshot: Mapping[str, Any],
+    user_configuration_export: Mapping[str, Any] | None,
+) -> dict[str, object]:
+    export = _mapping(user_configuration_export)
+    config = _mapping(config_snapshot.get("config"))
+    config_hash = str(export.get("config_hash", ""))
+    if not config_hash and config:
+        config_hash = stable_hash_payload(config)
+    validation_ok = export.get("validation_ok")
+    binding: dict[str, object] = {
+        "type": "USER_CONFIGURATION_AUDIT_BINDING_V1",
+        "version": "v1",
+        "binding_id": USER_CONFIGURATION_AUDIT_BINDING_V1_ID,
+        "source": "BACKEND_RUNTIME_EXPORT_PACKAGE",
+        "schema_id": str(export.get("schema_id", USER_CONFIGURATION_SCHEMA_V2_ID)),
+        "export_scope": str(export.get("export_scope", "CURRENT_EFFECTIVE_SEES_CONFIG")),
+        "format": str(export.get("format", "JSON_MAPPING")),
+        "config_hash": config_hash,
+        "export_hash": stable_hash_payload(export) if export else "",
+        "validation_ok": validation_ok is True,
+        "validation_error_count": _integer(export.get("validation_error_count")),
+        "unknown_key_policy": str(export.get("unknown_key_policy", "REJECT")),
+        "defaulting_policy": str(
+            export.get("defaulting_policy", "OMITTED_FIELDS_USE_BACKEND_DEFAULTS")
+        ),
+        "import_paths": _string_tuple(export.get("import_paths")),
+    }
+    binding["binding_hash"] = stable_hash_payload(binding)
+    return binding
 
 
 def summarize_result_package_record_v1(

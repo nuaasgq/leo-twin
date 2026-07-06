@@ -203,11 +203,14 @@ hash pairs, boundary alignment evidence, and operator notes. The report drawer
 can filter by status, search route id/status/hash/note text, and page through
 matching records without opening the raw JSON. Each package also exposes
 `export_package_audit_index_v1.json`, which summarizes manifest, boundary
-alignment, diagnostics, route review report, and artifact file hashes in one
-read-only audit entry. The dashboard loads this audit index and displays it as
-a dedicated audit drawer with Manifest, Boundary, Diagnostics, Route Review,
-and Artifact Hash sections, while still keeping a direct JSON link for
-operator review.
+alignment, user configuration binding, diagnostics, route review report, and
+artifact file hashes in one read-only audit entry. The dashboard loads this
+audit index and displays it as a dedicated audit drawer with Manifest,
+Configuration, Boundary, Diagnostics, Route Review, and Artifact Hash sections,
+while still keeping a direct JSON link for operator review. The Configuration
+section is backend-owned evidence from `/scenario/user-config/export`: it shows
+the schema id, config hash, export hash, binding hash, and validation status
+used for the exported package.
 For package-owned review, use:
 
 ```powershell
@@ -241,7 +244,8 @@ route comparison automatically. During that explicit save, the backend also
 records the package restore-preflight boundary alignment hash and status so the
 saved operator report can be audited later. It also regenerates
 `export_package_audit_index_v1.json` so the audit index includes the saved
-report hash.
+report hash while preserving the exported package's user configuration binding
+evidence.
 
 Package audit index:
 

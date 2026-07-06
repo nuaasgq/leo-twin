@@ -2415,6 +2415,32 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         "sha256:6666666666666666666666666666666666666666666666666666666666666666",
       boundary_alignment_status: "ALIGNED",
       boundary_alignment_warnings: [],
+      user_configuration_binding_v1: {
+        type: "USER_CONFIGURATION_AUDIT_BINDING_V1",
+        version: "v1",
+        binding_id: "leo_twin.user_configuration_audit_binding.v1",
+        source: "BACKEND_RUNTIME_EXPORT_PACKAGE",
+        schema_id: "sees.user_configuration.v2",
+        export_scope: "CURRENT_EFFECTIVE_SEES_CONFIG",
+        format: "JSON_MAPPING",
+        config_hash:
+          "sha256:1212121212121212121212121212121212121212121212121212121212121212",
+        export_hash:
+          "sha256:1313131313131313131313131313131313131313131313131313131313131313",
+        validation_ok: true,
+        validation_error_count: 0,
+        unknown_key_policy: "REJECT",
+        defaulting_policy: "OMITTED_FIELDS_USE_BACKEND_DEFAULTS",
+        import_paths: ["CONFIG_UPDATE control message for partial updates"],
+        binding_hash:
+          "sha256:1414141414141414141414141414141414141414141414141414141414141414"
+      },
+      user_configuration_schema_id: "sees.user_configuration.v2",
+      user_configuration_config_hash:
+        "sha256:1212121212121212121212121212121212121212121212121212121212121212",
+      user_configuration_export_hash:
+        "sha256:1313131313131313131313131313131313131313131313131313131313131313",
+      user_configuration_validation_ok: true,
       review_summary_hash:
         "sha256:7777777777777777777777777777777777777777777777777777777777777777",
       diagnostics_hash:
@@ -2475,6 +2501,13 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         "control 222222222222",
         "generated 333333333333",
         "runtime 444444444444"
+      ],
+      configurationLabels: [
+        "schema sees.user_configuration.v2",
+        "config 121212121212",
+        "export 131313131313",
+        "binding 141414141414",
+        "validation ok"
       ],
       boundaryLabels: [
         "boundary 555555555555",

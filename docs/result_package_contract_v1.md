@@ -288,13 +288,14 @@ leo_twin.runtime_export_package_audit_index.v1
 
 The artifact is written as `export_package_audit_index_v1.json`. It records the
 package manifest hash, config/generated/runtime hashes, runtime export boundary
-hash, boundary-alignment hash/status/warnings, review summary hash,
-diagnostics hash, optional route comparison review report hash, and the
-SHA-256 hashes of package artifacts. The audit index excludes its own file from
-`artifact_hashes` to avoid a circular self-hash. It is regenerated when a
-route comparison review report is saved, so the report hash and the
-preflight-derived boundary alignment evidence become part of the long-term
-package audit trail.
+hash, boundary-alignment hash/status/warnings, user configuration audit binding,
+user configuration schema id, user configuration config/export hashes,
+validation status, review summary hash, diagnostics hash, optional route
+comparison review report hash, and the SHA-256 hashes of package artifacts. The
+audit index excludes its own file from `artifact_hashes` to avoid a circular
+self-hash. It is regenerated when a route comparison review report is saved, so
+the report hash, user configuration binding, and the preflight-derived boundary
+alignment evidence become part of the long-term package audit trail.
 
 The audit index is read-only evidence. It does not replay events, recompute
 routes or services, mutate packages on read, capture packets, or call external
