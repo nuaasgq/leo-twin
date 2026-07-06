@@ -13389,3 +13389,53 @@ change.
 - Recommended follow-up:
   - Add route id search and row actions that open the live route detail endpoint
     when the referenced route still exists in the current runtime.
+
+## 2026-07-06 - Dashboard Route Index Search v1
+
+- Branch: `feature/T280-dashboard-route-index-search-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: continue the result-replay evidence workflow by making the dashboard
+  route detail index drawer searchable and traceable. The standalone dashboard
+  now filters the selected package's `route_detail_index_v1.json` rows by route,
+  flow, user, satellite, path, business type, or bottleneck text; reports the
+  matched/shown/indexed counts deterministically; and adds a row action that
+  requests the existing live route detail endpoint for the selected route id.
+  The task does not change backend runtime behavior, recompute routes, replay
+  packages, mutate exported artifacts, or modify Event Kernel behavior.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/dashboard_model_trust_evidence_workspace_v1.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with bundled Codex Node/Pnpm runtime.
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed, 1 test file and 164 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing large DataPanel chunk
+      warning after minification; no functional build error.
+- Problems encountered:
+  - The default shell could locate `pnpm` but not `node`, so the first
+    frontend validation attempt exited before running TypeScript or Vitest.
+    Re-ran the same commands with the bundled Codex Node/Pnpm paths from the
+    local workspace dependency runtime.
+  - The new TypeScript test initially exposed a fixture inference issue where
+    `path: []` became `never[]`; the fixture now supplies a concrete path.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The frontend search only covers the rows present in the exported
+    `route_detail_index_v1.json`; hidden routes outside the package window need
+    a later package-side pagination or route-id lookup task.
+  - The live route detail action is a best-effort comparison against the
+    current runtime. It cannot show a live detail if the route id no longer
+    exists in the running session.
+- Recommended follow-up:
+  - Add package-side route detail pagination or exact route-id lookup so result
+    packages can review hidden route rows without relying on current runtime
+    state.

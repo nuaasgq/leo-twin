@@ -144,7 +144,9 @@ Each result package contains:
 
 The standalone dashboard export review area can load the selected package's
 route detail index and show the route evidence counts, route-trust sample
-coverage, and sample route rows without rerunning the simulation.
+coverage, searchable sample route rows, and live route-detail lookup actions
+without rerunning the simulation. The live lookup only compares against the
+current runtime route detail endpoint when the same route id is still present.
 
 Export catalog:
 

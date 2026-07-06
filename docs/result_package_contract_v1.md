@@ -151,7 +151,11 @@ simulate packets.
 The standalone dashboard loads the selected package's
 `route_detail_index_v1.json` through the package file endpoint and renders a
 read-only route evidence drawer with indexed route counts, route-trust sample
-coverage, model-boundary labels, sample route rows, and a direct JSON link.
+coverage, model-boundary labels, sample route rows, route evidence search, row
+actions for live route-detail lookup, and a direct JSON link. The live
+route-detail action is a read-only comparison aid: it uses the current runtime
+detail endpoint when the same route id still exists, and it does not replay or
+mutate the exported package.
 
 ## Diagnostics Bundle
 

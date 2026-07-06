@@ -45,8 +45,9 @@ Rows are emitted in a deterministic order:
 The replay/export evidence lane now uses `route_detail_index_v1.json` when a
 selected result package provides it. The dashboard treats it as backend-owned
 route evidence: it displays indexed route counts, route trust sample coverage,
-model-boundary labels, and sample route rows without recomputing routes in the
-frontend.
+model-boundary labels, searchable sample route rows, and row actions that open
+the existing live route detail endpoint when the referenced route is still
+available in the current runtime. The frontend does not recompute routes.
 7. runtime evidence
 
 Each row has a tone:
@@ -74,7 +75,8 @@ The overall workspace tone is derived deterministically from row tones:
 
 ## Follow-Up
 
-- Link route explanation evidence rows to exact route detail endpoints.
+- Add package-side route-detail pagination or route-id lookup when exported
+  packages need to cover hidden route rows beyond the current export window.
 - Link each model assumption to a concrete verification report instance.
 - Promote result-review evidence into a wider workspace when exported package
   history becomes large.

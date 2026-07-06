@@ -78,6 +78,7 @@ import {
   buildUserBusinessRequestRows,
   COMPUTE_SERIES_OPTIONS,
   filterRouteExplanationRows,
+  filterRuntimeExportRouteDetailIndexRoutes,
   filterSatelliteResourceRows,
   filterServiceLifecycleTraceDisplay,
   filterUserBusinessRequestRows,
@@ -2581,6 +2582,52 @@ describe("buildDataPanelExportCompareDisplay", () => {
       summaryLabel: "pkg-next",
       metaLabels: ["HTTP 404"],
       indexHref: null
+    });
+  });
+
+  it("filters runtime export route detail indexes for reproducibility review", () => {
+    const routes = [
+      _runtimeExportRouteIndexRoute("route-a", true),
+      _runtimeExportRouteIndexRoute("route-b", false),
+      {
+        ..._runtimeExportRouteIndexRoute("route-c", true),
+        destination_id: "sat-1",
+        selected_satellite_id: "sat-1",
+        primary_next_hop_id: "sat-1",
+        next_hop_ids: ["sat-1"],
+        path: ["user-0", "sat-1"],
+        path_label: "user-0 -> sat-1",
+        bottleneck_component: "CAPACITY",
+        bottleneck_reason: "ROUTE_CAPACITY_PRESSURE",
+        bottleneck_reason_label: "Route capacity pressure",
+        explanation_label: "route is capacity constrained"
+      }
+    ];
+
+    expect(
+      filterRuntimeExportRouteDetailIndexRoutes(routes, "route-b data_transfer").map(
+        (route) => route.route_id
+      )
+    ).toEqual(["route-b"]);
+
+    const display = buildDataPanelExportRouteDetailIndexDisplay(
+      _runtimeExportRouteDetailIndex(routes),
+      {
+        query: "sat-1 capacity",
+        routeLimit: 1
+      }
+    );
+
+    expect(display).toMatchObject({
+      packageId: "pkg-review",
+      filterLabel: "shown 1/1 / matched 1/3 / query sat-1 capacity",
+      routeRows: [
+        {
+          routeId: "route-c",
+          pathLabel: "user-0 -> sat-1",
+          liveDetailActionLabel: "live route detail"
+        }
+      ]
     });
   });
 
@@ -8632,7 +8679,7 @@ function _runtimeExportRouteIndexRoute(routeId: string, available: boolean) {
     primary_next_hop_id: "sat-0",
     next_hop_ids: ["sat-0"],
     hop_count: 1,
-    path: [],
+    path: ["user-0", "sat-0"],
     path_label: "user-0 -> sat-0",
     available,
     capacity_mbps: available ? 80 : 40,
@@ -8650,6 +8697,76 @@ function _runtimeExportRouteIndexRoute(routeId: string, available: boolean) {
     explanation_label: available
       ? "route has a positive flow-level loss proxy"
       : "route is unavailable"
+  };
+}
+
+function _runtimeExportRouteDetailIndex(
+  routes: readonly ReturnType<typeof _runtimeExportRouteIndexRoute>[]
+) {
+  return {
+    type: "RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_V1",
+    version: "v1",
+    index_id: "leo_twin.runtime_export_route_detail_index.v1",
+    source: "BACKEND_RUNTIME_EXPORT",
+    index_scope: "ROUTE_EXPLANATION_WINDOW_EXPORT",
+    package_id: "pkg-review",
+    package_dir: "artifacts/runtime_exports/pkg-review",
+    route_model: "FLOW_LEVEL_ROUTE_PROXY",
+    packet_level_simulation: false,
+    all_pairs_computation: false,
+    route_summary: {
+      source: "BACKEND_RUNTIME_SNAPSHOT",
+      summary_scope: "ROUTE_EXPLANATION_WINDOW",
+      cursor: 0,
+      limit: 500,
+      next_cursor: routes.length,
+      has_more: false,
+      route_count: routes.length,
+      indexed_route_count: routes.length,
+      hidden_route_count: 0,
+      available_route_count: routes.filter((route) => route.available).length,
+      blocked_route_count: routes.filter((route) => !route.available).length,
+      over_demand_route_count: 0,
+      compute_service_route_count: routes.filter(
+        (route) => route.business_type === "COMPUTE_SERVICE"
+      ).length,
+      network_service_route_count: routes.filter(
+        (route) => route.business_type !== "COMPUTE_SERVICE"
+      ).length
+    },
+    route_trust: {
+      version: "v1",
+      trust_id: "leo_twin.route_provenance_trust.v1",
+      source: "config_snapshot.status.route_provenance_trust_summary_v1",
+      evidence_present: true,
+      route_model: "FLOW_LEVEL_ROUTE_PROXY",
+      packet_level_simulation: false,
+      all_pairs_computation: false,
+      trust_status: "COMPLETE_FLOW_LEVEL_ROUTE_PROXY",
+      route_count: routes.length,
+      assessed_route_count: routes.length,
+      hidden_route_count: 0,
+      available_route_count: routes.filter((route) => route.available).length,
+      blocked_route_count: routes.filter((route) => !route.available).length,
+      over_demand_route_count: 0,
+      explained_route_count: routes.length,
+      missing_explanation_count: 0,
+      path_context_route_count: routes.length,
+      next_hop_route_count: routes.length,
+      loss_proxy_route_count: routes.filter((route) => route.loss_proxy_rate > 0)
+        .length,
+      bottleneck_components: ["LOSS_PROXY", "CAPACITY"],
+      sample_route_ids: routes.map((route) => route.route_id),
+      caveats: []
+    },
+    route_ids: routes.map((route) => route.route_id),
+    sample_route_ids: routes.map((route) => route.route_id),
+    indexed_sample_route_ids: routes.map((route) => route.route_id),
+    missing_sample_route_ids: [],
+    source_order_policy: "route_explanation_summary_v1.items order is preserved",
+    routes,
+    route_detail_index_hash:
+      "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd"
   };
 }
 

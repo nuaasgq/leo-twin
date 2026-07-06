@@ -206,6 +206,9 @@ Tasks:
   - Status: T279 loads `route_detail_index_v1.json` in the standalone
     dashboard export review surface and renders indexed route counts,
     route-trust sample coverage, model-boundary labels, and sample route rows.
+  - Status: T280 adds route evidence search and row actions that request the
+    existing live route detail endpoint for the selected route id, without
+    recomputing paths or mutating exported packages.
 
 ### WS4. Compute Network Model v2
 

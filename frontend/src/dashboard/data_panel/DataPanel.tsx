@@ -320,6 +320,8 @@ export const DataPanel = memo(function DataPanel({
     useState<DataPanelComputeSeriesKey>("computeUsedTflops");
   const [detailFilter, setDetailFilter] = useState("");
   const [routeExplanationFilter, setRouteExplanationFilter] = useState("");
+  const [exportRouteDetailIndexFilter, setExportRouteDetailIndexFilter] =
+    useState("");
   const [routeExplanationAvailabilityFilter, setRouteExplanationAvailabilityFilter] =
     useState<DataPanelRouteExplanationAvailabilityFilter>("ALL");
   const [routeExplanationBusinessFilter, setRouteExplanationBusinessFilter] =
@@ -441,7 +443,10 @@ export const DataPanel = memo(function DataPanel({
     runtimeExportDiagnosticsBundleError
   );
   const exportRouteDetailIndexDisplay = buildDataPanelExportRouteDetailIndexDisplay(
-    runtimeExportRouteDetailIndex
+    runtimeExportRouteDetailIndex,
+    {
+      query: exportRouteDetailIndexFilter
+    }
   );
   const exportRouteDetailIndexStatus = buildDataPanelExportRouteDetailIndexStatus(
     exportRouteDetailIndexDisplay,
@@ -1297,6 +1302,26 @@ export const DataPanel = memo(function DataPanel({
                   ))}
                 </div>
               ) : null}
+              {exportRouteDetailIndexStatus.indexHref ? (
+                <div className="data-panel-export-route-index-tools">
+                  <label
+                    className="data-panel-export-route-index-search"
+                    htmlFor="data-panel-export-route-index-filter"
+                  >
+                    <span>route evidence search</span>
+                    <input
+                      id="data-panel-export-route-index-filter"
+                      type="search"
+                      value={exportRouteDetailIndexFilter}
+                      onChange={(event) =>
+                        setExportRouteDetailIndexFilter(event.currentTarget.value)
+                      }
+                      placeholder="route / user / satellite / service / bottleneck"
+                    />
+                  </label>
+                  <span>{exportRouteDetailIndexStatus.filterLabel}</span>
+                </div>
+              ) : null}
               {exportRouteDetailIndexStatus.routeRows.length > 0 ? (
                 <div className="data-panel-export-diagnostics-findings">
                   {exportRouteDetailIndexStatus.routeRows.map((row) => (
@@ -1308,6 +1333,15 @@ export const DataPanel = memo(function DataPanel({
                       <strong>{row.routeId}</strong>
                       {row.pathLabel}
                       <small>{row.metricLabel}</small>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedRouteDetailId(row.routeId);
+                          onRuntimeRouteDetailSelect?.(row.routeId);
+                        }}
+                      >
+                        {row.liveDetailActionLabel}
+                      </button>
                     </span>
                   ))}
                 </div>
@@ -8839,6 +8873,7 @@ export interface DataPanelExportRouteDetailIndexDisplay {
   metaLabels: readonly string[];
   boundaryLabels: readonly string[];
   routeRows: readonly DataPanelExportRouteDetailIndexRouteRow[];
+  filterLabel: string;
   indexHref: string;
 }
 
@@ -8849,6 +8884,7 @@ export interface DataPanelExportRouteDetailIndexStatus {
   metaLabels: readonly string[];
   boundaryLabels: readonly string[];
   routeRows: readonly DataPanelExportRouteDetailIndexRouteRow[];
+  filterLabel: string;
   indexHref: string | null;
 }
 
@@ -8858,6 +8894,12 @@ export interface DataPanelExportRouteDetailIndexRouteRow {
   metricLabel: string;
   available: boolean;
   title: string;
+  liveDetailActionLabel: string;
+}
+
+export interface DataPanelExportRouteDetailIndexDisplayOptions {
+  routeLimit?: number;
+  query?: string;
 }
 
 export interface DataPanelExportManifestInspectorDisplay {
@@ -9093,11 +9135,13 @@ export function buildDataPanelExportDiagnosticsStatus(
 
 export function buildDataPanelExportRouteDetailIndexDisplay(
   index: RuntimeExportRouteDetailIndexV1 | null | undefined,
-  routeLimit = 5
+  options: DataPanelExportRouteDetailIndexDisplayOptions = {}
 ): DataPanelExportRouteDetailIndexDisplay | null {
   if (index === null || index === undefined) {
     return null;
   }
+  const routeLimit = Math.max(0, options.routeLimit ?? 5);
+  const query = normalizeRouteDetailIndexQuery(options.query ?? "");
   const summary = index.route_summary;
   const sampleCount = index.sample_route_ids.length;
   const indexedSampleCount = index.indexed_sample_route_ids.length;
@@ -9106,8 +9150,9 @@ export function buildDataPanelExportRouteDetailIndexDisplay(
     index.packet_level_simulation === false &&
     index.all_pairs_computation === false &&
     missingSampleCount === 0;
-  const routeRows = index.routes
-    .slice(0, Math.max(0, routeLimit))
+  const filteredRoutes = filterRuntimeExportRouteDetailIndexRoutes(index.routes, query);
+  const routeRows = filteredRoutes
+    .slice(0, routeLimit)
     .map(buildDataPanelExportRouteDetailIndexRouteRow);
   return {
     packageId: index.package_id,
@@ -9133,8 +9178,30 @@ export function buildDataPanelExportRouteDetailIndexDisplay(
       index.source_order_policy
     ],
     routeRows,
+    filterLabel: buildRuntimeExportRouteDetailIndexFilterLabel(
+      query,
+      filteredRoutes.length,
+      index.routes.length,
+      routeRows.length,
+      routeLimit
+    ),
     indexHref: runtimeExportPackageFileHref(index.package_id, "route_detail_index_v1.json")
   };
+}
+
+export function filterRuntimeExportRouteDetailIndexRoutes(
+  routes: readonly RuntimeExportRouteDetailIndexRouteV1[],
+  query: string
+): readonly RuntimeExportRouteDetailIndexRouteV1[] {
+  const normalizedQuery = normalizeRouteDetailIndexQuery(query);
+  if (normalizedQuery.length === 0) {
+    return routes;
+  }
+  const queryParts = normalizedQuery.split(" ").filter((part) => part.length > 0);
+  return routes.filter((route) => {
+    const haystack = runtimeExportRouteDetailIndexRouteSearchText(route);
+    return queryParts.every((part) => haystack.includes(part));
+  });
 }
 
 function buildDataPanelExportRouteDetailIndexRouteRow(
@@ -9149,8 +9216,56 @@ function buildDataPanelExportRouteDetailIndexRouteRow(
       route.loss_proxy_rate
     )}`,
     available: route.available,
-    title: `${route.flow_id} / ${route.business_type} / ${route.bottleneck_component} / ${route.explanation_label}`
+    title: `${route.flow_id} / ${route.business_type} / ${route.bottleneck_component} / ${route.explanation_label}`,
+    liveDetailActionLabel: "live route detail"
   };
+}
+
+function normalizeRouteDetailIndexQuery(query: string): string {
+  return query.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function runtimeExportRouteDetailIndexRouteSearchText(
+  route: RuntimeExportRouteDetailIndexRouteV1
+): string {
+  return [
+    route.route_id,
+    route.flow_id,
+    route.user_id,
+    route.source_id,
+    route.destination_id,
+    route.selected_satellite_id,
+    route.primary_next_hop_id,
+    route.business_type,
+    route.business_label,
+    route.bottleneck_component,
+    route.bottleneck_reason,
+    route.bottleneck_reason_label,
+    route.explanation_label,
+    route.path_label,
+    ...route.next_hop_ids,
+    ...route.path
+  ]
+    .join(" ")
+    .toLowerCase();
+}
+
+function buildRuntimeExportRouteDetailIndexFilterLabel(
+  query: string,
+  filteredCount: number,
+  totalCount: number,
+  shownCount: number,
+  routeLimit: number
+): string {
+  const shownLabel = `shown ${formatCount(shownCount)}/${formatCount(filteredCount)}`;
+  const totalLabel = `indexed ${formatCount(totalCount)}`;
+  const limitLabel = `limit ${formatCount(routeLimit)}`;
+  if (query.length === 0) {
+    return `${shownLabel} / ${totalLabel} / ${limitLabel}`;
+  }
+  return `${shownLabel} / matched ${formatCount(filteredCount)}/${formatCount(
+    totalCount
+  )} / query ${query}`;
 }
 
 export function buildDataPanelExportRouteDetailIndexStatus(
@@ -9167,6 +9282,7 @@ export function buildDataPanelExportRouteDetailIndexStatus(
       metaLabels: ["只读索引", "不重算路由"],
       boundaryLabels: [],
       routeRows: [],
+      filterLabel: "loading route evidence index",
       indexHref: null
     };
   }
@@ -9178,6 +9294,7 @@ export function buildDataPanelExportRouteDetailIndexStatus(
       metaLabels: [error],
       boundaryLabels: [],
       routeRows: [],
+      filterLabel: "route evidence index unavailable",
       indexHref: null
     };
   }

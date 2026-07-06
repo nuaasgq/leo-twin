@@ -2874,6 +2874,58 @@ button.data-panel-route-row {
   font-size: 10px;
 }
 
+.data-panel-export-route-index-tools {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto;
+  align-items: end;
+  gap: 8px;
+  min-width: 0;
+}
+
+.data-panel-export-route-index-tools > span {
+  min-width: 0;
+  color: var(--app-muted);
+  font-size: 10px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.data-panel-export-route-index-search {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.data-panel-export-route-index-search span {
+  color: var(--app-muted);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.data-panel-export-route-index-search input {
+  min-width: 0;
+  width: 100%;
+  border: 1px solid #2c4554;
+  border-radius: 5px;
+  padding: 6px 8px;
+  background: #0b141c;
+  color: var(--app-text);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.data-panel-export-diagnostics-findings button {
+  justify-self: start;
+  border: 1px solid #2a4658;
+  border-radius: 5px;
+  padding: 4px 6px;
+  background: #101922;
+  color: var(--accent-cyan);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 900;
+}
+
 .data-panel-export-manifest-inspector {
   display: grid;
   gap: 8px;
