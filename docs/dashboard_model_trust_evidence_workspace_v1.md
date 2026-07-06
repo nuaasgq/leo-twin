@@ -86,7 +86,11 @@ evidence, including alignment hash, alignment status, warnings, and the runtime
 export boundary hash. This binds the operator's route comparison outcome to the
 same config-only restore, config/generated-config compare, persisted-artifact
 read, and no-replay/no-recompute/no-packet boundary used by package
-compare/preflight review.
+compare/preflight review. The package review area also surfaces
+`export_package_audit_index_v1.json` from the export catalog. That audit index
+binds manifest, boundary alignment, diagnostics, route review report, and
+artifact hashes into one backend-owned long-term review entry without route
+recomputation.
 7. runtime evidence
 
 Each row has a tone:

@@ -10,6 +10,7 @@ import {
   RuntimeExportHistoryV1,
   RuntimeExportPackageCompareEnvelope,
   RuntimeExportPackageCompareV1,
+  RuntimeExportPackageAuditIndexV1,
   RuntimeExportRouteComparisonReviewReportEnvelope,
   RuntimeExportRouteComparisonReviewReportRecordV1,
   RuntimeExportRouteComparisonReviewReportV1,
@@ -440,6 +441,22 @@ export async function loadRuntimeExportRouteComparisonReviewReport(
     throw new Error(`failed to load runtime export route comparison review report from ${url}: HTTP ${response.status}`);
   }
   return decodeRuntimeExportRouteComparisonReviewReportArtifact(await response.json());
+}
+
+export async function loadRuntimeExportPackageAuditIndex(
+  packageId: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): Promise<RuntimeExportPackageAuditIndexV1> {
+  const url = runtimeExportPackageFileHref(
+    packageId,
+    "export_package_audit_index_v1.json",
+    endpoint
+  );
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`failed to load runtime export package audit index from ${url}: HTTP ${response.status}`);
+  }
+  return decodeRuntimeExportPackageAuditIndex(await response.json());
 }
 
 export async function saveRuntimeExportRouteComparisonReviewReport(
@@ -1108,6 +1125,25 @@ export function decodeRuntimeExportRouteComparisonReviewReportArtifact(
     );
   }
   return value as RuntimeExportRouteComparisonReviewReportV1;
+}
+
+export function decodeRuntimeExportPackageAuditIndex(
+  value: unknown
+): RuntimeExportPackageAuditIndexV1 {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError("runtime export package audit index must be an object");
+  }
+  if (
+    typeof (value as { audit_index_id?: unknown }).audit_index_id !== "string" ||
+    typeof (value as { package_id?: unknown }).package_id !== "string" ||
+    !Array.isArray((value as { artifact_hashes?: unknown }).artifact_hashes) ||
+    typeof (value as { audit_hash?: unknown }).audit_hash !== "string"
+  ) {
+    throw new TypeError(
+      "runtime export package audit index must include audit_index_id, package_id, artifact_hashes, and audit_hash"
+    );
+  }
+  return value as RuntimeExportPackageAuditIndexV1;
 }
 
 export function decodeRuntimeExportRestorePreflight(

@@ -201,7 +201,11 @@ report artifact is available, the dashboard loads it read-only and summarizes
 saved record counts, MATCH/DIFFERENT/UNAVAILABLE/ERROR totals, route detail
 hash pairs, boundary alignment evidence, and operator notes. The report drawer
 can filter by status, search route id/status/hash/note text, and page through
-matching records without opening the raw JSON.
+matching records without opening the raw JSON. Each package also exposes
+`export_package_audit_index_v1.json`, which summarizes manifest, boundary
+alignment, diagnostics, route review report, and artifact file hashes in one
+read-only audit entry. The dashboard shows whether this audit index artifact is
+present and links to the JSON file from the package review area.
 For package-owned review, use:
 
 ```powershell
@@ -233,7 +237,15 @@ require the current runtime to contain the same route id. The POST call writes
 the export catalog; it records supplied review outcomes and does not rerun a
 route comparison automatically. During that explicit save, the backend also
 records the package restore-preflight boundary alignment hash and status so the
-saved operator report can be audited later.
+saved operator report can be audited later. It also regenerates
+`export_package_audit_index_v1.json` so the audit index includes the saved
+report hash.
+
+Package audit index:
+
+```powershell
+Invoke-RestMethod "http://127.0.0.1:8765/runtime/export/packages/<package_id>/files/export_package_audit_index_v1.json"
+```
 
 Export catalog:
 

@@ -1400,6 +1400,41 @@ export interface RuntimeExportRouteComparisonReviewReportRecordV1 {
   operator_note: string;
 }
 
+export interface RuntimeExportPackageAuditIndexV1 {
+  type: "RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1" | string;
+  version: "v1" | string;
+  audit_index_id: string;
+  source: string;
+  audit_scope: string;
+  package_id: string;
+  package_dir: string;
+  manifest_hash: string;
+  control_config_hash: string;
+  generated_config_hash: string;
+  runtime_state_hash: string;
+  runtime_export_boundary_hash: string;
+  boundary_alignment_hash: string;
+  boundary_alignment_status: string;
+  boundary_alignment_warnings: readonly string[];
+  review_summary_hash: string;
+  diagnostics_hash: string;
+  route_comparison_review_report_hash: string;
+  route_comparison_review_report_present: boolean;
+  artifact_count: number;
+  artifact_hashes: readonly RuntimeExportCatalogFileV1[];
+  required_artifact_filenames: readonly string[];
+  missing_required_artifact_filenames: readonly string[];
+  self_artifact_excluded_from_hashes: boolean;
+  audit_status: "AUDIT_READY" | "AUDIT_WARN" | string;
+  audit_warnings: readonly string[];
+  forbidden_external_integrations: readonly string[];
+  packet_level_simulation: boolean;
+  event_replay_restore: boolean;
+  model_recomputation: boolean;
+  package_mutation_on_read: boolean;
+  audit_hash: string;
+}
+
 export interface RuntimeExportReviewReproducibilityV1 {
   manifest_id: string;
   manifest_hash: string;

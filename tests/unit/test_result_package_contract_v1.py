@@ -5,6 +5,7 @@ import json
 from leo_twin.services.result_package_contract import (
     RESULT_PACKAGE_CONTRACT_V1_ID,
     RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1_ID,
+    RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID,
     RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1_ID,
     RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID,
     RUNTIME_EXPORT_ROUTE_DETAIL_ITEM_V1_ID,
@@ -14,6 +15,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_REVIEW_SUMMARY_V1_ID,
     RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID,
     build_runtime_export_diagnostics_bundle_v1,
+    build_runtime_export_package_audit_index_v1,
     build_runtime_export_reproducibility_boundary_v1,
     build_runtime_export_route_comparison_review_report_v1,
     build_runtime_export_route_detail_item_v1,
@@ -51,6 +53,7 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
         "route_detail_index_v1.json",
         "review_summary_v1.json",
         "diagnostics_bundle_v1.json",
+        "export_package_audit_index_v1.json",
     ]
     assert "GET /runtime/export" in first["source_endpoints"]
     assert (
@@ -704,6 +707,104 @@ def test_runtime_export_route_comparison_review_report_v1_is_deterministic() -> 
     assert first["report_hash"].startswith("sha256:")
     assert json.loads(json.dumps(first, sort_keys=True))["report_id"] == (
         RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID
+    )
+
+
+def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
+    boundary = {
+        "boundary_id": RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1_ID,
+        "boundary_hash": "sha256:boundary",
+    }
+    alignment = {
+        "alignment_id": "leo_twin.runtime_export_boundary_alignment.v1",
+        "alignment_hash": "sha256:alignment",
+        "alignment_status": "ALIGNED",
+        "boundary_hash": "sha256:boundary",
+        "warnings": (),
+    }
+    route_report = {
+        "report_id": RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID,
+        "report_hash": "sha256:route-report",
+        "runtime_export_boundary_alignment_v1": alignment,
+    }
+    config_snapshot = {
+        "type": "RUNTIME_CONFIG_SNAPSHOT",
+        "status": {"runtime_export_reproducibility_boundary_v1": boundary},
+        "config": {"seed": 7},
+        "generated_config": {"seed": 7, "satellite_count": 72},
+    }
+    manifest = {
+        "manifest_id": RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID,
+        "manifest_hash": "sha256:manifest",
+        "control_config_hash": "sha256:control",
+        "generated_config_hash": "sha256:generated",
+        "runtime_state_hash": "sha256:runtime",
+        "runtime_export_reproducibility_boundary_v1": boundary,
+    }
+    review_summary = {
+        "summary_id": RUNTIME_EXPORT_REVIEW_SUMMARY_V1_ID,
+        "summary_hash": "sha256:review",
+    }
+    diagnostics_bundle = {
+        "bundle_id": RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1_ID,
+        "diagnostics_hash": "sha256:diagnostics",
+        "findings": ({"severity": "INFO", "code": "OK", "message": "ready"},),
+    }
+    artifact_records = (
+        _file("manifest", "manifest.json", "sha256:manifest-file"),
+        _file("config_snapshot", "config_snapshot.json", "sha256:config-file"),
+        _file("events", "events.jsonl", "sha256:events-file"),
+        _file("metrics", "metrics.csv", "sha256:metrics-file"),
+        _file("summary", "summary.json", "sha256:summary-file"),
+        _file(
+            "route_comparison_review_report_v1",
+            "route_comparison_review_report_v1.json",
+            "sha256:route-report-file",
+        ),
+    )
+
+    first = build_runtime_export_package_audit_index_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+        manifest=manifest,
+        review_summary=review_summary,
+        diagnostics_bundle=diagnostics_bundle,
+        artifact_records=artifact_records,
+        route_comparison_review_report=route_report,
+    )
+    second = build_runtime_export_package_audit_index_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+        manifest=manifest,
+        review_summary=review_summary,
+        diagnostics_bundle=diagnostics_bundle,
+        artifact_records=tuple(reversed(artifact_records)),
+        route_comparison_review_report=route_report,
+    )
+
+    assert first == second
+    assert first["audit_index_id"] == RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID
+    assert first["audit_status"] == "AUDIT_READY"
+    assert first["audit_warnings"] == ()
+    assert first["manifest_hash"] == "sha256:manifest"
+    assert first["runtime_export_boundary_hash"] == "sha256:boundary"
+    assert first["boundary_alignment_hash"] == "sha256:alignment"
+    assert first["route_comparison_review_report_hash"] == "sha256:route-report"
+    assert first["route_comparison_review_report_present"] is True
+    assert first["self_artifact_excluded_from_hashes"] is True
+    assert [item["filename"] for item in first["artifact_hashes"]] == [
+        "config_snapshot.json",
+        "events.jsonl",
+        "manifest.json",
+        "metrics.csv",
+        "route_comparison_review_report_v1.json",
+        "summary.json",
+    ]
+    assert first["audit_hash"].startswith("sha256:")
+    assert json.loads(json.dumps(first, sort_keys=True))["audit_index_id"] == (
+        RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID
     )
 
 

@@ -31,6 +31,7 @@ import {
   buildDataPanelExportReviewSummaryStatus,
   buildDataPanelExportRouteDetailItemDisplay,
   buildDataPanelExportRouteDetailItemStatus,
+  buildDataPanelExportPackageAuditIndexArtifactDisplay,
   buildDataPanelExportRouteComparisonReviewArtifactDisplay,
   buildDataPanelExportRouteComparisonReviewReportDisplay,
   buildDataPanelExportRouteComparisonReviewReportStatus,
@@ -2260,7 +2261,7 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           package_id: "pkg-review",
           package_dir: "artifacts/runtime_exports/pkg-review",
           relative_package_dir: "pkg-review",
-          file_count: 1,
+          file_count: 2,
           manifest_hash:
             "sha256:1111111111111111111111111111111111111111111111111111111111111111",
           current_sim_time: 12,
@@ -2272,6 +2273,13 @@ describe("buildDataPanelExportCatalogDisplay", () => {
               bytes: 2048,
               sha256:
                 "sha256:7777777777777777777777777777777777777777777777777777777777777777"
+            },
+            {
+              name: "export_package_audit_index_v1",
+              filename: "export_package_audit_index_v1.json",
+              bytes: 1024,
+              sha256:
+                "sha256:9999999999999999999999999999999999999999999999999999999999999999"
             }
           ]
         }
@@ -2301,6 +2309,28 @@ describe("buildDataPanelExportCatalogDisplay", () => {
     });
 
     expect(
+      buildDataPanelExportPackageAuditIndexArtifactDisplay(
+        catalog,
+        "pkg-review",
+        "sha256:8888888888888888888888888888888888888888888888888888888888888888"
+      )
+    ).toEqual({
+      packageId: "pkg-review",
+      tone: "match",
+      statusLabel: "audit index artifact present",
+      summaryLabel: "pkg-review / 1 KiB / file 999999999999",
+      hashLabels: [
+        "catalog cccccccccccc",
+        "audit 999999999999",
+        "route report 888888888888"
+      ],
+      artifactHref:
+        "/runtime/export/packages/pkg-review/files/export_package_audit_index_v1.json",
+      artifactTitle:
+        "export_package_audit_index_v1.json / 1 KiB / sha256:9999999999999999999999999999999999999999999999999999999999999999"
+    });
+
+    expect(
       buildDataPanelExportRouteComparisonReviewArtifactDisplay(
         {
           ...catalog,
@@ -2327,7 +2357,36 @@ describe("buildDataPanelExportCatalogDisplay", () => {
     });
 
     expect(
+      buildDataPanelExportPackageAuditIndexArtifactDisplay(
+        {
+          ...catalog,
+          records: [
+            {
+              ...catalog.records[0],
+              file_count: 0,
+              files: []
+            }
+          ]
+        },
+        "pkg-review"
+      )
+    ).toMatchObject({
+      packageId: "pkg-review",
+      tone: "different",
+      statusLabel: "audit index not saved",
+      artifactHref: null,
+      hashLabels: [
+        "catalog cccccccccccc",
+        "package PACKAGE",
+        "route report hash waiting"
+      ]
+    });
+
+    expect(
       buildDataPanelExportRouteComparisonReviewArtifactDisplay(undefined, "pkg-review")
+    ).toBeNull();
+    expect(
+      buildDataPanelExportPackageAuditIndexArtifactDisplay(undefined, "pkg-review")
     ).toBeNull();
   });
 

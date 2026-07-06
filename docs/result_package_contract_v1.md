@@ -272,6 +272,34 @@ endpoint saves selected operator review outcomes only; it does not compute
 route diffs by itself, replay events, recompute routes, or update existing
 archive zip files.
 
+## Package Audit Index
+
+Runtime exports include a compact long-term audit index artifact:
+
+```text
+RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1
+```
+
+The audit index id is:
+
+```text
+leo_twin.runtime_export_package_audit_index.v1
+```
+
+The artifact is written as `export_package_audit_index_v1.json`. It records the
+package manifest hash, config/generated/runtime hashes, runtime export boundary
+hash, boundary-alignment hash/status/warnings, review summary hash,
+diagnostics hash, optional route comparison review report hash, and the
+SHA-256 hashes of package artifacts. The audit index excludes its own file from
+`artifact_hashes` to avoid a circular self-hash. It is regenerated when a
+route comparison review report is saved, so the report hash and the
+preflight-derived boundary alignment evidence become part of the long-term
+package audit trail.
+
+The audit index is read-only evidence. It does not replay events, recompute
+routes or services, mutate packages on read, capture packets, or call external
+simulators.
+
 ## Diagnostics Bundle
 
 The diagnostics bundle artifact has type:

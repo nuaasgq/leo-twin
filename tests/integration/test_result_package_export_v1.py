@@ -8,6 +8,7 @@ from examples.integration_demo.control_plane import DemoControlPlane
 from examples.integration_demo.runtime import run_integration_demo
 from leo_twin.services.detail_pagination_contract import DETAIL_ENDPOINT_MAX_LIMIT
 from leo_twin.services.result_package_contract import (
+    RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID,
     RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1_ID,
     RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID,
     RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID,
@@ -48,11 +49,13 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert (package_dir / "review_summary_v1.json").exists()
     assert (package_dir / "route_detail_index_v1.json").exists()
     assert (package_dir / "service_lifecycle_trace_v2.json").exists()
+    assert (package_dir / "export_package_audit_index_v1.json").exists()
     filenames = {str(record["filename"]) for record in package["files"]}
     assert "service_lifecycle_trace_v2.json" in filenames
     assert "route_detail_index_v1.json" in filenames
     assert "review_summary_v1.json" in filenames
     assert "diagnostics_bundle_v1.json" in filenames
+    assert "export_package_audit_index_v1.json" in filenames
 
     manifest = json.loads((package_dir / "manifest.json").read_text(encoding="utf-8"))
     config_snapshot = json.loads(
@@ -69,6 +72,11 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     )
     diagnostics_bundle = json.loads(
         (package_dir / "diagnostics_bundle_v1.json").read_text(encoding="utf-8")
+    )
+    audit_index = json.loads(
+        (package_dir / "export_package_audit_index_v1.json").read_text(
+            encoding="utf-8"
+        )
     )
 
     assert manifest["manifest_id"] == RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID
@@ -179,6 +187,21 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert diagnostics_bundle["reproducibility_boundary"] == reproducibility_boundary
     assert diagnostics_bundle["model_boundaries"]["packet_level_simulation"] is False
     assert diagnostics_bundle["model_boundaries"]["event_replay_restore"] is False
+    assert audit_index["audit_index_id"] == RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID
+    assert audit_index["package_id"] == package["package_id"]
+    assert audit_index["manifest_hash"] == manifest["manifest_hash"]
+    assert audit_index["runtime_export_boundary_hash"] == (
+        reproducibility_boundary["boundary_hash"]
+    )
+    assert audit_index["boundary_alignment_status"] == "ALIGNED"
+    assert audit_index["route_comparison_review_report_present"] is False
+    assert audit_index["route_comparison_review_report_hash"] == ""
+    assert audit_index["self_artifact_excluded_from_hashes"] is True
+    assert "ROUTE_COMPARISON_REVIEW_REPORT_NOT_SAVED" in audit_index["audit_warnings"]
+    assert audit_index["audit_hash"].startswith("sha256:")
+    assert "export_package_audit_index_v1.json" not in {
+        str(record["filename"]) for record in audit_index["artifact_hashes"]
+    }
 
     review_report_response = (
         control_plane.runtime_export_package_route_comparison_review_report(
@@ -244,10 +267,42 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     )
     assert report_artifact["filename"] == "route_comparison_review_report_v1.json"
     assert report_artifact["sha256"] == review_report_response["artifact"]["sha256"]
+    updated_audit_index = review_report_response["audit_index"]
+    assert updated_audit_index["audit_index_id"] == (
+        RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID
+    )
+    assert updated_audit_index["route_comparison_review_report_present"] is True
+    assert updated_audit_index["route_comparison_review_report_hash"] == (
+        review_report["report_hash"]
+    )
+    assert updated_audit_index["boundary_alignment_hash"] == (
+        review_report["boundary_alignment_hash"]
+    )
+    assert updated_audit_index["runtime_export_boundary_hash"] == (
+        reproducibility_boundary["boundary_hash"]
+    )
+    assert updated_audit_index["audit_status"] == "AUDIT_READY"
+    assert updated_audit_index["audit_warnings"] == ()
+    audit_artifact = control_plane.runtime_export_package_artifact(
+        str(package["package_id"]),
+        "export_package_audit_index_v1.json",
+        output_root,
+    )
+    assert audit_artifact["sha256"] == review_report_response["audit_artifact"][
+        "sha256"
+    ]
+    assert json.loads(
+        (package_dir / "export_package_audit_index_v1.json").read_text(
+            encoding="utf-8"
+        )
+    ) == json.loads(json.dumps(updated_audit_index, sort_keys=True))
     catalog = control_plane.runtime_export_catalog(output_root)["summary"]
     latest = catalog["latest_export"]
     assert latest["file_count"] == len(latest["files"])
     assert "route_comparison_review_report_v1.json" in {
+        str(record["filename"]) for record in latest["files"]
+    }
+    assert "export_package_audit_index_v1.json" in {
         str(record["filename"]) for record in latest["files"]
     }
 

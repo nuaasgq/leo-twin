@@ -75,6 +75,7 @@ from leo_twin.services.runtime_reproducibility import (
 )
 from leo_twin.services.result_package_contract import (
     build_runtime_export_diagnostics_bundle_v1,
+    build_runtime_export_package_audit_index_v1,
     build_runtime_export_reproducibility_boundary_v1,
     build_runtime_export_route_comparison_review_report_v1,
     build_runtime_export_route_detail_item_v1,
@@ -135,6 +136,7 @@ _RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_FILENAME = "diagnostics_bundle_v1.json"
 _RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_FILENAME = (
     "route_comparison_review_report_v1.json"
 )
+_RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_FILENAME = "export_package_audit_index_v1.json"
 
 
 class RuntimeExportArtifactError(LookupError):
@@ -674,6 +676,7 @@ class DemoControlPlane:
         diagnostics_bundle_path = (
             package_dir / _RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_FILENAME
         )
+        audit_index_path = package_dir / _RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_FILENAME
         artifact_filenames = tuple(
             sorted(
                 path.name
@@ -681,6 +684,7 @@ class DemoControlPlane:
                     *written_files.values(),
                     review_summary_path,
                     diagnostics_bundle_path,
+                    audit_index_path,
                 )
             )
         )
@@ -709,6 +713,26 @@ class DemoControlPlane:
             encoding="utf-8",
         )
         written_files["diagnostics_bundle_v1"] = diagnostics_bundle_path
+        audit_compare = _runtime_export_package_compare_summary(
+            package_id,
+            config_snapshot,
+            config_snapshot,
+            diff_limit=0,
+        )
+        raw_alignment = audit_compare.get("runtime_export_boundary_alignment_v1")
+        runtime_export_boundary_alignment: Mapping[str, Any] = (
+            raw_alignment if isinstance(raw_alignment, Mapping) else {}
+        )
+        self._write_runtime_export_package_audit_index(
+            package_id,
+            package_dir,
+            config_snapshot=config_snapshot,
+            manifest=manifest,
+            review_summary=review_summary,
+            diagnostics_bundle=diagnostics_bundle,
+            runtime_export_boundary_alignment=runtime_export_boundary_alignment,
+        )
+        written_files["export_package_audit_index_v1"] = audit_index_path
 
         files = tuple(
             _runtime_export_file_record(name, path)
@@ -939,12 +963,100 @@ class DemoControlPlane:
             package_id,
             artifact,
         )
+        audit_index, audit_artifact = self._write_runtime_export_package_audit_index(
+            package_id,
+            package_dir,
+            runtime_export_boundary_alignment=runtime_export_boundary_alignment,
+        )
+        catalog_record = _upsert_runtime_export_catalog_file(
+            output_root,
+            package_id,
+            audit_artifact,
+        )
         return {
             "type": "RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT",
             "summary": report,
             "artifact": _runtime_export_catalog_file_record(artifact),
+            "audit_index": audit_index,
+            "audit_artifact": _runtime_export_catalog_file_record(audit_artifact),
             "catalog_record": catalog_record,
         }
+
+    def _write_runtime_export_package_audit_index(
+        self,
+        package_id: str,
+        package_dir: Path,
+        *,
+        config_snapshot: Mapping[str, Any] | None = None,
+        manifest: Mapping[str, Any] | None = None,
+        review_summary: Mapping[str, Any] | None = None,
+        diagnostics_bundle: Mapping[str, Any] | None = None,
+        runtime_export_boundary_alignment: Mapping[str, Any] | None = None,
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
+        if config_snapshot is None:
+            config_snapshot = self._runtime_export_package_config_snapshot(
+                package_id,
+                package_dir.parent,
+            )
+        if manifest is None:
+            manifest_artifact = self.runtime_export_package_artifact(
+                package_id,
+                "manifest.json",
+                package_dir.parent,
+            )
+            manifest = json.loads(
+                Path(str(manifest_artifact["path"])).read_text(encoding="utf-8")
+            )
+        if review_summary is None:
+            review_artifact = self.runtime_export_package_artifact(
+                package_id,
+                _RUNTIME_EXPORT_REVIEW_SUMMARY_FILENAME,
+                package_dir.parent,
+            )
+            review_summary = json.loads(
+                Path(str(review_artifact["path"])).read_text(encoding="utf-8")
+            )
+        if diagnostics_bundle is None:
+            diagnostics_artifact = self.runtime_export_package_artifact(
+                package_id,
+                _RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_FILENAME,
+                package_dir.parent,
+            )
+            diagnostics_bundle = json.loads(
+                Path(str(diagnostics_artifact["path"])).read_text(encoding="utf-8")
+            )
+        route_report: Mapping[str, Any] | None = None
+        route_report_path = (
+            package_dir / _RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_FILENAME
+        )
+        if route_report_path.is_file():
+            raw_route_report = json.loads(route_report_path.read_text(encoding="utf-8"))
+            if isinstance(raw_route_report, Mapping):
+                route_report = raw_route_report
+        artifact_records = tuple(
+            _runtime_export_file_record(path.stem, path)
+            for path in sorted(package_dir.iterdir(), key=lambda item: item.name)
+            if path.is_file()
+            and path.name != _RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_FILENAME
+        )
+        audit_index = build_runtime_export_package_audit_index_v1(
+            package_id=package_id,
+            package_dir=str(package_dir),
+            config_snapshot=config_snapshot,
+            manifest=manifest,
+            review_summary=review_summary,
+            diagnostics_bundle=diagnostics_bundle,
+            artifact_records=artifact_records,
+            route_comparison_review_report=route_report,
+            runtime_export_boundary_alignment=runtime_export_boundary_alignment,
+        )
+        audit_path = package_dir / _RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_FILENAME
+        audit_path.write_text(stable_json_pretty(audit_index), encoding="utf-8")
+        audit_artifact = _runtime_export_file_record(
+            "export_package_audit_index_v1",
+            audit_path,
+        )
+        return audit_index, audit_artifact
 
     def runtime_export_package_archive_artifact(
         self,

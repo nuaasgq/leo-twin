@@ -299,6 +299,12 @@ Tasks:
     status, warnings, and runtime export boundary hash. The dashboard summary
     shows these fields so archived operator route reviews can cite the exact
     compare/preflight boundary evidence used during save.
+  - Status: T307 adds `export_package_audit_index_v1.json` as a backend-owned
+    long-term audit index. It summarizes manifest hash, runtime export boundary
+    hash, boundary alignment hash/status, review summary hash, diagnostics
+    hash, optional route review report hash, and package artifact file hashes.
+    The index is regenerated after route review report save and is surfaced in
+    the dashboard package review area through the export catalog.
 
 ### WS4. Compute Network Model v2
 

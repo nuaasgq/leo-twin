@@ -194,6 +194,7 @@ const FALLBACK_USER_DETAIL_PAGE_SIZE = 80;
 const FALLBACK_SATELLITE_DETAIL_PAGE_SIZE = 120;
 const ROUTE_COMPARISON_REVIEW_REPORT_FILENAME =
   "route_comparison_review_report_v1.json";
+const EXPORT_PACKAGE_AUDIT_INDEX_FILENAME = "export_package_audit_index_v1.json";
 const DEFAULT_USER_CONFIGURATION_VALIDATE_TEXT = `{
   "scenario": {
     "satellite_count": 72,
@@ -1068,6 +1069,12 @@ export const DataPanel = memo(function DataPanel({
     );
   const exportRouteComparisonReviewArtifactDisplay =
     buildDataPanelExportRouteComparisonReviewArtifactDisplay(
+      runtimeExportCatalog,
+      runtimeExportComparePackageId,
+      runtimeExportRouteComparisonReviewSaveReportHash
+    );
+  const exportPackageAuditIndexArtifactDisplay =
+    buildDataPanelExportPackageAuditIndexArtifactDisplay(
       runtimeExportCatalog,
       runtimeExportComparePackageId,
       runtimeExportRouteComparisonReviewSaveReportHash
@@ -1984,6 +1991,38 @@ export const DataPanel = memo(function DataPanel({
                   </div>
                   <div className="data-panel-export-compare-meta">
                     {exportRouteComparisonReviewArtifactDisplay.hashLabels.map(
+                      (label) => (
+                        <span key={label}>{label}</span>
+                      )
+                    )}
+                  </div>
+                </div>
+              ) : null}
+              {exportPackageAuditIndexArtifactDisplay ? (
+                <div
+                  className={`data-panel-export-route-compare-card ${exportPackageAuditIndexArtifactDisplay.tone}`}
+                >
+                  <div className="data-panel-export-diagnostics-header">
+                    <div>
+                      <span>Export package audit index</span>
+                      <strong>
+                        {exportPackageAuditIndexArtifactDisplay.statusLabel}
+                      </strong>
+                      <small>
+                        {exportPackageAuditIndexArtifactDisplay.summaryLabel}
+                      </small>
+                    </div>
+                    {exportPackageAuditIndexArtifactDisplay.artifactHref ? (
+                      <a
+                        href={exportPackageAuditIndexArtifactDisplay.artifactHref}
+                        title={exportPackageAuditIndexArtifactDisplay.artifactTitle}
+                      >
+                        audit index JSON
+                      </a>
+                    ) : null}
+                  </div>
+                  <div className="data-panel-export-compare-meta">
+                    {exportPackageAuditIndexArtifactDisplay.hashLabels.map(
                       (label) => (
                         <span key={label}>{label}</span>
                       )
@@ -9496,6 +9535,16 @@ export interface DataPanelExportRouteComparisonReviewArtifactDisplay {
   artifactTitle: string;
 }
 
+export interface DataPanelExportPackageAuditIndexArtifactDisplay {
+  packageId: string;
+  tone: "match" | "different";
+  statusLabel: string;
+  summaryLabel: string;
+  hashLabels: readonly string[];
+  artifactHref: string | null;
+  artifactTitle: string;
+}
+
 export interface DataPanelExportRouteComparisonReviewReportDisplay {
   packageId: string;
   tone: "match" | "different";
@@ -9655,6 +9704,67 @@ export function buildDataPanelExportRouteComparisonReviewArtifactDisplay(
     artifactTitle: `${reportFile.filename} / ${formatRuntimeExportFileBytes(
       reportFile.bytes
     )} / ${reportFile.sha256}`
+  };
+}
+
+export function buildDataPanelExportPackageAuditIndexArtifactDisplay(
+  catalog: RuntimeExportCatalogV1 | null | undefined,
+  selectedPackageId: string | null | undefined,
+  latestSavedReportHash: string | null | undefined = null
+): DataPanelExportPackageAuditIndexArtifactDisplay | null {
+  if (
+    catalog === null ||
+    catalog === undefined ||
+    selectedPackageId === null ||
+    selectedPackageId === undefined
+  ) {
+    return null;
+  }
+  const record = selectRuntimeExportCatalogRecordForPackage(catalog, selectedPackageId);
+  if (record === null) {
+    return null;
+  }
+  const auditFile =
+    record.files.find(
+      (file) =>
+        file.filename === EXPORT_PACKAGE_AUDIT_INDEX_FILENAME ||
+        file.name === "export_package_audit_index_v1"
+    ) ?? null;
+  const reportHashLabel =
+    latestSavedReportHash !== null && latestSavedReportHash !== undefined
+      ? `route report ${shortRuntimeHash(latestSavedReportHash)}`
+      : "route report hash waiting";
+  if (auditFile === null) {
+    return {
+      packageId: selectedPackageId,
+      tone: "different",
+      statusLabel: "audit index not saved",
+      summaryLabel: `${selectedPackageId} / audit file missing / ${reportHashLabel}`,
+      hashLabels: [
+        `catalog ${shortRuntimeHash(catalog.catalog_hash)}`,
+        `package ${record.export_type}`,
+        reportHashLabel
+      ],
+      artifactHref: null,
+      artifactTitle: `${EXPORT_PACKAGE_AUDIT_INDEX_FILENAME} is not present in the selected package catalog.`
+    };
+  }
+  return {
+    packageId: selectedPackageId,
+    tone: "match",
+    statusLabel: "audit index artifact present",
+    summaryLabel: `${selectedPackageId} / ${formatRuntimeExportFileBytes(
+      auditFile.bytes
+    )} / file ${shortRuntimeHash(auditFile.sha256)}`,
+    hashLabels: [
+      `catalog ${shortRuntimeHash(catalog.catalog_hash)}`,
+      `audit ${shortRuntimeHash(auditFile.sha256)}`,
+      reportHashLabel
+    ],
+    artifactHref: runtimeExportPackageFileHref(selectedPackageId, auditFile.filename),
+    artifactTitle: `${auditFile.filename} / ${formatRuntimeExportFileBytes(
+      auditFile.bytes
+    )} / ${auditFile.sha256}`
   };
 }
 

@@ -6,6 +6,7 @@ import {
   loadRuntimeExportHistory,
   loadRuntimeExportManifest,
   loadRuntimeExportPackageCompare,
+  loadRuntimeExportPackageAuditIndex,
   loadRuntimeExportRouteComparisonReviewReport,
   loadRuntimeExportRouteDetailIndex,
   loadRuntimeExportRouteDetailItem,
@@ -879,6 +880,64 @@ describe("runtime API diagnostics", () => {
     });
     expect(fetchMock).toHaveBeenCalledWith(
       "/runtime/export/packages/pkg/files/route_comparison_review_report_v1.json"
+    );
+  });
+
+  it("loads runtime export package audit index artifacts", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        type: "RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1",
+        version: "v1",
+        audit_index_id: "leo_twin.runtime_export_package_audit_index.v1",
+        source: "BACKEND_RUNTIME_EXPORT_PACKAGE",
+        audit_scope: "RESULT_PACKAGE_LONG_TERM_AUDIT_INDEX",
+        package_id: "pkg",
+        package_dir: "artifacts/runtime_exports/pkg",
+        manifest_hash: "sha256:manifest",
+        control_config_hash: "sha256:control",
+        generated_config_hash: "sha256:generated",
+        runtime_state_hash: "sha256:runtime",
+        runtime_export_boundary_hash: "sha256:boundary",
+        boundary_alignment_hash: "sha256:alignment",
+        boundary_alignment_status: "ALIGNED",
+        boundary_alignment_warnings: [],
+        review_summary_hash: "sha256:review",
+        diagnostics_hash: "sha256:diagnostics",
+        route_comparison_review_report_hash: "sha256:report",
+        route_comparison_review_report_present: true,
+        artifact_count: 1,
+        artifact_hashes: [
+          {
+            name: "manifest",
+            filename: "manifest.json",
+            bytes: 256,
+            sha256: "sha256:manifest-file"
+          }
+        ],
+        required_artifact_filenames: ["manifest.json"],
+        missing_required_artifact_filenames: [],
+        self_artifact_excluded_from_hashes: true,
+        audit_status: "AUDIT_READY",
+        audit_warnings: [],
+        forbidden_external_integrations: ["STK", "EXATA", "AFSIM", "DDS"],
+        packet_level_simulation: false,
+        event_replay_restore: false,
+        model_recomputation: false,
+        package_mutation_on_read: false,
+        audit_hash: "sha256:audit"
+      })
+    }));
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+
+    await expect(loadRuntimeExportPackageAuditIndex("pkg")).resolves.toMatchObject({
+      package_id: "pkg",
+      audit_status: "AUDIT_READY",
+      route_comparison_review_report_hash: "sha256:report",
+      artifact_hashes: [{ filename: "manifest.json" }]
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/runtime/export/packages/pkg/files/export_package_audit_index_v1.json"
     );
   });
 

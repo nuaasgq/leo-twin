@@ -14761,6 +14761,9 @@ change.
       files and 204 tests.
   - `pnpm --dir frontend exec tsc --noEmit`
     - Result: passed with the bundled Codex Node/Pnpm runtime path.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path. Vite
+      reported the existing large DataPanel chunk warning.
   - `git diff --check -- <task files>`
     - Result: passed.
 - Problems encountered:
@@ -14778,3 +14781,73 @@ change.
   - Add a compact export-package audit index that lists manifest hash, boundary
     alignment hash, route review report hash, diagnostics hash, and package
     file hashes in one backend-owned artifact for long-term review.
+
+## 2026-07-06 - Export Package Audit Index v1
+
+- Branch: `feature/T307-export-package-audit-index-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a backend-owned long-term audit index artifact for runtime result
+  packages. New exports now write `export_package_audit_index_v1.json`, using
+  `leo_twin.runtime_export_package_audit_index.v1`, after manifest, review
+  summary, diagnostics, route detail index, service trace, metrics, events, and
+  summary artifacts are available. The index records manifest/config/generated/
+  runtime hashes, runtime export boundary hash, boundary alignment hash/status/
+  warnings, review summary hash, diagnostics hash, optional route comparison
+  review report hash, and package artifact file hashes while excluding its own
+  file from the hashed artifact list to avoid circular self-hashing. Saving a
+  route comparison review report now regenerates the audit index and updates
+  the export catalog. The dashboard package review area surfaces the audit
+  index artifact from the backend catalog with a direct JSON link. This task
+  does not alter Event Kernel behavior, runtime restore execution, route
+  recomputation, model recomputation, packet-level simulation, or package reads.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `src/leo_twin/services/result_package_contract.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/app/api.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/dashboard_model_trust_evidence_workspace_v1.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_result_package_contract_v1.py::test_result_package_contract_v1_is_deterministic_json_ready tests/unit/test_result_package_contract_v1.py::test_runtime_export_package_audit_index_v1_is_deterministic tests/integration/test_result_package_export_v1.py -q`
+    - Result: passed, 3 tests.
+  - `python -m py_compile src/leo_twin/services/result_package_contract.py examples/integration_demo/control_plane.py`
+    - Result: passed.
+  - `pnpm --dir frontend test dataPanel.test.ts api.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 2 test
+      files and 205 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path. Vite
+      reported the existing large DataPanel chunk warning.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered:
+  - The audit index must not include its own file hash, otherwise the artifact
+    would need recursive rewriting. The index records
+    `self_artifact_excluded_from_hashes=true` and the catalog still carries the
+    audit index file hash.
+  - The normal PowerShell PATH may not expose `node`, so frontend validation
+    used the bundled Codex Node/Pnpm runtime path.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - Archive zip files created before a later route review report save are not
+    rewritten; the package directory and catalog are updated, but old archives
+    remain immutable by design.
+  - The dashboard currently surfaces audit index artifact presence and link
+    from the catalog. A future task can load the full audit index JSON into a
+    dedicated audit drawer.
+- Recommended follow-up:
+  - Add a dedicated dashboard audit drawer that loads
+    `export_package_audit_index_v1.json` and displays manifest, boundary,
+    diagnostics, route review report, and artifact hash sections without
+    opening raw JSON.

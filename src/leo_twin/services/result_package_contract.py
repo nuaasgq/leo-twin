@@ -34,6 +34,9 @@ RUNTIME_EXPORT_ROUTE_DETAIL_ITEM_V1_ID = (
 RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID = (
     "leo_twin.runtime_export_route_comparison_review_report.v1"
 )
+RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID = (
+    "leo_twin.runtime_export_package_audit_index.v1"
+)
 
 
 _REQUIRED_FILE_SPECS: tuple[dict[str, object], ...] = (
@@ -119,6 +122,15 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
                 "content": (
                     "deterministic result-package diagnostics, artifact health, "
                     "and operator next actions"
+                ),
+            },
+            {
+                "logical_name": "export_package_audit_index_v1",
+                "filename": "export_package_audit_index_v1.json",
+                "format": "json",
+                "content": (
+                    "long-term package audit index for manifest, boundary, "
+                    "diagnostics, review report, and artifact hashes"
                 ),
             },
         ),
@@ -872,6 +884,107 @@ def build_runtime_export_route_comparison_review_report_v1(
     }
     report["report_hash"] = stable_hash_payload(report)
     return report
+
+
+def build_runtime_export_package_audit_index_v1(
+    *,
+    package_id: str,
+    package_dir: str,
+    config_snapshot: Mapping[str, Any],
+    manifest: Mapping[str, Any],
+    review_summary: Mapping[str, Any],
+    diagnostics_bundle: Mapping[str, Any],
+    artifact_records: tuple[Mapping[str, Any], ...] = (),
+    route_comparison_review_report: Mapping[str, Any] | None = None,
+    runtime_export_boundary_alignment: Mapping[str, Any] | None = None,
+) -> dict[str, object]:
+    """Build a deterministic long-term audit index for a result package."""
+
+    if not isinstance(config_snapshot, Mapping):
+        raise TypeError("config_snapshot must be a mapping")
+    if not isinstance(manifest, Mapping):
+        raise TypeError("manifest must be a mapping")
+    if not isinstance(review_summary, Mapping):
+        raise TypeError("review_summary must be a mapping")
+    if not isinstance(diagnostics_bundle, Mapping):
+        raise TypeError("diagnostics_bundle must be a mapping")
+
+    status = _mapping(config_snapshot.get("status"))
+    boundary = _mapping(manifest.get("runtime_export_reproducibility_boundary_v1"))
+    if not boundary:
+        boundary = _runtime_export_reproducibility_boundary(status, manifest)
+    route_report = _mapping(route_comparison_review_report)
+    alignment = _mapping(runtime_export_boundary_alignment)
+    if not alignment:
+        alignment = _mapping(route_report.get("runtime_export_boundary_alignment_v1"))
+    normalized_artifacts = tuple(
+        sorted(
+            (
+                {
+                    "name": str(record.get("name", "")),
+                    "filename": str(record.get("filename", "")),
+                    "bytes": _integer(record.get("bytes")),
+                    "sha256": str(record.get("sha256", "")),
+                }
+                for record in _file_records(artifact_records)
+                if str(record.get("filename", ""))
+            ),
+            key=lambda item: (str(item["filename"]), str(item["name"])),
+        )
+    )
+    required_filenames = tuple(
+        str(spec["filename"]) for spec in _REQUIRED_FILE_SPECS
+    )
+    artifact_filenames = tuple(str(item["filename"]) for item in normalized_artifacts)
+    missing_required = tuple(
+        filename for filename in required_filenames if filename not in artifact_filenames
+    )
+    diagnostics_findings = _records(diagnostics_bundle.get("findings"))
+    audit_warnings: list[str] = []
+    if missing_required:
+        audit_warnings.append("REQUIRED_AUDIT_ARTIFACTS_MISSING")
+    if not route_report:
+        audit_warnings.append("ROUTE_COMPARISON_REVIEW_REPORT_NOT_SAVED")
+    if not alignment:
+        audit_warnings.append("BOUNDARY_ALIGNMENT_EVIDENCE_NOT_RECORDED")
+    if any(str(item.get("severity", "")) == "ERROR" for item in diagnostics_findings):
+        audit_warnings.append("DIAGNOSTICS_BUNDLE_HAS_ERROR_FINDINGS")
+
+    audit_index: dict[str, object] = {
+        "type": "RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1",
+        "version": "v1",
+        "audit_index_id": RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID,
+        "source": "BACKEND_RUNTIME_EXPORT_PACKAGE",
+        "audit_scope": "RESULT_PACKAGE_LONG_TERM_AUDIT_INDEX",
+        "package_id": str(package_id),
+        "package_dir": str(package_dir),
+        "manifest_hash": str(manifest.get("manifest_hash", "")),
+        "control_config_hash": str(manifest.get("control_config_hash", "")),
+        "generated_config_hash": str(manifest.get("generated_config_hash", "")),
+        "runtime_state_hash": str(manifest.get("runtime_state_hash", "")),
+        "runtime_export_boundary_hash": str(boundary.get("boundary_hash", "")),
+        "boundary_alignment_hash": str(alignment.get("alignment_hash", "")),
+        "boundary_alignment_status": str(alignment.get("alignment_status", "")),
+        "boundary_alignment_warnings": _string_tuple(alignment.get("warnings")),
+        "review_summary_hash": str(review_summary.get("summary_hash", "")),
+        "diagnostics_hash": str(diagnostics_bundle.get("diagnostics_hash", "")),
+        "route_comparison_review_report_hash": str(route_report.get("report_hash", "")),
+        "route_comparison_review_report_present": bool(route_report),
+        "artifact_count": len(normalized_artifacts),
+        "artifact_hashes": normalized_artifacts,
+        "required_artifact_filenames": required_filenames,
+        "missing_required_artifact_filenames": missing_required,
+        "self_artifact_excluded_from_hashes": True,
+        "audit_status": "AUDIT_READY" if not audit_warnings else "AUDIT_WARN",
+        "audit_warnings": tuple(audit_warnings),
+        "forbidden_external_integrations": ("STK", "EXATA", "AFSIM", "DDS"),
+        "packet_level_simulation": False,
+        "event_replay_restore": False,
+        "model_recomputation": False,
+        "package_mutation_on_read": False,
+    }
+    audit_index["audit_hash"] = stable_hash_payload(audit_index)
+    return audit_index
 
 
 def summarize_result_package_record_v1(
