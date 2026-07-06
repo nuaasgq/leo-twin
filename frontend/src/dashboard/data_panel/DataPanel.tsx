@@ -234,6 +234,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportReviewSummary,
   runtimeExportManifest,
   runtimeExportDiagnosticsBundle,
+  runtimeExportServiceLifecycleTrace,
   runtimeExportRouteDetailIndex,
   runtimeExportRouteDetailPage,
   runtimeExportRouteDetailItem,
@@ -248,6 +249,8 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportManifestError,
   runtimeExportDiagnosticsBundleLoading,
   runtimeExportDiagnosticsBundleError,
+  runtimeExportServiceLifecycleTraceLoading,
+  runtimeExportServiceLifecycleTraceError,
   runtimeExportRouteDetailIndexLoading,
   runtimeExportRouteDetailIndexError,
   runtimeExportRouteDetailItemLoading,
@@ -298,6 +301,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportReviewSummary?: RuntimeExportReviewSummaryV1 | null;
   runtimeExportManifest?: RuntimeReproducibilityManifestV1 | null;
   runtimeExportDiagnosticsBundle?: RuntimeExportDiagnosticsBundleV1 | null;
+  runtimeExportServiceLifecycleTrace?: RuntimeServiceLifecycleTraceV2 | null;
   runtimeExportRouteDetailIndex?: RuntimeExportRouteDetailIndexV1 | null;
   runtimeExportRouteDetailPage?: RuntimeExportRouteDetailPageV1 | null;
   runtimeExportRouteDetailItem?: RuntimeExportRouteDetailItemV1 | null;
@@ -312,6 +316,8 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportManifestError?: string | null;
   runtimeExportDiagnosticsBundleLoading?: boolean;
   runtimeExportDiagnosticsBundleError?: string | null;
+  runtimeExportServiceLifecycleTraceLoading?: boolean;
+  runtimeExportServiceLifecycleTraceError?: string | null;
   runtimeExportRouteDetailIndexLoading?: boolean;
   runtimeExportRouteDetailIndexError?: string | null;
   runtimeExportRouteDetailItemLoading?: boolean;
@@ -523,6 +529,19 @@ export const DataPanel = memo(function DataPanel({
     runtimeExportDiagnosticsBundleLoading,
     runtimeExportDiagnosticsBundleError
   );
+  const exportServiceLifecycleTraceStatus =
+    buildDataPanelExportServiceLifecycleTraceStatus(
+      runtimeExportServiceLifecycleTrace
+        ? buildDataPanelServiceLifecycleTraceDisplay(
+            runtimeExportServiceLifecycleTrace,
+            5
+          )
+        : null,
+      runtimeExportServiceLifecycleTrace,
+      runtimeExportComparePackageId,
+      runtimeExportServiceLifecycleTraceLoading,
+      runtimeExportServiceLifecycleTraceError
+    );
   const exportRouteDetailIndexDisplay =
     buildDataPanelExportRouteDetailPageDisplay(runtimeExportRouteDetailPage) ??
     buildDataPanelExportRouteDetailIndexDisplay(runtimeExportRouteDetailIndex, {
@@ -1426,6 +1445,35 @@ export const DataPanel = memo(function DataPanel({
                     <span key={label}>{label}</span>
                   ))}
                 </div>
+              ) : null}
+            </div>
+          ) : null}
+          {exportServiceLifecycleTraceStatus ? (
+            <div
+              className={`data-panel-export-diagnostics-drawer ${exportServiceLifecycleTraceStatus.tone}`}
+              aria-label="复盘包服务链路 trace"
+            >
+              <div className="data-panel-export-diagnostics-header">
+                <div>
+                  <span>Service lifecycle trace</span>
+                  <strong>{exportServiceLifecycleTraceStatus.statusLabel}</strong>
+                  <small>{exportServiceLifecycleTraceStatus.summaryLabel}</small>
+                </div>
+                {exportServiceLifecycleTraceStatus.traceHref ? (
+                  <a href={exportServiceLifecycleTraceStatus.traceHref}>
+                    service trace JSON
+                  </a>
+                ) : null}
+              </div>
+              <div className="data-panel-export-compare-meta">
+                {exportServiceLifecycleTraceStatus.metaLabels.map((label) => (
+                  <span key={label}>{label}</span>
+                ))}
+              </div>
+              {exportServiceLifecycleTraceStatus.display ? (
+                <ServiceLifecycleTracePanel
+                  display={exportServiceLifecycleTraceStatus.display}
+                />
               ) : null}
             </div>
           ) : null}
@@ -9676,6 +9724,15 @@ export interface DataPanelExportDiagnosticsStatus {
   diagnosticsHref: string | null;
 }
 
+export interface DataPanelExportServiceLifecycleTraceStatus {
+  tone: "match" | "different" | "pending" | "error";
+  statusLabel: string;
+  summaryLabel: string;
+  metaLabels: readonly string[];
+  traceHref: string | null;
+  display: DataPanelServiceLifecycleTraceDisplay | null;
+}
+
 export interface DataPanelExportDiagnosticsFindingRow {
   severity: string;
   code: string;
@@ -10045,6 +10102,66 @@ export function buildDataPanelExportDiagnosticsStatus(
     return null;
   }
   return display;
+}
+
+export function buildDataPanelExportServiceLifecycleTraceStatus(
+  display: DataPanelServiceLifecycleTraceDisplay | null,
+  trace: RuntimeServiceLifecycleTraceV2 | null | undefined,
+  selectedPackageId: string | null | undefined,
+  loading = false,
+  error: string | null | undefined = null
+): DataPanelExportServiceLifecycleTraceStatus | null {
+  if (loading) {
+    return {
+      tone: "pending",
+      statusLabel: "loading service trace artifact",
+      summaryLabel: selectedPackageId ?? "waiting for package selection",
+      metaLabels: ["read-only artifact", "no service replay"],
+      traceHref: null,
+      display: null
+    };
+  }
+  if (error !== null && error !== undefined) {
+    return {
+      tone: "error",
+      statusLabel: "service trace artifact load failed",
+      summaryLabel: selectedPackageId ?? "unknown package",
+      metaLabels: [error],
+      traceHref: null,
+      display: null
+    };
+  }
+  if (display === null || trace === null || trace === undefined) {
+    return null;
+  }
+  const packageId = selectedPackageId ?? "selected-package";
+  const complete = trace.incomplete_trace_count === 0 && trace.running_trace_count === 0;
+  return {
+    tone: complete ? "match" : "different",
+    statusLabel: complete
+      ? "service traces complete"
+      : "service traces need review",
+    summaryLabel: `${packageId} / traces ${formatCount(
+      trace.trace_count
+    )} / complete ${formatCount(trace.complete_trace_count)} / running ${formatCount(
+      trace.running_trace_count
+    )} / incomplete ${formatCount(trace.incomplete_trace_count)}`,
+    metaLabels: [
+      `service ${formatCount(trace.service_count)}`,
+      `hidden ${formatCount(trace.hidden_trace_count)}`,
+      `cursor ${formatCount(trace.cursor)} -> ${formatCount(trace.next_cursor)}`,
+      trace.has_more ? "has more" : "complete window",
+      trace.trace_model ? `model ${trace.trace_model}` : "model unspecified"
+    ],
+    traceHref:
+      selectedPackageId === null || selectedPackageId === undefined
+        ? null
+        : runtimeExportPackageFileHref(
+            selectedPackageId,
+            "service_lifecycle_trace_v2.json"
+          ),
+    display
+  };
 }
 
 export function buildDataPanelExportRouteDetailIndexDisplay(

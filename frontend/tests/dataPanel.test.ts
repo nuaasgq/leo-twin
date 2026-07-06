@@ -39,6 +39,7 @@ import {
   buildDataPanelExportRouteDetailIndexDisplay,
   buildDataPanelExportRouteDetailPageDisplay,
   buildDataPanelExportRouteDetailIndexStatus,
+  buildDataPanelExportServiceLifecycleTraceStatus,
   buildDataPanelExportRestoreActionDisplay,
   buildDataPanelExportRestorePreflightDisplay,
   buildDataPanelExportRestorePreflightStatus,
@@ -2769,6 +2770,132 @@ describe("buildDataPanelExportCompareDisplay", () => {
       summaryLabel: "pkg-next",
       metaLabels: ["HTTP 404"],
       diagnosticsHref: null
+    });
+  });
+
+  it("summarizes runtime export service lifecycle traces for package review", () => {
+    const trace = {
+      version: "v2",
+      contract_id: "leo_twin.service_lifecycle_trace_contract.v2",
+      source: "RUNTIME_EXPORT_PACKAGE",
+      source_summary: "service_latency_history_v1",
+      summary_scope: "SERVICE_LIFECYCLE_TRACE_WINDOW",
+      trace_model: "COMMUNICATION_COMPUTE_COMPONENT_PROXY",
+      cursor: 0,
+      limit: 100,
+      next_cursor: 1,
+      has_more: false,
+      service_count: 2,
+      trace_count: 2,
+      complete_trace_count: 1,
+      running_trace_count: 1,
+      incomplete_trace_count: 0,
+      hidden_trace_count: 0,
+      items: [
+        {
+          trace_id: "trace:done",
+          service_id: "svc-done",
+          task_id: "task-done",
+          service_class: "COMPUTE_SERVICE",
+          input_flow_id: "flow-in",
+          output_flow_id: "flow-out",
+          input_route_id: "route-in",
+          output_route_id: "route-out",
+          compute_node_id: "sat-00002",
+          placement_status: "PLACED",
+          input_network_latency_s: 1,
+          compute_queue_delay_s: 0.5,
+          compute_execution_delay_s: 2,
+          output_network_latency_s: 1,
+          total_latency_s: 4.5,
+          terminal_state: "COMPLETE",
+          terminal_state_reason: "TOTAL_LATENCY_OBSERVED",
+          stage_count: 4,
+          observed_stage_count: 4,
+          pending_stage_count: 0,
+          stages: []
+        },
+        {
+          trace_id: "trace:run",
+          service_id: "svc-run",
+          task_id: "task-run",
+          service_class: "COMPUTE_SERVICE",
+          input_flow_id: "flow-run-in",
+          output_flow_id: "flow-run-out",
+          input_route_id: "route-run-in",
+          output_route_id: "",
+          compute_node_id: "sat-00003",
+          placement_status: "PLACED",
+          input_network_latency_s: 1,
+          compute_queue_delay_s: 0.2,
+          compute_execution_delay_s: 1,
+          output_network_latency_s: 0,
+          total_latency_s: 0,
+          terminal_state: "RUNNING",
+          terminal_state_reason: "OUTPUT_NETWORK_PENDING",
+          stage_count: 4,
+          observed_stage_count: 3,
+          pending_stage_count: 1,
+          stages: []
+        }
+      ]
+    };
+    const display = buildDataPanelServiceLifecycleTraceDisplay(trace, 5);
+
+    expect(
+      buildDataPanelExportServiceLifecycleTraceStatus(
+        display,
+        trace,
+        "pkg-review",
+        false,
+        null
+      )
+    ).toMatchObject({
+      tone: "different",
+      statusLabel: "service traces need review",
+      summaryLabel: "pkg-review / traces 2 / complete 1 / running 1 / incomplete 0",
+      metaLabels: [
+        "service 2",
+        "hidden 0",
+        "cursor 0 -> 1",
+        "complete window",
+        "model COMMUNICATION_COMPUTE_COMPONENT_PROXY"
+      ],
+      traceHref:
+        "/runtime/export/packages/pkg-review/files/service_lifecycle_trace_v2.json",
+      display: {
+        items: [
+          expect.objectContaining({ traceId: "trace:done" }),
+          expect.objectContaining({ traceId: "trace:run" })
+        ]
+      }
+    });
+    expect(
+      buildDataPanelExportServiceLifecycleTraceStatus(
+        null,
+        null,
+        "pkg-review",
+        true,
+        null
+      )
+    ).toMatchObject({
+      tone: "pending",
+      statusLabel: "loading service trace artifact",
+      traceHref: null,
+      display: null
+    });
+    expect(
+      buildDataPanelExportServiceLifecycleTraceStatus(
+        null,
+        null,
+        "pkg-review",
+        false,
+        "HTTP 404"
+      )
+    ).toMatchObject({
+      tone: "error",
+      statusLabel: "service trace artifact load failed",
+      metaLabels: ["HTTP 404"]
     });
   });
 

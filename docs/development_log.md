@@ -14286,3 +14286,51 @@ change.
 - Recommended follow-up:
   - Add a backend-served paginated route comparison review report endpoint if
     report artifacts grow beyond practical frontend memory limits.
+
+## 2026-07-06 - Dashboard Export Service Trace Review v1
+
+- Branch: `feature/T297-dashboard-export-service-trace-review-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: load package-owned `service_lifecycle_trace_v2.json` from the runtime
+  export catalog and render a read-only dashboard export review card. The card
+  summarizes service trace counts, complete/running/incomplete totals, artifact
+  link, trace model, cursor window, and bounded trace rows using the existing
+  backend-owned `service_lifecycle_trace_v2` display logic. The App layer only
+  requests the artifact when the export catalog declares it, so packages without
+  the optional file remain normal artifact-health cases. No Event Kernel
+  behavior, service replay, route recomputation, backend model logic, packet
+  simulation, or artifact schema changed.
+- Changed files/modules:
+  - `frontend/src/app/api.ts`
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/service_lifecycle_trace_v2.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test api.test.ts dataPanel.test.ts`
+    - Result: passed, 2 test files and 199 tests.
+  - `python -m pytest tests/unit/test_user_guide_v2_docs.py -q`
+    - Result: passed, 2 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with bundled Codex Node/Pnpm runtime.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing large DataPanel chunk
+      warning after minification; no functional build error.
+  - `git diff --check`
+    - Result: passed for task files.
+- Problems encountered:
+  - No product blocker. Existing local runtime config drift remains untouched
+    and unstaged: `configs/generated_full_system_demo.json` and
+    `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The export service trace review card shows a bounded in-memory artifact
+    window. Very large `service_lifecycle_trace_v2.json` files may need a
+    backend-paginated package artifact endpoint later.
+- Recommended follow-up:
+  - Add package-owned service trace filtering and pagination for exported
+    lifecycle traces, mirroring the live `/runtime/details/service-traces`
+    controls.

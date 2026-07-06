@@ -338,6 +338,22 @@ export async function loadRuntimeExportDiagnosticsBundle(
   return decodeRuntimeExportDiagnosticsBundle(await response.json());
 }
 
+export async function loadRuntimeExportServiceLifecycleTrace(
+  packageId: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): Promise<RuntimeServiceLifecycleTraceV2> {
+  const url = runtimeExportPackageFileHref(
+    packageId,
+    "service_lifecycle_trace_v2.json",
+    endpoint
+  );
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`failed to load runtime export service lifecycle trace from ${url}: HTTP ${response.status}`);
+  }
+  return decodeRuntimeServiceLifecycleTrace(await response.json());
+}
+
 export async function loadRuntimeExportRouteDetailIndex(
   packageId: string,
   endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
@@ -897,6 +913,25 @@ export function decodeRuntimeExportDiagnosticsBundle(
     );
   }
   return value as RuntimeExportDiagnosticsBundleV1;
+}
+
+export function decodeRuntimeServiceLifecycleTrace(
+  value: unknown
+): RuntimeServiceLifecycleTraceV2 {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError("runtime service lifecycle trace response must be an object");
+  }
+  if (
+    typeof (value as { source?: unknown }).source !== "string" ||
+    typeof (value as { source_summary?: unknown }).source_summary !== "string" ||
+    typeof (value as { trace_count?: unknown }).trace_count !== "number" ||
+    !Array.isArray((value as { items?: unknown }).items)
+  ) {
+    throw new TypeError(
+      "runtime service lifecycle trace response must include source, source_summary, trace_count, and items"
+    );
+  }
+  return value as RuntimeServiceLifecycleTraceV2;
 }
 
 export function decodeRuntimeExportRouteDetailIndex(

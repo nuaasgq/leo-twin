@@ -149,7 +149,10 @@ Tasks:
     `terminal_reason` filters so lifecycle-stage and terminal-reason narrowing
     happens before cursor slicing. T266 binds those filters into the
     standalone dashboard service trace browser and preserves the existing
-    server cursor reset behavior.
+    server cursor reset behavior. T297 loads package-owned
+    `service_lifecycle_trace_v2.json` in the dashboard export review area so
+    offline result packages can inspect communication-compute service chain
+    evidence without replaying the simulation.
 
 ### WS3. Network Semantics and KPI Trust v2
 

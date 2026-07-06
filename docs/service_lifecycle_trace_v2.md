@@ -35,6 +35,14 @@ field to render service rows and stage segments for input network, compute
 queue, compute execution, and output network. The dashboard does not infer
 lifecycle semantics locally; it only formats the backend-owned trace.
 
+The export review area also loads package-owned
+`service_lifecycle_trace_v2.json` when the backend export catalog declares the
+artifact. It renders a read-only service chain review card with trace counts,
+complete/running/incomplete totals, artifact link, and the same bounded trace
+rows used by the live dashboard. This lets offline result packages review
+input network, compute queue, compute execution, and output network evidence
+without replaying the simulation.
+
 The dashboard service trace panel also supports selecting one trace and
 correlating it with currently visible user request rows, route explanations,
 satellite resource rows, and compute-node detail rows. The correlation uses the

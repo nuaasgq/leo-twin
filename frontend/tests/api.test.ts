@@ -12,6 +12,7 @@ import {
   loadRuntimeExportRouteDetailPage,
   loadRuntimeExportReviewSummary,
   loadRuntimeExportRestorePreflight,
+  loadRuntimeExportServiceLifecycleTrace,
   loadRuntimeComputeNodeDetail,
   loadRuntimeComputeNodeDetails,
   loadRuntimeNodeDetails,
@@ -318,6 +319,39 @@ describe("runtime API diagnostics", () => {
     });
     expect(fetchMock).toHaveBeenCalledWith(
       "/runtime/export/packages/pkg/files/diagnostics_bundle_v1.json"
+    );
+  });
+
+  it("loads runtime export service lifecycle trace artifacts", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        version: "v2",
+        source: "RUNTIME_EXPORT_PACKAGE",
+        source_summary: "service_latency_history_v1",
+        summary_scope: "SERVICE_LIFECYCLE_TRACE_WINDOW",
+        cursor: 0,
+        limit: 100,
+        next_cursor: 1,
+        has_more: false,
+        service_count: 1,
+        trace_count: 1,
+        complete_trace_count: 1,
+        running_trace_count: 0,
+        incomplete_trace_count: 0,
+        hidden_trace_count: 0,
+        items: []
+      })
+    }));
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+
+    await expect(loadRuntimeExportServiceLifecycleTrace("pkg")).resolves.toMatchObject({
+      source: "RUNTIME_EXPORT_PACKAGE",
+      trace_count: 1,
+      complete_trace_count: 1
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/runtime/export/packages/pkg/files/service_lifecycle_trace_v2.json"
     );
   });
 
