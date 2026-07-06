@@ -8,6 +8,7 @@ from leo_twin.services.runtime_observability import (
     build_runtime_service_detail_page,
     build_runtime_service_detail_item,
     build_runtime_service_lifecycle_trace_v2,
+    build_runtime_service_trace_detail_item,
     build_runtime_lifecycle_summaries,
     build_runtime_node_detail_page,
     build_runtime_route_explanation_summary,
@@ -783,6 +784,139 @@ def test_service_lifecycle_trace_v2_is_backend_owned_and_deterministic() -> None
     assert complete["trace_count"] == 1
     assert complete["items"][0]["terminal_state"] == "COMPLETE"
     assert complete["items"][0]["total_latency_s"] == 6.5
+
+
+def test_runtime_service_trace_detail_correlates_backend_context() -> None:
+    snapshot = {
+        "ground_users": [
+            {"user_id": "user-0", "cell_id": "cell-0", "status": "ACTIVE"},
+        ],
+        "satellites": [
+            {
+                "satellite_id": "sat-a",
+                "status": "ACTIVE",
+                "position": (1.0, 2.0, 3.0),
+            },
+        ],
+        "routes": [
+            {
+                "route_id": "route:input",
+                "flow_id": "svc-00-compute_service-00000-input",
+                "path": ("user-0", "sat-a", "compute-a"),
+                "available": True,
+                "latency": 0.1,
+                "capacity": 20.0,
+                "demand_capacity": 5.0,
+                "loss_rate": 0.0,
+            },
+            {
+                "route_id": "route:output",
+                "flow_id": "svc-00-compute_service-00000-output",
+                "path": ("compute-a", "sat-a", "user-0"),
+                "available": True,
+                "latency": 0.2,
+                "capacity": 12.0,
+                "demand_capacity": 4.0,
+                "loss_rate": 0.01,
+            },
+        ],
+        "compute_nodes": [
+            {
+                "node_id": "sat-a",
+                "status": "BUSY",
+                "capacity": 100.0,
+                "available_capacity": 25.0,
+                "running_tasks": 1,
+                "finished_tasks": 2,
+            },
+        ],
+        "links": [],
+    }
+    history = {
+        "items": [
+            {
+                "task_id": "svc-00-compute_service-00000-task",
+                "input_flow_id": "svc-00-compute_service-00000-input",
+                "output_flow_id": "svc-00-compute_service-00000-output",
+                "input_route_id": "route:input",
+                "output_route_id": "route:output",
+                "compute_node_id": "sat-a",
+                "service_placement_status": "PLACED",
+                "service_placement_policy": "MIN_ESTIMATED_FINISH_TIME",
+                "service_placement_bottleneck_resource": "cpu_gflops_fp32",
+                "complete": True,
+                "first_sample_sim_time": 3.0,
+                "last_sample_sim_time": 8.0,
+                "input_network_latency_s": 1.0,
+                "compute_queue_delay_s": 0.5,
+                "compute_execution_delay_s": 2.0,
+                "output_network_latency_s": 1.5,
+                "total_latency_s": 5.0,
+                "component_timeline": [
+                    {
+                        "component": "input_network",
+                        "sample_sim_time": 3.0,
+                        "duration_s": 1.0,
+                        "flow_id": "svc-00-compute_service-00000-input",
+                        "route_id": "route:input",
+                    },
+                    {
+                        "component": "output_network",
+                        "sample_sim_time": 8.0,
+                        "duration_s": 1.5,
+                        "flow_id": "svc-00-compute_service-00000-output",
+                        "route_id": "route:output",
+                    },
+                ],
+            }
+        ],
+    }
+
+    first = build_runtime_service_trace_detail_item(
+        snapshot,
+        history,
+        "trace:svc-00-compute_service-00000",
+    )
+    second = build_runtime_service_trace_detail_item(
+        snapshot,
+        history,
+        "svc-00-compute_service-00000",
+    )
+
+    assert first == second
+    assert first is not None
+    assert first["version"] == "v2"
+    assert first["summary_scope"] == "SERVICE_LIFECYCLE_TRACE_EXACT_DETAIL"
+    assert first["trace"]["trace_id"] == "trace:svc-00-compute_service-00000"
+    assert first["trace"]["terminal_state"] == "COMPLETE"
+    assert first["correlation"] == {
+        "trace_id": "trace:svc-00-compute_service-00000",
+        "service_id": "svc-00-compute_service-00000",
+        "task_id": "svc-00-compute_service-00000-task",
+        "flow_ids": (
+            "svc-00-compute_service-00000-input",
+            "svc-00-compute_service-00000-output",
+        ),
+        "route_ids": ("route:input", "route:output"),
+        "user_ids": ("user-0",),
+        "satellite_ids": ("sat-a",),
+        "compute_node_id": "sat-a",
+        "route_count": 2,
+        "user_count": 1,
+        "satellite_count": 1,
+        "compute_node_detail_available": True,
+    }
+    assert sorted(route["route_id"] for route in first["routes"]) == [
+        "route:input",
+        "route:output",
+    ]
+    assert first["users"][0]["entity_id"] == "user-0"
+    assert first["satellites"][0]["entity_id"] == "sat-a"
+    assert first["compute_node"]["node_id"] == "sat-a"
+    assert (
+        build_runtime_service_trace_detail_item(snapshot, history, "missing-trace")
+        is None
+    )
 
 
 def test_runtime_user_summary_counts_full_set_when_items_are_limited() -> None:

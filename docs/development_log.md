@@ -12319,3 +12319,48 @@ change.
   - Add backend-paged exact service trace detail endpoints so one selected trace
     can fetch full user, route, satellite, and compute context even when those
     rows are outside the current dashboard window.
+
+## 2026-07-06 - Service Trace Detail API v2
+
+- Branch: `feature/T259-service-trace-detail-api-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a backend-owned exact detail API for one
+  `service_lifecycle_trace_v2` item. The new runtime observability builder
+  returns the v2 trace, correlation ids, matching route explanation rows, user
+  detail cards, satellite detail cards, and compute-node detail. The integration
+  demo exposes it at `/runtime/details/service-traces/{trace_id}` through the
+  existing read-only detail route pattern. The endpoint accepts a trace id,
+  normalized service id, task id, input flow id, or output flow id. Event
+  Kernel behavior, network routing, compute scheduling, packet-level semantics,
+  frontend rendering, and result export formats remain unchanged.
+- Changed files/modules:
+  - `src/leo_twin/services/runtime_observability.py`
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `tests/unit/test_runtime_observability.py`
+  - `tests/integration/test_live_runtime_streaming.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/integration_demo.md`
+  - `docs/service_lifecycle_trace_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_runtime_observability.py::test_runtime_service_trace_detail_correlates_backend_context tests/integration/test_live_runtime_streaming.py::test_runtime_detail_pages_return_deterministic_windows tests/integration/test_runtime_session_control.py::test_demo_server_stream_query_parses_cursor_options -q`
+    - Result: passed, 3 tests.
+  - `python -m pytest tests/unit/test_runtime_observability.py tests/integration/test_live_runtime_streaming.py::test_runtime_detail_pages_return_deterministic_windows tests/integration/test_runtime_session_control.py::test_demo_server_stream_query_parses_cursor_options -q`
+    - Result: passed, 9 tests.
+  - `python -m pytest tests/integration/test_compute_service_lifecycle.py -q`
+    - Result: passed, 1 test.
+- Problems encountered:
+  - Route rows use the existing route explanation sort policy, so the unit test
+    checks route membership while the correlation object records deterministic
+    route ids.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The frontend does not yet call `/runtime/details/service-traces/{trace_id}`;
+    it still uses visible-window correlation from T258 plus existing exact
+    user/route/service/satellite/compute callbacks.
+- Recommended follow-up:
+  - Bind the dashboard service trace selection to the new backend exact trace
+    detail endpoint and display backend correlation results directly.

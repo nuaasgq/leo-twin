@@ -17,6 +17,7 @@ from examples.integration_demo.runtime import run_integration_demo
 from examples.integration_demo.server import (
     _detail_filter_query,
     _detail_query,
+    _runtime_detail_entity_route,
     _runtime_export_package_route,
     _stream_query,
 )
@@ -1235,6 +1236,10 @@ def test_demo_server_stream_query_parses_cursor_options() -> None:
         "business_type": "ALL",
         "bottleneck_component": "ALL",
     }
+    assert _runtime_detail_entity_route(
+        "/runtime/details/service-traces/trace%3Asvc-00-compute_service-00000",
+        "/runtime/details/service-traces",
+    ) == "trace:svc-00-compute_service-00000"
     assert _runtime_export_package_route("/runtime/export/packages/pkg-1") == (
         "pkg-1",
         "record",

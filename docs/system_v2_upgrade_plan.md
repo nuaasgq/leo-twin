@@ -127,7 +127,10 @@ Tasks:
     section as backend-owned trace rows and stage segments. T258 adds selectable
     service trace rows and a correlation inspector that links one trace to
     visible user, route, satellite, and compute-node context through backend
-    flow ids, route ids, and compute node ids.
+    flow ids, route ids, and compute node ids. T259 adds
+    `/runtime/details/service-traces/{trace_id}` so a selected trace can fetch
+    backend-owned exact context even when correlated rows are outside the
+    current dashboard window.
 
 ### WS3. Network Semantics and KPI Trust v2
 

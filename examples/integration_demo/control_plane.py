@@ -61,6 +61,7 @@ from leo_twin.services.runtime_observability import (
     build_runtime_satellite_service_summary,
     build_runtime_service_detail_item,
     build_runtime_service_detail_page,
+    build_runtime_service_trace_detail_item,
     build_runtime_user_detail_card,
     build_runtime_user_request_summary,
 )
@@ -503,6 +504,25 @@ class DemoControlPlane:
             "type": "RUNTIME_ENTITY_DETAIL",
             "kind": "service",
             "entity_id": str(summary["service_id"]),
+            "summary": summary,
+        }
+
+    def runtime_service_trace_detail(self, trace_id: str) -> dict[str, Any]:
+        summary = build_runtime_service_trace_detail_item(
+            self.visible_snapshot(),
+            self._service_latency_history_json(),
+            trace_id,
+            satellite_kpi_slices=self._satellite_kpi_slices_json(),
+        )
+        if summary is None:
+            raise KeyError(f"runtime service trace detail not found: {trace_id}")
+        trace = summary["trace"]
+        if not isinstance(trace, dict):
+            raise KeyError(f"runtime service trace detail not found: {trace_id}")
+        return {
+            "type": "RUNTIME_ENTITY_DETAIL",
+            "kind": "service_trace",
+            "entity_id": str(trace["trace_id"]),
             "summary": summary,
         }
 

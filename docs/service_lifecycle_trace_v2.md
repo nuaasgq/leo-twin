@@ -41,6 +41,17 @@ satellite resource rows, and compute-node detail rows. The correlation uses the
 backend trace's flow ids, route ids, and compute node id; it does not create new
 simulation state.
 
+Runtime detail APIs now expose a backend exact-detail path for one trace:
+
+`GET /runtime/details/service-traces/{trace_id}`
+
+The endpoint accepts the `trace:{service_id}` id, normalized `service_id`,
+`task_id`, input flow id, or output flow id. It returns
+`kind=service_trace`, the v2 trace, correlation ids, route explanation rows,
+user detail cards, satellite detail cards, and compute-node detail when
+available. The endpoint is read-only and derives all context from the current
+runtime snapshot plus `service_latency_history_v1`.
+
 ## Lifecycle Stages
 
 Each trace row exposes these ordered stages:

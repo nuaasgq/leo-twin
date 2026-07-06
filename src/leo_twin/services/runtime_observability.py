@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
 
 from leo_twin.schema.service_lifecycle_trace_contract import (
@@ -705,6 +705,124 @@ def build_runtime_service_detail_item(
         if _service_id(item) == normalized_service_id:
             return _service_detail_item(item)
     return None
+
+
+def build_runtime_service_trace_detail_item(
+    snapshot: Mapping[str, Any],
+    service_latency_history: Mapping[str, Any] | None,
+    trace_id: str,
+    *,
+    satellite_kpi_slices: Mapping[str, Any] | None = None,
+) -> dict[str, object] | None:
+    """Build one backend-owned service trace detail with correlated context."""
+
+    if not isinstance(snapshot, Mapping):
+        raise TypeError("snapshot must be a mapping")
+    normalized_trace_id = _str(trace_id).strip()
+    if not normalized_trace_id:
+        return None
+    ordered_items = tuple(
+        sorted(
+            _records((service_latency_history or {}).get("items")),
+            key=_service_detail_sort_key,
+        )
+    )
+    matching_trace: dict[str, object] | None = None
+    for item in ordered_items:
+        trace = _service_lifecycle_trace_item(item)
+        if normalized_trace_id in _service_trace_lookup_ids(trace):
+            matching_trace = trace
+            break
+    if matching_trace is None:
+        return None
+
+    flow_ids = _service_trace_flow_ids(matching_trace)
+    route_ids = _service_trace_route_ids(matching_trace)
+    service_lookup = _service_lookup(service_latency_history)
+    matched_routes = tuple(
+        _route_explanation_item(route, service_lookup)
+        for route in sorted(_records(snapshot.get("routes")), key=_route_explanation_sort_key)
+        if _service_trace_matches_route(route, route_ids, flow_ids)
+    )
+    route_paths = tuple(
+        _route_path(route)
+        for route in sorted(_records(snapshot.get("routes")), key=_route_explanation_sort_key)
+        if _service_trace_matches_route(route, route_ids, flow_ids)
+    )
+    user_ids = _unique_str_tuple(
+        node_id
+        for path in route_paths
+        for node_id in path
+        if node_id.startswith("user-")
+    )
+    compute_node_id = _str(matching_trace.get("compute_node_id"))
+    satellite_ids = _unique_str_tuple(
+        (
+            node_id
+            for path in route_paths
+            for node_id in path
+            if node_id.startswith("sat-")
+        ),
+        (compute_node_id,) if compute_node_id.startswith("sat-") else (),
+    )
+    users = tuple(
+        item
+        for item in (
+            build_runtime_user_detail_card(
+                snapshot,
+                user_id,
+                service_latency_history=service_latency_history,
+            )
+            for user_id in user_ids
+        )
+        if item is not None
+    )
+    satellites = tuple(
+        item
+        for item in (
+            build_runtime_satellite_detail_card(
+                snapshot,
+                satellite_id,
+                service_latency_history=service_latency_history,
+                satellite_kpi_slices=satellite_kpi_slices,
+            )
+            for satellite_id in satellite_ids
+        )
+        if item is not None
+    )
+    compute_node = (
+        build_runtime_compute_node_detail_item(
+            snapshot,
+            compute_node_id,
+            satellite_kpi_slices=satellite_kpi_slices,
+        )
+        if compute_node_id
+        else None
+    )
+    return {
+        "version": "v2",
+        "source": "BACKEND_RUNTIME_STATUS",
+        "summary_scope": "SERVICE_LIFECYCLE_TRACE_EXACT_DETAIL",
+        "trace": matching_trace,
+        "correlation": {
+            "trace_id": _str(matching_trace.get("trace_id")),
+            "service_id": _str(matching_trace.get("service_id")),
+            "task_id": _str(matching_trace.get("task_id")),
+            "flow_ids": flow_ids,
+            "route_ids": route_ids,
+            "user_ids": user_ids,
+            "satellite_ids": satellite_ids,
+            "compute_node_id": compute_node_id,
+            "route_count": len(matched_routes),
+            "user_count": len(users),
+            "satellite_count": len(satellites),
+            "compute_node_detail_available": compute_node is not None,
+        },
+        "routes": matched_routes,
+        "users": users,
+        "satellites": satellites,
+        "compute_node": compute_node,
+    }
 
 
 def build_runtime_compute_node_detail_item(
@@ -2490,6 +2608,72 @@ def _service_request_id(item: Mapping[str, Any]) -> str:
     if output_flow_id.endswith("-output"):
         return output_flow_id[: -len("-output")]
     return _service_id(item)
+
+
+def _service_trace_lookup_ids(trace: Mapping[str, Any]) -> tuple[str, ...]:
+    trace_id = _str(trace.get("trace_id"))
+    service_id = _str(trace.get("service_id"))
+    return _unique_str_tuple(
+        (
+            trace_id,
+            service_id,
+            trace_id.removeprefix("trace:"),
+            _str(trace.get("task_id")),
+            _str(trace.get("input_flow_id")),
+            _str(trace.get("output_flow_id")),
+        )
+    )
+
+
+def _service_trace_flow_ids(trace: Mapping[str, Any]) -> tuple[str, ...]:
+    stage_flow_ids = (
+        _str(stage.get("flow_id"))
+        for stage in _records(trace.get("stages"))
+        if _str(stage.get("flow_id"))
+    )
+    return _unique_str_tuple(
+        (
+            _str(trace.get("input_flow_id")),
+            _str(trace.get("output_flow_id")),
+        ),
+        stage_flow_ids,
+    )
+
+
+def _service_trace_route_ids(trace: Mapping[str, Any]) -> tuple[str, ...]:
+    stage_route_ids = (
+        _str(stage.get("route_id"))
+        for stage in _records(trace.get("stages"))
+        if _str(stage.get("route_id"))
+    )
+    return _unique_str_tuple(
+        (
+            _str(trace.get("input_route_id")),
+            _str(trace.get("output_route_id")),
+        ),
+        stage_route_ids,
+    )
+
+
+def _service_trace_matches_route(
+    route: Mapping[str, Any],
+    route_ids: tuple[str, ...],
+    flow_ids: tuple[str, ...],
+) -> bool:
+    return _str(route.get("route_id")) in route_ids or _str(route.get("flow_id")) in flow_ids
+
+
+def _unique_str_tuple(*groups: Iterable[object]) -> tuple[str, ...]:
+    values: list[str] = []
+    seen: set[str] = set()
+    for group in groups:
+        for value in group:
+            normalized = _str(value).strip()
+            if not normalized or normalized in seen:
+                continue
+            seen.add(normalized)
+            values.append(normalized)
+    return tuple(sorted(values, key=_entity_sort_key))
 
 
 def _records(value: object) -> tuple[Mapping[str, Any], ...]:

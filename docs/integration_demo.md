@@ -157,6 +157,7 @@ Runtime observability summaries:
   satellite_service_summary_v1
   route_explanation_summary_v1
   node_detail_summary_v1
+  service_lifecycle_trace_v2
 ```
 
 `route_explanation_summary_v1` is backend-owned. It explains each visible route
@@ -165,6 +166,16 @@ next hop, path, capacity, demand, latency, loss proxy, business type,
 bottleneck component, bottleneck reason, and a compact explanation label. It is
 derived from the runtime snapshot and service history; it does not change route
 selection or simulate packets.
+
+Exact service trace detail:
+
+```text
+/runtime/details/service-traces/{trace_id}
+```
+
+The trace detail endpoint accepts a trace id, normalized service id, task id,
+input flow id, or output flow id and returns the backend-owned trace with
+correlated user, route, satellite, and compute-node context.
 
 Persisted export catalog:
 

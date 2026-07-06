@@ -353,6 +353,15 @@ def test_runtime_detail_pages_return_deterministic_windows(tmp_path: Path) -> No
         assert service_detail["kind"] == "service"
         assert service_detail["entity_id"] == first_service_id
         assert service_detail["summary"]["service_id"] == first_service_id
+        service_trace_detail = control_plane.runtime_service_trace_detail(
+            first_service_id
+        )
+        assert service_trace_detail["type"] == "RUNTIME_ENTITY_DETAIL"
+        assert service_trace_detail["kind"] == "service_trace"
+        assert service_trace_detail["summary"]["version"] == "v2"
+        assert service_trace_detail["summary"]["trace"]["task_id"] == first_service_id
+        assert service_trace_detail["summary"]["correlation"]["route_count"] >= 0
+        assert "flow_ids" in service_trace_detail["summary"]["correlation"]
 
     assert compute_node_first["type"] == "RUNTIME_DETAIL_PAGE"
     assert compute_node_first["kind"] == "compute_nodes"

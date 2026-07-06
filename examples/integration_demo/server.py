@@ -282,6 +282,23 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                 except KeyError as exc:
                     self.send_error(404, str(exc))
                 return
+            service_trace_detail_id = _runtime_detail_entity_route(
+                path,
+                "/runtime/details/service-traces",
+            )
+            if service_trace_detail_id is not None:
+                if not service_trace_detail_id:
+                    self.send_error(404, "runtime service trace detail not found")
+                    return
+                try:
+                    self._send_json(
+                        control_plane.runtime_service_trace_detail(
+                            service_trace_detail_id
+                        )
+                    )
+                except KeyError as exc:
+                    self.send_error(404, str(exc))
+                return
             compute_node_detail_id = _runtime_detail_entity_route(
                 path,
                 "/runtime/details/compute-nodes",
