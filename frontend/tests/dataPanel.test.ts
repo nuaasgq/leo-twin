@@ -2648,10 +2648,17 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           "audit index records this scenario_review_bundle_v1.json file hash"
       },
       artifact_review: {
-        artifact_count: 8,
+        artifact_count: 9,
         artifact_filenames: [
           "scenario_review_bundle_v1.json",
-          "export_package_audit_index_v1.json"
+          "export_package_audit_index_v1.json",
+          "review_summary_v1.json",
+          "diagnostics_bundle_v1.json",
+          "manifest.json",
+          "config_snapshot.json",
+          "route_detail_index_v1.json",
+          "events.jsonl",
+          "metrics.csv"
         ],
         entrypoint_filenames: ["scenario_review_bundle_v1.json"]
       },
@@ -2666,7 +2673,18 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         external_simulators: false,
         forbidden_external_integrations: ["STK", "EXATA", "AFSIM", "DDS"]
       },
-      recommended_review_order: ["scenario_review_bundle_v1.json"],
+      recommended_review_order: [
+        "scenario_review_bundle_v1.json",
+        "export_package_audit_index_v1.json",
+        "review_summary_v1.json",
+        "diagnostics_bundle_v1.json",
+        "manifest.json",
+        "config_snapshot.json",
+        "route_detail_index_v1.json",
+        "events.jsonl",
+        "metrics.csv",
+        "summary.json"
+      ],
       scenario_review_status: "SCENARIO_REVIEW_READY",
       scenario_review_warnings: [],
       scenario_review_hash:
@@ -2709,6 +2727,109 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         "recompute no",
         "packet no",
         "external no"
+      ],
+      workflowRows: [
+        {
+          stepLabel: "1 scenario entry",
+          statusLabel: "available",
+          detailLabel: "scenario_review_bundle_v1.json",
+          href:
+            "/runtime/export/packages/pkg-review/files/scenario_review_bundle_v1.json",
+          title:
+            "1 scenario entry / scenario_review_bundle_v1.json / package artifact available",
+          tone: "match"
+        },
+        {
+          stepLabel: "2 audit index",
+          statusLabel: "available",
+          detailLabel: "export_package_audit_index_v1.json",
+          href:
+            "/runtime/export/packages/pkg-review/files/export_package_audit_index_v1.json",
+          title:
+            "2 audit index / export_package_audit_index_v1.json / package artifact available",
+          tone: "match"
+        },
+        {
+          stepLabel: "3 review summary",
+          statusLabel: "available",
+          detailLabel: "review_summary_v1.json",
+          href:
+            "/runtime/export/packages/pkg-review/files/review_summary_v1.json",
+          title:
+            "3 review summary / review_summary_v1.json / package artifact available",
+          tone: "match"
+        },
+        {
+          stepLabel: "4 diagnostics",
+          statusLabel: "available",
+          detailLabel: "diagnostics_bundle_v1.json",
+          href:
+            "/runtime/export/packages/pkg-review/files/diagnostics_bundle_v1.json",
+          title:
+            "4 diagnostics / diagnostics_bundle_v1.json / package artifact available",
+          tone: "match"
+        },
+        {
+          stepLabel: "5 manifest",
+          statusLabel: "available",
+          detailLabel: "manifest.json",
+          href: "/runtime/export/packages/pkg-review/files/manifest.json",
+          title: "5 manifest / manifest.json / package artifact available",
+          tone: "match"
+        },
+        {
+          stepLabel: "6 configuration",
+          statusLabel: "available",
+          detailLabel: "config_snapshot.json",
+          href: "/runtime/export/packages/pkg-review/files/config_snapshot.json",
+          title:
+            "6 configuration / config_snapshot.json / package artifact available",
+          tone: "match"
+        },
+        {
+          stepLabel: "7 route evidence",
+          statusLabel: "available",
+          detailLabel: "route_detail_index_v1.json",
+          href:
+            "/runtime/export/packages/pkg-review/files/route_detail_index_v1.json",
+          title:
+            "7 route evidence / route_detail_index_v1.json / package artifact available",
+          tone: "match"
+        },
+        {
+          stepLabel: "9 event evidence",
+          statusLabel: "available",
+          detailLabel: "events.jsonl",
+          href: "/runtime/export/packages/pkg-review/files/events.jsonl",
+          title: "9 event evidence / events.jsonl / package artifact available",
+          tone: "match"
+        },
+        {
+          stepLabel: "10 metrics",
+          statusLabel: "available",
+          detailLabel: "metrics.csv",
+          href: "/runtime/export/packages/pkg-review/files/metrics.csv",
+          title: "10 metrics / metrics.csv / package artifact available",
+          tone: "match"
+        },
+        {
+          stepLabel: "11 summary",
+          statusLabel: "missing",
+          detailLabel: "summary.json",
+          href: null,
+          title:
+            "11 summary / summary.json / not listed in scenario review bundle",
+          tone: "different"
+        },
+        {
+          stepLabel: "8 service trace",
+          statusLabel: "missing",
+          detailLabel: "service_lifecycle_trace_v2.json",
+          href: null,
+          title:
+            "8 service trace / service_lifecycle_trace_v2.json / not listed in scenario review bundle",
+          tone: "different"
+        }
       ],
       warningLabels: []
     });

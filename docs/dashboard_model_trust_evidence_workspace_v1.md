@@ -96,8 +96,10 @@ the audit index records that file hash alongside the other package evidence.
 The dashboard loads the scenario review bundle as a guided entry card and loads
 the audit index JSON to render the evidence groups directly, including
 schema/config/export/binding hashes and validation status for the user
-configuration, so operators can inspect the package audit boundary without
-opening raw JSON.
+configuration. The scenario review card also renders ordered artifact workflow
+rows for configuration, manifest, diagnostics, audit, route, service trace,
+event, metric, and summary review. This lets operators inspect the package
+audit boundary without opening raw JSON.
 7. runtime evidence
 
 Each row has a tone:

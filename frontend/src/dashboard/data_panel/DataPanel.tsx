@@ -2108,6 +2108,23 @@ export const DataPanel = memo(function DataPanel({
                       )
                     )}
                   </div>
+                  <div className="data-panel-export-manifest-artifacts">
+                    {exportScenarioReviewBundleStatus.workflowRows.map((row) => (
+                      <span
+                        className={row.tone}
+                        key={`${row.stepLabel}:${row.detailLabel}`}
+                        title={row.title}
+                      >
+                        <span>{row.stepLabel}</span>
+                        <strong>{row.statusLabel}</strong>
+                        {row.href ? (
+                          <a href={row.href}>{row.detailLabel}</a>
+                        ) : (
+                          <small>{row.detailLabel}</small>
+                        )}
+                      </span>
+                    ))}
+                  </div>
                   {exportScenarioReviewBundleStatus.warningLabels.length > 0 ? (
                     <div className="data-panel-export-diagnostics-findings">
                       {exportScenarioReviewBundleStatus.warningLabels.map((label) => (
@@ -9710,6 +9727,7 @@ export interface DataPanelExportScenarioReviewBundleDisplay {
   configurationLabels: readonly string[];
   evidenceLabels: readonly string[];
   boundaryLabels: readonly string[];
+  workflowRows: readonly DataPanelExportScenarioReviewWorkflowRow[];
   warningLabels: readonly string[];
 }
 
@@ -9722,7 +9740,17 @@ export interface DataPanelExportScenarioReviewBundleStatus {
   configurationLabels: readonly string[];
   evidenceLabels: readonly string[];
   boundaryLabels: readonly string[];
+  workflowRows: readonly DataPanelExportScenarioReviewWorkflowRow[];
   warningLabels: readonly string[];
+}
+
+export interface DataPanelExportScenarioReviewWorkflowRow {
+  stepLabel: string;
+  statusLabel: string;
+  detailLabel: string;
+  href: string | null;
+  title: string;
+  tone: "match" | "different" | "pending";
 }
 
 export interface DataPanelExportPackageAuditIndexDisplay {
@@ -10039,6 +10067,7 @@ export function buildDataPanelExportScenarioReviewBundleDisplay(
       `packet ${bundle.model_boundaries.packet_level_simulation ? "yes" : "no"}`,
       `external ${bundle.model_boundaries.external_simulators ? "yes" : "no"}`
     ],
+    workflowRows: buildDataPanelScenarioReviewWorkflowRows(bundle),
     warningLabels: [
       ...bundle.scenario_review_warnings,
       ...bundle.diagnostics.finding_labels
@@ -10064,6 +10093,7 @@ export function buildDataPanelExportScenarioReviewBundleStatus(
       configurationLabels: [],
       evidenceLabels: [],
       boundaryLabels: [],
+      workflowRows: [],
       warningLabels: []
     };
   }
@@ -10077,6 +10107,7 @@ export function buildDataPanelExportScenarioReviewBundleStatus(
       configurationLabels: [],
       evidenceLabels: [],
       boundaryLabels: [],
+      workflowRows: [],
       warningLabels: [error]
     };
   }
@@ -10092,8 +10123,78 @@ export function buildDataPanelExportScenarioReviewBundleStatus(
     configurationLabels: display.configurationLabels,
     evidenceLabels: display.evidenceLabels,
     boundaryLabels: display.boundaryLabels,
+    workflowRows: display.workflowRows,
     warningLabels: display.warningLabels
   };
+}
+
+function buildDataPanelScenarioReviewWorkflowRows(
+  bundle: RuntimeExportScenarioReviewBundleV1
+): readonly DataPanelExportScenarioReviewWorkflowRow[] {
+  const exported = new Set(bundle.artifact_review.artifact_filenames);
+  const orderedFilenames = [
+    ...bundle.recommended_review_order,
+    "route_detail_index_v1.json",
+    "service_lifecycle_trace_v2.json"
+  ];
+  const seen = new Set<string>();
+  return orderedFilenames
+    .filter((filename) => {
+      if (seen.has(filename)) {
+        return false;
+      }
+      seen.add(filename);
+      return scenarioReviewWorkflowStepLabel(filename) !== null;
+    })
+    .map((filename) => {
+      const stepLabel = scenarioReviewWorkflowStepLabel(filename) ?? filename;
+      const available =
+        exported.has(filename) ||
+        filename === SCENARIO_REVIEW_BUNDLE_FILENAME ||
+        filename === bundle.audit_index.filename;
+      const href = available
+        ? runtimeExportPackageFileHref(bundle.package_id, filename)
+        : null;
+      return {
+        stepLabel,
+        statusLabel: available ? "available" : "missing",
+        detailLabel: filename,
+        href,
+        title: `${stepLabel} / ${filename} / ${
+          available ? "package artifact available" : "not listed in scenario review bundle"
+        }`,
+        tone: available ? "match" : "different"
+      };
+    });
+}
+
+function scenarioReviewWorkflowStepLabel(filename: string): string | null {
+  switch (filename) {
+    case "scenario_review_bundle_v1.json":
+      return "1 scenario entry";
+    case "export_package_audit_index_v1.json":
+      return "2 audit index";
+    case "review_summary_v1.json":
+      return "3 review summary";
+    case "diagnostics_bundle_v1.json":
+      return "4 diagnostics";
+    case "manifest.json":
+      return "5 manifest";
+    case "config_snapshot.json":
+      return "6 configuration";
+    case "route_detail_index_v1.json":
+      return "7 route evidence";
+    case "service_lifecycle_trace_v2.json":
+      return "8 service trace";
+    case "events.jsonl":
+      return "9 event evidence";
+    case "metrics.csv":
+      return "10 metrics";
+    case "summary.json":
+      return "11 summary";
+    default:
+      return null;
+  }
 }
 
 export function buildDataPanelExportPackageAuditIndexDisplay(

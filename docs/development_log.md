@@ -15013,7 +15013,7 @@ change.
 ## 2026-07-06 - Dashboard Scenario Review Entry v1
 
 - Branch: `feature/T311-dashboard-scenario-review-entry-v1`
-- Commit: pending commit note; final hash is reported after commit creation.
+- Commit: `9f42a97 feat(frontend): add scenario review entry`
 - Scope: bind the backend-owned `scenario_review_bundle_v1.json` artifact into
   the standalone dashboard package review area. The frontend now loads the
   artifact when the selected package catalog lists it, decodes the backend
@@ -15060,3 +15060,48 @@ change.
   - Add a guided scenario review workflow that lets operators step through
     configuration, manifest, diagnostics, audit index, routes, and service
     traces from the Scenario Review Bundle card.
+
+## 2026-07-06 - Guided Scenario Review Workflow v1
+
+- Branch: `feature/T312-guided-scenario-review-workflow-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: expand the dashboard Scenario Review Bundle card into a guided
+  artifact review workflow. The workflow derives ordered rows from
+  `scenario_review_bundle_v1.json.recommended_review_order` and the bundle's
+  exported artifact list, then links scenario entry, audit index, review
+  summary, diagnostics, manifest, configuration, route evidence, service trace,
+  event evidence, metrics, and summary outputs while marking missing artifacts
+  explicitly. This task does not alter Event Kernel behavior, backend export
+  generation, runtime models, route recomputation, service recomputation,
+  package mutation, external simulator integration, or packet-level simulation.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/dashboard_model_trust_evidence_workspace_v1.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts api.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 2 test
+      files and 208 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path. Vite
+      reported the existing large DataPanel chunk warning.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered:
+  - The normal PowerShell PATH may not expose `node`, so frontend validation
+    uses the bundled Codex Node/Pnpm runtime path.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - This is still a read-only workflow. It does not yet store operator
+    checklist decisions or review notes.
+  - Older packages without `scenario_review_bundle_v1.json` do not show the
+    guided workflow.
+- Recommended follow-up:
+  - Add operator checklist persistence for guided scenario review decisions,
+    including reviewed/skipped status and reviewer notes per artifact step.

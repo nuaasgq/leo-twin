@@ -219,8 +219,11 @@ configuration, scenario scale, runtime progress, reproducibility hashes,
 review summary hash, diagnostics hash, audit-index filename, model boundaries,
 and recommended review order. The dashboard loads it as a Scenario Review
 Bundle card in the package review area with direct links to the JSON evidence.
-It is also available through the same package file endpoint and does not replay
-events or recompute model state.
+The card also shows a guided review workflow that steps through scenario entry,
+audit index, review summary, diagnostics, manifest, configuration, route
+evidence, service trace, event evidence, metrics, and summary artifacts,
+marking missing artifacts explicitly. It is also available through the same
+package file endpoint and does not replay events or recompute model state.
 For package-owned review, use:
 
 ```powershell

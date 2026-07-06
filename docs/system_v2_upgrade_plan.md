@@ -636,7 +636,11 @@ Tasks:
     review area as a Scenario Review Bundle card with scenario scale, user
     configuration binding, reproducibility evidence, diagnostics evidence,
     audit-index link, and explicit no-replay/no-recompute/no-packet boundary
-    labels.
+    labels. T312 expands that card into a guided review workflow with ordered
+    artifact rows for scenario entry, audit index, review summary, diagnostics,
+    manifest, configuration, route evidence, service trace, event evidence,
+    metrics, and summary outputs, using backend package evidence to mark
+    available and missing review steps.
 
 ### WS9. Delivery and Operations v2
 
