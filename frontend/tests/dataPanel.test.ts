@@ -38,6 +38,7 @@ import {
   buildDataPanelRuntimeProgress,
   buildDataPanelSatelliteResourceHistory,
   buildDataPanelServiceLatencyDisplay,
+  buildDataPanelServiceLifecycleTraceDisplay,
   buildDataPanelServiceDetailRows,
   buildDataPanelServiceLatencyRows,
   buildDataPanelComputeNodeDetailRows,
@@ -3432,6 +3433,128 @@ describe("buildDataPanelServiceDetailRows", () => {
     expect(buildDataPanelServiceDetailRows(null)).toEqual({
       sourceLabel: "等待后端服务详情页",
       summaryLabel: "暂无服务生命周期游标明细",
+      items: []
+    });
+  });
+});
+
+describe("buildDataPanelServiceLifecycleTraceDisplay", () => {
+  it("formats backend-owned service lifecycle trace v2 rows", () => {
+    const display = buildDataPanelServiceLifecycleTraceDisplay({
+      version: "v2",
+      contract_id: "leo_twin.service_lifecycle_trace_contract.v2",
+      source: "SERVICE_LATENCY_HISTORY",
+      source_summary: "service_latency_history_v1",
+      summary_scope: "SERVICE_LIFECYCLE_TRACE_WINDOW",
+      trace_model: "COMMUNICATION_COMPUTE_COMPONENT_PROXY",
+      cursor: 0,
+      limit: 100,
+      next_cursor: 1,
+      has_more: true,
+      service_count: 2,
+      trace_count: 1,
+      complete_trace_count: 0,
+      running_trace_count: 1,
+      incomplete_trace_count: 0,
+      hidden_trace_count: 1,
+      items: [
+        {
+          trace_id: "trace:svc-01",
+          service_id: "svc-01-compute_service-00000",
+          task_id: "svc-01-compute_service-00000-task",
+          service_class: "COMPUTE_SERVICE",
+          input_flow_id: "svc-01-compute_service-00000-input",
+          output_flow_id: "svc-01-compute_service-00000-output",
+          input_route_id: "route:input",
+          output_route_id: "",
+          compute_node_id: "sat-00001",
+          placement_status: "PLACED",
+          placement_policy: "MIN_ESTIMATED_FINISH_TIME",
+          placement_bottleneck_resource: "cpu_gflops_fp32",
+          first_sample_sim_time: 6,
+          last_sample_sim_time: 10,
+          input_network_latency_s: 4,
+          compute_queue_delay_s: 1,
+          compute_execution_delay_s: 2.5,
+          output_network_latency_s: 0,
+          total_latency_s: 0,
+          terminal_state: "RUNNING",
+          terminal_state_reason: "OUTPUT_NETWORK_PENDING",
+          stage_count: 4,
+          observed_stage_count: 3,
+          pending_stage_count: 1,
+          stages: [
+            {
+              stage_index: 0,
+              stage_id: "svc-01:input_network",
+              component: "input_network",
+              stage_kind: "INPUT_NETWORK",
+              stage_label: "Input network",
+              stage_status: "OBSERVED",
+              sample_sim_time: 6,
+              duration_s: 4,
+              flow_id: "svc-01-compute_service-00000-input",
+              route_id: "route:input",
+              compute_node_id: ""
+            },
+            {
+              stage_index: 3,
+              stage_id: "svc-01:output_network",
+              component: "output_network",
+              stage_kind: "OUTPUT_NETWORK",
+              stage_label: "Output network",
+              stage_status: "PENDING",
+              sample_sim_time: 10,
+              duration_s: 0,
+              flow_id: "svc-01-compute_service-00000-output",
+              route_id: "",
+              compute_node_id: ""
+            }
+          ]
+        }
+      ]
+    });
+
+    expect(display.sourceLabel).toBe(
+      "service_latency_history_v1 -> service_lifecycle_trace_v2"
+    );
+    expect(display.summaryLabel).toContain("1 trace / 2 service");
+    expect(display.summaryLabel).toContain("运行 1");
+    expect(display.items[0]).toMatchObject({
+      traceId: "trace:svc-01",
+      serviceId: "svc-01-compute_service-00000",
+      serviceLabel: "...e_service-00000",
+      terminalStateLabel: "运行中 / OUTPUT_NETWORK_PENDING",
+      computeNodeLabel: "算力 sat-00001",
+      networkLatencyLabel: "4,000 ms / 0 ms",
+      computeLatencyLabel: "1,000 ms / 2,500 ms",
+      totalLatencyLabel: "0 ms"
+    });
+    expect(display.items[0].traceTitle).toContain("terminal=RUNNING");
+    expect(display.items[0].stages).toEqual([
+      {
+        stageId: "svc-01:input_network",
+        label: "Input network",
+        statusLabel: "已观测",
+        durationLabel: "4,000 ms",
+        traceTitle:
+          "input_network@6s=4,000 ms OBSERVED route=route:input flow=svc-01-compute_service-00000-input"
+      },
+      {
+        stageId: "svc-01:output_network",
+        label: "Output network",
+        statusLabel: "等待",
+        durationLabel: "0 ms",
+        traceTitle:
+          "output_network@10s=0 ms PENDING flow=svc-01-compute_service-00000-output"
+      }
+    ]);
+  });
+
+  it("returns a backend waiting state before trace v2 arrives", () => {
+    expect(buildDataPanelServiceLifecycleTraceDisplay(null)).toEqual({
+      sourceLabel: "等待后端 service_lifecycle_trace_v2",
+      summaryLabel: "暂无通信-计算服务 trace",
       items: []
     });
   });

@@ -1339,6 +1339,7 @@ export interface RuntimeStatusPayload {
   satellite_kpi_slices_v1?: RuntimeSatelliteKpiSlicesV1;
   satellite_kpi_history_v1?: RuntimeSatelliteKpiHistoryV1;
   service_latency_history_v1?: RuntimeServiceLatencyHistoryV1;
+  service_lifecycle_trace_v2?: RuntimeServiceLifecycleTraceV2;
   compute_task_timeline_summary_v1?: RuntimeComputeTaskTimelineSummaryV1;
   user_request_summary_v1?: RuntimeUserRequestSummaryV1;
   user_request_history_v1?: RuntimeUserRequestHistoryV1;
@@ -1981,6 +1982,71 @@ export interface RuntimeServiceDetailItemV1 {
   total_latency_s: number;
   stage_count: number;
   stages: readonly RuntimeComputeTaskTimelineStageV1[];
+}
+
+export interface RuntimeServiceLifecycleTraceV2 {
+  version: "v2" | string;
+  contract_id?: string;
+  source: string;
+  source_summary: string;
+  summary_scope: string;
+  trace_model?: string;
+  cursor: number;
+  limit: number;
+  next_cursor: number;
+  has_more: boolean;
+  service_count: number;
+  trace_count: number;
+  complete_trace_count: number;
+  running_trace_count: number;
+  incomplete_trace_count: number;
+  hidden_trace_count: number;
+  unfiltered_service_count?: number;
+  filter_query?: string;
+  filter_applied?: boolean;
+  items: readonly RuntimeServiceLifecycleTraceItemV2[];
+}
+
+export interface RuntimeServiceLifecycleTraceItemV2 {
+  trace_id: string;
+  service_id: string;
+  task_id: string;
+  service_class: string;
+  input_flow_id?: string;
+  output_flow_id?: string;
+  input_route_id?: string;
+  output_route_id?: string;
+  compute_node_id?: string;
+  placement_status?: string;
+  placement_policy?: string;
+  placement_bottleneck_resource?: string;
+  first_sample_sim_time?: number | null;
+  last_sample_sim_time?: number | null;
+  input_network_latency_s: number;
+  compute_queue_delay_s: number;
+  compute_execution_delay_s: number;
+  output_network_latency_s: number;
+  total_latency_s: number;
+  terminal_state: "RUNNING" | "COMPLETE" | "INCOMPLETE" | string;
+  terminal_state_reason: string;
+  stage_count: number;
+  observed_stage_count: number;
+  pending_stage_count: number;
+  stages: readonly RuntimeServiceLifecycleTraceStageV2[];
+}
+
+export interface RuntimeServiceLifecycleTraceStageV2 {
+  stage_index: number;
+  stage_id: string;
+  component: string;
+  stage_kind: string;
+  stage_label: string;
+  stage_status: "OBSERVED" | "PENDING" | "NOT_APPLICABLE" | "UNKNOWN" | string;
+  sample_sim_time?: number | null;
+  duration_s: number;
+  flow_id?: string;
+  route_id?: string;
+  compute_node_id?: string;
 }
 
 export interface RuntimeComputeTaskTimelineSummaryV1 {

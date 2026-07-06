@@ -30,6 +30,11 @@ same backend-owned `service_lifecycle_trace_v2` summary that is present in the
 stable export status snapshot. This keeps the trace available for offline
 review without requiring consumers to parse `config_snapshot.json`.
 
+The standalone dashboard consumes the same `service_lifecycle_trace_v2` status
+field to render service rows and stage segments for input network, compute
+queue, compute execution, and output network. The dashboard does not infer
+lifecycle semantics locally; it only formats the backend-owned trace.
+
 ## Lifecycle Stages
 
 Each trace row exposes these ordered stages:

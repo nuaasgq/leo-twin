@@ -47,6 +47,7 @@ import {
   RuntimeServiceDetailItemV1,
   RuntimeServiceDetailPageV1,
   RuntimeServiceLatencyHistoryV1,
+  RuntimeServiceLifecycleTraceV2,
   RuntimeStatusPayload,
   RuntimeUserRequestHistoryV1,
   RuntimeUserRequestItemV1,
@@ -429,6 +430,9 @@ export const DataPanel = memo(function DataPanel({
   );
   const serviceLatencyRows = buildDataPanelServiceLatencyRows(
     runtimeStatus.service_latency_history_v1
+  );
+  const serviceLifecycleTraceDisplay = buildDataPanelServiceLifecycleTraceDisplay(
+    runtimeStatus.service_lifecycle_trace_v2
   );
   const serviceDetailPage = selectRuntimeServiceDetailPage(runtimeDetailPages);
   const serviceDetailRows = buildDataPanelServiceDetailRows(
@@ -1526,6 +1530,7 @@ export const DataPanel = memo(function DataPanel({
               onRuntimeServiceDetailSelect?.(row.serviceId);
             }}
           />
+          <ServiceLifecycleTracePanel display={serviceLifecycleTraceDisplay} />
           <TopComputeNodeTable rows={topComputeNodes} />
           <ComputeNodeDetailPageTable
             rows={computeNodeDetailRows}
@@ -2423,6 +2428,66 @@ function ServiceDetailPageTable({
           <span>{row.totalLatencyLabel}</span>
         </button>
       ))}
+    </div>
+  );
+}
+
+function ServiceLifecycleTracePanel({
+  display
+}: {
+  display: DataPanelServiceLifecycleTraceDisplay;
+}) {
+  if (display.items.length === 0) {
+    return (
+      <div className="data-panel-route-empty">
+        {display.summaryLabel}
+        <div className="data-panel-route-source">{display.sourceLabel}</div>
+      </div>
+    );
+  }
+  return (
+    <div
+      className="data-panel-route-table service-trace"
+      aria-label="服务生命周期 trace v2"
+    >
+      <div className="data-panel-route-source">{display.sourceLabel}</div>
+      <div className="data-panel-source-note">
+        <span>后端 service_lifecycle_trace_v2</span>
+        <small>{display.summaryLabel}</small>
+      </div>
+      <div className="data-panel-route-row header">
+        <span>服务</span>
+        <span>终态</span>
+        <span>节点</span>
+        <span>网络</span>
+        <span>计算</span>
+        <span>总时延</span>
+      </div>
+      {display.items.map((row) => (
+        <div className="data-panel-route-row" key={row.traceId} title={row.traceTitle}>
+          <span>{row.serviceLabel}</span>
+          <span>{row.terminalStateLabel}</span>
+          <span>{row.computeNodeLabel}</span>
+          <span>{row.networkLatencyLabel}</span>
+          <span>{row.computeLatencyLabel}</span>
+          <span>{row.totalLatencyLabel}</span>
+        </div>
+      ))}
+      <div className="data-panel-service-timeline" aria-label="服务生命周期阶段">
+        {display.items.flatMap((row) =>
+          row.stages.map((stage) => (
+            <span
+              className="data-panel-service-segment"
+              key={`${row.traceId}:${stage.stageId}`}
+              title={stage.traceTitle}
+            >
+              <small>{stage.label}</small>
+              <strong>{stage.durationLabel}</strong>
+              <em>{stage.statusLabel}</em>
+            </span>
+          ))
+        )}
+      </div>
     </div>
   );
 }
@@ -6298,6 +6363,94 @@ function serviceDetailTraceTitle(
     .join(" / ");
 }
 
+function serviceLifecycleTerminalLabel(state: string, reason: string): string {
+  const stateLabel =
+    state === "COMPLETE"
+      ? "完成"
+      : state === "RUNNING"
+        ? "运行中"
+        : state === "INCOMPLETE"
+          ? "未完整"
+          : state;
+  return reason ? `${stateLabel} / ${reason}` : stateLabel;
+}
+
+function serviceLifecycleStageStatusLabel(status: string): string {
+  if (status === "OBSERVED") {
+    return "已观测";
+  }
+  if (status === "PENDING") {
+    return "等待";
+  }
+  if (status === "NOT_APPLICABLE") {
+    return "不适用";
+  }
+  if (status === "UNKNOWN") {
+    return "未知";
+  }
+  return status;
+}
+
+function serviceLifecycleStageLabel(label: string, component: string): string {
+  if (label && label !== component) {
+    return label;
+  }
+  if (component === "input_network") {
+    return "输入网络";
+  }
+  if (component === "compute_queue") {
+    return "计算排队";
+  }
+  if (component === "compute_execution") {
+    return "计算执行";
+  }
+  if (component === "output_network") {
+    return "输出网络";
+  }
+  return component;
+}
+
+function serviceLifecycleTraceTitle(
+  item: RuntimeServiceLifecycleTraceV2["items"][number]
+): string {
+  const stages = item.stages.map(serviceLifecycleStageTitle).join(", ");
+  return [
+    `trace=${item.trace_id}`,
+    `service=${item.service_id}`,
+    item.task_id ? `task=${item.task_id}` : "",
+    item.service_class ? `class=${item.service_class}` : "",
+    item.input_flow_id ? `input=${item.input_flow_id}` : "",
+    item.output_flow_id ? `output=${item.output_flow_id}` : "",
+    item.compute_node_id ? `node=${item.compute_node_id}` : "",
+    item.placement_status ? `placement=${item.placement_status}` : "",
+    item.placement_bottleneck_resource
+      ? `bottleneck=${item.placement_bottleneck_resource}`
+      : "",
+    `terminal=${item.terminal_state}`,
+    item.terminal_state_reason ? `reason=${item.terminal_state_reason}` : "",
+    `observed=${formatCount(item.observed_stage_count)}`,
+    `pending=${formatCount(item.pending_stage_count)}`,
+    stages ? `stages=${stages}` : ""
+  ]
+    .filter((part) => part.length > 0)
+    .join(" / ");
+}
+
+function serviceLifecycleStageTitle(
+  stage: RuntimeServiceLifecycleTraceV2["items"][number]["stages"][number]
+): string {
+  const simTime =
+    typeof stage.sample_sim_time === "number"
+      ? `@${formatMetricValue(stage.sample_sim_time)}s`
+      : "";
+  const route = stage.route_id ? ` route=${stage.route_id}` : "";
+  const flow = stage.flow_id ? ` flow=${stage.flow_id}` : "";
+  const node = stage.compute_node_id ? ` node=${stage.compute_node_id}` : "";
+  return `${stage.component}${simTime}=${formatMetricMilliseconds(
+    stage.duration_s
+  )} ${stage.stage_status}${route}${flow}${node}`.trim();
+}
+
 function computeNodeDetailTraceTitle(
   item: RuntimeComputeNodeDetailPageV1["items"][number]
 ): string {
@@ -7650,6 +7803,33 @@ export interface DataPanelServiceDetailRow {
   traceTitle: string;
 }
 
+export interface DataPanelServiceLifecycleTraceDisplay {
+  sourceLabel: string;
+  summaryLabel: string;
+  items: readonly DataPanelServiceLifecycleTraceRow[];
+}
+
+export interface DataPanelServiceLifecycleTraceRow {
+  traceId: string;
+  serviceId: string;
+  serviceLabel: string;
+  terminalStateLabel: string;
+  computeNodeLabel: string;
+  networkLatencyLabel: string;
+  computeLatencyLabel: string;
+  totalLatencyLabel: string;
+  traceTitle: string;
+  stages: readonly DataPanelServiceLifecycleTraceStageRow[];
+}
+
+export interface DataPanelServiceLifecycleTraceStageRow {
+  stageId: string;
+  label: string;
+  statusLabel: string;
+  durationLabel: string;
+  traceTitle: string;
+}
+
 export interface DataPanelComputeTaskTimelineDisplay {
   sourceLabel: string;
   summaryLabel: string;
@@ -8323,6 +8503,54 @@ export function buildDataPanelServiceDetailRows(
     )} / 排队 ${formatCount(page.queued_service_count)}${
       page.has_more ? " / 可继续游标读取" : ""
     }`,
+    items
+  };
+}
+
+export function buildDataPanelServiceLifecycleTraceDisplay(
+  trace: RuntimeServiceLifecycleTraceV2 | null | undefined,
+  limit = 6
+): DataPanelServiceLifecycleTraceDisplay {
+  if (trace === null || trace === undefined) {
+    return {
+      sourceLabel: "等待后端 service_lifecycle_trace_v2",
+      summaryLabel: "暂无通信-计算服务 trace",
+      items: []
+    };
+  }
+  const boundedLimit = Math.max(0, Math.floor(limit));
+  const items = trace.items.slice(0, boundedLimit).map((item) => ({
+    traceId: item.trace_id || `trace:${item.service_id}`,
+    serviceId: item.service_id,
+    serviceLabel: compactTaskId(item.service_id || item.task_id),
+    terminalStateLabel: serviceLifecycleTerminalLabel(
+      item.terminal_state,
+      item.terminal_state_reason
+    ),
+    computeNodeLabel: item.compute_node_id ? `算力 ${item.compute_node_id}` : "未放置",
+    networkLatencyLabel: `${formatMetricMilliseconds(
+      item.input_network_latency_s
+    )} / ${formatMetricMilliseconds(item.output_network_latency_s)}`,
+    computeLatencyLabel: `${formatMetricMilliseconds(
+      item.compute_queue_delay_s
+    )} / ${formatMetricMilliseconds(item.compute_execution_delay_s)}`,
+    totalLatencyLabel: formatMetricMilliseconds(item.total_latency_s),
+    traceTitle: serviceLifecycleTraceTitle(item),
+    stages: item.stages.map((stage) => ({
+      stageId: stage.stage_id,
+      label: serviceLifecycleStageLabel(stage.stage_label, stage.component),
+      statusLabel: serviceLifecycleStageStatusLabel(stage.stage_status),
+      durationLabel: formatMetricMilliseconds(stage.duration_s),
+      traceTitle: serviceLifecycleStageTitle(stage)
+    }))
+  }));
+  return {
+    sourceLabel: `${trace.source_summary} -> service_lifecycle_trace_v2`,
+    summaryLabel: `${formatCount(trace.trace_count)} trace / ${formatCount(
+      trace.service_count
+    )} service / 完成 ${formatCount(trace.complete_trace_count)} / 运行 ${formatCount(
+      trace.running_trace_count
+    )}${trace.has_more ? " / 可继续游标读取" : ""}`,
     items
   };
 }

@@ -12237,3 +12237,45 @@ change.
 - Recommended follow-up:
   - Bind `service_lifecycle_trace_v2` into the dashboard service detail drawer
     and add export/download affordances from the dashboard.
+
+## 2026-07-06 - Dashboard Service Trace v2
+
+- Branch: `feature/T257-dashboard-service-trace-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: bind the backend-owned `service_lifecycle_trace_v2` runtime status
+  field into the standalone dashboard. The data panel now has typed frontend
+  contracts for service lifecycle trace v2, formats trace rows from backend
+  status, and renders input-network, compute-queue, compute-execution, and
+  output-network stage segments without inferring lifecycle semantics locally.
+  Backend runtime behavior, Event Kernel behavior, network routing, compute
+  scheduling, and packet-level semantics remain unchanged.
+- Changed files/modules:
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/service_lifecycle_trace_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed, 145 tests.
+  - `pnpm --dir frontend test`
+    - Result: passed, 355 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite reported the existing large DataPanel chunk warning.
+- Problems encountered:
+  - The default shell PATH did not include Node.js, so the first frontend test
+    invocation failed before executing tests. Validation was rerun with the
+    Codex bundled Node.js and pnpm paths prepended to PATH.
+  - The new unit test initially expected a different compact service id label.
+    The assertion was corrected to match the existing `compactTaskId()` policy.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The dashboard now displays trace rows and stage segments, but does not yet
+    provide a dedicated full-height service trace drawer or direct per-trace
+    export/download control.
+- Recommended follow-up:
+  - Add a dedicated service trace drawer that can correlate one trace with user
+    request rows, selected satellite resources, route explanation, and compute
+    node detail.

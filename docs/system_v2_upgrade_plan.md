@@ -122,7 +122,9 @@ Tasks:
     fields without changing Event Kernel, network routing, or compute
     scheduling. T256 adds `service_lifecycle_trace_v2.json` as a standalone
     runtime export artifact so offline result packages can inspect the same
-    backend-owned lifecycle trace without parsing `config_snapshot.json`.
+    backend-owned lifecycle trace without parsing `config_snapshot.json`. T257
+    binds `service_lifecycle_trace_v2` into the standalone dashboard service
+    section as backend-owned trace rows and stage segments.
 
 ### WS3. Network Semantics and KPI Trust v2
 
