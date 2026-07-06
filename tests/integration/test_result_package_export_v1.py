@@ -42,9 +42,11 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert (package_dir / "manifest.json").exists()
     assert (package_dir / "diagnostics_bundle_v1.json").exists()
     assert (package_dir / "review_summary_v1.json").exists()
+    assert (package_dir / "route_detail_index_v1.json").exists()
     assert (package_dir / "service_lifecycle_trace_v2.json").exists()
     filenames = {str(record["filename"]) for record in package["files"]}
     assert "service_lifecycle_trace_v2.json" in filenames
+    assert "route_detail_index_v1.json" in filenames
     assert "review_summary_v1.json" in filenames
     assert "diagnostics_bundle_v1.json" in filenames
 
@@ -54,6 +56,9 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     )
     service_lifecycle_trace = json.loads(
         (package_dir / "service_lifecycle_trace_v2.json").read_text(encoding="utf-8")
+    )
+    route_detail_index = json.loads(
+        (package_dir / "route_detail_index_v1.json").read_text(encoding="utf-8")
     )
     review_summary = json.loads(
         (package_dir / "review_summary_v1.json").read_text(encoding="utf-8")
@@ -72,8 +77,20 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert service_lifecycle_trace["summary"] == config_snapshot["status"][
         "service_lifecycle_trace_v2"
     ]
+    route_summary_status = config_snapshot["status"]["route_explanation_summary_v1"]
     route_trust_status = config_snapshot["status"]["route_provenance_trust_summary_v1"]
     assert route_trust_status["trust_id"] == "leo_twin.route_provenance_trust.v1"
+    assert route_detail_index["type"] == "RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_V1"
+    assert route_detail_index["route_trust"]["trust_id"] == route_trust_status[
+        "trust_id"
+    ]
+    assert route_detail_index["route_summary"]["route_count"] == route_summary_status[
+        "route_count"
+    ]
+    assert route_detail_index["route_summary"]["indexed_route_count"] == len(
+        route_summary_status["items"]
+    )
+    assert route_detail_index["route_detail_index_hash"].startswith("sha256:")
     assert review_summary["type"] == "RUNTIME_EXPORT_REVIEW_SUMMARY_V1"
     assert review_summary["review_status"] == "REVIEW_READY"
     assert review_summary["route_trust"]["trust_id"] == route_trust_status["trust_id"]
@@ -86,6 +103,9 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         "manifest_hash"
     ]
     assert "review_summary_v1.json" in review_summary["artifacts"][
+        "artifact_filenames"
+    ]
+    assert "route_detail_index_v1.json" in review_summary["artifacts"][
         "artifact_filenames"
     ]
     assert "diagnostics_bundle_v1.json" in review_summary["artifacts"][

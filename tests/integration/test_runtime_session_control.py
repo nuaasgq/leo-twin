@@ -815,6 +815,7 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
         "manifest.json",
         "metrics.csv",
         "review_summary_v1.json",
+        "route_detail_index_v1.json",
         "service_lifecycle_trace_v2.json",
         "summary.json",
     } <= set(files)
@@ -833,6 +834,9 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
     service_lifecycle_trace = json.loads(
         (package_dir / "service_lifecycle_trace_v2.json").read_text(encoding="utf-8")
     )
+    route_detail_index = json.loads(
+        (package_dir / "route_detail_index_v1.json").read_text(encoding="utf-8")
+    )
     review_summary = json.loads(
         (package_dir / "review_summary_v1.json").read_text(encoding="utf-8")
     )
@@ -850,6 +854,14 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
     assert service_lifecycle_trace["summary"] == config_snapshot["status"][
         "service_lifecycle_trace_v2"
     ]
+    assert route_detail_index["type"] == "RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_V1"
+    assert route_detail_index["route_trust"]["trust_id"] == config_snapshot["status"][
+        "route_provenance_trust_summary_v1"
+    ]["trust_id"]
+    assert route_detail_index["route_summary"]["route_count"] == config_snapshot[
+        "status"
+    ]["route_explanation_summary_v1"]["route_count"]
+    assert route_detail_index["route_detail_index_hash"].startswith("sha256:")
     assert review_summary["type"] == "RUNTIME_EXPORT_REVIEW_SUMMARY_V1"
     assert review_summary["package_id"] == exported["package_id"]
     assert review_summary["review_status"] == "REVIEW_READY"
@@ -899,6 +911,7 @@ def test_demo_adapter_exports_deterministic_runtime_archive(tmp_path) -> None:
             "manifest.json",
             "metrics.csv",
             "review_summary_v1.json",
+            "route_detail_index_v1.json",
             "service_lifecycle_trace_v2.json",
             "summary.json",
         } <= set(names)
@@ -994,6 +1007,7 @@ def test_demo_adapter_persists_runtime_export_catalog(tmp_path) -> None:
         "manifest.json",
         "metrics.csv",
         "review_summary_v1.json",
+        "route_detail_index_v1.json",
         "summary.json",
     } <= {item["filename"] for item in package_record["files"]}
 
@@ -1041,6 +1055,11 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
         "service_lifecycle_trace_v2.json",
         export_root,
     )
+    route_detail_index_artifact = control_plane.runtime_export_package_artifact(
+        package_id,
+        "route_detail_index_v1.json",
+        export_root,
+    )
     review_summary_artifact = control_plane.runtime_export_package_artifact(
         package_id,
         "review_summary_v1.json",
@@ -1083,6 +1102,19 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
     )
     assert service_trace["type"] == "SERVICE_LIFECYCLE_TRACE_EXPORT_V2"
     assert service_trace["summary"]["version"] == "v2"
+    assert (
+        Path(str(route_detail_index_artifact["path"])).name
+        == "route_detail_index_v1.json"
+    )
+    assert (
+        route_detail_index_artifact["content_type"]
+        == "application/json; charset=utf-8"
+    )
+    route_detail_index = json.loads(
+        Path(str(route_detail_index_artifact["path"])).read_text(encoding="utf-8")
+    )
+    assert route_detail_index["type"] == "RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_V1"
+    assert route_detail_index["route_detail_index_hash"].startswith("sha256:")
     assert Path(str(review_summary_artifact["path"])).name == "review_summary_v1.json"
     assert review_summary_artifact["content_type"] == "application/json; charset=utf-8"
     review_summary = json.loads(

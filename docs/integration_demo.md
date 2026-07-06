@@ -138,7 +138,8 @@ The live export writes a deterministic result package under
 `artifacts/runtime_exports`. Each package contains `manifest.json`,
 `config_snapshot.json`, `events.jsonl`, `metrics.csv`, `summary.json`, and the
 additional `service_lifecycle_trace_v2.json` observability artifact plus
-`review_summary_v1.json` for user-readable reproducibility review and
+`route_detail_index_v1.json` for route evidence review,
+`review_summary_v1.json` for user-readable reproducibility review, and
 `diagnostics_bundle_v1.json` for deterministic package health, model boundary,
 and operator next-action review.
 The archive endpoint returns the same package as a ZIP download with stable
@@ -177,6 +178,11 @@ dashboard model-trust surfaces. It reports route explanation coverage, path and
 next-hop context coverage, bottleneck components, hidden route windows, and
 flow-level route proxy caveats. It reuses `route_explanation_summary_v1`; it
 does not recompute routes or introduce all-pairs route analysis.
+
+Runtime exports also write `route_detail_index_v1.json`, which preserves the
+current route explanation window and route trust sample ids for offline review.
+It is an index of backend-owned route explanation rows, not a packet trace or
+route recomputation artifact.
 
 Service trace detail APIs:
 

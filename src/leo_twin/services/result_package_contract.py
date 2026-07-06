@@ -16,6 +16,9 @@ RUNTIME_EXPORT_REVIEW_SUMMARY_V1_ID = "leo_twin.runtime_export_review_summary.v1
 RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1_ID = (
     "leo_twin.runtime_export_diagnostics_bundle.v1"
 )
+RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_V1_ID = (
+    "leo_twin.runtime_export_route_detail_index.v1"
+)
 
 
 _REQUIRED_FILE_SPECS: tuple[dict[str, object], ...] = (
@@ -77,6 +80,12 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
                 "filename": "service_lifecycle_trace_v2.json",
                 "format": "json",
                 "content": "communication-compute lifecycle trace for offline review",
+            },
+            {
+                "logical_name": "route_detail_index_v1",
+                "filename": "route_detail_index_v1.json",
+                "format": "json",
+                "content": "indexed route explanation rows for route trust review",
             },
             {
                 "logical_name": "review_summary_v1",
@@ -222,6 +231,7 @@ def build_runtime_export_review_summary_v1(
             "Use events.jsonl, metrics.csv, and summary.json as replay evidence.",
             "Use service_lifecycle_trace_v2.json for communication-compute trace review.",
             "Use route_trust to inspect flow-level route explanation evidence.",
+            "Use route_detail_index_v1.json to inspect exported route explanation rows.",
             "This package does not contain packet captures or external simulator artifacts.",
         ),
     }
@@ -332,6 +342,86 @@ def build_runtime_export_diagnostics_bundle_v1(
     }
     diagnostics["diagnostics_hash"] = stable_hash_payload(diagnostics)
     return diagnostics
+
+
+def build_runtime_export_route_detail_index_v1(
+    *,
+    package_id: str,
+    package_dir: str,
+    config_snapshot: Mapping[str, Any],
+) -> dict[str, object]:
+    """Build a deterministic route detail index for result-package review."""
+
+    if not isinstance(config_snapshot, Mapping):
+        raise TypeError("config_snapshot must be a mapping")
+
+    status = _mapping(config_snapshot.get("status"))
+    route_summary = _mapping(status.get("route_explanation_summary_v1"))
+    route_trust = _runtime_export_route_trust_evidence(status)
+    route_items = tuple(
+        _runtime_export_route_detail_record(item)
+        for item in _records(route_summary.get("items"))
+    )
+    route_ids = tuple(
+        str(item.get("route_id", "")) for item in route_items if str(item.get("route_id", ""))
+    )
+    route_id_set = set(route_ids)
+    sample_route_ids = _string_tuple(route_trust.get("sample_route_ids"))
+    indexed_sample_route_ids = tuple(
+        route_id for route_id in sample_route_ids if route_id in route_id_set
+    )
+    missing_sample_route_ids = tuple(
+        route_id for route_id in sample_route_ids if route_id not in route_id_set
+    )
+    hidden_route_count = max(
+        0,
+        _integer(route_summary.get("route_count")) - len(route_items),
+    )
+    index: dict[str, object] = {
+        "type": "RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_V1",
+        "version": "v1",
+        "index_id": RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_V1_ID,
+        "source": "BACKEND_RUNTIME_EXPORT",
+        "index_scope": "ROUTE_EXPLANATION_WINDOW_EXPORT",
+        "package_id": str(package_id),
+        "package_dir": str(package_dir),
+        "route_model": str(route_trust.get("route_model", "")),
+        "packet_level_simulation": _bool(route_trust.get("packet_level_simulation")),
+        "all_pairs_computation": _bool(route_trust.get("all_pairs_computation")),
+        "route_summary": {
+            "source": str(route_summary.get("source", "")),
+            "summary_scope": str(route_summary.get("summary_scope", "")),
+            "cursor": _integer(route_summary.get("cursor")),
+            "limit": _integer(route_summary.get("limit")),
+            "next_cursor": _integer(route_summary.get("next_cursor")),
+            "has_more": _bool(route_summary.get("has_more")),
+            "route_count": _integer(route_summary.get("route_count")),
+            "indexed_route_count": len(route_items),
+            "hidden_route_count": hidden_route_count,
+            "available_route_count": _integer(
+                route_summary.get("available_route_count")
+            ),
+            "blocked_route_count": _integer(route_summary.get("blocked_route_count")),
+            "over_demand_route_count": _integer(
+                route_summary.get("over_demand_route_count")
+            ),
+            "compute_service_route_count": _integer(
+                route_summary.get("compute_service_route_count")
+            ),
+            "network_service_route_count": _integer(
+                route_summary.get("network_service_route_count")
+            ),
+        },
+        "route_trust": route_trust,
+        "route_ids": route_ids,
+        "sample_route_ids": sample_route_ids,
+        "indexed_sample_route_ids": indexed_sample_route_ids,
+        "missing_sample_route_ids": missing_sample_route_ids,
+        "source_order_policy": "route_explanation_summary_v1.items order is preserved",
+        "routes": route_items,
+    }
+    index["route_detail_index_hash"] = stable_hash_payload(index)
+    return index
 
 
 def summarize_result_package_record_v1(
@@ -586,6 +676,44 @@ def _runtime_export_route_trust_evidence(
         "sample_route_ids": _string_tuple(route_trust.get("sample_route_ids")),
         "caveats": _string_tuple(route_trust.get("caveats")),
     }
+
+
+def _runtime_export_route_detail_record(
+    item: Mapping[str, Any],
+) -> dict[str, object]:
+    path = _string_tuple(item.get("path"))
+    next_hop_ids = _string_tuple(item.get("next_hop_ids"))
+    return {
+        "route_id": str(item.get("route_id", "")),
+        "flow_id": str(item.get("flow_id", "")),
+        "user_id": str(item.get("user_id", "")),
+        "source_id": str(item.get("source_id", "")),
+        "destination_id": str(item.get("destination_id", "")),
+        "selected_satellite_id": str(item.get("selected_satellite_id", "")),
+        "primary_next_hop_id": str(item.get("primary_next_hop_id", "")),
+        "next_hop_ids": next_hop_ids,
+        "hop_count": _integer(item.get("hop_count")),
+        "path": path,
+        "path_label": str(item.get("path_label", "")),
+        "available": _bool(item.get("available")),
+        "capacity_mbps": _number(item.get("capacity_mbps")),
+        "demand_mbps": _number(item.get("demand_mbps")),
+        "latency_s": _number(item.get("latency_s")),
+        "loss_proxy_rate": _number(item.get("loss_proxy_rate")),
+        "route_pressure_proxy": _number(item.get("route_pressure_proxy")),
+        "business_type": str(item.get("business_type", "")),
+        "business_label": str(item.get("business_label", "")),
+        "bottleneck_component": str(item.get("bottleneck_component", "")),
+        "bottleneck_reason": str(item.get("bottleneck_reason", "")),
+        "bottleneck_reason_label": str(item.get("bottleneck_reason_label", "")),
+        "explanation_label": str(item.get("explanation_label", "")),
+    }
+
+
+def _records(value: object) -> tuple[Mapping[str, Any], ...]:
+    if not isinstance(value, (list, tuple)):
+        return ()
+    return tuple(item for item in value if isinstance(item, Mapping))
 
 
 def _file_records(value: object) -> tuple[Mapping[str, Any], ...]:

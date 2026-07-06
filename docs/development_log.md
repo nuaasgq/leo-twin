@@ -13291,3 +13291,54 @@ change.
   - Add route detail artifact export or package-linked route detail endpoints
     so a reviewer can drill from `route_trust.sample_route_ids` to exact route
     records.
+
+## 2026-07-06 - Result Package Route Detail Index v1
+
+- Branch: `feature/T278-result-package-route-detail-index-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: advance the result-package evidence lane by adding
+  `route_detail_index_v1.json` to runtime export packages. The new artifact is
+  built from `config_snapshot.status.route_explanation_summary_v1` and
+  `config_snapshot.status.route_provenance_trust_summary_v1`; it preserves the
+  exported route explanation window, route-trust sample route ids, indexed route
+  ids, and compact flow-level route explanation rows for offline review. It
+  does not recompute paths, simulate packets, compute all satellite pairs,
+  modify route selection, or change Event Kernel behavior.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `examples/integration_demo/control_plane.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/result_package_contract_v1.md`
+  - `docs/route_provenance_trust_summary_v1.md`
+  - `docs/integration_demo.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src/leo_twin/services/result_package_contract.py examples/integration_demo/control_plane.py`
+    - Result: passed.
+  - `python -m pytest tests/unit/test_result_package_contract_v1.py -q`
+    - Result: passed, 7 tests.
+  - `python -m pytest tests/integration/test_result_package_export_v1.py -q`
+    - Result: passed, 1 test.
+  - `python -m pytest tests/unit/test_result_package_contract_v1.py tests/integration/test_result_package_export_v1.py tests/unit/test_user_guide_v2_docs.py -q`
+    - Result: passed, 10 tests.
+  - `python -m pytest tests/integration/test_runtime_session_control.py::test_demo_adapter_exports_runtime_result_package tests/integration/test_runtime_session_control.py::test_demo_adapter_exports_deterministic_runtime_archive tests/integration/test_runtime_session_control.py::test_demo_adapter_persists_runtime_export_catalog tests/integration/test_runtime_session_control.py::test_demo_adapter_serves_persisted_runtime_export_artifacts -q`
+    - Result: passed, 4 tests.
+- Problems encountered:
+  - Adding a new recommended artifact changes result-package recommended-file
+    expectations. Updated the contract tests and runtime export tests to verify
+    `route_detail_index_v1.json` is emitted, included in package records, and
+    served through the persisted package file endpoint.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - `route_detail_index_v1.json` indexes the exported route explanation window;
+    it does not yet export every hidden route beyond the current window.
+  - Dashboard export cards can show the file via artifact-health rows, but this
+    task did not add a dedicated route detail index viewer.
+- Recommended follow-up:
+  - Add a dashboard export-side viewer for `route_detail_index_v1.json` with
+    route id search and links back to live route detail endpoints.

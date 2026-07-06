@@ -5,9 +5,11 @@ import json
 from leo_twin.services.result_package_contract import (
     RESULT_PACKAGE_CONTRACT_V1_ID,
     RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1_ID,
+    RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_V1_ID,
     RUNTIME_EXPORT_REVIEW_SUMMARY_V1_ID,
     RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID,
     build_runtime_export_diagnostics_bundle_v1,
+    build_runtime_export_route_detail_index_v1,
     build_runtime_export_review_summary_v1,
     result_package_contract_v1_to_dict,
     summarize_result_package_record_v1,
@@ -33,6 +35,7 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
     ]
     assert [spec["filename"] for spec in first["recommended_files"]] == [
         "service_lifecycle_trace_v2.json",
+        "route_detail_index_v1.json",
         "review_summary_v1.json",
         "diagnostics_bundle_v1.json",
     ]
@@ -73,6 +76,7 @@ def test_result_package_summary_accepts_complete_package_record() -> None:
     assert summary["file_hash_count"] == 5
     assert summary["missing_recommended_files"] == (
         "service_lifecycle_trace_v2.json",
+        "route_detail_index_v1.json",
         "review_summary_v1.json",
         "diagnostics_bundle_v1.json",
     )
@@ -110,6 +114,7 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
             "current_sim_time": 12.5,
             "processed_event_count": 42,
             "queued_event_count": 3,
+            "route_explanation_summary_v1": _route_summary(),
             "route_provenance_trust_summary_v1": _route_trust(),
         },
         "config": {"seed": 7, "duration_seconds": 120},
@@ -134,6 +139,7 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
         "metrics.csv",
         "diagnostics_bundle_v1.json",
         "review_summary_v1.json",
+        "route_detail_index_v1.json",
         "service_lifecycle_trace_v2.json",
         "summary.json",
     )
@@ -187,6 +193,7 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
             "current_sim_time": 120,
             "processed_event_count": 4200,
             "queued_event_count": 0,
+            "route_explanation_summary_v1": _route_summary(),
             "route_provenance_trust_summary_v1": _route_trust(),
         },
         "config": {"seed": 7, "duration_seconds": 120},
@@ -211,6 +218,7 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
         "manifest.json",
         "metrics.csv",
         "review_summary_v1.json",
+        "route_detail_index_v1.json",
         "service_lifecycle_trace_v2.json",
         "summary.json",
     )
@@ -261,6 +269,46 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
     )
 
 
+def test_runtime_export_route_detail_index_v1_is_deterministic_and_review_ready() -> None:
+    config_snapshot = {
+        "type": "RUNTIME_CONFIG_SNAPSHOT",
+        "status": {
+            "route_explanation_summary_v1": _route_summary(),
+            "route_provenance_trust_summary_v1": _route_trust(),
+        },
+    }
+
+    first = build_runtime_export_route_detail_index_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+    )
+    second = build_runtime_export_route_detail_index_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+    )
+
+    assert first == second
+    assert first["index_id"] == RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_V1_ID
+    assert first["route_model"] == "FLOW_LEVEL_ROUTE_PROXY"
+    assert first["packet_level_simulation"] is False
+    assert first["all_pairs_computation"] is False
+    assert first["route_summary"]["route_count"] == 2
+    assert first["route_summary"]["indexed_route_count"] == 2
+    assert first["route_summary"]["hidden_route_count"] == 0
+    assert first["route_ids"] == ("route-0", "route-1")
+    assert first["sample_route_ids"] == ("route-0", "route-1")
+    assert first["indexed_sample_route_ids"] == ("route-0", "route-1")
+    assert first["missing_sample_route_ids"] == ()
+    assert first["routes"][0]["route_id"] == "route-0"
+    assert first["routes"][0]["path_label"] == "user-0 -> sat-0"
+    assert first["route_detail_index_hash"].startswith("sha256:")
+    assert json.loads(json.dumps(first, sort_keys=True))["index_id"] == (
+        RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_V1_ID
+    )
+
+
 def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -> None:
     config_snapshot = {
         "type": "RUNTIME_CONFIG_SNAPSHOT",
@@ -292,6 +340,7 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
         "manifest.json",
         "metrics.csv",
         "review_summary_v1.json",
+        "route_detail_index_v1.json",
         "service_lifecycle_trace_v2.json",
         "summary.json",
     )
@@ -356,4 +405,59 @@ def _route_trust() -> dict[str, object]:
         "bottleneck_components": ("capacity",),
         "sample_route_ids": ("route-0", "route-1"),
         "caveats": ("Flow-level route proxy; no packet replay.",),
+    }
+
+
+def _route_summary() -> dict[str, object]:
+    return {
+        "version": "v1",
+        "source": "BACKEND_RUNTIME_SNAPSHOT",
+        "summary_scope": "ROUTE_EXPLANATION_WINDOW",
+        "cursor": 0,
+        "limit": 500,
+        "next_cursor": 2,
+        "has_more": False,
+        "route_count": 2,
+        "item_count": 2,
+        "available_route_count": 2,
+        "blocked_route_count": 0,
+        "over_demand_route_count": 1,
+        "compute_service_route_count": 1,
+        "network_service_route_count": 1,
+        "items": (
+            _route_item("route-0", "flow-0", "user-0", "sat-0"),
+            _route_item("route-1", "flow-1", "user-1", "sat-1"),
+        ),
+    }
+
+
+def _route_item(
+    route_id: str,
+    flow_id: str,
+    user_id: str,
+    satellite_id: str,
+) -> dict[str, object]:
+    return {
+        "route_id": route_id,
+        "flow_id": flow_id,
+        "user_id": user_id,
+        "source_id": user_id,
+        "destination_id": satellite_id,
+        "selected_satellite_id": satellite_id,
+        "primary_next_hop_id": satellite_id,
+        "next_hop_ids": (satellite_id,),
+        "hop_count": 1,
+        "path_label": f"{user_id} -> {satellite_id}",
+        "available": True,
+        "capacity_mbps": 80.0,
+        "demand_mbps": 60.0,
+        "latency_s": 0.1,
+        "loss_proxy_rate": 0.01,
+        "route_pressure_proxy": 0.75,
+        "business_type": "COMPUTE_SERVICE" if route_id == "route-0" else "DATA_TRANSFER",
+        "business_label": "compute service" if route_id == "route-0" else "data transfer",
+        "bottleneck_component": "capacity",
+        "bottleneck_reason": "ROUTE_DEMAND_NEAR_CAPACITY",
+        "bottleneck_reason_label": "Route demand is near capacity",
+        "explanation_label": "flow-level route explanation",
     }

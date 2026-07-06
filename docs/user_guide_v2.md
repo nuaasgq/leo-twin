@@ -138,6 +138,7 @@ Each result package contains:
 - `summary.json`
 - `manifest.json`
 - `service_lifecycle_trace_v2.json`
+- `route_detail_index_v1.json`
 - `review_summary_v1.json`
 - `diagnostics_bundle_v1.json`
 

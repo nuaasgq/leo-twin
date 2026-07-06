@@ -93,9 +93,15 @@ contract does not recompute routes. If an older package lacks the runtime
 status field, the diagnostics bundle reports `ROUTE_TRUST_EVIDENCE_MISSING`
 while preserving package export compatibility.
 
+T278 adds `route_detail_index_v1.json` so a result package also contains the
+exported route explanation window and the route ids referenced by
+`route_trust.sample_route_ids`. The index is still a flow-level route evidence
+artifact; it does not add packet-level replay, all-pairs computation, or new
+route selection behavior.
+
 ## Follow-Up
 
-- Link route trust rows to exact route detail endpoints when a selected route
-  is available.
+- Link route trust rows in the dashboard export view directly to
+  `route_detail_index_v1.json` rows.
 - Add a wider route provenance drawer if future routing policies expose
   multiple candidate path alternatives.

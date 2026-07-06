@@ -199,6 +199,10 @@ Tasks:
     `review_summary_v1.json` and `diagnostics_bundle_v1.json`, so result
     packages can be reviewed without manually searching the full
     `config_snapshot.status` object.
+  - Status: T278 adds `route_detail_index_v1.json` to runtime result packages.
+    The artifact preserves the exported route explanation window,
+    route-trust sample route ids, indexed route ids, and compact route evidence
+    rows without recomputing paths or adding packet-level behavior.
 
 ### WS4. Compute Network Model v2
 
@@ -491,7 +495,9 @@ Tasks:
     agreement, and artifact source/status rows. T277 adds route trust evidence
     to both review summary and diagnostics bundle, including a compatibility
     warning for older packages that lack
-    `route_provenance_trust_summary_v1`.
+    `route_provenance_trust_summary_v1`. T278 adds
+    `route_detail_index_v1.json` as a package artifact so route trust samples
+    can be reviewed against exported route explanation rows.
 
 ### WS9. Delivery and Operations v2
 

@@ -73,6 +73,7 @@ from leo_twin.services.runtime_reproducibility import (
 )
 from leo_twin.services.result_package_contract import (
     build_runtime_export_diagnostics_bundle_v1,
+    build_runtime_export_route_detail_index_v1,
     build_runtime_export_review_summary_v1,
 )
 from leo_twin.services.scenario_builder import (
@@ -119,6 +120,7 @@ _FRONTEND_EVENT_TYPES = frozenset(
 _RUNTIME_EXPORT_CATALOG_FILENAME = "runtime_export_catalog_v1.json"
 _RUNTIME_EXPORT_RESTORE_COMMAND = "RESTORE_EXPORT_PACKAGE"
 _SERVICE_LIFECYCLE_TRACE_EXPORT_FILENAME = "service_lifecycle_trace_v2.json"
+_RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_FILENAME = "route_detail_index_v1.json"
 _RUNTIME_EXPORT_REVIEW_SUMMARY_FILENAME = "review_summary_v1.json"
 _RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_FILENAME = "diagnostics_bundle_v1.json"
 
@@ -639,9 +641,22 @@ class DemoControlPlane:
             stable_json_pretty(_runtime_service_lifecycle_trace_export(status)),
             encoding="utf-8",
         )
+        route_detail_index_path = (
+            package_dir / _RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_FILENAME
+        )
+        route_detail_index = build_runtime_export_route_detail_index_v1(
+            package_id=package_id,
+            package_dir=str(package_dir),
+            config_snapshot=config_snapshot,
+        )
+        route_detail_index_path.write_text(
+            stable_json_pretty(route_detail_index),
+            encoding="utf-8",
+        )
         written_files["config_snapshot"] = config_snapshot_path
         written_files["manifest"] = manifest_path
         written_files["service_lifecycle_trace_v2"] = service_lifecycle_trace_path
+        written_files["route_detail_index_v1"] = route_detail_index_path
         review_summary_path = package_dir / _RUNTIME_EXPORT_REVIEW_SUMMARY_FILENAME
         diagnostics_bundle_path = (
             package_dir / _RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_FILENAME

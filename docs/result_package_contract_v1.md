@@ -60,6 +60,10 @@ Every v1 runtime export package must include:
 Current runtime exports may also include additional deterministic artifacts.
 `service_lifecycle_trace_v2.json` is emitted as an optional observability file
 for offline communication-compute service lifecycle review.
+`route_detail_index_v1.json` is emitted as an optional route evidence artifact.
+It preserves the exported `route_explanation_summary_v1` window, route trust
+sample ids, indexed route ids, and compact flow-level route explanation rows
+for offline route trust review.
 `review_summary_v1.json` is emitted as a user-readable review entry point for
 the package. It summarizes scenario scale, runtime progress, reproducibility
 hashes, artifact coverage, route trust evidence, and review readiness without
@@ -112,6 +116,38 @@ The manifest id must be:
 ```text
 leo_twin.runtime_reproducibility_manifest.v1
 ```
+
+## Route Detail Index
+
+The route detail index artifact has type:
+
+```text
+RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_V1
+```
+
+The index id is:
+
+```text
+leo_twin.runtime_export_route_detail_index.v1
+```
+
+It reports:
+
+- package id and package directory;
+- route model and model-boundary flags;
+- route summary counters copied from
+  `config_snapshot.status.route_explanation_summary_v1`;
+- route trust summary copied from
+  `config_snapshot.status.route_provenance_trust_summary_v1`;
+- exported route ids, route-trust sample route ids, indexed sample ids, and
+  missing sample ids;
+- compact route explanation rows with flow id, user id, selected satellite,
+  next hop, path label, capacity, demand, latency, loss proxy, business type,
+  and bottleneck explanation.
+
+The route detail index preserves the current backend route explanation window.
+It does not replay events, recompute paths, compute all satellite pairs, or
+simulate packets.
 
 ## Diagnostics Bundle
 
