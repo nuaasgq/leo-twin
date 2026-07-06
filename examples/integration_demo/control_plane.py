@@ -71,6 +71,9 @@ from leo_twin.services.runtime_reproducibility import (
     stable_hash_payload,
     stable_json_payload,
 )
+from leo_twin.services.result_package_contract import (
+    build_runtime_export_review_summary_v1,
+)
 from leo_twin.services.scenario_builder import (
     scenario_builder_backend_summary,
     scenario_builder_config_from_sees_config,
@@ -115,6 +118,7 @@ _FRONTEND_EVENT_TYPES = frozenset(
 _RUNTIME_EXPORT_CATALOG_FILENAME = "runtime_export_catalog_v1.json"
 _RUNTIME_EXPORT_RESTORE_COMMAND = "RESTORE_EXPORT_PACKAGE"
 _SERVICE_LIFECYCLE_TRACE_EXPORT_FILENAME = "service_lifecycle_trace_v2.json"
+_RUNTIME_EXPORT_REVIEW_SUMMARY_FILENAME = "review_summary_v1.json"
 
 
 class RuntimeExportArtifactError(LookupError):
@@ -636,6 +640,27 @@ class DemoControlPlane:
         written_files["config_snapshot"] = config_snapshot_path
         written_files["manifest"] = manifest_path
         written_files["service_lifecycle_trace_v2"] = service_lifecycle_trace_path
+        review_summary_path = package_dir / _RUNTIME_EXPORT_REVIEW_SUMMARY_FILENAME
+        review_summary = build_runtime_export_review_summary_v1(
+            package_id=package_id,
+            package_dir=str(package_dir),
+            config_snapshot=config_snapshot,
+            manifest=manifest,
+            artifact_filenames=tuple(
+                sorted(
+                    path.name
+                    for path in (
+                        *written_files.values(),
+                        review_summary_path,
+                    )
+                )
+            ),
+        )
+        review_summary_path.write_text(
+            stable_json_pretty(review_summary),
+            encoding="utf-8",
+        )
+        written_files["review_summary_v1"] = review_summary_path
 
         files = tuple(
             _runtime_export_file_record(name, path)

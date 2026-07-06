@@ -65,6 +65,7 @@ import {
   runtimeExportPackageCompareHref,
   runtimeExportPackageManifestHref,
   runtimeExportPackageRecordHref,
+  runtimeExportPackageReviewSummaryHref,
   runtimeExportRestorePreflightHref,
   userConfigurationExportHref,
   userConfigurationSchemaHref,
@@ -1159,6 +1160,7 @@ export const DataPanel = memo(function DataPanel({
                     <a href={row.manifestHref} download>
                       清单
                     </a>
+                    <a href={row.reviewSummaryHref}>审阅</a>
                     {row.archiveHref ? (
                       <a href={row.archiveHref} download>
                         归档
@@ -8204,6 +8206,7 @@ export interface DataPanelExportCatalogRow {
   hashLabel: string;
   recordHref: string;
   manifestHref: string;
+  reviewSummaryHref: string;
   archiveHref: string | null;
   compareHref: string;
   restorePreflightHref: string;
@@ -8245,6 +8248,7 @@ export function buildDataPanelExportCatalogDisplay(
         hashLabel: shortRuntimeHash(exportHash),
         recordHref: runtimeExportPackageRecordHref(record.package_id),
         manifestHref: runtimeExportPackageManifestHref(record.package_id),
+        reviewSummaryHref: runtimeExportPackageReviewSummaryHref(record.package_id),
         archiveHref: record.archive_filename
           ? runtimeExportPackageArchiveHref(record.package_id)
           : null,

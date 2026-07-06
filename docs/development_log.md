@@ -12705,3 +12705,62 @@ change.
 - Recommended follow-up:
   - Add a dedicated service trace export/action affordance for filtered trace
     windows, or continue the v2 dashboard detail-browser virtual scrolling work.
+
+## 2026-07-06 - Runtime Export Review Summary v1
+
+- Branch: `feature/T267-runtime-export-review-summary-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a deterministic user-readable review summary to runtime result
+  packages. New exports now include `review_summary_v1.json` with package id,
+  scenario scale, runtime progress, manifest/config hashes, artifact coverage,
+  review readiness, and review notes. The result package contract declares the
+  summary as a recommended artifact, the demo backend serves it through
+  `/runtime/export/packages/{package_id}/review-summary`, and the standalone
+  dashboard export catalog links each package row to the review summary.
+  Event Kernel behavior, runtime advancement, model behavior, packet-level
+  semantics, and restore behavior remain unchanged.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `frontend/src/app/api.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/result_package_contract_v1.md`
+  - `docs/integration_demo.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_result_package_contract_v1.py tests/integration/test_result_package_export_v1.py tests/integration/test_runtime_session_control.py::test_demo_adapter_exports_runtime_result_package tests/integration/test_runtime_session_control.py::test_demo_adapter_exports_deterministic_runtime_archive tests/integration/test_runtime_session_control.py::test_demo_adapter_persists_runtime_export_catalog tests/integration/test_runtime_session_control.py::test_demo_adapter_serves_persisted_runtime_export_artifacts tests/integration/test_runtime_session_control.py::test_demo_server_stream_query_parses_cursor_options -q`
+    - Result: passed, 10 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed, using the bundled Node/Pnpm runtime because the shell
+      PATH does not expose `node`.
+  - `pnpm --dir frontend test api.test.ts dataPanel.test.ts`
+    - Result: passed, 169 tests.
+  - `python -m pytest tests/integration/test_runtime_session_control.py tests/integration/test_result_package_export_v1.py tests/unit/test_result_package_contract_v1.py -q`
+    - Result: passed, 28 tests.
+  - `pnpm --dir frontend test`
+    - Result: passed, 361 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite reported the existing large DataPanel chunk warning.
+- Problems encountered:
+  - The export review summary must not include its own file hash, otherwise the
+    artifact would become circular. The summary records artifact filenames and
+    required-file coverage instead; package/catalog file hashes still cover the
+    actual artifact bytes.
+  - The dashboard export catalog still contains existing localized text that is
+    displayed as mojibake in the terminal, so the new review link was inserted
+    using stable JSX context without rewriting existing labels.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The review summary is a compact JSON artifact and link. A future task can
+    render it as a full dashboard review drawer with artifact health badges.
+- Recommended follow-up:
+  - Add a dashboard review drawer for `review_summary_v1.json` and connect it
+    to result package compare/restore context.

@@ -40,10 +40,11 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert (package_dir / "metrics.csv").exists()
     assert (package_dir / "summary.json").exists()
     assert (package_dir / "manifest.json").exists()
+    assert (package_dir / "review_summary_v1.json").exists()
     assert (package_dir / "service_lifecycle_trace_v2.json").exists()
-    assert "service_lifecycle_trace_v2.json" in {
-        str(record["filename"]) for record in package["files"]
-    }
+    filenames = {str(record["filename"]) for record in package["files"]}
+    assert "service_lifecycle_trace_v2.json" in filenames
+    assert "review_summary_v1.json" in filenames
 
     manifest = json.loads((package_dir / "manifest.json").read_text(encoding="utf-8"))
     config_snapshot = json.loads(
@@ -51,6 +52,9 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     )
     service_lifecycle_trace = json.loads(
         (package_dir / "service_lifecycle_trace_v2.json").read_text(encoding="utf-8")
+    )
+    review_summary = json.loads(
+        (package_dir / "review_summary_v1.json").read_text(encoding="utf-8")
     )
 
     assert manifest["manifest_id"] == RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID
@@ -62,6 +66,14 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert service_lifecycle_trace["type"] == "SERVICE_LIFECYCLE_TRACE_EXPORT_V2"
     assert service_lifecycle_trace["summary"] == config_snapshot["status"][
         "service_lifecycle_trace_v2"
+    ]
+    assert review_summary["type"] == "RUNTIME_EXPORT_REVIEW_SUMMARY_V1"
+    assert review_summary["review_status"] == "REVIEW_READY"
+    assert review_summary["reproducibility"]["manifest_hash"] == manifest[
+        "manifest_hash"
+    ]
+    assert "review_summary_v1.json" in review_summary["artifacts"][
+        "artifact_filenames"
     ]
 
 

@@ -792,6 +792,7 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
         "events.jsonl",
         "manifest.json",
         "metrics.csv",
+        "review_summary_v1.json",
         "service_lifecycle_trace_v2.json",
         "summary.json",
     } <= set(files)
@@ -810,6 +811,9 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
     service_lifecycle_trace = json.loads(
         (package_dir / "service_lifecycle_trace_v2.json").read_text(encoding="utf-8")
     )
+    review_summary = json.loads(
+        (package_dir / "review_summary_v1.json").read_text(encoding="utf-8")
+    )
 
     assert manifest == exported["manifest"]
     assert manifest["source"] == "BACKEND_RUNTIME_STATUS"
@@ -821,6 +825,13 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
     assert service_lifecycle_trace["summary"] == config_snapshot["status"][
         "service_lifecycle_trace_v2"
     ]
+    assert review_summary["type"] == "RUNTIME_EXPORT_REVIEW_SUMMARY_V1"
+    assert review_summary["package_id"] == exported["package_id"]
+    assert review_summary["review_status"] == "REVIEW_READY"
+    assert review_summary["reproducibility"]["manifest_hash"] == manifest[
+        "manifest_hash"
+    ]
+    assert review_summary["artifacts"]["review_summary_exported"] is True
     assert summary["event_count"] >= 1
     assert (package_dir / "metrics.csv").read_text(encoding="utf-8").startswith(
         "sim_time,metric_name,entity_id,value,tags\n"
@@ -858,6 +869,7 @@ def test_demo_adapter_exports_deterministic_runtime_archive(tmp_path) -> None:
             "events.jsonl",
             "manifest.json",
             "metrics.csv",
+            "review_summary_v1.json",
             "service_lifecycle_trace_v2.json",
             "summary.json",
         } <= set(names)
@@ -951,6 +963,7 @@ def test_demo_adapter_persists_runtime_export_catalog(tmp_path) -> None:
         "events.jsonl",
         "manifest.json",
         "metrics.csv",
+        "review_summary_v1.json",
         "summary.json",
     } <= {item["filename"] for item in package_record["files"]}
 
@@ -998,6 +1011,11 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
         "service_lifecycle_trace_v2.json",
         export_root,
     )
+    review_summary_artifact = control_plane.runtime_export_package_artifact(
+        package_id,
+        "review_summary_v1.json",
+        export_root,
+    )
     archive_artifact = control_plane.runtime_export_package_archive_artifact(
         package_id,
         export_root,
@@ -1030,6 +1048,14 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
     )
     assert service_trace["type"] == "SERVICE_LIFECYCLE_TRACE_EXPORT_V2"
     assert service_trace["summary"]["version"] == "v2"
+    assert Path(str(review_summary_artifact["path"])).name == "review_summary_v1.json"
+    assert review_summary_artifact["content_type"] == "application/json; charset=utf-8"
+    review_summary = json.loads(
+        Path(str(review_summary_artifact["path"])).read_text(encoding="utf-8")
+    )
+    assert review_summary["type"] == "RUNTIME_EXPORT_REVIEW_SUMMARY_V1"
+    assert review_summary["review_status"] == "REVIEW_READY"
+    assert review_summary["summary_hash"].startswith("sha256:")
     assert Path(str(archive_artifact["path"])) == Path(str(exported["archive"]["path"]))
     assert archive_artifact["filename"].endswith(".zip")
     assert archive_artifact["sha256"] == exported["archive"]["sha256"]
@@ -1274,6 +1300,9 @@ def test_demo_server_stream_query_parses_cursor_options() -> None:
     assert _runtime_export_package_route(
         "/runtime/export/packages/pkg%201/manifest"
     ) == ("pkg 1", "manifest", None)
+    assert _runtime_export_package_route(
+        "/runtime/export/packages/pkg%201/review-summary"
+    ) == ("pkg 1", "review-summary", None)
     assert _runtime_export_package_route(
         "/runtime/export/packages/pkg%201/compare"
     ) == ("pkg 1", "compare", None)

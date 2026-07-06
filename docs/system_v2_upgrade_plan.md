@@ -452,7 +452,12 @@ Tasks:
     (`config_snapshot.json`, `events.jsonl`, `metrics.csv`, `summary.json`,
     `manifest.json`). It also adds a package-record summary validator and a
     real integration export test that verifies the package satisfies the
-    contract.
+    contract. T267 adds `review_summary_v1.json` and
+    `leo_twin.runtime_export_review_summary.v1` so every new runtime export
+    package has a deterministic user-readable review entry point with scenario
+    scale, runtime progress, manifest/config hashes, artifact coverage, and
+    review readiness. The demo backend serves it at
+    `/runtime/export/packages/{package_id}/review-summary`.
 
 ### WS9. Delivery and Operations v2
 

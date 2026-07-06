@@ -30,6 +30,7 @@ import {
   runtimeExportPackageFileHref,
   runtimeExportPackageManifestHref,
   runtimeExportPackageRecordHref,
+  runtimeExportPackageReviewSummaryHref,
   runtimeExportRestorePreflightHref,
   runtimeDetailEntityHref,
   userConfigurationExportHref,
@@ -56,6 +57,9 @@ describe("runtime API diagnostics", () => {
     );
     expect(runtimeExportPackageManifestHref("pkg 1")).toBe(
       "/runtime/export/packages/pkg%201/manifest"
+    );
+    expect(runtimeExportPackageReviewSummaryHref("pkg 1")).toBe(
+      "/runtime/export/packages/pkg%201/review-summary"
     );
     expect(runtimeExportPackageArchiveHref("pkg 1")).toBe(
       "/runtime/export/packages/pkg%201/archive"

@@ -1991,6 +1991,8 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           hashLabel: "abcdefabcdef",
           recordHref: "/runtime/export/packages/integration-demo-new",
           manifestHref: "/runtime/export/packages/integration-demo-new/manifest",
+          reviewSummaryHref:
+            "/runtime/export/packages/integration-demo-new/review-summary",
           archiveHref: "/runtime/export/packages/integration-demo-new/archive",
           compareHref: "/runtime/export/packages/integration-demo-new/compare",
           restorePreflightHref:
@@ -2006,6 +2008,8 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           hashLabel: "111111111111",
           recordHref: "/runtime/export/packages/integration-demo-old",
           manifestHref: "/runtime/export/packages/integration-demo-old/manifest",
+          reviewSummaryHref:
+            "/runtime/export/packages/integration-demo-old/review-summary",
           archiveHref: null,
           compareHref: "/runtime/export/packages/integration-demo-old/compare",
           restorePreflightHref:

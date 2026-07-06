@@ -409,6 +409,13 @@ export function runtimeExportPackageManifestHref(
   return `${runtimeExportPackageRecordHref(packageId, endpoint)}/manifest`;
 }
 
+export function runtimeExportPackageReviewSummaryHref(
+  packageId: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): string {
+  return `${runtimeExportPackageRecordHref(packageId, endpoint)}/review-summary`;
+}
+
 export function runtimeExportPackageArchiveHref(
   packageId: string,
   endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT

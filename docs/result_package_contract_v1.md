@@ -35,6 +35,7 @@ The integration demo backend already exposes:
 - `GET /runtime/export/catalog`
 - `GET /runtime/export/packages/{package_id}`
 - `GET /runtime/export/packages/{package_id}/manifest`
+- `GET /runtime/export/packages/{package_id}/review-summary`
 - `GET /runtime/export/packages/{package_id}/files/{filename}`
 
 The persisted catalog file is:
@@ -58,6 +59,38 @@ Every v1 runtime export package must include:
 Current runtime exports may also include additional deterministic artifacts.
 `service_lifecycle_trace_v2.json` is emitted as an optional observability file
 for offline communication-compute service lifecycle review.
+`review_summary_v1.json` is emitted as a user-readable review entry point for
+the package. It summarizes scenario scale, runtime progress, reproducibility
+hashes, artifact coverage, and review readiness without adding wall-clock data.
+
+## Review Summary
+
+The review summary artifact has type:
+
+```text
+RUNTIME_EXPORT_REVIEW_SUMMARY_V1
+```
+
+The summary id is:
+
+```text
+leo_twin.runtime_export_review_summary.v1
+```
+
+It reports:
+
+- package id and package directory;
+- scenario seed, satellite count, user count, compute-node count, and duration;
+- runtime lifecycle state, simulation time, processed events, and queued events;
+- manifest id/hash plus config and generated-config hashes;
+- required artifact coverage and missing required filenames;
+- review notes explaining which artifacts support reproducibility review.
+
+The persisted route
+`GET /runtime/export/packages/{package_id}/review-summary` serves the
+`review_summary_v1.json` artifact from the package catalog.
+The standalone dashboard export catalog also links each package row to this
+review summary so users can inspect it without constructing the URL manually.
 
 The manifest id must be:
 

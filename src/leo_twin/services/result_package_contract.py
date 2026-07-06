@@ -5,11 +5,14 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from leo_twin.services.runtime_reproducibility import stable_hash_payload
+
 
 RESULT_PACKAGE_CONTRACT_V1_ID = "leo_twin.result_package_contract.v1"
 RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID = (
     "leo_twin.runtime_reproducibility_manifest.v1"
 )
+RUNTIME_EXPORT_REVIEW_SUMMARY_V1_ID = "leo_twin.runtime_export_review_summary.v1"
 
 
 _REQUIRED_FILE_SPECS: tuple[dict[str, object], ...] = (
@@ -59,11 +62,26 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
             "GET /runtime/export/catalog",
             "GET /runtime/export/packages/{package_id}",
             "GET /runtime/export/packages/{package_id}/manifest",
+            "GET /runtime/export/packages/{package_id}/review-summary",
             "GET /runtime/export/packages/{package_id}/files/{filename}",
         ),
         "catalog_filename": "runtime_export_catalog_v1.json",
         "required_files": _REQUIRED_FILE_SPECS,
         "required_file_count": len(_REQUIRED_FILE_SPECS),
+        "recommended_files": (
+            {
+                "logical_name": "service_lifecycle_trace_v2",
+                "filename": "service_lifecycle_trace_v2.json",
+                "format": "json",
+                "content": "communication-compute lifecycle trace for offline review",
+            },
+            {
+                "logical_name": "review_summary_v1",
+                "filename": "review_summary_v1.json",
+                "format": "json",
+                "content": "user-readable package summary and review readiness",
+            },
+        ),
         "required_manifest_id": RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID,
         "hash_policy": {
             "file_hash": "sha256 over artifact bytes",
@@ -95,6 +113,105 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
             "LIVE_EVENT_REPLAY_RESTORE",
         ),
     }
+
+
+def build_runtime_export_review_summary_v1(
+    *,
+    package_id: str,
+    package_dir: str,
+    config_snapshot: Mapping[str, Any],
+    manifest: Mapping[str, Any],
+    artifact_filenames: tuple[str, ...],
+) -> dict[str, object]:
+    """Build a deterministic user-facing review summary for a result package."""
+
+    if not isinstance(config_snapshot, Mapping):
+        raise TypeError("config_snapshot must be a mapping")
+    if not isinstance(manifest, Mapping):
+        raise TypeError("manifest must be a mapping")
+
+    contract = result_package_contract_v1_to_dict()
+    status = _mapping(config_snapshot.get("status"))
+    config = _mapping(config_snapshot.get("config"))
+    generated_config = _mapping(config_snapshot.get("generated_config"))
+    required_filenames = tuple(
+        str(spec["filename"]) for spec in contract["required_files"]  # type: ignore[index]
+    )
+    artifacts = tuple(sorted(str(filename) for filename in artifact_filenames))
+    missing_required = tuple(
+        filename for filename in required_filenames if filename not in artifacts
+    )
+    review_status = (
+        "REVIEW_READY"
+        if not missing_required
+        and str(manifest.get("manifest_id", ""))
+        == RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID
+        else "INCOMPLETE"
+    )
+    summary: dict[str, object] = {
+        "type": "RUNTIME_EXPORT_REVIEW_SUMMARY_V1",
+        "version": "v1",
+        "summary_id": RUNTIME_EXPORT_REVIEW_SUMMARY_V1_ID,
+        "source": "BACKEND_RUNTIME_EXPORT",
+        "summary_scope": "USER_READABLE_RESULT_PACKAGE_REVIEW",
+        "package_id": str(package_id),
+        "package_dir": str(package_dir),
+        "review_status": review_status,
+        "scenario": {
+            "seed": _value(generated_config, "seed", _value(config, "seed", 0)),
+            "satellite_count": _value(
+                generated_config,
+                "satellite_count",
+                _value(config, "satellite_count", 0),
+            ),
+            "user_count": _value(
+                generated_config,
+                "ground_user_count",
+                _value(generated_config, "user_count", _value(config, "user_count", 0)),
+            ),
+            "compute_node_count": _value(
+                generated_config,
+                "compute_node_count",
+                _value(config, "compute_node_count", 0),
+            ),
+            "duration_seconds": _value(
+                generated_config,
+                "duration_seconds",
+                _value(config, "duration_seconds", 0),
+            ),
+        },
+        "runtime": {
+            "lifecycle_state": str(status.get("lifecycle_state", "")),
+            "current_sim_time": _number(status.get("current_sim_time")),
+            "processed_event_count": _integer(status.get("processed_event_count")),
+            "queued_event_count": _integer(status.get("queued_event_count")),
+        },
+        "reproducibility": {
+            "manifest_id": str(manifest.get("manifest_id", "")),
+            "manifest_hash": str(manifest.get("manifest_hash", "")),
+            "config_hash": str(manifest.get("config_hash", "")),
+            "generated_config_hash": str(manifest.get("generated_config_hash", "")),
+            "event_kernel_policy": "NO_EVENT_KERNEL_BEHAVIOR_CHANGE",
+        },
+        "artifacts": {
+            "artifact_count": len(artifacts),
+            "artifact_filenames": artifacts,
+            "required_filenames": required_filenames,
+            "missing_required_filenames": missing_required,
+            "service_lifecycle_trace_exported": (
+                "service_lifecycle_trace_v2.json" in artifacts
+            ),
+            "review_summary_exported": "review_summary_v1.json" in artifacts,
+        },
+        "review_notes": (
+            "Use manifest.json and config_snapshot.json to verify deterministic inputs.",
+            "Use events.jsonl, metrics.csv, and summary.json as replay evidence.",
+            "Use service_lifecycle_trace_v2.json for communication-compute trace review.",
+            "This package does not contain packet captures or external simulator artifacts.",
+        ),
+    }
+    summary["summary_hash"] = stable_hash_payload(summary)
+    return summary
 
 
 def summarize_result_package_record_v1(
@@ -157,3 +274,31 @@ def _file_records(value: object) -> tuple[Mapping[str, Any], ...]:
 
 def _mapping(value: object) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
+
+
+def _value(mapping: Mapping[str, Any], key: str, default: object) -> object:
+    return mapping.get(key, default)
+
+
+def _integer(value: object) -> int:
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+    try:
+        return int(str(value))
+    except (TypeError, ValueError):
+        return 0
+
+
+def _number(value: object) -> float:
+    if isinstance(value, bool):
+        return float(value)
+    if isinstance(value, (int, float)):
+        return float(value)
+    try:
+        return float(str(value))
+    except (TypeError, ValueError):
+        return 0.0

@@ -108,6 +108,7 @@ Endpoints:
 - `GET /runtime/export/archive`
 - `GET /runtime/export/packages/{package_id}`
 - `GET /runtime/export/packages/{package_id}/manifest`
+- `GET /runtime/export/packages/{package_id}/review-summary`
 - `GET /runtime/export/packages/{package_id}/compare`
 - `GET /runtime/export/packages/{package_id}/restore-preflight`
 - `GET /runtime/export/packages/{package_id}/archive`
@@ -136,7 +137,8 @@ http://127.0.0.1:8765/runtime/export/archive
 The live export writes a deterministic result package under
 `artifacts/runtime_exports`. Each package contains `manifest.json`,
 `config_snapshot.json`, `events.jsonl`, `metrics.csv`, `summary.json`, and the
-additional `service_lifecycle_trace_v2.json` observability artifact.
+additional `service_lifecycle_trace_v2.json` observability artifact plus
+`review_summary_v1.json` for user-readable reproducibility review.
 The archive endpoint returns the same package as a ZIP download with stable
 entry ordering and fixed ZIP metadata.
 
@@ -268,6 +270,7 @@ Persisted package artifact routes:
 ```text
 http://127.0.0.1:8765/runtime/export/packages/{package_id}
 http://127.0.0.1:8765/runtime/export/packages/{package_id}/manifest
+http://127.0.0.1:8765/runtime/export/packages/{package_id}/review-summary
 http://127.0.0.1:8765/runtime/export/packages/{package_id}/compare
 http://127.0.0.1:8765/runtime/export/packages/{package_id}/restore-preflight
 http://127.0.0.1:8765/runtime/export/packages/{package_id}/archive

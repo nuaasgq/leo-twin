@@ -200,6 +200,11 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                             package_id,
                             "manifest.json",
                         )
+                    elif artifact_kind == "review-summary":
+                        artifact = control_plane.runtime_export_package_artifact(
+                            package_id,
+                            "review_summary_v1.json",
+                        )
                     elif artifact_kind == "archive":
                         artifact = control_plane.runtime_export_package_archive_artifact(
                             package_id,
@@ -730,6 +735,8 @@ def _runtime_export_package_route(
         return parts[0], "record", None
     if len(parts) == 2 and parts[1] == "manifest":
         return parts[0], "manifest", None
+    if len(parts) == 2 and parts[1] == "review-summary":
+        return parts[0], "review-summary", None
     if len(parts) == 2 and parts[1] == "compare":
         return parts[0], "compare", None
     if len(parts) == 2 and parts[1] == "restore-preflight":
