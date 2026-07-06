@@ -10,6 +10,9 @@ import {
   RuntimeExportHistoryV1,
   RuntimeExportPackageCompareEnvelope,
   RuntimeExportPackageCompareV1,
+  RuntimeExportRouteComparisonReviewReportEnvelope,
+  RuntimeExportRouteComparisonReviewReportRecordV1,
+  RuntimeExportRouteComparisonReviewReportV1,
   RuntimeExportRouteDetailIndexV1,
   RuntimeExportRouteDetailItemV1,
   RuntimeExportRouteDetailPageV1,
@@ -61,6 +64,10 @@ export interface RuntimeDetailQueryFilters {
   computeNodeId?: string;
   stageKind?: string;
   terminalReason?: string;
+}
+
+export interface RuntimeExportRouteComparisonReviewReportRequest {
+  records: readonly Partial<RuntimeExportRouteComparisonReviewReportRecordV1>[];
 }
 
 export async function loadScenarioConfig(endpoint = "/scenario/config"): Promise<ScenarioConfig> {
@@ -381,6 +388,25 @@ export async function loadRuntimeExportRouteDetailItem(
   return decodeRuntimeExportRouteDetailItem(await response.json());
 }
 
+export async function saveRuntimeExportRouteComparisonReviewReport(
+  packageId: string,
+  request: RuntimeExportRouteComparisonReviewReportRequest,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): Promise<RuntimeExportRouteComparisonReviewReportV1> {
+  const url = runtimeExportRouteComparisonReviewReportHref(packageId, endpoint);
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(request)
+  });
+  if (!response.ok) {
+    throw new Error(`failed to save runtime export route comparison review report to ${url}: HTTP ${response.status}`);
+  }
+  return decodeRuntimeExportRouteComparisonReviewReport(await response.json()).summary;
+}
+
 export async function loadRuntimeExportRestorePreflight(
   packageId: string,
   endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
@@ -566,6 +592,13 @@ export function runtimeExportPackageRouteDetailHref(
   return `${runtimeExportPackageRecordHref(packageId, endpoint)}/routes/${encodeURIComponent(
     routeId
   )}`;
+}
+
+export function runtimeExportRouteComparisonReviewReportHref(
+  packageId: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): string {
+  return `${runtimeExportPackageRecordHref(packageId, endpoint)}/route-comparison-review-report`;
 }
 
 export function userConfigurationSchemaHref(
@@ -913,6 +946,37 @@ export function decodeRuntimeExportRouteDetailItem(
     );
   }
   return value as RuntimeExportRouteDetailItemV1;
+}
+
+export function decodeRuntimeExportRouteComparisonReviewReport(
+  value: unknown
+): RuntimeExportRouteComparisonReviewReportEnvelope {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError(
+      "runtime export route comparison review report response must be an object"
+    );
+  }
+  const summary = (value as { summary?: unknown }).summary;
+  const artifact = (value as { artifact?: unknown }).artifact;
+  if (
+    typeof summary !== "object" ||
+    summary === null ||
+    Array.isArray(summary) ||
+    typeof (summary as { report_id?: unknown }).report_id !== "string" ||
+    !Array.isArray((summary as { records?: unknown }).records) ||
+    typeof artifact !== "object" ||
+    artifact === null ||
+    Array.isArray(artifact)
+  ) {
+    throw new TypeError(
+      "runtime export route comparison review report response must include summary report_id, records, and artifact"
+    );
+  }
+  return {
+    ...(value as Record<string, unknown>),
+    summary: summary as RuntimeExportRouteComparisonReviewReportV1,
+    artifact: artifact as RuntimeExportRouteComparisonReviewReportEnvelope["artifact"]
+  } as RuntimeExportRouteComparisonReviewReportEnvelope;
 }
 
 export function decodeRuntimeExportRestorePreflight(

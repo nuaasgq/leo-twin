@@ -13977,3 +13977,67 @@ change.
 - Recommended follow-up:
   - Add a package review endpoint or persisted artifact that saves operator
     route comparison report records from the dashboard workflow.
+
+## 2026-07-06 - Route Comparison Review Report Save API v1
+
+- Branch: `feature/T291-route-comparison-review-save-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a package-level save path for selected route comparison review
+  outcomes. The backend now accepts
+  `POST /runtime/export/packages/{package_id}/route-comparison-review-report`,
+  builds `RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1` from the selected
+  records and package-owned review metadata, writes
+  `route_comparison_review_report_v1.json`, and updates
+  `runtime_export_catalog_v1.json` so the artifact is retrievable through the
+  existing `/files/{filename}` path. The frontend API layer now exposes the
+  stable href, POST helper, response decoder, and TypeScript contracts. No
+  Event Kernel behavior, route recomputation, dashboard layout, or packet-level
+  simulation behavior changed.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `src/leo_twin/services/result_package_contract.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `frontend/src/app/api.ts`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/tests/api.test.ts`
+  - `docs/dashboard_model_trust_evidence_workspace_v1.md`
+  - `docs/result_package_contract_v1.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/integration/test_result_package_export_v1.py -q`
+    - Result: passed, 1 test.
+  - `python -m pytest tests/integration/test_runtime_session_control.py -q`
+    - Result: passed, 23 tests.
+  - `python -m pytest tests/unit/test_result_package_contract_v1.py -q`
+    - Result: passed, 10 tests.
+  - `pnpm --dir frontend test api.test.ts`
+    - Result: passed, 1 test file and 25 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with bundled Codex Node/Pnpm runtime.
+  - `python -m pytest tests/integration/test_result_package_export_v1.py tests/integration/test_runtime_session_control.py tests/unit/test_result_package_contract_v1.py tests/unit/test_user_guide_v2_docs.py -q`
+    - Result: passed, 36 tests.
+  - `pnpm --dir frontend test api.test.ts dataPanel.test.ts`
+    - Result: passed, 2 test files and 193 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing large DataPanel chunk
+      warning after minification; no functional build error.
+  - `git diff --check`
+    - Result: passed for task files.
+- Problems encountered:
+  - No product blocker. The saved report is a selected-record operator artifact;
+    it intentionally does not run a full package-vs-live diff by itself.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The current dashboard has API support but no dedicated UI save button for
+    the report endpoint.
+  - Existing archive zip files are not rewritten when the report artifact is
+    saved after package export; re-export an archive if the zip must contain the
+    review report.
+- Recommended follow-up:
+  - Add a small dashboard action to save the currently displayed route
+    comparison card into `route_comparison_review_report_v1.json`.

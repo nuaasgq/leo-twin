@@ -457,6 +457,27 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
             parsed_url = urlsplit(self.path)
             path = parsed_url.path
             query = parse_qs(parsed_url.query)
+            export_artifact_route = _runtime_export_package_route(path)
+            if export_artifact_route is not None:
+                package_id, artifact_kind, _filename = export_artifact_route
+                if artifact_kind == "route-comparison-review-report":
+                    try:
+                        payload = self._read_json_body()
+                        if not isinstance(payload, dict):
+                            raise ValueError("request body must be a JSON object")
+                        self._send_json(
+                            control_plane.runtime_export_package_route_comparison_review_report(
+                                package_id,
+                                payload,
+                            )
+                        )
+                    except ValueError as exc:
+                        self.send_error(400, str(exc))
+                    except RuntimeExportArtifactError as exc:
+                        self.send_error(404, str(exc))
+                    except RuntimeError as exc:
+                        self.send_error(400, str(exc))
+                    return
             if path == "/scenario/user-config/validate":
                 try:
                     payload = self._read_json_body()
@@ -774,6 +795,8 @@ def _runtime_export_package_route(
         return parts[0], "routes", None
     if len(parts) == 3 and parts[1] == "routes":
         return parts[0], "route-detail", parts[2]
+    if len(parts) == 2 and parts[1] == "route-comparison-review-report":
+        return parts[0], "route-comparison-review-report", None
     if len(parts) == 3 and parts[1] == "files":
         return parts[0], "file", parts[2]
     return "", "missing", None

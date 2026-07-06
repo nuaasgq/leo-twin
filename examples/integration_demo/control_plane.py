@@ -75,6 +75,7 @@ from leo_twin.services.runtime_reproducibility import (
 )
 from leo_twin.services.result_package_contract import (
     build_runtime_export_diagnostics_bundle_v1,
+    build_runtime_export_route_comparison_review_report_v1,
     build_runtime_export_route_detail_item_v1,
     build_runtime_export_route_detail_index_v1,
     build_runtime_export_route_detail_page_v1,
@@ -128,6 +129,9 @@ _RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_FILENAME = "route_detail_index_v1.json"
 _RUNTIME_EXPORT_ROUTE_DETAIL_LIMIT = DETAIL_ENDPOINT_MAX_LIMIT
 _RUNTIME_EXPORT_REVIEW_SUMMARY_FILENAME = "review_summary_v1.json"
 _RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_FILENAME = "diagnostics_bundle_v1.json"
+_RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_FILENAME = (
+    "route_comparison_review_report_v1.json"
+)
 
 
 class RuntimeExportArtifactError(LookupError):
@@ -840,6 +844,62 @@ class DemoControlPlane:
                 f"runtime export package {package_id!r} route {route_id!r} not found"
             )
         return detail
+
+    def runtime_export_package_route_comparison_review_report(
+        self,
+        package_id: str,
+        payload: Mapping[str, Any],
+        output_root: str | Path = "artifacts/runtime_exports",
+    ) -> dict[str, Any]:
+        if not isinstance(payload, Mapping):
+            raise RuntimeError("route comparison review report payload must be an object")
+        route_detail_index = self._runtime_export_package_route_detail_index(
+            package_id,
+            output_root,
+        )
+        route_comparison_review = route_detail_index.get("route_comparison_review")
+        if not isinstance(route_comparison_review, Mapping):
+            raise RuntimeExportArtifactError(
+                f"runtime export package {package_id!r} has no route comparison review metadata"
+            )
+        raw_records = payload.get("records", ())
+        if raw_records is None:
+            raw_records = ()
+        if not isinstance(raw_records, (list, tuple)):
+            raise RuntimeError("route comparison review report records must be a list")
+        records: list[Mapping[str, Any]] = []
+        for record in raw_records:
+            if not isinstance(record, Mapping):
+                raise RuntimeError(
+                    "route comparison review report records must be objects"
+                )
+            records.append(record)
+        catalog = _read_runtime_export_catalog(output_root)
+        catalog_record = _runtime_export_catalog_package_record(catalog, package_id)
+        package_dir = _runtime_export_catalog_package_dir(output_root, catalog_record)
+        report = build_runtime_export_route_comparison_review_report_v1(
+            package_id=package_id,
+            package_dir=str(package_dir),
+            route_comparison_review=route_comparison_review,
+            records=tuple(records),
+        )
+        report_path = package_dir / _RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_FILENAME
+        report_path.write_text(stable_json_pretty(report), encoding="utf-8")
+        artifact = _runtime_export_file_record(
+            "route_comparison_review_report_v1",
+            report_path,
+        )
+        catalog_record = _upsert_runtime_export_catalog_file(
+            output_root,
+            package_id,
+            artifact,
+        )
+        return {
+            "type": "RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT",
+            "summary": report,
+            "artifact": _runtime_export_catalog_file_record(artifact),
+            "catalog_record": catalog_record,
+        }
 
     def runtime_export_package_archive_artifact(
         self,
@@ -2193,6 +2253,55 @@ def _read_runtime_export_catalog(output_root: str | Path) -> dict[str, Any]:
         tuple(sorted(records, key=lambda item: str(item["catalog_key"]))),
         latest_record,
     )
+
+
+def _upsert_runtime_export_catalog_file(
+    output_root: str | Path,
+    package_id: str,
+    file_record: dict[str, Any],
+) -> dict[str, Any]:
+    root = Path(output_root)
+    catalog_path = root / _RUNTIME_EXPORT_CATALOG_FILENAME
+    existing = _read_runtime_export_catalog(root)
+    records = tuple(
+        _runtime_export_catalog_record_with_file(record, package_id, file_record)
+        for record in _control_records(existing.get("records"))
+        if record.get("catalog_key")
+    )
+    latest = existing.get("latest_export")
+    latest_record = (
+        _runtime_export_catalog_record_with_file(latest, package_id, file_record)
+        if isinstance(latest, dict)
+        else None
+    )
+    catalog = _runtime_export_catalog_document(
+        root,
+        catalog_path,
+        tuple(sorted(records, key=lambda item: str(item["catalog_key"]))),
+        latest_record,
+    )
+    catalog_path.write_text(stable_json_pretty(catalog), encoding="utf-8")
+    return _runtime_export_catalog_package_record(catalog, package_id)
+
+
+def _runtime_export_catalog_record_with_file(
+    record: dict[str, Any],
+    package_id: str,
+    file_record: dict[str, Any],
+) -> dict[str, Any]:
+    updated = dict(record)
+    if str(updated.get("package_id", "")) != str(package_id):
+        return updated
+    catalog_file = _runtime_export_catalog_file_record(file_record)
+    files = {
+        str(item.get("filename", "")): _runtime_export_catalog_file_record(item)
+        for item in _control_records(updated.get("files"))
+        if item.get("filename")
+    }
+    files[str(catalog_file["filename"])] = catalog_file
+    updated["files"] = tuple(files[key] for key in sorted(files))
+    updated["file_count"] = len(files)
+    return updated
 
 
 def _runtime_export_catalog_document(

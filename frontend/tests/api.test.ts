@@ -39,8 +39,10 @@ import {
   runtimeExportPackageRouteDetailsHref,
   runtimeExportPackageRouteDetailHref,
   runtimeExportPackageReviewSummaryHref,
+  runtimeExportRouteComparisonReviewReportHref,
   runtimeExportRestorePreflightHref,
   runtimeDetailEntityHref,
+  saveRuntimeExportRouteComparisonReviewReport,
   userConfigurationExportHref,
   userConfigurationSchemaHref,
   userConfigurationTemplatesHref,
@@ -83,6 +85,9 @@ describe("runtime API diagnostics", () => {
     );
     expect(runtimeExportPackageRouteDetailHref("pkg 1", "route:input 1")).toBe(
       "/runtime/export/packages/pkg%201/routes/route%3Ainput%201"
+    );
+    expect(runtimeExportRouteComparisonReviewReportHref("pkg 1")).toBe(
+      "/runtime/export/packages/pkg%201/route-comparison-review-report"
     );
     expect(
       runtimeExportPackageRouteDetailsHref(
@@ -469,6 +474,105 @@ describe("runtime API diagnostics", () => {
     });
     expect(fetchMock).toHaveBeenCalledWith(
       "/runtime/export/packages/pkg/routes/route%3A0"
+    );
+  });
+
+  it("saves runtime export route comparison review reports", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        type: "RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT",
+        summary: {
+          type: "RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1",
+          version: "v1",
+          report_id: "leo_twin.runtime_export_route_comparison_review_report.v1",
+          source: "OPERATOR_ROUTE_COMPARISON_REVIEW",
+          report_scope: "SELECTED_PACKAGE_VS_LIVE_ROUTE_COMPARISON_OUTCOMES",
+          package_id: "pkg",
+          package_dir: "artifacts/runtime_exports/pkg",
+          route_comparison_review: {
+            version: "v1",
+            source: "BACKEND_RUNTIME_EXPORT",
+            review_scope: "PACKAGE_ROUTE_DETAIL_TO_LIVE_RUNTIME_ROUTE_DETAIL",
+            package_route_detail_endpoint:
+              "GET /runtime/export/packages/{package_id}/routes/{route_id}",
+            live_route_detail_endpoint: "GET /runtime/details/routes/{route_id}",
+            compare_action: "compare with live",
+            comparison_requires_live_runtime: true,
+            route_id_alignment_required: true,
+            exported_rows_only: true,
+            compared_fields: ["latency", "bottleneck"],
+            status_reasons: ["ROUTE_ID_MISMATCH"],
+            boundary_conditions: ["NO_ROUTE_RECOMPUTE"]
+          },
+          record_count: 1,
+          match_count: 0,
+          different_count: 1,
+          unavailable_count: 0,
+          error_count: 0,
+          records: [
+            {
+              route_id: "route:0",
+              comparison_status: "DIFFERENT",
+              package_route_detail_hash: "sha256:package",
+              live_route_detail_hash: "sha256:live",
+              matched_field_count: 1,
+              different_field_count: 1,
+              compared_fields: ["latency", "bottleneck"],
+              different_fields: ["latency"],
+              status_reason: "FIELDS_DIFFER",
+              operator_note: "operator reviewed"
+            }
+          ],
+          ordering: "route_id ascending, then comparison_status ascending",
+          boundary_conditions: ["NO_ROUTE_RECOMPUTE"],
+          report_hash: "sha256:report"
+        },
+        artifact: {
+          name: "route_comparison_review_report_v1",
+          filename: "route_comparison_review_report_v1.json",
+          bytes: 256,
+          sha256: "sha256:artifact"
+        }
+      })
+    }));
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+
+    await expect(
+      saveRuntimeExportRouteComparisonReviewReport("pkg", {
+        records: [
+          {
+            route_id: "route:0",
+            comparison_status: "DIFFERENT",
+            different_fields: ["latency"],
+            status_reason: "FIELDS_DIFFER"
+          }
+        ]
+      })
+    ).resolves.toMatchObject({
+      package_id: "pkg",
+      record_count: 1,
+      different_count: 1,
+      records: [{ route_id: "route:0", status_reason: "FIELDS_DIFFER" }]
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/runtime/export/packages/pkg/route-comparison-review-report",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          records: [
+            {
+              route_id: "route:0",
+              comparison_status: "DIFFERENT",
+              different_fields: ["latency"],
+              status_reason: "FIELDS_DIFFER"
+            }
+          ]
+        })
+      }
     );
   });
 

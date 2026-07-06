@@ -1445,6 +1445,9 @@ def test_demo_server_stream_query_parses_cursor_options() -> None:
     assert _runtime_export_package_route(
         "/runtime/export/packages/pkg%201/routes/route%3Ainput-0"
     ) == ("pkg 1", "route-detail", "route:input-0")
+    assert _runtime_export_package_route(
+        "/runtime/export/packages/pkg%201/route-comparison-review-report"
+    ) == ("pkg 1", "route-comparison-review-report", None)
 
 
 def _deterministic_sequence() -> tuple[tuple[dict[str, Any], ...], tuple[dict[str, Any], ...]]:

@@ -1316,6 +1316,46 @@ export interface RuntimeExportRouteComparisonReviewRecordSchemaV1 {
   ordering: string;
 }
 
+export interface RuntimeExportRouteComparisonReviewReportEnvelope {
+  type: "RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT" | string;
+  summary: RuntimeExportRouteComparisonReviewReportV1;
+  artifact: RuntimeExportCatalogFileV1;
+  catalog_record?: RuntimeExportCatalogRecordV1;
+}
+
+export interface RuntimeExportRouteComparisonReviewReportV1 {
+  type: "RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1" | string;
+  version: "v1" | string;
+  report_id: string;
+  source: string;
+  report_scope: string;
+  package_id: string;
+  package_dir: string;
+  route_comparison_review: RuntimeExportRouteComparisonReviewV1;
+  record_count: number;
+  match_count: number;
+  different_count: number;
+  unavailable_count: number;
+  error_count: number;
+  records: readonly RuntimeExportRouteComparisonReviewReportRecordV1[];
+  ordering: string;
+  boundary_conditions: readonly string[];
+  report_hash: string;
+}
+
+export interface RuntimeExportRouteComparisonReviewReportRecordV1 {
+  route_id: string;
+  comparison_status: "MATCH" | "DIFFERENT" | "UNAVAILABLE" | "ERROR" | string;
+  package_route_detail_hash: string;
+  live_route_detail_hash: string;
+  matched_field_count: number;
+  different_field_count: number;
+  compared_fields: readonly string[];
+  different_fields: readonly string[];
+  status_reason: string;
+  operator_note: string;
+}
+
 export interface RuntimeExportReviewReproducibilityV1 {
   manifest_id: string;
   manifest_hash: string;

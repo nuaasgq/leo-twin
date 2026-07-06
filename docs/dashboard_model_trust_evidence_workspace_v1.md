@@ -64,8 +64,11 @@ blocking condition. Result packages now also expose backend-owned
 detail artifacts so this workflow is auditable outside the frontend. The
 metadata names the `RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1` report
 template and its record schema, so selected package-vs-live comparison outcomes
-can be captured later with deterministic ordering. The frontend does not
-recompute routes or download the full `route_detail_index_v1.json` by default.
+can be captured with deterministic ordering. The API layer can POST selected
+review records to the package-level route comparison review report endpoint,
+which writes `route_comparison_review_report_v1.json` and updates the export
+catalog. The frontend does not recompute routes or download the full
+`route_detail_index_v1.json` by default.
 7. runtime evidence
 
 Each row has a tone:

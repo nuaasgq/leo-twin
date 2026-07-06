@@ -80,6 +80,7 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
             "GET /runtime/export/packages/{package_id}/review-summary",
             "GET /runtime/export/packages/{package_id}/routes",
             "GET /runtime/export/packages/{package_id}/routes/{route_id}",
+            "POST /runtime/export/packages/{package_id}/route-comparison-review-report",
             "GET /runtime/export/packages/{package_id}/files/{filename}",
         ),
         "catalog_filename": "runtime_export_catalog_v1.json",

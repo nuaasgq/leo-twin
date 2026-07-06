@@ -8,6 +8,7 @@ from examples.integration_demo.control_plane import DemoControlPlane
 from examples.integration_demo.runtime import run_integration_demo
 from leo_twin.services.detail_pagination_contract import DETAIL_ENDPOINT_MAX_LIMIT
 from leo_twin.services.result_package_contract import (
+    RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID,
     RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID,
     summarize_result_package_record_v1,
 )
@@ -22,7 +23,8 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         generated_config_output_path=tmp_path / "generated_full_system_demo.json",
     )
 
-    package = control_plane.export_runtime_package(tmp_path / "exports")
+    output_root = tmp_path / "exports"
+    package = control_plane.export_runtime_package(output_root)
     summary = summarize_result_package_record_v1(package)
     package_dir = Path(str(package["package_dir"]))
 
@@ -136,6 +138,62 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         "manifest_hash"
     ]
     assert diagnostics_bundle["model_boundaries"]["packet_level_simulation"] is False
+
+    review_report_response = (
+        control_plane.runtime_export_package_route_comparison_review_report(
+            str(package["package_id"]),
+            {
+                "records": [
+                    {
+                        "route_id": "route-1",
+                        "comparison_status": "DIFFERENT",
+                        "package_route_detail_hash": "sha256:package-route-1",
+                        "live_route_detail_hash": "sha256:live-route-1",
+                        "compared_fields": ["path", "latency", "bottleneck"],
+                        "different_fields": ["bottleneck", "latency"],
+                        "status_reason": "FIELDS_DIFFER",
+                        "operator_note": "reviewed during integration test",
+                    }
+                ]
+            },
+            output_root,
+        )
+    )
+    review_report = review_report_response["summary"]
+    assert review_report_response["type"] == (
+        "RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT"
+    )
+    assert review_report["report_id"] == (
+        RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID
+    )
+    assert review_report["package_id"] == package["package_id"]
+    assert review_report["record_count"] == 1
+    assert review_report["different_count"] == 1
+    assert review_report["records"][0]["different_fields"] == (
+        "latency",
+        "bottleneck",
+    )
+    assert review_report["records"][0]["operator_note"] == (
+        "reviewed during integration test"
+    )
+    review_report_path = package_dir / "route_comparison_review_report_v1.json"
+    assert review_report_path.exists()
+    assert json.loads(review_report_path.read_text(encoding="utf-8")) == json.loads(
+        json.dumps(review_report, sort_keys=True)
+    )
+    report_artifact = control_plane.runtime_export_package_artifact(
+        str(package["package_id"]),
+        "route_comparison_review_report_v1.json",
+        output_root,
+    )
+    assert report_artifact["filename"] == "route_comparison_review_report_v1.json"
+    assert report_artifact["sha256"] == review_report_response["artifact"]["sha256"]
+    catalog = control_plane.runtime_export_catalog(output_root)["summary"]
+    latest = catalog["latest_export"]
+    assert latest["file_count"] == len(latest["files"])
+    assert "route_comparison_review_report_v1.json" in {
+        str(record["filename"]) for record in latest["files"]
+    }
 
 
 def _base_demo_config() -> DemoConfig:

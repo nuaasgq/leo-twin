@@ -165,10 +165,30 @@ For package-owned review, use:
 ```powershell
 Invoke-RestMethod "http://127.0.0.1:8765/runtime/export/packages/<package_id>/routes?cursor=0&limit=100"
 Invoke-RestMethod "http://127.0.0.1:8765/runtime/export/packages/<package_id>/routes/<route_id>"
+$body = @{
+  records = @(
+    @{
+      route_id = "<route_id>"
+      comparison_status = "DIFFERENT"
+      compared_fields = @("latency", "bottleneck")
+      different_fields = @("latency")
+      status_reason = "FIELDS_DIFFER"
+      operator_note = "manual review note"
+    }
+  )
+} | ConvertTo-Json -Depth 5
+Invoke-RestMethod `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body $body `
+  "http://127.0.0.1:8765/runtime/export/packages/<package_id>/route-comparison-review-report"
 ```
 
-These calls read the exported route detail index artifact. They do not require
-the current runtime to contain the same route id.
+The first two calls read the exported route detail index artifact. They do not
+require the current runtime to contain the same route id. The POST call writes
+`route_comparison_review_report_v1.json` into the selected package and updates
+the export catalog; it records supplied review outcomes and does not rerun a
+route comparison automatically.
 
 Export catalog:
 

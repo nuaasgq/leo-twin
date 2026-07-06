@@ -202,6 +202,21 @@ no-recompute/no-replay boundaries. A review report records operator-selected
 package-vs-live comparison outcomes; it does not mutate the package, run a
 route recomputation, or infer route semantics in the frontend.
 
+The demo backend can persist that report through:
+
+```text
+POST /runtime/export/packages/{package_id}/route-comparison-review-report
+```
+
+The request body is a JSON object with a `records` array. The backend reads the
+package's `route_detail_index_v1.json`, builds
+`route_comparison_review_report_v1.json` with stable ordering and a
+`report_hash`, writes it into the package directory, and updates
+`runtime_export_catalog_v1.json` so the artifact is retrievable through the
+normal `/files/route_comparison_review_report_v1.json` path. The endpoint saves
+selected operator review outcomes only; it does not compute route diffs by
+itself, replay events, recompute routes, or update existing archive zip files.
+
 ## Diagnostics Bundle
 
 The diagnostics bundle artifact has type:

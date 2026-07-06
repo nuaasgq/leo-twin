@@ -255,6 +255,12 @@ Tasks:
     deterministic record builder for selected package-vs-live route comparison
     outcomes. The dashboard consumes the backend report template label; it does
     not infer report schema locally.
+  - Status: T291 adds the package-level
+    `POST /runtime/export/packages/{package_id}/route-comparison-review-report`
+    save path. The backend persists
+    `route_comparison_review_report_v1.json`, updates the export catalog, and
+    the frontend API layer can post selected review records without changing
+    dashboard layout.
 
 ### WS4. Compute Network Model v2
 
