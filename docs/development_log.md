@@ -12816,3 +12816,49 @@ change.
   - Add a detailed result package review drawer that combines
     `review_summary_v1`, compare, restore preflight, and manifest artifact
     health into one operator workflow.
+
+## 2026-07-06 - Dashboard Export Artifact Health v1
+
+- Branch: `feature/T269-dashboard-export-artifact-health-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: render selected runtime export package artifact health in the
+  standalone dashboard. DataPanel now derives file-health rows from the
+  backend runtime export catalog and the selected `review_summary_v1.json`,
+  showing required/optional status, present/missing state, file size, short
+  SHA-256 hash, and direct file links. This is a read-only frontend
+  observability task; backend export behavior, runtime behavior, Event Kernel
+  behavior, restore behavior, model behavior, and packet-level semantics remain
+  unchanged.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed, using the bundled Node/Pnpm runtime because the shell
+      PATH does not expose `node`.
+  - `pnpm --dir frontend test api.test.ts appSurface.test.ts dataPanel.test.ts`
+    - Result: passed, 215 tests.
+  - `pnpm --dir frontend test`
+    - Result: passed, 364 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite reported the existing large DataPanel chunk warning.
+  - `python -m pytest tests/integration/test_result_package_export_v1.py tests/integration/test_runtime_session_control.py::test_demo_adapter_serves_persisted_runtime_export_artifacts -q`
+    - Result: passed, 2 tests.
+- Problems encountered:
+  - Existing localized dashboard text still appears as mojibake in terminal
+    output, so patches used stable ASCII/JSX context and did not rewrite
+    unrelated labels.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - Artifact health is still a compact inline panel. A future review drawer can
+    combine manifest contents, compare diffs, restore preflight, and artifact
+    health into one larger operator workflow.
+- Recommended follow-up:
+  - Continue Phase 3 observability with a dedicated runtime export review drawer
+    or diagnostics bundle that packages logs, config, manifest, KPI provenance,
+    and result artifacts for handoff.

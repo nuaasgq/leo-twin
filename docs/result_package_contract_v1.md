@@ -94,6 +94,10 @@ review summary so users can inspect it without constructing the URL manually.
 The dashboard also loads the selected package's review summary as a read-only
 card, showing review readiness, scenario scale, runtime progress, manifest
 hashes, and artifact coverage alongside compare and restore-preflight context.
+The same dashboard view derives artifact health rows from the backend export
+catalog and selected review summary, showing required/optional status,
+present/missing state, file size, short SHA-256 hash, and direct file links
+without hardcoding artifact semantics in the frontend.
 
 The manifest id must be:
 

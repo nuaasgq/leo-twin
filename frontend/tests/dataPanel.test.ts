@@ -16,6 +16,7 @@ import {
   buildDataPanelPaginationContractNotes,
   buildDataPanelDetailWindowPolicyNote,
   buildDataPanelDisplaySummary,
+  buildDataPanelExportArtifactHealthDisplay,
   buildDataPanelExportCatalogDisplay,
   buildDataPanelExportCompareDisplay,
   buildDataPanelExportCompareStatus,
@@ -2023,6 +2024,198 @@ describe("buildDataPanelExportCatalogDisplay", () => {
 
   it("returns null before backend catalog is loaded", () => {
     expect(buildDataPanelExportCatalogDisplay(undefined)).toBeNull();
+  });
+
+  it("summarizes selected package artifact health from backend catalog records", () => {
+    const display = buildDataPanelExportArtifactHealthDisplay(
+      {
+        version: "v1",
+        source: "BACKEND_RUNTIME_EXPORT_CATALOG",
+        catalog_scope: "PERSISTED_EXPORT_PACKAGES",
+        catalog_file: "artifacts/runtime_exports/runtime_export_catalog_v1.json",
+        export_root: "artifacts/runtime_exports",
+        record_count: 2,
+        catalog_hash:
+          "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        latest_export: null,
+        records: [
+          {
+            catalog_key: "PACKAGE:pkg-review",
+            export_type: "PACKAGE",
+            package_id: "pkg-review",
+            package_dir: "artifacts/runtime_exports/pkg-review",
+            relative_package_dir: "pkg-review",
+            file_count: 1,
+            manifest_hash:
+              "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+            current_sim_time: 12,
+            processed_event_count: 100,
+            files: [
+              {
+                name: "package-only",
+                filename: "package_only.json",
+                bytes: 64,
+                sha256:
+                  "sha256:9999999999999999999999999999999999999999999999999999999999999999"
+              }
+            ]
+          },
+          {
+            catalog_key: "ARCHIVE:pkg-review",
+            export_type: "ARCHIVE",
+            package_id: "pkg-review",
+            package_dir: "artifacts/runtime_exports/pkg-review",
+            relative_package_dir: "pkg-review",
+            file_count: 6,
+            manifest_hash:
+              "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+            current_sim_time: 12,
+            processed_event_count: 100,
+            archive_filename: "pkg-review.zip",
+            archive_sha256:
+              "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+            archive_bytes: 8192,
+            files: [
+              {
+                name: "config_snapshot",
+                filename: "config_snapshot.json",
+                bytes: 100,
+                sha256:
+                  "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+              },
+              {
+                name: "events",
+                filename: "events.jsonl",
+                bytes: 2048,
+                sha256:
+                  "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+              },
+              {
+                name: "manifest",
+                filename: "manifest.json",
+                bytes: 120,
+                sha256:
+                  "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+              },
+              {
+                name: "review_summary",
+                filename: "review_summary_v1.json",
+                bytes: 512,
+                sha256:
+                  "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+              },
+              {
+                name: "service_lifecycle_trace",
+                filename: "service_lifecycle_trace_v2.json",
+                bytes: 4096,
+                sha256:
+                  "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+              },
+              {
+                name: "summary",
+                filename: "summary.json",
+                bytes: 300,
+                sha256:
+                  "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+              }
+            ]
+          }
+        ]
+      },
+      "pkg-review",
+      {
+        type: "RUNTIME_EXPORT_REVIEW_SUMMARY_V1",
+        version: "v1",
+        summary_id: "leo_twin.runtime_export_review_summary.v1",
+        source: "BACKEND_RUNTIME_EXPORT",
+        summary_scope: "USER_READABLE_RESULT_PACKAGE_REVIEW",
+        package_id: "pkg-review",
+        package_dir: "artifacts/runtime_exports/pkg-review",
+        review_status: "INCOMPLETE",
+        scenario: {
+          seed: 4321,
+          satellite_count: 72,
+          user_count: 20,
+          compute_node_count: 2,
+          duration_seconds: 120
+        },
+        runtime: {
+          lifecycle_state: "STOPPED",
+          current_sim_time: 120,
+          processed_event_count: 4096,
+          queued_event_count: 0
+        },
+        reproducibility: {
+          manifest_id: "leo_twin.runtime_reproducibility_manifest.v1",
+          manifest_hash:
+            "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+          config_hash:
+            "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+          generated_config_hash:
+            "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+          event_kernel_policy: "NO_EVENT_KERNEL_BEHAVIOR_CHANGE"
+        },
+        artifacts: {
+          artifact_count: 6,
+          artifact_filenames: [
+            "config_snapshot.json",
+            "events.jsonl",
+            "manifest.json",
+            "review_summary_v1.json",
+            "service_lifecycle_trace_v2.json",
+            "summary.json"
+          ],
+          required_filenames: [
+            "config_snapshot.json",
+            "events.jsonl",
+            "manifest.json",
+            "metrics.csv",
+            "summary.json"
+          ],
+          missing_required_filenames: ["metrics.csv"],
+          service_lifecycle_trace_exported: true,
+          review_summary_exported: true
+        },
+        review_notes: ["metrics.csv is required"],
+        summary_hash:
+          "sha256:abababababababababababababababababababababababababababababababab"
+      }
+    );
+
+    expect(display).toMatchObject({
+      packageId: "pkg-review",
+      sourceLabel: "BACKEND_RUNTIME_EXPORT_CATALOG / ARCHIVE / files",
+      summaryLabel: "pkg-review / 登记 6 个文件 / 缺失 1 个"
+    });
+    expect(display?.rows).toContainEqual(
+      expect.objectContaining({
+        filename: "events.jsonl",
+        roleLabel: "必需",
+        statusLabel: "必需已登记",
+        hashLabel: "bbbbbbbbbbbb",
+        href: "/runtime/export/packages/pkg-review/files/events.jsonl",
+        required: true,
+        present: true
+      })
+    );
+    expect(display?.rows).toContainEqual(
+      expect.objectContaining({
+        filename: "metrics.csv",
+        roleLabel: "必需",
+        statusLabel: "缺失",
+        sizeLabel: "-",
+        hashLabel: "-",
+        href: null,
+        required: true,
+        present: false
+      })
+    );
+    expect(display?.rows.some((row) => row.filename === "package_only.json")).toBe(
+      false
+    );
+    expect(
+      buildDataPanelExportArtifactHealthDisplay(undefined, "pkg-review", null)
+    ).toBeNull();
   });
 });
 

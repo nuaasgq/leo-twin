@@ -2419,6 +2419,71 @@ button.data-panel-route-row {
   font-size: 10px;
 }
 
+.data-panel-export-artifact-health {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  border: 1px solid #263a48;
+  border-radius: 7px;
+  padding: 8px;
+  background: #0b1219;
+}
+
+.data-panel-export-artifact-health-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 6px;
+  min-width: 0;
+}
+
+.data-panel-export-artifact-health-grid a,
+.data-panel-export-artifact-health-grid > span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  border: 1px solid #314656;
+  border-radius: 6px;
+  padding: 7px;
+  background: #081016;
+  color: var(--app-text);
+  text-decoration: none;
+}
+
+.data-panel-export-artifact-health-grid a:hover {
+  border-color: #4b7490;
+  background: #0c1a24;
+}
+
+.data-panel-export-artifact-health-grid a > span,
+.data-panel-export-artifact-health-grid > span > span {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--app-text);
+  font-size: 11px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.data-panel-export-artifact-health-grid strong {
+  color: var(--accent-cyan);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.data-panel-export-artifact-health-grid strong.missing {
+  color: #ffb6b6;
+}
+
+.data-panel-export-artifact-health-grid small {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--app-muted);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .data-panel-export-restore-actions {
   display: flex;
   flex-wrap: wrap;

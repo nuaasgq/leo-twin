@@ -599,6 +599,13 @@ Exit criteria:
   assumptions and KPI provenance.
 - Operator can diagnose service startup and runtime issues without reading code.
 
+Current Phase 3 progress:
+
+- V2-073 has been extended from backend package export into dashboard review
+  surfaces. The dashboard now links persisted package artifacts, renders the
+  selected `review_summary_v1.json`, and exposes backend-catalog artifact
+  health rows for required-file coverage and direct file inspection.
+
 ## 5. Parallel Agent Assignment Model
 
 - Kernel Agent: guard Event Kernel boundaries; review that no domain behavior

@@ -23,6 +23,8 @@ import {
   RuntimeComputeNodeDetailPageV1,
   TrafficDemandSummary,
   RuntimeExportCatalogV1,
+  RuntimeExportCatalogFileV1,
+  RuntimeExportCatalogRecordV1,
   RuntimeExportPackageCompareV1,
   RuntimeExportReviewSummaryV1,
   RuntimeExportRestoreCommandResultV1,
@@ -64,6 +66,7 @@ import {
   runtimeExportArchiveHref,
   runtimeExportPackageArchiveHref,
   runtimeExportPackageCompareHref,
+  runtimeExportPackageFileHref,
   runtimeExportPackageManifestHref,
   runtimeExportPackageRecordHref,
   runtimeExportPackageReviewSummaryHref,
@@ -399,6 +402,11 @@ export const DataPanel = memo(function DataPanel({
     runtimeExportComparePackageId,
     runtimeExportReviewSummaryLoading,
     runtimeExportReviewSummaryError
+  );
+  const exportArtifactHealthDisplay = buildDataPanelExportArtifactHealthDisplay(
+    runtimeExportCatalog,
+    runtimeExportComparePackageId,
+    runtimeExportReviewSummary
   );
   const exportCompareDisplay = buildDataPanelExportCompareDisplay(runtimeExportCompare);
   const exportCompareStatus = buildDataPanelExportCompareStatus(
@@ -1096,6 +1104,42 @@ export const DataPanel = memo(function DataPanel({
                   ))}
                 </div>
               ) : null}
+            </div>
+          ) : null}
+          {exportArtifactHealthDisplay ? (
+            <div
+              className="data-panel-export-artifact-health"
+              aria-label="复盘包文件健康"
+            >
+              <div className="data-panel-source-note">
+                <span>{exportArtifactHealthDisplay.sourceLabel}</span>
+                <small>{exportArtifactHealthDisplay.summaryLabel}</small>
+              </div>
+              <div className="data-panel-export-artifact-health-grid">
+                {exportArtifactHealthDisplay.rows.map((row) =>
+                  row.href ? (
+                    <a href={row.href} key={row.filename} title={row.title}>
+                      <span>{row.filename}</span>
+                      <strong className={row.present ? "present" : "missing"}>
+                        {row.statusLabel}
+                      </strong>
+                      <small>
+                        {row.roleLabel} / {row.sizeLabel} / {row.hashLabel}
+                      </small>
+                    </a>
+                  ) : (
+                    <span key={row.filename} title={row.title}>
+                      <span>{row.filename}</span>
+                      <strong className={row.present ? "present" : "missing"}>
+                        {row.statusLabel}
+                      </strong>
+                      <small>
+                        {row.roleLabel} / {row.sizeLabel} / {row.hashLabel}
+                      </small>
+                    </span>
+                  )
+                )}
+              </div>
             </div>
           ) : null}
           {exportCompareStatus ? (
@@ -8252,6 +8296,25 @@ export interface DataPanelExportCatalogRow {
   restorePreflightHref: string;
 }
 
+export interface DataPanelExportArtifactHealthDisplay {
+  packageId: string;
+  sourceLabel: string;
+  summaryLabel: string;
+  rows: readonly DataPanelExportArtifactHealthRow[];
+}
+
+export interface DataPanelExportArtifactHealthRow {
+  filename: string;
+  roleLabel: string;
+  statusLabel: string;
+  sizeLabel: string;
+  hashLabel: string;
+  href: string | null;
+  required: boolean;
+  present: boolean;
+  title: string;
+}
+
 export function buildDataPanelExportCatalogDisplay(
   catalog: RuntimeExportCatalogV1 | null | undefined,
   limit = 6
@@ -8303,6 +8366,110 @@ export function buildDataPanelExportCatalogDisplay(
     )} 条 / catalog ${shortRuntimeHash(catalog.catalog_hash)}`,
     rows
   };
+}
+
+export function buildDataPanelExportArtifactHealthDisplay(
+  catalog: RuntimeExportCatalogV1 | null | undefined,
+  selectedPackageId: string | null | undefined,
+  reviewSummary: RuntimeExportReviewSummaryV1 | null | undefined
+): DataPanelExportArtifactHealthDisplay | null {
+  if (
+    catalog === null ||
+    catalog === undefined ||
+    selectedPackageId === null ||
+    selectedPackageId === undefined
+  ) {
+    return null;
+  }
+  const record = selectRuntimeExportCatalogRecordForPackage(catalog, selectedPackageId);
+  if (record === null) {
+    return null;
+  }
+  const files = [...record.files].sort(compareRuntimeExportCatalogFiles);
+  const filesByName = new Map(files.map((file) => [file.filename, file]));
+  const requiredFilenames = new Set(
+    reviewSummary?.package_id === selectedPackageId
+      ? reviewSummary.artifacts.required_filenames
+      : []
+  );
+  const missingRequiredFilenames = new Set(
+    reviewSummary?.package_id === selectedPackageId
+      ? reviewSummary.artifacts.missing_required_filenames
+      : []
+  );
+  const orderedFilenames = [
+    ...new Set([
+      ...Array.from(requiredFilenames),
+      ...files.map((file) => file.filename),
+      ...Array.from(missingRequiredFilenames)
+    ])
+  ].sort((left, right) => left.localeCompare(right));
+  const rows = orderedFilenames.map((filename) => {
+    const file = filesByName.get(filename) ?? null;
+    const required = requiredFilenames.has(filename);
+    const missing = missingRequiredFilenames.has(filename) || (required && file === null);
+    const present = file !== null && !missing;
+    return {
+      filename,
+      roleLabel: required ? "必需" : "附加",
+      statusLabel: missing ? "缺失" : required ? "必需已登记" : "附加已登记",
+      sizeLabel: file ? formatRuntimeExportFileBytes(file.bytes) : "-",
+      hashLabel: file ? shortRuntimeHash(file.sha256) : "-",
+      href: file ? runtimeExportPackageFileHref(selectedPackageId, filename) : null,
+      required,
+      present,
+      title: `${filename} / ${missing ? "缺失" : "已登记"} / ${
+        file ? file.sha256 : "no file hash"
+      }`
+    };
+  });
+  const missingCount = rows.filter((row) => !row.present).length;
+  return {
+    packageId: selectedPackageId,
+    sourceLabel: `${catalog.source} / ${record.export_type} / files`,
+    summaryLabel: `${selectedPackageId} / 登记 ${formatCount(
+      files.length
+    )} 个文件 / 缺失 ${formatCount(missingCount)} 个`,
+    rows
+  };
+}
+
+function selectRuntimeExportCatalogRecordForPackage(
+  catalog: RuntimeExportCatalogV1,
+  packageId: string
+): RuntimeExportCatalogRecordV1 | null {
+  return (
+    [...catalog.records]
+      .filter((record) => record.package_id === packageId)
+      .sort((left, right) => {
+        const leftRank = left.export_type === "ARCHIVE" ? 0 : 1;
+        const rightRank = right.export_type === "ARCHIVE" ? 0 : 1;
+        if (leftRank !== rightRank) {
+          return leftRank - rightRank;
+        }
+        return left.catalog_key.localeCompare(right.catalog_key);
+      })[0] ?? null
+  );
+}
+
+function compareRuntimeExportCatalogFiles(
+  left: RuntimeExportCatalogFileV1,
+  right: RuntimeExportCatalogFileV1
+): number {
+  return left.filename.localeCompare(right.filename);
+}
+
+function formatRuntimeExportFileBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) {
+    return "0 B";
+  }
+  if (bytes < 1024) {
+    return `${formatCount(Math.round(bytes))} B`;
+  }
+  if (bytes < 1024 * 1024) {
+    return `${formatPreciseMetricValue(bytes / 1024)} KiB`;
+  }
+  return `${formatPreciseMetricValue(bytes / (1024 * 1024))} MiB`;
 }
 
 export interface DataPanelExportCompareDisplay {
