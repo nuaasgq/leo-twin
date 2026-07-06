@@ -110,7 +110,10 @@ to local aggregation only for older packages. That object aggregates checklist
 state with audit readiness, saved route comparison report presence, and
 scenario-review bundle readiness, so operators can see the handoff state before
 drilling into raw JSON. This lets operators inspect and record the package
-audit boundary without opening raw JSON first.
+audit boundary without opening raw JSON first. Tools that only need that
+handoff summary can call
+`GET /runtime/export/packages/{package_id}/review-completion`, which reads the
+same backend-owned audit evidence without replaying or recomputing the package.
 7. runtime evidence
 
 Each row has a tone:

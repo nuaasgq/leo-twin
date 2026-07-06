@@ -15266,7 +15266,7 @@ change.
 ## 2026-07-06 - Runtime Review Completion Contract v1
 
 - Branch: `feature/T316-runtime-review-completion-contract-v1`
-- Commit: pending commit note; final hash is reported after commit creation.
+- Commit: `4e2d042 feat(runtime): add package review completion contract`
 - Scope: move package-review handoff readiness semantics from frontend-only
   aggregation into backend-owned audit evidence. The runtime result package
   audit index now embeds `package_review_completion_v1` with deterministic
@@ -15322,3 +15322,58 @@ change.
   - Add a package-review handoff export endpoint or standalone artifact only
     if downstream tools need to consume completion without loading the full
     audit index.
+
+## 2026-07-06 - Runtime Review Completion Endpoint v1
+
+- Branch: `feature/T317-runtime-review-completion-endpoint-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: expose the backend-owned `package_review_completion_v1` audit-index
+  subobject through `GET /runtime/export/packages/{package_id}/review-completion`.
+  The endpoint reads the existing `export_package_audit_index_v1.json` artifact
+  and returns the completion summary plus the audit-index source artifact
+  record. It does not replay events, recompute package evidence, mutate package
+  files on read, change Event Kernel behavior, alter runtime models, or invoke
+  external simulators. The frontend API gains a typed loader and href helper
+  for downstream tools and future dashboard usage.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/app/api.ts`
+  - `frontend/tests/api.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/dashboard_model_trust_evidence_workspace_v1.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile ...`
+    - Result: passed.
+  - `python -m pytest tests/unit/test_result_package_contract_v1.py tests/integration/test_result_package_export_v1.py tests/integration/test_runtime_session_control.py::test_demo_server_stream_query_parses_cursor_options -q`
+    - Result: passed, 18 tests.
+  - `pnpm --dir frontend test api.test.ts dataPanel.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 2 test
+      files and 213 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path. Vite
+      reported the existing large DataPanel chunk warning.
+  - `git diff --check -- <task files>`
+    - Result: passed.
+- Problems encountered:
+  - The first integration assertion compared the endpoint response loaded from
+    JSON with the in-memory audit index. JSON converts tuple fields to lists,
+    so the test was corrected to compare against the JSON transport shape.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The endpoint returns JSON but does not create a standalone
+    `review_completion_v1.json` file inside existing packages.
+- Recommended follow-up:
+  - Add an optional Markdown handoff report if operators need a human-readable
+    one-file review package summary.

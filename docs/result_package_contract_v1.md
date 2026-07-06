@@ -341,6 +341,18 @@ configuration validation, missing/warning evidence, and a deterministic
 `completion_hash`. It deliberately does not include `audit_hash`, so the audit
 index can hash the completion object without a self-reference.
 
+For tools that only need the handoff summary, the demo backend exposes the same
+object without returning the full audit index:
+
+```text
+GET /runtime/export/packages/{package_id}/review-completion
+```
+
+The endpoint reads `export_package_audit_index_v1.json` and returns its
+`package_review_completion_v1` subobject plus the audit-index source artifact
+record. It does not replay events, recompute package evidence, or mutate the
+package.
+
 The audit index is read-only evidence. It does not replay events, recompute
 routes or services, mutate packages on read, capture packets, or call external
 simulators.

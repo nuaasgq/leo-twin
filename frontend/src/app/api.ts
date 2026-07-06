@@ -11,6 +11,8 @@ import {
   RuntimeExportPackageCompareEnvelope,
   RuntimeExportPackageCompareV1,
   RuntimeExportPackageAuditIndexV1,
+  RuntimeExportPackageReviewCompletionEnvelope,
+  RuntimeExportPackageReviewCompletionV1,
   RuntimeExportScenarioReviewBundleV1,
   RuntimeExportScenarioReviewChecklistEnvelope,
   RuntimeExportScenarioReviewChecklistRecordV1,
@@ -467,6 +469,18 @@ export async function loadRuntimeExportPackageAuditIndex(
   return decodeRuntimeExportPackageAuditIndex(await response.json());
 }
 
+export async function loadRuntimeExportPackageReviewCompletion(
+  packageId: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): Promise<RuntimeExportPackageReviewCompletionV1> {
+  const url = runtimeExportPackageReviewCompletionHref(packageId, endpoint);
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`failed to load runtime export package review completion from ${url}: HTTP ${response.status}`);
+  }
+  return decodeRuntimeExportPackageReviewCompletionEnvelope(await response.json()).summary;
+}
+
 export async function loadRuntimeExportScenarioReviewBundle(
   packageId: string,
   endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
@@ -666,6 +680,13 @@ export function runtimeExportPackageReviewSummaryHref(
   endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
 ): string {
   return `${runtimeExportPackageRecordHref(packageId, endpoint)}/review-summary`;
+}
+
+export function runtimeExportPackageReviewCompletionHref(
+  packageId: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): string {
+  return `${runtimeExportPackageRecordHref(packageId, endpoint)}/review-completion`;
 }
 
 export function runtimeExportPackageArchiveHref(
@@ -1260,6 +1281,39 @@ export function decodeRuntimeExportPackageAuditIndex(
     );
   }
   return value as RuntimeExportPackageAuditIndexV1;
+}
+
+export function decodeRuntimeExportPackageReviewCompletionEnvelope(
+  value: unknown
+): RuntimeExportPackageReviewCompletionEnvelope {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError(
+      "runtime export package review completion response must be an object"
+    );
+  }
+  const summary = (value as { summary?: unknown }).summary;
+  const sourceArtifact = (value as { source_artifact?: unknown }).source_artifact;
+  if (
+    typeof summary !== "object" ||
+    summary === null ||
+    Array.isArray(summary) ||
+    typeof (summary as { completion_id?: unknown }).completion_id !== "string" ||
+    typeof (summary as { completion_hash?: unknown }).completion_hash !==
+      "string" ||
+    typeof sourceArtifact !== "object" ||
+    sourceArtifact === null ||
+    Array.isArray(sourceArtifact)
+  ) {
+    throw new TypeError(
+      "runtime export package review completion response must include summary completion_id, completion_hash, and source_artifact"
+    );
+  }
+  return {
+    ...(value as Record<string, unknown>),
+    summary: summary as RuntimeExportPackageReviewCompletionV1,
+    source_artifact:
+      sourceArtifact as RuntimeExportPackageReviewCompletionEnvelope["source_artifact"]
+  } as RuntimeExportPackageReviewCompletionEnvelope;
 }
 
 export function decodeRuntimeExportScenarioReviewBundle(

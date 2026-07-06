@@ -100,6 +100,7 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
             "GET /runtime/export/packages/{package_id}",
             "GET /runtime/export/packages/{package_id}/manifest",
             "GET /runtime/export/packages/{package_id}/review-summary",
+            "GET /runtime/export/packages/{package_id}/review-completion",
             "GET /runtime/export/packages/{package_id}/service-traces",
             "GET /runtime/export/packages/{package_id}/routes",
             "GET /runtime/export/packages/{package_id}/routes/{route_id}",

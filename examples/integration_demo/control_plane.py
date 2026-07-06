@@ -905,6 +905,34 @@ class DemoControlPlane:
             terminal_reason=terminal_reason,
         )
 
+    def runtime_export_package_review_completion(
+        self,
+        package_id: str,
+        output_root: str | Path = "artifacts/runtime_exports",
+    ) -> dict[str, Any]:
+        audit_artifact = self.runtime_export_package_artifact(
+            package_id,
+            _RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_FILENAME,
+            output_root,
+        )
+        audit_index = json.loads(
+            Path(str(audit_artifact["path"])).read_text(encoding="utf-8")
+        )
+        if not isinstance(audit_index, Mapping):
+            raise RuntimeExportArtifactError(
+                f"runtime export package {package_id!r} has invalid audit index"
+            )
+        completion = audit_index.get("package_review_completion_v1")
+        if not isinstance(completion, Mapping):
+            raise RuntimeExportArtifactError(
+                f"runtime export package {package_id!r} has no package review completion evidence"
+            )
+        return {
+            "type": "RUNTIME_EXPORT_PACKAGE_REVIEW_COMPLETION",
+            "summary": dict(completion),
+            "source_artifact": _runtime_export_catalog_file_record(audit_artifact),
+        }
+
     def runtime_export_package_route_detail(
         self,
         package_id: str,

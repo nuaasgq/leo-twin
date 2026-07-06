@@ -657,7 +657,9 @@ Tasks:
     signal. T316 moves that handoff readiness semantics into the backend audit
     index as `package_review_completion_v1`, allowing dashboard and offline
     consumers to read the same deterministic completion status and hash without
-    re-deriving the rules locally.
+    re-deriving the rules locally. T317 exposes the same object through
+    `GET /runtime/export/packages/{package_id}/review-completion`, so tools can
+    read handoff readiness without loading the full audit index.
 
 ### WS9. Delivery and Operations v2
 

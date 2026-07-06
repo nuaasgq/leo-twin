@@ -68,6 +68,10 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
         in first["source_endpoints"]
     )
     assert (
+        "GET /runtime/export/packages/{package_id}/review-completion"
+        in first["source_endpoints"]
+    )
+    assert (
         "GET /runtime/export/packages/{package_id}/service-traces"
         in first["source_endpoints"]
     )

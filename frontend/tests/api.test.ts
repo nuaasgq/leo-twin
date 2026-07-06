@@ -7,6 +7,7 @@ import {
   loadRuntimeExportManifest,
   loadRuntimeExportPackageCompare,
   loadRuntimeExportPackageAuditIndex,
+  loadRuntimeExportPackageReviewCompletion,
   loadRuntimeExportScenarioReviewBundle,
   loadRuntimeExportScenarioReviewChecklist,
   loadRuntimeExportRouteComparisonReviewReport,
@@ -41,6 +42,7 @@ import {
   runtimeExportPackageCompareHref,
   runtimeExportPackageFileHref,
   runtimeExportPackageManifestHref,
+  runtimeExportPackageReviewCompletionHref,
   runtimeExportPackageRecordHref,
   runtimeExportPackageRouteDetailsHref,
   runtimeExportPackageRouteDetailHref,
@@ -79,6 +81,9 @@ describe("runtime API diagnostics", () => {
     );
     expect(runtimeExportPackageReviewSummaryHref("pkg 1")).toBe(
       "/runtime/export/packages/pkg%201/review-summary"
+    );
+    expect(runtimeExportPackageReviewCompletionHref("pkg 1")).toBe(
+      "/runtime/export/packages/pkg%201/review-completion"
     );
     expect(runtimeExportPackageArchiveHref("pkg 1")).toBe(
       "/runtime/export/packages/pkg%201/archive"
@@ -1038,6 +1043,65 @@ describe("runtime API diagnostics", () => {
     });
     expect(fetchMock).toHaveBeenCalledWith(
       "/runtime/export/packages/pkg/files/export_package_audit_index_v1.json"
+    );
+  });
+
+  it("loads runtime export package review completion summaries", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        type: "RUNTIME_EXPORT_PACKAGE_REVIEW_COMPLETION",
+        summary: {
+          type: "RUNTIME_EXPORT_PACKAGE_REVIEW_COMPLETION_V1",
+          version: "v1",
+          completion_id: "leo_twin.runtime_export_package_review_completion.v1",
+          source: "BACKEND_RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX",
+          completion_scope: "RESULT_PACKAGE_OPERATOR_HANDOFF_READINESS",
+          package_id: "pkg",
+          package_dir: "artifacts/runtime_exports/pkg",
+          completion_status: "REVIEW_COMPLETE",
+          handoff_ready: true,
+          audit_status: "AUDIT_READY",
+          audit_warnings: [],
+          route_comparison_review_report_present: true,
+          route_comparison_review_report_hash: "sha256:route-report",
+          route_comparison_review_record_count: 1,
+          route_comparison_review_error_count: 0,
+          scenario_review_bundle_present: true,
+          scenario_review_checklist_present: true,
+          scenario_review_checklist_hash: "sha256:checklist",
+          scenario_review_checklist_status: "CHECKLIST_COMPLETE",
+          scenario_review_checklist_record_count: 2,
+          review_summary_status: "REVIEW_READY",
+          review_summary_hash: "sha256:review",
+          diagnostics_error_count: 0,
+          diagnostics_hash: "sha256:diagnostics",
+          boundary_alignment_status: "ALIGNED",
+          boundary_alignment_hash: "sha256:alignment",
+          user_configuration_validation_ok: true,
+          missing_or_warning_evidence: [],
+          evidence_labels: ["audit AUDIT_READY"],
+          boundary_conditions: ["BACKEND_OWNED_HANDOFF_SUMMARY"],
+          completion_hash: "sha256:completion"
+        },
+        source_artifact: {
+          name: "export_package_audit_index_v1",
+          filename: "export_package_audit_index_v1.json",
+          bytes: 512,
+          sha256: "sha256:audit-artifact"
+        }
+      })
+    }));
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+
+    await expect(loadRuntimeExportPackageReviewCompletion("pkg")).resolves.toMatchObject({
+      package_id: "pkg",
+      completion_status: "REVIEW_COMPLETE",
+      handoff_ready: true,
+      completion_hash: "sha256:completion"
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/runtime/export/packages/pkg/review-completion"
     );
   });
 

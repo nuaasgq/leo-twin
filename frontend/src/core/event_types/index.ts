@@ -1494,6 +1494,12 @@ export interface RuntimeExportPackageAuditIndexV1 {
   audit_hash: string;
 }
 
+export interface RuntimeExportPackageReviewCompletionEnvelope {
+  type: "RUNTIME_EXPORT_PACKAGE_REVIEW_COMPLETION" | string;
+  summary: RuntimeExportPackageReviewCompletionV1;
+  source_artifact: RuntimeExportCatalogFileV1;
+}
+
 export interface RuntimeExportPackageReviewCompletionV1 {
   type: "RUNTIME_EXPORT_PACKAGE_REVIEW_COMPLETION_V1" | string;
   version: "v1" | string;

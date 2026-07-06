@@ -236,6 +236,12 @@ backend object is present. It combines audit status, saved route comparison
 report presence, scenario review readiness, and checklist completion. Use that
 banner as the first operator-facing signal for whether a result package is
 ready for handoff, then inspect the underlying JSON links for evidence.
+The same completion summary is available directly:
+
+```powershell
+Invoke-RestMethod "http://127.0.0.1:8765/runtime/export/packages/<package_id>/review-completion"
+```
+
 For package-owned review, use:
 
 ```powershell

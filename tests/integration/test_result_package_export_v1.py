@@ -429,6 +429,17 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert checklist_audit["package_review_completion_hash"] == (
         checklist_audit["package_review_completion_v1"]["completion_hash"]
     )
+    completion_response = control_plane.runtime_export_package_review_completion(
+        str(package["package_id"]),
+        output_root,
+    )
+    assert completion_response["type"] == "RUNTIME_EXPORT_PACKAGE_REVIEW_COMPLETION"
+    assert completion_response["summary"] == json.loads(
+        json.dumps(checklist_audit["package_review_completion_v1"], sort_keys=True)
+    )
+    assert completion_response["source_artifact"]["filename"] == (
+        "export_package_audit_index_v1.json"
+    )
     assert checklist_audit["audit_status"] == "AUDIT_READY"
     assert checklist_audit["audit_warnings"] == ()
     catalog = control_plane.runtime_export_catalog(output_root)["summary"]
