@@ -122,9 +122,14 @@ credibility locally. The card reports status, KPI coverage, source-field
 coverage, proxy/packet guard counts, zero-value explanation coverage, missing
 metric names, and backend caveats.
 
+The dashboard also renders `network_kpi_provenance_v2.kpis` as a read-only KPI
+formula inspector. Each visible row shows the KPI display name, runtime value,
+owning layer, observed source, formula summary, source-field coverage, and
+zero-value reason or semantics. This keeps frontend explanations tied to the
+backend contract instead of local dashboard guesses.
+
 ## Follow-Up
 
 V2-022 added deterministic time-window pressure inputs while preserving this
-contract. A later dashboard pass can render the full
-`network_kpi_provenance_v2.kpis` table instead of only the compact
-`network_kpi_credibility_v1` trust summary.
+contract. Future dashboard work can add filtering or a wider drawer for large
+KPI/source-field tables if additional KPI families are added.

@@ -167,6 +167,9 @@ Tasks:
   - Status: provenance contract implemented earlier; backend
     `network_kpi_credibility_v1` coverage/trust summary implemented in T206;
     standalone dashboard trust card bound to backend credibility fields in T207.
+    T273 renders `network_kpi_provenance_v2.kpis` as a dashboard formula
+    inspector with runtime value, layer, observed source, formula summary,
+    source-field coverage, and zero-value semantics per KPI.
 - V2-022: Add time-varying flow-level network pressure.
   - Scope: deterministic demand/capacity pressure, route blocking, congestion
     proxy, loss proxy, delay variation proxy.

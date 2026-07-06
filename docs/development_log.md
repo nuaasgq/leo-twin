@@ -13016,3 +13016,48 @@ change.
 - Recommended follow-up:
   - Add manifest-to-diagnostics navigation affordances and optional filtering
     for large artifact lists once result packages accumulate more files.
+
+## 2026-07-06 - Dashboard Network KPI Formula Inspector v1
+
+- Branch: `feature/T273-dashboard-network-kpi-formula-inspector-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: render backend-owned `network_kpi_provenance_v2.kpis` in the
+  standalone dashboard network KPI card. The new read-only formula inspector
+  shows each visible KPI's runtime value, owning layer, observed source, formula
+  summary, source-field coverage, zero-value reason or semantics, and
+  credibility tone from `network_kpi_credibility_v1`. This is a frontend
+  semantics-display task only; backend KPI calculation, runtime behavior, Event
+  Kernel behavior, model behavior, packet-level semantics, and external
+  simulator integration remain unchanged.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/network_kpi_provenance_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed, using the bundled Node/Pnpm runtime because the shell
+      PATH does not expose `node`.
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed, 156 tests.
+  - `pnpm --dir frontend test`
+    - Result: passed, 26 test files and 369 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing DataPanel chunk-size
+      warning after minification; no functional build error.
+  - `python -m pytest tests/unit/test_network_kpi_provenance_v2.py tests/unit/test_network_model_contract_v2.py tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer -q`
+    - Result: passed, 7 tests.
+- Problems encountered:
+  - `tone` needed an explicit TypeScript union annotation so the formula rows
+    remain type-safe.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The inspector intentionally limits visible KPI rows to keep the network KPI
+    card compact. A future wider drawer can add filtering and full source-field
+    expansion.
+- Recommended follow-up:
+  - Add a larger model-trust workspace that groups KPI formulas, route
+    explanations, and benchmark acceptance evidence.

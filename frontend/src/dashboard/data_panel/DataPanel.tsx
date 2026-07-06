@@ -36,6 +36,7 @@ import {
   RuntimeExportHistoryV1,
   RuntimeMetricsSummary,
   RuntimeNetworkKpiCredibilityV1,
+  RuntimeNetworkKpiProvenanceV2,
   RuntimeNetworkQualityProvenanceV1,
   RuntimeComputeNodeDetailItemV1,
   RuntimeNodeDetailCardV1,
@@ -493,6 +494,10 @@ export const DataPanel = memo(function DataPanel({
     runtimeStatus.network_quality_provenance_v1
   );
   const networkKpiCredibilityDisplay = buildDataPanelNetworkKpiCredibilityDisplay(
+    runtimeStatus.network_kpi_credibility_v1
+  );
+  const networkKpiFormulaInspector = buildDataPanelNetworkKpiFormulaInspector(
+    runtimeStatus.network_kpi_provenance_v2,
     runtimeStatus.network_kpi_credibility_v1
   );
   const modelAssumptionsDisplay = buildDataPanelModelAssumptionsDisplay(
@@ -1495,6 +1500,38 @@ export const DataPanel = memo(function DataPanel({
                   ))}
                 </div>
               ) : null}
+            </div>
+          ) : null}
+          {networkKpiFormulaInspector ? (
+            <div
+              className={`data-panel-kpi-formula-inspector ${networkKpiFormulaInspector.tone}`}
+              aria-label="网络KPI公式检查器"
+            >
+              <div className="data-panel-kpi-formula-header">
+                <div>
+                  <span>{networkKpiFormulaInspector.sourceLabel}</span>
+                  <strong>{networkKpiFormulaInspector.statusLabel}</strong>
+                  <small>{networkKpiFormulaInspector.summaryLabel}</small>
+                </div>
+              </div>
+              <div className="data-panel-kpi-formula-meta">
+                {networkKpiFormulaInspector.metaLabels.map((label) => (
+                  <span key={label}>{label}</span>
+                ))}
+              </div>
+              <div className="data-panel-kpi-formula-rows">
+                {networkKpiFormulaInspector.rows.map((row) => (
+                  <span className={row.tone} key={row.metric} title={row.title}>
+                    <strong>{row.displayName}</strong>
+                    <em>{row.valueLabel}</em>
+                    <small>{row.layerLabel}</small>
+                    <small>{row.sourceLabel}</small>
+                    <small>{row.formulaLabel}</small>
+                    <small>{row.sourceFieldsLabel}</small>
+                    {row.zeroReasonLabel ? <small>{row.zeroReasonLabel}</small> : null}
+                  </span>
+                ))}
+              </div>
             </div>
           ) : null}
           {networkKpiSource.caveats.length > 0 ? (
@@ -9330,6 +9367,28 @@ export interface DataPanelNetworkKpiCredibilityDisplay {
   caveats: readonly string[];
 }
 
+export interface DataPanelNetworkKpiFormulaInspectorDisplay {
+  tone: DataPanelNetworkKpiCredibilityTone;
+  sourceLabel: string;
+  statusLabel: string;
+  summaryLabel: string;
+  metaLabels: readonly string[];
+  rows: readonly DataPanelNetworkKpiFormulaRow[];
+}
+
+export interface DataPanelNetworkKpiFormulaRow {
+  metric: string;
+  displayName: string;
+  valueLabel: string;
+  layerLabel: string;
+  sourceLabel: string;
+  formulaLabel: string;
+  sourceFieldsLabel: string;
+  zeroReasonLabel: string | null;
+  tone: "observed" | "missing" | "invalid";
+  title: string;
+}
+
 export interface DataPanelModelAssumptionsDisplay {
   sourceLabel: string;
   summaryLabel: string;
@@ -9790,6 +9849,80 @@ export function buildDataPanelNetworkKpiCredibilityDisplay(
   };
 }
 
+export function buildDataPanelNetworkKpiFormulaInspector(
+  provenance: RuntimeNetworkKpiProvenanceV2 | null | undefined,
+  credibility: RuntimeNetworkKpiCredibilityV1 | null | undefined,
+  limit = 6
+): DataPanelNetworkKpiFormulaInspectorDisplay | null {
+  if (provenance === null || provenance === undefined) {
+    return null;
+  }
+  const displayLimit = Math.max(0, limit);
+  const orderedKpis = [...provenance.kpis].sort((left, right) =>
+    left.metric.localeCompare(right.metric)
+  );
+  const rows = orderedKpis.slice(0, displayLimit).map((kpi) => {
+    const observedFields = kpi.source_fields.filter(
+      (field) => field.value_source === "METRICS_SUMMARY"
+    );
+    const sourceFieldsLabel = `来源字段 ${formatCount(
+      observedFields.length
+    )}/${formatCount(kpi.source_fields.length)}：${kpi.source_fields
+      .slice(0, 4)
+      .map((field) => `${field.field}=${formatNetworkKpiValue(field.current_value)}`)
+      .join(" / ")}`;
+    const zeroReasonLabel =
+      kpi.zero_reason && kpi.zero_reason.label
+        ? `零值原因：${kpi.zero_reason.label}`
+        : kpi.zero_value_semantics
+          ? `零值语义：${kpi.zero_value_semantics}`
+          : null;
+    const tone: DataPanelNetworkKpiFormulaRow["tone"] = kpi.packet_level_metric
+      ? "invalid"
+      : kpi.status === "OBSERVED"
+        ? "observed"
+        : "missing";
+    return {
+      metric: kpi.metric,
+      displayName: `${kpi.display_name} / ${kpi.metric}`,
+      valueLabel: `${formatNetworkKpiValue(kpi.current_value)} ${kpi.unit}`.trim(),
+      layerLabel: `${kpi.layer} / ${kpi.status}`,
+      sourceLabel: `${kpi.observed_source.label || kpi.observed_source.source}`,
+      formulaLabel: kpi.formula_summary,
+      sourceFieldsLabel,
+      zeroReasonLabel,
+      tone,
+      title: `${kpi.metric}: ${kpi.interpretation}`
+    };
+  });
+  const credibilityStatus = credibility?.credibility_status ?? "";
+  const tone =
+    credibility === null || credibility === undefined
+      ? "pending"
+      : networkKpiCredibilityTone(credibilityStatus);
+  const hiddenCount = Math.max(0, orderedKpis.length - rows.length);
+  return {
+    tone,
+    sourceLabel: `${provenance.provenance_id} / ${provenance.network_model_contract_id}`,
+    statusLabel:
+      credibility === null || credibility === undefined
+        ? "等待可信度摘要"
+        : networkKpiCredibilityStatusLabel(credibility.credibility_status),
+    summaryLabel: `${networkKpiMetricModelLabel(
+      provenance.metric_model
+    )} / 公式 ${formatCount(rows.length)}/${formatCount(provenance.kpi_count)}${
+      hiddenCount > 0 ? ` / 隐藏 ${formatCount(hiddenCount)}` : ""
+    }`,
+    metaLabels: [
+      `contract ${provenance.network_model_contract_version}`,
+      provenance.packet_level_simulation ? "含包级仿真" : "无包级仿真",
+      `KPI ${formatCount(provenance.kpi_count)}`,
+      `展示 ${formatCount(rows.length)}`
+    ],
+    rows
+  };
+}
+
 export function buildDataPanelModelAssumptionsDisplay(
   modelAssumptions: readonly string[] | null | undefined,
   fidelitySummary: FidelitySummary | null | undefined,
@@ -9918,6 +10051,19 @@ function networkKpiMetricModelLabel(metricModel: string): string {
     return "流级代理";
   }
   return metricModel || "未知";
+}
+
+function formatNetworkKpiValue(value: string | number | boolean | null): string {
+  if (value === null) {
+    return "-";
+  }
+  if (typeof value === "number") {
+    return Number.isInteger(value) ? formatCount(value) : formatPreciseMetricValue(value);
+  }
+  if (typeof value === "boolean") {
+    return value ? "true" : "false";
+  }
+  return value;
 }
 
 function networkKpiCredibilityIssueLabels(

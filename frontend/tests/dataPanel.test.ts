@@ -35,6 +35,7 @@ import {
   buildDataPanelNetworkComponentTail,
   buildDataPanelNetworkKpiCaveats,
   buildDataPanelNetworkKpiCredibilityDisplay,
+  buildDataPanelNetworkKpiFormulaInspector,
   buildDataPanelModelAssumptionsDisplay,
   buildDataPanelNetworkKpiProvenanceItems,
   buildDataPanelNetworkKpiSource,
@@ -3558,6 +3559,136 @@ describe("buildDataPanelNetworkKpiProvenanceItems", () => {
 });
 
 describe("buildDataPanelNetworkKpiCredibilityDisplay", () => {
+  it("renders per-KPI backend formula provenance for dashboard inspection", () => {
+    const display = buildDataPanelNetworkKpiFormulaInspector(
+      {
+        version: "v2",
+        provenance_id: "leo_twin.network_kpi_provenance.v2",
+        source: "BACKEND_METRICS_SUMMARY",
+        network_model_contract_id: "leo_twin.network_model_contract.v2",
+        network_model_contract_version: "v2",
+        metric_model: "FLOW_LEVEL_PROXY",
+        packet_level_simulation: false,
+        proxy_note: "Flow-level proxy only.",
+        provenance_note: "KPI provenance from backend metrics.",
+        kpi_count: 2,
+        kpis: [
+          {
+            metric: "EFFECTIVE_THROUGHPUT",
+            runtime_summary_key: "network_quality_effective_throughput_mbps",
+            current_value: 180,
+            status: "OBSERVED",
+            display_name: "Effective throughput",
+            layer: "NETWORK",
+            unit: "Mbps",
+            formula_summary:
+              "Prefer completed-flow throughput adjusted by deterministic pressure.",
+            interpretation: "Flow-level carried throughput estimate.",
+            zero_value_semantics: "No completed flow and no available route.",
+            packet_level_metric: false,
+            observed_source: {
+              source: "COMPLETED_FLOW_CAPACITY",
+              label: "completed flow capacity"
+            },
+            zero_reason: null,
+            source_fields: [
+              {
+                field: "network_quality_estimated_delivered_throughput_mbps",
+                current_value: 180,
+                value_source: "METRICS_SUMMARY"
+              },
+              {
+                field: "network_quality_available_route_demand_mbps",
+                current_value: null,
+                value_source: "MODEL_OR_CONFIG_STATE"
+              }
+            ]
+          },
+          {
+            metric: "EFFECTIVE_LOSS_PROXY",
+            runtime_summary_key: "network_quality_effective_loss_proxy_rate",
+            current_value: null,
+            status: "MISSING_RUNTIME_VALUE",
+            display_name: "Effective loss proxy",
+            layer: "TRANSPORT",
+            unit: "ratio",
+            formula_summary: "Maximum of configured and pressure loss proxies.",
+            interpretation: "Flow-level loss proxy, not packet loss.",
+            zero_value_semantics: "No configured or pressure-driven loss.",
+            packet_level_metric: false,
+            observed_source: {
+              source: "RUNTIME_SUMMARY_KEY",
+              label: "Runtime summary field"
+            },
+            zero_reason: {
+              reason: "",
+              label: ""
+            },
+            source_fields: [
+              {
+                field: "network.transport_loss_rate",
+                current_value: null,
+                value_source: "MODEL_OR_CONFIG_STATE"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        version: "v1",
+        credibility_id: "leo_twin.network_kpi_credibility.v1",
+        source: "NETWORK_KPI_PROVENANCE_V2",
+        provenance_id: "leo_twin.network_kpi_provenance.v2",
+        metric_model: "FLOW_LEVEL_PROXY",
+        packet_level_simulation: false,
+        credibility_status: "PARTIAL_RUNTIME_VALUES",
+        kpi_count: 2,
+        observed_kpi_count: 1,
+        missing_kpi_count: 1,
+        packet_level_metric_count: 0,
+        flow_level_proxy_metric_count: 2,
+        zero_value_kpi_count: 0,
+        zero_value_explained_count: 0,
+        source_field_count: 3,
+        observed_source_field_count: 1,
+        missing_source_field_count: 2,
+        missing_metrics: ["EFFECTIVE_LOSS_PROXY"],
+        zero_unexplained_metrics: [],
+        caveats: []
+      }
+    );
+
+    expect(display).toMatchObject({
+      tone: "different",
+      sourceLabel:
+        "leo_twin.network_kpi_provenance.v2 / leo_twin.network_model_contract.v2",
+      statusLabel: "部分运行值",
+      summaryLabel: "流级代理 / 公式 2/2",
+      metaLabels: ["contract v2", "无包级仿真", "KPI 2", "展示 2"],
+      rows: [
+        {
+          metric: "EFFECTIVE_LOSS_PROXY",
+          valueLabel: "- ratio",
+          layerLabel: "TRANSPORT / MISSING_RUNTIME_VALUE",
+          sourceFieldsLabel:
+            "来源字段 0/1：network.transport_loss_rate=-",
+          zeroReasonLabel: "零值语义：No configured or pressure-driven loss.",
+          tone: "missing"
+        },
+        {
+          metric: "EFFECTIVE_THROUGHPUT",
+          valueLabel: "180 Mbps",
+          layerLabel: "NETWORK / OBSERVED",
+          sourceLabel: "completed flow capacity",
+          sourceFieldsLabel:
+            "来源字段 1/2：network_quality_estimated_delivered_throughput_mbps=180 / network_quality_available_route_demand_mbps=-",
+          tone: "observed"
+        }
+      ]
+    });
+    expect(buildDataPanelNetworkKpiFormulaInspector(undefined, undefined)).toBeNull();
+  });
+
   it("formats complete backend network KPI credibility as a trusted flow-level proxy", () => {
     expect(
       buildDataPanelNetworkKpiCredibilityDisplay({
