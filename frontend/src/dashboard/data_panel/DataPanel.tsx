@@ -30,6 +30,8 @@ import {
   RuntimeExportRouteComparisonReviewV1,
   RuntimeExportRouteComparisonReviewReportV1,
   RuntimeExportRouteComparisonReviewReportRecordV1,
+  RuntimeExportServiceTraceComparisonReviewReportV1,
+  RuntimeExportServiceTraceComparisonReviewReportRecordV1,
   RuntimeExportRouteDetailItemV1,
   RuntimeExportRouteDetailIndexRouteV1,
   RuntimeExportRouteDetailIndexV1,
@@ -263,6 +265,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportRouteDetailPage,
   runtimeExportRouteDetailItem,
   runtimeExportRouteComparisonReviewReport,
+  runtimeExportServiceTraceComparisonReviewReport,
   runtimeExportPackageAuditIndex,
   runtimeExportScenarioReviewBundle,
   runtimeExportScenarioReviewChecklist,
@@ -289,6 +292,8 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportServiceTraceItemError,
   runtimeExportRouteComparisonReviewReportLoading,
   runtimeExportRouteComparisonReviewReportError,
+  runtimeExportServiceTraceComparisonReviewReportLoading,
+  runtimeExportServiceTraceComparisonReviewReportError,
   runtimeExportPackageAuditIndexLoading,
   runtimeExportPackageAuditIndexError,
   runtimeExportScenarioReviewBundleLoading,
@@ -298,6 +303,9 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportRouteComparisonReviewSavePendingRouteId,
   runtimeExportRouteComparisonReviewSaveError,
   runtimeExportRouteComparisonReviewSaveReportHash,
+  runtimeExportServiceTraceComparisonReviewSavePendingTraceId,
+  runtimeExportServiceTraceComparisonReviewSaveError,
+  runtimeExportServiceTraceComparisonReviewSaveReportHash,
   runtimeExportScenarioReviewChecklistSavePending,
   runtimeExportScenarioReviewChecklistSaveError,
   runtimeExportScenarioReviewChecklistSaveHash,
@@ -323,6 +331,7 @@ export const DataPanel = memo(function DataPanel({
   onRuntimeExportRouteDetailItemSelect,
   onRuntimeExportServiceTraceItemSelect,
   onRuntimeExportRouteComparisonReviewSave,
+  onRuntimeExportServiceTraceComparisonReviewSave,
   onRuntimeExportScenarioReviewChecklistSave,
   onRuntimeExportRestore,
   onRuntimeUserDetailSelect,
@@ -355,6 +364,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportRouteDetailPage?: RuntimeExportRouteDetailPageV1 | null;
   runtimeExportRouteDetailItem?: RuntimeExportRouteDetailItemV1 | null;
   runtimeExportRouteComparisonReviewReport?: RuntimeExportRouteComparisonReviewReportV1 | null;
+  runtimeExportServiceTraceComparisonReviewReport?: RuntimeExportServiceTraceComparisonReviewReportV1 | null;
   runtimeExportPackageAuditIndex?: RuntimeExportPackageAuditIndexV1 | null;
   runtimeExportScenarioReviewBundle?: RuntimeExportScenarioReviewBundleV1 | null;
   runtimeExportScenarioReviewChecklist?: RuntimeExportScenarioReviewChecklistV1 | null;
@@ -381,6 +391,8 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportServiceTraceItemError?: string | null;
   runtimeExportRouteComparisonReviewReportLoading?: boolean;
   runtimeExportRouteComparisonReviewReportError?: string | null;
+  runtimeExportServiceTraceComparisonReviewReportLoading?: boolean;
+  runtimeExportServiceTraceComparisonReviewReportError?: string | null;
   runtimeExportPackageAuditIndexLoading?: boolean;
   runtimeExportPackageAuditIndexError?: string | null;
   runtimeExportScenarioReviewBundleLoading?: boolean;
@@ -390,6 +402,9 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportRouteComparisonReviewSavePendingRouteId?: string | null;
   runtimeExportRouteComparisonReviewSaveError?: string | null;
   runtimeExportRouteComparisonReviewSaveReportHash?: string | null;
+  runtimeExportServiceTraceComparisonReviewSavePendingTraceId?: string | null;
+  runtimeExportServiceTraceComparisonReviewSaveError?: string | null;
+  runtimeExportServiceTraceComparisonReviewSaveReportHash?: string | null;
   runtimeExportScenarioReviewChecklistSavePending?: boolean;
   runtimeExportScenarioReviewChecklistSaveError?: string | null;
   runtimeExportScenarioReviewChecklistSaveHash?: string | null;
@@ -430,6 +445,9 @@ export const DataPanel = memo(function DataPanel({
   onRuntimeExportServiceTraceItemSelect?: (traceId: string | null) => void;
   onRuntimeExportRouteComparisonReviewSave?: (
     request: DataPanelExportRouteComparisonReviewSaveRequest
+  ) => void;
+  onRuntimeExportServiceTraceComparisonReviewSave?: (
+    request: DataPanelExportServiceTraceComparisonReviewSaveRequest
   ) => void;
   onRuntimeExportScenarioReviewChecklistSave?: (
     request: DataPanelExportScenarioReviewChecklistSaveRequest
@@ -1299,6 +1317,23 @@ export const DataPanel = memo(function DataPanel({
       selectedExportServiceTraceBackendDetail,
       exportServiceTraceDetailRequestStatus
     );
+  const exportServiceTraceComparisonReviewRecord =
+    buildDataPanelExportServiceTraceComparisonReviewRecord(
+      runtimeExportServiceTraceItem,
+      selectedExportServiceTraceBackendDetail,
+      exportServiceTraceLiveComparison
+    );
+  const exportServiceTraceComparisonReviewSaveStatus =
+    buildDataPanelExportServiceTraceComparisonReviewSaveStatus(
+      exportServiceTraceLiveComparison,
+      runtimeExportServiceTraceItem,
+      {
+        pendingTraceId:
+          runtimeExportServiceTraceComparisonReviewSavePendingTraceId,
+        error: runtimeExportServiceTraceComparisonReviewSaveError,
+        reportHash: runtimeExportServiceTraceComparisonReviewSaveReportHash
+      }
+    );
   const exportRouteComparisonReviewArtifactDisplay =
     buildDataPanelExportRouteComparisonReviewArtifactDisplay(
       runtimeExportCatalog,
@@ -2104,6 +2139,34 @@ export const DataPanel = memo(function DataPanel({
                         {exportServiceTraceLiveComparison.summaryLabel}
                       </small>
                     </div>
+                    {exportServiceTraceComparisonReviewSaveStatus &&
+                    exportServiceTraceComparisonReviewRecord ? (
+                      <div className="data-panel-export-restore-actions">
+                        <button
+                          type="button"
+                          disabled={
+                            exportServiceTraceComparisonReviewSaveStatus.disabled ||
+                            !onRuntimeExportServiceTraceComparisonReviewSave
+                          }
+                          onClick={() => {
+                            const packageId =
+                              runtimeExportServiceTraceItem?.package_id;
+                            if (!packageId) {
+                              return;
+                            }
+                            onRuntimeExportServiceTraceComparisonReviewSave?.({
+                              packageId,
+                              record: exportServiceTraceComparisonReviewRecord
+                            });
+                          }}
+                        >
+                          {exportServiceTraceComparisonReviewSaveStatus.buttonLabel}
+                        </button>
+                        <small>
+                          {exportServiceTraceComparisonReviewSaveStatus.detailLabel}
+                        </small>
+                      </div>
+                    ) : null}
                   </div>
                   <div className="data-panel-export-route-compare-rows">
                     {exportServiceTraceLiveComparison.rows.map((row) => (
@@ -2141,6 +2204,55 @@ export const DataPanel = memo(function DataPanel({
                     {exportServiceTraceLiveComparisonStatus.notes.map((note) => (
                       <span key={note}>{note}</span>
                     ))}
+                  </div>
+                </div>
+              ) : null}
+              {runtimeExportServiceTraceComparisonReviewReportLoading ||
+              runtimeExportServiceTraceComparisonReviewReportError ||
+              runtimeExportServiceTraceComparisonReviewReport ? (
+                <div
+                  className={`data-panel-export-route-compare-card ${
+                    runtimeExportServiceTraceComparisonReviewReportError
+                      ? "error"
+                      : runtimeExportServiceTraceComparisonReviewReport
+                        ? "match"
+                        : "pending"
+                  }`}
+                >
+                  <div className="data-panel-export-diagnostics-header">
+                    <div>
+                      <span>Service trace comparison review report</span>
+                      <strong>
+                        {runtimeExportServiceTraceComparisonReviewReportError
+                          ? "report unavailable"
+                          : runtimeExportServiceTraceComparisonReviewReport
+                            ? "report saved"
+                            : "loading report"}
+                      </strong>
+                      <small>
+                        {runtimeExportServiceTraceComparisonReviewReport
+                          ? `records ${formatCount(
+                              runtimeExportServiceTraceComparisonReviewReport.record_count
+                            )} / differences ${formatCount(
+                              runtimeExportServiceTraceComparisonReviewReport.different_count
+                            )} / ${shortRuntimeHash(
+                              runtimeExportServiceTraceComparisonReviewReport.report_hash
+                            )}`
+                          : runtimeExportServiceTraceComparisonReviewReportError ??
+                            "waiting for saved service trace comparison artifact"}
+                      </small>
+                    </div>
+                    {runtimeExportServiceTraceComparisonReviewReport &&
+                    runtimeExportComparePackageId ? (
+                      <a
+                        href={runtimeExportPackageFileHref(
+                          runtimeExportComparePackageId,
+                          "service_trace_comparison_review_report_v1.json"
+                        )}
+                      >
+                        trace review JSON
+                      </a>
+                    ) : null}
                   </div>
                 </div>
               ) : null}
@@ -12519,6 +12631,11 @@ export interface DataPanelExportRouteComparisonReviewSaveRequest {
   record: Partial<RuntimeExportRouteComparisonReviewReportRecordV1>;
 }
 
+export interface DataPanelExportServiceTraceComparisonReviewSaveRequest {
+  packageId: string;
+  record: Partial<RuntimeExportServiceTraceComparisonReviewReportRecordV1>;
+}
+
 export type DataPanelScenarioReviewChecklistStatus =
   | "REVIEWED"
   | "SKIPPED"
@@ -12542,6 +12659,14 @@ export interface DataPanelExportScenarioReviewChecklistSaveRequest {
 
 export interface DataPanelExportRouteComparisonReviewSaveStatus {
   routeId: string;
+  tone: "ready" | "pending" | "error" | "success";
+  buttonLabel: string;
+  detailLabel: string;
+  disabled: boolean;
+}
+
+export interface DataPanelExportServiceTraceComparisonReviewSaveStatus {
+  traceId: string;
   tone: "ready" | "pending" | "error" | "success";
   buttonLabel: string;
   detailLabel: string;
@@ -14043,6 +14168,103 @@ export function buildDataPanelExportRouteComparisonReviewSaveStatus(
   };
 }
 
+export function buildDataPanelExportServiceTraceComparisonReviewRecord(
+  packageItem: RuntimeExportServiceTraceItemV1 | null | undefined,
+  liveDetail: RuntimeServiceTraceDetailV2 | null | undefined,
+  comparison:
+    | DataPanelExportServiceTraceLiveComparisonDisplay
+    | null
+    | undefined
+): Partial<RuntimeExportServiceTraceComparisonReviewReportRecordV1> | null {
+  if (
+    packageItem === null ||
+    packageItem === undefined ||
+    liveDetail === null ||
+    liveDetail === undefined ||
+    comparison === null ||
+    comparison === undefined ||
+    (packageItem.trace_id || packageItem.trace.trace_id) !== liveDetail.trace.trace_id ||
+    (packageItem.trace_id || packageItem.trace.trace_id) !== comparison.traceId
+  ) {
+    return null;
+  }
+  const comparedFields = comparison.rows.map((row) =>
+    serviceTraceComparisonReportField(row.field)
+  );
+  const differentFields = comparison.rows
+    .filter((row) => !row.matches)
+    .map((row) => serviceTraceComparisonReportField(row.field));
+  return {
+    trace_id: comparison.traceId,
+    comparison_status: differentFields.length === 0 ? "MATCH" : "DIFFERENT",
+    package_trace_item_hash: packageItem.item_hash,
+    live_trace_detail_hash: "",
+    matched_field_count: comparedFields.length - differentFields.length,
+    different_field_count: differentFields.length,
+    compared_fields: comparedFields,
+    different_fields: differentFields,
+    status_reason: differentFields.length === 0 ? "MATCHED" : "FIELDS_DIFFER",
+    operator_note: "Saved from dashboard package-vs-live service trace comparison."
+  };
+}
+
+export function buildDataPanelExportServiceTraceComparisonReviewSaveStatus(
+  comparison:
+    | DataPanelExportServiceTraceLiveComparisonDisplay
+    | null
+    | undefined,
+  packageItem: RuntimeExportServiceTraceItemV1 | null | undefined,
+  state: {
+    pendingTraceId?: string | null;
+    error?: string | null;
+    reportHash?: string | null;
+  } = {}
+): DataPanelExportServiceTraceComparisonReviewSaveStatus | null {
+  if (
+    comparison === null ||
+    comparison === undefined ||
+    packageItem === null ||
+    packageItem === undefined ||
+    (packageItem.trace_id || packageItem.trace.trace_id) !== comparison.traceId
+  ) {
+    return null;
+  }
+  if (state.pendingTraceId === comparison.traceId) {
+    return {
+      traceId: comparison.traceId,
+      tone: "pending",
+      buttonLabel: "saving report",
+      detailLabel: "writing selected service trace comparison report",
+      disabled: true
+    };
+  }
+  if (state.error) {
+    return {
+      traceId: comparison.traceId,
+      tone: "error",
+      buttonLabel: "save trace report",
+      detailLabel: state.error,
+      disabled: false
+    };
+  }
+  if (state.reportHash) {
+    return {
+      traceId: comparison.traceId,
+      tone: "success",
+      buttonLabel: "save trace report",
+      detailLabel: `saved ${shortRuntimeHash(state.reportHash)}`,
+      disabled: false
+    };
+  }
+  return {
+    traceId: comparison.traceId,
+    tone: "ready",
+    buttonLabel: "save trace report",
+    detailLabel: "persist selected service trace comparison outcome",
+    disabled: false
+  };
+}
+
 function routeComparisonStatus(
   tone: DataPanelExportRouteLiveComparisonStatus["tone"],
   statusLabel: string,
@@ -14068,6 +14290,39 @@ function routeComparisonReportField(field: string): string {
       return "primary_next_hop";
     case "capacity / demand":
       return "capacity_demand";
+    default:
+      return field
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "");
+  }
+}
+
+function serviceTraceComparisonReportField(field: string): string {
+  switch (field) {
+    case "compute node":
+      return "compute_node";
+    case "input flow":
+      return "input_flow";
+    case "input route":
+      return "input_route";
+    case "output flow":
+      return "output_flow";
+    case "output route":
+      return "output_route";
+    case "input latency":
+      return "input_latency";
+    case "queue delay":
+      return "queue_delay";
+    case "execution delay":
+      return "execution_delay";
+    case "output latency":
+      return "output_latency";
+    case "total latency":
+      return "total_latency";
+    case "stage counts":
+      return "stage_counts";
     default:
       return field
         .trim()

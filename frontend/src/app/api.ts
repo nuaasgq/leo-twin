@@ -20,6 +20,9 @@ import {
   RuntimeExportRouteComparisonReviewReportEnvelope,
   RuntimeExportRouteComparisonReviewReportRecordV1,
   RuntimeExportRouteComparisonReviewReportV1,
+  RuntimeExportServiceTraceComparisonReviewReportEnvelope,
+  RuntimeExportServiceTraceComparisonReviewReportRecordV1,
+  RuntimeExportServiceTraceComparisonReviewReportV1,
   RuntimeExportRouteDetailIndexV1,
   RuntimeExportRouteDetailItemV1,
   RuntimeExportRouteDetailPageV1,
@@ -86,6 +89,10 @@ export interface RuntimeDetailQueryFilters {
 
 export interface RuntimeExportRouteComparisonReviewReportRequest {
   records: readonly Partial<RuntimeExportRouteComparisonReviewReportRecordV1>[];
+}
+
+export interface RuntimeExportServiceTraceComparisonReviewReportRequest {
+  records: readonly Partial<RuntimeExportServiceTraceComparisonReviewReportRecordV1>[];
 }
 
 export interface RuntimeExportScenarioReviewChecklistRequest {
@@ -516,6 +523,22 @@ export async function loadRuntimeExportRouteComparisonReviewReport(
   return decodeRuntimeExportRouteComparisonReviewReportArtifact(await response.json());
 }
 
+export async function loadRuntimeExportServiceTraceComparisonReviewReport(
+  packageId: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): Promise<RuntimeExportServiceTraceComparisonReviewReportV1> {
+  const url = runtimeExportPackageFileHref(
+    packageId,
+    "service_trace_comparison_review_report_v1.json",
+    endpoint
+  );
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`failed to load runtime export service trace comparison review report from ${url}: HTTP ${response.status}`);
+  }
+  return decodeRuntimeExportServiceTraceComparisonReviewReportArtifact(await response.json());
+}
+
 export async function loadRuntimeExportPackageAuditIndex(
   packageId: string,
   endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
@@ -605,6 +628,25 @@ export async function saveRuntimeExportRouteComparisonReviewReport(
     throw new Error(`failed to save runtime export route comparison review report to ${url}: HTTP ${response.status}`);
   }
   return decodeRuntimeExportRouteComparisonReviewReport(await response.json()).summary;
+}
+
+export async function saveRuntimeExportServiceTraceComparisonReviewReport(
+  packageId: string,
+  request: RuntimeExportServiceTraceComparisonReviewReportRequest,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): Promise<RuntimeExportServiceTraceComparisonReviewReportV1> {
+  const url = runtimeExportServiceTraceComparisonReviewReportHref(packageId, endpoint);
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(request)
+  });
+  if (!response.ok) {
+    throw new Error(`failed to save runtime export service trace comparison review report to ${url}: HTTP ${response.status}`);
+  }
+  return decodeRuntimeExportServiceTraceComparisonReviewReport(await response.json()).summary;
 }
 
 export async function saveRuntimeExportScenarioReviewChecklist(
@@ -882,6 +924,13 @@ export function runtimeExportRouteComparisonReviewReportHref(
   endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
 ): string {
   return `${runtimeExportPackageRecordHref(packageId, endpoint)}/route-comparison-review-report`;
+}
+
+export function runtimeExportServiceTraceComparisonReviewReportHref(
+  packageId: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): string {
+  return `${runtimeExportPackageRecordHref(packageId, endpoint)}/service-trace-comparison-review-report`;
 }
 
 export function runtimeExportScenarioReviewChecklistHref(
@@ -1422,6 +1471,58 @@ export function decodeRuntimeExportRouteComparisonReviewReportArtifact(
     );
   }
   return value as RuntimeExportRouteComparisonReviewReportV1;
+}
+
+export function decodeRuntimeExportServiceTraceComparisonReviewReport(
+  value: unknown
+): RuntimeExportServiceTraceComparisonReviewReportEnvelope {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError(
+      "runtime export service trace comparison review report response must be an object"
+    );
+  }
+  const summary = (value as { summary?: unknown }).summary;
+  const artifact = (value as { artifact?: unknown }).artifact;
+  if (
+    typeof summary !== "object" ||
+    summary === null ||
+    Array.isArray(summary) ||
+    typeof (summary as { report_id?: unknown }).report_id !== "string" ||
+    !Array.isArray((summary as { records?: unknown }).records) ||
+    typeof artifact !== "object" ||
+    artifact === null ||
+    Array.isArray(artifact)
+  ) {
+    throw new TypeError(
+      "runtime export service trace comparison review report response must include summary report_id, records, and artifact"
+    );
+  }
+  return {
+    ...(value as Record<string, unknown>),
+    summary: summary as RuntimeExportServiceTraceComparisonReviewReportV1,
+    artifact: artifact as RuntimeExportServiceTraceComparisonReviewReportEnvelope["artifact"]
+  } as RuntimeExportServiceTraceComparisonReviewReportEnvelope;
+}
+
+export function decodeRuntimeExportServiceTraceComparisonReviewReportArtifact(
+  value: unknown
+): RuntimeExportServiceTraceComparisonReviewReportV1 {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError(
+      "runtime export service trace comparison review report artifact must be an object"
+    );
+  }
+  if (
+    typeof (value as { report_id?: unknown }).report_id !== "string" ||
+    typeof (value as { package_id?: unknown }).package_id !== "string" ||
+    !Array.isArray((value as { records?: unknown }).records) ||
+    typeof (value as { report_hash?: unknown }).report_hash !== "string"
+  ) {
+    throw new TypeError(
+      "runtime export service trace comparison review report artifact must include report_id, package_id, records, and report_hash"
+    );
+  }
+  return value as RuntimeExportServiceTraceComparisonReviewReportV1;
 }
 
 export function decodeRuntimeExportScenarioReviewChecklistResponse(

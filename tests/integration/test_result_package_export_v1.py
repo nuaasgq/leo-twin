@@ -14,6 +14,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID,
     RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1_ID,
     RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_V1_ID,
+    RUNTIME_EXPORT_SERVICE_TRACE_COMPARISON_REVIEW_REPORT_V1_ID,
     RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID,
     summarize_result_package_record_v1,
 )
@@ -467,6 +468,71 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
             encoding="utf-8"
         )
     ) == json.loads(json.dumps(updated_audit_index, sort_keys=True))
+
+    service_trace_report_response = (
+        control_plane.runtime_export_package_service_trace_comparison_review_report(
+            str(package["package_id"]),
+            {
+                "records": [
+                    {
+                        "trace_id": "trace:run",
+                        "comparison_status": "DIFFERENT",
+                        "package_trace_item_hash": "sha256:package-trace-1",
+                        "live_trace_detail_hash": "",
+                        "compared_fields": [
+                            "terminal",
+                            "reason",
+                            "total_latency",
+                            "stage_counts",
+                        ],
+                        "different_fields": ["stage_counts", "terminal"],
+                        "status_reason": "FIELDS_DIFFER",
+                        "operator_note": "reviewed service trace during integration test",
+                    }
+                ]
+            },
+            output_root,
+        )
+    )
+    service_trace_report = service_trace_report_response["summary"]
+    assert service_trace_report_response["type"] == (
+        "RUNTIME_EXPORT_SERVICE_TRACE_COMPARISON_REVIEW_REPORT"
+    )
+    assert service_trace_report["report_id"] == (
+        RUNTIME_EXPORT_SERVICE_TRACE_COMPARISON_REVIEW_REPORT_V1_ID
+    )
+    assert service_trace_report["package_id"] == package["package_id"]
+    assert service_trace_report["record_count"] == 1
+    assert service_trace_report["different_count"] == 1
+    assert service_trace_report["runtime_export_boundary_hash"] == (
+        reproducibility_boundary["boundary_hash"]
+    )
+    assert service_trace_report["boundary_alignment_status"] == "ALIGNED"
+    assert service_trace_report["records"][0]["different_fields"] == (
+        "terminal",
+        "stage_counts",
+    )
+    service_trace_report_path = (
+        package_dir / "service_trace_comparison_review_report_v1.json"
+    )
+    assert service_trace_report_path.exists()
+    assert json.loads(
+        service_trace_report_path.read_text(encoding="utf-8")
+    ) == json.loads(json.dumps(service_trace_report, sort_keys=True))
+    service_trace_report_artifact = control_plane.runtime_export_package_artifact(
+        str(package["package_id"]),
+        "service_trace_comparison_review_report_v1.json",
+        output_root,
+    )
+    assert service_trace_report_artifact["filename"] == (
+        "service_trace_comparison_review_report_v1.json"
+    )
+    assert service_trace_report_artifact["sha256"] == (
+        service_trace_report_response["artifact"]["sha256"]
+    )
+    assert service_trace_report_response["audit_index"]["audit_index_id"] == (
+        RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID
+    )
 
     checklist_response = control_plane.runtime_export_package_scenario_review_checklist(
         str(package["package_id"]),

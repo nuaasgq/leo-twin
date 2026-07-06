@@ -43,6 +43,9 @@ RUNTIME_EXPORT_ROUTE_DETAIL_ITEM_V1_ID = (
 RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID = (
     "leo_twin.runtime_export_route_comparison_review_report.v1"
 )
+RUNTIME_EXPORT_SERVICE_TRACE_COMPARISON_REVIEW_REPORT_V1_ID = (
+    "leo_twin.runtime_export_service_trace_comparison_review_report.v1"
+)
 RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID = (
     "leo_twin.runtime_export_package_audit_index.v1"
 )
@@ -123,6 +126,7 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
             "GET /runtime/export/packages/{package_id}/routes",
             "GET /runtime/export/packages/{package_id}/routes/{route_id}",
             "POST /runtime/export/packages/{package_id}/route-comparison-review-report",
+            "POST /runtime/export/packages/{package_id}/service-trace-comparison-review-report",
             "POST /runtime/export/packages/{package_id}/scenario-review-checklist",
             "GET /runtime/export/packages/{package_id}/files/{filename}",
         ),
@@ -1183,6 +1187,7 @@ def build_runtime_export_service_trace_page_v1(
         "service_trace_export_policy": dict(
             _mapping(service_trace_export.get("service_trace_export_policy"))
         ),
+        "service_trace_comparison_review": _runtime_export_service_trace_comparison_review_metadata(),
         "artifact_window_only": True,
         "trace_contract_id": str(summary.get("contract_id", "")),
         "trace_model": str(summary.get("trace_model", "")),
@@ -1256,6 +1261,9 @@ def build_runtime_export_service_trace_item_v1(
                 ),
                 "service_trace_export_policy": dict(
                     _mapping(service_trace_export.get("service_trace_export_policy"))
+                ),
+                "service_trace_comparison_review": (
+                    _runtime_export_service_trace_comparison_review_metadata()
                 ),
                 "artifact_window_only": True,
                 "trace_contract_id": str(summary.get("contract_id", "")),
@@ -1509,6 +1517,92 @@ def build_runtime_export_route_comparison_review_report_v1(
         "error_count": error_count,
         "records": normalized_records,
         "ordering": "route_id ascending, then comparison_status ascending",
+        "boundary_conditions": _string_tuple(
+            normalized_review.get("boundary_conditions")
+        ),
+    }
+    report["report_hash"] = stable_hash_payload(report)
+    return report
+
+
+def build_runtime_export_service_trace_comparison_review_report_v1(
+    *,
+    package_id: str,
+    package_dir: str,
+    service_trace_comparison_review: Mapping[str, Any] | None = None,
+    runtime_export_boundary_alignment: Mapping[str, Any] | None = None,
+    records: tuple[Mapping[str, Any], ...] = (),
+) -> dict[str, object]:
+    """Build a deterministic operator report for selected service trace comparisons."""
+
+    normalized_review = (
+        _runtime_export_service_trace_comparison_review_metadata()
+        if service_trace_comparison_review is None
+        else _mapping(service_trace_comparison_review)
+    )
+    normalized_alignment = _mapping(runtime_export_boundary_alignment)
+    normalized_records = tuple(
+        sorted(
+            (
+                _runtime_export_service_trace_comparison_report_record(
+                    record,
+                    normalized_review,
+                )
+                for record in records
+            ),
+            key=lambda item: (
+                str(item["trace_id"]),
+                str(item["comparison_status"]),
+                str(item["package_trace_item_hash"]),
+                str(item["live_trace_detail_hash"]),
+            ),
+        )
+    )
+    match_count = sum(
+        1 for record in normalized_records if record["comparison_status"] == "MATCH"
+    )
+    different_count = sum(
+        1
+        for record in normalized_records
+        if record["comparison_status"] == "DIFFERENT"
+    )
+    unavailable_count = sum(
+        1
+        for record in normalized_records
+        if record["comparison_status"] == "UNAVAILABLE"
+    )
+    error_count = sum(
+        1 for record in normalized_records if record["comparison_status"] == "ERROR"
+    )
+    report: dict[str, object] = {
+        "type": "RUNTIME_EXPORT_SERVICE_TRACE_COMPARISON_REVIEW_REPORT_V1",
+        "version": "v1",
+        "report_id": RUNTIME_EXPORT_SERVICE_TRACE_COMPARISON_REVIEW_REPORT_V1_ID,
+        "source": "OPERATOR_SERVICE_TRACE_COMPARISON_REVIEW",
+        "report_scope": "SELECTED_PACKAGE_VS_LIVE_SERVICE_TRACE_COMPARISON_OUTCOMES",
+        "package_id": str(package_id),
+        "package_dir": str(package_dir),
+        "service_trace_comparison_review": dict(normalized_review),
+        "runtime_export_boundary_alignment_v1": dict(normalized_alignment),
+        "boundary_alignment_hash": str(
+            normalized_alignment.get("alignment_hash", "")
+        ),
+        "boundary_alignment_status": str(
+            normalized_alignment.get("alignment_status", "")
+        ),
+        "boundary_alignment_warnings": _string_tuple(
+            normalized_alignment.get("warnings")
+        ),
+        "runtime_export_boundary_hash": str(
+            normalized_alignment.get("boundary_hash", "")
+        ),
+        "record_count": len(normalized_records),
+        "match_count": match_count,
+        "different_count": different_count,
+        "unavailable_count": unavailable_count,
+        "error_count": error_count,
+        "records": normalized_records,
+        "ordering": "trace_id ascending, then comparison_status ascending",
         "boundary_conditions": _string_tuple(
             normalized_review.get("boundary_conditions")
         ),
@@ -2311,6 +2405,82 @@ def _runtime_export_route_comparison_review_metadata() -> dict[str, object]:
     }
 
 
+def _runtime_export_service_trace_comparison_review_metadata() -> dict[str, object]:
+    return {
+        "version": "v1",
+        "source": "BACKEND_RUNTIME_EXPORT",
+        "review_scope": "PACKAGE_SERVICE_TRACE_TO_LIVE_RUNTIME_SERVICE_TRACE",
+        "review_report_type": "RUNTIME_EXPORT_SERVICE_TRACE_COMPARISON_REVIEW_REPORT_V1",
+        "review_report_id": RUNTIME_EXPORT_SERVICE_TRACE_COMPARISON_REVIEW_REPORT_V1_ID,
+        "package_service_trace_endpoint": (
+            "GET /runtime/export/packages/{package_id}/service-traces/{trace_id}"
+        ),
+        "live_service_trace_endpoint": "GET /runtime/details/service-traces/{trace_id}",
+        "compare_action": "compare with live service trace",
+        "comparison_requires_live_runtime": True,
+        "trace_id_alignment_required": True,
+        "exported_rows_only": True,
+        "compared_fields": (
+            "trace",
+            "service",
+            "task",
+            "class",
+            "terminal",
+            "reason",
+            "compute_node",
+            "input_flow",
+            "input_route",
+            "output_flow",
+            "output_route",
+            "input_latency",
+            "queue_delay",
+            "execution_delay",
+            "output_latency",
+            "total_latency",
+            "stage_counts",
+        ),
+        "status_reasons": (
+            "PACKAGE_TRACE_NOT_LOADED",
+            "PACKAGE_TRACE_LOADING",
+            "PACKAGE_TRACE_UNAVAILABLE",
+            "LIVE_TRACE_NOT_LOADED",
+            "LIVE_TRACE_LOADING",
+            "LIVE_TRACE_UNAVAILABLE",
+            "TRACE_ID_MISMATCH",
+        ),
+        "boundary_conditions": (
+            "NO_SERVICE_RECOMPUTE",
+            "NO_EVENT_REPLAY",
+            "NO_PACKET_CAPTURE",
+            "NO_PACKAGE_MUTATION",
+            "CURRENT_RUNTIME_MAY_DIFFER_FROM_EXPORTED_PACKAGE",
+        ),
+        "review_report_record_schema": {
+            "required_fields": (
+                "trace_id",
+                "comparison_status",
+                "compared_fields",
+                "different_fields",
+                "status_reason",
+            ),
+            "optional_fields": (
+                "package_trace_item_hash",
+                "live_trace_detail_hash",
+                "matched_field_count",
+                "different_field_count",
+                "operator_note",
+            ),
+            "status_values": (
+                "MATCH",
+                "DIFFERENT",
+                "UNAVAILABLE",
+                "ERROR",
+            ),
+            "ordering": "trace_id ascending, then comparison_status ascending",
+        },
+    }
+
+
 def _runtime_export_scenario_review_checklist_record(
     record: Mapping[str, Any],
     *,
@@ -2775,6 +2945,46 @@ def _runtime_export_route_comparison_report_record(
             record.get("package_route_detail_hash", "")
         ),
         "live_route_detail_hash": str(record.get("live_route_detail_hash", "")),
+        "matched_field_count": matched_field_count,
+        "different_field_count": different_field_count,
+        "compared_fields": compared_fields,
+        "different_fields": different_fields,
+        "status_reason": str(record.get("status_reason", "")),
+        "operator_note": str(record.get("operator_note", "")),
+    }
+
+
+def _runtime_export_service_trace_comparison_report_record(
+    record: Mapping[str, Any],
+    service_trace_comparison_review: Mapping[str, Any],
+) -> dict[str, object]:
+    field_order = _string_tuple(
+        service_trace_comparison_review.get("compared_fields")
+    )
+    compared_fields = _ordered_subset(
+        _string_tuple(record.get("compared_fields")) or field_order,
+        field_order,
+    )
+    different_fields = _ordered_subset(
+        _string_tuple(record.get("different_fields")),
+        field_order,
+    )
+    status = str(record.get("comparison_status", "")).strip().upper()
+    if status not in {"MATCH", "DIFFERENT", "UNAVAILABLE", "ERROR"}:
+        status = "ERROR"
+    matched_field_count = _integer(record.get("matched_field_count"))
+    if matched_field_count <= 0 and compared_fields:
+        matched_field_count = max(0, len(compared_fields) - len(different_fields))
+    different_field_count = _integer(record.get("different_field_count"))
+    if different_field_count <= 0:
+        different_field_count = len(different_fields)
+    return {
+        "trace_id": str(record.get("trace_id", "")),
+        "comparison_status": status,
+        "package_trace_item_hash": str(
+            record.get("package_trace_item_hash", "")
+        ),
+        "live_trace_detail_hash": str(record.get("live_trace_detail_hash", "")),
         "matched_field_count": matched_field_count,
         "different_field_count": different_field_count,
         "compared_fields": compared_fields,

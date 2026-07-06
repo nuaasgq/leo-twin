@@ -339,6 +339,28 @@ endpoint saves selected operator review outcomes only; it does not compute
 route diffs by itself, replay events, recompute routes, or update existing
 archive zip files.
 
+Service trace comparisons follow the same read-only review pattern. The
+package-owned service trace item endpoint provides the exported trace evidence,
+the live `/runtime/details/service-traces/{trace_id}` endpoint can provide
+optional current-runtime context, and the dashboard can persist selected
+field-level outcomes through:
+
+```text
+POST /runtime/export/packages/{package_id}/service-trace-comparison-review-report
+```
+
+The request body is a JSON object with a `records` array. The backend builds
+`service_trace_comparison_review_report_v1.json` with stable ordering and a
+`report_hash`, writes it into the package directory, and updates
+`runtime_export_catalog_v1.json` so the artifact is retrievable through
+`/files/service_trace_comparison_review_report_v1.json`. The report records
+selected package-vs-live service trace outcomes for lifecycle fields such as
+terminal state, reason, compute node, flow/route ids, latency components, and
+stage counts. It copies the same restore-preflight boundary alignment evidence
+as the route review report. It does not replay events, recompute services,
+capture packets, mutate the package on read, or update existing archive zip
+files.
+
 `scenario_review_bundle_v1.json` also declares a guided package review order.
 The demo backend can persist operator decisions for that guided flow through:
 

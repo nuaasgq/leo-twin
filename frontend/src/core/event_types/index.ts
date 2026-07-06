@@ -1590,6 +1590,69 @@ export interface RuntimeExportRouteComparisonReviewReportRecordV1 {
   operator_note: string;
 }
 
+export interface RuntimeExportServiceTraceComparisonReviewV1 {
+  version: "v1" | string;
+  source: string;
+  review_scope: string;
+  review_report_type?: string;
+  review_report_id?: string;
+  package_service_trace_endpoint: string;
+  live_service_trace_endpoint: string;
+  compare_action: string;
+  comparison_requires_live_runtime: boolean;
+  trace_id_alignment_required: boolean;
+  exported_rows_only: boolean;
+  compared_fields: readonly string[];
+  status_reasons: readonly string[];
+  boundary_conditions: readonly string[];
+  review_report_record_schema?: RuntimeExportRouteComparisonReviewRecordSchemaV1;
+}
+
+export interface RuntimeExportServiceTraceComparisonReviewReportEnvelope {
+  type: "RUNTIME_EXPORT_SERVICE_TRACE_COMPARISON_REVIEW_REPORT" | string;
+  summary: RuntimeExportServiceTraceComparisonReviewReportV1;
+  artifact: RuntimeExportCatalogFileV1;
+  catalog_record?: RuntimeExportCatalogRecordV1;
+}
+
+export interface RuntimeExportServiceTraceComparisonReviewReportV1 {
+  type: "RUNTIME_EXPORT_SERVICE_TRACE_COMPARISON_REVIEW_REPORT_V1" | string;
+  version: "v1" | string;
+  report_id: string;
+  source: string;
+  report_scope: string;
+  package_id: string;
+  package_dir: string;
+  service_trace_comparison_review: RuntimeExportServiceTraceComparisonReviewV1;
+  runtime_export_boundary_alignment_v1?: RuntimeExportBoundaryAlignmentV1;
+  boundary_alignment_hash?: string;
+  boundary_alignment_status?: string;
+  boundary_alignment_warnings?: readonly string[];
+  runtime_export_boundary_hash?: string;
+  record_count: number;
+  match_count: number;
+  different_count: number;
+  unavailable_count: number;
+  error_count: number;
+  records: readonly RuntimeExportServiceTraceComparisonReviewReportRecordV1[];
+  ordering: string;
+  boundary_conditions: readonly string[];
+  report_hash: string;
+}
+
+export interface RuntimeExportServiceTraceComparisonReviewReportRecordV1 {
+  trace_id: string;
+  comparison_status: "MATCH" | "DIFFERENT" | "UNAVAILABLE" | "ERROR" | string;
+  package_trace_item_hash: string;
+  live_trace_detail_hash: string;
+  matched_field_count: number;
+  different_field_count: number;
+  compared_fields: readonly string[];
+  different_fields: readonly string[];
+  status_reason: string;
+  operator_note: string;
+}
+
 export interface RuntimeExportScenarioReviewChecklistEnvelope {
   type: "RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST" | string;
   summary: RuntimeExportScenarioReviewChecklistV1;
@@ -2088,6 +2151,7 @@ export interface RuntimeExportServiceTracePageV1 {
   artifact_type: string;
   artifact_source: string;
   artifact_policy: string;
+  service_trace_comparison_review?: RuntimeExportServiceTraceComparisonReviewV1;
   artifact_window_only: boolean;
   trace_contract_id: string;
   trace_model: string;
@@ -2134,6 +2198,7 @@ export interface RuntimeExportServiceTraceItemV1 {
   artifact_source: string;
   artifact_policy: string;
   service_trace_export_policy?: Readonly<Record<string, unknown>>;
+  service_trace_comparison_review?: RuntimeExportServiceTraceComparisonReviewV1;
   artifact_window_only: boolean;
   trace_contract_id: string;
   trace_model: string;

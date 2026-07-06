@@ -161,7 +161,11 @@ Tasks:
     evidence without live runtime availability, event replay, service
     recomputation, or package mutation. T335 adds a field-level package-vs-live
     service trace comparison card for the same selected trace, separating
-    artifact-owned evidence from optional current-runtime drift checks.
+    artifact-owned evidence from optional current-runtime drift checks. T336
+    persists selected service trace comparison outcomes as
+    `service_trace_comparison_review_report_v1.json`, updates the export
+    catalog/audit/handoff artifacts, and lets the dashboard save and reload the
+    report without event replay or service recomputation.
 - V2-013: Add service lifecycle trace.
   - Scope: input flow, queue, compute, output flow, terminal state.
   - Output: timeline records for dashboard and result export.
@@ -223,7 +227,10 @@ Tasks:
     trace API only as optional current-runtime comparison context. T335 renders
     that context as an explicit package/live service trace comparison with
     matched and different lifecycle fields, plus loading/error/mismatch status
-    notes when one side of the evidence is unavailable.
+    notes when one side of the evidence is unavailable. T336 adds the
+    backend-served service trace comparison review report save path and binds
+    the dashboard save action to the persisted package artifact, closing the
+    review loop from trace evidence to saved operator report.
 
 ### WS3. Network Semantics and KPI Trust v2
 

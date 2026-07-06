@@ -13,6 +13,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID,
     RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1_ID,
     RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_V1_ID,
+    RUNTIME_EXPORT_SERVICE_TRACE_COMPARISON_REVIEW_REPORT_V1_ID,
     RUNTIME_EXPORT_ROUTE_DETAIL_ITEM_V1_ID,
     RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_V1_ID,
     RUNTIME_EXPORT_ROUTE_DETAIL_PAGE_V1_ID,
@@ -35,6 +36,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_review_summary_v1,
     build_runtime_export_scenario_review_bundle_v1,
     build_runtime_export_scenario_review_checklist_v1,
+    build_runtime_export_service_trace_comparison_review_report_v1,
     build_runtime_export_service_trace_item_v1,
     build_runtime_export_service_trace_page_v1,
     build_runtime_export_user_service_request_page_v1,
@@ -98,6 +100,10 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
     )
     assert (
         "GET /runtime/export/packages/{package_id}/service-traces/{trace_id}"
+        in first["source_endpoints"]
+    )
+    assert (
+        "POST /runtime/export/packages/{package_id}/service-trace-comparison-review-report"
         in first["source_endpoints"]
     )
     assert (
@@ -1214,6 +1220,99 @@ def test_runtime_export_route_comparison_review_report_v1_is_deterministic() -> 
     assert first["report_hash"].startswith("sha256:")
     assert json.loads(json.dumps(first, sort_keys=True))["report_id"] == (
         RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID
+    )
+
+
+def test_runtime_export_service_trace_comparison_review_report_v1_is_deterministic() -> None:
+    service_trace_page = build_runtime_export_service_trace_page_v1(
+        _service_trace_export(),
+        package_id="pkg-1",
+    )
+    review = service_trace_page["service_trace_comparison_review"]
+    runtime_export_boundary_alignment = {
+        "type": "RUNTIME_EXPORT_BOUNDARY_ALIGNMENT_V1",
+        "version": "v1",
+        "alignment_id": "leo_twin.runtime_export_boundary_alignment.v1",
+        "source": "BACKEND_RUNTIME_EXPORT_RESTORE_PREFLIGHT",
+        "alignment_scope": "PACKAGE_COMPARE_AND_RESTORE_BOUNDARY",
+        "package_id": "pkg-1",
+        "boundary_hash": "sha256:boundary-1",
+        "alignment_status": "ALIGNED",
+        "warnings": (),
+        "alignment_hash": "sha256:alignment-1",
+    }
+    records = (
+        {
+            "trace_id": "trace:run",
+            "comparison_status": "different",
+            "package_trace_item_hash": "sha256:package-trace-1",
+            "live_trace_detail_hash": "",
+            "compared_fields": (
+                "terminal",
+                "reason",
+                "total_latency",
+                "stage_counts",
+            ),
+            "different_fields": ("stage_counts", "terminal"),
+            "status_reason": "FIELDS_DIFFER",
+            "operator_note": "trace finished after package export",
+        },
+        {
+            "trace_id": "trace:done",
+            "comparison_status": "match",
+            "package_trace_item_hash": "sha256:package-trace-0",
+            "live_trace_detail_hash": "",
+            "compared_fields": ("terminal", "total_latency"),
+            "different_fields": (),
+            "status_reason": "MATCHED",
+        },
+    )
+
+    first = build_runtime_export_service_trace_comparison_review_report_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        service_trace_comparison_review=review,
+        runtime_export_boundary_alignment=runtime_export_boundary_alignment,
+        records=records,
+    )
+    second = build_runtime_export_service_trace_comparison_review_report_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        service_trace_comparison_review=review,
+        runtime_export_boundary_alignment=runtime_export_boundary_alignment,
+        records=tuple(reversed(records)),
+    )
+
+    assert first == second
+    assert first["report_id"] == (
+        RUNTIME_EXPORT_SERVICE_TRACE_COMPARISON_REVIEW_REPORT_V1_ID
+    )
+    assert first["record_count"] == 2
+    assert first["match_count"] == 1
+    assert first["different_count"] == 1
+    assert [record["trace_id"] for record in first["records"]] == [
+        "trace:done",
+        "trace:run",
+    ]
+    assert first["records"][1]["different_fields"] == (
+        "terminal",
+        "stage_counts",
+    )
+    assert first["records"][1]["matched_field_count"] == 2
+    assert first["records"][1]["different_field_count"] == 2
+    assert first["records"][1]["operator_note"] == (
+        "trace finished after package export"
+    )
+    assert first["runtime_export_boundary_alignment_v1"] == (
+        runtime_export_boundary_alignment
+    )
+    assert first["boundary_alignment_hash"] == "sha256:alignment-1"
+    assert first["boundary_alignment_status"] == "ALIGNED"
+    assert first["runtime_export_boundary_hash"] == "sha256:boundary-1"
+    assert first["boundary_conditions"] == review["boundary_conditions"]
+    assert first["report_hash"].startswith("sha256:")
+    assert json.loads(json.dumps(first, sort_keys=True))["report_id"] == (
+        RUNTIME_EXPORT_SERVICE_TRACE_COMPARISON_REVIEW_REPORT_V1_ID
     )
 
 

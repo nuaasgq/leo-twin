@@ -91,6 +91,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_review_summary_v1,
     build_runtime_export_scenario_review_bundle_v1,
     build_runtime_export_scenario_review_checklist_v1,
+    build_runtime_export_service_trace_comparison_review_report_v1,
     build_runtime_export_service_trace_item_v1,
     build_runtime_export_service_trace_page_v1,
     build_runtime_export_user_service_request_page_v1,
@@ -156,6 +157,9 @@ _RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_FILENAME = "scenario_review_bundle_v1.jso
 _RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_FILENAME = "scenario_review_checklist_v1.json"
 _RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_FILENAME = (
     "route_comparison_review_report_v1.json"
+)
+_RUNTIME_EXPORT_SERVICE_TRACE_COMPARISON_REVIEW_REPORT_FILENAME = (
+    "service_trace_comparison_review_report_v1.json"
 )
 _RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_FILENAME = "export_package_audit_index_v1.json"
 _RUNTIME_EXPORT_PACKAGE_HANDOFF_REPORT_FILENAME = "package_handoff_report_v1.md"
@@ -1170,6 +1174,115 @@ class DemoControlPlane:
         )
         return {
             "type": "RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT",
+            "summary": report,
+            "artifact": _runtime_export_catalog_file_record(artifact),
+            "audit_index": audit_index,
+            "audit_artifact": _runtime_export_catalog_file_record(audit_artifact),
+            "handoff_report_artifact": _runtime_export_catalog_file_record(
+                handoff_artifact
+            ),
+            "catalog_record": catalog_record,
+        }
+
+    def runtime_export_package_service_trace_comparison_review_report(
+        self,
+        package_id: str,
+        payload: Mapping[str, Any],
+        output_root: str | Path = "artifacts/runtime_exports",
+    ) -> dict[str, Any]:
+        if not isinstance(payload, Mapping):
+            raise RuntimeError(
+                "service trace comparison review report payload must be an object"
+            )
+        service_trace_export = self._runtime_export_package_service_trace_export(
+            package_id,
+            output_root,
+        )
+        service_trace_page = build_runtime_export_service_trace_page_v1(
+            service_trace_export,
+            package_id=package_id,
+            cursor=0,
+            limit=0,
+        )
+        service_trace_comparison_review = service_trace_page.get(
+            "service_trace_comparison_review"
+        )
+        if not isinstance(service_trace_comparison_review, Mapping):
+            raise RuntimeExportArtifactError(
+                f"runtime export package {package_id!r} has no service trace comparison review metadata"
+            )
+        raw_records = payload.get("records", ())
+        if raw_records is None:
+            raw_records = ()
+        if not isinstance(raw_records, (list, tuple)):
+            raise RuntimeError(
+                "service trace comparison review report records must be a list"
+            )
+        records: list[Mapping[str, Any]] = []
+        for record in raw_records:
+            if not isinstance(record, Mapping):
+                raise RuntimeError(
+                    "service trace comparison review report records must be objects"
+                )
+            records.append(record)
+        catalog = _read_runtime_export_catalog(output_root)
+        catalog_record = _runtime_export_catalog_package_record(catalog, package_id)
+        package_dir = _runtime_export_catalog_package_dir(output_root, catalog_record)
+        preflight = self.runtime_export_package_restore_preflight(
+            package_id,
+            output_root,
+        )
+        preflight_summary = preflight.get("summary")
+        runtime_export_boundary_alignment: Mapping[str, Any] = {}
+        if isinstance(preflight_summary, Mapping):
+            raw_alignment = preflight_summary.get(
+                "runtime_export_boundary_alignment_v1"
+            )
+            if isinstance(raw_alignment, Mapping):
+                runtime_export_boundary_alignment = raw_alignment
+        report = build_runtime_export_service_trace_comparison_review_report_v1(
+            package_id=package_id,
+            package_dir=str(package_dir),
+            service_trace_comparison_review=service_trace_comparison_review,
+            runtime_export_boundary_alignment=runtime_export_boundary_alignment,
+            records=tuple(records),
+        )
+        report_path = (
+            package_dir
+            / _RUNTIME_EXPORT_SERVICE_TRACE_COMPARISON_REVIEW_REPORT_FILENAME
+        )
+        report_path.write_text(stable_json_pretty(report), encoding="utf-8")
+        artifact = _runtime_export_file_record(
+            "service_trace_comparison_review_report_v1",
+            report_path,
+        )
+        catalog_record = _upsert_runtime_export_catalog_file(
+            output_root,
+            package_id,
+            artifact,
+        )
+        audit_index, audit_artifact = self._write_runtime_export_package_audit_index(
+            package_id,
+            package_dir,
+            runtime_export_boundary_alignment=runtime_export_boundary_alignment,
+        )
+        catalog_record = _upsert_runtime_export_catalog_file(
+            output_root,
+            package_id,
+            audit_artifact,
+        )
+        _, handoff_artifact = self._write_runtime_export_package_handoff_report(
+            package_id,
+            package_dir,
+            audit_index=audit_index,
+        )
+        catalog_record = _upsert_runtime_export_catalog_file(
+            output_root,
+            package_id,
+            handoff_artifact,
+        )
+        return {
+            "type": "RUNTIME_EXPORT_SERVICE_TRACE_COMPARISON_REVIEW_REPORT",
             "summary": report,
             "artifact": _runtime_export_catalog_file_record(artifact),
             "audit_index": audit_index,

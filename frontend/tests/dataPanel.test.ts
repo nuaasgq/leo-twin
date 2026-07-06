@@ -37,6 +37,8 @@ import {
   buildDataPanelExportServiceTraceItemStatus,
   buildDataPanelExportServiceTraceLiveComparisonDisplay,
   buildDataPanelExportServiceTraceLiveComparisonStatus,
+  buildDataPanelExportServiceTraceComparisonReviewRecord,
+  buildDataPanelExportServiceTraceComparisonReviewSaveStatus,
   buildDataPanelExportPackageAuditIndexArtifactDisplay,
   buildDataPanelExportPackageHandoffReportArtifactDisplay,
   buildDataPanelExportPackageAuditIndexDisplay,
@@ -5487,6 +5489,150 @@ describe("buildDataPanelExportCompareDisplay", () => {
       tone: "different",
       statusLabel: "service trace id mismatch",
       summaryLabel: "package trace:run / live trace:other"
+    });
+  });
+
+  it("builds package-live service trace comparison review save records", () => {
+    const packageItem = {
+      type: "RUNTIME_EXPORT_SERVICE_TRACE_ITEM_V1",
+      version: "v1",
+      item_id: "leo_twin.runtime_export_service_trace_item.v1",
+      source: "BACKEND_RUNTIME_EXPORT_PACKAGE",
+      package_id: "pkg-review",
+      artifact_type: "SERVICE_LIFECYCLE_TRACE_EXPORT_V2",
+      artifact_source: "BACKEND_RUNTIME_STATUS",
+      artifact_policy: "STANDALONE_RUNTIME_EXPORT_ARTIFACT",
+      artifact_window_only: true,
+      trace_contract_id: "leo_twin.service_lifecycle_trace_contract.v2",
+      trace_model: "COMMUNICATION_COMPUTE_COMPONENT_PROXY",
+      source_summary: "service_latency_history_v1",
+      summary_scope: "SERVICE_LIFECYCLE_TRACE_ITEM",
+      trace_id: "trace:run",
+      trace: {
+        trace_id: "trace:run",
+        service_id: "svc-run",
+        task_id: "task-run",
+        service_class: "COMPUTE_SERVICE",
+        input_flow_id: "flow-in",
+        output_flow_id: "flow-out",
+        input_route_id: "route-in",
+        output_route_id: "route-out",
+        compute_node_id: "sat-00003",
+        input_network_latency_s: 0.12,
+        compute_queue_delay_s: 0.02,
+        compute_execution_delay_s: 0.4,
+        output_network_latency_s: 0.08,
+        total_latency_s: 0.62,
+        terminal_state: "RUNNING",
+        terminal_state_reason: "OUTPUT_NETWORK_PENDING",
+        stage_count: 4,
+        observed_stage_count: 3,
+        pending_stage_count: 1,
+        stages: []
+      },
+      boundary_conditions: ["ARTIFACT_WINDOW_ONLY"],
+      item_hash: "sha256:package-trace"
+    };
+    const liveDetail = {
+      version: "v2",
+      source: "BACKEND_RUNTIME_DETAIL",
+      summary_scope: "SERVICE_TRACE_EXACT_DETAIL",
+      trace: {
+        ...packageItem.trace,
+        terminal_state: "COMPLETE",
+        terminal_state_reason: "TOTAL_LATENCY_OBSERVED",
+        total_latency_s: 0.74,
+        observed_stage_count: 4,
+        pending_stage_count: 0
+      },
+      correlation: {
+        trace_id: "trace:run",
+        service_id: "svc-run",
+        task_id: "task-run",
+        flow_ids: ["flow-in", "flow-out"],
+        route_ids: ["route-in", "route-out"],
+        user_ids: [],
+        satellite_ids: ["sat-00003"],
+        compute_node_id: "sat-00003",
+        route_count: 2,
+        user_count: 0,
+        satellite_count: 1,
+        compute_node_detail_available: true
+      },
+      routes: [],
+      users: [],
+      satellites: [],
+      compute_node: null
+    };
+    const comparison = buildDataPanelExportServiceTraceLiveComparisonDisplay(
+      packageItem,
+      liveDetail
+    );
+
+    expect(
+      buildDataPanelExportServiceTraceComparisonReviewRecord(
+        packageItem,
+        liveDetail,
+        comparison
+      )
+    ).toMatchObject({
+      trace_id: "trace:run",
+      comparison_status: "DIFFERENT",
+      package_trace_item_hash: "sha256:package-trace",
+      live_trace_detail_hash: "",
+      matched_field_count: 13,
+      different_field_count: 4,
+      compared_fields: expect.arrayContaining([
+        "compute_node",
+        "input_flow",
+        "output_route",
+        "total_latency",
+        "stage_counts"
+      ]),
+      different_fields: ["terminal", "reason", "total_latency", "stage_counts"],
+      status_reason: "FIELDS_DIFFER"
+    });
+    expect(
+      buildDataPanelExportServiceTraceComparisonReviewSaveStatus(
+        comparison,
+        packageItem
+      )
+    ).toMatchObject({
+      traceId: "trace:run",
+      tone: "ready",
+      buttonLabel: "save trace report",
+      disabled: false
+    });
+    expect(
+      buildDataPanelExportServiceTraceComparisonReviewSaveStatus(
+        comparison,
+        packageItem,
+        { pendingTraceId: "trace:run" }
+      )
+    ).toMatchObject({
+      tone: "pending",
+      buttonLabel: "saving report",
+      disabled: true
+    });
+    expect(
+      buildDataPanelExportServiceTraceComparisonReviewSaveStatus(
+        comparison,
+        packageItem,
+        { error: "HTTP 500" }
+      )
+    ).toMatchObject({
+      tone: "error",
+      detailLabel: "HTTP 500"
+    });
+    expect(
+      buildDataPanelExportServiceTraceComparisonReviewSaveStatus(
+        comparison,
+        packageItem,
+        { reportHash: "sha256:report" }
+      )
+    ).toMatchObject({
+      tone: "success",
+      detailLabel: "saved report"
     });
   });
 

@@ -12,6 +12,7 @@ import {
   loadRuntimeExportScenarioReviewBundle,
   loadRuntimeExportScenarioReviewChecklist,
   loadRuntimeExportRouteComparisonReviewReport,
+  loadRuntimeExportServiceTraceComparisonReviewReport,
   loadRuntimeExportRouteDetailIndex,
   loadRuntimeExportRouteDetailItem,
   loadRuntimeExportRouteDetailPage,
@@ -57,10 +58,12 @@ import {
   runtimeExportPackageUserServiceRequestsHref,
   runtimeExportPackageReviewSummaryHref,
   runtimeExportRouteComparisonReviewReportHref,
+  runtimeExportServiceTraceComparisonReviewReportHref,
   runtimeExportScenarioReviewChecklistHref,
   runtimeExportRestorePreflightHref,
   runtimeDetailEntityHref,
   saveRuntimeExportRouteComparisonReviewReport,
+  saveRuntimeExportServiceTraceComparisonReviewReport,
   saveRuntimeExportScenarioReviewChecklist,
   userConfigurationExportHref,
   userConfigurationReferenceHref,
@@ -117,6 +120,9 @@ describe("runtime API diagnostics", () => {
     );
     expect(runtimeExportRouteComparisonReviewReportHref("pkg 1")).toBe(
       "/runtime/export/packages/pkg%201/route-comparison-review-report"
+    );
+    expect(runtimeExportServiceTraceComparisonReviewReportHref("pkg 1")).toBe(
+      "/runtime/export/packages/pkg%201/service-trace-comparison-review-report"
     );
     expect(runtimeExportScenarioReviewChecklistHref("pkg 1")).toBe(
       "/runtime/export/packages/pkg%201/scenario-review-checklist"
@@ -1251,6 +1257,181 @@ describe("runtime API diagnostics", () => {
           ]
         })
       }
+    );
+  });
+
+  it("saves runtime export service trace comparison review reports", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        type: "RUNTIME_EXPORT_SERVICE_TRACE_COMPARISON_REVIEW_REPORT",
+        summary: {
+          type: "RUNTIME_EXPORT_SERVICE_TRACE_COMPARISON_REVIEW_REPORT_V1",
+          version: "v1",
+          report_id:
+            "leo_twin.runtime_export_service_trace_comparison_review_report.v1",
+          source: "OPERATOR_SERVICE_TRACE_COMPARISON_REVIEW",
+          report_scope:
+            "SELECTED_PACKAGE_VS_LIVE_SERVICE_TRACE_COMPARISON_OUTCOMES",
+          package_id: "pkg",
+          package_dir: "artifacts/runtime_exports/pkg",
+          service_trace_comparison_review: {
+            version: "v1",
+            source: "BACKEND_RUNTIME_EXPORT",
+            review_scope: "PACKAGE_SERVICE_TRACE_TO_LIVE_RUNTIME_SERVICE_TRACE",
+            package_service_trace_endpoint:
+              "GET /runtime/export/packages/{package_id}/service-traces/{trace_id}",
+            live_service_trace_endpoint:
+              "GET /runtime/details/service-traces/{trace_id}",
+            compare_action: "compare with live service trace",
+            comparison_requires_live_runtime: true,
+            trace_id_alignment_required: true,
+            exported_rows_only: true,
+            compared_fields: ["terminal", "reason", "total_latency"],
+            status_reasons: ["TRACE_ID_MISMATCH"],
+            boundary_conditions: ["NO_SERVICE_RECOMPUTE"]
+          },
+          boundary_alignment_hash: "sha256:alignment",
+          boundary_alignment_status: "ALIGNED",
+          boundary_alignment_warnings: [],
+          runtime_export_boundary_hash: "sha256:boundary",
+          record_count: 1,
+          match_count: 0,
+          different_count: 1,
+          unavailable_count: 0,
+          error_count: 0,
+          records: [
+            {
+              trace_id: "trace:0",
+              comparison_status: "DIFFERENT",
+              package_trace_item_hash: "sha256:package",
+              live_trace_detail_hash: "",
+              matched_field_count: 2,
+              different_field_count: 1,
+              compared_fields: ["terminal", "reason", "total_latency"],
+              different_fields: ["terminal"],
+              status_reason: "FIELDS_DIFFER",
+              operator_note: "operator reviewed"
+            }
+          ],
+          ordering: "trace_id ascending, then comparison_status ascending",
+          boundary_conditions: ["NO_SERVICE_RECOMPUTE"],
+          report_hash: "sha256:trace-report"
+        },
+        artifact: {
+          name: "service_trace_comparison_review_report_v1",
+          filename: "service_trace_comparison_review_report_v1.json",
+          bytes: 256,
+          sha256: "sha256:artifact"
+        }
+      })
+    }));
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+
+    await expect(
+      saveRuntimeExportServiceTraceComparisonReviewReport("pkg", {
+        records: [
+          {
+            trace_id: "trace:0",
+            comparison_status: "DIFFERENT",
+            different_fields: ["terminal"],
+            status_reason: "FIELDS_DIFFER"
+          }
+        ]
+      })
+    ).resolves.toMatchObject({
+      package_id: "pkg",
+      record_count: 1,
+      different_count: 1,
+      boundary_alignment_status: "ALIGNED",
+      records: [{ trace_id: "trace:0", status_reason: "FIELDS_DIFFER" }]
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/runtime/export/packages/pkg/service-trace-comparison-review-report",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          records: [
+            {
+              trace_id: "trace:0",
+              comparison_status: "DIFFERENT",
+              different_fields: ["terminal"],
+              status_reason: "FIELDS_DIFFER"
+            }
+          ]
+        })
+      }
+    );
+  });
+
+  it("loads saved runtime export service trace comparison review report artifacts", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        type: "RUNTIME_EXPORT_SERVICE_TRACE_COMPARISON_REVIEW_REPORT_V1",
+        version: "v1",
+        report_id:
+          "leo_twin.runtime_export_service_trace_comparison_review_report.v1",
+        source: "OPERATOR_SERVICE_TRACE_COMPARISON_REVIEW",
+        report_scope:
+          "SELECTED_PACKAGE_VS_LIVE_SERVICE_TRACE_COMPARISON_OUTCOMES",
+        package_id: "pkg",
+        package_dir: "artifacts/runtime_exports/pkg",
+        service_trace_comparison_review: {
+          version: "v1",
+          source: "BACKEND_RUNTIME_EXPORT",
+          review_scope: "PACKAGE_SERVICE_TRACE_TO_LIVE_RUNTIME_SERVICE_TRACE",
+          package_service_trace_endpoint:
+            "GET /runtime/export/packages/{package_id}/service-traces/{trace_id}",
+          live_service_trace_endpoint:
+            "GET /runtime/details/service-traces/{trace_id}",
+          compare_action: "compare with live service trace",
+          comparison_requires_live_runtime: true,
+          trace_id_alignment_required: true,
+          exported_rows_only: true,
+          compared_fields: ["terminal"],
+          status_reasons: ["TRACE_ID_MISMATCH"],
+          boundary_conditions: ["NO_SERVICE_RECOMPUTE"]
+        },
+        record_count: 1,
+        match_count: 1,
+        different_count: 0,
+        unavailable_count: 0,
+        error_count: 0,
+        records: [
+          {
+            trace_id: "trace:0",
+            comparison_status: "MATCH",
+            package_trace_item_hash: "sha256:package",
+            live_trace_detail_hash: "",
+            matched_field_count: 1,
+            different_field_count: 0,
+            compared_fields: ["terminal"],
+            different_fields: [],
+            status_reason: "MATCHED",
+            operator_note: ""
+          }
+        ],
+        ordering: "trace_id ascending, then comparison_status ascending",
+        boundary_conditions: ["NO_SERVICE_RECOMPUTE"],
+        report_hash: "sha256:trace-report"
+      })
+    }));
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+
+    await expect(
+      loadRuntimeExportServiceTraceComparisonReviewReport("pkg")
+    ).resolves.toMatchObject({
+      package_id: "pkg",
+      record_count: 1,
+      report_hash: "sha256:trace-report",
+      records: [{ trace_id: "trace:0", comparison_status: "MATCH" }]
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/runtime/export/packages/pkg/files/service_trace_comparison_review_report_v1.json"
     );
   });
 

@@ -6603,7 +6603,7 @@ change.
 ## 2026-07-05 - Network KPI Source Notice v1
 
 - Branch: `feature/T163-frontend-dashboard-compute-v2`
-- Commit: pending commit note; final hash is reported after commit creation.
+- Commit: `b67a77a feat(frontend): compare package and live service traces`
 - Scope: make the dashboard network KPI chart disclose whether values come
   from backend realtime KPI series, snapshot KPI series, backend metric
   summary, or frontend snapshot estimates.
@@ -16295,3 +16295,62 @@ change.
 - Recommended follow-up:
   - Add a backend-served service-trace comparison review artifact, mirroring
     the existing route comparison review report save workflow.
+
+## 2026-07-07 - Service Trace Comparison Review Report v1
+
+- Branch: `feature/T336-service-trace-comparison-review-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a backend-served package artifact for selected package-vs-live
+  service trace comparison outcomes. The backend exposes
+  `POST /runtime/export/packages/{package_id}/service-trace-comparison-review-report`,
+  writes `service_trace_comparison_review_report_v1.json` with stable ordering
+  and a `report_hash`, updates the runtime export catalog, regenerates the
+  audit index and handoff report, and preserves no-replay/no-recompute
+  boundaries. The dashboard can save the selected service trace comparison
+  record and load the saved report artifact from the package.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/app/api.ts`
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m compileall -q src\leo_twin\services\result_package_contract.py examples\integration_demo\control_plane.py examples\integration_demo\server.py`
+    - Result: passed.
+  - `python -m pytest tests\unit\test_result_package_contract_v1.py::test_runtime_export_service_trace_comparison_review_report_v1_is_deterministic tests\unit\test_result_package_contract_v1.py::test_result_package_contract_v1_is_deterministic_json_ready tests\integration\test_runtime_session_control.py::test_demo_server_stream_query_parses_cursor_options -q`
+    - Result: passed, 3 tests.
+  - `python -m pytest tests\integration\test_result_package_export_v1.py::test_runtime_export_package_satisfies_result_package_contract_v1 -q`
+    - Result: passed, 1 test.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path.
+  - `pnpm --dir frontend test api.test.ts dataPanel.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 2 test
+      files and 228 tests.
+- Problems encountered:
+  - `RuntimeServiceTraceDetailV2` does not currently expose a backend
+    `detail_hash`, so the saved service-trace comparison record leaves
+    `live_trace_detail_hash` empty while preserving the package item hash and
+    all compared/different field evidence.
+  - To avoid changing existing handoff gates, the new service trace comparison
+    report is cataloged and audit-indexed as package evidence but is not yet a
+    required condition for `handoff_ready`.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - Saved service trace reports are full-artifact JSON files; there is not yet
+    a paginated backend endpoint for large saved report review.
+  - The report save endpoint persists selected operator outcomes only. It does
+    not compute package/live differences server-side.
+- Recommended follow-up:
+  - Add backend `detail_hash` to `RuntimeServiceTraceDetailV2` and include it
+    in saved service trace comparison reports.
