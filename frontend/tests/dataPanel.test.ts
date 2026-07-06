@@ -2310,7 +2310,8 @@ describe("buildDataPanelExportCompareDisplay", () => {
         "summary aaaaaaaaaaaa",
         "route compare compare with live",
         "compare fields 12",
-        "live runtime required"
+        "live runtime required",
+        "report RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1"
       ],
       artifactLabels: [
         "必需文件缺失 0",
@@ -2461,6 +2462,9 @@ describe("buildDataPanelExportCompareDisplay", () => {
     );
     expect(display?.modelBoundaryLabels).toContain("compare fields 12");
     expect(display?.modelBoundaryLabels).toContain("live runtime required");
+    expect(display?.modelBoundaryLabels).toContain(
+      "report RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1"
+    );
     expect(
       buildDataPanelExportDiagnosticsStatus(display, "pkg-review", false, null)
     ).toBe(display);
@@ -2684,7 +2688,8 @@ describe("buildDataPanelExportCompareDisplay", () => {
         "network 5",
         "route compare compare with live",
         "compare fields 12",
-        "live runtime required"
+        "live runtime required",
+        "report RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1"
       ],
       boundaryLabels: [
         "ROUTE_EXPLANATION_WINDOW_EXPORT",
@@ -8991,6 +8996,8 @@ function _runtimeExportRouteComparisonReview() {
     version: "v1",
     source: "BACKEND_RUNTIME_EXPORT",
     review_scope: "PACKAGE_ROUTE_DETAIL_TO_LIVE_RUNTIME_ROUTE_DETAIL",
+    review_report_type: "RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1",
+    review_report_id: "leo_twin.runtime_export_route_comparison_review_report.v1",
     package_route_detail_endpoint:
       "GET /runtime/export/packages/{package_id}/routes/{route_id}",
     live_route_detail_endpoint: "GET /runtime/details/routes/{route_id}",
@@ -9027,7 +9034,25 @@ function _runtimeExportRouteComparisonReview() {
       "NO_PACKET_CAPTURE",
       "NO_PACKAGE_MUTATION",
       "CURRENT_RUNTIME_MAY_DIFFER_FROM_EXPORTED_PACKAGE"
-    ]
+    ],
+    review_report_record_schema: {
+      required_fields: [
+        "route_id",
+        "comparison_status",
+        "compared_fields",
+        "different_fields",
+        "status_reason"
+      ],
+      optional_fields: [
+        "package_route_detail_hash",
+        "live_route_detail_hash",
+        "matched_field_count",
+        "different_field_count",
+        "operator_note"
+      ],
+      status_values: ["MATCH", "DIFFERENT", "UNAVAILABLE", "ERROR"],
+      ordering: "route_id ascending, then comparison_status ascending"
+    }
   };
 }
 

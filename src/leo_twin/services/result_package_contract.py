@@ -25,6 +25,9 @@ RUNTIME_EXPORT_ROUTE_DETAIL_PAGE_V1_ID = (
 RUNTIME_EXPORT_ROUTE_DETAIL_ITEM_V1_ID = (
     "leo_twin.runtime_export_route_detail_item.v1"
 )
+RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID = (
+    "leo_twin.runtime_export_route_comparison_review_report.v1"
+)
 
 
 _REQUIRED_FILE_SPECS: tuple[dict[str, object], ...] = (
@@ -562,6 +565,75 @@ def build_runtime_export_route_detail_item_v1(
     return None
 
 
+def build_runtime_export_route_comparison_review_report_v1(
+    *,
+    package_id: str,
+    package_dir: str,
+    route_comparison_review: Mapping[str, Any],
+    records: tuple[Mapping[str, Any], ...] = (),
+) -> dict[str, object]:
+    """Build a deterministic operator report for selected route comparisons."""
+
+    if not isinstance(route_comparison_review, Mapping):
+        raise TypeError("route_comparison_review must be a mapping")
+    normalized_review = _mapping(route_comparison_review)
+    normalized_records = tuple(
+        sorted(
+            (
+                _runtime_export_route_comparison_report_record(
+                    record,
+                    normalized_review,
+                )
+                for record in records
+            ),
+            key=lambda item: (
+                str(item["route_id"]),
+                str(item["comparison_status"]),
+                str(item["package_route_detail_hash"]),
+                str(item["live_route_detail_hash"]),
+            ),
+        )
+    )
+    match_count = sum(
+        1 for record in normalized_records if record["comparison_status"] == "MATCH"
+    )
+    different_count = sum(
+        1
+        for record in normalized_records
+        if record["comparison_status"] == "DIFFERENT"
+    )
+    unavailable_count = sum(
+        1
+        for record in normalized_records
+        if record["comparison_status"] == "UNAVAILABLE"
+    )
+    error_count = sum(
+        1 for record in normalized_records if record["comparison_status"] == "ERROR"
+    )
+    report: dict[str, object] = {
+        "type": "RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1",
+        "version": "v1",
+        "report_id": RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID,
+        "source": "OPERATOR_ROUTE_COMPARISON_REVIEW",
+        "report_scope": "SELECTED_PACKAGE_VS_LIVE_ROUTE_COMPARISON_OUTCOMES",
+        "package_id": str(package_id),
+        "package_dir": str(package_dir),
+        "route_comparison_review": dict(normalized_review),
+        "record_count": len(normalized_records),
+        "match_count": match_count,
+        "different_count": different_count,
+        "unavailable_count": unavailable_count,
+        "error_count": error_count,
+        "records": normalized_records,
+        "ordering": "route_id ascending, then comparison_status ascending",
+        "boundary_conditions": _string_tuple(
+            normalized_review.get("boundary_conditions")
+        ),
+    }
+    report["report_hash"] = stable_hash_payload(report)
+    return report
+
+
 def summarize_result_package_record_v1(
     package: Mapping[str, Any],
 ) -> dict[str, object]:
@@ -752,6 +824,8 @@ def _runtime_export_route_comparison_review_metadata() -> dict[str, object]:
         "version": "v1",
         "source": "BACKEND_RUNTIME_EXPORT",
         "review_scope": "PACKAGE_ROUTE_DETAIL_TO_LIVE_RUNTIME_ROUTE_DETAIL",
+        "review_report_type": "RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1",
+        "review_report_id": RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID,
         "package_route_detail_endpoint": (
             "GET /runtime/export/packages/{package_id}/routes/{route_id}"
         ),
@@ -790,6 +864,29 @@ def _runtime_export_route_comparison_review_metadata() -> dict[str, object]:
             "NO_PACKAGE_MUTATION",
             "CURRENT_RUNTIME_MAY_DIFFER_FROM_EXPORTED_PACKAGE",
         ),
+        "review_report_record_schema": {
+            "required_fields": (
+                "route_id",
+                "comparison_status",
+                "compared_fields",
+                "different_fields",
+                "status_reason",
+            ),
+            "optional_fields": (
+                "package_route_detail_hash",
+                "live_route_detail_hash",
+                "matched_field_count",
+                "different_field_count",
+                "operator_note",
+            ),
+            "status_values": (
+                "MATCH",
+                "DIFFERENT",
+                "UNAVAILABLE",
+                "ERROR",
+            ),
+            "ordering": "route_id ascending, then comparison_status ascending",
+        },
     }
 
 
@@ -892,6 +989,56 @@ def _runtime_export_route_detail_record(
         "bottleneck_reason_label": str(item.get("bottleneck_reason_label", "")),
         "explanation_label": str(item.get("explanation_label", "")),
     }
+
+
+def _runtime_export_route_comparison_report_record(
+    record: Mapping[str, Any],
+    route_comparison_review: Mapping[str, Any],
+) -> dict[str, object]:
+    field_order = _string_tuple(route_comparison_review.get("compared_fields"))
+    compared_fields = _ordered_subset(
+        _string_tuple(record.get("compared_fields")) or field_order,
+        field_order,
+    )
+    different_fields = _ordered_subset(
+        _string_tuple(record.get("different_fields")),
+        field_order,
+    )
+    status = str(record.get("comparison_status", "")).strip().upper()
+    if status not in {"MATCH", "DIFFERENT", "UNAVAILABLE", "ERROR"}:
+        status = "ERROR"
+    matched_field_count = _integer(record.get("matched_field_count"))
+    if matched_field_count <= 0 and compared_fields:
+        matched_field_count = max(0, len(compared_fields) - len(different_fields))
+    different_field_count = _integer(record.get("different_field_count"))
+    if different_field_count <= 0:
+        different_field_count = len(different_fields)
+    return {
+        "route_id": str(record.get("route_id", "")),
+        "comparison_status": status,
+        "package_route_detail_hash": str(
+            record.get("package_route_detail_hash", "")
+        ),
+        "live_route_detail_hash": str(record.get("live_route_detail_hash", "")),
+        "matched_field_count": matched_field_count,
+        "different_field_count": different_field_count,
+        "compared_fields": compared_fields,
+        "different_fields": different_fields,
+        "status_reason": str(record.get("status_reason", "")),
+        "operator_note": str(record.get("operator_note", "")),
+    }
+
+
+def _ordered_subset(
+    values: tuple[str, ...],
+    field_order: tuple[str, ...],
+) -> tuple[str, ...]:
+    if not field_order:
+        return tuple(sorted(dict.fromkeys(values)))
+    value_set = set(values)
+    ordered = tuple(field for field in field_order if field in value_set)
+    extras = tuple(sorted(value for value in value_set if value not in field_order))
+    return ordered + extras
 
 
 def _runtime_export_route_detail_matches_filter(

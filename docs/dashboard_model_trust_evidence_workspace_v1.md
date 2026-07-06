@@ -62,8 +62,10 @@ identifies whether package detail, live detail, or route-id alignment is the
 blocking condition. Result packages now also expose backend-owned
 `route_comparison_review` metadata in review summary, diagnostics, and route
 detail artifacts so this workflow is auditable outside the frontend. The
-frontend does not recompute routes or download the
-full `route_detail_index_v1.json` by default.
+metadata names the `RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1` report
+template and its record schema, so selected package-vs-live comparison outcomes
+can be captured later with deterministic ordering. The frontend does not
+recompute routes or download the full `route_detail_index_v1.json` by default.
 7. runtime evidence
 
 Each row has a tone:

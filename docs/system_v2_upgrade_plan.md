@@ -250,6 +250,11 @@ Tasks:
     and exact package route detail items. The metadata records comparison
     endpoints, compared fields, live-runtime requirements, status reasons, and
     no-recompute/no-replay boundaries.
+  - Status: T290 adds the backend-declared
+    `RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1` report template and
+    deterministic record builder for selected package-vs-live route comparison
+    outcomes. The dashboard consumes the backend report template label; it does
+    not infer report schema locally.
 
 ### WS4. Compute Network Model v2
 

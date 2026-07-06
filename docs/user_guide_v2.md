@@ -155,7 +155,9 @@ matched and different route fields. If the comparison is not ready, the same
 area explains whether package detail, live detail, or route-id mismatch is the
 reason. The package review artifacts include `route_comparison_review`
 metadata so the available comparison fields, live-runtime requirement, and
-no-recompute boundaries are visible outside the dashboard UI.
+no-recompute boundaries are visible outside the dashboard UI. The same metadata
+declares the `RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1` template for
+recording selected route comparison outcomes with deterministic record ordering.
 Runtime export rebuilds the package route evidence window with a 5000-row
 maximum; hidden rows beyond that limit are reported in the package policy.
 For package-owned review, use:

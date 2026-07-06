@@ -13924,3 +13924,56 @@ change.
 - Recommended follow-up:
   - Add an operator review report section that can record selected route
     comparison outcomes after users run package-vs-live diagnostics.
+
+## 2026-07-06 - Route Comparison Review Report v1
+
+- Branch: `feature/T290-route-comparison-review-report-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a deterministic backend contract for recording selected
+  package-vs-live route comparison outcomes. The task introduces
+  `RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1`, adds the report template
+  id and record schema to backend-owned `route_comparison_review` metadata,
+  provides a deterministic report builder with stable ordering and hash output,
+  and lets the dashboard display the backend report template label. No route
+  model, live comparison execution logic, Event Kernel behavior, or frontend
+  layout changed.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/dashboard_model_trust_evidence_workspace_v1.md`
+  - `docs/result_package_contract_v1.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_result_package_contract_v1.py -q`
+    - Result: passed, 10 tests.
+  - `python -m pytest tests/unit/test_result_package_contract_v1.py tests/unit/test_user_guide_v2_docs.py -q`
+    - Result: passed, 12 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with bundled Codex Node/Pnpm runtime.
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed, 1 test file and 168 tests.
+  - `pnpm --dir frontend test api.test.ts dataPanel.test.ts`
+    - Result: passed, 2 test files and 192 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing large DataPanel chunk
+      warning after minification; no functional build error.
+  - `git diff --check`
+    - Result: passed for task files.
+- Problems encountered:
+  - The shell PATH initially did not expose `node`, so frontend validation used
+    the bundled Codex Node/Pnpm runtime path.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The report builder records selected comparison outcomes supplied by the
+    operator workflow; it does not automatically export every route comparison.
+  - Live comparison remains dependent on the current runtime exposing the same
+    route id as the exported package row.
+- Recommended follow-up:
+  - Add a package review endpoint or persisted artifact that saves operator
+    route comparison report records from the dashboard workflow.

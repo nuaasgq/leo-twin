@@ -194,6 +194,14 @@ cover rows already present in the exported route detail index; if a scenario
 has more than the export limit, the policy and summary fields report the
 remaining hidden route count.
 
+`route_comparison_review` also declares the deterministic
+`RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1` report template. The
+template defines the selected route comparison record schema, accepted status
+values (`MATCH`, `DIFFERENT`, `UNAVAILABLE`, `ERROR`), ordering rule, and
+no-recompute/no-replay boundaries. A review report records operator-selected
+package-vs-live comparison outcomes; it does not mutate the package, run a
+route recomputation, or infer route semantics in the frontend.
+
 ## Diagnostics Bundle
 
 The diagnostics bundle artifact has type:

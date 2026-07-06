@@ -5,12 +5,14 @@ import json
 from leo_twin.services.result_package_contract import (
     RESULT_PACKAGE_CONTRACT_V1_ID,
     RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1_ID,
+    RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID,
     RUNTIME_EXPORT_ROUTE_DETAIL_ITEM_V1_ID,
     RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_V1_ID,
     RUNTIME_EXPORT_ROUTE_DETAIL_PAGE_V1_ID,
     RUNTIME_EXPORT_REVIEW_SUMMARY_V1_ID,
     RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID,
     build_runtime_export_diagnostics_bundle_v1,
+    build_runtime_export_route_comparison_review_report_v1,
     build_runtime_export_route_detail_item_v1,
     build_runtime_export_route_detail_index_v1,
     build_runtime_export_route_detail_page_v1,
@@ -185,8 +187,14 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
     assert first["route_comparison_review"]["review_scope"] == (
         "PACKAGE_ROUTE_DETAIL_TO_LIVE_RUNTIME_ROUTE_DETAIL"
     )
+    assert first["route_comparison_review"]["review_report_id"] == (
+        RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID
+    )
     assert first["route_comparison_review"]["compare_action"] == "compare with live"
     assert "ROUTE_ID_MISMATCH" in first["route_comparison_review"]["status_reasons"]
+    assert first["route_comparison_review"]["review_report_record_schema"][
+        "status_values"
+    ] == ("MATCH", "DIFFERENT", "UNAVAILABLE", "ERROR")
     assert "diagnostics_bundle_v1.json" in first["artifacts"]["artifact_filenames"]
     assert first["summary_hash"].startswith("sha256:")
     assert json.loads(json.dumps(first, sort_keys=True))["summary_id"] == (
@@ -416,6 +424,79 @@ def test_runtime_export_route_detail_item_v1_reads_exact_package_route() -> None
     assert detail["route"]["path_label"] == "user-1 -> sat-1"
     assert detail["item_hash"].startswith("sha256:")
     assert build_runtime_export_route_detail_item_v1(route_index, "missing") is None
+
+
+def test_runtime_export_route_comparison_review_report_v1_is_deterministic() -> None:
+    route_index = build_runtime_export_route_detail_index_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot={
+            "type": "RUNTIME_CONFIG_SNAPSHOT",
+            "status": {
+                "route_explanation_summary_v1": _route_summary(),
+                "runtime_export_route_detail_policy_v1": _route_detail_export_policy(),
+                "route_provenance_trust_summary_v1": _route_trust(),
+            },
+        },
+    )
+    review = route_index["route_comparison_review"]
+    records = (
+        {
+            "route_id": "route-1",
+            "comparison_status": "different",
+            "package_route_detail_hash": "sha256:package-route-1",
+            "live_route_detail_hash": "sha256:live-route-1",
+            "compared_fields": ("latency", "bottleneck", "path"),
+            "different_fields": ("bottleneck", "latency"),
+            "status_reason": "FIELDS_DIFFER",
+            "operator_note": "capacity changed after runtime advanced",
+        },
+        {
+            "route_id": "route-0",
+            "comparison_status": "match",
+            "package_route_detail_hash": "sha256:package-route-0",
+            "live_route_detail_hash": "sha256:live-route-0",
+            "compared_fields": ("availability", "path"),
+            "different_fields": (),
+            "status_reason": "MATCHED",
+        },
+    )
+
+    first = build_runtime_export_route_comparison_review_report_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        route_comparison_review=review,
+        records=records,
+    )
+    second = build_runtime_export_route_comparison_review_report_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        route_comparison_review=review,
+        records=tuple(reversed(records)),
+    )
+
+    assert first == second
+    assert first["report_id"] == RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID
+    assert first["record_count"] == 2
+    assert first["match_count"] == 1
+    assert first["different_count"] == 1
+    assert first["unavailable_count"] == 0
+    assert first["error_count"] == 0
+    assert [record["route_id"] for record in first["records"]] == [
+        "route-0",
+        "route-1",
+    ]
+    assert first["records"][1]["different_fields"] == ("latency", "bottleneck")
+    assert first["records"][1]["matched_field_count"] == 1
+    assert first["records"][1]["different_field_count"] == 2
+    assert first["records"][1]["operator_note"] == (
+        "capacity changed after runtime advanced"
+    )
+    assert first["boundary_conditions"] == review["boundary_conditions"]
+    assert first["report_hash"].startswith("sha256:")
+    assert json.loads(json.dumps(first, sort_keys=True))["report_id"] == (
+        RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID
+    )
 
 
 def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -> None:

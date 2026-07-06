@@ -1295,6 +1295,8 @@ export interface RuntimeExportRouteComparisonReviewV1 {
   version: "v1" | string;
   source: string;
   review_scope: string;
+  review_report_type?: string;
+  review_report_id?: string;
   package_route_detail_endpoint: string;
   live_route_detail_endpoint: string;
   compare_action: string;
@@ -1304,6 +1306,14 @@ export interface RuntimeExportRouteComparisonReviewV1 {
   compared_fields: readonly string[];
   status_reasons: readonly string[];
   boundary_conditions: readonly string[];
+  review_report_record_schema?: RuntimeExportRouteComparisonReviewRecordSchemaV1;
+}
+
+export interface RuntimeExportRouteComparisonReviewRecordSchemaV1 {
+  required_fields: readonly string[];
+  optional_fields: readonly string[];
+  status_values: readonly string[];
+  ordering: string;
 }
 
 export interface RuntimeExportReviewReproducibilityV1 {

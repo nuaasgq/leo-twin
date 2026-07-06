@@ -9315,8 +9315,9 @@ function runtimeExportRouteComparisonReviewLabels(
     `compare fields ${formatCount(review.compared_fields.length)}`,
     review.comparison_requires_live_runtime
       ? "live runtime required"
-      : "offline route comparison"
-  ];
+      : "offline route comparison",
+    review.review_report_type ? `report ${review.review_report_type}` : ""
+  ].filter((label) => label.length > 0);
 }
 
 export function buildDataPanelExportReviewSummaryDisplay(
