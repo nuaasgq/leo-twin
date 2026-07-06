@@ -373,6 +373,11 @@ Tasks:
     combines backend `model_assumptions`, runtime fidelity warnings, network
     KPI credibility, and configuration boundary labels without adding frontend
     model inference.
+  - Status: T274 adds a neighboring dashboard model trust evidence workspace
+    that summarizes configuration semantics, fidelity policy, KPI credibility,
+    KPI formula provenance, reproducibility/export diagnostics, and runtime
+    state into deterministic evidence rows. Missing proof is shown as pending
+    evidence rather than inferred locally.
 
 ### WS7. 3D Scene Productization v2
 

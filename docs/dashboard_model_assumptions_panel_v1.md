@@ -27,6 +27,12 @@ The panel shows:
 - forbidden integration / packet-level boundary text from backend
   configuration explanation
 
+T274 adds a neighboring model trust evidence workspace. It does not replace the
+assumptions panel; it summarizes the assumptions panel, KPI credibility, KPI
+formula provenance, reproducibility manifest, export diagnostics, and runtime
+status into deterministic evidence rows so missing proof is visible instead of
+silently hidden.
+
 ## Model Boundary
 
 - The frontend does not invent model assumptions locally.
@@ -41,3 +47,5 @@ The panel shows:
 - Link each assumption to the future model verification report.
 - Split KPI credibility details into a drill-down panel when the network model
   gains more provenance fields.
+- Add route explanation evidence once route provenance has a backend trust
+  summary.

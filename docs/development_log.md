@@ -13061,3 +13061,52 @@ change.
 - Recommended follow-up:
   - Add a larger model-trust workspace that groups KPI formulas, route
     explanations, and benchmark acceptance evidence.
+
+## 2026-07-06 - Dashboard Model Trust Evidence Workspace v1
+
+- Branch: `feature/T274-dashboard-model-trust-evidence-workspace-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: advance V2-054 by adding a read-only model trust evidence workspace to
+  the standalone dashboard. The workspace summarizes existing backend-derived
+  configuration semantics, fidelity policy, network KPI credibility, KPI formula
+  provenance, reproducibility/export diagnostics, and runtime status into
+  deterministic evidence rows. Missing proof is displayed as `pending` evidence
+  instead of being hidden or inferred locally. Backend runtime behavior, Event
+  Kernel behavior, orbit/network/compute/traffic models, packet-level semantics,
+  and external simulator integration remain unchanged.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/dashboard_model_trust_evidence_workspace_v1.md`
+  - `docs/dashboard_model_assumptions_panel_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed, using the bundled Node/Pnpm runtime because the shell
+      PATH does not expose `node`.
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed, 159 tests.
+  - `pnpm --dir frontend test`
+    - Result: passed, 26 test files and 372 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing DataPanel chunk-size
+      warning after minification; no functional build error.
+  - `python -m pytest tests/unit/test_network_kpi_provenance_v2.py tests/unit/test_network_model_contract_v2.py tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer -q`
+    - Result: passed, 7 tests.
+- Problems encountered:
+  - The workspace evidence score intentionally counts `match` and `different`
+    rows as usable evidence, while `error` rows remain invalid and are not
+    counted as usable. One test expectation was corrected to match that product
+    semantics.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - Route explanation evidence is not included yet because route provenance does
+    not currently expose a compact backend trust summary.
+  - Concrete model verification report instances are not linked yet; the
+    workspace only reports current runtime/export evidence.
+- Recommended follow-up:
+  - Add backend route-provenance trust summary and link model assumptions to
+    verification report evidence.

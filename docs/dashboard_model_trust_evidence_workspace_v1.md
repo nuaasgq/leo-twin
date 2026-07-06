@@ -1,0 +1,72 @@
+# Dashboard Model Trust Evidence Workspace v1
+
+Date: 2026-07-06
+
+## Purpose
+
+Dashboard model trust evidence workspace v1 gives the standalone dashboard a
+single read-only evidence surface for model trust. It connects existing backend
+runtime semantics instead of adding new simulation behavior.
+
+The workspace answers five user-facing questions:
+
+- Which configuration semantics and forbidden boundaries are declared?
+- Which large-scale fidelity policy is active?
+- Are network KPIs backed by backend provenance and source fields?
+- Is there a reproducibility manifest or export diagnostics package?
+- What runtime state proves the current run is live, completed, or failed?
+
+## Data Sources
+
+The workspace uses existing frontend view models and runtime payloads:
+
+- `backend_summary.configuration_explanation_v2`
+- `backend_summary.model_assumptions`
+- `runtimeStatus.fidelity_summary`
+- `runtimeStatus.network_kpi_credibility_v1`
+- `runtimeStatus.network_kpi_provenance_v2`
+- `runtimeStatus.reproducibility_manifest_v1`
+- runtime export catalog, review summary, and diagnostics bundle data
+- `/runtime/status`
+
+## Evidence Rows
+
+Rows are emitted in a deterministic order:
+
+1. configuration semantics
+2. fidelity boundary
+3. KPI credibility
+4. KPI formula provenance
+5. replay/export evidence
+6. runtime evidence
+
+Each row has a tone:
+
+- `match`: evidence is present and usable.
+- `different`: evidence is present but degraded, partial, or warning-bearing.
+- `pending`: evidence is not present yet.
+- `error`: evidence indicates an invalid or failed state.
+
+The overall workspace tone is derived deterministically from row tones:
+
+1. any error -> `error`
+2. any warning/degradation -> `different`
+3. any pending evidence -> `pending`
+4. otherwise -> `match`
+
+## Model Boundary
+
+- No Event Kernel behavior changes are introduced.
+- No orbit, network, compute, traffic, or metrics formulas are changed.
+- No packet-level simulation is introduced.
+- No STK, EXATA, AFSIM, or DDS integration is introduced.
+- The frontend does not invent model trust semantics; it summarizes existing
+  backend fields and marks missing evidence explicitly.
+
+## Follow-Up
+
+- Add route explanation evidence rows once route provenance has a compact
+  backend trust summary.
+- Link each model assumption to a concrete verification report instance.
+- Promote result-review evidence into a wider workspace when exported package
+  history becomes large.

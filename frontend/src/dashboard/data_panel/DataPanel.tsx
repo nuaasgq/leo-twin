@@ -506,6 +506,18 @@ export const DataPanel = memo(function DataPanel({
     networkKpiCredibilityDisplay,
     configurationExplanationDisplay
   );
+  const modelTrustEvidenceWorkspace = buildDataPanelModelTrustEvidenceWorkspace({
+    configurationExplanation: configurationExplanationDisplay,
+    modelAssumptions: modelAssumptionsDisplay,
+    networkKpiCredibility: networkKpiCredibilityDisplay,
+    networkKpiFormulaInspector,
+    fidelitySummary,
+    reproducibilityManifest: runtimeStatus.reproducibility_manifest_v1,
+    exportCatalog: runtimeExportCatalog,
+    exportReviewSummary: runtimeExportReviewSummary,
+    exportDiagnosticsBundle: runtimeExportDiagnosticsBundle,
+    runtimeStatus
+  });
   const networkFormulaInputs = buildDataPanelNetworkFormulaInputs(
     runtimeStatus.metrics_summary
   );
@@ -2381,6 +2393,48 @@ export const DataPanel = memo(function DataPanel({
                 </div>
               ))}
             </div>
+          </section>
+        ) : null}
+        {modelTrustEvidenceWorkspace ? (
+          <section
+            className={`dashboard-section data-panel-model-trust-evidence ${modelTrustEvidenceWorkspace.tone}`}
+            aria-label="模型可信证据工作台"
+          >
+            <div className="section-title">模型可信证据</div>
+            <div className="data-panel-source-note">
+              <span>{modelTrustEvidenceWorkspace.sourceLabel}</span>
+              <small>{modelTrustEvidenceWorkspace.summaryLabel}</small>
+            </div>
+            <div className="data-panel-model-trust-headline">
+              <strong>{modelTrustEvidenceWorkspace.statusLabel}</strong>
+              <span>{modelTrustEvidenceWorkspace.scoreLabel}</span>
+            </div>
+            <div className="data-panel-model-trust-meta">
+              {modelTrustEvidenceWorkspace.metaLabels.map((label) => (
+                <span key={label}>{label}</span>
+              ))}
+            </div>
+            <div className="data-panel-model-trust-grid">
+              {modelTrustEvidenceWorkspace.rows.map((row) => (
+                <span
+                  key={`${row.kind}:${row.label}`}
+                  className={row.tone}
+                  title={row.title}
+                >
+                  <small>{row.source}</small>
+                  <strong>{row.label}</strong>
+                  <em>{row.statusLabel}</em>
+                  <span>{row.detail}</span>
+                </span>
+              ))}
+            </div>
+            {modelTrustEvidenceWorkspace.actionLabels.length > 0 ? (
+              <div className="data-panel-model-trust-actions">
+                {modelTrustEvidenceWorkspace.actionLabels.map((label) => (
+                  <span key={label}>{label}</span>
+                ))}
+              </div>
+            ) : null}
           </section>
         ) : null}
         {configurationExplanationDisplay ? (
@@ -9404,6 +9458,40 @@ export interface DataPanelModelAssumptionRow {
   source: string;
 }
 
+export interface DataPanelModelTrustEvidenceWorkspaceInput {
+  configurationExplanation?: DataPanelConfigurationExplanationDisplay | null;
+  modelAssumptions?: DataPanelModelAssumptionsDisplay | null;
+  networkKpiCredibility?: DataPanelNetworkKpiCredibilityDisplay | null;
+  networkKpiFormulaInspector?: DataPanelNetworkKpiFormulaInspectorDisplay | null;
+  fidelitySummary?: FidelitySummary | null;
+  reproducibilityManifest?: RuntimeReproducibilityManifestV1 | null;
+  exportCatalog?: RuntimeExportCatalogV1 | null;
+  exportReviewSummary?: RuntimeExportReviewSummaryV1 | null;
+  exportDiagnosticsBundle?: RuntimeExportDiagnosticsBundleV1 | null;
+  runtimeStatus?: RuntimeStatusPayload | null;
+}
+
+export interface DataPanelModelTrustEvidenceWorkspaceDisplay {
+  tone: DataPanelNetworkKpiCredibilityTone;
+  sourceLabel: string;
+  statusLabel: string;
+  summaryLabel: string;
+  scoreLabel: string;
+  metaLabels: readonly string[];
+  rows: readonly DataPanelModelTrustEvidenceRow[];
+  actionLabels: readonly string[];
+}
+
+export interface DataPanelModelTrustEvidenceRow {
+  kind: "configuration" | "fidelity" | "kpi" | "formula" | "replay" | "runtime";
+  label: string;
+  statusLabel: string;
+  detail: string;
+  source: string;
+  tone: DataPanelNetworkKpiCredibilityTone;
+  title: string;
+}
+
 export interface DataPanelServiceLatencyDisplay {
   sourceLabel: string;
   modelLabel: string;
@@ -10008,6 +10096,343 @@ export function buildDataPanelModelAssumptionsDisplay(
         : "等待后端保真策略",
     rows
   };
+}
+
+export function buildDataPanelModelTrustEvidenceWorkspace(
+  input: DataPanelModelTrustEvidenceWorkspaceInput
+): DataPanelModelTrustEvidenceWorkspaceDisplay | null {
+  const runtimeStatus = input.runtimeStatus ?? null;
+  if (
+    (input.configurationExplanation === null ||
+      input.configurationExplanation === undefined) &&
+    (input.modelAssumptions === null || input.modelAssumptions === undefined) &&
+    (input.networkKpiCredibility === null || input.networkKpiCredibility === undefined) &&
+    (input.networkKpiFormulaInspector === null ||
+      input.networkKpiFormulaInspector === undefined) &&
+    (input.fidelitySummary === null || input.fidelitySummary === undefined) &&
+    (input.reproducibilityManifest === null ||
+      input.reproducibilityManifest === undefined) &&
+    (input.exportCatalog === null || input.exportCatalog === undefined) &&
+    (input.exportReviewSummary === null || input.exportReviewSummary === undefined) &&
+    (input.exportDiagnosticsBundle === null ||
+      input.exportDiagnosticsBundle === undefined) &&
+    runtimeStatus === null
+  ) {
+    return null;
+  }
+
+  const rows: DataPanelModelTrustEvidenceRow[] = [
+    buildModelTrustConfigurationRow(input.configurationExplanation),
+    buildModelTrustFidelityRow(input.fidelitySummary, input.modelAssumptions),
+    buildModelTrustKpiRow(input.networkKpiCredibility),
+    buildModelTrustFormulaRow(input.networkKpiFormulaInspector),
+    buildModelTrustReplayRow(
+      input.reproducibilityManifest,
+      input.exportCatalog,
+      input.exportReviewSummary,
+      input.exportDiagnosticsBundle
+    )
+  ];
+  if (runtimeStatus !== null) {
+    rows.push(buildModelTrustRuntimeRow(runtimeStatus));
+  }
+
+  const readyCount = rows.filter((row) => row.tone === "match" || row.tone === "different")
+    .length;
+  const warningCount = rows.filter((row) => row.tone === "different").length;
+  const errorCount = rows.filter((row) => row.tone === "error").length;
+  const pendingCount = rows.filter((row) => row.tone === "pending").length;
+  const tone =
+    errorCount > 0
+      ? "error"
+      : warningCount > 0
+        ? "different"
+        : pendingCount > 0
+          ? "pending"
+          : "match";
+  const statusLabel =
+    tone === "match"
+      ? "证据链完整"
+      : tone === "different"
+        ? "证据链有降级"
+        : tone === "pending"
+          ? "证据链待补齐"
+          : "证据链存在错误";
+  const actionLabels = buildModelTrustActionLabels(rows, input.exportDiagnosticsBundle);
+  return {
+    tone,
+    sourceLabel: "runtime status + backend summary + export diagnostics",
+    statusLabel,
+    summaryLabel: `${formatCount(rows.length)} 类证据 / ${formatCount(
+      readyCount
+    )} 类可用 / ${formatCount(pendingCount)} 类待补齐`,
+    scoreLabel: `可用 ${formatCount(readyCount)}/${formatCount(
+      rows.length
+    )} / 警告 ${formatCount(warningCount)} / 错误 ${formatCount(errorCount)}`,
+    metaLabels: [
+      input.configurationExplanation ? "配置语义已声明" : "配置语义待声明",
+      input.networkKpiFormulaInspector ? "KPI公式可追踪" : "KPI公式待补齐",
+      input.reproducibilityManifest ? "manifest已生成" : "manifest待生成",
+      input.exportDiagnosticsBundle ? "诊断包已加载" : "诊断包待选择"
+    ],
+    rows,
+    actionLabels
+  };
+}
+
+function buildModelTrustConfigurationRow(
+  configurationExplanation: DataPanelConfigurationExplanationDisplay | null | undefined
+): DataPanelModelTrustEvidenceRow {
+  if (configurationExplanation === null || configurationExplanation === undefined) {
+    return {
+      kind: "configuration",
+      label: "配置语义",
+      statusLabel: "等待后端解释",
+      detail: "未收到 configuration_explanation_v2，界面只能展示运行值，不能完整解释配置边界。",
+      source: "backend_summary.configuration_explanation_v2",
+      tone: "pending",
+      title: "配置语义证据必须由后端生成，前端不本地推断业务边界。"
+    };
+  }
+  return {
+    kind: "configuration",
+    label: "配置语义",
+    statusLabel: "已声明",
+    detail: `${configurationExplanation.summaryLabel} / ${configurationExplanation.boundaryLabel}`,
+    source: configurationExplanation.sourceLabel,
+    tone: "match",
+    title: configurationExplanation.determinismLabel
+  };
+}
+
+function buildModelTrustFidelityRow(
+  fidelitySummary: FidelitySummary | null | undefined,
+  modelAssumptions: DataPanelModelAssumptionsDisplay | null | undefined
+): DataPanelModelTrustEvidenceRow {
+  if (fidelitySummary === null || fidelitySummary === undefined) {
+    return {
+      kind: "fidelity",
+      label: "保真边界",
+      statusLabel: "等待规模策略",
+      detail: modelAssumptions?.boundaryLabel ?? "未收到 fidelity_summary。",
+      source: "fidelity_summary",
+      tone: "pending",
+      title: "大规模场景的轨道、指标和星间链路保真策略需要后端显式声明。"
+    };
+  }
+  const warningCount = fidelitySummary.fidelity_warnings.length;
+  return {
+    kind: "fidelity",
+    label: "保真边界",
+    statusLabel:
+      warningCount > 0
+        ? `降级 ${formatCount(warningCount)} 项`
+        : fidelitySummary.current_scale_mode,
+    detail: [
+      `orbit=${fidelitySummary.orbit_update_mode}`,
+      `metrics=${fidelitySummary.metrics_mode}`,
+      `space=${fidelitySummary.space_link_mode}`,
+      fidelitySummary.scale_limit_reason
+    ]
+      .filter((value) => value.length > 0)
+      .join(" / "),
+    source: "fidelity_summary",
+    tone: warningCount > 0 ? "different" : "match",
+    title: modelAssumptions?.fidelityLabel ?? fidelitySummary.current_scale_mode
+  };
+}
+
+function buildModelTrustKpiRow(
+  networkKpiCredibility: DataPanelNetworkKpiCredibilityDisplay | null | undefined
+): DataPanelModelTrustEvidenceRow {
+  if (networkKpiCredibility === null || networkKpiCredibility === undefined) {
+    return {
+      kind: "kpi",
+      label: "KPI可信度",
+      statusLabel: "等待可信度摘要",
+      detail: "未收到 network_kpi_credibility_v1。",
+      source: "network_kpi_credibility_v1",
+      tone: "pending",
+      title: "KPI可信度摘要必须来自后端 provenance 覆盖率。"
+    };
+  }
+  return {
+    kind: "kpi",
+    label: "KPI可信度",
+    statusLabel: networkKpiCredibility.statusLabel,
+    detail: networkKpiCredibility.summaryLabel,
+    source: "network_kpi_credibility_v1",
+    tone: networkKpiCredibility.tone,
+    title: networkKpiCredibility.caveats.join(" / ") || networkKpiCredibility.summaryLabel
+  };
+}
+
+function buildModelTrustFormulaRow(
+  networkKpiFormulaInspector:
+    | DataPanelNetworkKpiFormulaInspectorDisplay
+    | null
+    | undefined
+): DataPanelModelTrustEvidenceRow {
+  if (networkKpiFormulaInspector === null || networkKpiFormulaInspector === undefined) {
+    return {
+      kind: "formula",
+      label: "KPI公式来源",
+      statusLabel: "等待公式证据",
+      detail: "未收到 network_kpi_provenance_v2.kpis。",
+      source: "network_kpi_provenance_v2",
+      tone: "pending",
+      title: "公式、运行值和来源字段应由后端 KPI provenance 合同声明。"
+    };
+  }
+  return {
+    kind: "formula",
+    label: "KPI公式来源",
+    statusLabel: networkKpiFormulaInspector.statusLabel,
+    detail: networkKpiFormulaInspector.summaryLabel,
+    source: networkKpiFormulaInspector.sourceLabel,
+    tone: networkKpiFormulaInspector.tone,
+    title: networkKpiFormulaInspector.rows.map((row) => row.title).join(" / ")
+  };
+}
+
+function buildModelTrustReplayRow(
+  reproducibilityManifest: RuntimeReproducibilityManifestV1 | null | undefined,
+  exportCatalog: RuntimeExportCatalogV1 | null | undefined,
+  exportReviewSummary: RuntimeExportReviewSummaryV1 | null | undefined,
+  exportDiagnosticsBundle: RuntimeExportDiagnosticsBundleV1 | null | undefined
+): DataPanelModelTrustEvidenceRow {
+  if (exportDiagnosticsBundle !== null && exportDiagnosticsBundle !== undefined) {
+    const errorCount = exportDiagnosticsBundle.findings.filter(
+      (finding) => finding.severity === "ERROR"
+    ).length;
+    const warnCount = exportDiagnosticsBundle.findings.filter(
+      (finding) => finding.severity === "WARN"
+    ).length;
+    const missingRequired =
+      exportDiagnosticsBundle.artifact_health.missing_required_filenames.length;
+    const tone =
+      errorCount > 0
+        ? "error"
+        : warnCount > 0 || missingRequired > 0
+          ? "different"
+          : "match";
+    return {
+      kind: "replay",
+      label: "复盘证据",
+      statusLabel: exportDiagnosticsBundle.package.review_status,
+      detail: `${exportDiagnosticsBundle.package.package_id} / findings ${formatCount(
+        exportDiagnosticsBundle.finding_count
+      )} / 必需缺失 ${formatCount(missingRequired)} / ${shortRuntimeHash(
+        exportDiagnosticsBundle.diagnostics_hash
+      )}`,
+      source: "runtime_export_diagnostics_bundle_v1",
+      tone,
+      title: exportDiagnosticsBundle.recommended_next_actions.join(" / ")
+    };
+  }
+  if (exportReviewSummary !== null && exportReviewSummary !== undefined) {
+    const missingRequired = exportReviewSummary.artifacts.missing_required_filenames.length;
+    const tone =
+      exportReviewSummary.review_status === "REVIEW_READY" && missingRequired === 0
+        ? "match"
+        : "different";
+    return {
+      kind: "replay",
+      label: "复盘证据",
+      statusLabel: exportReviewSummary.review_status,
+      detail: `${exportReviewSummary.package_id} / artifacts ${formatCount(
+        exportReviewSummary.artifacts.artifact_count
+      )} / 必需缺失 ${formatCount(missingRequired)} / ${shortRuntimeHash(
+        exportReviewSummary.summary_hash
+      )}`,
+      source: "runtime_export_review_summary_v1",
+      tone,
+      title: exportReviewSummary.review_notes.join(" / ")
+    };
+  }
+  if (reproducibilityManifest !== null && reproducibilityManifest !== undefined) {
+    const artifactCount =
+      typeof reproducibilityManifest.artifact_count === "number"
+        ? reproducibilityManifest.artifact_count
+        : reproducibilityManifest.artifacts.length;
+    return {
+      kind: "replay",
+      label: "复盘证据",
+      statusLabel: `manifest ${shortRuntimeHash(reproducibilityManifest.manifest_hash)}`,
+      detail: `${reproducibilityManifest.artifact_policy} / artifacts ${formatCount(
+        artifactCount
+      )} / seed ${String(reproducibilityManifest.seed ?? "-")}`,
+      source: "reproducibility_manifest_v1",
+      tone: "match",
+      title: reproducibilityManifest.notes?.join(" / ") ?? reproducibilityManifest.manifest_id
+    };
+  }
+  if (exportCatalog?.latest_export) {
+    const latest = exportCatalog.latest_export;
+    return {
+      kind: "replay",
+      label: "复盘证据",
+      statusLabel: "已有导出记录",
+      detail: `${latest.package_id} / files ${formatCount(
+        latest.file_count
+      )} / ${shortRuntimeHash(latest.archive_sha256 || latest.manifest_hash)}`,
+      source: "runtime_export_catalog_v1.latest_export",
+      tone: "different",
+      title: "已存在导出记录，但当前未加载 manifest 或 diagnostics 证据。"
+    };
+  }
+  return {
+    kind: "replay",
+    label: "复盘证据",
+    statusLabel: "等待结果包",
+    detail: "尚未选择或生成复盘包，无法证明结果可复现。",
+    source: "runtime export package",
+    tone: "pending",
+    title: "完成仿真后应导出 events、metrics、summary、manifest 和 diagnostics。"
+  };
+}
+
+function buildModelTrustRuntimeRow(
+  runtimeStatus: RuntimeStatusPayload
+): DataPanelModelTrustEvidenceRow {
+  const isError =
+    runtimeStatus.status === "ERROR" || runtimeStatus.lifecycle_state === "ERROR";
+  const isReady =
+    runtimeStatus.initialized === true ||
+    runtimeStatus.status === "RUNNING" ||
+    runtimeStatus.status === "PAUSED" ||
+    runtimeStatus.status === "COMPLETED";
+  return {
+    kind: "runtime",
+    label: "运行证据",
+    statusLabel: runtimeStatusLabel(runtimeStatus),
+    detail: `t=${formatPreciseMetricValue(
+      runtimeStatus.current_sim_time ?? 0
+    )}s / events=${formatCount(runtimeStatus.processed_event_count ?? 0)} / ${runtimeModeLabel(
+      runtimeStatus.mode
+    )}`,
+    source: "runtime/status",
+    tone: isError ? "error" : isReady ? "match" : "pending",
+    title: runtimeStatus.last_error ?? runtimeStatus.last_action
+  };
+}
+
+function buildModelTrustActionLabels(
+  rows: readonly DataPanelModelTrustEvidenceRow[],
+  exportDiagnosticsBundle: RuntimeExportDiagnosticsBundleV1 | null | undefined
+): readonly string[] {
+  const labels = rows
+    .filter((row) => row.tone === "pending" || row.tone === "error")
+    .map((row) => `${row.label}：${row.statusLabel}`);
+  if (exportDiagnosticsBundle !== null && exportDiagnosticsBundle !== undefined) {
+    labels.push(
+      ...exportDiagnosticsBundle.findings
+        .filter((finding) => finding.severity === "ERROR" || finding.severity === "WARN")
+        .slice(0, 3)
+        .map((finding) => `${finding.severity} ${finding.code}`)
+    );
+  }
+  return labels.length > 0 ? labels : ["证据链可用于导出结果包并进入复盘验收。"];
 }
 
 function clampCount(value: number, maxValue: number): number {

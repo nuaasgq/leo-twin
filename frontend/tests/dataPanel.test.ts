@@ -37,6 +37,7 @@ import {
   buildDataPanelNetworkKpiCredibilityDisplay,
   buildDataPanelNetworkKpiFormulaInspector,
   buildDataPanelModelAssumptionsDisplay,
+  buildDataPanelModelTrustEvidenceWorkspace,
   buildDataPanelNetworkKpiProvenanceItems,
   buildDataPanelNetworkKpiSource,
   buildDataPanelNodeDetailDrawerItems,
@@ -3906,6 +3907,302 @@ describe("buildDataPanelModelAssumptionsDisplay", () => {
     expect(
       buildDataPanelModelAssumptionsDisplay(null, null, null, null)
     ).toBeNull();
+  });
+});
+
+describe("buildDataPanelModelTrustEvidenceWorkspace", () => {
+  it("combines backend configuration, KPI, fidelity, replay, and runtime evidence", () => {
+    const display = buildDataPanelModelTrustEvidenceWorkspace({
+      configurationExplanation: {
+        sourceLabel: "BACKEND_DERIVED_SUMMARY / sees.user_configuration.v2",
+        summaryLabel: "2 个配置入口 / 6 个语义分组 / READ_ONLY_EXPLANATION",
+        determinismLabel: "seed runtime.seed / unknown REJECT / default OMITTED",
+        boundaryLabel: "STK/EXATA/AFSIM/DDS 禁止；无包级仿真",
+        surfaces: [],
+        sections: []
+      },
+      modelAssumptions: {
+        sourceLabel: "backend_summary.model_assumptions + runtime credibility",
+        summaryLabel: "2 条假设 / 1 条规模边界 / 1 条KPI边界",
+        boundaryLabel: "STK/EXATA/AFSIM/DDS 禁止；无包级仿真",
+        fidelityLabel: "STANDARD / 72 星 / 20 用户",
+        rows: []
+      },
+      networkKpiCredibility: {
+        tone: "match",
+        statusLabel: "完整流级代理",
+        summaryLabel: "KPI 6/6 有运行值；来源字段 18/18 可观测",
+        metaLabels: ["模型 流级代理", "无包级指标"],
+        caveats: ["No packet-level simulation."]
+      },
+      networkKpiFormulaInspector: {
+        tone: "match",
+        sourceLabel: "leo_twin.network_kpi_provenance.v2 / leo_twin.network_model_contract.v2",
+        statusLabel: "完整流级代理",
+        summaryLabel: "流级代理 / 公式 6/6",
+        metaLabels: ["contract v2", "无包级仿真"],
+        rows: [
+          {
+            metric: "EFFECTIVE_THROUGHPUT",
+            displayName: "有效吞吐量 / EFFECTIVE_THROUGHPUT",
+            valueLabel: "180 Mbps",
+            layerLabel: "TRANSPORT / OBSERVED",
+            sourceLabel: "completed flow capacity",
+            formulaLabel: "min(delivered, route capacity)",
+            sourceFieldsLabel: "来源字段 2/2",
+            zeroReasonLabel: null,
+            tone: "observed",
+            title: "throughput interpretation"
+          }
+        ]
+      },
+      fidelitySummary: {
+        orbit_update_mode: "PER_SATELLITE",
+        metrics_mode: "DETAILED",
+        space_link_mode: "DETAILED_SMALL_SCALE",
+        detailed_space_link_enabled: true,
+        space_link_candidate_policy: "ALL_SMALL_SCALE",
+        max_space_link_candidates_per_satellite: 8,
+        batch_space_link_update_limit: 10000,
+        scale_limit_reason: "",
+        current_scale_mode: "STANDARD",
+        fidelity_warnings: [],
+        satellite_count: 72,
+        user_count: 20
+      },
+      reproducibilityManifest: {
+        version: "v1",
+        source: "runtime/status",
+        manifest_id: "manifest-demo",
+        session_id: "session-demo",
+        seed: 42,
+        duration_s: 600,
+        runtime_mode: "REAL_TIME",
+        speed_factor: 1,
+        config_version: 3,
+        deterministic_replay: true,
+        scenario_hash: "sha256:scenariohash",
+        control_config_hash: "sha256:controlhash",
+        generated_config_hash: "sha256:generatedhash",
+        metrics_summary_hash: "sha256:metricshash",
+        runtime_state_hash: "sha256:runtimehash",
+        manifest_hash: "sha256:manifesthash",
+        artifact_policy: "REPRODUCIBLE_PACKAGE",
+        artifacts: [],
+        artifact_count: 4,
+        notes: ["Deterministic manifest."]
+      },
+      exportDiagnosticsBundle: {
+        type: "RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1",
+        version: "v1",
+        bundle_id: "diag-demo",
+        source: "runtime/export",
+        diagnostics_scope: "PACKAGE",
+        package: {
+          package_id: "pkg-demo",
+          package_dir: "exports/pkg-demo",
+          package_complete: true,
+          review_status: "REVIEW_READY",
+          contract_id: "runtime_export_package.v1"
+        },
+        runtime: {
+          lifecycle_state: "COMPLETED",
+          current_sim_time: 600,
+          processed_event_count: 3905,
+          queued_event_count: 0
+        },
+        reproducibility: {
+          manifest_id: "manifest-demo",
+          manifest_ok: true,
+          manifest_hash: "sha256:manifesthash",
+          config_hash: "sha256:controlhash",
+          generated_config_hash: "sha256:generatedhash",
+          review_summary_hash: "sha256:summaryhash"
+        },
+        artifact_health: {
+          artifact_count: 4,
+          artifact_filenames: ["manifest.json", "summary.json"],
+          required_filenames: ["manifest.json", "summary.json"],
+          recommended_filenames: ["diagnostics_bundle_v1.json"],
+          present_required_filenames: ["manifest.json", "summary.json"],
+          missing_required_filenames: [],
+          present_recommended_filenames: ["diagnostics_bundle_v1.json"],
+          missing_recommended_filenames: []
+        },
+        model_boundaries: {
+          event_kernel_policy: "FROZEN_DETERMINISTIC_KERNEL",
+          packet_level_simulation: false,
+          external_simulators: [],
+          forbidden_external_integrations: ["STK", "EXATA", "AFSIM", "DDS"],
+          diagnostics_policy: "READ_ONLY"
+        },
+        findings: [],
+        finding_count: 0,
+        recommended_next_actions: ["Archive package."],
+        diagnostics_hash: "sha256:diagnosticshash"
+      },
+      runtimeStatus: {
+        status: "COMPLETED",
+        lifecycle_state: "COMPLETED",
+        mode: "REAL_TIME",
+        speed_factor: 1,
+        seed: 42,
+        duration: 600,
+        config_version: 3,
+        last_action: "STOP",
+        initialized: true,
+        current_sim_time: 600,
+        processed_event_count: 3905
+      }
+    });
+
+    expect(display).toMatchObject({
+      tone: "match",
+      sourceLabel: "runtime status + backend summary + export diagnostics",
+      statusLabel: "证据链完整",
+      summaryLabel: "6 类证据 / 6 类可用 / 0 类待补齐",
+      scoreLabel: "可用 6/6 / 警告 0 / 错误 0",
+      metaLabels: [
+        "配置语义已声明",
+        "KPI公式可追踪",
+        "manifest已生成",
+        "诊断包已加载"
+      ],
+      actionLabels: ["证据链可用于导出结果包并进入复盘验收。"]
+    });
+    expect(display?.rows.map((row) => row.kind)).toEqual([
+      "configuration",
+      "fidelity",
+      "kpi",
+      "formula",
+      "replay",
+      "runtime"
+    ]);
+    expect(display?.rows[4]).toMatchObject({
+      label: "复盘证据",
+      statusLabel: "REVIEW_READY",
+      tone: "match",
+      source: "runtime_export_diagnostics_bundle_v1"
+    });
+  });
+
+  it("surfaces pending and invalid evidence without hiding the workspace", () => {
+    const display = buildDataPanelModelTrustEvidenceWorkspace({
+      networkKpiCredibility: {
+        tone: "error",
+        statusLabel: "包级指标越界",
+        summaryLabel: "KPI 5/6 有运行值；来源字段 10/12 可观测",
+        metaLabels: ["包级指标 1"],
+        caveats: ["Packet-level metric is not allowed."]
+      },
+      fidelitySummary: {
+        orbit_update_mode: "BATCH",
+        metrics_mode: "AGGREGATED",
+        space_link_mode: "BOUNDED_CANDIDATE",
+        detailed_space_link_enabled: false,
+        space_link_candidate_policy: "SAME_PLANE_AND_ADJACENT_PLANE_BOUNDED_CANDIDATES",
+        max_space_link_candidates_per_satellite: 4,
+        batch_space_link_update_limit: 999,
+        scale_limit_reason: "satellite_count >= 300",
+        current_scale_mode: "LARGE_SCALE_AGGREGATED",
+        fidelity_warnings: ["Orbit updates are batched."],
+        satellite_count: 1200,
+        user_count: 100
+      },
+      exportDiagnosticsBundle: {
+        type: "RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1",
+        version: "v1",
+        bundle_id: "diag-error",
+        source: "runtime/export",
+        diagnostics_scope: "PACKAGE",
+        package: {
+          package_id: "pkg-error",
+          package_dir: "exports/pkg-error",
+          package_complete: false,
+          review_status: "INCOMPLETE",
+          contract_id: "runtime_export_package.v1"
+        },
+        runtime: {
+          lifecycle_state: "ERROR",
+          current_sim_time: 12,
+          processed_event_count: 100,
+          queued_event_count: 5
+        },
+        reproducibility: {
+          manifest_id: "manifest-error",
+          manifest_ok: false,
+          manifest_hash: "sha256:manifesthash",
+          config_hash: "sha256:controlhash",
+          generated_config_hash: "sha256:generatedhash",
+          review_summary_hash: "sha256:summaryhash"
+        },
+        artifact_health: {
+          artifact_count: 1,
+          artifact_filenames: ["summary.json"],
+          required_filenames: ["manifest.json", "summary.json"],
+          recommended_filenames: ["diagnostics_bundle_v1.json"],
+          present_required_filenames: ["summary.json"],
+          missing_required_filenames: ["manifest.json"],
+          present_recommended_filenames: [],
+          missing_recommended_filenames: ["diagnostics_bundle_v1.json"]
+        },
+        model_boundaries: {
+          event_kernel_policy: "FROZEN_DETERMINISTIC_KERNEL",
+          packet_level_simulation: false,
+          external_simulators: [],
+          forbidden_external_integrations: ["STK", "EXATA", "AFSIM", "DDS"],
+          diagnostics_policy: "READ_ONLY"
+        },
+        findings: [
+          {
+            severity: "ERROR",
+            code: "MISSING_MANIFEST",
+            message: "manifest.json is missing."
+          }
+        ],
+        finding_count: 1,
+        recommended_next_actions: ["Regenerate package."],
+        diagnostics_hash: "sha256:diagnosticshash"
+      },
+      runtimeStatus: {
+        status: "ERROR",
+        lifecycle_state: "ERROR",
+        mode: "PAUSED",
+        speed_factor: 1,
+        seed: 42,
+        duration: 600,
+        config_version: 3,
+        last_action: "START",
+        initialized: true,
+        current_sim_time: 12,
+        processed_event_count: 100,
+        last_error: "runtime failed"
+      }
+    });
+
+    expect(display?.tone).toBe("error");
+    expect(display?.statusLabel).toBe("证据链存在错误");
+    expect(display?.summaryLabel).toBe("6 类证据 / 1 类可用 / 2 类待补齐");
+    expect(display?.rows.map((row) => [row.kind, row.tone])).toEqual([
+      ["configuration", "pending"],
+      ["fidelity", "different"],
+      ["kpi", "error"],
+      ["formula", "pending"],
+      ["replay", "error"],
+      ["runtime", "error"]
+    ]);
+    expect(display?.actionLabels).toEqual([
+      "配置语义：等待后端解释",
+      "KPI可信度：包级指标越界",
+      "KPI公式来源：等待公式证据",
+      "复盘证据：INCOMPLETE",
+      "运行证据：已停止",
+      "ERROR MISSING_MANIFEST"
+    ]);
+  });
+
+  it("returns null only when no evidence input exists", () => {
+    expect(buildDataPanelModelTrustEvidenceWorkspace({})).toBeNull();
   });
 });
 
