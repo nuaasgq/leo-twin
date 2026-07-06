@@ -48,6 +48,7 @@ import {
   RuntimeServiceDetailPageV1,
   RuntimeServiceLatencyHistoryV1,
   RuntimeServiceLifecycleTraceV2,
+  RuntimeServiceTraceDetailV2,
   RuntimeStatusPayload,
   RuntimeUserRequestHistoryV1,
   RuntimeUserRequestItemV1,
@@ -146,6 +147,7 @@ export interface RuntimeSelectedNodeDetails {
   satellite?: RuntimeNodeDetailCardV1 | null;
   route?: RuntimeRouteExplanationItemV1 | null;
   service?: RuntimeServiceDetailItemV1 | null;
+  serviceTrace?: RuntimeServiceTraceDetailV2 | null;
   computeNode?: RuntimeComputeNodeDetailItemV1 | null;
 }
 
@@ -160,6 +162,7 @@ export interface RuntimeSelectedNodeDetailRequests {
   satellite?: RuntimeExactDetailRequestState | null;
   route?: RuntimeExactDetailRequestState | null;
   service?: RuntimeExactDetailRequestState | null;
+  serviceTrace?: RuntimeExactDetailRequestState | null;
   computeNode?: RuntimeExactDetailRequestState | null;
 }
 
@@ -221,6 +224,7 @@ export const DataPanel = memo(function DataPanel({
   onRuntimeSatelliteDetailSelect,
   onRuntimeRouteDetailSelect,
   onRuntimeServiceDetailSelect,
+  onRuntimeServiceTraceDetailSelect,
   onRuntimeComputeNodeDetailSelect,
   displaySimTime,
   displayEventCount,
@@ -266,6 +270,7 @@ export const DataPanel = memo(function DataPanel({
   onRuntimeSatelliteDetailSelect?: (satelliteId: string | null) => void;
   onRuntimeRouteDetailSelect?: (routeId: string | null) => void;
   onRuntimeServiceDetailSelect?: (serviceId: string | null) => void;
+  onRuntimeServiceTraceDetailSelect?: (traceId: string | null) => void;
   onRuntimeComputeNodeDetailSelect?: (nodeId: string | null) => void;
   displaySimTime: number;
   displayEventCount: number;
@@ -521,13 +526,6 @@ export const DataPanel = memo(function DataPanel({
     runtimeStatus.satellite_kpi_slices_v1,
     satelliteServiceSummary
   );
-  const serviceTraceCorrelationInspector = buildServiceTraceCorrelationInspector(
-    selectedServiceTraceRow,
-    userBusinessRequests,
-    routeExplanations,
-    satelliteResourceRows,
-    computeNodeDetailRows
-  );
   const userDetailWindowNote = buildRuntimeDetailWindowNote(
     userRequestSummary,
     "users"
@@ -588,10 +586,26 @@ export const DataPanel = memo(function DataPanel({
     runtimeSelectedNodeDetails?.service?.service_id === selectedServiceDetailId
       ? runtimeSelectedNodeDetails.service
       : null;
+  const selectedServiceTraceBackendDetail =
+    selectedServiceTraceRow !== null &&
+    serviceTraceDetailMatchesRow(
+      runtimeSelectedNodeDetails?.serviceTrace,
+      selectedServiceTraceRow
+    )
+      ? runtimeSelectedNodeDetails?.serviceTrace ?? null
+      : null;
   const selectedComputeNodeBackendDetail =
     runtimeSelectedNodeDetails?.computeNode?.node_id === selectedComputeNodeDetailId
       ? runtimeSelectedNodeDetails.computeNode
       : null;
+  const serviceTraceCorrelationInspector = buildServiceTraceCorrelationInspector(
+    selectedServiceTraceRow,
+    userBusinessRequests,
+    routeExplanations,
+    satelliteResourceRows,
+    computeNodeDetailRows,
+    selectedServiceTraceBackendDetail
+  );
   const userDetailRequestStatus = selectExactDetailRequestStatus(
     runtimeSelectedNodeDetailRequests?.user,
     selectedDetailUserId
@@ -607,6 +621,10 @@ export const DataPanel = memo(function DataPanel({
   const serviceDetailRequestStatus = selectExactDetailRequestStatus(
     runtimeSelectedNodeDetailRequests?.service,
     selectedServiceDetailId
+  );
+  const serviceTraceDetailRequestStatus = selectExactDetailRequestStatus(
+    runtimeSelectedNodeDetailRequests?.serviceTrace,
+    selectedServiceTraceRow?.traceId ?? null
   );
   const computeNodeDetailRequestStatus = selectExactDetailRequestStatus(
     runtimeSelectedNodeDetailRequests?.computeNode,
@@ -646,6 +664,11 @@ export const DataPanel = memo(function DataPanel({
     serviceDetailInspector,
     serviceDetailRequestStatus
   );
+  const displayedServiceTraceCorrelationInspector =
+    appendExactDetailStatusToInspector(
+      serviceTraceCorrelationInspector,
+      serviceTraceDetailRequestStatus
+    );
   const computeNodeDetailInspector = buildComputeNodeExactDetailInspector(
     selectedComputeNodeDetailRow,
     selectedComputeNodeBackendDetail
@@ -1537,11 +1560,15 @@ export const DataPanel = memo(function DataPanel({
             onFilterChange={(value) => {
               setServiceDetailFilter(value);
               setSelectedServiceDetailId(null);
+              setSelectedServiceTraceId(null);
               onRuntimeServiceDetailSelect?.(null);
+              onRuntimeServiceTraceDetailSelect?.(null);
             }}
             onSelect={(row) => {
               setSelectedServiceDetailId(row.serviceId);
+              setSelectedServiceTraceId(null);
               onRuntimeServiceDetailSelect?.(row.serviceId);
+              onRuntimeServiceTraceDetailSelect?.(null);
             }}
           />
           <ServiceLifecycleTracePanel
@@ -1550,6 +1577,7 @@ export const DataPanel = memo(function DataPanel({
             onSelect={(row) => {
               setSelectedServiceTraceId(row.traceId);
               setSelectedServiceDetailId(row.serviceId);
+              onRuntimeServiceTraceDetailSelect?.(row.traceId);
               onRuntimeServiceDetailSelect?.(row.serviceId);
               if (row.primaryRouteId) {
                 setSelectedRouteDetailId(row.primaryRouteId);
@@ -1585,7 +1613,7 @@ export const DataPanel = memo(function DataPanel({
           <ExactDetailInspectorGrid
             items={[
               displayedServiceDetailInspector,
-              serviceTraceCorrelationInspector,
+              displayedServiceTraceCorrelationInspector,
               displayedComputeNodeDetailInspector
             ]}
           />
@@ -5010,13 +5038,94 @@ export function buildServiceTraceCorrelationInspector(
   users: UserBusinessRequestRows,
   routes: DataPanelRouteExplanationRows,
   satellites: SatelliteResourceRows,
-  computeNodes: DataPanelComputeNodeDetailRows
+  computeNodes: DataPanelComputeNodeDetailRows,
+  backendDetail: RuntimeServiceTraceDetailV2 | null | undefined = undefined
 ): DataPanelDetailInspector {
   if (trace === null || trace === undefined) {
     return {
       title: "服务 trace 关联",
       subtitle: "选择一条 service_lifecycle_trace_v2",
       fields: []
+    };
+  }
+  if (backendDetail !== null && backendDetail !== undefined) {
+    const backendTrace = backendDetail.trace;
+    const correlation = backendDetail.correlation;
+    const computeNodeId =
+      backendDetail.compute_node?.node_id ?? correlation.compute_node_id;
+    return {
+      title: `Service trace ${compactTaskId(correlation.service_id)}`,
+      subtitle: serviceLifecycleTerminalLabel(
+        backendTrace.terminal_state,
+        backendTrace.terminal_state_reason
+      ),
+      fields: [
+        { label: "source", value: "backend exact detail", tone: "resource" },
+        { label: "service", value: correlation.service_id },
+        { label: "task", value: correlation.task_id || "no task id" },
+        {
+          label: "flows",
+          value:
+            correlation.flow_ids.length > 0
+              ? correlation.flow_ids.join(" / ")
+              : "no flow ids"
+        },
+        {
+          label: "routes",
+          value:
+            correlation.route_ids.length > 0
+              ? correlation.route_ids.join(" / ")
+              : "no route ids",
+          tone: correlation.route_count > 0 ? "resource" : "warning"
+        },
+        {
+          label: "users",
+          value:
+            correlation.user_ids.length > 0
+              ? correlation.user_ids.join(" / ")
+              : "no correlated users",
+          tone: correlation.user_count > 0 ? "resource" : "warning"
+        },
+        {
+          label: "satellites",
+          value:
+            correlation.satellite_ids.length > 0
+              ? correlation.satellite_ids.join(" / ")
+              : "no correlated satellites",
+          tone: correlation.satellite_count > 0 ? "resource" : "warning"
+        },
+        {
+          label: "compute node",
+          value: computeNodeId || "not placed",
+          tone: computeNodeId ? "resource" : "warning"
+        },
+        {
+          label: "network",
+          value: `${formatMetricMilliseconds(
+            backendTrace.input_network_latency_s
+          )} / ${formatMetricMilliseconds(backendTrace.output_network_latency_s)}`
+        },
+        {
+          label: "compute",
+          value: `${formatMetricMilliseconds(
+            backendTrace.compute_queue_delay_s
+          )} / ${formatMetricMilliseconds(backendTrace.compute_execution_delay_s)}`,
+          tone: computeNodeId ? "resource" : "warning"
+        },
+        {
+          label: "total latency",
+          value: formatMetricMilliseconds(backendTrace.total_latency_s)
+        },
+        {
+          label: "stages",
+          value:
+            backendTrace.stages.length > 0
+              ? backendTrace.stages
+                  .map((stage) => `${stage.stage_label}:${stage.stage_status}`)
+                  .join(" / ")
+              : "no stage samples"
+        }
+      ]
     };
   }
   const matchedRoutes = routes.items.filter((route) =>
@@ -5093,6 +5202,49 @@ export function buildServiceTraceCorrelationInspector(
       }
     ]
   };
+}
+
+export function serviceTraceDetailMatchesRow(
+  detail: RuntimeServiceTraceDetailV2 | null | undefined,
+  row: DataPanelServiceLifecycleTraceRow | null | undefined
+): boolean {
+  if (detail === null || detail === undefined || row === null || row === undefined) {
+    return false;
+  }
+  const trace = detail.trace;
+  const correlation = detail.correlation;
+  const detailIds = new Set(
+    uniqueStrings([
+      trace.trace_id,
+      trace.service_id,
+      trace.task_id,
+      trace.input_flow_id ?? "",
+      trace.output_flow_id ?? "",
+      trace.input_route_id ?? "",
+      trace.output_route_id ?? "",
+      trace.compute_node_id ?? "",
+      correlation.trace_id,
+      correlation.service_id,
+      correlation.task_id,
+      correlation.compute_node_id,
+      ...correlation.flow_ids,
+      ...correlation.route_ids
+    ])
+  );
+  const rowIds = uniqueStrings([
+    row.traceId,
+    row.serviceId,
+    row.taskId,
+    row.inputFlowId,
+    row.outputFlowId,
+    row.inputRouteId,
+    row.outputRouteId,
+    row.computeNodeId,
+    row.primaryRouteId,
+    ...row.routeIds,
+    ...row.flowIds
+  ]);
+  return rowIds.some((id) => detailIds.has(id));
 }
 
 function routeMatchesServiceTrace(

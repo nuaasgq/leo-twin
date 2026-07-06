@@ -21,6 +21,7 @@ import {
   RuntimeNodeDetailCardV1,
   RuntimeRouteExplanationItemV1,
   RuntimeServiceDetailItemV1,
+  RuntimeServiceTraceDetailV2,
   RuntimeStatusPayload,
   ScenarioConfig,
   UserConfigurationExportV1,
@@ -48,6 +49,7 @@ import {
   loadRuntimeSatelliteDetails,
   loadRuntimeServiceDetail,
   loadRuntimeServiceDetails,
+  loadRuntimeServiceTraceDetail,
   loadRuntimeUserDetail,
   loadRuntimeUserDetails,
   loadRuntimeState,
@@ -91,6 +93,7 @@ type RuntimeSelectedNodeDetails = {
   satellite: RuntimeNodeDetailCardV1 | null;
   route: RuntimeRouteExplanationItemV1 | null;
   service: RuntimeServiceDetailItemV1 | null;
+  serviceTrace: RuntimeServiceTraceDetailV2 | null;
   computeNode: RuntimeComputeNodeDetailItemV1 | null;
 };
 type RuntimeExactDetailRequestState = {
@@ -103,6 +106,7 @@ type RuntimeSelectedNodeDetailRequests = {
   satellite: RuntimeExactDetailRequestState;
   route: RuntimeExactDetailRequestState;
   service: RuntimeExactDetailRequestState;
+  serviceTrace: RuntimeExactDetailRequestState;
   computeNode: RuntimeExactDetailRequestState;
 };
 
@@ -164,6 +168,7 @@ function defaultRuntimeSelectedNodeDetailRequests(): RuntimeSelectedNodeDetailRe
     satellite: defaultRuntimeExactDetailRequest(),
     route: defaultRuntimeExactDetailRequest(),
     service: defaultRuntimeExactDetailRequest(),
+    serviceTrace: defaultRuntimeExactDetailRequest(),
     computeNode: defaultRuntimeExactDetailRequest()
   };
 }
@@ -228,6 +233,7 @@ export function App() {
       satellite: null,
       route: null,
       service: null,
+      serviceTrace: null,
       computeNode: null
     });
   const [runtimeSelectedNodeDetailRequests, setRuntimeSelectedNodeDetailRequests] =
@@ -364,6 +370,7 @@ export function App() {
       satellite: null,
       route: null,
       service: null,
+      serviceTrace: null,
       computeNode: null
     });
     setRuntimeSelectedNodeDetailRequests(defaultRuntimeSelectedNodeDetailRequests());
@@ -843,6 +850,54 @@ export function App() {
       }
     },
     [generatedConfig, setConnectionChannel]
+  );
+
+  const refreshRuntimeServiceTraceEntityDetail = useCallback(
+    async (traceId: string | null) => {
+      const normalizedTraceId = traceId?.trim() ?? "";
+      if (!normalizedTraceId) {
+        setRuntimeSelectedNodeDetails((previous) => ({
+          ...previous,
+          serviceTrace: null
+        }));
+        setRuntimeSelectedNodeDetailRequests((previous) => ({
+          ...previous,
+          serviceTrace: defaultRuntimeExactDetailRequest()
+        }));
+        return;
+      }
+      setRuntimeSelectedNodeDetailRequests((previous) => ({
+        ...previous,
+        serviceTrace: { entityId: normalizedTraceId, loading: true, error: null }
+      }));
+      try {
+        const detail = await loadRuntimeServiceTraceDetail(normalizedTraceId);
+        setRuntimeSelectedNodeDetails((previous) => ({
+          ...previous,
+          serviceTrace: detail
+        }));
+        setRuntimeSelectedNodeDetailRequests((previous) => ({
+          ...previous,
+          serviceTrace: { entityId: normalizedTraceId, loading: false, error: null }
+        }));
+        setConnectionChannel("http", "live");
+      } catch (error) {
+        setRuntimeSelectedNodeDetails((previous) => ({
+          ...previous,
+          serviceTrace: null
+        }));
+        setRuntimeSelectedNodeDetailRequests((previous) => ({
+          ...previous,
+          serviceTrace: {
+            entityId: normalizedTraceId,
+            loading: false,
+            error: runtimeApiErrorMessage(error)
+          }
+        }));
+        setConnectionChannel("http", "degraded");
+      }
+    },
+    [setConnectionChannel]
   );
 
   const refreshRuntimeComputeNodeEntityDetail = useCallback(
@@ -1648,6 +1703,9 @@ export function App() {
               onRuntimeSatelliteDetailSelect={refreshRuntimeSatelliteEntityDetail}
               onRuntimeRouteDetailSelect={refreshRuntimeRouteEntityDetail}
               onRuntimeServiceDetailSelect={refreshRuntimeServiceEntityDetail}
+              onRuntimeServiceTraceDetailSelect={
+                refreshRuntimeServiceTraceEntityDetail
+              }
               onRuntimeComputeNodeDetailSelect={refreshRuntimeComputeNodeEntityDetail}
               displaySimTime={displaySimTime}
               displayEventCount={displayEventCount}

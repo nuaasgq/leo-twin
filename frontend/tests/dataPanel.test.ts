@@ -78,6 +78,7 @@ import {
   selectRouteExplanationRow,
   selectServiceDetailRow,
   selectServiceLifecycleTraceRow,
+  serviceTraceDetailMatchesRow,
   selectRuntimeRouteExplanationSummary,
   selectRuntimeSatelliteDetailCard,
   selectRuntimeSatelliteServiceSummary,
@@ -3702,6 +3703,142 @@ describe("buildDataPanelServiceLifecycleTraceDisplay", () => {
         { label: "下一跳", value: "sat-00002" }
       ])
     });
+  });
+
+  it("prefers backend exact service trace details over visible-window correlation", () => {
+    const display = buildDataPanelServiceLifecycleTraceDisplay({
+      version: "v2",
+      source: "BACKEND_RUNTIME_EXPORT",
+      source_summary: "latest export",
+      summary_scope: "LATEST_RUNTIME_EXPORT",
+      trace_model: "COMMUNICATION_COMPUTE_SERVICE_LIFECYCLE",
+      cursor: 0,
+      limit: 100,
+      next_cursor: 1,
+      has_more: false,
+      service_count: 1,
+      trace_count: 1,
+      complete_trace_count: 1,
+      running_trace_count: 0,
+      incomplete_trace_count: 0,
+      hidden_trace_count: 0,
+      items: [
+        {
+          trace_id: "trace:svc-02",
+          service_id: "svc-02-compute_service-00000",
+          task_id: "svc-02-compute_service-00000-task",
+          service_class: "COMPUTE_SERVICE",
+          input_flow_id: "svc-02-compute_service-00000-input",
+          output_flow_id: "svc-02-compute_service-00000-output",
+          input_route_id: "route:input-02",
+          output_route_id: "route:output-02",
+          compute_node_id: "sat-00002",
+          placement_status: "PLACED",
+          first_sample_sim_time: 2,
+          last_sample_sim_time: 9,
+          input_network_latency_s: 1,
+          compute_queue_delay_s: 0.2,
+          compute_execution_delay_s: 3,
+          output_network_latency_s: 1.5,
+          total_latency_s: 5.7,
+          terminal_state: "COMPLETE",
+          terminal_state_reason: "TOTAL_LATENCY_OBSERVED",
+          stage_count: 4,
+          observed_stage_count: 4,
+          pending_stage_count: 0,
+          stages: []
+        }
+      ]
+    });
+    const selected = selectServiceLifecycleTraceRow(
+      display.items,
+      "trace:svc-02"
+    );
+    const backendDetail = {
+      version: "v2",
+      source: "BACKEND_RUNTIME_DETAIL",
+      summary_scope: "SERVICE_TRACE_EXACT_DETAIL",
+      trace: {
+        trace_id: "trace:svc-02",
+        service_id: "svc-02-compute_service-00000",
+        task_id: "svc-02-compute_service-00000-task",
+        service_class: "COMPUTE_SERVICE",
+        input_flow_id: "svc-02-compute_service-00000-input",
+        output_flow_id: "svc-02-compute_service-00000-output",
+        input_route_id: "route:input-02",
+        output_route_id: "route:output-02",
+        compute_node_id: "sat-00002",
+        placement_status: "PLACED",
+        input_network_latency_s: 1,
+        compute_queue_delay_s: 0.2,
+        compute_execution_delay_s: 3,
+        output_network_latency_s: 1.5,
+        total_latency_s: 5.7,
+        terminal_state: "COMPLETE",
+        terminal_state_reason: "TOTAL_LATENCY_OBSERVED",
+        stage_count: 4,
+        observed_stage_count: 4,
+        pending_stage_count: 0,
+        stages: []
+      },
+      correlation: {
+        trace_id: "trace:svc-02",
+        service_id: "svc-02-compute_service-00000",
+        task_id: "svc-02-compute_service-00000-task",
+        flow_ids: [
+          "svc-02-compute_service-00000-input",
+          "svc-02-compute_service-00000-output"
+        ],
+        route_ids: ["route:input-02", "route:output-02"],
+        user_ids: ["user-7"],
+        satellite_ids: ["sat-00002", "sat-00003"],
+        compute_node_id: "sat-00002",
+        route_count: 2,
+        user_count: 1,
+        satellite_count: 2,
+        compute_node_detail_available: false
+      },
+      routes: [],
+      users: [],
+      satellites: [],
+      compute_node: null
+    };
+    const emptyUsers = { sourceLabel: "users", summaryLabel: "0 users", items: [] };
+    const emptyRoutes = { sourceLabel: "routes", items: [] };
+    const emptySatellites = {
+      sourceLabel: "satellites",
+      summaryLabel: "0 satellites",
+      items: []
+    };
+    const emptyComputeNodes = {
+      sourceLabel: "compute",
+      summaryLabel: "0 nodes",
+      items: []
+    };
+
+    expect(serviceTraceDetailMatchesRow(backendDetail, selected)).toBe(true);
+
+    const inspector = buildServiceTraceCorrelationInspector(
+      selected,
+      emptyUsers,
+      emptyRoutes,
+      emptySatellites,
+      emptyComputeNodes,
+      backendDetail
+    );
+
+    expect(inspector.fields).toEqual(
+      expect.arrayContaining([
+        { label: "source", value: "backend exact detail", tone: "resource" },
+        { label: "users", value: "user-7", tone: "resource" },
+        {
+          label: "satellites",
+          value: "sat-00002 / sat-00003",
+          tone: "resource"
+        },
+        { label: "compute node", value: "sat-00002", tone: "resource" }
+      ])
+    );
   });
 
   it("returns a backend waiting state before trace v2 arrives", () => {

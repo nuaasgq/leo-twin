@@ -12364,3 +12364,54 @@ change.
 - Recommended follow-up:
   - Bind the dashboard service trace selection to the new backend exact trace
     detail endpoint and display backend correlation results directly.
+
+## 2026-07-06 - Dashboard Service Trace Detail Binding v2
+
+- Branch: `feature/T260-dashboard-service-trace-detail-binding-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: bind the standalone dashboard service trace selection path to the
+  backend-owned exact service trace detail endpoint introduced in T259. The
+  frontend API client now supports `kind=service_trace` envelopes and
+  `/runtime/details/service-traces/{trace_id}`. The dashboard stores the exact
+  trace detail request state, fetches it when a service trace row is selected,
+  and prefers backend-owned correlation ids for user, route, satellite, flow,
+  and compute-node context. The previous visible-window correlation remains as
+  a loading/error fallback. Backend runtime behavior, Event Kernel behavior,
+  network routing, compute scheduling, packet-level semantics, and export
+  formats remain unchanged.
+- Changed files/modules:
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/app/api.ts`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/service_lifecycle_trace_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed.
+  - `pnpm --dir frontend test api.test.ts dataPanel.test.ts`
+    - Result: passed, 165 tests.
+  - `pnpm --dir frontend test`
+    - Result: passed, 357 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite reported the existing large DataPanel chunk warning.
+  - `git diff --check`
+    - Result: passed. Git reported CRLF normalization warnings for the existing
+      unstaged local runtime config drift.
+- Problems encountered:
+  - The first standalone TypeScript check caught a missing
+    `source_summary` field in the new `service_lifecycle_trace_v2` test
+    fixture. The fixture was corrected to match the existing frontend contract.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The exact trace inspector currently displays backend correlation ids and
+    latency components, but does not yet provide a full-height trace drawer with
+    full route/user/satellite cards.
+- Recommended follow-up:
+  - Add a dedicated service trace detail drawer that renders backend-returned
+    route explanations, user cards, satellite cards, and compute-node detail in
+    a virtualized, scrollable layout.

@@ -14,6 +14,7 @@ import {
   loadRuntimeSatelliteDetails,
   loadRuntimeServiceDetail,
   loadRuntimeServiceDetails,
+  loadRuntimeServiceTraceDetail,
   loadRuntimeState,
   loadRuntimeUserDetail,
   loadRuntimeUserDetails,
@@ -837,6 +838,54 @@ describe("runtime API diagnostics", () => {
         ok: true,
         json: async () => ({
           type: "RUNTIME_ENTITY_DETAIL",
+          kind: "service_trace",
+          entity_id: "trace:svc-0",
+          summary: {
+            version: "v2",
+            source: "BACKEND_RUNTIME_STATUS",
+            summary_scope: "SERVICE_LIFECYCLE_TRACE_EXACT_DETAIL",
+            trace: {
+              trace_id: "trace:svc-0",
+              service_id: "svc-0",
+              task_id: "svc-0-task",
+              service_class: "COMPUTE_SERVICE",
+              input_network_latency_s: 0.1,
+              compute_queue_delay_s: 0.2,
+              compute_execution_delay_s: 0.3,
+              output_network_latency_s: 0.4,
+              total_latency_s: 1.0,
+              terminal_state: "RUNNING",
+              terminal_state_reason: "OUTPUT_NETWORK_PENDING",
+              stage_count: 4,
+              observed_stage_count: 3,
+              pending_stage_count: 1,
+              stages: []
+            },
+            correlation: {
+              trace_id: "trace:svc-0",
+              service_id: "svc-0",
+              task_id: "svc-0-task",
+              flow_ids: ["svc-0-input"],
+              route_ids: ["route-0"],
+              user_ids: ["user-0"],
+              satellite_ids: ["sat-0"],
+              compute_node_id: "sat-0",
+              route_count: 1,
+              user_count: 1,
+              satellite_count: 1,
+              compute_node_detail_available: true
+            },
+            routes: [],
+            users: [],
+            satellites: [],
+            compute_node: null
+          }
+        })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          type: "RUNTIME_ENTITY_DETAIL",
           kind: "compute_node",
           entity_id: "sat-0",
           summary: {
@@ -872,6 +921,10 @@ describe("runtime API diagnostics", () => {
     await expect(loadRuntimeServiceDetail("task-0")).resolves.toMatchObject({
       service_id: "task-0"
     });
+    await expect(loadRuntimeServiceTraceDetail("trace:svc-0")).resolves.toMatchObject({
+      trace: { trace_id: "trace:svc-0" },
+      correlation: { route_count: 1 }
+    });
     await expect(loadRuntimeComputeNodeDetail("sat-0")).resolves.toMatchObject({
       node_id: "sat-0"
     });
@@ -879,6 +932,10 @@ describe("runtime API diagnostics", () => {
     expect(fetchMock).toHaveBeenNthCalledWith(2, "/runtime/details/services/task-0");
     expect(fetchMock).toHaveBeenNthCalledWith(
       3,
+      "/runtime/details/service-traces/trace%3Asvc-0"
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      4,
       "/runtime/details/compute-nodes/sat-0"
     );
   });

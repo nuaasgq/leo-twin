@@ -1714,12 +1714,20 @@ export interface RuntimeDetailPageEnvelope {
 
 export interface RuntimeEntityDetailEnvelopeV1 {
   type: "RUNTIME_ENTITY_DETAIL" | string;
-  kind: "user" | "satellite" | "route" | "service" | "compute_node" | string;
+  kind:
+    | "user"
+    | "satellite"
+    | "route"
+    | "service"
+    | "service_trace"
+    | "compute_node"
+    | string;
   entity_id: string;
   summary:
     | RuntimeNodeDetailCardV1
     | RuntimeRouteExplanationItemV1
     | RuntimeServiceDetailItemV1
+    | RuntimeServiceTraceDetailV2
     | RuntimeComputeNodeDetailItemV1;
 }
 
@@ -2047,6 +2055,33 @@ export interface RuntimeServiceLifecycleTraceStageV2 {
   flow_id?: string;
   route_id?: string;
   compute_node_id?: string;
+}
+
+export interface RuntimeServiceTraceDetailV2 {
+  version: "v2" | string;
+  source: string;
+  summary_scope: string;
+  trace: RuntimeServiceLifecycleTraceItemV2;
+  correlation: RuntimeServiceTraceCorrelationV2;
+  routes: readonly RuntimeRouteExplanationItemV1[];
+  users: readonly RuntimeNodeDetailCardV1[];
+  satellites: readonly RuntimeNodeDetailCardV1[];
+  compute_node?: RuntimeComputeNodeDetailItemV1 | null;
+}
+
+export interface RuntimeServiceTraceCorrelationV2 {
+  trace_id: string;
+  service_id: string;
+  task_id: string;
+  flow_ids: readonly string[];
+  route_ids: readonly string[];
+  user_ids: readonly string[];
+  satellite_ids: readonly string[];
+  compute_node_id: string;
+  route_count: number;
+  user_count: number;
+  satellite_count: number;
+  compute_node_detail_available: boolean;
 }
 
 export interface RuntimeComputeTaskTimelineSummaryV1 {

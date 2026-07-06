@@ -52,6 +52,13 @@ user detail cards, satellite detail cards, and compute-node detail when
 available. The endpoint is read-only and derives all context from the current
 runtime snapshot plus `service_latency_history_v1`.
 
+The standalone dashboard selection path now calls this exact-detail endpoint
+for a selected service trace. When the backend detail matches the selected
+trace row, the correlation inspector prefers the backend-owned user, route,
+satellite, flow, and compute-node ids over the current visible table window.
+The previous visible-window correlation remains as a fallback while the detail
+request is loading or unavailable.
+
 ## Lifecycle Stages
 
 Each trace row exposes these ordered stages:

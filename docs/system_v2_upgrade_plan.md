@@ -130,7 +130,9 @@ Tasks:
     flow ids, route ids, and compute node ids. T259 adds
     `/runtime/details/service-traces/{trace_id}` so a selected trace can fetch
     backend-owned exact context even when correlated rows are outside the
-    current dashboard window.
+    current dashboard window. T260 binds the dashboard selection path to that
+    exact-detail API and displays backend-owned correlation ids first, with the
+    existing visible-window correlation retained as a loading/error fallback.
 
 ### WS3. Network Semantics and KPI Trust v2
 

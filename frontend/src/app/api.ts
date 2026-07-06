@@ -20,6 +20,7 @@ import {
   RuntimeSatelliteServiceSummaryV1,
   RuntimeServiceDetailItemV1,
   RuntimeServiceDetailPageV1,
+  RuntimeServiceTraceDetailV2,
   RuntimeStatusEnvelope,
   RuntimeStatusPayload,
   RuntimeUserRequestSummaryV1,
@@ -189,6 +190,19 @@ export async function loadRuntimeServiceDetail(
     throw new TypeError(`runtime entity detail kind must be service, got ${detail.kind}`);
   }
   return detail.summary as RuntimeServiceDetailItemV1;
+}
+
+export async function loadRuntimeServiceTraceDetail(
+  traceId: string,
+  endpoint = "/runtime/details/service-traces"
+): Promise<RuntimeServiceTraceDetailV2> {
+  const detail = await loadRuntimeEntityDetail(runtimeDetailEntityHref(traceId, endpoint));
+  if (detail.kind !== "service_trace") {
+    throw new TypeError(
+      `runtime entity detail kind must be service_trace, got ${detail.kind}`
+    );
+  }
+  return detail.summary as RuntimeServiceTraceDetailV2;
 }
 
 export async function loadRuntimeComputeNodeDetails(
@@ -541,10 +555,11 @@ export function decodeRuntimeEntityDetail(value: unknown): RuntimeEntityDetailEn
     kind !== "satellite" &&
     kind !== "route" &&
     kind !== "service" &&
+    kind !== "service_trace" &&
     kind !== "compute_node"
   ) {
     throw new TypeError(
-      "runtime entity detail kind must be user, satellite, route, service, or compute_node"
+      "runtime entity detail kind must be user, satellite, route, service, service_trace, or compute_node"
     );
   }
   if (typeof entityId !== "string" || entityId.trim().length === 0) {
@@ -557,7 +572,12 @@ export function decodeRuntimeEntityDetail(value: unknown): RuntimeEntityDetailEn
     ...(value as Record<string, unknown>),
     kind,
     entity_id: entityId,
-    summary: summary as RuntimeNodeDetailCardV1
+    summary: summary as
+      | RuntimeNodeDetailCardV1
+      | RuntimeRouteExplanationItemV1
+      | RuntimeServiceDetailItemV1
+      | RuntimeServiceTraceDetailV2
+      | RuntimeComputeNodeDetailItemV1
   } as RuntimeEntityDetailEnvelopeV1;
 }
 
