@@ -15888,3 +15888,47 @@ change.
   - Add explicit dashboard labels for paged v2 user-service data and then
     extend export packages to include a bounded `user_service_request_summary_v2`
     artifact for offline review.
+
+## 2026-07-06 - User Service Request Export Artifact v1
+
+- Branch: `feature/T328-user-service-request-export-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: persist backend-owned `user_service_request_summary_v2` into runtime
+  result packages as `user_service_request_summary_v2.json`. The artifact copies
+  the export-window summary and `runtime_export_user_service_request_policy_v1`
+  from `config_snapshot.status`, adds stable evidence/hash fields, and records
+  no-replay/no-service-recompute/no-packet/no-external-simulator boundaries.
+  Review summary, diagnostics bundle, scenario review bundle, audit index, and
+  reproducibility boundary now expose the same user-service request evidence for
+  offline review.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `src/leo_twin/services/result_package_contract.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/result_package_contract_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m compileall -q src\leo_twin\services\result_package_contract.py examples\integration_demo\control_plane.py`
+    - Result: passed.
+  - `python -m pytest tests\unit\test_result_package_contract_v1.py tests\integration\test_result_package_export_v1.py -q`
+    - Result: passed, 20 tests.
+  - `python -m pytest tests\integration\test_runtime_session_control.py::test_demo_adapter_exports_runtime_result_package tests\integration\test_runtime_session_control.py::test_demo_adapter_serves_persisted_runtime_export_artifacts tests\unit\test_user_guide_v2_docs.py -q`
+    - Result: passed, 4 tests.
+- Problems encountered:
+  - Existing diagnostics test fixtures needed one new expected WARN code,
+    `USER_SERVICE_REQUEST_SUMMARY_MISSING`, when runtime status intentionally
+    lacks the v2 user-service request evidence.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The exported artifact is bounded by `DETAIL_ENDPOINT_MAX_LIMIT`; very large
+    scenarios may still need a sharded or paged package artifact format.
+  - The artifact remains a flow-level request-state proxy. It does not add
+    packet-level traffic, RF modeling, or new business-generation behavior.
+- Recommended follow-up:
+  - Add dashboard export-review labels and a read-only drawer for
+    `user_service_request_summary_v2.json`, reusing the live v2 user-service
+    table semantics where possible.

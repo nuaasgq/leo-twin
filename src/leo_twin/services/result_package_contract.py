@@ -52,6 +52,9 @@ RUNTIME_EXPORT_PACKAGE_HANDOFF_REPORT_V1_ID = (
 RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_V1_ID = (
     "leo_twin.runtime_export_network_kpi_benchmark_validation.v1"
 )
+RUNTIME_EXPORT_USER_SERVICE_REQUEST_SUMMARY_V2_ID = (
+    "leo_twin.runtime_export_user_service_request_summary.v2"
+)
 USER_CONFIGURATION_AUDIT_BINDING_V1_ID = (
     "leo_twin.user_configuration_audit_binding.v1"
 )
@@ -124,6 +127,15 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
                 "filename": "service_lifecycle_trace_v2.json",
                 "format": "json",
                 "content": "communication-compute lifecycle trace for offline review",
+            },
+            {
+                "logical_name": "user_service_request_summary_v2",
+                "filename": "user_service_request_summary_v2.json",
+                "format": "json",
+                "content": (
+                    "backend-owned per-user communication/compute request "
+                    "state window for offline dashboard review"
+                ),
             },
             {
                 "logical_name": "route_detail_index_v1",
@@ -237,6 +249,9 @@ def build_runtime_export_reproducibility_boundary_v1(
     service_policy = _mapping(
         runtime_status.get("runtime_export_service_trace_policy_v1")
     )
+    user_service_policy = _mapping(
+        runtime_status.get("runtime_export_user_service_request_policy_v1")
+    )
     boundary: dict[str, object] = {
         "type": "RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1",
         "version": "v1",
@@ -279,6 +294,7 @@ def build_runtime_export_reproducibility_boundary_v1(
             "review_summary_v1.json",
             "diagnostics_bundle_v1.json",
             "network_kpi_benchmark_validation_v1.json",
+            "user_service_request_summary_v2.json",
             "scenario_review_bundle_v1.json",
         ),
         "route_detail_export": {
@@ -297,6 +313,20 @@ def build_runtime_export_reproducibility_boundary_v1(
                 service_policy.get("exported_trace_count")
             ),
             "hidden_trace_count": _integer(service_policy.get("hidden_trace_count")),
+            "artifact_window_only": True,
+        },
+        "user_service_request_export": {
+            "policy": str(user_service_policy.get("policy", "")),
+            "user_service_request_limit": _integer(
+                user_service_policy.get("user_service_request_limit")
+            ),
+            "request_count": _integer(user_service_policy.get("request_count")),
+            "exported_request_count": _integer(
+                user_service_policy.get("exported_request_count")
+            ),
+            "hidden_request_count": _integer(
+                user_service_policy.get("hidden_request_count")
+            ),
             "artifact_window_only": True,
         },
         "boundary_conditions": (
@@ -353,6 +383,46 @@ def build_runtime_export_network_kpi_benchmark_validation_v1(
     return artifact
 
 
+def build_runtime_export_user_service_request_summary_v2(
+    *,
+    package_id: str,
+    package_dir: str,
+    config_snapshot: Mapping[str, Any],
+) -> dict[str, object]:
+    """Build offline review evidence for runtime user service request state."""
+
+    if not isinstance(config_snapshot, Mapping):
+        raise TypeError("config_snapshot must be a mapping")
+
+    status = _mapping(config_snapshot.get("status"))
+    summary = _mapping(status.get("user_service_request_summary_v2"))
+    policy = _mapping(status.get("runtime_export_user_service_request_policy_v1"))
+    artifact: dict[str, object] = {
+        "type": "RUNTIME_EXPORT_USER_SERVICE_REQUEST_SUMMARY_V2",
+        "version": "v2",
+        "artifact_id": RUNTIME_EXPORT_USER_SERVICE_REQUEST_SUMMARY_V2_ID,
+        "source": "BACKEND_RUNTIME_EXPORT",
+        "artifact_scope": "USER_SERVICE_REQUEST_OFFLINE_REVIEW",
+        "package_id": str(package_id),
+        "package_dir": str(package_dir),
+        "runtime_status_field": "user_service_request_summary_v2",
+        "artifact_policy": "STANDALONE_RUNTIME_EXPORT_ARTIFACT",
+        "artifact_window_only": True,
+        "summary": dict(summary),
+        "user_service_request_export_policy": dict(policy),
+        "evidence": _runtime_export_user_service_request_evidence(status),
+        "boundary_conditions": (
+            "READ_RUNTIME_STATUS_ONLY",
+            "NO_SERVICE_RECOMPUTE",
+            "NO_EVENT_REPLAY",
+            "NO_PACKET_LEVEL_SIMULATION",
+            "NO_EXTERNAL_SIMULATOR_ARTIFACT",
+        ),
+    }
+    artifact["artifact_hash"] = stable_hash_payload(artifact)
+    return artifact
+
+
 def build_runtime_export_review_summary_v1(
     *,
     package_id: str,
@@ -388,6 +458,7 @@ def build_runtime_export_review_summary_v1(
     )
     route_trust = _runtime_export_route_trust_evidence(status)
     network_kpi_validation = _runtime_export_network_kpi_validation_evidence(status)
+    user_service_requests = _runtime_export_user_service_request_evidence(status)
     route_comparison_review = _runtime_export_route_comparison_review_metadata()
     reproducibility_boundary = _runtime_export_reproducibility_boundary(
         status,
@@ -433,6 +504,7 @@ def build_runtime_export_review_summary_v1(
         },
         "route_trust": route_trust,
         "network_kpi_benchmark_validation": network_kpi_validation,
+        "user_service_requests": user_service_requests,
         "route_comparison_review": route_comparison_review,
         "reproducibility": {
             "manifest_id": str(manifest.get("manifest_id", "")),
@@ -457,11 +529,15 @@ def build_runtime_export_review_summary_v1(
             "network_kpi_benchmark_validation_exported": (
                 "network_kpi_benchmark_validation_v1.json" in artifacts
             ),
+            "user_service_request_summary_exported": (
+                "user_service_request_summary_v2.json" in artifacts
+            ),
         },
         "review_notes": (
             "Use manifest.json and config_snapshot.json to verify deterministic inputs.",
             "Use events.jsonl, metrics.csv, and summary.json as replay evidence.",
             "Use service_lifecycle_trace_v2.json for communication-compute trace review.",
+            "Use user_service_request_summary_v2.json for per-user business request state review.",
             "Use route_trust to inspect flow-level route explanation evidence.",
             "Use network_kpi_benchmark_validation_v1.json to review KPI guardrail evidence.",
             "Use route_detail_index_v1.json to inspect exported route explanation rows.",
@@ -514,6 +590,7 @@ def build_runtime_export_diagnostics_bundle_v1(
     package_complete = manifest_ok and not missing_required
     route_trust = _runtime_export_route_trust_evidence(status)
     network_kpi_validation = _runtime_export_network_kpi_validation_evidence(status)
+    user_service_requests = _runtime_export_user_service_request_evidence(status)
     route_comparison_review = _runtime_export_route_comparison_review_metadata()
     reproducibility_boundary = _runtime_export_reproducibility_boundary(
         status,
@@ -526,6 +603,7 @@ def build_runtime_export_diagnostics_bundle_v1(
         missing_recommended=missing_recommended,
         route_trust=route_trust,
         network_kpi_validation=network_kpi_validation,
+        user_service_requests=user_service_requests,
     )
     diagnostics: dict[str, object] = {
         "type": "RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1",
@@ -548,6 +626,7 @@ def build_runtime_export_diagnostics_bundle_v1(
         },
         "route_trust": route_trust,
         "network_kpi_benchmark_validation": network_kpi_validation,
+        "user_service_requests": user_service_requests,
         "route_comparison_review": route_comparison_review,
         "reproducibility": {
             "manifest_id": manifest_id,
@@ -643,6 +722,9 @@ def build_runtime_export_scenario_review_bundle_v1(
     network_kpi_validation = _mapping(
         review_summary.get("network_kpi_benchmark_validation")
     )
+    user_service_requests = _mapping(review_summary.get("user_service_requests"))
+    if user_service_requests.get("evidence_present") is not True:
+        scenario_review_warnings.append("USER_SERVICE_REQUEST_SUMMARY_MISSING")
 
     bundle: dict[str, object] = {
         "type": "RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1",
@@ -691,6 +773,28 @@ def build_runtime_export_scenario_review_bundle_v1(
             "validation_hash": str(network_kpi_validation.get("validation_hash", "")),
             "evidence_present": network_kpi_validation.get("evidence_present") is True,
         },
+        "user_service_requests": {
+            "evidence_id": str(user_service_requests.get("evidence_id", "")),
+            "request_model": str(user_service_requests.get("request_model", "")),
+            "request_count": _integer(user_service_requests.get("request_count")),
+            "exported_request_count": _integer(
+                user_service_requests.get("exported_request_count")
+            ),
+            "hidden_request_count": _integer(
+                user_service_requests.get("hidden_request_count")
+            ),
+            "active_request_count": _integer(
+                user_service_requests.get("active_request_count")
+            ),
+            "compute_request_count": _integer(
+                user_service_requests.get("compute_request_count")
+            ),
+            "network_waiting_request_count": _integer(
+                user_service_requests.get("network_waiting_request_count")
+            ),
+            "summary_hash": str(user_service_requests.get("summary_hash", "")),
+            "evidence_present": user_service_requests.get("evidence_present") is True,
+        },
         "audit_index": {
             "audit_index_id": RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID,
             "filename": "export_package_audit_index_v1.json",
@@ -707,6 +811,7 @@ def build_runtime_export_scenario_review_bundle_v1(
                 "review_summary_v1.json",
                 "diagnostics_bundle_v1.json",
                 "network_kpi_benchmark_validation_v1.json",
+                "user_service_request_summary_v2.json",
                 "manifest.json",
                 "config_snapshot.json",
             ),
@@ -728,6 +833,7 @@ def build_runtime_export_scenario_review_bundle_v1(
             "review_summary_v1.json",
             "diagnostics_bundle_v1.json",
             "network_kpi_benchmark_validation_v1.json",
+            "user_service_request_summary_v2.json",
             "manifest.json",
             "config_snapshot.json",
             "events.jsonl",
@@ -1270,6 +1376,7 @@ def build_runtime_export_package_audit_index_v1(
         user_configuration_export,
     )
     network_kpi_validation = _runtime_export_network_kpi_validation_evidence(status)
+    user_service_requests = _runtime_export_user_service_request_evidence(status)
     normalized_artifacts = tuple(
         sorted(
             (
@@ -1355,6 +1462,21 @@ def build_runtime_export_package_audit_index_v1(
         ),
         "network_kpi_benchmark_validation_failed_check_count": _integer(
             network_kpi_validation.get("failed_check_count")
+        ),
+        "user_service_request_summary_hash": str(
+            user_service_requests.get("summary_hash", "")
+        ),
+        "user_service_request_summary_present": (
+            user_service_requests.get("evidence_present") is True
+        ),
+        "user_service_request_summary_request_count": _integer(
+            user_service_requests.get("request_count")
+        ),
+        "user_service_request_summary_exported_request_count": _integer(
+            user_service_requests.get("exported_request_count")
+        ),
+        "user_service_request_summary_hidden_request_count": _integer(
+            user_service_requests.get("hidden_request_count")
         ),
         "route_comparison_review_report_hash": str(route_report.get("report_hash", "")),
         "route_comparison_review_report_present": bool(route_report),
@@ -1773,6 +1895,7 @@ def _runtime_export_diagnostic_findings(
     missing_recommended: tuple[str, ...],
     route_trust: Mapping[str, Any],
     network_kpi_validation: Mapping[str, Any],
+    user_service_requests: Mapping[str, Any],
 ) -> tuple[dict[str, object], ...]:
     findings: list[dict[str, object]] = []
     if not manifest_ok:
@@ -1867,6 +1990,30 @@ def _runtime_export_diagnostic_findings(
                     "network KPI benchmark guardrails require operator review: "
                     f"{network_kpi_validation.get('validation_status', '')}."
                 ),
+            )
+        )
+    if user_service_requests.get("evidence_present") is not True:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "USER_SERVICE_REQUEST_SUMMARY_MISSING",
+                "config_snapshot.status does not include user_service_request_summary_v2.",
+            )
+        )
+    if user_service_requests.get("packet_level_simulation") is True:
+        findings.append(
+            _diagnostic_finding(
+                "ERROR",
+                "USER_SERVICE_REQUEST_PACKET_LEVEL_DECLARED",
+                "user service request evidence declares packet-level simulation, which is outside the v2 demo boundary.",
+            )
+        )
+    if user_service_requests.get("frontend_inference_required") is True:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "USER_SERVICE_REQUEST_FRONTEND_INFERENCE_REQUIRED",
+                "user service request evidence still requires frontend semantic inference.",
             )
         )
     if not findings:
@@ -2155,6 +2302,80 @@ def _runtime_export_network_kpi_validation_evidence(
         "caveats": _string_tuple(validation.get("caveats")),
     }
     evidence["validation_hash"] = stable_hash_payload(evidence)
+    return evidence
+
+
+def _runtime_export_user_service_request_evidence(
+    status: Mapping[str, Any],
+) -> dict[str, object]:
+    summary = _mapping(status.get("user_service_request_summary_v2"))
+    policy = _mapping(status.get("runtime_export_user_service_request_policy_v1"))
+    evidence_present = bool(summary)
+    if not evidence_present:
+        evidence: dict[str, object] = {
+            "version": "v2",
+            "evidence_id": RUNTIME_EXPORT_USER_SERVICE_REQUEST_SUMMARY_V2_ID,
+            "source": "config_snapshot.status.user_service_request_summary_v2",
+            "evidence_present": False,
+            "request_model": "UNKNOWN",
+            "request_count": 0,
+            "exported_request_count": 0,
+            "hidden_request_count": 0,
+            "active_request_count": 0,
+            "compute_request_count": 0,
+            "network_waiting_request_count": 0,
+            "packet_level_simulation": False,
+            "frontend_inference_required": False,
+            "artifact_window_only": True,
+            "caveats": (
+                "Runtime status did not expose user_service_request_summary_v2.",
+            ),
+        }
+        evidence["summary_hash"] = stable_hash_payload(evidence)
+        return evidence
+
+    exported_request_count = _integer(summary.get("item_count"))
+    request_count = _integer(summary.get("request_count", summary.get("user_count")))
+    hidden_request_count = _integer(
+        summary.get(
+            "hidden_request_count",
+            max(0, request_count - exported_request_count),
+        )
+    )
+    evidence = {
+        "version": "v2",
+        "evidence_id": RUNTIME_EXPORT_USER_SERVICE_REQUEST_SUMMARY_V2_ID,
+        "source": "config_snapshot.status.user_service_request_summary_v2",
+        "evidence_present": True,
+        "request_model": str(summary.get("request_model", "")),
+        "route_model": str(summary.get("route_model", "")),
+        "compute_model": str(summary.get("compute_model", "")),
+        "request_count": request_count,
+        "exported_request_count": exported_request_count,
+        "hidden_request_count": hidden_request_count,
+        "active_request_count": _integer(summary.get("active_request_count")),
+        "communication_request_count": _integer(
+            summary.get("communication_request_count")
+        ),
+        "compute_request_count": _integer(summary.get("compute_request_count")),
+        "network_waiting_request_count": _integer(
+            summary.get("network_waiting_request_count")
+        ),
+        "completed_request_count": _integer(summary.get("completed_request_count")),
+        "service_class_counts": tuple(_records(summary.get("service_class_counts"))),
+        "terminal_state_counts": tuple(_records(summary.get("terminal_state_counts"))),
+        "packet_level_simulation": summary.get("packet_level_simulation") is True,
+        "frontend_inference_required": (
+            summary.get("frontend_inference_required") is True
+        ),
+        "artifact_window_only": bool(policy.get("artifact_window_only", True)),
+        "export_limit": _integer(
+            policy.get("user_service_request_limit", summary.get("limit"))
+        ),
+        "policy": str(policy.get("policy", "")),
+        "model_assumptions": _string_tuple(summary.get("model_assumptions")),
+    }
+    evidence["summary_hash"] = stable_hash_payload(evidence)
     return evidence
 
 

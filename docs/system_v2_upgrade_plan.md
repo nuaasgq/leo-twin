@@ -130,7 +130,11 @@ Tasks:
     existing `/runtime/details/users` cursor endpoint with
     `summary_version=v2`, allowing the standalone dashboard to request
     server-side paginated v2 user service request pages while the default v1
-    endpoint remains backward compatible.
+    endpoint remains backward compatible. T328 adds
+    `user_service_request_summary_v2.json` as a bounded runtime export artifact
+    so offline result packages can review the same backend-owned per-user
+    service request semantics without live runtime lookup or service
+    recomputation.
 - V2-013: Add service lifecycle trace.
   - Scope: input flow, queue, compute, output flow, terminal state.
   - Output: timeline records for dashboard and result export.

@@ -52,6 +52,7 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert (package_dir / "review_summary_v1.json").exists()
     assert (package_dir / "route_detail_index_v1.json").exists()
     assert (package_dir / "network_kpi_benchmark_validation_v1.json").exists()
+    assert (package_dir / "user_service_request_summary_v2.json").exists()
     assert (package_dir / "service_lifecycle_trace_v2.json").exists()
     assert (package_dir / "scenario_review_bundle_v1.json").exists()
     assert (package_dir / "export_package_audit_index_v1.json").exists()
@@ -62,6 +63,7 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert "review_summary_v1.json" in filenames
     assert "diagnostics_bundle_v1.json" in filenames
     assert "network_kpi_benchmark_validation_v1.json" in filenames
+    assert "user_service_request_summary_v2.json" in filenames
     assert "scenario_review_bundle_v1.json" in filenames
     assert "export_package_audit_index_v1.json" in filenames
     assert "package_handoff_report_v1.md" in filenames
@@ -84,6 +86,11 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     )
     network_kpi_benchmark_validation = json.loads(
         (package_dir / "network_kpi_benchmark_validation_v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    user_service_request_summary = json.loads(
+        (package_dir / "user_service_request_summary_v2.json").read_text(
             encoding="utf-8"
         )
     )
@@ -239,6 +246,21 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert "NO_METRIC_RECOMPUTE" in network_kpi_benchmark_validation[
         "boundary_conditions"
     ]
+    assert user_service_request_summary["artifact_id"] == (
+        "leo_twin.runtime_export_user_service_request_summary.v2"
+    )
+    assert user_service_request_summary["summary"] == (
+        config_snapshot["status"]["user_service_request_summary_v2"]
+    )
+    assert user_service_request_summary["user_service_request_export_policy"] == (
+        config_snapshot["status"]["runtime_export_user_service_request_policy_v1"]
+    )
+    assert user_service_request_summary["evidence"]["summary_hash"] == (
+        review_summary["user_service_requests"]["summary_hash"]
+    )
+    assert "NO_SERVICE_RECOMPUTE" in user_service_request_summary[
+        "boundary_conditions"
+    ]
     assert scenario_review_bundle["bundle_id"] == (
         RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1_ID
     )
@@ -259,6 +281,12 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         "validation_hash"
     ] == network_kpi_benchmark_validation["evidence"]["validation_hash"]
     assert scenario_review_bundle["network_kpi_benchmark_validation"][
+        "evidence_present"
+    ] is True
+    assert scenario_review_bundle["user_service_requests"][
+        "summary_hash"
+    ] == user_service_request_summary["evidence"]["summary_hash"]
+    assert scenario_review_bundle["user_service_requests"][
         "evidence_present"
     ] is True
     assert scenario_review_bundle["audit_index"]["filename"] == (
@@ -299,6 +327,13 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert audit_index["network_kpi_benchmark_validation_failed_check_count"] == 0
     assert audit_index["network_kpi_benchmark_validation_hash"] == (
         network_kpi_benchmark_validation["evidence"]["validation_hash"]
+    )
+    assert audit_index["user_service_request_summary_present"] is True
+    assert audit_index["user_service_request_summary_hash"] == (
+        user_service_request_summary["evidence"]["summary_hash"]
+    )
+    assert audit_index["user_service_request_summary_exported_request_count"] == (
+        user_service_request_summary["evidence"]["exported_request_count"]
     )
     assert audit_index["route_comparison_review_report_present"] is False
     assert audit_index["route_comparison_review_report_hash"] == ""

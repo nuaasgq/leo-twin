@@ -92,6 +92,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_scenario_review_bundle_v1,
     build_runtime_export_scenario_review_checklist_v1,
     build_runtime_export_service_trace_page_v1,
+    build_runtime_export_user_service_request_summary_v2,
 )
 from leo_twin.services.scenario_builder import (
     scenario_builder_backend_summary,
@@ -138,8 +139,12 @@ _RUNTIME_EXPORT_CATALOG_FILENAME = "runtime_export_catalog_v1.json"
 _RUNTIME_EXPORT_RESTORE_COMMAND = "RESTORE_EXPORT_PACKAGE"
 _SERVICE_LIFECYCLE_TRACE_EXPORT_FILENAME = "service_lifecycle_trace_v2.json"
 _RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_FILENAME = "route_detail_index_v1.json"
+_RUNTIME_EXPORT_USER_SERVICE_REQUEST_SUMMARY_FILENAME = (
+    "user_service_request_summary_v2.json"
+)
 _RUNTIME_EXPORT_ROUTE_DETAIL_LIMIT = DETAIL_ENDPOINT_MAX_LIMIT
 _RUNTIME_EXPORT_SERVICE_TRACE_LIMIT = DETAIL_ENDPOINT_MAX_LIMIT
+_RUNTIME_EXPORT_USER_SERVICE_REQUEST_LIMIT = DETAIL_ENDPOINT_MAX_LIMIT
 _RUNTIME_EXPORT_REVIEW_SUMMARY_FILENAME = "review_summary_v1.json"
 _RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_FILENAME = "diagnostics_bundle_v1.json"
 _RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_FILENAME = (
@@ -718,12 +723,29 @@ class DemoControlPlane:
             stable_json_pretty(network_kpi_benchmark_validation),
             encoding="utf-8",
         )
+        user_service_request_summary_path = (
+            package_dir / _RUNTIME_EXPORT_USER_SERVICE_REQUEST_SUMMARY_FILENAME
+        )
+        user_service_request_summary = (
+            build_runtime_export_user_service_request_summary_v2(
+                package_id=package_id,
+                package_dir=str(package_dir),
+                config_snapshot=config_snapshot,
+            )
+        )
+        user_service_request_summary_path.write_text(
+            stable_json_pretty(user_service_request_summary),
+            encoding="utf-8",
+        )
         written_files["config_snapshot"] = config_snapshot_path
         written_files["manifest"] = manifest_path
         written_files["service_lifecycle_trace_v2"] = service_lifecycle_trace_path
         written_files["route_detail_index_v1"] = route_detail_index_path
         written_files["network_kpi_benchmark_validation_v1"] = (
             network_kpi_benchmark_validation_path
+        )
+        written_files["user_service_request_summary_v2"] = (
+            user_service_request_summary_path
         )
         review_summary_path = package_dir / _RUNTIME_EXPORT_REVIEW_SUMMARY_FILENAME
         diagnostics_bundle_path = (
@@ -1858,6 +1880,24 @@ class DemoControlPlane:
             "packet_level_simulation": False,
             "all_pairs_computation": False,
         }
+        user_service_summary = self._runtime_export_user_service_request_summary()
+        export_status["user_service_request_summary_v2"] = user_service_summary
+        export_status["runtime_export_user_service_request_policy_v1"] = {
+            "version": "v1",
+            "source": "BACKEND_RUNTIME_EXPORT",
+            "policy": "EXPORT_USER_SERVICE_REQUEST_WINDOW",
+            "user_service_request_source": (
+                "visible_snapshot.ground_users/routes + service_latency_history_v1"
+            ),
+            "user_service_request_limit": _RUNTIME_EXPORT_USER_SERVICE_REQUEST_LIMIT,
+            "request_count": user_service_summary["request_count"],
+            "exported_request_count": user_service_summary["item_count"],
+            "hidden_request_count": user_service_summary["hidden_request_count"],
+            "artifact_window_only": True,
+            "event_replay": False,
+            "service_recomputation": False,
+            "packet_level_simulation": False,
+        }
         service_trace_summary = self._runtime_export_service_lifecycle_trace_summary()
         export_status["service_lifecycle_trace_v2"] = service_trace_summary
         export_status["runtime_export_service_trace_policy_v1"] = {
@@ -1887,6 +1927,14 @@ class DemoControlPlane:
             service_latency_history=self._service_latency_history_json(),
             cursor=0,
             limit=_RUNTIME_EXPORT_ROUTE_DETAIL_LIMIT,
+        )
+
+    def _runtime_export_user_service_request_summary(self) -> dict[str, Any]:
+        return build_runtime_user_service_request_summary_v2(
+            self.visible_snapshot(),
+            service_latency_history=self._service_latency_history_json(),
+            cursor=0,
+            limit=_RUNTIME_EXPORT_USER_SERVICE_REQUEST_LIMIT,
         )
 
     def _runtime_export_service_lifecycle_trace_summary(self) -> dict[str, Any]:

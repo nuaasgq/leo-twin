@@ -18,6 +18,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_ROUTE_DETAIL_PAGE_V1_ID,
     RUNTIME_EXPORT_SERVICE_TRACE_PAGE_V1_ID,
     RUNTIME_EXPORT_REVIEW_SUMMARY_V1_ID,
+    RUNTIME_EXPORT_USER_SERVICE_REQUEST_SUMMARY_V2_ID,
     RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID,
     build_runtime_export_diagnostics_bundle_v1,
     build_runtime_export_network_kpi_benchmark_validation_v1,
@@ -33,6 +34,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_scenario_review_bundle_v1,
     build_runtime_export_scenario_review_checklist_v1,
     build_runtime_export_service_trace_page_v1,
+    build_runtime_export_user_service_request_summary_v2,
     result_package_contract_v1_to_dict,
     summarize_result_package_record_v1,
 )
@@ -60,6 +62,7 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
     ]
     assert [spec["filename"] for spec in first["recommended_files"]] == [
         "service_lifecycle_trace_v2.json",
+        "user_service_request_summary_v2.json",
         "route_detail_index_v1.json",
         "review_summary_v1.json",
         "diagnostics_bundle_v1.json",
@@ -171,6 +174,7 @@ def test_result_package_summary_accepts_complete_package_record() -> None:
     assert summary["file_hash_count"] == 5
     assert summary["missing_recommended_files"] == (
         "service_lifecycle_trace_v2.json",
+        "user_service_request_summary_v2.json",
         "route_detail_index_v1.json",
         "review_summary_v1.json",
         "diagnostics_bundle_v1.json",
@@ -218,6 +222,10 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
             "network_kpi_benchmark_validation_v1": (
                 _network_kpi_benchmark_validation()
             ),
+            "user_service_request_summary_v2": _user_service_request_summary(),
+            "runtime_export_user_service_request_policy_v1": (
+                _user_service_request_export_policy()
+            ),
             "runtime_export_route_detail_policy_v1": _route_detail_export_policy(),
             "runtime_export_service_trace_policy_v1": _service_trace_export_policy(),
         },
@@ -248,6 +256,7 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
         "scenario_review_bundle_v1.json",
         "service_lifecycle_trace_v2.json",
         "summary.json",
+        "user_service_request_summary_v2.json",
     )
 
     first = build_runtime_export_review_summary_v1(
@@ -287,9 +296,14 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
     assert first["network_kpi_benchmark_validation"]["evidence_present"] is True
     assert first["network_kpi_benchmark_validation"]["validation_status"] == "PASS"
     assert first["network_kpi_benchmark_validation"]["failed_check_count"] == 0
+    assert first["user_service_requests"]["evidence_present"] is True
+    assert first["user_service_requests"]["request_count"] == 2
+    assert first["user_service_requests"]["exported_request_count"] == 2
+    assert first["user_service_requests"]["hidden_request_count"] == 0
     assert first["artifacts"][
         "network_kpi_benchmark_validation_exported"
     ] is True
+    assert first["artifacts"]["user_service_request_summary_exported"] is True
     assert first["route_comparison_review"]["review_scope"] == (
         "PACKAGE_ROUTE_DETAIL_TO_LIVE_RUNTIME_ROUTE_DETAIL"
     )
@@ -356,6 +370,49 @@ def test_runtime_export_network_kpi_benchmark_validation_v1_is_deterministic() -
     assert "NO_METRIC_RECOMPUTE" in first["boundary_conditions"]
 
 
+def test_runtime_export_user_service_request_summary_v2_is_deterministic() -> None:
+    config_snapshot = {
+        "type": "RUNTIME_CONFIG_SNAPSHOT",
+        "status": {
+            "user_service_request_summary_v2": _user_service_request_summary(),
+            "runtime_export_user_service_request_policy_v1": (
+                _user_service_request_export_policy()
+            ),
+        },
+        "config": {"seed": 7},
+        "generated_config": {"seed": 7, "satellite_count": 72},
+    }
+
+    first = build_runtime_export_user_service_request_summary_v2(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+    )
+    second = build_runtime_export_user_service_request_summary_v2(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=dict(reversed(tuple(config_snapshot.items()))),
+    )
+
+    assert first == second
+    assert first["artifact_id"] == RUNTIME_EXPORT_USER_SERVICE_REQUEST_SUMMARY_V2_ID
+    assert first["runtime_status_field"] == "user_service_request_summary_v2"
+    assert first["artifact_policy"] == "STANDALONE_RUNTIME_EXPORT_ARTIFACT"
+    assert first["artifact_window_only"] is True
+    assert first["summary"] == config_snapshot["status"][
+        "user_service_request_summary_v2"
+    ]
+    assert first["user_service_request_export_policy"] == config_snapshot["status"][
+        "runtime_export_user_service_request_policy_v1"
+    ]
+    assert first["evidence"]["evidence_present"] is True
+    assert first["evidence"]["request_count"] == 2
+    assert first["evidence"]["exported_request_count"] == 2
+    assert first["evidence"]["packet_level_simulation"] is False
+    assert first["artifact_hash"].startswith("sha256:")
+    assert "NO_SERVICE_RECOMPUTE" in first["boundary_conditions"]
+
+
 def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready() -> None:
     config_snapshot = {
         "type": "RUNTIME_CONFIG_SNAPSHOT",
@@ -368,6 +425,10 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
             "route_provenance_trust_summary_v1": _route_trust(),
             "network_kpi_benchmark_validation_v1": (
                 _network_kpi_benchmark_validation()
+            ),
+            "user_service_request_summary_v2": _user_service_request_summary(),
+            "runtime_export_user_service_request_policy_v1": (
+                _user_service_request_export_policy()
             ),
             "runtime_export_route_detail_policy_v1": _route_detail_export_policy(),
             "runtime_export_service_trace_policy_v1": _service_trace_export_policy(),
@@ -401,6 +462,7 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
         "scenario_review_bundle_v1.json",
         "service_lifecycle_trace_v2.json",
         "summary.json",
+        "user_service_request_summary_v2.json",
     )
     review_summary = build_runtime_export_review_summary_v1(
         package_id="pkg-1",
@@ -443,6 +505,9 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
     assert first["network_kpi_benchmark_validation"]["evidence_present"] is True
     assert first["network_kpi_benchmark_validation"]["validation_status"] == "PASS"
     assert first["network_kpi_benchmark_validation"]["failed_check_count"] == 0
+    assert first["user_service_requests"]["evidence_present"] is True
+    assert first["user_service_requests"]["request_count"] == 2
+    assert first["user_service_requests"]["exported_request_count"] == 2
     assert first["route_comparison_review"]["live_route_detail_endpoint"] == (
         "GET /runtime/details/routes/{route_id}"
     )
@@ -475,6 +540,10 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
             "queued_event_count": 0,
             "route_explanation_summary_v1": _route_summary(),
             "route_provenance_trust_summary_v1": _route_trust(),
+            "user_service_request_summary_v2": _user_service_request_summary(),
+            "runtime_export_user_service_request_policy_v1": (
+                _user_service_request_export_policy()
+            ),
             "runtime_export_route_detail_policy_v1": _route_detail_export_policy(),
             "runtime_export_service_trace_policy_v1": _service_trace_export_policy(),
         },
@@ -509,6 +578,7 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
         "scenario_review_bundle_v1.json",
         "service_lifecycle_trace_v2.json",
         "summary.json",
+        "user_service_request_summary_v2.json",
     )
     user_configuration_export = {
         "version": "v1",
@@ -580,11 +650,22 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
     assert first["audit_index"]["audit_index_id"] == (
         RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID
     )
+    assert first["user_service_requests"]["evidence_present"] is True
+    assert first["user_service_requests"]["request_count"] == 2
+    assert first["user_service_requests"]["summary_hash"] == review_summary[
+        "user_service_requests"
+    ]["summary_hash"]
     assert first["model_boundaries"]["packet_level_simulation"] is False
     assert first["model_boundaries"]["external_simulators"] is False
     assert first["recommended_review_order"][0] == "scenario_review_bundle_v1.json"
+    assert "user_service_request_summary_v2.json" in first[
+        "recommended_review_order"
+    ]
     assert "export_package_audit_index_v1.json" in first["artifact_review"][
         "artifact_filenames"
+    ]
+    assert "user_service_request_summary_v2.json" in first["artifact_review"][
+        "entrypoint_filenames"
     ]
     assert first["scenario_review_hash"].startswith("sha256:")
     assert json.loads(json.dumps(first, sort_keys=True))["bundle_id"] == (
@@ -1303,6 +1384,7 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
         "scenario_review_bundle_v1.json",
         "service_lifecycle_trace_v2.json",
         "summary.json",
+        "user_service_request_summary_v2.json",
     )
     review_summary = build_runtime_export_review_summary_v1(
         package_id="pkg-1",
@@ -1330,8 +1412,9 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
     } == {
         "ROUTE_TRUST_EVIDENCE_MISSING",
         "NETWORK_KPI_BENCHMARK_VALIDATION_MISSING",
+        "USER_SERVICE_REQUEST_SUMMARY_MISSING",
     }
-    assert diagnostics["finding_count"] == 2
+    assert diagnostics["finding_count"] == 3
 
 
 def _file(name: str, filename: str, sha256: str) -> dict[str, object]:
@@ -1572,6 +1655,91 @@ def _network_kpi_benchmark_validation() -> dict[str, object]:
         "caveats": (
             "Benchmark validation v1 is a deterministic product guardrail.",
         ),
+    }
+
+
+def _user_service_request_summary() -> dict[str, object]:
+    return {
+        "version": "v2",
+        "source": "BACKEND_RUNTIME_STATUS",
+        "summary_scope": "USER_SERVICE_REQUEST_WINDOW",
+        "request_model": "FLOW_LEVEL_USER_SERVICE_REQUEST_PROXY",
+        "route_model": "FLOW_LEVEL_ROUTE_PROXY",
+        "compute_model": "SERVICE_LIFECYCLE_PROXY",
+        "packet_level_simulation": False,
+        "frontend_inference_required": False,
+        "cursor": 0,
+        "limit": 5000,
+        "next_cursor": 2,
+        "has_more": False,
+        "user_count": 2,
+        "request_count": 2,
+        "item_count": 2,
+        "active_user_count": 2,
+        "active_request_count": 2,
+        "communication_request_count": 2,
+        "compute_service_user_count": 1,
+        "compute_request_count": 1,
+        "waiting_user_count": 1,
+        "network_waiting_request_count": 1,
+        "completed_request_count": 0,
+        "hidden_user_count": 0,
+        "hidden_request_count": 0,
+        "service_class_counts": (
+            {"service_class": "COMPUTE_SERVICE", "request_count": 1},
+            {"service_class": "DATA_TRANSFER", "request_count": 1},
+        ),
+        "terminal_state_counts": (
+            {"terminal_state": "RUNNING_COMPUTE_SERVICE", "request_count": 1},
+            {"terminal_state": "WAITING_NETWORK", "request_count": 1},
+        ),
+        "model_assumptions": (
+            "One row summarizes the current flow-level request state for one user.",
+            "Packet-level behavior is not simulated.",
+        ),
+        "items": (
+            {
+                "request_id": "service-0",
+                "user_id": "user-0",
+                "service_class": "COMPUTE_SERVICE",
+                "request_state": "COMPUTE_SERVICE_ACTIVE",
+                "terminal_state": "RUNNING_COMPUTE_SERVICE",
+                "selected_satellite_id": "sat-0",
+                "target_node_id": "sat-0",
+                "network_queue_depth": 0,
+                "detail_hash": "sha256:user-service-0",
+            },
+            {
+                "request_id": "flow-1",
+                "user_id": "user-1",
+                "service_class": "DATA_TRANSFER",
+                "request_state": "NETWORK_WAITING",
+                "terminal_state": "WAITING_NETWORK",
+                "selected_satellite_id": "sat-1",
+                "target_node_id": "ground-station-0",
+                "network_queue_depth": 1,
+                "detail_hash": "sha256:user-service-1",
+            },
+        ),
+    }
+
+
+def _user_service_request_export_policy() -> dict[str, object]:
+    return {
+        "version": "v1",
+        "source": "BACKEND_RUNTIME_EXPORT",
+        "policy": "EXPORT_USER_SERVICE_REQUEST_WINDOW",
+        "user_service_request_source": (
+            "visible_snapshot.ground_users/routes + service_latency_history_v1"
+        ),
+        "user_service_request_limit": 5000,
+        "request_count": 2,
+        "exported_request_count": 2,
+        "hidden_request_count": 0,
+        "artifact_window_only": True,
+        "event_replay": False,
+        "service_recomputation": False,
+        "packet_level_simulation": False,
     }
 
 

@@ -60,6 +60,11 @@ Every v1 runtime export package must include:
 Current runtime exports may also include additional deterministic artifacts.
 `service_lifecycle_trace_v2.json` is emitted as an optional observability file
 for offline communication-compute service lifecycle review.
+`user_service_request_summary_v2.json` is emitted as an optional observability
+file for offline per-user communication/compute request state review. It copies
+the backend-owned `user_service_request_summary_v2` export window and its
+`runtime_export_user_service_request_policy_v1` boundary without replaying
+events or recomputing services.
 `route_detail_index_v1.json` is emitted as an optional route evidence artifact.
 It preserves the exported `route_explanation_summary_v1` window, route trust
 sample ids, indexed route ids, and compact flow-level route explanation rows
@@ -256,6 +261,14 @@ same policy into `service_lifecycle_trace_v2.json` and
 `RUNTIME_EXPORT_SERVICE_TRACE_PAGE_V1`. The default service trace export limit
 matches the large-detail maximum of 5000 rows; `hidden_trace_count` reports any
 trace rows outside that persisted artifact window.
+
+`user_service_request_summary_v2.json` follows the same persisted-window
+boundary for user business request review. Runtime export records
+`config_snapshot.status.runtime_export_user_service_request_policy_v1`, copies
+that policy into the artifact, and reports `artifact_window_only=true`. The
+artifact is sourced from backend runtime status only; it does not inspect the
+current runtime session, replay events, recompute business/service state, or
+mutate the package.
 
 `route_comparison_review` also declares the deterministic
 `RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1` report template. The

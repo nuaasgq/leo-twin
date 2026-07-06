@@ -870,6 +870,7 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
         "scenario_review_bundle_v1.json",
         "service_lifecycle_trace_v2.json",
         "summary.json",
+        "user_service_request_summary_v2.json",
     } <= set(files)
     for record in files.values():
         path = Path(record["path"])
@@ -885,6 +886,11 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
     summary = json.loads((package_dir / "summary.json").read_text(encoding="utf-8"))
     service_lifecycle_trace = json.loads(
         (package_dir / "service_lifecycle_trace_v2.json").read_text(encoding="utf-8")
+    )
+    user_service_request_summary = json.loads(
+        (package_dir / "user_service_request_summary_v2.json").read_text(
+            encoding="utf-8"
+        )
     )
     route_detail_index = json.loads(
         (package_dir / "route_detail_index_v1.json").read_text(encoding="utf-8")
@@ -932,6 +938,16 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
     )
     assert service_lifecycle_trace["service_trace_export_policy"] == (
         service_trace_export_policy
+    )
+    assert user_service_request_summary["type"] == (
+        "RUNTIME_EXPORT_USER_SERVICE_REQUEST_SUMMARY_V2"
+    )
+    assert user_service_request_summary["summary"] == config_snapshot["status"][
+        "user_service_request_summary_v2"
+    ]
+    assert user_service_request_summary["evidence"]["evidence_present"] is True
+    assert review_summary["user_service_requests"]["summary_hash"] == (
+        user_service_request_summary["evidence"]["summary_hash"]
     )
     assert route_detail_index["type"] == "RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_V1"
     assert route_detail_index["route_trust"]["trust_id"] == config_snapshot["status"][
@@ -1164,6 +1180,11 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
         "service_lifecycle_trace_v2.json",
         export_root,
     )
+    user_service_request_artifact = control_plane.runtime_export_package_artifact(
+        package_id,
+        "user_service_request_summary_v2.json",
+        export_root,
+    )
     route_detail_index_artifact = control_plane.runtime_export_package_artifact(
         package_id,
         "route_detail_index_v1.json",
@@ -1239,6 +1260,24 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
         DETAIL_ENDPOINT_MAX_LIMIT
     )
     assert service_trace["service_trace_export_policy"] == service_trace_export_policy
+    assert (
+        Path(str(user_service_request_artifact["path"])).name
+        == "user_service_request_summary_v2.json"
+    )
+    assert (
+        user_service_request_artifact["content_type"]
+        == "application/json; charset=utf-8"
+    )
+    user_service_request = json.loads(
+        Path(str(user_service_request_artifact["path"])).read_text(encoding="utf-8")
+    )
+    assert user_service_request["type"] == (
+        "RUNTIME_EXPORT_USER_SERVICE_REQUEST_SUMMARY_V2"
+    )
+    assert user_service_request["summary"] == config_snapshot["status"][
+        "user_service_request_summary_v2"
+    ]
+    assert user_service_request["evidence"]["evidence_present"] is True
     service_trace_page = control_plane.runtime_export_package_service_traces(
         package_id,
         export_root,
