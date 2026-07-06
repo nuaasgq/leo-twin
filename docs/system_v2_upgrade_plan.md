@@ -459,7 +459,11 @@ Tasks:
     review readiness. The demo backend serves it at
     `/runtime/export/packages/{package_id}/review-summary`. T268 binds the
     selected package's review summary into the standalone dashboard as a
-    read-only card next to compare and restore-preflight context.
+    read-only card next to compare and restore-preflight context. T270 adds
+    `diagnostics_bundle_v1.json` and
+    `leo_twin.runtime_export_diagnostics_bundle.v1` so each result package also
+    has deterministic artifact-health findings, model-boundary declarations,
+    and operator next actions.
 
 ### WS9. Delivery and Operations v2
 

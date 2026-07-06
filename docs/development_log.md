@@ -12862,3 +12862,54 @@ change.
   - Continue Phase 3 observability with a dedicated runtime export review drawer
     or diagnostics bundle that packages logs, config, manifest, KPI provenance,
     and result artifacts for handoff.
+
+## 2026-07-06 - Runtime Export Diagnostics Bundle v1
+
+- Branch: `feature/T270-runtime-export-diagnostics-bundle-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a deterministic `diagnostics_bundle_v1.json` artifact to runtime
+  result packages. The new backend contract id is
+  `leo_twin.runtime_export_diagnostics_bundle.v1`. The bundle summarizes
+  package completeness, runtime counters, manifest/config/review hashes,
+  required and recommended artifact health, explicit model boundaries, findings,
+  and operator next actions. `DemoControlPlane.export_runtime_package()` writes
+  the bundle alongside `review_summary_v1.json`, and persisted package file
+  routes can serve it through the existing artifact endpoint. Event Kernel
+  behavior, runtime advancement, model behavior, restore behavior,
+  packet-level semantics, and external simulator integration remain unchanged.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `examples/integration_demo/control_plane.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/result_package_contract_v1.md`
+  - `docs/integration_demo.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src/leo_twin/services/result_package_contract.py examples/integration_demo/control_plane.py`
+    - Result: passed.
+  - `python -m pytest tests/unit/test_result_package_contract_v1.py tests/integration/test_result_package_export_v1.py tests/integration/test_runtime_session_control.py::test_demo_adapter_exports_runtime_result_package tests/integration/test_runtime_session_control.py::test_demo_adapter_exports_deterministic_runtime_archive tests/integration/test_runtime_session_control.py::test_demo_adapter_persists_runtime_export_catalog tests/integration/test_runtime_session_control.py::test_demo_adapter_serves_persisted_runtime_export_artifacts tests/unit/test_user_guide_v2_docs.py -q`
+    - Result: passed, 12 tests.
+  - `python -m pytest tests/integration/test_runtime_session_control.py tests/integration/test_result_package_export_v1.py tests/unit/test_result_package_contract_v1.py -q`
+    - Result: passed, 29 tests.
+  - `pnpm --dir frontend test api.test.ts dataPanel.test.ts`
+    - Result: passed, 172 tests, using the bundled Node/Pnpm runtime because
+      the shell PATH does not expose `node`.
+- Problems encountered:
+  - The diagnostics artifact must not depend on its own file hash. It records
+    planned artifact filenames and a stable `diagnostics_hash` over the bundle
+    payload before the file is written.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The diagnostics bundle is currently served through the generic package file
+    endpoint rather than a dedicated `/diagnostics` shortcut.
+  - The standalone dashboard does not yet render the diagnostics findings as a
+    dedicated review drawer.
+- Recommended follow-up:
+  - Add a dashboard result-package diagnostics drawer that combines
+    `diagnostics_bundle_v1.json`, review summary, compare, restore preflight,
+    and manifest links into a single operator workflow.

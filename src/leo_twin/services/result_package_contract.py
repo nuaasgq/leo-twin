@@ -13,6 +13,9 @@ RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID = (
     "leo_twin.runtime_reproducibility_manifest.v1"
 )
 RUNTIME_EXPORT_REVIEW_SUMMARY_V1_ID = "leo_twin.runtime_export_review_summary.v1"
+RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1_ID = (
+    "leo_twin.runtime_export_diagnostics_bundle.v1"
+)
 
 
 _REQUIRED_FILE_SPECS: tuple[dict[str, object], ...] = (
@@ -80,6 +83,15 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
                 "filename": "review_summary_v1.json",
                 "format": "json",
                 "content": "user-readable package summary and review readiness",
+            },
+            {
+                "logical_name": "diagnostics_bundle_v1",
+                "filename": "diagnostics_bundle_v1.json",
+                "format": "json",
+                "content": (
+                    "deterministic result-package diagnostics, artifact health, "
+                    "and operator next actions"
+                ),
             },
         ),
         "required_manifest_id": RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID,
@@ -214,6 +226,108 @@ def build_runtime_export_review_summary_v1(
     return summary
 
 
+def build_runtime_export_diagnostics_bundle_v1(
+    *,
+    package_id: str,
+    package_dir: str,
+    config_snapshot: Mapping[str, Any],
+    manifest: Mapping[str, Any],
+    review_summary: Mapping[str, Any],
+    artifact_filenames: tuple[str, ...],
+) -> dict[str, object]:
+    """Build a deterministic diagnostics index for a runtime result package."""
+
+    if not isinstance(config_snapshot, Mapping):
+        raise TypeError("config_snapshot must be a mapping")
+    if not isinstance(manifest, Mapping):
+        raise TypeError("manifest must be a mapping")
+    if not isinstance(review_summary, Mapping):
+        raise TypeError("review_summary must be a mapping")
+
+    contract = result_package_contract_v1_to_dict()
+    status = _mapping(config_snapshot.get("status"))
+    required_filenames = _contract_filenames(contract, "required_files")
+    recommended_filenames = _contract_filenames(contract, "recommended_files")
+    artifacts = tuple(sorted(str(filename) for filename in artifact_filenames))
+    present_required = tuple(
+        filename for filename in required_filenames if filename in artifacts
+    )
+    missing_required = tuple(
+        filename for filename in required_filenames if filename not in artifacts
+    )
+    present_recommended = tuple(
+        filename for filename in recommended_filenames if filename in artifacts
+    )
+    missing_recommended = tuple(
+        filename for filename in recommended_filenames if filename not in artifacts
+    )
+    manifest_id = str(manifest.get("manifest_id", ""))
+    manifest_ok = manifest_id == RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID
+    review_status = str(review_summary.get("review_status", ""))
+    package_complete = manifest_ok and not missing_required
+    findings = _runtime_export_diagnostic_findings(
+        manifest_ok=manifest_ok,
+        review_status=review_status,
+        missing_required=missing_required,
+        missing_recommended=missing_recommended,
+    )
+    diagnostics: dict[str, object] = {
+        "type": "RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1",
+        "version": "v1",
+        "bundle_id": RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1_ID,
+        "source": "BACKEND_RUNTIME_EXPORT",
+        "diagnostics_scope": "RESULT_PACKAGE_OPERATOR_REVIEW",
+        "package": {
+            "package_id": str(package_id),
+            "package_dir": str(package_dir),
+            "package_complete": package_complete,
+            "review_status": review_status,
+            "contract_id": RESULT_PACKAGE_CONTRACT_V1_ID,
+        },
+        "runtime": {
+            "lifecycle_state": str(status.get("lifecycle_state", "")),
+            "current_sim_time": _number(status.get("current_sim_time")),
+            "processed_event_count": _integer(status.get("processed_event_count")),
+            "queued_event_count": _integer(status.get("queued_event_count")),
+        },
+        "reproducibility": {
+            "manifest_id": manifest_id,
+            "manifest_ok": manifest_ok,
+            "manifest_hash": str(manifest.get("manifest_hash", "")),
+            "config_hash": str(manifest.get("config_hash", "")),
+            "generated_config_hash": str(manifest.get("generated_config_hash", "")),
+            "review_summary_hash": str(review_summary.get("summary_hash", "")),
+        },
+        "artifact_health": {
+            "artifact_count": len(artifacts),
+            "artifact_filenames": artifacts,
+            "required_filenames": required_filenames,
+            "recommended_filenames": recommended_filenames,
+            "present_required_filenames": present_required,
+            "missing_required_filenames": missing_required,
+            "present_recommended_filenames": present_recommended,
+            "missing_recommended_filenames": missing_recommended,
+        },
+        "model_boundaries": {
+            "event_kernel_policy": "NO_EVENT_KERNEL_BEHAVIOR_CHANGE",
+            "packet_level_simulation": False,
+            "external_simulators": (),
+            "forbidden_external_integrations": ("STK", "EXATA", "AFSIM", "DDS"),
+            "diagnostics_policy": (
+                "Deterministic package index only; no event replay or packet capture."
+            ),
+        },
+        "findings": findings,
+        "finding_count": len(findings),
+        "recommended_next_actions": _runtime_export_diagnostic_next_actions(
+            package_complete=package_complete,
+            missing_recommended=missing_recommended,
+        ),
+    }
+    diagnostics["diagnostics_hash"] = stable_hash_payload(diagnostics)
+    return diagnostics
+
+
 def summarize_result_package_record_v1(
     package: Mapping[str, Any],
 ) -> dict[str, object]:
@@ -225,11 +339,18 @@ def summarize_result_package_record_v1(
     required_files = tuple(
         str(spec["filename"]) for spec in contract["required_files"]  # type: ignore[index]
     )
+    recommended_files = _contract_filenames(contract, "recommended_files")
     file_records = tuple(_file_records(package.get("files")))
     filenames = tuple(sorted(str(record.get("filename", "")) for record in file_records))
     present_required = tuple(filename for filename in required_files if filename in filenames)
     missing_required = tuple(
         filename for filename in required_files if filename not in filenames
+    )
+    present_recommended = tuple(
+        filename for filename in recommended_files if filename in filenames
+    )
+    missing_recommended = tuple(
+        filename for filename in recommended_files if filename not in filenames
     )
     manifest = _mapping(package.get("manifest"))
     manifest_id = str(manifest.get("manifest_id", ""))
@@ -250,6 +371,9 @@ def summarize_result_package_record_v1(
         "required_file_count": len(required_files),
         "present_required_files": present_required,
         "missing_required_files": missing_required,
+        "recommended_file_count": len(recommended_files),
+        "present_recommended_files": present_recommended,
+        "missing_recommended_files": missing_recommended,
         "package_complete": package_ok and manifest_ok and not missing_required,
         "manifest_id": manifest_id,
         "manifest_hash": str(manifest.get("manifest_hash", "")),
@@ -264,6 +388,104 @@ def summarize_result_package_record_v1(
             Mapping,
         ),
     }
+
+
+def _contract_filenames(
+    contract: Mapping[str, Any],
+    field_name: str,
+) -> tuple[str, ...]:
+    value = contract.get(field_name)
+    if not isinstance(value, (list, tuple)):
+        return ()
+    filenames: list[str] = []
+    for item in value:
+        if isinstance(item, Mapping):
+            filenames.append(str(item.get("filename", "")))
+    return tuple(filename for filename in filenames if filename)
+
+
+def _runtime_export_diagnostic_findings(
+    *,
+    manifest_ok: bool,
+    review_status: str,
+    missing_required: tuple[str, ...],
+    missing_recommended: tuple[str, ...],
+) -> tuple[dict[str, object], ...]:
+    findings: list[dict[str, object]] = []
+    if not manifest_ok:
+        findings.append(
+            _diagnostic_finding(
+                "ERROR",
+                "MANIFEST_ID_MISMATCH",
+                "manifest.json does not use the expected runtime reproducibility id.",
+            )
+        )
+    if missing_required:
+        findings.append(
+            _diagnostic_finding(
+                "ERROR",
+                "REQUIRED_ARTIFACTS_MISSING",
+                f"Missing required artifacts: {', '.join(missing_required)}.",
+            )
+        )
+    if review_status != "REVIEW_READY":
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "REVIEW_SUMMARY_NOT_READY",
+                f"review_summary_v1.json reports {review_status or 'UNKNOWN'}.",
+            )
+        )
+    if missing_recommended:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "RECOMMENDED_ARTIFACTS_MISSING",
+                f"Missing recommended artifacts: {', '.join(missing_recommended)}.",
+            )
+        )
+    if not findings:
+        findings.append(
+            _diagnostic_finding(
+                "INFO",
+                "RESULT_PACKAGE_REVIEW_READY",
+                "Required artifacts, manifest id, and review summary are ready.",
+            )
+        )
+    return tuple(findings)
+
+
+def _diagnostic_finding(
+    severity: str,
+    code: str,
+    message: str,
+) -> dict[str, object]:
+    return {
+        "severity": severity,
+        "code": code,
+        "message": message,
+    }
+
+
+def _runtime_export_diagnostic_next_actions(
+    *,
+    package_complete: bool,
+    missing_recommended: tuple[str, ...],
+) -> tuple[str, ...]:
+    if not package_complete:
+        return (
+            "Re-export the runtime package after the run reaches a stable state.",
+            "Attach diagnostics_bundle_v1.json when reporting missing artifacts.",
+        )
+    if missing_recommended:
+        return (
+            "Package is reproducible with required artifacts.",
+            "Attach the package directory and note missing recommended artifacts.",
+        )
+    return (
+        "Attach the package directory or deterministic archive for review.",
+        "Use manifest.json, review_summary_v1.json, and diagnostics_bundle_v1.json as the first inspection points.",
+    )
 
 
 def _file_records(value: object) -> tuple[Mapping[str, Any], ...]:

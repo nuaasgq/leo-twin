@@ -72,6 +72,7 @@ from leo_twin.services.runtime_reproducibility import (
     stable_json_payload,
 )
 from leo_twin.services.result_package_contract import (
+    build_runtime_export_diagnostics_bundle_v1,
     build_runtime_export_review_summary_v1,
 )
 from leo_twin.services.scenario_builder import (
@@ -119,6 +120,7 @@ _RUNTIME_EXPORT_CATALOG_FILENAME = "runtime_export_catalog_v1.json"
 _RUNTIME_EXPORT_RESTORE_COMMAND = "RESTORE_EXPORT_PACKAGE"
 _SERVICE_LIFECYCLE_TRACE_EXPORT_FILENAME = "service_lifecycle_trace_v2.json"
 _RUNTIME_EXPORT_REVIEW_SUMMARY_FILENAME = "review_summary_v1.json"
+_RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_FILENAME = "diagnostics_bundle_v1.json"
 
 
 class RuntimeExportArtifactError(LookupError):
@@ -641,26 +643,44 @@ class DemoControlPlane:
         written_files["manifest"] = manifest_path
         written_files["service_lifecycle_trace_v2"] = service_lifecycle_trace_path
         review_summary_path = package_dir / _RUNTIME_EXPORT_REVIEW_SUMMARY_FILENAME
+        diagnostics_bundle_path = (
+            package_dir / _RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_FILENAME
+        )
+        artifact_filenames = tuple(
+            sorted(
+                path.name
+                for path in (
+                    *written_files.values(),
+                    review_summary_path,
+                    diagnostics_bundle_path,
+                )
+            )
+        )
         review_summary = build_runtime_export_review_summary_v1(
             package_id=package_id,
             package_dir=str(package_dir),
             config_snapshot=config_snapshot,
             manifest=manifest,
-            artifact_filenames=tuple(
-                sorted(
-                    path.name
-                    for path in (
-                        *written_files.values(),
-                        review_summary_path,
-                    )
-                )
-            ),
+            artifact_filenames=artifact_filenames,
         )
         review_summary_path.write_text(
             stable_json_pretty(review_summary),
             encoding="utf-8",
         )
         written_files["review_summary_v1"] = review_summary_path
+        diagnostics_bundle = build_runtime_export_diagnostics_bundle_v1(
+            package_id=package_id,
+            package_dir=str(package_dir),
+            config_snapshot=config_snapshot,
+            manifest=manifest,
+            review_summary=review_summary,
+            artifact_filenames=artifact_filenames,
+        )
+        diagnostics_bundle_path.write_text(
+            stable_json_pretty(diagnostics_bundle),
+            encoding="utf-8",
+        )
+        written_files["diagnostics_bundle_v1"] = diagnostics_bundle_path
 
         files = tuple(
             _runtime_export_file_record(name, path)

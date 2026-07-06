@@ -40,11 +40,13 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert (package_dir / "metrics.csv").exists()
     assert (package_dir / "summary.json").exists()
     assert (package_dir / "manifest.json").exists()
+    assert (package_dir / "diagnostics_bundle_v1.json").exists()
     assert (package_dir / "review_summary_v1.json").exists()
     assert (package_dir / "service_lifecycle_trace_v2.json").exists()
     filenames = {str(record["filename"]) for record in package["files"]}
     assert "service_lifecycle_trace_v2.json" in filenames
     assert "review_summary_v1.json" in filenames
+    assert "diagnostics_bundle_v1.json" in filenames
 
     manifest = json.loads((package_dir / "manifest.json").read_text(encoding="utf-8"))
     config_snapshot = json.loads(
@@ -55,6 +57,9 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     )
     review_summary = json.loads(
         (package_dir / "review_summary_v1.json").read_text(encoding="utf-8")
+    )
+    diagnostics_bundle = json.loads(
+        (package_dir / "diagnostics_bundle_v1.json").read_text(encoding="utf-8")
     )
 
     assert manifest["manifest_id"] == RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID
@@ -75,6 +80,16 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert "review_summary_v1.json" in review_summary["artifacts"][
         "artifact_filenames"
     ]
+    assert "diagnostics_bundle_v1.json" in review_summary["artifacts"][
+        "artifact_filenames"
+    ]
+    assert diagnostics_bundle["type"] == "RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1"
+    assert diagnostics_bundle["package"]["package_complete"] is True
+    assert diagnostics_bundle["artifact_health"]["missing_required_filenames"] == []
+    assert diagnostics_bundle["reproducibility"]["manifest_hash"] == manifest[
+        "manifest_hash"
+    ]
+    assert diagnostics_bundle["model_boundaries"]["packet_level_simulation"] is False
 
 
 def _base_demo_config() -> DemoConfig:

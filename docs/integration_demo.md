@@ -138,7 +138,9 @@ The live export writes a deterministic result package under
 `artifacts/runtime_exports`. Each package contains `manifest.json`,
 `config_snapshot.json`, `events.jsonl`, `metrics.csv`, `summary.json`, and the
 additional `service_lifecycle_trace_v2.json` observability artifact plus
-`review_summary_v1.json` for user-readable reproducibility review.
+`review_summary_v1.json` for user-readable reproducibility review and
+`diagnostics_bundle_v1.json` for deterministic package health, model boundary,
+and operator next-action review.
 The archive endpoint returns the same package as a ZIP download with stable
 entry ordering and fixed ZIP metadata.
 

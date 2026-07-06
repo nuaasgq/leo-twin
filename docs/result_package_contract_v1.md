@@ -13,6 +13,7 @@ Python API:
 
 ```python
 from leo_twin.services.result_package_contract import (
+    build_runtime_export_diagnostics_bundle_v1,
     result_package_contract_v1_to_dict,
     summarize_result_package_record_v1,
 )
@@ -62,6 +63,10 @@ for offline communication-compute service lifecycle review.
 `review_summary_v1.json` is emitted as a user-readable review entry point for
 the package. It summarizes scenario scale, runtime progress, reproducibility
 hashes, artifact coverage, and review readiness without adding wall-clock data.
+`diagnostics_bundle_v1.json` is emitted as a deterministic operator-facing
+diagnostics index. It summarizes package completeness, required/recommended
+artifact health, reproducibility hashes, model boundaries, findings, and
+recommended next actions.
 
 ## Review Summary
 
@@ -104,6 +109,34 @@ The manifest id must be:
 ```text
 leo_twin.runtime_reproducibility_manifest.v1
 ```
+
+## Diagnostics Bundle
+
+The diagnostics bundle artifact has type:
+
+```text
+RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1
+```
+
+The bundle id is:
+
+```text
+leo_twin.runtime_export_diagnostics_bundle.v1
+```
+
+It reports:
+
+- package id, package directory, contract id, package completeness, and review
+  status;
+- runtime lifecycle state, simulation time, processed events, and queued events;
+- manifest id/hash plus config, generated-config, and review-summary hashes;
+- required and recommended artifact coverage;
+- explicit model boundaries: no Event Kernel behavior change, no packet-level
+  simulation, and no STK/EXATA/AFSIM/DDS integration;
+- deterministic findings and operator next actions.
+
+The diagnostics bundle is an index artifact only. It does not replay events,
+capture packets, introduce wall-clock fields, or call external simulators.
 
 ## Hash Policy
 

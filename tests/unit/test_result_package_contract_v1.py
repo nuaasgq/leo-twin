@@ -4,8 +4,10 @@ import json
 
 from leo_twin.services.result_package_contract import (
     RESULT_PACKAGE_CONTRACT_V1_ID,
+    RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1_ID,
     RUNTIME_EXPORT_REVIEW_SUMMARY_V1_ID,
     RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID,
+    build_runtime_export_diagnostics_bundle_v1,
     build_runtime_export_review_summary_v1,
     result_package_contract_v1_to_dict,
     summarize_result_package_record_v1,
@@ -32,6 +34,7 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
     assert [spec["filename"] for spec in first["recommended_files"]] == [
         "service_lifecycle_trace_v2.json",
         "review_summary_v1.json",
+        "diagnostics_bundle_v1.json",
     ]
     assert "GET /runtime/export" in first["source_endpoints"]
     assert (
@@ -68,6 +71,11 @@ def test_result_package_summary_accepts_complete_package_record() -> None:
     assert summary["package_complete"] is True
     assert summary["missing_required_files"] == ()
     assert summary["file_hash_count"] == 5
+    assert summary["missing_recommended_files"] == (
+        "service_lifecycle_trace_v2.json",
+        "review_summary_v1.json",
+        "diagnostics_bundle_v1.json",
+    )
     assert summary["catalog_record_present"] is True
     assert summary["history_record_present"] is True
 
@@ -123,6 +131,7 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
         "events.jsonl",
         "manifest.json",
         "metrics.csv",
+        "diagnostics_bundle_v1.json",
         "review_summary_v1.json",
         "service_lifecycle_trace_v2.json",
         "summary.json",
@@ -155,9 +164,88 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
     }
     assert first["artifacts"]["missing_required_filenames"] == ()
     assert first["artifacts"]["review_summary_exported"] is True
+    assert "diagnostics_bundle_v1.json" in first["artifacts"]["artifact_filenames"]
     assert first["summary_hash"].startswith("sha256:")
     assert json.loads(json.dumps(first, sort_keys=True))["summary_id"] == (
         RUNTIME_EXPORT_REVIEW_SUMMARY_V1_ID
+    )
+
+
+def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready() -> None:
+    config_snapshot = {
+        "type": "RUNTIME_CONFIG_SNAPSHOT",
+        "status": {
+            "lifecycle_state": "STOPPED",
+            "current_sim_time": 120,
+            "processed_event_count": 4200,
+            "queued_event_count": 0,
+        },
+        "config": {"seed": 7, "duration_seconds": 120},
+        "generated_config": {
+            "seed": 7,
+            "satellite_count": 72,
+            "ground_user_count": 20,
+            "compute_node_count": 12,
+            "duration_seconds": 120,
+        },
+    }
+    manifest = {
+        "manifest_id": RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID,
+        "manifest_hash": "sha256:manifest",
+        "config_hash": "sha256:config",
+        "generated_config_hash": "sha256:generated",
+    }
+    filenames = (
+        "config_snapshot.json",
+        "diagnostics_bundle_v1.json",
+        "events.jsonl",
+        "manifest.json",
+        "metrics.csv",
+        "review_summary_v1.json",
+        "service_lifecycle_trace_v2.json",
+        "summary.json",
+    )
+    review_summary = build_runtime_export_review_summary_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+        manifest=manifest,
+        artifact_filenames=filenames,
+    )
+
+    first = build_runtime_export_diagnostics_bundle_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+        manifest=manifest,
+        review_summary=review_summary,
+        artifact_filenames=tuple(reversed(filenames)),
+    )
+    second = build_runtime_export_diagnostics_bundle_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+        manifest=manifest,
+        review_summary=review_summary,
+        artifact_filenames=filenames,
+    )
+
+    assert first == second
+    assert first["bundle_id"] == RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1_ID
+    assert first["package"]["package_complete"] is True
+    assert first["reproducibility"]["manifest_ok"] is True
+    assert first["artifact_health"]["missing_required_filenames"] == ()
+    assert first["artifact_health"]["missing_recommended_filenames"] == ()
+    assert first["findings"] == (
+        {
+            "severity": "INFO",
+            "code": "RESULT_PACKAGE_REVIEW_READY",
+            "message": "Required artifacts, manifest id, and review summary are ready.",
+        },
+    )
+    assert first["diagnostics_hash"].startswith("sha256:")
+    assert json.loads(json.dumps(first, sort_keys=True))["bundle_id"] == (
+        RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1_ID
     )
 
 

@@ -789,6 +789,7 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
     assert Path(exported["package_dir"]) == package_dir
     assert {
         "config_snapshot.json",
+        "diagnostics_bundle_v1.json",
         "events.jsonl",
         "manifest.json",
         "metrics.csv",
@@ -814,6 +815,9 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
     review_summary = json.loads(
         (package_dir / "review_summary_v1.json").read_text(encoding="utf-8")
     )
+    diagnostics_bundle = json.loads(
+        (package_dir / "diagnostics_bundle_v1.json").read_text(encoding="utf-8")
+    )
 
     assert manifest == exported["manifest"]
     assert manifest["source"] == "BACKEND_RUNTIME_STATUS"
@@ -832,6 +836,9 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
         "manifest_hash"
     ]
     assert review_summary["artifacts"]["review_summary_exported"] is True
+    assert diagnostics_bundle["type"] == "RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1"
+    assert diagnostics_bundle["package"]["package_complete"] is True
+    assert diagnostics_bundle["artifact_health"]["missing_required_filenames"] == []
     assert summary["event_count"] >= 1
     assert (package_dir / "metrics.csv").read_text(encoding="utf-8").startswith(
         "sim_time,metric_name,entity_id,value,tags\n"
@@ -866,6 +873,7 @@ def test_demo_adapter_exports_deterministic_runtime_archive(tmp_path) -> None:
         assert names == sorted(names)
         assert {
             "config_snapshot.json",
+            "diagnostics_bundle_v1.json",
             "events.jsonl",
             "manifest.json",
             "metrics.csv",
@@ -960,6 +968,7 @@ def test_demo_adapter_persists_runtime_export_catalog(tmp_path) -> None:
     )
     assert {
         "config_snapshot.json",
+        "diagnostics_bundle_v1.json",
         "events.jsonl",
         "manifest.json",
         "metrics.csv",
@@ -1016,6 +1025,11 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
         "review_summary_v1.json",
         export_root,
     )
+    diagnostics_bundle_artifact = control_plane.runtime_export_package_artifact(
+        package_id,
+        "diagnostics_bundle_v1.json",
+        export_root,
+    )
     archive_artifact = control_plane.runtime_export_package_archive_artifact(
         package_id,
         export_root,
@@ -1056,6 +1070,19 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
     assert review_summary["type"] == "RUNTIME_EXPORT_REVIEW_SUMMARY_V1"
     assert review_summary["review_status"] == "REVIEW_READY"
     assert review_summary["summary_hash"].startswith("sha256:")
+    assert (
+        Path(str(diagnostics_bundle_artifact["path"])).name
+        == "diagnostics_bundle_v1.json"
+    )
+    assert (
+        diagnostics_bundle_artifact["content_type"]
+        == "application/json; charset=utf-8"
+    )
+    diagnostics_bundle = json.loads(
+        Path(str(diagnostics_bundle_artifact["path"])).read_text(encoding="utf-8")
+    )
+    assert diagnostics_bundle["type"] == "RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1"
+    assert diagnostics_bundle["diagnostics_hash"].startswith("sha256:")
     assert Path(str(archive_artifact["path"])) == Path(str(exported["archive"]["path"]))
     assert archive_artifact["filename"].endswith(".zip")
     assert archive_artifact["sha256"] == exported["archive"]["sha256"]
