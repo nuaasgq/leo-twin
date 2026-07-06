@@ -1,7 +1,14 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
+from leo_twin.schema.config import config_to_dict
+from leo_twin.schema.config_loader import load_config
+from leo_twin.services.benchmark_scenarios import (
+    benchmark_scenario_by_id,
+    benchmark_scenario_ids,
+)
 from leo_twin.services.result_package_contract import (
     RESULT_PACKAGE_CONTRACT_V1_ID,
     RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1_ID,
@@ -10,6 +17,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT_V1_ID,
     RUNTIME_EXPORT_PACKAGE_HANDOFF_REPORT_V1_ID,
     RUNTIME_EXPORT_PACKAGE_REVIEW_COMPLETION_V1_ID,
+    RUNTIME_EXPORT_BENCHMARK_ACCEPTANCE_BINDING_V1_ID,
     RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1_ID,
     RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID,
     RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1_ID,
@@ -29,6 +37,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID,
     build_runtime_export_diagnostics_bundle_v1,
     build_runtime_export_network_kpi_benchmark_validation_v1,
+    build_runtime_export_benchmark_acceptance_binding_v1,
     build_runtime_export_package_acceptance_report_v1,
     build_runtime_export_package_audit_index_v1,
     build_runtime_export_package_handoff_report_v1,
@@ -52,6 +61,9 @@ from leo_twin.services.result_package_contract import (
     result_package_contract_v1_to_dict,
     summarize_result_package_record_v1,
 )
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
@@ -1863,6 +1875,75 @@ def test_runtime_export_package_handoff_report_v1_is_deterministic() -> None:
     assert "external simulators" in first
 
 
+def test_runtime_export_benchmark_acceptance_binding_v1_matches_standard_scenarios() -> None:
+    for scenario_id in benchmark_scenario_ids():
+        scenario = benchmark_scenario_by_id(scenario_id, PROJECT_ROOT)
+        config = load_config(PROJECT_ROOT / str(scenario["config_path"]))
+        config_snapshot = {
+            "type": "RUNTIME_CONFIG_SNAPSHOT",
+            "status": {
+                "fidelity_summary": scenario["fidelity_summary"],
+                "route_provenance_trust_summary_v1": {
+                    "trust_status": "COMPLETE_FLOW_LEVEL_ROUTE_PROXY",
+                    "assessed_route_count": 1,
+                },
+                "network_kpi_benchmark_validation_v1": {
+                    "validation_status": "PASS",
+                    "failed_check_count": 0,
+                },
+            },
+            "config": config_to_dict(config),
+            "generated_config": {
+                "satellite_count": scenario["satellite_count"],
+                "ground_user_count": scenario["user_count"],
+                "compute_node_count": scenario["compute_node_count"],
+                "duration_seconds": scenario["runtime_duration_s"],
+            },
+        }
+
+        binding = build_runtime_export_benchmark_acceptance_binding_v1(
+            config_snapshot=config_snapshot,
+        )
+
+        assert binding["binding_id"] == (
+            RUNTIME_EXPORT_BENCHMARK_ACCEPTANCE_BINDING_V1_ID
+        )
+        assert binding["binding_status"] == "MATCHED_STANDARD_SCENARIO"
+        assert binding["check_status"] == "PASS"
+        assert binding["scenario_id"] == scenario_id
+        assert binding["expected_range_results"]
+        assert all(
+            result["status"] == "PASS"
+            for result in binding["expected_range_results"]
+        )
+        assert all(result["status"] == "PASS" for result in binding["fidelity_results"])
+        assert all(
+            result["status"] == "PASS"
+            for result in binding["runtime_status_results"]
+        )
+        assert binding["binding_hash"].startswith("sha256:")
+
+
+def test_runtime_export_benchmark_acceptance_binding_v1_warns_for_custom_scenario() -> None:
+    binding = build_runtime_export_benchmark_acceptance_binding_v1(
+        config_snapshot={
+            "type": "RUNTIME_CONFIG_SNAPSHOT",
+            "status": {},
+            "config": {"satellite_count": 8, "duration_seconds": 120},
+            "generated_config": {
+                "satellite_count": 8,
+                "ground_user_count": 20,
+                "compute_node_count": 2,
+                "duration_seconds": 120,
+            },
+        },
+    )
+
+    assert binding["binding_status"] == "NO_STANDARD_SCENARIO_MATCH"
+    assert binding["check_status"] == "WARN"
+    assert binding["issue_labels"] == ("NO_STANDARD_BENCHMARK_SCENARIO_MATCH",)
+
+
 def test_runtime_export_package_acceptance_report_v1_marks_pass_warn_fail() -> None:
     completion = {
         "completion_id": RUNTIME_EXPORT_PACKAGE_REVIEW_COMPLETION_V1_ID,
@@ -1901,6 +1982,26 @@ def test_runtime_export_package_acceptance_report_v1_marks_pass_warn_fail() -> N
         "runtime_export_boundary_hash": "sha256:boundary",
         "user_configuration_schema_id": "sees.user_configuration.v2",
         "user_configuration_config_hash": "sha256:user-config",
+        "benchmark_acceptance_binding_v1": {
+            "type": "RUNTIME_EXPORT_BENCHMARK_ACCEPTANCE_BINDING_V1",
+            "version": "v1",
+            "binding_id": RUNTIME_EXPORT_BENCHMARK_ACCEPTANCE_BINDING_V1_ID,
+            "source": "BACKEND_RUNTIME_EXPORT_CONFIG_SNAPSHOT",
+            "matrix_id": "leo_twin.benchmark_scenario_matrix.v1",
+            "binding_status": "MATCHED_STANDARD_SCENARIO",
+            "check_status": "PASS",
+            "scenario_id": "small_demo_72sat",
+            "label": "72-satellite detailed baseline",
+            "config_path": "configs/acceptance/small_demo_72sat.yaml",
+            "scale_tier": "SMALL_DETAILED",
+            "matched_identity_metrics": ("satellite_count",),
+            "expected_range_results": (),
+            "fidelity_results": (),
+            "runtime_status_results": (),
+            "issue_labels": (),
+            "recommendation": "no action",
+            "binding_hash": "sha256:benchmark-binding",
+        },
         "artifact_count": 9,
         "missing_required_artifact_filenames": (),
         "audit_status": "AUDIT_READY",
@@ -1924,7 +2025,7 @@ def test_runtime_export_package_acceptance_report_v1_marks_pass_warn_fail() -> N
     assert first["acceptance_id"] == RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT_V1_ID
     assert first["acceptance_status"] == "PASS"
     assert first["demo_closed_loop_ready"] is True
-    assert first["pass_count"] == 9
+    assert first["pass_count"] == 10
     assert first["warn_count"] == 0
     assert first["fail_count"] == 0
     assert [check["check_id"] for check in first["checks"]] == [
@@ -1934,6 +2035,7 @@ def test_runtime_export_package_acceptance_report_v1_marks_pass_warn_fail() -> N
         "service_trace_review",
         "scenario_review",
         "network_kpi_benchmark",
+        "benchmark_scenario_gate",
         "model_boundary",
         "user_configuration",
         "forbidden_integrations",

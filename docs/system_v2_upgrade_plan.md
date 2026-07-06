@@ -778,7 +778,12 @@ Tasks:
     handoff completion, route review, service-trace review, scenario review,
     network KPI benchmark status, model-boundary exclusions, user configuration
     validation, and forbidden-integration declarations into one dashboard and
-    API signal for the industrial v2 demo closed loop.
+    API signal for the industrial v2 demo closed loop. T345 binds that
+    acceptance report to the shipped 72/300/1200 benchmark scenario matrix by
+    adding `benchmark_acceptance_binding_v1` to the audit index and a
+    `benchmark_scenario_gate` acceptance check. Standard benchmark packages now
+    report exact-range, fidelity, route-trust, and KPI-gate evidence; custom
+    packages remain usable but show a benchmark-gate warning.
 
 ### WS9. Delivery and Operations v2
 

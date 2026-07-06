@@ -740,13 +740,13 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert acceptance_report["acceptance_id"] == (
         RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT_V1_ID
     )
-    assert acceptance_report["acceptance_status"] == "PASS"
+    assert acceptance_report["acceptance_status"] == "WARN"
     assert acceptance_report["demo_closed_loop_ready"] is True
     assert acceptance_report["handoff_ready"] is True
     assert acceptance_report["completion_status"] == "REVIEW_COMPLETE"
     assert acceptance_report["fail_count"] == 0
-    assert acceptance_report["warn_count"] == 0
-    assert acceptance_report["pass_count"] == acceptance_report["check_count"]
+    assert acceptance_report["warn_count"] == 1
+    assert acceptance_report["pass_count"] == acceptance_report["check_count"] - 1
     assert [check["check_id"] for check in acceptance_report["checks"]] == [
         "required_artifacts",
         "review_completion",
@@ -754,10 +754,20 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         "service_trace_review",
         "scenario_review",
         "network_kpi_benchmark",
+        "benchmark_scenario_gate",
         "model_boundary",
         "user_configuration",
         "forbidden_integrations",
     ]
+    benchmark_gate = next(
+        check
+        for check in acceptance_report["checks"]
+        if check["check_id"] == "benchmark_scenario_gate"
+    )
+    assert benchmark_gate["status"] == "WARN"
+    assert benchmark_gate["issue_labels"] == (
+        "NO_STANDARD_BENCHMARK_SCENARIO_MATCH",
+    )
     assert acceptance_report["acceptance_hash"].startswith("sha256:")
     handoff_artifact = control_plane.runtime_export_package_artifact(
         str(package["package_id"]),

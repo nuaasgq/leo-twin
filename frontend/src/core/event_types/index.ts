@@ -1881,6 +1881,11 @@ export interface RuntimeExportPackageAuditIndexV1 {
   package_review_completion_v1?: RuntimeExportPackageReviewCompletionV1;
   package_review_completion_status?: string;
   package_review_completion_hash?: string;
+  benchmark_acceptance_binding_v1?: RuntimeExportBenchmarkAcceptanceBindingV1;
+  benchmark_acceptance_binding_status?: string;
+  benchmark_acceptance_check_status?: string;
+  benchmark_acceptance_scenario_id?: string;
+  benchmark_acceptance_binding_hash?: string;
   artifact_count: number;
   artifact_hashes: readonly RuntimeExportCatalogFileV1[];
   required_artifact_filenames: readonly string[];
@@ -1991,6 +1996,44 @@ export interface RuntimeExportPackageAcceptanceCheckV1 {
   issue_labels: readonly string[];
   recommendation: string;
   check_hash: string;
+}
+
+export interface RuntimeExportBenchmarkAcceptanceBindingV1 {
+  type: "RUNTIME_EXPORT_BENCHMARK_ACCEPTANCE_BINDING_V1" | string;
+  version: "v1" | string;
+  binding_id: string;
+  source: string;
+  matrix_id: string;
+  binding_status: string;
+  check_status: "PASS" | "WARN" | "FAIL" | string;
+  scenario_id: string;
+  label: string;
+  config_path: string;
+  scale_tier: string;
+  matched_identity_metrics: readonly string[];
+  expected_range_results: readonly RuntimeExportBenchmarkAcceptanceResultV1[];
+  fidelity_results: readonly RuntimeExportBenchmarkAcceptanceResultV1[];
+  runtime_status_results: readonly RuntimeExportBenchmarkAcceptanceResultV1[];
+  issue_labels: readonly string[];
+  recommendation: string;
+  binding_hash: string;
+}
+
+export interface RuntimeExportBenchmarkAcceptanceResultV1 {
+  metric?: string;
+  check_id?: string;
+  source?: string;
+  status: "PASS" | "WARN" | "FAIL" | string;
+  observed_value?: number | string;
+  minimum?: number;
+  maximum?: number;
+  unit?: string;
+  expected?: string;
+  actual?: string;
+  observed_count?: number;
+  minimum_count?: number;
+  issue_labels: readonly string[];
+  result_hash: string;
 }
 
 export interface RuntimeExportUserConfigurationAuditBindingV1 {

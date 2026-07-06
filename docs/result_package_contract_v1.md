@@ -495,6 +495,23 @@ evidence, and a deterministic `completion_hash`. It deliberately does not
 include `audit_hash`, so the audit index can hash the completion object without
 a self-reference.
 
+The audit index also embeds `benchmark_acceptance_binding_v1` with id:
+
+```text
+leo_twin.runtime_export_benchmark_acceptance_binding.v1
+```
+
+This binding compares the package `config_snapshot.json` against the shipped
+benchmark scenario matrix (`small_demo_72sat`, `medium_demo_300sat`, and
+`scale_demo_1200sat_short`). It matches standard scenarios by exact identity
+guardrails such as satellite count, user count, compute-node count, runtime
+duration, orbit update interval, and plane count. When a standard scenario is
+matched, it records exact expected-range results, fidelity-summary checks,
+route-trust status checks, network-KPI benchmark checks, and a deterministic
+`binding_hash`. Non-standard custom packages are not failed by this binding;
+they are reported as `NO_STANDARD_SCENARIO_MATCH` so the acceptance report can
+warn that benchmark-gated evidence is not attached.
+
 For tools that only need the handoff summary, the demo backend exposes the same
 object without returning the full audit index:
 
@@ -528,7 +545,11 @@ conditions, and `acceptance_hash`. Required artifact gaps, incomplete handoff
 review, route-review errors, scenario-review gaps, model-boundary violations,
 invalid user configuration, or missing forbidden-integration declarations are
 failures. Optional service-trace review absence and non-pass KPI benchmark
-validation are warnings unless they contain explicit errors. The endpoint is
+validation are warnings unless they contain explicit errors. The
+`benchmark_scenario_gate` check passes when the package matches and satisfies a
+shipped benchmark scenario, warns for custom non-standard scenarios, and fails
+when a matched benchmark scenario violates exact ranges, fidelity expectations,
+route-trust expectations, or KPI benchmark expectations. The endpoint is
 read-only and does not replay events, recompute metrics, mutate packages on
 read, capture packets, or call external simulators.
 

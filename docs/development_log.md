@@ -16839,3 +16839,60 @@ change.
   - Add benchmark-scenario acceptance binding so standard 72, 300, and 1200
     scenario result packages include expected scale, KPI, and fidelity-policy
     gates in the same backend-owned acceptance report.
+
+## 2026-07-07 - T345 benchmark acceptance gates in result package v1
+
+- Branch: `feature/T345-acceptance-benchmark-gates-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: bind result-package acceptance to the shipped 72/300/1200 benchmark
+  scenario matrix. The backend now builds
+  `runtime_export_benchmark_acceptance_binding_v1` from `config_snapshot.json`,
+  records it in `export_package_audit_index_v1.json`, and adds a
+  `benchmark_scenario_gate` check to
+  `runtime_export_package_acceptance_report_v1`. Standard benchmark packages
+  get exact expected-range, fidelity-summary, route-trust, and network-KPI gate
+  evidence. Custom non-standard packages remain accepted for normal review
+  workflows but carry a benchmark-gate warning. No Event Kernel, simulation
+  model, package replay, package write-on-read, or frontend architecture
+  behavior changed.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `docs/result_package_contract_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m compileall -q src\leo_twin\services\result_package_contract.py examples\integration_demo\control_plane.py examples\integration_demo\server.py`
+    - Result: passed.
+  - `python -m pytest tests\unit\test_result_package_contract_v1.py::test_result_package_contract_v1_is_deterministic_json_ready tests\unit\test_result_package_contract_v1.py::test_runtime_export_benchmark_acceptance_binding_v1_matches_standard_scenarios tests\unit\test_result_package_contract_v1.py::test_runtime_export_benchmark_acceptance_binding_v1_warns_for_custom_scenario tests\unit\test_result_package_contract_v1.py::test_runtime_export_package_acceptance_report_v1_marks_pass_warn_fail tests\unit\test_result_package_contract_v1.py::test_runtime_export_package_audit_index_v1_is_deterministic tests\integration\test_result_package_export_v1.py::test_runtime_export_package_satisfies_result_package_contract_v1 tests\integration\test_runtime_session_control.py::test_demo_server_stream_query_parses_cursor_options -q`
+    - Result: passed, 7 tests.
+  - `.\node_modules\.bin\tsc.cmd --noEmit -p tsconfig.json` from
+    `frontend`
+    - Result: passed with the bundled Codex Node runtime path.
+  - `pnpm --dir frontend test dataPanel.test.ts api.test.ts appSurface.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 3 test
+      files and 278 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path; Vite
+      reported the existing large `DataPanel` chunk warning.
+  - `git diff --check`
+    - Result: passed; Git emitted CRLF warnings for the existing unstaged
+      runtime config drift.
+- Problems encountered:
+  - Existing non-standard package export tests use an 8-satellite custom demo,
+    so the benchmark gate intentionally reports `WARN` rather than `PASS`.
+    This preserves custom package usability while making missing standard
+    benchmark evidence visible.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - Benchmark gates currently use exact config/fidelity/status guardrails, not
+    calibrated KPI numeric ranges from repeated deterministic runs.
+  - The dashboard displays the benchmark gate through the existing acceptance
+    report warning list; a later UI task can add a dedicated benchmark gate
+    table.
+- Recommended follow-up:
+  - Add exported benchmark gate details to the dashboard acceptance card, with
+    per-check rows for exact range, fidelity, route trust, and KPI status.

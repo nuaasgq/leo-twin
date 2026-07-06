@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from leo_twin.services.benchmark_scenarios import benchmark_scenario_matrix_v1_to_dict
 from leo_twin.services.runtime_reproducibility import stable_hash_payload
 
 
@@ -66,6 +67,9 @@ RUNTIME_EXPORT_PACKAGE_HANDOFF_REPORT_V1_ID = (
 )
 RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT_V1_ID = (
     "leo_twin.runtime_export_package_acceptance_report.v1"
+)
+RUNTIME_EXPORT_BENCHMARK_ACCEPTANCE_BINDING_V1_ID = (
+    "leo_twin.runtime_export_benchmark_acceptance_binding.v1"
 )
 RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_V1_ID = (
     "leo_twin.runtime_export_network_kpi_benchmark_validation.v1"
@@ -1934,6 +1938,115 @@ def build_runtime_export_service_trace_comparison_review_report_page_v1(
     return page
 
 
+def build_runtime_export_benchmark_acceptance_binding_v1(
+    *,
+    config_snapshot: Mapping[str, Any],
+) -> dict[str, object]:
+    """Bind one package config snapshot to the shipped benchmark gate matrix."""
+
+    if not isinstance(config_snapshot, Mapping):
+        raise TypeError("config_snapshot must be a mapping")
+    matrix = benchmark_scenario_matrix_v1_to_dict()
+    scenarios = _records(matrix.get("scenarios"))
+    identity_metrics = (
+        "satellite_count",
+        "user_count",
+        "compute_node_count",
+        "runtime_duration_s",
+        "orbit_update_interval_s",
+        "plane_count",
+    )
+    candidates = tuple(
+        scenario
+        for scenario in scenarios
+        if all(
+            _runtime_export_benchmark_metric_matches(
+                config_snapshot,
+                scenario,
+                metric,
+            )
+            for metric in identity_metrics
+        )
+    )
+    issue_labels: list[str] = []
+    if not candidates:
+        binding: dict[str, object] = {
+            "type": "RUNTIME_EXPORT_BENCHMARK_ACCEPTANCE_BINDING_V1",
+            "version": "v1",
+            "binding_id": RUNTIME_EXPORT_BENCHMARK_ACCEPTANCE_BINDING_V1_ID,
+            "source": "BACKEND_RUNTIME_EXPORT_CONFIG_SNAPSHOT",
+            "matrix_id": str(matrix.get("matrix_id", "")),
+            "binding_status": "NO_STANDARD_SCENARIO_MATCH",
+            "check_status": "WARN",
+            "scenario_id": "",
+            "label": "",
+            "config_path": "",
+            "scale_tier": "",
+            "matched_identity_metrics": (),
+            "expected_range_results": (),
+            "fidelity_results": (),
+            "runtime_status_results": (),
+            "issue_labels": ("NO_STANDARD_BENCHMARK_SCENARIO_MATCH",),
+            "recommendation": (
+                "run one of the shipped 72, 300, or 1200 benchmark configs "
+                "for benchmark-gated acceptance"
+            ),
+        }
+        binding["binding_hash"] = stable_hash_payload(binding)
+        return binding
+    if len(candidates) > 1:
+        issue_labels.append("MULTIPLE_STANDARD_BENCHMARK_SCENARIO_MATCHES")
+    scenario = candidates[0]
+    expected_range_results = tuple(
+        _runtime_export_benchmark_expected_range_result(
+            config_snapshot,
+            expected_range,
+        )
+        for expected_range in _records(scenario.get("expected_ranges"))
+    )
+    fidelity_results = _runtime_export_benchmark_fidelity_results(
+        config_snapshot,
+        scenario,
+    )
+    runtime_status_results = _runtime_export_benchmark_runtime_status_results(
+        config_snapshot,
+        scenario,
+    )
+    for result in (
+        *expected_range_results,
+        *fidelity_results,
+        *runtime_status_results,
+    ):
+        if result["status"] != "PASS":
+            issue_labels.extend(_string_tuple(result.get("issue_labels")))
+    check_status = "FAIL" if issue_labels else "PASS"
+    binding = {
+        "type": "RUNTIME_EXPORT_BENCHMARK_ACCEPTANCE_BINDING_V1",
+        "version": "v1",
+        "binding_id": RUNTIME_EXPORT_BENCHMARK_ACCEPTANCE_BINDING_V1_ID,
+        "source": "BACKEND_RUNTIME_EXPORT_CONFIG_SNAPSHOT",
+        "matrix_id": str(matrix.get("matrix_id", "")),
+        "binding_status": "MATCHED_STANDARD_SCENARIO",
+        "check_status": check_status,
+        "scenario_id": str(scenario.get("scenario_id", "")),
+        "label": str(scenario.get("label", "")),
+        "config_path": str(scenario.get("config_path", "")),
+        "scale_tier": str(scenario.get("scale_tier", "")),
+        "matched_identity_metrics": identity_metrics,
+        "expected_range_results": expected_range_results,
+        "fidelity_results": fidelity_results,
+        "runtime_status_results": runtime_status_results,
+        "issue_labels": tuple(sorted(set(issue_labels))),
+        "recommendation": (
+            "inspect failed benchmark gate evidence"
+            if issue_labels
+            else "no action"
+        ),
+    }
+    binding["binding_hash"] = stable_hash_payload(binding)
+    return binding
+
+
 def build_runtime_export_package_audit_index_v1(
     *,
     package_id: str,
@@ -1973,6 +2086,11 @@ def build_runtime_export_package_audit_index_v1(
     user_config_binding = _runtime_export_user_configuration_audit_binding(
         config_snapshot,
         user_configuration_export,
+    )
+    benchmark_acceptance_binding = (
+        build_runtime_export_benchmark_acceptance_binding_v1(
+            config_snapshot=config_snapshot,
+        )
     )
     network_kpi_validation = _runtime_export_network_kpi_validation_evidence(status)
     user_service_requests = _runtime_export_user_service_request_evidence(status)
@@ -2057,6 +2175,19 @@ def build_runtime_export_package_audit_index_v1(
         "user_configuration_config_hash": str(user_config_binding["config_hash"]),
         "user_configuration_export_hash": str(user_config_binding["export_hash"]),
         "user_configuration_validation_ok": user_config_binding["validation_ok"],
+        "benchmark_acceptance_binding_v1": benchmark_acceptance_binding,
+        "benchmark_acceptance_binding_status": str(
+            benchmark_acceptance_binding["binding_status"]
+        ),
+        "benchmark_acceptance_check_status": str(
+            benchmark_acceptance_binding["check_status"]
+        ),
+        "benchmark_acceptance_scenario_id": str(
+            benchmark_acceptance_binding["scenario_id"]
+        ),
+        "benchmark_acceptance_binding_hash": str(
+            benchmark_acceptance_binding["binding_hash"]
+        ),
         "review_summary_hash": str(review_summary.get("summary_hash", "")),
         "diagnostics_hash": str(diagnostics_bundle.get("diagnostics_hash", "")),
         "network_kpi_benchmark_validation_hash": str(
@@ -2421,6 +2552,9 @@ def build_runtime_export_package_acceptance_report_v1(
     service_trace_present = (
         completion.get("service_trace_comparison_review_report_present") is True
     )
+    benchmark_binding = _mapping(audit.get("benchmark_acceptance_binding_v1"))
+    benchmark_status = str(benchmark_binding.get("check_status", "WARN"))
+    benchmark_scenario_id = str(benchmark_binding.get("scenario_id", ""))
     checks = (
         _runtime_export_acceptance_check(
             "required_artifacts",
@@ -2585,6 +2719,27 @@ def build_runtime_export_package_acceptance_report_v1(
             ),
         ),
         _runtime_export_acceptance_check(
+            "benchmark_scenario_gate",
+            benchmark_status if benchmark_binding else "WARN",
+            str(benchmark_binding.get("binding_status", "NO_BENCHMARK_BINDING")),
+            evidence_hash=str(benchmark_binding.get("binding_hash", "")),
+            evidence_labels=(
+                f"scenario {benchmark_scenario_id or 'unmatched'}",
+                f"scale {benchmark_binding.get('scale_tier', '')}",
+                f"binding {benchmark_binding.get('binding_status', 'missing')}",
+            ),
+            issue_labels=(
+                _string_tuple(benchmark_binding.get("issue_labels"))
+                if benchmark_binding
+                else ("BENCHMARK_ACCEPTANCE_BINDING_MISSING",)
+            ),
+            recommendation=(
+                str(benchmark_binding.get("recommendation", ""))
+                if benchmark_binding
+                else "rerun export with benchmark binding support"
+            ),
+        ),
+        _runtime_export_acceptance_check(
             "model_boundary",
             "FAIL" if boundary_issues else "PASS",
             "model boundary exclusions are preserved",
@@ -2672,6 +2827,7 @@ def build_runtime_export_package_acceptance_report_v1(
             f"manifest {audit.get('manifest_hash', '')}",
             f"boundary {audit.get('runtime_export_boundary_hash', '')}",
             f"user_config {audit.get('user_configuration_config_hash', '')}",
+            f"benchmark {benchmark_binding.get('binding_hash', '')}",
         ),
         "boundary_conditions": (
             "NO_EVENT_REPLAY",
@@ -2837,6 +2993,259 @@ def _runtime_export_acceptance_check(
         **check,
         "check_hash": stable_hash_payload(check),
     }
+
+
+def _runtime_export_benchmark_metric_matches(
+    config_snapshot: Mapping[str, Any],
+    scenario: Mapping[str, Any],
+    metric: str,
+) -> bool:
+    observed = _runtime_export_benchmark_metric_value(config_snapshot, metric)
+    if observed is None:
+        return False
+    return _number(observed) == _number(scenario.get(metric))
+
+
+def _runtime_export_benchmark_expected_range_result(
+    config_snapshot: Mapping[str, Any],
+    expected_range: Mapping[str, Any],
+) -> dict[str, object]:
+    metric = str(expected_range.get("metric", ""))
+    observed = _runtime_export_benchmark_metric_value(config_snapshot, metric)
+    issue_labels: tuple[str, ...] = ()
+    status = "PASS"
+    if observed is None:
+        status = "FAIL"
+        issue_labels = ("BENCHMARK_METRIC_MISSING",)
+        observed_value = ""
+    else:
+        observed_value = _number(observed)
+        if not (
+            _number(expected_range.get("minimum"))
+            <= observed_value
+            <= _number(expected_range.get("maximum"))
+        ):
+            status = "FAIL"
+            issue_labels = ("BENCHMARK_METRIC_OUT_OF_RANGE",)
+    result = {
+        "metric": metric,
+        "source": str(expected_range.get("source", "")),
+        "status": status,
+        "observed_value": observed_value,
+        "minimum": _number(expected_range.get("minimum")),
+        "maximum": _number(expected_range.get("maximum")),
+        "unit": str(expected_range.get("unit", "")),
+        "issue_labels": issue_labels,
+    }
+    return {
+        **result,
+        "result_hash": stable_hash_payload(result),
+    }
+
+
+def _runtime_export_benchmark_fidelity_results(
+    config_snapshot: Mapping[str, Any],
+    scenario: Mapping[str, Any],
+) -> tuple[dict[str, object], ...]:
+    status = _mapping(config_snapshot.get("status"))
+    fidelity_summary = _mapping(status.get("fidelity_summary"))
+    expectation = _mapping(scenario.get("fidelity_expectation"))
+    return tuple(
+        _runtime_export_benchmark_string_result(
+            check_id=f"fidelity.{field}",
+            expected=str(expectation.get(field, "")),
+            actual=str(fidelity_summary.get(field, "")),
+            missing_label="BENCHMARK_FIDELITY_MISSING",
+            mismatch_label="BENCHMARK_FIDELITY_MISMATCH",
+        )
+        for field in ("orbit_update_mode", "metrics_mode", "space_link_mode")
+    )
+
+
+def _runtime_export_benchmark_runtime_status_results(
+    config_snapshot: Mapping[str, Any],
+    scenario: Mapping[str, Any],
+) -> tuple[dict[str, object], ...]:
+    status = _mapping(config_snapshot.get("status"))
+    expectation = _mapping(scenario.get("runtime_status_expectation"))
+    route_expectation = _mapping(expectation.get("route_trust"))
+    kpi_expectation = _mapping(expectation.get("network_kpi_benchmark_validation"))
+    route_summary = _mapping(status.get(str(route_expectation.get("field", ""))))
+    kpi_validation = _mapping(status.get(str(kpi_expectation.get("field", ""))))
+    route_status = str(route_summary.get("trust_status", ""))
+    route_allowed = _string_tuple(route_expectation.get("allowed_trust_statuses"))
+    route_assessed = _integer(route_summary.get("assessed_route_count"))
+    route_minimum = _integer(route_expectation.get("minimum_assessed_route_count"))
+    route_pass = route_status in route_allowed and route_assessed >= route_minimum
+    kpi_status = str(kpi_validation.get("validation_status", ""))
+    kpi_allowed = _string_tuple(kpi_expectation.get("allowed_validation_statuses"))
+    kpi_failed = _integer(kpi_validation.get("failed_check_count"))
+    kpi_max_failed = _integer(kpi_expectation.get("maximum_failed_check_count"))
+    kpi_pass = kpi_status in kpi_allowed and kpi_failed <= kpi_max_failed
+    return (
+        _runtime_export_benchmark_status_result(
+            check_id="runtime_status.route_trust",
+            status="PASS" if route_pass else "FAIL",
+            expected="/".join(route_allowed),
+            actual=route_status,
+            observed_count=route_assessed,
+            minimum_count=route_minimum,
+            issue_label="BENCHMARK_ROUTE_TRUST_NOT_ACCEPTED",
+        ),
+        _runtime_export_benchmark_status_result(
+            check_id="runtime_status.network_kpi",
+            status="PASS" if kpi_pass else "FAIL",
+            expected="/".join(kpi_allowed),
+            actual=kpi_status,
+            observed_count=kpi_failed,
+            minimum_count=0,
+            issue_label="BENCHMARK_NETWORK_KPI_NOT_ACCEPTED",
+        ),
+    )
+
+
+def _runtime_export_benchmark_string_result(
+    *,
+    check_id: str,
+    expected: str,
+    actual: str,
+    missing_label: str,
+    mismatch_label: str,
+) -> dict[str, object]:
+    issue_labels: tuple[str, ...] = ()
+    status = "PASS"
+    if not actual:
+        status = "FAIL"
+        issue_labels = (missing_label,)
+    elif actual != expected:
+        status = "FAIL"
+        issue_labels = (mismatch_label,)
+    result = {
+        "check_id": check_id,
+        "status": status,
+        "expected": expected,
+        "actual": actual,
+        "issue_labels": issue_labels,
+    }
+    return {
+        **result,
+        "result_hash": stable_hash_payload(result),
+    }
+
+
+def _runtime_export_benchmark_status_result(
+    *,
+    check_id: str,
+    status: str,
+    expected: str,
+    actual: str,
+    observed_count: int,
+    minimum_count: int,
+    issue_label: str,
+) -> dict[str, object]:
+    result = {
+        "check_id": check_id,
+        "status": status,
+        "expected": expected,
+        "actual": actual,
+        "observed_count": observed_count,
+        "minimum_count": minimum_count,
+        "issue_labels": () if status == "PASS" else (issue_label,),
+    }
+    return {
+        **result,
+        "result_hash": stable_hash_payload(result),
+    }
+
+
+def _runtime_export_benchmark_metric_value(
+    config_snapshot: Mapping[str, Any],
+    metric: str,
+) -> object | None:
+    config = _mapping(config_snapshot.get("config"))
+    generated = _mapping(config_snapshot.get("generated_config"))
+    paths = {
+        "satellite_count": (
+            ("generated", "satellite_count"),
+            ("config", "satellite_count"),
+            ("config", "scenario", "satellite_count"),
+        ),
+        "user_count": (
+            ("generated", "ground_user_count"),
+            ("generated", "user_count"),
+            ("config", "ground_user_count"),
+            ("config", "scenario", "user_count"),
+        ),
+        "compute_node_count": (
+            ("generated", "compute_node_count"),
+            ("generated", "compute_nodes"),
+            ("config", "compute_node_count"),
+            ("config", "compute_nodes"),
+            ("config", "scenario", "compute_nodes"),
+        ),
+        "runtime_duration_s": (
+            ("generated", "duration_seconds"),
+            ("config", "duration_seconds"),
+            ("config", "runtime", "duration"),
+        ),
+        "orbit_update_interval_s": (
+            ("generated", "orbit_tick_seconds"),
+            ("config", "orbit_tick_seconds"),
+            ("config", "scenario", "orbit", "update_interval_seconds"),
+        ),
+        "plane_count": (
+            ("generated", "plane_count"),
+            ("config", "plane_count"),
+            ("config", "scenario", "orbit", "plane_count"),
+        ),
+        "flow_interval_s": (
+            ("config", "flow_interval_seconds"),
+            ("config", "scenario", "traffic_model", "flow_interval_seconds"),
+        ),
+        "task_interval_s": (
+            ("config", "task_interval_seconds"),
+            ("config", "scenario", "traffic_model", "task_interval_seconds"),
+        ),
+        "flow_demand_capacity_mbps": (
+            ("config", "flow_demand_capacity"),
+            ("config", "scenario", "traffic_model", "flow_demand_capacity"),
+        ),
+        "task_compute_demand": (
+            ("config", "task_compute_demand"),
+            ("config", "scenario", "traffic_model", "task_compute_demand"),
+        ),
+        "task_data_size_mb": (
+            ("config", "task_data_size"),
+            ("config", "scenario", "traffic_model", "task_data_size"),
+        ),
+        "max_space_link_candidates_per_satellite": (
+            ("config", "network", "max_space_link_candidates_per_satellite"),
+        ),
+        "batch_space_link_update_limit": (
+            ("config", "network", "batch_space_link_update_limit"),
+        ),
+    }.get(metric, ())
+    roots = {"config": config, "generated": generated}
+    for path in paths:
+        value = _runtime_export_nested_value(roots, path)
+        if value is not None:
+            return value
+    return None
+
+
+def _runtime_export_nested_value(
+    roots: Mapping[str, Mapping[str, Any]],
+    path: tuple[str, ...],
+) -> object | None:
+    if not path:
+        return None
+    current: object = roots.get(path[0], {})
+    for key in path[1:]:
+        mapping = _mapping(current)
+        if key not in mapping:
+            return None
+        current = mapping[key]
+    return current
 
 
 def _runtime_export_user_configuration_audit_binding(
