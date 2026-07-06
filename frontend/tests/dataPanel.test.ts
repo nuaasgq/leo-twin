@@ -29,6 +29,7 @@ import {
   buildDataPanelExportReviewSummaryStatus,
   buildDataPanelExportRouteDetailItemDisplay,
   buildDataPanelExportRouteDetailItemStatus,
+  buildDataPanelExportRouteComparisonReviewArtifactDisplay,
   buildDataPanelExportRouteComparisonReviewRecord,
   buildDataPanelExportRouteComparisonReviewSaveStatus,
   buildDataPanelExportRouteLiveComparisonDisplay,
@@ -2232,6 +2233,95 @@ describe("buildDataPanelExportCatalogDisplay", () => {
     );
     expect(
       buildDataPanelExportArtifactHealthDisplay(undefined, "pkg-review", null)
+    ).toBeNull();
+  });
+
+  it("surfaces saved route comparison review report artifacts from backend catalog", () => {
+    const catalog = {
+      version: "v1",
+      source: "BACKEND_RUNTIME_EXPORT_CATALOG",
+      catalog_scope: "PERSISTED_EXPORT_PACKAGES",
+      catalog_file: "artifacts/runtime_exports/runtime_export_catalog_v1.json",
+      export_root: "artifacts/runtime_exports",
+      record_count: 1,
+      catalog_hash:
+        "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      latest_export: null,
+      records: [
+        {
+          catalog_key: "PACKAGE:pkg-review",
+          export_type: "PACKAGE",
+          package_id: "pkg-review",
+          package_dir: "artifacts/runtime_exports/pkg-review",
+          relative_package_dir: "pkg-review",
+          file_count: 1,
+          manifest_hash:
+            "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+          current_sim_time: 12,
+          processed_event_count: 100,
+          files: [
+            {
+              name: "route_comparison_review_report_v1",
+              filename: "route_comparison_review_report_v1.json",
+              bytes: 2048,
+              sha256:
+                "sha256:7777777777777777777777777777777777777777777777777777777777777777"
+            }
+          ]
+        }
+      ]
+    };
+
+    expect(
+      buildDataPanelExportRouteComparisonReviewArtifactDisplay(
+        catalog,
+        "pkg-review",
+        "sha256:8888888888888888888888888888888888888888888888888888888888888888"
+      )
+    ).toEqual({
+      packageId: "pkg-review",
+      tone: "match",
+      statusLabel: "review report artifact present",
+      summaryLabel: "pkg-review / 2 KiB / file 777777777777",
+      hashLabels: [
+        "catalog cccccccccccc",
+        "file 777777777777",
+        "report 888888888888"
+      ],
+      artifactHref:
+        "/runtime/export/packages/pkg-review/files/route_comparison_review_report_v1.json",
+      artifactTitle:
+        "route_comparison_review_report_v1.json / 2 KiB / sha256:7777777777777777777777777777777777777777777777777777777777777777"
+    });
+
+    expect(
+      buildDataPanelExportRouteComparisonReviewArtifactDisplay(
+        {
+          ...catalog,
+          records: [
+            {
+              ...catalog.records[0],
+              file_count: 0,
+              files: []
+            }
+          ]
+        },
+        "pkg-review"
+      )
+    ).toMatchObject({
+      packageId: "pkg-review",
+      tone: "different",
+      statusLabel: "review report not saved",
+      artifactHref: null,
+      hashLabels: [
+        "catalog cccccccccccc",
+        "package PACKAGE",
+        "report hash waiting"
+      ]
+    });
+
+    expect(
+      buildDataPanelExportRouteComparisonReviewArtifactDisplay(undefined, "pkg-review")
     ).toBeNull();
   });
 });

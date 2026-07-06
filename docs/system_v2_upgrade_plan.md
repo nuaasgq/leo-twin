@@ -268,6 +268,10 @@ Tasks:
   - Status: T293 adds backend-generated `detail_hash` to live route detail
     rows. Dashboard-saved route comparison review reports now include both the
     package route detail hash and live route detail hash.
+  - Status: T294 surfaces the saved
+    `route_comparison_review_report_v1.json` artifact in the dashboard package
+    review area from the backend export catalog, including the direct JSON link,
+    file hash, and latest saved report hash.
 
 ### WS4. Compute Network Model v2
 

@@ -14145,3 +14145,47 @@ change.
 - Recommended follow-up:
   - Surface the saved review report artifact in the dashboard manifest/artifact
     inspector after a save completes.
+
+## 2026-07-06 - Dashboard Route Review Report Artifact v1
+
+- Branch: `feature/T294-dashboard-review-report-artifact-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: surface the saved route comparison review report artifact in the
+  dashboard package review area. The frontend now reads the backend export
+  catalog for `route_comparison_review_report_v1.json`, shows whether the
+  report artifact is present, links directly to the JSON file, and displays the
+  file hash plus latest saved report hash. This closes the operator loop after
+  saving a package-vs-live route comparison without changing Event Kernel
+  behavior, route recomputation, backend model logic, or package mutation beyond
+  the existing save endpoint.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/dashboard_model_trust_evidence_workspace_v1.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed, 1 test file and 170 tests.
+  - `python -m pytest tests/unit/test_user_guide_v2_docs.py -q`
+    - Result: passed, 2 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with bundled Codex Node/Pnpm runtime.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing large DataPanel chunk
+      warning after minification; no functional build error.
+  - `git diff --check`
+    - Result: passed for task files.
+- Problems encountered:
+  - No product blocker. The report artifact is surfaced from the backend export
+    catalog only; existing local runtime config drift remains untouched and
+    unstaged: `configs/generated_full_system_demo.json` and
+    `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The dashboard surfaces the report file from the catalog but does not load or
+    render the full report contents inline yet.
+- Recommended follow-up:
+  - Add a compact review report drawer that loads
+    `route_comparison_review_report_v1.json` and summarizes saved record counts,
+    match/different totals, and operator notes.

@@ -164,7 +164,9 @@ After using `compare with live`, the package-vs-live route comparison card can
 save the currently displayed comparison into
 `route_comparison_review_report_v1.json`. The saved record includes the
 compared fields, different fields, package route detail hash, live route detail
-hash, status reason, and dashboard operator note.
+hash, status reason, and dashboard operator note. After the save completes, the
+dashboard package review area shows the report artifact from the backend export
+catalog with a direct JSON link and file hash.
 For package-owned review, use:
 
 ```powershell

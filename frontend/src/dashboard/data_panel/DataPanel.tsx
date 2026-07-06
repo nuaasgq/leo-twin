@@ -189,6 +189,8 @@ export interface RuntimeSelectedNodeDetailRequests {
 
 const FALLBACK_USER_DETAIL_PAGE_SIZE = 80;
 const FALLBACK_SATELLITE_DETAIL_PAGE_SIZE = 120;
+const ROUTE_COMPARISON_REVIEW_REPORT_FILENAME =
+  "route_comparison_review_report_v1.json";
 const DEFAULT_USER_CONFIGURATION_VALIDATE_TEXT = `{
   "scenario": {
     "satellite_count": 72,
@@ -889,6 +891,12 @@ export const DataPanel = memo(function DataPanel({
         error: runtimeExportRouteComparisonReviewSaveError,
         reportHash: runtimeExportRouteComparisonReviewSaveReportHash
       }
+    );
+  const exportRouteComparisonReviewArtifactDisplay =
+    buildDataPanelExportRouteComparisonReviewArtifactDisplay(
+      runtimeExportCatalog,
+      runtimeExportComparePackageId,
+      runtimeExportRouteComparisonReviewSaveReportHash
     );
   const serviceDetailInspector = buildServiceLifecycleDetailInspector(
     selectedServiceDetailRow,
@@ -1666,6 +1674,40 @@ export const DataPanel = memo(function DataPanel({
                     {exportRouteLiveComparisonStatus.notes.map((note) => (
                       <span key={note}>{note}</span>
                     ))}
+                  </div>
+                </div>
+              ) : null}
+              {exportRouteComparisonReviewArtifactDisplay ? (
+                <div
+                  className={`data-panel-export-route-compare-card ${exportRouteComparisonReviewArtifactDisplay.tone}`}
+                >
+                  <div className="data-panel-export-diagnostics-header">
+                    <div>
+                      <span>Route comparison review report</span>
+                      <strong>
+                        {exportRouteComparisonReviewArtifactDisplay.statusLabel}
+                      </strong>
+                      <small>
+                        {exportRouteComparisonReviewArtifactDisplay.summaryLabel}
+                      </small>
+                    </div>
+                    {exportRouteComparisonReviewArtifactDisplay.artifactHref ? (
+                      <a
+                        href={exportRouteComparisonReviewArtifactDisplay.artifactHref}
+                        title={
+                          exportRouteComparisonReviewArtifactDisplay.artifactTitle
+                        }
+                      >
+                        review report JSON
+                      </a>
+                    ) : null}
+                  </div>
+                  <div className="data-panel-export-compare-meta">
+                    {exportRouteComparisonReviewArtifactDisplay.hashLabels.map(
+                      (label) => (
+                        <span key={label}>{label}</span>
+                      )
+                    )}
                   </div>
                 </div>
               ) : null}
@@ -8965,6 +9007,16 @@ export interface DataPanelExportArtifactHealthRow {
   title: string;
 }
 
+export interface DataPanelExportRouteComparisonReviewArtifactDisplay {
+  packageId: string;
+  tone: "match" | "different";
+  statusLabel: string;
+  summaryLabel: string;
+  hashLabels: readonly string[];
+  artifactHref: string | null;
+  artifactTitle: string;
+}
+
 export function buildDataPanelExportCatalogDisplay(
   catalog: RuntimeExportCatalogV1 | null | undefined,
   limit = 6
@@ -9015,6 +9067,67 @@ export function buildDataPanelExportCatalogDisplay(
       rows.length
     )} 条 / catalog ${shortRuntimeHash(catalog.catalog_hash)}`,
     rows
+  };
+}
+
+export function buildDataPanelExportRouteComparisonReviewArtifactDisplay(
+  catalog: RuntimeExportCatalogV1 | null | undefined,
+  selectedPackageId: string | null | undefined,
+  latestSavedReportHash: string | null | undefined = null
+): DataPanelExportRouteComparisonReviewArtifactDisplay | null {
+  if (
+    catalog === null ||
+    catalog === undefined ||
+    selectedPackageId === null ||
+    selectedPackageId === undefined
+  ) {
+    return null;
+  }
+  const record = selectRuntimeExportCatalogRecordForPackage(catalog, selectedPackageId);
+  if (record === null) {
+    return null;
+  }
+  const reportFile =
+    record.files.find(
+      (file) =>
+        file.filename === ROUTE_COMPARISON_REVIEW_REPORT_FILENAME ||
+        file.name === "route_comparison_review_report_v1"
+    ) ?? null;
+  const reportHashLabel =
+    latestSavedReportHash !== null && latestSavedReportHash !== undefined
+      ? `report ${shortRuntimeHash(latestSavedReportHash)}`
+      : "report hash waiting";
+  if (reportFile === null) {
+    return {
+      packageId: selectedPackageId,
+      tone: "different",
+      statusLabel: "review report not saved",
+      summaryLabel: `${selectedPackageId} / catalog file missing / ${reportHashLabel}`,
+      hashLabels: [
+        `catalog ${shortRuntimeHash(catalog.catalog_hash)}`,
+        `package ${record.export_type}`,
+        reportHashLabel
+      ],
+      artifactHref: null,
+      artifactTitle: `${ROUTE_COMPARISON_REVIEW_REPORT_FILENAME} is not present in the selected package catalog.`
+    };
+  }
+  return {
+    packageId: selectedPackageId,
+    tone: "match",
+    statusLabel: "review report artifact present",
+    summaryLabel: `${selectedPackageId} / ${formatRuntimeExportFileBytes(
+      reportFile.bytes
+    )} / file ${shortRuntimeHash(reportFile.sha256)}`,
+    hashLabels: [
+      `catalog ${shortRuntimeHash(catalog.catalog_hash)}`,
+      `file ${shortRuntimeHash(reportFile.sha256)}`,
+      reportHashLabel
+    ],
+    artifactHref: runtimeExportPackageFileHref(selectedPackageId, reportFile.filename),
+    artifactTitle: `${reportFile.filename} / ${formatRuntimeExportFileBytes(
+      reportFile.bytes
+    )} / ${reportFile.sha256}`
   };
 }
 

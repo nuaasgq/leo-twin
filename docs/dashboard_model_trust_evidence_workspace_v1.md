@@ -71,9 +71,12 @@ catalog. The dashboard route comparison card exposes a save action for the
 currently displayed package-vs-live comparison and records the compared fields,
 different fields, package detail hash, live detail hash, and status reason.
 The live route detail endpoint exposes a backend-generated `detail_hash`, so
-saved review reports can bind both sides of the comparison. The frontend does
-not recompute routes or download the full `route_detail_index_v1.json` by
-default.
+saved review reports can bind both sides of the comparison. After a save, the
+dashboard export package view surfaces the catalog-owned
+`route_comparison_review_report_v1.json` artifact link, file hash, and latest
+report hash so the operator can verify that the review record is persisted.
+The frontend does not recompute routes or download the full
+`route_detail_index_v1.json` by default.
 7. runtime evidence
 
 Each row has a tone:
