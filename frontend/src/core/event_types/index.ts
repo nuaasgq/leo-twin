@@ -1356,6 +1356,7 @@ export interface RuntimeExportReviewSummaryV1 {
   runtime: RuntimeExportReviewRuntimeV1;
   route_trust?: RuntimeExportRouteTrustEvidenceV1;
   network_kpi_benchmark_validation?: RuntimeExportNetworkKpiBenchmarkValidationEvidenceV1;
+  user_service_requests?: RuntimeExportUserServiceRequestEvidenceV2;
   route_comparison_review?: RuntimeExportRouteComparisonReviewV1;
   reproducibility: RuntimeExportReviewReproducibilityV1;
   reproducibility_boundary?: RuntimeExportReproducibilityBoundaryV1;
@@ -1422,6 +1423,34 @@ export interface RuntimeExportNetworkKpiBenchmarkValidationEvidenceV1 {
   acceptable_for_demo_review: boolean;
   caveats: readonly string[];
   validation_hash: string;
+}
+
+export interface RuntimeExportUserServiceRequestEvidenceV2 {
+  version: "v2" | string;
+  evidence_id: string;
+  source: string;
+  evidence_present: boolean;
+  request_model: string;
+  route_model?: string;
+  compute_model?: string;
+  request_count: number;
+  exported_request_count: number;
+  hidden_request_count: number;
+  active_request_count: number;
+  communication_request_count?: number;
+  compute_request_count: number;
+  network_waiting_request_count: number;
+  completed_request_count?: number;
+  service_class_counts?: readonly RuntimeRequestCountBucketV2[];
+  terminal_state_counts?: readonly RuntimeRequestCountBucketV2[];
+  packet_level_simulation: boolean;
+  frontend_inference_required: boolean;
+  artifact_window_only: boolean;
+  export_limit?: number;
+  policy?: string;
+  model_assumptions?: readonly string[];
+  caveats?: readonly string[];
+  summary_hash: string;
 }
 
 export interface RuntimeExportRouteComparisonReviewV1 {
@@ -1568,6 +1597,11 @@ export interface RuntimeExportPackageAuditIndexV1 {
   network_kpi_benchmark_validation_status?: string;
   network_kpi_benchmark_validation_present?: boolean;
   network_kpi_benchmark_validation_failed_check_count?: number;
+  user_service_request_summary_hash?: string;
+  user_service_request_summary_present?: boolean;
+  user_service_request_summary_request_count?: number;
+  user_service_request_summary_exported_request_count?: number;
+  user_service_request_summary_hidden_request_count?: number;
   route_comparison_review_report_hash: string;
   route_comparison_review_report_present: boolean;
   scenario_review_checklist_hash?: string;
@@ -1668,6 +1702,7 @@ export interface RuntimeExportScenarioReviewBundleV1 {
   review_summary: RuntimeExportScenarioReviewSummaryRefV1;
   diagnostics: RuntimeExportScenarioReviewDiagnosticsRefV1;
   network_kpi_benchmark_validation?: RuntimeExportScenarioReviewNetworkKpiBenchmarkValidationRefV1;
+  user_service_requests?: RuntimeExportScenarioReviewUserServiceRequestRefV2;
   audit_index: RuntimeExportScenarioReviewAuditIndexRefV1;
   artifact_review: RuntimeExportScenarioReviewArtifactsV1;
   model_boundaries: RuntimeExportScenarioReviewModelBoundariesV1;
@@ -1721,6 +1756,18 @@ export interface RuntimeExportScenarioReviewNetworkKpiBenchmarkValidationRefV1 {
   validation_status: string;
   failed_check_count: number;
   validation_hash: string;
+  evidence_present: boolean;
+}
+
+export interface RuntimeExportScenarioReviewUserServiceRequestRefV2 {
+  evidence_id: string;
+  request_model: string;
+  request_count: number;
+  exported_request_count: number;
+  hidden_request_count: number;
+  compute_request_count: number;
+  network_waiting_request_count: number;
+  summary_hash: string;
   evidence_present: boolean;
 }
 
@@ -1795,6 +1842,7 @@ export interface RuntimeExportReproducibilityBoundaryV1 {
   optional_evidence_artifacts: readonly string[];
   route_detail_export: RuntimeExportReproducibilityBoundaryWindowV1;
   service_trace_export: RuntimeExportReproducibilityBoundaryWindowV1;
+  user_service_request_export?: RuntimeExportReproducibilityBoundaryWindowV1;
   boundary_conditions: readonly string[];
   boundary_hash: string;
 }
@@ -1807,6 +1855,10 @@ export interface RuntimeExportReproducibilityBoundaryWindowV1 {
   service_trace_limit?: number;
   service_count?: number;
   exported_trace_count?: number;
+  user_service_request_limit?: number;
+  request_count?: number;
+  exported_request_count?: number;
+  hidden_request_count?: number;
   hidden_route_count?: number;
   hidden_trace_count?: number;
   artifact_window_only: boolean;
@@ -1820,6 +1872,7 @@ export interface RuntimeExportReviewArtifactsV1 {
   service_lifecycle_trace_exported: boolean;
   review_summary_exported: boolean;
   network_kpi_benchmark_validation_exported?: boolean;
+  user_service_request_summary_exported?: boolean;
 }
 
 export interface RuntimeExportDiagnosticsBundleV1 {
@@ -1832,6 +1885,7 @@ export interface RuntimeExportDiagnosticsBundleV1 {
   runtime: RuntimeExportDiagnosticsRuntimeV1;
   route_trust?: RuntimeExportRouteTrustEvidenceV1;
   network_kpi_benchmark_validation?: RuntimeExportNetworkKpiBenchmarkValidationEvidenceV1;
+  user_service_requests?: RuntimeExportUserServiceRequestEvidenceV2;
   route_comparison_review?: RuntimeExportRouteComparisonReviewV1;
   reproducibility: RuntimeExportDiagnosticsReproducibilityV1;
   reproducibility_boundary?: RuntimeExportReproducibilityBoundaryV1;

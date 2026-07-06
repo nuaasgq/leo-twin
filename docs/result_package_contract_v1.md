@@ -125,7 +125,8 @@ The standalone dashboard export catalog also links each package row to this
 review summary so users can inspect it without constructing the URL manually.
 The dashboard also loads the selected package's review summary as a read-only
 card, showing review readiness, scenario scale, runtime progress, manifest
-hashes, and artifact coverage alongside compare and restore-preflight context.
+hashes, artifact coverage, and optional user-service request evidence
+alongside compare and restore-preflight context.
 The same dashboard view derives artifact health rows from the backend export
 catalog and selected review summary, showing required/optional status,
 present/missing state, file size, short SHA-256 hash, and direct file links
@@ -468,9 +469,11 @@ The standalone dashboard loads the selected package's
 `diagnostics_bundle_v1.json` through the package file endpoint and renders its
 package completeness, artifact-health counters, findings, model boundaries, and
 recommended next actions as a read-only diagnostics drawer. The dashboard also
-shows compact KPI benchmark status/hash labels in export review, diagnostics,
-scenario review, and audit-index sections when the backend artifact provides
-them.
+shows compact KPI benchmark and user-service request status/hash labels in
+export review, diagnostics, scenario review, and audit-index sections when the
+backend artifact provides them. Scenario review workflows include
+`user_service_request_summary_v2.json` as a guided evidence row when the
+artifact is present or recommended by the backend package.
 The dashboard also loads the selected package's `manifest.json` and renders a
 read-only manifest inspector that shows stable manifest/scenario/config/
 generated/metrics/runtime hashes, catalog file hashes, diagnostics manifest

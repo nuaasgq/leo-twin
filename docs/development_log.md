@@ -15932,3 +15932,48 @@ change.
   - Add dashboard export-review labels and a read-only drawer for
     `user_service_request_summary_v2.json`, reusing the live v2 user-service
     table semantics where possible.
+
+## 2026-07-06 - User Service Request Export Review Card v1
+
+- Branch: `feature/T329-export-user-service-review-card-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: bind the T328 `user_service_request_summary_v2.json` export evidence
+  into existing standalone dashboard export-review surfaces. Review summary,
+  diagnostics, scenario review workflow, and audit-index displays now render
+  backend-provided user-service request counts, exported-window counts, hidden
+  counts, and evidence hashes when present. Older packages remain readable
+  because optional labels are only shown when the backend artifact provides the
+  corresponding fields.
+- Changed files/modules:
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 1 test file
+      and 184 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path. Vite
+      reported the existing large DataPanel chunk warning.
+- Problems encountered:
+  - No Event Kernel, runtime service, orbit, network, compute, or metrics model
+    changes were needed. The change stayed in frontend typing/display and
+    documentation.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - This task adds review labels and workflow visibility only. It does not add a
+    dedicated read-only drawer for opening the persisted
+    `user_service_request_summary_v2.json` artifact itself.
+  - The exported user-service evidence remains the current flow-level
+    request-state proxy. It does not add packet-level traffic, RF modeling, or
+    new business-generation behavior.
+- Recommended follow-up:
+  - Add a package artifact drawer/page for `user_service_request_summary_v2.json`
+    that reuses the live v2 user-service table semantics and supports persisted
+    artifact-window filtering.

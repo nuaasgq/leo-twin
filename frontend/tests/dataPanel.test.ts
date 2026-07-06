@@ -2957,6 +2957,12 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         "sha256:7777777777777777777777777777777777777777777777777777777777777777",
       diagnostics_hash:
         "sha256:8888888888888888888888888888888888888888888888888888888888888888",
+      user_service_request_summary_hash:
+        "sha256:abababababababababababababababababababababababababababababababab",
+      user_service_request_summary_present: true,
+      user_service_request_summary_request_count: 20,
+      user_service_request_summary_exported_request_count: 18,
+      user_service_request_summary_hidden_request_count: 2,
       route_comparison_review_report_hash:
         "sha256:9999999999999999999999999999999999999999999999999999999999999999",
       route_comparison_review_report_present: true,
@@ -3030,6 +3036,11 @@ describe("buildDataPanelExportCatalogDisplay", () => {
       diagnosticsLabels: [
         "review 777777777777",
         "diagnostics 888888888888",
+        "user services present",
+        "user service requests 20",
+        "user services exported 18",
+        "user services hidden 2",
+        "user services abababababab",
         "packet no",
         "recompute no"
       ],
@@ -3151,6 +3162,18 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         finding_count: 1,
         finding_labels: [{ severity: "INFO", code: "RESULT_PACKAGE_REVIEW_READY" }]
       },
+      user_service_requests: {
+        evidence_id: "leo_twin.user_service_request_export_evidence.v2",
+        request_model: "FLOW_LEVEL_USER_SERVICE_REQUEST_PROXY",
+        request_count: 20,
+        exported_request_count: 18,
+        hidden_request_count: 2,
+        compute_request_count: 8,
+        network_waiting_request_count: 3,
+        summary_hash:
+          "sha256:abababababababababababababababababababababababababababababababab",
+        evidence_present: true
+      },
       audit_index: {
         audit_index_id: "leo_twin.runtime_export_package_audit_index.v1",
         filename: "export_package_audit_index_v1.json",
@@ -3158,7 +3181,7 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           "audit index records this scenario_review_bundle_v1.json file hash"
       },
       artifact_review: {
-        artifact_count: 9,
+        artifact_count: 10,
         artifact_filenames: [
           "scenario_review_bundle_v1.json",
           "export_package_audit_index_v1.json",
@@ -3167,6 +3190,7 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           "manifest.json",
           "config_snapshot.json",
           "route_detail_index_v1.json",
+          "user_service_request_summary_v2.json",
           "events.jsonl",
           "metrics.csv"
         ],
@@ -3191,6 +3215,7 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         "manifest.json",
         "config_snapshot.json",
         "route_detail_index_v1.json",
+        "user_service_request_summary_v2.json",
         "events.jsonl",
         "metrics.csv",
         "summary.json"
@@ -3229,6 +3254,8 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         "boundary 777777777777",
         "review 888888888888",
         "diagnostics 999999999999",
+        "user services 18 / 20",
+        "user services abababababab",
         "audit export_package_audit_index_v1.json"
       ],
       boundaryLabels: [
@@ -3307,28 +3334,38 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           tone: "match"
         },
         {
-          stepLabel: "9 event evidence",
+          stepLabel: "9 user services",
+          statusLabel: "available",
+          detailLabel: "user_service_request_summary_v2.json",
+          href:
+            "/runtime/export/packages/pkg-review/files/user_service_request_summary_v2.json",
+          title:
+            "9 user services / user_service_request_summary_v2.json / package artifact available",
+          tone: "match"
+        },
+        {
+          stepLabel: "10 event evidence",
           statusLabel: "available",
           detailLabel: "events.jsonl",
           href: "/runtime/export/packages/pkg-review/files/events.jsonl",
-          title: "9 event evidence / events.jsonl / package artifact available",
+          title: "10 event evidence / events.jsonl / package artifact available",
           tone: "match"
         },
         {
-          stepLabel: "10 metrics",
+          stepLabel: "11 metrics",
           statusLabel: "available",
           detailLabel: "metrics.csv",
           href: "/runtime/export/packages/pkg-review/files/metrics.csv",
-          title: "10 metrics / metrics.csv / package artifact available",
+          title: "11 metrics / metrics.csv / package artifact available",
           tone: "match"
         },
         {
-          stepLabel: "11 summary",
+          stepLabel: "12 summary",
           statusLabel: "missing",
           detailLabel: "summary.json",
           href: null,
           title:
-            "11 summary / summary.json / not listed in scenario review bundle",
+            "12 summary / summary.json / not listed in scenario review bundle",
           tone: "different"
         },
         {
@@ -3966,6 +4003,29 @@ describe("buildDataPanelExportCompareDisplay", () => {
         validation_hash:
           "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd"
       },
+      user_service_requests: {
+        version: "v2",
+        evidence_id: "leo_twin.user_service_request_export_evidence.v2",
+        source: "config_snapshot.status.user_service_request_summary_v2",
+        evidence_present: true,
+        request_model: "FLOW_LEVEL_USER_SERVICE_REQUEST_PROXY",
+        route_model: "FLOW_LEVEL_ROUTE_PROXY",
+        compute_model: "TASK_RESOURCE_DEMAND_PROXY",
+        request_count: 20,
+        exported_request_count: 18,
+        hidden_request_count: 2,
+        active_request_count: 9,
+        communication_request_count: 12,
+        compute_request_count: 8,
+        network_waiting_request_count: 3,
+        completed_request_count: 11,
+        packet_level_simulation: false,
+        frontend_inference_required: false,
+        artifact_window_only: true,
+        export_limit: 5000,
+        summary_hash:
+          "sha256:abababababababababababababababababababababababababababababababab"
+      },
       reproducibility: {
         manifest_id: "leo_twin.runtime_reproducibility_manifest.v1",
         manifest_hash:
@@ -3977,7 +4037,7 @@ describe("buildDataPanelExportCompareDisplay", () => {
         event_kernel_policy: "NO_EVENT_KERNEL_BEHAVIOR_CHANGE"
       },
       artifacts: {
-        artifact_count: 7,
+        artifact_count: 8,
         artifact_filenames: [
           "config_snapshot.json",
           "events.jsonl",
@@ -3985,7 +4045,8 @@ describe("buildDataPanelExportCompareDisplay", () => {
           "metrics.csv",
           "review_summary_v1.json",
           "service_lifecycle_trace_v2.json",
-          "summary.json"
+          "summary.json",
+          "user_service_request_summary_v2.json"
         ],
         required_filenames: [
           "config_snapshot.json",
@@ -3996,7 +4057,8 @@ describe("buildDataPanelExportCompareDisplay", () => {
         ],
         missing_required_filenames: [],
         service_lifecycle_trace_exported: true,
-        review_summary_exported: true
+        review_summary_exported: true,
+        user_service_request_summary_exported: true
       },
       review_notes: ["Use manifest.json"],
       summary_hash:
@@ -4007,7 +4069,7 @@ describe("buildDataPanelExportCompareDisplay", () => {
       packageId: "pkg-review",
       tone: "match",
       statusLabel: "可审阅",
-      summaryLabel: "pkg-review / 7 个文件 / 12.5 s / 4,096 事件",
+      summaryLabel: "pkg-review / 8 个文件 / 12.5 s / 4,096 事件",
       metaLabels: [
         "seed 4321",
         "卫星 72",
@@ -4019,6 +4081,13 @@ describe("buildDataPanelExportCompareDisplay", () => {
         "KPI failed 0",
         "KPI checks 12",
         "KPI benchmark cdcdcdcdcdcd",
+        "user services present",
+        "user service requests 20",
+        "user services exported 18",
+        "user services hidden 2",
+        "compute requests 8",
+        "network waiting 3",
+        "user services abababababab",
         "route compare compare with live",
         "compare fields 12",
         "live runtime required",
@@ -4027,7 +4096,8 @@ describe("buildDataPanelExportCompareDisplay", () => {
       artifactLabels: [
         "必需文件缺失 0",
         "service trace 已导出",
-        "review summary 已导出"
+        "review summary 已导出",
+        "user services exported"
       ]
     });
     expect(
@@ -4092,6 +4162,29 @@ describe("buildDataPanelExportCompareDisplay", () => {
         caveats: [],
         validation_hash:
           "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd"
+      },
+      user_service_requests: {
+        version: "v2",
+        evidence_id: "leo_twin.user_service_request_export_evidence.v2",
+        source: "config_snapshot.status.user_service_request_summary_v2",
+        evidence_present: true,
+        request_model: "FLOW_LEVEL_USER_SERVICE_REQUEST_PROXY",
+        route_model: "FLOW_LEVEL_ROUTE_PROXY",
+        compute_model: "TASK_RESOURCE_DEMAND_PROXY",
+        request_count: 20,
+        exported_request_count: 18,
+        hidden_request_count: 2,
+        active_request_count: 9,
+        communication_request_count: 12,
+        compute_request_count: 8,
+        network_waiting_request_count: 3,
+        completed_request_count: 11,
+        packet_level_simulation: false,
+        frontend_inference_required: false,
+        artifact_window_only: true,
+        export_limit: 5000,
+        summary_hash:
+          "sha256:abababababababababababababababababababababababababababababababab"
       },
       reproducibility: {
         manifest_id: "leo_twin.runtime_reproducibility_manifest.v1",
@@ -4196,6 +4289,13 @@ describe("buildDataPanelExportCompareDisplay", () => {
     expect(display?.modelBoundaryLabels).toContain("KPI failed 0");
     expect(display?.modelBoundaryLabels).toContain("KPI checks 12");
     expect(display?.modelBoundaryLabels).toContain("KPI benchmark cdcdcdcdcdcd");
+    expect(display?.modelBoundaryLabels).toContain("user services present");
+    expect(display?.modelBoundaryLabels).toContain("user service requests 20");
+    expect(display?.modelBoundaryLabels).toContain("user services exported 18");
+    expect(display?.modelBoundaryLabels).toContain("user services hidden 2");
+    expect(display?.modelBoundaryLabels).toContain("compute requests 8");
+    expect(display?.modelBoundaryLabels).toContain("network waiting 3");
+    expect(display?.modelBoundaryLabels).toContain("user services abababababab");
     expect(display?.modelBoundaryLabels).toContain(
       "report RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1"
     );

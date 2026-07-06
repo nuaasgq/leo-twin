@@ -43,6 +43,7 @@ import {
   RuntimeExportRestoreCommandResultV1,
   RuntimeExportRestorePreflightV1,
   RuntimeComputeTaskTimelineSummaryV1,
+  RuntimeExportUserServiceRequestEvidenceV2,
   RuntimeKpiSampleV1,
   RuntimeKpiTimeSeriesV1,
   RuntimeExportHistoryV1,
@@ -10757,6 +10758,16 @@ export function buildDataPanelExportScenarioReviewBundleDisplay(
             )}`
           ]
         : []),
+      ...(bundle.user_service_requests
+        ? [
+            `user services ${formatCount(
+              bundle.user_service_requests.exported_request_count
+            )} / ${formatCount(bundle.user_service_requests.request_count)}`,
+            `user services ${shortRuntimeHash(
+              bundle.user_service_requests.summary_hash
+            )}`
+          ]
+        : []),
       `audit ${bundle.audit_index.filename}`
     ],
     boundaryLabels: [
@@ -10834,7 +10845,8 @@ function buildDataPanelScenarioReviewWorkflowRows(
   const orderedFilenames = [
     ...bundle.recommended_review_order,
     "route_detail_index_v1.json",
-    "service_lifecycle_trace_v2.json"
+    "service_lifecycle_trace_v2.json",
+    "user_service_request_summary_v2.json"
   ];
   const seen = new Set<string>();
   return orderedFilenames
@@ -10885,12 +10897,14 @@ function scenarioReviewWorkflowStepLabel(filename: string): string | null {
       return "7 route evidence";
     case "service_lifecycle_trace_v2.json":
       return "8 service trace";
+    case "user_service_request_summary_v2.json":
+      return "9 user services";
     case "events.jsonl":
-      return "9 event evidence";
+      return "10 event evidence";
     case "metrics.csv":
-      return "10 metrics";
+      return "11 metrics";
     case "summary.json":
-      return "11 summary";
+      return "12 summary";
     default:
       return null;
   }
@@ -11272,6 +11286,25 @@ export function buildDataPanelExportPackageAuditIndexDisplay(
             )}`,
             `KPI benchmark ${shortRuntimeHash(
               auditIndex.network_kpi_benchmark_validation_hash ?? ""
+            )}`
+          ]
+        : []),
+      ...(auditIndex.user_service_request_summary_present !== undefined
+        ? [
+            `user services ${
+              auditIndex.user_service_request_summary_present ? "present" : "missing"
+            }`,
+            `user service requests ${formatCount(
+              auditIndex.user_service_request_summary_request_count ?? 0
+            )}`,
+            `user services exported ${formatCount(
+              auditIndex.user_service_request_summary_exported_request_count ?? 0
+            )}`,
+            `user services hidden ${formatCount(
+              auditIndex.user_service_request_summary_hidden_request_count ?? 0
+            )}`,
+            `user services ${shortRuntimeHash(
+              auditIndex.user_service_request_summary_hash ?? ""
             )}`
           ]
         : []),
@@ -11986,6 +12019,23 @@ function runtimeExportNetworkKpiBenchmarkValidationLabels(
   ];
 }
 
+function runtimeExportUserServiceRequestLabels(
+  evidence: RuntimeExportUserServiceRequestEvidenceV2 | null | undefined
+): readonly string[] {
+  if (evidence === null || evidence === undefined) {
+    return [];
+  }
+  return [
+    `user services ${evidence.evidence_present ? "present" : "missing"}`,
+    `user service requests ${formatCount(evidence.request_count)}`,
+    `user services exported ${formatCount(evidence.exported_request_count)}`,
+    `user services hidden ${formatCount(evidence.hidden_request_count)}`,
+    `compute requests ${formatCount(evidence.compute_request_count)}`,
+    `network waiting ${formatCount(evidence.network_waiting_request_count)}`,
+    `user services ${shortRuntimeHash(evidence.summary_hash)}`
+  ];
+}
+
 export function buildDataPanelExportReviewSummaryDisplay(
   summary: RuntimeExportReviewSummaryV1 | null | undefined
 ): DataPanelExportReviewSummaryDisplay | null {
@@ -12013,6 +12063,7 @@ export function buildDataPanelExportReviewSummaryDisplay(
       ...runtimeExportNetworkKpiBenchmarkValidationLabels(
         summary.network_kpi_benchmark_validation
       ),
+      ...runtimeExportUserServiceRequestLabels(summary.user_service_requests),
       ...runtimeExportRouteComparisonReviewLabels(summary.route_comparison_review)
     ],
     artifactLabels: [
@@ -12023,6 +12074,15 @@ export function buildDataPanelExportReviewSummaryDisplay(
       `review summary ${
         summary.artifacts.review_summary_exported ? "已导出" : "缺失"
       }`,
+      ...(summary.artifacts.user_service_request_summary_exported !== undefined
+        ? [
+            `user services ${
+              summary.artifacts.user_service_request_summary_exported
+                ? "exported"
+                : "missing"
+            }`
+          ]
+        : []),
       ...missing.map((filename) => `缺失 ${filename}`)
     ]
   };
@@ -12103,6 +12163,7 @@ export function buildDataPanelExportDiagnosticsDisplay(
       ...runtimeExportNetworkKpiBenchmarkValidationLabels(
         diagnostics.network_kpi_benchmark_validation
       ),
+      ...runtimeExportUserServiceRequestLabels(diagnostics.user_service_requests),
       ...runtimeExportRouteComparisonReviewLabels(
         diagnostics.route_comparison_review
       )

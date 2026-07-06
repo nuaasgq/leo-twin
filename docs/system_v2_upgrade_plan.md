@@ -134,7 +134,10 @@ Tasks:
     `user_service_request_summary_v2.json` as a bounded runtime export artifact
     so offline result packages can review the same backend-owned per-user
     service request semantics without live runtime lookup or service
-    recomputation.
+    recomputation. T329 binds that artifact evidence into the standalone
+    dashboard export review surfaces: review summary, diagnostics, scenario
+    review workflow, and audit-index sections now display backend-provided
+    request counts, exported-window counts, hidden counts, and evidence hashes.
 - V2-013: Add service lifecycle trace.
   - Scope: input flow, queue, compute, output flow, terminal state.
   - Output: timeline records for dashboard and result export.
