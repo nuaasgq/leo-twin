@@ -846,6 +846,11 @@ export const DataPanel = memo(function DataPanel({
         bottleneckComponent: "ALL"
       });
     }
+    const traceId = linkedReviewId(row.traceId);
+    if (traceId) {
+      setSelectedServiceTraceId(traceId);
+      onRuntimeServiceTraceDetailSelect?.(traceId);
+    }
     const serviceQuery = userBusinessRequestServiceTraceQuery(row);
     if (serviceQuery) {
       setExportServiceTraceFilter(serviceQuery);
@@ -5638,6 +5643,7 @@ export interface UserBusinessRequestRow {
   routeId?: string;
   flowId?: string;
   taskId?: string;
+  traceId?: string;
   computeNodeId?: string;
   nextHopId?: string;
   platformTypeLabel: string;
@@ -6312,6 +6318,7 @@ function buildSnapshotUserBusinessRequestRows(
     const routeId = selectedRoute?.route_id ?? "";
     const flowId = selectedRoute?.flow_id ?? "";
     const taskId = "";
+    const traceId = "";
     const computeNodeId = "";
     const nextHopId = selectedRoute?.path[1] ?? "";
     const requestId = flowId;
@@ -6322,6 +6329,7 @@ function buildSnapshotUserBusinessRequestRows(
       routeId,
       flowId,
       taskId,
+      traceId,
       computeNodeId,
       nextHopId
     });
@@ -6349,6 +6357,7 @@ function buildSnapshotUserBusinessRequestRows(
       routeId,
       flowId,
       taskId,
+      traceId,
       computeNodeId,
       nextHopId,
       platformTypeLabel: userPlatformTypeLabel(user),
@@ -6890,6 +6899,7 @@ export function filterUserBusinessRequestRows(
       item.routeId,
       item.flowId,
       item.taskId,
+      item.traceId,
       item.computeNodeId,
       item.nextHopId,
       item.platformTypeLabel,
@@ -8314,6 +8324,7 @@ function userBusinessRequestCorrelationLabel({
   routeId,
   flowId,
   taskId,
+  traceId,
   computeNodeId,
   nextHopId
 }: {
@@ -8322,6 +8333,7 @@ function userBusinessRequestCorrelationLabel({
   routeId: string;
   flowId: string;
   taskId: string;
+  traceId: string;
   computeNodeId: string;
   nextHopId: string;
 }): string {
@@ -8333,6 +8345,7 @@ function userBusinessRequestCorrelationLabel({
     routeId ? `route ${routeId}` : "",
     flowId ? `flow ${flowId}` : "",
     taskId ? `task ${taskId}` : "",
+    traceId ? `trace ${traceId}` : "",
     computeNodeId ? `compute ${computeNodeId}` : "",
     nextHopId ? `next ${nextHopId}` : ""
   ]
@@ -8362,6 +8375,7 @@ function userBusinessRequestServiceTraceQuery(
   row: UserBusinessRequestRow
 ): string {
   return (
+    linkedReviewId(row.traceId) ??
     linkedReviewId(row.serviceRequestId) ??
     linkedReviewId(row.requestId) ??
     linkedReviewId(row.taskId) ??
@@ -8381,6 +8395,7 @@ function buildBackendUserBusinessRequestRows(
       item.route_id ?? item.primary_route_id ?? item.input_route_id ?? item.output_route_id ?? "";
     const flowId = item.flow_id ?? item.primary_flow_id ?? "";
     const taskId = item.task_id ?? item.service_task_id ?? "";
+    const traceId = item.trace_id ?? "";
     const computeNodeId = item.compute_node_id ?? "";
     const nextHopId = item.next_hop_id ?? item.primary_next_hop_id ?? "";
     const correlationLabel = userBusinessRequestCorrelationLabel({
@@ -8389,6 +8404,7 @@ function buildBackendUserBusinessRequestRows(
       routeId,
       flowId,
       taskId,
+      traceId,
       computeNodeId,
       nextHopId
     });
@@ -8433,6 +8449,7 @@ function buildBackendUserBusinessRequestRows(
       routeId,
       flowId,
       taskId,
+      traceId,
       computeNodeId,
       nextHopId,
       platformTypeLabel: `${item.platform_type_label || item.platform_type}${cellLabel}`,

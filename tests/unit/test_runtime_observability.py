@@ -278,6 +278,7 @@ def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> No
                 "loss_proxy_rate": 0.01,
                 "service_state": "task-0/310ms/RUNNING",
                 "service_task_id": "task-0",
+                "trace_id": "trace:task-0",
                 "service_complete": False,
                 "service_total_latency_s": 0.31,
                 "input_network_latency_s": 0.1,
@@ -326,6 +327,7 @@ def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> No
                 "loss_proxy_rate": 0.05,
                 "service_state": "",
                 "service_task_id": "",
+                "trace_id": "",
                 "service_complete": False,
                 "service_total_latency_s": None,
                 "input_network_latency_s": None,
@@ -384,6 +386,7 @@ def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> No
         "route_id": "route-a",
         "flow_id": "flow-a",
         "task_id": "task-0",
+        "trace_id": "trace:task-0",
         "target_node_id": "compute-0",
         "next_hop_id": "sat-0",
         "network_queue_depth": 0,
@@ -398,6 +401,9 @@ def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> No
             "RUNNING_COMPUTE_SERVICE/sat-0"
         ),
     }
+    assert first["service_lifecycle_trace_v2"]["items"][0]["trace_id"] == (
+        user_service_summary["items"][0]["trace_id"]
+    )
     assert user_service_summary["items"][1]["request_id"] == "flow-b"
     assert user_service_summary["items"][1]["terminal_state"] == "WAITING_NETWORK"
     assert first["satellite_service_summary_v1"][

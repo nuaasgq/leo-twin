@@ -150,6 +150,10 @@ Tasks:
     correlation ids in dashboard user-service rows and lets selected export
     package rows drive package route evidence, package service-trace filtering,
     and live runtime detail lookups without frontend business recomputation.
+    T333 adds backend-owned `trace_id` correlation to user-service request rows,
+    propagates it through runtime export package pages, and lets dashboard
+    navigation open exact service lifecycle trace details when the current
+    runtime exposes the matching trace.
 - V2-013: Add service lifecycle trace.
   - Scope: input flow, queue, compute, output flow, terminal state.
   - Output: timeline records for dashboard and result export.

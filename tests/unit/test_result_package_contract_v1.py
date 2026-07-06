@@ -482,9 +482,21 @@ def test_runtime_export_user_service_request_page_v1_filters_artifact_window() -
     }
     assert first["items"][0]["user_id"] == "user-1"
     assert first["items"][0]["request_id"] == "flow-1"
+    assert first["items"][0]["trace_id"] == ""
     assert first["items"][0]["network_waiting"] is True
     assert first["page_hash"].startswith("sha256:")
     assert "NO_SERVICE_RECOMPUTE" in first["boundary_conditions"]
+
+    trace_match = build_runtime_export_user_service_request_page_v1(
+        artifact,
+        package_id="pkg-1",
+        cursor=0,
+        limit=10,
+        query="trace:service-0",
+    )
+    assert trace_match["request_count"] == 1
+    assert trace_match["items"][0]["request_id"] == "service-0"
+    assert trace_match["items"][0]["trace_id"] == "trace:service-0"
 
 
 def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready() -> None:
@@ -1774,6 +1786,7 @@ def _user_service_request_summary() -> dict[str, object]:
         "items": (
             {
                 "request_id": "service-0",
+                "trace_id": "trace:service-0",
                 "user_id": "user-0",
                 "service_class": "COMPUTE_SERVICE",
                 "request_state": "COMPUTE_SERVICE_ACTIVE",
@@ -1785,6 +1798,7 @@ def _user_service_request_summary() -> dict[str, object]:
             },
             {
                 "request_id": "flow-1",
+                "trace_id": "",
                 "user_id": "user-1",
                 "service_class": "DATA_TRANSFER",
                 "request_state": "NETWORK_WAITING",

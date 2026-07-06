@@ -1288,6 +1288,7 @@ def _user_service_request_summary_v2(
             "selected_satellite_id": "selected route path first satellite",
             "compute_node_id": "service_latency_history_v1 placement fields",
             "latency_components": "service_latency_history_v1 component latencies",
+            "trace_id": "service_lifecycle_trace_v2 trace id derived from service_latency_history_v1",
         },
         "model_assumptions": (
             "One row summarizes the current flow-level request state for one user.",
@@ -1335,6 +1336,7 @@ def _user_service_request_item_v2(item: Mapping[str, Any]) -> dict[str, object]:
             "route_id": _str(row.get("primary_route_id")),
             "flow_id": _str(row.get("primary_flow_id")),
             "task_id": _str(row.get("service_task_id")),
+            "trace_id": _str(row.get("trace_id")),
             "target_node_id": _str(row.get("destination_id")),
             "next_hop_id": _str(row.get("primary_next_hop_id")),
             "network_queue_depth": _count(row.get("network_queue_count")),
@@ -1486,6 +1488,7 @@ def _user_item(
         "loss_proxy_rate": _optional_float(selected_route.get("loss_rate")) if selected_route is not None else None,
         "service_state": service_lookup.get(flow_id, ""),
         "service_task_id": _str(service_detail.get("task_id")),
+        "trace_id": _service_trace_id(service_detail),
         "service_complete": bool(service_detail.get("complete", False)),
         "service_total_latency_s": _optional_float(
             service_detail.get("total_latency_s")
@@ -3202,6 +3205,15 @@ def _service_request_id(item: Mapping[str, Any]) -> str:
     if output_flow_id.endswith("-output"):
         return output_flow_id[: -len("-output")]
     return _service_id(item)
+
+
+def _service_trace_id(item: Mapping[str, Any]) -> str:
+    if not item:
+        return ""
+    service_id = _service_request_id(item)
+    if not service_id or service_id == "service":
+        return ""
+    return f"trace:{service_id}"
 
 
 def _service_trace_lookup_ids(trace: Mapping[str, Any]) -> tuple[str, ...]:

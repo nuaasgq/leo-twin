@@ -2665,6 +2665,7 @@ export interface RuntimeUserRequestItemV1 {
   route_id?: string;
   flow_id?: string;
   task_id?: string;
+  trace_id?: string;
   target_node_id?: string;
   next_hop_id?: string;
   primary_route_id?: string;
@@ -2748,6 +2749,7 @@ export interface RuntimeUserServiceRequestItemV2 extends RuntimeUserRequestItemV
   route_id: string;
   flow_id: string;
   task_id: string;
+  trace_id: string;
   target_node_id: string;
   next_hop_id: string;
   network_queue_depth: number;

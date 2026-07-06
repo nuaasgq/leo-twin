@@ -4202,6 +4202,7 @@ describe("buildDataPanelExportCompareDisplay", () => {
             route_id: "route-00001",
             flow_id: "flow-00001",
             task_id: "task-00001",
+            trace_id: "trace:svc-00001",
             target_node_id: "sat-00001",
             next_hop_id: "sat-00001",
             network_queue_depth: 1,
@@ -4252,11 +4253,12 @@ describe("buildDataPanelExportCompareDisplay", () => {
           routeId: "route-00001",
           flowId: "flow-00001",
           taskId: "task-00001",
+          traceId: "trace:svc-00001",
           computeNodeId: "sat-00001",
           computeLabel: "1 compute",
           selectedSatelliteId: "sat-00001",
           correlationLabel:
-            "request svc-00001 / route route-00001 / flow flow-00001 / task task-00001 / compute sat-00001 / next sat-00001"
+            "request svc-00001 / route route-00001 / flow flow-00001 / task task-00001 / trace trace:svc-00001 / compute sat-00001 / next sat-00001"
         })
       ],
       filterLabel: "query sat-00001 / backend artifact page 1-1 / 2",
@@ -10194,6 +10196,7 @@ describe("buildUserBusinessRequestRows", () => {
           route_id: "route-a",
           flow_id: "flow-a",
           task_id: "",
+          trace_id: "",
           target_node_id: "service-0",
           next_hop_id: "sat-0",
           network_queue_depth: 0,

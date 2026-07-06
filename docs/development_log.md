@@ -16139,3 +16139,60 @@ change.
     `user_service_request_summary_v2` rows so a package user-service row can
     open an exact service lifecycle trace instead of using text-filtered trace
     search.
+
+## 2026-07-07 - User Service Trace Correlation v1
+
+- Branch: `feature/T333-user-service-trace-correlation-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add backend-owned `trace_id` correlation to
+  `user_service_request_summary_v2` rows by deriving the id from
+  `service_latency_history_v1` with the same deterministic service-id rule used
+  by `service_lifecycle_trace_v2`. The field is preserved in runtime export
+  package user-service pages, included in package-page search text, surfaced in
+  frontend row correlation labels, and used by dashboard review navigation to
+  open exact live service trace detail when the current runtime exposes the
+  matching trace.
+- Changed files/modules:
+  - `src/leo_twin/services/runtime_observability.py`
+  - `src/leo_twin/services/result_package_contract.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `tests/unit/test_runtime_observability.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m compileall -q src\leo_twin\services\runtime_observability.py src\leo_twin\services\result_package_contract.py`
+    - Result: passed.
+  - `python -m pytest tests\unit\test_runtime_observability.py::test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned tests\unit\test_runtime_observability.py::test_service_lifecycle_trace_v2_is_backend_owned_and_deterministic tests\unit\test_result_package_contract_v1.py::test_runtime_export_user_service_request_page_v1_filters_artifact_window tests\integration\test_runtime_session_control.py::test_demo_adapter_exports_runtime_result_package -q`
+    - Result: passed, 4 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path.
+  - `pnpm --dir frontend test dataPanel.test.ts appSurface.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 2 test
+      files and 229 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path. Vite
+      reported the existing large DataPanel chunk warning.
+- Problems encountered:
+  - A stale remembered pytest selector did not exist; the real runtime
+    observability test is
+    `test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned`.
+  - Existing expected dictionaries and frontend fixtures needed the new
+    `trace_id` field added explicitly so the test suite proves the correlation
+    instead of silently ignoring it.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - `trace_id` is present only when service lifecycle history can be correlated
+    through input/output flow ids. Pure network-service rows may still have an
+    empty trace id.
+  - Exact live trace lookup still depends on the current runtime exposing the
+    same trace id as the selected export package. No replay or package restore
+    is performed.
+- Recommended follow-up:
+  - Add a compact package-side exact service trace action for exported
+    `service_lifecycle_trace_v2.json` rows, so package review can open a trace
+    item directly without relying on live runtime availability.
