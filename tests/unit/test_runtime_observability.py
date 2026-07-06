@@ -7,6 +7,7 @@ from leo_twin.services.runtime_observability import (
     build_runtime_route_detail_item,
     build_runtime_service_detail_page,
     build_runtime_service_detail_item,
+    build_runtime_service_lifecycle_trace_v2,
     build_runtime_lifecycle_summaries,
     build_runtime_node_detail_page,
     build_runtime_route_explanation_summary,
@@ -125,6 +126,8 @@ def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> No
     assert first == second
     assert first["compute_task_timeline_summary_v1"]["task_count"] == 1
     assert first["compute_task_timeline_summary_v1"]["queued_task_count"] == 1
+    assert first["service_lifecycle_trace_v2"]["service_count"] == 1
+    assert first["service_lifecycle_trace_v2"]["items"][0]["service_id"] == "task-0"
     assert first["route_explanation_summary_v1"] == {
         "version": "v1",
         "source": "BACKEND_RUNTIME_SNAPSHOT",
@@ -667,6 +670,119 @@ def test_compute_task_timeline_summary_is_backend_owned_and_deterministic() -> N
         ),
     }
     assert build_runtime_compute_task_timeline_summary(None)["task_count"] == 0
+
+
+def test_service_lifecycle_trace_v2_is_backend_owned_and_deterministic() -> None:
+    history = {
+        "items": [
+            {
+                "task_id": "svc-02-compute_service-00000-task",
+                "input_flow_id": "svc-02-compute_service-00000-input",
+                "output_flow_id": "svc-02-compute_service-00000-output",
+                "input_route_id": "route:input",
+                "output_route_id": "route:output",
+                "compute_node_id": "sat-a",
+                "service_placement_status": "PLACED",
+                "service_placement_policy": "MIN_ESTIMATED_FINISH_TIME",
+                "service_placement_bottleneck_resource": "cpu_gflops_fp32",
+                "complete": True,
+                "first_sample_sim_time": 6.0,
+                "last_sample_sim_time": 8.0,
+                "input_network_latency_s": 3.0,
+                "compute_queue_delay_s": 0.0,
+                "compute_execution_delay_s": 2.0,
+                "output_network_latency_s": 1.5,
+                "total_latency_s": 6.5,
+                "component_timeline": [
+                    {
+                        "component": "input_network",
+                        "sample_sim_time": 6.0,
+                        "duration_s": 3.0,
+                        "input_flow_id": "svc-02-compute_service-00000-input",
+                        "route_id": "route:input",
+                    },
+                    {
+                        "component": "compute_queue",
+                        "sample_sim_time": 6.0,
+                        "duration_s": 0.0,
+                        "route_id": "route:input",
+                    },
+                    {
+                        "component": "compute_execution",
+                        "sample_sim_time": 6.0,
+                        "duration_s": 2.0,
+                    },
+                    {
+                        "component": "output_network",
+                        "sample_sim_time": 8.0,
+                        "duration_s": 1.5,
+                        "output_flow_id": "svc-02-compute_service-00000-output",
+                        "route_id": "route:output",
+                    },
+                ],
+            },
+            {
+                "task_id": "svc-01-compute_service-00000-task",
+                "input_flow_id": "svc-01-compute_service-00000-input",
+                "output_flow_id": "svc-01-compute_service-00000-output",
+                "input_route_id": "route:pending-input",
+                "compute_node_id": "sat-b",
+                "complete": False,
+                "last_sample_sim_time": 10.0,
+                "input_network_latency_s": 4.0,
+                "compute_queue_delay_s": 1.0,
+                "compute_execution_delay_s": 2.5,
+                "component_timeline": [
+                    {
+                        "component": "compute_execution",
+                        "sample_sim_time": 10.0,
+                        "duration_s": 2.5,
+                    }
+                ],
+            },
+        ],
+    }
+
+    first = build_runtime_service_lifecycle_trace_v2(history, cursor=0, limit=1)
+    second = build_runtime_service_lifecycle_trace_v2(history, cursor=0, limit=1)
+
+    assert first == second
+    assert first["version"] == "v2"
+    assert first["source_summary"] == "service_latency_history_v1"
+    assert first["summary_scope"] == "SERVICE_LIFECYCLE_TRACE_WINDOW"
+    assert first["service_count"] == 2
+    assert first["trace_count"] == 1
+    assert first["has_more"] is True
+    assert first["complete_trace_count"] == 1
+    assert first["running_trace_count"] == 1
+    assert first["hidden_trace_count"] == 1
+    trace = first["items"][0]
+    assert trace["service_id"] == "svc-01-compute_service-00000"
+    assert trace["terminal_state"] == "RUNNING"
+    assert trace["terminal_state_reason"] == "OUTPUT_NETWORK_PENDING"
+    assert trace["stage_count"] == 4
+    assert trace["observed_stage_count"] == 3
+    assert trace["pending_stage_count"] == 1
+    assert trace["stages"][-1] == {
+        "stage_index": 3,
+        "stage_id": "svc-01-compute_service-00000:output_network",
+        "component": "output_network",
+        "stage_kind": "OUTPUT_NETWORK",
+        "stage_label": "Output network",
+        "stage_status": "PENDING",
+        "sample_sim_time": 10.0,
+        "duration_s": 0.0,
+        "flow_id": "svc-01-compute_service-00000-output",
+        "route_id": "",
+        "compute_node_id": "",
+    }
+    complete = build_runtime_service_lifecycle_trace_v2(
+        history,
+        query="sat-a",
+    )
+    assert complete["trace_count"] == 1
+    assert complete["items"][0]["terminal_state"] == "COMPLETE"
+    assert complete["items"][0]["total_latency_s"] == 6.5
 
 
 def test_runtime_user_summary_counts_full_set_when_items_are_limited() -> None:

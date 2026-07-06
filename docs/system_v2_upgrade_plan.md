@@ -115,6 +115,12 @@ Tasks:
   - Scope: input flow, queue, compute, output flow, terminal state.
   - Output: timeline records for dashboard and result export.
   - Depends on: V2-012 and compute lifecycle work.
+  - Status: T255 adds `leo_twin.service_lifecycle_trace_contract.v2` and
+    exposes `service_lifecycle_trace_v2` from runtime observability. The trace
+    is derived from `service_latency_history_v1` and reports input network,
+    compute queue, compute execution, output network, and terminal state
+    fields without changing Event Kernel, network routing, or compute
+    scheduling.
 
 ### WS3. Network Semantics and KPI Trust v2
 

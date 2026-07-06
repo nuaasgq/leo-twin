@@ -5,8 +5,24 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from leo_twin.schema.service_lifecycle_trace_contract import (
+    SERVICE_LIFECYCLE_TRACE_CONTRACT_V2_ID,
+)
+
 
 RuntimeObservabilitySummary = dict[str, object]
+_SERVICE_LIFECYCLE_TRACE_COMPONENTS = (
+    "input_network",
+    "compute_queue",
+    "compute_execution",
+    "output_network",
+)
+_SERVICE_LIFECYCLE_DURATION_FIELDS = {
+    "input_network": "input_network_latency_s",
+    "compute_queue": "compute_queue_delay_s",
+    "compute_execution": "compute_execution_delay_s",
+    "output_network": "output_network_latency_s",
+}
 
 
 def build_runtime_lifecycle_summaries(
@@ -43,6 +59,9 @@ def build_runtime_lifecycle_summaries(
         "satellite_service_summary_v1": satellite_summary,
         "route_explanation_summary_v1": route_explanation_summary,
         "compute_task_timeline_summary_v1": build_runtime_compute_task_timeline_summary(
+            service_latency_history
+        ),
+        "service_lifecycle_trace_v2": build_runtime_service_lifecycle_trace_v2(
             service_latency_history
         ),
         "node_detail_summary_v1": build_runtime_node_detail_summary(
@@ -87,6 +106,68 @@ def build_runtime_compute_task_timeline_summary(
         "avg_compute_execution_delay_s": _average(execution_delays),
         "items": rows,
     }
+
+
+def build_runtime_service_lifecycle_trace_v2(
+    service_latency_history: Mapping[str, Any] | None,
+    *,
+    cursor: int = 0,
+    limit: int = 100,
+    query: str = "",
+) -> dict[str, object]:
+    """Build deterministic product-level communication-compute service traces."""
+
+    items = tuple(_records((service_latency_history or {}).get("items")))
+    ordered_items = tuple(sorted(items, key=_service_detail_sort_key))
+    all_traces = tuple(_service_lifecycle_trace_item(item) for item in ordered_items)
+    filtered_traces = tuple(
+        item for item in all_traces if _detail_item_matches_query(item, query)
+    )
+    normalized_cursor = _page_cursor(cursor)
+    normalized_limit = _page_limit(limit)
+    traces = filtered_traces[
+        normalized_cursor : normalized_cursor + normalized_limit
+    ]
+    next_cursor = min(len(filtered_traces), normalized_cursor + len(traces))
+    filter_query = _normalized_filter_text(query)
+    result: dict[str, object] = {
+        "version": "v2",
+        "contract_id": SERVICE_LIFECYCLE_TRACE_CONTRACT_V2_ID,
+        "source": "SERVICE_LATENCY_HISTORY",
+        "source_summary": "service_latency_history_v1",
+        "summary_scope": (
+            "FILTERED_SERVICE_LIFECYCLE_TRACE_WINDOW"
+            if filter_query
+            else "SERVICE_LIFECYCLE_TRACE_WINDOW"
+        ),
+        "trace_model": "COMMUNICATION_COMPUTE_COMPONENT_PROXY",
+        "cursor": normalized_cursor,
+        "limit": normalized_limit,
+        "next_cursor": next_cursor,
+        "has_more": next_cursor < len(filtered_traces),
+        "service_count": len(filtered_traces),
+        "trace_count": len(traces),
+        "complete_trace_count": sum(
+            1 for item in filtered_traces if item["terminal_state"] == "COMPLETE"
+        ),
+        "running_trace_count": sum(
+            1 for item in filtered_traces if item["terminal_state"] == "RUNNING"
+        ),
+        "incomplete_trace_count": sum(
+            1 for item in filtered_traces if item["terminal_state"] == "INCOMPLETE"
+        ),
+        "hidden_trace_count": max(0, len(filtered_traces) - len(traces)),
+        "items": traces,
+    }
+    if filter_query:
+        result.update(
+            {
+                "unfiltered_service_count": len(ordered_items),
+                "filter_query": filter_query,
+                "filter_applied": True,
+            }
+        )
+    return result
 
 
 def build_runtime_node_detail_summary(
@@ -1325,6 +1406,166 @@ def _service_detail_item(item: Mapping[str, Any]) -> dict[str, object]:
     }
 
 
+def _service_lifecycle_trace_item(item: Mapping[str, Any]) -> dict[str, object]:
+    service_id = _service_request_id(item)
+    stages = tuple(
+        _service_lifecycle_trace_stage(item, component, index)
+        for index, component in enumerate(_SERVICE_LIFECYCLE_TRACE_COMPONENTS)
+    )
+    terminal_state = _service_lifecycle_terminal_state(item, stages)
+    return {
+        "trace_id": f"trace:{service_id}",
+        "service_id": service_id,
+        "task_id": _str(item.get("task_id")),
+        "service_class": "COMPUTE_SERVICE",
+        "input_flow_id": _str(item.get("input_flow_id")),
+        "output_flow_id": _str(item.get("output_flow_id")),
+        "input_route_id": _str(item.get("input_route_id")),
+        "output_route_id": _str(item.get("output_route_id")),
+        "compute_node_id": _str(item.get("compute_node_id")),
+        "placement_status": _str(item.get("service_placement_status")),
+        "placement_policy": _str(item.get("service_placement_policy")),
+        "placement_bottleneck_resource": _str(
+            item.get("service_placement_bottleneck_resource")
+        ),
+        "first_sample_sim_time": _optional_float(item.get("first_sample_sim_time")),
+        "last_sample_sim_time": _optional_float(item.get("last_sample_sim_time")),
+        "input_network_latency_s": _float(item.get("input_network_latency_s")),
+        "compute_queue_delay_s": _float(item.get("compute_queue_delay_s")),
+        "compute_execution_delay_s": _float(item.get("compute_execution_delay_s")),
+        "output_network_latency_s": _float(item.get("output_network_latency_s")),
+        "total_latency_s": _float(item.get("total_latency_s")),
+        "terminal_state": terminal_state,
+        "terminal_state_reason": _service_lifecycle_terminal_reason(item, stages),
+        "stage_count": len(stages),
+        "observed_stage_count": sum(
+            1 for stage in stages if stage["stage_status"] == "OBSERVED"
+        ),
+        "pending_stage_count": sum(
+            1 for stage in stages if stage["stage_status"] == "PENDING"
+        ),
+        "stages": stages,
+    }
+
+
+def _service_lifecycle_trace_stage(
+    item: Mapping[str, Any],
+    component: str,
+    index: int,
+) -> dict[str, object]:
+    stage = _service_component_stage(item, component)
+    duration_field = _SERVICE_LIFECYCLE_DURATION_FIELDS[component]
+    duration = (
+        _optional_float(stage.get("duration_s"))
+        if stage is not None
+        else _optional_float(item.get(duration_field))
+    )
+    observed = stage is not None or duration is not None
+    status = _service_lifecycle_stage_status(item, component, observed)
+    route_id = _service_lifecycle_stage_route_id(item, component, stage)
+    flow_id = _service_lifecycle_stage_flow_id(item, component, stage)
+    return {
+        "stage_index": index,
+        "stage_id": f"{_service_request_id(item)}:{component}",
+        "component": component,
+        "stage_kind": component.upper(),
+        "stage_label": _compute_task_stage_label(component),
+        "stage_status": status,
+        "sample_sim_time": (
+            _optional_float(stage.get("sample_sim_time"))
+            if stage is not None
+            else _optional_float(item.get("last_sample_sim_time"))
+        ),
+        "duration_s": 0.0 if duration is None else duration,
+        "flow_id": flow_id,
+        "route_id": route_id,
+        "compute_node_id": (
+            _str(item.get("compute_node_id"))
+            if component in {"compute_queue", "compute_execution"}
+            else ""
+        ),
+    }
+
+
+def _service_component_stage(
+    item: Mapping[str, Any],
+    component: str,
+) -> Mapping[str, Any] | None:
+    for stage in _records(item.get("component_timeline")):
+        if _str(stage.get("component")) == component:
+            return stage
+    return None
+
+
+def _service_lifecycle_stage_status(
+    item: Mapping[str, Any],
+    component: str,
+    observed: bool,
+) -> str:
+    if observed:
+        return "OBSERVED"
+    if component == "output_network" and _str(item.get("output_flow_id")):
+        return "PENDING"
+    return "UNKNOWN"
+
+
+def _service_lifecycle_stage_route_id(
+    item: Mapping[str, Any],
+    component: str,
+    stage: Mapping[str, Any] | None,
+) -> str:
+    if stage is not None and _str(stage.get("route_id")):
+        return _str(stage.get("route_id"))
+    if component == "input_network":
+        return _str(item.get("input_route_id"))
+    if component == "output_network":
+        return _str(item.get("output_route_id"))
+    return ""
+
+
+def _service_lifecycle_stage_flow_id(
+    item: Mapping[str, Any],
+    component: str,
+    stage: Mapping[str, Any] | None,
+) -> str:
+    if stage is not None:
+        flow_id = _str(stage.get("output_flow_id")) or _str(stage.get("input_flow_id"))
+        if flow_id:
+            return flow_id
+    if component == "output_network":
+        return _str(item.get("output_flow_id"))
+    if component == "input_network":
+        return _str(item.get("input_flow_id"))
+    return ""
+
+
+def _service_lifecycle_terminal_state(
+    item: Mapping[str, Any],
+    stages: tuple[dict[str, object], ...],
+) -> str:
+    if bool(item.get("complete")):
+        return "COMPLETE"
+    if any(stage["stage_status"] == "OBSERVED" for stage in stages):
+        return "RUNNING"
+    return "INCOMPLETE"
+
+
+def _service_lifecycle_terminal_reason(
+    item: Mapping[str, Any],
+    stages: tuple[dict[str, object], ...],
+) -> str:
+    if bool(item.get("complete")):
+        return "TOTAL_LATENCY_OBSERVED"
+    if any(
+        stage["component"] == "output_network" and stage["stage_status"] == "PENDING"
+        for stage in stages
+    ):
+        return "OUTPUT_NETWORK_PENDING"
+    if any(stage["stage_status"] == "OBSERVED" for stage in stages):
+        return "COMPONENTS_OBSERVED_BUT_TOTAL_MISSING"
+    return "NO_COMPONENT_OBSERVATIONS"
+
+
 def _compute_node_detail_item(
     node_id: str,
     node: Mapping[str, Any],
@@ -2236,6 +2477,19 @@ def _service_id(item: Mapping[str, Any]) -> str:
         or _str(item.get("output_flow_id"))
         or "service"
     )
+
+
+def _service_request_id(item: Mapping[str, Any]) -> str:
+    task_id = _str(item.get("task_id"))
+    if task_id.endswith("-task"):
+        return task_id[: -len("-task")]
+    input_flow_id = _str(item.get("input_flow_id"))
+    if input_flow_id.endswith("-input"):
+        return input_flow_id[: -len("-input")]
+    output_flow_id = _str(item.get("output_flow_id"))
+    if output_flow_id.endswith("-output"):
+        return output_flow_id[: -len("-output")]
+    return _service_id(item)
 
 
 def _records(value: object) -> tuple[Mapping[str, Any], ...]:

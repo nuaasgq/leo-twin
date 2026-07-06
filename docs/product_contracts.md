@@ -43,6 +43,16 @@ The current runtime supports deterministic flow-level mapping for
 runtime behavior marks unsupported execution semantics as reserved rather than
 silently pretending deadline scheduling or retries exist.
 
+## Service Lifecycle Trace Contract
+
+`leo_twin.service_lifecycle_trace_contract.v2` defines the product-level
+communication-compute service trace derived from `service_latency_history_v1`.
+It reports ordered `input_network`, `compute_queue`, `compute_execution`, and
+`output_network` stages, plus backend-owned terminal state fields. The trace is
+an observability contract over existing deterministic runtime metrics; it does
+not introduce packet-level timelines, stochastic retries, deadline-aware
+preemption, or external simulators.
+
 ## Compatibility Names
 
 `RouteState` is the canonical route contract.

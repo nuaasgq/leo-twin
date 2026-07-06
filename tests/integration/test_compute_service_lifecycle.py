@@ -10,6 +10,7 @@ from leo_twin.models.traffic import (
 )
 from leo_twin.schema import EventType, FlowRequest, Route, SimEvent
 from leo_twin.services.metrics import MetricsCollector
+from leo_twin.services.runtime_observability import build_runtime_service_lifecycle_trace_v2
 
 
 class DeterministicServiceNetwork(SimulationModule):
@@ -123,6 +124,18 @@ def test_compute_service_lifecycle_emits_component_metrics() -> None:
     assert summary["service_latency_output_network_avg_s"] == 1.4
     assert summary["service_latency_total_avg_s"] == 7.4
     history = metrics.service_latency_history()
+    trace = build_runtime_service_lifecycle_trace_v2(history)
+    assert trace["service_count"] == 1
+    assert trace["complete_trace_count"] == 1
+    assert trace["items"][0]["service_id"] == "svc-00-compute_service-00000"
+    assert tuple(stage["component"] for stage in trace["items"][0]["stages"]) == (
+        "input_network",
+        "compute_queue",
+        "compute_execution",
+        "output_network",
+    )
+    assert trace["items"][0]["terminal_state"] == "COMPLETE"
+    assert trace["items"][0]["total_latency_s"] == 7.4
     assert history == {
         "version": "v1",
         "mode": "RECENT_SERVICE_LIMITED",

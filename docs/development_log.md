@@ -6315,6 +6315,10 @@ change.
     - Result: passed, 4 tests.
   - `python -m pytest tests/integration/test_compute_service_lifecycle.py -q`
     - Result: passed, 1 test.
+  - `python -m pytest tests/unit/test_network_aware_compute.py tests/unit/test_metrics_module.py::test_service_latency_history_includes_sorted_component_timeline tests/unit/test_metrics_module.py::test_service_latency_history_includes_placement_candidate_queue_label -q`
+    - Result: passed, 12 tests.
+  - `python -m pytest tests/unit/test_product_contracts.py tests/unit/test_service_lifecycle_trace_contract_v2.py -q`
+    - Result: passed, 7 tests.
   - `python -m pytest tests/integration/test_runtime_session_control.py -q`
     - Result: passed, 12 tests.
 - Problems encountered:
@@ -12143,3 +12147,50 @@ change.
 - Recommended follow-up:
   - Start V2-013 service lifecycle trace so active service rows can reference a
     runtime lifecycle timeline instead of only generated demand records.
+
+## 2026-07-06 - Service Lifecycle Trace v2
+
+- Branch: `feature/T255-service-lifecycle-trace-v2`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: complete V2-013 by adding a schema-level service lifecycle trace
+  contract and exposing `service_lifecycle_trace_v2` from runtime observability.
+  The trace is derived from existing `service_latency_history_v1` component
+  metrics and reports ordered input-network, compute-queue, compute-execution,
+  output-network, and terminal-state fields. Event Kernel behavior, network
+  routing, compute scheduling, packet-level semantics, and frontend rendering
+  remain unchanged.
+- Changed files/modules:
+  - `src/leo_twin/schema/service_lifecycle_trace_contract.py`
+  - `src/leo_twin/schema/__init__.py`
+  - `src/leo_twin/services/runtime_observability.py`
+  - `tests/unit/test_service_lifecycle_trace_contract_v2.py`
+  - `tests/unit/test_runtime_observability.py`
+  - `tests/integration/test_compute_service_lifecycle.py`
+  - `docs/service_lifecycle_trace_v2.md`
+  - `docs/product_contracts.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_service_lifecycle_trace_contract_v2.py tests/unit/test_runtime_observability.py -q`
+    - Result: passed, 7 tests.
+  - `python -m pytest tests/integration/test_compute_service_lifecycle.py -q`
+    - Result: passed, 1 test.
+- Problems encountered:
+  - The runtime already had `service_latency_history_v1`,
+    `compute_task_timeline_summary_v1`, and service detail pages. The task was
+    therefore implemented as a thin product contract and trace projection layer
+    instead of duplicating compute/network lifecycle behavior.
+  - Current route-aware compute scheduling is driven by `TASK_ARRIVAL` plus a
+    matching `ROUTE_UPDATE`, not by waiting for `FLOW_COMPLETE`. The new trace
+    records the currently implemented deterministic lifecycle semantics rather
+    than overstating a stricter network-completion gate.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - Trace sample times come from metric observation records. They are
+    deterministic component observations, not packet-level start/end timestamps.
+  - The frontend does not yet render `service_lifecycle_trace_v2` as a dedicated
+    service trace drawer.
+- Recommended follow-up:
+  - Bind `service_lifecycle_trace_v2` into the dashboard service detail drawer
+    and result export package so users can inspect each request end to end.

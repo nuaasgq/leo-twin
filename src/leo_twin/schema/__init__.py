@@ -101,6 +101,16 @@ from leo_twin.schema.service_request_contract import (
     default_service_request_contract_v2,
     service_request_contract_v2_to_dict,
 )
+from leo_twin.schema.service_lifecycle_trace_contract import (
+    SERVICE_LIFECYCLE_TRACE_CONTRACT_V2_ID,
+    ServiceLifecycleStageContract,
+    ServiceLifecycleStageKind,
+    ServiceLifecycleStageStatus,
+    ServiceLifecycleTerminalState,
+    ServiceLifecycleTraceContractV2,
+    default_service_lifecycle_trace_contract_v2,
+    service_lifecycle_trace_contract_v2_to_dict,
+)
 from leo_twin.schema.sim_event import SimEvent
 
 __all__ = [
@@ -157,6 +167,7 @@ __all__ = [
     "RuntimeMode",
     "RuntimeStatus",
     "SERVICE_PLACEMENT_CONTRACT_V2_ID",
+    "SERVICE_LIFECYCLE_TRACE_CONTRACT_V2_ID",
     "SERVICE_REQUEST_CONTRACT_V2_ID",
     "SatelliteState",
     "SatelliteProfile",
@@ -170,6 +181,11 @@ __all__ = [
     "ServiceRequestFieldStatus",
     "ServiceRequestGeneratedArtifactContract",
     "ServiceRequestGeneratedArtifactKind",
+    "ServiceLifecycleStageContract",
+    "ServiceLifecycleStageKind",
+    "ServiceLifecycleStageStatus",
+    "ServiceLifecycleTerminalState",
+    "ServiceLifecycleTraceContractV2",
     "SimEvent",
     "TaskRequest",
     "TaskState",
@@ -184,8 +200,10 @@ __all__ = [
     "default_compute_resource_contract_v2",
     "default_network_model_contract_v2",
     "default_service_placement_contract_v2",
+    "default_service_lifecycle_trace_contract_v2",
     "default_service_request_contract_v2",
     "network_model_contract_v2_to_dict",
     "service_placement_contract_v2_to_dict",
+    "service_lifecycle_trace_contract_v2_to_dict",
     "service_request_contract_v2_to_dict",
 ]
