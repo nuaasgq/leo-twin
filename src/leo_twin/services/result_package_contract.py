@@ -3041,6 +3041,7 @@ def _runtime_export_benchmark_expected_range_result(
         "evidence_artifact_role": "benchmark_acceptance_audit_index",
         "evidence_context_id": f"benchmark.expected_range.{metric}",
         "evidence_context_label": f"expected range metric {metric}",
+        "evidence_json_pointer": "/benchmark_acceptance_binding_v1/expected_range_results",
         "observed_value": observed_value,
         "minimum": _number(expected_range.get("minimum")),
         "maximum": _number(expected_range.get("maximum")),
@@ -3071,6 +3072,7 @@ def _runtime_export_benchmark_fidelity_results(
             evidence_artifact_role="runtime_config_snapshot_status",
             evidence_context_id=f"fidelity_summary.{field}",
             evidence_context_label=f"fidelity summary {field}",
+            evidence_json_pointer=f"/status/fidelity_summary/{field}",
         )
         for field in ("orbit_update_mode", "metrics_mode", "space_link_mode")
     )
@@ -3109,6 +3111,7 @@ def _runtime_export_benchmark_runtime_status_results(
             evidence_artifact_role="route_trust_evidence",
             evidence_context_id=str(route_expectation.get("field", "")),
             evidence_context_label="route trust runtime status",
+            evidence_json_pointer="/route_trust",
         ),
         _runtime_export_benchmark_status_result(
             check_id="runtime_status.network_kpi",
@@ -3122,6 +3125,7 @@ def _runtime_export_benchmark_runtime_status_results(
             evidence_artifact_role="network_kpi_benchmark_validation",
             evidence_context_id=str(kpi_expectation.get("field", "")),
             evidence_context_label="network KPI benchmark validation",
+            evidence_json_pointer="/validation",
         ),
     )
 
@@ -3137,6 +3141,7 @@ def _runtime_export_benchmark_string_result(
     evidence_artifact_role: str,
     evidence_context_id: str,
     evidence_context_label: str,
+    evidence_json_pointer: str,
 ) -> dict[str, object]:
     issue_labels: tuple[str, ...] = ()
     status = "PASS"
@@ -3153,6 +3158,7 @@ def _runtime_export_benchmark_string_result(
         "evidence_artifact_role": evidence_artifact_role,
         "evidence_context_id": evidence_context_id,
         "evidence_context_label": evidence_context_label,
+        "evidence_json_pointer": evidence_json_pointer,
         "expected": expected,
         "actual": actual,
         "issue_labels": issue_labels,
@@ -3176,6 +3182,7 @@ def _runtime_export_benchmark_status_result(
     evidence_artifact_role: str,
     evidence_context_id: str,
     evidence_context_label: str,
+    evidence_json_pointer: str,
 ) -> dict[str, object]:
     result = {
         "check_id": check_id,
@@ -3184,6 +3191,7 @@ def _runtime_export_benchmark_status_result(
         "evidence_artifact_role": evidence_artifact_role,
         "evidence_context_id": evidence_context_id,
         "evidence_context_label": evidence_context_label,
+        "evidence_json_pointer": evidence_json_pointer,
         "expected": expected,
         "actual": actual,
         "observed_count": observed_count,

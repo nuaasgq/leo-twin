@@ -803,7 +803,10 @@ Tasks:
     mapping for older packages. T350 adds backend-owned
     `evidence_context_id` and `evidence_context_label` to the same benchmark
     rows, so dashboard rows can show the artifact-local context for a selected
-    check without inventing that context in the browser.
+    check without inventing that context in the browser. T351 adds backend
+    `evidence_json_pointer` fields to those rows, giving operators an
+    artifact-local JSON path hint for expected-range, fidelity, route-trust,
+    and KPI benchmark checks without browser-side recomputation.
 
 ### WS9. Delivery and Operations v2
 

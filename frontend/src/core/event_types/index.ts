@@ -2028,6 +2028,7 @@ export interface RuntimeExportBenchmarkAcceptanceResultV1 {
   evidence_artifact_role?: string;
   evidence_context_id?: string;
   evidence_context_label?: string;
+  evidence_json_pointer?: string;
   observed_value?: number | string;
   minimum?: number;
   maximum?: number;

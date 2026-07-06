@@ -3006,6 +3006,7 @@ export const DataPanel = memo(function DataPanel({
                                   {row.statusLabel} / {row.hashLabel}
                                 </small>
                                 <em>{row.contextLabel}</em>
+                                <em>{row.pointerLabel}</em>
                                 <em>{row.expectedLabel}</em>
                                 <em>{row.observedLabel}</em>
                                 {row.issueLabel.length > 0 ? (
@@ -11434,6 +11435,7 @@ export interface DataPanelExportBenchmarkGateRow {
   issueLabel: string;
   hashLabel: string;
   contextLabel: string;
+  pointerLabel: string;
   artifactLabel: string;
   artifactHref: string | null;
   artifactTitle: string;
@@ -12562,6 +12564,7 @@ function buildAcceptanceBenchmarkGateRows(
         issueLabel: gateCheck.issue_labels.join(", "),
         hashLabel: shortRuntimeHash(gateCheck.check_hash),
         contextLabel: `context ${gateCheck.check_id}`,
+        pointerLabel: "json /benchmark_acceptance_binding_v1",
         ...acceptanceBenchmarkArtifactLink(packageId, EXPORT_PACKAGE_AUDIT_INDEX_FILENAME)
       }
     ];
@@ -12601,6 +12604,7 @@ function buildAcceptanceBenchmarkResultRow(
     evidence_artifact_role?: string;
     evidence_context_id?: string;
     evidence_context_label?: string;
+    evidence_json_pointer?: string;
   }
 ): DataPanelExportBenchmarkGateRow {
   const artifactFilename = acceptanceBenchmarkArtifactFilename(groupLabel, result);
@@ -12614,12 +12618,19 @@ function buildAcceptanceBenchmarkResultRow(
     issueLabel: result.issue_labels.join(", "),
     hashLabel: shortRuntimeHash(result.result_hash),
     contextLabel: acceptanceBenchmarkContextLabel(result),
+    pointerLabel: acceptanceBenchmarkPointerLabel(result.evidence_json_pointer),
     ...acceptanceBenchmarkArtifactLink(
       packageId,
       artifactFilename,
       result.evidence_artifact_role
     )
   };
+}
+
+function acceptanceBenchmarkPointerLabel(pointer: string | undefined): string {
+  return pointer !== undefined && pointer.length > 0
+    ? `json ${pointer}`
+    : "json pointer not recorded";
 }
 
 function acceptanceBenchmarkContextLabel(result: {

@@ -1930,6 +1930,10 @@ def test_runtime_export_benchmark_acceptance_binding_v1_matches_standard_scenari
             for result in binding["expected_range_results"]
         )
         assert {
+            result["evidence_json_pointer"]
+            for result in binding["expected_range_results"]
+        } == {"/benchmark_acceptance_binding_v1/expected_range_results"}
+        assert {
             result["evidence_artifact_filename"]
             for result in binding["fidelity_results"]
         } == {"config_snapshot.json"}
@@ -1940,6 +1944,14 @@ def test_runtime_export_benchmark_acceptance_binding_v1_matches_standard_scenari
             "fidelity_summary.orbit_update_mode",
             "fidelity_summary.metrics_mode",
             "fidelity_summary.space_link_mode",
+        }
+        assert {
+            result["evidence_json_pointer"]
+            for result in binding["fidelity_results"]
+        } == {
+            "/status/fidelity_summary/orbit_update_mode",
+            "/status/fidelity_summary/metrics_mode",
+            "/status/fidelity_summary/space_link_mode",
         }
         runtime_artifacts = {
             result["check_id"]: result["evidence_artifact_filename"]
@@ -1958,6 +1970,14 @@ def test_runtime_export_benchmark_acceptance_binding_v1_matches_standard_scenari
         assert runtime_contexts == {
             "runtime_status.route_trust": "route_provenance_trust_summary_v1",
             "runtime_status.network_kpi": "network_kpi_benchmark_validation_v1",
+        }
+        runtime_pointers = {
+            result["check_id"]: result["evidence_json_pointer"]
+            for result in binding["runtime_status_results"]
+        }
+        assert runtime_pointers == {
+            "runtime_status.route_trust": "/route_trust",
+            "runtime_status.network_kpi": "/validation",
         }
         assert binding["binding_hash"].startswith("sha256:")
 
