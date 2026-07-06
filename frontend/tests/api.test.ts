@@ -19,6 +19,7 @@ import {
   loadRuntimeExportRestorePreflight,
   loadRuntimeExportServiceLifecycleTrace,
   loadRuntimeExportServiceTracePage,
+  loadRuntimeExportUserServiceRequestSummaryArtifact,
   loadRuntimeComputeNodeDetail,
   loadRuntimeComputeNodeDetails,
   loadRuntimeNodeDetails,
@@ -499,6 +500,110 @@ describe("runtime API diagnostics", () => {
     });
     expect(fetchMock).toHaveBeenCalledWith(
       "/runtime/export/packages/pkg/service-traces?cursor=0&limit=1&query=route-run&terminal_state=RUNNING&compute_node_id=sat-00003&stage_kind=OUTPUT_NETWORK&terminal_reason=OUTPUT_NETWORK_PENDING"
+    );
+  });
+
+  it("loads runtime export user service request summary artifacts", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        type: "RUNTIME_EXPORT_USER_SERVICE_REQUEST_SUMMARY_V2",
+        version: "v2",
+        artifact_id: "leo_twin.runtime_export_user_service_request_summary.v2",
+        source: "BACKEND_RUNTIME_EXPORT",
+        artifact_scope: "USER_SERVICE_REQUEST_OFFLINE_REVIEW",
+        package_id: "pkg",
+        package_dir: "artifacts/runtime_exports/pkg",
+        runtime_status_field: "user_service_request_summary_v2",
+        artifact_policy: "STANDALONE_RUNTIME_EXPORT_ARTIFACT",
+        artifact_window_only: true,
+        summary: {
+          version: "v2",
+          source: "BACKEND_RUNTIME_STATUS",
+          summary_scope: "USER_SERVICE_REQUEST_WINDOW",
+          cursor: 0,
+          limit: 100,
+          next_cursor: 1,
+          has_more: false,
+          request_model: "FLOW_LEVEL_USER_SERVICE_REQUEST_PROXY",
+          route_model: "FLOW_LEVEL_ROUTE_PROXY",
+          compute_model: "TASK_RESOURCE_DEMAND_PROXY",
+          packet_level_simulation: false,
+          frontend_inference_required: false,
+          user_count: 1,
+          active_user_count: 1,
+          compute_service_user_count: 1,
+          communication_user_count: 1,
+          item_count: 1,
+          hidden_user_count: 0,
+          request_count: 1,
+          active_request_count: 1,
+          communication_request_count: 1,
+          compute_request_count: 1,
+          network_waiting_request_count: 0,
+          completed_request_count: 0,
+          hidden_request_count: 0,
+          items: [
+            {
+              user_id: "user-00001",
+              platform_type: "GROUND_USER",
+              platform_type_label: "ground user",
+              status: "ACTIVE",
+              communication_route_count: 1,
+              available_route_count: 1,
+              compute_service_count: 1,
+              network_queue_count: 0,
+              selected_satellite_id: "sat-00001",
+              destination_id: "sat-00001",
+              path: ["user-00001", "sat-00001"],
+              request_id: "svc-00001",
+              service_request_id: "svc-00001",
+              service_class: "COMPUTE_SERVICE",
+              service_class_label: "compute service"
+            }
+          ]
+        },
+        user_service_request_export_policy: {
+          policy: "EXPORT_USER_SERVICE_REQUEST_WINDOW"
+        },
+        evidence: {
+          version: "v2",
+          evidence_id: "leo_twin.runtime_export_user_service_request_summary.v2",
+          source: "config_snapshot.status.user_service_request_summary_v2",
+          evidence_present: true,
+          request_model: "FLOW_LEVEL_USER_SERVICE_REQUEST_PROXY",
+          request_count: 1,
+          exported_request_count: 1,
+          hidden_request_count: 0,
+          active_request_count: 1,
+          compute_request_count: 1,
+          network_waiting_request_count: 0,
+          packet_level_simulation: false,
+          frontend_inference_required: false,
+          artifact_window_only: true,
+          summary_hash:
+            "sha256:abababababababababababababababababababababababababababababababab"
+        },
+        boundary_conditions: ["NO_SERVICE_RECOMPUTE"],
+        artifact_hash:
+          "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd"
+      })
+    }));
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+
+    await expect(
+      loadRuntimeExportUserServiceRequestSummaryArtifact("pkg")
+    ).resolves.toMatchObject({
+      package_id: "pkg",
+      artifact_window_only: true,
+      summary: {
+        request_model: "FLOW_LEVEL_USER_SERVICE_REQUEST_PROXY",
+        request_count: 1,
+        items: [{ user_id: "user-00001" }]
+      }
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/runtime/export/packages/pkg/files/user_service_request_summary_v2.json"
     );
   });
 

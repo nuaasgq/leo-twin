@@ -15977,3 +15977,55 @@ change.
   - Add a package artifact drawer/page for `user_service_request_summary_v2.json`
     that reuses the live v2 user-service table semantics and supports persisted
     artifact-window filtering.
+
+## 2026-07-06 - User Service Request Export Detail v1
+
+- Branch: `feature/T330-user-service-request-export-detail-v1`
+- Commit: pending commit note; final hash is reported after commit creation.
+- Scope: add a read-only standalone dashboard view for the persisted
+  `user_service_request_summary_v2.json` runtime export artifact. The selected
+  result package now loads the artifact through the existing package file
+  endpoint, renders artifact metadata and evidence hashes, links to the raw
+  JSON, and reuses the live v2 user-service request table row semantics for
+  offline per-user communication/compute request review. Older packages remain
+  compatible because the artifact is loaded only when the export catalog lists
+  `user_service_request_summary_v2.json`.
+- Changed files/modules:
+  - `frontend/src/app/api.ts`
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test api.test.ts dataPanel.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 2 test
+      files and 220 tests.
+  - `pnpm --dir frontend exec tsc --noEmit`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path. Vite
+      reported the existing large DataPanel chunk warning.
+- Problems encountered:
+  - The first DataPanel test assertion used the text filter `compute`, which
+    correctly matched both `1 compute` and `no compute`; the test was narrowed
+    to `sat-00001` to verify a single filtered row.
+  - TypeScript caught incomplete `RuntimeUserServiceRequestItemV2` test
+    fixtures. The fixtures were expanded to include the backend-required v2
+    request fields rather than loosening the frontend type.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The package artifact view filters locally over the persisted export window.
+    It does not add a server-side paged package endpoint for very large
+    user-service artifacts.
+  - The artifact still reflects the current flow-level request-state proxy. It
+    does not add packet-level traffic, RF modeling, or new business-generation
+    behavior.
+- Recommended follow-up:
+  - Add a server-side package endpoint for paged/filterable
+    `user_service_request_summary_v2.json` review when export windows exceed
+    the current frontend display budget.

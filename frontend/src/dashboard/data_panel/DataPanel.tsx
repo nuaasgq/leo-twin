@@ -43,6 +43,7 @@ import {
   RuntimeExportRestoreCommandResultV1,
   RuntimeExportRestorePreflightV1,
   RuntimeComputeTaskTimelineSummaryV1,
+  RuntimeExportUserServiceRequestSummaryArtifactV2,
   RuntimeExportUserServiceRequestEvidenceV2,
   RuntimeKpiSampleV1,
   RuntimeKpiTimeSeriesV1,
@@ -253,6 +254,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportDiagnosticsBundle,
   runtimeExportServiceLifecycleTrace,
   runtimeExportServiceTracePage,
+  runtimeExportUserServiceRequestArtifact,
   runtimeExportRouteDetailIndex,
   runtimeExportRouteDetailPage,
   runtimeExportRouteDetailItem,
@@ -272,6 +274,8 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportDiagnosticsBundleError,
   runtimeExportServiceLifecycleTraceLoading,
   runtimeExportServiceLifecycleTraceError,
+  runtimeExportUserServiceRequestArtifactLoading,
+  runtimeExportUserServiceRequestArtifactError,
   runtimeExportRouteDetailIndexLoading,
   runtimeExportRouteDetailIndexError,
   runtimeExportRouteDetailItemLoading,
@@ -336,6 +340,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportDiagnosticsBundle?: RuntimeExportDiagnosticsBundleV1 | null;
   runtimeExportServiceLifecycleTrace?: RuntimeServiceLifecycleTraceV2 | null;
   runtimeExportServiceTracePage?: RuntimeExportServiceTracePageV1 | null;
+  runtimeExportUserServiceRequestArtifact?: RuntimeExportUserServiceRequestSummaryArtifactV2 | null;
   runtimeExportRouteDetailIndex?: RuntimeExportRouteDetailIndexV1 | null;
   runtimeExportRouteDetailPage?: RuntimeExportRouteDetailPageV1 | null;
   runtimeExportRouteDetailItem?: RuntimeExportRouteDetailItemV1 | null;
@@ -355,6 +360,8 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportDiagnosticsBundleError?: string | null;
   runtimeExportServiceLifecycleTraceLoading?: boolean;
   runtimeExportServiceLifecycleTraceError?: string | null;
+  runtimeExportUserServiceRequestArtifactLoading?: boolean;
+  runtimeExportUserServiceRequestArtifactError?: string | null;
   runtimeExportRouteDetailIndexLoading?: boolean;
   runtimeExportRouteDetailIndexError?: string | null;
   runtimeExportRouteDetailItemLoading?: boolean;
@@ -451,6 +458,8 @@ export const DataPanel = memo(function DataPanel({
     setExportScenarioReviewChecklistDraft
   ] = useState<DataPanelScenarioReviewChecklistDraft>({});
   const [exportServiceTraceFilter, setExportServiceTraceFilter] = useState("");
+  const [exportUserServiceRequestFilter, setExportUserServiceRequestFilter] =
+    useState("");
   const [exportServiceTraceTerminalFilter, setExportServiceTraceTerminalFilter] =
     useState<DataPanelServiceTraceTerminalFilter>("ALL");
   const [exportServiceTraceComputeNodeFilter, setExportServiceTraceComputeNodeFilter] =
@@ -525,6 +534,7 @@ export const DataPanel = memo(function DataPanel({
     setExportRouteReviewReportPage(0);
     setExportScenarioReviewChecklistDraft({});
     setExportServiceTraceFilter("");
+    setExportUserServiceRequestFilter("");
     setExportServiceTraceTerminalFilter("ALL");
     setExportServiceTraceComputeNodeFilter("");
     setExportServiceTraceStageFilter("ALL");
@@ -686,6 +696,14 @@ export const DataPanel = memo(function DataPanel({
             : runtimeExportServiceTracePage.limit,
         backendPage: runtimeExportServiceTracePage ?? undefined
       }
+    );
+  const exportUserServiceRequestStatus =
+    buildDataPanelExportUserServiceRequestStatus(
+      runtimeExportUserServiceRequestArtifact,
+      runtimeExportComparePackageId,
+      runtimeExportUserServiceRequestArtifactLoading,
+      runtimeExportUserServiceRequestArtifactError,
+      exportUserServiceRequestFilter
     );
   const exportRouteDetailIndexDisplay =
     buildDataPanelExportRouteDetailPageDisplay(runtimeExportRouteDetailPage) ??
@@ -1873,6 +1891,42 @@ export const DataPanel = memo(function DataPanel({
                   display={exportServiceLifecycleTraceStatus.display}
                 />
               ) : null}
+            </div>
+          ) : null}
+          {exportUserServiceRequestStatus ? (
+            <div
+              className={`data-panel-export-diagnostics-drawer ${exportUserServiceRequestStatus.tone}`}
+              aria-label="复盘包用户业务请求artifact"
+            >
+              <div className="data-panel-export-diagnostics-header">
+                <div>
+                  <span>User service requests</span>
+                  <strong>{exportUserServiceRequestStatus.statusLabel}</strong>
+                  <small>{exportUserServiceRequestStatus.summaryLabel}</small>
+                </div>
+                {exportUserServiceRequestStatus.artifactHref ? (
+                  <a href={exportUserServiceRequestStatus.artifactHref}>
+                    user services JSON
+                  </a>
+                ) : null}
+              </div>
+              <div className="data-panel-export-compare-meta">
+                {exportUserServiceRequestStatus.metaLabels.map((label) => (
+                  <span key={label}>{label}</span>
+                ))}
+              </div>
+              <div className="data-panel-export-route-index-tools">
+                <BackendTextFilter
+                  label="User service filter"
+                  value={exportUserServiceRequestFilter}
+                  placeholder="user / service / sat / compute"
+                  onChange={setExportUserServiceRequestFilter}
+                />
+                <span>{exportUserServiceRequestStatus.filterLabel}</span>
+              </div>
+              <UserBusinessRequestTable
+                rows={exportUserServiceRequestStatus.rows}
+              />
             </div>
           ) : null}
           {exportRouteDetailIndexStatus ? (
@@ -11744,6 +11798,16 @@ export interface DataPanelExportServiceLifecycleTraceStatus {
   canNextPage: boolean;
 }
 
+export interface DataPanelExportUserServiceRequestStatus {
+  tone: "match" | "different" | "pending" | "error";
+  statusLabel: string;
+  summaryLabel: string;
+  metaLabels: readonly string[];
+  artifactHref: string | null;
+  rows: readonly UserBusinessRequestRow[];
+  filterLabel: string;
+}
+
 export interface DataPanelExportServiceLifecycleTraceStatusOptions
   extends DataPanelServiceTraceFilter {
   cursor?: number;
@@ -12333,6 +12397,98 @@ export function buildDataPanelExportServiceLifecycleTraceStatus(
           )
         : dataPanelExportServiceTraceBackendFilterLabel(backendPage),
     ...page
+  };
+}
+
+export function buildDataPanelExportUserServiceRequestStatus(
+  artifact: RuntimeExportUserServiceRequestSummaryArtifactV2 | null | undefined,
+  selectedPackageId: string | null | undefined,
+  loading = false,
+  error: string | null | undefined = null,
+  filter = "",
+  rowLimit = 80
+): DataPanelExportUserServiceRequestStatus | null {
+  if (loading) {
+    return {
+      tone: "pending",
+      statusLabel: "loading user services artifact",
+      summaryLabel: selectedPackageId ?? "waiting for package selection",
+      metaLabels: ["read-only artifact", "no service recompute"],
+      artifactHref: null,
+      rows: [],
+      filterLabel: "all user services / 0 shown"
+    };
+  }
+  if (error !== null && error !== undefined) {
+    return {
+      tone: "error",
+      statusLabel: "user services artifact load failed",
+      summaryLabel: selectedPackageId ?? "unknown package",
+      metaLabels: [error],
+      artifactHref: null,
+      rows: [],
+      filterLabel: "all user services / 0 shown"
+    };
+  }
+  if (artifact === null || artifact === undefined) {
+    return null;
+  }
+  const summary = artifact.summary;
+  const allRows = buildBackendUserBusinessRequestRows(
+    summary,
+    summary.items.length
+  );
+  const filteredRows = filterUserBusinessRequestRows(allRows, filter);
+  const displayLimit = Math.max(1, Math.floor(rowLimit));
+  const rows = filteredRows.items.slice(0, displayLimit);
+  const hiddenDisplayRows = Math.max(0, filteredRows.items.length - rows.length);
+  const evidence = artifact.evidence;
+  const policy = artifact.user_service_request_export_policy ?? {};
+  const policyLabel =
+    typeof policy.policy === "string"
+      ? policy.policy
+      : "EXPORT_USER_SERVICE_REQUEST_WINDOW";
+  const tone =
+    summary.packet_level_simulation || summary.frontend_inference_required
+      ? "different"
+      : "match";
+  const packageId = selectedPackageId ?? artifact.package_id;
+  const filterLabel = filter.trim()
+    ? `filter "${filter.trim()}" / ${formatCount(rows.length)} shown / ${formatCount(
+        filteredRows.items.length
+      )} matched${hiddenDisplayRows > 0 ? ` / hidden display ${formatCount(hiddenDisplayRows)}` : ""}`
+    : `all user services / ${formatCount(rows.length)} shown / ${formatCount(
+        filteredRows.items.length
+      )} artifact rows${
+        hiddenDisplayRows > 0 ? ` / hidden display ${formatCount(hiddenDisplayRows)}` : ""
+      }`;
+  return {
+    tone,
+    statusLabel:
+      summary.hidden_request_count > 0
+        ? "user services windowed"
+        : "user services exported",
+    summaryLabel: `${artifact.package_id} / requests ${formatCount(
+      summary.request_count
+    )} / exported ${formatCount(summary.items.length)} / active ${formatCount(
+      summary.active_request_count
+    )}`,
+    metaLabels: [
+      `model ${summary.request_model}`,
+      `compute ${formatCount(summary.compute_request_count)}`,
+      `network waiting ${formatCount(summary.network_waiting_request_count)}`,
+      `hidden ${formatCount(summary.hidden_request_count)}`,
+      artifact.artifact_window_only ? "artifact window only" : "full artifact",
+      `policy ${policyLabel}`,
+      `artifact ${shortRuntimeHash(artifact.artifact_hash)}`,
+      evidence ? `summary ${shortRuntimeHash(evidence.summary_hash)}` : ""
+    ].filter((label) => label.length > 0),
+    artifactHref: runtimeExportPackageFileHref(
+      packageId,
+      "user_service_request_summary_v2.json"
+    ),
+    rows,
+    filterLabel
   };
 }
 

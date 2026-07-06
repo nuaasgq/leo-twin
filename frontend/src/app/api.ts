@@ -25,6 +25,7 @@ import {
   RuntimeExportRouteDetailPageV1,
   RuntimeExportServiceTracePageV1,
   RuntimeExportReviewSummaryV1,
+  RuntimeExportUserServiceRequestSummaryArtifactV2,
   RuntimeExportRestorePreflightEnvelope,
   RuntimeExportRestorePreflightV1,
   RuntimeReproducibilityManifestV1,
@@ -372,6 +373,22 @@ export async function loadRuntimeExportServiceLifecycleTrace(
     throw new Error(`failed to load runtime export service lifecycle trace from ${url}: HTTP ${response.status}`);
   }
   return decodeRuntimeServiceLifecycleTrace(await response.json());
+}
+
+export async function loadRuntimeExportUserServiceRequestSummaryArtifact(
+  packageId: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): Promise<RuntimeExportUserServiceRequestSummaryArtifactV2> {
+  const url = runtimeExportPackageFileHref(
+    packageId,
+    "user_service_request_summary_v2.json",
+    endpoint
+  );
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`failed to load runtime export user service request summary from ${url}: HTTP ${response.status}`);
+  }
+  return decodeRuntimeExportUserServiceRequestSummaryArtifact(await response.json());
 }
 
 export async function loadRuntimeExportServiceTracePage(
@@ -1120,6 +1137,34 @@ export function decodeRuntimeServiceLifecycleTrace(
     );
   }
   return value as RuntimeServiceLifecycleTraceV2;
+}
+
+export function decodeRuntimeExportUserServiceRequestSummaryArtifact(
+  value: unknown
+): RuntimeExportUserServiceRequestSummaryArtifactV2 {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError(
+      "runtime export user service request summary response must be an object"
+    );
+  }
+  const summary = (value as { summary?: unknown }).summary;
+  if (
+    typeof (value as { package_id?: unknown }).package_id !== "string" ||
+    typeof (value as { artifact_hash?: unknown }).artifact_hash !== "string" ||
+    typeof (value as { artifact_window_only?: unknown })
+      .artifact_window_only !== "boolean" ||
+    typeof summary !== "object" ||
+    summary === null ||
+    Array.isArray(summary) ||
+    typeof (summary as { request_model?: unknown }).request_model !== "string" ||
+    typeof (summary as { request_count?: unknown }).request_count !== "number" ||
+    !Array.isArray((summary as { items?: unknown }).items)
+  ) {
+    throw new TypeError(
+      "runtime export user service request summary response must include package_id, artifact_hash, artifact_window_only, and summary items"
+    );
+  }
+  return value as RuntimeExportUserServiceRequestSummaryArtifactV2;
 }
 
 export function decodeRuntimeExportRouteDetailIndex(

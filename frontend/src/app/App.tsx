@@ -23,6 +23,7 @@ import {
   RuntimeExportRouteDetailPageV1,
   RuntimeExportServiceTracePageV1,
   RuntimeExportReviewSummaryV1,
+  RuntimeExportUserServiceRequestSummaryArtifactV2,
   RuntimeExportRestoreCommandResultV1,
   RuntimeExportRestorePreflightV1,
   RuntimeBackpressureSummary,
@@ -64,6 +65,7 @@ import {
   loadRuntimeExportReviewSummary,
   loadRuntimeExportRestorePreflight,
   loadRuntimeExportServiceTracePage,
+  loadRuntimeExportUserServiceRequestSummaryArtifact,
   loadRuntimeNodeDetails,
   loadRuntimeRouteDetail,
   loadRuntimeRouteDetails,
@@ -108,6 +110,8 @@ const EXPORT_PACKAGE_AUDIT_INDEX_FILENAME = "export_package_audit_index_v1.json"
 const SCENARIO_REVIEW_BUNDLE_FILENAME = "scenario_review_bundle_v1.json";
 const SCENARIO_REVIEW_CHECKLIST_FILENAME = "scenario_review_checklist_v1.json";
 const SERVICE_LIFECYCLE_TRACE_FILENAME = "service_lifecycle_trace_v2.json";
+const USER_SERVICE_REQUEST_SUMMARY_FILENAME =
+  "user_service_request_summary_v2.json";
 
 type RuntimeConnectionChannel = "http" | "control" | "events" | "state";
 type RuntimeConnectionStatus = "idle" | "connecting" | "live" | "degraded";
@@ -297,6 +301,10 @@ export function App() {
     useState<RuntimeServiceLifecycleTraceV2 | null>(null);
   const [runtimeExportServiceTracePage, setRuntimeExportServiceTracePage] =
     useState<RuntimeExportServiceTracePageV1 | null>(null);
+  const [
+    runtimeExportUserServiceRequestArtifact,
+    setRuntimeExportUserServiceRequestArtifact
+  ] = useState<RuntimeExportUserServiceRequestSummaryArtifactV2 | null>(null);
   const [runtimeExportRouteDetailPage, setRuntimeExportRouteDetailPage] =
     useState<RuntimeExportRouteDetailPageV1 | null>(null);
   const [runtimeExportRouteDetailItem, setRuntimeExportRouteDetailItem] =
@@ -344,6 +352,14 @@ export function App() {
   const [
     runtimeExportServiceLifecycleTraceError,
     setRuntimeExportServiceLifecycleTraceError
+  ] = useState<string | null>(null);
+  const [
+    runtimeExportUserServiceRequestArtifactLoading,
+    setRuntimeExportUserServiceRequestArtifactLoading
+  ] = useState(false);
+  const [
+    runtimeExportUserServiceRequestArtifactError,
+    setRuntimeExportUserServiceRequestArtifactError
   ] = useState<string | null>(null);
   const [runtimeExportRouteDetailIndexLoading, setRuntimeExportRouteDetailIndexLoading] =
     useState(false);
@@ -1192,12 +1208,17 @@ export function App() {
       runtimeExportCatalogHasScenarioReviewChecklist(exportCatalog, packageId);
     const shouldLoadServiceLifecycleTrace =
       runtimeExportCatalogHasServiceLifecycleTrace(exportCatalog, packageId);
+    const shouldLoadUserServiceRequestSummary =
+      runtimeExportCatalogHasUserServiceRequestSummary(exportCatalog, packageId);
     setRuntimeExportComparePackageId(packageId);
     setRuntimeExportCompareLoading(true);
     setRuntimeExportReviewSummaryLoading(true);
     setRuntimeExportManifestLoading(true);
     setRuntimeExportDiagnosticsBundleLoading(true);
     setRuntimeExportServiceLifecycleTraceLoading(shouldLoadServiceLifecycleTrace);
+    setRuntimeExportUserServiceRequestArtifactLoading(
+      shouldLoadUserServiceRequestSummary
+    );
     setRuntimeExportRouteDetailIndexLoading(true);
     setRuntimeExportRouteComparisonReviewReportLoading(shouldLoadReviewReport);
     setRuntimeExportPackageAuditIndexLoading(shouldLoadAuditIndex);
@@ -1211,6 +1232,8 @@ export function App() {
     setRuntimeExportServiceLifecycleTrace(null);
     setRuntimeExportServiceTracePage(null);
     setRuntimeExportServiceLifecycleTraceError(null);
+    setRuntimeExportUserServiceRequestArtifact(null);
+    setRuntimeExportUserServiceRequestArtifactError(null);
     setRuntimeExportRouteDetailIndexError(null);
     setRuntimeExportRouteComparisonReviewReport(null);
     setRuntimeExportRouteComparisonReviewReportError(null);
@@ -1239,6 +1262,7 @@ export function App() {
       manifest,
       diagnosticsBundle,
       serviceTracePage,
+      userServiceRequestArtifact,
       routeDetailPage,
       routeComparisonReviewReport,
       packageAuditIndex,
@@ -1253,6 +1277,9 @@ export function App() {
         loadRuntimeExportDiagnosticsBundle(packageId),
         shouldLoadServiceLifecycleTrace
           ? loadRuntimeExportServiceTracePage(packageId, 0, 5)
+          : Promise.resolve(null),
+        shouldLoadUserServiceRequestSummary
+          ? loadRuntimeExportUserServiceRequestSummaryArtifact(packageId)
           : Promise.resolve(null),
         loadRuntimeExportRouteDetailPage(packageId, 0, 5),
         shouldLoadReviewReport
@@ -1304,6 +1331,16 @@ export function App() {
       setRuntimeExportServiceLifecycleTrace(null);
       setRuntimeExportServiceLifecycleTraceError(
         runtimeExportServiceLifecycleTraceErrorMessage(serviceTracePage.reason)
+      );
+    }
+    if (userServiceRequestArtifact.status === "fulfilled") {
+      setRuntimeExportUserServiceRequestArtifact(userServiceRequestArtifact.value);
+    } else {
+      setRuntimeExportUserServiceRequestArtifact(null);
+      setRuntimeExportUserServiceRequestArtifactError(
+        runtimeExportUserServiceRequestSummaryErrorMessage(
+          userServiceRequestArtifact.reason
+        )
       );
     }
     if (routeDetailPage.status === "fulfilled") {
@@ -1365,6 +1402,7 @@ export function App() {
     setRuntimeExportManifestLoading(false);
     setRuntimeExportDiagnosticsBundleLoading(false);
     setRuntimeExportServiceLifecycleTraceLoading(false);
+    setRuntimeExportUserServiceRequestArtifactLoading(false);
     setRuntimeExportRouteDetailIndexLoading(false);
     setRuntimeExportRouteComparisonReviewReportLoading(false);
     setRuntimeExportPackageAuditIndexLoading(false);
@@ -1478,6 +1516,7 @@ export function App() {
         setRuntimeExportDiagnosticsBundle(null);
         setRuntimeExportServiceLifecycleTrace(null);
         setRuntimeExportServiceTracePage(null);
+        setRuntimeExportUserServiceRequestArtifact(null);
         setRuntimeExportRouteDetailPage(null);
         setRuntimeExportRouteDetailItem(null);
         setRuntimeExportRouteDetailItemRouteId(null);
@@ -1508,6 +1547,7 @@ export function App() {
         setRuntimeExportManifestLoading(false);
         setRuntimeExportDiagnosticsBundleLoading(false);
         setRuntimeExportServiceLifecycleTraceLoading(false);
+        setRuntimeExportUserServiceRequestArtifactLoading(false);
         setRuntimeExportRouteDetailIndexLoading(false);
         setRuntimeExportRouteComparisonReviewReportLoading(false);
         setRuntimeExportPackageAuditIndexLoading(false);
@@ -1518,6 +1558,7 @@ export function App() {
         setRuntimeExportManifestError(null);
         setRuntimeExportDiagnosticsBundleError(null);
         setRuntimeExportServiceLifecycleTraceError(null);
+        setRuntimeExportUserServiceRequestArtifactError(null);
         setRuntimeExportRouteDetailIndexError(null);
         setRuntimeExportRouteComparisonReviewReportError(null);
         setRuntimeExportPackageAuditIndexError(null);
@@ -1538,6 +1579,7 @@ export function App() {
       setRuntimeExportDiagnosticsBundle(null);
       setRuntimeExportServiceLifecycleTrace(null);
       setRuntimeExportServiceTracePage(null);
+      setRuntimeExportUserServiceRequestArtifact(null);
       setRuntimeExportRouteDetailPage(null);
       setRuntimeExportRouteComparisonReviewReport(null);
       setRuntimeExportPackageAuditIndex(null);
@@ -1556,6 +1598,7 @@ export function App() {
       setRuntimeExportManifestLoading(false);
       setRuntimeExportDiagnosticsBundleLoading(false);
       setRuntimeExportServiceLifecycleTraceLoading(false);
+      setRuntimeExportUserServiceRequestArtifactLoading(false);
       setRuntimeExportRouteDetailIndexLoading(false);
       setRuntimeExportRouteComparisonReviewReportLoading(false);
       setRuntimeExportPackageAuditIndexLoading(false);
@@ -1567,6 +1610,7 @@ export function App() {
       setRuntimeExportManifestError(null);
       setRuntimeExportDiagnosticsBundleError(null);
       setRuntimeExportServiceLifecycleTraceError(null);
+      setRuntimeExportUserServiceRequestArtifactError(null);
       setRuntimeExportRouteDetailIndexError(null);
       setRuntimeExportRouteComparisonReviewReportError(null);
       setRuntimeExportPackageAuditIndexError(null);
@@ -2366,6 +2410,9 @@ export function App() {
               runtimeExportDiagnosticsBundle={runtimeExportDiagnosticsBundle}
               runtimeExportServiceLifecycleTrace={runtimeExportServiceLifecycleTrace}
               runtimeExportServiceTracePage={runtimeExportServiceTracePage}
+              runtimeExportUserServiceRequestArtifact={
+                runtimeExportUserServiceRequestArtifact
+              }
               runtimeExportRouteDetailPage={runtimeExportRouteDetailPage}
               runtimeExportRouteDetailItem={runtimeExportRouteDetailItem}
               runtimeExportRouteComparisonReviewReport={
@@ -2393,6 +2440,12 @@ export function App() {
               }
               runtimeExportServiceLifecycleTraceError={
                 runtimeExportServiceLifecycleTraceError
+              }
+              runtimeExportUserServiceRequestArtifactLoading={
+                runtimeExportUserServiceRequestArtifactLoading
+              }
+              runtimeExportUserServiceRequestArtifactError={
+                runtimeExportUserServiceRequestArtifactError
               }
               runtimeExportRouteDetailIndexLoading={runtimeExportRouteDetailIndexLoading}
               runtimeExportRouteDetailIndexError={runtimeExportRouteDetailIndexError}
@@ -2703,6 +2756,22 @@ export function runtimeExportCatalogHasServiceLifecycleTrace(
     (record) =>
       record.package_id === packageId &&
       record.files.some((file) => file.filename === SERVICE_LIFECYCLE_TRACE_FILENAME)
+  );
+}
+
+export function runtimeExportCatalogHasUserServiceRequestSummary(
+  catalog: RuntimeExportCatalogV1 | null,
+  packageId: string
+): boolean {
+  if (catalog === null) {
+    return false;
+  }
+  return catalog.records.some(
+    (record) =>
+      record.package_id === packageId &&
+      record.files.some(
+        (file) => file.filename === USER_SERVICE_REQUEST_SUMMARY_FILENAME
+      )
   );
 }
 
@@ -3998,6 +4067,13 @@ export function runtimeExportDiagnosticsBundleErrorMessage(error: unknown): stri
 export function runtimeExportServiceLifecycleTraceErrorMessage(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   return `runtime export service lifecycle trace load failed: ${message}`;
+}
+
+export function runtimeExportUserServiceRequestSummaryErrorMessage(
+  error: unknown
+): string {
+  const message = error instanceof Error ? error.message : String(error);
+  return `runtime export user service request summary load failed: ${message}`;
 }
 
 export function runtimeExportRouteDetailIndexErrorMessage(error: unknown): string {

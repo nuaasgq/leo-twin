@@ -1453,6 +1453,24 @@ export interface RuntimeExportUserServiceRequestEvidenceV2 {
   summary_hash: string;
 }
 
+export interface RuntimeExportUserServiceRequestSummaryArtifactV2 {
+  type: "RUNTIME_EXPORT_USER_SERVICE_REQUEST_SUMMARY_V2" | string;
+  version: "v2" | string;
+  artifact_id: string;
+  source: string;
+  artifact_scope: string;
+  package_id: string;
+  package_dir: string;
+  runtime_status_field: string;
+  artifact_policy: string;
+  artifact_window_only: boolean;
+  summary: RuntimeUserServiceRequestSummaryV2;
+  user_service_request_export_policy?: Readonly<Record<string, unknown>>;
+  evidence?: RuntimeExportUserServiceRequestEvidenceV2;
+  boundary_conditions: readonly string[];
+  artifact_hash: string;
+}
+
 export interface RuntimeExportRouteComparisonReviewV1 {
   version: "v1" | string;
   source: string;

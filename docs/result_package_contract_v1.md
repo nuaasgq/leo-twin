@@ -270,6 +270,11 @@ that policy into the artifact, and reports `artifact_window_only=true`. The
 artifact is sourced from backend runtime status only; it does not inspect the
 current runtime session, replay events, recompute business/service state, or
 mutate the package.
+The standalone dashboard loads this artifact from the selected package and
+renders a read-only user-service request view using the same row semantics as
+the live `user_service_request_summary_v2` dashboard table. The view supports a
+local text filter over the persisted artifact window and links back to the raw
+`user_service_request_summary_v2.json` file for audit.
 
 `route_comparison_review` also declares the deterministic
 `RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1` report template. The

@@ -138,6 +138,10 @@ Tasks:
     dashboard export review surfaces: review summary, diagnostics, scenario
     review workflow, and audit-index sections now display backend-provided
     request counts, exported-window counts, hidden counts, and evidence hashes.
+    T330 adds a read-only dashboard artifact view for
+    `user_service_request_summary_v2.json`, loading the persisted package file
+    and reusing the live v2 user-service table semantics for offline
+    per-user request review.
 - V2-013: Add service lifecycle trace.
   - Scope: input flow, queue, compute, output flow, terminal state.
   - Output: timeline records for dashboard and result export.

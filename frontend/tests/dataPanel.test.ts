@@ -29,6 +29,7 @@ import {
   buildDataPanelExportReproducibilityBoundaryDisplay,
   buildDataPanelExportReviewSummaryDisplay,
   buildDataPanelExportReviewSummaryStatus,
+  buildDataPanelExportUserServiceRequestStatus,
   buildDataPanelExportReviewCompletionSummary,
   buildDataPanelExportRouteDetailItemDisplay,
   buildDataPanelExportRouteDetailItemStatus,
@@ -4120,6 +4121,213 @@ describe("buildDataPanelExportCompareDisplay", () => {
       summaryLabel: "pkg-next",
       metaLabels: ["HTTP 404"],
       artifactLabels: []
+    });
+  });
+
+  it("summarizes runtime export user service request artifacts for dashboard review", () => {
+    const status = buildDataPanelExportUserServiceRequestStatus(
+      {
+        type: "RUNTIME_EXPORT_USER_SERVICE_REQUEST_SUMMARY_V2",
+        version: "v2",
+        artifact_id: "leo_twin.runtime_export_user_service_request_summary.v2",
+        source: "BACKEND_RUNTIME_EXPORT",
+        artifact_scope: "USER_SERVICE_REQUEST_OFFLINE_REVIEW",
+        package_id: "pkg-review",
+        package_dir: "artifacts/runtime_exports/pkg-review",
+        runtime_status_field: "user_service_request_summary_v2",
+        artifact_policy: "STANDALONE_RUNTIME_EXPORT_ARTIFACT",
+        artifact_window_only: true,
+        summary: {
+          version: "v2",
+          source: "BACKEND_RUNTIME_STATUS",
+          summary_scope: "USER_SERVICE_REQUEST_WINDOW",
+          cursor: 0,
+          limit: 100,
+          next_cursor: 2,
+          has_more: false,
+          request_model: "FLOW_LEVEL_USER_SERVICE_REQUEST_PROXY",
+          route_model: "FLOW_LEVEL_ROUTE_PROXY",
+          compute_model: "TASK_RESOURCE_DEMAND_PROXY",
+          packet_level_simulation: false,
+          frontend_inference_required: false,
+          user_count: 2,
+          active_user_count: 2,
+          compute_service_user_count: 1,
+          waiting_user_count: 1,
+          item_count: 2,
+          hidden_user_count: 0,
+          request_count: 2,
+          active_request_count: 2,
+          communication_request_count: 2,
+          compute_request_count: 1,
+          network_waiting_request_count: 1,
+          completed_request_count: 0,
+          hidden_request_count: 0,
+          items: [
+            {
+              user_id: "user-00001",
+              platform_type: "GROUND_USER",
+              platform_type_label: "ground user",
+              status: "ACTIVE",
+              communication_route_count: 1,
+              available_route_count: 1,
+              compute_service_count: 1,
+              network_queue_count: 1,
+              selected_satellite_id: "sat-00001",
+              destination_id: "sat-00001",
+              compute_node_id: "sat-00001",
+              path: ["user-00001", "sat-00001"],
+              request_id: "svc-00001",
+              service_request_id: "svc-00001",
+              service_class: "COMPUTE_SERVICE",
+              service_class_label: "compute service",
+              business_type: "COMPUTE_SERVICE",
+              business_label: "compute service",
+              request_active: true,
+              communication_request_active: true,
+              compute_request_active: true,
+              network_waiting: true,
+              terminal_state: "RUNNING",
+              terminal_state_label: "running",
+              route_id: "route-00001",
+              flow_id: "flow-00001",
+              task_id: "task-00001",
+              target_node_id: "sat-00001",
+              next_hop_id: "sat-00001",
+              network_queue_depth: 1,
+              route_available: true,
+              input_output_coupled: true,
+              latency_components_observed: true,
+              route_model: "FLOW_LEVEL_ROUTE_PROXY",
+              service_model: "TASK_RESOURCE_DEMAND_PROXY",
+              packet_level_simulation: false,
+              status_digest: "running compute service",
+              active_business_type: "COMPUTE_SERVICE",
+              active_business_label: "compute service",
+              request_state: "RUNNING",
+              request_state_label: "running"
+            },
+            {
+              user_id: "user-00002",
+              platform_type: "GROUND_USER",
+              platform_type_label: "ground user",
+              status: "ACTIVE",
+              communication_route_count: 1,
+              available_route_count: 1,
+              compute_service_count: 0,
+              network_queue_count: 0,
+              selected_satellite_id: "sat-00002",
+              destination_id: "gateway-1",
+              path: ["user-00002", "sat-00002", "gateway-1"],
+              request_id: "svc-00002",
+              service_request_id: "svc-00002",
+              service_class: "DATA_TRANSFER",
+              service_class_label: "data transfer",
+              business_type: "DATA_TRANSFER",
+              business_label: "data transfer",
+              request_active: true,
+              communication_request_active: true,
+              compute_request_active: false,
+              network_waiting: false,
+              terminal_state: "RUNNING",
+              terminal_state_label: "running",
+              route_id: "route-00002",
+              flow_id: "flow-00002",
+              task_id: "",
+              target_node_id: "gateway-1",
+              next_hop_id: "sat-00002",
+              network_queue_depth: 0,
+              route_available: true,
+              input_output_coupled: false,
+              latency_components_observed: true,
+              route_model: "FLOW_LEVEL_ROUTE_PROXY",
+              service_model: "TASK_RESOURCE_DEMAND_PROXY",
+              packet_level_simulation: false,
+              status_digest: "running data transfer",
+              active_business_type: "DATA_TRANSFER",
+              active_business_label: "data transfer",
+              request_state: "RUNNING",
+              request_state_label: "running"
+            }
+          ]
+        },
+        user_service_request_export_policy: {
+          policy: "EXPORT_USER_SERVICE_REQUEST_WINDOW"
+        },
+        evidence: {
+          version: "v2",
+          evidence_id: "leo_twin.runtime_export_user_service_request_summary.v2",
+          source: "config_snapshot.status.user_service_request_summary_v2",
+          evidence_present: true,
+          request_model: "FLOW_LEVEL_USER_SERVICE_REQUEST_PROXY",
+          route_model: "FLOW_LEVEL_ROUTE_PROXY",
+          compute_model: "TASK_RESOURCE_DEMAND_PROXY",
+          request_count: 2,
+          exported_request_count: 2,
+          hidden_request_count: 0,
+          active_request_count: 2,
+          communication_request_count: 2,
+          compute_request_count: 1,
+          network_waiting_request_count: 1,
+          completed_request_count: 0,
+          packet_level_simulation: false,
+          frontend_inference_required: false,
+          artifact_window_only: true,
+          summary_hash:
+            "sha256:abababababababababababababababababababababababababababababababab"
+        },
+        boundary_conditions: ["NO_SERVICE_RECOMPUTE"],
+        artifact_hash:
+          "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd"
+      },
+      "pkg-review",
+      false,
+      null,
+      "sat-00001",
+      1
+    );
+
+    expect(status).toEqual({
+      tone: "match",
+      statusLabel: "user services exported",
+      summaryLabel: "pkg-review / requests 2 / exported 2 / active 2",
+      metaLabels: [
+        "model FLOW_LEVEL_USER_SERVICE_REQUEST_PROXY",
+        "compute 1",
+        "network waiting 1",
+        "hidden 0",
+        "artifact window only",
+        "policy EXPORT_USER_SERVICE_REQUEST_WINDOW",
+        "artifact cdcdcdcdcdcd",
+        "summary abababababab"
+      ],
+      artifactHref:
+        "/runtime/export/packages/pkg-review/files/user_service_request_summary_v2.json",
+      rows: [
+        expect.objectContaining({
+          userId: "user-00001",
+          computeLabel: "1 compute",
+          selectedSatelliteId: "sat-00001"
+        })
+      ],
+      filterLabel: 'filter "sat-00001" / 1 shown / 1 matched'
+    });
+    expect(
+      buildDataPanelExportUserServiceRequestStatus(null, "pkg-review", true)
+    ).toMatchObject({
+      tone: "pending",
+      statusLabel: "loading user services artifact"
+    });
+    expect(
+      buildDataPanelExportUserServiceRequestStatus(
+        null,
+        "pkg-review",
+        false,
+        "HTTP 404"
+      )
+    ).toMatchObject({
+      tone: "error",
+      metaLabels: ["HTTP 404"]
     });
   });
 
