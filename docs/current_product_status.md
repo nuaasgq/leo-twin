@@ -2,7 +2,7 @@
 
 Date: 2026-07-08
 
-Branch: `feature/T394-dashboard-exact-detail-json-pinning-v1`
+Branch: `feature/T395-dashboard-exact-detail-json-pin-summary-v1`
 
 ## Local Entry Points
 
@@ -276,6 +276,9 @@ the card without loading the full JSON artifact.
 - Operators can now pin custom exact-detail JSON pointers in the same read-only
   inspector. Pinned paths are resolved against the synchronized payloads and
   shown with resolved, missing, or invalid status without mutating payloads.
+- The pinned path area now includes a compact comparison-readiness summary that
+  counts resolved, missing, and invalid pinned paths. This makes the current
+  live exact-detail payload ready for a later package/live pinned-path diff.
 - Launcher health v2 reports backend/frontend port readiness, HTTP readiness,
   process ids, latest log paths, config paths, and recommended actions.
 - Operator diagnostics bundle captures launcher health, runtime status, version

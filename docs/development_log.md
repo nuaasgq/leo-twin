@@ -5,6 +5,45 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-08 - Dashboard Exact Detail JSON Pin Summary v1
+
+- Branch: `feature/T395-dashboard-exact-detail-json-pin-summary-v1`
+- Commit: pending in this commit
+- Scope: add a comparison-readiness summary to the standalone dashboard
+  exact-detail raw JSON pinned-path area. The dashboard now counts resolved,
+  missing, and invalid custom JSON pointers for the current synchronized live
+  exact-detail payload. This provides a stable preflight signal for a future
+  package/live pinned-path diff while keeping all behavior frontend-local and
+  read-only. This task does not change Event Kernel behavior, backend
+  protocols, runtime contracts, simulation models, packet-level behavior, or
+  frontend routing architecture.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/current_product_status.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed, 1 test file / 228 tests using the bundled Codex
+      Node/pnpm runtime.
+  - `python -m pytest tests\unit\test_system_v2_upgrade_plan_docs.py tests\unit\test_user_guide_v2_docs.py -q`
+    - Result: passed, 4 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing large `DataPanel` chunk
+      warning after minification.
+- Problems encountered and handling:
+  - The summary intentionally counts current live payload resolution state
+    only. It does not claim package/live equality until package payloads are
+    wired into the same pinned-path comparison workflow.
+  - Local runtime/generated config files were already dirty and remain outside
+    the staged task scope.
+- Known remaining issues / follow-up:
+  - Add a package/live pinned-path diff view that compares the same pinned
+    paths against exported route or service-trace evidence.
+
 ## 2026-07-08 - Dashboard Exact Detail JSON Pinning v1
 
 - Branch: `feature/T394-dashboard-exact-detail-json-pinning-v1`

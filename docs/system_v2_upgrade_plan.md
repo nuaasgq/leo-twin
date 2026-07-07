@@ -732,6 +732,10 @@ Tasks:
     pointers; the dashboard deduplicates and bounds the list, then resolves
     each path as resolved, missing, or invalid through the existing JSON pointer
     selector without mutating backend payloads.
+  - Status: T395 adds a pinned-path comparison-readiness summary. The
+    dashboard now counts resolved, missing, and invalid pinned paths for the
+    current live exact-detail payload, providing a stable preflight signal for
+    a future package/live pinned-path diff.
 - V2-054: Add model assumptions panel.
   - Scope: backend-derived model caveats, fidelity mode, KPI provenance.
   - Depends on: V2-003, V2-021.

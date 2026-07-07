@@ -181,7 +181,8 @@ The standalone dashboard is for data situation awareness:
   as focus rows when present, so route ids, latency, service state, compute
   node ids, and compute-resource fields are easier to inspect. For custom
   review, enter JSON pointers in the pin field; pinned paths show resolved,
-  missing, or invalid status against the synchronized payloads;
+  missing, or invalid status against the synchronized payloads, with a compact
+  count summary for quick review readiness checks;
 - service-trace closed-loop evidence, showing whether the selected service
   trace has correlated flow, route, user, satellite, compute-node, stage, and
   latency evidence from backend exact detail or the visible dashboard window;

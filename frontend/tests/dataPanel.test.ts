@@ -16366,6 +16366,7 @@ describe("paginateDetailRows", () => {
       emptyLabel: "选择明细行后显示后端精确详情 payload 的只读 JSON 路径。",
       filterText: "",
       pinnedPointersText: "",
+      pinnedSummaryLabel: "固定路径未设置",
       metaLabels: ["只读审查", "不重新计算业务语义", "无活动 payload", "无过滤", "无固定路径"],
       focusRows: [],
       pinnedRows: [],
@@ -16391,10 +16392,22 @@ describe("paginateDetailRows", () => {
       emptyLabel: "后端精确详情 payload 尚未同步，暂无可审查 JSON 路径。",
       filterText: "",
       pinnedPointersText: "",
+      pinnedSummaryLabel: "固定路径未设置",
       focusRows: [],
       pinnedRows: [],
       rows: []
     });
+    expect(
+      buildDataPanelExactDetailJsonInspector({
+        selected: {
+          routeId: "route-0",
+          backendDetails: {
+            route: null
+          }
+        },
+        pinnedPointersText: "/route/route_id"
+      }).pinnedSummaryLabel
+    ).toBe("固定路径等待后端 payload");
   });
 
   it("builds deterministic read-only JSON pointer rows for exact-detail payloads", () => {
@@ -16533,6 +16546,9 @@ describe("paginateDetailRows", () => {
 
     expect(display.pinnedPointersText).toBe(
       "/route/route_id /route/route_id, /route/metrics/latency_s /route/missing invalid-pointer"
+    );
+    expect(display.pinnedSummaryLabel).toBe(
+      "固定路径 2 resolved / 1 missing / 1 invalid"
     );
     expect(display.metaLabels).toContain("固定 4 条");
     expect(display.pinnedRows).toEqual([

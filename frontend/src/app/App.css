@@ -4881,6 +4881,13 @@ button.data-panel-compute-node-row {
   min-width: 0;
 }
 
+.data-panel-exact-detail-json-pin-summary {
+  min-width: 0;
+  color: var(--app-muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
 .data-panel-exact-detail-json-pins > span {
   display: grid;
   gap: 3px;

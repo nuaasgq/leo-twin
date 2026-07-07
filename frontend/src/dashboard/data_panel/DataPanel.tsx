@@ -7030,6 +7030,9 @@ function ExactDetailJsonInspector({
           placeholder="/route/route_id, /route/metrics/latency_s"
         />
       </label>
+      <div className="data-panel-exact-detail-json-pin-summary">
+        {display.pinnedSummaryLabel}
+      </div>
       {display.pinnedRows.length > 0 ? (
         <div className="data-panel-exact-detail-json-pins">
           {display.pinnedRows.map((row) => (
@@ -7815,6 +7818,7 @@ export interface DataPanelExactDetailJsonInspectorDisplay {
   emptyLabel: string;
   filterText: string;
   pinnedPointersText: string;
+  pinnedSummaryLabel: string;
   metaLabels: readonly string[];
   focusRows: readonly DataPanelExactDetailJsonFocusRow[];
   pinnedRows: readonly DataPanelExactDetailJsonPinnedRow[];
@@ -9384,6 +9388,7 @@ export function buildDataPanelExactDetailJsonInspector(
       emptyLabel: "选择明细行后显示后端精确详情 payload 的只读 JSON 路径。",
       filterText,
       pinnedPointersText,
+      pinnedSummaryLabel: "固定路径未设置",
       metaLabels: [
         "只读审查",
         "不重新计算业务语义",
@@ -9406,6 +9411,10 @@ export function buildDataPanelExactDetailJsonInspector(
       emptyLabel: "后端精确详情 payload 尚未同步，暂无可审查 JSON 路径。",
       filterText,
       pinnedPointersText,
+      pinnedSummaryLabel:
+        pinnedPointersText.length > 0
+          ? "固定路径等待后端 payload"
+          : "固定路径未设置",
       metaLabels: [
         "只读审查",
         "等待 exact-detail API",
@@ -9432,6 +9441,7 @@ export function buildDataPanelExactDetailJsonInspector(
     document,
     pinnedPointersText
   );
+  const pinnedSummaryLabel = buildDataPanelExactDetailJsonPinnedSummary(pinnedRows);
   const missingCount = Math.max(0, selectedRecords.length - payloadRecordsWithData.length);
   return {
     active: true,
@@ -9447,6 +9457,7 @@ export function buildDataPanelExactDetailJsonInspector(
         : "已显示匹配的只读 JSON 路径。",
     filterText,
     pinnedPointersText,
+    pinnedSummaryLabel,
     metaLabels: [
       "只读 JSON pointer",
       payloadRecordsWithData.map((record) => record.label).join(" / "),
@@ -9460,6 +9471,20 @@ export function buildDataPanelExactDetailJsonInspector(
     pinnedRows,
     rows: inspector.rows
   };
+}
+
+function buildDataPanelExactDetailJsonPinnedSummary(
+  rows: readonly DataPanelExactDetailJsonPinnedRow[]
+): string {
+  if (rows.length === 0) {
+    return "固定路径未设置";
+  }
+  const resolved = rows.filter((row) => row.statusLabel === "resolved").length;
+  const missing = rows.filter((row) => row.statusLabel === "missing").length;
+  const invalid = rows.filter((row) => row.statusLabel === "invalid").length;
+  return `固定路径 ${formatCount(resolved)} resolved / ${formatCount(
+    missing
+  )} missing / ${formatCount(invalid)} invalid`;
 }
 
 function buildDataPanelExactDetailJsonPinnedRows(
