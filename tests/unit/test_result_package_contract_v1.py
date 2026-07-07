@@ -13,6 +13,7 @@ from leo_twin.services.result_package_contract import (
     RESULT_PACKAGE_CONTRACT_V1_ID,
     RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1_ID,
     RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_V1_ID,
+    RUNTIME_EXPORT_NETWORK_KPI_FORMULA_EVIDENCE_V1_ID,
     RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID,
     RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT_V1_ID,
     RUNTIME_EXPORT_PACKAGE_HANDOFF_REPORT_V1_ID,
@@ -37,6 +38,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID,
     build_runtime_export_diagnostics_bundle_v1,
     build_runtime_export_network_kpi_benchmark_validation_v1,
+    build_runtime_export_network_kpi_formula_evidence_v1,
     build_runtime_export_benchmark_acceptance_binding_v1,
     build_runtime_export_package_acceptance_report_v1,
     build_runtime_export_package_audit_index_v1,
@@ -93,6 +95,7 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
         "review_summary_v1.json",
         "diagnostics_bundle_v1.json",
         "network_kpi_benchmark_validation_v1.json",
+        "network_kpi_formula_evidence_v1.json",
         "scenario_review_bundle_v1.json",
         "export_package_audit_index_v1.json",
         "package_handoff_report_v1.md",
@@ -229,6 +232,7 @@ def test_result_package_summary_accepts_complete_package_record() -> None:
         "review_summary_v1.json",
         "diagnostics_bundle_v1.json",
         "network_kpi_benchmark_validation_v1.json",
+        "network_kpi_formula_evidence_v1.json",
         "scenario_review_bundle_v1.json",
         "export_package_audit_index_v1.json",
         "package_handoff_report_v1.md",
@@ -272,6 +276,7 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
             "network_kpi_benchmark_validation_v1": (
                 _network_kpi_benchmark_validation()
             ),
+            "network_kpi_formula_evidence_v1": _network_kpi_formula_evidence(),
             "user_service_request_summary_v2": _user_service_request_summary(),
             "runtime_export_user_service_request_policy_v1": (
                 _user_service_request_export_policy()
@@ -301,6 +306,7 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
         "metrics.csv",
         "diagnostics_bundle_v1.json",
         "network_kpi_benchmark_validation_v1.json",
+        "network_kpi_formula_evidence_v1.json",
         "review_summary_v1.json",
         "route_detail_index_v1.json",
         "scenario_review_bundle_v1.json",
@@ -346,6 +352,11 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
     assert first["network_kpi_benchmark_validation"]["evidence_present"] is True
     assert first["network_kpi_benchmark_validation"]["validation_status"] == "PASS"
     assert first["network_kpi_benchmark_validation"]["failed_check_count"] == 0
+    assert first["network_kpi_formula_evidence"]["evidence_present"] is True
+    assert first["network_kpi_formula_evidence"]["formula_evidence_status"] == (
+        "FORMULA_AND_TIME_EVIDENCE_READY"
+    )
+    assert first["network_kpi_formula_evidence"]["missing_selected_input_count"] == 0
     assert first["user_service_requests"]["evidence_present"] is True
     assert first["user_service_requests"]["request_count"] == 2
     assert first["user_service_requests"]["exported_request_count"] == 2
@@ -353,6 +364,7 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
     assert first["artifacts"][
         "network_kpi_benchmark_validation_exported"
     ] is True
+    assert first["artifacts"]["network_kpi_formula_evidence_exported"] is True
     assert first["artifacts"]["user_service_request_summary_exported"] is True
     assert first["route_comparison_review"]["review_scope"] == (
         "PACKAGE_ROUTE_DETAIL_TO_LIVE_RUNTIME_ROUTE_DETAIL"
@@ -416,6 +428,43 @@ def test_runtime_export_network_kpi_benchmark_validation_v1_is_deterministic() -
     assert first["evidence"]["evidence_present"] is True
     assert first["evidence"]["validation_status"] == "PASS"
     assert first["evidence"]["acceptable_for_demo_review"] is True
+    assert first["artifact_hash"].startswith("sha256:")
+    assert "NO_METRIC_RECOMPUTE" in first["boundary_conditions"]
+
+
+def test_runtime_export_network_kpi_formula_evidence_v1_is_deterministic() -> None:
+    config_snapshot = {
+        "type": "RUNTIME_CONFIG_SNAPSHOT",
+        "status": {
+            "network_kpi_formula_evidence_v1": _network_kpi_formula_evidence(),
+        },
+        "config": {"seed": 7},
+        "generated_config": {"seed": 7, "satellite_count": 72},
+    }
+
+    first = build_runtime_export_network_kpi_formula_evidence_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+    )
+    second = build_runtime_export_network_kpi_formula_evidence_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=dict(reversed(tuple(config_snapshot.items()))),
+    )
+
+    assert first == second
+    assert first["artifact_id"] == RUNTIME_EXPORT_NETWORK_KPI_FORMULA_EVIDENCE_V1_ID
+    assert first["runtime_status_field"] == "network_kpi_formula_evidence_v1"
+    assert first["formula_evidence"]["formula_evidence_status"] == (
+        "FORMULA_AND_TIME_EVIDENCE_READY"
+    )
+    assert first["evidence"]["evidence_present"] is True
+    assert first["evidence"]["formula_evidence_status"] == (
+        "FORMULA_AND_TIME_EVIDENCE_READY"
+    )
+    assert first["evidence"]["acceptable_for_demo_review"] is True
+    assert first["evidence"]["evidence_hash"].startswith("sha256:")
     assert first["artifact_hash"].startswith("sha256:")
     assert "NO_METRIC_RECOMPUTE" in first["boundary_conditions"]
 
@@ -556,6 +605,7 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
             "network_kpi_benchmark_validation_v1": (
                 _network_kpi_benchmark_validation()
             ),
+            "network_kpi_formula_evidence_v1": _network_kpi_formula_evidence(),
             "user_service_request_summary_v2": _user_service_request_summary(),
             "runtime_export_user_service_request_policy_v1": (
                 _user_service_request_export_policy()
@@ -587,6 +637,7 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
         "manifest.json",
         "metrics.csv",
         "network_kpi_benchmark_validation_v1.json",
+        "network_kpi_formula_evidence_v1.json",
         "review_summary_v1.json",
         "route_detail_index_v1.json",
         "scenario_review_bundle_v1.json",
@@ -635,6 +686,11 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
     assert first["network_kpi_benchmark_validation"]["evidence_present"] is True
     assert first["network_kpi_benchmark_validation"]["validation_status"] == "PASS"
     assert first["network_kpi_benchmark_validation"]["failed_check_count"] == 0
+    assert first["network_kpi_formula_evidence"]["evidence_present"] is True
+    assert first["network_kpi_formula_evidence"]["formula_evidence_status"] == (
+        "FORMULA_AND_TIME_EVIDENCE_READY"
+    )
+    assert first["network_kpi_formula_evidence"]["acceptable_for_demo_review"] is True
     assert first["user_service_requests"]["evidence_present"] is True
     assert first["user_service_requests"]["request_count"] == 2
     assert first["user_service_requests"]["exported_request_count"] == 2
@@ -670,6 +726,7 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
             "queued_event_count": 0,
             "route_explanation_summary_v1": _route_summary(),
             "route_provenance_trust_summary_v1": _route_trust(),
+            "network_kpi_formula_evidence_v1": _network_kpi_formula_evidence(),
             "user_service_request_summary_v2": _user_service_request_summary(),
             "runtime_export_user_service_request_policy_v1": (
                 _user_service_request_export_policy()
@@ -703,6 +760,7 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
         "manifest.json",
         "metrics.csv",
         "network_kpi_benchmark_validation_v1.json",
+        "network_kpi_formula_evidence_v1.json",
         "review_summary_v1.json",
         "route_detail_index_v1.json",
         "scenario_review_bundle_v1.json",
@@ -785,6 +843,13 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
     assert first["user_service_requests"]["summary_hash"] == review_summary[
         "user_service_requests"
     ]["summary_hash"]
+    assert first["network_kpi_formula_evidence"]["evidence_present"] is True
+    assert first["network_kpi_formula_evidence"]["formula_evidence_status"] == (
+        "FORMULA_AND_TIME_EVIDENCE_READY"
+    )
+    assert first["network_kpi_formula_evidence"]["evidence_hash"] == (
+        review_summary["network_kpi_formula_evidence"]["evidence_hash"]
+    )
     assert first["model_boundaries"]["packet_level_simulation"] is False
     assert first["model_boundaries"]["external_simulators"] is False
     assert first["recommended_review_order"][0] == "scenario_review_bundle_v1.json"
@@ -2384,6 +2449,7 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
         "manifest.json",
         "metrics.csv",
         "network_kpi_benchmark_validation_v1.json",
+        "network_kpi_formula_evidence_v1.json",
         "review_summary_v1.json",
         "route_detail_index_v1.json",
         "scenario_review_bundle_v1.json",
@@ -2414,12 +2480,13 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
     assert diagnostics["package"]["package_complete"] is True
     assert {
         finding["code"] for finding in diagnostics["findings"]
-    } == {
-        "ROUTE_TRUST_EVIDENCE_MISSING",
-        "NETWORK_KPI_BENCHMARK_VALIDATION_MISSING",
-        "USER_SERVICE_REQUEST_SUMMARY_MISSING",
-    }
-    assert diagnostics["finding_count"] == 3
+        } == {
+            "ROUTE_TRUST_EVIDENCE_MISSING",
+            "NETWORK_KPI_BENCHMARK_VALIDATION_MISSING",
+            "NETWORK_KPI_FORMULA_EVIDENCE_MISSING",
+            "USER_SERVICE_REQUEST_SUMMARY_MISSING",
+        }
+    assert diagnostics["finding_count"] == 4
 
 
 def _file(name: str, filename: str, sha256: str) -> dict[str, object]:
@@ -2659,6 +2726,95 @@ def _network_kpi_benchmark_validation() -> dict[str, object]:
         ),
         "caveats": (
             "Benchmark validation v1 is a deterministic product guardrail.",
+        ),
+    }
+
+
+def _network_kpi_formula_evidence() -> dict[str, object]:
+    return {
+        "version": "v1",
+        "evidence_id": "leo_twin.network_kpi_formula_evidence.v1",
+        "source": "NETWORK_KPI_PROVENANCE_V2_AND_CALIBRATION_V1",
+        "provenance_id": "leo_twin.network_kpi_provenance.v2",
+        "calibration_id": "leo_twin.network_kpi_calibration.v1",
+        "metric_model": "FLOW_LEVEL_PROXY",
+        "packet_level_simulation": False,
+        "kpi_count": 2,
+        "observed_kpi_count": 2,
+        "runtime_value_missing_count": 0,
+        "selected_input_count": 3,
+        "selected_observed_input_count": 3,
+        "missing_selected_input_count": 0,
+        "time_varying_kpi_count": 1,
+        "flat_kpi_count": 1,
+        "formula_evidence_status": "FORMULA_AND_TIME_EVIDENCE_READY",
+        "kpis": (
+            {
+                "metric": "EFFECTIVE_THROUGHPUT",
+                "display_name": "Effective throughput",
+                "runtime_summary_key": "network_quality_effective_throughput_mbps",
+                "current_value": 180.0,
+                "unit": "Mbps",
+                "status": "OBSERVED",
+                "observed_source": "COMPLETED_FLOW_CAPACITY",
+                "observed_source_label": "completed flow capacity",
+                "formula_summary": "min(delivered, route capacity)",
+                "selection_policy": "Prefer completed-flow throughput.",
+                "selected_input_count": 2,
+                "selected_observed_input_count": 2,
+                "missing_selected_input_count": 0,
+                "selected_inputs": (
+                    {
+                        "field": "network_quality_estimated_delivered_throughput_mbps",
+                        "current_value": 180.0,
+                        "observed": True,
+                        "role": "primary",
+                        "selection_reason": "selected source",
+                    },
+                    {
+                        "field": "network_quality_time_adjusted_delivered_throughput_mbps",
+                        "current_value": 171.0,
+                        "observed": True,
+                        "role": "time_driver",
+                        "selection_reason": "time adjusted source",
+                    },
+                ),
+                "variation_status": "TIME_VARYING",
+                "flat_reason": "",
+                "latest_is_zero": False,
+                "evidence_status": "FORMULA_AND_TIME_VARYING",
+            },
+            {
+                "metric": "EFFECTIVE_LOSS_PROXY",
+                "display_name": "Effective loss proxy",
+                "runtime_summary_key": "network_quality_effective_loss_proxy_rate",
+                "current_value": 0.02,
+                "unit": "ratio",
+                "status": "OBSERVED",
+                "observed_source": "PRESSURE_LOSS_PROXY",
+                "observed_source_label": "pressure loss proxy",
+                "formula_summary": "max(route loss, demand pressure loss)",
+                "selection_policy": "Prefer pressure loss proxy.",
+                "selected_input_count": 1,
+                "selected_observed_input_count": 1,
+                "missing_selected_input_count": 0,
+                "selected_inputs": (
+                    {
+                        "field": "network_quality_time_pressure_loss_proxy_rate",
+                        "current_value": 0.02,
+                        "observed": True,
+                        "role": "time_driver",
+                        "selection_reason": "selected source",
+                    },
+                ),
+                "variation_status": "FLAT_NONZERO",
+                "flat_reason": "unchanged pressure inputs",
+                "latest_is_zero": False,
+                "evidence_status": "FORMULA_READY_FLAT_OR_LIMITED_SERIES",
+            },
+        ),
+        "caveats": (
+            "Formula evidence summarizes backend flow-level proxy inputs.",
         ),
     }
 

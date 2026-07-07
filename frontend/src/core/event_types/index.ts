@@ -1356,6 +1356,7 @@ export interface RuntimeExportReviewSummaryV1 {
   runtime: RuntimeExportReviewRuntimeV1;
   route_trust?: RuntimeExportRouteTrustEvidenceV1;
   network_kpi_benchmark_validation?: RuntimeExportNetworkKpiBenchmarkValidationEvidenceV1;
+  network_kpi_formula_evidence?: RuntimeExportNetworkKpiFormulaEvidenceV1;
   user_service_requests?: RuntimeExportUserServiceRequestEvidenceV2;
   route_comparison_review?: RuntimeExportRouteComparisonReviewV1;
   reproducibility: RuntimeExportReviewReproducibilityV1;
@@ -1423,6 +1424,30 @@ export interface RuntimeExportNetworkKpiBenchmarkValidationEvidenceV1 {
   acceptable_for_demo_review: boolean;
   caveats: readonly string[];
   validation_hash: string;
+}
+
+export interface RuntimeExportNetworkKpiFormulaEvidenceV1 {
+  version: "v1" | string;
+  evidence_id: string;
+  source: string;
+  evidence_present: boolean;
+  runtime_status_source?: string;
+  provenance_id?: string;
+  calibration_id?: string;
+  metric_model: string;
+  formula_evidence_status: string;
+  kpi_count: number;
+  observed_kpi_count: number;
+  runtime_value_missing_count: number;
+  selected_input_count: number;
+  selected_observed_input_count: number;
+  missing_selected_input_count: number;
+  time_varying_kpi_count: number;
+  flat_kpi_count: number;
+  packet_level_simulation: boolean;
+  acceptable_for_demo_review: boolean;
+  caveats: readonly string[];
+  evidence_hash: string;
 }
 
 export interface RuntimeExportUserServiceRequestEvidenceV2 {
@@ -1855,6 +1880,10 @@ export interface RuntimeExportPackageAuditIndexV1 {
   network_kpi_benchmark_validation_status?: string;
   network_kpi_benchmark_validation_present?: boolean;
   network_kpi_benchmark_validation_failed_check_count?: number;
+  network_kpi_formula_evidence_hash?: string;
+  network_kpi_formula_evidence_status?: string;
+  network_kpi_formula_evidence_present?: boolean;
+  network_kpi_formula_evidence_missing_selected_input_count?: number;
   user_service_request_summary_hash?: string;
   user_service_request_summary_present?: boolean;
   user_service_request_summary_request_count?: number;
@@ -2074,6 +2103,7 @@ export interface RuntimeExportScenarioReviewBundleV1 {
   review_summary: RuntimeExportScenarioReviewSummaryRefV1;
   diagnostics: RuntimeExportScenarioReviewDiagnosticsRefV1;
   network_kpi_benchmark_validation?: RuntimeExportScenarioReviewNetworkKpiBenchmarkValidationRefV1;
+  network_kpi_formula_evidence?: RuntimeExportScenarioReviewNetworkKpiFormulaEvidenceRefV1;
   user_service_requests?: RuntimeExportScenarioReviewUserServiceRequestRefV2;
   audit_index: RuntimeExportScenarioReviewAuditIndexRefV1;
   artifact_review: RuntimeExportScenarioReviewArtifactsV1;
@@ -2128,6 +2158,18 @@ export interface RuntimeExportScenarioReviewNetworkKpiBenchmarkValidationRefV1 {
   validation_status: string;
   failed_check_count: number;
   validation_hash: string;
+  evidence_present: boolean;
+}
+
+export interface RuntimeExportScenarioReviewNetworkKpiFormulaEvidenceRefV1 {
+  evidence_id: string;
+  metric_model: string;
+  formula_evidence_status: string;
+  kpi_count: number;
+  observed_kpi_count: number;
+  missing_selected_input_count: number;
+  time_varying_kpi_count: number;
+  evidence_hash: string;
   evidence_present: boolean;
 }
 
@@ -2244,6 +2286,7 @@ export interface RuntimeExportReviewArtifactsV1 {
   service_lifecycle_trace_exported: boolean;
   review_summary_exported: boolean;
   network_kpi_benchmark_validation_exported?: boolean;
+  network_kpi_formula_evidence_exported?: boolean;
   user_service_request_summary_exported?: boolean;
 }
 
@@ -2257,6 +2300,7 @@ export interface RuntimeExportDiagnosticsBundleV1 {
   runtime: RuntimeExportDiagnosticsRuntimeV1;
   route_trust?: RuntimeExportRouteTrustEvidenceV1;
   network_kpi_benchmark_validation?: RuntimeExportNetworkKpiBenchmarkValidationEvidenceV1;
+  network_kpi_formula_evidence?: RuntimeExportNetworkKpiFormulaEvidenceV1;
   user_service_requests?: RuntimeExportUserServiceRequestEvidenceV2;
   route_comparison_review?: RuntimeExportRouteComparisonReviewV1;
   reproducibility: RuntimeExportDiagnosticsReproducibilityV1;

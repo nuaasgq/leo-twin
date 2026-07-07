@@ -2,7 +2,7 @@
 
 Date: 2026-07-07
 
-Branch: `feature/T369-network-kpi-formula-evidence-v1`
+Branch: `feature/T370-network-kpi-formula-evidence-export-v1`
 
 ## Local Entry Points
 
@@ -61,10 +61,10 @@ The latest full local run passed:
 The latest fast local run with `-RunControlCycleSmoke` also passed for a
 1200-satellite / 20-user / 1200-compute-node scenario and verified INITIALIZE,
 START, PAUSE, RESUME, STOP, and RESET through the control websocket.
-The latest frontend run after the network KPI formula evidence task included
-26 frontend test files / 456 tests, followed by a successful production build.
-The latest targeted T369 backend validation added network KPI formula evidence
-checks for the runtime status adapter and provenance/calibration summary.
+The latest T370 validation added result-package export checks for network KPI
+formula evidence, passed 35 targeted backend tests, passed 26 frontend test
+files / 456 tests, and completed a production build. Vite reported the
+existing `DataPanel` chunk-size warning after minification.
 
 ## Current Product Signals
 
@@ -86,6 +86,11 @@ checks for the runtime status adapter and provenance/calibration summary.
   time-series evidence summary. The dashboard renders it in the network KPI
   panel and model-trust workspace rather than inferring formula credibility
   locally.
+- Runtime export packages now include `network_kpi_formula_evidence_v1.json`
+  and propagate its status/hash into review summary, diagnostics, scenario
+  review, audit index, and dashboard export review labels. Offline package
+  review can inspect KPI formula/input/time-series evidence without metric
+  recomputation.
 - The standalone dashboard now shows a detail-coverage card in the user/satellite
   detail section. It reports how many backend detail families are present,
   returned-vs-total rows, hidden/cursor-limited rows, exact node cards, and the
@@ -156,3 +161,6 @@ checks for the runtime status adapter and provenance/calibration summary.
 - KPI formula evidence is visible as a compact card; a future pass can add a
   wider source-field/input drawer if operators need to inspect every KPI input
   for larger scenarios.
+- Formula evidence is exported as a package artifact, but the dashboard still
+  uses compact labels rather than a dedicated artifact drawer for every KPI
+  input row.

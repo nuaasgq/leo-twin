@@ -9,6 +9,7 @@ from examples.integration_demo.runtime import run_integration_demo
 from leo_twin.services.detail_pagination_contract import DETAIL_ENDPOINT_MAX_LIMIT
 from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_V1_ID,
+    RUNTIME_EXPORT_NETWORK_KPI_FORMULA_EVIDENCE_V1_ID,
     RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT_V1_ID,
     RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID,
     RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1_ID,
@@ -55,6 +56,7 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert (package_dir / "review_summary_v1.json").exists()
     assert (package_dir / "route_detail_index_v1.json").exists()
     assert (package_dir / "network_kpi_benchmark_validation_v1.json").exists()
+    assert (package_dir / "network_kpi_formula_evidence_v1.json").exists()
     assert (package_dir / "user_service_request_summary_v2.json").exists()
     assert (package_dir / "service_lifecycle_trace_v2.json").exists()
     assert (package_dir / "scenario_review_bundle_v1.json").exists()
@@ -66,6 +68,7 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert "review_summary_v1.json" in filenames
     assert "diagnostics_bundle_v1.json" in filenames
     assert "network_kpi_benchmark_validation_v1.json" in filenames
+    assert "network_kpi_formula_evidence_v1.json" in filenames
     assert "user_service_request_summary_v2.json" in filenames
     assert "scenario_review_bundle_v1.json" in filenames
     assert "export_package_audit_index_v1.json" in filenames
@@ -89,6 +92,11 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     )
     network_kpi_benchmark_validation = json.loads(
         (package_dir / "network_kpi_benchmark_validation_v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    network_kpi_formula_evidence = json.loads(
+        (package_dir / "network_kpi_formula_evidence_v1.json").read_text(
             encoding="utf-8"
         )
     )
@@ -193,6 +201,17 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert review_summary["network_kpi_benchmark_validation"][
         "failed_check_count"
     ] == 0
+    assert review_summary["network_kpi_formula_evidence"][
+        "evidence_present"
+    ] is True
+    assert review_summary["network_kpi_formula_evidence"][
+        "formula_evidence_status"
+    ] in {
+        "FORMULA_AND_TIME_EVIDENCE_READY",
+        "FORMULA_READY",
+        "FORMULA_READY_FLAT_SERIES",
+        "FORMULA_READY_INSUFFICIENT_SERIES",
+    }
     assert review_summary["reproducibility"]["manifest_hash"] == manifest[
         "manifest_hash"
     ]
@@ -212,6 +231,9 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert review_summary["artifacts"][
         "network_kpi_benchmark_validation_exported"
     ] is True
+    assert review_summary["artifacts"][
+        "network_kpi_formula_evidence_exported"
+    ] is True
     assert diagnostics_bundle["type"] == "RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1"
     assert diagnostics_bundle["package"]["package_complete"] is True
     assert diagnostics_bundle["artifact_health"]["missing_required_filenames"] == []
@@ -228,6 +250,12 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert diagnostics_bundle["network_kpi_benchmark_validation"][
         "failed_check_count"
     ] == 0
+    assert diagnostics_bundle["network_kpi_formula_evidence"][
+        "evidence_hash"
+    ] == review_summary["network_kpi_formula_evidence"]["evidence_hash"]
+    assert diagnostics_bundle["network_kpi_formula_evidence"][
+        "evidence_present"
+    ] is True
     assert diagnostics_bundle["reproducibility"]["manifest_hash"] == manifest[
         "manifest_hash"
     ]
@@ -247,6 +275,18 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         "validation_hash"
     ] == review_summary["network_kpi_benchmark_validation"]["validation_hash"]
     assert "NO_METRIC_RECOMPUTE" in network_kpi_benchmark_validation[
+        "boundary_conditions"
+    ]
+    assert network_kpi_formula_evidence["artifact_id"] == (
+        RUNTIME_EXPORT_NETWORK_KPI_FORMULA_EVIDENCE_V1_ID
+    )
+    assert network_kpi_formula_evidence["formula_evidence"] == (
+        config_snapshot["status"]["network_kpi_formula_evidence_v1"]
+    )
+    assert network_kpi_formula_evidence["evidence"]["evidence_hash"] == (
+        review_summary["network_kpi_formula_evidence"]["evidence_hash"]
+    )
+    assert "NO_METRIC_RECOMPUTE" in network_kpi_formula_evidence[
         "boundary_conditions"
     ]
     assert user_service_request_summary["artifact_id"] == (
@@ -284,6 +324,12 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         "validation_hash"
     ] == network_kpi_benchmark_validation["evidence"]["validation_hash"]
     assert scenario_review_bundle["network_kpi_benchmark_validation"][
+        "evidence_present"
+    ] is True
+    assert scenario_review_bundle["network_kpi_formula_evidence"][
+        "evidence_hash"
+    ] == network_kpi_formula_evidence["evidence"]["evidence_hash"]
+    assert scenario_review_bundle["network_kpi_formula_evidence"][
         "evidence_present"
     ] is True
     assert scenario_review_bundle["user_service_requests"][
@@ -334,6 +380,11 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert audit_index["network_kpi_benchmark_validation_hash"] == (
         network_kpi_benchmark_validation["evidence"]["validation_hash"]
     )
+    assert audit_index["network_kpi_formula_evidence_present"] is True
+    assert audit_index["network_kpi_formula_evidence_hash"] == (
+        network_kpi_formula_evidence["evidence"]["evidence_hash"]
+    )
+    assert audit_index["network_kpi_formula_evidence_missing_selected_input_count"] >= 0
     assert audit_index["user_service_request_summary_present"] is True
     assert audit_index["user_service_request_summary_hash"] == (
         user_service_request_summary["evidence"]["summary_hash"]

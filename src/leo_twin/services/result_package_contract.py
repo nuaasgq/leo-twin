@@ -74,6 +74,9 @@ RUNTIME_EXPORT_BENCHMARK_ACCEPTANCE_BINDING_V1_ID = (
 RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_V1_ID = (
     "leo_twin.runtime_export_network_kpi_benchmark_validation.v1"
 )
+RUNTIME_EXPORT_NETWORK_KPI_FORMULA_EVIDENCE_V1_ID = (
+    "leo_twin.runtime_export_network_kpi_formula_evidence.v1"
+)
 RUNTIME_EXPORT_USER_SERVICE_REQUEST_SUMMARY_V2_ID = (
     "leo_twin.runtime_export_user_service_request_summary.v2"
 )
@@ -90,6 +93,7 @@ ROUTE_DETAIL_INDEX_FILENAME = "route_detail_index_v1.json"
 NETWORK_KPI_BENCHMARK_VALIDATION_FILENAME = (
     "network_kpi_benchmark_validation_v1.json"
 )
+NETWORK_KPI_FORMULA_EVIDENCE_FILENAME = "network_kpi_formula_evidence_v1.json"
 
 
 _REQUIRED_FILE_SPECS: tuple[dict[str, object], ...] = (
@@ -202,6 +206,15 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
                 "content": (
                     "runtime network KPI benchmark guardrail evidence exported "
                     "for offline review"
+                ),
+            },
+            {
+                "logical_name": "network_kpi_formula_evidence_v1",
+                "filename": "network_kpi_formula_evidence_v1.json",
+                "format": "json",
+                "content": (
+                    "runtime network KPI formula input and time-series evidence "
+                    "exported for offline review"
                 ),
             },
             {
@@ -331,6 +344,7 @@ def build_runtime_export_reproducibility_boundary_v1(
             "review_summary_v1.json",
             "diagnostics_bundle_v1.json",
             "network_kpi_benchmark_validation_v1.json",
+            "network_kpi_formula_evidence_v1.json",
             "user_service_request_summary_v2.json",
             "scenario_review_bundle_v1.json",
         ),
@@ -420,6 +434,43 @@ def build_runtime_export_network_kpi_benchmark_validation_v1(
     return artifact
 
 
+def build_runtime_export_network_kpi_formula_evidence_v1(
+    *,
+    package_id: str,
+    package_dir: str,
+    config_snapshot: Mapping[str, Any],
+) -> dict[str, object]:
+    """Build offline review evidence for runtime network KPI formula inputs."""
+
+    if not isinstance(config_snapshot, Mapping):
+        raise TypeError("config_snapshot must be a mapping")
+
+    status = _mapping(config_snapshot.get("status"))
+    formula_evidence = _mapping(status.get("network_kpi_formula_evidence_v1"))
+    evidence = _runtime_export_network_kpi_formula_evidence(status)
+    artifact: dict[str, object] = {
+        "type": "RUNTIME_EXPORT_NETWORK_KPI_FORMULA_EVIDENCE_V1",
+        "version": "v1",
+        "artifact_id": RUNTIME_EXPORT_NETWORK_KPI_FORMULA_EVIDENCE_V1_ID,
+        "source": "BACKEND_RUNTIME_EXPORT",
+        "artifact_scope": "NETWORK_KPI_FORMULA_INPUT_TIME_SERIES_REVIEW",
+        "package_id": str(package_id),
+        "package_dir": str(package_dir),
+        "runtime_status_field": "network_kpi_formula_evidence_v1",
+        "formula_evidence": dict(formula_evidence),
+        "evidence": evidence,
+        "boundary_conditions": (
+            "READ_RUNTIME_STATUS_ONLY",
+            "NO_METRIC_RECOMPUTE",
+            "NO_EVENT_REPLAY",
+            "NO_PACKET_LEVEL_SIMULATION",
+            "NO_EXTERNAL_SIMULATOR_ARTIFACT",
+        ),
+    }
+    artifact["artifact_hash"] = stable_hash_payload(artifact)
+    return artifact
+
+
 def build_runtime_export_user_service_request_summary_v2(
     *,
     package_id: str,
@@ -495,6 +546,9 @@ def build_runtime_export_review_summary_v1(
     )
     route_trust = _runtime_export_route_trust_evidence(status)
     network_kpi_validation = _runtime_export_network_kpi_validation_evidence(status)
+    network_kpi_formula_evidence = _runtime_export_network_kpi_formula_evidence(
+        status
+    )
     user_service_requests = _runtime_export_user_service_request_evidence(status)
     route_comparison_review = _runtime_export_route_comparison_review_metadata()
     reproducibility_boundary = _runtime_export_reproducibility_boundary(
@@ -541,6 +595,7 @@ def build_runtime_export_review_summary_v1(
         },
         "route_trust": route_trust,
         "network_kpi_benchmark_validation": network_kpi_validation,
+        "network_kpi_formula_evidence": network_kpi_formula_evidence,
         "user_service_requests": user_service_requests,
         "route_comparison_review": route_comparison_review,
         "reproducibility": {
@@ -566,6 +621,9 @@ def build_runtime_export_review_summary_v1(
             "network_kpi_benchmark_validation_exported": (
                 "network_kpi_benchmark_validation_v1.json" in artifacts
             ),
+            "network_kpi_formula_evidence_exported": (
+                "network_kpi_formula_evidence_v1.json" in artifacts
+            ),
             "user_service_request_summary_exported": (
                 "user_service_request_summary_v2.json" in artifacts
             ),
@@ -577,6 +635,7 @@ def build_runtime_export_review_summary_v1(
             "Use user_service_request_summary_v2.json for per-user business request state review.",
             "Use route_trust to inspect flow-level route explanation evidence.",
             "Use network_kpi_benchmark_validation_v1.json to review KPI guardrail evidence.",
+            "Use network_kpi_formula_evidence_v1.json to review KPI formula input and time-series evidence.",
             "Use route_detail_index_v1.json to inspect exported route explanation rows.",
             "Use route_comparison_review to compare exported route rows with the current live runtime when available.",
             "This package does not contain packet captures or external simulator artifacts.",
@@ -627,6 +686,9 @@ def build_runtime_export_diagnostics_bundle_v1(
     package_complete = manifest_ok and not missing_required
     route_trust = _runtime_export_route_trust_evidence(status)
     network_kpi_validation = _runtime_export_network_kpi_validation_evidence(status)
+    network_kpi_formula_evidence = _runtime_export_network_kpi_formula_evidence(
+        status
+    )
     user_service_requests = _runtime_export_user_service_request_evidence(status)
     route_comparison_review = _runtime_export_route_comparison_review_metadata()
     reproducibility_boundary = _runtime_export_reproducibility_boundary(
@@ -640,6 +702,7 @@ def build_runtime_export_diagnostics_bundle_v1(
         missing_recommended=missing_recommended,
         route_trust=route_trust,
         network_kpi_validation=network_kpi_validation,
+        network_kpi_formula_evidence=network_kpi_formula_evidence,
         user_service_requests=user_service_requests,
     )
     diagnostics: dict[str, object] = {
@@ -663,6 +726,7 @@ def build_runtime_export_diagnostics_bundle_v1(
         },
         "route_trust": route_trust,
         "network_kpi_benchmark_validation": network_kpi_validation,
+        "network_kpi_formula_evidence": network_kpi_formula_evidence,
         "user_service_requests": user_service_requests,
         "route_comparison_review": route_comparison_review,
         "reproducibility": {
@@ -759,9 +823,14 @@ def build_runtime_export_scenario_review_bundle_v1(
     network_kpi_validation = _mapping(
         review_summary.get("network_kpi_benchmark_validation")
     )
+    network_kpi_formula_evidence = _mapping(
+        review_summary.get("network_kpi_formula_evidence")
+    )
     user_service_requests = _mapping(review_summary.get("user_service_requests"))
     if user_service_requests.get("evidence_present") is not True:
         scenario_review_warnings.append("USER_SERVICE_REQUEST_SUMMARY_MISSING")
+    if network_kpi_formula_evidence.get("evidence_present") is not True:
+        scenario_review_warnings.append("NETWORK_KPI_FORMULA_EVIDENCE_MISSING")
 
     bundle: dict[str, object] = {
         "type": "RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1",
@@ -810,6 +879,29 @@ def build_runtime_export_scenario_review_bundle_v1(
             "validation_hash": str(network_kpi_validation.get("validation_hash", "")),
             "evidence_present": network_kpi_validation.get("evidence_present") is True,
         },
+        "network_kpi_formula_evidence": {
+            "evidence_id": str(network_kpi_formula_evidence.get("evidence_id", "")),
+            "metric_model": str(network_kpi_formula_evidence.get("metric_model", "")),
+            "formula_evidence_status": str(
+                network_kpi_formula_evidence.get("formula_evidence_status", "")
+            ),
+            "kpi_count": _integer(network_kpi_formula_evidence.get("kpi_count")),
+            "observed_kpi_count": _integer(
+                network_kpi_formula_evidence.get("observed_kpi_count")
+            ),
+            "missing_selected_input_count": _integer(
+                network_kpi_formula_evidence.get("missing_selected_input_count")
+            ),
+            "time_varying_kpi_count": _integer(
+                network_kpi_formula_evidence.get("time_varying_kpi_count")
+            ),
+            "evidence_hash": str(
+                network_kpi_formula_evidence.get("evidence_hash", "")
+            ),
+            "evidence_present": (
+                network_kpi_formula_evidence.get("evidence_present") is True
+            ),
+        },
         "user_service_requests": {
             "evidence_id": str(user_service_requests.get("evidence_id", "")),
             "request_model": str(user_service_requests.get("request_model", "")),
@@ -848,6 +940,7 @@ def build_runtime_export_scenario_review_bundle_v1(
                 "review_summary_v1.json",
                 "diagnostics_bundle_v1.json",
                 "network_kpi_benchmark_validation_v1.json",
+                "network_kpi_formula_evidence_v1.json",
                 "user_service_request_summary_v2.json",
                 "manifest.json",
                 "config_snapshot.json",
@@ -870,6 +963,7 @@ def build_runtime_export_scenario_review_bundle_v1(
             "review_summary_v1.json",
             "diagnostics_bundle_v1.json",
             "network_kpi_benchmark_validation_v1.json",
+            "network_kpi_formula_evidence_v1.json",
             "user_service_request_summary_v2.json",
             "service_lifecycle_trace_v2.json",
             "service_trace_comparison_review_report_v1.json",
@@ -2099,6 +2193,9 @@ def build_runtime_export_package_audit_index_v1(
         )
     )
     network_kpi_validation = _runtime_export_network_kpi_validation_evidence(status)
+    network_kpi_formula_evidence = _runtime_export_network_kpi_formula_evidence(
+        status
+    )
     user_service_requests = _runtime_export_user_service_request_evidence(status)
     normalized_artifacts = tuple(
         sorted(
@@ -2207,6 +2304,18 @@ def build_runtime_export_package_audit_index_v1(
         ),
         "network_kpi_benchmark_validation_failed_check_count": _integer(
             network_kpi_validation.get("failed_check_count")
+        ),
+        "network_kpi_formula_evidence_hash": str(
+            network_kpi_formula_evidence.get("evidence_hash", "")
+        ),
+        "network_kpi_formula_evidence_status": str(
+            network_kpi_formula_evidence.get("formula_evidence_status", "")
+        ),
+        "network_kpi_formula_evidence_present": (
+            network_kpi_formula_evidence.get("evidence_present") is True
+        ),
+        "network_kpi_formula_evidence_missing_selected_input_count": _integer(
+            network_kpi_formula_evidence.get("missing_selected_input_count")
         ),
         "user_service_request_summary_hash": str(
             user_service_requests.get("summary_hash", "")
@@ -2326,6 +2435,9 @@ def build_runtime_export_package_review_completion_v1(
     user_config = _mapping(user_configuration_binding)
     network_kpi_validation = _mapping(
         diagnostics_bundle.get("network_kpi_benchmark_validation")
+    )
+    network_kpi_formula_evidence = _mapping(
+        diagnostics_bundle.get("network_kpi_formula_evidence")
     )
     artifact_filenames = tuple(
         sorted(
@@ -2479,6 +2591,15 @@ def build_runtime_export_package_review_completion_v1(
         "network_kpi_benchmark_validation_failed_check_count": _integer(
             network_kpi_validation.get("failed_check_count")
         ),
+        "network_kpi_formula_evidence_present": (
+            network_kpi_formula_evidence.get("evidence_present") is True
+        ),
+        "network_kpi_formula_evidence_status": str(
+            network_kpi_formula_evidence.get("formula_evidence_status", "")
+        ),
+        "network_kpi_formula_evidence_missing_selected_input_count": _integer(
+            network_kpi_formula_evidence.get("missing_selected_input_count")
+        ),
         "boundary_alignment_status": str(alignment.get("alignment_status", "")),
         "boundary_alignment_hash": str(alignment.get("alignment_hash", "")),
         "user_configuration_validation_ok": user_configuration_validated,
@@ -2503,6 +2624,10 @@ def build_runtime_export_package_review_completion_v1(
             (
                 "network_kpi "
                 f"{network_kpi_validation.get('validation_status', 'missing')}"
+            ),
+            (
+                "network_kpi_formula "
+                f"{network_kpi_formula_evidence.get('formula_evidence_status', 'missing')}"
             ),
         ),
         "boundary_conditions": (
@@ -3423,6 +3548,7 @@ def _runtime_export_diagnostic_findings(
     missing_recommended: tuple[str, ...],
     route_trust: Mapping[str, Any],
     network_kpi_validation: Mapping[str, Any],
+    network_kpi_formula_evidence: Mapping[str, Any],
     user_service_requests: Mapping[str, Any],
 ) -> tuple[dict[str, object], ...]:
     findings: list[dict[str, object]] = []
@@ -3517,6 +3643,39 @@ def _runtime_export_diagnostic_findings(
                 (
                     "network KPI benchmark guardrails require operator review: "
                     f"{network_kpi_validation.get('validation_status', '')}."
+                ),
+            )
+        )
+    if network_kpi_formula_evidence.get("evidence_present") is not True:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "NETWORK_KPI_FORMULA_EVIDENCE_MISSING",
+                "config_snapshot.status does not include network_kpi_formula_evidence_v1.",
+            )
+        )
+    if network_kpi_formula_evidence.get("packet_level_simulation") is True:
+        findings.append(
+            _diagnostic_finding(
+                "ERROR",
+                "NETWORK_KPI_FORMULA_PACKET_LEVEL_DECLARED",
+                "network KPI formula evidence declares packet-level simulation, which is outside the v2 demo boundary.",
+            )
+        )
+    if network_kpi_formula_evidence.get("evidence_present") is True and str(
+        network_kpi_formula_evidence.get("formula_evidence_status", "")
+    ) in {
+        "PARTIAL_RUNTIME_VALUES",
+        "MISSING_SELECTED_INPUTS",
+        "NO_KPI_PROVENANCE",
+    }:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "NETWORK_KPI_FORMULA_EVIDENCE_INCOMPLETE",
+                (
+                    "network KPI formula evidence requires operator review: "
+                    f"{network_kpi_formula_evidence.get('formula_evidence_status', '')}."
                 ),
             )
         )
@@ -3924,6 +4083,12 @@ def _runtime_export_scenario_review_evidence_hash(
                 scenario_review_bundle.get("network_kpi_benchmark_validation")
             ).get("validation_hash", "")
         )
+    if filename == "network_kpi_formula_evidence_v1.json":
+        return str(
+            _mapping(
+                scenario_review_bundle.get("network_kpi_formula_evidence")
+            ).get("evidence_hash", "")
+        )
     if filename == "user_service_request_summary_v2.json":
         return str(
             _mapping(scenario_review_bundle.get("user_service_requests")).get(
@@ -3980,6 +4145,7 @@ def _runtime_export_scenario_review_step_label(
         "review_summary_v1.json": "review summary",
         "diagnostics_bundle_v1.json": "diagnostics",
         "network_kpi_benchmark_validation_v1.json": "network KPI benchmark",
+        "network_kpi_formula_evidence_v1.json": "network KPI formula evidence",
         "user_service_request_summary_v2.json": "user services",
         "service_lifecycle_trace_v2.json": "service trace",
         "service_trace_comparison_review_report_v1.json": "service trace review",
@@ -4147,6 +4313,85 @@ def _runtime_export_network_kpi_validation_evidence(
         "caveats": _string_tuple(validation.get("caveats")),
     }
     evidence["validation_hash"] = stable_hash_payload(evidence)
+    return evidence
+
+
+def _runtime_export_network_kpi_formula_evidence(
+    status: Mapping[str, Any],
+) -> dict[str, object]:
+    formula_evidence = _mapping(status.get("network_kpi_formula_evidence_v1"))
+    evidence_present = bool(formula_evidence)
+    if not evidence_present:
+        evidence: dict[str, object] = {
+            "version": "v1",
+            "evidence_id": "",
+            "source": "config_snapshot.status.network_kpi_formula_evidence_v1",
+            "evidence_present": False,
+            "metric_model": "UNKNOWN",
+            "formula_evidence_status": "MISSING_KPI_FORMULA_EVIDENCE",
+            "kpi_count": 0,
+            "observed_kpi_count": 0,
+            "runtime_value_missing_count": 0,
+            "selected_input_count": 0,
+            "selected_observed_input_count": 0,
+            "missing_selected_input_count": 0,
+            "time_varying_kpi_count": 0,
+            "flat_kpi_count": 0,
+            "packet_level_simulation": False,
+            "acceptable_for_demo_review": False,
+            "caveats": (
+                "Runtime status did not expose network_kpi_formula_evidence_v1.",
+            ),
+        }
+        evidence["evidence_hash"] = stable_hash_payload(evidence)
+        return evidence
+
+    formula_status = str(formula_evidence.get("formula_evidence_status", ""))
+    acceptable = (
+        formula_status
+        in {
+            "FORMULA_AND_TIME_EVIDENCE_READY",
+            "FORMULA_READY",
+            "FORMULA_READY_FLAT_SERIES",
+            "FORMULA_READY_INSUFFICIENT_SERIES",
+        }
+        and formula_evidence.get("packet_level_simulation") is not True
+        and _integer(formula_evidence.get("runtime_value_missing_count")) == 0
+        and _integer(formula_evidence.get("missing_selected_input_count")) == 0
+    )
+    evidence = {
+        "version": "v1",
+        "evidence_id": str(formula_evidence.get("evidence_id", "")),
+        "source": "config_snapshot.status.network_kpi_formula_evidence_v1",
+        "runtime_status_source": str(formula_evidence.get("source", "")),
+        "evidence_present": True,
+        "provenance_id": str(formula_evidence.get("provenance_id", "")),
+        "calibration_id": str(formula_evidence.get("calibration_id", "")),
+        "metric_model": str(formula_evidence.get("metric_model", "")),
+        "formula_evidence_status": formula_status,
+        "kpi_count": _integer(formula_evidence.get("kpi_count")),
+        "observed_kpi_count": _integer(formula_evidence.get("observed_kpi_count")),
+        "runtime_value_missing_count": _integer(
+            formula_evidence.get("runtime_value_missing_count")
+        ),
+        "selected_input_count": _integer(formula_evidence.get("selected_input_count")),
+        "selected_observed_input_count": _integer(
+            formula_evidence.get("selected_observed_input_count")
+        ),
+        "missing_selected_input_count": _integer(
+            formula_evidence.get("missing_selected_input_count")
+        ),
+        "time_varying_kpi_count": _integer(
+            formula_evidence.get("time_varying_kpi_count")
+        ),
+        "flat_kpi_count": _integer(formula_evidence.get("flat_kpi_count")),
+        "packet_level_simulation": (
+            formula_evidence.get("packet_level_simulation") is True
+        ),
+        "acceptable_for_demo_review": acceptable,
+        "caveats": _string_tuple(formula_evidence.get("caveats")),
+    }
+    evidence["evidence_hash"] = stable_hash_payload(evidence)
     return evidence
 
 

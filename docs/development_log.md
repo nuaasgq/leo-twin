@@ -5,6 +5,62 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-07 - Network KPI Formula Evidence Export v1
+
+- Branch: `feature/T370-network-kpi-formula-evidence-export-v1`
+- Commit: pending in this commit
+- Scope: persist backend-owned `network_kpi_formula_evidence_v1` into runtime
+  result packages as `network_kpi_formula_evidence_v1.json`. The artifact
+  copies the runtime status formula/input/time-series evidence, adds compact
+  evidence/hash fields, and records no-replay/no-recompute/no-packet/
+  no-external-simulator boundaries. Review summary, diagnostics bundle,
+  scenario review bundle, package audit index, and the dashboard export review
+  labels now surface the same status/hash evidence without recomputing metrics.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `examples/integration_demo/control_plane.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/network_kpi_provenance_v2.md`
+  - `docs/current_product_status.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/user_guide_v2.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_result_package_contract_v1.py -q`
+    - Result: passed, 31 tests.
+  - `python -m pytest tests/integration/test_result_package_export_v1.py::test_runtime_export_package_satisfies_result_package_contract_v1 -q`
+    - Result: passed, 1 test.
+  - `python -m pytest tests/integration/test_runtime_session_control.py::test_demo_adapter_exports_runtime_result_package tests/integration/test_runtime_session_control.py::test_demo_adapter_persists_runtime_export_catalog tests/integration/test_runtime_session_control.py::test_demo_adapter_serves_persisted_runtime_export_artifacts -q`
+    - Result: passed, 3 tests.
+  - `python -m pytest tests/unit/test_result_package_contract_v1.py tests/integration/test_result_package_export_v1.py::test_runtime_export_package_satisfies_result_package_contract_v1 tests/integration/test_runtime_session_control.py::test_demo_adapter_exports_runtime_result_package tests/integration/test_runtime_session_control.py::test_demo_adapter_persists_runtime_export_catalog tests/integration/test_runtime_session_control.py::test_demo_adapter_serves_persisted_runtime_export_artifacts -q`
+    - Result: passed, 35 tests.
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed, 1 test file / 215 tests.
+  - `pnpm --dir frontend test`
+    - Result: passed, 26 test files / 456 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite reported the existing `DataPanel` chunk-size
+      warning after minification.
+- Problems encountered and handling:
+  - Missing formula evidence initially produced both a missing-evidence warning
+    and an incomplete-evidence warning. The diagnostics rule now reports only
+    the missing-evidence warning until the runtime field exists.
+  - Existing result-package tests still expected the older recommended artifact
+    list and review workflow order. Fixtures were updated to include
+    `network_kpi_formula_evidence_v1.json` as a recommended offline evidence
+    artifact.
+  - Existing local runtime/generated config files remain dirty and are
+    intentionally not included in this task.
+- Known remaining issues / follow-up:
+  - The dashboard export review shows compact formula evidence labels. A future
+    package artifact viewer can render every KPI row and selected input from
+    `network_kpi_formula_evidence_v1.json` directly.
+
 ## 2026-07-07 - Network KPI Formula Evidence v1
 
 - Branch: `feature/T369-network-kpi-formula-evidence-v1`

@@ -246,3 +246,7 @@ KPI/source-field/input tables if additional KPI families are added.
 T369 adds `network_kpi_formula_evidence_v1` so the backend can prove formula
 input coverage and time-series evidence together, and binds that summary into
 the dashboard network KPI panel and model-trust evidence workspace.
+T370 exports the same formula evidence as
+`network_kpi_formula_evidence_v1.json` inside runtime result packages and binds
+compact status/hash labels into review summary, diagnostics, scenario review,
+audit-index, and dashboard export review surfaces.

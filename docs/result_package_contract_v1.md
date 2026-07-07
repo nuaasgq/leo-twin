@@ -82,6 +82,11 @@ offline review artifact for `network_kpi_benchmark_validation_v1`. It copies the
 runtime status validation object into the result package and adds compact
 evidence fields, a stable artifact hash, and explicit no-replay/no-recompute/
 no-packet/no-external-simulator boundary conditions.
+`network_kpi_formula_evidence_v1.json` is emitted as a deterministic offline
+review artifact for `network_kpi_formula_evidence_v1`. It copies the backend
+formula/input/time-series evidence object from runtime status, adds compact
+evidence fields plus a stable evidence hash, and records the same no-replay,
+no-recompute, no-packet, and no-external-simulator boundary conditions.
 `scenario_review_bundle_v1.json` is emitted as a deterministic operator-facing
 review entry point. It binds the effective user configuration evidence,
 scenario scale, runtime progress, manifest hashes, review summary hash,
@@ -113,6 +118,8 @@ It reports:
 - runtime lifecycle state, simulation time, processed events, and queued events;
 - route trust evidence derived from
   `config_snapshot.status.route_provenance_trust_summary_v1`;
+- network KPI formula evidence derived from
+  `config_snapshot.status.network_kpi_formula_evidence_v1`;
 - route comparison review metadata for package-vs-live route diagnostics;
 - manifest id/hash plus config and generated-config hashes;
 - required artifact coverage and missing required filenames;
@@ -126,7 +133,7 @@ review summary so users can inspect it without constructing the URL manually.
 The dashboard also loads the selected package's review summary as a read-only
 card, showing review readiness, scenario scale, runtime progress, manifest
 hashes, artifact coverage, and optional user-service request evidence
-alongside compare and restore-preflight context.
+alongside KPI formula evidence, compare, and restore-preflight context.
 The same dashboard view derives artifact health rows from the backend export
 catalog and selected review summary, showing required/optional status,
 present/missing state, file size, short SHA-256 hash, and direct file links
@@ -580,7 +587,8 @@ with older packages that lack this field, the dashboard falls back to the
 previous deterministic mapping: expected-range rows use the audit index,
 fidelity rows use `config_snapshot.json`, route/trust rows use
 `route_detail_index_v1.json`, KPI rows use
-`network_kpi_benchmark_validation_v1.json`, and scenario rows use
+`network_kpi_benchmark_validation_v1.json`, formula evidence rows use
+`network_kpi_formula_evidence_v1.json`, and scenario rows use
 `scenario_review_bundle_v1.json`. When available, the dashboard also displays
 `evidence_context_label / evidence_context_id` for each row so operators can
 carry the selected benchmark check context into the linked evidence artifact.

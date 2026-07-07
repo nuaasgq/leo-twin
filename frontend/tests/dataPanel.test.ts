@@ -3130,6 +3130,11 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         "sha256:7777777777777777777777777777777777777777777777777777777777777777",
       diagnostics_hash:
         "sha256:8888888888888888888888888888888888888888888888888888888888888888",
+      network_kpi_formula_evidence_hash:
+        "sha256:edededededededededededededededededededededededededededededededed",
+      network_kpi_formula_evidence_status: "FORMULA_AND_TIME_EVIDENCE_READY",
+      network_kpi_formula_evidence_present: true,
+      network_kpi_formula_evidence_missing_selected_input_count: 0,
       user_service_request_summary_hash:
         "sha256:abababababababababababababababababababababababababababababababab",
       user_service_request_summary_present: true,
@@ -3214,6 +3219,9 @@ describe("buildDataPanelExportCatalogDisplay", () => {
       diagnosticsLabels: [
         "review 777777777777",
         "diagnostics 888888888888",
+        "KPI formula FORMULA_AND_TIME_EVIDENCE_READY",
+        "KPI formula missing inputs 0",
+        "KPI formula edededededed",
         "user services present",
         "user service requests 20",
         "user services exported 18",
@@ -3346,6 +3354,18 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         finding_count: 1,
         finding_labels: [{ severity: "INFO", code: "RESULT_PACKAGE_REVIEW_READY" }]
       },
+      network_kpi_formula_evidence: {
+        evidence_id: "leo_twin.network_kpi_formula_evidence.v1",
+        metric_model: "FLOW_LEVEL_PROXY",
+        formula_evidence_status: "FORMULA_AND_TIME_EVIDENCE_READY",
+        kpi_count: 6,
+        observed_kpi_count: 6,
+        missing_selected_input_count: 0,
+        time_varying_kpi_count: 4,
+        evidence_hash:
+          "sha256:edededededededededededededededededededededededededededededededed",
+        evidence_present: true
+      },
       user_service_requests: {
         evidence_id: "leo_twin.user_service_request_export_evidence.v2",
         request_model: "FLOW_LEVEL_USER_SERVICE_REQUEST_PROXY",
@@ -3376,6 +3396,7 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           "route_detail_index_v1.json",
           "service_lifecycle_trace_v2.json",
           "service_trace_comparison_review_report_v1.json",
+          "network_kpi_formula_evidence_v1.json",
           "user_service_request_summary_v2.json",
           "events.jsonl",
           "metrics.csv"
@@ -3403,6 +3424,7 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         "route_detail_index_v1.json",
         "service_lifecycle_trace_v2.json",
         "service_trace_comparison_review_report_v1.json",
+        "network_kpi_formula_evidence_v1.json",
         "user_service_request_summary_v2.json",
         "events.jsonl",
         "metrics.csv",
@@ -3442,6 +3464,8 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         "boundary 777777777777",
         "review 888888888888",
         "diagnostics 999999999999",
+        "KPI formula FORMULA_AND_TIME_EVIDENCE_READY",
+        "KPI formula edededededed",
         "user services 18 / 20",
         "user services abababababab",
         "audit export_package_audit_index_v1.json"
@@ -3542,38 +3566,48 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           tone: "match"
         },
         {
-          stepLabel: "10 user services",
+          stepLabel: "10 KPI formula evidence",
+          statusLabel: "available",
+          detailLabel: "network_kpi_formula_evidence_v1.json",
+          href:
+            "/runtime/export/packages/pkg-review/files/network_kpi_formula_evidence_v1.json",
+          title:
+            "10 KPI formula evidence / network_kpi_formula_evidence_v1.json / package artifact available",
+          tone: "match"
+        },
+        {
+          stepLabel: "11 user services",
           statusLabel: "available",
           detailLabel: "user_service_request_summary_v2.json",
           href:
             "/runtime/export/packages/pkg-review/files/user_service_request_summary_v2.json",
           title:
-            "10 user services / user_service_request_summary_v2.json / package artifact available",
+            "11 user services / user_service_request_summary_v2.json / package artifact available",
           tone: "match"
         },
         {
-          stepLabel: "11 event evidence",
+          stepLabel: "12 event evidence",
           statusLabel: "available",
           detailLabel: "events.jsonl",
           href: "/runtime/export/packages/pkg-review/files/events.jsonl",
-          title: "11 event evidence / events.jsonl / package artifact available",
+          title: "12 event evidence / events.jsonl / package artifact available",
           tone: "match"
         },
         {
-          stepLabel: "12 metrics",
+          stepLabel: "13 metrics",
           statusLabel: "available",
           detailLabel: "metrics.csv",
           href: "/runtime/export/packages/pkg-review/files/metrics.csv",
-          title: "12 metrics / metrics.csv / package artifact available",
+          title: "13 metrics / metrics.csv / package artifact available",
           tone: "match"
         },
         {
-          stepLabel: "13 summary",
+          stepLabel: "14 summary",
           statusLabel: "missing",
           detailLabel: "summary.json",
           href: null,
           title:
-            "13 summary / summary.json / not listed in scenario review bundle",
+            "14 summary / summary.json / not listed in scenario review bundle",
           tone: "different"
         }
       ],
@@ -5143,6 +5177,30 @@ describe("buildDataPanelExportCompareDisplay", () => {
         validation_hash:
           "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd"
       },
+      network_kpi_formula_evidence: {
+        version: "v1",
+        evidence_id: "leo_twin.network_kpi_formula_evidence.v1",
+        source: "config_snapshot.status.network_kpi_formula_evidence_v1",
+        evidence_present: true,
+        runtime_status_source: "NETWORK_KPI_PROVENANCE_V2_AND_CALIBRATION_V1",
+        provenance_id: "leo_twin.network_kpi_provenance.v2",
+        calibration_id: "leo_twin.network_kpi_calibration.v1",
+        metric_model: "FLOW_LEVEL_PROXY",
+        formula_evidence_status: "FORMULA_AND_TIME_EVIDENCE_READY",
+        kpi_count: 6,
+        observed_kpi_count: 6,
+        runtime_value_missing_count: 0,
+        selected_input_count: 10,
+        selected_observed_input_count: 10,
+        missing_selected_input_count: 0,
+        time_varying_kpi_count: 4,
+        flat_kpi_count: 2,
+        packet_level_simulation: false,
+        acceptable_for_demo_review: true,
+        caveats: ["Formula evidence summarizes backend flow-level proxy inputs."],
+        evidence_hash:
+          "sha256:edededededededededededededededededededededededededededededededed"
+      },
       user_service_requests: {
         version: "v2",
         evidence_id: "leo_twin.user_service_request_export_evidence.v2",
@@ -5198,6 +5256,7 @@ describe("buildDataPanelExportCompareDisplay", () => {
         missing_required_filenames: [],
         service_lifecycle_trace_exported: true,
         review_summary_exported: true,
+        network_kpi_formula_evidence_exported: true,
         user_service_request_summary_exported: true
       },
       review_notes: ["Use manifest.json"],
@@ -5221,6 +5280,10 @@ describe("buildDataPanelExportCompareDisplay", () => {
         "KPI failed 0",
         "KPI checks 12",
         "KPI benchmark cdcdcdcdcdcd",
+        "KPI formula FORMULA_AND_TIME_EVIDENCE_READY",
+        "KPI formula missing inputs 0",
+        "KPI formula moving 4",
+        "KPI formula edededededed",
         "user services present",
         "user service requests 20",
         "user services exported 18",
@@ -5237,6 +5300,7 @@ describe("buildDataPanelExportCompareDisplay", () => {
         "必需文件缺失 0",
         "service trace 已导出",
         "review summary 已导出",
+        "KPI formula exported",
         "user services exported"
       ]
     });
@@ -5482,6 +5546,27 @@ describe("buildDataPanelExportCompareDisplay", () => {
         validation_hash:
           "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd"
       },
+      network_kpi_formula_evidence: {
+        version: "v1",
+        evidence_id: "leo_twin.network_kpi_formula_evidence.v1",
+        source: "config_snapshot.status.network_kpi_formula_evidence_v1",
+        evidence_present: true,
+        metric_model: "FLOW_LEVEL_PROXY",
+        formula_evidence_status: "FORMULA_AND_TIME_EVIDENCE_READY",
+        kpi_count: 6,
+        observed_kpi_count: 6,
+        runtime_value_missing_count: 0,
+        selected_input_count: 10,
+        selected_observed_input_count: 10,
+        missing_selected_input_count: 0,
+        time_varying_kpi_count: 4,
+        flat_kpi_count: 2,
+        packet_level_simulation: false,
+        acceptable_for_demo_review: true,
+        caveats: [],
+        evidence_hash:
+          "sha256:edededededededededededededededededededededededededededededededed"
+      },
       user_service_requests: {
         version: "v2",
         evidence_id: "leo_twin.user_service_request_export_evidence.v2",
@@ -5608,6 +5693,12 @@ describe("buildDataPanelExportCompareDisplay", () => {
     expect(display?.modelBoundaryLabels).toContain("KPI failed 0");
     expect(display?.modelBoundaryLabels).toContain("KPI checks 12");
     expect(display?.modelBoundaryLabels).toContain("KPI benchmark cdcdcdcdcdcd");
+    expect(display?.modelBoundaryLabels).toContain(
+      "KPI formula FORMULA_AND_TIME_EVIDENCE_READY"
+    );
+    expect(display?.modelBoundaryLabels).toContain("KPI formula missing inputs 0");
+    expect(display?.modelBoundaryLabels).toContain("KPI formula moving 4");
+    expect(display?.modelBoundaryLabels).toContain("KPI formula edededededed");
     expect(display?.modelBoundaryLabels).toContain("user services present");
     expect(display?.modelBoundaryLabels).toContain("user service requests 20");
     expect(display?.modelBoundaryLabels).toContain("user services exported 18");

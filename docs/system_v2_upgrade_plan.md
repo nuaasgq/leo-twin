@@ -305,7 +305,10 @@ Tasks:
     T369 adds backend-owned `network_kpi_formula_evidence_v1`, joining KPI
     provenance and KPI calibration into a compact formula/input/time-series
     evidence summary that the dashboard renders without local semantic
-    inference.
+    inference. T370 exports the same formula evidence into
+    `network_kpi_formula_evidence_v1.json` and surfaces compact status/hash
+    labels in result-package review, diagnostics, scenario review, and audit
+    sections.
 - V2-022: Add time-varying flow-level network pressure.
   - Scope: deterministic demand/capacity pressure, route blocking, congestion
     proxy, loss proxy, delay variation proxy.
@@ -808,7 +811,10 @@ Tasks:
     binds it into `review_summary_v1.json`, `diagnostics_bundle_v1.json`,
     `scenario_review_bundle_v1.json`, `export_package_audit_index_v1.json`, and
     `package_handoff_report_v1.md`, and lets the dashboard show backend-owned
-    KPI benchmark status/hash labels without recomputing KPI values. T344 adds
+    KPI benchmark status/hash labels without recomputing KPI values. T370 adds
+    `network_kpi_formula_evidence_v1.json` to the same result-package review
+    path, preserving backend formula/input/time-series evidence offline without
+    metric recomputation. T344 adds
     `GET /runtime/export/packages/{package_id}/acceptance-report`, a
     backend-owned pass/warn/fail acceptance summary that binds audit evidence,
     handoff completion, route review, service-trace review, scenario review,
