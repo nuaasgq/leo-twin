@@ -3459,6 +3459,40 @@ export const DataPanel = memo(function DataPanel({
                                       )}
                                     </div>
                                   ) : null}
+                                  {benchmarkEvidenceArtifactViewerDisplay.trafficDemandCard
+                                    .userRows.length > 0 ? (
+                                    <>
+                                      <small className="data-panel-traffic-demand-user-filter">
+                                        {
+                                          benchmarkEvidenceArtifactViewerDisplay
+                                            .trafficDemandCard.userFilterLabel
+                                        }
+                                      </small>
+                                      <div className="data-panel-traffic-demand-user-rows">
+                                        {benchmarkEvidenceArtifactViewerDisplay.trafficDemandCard.userRows.map(
+                                          (row) => (
+                                            <span
+                                              key={`traffic-demand-user:${row.userId}`}
+                                            >
+                                              <strong>{row.userId}</strong>
+                                              <small>{row.serviceLabel}</small>
+                                              <em>{row.requestLabel}</em>
+                                              <em>{row.flowLabel}</em>
+                                              <em>{row.dataLabel}</em>
+                                              <em>{row.arrivalLabel}</em>
+                                            </span>
+                                          )
+                                        )}
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <small className="data-panel-traffic-demand-user-filter">
+                                      {
+                                        benchmarkEvidenceArtifactViewerDisplay
+                                          .trafficDemandCard.userFilterLabel
+                                      }
+                                    </small>
+                                  )}
                                   <div className="data-panel-export-compare-meta">
                                     {benchmarkEvidenceArtifactViewerDisplay.trafficDemandCard.stateLabels.map(
                                       (label) => (
@@ -12968,6 +13002,8 @@ export interface DataPanelTrafficDemandArtifactCard {
   summaryLabel: string;
   metaLabels: readonly string[];
   classRows: readonly DataPanelTrafficDemandArtifactClassRow[];
+  userRows: readonly DataPanelTrafficDemandArtifactUserRow[];
+  userFilterLabel: string;
   stateLabels: readonly string[];
 }
 
@@ -12977,6 +13013,15 @@ export interface DataPanelTrafficDemandArtifactClassRow {
   flowLabel: string;
   dataLabel: string;
   destinationLabel: string;
+}
+
+export interface DataPanelTrafficDemandArtifactUserRow {
+  userId: string;
+  serviceLabel: string;
+  requestLabel: string;
+  flowLabel: string;
+  dataLabel: string;
+  arrivalLabel: string;
 }
 
 export interface DataPanelBenchmarkEvidenceArtifactInspectorRow {
@@ -14488,6 +14533,7 @@ export interface DataPanelJsonPointerSelection {
 const DATA_PANEL_ARTIFACT_INSPECTOR_ROW_LIMIT = 24;
 const DATA_PANEL_ARTIFACT_INSPECTOR_SCAN_LIMIT = 256;
 const DATA_PANEL_ARTIFACT_INSPECTOR_DEPTH_LIMIT = 8;
+const DATA_PANEL_TRAFFIC_DEMAND_USER_ROW_LIMIT = 8;
 
 interface DataPanelArtifactInspectorDisplay {
   summaryLabel: string;
@@ -14579,7 +14625,8 @@ export function buildDataPanelBenchmarkEvidenceArtifactViewerDisplay(
   );
   const trafficDemandCard = buildDataPanelTrafficDemandArtifactCard(
     focus,
-    artifactDocument
+    artifactDocument,
+    filterText
   );
   return {
     tone: selection.found ? focus.tone : selection.valid ? "different" : "error",
@@ -14606,7 +14653,8 @@ export function buildDataPanelBenchmarkEvidenceArtifactViewerDisplay(
 
 function buildDataPanelTrafficDemandArtifactCard(
   focus: DataPanelBenchmarkEvidenceFocus,
-  artifactDocument: unknown
+  artifactDocument: unknown,
+  filterText = ""
 ): DataPanelTrafficDemandArtifactCard | null {
   if (focus.artifactLabel !== TRAFFIC_DEMAND_EXPLANATION_FILENAME) {
     return null;
@@ -14618,6 +14666,8 @@ function buildDataPanelTrafficDemandArtifactCard(
       summaryLabel: "artifact root is not a JSON object",
       metaLabels: ["read-only artifact", "backend semantics unavailable"],
       classRows: [],
+      userRows: [],
+      userFilterLabel: "users 0 shown / 0 matched / 0 total",
       stateLabels: []
     };
   }
@@ -14629,6 +14679,8 @@ function buildDataPanelTrafficDemandArtifactCard(
       summaryLabel: "traffic_demand_explanation field not found",
       metaLabels: ["read-only artifact", "no browser-side regeneration"],
       classRows: [],
+      userRows: [],
+      userFilterLabel: "users 0 shown / 0 matched / 0 total",
       stateLabels: []
     };
   }
@@ -14645,9 +14697,16 @@ function buildDataPanelTrafficDemandArtifactCard(
   const classRows = dataPanelJsonRecordArray(explanation.traffic_class_rows)
     .slice(0, 6)
     .map((row) => buildDataPanelTrafficDemandArtifactClassRow(row));
+  const perUserRecords = dataPanelJsonRecordArray(
+    explanation.per_user_active_service_state
+  );
   const perUserCount =
-    dataPanelJsonRecordArray(explanation.per_user_active_service_state).length ||
+    perUserRecords.length ||
     dataPanelJsonNumber(explanation.per_user_state_count);
+  const userDisplay = buildDataPanelTrafficDemandArtifactUserRows(
+    perUserRecords,
+    filterText
+  );
   const correlation: Record<string, unknown> = isDataPanelJsonObject(
     explanation.correlation_summary
   )
@@ -14690,6 +14749,8 @@ function buildDataPanelTrafficDemandArtifactCard(
       `packet ${packetLevel ? "yes" : "no"}`
     ],
     classRows,
+    userRows: userDisplay.rows,
+    userFilterLabel: userDisplay.filterLabel,
     stateLabels: [
       `active classes ${
         activeClasses.length > 0 ? activeClasses.join(" + ") : "-"
@@ -14704,6 +14765,104 @@ function buildDataPanelTrafficDemandArtifactCard(
       )}`
     ]
   };
+}
+
+function buildDataPanelTrafficDemandArtifactUserRows(
+  sourceRows: readonly Record<string, unknown>[],
+  filterText: string
+): {
+  rows: readonly DataPanelTrafficDemandArtifactUserRow[];
+  filterLabel: string;
+} {
+  const normalizedFilter = normalizeDataPanelTrafficDemandUserFilter(filterText);
+  const allRows = [...sourceRows]
+    .sort((left, right) =>
+      compareEntityId(
+        dataPanelJsonString(left.user_id),
+        dataPanelJsonString(right.user_id)
+      )
+    )
+    .map((row) => buildDataPanelTrafficDemandArtifactUserRow(row));
+  const matchedRows =
+    normalizedFilter.length > 0
+      ? allRows.filter((row) =>
+          [
+            row.userId,
+            row.serviceLabel,
+            row.requestLabel,
+            row.flowLabel,
+            row.dataLabel,
+            row.arrivalLabel
+          ]
+            .join(" ")
+            .toLowerCase()
+            .includes(normalizedFilter)
+        )
+      : allRows;
+  const rows = matchedRows.slice(0, DATA_PANEL_TRAFFIC_DEMAND_USER_ROW_LIMIT);
+  const hiddenCount = Math.max(0, matchedRows.length - rows.length);
+  const filterSuffix =
+    normalizedFilter.length > 0 ? ` / filter ${normalizedFilter}` : "";
+  const hiddenSuffix = hiddenCount > 0 ? ` / hidden ${formatCount(hiddenCount)}` : "";
+  return {
+    rows,
+    filterLabel: `users ${formatCount(rows.length)} shown / ${formatCount(
+      matchedRows.length
+    )} matched / ${formatCount(sourceRows.length)} total${filterSuffix}${hiddenSuffix}`
+  };
+}
+
+function normalizeDataPanelTrafficDemandUserFilter(filterText: string): string {
+  const normalized = filterText.trim().toLowerCase();
+  return normalized === "traffic_demand_explanation" ? "" : normalized;
+}
+
+function buildDataPanelTrafficDemandArtifactUserRow(
+  row: Record<string, unknown>
+): DataPanelTrafficDemandArtifactUserRow {
+  const userId = dataPanelJsonString(row.user_id) || "unknown-user";
+  const classes = dataPanelJsonStringArray(row.service_classes);
+  const primaryClass =
+    dataPanelJsonString(row.primary_service_class) || classes[0] || "UNKNOWN";
+  const serviceParts = uniqueTrafficDemandServiceParts([primaryClass, ...classes]);
+  const flowIds = dataPanelJsonStringArray(row.flow_ids);
+  const taskIds = dataPanelJsonStringArray(row.task_ids);
+  const outputFlowIds = dataPanelJsonStringArray(row.output_flow_ids);
+  return {
+    userId,
+    serviceLabel: serviceParts.length > 0 ? serviceParts.join(" / ") : "UNKNOWN",
+    requestLabel: `requests ${formatCount(
+      dataPanelJsonNumber(row.request_count)
+    )} / priority ${formatCount(dataPanelJsonNumber(row.max_priority))}`,
+    flowLabel: `flows ${formatCount(flowIds.length)} / tasks ${formatCount(
+      taskIds.length
+    )} / outputs ${formatCount(outputFlowIds.length)}`,
+    dataLabel: `${formatMetricValue(
+      dataPanelJsonNumber(row.total_input_data_mb)
+    )} MB in / ${formatMetricValue(dataPanelJsonNumber(row.total_output_data_mb))} MB out`,
+    arrivalLabel: `arrival ${formatPreciseMetricValue(
+      dataPanelJsonNumber(row.first_arrival_time)
+    )} s -> ${formatPreciseMetricValue(
+      dataPanelJsonNumber(row.last_arrival_time)
+    )} s`
+  };
+}
+
+function uniqueTrafficDemandServiceParts(
+  values: readonly string[]
+): readonly string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  values.forEach((value) => {
+    const normalized = value.trim();
+    const key = normalized.toLowerCase();
+    if (normalized.length === 0 || seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    result.push(normalized);
+  });
+  return result;
 }
 
 function buildDataPanelTrafficDemandArtifactClassRow(

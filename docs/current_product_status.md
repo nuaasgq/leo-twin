@@ -2,7 +2,7 @@
 
 Date: 2026-07-07
 
-Branch: `feature/T379-dashboard-traffic-demand-compact-card-v1`
+Branch: `feature/T380-dashboard-traffic-demand-user-rows-v1`
 
 ## Local Entry Points
 
@@ -102,6 +102,10 @@ artifact inspector. When `traffic_demand_explanation_v1.json` is selected, the
 dashboard shows backend-owned request totals, compute-service counts, flow/task
 counts, class rows, per-user state counts, correlation status, and
 frontend-inference / packet-level flags before the raw JSON preview.
+The latest T380 validation extends that card with bounded per-user demand rows
+from the same exported artifact. The existing artifact filter can narrow the
+user rows by user id or displayed service/request labels, while the browser
+still treats `traffic_demand_explanation_v1.json` as the source of truth.
 
 ## Current Product Signals
 
@@ -117,6 +121,10 @@ frontend-inference / packet-level flags before the raw JSON preview.
   ranges, compute-service task/output-flow correlation, arrival window, and
   per-user active service state without changing flow generation or event
   scheduling.
+- The dashboard traffic-demand artifact card now renders a bounded per-user
+  demand preview from exported `per_user_active_service_state` rows and reuses
+  the artifact filter for user-level inspection without regenerating demand in
+  the frontend.
 - Generated backend summaries now expose the same traffic-demand explanation
   under `backend_summary.traffic_demand_explanation_v1`. The object is derived
   from the backend traffic configuration, uses a bounded endpoint/request

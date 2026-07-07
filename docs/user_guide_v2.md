@@ -152,7 +152,10 @@ The standalone dashboard is for data situation awareness:
   `backend_summary.traffic_demand_explanation_v1` for generated business
   request counts, active traffic classes, priority/data-volume summaries,
   compute-service correlation completeness, arrival windows, and per-user
-  active service state;
+  active service state. Offline result-package review of
+  `traffic_demand_explanation_v1.json` includes the same compact explanation
+  card, bounded per-user demand rows, and artifact-filtered user inspection
+  without regenerating demand in the browser;
 - route explanations;
 - compute resource and task timeline summaries;
 - user, satellite, and node detail pages;

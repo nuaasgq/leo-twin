@@ -5136,8 +5136,34 @@ describe("buildDataPanelExportCatalogDisplay", () => {
               }
             ],
             per_user_active_service_state: [
-              { user_id: "user-00001", request_state: "NETWORK_SERVICE_READY" },
-              { user_id: "user-00002", request_state: "COMPUTE_SERVICE_ACTIVE" }
+              {
+                user_id: "user-00001",
+                request_count: 12,
+                service_classes: ["DATA_TRANSFER"],
+                primary_service_class: "DATA_TRANSFER",
+                max_priority: 1,
+                first_arrival_time: 0,
+                last_arrival_time: 55,
+                flow_ids: ["flow-a", "flow-b"],
+                task_ids: [],
+                output_flow_ids: [],
+                total_input_data_mb: 24,
+                total_output_data_mb: 0
+              },
+              {
+                user_id: "user-00002",
+                request_count: 8,
+                service_classes: ["COMPUTE_SERVICE"],
+                primary_service_class: "COMPUTE_SERVICE",
+                max_priority: 3,
+                first_arrival_time: 10,
+                last_arrival_time: 75,
+                flow_ids: ["flow-c"],
+                task_ids: ["task-c"],
+                output_flow_ids: ["flow-c-output"],
+                total_input_data_mb: 64,
+                total_output_data_mb: 16
+              }
             ],
             correlation_summary: {
               all_compute_services_have_task: true,
@@ -5156,7 +5182,7 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         },
         false,
         null,
-        "request_count"
+        "user-00002"
       )
     ).toMatchObject({
       tone: "match",
@@ -5189,6 +5215,18 @@ describe("buildDataPanelExportCatalogDisplay", () => {
             flowLabel: "flows 8 / tasks 8 / outputs 8",
             dataLabel: "64 MB in / 16 MB out",
             destinationLabel: "COMPUTE_NODE"
+          }
+        ],
+        userFilterLabel:
+          "users 1 shown / 1 matched / 2 total / filter user-00002",
+        userRows: [
+          {
+            userId: "user-00002",
+            serviceLabel: "COMPUTE_SERVICE",
+            requestLabel: "requests 8 / priority 3",
+            flowLabel: "flows 1 / tasks 1 / outputs 1",
+            dataLabel: "64 MB in / 16 MB out",
+            arrivalLabel: "arrival 10 s -> 75 s"
           }
         ],
         stateLabels: [

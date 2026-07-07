@@ -3491,14 +3491,16 @@ button.data-panel-route-row {
   background: #180c0c;
 }
 
-.data-panel-traffic-demand-artifact-rows {
+.data-panel-traffic-demand-artifact-rows,
+.data-panel-traffic-demand-user-rows {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 5px;
   min-width: 0;
 }
 
-.data-panel-traffic-demand-artifact-rows > span {
+.data-panel-traffic-demand-artifact-rows > span,
+.data-panel-traffic-demand-user-rows > span {
   display: grid;
   gap: 2px;
   min-width: 0;
@@ -3508,7 +3510,13 @@ button.data-panel-route-row {
   background: #071018;
 }
 
-.data-panel-traffic-demand-artifact-rows em {
+.data-panel-traffic-demand-user-filter {
+  color: var(--app-muted);
+  font-size: 10px;
+}
+
+.data-panel-traffic-demand-artifact-rows em,
+.data-panel-traffic-demand-user-rows em {
   min-width: 0;
   color: var(--app-muted);
   font-size: 10px;

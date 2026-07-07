@@ -5,6 +5,44 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-07 - Dashboard Traffic Demand User Rows v1
+
+- Branch: `feature/T380-dashboard-traffic-demand-user-rows-v1`
+- Commit: pending in this commit
+- Scope: extend the standalone dashboard compact review card for
+  `traffic_demand_explanation_v1.json` with bounded per-user demand rows from
+  exported `per_user_active_service_state` data. The existing artifact filter
+  now narrows those rows by user id or displayed service/request labels. The
+  browser still treats the persisted artifact as the only semantic source and
+  does not regenerate traffic, replay events, change runtime control, alter
+  Event Kernel behavior, add packet-level simulation, or introduce external
+  simulator dependencies.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/current_product_status.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed, 1 test file / 217 tests using the bundled Codex
+      Node/pnpm runtime.
+  - `python -m pytest tests\unit\test_system_v2_upgrade_plan_docs.py tests\unit\test_user_guide_v2_docs.py -q`
+    - Result: passed, 4 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed using the bundled Codex Node/pnpm runtime. Vite reported
+      the existing `DataPanel` chunk-size warning after minification.
+- Problems encountered and handling:
+  - The task started with local runtime/generated config files already dirty.
+    They remain outside the staged task scope and are intentionally not
+    delivered as product changes.
+- Known remaining issues / follow-up:
+  - The per-user preview is bounded to keep package review lightweight. A later
+    backend-paged artifact endpoint can expose large per-user traffic-demand
+    windows without loading the full JSON artifact in the browser.
+
 ## 2026-07-07 - Dashboard Traffic Demand Compact Card v1
 
 - Branch: `feature/T379-dashboard-traffic-demand-compact-card-v1`

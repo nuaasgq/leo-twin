@@ -202,7 +202,10 @@ Tasks:
     configured/explained requests, input flows, tasks, output flows, class rows,
     per-user state count, compute-service correlation status, packet-level flag,
     frontend-inference flag, and evidence hash from the persisted artifact
-    before the raw JSON preview. T332 preserves
+    before the raw JSON preview. T380 extends that compact card with bounded
+    per-user demand rows from exported `per_user_active_service_state` data and
+    reuses the artifact filter for user-level inspection without frontend
+    demand regeneration. T332 preserves
     backend-provided request/route/flow/task
     correlation ids in dashboard user-service rows and lets selected export
     package rows drive package route evidence, package service-trace filtering,
