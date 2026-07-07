@@ -2,7 +2,7 @@
 
 Date: 2026-07-07
 
-Branch: `feature/T365-dashboard-selected-detail-evidence-v1`
+Branch: `feature/T366-dashboard-service-trace-correlation-v1`
 
 ## Local Entry Points
 
@@ -61,8 +61,8 @@ The latest full local run passed:
 The latest fast local run with `-RunControlCycleSmoke` also passed for a
 1200-satellite / 20-user / 1200-compute-node scenario and verified INITIALIZE,
 START, PAUSE, RESUME, STOP, and RESET through the control websocket.
-The latest frontend run after the pending-control render test included 25
-frontend test files / 197 tests.
+The latest frontend run after the service-trace correlation evidence task
+included 26 frontend test files / 449 tests.
 
 ## Current Product Signals
 
@@ -87,6 +87,10 @@ frontend test files / 197 tests.
   selected user, satellite, route, service, service trace, and compute node. It
   separates table-row evidence, backend exact-detail availability, loading
   state, and exact-detail errors.
+- The same evidence row now includes a service-trace closed-loop correlation
+  note. For a selected service trace it reports whether flow, route, user,
+  satellite, compute-node, stage, and latency evidence comes from backend exact
+  detail or from the current visible window fallback.
 - Launcher health v2 reports backend/frontend port readiness, HTTP readiness,
   process ids, latest log paths, config paths, and recommended actions.
 - Operator diagnostics bundle captures launcher health, runtime status, version

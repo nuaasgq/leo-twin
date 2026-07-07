@@ -17965,3 +17965,45 @@ change.
   - The card summarizes selected detail evidence but does not yet provide a
     dedicated wide drill-down browser for service trace correlations or large
     exact-detail payloads.
+
+## 2026-07-07 - T366 dashboard service trace correlation v1
+
+- Branch: `feature/T366-dashboard-service-trace-correlation-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: add a service-trace closed-loop correlation evidence note to the
+  standalone dashboard detail section. The note reports whether a selected
+  service trace has flow, route, user, satellite, compute-node, stage, and
+  latency evidence from backend exact detail, with current visible-window data
+  as a fallback. This task does not change backend protocols, Event Kernel
+  behavior, or simulation model logic.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/current_product_status.md`
+  - `docs/dashboard_information_architecture_v3.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/user_guide_v2.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts` using bundled Node/Pnpm
+    paths.
+    - Result: passed, 1 file / 208 tests.
+  - `pnpm --dir frontend test` using bundled Node/Pnpm paths.
+    - Result: passed, 26 files / 449 tests.
+  - `pnpm --dir frontend build` using bundled Node/Pnpm paths.
+    - Result: passed; Vite emitted the existing large-chunk warning for
+      `DataPanel`.
+  - `git diff --check`.
+    - Result: passed; Git emitted CRLF warnings for the existing unstaged
+      runtime config drift.
+  - `scripts/check_no_runtime_config_staged.ps1`.
+    - Result: passed; no runtime/local config files are staged.
+- Problems encountered:
+  - None so far; the implementation stayed within the existing dashboard data
+    panel contracts and reused current service-trace matching helpers.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The note summarizes the closed-loop evidence, but a later task should add a
+    wider service-trace drill-down browser for large exact-detail payloads and
+    cross-filtered route/user/satellite tables.

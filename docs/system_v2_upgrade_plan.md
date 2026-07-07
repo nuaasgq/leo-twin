@@ -1031,6 +1031,10 @@ Current Phase 3 progress:
   service, service trace, and compute-node selections so the dashboard can show
   whether the current selection is backed by a table row, backend exact detail,
   a loading request, or an exact-detail error.
+- T366 adds a service-trace closed-loop correlation note to the dashboard
+  detail evidence row. It makes the selected service trace's flow, route, user,
+  satellite, compute-node, stage, and latency evidence explicit and prefers
+  backend exact detail over visible-window fallback.
 
 ## 5. Parallel Agent Assignment Model
 

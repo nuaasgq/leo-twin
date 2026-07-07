@@ -1416,6 +1416,16 @@ export const DataPanel = memo(function DataPanel({
       computeNode: computeNodeDetailRequestStatus
     }
   });
+  const serviceTraceCorrelationEvidenceNote =
+    buildDataPanelServiceTraceCorrelationEvidenceNote({
+      trace: selectedServiceTraceRow,
+      users: userBusinessRequests,
+      routes: routeExplanations,
+      satellites: satelliteResourceRows,
+      computeNodes: computeNodeDetailRows,
+      backendDetail: selectedServiceTraceBackendDetail,
+      requestStatus: serviceTraceDetailRequestStatus
+    });
   const userDetailInspector = buildUserBusinessRequestInspector(
     selectedUserDetailRow,
     nodeDetailSummary,
@@ -1648,6 +1658,7 @@ export const DataPanel = memo(function DataPanel({
   const detailScopeNotes = [
     detailCoverageNote,
     selectedDetailEvidenceNote,
+    serviceTraceCorrelationEvidenceNote,
     ...buildDataPanelDetailScopeNotes(
       userBusinessRequests,
       satelliteResourceRows,
@@ -6719,6 +6730,16 @@ export interface DataPanelSelectedDetailEvidenceInput {
   requestStatuses?: RuntimeSelectedNodeDetailRequests | null;
 }
 
+export interface DataPanelServiceTraceCorrelationEvidenceInput {
+  trace?: DataPanelServiceLifecycleTraceRow | null;
+  users: UserBusinessRequestRows;
+  routes: DataPanelRouteExplanationRows;
+  satellites: SatelliteResourceRows;
+  computeNodes: DataPanelComputeNodeDetailRows;
+  backendDetail?: RuntimeServiceTraceDetailV2 | null;
+  requestStatus?: RuntimeExactDetailRequestState | null;
+}
+
 interface DataPanelDetailCoverageRecord {
   label: string;
   present: boolean;
@@ -6736,6 +6757,18 @@ interface DataPanelSelectedDetailEvidenceRecord {
   backendPresent: boolean;
   loading: boolean;
   error: string | null;
+}
+
+interface DataPanelServiceTraceCorrelationEvidenceRecord {
+  sourceLabel: string;
+  routeCount: number;
+  userCount: number;
+  satelliteCount: number;
+  computeNodeId: string;
+  computeNodeDetailAvailable: boolean;
+  flowCount: number;
+  stageLabel: string;
+  latencyLabel: string;
 }
 
 export function buildDataPanelDetailPageSizes(
@@ -7825,6 +7858,154 @@ export function buildDataPanelSelectedDetailEvidenceNote(
         : selected.length === 0
           ? "history"
           : "backend"
+  };
+}
+
+export function buildDataPanelServiceTraceCorrelationEvidenceNote(
+  input: DataPanelServiceTraceCorrelationEvidenceInput
+): DataPanelDetailScopeNote {
+  const trace = input.trace ?? null;
+  if (trace === null) {
+    return {
+      label: "服务链路闭环",
+      value: "等待选择",
+      detail:
+        "选择一条服务链路后，将核对服务、流、路由、用户、卫星、算力节点和阶段时延是否来自同一条后端语义链。",
+      tone: "history"
+    };
+  }
+
+  const record =
+    input.backendDetail !== null && input.backendDetail !== undefined
+      ? serviceTraceBackendCorrelationEvidenceRecord(input.backendDetail)
+      : serviceTraceWindowCorrelationEvidenceRecord(
+          trace,
+          input.users,
+          input.routes,
+          input.satellites,
+          input.computeNodes
+        );
+  const completedFamilies = [
+    record.flowCount > 0,
+    record.routeCount > 0,
+    record.userCount > 0,
+    record.satelliteCount > 0,
+    record.computeNodeId.length > 0 || record.computeNodeDetailAvailable
+  ].filter(Boolean).length;
+  const requestStatus = input.requestStatus ?? null;
+  const statusParts = [
+    requestStatus?.loading === true ? "精确详情读取中" : null,
+    requestStatus?.error ? `精确详情错误 ${requestStatus.error}` : null
+  ].filter((part): part is string => part !== null);
+
+  return {
+    label: "服务链路闭环",
+    value: `${formatCount(completedFamilies)} / 5 ${
+      record.sourceLabel === "后端精确详情" ? "后端精确" : "窗口匹配"
+    }`,
+    detail: [
+      record.sourceLabel,
+      `服务 ${trace.serviceId}`,
+      `流 ${formatCount(record.flowCount)}`,
+      `路由 ${formatCount(record.routeCount)}`,
+      `用户 ${formatCount(record.userCount)}`,
+      `卫星 ${formatCount(record.satelliteCount)}`,
+      `算力节点 ${record.computeNodeId || "未放置"}`,
+      record.computeNodeDetailAvailable ? "算力详情已返回" : "算力详情未返回",
+      record.stageLabel,
+      record.latencyLabel,
+      ...statusParts
+    ].join("；"),
+    tone:
+      requestStatus?.error || requestStatus?.loading === true || completedFamilies < 5
+        ? "limit"
+        : record.sourceLabel === "后端精确详情"
+          ? "backend"
+          : "history"
+  };
+}
+
+function serviceTraceBackendCorrelationEvidenceRecord(
+  detail: RuntimeServiceTraceDetailV2
+): DataPanelServiceTraceCorrelationEvidenceRecord {
+  const trace = detail.trace;
+  const correlation = detail.correlation;
+  const computeNodeId = detail.compute_node?.node_id ?? correlation.compute_node_id;
+  return {
+    sourceLabel: "后端精确详情",
+    routeCount: Math.max(
+      normalizeNonNegativeInteger(correlation.route_count),
+      uniqueStrings(correlation.route_ids).length,
+      detail.routes.length
+    ),
+    userCount: Math.max(
+      normalizeNonNegativeInteger(correlation.user_count),
+      uniqueStrings(correlation.user_ids).length,
+      detail.users.length
+    ),
+    satelliteCount: Math.max(
+      normalizeNonNegativeInteger(correlation.satellite_count),
+      uniqueStrings(correlation.satellite_ids).length,
+      detail.satellites.length
+    ),
+    computeNodeId,
+    computeNodeDetailAvailable:
+      detail.compute_node !== null &&
+      detail.compute_node !== undefined &&
+      correlation.compute_node_detail_available,
+    flowCount: uniqueStrings(correlation.flow_ids).length,
+    stageLabel: `阶段 ${formatCount(trace.observed_stage_count)} 已观测 / ${formatCount(
+      trace.pending_stage_count
+    )} 待观测 / ${formatCount(trace.stage_count)} 合计`,
+    latencyLabel: `时延 输入网络 ${formatMetricMilliseconds(
+      trace.input_network_latency_s
+    )} / 计算排队 ${formatMetricMilliseconds(
+      trace.compute_queue_delay_s
+    )} / 计算执行 ${formatMetricMilliseconds(
+      trace.compute_execution_delay_s
+    )} / 输出网络 ${formatMetricMilliseconds(trace.output_network_latency_s)}`
+  };
+}
+
+function serviceTraceWindowCorrelationEvidenceRecord(
+  trace: DataPanelServiceLifecycleTraceRow,
+  users: UserBusinessRequestRows,
+  routes: DataPanelRouteExplanationRows,
+  satellites: SatelliteResourceRows,
+  computeNodes: DataPanelComputeNodeDetailRows
+): DataPanelServiceTraceCorrelationEvidenceRecord {
+  const matchedRoutes = routes.items.filter((route) =>
+    routeMatchesServiceTrace(route, trace)
+  );
+  const matchedUsers = users.items.filter((user) =>
+    userMatchesServiceTrace(user, trace, matchedRoutes)
+  );
+  const matchedSatellites = satellites.items.filter((satellite) =>
+    satelliteMatchesServiceTrace(satellite, trace, matchedRoutes, matchedUsers)
+  );
+  const computeNode =
+    computeNodes.items.find((node) => node.nodeId === trace.computeNodeId) ?? null;
+  const observedStageCount = trace.stages.filter(
+    (stage) => stage.stageStatus === "OBSERVED"
+  ).length;
+  const pendingStageCount = trace.stages.filter(
+    (stage) => stage.stageStatus === "PENDING"
+  ).length;
+  return {
+    sourceLabel: "当前窗口关联",
+    routeCount: matchedRoutes.length || uniqueStrings(trace.routeIds).length,
+    userCount: matchedUsers.length,
+    satelliteCount: matchedSatellites.length,
+    computeNodeId: computeNode?.nodeId ?? trace.computeNodeId,
+    computeNodeDetailAvailable: computeNode !== null,
+    flowCount: uniqueStrings(trace.flowIds).length,
+    stageLabel:
+      trace.stages.length > 0
+        ? `阶段 ${formatCount(observedStageCount)} 已观测 / ${formatCount(
+            pendingStageCount
+          )} 待观测 / ${formatCount(trace.stages.length)} 窗口样本`
+        : "阶段 当前窗口无阶段样本",
+    latencyLabel: `时延 网络 ${trace.networkLatencyLabel} / 计算 ${trace.computeLatencyLabel} / 总 ${trace.totalLatencyLabel}`
   };
 }
 

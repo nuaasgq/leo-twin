@@ -14,6 +14,7 @@ import {
   buildDataPanelDetailScopeNotes,
   buildDataPanelDetailCoverageNote,
   buildDataPanelSelectedDetailEvidenceNote,
+  buildDataPanelServiceTraceCorrelationEvidenceNote,
   buildDataPanelDetailPageSizes,
   buildDataPanelPaginationContractNotes,
   buildDataPanelDetailWindowPolicyNote,
@@ -10634,6 +10635,287 @@ describe("buildDataPanelServiceLifecycleTraceDisplay", () => {
         { label: "compute node", value: "sat-00002", tone: "resource" }
       ])
     );
+  });
+
+  it("summarizes backend exact service trace correlation evidence", () => {
+    const traceRow = {
+      traceId: "trace:svc-02",
+      serviceId: "svc-02-compute_service-00000",
+      taskId: "svc-02-compute_service-00000-task",
+      inputFlowId: "svc-02-compute_service-00000-input",
+      outputFlowId: "svc-02-compute_service-00000-output",
+      inputRouteId: "route:input-02",
+      outputRouteId: "route:output-02",
+      computeNodeId: "sat-00002",
+      primaryRouteId: "route:input-02",
+      routeIds: ["route:input-02", "route:output-02"],
+      flowIds: [
+        "svc-02-compute_service-00000-input",
+        "svc-02-compute_service-00000-output"
+      ],
+      serviceLabel: "...e_service-00000",
+      terminalState: "COMPLETE",
+      terminalStateReason: "TOTAL_LATENCY_OBSERVED",
+      terminalStateLabel: "完成 / TOTAL_LATENCY_OBSERVED",
+      computeNodeLabel: "算力 sat-00002",
+      networkLatencyLabel: "1000.00 ms / 1500.00 ms",
+      computeLatencyLabel: "200.00 ms / 3000.00 ms",
+      totalLatencyLabel: "5700.00 ms",
+      traceTitle: "trace:svc-02",
+      artifactFilename: "service_lifecycle_trace_v2.json",
+      artifactPointer: "/items/0",
+      artifactFilter: "trace:svc-02",
+      stages: []
+    };
+    const note = buildDataPanelServiceTraceCorrelationEvidenceNote({
+      trace: traceRow,
+      users: { sourceLabel: "users", summaryLabel: "0 users", items: [] },
+      routes: { sourceLabel: "routes", items: [] },
+      satellites: {
+        sourceLabel: "satellites",
+        summaryLabel: "0 satellites",
+        items: []
+      },
+      computeNodes: {
+        sourceLabel: "compute",
+        summaryLabel: "0 nodes",
+        items: []
+      },
+      backendDetail: {
+        version: "v2",
+        source: "BACKEND_RUNTIME_DETAIL",
+        summary_scope: "SERVICE_TRACE_EXACT_DETAIL",
+        detail_hash: "sha256:live-trace-detail",
+        trace: {
+          trace_id: "trace:svc-02",
+          service_id: "svc-02-compute_service-00000",
+          task_id: "svc-02-compute_service-00000-task",
+          service_class: "COMPUTE_SERVICE",
+          input_flow_id: "svc-02-compute_service-00000-input",
+          output_flow_id: "svc-02-compute_service-00000-output",
+          input_route_id: "route:input-02",
+          output_route_id: "route:output-02",
+          compute_node_id: "sat-00002",
+          placement_status: "PLACED",
+          input_network_latency_s: 1,
+          compute_queue_delay_s: 0.2,
+          compute_execution_delay_s: 3,
+          output_network_latency_s: 1.5,
+          total_latency_s: 5.7,
+          terminal_state: "COMPLETE",
+          terminal_state_reason: "TOTAL_LATENCY_OBSERVED",
+          stage_count: 4,
+          observed_stage_count: 4,
+          pending_stage_count: 0,
+          stages: []
+        },
+        correlation: {
+          trace_id: "trace:svc-02",
+          service_id: "svc-02-compute_service-00000",
+          task_id: "svc-02-compute_service-00000-task",
+          flow_ids: [
+            "svc-02-compute_service-00000-input",
+            "svc-02-compute_service-00000-output"
+          ],
+          route_ids: ["route:input-02", "route:output-02"],
+          user_ids: ["user-7"],
+          satellite_ids: ["sat-00002", "sat-00003"],
+          compute_node_id: "sat-00002",
+          route_count: 2,
+          user_count: 1,
+          satellite_count: 2,
+          compute_node_detail_available: false
+        },
+        routes: [],
+        users: [],
+        satellites: [],
+        compute_node: null
+      }
+    });
+
+    expect(note).toMatchObject({
+      label: "服务链路闭环",
+      value: "5 / 5 后端精确",
+      tone: "backend"
+    });
+    expect(note.detail).toContain("后端精确详情");
+    expect(note.detail).toContain("路由 2");
+    expect(note.detail).toContain("用户 1");
+    expect(note.detail).toContain("卫星 2");
+    expect(note.detail).toContain("算力节点 sat-00002");
+    expect(note.detail).toContain("阶段 4 已观测 / 0 待观测 / 4 合计");
+    expect(note.detail).toContain("时延 输入网络");
+  });
+
+  it("summarizes visible-window service trace correlation evidence", () => {
+    const traceRow = {
+      traceId: "trace:svc-02",
+      serviceId: "svc-02-compute_service-00000",
+      taskId: "svc-02-compute_service-00000-task",
+      inputFlowId: "svc-02-compute_service-00000-input",
+      outputFlowId: "svc-02-compute_service-00000-output",
+      inputRouteId: "route:input-02",
+      outputRouteId: "route:output-02",
+      computeNodeId: "sat-00002",
+      primaryRouteId: "route:input-02",
+      routeIds: ["route:input-02", "route:output-02"],
+      flowIds: [
+        "svc-02-compute_service-00000-input",
+        "svc-02-compute_service-00000-output"
+      ],
+      serviceLabel: "...e_service-00000",
+      terminalState: "RUNNING",
+      terminalStateReason: "OUTPUT_NETWORK_PENDING",
+      terminalStateLabel: "运行 / OUTPUT_NETWORK_PENDING",
+      computeNodeLabel: "算力 sat-00002",
+      networkLatencyLabel: "1000.00 ms / 1500.00 ms",
+      computeLatencyLabel: "200.00 ms / 3000.00 ms",
+      totalLatencyLabel: "5700.00 ms",
+      traceTitle: "trace:svc-02",
+      artifactFilename: "service_lifecycle_trace_v2.json",
+      artifactPointer: "/items/0",
+      artifactFilter: "trace:svc-02",
+      stages: [
+        {
+          stageId: "stage-input",
+          component: "network",
+          stageKind: "INPUT_NETWORK",
+          stageStatus: "OBSERVED",
+          label: "输入网络",
+          statusLabel: "已观测",
+          durationLabel: "1000.00 ms",
+          traceTitle: "input"
+        },
+        {
+          stageId: "stage-output",
+          component: "network",
+          stageKind: "OUTPUT_NETWORK",
+          stageStatus: "PENDING",
+          label: "输出网络",
+          statusLabel: "等待",
+          durationLabel: "0.00 ms",
+          traceTitle: "output"
+        }
+      ]
+    };
+    const note = buildDataPanelServiceTraceCorrelationEvidenceNote({
+      trace: traceRow,
+      users: {
+        sourceLabel: "users",
+        summaryLabel: "1 user",
+        items: [
+          {
+            userId: "user-7",
+            platformTypeLabel: "terminal",
+            communicationLabel: "1 / 1 routes",
+            computeLabel: "1 compute",
+            networkQueueLabel: "empty",
+            selectedSatelliteId: "sat-00002",
+            destinationId: "sat-00002",
+            placementLabel: "sat-00002",
+            statusLabel: "ACTIVE",
+            latencyCapacityLabel: "1 s / 10 Mbps",
+            serviceLabel: "svc-02-compute_service-00000-input",
+            pathLabel: "route:input-02: user-7 -> sat-00002"
+          }
+        ]
+      },
+      routes: {
+        sourceLabel: "routes",
+        items: [
+          {
+            routeId: "route:input-02",
+            flowId: "svc-02-compute_service-00000-input",
+            available: true,
+            availabilityLabel: "available",
+            businessType: "COMPUTE_SERVICE",
+            businessLabel: "compute",
+            nextHopLabel: "sat-00002",
+            capacityDemandLabel: "10 / 5 Mbps",
+            pressureLabel: "50%",
+            bottleneckComponent: "NONE",
+            bottleneckLabel: "none",
+            explanationLabel: "route ready",
+            pathLabel: "user-7 -> sat-00002 -> compute"
+          }
+        ]
+      },
+      satellites: {
+        sourceLabel: "satellites",
+        summaryLabel: "1 satellite",
+        items: [
+          {
+            satelliteId: "sat-00002",
+            statusLabel: "ACTIVE",
+            loadPercent: 42,
+            loadLabel: "42%",
+            serviceObjectLabel: "user-7",
+            nextHopLabel: "compute",
+            cpuFp32Label: "4 / 10 GFLOPS",
+            cpuFp64Label: "0 / 2 GFLOPS",
+            gpuLabel: "0 / 1 TFLOPS",
+            npuLabel: "0 / 1 TOPS",
+            memoryStorageLabel: "1 / 4 GB",
+            taskLabel: "1 running",
+            networkLabel: "1 link"
+          }
+        ]
+      },
+      computeNodes: {
+        sourceLabel: "compute",
+        summaryLabel: "1 node",
+        items: [
+          {
+            nodeId: "sat-00002",
+            statusLabel: "BUSY",
+            loadLabel: "42%",
+            fp32Label: "4 / 10 GFLOPS",
+            acceleratorLabel: "GPU 0 / 1 TFLOPS",
+            memoryStorageLabel: "1 / 4 GB",
+            taskLabel: "1 running",
+            traceTitle: "node=sat-00002"
+          }
+        ]
+      }
+    });
+
+    expect(note).toMatchObject({
+      label: "服务链路闭环",
+      value: "5 / 5 窗口匹配",
+      tone: "history"
+    });
+    expect(note.detail).toContain("当前窗口关联");
+    expect(note.detail).toContain("流 2");
+    expect(note.detail).toContain("路由 1");
+    expect(note.detail).toContain("用户 1");
+    expect(note.detail).toContain("卫星 1");
+    expect(note.detail).toContain("阶段 1 已观测 / 1 待观测 / 2 窗口样本");
+  });
+
+  it("shows a waiting service trace correlation evidence note before selection", () => {
+    const note = buildDataPanelServiceTraceCorrelationEvidenceNote({
+      trace: null,
+      users: { sourceLabel: "users", summaryLabel: "0 users", items: [] },
+      routes: { sourceLabel: "routes", items: [] },
+      satellites: {
+        sourceLabel: "satellites",
+        summaryLabel: "0 satellites",
+        items: []
+      },
+      computeNodes: {
+        sourceLabel: "compute",
+        summaryLabel: "0 nodes",
+        items: []
+      }
+    });
+
+    expect(note).toEqual({
+      label: "服务链路闭环",
+      value: "等待选择",
+      detail:
+        "选择一条服务链路后，将核对服务、流、路由、用户、卫星、算力节点和阶段时延是否来自同一条后端语义链。",
+      tone: "history"
+    });
   });
 
   it("builds a backend exact service trace detail drawer", () => {
