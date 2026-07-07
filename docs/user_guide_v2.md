@@ -337,9 +337,12 @@ configured/explained requests, input flows, tasks, output flows, active traffic
 classes, per-class data volumes, per-user state count, compute-service
 correlation status, packet-level flag, frontend-inference flag, and evidence
 hash. The values are read from the exported artifact; the browser does not
-derive new business-demand semantics. The backend traffic-demand user page
-endpoint is available for large packages where a later dashboard binding should
-page user rows instead of relying on the compact artifact preview.
+derive new business-demand semantics. For per-user rows, the card now prefers
+the backend traffic-demand user page endpoint and applies the current artifact
+filter as the backend `query`. The label beginning with `backend page users`
+shows the returned item count, matched count, total exported user count, and
+cursor range. If that page is still loading or unavailable, the card falls back
+to the bounded artifact preview.
 The workflow includes an editable checklist. For each review row, the dashboard
 lets the operator choose `REVIEWED`, `SKIPPED`, `NEEDS_FOLLOWUP`, or `ERROR`,
 enter a short note, and save the checklist through the backend. After saving,

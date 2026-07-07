@@ -209,7 +209,10 @@ Tasks:
     `/runtime/export/packages/{package_id}/traffic-demand-users` cursor
     endpoint and frontend API contract so per-user traffic-demand rows can be
     paged and filtered by query/traffic class from persisted package evidence
-    without traffic regeneration, event replay, or package mutation. T332 preserves
+    without traffic regeneration, event replay, or package mutation. T382 binds
+    the dashboard compact traffic-demand card to that backend page, using the
+    artifact filter as the page query and falling back to the bounded artifact
+    preview only while the backend page is loading or unavailable. T332 preserves
     backend-provided request/route/flow/task
     correlation ids in dashboard user-service rows and lets selected export
     package rows drive package route evidence, package service-trace filtering,

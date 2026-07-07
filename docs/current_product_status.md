@@ -2,7 +2,7 @@
 
 Date: 2026-07-07
 
-Branch: `feature/T381-traffic-demand-package-user-page-v1`
+Branch: `feature/T382-dashboard-traffic-demand-page-binding-v1`
 
 ## Local Entry Points
 
@@ -112,6 +112,11 @@ pages and filters exported `per_user_active_service_state` rows by query and
 traffic class without regenerating demand, replaying events, or mutating the
 result package. The frontend API contract exposes the same endpoint for the
 next dashboard binding step.
+The latest T382 validation binds the standalone dashboard traffic-demand compact
+card to that backend page. When `traffic_demand_explanation_v1.json` is
+selected, the card loads `traffic-demand-users` with the current artifact
+filter and shows backend page counts/cursor state; if the page is still loading
+or unavailable, it falls back to the bounded artifact preview.
 
 ## Current Product Signals
 
@@ -136,6 +141,9 @@ next dashboard binding step.
   `/runtime/export/packages/{package_id}/traffic-demand-users`, so large
   package review can page user demand evidence instead of loading the whole
   artifact in the browser.
+- The traffic-demand compact card now prefers that backend cursor page for
+  per-user rows and shows `backend page users ... / cursor ...` in the card,
+  preserving the artifact preview only as a fallback.
 - Generated backend summaries now expose the same traffic-demand explanation
   under `backend_summary.traffic_demand_explanation_v1`. The object is derived
   from the backend traffic configuration, uses a bounded endpoint/request

@@ -5,6 +5,50 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-07 - Dashboard Traffic Demand Page Binding v1
+
+- Branch: `feature/T382-dashboard-traffic-demand-page-binding-v1`
+- Commit: pending in this commit
+- Scope: bind the standalone dashboard traffic-demand compact card to the
+  package-owned `/runtime/export/packages/{package_id}/traffic-demand-users`
+  cursor endpoint. When `traffic_demand_explanation_v1.json` is selected, the
+  card loads backend-paged per-user demand rows using the artifact filter as
+  the endpoint query, displays backend page counts and cursor state, and falls
+  back to the bounded artifact preview only while the page is loading or
+  unavailable. This task does not change backend package contracts, regenerate
+  traffic, replay events, change runtime control, alter Event Kernel behavior,
+  add packet-level simulation, or introduce external simulator dependencies.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/current_product_status.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed, 1 test file / 217 tests using the bundled Codex
+      Node/pnpm runtime.
+  - `pnpm --dir frontend test api.test.ts`
+    - Result: passed, 1 test file / 45 tests using the bundled Codex
+      Node/pnpm runtime.
+  - `pnpm --dir frontend test`
+    - Result: passed, 26 test files / 459 tests using the bundled Codex
+      Node/pnpm runtime.
+  - `python -m pytest tests\unit\test_system_v2_upgrade_plan_docs.py tests\unit\test_user_guide_v2_docs.py -q`
+    - Result: passed, 4 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed using the bundled Codex Node/pnpm runtime. Vite reported
+      the existing `DataPanel` chunk-size warning after minification.
+- Problems encountered and handling:
+  - The task started with local runtime/generated config files already dirty.
+    They remain outside the staged task scope and are intentionally not
+    delivered as product changes.
+- Known remaining issues / follow-up:
+  - The compact card still requests the first bounded page only. A later UI
+    task can add explicit next/previous controls for the traffic-demand user
+    page if operators need deep package browsing inside the compact card.
+
 ## 2026-07-07 - Traffic Demand Package User Page v1
 
 - Branch: `feature/T381-traffic-demand-package-user-page-v1`

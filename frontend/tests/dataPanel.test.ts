@@ -5182,7 +5182,65 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         },
         false,
         null,
-        "user-00002"
+        "user-00002",
+        {
+          type: "RUNTIME_EXPORT_TRAFFIC_DEMAND_USER_PAGE_V1",
+          version: "v1",
+          page_id: "leo_twin.runtime_export_traffic_demand_user_page.v1",
+          source: "BACKEND_RUNTIME_EXPORT_PACKAGE",
+          package_id: "pkg-review",
+          artifact_type: "RUNTIME_EXPORT_TRAFFIC_DEMAND_EXPLANATION_V1",
+          artifact_source: "BACKEND_RUNTIME_EXPORT",
+          artifact_scope: "TRAFFIC_DEMAND_OFFLINE_REVIEW",
+          artifact_hash:
+            "sha256:abababababababababababababababababababababababababababababababab",
+          evidence_hash:
+            "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+          explanation_id: "leo_twin.traffic_demand_explanation.v1",
+          explanation_window_policy: "FULL_CONFIGURED_WINDOW",
+          endpoint_window_policy: "ROUND_ROBIN_ENDPOINT_IDS_CAPPED_AT_512",
+          packet_level_simulation: false,
+          frontend_inference_required: false,
+          cursor: 0,
+          limit: 8,
+          next_cursor: 1,
+          has_more: false,
+          user_count: 1,
+          item_count: 1,
+          unfiltered_user_count: 2,
+          request_count: 8,
+          compute_service_user_count: 1,
+          communication_service_user_count: 0,
+          filter_applied: true,
+          filters: {
+            query: "user-00002",
+            traffic_class: "ALL"
+          },
+          boundary_conditions: [
+            "ARTIFACT_WINDOW_ONLY",
+            "NO_TRAFFIC_REGENERATION",
+            "NO_EVENT_REPLAY",
+            "NO_PACKAGE_MUTATION"
+          ],
+          items: [
+            {
+              user_id: "user-00002",
+              request_count: 8,
+              service_classes: ["COMPUTE_SERVICE"],
+              primary_service_class: "COMPUTE_SERVICE",
+              max_priority: 3,
+              first_arrival_time: 10,
+              last_arrival_time: 75,
+              flow_ids: ["flow-c"],
+              task_ids: ["task-c"],
+              output_flow_ids: ["flow-c-output"],
+              total_input_data_mb: 64,
+              total_output_data_mb: 16
+            }
+          ],
+          page_hash:
+            "sha256:efefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefef"
+        }
       )
     ).toMatchObject({
       tone: "match",
@@ -5218,7 +5276,7 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           }
         ],
         userFilterLabel:
-          "users 1 shown / 1 matched / 2 total / filter user-00002",
+          "backend page users 1 shown / 1 matched / 2 total / filter user-00002 / cursor 0 -> 1",
         userRows: [
           {
             userId: "user-00002",

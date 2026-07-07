@@ -48,6 +48,7 @@ import {
   RuntimeExportRestoreCommandResultV1,
   RuntimeExportRestorePreflightV1,
   RuntimeExportTrafficDemandExplanationEvidenceV1,
+  RuntimeExportTrafficDemandUserPageV1,
   RuntimeComputeTaskTimelineSummaryV1,
   RuntimeExportUserServiceRequestPageV1,
   RuntimeExportUserServiceRequestEvidenceV2,
@@ -99,6 +100,7 @@ import {
   UserConfigurationValidationReportV1
 } from "../../core/event_types";
 import {
+  loadRuntimeExportTrafficDemandUserPage,
   loadRuntimeExportPackageJsonArtifact,
   runtimeExportArchiveHref,
   runtimeExportPackageArchiveHref,
@@ -625,6 +627,18 @@ export const DataPanel = memo(function DataPanel({
     useState<string | null>(null);
   const [benchmarkEvidenceArtifactFilter, setBenchmarkEvidenceArtifactFilter] =
     useState("");
+  const [
+    benchmarkEvidenceTrafficDemandUserPage,
+    setBenchmarkEvidenceTrafficDemandUserPage
+  ] = useState<RuntimeExportTrafficDemandUserPageV1 | null>(null);
+  const [
+    benchmarkEvidenceTrafficDemandUserPageLoading,
+    setBenchmarkEvidenceTrafficDemandUserPageLoading
+  ] = useState(false);
+  const [
+    benchmarkEvidenceTrafficDemandUserPageError,
+    setBenchmarkEvidenceTrafficDemandUserPageError
+  ] = useState<string | null>(null);
   useEffect(() => {
     setExportRouteDetailIndexFilter("");
     setExportRouteDetailIndexAvailabilityFilter("ALL");
@@ -649,6 +663,8 @@ export const DataPanel = memo(function DataPanel({
     setExportServiceTracePageCursor(0);
     setBenchmarkEvidenceFocus(null);
     setBenchmarkEvidenceArtifactFilter("");
+    setBenchmarkEvidenceTrafficDemandUserPage(null);
+    setBenchmarkEvidenceTrafficDemandUserPageError(null);
   }, [runtimeExportComparePackageId]);
   useEffect(() => {
     setBenchmarkEvidenceArtifactFilter(
@@ -696,6 +712,52 @@ export const DataPanel = memo(function DataPanel({
       cancelled = true;
     };
   }, [benchmarkEvidenceFocus, runtimeExportComparePackageId]);
+  useEffect(() => {
+    setBenchmarkEvidenceTrafficDemandUserPage(null);
+    setBenchmarkEvidenceTrafficDemandUserPageError(null);
+    if (
+      benchmarkEvidenceFocus === null ||
+      benchmarkEvidenceFocus === undefined ||
+      benchmarkEvidenceFocus.artifactLabel !== TRAFFIC_DEMAND_EXPLANATION_FILENAME ||
+      runtimeExportComparePackageId === null ||
+      runtimeExportComparePackageId === undefined
+    ) {
+      setBenchmarkEvidenceTrafficDemandUserPageLoading(false);
+      return;
+    }
+    let cancelled = false;
+    const query = normalizeDataPanelTrafficDemandUserFilter(
+      benchmarkEvidenceArtifactFilter
+    );
+    setBenchmarkEvidenceTrafficDemandUserPageLoading(true);
+    loadRuntimeExportTrafficDemandUserPage(
+      runtimeExportComparePackageId,
+      0,
+      DATA_PANEL_TRAFFIC_DEMAND_USER_ROW_LIMIT,
+      { query }
+    )
+      .then((page) => {
+        if (!cancelled) {
+          setBenchmarkEvidenceTrafficDemandUserPage(page);
+          setBenchmarkEvidenceTrafficDemandUserPageLoading(false);
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setBenchmarkEvidenceTrafficDemandUserPageError(
+            error instanceof Error ? error.message : String(error)
+          );
+          setBenchmarkEvidenceTrafficDemandUserPageLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    benchmarkEvidenceArtifactFilter,
+    benchmarkEvidenceFocus,
+    runtimeExportComparePackageId
+  ]);
   useEffect(() => {
     setExportRouteReviewReportPage(0);
   }, [
@@ -1618,7 +1680,10 @@ export const DataPanel = memo(function DataPanel({
       benchmarkEvidenceArtifactDocument,
       benchmarkEvidenceArtifactLoading,
       benchmarkEvidenceArtifactError,
-      benchmarkEvidenceArtifactFilter
+      benchmarkEvidenceArtifactFilter,
+      benchmarkEvidenceTrafficDemandUserPage,
+      benchmarkEvidenceTrafficDemandUserPageLoading,
+      benchmarkEvidenceTrafficDemandUserPageError
     );
   const exportRouteComparisonReviewReportStatus =
     buildDataPanelExportRouteComparisonReviewReportStatus(
@@ -14545,7 +14610,10 @@ export function buildDataPanelBenchmarkEvidenceArtifactViewerDisplay(
   artifactDocument: unknown,
   loading: boolean,
   errorLabel: string | null | undefined,
-  filterText = ""
+  filterText = "",
+  trafficDemandUserPage: RuntimeExportTrafficDemandUserPageV1 | null | undefined = null,
+  trafficDemandUserPageLoading = false,
+  trafficDemandUserPageError: string | null | undefined = null
 ): DataPanelBenchmarkEvidenceArtifactViewerDisplay | null {
   if (focus === null || focus === undefined) {
     return null;
@@ -14626,7 +14694,10 @@ export function buildDataPanelBenchmarkEvidenceArtifactViewerDisplay(
   const trafficDemandCard = buildDataPanelTrafficDemandArtifactCard(
     focus,
     artifactDocument,
-    filterText
+    filterText,
+    trafficDemandUserPage,
+    trafficDemandUserPageLoading,
+    trafficDemandUserPageError
   );
   return {
     tone: selection.found ? focus.tone : selection.valid ? "different" : "error",
@@ -14654,7 +14725,10 @@ export function buildDataPanelBenchmarkEvidenceArtifactViewerDisplay(
 function buildDataPanelTrafficDemandArtifactCard(
   focus: DataPanelBenchmarkEvidenceFocus,
   artifactDocument: unknown,
-  filterText = ""
+  filterText = "",
+  trafficDemandUserPage: RuntimeExportTrafficDemandUserPageV1 | null | undefined = null,
+  trafficDemandUserPageLoading = false,
+  trafficDemandUserPageError: string | null | undefined = null
 ): DataPanelTrafficDemandArtifactCard | null {
   if (focus.artifactLabel !== TRAFFIC_DEMAND_EXPLANATION_FILENAME) {
     return null;
@@ -14707,6 +14781,17 @@ function buildDataPanelTrafficDemandArtifactCard(
     perUserRecords,
     filterText
   );
+  const pagedUserDisplay = buildDataPanelTrafficDemandArtifactUserRowsFromPage(
+    trafficDemandUserPage
+  );
+  const effectiveUserRows = pagedUserDisplay?.rows ?? userDisplay.rows;
+  const effectiveUserFilterLabel =
+    pagedUserDisplay?.filterLabel ??
+    buildDataPanelTrafficDemandArtifactFallbackUserLabel(
+      userDisplay.filterLabel,
+      trafficDemandUserPageLoading,
+      trafficDemandUserPageError
+    );
   const correlation: Record<string, unknown> = isDataPanelJsonObject(
     explanation.correlation_summary
   )
@@ -14749,8 +14834,8 @@ function buildDataPanelTrafficDemandArtifactCard(
       `packet ${packetLevel ? "yes" : "no"}`
     ],
     classRows,
-    userRows: userDisplay.rows,
-    userFilterLabel: userDisplay.filterLabel,
+    userRows: effectiveUserRows,
+    userFilterLabel: effectiveUserFilterLabel,
     stateLabels: [
       `active classes ${
         activeClasses.length > 0 ? activeClasses.join(" + ") : "-"
@@ -14765,6 +14850,66 @@ function buildDataPanelTrafficDemandArtifactCard(
       )}`
     ]
   };
+}
+
+function buildDataPanelTrafficDemandArtifactFallbackUserLabel(
+  fallbackLabel: string,
+  loading: boolean,
+  errorLabel: string | null | undefined
+): string {
+  if (loading) {
+    return `backend page loading / fallback ${fallbackLabel}`;
+  }
+  if (errorLabel !== null && errorLabel !== undefined && errorLabel.length > 0) {
+    return `backend page failed / fallback ${fallbackLabel}`;
+  }
+  return fallbackLabel;
+}
+
+function buildDataPanelTrafficDemandArtifactUserRowsFromPage(
+  page: RuntimeExportTrafficDemandUserPageV1 | null | undefined
+): {
+  rows: readonly DataPanelTrafficDemandArtifactUserRow[];
+  filterLabel: string;
+} | null {
+  if (page === null || page === undefined) {
+    return null;
+  }
+  const rows = page.items.map((row) =>
+    buildDataPanelTrafficDemandArtifactUserRow(
+      row as unknown as Record<string, unknown>
+    )
+  );
+  const filterLabel = buildDataPanelTrafficDemandArtifactPageFilterLabel(page);
+  return {
+    rows,
+    filterLabel
+  };
+}
+
+function buildDataPanelTrafficDemandArtifactPageFilterLabel(
+  page: RuntimeExportTrafficDemandUserPageV1
+): string {
+  const query = normalizeDataPanelTrafficDemandUserFilter(
+    page.filters?.query ?? ""
+  );
+  const trafficClass = String(page.filters?.traffic_class ?? "ALL").trim();
+  const filterParts = [
+    query.length > 0 ? `filter ${query}` : "",
+    trafficClass.length > 0 && trafficClass !== "ALL"
+      ? `class ${trafficClass}`
+      : ""
+  ].filter((part) => part.length > 0);
+  const filterSuffix =
+    filterParts.length > 0 ? ` / ${filterParts.join(" / ")}` : "";
+  const moreSuffix = page.has_more ? " / more" : "";
+  return `backend page users ${formatCount(page.item_count)} shown / ${formatCount(
+    page.user_count
+  )} matched / ${formatCount(
+    page.unfiltered_user_count
+  )} total${filterSuffix} / cursor ${formatCount(page.cursor)} -> ${formatCount(
+    page.next_cursor
+  )}${moreSuffix}`;
 }
 
 function buildDataPanelTrafficDemandArtifactUserRows(
