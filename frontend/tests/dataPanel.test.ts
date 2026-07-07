@@ -12,6 +12,7 @@ import {
   buildDataPanelInformationArchitectureDisplay,
   buildDataPanelBackendCursorDisplay,
   buildDataPanelDetailScopeNotes,
+  buildDataPanelDetailCoverageNote,
   buildDataPanelDetailPageSizes,
   buildDataPanelPaginationContractNotes,
   buildDataPanelDetailWindowPolicyNote,
@@ -13850,6 +13851,135 @@ describe("paginateDetailRows", () => {
       detail:
         "用户窗口 1-1 / 1，上限 80；卫星窗口 0 / 0，上限 120；渲染预算 200 行；预算来源 后端契约 leo_twin.large_detail_pagination_contract.v2；当前筛选结果可在一屏窗口内完整渲染。",
       tone: "backend"
+    });
+  });
+
+  it("summarizes complete backend detail coverage across all detail families", () => {
+    expect(
+      buildDataPanelDetailCoverageNote({
+        userSummary: {
+          source: "BACKEND_RUNTIME_STATUS",
+          cursor: 0,
+          limit: 2,
+          next_cursor: 2,
+          has_more: false,
+          user_count: 2,
+          item_count: 2,
+          active_user_count: 1,
+          compute_service_user_count: 1,
+          waiting_user_count: 0,
+          hidden_user_count: 0
+        } as any,
+        satelliteSummary: {
+          source: "BACKEND_RUNTIME_STATUS",
+          cursor: 0,
+          limit: 2,
+          next_cursor: 2,
+          has_more: false,
+          satellite_count: 2,
+          item_count: 2,
+          hidden_satellite_count: 0
+        } as any,
+        routeSummary: {
+          version: "v1",
+          source: "BACKEND_RUNTIME_STATUS",
+          cursor: 0,
+          limit: 2,
+          next_cursor: 2,
+          has_more: false,
+          route_count: 2,
+          item_count: 2,
+          available_route_count: 2,
+          blocked_route_count: 0,
+          over_demand_route_count: 0,
+          compute_service_route_count: 1,
+          network_service_route_count: 1,
+          items: []
+        },
+        servicePage: {
+          source: "BACKEND_RUNTIME_STATUS",
+          cursor: 0,
+          limit: 1,
+          next_cursor: 1,
+          has_more: false,
+          service_count: 1,
+          item_count: 1,
+          hidden_service_count: 0
+        } as any,
+        serviceTracePage: {
+          source: "BACKEND_RUNTIME_STATUS",
+          cursor: 0,
+          limit: 1,
+          next_cursor: 1,
+          has_more: false,
+          trace_count: 1,
+          hidden_trace_count: 0,
+          items: [{}]
+        } as any,
+        computeNodePage: {
+          source: "BACKEND_RUNTIME_STATUS",
+          cursor: 0,
+          limit: 2,
+          next_cursor: 2,
+          has_more: false,
+          compute_node_count: 2,
+          item_count: 2,
+          hidden_compute_node_count: 0
+        } as any,
+        nodeDetailSummary: {
+          version: "v1",
+          source: "BACKEND_RUNTIME_STATUS",
+          user_detail_count: 1,
+          satellite_detail_count: 1,
+          users: [],
+          satellites: []
+        },
+        paginationContract: makeLargeDetailPaginationContract()
+      })
+    ).toEqual({
+      label: "详情覆盖度",
+      value: "6 / 6 来源",
+      detail:
+        "后端详情覆盖完整；当前返回 10 / 10 行；无显式隐藏行；游标 6 类；可继续 0 类；精确卡片 2 个；large_1200 / zero_based_offset",
+      tone: "backend"
+    });
+  });
+
+  it("warns when backend detail coverage is partial or still cursor-limited", () => {
+    expect(
+      buildDataPanelDetailCoverageNote({
+        userSummary: {
+          source: "BACKEND_RUNTIME_STATUS",
+          cursor: 0,
+          limit: 10,
+          next_cursor: 10,
+          has_more: true,
+          user_count: 20,
+          request_count: 30,
+          item_count: 10,
+          active_user_count: 8,
+          compute_service_user_count: 4,
+          waiting_user_count: 2,
+          hidden_user_count: 3,
+          hidden_request_count: 5
+        } as any
+      })
+    ).toEqual({
+      label: "详情覆盖度",
+      value: "1 / 6 来源",
+      detail:
+        "后端详情部分覆盖；当前返回 10 / 20 行；隐藏或未加载 5 行；游标 1 类；可继续 1 类；精确卡片 0 个；分页契约未声明",
+      tone: "limit"
+    });
+  });
+
+  it("shows a pending detail coverage card before backend detail summaries arrive", () => {
+    expect(buildDataPanelDetailCoverageNote({})).toEqual({
+      label: "详情覆盖度",
+      value: "0 / 6 来源",
+      detail:
+        "等待后端详情；当前返回 0 / 0 行；无显式隐藏行；无后端游标页；精确卡片 0 个；分页契约未声明",
+      tone: "history"
     });
   });
 });

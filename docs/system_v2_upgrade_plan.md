@@ -1023,6 +1023,10 @@ Current Phase 3 progress:
   dashboard renders the backend calibration summary in the network KPI panel
   and model-trust evidence workspace instead of deriving movement semantics
   locally.
+- T364 adds a dashboard detail-coverage status card for backend detail
+  families, cursor windows, hidden rows, exact node cards, and pagination
+  contract status. This improves the node-detail workstream without changing
+  backend protocols.
 
 ## 5. Parallel Agent Assignment Model
 

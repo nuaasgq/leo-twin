@@ -2,7 +2,7 @@
 
 Date: 2026-07-07
 
-Branch: `feature/T363-dashboard-kpi-calibration-v1`
+Branch: `feature/T364-dashboard-detail-coverage-v1`
 
 ## Local Entry Points
 
@@ -79,6 +79,10 @@ frontend test files / 197 tests.
 - The standalone dashboard renders `network_kpi_calibration_v1` in the network
   KPI panel and model-trust workspace, so users can see whether KPI curves are
   time-varying, partially varying, flat under activity, or sample-limited.
+- The standalone dashboard now shows a detail-coverage card in the user/satellite
+  detail section. It reports how many backend detail families are present,
+  returned-vs-total rows, hidden/cursor-limited rows, exact node cards, and the
+  active pagination contract.
 - Launcher health v2 reports backend/frontend port readiness, HTTP readiness,
   process ids, latest log paths, config paths, and recommended actions.
 - Operator diagnostics bundle captures launcher health, runtime status, version
@@ -114,7 +118,8 @@ frontend test files / 197 tests.
 
 - Browser-rendered smoke is available as an optional local gate, but is still
   not part of CI.
-- Service trace drill-down filtering remains a future dashboard enhancement.
+- Service trace drill-down filtering remains a future dashboard enhancement,
+  although the dashboard now exposes detail coverage and cursor scope.
 - Disposable acceptance can launch selected acceptance YAML files from a clean
   service restart, but it is still a local Windows harness rather than CI.
 - Runtime config staging guard is script-enforced, not a Git hook.

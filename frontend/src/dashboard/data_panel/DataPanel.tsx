@@ -1312,6 +1312,16 @@ export const DataPanel = memo(function DataPanel({
     runtimeStatus,
     runtimeDetailPages
   );
+  const detailCoverageNote = buildDataPanelDetailCoverageNote({
+    userSummary: userRequestSummary,
+    satelliteSummary: satelliteServiceSummary,
+    routeSummary: routeExplanationSummary,
+    servicePage: serviceDetailPage,
+    serviceTracePage,
+    computeNodePage: computeNodeDetailPage,
+    nodeDetailSummary,
+    paginationContract: detailPaginationContract
+  });
   const selectedUserBackendDetail =
     runtimeSelectedNodeDetails?.user?.entity_id === selectedDetailUserId
       ? runtimeSelectedNodeDetails.user
@@ -1606,6 +1616,7 @@ export const DataPanel = memo(function DataPanel({
   const userSourceBadge = buildRuntimeDetailSourceBadge(userBusinessRequests.sourceLabel);
   const satelliteSourceBadge = buildRuntimeDetailSourceBadge(satelliteResourceRows.sourceLabel);
   const detailScopeNotes = [
+    detailCoverageNote,
     ...buildDataPanelDetailScopeNotes(
       userBusinessRequests,
       satelliteResourceRows,
@@ -6649,6 +6660,27 @@ export interface DataPanelDetailScopeNote {
   tone: "backend" | "limit" | "history";
 }
 
+export interface DataPanelDetailCoverageInput {
+  userSummary?: RuntimeUserRequestSummaryV1 | RuntimeUserServiceRequestSummaryV2 | null;
+  satelliteSummary?: RuntimeSatelliteServiceSummaryV1 | null;
+  routeSummary?: RuntimeRouteExplanationSummaryV1 | null;
+  servicePage?: RuntimeServiceDetailPageV1 | null;
+  serviceTracePage?: RuntimeServiceLifecycleTraceV2 | null;
+  computeNodePage?: RuntimeComputeNodeDetailPageV1 | null;
+  nodeDetailSummary?: RuntimeNodeDetailSummaryV1 | null;
+  paginationContract?: LargeDetailPaginationContractV2 | null;
+}
+
+interface DataPanelDetailCoverageRecord {
+  label: string;
+  present: boolean;
+  itemCount: number;
+  totalCount: number;
+  hiddenCount: number;
+  hasCursor: boolean;
+  hasMore: boolean;
+}
+
 export function buildDataPanelDetailPageSizes(
   contract: LargeDetailPaginationContractV2 | null | undefined
 ): DataPanelDetailPageSizes {
@@ -7553,6 +7585,144 @@ export function buildDataPanelSatelliteResourceHistory(
     selectedSatelliteId: selectedSeries.satellite_id,
     availableSatelliteIds,
     points
+  };
+}
+
+export function buildDataPanelDetailCoverageNote(
+  input: DataPanelDetailCoverageInput
+): DataPanelDetailScopeNote {
+  const nodeCardCount =
+    Math.max(0, input.nodeDetailSummary?.user_detail_count ?? 0) +
+    Math.max(0, input.nodeDetailSummary?.satellite_detail_count ?? 0);
+  const records: DataPanelDetailCoverageRecord[] = [
+    detailCoverageRecord("用户", input.userSummary, {
+      total: input.userSummary?.user_count,
+      item: input.userSummary?.item_count,
+      hidden: Math.max(
+        0,
+        input.userSummary?.hidden_user_count ?? 0,
+        "hidden_request_count" in (input.userSummary ?? {})
+          ? Math.max(
+              0,
+              (input.userSummary as RuntimeUserServiceRequestSummaryV2)
+                .hidden_request_count
+            )
+          : 0
+      )
+    }),
+    detailCoverageRecord("卫星", input.satelliteSummary, {
+      total: input.satelliteSummary?.satellite_count,
+      item: input.satelliteSummary?.item_count,
+      hidden: input.satelliteSummary?.hidden_satellite_count
+    }),
+    detailCoverageRecord("路由", input.routeSummary, {
+      total: input.routeSummary?.route_count,
+      item: input.routeSummary?.item_count,
+      hidden: Math.max(
+        0,
+        (input.routeSummary?.route_count ?? 0) - (input.routeSummary?.item_count ?? 0)
+      )
+    }),
+    detailCoverageRecord("服务", input.servicePage, {
+      total: input.servicePage?.service_count,
+      item: input.servicePage?.item_count,
+      hidden: input.servicePage?.hidden_service_count
+    }),
+    detailCoverageRecord("服务链路", input.serviceTracePage, {
+      total: input.serviceTracePage?.trace_count,
+      item:
+        input.serviceTracePage?.items.length ??
+        input.serviceTracePage?.trace_count,
+      hidden: input.serviceTracePage?.hidden_trace_count
+    }),
+    detailCoverageRecord("算力节点", input.computeNodePage, {
+      total: input.computeNodePage?.compute_node_count,
+      item: input.computeNodePage?.item_count,
+      hidden: input.computeNodePage?.hidden_compute_node_count
+    })
+  ];
+  const presentRecords = records.filter((record) => record.present);
+  const cursorRecords = records.filter((record) => record.hasCursor);
+  const moreRecords = records.filter((record) => record.hasMore);
+  const totalItems = records.reduce((total, record) => total + record.totalCount, 0);
+  const returnedItems = records.reduce((total, record) => total + record.itemCount, 0);
+  const hiddenItems = records.reduce((total, record) => total + record.hiddenCount, 0);
+  const presentLabel =
+    presentRecords.length === records.length
+      ? "后端详情覆盖完整"
+      : presentRecords.length === 0
+        ? "等待后端详情"
+        : "后端详情部分覆盖";
+  const contractLabel =
+    input.paginationContract === null || input.paginationContract === undefined
+      ? "分页契约未声明"
+      : `${input.paginationContract.active_profile_id} / ${input.paginationContract.cursor_model.cursor_type}`;
+  return {
+    label: "详情覆盖度",
+    value: `${formatCount(presentRecords.length)} / ${formatCount(records.length)} 来源`,
+    detail: [
+      presentLabel,
+      `当前返回 ${formatCount(returnedItems)} / ${formatCount(totalItems)} 行`,
+      hiddenItems > 0
+        ? `隐藏或未加载 ${formatCount(hiddenItems)} 行`
+        : "无显式隐藏行",
+      cursorRecords.length > 0
+        ? `游标 ${formatCount(cursorRecords.length)} 类；可继续 ${formatCount(
+            moreRecords.length
+          )} 类`
+        : "无后端游标页",
+      `精确卡片 ${formatCount(nodeCardCount)} 个`,
+      contractLabel
+    ].join("；"),
+    tone:
+      presentRecords.length === 0
+        ? "history"
+        : hiddenItems > 0 || moreRecords.length > 0 || presentRecords.length < records.length
+          ? "limit"
+          : "backend"
+  };
+}
+
+function detailCoverageRecord(
+  label: string,
+  page:
+    | RuntimeUserRequestSummaryV1
+    | RuntimeSatelliteServiceSummaryV1
+    | RuntimeRouteExplanationSummaryV1
+    | RuntimeServiceDetailPageV1
+    | RuntimeServiceLifecycleTraceV2
+    | RuntimeComputeNodeDetailPageV1
+    | null
+    | undefined,
+  counts: {
+    total?: number;
+    item?: number;
+    hidden?: number;
+  }
+): DataPanelDetailCoverageRecord {
+  const itemCount = normalizeNonNegativeInteger(counts.item ?? 0);
+  const totalCount = Math.max(
+    normalizeNonNegativeInteger(counts.total ?? 0),
+    itemCount
+  );
+  const hiddenCount = normalizeNonNegativeInteger(
+    counts.hidden ?? Math.max(0, totalCount - itemCount)
+  );
+  const hasCursor =
+    page !== null &&
+    page !== undefined &&
+    typeof page.cursor === "number" &&
+    typeof page.limit === "number" &&
+    typeof page.next_cursor === "number" &&
+    typeof page.has_more === "boolean";
+  return {
+    label,
+    present: page !== null && page !== undefined,
+    itemCount,
+    totalCount,
+    hiddenCount,
+    hasCursor,
+    hasMore: page?.has_more === true
   };
 }
 

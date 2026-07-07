@@ -17887,3 +17887,42 @@ change.
   - The dashboard now shows calibration rows inline. A later dashboard detail
     pass can add filtering or a wider drawer if additional KPI families make
     the inline row list too large.
+
+## 2026-07-07 - T364 dashboard detail coverage v1
+
+- Branch: `feature/T364-dashboard-detail-coverage-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: add a standalone dashboard detail-coverage status card for the
+  user/satellite detail section. The card summarizes backend detail-family
+  presence, returned-vs-total rows, hidden or cursor-limited rows, exact node
+  cards, and the active pagination contract. This task does not change backend
+  protocols, Event Kernel behavior, or simulation model logic.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/current_product_status.md`
+  - `docs/dashboard_information_architecture_v3.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/user_guide_v2.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts` using bundled Node/Pnpm
+    paths.
+    - Result: passed, 1 file / 202 tests.
+  - `pnpm --dir frontend test` using bundled Node/Pnpm paths.
+    - Result: passed, 26 files / 443 tests.
+  - `pnpm --dir frontend build` using bundled Node/Pnpm paths.
+    - Result: passed; Vite emitted the existing large-chunk warning for
+      `DataPanel`.
+- Problems encountered:
+  - The first build caught two useful type issues before commit: the service
+    trace page contract does not expose `item_count`, and the new route-summary
+    test fixture lacked the required `version` field. The implementation now
+    uses `serviceTracePage.items.length` for returned trace rows and the test
+    fixture matches the route summary contract.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The coverage card exposes whether detail data is complete or cursor-limited,
+    but it does not replace deeper service-trace drill-down filtering or a
+    dedicated virtualized detail browser.

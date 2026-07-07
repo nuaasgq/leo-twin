@@ -27,7 +27,8 @@ The deterministic section order is:
 4. `COMPUTE` - satellite-hosted resource vectors, task queue state, bottleneck
    lanes, and task timelines.
 5. `NODE_DETAIL` - paged or virtualized drill-down for user and satellite
-   nodes.
+   nodes, including detail coverage status for backend detail families, cursor
+   windows, hidden rows, exact node cards, and active pagination contract.
 6. `MODEL_ASSUMPTIONS` - backend model boundaries, fidelity degradation,
    forbidden integrations, and KPI caveats.
 7. `DIAGNOSTICS` - reproducibility manifest, result packages, launcher health,
@@ -51,3 +52,4 @@ The deterministic section order is:
 - V2-052: satellite detail drawer.
 - V2-053: virtualized large tables.
 - V2-054: model assumptions panel.
+- T364: dashboard detail coverage card.

@@ -137,6 +137,8 @@ The standalone dashboard is for data situation awareness:
 - route explanations;
 - compute resource and task timeline summaries;
 - user, satellite, and node detail pages;
+- detail coverage status for backend detail families, cursor windows, hidden
+  rows, exact node cards, and the active pagination contract;
 - configuration explanation and model assumptions.
 
 Backend runtime status is the source of truth. The frontend should not invent
