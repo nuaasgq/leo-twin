@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -11,12 +12,14 @@ from leo_twin.schema.config_loader import ConfigValidationError, load_config
 from leo_twin.services.configuration_schema import (
     USER_CONFIGURATION_SCHEMA_V2_ID,
     build_user_configuration_schema_v2,
+    validate_user_configuration_mapping_v2,
 )
 from leo_twin.services.runtime_reproducibility import stable_hash_payload
 
 
 ConfigurationView = dict[str, object]
 UserConfigurationReference = dict[str, object]
+UserConfigurationTemplateValidation = dict[str, object]
 
 _KEY_FIELD_PATHS = (
     "scenario.satellite_count",
@@ -293,6 +296,45 @@ def configuration_template_profiles() -> tuple[dict[str, str], ...]:
     return tuple(dict(profile) for profile in _TEMPLATE_PROFILES)
 
 
+def build_user_configuration_template_validation_evidence(
+    *,
+    repository_root: Path | str | None = None,
+) -> UserConfigurationTemplateValidation:
+    """Return deterministic validation evidence for all approved config templates."""
+
+    root = _REPOSITORY_ROOT if repository_root is None else Path(repository_root)
+    rows = tuple(
+        _template_validation_row(profile, root)
+        for profile in configuration_template_profiles()
+    )
+    valid_count = sum(1 for row in rows if row["validation_ok"] is True)
+    result: UserConfigurationTemplateValidation = {
+        "version": "v1",
+        "evidence_id": "sees.user_configuration_template_validation.v1",
+        "source": "BACKEND_USER_CONFIGURATION",
+        "schema_id": USER_CONFIGURATION_SCHEMA_V2_ID,
+        "validation_scope": "APPROVED_EXECUTABLE_TEMPLATES",
+        "template_count": len(rows),
+        "valid_template_count": valid_count,
+        "invalid_template_count": len(rows) - valid_count,
+        "all_templates_valid": valid_count == len(rows),
+        "templates": rows,
+        "model_boundaries": {
+            "event_kernel_policy": "NO_EVENT_KERNEL_BEHAVIOR_CHANGE",
+            "packet_level_simulation": False,
+            "external_simulators": False,
+            "forbidden_integrations": ("STK", "EXATA", "AFSIM", "DDS"),
+        },
+        "notes": (
+            "Template validation loads approved YAML files through the same backend config loader used by runtime control.",
+            "The evidence hashes executable file content and normalized effective config without applying it to the running session.",
+            "This is a read-only configuration product check and does not mutate runtime state.",
+        ),
+    }
+    result["evidence_hash"] = stable_hash_payload(result)
+    return result
+
+
 def load_user_configuration_template(template_id: str) -> SEESConfig:
     """Load one backend-approved user configuration template by profile id."""
 
@@ -320,6 +362,7 @@ def build_user_configuration_view(config: SEESConfig) -> ConfigurationView:
         "detailed_config_file": "configs/sees_control.yaml",
         "template_config_file": "configs/templates/sees_user_detailed.example.yaml",
         "template_profiles": _TEMPLATE_PROFILES,
+        "template_validation": build_user_configuration_template_validation_evidence(),
         "frontend_policy": "CONTROL_PANEL_KEY_FIELDS_ONLY",
         "key_field_count": len(key_paths),
         "detailed_field_count": len(flattened),
@@ -375,6 +418,7 @@ def build_user_configuration_reference(
         "generated_config_file": generated_config_file,
         "template_config_file": view["template_config_file"],
         "template_profiles": configuration_template_profiles(),
+        "template_validation": build_user_configuration_template_validation_evidence(),
         "unknown_key_policy": schema["unknown_key_policy"],
         "defaulting_policy": schema["defaulting_policy"],
         "mutation_policy": {
@@ -425,6 +469,107 @@ def _template_profile_by_id(template_id: str) -> Mapping[str, str]:
     raise ConfigValidationError(
         f"unknown configuration template_id: {template_id}; expected one of: {known}"
     )
+
+
+def _template_validation_row(
+    profile: Mapping[str, str],
+    repository_root: Path,
+) -> dict[str, object]:
+    path = str(profile["path"])
+    absolute_path = repository_root / path
+    row: dict[str, object] = {
+        "id": str(profile["id"]),
+        "label": str(profile["label"]),
+        "path": path,
+        "scale": str(profile.get("scale", "")),
+        "fidelity_mode": str(profile.get("fidelity_mode", "")),
+        "expected_kpi_behavior": str(profile.get("expected_kpi_behavior", "")),
+        "file_exists": absolute_path.is_file(),
+        "file_hash": "",
+        "config_hash": "",
+        "load_ok": False,
+        "validation_ok": False,
+        "error_count": 0,
+        "errors": (),
+        "config_summary": {},
+    }
+    if not absolute_path.is_file():
+        row.update(
+            {
+                "error_count": 1,
+                "errors": (
+                    {
+                        "source": "template_file",
+                        "message": f"template file is missing: {path}",
+                    },
+                ),
+            }
+        )
+        row["row_hash"] = stable_hash_payload(row)
+        return row
+    row["file_hash"] = _file_sha256(absolute_path)
+    try:
+        config = load_config(absolute_path)
+    except Exception as exc:  # pragma: no cover - covered by invalid template inputs.
+        row.update(
+            {
+                "error_count": 1,
+                "errors": (
+                    {
+                        "source": exc.__class__.__name__,
+                        "message": str(exc),
+                    },
+                ),
+            }
+        )
+        row["row_hash"] = stable_hash_payload(row)
+        return row
+    mapping = config_to_dict(config)
+    validation = validate_user_configuration_mapping_v2(mapping)
+    row.update(
+        {
+            "config_hash": stable_hash_payload(mapping),
+            "load_ok": True,
+            "validation_ok": bool(validation["ok"]),
+            "error_count": int(validation["error_count"]),
+            "errors": tuple(validation["errors"]),
+            "config_summary": {
+                "satellite_count": config.scenario.satellite_count,
+                "user_count": config.scenario.user_count,
+                "compute_nodes": config.scenario.compute_nodes,
+                "traffic_class": _config_value(
+                    config.scenario.traffic_model.traffic_class
+                ),
+                "destination_type": _config_value(
+                    config.scenario.traffic_model.destination_type
+                ),
+                "runtime_mode": _config_value(config.runtime.mode),
+                "runtime_duration": config.runtime.duration,
+                "runtime_seed": config.runtime.seed,
+                "orbit_update_mode": _config_value(
+                    config.scenario.orbit.orbit_update_mode
+                ),
+                "space_link_mode": _config_value(config.network.space_link_mode),
+            },
+        }
+    )
+    row["row_hash"] = stable_hash_payload(row)
+    return row
+
+
+def _config_value(value: object) -> object:
+    enum_value = getattr(value, "value", None)
+    if isinstance(enum_value, str):
+        return enum_value
+    return value
+
+
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return f"sha256:{digest.hexdigest()}"
 
 
 def _reference_section(

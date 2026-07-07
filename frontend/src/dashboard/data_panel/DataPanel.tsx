@@ -92,6 +92,7 @@ import {
   UserConfigurationReferenceV1,
   UserConfigurationSchemaV2,
   UserConfigurationTemplateCatalogV1,
+  UserConfigurationTemplateValidationV1,
   UserConfigurationValidationApplyCommandV1,
   UserConfigurationValidationReportV1
 } from "../../core/event_types";
@@ -11883,6 +11884,10 @@ export function buildDataPanelUserConfigurationContractDisplay(
   const templateCount = templates?.template_count ?? schema?.templates.length ?? 0;
   const configHash = exported?.config_hash ?? "";
   const validationOk = exported?.validation_ok ?? false;
+  const templateValidation =
+    templates?.template_validation ?? reference?.template_validation ?? null;
+  const templateValidationLabels =
+    buildDataPanelUserConfigurationTemplateValidationLabels(templateValidation);
   const source =
     reference?.source ??
     exported?.source ??
@@ -11905,6 +11910,7 @@ export function buildDataPanelUserConfigurationContractDisplay(
       `validation ${validationOk ? "ok" : exported == null ? "pending" : "failed"}`,
       `format ${reference?.format ?? schema?.format ?? exported?.format ?? "YAML_OR_JSON_MAPPING"}`,
       `file-only ${formatCount(fileOnlyFieldCount)}`,
+      ...templateValidationLabels,
       `reference ${shortRuntimeHash(reference?.reference_hash ?? "")}`
     ],
     fieldSections: buildDataPanelUserConfigurationFieldSections(schema),
@@ -11973,6 +11979,29 @@ export function buildDataPanelUserConfigurationFieldSections(
     });
   });
   return sectionDisplays;
+}
+
+export function buildDataPanelUserConfigurationTemplateValidationLabels(
+  validation: UserConfigurationTemplateValidationV1 | null | undefined
+): readonly string[] {
+  if (validation === null || validation === undefined) {
+    return [];
+  }
+  const labels = [
+    `templates valid ${formatCount(validation.valid_template_count)}/${formatCount(
+      validation.template_count
+    )}`,
+    `template errors ${formatCount(validation.invalid_template_count)}`,
+    `template evidence ${shortRuntimeHash(validation.evidence_hash)}`
+  ];
+  if (validation.all_templates_valid) {
+    return labels;
+  }
+  const errorRows = validation.templates
+    .filter((row) => !row.validation_ok || !row.load_ok || !row.file_exists)
+    .slice(0, 2)
+    .map((row) => `${row.id} ${row.errors[0]?.message ?? "invalid template"}`);
+  return [...labels, ...errorRows];
 }
 
 export function buildDataPanelUserConfigurationReferenceFieldSections(

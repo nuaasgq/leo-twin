@@ -39,6 +39,7 @@ from leo_twin.services.configuration_schema import (
 )
 from leo_twin.services.configuration_view import (
     build_user_configuration_reference,
+    build_user_configuration_template_validation_evidence,
     build_user_configuration_view,
     configuration_template_profiles,
     load_user_configuration_template,
@@ -251,6 +252,7 @@ class DemoControlPlane:
 
     def user_configuration_templates(self) -> dict[str, Any]:
         templates = configuration_template_profiles()
+        template_validation = build_user_configuration_template_validation_evidence()
         return {
             "type": "USER_CONFIGURATION_TEMPLATE_CATALOG",
             "summary": {
@@ -261,6 +263,7 @@ class DemoControlPlane:
                 "mutation_policy": "READ_ONLY_CATALOG",
                 "template_count": len(templates),
                 "templates": templates,
+                "template_validation": template_validation,
                 "load_command": {
                     "type": "RUNTIME_CONTROL",
                     "action": "LOAD_TEMPLATE",
@@ -268,6 +271,12 @@ class DemoControlPlane:
                     "requires_uninitialized_runtime": True,
                 },
             },
+        }
+
+    def user_configuration_template_validation(self) -> dict[str, Any]:
+        return {
+            "type": "USER_CONFIGURATION_TEMPLATE_VALIDATION_V1",
+            "summary": build_user_configuration_template_validation_evidence(),
         }
 
     def user_configuration_reference(self) -> dict[str, Any]:

@@ -11,6 +11,7 @@ from leo_twin.schema.config import (
 from leo_twin.schema.config_loader import ConfigValidationError, load_config
 from leo_twin.services.configuration_view import (
     build_user_configuration_reference,
+    build_user_configuration_template_validation_evidence,
     build_user_configuration_view,
     configuration_template_profiles,
     load_user_configuration_template,
@@ -111,6 +112,14 @@ def test_user_configuration_view_is_deterministic_and_frontend_ready() -> None:
         },
     )
     assert first["key_field_count"] == len(first["key_fields"])
+    template_validation = first["template_validation"]
+    assert isinstance(template_validation, dict)
+    assert template_validation["evidence_id"] == (
+        "sees.user_configuration_template_validation.v1"
+    )
+    assert template_validation["all_templates_valid"] is True
+    assert template_validation["template_count"] == len(first["template_profiles"])
+    assert template_validation["evidence_hash"].startswith("sha256:")
     assert first["detailed_field_count"] > first["key_field_count"]
     assert _field(first, "scenario.satellite_count") == {
         "path": "scenario.satellite_count",
@@ -174,6 +183,14 @@ def test_user_configuration_reference_v1_summarizes_full_file_contract() -> None
     assert first["frontend_policy"] == "CONTROL_PANEL_KEY_FIELDS_ONLY"
     assert first["detailed_config_file"] == "tmp/sees_control.yaml"
     assert first["generated_config_file"] == "tmp/generated_full_system_demo.json"
+    template_validation = first["template_validation"]
+    assert isinstance(template_validation, dict)
+    assert template_validation["evidence_id"] == (
+        "sees.user_configuration_template_validation.v1"
+    )
+    assert template_validation["all_templates_valid"] is True
+    assert template_validation["template_count"] == len(first["template_profiles"])
+    assert template_validation["evidence_hash"].startswith("sha256:")
     assert first["field_count"] == len(first["fields"])
     assert first["key_field_count"] > 0
     assert first["file_only_field_count"] > 0
@@ -197,6 +214,80 @@ def test_user_configuration_reference_v1_summarizes_full_file_contract() -> None
     assert "POST /scenario/user-config/validate-text" == first["mutation_policy"][
         "validate_endpoint"
     ]
+
+
+def test_user_configuration_template_validation_evidence_is_deterministic() -> None:
+    first = build_user_configuration_template_validation_evidence()
+    second = build_user_configuration_template_validation_evidence()
+
+    assert first == second
+    assert first["version"] == "v1"
+    assert first["evidence_id"] == "sees.user_configuration_template_validation.v1"
+    assert first["source"] == "BACKEND_USER_CONFIGURATION"
+    assert first["schema_id"] == "sees.user_configuration.v2"
+    assert first["validation_scope"] == "APPROVED_EXECUTABLE_TEMPLATES"
+    assert first["template_count"] == 4
+    assert first["valid_template_count"] == 4
+    assert first["invalid_template_count"] == 0
+    assert first["all_templates_valid"] is True
+    assert first["evidence_hash"].startswith("sha256:")
+    assert first["model_boundaries"] == {
+        "event_kernel_policy": "NO_EVENT_KERNEL_BEHAVIOR_CHANGE",
+        "packet_level_simulation": False,
+        "external_simulators": False,
+        "forbidden_integrations": ("STK", "EXATA", "AFSIM", "DDS"),
+    }
+
+    rows = {row["id"]: row for row in first["templates"]}
+    assert tuple(rows) == (
+        "baseline_72sat",
+        "dynamic_observability_120sat",
+        "network_stress_120sat",
+        "large_scale_1200sat",
+    )
+    assert rows["baseline_72sat"]["file_exists"] is True
+    assert rows["baseline_72sat"]["file_hash"].startswith("sha256:")
+    assert rows["baseline_72sat"]["config_hash"].startswith("sha256:")
+    assert rows["baseline_72sat"]["row_hash"].startswith("sha256:")
+    assert rows["baseline_72sat"]["load_ok"] is True
+    assert rows["baseline_72sat"]["validation_ok"] is True
+    assert rows["baseline_72sat"]["error_count"] == 0
+    assert rows["baseline_72sat"]["config_summary"] == {
+        "satellite_count": 72,
+        "user_count": 1000,
+        "compute_nodes": 72,
+        "traffic_class": "COMPUTE_SERVICE",
+        "destination_type": "COMPUTE_NODE",
+        "runtime_mode": "REAL_TIME",
+        "runtime_duration": 600,
+        "runtime_seed": 20260703,
+        "orbit_update_mode": None,
+        "space_link_mode": None,
+    }
+    assert rows["large_scale_1200sat"]["config_summary"]["satellite_count"] == 1200
+    assert rows["large_scale_1200sat"]["config_summary"]["orbit_update_mode"] == "BATCH"
+    assert rows["large_scale_1200sat"]["config_summary"]["space_link_mode"] == (
+        "BOUNDED_CANDIDATE"
+    )
+
+
+def test_user_configuration_template_validation_reports_missing_files(
+    tmp_path: Path,
+) -> None:
+    evidence = build_user_configuration_template_validation_evidence(
+        repository_root=tmp_path
+    )
+
+    assert evidence["all_templates_valid"] is False
+    assert evidence["valid_template_count"] == 0
+    assert evidence["invalid_template_count"] == evidence["template_count"]
+    first_row = evidence["templates"][0]
+    assert first_row["file_exists"] is False
+    assert first_row["load_ok"] is False
+    assert first_row["validation_ok"] is False
+    assert first_row["error_count"] == 1
+    assert first_row["errors"][0]["source"] == "template_file"
+    assert "template file is missing" in first_row["errors"][0]["message"]
 
 
 def test_detailed_user_config_template_loads_with_full_contract() -> None:

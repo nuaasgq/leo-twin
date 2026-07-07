@@ -636,6 +636,7 @@ def test_control_plane_exposes_user_configuration_contract_api(tmp_path) -> None
 
     schema = control_plane.user_configuration_schema()
     templates = control_plane.user_configuration_templates()
+    template_validation = control_plane.user_configuration_template_validation()
     reference = control_plane.user_configuration_reference()
     exported = control_plane.user_configuration_export()
 
@@ -681,6 +682,25 @@ def test_control_plane_exposes_user_configuration_contract_api(tmp_path) -> None
     assert template_by_id["large_scale_1200sat"]["fidelity_mode"] == (
         "LARGE_SCALE_BATCH_ORBIT_BOUNDED_ISL"
     )
+    assert templates["summary"]["template_validation"] == template_validation["summary"]
+    assert template_validation["type"] == "USER_CONFIGURATION_TEMPLATE_VALIDATION_V1"
+    validation_summary = template_validation["summary"]
+    assert validation_summary["evidence_id"] == (
+        "sees.user_configuration_template_validation.v1"
+    )
+    assert validation_summary["schema_id"] == USER_CONFIGURATION_SCHEMA_V2_ID
+    assert validation_summary["template_count"] == 4
+    assert validation_summary["valid_template_count"] == 4
+    assert validation_summary["all_templates_valid"] is True
+    assert validation_summary["evidence_hash"].startswith("sha256:")
+    validation_rows = {row["id"]: row for row in validation_summary["templates"]}
+    assert validation_rows["network_stress_120sat"]["validation_ok"] is True
+    assert validation_rows["network_stress_120sat"]["config_summary"][
+        "satellite_count"
+    ] == 120
+    assert validation_rows["large_scale_1200sat"]["config_summary"][
+        "satellite_count"
+    ] == 1200
 
     assert reference["type"] == "USER_CONFIGURATION_REFERENCE_V1"
     reference_summary = reference["summary"]
@@ -690,6 +710,7 @@ def test_control_plane_exposes_user_configuration_contract_api(tmp_path) -> None
     assert reference_summary["reference_scope"] == (
         "FULL_USER_CONFIGURATION_FILE_AND_FRONTEND_SURFACE"
     )
+    assert reference_summary["template_validation"] == validation_summary
     assert reference_summary["detailed_config_file"] == str(
         tmp_path / "sees_control.yaml"
     )
@@ -729,6 +750,7 @@ def test_control_plane_exposes_user_configuration_contract_api(tmp_path) -> None
     ]
     json.dumps(schema, sort_keys=True)
     json.dumps(templates, sort_keys=True)
+    json.dumps(template_validation, sort_keys=True)
     json.dumps(reference, sort_keys=True)
     json.dumps(exported, sort_keys=True)
     assert control_plane.runtime_status()["status"]["initialized"] is True

@@ -5,6 +5,68 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-07 - User Configuration Template Validation Evidence v1
+
+- Branch: `feature/T371-user-config-template-validation-v1`
+- Commit: pending in this commit
+- Scope: add backend-owned validation evidence for approved user configuration
+  YAML templates. The new `sees.user_configuration_template_validation.v1`
+  object loads each approved template through the same config loader and schema
+  validation path used by runtime control, reports file/config/row hashes,
+  key scale/runtime summaries, valid/invalid counts, and no-Event-Kernel/
+  no-packet/no-external-simulator boundaries. The evidence is embedded in the
+  template catalog and full configuration reference and is also available from
+  `GET /scenario/user-config/template-validation`. The dashboard configuration
+  contract card renders compact template validation labels from backend fields.
+- Changed files/modules:
+  - `src/leo_twin/services/configuration_view.py`
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `tests/unit/test_configuration_view.py`
+  - `tests/integration/test_config_control.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/app/api.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/user_guide_v2.md`
+  - `docs/current_product_status.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_configuration_view.py -q`
+    - Result: passed, 10 tests.
+  - `python -m pytest tests/integration/test_config_control.py::test_control_plane_exposes_user_configuration_contract_api -q`
+    - Result: passed, 1 test.
+  - `python -m pytest tests/unit/test_configuration_view.py tests/integration/test_config_control.py::test_control_plane_exposes_user_configuration_contract_api -q`
+    - Result: passed, 11 tests.
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed, 1 test file / 215 tests using the bundled Node/pnpm
+      runtime.
+  - `pnpm --dir frontend test api.test.ts`
+    - Result: passed, 1 test file / 44 tests using the bundled Node/pnpm
+      runtime.
+  - `pnpm --dir frontend test dataPanel.test.ts api.test.ts`
+    - Result: passed, 2 test files / 259 tests using the bundled Node/pnpm
+      runtime.
+  - `pnpm --dir frontend build`
+    - Result: passed using the bundled Node/pnpm runtime. Vite reported the
+      existing `DataPanel` chunk-size warning after minification.
+- Problems encountered and handling:
+  - The initial frontend test command failed because the shell did not have
+    `node` on PATH. The bundled Codex Node/pnpm runtime was loaded and used
+    explicitly for frontend tests.
+  - The baseline template test expectation used stale values for user count,
+    runtime mode, and seed. The test was corrected to match the current
+    approved YAML template, and the evidence builder now serializes enum-backed
+    config values as strings.
+  - Existing local runtime/generated config files remain dirty and are
+    intentionally not included in this task.
+- Known remaining issues / follow-up:
+  - The dashboard renders compact template validation labels. A future
+    configuration UX task can add a wider template evidence drawer with every
+    template row and validation error message.
+
 ## 2026-07-07 - Network KPI Formula Evidence Export v1
 
 - Branch: `feature/T370-network-kpi-formula-evidence-export-v1`

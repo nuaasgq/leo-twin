@@ -84,6 +84,7 @@ Main user configuration endpoints:
 
 - `GET /scenario/user-config/schema`
 - `GET /scenario/user-config/templates`
+- `GET /scenario/user-config/template-validation`
 - `GET /scenario/user-config/reference`
 - `GET /scenario/user-config/export`
 - `POST /scenario/user-config/validate`
@@ -98,6 +99,13 @@ and shows its stable hash/file-only field count next to the schema, templates,
 and current export links. It also includes a scrollable reference browser for
 all backend-declared sections and fields, including the edit surface, current
 value, default value, and validation rules for each field.
+
+Use `/scenario/user-config/template-validation` when you need a read-only
+operator check that the shipped YAML templates are executable through the same
+backend config loader and schema validation path used by runtime control. The
+template catalog and reference endpoints also carry this evidence with template
+counts, valid/invalid counts, file hashes, config hashes, scale summaries, and
+the no-Event-Kernel/no-packet/no-external-simulator boundary.
 
 Minimal YAML example:
 

@@ -62,7 +62,12 @@ Tasks:
     advanced configuration explanation locally.
     T322 adds a scrollable in-dashboard reference browser for the same backend
     object, covering sections, field rows, edit surfaces, current/default
-    values, validation rules, model boundaries, and workflow notes.
+    values, validation rules, model boundaries, and workflow notes. T371 adds
+    backend-owned user configuration template validation evidence, so approved
+    YAML templates are loaded through the same config loader and schema
+    validation path used by runtime control and are reported with stable file
+    hashes, normalized config hashes, scale summaries, and model-boundary
+    declarations.
 - V2-002: Add template catalog metadata.
   - Scope: scenario name, purpose, scale, expected KPI behavior, fidelity mode.
   - Output: backend template endpoint and frontend selector metadata.
@@ -71,7 +76,10 @@ Tasks:
     with scale, expected KPI behavior, fidelity mode, and recommended-use
     metadata, exposes the fields through schema/templates/configuration-surface
     summaries, and displays them in the frontend template selector without
-    local semantic inference.
+    local semantic inference. T371 adds the
+    `/scenario/user-config/template-validation` read-only endpoint and embeds
+    the same evidence in the template catalog/reference surfaces so operators
+    can see how many approved templates are executable before applying one.
 - V2-003: Add config explanation summary.
   - Scope: backend-generated text/structured explanation for orbit, network,
     traffic, compute, runtime, fidelity.

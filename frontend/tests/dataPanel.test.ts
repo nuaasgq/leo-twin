@@ -1334,6 +1334,20 @@ describe("buildDataPanelUserConfigurationContractDisplay", () => {
         mutation_policy: "READ_ONLY_CATALOG",
         template_count: 4,
         templates: [],
+        template_validation: {
+          version: "v1",
+          evidence_id: "sees.user_configuration_template_validation.v1",
+          source: "BACKEND_USER_CONFIGURATION",
+          schema_id: "sees.user_configuration.v2",
+          validation_scope: "APPROVED_EXECUTABLE_TEMPLATES",
+          template_count: 4,
+          valid_template_count: 4,
+          invalid_template_count: 0,
+          all_templates_valid: true,
+          templates: [],
+          evidence_hash:
+            "sha256:3434343434343434343434343434343434343434343434343434343434343434"
+        },
         load_command: {
           type: "RUNTIME_CONTROL",
           action: "LOAD_TEMPLATE",
@@ -1510,6 +1524,9 @@ describe("buildDataPanelUserConfigurationContractDisplay", () => {
       "validation ok",
       "format YAML_OR_JSON_MAPPING",
       "file-only 30",
+      "templates valid 4/4",
+      "template errors 0",
+      "template evidence 343434343434",
       "reference 121212121212"
     ]);
     expect(display?.referenceSummaryLabels).toEqual([

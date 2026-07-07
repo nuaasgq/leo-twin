@@ -45,6 +45,7 @@ import {
   loadUserConfigurationExport,
   loadUserConfigurationReference,
   loadUserConfigurationSchema,
+  loadUserConfigurationTemplateValidation,
   loadUserConfigurationTemplates,
   validateUserConfigurationCandidate,
   validateUserConfigurationTextCandidate,
@@ -77,6 +78,7 @@ import {
   userConfigurationExportHref,
   userConfigurationReferenceHref,
   userConfigurationSchemaHref,
+  userConfigurationTemplateValidationHref,
   userConfigurationTemplatesHref,
   userConfigurationValidateHref,
   userConfigurationValidateTextHref,
@@ -203,6 +205,9 @@ describe("runtime API diagnostics", () => {
   it("exposes stable user configuration contract links", () => {
     expect(userConfigurationSchemaHref()).toBe("/scenario/user-config/schema");
     expect(userConfigurationTemplatesHref()).toBe("/scenario/user-config/templates");
+    expect(userConfigurationTemplateValidationHref()).toBe(
+      "/scenario/user-config/template-validation"
+    );
     expect(userConfigurationReferenceHref()).toBe("/scenario/user-config/reference");
     expect(userConfigurationExportHref()).toBe("/scenario/user-config/export");
     expect(userConfigurationValidateHref()).toBe("/scenario/user-config/validate");
@@ -2303,6 +2308,39 @@ describe("runtime API diagnostics", () => {
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({
+          type: "USER_CONFIGURATION_TEMPLATE_VALIDATION_V1",
+          summary: {
+            version: "v1",
+            evidence_id: "sees.user_configuration_template_validation.v1",
+            source: "BACKEND_USER_CONFIGURATION",
+            schema_id: "sees.user_configuration.v2",
+            validation_scope: "APPROVED_EXECUTABLE_TEMPLATES",
+            template_count: 1,
+            valid_template_count: 1,
+            invalid_template_count: 0,
+            all_templates_valid: true,
+            templates: [
+              {
+                id: "baseline_72sat",
+                label: "72-satellite baseline",
+                path: "configs/templates/sees_user_detailed.example.yaml",
+                file_exists: true,
+                file_hash: "sha256:file",
+                config_hash: "sha256:config",
+                load_ok: true,
+                validation_ok: true,
+                error_count: 0,
+                errors: [],
+                row_hash: "sha256:row"
+              }
+            ],
+            evidence_hash: "sha256:template-validation"
+          }
+        })
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
           type: "USER_CONFIGURATION_REFERENCE_V1",
           summary: {
             version: "v1",
@@ -2404,6 +2442,10 @@ describe("runtime API diagnostics", () => {
       template_count: 1,
       mutation_policy: "READ_ONLY_CATALOG"
     });
+    await expect(loadUserConfigurationTemplateValidation()).resolves.toMatchObject({
+      evidence_id: "sees.user_configuration_template_validation.v1",
+      all_templates_valid: true
+    });
     await expect(loadUserConfigurationReference()).resolves.toMatchObject({
       reference_id: "sees.user_configuration_reference.v1",
       field_count: 42,
@@ -2415,8 +2457,12 @@ describe("runtime API diagnostics", () => {
     });
     expect(fetchMock).toHaveBeenNthCalledWith(1, "/scenario/user-config/schema");
     expect(fetchMock).toHaveBeenNthCalledWith(2, "/scenario/user-config/templates");
-    expect(fetchMock).toHaveBeenNthCalledWith(3, "/scenario/user-config/reference");
-    expect(fetchMock).toHaveBeenNthCalledWith(4, "/scenario/user-config/export");
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      "/scenario/user-config/template-validation"
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(4, "/scenario/user-config/reference");
+    expect(fetchMock).toHaveBeenNthCalledWith(5, "/scenario/user-config/export");
   });
 
   it("validates user configuration candidates through the backend preflight endpoint", async () => {

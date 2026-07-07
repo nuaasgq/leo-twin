@@ -803,6 +803,7 @@ export interface ConfigurationSurfaceSummary {
   detailed_config_file: string;
   template_config_file: string;
   template_profiles?: readonly ConfigurationTemplateProfile[];
+  template_validation?: UserConfigurationTemplateValidationV1;
   frontend_policy: string;
   key_field_count: number;
   detailed_field_count: number;
@@ -915,6 +916,7 @@ export interface UserConfigurationTemplateCatalogV1 {
   mutation_policy: string;
   template_count: number;
   templates: readonly ConfigurationTemplateProfile[];
+  template_validation?: UserConfigurationTemplateValidationV1;
   load_command: {
     type: string;
     action: string;
@@ -923,9 +925,67 @@ export interface UserConfigurationTemplateCatalogV1 {
   };
 }
 
+export interface UserConfigurationTemplateValidationV1 {
+  version: "v1" | string;
+  evidence_id: string;
+  source: string;
+  schema_id: string;
+  validation_scope: string;
+  template_count: number;
+  valid_template_count: number;
+  invalid_template_count: number;
+  all_templates_valid: boolean;
+  templates: readonly UserConfigurationTemplateValidationRowV1[];
+  model_boundaries?: {
+    event_kernel_policy?: string;
+    packet_level_simulation?: boolean;
+    external_simulators?: boolean;
+    forbidden_integrations?: readonly string[];
+  };
+  notes?: readonly string[];
+  evidence_hash: string;
+}
+
+export interface UserConfigurationTemplateValidationRowV1 {
+  id: string;
+  label: string;
+  path: string;
+  scale?: string;
+  fidelity_mode?: string;
+  expected_kpi_behavior?: string;
+  file_exists: boolean;
+  file_hash: string;
+  config_hash: string;
+  load_ok: boolean;
+  validation_ok: boolean;
+  error_count: number;
+  errors: readonly {
+    source: string;
+    message: string;
+  }[];
+  config_summary?: {
+    satellite_count?: number;
+    user_count?: number;
+    compute_nodes?: number;
+    traffic_class?: string;
+    destination_type?: string;
+    runtime_mode?: string;
+    runtime_duration?: number;
+    runtime_seed?: number;
+    orbit_update_mode?: string | null;
+    space_link_mode?: string | null;
+  };
+  row_hash: string;
+}
+
 export interface UserConfigurationTemplateCatalogEnvelope {
   type: "USER_CONFIGURATION_TEMPLATE_CATALOG" | string;
   summary: UserConfigurationTemplateCatalogV1;
+}
+
+export interface UserConfigurationTemplateValidationEnvelope {
+  type: "USER_CONFIGURATION_TEMPLATE_VALIDATION_V1" | string;
+  summary: UserConfigurationTemplateValidationV1;
 }
 
 export interface UserConfigurationReferenceV1 {
@@ -940,6 +1000,7 @@ export interface UserConfigurationReferenceV1 {
   generated_config_file: string;
   template_config_file: string;
   template_profiles: readonly ConfigurationTemplateProfile[];
+  template_validation?: UserConfigurationTemplateValidationV1;
   unknown_key_policy: string;
   defaulting_policy: string;
   mutation_policy: {
