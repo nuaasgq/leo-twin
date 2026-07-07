@@ -384,6 +384,32 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
     assert latest_kpi_sample["network_effective_delay_variation_s"] == status_after_tick[
         "metrics_summary"
     ]["network_quality_effective_delay_variation_proxy_s"]
+    network_kpi_calibration = status_after_tick["network_kpi_calibration_v1"]
+    assert network_kpi_calibration["version"] == "v1"
+    assert network_kpi_calibration["calibration_id"] == (
+        "leo_twin.network_kpi_calibration.v1"
+    )
+    assert network_kpi_calibration["source"] == (
+        "KPI_TIME_SERIES_V1_AND_METRICS_SUMMARY"
+    )
+    assert network_kpi_calibration["packet_level_simulation"] is False
+    assert network_kpi_calibration["sample_count"] == kpi_series["sample_count"]
+    assert network_kpi_calibration["kpi_count"] == len(
+        network_kpi_calibration["kpis"]
+    )
+    assert network_kpi_calibration["calibration_status"] in {
+        "TIME_VARYING_OBSERVED",
+        "PARTIAL_TIME_VARIATION",
+        "FLAT_UNDER_ACTIVITY",
+        "FLAT_NO_ACTIVITY",
+        "INSUFFICIENT_SERIES",
+    }
+    assert {
+        "EFFECTIVE_THROUGHPUT",
+        "EFFECTIVE_LATENCY",
+        "EFFECTIVE_LOSS_PROXY",
+        "EFFECTIVE_DELAY_VARIATION_PROXY",
+    } == {item["metric"] for item in network_kpi_calibration["kpis"]}
     satellite_slices = status_after_tick["satellite_kpi_slices_v1"]
     assert satellite_slices["version"] == "v1"
     assert satellite_slices["mode"] == "TOP_ACTIVITY_LIMITED"

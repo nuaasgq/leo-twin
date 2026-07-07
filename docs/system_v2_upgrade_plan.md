@@ -1015,6 +1015,10 @@ Current Phase 3 progress:
   restart services, apply the standard 72 / 300 / 1200 benchmark YAMLs through
   backend `/control`, reuse the product acceptance script, and restore local
   runtime config drift files after the run.
+- V2-021/V2-072 now include backend KPI calibration evidence. Runtime status
+  exposes `network_kpi_calibration_v1` so benchmark and dashboard layers can
+  distinguish time-varying KPI movement from flat-but-explained flow-level
+  proxy values.
 
 ## 5. Parallel Agent Assignment Model
 

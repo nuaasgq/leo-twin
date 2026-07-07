@@ -129,3 +129,23 @@ def test_benchmark_scenario_matrix_records_scope_boundaries() -> None:
     assert matrix["packet_level_simulation"] is False
     assert "Event Kernel" in matrix["acceptance_policy"]
     assert "events.jsonl" in matrix["result_artifact_expectation"]
+
+
+def test_benchmark_scenario_matrix_requires_network_kpi_calibration() -> None:
+    scenario = benchmark_scenario_by_id("small_demo_72sat", PROJECT_ROOT)
+    expectation = scenario["runtime_status_expectation"]  # type: ignore[index]
+
+    assert "network_kpi_calibration_v1" in expectation["required_fields"]
+    calibration = expectation["network_kpi_calibration"]
+    assert calibration == {
+        "field": "network_kpi_calibration_v1",
+        "source": "kpi_time_series_v1 + metrics_summary",
+        "allowed_calibration_statuses": (
+            "TIME_VARYING_OBSERVED",
+            "PARTIAL_TIME_VARIATION",
+            "FLAT_UNDER_ACTIVITY",
+            "FLAT_NO_ACTIVITY",
+            "INSUFFICIENT_SERIES",
+        ),
+        "packet_level_simulation": False,
+    }

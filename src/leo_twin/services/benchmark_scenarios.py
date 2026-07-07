@@ -285,10 +285,23 @@ def _runtime_status_expectation() -> dict[str, object]:
             "network_kpi_provenance_v2",
             "network_kpi_credibility_v1",
             "network_kpi_benchmark_validation_v1",
+            "network_kpi_calibration_v1",
             "route_explanation_summary_v1",
             "route_provenance_trust_summary_v1",
             "reproducibility_manifest_v1",
         ),
+        "network_kpi_calibration": {
+            "field": "network_kpi_calibration_v1",
+            "source": "kpi_time_series_v1 + metrics_summary",
+            "allowed_calibration_statuses": (
+                "TIME_VARYING_OBSERVED",
+                "PARTIAL_TIME_VARIATION",
+                "FLAT_UNDER_ACTIVITY",
+                "FLAT_NO_ACTIVITY",
+                "INSUFFICIENT_SERIES",
+            ),
+            "packet_level_simulation": False,
+        },
         "network_kpi_benchmark_validation": {
             "field": "network_kpi_benchmark_validation_v1",
             "source": "network_kpi_provenance_v2 + metrics_summary",

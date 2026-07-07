@@ -67,6 +67,7 @@ fields include:
 - `network_kpi_provenance_v2`
 - `network_kpi_credibility_v1`
 - `network_kpi_benchmark_validation_v1`
+- `network_kpi_calibration_v1`
 - `route_explanation_summary_v1`
 - `route_provenance_trust_summary_v1`
 - `reproducibility_manifest_v1`
@@ -84,6 +85,12 @@ derived from `route_explanation_summary_v1`, use the
 `FLOW_LEVEL_ROUTE_PROXY` model, forbid packet-level simulation, forbid all-pairs
 route/link computation, and assess at least one route after the benchmark
 runtime advances.
+
+The KPI calibration expectation requires `network_kpi_calibration_v1` to be
+derived from `kpi_time_series_v1` plus `metrics_summary`, report no
+packet-level simulation, and use one of the bounded runtime statuses:
+`TIME_VARYING_OBSERVED`, `PARTIAL_TIME_VARIATION`, `FLAT_UNDER_ACTIVITY`,
+`FLAT_NO_ACTIVITY`, or `INSUFFICIENT_SERIES`.
 
 ## Acceptance Command
 

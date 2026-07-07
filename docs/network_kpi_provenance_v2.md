@@ -161,6 +161,34 @@ out-of-range ratios or packet-level metrics.
 The standalone dashboard renders this validation as a compact benchmark card in
 the network KPI section and indexes it into the model-trust evidence workspace.
 
+## Calibration Summary v1
+
+`status.network_kpi_calibration_v1` is a backend-owned calibration summary for
+the runtime KPI time series. It does not change the formulas. It audits
+`kpi_time_series_v1.samples` plus `metrics_summary` and reports whether the
+current run shows deterministic movement over simulation time.
+
+The summary includes:
+
+- `sample_count`, `sim_time_start_s`, `sim_time_end_s`, and `sim_time_span_s`;
+- `activity_context` for route demand, offered route capacity, recent flow
+  count, and available route count;
+- `time_driver` fields for simulation-time pressure period, phase, factor,
+  loss proxy, and delay-variation proxy;
+- one row for each core KPI: throughput, latency, loss proxy, and
+  delay-variation proxy;
+- first, latest, minimum, maximum, absolute delta, endpoint delta, relative
+  delta, zero-latest flag, and variation status for each KPI;
+- `calibration_status`: `TIME_VARYING_OBSERVED`,
+  `PARTIAL_TIME_VARIATION`, `FLAT_UNDER_ACTIVITY`, `FLAT_NO_ACTIVITY`, or
+  `INSUFFICIENT_SERIES`.
+
+This field gives the frontend a backend source of truth for explaining whether
+network KPI charts are moving because the model inputs changed, or whether a
+flat value is expected because route, flow, and pressure inputs stayed constant.
+It remains a deterministic flow-level proxy audit and does not introduce
+packet-level loss or jitter.
+
 ## Follow-Up
 
 V2-022 added deterministic time-window pressure inputs while preserving this
@@ -169,5 +197,8 @@ T324 added `network_kpi_benchmark_validation_v1` runtime guardrails.
 T325 exports the same guardrail evidence as
 `network_kpi_benchmark_validation_v1.json` inside runtime result packages and
 binds compact status/hash labels into the dashboard export review surfaces.
+T362 adds `network_kpi_calibration_v1` so runtime status can prove whether the
+KPI time series is actually moving over simulation time and explain flat
+metrics without frontend inference.
 Future dashboard work can add filtering or a wider drawer for large
 KPI/source-field/input tables if additional KPI families are added.

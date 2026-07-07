@@ -17801,3 +17801,45 @@ change.
     acceptance for initialized scenarios; long real-time advancement checks
     remain a separate smoke profile to avoid making the three-scenario default
     run unnecessarily slow.
+
+## 2026-07-07 - T362 network KPI calibration v1
+
+- Branch: `feature/T362-network-kpi-calibration-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: add a backend-owned network KPI calibration summary that audits
+  `kpi_time_series_v1` plus `metrics_summary` and reports whether throughput,
+  latency, loss proxy, and delay-variation proxy are moving over simulation
+  time. The task does not change Event Kernel behavior, does not implement
+  packet-level simulation, and does not change the KPI formulas.
+- Changed files/modules:
+  - `src/leo_twin/services/network_kpi_calibration.py`
+  - `examples/integration_demo/control_plane.py`
+  - `src/leo_twin/services/benchmark_scenarios.py`
+  - `tests/unit/test_network_kpi_calibration_v1.py`
+  - `tests/unit/test_benchmark_scenario_matrix_v1.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/network_kpi_provenance_v2.md`
+  - `docs/benchmark_scenario_matrix_v1.md`
+  - `docs/current_product_status.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_network_kpi_calibration_v1.py tests/unit/test_benchmark_scenario_matrix_v1.py tests/unit/test_network_kpi_benchmark_validation.py tests/unit/test_network_kpi_provenance_v2.py tests/unit/test_metrics_module.py::test_metrics_collector_uses_runtime_sim_time_for_time_varying_pressure tests/unit/test_metrics_module.py::test_metrics_collector_publishes_backend_kpi_time_series -q`
+    - Result: passed, 19 tests.
+  - `python -m pytest tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer tests/integration/test_product_acceptance_scenarios.py::test_network_stress_acceptance_scenario_drives_dynamic_kpis -q`
+    - Result: passed, 2 tests.
+  - `git diff --check`
+    - Result: passed; Git emitted CRLF warnings for the existing unstaged
+      runtime config drift.
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\sees_launcher.ps1 status -JsonSummary`
+    - Result: passed; backend and frontend were stopped.
+- Problems encountered:
+  - Users can see KPI charts but previously lacked a backend-owned status that
+    says whether a flat curve is expected from unchanged route/flow/pressure
+    inputs or is suspicious under active demand. T362 adds that evidence layer
+    without altering the simulation model.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - Dashboard rendering can surface `network_kpi_calibration_v1` more directly
+    in a later frontend-focused task.

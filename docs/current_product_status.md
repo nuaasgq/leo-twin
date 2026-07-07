@@ -2,7 +2,7 @@
 
 Date: 2026-07-07
 
-Branch: `feature/T361-disposable-acceptance-harness-v1`
+Branch: `feature/T362-network-kpi-calibration-v1`
 
 ## Local Entry Points
 
@@ -72,6 +72,10 @@ frontend test files / 197 tests.
 - Runtime health smoke reports endpoint timings, orbit/protocol fields,
   constellation profile, traffic class, compute node count, and compute
   resource model.
+- Runtime status now includes backend-owned `network_kpi_calibration_v1`, which
+  audits whether throughput, latency, loss proxy, and delay-variation proxy
+  have actually changed over simulation time and explains flat values from
+  backend sample evidence.
 - Launcher health v2 reports backend/frontend port readiness, HTTP readiness,
   process ids, latest log paths, config paths, and recommended actions.
 - Operator diagnostics bundle captures launcher health, runtime status, version
@@ -116,4 +120,5 @@ frontend test files / 197 tests.
 - The package JSON inspector is still an embedded bounded review card rather
   than a dedicated virtualized artifact browser.
 - KPI provenance and benchmark gates are present, but calibration reporting
-  still needs a v2.1 pass that ties expected KPI movement to scenario pressure.
+  still needs a frontend v2.1 pass that renders backend calibration rows more
+  prominently in the dashboard.
