@@ -5,6 +5,47 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-07 - Dashboard Traffic Demand Artifact Review v1
+
+- Branch: `feature/T378-dashboard-traffic-demand-artifact-review-v1`
+- Commit: pending in this commit
+- Scope: add a standalone dashboard scenario-review workflow entry for
+  `traffic_demand_explanation_v1.json`. The dashboard now surfaces
+  backend-owned traffic-demand evidence labels from review summary,
+  diagnostics, scenario review, and audit index artifacts, and opens the
+  persisted JSON artifact through the existing read-only package artifact
+  inspector at `/traffic_demand_explanation`. This task does not regenerate
+  traffic, infer business semantics in the browser, replay events, change
+  runtime control, change backend routes, change Event Kernel behavior, add
+  packet-level simulation, or introduce external simulator dependencies.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/current_product_status.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed, 1 test file / 217 tests using the bundled Codex
+      Node/pnpm runtime.
+  - `python -m pytest tests\unit\test_system_v2_upgrade_plan_docs.py tests\unit\test_user_guide_v2_docs.py -q`
+    - Result: passed, 4 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed using the bundled Codex Node/pnpm runtime. Vite reported
+      the existing `DataPanel` chunk-size warning after minification.
+- Problems encountered and handling:
+  - While updating test fixtures, the traffic-demand evidence block was
+    briefly inserted twice in one review-summary fixture. The duplicate block
+    was removed before validation, and the targeted dashboard test passed.
+  - Existing local runtime/generated config files remain dirty and are
+    intentionally not included in this task.
+- Known remaining issues / follow-up:
+  - The workflow uses the generic JSON artifact inspector. A later UI task can
+    add a dedicated compact traffic-demand card with class rows and per-user
+    demand counters while keeping backend-owned semantics as the source of
+    truth.
+
 ## 2026-07-07 - Traffic Demand Explanation Export v1
 
 - Branch: `feature/T377-traffic-demand-explanation-export-v1`

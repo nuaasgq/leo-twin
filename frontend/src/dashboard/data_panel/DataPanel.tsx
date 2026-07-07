@@ -47,6 +47,7 @@ import {
   RuntimeExportReviewSummaryV1,
   RuntimeExportRestoreCommandResultV1,
   RuntimeExportRestorePreflightV1,
+  RuntimeExportTrafficDemandExplanationEvidenceV1,
   RuntimeComputeTaskTimelineSummaryV1,
   RuntimeExportUserServiceRequestPageV1,
   RuntimeExportUserServiceRequestEvidenceV2,
@@ -234,6 +235,8 @@ const NETWORK_KPI_FORMULA_EVIDENCE_FILENAME =
   "network_kpi_formula_evidence_v1.json";
 const USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME =
   "user_configuration_template_validation_v1.json";
+const TRAFFIC_DEMAND_EXPLANATION_FILENAME =
+  "traffic_demand_explanation_v1.json";
 const CONFIG_SNAPSHOT_FILENAME = "config_snapshot.json";
 const PACKAGE_HANDOFF_REPORT_FILENAME = "package_handoff_report_v1.md";
 const SCENARIO_REVIEW_BUNDLE_FILENAME = "scenario_review_bundle_v1.json";
@@ -13348,6 +13351,19 @@ export function buildDataPanelExportScenarioReviewBundleDisplay(
             )}`
           ]
         : []),
+      ...(bundle.traffic_demand_explanation
+        ? [
+            `traffic requests ${formatCount(
+              bundle.traffic_demand_explanation.request_count
+            )}`,
+            `traffic compute ${formatCount(
+              bundle.traffic_demand_explanation.compute_service_request_count
+            )}`,
+            `traffic demand ${shortRuntimeHash(
+              bundle.traffic_demand_explanation.evidence_hash
+            )}`
+          ]
+        : []),
       ...(bundle.user_service_requests
         ? [
             `user services ${formatCount(
@@ -13440,6 +13456,7 @@ function buildDataPanelScenarioReviewWorkflowRows(
     SERVICE_TRACE_COMPARISON_REVIEW_REPORT_FILENAME,
     NETWORK_KPI_FORMULA_EVIDENCE_FILENAME,
     USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME,
+    TRAFFIC_DEMAND_EXPLANATION_FILENAME,
     USER_SERVICE_REQUEST_SUMMARY_FILENAME
   ];
   const seen = new Set<string>();
@@ -13498,14 +13515,16 @@ function scenarioReviewWorkflowStepLabel(filename: string): string | null {
       return "10 KPI formula evidence";
     case USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME:
       return "11 config template validation";
+    case TRAFFIC_DEMAND_EXPLANATION_FILENAME:
+      return "12 traffic demand";
     case USER_SERVICE_REQUEST_SUMMARY_FILENAME:
-      return "12 user services";
+      return "13 user services";
     case "events.jsonl":
-      return "13 event evidence";
+      return "14 event evidence";
     case "metrics.csv":
-      return "14 metrics";
+      return "15 metrics";
     case "summary.json":
-      return "15 summary";
+      return "16 summary";
     default:
       return null;
   }
@@ -14351,6 +14370,8 @@ function scenarioReviewWorkflowArtifactPointer(filename: string): string {
       return "/evidence";
     case USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME:
       return "/template_validation/templates";
+    case TRAFFIC_DEMAND_EXPLANATION_FILENAME:
+      return "/traffic_demand_explanation";
     case USER_SERVICE_REQUEST_SUMMARY_FILENAME:
       return "/summary/items";
     default:
@@ -14362,6 +14383,8 @@ function scenarioReviewWorkflowArtifactFilter(filename: string): string {
   switch (filename) {
     case USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME:
       return "template_validation";
+    case TRAFFIC_DEMAND_EXPLANATION_FILENAME:
+      return "traffic_demand_explanation";
     case CONFIG_SNAPSHOT_FILENAME:
       return "user_configuration_template_validation_v1";
     case "review_summary_v1.json":
@@ -15033,6 +15056,30 @@ export function buildDataPanelExportPackageAuditIndexDisplay(
             }`,
             `config template ${shortRuntimeHash(
               auditIndex.user_configuration_template_validation_hash ?? ""
+            )}`
+          ]
+        : []),
+      ...(auditIndex.traffic_demand_explanation_present !== undefined
+        ? [
+            `traffic demand ${
+              auditIndex.traffic_demand_explanation_present
+                ? "present"
+                : "missing"
+            }`,
+            `traffic requests ${formatCount(
+              auditIndex.traffic_demand_explanation_request_count ?? 0
+            )}`,
+            `traffic compute ${formatCount(
+              auditIndex.traffic_demand_explanation_compute_service_request_count ??
+                0
+            )}`,
+            `traffic frontend inference ${
+              auditIndex.traffic_demand_explanation_frontend_inference_required
+                ? "yes"
+                : "no"
+            }`,
+            `traffic demand ${shortRuntimeHash(
+              auditIndex.traffic_demand_explanation_hash ?? ""
             )}`
           ]
         : []),
@@ -16055,6 +16102,28 @@ function runtimeExportUserConfigurationTemplateValidationLabels(
   ];
 }
 
+function runtimeExportTrafficDemandExplanationLabels(
+  evidence: RuntimeExportTrafficDemandExplanationEvidenceV1 | null | undefined
+): readonly string[] {
+  if (evidence === null || evidence === undefined) {
+    return [];
+  }
+  return [
+    `traffic demand ${evidence.evidence_present ? "present" : "missing"}`,
+    `traffic requests ${formatCount(evidence.request_count)}`,
+    `traffic classes ${formatCount(
+      evidence.active_traffic_class_count ?? evidence.active_traffic_classes.length
+    )}`,
+    `compute service requests ${formatCount(
+      evidence.compute_service_request_count
+    )}`,
+    `traffic frontend inference ${
+      evidence.frontend_inference_required ? "yes" : "no"
+    }`,
+    `traffic demand ${shortRuntimeHash(evidence.evidence_hash)}`
+  ];
+}
+
 function runtimeExportUserServiceRequestLabels(
   evidence: RuntimeExportUserServiceRequestEvidenceV2 | null | undefined
 ): readonly string[] {
@@ -16105,6 +16174,9 @@ export function buildDataPanelExportReviewSummaryDisplay(
       ...runtimeExportUserConfigurationTemplateValidationLabels(
         summary.user_configuration_template_validation
       ),
+      ...runtimeExportTrafficDemandExplanationLabels(
+        summary.traffic_demand_explanation
+      ),
       ...runtimeExportUserServiceRequestLabels(summary.user_service_requests),
       ...runtimeExportRouteComparisonReviewLabels(summary.route_comparison_review)
     ],
@@ -16130,6 +16202,15 @@ export function buildDataPanelExportReviewSummaryDisplay(
         ? [
             `config templates ${
               summary.artifacts.user_configuration_template_validation_exported
+                ? "exported"
+                : "missing"
+            }`
+          ]
+        : []),
+      ...(summary.artifacts.traffic_demand_explanation_exported !== undefined
+        ? [
+            `traffic demand ${
+              summary.artifacts.traffic_demand_explanation_exported
                 ? "exported"
                 : "missing"
             }`
@@ -16229,6 +16310,9 @@ export function buildDataPanelExportDiagnosticsDisplay(
       ),
       ...runtimeExportUserConfigurationTemplateValidationLabels(
         diagnostics.user_configuration_template_validation
+      ),
+      ...runtimeExportTrafficDemandExplanationLabels(
+        diagnostics.traffic_demand_explanation
       ),
       ...runtimeExportUserServiceRequestLabels(diagnostics.user_service_requests),
       ...runtimeExportRouteComparisonReviewLabels(

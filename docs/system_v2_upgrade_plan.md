@@ -193,7 +193,11 @@ Tasks:
     `traffic_demand_explanation_v1.json` and binds its request counts,
     compute-service counts, frontend-inference flag, and evidence hash into
     review summary, diagnostics, scenario review, and audit index artifacts
-    without traffic regeneration or event replay. T332 preserves
+    without traffic regeneration or event replay. T378 adds the dashboard
+    scenario-review workflow entry for that artifact, opening
+    `traffic_demand_explanation_v1.json` in the existing read-only JSON
+    inspector at `/traffic_demand_explanation` and surfacing backend-owned
+    request/evidence labels without browser-side demand recomputation. T332 preserves
     backend-provided request/route/flow/task
     correlation ids in dashboard user-service rows and lets selected export
     package rows drive package route evidence, package service-trace filtering,

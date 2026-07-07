@@ -304,15 +304,21 @@ Bundle card in the package review area with direct links to the JSON evidence.
 The card also shows a guided review workflow that steps through scenario entry,
 audit index, review summary, diagnostics, manifest, configuration, route
 evidence, service trace, KPI formula evidence, configuration template
-validation, user-service evidence, event evidence, metrics, and summary artifacts,
-marking missing artifacts explicitly. It is also available through the same
-package file endpoint and does not replay events or recompute model state.
+validation, traffic-demand explanation, user-service evidence, event evidence,
+metrics, and summary artifacts, marking missing artifacts explicitly. It is
+also available through the same package file endpoint and does not replay
+events or recompute model state.
 For JSON artifacts in that workflow, the dashboard can open the existing
 read-only package artifact inspector. The configuration template validation
 step opens `user_configuration_template_validation_v1.json` directly at
 `/template_validation/templates`, which is the exported per-template validation
 row list. This is an inspection path only: it does not reload templates,
 revalidate configs, or mutate the active runtime session.
+The traffic-demand explanation step opens `traffic_demand_explanation_v1.json`
+directly at `/traffic_demand_explanation`, so an operator can inspect generated
+request counts, compute-service request counts, class rows, per-user state
+counts, frontend-inference flags, and evidence hashes from the exported package
+without regenerating traffic or replaying events.
 The workflow includes an editable checklist. For each review row, the dashboard
 lets the operator choose `REVIEWED`, `SKIPPED`, `NEEDS_FOLLOWUP`, or `ERROR`,
 enter a short note, and save the checklist through the backend. After saving,

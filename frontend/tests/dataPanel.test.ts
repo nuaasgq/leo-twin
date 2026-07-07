@@ -3300,6 +3300,12 @@ describe("buildDataPanelExportCatalogDisplay", () => {
       user_configuration_template_validation_present: true,
       user_configuration_template_validation_all_templates_valid: true,
       user_configuration_template_validation_invalid_template_count: 0,
+      traffic_demand_explanation_hash:
+        "sha256:7878787878787878787878787878787878787878787878787878787878787878",
+      traffic_demand_explanation_present: true,
+      traffic_demand_explanation_request_count: 20,
+      traffic_demand_explanation_compute_service_request_count: 8,
+      traffic_demand_explanation_frontend_inference_required: false,
       user_service_request_summary_hash:
         "sha256:abababababababababababababababababababababababababababababababab",
       user_service_request_summary_present: true,
@@ -3391,6 +3397,11 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         "config template invalid 0",
         "config templates valid",
         "config template fefefefefefe",
+        "traffic demand present",
+        "traffic requests 20",
+        "traffic compute 8",
+        "traffic frontend inference no",
+        "traffic demand 787878787878",
         "user services present",
         "user service requests 20",
         "user services exported 18",
@@ -3549,6 +3560,18 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           "sha256:fefefefefefefefefefefefefefefefefefefefefefefefefefefefefefe",
         evidence_present: true
       },
+      traffic_demand_explanation: {
+        evidence_id: "leo_twin.traffic_demand_explanation.v1",
+        request_count: 20,
+        compute_service_request_count: 8,
+        traffic_class_row_count: 2,
+        per_user_state_count: 20,
+        frontend_inference_required: false,
+        packet_level_simulation: false,
+        evidence_hash:
+          "sha256:7878787878787878787878787878787878787878787878787878787878787878",
+        evidence_present: true
+      },
       user_service_requests: {
         evidence_id: "leo_twin.user_service_request_export_evidence.v2",
         request_model: "FLOW_LEVEL_USER_SERVICE_REQUEST_PROXY",
@@ -3581,6 +3604,7 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           "service_trace_comparison_review_report_v1.json",
           "network_kpi_formula_evidence_v1.json",
           "user_configuration_template_validation_v1.json",
+          "traffic_demand_explanation_v1.json",
           "user_service_request_summary_v2.json",
           "events.jsonl",
           "metrics.csv"
@@ -3610,6 +3634,7 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         "service_trace_comparison_review_report_v1.json",
         "network_kpi_formula_evidence_v1.json",
         "user_configuration_template_validation_v1.json",
+        "traffic_demand_explanation_v1.json",
         "user_service_request_summary_v2.json",
         "events.jsonl",
         "metrics.csv",
@@ -3654,6 +3679,9 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         "config templates ALL_TEMPLATES_VALID",
         "config templates valid 3 / 3",
         "config template fefefefefefe",
+        "traffic requests 20",
+        "traffic compute 8",
+        "traffic demand 787878787878",
         "user services 18 / 20",
         "user services abababababab",
         "audit export_package_audit_index_v1.json"
@@ -3774,38 +3802,48 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           tone: "match"
         },
         {
-          stepLabel: "12 user services",
+          stepLabel: "12 traffic demand",
+          statusLabel: "available",
+          detailLabel: "traffic_demand_explanation_v1.json",
+          href:
+            "/runtime/export/packages/pkg-review/files/traffic_demand_explanation_v1.json",
+          title:
+            "12 traffic demand / traffic_demand_explanation_v1.json / package artifact available",
+          tone: "match"
+        },
+        {
+          stepLabel: "13 user services",
           statusLabel: "available",
           detailLabel: "user_service_request_summary_v2.json",
           href:
             "/runtime/export/packages/pkg-review/files/user_service_request_summary_v2.json",
           title:
-            "12 user services / user_service_request_summary_v2.json / package artifact available",
+            "13 user services / user_service_request_summary_v2.json / package artifact available",
           tone: "match"
         },
         {
-          stepLabel: "13 event evidence",
+          stepLabel: "14 event evidence",
           statusLabel: "available",
           detailLabel: "events.jsonl",
           href: "/runtime/export/packages/pkg-review/files/events.jsonl",
-          title: "13 event evidence / events.jsonl / package artifact available",
+          title: "14 event evidence / events.jsonl / package artifact available",
           tone: "match"
         },
         {
-          stepLabel: "14 metrics",
+          stepLabel: "15 metrics",
           statusLabel: "available",
           detailLabel: "metrics.csv",
           href: "/runtime/export/packages/pkg-review/files/metrics.csv",
-          title: "14 metrics / metrics.csv / package artifact available",
+          title: "15 metrics / metrics.csv / package artifact available",
           tone: "match"
         },
         {
-          stepLabel: "15 summary",
+          stepLabel: "16 summary",
           statusLabel: "missing",
           detailLabel: "summary.json",
           href: null,
           title:
-            "15 summary / summary.json / not listed in scenario review bundle",
+            "16 summary / summary.json / not listed in scenario review bundle",
           tone: "different"
         }
       ],
@@ -5037,9 +5075,52 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         '[\n  {\n    "id": "default-72",\n    "validation_ok": true\n  }\n]',
       inspectorEnabled: true
     });
+    const trafficFocus = buildDataPanelScenarioReviewWorkflowInspectorFocus(
+      "pkg-review",
+      {
+        stepLabel: "12 traffic demand",
+        statusLabel: "available",
+        detailLabel: "traffic_demand_explanation_v1.json",
+        href:
+          "/runtime/export/packages/pkg-review/files/traffic_demand_explanation_v1.json",
+        title:
+          "12 traffic demand / traffic_demand_explanation_v1.json / package artifact available",
+        tone: "match"
+      }
+    );
+    expect(trafficFocus).toMatchObject({
+      focusSourceLabel: "Scenario review workflow artifact focus",
+      statusLabel: "12 traffic demand / traffic_demand_explanation_v1.json",
+      jsonPointer: "/traffic_demand_explanation",
+      defaultInspectorFilter: "traffic_demand_explanation",
+      artifactLabel: "traffic_demand_explanation_v1.json",
+      artifactHref:
+        "/runtime/export/packages/pkg-review/files/traffic_demand_explanation_v1.json",
+      artifactTitle:
+        "traffic_demand_explanation_v1.json / /traffic_demand_explanation / read-only package artifact"
+    });
+    expect(
+      buildDataPanelBenchmarkEvidenceArtifactViewerDisplay(
+        trafficFocus,
+        {
+          traffic_demand_explanation: {
+            request_count: 20,
+            compute_service_request_count: 8,
+            frontend_inference_required: false
+          }
+        },
+        false,
+        null,
+        "request_count"
+      )
+    ).toMatchObject({
+      tone: "match",
+      statusLabel: "pointer target resolved",
+      inspectorEnabled: true
+    });
     expect(
       buildDataPanelScenarioReviewWorkflowInspectorFocus("pkg-review", {
-        stepLabel: "13 event evidence",
+        stepLabel: "14 event evidence",
         statusLabel: "available",
         detailLabel: "events.jsonl",
         href: "/runtime/export/packages/pkg-review/files/events.jsonl",
@@ -5493,6 +5574,38 @@ describe("buildDataPanelExportCompareDisplay", () => {
         evidence_hash:
           "sha256:fefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefe"
       },
+      traffic_demand_explanation: {
+        version: "v1",
+        evidence_id: "leo_twin.traffic_demand_explanation.v1",
+        source:
+          "config_snapshot.generated_config.backend_summary.traffic_demand_explanation_v1",
+        runtime_summary_source: "backend_summary.traffic_demand_summary",
+        evidence_present: true,
+        request_count: 20,
+        configured_request_count: 20,
+        explained_request_count: 20,
+        input_flow_count: 20,
+        task_request_count: 8,
+        output_flow_count: 8,
+        communication_only_request_count: 12,
+        compute_service_request_count: 8,
+        active_traffic_classes: ["DATA_TRANSFER", "COMPUTE_SERVICE"],
+        active_traffic_class_count: 2,
+        traffic_class_row_count: 2,
+        per_user_state_count: 20,
+        explanation_window_policy: "FULL_CONFIGURED_WINDOW",
+        endpoint_window_policy: "ROUND_ROBIN_ENDPOINT_IDS_CAPPED_AT_512",
+        all_compute_services_have_task: true,
+        all_compute_services_have_output_flow: true,
+        packet_level_simulation: false,
+        frontend_inference_required: false,
+        acceptable_for_demo_review: true,
+        model_assumptions: ["Flow-level demand explanation."],
+        explanation_hash:
+          "sha256:6969696969696969696969696969696969696969696969696969696969696969",
+        evidence_hash:
+          "sha256:7878787878787878787878787878787878787878787878787878787878787878"
+      },
       user_service_requests: {
         version: "v2",
         evidence_id: "leo_twin.user_service_request_export_evidence.v2",
@@ -5527,7 +5640,7 @@ describe("buildDataPanelExportCompareDisplay", () => {
         event_kernel_policy: "NO_EVENT_KERNEL_BEHAVIOR_CHANGE"
       },
       artifacts: {
-        artifact_count: 9,
+        artifact_count: 10,
         artifact_filenames: [
           "config_snapshot.json",
           "events.jsonl",
@@ -5537,6 +5650,7 @@ describe("buildDataPanelExportCompareDisplay", () => {
           "service_lifecycle_trace_v2.json",
           "summary.json",
           "user_configuration_template_validation_v1.json",
+          "traffic_demand_explanation_v1.json",
           "user_service_request_summary_v2.json"
         ],
         required_filenames: [
@@ -5551,6 +5665,7 @@ describe("buildDataPanelExportCompareDisplay", () => {
         review_summary_exported: true,
         network_kpi_formula_evidence_exported: true,
         user_configuration_template_validation_exported: true,
+        traffic_demand_explanation_exported: true,
         user_service_request_summary_exported: true
       },
       review_notes: ["Use manifest.json"],
@@ -5562,7 +5677,7 @@ describe("buildDataPanelExportCompareDisplay", () => {
       packageId: "pkg-review",
       tone: "match",
       statusLabel: "可审阅",
-      summaryLabel: "pkg-review / 9 个文件 / 12.5 s / 4,096 事件",
+      summaryLabel: "pkg-review / 10 个文件 / 12.5 s / 4,096 事件",
       metaLabels: [
         "seed 4321",
         "卫星 72",
@@ -5582,6 +5697,12 @@ describe("buildDataPanelExportCompareDisplay", () => {
         "config templates valid 3 / 3",
         "config template invalid 0",
         "config template fefefefefefe",
+        "traffic demand present",
+        "traffic requests 20",
+        "traffic classes 2",
+        "compute service requests 8",
+        "traffic frontend inference no",
+        "traffic demand 787878787878",
         "user services present",
         "user service requests 20",
         "user services exported 18",
@@ -5600,6 +5721,7 @@ describe("buildDataPanelExportCompareDisplay", () => {
         "review summary 已导出",
         "KPI formula exported",
         "config templates exported",
+        "traffic demand exported",
         "user services exported"
       ]
     });
@@ -5915,6 +6037,38 @@ describe("buildDataPanelExportCompareDisplay", () => {
         summary_hash:
           "sha256:abababababababababababababababababababababababababababababababab"
       },
+      traffic_demand_explanation: {
+        version: "v1",
+        evidence_id: "leo_twin.traffic_demand_explanation.v1",
+        source:
+          "config_snapshot.generated_config.backend_summary.traffic_demand_explanation_v1",
+        runtime_summary_source: "backend_summary.traffic_demand_summary",
+        evidence_present: true,
+        request_count: 20,
+        configured_request_count: 20,
+        explained_request_count: 20,
+        input_flow_count: 20,
+        task_request_count: 8,
+        output_flow_count: 8,
+        communication_only_request_count: 12,
+        compute_service_request_count: 8,
+        active_traffic_classes: ["DATA_TRANSFER", "COMPUTE_SERVICE"],
+        active_traffic_class_count: 2,
+        traffic_class_row_count: 2,
+        per_user_state_count: 20,
+        explanation_window_policy: "FULL_CONFIGURED_WINDOW",
+        endpoint_window_policy: "ROUND_ROBIN_ENDPOINT_IDS_CAPPED_AT_512",
+        all_compute_services_have_task: true,
+        all_compute_services_have_output_flow: true,
+        packet_level_simulation: false,
+        frontend_inference_required: false,
+        acceptable_for_demo_review: true,
+        model_assumptions: ["Flow-level demand explanation."],
+        explanation_hash:
+          "sha256:6969696969696969696969696969696969696969696969696969696969696969",
+        evidence_hash:
+          "sha256:7878787878787878787878787878787878787878787878787878787878787878"
+      },
       reproducibility: {
         manifest_id: "leo_twin.runtime_reproducibility_manifest.v1",
         manifest_ok: true,
@@ -6031,6 +6185,12 @@ describe("buildDataPanelExportCompareDisplay", () => {
     expect(display?.modelBoundaryLabels).toContain("config templates valid 3 / 3");
     expect(display?.modelBoundaryLabels).toContain("config template invalid 0");
     expect(display?.modelBoundaryLabels).toContain("config template fefefefefefe");
+    expect(display?.modelBoundaryLabels).toContain("traffic demand present");
+    expect(display?.modelBoundaryLabels).toContain("traffic requests 20");
+    expect(display?.modelBoundaryLabels).toContain("traffic classes 2");
+    expect(display?.modelBoundaryLabels).toContain("compute service requests 8");
+    expect(display?.modelBoundaryLabels).toContain("traffic frontend inference no");
+    expect(display?.modelBoundaryLabels).toContain("traffic demand 787878787878");
     expect(display?.modelBoundaryLabels).toContain("user services present");
     expect(display?.modelBoundaryLabels).toContain("user service requests 20");
     expect(display?.modelBoundaryLabels).toContain("user services exported 18");
