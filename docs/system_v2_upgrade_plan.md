@@ -389,7 +389,11 @@ Tasks:
     acceptance. T325 exports the same guardrail evidence into
     `network_kpi_benchmark_validation_v1.json` and surfaces compact status/hash
     labels in result-package review, diagnostics, scenario review, and audit
-    sections so offline packages preserve KPI validation evidence.
+    sections so offline packages preserve KPI validation evidence. T400 extracts
+    active flow-pressure reservations, utilization, queue-delay, and pressure
+    loss helpers into `models/network/pressure.py`, keeping the position-driven
+    network engine as an event adapter while preserving flow-level,
+    non-packet-level behavior.
 - V2-023: Add route explanation records.
   - Scope: selected route, alternative count, bottleneck reason, next hop,
     blocked reason.

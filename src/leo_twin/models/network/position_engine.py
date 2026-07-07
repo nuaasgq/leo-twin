@@ -18,6 +18,12 @@ from leo_twin.models.network.geometry import (
     GroundEndpoint,
     PositionDrivenAccessModel,
 )
+from leo_twin.models.network.pressure import (
+    FlowPressureLedger,
+    PressureEdge,
+    pressure_loss_rate,
+    pressure_queue_delay,
+)
 from leo_twin.models.network.routing import RoutingRuntime
 from leo_twin.models.network.stack import NetworkStackRuntime, NetworkStackTrace
 from leo_twin.models.network.transport import TransportRuntime
@@ -42,12 +48,8 @@ from leo_twin.schema.config import (
 
 
 SpaceCellId = tuple[int, int, int]
-PressureEdge = tuple[str, str]
 
 _NETWORK_FLOW_RELEASE = "NETWORK_FLOW_RELEASE"
-_QUEUE_UTILIZATION_THRESHOLD = 0.75
-_LOSS_UTILIZATION_THRESHOLD = 0.80
-_MAX_PRESSURE_LOSS_RATE = 0.95
 
 
 class SpaceLinkMode(StrEnum):
@@ -188,9 +190,7 @@ class PositionDrivenNetworkEngine(SimulationModule):
         self._active_links: dict[tuple[str, str], LinkState] = {}
         self._active_space_links: dict[tuple[str, str], LinkState] = {}
         self._active_flows: dict[str, FlowRequest] = {}
-        self._flow_pressure_edges: dict[str, tuple[PressureEdge, ...]] = {}
-        self._flow_pressure_demand: dict[str, float] = {}
-        self._edge_active_demand: dict[PressureEdge, float] = {}
+        self._flow_pressure = FlowPressureLedger()
         self._last_routes: dict[str, Route] = {}
         self._last_stack_traces: dict[str, NetworkStackTrace] = {}
         self._last_links: dict[tuple[str, str], LinkState] = {}
@@ -429,19 +429,13 @@ class PositionDrivenNetworkEngine(SimulationModule):
         demand = _route_demand_capacity(request, route)
         if demand <= 0.0:
             return route, ()
-        self._release_flow_pressure(dispatch_time, request.flow_id)
-        for edge in edges:
-            self._edge_active_demand[edge] = self._edge_active_demand.get(edge, 0.0) + demand
-        self._flow_pressure_edges[request.flow_id] = edges
-        self._flow_pressure_demand[request.flow_id] = demand
+        self._flow_pressure.release(request.flow_id)
+        self._flow_pressure.reserve(request.flow_id, edges, demand)
 
         max_utilization = max(self._edge_utilization(edge) for edge in edges)
-        pressure_loss = _pressure_loss_rate(max_utilization)
+        pressure_loss = pressure_loss_rate(max_utilization)
         next_loss_rate = max(float(route.loss_rate or 0.0), pressure_loss)
-        queue_delay = route.latency * max(
-            0.0,
-            max_utilization - _QUEUE_UTILIZATION_THRESHOLD,
-        )
+        queue_delay = pressure_queue_delay(route.latency, max_utilization)
         pressured_route = Route(
             route_id=route.route_id,
             flow_id=route.flow_id,
@@ -462,16 +456,9 @@ class PositionDrivenNetworkEngine(SimulationModule):
         payload: object,
     ) -> tuple[SimEvent, ...]:
         flow_id = _flow_id_from_release_payload(payload)
-        edges = self._flow_pressure_edges.pop(flow_id, ())
-        demand = self._flow_pressure_demand.pop(flow_id, 0.0)
-        if not edges or demand <= 0.0:
+        edges = self._flow_pressure.release(flow_id)
+        if not edges:
             return ()
-        for edge in edges:
-            next_demand = max(0.0, self._edge_active_demand.get(edge, 0.0) - demand)
-            if next_demand == 0.0:
-                self._edge_active_demand.pop(edge, None)
-            else:
-                self._edge_active_demand[edge] = next_demand
         return self._pressure_link_events(dispatch_time, edges)
 
     def _route_pressure_edges(self, route: Route) -> tuple[PressureEdge, ...]:
@@ -511,7 +498,7 @@ class PositionDrivenNetworkEngine(SimulationModule):
         link = self._link_for_pressure_edge(edge)
         if link is None or link.capacity <= 0.0:
             return 1.0
-        return min(1.0, self._edge_active_demand.get(edge, 0.0) / link.capacity)
+        return self._flow_pressure.utilization(edge, link.capacity)
 
     def _pressure_link_events(
         self,
@@ -1179,14 +1166,6 @@ def _route_demand_capacity(request: FlowRequest, route: Route) -> float:
         return float(route.demand_capacity)
     return float(request.demand_capacity)
 
-
-def _pressure_loss_rate(utilization: float) -> float:
-    if utilization <= _LOSS_UTILIZATION_THRESHOLD:
-        return 0.0
-    return min(
-        _MAX_PRESSURE_LOSS_RATE,
-        max(0.0, (utilization - _LOSS_UTILIZATION_THRESHOLD) * 0.5),
-    )
 
 
 def _flow_id_from_release_payload(payload: object) -> str:

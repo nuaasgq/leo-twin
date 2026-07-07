@@ -5,6 +5,46 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-08 - Network Flow Pressure Model v2
+
+- Branch: `feature/T400-network-pressure-model-v2`
+- Commit: pending in this commit
+- Scope: extract the deterministic flow-level network pressure accounting from
+  `PositionDrivenNetworkEngine` into `src/leo_twin/models/network/pressure.py`.
+  The position-driven network engine remains the event adapter: it maps routed
+  path steps to active links, asks the pressure ledger for active demand and
+  utilization, and emits the same link-utilization updates as before. This task
+  keeps the model flow-level, deterministic, and non-packet-level, and does not
+  modify Event Kernel behavior, routing topology selection, frontend code,
+  runtime control, or external simulator integrations.
+- Changed files/modules:
+  - `src/leo_twin/models/network/pressure.py`
+  - `src/leo_twin/models/network/position_engine.py`
+  - `src/leo_twin/models/network/__init__.py`
+  - `tests/unit/test_network_pressure_model_v2.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests\unit\test_network_pressure_model_v2.py tests\unit\test_position_driven_network_engine.py -q`
+    - Result: passed, 36 tests.
+  - `python -m pytest tests\unit\test_system_v2_upgrade_plan_docs.py -q`
+    - Result: passed, 2 tests.
+- Problems encountered and handling:
+  - The previous work direction was drifting into frontend/configuration surface
+    changes. After the user requested backend convergence, those unfinished
+    edits were abandoned and the task scope was narrowed to the network model.
+  - The local `apply_patch` helper intermittently failed to update existing
+    Windows workspace files with `orchestrator_helper_launch_canceled`; precise
+    PowerShell replacements were used, followed by UTF-8-without-BOM rewrites to
+    avoid encoding noise.
+  - Local runtime/generated config files were already dirty and remain outside
+    the staged task scope.
+- Known remaining issues / follow-up:
+  - This is a model extraction and testability step. It does not yet add richer
+    MAC/PHY contention, route admission control, or packet-level behavior. The
+    next backend step should add bounded route-admission and queue-state
+    semantics on top of the extracted flow-pressure ledger.
+
 ## 2026-07-08 - Route Review Report Cursor Page v1
 
 - Branch: `feature/T399-route-review-report-cursor-page-v1`
