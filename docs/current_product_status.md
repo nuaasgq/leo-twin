@@ -2,7 +2,7 @@
 
 Date: 2026-07-08
 
-Branch: `feature/T396-dashboard-route-pinned-path-diff-v1`
+Branch: `feature/T397-dashboard-service-trace-pinned-path-diff-v1`
 
 ## Local Entry Points
 
@@ -283,6 +283,11 @@ the card without loading the full JSON artifact.
   package route detail and live route detail share the same route id. It
   compares each pinned `/route/...` path across package and live payloads and
   reports match, different, missing, or invalid without recomputing routes.
+- The package service-trace review card now reuses the same pinned JSON
+  pointers when package service-trace detail and live exact trace detail share
+  the same trace id. It compares `/service_trace/...` paths, plus the `/trace`
+  shortcut root, across package and live payloads without replaying events or
+  recomputing service lifecycle state.
 - Launcher health v2 reports backend/frontend port readiness, HTTP readiness,
   process ids, latest log paths, config paths, and recommended actions.
 - Operator diagnostics bundle captures launcher health, runtime status, version

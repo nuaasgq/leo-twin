@@ -57,6 +57,7 @@ import {
   buildDataPanelExportServiceTraceComparisonReviewReportDisplay,
   buildDataPanelExportServiceTraceComparisonReviewReportStatus,
   buildDataPanelExportServiceTraceComparisonReviewSaveStatus,
+  buildDataPanelExportServiceTracePinnedPathDiffDisplay,
   buildDataPanelExportPackageAuditIndexArtifactDisplay,
   buildDataPanelExportPackageHandoffReportArtifactDisplay,
   buildDataPanelExportPackageAuditIndexDisplay,
@@ -7624,6 +7625,157 @@ describe("buildDataPanelExportCompareDisplay", () => {
         ...liveDetail,
         trace: { ...liveDetail.trace, trace_id: "trace:other" }
       })
+    ).toBeNull();
+  });
+
+  it("compares pinned service trace json paths between package and live details", () => {
+    const packageItem = {
+      type: "RUNTIME_EXPORT_SERVICE_TRACE_ITEM_V1",
+      version: "v1",
+      item_id: "leo_twin.runtime_export_service_trace_item.v1",
+      source: "BACKEND_RUNTIME_EXPORT_PACKAGE",
+      package_id: "pkg-review",
+      artifact_type: "SERVICE_LIFECYCLE_TRACE_EXPORT_V2",
+      artifact_source: "BACKEND_RUNTIME_STATUS",
+      artifact_policy: "STANDALONE_RUNTIME_EXPORT_ARTIFACT",
+      artifact_window_only: true,
+      trace_contract_id: "leo_twin.service_lifecycle_trace_contract.v2",
+      trace_model: "COMMUNICATION_COMPUTE_COMPONENT_PROXY",
+      source_summary: "service_latency_history_v1",
+      summary_scope: "SERVICE_LIFECYCLE_TRACE_ITEM",
+      trace_id: "trace:run",
+      trace: {
+        trace_id: "trace:run",
+        service_id: "svc-run",
+        task_id: "task-run",
+        service_class: "COMPUTE_SERVICE",
+        input_flow_id: "flow-in",
+        output_flow_id: "flow-out",
+        input_route_id: "route-in",
+        output_route_id: "route-out",
+        compute_node_id: "sat-00003",
+        input_network_latency_s: 0.12,
+        compute_queue_delay_s: 0.02,
+        compute_execution_delay_s: 0.4,
+        output_network_latency_s: 0.08,
+        total_latency_s: 0.62,
+        terminal_state: "RUNNING",
+        terminal_state_reason: "OUTPUT_NETWORK_PENDING",
+        stage_count: 4,
+        observed_stage_count: 3,
+        pending_stage_count: 1,
+        stages: []
+      },
+      boundary_conditions: [
+        "ARTIFACT_WINDOW_ONLY",
+        "NO_EVENT_REPLAY",
+        "NO_SERVICE_RECOMPUTE",
+        "NO_PACKAGE_MUTATION"
+      ],
+      item_hash:
+        "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd"
+    };
+    const liveDetail = {
+      version: "v2",
+      source: "BACKEND_RUNTIME_DETAIL",
+      summary_scope: "SERVICE_TRACE_EXACT_DETAIL",
+      detail_hash: "sha256:live-trace-detail",
+      trace: {
+        ...packageItem.trace,
+        terminal_state: "COMPLETE",
+        total_latency_s: 0.74
+      },
+      correlation: {
+        trace_id: "trace:run",
+        service_id: "svc-run",
+        task_id: "task-run",
+        flow_ids: ["flow-in", "flow-out"],
+        route_ids: ["route-in", "route-out"],
+        user_ids: ["user-0"],
+        satellite_ids: ["sat-00003"],
+        compute_node_id: "sat-00003",
+        route_count: 2,
+        user_count: 1,
+        satellite_count: 1,
+        compute_node_detail_available: true
+      },
+      routes: [],
+      users: [],
+      satellites: [],
+      compute_node: null
+    };
+
+    const display = buildDataPanelExportServiceTracePinnedPathDiffDisplay(
+      packageItem,
+      liveDetail,
+      "/service_trace/trace/trace_id /service_trace/trace/total_latency_s /service_trace/correlation/compute_node_id /trace/terminal_state invalid-pointer /trace/terminal_state"
+    );
+
+    expect(display).toMatchObject({
+      traceId: "trace:run",
+      tone: "different",
+      statusLabel: "pinned service trace paths differ",
+      summaryLabel: "trace:run / pinned 5 / matched 1 / differences 4"
+    });
+    expect(display?.rows).toEqual([
+      expect.objectContaining({
+        pointer: "/service_trace/trace/trace_id",
+        packageValue: '"trace:run"',
+        liveValue: '"trace:run"',
+        packageStatusLabel: "resolved",
+        liveStatusLabel: "resolved",
+        matches: true,
+        statusLabel: "match"
+      }),
+      expect.objectContaining({
+        pointer: "/service_trace/trace/total_latency_s",
+        packageValue: "0.62",
+        liveValue: "0.74",
+        packageStatusLabel: "resolved",
+        liveStatusLabel: "resolved",
+        matches: false,
+        statusLabel: "different"
+      }),
+      expect.objectContaining({
+        pointer: "/service_trace/correlation/compute_node_id",
+        packageStatusLabel: "missing",
+        liveStatusLabel: "resolved",
+        matches: false,
+        statusLabel: "missing"
+      }),
+      expect.objectContaining({
+        pointer: "/trace/terminal_state",
+        packageValue: '"RUNNING"',
+        liveValue: '"COMPLETE"',
+        packageStatusLabel: "resolved",
+        liveStatusLabel: "resolved",
+        matches: false,
+        statusLabel: "different"
+      }),
+      expect.objectContaining({
+        pointer: "invalid-pointer",
+        packageStatusLabel: "invalid",
+        liveStatusLabel: "invalid",
+        matches: false,
+        statusLabel: "invalid"
+      })
+    ]);
+    expect(
+      buildDataPanelExportServiceTracePinnedPathDiffDisplay(
+        packageItem,
+        liveDetail,
+        ""
+      )
+    ).toBeNull();
+    expect(
+      buildDataPanelExportServiceTracePinnedPathDiffDisplay(
+        packageItem,
+        {
+          ...liveDetail,
+          trace: { ...liveDetail.trace, trace_id: "trace:other" }
+        },
+        "/service_trace/trace/trace_id"
+      )
     ).toBeNull();
   });
 

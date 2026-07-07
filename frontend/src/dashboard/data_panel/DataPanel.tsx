@@ -1663,6 +1663,12 @@ export const DataPanel = memo(function DataPanel({
       runtimeExportServiceTraceItem,
       selectedExportServiceTraceBackendDetail
     );
+  const exportServiceTracePinnedPathDiff =
+    buildDataPanelExportServiceTracePinnedPathDiffDisplay(
+      runtimeExportServiceTraceItem,
+      selectedExportServiceTraceBackendDetail,
+      exactDetailJsonPinnedPaths
+    );
   const exportServiceTraceLiveComparisonStatus =
     buildDataPanelExportServiceTraceLiveComparisonStatus(
       exportServiceTraceLiveComparison,
@@ -2932,6 +2938,31 @@ export const DataPanel = memo(function DataPanel({
                       </div>
                     ))}
                   </div>
+                  {exportServiceTracePinnedPathDiff ? (
+                    <>
+                      <div className="data-panel-export-route-compare-subtitle">
+                        <span>Pinned JSON paths</span>
+                        <small>{exportServiceTracePinnedPathDiff.summaryLabel}</small>
+                      </div>
+                      <div className="data-panel-export-route-compare-rows pinned">
+                        {exportServiceTracePinnedPathDiff.rows.map((row) => (
+                          <div
+                            className={row.matches ? "match" : "different"}
+                            key={row.pointer}
+                          >
+                            <span>{row.pointer}</span>
+                            <strong>{row.statusLabel}</strong>
+                            <small title={row.packageValue}>
+                              package {row.packageStatusLabel}: {row.packageValue}
+                            </small>
+                            <small title={row.liveValue}>
+                              live {row.liveStatusLabel}: {row.liveValue}
+                            </small>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : null}
                 </div>
               ) : null}
               {exportServiceTraceLiveComparisonStatus ? (
@@ -18058,6 +18089,24 @@ export interface DataPanelExportServiceTraceLiveComparisonRow {
   statusLabel: string;
 }
 
+export interface DataPanelExportServiceTracePinnedPathDiffDisplay {
+  traceId: string;
+  tone: "match" | "different";
+  statusLabel: string;
+  summaryLabel: string;
+  rows: readonly DataPanelExportServiceTracePinnedPathDiffRow[];
+}
+
+export interface DataPanelExportServiceTracePinnedPathDiffRow {
+  pointer: string;
+  packageValue: string;
+  liveValue: string;
+  packageStatusLabel: "resolved" | "missing" | "invalid";
+  liveStatusLabel: "resolved" | "missing" | "invalid";
+  matches: boolean;
+  statusLabel: "match" | "different" | "missing" | "invalid";
+}
+
 export interface DataPanelExportServiceTraceLiveComparisonStatus {
   tone: "pending" | "error" | "different";
   statusLabel: string;
@@ -19482,7 +19531,7 @@ export function buildDataPanelExportRoutePinnedPathDiffDisplay(
   const packageDocument = { route: packageItem.route };
   const liveDocument = { route: liveDetail };
   const rows = pointers.map((pointer) =>
-    routePinnedPathDiffRow(pointer, packageDocument, liveDocument)
+    pinnedPathDiffRow(pointer, packageDocument, liveDocument)
   );
   const differentCount = rows.filter((row) => !row.matches).length;
   return {
@@ -19583,6 +19632,53 @@ export function buildDataPanelExportRouteLiveComparisonStatus(
     );
   }
   return null;
+}
+
+export function buildDataPanelExportServiceTracePinnedPathDiffDisplay(
+  packageItem: RuntimeExportServiceTraceItemV1 | null | undefined,
+  liveDetail: RuntimeServiceTraceDetailV2 | null | undefined,
+  pinnedPointersText: string | null | undefined
+): DataPanelExportServiceTracePinnedPathDiffDisplay | null {
+  const pointers = parseExactDetailJsonPinnedPointers(pinnedPointersText ?? "");
+  if (
+    pointers.length === 0 ||
+    packageItem === null ||
+    packageItem === undefined ||
+    liveDetail === null ||
+    liveDetail === undefined
+  ) {
+    return null;
+  }
+  const packageTraceId = packageItem.trace_id || packageItem.trace.trace_id;
+  if (packageTraceId !== liveDetail.trace.trace_id) {
+    return null;
+  }
+  const packageDocument = {
+    service_trace: packageItem,
+    trace: packageItem.trace
+  };
+  const liveDocument = {
+    service_trace: liveDetail,
+    trace: liveDetail.trace
+  };
+  const rows = pointers.map((pointer) =>
+    pinnedPathDiffRow(pointer, packageDocument, liveDocument)
+  );
+  const differentCount = rows.filter((row) => !row.matches).length;
+  return {
+    traceId: packageTraceId,
+    tone: differentCount === 0 ? "match" : "different",
+    statusLabel:
+      differentCount === 0
+        ? "pinned service trace paths match"
+        : "pinned service trace paths differ",
+    summaryLabel: `${packageTraceId} / pinned ${formatCount(
+      rows.length
+    )} / matched ${formatCount(
+      rows.length - differentCount
+    )} / differences ${formatCount(differentCount)}`,
+    rows
+  };
 }
 
 export function buildDataPanelExportServiceTraceLiveComparisonDisplay(
@@ -19998,7 +20094,7 @@ function routeComparisonRow(
   };
 }
 
-function routePinnedPathDiffRow(
+function pinnedPathDiffRow(
   pointer: string,
   packageDocument: unknown,
   liveDocument: unknown

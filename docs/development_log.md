@@ -5,6 +5,42 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-08 - Dashboard Service Trace Pinned Path Diff v1
+
+- Branch: `feature/T397-dashboard-service-trace-pinned-path-diff-v1`
+- Commit: pending in this commit
+- Scope: extend the exact-detail JSON pinned pointer comparison workflow from
+  package-vs-live route evidence to package-vs-live service trace evidence.
+  When the selected package service trace detail and live exact trace detail
+  share the same trace id, the dashboard compares each pinned path against a
+  package document rooted at `service_trace` / `trace` and a live document
+  rooted the same way. Rows report match, different, missing, or invalid. This
+  keeps the comparison read-only and frontend-local, and does not change Event
+  Kernel behavior, backend protocols, runtime contracts, simulation models,
+  packet-level behavior, or frontend routing architecture.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/current_product_status.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed, 1 test file / 230 tests using the bundled Codex
+      Node/pnpm runtime.
+  - `python -m pytest tests\unit\test_system_v2_upgrade_plan_docs.py tests\unit\test_user_guide_v2_docs.py -q`
+    - Result: passed, 4 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing large `DataPanel` chunk
+      warning after minification.
+- Problems encountered and handling:
+  - Local runtime/generated config files were already dirty and remain outside
+    the staged task scope.
+- Known remaining issues / follow-up:
+  - Persisting pinned-path diff rows into saved route or service-trace review
+    reports remains a separate backend/package task.
+
 ## 2026-07-08 - Dashboard Route Pinned Path Diff v1
 
 - Branch: `feature/T396-dashboard-route-pinned-path-diff-v1`

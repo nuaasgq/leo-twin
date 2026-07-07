@@ -741,6 +741,11 @@ Tasks:
     detail share the same route id. The dashboard compares the package route
     payload against the live route payload at each pinned path and reports
     match, different, missing, or invalid without recomputing routes.
+  - Status: T397 extends the same pinned-path diff workflow to package-vs-live
+    service trace comparison. It compares package service trace detail and live
+    exact trace detail at `/service_trace/...` paths, with `/trace` as a
+    shortcut root, and reports match, different, missing, or invalid without
+    replaying events or recomputing lifecycle state.
 - V2-054: Add model assumptions panel.
   - Scope: backend-derived model caveats, fidelity mode, KPI provenance.
   - Depends on: V2-003, V2-021.

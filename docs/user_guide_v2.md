@@ -184,10 +184,16 @@ The standalone dashboard is for data situation awareness:
   missing, or invalid status against the synchronized payloads, with a compact
   count summary for quick review readiness checks. When a package route detail
   is compared with the matching live route detail, the same pins are reused for
-  a path-level package/live route diff;
+  a path-level package/live route diff. When a package service trace is
+  compared with the matching live exact trace detail, the same pins are reused
+  for a service-trace path diff using `/service_trace/...` or the `/trace`
+  shortcut root;
 - service-trace closed-loop evidence, showing whether the selected service
   trace has correlated flow, route, user, satellite, compute-node, stage, and
-  latency evidence from backend exact detail or the visible dashboard window;
+  latency evidence from backend exact detail or the visible dashboard window.
+  Package-vs-live service trace review also supports pinned JSON path
+  comparison, so selected lifecycle fields can be checked as match, different,
+  missing, or invalid without replaying events;
 - one-click service-trace focus, which applies correlated filters across user,
   satellite, route, service, service-trace, and compute-node tables for the
   selected trace;
