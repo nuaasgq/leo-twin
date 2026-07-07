@@ -17382,3 +17382,54 @@ change.
 - Recommended follow-up:
   - Add a larger read-only artifact inspector with search, pointer navigation,
     and row-level highlighting for result-package review workflows.
+
+## 2026-07-07 - T355 dashboard artifact inspector v1
+
+- Branch: `feature/T355-dashboard-artifact-inspector-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: expand the T354 benchmark evidence JSON preview into a bounded
+  read-only artifact inspector. When a selected benchmark evidence row points
+  to a JSON package artifact, the dashboard now lists deterministic JSON
+  pointer rows, highlights the backend-provided evidence pointer, and supports
+  local text filtering over pointer/key/value previews. The inspector is
+  bounded for dashboard responsiveness and remains informational only: it does
+  not mutate result packages, recompute acceptance, alter backend routes,
+  change simulation models, or modify Event Kernel behavior.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `.\node_modules\.bin\tsc.cmd --noEmit -p tsconfig.json` from
+    `frontend`
+    - Result: passed with the bundled Codex Node runtime path.
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 197 tests.
+  - `pnpm --dir frontend test dataPanel.test.ts api.test.ts appSurface.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 3 test
+      files and 285 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path; Vite
+      reported the existing large `DataPanel` chunk warning.
+  - `git diff --check`
+    - Result: passed; Git emitted CRLF warnings for the existing unstaged
+      runtime config drift.
+- Problems encountered:
+  - Initial test expectations undercounted filter matches because parent JSON
+    object previews also contain matching child keys. The implementation was
+    kept as-is and the tests were corrected to match the intended inspector
+    behavior.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The inspector is bounded to a compact in-card view rather than a full-page
+    artifact browser.
+  - Very large artifacts are scanned only up to a dashboard safety limit; the
+    linked package file remains the authoritative full evidence.
+- Recommended follow-up:
+  - Add a dedicated result-package artifact browser with larger virtualized
+    path lists and cross-links from benchmark rows, route evidence, and service
+    trace evidence.

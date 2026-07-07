@@ -3328,6 +3328,68 @@ button.data-panel-route-row {
   white-space: pre-wrap;
 }
 
+.data-panel-export-artifact-inspector-filter {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.data-panel-export-artifact-inspector-filter input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #294456;
+  border-radius: 5px;
+  padding: 6px 7px;
+  background: #071018;
+  color: var(--app-text);
+  font-size: 11px;
+}
+
+.data-panel-export-artifact-inspector-rows {
+  display: grid;
+  gap: 4px;
+  max-height: 220px;
+  min-width: 0;
+  overflow: auto;
+}
+
+.data-panel-export-artifact-inspector-rows > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  border: 1px solid #243846;
+  border-radius: 5px;
+  padding: 6px 7px;
+  background: #071018;
+}
+
+.data-panel-export-artifact-inspector-rows > span.selected {
+  border-color: var(--accent-cyan);
+  background: #0d2028;
+  box-shadow: inset 0 0 0 1px rgba(94, 234, 212, 0.18);
+}
+
+.data-panel-export-artifact-inspector-rows strong,
+.data-panel-export-artifact-inspector-rows small,
+.data-panel-export-artifact-inspector-rows em {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.data-panel-export-artifact-inspector-rows strong {
+  color: var(--app-text);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.data-panel-export-artifact-inspector-rows em {
+  color: var(--app-muted);
+  font-size: 10px;
+  font-style: normal;
+}
+
 .data-panel-export-benchmark-gate-rows {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));

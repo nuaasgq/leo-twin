@@ -608,6 +608,8 @@ export const DataPanel = memo(function DataPanel({
     useState(false);
   const [benchmarkEvidenceArtifactError, setBenchmarkEvidenceArtifactError] =
     useState<string | null>(null);
+  const [benchmarkEvidenceArtifactFilter, setBenchmarkEvidenceArtifactFilter] =
+    useState("");
   useEffect(() => {
     setExportRouteDetailIndexFilter("");
     setExportRouteDetailIndexAvailabilityFilter("ALL");
@@ -631,7 +633,11 @@ export const DataPanel = memo(function DataPanel({
     setExportServiceTraceTerminalReasonFilter("ALL");
     setExportServiceTracePageCursor(0);
     setBenchmarkEvidenceFocus(null);
+    setBenchmarkEvidenceArtifactFilter("");
   }, [runtimeExportComparePackageId]);
+  useEffect(() => {
+    setBenchmarkEvidenceArtifactFilter("");
+  }, [benchmarkEvidenceFocus?.artifactLabel, benchmarkEvidenceFocus?.jsonPointer]);
   useEffect(() => {
     setBenchmarkEvidenceArtifactDocument(undefined);
     setBenchmarkEvidenceArtifactError(null);
@@ -1520,7 +1526,8 @@ export const DataPanel = memo(function DataPanel({
       benchmarkEvidenceFocus,
       benchmarkEvidenceArtifactDocument,
       benchmarkEvidenceArtifactLoading,
-      benchmarkEvidenceArtifactError
+      benchmarkEvidenceArtifactError,
+      benchmarkEvidenceArtifactFilter
     );
   const exportRouteComparisonReviewReportStatus =
     buildDataPanelExportRouteComparisonReviewReportStatus(
@@ -3102,7 +3109,7 @@ export const DataPanel = memo(function DataPanel({
                               className={`data-panel-export-artifact-pointer-viewer ${benchmarkEvidenceArtifactViewerDisplay.tone}`}
                             >
                               <div>
-                                <span>Artifact pointer viewer</span>
+                                <span>证据指针预览</span>
                                 <strong>
                                   {
                                     benchmarkEvidenceArtifactViewerDisplay
@@ -3131,6 +3138,49 @@ export const DataPanel = memo(function DataPanel({
                                     .targetPreview
                                 }
                               </pre>
+                              {benchmarkEvidenceArtifactViewerDisplay.inspectorEnabled ? (
+                                <>
+                                  <label
+                                    className="data-panel-export-artifact-inspector-filter"
+                                    htmlFor="data-panel-export-artifact-inspector-filter"
+                                  >
+                                    <span>证据路径筛选</span>
+                                    <input
+                                      id="data-panel-export-artifact-inspector-filter"
+                                      type="search"
+                                      value={benchmarkEvidenceArtifactFilter}
+                                      onChange={(event) =>
+                                        setBenchmarkEvidenceArtifactFilter(
+                                          event.currentTarget.value
+                                        )
+                                      }
+                                      placeholder="pointer / 键 / 值"
+                                    />
+                                  </label>
+                                  <small>
+                                    {
+                                      benchmarkEvidenceArtifactViewerDisplay
+                                        .inspectorFilterLabel
+                                    }
+                                  </small>
+                                  <div className="data-panel-export-artifact-inspector-rows">
+                                    {benchmarkEvidenceArtifactViewerDisplay.inspectorRows.map(
+                                      (row) => (
+                                        <span
+                                          className={row.selected ? "selected" : undefined}
+                                          key={`artifact-inspector:${row.pointer}`}
+                                        >
+                                          <strong>{row.pointerLabel}</strong>
+                                          <small>
+                                            {row.typeLabel} / {row.depthLabel}
+                                          </small>
+                                          <em>{row.previewLabel}</em>
+                                        </span>
+                                      )
+                                    )}
+                                  </div>
+                                </>
+                              ) : null}
                             </div>
                           ) : null}
                         </div>
@@ -11615,6 +11665,18 @@ export interface DataPanelBenchmarkEvidenceArtifactViewerDisplay {
   summaryLabel: string;
   segmentLabels: readonly string[];
   targetPreview: string;
+  inspectorEnabled: boolean;
+  inspectorFilterLabel: string;
+  inspectorRows: readonly DataPanelBenchmarkEvidenceArtifactInspectorRow[];
+}
+
+export interface DataPanelBenchmarkEvidenceArtifactInspectorRow {
+  pointer: string;
+  pointerLabel: string;
+  typeLabel: string;
+  depthLabel: string;
+  previewLabel: string;
+  selected: boolean;
 }
 
 export interface DataPanelExportPackageAuditIndexDisplay {
@@ -12844,11 +12906,21 @@ export interface DataPanelJsonPointerSelection {
   preview: string;
 }
 
+const DATA_PANEL_ARTIFACT_INSPECTOR_ROW_LIMIT = 24;
+const DATA_PANEL_ARTIFACT_INSPECTOR_SCAN_LIMIT = 256;
+const DATA_PANEL_ARTIFACT_INSPECTOR_DEPTH_LIMIT = 8;
+
+interface DataPanelArtifactInspectorDisplay {
+  summaryLabel: string;
+  rows: readonly DataPanelBenchmarkEvidenceArtifactInspectorRow[];
+}
+
 export function buildDataPanelBenchmarkEvidenceArtifactViewerDisplay(
   focus: DataPanelBenchmarkEvidenceFocus | null | undefined,
   artifactDocument: unknown,
   loading: boolean,
-  errorLabel: string | null | undefined
+  errorLabel: string | null | undefined,
+  filterText = ""
 ): DataPanelBenchmarkEvidenceArtifactViewerDisplay | null {
   if (focus === null || focus === undefined) {
     return null;
@@ -12859,7 +12931,8 @@ export function buildDataPanelBenchmarkEvidenceArtifactViewerDisplay(
       statusLabel: "json pointer not recorded",
       summaryLabel: focus.artifactLabel,
       segmentLabels: [`artifact ${focus.artifactLabel}`],
-      targetPreview: "No backend evidence_json_pointer was recorded for this row."
+      targetPreview: "No backend evidence_json_pointer was recorded for this row.",
+      ...emptyDataPanelArtifactInspectorDisplay()
     };
   }
   if (!isDataPanelJsonArtifactFilename(focus.artifactLabel)) {
@@ -12872,7 +12945,8 @@ export function buildDataPanelBenchmarkEvidenceArtifactViewerDisplay(
         `pointer ${focus.jsonPointer}`
       ],
       targetPreview:
-        "Pointer preview is available only for JSON result-package artifacts."
+        "Pointer preview is available only for JSON result-package artifacts.",
+      ...emptyDataPanelArtifactInspectorDisplay()
     };
   }
   if (loading) {
@@ -12884,7 +12958,8 @@ export function buildDataPanelBenchmarkEvidenceArtifactViewerDisplay(
         `artifact ${focus.artifactLabel}`,
         `pointer ${focus.jsonPointer}`
       ],
-      targetPreview: "Loading selected result-package artifact..."
+      targetPreview: "Loading selected result-package artifact...",
+      ...emptyDataPanelArtifactInspectorDisplay()
     };
   }
   if (errorLabel !== null && errorLabel !== undefined) {
@@ -12896,7 +12971,8 @@ export function buildDataPanelBenchmarkEvidenceArtifactViewerDisplay(
         `artifact ${focus.artifactLabel}`,
         `pointer ${focus.jsonPointer}`
       ],
-      targetPreview: errorLabel
+      targetPreview: errorLabel,
+      ...emptyDataPanelArtifactInspectorDisplay()
     };
   }
   if (artifactDocument === undefined) {
@@ -12908,12 +12984,18 @@ export function buildDataPanelBenchmarkEvidenceArtifactViewerDisplay(
         `artifact ${focus.artifactLabel}`,
         `pointer ${focus.jsonPointer}`
       ],
-      targetPreview: "Select a benchmark evidence row to load the artifact preview."
+      targetPreview: "Select a benchmark evidence row to load the artifact preview.",
+      ...emptyDataPanelArtifactInspectorDisplay()
     };
   }
   const selection = selectDataPanelJsonPointerValue(
     artifactDocument,
     focus.jsonPointer
+  );
+  const inspector = buildDataPanelJsonArtifactInspectorRows(
+    artifactDocument,
+    focus.jsonPointer,
+    filterText
   );
   return {
     tone: selection.found ? focus.tone : selection.valid ? "different" : "error",
@@ -12930,7 +13012,124 @@ export function buildDataPanelBenchmarkEvidenceArtifactViewerDisplay(
       `target ${selection.typeLabel}`,
       ...selection.segmentLabels
     ],
-    targetPreview: selection.preview
+    targetPreview: selection.preview,
+    inspectorEnabled: true,
+    inspectorFilterLabel: inspector.summaryLabel,
+    inspectorRows: inspector.rows
+  };
+}
+
+export function buildDataPanelJsonArtifactInspectorRows(
+  document: unknown,
+  selectedPointer: string,
+  filterText = "",
+  rowLimit = DATA_PANEL_ARTIFACT_INSPECTOR_ROW_LIMIT
+): DataPanelArtifactInspectorDisplay {
+  const normalizedFilter = filterText.trim().toLowerCase();
+  const rows: DataPanelBenchmarkEvidenceArtifactInspectorRow[] = [];
+  let scanLimitReached = false;
+  const visit = (value: unknown, pointer: string, depth: number) => {
+    if (rows.length >= DATA_PANEL_ARTIFACT_INSPECTOR_SCAN_LIMIT) {
+      scanLimitReached = true;
+      return;
+    }
+    rows.push(buildDataPanelJsonArtifactInspectorRow(value, pointer, depth, selectedPointer));
+    if (depth >= DATA_PANEL_ARTIFACT_INSPECTOR_DEPTH_LIMIT) {
+      return;
+    }
+    if (Array.isArray(value)) {
+      value.forEach((item, index) => {
+        visit(item, appendDataPanelJsonPointerSegment(pointer, String(index)), depth + 1);
+      });
+      return;
+    }
+    if (isDataPanelJsonObject(value)) {
+      Object.keys(value)
+        .sort((left, right) => left.localeCompare(right))
+        .forEach((key) => {
+          visit(value[key], appendDataPanelJsonPointerSegment(pointer, key), depth + 1);
+        });
+    }
+  };
+  visit(document, "", 0);
+  const matchedRows =
+    normalizedFilter.length === 0
+      ? rows
+      : rows.filter((row) =>
+          [
+            row.pointerLabel,
+            row.typeLabel,
+            row.depthLabel,
+            row.previewLabel
+          ].some((label) => label.toLowerCase().includes(normalizedFilter))
+        );
+  const selectedRow = rows.find((row) => row.pointer === selectedPointer) ?? null;
+  const selectedMatchesFilter =
+    selectedRow !== null &&
+    (normalizedFilter.length === 0 ||
+      [
+        selectedRow.pointerLabel,
+        selectedRow.typeLabel,
+        selectedRow.depthLabel,
+        selectedRow.previewLabel
+      ].some((label) => label.toLowerCase().includes(normalizedFilter)));
+  const displayRows =
+    selectedRow !== null && selectedMatchesFilter
+      ? [
+          selectedRow,
+          ...matchedRows
+            .filter((row) => row.pointer !== selectedRow.pointer)
+            .slice(0, Math.max(0, rowLimit - 1))
+        ]
+      : matchedRows.slice(0, rowLimit);
+  const selectedLabel =
+    selectedRow === null
+      ? "selected pointer not scanned"
+      : selectedMatchesFilter
+        ? "selected pointer visible"
+        : "selected pointer filtered";
+  const scanLabel = scanLimitReached ? " / scan limit reached" : "";
+  return {
+    summaryLabel: `paths ${formatCount(displayRows.length)} shown / ${formatCount(
+      matchedRows.length
+    )} matched / ${formatCount(rows.length)} scanned / ${selectedLabel}${scanLabel}`,
+    rows: displayRows
+  };
+}
+
+function buildDataPanelJsonArtifactInspectorRow(
+  value: unknown,
+  pointer: string,
+  depth: number,
+  selectedPointer: string
+): DataPanelBenchmarkEvidenceArtifactInspectorRow {
+  return {
+    pointer,
+    pointerLabel: `json ${dataPanelJsonPointerDisplayLabel(pointer)}`,
+    typeLabel: dataPanelJsonValueTypeLabel(value),
+    depthLabel: `depth ${formatCount(depth)}`,
+    previewLabel: formatDataPanelJsonInlinePreview(value),
+    selected: pointer === selectedPointer
+  };
+}
+
+function appendDataPanelJsonPointerSegment(pointer: string, segment: string): string {
+  const encoded = segment.replace(/~/g, "~0").replace(/\//g, "~1");
+  return pointer.length === 0 ? `/${encoded}` : `${pointer}/${encoded}`;
+}
+
+function dataPanelJsonPointerDisplayLabel(pointer: string): string {
+  return pointer.length === 0 ? "/" : pointer;
+}
+
+function emptyDataPanelArtifactInspectorDisplay(): Pick<
+  DataPanelBenchmarkEvidenceArtifactViewerDisplay,
+  "inspectorEnabled" | "inspectorFilterLabel" | "inspectorRows"
+> {
+  return {
+    inspectorEnabled: false,
+    inspectorFilterLabel: "artifact inspector unavailable",
+    inspectorRows: []
   };
 }
 
@@ -13046,6 +13245,11 @@ function dataPanelJsonValueTypeLabel(value: unknown): string {
 function formatDataPanelJsonPreview(value: unknown): string {
   const text = JSON.stringify(value, null, 2) ?? String(value);
   return text.length > 1000 ? `${text.slice(0, 997)}...` : text;
+}
+
+function formatDataPanelJsonInlinePreview(value: unknown): string {
+  const text = (JSON.stringify(value) ?? String(value)).replace(/\s+/g, " ");
+  return text.length > 160 ? `${text.slice(0, 157)}...` : text;
 }
 
 function isDataPanelJsonObject(value: unknown): value is Record<string, unknown> {

@@ -598,6 +598,10 @@ existing read-only package file endpoint and resolve the backend-provided
 `evidence_json_pointer` as a local preview. The preview is informational only:
 it does not rewrite artifacts, recompute acceptance, or replace the linked
 package file as the authoritative evidence.
+The same preview includes a bounded read-only artifact inspector: JSON paths
+are listed in deterministic order, the selected evidence pointer is highlighted,
+and operators can filter path/key/value text without changing package files or
+browser-side acceptance decisions.
 
 For operator handoff, the demo backend also exposes the generated Markdown
 handoff report:

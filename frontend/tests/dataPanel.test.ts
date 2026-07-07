@@ -20,6 +20,7 @@ import {
   buildDataPanelExportAcceptanceReportStatus,
   buildDataPanelBenchmarkEvidenceFocus,
   buildDataPanelBenchmarkEvidenceArtifactViewerDisplay,
+  buildDataPanelJsonArtifactInspectorRows,
   buildDataPanelExportBoundaryAlignmentDisplay,
   buildDataPanelExportCatalogDisplay,
   buildDataPanelExportCompareDisplay,
@@ -4508,6 +4509,79 @@ describe("buildDataPanelExportCatalogDisplay", () => {
       ]),
       targetPreview: "96.5"
     });
+    expect(
+      buildDataPanelBenchmarkEvidenceArtifactViewerDisplay(
+        focus,
+        {
+          validation: {
+            checks: [
+              {
+                metric: "latency",
+                observed_value: 96.5
+              }
+            ]
+          }
+        },
+        false,
+        null,
+        "observed"
+      )
+    ).toMatchObject({
+      inspectorEnabled: true,
+      inspectorFilterLabel:
+        "paths 5 shown / 5 matched / 6 scanned / selected pointer visible",
+      inspectorRows: expect.arrayContaining([
+        expect.objectContaining({
+          pointer: "/validation/checks/0/observed_value",
+          pointerLabel: "json /validation/checks/0/observed_value",
+          selected: true,
+          previewLabel: "96.5"
+        }),
+        expect.objectContaining({
+          pointer: "",
+          selected: false
+        })
+      ])
+    });
+  });
+
+  it("builds deterministic artifact inspector rows with selected pointer priority", () => {
+    const display = buildDataPanelJsonArtifactInspectorRows(
+      {
+        zeta: 1,
+        alpha: {
+          child: "selected",
+          other: true
+        },
+        list: [{ child: "array" }]
+      },
+      "/alpha/child",
+      "child",
+      4
+    );
+
+    expect(display.summaryLabel).toBe(
+      "paths 4 shown / 6 matched / 8 scanned / selected pointer visible"
+    );
+    expect(display.rows).toEqual([
+      expect.objectContaining({
+        pointer: "/alpha/child",
+        selected: true,
+        previewLabel: '"selected"'
+      }),
+      expect.objectContaining({
+        pointer: "",
+        selected: false
+      }),
+      expect.objectContaining({
+        pointer: "/alpha",
+        selected: false
+      }),
+      expect.objectContaining({
+        pointer: "/list",
+        selected: false
+      })
+    ]);
   });
 
   it("reports missing and escaped JSON pointer targets deterministically", () => {

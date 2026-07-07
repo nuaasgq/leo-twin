@@ -817,6 +817,9 @@ Tasks:
     pointer preview for selected JSON evidence files: the dashboard loads the
     backend-named package artifact, resolves `evidence_json_pointer`, and shows
     the target JSON value without mutating packages or recomputing acceptance.
+    T355 expands that preview into a bounded read-only JSON artifact inspector
+    with deterministic pointer rows, selected evidence pointer highlighting,
+    and local text filtering over pointer/key/value previews.
 
 ### WS9. Delivery and Operations v2
 
