@@ -58,6 +58,7 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert (package_dir / "diagnostics_bundle_v1.json").exists()
     assert (package_dir / "review_summary_v1.json").exists()
     assert (package_dir / "route_detail_index_v1.json").exists()
+    assert (package_dir / "route_pressure_evidence_v1.json").exists()
     assert (package_dir / "network_kpi_benchmark_validation_v1.json").exists()
     assert (package_dir / "network_kpi_formula_evidence_v1.json").exists()
     assert (package_dir / "network_kpi_variation_explanation_v1.json").exists()
@@ -71,6 +72,7 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     filenames = {str(record["filename"]) for record in package["files"]}
     assert "service_lifecycle_trace_v2.json" in filenames
     assert "route_detail_index_v1.json" in filenames
+    assert "route_pressure_evidence_v1.json" in filenames
     assert "review_summary_v1.json" in filenames
     assert "diagnostics_bundle_v1.json" in filenames
     assert "network_kpi_benchmark_validation_v1.json" in filenames
@@ -92,6 +94,9 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     )
     route_detail_index = json.loads(
         (package_dir / "route_detail_index_v1.json").read_text(encoding="utf-8")
+    )
+    route_pressure_evidence = json.loads(
+        (package_dir / "route_pressure_evidence_v1.json").read_text(encoding="utf-8")
     )
     review_summary = json.loads(
         (package_dir / "review_summary_v1.json").read_text(encoding="utf-8")
@@ -208,6 +213,13 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         route_summary_status["items"]
     )
     assert route_detail_index["route_detail_index_hash"].startswith("sha256:")
+    assert route_pressure_evidence["type"] == "RUNTIME_EXPORT_ROUTE_PRESSURE_EVIDENCE_V1"
+    assert route_pressure_evidence["summary"] == config_snapshot["status"][
+        "route_pressure_evidence_v1"
+    ]
+    assert route_pressure_evidence["route_pressure_evidence_export_policy"] == (
+        config_snapshot["status"]["runtime_export_route_pressure_evidence_policy_v1"]
+    )
     assert review_summary["type"] == "RUNTIME_EXPORT_REVIEW_SUMMARY_V1"
     assert review_summary["review_status"] == "REVIEW_READY"
     assert review_summary["route_trust"]["trust_id"] == route_trust_status["trust_id"]

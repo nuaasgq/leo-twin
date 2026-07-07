@@ -185,6 +185,7 @@ _RUNTIME_EXPORT_USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME = (
 _RUNTIME_EXPORT_TRAFFIC_DEMAND_EXPLANATION_FILENAME = (
     "traffic_demand_explanation_v1.json"
 )
+_RUNTIME_EXPORT_ROUTE_PRESSURE_EVIDENCE_FILENAME = "route_pressure_evidence_v1.json"
 _RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_FILENAME = "scenario_review_bundle_v1.json"
 _RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_FILENAME = "scenario_review_checklist_v1.json"
 _RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_FILENAME = (
@@ -865,6 +866,17 @@ class DemoControlPlane:
         written_files["traffic_demand_explanation_v1"] = (
             traffic_demand_explanation_path
         )
+        route_pressure_evidence_path = (
+            package_dir / _RUNTIME_EXPORT_ROUTE_PRESSURE_EVIDENCE_FILENAME
+        )
+        route_pressure_evidence_export = _runtime_route_pressure_evidence_export(
+            export_status
+        )
+        route_pressure_evidence_path.write_text(
+            stable_json_pretty(route_pressure_evidence_export),
+            encoding="utf-8",
+        )
+        written_files["route_pressure_evidence_v1"] = route_pressure_evidence_path
         written_files["user_service_request_summary_v2"] = (
             user_service_request_summary_path
         )
@@ -2387,6 +2399,20 @@ class DemoControlPlane:
             "packet_level_simulation": False,
             "all_pairs_computation": False,
         }
+        route_pressure_evidence = self._route_pressure_evidence_json()
+        export_status["route_pressure_evidence_v1"] = route_pressure_evidence
+        export_status["runtime_export_route_pressure_evidence_policy_v1"] = {
+            "version": "v1",
+            "source": "BACKEND_RUNTIME_EXPORT",
+            "policy": "EXPORT_ROUTE_PRESSURE_EVIDENCE_WINDOW",
+            "route_pressure_evidence_source": "route_pressure_evidence_v1",
+            "route_pressure_evidence_limit": 64,
+            "route_count": route_pressure_evidence["route_count"],
+            "exported_item_count": route_pressure_evidence["item_count"],
+            "hidden_route_count": route_pressure_evidence["hidden_route_count"],
+            "packet_level_simulation": False,
+            "event_replay": False,
+        }
         user_service_summary = self._runtime_export_user_service_request_summary()
         export_status["user_service_request_summary_v2"] = user_service_summary
         export_status["runtime_export_user_service_request_policy_v1"] = {
@@ -3293,6 +3319,45 @@ def _runtime_export_manifest_with_boundary(status: dict[str, Any]) -> dict[str, 
     manifest["manifest_hash"] = stable_hash_payload(manifest)
     payload = stable_json_payload(manifest)
     return dict(payload) if isinstance(payload, dict) else {}
+
+
+def _runtime_route_pressure_evidence_export(status: dict[str, Any]) -> dict[str, Any]:
+    evidence = status.get("route_pressure_evidence_v1")
+    if not isinstance(evidence, dict):
+        evidence = {
+            "version": "v1",
+            "source": "BACKEND_METRICS_COLLECTOR",
+            "evidence_id": "leo_twin.route_pressure_evidence.v1",
+            "pressure_model": "FLOW_PRESSURE_ADMISSION_V1",
+            "route_source": "ROUTE_UPDATE",
+            "packet_level_simulation": False,
+            "route_count": 0,
+            "item_limit": 64,
+            "item_count": 0,
+            "hidden_route_count": 0,
+            "items": (),
+        }
+    policy = status.get("runtime_export_route_pressure_evidence_policy_v1")
+    if not isinstance(policy, dict):
+        policy = {
+            "version": "v1",
+            "source": "BACKEND_RUNTIME_EXPORT",
+            "policy": "EXPORT_ROUTE_PRESSURE_EVIDENCE_WINDOW",
+            "route_pressure_evidence_source": "route_pressure_evidence_v1",
+            "route_pressure_evidence_limit": int(evidence.get("item_limit", 64)),
+            "route_count": int(evidence.get("route_count", 0)),
+            "exported_item_count": int(evidence.get("item_count", 0)),
+            "hidden_route_count": int(evidence.get("hidden_route_count", 0)),
+            "packet_level_simulation": False,
+            "event_replay": False,
+        }
+    return {
+        "type": "RUNTIME_EXPORT_ROUTE_PRESSURE_EVIDENCE_V1",
+        "source": "BACKEND_RUNTIME_STATUS",
+        "artifact_policy": "STANDALONE_RUNTIME_EXPORT_ARTIFACT",
+        "route_pressure_evidence_export_policy": policy,
+        "summary": evidence,
+    }
 
 
 def _runtime_service_lifecycle_trace_export(status: dict[str, Any]) -> dict[str, Any]:

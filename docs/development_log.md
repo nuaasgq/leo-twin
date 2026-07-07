@@ -5,6 +5,45 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-08 - Route Pressure Evidence Export v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: pending in this commit
+- Scope: persist `route_pressure_evidence_v1` into runtime export packages as
+  `route_pressure_evidence_v1.json`. The export status now includes a dedicated
+  `runtime_export_route_pressure_evidence_policy_v1`, and the standalone export
+  artifact wraps the backend evidence with an explicit export policy. This makes
+  route admission, queue, saturation, and blocked-reason evidence available for
+  result-package review and replay boundaries without relying on frontend-local
+  inference. This task does not modify Event Kernel behavior, frontend code,
+  routing topology selection, packet-level behavior, or external simulator
+  integrations.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile examples\integration_demo\control_plane.py tests\integration\test_runtime_session_control.py tests\integration\test_result_package_export_v1.py`
+    - Result: passed using the bundled Codex Python runtime.
+  - `python -c "... _runtime_route_pressure_evidence_export ..."`
+    - Result: passed; the export wrapper reports
+      `RUNTIME_EXPORT_ROUTE_PRESSURE_EVIDENCE_V1` and preserves route-count
+      evidence.
+  - Target `pytest` command was not run in this no-approval continuation: the
+    project Python is denied by the sandbox without escalation, and the bundled
+    Codex Python runtime is accessible but does not include `pytest`.
+- Problems encountered and handling:
+  - The user requested no further approval prompts. Commands requiring approval
+    were avoided; validation was limited to static compile and direct backend
+    smoke checks that do not require pytest.
+  - Local runtime/generated config files remain dirty from user/runtime state and
+    are intentionally outside this task scope.
+- Known remaining issues / follow-up:
+  - The exported artifact persists route-level pressure evidence. A later task
+    can add per-edge `PressureEdgeQueueState` evidence to the export package if
+    detailed edge-by-edge replay is required.
 ## 2026-07-08 - Route Pressure Evidence v1
 
 - Branch: `feature/T402-network-pressure-provenance-v1`

@@ -400,7 +400,9 @@ Tasks:
     summary and binds those fields into KPI provenance for route blocking and
     effective loss explanation. The follow-on route pressure evidence increment
     adds `route_pressure_evidence_v1` to runtime status so each observed route
-    has replayable pressure-state and blocked-reason evidence.
+    has replayable pressure-state and blocked-reason evidence. The export
+    follow-up persists the same evidence as `route_pressure_evidence_v1.json`
+    with an explicit export policy for result-package review.
 - V2-023: Add route explanation records.
   - Scope: selected route, alternative count, bottleneck reason, next hop,
     blocked reason.

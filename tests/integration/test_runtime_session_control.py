@@ -1060,6 +1060,7 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
         "metrics.csv",
         "review_summary_v1.json",
         "route_detail_index_v1.json",
+        "route_pressure_evidence_v1.json",
         "scenario_review_bundle_v1.json",
         "service_lifecycle_trace_v2.json",
         "summary.json",
@@ -1093,6 +1094,9 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
     )
     route_detail_index = json.loads(
         (package_dir / "route_detail_index_v1.json").read_text(encoding="utf-8")
+    )
+    route_pressure_evidence = json.loads(
+        (package_dir / "route_pressure_evidence_v1.json").read_text(encoding="utf-8")
     )
     review_summary = json.loads(
         (package_dir / "review_summary_v1.json").read_text(encoding="utf-8")
@@ -1164,6 +1168,18 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
     assert route_export_policy["route_detail_limit"] == DETAIL_ENDPOINT_MAX_LIMIT
     assert route_detail_index["route_detail_export_policy"] == route_export_policy
     assert route_detail_index["route_detail_index_hash"].startswith("sha256:")
+    assert route_pressure_evidence["type"] == "RUNTIME_EXPORT_ROUTE_PRESSURE_EVIDENCE_V1"
+    assert route_pressure_evidence["source"] == "BACKEND_RUNTIME_STATUS"
+    assert route_pressure_evidence["summary"] == config_snapshot["status"][
+        "route_pressure_evidence_v1"
+    ]
+    route_pressure_policy = config_snapshot["status"][
+        "runtime_export_route_pressure_evidence_policy_v1"
+    ]
+    assert route_pressure_policy["policy"] == "EXPORT_ROUTE_PRESSURE_EVIDENCE_WINDOW"
+    assert route_pressure_evidence["route_pressure_evidence_export_policy"] == (
+        route_pressure_policy
+    )
     assert review_summary["type"] == "RUNTIME_EXPORT_REVIEW_SUMMARY_V1"
     assert review_summary["package_id"] == exported["package_id"]
     assert review_summary["review_status"] == "REVIEW_READY"
@@ -1415,6 +1431,11 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
         "route_detail_index_v1.json",
         export_root,
     )
+    route_pressure_evidence_artifact = control_plane.runtime_export_package_artifact(
+        package_id,
+        "route_pressure_evidence_v1.json",
+        export_root,
+    )
     review_summary_artifact = control_plane.runtime_export_package_artifact(
         package_id,
         "review_summary_v1.json",
@@ -1449,6 +1470,16 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
     config_snapshot = json.loads(
         Path(str(config_snapshot_artifact["path"])).read_text(encoding="utf-8")
     )
+    assert Path(str(route_pressure_evidence_artifact["path"])).name == (
+        "route_pressure_evidence_v1.json"
+    )
+    assert route_pressure_evidence_artifact["content_type"] == (
+        "application/json; charset=utf-8"
+    )
+    route_pressure_evidence = json.loads(
+        Path(str(route_pressure_evidence_artifact["path"])).read_text(encoding="utf-8")
+    )
+    assert route_pressure_evidence["type"] == "RUNTIME_EXPORT_ROUTE_PRESSURE_EVIDENCE_V1"
     assert Path(str(manifest_artifact["path"])).name == "manifest.json"
     assert manifest_artifact["content_type"] == "application/json; charset=utf-8"
     manifest = json.loads(Path(str(manifest_artifact["path"])).read_text(encoding="utf-8"))
