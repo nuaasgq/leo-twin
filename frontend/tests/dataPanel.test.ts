@@ -5779,6 +5779,117 @@ describe("buildDataPanelExportCatalogDisplay", () => {
     });
   });
 
+  it("summarizes backend-paged route comparison review report contents", () => {
+    const report = {
+      type: "RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_PAGE_V1",
+      version: "v1",
+      page_id: "leo_twin.runtime_export_route_comparison_review_report_page.v1",
+      report_id: "leo_twin.runtime_export_route_comparison_review_report.v1",
+      report_type: "RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1",
+      source: "BACKEND_RUNTIME_EXPORT_PACKAGE",
+      report_scope: "SELECTED_PACKAGE_VS_LIVE_ROUTE_COMPARISON_OUTCOMES",
+      package_id: "pkg-review",
+      package_dir: "artifacts/runtime_exports/pkg-review",
+      route_comparison_review: _runtimeExportRouteComparisonReview(),
+      runtime_export_boundary_alignment_v1: _runtimeExportBoundaryAlignment(),
+      boundary_alignment_hash:
+        "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      boundary_alignment_status: "ALIGNED",
+      boundary_alignment_warnings: [],
+      runtime_export_boundary_hash:
+        "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      report_hash:
+        "sha256:9999999999999999999999999999999999999999999999999999999999999999",
+      report_record_count: 3,
+      record_count: 1,
+      unfiltered_record_count: 3,
+      match_count: 0,
+      different_count: 1,
+      unavailable_count: 0,
+      error_count: 0,
+      cursor: 0,
+      limit: 5,
+      next_cursor: 1,
+      has_more: false,
+      item_count: 1,
+      hidden_record_count: 0,
+      filter_applied: true,
+      filters: {
+        query: "/route/latency_s",
+        status: "DIFFERENT"
+      },
+      records: [
+        {
+          route_id: "route-b",
+          comparison_status: "DIFFERENT",
+          package_route_detail_hash:
+            "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          live_route_detail_hash:
+            "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          matched_field_count: 10,
+          different_field_count: 2,
+          compared_fields: ["path", "latency", "bottleneck"],
+          different_fields: ["latency", "bottleneck"],
+          pinned_path_count: 2,
+          pinned_path_match_count: 1,
+          pinned_path_different_count: 1,
+          pinned_path_diffs: [
+            {
+              pointer: "/route/route_id",
+              package_value: '"route-b"',
+              live_value: '"route-b"',
+              package_status: "RESOLVED",
+              live_status: "RESOLVED",
+              comparison_status: "MATCH"
+            },
+            {
+              pointer: "/route/latency_s",
+              package_value: "0.1",
+              live_value: "0.25",
+              package_status: "RESOLVED",
+              live_status: "RESOLVED",
+              comparison_status: "DIFFERENT"
+            }
+          ],
+          status_reason: "FIELDS_DIFFER",
+          operator_note: ""
+        }
+      ],
+      ordering: "route_id ascending, then comparison_status ascending",
+      boundary_conditions: ["NO_ROUTE_RECOMPUTE"],
+      page_hash:
+        "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+    };
+
+    const display = buildDataPanelExportRouteComparisonReviewReportDisplay(report);
+
+    expect(display).toMatchObject({
+      packageId: "pkg-review",
+      tone: "different",
+      statusLabel: "saved comparisons need review",
+      summaryLabel:
+        "pkg-review / records 1 / different 1 / error 0 / 999999999999",
+      recordRows: [
+        {
+          routeId: "route-b",
+          tone: "different",
+          statusLabel: "DIFFERENT",
+          hashLabel: "package cccccccccccc / live dddddddddddd",
+          noteLabel: "FIELDS_DIFFER / pinned paths 2 / different 1"
+        }
+      ],
+      filterLabel:
+        "showing 1-1 of 1 filtered / total 3 / status DIFFERENT / query /route/latency_s",
+      pageCursor: 0,
+      pageLimit: 5,
+      previousCursor: 0,
+      nextCursor: 1,
+      canPreviousPage: false,
+      canNextPage: false
+    });
+    expect(display?.metaLabels).toContain("backend cursor page dddddddddddd");
+  });
+
   it("summarizes backend-paged service trace comparison review report contents", () => {
     const report = {
       type: "RUNTIME_EXPORT_SERVICE_TRACE_COMPARISON_REVIEW_REPORT_PAGE_V1",

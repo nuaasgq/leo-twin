@@ -24,6 +24,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_PACKAGE_REVIEW_COMPLETION_V1_ID,
     RUNTIME_EXPORT_BENCHMARK_ACCEPTANCE_BINDING_V1_ID,
     RUNTIME_EXPORT_REPRODUCIBILITY_BOUNDARY_V1_ID,
+    RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_PAGE_V1_ID,
     RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID,
     RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1_ID,
     RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_V1_ID,
@@ -52,6 +53,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_package_handoff_report_v1,
     build_runtime_export_package_review_completion_v1,
     build_runtime_export_reproducibility_boundary_v1,
+    build_runtime_export_route_comparison_review_report_page_v1,
     build_runtime_export_route_comparison_review_report_v1,
     build_runtime_export_route_detail_item_v1,
     build_runtime_export_route_detail_index_v1,
@@ -1866,6 +1868,126 @@ def test_runtime_export_route_comparison_review_report_v1_is_deterministic() -> 
     assert json.loads(json.dumps(first, sort_keys=True))["report_id"] == (
         RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID
     )
+
+
+def test_runtime_export_route_comparison_review_report_page_v1_filters_records() -> None:
+    route_index = build_runtime_export_route_detail_index_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot={
+            "type": "RUNTIME_CONFIG_SNAPSHOT",
+            "status": {
+                "route_explanation_summary_v1": _route_summary(),
+                "runtime_export_route_detail_policy_v1": _route_detail_export_policy(),
+                "route_provenance_trust_summary_v1": _route_trust(),
+            },
+        },
+    )
+    review = route_index["route_comparison_review"]
+    report = build_runtime_export_route_comparison_review_report_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        route_comparison_review=review,
+        records=(
+            {
+                "route_id": "route-0",
+                "comparison_status": "MATCH",
+                "package_route_detail_hash": "sha256:package-route-0",
+                "live_route_detail_hash": "sha256:live-route-0",
+                "compared_fields": ("availability", "path"),
+                "different_fields": (),
+                "status_reason": "MATCHED",
+                "operator_note": "baseline route aligned",
+            },
+            {
+                "route_id": "route-1",
+                "comparison_status": "DIFFERENT",
+                "package_route_detail_hash": "sha256:package-route-1",
+                "live_route_detail_hash": "sha256:live-route-1",
+                "compared_fields": ("latency", "bottleneck", "path"),
+                "different_fields": ("bottleneck", "latency"),
+                "pinned_path_diffs": (
+                    {
+                        "pointer": "/route/latency_s",
+                        "package_value": "0.1",
+                        "live_value": "0.25",
+                        "package_status": "RESOLVED",
+                        "live_status": "RESOLVED",
+                        "comparison_status": "DIFFERENT",
+                    },
+                ),
+                "status_reason": "FIELDS_DIFFER",
+                "operator_note": "capacity changed after runtime advanced",
+            },
+            {
+                "route_id": "route-2",
+                "comparison_status": "UNAVAILABLE",
+                "package_route_detail_hash": "sha256:package-route-2",
+                "live_route_detail_hash": "",
+                "compared_fields": (),
+                "different_fields": (),
+                "status_reason": "LIVE_ROUTE_MISSING",
+                "operator_note": "live runtime no longer has route",
+            },
+        ),
+    )
+
+    first_page = build_runtime_export_route_comparison_review_report_page_v1(
+        report,
+        cursor=0,
+        limit=2,
+    )
+    second_page = build_runtime_export_route_comparison_review_report_page_v1(
+        report,
+        cursor=2,
+        limit=2,
+    )
+    filtered = build_runtime_export_route_comparison_review_report_page_v1(
+        report,
+        status="different",
+        query="runtime advanced",
+    )
+    repeated = build_runtime_export_route_comparison_review_report_page_v1(
+        report,
+        status="different",
+        query="runtime advanced",
+    )
+    pinned_filtered = build_runtime_export_route_comparison_review_report_page_v1(
+        report,
+        status="different",
+        query="/route/latency_s",
+    )
+
+    assert first_page["page_id"] == (
+        RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_PAGE_V1_ID
+    )
+    assert first_page["report_hash"] == report["report_hash"]
+    assert first_page["record_count"] == 3
+    assert first_page["item_count"] == 2
+    assert first_page["next_cursor"] == 2
+    assert first_page["has_more"] is True
+    assert [record["route_id"] for record in first_page["records"]] == [
+        "route-0",
+        "route-1",
+    ]
+    assert [record["route_id"] for record in second_page["records"]] == [
+        "route-2",
+    ]
+    assert filtered == repeated
+    assert filtered["filter_applied"] is True
+    assert filtered["filters"] == {
+        "query": "runtime advanced",
+        "status": "DIFFERENT",
+    }
+    assert filtered["record_count"] == 1
+    assert filtered["different_count"] == 1
+    assert filtered["records"][0]["route_id"] == "route-1"
+    assert pinned_filtered["record_count"] == 1
+    assert pinned_filtered["records"][0]["pinned_path_different_count"] == 1
+    assert pinned_filtered["records"][0]["pinned_path_diffs"][0]["pointer"] == (
+        "/route/latency_s"
+    )
+    assert filtered["page_hash"].startswith("sha256:")
 
 
 def test_runtime_export_service_trace_comparison_review_report_v1_is_deterministic() -> None:

@@ -1209,6 +1209,7 @@ def test_demo_adapter_exports_deterministic_runtime_archive(tmp_path) -> None:
     )
     control_plane.handle_raw_message(json.dumps({"type": "RUNTIME_CONTROL", "action": "START"}))
     control_plane._require_advance_loop().tick()
+    control_plane.handle_raw_message(json.dumps({"type": "RUNTIME_CONTROL", "action": "PAUSE"}))
 
     first = control_plane.export_runtime_archive(tmp_path / "archives")
     second = control_plane.export_runtime_archive(tmp_path / "archives")
@@ -1293,6 +1294,7 @@ def test_demo_adapter_persists_runtime_export_catalog(tmp_path) -> None:
     )
     control_plane.handle_raw_message(json.dumps({"type": "RUNTIME_CONTROL", "action": "START"}))
     control_plane._require_advance_loop().tick()
+    control_plane.handle_raw_message(json.dumps({"type": "RUNTIME_CONTROL", "action": "PAUSE"}))
 
     exported = control_plane.export_runtime_archive(export_root)
     catalog_path = export_root / "runtime_export_catalog_v1.json"
@@ -2079,6 +2081,9 @@ def test_demo_server_stream_query_parses_cursor_options() -> None:
     assert _runtime_export_package_route(
         "/runtime/export/packages/pkg%201/route-comparison-review-report"
     ) == ("pkg 1", "route-comparison-review-report", None)
+    assert _runtime_export_package_route(
+        "/runtime/export/packages/pkg%201/route-comparison-review-report/records"
+    ) == ("pkg 1", "route-comparison-review-report-records", None)
     assert _runtime_export_package_route(
         "/runtime/export/packages/pkg%201/service-trace-comparison-review-report"
     ) == ("pkg 1", "service-trace-comparison-review-report", None)

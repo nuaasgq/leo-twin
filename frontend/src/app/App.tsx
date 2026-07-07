@@ -21,7 +21,7 @@ import {
   RuntimeExportScenarioReviewChecklistV1,
   RuntimeExportScenarioReviewChecklistTemplateComparisonV1,
   RuntimeExportScenarioReviewChecklistTemplateV1,
-  RuntimeExportRouteComparisonReviewReportV1,
+  RuntimeExportRouteComparisonReviewReportPageV1,
   RuntimeExportServiceTraceComparisonReviewReportPageV1,
   RuntimeExportRouteDetailItemV1,
   RuntimeExportRouteDetailPageV1,
@@ -67,7 +67,7 @@ import {
   loadRuntimeExportScenarioReviewChecklist,
   loadRuntimeExportScenarioReviewChecklistTemplateComparison,
   loadRuntimeExportScenarioReviewChecklistTemplate,
-  loadRuntimeExportRouteComparisonReviewReport,
+  loadRuntimeExportRouteComparisonReviewReportPage,
   loadRuntimeExportServiceTraceComparisonReviewReportPage,
   loadRuntimeExportRouteDetailItem,
   loadRuntimeExportRouteDetailPage,
@@ -103,6 +103,7 @@ import {
 } from "./api";
 import type {
   DataPanelExportRouteComparisonReviewSaveRequest,
+  DataPanelExportRouteComparisonReviewReportPageRequest,
   DataPanelExportServiceTraceComparisonReviewSaveRequest,
   DataPanelExportServiceTraceComparisonReviewReportPageRequest,
   DataPanelExportScenarioReviewChecklistSaveRequest,
@@ -330,7 +331,7 @@ export function App() {
   const [
     runtimeExportRouteComparisonReviewReport,
     setRuntimeExportRouteComparisonReviewReport
-  ] = useState<RuntimeExportRouteComparisonReviewReportV1 | null>(null);
+  ] = useState<RuntimeExportRouteComparisonReviewReportPageV1 | null>(null);
   const [
     runtimeExportServiceTraceComparisonReviewReport,
     setRuntimeExportServiceTraceComparisonReviewReport
@@ -1375,7 +1376,7 @@ export function App() {
           : Promise.resolve(null),
         loadRuntimeExportRouteDetailPage(packageId, 0, 5),
         shouldLoadReviewReport
-          ? loadRuntimeExportRouteComparisonReviewReport(packageId)
+          ? loadRuntimeExportRouteComparisonReviewReportPage(packageId, 0, 5)
           : Promise.resolve(null),
         shouldLoadServiceTraceReviewReport
           ? loadRuntimeExportServiceTraceComparisonReviewReportPage(packageId, 0, 5)
@@ -1596,6 +1597,38 @@ export function App() {
         );
       } finally {
         setRuntimeExportServiceLifecycleTraceLoading(false);
+      }
+    },
+    [runtimeExportComparePackageId]
+  );
+
+  const refreshRuntimeExportRouteComparisonReviewReportPage = useCallback(
+    async (request: DataPanelExportRouteComparisonReviewReportPageRequest) => {
+      const packageId = runtimeExportComparePackageId;
+      if (packageId === null) {
+        return;
+      }
+      const cursor = Math.max(0, request.cursor);
+      const limit = request.limit ?? 5;
+      const filters = request.filters ?? {};
+      setRuntimeExportRouteComparisonReviewReportLoading(true);
+      setRuntimeExportRouteComparisonReviewReportError(null);
+      try {
+        setRuntimeExportRouteComparisonReviewReport(
+          await loadRuntimeExportRouteComparisonReviewReportPage(
+            packageId,
+            cursor,
+            limit,
+            filters
+          )
+        );
+      } catch (error) {
+        setRuntimeExportRouteComparisonReviewReport(null);
+        setRuntimeExportRouteComparisonReviewReportError(
+          runtimeExportRouteComparisonReviewReportErrorMessage(error)
+        );
+      } finally {
+        setRuntimeExportRouteComparisonReviewReportLoading(false);
       }
     },
     [runtimeExportComparePackageId]
@@ -1914,7 +1947,12 @@ export function App() {
             runtimeExportPackageAuditIndexErrorMessage(auditIndex.reason)
           );
         }
-        setRuntimeExportRouteComparisonReviewReport(report);
+        const page = await loadRuntimeExportRouteComparisonReviewReportPage(
+          request.packageId,
+          0,
+          5
+        );
+        setRuntimeExportRouteComparisonReviewReport(page);
         setRuntimeExportRouteComparisonReviewSaveReportHash(report.report_hash);
       } catch (error) {
         setRuntimeExportRouteComparisonReviewReport(null);
@@ -2869,6 +2907,9 @@ export function App() {
               onRuntimeExportCompareSelect={refreshRuntimeExportCompare}
               onRuntimeExportRouteDetailPageQueryChange={
                 refreshRuntimeExportRouteDetailPage
+              }
+              onRuntimeExportRouteComparisonReviewReportPageQueryChange={
+                refreshRuntimeExportRouteComparisonReviewReportPage
               }
               onRuntimeExportServiceTracePageQueryChange={
                 refreshRuntimeExportServiceTracePage

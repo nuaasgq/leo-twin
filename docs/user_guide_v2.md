@@ -332,8 +332,16 @@ available, the dashboard loads it read-only and summarizes saved record counts,
 MATCH/DIFFERENT/UNAVAILABLE/ERROR totals, route or trace detail hash pairs,
 boundary alignment evidence, operator notes, and pinned-path counts. The route
 report drawer can filter by status, search id/status/hash/note/pinned-path
-text, and page through matching records without opening the raw JSON. Each
-package also exposes
+text, and page through matching records through the backend cursor endpoint
+without opening the raw JSON:
+
+```powershell
+Invoke-RestMethod "http://127.0.0.1:8765/runtime/export/packages/<package_id>/route-comparison-review-report/records?cursor=0&limit=100&status=DIFFERENT&query=/route/latency_s"
+```
+
+This records endpoint reads `route_comparison_review_report_v1.json` from the
+selected package. It does not replay events, recompute routes, compare new live
+state, or mutate package artifacts. Each package also exposes
 `export_package_audit_index_v1.json`, which summarizes manifest, boundary
 alignment, user configuration binding, diagnostics, route review report, and
 artifact file hashes in one read-only audit entry. The dashboard loads this
@@ -438,6 +446,7 @@ For package-owned review, use:
 Invoke-RestMethod "http://127.0.0.1:8765/runtime/export/packages/<package_id>/routes?cursor=0&limit=100"
 Invoke-RestMethod "http://127.0.0.1:8765/runtime/export/packages/<package_id>/routes/<route_id>"
 Invoke-RestMethod "http://127.0.0.1:8765/runtime/export/packages/<package_id>/service-traces?cursor=0&limit=100&terminal_state=RUNNING"
+Invoke-RestMethod "http://127.0.0.1:8765/runtime/export/packages/<package_id>/route-comparison-review-report/records?cursor=0&limit=100&status=DIFFERENT"
 $body = @{
   records = @(
     @{

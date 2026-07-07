@@ -97,6 +97,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_package_audit_index_v1,
     build_runtime_export_package_handoff_report_v1,
     build_runtime_export_reproducibility_boundary_v1,
+    build_runtime_export_route_comparison_review_report_page_v1,
     build_runtime_export_route_comparison_review_report_v1,
     build_runtime_export_route_detail_item_v1,
     build_runtime_export_route_detail_index_v1,
@@ -1346,6 +1347,28 @@ class DemoControlPlane:
             ),
             "catalog_record": catalog_record,
         }
+
+    def runtime_export_package_route_comparison_review_report_records(
+        self,
+        package_id: str,
+        output_root: str | Path = "artifacts/runtime_exports",
+        *,
+        cursor: int = 0,
+        limit: int = 100,
+        query: str = "",
+        status: str = "ALL",
+    ) -> dict[str, Any]:
+        report = self._runtime_export_package_route_comparison_review_report(
+            package_id,
+            output_root,
+        )
+        return build_runtime_export_route_comparison_review_report_page_v1(
+            report,
+            cursor=cursor,
+            limit=limit,
+            query=query,
+            status=status,
+        )
 
     def runtime_export_package_service_trace_comparison_review_report(
         self,
@@ -2713,6 +2736,23 @@ class DemoControlPlane:
                 f"runtime export package {package_id!r} has invalid route detail index"
             )
         return route_detail_index
+
+    def _runtime_export_package_route_comparison_review_report(
+        self,
+        package_id: str,
+        output_root: str | Path,
+    ) -> dict[str, Any]:
+        artifact = self.runtime_export_package_artifact(
+            package_id,
+            _RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_FILENAME,
+            output_root,
+        )
+        report = json.loads(Path(str(artifact["path"])).read_text(encoding="utf-8"))
+        if not isinstance(report, dict):
+            raise RuntimeExportArtifactError(
+                f"runtime export package {package_id!r} has invalid route comparison review report"
+            )
+        return report
 
     def _runtime_export_package_service_trace_export(
         self,

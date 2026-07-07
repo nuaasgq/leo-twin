@@ -2,7 +2,7 @@
 
 Date: 2026-07-08
 
-Branch: `feature/T398-dashboard-pinned-diff-review-report-v1`
+Branch: `feature/T399-route-review-report-cursor-page-v1`
 
 ## Local Entry Points
 
@@ -120,6 +120,11 @@ or unavailable, it falls back to the bounded artifact preview.
 The latest T383 validation adds explicit previous/next controls to that compact
 card, so operators can page through backend traffic-demand user evidence from
 the card without loading the full JSON artifact.
+The latest T399 validation adds a backend cursor page endpoint for saved route
+comparison review report records. The dashboard route review drawer now uses
+`/runtime/export/packages/{package_id}/route-comparison-review-report/records`
+for query/status/cursor/limit reads instead of loading and filtering the full
+report artifact in the browser.
 
 ## Current Product Signals
 
@@ -292,6 +297,12 @@ the card without loading the full JSON artifact.
   path diff rows with pointer, package/live values, per-side resolution status,
   comparison status, and match/difference counts. The dashboard saved-report
   drawers summarize this pinned-path evidence without opening raw JSON.
+- Saved route comparison review reports now also expose a backend cursor page
+  endpoint at
+  `/runtime/export/packages/{package_id}/route-comparison-review-report/records`.
+  It filters by status and searches route id, status, hashes, notes, compared
+  fields, and pinned-path diff rows from the exported report artifact without
+  replaying routes or mutating the package.
 - Launcher health v2 reports backend/frontend port readiness, HTTP readiness,
   process ids, latest log paths, config paths, and recommended actions.
 - Operator diagnostics bundle captures launcher health, runtime status, version

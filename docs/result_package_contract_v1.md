@@ -355,6 +355,23 @@ endpoint saves selected operator review outcomes only; it does not compute
 route diffs by itself, replay events, recompute routes, or update existing
 archive zip files.
 
+Saved route review report records can also be read through a backend cursor
+page endpoint:
+
+```text
+GET /runtime/export/packages/{package_id}/route-comparison-review-report/records?cursor=0&limit=100&status=DIFFERENT&query=/route/latency_s
+```
+
+The endpoint reads the saved `route_comparison_review_report_v1.json` artifact
+from the package, applies deterministic status/query filtering, and returns a
+`RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_PAGE_V1` object with cursor,
+limit, next-cursor, match/difference/unavailable/error counts, records, and a
+`page_hash`. The query searches route ids, comparison status, detail hashes,
+status reasons, operator notes, compared fields, different fields, and
+pinned-path diff rows. It is read-only package evidence: it does not replay
+events, recompute routes, compare new live state, mutate the package, or update
+existing archive zip files.
+
 Service trace comparisons follow the same read-only review pattern. The
 package-owned service trace item endpoint provides the exported trace evidence,
 the live `/runtime/details/service-traces/{trace_id}` endpoint can provide

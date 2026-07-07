@@ -751,6 +751,12 @@ Tasks:
     pointer, package/live values, per-side resolution status, comparison
     status, and pinned-path counts for reviewed package/live evidence without
     replaying events, recomputing routes, or recomputing lifecycle state.
+  - Status: T399 adds the backend cursor page endpoint
+    `/runtime/export/packages/{package_id}/route-comparison-review-report/records`
+    for saved route comparison review report records. The dashboard route
+    report drawer now sends query/status/cursor/limit reads to the backend
+    package artifact instead of loading and filtering the full report locally,
+    while preserving pinned-path diff search and no-replay boundaries.
 - V2-054: Add model assumptions panel.
   - Scope: backend-derived model caveats, fidelity mode, KPI provenance.
   - Depends on: V2-003, V2-021.

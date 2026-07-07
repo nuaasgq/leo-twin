@@ -16,6 +16,7 @@ import {
   loadRuntimeExportScenarioReviewChecklistTemplate,
   loadRuntimeExportScenarioReviewChecklistTemplateComparison,
   loadRuntimeExportRouteComparisonReviewReport,
+  loadRuntimeExportRouteComparisonReviewReportPage,
   loadRuntimeExportServiceTraceComparisonReviewReport,
   loadRuntimeExportServiceTraceComparisonReviewReportPage,
   loadRuntimeExportRouteDetailIndex,
@@ -67,6 +68,7 @@ import {
   runtimeExportPackageUserServiceRequestsHref,
   runtimeExportPackageReviewSummaryHref,
   runtimeExportRouteComparisonReviewReportHref,
+  runtimeExportRouteComparisonReviewReportRecordsHref,
   runtimeExportServiceTraceComparisonReviewReportHref,
   runtimeExportServiceTraceComparisonReviewReportRecordsHref,
   runtimeExportScenarioReviewChecklistHref,
@@ -136,6 +138,9 @@ describe("runtime API diagnostics", () => {
     );
     expect(runtimeExportRouteComparisonReviewReportHref("pkg 1")).toBe(
       "/runtime/export/packages/pkg%201/route-comparison-review-report"
+    );
+    expect(runtimeExportRouteComparisonReviewReportRecordsHref("pkg 1")).toBe(
+      "/runtime/export/packages/pkg%201/route-comparison-review-report/records"
     );
     expect(runtimeExportServiceTraceComparisonReviewReportHref("pkg 1")).toBe(
       "/runtime/export/packages/pkg%201/service-trace-comparison-review-report"
@@ -1325,6 +1330,93 @@ describe("runtime API diagnostics", () => {
     });
     expect(fetchMock).toHaveBeenCalledWith(
       "/runtime/export/packages/pkg/files/route_comparison_review_report_v1.json"
+    );
+  });
+
+  it("loads saved runtime export route comparison review report pages", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        type: "RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_PAGE_V1",
+        version: "v1",
+        page_id: "leo_twin.runtime_export_route_comparison_review_report_page.v1",
+        report_id: "leo_twin.runtime_export_route_comparison_review_report.v1",
+        report_type: "RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1",
+        source: "BACKEND_RUNTIME_EXPORT_PACKAGE",
+        report_scope: "SELECTED_PACKAGE_VS_LIVE_ROUTE_COMPARISON_OUTCOMES",
+        package_id: "pkg",
+        package_dir: "artifacts/runtime_exports/pkg",
+        route_comparison_review: {
+          version: "v1",
+          source: "BACKEND_RUNTIME_EXPORT",
+          review_scope: "PACKAGE_ROUTE_TO_LIVE_RUNTIME_ROUTE",
+          package_route_endpoint:
+            "GET /runtime/export/packages/{package_id}/routes/{route_id}",
+          live_route_endpoint: "GET /runtime/details/routes/{route_id}",
+          compare_action: "compare with live route",
+          comparison_requires_live_runtime: true,
+          route_id_alignment_required: true,
+          exported_rows_only: true,
+          compared_fields: ["latency"],
+          status_reasons: ["FIELDS_DIFFER"],
+          boundary_conditions: ["NO_ROUTE_RECOMPUTE"]
+        },
+        boundary_alignment_hash: "sha256:alignment",
+        boundary_alignment_status: "ALIGNED",
+        boundary_alignment_warnings: [],
+        runtime_export_boundary_hash: "sha256:boundary",
+        report_record_count: 2,
+        record_count: 1,
+        unfiltered_record_count: 2,
+        match_count: 0,
+        different_count: 1,
+        unavailable_count: 0,
+        error_count: 0,
+        cursor: 0,
+        limit: 5,
+        next_cursor: 1,
+        has_more: false,
+        item_count: 1,
+        hidden_record_count: 0,
+        filter_applied: true,
+        filters: {
+          query: "operator",
+          status: "DIFFERENT"
+        },
+        records: [
+          {
+            route_id: "route:0",
+            comparison_status: "DIFFERENT",
+            package_route_detail_hash: "sha256:package",
+            live_route_detail_hash: "sha256:live",
+            matched_field_count: 0,
+            different_field_count: 1,
+            compared_fields: ["latency"],
+            different_fields: ["latency"],
+            status_reason: "FIELDS_DIFFER",
+            operator_note: "operator reviewed"
+          }
+        ],
+        ordering: "route_id ascending, then comparison_status ascending",
+        boundary_conditions: ["NO_ROUTE_RECOMPUTE"],
+        report_hash: "sha256:route-report",
+        page_hash: "sha256:route-page"
+      })
+    }));
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+
+    await expect(
+      loadRuntimeExportRouteComparisonReviewReportPage("pkg", 0, 5, {
+        query: "operator",
+        status: "DIFFERENT"
+      })
+    ).resolves.toMatchObject({
+      package_id: "pkg",
+      page_hash: "sha256:route-page",
+      records: [{ route_id: "route:0", comparison_status: "DIFFERENT" }]
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/runtime/export/packages/pkg/route-comparison-review-report/records?cursor=0&limit=5&query=operator&status=DIFFERENT"
     );
   });
 

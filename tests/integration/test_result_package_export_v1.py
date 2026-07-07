@@ -682,6 +682,24 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert review_report["records"][0]["operator_note"] == (
         "reviewed during integration test"
     )
+    route_report_page = (
+        control_plane.runtime_export_package_route_comparison_review_report_records(
+            str(package["package_id"]),
+            output_root,
+            cursor=0,
+            limit=5,
+            query="/route/latency_s",
+            status="DIFFERENT",
+        )
+    )
+    assert route_report_page["type"] == (
+        "RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_PAGE_V1"
+    )
+    assert route_report_page["record_count"] == 1
+    assert route_report_page["records"][0]["route_id"] == "route-1"
+    assert route_report_page["records"][0]["pinned_path_diffs"][0]["pointer"] == (
+        "/route/latency_s"
+    )
     review_report_path = package_dir / "route_comparison_review_report_v1.json"
     assert review_report_path.exists()
     assert json.loads(review_report_path.read_text(encoding="utf-8")) == json.loads(

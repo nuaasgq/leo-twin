@@ -5,6 +5,67 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-08 - Route Review Report Cursor Page v1
+
+- Branch: `feature/T399-route-review-report-cursor-page-v1`
+- Commit: pending in this commit
+- Scope: add a backend cursor/page read endpoint for saved route comparison
+  review report records. The backend reads
+  `route_comparison_review_report_v1.json` from the selected result package,
+  normalizes records deterministically, filters by status and query, and
+  searches route ids, status fields, hashes, operator notes, compared fields,
+  different fields, and pinned-path diff rows. The dashboard route review
+  drawer now loads that backend page for query/status/cursor/limit changes
+  instead of loading and filtering the full report artifact in the browser.
+  This task does not change Event Kernel behavior, runtime advancement,
+  simulation models, packet-level behavior, external dependencies, result
+  package mutation semantics, or frontend routing architecture.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/app/api.ts`
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/current_product_status.md`
+  - `docs/result_package_contract_v1.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests\unit\test_result_package_contract_v1.py tests\integration\test_result_package_export_v1.py tests\integration\test_runtime_session_control.py -q`
+    - Result: passed, 60 tests.
+  - `pnpm --dir frontend test dataPanel.test.ts api.test.ts`
+    - Result: passed, 2 test files / 277 tests using the bundled Codex
+      Node/pnpm runtime.
+  - `python -m pytest tests\unit\test_system_v2_upgrade_plan_docs.py tests\unit\test_user_guide_v2_docs.py -q`
+    - Result: passed, 4 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing large `DataPanel` chunk
+      warning after minification.
+- Problems encountered and handling:
+  - Route review reports previously had only full-artifact loading in the
+    frontend, unlike service-trace review reports that already had a backend
+    page endpoint. T399 adds the missing read-only page endpoint rather than
+    changing the report save path or recomputing routes.
+  - The target `test_runtime_session_control.py` suite exposed an existing
+    timing-sensitive deterministic export assertion: repeated archive/catalog
+    export checks were running while the backend-owned advance loop could still
+    progress the session. The tests now pause the session before comparing
+    same-state repeated export hashes, keeping the product behavior unchanged.
+  - Local runtime/generated config files were already dirty and remain outside
+    the staged task scope.
+- Known remaining issues / follow-up:
+  - This endpoint reads saved package evidence only. It does not create a
+    broader virtualized artifact browser or add new route/network model
+    fidelity.
+
 ## 2026-07-08 - Dashboard Pinned Diff Review Report v1
 
 - Branch: `feature/T398-dashboard-pinned-diff-review-report-v1`

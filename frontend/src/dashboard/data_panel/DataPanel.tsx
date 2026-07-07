@@ -28,6 +28,7 @@ import {
   RuntimeExportDiagnosticsBundleV1,
   RuntimeExportPackageCompareV1,
   RuntimeExportRouteComparisonReviewV1,
+  RuntimeExportRouteComparisonReviewReportPageV1,
   RuntimeExportRouteComparisonReviewReportV1,
   RuntimeExportRouteComparisonReviewReportRecordV1,
   RuntimeExportServiceTraceComparisonReviewReportPageV1,
@@ -360,6 +361,7 @@ export const DataPanel = memo(function DataPanel({
   onUserConfigurationApply,
   onRuntimeExportCompareSelect,
   onRuntimeExportRouteDetailPageQueryChange,
+  onRuntimeExportRouteComparisonReviewReportPageQueryChange,
   onRuntimeExportServiceTracePageQueryChange,
   onRuntimeExportServiceTraceComparisonReviewReportPageQueryChange,
   onRuntimeExportUserServiceRequestPageQueryChange,
@@ -398,7 +400,7 @@ export const DataPanel = memo(function DataPanel({
   runtimeExportRouteDetailIndex?: RuntimeExportRouteDetailIndexV1 | null;
   runtimeExportRouteDetailPage?: RuntimeExportRouteDetailPageV1 | null;
   runtimeExportRouteDetailItem?: RuntimeExportRouteDetailItemV1 | null;
-  runtimeExportRouteComparisonReviewReport?: RuntimeExportRouteComparisonReviewReportV1 | null;
+  runtimeExportRouteComparisonReviewReport?: RuntimeExportRouteComparisonReviewReportPageV1 | null;
   runtimeExportServiceTraceComparisonReviewReport?: RuntimeExportServiceTraceComparisonReviewReportPageV1 | null;
   runtimeExportPackageAuditIndex?: RuntimeExportPackageAuditIndexV1 | null;
   runtimeExportPackageAcceptanceReport?: RuntimeExportPackageAcceptanceReportV1 | null;
@@ -472,6 +474,9 @@ export const DataPanel = memo(function DataPanel({
   onRuntimeExportCompareSelect?: (packageId: string) => void;
   onRuntimeExportRouteDetailPageQueryChange?: (
     request: DataPanelExportRouteDetailPageRequest
+  ) => void;
+  onRuntimeExportRouteComparisonReviewReportPageQueryChange?: (
+    request: DataPanelExportRouteComparisonReviewReportPageRequest
   ) => void;
   onRuntimeExportServiceTracePageQueryChange?: (
     request: DataPanelExportServiceTracePageRequest
@@ -1038,6 +1043,26 @@ export const DataPanel = memo(function DataPanel({
       return;
     }
     setExportServiceTracePageCursor(cursor);
+  };
+  const requestRuntimeExportRouteReviewReportPage = (
+    cursor: number,
+    filterOverrides: DataPanelRouteComparisonReviewReportFilter = {}
+  ) => {
+    const nextQuery = filterOverrides.query ?? exportRouteReviewReportFilter;
+    const nextStatus =
+      filterOverrides.status ?? exportRouteReviewReportStatusFilter;
+    if (onRuntimeExportRouteComparisonReviewReportPageQueryChange) {
+      onRuntimeExportRouteComparisonReviewReportPageQueryChange({
+        cursor,
+        limit: 5,
+        filters: {
+          query: nextQuery,
+          status: nextStatus
+        }
+      });
+      return;
+    }
+    setExportRouteReviewReportPage(cursor);
   };
   const requestRuntimeExportServiceTraceReviewReportPage = (
     cursor: number,
@@ -1782,13 +1807,7 @@ export const DataPanel = memo(function DataPanel({
   const exportRouteComparisonReviewReportStatus =
     buildDataPanelExportRouteComparisonReviewReportStatus(
       buildDataPanelExportRouteComparisonReviewReportDisplay(
-        runtimeExportRouteComparisonReviewReport,
-        {
-          cursor: exportRouteReviewReportPage,
-          limit: 5,
-          query: exportRouteReviewReportFilter,
-          status: exportRouteReviewReportStatusFilter
-        }
+        runtimeExportRouteComparisonReviewReport
       ),
       runtimeExportComparePackageId,
       runtimeExportRouteComparisonReviewReportLoading,
@@ -4429,9 +4448,11 @@ export const DataPanel = memo(function DataPanel({
                           type="search"
                           value={exportRouteReviewReportFilter}
                           onChange={(event) => {
-                            setExportRouteReviewReportFilter(
-                              event.currentTarget.value
-                            );
+                            const nextQuery = event.currentTarget.value;
+                            setExportRouteReviewReportFilter(nextQuery);
+                            requestRuntimeExportRouteReviewReportPage(0, {
+                              query: nextQuery
+                            });
                           }}
                           placeholder="route / status / hash / note"
                         />
@@ -4445,10 +4466,12 @@ export const DataPanel = memo(function DataPanel({
                           id="data-panel-export-review-report-status"
                           value={exportRouteReviewReportStatusFilter}
                           onChange={(event) => {
-                            setExportRouteReviewReportStatusFilter(
-                              event.currentTarget
-                                .value as DataPanelRouteComparisonReviewReportStatusFilter
-                            );
+                            const nextStatus = event.currentTarget
+                              .value as DataPanelRouteComparisonReviewReportStatusFilter;
+                            setExportRouteReviewReportStatusFilter(nextStatus);
+                            requestRuntimeExportRouteReviewReportPage(0, {
+                              status: nextStatus
+                            });
                           }}
                         >
                           <option value="ALL">ALL</option>
@@ -4466,7 +4489,7 @@ export const DataPanel = memo(function DataPanel({
                               .canPreviousPage
                           }
                           onClick={() => {
-                            setExportRouteReviewReportPage(
+                            requestRuntimeExportRouteReviewReportPage(
                               exportRouteComparisonReviewReportStatus.previousCursor
                             );
                           }}
@@ -4479,7 +4502,7 @@ export const DataPanel = memo(function DataPanel({
                             !exportRouteComparisonReviewReportStatus.canNextPage
                           }
                           onClick={() => {
-                            setExportRouteReviewReportPage(
+                            requestRuntimeExportRouteReviewReportPage(
                               exportRouteComparisonReviewReportStatus.nextCursor
                             );
                           }}
@@ -17128,32 +17151,53 @@ export function buildDataPanelExportPackageAuditIndexStatus(
 }
 
 export function buildDataPanelExportRouteComparisonReviewReportDisplay(
-  report: RuntimeExportRouteComparisonReviewReportV1 | null | undefined,
+  report:
+    | RuntimeExportRouteComparisonReviewReportV1
+    | RuntimeExportRouteComparisonReviewReportPageV1
+    | null
+    | undefined,
   options: DataPanelExportRouteComparisonReviewReportOptions = {}
 ): DataPanelExportRouteComparisonReviewReportDisplay | null {
   if (report === null || report === undefined) {
     return null;
   }
-  const pageLimit = Math.max(1, Math.floor(options.limit ?? 5));
+  const backendPage =
+    typeof (report as { page_id?: unknown }).page_id === "string";
+  const pageReport = backendPage
+    ? (report as RuntimeExportRouteComparisonReviewReportPageV1)
+    : null;
+  const pageLimit = pageReport?.limit ?? Math.max(1, Math.floor(options.limit ?? 5));
   const requestedCursor = Math.max(0, Math.floor(options.cursor ?? 0));
-  const statusFilter = options.status ?? "ALL";
-  const query = options.query?.trim() ?? "";
+  const statusFilter = pageReport?.filters.status ?? options.status ?? "ALL";
+  const query = pageReport?.filters.query ?? options.query?.trim() ?? "";
   const normalizedQuery = query.toLowerCase();
-  const filteredRecords = report.records.filter((record) => {
-    if (statusFilter !== "ALL" && record.comparison_status !== statusFilter) {
-      return false;
-    }
-    if (normalizedQuery.length === 0) {
-      return true;
-    }
-    return routeComparisonReviewReportRecordMatchesQuery(record, normalizedQuery);
-  });
+  const filteredRecords =
+    pageReport === null
+      ? report.records.filter((record) => {
+          if (statusFilter !== "ALL" && record.comparison_status !== statusFilter) {
+            return false;
+          }
+          if (normalizedQuery.length === 0) {
+            return true;
+          }
+          return routeComparisonReviewReportRecordMatchesQuery(
+            record,
+            normalizedQuery
+          );
+        })
+      : report.records;
   const maxStart =
     filteredRecords.length === 0
       ? 0
       : Math.floor((filteredRecords.length - 1) / pageLimit) * pageLimit;
-  const pageCursor = Math.min(requestedCursor, maxStart);
-  const pageRecords = filteredRecords.slice(pageCursor, pageCursor + pageLimit);
+  const pageCursor =
+    pageReport === null ? Math.min(requestedCursor, maxStart) : pageReport.cursor;
+  const pageRecords =
+    pageReport === null
+      ? filteredRecords.slice(pageCursor, pageCursor + pageLimit)
+      : pageReport.records;
+  const filteredRecordCount = pageReport?.record_count ?? filteredRecords.length;
+  const totalRecordCount = pageReport?.report_record_count ?? report.record_count;
   const reviewReady =
     report.error_count === 0 &&
     report.unavailable_count === 0 &&
@@ -17178,7 +17222,10 @@ export function buildDataPanelExportRouteComparisonReviewReportDisplay(
       noteLabel: comparisonReviewReportNoteLabel(record)
     }));
   const hiddenCount = Math.max(0, filteredRecords.length - rows.length);
-  const hiddenLabel = hiddenCount > 0 ? ` / hidden ${formatCount(hiddenCount)}` : "";
+  const hiddenLabel =
+    (pageReport?.hidden_record_count ?? hiddenCount) > 0
+      ? ` / hidden ${formatCount(pageReport?.hidden_record_count ?? hiddenCount)}`
+      : "";
   const visibleStart = rows.length === 0 ? 0 : pageCursor + 1;
   const visibleEnd = pageCursor + rows.length;
   const queryLabel = query.length > 0 ? ` / query ${query}` : "";
@@ -17198,6 +17245,7 @@ export function buildDataPanelExportRouteComparisonReviewReportDisplay(
       `different ${formatCount(report.different_count)}`,
       `unavailable ${formatCount(report.unavailable_count)}`,
       `error ${formatCount(report.error_count)}`,
+      ...(pageReport ? [`backend cursor page ${shortRuntimeHash(pageReport.page_hash)}`] : []),
       ...boundaryAlignmentLabels,
       `ordering ${report.ordering}`
     ],
@@ -17208,15 +17256,15 @@ export function buildDataPanelExportRouteComparisonReviewReportDisplay(
     ),
     filterLabel: `showing ${formatCount(visibleStart)}-${formatCount(
       visibleEnd
-    )} of ${formatCount(filteredRecords.length)} filtered / total ${formatCount(
-      report.record_count
+    )} of ${formatCount(filteredRecordCount)} filtered / total ${formatCount(
+      totalRecordCount
     )} / status ${statusFilter}${queryLabel}`,
     pageCursor,
     pageLimit,
     previousCursor: Math.max(0, pageCursor - pageLimit),
-    nextCursor: pageCursor + pageLimit,
+    nextCursor: pageReport?.next_cursor ?? pageCursor + pageLimit,
     canPreviousPage: pageCursor > 0,
-    canNextPage: pageCursor + pageLimit < filteredRecords.length
+    canNextPage: pageReport?.has_more ?? pageCursor + pageLimit < filteredRecords.length
   };
 }
 
@@ -18008,6 +18056,12 @@ export interface DataPanelExportServiceTracePageRequest {
   cursor: number;
   limit?: number;
   filters?: DataPanelServiceTraceFilter;
+}
+
+export interface DataPanelExportRouteComparisonReviewReportPageRequest {
+  cursor: number;
+  limit?: number;
+  filters?: DataPanelRouteComparisonReviewReportFilter;
 }
 
 export interface DataPanelExportServiceTraceComparisonReviewReportPageRequest {
@@ -21437,10 +21491,13 @@ export interface DataPanelUserServiceRequestFilter {
   networkWaiting?: string;
 }
 
-export interface DataPanelServiceTraceComparisonReviewReportFilter {
+export interface DataPanelRouteComparisonReviewReportFilter {
   query?: string;
   status?: DataPanelRouteComparisonReviewReportStatusFilter | string;
 }
+
+export type DataPanelServiceTraceComparisonReviewReportFilter =
+  DataPanelRouteComparisonReviewReportFilter;
 
 export interface DataPanelServiceLifecycleTraceStageRow {
   stageId: string;

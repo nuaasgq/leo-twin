@@ -24,6 +24,7 @@ import {
   RuntimeExportScenarioReviewChecklistTemplateV1,
   RuntimeExportScenarioReviewChecklistV1,
   RuntimeExportRouteComparisonReviewReportEnvelope,
+  RuntimeExportRouteComparisonReviewReportPageV1,
   RuntimeExportRouteComparisonReviewReportRecordV1,
   RuntimeExportRouteComparisonReviewReportV1,
   RuntimeExportServiceTraceComparisonReviewReportEnvelope,
@@ -570,6 +571,34 @@ export async function loadRuntimeExportRouteComparisonReviewReport(
   return decodeRuntimeExportRouteComparisonReviewReportArtifact(await response.json());
 }
 
+export async function loadRuntimeExportRouteComparisonReviewReportPage(
+  packageId: string,
+  cursor = 0,
+  limit = 100,
+  filters: Pick<RuntimeDetailQueryFilters, "query"> & { status?: string } = {},
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): Promise<RuntimeExportRouteComparisonReviewReportPageV1> {
+  const params = new URLSearchParams({
+    cursor: String(Math.max(0, Math.floor(cursor))),
+    limit: String(Math.max(1, Math.floor(limit)))
+  });
+  if (filters.query !== undefined && filters.query.trim().length > 0) {
+    params.set("query", filters.query.trim());
+  }
+  if (filters.status !== undefined && filters.status.trim().length > 0) {
+    params.set("status", filters.status.trim());
+  }
+  const url = `${runtimeExportRouteComparisonReviewReportRecordsHref(
+    packageId,
+    endpoint
+  )}?${params.toString()}`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`failed to load runtime export route comparison review report page from ${url}: HTTP ${response.status}`);
+  }
+  return decodeRuntimeExportRouteComparisonReviewReportPage(await response.json());
+}
+
 export async function loadRuntimeExportServiceTraceComparisonReviewReport(
   packageId: string,
   endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
@@ -1072,6 +1101,16 @@ export function runtimeExportRouteComparisonReviewReportHref(
   endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
 ): string {
   return `${runtimeExportPackageRecordHref(packageId, endpoint)}/route-comparison-review-report`;
+}
+
+export function runtimeExportRouteComparisonReviewReportRecordsHref(
+  packageId: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): string {
+  return `${runtimeExportRouteComparisonReviewReportHref(
+    packageId,
+    endpoint
+  )}/records`;
 }
 
 export function runtimeExportServiceTraceComparisonReviewReportHref(
@@ -1677,6 +1716,29 @@ export function decodeRuntimeExportRouteComparisonReviewReportArtifact(
     );
   }
   return value as RuntimeExportRouteComparisonReviewReportV1;
+}
+
+export function decodeRuntimeExportRouteComparisonReviewReportPage(
+  value: unknown
+): RuntimeExportRouteComparisonReviewReportPageV1 {
+  const report = decodeRuntimeExportRouteComparisonReviewReportArtifact(
+    value
+  ) as RuntimeExportRouteComparisonReviewReportPageV1;
+  if (
+    typeof report.page_id !== "string" ||
+    typeof report.cursor !== "number" ||
+    typeof report.limit !== "number" ||
+    typeof report.next_cursor !== "number" ||
+    typeof report.has_more !== "boolean" ||
+    typeof report.page_hash !== "string" ||
+    typeof report.filters !== "object" ||
+    report.filters === null
+  ) {
+    throw new TypeError(
+      "runtime export route comparison review report page must include page_id, cursor, limit, next_cursor, has_more, filters, and page_hash"
+    );
+  }
+  return report;
 }
 
 export function decodeRuntimeExportServiceTraceComparisonReviewReport(

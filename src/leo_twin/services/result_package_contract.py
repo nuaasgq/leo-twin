@@ -53,6 +53,9 @@ RUNTIME_EXPORT_ROUTE_DETAIL_ITEM_V1_ID = (
 RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_V1_ID = (
     "leo_twin.runtime_export_route_comparison_review_report.v1"
 )
+RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_PAGE_V1_ID = (
+    "leo_twin.runtime_export_route_comparison_review_report_page.v1"
+)
 RUNTIME_EXPORT_SERVICE_TRACE_COMPARISON_REVIEW_REPORT_V1_ID = (
     "leo_twin.runtime_export_service_trace_comparison_review_report.v1"
 )
@@ -2687,6 +2690,110 @@ def build_runtime_export_route_comparison_review_report_v1(
     }
     report["report_hash"] = stable_hash_payload(report)
     return report
+
+
+def build_runtime_export_route_comparison_review_report_page_v1(
+    report: Mapping[str, Any],
+    *,
+    cursor: int = 0,
+    limit: int = 100,
+    query: str = "",
+    status: str = "ALL",
+) -> dict[str, object]:
+    """Build a deterministic cursor page from a saved route review report."""
+
+    if not isinstance(report, Mapping):
+        raise TypeError("report must be a mapping")
+    review = _mapping(report.get("route_comparison_review"))
+    normalized_records = tuple(
+        _runtime_export_route_comparison_report_record(record, review)
+        for record in _records(report.get("records"))
+    )
+    normalized_status = _normalized_filter_value(status, "ALL")
+    if normalized_status not in {"ALL", "MATCH", "DIFFERENT", "UNAVAILABLE", "ERROR"}:
+        normalized_status = "ALL"
+    normalized_query = _normalized_search_query(query)
+    filtered_records = tuple(
+        record
+        for record in normalized_records
+        if _runtime_export_route_comparison_report_record_matches_filter(
+            record,
+            query=normalized_query,
+            status=normalized_status,
+        )
+    )
+    normalized_cursor = _page_cursor(cursor)
+    normalized_limit = _page_limit(limit)
+    items = filtered_records[
+        normalized_cursor : normalized_cursor + normalized_limit
+    ]
+    next_cursor = min(len(filtered_records), normalized_cursor + len(items))
+    page: dict[str, object] = {
+        "type": "RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_PAGE_V1",
+        "version": "v1",
+        "page_id": RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_PAGE_V1_ID,
+        "source": "BACKEND_RUNTIME_EXPORT_PACKAGE",
+        "report_id": str(report.get("report_id", "")),
+        "report_type": str(report.get("type", "")),
+        "report_scope": str(report.get("report_scope", "")),
+        "package_id": str(report.get("package_id", "")),
+        "package_dir": str(report.get("package_dir", "")),
+        "route_comparison_review": dict(review),
+        "runtime_export_boundary_alignment_v1": dict(
+            _mapping(report.get("runtime_export_boundary_alignment_v1"))
+        ),
+        "boundary_alignment_hash": str(report.get("boundary_alignment_hash", "")),
+        "boundary_alignment_status": str(
+            report.get("boundary_alignment_status", "")
+        ),
+        "boundary_alignment_warnings": _string_tuple(
+            report.get("boundary_alignment_warnings")
+        ),
+        "runtime_export_boundary_hash": str(
+            report.get("runtime_export_boundary_hash", "")
+        ),
+        "report_hash": str(report.get("report_hash", "")),
+        "report_record_count": _integer(report.get("record_count")),
+        "record_count": len(filtered_records),
+        "unfiltered_record_count": len(normalized_records),
+        "match_count": sum(
+            1 for record in filtered_records if record["comparison_status"] == "MATCH"
+        ),
+        "different_count": sum(
+            1
+            for record in filtered_records
+            if record["comparison_status"] == "DIFFERENT"
+        ),
+        "unavailable_count": sum(
+            1
+            for record in filtered_records
+            if record["comparison_status"] == "UNAVAILABLE"
+        ),
+        "error_count": sum(
+            1 for record in filtered_records if record["comparison_status"] == "ERROR"
+        ),
+        "cursor": normalized_cursor,
+        "limit": normalized_limit,
+        "next_cursor": next_cursor,
+        "has_more": next_cursor < len(filtered_records),
+        "item_count": len(items),
+        "hidden_record_count": max(0, len(filtered_records) - len(items)),
+        "filter_applied": normalized_status != "ALL" or bool(normalized_query),
+        "filters": {
+            "query": normalized_query,
+            "status": normalized_status,
+        },
+        "records": items,
+        "ordering": str(
+            report.get(
+                "ordering",
+                "route_id ascending, then comparison_status ascending",
+            )
+        ),
+        "boundary_conditions": _string_tuple(report.get("boundary_conditions")),
+    }
+    page["page_hash"] = stable_hash_payload(page)
+    return page
 
 
 def build_runtime_export_service_trace_comparison_review_report_v1(
@@ -6140,6 +6247,43 @@ def _runtime_export_service_trace_comparison_report_record(
         "status_reason": str(record.get("status_reason", "")),
         "operator_note": str(record.get("operator_note", "")),
     }
+
+
+def _runtime_export_route_comparison_report_record_matches_filter(
+    record: Mapping[str, Any],
+    *,
+    query: str,
+    status: str,
+) -> bool:
+    if status != "ALL" and str(record.get("comparison_status", "")).upper() != status:
+        return False
+    if not query:
+        return True
+    values = (
+        str(record.get("route_id", "")),
+        str(record.get("comparison_status", "")),
+        str(record.get("package_route_detail_hash", "")),
+        str(record.get("live_route_detail_hash", "")),
+        str(record.get("status_reason", "")),
+        str(record.get("operator_note", "")),
+        *tuple(str(value) for value in _string_tuple(record.get("compared_fields"))),
+        *tuple(str(value) for value in _string_tuple(record.get("different_fields"))),
+        *tuple(
+            value
+            for item in _runtime_export_pinned_path_diff_records(
+                record.get("pinned_path_diffs")
+            )
+            for value in (
+                str(item["pointer"]),
+                str(item["package_value"]),
+                str(item["live_value"]),
+                str(item["package_status"]),
+                str(item["live_status"]),
+                str(item["comparison_status"]),
+            )
+        ),
+    )
+    return any(query in _normalized_search_query(value) for value in values)
 
 
 def _runtime_export_pinned_path_diff_records(
