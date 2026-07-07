@@ -2713,6 +2713,91 @@ describe("buildDataPanelExportCatalogDisplay", () => {
     ).toBeNull();
   });
 
+  it("marks the artifact health row linked to the selected benchmark evidence focus", () => {
+    const catalog = {
+      version: "v1",
+      source: "BACKEND_RUNTIME_EXPORT_CATALOG",
+      catalog_scope: "PERSISTED_EXPORT_PACKAGES",
+      catalog_file: "artifacts/runtime_exports/runtime_export_catalog_v1.json",
+      export_root: "artifacts/runtime_exports",
+      record_count: 1,
+      catalog_hash:
+        "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      latest_export: null,
+      records: [
+        {
+          catalog_key: "ARCHIVE:pkg-review",
+          export_type: "ARCHIVE",
+          package_id: "pkg-review",
+          package_dir: "artifacts/runtime_exports/pkg-review",
+          relative_package_dir: "pkg-review",
+          file_count: 2,
+          manifest_hash:
+            "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+          current_sim_time: 12,
+          processed_event_count: 100,
+          archive_filename: "pkg-review.zip",
+          archive_sha256:
+            "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+          archive_bytes: 8192,
+          files: [
+            {
+              name: "manifest",
+              filename: "manifest.json",
+              bytes: 120,
+              sha256:
+                "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+            },
+            {
+              name: "network_kpi_benchmark_validation",
+              filename: "network_kpi_benchmark_validation_v1.json",
+              bytes: 512,
+              sha256:
+                "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+            }
+          ]
+        }
+      ]
+    };
+    const focus = buildDataPanelBenchmarkEvidenceFocus({
+      tone: "different",
+      groupLabel: "expected range",
+      itemLabel: "avg_latency_ms",
+      statusLabel: "FAIL",
+      expectedLabel: "expected 20-80 ms",
+      observedLabel: "observed 120 ms",
+      issueLabel: "latency outside benchmark range",
+      hashLabel: "deadbeefcafe",
+      contextLabel: "KPI benchmark / avg_latency_ms",
+      pointerLabel: "json /checks/0",
+      artifactLabel: "network_kpi_benchmark_validation_v1.json",
+      artifactHref:
+        "/runtime/export/packages/pkg-review/files/network_kpi_benchmark_validation_v1.json",
+      artifactTitle:
+        "network_kpi_benchmark_validation_v1.json contains the backend-owned evidence."
+    });
+
+    const display = buildDataPanelExportArtifactHealthDisplay(
+      catalog,
+      "pkg-review",
+      null,
+      focus
+    );
+
+    expect(
+      display?.rows.find(
+        (row) => row.filename === "network_kpi_benchmark_validation_v1.json"
+      )
+    ).toMatchObject({
+      focused: true,
+      focusLabel: "expected range / avg_latency_ms / FAIL / deadbeefcafe"
+    });
+    expect(display?.rows.find((row) => row.filename === "manifest.json")).toMatchObject({
+      focused: false,
+      focusLabel: ""
+    });
+  });
+
   it("surfaces saved route comparison review report artifacts from backend catalog", () => {
     const catalog = {
       version: "v1",

@@ -723,7 +723,8 @@ export const DataPanel = memo(function DataPanel({
   const exportArtifactHealthDisplay = buildDataPanelExportArtifactHealthDisplay(
     runtimeExportCatalog,
     runtimeExportComparePackageId,
-    runtimeExportReviewSummary
+    runtimeExportReviewSummary,
+    benchmarkEvidenceFocus
   );
   const exportDiagnosticsDisplay = buildDataPanelExportDiagnosticsDisplay(
     runtimeExportDiagnosticsBundle
@@ -1992,7 +1993,12 @@ export const DataPanel = memo(function DataPanel({
               <div className="data-panel-export-artifact-health-grid">
                 {exportArtifactHealthDisplay.rows.map((row) =>
                   row.href ? (
-                    <a href={row.href} key={row.filename} title={row.title}>
+                    <a
+                      className={row.focused ? "focused" : undefined}
+                      href={row.href}
+                      key={row.filename}
+                      title={row.title}
+                    >
                       <span>{row.filename}</span>
                       <strong className={row.present ? "present" : "missing"}>
                         {row.statusLabel}
@@ -2000,9 +2006,18 @@ export const DataPanel = memo(function DataPanel({
                       <small>
                         {row.roleLabel} / {row.sizeLabel} / {row.hashLabel}
                       </small>
+                      {row.focused ? (
+                        <small className="data-panel-export-artifact-focus-label">
+                          focused evidence / {row.focusLabel}
+                        </small>
+                      ) : null}
                     </a>
                   ) : (
-                    <span key={row.filename} title={row.title}>
+                    <span
+                      className={row.focused ? "focused" : undefined}
+                      key={row.filename}
+                      title={row.title}
+                    >
                       <span>{row.filename}</span>
                       <strong className={row.present ? "present" : "missing"}>
                         {row.statusLabel}
@@ -2010,6 +2025,11 @@ export const DataPanel = memo(function DataPanel({
                       <small>
                         {row.roleLabel} / {row.sizeLabel} / {row.hashLabel}
                       </small>
+                      {row.focused ? (
+                        <small className="data-panel-export-artifact-focus-label">
+                          focused evidence / {row.focusLabel}
+                        </small>
+                      ) : null}
                     </span>
                   )
                 )}
@@ -11362,6 +11382,8 @@ export interface DataPanelExportArtifactHealthRow {
   href: string | null;
   required: boolean;
   present: boolean;
+  focused: boolean;
+  focusLabel: string;
   title: string;
 }
 
@@ -13415,7 +13437,8 @@ export function buildDataPanelExportServiceTraceComparisonReviewReportStatus(
 export function buildDataPanelExportArtifactHealthDisplay(
   catalog: RuntimeExportCatalogV1 | null | undefined,
   selectedPackageId: string | null | undefined,
-  reviewSummary: RuntimeExportReviewSummaryV1 | null | undefined
+  reviewSummary: RuntimeExportReviewSummaryV1 | null | undefined,
+  benchmarkEvidenceFocus: DataPanelBenchmarkEvidenceFocus | null | undefined = null
 ): DataPanelExportArtifactHealthDisplay | null {
   if (
     catalog === null ||
@@ -13453,6 +13476,10 @@ export function buildDataPanelExportArtifactHealthDisplay(
     const required = requiredFilenames.has(filename);
     const missing = missingRequiredFilenames.has(filename) || (required && file === null);
     const present = file !== null && !missing;
+    const focused = benchmarkEvidenceFocus?.artifactLabel === filename;
+    const focusLabel = focused
+      ? `${benchmarkEvidenceFocus.statusLabel} / ${benchmarkEvidenceFocus.summaryLabel}`
+      : "";
     return {
       filename,
       roleLabel: required ? "必需" : "附加",
@@ -13462,6 +13489,8 @@ export function buildDataPanelExportArtifactHealthDisplay(
       href: file ? runtimeExportPackageFileHref(selectedPackageId, filename) : null,
       required,
       present,
+      focused,
+      focusLabel,
       title: `${filename} / ${missing ? "缺失" : "已登记"} / ${
         file ? file.sha256 : "no file hash"
       }`

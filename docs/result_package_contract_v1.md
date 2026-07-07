@@ -589,6 +589,10 @@ does not parse or revalidate the artifact in the browser. Selecting a benchmark
 row stores a local dashboard review focus that shows the row status, artifact,
 context, JSON pointer, expected value, and observed value together, while the
 artifact link remains a normal read-only package file link.
+The same local focus also marks the matching filename in the package artifact
+health grid, making the selected benchmark evidence file visible without
+parsing artifacts, mutating result packages, or changing package acceptance
+semantics in the browser.
 
 For operator handoff, the demo backend also exposes the generated Markdown
 handoff report:

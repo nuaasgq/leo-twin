@@ -17276,3 +17276,54 @@ change.
 - Recommended follow-up:
   - Add an artifact viewer mode that can use the selected benchmark evidence
     pointer to prefilter or highlight the linked JSON evidence path.
+
+## 2026-07-07 - T353 dashboard artifact focus marker v1
+
+- Branch: `feature/T353-dashboard-artifact-focus-marker-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: carry the local benchmark evidence focus from T352 into the package
+  artifact health grid. When a benchmark row is focused, the dashboard now
+  marks the matching backend-named artifact filename in the artifact health
+  list and shows a compact focus label. This keeps the review workflow
+  read-only: no result-package parsing, package mutation, acceptance
+  recomputation, backend route behavior, simulation model, or Event Kernel
+  behavior changed.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `.\node_modules\.bin\tsc.cmd --noEmit -p tsconfig.json` from
+    `frontend`
+    - Result: passed with the bundled Codex Node runtime path.
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 193 tests.
+  - `pnpm --dir frontend test dataPanel.test.ts api.test.ts appSurface.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 3 test
+      files and 280 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path; Vite
+      reported the existing large `DataPanel` chunk warning.
+  - `git diff --check`
+    - Result: passed; Git emitted CRLF warnings for the existing unstaged
+      runtime config drift.
+- Problems encountered:
+  - The default shell environment did not expose `node`; validation used the
+    bundled Codex Node/Pnpm runtime paths returned by the desktop workspace
+    dependency helper.
+  - PowerShell rendered some existing UTF-8 Chinese strings as mojibake during
+    inspection, so edits avoided changing existing Chinese UI copy.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The focus marker identifies the matching artifact file but does not yet
+    open an artifact viewer or scroll to the `evidence_json_pointer` path.
+  - The focus state remains local to the current dashboard session and is not
+    persisted into result packages.
+- Recommended follow-up:
+  - Add a read-only artifact viewer mode that can use `evidence_json_pointer`
+    to prefilter or highlight the linked JSON evidence path inside the
+    selected package artifact.

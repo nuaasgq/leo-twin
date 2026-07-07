@@ -2867,6 +2867,13 @@ button.data-panel-route-row {
   background: #0c1a24;
 }
 
+.data-panel-export-artifact-health-grid a.focused,
+.data-panel-export-artifact-health-grid > span.focused {
+  border-color: var(--accent-cyan);
+  background: #0d2028;
+  box-shadow: inset 0 0 0 1px rgba(94, 234, 212, 0.18);
+}
+
 .data-panel-export-artifact-health-grid a > span,
 .data-panel-export-artifact-health-grid > span > span {
   min-width: 0;
@@ -2895,6 +2902,11 @@ button.data-panel-route-row {
   font-size: 10px;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.data-panel-export-artifact-health-grid small.data-panel-export-artifact-focus-label {
+  color: var(--accent-cyan);
+  font-weight: 800;
 }
 
 .data-panel-export-diagnostics-drawer {

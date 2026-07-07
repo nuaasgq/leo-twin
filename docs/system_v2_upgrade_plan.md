@@ -810,6 +810,10 @@ Tasks:
     local dashboard review-focus state for benchmark rows, so selecting a row
     displays the current artifact, context, JSON pointer, expected value, and
     observed value together while preserving read-only package artifact links.
+    T353 carries that same selected focus into the package artifact health
+    grid, marking the backend-named evidence file so an operator can trace a
+    benchmark row to a concrete package artifact without browser-side package
+    parsing or acceptance recomputation.
 
 ### WS9. Delivery and Operations v2
 
