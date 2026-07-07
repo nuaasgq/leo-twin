@@ -5,6 +5,51 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-08 - Dashboard Exact Detail Review Workspace v1
+
+- Branch: `feature/T390-dashboard-exact-detail-review-workspace-v1`
+- Commit: pending in this commit
+- Scope: add an exact-detail review workspace to the standalone dashboard
+  detail section. The workspace reuses existing exact-detail inspectors and
+  App-owned request status to summarize backend exact-detail synchronization,
+  visible-window fallback state, loading/error/pending state, reviewable field
+  counts, warning-field counts, and resource/synchronization field counts for
+  users, satellites, routes, services, service traces, and compute nodes. This
+  task does not change Event Kernel behavior, backend protocols, runtime
+  contracts, simulation models, packet-level behavior, or frontend routing
+  architecture.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/current_product_status.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed, 1 test file / 223 tests using the bundled Codex
+      Node/pnpm runtime.
+  - `python -m pytest tests\unit\test_system_v2_upgrade_plan_docs.py tests\unit\test_user_guide_v2_docs.py -q`
+    - Result: passed, 4 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing large `DataPanel` chunk
+      warning after minification.
+- Problems encountered and handling:
+  - The first production build caught a narrow test helper type that did not
+    allow `tone` fields in detail-inspector test fixtures. The helper was
+    widened to an explicit test-stub field array and the target test/build were
+    rerun successfully.
+  - The review workspace intentionally counts evidence from the already-built
+    inspector fields instead of reading raw backend payloads or recomputing
+    business semantics in the browser.
+  - Local runtime/generated config files were already dirty and remain outside
+    the staged task scope.
+- Known remaining issues / follow-up:
+  - The workspace summarizes exact-detail evidence but does not yet open a raw
+    JSON side-by-side payload inspector. A later dashboard pass can add a
+    read-only exact-detail payload viewer with field-level provenance.
+
 ## 2026-07-08 - Dashboard Node Evidence Workspace v1
 
 - Branch: `feature/T389-dashboard-node-evidence-workspace-v1`

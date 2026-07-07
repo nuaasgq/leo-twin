@@ -1820,6 +1820,46 @@ export const DataPanel = memo(function DataPanel({
     selectedServiceTraceBackendDetail,
     displayedServiceTraceCorrelationInspector
   );
+  const exactDetailReviewWorkspace = buildDataPanelExactDetailReviewWorkspace({
+    selected: {
+      userId: selectedDetailUserId,
+      satelliteId: selectedDetailSatelliteId,
+      routeId: selectedRouteDetailId,
+      serviceId: selectedServiceDetailId,
+      traceId: selectedServiceTraceRow?.traceId ?? null,
+      computeNodeId: selectedComputeNodeDetailId,
+      userRow: selectedUserDetailRow,
+      satelliteRow: selectedSatelliteDetailRow,
+      routeRow: selectedRouteDetailRow,
+      serviceRow: selectedServiceDetailRow,
+      traceRow: selectedServiceTraceRow,
+      computeNodeRow: selectedComputeNodeDetailRow,
+      backendDetails: {
+        user: selectedUserBackendDetail,
+        satellite: selectedSatelliteBackendDetail,
+        route: selectedRouteBackendDetail,
+        service: selectedServiceBackendDetail,
+        serviceTrace: selectedServiceTraceBackendDetail,
+        computeNode: selectedComputeNodeBackendDetail
+      },
+      requestStatuses: {
+        user: userDetailRequestStatus,
+        satellite: satelliteDetailRequestStatus,
+        route: routeDetailRequestStatus,
+        service: serviceDetailRequestStatus,
+        serviceTrace: serviceTraceDetailRequestStatus,
+        computeNode: computeNodeDetailRequestStatus
+      }
+    },
+    inspectors: {
+      user: displayedUserDetailInspector,
+      satellite: displayedSatelliteDetailInspector,
+      route: displayedRouteDetailInspector,
+      service: displayedServiceDetailInspector,
+      serviceTrace: displayedServiceTraceCorrelationInspector,
+      computeNode: displayedComputeNodeDetailInspector
+    }
+  });
   const userSourceBadge = buildRuntimeDetailSourceBadge(userBusinessRequests.sourceLabel);
   const satelliteSourceBadge = buildRuntimeDetailSourceBadge(satelliteResourceRows.sourceLabel);
   const detailScopeNotes = [
@@ -5644,6 +5684,7 @@ export const DataPanel = memo(function DataPanel({
       />
       <DetailInspectorDrawer items={nodeDetailDrawerItems} />
       <ServiceTraceWideBrowser display={serviceTraceBrowserDisplay} />
+      <ExactDetailReviewWorkspace display={exactDetailReviewWorkspace} />
       <div className="data-panel-detail-grid">
         <section className="dashboard-section data-panel-detail-table" aria-label="用户节点状态明细">
           <div className="section-title">用户节点状态</div>
@@ -6869,6 +6910,47 @@ function DetailInspectorDrawer({
   );
 }
 
+function ExactDetailReviewWorkspace({
+  display
+}: {
+  display: DataPanelExactDetailReviewWorkspaceDisplay;
+}) {
+  return (
+    <section
+      className={`data-panel-exact-detail-review ${display.tone}`}
+      aria-label="精确详情审查工作区"
+    >
+      <div className="data-panel-exact-detail-review-header">
+        <div>
+          <span>{display.sourceLabel}</span>
+          <strong>{display.statusLabel}</strong>
+          <small>{display.summaryLabel}</small>
+        </div>
+        <div className="data-panel-exact-detail-review-meta">
+          {display.metaLabels.map((label) => (
+            <span key={label}>{label}</span>
+          ))}
+        </div>
+      </div>
+      <div className="data-panel-exact-detail-review-grid">
+        {display.rows.map((row) => (
+          <span
+            className={`data-panel-exact-detail-review-row ${row.tone}`}
+            key={row.family}
+            title={row.title}
+          >
+            <strong>{row.family}</strong>
+            <small>{row.selectedLabel}</small>
+            <small>{row.sourceLabel} / {row.statusLabel}</small>
+            <small>{row.fieldSummaryLabel}</small>
+            <small>{row.warningLabel} / {row.resourceLabel}</small>
+          </span>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function ServiceTraceWideBrowser({
   display
 }: {
@@ -7544,6 +7626,40 @@ export interface DataPanelNodeEvidenceWorkspaceRow {
   exactDetailLabel: string;
   tone: "backend" | "limit" | "history";
   title: string;
+}
+
+export interface DataPanelExactDetailReviewWorkspaceInput {
+  selected: DataPanelSelectedDetailEvidenceInput;
+  inspectors: {
+    user: DataPanelDetailInspector;
+    satellite: DataPanelDetailInspector;
+    route: DataPanelDetailInspector;
+    service: DataPanelDetailInspector;
+    serviceTrace: DataPanelDetailInspector;
+    computeNode: DataPanelDetailInspector;
+  };
+}
+
+export interface DataPanelExactDetailReviewWorkspaceDisplay {
+  active: boolean;
+  tone: "backend" | "limit" | "history";
+  sourceLabel: string;
+  statusLabel: string;
+  summaryLabel: string;
+  metaLabels: readonly string[];
+  rows: readonly DataPanelExactDetailReviewWorkspaceRow[];
+}
+
+export interface DataPanelExactDetailReviewWorkspaceRow {
+  family: string;
+  title: string;
+  selectedLabel: string;
+  sourceLabel: string;
+  statusLabel: string;
+  fieldSummaryLabel: string;
+  warningLabel: string;
+  resourceLabel: string;
+  tone: "backend" | "limit" | "history";
 }
 
 export interface DataPanelServiceTraceCorrelationEvidenceInput {
@@ -8887,6 +9003,149 @@ export function buildDataPanelNodeEvidenceWorkspace(
       `后端源 ${formatCount(availableCoverage)} 类`
     ],
     rows
+  };
+}
+
+export function buildDataPanelExactDetailReviewWorkspace(
+  input: DataPanelExactDetailReviewWorkspaceInput
+): DataPanelExactDetailReviewWorkspaceDisplay {
+  const records: DataPanelSelectedDetailEvidenceRecord[] = [
+    selectedDetailEvidenceRecord(
+      "用户",
+      input.selected.userId,
+      input.selected.userRow,
+      input.selected.backendDetails?.user,
+      input.selected.requestStatuses?.user
+    ),
+    selectedDetailEvidenceRecord(
+      "卫星",
+      input.selected.satelliteId,
+      input.selected.satelliteRow,
+      input.selected.backendDetails?.satellite,
+      input.selected.requestStatuses?.satellite
+    ),
+    selectedDetailEvidenceRecord(
+      "路由",
+      input.selected.routeId,
+      input.selected.routeRow,
+      input.selected.backendDetails?.route,
+      input.selected.requestStatuses?.route
+    ),
+    selectedDetailEvidenceRecord(
+      "服务",
+      input.selected.serviceId,
+      input.selected.serviceRow,
+      input.selected.backendDetails?.service,
+      input.selected.requestStatuses?.service
+    ),
+    selectedDetailEvidenceRecord(
+      "服务链路",
+      input.selected.traceId,
+      input.selected.traceRow,
+      input.selected.backendDetails?.serviceTrace,
+      input.selected.requestStatuses?.serviceTrace
+    ),
+    selectedDetailEvidenceRecord(
+      "算力节点",
+      input.selected.computeNodeId,
+      input.selected.computeNodeRow,
+      input.selected.backendDetails?.computeNode,
+      input.selected.requestStatuses?.computeNode
+    )
+  ];
+  const inspectors = [
+    input.inspectors.user,
+    input.inspectors.satellite,
+    input.inspectors.route,
+    input.inspectors.service,
+    input.inspectors.serviceTrace,
+    input.inspectors.computeNode
+  ];
+  const rows = records.map((record, index) =>
+    exactDetailReviewWorkspaceRow(record, inspectors[index])
+  );
+  const selectedRows = rows.filter((row) => row.selectedLabel !== "未选择");
+  const exactRows = rows.filter((row) => row.sourceLabel === "后端精确详情");
+  const limitedRows = rows.filter((row) => row.tone === "limit");
+  const warningFields = records.reduce(
+    (total, record, index) =>
+      record.selected
+        ? total + inspectors[index].fields.filter((field) => field.tone === "warning").length
+        : total,
+    0
+  );
+  const active = selectedRows.length > 0;
+  return {
+    active,
+    tone:
+      !active
+        ? "history"
+        : limitedRows.length > 0
+          ? "limit"
+          : "backend",
+    sourceLabel: "精确详情审查工作区",
+    statusLabel: active
+      ? `后端精确 ${formatCount(exactRows.length)}/${formatCount(selectedRows.length)}`
+      : "等待选择明细行",
+    summaryLabel: active
+      ? `已选 ${formatCount(selectedRows.length)} 类；受限 ${formatCount(
+          limitedRows.length
+        )} 类；告警字段 ${formatCount(warningFields)} 个`
+      : "选择用户、卫星、路由、服务、服务链路或算力节点后显示可审查证据",
+    metaLabels: [
+      "不重新计算业务语义",
+      "复用后端精确详情与可见窗口",
+      active ? `审查行 ${formatCount(selectedRows.length)}` : "无活动选择"
+    ],
+    rows
+  };
+}
+
+function exactDetailReviewWorkspaceRow(
+  record: DataPanelSelectedDetailEvidenceRecord,
+  inspector: DataPanelDetailInspector
+): DataPanelExactDetailReviewWorkspaceRow {
+  const fieldCount = inspector.fields.length;
+  const warningCount = inspector.fields.filter((field) => field.tone === "warning").length;
+  const resourceCount = inspector.fields.filter((field) => field.tone === "resource").length;
+  const sourceLabel = record.backendPresent
+    ? "后端精确详情"
+    : record.rowPresent
+      ? "当前明细窗口"
+      : record.selected
+        ? "等待详情证据"
+        : "未选择";
+  const statusLabel = record.loading
+    ? "读取中"
+    : record.error !== null
+      ? `错误 ${record.error}`
+      : record.backendPresent
+        ? "已同步"
+        : record.selected && record.rowPresent
+          ? "窗口回退"
+          : record.selected
+            ? "待加载"
+            : "未选择";
+  const tone: DataPanelExactDetailReviewWorkspaceRow["tone"] =
+    record.error !== null || record.loading || (record.selected && !record.backendPresent)
+      ? "limit"
+      : record.backendPresent
+        ? "backend"
+        : "history";
+  return {
+    family: record.label,
+    title: `${record.label}: ${sourceLabel}; ${statusLabel}; ${formatCount(fieldCount)} fields`,
+    selectedLabel: record.selected
+      ? record.rowPresent
+        ? "已选中 / 表格命中"
+        : "已选中 / 表格未命中"
+      : "未选择",
+    sourceLabel,
+    statusLabel,
+    fieldSummaryLabel: `${formatCount(fieldCount)} 个可审查字段`,
+    warningLabel: `${formatCount(warningCount)} 个告警字段`,
+    resourceLabel: `${formatCount(resourceCount)} 个资源/同步字段`,
+    tone
   };
 }
 

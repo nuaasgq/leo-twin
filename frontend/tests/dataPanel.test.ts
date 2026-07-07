@@ -15,6 +15,7 @@ import {
   buildDataPanelDetailCoverageNote,
   buildDataPanelSelectedDetailEvidenceNote,
   buildDataPanelNodeEvidenceWorkspace,
+  buildDataPanelExactDetailReviewWorkspace,
   buildDataPanelServiceTraceCorrelationEvidenceNote,
   buildDataPanelDetailPageSizes,
   buildDataPanelPaginationContractNotes,
@@ -16243,6 +16244,114 @@ describe("paginateDetailRows", () => {
     expect(display.rows.find((row) => row.family === "用户")).toMatchObject({
       tone: "limit",
       exactDetailLabel: "精确详情读取中"
+    });
+  });
+
+  it("builds an exact-detail review workspace from selected inspectors and backend details", () => {
+    const inspector = (title: string, fields: any[] = [{ label: "id", value: title }]) => ({
+      title,
+      subtitle: "test",
+      fields
+    });
+    const display = buildDataPanelExactDetailReviewWorkspace({
+      selected: {
+        userId: "user-0",
+        routeId: "route-0",
+        userRow: { userId: "user-0" } as any,
+        routeRow: { routeId: "route-0" } as any,
+        backendDetails: {
+          user: { entity_id: "user-0" } as any,
+          route: { route_id: "route-0" } as any
+        },
+        requestStatuses: {
+          user: { entityId: "user-0", loading: false, error: null },
+          route: { entityId: "route-0", loading: false, error: null }
+        }
+      },
+      inspectors: {
+        user: inspector("user", [
+          { label: "精确详情", value: "synced", tone: "resource" },
+          { label: "业务", value: "active" }
+        ]),
+        satellite: inspector("satellite"),
+        route: inspector("route", [
+          { label: "路由", value: "route-0" },
+          { label: "瓶颈", value: "none", tone: "warning" }
+        ]),
+        service: inspector("service"),
+        serviceTrace: inspector("serviceTrace"),
+        computeNode: inspector("compute")
+      }
+    });
+
+    expect(display).toMatchObject({
+      active: true,
+      tone: "backend",
+      statusLabel: "后端精确 2/2",
+      summaryLabel: "已选 2 类；受限 0 类；告警字段 1 个"
+    });
+    expect(display.rows.find((row) => row.family === "用户")).toMatchObject({
+      sourceLabel: "后端精确详情",
+      statusLabel: "已同步",
+      resourceLabel: "1 个资源/同步字段",
+      tone: "backend"
+    });
+    expect(display.rows.find((row) => row.family === "路由")).toMatchObject({
+      warningLabel: "1 个告警字段",
+      tone: "backend"
+    });
+  });
+
+  it("marks exact-detail review workspace as limited when selected details are loading or failed", () => {
+    const inspector = (title: string, fields: any[] = [{ label: "id", value: title }]) => ({
+      title,
+      subtitle: "test",
+      fields
+    });
+    const display = buildDataPanelExactDetailReviewWorkspace({
+      selected: {
+        routeId: "route-0",
+        serviceId: "service-0",
+        routeRow: { routeId: "route-0" } as any,
+        backendDetails: {
+          route: null,
+          service: null
+        },
+        requestStatuses: {
+          route: { entityId: "route-0", loading: true, error: null },
+          service: { entityId: "service-0", loading: false, error: "HTTP 404" }
+        }
+      },
+      inspectors: {
+        user: inspector("user"),
+        satellite: inspector("satellite"),
+        route: inspector("route", [
+          { label: "精确详情", value: "loading", tone: "resource" }
+        ]),
+        service: inspector("service", [
+          { label: "精确详情", value: "HTTP 404", tone: "warning" }
+        ]),
+        serviceTrace: inspector("serviceTrace"),
+        computeNode: inspector("compute")
+      }
+    });
+
+    expect(display).toMatchObject({
+      active: true,
+      tone: "limit",
+      statusLabel: "后端精确 0/2",
+      summaryLabel: "已选 2 类；受限 2 类；告警字段 1 个"
+    });
+    expect(display.metaLabels).toContain("审查行 2");
+    expect(display.rows.find((row) => row.family === "路由")).toMatchObject({
+      sourceLabel: "当前明细窗口",
+      statusLabel: "读取中",
+      tone: "limit"
+    });
+    expect(display.rows.find((row) => row.family === "服务")).toMatchObject({
+      sourceLabel: "等待详情证据",
+      statusLabel: "错误 HTTP 404",
+      tone: "limit"
     });
   });
 });

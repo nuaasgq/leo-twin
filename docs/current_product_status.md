@@ -2,7 +2,7 @@
 
 Date: 2026-07-08
 
-Branch: `feature/T389-dashboard-node-evidence-workspace-v1`
+Branch: `feature/T390-dashboard-exact-detail-review-workspace-v1`
 
 ## Local Entry Points
 
@@ -256,6 +256,11 @@ the card without loading the full JSON artifact.
   traces, and compute nodes. The workspace is frontend display logic only; the
   source of truth remains the existing backend detail pages and App-owned exact
   detail requests.
+- The node-detail area also includes an exact-detail review workspace. It
+  summarizes, by detail family, whether the selected evidence is backend exact
+  detail, visible-window fallback, loading, failed, or pending, and counts
+  reviewable fields, warning fields, and resource/synchronization fields from
+  the existing inspector view models.
 - Launcher health v2 reports backend/frontend port readiness, HTTP readiness,
   process ids, latest log paths, config paths, and recommended actions.
 - Operator diagnostics bundle captures launcher health, runtime status, version

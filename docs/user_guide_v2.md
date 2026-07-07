@@ -169,6 +169,10 @@ The standalone dashboard is for data situation awareness:
   presence, and exact-detail request status so operators can see which node or
   service evidence comes from backend pages and which exact detail is still
   pending;
+- an exact-detail review workspace that summarizes each selected detail family
+  as backend exact detail, visible-window fallback, loading, failed, pending,
+  or not selected, and counts reviewable fields, warnings, and resource/sync
+  fields without recomputing business semantics in the browser;
 - service-trace closed-loop evidence, showing whether the selected service
   trace has correlated flow, route, user, satellite, compute-node, stage, and
   latency evidence from backend exact detail or the visible dashboard window;

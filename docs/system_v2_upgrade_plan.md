@@ -706,6 +706,12 @@ Tasks:
     table-row presence, and exact-detail request status for users, satellites,
     routes, services, service traces, and compute nodes without adding new
     backend semantics or frontend-local business inference.
+  - Status: T390 adds an exact-detail review workspace above the large detail
+    tables. It reuses the existing exact-detail inspectors to show, per detail
+    family, backend exact-detail sync state, visible-window fallback state,
+    request loading/error state, reviewable field counts, warning-field counts,
+    and resource/synchronization field counts without changing backend
+    protocols.
 - V2-054: Add model assumptions panel.
   - Scope: backend-derived model caveats, fidelity mode, KPI provenance.
   - Depends on: V2-003, V2-021.
