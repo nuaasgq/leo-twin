@@ -33,6 +33,7 @@ MetricSummary = dict[str, str | float | int | bool]
 KpiSample = dict[str, str | float]
 SatelliteKpiSlice = dict[str, str | float | int]
 SatelliteKpiHistorySample = dict[str, float]
+RoutePressureEvidenceItem = dict[str, str | float | int | bool]
 ReplayPayload = str | int | float | bool | None | list["ReplayPayload"] | dict[str, "ReplayPayload"]
 ReplayEvent = dict[str, ReplayPayload]
 
@@ -423,6 +424,45 @@ class MetricsCollector:
     def service_latency_history(self, limit: int = 32) -> dict[str, Any]:
         with self._lock:
             return self._service_latency_history_unlocked(limit)
+
+    def route_pressure_evidence(self, limit: int = 64) -> dict[str, Any]:
+        with self._lock:
+            return self._route_pressure_evidence_unlocked(limit)
+
+    def _route_pressure_evidence_unlocked(self, limit: int = 64) -> dict[str, Any]:
+        _require_positive_int(limit, "limit")
+        routes = tuple(self._routes[route_id] for route_id in sorted(self._routes))
+        evidence_items = tuple(_route_pressure_evidence_item(route) for route in routes)
+        selected = tuple(sorted(evidence_items, key=_route_pressure_evidence_sort_key)[:limit])
+        pressure_rejected_count = sum(
+            1 for item in evidence_items if item["pressure_state"] == "ADMISSION_REJECTED"
+        )
+        topology_blocked_count = sum(
+            1 for item in evidence_items if item["pressure_state"] == "TOPOLOGY_BLOCKED"
+        )
+        queued_count = sum(
+            1 for item in evidence_items if item["pressure_state"] == "QUEUED"
+        )
+        saturated_count = sum(
+            1 for item in evidence_items if item["pressure_state"] == "SATURATED"
+        )
+        return {
+            "version": "v1",
+            "source": "BACKEND_METRICS_COLLECTOR",
+            "evidence_id": "leo_twin.route_pressure_evidence.v1",
+            "pressure_model": "FLOW_PRESSURE_ADMISSION_V1",
+            "route_source": "ROUTE_UPDATE",
+            "packet_level_simulation": False,
+            "route_count": len(routes),
+            "item_limit": limit,
+            "item_count": len(selected),
+            "hidden_route_count": max(0, len(routes) - len(selected)),
+            "pressure_admission_rejected_count": pressure_rejected_count,
+            "topology_blocked_count": topology_blocked_count,
+            "queued_route_count": queued_count,
+            "saturated_route_count": saturated_count,
+            "items": selected,
+        }
 
     def _service_latency_history_unlocked(self, limit: int = 32) -> dict[str, Any]:
         _require_positive_int(limit, "limit")
@@ -2279,6 +2319,70 @@ def _route_pressure_proxy(route: Route) -> float:
     if route.capacity > 0.0:
         return _clamp_probability(demand / route.capacity)
     return 1.0 if demand > 0.0 else 0.0
+
+
+def _route_pressure_evidence_item(route: Route) -> RoutePressureEvidenceItem:
+    pressure_state = _route_pressure_state(route)
+    blocked_reason = _route_pressure_blocked_reason(route, pressure_state)
+    demand = _route_demand_capacity(route)
+    loss_rate = 0.0 if route.loss_rate is None else float(route.loss_rate)
+    return {
+        "route_id": route.route_id,
+        "flow_id": route.flow_id,
+        "available": route.available,
+        "pressure_state": pressure_state,
+        "blocked_reason": blocked_reason,
+        "path_label": " -> ".join(route.path),
+        "hop_count": _route_hop_count(route),
+        "demand_capacity_mbps": demand,
+        "route_capacity_mbps": float(route.capacity),
+        "latency_s": float(route.latency),
+        "loss_proxy_rate": loss_rate,
+        "route_pressure_proxy": _route_pressure_proxy(route),
+        "queue_over_demand_mbps": max(0.0, demand - float(route.capacity)),
+        "evidence_source": "ROUTE_UPDATE + FLOW_PRESSURE_ADMISSION_V1",
+        "packet_level_simulation": False,
+    }
+
+
+def _route_pressure_state(route: Route) -> str:
+    if not route.available:
+        return "ADMISSION_REJECTED" if route.path else "TOPOLOGY_BLOCKED"
+    if _route_demand_capacity(route) > route.capacity:
+        return "SATURATED"
+    if (route.loss_rate is not None and route.loss_rate > 0.0) or _route_pressure_proxy(route) >= 0.75:
+        return "QUEUED"
+    return "NOMINAL"
+
+
+def _route_pressure_blocked_reason(route: Route, pressure_state: str) -> str:
+    if pressure_state == "ADMISSION_REJECTED":
+        return "flow_pressure_admission_limit"
+    if pressure_state == "TOPOLOGY_BLOCKED":
+        return "no_available_route"
+    if pressure_state == "SATURATED":
+        return "demand_exceeds_route_capacity"
+    if pressure_state == "QUEUED":
+        return "route_pressure_or_loss_proxy"
+    return "none"
+
+
+def _route_pressure_evidence_sort_key(
+    item: RoutePressureEvidenceItem,
+) -> tuple[int, float, float, str]:
+    state_rank = {
+        "ADMISSION_REJECTED": 0,
+        "TOPOLOGY_BLOCKED": 1,
+        "SATURATED": 2,
+        "QUEUED": 3,
+        "NOMINAL": 4,
+    }
+    return (
+        state_rank.get(str(item["pressure_state"]), 9),
+        -float(item["route_pressure_proxy"]),
+        -float(item["loss_proxy_rate"]),
+        str(item["route_id"]),
+    )
 
 
 def _link_id(link: LinkState) -> str:

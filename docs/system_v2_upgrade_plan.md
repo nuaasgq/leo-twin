@@ -398,7 +398,9 @@ Tasks:
     oversubscription is blocked without reserving rejected flow demand. T402
     exposes route-admission and queue-pressure evidence in backend metrics
     summary and binds those fields into KPI provenance for route blocking and
-    effective loss explanation.
+    effective loss explanation. The follow-on route pressure evidence increment
+    adds `route_pressure_evidence_v1` to runtime status so each observed route
+    has replayable pressure-state and blocked-reason evidence.
 - V2-023: Add route explanation records.
   - Scope: selected route, alternative count, bottleneck reason, next hop,
     blocked reason.

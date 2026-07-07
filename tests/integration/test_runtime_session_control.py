@@ -675,6 +675,21 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
             "bottleneck_reason_label",
             "explanation_label",
         }.issubset(route_explanation_summary["items"][0])
+    route_pressure_evidence = status_after_tick["route_pressure_evidence_v1"]
+    assert route_pressure_evidence["version"] == "v1"
+    assert route_pressure_evidence["source"] == "BACKEND_METRICS_COLLECTOR"
+    assert route_pressure_evidence["pressure_model"] == "FLOW_PRESSURE_ADMISSION_V1"
+    assert route_pressure_evidence["packet_level_simulation"] is False
+    assert route_pressure_evidence["route_count"] >= route_pressure_evidence["item_count"]
+    if route_pressure_evidence["items"]:
+        assert {
+            "route_id",
+            "flow_id",
+            "pressure_state",
+            "blocked_reason",
+            "route_pressure_proxy",
+            "evidence_source",
+        }.issubset(route_pressure_evidence["items"][0])
     route_trust_summary = status_after_tick["route_provenance_trust_summary_v1"]
     assert route_trust_summary["version"] == "v1"
     assert route_trust_summary["source"] == "route_explanation_summary_v1"

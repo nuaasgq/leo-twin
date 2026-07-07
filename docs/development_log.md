@@ -5,6 +5,45 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-08 - Route Pressure Evidence v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: pending in this commit
+- Scope: add explicit backend `route_pressure_evidence_v1` output from the
+  metrics collector and expose it through integration demo runtime status. The
+  evidence records classify each observed route as `NOMINAL`, `QUEUED`,
+  `SATURATED`, `ADMISSION_REJECTED`, or `TOPOLOGY_BLOCKED`, include route
+  demand/capacity/latency/loss/pressure fields, and keep packet-level
+  simulation explicitly false. This task does not modify Event Kernel behavior,
+  frontend code, routing topology selection, packet-level behavior, or external
+  simulator integrations.
+- Changed files/modules:
+  - `src/leo_twin/services/metrics/collector.py`
+  - `examples/integration_demo/control_plane.py`
+  - `tests/unit/test_metrics_module.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src\leo_twin\services\metrics\collector.py examples\integration_demo\control_plane.py tests\unit\test_metrics_module.py tests\integration\test_runtime_session_control.py`
+    - Result: passed using the bundled Codex Python runtime.
+  - `python -c "... MetricsCollector.route_pressure_evidence ..."`
+    - Result: passed; route pressure evidence reports admission rejection,
+      saturated-route count, and sorted evidence items.
+  - Target `pytest` command was not run in this no-approval continuation: the
+    project Python is denied by the sandbox without escalation, and the bundled
+    Codex Python runtime is accessible but does not include `pytest`.
+- Problems encountered and handling:
+  - The user requested no further approval prompts. Commands requiring approval
+    were avoided; validation was limited to static compile and direct backend
+    smoke checks that do not require pytest.
+  - Local runtime/generated config files remain dirty from user/runtime state and
+    are intentionally outside this task scope.
+- Known remaining issues / follow-up:
+  - `route_pressure_evidence_v1` currently uses route-level evidence. A later
+    backend model task can promote per-edge queue states from `RoutePressureDecision`
+    into a first-class event or export artifact if exact edge-by-edge replay is
+    required.
 ## 2026-07-08 - Network Pressure Provenance v1
 
 - Branch: `feature/T402-network-pressure-provenance-v1`

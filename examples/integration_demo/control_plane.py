@@ -2337,6 +2337,7 @@ class DemoControlPlane:
         status["satellite_kpi_slices_v1"] = self._satellite_kpi_slices_json()
         status["satellite_kpi_history_v1"] = self._satellite_kpi_history_json()
         status["service_latency_history_v1"] = self._service_latency_history_json()
+        status["route_pressure_evidence_v1"] = self._route_pressure_evidence_json()
         lifecycle_summaries = build_runtime_lifecycle_summaries(
             self.visible_snapshot(),
             service_latency_history=status["service_latency_history_v1"],
@@ -2517,6 +2518,27 @@ class DemoControlPlane:
                 "items": (),
             }
         return dict(self._runtime_context.metrics.service_latency_history())
+
+    def _route_pressure_evidence_json(self) -> dict[str, Any]:
+        if self._runtime_context is None:
+            return {
+                "version": "v1",
+                "source": "BACKEND_METRICS_COLLECTOR",
+                "evidence_id": "leo_twin.route_pressure_evidence.v1",
+                "pressure_model": "FLOW_PRESSURE_ADMISSION_V1",
+                "route_source": "ROUTE_UPDATE",
+                "packet_level_simulation": False,
+                "route_count": 0,
+                "item_limit": 64,
+                "item_count": 0,
+                "hidden_route_count": 0,
+                "pressure_admission_rejected_count": 0,
+                "topology_blocked_count": 0,
+                "queued_route_count": 0,
+                "saturated_route_count": 0,
+                "items": (),
+            }
+        return dict(self._runtime_context.metrics.route_pressure_evidence())
 
     def _user_request_history_json(
         self,

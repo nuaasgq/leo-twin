@@ -711,6 +711,21 @@ def test_metrics_collector_reports_route_admission_and_queue_pressure_evidence()
     assert summary["network_quality_queue_pressure_proxy"] == pytest.approx(1.0)
     assert summary["network_quality_route_blocking_ratio"] == pytest.approx(0.5)
     assert summary["network_quality_effective_loss_proxy_rate"] == pytest.approx(0.5)
+    evidence = collector.route_pressure_evidence()
+    assert evidence["version"] == "v1"
+    assert evidence["source"] == "BACKEND_METRICS_COLLECTOR"
+    assert evidence["pressure_model"] == "FLOW_PRESSURE_ADMISSION_V1"
+    assert evidence["packet_level_simulation"] is False
+    assert evidence["route_count"] == 2
+    assert evidence["pressure_admission_rejected_count"] == 1
+    assert evidence["queued_route_count"] == 0
+    assert evidence["saturated_route_count"] == 1
+    assert evidence["items"][0]["route_id"] == "route-rejected"
+    assert evidence["items"][0]["pressure_state"] == "ADMISSION_REJECTED"
+    assert evidence["items"][0]["blocked_reason"] == "flow_pressure_admission_limit"
+    assert evidence["items"][1]["pressure_state"] == "SATURATED"
+    assert evidence["items"][1]["queue_over_demand_mbps"] == pytest.approx(10.0)
+
 
 def test_metrics_collector_uses_route_demand_for_network_pressure_proxy() -> None:
     collector = MetricsCollector()
