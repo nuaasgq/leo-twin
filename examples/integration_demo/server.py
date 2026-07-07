@@ -282,6 +282,23 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                             )
                         )
                         return
+                    if artifact_kind == "traffic-demand-users":
+                        try:
+                            cursor, limit = _detail_query(query, default_limit=100)
+                        except ValueError as exc:
+                            self.send_error(400, str(exc))
+                            return
+                        filters = _traffic_demand_user_filter_query(query)
+                        self._send_json(
+                            control_plane.runtime_export_package_traffic_demand_users(
+                                package_id,
+                                cursor=cursor,
+                                limit=limit,
+                                query=filters["query"],
+                                traffic_class=filters["traffic_class"],
+                            )
+                        )
+                        return
                     if artifact_kind == "routes":
                         try:
                             cursor, limit = _detail_query(query, default_limit=100)
@@ -956,6 +973,15 @@ def _user_service_request_filter_query(
     }
 
 
+def _traffic_demand_user_filter_query(
+    query: dict[str, list[str]],
+) -> dict[str, str]:
+    return {
+        "query": _first_query_value(query, "query", "").strip(),
+        "traffic_class": _first_query_value(query, "traffic_class", "ALL").strip(),
+    }
+
+
 def _runtime_export_package_route(
     path: str,
 ) -> tuple[str, str, str | None] | None:
@@ -988,6 +1014,8 @@ def _runtime_export_package_route(
         return parts[0], "service-trace", parts[2]
     if len(parts) == 2 and parts[1] == "user-service-requests":
         return parts[0], "user-service-requests", None
+    if len(parts) == 2 and parts[1] == "traffic-demand-users":
+        return parts[0], "traffic-demand-users", None
     if len(parts) == 2 and parts[1] == "routes":
         return parts[0], "routes", None
     if len(parts) == 3 and parts[1] == "routes":

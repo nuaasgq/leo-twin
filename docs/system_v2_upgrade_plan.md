@@ -205,7 +205,11 @@ Tasks:
     before the raw JSON preview. T380 extends that compact card with bounded
     per-user demand rows from exported `per_user_active_service_state` data and
     reuses the artifact filter for user-level inspection without frontend
-    demand regeneration. T332 preserves
+    demand regeneration. T381 adds the package-owned
+    `/runtime/export/packages/{package_id}/traffic-demand-users` cursor
+    endpoint and frontend API contract so per-user traffic-demand rows can be
+    paged and filtered by query/traffic class from persisted package evidence
+    without traffic regeneration, event replay, or package mutation. T332 preserves
     backend-provided request/route/flow/task
     correlation ids in dashboard user-service rows and lets selected export
     package rows drive package route evidence, package service-trace filtering,

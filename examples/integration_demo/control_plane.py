@@ -106,6 +106,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_service_trace_comparison_review_report_v1,
     build_runtime_export_service_trace_item_v1,
     build_runtime_export_service_trace_page_v1,
+    build_runtime_export_traffic_demand_user_page_v1,
     build_runtime_export_traffic_demand_explanation_v1,
     build_runtime_export_user_configuration_template_validation_v1,
     build_runtime_export_user_service_request_page_v1,
@@ -1129,6 +1130,29 @@ class DemoControlPlane:
             service_class=service_class,
             terminal_state=terminal_state,
             network_waiting=network_waiting,
+        )
+
+    def runtime_export_package_traffic_demand_users(
+        self,
+        package_id: str,
+        output_root: str | Path = "artifacts/runtime_exports",
+        *,
+        cursor: int = 0,
+        limit: int = 100,
+        query: str = "",
+        traffic_class: str = "ALL",
+    ) -> dict[str, Any]:
+        traffic_demand_export = self._runtime_export_package_traffic_demand_export(
+            package_id,
+            output_root,
+        )
+        return build_runtime_export_traffic_demand_user_page_v1(
+            traffic_demand_export,
+            package_id=package_id,
+            cursor=cursor,
+            limit=limit,
+            query=query,
+            traffic_class=traffic_class,
         )
 
     def runtime_export_package_review_completion(
@@ -2712,6 +2736,25 @@ class DemoControlPlane:
                 f"runtime export package {package_id!r} has invalid user service request export"
             )
         return user_service_request_export
+
+    def _runtime_export_package_traffic_demand_export(
+        self,
+        package_id: str,
+        output_root: str | Path,
+    ) -> dict[str, Any]:
+        artifact = self.runtime_export_package_artifact(
+            package_id,
+            _RUNTIME_EXPORT_TRAFFIC_DEMAND_EXPLANATION_FILENAME,
+            output_root,
+        )
+        traffic_demand_export = json.loads(
+            Path(str(artifact["path"])).read_text(encoding="utf-8")
+        )
+        if not isinstance(traffic_demand_export, dict):
+            raise RuntimeExportArtifactError(
+                f"runtime export package {package_id!r} has invalid traffic demand export"
+            )
+        return traffic_demand_export
 
 
 def _runtime_export_restore_control_payload(raw: str | bytes) -> dict[str, Any] | None:

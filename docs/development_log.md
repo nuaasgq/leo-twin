@@ -5,6 +5,62 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-07 - Traffic Demand Package User Page v1
+
+- Branch: `feature/T381-traffic-demand-package-user-page-v1`
+- Commit: pending in this commit
+- Scope: add a deterministic package-owned cursor endpoint for exported
+  traffic-demand per-user state rows:
+  `/runtime/export/packages/{package_id}/traffic-demand-users`. The endpoint
+  reads `traffic_demand_explanation_v1.json`, normalizes
+  `per_user_active_service_state`, supports `cursor`, `limit`, `query`, and
+  `traffic_class`, and returns page hashes and no-regeneration/no-replay
+  boundary conditions. The frontend API contract now exposes the matching URL
+  builder, loader, decoder, and TypeScript page types. This task does not
+  regenerate traffic, replay events, change runtime control, alter Event
+  Kernel behavior, add packet-level simulation, or introduce external
+  simulator dependencies.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/app/api.ts`
+  - `frontend/tests/api.test.ts`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/current_product_status.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests\unit\test_result_package_contract_v1.py::test_result_package_contract_v1_is_deterministic_json_ready tests\unit\test_result_package_contract_v1.py::test_runtime_export_traffic_demand_explanation_v1_is_deterministic tests\unit\test_result_package_contract_v1.py::test_runtime_export_traffic_demand_user_page_v1_is_deterministic -q`
+    - Result: passed, 3 tests.
+  - `python -m pytest tests\unit\test_result_package_contract_v1.py -q`
+    - Result: passed, 34 tests.
+  - `python -m pytest tests\integration\test_result_package_export_v1.py -q`
+    - Result: passed, 1 test.
+  - `python -m pytest tests\integration\test_runtime_session_control.py::test_demo_adapter_serves_persisted_runtime_export_artifacts -q`
+    - Result: passed, 1 test.
+  - `python -m pytest tests\integration\test_runtime_session_control.py::test_demo_server_stream_query_parses_cursor_options -q`
+    - Result: passed, 1 test.
+  - `pnpm --dir frontend test api.test.ts`
+    - Result: passed, 1 test file / 45 tests using the bundled Codex
+      Node/pnpm runtime.
+  - `python -m pytest tests\unit\test_system_v2_upgrade_plan_docs.py tests\unit\test_user_guide_v2_docs.py -q`
+    - Result: passed, 4 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed using the bundled Codex Node/pnpm runtime. Vite reported
+      the existing `DataPanel` chunk-size warning after minification.
+- Problems encountered and handling:
+  - The task started with local runtime/generated config files already dirty.
+    They remain outside the staged task scope and are intentionally not
+    delivered as product changes.
+- Known remaining issues / follow-up:
+  - The standalone dashboard compact traffic-demand card still renders the
+    bounded artifact preview loaded by the generic artifact viewer. A follow-up
+    UI task should bind that card to the new page endpoint for large packages.
+
 ## 2026-07-07 - Dashboard Traffic Demand User Rows v1
 
 - Branch: `feature/T380-dashboard-traffic-demand-user-rows-v1`

@@ -15,6 +15,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_V1_ID,
     RUNTIME_EXPORT_NETWORK_KPI_FORMULA_EVIDENCE_V1_ID,
     RUNTIME_EXPORT_TRAFFIC_DEMAND_EXPLANATION_V1_ID,
+    RUNTIME_EXPORT_TRAFFIC_DEMAND_USER_PAGE_V1_ID,
     RUNTIME_EXPORT_USER_CONFIGURATION_TEMPLATE_VALIDATION_V1_ID,
     RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID,
     RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT_V1_ID,
@@ -42,6 +43,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_network_kpi_benchmark_validation_v1,
     build_runtime_export_network_kpi_formula_evidence_v1,
     build_runtime_export_traffic_demand_explanation_v1,
+    build_runtime_export_traffic_demand_user_page_v1,
     build_runtime_export_user_configuration_template_validation_v1,
     build_runtime_export_benchmark_acceptance_binding_v1,
     build_runtime_export_package_acceptance_report_v1,
@@ -122,6 +124,10 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
     )
     assert (
         "GET /runtime/export/packages/{package_id}/user-service-requests"
+        in first["source_endpoints"]
+    )
+    assert (
+        "GET /runtime/export/packages/{package_id}/traffic-demand-users"
         in first["source_endpoints"]
     )
     assert (
@@ -580,6 +586,67 @@ def test_runtime_export_traffic_demand_explanation_v1_is_deterministic() -> None
     assert first["evidence"]["evidence_hash"].startswith("sha256:")
     assert first["artifact_hash"].startswith("sha256:")
     assert "NO_TRAFFIC_REGENERATION" in first["boundary_conditions"]
+
+
+def test_runtime_export_traffic_demand_user_page_v1_is_deterministic() -> None:
+    traffic_demand_export = build_runtime_export_traffic_demand_explanation_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot={
+            "type": "RUNTIME_CONFIG_SNAPSHOT",
+            "status": {},
+            "config": {"seed": 7},
+            "generated_config": _generated_config(),
+        },
+    )
+
+    first = build_runtime_export_traffic_demand_user_page_v1(
+        traffic_demand_export,
+        package_id="pkg-1",
+        cursor=0,
+        limit=1,
+        traffic_class="COMPUTE_SERVICE",
+    )
+    second = build_runtime_export_traffic_demand_user_page_v1(
+        dict(reversed(tuple(traffic_demand_export.items()))),
+        package_id="pkg-1",
+        cursor=0,
+        limit=1,
+        traffic_class="COMPUTE_SERVICE",
+    )
+    query_page = build_runtime_export_traffic_demand_user_page_v1(
+        traffic_demand_export,
+        package_id="pkg-1",
+        cursor=0,
+        limit=5,
+        query="flow-data",
+    )
+
+    assert first == second
+    assert first["page_id"] == RUNTIME_EXPORT_TRAFFIC_DEMAND_USER_PAGE_V1_ID
+    assert first["type"] == "RUNTIME_EXPORT_TRAFFIC_DEMAND_USER_PAGE_V1"
+    assert first["package_id"] == "pkg-1"
+    assert first["artifact_hash"] == traffic_demand_export["artifact_hash"]
+    assert first["filters"] == {
+        "query": "",
+        "traffic_class": "COMPUTE_SERVICE",
+    }
+    assert first["filter_applied"] is True
+    assert first["unfiltered_user_count"] == 2
+    assert first["user_count"] == 1
+    assert first["item_count"] == 1
+    assert first["request_count"] == 1
+    assert first["compute_service_user_count"] == 1
+    assert first["communication_service_user_count"] == 0
+    assert first["items"][0]["user_id"] == "user-00000"
+    assert first["items"][0]["service_classes"] == ("COMPUTE_SERVICE",)
+    assert first["page_hash"].startswith("sha256:")
+    assert "NO_TRAFFIC_REGENERATION" in first["boundary_conditions"]
+    assert query_page["filters"] == {
+        "query": "flow-data",
+        "traffic_class": "ALL",
+    }
+    assert query_page["items"][0]["user_id"] == "user-00001"
 
 
 def test_runtime_export_user_service_request_summary_v2_is_deterministic() -> None:

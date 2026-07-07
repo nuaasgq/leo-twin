@@ -83,6 +83,9 @@ RUNTIME_EXPORT_USER_CONFIGURATION_TEMPLATE_VALIDATION_V1_ID = (
 RUNTIME_EXPORT_TRAFFIC_DEMAND_EXPLANATION_V1_ID = (
     "leo_twin.runtime_export_traffic_demand_explanation.v1"
 )
+RUNTIME_EXPORT_TRAFFIC_DEMAND_USER_PAGE_V1_ID = (
+    "leo_twin.runtime_export_traffic_demand_user_page.v1"
+)
 RUNTIME_EXPORT_USER_SERVICE_REQUEST_SUMMARY_V2_ID = (
     "leo_twin.runtime_export_user_service_request_summary.v2"
 )
@@ -160,6 +163,7 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
             "GET /runtime/export/packages/{package_id}/service-traces",
             "GET /runtime/export/packages/{package_id}/service-traces/{trace_id}",
             "GET /runtime/export/packages/{package_id}/user-service-requests",
+            "GET /runtime/export/packages/{package_id}/traffic-demand-users",
             "GET /runtime/export/packages/{package_id}/routes",
             "GET /runtime/export/packages/{package_id}/routes/{route_id}",
             "POST /runtime/export/packages/{package_id}/route-comparison-review-report",
@@ -1936,6 +1940,106 @@ def build_runtime_export_user_service_request_page_v1(
             "ARTIFACT_WINDOW_ONLY",
             "NO_EVENT_REPLAY",
             "NO_SERVICE_RECOMPUTE",
+            "NO_PACKAGE_MUTATION",
+        ),
+        "items": items,
+    }
+    page["page_hash"] = stable_hash_payload(page)
+    return page
+
+
+def build_runtime_export_traffic_demand_user_page_v1(
+    traffic_demand_export: Mapping[str, Any],
+    *,
+    package_id: str = "",
+    cursor: int = 0,
+    limit: int = 100,
+    query: str = "",
+    traffic_class: str = "ALL",
+) -> dict[str, object]:
+    """Build a deterministic user-state page from traffic-demand evidence."""
+
+    if not isinstance(traffic_demand_export, Mapping):
+        raise TypeError("traffic_demand_export must be a mapping")
+    explanation = _mapping(traffic_demand_export.get("traffic_demand_explanation"))
+    evidence = _mapping(traffic_demand_export.get("evidence"))
+    rows = tuple(
+        sorted(
+            (
+                _runtime_export_traffic_demand_user_record(item)
+                for item in _records(explanation.get("per_user_active_service_state"))
+            ),
+            key=lambda item: str(item["user_id"]),
+        )
+    )
+    filtered_rows = tuple(
+        row
+        for row in rows
+        if _runtime_export_traffic_demand_user_matches_filter(
+            row,
+            query=query,
+            traffic_class=traffic_class,
+        )
+    )
+    normalized_cursor = _page_cursor(cursor)
+    normalized_limit = _page_limit(limit)
+    items = filtered_rows[normalized_cursor : normalized_cursor + normalized_limit]
+    next_cursor = min(len(filtered_rows), normalized_cursor + len(items))
+    normalized_filters = _runtime_export_traffic_demand_user_filter_summary(
+        query=query,
+        traffic_class=traffic_class,
+    )
+    filter_applied = _runtime_export_traffic_demand_user_filter_applied(
+        normalized_filters
+    )
+    page: dict[str, object] = {
+        "type": "RUNTIME_EXPORT_TRAFFIC_DEMAND_USER_PAGE_V1",
+        "version": "v1",
+        "page_id": RUNTIME_EXPORT_TRAFFIC_DEMAND_USER_PAGE_V1_ID,
+        "source": "BACKEND_RUNTIME_EXPORT_PACKAGE",
+        "package_id": str(package_id or traffic_demand_export.get("package_id", "")),
+        "artifact_type": str(traffic_demand_export.get("type", "")),
+        "artifact_source": str(traffic_demand_export.get("source", "")),
+        "artifact_scope": str(traffic_demand_export.get("artifact_scope", "")),
+        "artifact_hash": str(traffic_demand_export.get("artifact_hash", "")),
+        "evidence_hash": str(
+            evidence.get("evidence_hash", explanation.get("explanation_hash", ""))
+        ),
+        "explanation_id": str(explanation.get("explanation_id", "")),
+        "explanation_window_policy": str(
+            explanation.get("explanation_window_policy", "")
+        ),
+        "endpoint_window_policy": str(explanation.get("endpoint_window_policy", "")),
+        "packet_level_simulation": _bool(
+            explanation.get("packet_level_simulation")
+        ),
+        "frontend_inference_required": _bool(
+            explanation.get("frontend_inference_required")
+        ),
+        "cursor": normalized_cursor,
+        "limit": normalized_limit,
+        "next_cursor": next_cursor,
+        "has_more": next_cursor < len(filtered_rows),
+        "user_count": len(filtered_rows),
+        "item_count": len(items),
+        "unfiltered_user_count": len(rows),
+        "request_count": sum(_integer(row.get("request_count")) for row in filtered_rows),
+        "compute_service_user_count": sum(
+            1
+            for row in filtered_rows
+            if "COMPUTE_SERVICE" in _string_tuple(row.get("service_classes"))
+        ),
+        "communication_service_user_count": sum(
+            1
+            for row in filtered_rows
+            if "COMPUTE_SERVICE" not in _string_tuple(row.get("service_classes"))
+        ),
+        "filter_applied": filter_applied,
+        "filters": normalized_filters,
+        "boundary_conditions": (
+            "ARTIFACT_WINDOW_ONLY",
+            "NO_TRAFFIC_REGENERATION",
+            "NO_EVENT_REPLAY",
             "NO_PACKAGE_MUTATION",
         ),
         "items": items,
@@ -5193,6 +5297,30 @@ def _runtime_export_user_service_request_record(
     }
 
 
+def _runtime_export_traffic_demand_user_record(
+    item: Mapping[str, Any],
+) -> dict[str, object]:
+    return {
+        "user_id": str(item.get("user_id", "")),
+        "request_count": _integer(item.get("request_count")),
+        "service_classes": _unique_normalized_strings(
+            _string_tuple(item.get("service_classes"))
+        ),
+        "primary_service_class": _normalized_filter_value(
+            str(item.get("primary_service_class", "")),
+            "UNKNOWN",
+        ),
+        "max_priority": _integer(item.get("max_priority")),
+        "first_arrival_time": _number(item.get("first_arrival_time")),
+        "last_arrival_time": _number(item.get("last_arrival_time")),
+        "flow_ids": _string_tuple(item.get("flow_ids")),
+        "task_ids": _string_tuple(item.get("task_ids")),
+        "output_flow_ids": _string_tuple(item.get("output_flow_ids")),
+        "total_input_data_mb": _number(item.get("total_input_data_mb")),
+        "total_output_data_mb": _number(item.get("total_output_data_mb")),
+    }
+
+
 def _runtime_export_service_trace_stage_record(
     stage: Mapping[str, Any],
 ) -> dict[str, object]:
@@ -5688,6 +5816,63 @@ def _runtime_export_user_service_request_code(value: object, default: str) -> st
     return normalized or default
 
 
+def _runtime_export_traffic_demand_user_matches_filter(
+    row: Mapping[str, Any],
+    *,
+    query: str,
+    traffic_class: str,
+) -> bool:
+    normalized_class = _normalized_filter_value(traffic_class, "ALL")
+    service_classes = _string_tuple(row.get("service_classes"))
+    primary_class = str(row.get("primary_service_class", "")).strip().upper()
+    if (
+        normalized_class
+        and normalized_class != "ALL"
+        and normalized_class != primary_class
+        and normalized_class not in service_classes
+    ):
+        return False
+    terms = _search_terms(query)
+    if not terms:
+        return True
+    haystack = _runtime_export_traffic_demand_user_search_text(row)
+    return all(term in haystack for term in terms)
+
+
+def _runtime_export_traffic_demand_user_filter_summary(
+    *,
+    query: str,
+    traffic_class: str,
+) -> dict[str, str]:
+    return {
+        "query": _normalized_search_query(query),
+        "traffic_class": _normalized_filter_value(traffic_class, "ALL"),
+    }
+
+
+def _runtime_export_traffic_demand_user_filter_applied(
+    filters: Mapping[str, Any],
+) -> bool:
+    return (
+        str(filters.get("query", "")).strip() != ""
+        or str(filters.get("traffic_class", "ALL")).upper() != "ALL"
+    )
+
+
+def _runtime_export_traffic_demand_user_search_text(
+    row: Mapping[str, Any],
+) -> str:
+    values = (
+        str(row.get("user_id", "")),
+        str(row.get("primary_service_class", "")),
+        *tuple(str(value) for value in _string_tuple(row.get("service_classes"))),
+        *tuple(str(value) for value in _string_tuple(row.get("flow_ids"))),
+        *tuple(str(value) for value in _string_tuple(row.get("task_ids"))),
+        *tuple(str(value) for value in _string_tuple(row.get("output_flow_ids"))),
+    )
+    return " ".join(values).lower()
+
+
 def _runtime_export_service_trace_terminal_state(value: object) -> str:
     normalized = _runtime_export_service_trace_code(value, "ALL")
     if normalized in {"ALL", "RUNNING", "COMPLETE", "INCOMPLETE"}:
@@ -5823,3 +6008,15 @@ def _string_tuple(value: object) -> tuple[str, ...]:
     if not isinstance(value, (list, tuple)):
         return ()
     return tuple(str(item) for item in value if str(item))
+
+
+def _unique_normalized_strings(values: tuple[str, ...]) -> tuple[str, ...]:
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for value in values:
+        normalized = str(value).strip().upper()
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        ordered.append(normalized)
+    return tuple(ordered)

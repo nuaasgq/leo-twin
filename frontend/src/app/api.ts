@@ -35,6 +35,7 @@ import {
   RuntimeExportRouteDetailPageV1,
   RuntimeExportServiceTraceItemV1,
   RuntimeExportServiceTracePageV1,
+  RuntimeExportTrafficDemandUserPageV1,
   RuntimeExportReviewSummaryV1,
   RuntimeExportUserServiceRequestPageV1,
   RuntimeExportUserServiceRequestSummaryArtifactV2,
@@ -95,6 +96,7 @@ export interface RuntimeDetailQueryFilters {
   stageKind?: string;
   terminalReason?: string;
   serviceClass?: string;
+  trafficClass?: string;
   networkWaiting?: string;
 }
 
@@ -445,6 +447,27 @@ export async function loadRuntimeExportUserServiceRequestPage(
     throw new Error(`failed to load runtime export user service request page from ${url}: HTTP ${response.status}`);
   }
   return decodeRuntimeExportUserServiceRequestPage(await response.json());
+}
+
+export async function loadRuntimeExportTrafficDemandUserPage(
+  packageId: string,
+  cursor = 0,
+  limit = 100,
+  filters: RuntimeDetailQueryFilters = {},
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): Promise<RuntimeExportTrafficDemandUserPageV1> {
+  const url = runtimeExportPackageTrafficDemandUsersHref(
+    packageId,
+    cursor,
+    limit,
+    filters,
+    endpoint
+  );
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`failed to load runtime export traffic demand user page from ${url}: HTTP ${response.status}`);
+  }
+  return decodeRuntimeExportTrafficDemandUserPage(await response.json());
 }
 
 export async function loadRuntimeExportServiceTracePage(
@@ -1019,6 +1042,21 @@ export function runtimeExportPackageUserServiceRequestsHref(
   return `${runtimeExportPackageRecordHref(packageId, endpoint)}/user-service-requests?${params.toString()}`;
 }
 
+export function runtimeExportPackageTrafficDemandUsersHref(
+  packageId: string,
+  cursor = 0,
+  limit = 100,
+  filters: RuntimeDetailQueryFilters = {},
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): string {
+  const params = new URLSearchParams({
+    cursor: String(cursor),
+    limit: String(limit)
+  });
+  appendRuntimeDetailFilterParams(params, filters);
+  return `${runtimeExportPackageRecordHref(packageId, endpoint)}/traffic-demand-users?${params.toString()}`;
+}
+
 export function runtimeExportPackageRouteDetailHref(
   packageId: string,
   routeId: string,
@@ -1196,6 +1234,10 @@ function appendRuntimeDetailFilterParams(
   const serviceClass = filters.serviceClass?.trim();
   if (serviceClass && serviceClass !== "ALL") {
     params.set("service_class", serviceClass);
+  }
+  const trafficClass = filters.trafficClass?.trim();
+  if (trafficClass && trafficClass !== "ALL") {
+    params.set("traffic_class", trafficClass);
   }
   const networkWaiting = filters.networkWaiting?.trim();
   if (networkWaiting && networkWaiting !== "ALL") {
@@ -1450,6 +1492,30 @@ export function decodeRuntimeExportUserServiceRequestPage(
     );
   }
   return value as RuntimeExportUserServiceRequestPageV1;
+}
+
+export function decodeRuntimeExportTrafficDemandUserPage(
+  value: unknown
+): RuntimeExportTrafficDemandUserPageV1 {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new TypeError(
+      "runtime export traffic demand user page response must be an object"
+    );
+  }
+  if (
+    typeof (value as { package_id?: unknown }).package_id !== "string" ||
+    typeof (value as { artifact_hash?: unknown }).artifact_hash !== "string" ||
+    typeof (value as { filters?: unknown }).filters !== "object" ||
+    (value as { filters?: unknown }).filters === null ||
+    Array.isArray((value as { filters?: unknown }).filters) ||
+    typeof (value as { user_count?: unknown }).user_count !== "number" ||
+    !Array.isArray((value as { items?: unknown }).items)
+  ) {
+    throw new TypeError(
+      "runtime export traffic demand user page response must include package_id, artifact_hash, filters, user_count, and items"
+    );
+  }
+  return value as RuntimeExportTrafficDemandUserPageV1;
 }
 
 export function decodeRuntimeExportRouteDetailIndex(

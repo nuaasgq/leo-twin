@@ -1662,6 +1662,59 @@ export interface RuntimeExportTrafficDemandExplanationArtifactV1 {
   artifact_hash: string;
 }
 
+export interface RuntimeExportTrafficDemandUserPageV1 {
+  type: "RUNTIME_EXPORT_TRAFFIC_DEMAND_USER_PAGE_V1" | string;
+  version: "v1" | string;
+  page_id: string;
+  source: string;
+  package_id: string;
+  artifact_type: string;
+  artifact_source: string;
+  artifact_scope: string;
+  artifact_hash: string;
+  evidence_hash: string;
+  explanation_id: string;
+  explanation_window_policy: string;
+  endpoint_window_policy: string;
+  packet_level_simulation: boolean;
+  frontend_inference_required: boolean;
+  cursor: number;
+  limit: number;
+  next_cursor: number;
+  has_more: boolean;
+  user_count: number;
+  item_count: number;
+  unfiltered_user_count: number;
+  request_count: number;
+  compute_service_user_count: number;
+  communication_service_user_count: number;
+  filter_applied: boolean;
+  filters: RuntimeExportTrafficDemandUserPageFiltersV1;
+  boundary_conditions: readonly string[];
+  items: readonly RuntimeExportTrafficDemandUserRowV1[];
+  page_hash: string;
+}
+
+export interface RuntimeExportTrafficDemandUserPageFiltersV1 {
+  query: string;
+  traffic_class: string;
+}
+
+export interface RuntimeExportTrafficDemandUserRowV1 {
+  user_id: string;
+  request_count: number;
+  service_classes: readonly string[];
+  primary_service_class: string;
+  max_priority: number;
+  first_arrival_time: number;
+  last_arrival_time: number;
+  flow_ids: readonly string[];
+  task_ids: readonly string[];
+  output_flow_ids: readonly string[];
+  total_input_data_mb: number;
+  total_output_data_mb: number;
+}
+
 export interface RuntimeExportUserServiceRequestEvidenceV2 {
   version: "v2" | string;
   evidence_id: string;

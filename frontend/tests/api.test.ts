@@ -26,6 +26,7 @@ import {
   loadRuntimeExportServiceLifecycleTrace,
   loadRuntimeExportServiceTraceItem,
   loadRuntimeExportServiceTracePage,
+  loadRuntimeExportTrafficDemandUserPage,
   loadRuntimeExportUserServiceRequestSummaryArtifact,
   loadRuntimeExportUserServiceRequestPage,
   loadRuntimeComputeNodeDetail,
@@ -62,6 +63,7 @@ import {
   runtimeExportPackageRouteDetailHref,
   runtimeExportPackageServiceTraceHref,
   runtimeExportPackageServiceTracesHref,
+  runtimeExportPackageTrafficDemandUsersHref,
   runtimeExportPackageUserServiceRequestsHref,
   runtimeExportPackageReviewSummaryHref,
   runtimeExportRouteComparisonReviewReportHref,
@@ -199,6 +201,19 @@ describe("runtime API diagnostics", () => {
       )
     ).toBe(
       "/runtime/export/packages/pkg%201/user-service-requests?cursor=0&limit=5&query=sat+1&terminal_state=WAITING_NETWORK&service_class=COMPUTE_SERVICE&network_waiting=WAITING"
+    );
+    expect(
+      runtimeExportPackageTrafficDemandUsersHref(
+        "pkg 1",
+        0,
+        5,
+        {
+          query: "user 1",
+          trafficClass: "COMPUTE_SERVICE"
+        }
+      )
+    ).toBe(
+      "/runtime/export/packages/pkg%201/traffic-demand-users?cursor=0&limit=5&query=user+1&traffic_class=COMPUTE_SERVICE"
     );
   });
 
@@ -722,6 +737,89 @@ describe("runtime API diagnostics", () => {
     });
     expect(fetchMock).toHaveBeenCalledWith(
       "/runtime/export/packages/pkg/user-service-requests?cursor=0&limit=1&query=sat-run&terminal_state=RUNNING&service_class=COMPUTE_SERVICE&network_waiting=READY"
+    );
+  });
+
+  it("loads runtime export traffic demand user pages", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        type: "RUNTIME_EXPORT_TRAFFIC_DEMAND_USER_PAGE_V1",
+        version: "v1",
+        page_id: "leo_twin.runtime_export_traffic_demand_user_page.v1",
+        source: "BACKEND_RUNTIME_EXPORT_PACKAGE",
+        package_id: "pkg",
+        artifact_type: "RUNTIME_EXPORT_TRAFFIC_DEMAND_EXPLANATION_V1",
+        artifact_source: "BACKEND_RUNTIME_EXPORT",
+        artifact_scope: "TRAFFIC_DEMAND_OFFLINE_REVIEW",
+        artifact_hash:
+          "sha256:1212121212121212121212121212121212121212121212121212121212121212",
+        evidence_hash:
+          "sha256:3434343434343434343434343434343434343434343434343434343434343434",
+        explanation_id: "leo_twin.traffic_demand_explanation.v1",
+        explanation_window_policy: "FULL_CONFIGURED_WINDOW",
+        endpoint_window_policy: "ROUND_ROBIN_ENDPOINT_IDS_CAPPED_AT_512",
+        packet_level_simulation: false,
+        frontend_inference_required: false,
+        cursor: 0,
+        limit: 1,
+        next_cursor: 1,
+        has_more: false,
+        user_count: 1,
+        item_count: 1,
+        unfiltered_user_count: 2,
+        request_count: 1,
+        compute_service_user_count: 1,
+        communication_service_user_count: 0,
+        filter_applied: true,
+        filters: {
+          query: "user-00001",
+          traffic_class: "COMPUTE_SERVICE"
+        },
+        boundary_conditions: [
+          "ARTIFACT_WINDOW_ONLY",
+          "NO_TRAFFIC_REGENERATION",
+          "NO_EVENT_REPLAY",
+          "NO_PACKAGE_MUTATION"
+        ],
+        items: [
+          {
+            user_id: "user-00001",
+            request_count: 1,
+            service_classes: ["COMPUTE_SERVICE"],
+            primary_service_class: "COMPUTE_SERVICE",
+            max_priority: 3,
+            first_arrival_time: 10,
+            last_arrival_time: 10,
+            flow_ids: ["flow-input"],
+            task_ids: ["task-1"],
+            output_flow_ids: ["flow-output"],
+            total_input_data_mb: 64,
+            total_output_data_mb: 16
+          }
+        ],
+        page_hash:
+          "sha256:5656565656565656565656565656565656565656565656565656565656565656"
+      })
+    }));
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+
+    await expect(
+      loadRuntimeExportTrafficDemandUserPage("pkg", 0, 1, {
+        query: "user-00001",
+        trafficClass: "COMPUTE_SERVICE"
+      })
+    ).resolves.toMatchObject({
+      package_id: "pkg",
+      user_count: 1,
+      filters: {
+        query: "user-00001",
+        traffic_class: "COMPUTE_SERVICE"
+      },
+      items: [{ user_id: "user-00001" }]
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/runtime/export/packages/pkg/traffic-demand-users?cursor=0&limit=1&query=user-00001&traffic_class=COMPUTE_SERVICE"
     );
   });
 

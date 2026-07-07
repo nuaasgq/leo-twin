@@ -27,6 +27,7 @@ from examples.integration_demo.server import (
     _runtime_export_package_route,
     _service_trace_filter_query,
     _stream_query,
+    _traffic_demand_user_filter_query,
 )
 from leo_twin.core import SimulationKernel, SimulationModule
 from leo_twin.runtime import (
@@ -1505,6 +1506,54 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
         item["service_class"] == "COMPUTE_SERVICE"
         for item in filtered_user_service_page["items"]
     )
+    traffic_demand_user_page = (
+        control_plane.runtime_export_package_traffic_demand_users(
+            package_id,
+            export_root,
+            cursor=0,
+            limit=1,
+        )
+    )
+    assert (
+        traffic_demand_user_page["type"]
+        == "RUNTIME_EXPORT_TRAFFIC_DEMAND_USER_PAGE_V1"
+    )
+    assert traffic_demand_user_page["source"] == "BACKEND_RUNTIME_EXPORT_PACKAGE"
+    assert traffic_demand_user_page["package_id"] == package_id
+    assert traffic_demand_user_page["artifact_hash"] == (
+        traffic_demand_explanation["artifact_hash"]
+    )
+    assert traffic_demand_user_page["unfiltered_user_count"] == len(
+        traffic_demand_explanation["traffic_demand_explanation"][
+            "per_user_active_service_state"
+        ]
+    )
+    assert traffic_demand_user_page["item_count"] == min(
+        1,
+        len(
+            traffic_demand_explanation["traffic_demand_explanation"][
+                "per_user_active_service_state"
+            ]
+        ),
+    )
+    assert traffic_demand_user_page["page_hash"].startswith("sha256:")
+    filtered_traffic_user_page = (
+        control_plane.runtime_export_package_traffic_demand_users(
+            package_id,
+            export_root,
+            cursor=0,
+            limit=5,
+            traffic_class="COMPUTE_SERVICE",
+        )
+    )
+    assert filtered_traffic_user_page["filters"]["traffic_class"] == (
+        "COMPUTE_SERVICE"
+    )
+    assert filtered_traffic_user_page["filter_applied"] is True
+    assert all(
+        "COMPUTE_SERVICE" in item["service_classes"]
+        for item in filtered_traffic_user_page["items"]
+    )
     service_trace_page = control_plane.runtime_export_package_service_traces(
         package_id,
         export_root,
@@ -1919,6 +1968,15 @@ def test_demo_server_stream_query_parses_cursor_options() -> None:
         "query": "operator note",
         "status": "different",
     }
+    assert _traffic_demand_user_filter_query(
+        {
+            "query": [" user-00001 "],
+            "traffic_class": [" compute_service "],
+        }
+    ) == {
+        "query": "user-00001",
+        "traffic_class": "compute_service",
+    }
     assert _runtime_detail_entity_route(
         "/runtime/details/service-traces/trace%3Asvc-00-compute_service-00000",
         "/runtime/details/service-traces",
@@ -1964,6 +2022,9 @@ def test_demo_server_stream_query_parses_cursor_options() -> None:
     assert _runtime_export_package_route(
         "/runtime/export/packages/pkg%201/user-service-requests"
     ) == ("pkg 1", "user-service-requests", None)
+    assert _runtime_export_package_route(
+        "/runtime/export/packages/pkg%201/traffic-demand-users"
+    ) == ("pkg 1", "traffic-demand-users", None)
     assert _runtime_export_package_route(
         "/runtime/export/packages/pkg%201/routes"
     ) == ("pkg 1", "routes", None)

@@ -276,6 +276,15 @@ The review summary, diagnostics, scenario review, and audit index artifacts all
 bind compact evidence fields for this file. Reading the artifact does not
 regenerate traffic, replay events, perform packet-level simulation, or require
 frontend-side business inference.
+Packages also expose a cursor endpoint for the same per-user demand evidence:
+
+```powershell
+Invoke-RestMethod "http://127.0.0.1:8765/runtime/export/packages/<package_id>/traffic-demand-users?cursor=0&limit=100&traffic_class=COMPUTE_SERVICE"
+```
+
+This endpoint pages exported `per_user_active_service_state` rows and supports
+`query` plus `traffic_class` filters. It reads the package artifact only; it
+does not regenerate traffic, replay events, or mutate the package.
 After using `compare with live`, the package-vs-live route comparison card can
 save the currently displayed comparison into
 `route_comparison_review_report_v1.json`. The saved record includes the
@@ -328,7 +337,9 @@ configured/explained requests, input flows, tasks, output flows, active traffic
 classes, per-class data volumes, per-user state count, compute-service
 correlation status, packet-level flag, frontend-inference flag, and evidence
 hash. The values are read from the exported artifact; the browser does not
-derive new business-demand semantics.
+derive new business-demand semantics. The backend traffic-demand user page
+endpoint is available for large packages where a later dashboard binding should
+page user rows instead of relying on the compact artifact preview.
 The workflow includes an editable checklist. For each review row, the dashboard
 lets the operator choose `REVIEWED`, `SKIPPED`, `NEEDS_FOLLOWUP`, or `ERROR`,
 enter a short note, and save the checklist through the backend. After saving,

@@ -2,7 +2,7 @@
 
 Date: 2026-07-07
 
-Branch: `feature/T380-dashboard-traffic-demand-user-rows-v1`
+Branch: `feature/T381-traffic-demand-package-user-page-v1`
 
 ## Local Entry Points
 
@@ -106,6 +106,12 @@ The latest T380 validation extends that card with bounded per-user demand rows
 from the same exported artifact. The existing artifact filter can narrow the
 user rows by user id or displayed service/request labels, while the browser
 still treats `traffic_demand_explanation_v1.json` as the source of truth.
+The latest T381 validation adds a package-owned traffic-demand user page
+endpoint at `/runtime/export/packages/{package_id}/traffic-demand-users`. It
+pages and filters exported `per_user_active_service_state` rows by query and
+traffic class without regenerating demand, replaying events, or mutating the
+result package. The frontend API contract exposes the same endpoint for the
+next dashboard binding step.
 
 ## Current Product Signals
 
@@ -125,6 +131,11 @@ still treats `traffic_demand_explanation_v1.json` as the source of truth.
   demand preview from exported `per_user_active_service_state` rows and reuses
   the artifact filter for user-level inspection without regenerating demand in
   the frontend.
+- Runtime export packages now expose the same per-user traffic-demand state
+  through a deterministic cursor endpoint,
+  `/runtime/export/packages/{package_id}/traffic-demand-users`, so large
+  package review can page user demand evidence instead of loading the whole
+  artifact in the browser.
 - Generated backend summaries now expose the same traffic-demand explanation
   under `backend_summary.traffic_demand_explanation_v1`. The object is derived
   from the backend traffic configuration, uses a bounded endpoint/request
