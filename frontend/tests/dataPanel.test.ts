@@ -87,6 +87,7 @@ import {
   buildDataPanelNetworkKpiCalibrationDisplay,
   buildDataPanelNetworkKpiCredibilityDisplay,
   buildDataPanelNetworkKpiFormulaEvidenceDisplay,
+  buildDataPanelNetworkKpiVariationExplanationDisplay,
   buildDataPanelNetworkKpiFormulaInspector,
   buildDataPanelModelAssumptionsDisplay,
   buildDataPanelModelTrustEvidenceWorkspace,
@@ -9928,6 +9929,160 @@ describe("buildDataPanelNetworkKpiCredibilityDisplay", () => {
       tone: "observed"
     });
     expect(buildDataPanelNetworkKpiFormulaEvidenceDisplay(undefined)).toBeNull();
+  });
+
+  it("formats backend network KPI variation explanations from runtime status", () => {
+    const display = buildDataPanelNetworkKpiVariationExplanationDisplay({
+      version: "v1",
+      explanation_id: "leo_twin.network_kpi_variation_explanation.v1",
+      source: "NETWORK_KPI_FORMULA_EVIDENCE_V1_AND_CALIBRATION_V1",
+      provenance_id: "leo_twin.network_kpi_provenance.v2",
+      calibration_id: "leo_twin.network_kpi_calibration.v1",
+      formula_evidence_id: "leo_twin.network_kpi_formula_evidence.v1",
+      metric_model: "FLOW_LEVEL_PROXY",
+      packet_level_simulation: false,
+      sample_count: 2,
+      sim_time_span_s: 60,
+      activity_context: {
+        active: true,
+        requested_route_demand_mbps: 200,
+        offered_route_capacity_mbps: 220,
+        recent_flow_count: 2,
+        available_route_count: 2
+      },
+      kpi_count: 2,
+      time_varying_kpi_count: 1,
+      flat_kpi_count: 1,
+      zero_latest_kpi_count: 0,
+      missing_explanation_count: 0,
+      explanation_status: "TIME_VARIATION_EXPLAINED",
+      items: [
+        {
+          metric: "EFFECTIVE_THROUGHPUT",
+          display_name: "有效吞吐量",
+          runtime_summary_key: "network_quality_effective_throughput_mbps",
+          sample_key: "network_effective_throughput_mbps",
+          current_value: 180,
+          unit: "Mbps",
+          observed: true,
+          observed_source: "COMPLETED_FLOW_CAPACITY",
+          observed_source_label: "completed flow capacity",
+          formula_summary: "min(delivered, route capacity)",
+          selected_input_count: 2,
+          selected_observed_input_count: 2,
+          missing_selected_input_count: 0,
+          selected_inputs: [
+            {
+              field: "network_quality_estimated_delivered_throughput_mbps",
+              current_value: 180,
+              observed: true,
+              role: "primary",
+              selection_reason: "selected source"
+            },
+            {
+              field: "network_quality_time_adjusted_delivered_throughput_mbps",
+              current_value: 171,
+              observed: true,
+              role: "time_driver",
+              selection_reason: "time adjusted source"
+            }
+          ],
+          first_value: 160,
+          latest_value: 180,
+          minimum_value: 160,
+          maximum_value: 180,
+          absolute_delta: 20,
+          endpoint_delta: 20,
+          relative_delta: 0.111,
+          latest_is_zero: false,
+          variation_status: "TIME_VARYING",
+          flat_reason: "",
+          evidence_status: "FORMULA_AND_TIME_VARYING",
+          explanation_status: "TIME_VARIATION_EXPLAINED",
+          trust_label: "time-varying flow-level proxy",
+          user_explanation:
+            "有效吞吐量 随仿真时间变化，因为后端选中的 2 个流级输入和 KPI 时间序列样本发生变化。"
+        },
+        {
+          metric: "EFFECTIVE_LOSS_PROXY",
+          display_name: "丢包代理",
+          runtime_summary_key: "network_quality_effective_loss_proxy_rate",
+          sample_key: "network_effective_loss_proxy_rate",
+          current_value: 0.02,
+          unit: "ratio",
+          observed: true,
+          observed_source: "PRESSURE_LOSS_PROXY",
+          observed_source_label: "pressure loss proxy",
+          formula_summary: "max(route loss, pressure loss)",
+          selected_input_count: 1,
+          selected_observed_input_count: 1,
+          missing_selected_input_count: 0,
+          selected_inputs: [
+            {
+              field: "network_quality_time_pressure_loss_proxy_rate",
+              current_value: 0.02,
+              observed: true,
+              role: "time_driver",
+              selection_reason: "selected source"
+            }
+          ],
+          first_value: 0.02,
+          latest_value: 0.02,
+          minimum_value: 0.02,
+          maximum_value: 0.02,
+          absolute_delta: 0,
+          endpoint_delta: 0,
+          relative_delta: 0,
+          latest_is_zero: false,
+          variation_status: "FLAT_NONZERO",
+          flat_reason: "selected pressure inputs did not change",
+          evidence_status: "FORMULA_READY_FLAT_OR_LIMITED_SERIES",
+          explanation_status: "FLAT_NONZERO_EXPLAINED",
+          trust_label: "flat flow-level proxy",
+          user_explanation:
+            "丢包代理 保持不变，因为选中的压力输入没有变化。"
+        }
+      ],
+      model_assumptions: [
+        "网络 KPI 变化解释来自后端 KPI provenance、选中公式输入和确定性运行时 KPI 样本。"
+      ],
+      caveats: [
+        "变化解释 v1 只是观测摘要，不改变任何 KPI 公式。"
+      ],
+      explanation_hash:
+        "sha256:abababababababababababababababababababababababababababababababab"
+    });
+
+    expect(display).toMatchObject({
+      tone: "match",
+      sourceLabel:
+        "leo_twin.network_kpi_variation_explanation.v1 / NETWORK_KPI_FORMULA_EVIDENCE_V1_AND_CALIBRATION_V1",
+      statusLabel: "已解释时间变化",
+      summaryLabel: "流级代理 / 样本 2 / 跨度 1分0秒 / 变化 KPI 1/2",
+      metaLabels: [
+        "无包级仿真",
+        "活动需求 200 Mbps",
+        "平坦 KPI 1",
+        "缺失解释 0",
+        "证据 abababababab"
+      ],
+      caveats: [
+        "网络 KPI 变化解释来自后端 KPI provenance、选中公式输入和确定性运行时 KPI 样本。",
+        "变化解释 v1 只是观测摘要，不改变任何 KPI 公式。"
+      ]
+    });
+    expect(display?.rows[1]).toMatchObject({
+      metric: "EFFECTIVE_THROUGHPUT",
+      displayName: "有效吞吐量 / EFFECTIVE_THROUGHPUT",
+      statusLabel: "已解释时间变化",
+      valueLabel: "180 Mbps",
+      inputLabel:
+        "选中输入 2/2：network_quality_estimated_delivered_throughput_mbps=180 / network_quality_time_adjusted_delivered_throughput_mbps=171",
+      explanationLabel:
+        "有效吞吐量 随仿真时间变化，因为后端选中的 2 个流级输入和 KPI 时间序列样本发生变化。",
+      tone: "observed"
+    });
+    expect(buildDataPanelNetworkKpiVariationExplanationDisplay(undefined)).toBeNull();
   });
 
   it("surfaces missing runtime KPI values from backend credibility fields", () => {

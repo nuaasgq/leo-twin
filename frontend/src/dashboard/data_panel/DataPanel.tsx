@@ -64,6 +64,7 @@ import {
   RuntimeNetworkKpiBenchmarkValidationV1,
   RuntimeNetworkKpiFormulaEvidenceV1,
   RuntimeNetworkKpiProvenanceV2,
+  RuntimeNetworkKpiVariationExplanationV1,
   RuntimeNetworkQualityProvenanceV1,
   RuntimeExportPackageAcceptanceReportV1,
   RuntimeExportPackageAuditIndexV1,
@@ -1212,6 +1213,10 @@ export const DataPanel = memo(function DataPanel({
   const networkKpiFormulaEvidenceDisplay =
     buildDataPanelNetworkKpiFormulaEvidenceDisplay(
       runtimeStatus.network_kpi_formula_evidence_v1
+    );
+  const networkKpiVariationExplanationDisplay =
+    buildDataPanelNetworkKpiVariationExplanationDisplay(
+      runtimeStatus.network_kpi_variation_explanation_v1
     );
   const networkKpiFormulaInspector = buildDataPanelNetworkKpiFormulaInspector(
     runtimeStatus.network_kpi_provenance_v2,
@@ -4647,6 +4652,43 @@ export const DataPanel = memo(function DataPanel({
               {networkKpiFormulaEvidenceDisplay.caveats.length > 0 ? (
                 <div className="data-panel-kpi-credibility-caveats">
                   {networkKpiFormulaEvidenceDisplay.caveats.map((caveat) => (
+                    <span key={caveat}>{caveat}</span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+          {networkKpiVariationExplanationDisplay ? (
+            <div
+              className={`data-panel-kpi-formula-inspector ${networkKpiVariationExplanationDisplay.tone}`}
+              aria-label="网络KPI变化解释"
+            >
+              <div className="data-panel-kpi-formula-header">
+                <div>
+                  <span>{networkKpiVariationExplanationDisplay.sourceLabel}</span>
+                  <strong>{networkKpiVariationExplanationDisplay.statusLabel}</strong>
+                  <small>{networkKpiVariationExplanationDisplay.summaryLabel}</small>
+                </div>
+              </div>
+              <div className="data-panel-kpi-formula-meta">
+                {networkKpiVariationExplanationDisplay.metaLabels.map((label) => (
+                  <span key={label}>{label}</span>
+                ))}
+              </div>
+              <div className="data-panel-kpi-formula-rows">
+                {networkKpiVariationExplanationDisplay.rows.map((row) => (
+                  <span className={row.tone} key={row.metric} title={row.title}>
+                    <strong>{row.displayName}</strong>
+                    <em>{row.statusLabel}</em>
+                    <small>{row.valueLabel}</small>
+                    <small>{row.inputLabel}</small>
+                    <small>{row.explanationLabel}</small>
+                  </span>
+                ))}
+              </div>
+              {networkKpiVariationExplanationDisplay.caveats.length > 0 ? (
+                <div className="data-panel-kpi-credibility-caveats">
+                  {networkKpiVariationExplanationDisplay.caveats.map((caveat) => (
                     <span key={caveat}>{caveat}</span>
                   ))}
                 </div>
@@ -19360,6 +19402,16 @@ export interface DataPanelNetworkKpiFormulaEvidenceDisplay {
   caveats: readonly string[];
 }
 
+export interface DataPanelNetworkKpiVariationExplanationDisplay {
+  tone: DataPanelNetworkKpiCredibilityTone;
+  sourceLabel: string;
+  statusLabel: string;
+  summaryLabel: string;
+  metaLabels: readonly string[];
+  rows: readonly DataPanelNetworkKpiVariationExplanationRow[];
+  caveats: readonly string[];
+}
+
 export interface DataPanelNetworkKpiCalibrationRow {
   metric: string;
   metricLabel: string;
@@ -19378,6 +19430,17 @@ export interface DataPanelNetworkKpiFormulaEvidenceRow {
   valueLabel: string;
   selectedInputLabel: string;
   variationLabel: string;
+  tone: "observed" | "missing" | "invalid";
+  title: string;
+}
+
+export interface DataPanelNetworkKpiVariationExplanationRow {
+  metric: string;
+  displayName: string;
+  statusLabel: string;
+  valueLabel: string;
+  inputLabel: string;
+  explanationLabel: string;
   tone: "observed" | "missing" | "invalid";
   title: string;
 }
@@ -20100,6 +20163,86 @@ export function buildDataPanelNetworkKpiFormulaEvidenceDisplay(
     ],
     rows,
     caveats: evidence.caveats.slice(0, 3)
+  };
+}
+
+export function buildDataPanelNetworkKpiVariationExplanationDisplay(
+  explanation: RuntimeNetworkKpiVariationExplanationV1 | null | undefined,
+  limit = 4
+): DataPanelNetworkKpiVariationExplanationDisplay | null {
+  if (explanation === null || explanation === undefined) {
+    return null;
+  }
+  const displayLimit = Math.max(0, Math.floor(limit));
+  const orderedItems = [...explanation.items].sort((left, right) =>
+    left.metric.localeCompare(right.metric)
+  );
+  const rows = orderedItems.slice(0, displayLimit).map((item) => {
+    const selectedInputText =
+      item.selected_inputs.length > 0
+        ? item.selected_inputs
+            .slice(0, 3)
+            .map((input) => `${input.field}=${formatNetworkKpiValue(input.current_value)}`)
+            .join(" / ")
+        : "无显式选中输入";
+    const tone: DataPanelNetworkKpiVariationExplanationRow["tone"] =
+      explanation.packet_level_simulation
+        ? "invalid"
+        : item.explanation_status.startsWith("MISSING") ||
+            item.explanation_status === "FORMULA_ONLY_NO_TIME_SERIES"
+          ? "missing"
+          : "observed";
+    return {
+      metric: item.metric,
+      displayName: `${item.display_name} / ${item.metric}`,
+      statusLabel: networkKpiVariationExplanationStatusLabel(
+        item.explanation_status
+      ),
+      valueLabel: `${formatNetworkKpiValue(item.current_value)} ${item.unit}`.trim(),
+      inputLabel: `选中输入 ${formatCount(
+        item.selected_observed_input_count
+      )}/${formatCount(item.selected_input_count)}：${selectedInputText}`,
+      explanationLabel: item.user_explanation,
+      tone,
+      title: [
+        item.formula_summary,
+        item.flat_reason,
+        item.trust_label,
+        item.observed_source_label || item.observed_source
+      ]
+        .filter((part) => part.length > 0)
+        .join(" / ")
+    };
+  });
+  const hiddenCount = Math.max(0, orderedItems.length - rows.length);
+  return {
+    tone: networkKpiVariationExplanationTone(explanation.explanation_status),
+    sourceLabel: `${explanation.explanation_id} / ${explanation.source}`,
+    statusLabel: networkKpiVariationExplanationStatusLabel(
+      explanation.explanation_status
+    ),
+    summaryLabel: `${networkKpiMetricModelLabel(
+      explanation.metric_model
+    )} / 样本 ${formatCount(explanation.sample_count)} / 跨度 ${formatDurationCompact(
+      explanation.sim_time_span_s
+    )} / 变化 KPI ${formatCount(
+      explanation.time_varying_kpi_count
+    )}/${formatCount(explanation.kpi_count)}${
+      hiddenCount > 0 ? ` / 隐藏 ${formatCount(hiddenCount)}` : ""
+    }`,
+    metaLabels: [
+      explanation.packet_level_simulation ? "含包级仿真" : "无包级仿真",
+      explanation.activity_context.active
+        ? `活动需求 ${formatMetricMbps(
+            explanation.activity_context.requested_route_demand_mbps
+          )}`
+        : "无活动需求",
+      `平坦 KPI ${formatCount(explanation.flat_kpi_count)}`,
+      `缺失解释 ${formatCount(explanation.missing_explanation_count)}`,
+      `证据 ${shortRuntimeHash(explanation.explanation_hash)}`
+    ],
+    rows,
+    caveats: [...explanation.model_assumptions.slice(0, 1), ...explanation.caveats.slice(0, 2)]
   };
 }
 
@@ -20970,6 +21113,61 @@ function networkKpiFormulaEvidenceStatusLabel(status: string): string {
     return "公式齐备但序列平坦或不足";
   }
   return status || "公式证据未知";
+}
+
+function networkKpiVariationExplanationTone(
+  status: string
+): DataPanelNetworkKpiCredibilityTone {
+  if (
+    status === "TIME_VARIATION_EXPLAINED" ||
+    status === "FLAT_NO_ACTIVITY_EXPLAINED"
+  ) {
+    return "match";
+  }
+  if (status === "FLAT_UNDER_ACTIVITY_EXPLAINED") {
+    return "different";
+  }
+  if (status === "INSUFFICIENT_SERIES") {
+    return "pending";
+  }
+  return "error";
+}
+
+function networkKpiVariationExplanationStatusLabel(status: string): string {
+  if (status === "TIME_VARIATION_EXPLAINED") {
+    return "已解释时间变化";
+  }
+  if (status === "FLAT_UNDER_ACTIVITY_EXPLAINED") {
+    return "活动下平坦已解释";
+  }
+  if (status === "FLAT_NO_ACTIVITY_EXPLAINED") {
+    return "无活动平坦已解释";
+  }
+  if (status === "INSUFFICIENT_SERIES") {
+    return "样本不足";
+  }
+  if (status === "NO_KPI_EVIDENCE") {
+    return "无KPI证据";
+  }
+  if (status === "FLAT_ZERO_EXPLAINED") {
+    return "零值平坦已解释";
+  }
+  if (status === "FLAT_NONZERO_EXPLAINED") {
+    return "非零平坦已解释";
+  }
+  if (status === "MISSING_RUNTIME_VALUE") {
+    return "运行值缺失";
+  }
+  if (status === "MISSING_SELECTED_INPUT") {
+    return "选中输入缺失";
+  }
+  if (status === "FORMULA_ONLY_NO_TIME_SERIES") {
+    return "仅有公式证据";
+  }
+  if (status === "FORMULA_READY") {
+    return "公式证据可用";
+  }
+  return status || "变化解释未知";
 }
 
 function networkKpiCalibrationVariationLabel(status: string): string {

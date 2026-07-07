@@ -13,6 +13,10 @@ from leo_twin.services.network_kpi_formula_evidence import (
     NETWORK_KPI_FORMULA_EVIDENCE_V1_ID,
     build_network_kpi_formula_evidence_v1,
 )
+from leo_twin.services.network_kpi_variation_explanation import (
+    NETWORK_KPI_VARIATION_EXPLANATION_V1_ID,
+    build_network_kpi_variation_explanation_v1,
+)
 
 
 def test_network_kpi_provenance_v2_binds_metrics_to_network_contract() -> None:
@@ -289,6 +293,167 @@ def test_network_kpi_formula_evidence_v1_combines_formula_inputs_and_calibration
     )
 
 
+def test_network_kpi_variation_explanation_v1_explains_metric_movement() -> None:
+    metrics = {
+        "network_quality_metric_model": "FLOW_LEVEL_PROXY",
+        "network_quality_effective_throughput_mbps": 180.0,
+        "network_quality_estimated_delivered_throughput_mbps": 180.0,
+        "network_quality_time_adjusted_delivered_throughput_mbps": 171.0,
+        "network_quality_estimated_available_throughput_mbps": 171.0,
+        "network_quality_available_route_demand_mbps": 200.0,
+        "network_quality_throughput_source": "COMPLETED_FLOW_CAPACITY",
+        "network_quality_throughput_source_label": "completed flow capacity",
+        "network_quality_effective_latency_avg_s": 0.045,
+        "network_quality_route_latency_avg_s": 0.05,
+        "network_quality_flow_latency_avg_s": 0.045,
+        "network_quality_latency_source": "COMPLETED_FLOW_LATENCY",
+        "network_quality_latency_source_label": "completed flow latency",
+        "network_quality_effective_loss_proxy_rate": 0.05,
+        "network_quality_failed_flow_ratio": 0.0,
+        "network_quality_congestion_loss_proxy_rate": 0.03,
+        "network_quality_demand_loss_proxy_rate": 0.05,
+        "network_quality_time_pressure_loss_proxy_rate": 0.07,
+        "network_quality_loss_source": "PRESSURE_LOSS_PROXY",
+        "network_quality_loss_source_label": "pressure loss proxy",
+        "network_quality_effective_delay_variation_proxy_s": 0.006,
+        "network_quality_delay_variation_proxy_s": 0.004,
+        "network_quality_flow_latency_variation_proxy_s": 0.006,
+        "network_quality_pressure_delay_variation_proxy_s": 0.001,
+        "network_quality_time_pressure_delay_variation_proxy_s": 0.002,
+        "network_quality_delay_variation_source": "FLOW_LATENCY_VARIATION",
+        "network_quality_delay_variation_source_label": "flow latency variation",
+        "network_quality_route_blocking_ratio": 0.0,
+        "network_quality_congestion_proxy": 0.8,
+        "network_quality_requested_route_demand_mbps": 200.0,
+        "network_quality_offered_route_capacity_mbps": 220.0,
+    }
+    series = {
+        "samples": (
+            {
+                "sim_time": 1.0,
+                "network_effective_throughput_mbps": 160.0,
+                "network_effective_latency_s": 0.04,
+                "network_effective_loss_proxy_rate": 0.04,
+                "network_effective_delay_variation_s": 0.005,
+            },
+            {
+                "sim_time": 2.0,
+                "network_effective_throughput_mbps": 180.0,
+                "network_effective_latency_s": 0.045,
+                "network_effective_loss_proxy_rate": 0.05,
+                "network_effective_delay_variation_s": 0.006,
+            },
+        )
+    }
+    provenance = build_network_kpi_provenance_v2(metrics)
+    calibration = build_network_kpi_calibration_v1(series, metrics)
+    evidence = build_network_kpi_formula_evidence_v1(
+        metrics,
+        provenance,
+        calibration,
+    )
+
+    explanation = build_network_kpi_variation_explanation_v1(
+        metrics,
+        provenance,
+        calibration,
+        evidence,
+    )
+
+    assert explanation["version"] == "v1"
+    assert explanation["explanation_id"] == NETWORK_KPI_VARIATION_EXPLANATION_V1_ID
+    assert explanation["source"] == "NETWORK_KPI_FORMULA_EVIDENCE_V1_AND_CALIBRATION_V1"
+    assert explanation["packet_level_simulation"] is False
+    assert explanation["sample_count"] == 2
+    assert explanation["time_varying_kpi_count"] >= 1
+    assert explanation["explanation_status"] == "TIME_VARIATION_EXPLAINED"
+    assert str(explanation["explanation_hash"]).startswith("sha256:")
+    throughput = _variation_explanation_kpi(explanation, "EFFECTIVE_THROUGHPUT")
+    assert throughput["variation_status"] == "TIME_VARYING"
+    assert throughput["explanation_status"] == "TIME_VARIATION_EXPLAINED"
+    assert "随仿真时间变化" in str(throughput["user_explanation"])
+    assert [item["field"] for item in throughput["selected_inputs"]] == [
+        "network_quality_estimated_delivered_throughput_mbps",
+        "network_quality_time_adjusted_delivered_throughput_mbps",
+    ]
+    assert json.loads(json.dumps(explanation, sort_keys=True))["explanation_id"] == (
+        NETWORK_KPI_VARIATION_EXPLANATION_V1_ID
+    )
+
+
+def test_network_kpi_variation_explanation_v1_explains_flat_active_kpis() -> None:
+    metrics = {
+        "network_quality_metric_model": "FLOW_LEVEL_PROXY",
+        "network_quality_effective_throughput_mbps": 100.0,
+        "network_quality_estimated_delivered_throughput_mbps": 100.0,
+        "network_quality_time_adjusted_delivered_throughput_mbps": 100.0,
+        "network_quality_throughput_source": "COMPLETED_FLOW_CAPACITY",
+        "network_quality_throughput_source_label": "completed flow capacity",
+        "network_quality_effective_latency_avg_s": 0.04,
+        "network_quality_flow_latency_avg_s": 0.04,
+        "network_quality_latency_source": "COMPLETED_FLOW_LATENCY",
+        "network_quality_latency_source_label": "completed flow latency",
+        "network_quality_effective_loss_proxy_rate": 0.0,
+        "network_quality_failed_flow_ratio": 0.0,
+        "network_quality_congestion_loss_proxy_rate": 0.0,
+        "network_quality_demand_loss_proxy_rate": 0.0,
+        "network_quality_time_pressure_loss_proxy_rate": 0.0,
+        "network_quality_loss_source": "PRESSURE_LOSS_PROXY",
+        "network_quality_loss_source_label": "pressure loss proxy",
+        "network_quality_effective_delay_variation_proxy_s": 0.0,
+        "network_quality_delay_variation_proxy_s": 0.0,
+        "network_quality_flow_latency_variation_proxy_s": 0.0,
+        "network_quality_pressure_delay_variation_proxy_s": 0.0,
+        "network_quality_time_pressure_delay_variation_proxy_s": 0.0,
+        "network_quality_delay_variation_source": "FLOW_LATENCY_VARIATION",
+        "network_quality_delay_variation_source_label": "flow latency variation",
+        "network_quality_route_blocking_ratio": 0.0,
+        "network_quality_congestion_proxy": 0.0,
+        "network_quality_requested_route_demand_mbps": 100.0,
+        "network_quality_offered_route_capacity_mbps": 100.0,
+    }
+    series = {
+        "samples": (
+            {
+                "sim_time": 1.0,
+                "network_effective_throughput_mbps": 100.0,
+                "network_effective_latency_s": 0.04,
+                "network_effective_loss_proxy_rate": 0.0,
+                "network_effective_delay_variation_s": 0.0,
+            },
+            {
+                "sim_time": 2.0,
+                "network_effective_throughput_mbps": 100.0,
+                "network_effective_latency_s": 0.04,
+                "network_effective_loss_proxy_rate": 0.0,
+                "network_effective_delay_variation_s": 0.0,
+            },
+        )
+    }
+    provenance = build_network_kpi_provenance_v2(metrics)
+    calibration = build_network_kpi_calibration_v1(series, metrics)
+    evidence = build_network_kpi_formula_evidence_v1(
+        metrics,
+        provenance,
+        calibration,
+    )
+
+    explanation = build_network_kpi_variation_explanation_v1(
+        metrics,
+        provenance,
+        calibration,
+        evidence,
+    )
+
+    assert explanation["explanation_status"] == "FLAT_UNDER_ACTIVITY_EXPLAINED"
+    assert explanation["time_varying_kpi_count"] == 0
+    assert explanation["flat_kpi_count"] >= 1
+    loss = _variation_explanation_kpi(explanation, "EFFECTIVE_LOSS_PROXY")
+    assert loss["variation_status"] == "FLAT_ZERO"
+    assert loss["explanation_status"] == "FLAT_ZERO_EXPLAINED"
+    assert "保持为零" in str(loss["user_explanation"])
+
+
 def _kpi(provenance: dict[str, object], metric: str) -> dict[str, object]:
     kpis = provenance["kpis"]
     assert isinstance(kpis, tuple)
@@ -330,3 +495,16 @@ def _formula_evidence_kpi(
         if item["metric"] == metric:
             return item
     raise AssertionError(f"missing formula evidence KPI {metric}")
+
+
+def _variation_explanation_kpi(
+    explanation: dict[str, object],
+    metric: str,
+) -> dict[str, object]:
+    items = explanation["items"]
+    assert isinstance(items, tuple)
+    for item in items:
+        assert isinstance(item, dict)
+        if item["metric"] == metric:
+            return item
+    raise AssertionError(f"missing variation explanation KPI {metric}")

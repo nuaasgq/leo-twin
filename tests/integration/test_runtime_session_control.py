@@ -450,6 +450,51 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
         "network_quality_effective_throughput_mbps"
     )
     assert formula_throughput["selected_input_count"] >= 0
+    network_kpi_variation_explanation = status_after_tick[
+        "network_kpi_variation_explanation_v1"
+    ]
+    assert network_kpi_variation_explanation["version"] == "v1"
+    assert network_kpi_variation_explanation["explanation_id"] == (
+        "leo_twin.network_kpi_variation_explanation.v1"
+    )
+    assert network_kpi_variation_explanation["source"] == (
+        "NETWORK_KPI_FORMULA_EVIDENCE_V1_AND_CALIBRATION_V1"
+    )
+    assert network_kpi_variation_explanation["provenance_id"] == (
+        network_provenance_v2["provenance_id"]
+    )
+    assert network_kpi_variation_explanation["calibration_id"] == (
+        network_kpi_calibration["calibration_id"]
+    )
+    assert network_kpi_variation_explanation["formula_evidence_id"] == (
+        network_kpi_formula_evidence["evidence_id"]
+    )
+    assert network_kpi_variation_explanation["packet_level_simulation"] is False
+    assert network_kpi_variation_explanation["sample_count"] == (
+        network_kpi_calibration["sample_count"]
+    )
+    assert network_kpi_variation_explanation["kpi_count"] == len(
+        network_kpi_variation_explanation["items"]
+    )
+    assert network_kpi_variation_explanation["explanation_status"] in {
+        "TIME_VARIATION_EXPLAINED",
+        "FLAT_UNDER_ACTIVITY_EXPLAINED",
+        "FLAT_NO_ACTIVITY_EXPLAINED",
+        "INSUFFICIENT_SERIES",
+        "NO_KPI_EVIDENCE",
+    }
+    assert str(network_kpi_variation_explanation["explanation_hash"]).startswith(
+        "sha256:"
+    )
+    variation_throughput = _runtime_kpi_variation_explanation(
+        network_kpi_variation_explanation,
+        "EFFECTIVE_THROUGHPUT",
+    )
+    assert variation_throughput["runtime_summary_key"] == (
+        "network_quality_effective_throughput_mbps"
+    )
+    assert variation_throughput["selected_input_count"] >= 0
+    assert variation_throughput["user_explanation"]
     satellite_slices = status_after_tick["satellite_kpi_slices_v1"]
     assert satellite_slices["version"] == "v1"
     assert satellite_slices["mode"] == "TOP_ACTIVITY_LIMITED"
@@ -2220,6 +2265,19 @@ def _runtime_kpi_formula_evidence(
         if item["metric"] == metric:
             return item
     raise AssertionError(f"missing KPI formula evidence {metric}")
+
+
+def _runtime_kpi_variation_explanation(
+    explanation: dict[str, object],
+    metric: str,
+) -> dict[str, object]:
+    items = explanation["items"]
+    assert isinstance(items, tuple)
+    for item in items:
+        assert isinstance(item, dict)
+        if item["metric"] == metric:
+            return item
+    raise AssertionError(f"missing KPI variation explanation {metric}")
 
 
 def _runtime_status_after_route_demand(config: DemoConfig, output_dir: Path) -> dict[str, Any]:

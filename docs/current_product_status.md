@@ -168,6 +168,12 @@ the card without loading the full JSON artifact.
   time-series evidence summary. The dashboard renders it in the network KPI
   panel and model-trust workspace rather than inferring formula credibility
   locally.
+- Runtime status now also includes backend-owned
+  `network_kpi_variation_explanation_v1`, which turns KPI calibration and
+  formula evidence into user-facing explanations for why throughput, latency,
+  loss proxy, and jitter proxy moved or stayed flat over simulation time. The
+  standalone dashboard renders this explanation in the network KPI panel from
+  backend-provided fields.
 - Runtime export packages now include `network_kpi_formula_evidence_v1.json`
   and propagate its status/hash into review summary, diagnostics, scenario
   review, audit index, and dashboard export review labels. Offline package
@@ -272,6 +278,8 @@ the card without loading the full JSON artifact.
 - KPI formula evidence is visible as a compact card; a future pass can add a
   wider source-field/input drawer if operators need to inspect every KPI input
   for larger scenarios.
+- KPI variation explanation is visible in the dashboard runtime view, but it is
+  not yet exported as a standalone package artifact.
 - Formula evidence is exported as a package artifact, but the dashboard still
   uses compact labels rather than a dedicated artifact drawer for every KPI
   input row.

@@ -58,6 +58,9 @@ from leo_twin.services.network_kpi_provenance import (
     build_network_kpi_credibility_v1,
     build_network_kpi_provenance_v2,
 )
+from leo_twin.services.network_kpi_variation_explanation import (
+    build_network_kpi_variation_explanation_v1,
+)
 from leo_twin.services.control import (
     RuntimeController,
     ScaleSafetyChecker,
@@ -2277,6 +2280,14 @@ class DemoControlPlane:
                 metrics_summary,
                 network_kpi_provenance_v2,
                 status["network_kpi_calibration_v1"],
+            )
+        )
+        status["network_kpi_variation_explanation_v1"] = (
+            build_network_kpi_variation_explanation_v1(
+                metrics_summary,
+                network_kpi_provenance_v2,
+                status["network_kpi_calibration_v1"],
+                status["network_kpi_formula_evidence_v1"],
             )
         )
         status["satellite_kpi_slices_v1"] = self._satellite_kpi_slices_json()

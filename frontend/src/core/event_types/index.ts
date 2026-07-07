@@ -2979,6 +2979,7 @@ export interface RuntimeStatusPayload {
   network_kpi_benchmark_validation_v1?: RuntimeNetworkKpiBenchmarkValidationV1;
   network_kpi_calibration_v1?: RuntimeNetworkKpiCalibrationV1;
   network_kpi_formula_evidence_v1?: RuntimeNetworkKpiFormulaEvidenceV1;
+  network_kpi_variation_explanation_v1?: RuntimeNetworkKpiVariationExplanationV1;
   kpi_time_series_v1?: RuntimeKpiTimeSeriesV1;
   satellite_kpi_slices_v1?: RuntimeSatelliteKpiSlicesV1;
   satellite_kpi_history_v1?: RuntimeSatelliteKpiHistoryV1;
@@ -3230,6 +3231,61 @@ export interface RuntimeNetworkKpiFormulaEvidenceInputV1 {
   observed: boolean;
   role: string;
   selection_reason: string;
+}
+
+export interface RuntimeNetworkKpiVariationExplanationV1 {
+  version: "v1" | string;
+  explanation_id: string;
+  source: string;
+  provenance_id: string;
+  calibration_id: string;
+  formula_evidence_id: string;
+  metric_model: string;
+  packet_level_simulation: boolean;
+  sample_count: number;
+  sim_time_span_s: number;
+  activity_context: RuntimeNetworkKpiCalibrationActivityContextV1;
+  kpi_count: number;
+  time_varying_kpi_count: number;
+  flat_kpi_count: number;
+  zero_latest_kpi_count: number;
+  missing_explanation_count: number;
+  explanation_status: string;
+  items: readonly RuntimeNetworkKpiVariationExplanationItemV1[];
+  model_assumptions: readonly string[];
+  caveats: readonly string[];
+  explanation_hash: string;
+}
+
+export interface RuntimeNetworkKpiVariationExplanationItemV1 {
+  metric: string;
+  display_name: string;
+  runtime_summary_key: string;
+  sample_key: string;
+  current_value: string | number | boolean | null;
+  unit: string;
+  observed: boolean;
+  observed_source: string;
+  observed_source_label: string;
+  formula_summary: string;
+  selected_input_count: number;
+  selected_observed_input_count: number;
+  missing_selected_input_count: number;
+  selected_inputs: readonly RuntimeNetworkKpiFormulaEvidenceInputV1[];
+  first_value: number | null;
+  latest_value: number | null;
+  minimum_value: number | null;
+  maximum_value: number | null;
+  absolute_delta: number;
+  endpoint_delta: number;
+  relative_delta: number;
+  latest_is_zero: boolean;
+  variation_status: string;
+  flat_reason: string;
+  evidence_status: string;
+  explanation_status: string;
+  trust_label: string;
+  user_explanation: string;
 }
 
 export interface RuntimeNetworkKpiCalibrationActivityContextV1 {

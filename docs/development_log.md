@@ -5,6 +5,54 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-07 - Network KPI Variation Explanation v1
+
+- Branch: `feature/T384-network-kpi-variation-explanation-v1`
+- Commit: pending in this commit
+- Scope: add backend-owned `network_kpi_variation_explanation_v1` to runtime
+  status, derived from existing KPI provenance, KPI calibration, and KPI
+  formula evidence. The standalone dashboard renders this backend summary in
+  the network KPI panel so users can see why throughput, latency, loss proxy,
+  and jitter proxy moved or stayed flat. This task does not change KPI
+  formulas, Event Kernel behavior, packet-level simulation, network/orbit/
+  compute models, or result-package artifact contracts.
+- Changed files/modules:
+  - `src/leo_twin/services/network_kpi_variation_explanation.py`
+  - `examples/integration_demo/control_plane.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `tests/unit/test_network_kpi_provenance_v2.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/current_product_status.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests\unit\test_network_kpi_provenance_v2.py -q`
+    - Result: passed, 5 tests.
+  - `python -m pytest tests\integration\test_runtime_session_control.py -q`
+    - Result: passed, 24 tests.
+  - `python -m pytest tests\unit\test_network_kpi_provenance_v2.py tests\integration\test_runtime_session_control.py tests\unit\test_system_v2_upgrade_plan_docs.py tests\unit\test_user_guide_v2_docs.py -q`
+    - Result: passed, 33 tests.
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed, 1 test file / 218 tests using the bundled Codex
+      Node/pnpm runtime.
+  - `pnpm --dir frontend build`
+    - Result: passed using the bundled Codex Node/pnpm runtime. Vite reported
+      the existing `DataPanel` chunk-size warning after minification.
+- Problems encountered and handling:
+  - The default shell did not have `node` on `PATH`; validation was rerun with
+    the bundled Codex Node and pnpm executables.
+  - The task started with local runtime/generated config files already dirty.
+    They remain outside the staged task scope and are intentionally not
+    delivered as product changes.
+- Known remaining issues / follow-up:
+  - `network_kpi_variation_explanation_v1` is currently a runtime-status and
+    dashboard surface. A later result-package task can export it as a
+    standalone offline artifact if package review needs the same explanation
+    without loading the full runtime status snapshot.
+
 ## 2026-07-07 - Dashboard Traffic Demand Page Controls v1
 
 - Branch: `feature/T383-dashboard-traffic-demand-page-controls-v1`

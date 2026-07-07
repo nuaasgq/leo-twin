@@ -368,7 +368,10 @@ Tasks:
     inference. T370 exports the same formula evidence into
     `network_kpi_formula_evidence_v1.json` and surfaces compact status/hash
     labels in result-package review, diagnostics, scenario review, and audit
-    sections.
+    sections. T384 adds backend-owned
+    `network_kpi_variation_explanation_v1`, derived from KPI formula evidence
+    and KPI calibration, so the dashboard can explain why each flow-level KPI
+    moved or stayed flat without recomputing KPI semantics locally.
 - V2-022: Add time-varying flow-level network pressure.
   - Scope: deterministic demand/capacity pressure, route blocking, congestion
     proxy, loss proxy, delay variation proxy.
@@ -1104,6 +1107,10 @@ Current Phase 3 progress:
   same dashboard network KPI panel and model-trust evidence workspace, closing
   the gap between formula provenance, selected runtime inputs, and observed KPI
   movement.
+- T384 adds backend KPI variation explanation evidence in runtime status and
+  binds it to the dashboard network KPI panel, making flat or time-varying
+  throughput, latency, loss-proxy, and jitter-proxy behavior explicit from
+  backend-owned fields.
 - T364 adds a dashboard detail-coverage status card for backend detail
   families, cursor windows, hidden rows, exact node cards, and pagination
   contract status. This improves the node-detail workstream without changing

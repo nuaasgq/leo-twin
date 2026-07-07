@@ -145,8 +145,9 @@ The console is for simulation control and 3D inspection:
 The standalone dashboard is for data situation awareness:
 
 - network KPI trend, provenance, benchmark validation, backend calibration
-  evidence for whether KPI curves are time-varying or flat, and formula
-  evidence showing selected backend inputs for the current KPI values;
+  evidence for whether KPI curves are time-varying or flat, formula evidence
+  showing selected backend inputs for the current KPI values, and backend
+  variation explanations describing why each KPI moved or stayed flat;
 - business/service traces;
 - backend traffic-demand explanation from
   `backend_summary.traffic_demand_explanation_v1` for generated business
