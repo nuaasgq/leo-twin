@@ -46,11 +46,16 @@ Tasks:
   - Scope: schema fields, validation rules, defaults, comments, examples.
   - Output: docs and tests for accepted/rejected configs.
   - Depends on: existing generated config and templates.
-  - Status: T320 adds backend-owned `USER_CONFIGURATION_REFERENCE_V1` through
-    `GET /scenario/user-config/reference`. The reference binds schema v2,
-    key UI fields, detailed file-only fields, template profiles,
-    validation/apply workflow, and model boundaries into one stable
-    configuration reference object for users and frontend surfaces.
+  - Status: T166 implements the backend-owned user configuration schema v2 for
+    the full `SEESConfig` surface, including deterministic field paths,
+    defaults/current values, enum values, numeric constraints, key-control vs
+    detailed-file edit surfaces, template references, accepted/rejected
+    examples, and validation reporting. T320 adds backend-owned
+    `USER_CONFIGURATION_REFERENCE_V1` through `GET
+    /scenario/user-config/reference`. The reference binds schema v2, key UI
+    fields, detailed file-only fields, template profiles, validation/apply
+    workflow, and model boundaries into one stable configuration reference
+    object for users and frontend surfaces.
     T321 binds that reference into the standalone dashboard configuration
     contract card so the frontend displays the backend-owned reference hash,
     file-only field count, and reference link rather than deriving the
@@ -79,15 +84,20 @@ Tasks:
   - Scope: frontend upload/download for user config, backend validation errors.
   - Output: no silent fallback on invalid keys.
   - Depends on: V2-001, V2-003.
-  - Status: preflight validation API implemented in T198 as
-    `POST /scenario/user-config/validate`; dashboard JSON preflight UI
-    implemented in T199; guarded preflight-to-apply flow implemented in T200 by
-    sending backend-normalized config through explicit `CONFIG_UPDATE`;
-    backend preflight diff summary implemented in T201; dashboard diff
-    rendering implemented in T202; backend/runtime apply readiness and
-    dashboard readiness rendering implemented in T203; backend JSON/YAML text
-    preflight endpoint implemented in T204; dashboard JSON/YAML text preflight
-    mode implemented in T205.
+  - Status: T193 exposes read-only backend configuration contract endpoints
+    for schema, template catalog, and current effective config export; T194
+    binds the dashboard to those read-only schema/template/export links.
+    Preflight validation API implemented in T198 as `POST
+    /scenario/user-config/validate`; dashboard JSON preflight UI implemented
+    in T199; guarded preflight-to-apply flow implemented in T200 by sending
+    backend-normalized config through explicit `CONFIG_UPDATE`; backend
+    preflight diff summary implemented in T201; dashboard diff rendering
+    implemented in T202; backend/runtime apply readiness and dashboard
+    readiness rendering implemented in T203; backend JSON/YAML text preflight
+    endpoint implemented in T204; dashboard JSON/YAML text preflight mode
+    implemented in T205. Direct file-picker upload remains a future UI
+    hardening item; the current workflow supports text preflight and explicit
+    apply.
 
 ### WS2. Business Demand Model v2
 
@@ -267,13 +277,25 @@ Tasks:
 - V2-020: Document layered network model contract.
   - Scope: application, transport, routing, data link, channel abstraction.
   - Output: docs and schema enums; no behavior rewrite.
+  - Status: T167 implements `leo_twin.network_model_contract.v2` as a
+    product-level layered network contract. It documents application,
+    transport, network/routing, data-link, physical terminal, and channel
+    abstraction boundaries, exposes deterministic KPI semantic contracts
+    through `network_model_contract_v2_to_dict()`, publishes
+    `docs/network_model_contract_v2.md`, and verifies the contract with
+    `tests/unit/test_network_model_contract_v2.py` without changing Event
+    Kernel behavior or runtime packet-level fidelity.
 - V2-021: Add KPI provenance contract v2.
   - Scope: formula inputs for throughput, latency, loss proxy, jitter proxy.
   - Output: backend `network_kpi_provenance_v2`.
   - Depends on: V2-020.
-  - Status: provenance contract implemented earlier; backend
-    `network_kpi_credibility_v1` coverage/trust summary implemented in T206;
-    standalone dashboard trust card bound to backend credibility fields in T207.
+  - Status: T168 implements `network_kpi_provenance_v2` in runtime status,
+    binding existing `metrics_summary` values to
+    `leo_twin.network_model_contract.v2` with current KPI values, runtime
+    summary keys, layer ownership, formula summaries, source-field values,
+    dominant observed source, zero reasons, and explicit non-packet semantics.
+    Backend `network_kpi_credibility_v1` coverage/trust summary implemented in
+    T206; standalone dashboard trust card bound to backend credibility fields in T207.
     T273 renders `network_kpi_provenance_v2.kpis` as a dashboard formula
     inspector with runtime value, layer, observed source, formula summary,
     source-field coverage, and zero-value semantics per KPI.
@@ -426,16 +448,26 @@ Tasks:
 - V2-030: Stabilize compute resource vector v2.
   - Scope: FP32, FP64, FP16, INT8, memory, storage, compatibility rules.
   - Output: schema docs and unit tests.
-  - Status: compute resource vector schema/summary already exists; T213 adds
-    backend-owned bottleneck resource, utilization, available/used/total, and
-    pressure status fields to runtime metrics, with the standalone dashboard
-    consuming those fields instead of inferring bottlenecks locally.
+  - Status: T169 implements `leo_twin.compute_resource_contract.v2`,
+    formalizing satellite-hosted `ComputeResourceVector` lanes, task demand
+    lanes, legacy scalar compatibility, deterministic bottleneck service-time
+    estimation, memory/storage capacity-limit semantics, excluded
+    real-execution semantics, and configured per-node resource profiles in
+    backend-derived summaries. T213 adds backend-owned bottleneck resource,
+    utilization, available/used/total, and pressure status fields to runtime
+    metrics, with the standalone dashboard consuming those fields instead of
+    inferring bottlenecks locally.
 - V2-031: Add service placement model.
   - Scope: deterministic service-to-satellite placement, capacity check,
     queue state, rejection reason.
   - Depends on: V2-030.
-  - Status: service placement contract/runtime already exists; T214 adds a
-    bounded backend-owned candidate queue observability label to service
+  - Status: T170 adds the deterministic service placement contract and pure
+    model for selecting satellite-hosted compute nodes by minimum estimated
+    finish time with deterministic tie-breaks, explicit queue state, queue and
+    execution delay, and canonical rejection reasons. T171 connects the
+    route-aware compute runtime to that placement model and carries placement
+    metadata into service latency history and user request summaries. T214 adds
+    a bounded backend-owned candidate queue observability label to service
     latency history, user request summaries, node detail cards, and dashboard
     placement labels.
 - V2-032: Add task queue and execution timeline v2.

@@ -17538,3 +17538,54 @@ change.
   - Extend user-service request rows with artifact inspector links into
     `user_service_request_summary_v2.json` and unify evidence navigation
     across route, service, and user request review sections.
+
+## 2026-07-07 - T358 system v2 completion audit v1
+
+- Branch: `feature/T358-v2-completion-audit-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: reconcile the system v2 upgrade plan with current repository
+  evidence. The task corrects the missing `V2-020` Status entry for the
+  already-implemented layered network model contract, adds a
+  `system_v2_completion_audit_v1` document, and records the next v2.1
+  hardening tasks for browser acceptance, package artifact navigation,
+  disposable acceptance YAML runs, KPI calibration reporting, 3D visual
+  verification, and operator delivery hardening. This is a documentation and
+  planning-consistency task only; it does not modify Event Kernel behavior,
+  runtime control, model behavior, frontend rendering, or result package
+  semantics.
+- Changed files/modules:
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/system_v2_completion_audit_v1.md`
+  - `docs/current_product_status.md`
+  - `tests/unit/test_system_v2_upgrade_plan_docs.py`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_system_v2_upgrade_plan_docs.py -q`
+    - Result: passed, 2 tests.
+  - `python -m pytest tests/unit/test_network_model_contract_v2.py tests/unit/test_user_guide_v2_docs.py tests/unit/test_system_v2_upgrade_plan_docs.py -q`
+    - Result: passed, 8 tests.
+  - `git diff --check`
+    - Result: passed; Git emitted CRLF warnings for the existing unstaged
+      runtime config drift.
+- Problems encountered:
+  - The broad v2 workstream had implementation evidence for V2-020, but the
+    plan document missed the Status entry. The fix updates the plan instead of
+    duplicating the existing network contract implementation.
+  - A parallel read-only audit found that the first V2-020 Status draft cited
+    T197 instead of the correct T167 network model contract task, and that a
+    few Status entries named later UI/observability follow-ups without naming
+    their core contract tasks. The plan now references T166, T167, T168, T169,
+    T170, T171, T193, T194, T213, and T214 where appropriate.
+  - The first audit draft undercounted baseline workstream tasks as 35. The
+    deterministic documentation test caught the mismatch, and the audit count
+    was corrected to 38 tracked tasks.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The industrial v2 goal is not complete. The baseline workstream is
+    reconciled, but v2.1 hardening remains necessary before calling the product
+    industrial-grade.
+- Recommended follow-up:
+  - Start T359 by adding `user_service_request_summary_v2.json` evidence
+    cross-links into the package JSON artifact inspector, then proceed to
+    browser-rendered acceptance smoke coverage.

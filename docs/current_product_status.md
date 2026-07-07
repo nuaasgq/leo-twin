@@ -70,6 +70,9 @@ frontend test files / 197 tests.
 - Launcher workflow is Windows-first and supports menu, batch shortcuts,
   status, read-only smoke, control-cycle smoke, dashboard-first startup, and
   fast/full acceptance checks.
+- System v2 baseline completion is reconciled in
+  `docs\system_v2_completion_audit_v1.md`. The planned v2 workstreams now
+  have Status coverage, while v2.1 hardening remains active.
 
 ## Remaining Gaps
 
@@ -80,3 +83,7 @@ frontend test files / 197 tests.
 - Runtime config staging guard is script-enforced, not a Git hook.
 - Control-cycle smoke validates backend control protocol responsiveness, not
   browser button clicks.
+- The package JSON inspector is still an embedded bounded review card rather
+  than a dedicated virtualized artifact browser.
+- KPI provenance and benchmark gates are present, but calibration reporting
+  still needs a v2.1 pass that ties expected KPI movement to scenario pressure.
