@@ -131,8 +131,9 @@ The console is for simulation control and 3D inspection:
 
 The standalone dashboard is for data situation awareness:
 
-- network KPI trend, provenance, benchmark validation, and backend calibration
-  evidence for whether KPI curves are time-varying or flat;
+- network KPI trend, provenance, benchmark validation, backend calibration
+  evidence for whether KPI curves are time-varying or flat, and formula
+  evidence showing selected backend inputs for the current KPI values;
 - business/service traces;
 - route explanations;
 - compute resource and task timeline summaries;
@@ -151,6 +152,9 @@ The standalone dashboard is for data situation awareness:
 - a wide service-trace browser that expands the selected trace into lifecycle,
   correlation, route, user, satellite, and compute-node sections;
 - configuration explanation and model assumptions.
+- model-trust evidence, including configuration semantics, scale fidelity,
+  KPI credibility, benchmark validation, KPI calibration, KPI formula evidence,
+  route evidence, replay/export evidence, and runtime state.
 
 Backend runtime status is the source of truth. The frontend should not invent
 business semantics locally.

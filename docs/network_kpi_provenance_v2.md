@@ -21,6 +21,7 @@ The integration demo runtime status now includes:
 ```text
 status.network_kpi_provenance_v2
 status.network_kpi_credibility_v1
+status.network_kpi_formula_evidence_v1
 ```
 
 The existing field remains for compatibility:
@@ -196,6 +197,37 @@ The same calibration card is indexed into the model-trust evidence workspace so
 dashboard users can distinguish a live time-varying run from an insufficient or
 flat KPI series without local frontend inference.
 
+## Formula Evidence Summary v1
+
+`status.network_kpi_formula_evidence_v1` is a backend-owned formula evidence
+summary that combines `network_kpi_provenance_v2` with
+`network_kpi_calibration_v1`. It does not change KPI formulas or simulation
+behavior. It reports whether each runtime KPI has:
+
+- a declared runtime summary key and observed current value;
+- selected formula inputs for the current observed source;
+- observed selected inputs in `metrics_summary`;
+- a calibration status showing time-varying, flat, or sample-limited behavior.
+
+The summary includes:
+
+- `evidence_id`: `leo_twin.network_kpi_formula_evidence.v1`;
+- `source`: `NETWORK_KPI_PROVENANCE_V2_AND_CALIBRATION_V1`;
+- provenance and calibration ids used to build the evidence;
+- `metric_model` and `packet_level_simulation` guard fields;
+- KPI counts, observed runtime-value counts, selected-input coverage counts,
+  time-varying KPI count, and flat KPI count;
+- `formula_evidence_status`, such as `FORMULA_AND_TIME_EVIDENCE_READY`,
+  `FORMULA_READY_FLAT_SERIES`, `FORMULA_READY_INSUFFICIENT_SERIES`, or
+  missing-data statuses;
+- one row per KPI with current value, selected inputs, observed source,
+  formula summary, selection policy, variation status, and evidence status.
+
+The standalone dashboard consumes this field directly in the network KPI
+section and model-trust evidence workspace. It shows whether formulas,
+selected inputs, and time-series movement are backed by the backend runtime
+state instead of inferring formula credibility in the browser.
+
 ## Follow-Up
 
 V2-022 added deterministic time-window pressure inputs while preserving this
@@ -211,3 +243,6 @@ T363 binds that backend calibration summary into the standalone dashboard
 network KPI panel and model-trust evidence workspace. Future dashboard work can
 add filtering or a wider drawer for large
 KPI/source-field/input tables if additional KPI families are added.
+T369 adds `network_kpi_formula_evidence_v1` so the backend can prove formula
+input coverage and time-series evidence together, and binds that summary into
+the dashboard network KPI panel and model-trust evidence workspace.

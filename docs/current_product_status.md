@@ -2,7 +2,7 @@
 
 Date: 2026-07-07
 
-Branch: `feature/T368-dashboard-service-trace-browser-v1`
+Branch: `feature/T369-network-kpi-formula-evidence-v1`
 
 ## Local Entry Points
 
@@ -61,8 +61,10 @@ The latest full local run passed:
 The latest fast local run with `-RunControlCycleSmoke` also passed for a
 1200-satellite / 20-user / 1200-compute-node scenario and verified INITIALIZE,
 START, PAUSE, RESUME, STOP, and RESET through the control websocket.
-The latest frontend run after the service-trace browser task included 26
-frontend test files / 455 tests.
+The latest frontend run after the network KPI formula evidence task included
+26 frontend test files / 456 tests, followed by a successful production build.
+The latest targeted T369 backend validation added network KPI formula evidence
+checks for the runtime status adapter and provenance/calibration summary.
 
 ## Current Product Signals
 
@@ -79,6 +81,11 @@ frontend test files / 455 tests.
 - The standalone dashboard renders `network_kpi_calibration_v1` in the network
   KPI panel and model-trust workspace, so users can see whether KPI curves are
   time-varying, partially varying, flat under activity, or sample-limited.
+- Runtime status now includes backend-owned `network_kpi_formula_evidence_v1`,
+  which joins KPI provenance and KPI calibration into a single formula/input/
+  time-series evidence summary. The dashboard renders it in the network KPI
+  panel and model-trust workspace rather than inferring formula credibility
+  locally.
 - The standalone dashboard now shows a detail-coverage card in the user/satellite
   detail section. It reports how many backend detail families are present,
   returned-vs-total rows, hidden/cursor-limited rows, exact node cards, and the
@@ -146,3 +153,6 @@ frontend test files / 455 tests.
   than a dedicated virtualized artifact browser.
 - KPI calibration is visible in the dashboard; a future pass can add filtering
   or a wider drawer if more KPI families are added.
+- KPI formula evidence is visible as a compact card; a future pass can add a
+  wider source-field/input drawer if operators need to inspect every KPI input
+  for larger scenarios.

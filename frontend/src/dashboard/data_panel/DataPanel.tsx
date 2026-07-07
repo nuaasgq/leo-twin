@@ -58,6 +58,7 @@ import {
   RuntimeNetworkKpiCalibrationV1,
   RuntimeNetworkKpiCredibilityV1,
   RuntimeNetworkKpiBenchmarkValidationV1,
+  RuntimeNetworkKpiFormulaEvidenceV1,
   RuntimeNetworkKpiProvenanceV2,
   RuntimeNetworkQualityProvenanceV1,
   RuntimeExportPackageAcceptanceReportV1,
@@ -1126,6 +1127,10 @@ export const DataPanel = memo(function DataPanel({
   const networkKpiCalibrationDisplay = buildDataPanelNetworkKpiCalibrationDisplay(
     runtimeStatus.network_kpi_calibration_v1
   );
+  const networkKpiFormulaEvidenceDisplay =
+    buildDataPanelNetworkKpiFormulaEvidenceDisplay(
+      runtimeStatus.network_kpi_formula_evidence_v1
+    );
   const networkKpiFormulaInspector = buildDataPanelNetworkKpiFormulaInspector(
     runtimeStatus.network_kpi_provenance_v2,
     runtimeStatus.network_kpi_credibility_v1
@@ -1145,6 +1150,7 @@ export const DataPanel = memo(function DataPanel({
     networkKpiCredibility: networkKpiCredibilityDisplay,
     networkKpiBenchmarkValidation: networkKpiBenchmarkValidationDisplay,
     networkKpiCalibration: networkKpiCalibrationDisplay,
+    networkKpiFormulaEvidence: networkKpiFormulaEvidenceDisplay,
     networkKpiFormulaInspector,
     routeProvenanceTrust: routeProvenanceTrustDisplay,
     fidelitySummary,
@@ -4310,6 +4316,43 @@ export const DataPanel = memo(function DataPanel({
               {networkKpiCalibrationDisplay.caveats.length > 0 ? (
                 <div className="data-panel-kpi-credibility-caveats">
                   {networkKpiCalibrationDisplay.caveats.map((caveat) => (
+                    <span key={caveat}>{caveat}</span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+          {networkKpiFormulaEvidenceDisplay ? (
+            <div
+              className={`data-panel-kpi-formula-inspector ${networkKpiFormulaEvidenceDisplay.tone}`}
+              aria-label="网络KPI公式证据"
+            >
+              <div className="data-panel-kpi-formula-header">
+                <div>
+                  <span>{networkKpiFormulaEvidenceDisplay.sourceLabel}</span>
+                  <strong>{networkKpiFormulaEvidenceDisplay.statusLabel}</strong>
+                  <small>{networkKpiFormulaEvidenceDisplay.summaryLabel}</small>
+                </div>
+              </div>
+              <div className="data-panel-kpi-formula-meta">
+                {networkKpiFormulaEvidenceDisplay.metaLabels.map((label) => (
+                  <span key={label}>{label}</span>
+                ))}
+              </div>
+              <div className="data-panel-kpi-formula-rows">
+                {networkKpiFormulaEvidenceDisplay.rows.map((row) => (
+                  <span className={row.tone} key={row.metric} title={row.title}>
+                    <strong>{row.displayName}</strong>
+                    <em>{row.evidenceLabel}</em>
+                    <small>{row.valueLabel}</small>
+                    <small>{row.selectedInputLabel}</small>
+                    <small>{row.variationLabel}</small>
+                  </span>
+                ))}
+              </div>
+              {networkKpiFormulaEvidenceDisplay.caveats.length > 0 ? (
+                <div className="data-panel-kpi-credibility-caveats">
+                  {networkKpiFormulaEvidenceDisplay.caveats.map((caveat) => (
                     <span key={caveat}>{caveat}</span>
                   ))}
                 </div>
@@ -18215,6 +18258,16 @@ export interface DataPanelNetworkKpiCalibrationDisplay {
   caveats: readonly string[];
 }
 
+export interface DataPanelNetworkKpiFormulaEvidenceDisplay {
+  tone: DataPanelNetworkKpiCredibilityTone;
+  sourceLabel: string;
+  statusLabel: string;
+  summaryLabel: string;
+  metaLabels: readonly string[];
+  rows: readonly DataPanelNetworkKpiFormulaEvidenceRow[];
+  caveats: readonly string[];
+}
+
 export interface DataPanelNetworkKpiCalibrationRow {
   metric: string;
   metricLabel: string;
@@ -18222,6 +18275,17 @@ export interface DataPanelNetworkKpiCalibrationRow {
   valueLabel: string;
   deltaLabel: string;
   rangeLabel: string;
+  tone: "observed" | "missing" | "invalid";
+  title: string;
+}
+
+export interface DataPanelNetworkKpiFormulaEvidenceRow {
+  metric: string;
+  displayName: string;
+  evidenceLabel: string;
+  valueLabel: string;
+  selectedInputLabel: string;
+  variationLabel: string;
   tone: "observed" | "missing" | "invalid";
   title: string;
 }
@@ -18271,6 +18335,7 @@ export interface DataPanelModelTrustEvidenceWorkspaceInput {
   networkKpiCredibility?: DataPanelNetworkKpiCredibilityDisplay | null;
   networkKpiBenchmarkValidation?: DataPanelNetworkKpiBenchmarkValidationDisplay | null;
   networkKpiCalibration?: DataPanelNetworkKpiCalibrationDisplay | null;
+  networkKpiFormulaEvidence?: DataPanelNetworkKpiFormulaEvidenceDisplay | null;
   networkKpiFormulaInspector?: DataPanelNetworkKpiFormulaInspectorDisplay | null;
   routeProvenanceTrust?: DataPanelRouteProvenanceTrustDisplay | null;
   fidelitySummary?: FidelitySummary | null;
@@ -18874,6 +18939,78 @@ export function buildDataPanelNetworkKpiCalibrationDisplay(
   };
 }
 
+export function buildDataPanelNetworkKpiFormulaEvidenceDisplay(
+  evidence: RuntimeNetworkKpiFormulaEvidenceV1 | null | undefined,
+  limit = 4
+): DataPanelNetworkKpiFormulaEvidenceDisplay | null {
+  if (evidence === null || evidence === undefined) {
+    return null;
+  }
+  const displayLimit = Math.max(0, Math.floor(limit));
+  const orderedKpis = [...evidence.kpis].sort((left, right) =>
+    left.metric.localeCompare(right.metric)
+  );
+  const rows = orderedKpis.slice(0, displayLimit).map((kpi) => {
+    const selectedInputs = kpi.selected_inputs.slice(0, 3);
+    const selectedInputText =
+      selectedInputs.length > 0
+        ? selectedInputs
+            .map((input) => `${input.field}=${formatNetworkKpiValue(input.current_value)}`)
+            .join(" / ")
+        : "无显式选中输入";
+    const tone: DataPanelNetworkKpiFormulaEvidenceRow["tone"] =
+      evidence.packet_level_simulation
+        ? "invalid"
+        : kpi.evidence_status === "MISSING_RUNTIME_VALUE" ||
+            kpi.evidence_status === "MISSING_SELECTED_INPUT"
+          ? "missing"
+          : "observed";
+    return {
+      metric: kpi.metric,
+      displayName: `${kpi.display_name} / ${kpi.metric}`,
+      evidenceLabel: networkKpiFormulaEvidenceStatusLabel(kpi.evidence_status),
+      valueLabel: `${formatNetworkKpiValue(kpi.current_value)} ${kpi.unit}`.trim(),
+      selectedInputLabel: `选中输入 ${formatCount(
+        kpi.selected_observed_input_count
+      )}/${formatCount(kpi.selected_input_count)}：${selectedInputText}`,
+      variationLabel: `${networkKpiCalibrationVariationLabel(kpi.variation_status)}${
+        kpi.flat_reason ? ` / ${kpi.flat_reason}` : ""
+      }`,
+      tone,
+      title: [
+        kpi.formula_summary,
+        kpi.selection_policy,
+        kpi.observed_source_label || kpi.observed_source
+      ]
+        .filter((part) => part.length > 0)
+        .join(" / ")
+    };
+  });
+  const hiddenCount = Math.max(0, orderedKpis.length - rows.length);
+  return {
+    tone: networkKpiFormulaEvidenceTone(evidence.formula_evidence_status),
+    sourceLabel: `${evidence.evidence_id} / ${evidence.source}`,
+    statusLabel: networkKpiFormulaEvidenceStatusLabel(
+      evidence.formula_evidence_status
+    ),
+    summaryLabel: `${networkKpiMetricModelLabel(
+      evidence.metric_model
+    )} / 公式证据 ${formatCount(evidence.observed_kpi_count)}/${formatCount(
+      evidence.kpi_count
+    )}${hiddenCount > 0 ? ` / 隐藏 ${formatCount(hiddenCount)}` : ""}`,
+    metaLabels: [
+      evidence.packet_level_simulation ? "含包级仿真" : "无包级仿真",
+      `选中输入 ${formatCount(evidence.selected_observed_input_count)}/${formatCount(
+        evidence.selected_input_count
+      )}`,
+      `变化 KPI ${formatCount(evidence.time_varying_kpi_count)}`,
+      `平坦 KPI ${formatCount(evidence.flat_kpi_count)}`
+    ],
+    rows,
+    caveats: evidence.caveats.slice(0, 3)
+  };
+}
+
 export function buildDataPanelNetworkKpiFormulaInspector(
   provenance: RuntimeNetworkKpiProvenanceV2 | null | undefined,
   credibility: RuntimeNetworkKpiCredibilityV1 | null | undefined,
@@ -19137,6 +19274,8 @@ export function buildDataPanelModelTrustEvidenceWorkspace(
       input.networkKpiBenchmarkValidation === undefined) &&
     (input.networkKpiCalibration === null ||
       input.networkKpiCalibration === undefined) &&
+    (input.networkKpiFormulaEvidence === null ||
+      input.networkKpiFormulaEvidence === undefined) &&
     (input.networkKpiFormulaInspector === null ||
       input.networkKpiFormulaInspector === undefined) &&
     (input.routeProvenanceTrust === null || input.routeProvenanceTrust === undefined) &&
@@ -19158,6 +19297,7 @@ export function buildDataPanelModelTrustEvidenceWorkspace(
     buildModelTrustKpiRow(input.networkKpiCredibility),
     buildModelTrustKpiBenchmarkRow(input.networkKpiBenchmarkValidation),
     buildModelTrustKpiCalibrationRow(input.networkKpiCalibration),
+    buildModelTrustKpiFormulaEvidenceRow(input.networkKpiFormulaEvidence),
     buildModelTrustFormulaRow(input.networkKpiFormulaInspector),
     buildModelTrustRouteProvenanceRow(input.routeProvenanceTrust),
     buildModelTrustReplayRow(
@@ -19207,6 +19347,7 @@ export function buildDataPanelModelTrustEvidenceWorkspace(
       input.configurationExplanation ? "配置语义已声明" : "配置语义待声明",
       input.networkKpiBenchmarkValidation ? "KPI基准已验证" : "KPI基准待验证",
       input.networkKpiCalibration ? "KPI变化已校准" : "KPI变化待校准",
+      input.networkKpiFormulaEvidence ? "KPI公式证据已核验" : "KPI公式证据待核验",
       input.networkKpiFormulaInspector ? "KPI公式可追踪" : "KPI公式待补齐",
       input.routeProvenanceTrust ? "路由证据可追踪" : "路由证据待补齐",
       input.reproducibilityManifest ? "manifest已生成" : "manifest待生成",
@@ -19355,6 +19496,36 @@ function buildModelTrustKpiCalibrationRow(
       ...calibration.metaLabels,
       ...calibration.rows.map((row) => `${row.metric}: ${row.statusLabel}`),
       ...calibration.caveats
+    ].join(" / ")
+  };
+}
+
+function buildModelTrustKpiFormulaEvidenceRow(
+  evidence: DataPanelNetworkKpiFormulaEvidenceDisplay | null | undefined
+): DataPanelModelTrustEvidenceRow {
+  if (evidence === null || evidence === undefined) {
+    return {
+      kind: "formula",
+      label: "KPI公式证据",
+      statusLabel: "等待公式证据摘要",
+      detail: "未收到 network_kpi_formula_evidence_v1。",
+      source: "network_kpi_formula_evidence_v1",
+      tone: "pending",
+      title:
+        "公式证据摘要必须由后端合并 KPI provenance 与 kpi_time_series_v1 校准结果生成。"
+    };
+  }
+  return {
+    kind: "formula",
+    label: "KPI公式证据",
+    statusLabel: evidence.statusLabel,
+    detail: evidence.summaryLabel,
+    source: evidence.sourceLabel,
+    tone: evidence.tone,
+    title: [
+      ...evidence.metaLabels,
+      ...evidence.rows.map((row) => `${row.metric}: ${row.evidenceLabel}`),
+      ...evidence.caveats
     ].join(" / ")
   };
 }
@@ -19649,6 +19820,64 @@ function networkKpiCalibrationStatusLabel(status: string): string {
     return "样本不足";
   }
   return "校准状态未知";
+}
+
+function networkKpiFormulaEvidenceTone(
+  status: string
+): DataPanelNetworkKpiCredibilityTone {
+  if (status === "FORMULA_AND_TIME_EVIDENCE_READY" || status === "FORMULA_READY") {
+    return "match";
+  }
+  if (
+    status === "FORMULA_READY_FLAT_SERIES" ||
+    status === "MISSING_SELECTED_INPUTS"
+  ) {
+    return "different";
+  }
+  if (status === "FORMULA_READY_INSUFFICIENT_SERIES") {
+    return "pending";
+  }
+  return "error";
+}
+
+function networkKpiFormulaEvidenceStatusLabel(status: string): string {
+  if (status === "FORMULA_AND_TIME_EVIDENCE_READY") {
+    return "公式与时间证据齐备";
+  }
+  if (status === "FORMULA_READY") {
+    return "公式证据齐备";
+  }
+  if (status === "FORMULA_READY_FLAT_SERIES") {
+    return "公式齐备但曲线平坦";
+  }
+  if (status === "FORMULA_READY_INSUFFICIENT_SERIES") {
+    return "公式齐备但样本不足";
+  }
+  if (status === "MISSING_SELECTED_INPUTS") {
+    return "选中输入缺失";
+  }
+  if (status === "PARTIAL_RUNTIME_VALUES") {
+    return "部分运行值缺失";
+  }
+  if (status === "NO_KPI_PROVENANCE") {
+    return "无KPI来源";
+  }
+  if (status === "FORMULA_AND_TIME_VARYING") {
+    return "公式输入与时间变化匹配";
+  }
+  if (status === "MISSING_RUNTIME_VALUE") {
+    return "运行值缺失";
+  }
+  if (status === "MISSING_SELECTED_INPUT") {
+    return "选中输入缺失";
+  }
+  if (status === "FORMULA_ONLY_NO_SAMPLE") {
+    return "公式可查但样本缺失";
+  }
+  if (status === "FORMULA_READY_FLAT_OR_LIMITED_SERIES") {
+    return "公式齐备但序列平坦或不足";
+  }
+  return status || "公式证据未知";
 }
 
 function networkKpiCalibrationVariationLabel(status: string): string {

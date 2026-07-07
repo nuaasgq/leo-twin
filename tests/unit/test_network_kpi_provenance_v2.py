@@ -8,6 +8,11 @@ from leo_twin.services.network_kpi_provenance import (
     build_network_kpi_credibility_v1,
     build_network_kpi_provenance_v2,
 )
+from leo_twin.services.network_kpi_calibration import build_network_kpi_calibration_v1
+from leo_twin.services.network_kpi_formula_evidence import (
+    NETWORK_KPI_FORMULA_EVIDENCE_V1_ID,
+    build_network_kpi_formula_evidence_v1,
+)
 
 
 def test_network_kpi_provenance_v2_binds_metrics_to_network_contract() -> None:
@@ -33,11 +38,11 @@ def test_network_kpi_provenance_v2_binds_metrics_to_network_contract() -> None:
         "network_quality_latency_source": "COMPLETED_FLOW_LATENCY",
         "network_quality_latency_source_label": "completed flow latency",
         "network_quality_effective_loss_proxy_rate": 0.05,
-        "network_quality_route_blocking_ratio": 0.0,
         "network_quality_failed_flow_ratio": 0.0,
         "network_quality_congestion_loss_proxy_rate": 0.03,
         "network_quality_demand_loss_proxy_rate": 0.05,
         "network_quality_time_pressure_loss_proxy_rate": 0.07,
+        "network_quality_route_blocking_ratio": 0.0,
         "network_quality_loss_source": "PRESSURE_LOSS_PROXY",
         "network_quality_loss_source_label": "pressure loss proxy",
         "network_quality_loss_zero_reason": "POSITIVE_PROXY",
@@ -196,6 +201,94 @@ def test_network_kpi_provenance_v2_reports_missing_runtime_values() -> None:
     )
 
 
+def test_network_kpi_formula_evidence_v1_combines_formula_inputs_and_calibration() -> None:
+    metrics = {
+        "network_quality_metric_model": "FLOW_LEVEL_PROXY",
+        "network_quality_effective_throughput_mbps": 180.0,
+        "network_quality_estimated_delivered_throughput_mbps": 180.0,
+        "network_quality_time_adjusted_delivered_throughput_mbps": 171.0,
+        "network_quality_estimated_available_throughput_mbps": 171.0,
+        "network_quality_available_route_demand_mbps": 200.0,
+        "network_quality_throughput_source": "COMPLETED_FLOW_CAPACITY",
+        "network_quality_throughput_source_label": "completed flow capacity",
+        "network_quality_effective_latency_avg_s": 0.045,
+        "network_quality_route_latency_avg_s": 0.05,
+        "network_quality_flow_latency_avg_s": 0.045,
+        "network_quality_latency_source": "COMPLETED_FLOW_LATENCY",
+        "network_quality_latency_source_label": "completed flow latency",
+        "network_quality_effective_loss_proxy_rate": 0.05,
+        "network_quality_failed_flow_ratio": 0.0,
+        "network_quality_congestion_loss_proxy_rate": 0.03,
+        "network_quality_demand_loss_proxy_rate": 0.05,
+        "network_quality_time_pressure_loss_proxy_rate": 0.07,
+        "network_quality_loss_source": "PRESSURE_LOSS_PROXY",
+        "network_quality_loss_source_label": "pressure loss proxy",
+        "network_quality_effective_delay_variation_proxy_s": 0.006,
+        "network_quality_delay_variation_proxy_s": 0.004,
+        "network_quality_flow_latency_variation_proxy_s": 0.006,
+        "network_quality_pressure_delay_variation_proxy_s": 0.001,
+        "network_quality_time_pressure_delay_variation_proxy_s": 0.002,
+        "network_quality_delay_variation_source": "FLOW_LATENCY_VARIATION",
+        "network_quality_delay_variation_source_label": "flow latency variation",
+        "network_quality_route_blocking_ratio": 0.0,
+        "network_quality_congestion_proxy": 0.8,
+        "network_quality_requested_route_demand_mbps": 200.0,
+        "network_quality_offered_route_capacity_mbps": 220.0,
+    }
+    series = {
+        "samples": (
+            {
+                "sim_time": 1.0,
+                "network_effective_throughput_mbps": 160.0,
+                "network_effective_latency_s": 0.04,
+                "network_effective_loss_proxy_rate": 0.04,
+                "network_effective_delay_variation_s": 0.005,
+            },
+            {
+                "sim_time": 2.0,
+                "network_effective_throughput_mbps": 180.0,
+                "network_effective_latency_s": 0.045,
+                "network_effective_loss_proxy_rate": 0.05,
+                "network_effective_delay_variation_s": 0.006,
+            },
+        )
+    }
+    provenance = build_network_kpi_provenance_v2(metrics)
+    calibration = build_network_kpi_calibration_v1(series, metrics)
+
+    evidence = build_network_kpi_formula_evidence_v1(
+        metrics,
+        provenance,
+        calibration,
+    )
+
+    assert evidence["version"] == "v1"
+    assert evidence["evidence_id"] == NETWORK_KPI_FORMULA_EVIDENCE_V1_ID
+    assert evidence["source"] == "NETWORK_KPI_PROVENANCE_V2_AND_CALIBRATION_V1"
+    assert evidence["provenance_id"] == NETWORK_KPI_PROVENANCE_V2_ID
+    assert evidence["calibration_id"] == "leo_twin.network_kpi_calibration.v1"
+    assert evidence["packet_level_simulation"] is False
+    assert evidence["kpi_count"] == len(evidence["kpis"])
+    assert evidence["observed_kpi_count"] == evidence["kpi_count"]
+    assert evidence["missing_selected_input_count"] == 0
+    assert evidence["time_varying_kpi_count"] >= 1
+    assert evidence["formula_evidence_status"] == "FORMULA_AND_TIME_EVIDENCE_READY"
+    throughput = _formula_evidence_kpi(evidence, "EFFECTIVE_THROUGHPUT")
+    assert throughput["current_value"] == 180.0
+    assert throughput["observed_source"] == "COMPLETED_FLOW_CAPACITY"
+    assert throughput["selected_input_count"] == 2
+    assert throughput["selected_observed_input_count"] == 2
+    assert throughput["variation_status"] == "TIME_VARYING"
+    assert throughput["evidence_status"] == "FORMULA_AND_TIME_VARYING"
+    assert [item["field"] for item in throughput["selected_inputs"]] == [
+        "network_quality_estimated_delivered_throughput_mbps",
+        "network_quality_time_adjusted_delivered_throughput_mbps",
+    ]
+    assert json.loads(json.dumps(evidence, sort_keys=True))["evidence_id"] == (
+        NETWORK_KPI_FORMULA_EVIDENCE_V1_ID
+    )
+
+
 def _kpi(provenance: dict[str, object], metric: str) -> dict[str, object]:
     kpis = provenance["kpis"]
     assert isinstance(kpis, tuple)
@@ -224,3 +317,16 @@ def _formula_inputs(item: dict[str, object]) -> dict[str, dict[str, object]]:
         assert isinstance(formula_input, dict)
         result[str(formula_input["field"])] = formula_input
     return result
+
+
+def _formula_evidence_kpi(
+    evidence: dict[str, object],
+    metric: str,
+) -> dict[str, object]:
+    kpis = evidence["kpis"]
+    assert isinstance(kpis, tuple)
+    for item in kpis:
+        assert isinstance(item, dict)
+        if item["metric"] == metric:
+            return item
+    raise AssertionError(f"missing formula evidence KPI {metric}")

@@ -21,7 +21,8 @@ The deterministic section order is:
 1. `OVERVIEW` - simulation time, run state, scale, event volume, fidelity mode,
    export status, and high-level health.
 2. `NETWORK` - throughput, latency, jitter, loss, route explanation, link
-   protocol state, KPI credibility, and provenance.
+   protocol state, KPI credibility, provenance, calibration, and formula
+   evidence.
 3. `BUSINESS` - user business requests, service classes, lifecycle stage,
    target satellite, and service latency components.
 4. `COMPUTE` - satellite-hosted resource vectors, task queue state, bottleneck
@@ -33,7 +34,8 @@ The deterministic section order is:
    service-trace wide detail browser, exact node cards, and active pagination
    contract.
 6. `MODEL_ASSUMPTIONS` - backend model boundaries, fidelity degradation,
-   forbidden integrations, and KPI caveats.
+   forbidden integrations, KPI caveats, KPI formula evidence, and replay
+   trust evidence.
 7. `DIAGNOSTICS` - reproducibility manifest, result packages, launcher health,
    warnings, and operator diagnostics.
 
@@ -60,3 +62,5 @@ The deterministic section order is:
 - T366: service trace closed-loop correlation evidence card.
 - T367: service trace focus filters for correlated detail tables.
 - T368: service trace wide detail browser.
+- T369: backend-owned network KPI formula evidence card and model-trust
+  evidence row.

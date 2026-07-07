@@ -2628,6 +2628,7 @@ export interface RuntimeStatusPayload {
   network_kpi_credibility_v1?: RuntimeNetworkKpiCredibilityV1;
   network_kpi_benchmark_validation_v1?: RuntimeNetworkKpiBenchmarkValidationV1;
   network_kpi_calibration_v1?: RuntimeNetworkKpiCalibrationV1;
+  network_kpi_formula_evidence_v1?: RuntimeNetworkKpiFormulaEvidenceV1;
   kpi_time_series_v1?: RuntimeKpiTimeSeriesV1;
   satellite_kpi_slices_v1?: RuntimeSatelliteKpiSlicesV1;
   satellite_kpi_history_v1?: RuntimeSatelliteKpiHistoryV1;
@@ -2829,6 +2830,56 @@ export interface RuntimeNetworkKpiCalibrationV1 {
   calibration_status: string;
   kpis: readonly RuntimeNetworkKpiCalibrationItemV1[];
   caveats: readonly string[];
+}
+
+export interface RuntimeNetworkKpiFormulaEvidenceV1 {
+  version: "v1" | string;
+  evidence_id: string;
+  source: string;
+  provenance_id: string;
+  calibration_id: string;
+  metric_model: string;
+  packet_level_simulation: boolean;
+  kpi_count: number;
+  observed_kpi_count: number;
+  runtime_value_missing_count: number;
+  selected_input_count: number;
+  selected_observed_input_count: number;
+  missing_selected_input_count: number;
+  time_varying_kpi_count: number;
+  flat_kpi_count: number;
+  formula_evidence_status: string;
+  kpis: readonly RuntimeNetworkKpiFormulaEvidenceItemV1[];
+  caveats: readonly string[];
+}
+
+export interface RuntimeNetworkKpiFormulaEvidenceItemV1 {
+  metric: string;
+  display_name: string;
+  runtime_summary_key: string;
+  current_value: string | number | boolean | null;
+  unit: string;
+  status: string;
+  observed_source: string;
+  observed_source_label: string;
+  formula_summary: string;
+  selection_policy: string;
+  selected_input_count: number;
+  selected_observed_input_count: number;
+  missing_selected_input_count: number;
+  selected_inputs: readonly RuntimeNetworkKpiFormulaEvidenceInputV1[];
+  variation_status: string;
+  flat_reason: string;
+  latest_is_zero: boolean;
+  evidence_status: string;
+}
+
+export interface RuntimeNetworkKpiFormulaEvidenceInputV1 {
+  field: string;
+  current_value: string | number | boolean | null;
+  observed: boolean;
+  role: string;
+  selection_reason: string;
 }
 
 export interface RuntimeNetworkKpiCalibrationActivityContextV1 {

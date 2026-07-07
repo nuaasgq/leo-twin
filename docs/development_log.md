@@ -5,6 +5,55 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-07 - Network KPI Formula Evidence v1
+
+- Branch: `feature/T369-network-kpi-formula-evidence-v1`
+- Commit: pending in this commit
+- Scope: add backend-owned formula evidence for network KPIs and bind it to
+  the standalone dashboard. Runtime status now exposes
+  `network_kpi_formula_evidence_v1`, derived from `network_kpi_provenance_v2`
+  and `network_kpi_calibration_v1`. The object reports per-KPI current value,
+  selected formula inputs, selected-input coverage, observed source, variation
+  status, and formula evidence status without changing network formulas or
+  Event Kernel behavior.
+- Changed files/modules:
+  - `src/leo_twin/services/network_kpi_formula_evidence.py`
+  - `examples/integration_demo/control_plane.py`
+  - `tests/unit/test_network_kpi_provenance_v2.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/network_kpi_provenance_v2.md`
+  - `docs/current_product_status.md`
+  - `docs/dashboard_information_architecture_v3.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_network_kpi_provenance_v2.py tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer -q`
+    - Result: passed, 4 tests.
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed, 1 test file / 215 tests.
+  - `pnpm --dir frontend test`
+    - Result: passed, 26 test files / 456 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite reported the existing `DataPanel` chunk-size
+      warning after minification.
+- Problems encountered and handling:
+  - The first frontend binding passed `networkKpiFormulaEvidence` into the
+    model-trust workspace before adding it to the TypeScript input contract.
+    The input type, evidence row, metadata, and tests were updated together.
+  - Formula evidence status depends on both selected input coverage and KPI
+    calibration. The unit fixture was updated to include the route-blocking
+    source metric so all declared KPI rows are observed.
+  - Existing local runtime/generated config files remain dirty and are
+    intentionally not included in this task.
+- Known remaining issues / follow-up:
+  - The dashboard shows formula evidence as a compact card. A future task can
+    add a wider virtualized source-field/input drawer for all KPI rows and
+    source fields when the KPI family grows.
+
 ## 2026-07-06 - Traffic Arrival Profiles v2
 
 - Branch: `feature/T253-traffic-arrival-profiles-v2`

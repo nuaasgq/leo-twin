@@ -410,6 +410,45 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
         "EFFECTIVE_LOSS_PROXY",
         "EFFECTIVE_DELAY_VARIATION_PROXY",
     } == {item["metric"] for item in network_kpi_calibration["kpis"]}
+    network_kpi_formula_evidence = status_after_tick[
+        "network_kpi_formula_evidence_v1"
+    ]
+    assert network_kpi_formula_evidence["version"] == "v1"
+    assert network_kpi_formula_evidence["evidence_id"] == (
+        "leo_twin.network_kpi_formula_evidence.v1"
+    )
+    assert network_kpi_formula_evidence["source"] == (
+        "NETWORK_KPI_PROVENANCE_V2_AND_CALIBRATION_V1"
+    )
+    assert network_kpi_formula_evidence["provenance_id"] == (
+        network_provenance_v2["provenance_id"]
+    )
+    assert network_kpi_formula_evidence["calibration_id"] == (
+        network_kpi_calibration["calibration_id"]
+    )
+    assert network_kpi_formula_evidence["packet_level_simulation"] is False
+    assert network_kpi_formula_evidence["kpi_count"] == len(
+        network_kpi_formula_evidence["kpis"]
+    )
+    assert network_kpi_formula_evidence["observed_kpi_count"] <= (
+        network_kpi_formula_evidence["kpi_count"]
+    )
+    assert network_kpi_formula_evidence["formula_evidence_status"] in {
+        "FORMULA_AND_TIME_EVIDENCE_READY",
+        "FORMULA_READY_INSUFFICIENT_SERIES",
+        "FORMULA_READY_FLAT_SERIES",
+        "FORMULA_READY",
+        "PARTIAL_RUNTIME_VALUES",
+        "MISSING_SELECTED_INPUTS",
+    }
+    formula_throughput = _runtime_kpi_formula_evidence(
+        network_kpi_formula_evidence,
+        "EFFECTIVE_THROUGHPUT",
+    )
+    assert formula_throughput["runtime_summary_key"] == (
+        "network_quality_effective_throughput_mbps"
+    )
+    assert formula_throughput["selected_input_count"] >= 0
     satellite_slices = status_after_tick["satellite_kpi_slices_v1"]
     assert satellite_slices["version"] == "v1"
     assert satellite_slices["mode"] == "TOP_ACTIVITY_LIMITED"
@@ -2055,6 +2094,19 @@ def _runtime_kpi_provenance(
         if item["metric"] == metric:
             return item
     raise AssertionError(f"missing KPI provenance {metric}")
+
+
+def _runtime_kpi_formula_evidence(
+    evidence: dict[str, object],
+    metric: str,
+) -> dict[str, object]:
+    kpis = evidence["kpis"]
+    assert isinstance(kpis, tuple)
+    for item in kpis:
+        assert isinstance(item, dict)
+        if item["metric"] == metric:
+            return item
+    raise AssertionError(f"missing KPI formula evidence {metric}")
 
 
 def _runtime_status_after_route_demand(config: DemoConfig, output_dir: Path) -> dict[str, Any]:

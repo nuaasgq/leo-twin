@@ -302,6 +302,10 @@ Tasks:
     T323 adds backend-owned `formula_inputs` and `formula_trace` to each KPI
     provenance item, and the dashboard displays the input audit and current
     selection trace so KPI movement can be explained from backend values.
+    T369 adds backend-owned `network_kpi_formula_evidence_v1`, joining KPI
+    provenance and KPI calibration into a compact formula/input/time-series
+    evidence summary that the dashboard renders without local semantic
+    inference.
 - V2-022: Add time-varying flow-level network pressure.
   - Scope: deterministic demand/capacity pressure, route blocking, congestion
     proxy, loss proxy, delay variation proxy.
@@ -1023,6 +1027,10 @@ Current Phase 3 progress:
   dashboard renders the backend calibration summary in the network KPI panel
   and model-trust evidence workspace instead of deriving movement semantics
   locally.
+- T369 adds backend formula evidence for network KPIs and binds it into the
+  same dashboard network KPI panel and model-trust evidence workspace, closing
+  the gap between formula provenance, selected runtime inputs, and observed KPI
+  movement.
 - T364 adds a dashboard detail-coverage status card for backend detail
   families, cursor windows, hidden rows, exact node cards, and pagination
   contract status. This improves the node-detail workstream without changing

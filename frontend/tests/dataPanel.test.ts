@@ -85,6 +85,7 @@ import {
   buildDataPanelNetworkKpiBenchmarkValidationDisplay,
   buildDataPanelNetworkKpiCalibrationDisplay,
   buildDataPanelNetworkKpiCredibilityDisplay,
+  buildDataPanelNetworkKpiFormulaEvidenceDisplay,
   buildDataPanelNetworkKpiFormulaInspector,
   buildDataPanelModelAssumptionsDisplay,
   buildDataPanelModelTrustEvidenceWorkspace,
@@ -9052,6 +9053,114 @@ describe("buildDataPanelNetworkKpiCredibilityDisplay", () => {
     });
   });
 
+  it("formats backend network KPI formula evidence from provenance and calibration", () => {
+    const display = buildDataPanelNetworkKpiFormulaEvidenceDisplay({
+      version: "v1",
+      evidence_id: "leo_twin.network_kpi_formula_evidence.v1",
+      source: "NETWORK_KPI_PROVENANCE_V2_AND_CALIBRATION_V1",
+      provenance_id: "leo_twin.network_kpi_provenance.v2",
+      calibration_id: "leo_twin.network_kpi_calibration.v1",
+      metric_model: "FLOW_LEVEL_PROXY",
+      packet_level_simulation: false,
+      kpi_count: 2,
+      observed_kpi_count: 2,
+      runtime_value_missing_count: 0,
+      selected_input_count: 3,
+      selected_observed_input_count: 3,
+      missing_selected_input_count: 0,
+      time_varying_kpi_count: 1,
+      flat_kpi_count: 1,
+      formula_evidence_status: "FORMULA_AND_TIME_EVIDENCE_READY",
+      kpis: [
+        {
+          metric: "EFFECTIVE_THROUGHPUT",
+          display_name: "有效吞吐量",
+          runtime_summary_key: "network_quality_effective_throughput_mbps",
+          current_value: 180,
+          unit: "Mbps",
+          status: "OBSERVED",
+          observed_source: "COMPLETED_FLOW_CAPACITY",
+          observed_source_label: "completed flow capacity",
+          formula_summary: "min(delivered, route capacity)",
+          selection_policy: "Prefer completed-flow throughput.",
+          selected_input_count: 2,
+          selected_observed_input_count: 2,
+          missing_selected_input_count: 0,
+          selected_inputs: [
+            {
+              field: "network_quality_estimated_delivered_throughput_mbps",
+              current_value: 180,
+              observed: true,
+              role: "primary",
+              selection_reason: "selected source"
+            },
+            {
+              field: "network_quality_time_adjusted_delivered_throughput_mbps",
+              current_value: 171,
+              observed: true,
+              role: "time_driver",
+              selection_reason: "time adjusted source"
+            }
+          ],
+          variation_status: "TIME_VARYING",
+          flat_reason: "",
+          latest_is_zero: false,
+          evidence_status: "FORMULA_AND_TIME_VARYING"
+        },
+        {
+          metric: "EFFECTIVE_LOSS_PROXY",
+          display_name: "有效丢包代理",
+          runtime_summary_key: "network_quality_effective_loss_proxy_rate",
+          current_value: 0.02,
+          unit: "ratio",
+          status: "OBSERVED",
+          observed_source: "PRESSURE_LOSS_PROXY",
+          observed_source_label: "pressure loss proxy",
+          formula_summary: "max(route loss, demand pressure loss)",
+          selection_policy: "Prefer pressure loss proxy.",
+          selected_input_count: 1,
+          selected_observed_input_count: 1,
+          missing_selected_input_count: 0,
+          selected_inputs: [
+            {
+              field: "network_quality_time_pressure_loss_proxy_rate",
+              current_value: 0.02,
+              observed: true,
+              role: "time_driver",
+              selection_reason: "selected source"
+            }
+          ],
+          variation_status: "FLAT_NONZERO",
+          flat_reason: "unchanged pressure inputs",
+          latest_is_zero: false,
+          evidence_status: "FORMULA_READY_FLAT_OR_LIMITED_SERIES"
+        }
+      ],
+      caveats: ["Formula evidence summarizes backend flow-level proxy inputs."]
+    });
+
+    expect(display).toMatchObject({
+      tone: "match",
+      sourceLabel:
+        "leo_twin.network_kpi_formula_evidence.v1 / NETWORK_KPI_PROVENANCE_V2_AND_CALIBRATION_V1",
+      statusLabel: "公式与时间证据齐备",
+      summaryLabel: "流级代理 / 公式证据 2/2",
+      metaLabels: ["无包级仿真", "选中输入 3/3", "变化 KPI 1", "平坦 KPI 1"],
+      caveats: ["Formula evidence summarizes backend flow-level proxy inputs."]
+    });
+    expect(display?.rows[1]).toMatchObject({
+      metric: "EFFECTIVE_THROUGHPUT",
+      displayName: "有效吞吐量 / EFFECTIVE_THROUGHPUT",
+      evidenceLabel: "公式输入与时间变化匹配",
+      valueLabel: "180 Mbps",
+      selectedInputLabel:
+        "选中输入 2/2：network_quality_estimated_delivered_throughput_mbps=180 / network_quality_time_adjusted_delivered_throughput_mbps=171",
+      variationLabel: "随时间变化",
+      tone: "observed"
+    });
+    expect(buildDataPanelNetworkKpiFormulaEvidenceDisplay(undefined)).toBeNull();
+  });
+
   it("surfaces missing runtime KPI values from backend credibility fields", () => {
     const display = buildDataPanelNetworkKpiCredibilityDisplay({
       version: "v1",
@@ -9400,6 +9509,27 @@ describe("buildDataPanelModelTrustEvidenceWorkspace", () => {
         ],
         caveats: ["Calibration audits movement only."]
       },
+      networkKpiFormulaEvidence: {
+        tone: "match",
+        sourceLabel:
+          "leo_twin.network_kpi_formula_evidence.v1 / NETWORK_KPI_PROVENANCE_V2_AND_CALIBRATION_V1",
+        statusLabel: "公式与时间证据齐备",
+        summaryLabel: "流级代理 / 公式证据 6/6",
+        metaLabels: ["无包级仿真", "选中输入 10/10", "变化 KPI 4", "平坦 KPI 2"],
+        rows: [
+          {
+            metric: "EFFECTIVE_THROUGHPUT",
+            displayName: "有效吞吐量 / EFFECTIVE_THROUGHPUT",
+            evidenceLabel: "公式输入与时间变化匹配",
+            valueLabel: "180 Mbps",
+            selectedInputLabel: "选中输入 2/2：network_quality_estimated_delivered_throughput_mbps=180",
+            variationLabel: "随时间变化",
+            tone: "observed",
+            title: "min(delivered, route capacity)"
+          }
+        ],
+        caveats: ["Formula evidence summarizes backend flow-level proxy inputs."]
+      },
       networkKpiFormulaInspector: {
         tone: "match",
         sourceLabel: "leo_twin.network_kpi_provenance.v2 / leo_twin.network_model_contract.v2",
@@ -9537,12 +9667,13 @@ describe("buildDataPanelModelTrustEvidenceWorkspace", () => {
       tone: "match",
       sourceLabel: "runtime status + backend summary + export diagnostics",
       statusLabel: "证据链完整",
-      summaryLabel: "9 类证据 / 9 类可用 / 0 类待补齐",
-      scoreLabel: "可用 9/9 / 警告 0 / 错误 0",
+      summaryLabel: "10 类证据 / 10 类可用 / 0 类待补齐",
+      scoreLabel: "可用 10/10 / 警告 0 / 错误 0",
       metaLabels: [
         "配置语义已声明",
         "KPI基准已验证",
         "KPI变化已校准",
+        "KPI公式证据已核验",
         "KPI公式可追踪",
         "路由证据可追踪",
         "manifest已生成",
@@ -9557,6 +9688,7 @@ describe("buildDataPanelModelTrustEvidenceWorkspace", () => {
       "benchmark",
       "calibration",
       "formula",
+      "formula",
       "route",
       "replay",
       "runtime"
@@ -9569,16 +9701,20 @@ describe("buildDataPanelModelTrustEvidenceWorkspace", () => {
         "leo_twin.network_kpi_calibration.v1 / KPI_TIME_SERIES_V1_AND_METRICS_SUMMARY"
     });
     expect(display?.rows[5]).toMatchObject({
-      label: "KPI公式来源",
+      label: "KPI公式证据",
       tone: "match"
     });
     expect(display?.rows[6]).toMatchObject({
+      label: "KPI公式来源",
+      tone: "match"
+    });
+    expect(display?.rows[7]).toMatchObject({
       label: "路由解释可信度",
       statusLabel: "完整流级路由代理",
       tone: "match",
       source: "leo_twin.route_provenance_trust.v1 / route_explanation_summary_v1"
     });
-    expect(display?.rows[7]).toMatchObject({
+    expect(display?.rows[8]).toMatchObject({
       label: "复盘证据",
       statusLabel: "REVIEW_READY",
       tone: "match",
@@ -9682,13 +9818,14 @@ describe("buildDataPanelModelTrustEvidenceWorkspace", () => {
 
     expect(display?.tone).toBe("error");
     expect(display?.statusLabel).toBe("证据链存在错误");
-    expect(display?.summaryLabel).toBe("9 类证据 / 1 类可用 / 5 类待补齐");
+    expect(display?.summaryLabel).toBe("10 类证据 / 1 类可用 / 6 类待补齐");
     expect(display?.rows.map((row) => [row.kind, row.tone])).toEqual([
       ["configuration", "pending"],
       ["fidelity", "different"],
       ["kpi", "error"],
       ["benchmark", "pending"],
       ["calibration", "pending"],
+      ["formula", "pending"],
       ["formula", "pending"],
       ["route", "pending"],
       ["replay", "error"],
@@ -9699,6 +9836,7 @@ describe("buildDataPanelModelTrustEvidenceWorkspace", () => {
       "KPI可信度：包级指标越界",
       "KPI基准验证：等待基准验证",
       "KPI变化校准：等待校准摘要",
+      "KPI公式证据：等待公式证据摘要",
       "KPI公式来源：等待公式证据",
       "路由解释可信度：等待路由证据",
       "复盘证据：INCOMPLETE",
