@@ -20,6 +20,9 @@ import {
   buildDataPanelExportAcceptanceReportStatus,
   buildDataPanelBenchmarkEvidenceFocus,
   buildDataPanelArtifactHealthInspectorFocus,
+  buildDataPanelPackageArtifactInspectorFocus,
+  buildDataPanelRouteEvidenceInspectorFocus,
+  buildDataPanelServiceTraceEvidenceInspectorFocus,
   buildDataPanelBenchmarkEvidenceArtifactViewerDisplay,
   buildDataPanelJsonArtifactInspectorRows,
   buildDataPanelExportBoundaryAlignmentDisplay,
@@ -4511,6 +4514,7 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         "observed PASS"
       ],
       jsonPointer: "/validation",
+      defaultInspectorFilter: "/validation",
       artifactLabel: "network_kpi_benchmark_validation_v1.json",
       artifactHref:
         "/runtime/export/packages/pkg-standard/files/network_kpi_benchmark_validation_v1.json",
@@ -4654,6 +4658,7 @@ describe("buildDataPanelExportCatalogDisplay", () => {
       summaryLabel: "PASS / escaped",
       metaLabels: [],
       jsonPointer: "/a~1b/c~0d",
+      defaultInspectorFilter: "",
       artifactLabel: "export_package_audit_index_v1.json",
       artifactHref:
         "/runtime/export/packages/pkg-standard/files/export_package_audit_index_v1.json",
@@ -4703,6 +4708,7 @@ describe("buildDataPanelExportCatalogDisplay", () => {
       summaryLabel: "PASS / hash",
       metaLabels: [],
       jsonPointer: null,
+      defaultInspectorFilter: "",
       artifactLabel: "events.jsonl",
       artifactHref: "/runtime/export/packages/pkg-standard/files/events.jsonl",
       artifactTitle: "events artifact"
@@ -6002,6 +6008,15 @@ describe("buildDataPanelExportCompareDisplay", () => {
       { routeId: "route-b", pathLabel: "user-0 -> sat-0", available: false }
     ]);
     expect(
+      buildDataPanelRouteEvidenceInspectorFocus("pkg-review", display?.routeRows[1])
+    ).toMatchObject({
+      focusSourceLabel: "Route evidence inspector focus",
+      statusLabel: "route evidence / route-b",
+      artifactLabel: "route_detail_index_v1.json",
+      jsonPointer: "/routes/1",
+      defaultInspectorFilter: "route-b"
+    });
+    expect(
       buildDataPanelExportRouteDetailIndexStatus(display, "pkg-review", false, null)
     ).toBe(display);
     expect(
@@ -6065,6 +6080,9 @@ describe("buildDataPanelExportCompareDisplay", () => {
           pathLabel: "user-0 -> sat-1",
           packageDetailHref:
             "/runtime/export/packages/pkg-review/routes/route-c",
+          artifactFilename: "route_detail_index_v1.json",
+          artifactPointer: "/routes/2",
+          artifactFilter: "route-c",
           compareActionLabel: "compare with live",
           liveDetailActionLabel: "live route detail"
         }
@@ -6118,11 +6136,13 @@ describe("buildDataPanelExportCompareDisplay", () => {
     expect(display?.routeRows).toMatchObject([
       {
         routeId: "route-a",
-        packageDetailHref: "/runtime/export/packages/pkg-review/routes/route-a"
+        packageDetailHref: "/runtime/export/packages/pkg-review/routes/route-a",
+        artifactPointer: "/routes"
       },
       {
         routeId: "route-b",
-        packageDetailHref: "/runtime/export/packages/pkg-review/routes/route-b"
+        packageDetailHref: "/runtime/export/packages/pkg-review/routes/route-b",
+        artifactPointer: "/routes"
       }
     ]);
   });
@@ -9946,7 +9966,22 @@ describe("buildDataPanelServiceLifecycleTraceDisplay", () => {
       computeNodeLabel: "算力 sat-00001",
       networkLatencyLabel: "4,000 ms / 0 ms",
       computeLatencyLabel: "1,000 ms / 2,500 ms",
-      totalLatencyLabel: "0 ms"
+      totalLatencyLabel: "0 ms",
+      artifactFilename: "service_lifecycle_trace_v2.json",
+      artifactPointer: "/items/0",
+      artifactFilter: "trace:svc-01"
+    });
+    expect(
+      buildDataPanelServiceTraceEvidenceInspectorFocus(
+        "pkg-review",
+        display.items[0]
+      )
+    ).toMatchObject({
+      focusSourceLabel: "Service trace evidence inspector focus",
+      statusLabel: "service trace / trace:svc-01",
+      artifactLabel: "service_lifecycle_trace_v2.json",
+      jsonPointer: "/items/0",
+      defaultInspectorFilter: "trace:svc-01"
     });
     expect(display.items[0].traceTitle).toContain("terminal=RUNNING");
     expect(display.items[0].stages).toEqual([

@@ -17483,3 +17483,58 @@ change.
 - Recommended follow-up:
   - Add route and service-trace evidence cross-links that can preselect the
     relevant artifact inspector row from route/detail review sections.
+
+## 2026-07-07 - T357 dashboard evidence crosslinks v1
+
+- Branch: `feature/T357-dashboard-evidence-crosslinks-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: connect route and service-trace review rows to the read-only JSON
+  artifact inspector. Route evidence rows now carry deterministic artifact
+  context for `route_detail_index_v1.json`, including exact `/routes/<index>`
+  pointers when the full route index is available and conservative `/routes`
+  context for filtered backend pages. Service lifecycle trace rows now carry
+  `service_lifecycle_trace_v2.json` item pointers with trace-id default
+  filters. The inspector focus keeps the original package artifact link and
+  remains read-only. This task does not add backend routes, mutate packages,
+  recompute acceptance, change model behavior, or modify Event Kernel behavior.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `.\node_modules\.bin\tsc.cmd --noEmit -p tsconfig.json` from
+    `frontend`
+    - Result: passed with the bundled Codex Node runtime path.
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 197 tests.
+  - `pnpm --dir frontend test dataPanel.test.ts api.test.ts appSurface.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 3 test
+      files and 285 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path; Vite
+      reported the existing large `DataPanel` chunk warning.
+  - `git diff --check`
+    - Result: passed; Git emitted CRLF warnings for the existing unstaged
+      runtime config drift.
+- Problems encountered:
+  - `defaultInspectorFilter` was initially added to the benchmark gate row
+    interface instead of the evidence focus interface; TypeScript caught the
+    mismatch and the interface was corrected.
+  - For filtered backend route pages, the route row cannot prove an exact
+    original artifact array index, so the inspector uses `/routes` plus the
+    route id as the default filter rather than pretending to know a precise
+    pointer.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - Service trace cross-links rely on the exported trace window cursor when
+    deriving `/items/<index>` pointers; a future dedicated artifact browser can
+    add server-side exact pointer metadata for paged filtered traces.
+  - The inspector is still embedded in the review card rather than a full-page
+    virtualized artifact browser.
+- Recommended follow-up:
+  - Extend user-service request rows with artifact inspector links into
+    `user_service_request_summary_v2.json` and unify evidence navigation
+    across route, service, and user request review sections.

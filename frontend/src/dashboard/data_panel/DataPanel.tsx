@@ -220,6 +220,7 @@ const SERVICE_TRACE_COMPARISON_REVIEW_REPORT_FILENAME =
   "service_trace_comparison_review_report_v1.json";
 const EXPORT_PACKAGE_AUDIT_INDEX_FILENAME = "export_package_audit_index_v1.json";
 const ROUTE_DETAIL_INDEX_FILENAME = "route_detail_index_v1.json";
+const SERVICE_LIFECYCLE_TRACE_FILENAME = "service_lifecycle_trace_v2.json";
 const NETWORK_KPI_BENCHMARK_VALIDATION_FILENAME =
   "network_kpi_benchmark_validation_v1.json";
 const CONFIG_SNAPSHOT_FILENAME = "config_snapshot.json";
@@ -636,8 +637,14 @@ export const DataPanel = memo(function DataPanel({
     setBenchmarkEvidenceArtifactFilter("");
   }, [runtimeExportComparePackageId]);
   useEffect(() => {
-    setBenchmarkEvidenceArtifactFilter("");
-  }, [benchmarkEvidenceFocus?.artifactLabel, benchmarkEvidenceFocus?.jsonPointer]);
+    setBenchmarkEvidenceArtifactFilter(
+      benchmarkEvidenceFocus?.defaultInspectorFilter ?? ""
+    );
+  }, [
+    benchmarkEvidenceFocus?.artifactLabel,
+    benchmarkEvidenceFocus?.jsonPointer,
+    benchmarkEvidenceFocus?.defaultInspectorFilter
+  ]);
   useEffect(() => {
     setBenchmarkEvidenceArtifactDocument(undefined);
     setBenchmarkEvidenceArtifactError(null);
@@ -2254,6 +2261,13 @@ export const DataPanel = memo(function DataPanel({
                   display={exportServiceLifecycleTraceStatus.display}
                   selectedTraceId={runtimeExportServiceTraceItemTraceId ?? null}
                   onSelect={(row) => {
+                    const focus = buildDataPanelServiceTraceEvidenceInspectorFocus(
+                      runtimeExportComparePackageId,
+                      row
+                    );
+                    if (focus !== null) {
+                      setBenchmarkEvidenceFocus(focus);
+                    }
                     setSelectedServiceTraceId(row.traceId);
                     setSelectedServiceDetailId(row.serviceId);
                     onRuntimeExportServiceTraceItemSelect?.(row.traceId);
@@ -2811,6 +2825,20 @@ export const DataPanel = memo(function DataPanel({
                       {row.pathLabel}
                       <small>{row.metricLabel}</small>
                       <a href={row.packageDetailHref}>package route JSON</a>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const focus = buildDataPanelRouteEvidenceInspectorFocus(
+                            runtimeExportComparePackageId,
+                            row
+                          );
+                          if (focus !== null) {
+                            setBenchmarkEvidenceFocus(focus);
+                          }
+                        }}
+                      >
+                        检查证据
+                      </button>
                       <button
                         type="button"
                         disabled={!onRuntimeExportRouteDetailItemSelect}
@@ -11674,6 +11702,7 @@ export interface DataPanelBenchmarkEvidenceFocus {
   summaryLabel: string;
   metaLabels: readonly string[];
   jsonPointer: string | null;
+  defaultInspectorFilter: string;
   artifactLabel: string;
   artifactHref: string | null;
   artifactTitle: string;
@@ -12912,6 +12941,7 @@ export function buildDataPanelBenchmarkEvidenceFocus(
       row.issueLabel
     ].filter((label) => label.length > 0),
     jsonPointer: row.jsonPointer,
+    defaultInspectorFilter: row.jsonPointer ?? "",
     artifactLabel: row.artifactLabel,
     artifactHref: row.artifactHref,
     artifactTitle: row.artifactTitle
@@ -12935,10 +12965,95 @@ export function buildDataPanelArtifactHealthInspectorFocus(
       "read-only package artifact"
     ],
     jsonPointer: "",
+    defaultInspectorFilter: "",
     artifactLabel: row.filename,
     artifactHref: row.href,
     artifactTitle: `${row.title} / read-only JSON inspector`
   };
+}
+
+export interface DataPanelPackageArtifactInspectorFocusRequest {
+  sourceLabel: string;
+  packageId: string | null | undefined;
+  artifactFilename: string;
+  jsonPointer: string;
+  statusLabel: string;
+  summaryLabel: string;
+  metaLabels?: readonly string[];
+  defaultInspectorFilter?: string;
+  tone?: DataPanelBenchmarkEvidenceFocus["tone"];
+}
+
+export function buildDataPanelPackageArtifactInspectorFocus(
+  request: DataPanelPackageArtifactInspectorFocusRequest
+): DataPanelBenchmarkEvidenceFocus | null {
+  if (
+    request.packageId === null ||
+    request.packageId === undefined ||
+    request.packageId.length === 0 ||
+    request.artifactFilename.length === 0 ||
+    !isDataPanelJsonArtifactFilename(request.artifactFilename)
+  ) {
+    return null;
+  }
+  const pointerLabel = dataPanelJsonPointerDisplayLabel(request.jsonPointer);
+  const href = runtimeExportPackageFileHref(request.packageId, request.artifactFilename);
+  return {
+    focusSourceLabel: request.sourceLabel,
+    tone: request.tone ?? "match",
+    statusLabel: request.statusLabel,
+    summaryLabel: request.summaryLabel,
+    metaLabels: [
+      `artifact ${request.artifactFilename}`,
+      `json ${pointerLabel}`,
+      ...(request.metaLabels ?? [])
+    ],
+    jsonPointer: request.jsonPointer,
+    defaultInspectorFilter: request.defaultInspectorFilter ?? "",
+    artifactLabel: request.artifactFilename,
+    artifactHref: href,
+    artifactTitle: `${request.artifactFilename} / ${pointerLabel} / read-only package artifact`
+  };
+}
+
+export function buildDataPanelRouteEvidenceInspectorFocus(
+  packageId: string | null | undefined,
+  row: DataPanelExportRouteDetailIndexRouteRow | null | undefined
+): DataPanelBenchmarkEvidenceFocus | null {
+  if (row === null || row === undefined || row.artifactPointer === null) {
+    return null;
+  }
+  return buildDataPanelPackageArtifactInspectorFocus({
+    sourceLabel: "Route evidence inspector focus",
+    packageId,
+    artifactFilename: row.artifactFilename,
+    jsonPointer: row.artifactPointer,
+    statusLabel: `route evidence / ${row.routeId}`,
+    summaryLabel: row.metricLabel,
+    metaLabels: [row.pathLabel, row.title],
+    defaultInspectorFilter: row.artifactFilter,
+    tone: row.available ? "match" : "different"
+  });
+}
+
+export function buildDataPanelServiceTraceEvidenceInspectorFocus(
+  packageId: string | null | undefined,
+  row: DataPanelServiceLifecycleTraceRow | null | undefined
+): DataPanelBenchmarkEvidenceFocus | null {
+  if (row === null || row === undefined) {
+    return null;
+  }
+  return buildDataPanelPackageArtifactInspectorFocus({
+    sourceLabel: "Service trace evidence inspector focus",
+    packageId,
+    artifactFilename: row.artifactFilename,
+    jsonPointer: row.artifactPointer,
+    statusLabel: `service trace / ${row.traceId}`,
+    summaryLabel: `${row.terminalStateLabel} / ${row.totalLatencyLabel}`,
+    metaLabels: [row.serviceLabel, row.traceTitle],
+    defaultInspectorFilter: row.artifactFilter,
+    tone: row.terminalState === "COMPLETE" ? "match" : "different"
+  });
 }
 
 export interface DataPanelJsonPointerSelection {
@@ -14264,6 +14379,9 @@ export interface DataPanelExportRouteDetailIndexRouteRow {
   available: boolean;
   title: string;
   packageDetailHref: string;
+  artifactFilename: string;
+  artifactPointer: string | null;
+  artifactFilter: string;
   compareActionLabel: string;
   liveDetailActionLabel: string;
 }
@@ -15233,10 +15351,17 @@ export function buildDataPanelExportRouteDetailIndexDisplay(
     index.all_pairs_computation === false &&
     missingSampleCount === 0;
   const filteredRoutes = filterRuntimeExportRouteDetailIndexRoutes(index.routes, query);
+  const routeIndexById = new Map(
+    index.routes.map((route, routeIndex) => [route.route_id, routeIndex])
+  );
   const routeRows = filteredRoutes
     .slice(0, routeLimit)
     .map((route) =>
-      buildDataPanelExportRouteDetailIndexRouteRow(index.package_id, route)
+      buildDataPanelExportRouteDetailIndexRouteRow(
+        index.package_id,
+        route,
+        routeIndexById.get(route.route_id) ?? null
+      )
     );
   return {
     packageId: index.package_id,
@@ -15293,8 +15418,12 @@ export function buildDataPanelExportRouteDetailPageDisplay(
   const evidenceComplete =
     policy === undefined ||
     (policy.packet_level_simulation === false && policy.all_pairs_computation === false);
-  const routeRows = page.items.map((route) =>
-    buildDataPanelExportRouteDetailIndexRouteRow(page.package_id, route)
+  const routeRows = page.items.map((route, index) =>
+    buildDataPanelExportRouteDetailIndexRouteRow(
+      page.package_id,
+      route,
+      page.filter_applied ? null : page.cursor + index
+    )
   );
   return {
     packageId: page.package_id,
@@ -16191,7 +16320,8 @@ function buildRuntimeExportRouteDetailPageFilterLabel(
 
 function buildDataPanelExportRouteDetailIndexRouteRow(
   packageId: string,
-  route: RuntimeExportRouteDetailIndexRouteV1
+  route: RuntimeExportRouteDetailIndexRouteV1,
+  routeArtifactIndex: number | null = null
 ): DataPanelExportRouteDetailIndexRouteRow {
   return {
     routeId: route.route_id,
@@ -16204,6 +16334,10 @@ function buildDataPanelExportRouteDetailIndexRouteRow(
     available: route.available,
     title: `${route.flow_id} / ${route.business_type} / ${route.bottleneck_component} / ${route.explanation_label}`,
     packageDetailHref: runtimeExportPackageRouteDetailHref(packageId, route.route_id),
+    artifactFilename: ROUTE_DETAIL_INDEX_FILENAME,
+    artifactPointer:
+      routeArtifactIndex === null ? "/routes" : `/routes/${routeArtifactIndex}`,
+    artifactFilter: route.route_id,
     compareActionLabel: "compare with live",
     liveDetailActionLabel: "live route detail"
   };
@@ -17204,6 +17338,9 @@ export interface DataPanelServiceLifecycleTraceRow {
   computeLatencyLabel: string;
   totalLatencyLabel: string;
   traceTitle: string;
+  artifactFilename: string;
+  artifactPointer: string;
+  artifactFilter: string;
   stages: readonly DataPanelServiceLifecycleTraceStageRow[];
 }
 
@@ -18641,7 +18778,7 @@ export function buildDataPanelServiceLifecycleTraceDisplay(
     };
   }
   const boundedLimit = Math.max(0, Math.floor(limit));
-  const items = trace.items.slice(0, boundedLimit).map((item) => {
+  const items = trace.items.slice(0, boundedLimit).map((item, index) => {
     const stageRouteIds = item.stages
       .map((stage) => stage.route_id ?? "")
       .filter((routeId) => routeId.length > 0);
@@ -18686,6 +18823,9 @@ export function buildDataPanelServiceLifecycleTraceDisplay(
       )} / ${formatMetricMilliseconds(item.compute_execution_delay_s)}`,
       totalLatencyLabel: formatMetricMilliseconds(item.total_latency_s),
       traceTitle: serviceLifecycleTraceTitle(item),
+      artifactFilename: SERVICE_LIFECYCLE_TRACE_FILENAME,
+      artifactPointer: `/items/${Math.max(0, trace.cursor + index)}`,
+      artifactFilter: item.trace_id || item.service_id || "",
       stages: item.stages.map((stage) => ({
         stageId: stage.stage_id,
         component: stage.component,

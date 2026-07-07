@@ -606,6 +606,11 @@ The package artifact health grid also exposes this inspector for registered
 JSON artifacts. Selecting a package artifact opens the same read-only inspector
 at the JSON root, while the original package-file link remains available as the
 authoritative artifact reference.
+Route evidence rows and service lifecycle trace rows can also open the same
+inspector with a backend-derived artifact filename, JSON pointer, and default
+filter text. These cross-links help operators jump from a route or service
+trace review row to the corresponding package artifact context without
+replaying events or changing package contents.
 
 For operator handoff, the demo backend also exposes the generated Markdown
 handoff report:

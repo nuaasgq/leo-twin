@@ -822,7 +822,10 @@ Tasks:
     and local text filtering over pointer/key/value previews. T356 adds a
     package artifact health entry point for the same inspector, so any
     registered JSON result artifact can be inspected from its health row at the
-    JSON root while retaining the original package-file link.
+    JSON root while retaining the original package-file link. T357 adds route
+    and service-trace evidence cross-links into that inspector, carrying
+    route ids or trace ids as default filters and preselecting backend-derived
+    JSON pointer context where available.
 
 ### WS9. Delivery and Operations v2
 
