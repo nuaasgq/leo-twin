@@ -16365,8 +16365,10 @@ describe("paginateDetailRows", () => {
       summaryLabel: "选择节点或业务后显示后端 exact-detail payload 的只读 JSON 路径",
       emptyLabel: "选择明细行后显示后端精确详情 payload 的只读 JSON 路径。",
       filterText: "",
-      metaLabels: ["只读审查", "不重新计算业务语义", "无活动 payload", "无过滤"],
+      pinnedPointersText: "",
+      metaLabels: ["只读审查", "不重新计算业务语义", "无活动 payload", "无过滤", "无固定路径"],
       focusRows: [],
+      pinnedRows: [],
       rows: []
     });
   });
@@ -16388,7 +16390,9 @@ describe("paginateDetailRows", () => {
       summaryLabel: "已选 1 类；后端 payload 0 类",
       emptyLabel: "后端精确详情 payload 尚未同步，暂无可审查 JSON 路径。",
       filterText: "",
+      pinnedPointersText: "",
       focusRows: [],
+      pinnedRows: [],
       rows: []
     });
   });
@@ -16421,7 +16425,8 @@ describe("paginateDetailRows", () => {
       "只读 JSON pointer",
       "用户 / 路由",
       "已选 payload 已覆盖",
-      "无过滤"
+      "无过滤",
+      "无固定路径"
     ]);
     expect(display.summaryLabel).toBe(
       "paths 8 shown / 12 matched / 12 scanned / selected pointer visible"
@@ -16507,6 +16512,55 @@ describe("paginateDetailRows", () => {
     });
     expect(noMatch.rows).toEqual([]);
     expect(noMatch.emptyLabel).toBe("当前过滤没有匹配 JSON 路径。");
+  });
+
+  it("pins custom exact-detail JSON pointers with resolved missing and invalid states", () => {
+    const display = buildDataPanelExactDetailJsonInspector({
+      selected: {
+        routeId: "route-0",
+        backendDetails: {
+          route: {
+            route_id: "route-0",
+            metrics: {
+              latency_s: 0.12
+            }
+          } as any
+        }
+      },
+      pinnedPointersText:
+        "/route/route_id /route/route_id, /route/metrics/latency_s /route/missing invalid-pointer"
+    });
+
+    expect(display.pinnedPointersText).toBe(
+      "/route/route_id /route/route_id, /route/metrics/latency_s /route/missing invalid-pointer"
+    );
+    expect(display.metaLabels).toContain("固定 4 条");
+    expect(display.pinnedRows).toEqual([
+      expect.objectContaining({
+        pointer: "/route/route_id",
+        statusLabel: "resolved",
+        previewLabel: '"route-0"',
+        tone: "backend"
+      }),
+      expect.objectContaining({
+        pointer: "/route/metrics/latency_s",
+        statusLabel: "resolved",
+        previewLabel: "0.12",
+        tone: "backend"
+      }),
+      expect.objectContaining({
+        pointer: "/route/missing",
+        statusLabel: "missing",
+        typeLabel: "missing",
+        tone: "limit"
+      }),
+      expect.objectContaining({
+        pointer: "invalid-pointer",
+        statusLabel: "invalid",
+        typeLabel: "invalid",
+        tone: "limit"
+      })
+    ]);
   });
 });
 

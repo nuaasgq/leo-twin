@@ -179,7 +179,9 @@ The standalone dashboard is for data situation awareness:
   local JSON path filter to narrow rows by pointer, key, type, or preview value
   without changing backend payloads. Common exact-detail fields are also shown
   as focus rows when present, so route ids, latency, service state, compute
-  node ids, and compute-resource fields are easier to inspect;
+  node ids, and compute-resource fields are easier to inspect. For custom
+  review, enter JSON pointers in the pin field; pinned paths show resolved,
+  missing, or invalid status against the synchronized payloads;
 - service-trace closed-loop evidence, showing whether the selected service
   trace has correlated flow, route, user, satellite, compute-node, stage, and
   latency evidence from backend exact detail or the visible dashboard window;

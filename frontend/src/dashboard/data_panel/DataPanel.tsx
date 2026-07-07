@@ -595,6 +595,7 @@ export const DataPanel = memo(function DataPanel({
     useState<DataPanelServiceTraceTerminalReasonFilter>("ALL");
   const [computeNodeDetailFilter, setComputeNodeDetailFilter] = useState("");
   const [exactDetailJsonFilter, setExactDetailJsonFilter] = useState("");
+  const [exactDetailJsonPinnedPaths, setExactDetailJsonPinnedPaths] = useState("");
   const [userDetailPage, setUserDetailPage] = useState(0);
   const [satelliteDetailPage, setSatelliteDetailPage] = useState(0);
   const [selectedHistorySatelliteId, setSelectedHistorySatelliteId] = useState<string | null>(
@@ -1878,7 +1879,8 @@ export const DataPanel = memo(function DataPanel({
         computeNode: selectedComputeNodeBackendDetail
       }
     },
-    filterText: exactDetailJsonFilter
+    filterText: exactDetailJsonFilter,
+    pinnedPointersText: exactDetailJsonPinnedPaths
   });
   const userSourceBadge = buildRuntimeDetailSourceBadge(userBusinessRequests.sourceLabel);
   const satelliteSourceBadge = buildRuntimeDetailSourceBadge(satelliteResourceRows.sourceLabel);
@@ -5708,6 +5710,7 @@ export const DataPanel = memo(function DataPanel({
       <ExactDetailJsonInspector
         display={exactDetailJsonInspector}
         onFilterChange={setExactDetailJsonFilter}
+        onPinnedPointersChange={setExactDetailJsonPinnedPaths}
       />
       <div className="data-panel-detail-grid">
         <section className="dashboard-section data-panel-detail-table" aria-label="用户节点状态明细">
@@ -6977,10 +6980,12 @@ function ExactDetailReviewWorkspace({
 
 function ExactDetailJsonInspector({
   display,
-  onFilterChange
+  onFilterChange,
+  onPinnedPointersChange
 }: {
   display: DataPanelExactDetailJsonInspectorDisplay;
   onFilterChange: (value: string) => void;
+  onPinnedPointersChange: (value: string) => void;
 }) {
   return (
     <section
@@ -7012,6 +7017,36 @@ function ExactDetailJsonInspector({
           placeholder="latency / route_id / compute"
         />
       </label>
+      <label
+        className="data-panel-exact-detail-json-pin-input"
+        htmlFor="data-panel-exact-detail-json-pin-input"
+      >
+        <span>固定 JSON 路径</span>
+        <input
+          id="data-panel-exact-detail-json-pin-input"
+          type="search"
+          value={display.pinnedPointersText}
+          onChange={(event) => onPinnedPointersChange(event.currentTarget.value)}
+          placeholder="/route/route_id, /route/metrics/latency_s"
+        />
+      </label>
+      {display.pinnedRows.length > 0 ? (
+        <div className="data-panel-exact-detail-json-pins">
+          {display.pinnedRows.map((row) => (
+            <span
+              className={row.tone}
+              key={`pinned:${row.pointer}`}
+              title={`${row.pointerLabel}: ${row.previewLabel}`}
+            >
+              <small>{row.pointerLabel}</small>
+              <strong>{row.previewLabel}</strong>
+              <em>
+                {row.statusLabel} / {row.typeLabel}
+              </em>
+            </span>
+          ))}
+        </div>
+      ) : null}
       {display.focusRows.length > 0 ? (
         <div className="data-panel-exact-detail-json-focus">
           {display.focusRows.map((row) => (
@@ -7767,6 +7802,7 @@ export interface DataPanelExactDetailReviewWorkspaceRow {
 export interface DataPanelExactDetailJsonInspectorInput {
   selected: DataPanelSelectedDetailEvidenceInput;
   filterText?: string;
+  pinnedPointersText?: string;
   rowLimit?: number;
 }
 
@@ -7778,8 +7814,10 @@ export interface DataPanelExactDetailJsonInspectorDisplay {
   summaryLabel: string;
   emptyLabel: string;
   filterText: string;
+  pinnedPointersText: string;
   metaLabels: readonly string[];
   focusRows: readonly DataPanelExactDetailJsonFocusRow[];
+  pinnedRows: readonly DataPanelExactDetailJsonPinnedRow[];
   rows: readonly DataPanelBenchmarkEvidenceArtifactInspectorRow[];
 }
 
@@ -7788,6 +7826,15 @@ export interface DataPanelExactDetailJsonFocusRow {
   pointerLabel: string;
   typeLabel: string;
   previewLabel: string;
+}
+
+export interface DataPanelExactDetailJsonPinnedRow {
+  pointer: string;
+  pointerLabel: string;
+  statusLabel: string;
+  typeLabel: string;
+  previewLabel: string;
+  tone: "backend" | "limit";
 }
 
 export interface DataPanelServiceTraceCorrelationEvidenceInput {
@@ -9281,7 +9328,12 @@ export function buildDataPanelExactDetailJsonInspector(
   input: DataPanelExactDetailJsonInspectorInput
 ): DataPanelExactDetailJsonInspectorDisplay {
   const filterText = input.filterText?.trim() ?? "";
+  const pinnedPointersText = input.pinnedPointersText?.trim() ?? "";
   const filterLabel = filterText.length > 0 ? `过滤 ${filterText}` : "无过滤";
+  const pinnedPointerLabel =
+    pinnedPointersText.length > 0
+      ? `固定 ${formatCount(parseExactDetailJsonPinnedPointers(pinnedPointersText).length)} 条`
+      : "无固定路径";
   const payloadRecords = [
     exactDetailJsonPayloadRecord(
       "user",
@@ -9331,8 +9383,16 @@ export function buildDataPanelExactDetailJsonInspector(
       summaryLabel: "选择节点或业务后显示后端 exact-detail payload 的只读 JSON 路径",
       emptyLabel: "选择明细行后显示后端精确详情 payload 的只读 JSON 路径。",
       filterText,
-      metaLabels: ["只读审查", "不重新计算业务语义", "无活动 payload", filterLabel],
+      pinnedPointersText,
+      metaLabels: [
+        "只读审查",
+        "不重新计算业务语义",
+        "无活动 payload",
+        filterLabel,
+        pinnedPointerLabel
+      ],
       focusRows: [],
+      pinnedRows: [],
       rows: []
     };
   }
@@ -9345,8 +9405,16 @@ export function buildDataPanelExactDetailJsonInspector(
       summaryLabel: `已选 ${formatCount(selectedRecords.length)} 类；后端 payload 0 类`,
       emptyLabel: "后端精确详情 payload 尚未同步，暂无可审查 JSON 路径。",
       filterText,
-      metaLabels: ["只读审查", "等待 exact-detail API", "无 raw JSON 可扫描", filterLabel],
+      pinnedPointersText,
+      metaLabels: [
+        "只读审查",
+        "等待 exact-detail API",
+        "无 raw JSON 可扫描",
+        filterLabel,
+        pinnedPointerLabel
+      ],
       focusRows: [],
+      pinnedRows: [],
       rows: []
     };
   }
@@ -9360,6 +9428,10 @@ export function buildDataPanelExactDetailJsonInspector(
     input.rowLimit ?? 18
   );
   const focusRows = buildDataPanelExactDetailJsonFocusRows(document);
+  const pinnedRows = buildDataPanelExactDetailJsonPinnedRows(
+    document,
+    pinnedPointersText
+  );
   const missingCount = Math.max(0, selectedRecords.length - payloadRecordsWithData.length);
   return {
     active: true,
@@ -9374,17 +9446,53 @@ export function buildDataPanelExactDetailJsonInspector(
         ? "当前过滤没有匹配 JSON 路径。"
         : "已显示匹配的只读 JSON 路径。",
     filterText,
+    pinnedPointersText,
     metaLabels: [
       "只读 JSON pointer",
       payloadRecordsWithData.map((record) => record.label).join(" / "),
       missingCount > 0
         ? `缺少 ${formatCount(missingCount)} 类 payload`
         : "已选 payload 已覆盖",
-      filterLabel
+      filterLabel,
+      pinnedPointerLabel
     ],
     focusRows,
+    pinnedRows,
     rows: inspector.rows
   };
+}
+
+function buildDataPanelExactDetailJsonPinnedRows(
+  document: unknown,
+  pinnedPointersText: string
+): readonly DataPanelExactDetailJsonPinnedRow[] {
+  return parseExactDetailJsonPinnedPointers(pinnedPointersText).map((pointer) => {
+    const selection = selectDataPanelJsonPointerValue(document, pointer);
+    return {
+      pointer,
+      pointerLabel: `json ${pointer}`,
+      statusLabel: selection.found ? "resolved" : selection.valid ? "missing" : "invalid",
+      typeLabel: selection.typeLabel,
+      previewLabel: formatDataPanelJsonInlinePreviewForSelection(selection.preview),
+      tone: selection.found ? "backend" : "limit"
+    };
+  });
+}
+
+function parseExactDetailJsonPinnedPointers(text: string): readonly string[] {
+  const seen = new Set<string>();
+  const pointers: string[] = [];
+  text
+    .split(/[\s,;]+/)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0)
+    .forEach((pointer) => {
+      if (!seen.has(pointer)) {
+        seen.add(pointer);
+        pointers.push(pointer);
+      }
+    });
+  return pointers.slice(0, 8);
 }
 
 function buildDataPanelExactDetailJsonFocusRows(

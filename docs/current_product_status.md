@@ -2,7 +2,7 @@
 
 Date: 2026-07-08
 
-Branch: `feature/T393-dashboard-exact-detail-json-focus-v1`
+Branch: `feature/T394-dashboard-exact-detail-json-pinning-v1`
 
 ## Local Entry Points
 
@@ -273,6 +273,9 @@ the card without loading the full JSON artifact.
   exact-detail fields such as user id, route id, route path, latency, service
   state, compute node id, compute load, and running task count when those
   fields are present in synchronized payloads.
+- Operators can now pin custom exact-detail JSON pointers in the same read-only
+  inspector. Pinned paths are resolved against the synchronized payloads and
+  shown with resolved, missing, or invalid status without mutating payloads.
 - Launcher health v2 reports backend/frontend port readiness, HTTP readiness,
   process ids, latest log paths, config paths, and recommended actions.
 - Operator diagnostics bundle captures launcher health, runtime status, version

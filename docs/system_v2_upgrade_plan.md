@@ -727,6 +727,11 @@ Tasks:
     derived through existing JSON pointer selection and expose ids, route path,
     latency, service state, compute node id, compute load, FP32 use, and
     running task count without frontend-side model recomputation.
+  - Status: T394 adds local custom JSON pointer pinning to the same inspector.
+    Operators can enter comma, semicolon, whitespace, or newline separated
+    pointers; the dashboard deduplicates and bounds the list, then resolves
+    each path as resolved, missing, or invalid through the existing JSON pointer
+    selector without mutating backend payloads.
 - V2-054: Add model assumptions panel.
   - Scope: backend-derived model caveats, fidelity mode, KPI provenance.
   - Depends on: V2-003, V2-021.

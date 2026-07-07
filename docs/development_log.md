@@ -5,6 +5,49 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-08 - Dashboard Exact Detail JSON Pinning v1
+
+- Branch: `feature/T394-dashboard-exact-detail-json-pinning-v1`
+- Commit: pending in this commit
+- Scope: add local custom JSON pointer pinning to the standalone dashboard
+  exact-detail raw JSON inspector. Operators can enter comma, semicolon,
+  whitespace, or newline separated JSON pointers. The dashboard deduplicates
+  and bounds the list, then resolves each pinned path against synchronized
+  backend exact-detail payloads as resolved, missing, or invalid using the
+  existing JSON pointer selector. This task does not change Event Kernel
+  behavior, backend protocols, runtime contracts, simulation models,
+  packet-level behavior, or frontend routing architecture.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/current_product_status.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed, 1 test file / 228 tests using the bundled Codex
+      Node/pnpm runtime.
+  - `python -m pytest tests\unit\test_system_v2_upgrade_plan_docs.py tests\unit\test_user_guide_v2_docs.py -q`
+    - Result: passed, 4 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing large `DataPanel` chunk
+      warning after minification.
+- Problems encountered and handling:
+  - The pinned pointer input is intentionally local and bounded to eight unique
+    pointers. This keeps the panel responsive and avoids turning the dashboard
+    into a payload editor.
+  - Missing and invalid paths are displayed as review evidence instead of
+    errors that block the panel, which makes custom audit paths safe to try
+    during live runs.
+  - Local runtime/generated config files were already dirty and remain outside
+    the staged task scope.
+- Known remaining issues / follow-up:
+  - Pinned paths are local to the browser session. A later pass can persist
+    operator path presets or compare pinned live paths with exported package
+    evidence.
+
 ## 2026-07-08 - Dashboard Exact Detail JSON Focus v1
 
 - Branch: `feature/T393-dashboard-exact-detail-json-focus-v1`

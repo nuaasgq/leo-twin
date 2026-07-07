@@ -4844,7 +4844,8 @@ button.data-panel-compute-node-row {
   white-space: nowrap;
 }
 
-.data-panel-exact-detail-json-filter {
+.data-panel-exact-detail-json-filter,
+.data-panel-exact-detail-json-pin-input {
   display: grid;
   grid-template-columns: auto minmax(180px, 360px);
   align-items: center;
@@ -4855,11 +4856,13 @@ button.data-panel-compute-node-row {
   font-weight: 800;
 }
 
-.data-panel-exact-detail-json-filter span {
+.data-panel-exact-detail-json-filter span,
+.data-panel-exact-detail-json-pin-input span {
   color: var(--accent-cyan);
 }
 
-.data-panel-exact-detail-json-filter input {
+.data-panel-exact-detail-json-filter input,
+.data-panel-exact-detail-json-pin-input input {
   min-width: 0;
   width: 100%;
   border: 1px solid #314656;
@@ -4869,6 +4872,54 @@ button.data-panel-compute-node-row {
   color: var(--app-text);
   font: inherit;
   font-weight: 600;
+}
+
+.data-panel-exact-detail-json-pins {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  min-width: 0;
+}
+
+.data-panel-exact-detail-json-pins > span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  border: 1px solid #294252;
+  border-radius: 6px;
+  padding: 7px 8px;
+  background: #0b141b;
+}
+
+.data-panel-exact-detail-json-pins > span.limit {
+  border-color: #6a5a2c;
+  background: #19160e;
+}
+
+.data-panel-exact-detail-json-pins small,
+.data-panel-exact-detail-json-pins strong,
+.data-panel-exact-detail-json-pins em {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.data-panel-exact-detail-json-pins small {
+  color: var(--accent-cyan);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.data-panel-exact-detail-json-pins strong {
+  color: var(--app-text);
+  font-size: 11px;
+}
+
+.data-panel-exact-detail-json-pins em {
+  color: var(--app-muted);
+  font-size: 10px;
+  font-style: normal;
 }
 
 .data-panel-exact-detail-json-focus {
@@ -6757,6 +6808,7 @@ button.data-panel-satellite-resource-row:hover,
   .data-panel-grid,
   .data-panel-node-evidence-grid,
   .data-panel-exact-detail-review-grid,
+  .data-panel-exact-detail-json-pins,
   .data-panel-exact-detail-json-focus,
   .data-panel-exact-detail-json-rows,
   .data-panel-observability-notes,
@@ -6879,6 +6931,7 @@ button.data-panel-satellite-resource-row:hover,
   .data-panel-grid,
   .data-panel-node-evidence-grid,
   .data-panel-exact-detail-review-grid,
+  .data-panel-exact-detail-json-pins,
   .data-panel-exact-detail-json-focus,
   .data-panel-exact-detail-json-rows,
   .data-panel-observability-notes,
@@ -6907,6 +6960,10 @@ button.data-panel-satellite-resource-row:hover,
   }
 
   .data-panel-exact-detail-json-filter {
+    grid-template-columns: 1fr;
+  }
+
+  .data-panel-exact-detail-json-pin-input {
     grid-template-columns: 1fr;
   }
 
