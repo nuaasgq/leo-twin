@@ -197,7 +197,12 @@ Tasks:
     scenario-review workflow entry for that artifact, opening
     `traffic_demand_explanation_v1.json` in the existing read-only JSON
     inspector at `/traffic_demand_explanation` and surfacing backend-owned
-    request/evidence labels without browser-side demand recomputation. T332 preserves
+    request/evidence labels without browser-side demand recomputation. T379
+    adds a compact dashboard artifact card for the same file, displaying
+    configured/explained requests, input flows, tasks, output flows, class rows,
+    per-user state count, compute-service correlation status, packet-level flag,
+    frontend-inference flag, and evidence hash from the persisted artifact
+    before the raw JSON preview. T332 preserves
     backend-provided request/route/flow/task
     correlation ids in dashboard user-service rows and lets selected export
     package rows drive package route evidence, package service-trace filtering,

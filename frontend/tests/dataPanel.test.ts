@@ -5105,8 +5105,53 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         {
           traffic_demand_explanation: {
             request_count: 20,
+            configured_request_count: 20,
+            explained_request_count: 20,
+            input_flow_count: 20,
+            task_request_count: 8,
+            output_flow_count: 8,
+            communication_only_request_count: 12,
             compute_service_request_count: 8,
-            frontend_inference_required: false
+            active_traffic_classes: ["DATA_TRANSFER", "COMPUTE_SERVICE"],
+            traffic_class_rows: [
+              {
+                traffic_class: "DATA_TRANSFER",
+                request_count: 12,
+                input_flow_count: 12,
+                task_request_count: 0,
+                output_flow_count: 0,
+                total_input_data_mb: 24,
+                total_output_data_mb: 0,
+                destination_types: ["SERVICE_ENDPOINT"]
+              },
+              {
+                traffic_class: "COMPUTE_SERVICE",
+                request_count: 8,
+                input_flow_count: 8,
+                task_request_count: 8,
+                output_flow_count: 8,
+                total_input_data_mb: 64,
+                total_output_data_mb: 16,
+                destination_types: ["COMPUTE_NODE"]
+              }
+            ],
+            per_user_active_service_state: [
+              { user_id: "user-00001", request_state: "NETWORK_SERVICE_READY" },
+              { user_id: "user-00002", request_state: "COMPUTE_SERVICE_ACTIVE" }
+            ],
+            correlation_summary: {
+              all_compute_services_have_task: true,
+              all_compute_services_have_output_flow: true,
+              packet_level_simulation: false,
+              frontend_inference_required: false
+            },
+            explanation_window_policy: "FULL_CONFIGURED_WINDOW",
+            endpoint_window_policy: "ROUND_ROBIN_ENDPOINT_IDS_CAPPED_AT_512",
+            frontend_inference_required: false,
+            packet_level_simulation: false,
+            acceptable_for_demo_review: true,
+            evidence_hash:
+              "sha256:7878787878787878787878787878787878787878787878787878787878787878"
           }
         },
         false,
@@ -5116,7 +5161,45 @@ describe("buildDataPanelExportCatalogDisplay", () => {
     ).toMatchObject({
       tone: "match",
       statusLabel: "pointer target resolved",
-      inspectorEnabled: true
+      inspectorEnabled: true,
+      trafficDemandCard: {
+        tone: "match",
+        statusLabel: "traffic demand review ready",
+        summaryLabel: "requests 20 / compute 8 / classes 2",
+        metaLabels: [
+          "configured 20",
+          "explained 20",
+          "flows 20",
+          "tasks 8",
+          "outputs 8",
+          "frontend inference no",
+          "packet no"
+        ],
+        classRows: [
+          {
+            trafficClassLabel: "DATA_TRANSFER",
+            requestLabel: "requests 12",
+            flowLabel: "flows 12 / tasks 0 / outputs 0",
+            dataLabel: "24 MB in / 0 MB out",
+            destinationLabel: "SERVICE_ENDPOINT"
+          },
+          {
+            trafficClassLabel: "COMPUTE_SERVICE",
+            requestLabel: "requests 8",
+            flowLabel: "flows 8 / tasks 8 / outputs 8",
+            dataLabel: "64 MB in / 16 MB out",
+            destinationLabel: "COMPUTE_NODE"
+          }
+        ],
+        stateLabels: [
+          "active classes DATA_TRANSFER + COMPUTE_SERVICE",
+          "per-user states 2",
+          "compute correlation complete",
+          "window FULL_CONFIGURED_WINDOW",
+          "endpoint ROUND_ROBIN_ENDPOINT_IDS_CAPPED_AT_512",
+          "evidence 787878787878"
+        ]
+      }
     });
     expect(
       buildDataPanelScenarioReviewWorkflowInspectorFocus("pkg-review", {

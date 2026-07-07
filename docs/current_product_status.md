@@ -2,7 +2,7 @@
 
 Date: 2026-07-07
 
-Branch: `feature/T378-dashboard-traffic-demand-artifact-review-v1`
+Branch: `feature/T379-dashboard-traffic-demand-compact-card-v1`
 
 ## Local Entry Points
 
@@ -97,6 +97,11 @@ the standalone dashboard scenario-review workflow. Operators can open
 artifact inspector at `/traffic_demand_explanation`, while review summary,
 diagnostics, scenario review, and audit index labels show backend-owned request
 counts and evidence hashes.
+The latest T379 validation adds a compact dashboard card on top of that
+artifact inspector. When `traffic_demand_explanation_v1.json` is selected, the
+dashboard shows backend-owned request totals, compute-service counts, flow/task
+counts, class rows, per-user state counts, correlation status, and
+frontend-inference / packet-level flags before the raw JSON preview.
 
 ## Current Product Signals
 
@@ -151,8 +156,11 @@ counts and evidence hashes.
 - The dashboard scenario-review workflow now provides JSON-inspector entry
   points for package artifacts. Configuration template validation artifacts
   default to the `/template_validation/templates` path, and traffic-demand
-  explanation artifacts default to `/traffic_demand_explanation`. Both remain
-  read-only and reuse the existing persisted package file endpoint.
+  explanation artifacts default to `/traffic_demand_explanation`. The
+  traffic-demand artifact now also renders a compact review card with request,
+  flow, task, output-flow, class-row, per-user-state, and correlation labels.
+  These views remain read-only and reuse the existing persisted package file
+  endpoint.
 - User configuration template catalog and reference surfaces now include
   backend-owned `sees.user_configuration_template_validation.v1` evidence.
   The evidence loads approved YAML templates through the same backend config

@@ -319,6 +319,13 @@ directly at `/traffic_demand_explanation`, so an operator can inspect generated
 request counts, compute-service request counts, class rows, per-user state
 counts, frontend-inference flags, and evidence hashes from the exported package
 without regenerating traffic or replaying events.
+When that artifact is selected, the dashboard also renders a compact
+traffic-demand review card above the raw JSON preview. The card summarizes
+configured/explained requests, input flows, tasks, output flows, active traffic
+classes, per-class data volumes, per-user state count, compute-service
+correlation status, packet-level flag, frontend-inference flag, and evidence
+hash. The values are read from the exported artifact; the browser does not
+derive new business-demand semantics.
 The workflow includes an editable checklist. For each review row, the dashboard
 lets the operator choose `REVIEWED`, `SKIPPED`, `NEEDS_FOLLOWUP`, or `ERROR`,
 enter a short note, and save the checklist through the backend. After saving,

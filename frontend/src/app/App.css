@@ -3471,6 +3471,53 @@ button.data-panel-route-row {
   white-space: pre-wrap;
 }
 
+.data-panel-traffic-demand-artifact-card {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  border: 1px solid #244b4b;
+  border-radius: 6px;
+  padding: 7px;
+  background: #071414;
+}
+
+.data-panel-traffic-demand-artifact-card.different {
+  border-color: #725b28;
+  background: #17140c;
+}
+
+.data-panel-traffic-demand-artifact-card.error {
+  border-color: #663333;
+  background: #180c0c;
+}
+
+.data-panel-traffic-demand-artifact-rows {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 5px;
+  min-width: 0;
+}
+
+.data-panel-traffic-demand-artifact-rows > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  border: 1px solid #263a48;
+  border-radius: 5px;
+  padding: 6px 7px;
+  background: #071018;
+}
+
+.data-panel-traffic-demand-artifact-rows em {
+  min-width: 0;
+  color: var(--app-muted);
+  font-size: 10px;
+  font-style: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .data-panel-export-artifact-inspector-filter {
   display: grid;
   gap: 4px;
