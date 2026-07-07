@@ -341,8 +341,9 @@ derive new business-demand semantics. For per-user rows, the card now prefers
 the backend traffic-demand user page endpoint and applies the current artifact
 filter as the backend `query`. The label beginning with `backend page users`
 shows the returned item count, matched count, total exported user count, and
-cursor range. If that page is still loading or unavailable, the card falls back
-to the bounded artifact preview.
+cursor range. Use the previous/next controls in that card to page through the
+backend traffic-demand user evidence. If that page is still loading or
+unavailable, the card falls back to the bounded artifact preview.
 The workflow includes an editable checklist. For each review row, the dashboard
 lets the operator choose `REVIEWED`, `SKIPPED`, `NEEDS_FOLLOWUP`, or `ERROR`,
 enter a short note, and save the checklist through the backend. After saving,

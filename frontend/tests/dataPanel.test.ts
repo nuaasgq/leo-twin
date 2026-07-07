@@ -5277,6 +5277,13 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         ],
         userFilterLabel:
           "backend page users 1 shown / 1 matched / 2 total / filter user-00002 / cursor 0 -> 1",
+        userPageControls: {
+          pageLabel: "cursor 0-1 / 1 matched",
+          canPrevious: false,
+          canNext: false,
+          previousCursor: 0,
+          nextCursor: 1
+        },
         userRows: [
           {
             userId: "user-00002",

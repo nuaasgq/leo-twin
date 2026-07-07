@@ -212,7 +212,10 @@ Tasks:
     without traffic regeneration, event replay, or package mutation. T382 binds
     the dashboard compact traffic-demand card to that backend page, using the
     artifact filter as the page query and falling back to the bounded artifact
-    preview only while the backend page is loading or unavailable. T332 preserves
+    preview only while the backend page is loading or unavailable. T383 adds
+    previous/next controls for that backend page inside the compact card, so
+    operators can inspect more than the first bounded traffic-demand user page
+    without loading the full JSON artifact. T332 preserves
     backend-provided request/route/flow/task
     correlation ids in dashboard user-service rows and lets selected export
     package rows drive package route evidence, package service-trace filtering,

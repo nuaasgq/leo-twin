@@ -3515,6 +3515,39 @@ button.data-panel-route-row {
   font-size: 10px;
 }
 
+.data-panel-traffic-demand-user-page-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--app-muted);
+  font-size: 10px;
+}
+
+.data-panel-traffic-demand-user-page-controls button {
+  min-width: 58px;
+  border: 1px solid #29465b;
+  border-radius: 5px;
+  padding: 4px 7px;
+  background: #0a1820;
+  color: var(--app-text);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 10px;
+}
+
+.data-panel-traffic-demand-user-page-controls button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.data-panel-traffic-demand-user-page-controls span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .data-panel-traffic-demand-artifact-rows em,
 .data-panel-traffic-demand-user-rows em {
   min-width: 0;

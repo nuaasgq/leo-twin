@@ -632,6 +632,10 @@ export const DataPanel = memo(function DataPanel({
     setBenchmarkEvidenceTrafficDemandUserPage
   ] = useState<RuntimeExportTrafficDemandUserPageV1 | null>(null);
   const [
+    benchmarkEvidenceTrafficDemandUserPageCursor,
+    setBenchmarkEvidenceTrafficDemandUserPageCursor
+  ] = useState(0);
+  const [
     benchmarkEvidenceTrafficDemandUserPageLoading,
     setBenchmarkEvidenceTrafficDemandUserPageLoading
   ] = useState(false);
@@ -665,16 +669,21 @@ export const DataPanel = memo(function DataPanel({
     setBenchmarkEvidenceArtifactFilter("");
     setBenchmarkEvidenceTrafficDemandUserPage(null);
     setBenchmarkEvidenceTrafficDemandUserPageError(null);
+    setBenchmarkEvidenceTrafficDemandUserPageCursor(0);
   }, [runtimeExportComparePackageId]);
   useEffect(() => {
     setBenchmarkEvidenceArtifactFilter(
       benchmarkEvidenceFocus?.defaultInspectorFilter ?? ""
     );
+    setBenchmarkEvidenceTrafficDemandUserPageCursor(0);
   }, [
     benchmarkEvidenceFocus?.artifactLabel,
     benchmarkEvidenceFocus?.jsonPointer,
     benchmarkEvidenceFocus?.defaultInspectorFilter
   ]);
+  useEffect(() => {
+    setBenchmarkEvidenceTrafficDemandUserPageCursor(0);
+  }, [benchmarkEvidenceArtifactFilter]);
   useEffect(() => {
     setBenchmarkEvidenceArtifactDocument(undefined);
     setBenchmarkEvidenceArtifactError(null);
@@ -732,7 +741,7 @@ export const DataPanel = memo(function DataPanel({
     setBenchmarkEvidenceTrafficDemandUserPageLoading(true);
     loadRuntimeExportTrafficDemandUserPage(
       runtimeExportComparePackageId,
-      0,
+      benchmarkEvidenceTrafficDemandUserPageCursor,
       DATA_PANEL_TRAFFIC_DEMAND_USER_ROW_LIMIT,
       { query }
     )
@@ -755,6 +764,7 @@ export const DataPanel = memo(function DataPanel({
     };
   }, [
     benchmarkEvidenceArtifactFilter,
+    benchmarkEvidenceTrafficDemandUserPageCursor,
     benchmarkEvidenceFocus,
     runtimeExportComparePackageId
   ]);
@@ -3533,6 +3543,54 @@ export const DataPanel = memo(function DataPanel({
                                             .trafficDemandCard.userFilterLabel
                                         }
                                       </small>
+                                      {benchmarkEvidenceArtifactViewerDisplay
+                                        .trafficDemandCard.userPageControls ? (
+                                        <div className="data-panel-traffic-demand-user-page-controls">
+                                          <button
+                                            disabled={
+                                              !benchmarkEvidenceArtifactViewerDisplay
+                                                .trafficDemandCard.userPageControls
+                                                .canPrevious
+                                            }
+                                            type="button"
+                                            onClick={() =>
+                                              setBenchmarkEvidenceTrafficDemandUserPageCursor(
+                                                benchmarkEvidenceArtifactViewerDisplay
+                                                  .trafficDemandCard
+                                                  ?.userPageControls
+                                                  ?.previousCursor ?? 0
+                                              )
+                                            }
+                                          >
+                                            上一页
+                                          </button>
+                                          <span>
+                                            {
+                                              benchmarkEvidenceArtifactViewerDisplay
+                                                .trafficDemandCard.userPageControls
+                                                .pageLabel
+                                            }
+                                          </span>
+                                          <button
+                                            disabled={
+                                              !benchmarkEvidenceArtifactViewerDisplay
+                                                .trafficDemandCard.userPageControls
+                                                .canNext
+                                            }
+                                            type="button"
+                                            onClick={() =>
+                                              setBenchmarkEvidenceTrafficDemandUserPageCursor(
+                                                benchmarkEvidenceArtifactViewerDisplay
+                                                  .trafficDemandCard
+                                                  ?.userPageControls
+                                                  ?.nextCursor ?? 0
+                                              )
+                                            }
+                                          >
+                                            下一页
+                                          </button>
+                                        </div>
+                                      ) : null}
                                       <div className="data-panel-traffic-demand-user-rows">
                                         {benchmarkEvidenceArtifactViewerDisplay.trafficDemandCard.userRows.map(
                                           (row) => (
@@ -13069,6 +13127,7 @@ export interface DataPanelTrafficDemandArtifactCard {
   classRows: readonly DataPanelTrafficDemandArtifactClassRow[];
   userRows: readonly DataPanelTrafficDemandArtifactUserRow[];
   userFilterLabel: string;
+  userPageControls: DataPanelTrafficDemandArtifactUserPageControls | null;
   stateLabels: readonly string[];
 }
 
@@ -13087,6 +13146,14 @@ export interface DataPanelTrafficDemandArtifactUserRow {
   flowLabel: string;
   dataLabel: string;
   arrivalLabel: string;
+}
+
+export interface DataPanelTrafficDemandArtifactUserPageControls {
+  pageLabel: string;
+  canPrevious: boolean;
+  canNext: boolean;
+  previousCursor: number;
+  nextCursor: number;
 }
 
 export interface DataPanelBenchmarkEvidenceArtifactInspectorRow {
@@ -14742,6 +14809,7 @@ function buildDataPanelTrafficDemandArtifactCard(
       classRows: [],
       userRows: [],
       userFilterLabel: "users 0 shown / 0 matched / 0 total",
+      userPageControls: null,
       stateLabels: []
     };
   }
@@ -14755,6 +14823,7 @@ function buildDataPanelTrafficDemandArtifactCard(
       classRows: [],
       userRows: [],
       userFilterLabel: "users 0 shown / 0 matched / 0 total",
+      userPageControls: null,
       stateLabels: []
     };
   }
@@ -14792,6 +14861,12 @@ function buildDataPanelTrafficDemandArtifactCard(
       trafficDemandUserPageLoading,
       trafficDemandUserPageError
     );
+  const userPageControls =
+    trafficDemandUserPage === null || trafficDemandUserPage === undefined
+      ? null
+      : buildDataPanelTrafficDemandArtifactUserPageControls(
+          trafficDemandUserPage
+        );
   const correlation: Record<string, unknown> = isDataPanelJsonObject(
     explanation.correlation_summary
   )
@@ -14836,6 +14911,7 @@ function buildDataPanelTrafficDemandArtifactCard(
     classRows,
     userRows: effectiveUserRows,
     userFilterLabel: effectiveUserFilterLabel,
+    userPageControls,
     stateLabels: [
       `active classes ${
         activeClasses.length > 0 ? activeClasses.join(" + ") : "-"
@@ -14849,6 +14925,21 @@ function buildDataPanelTrafficDemandArtifactCard(
           dataPanelJsonString(explanation.explanation_hash)
       )}`
     ]
+  };
+}
+
+function buildDataPanelTrafficDemandArtifactUserPageControls(
+  page: RuntimeExportTrafficDemandUserPageV1
+): DataPanelTrafficDemandArtifactUserPageControls {
+  const previousCursor = Math.max(0, page.cursor - page.limit);
+  return {
+    pageLabel: `cursor ${formatCount(page.cursor)}-${formatCount(
+      page.next_cursor
+    )} / ${formatCount(page.user_count)} matched`,
+    canPrevious: page.cursor > 0,
+    canNext: page.has_more,
+    previousCursor,
+    nextCursor: page.next_cursor
   };
 }
 

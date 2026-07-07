@@ -5,6 +5,48 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-07 - Dashboard Traffic Demand Page Controls v1
+
+- Branch: `feature/T383-dashboard-traffic-demand-page-controls-v1`
+- Commit: pending in this commit
+- Scope: add explicit previous/next cursor controls to the standalone
+  dashboard traffic-demand compact card backed by
+  `/runtime/export/packages/{package_id}/traffic-demand-users`. The card keeps
+  using the artifact filter as the backend query, displays the backend page
+  cursor range, and lets operators move through package-owned per-user
+  traffic-demand evidence without loading the full JSON artifact. This task
+  does not change backend package contracts, regenerate traffic, replay events,
+  change runtime control, alter Event Kernel behavior, add packet-level
+  simulation, or introduce external simulator dependencies.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/current_product_status.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed, 1 test file / 217 tests using the bundled Codex
+      Node/pnpm runtime.
+  - `pnpm --dir frontend test`
+    - Result: passed, 26 test files / 459 tests using the bundled Codex
+      Node/pnpm runtime.
+  - `pnpm --dir frontend build`
+    - Result: passed using the bundled Codex Node/pnpm runtime. Vite reported
+      the existing `DataPanel` chunk-size warning after minification.
+  - `python -m pytest tests\unit\test_system_v2_upgrade_plan_docs.py tests\unit\test_user_guide_v2_docs.py -q`
+    - Result: passed, 4 tests.
+- Problems encountered and handling:
+  - The task started with local runtime/generated config files already dirty.
+    They remain outside the staged task scope and are intentionally not
+    delivered as product changes.
+- Known remaining issues / follow-up:
+  - The compact card uses one shared artifact filter as the backend query.
+    A later dashboard task can add a dedicated traffic-class filter if operators
+    need class-specific package browsing directly inside this compact card.
+
 ## 2026-07-07 - Dashboard Traffic Demand Page Binding v1
 
 - Branch: `feature/T382-dashboard-traffic-demand-page-binding-v1`

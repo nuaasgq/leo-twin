@@ -2,7 +2,7 @@
 
 Date: 2026-07-07
 
-Branch: `feature/T382-dashboard-traffic-demand-page-binding-v1`
+Branch: `feature/T383-dashboard-traffic-demand-page-controls-v1`
 
 ## Local Entry Points
 
@@ -117,6 +117,9 @@ card to that backend page. When `traffic_demand_explanation_v1.json` is
 selected, the card loads `traffic-demand-users` with the current artifact
 filter and shows backend page counts/cursor state; if the page is still loading
 or unavailable, it falls back to the bounded artifact preview.
+The latest T383 validation adds explicit previous/next controls to that compact
+card, so operators can page through backend traffic-demand user evidence from
+the card without loading the full JSON artifact.
 
 ## Current Product Signals
 
@@ -144,6 +147,9 @@ or unavailable, it falls back to the bounded artifact preview.
 - The traffic-demand compact card now prefers that backend cursor page for
   per-user rows and shows `backend page users ... / cursor ...` in the card,
   preserving the artifact preview only as a fallback.
+- The same card now includes previous/next cursor controls for the backend
+  traffic-demand user page, keeping large package review inside the backend
+  pagination contract.
 - Generated backend summaries now expose the same traffic-demand explanation
   under `backend_summary.traffic_demand_explanation_v1`. The object is derived
   from the backend traffic configuration, uses a bounded endpoint/request
