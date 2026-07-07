@@ -1619,6 +1619,12 @@ export const DataPanel = memo(function DataPanel({
       runtimeExportRouteDetailItem,
       selectedRouteBackendDetail
     );
+  const exportRoutePinnedPathDiff =
+    buildDataPanelExportRoutePinnedPathDiffDisplay(
+      runtimeExportRouteDetailItem,
+      selectedRouteBackendDetail,
+      exactDetailJsonPinnedPaths
+    );
   const exportRouteLiveComparisonStatus =
     buildDataPanelExportRouteLiveComparisonStatus(
       exportRouteLiveComparison,
@@ -3506,6 +3512,31 @@ export const DataPanel = memo(function DataPanel({
                       </div>
                     ))}
                   </div>
+                  {exportRoutePinnedPathDiff ? (
+                    <>
+                      <div className="data-panel-export-route-compare-subtitle">
+                        <span>Pinned JSON paths</span>
+                        <small>{exportRoutePinnedPathDiff.summaryLabel}</small>
+                      </div>
+                      <div className="data-panel-export-route-compare-rows pinned">
+                        {exportRoutePinnedPathDiff.rows.map((row) => (
+                          <div
+                            className={row.matches ? "match" : "different"}
+                            key={row.pointer}
+                          >
+                            <span>{row.pointer}</span>
+                            <strong>{row.statusLabel}</strong>
+                            <small title={row.packageValue}>
+                              package {row.packageStatusLabel}: {row.packageValue}
+                            </small>
+                            <small title={row.liveValue}>
+                              live {row.liveStatusLabel}: {row.liveValue}
+                            </small>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : null}
                 </div>
               ) : null}
               {exportRouteLiveComparisonStatus ? (
@@ -17986,6 +18017,24 @@ export interface DataPanelExportRouteLiveComparisonRow {
   statusLabel: string;
 }
 
+export interface DataPanelExportRoutePinnedPathDiffDisplay {
+  routeId: string;
+  tone: "match" | "different";
+  statusLabel: string;
+  summaryLabel: string;
+  rows: readonly DataPanelExportRoutePinnedPathDiffRow[];
+}
+
+export interface DataPanelExportRoutePinnedPathDiffRow {
+  pointer: string;
+  packageValue: string;
+  liveValue: string;
+  packageStatusLabel: "resolved" | "missing" | "invalid";
+  liveStatusLabel: "resolved" | "missing" | "invalid";
+  matches: boolean;
+  statusLabel: "match" | "different" | "missing" | "invalid";
+}
+
 export interface DataPanelExportRouteLiveComparisonStatus {
   tone: "pending" | "error" | "different";
   statusLabel: string;
@@ -19414,6 +19463,44 @@ export function buildDataPanelExportRouteLiveComparisonDisplay(
   };
 }
 
+export function buildDataPanelExportRoutePinnedPathDiffDisplay(
+  packageItem: RuntimeExportRouteDetailItemV1 | null | undefined,
+  liveDetail: RuntimeRouteExplanationItemV1 | null | undefined,
+  pinnedPointersText: string | null | undefined
+): DataPanelExportRoutePinnedPathDiffDisplay | null {
+  const pointers = parseExactDetailJsonPinnedPointers(pinnedPointersText ?? "");
+  if (
+    pointers.length === 0 ||
+    packageItem === null ||
+    packageItem === undefined ||
+    liveDetail === null ||
+    liveDetail === undefined ||
+    packageItem.route_id !== liveDetail.route_id
+  ) {
+    return null;
+  }
+  const packageDocument = { route: packageItem.route };
+  const liveDocument = { route: liveDetail };
+  const rows = pointers.map((pointer) =>
+    routePinnedPathDiffRow(pointer, packageDocument, liveDocument)
+  );
+  const differentCount = rows.filter((row) => !row.matches).length;
+  return {
+    routeId: packageItem.route_id,
+    tone: differentCount === 0 ? "match" : "different",
+    statusLabel:
+      differentCount === 0
+        ? "pinned route paths match"
+        : "pinned route paths differ",
+    summaryLabel: `${packageItem.route_id} / pinned ${formatCount(
+      rows.length
+    )} / matched ${formatCount(
+      rows.length - differentCount
+    )} / differences ${formatCount(differentCount)}`,
+    rows
+  };
+}
+
 export function buildDataPanelExportRouteLiveComparisonStatus(
   comparison: DataPanelExportRouteLiveComparisonDisplay | null | undefined,
   packageItem: RuntimeExportRouteDetailItemV1 | null | undefined,
@@ -19909,6 +19996,55 @@ function routeComparisonRow(
     matches,
     statusLabel: matches ? "match" : "different"
   };
+}
+
+function routePinnedPathDiffRow(
+  pointer: string,
+  packageDocument: unknown,
+  liveDocument: unknown
+): DataPanelExportRoutePinnedPathDiffRow {
+  const packageSelection = selectDataPanelJsonPointerValue(packageDocument, pointer);
+  const liveSelection = selectDataPanelJsonPointerValue(liveDocument, pointer);
+  const packageStatusLabel = jsonPointerSelectionStatusLabel(packageSelection);
+  const liveStatusLabel = jsonPointerSelectionStatusLabel(liveSelection);
+  const packageValue = formatDataPanelJsonInlinePreviewForSelection(
+    packageSelection.preview
+  );
+  const liveValue = formatDataPanelJsonInlinePreviewForSelection(liveSelection.preview);
+  const invalid =
+    packageStatusLabel === "invalid" || liveStatusLabel === "invalid";
+  const missing =
+    !invalid &&
+    (packageStatusLabel === "missing" || liveStatusLabel === "missing");
+  const matches =
+    !invalid &&
+    !missing &&
+    packageSelection.typeLabel === liveSelection.typeLabel &&
+    packageValue === liveValue;
+  return {
+    pointer,
+    packageValue,
+    liveValue,
+    packageStatusLabel,
+    liveStatusLabel,
+    matches,
+    statusLabel: invalid
+      ? "invalid"
+      : missing
+        ? "missing"
+        : matches
+          ? "match"
+          : "different"
+  };
+}
+
+function jsonPointerSelectionStatusLabel(
+  selection: DataPanelJsonPointerSelection
+): "resolved" | "missing" | "invalid" {
+  if (!selection.valid) {
+    return "invalid";
+  }
+  return selection.found ? "resolved" : "missing";
 }
 
 function serviceTraceComparisonStatus(

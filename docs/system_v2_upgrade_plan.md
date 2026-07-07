@@ -736,6 +736,11 @@ Tasks:
     dashboard now counts resolved, missing, and invalid pinned paths for the
     current live exact-detail payload, providing a stable preflight signal for
     a future package/live pinned-path diff.
+  - Status: T396 uses those pinned JSON pointers in the package-vs-live route
+    comparison card when the selected package route detail and live route
+    detail share the same route id. The dashboard compares the package route
+    payload against the live route payload at each pinned path and reports
+    match, different, missing, or invalid without recomputing routes.
 - V2-054: Add model assumptions panel.
   - Scope: backend-derived model caveats, fidelity mode, KPI provenance.
   - Depends on: V2-003, V2-021.

@@ -76,6 +76,7 @@ import {
   buildDataPanelExportRouteComparisonReviewSaveStatus,
   buildDataPanelExportRouteLiveComparisonDisplay,
   buildDataPanelExportRouteLiveComparisonStatus,
+  buildDataPanelExportRoutePinnedPathDiffDisplay,
   buildDataPanelExportRouteDetailIndexDisplay,
   buildDataPanelExportRouteDetailPageDisplay,
   buildDataPanelExportRouteDetailIndexStatus,
@@ -7964,6 +7965,89 @@ describe("buildDataPanelExportCompareDisplay", () => {
         ...packageRoute,
         route_id: "route-b"
       })
+    ).toBeNull();
+  });
+
+  it("compares pinned route json paths between package and live details", () => {
+    const packageRoute = _runtimeExportRouteIndexRoute("route-a", true);
+    const packageItem = {
+      type: "RUNTIME_EXPORT_ROUTE_DETAIL_ITEM_V1",
+      version: "v1",
+      item_id: "leo_twin.runtime_export_route_detail_item.v1",
+      source: "BACKEND_RUNTIME_EXPORT_PACKAGE",
+      package_id: "pkg-review",
+      index_id: "leo_twin.runtime_export_route_detail_index.v1",
+      route_detail_index_hash:
+        "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+      route_id: "route-a",
+      route: packageRoute,
+      item_hash:
+        "sha256:abababababababababababababababababababababababababababababababab"
+    };
+    const changedLiveRoute = {
+      ...packageRoute,
+      latency_s: 0.25
+    };
+
+    const display = buildDataPanelExportRoutePinnedPathDiffDisplay(
+      packageItem,
+      changedLiveRoute,
+      "/route/route_id /route/latency_s /route/missing invalid-pointer /route/route_id"
+    );
+
+    expect(display).toMatchObject({
+      routeId: "route-a",
+      tone: "different",
+      statusLabel: "pinned route paths differ",
+      summaryLabel: "route-a / pinned 4 / matched 1 / differences 3"
+    });
+    expect(display?.rows).toEqual([
+      expect.objectContaining({
+        pointer: "/route/route_id",
+        packageValue: '"route-a"',
+        liveValue: '"route-a"',
+        packageStatusLabel: "resolved",
+        liveStatusLabel: "resolved",
+        matches: true,
+        statusLabel: "match"
+      }),
+      expect.objectContaining({
+        pointer: "/route/latency_s",
+        packageValue: "0.1",
+        liveValue: "0.25",
+        packageStatusLabel: "resolved",
+        liveStatusLabel: "resolved",
+        matches: false,
+        statusLabel: "different"
+      }),
+      expect.objectContaining({
+        pointer: "/route/missing",
+        packageStatusLabel: "missing",
+        liveStatusLabel: "missing",
+        matches: false,
+        statusLabel: "missing"
+      }),
+      expect.objectContaining({
+        pointer: "invalid-pointer",
+        packageStatusLabel: "invalid",
+        liveStatusLabel: "invalid",
+        matches: false,
+        statusLabel: "invalid"
+      })
+    ]);
+    expect(
+      buildDataPanelExportRoutePinnedPathDiffDisplay(
+        packageItem,
+        changedLiveRoute,
+        ""
+      )
+    ).toBeNull();
+    expect(
+      buildDataPanelExportRoutePinnedPathDiffDisplay(
+        packageItem,
+        { ...changedLiveRoute, route_id: "route-b" },
+        "/route/route_id"
+      )
     ).toBeNull();
   });
 

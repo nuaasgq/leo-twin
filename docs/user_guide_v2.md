@@ -182,7 +182,9 @@ The standalone dashboard is for data situation awareness:
   node ids, and compute-resource fields are easier to inspect. For custom
   review, enter JSON pointers in the pin field; pinned paths show resolved,
   missing, or invalid status against the synchronized payloads, with a compact
-  count summary for quick review readiness checks;
+  count summary for quick review readiness checks. When a package route detail
+  is compared with the matching live route detail, the same pins are reused for
+  a path-level package/live route diff;
 - service-trace closed-loop evidence, showing whether the selected service
   trace has correlated flow, route, user, satellite, compute-node, stage, and
   latency evidence from backend exact detail or the visible dashboard window;
@@ -247,8 +249,11 @@ compares against the current runtime route detail endpoint when the same route
 id is still present. Use `compare with live` to load both detail channels for
 the same route in one click. If both package and live details are loaded for
 the same route, the dashboard shows a package-vs-live comparison card with
-matched and different route fields. If the comparison is not ready, the same
-area explains whether package detail, live detail, or route-id mismatch is the
+matched and different route fields. If exact-detail JSON pointers are pinned,
+the same card also compares those pinned `/route/...` paths against the package
+route payload and the live route payload, reporting match, different, missing,
+or invalid for each pinned path. If the comparison is not ready, the same area
+explains whether package detail, live detail, or route-id mismatch is the
 reason. The package review artifacts include `route_comparison_review`
 metadata so the available comparison fields, live-runtime requirement, and
 no-recompute boundaries are visible outside the dashboard UI. The same metadata

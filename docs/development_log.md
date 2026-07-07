@@ -5,6 +5,42 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-08 - Dashboard Route Pinned Path Diff v1
+
+- Branch: `feature/T396-dashboard-route-pinned-path-diff-v1`
+- Commit: pending in this commit
+- Scope: reuse the exact-detail JSON pinned pointer workflow inside the
+  package-vs-live route comparison card. When a selected package route detail
+  and live route detail share the same route id, the dashboard compares each
+  pinned path against `{ route: packageRoute }` and `{ route: liveRoute }` and
+  reports match, different, missing, or invalid. This keeps the comparison
+  read-only and frontend-local, and does not change Event Kernel behavior,
+  backend protocols, runtime contracts, simulation models, packet-level
+  behavior, or frontend routing architecture.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/current_product_status.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed, 1 test file / 229 tests using the bundled Codex
+      Node/pnpm runtime.
+  - `python -m pytest tests\unit\test_system_v2_upgrade_plan_docs.py tests\unit\test_user_guide_v2_docs.py -q`
+    - Result: passed, 4 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing large `DataPanel` chunk
+      warning after minification.
+- Problems encountered and handling:
+  - Local runtime/generated config files were already dirty and remain outside
+    the staged task scope.
+- Known remaining issues / follow-up:
+  - Extend the same pinned-path diff concept to service-trace package/live
+    evidence after the route workflow is stable.
+
 ## 2026-07-08 - Dashboard Exact Detail JSON Pin Summary v1
 
 - Branch: `feature/T395-dashboard-exact-detail-json-pin-summary-v1`

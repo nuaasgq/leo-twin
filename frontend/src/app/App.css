@@ -3850,6 +3850,31 @@ button.data-panel-route-row {
   min-width: 0;
 }
 
+.data-panel-export-route-compare-subtitle {
+  display: grid;
+  gap: 3px;
+  padding-top: 3px;
+  border-top: 1px solid #263a48;
+}
+
+.data-panel-export-route-compare-subtitle span {
+  color: #9fd6ff;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.data-panel-export-route-compare-subtitle small {
+  color: var(--app-muted);
+  font-size: 10px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.data-panel-export-route-compare-rows.pinned {
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+
 .data-panel-export-route-compare-rows div {
   display: grid;
   gap: 3px;

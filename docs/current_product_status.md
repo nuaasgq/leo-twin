@@ -2,7 +2,7 @@
 
 Date: 2026-07-08
 
-Branch: `feature/T395-dashboard-exact-detail-json-pin-summary-v1`
+Branch: `feature/T396-dashboard-route-pinned-path-diff-v1`
 
 ## Local Entry Points
 
@@ -279,6 +279,10 @@ the card without loading the full JSON artifact.
 - The pinned path area now includes a compact comparison-readiness summary that
   counts resolved, missing, and invalid pinned paths. This makes the current
   live exact-detail payload ready for a later package/live pinned-path diff.
+- The package route review card now reuses those pinned JSON pointers when
+  package route detail and live route detail share the same route id. It
+  compares each pinned `/route/...` path across package and live payloads and
+  reports match, different, missing, or invalid without recomputing routes.
 - Launcher health v2 reports backend/frontend port readiness, HTTP readiness,
   process ids, latest log paths, config paths, and recommended actions.
 - Operator diagnostics bundle captures launcher health, runtime status, version
