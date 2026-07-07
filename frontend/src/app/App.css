@@ -2954,6 +2954,73 @@ button.data-panel-route-row {
   min-width: 0;
 }
 
+.data-panel-export-artifact-browser-controls {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  border: 1px solid #263a48;
+  border-radius: 6px;
+  padding: 7px;
+  background: #081016;
+}
+
+.data-panel-export-artifact-browser-controls label {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.data-panel-export-artifact-browser-controls label span,
+.data-panel-export-artifact-browser-controls small {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--app-muted);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.data-panel-export-artifact-browser-controls input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #2a4658;
+  border-radius: 5px;
+  padding: 6px 7px;
+  background: #0b1219;
+  color: var(--app-text);
+  font-size: 11px;
+}
+
+.data-panel-export-artifact-browser-filter-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-width: 0;
+}
+
+.data-panel-export-artifact-browser-filter-buttons button {
+  min-width: 0;
+  max-width: 100%;
+  border: 1px solid #2a4658;
+  border-radius: 5px;
+  padding: 4px 6px;
+  background: #101922;
+  color: var(--app-muted);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 900;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.data-panel-export-artifact-browser-filter-buttons button.active,
+.data-panel-export-artifact-browser-filter-buttons button:hover {
+  border-color: #4b7490;
+  background: #0c1a24;
+  color: var(--accent-cyan);
+}
+
 .data-panel-export-artifact-browser-row {
   display: grid;
   gap: 4px;

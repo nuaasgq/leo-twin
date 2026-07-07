@@ -5,6 +5,43 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-07 - Dashboard Artifact Browser Filter v1
+
+- Branch: `feature/T388-dashboard-artifact-browser-filter-v1`
+- Commit: pending in this commit
+- Scope: add dashboard-local filters to the result-package artifact browser
+  workspace. Operators can filter visible package artifact rows by backend
+  category, missing state, inspectable JSON artifacts, and text query while the
+  complete backend-owned artifact set remains available for review and evidence
+  actions. This task does not change Event Kernel behavior, backend model
+  semantics, result-package artifact generation, package hashes, packet-level
+  simulation, or frontend routing architecture.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/current_product_status.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed, 1 test file / 219 tests using the bundled Codex
+      Node/pnpm runtime.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing large DataPanel chunk
+      warning.
+- Problems encountered and handling:
+  - The filter must focus the operator view without hiding backend evidence
+    from programmatic review. The builder now keeps `rows` as the complete
+    artifact set and exposes `visibleRows` plus a filter summary for the UI.
+  - Local runtime/generated config files were already dirty and remain outside
+    the staged task scope.
+- Known remaining issues / follow-up:
+  - Filters are local to the current dashboard session. A later pass can
+    persist operator review filter presets or add a virtualized per-artifact
+    table for very large packages.
+
 ## 2026-07-07 - Dashboard Artifact Browser Workspace v1
 
 - Branch: `feature/T387-dashboard-artifact-browser-workspace-v1`

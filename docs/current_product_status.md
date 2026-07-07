@@ -197,6 +197,10 @@ the card without loading the full JSON artifact.
   present/missing counts, representative artifact filenames, the default JSON
   inspection target, and a direct evidence-inspection button when a readable
   JSON artifact is available.
+- The same artifact browser workspace now supports local category, missing
+  artifact, inspectable-JSON, and text filters. Filtering only changes the
+  dashboard-visible artifact rows; the complete backend-derived artifact set
+  remains available for review and evidence actions.
 - Runtime export packages now also include
   `user_configuration_template_validation_v1.json` and propagate approved
   template validation status, valid/invalid counts, and evidence hash into the

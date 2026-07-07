@@ -343,6 +343,11 @@ backend marked an inspectable JSON artifact. Pressing that button opens the
 read-only package artifact inspector at the backend-provided JSON pointer and
 filter hint; it does not replay events, mutate the package, or recompute
 acceptance.
+Use the artifact browser filter controls to narrow the visible package files by
+backend category, missing-artifact state, inspectable JSON artifacts, or text in
+the filename/category/review-role fields. These controls are dashboard-local
+review filters: they do not change the exported package, hide evidence from the
+backend index, or alter artifact hashes.
 The traffic-demand explanation step opens `traffic_demand_explanation_v1.json`
 directly at `/traffic_demand_explanation`, so an operator can inspect generated
 request counts, compute-service request counts, class rows, per-user state

@@ -1130,6 +1130,10 @@ Current Phase 3 progress:
   present/missing counts, representative filenames, a default JSON evidence
   target, and a direct read-only inspector action, making exported result
   packages easier to review without adding browser-side artifact semantics.
+- T388 adds local artifact-browser filters for backend category, missing state,
+  inspectable JSON artifacts, and text query. The full artifact set stays
+  backend-owned while the dashboard can focus large result packages during
+  operator review.
 - T364 adds a dashboard detail-coverage status card for backend detail
   families, cursor windows, hidden rows, exact node cards, and pagination
   contract status. This improves the node-detail workstream without changing

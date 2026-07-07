@@ -530,6 +530,15 @@ export const DataPanel = memo(function DataPanel({
   ] = useState<DataPanelRouteComparisonReviewReportStatusFilter>("ALL");
   const [exportRouteReviewReportPage, setExportRouteReviewReportPage] = useState(0);
   const [
+    exportArtifactBrowserCategoryFilter,
+    setExportArtifactBrowserCategoryFilter
+  ] = useState("ALL");
+  const [
+    exportArtifactBrowserStatusFilter,
+    setExportArtifactBrowserStatusFilter
+  ] = useState<DataPanelArtifactBrowserStatusFilter>("ALL");
+  const [exportArtifactBrowserQuery, setExportArtifactBrowserQuery] = useState("");
+  const [
     exportServiceTraceReviewReportFilter,
     setExportServiceTraceReviewReportFilter
   ] = useState("");
@@ -655,6 +664,9 @@ export const DataPanel = memo(function DataPanel({
     setExportRouteReviewReportFilter("");
     setExportRouteReviewReportStatusFilter("ALL");
     setExportRouteReviewReportPage(0);
+    setExportArtifactBrowserCategoryFilter("ALL");
+    setExportArtifactBrowserStatusFilter("ALL");
+    setExportArtifactBrowserQuery("");
     setExportServiceTraceReviewReportFilter("");
     setExportServiceTraceReviewReportStatusFilter("ALL");
     setExportServiceTraceReviewReportCursor(0);
@@ -872,7 +884,12 @@ export const DataPanel = memo(function DataPanel({
     runtimeExportComparePackageId,
     runtimeExportReviewSummary,
     benchmarkEvidenceFocus,
-    runtimeExportDiagnosticsBundle
+    runtimeExportDiagnosticsBundle,
+    {
+      category: exportArtifactBrowserCategoryFilter,
+      status: exportArtifactBrowserStatusFilter,
+      query: exportArtifactBrowserQuery
+    }
   );
   const exportDiagnosticsDisplay = buildDataPanelExportDiagnosticsDisplay(
     runtimeExportDiagnosticsBundle
@@ -2380,6 +2397,58 @@ export const DataPanel = memo(function DataPanel({
                   ))}
                 </div>
               ) : null}
+              <div
+                className="data-panel-export-artifact-browser-controls"
+                aria-label="artifact browser filters"
+              >
+                <label>
+                  <span>artifact filter</span>
+                  <input
+                    type="search"
+                    value={exportArtifactBrowserQuery}
+                    onChange={(event) =>
+                      setExportArtifactBrowserQuery(event.currentTarget.value)
+                    }
+                    placeholder="filename, category, role"
+                  />
+                </label>
+                <div className="data-panel-export-artifact-browser-filter-buttons">
+                  {(["ALL", "MISSING", "INSPECTABLE_JSON"] as const).map((status) => (
+                    <button
+                      className={
+                        exportArtifactBrowserStatusFilter === status ? "active" : undefined
+                      }
+                      key={status}
+                      type="button"
+                      onClick={() => setExportArtifactBrowserStatusFilter(status)}
+                    >
+                      {status}
+                    </button>
+                  ))}
+                </div>
+                <div className="data-panel-export-artifact-browser-filter-buttons">
+                  {exportArtifactHealthDisplay.artifactBrowserCategoryOptions.map(
+                    (option) => (
+                      <button
+                        className={
+                          exportArtifactBrowserCategoryFilter === option.value
+                            ? "active"
+                            : undefined
+                        }
+                        key={option.value}
+                        title={`${option.label} / ${option.presentCount}/${option.itemCount} present / ${option.missingCount} missing`}
+                        type="button"
+                        onClick={() =>
+                          setExportArtifactBrowserCategoryFilter(option.value)
+                        }
+                      >
+                        {option.label}
+                      </button>
+                    )
+                  )}
+                </div>
+                <small>{exportArtifactHealthDisplay.artifactBrowserFilterLabel}</small>
+              </div>
               {exportArtifactHealthDisplay.artifactBrowserRows.length > 0 ? (
                 <div
                   className="data-panel-export-artifact-browser"
@@ -2416,7 +2485,7 @@ export const DataPanel = memo(function DataPanel({
                 </div>
               ) : null}
               <div className="data-panel-export-artifact-health-grid">
-                {exportArtifactHealthDisplay.rows.map((row) =>
+                {exportArtifactHealthDisplay.visibleRows.map((row) =>
                   row.href && !row.inspectable ? (
                     <a
                       className={row.focused ? "focused" : undefined}
@@ -2478,6 +2547,13 @@ export const DataPanel = memo(function DataPanel({
                     </span>
                   )
                 )}
+                {exportArtifactHealthDisplay.visibleRows.length === 0 ? (
+                  <span title={exportArtifactHealthDisplay.artifactBrowserFilterLabel}>
+                    <span>No matching package artifacts</span>
+                    <strong className="missing">filtered</strong>
+                    <small>{exportArtifactHealthDisplay.artifactBrowserFilterLabel}</small>
+                  </span>
+                ) : null}
               </div>
             </div>
           ) : null}
@@ -13051,7 +13127,30 @@ export interface DataPanelExportArtifactHealthDisplay {
   summaryLabel: string;
   browserLabels: readonly string[];
   artifactBrowserRows: readonly DataPanelExportArtifactBrowserRow[];
+  artifactBrowserCategoryOptions: readonly DataPanelArtifactBrowserCategoryOption[];
+  artifactBrowserFilterLabel: string;
+  visibleRows: readonly DataPanelExportArtifactHealthRow[];
+  hiddenRowCount: number;
   rows: readonly DataPanelExportArtifactHealthRow[];
+}
+
+export type DataPanelArtifactBrowserStatusFilter =
+  | "ALL"
+  | "MISSING"
+  | "INSPECTABLE_JSON";
+
+export interface DataPanelArtifactBrowserFilters {
+  category?: string;
+  status?: DataPanelArtifactBrowserStatusFilter;
+  query?: string;
+}
+
+export interface DataPanelArtifactBrowserCategoryOption {
+  value: string;
+  label: string;
+  itemCount: number;
+  presentCount: number;
+  missingCount: number;
 }
 
 export interface DataPanelExportArtifactBrowserRow {
@@ -13071,6 +13170,7 @@ export interface DataPanelExportArtifactBrowserRow {
 
 export interface DataPanelExportArtifactHealthRow {
   filename: string;
+  category: string;
   roleLabel: string;
   categoryLabel: string;
   reviewRoleLabel: string;
@@ -16319,7 +16419,8 @@ export function buildDataPanelExportArtifactHealthDisplay(
   selectedPackageId: string | null | undefined,
   reviewSummary: RuntimeExportReviewSummaryV1 | null | undefined,
   benchmarkEvidenceFocus: DataPanelBenchmarkEvidenceFocus | null | undefined = null,
-  diagnosticsBundle: RuntimeExportDiagnosticsBundleV1 | null | undefined = null
+  diagnosticsBundle: RuntimeExportDiagnosticsBundleV1 | null | undefined = null,
+  filters: DataPanelArtifactBrowserFilters = {}
 ): DataPanelExportArtifactHealthDisplay | null {
   if (
     catalog === null ||
@@ -16378,6 +16479,7 @@ export function buildDataPanelExportArtifactHealthDisplay(
       : "";
     return {
       filename,
+      category: browserItem?.category ?? "CATALOG_ARTIFACT",
       roleLabel: required ? "必需" : "附加",
       statusLabel: missing ? "缺失" : required ? "必需已登记" : "附加已登记",
       categoryLabel: browserItem?.category_label ?? "Catalog artifact",
@@ -16398,12 +16500,24 @@ export function buildDataPanelExportArtifactHealthDisplay(
     };
   });
   const missingCount = rows.filter((row) => !row.present).length;
+  const visibleRows = filterDataPanelArtifactHealthRows(rows, filters);
   return {
     browserLabels: buildDataPanelArtifactBrowserLabels(artifactBrowserIndex),
     artifactBrowserRows: buildDataPanelArtifactBrowserRows(
       artifactBrowserIndex,
       rows
     ),
+    artifactBrowserCategoryOptions: buildDataPanelArtifactBrowserCategoryOptions(
+      artifactBrowserIndex,
+      rows
+    ),
+    artifactBrowserFilterLabel: buildDataPanelArtifactBrowserFilterLabel(
+      filters,
+      visibleRows.length,
+      rows.length
+    ),
+    visibleRows,
+    hiddenRowCount: Math.max(0, rows.length - visibleRows.length),
     packageId: selectedPackageId,
     sourceLabel: `${catalog.source} / ${record.export_type} / files`,
     summaryLabel: `${selectedPackageId} / 登记 ${formatCount(
@@ -16437,6 +16551,122 @@ function buildDataPanelArtifactBrowserLabels(
           )}/${formatCount(category.item_count)}`
       )
   ];
+}
+
+function buildDataPanelArtifactBrowserCategoryOptions(
+  index: RuntimeExportDiagnosticsBundleV1["artifact_browser_index_v1"] | null | undefined,
+  rows: readonly DataPanelExportArtifactHealthRow[]
+): readonly DataPanelArtifactBrowserCategoryOption[] {
+  if (index !== null && index !== undefined) {
+    return [
+      {
+        value: "ALL",
+        label: "All artifact categories",
+        itemCount: rows.length,
+        presentCount: rows.filter((row) => row.present).length,
+        missingCount: rows.filter((row) => !row.present).length
+      },
+      ...index.categories.map((category) => ({
+        value: category.category,
+        label: category.category_label,
+        itemCount: category.item_count,
+        presentCount: category.present_count,
+        missingCount: category.missing_count
+      }))
+    ];
+  }
+  return [
+    {
+      value: "ALL",
+      label: "All catalog artifacts",
+      itemCount: rows.length,
+      presentCount: rows.filter((row) => row.present).length,
+      missingCount: rows.filter((row) => !row.present).length
+    }
+  ];
+}
+
+export function filterDataPanelArtifactHealthRows(
+  rows: readonly DataPanelExportArtifactHealthRow[],
+  filters: DataPanelArtifactBrowserFilters = {}
+): readonly DataPanelExportArtifactHealthRow[] {
+  const category = normalizeDataPanelArtifactBrowserCategoryFilter(
+    filters.category
+  );
+  const status = normalizeDataPanelArtifactBrowserStatusFilter(filters.status);
+  const query = normalizeDataPanelArtifactBrowserQuery(filters.query);
+  const terms = query.length > 0 ? query.split(" ") : [];
+  return rows.filter((row) => {
+    if (category !== "ALL" && row.category !== category) {
+      return false;
+    }
+    if (status === "MISSING" && row.present) {
+      return false;
+    }
+    if (status === "INSPECTABLE_JSON" && !row.inspectable) {
+      return false;
+    }
+    if (terms.length === 0) {
+      return true;
+    }
+    const haystack = [
+      row.filename,
+      row.category,
+      row.categoryLabel,
+      row.reviewRoleLabel,
+      row.statusLabel,
+      row.roleLabel,
+      row.defaultInspectorFilter,
+      row.jsonPointer
+    ]
+      .join(" ")
+      .toLowerCase();
+    return terms.every((term) => haystack.includes(term));
+  });
+}
+
+function buildDataPanelArtifactBrowserFilterLabel(
+  filters: DataPanelArtifactBrowserFilters,
+  visibleCount: number,
+  totalCount: number
+): string {
+  const category = normalizeDataPanelArtifactBrowserCategoryFilter(
+    filters.category
+  );
+  const status = normalizeDataPanelArtifactBrowserStatusFilter(filters.status);
+  const query = normalizeDataPanelArtifactBrowserQuery(filters.query);
+  const parts = [
+    `visible ${formatCount(visibleCount)} / ${formatCount(totalCount)}`,
+    `category ${category}`,
+    `status ${status}`
+  ];
+  if (query.length > 0) {
+    parts.push(`query ${query}`);
+  }
+  return parts.join(" / ");
+}
+
+function normalizeDataPanelArtifactBrowserCategoryFilter(
+  value: string | null | undefined
+): string {
+  const normalized = String(value ?? "ALL").trim().toUpperCase();
+  return normalized.length > 0 ? normalized : "ALL";
+}
+
+function normalizeDataPanelArtifactBrowserStatusFilter(
+  value: DataPanelArtifactBrowserStatusFilter | string | null | undefined
+): DataPanelArtifactBrowserStatusFilter {
+  const normalized = String(value ?? "ALL").trim().toUpperCase();
+  if (normalized === "MISSING" || normalized === "INSPECTABLE_JSON") {
+    return normalized;
+  }
+  return "ALL";
+}
+
+function normalizeDataPanelArtifactBrowserQuery(
+  value: string | null | undefined
+): string {
+  return String(value ?? "").trim().toLowerCase().replace(/\s+/g, " ");
 }
 
 function buildDataPanelArtifactBrowserRows(

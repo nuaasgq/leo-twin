@@ -20,6 +20,7 @@ import {
   buildDataPanelDetailWindowPolicyNote,
   buildDataPanelDisplaySummary,
   buildDataPanelExportArtifactHealthDisplay,
+  filterDataPanelArtifactHealthRows,
   buildDataPanelExportAcceptanceReportStatus,
   buildDataPanelBenchmarkEvidenceFocus,
   buildDataPanelArtifactHealthInspectorFocus,
@@ -3018,7 +3019,49 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         missingFilenames: ["network_kpi_formula_evidence_v1.json"]
       })
     ]);
+    expect(display?.artifactBrowserCategoryOptions).toEqual([
+      expect.objectContaining({
+        value: "ALL",
+        itemCount: 2,
+        presentCount: 1,
+        missingCount: 1
+      }),
+      expect.objectContaining({
+        value: "NETWORK_KPI_EVIDENCE",
+        label: "Network KPI evidence",
+        itemCount: 2,
+        presentCount: 1,
+        missingCount: 1
+      })
+    ]);
+    expect(display?.visibleRows.map((item) => item.filename)).toEqual([
+      "network_kpi_formula_evidence_v1.json",
+      "network_kpi_variation_explanation_v1.json"
+    ]);
+    expect(display?.artifactBrowserFilterLabel).toBe(
+      "visible 2 / 2 / category ALL / status ALL"
+    );
+    const missingOnly = buildDataPanelExportArtifactHealthDisplay(
+      catalog,
+      "pkg-review",
+      null,
+      null,
+      diagnostics as any,
+      {
+        category: "NETWORK_KPI_EVIDENCE",
+        status: "MISSING",
+        query: "formula"
+      }
+    );
+    expect(missingOnly?.visibleRows.map((item) => item.filename)).toEqual([
+      "network_kpi_formula_evidence_v1.json"
+    ]);
+    expect(missingOnly?.hiddenRowCount).toBe(1);
+    expect(missingOnly?.artifactBrowserFilterLabel).toBe(
+      "visible 1 / 2 / category NETWORK_KPI_EVIDENCE / status MISSING / query formula"
+    );
     expect(row).toMatchObject({
+      category: "NETWORK_KPI_EVIDENCE",
       categoryLabel: "Network KPI evidence",
       reviewRoleLabel: "Network KPI variation explanation.",
       jsonPointer: "/evidence",
@@ -3030,6 +3073,12 @@ describe("buildDataPanelExportCatalogDisplay", () => {
       jsonPointer: "/evidence",
       defaultInspectorFilter: "variation"
     });
+    expect(
+      filterDataPanelArtifactHealthRows(display?.rows ?? [], {
+        status: "INSPECTABLE_JSON",
+        query: "variation"
+      }).map((item) => item.filename)
+    ).toEqual(["network_kpi_variation_explanation_v1.json"]);
   });
 
   it("marks the artifact health row linked to the selected benchmark evidence focus", () => {
@@ -3163,6 +3212,7 @@ describe("buildDataPanelExportCatalogDisplay", () => {
     expect(
       buildDataPanelArtifactHealthInspectorFocus({
         filename: "events.jsonl",
+        category: "RAW_RUNTIME",
         roleLabel: "required",
         categoryLabel: "Raw runtime evidence",
         reviewRoleLabel: "Processed event evidence for replay review.",
