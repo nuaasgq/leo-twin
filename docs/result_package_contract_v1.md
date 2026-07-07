@@ -87,6 +87,13 @@ review artifact for `network_kpi_formula_evidence_v1`. It copies the backend
 formula/input/time-series evidence object from runtime status, adds compact
 evidence fields plus a stable evidence hash, and records the same no-replay,
 no-recompute, no-packet, and no-external-simulator boundary conditions.
+`user_configuration_template_validation_v1.json` is emitted as a deterministic
+offline review artifact for the backend-owned approved user configuration
+template validation evidence. It copies
+`config_snapshot.user_configuration_template_validation_v1`, records compact
+valid/invalid template counts, model-boundary flags, and a stable evidence
+hash, and does not reload templates, apply config, replay events, or recompute
+model state.
 `scenario_review_bundle_v1.json` is emitted as a deterministic operator-facing
 review entry point. It binds the effective user configuration evidence,
 scenario scale, runtime progress, manifest hashes, review summary hash,
@@ -120,6 +127,8 @@ It reports:
   `config_snapshot.status.route_provenance_trust_summary_v1`;
 - network KPI formula evidence derived from
   `config_snapshot.status.network_kpi_formula_evidence_v1`;
+- user configuration template validation evidence derived from
+  `config_snapshot.user_configuration_template_validation_v1`;
 - route comparison review metadata for package-vs-live route diagnostics;
 - manifest id/hash plus config and generated-config hashes;
 - required artifact coverage and missing required filenames;

@@ -67,7 +67,11 @@ Tasks:
     YAML templates are loaded through the same config loader and schema
     validation path used by runtime control and are reported with stable file
     hashes, normalized config hashes, scale summaries, and model-boundary
-    declarations.
+    declarations. T373 persists the same backend-owned template validation
+    evidence into runtime result packages as
+    `user_configuration_template_validation_v1.json`, so offline review uses
+    the exported package as the source of truth and does not reload templates
+    or apply a new config.
 - V2-002: Add template catalog metadata.
   - Scope: scenario name, purpose, scale, expected KPI behavior, fidelity mode.
   - Output: backend template endpoint and frontend selector metadata.
@@ -83,7 +87,9 @@ Tasks:
     T372 renders the backend evidence as a dashboard template-validation table
     with per-template status, scale/runtime summary, orbit/space-link mode,
     file hash, config hash, and error summary without revalidating templates in
-    the browser.
+    the browser. T373 adds compact export-review labels for the same evidence
+    through review summary, diagnostics, scenario review, and audit index
+    package surfaces.
 - V2-003: Add config explanation summary.
   - Scope: backend-generated text/structured explanation for orbit, network,
     traffic, compute, runtime, fidelity.
@@ -826,7 +832,11 @@ Tasks:
     KPI benchmark status/hash labels without recomputing KPI values. T370 adds
     `network_kpi_formula_evidence_v1.json` to the same result-package review
     path, preserving backend formula/input/time-series evidence offline without
-    metric recomputation. T344 adds
+    metric recomputation. T373 adds
+    `user_configuration_template_validation_v1.json` to the same review path,
+    preserving approved user configuration template validation evidence
+    offline without template reloads, config application, event replay, or
+    frontend-side validation. T344 adds
     `GET /runtime/export/packages/{package_id}/acceptance-report`, a
     backend-owned pass/warn/fail acceptance summary that binds audit evidence,
     handoff completion, route review, service-trace review, scenario review,

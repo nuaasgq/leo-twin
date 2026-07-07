@@ -14,6 +14,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1_ID,
     RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_V1_ID,
     RUNTIME_EXPORT_NETWORK_KPI_FORMULA_EVIDENCE_V1_ID,
+    RUNTIME_EXPORT_USER_CONFIGURATION_TEMPLATE_VALIDATION_V1_ID,
     RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID,
     RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT_V1_ID,
     RUNTIME_EXPORT_PACKAGE_HANDOFF_REPORT_V1_ID,
@@ -39,6 +40,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_diagnostics_bundle_v1,
     build_runtime_export_network_kpi_benchmark_validation_v1,
     build_runtime_export_network_kpi_formula_evidence_v1,
+    build_runtime_export_user_configuration_template_validation_v1,
     build_runtime_export_benchmark_acceptance_binding_v1,
     build_runtime_export_package_acceptance_report_v1,
     build_runtime_export_package_audit_index_v1,
@@ -96,6 +98,7 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
         "diagnostics_bundle_v1.json",
         "network_kpi_benchmark_validation_v1.json",
         "network_kpi_formula_evidence_v1.json",
+        "user_configuration_template_validation_v1.json",
         "scenario_review_bundle_v1.json",
         "export_package_audit_index_v1.json",
         "package_handoff_report_v1.md",
@@ -233,6 +236,7 @@ def test_result_package_summary_accepts_complete_package_record() -> None:
         "diagnostics_bundle_v1.json",
         "network_kpi_benchmark_validation_v1.json",
         "network_kpi_formula_evidence_v1.json",
+        "user_configuration_template_validation_v1.json",
         "scenario_review_bundle_v1.json",
         "export_package_audit_index_v1.json",
         "package_handoff_report_v1.md",
@@ -292,6 +296,9 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
             "compute_node_count": 12,
             "duration_seconds": 120,
         },
+        "user_configuration_template_validation_v1": (
+            _user_configuration_template_validation()
+        ),
     }
     manifest = {
         "manifest_id": RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID,
@@ -307,6 +314,7 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
         "diagnostics_bundle_v1.json",
         "network_kpi_benchmark_validation_v1.json",
         "network_kpi_formula_evidence_v1.json",
+        "user_configuration_template_validation_v1.json",
         "review_summary_v1.json",
         "route_detail_index_v1.json",
         "scenario_review_bundle_v1.json",
@@ -357,6 +365,15 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
         "FORMULA_AND_TIME_EVIDENCE_READY"
     )
     assert first["network_kpi_formula_evidence"]["missing_selected_input_count"] == 0
+    assert first["user_configuration_template_validation"][
+        "evidence_present"
+    ] is True
+    assert first["user_configuration_template_validation"]["validation_status"] == (
+        "ALL_TEMPLATES_VALID"
+    )
+    assert first["user_configuration_template_validation"][
+        "invalid_template_count"
+    ] == 0
     assert first["user_service_requests"]["evidence_present"] is True
     assert first["user_service_requests"]["request_count"] == 2
     assert first["user_service_requests"]["exported_request_count"] == 2
@@ -365,6 +382,9 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
         "network_kpi_benchmark_validation_exported"
     ] is True
     assert first["artifacts"]["network_kpi_formula_evidence_exported"] is True
+    assert first["artifacts"][
+        "user_configuration_template_validation_exported"
+    ] is True
     assert first["artifacts"]["user_service_request_summary_exported"] is True
     assert first["route_comparison_review"]["review_scope"] == (
         "PACKAGE_ROUTE_DETAIL_TO_LIVE_RUNTIME_ROUTE_DETAIL"
@@ -467,6 +487,50 @@ def test_runtime_export_network_kpi_formula_evidence_v1_is_deterministic() -> No
     assert first["evidence"]["evidence_hash"].startswith("sha256:")
     assert first["artifact_hash"].startswith("sha256:")
     assert "NO_METRIC_RECOMPUTE" in first["boundary_conditions"]
+
+
+def test_runtime_export_user_configuration_template_validation_v1_is_deterministic() -> None:
+    config_snapshot = {
+        "type": "RUNTIME_CONFIG_SNAPSHOT",
+        "status": {},
+        "config": {"seed": 7},
+        "generated_config": {"seed": 7, "satellite_count": 72},
+        "user_configuration_template_validation_v1": (
+            _user_configuration_template_validation()
+        ),
+    }
+
+    first = build_runtime_export_user_configuration_template_validation_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+    )
+    second = build_runtime_export_user_configuration_template_validation_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=dict(reversed(tuple(config_snapshot.items()))),
+    )
+
+    assert first == second
+    assert first["artifact_id"] == (
+        RUNTIME_EXPORT_USER_CONFIGURATION_TEMPLATE_VALIDATION_V1_ID
+    )
+    assert (
+        first["config_snapshot_field"] == "user_configuration_template_validation_v1"
+    )
+    assert first["template_validation"] == config_snapshot[
+        "user_configuration_template_validation_v1"
+    ]
+    assert first["evidence"]["evidence_present"] is True
+    assert first["evidence"]["validation_status"] == "ALL_TEMPLATES_VALID"
+    assert first["evidence"]["template_count"] == 2
+    assert first["evidence"]["invalid_template_count"] == 0
+    assert first["evidence"]["packet_level_simulation"] is False
+    assert first["evidence"]["external_simulators"] is False
+    assert first["evidence"]["acceptable_for_demo_review"] is True
+    assert first["evidence"]["evidence_hash"].startswith("sha256:")
+    assert first["artifact_hash"].startswith("sha256:")
+    assert "NO_TEMPLATE_RELOAD" in first["boundary_conditions"]
 
 
 def test_runtime_export_user_service_request_summary_v2_is_deterministic() -> None:
@@ -621,6 +685,9 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
             "compute_node_count": 12,
             "duration_seconds": 120,
         },
+        "user_configuration_template_validation_v1": (
+            _user_configuration_template_validation()
+        ),
     }
     manifest = {
         "manifest_id": RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID,
@@ -638,6 +705,7 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
         "metrics.csv",
         "network_kpi_benchmark_validation_v1.json",
         "network_kpi_formula_evidence_v1.json",
+        "user_configuration_template_validation_v1.json",
         "review_summary_v1.json",
         "route_detail_index_v1.json",
         "scenario_review_bundle_v1.json",
@@ -691,6 +759,12 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
         "FORMULA_AND_TIME_EVIDENCE_READY"
     )
     assert first["network_kpi_formula_evidence"]["acceptable_for_demo_review"] is True
+    assert first["user_configuration_template_validation"][
+        "validation_status"
+    ] == "ALL_TEMPLATES_VALID"
+    assert first["user_configuration_template_validation"][
+        "evidence_hash"
+    ] == review_summary["user_configuration_template_validation"]["evidence_hash"]
     assert first["user_service_requests"]["evidence_present"] is True
     assert first["user_service_requests"]["request_count"] == 2
     assert first["user_service_requests"]["exported_request_count"] == 2
@@ -742,6 +816,9 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
             "compute_node_count": 12,
             "duration_seconds": 120,
         },
+        "user_configuration_template_validation_v1": (
+            _user_configuration_template_validation()
+        ),
     }
     manifest = {
         "manifest_id": RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID,
@@ -761,6 +838,7 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
         "metrics.csv",
         "network_kpi_benchmark_validation_v1.json",
         "network_kpi_formula_evidence_v1.json",
+        "user_configuration_template_validation_v1.json",
         "review_summary_v1.json",
         "route_detail_index_v1.json",
         "scenario_review_bundle_v1.json",
@@ -850,10 +928,22 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
     assert first["network_kpi_formula_evidence"]["evidence_hash"] == (
         review_summary["network_kpi_formula_evidence"]["evidence_hash"]
     )
+    assert first["user_configuration_template_validation"][
+        "validation_status"
+    ] == "ALL_TEMPLATES_VALID"
+    assert first["user_configuration_template_validation"][
+        "evidence_hash"
+    ] == review_summary["user_configuration_template_validation"]["evidence_hash"]
+    assert first["user_configuration_template_validation"][
+        "all_templates_valid"
+    ] is True
     assert first["model_boundaries"]["packet_level_simulation"] is False
     assert first["model_boundaries"]["external_simulators"] is False
     assert first["recommended_review_order"][0] == "scenario_review_bundle_v1.json"
     assert "user_service_request_summary_v2.json" in first[
+        "recommended_review_order"
+    ]
+    assert "user_configuration_template_validation_v1.json" in first[
         "recommended_review_order"
     ]
     assert "service_trace_comparison_review_report_v1.json" in first[
@@ -870,6 +960,9 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
     assert "user_service_request_summary_v2.json" in first["artifact_review"][
         "entrypoint_filenames"
     ]
+    assert "user_configuration_template_validation_v1.json" in first[
+        "artifact_review"
+    ]["entrypoint_filenames"]
     assert first["scenario_review_hash"].startswith("sha256:")
     assert json.loads(json.dumps(first, sort_keys=True))["bundle_id"] == (
         RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1_ID
@@ -2270,6 +2363,9 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
         "status": {"runtime_export_reproducibility_boundary_v1": boundary},
         "config": {"seed": 7},
         "generated_config": {"seed": 7, "satellite_count": 72},
+        "user_configuration_template_validation_v1": (
+            _user_configuration_template_validation()
+        ),
     }
     manifest = {
         "manifest_id": RUNTIME_REPRODUCIBILITY_MANIFEST_V1_ID,
@@ -2314,6 +2410,11 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
             "scenario_review_bundle_v1",
             "scenario_review_bundle_v1.json",
             "sha256:scenario-bundle-file",
+        ),
+        _file(
+            "user_configuration_template_validation_v1",
+            "user_configuration_template_validation_v1.json",
+            "sha256:template-validation-file",
         ),
     )
 
@@ -2360,6 +2461,15 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
     assert first["user_configuration_binding_v1"]["binding_hash"].startswith(
         "sha256:"
     )
+    assert first["user_configuration_template_validation_present"] is True
+    assert first["user_configuration_template_validation_status"] == (
+        "ALL_TEMPLATES_VALID"
+    )
+    assert first[
+        "user_configuration_template_validation_all_templates_valid"
+    ] is True
+    assert first["user_configuration_template_validation_invalid_template_count"] == 0
+    assert first["user_configuration_template_validation_hash"].startswith("sha256:")
     assert first["route_comparison_review_report_hash"] == "sha256:route-report"
     assert first["route_comparison_review_report_present"] is True
     assert first["service_trace_comparison_review_report_hash"] == (
@@ -2409,6 +2519,7 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
         "scenario_review_checklist_v1.json",
         "service_trace_comparison_review_report_v1.json",
         "summary.json",
+        "user_configuration_template_validation_v1.json",
     ]
     assert first["audit_hash"].startswith("sha256:")
     assert json.loads(json.dumps(first, sort_keys=True))["audit_index_id"] == (
@@ -2450,6 +2561,7 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
         "metrics.csv",
         "network_kpi_benchmark_validation_v1.json",
         "network_kpi_formula_evidence_v1.json",
+        "user_configuration_template_validation_v1.json",
         "review_summary_v1.json",
         "route_detail_index_v1.json",
         "scenario_review_bundle_v1.json",
@@ -2484,9 +2596,10 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
             "ROUTE_TRUST_EVIDENCE_MISSING",
             "NETWORK_KPI_BENCHMARK_VALIDATION_MISSING",
             "NETWORK_KPI_FORMULA_EVIDENCE_MISSING",
+            "USER_CONFIGURATION_TEMPLATE_VALIDATION_MISSING",
             "USER_SERVICE_REQUEST_SUMMARY_MISSING",
         }
-    assert diagnostics["finding_count"] == 4
+    assert diagnostics["finding_count"] == 5
 
 
 def _file(name: str, filename: str, sha256: str) -> dict[str, object]:
@@ -2816,6 +2929,49 @@ def _network_kpi_formula_evidence() -> dict[str, object]:
         "caveats": (
             "Formula evidence summarizes backend flow-level proxy inputs.",
         ),
+    }
+
+
+def _user_configuration_template_validation() -> dict[str, object]:
+    return {
+        "version": "v1",
+        "evidence_id": "sees.user_configuration_template_validation.v1",
+        "source": "BACKEND_USER_CONFIGURATION_TEMPLATE_VALIDATOR",
+        "schema_id": "sees.user_configuration.v2",
+        "validation_scope": "APPROVED_USER_CONFIGURATION_TEMPLATES",
+        "template_count": 2,
+        "valid_template_count": 2,
+        "invalid_template_count": 0,
+        "all_templates_valid": True,
+        "templates": (
+            {
+                "id": "default-72",
+                "filename": "sees_user_config_72_satellite_demo.yaml",
+                "file_exists": True,
+                "load_ok": True,
+                "validation_ok": True,
+                "validation_error_count": 0,
+                "template_hash": "sha256:template-72",
+            },
+            {
+                "id": "scale-1200",
+                "filename": "sees_user_config_1200_satellite_scale.yaml",
+                "file_exists": True,
+                "load_ok": True,
+                "validation_ok": True,
+                "validation_error_count": 0,
+                "template_hash": "sha256:template-1200",
+            },
+        ),
+        "model_boundaries": {
+            "packet_level_simulation": False,
+            "external_simulators": False,
+            "forbidden_integrations": ("STK", "EXATA", "AFSIM", "DDS"),
+        },
+        "notes": (
+            "Approved templates validate against user configuration schema v2.",
+        ),
+        "evidence_hash": "sha256:template-validation",
     }
 
 

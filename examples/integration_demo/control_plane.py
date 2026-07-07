@@ -106,6 +106,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_service_trace_comparison_review_report_v1,
     build_runtime_export_service_trace_item_v1,
     build_runtime_export_service_trace_page_v1,
+    build_runtime_export_user_configuration_template_validation_v1,
     build_runtime_export_user_service_request_page_v1,
     build_runtime_export_user_service_request_summary_v2,
 )
@@ -167,6 +168,9 @@ _RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_FILENAME = (
 )
 _RUNTIME_EXPORT_NETWORK_KPI_FORMULA_EVIDENCE_FILENAME = (
     "network_kpi_formula_evidence_v1.json"
+)
+_RUNTIME_EXPORT_USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME = (
+    "user_configuration_template_validation_v1.json"
 )
 _RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_FILENAME = "scenario_review_bundle_v1.json"
 _RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_FILENAME = "scenario_review_checklist_v1.json"
@@ -706,11 +710,17 @@ class DemoControlPlane:
 
         written_files = dict(self._runtime_context.metrics.write_outputs(package_dir))
         export_status = self._runtime_export_status_json(status)
+        user_configuration_template_validation = (
+            build_user_configuration_template_validation_evidence()
+        )
         config_snapshot = {
             "type": "RUNTIME_CONFIG_SNAPSHOT",
             "status": export_status,
             "config": self._controller.config_json(),
             "generated_config": generated_config,
+            "user_configuration_template_validation_v1": (
+                user_configuration_template_validation
+            ),
         }
         config_snapshot_path = package_dir / "config_snapshot.json"
         manifest_path = package_dir / "manifest.json"
@@ -789,6 +799,24 @@ class DemoControlPlane:
         )
         written_files["network_kpi_formula_evidence_v1"] = (
             network_kpi_formula_evidence_path
+        )
+        user_configuration_template_validation_path = (
+            package_dir
+            / _RUNTIME_EXPORT_USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME
+        )
+        user_configuration_template_validation_artifact = (
+            build_runtime_export_user_configuration_template_validation_v1(
+                package_id=package_id,
+                package_dir=str(package_dir),
+                config_snapshot=config_snapshot,
+            )
+        )
+        user_configuration_template_validation_path.write_text(
+            stable_json_pretty(user_configuration_template_validation_artifact),
+            encoding="utf-8",
+        )
+        written_files["user_configuration_template_validation_v1"] = (
+            user_configuration_template_validation_path
         )
         written_files["user_service_request_summary_v2"] = (
             user_service_request_summary_path

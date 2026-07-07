@@ -199,6 +199,7 @@ Each result package contains:
 - `diagnostics_bundle_v1.json`
 - `network_kpi_benchmark_validation_v1.json`
 - `network_kpi_formula_evidence_v1.json`
+- `user_configuration_template_validation_v1.json`
 - `scenario_review_bundle_v1.json`
 - `export_package_audit_index_v1.json`
 
@@ -249,6 +250,13 @@ New compare and restore-preflight API responses include
 alignment status, alignment hash, boundary hash, and warnings even before every
 review artifact has finished loading. Older packages or older backend responses
 still fall back to the manifest/review/diagnostics cross-check.
+New exports also persist `user_configuration_template_validation_v1.json`.
+This file is the offline copy of the backend-approved YAML template validation
+evidence shown in the configuration contract card. Review summary,
+diagnostics, scenario review, and audit index artifacts all expose compact
+status/hash fields for this file so an exported package can prove which
+approved user-facing configuration templates were validated without reloading
+templates or applying a new config.
 After using `compare with live`, the package-vs-live route comparison card can
 save the currently displayed comparison into
 `route_comparison_review_report_v1.json`. The saved record includes the
@@ -279,7 +287,8 @@ and recommended review order. The dashboard loads it as a Scenario Review
 Bundle card in the package review area with direct links to the JSON evidence.
 The card also shows a guided review workflow that steps through scenario entry,
 audit index, review summary, diagnostics, manifest, configuration, route
-evidence, service trace, event evidence, metrics, and summary artifacts,
+evidence, service trace, KPI formula evidence, configuration template
+validation, user-service evidence, event evidence, metrics, and summary artifacts,
 marking missing artifacts explicitly. It is also available through the same
 package file endpoint and does not replay events or recompute model state.
 The workflow includes an editable checklist. For each review row, the dashboard

@@ -74,6 +74,12 @@ The latest T372 validation adds a dashboard per-template validation evidence
 table on top of T371. `pnpm --dir frontend test dataPanel.test.ts` passed 216
 tests, and `pnpm --dir frontend build` completed. Vite reported the existing
 `DataPanel` chunk-size warning after minification.
+The latest T373 validation persists the same backend-owned user configuration
+template validation evidence into result packages as
+`user_configuration_template_validation_v1.json`. Review summary, diagnostics,
+scenario review, audit index, and dashboard export review labels now expose
+the backend validation status/hash without reloading templates or applying a
+new config.
 
 ## Current Product Signals
 
@@ -100,6 +106,12 @@ tests, and `pnpm --dir frontend build` completed. Vite reported the existing
   review, audit index, and dashboard export review labels. Offline package
   review can inspect KPI formula/input/time-series evidence without metric
   recomputation.
+- Runtime export packages now also include
+  `user_configuration_template_validation_v1.json` and propagate approved
+  template validation status, valid/invalid counts, and evidence hash into the
+  same result-package review surfaces. Offline package review can verify the
+  shipped user-facing configuration templates without revalidating them in the
+  frontend or mutating the active runtime config.
 - User configuration template catalog and reference surfaces now include
   backend-owned `sees.user_configuration_template_validation.v1` evidence.
   The evidence loads approved YAML templates through the same backend config

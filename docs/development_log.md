@@ -5,6 +5,60 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-07 - User Config Template Validation Export v1
+
+- Branch: `feature/T373-user-config-template-validation-export-v1`
+- Commit: pending in this commit
+- Scope: persist backend-owned approved user configuration template validation
+  evidence into runtime result packages as
+  `user_configuration_template_validation_v1.json`. The artifact copies
+  `config_snapshot.user_configuration_template_validation_v1`, adds compact
+  validation status/count/hash evidence, declares no-template-reload,
+  no-config-apply, no-event-replay, no-packet, and no-external-simulator
+  boundaries, and propagates the same evidence through review summary,
+  diagnostics, scenario review, audit index, and dashboard export-review
+  labels.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `examples/integration_demo/control_plane.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/user_guide_v2.md`
+  - `docs/current_product_status.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_result_package_contract_v1.py -q`
+    - Result: passed, 32 tests.
+  - `python -m pytest tests/integration/test_result_package_export_v1.py::test_runtime_export_package_satisfies_result_package_contract_v1 -q`
+    - Result: passed, 1 test.
+  - `python -m pytest tests/integration/test_runtime_session_control.py::test_demo_adapter_exports_runtime_result_package tests/integration/test_runtime_session_control.py::test_demo_adapter_persists_runtime_export_catalog tests/integration/test_runtime_session_control.py::test_demo_adapter_serves_persisted_runtime_export_artifacts -q`
+    - Result: passed, 3 tests.
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed, 1 test file / 216 tests using the bundled Node/pnpm
+      runtime.
+  - `pnpm --dir frontend build`
+    - Result: passed using the bundled Node/pnpm runtime. Vite reported the
+      existing `DataPanel` chunk-size warning after minification.
+- Problems encountered and handling:
+  - The frontend test file is UTF-8 but PowerShell default output displayed
+    existing Chinese strings as mojibake. Patches were applied against UTF-8
+    content and avoided broad encoding churn.
+  - Existing local runtime/generated config files remain dirty and are
+    intentionally not included in this task.
+  - The first `git push` attempt failed with an HTTPS SSL/TLS handshake error;
+    retrying the same push succeeded without code changes.
+- Known remaining issues / follow-up:
+  - Older result packages do not contain
+    `user_configuration_template_validation_v1.json`; frontend fields remain
+    optional for backward compatibility.
+  - Future configuration UX work can add filters and action links around
+    template validation rows, but export review stays read-only in this task.
+
 ## 2026-07-07 - Dashboard Template Validation Detail v1
 
 - Branch: `feature/T372-dashboard-template-validation-detail-v1`

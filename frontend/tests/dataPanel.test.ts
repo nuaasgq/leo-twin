@@ -3293,6 +3293,12 @@ describe("buildDataPanelExportCatalogDisplay", () => {
       network_kpi_formula_evidence_status: "FORMULA_AND_TIME_EVIDENCE_READY",
       network_kpi_formula_evidence_present: true,
       network_kpi_formula_evidence_missing_selected_input_count: 0,
+      user_configuration_template_validation_hash:
+        "sha256:fefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefe",
+      user_configuration_template_validation_status: "ALL_TEMPLATES_VALID",
+      user_configuration_template_validation_present: true,
+      user_configuration_template_validation_all_templates_valid: true,
+      user_configuration_template_validation_invalid_template_count: 0,
       user_service_request_summary_hash:
         "sha256:abababababababababababababababababababababababababababababababab",
       user_service_request_summary_present: true,
@@ -3380,6 +3386,10 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         "KPI formula FORMULA_AND_TIME_EVIDENCE_READY",
         "KPI formula missing inputs 0",
         "KPI formula edededededed",
+        "config templates ALL_TEMPLATES_VALID",
+        "config template invalid 0",
+        "config templates valid",
+        "config template fefefefefefe",
         "user services present",
         "user service requests 20",
         "user services exported 18",
@@ -3524,6 +3534,20 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           "sha256:edededededededededededededededededededededededededededededededed",
         evidence_present: true
       },
+      user_configuration_template_validation: {
+        evidence_id: "sees.user_configuration_template_validation.v1",
+        schema_id: "sees.user_configuration.v2",
+        validation_status: "ALL_TEMPLATES_VALID",
+        template_count: 3,
+        valid_template_count: 3,
+        invalid_template_count: 0,
+        all_templates_valid: true,
+        template_evidence_hash:
+          "sha256:fdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfd",
+        evidence_hash:
+          "sha256:fefefefefefefefefefefefefefefefefefefefefefefefefefefefefefe",
+        evidence_present: true
+      },
       user_service_requests: {
         evidence_id: "leo_twin.user_service_request_export_evidence.v2",
         request_model: "FLOW_LEVEL_USER_SERVICE_REQUEST_PROXY",
@@ -3555,6 +3579,7 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           "service_lifecycle_trace_v2.json",
           "service_trace_comparison_review_report_v1.json",
           "network_kpi_formula_evidence_v1.json",
+          "user_configuration_template_validation_v1.json",
           "user_service_request_summary_v2.json",
           "events.jsonl",
           "metrics.csv"
@@ -3583,6 +3608,7 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         "service_lifecycle_trace_v2.json",
         "service_trace_comparison_review_report_v1.json",
         "network_kpi_formula_evidence_v1.json",
+        "user_configuration_template_validation_v1.json",
         "user_service_request_summary_v2.json",
         "events.jsonl",
         "metrics.csv",
@@ -3624,6 +3650,9 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         "diagnostics 999999999999",
         "KPI formula FORMULA_AND_TIME_EVIDENCE_READY",
         "KPI formula edededededed",
+        "config templates ALL_TEMPLATES_VALID",
+        "config templates valid 3 / 3",
+        "config template fefefefefefe",
         "user services 18 / 20",
         "user services abababababab",
         "audit export_package_audit_index_v1.json"
@@ -3734,38 +3763,48 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           tone: "match"
         },
         {
-          stepLabel: "11 user services",
+          stepLabel: "11 config template validation",
+          statusLabel: "available",
+          detailLabel: "user_configuration_template_validation_v1.json",
+          href:
+            "/runtime/export/packages/pkg-review/files/user_configuration_template_validation_v1.json",
+          title:
+            "11 config template validation / user_configuration_template_validation_v1.json / package artifact available",
+          tone: "match"
+        },
+        {
+          stepLabel: "12 user services",
           statusLabel: "available",
           detailLabel: "user_service_request_summary_v2.json",
           href:
             "/runtime/export/packages/pkg-review/files/user_service_request_summary_v2.json",
           title:
-            "11 user services / user_service_request_summary_v2.json / package artifact available",
+            "12 user services / user_service_request_summary_v2.json / package artifact available",
           tone: "match"
         },
         {
-          stepLabel: "12 event evidence",
+          stepLabel: "13 event evidence",
           statusLabel: "available",
           detailLabel: "events.jsonl",
           href: "/runtime/export/packages/pkg-review/files/events.jsonl",
-          title: "12 event evidence / events.jsonl / package artifact available",
+          title: "13 event evidence / events.jsonl / package artifact available",
           tone: "match"
         },
         {
-          stepLabel: "13 metrics",
+          stepLabel: "14 metrics",
           statusLabel: "available",
           detailLabel: "metrics.csv",
           href: "/runtime/export/packages/pkg-review/files/metrics.csv",
-          title: "13 metrics / metrics.csv / package artifact available",
+          title: "14 metrics / metrics.csv / package artifact available",
           tone: "match"
         },
         {
-          stepLabel: "14 summary",
+          stepLabel: "15 summary",
           statusLabel: "missing",
           detailLabel: "summary.json",
           href: null,
           title:
-            "14 summary / summary.json / not listed in scenario review bundle",
+            "15 summary / summary.json / not listed in scenario review bundle",
           tone: "different"
         }
       ],
@@ -5359,6 +5398,32 @@ describe("buildDataPanelExportCompareDisplay", () => {
         evidence_hash:
           "sha256:edededededededededededededededededededededededededededededededed"
       },
+      user_configuration_template_validation: {
+        version: "v1",
+        evidence_id: "sees.user_configuration_template_validation.v1",
+        source: "config_snapshot.user_configuration_template_validation_v1",
+        evidence_present: true,
+        schema_id: "sees.user_configuration.v2",
+        validation_scope: "APPROVED_USER_CONFIGURATION_TEMPLATES",
+        validation_status: "ALL_TEMPLATES_VALID",
+        template_count: 3,
+        valid_template_count: 3,
+        invalid_template_count: 0,
+        missing_file_count: 0,
+        load_failed_count: 0,
+        validation_failed_count: 0,
+        all_templates_valid: true,
+        packet_level_simulation: false,
+        external_simulators: false,
+        forbidden_integrations: ["STK", "EXATA", "AFSIM", "DDS"],
+        acceptable_for_demo_review: true,
+        invalid_template_ids: [],
+        template_evidence_hash:
+          "sha256:fdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfd",
+        notes: ["Approved templates validate against schema v2."],
+        evidence_hash:
+          "sha256:fefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefe"
+      },
       user_service_requests: {
         version: "v2",
         evidence_id: "leo_twin.user_service_request_export_evidence.v2",
@@ -5393,7 +5458,7 @@ describe("buildDataPanelExportCompareDisplay", () => {
         event_kernel_policy: "NO_EVENT_KERNEL_BEHAVIOR_CHANGE"
       },
       artifacts: {
-        artifact_count: 8,
+        artifact_count: 9,
         artifact_filenames: [
           "config_snapshot.json",
           "events.jsonl",
@@ -5402,6 +5467,7 @@ describe("buildDataPanelExportCompareDisplay", () => {
           "review_summary_v1.json",
           "service_lifecycle_trace_v2.json",
           "summary.json",
+          "user_configuration_template_validation_v1.json",
           "user_service_request_summary_v2.json"
         ],
         required_filenames: [
@@ -5415,6 +5481,7 @@ describe("buildDataPanelExportCompareDisplay", () => {
         service_lifecycle_trace_exported: true,
         review_summary_exported: true,
         network_kpi_formula_evidence_exported: true,
+        user_configuration_template_validation_exported: true,
         user_service_request_summary_exported: true
       },
       review_notes: ["Use manifest.json"],
@@ -5426,7 +5493,7 @@ describe("buildDataPanelExportCompareDisplay", () => {
       packageId: "pkg-review",
       tone: "match",
       statusLabel: "可审阅",
-      summaryLabel: "pkg-review / 8 个文件 / 12.5 s / 4,096 事件",
+      summaryLabel: "pkg-review / 9 个文件 / 12.5 s / 4,096 事件",
       metaLabels: [
         "seed 4321",
         "卫星 72",
@@ -5442,6 +5509,10 @@ describe("buildDataPanelExportCompareDisplay", () => {
         "KPI formula missing inputs 0",
         "KPI formula moving 4",
         "KPI formula edededededed",
+        "config templates ALL_TEMPLATES_VALID",
+        "config templates valid 3 / 3",
+        "config template invalid 0",
+        "config template fefefefefefe",
         "user services present",
         "user service requests 20",
         "user services exported 18",
@@ -5459,6 +5530,7 @@ describe("buildDataPanelExportCompareDisplay", () => {
         "service trace 已导出",
         "review summary 已导出",
         "KPI formula exported",
+        "config templates exported",
         "user services exported"
       ]
     });
@@ -5725,6 +5797,32 @@ describe("buildDataPanelExportCompareDisplay", () => {
         evidence_hash:
           "sha256:edededededededededededededededededededededededededededededededed"
       },
+      user_configuration_template_validation: {
+        version: "v1",
+        evidence_id: "sees.user_configuration_template_validation.v1",
+        source: "config_snapshot.user_configuration_template_validation_v1",
+        evidence_present: true,
+        schema_id: "sees.user_configuration.v2",
+        validation_scope: "APPROVED_USER_CONFIGURATION_TEMPLATES",
+        validation_status: "ALL_TEMPLATES_VALID",
+        template_count: 3,
+        valid_template_count: 3,
+        invalid_template_count: 0,
+        missing_file_count: 0,
+        load_failed_count: 0,
+        validation_failed_count: 0,
+        all_templates_valid: true,
+        packet_level_simulation: false,
+        external_simulators: false,
+        forbidden_integrations: ["STK", "EXATA", "AFSIM", "DDS"],
+        acceptable_for_demo_review: true,
+        invalid_template_ids: [],
+        template_evidence_hash:
+          "sha256:fdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfdfd",
+        notes: ["Approved templates validate against schema v2."],
+        evidence_hash:
+          "sha256:fefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefe"
+      },
       user_service_requests: {
         version: "v2",
         evidence_id: "leo_twin.user_service_request_export_evidence.v2",
@@ -5758,7 +5856,7 @@ describe("buildDataPanelExportCompareDisplay", () => {
         review_summary_hash: "sha256:summary"
       },
       artifact_health: {
-        artifact_count: 8,
+        artifact_count: 9,
         artifact_filenames: [
           "config_snapshot.json",
           "diagnostics_bundle_v1.json",
@@ -5767,7 +5865,8 @@ describe("buildDataPanelExportCompareDisplay", () => {
           "metrics.csv",
           "review_summary_v1.json",
           "service_lifecycle_trace_v2.json",
-          "summary.json"
+          "summary.json",
+          "user_configuration_template_validation_v1.json"
         ],
         required_filenames: [
           "config_snapshot.json",
@@ -5820,7 +5919,7 @@ describe("buildDataPanelExportCompareDisplay", () => {
       packageId: "pkg-review",
       tone: "match",
       statusLabel: "诊断通过",
-      summaryLabel: "pkg-review / findings 1 / artifacts 8 / abababababab",
+      summaryLabel: "pkg-review / findings 1 / artifacts 9 / abababababab",
       metaLabels: [
         "manifest OK",
         "必需缺失 0",
@@ -5857,6 +5956,12 @@ describe("buildDataPanelExportCompareDisplay", () => {
     expect(display?.modelBoundaryLabels).toContain("KPI formula missing inputs 0");
     expect(display?.modelBoundaryLabels).toContain("KPI formula moving 4");
     expect(display?.modelBoundaryLabels).toContain("KPI formula edededededed");
+    expect(display?.modelBoundaryLabels).toContain(
+      "config templates ALL_TEMPLATES_VALID"
+    );
+    expect(display?.modelBoundaryLabels).toContain("config templates valid 3 / 3");
+    expect(display?.modelBoundaryLabels).toContain("config template invalid 0");
+    expect(display?.modelBoundaryLabels).toContain("config template fefefefefefe");
     expect(display?.modelBoundaryLabels).toContain("user services present");
     expect(display?.modelBoundaryLabels).toContain("user service requests 20");
     expect(display?.modelBoundaryLabels).toContain("user services exported 18");

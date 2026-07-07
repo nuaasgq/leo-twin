@@ -77,6 +77,9 @@ RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_V1_ID = (
 RUNTIME_EXPORT_NETWORK_KPI_FORMULA_EVIDENCE_V1_ID = (
     "leo_twin.runtime_export_network_kpi_formula_evidence.v1"
 )
+RUNTIME_EXPORT_USER_CONFIGURATION_TEMPLATE_VALIDATION_V1_ID = (
+    "leo_twin.runtime_export_user_configuration_template_validation.v1"
+)
 RUNTIME_EXPORT_USER_SERVICE_REQUEST_SUMMARY_V2_ID = (
     "leo_twin.runtime_export_user_service_request_summary.v2"
 )
@@ -94,6 +97,9 @@ NETWORK_KPI_BENCHMARK_VALIDATION_FILENAME = (
     "network_kpi_benchmark_validation_v1.json"
 )
 NETWORK_KPI_FORMULA_EVIDENCE_FILENAME = "network_kpi_formula_evidence_v1.json"
+USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME = (
+    "user_configuration_template_validation_v1.json"
+)
 
 
 _REQUIRED_FILE_SPECS: tuple[dict[str, object], ...] = (
@@ -215,6 +221,15 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
                 "content": (
                     "runtime network KPI formula input and time-series evidence "
                     "exported for offline review"
+                ),
+            },
+            {
+                "logical_name": "user_configuration_template_validation_v1",
+                "filename": "user_configuration_template_validation_v1.json",
+                "format": "json",
+                "content": (
+                    "backend-owned approved user configuration template "
+                    "validation evidence exported for offline review"
                 ),
             },
             {
@@ -345,6 +360,7 @@ def build_runtime_export_reproducibility_boundary_v1(
             "diagnostics_bundle_v1.json",
             "network_kpi_benchmark_validation_v1.json",
             "network_kpi_formula_evidence_v1.json",
+            "user_configuration_template_validation_v1.json",
             "user_service_request_summary_v2.json",
             "scenario_review_bundle_v1.json",
         ),
@@ -471,6 +487,47 @@ def build_runtime_export_network_kpi_formula_evidence_v1(
     return artifact
 
 
+def build_runtime_export_user_configuration_template_validation_v1(
+    *,
+    package_id: str,
+    package_dir: str,
+    config_snapshot: Mapping[str, Any],
+) -> dict[str, object]:
+    """Build offline review evidence for approved user configuration templates."""
+
+    if not isinstance(config_snapshot, Mapping):
+        raise TypeError("config_snapshot must be a mapping")
+
+    template_validation = _mapping(
+        config_snapshot.get("user_configuration_template_validation_v1")
+    )
+    evidence = _runtime_export_user_configuration_template_validation_evidence(
+        config_snapshot
+    )
+    artifact: dict[str, object] = {
+        "type": "RUNTIME_EXPORT_USER_CONFIGURATION_TEMPLATE_VALIDATION_V1",
+        "version": "v1",
+        "artifact_id": RUNTIME_EXPORT_USER_CONFIGURATION_TEMPLATE_VALIDATION_V1_ID,
+        "source": "BACKEND_RUNTIME_EXPORT",
+        "artifact_scope": "USER_CONFIGURATION_TEMPLATE_VALIDATION_REVIEW",
+        "package_id": str(package_id),
+        "package_dir": str(package_dir),
+        "config_snapshot_field": "user_configuration_template_validation_v1",
+        "template_validation": dict(template_validation),
+        "evidence": evidence,
+        "boundary_conditions": (
+            "READ_CONFIG_SNAPSHOT_ONLY",
+            "NO_TEMPLATE_RELOAD",
+            "NO_CONFIG_APPLY",
+            "NO_EVENT_REPLAY",
+            "NO_PACKET_LEVEL_SIMULATION",
+            "NO_EXTERNAL_SIMULATOR_ARTIFACT",
+        ),
+    }
+    artifact["artifact_hash"] = stable_hash_payload(artifact)
+    return artifact
+
+
 def build_runtime_export_user_service_request_summary_v2(
     *,
     package_id: str,
@@ -549,6 +606,11 @@ def build_runtime_export_review_summary_v1(
     network_kpi_formula_evidence = _runtime_export_network_kpi_formula_evidence(
         status
     )
+    user_config_template_validation = (
+        _runtime_export_user_configuration_template_validation_evidence(
+            config_snapshot
+        )
+    )
     user_service_requests = _runtime_export_user_service_request_evidence(status)
     route_comparison_review = _runtime_export_route_comparison_review_metadata()
     reproducibility_boundary = _runtime_export_reproducibility_boundary(
@@ -596,6 +658,7 @@ def build_runtime_export_review_summary_v1(
         "route_trust": route_trust,
         "network_kpi_benchmark_validation": network_kpi_validation,
         "network_kpi_formula_evidence": network_kpi_formula_evidence,
+        "user_configuration_template_validation": user_config_template_validation,
         "user_service_requests": user_service_requests,
         "route_comparison_review": route_comparison_review,
         "reproducibility": {
@@ -624,6 +687,9 @@ def build_runtime_export_review_summary_v1(
             "network_kpi_formula_evidence_exported": (
                 "network_kpi_formula_evidence_v1.json" in artifacts
             ),
+            "user_configuration_template_validation_exported": (
+                "user_configuration_template_validation_v1.json" in artifacts
+            ),
             "user_service_request_summary_exported": (
                 "user_service_request_summary_v2.json" in artifacts
             ),
@@ -636,6 +702,7 @@ def build_runtime_export_review_summary_v1(
             "Use route_trust to inspect flow-level route explanation evidence.",
             "Use network_kpi_benchmark_validation_v1.json to review KPI guardrail evidence.",
             "Use network_kpi_formula_evidence_v1.json to review KPI formula input and time-series evidence.",
+            "Use user_configuration_template_validation_v1.json to review approved configuration template validation evidence.",
             "Use route_detail_index_v1.json to inspect exported route explanation rows.",
             "Use route_comparison_review to compare exported route rows with the current live runtime when available.",
             "This package does not contain packet captures or external simulator artifacts.",
@@ -689,6 +756,11 @@ def build_runtime_export_diagnostics_bundle_v1(
     network_kpi_formula_evidence = _runtime_export_network_kpi_formula_evidence(
         status
     )
+    user_config_template_validation = (
+        _runtime_export_user_configuration_template_validation_evidence(
+            config_snapshot
+        )
+    )
     user_service_requests = _runtime_export_user_service_request_evidence(status)
     route_comparison_review = _runtime_export_route_comparison_review_metadata()
     reproducibility_boundary = _runtime_export_reproducibility_boundary(
@@ -703,6 +775,7 @@ def build_runtime_export_diagnostics_bundle_v1(
         route_trust=route_trust,
         network_kpi_validation=network_kpi_validation,
         network_kpi_formula_evidence=network_kpi_formula_evidence,
+        user_config_template_validation=user_config_template_validation,
         user_service_requests=user_service_requests,
     )
     diagnostics: dict[str, object] = {
@@ -727,6 +800,7 @@ def build_runtime_export_diagnostics_bundle_v1(
         "route_trust": route_trust,
         "network_kpi_benchmark_validation": network_kpi_validation,
         "network_kpi_formula_evidence": network_kpi_formula_evidence,
+        "user_configuration_template_validation": user_config_template_validation,
         "user_service_requests": user_service_requests,
         "route_comparison_review": route_comparison_review,
         "reproducibility": {
@@ -826,11 +900,18 @@ def build_runtime_export_scenario_review_bundle_v1(
     network_kpi_formula_evidence = _mapping(
         review_summary.get("network_kpi_formula_evidence")
     )
+    user_config_template_validation = _mapping(
+        review_summary.get("user_configuration_template_validation")
+    )
     user_service_requests = _mapping(review_summary.get("user_service_requests"))
     if user_service_requests.get("evidence_present") is not True:
         scenario_review_warnings.append("USER_SERVICE_REQUEST_SUMMARY_MISSING")
     if network_kpi_formula_evidence.get("evidence_present") is not True:
         scenario_review_warnings.append("NETWORK_KPI_FORMULA_EVIDENCE_MISSING")
+    if user_config_template_validation.get("evidence_present") is not True:
+        scenario_review_warnings.append(
+            "USER_CONFIGURATION_TEMPLATE_VALIDATION_MISSING"
+        )
 
     bundle: dict[str, object] = {
         "type": "RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1",
@@ -902,6 +983,34 @@ def build_runtime_export_scenario_review_bundle_v1(
                 network_kpi_formula_evidence.get("evidence_present") is True
             ),
         },
+        "user_configuration_template_validation": {
+            "evidence_id": str(user_config_template_validation.get("evidence_id", "")),
+            "schema_id": str(user_config_template_validation.get("schema_id", "")),
+            "validation_status": str(
+                user_config_template_validation.get("validation_status", "")
+            ),
+            "template_count": _integer(
+                user_config_template_validation.get("template_count")
+            ),
+            "valid_template_count": _integer(
+                user_config_template_validation.get("valid_template_count")
+            ),
+            "invalid_template_count": _integer(
+                user_config_template_validation.get("invalid_template_count")
+            ),
+            "all_templates_valid": (
+                user_config_template_validation.get("all_templates_valid") is True
+            ),
+            "template_evidence_hash": str(
+                user_config_template_validation.get("template_evidence_hash", "")
+            ),
+            "evidence_hash": str(
+                user_config_template_validation.get("evidence_hash", "")
+            ),
+            "evidence_present": (
+                user_config_template_validation.get("evidence_present") is True
+            ),
+        },
         "user_service_requests": {
             "evidence_id": str(user_service_requests.get("evidence_id", "")),
             "request_model": str(user_service_requests.get("request_model", "")),
@@ -941,6 +1050,7 @@ def build_runtime_export_scenario_review_bundle_v1(
                 "diagnostics_bundle_v1.json",
                 "network_kpi_benchmark_validation_v1.json",
                 "network_kpi_formula_evidence_v1.json",
+                "user_configuration_template_validation_v1.json",
                 "user_service_request_summary_v2.json",
                 "manifest.json",
                 "config_snapshot.json",
@@ -964,6 +1074,7 @@ def build_runtime_export_scenario_review_bundle_v1(
             "diagnostics_bundle_v1.json",
             "network_kpi_benchmark_validation_v1.json",
             "network_kpi_formula_evidence_v1.json",
+            "user_configuration_template_validation_v1.json",
             "user_service_request_summary_v2.json",
             "service_lifecycle_trace_v2.json",
             "service_trace_comparison_review_report_v1.json",
@@ -2196,6 +2307,11 @@ def build_runtime_export_package_audit_index_v1(
     network_kpi_formula_evidence = _runtime_export_network_kpi_formula_evidence(
         status
     )
+    user_config_template_validation = (
+        _runtime_export_user_configuration_template_validation_evidence(
+            config_snapshot
+        )
+    )
     user_service_requests = _runtime_export_user_service_request_evidence(status)
     normalized_artifacts = tuple(
         sorted(
@@ -2316,6 +2432,21 @@ def build_runtime_export_package_audit_index_v1(
         ),
         "network_kpi_formula_evidence_missing_selected_input_count": _integer(
             network_kpi_formula_evidence.get("missing_selected_input_count")
+        ),
+        "user_configuration_template_validation_hash": str(
+            user_config_template_validation.get("evidence_hash", "")
+        ),
+        "user_configuration_template_validation_status": str(
+            user_config_template_validation.get("validation_status", "")
+        ),
+        "user_configuration_template_validation_present": (
+            user_config_template_validation.get("evidence_present") is True
+        ),
+        "user_configuration_template_validation_all_templates_valid": (
+            user_config_template_validation.get("all_templates_valid") is True
+        ),
+        "user_configuration_template_validation_invalid_template_count": _integer(
+            user_config_template_validation.get("invalid_template_count")
         ),
         "user_service_request_summary_hash": str(
             user_service_requests.get("summary_hash", "")
@@ -2438,6 +2569,9 @@ def build_runtime_export_package_review_completion_v1(
     )
     network_kpi_formula_evidence = _mapping(
         diagnostics_bundle.get("network_kpi_formula_evidence")
+    )
+    user_config_template_validation = _mapping(
+        diagnostics_bundle.get("user_configuration_template_validation")
     )
     artifact_filenames = tuple(
         sorted(
@@ -2600,6 +2734,15 @@ def build_runtime_export_package_review_completion_v1(
         "network_kpi_formula_evidence_missing_selected_input_count": _integer(
             network_kpi_formula_evidence.get("missing_selected_input_count")
         ),
+        "user_configuration_template_validation_present": (
+            user_config_template_validation.get("evidence_present") is True
+        ),
+        "user_configuration_template_validation_status": str(
+            user_config_template_validation.get("validation_status", "")
+        ),
+        "user_configuration_template_validation_invalid_template_count": _integer(
+            user_config_template_validation.get("invalid_template_count")
+        ),
         "boundary_alignment_status": str(alignment.get("alignment_status", "")),
         "boundary_alignment_hash": str(alignment.get("alignment_hash", "")),
         "user_configuration_validation_ok": user_configuration_validated,
@@ -2628,6 +2771,10 @@ def build_runtime_export_package_review_completion_v1(
             (
                 "network_kpi_formula "
                 f"{network_kpi_formula_evidence.get('formula_evidence_status', 'missing')}"
+            ),
+            (
+                "config_templates "
+                f"{user_config_template_validation.get('validation_status', 'missing')}"
             ),
         ),
         "boundary_conditions": (
@@ -3549,6 +3696,7 @@ def _runtime_export_diagnostic_findings(
     route_trust: Mapping[str, Any],
     network_kpi_validation: Mapping[str, Any],
     network_kpi_formula_evidence: Mapping[str, Any],
+    user_config_template_validation: Mapping[str, Any],
     user_service_requests: Mapping[str, Any],
 ) -> tuple[dict[str, object], ...]:
     findings: list[dict[str, object]] = []
@@ -3676,6 +3824,43 @@ def _runtime_export_diagnostic_findings(
                 (
                     "network KPI formula evidence requires operator review: "
                     f"{network_kpi_formula_evidence.get('formula_evidence_status', '')}."
+                ),
+            )
+        )
+    if user_config_template_validation.get("evidence_present") is not True:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "USER_CONFIGURATION_TEMPLATE_VALIDATION_MISSING",
+                "config_snapshot does not include user_configuration_template_validation_v1.",
+            )
+        )
+    if user_config_template_validation.get("packet_level_simulation") is True:
+        findings.append(
+            _diagnostic_finding(
+                "ERROR",
+                "USER_CONFIGURATION_TEMPLATE_PACKET_LEVEL_DECLARED",
+                "user configuration template validation evidence declares packet-level simulation.",
+            )
+        )
+    if user_config_template_validation.get("external_simulators") is True:
+        findings.append(
+            _diagnostic_finding(
+                "ERROR",
+                "USER_CONFIGURATION_TEMPLATE_EXTERNAL_SIMULATOR_DECLARED",
+                "user configuration template validation evidence declares external simulator use.",
+            )
+        )
+    if user_config_template_validation.get("evidence_present") is True and (
+        user_config_template_validation.get("all_templates_valid") is not True
+    ):
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "USER_CONFIGURATION_TEMPLATE_VALIDATION_INCOMPLETE",
+                (
+                    "approved user configuration template validation requires "
+                    "operator review."
                 ),
             )
         )
@@ -4390,6 +4575,103 @@ def _runtime_export_network_kpi_formula_evidence(
         ),
         "acceptable_for_demo_review": acceptable,
         "caveats": _string_tuple(formula_evidence.get("caveats")),
+    }
+    evidence["evidence_hash"] = stable_hash_payload(evidence)
+    return evidence
+
+
+def _runtime_export_user_configuration_template_validation_evidence(
+    config_snapshot: Mapping[str, Any],
+) -> dict[str, object]:
+    template_validation = _mapping(
+        config_snapshot.get("user_configuration_template_validation_v1")
+    )
+    evidence_present = bool(template_validation)
+    if not evidence_present:
+        evidence: dict[str, object] = {
+            "version": "v1",
+            "evidence_id": "",
+            "source": "config_snapshot.user_configuration_template_validation_v1",
+            "evidence_present": False,
+            "schema_id": USER_CONFIGURATION_SCHEMA_V2_ID,
+            "validation_scope": "UNKNOWN",
+            "validation_status": "MISSING_TEMPLATE_VALIDATION_EVIDENCE",
+            "template_count": 0,
+            "valid_template_count": 0,
+            "invalid_template_count": 0,
+            "missing_file_count": 0,
+            "load_failed_count": 0,
+            "validation_failed_count": 0,
+            "all_templates_valid": False,
+            "packet_level_simulation": False,
+            "external_simulators": False,
+            "acceptable_for_demo_review": False,
+            "invalid_template_ids": (),
+            "caveats": (
+                "Config snapshot did not include user_configuration_template_validation_v1.",
+            ),
+        }
+        evidence["evidence_hash"] = stable_hash_payload(evidence)
+        return evidence
+
+    template_rows = _records(template_validation.get("templates"))
+    invalid_rows = tuple(
+        row
+        for row in template_rows
+        if row.get("file_exists") is not True
+        or row.get("load_ok") is not True
+        or row.get("validation_ok") is not True
+    )
+    model_boundaries = _mapping(template_validation.get("model_boundaries"))
+    packet_level = model_boundaries.get("packet_level_simulation") is True
+    external_simulators = model_boundaries.get("external_simulators") is True
+    all_templates_valid = template_validation.get("all_templates_valid") is True
+    evidence = {
+        "version": "v1",
+        "evidence_id": str(template_validation.get("evidence_id", "")),
+        "source": "config_snapshot.user_configuration_template_validation_v1",
+        "evidence_present": True,
+        "schema_id": str(
+            template_validation.get("schema_id", USER_CONFIGURATION_SCHEMA_V2_ID)
+        ),
+        "validation_scope": str(template_validation.get("validation_scope", "")),
+        "validation_status": (
+            "ALL_TEMPLATES_VALID"
+            if all_templates_valid
+            else "TEMPLATE_VALIDATION_REQUIRES_REVIEW"
+        ),
+        "template_count": _integer(template_validation.get("template_count")),
+        "valid_template_count": _integer(
+            template_validation.get("valid_template_count")
+        ),
+        "invalid_template_count": _integer(
+            template_validation.get("invalid_template_count")
+        ),
+        "missing_file_count": sum(
+            1 for row in template_rows if row.get("file_exists") is not True
+        ),
+        "load_failed_count": sum(
+            1
+            for row in template_rows
+            if row.get("file_exists") is True and row.get("load_ok") is not True
+        ),
+        "validation_failed_count": sum(
+            1
+            for row in template_rows
+            if row.get("load_ok") is True and row.get("validation_ok") is not True
+        ),
+        "all_templates_valid": all_templates_valid,
+        "packet_level_simulation": packet_level,
+        "external_simulators": external_simulators,
+        "forbidden_integrations": _string_tuple(
+            model_boundaries.get("forbidden_integrations")
+        ),
+        "acceptable_for_demo_review": (
+            all_templates_valid and not packet_level and not external_simulators
+        ),
+        "invalid_template_ids": tuple(str(row.get("id", "")) for row in invalid_rows),
+        "template_evidence_hash": str(template_validation.get("evidence_hash", "")),
+        "notes": _string_tuple(template_validation.get("notes")),
     }
     evidence["evidence_hash"] = stable_hash_payload(evidence)
     return evidence

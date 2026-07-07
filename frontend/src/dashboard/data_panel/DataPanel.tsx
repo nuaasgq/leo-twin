@@ -50,6 +50,7 @@ import {
   RuntimeComputeTaskTimelineSummaryV1,
   RuntimeExportUserServiceRequestPageV1,
   RuntimeExportUserServiceRequestEvidenceV2,
+  RuntimeExportUserConfigurationTemplateValidationEvidenceV1,
   RuntimeKpiSampleV1,
   RuntimeKpiTimeSeriesV1,
   RuntimeExportHistoryV1,
@@ -231,6 +232,8 @@ const NETWORK_KPI_BENCHMARK_VALIDATION_FILENAME =
   "network_kpi_benchmark_validation_v1.json";
 const NETWORK_KPI_FORMULA_EVIDENCE_FILENAME =
   "network_kpi_formula_evidence_v1.json";
+const USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME =
+  "user_configuration_template_validation_v1.json";
 const CONFIG_SNAPSHOT_FILENAME = "config_snapshot.json";
 const PACKAGE_HANDOFF_REPORT_FILENAME = "package_handoff_report_v1.md";
 const SCENARIO_REVIEW_BUNDLE_FILENAME = "scenario_review_bundle_v1.json";
@@ -13316,6 +13319,19 @@ export function buildDataPanelExportScenarioReviewBundleDisplay(
             )}`
           ]
         : []),
+      ...(bundle.user_configuration_template_validation
+        ? [
+            `config templates ${bundle.user_configuration_template_validation.validation_status}`,
+            `config templates valid ${formatCount(
+              bundle.user_configuration_template_validation.valid_template_count
+            )} / ${formatCount(
+              bundle.user_configuration_template_validation.template_count
+            )}`,
+            `config template ${shortRuntimeHash(
+              bundle.user_configuration_template_validation.evidence_hash
+            )}`
+          ]
+        : []),
       ...(bundle.user_service_requests
         ? [
             `user services ${formatCount(
@@ -13407,6 +13423,7 @@ function buildDataPanelScenarioReviewWorkflowRows(
     "service_lifecycle_trace_v2.json",
     SERVICE_TRACE_COMPARISON_REVIEW_REPORT_FILENAME,
     NETWORK_KPI_FORMULA_EVIDENCE_FILENAME,
+    USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME,
     USER_SERVICE_REQUEST_SUMMARY_FILENAME
   ];
   const seen = new Set<string>();
@@ -13463,14 +13480,16 @@ function scenarioReviewWorkflowStepLabel(filename: string): string | null {
       return "9 service trace review";
     case NETWORK_KPI_FORMULA_EVIDENCE_FILENAME:
       return "10 KPI formula evidence";
+    case USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME:
+      return "11 config template validation";
     case USER_SERVICE_REQUEST_SUMMARY_FILENAME:
-      return "11 user services";
+      return "12 user services";
     case "events.jsonl":
-      return "12 event evidence";
+      return "13 event evidence";
     case "metrics.csv":
-      return "13 metrics";
+      return "14 metrics";
     case "summary.json":
-      return "14 summary";
+      return "15 summary";
     default:
       return null;
   }
@@ -13763,6 +13782,12 @@ function scenarioReviewWorkflowEvidenceHash(
       return auditIndex?.route_comparison_review_report_hash ?? "";
     case SERVICE_TRACE_COMPARISON_REVIEW_REPORT_FILENAME:
       return auditIndex?.service_trace_comparison_review_report_hash ?? "";
+    case USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME:
+      return (
+        bundle.user_configuration_template_validation?.evidence_hash ??
+        auditIndex?.user_configuration_template_validation_hash ??
+        ""
+      );
     default:
       return "";
   }
@@ -14905,6 +14930,25 @@ export function buildDataPanelExportPackageAuditIndexDisplay(
             )}`
           ]
         : []),
+      ...(auditIndex.user_configuration_template_validation_present !== undefined
+        ? [
+            `config templates ${
+              auditIndex.user_configuration_template_validation_status ?? "-"
+            }`,
+            `config template invalid ${formatCount(
+              auditIndex.user_configuration_template_validation_invalid_template_count ??
+                0
+            )}`,
+            `config templates ${
+              auditIndex.user_configuration_template_validation_all_templates_valid
+                ? "valid"
+                : "check"
+            }`,
+            `config template ${shortRuntimeHash(
+              auditIndex.user_configuration_template_validation_hash ?? ""
+            )}`
+          ]
+        : []),
       ...(auditIndex.user_service_request_summary_present !== undefined
         ? [
             `user services ${
@@ -15908,6 +15952,22 @@ function runtimeExportNetworkKpiFormulaEvidenceLabels(
   ];
 }
 
+function runtimeExportUserConfigurationTemplateValidationLabels(
+  evidence: RuntimeExportUserConfigurationTemplateValidationEvidenceV1 | null | undefined
+): readonly string[] {
+  if (evidence === null || evidence === undefined) {
+    return [];
+  }
+  return [
+    `config templates ${evidence.validation_status}`,
+    `config templates valid ${formatCount(evidence.valid_template_count)} / ${formatCount(
+      evidence.template_count
+    )}`,
+    `config template invalid ${formatCount(evidence.invalid_template_count)}`,
+    `config template ${shortRuntimeHash(evidence.evidence_hash)}`
+  ];
+}
+
 function runtimeExportUserServiceRequestLabels(
   evidence: RuntimeExportUserServiceRequestEvidenceV2 | null | undefined
 ): readonly string[] {
@@ -15955,6 +16015,9 @@ export function buildDataPanelExportReviewSummaryDisplay(
       ...runtimeExportNetworkKpiFormulaEvidenceLabels(
         summary.network_kpi_formula_evidence
       ),
+      ...runtimeExportUserConfigurationTemplateValidationLabels(
+        summary.user_configuration_template_validation
+      ),
       ...runtimeExportUserServiceRequestLabels(summary.user_service_requests),
       ...runtimeExportRouteComparisonReviewLabels(summary.route_comparison_review)
     ],
@@ -15970,6 +16033,16 @@ export function buildDataPanelExportReviewSummaryDisplay(
         ? [
             `KPI formula ${
               summary.artifacts.network_kpi_formula_evidence_exported
+                ? "exported"
+                : "missing"
+            }`
+          ]
+        : []),
+      ...(summary.artifacts.user_configuration_template_validation_exported !==
+      undefined
+        ? [
+            `config templates ${
+              summary.artifacts.user_configuration_template_validation_exported
                 ? "exported"
                 : "missing"
             }`
@@ -16066,6 +16139,9 @@ export function buildDataPanelExportDiagnosticsDisplay(
       ),
       ...runtimeExportNetworkKpiFormulaEvidenceLabels(
         diagnostics.network_kpi_formula_evidence
+      ),
+      ...runtimeExportUserConfigurationTemplateValidationLabels(
+        diagnostics.user_configuration_template_validation
       ),
       ...runtimeExportUserServiceRequestLabels(diagnostics.user_service_requests),
       ...runtimeExportRouteComparisonReviewLabels(

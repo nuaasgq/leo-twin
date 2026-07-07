@@ -1418,6 +1418,7 @@ export interface RuntimeExportReviewSummaryV1 {
   route_trust?: RuntimeExportRouteTrustEvidenceV1;
   network_kpi_benchmark_validation?: RuntimeExportNetworkKpiBenchmarkValidationEvidenceV1;
   network_kpi_formula_evidence?: RuntimeExportNetworkKpiFormulaEvidenceV1;
+  user_configuration_template_validation?: RuntimeExportUserConfigurationTemplateValidationEvidenceV1;
   user_service_requests?: RuntimeExportUserServiceRequestEvidenceV2;
   route_comparison_review?: RuntimeExportRouteComparisonReviewV1;
   reproducibility: RuntimeExportReviewReproducibilityV1;
@@ -1508,6 +1509,32 @@ export interface RuntimeExportNetworkKpiFormulaEvidenceV1 {
   packet_level_simulation: boolean;
   acceptable_for_demo_review: boolean;
   caveats: readonly string[];
+  evidence_hash: string;
+}
+
+export interface RuntimeExportUserConfigurationTemplateValidationEvidenceV1 {
+  version: "v1" | string;
+  evidence_id: string;
+  source: string;
+  evidence_present: boolean;
+  schema_id: string;
+  validation_scope: string;
+  validation_status: string;
+  template_count: number;
+  valid_template_count: number;
+  invalid_template_count: number;
+  missing_file_count: number;
+  load_failed_count: number;
+  validation_failed_count: number;
+  all_templates_valid: boolean;
+  packet_level_simulation: boolean;
+  external_simulators: boolean;
+  forbidden_integrations?: readonly string[];
+  acceptable_for_demo_review: boolean;
+  invalid_template_ids: readonly string[];
+  template_evidence_hash?: string;
+  notes?: readonly string[];
+  caveats?: readonly string[];
   evidence_hash: string;
 }
 
@@ -1945,6 +1972,11 @@ export interface RuntimeExportPackageAuditIndexV1 {
   network_kpi_formula_evidence_status?: string;
   network_kpi_formula_evidence_present?: boolean;
   network_kpi_formula_evidence_missing_selected_input_count?: number;
+  user_configuration_template_validation_hash?: string;
+  user_configuration_template_validation_status?: string;
+  user_configuration_template_validation_present?: boolean;
+  user_configuration_template_validation_all_templates_valid?: boolean;
+  user_configuration_template_validation_invalid_template_count?: number;
   user_service_request_summary_hash?: string;
   user_service_request_summary_present?: boolean;
   user_service_request_summary_request_count?: number;
@@ -2165,6 +2197,7 @@ export interface RuntimeExportScenarioReviewBundleV1 {
   diagnostics: RuntimeExportScenarioReviewDiagnosticsRefV1;
   network_kpi_benchmark_validation?: RuntimeExportScenarioReviewNetworkKpiBenchmarkValidationRefV1;
   network_kpi_formula_evidence?: RuntimeExportScenarioReviewNetworkKpiFormulaEvidenceRefV1;
+  user_configuration_template_validation?: RuntimeExportScenarioReviewUserConfigurationTemplateValidationRefV1;
   user_service_requests?: RuntimeExportScenarioReviewUserServiceRequestRefV2;
   audit_index: RuntimeExportScenarioReviewAuditIndexRefV1;
   artifact_review: RuntimeExportScenarioReviewArtifactsV1;
@@ -2230,6 +2263,19 @@ export interface RuntimeExportScenarioReviewNetworkKpiFormulaEvidenceRefV1 {
   observed_kpi_count: number;
   missing_selected_input_count: number;
   time_varying_kpi_count: number;
+  evidence_hash: string;
+  evidence_present: boolean;
+}
+
+export interface RuntimeExportScenarioReviewUserConfigurationTemplateValidationRefV1 {
+  evidence_id: string;
+  schema_id: string;
+  validation_status: string;
+  template_count: number;
+  valid_template_count: number;
+  invalid_template_count: number;
+  all_templates_valid: boolean;
+  template_evidence_hash: string;
   evidence_hash: string;
   evidence_present: boolean;
 }
@@ -2348,6 +2394,7 @@ export interface RuntimeExportReviewArtifactsV1 {
   review_summary_exported: boolean;
   network_kpi_benchmark_validation_exported?: boolean;
   network_kpi_formula_evidence_exported?: boolean;
+  user_configuration_template_validation_exported?: boolean;
   user_service_request_summary_exported?: boolean;
 }
 
@@ -2362,6 +2409,7 @@ export interface RuntimeExportDiagnosticsBundleV1 {
   route_trust?: RuntimeExportRouteTrustEvidenceV1;
   network_kpi_benchmark_validation?: RuntimeExportNetworkKpiBenchmarkValidationEvidenceV1;
   network_kpi_formula_evidence?: RuntimeExportNetworkKpiFormulaEvidenceV1;
+  user_configuration_template_validation?: RuntimeExportUserConfigurationTemplateValidationEvidenceV1;
   user_service_requests?: RuntimeExportUserServiceRequestEvidenceV2;
   route_comparison_review?: RuntimeExportRouteComparisonReviewV1;
   reproducibility: RuntimeExportDiagnosticsReproducibilityV1;
