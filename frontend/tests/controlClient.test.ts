@@ -121,6 +121,55 @@ describe("ControlChannelClient", () => {
     client.close();
     expect(issues).toHaveLength(2);
   });
+
+  it("uses HTTP control for commands when a fallback endpoint is configured", async () => {
+    const sockets: MockControlSocket[] = [];
+    const received: unknown[] = [];
+    const fetchCalls: { input: string; init: RequestInit }[] = [];
+    const client = new ControlChannelClient({
+      url: "ws://test/control",
+      httpFallbackUrl: "/control",
+      createWebSocket: (url) => {
+        const socket = new MockControlSocket(url);
+        sockets.push(socket);
+        return socket;
+      },
+      fetchControl: async (input, init) => {
+        fetchCalls.push({ input, init });
+        return new Response(
+          JSON.stringify({
+            type: "CONTROL_ACK",
+            ok: true,
+            status: {
+              status: "RUNNING",
+              mode: "REAL_TIME",
+              speed_factor: 1,
+              seed: 1,
+              duration: 60,
+              config_version: 1,
+              last_action: "START"
+            }
+          }),
+          { status: 200 }
+        );
+      },
+      onMessage: (message) => received.push(message)
+    });
+
+    client.sendRuntimeControl("START");
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(sockets).toHaveLength(0);
+    expect(fetchCalls).toHaveLength(1);
+    expect(fetchCalls[0].input).toBe("/control");
+    expect(JSON.parse(String(fetchCalls[0].init.body))).toEqual({
+      type: "RUNTIME_CONTROL",
+      action: "START",
+      payload: {}
+    });
+    expect(received).toHaveLength(1);
+    client.close();
+  });
 });
 
 class MockControlSocket implements ControlWebSocketLike {

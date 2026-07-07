@@ -186,9 +186,76 @@ export class WebSocketStreamClient {
   }
 }
 
-export function websocketUrl(path: string): string {
-  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-  return `${protocol}//${window.location.host}${path}`;
+export interface WebSocketUrlOptions {
+  location?: WebSocketLocationLike;
+  backendOrigin?: string;
+  developmentBackendPort?: string | number;
+}
+
+interface WebSocketLocationLike {
+  protocol: string;
+  host: string;
+  hostname: string;
+  port: string;
+}
+
+export function websocketUrl(path: string, options: WebSocketUrlOptions = {}): string {
+  const location = options.location ?? window.location;
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const configuredOrigin = normalizeWebSocketOrigin(
+    options.backendOrigin ??
+      import.meta.env.VITE_BACKEND_WS_ORIGIN ??
+      import.meta.env.VITE_BACKEND_ORIGIN
+  );
+  if (configuredOrigin !== null) {
+    return `${configuredOrigin}${normalizedPath}`;
+  }
+  const protocol = location.protocol === "https:" ? "wss:" : "ws:";
+  const host = localDevFrontendNeedsBackendPort(location)
+    ? hostWithPort(
+        location.hostname,
+        String(options.developmentBackendPort ?? import.meta.env.VITE_BACKEND_PORT ?? 8765)
+      )
+    : location.host;
+  return `${protocol}//${host}${normalizedPath}`;
+}
+
+function localDevFrontendNeedsBackendPort(location: WebSocketLocationLike): boolean {
+  return location.port === "5173" && isLocalHostname(location.hostname);
+}
+
+function isLocalHostname(hostname: string): boolean {
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+}
+
+function hostWithPort(hostname: string, port: string): string {
+  const normalizedHostname =
+    hostname.includes(":") && !hostname.startsWith("[") ? `[${hostname}]` : hostname;
+  return `${normalizedHostname}:${port}`;
+}
+
+function normalizeWebSocketOrigin(origin: string | undefined): string | null {
+  if (origin === undefined) {
+    return null;
+  }
+  const trimmed = origin.trim();
+  if (trimmed.length === 0) {
+    return null;
+  }
+  const withoutTrailingSlash = trimmed.endsWith("/") ? trimmed.slice(0, -1) : trimmed;
+  if (withoutTrailingSlash.startsWith("https://")) {
+    return `wss://${withoutTrailingSlash.slice("https://".length)}`;
+  }
+  if (withoutTrailingSlash.startsWith("http://")) {
+    return `ws://${withoutTrailingSlash.slice("http://".length)}`;
+  }
+  if (
+    withoutTrailingSlash.startsWith("ws://") ||
+    withoutTrailingSlash.startsWith("wss://")
+  ) {
+    return withoutTrailingSlash;
+  }
+  return `ws://${withoutTrailingSlash}`;
 }
 
 function parseJsonMessage(data: string): unknown {

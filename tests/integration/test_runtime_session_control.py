@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import json
+import threading
+import time
 import zipfile
 from dataclasses import dataclass, replace
+from http.server import ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
+from urllib.request import Request, urlopen
 
 import pytest
 
@@ -15,6 +19,7 @@ from examples.integration_demo.control_plane import (
 )
 from examples.integration_demo.runtime import run_integration_demo
 from examples.integration_demo.server import (
+    _handler_for,
     _comparison_review_report_filter_query,
     _detail_filter_query,
     _detail_query,
@@ -625,6 +630,67 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
     assert invalid["ok"] is False
 
     control_plane.handle_raw_message(json.dumps({"type": "RUNTIME_CONTROL", "action": "STOP"}))
+
+
+def test_demo_http_control_post_uses_runtime_control_layer(tmp_path) -> None:
+    control_plane = DemoControlPlane.from_result(
+        run_integration_demo(_small_demo_config()),
+        config_output_path=tmp_path / "sees_control.yaml",
+        generated_config_output_path=tmp_path / "generated_full_system_demo.json",
+    )
+    server = ThreadingHTTPServer(("127.0.0.1", 0), _handler_for(control_plane))
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    base_url = f"http://127.0.0.1:{server.server_port}"
+    try:
+        initialize_ack = _post_control(
+            base_url,
+            {
+                "type": "RUNTIME_CONTROL",
+                "action": "INITIALIZE",
+                "payload": {
+                    "satellite_count": 4,
+                    "user_count": 8,
+                    "compute_nodes": 4,
+                    "duration": 60,
+                },
+            },
+        )
+        start_ack = _post_control(
+            base_url,
+            {"type": "RUNTIME_CONTROL", "action": "START", "payload": {}},
+        )
+
+        assert initialize_ack["type"] == "CONTROL_ACK"
+        assert initialize_ack["ok"] is True
+        assert initialize_ack["status"]["initialized"] is True
+        assert start_ack["type"] == "CONTROL_ACK"
+        assert start_ack["ok"] is True
+        assert start_ack["status"]["last_action"] == "START"
+
+        deadline = time.time() + 5
+        while time.time() < deadline:
+            status = control_plane.runtime_status()["status"]
+            if status["current_sim_time"] > 0:
+                break
+            time.sleep(0.05)
+        else:
+            raise AssertionError("HTTP /control START did not advance simulation time")
+
+        _post_control(
+            base_url,
+            {"type": "RUNTIME_CONTROL", "action": "STOP", "payload": {}},
+        )
+        reset_ack = _post_control(
+            base_url,
+            {"type": "RUNTIME_CONTROL", "action": "RESET", "payload": {}},
+        )
+        assert reset_ack["ok"] is True
+        assert reset_ack["status"]["initialized"] is False
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
 
 
 def test_runtime_kpi_series_changes_with_configured_flow_demand(tmp_path) -> None:
@@ -1914,6 +1980,18 @@ def _event(event_id: int, sim_time: float) -> SimEvent:
         event_type="TEST_EVENT",
         payload={},
     )
+
+
+def _post_control(base_url: str, payload: dict[str, Any]) -> dict[str, Any]:
+    data = json.dumps(payload).encode("utf-8")
+    request = Request(
+        f"{base_url}/control",
+        data=data,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urlopen(request, timeout=10) as response:
+        return json.loads(response.read().decode("utf-8"))
 
 
 def _small_demo_config() -> DemoConfig:

@@ -1,8 +1,8 @@
 # Current Product Status
 
-Date: 2026-07-05
+Date: 2026-07-07
 
-Branch: `feature/T163-frontend-dashboard-compute-v2`
+Branch: `feature/T360-browser-acceptance-smoke-v1`
 
 ## Local Entry Points
 
@@ -14,6 +14,7 @@ Branch: `feature/T163-frontend-dashboard-compute-v2`
 - Operator diagnostics bundle: `.\diagnostics_leo_twin.bat`
 - Read-only health smoke: `.\smoke_leo_twin.bat`
 - Mutating control-cycle smoke: `.\control_smoke_leo_twin.bat`
+- Browser acceptance smoke: `.\browser_smoke_leo_twin.bat`
 - User guide: `docs\user_guide_v2.md`
 
 Default local URLs:
@@ -32,6 +33,12 @@ Optional 1200-node control-cycle gate:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_product_acceptance.ps1 -SkipBuild -RunControlCycleSmoke -ExpectedSatelliteCount 1200 -ExpectedUserCount 20 -ExpectedComputeNodeCount 1200 -ExpectedConstellationProfile CUSTOM_WALKER -ExpectedTrafficClass COMPUTE_SERVICE
+```
+
+Optional browser-rendered gate:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_product_acceptance.ps1 -SkipBuild -SkipRuntimeSmoke -RunBrowserSmoke
 ```
 
 The latest full local run passed:
@@ -67,22 +74,32 @@ frontend test files / 197 tests.
   at the end.
 - Aggregate product acceptance can optionally run the mutating control-cycle
   smoke via `-RunControlCycleSmoke`.
+- Browser acceptance smoke validates real console initialize/start clicks,
+  dashboard visibility, browser page errors, and browser-side stop/reset cleanup
+  through `scripts\smoke_browser_acceptance.ps1`. The browser command path uses
+  backend `POST /control` as the frontend button transport, while the existing
+  `/control` WebSocket remains available for backend control-cycle smoke and
+  compatibility.
+- The Cesium control view disables Cesium's default render-loop error overlay
+  and routes render errors into the existing local error state, so render errors
+  no longer block runtime control buttons.
 - Launcher workflow is Windows-first and supports menu, batch shortcuts,
-  status, read-only smoke, control-cycle smoke, dashboard-first startup, and
-  fast/full acceptance checks.
+  status, read-only smoke, control-cycle smoke, browser smoke,
+  dashboard-first startup, and fast/full acceptance checks.
 - System v2 baseline completion is reconciled in
   `docs\system_v2_completion_audit_v1.md`. The planned v2 workstreams now
   have Status coverage, while v2.1 hardening remains active.
 
 ## Remaining Gaps
 
-- Browser-rendered Playwright smoke is still not part of CI.
+- Browser-rendered smoke is available as an optional local gate, but is still
+  not part of CI.
 - Service trace drill-down filtering remains a future dashboard enhancement.
 - Acceptance scripts validate currently running services; they do not yet
   launch disposable backends from selected acceptance YAML files.
 - Runtime config staging guard is script-enforced, not a Git hook.
-- Control-cycle smoke validates backend control protocol responsiveness, not
-  browser button clicks.
+- Control-cycle smoke validates backend control protocol responsiveness; use
+  browser smoke when the risk is browser button wiring or dashboard rendering.
 - The package JSON inspector is still an embedded bounded review card rather
   than a dedicated virtualized artifact browser.
 - KPI provenance and benchmark gates are present, but calibration reporting

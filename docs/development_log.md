@@ -17645,3 +17645,91 @@ change.
 - Recommended follow-up:
   - Start T360 browser-rendered acceptance smoke for console initialize/start
     and dashboard status visibility.
+
+## 2026-07-07 - T360 browser acceptance smoke v1
+
+- Branch: `feature/T360-browser-acceptance-smoke-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: add a browser-rendered acceptance smoke gate that opens the real
+  frontend, clicks console `RESET`, `INITIALIZE`, and `START`, verifies backend
+  simulation time advances, opens the standalone dashboard, checks dashboard
+  visibility, and then stops/resets the runtime from the browser UI. The task
+  also hardens browser control transport by adding backend `POST /control` as
+  the frontend button command path while preserving the existing `/control`
+  WebSocket for backend control-cycle smoke and compatibility. The frontend
+  WebSocket URL resolver now uses the backend port when running from the local
+  Vite dev server, and Cesium render-loop errors are routed through the local
+  error state instead of showing Cesium's blocking default overlay.
+- Changed files/modules:
+  - `browser_smoke_leo_twin.bat`
+  - `scripts/smoke_browser_acceptance.mjs`
+  - `scripts/smoke_browser_acceptance.ps1`
+  - `scripts/verify_product_acceptance.ps1`
+  - `examples/integration_demo/server.py`
+  - `frontend/src/app/App.tsx`
+  - `frontend/src/config_panel/controlClient.ts`
+  - `frontend/src/stream/websocket_client/index.ts`
+  - `frontend/src/3d/cesium/CesiumGlobe.tsx`
+  - `frontend/tests/controlClient.test.ts`
+  - `frontend/tests/websocketClient.test.ts`
+  - `frontend/package.json`
+  - `frontend/pnpm-lock.yaml`
+  - `tests/integration/test_runtime_session_control.py`
+  - `tests/unit/test_browser_acceptance_smoke_docs.py`
+  - `tests/unit/test_user_guide_v2_docs.py`
+  - `docs/current_product_status.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_completion_audit_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_browser_acceptance_smoke_docs.py tests/unit/test_user_guide_v2_docs.py tests/integration/test_runtime_session_control.py::test_demo_server_adapter_uses_runtime_status_and_control_layer tests/integration/test_runtime_session_control.py::test_demo_http_control_post_uses_runtime_control_layer -q`
+    - Result: passed, 5 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test controlClient.test.ts websocketClient.test.ts appSurface.test.ts configPanel.test.ts`
+    - Result: passed, 4 files and 96 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test controlClient.test.ts websocketClient.test.ts globeVisualPolicy.test.ts satelliteVisuals.test.ts`
+    - Result: passed, 4 files and 45 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed; Vite reported the existing large `DataPanel` chunk
+      warning.
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\smoke_runtime_control_cycle.ps1 -SatelliteCount 72 -UserCount 20 -ComputeNodeCount 72 -JsonSummary -TimeoutSeconds 60`
+    - Result: passed; INITIALIZE, START, PAUSE, RESUME, STOP, and RESET worked
+      through the `/control` WebSocket.
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\smoke_browser_acceptance.ps1 -JsonSummary`
+    - Result: passed; browser clicked console controls, observed
+      `current_sim_time > 0`, opened `/dashboard`, and reset the runtime.
+- Problems encountered:
+  - The default shell did not expose `node` on `PATH`; frontend validation was
+    run with the bundled Codex Node/Pnpm runtime path.
+  - The first browser smoke attempt could not resolve Playwright from the
+    current runtime. The task adds `playwright-core` as a frontend dev
+    dependency without downloading browsers, so it can drive the installed
+    Chrome channel.
+  - A stale backend process returned 404 for `/control` WebSocket until the
+    launcher restarted the services. The source route was present; the problem
+    was stale local service state.
+  - The Vite dev frontend initially attempted browser control over a fragile
+    WebSocket path. Browser clicks could leave the backend at `INITIALIZE` or
+    `RESET` even though the UI button was enabled. The fix uses HTTP
+    `POST /control` for browser button commands and keeps WebSocket control
+    compatibility for backend control smoke.
+  - Cesium's default render-loop error panel could intercept pointer events
+    over the control dock. The fix disables the default Cesium overlay and
+    records render-loop errors through the component's local error state.
+  - Backend session rebuild during `INITIALIZE` can briefly make detail/status
+    requests return transient 500 or connection-aborted logs. The browser smoke
+    now retries status polling and uses a 90-second default wait window.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - Browser smoke is still an optional local gate, not CI.
+  - Demo backend logs can still contain benign connection-aborted stack traces
+    when a browser closes or reloads while large JSON responses are in flight.
+  - Acceptance still validates already-running services; it does not launch a
+    disposable scenario from an acceptance YAML.
+- Recommended follow-up:
+  - Start T361 by adding a disposable-run acceptance harness for the standard
+    72/300/1200 YAML scenarios, then wire browser smoke into that profile.

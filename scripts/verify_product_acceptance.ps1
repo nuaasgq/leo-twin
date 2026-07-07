@@ -11,7 +11,10 @@ param(
     [switch]$RunControlCycleSmoke,
     [int]$ControlSmokeSatelliteCount = 1200,
     [int]$ControlSmokeUserCount = 20,
-    [int]$ControlSmokeComputeNodeCount = 1200
+    [int]$ControlSmokeComputeNodeCount = 1200,
+    [switch]$RunBrowserSmoke,
+    [string]$BrowserSmokeChannel = "",
+    [switch]$BrowserSmokeHeaded
 )
 
 $ErrorActionPreference = "Stop"
@@ -177,6 +180,23 @@ try {
             "-ComputeNodeCount",
             "$ControlSmokeComputeNodeCount"
         )
+    }
+
+    if ($RunBrowserSmoke) {
+        $browserSmokeArgs = @(
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            (Join-Path $PSScriptRoot "smoke_browser_acceptance.ps1")
+        )
+        if ($BrowserSmokeChannel) {
+            $browserSmokeArgs += @("-BrowserChannel", $BrowserSmokeChannel)
+        }
+        if ($BrowserSmokeHeaded) {
+            $browserSmokeArgs += "-Headed"
+        }
+        Invoke-CheckedCommand "powershell" $browserSmokeArgs
     }
 
     Write-Host "Product acceptance verification passed."

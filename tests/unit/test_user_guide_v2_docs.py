@@ -25,6 +25,7 @@ def test_user_guide_v2_covers_required_operator_workflows() -> None:
         ".\\leo_twin_launcher.bat",
         ".\\scripts\\sees_launcher.ps1 status -JsonSummary",
         ".\\scripts\\smoke_runtime_health.ps1 -JsonSummary",
+        ".\\scripts\\smoke_browser_acceptance.ps1 -JsonSummary",
         ".\\scripts\\collect_operator_diagnostics.ps1 -JsonSummary",
         "GET /scenario/user-config/schema",
         "POST /scenario/user-config/validate-text",

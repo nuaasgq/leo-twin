@@ -2192,6 +2192,7 @@ export function App() {
   const controlClient = useMemo(
     () =>
       new ControlChannelClient({
+        httpFallbackUrl: "/control",
         onMessage: (message) => {
           handleControlMessage(message, setRuntimeStatus);
           handleGeneratedConfig(message, setGeneratedConfig);

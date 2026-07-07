@@ -41,6 +41,7 @@ export interface ControlWebSocketLike {
 }
 
 export type ControlWebSocketFactory = (url: string) => ControlWebSocketLike;
+export type ControlFetch = (input: string, init: RequestInit) => Promise<Response>;
 
 export interface ControlConnectionIssue {
   type: "error" | "close";
@@ -55,6 +56,8 @@ const OPEN_SOCKET_STATE = 1;
 export interface ControlChannelClientOptions {
   url?: string;
   createWebSocket?: ControlWebSocketFactory;
+  httpFallbackUrl?: string | null;
+  fetchControl?: ControlFetch;
   onMessage?: (message: ControlAck) => void;
   onConnectionOpen?: (url: string) => void;
   onConnectionIssue?: (issue: ControlConnectionIssue) => void;
@@ -63,6 +66,8 @@ export interface ControlChannelClientOptions {
 export class ControlChannelClient {
   private readonly url: string;
   private readonly createWebSocket: ControlWebSocketFactory;
+  private readonly httpFallbackUrl: string | null;
+  private readonly fetchControl: ControlFetch;
   private readonly onMessage: (message: ControlAck) => void;
   private readonly onConnectionOpen: (url: string) => void;
   private readonly onConnectionIssue: (issue: ControlConnectionIssue) => void;
@@ -73,6 +78,8 @@ export class ControlChannelClient {
   constructor(options: ControlChannelClientOptions = {}) {
     this.url = options.url ?? websocketUrl("/control");
     this.createWebSocket = options.createWebSocket ?? ((url) => new WebSocket(url));
+    this.httpFallbackUrl = options.httpFallbackUrl ?? null;
+    this.fetchControl = options.fetchControl ?? ((input, init) => fetch(input, init));
     this.onMessage = options.onMessage ?? (() => undefined);
     this.onConnectionOpen = options.onConnectionOpen ?? (() => undefined);
     this.onConnectionIssue = options.onConnectionIssue ?? (() => undefined);
@@ -137,12 +144,44 @@ export class ControlChannelClient {
 
   private send(message: Record<string, unknown>): void {
     const encoded = JSON.stringify(message);
+    if (this.httpFallbackUrl !== null) {
+      void this.sendHttpFallback(encoded);
+      return;
+    }
     this.connect();
     if (this.socket?.readyState === OPEN_SOCKET_STATE) {
       this.socket.send(encoded);
       return;
     }
     this.pendingMessages.push(encoded);
+  }
+
+  private async sendHttpFallback(encoded: string): Promise<void> {
+    if (this.httpFallbackUrl === null) {
+      return;
+    }
+    try {
+      const response = await this.fetchControl(this.httpFallbackUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: encoded
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      this.onMessage(decodeControlAck(await response.text()));
+    } catch (error) {
+      this.onConnectionIssue({ type: "error", url: this.httpFallbackUrl });
+      this.onMessage({
+        type: "CONTROL_ACK",
+        ok: false,
+        error: `control HTTP fallback failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      });
+    }
   }
 
   private flushPending(): void {

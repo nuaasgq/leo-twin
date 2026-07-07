@@ -6,7 +6,8 @@ import {
   WebSocketCursorAdvance,
   WebSocketConnectionIssue,
   WebSocketLike,
-  WebSocketStreamClient
+  WebSocketStreamClient,
+  websocketUrl
 } from "../src/stream/websocket_client";
 
 describe("WebSocketStreamClient", () => {
@@ -150,6 +151,48 @@ describe("WebSocketStreamClient", () => {
 
     client.close();
     expect(issues).toHaveLength(2);
+  });
+});
+
+describe("websocketUrl", () => {
+  it("uses the backend port for the local Vite development frontend", () => {
+    expect(
+      websocketUrl("/control", {
+        location: {
+          protocol: "http:",
+          host: "127.0.0.1:5173",
+          hostname: "127.0.0.1",
+          port: "5173"
+        }
+      })
+    ).toBe("ws://127.0.0.1:8765/control");
+  });
+
+  it("keeps same-origin websocket URLs outside the local development frontend", () => {
+    expect(
+      websocketUrl("/stream/events", {
+        location: {
+          protocol: "https:",
+          host: "leo.example.test",
+          hostname: "leo.example.test",
+          port: ""
+        }
+      })
+    ).toBe("wss://leo.example.test/stream/events");
+  });
+
+  it("allows an explicit backend websocket origin override", () => {
+    expect(
+      websocketUrl("stream/state", {
+        backendOrigin: "http://127.0.0.1:9000/",
+        location: {
+          protocol: "http:",
+          host: "127.0.0.1:5173",
+          hostname: "127.0.0.1",
+          port: "5173"
+        }
+      })
+    ).toBe("ws://127.0.0.1:9000/stream/state");
   });
 });
 

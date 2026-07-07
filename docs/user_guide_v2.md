@@ -1,6 +1,6 @@
 # LEO-Twin / SEES User Guide v2
 
-Date: 2026-07-06
+Date: 2026-07-07
 
 This guide is the user-facing entry point for the current SEES v2 product
 prototype. It is written for operators who need to start the system, configure
@@ -60,6 +60,20 @@ Control-path smoke, which mutates and resets the active session:
 .\control_smoke_leo_twin.bat
 .\scripts\smoke_runtime_control_cycle.ps1 -JsonSummary
 ```
+
+Browser acceptance smoke, which clicks the real console buttons, verifies the
+dashboard surface, fails on browser page errors, and resets the active session:
+
+```powershell
+.\browser_smoke_leo_twin.bat
+.\scripts\smoke_browser_acceptance.ps1 -JsonSummary
+```
+
+The browser smoke uses a 90-second default wait window because initialization
+rebuilds the backend session and dashboard detail endpoints can briefly return
+transient errors during that rebuild. Browser button commands are sent through
+the same backend control protocol via `POST /control`; the `/control`
+WebSocket remains available for the backend control-cycle smoke.
 
 ## 3. Configure A Scenario
 
@@ -377,6 +391,7 @@ Acceptance commands:
 ```powershell
 .\scripts\verify_product_acceptance.ps1 -SkipBuild
 .\scripts\verify_product_acceptance.ps1 -AcceptanceConfig configs\acceptance\small_demo_72sat.yaml
+.\scripts\verify_product_acceptance.ps1 -SkipBuild -SkipRuntimeSmoke -RunBrowserSmoke
 ```
 
 Benchmark contracts:

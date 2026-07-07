@@ -289,6 +289,7 @@ export function CesiumGlobe({
         fullscreenButton: false,
         infoBox: false,
         selectionIndicator: false,
+        showRenderLoopErrors: false,
         shouldAnimate: false,
         requestRenderMode: true,
         maximumRenderTimeChange: Number.POSITIVE_INFINITY
@@ -310,7 +311,11 @@ export function CesiumGlobe({
       event.preventDefault();
       setRenderError("WebGL context lost");
     };
+    const handleRenderError = (_scene: unknown, error: unknown) => {
+      setRenderError(renderErrorMessage(error));
+    };
     viewer.scene.canvas.addEventListener("webglcontextlost", handleContextLost);
+    viewer.scene.renderError.addEventListener(handleRenderError);
     const satellitePrimitives = viewer.scene.primitives.add(
       new PointPrimitiveCollection()
     ) as PointPrimitiveCollection;
@@ -322,6 +327,7 @@ export function CesiumGlobe({
       disposed = true;
       if (!viewer.isDestroyed()) {
         viewer.scene.canvas.removeEventListener("webglcontextlost", handleContextLost);
+        viewer.scene.renderError.removeEventListener(handleRenderError);
         satelliteBatch.clear();
         viewer.scene.primitives.remove(satellitePrimitives);
       }

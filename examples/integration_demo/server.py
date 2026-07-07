@@ -649,6 +649,14 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                     )
                 )
                 return
+            if path == "/control":
+                try:
+                    payload = self._read_text_body()
+                except ValueError as exc:
+                    self.send_error(400, str(exc))
+                    return
+                self._send_json(control_plane.handle_raw_message(payload))
+                return
             self.send_error(404, "not found")
 
         def log_message(self, format: str, *args: object) -> None:

@@ -60,8 +60,11 @@ but no Status entry in the plan. The corrected Status is backed by:
 The next work should move from v2 baseline closure to v2.1 product hardening:
 
 1. Browser-level acceptance
-   - Current scripts validate services and backend control paths.
-   - Missing: disposable browser smoke that clicks console and dashboard flows.
+   - Current scripts validate services, backend control paths, and T360 adds
+     an optional browser smoke for real console initialize/start clicks plus
+     dashboard visibility.
+   - Missing: CI integration and disposable scenario startup around that
+     browser smoke.
 
 2. Full artifact evidence navigation
    - Current dashboard has a bounded in-card JSON inspector.
@@ -94,7 +97,10 @@ The next work should move from v2 baseline closure to v2.1 product hardening:
 - T359: Add user-service request evidence cross-links into the JSON artifact
   inspector for `user_service_request_summary_v2.json`.
 - T360: Add browser-rendered Playwright smoke for console initialize/start and
-  dashboard status visibility.
+  dashboard status visibility. Status: implemented as an optional local gate;
+  the frontend now sends browser button commands through backend `POST /control`
+  while retaining `/control` WebSocket compatibility, and Cesium render-loop
+  errors no longer display a blocking default Cesium overlay.
 - T361: Add acceptance YAML disposable-run harness for 72/300/1200 benchmark
   scenarios.
 - T362: Add KPI calibration report v2.1 linked to benchmark matrix evidence.

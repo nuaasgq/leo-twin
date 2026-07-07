@@ -896,6 +896,11 @@ Tasks:
     guide covering startup, health checks, configuration, console/dashboard
     usage, result export, diagnostics bundles, benchmark acceptance, and current
     model boundaries.
+  - Status: T360 adds browser-rendered acceptance smoke for real console
+    initialize/start clicks, dashboard visibility, browser page-error checks,
+    and browser-side stop/reset cleanup. It also adds frontend `POST /control`
+    command transport for browser buttons while preserving the `/control`
+    WebSocket path used by backend control-cycle smoke.
 - V2-084: Add surface notice persistence.
   - Scope: operator-facing runtime notice dismissal across page refreshes.
   - Status: T249 persists dismissed simulation-completed notice keys in
