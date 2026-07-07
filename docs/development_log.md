@@ -5,6 +5,46 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-07 - Dashboard Artifact Browser Workspace v1
+
+- Branch: `feature/T387-dashboard-artifact-browser-workspace-v1`
+- Commit: pending in this commit
+- Scope: render the backend-owned `artifact_browser_index_v1` as a compact
+  dashboard artifact browser workspace inside the package artifact-health card.
+  Each backend category shows present/missing counts, representative filenames,
+  the default JSON inspection target, and a read-only evidence button when an
+  inspectable JSON artifact is available. This task does not change Event
+  Kernel behavior, backend model semantics, result-package artifact generation,
+  packet-level simulation, or frontend routing architecture.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/current_product_status.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed, 1 test file / 219 tests using the bundled Codex
+      Node/pnpm runtime.
+  - `python -m pytest tests\unit\test_system_v2_upgrade_plan_docs.py tests\unit\test_user_guide_v2_docs.py -q`
+    - Result: passed, 4 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing large DataPanel chunk
+      warning.
+- Problems encountered and handling:
+  - The artifact browser row needed to preserve backend ownership of semantic
+    categories while still using catalog file hashes and links for present
+    artifacts. The display builder now joins diagnostics browser items to
+    catalog-backed artifact-health rows and marks missing items explicitly.
+  - Local runtime/generated config files were already dirty and remain outside
+    the staged task scope.
+- Known remaining issues / follow-up:
+  - The workspace is a compact category navigator. A future pass can add
+    persistent category/search filters and virtualized per-artifact rows for
+    very large packages.
+
 ## 2026-07-07 - Result Package Artifact Browser Index v1
 
 - Branch: `feature/T386-result-package-artifact-browser-index-v1`

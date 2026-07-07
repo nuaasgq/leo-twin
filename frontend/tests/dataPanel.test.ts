@@ -2935,21 +2935,21 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         index_scope: "RESULT_PACKAGE_ARTIFACT_BROWSER",
         artifact_count: 1,
         artifact_filenames: ["network_kpi_variation_explanation_v1.json"],
-        item_count: 1,
+        item_count: 2,
         present_artifact_count: 1,
         required_artifact_count: 0,
-        recommended_artifact_count: 1,
+        recommended_artifact_count: 2,
         missing_required_count: 0,
-        missing_recommended_count: 0,
+        missing_recommended_count: 1,
         category_count: 1,
         default_focus_filename: "network_kpi_variation_explanation_v1.json",
         categories: [
           {
             category: "NETWORK_KPI_EVIDENCE",
             category_label: "Network KPI evidence",
-            item_count: 1,
+            item_count: 2,
             present_count: 1,
-            missing_count: 0
+            missing_count: 1
           }
         ],
         items: [
@@ -2968,6 +2968,22 @@ describe("buildDataPanelExportCatalogDisplay", () => {
             inspectable_json: true,
             default_json_pointer: "/evidence",
             filter_hint: "variation"
+          },
+          {
+            filename: "network_kpi_formula_evidence_v1.json",
+            logical_name: "network_kpi_formula_evidence_v1",
+            category: "NETWORK_KPI_EVIDENCE",
+            category_label: "Network KPI evidence",
+            review_priority: 110,
+            review_role: "Network KPI formula input evidence.",
+            format: "json",
+            content: "Formula inputs and time-series evidence.",
+            required: false,
+            recommended: true,
+            present: false,
+            inspectable_json: true,
+            default_json_pointer: "/evidence",
+            filter_hint: "formula"
           }
         ],
         browser_hash:
@@ -2989,7 +3005,19 @@ describe("buildDataPanelExportCatalogDisplay", () => {
     expect(display?.browserLabels).toContain(
       "BACKEND_RUNTIME_EXPORT_DIAGNOSTICS / RESULT_PACKAGE_ARTIFACT_BROWSER"
     );
-    expect(display?.browserLabels).toContain("Network KPI evidence 1/1");
+    expect(display?.browserLabels).toContain("Network KPI evidence 1/2");
+    expect(display?.artifactBrowserRows).toEqual([
+      expect.objectContaining({
+        category: "NETWORK_KPI_EVIDENCE",
+        categoryLabel: "Network KPI evidence",
+        tone: "different",
+        statusLabel: "1/2 present / 1 missing",
+        defaultFocusFilename: "network_kpi_variation_explanation_v1.json",
+        defaultFocusJsonPointer: "/evidence",
+        defaultFocusFilter: "variation",
+        missingFilenames: ["network_kpi_formula_evidence_v1.json"]
+      })
+    ]);
     expect(row).toMatchObject({
       categoryLabel: "Network KPI evidence",
       reviewRoleLabel: "Network KPI variation explanation.",

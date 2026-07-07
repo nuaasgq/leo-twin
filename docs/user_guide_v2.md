@@ -336,6 +336,13 @@ operators can move from a result package to the relevant KPI, business-demand,
 route/service, reproducibility, or audit artifact without browser-side semantic
 inference. Older packages that do not contain the index continue to use the
 catalog and review-summary fallback.
+In the artifact-health card, the browser index appears as compact category
+rows. A row reports how many artifacts in that category are present or missing,
+lists representative filenames, and exposes a default evidence button when the
+backend marked an inspectable JSON artifact. Pressing that button opens the
+read-only package artifact inspector at the backend-provided JSON pointer and
+filter hint; it does not replay events, mutate the package, or recompute
+acceptance.
 The traffic-demand explanation step opens `traffic_demand_explanation_v1.json`
 directly at `/traffic_demand_explanation`, so an operator can inspect generated
 request counts, compute-service request counts, class rows, per-user state

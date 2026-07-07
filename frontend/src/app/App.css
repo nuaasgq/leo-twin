@@ -2947,6 +2947,80 @@ button.data-panel-route-row {
   background: #0b1219;
 }
 
+.data-panel-export-artifact-browser {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 6px;
+  min-width: 0;
+}
+
+.data-panel-export-artifact-browser-row {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  border: 1px solid #314656;
+  border-radius: 6px;
+  padding: 7px;
+  background: #09131b;
+}
+
+.data-panel-export-artifact-browser-row.match {
+  border-color: #2e5b56;
+}
+
+.data-panel-export-artifact-browser-row.different {
+  border-color: #6a4a4a;
+}
+
+.data-panel-export-artifact-browser-row.pending {
+  border-color: #4b5563;
+}
+
+.data-panel-export-artifact-browser-row strong,
+.data-panel-export-artifact-browser-row small,
+.data-panel-export-artifact-browser-row em {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.data-panel-export-artifact-browser-row strong {
+  color: var(--app-text);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.data-panel-export-artifact-browser-row small {
+  color: var(--app-muted);
+  font-size: 10px;
+}
+
+.data-panel-export-artifact-browser-row em {
+  color: var(--accent-cyan);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.data-panel-export-artifact-browser-row button {
+  justify-self: start;
+  min-width: 0;
+  border: 1px solid #2a4658;
+  border-radius: 5px;
+  padding: 4px 6px;
+  background: #101922;
+  color: var(--accent-cyan);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.data-panel-export-artifact-browser-row button:hover {
+  border-color: #4b7490;
+  background: #0c1a24;
+}
+
 .data-panel-export-artifact-health-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));

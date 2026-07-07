@@ -192,6 +192,11 @@ the card without loading the full JSON artifact.
   displays this backend-provided index in artifact health and diagnostics
   review surfaces and uses its JSON pointer/filter hints for read-only artifact
   inspection instead of hardcoding those review semantics locally.
+- The dashboard artifact-health card now renders a compact artifact browser
+  workspace from `artifact_browser_index_v1`. Each backend category shows
+  present/missing counts, representative artifact filenames, the default JSON
+  inspection target, and a direct evidence-inspection button when a readable
+  JSON artifact is available.
 - Runtime export packages now also include
   `user_configuration_template_validation_v1.json` and propagate approved
   template validation status, valid/invalid counts, and evidence hash into the

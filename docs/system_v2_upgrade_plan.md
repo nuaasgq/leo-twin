@@ -1125,6 +1125,11 @@ Current Phase 3 progress:
   carries default JSON pointer/filter hints. The dashboard artifact-health card
   and diagnostics drawer consume this backend index so offline package browsing
   does not depend on frontend-local artifact semantics.
+- T387 renders the backend artifact browser index as a compact dashboard
+  workspace in the artifact-health card. Each category row shows
+  present/missing counts, representative filenames, a default JSON evidence
+  target, and a direct read-only inspector action, making exported result
+  packages easier to review without adding browser-side artifact semantics.
 - T364 adds a dashboard detail-coverage status card for backend detail
   families, cursor windows, hidden rows, exact node cards, and pagination
   contract status. This improves the node-detail workstream without changing

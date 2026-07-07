@@ -2380,6 +2380,41 @@ export const DataPanel = memo(function DataPanel({
                   ))}
                 </div>
               ) : null}
+              {exportArtifactHealthDisplay.artifactBrowserRows.length > 0 ? (
+                <div
+                  className="data-panel-export-artifact-browser"
+                  aria-label="result package artifact browser"
+                >
+                  {exportArtifactHealthDisplay.artifactBrowserRows.map((row) => (
+                    <span
+                      className={`data-panel-export-artifact-browser-row ${row.tone}`}
+                      key={row.category}
+                      title={row.title}
+                    >
+                      <strong>{row.categoryLabel}</strong>
+                      <small>{row.statusLabel}</small>
+                      <small>{row.detailLabel}</small>
+                      <em>{row.defaultFocusLabel}</em>
+                      {row.defaultFocusHref !== null ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setBenchmarkEvidenceFocus(
+                              buildDataPanelArtifactHealthInspectorFocus(
+                                exportArtifactHealthDisplay.rows.find(
+                                  (item) => item.filename === row.defaultFocusFilename
+                                )
+                              )
+                            )
+                          }
+                        >
+                          妫€鏌ヨ瘉鎹?
+                        </button>
+                      ) : null}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
               <div className="data-panel-export-artifact-health-grid">
                 {exportArtifactHealthDisplay.rows.map((row) =>
                   row.href && !row.inspectable ? (
@@ -13015,7 +13050,23 @@ export interface DataPanelExportArtifactHealthDisplay {
   sourceLabel: string;
   summaryLabel: string;
   browserLabels: readonly string[];
+  artifactBrowserRows: readonly DataPanelExportArtifactBrowserRow[];
   rows: readonly DataPanelExportArtifactHealthRow[];
+}
+
+export interface DataPanelExportArtifactBrowserRow {
+  category: string;
+  categoryLabel: string;
+  tone: "match" | "different" | "pending";
+  statusLabel: string;
+  detailLabel: string;
+  defaultFocusLabel: string;
+  defaultFocusFilename: string;
+  defaultFocusHref: string | null;
+  defaultFocusJsonPointer: string;
+  defaultFocusFilter: string;
+  missingFilenames: readonly string[];
+  title: string;
 }
 
 export interface DataPanelExportArtifactHealthRow {
@@ -16349,6 +16400,10 @@ export function buildDataPanelExportArtifactHealthDisplay(
   const missingCount = rows.filter((row) => !row.present).length;
   return {
     browserLabels: buildDataPanelArtifactBrowserLabels(artifactBrowserIndex),
+    artifactBrowserRows: buildDataPanelArtifactBrowserRows(
+      artifactBrowserIndex,
+      rows
+    ),
     packageId: selectedPackageId,
     sourceLabel: `${catalog.source} / ${record.export_type} / files`,
     summaryLabel: `${selectedPackageId} / 登记 ${formatCount(
@@ -16382,6 +16437,74 @@ function buildDataPanelArtifactBrowserLabels(
           )}/${formatCount(category.item_count)}`
       )
   ];
+}
+
+function buildDataPanelArtifactBrowserRows(
+  index: RuntimeExportDiagnosticsBundleV1["artifact_browser_index_v1"] | null | undefined,
+  artifactRows: readonly DataPanelExportArtifactHealthRow[]
+): readonly DataPanelExportArtifactBrowserRow[] {
+  if (index === null || index === undefined) {
+    return [];
+  }
+  const rowsByFilename = new Map(artifactRows.map((row) => [row.filename, row]));
+  return index.categories.map((category) => {
+    const indexedItems = index.items.filter(
+      (item) => item.category === category.category
+    );
+    const browserRows = indexedItems
+      .map((item) => rowsByFilename.get(item.filename) ?? null)
+      .filter((row): row is DataPanelExportArtifactHealthRow => row !== null);
+    const presentRows = browserRows.filter((row) => row.present);
+    const missingRows = browserRows.filter((row) => !row.present);
+    const defaultFocus =
+      browserRows.find(
+        (row) =>
+          row.filename === index.default_focus_filename &&
+          row.present &&
+          row.inspectable
+      ) ??
+      browserRows.find((row) => row.present && row.inspectable) ??
+      presentRows[0] ??
+      null;
+    const visibleFilenames = indexedItems
+      .slice(0, 4)
+      .map((item) => item.filename)
+      .join(", ");
+    const hiddenCount = Math.max(0, indexedItems.length - 4);
+    return {
+      category: category.category,
+      categoryLabel: category.category_label,
+      tone:
+        category.missing_count > 0
+          ? "different"
+          : category.present_count > 0
+            ? "match"
+            : "pending",
+      statusLabel: `${formatCount(category.present_count)}/${formatCount(
+        category.item_count
+      )} present / ${formatCount(category.missing_count)} missing`,
+      detailLabel:
+        hiddenCount > 0
+          ? `${visibleFilenames}, +${formatCount(hiddenCount)} more`
+          : visibleFilenames,
+      defaultFocusLabel:
+        defaultFocus === null
+          ? "no inspectable artifact"
+          : `${defaultFocus.filename} / ${dataPanelJsonPointerDisplayLabel(
+              defaultFocus.jsonPointer
+            )}`,
+      defaultFocusFilename: defaultFocus?.filename ?? "",
+      defaultFocusHref: defaultFocus?.href ?? null,
+      defaultFocusJsonPointer: defaultFocus?.jsonPointer ?? "",
+      defaultFocusFilter: defaultFocus?.defaultInspectorFilter ?? "",
+      missingFilenames: missingRows.map((row) => row.filename),
+      title: `${category.category_label} / ${formatCount(
+        category.present_count
+      )} present / ${formatCount(category.missing_count)} missing / ${
+        defaultFocus?.title ?? "no default focus"
+      }`
+    };
+  });
 }
 
 function selectRuntimeExportCatalogRecordForPackage(
