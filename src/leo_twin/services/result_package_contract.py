@@ -17,6 +17,9 @@ RUNTIME_EXPORT_REVIEW_SUMMARY_V1_ID = "leo_twin.runtime_export_review_summary.v1
 RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1_ID = (
     "leo_twin.runtime_export_diagnostics_bundle.v1"
 )
+RUNTIME_EXPORT_ARTIFACT_BROWSER_INDEX_V1_ID = (
+    "leo_twin.runtime_export_artifact_browser_index.v1"
+)
 RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1_ID = (
     "leo_twin.runtime_export_scenario_review_bundle.v1"
 )
@@ -101,7 +104,15 @@ USER_CONFIGURATION_AUDIT_BINDING_V1_ID = (
 USER_CONFIGURATION_SCHEMA_V2_ID = "sees.user_configuration.v2"
 EXPORT_PACKAGE_AUDIT_INDEX_FILENAME = "export_package_audit_index_v1.json"
 CONFIG_SNAPSHOT_FILENAME = "config_snapshot.json"
+EVENTS_FILENAME = "events.jsonl"
+METRICS_FILENAME = "metrics.csv"
+SUMMARY_FILENAME = "summary.json"
+MANIFEST_FILENAME = "manifest.json"
+REVIEW_SUMMARY_FILENAME = "review_summary_v1.json"
+DIAGNOSTICS_BUNDLE_FILENAME = "diagnostics_bundle_v1.json"
 ROUTE_DETAIL_INDEX_FILENAME = "route_detail_index_v1.json"
+SERVICE_LIFECYCLE_TRACE_FILENAME = "service_lifecycle_trace_v2.json"
+USER_SERVICE_REQUEST_SUMMARY_FILENAME = "user_service_request_summary_v2.json"
 NETWORK_KPI_BENCHMARK_VALIDATION_FILENAME = (
     "network_kpi_benchmark_validation_v1.json"
 )
@@ -113,6 +124,23 @@ USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME = (
     "user_configuration_template_validation_v1.json"
 )
 TRAFFIC_DEMAND_EXPLANATION_FILENAME = "traffic_demand_explanation_v1.json"
+SCENARIO_REVIEW_BUNDLE_FILENAME = "scenario_review_bundle_v1.json"
+PACKAGE_HANDOFF_REPORT_FILENAME = "package_handoff_report_v1.md"
+ROUTE_COMPARISON_REVIEW_REPORT_FILENAME = "route_comparison_review_report_v1.json"
+SERVICE_TRACE_COMPARISON_REVIEW_REPORT_FILENAME = (
+    "service_trace_comparison_review_report_v1.json"
+)
+
+_ARTIFACT_BROWSER_CATEGORY_LABELS: tuple[tuple[str, str], ...] = (
+    ("CORE_REPRODUCIBILITY", "Core reproducibility"),
+    ("OPERATOR_REVIEW", "Operator review"),
+    ("NETWORK_KPI_EVIDENCE", "Network KPI evidence"),
+    ("TRAFFIC_BUSINESS", "Traffic and business requests"),
+    ("ROUTE_SERVICE_EVIDENCE", "Route and service evidence"),
+    ("AUDIT_HANDOFF", "Audit and handoff"),
+    ("RAW_RUNTIME", "Raw runtime evidence"),
+    ("ADDITIONAL_ARTIFACT", "Additional artifact"),
+)
 
 
 _REQUIRED_FILE_SPECS: tuple[dict[str, object], ...] = (
@@ -328,6 +356,384 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
             "LIVE_EVENT_REPLAY_RESTORE",
         ),
     }
+
+
+def _runtime_export_artifact_browser_index_v1(
+    *,
+    artifact_filenames: tuple[str, ...],
+    required_filenames: tuple[str, ...],
+    recommended_filenames: tuple[str, ...],
+) -> dict[str, object]:
+    """Build a deterministic browser index for result package artifacts."""
+
+    artifacts = tuple(sorted(str(filename) for filename in artifact_filenames))
+    artifact_set = set(artifacts)
+    required_set = set(required_filenames)
+    recommended_set = set(recommended_filenames)
+    specs = _runtime_export_artifact_browser_specs()
+    spec_by_filename = {str(spec["filename"]): spec for spec in specs}
+    category_labels = dict(_ARTIFACT_BROWSER_CATEGORY_LABELS)
+    category_priority = {
+        category: index for index, (category, _label) in enumerate(
+            _ARTIFACT_BROWSER_CATEGORY_LABELS
+        )
+    }
+    filenames = set(artifacts)
+    filenames.update(required_filenames)
+    filenames.update(recommended_filenames)
+
+    raw_items: list[dict[str, object]] = []
+    for filename in sorted(filenames):
+        spec = spec_by_filename.get(filename, {})
+        category = str(spec.get("category", "ADDITIONAL_ARTIFACT"))
+        category_label = category_labels.get(category, "Additional artifact")
+        required = filename in required_set
+        recommended = filename in recommended_set
+        present = filename in artifact_set
+        format_hint = str(
+            spec.get("format", filename.rsplit(".", 1)[-1] if "." in filename else "")
+        )
+        content = str(spec.get("content", "Exported runtime result artifact."))
+        raw_items.append(
+            {
+                "filename": filename,
+                "logical_name": str(
+                    spec.get("logical_name", filename.rsplit(".", 1)[0])
+                ),
+                "category": category,
+                "category_label": category_label,
+                "review_priority": _integer(spec.get("review_priority", 900)),
+                "review_role": str(
+                    spec.get(
+                        "review_role",
+                        "Additional package artifact captured for review.",
+                    )
+                ),
+                "format": format_hint,
+                "content": content,
+                "required": required,
+                "recommended": recommended,
+                "present": present,
+                "inspectable_json": filename.endswith(".json"),
+                "default_json_pointer": str(spec.get("default_json_pointer", "")),
+                "filter_hint": str(spec.get("filter_hint", "")),
+            }
+        )
+
+    items = tuple(
+        sorted(
+            raw_items,
+            key=lambda item: (
+                category_priority.get(str(item["category"]), 99),
+                _integer(item.get("review_priority")),
+                str(item["filename"]),
+            ),
+        )
+    )
+    categories = tuple(
+        category
+        for category in (
+            {
+                "category": category,
+                "category_label": label,
+                "item_count": len(
+                    [item for item in items if item["category"] == category]
+                ),
+                "present_count": len(
+                    [
+                        item
+                        for item in items
+                        if item["category"] == category and item["present"] is True
+                    ]
+                ),
+                "missing_count": len(
+                    [
+                        item
+                        for item in items
+                        if item["category"] == category and item["present"] is not True
+                    ]
+                ),
+            }
+            for category, label in _ARTIFACT_BROWSER_CATEGORY_LABELS
+        )
+        if category["item_count"] > 0
+    )
+    default_focus_filename = _runtime_export_artifact_browser_default_focus(items)
+    browser: dict[str, object] = {
+        "version": "v1",
+        "index_id": RUNTIME_EXPORT_ARTIFACT_BROWSER_INDEX_V1_ID,
+        "source": "BACKEND_RUNTIME_EXPORT_DIAGNOSTICS",
+        "index_scope": "RESULT_PACKAGE_ARTIFACT_BROWSER",
+        "artifact_count": len(artifacts),
+        "artifact_filenames": artifacts,
+        "item_count": len(items),
+        "present_artifact_count": len(
+            [item for item in items if item["present"] is True]
+        ),
+        "required_artifact_count": len(required_filenames),
+        "recommended_artifact_count": len(recommended_filenames),
+        "missing_required_count": len(
+            [item for item in items if item["required"] is True and item["present"] is not True]
+        ),
+        "missing_recommended_count": len(
+            [
+                item
+                for item in items
+                if item["recommended"] is True and item["present"] is not True
+            ]
+        ),
+        "category_count": len(categories),
+        "default_focus_filename": default_focus_filename,
+        "categories": categories,
+        "items": items,
+    }
+    browser["browser_hash"] = stable_hash_payload(browser)
+    return browser
+
+
+def _runtime_export_artifact_browser_default_focus(
+    items: tuple[dict[str, object], ...],
+) -> str:
+    preferred = (
+        SCENARIO_REVIEW_BUNDLE_FILENAME,
+        DIAGNOSTICS_BUNDLE_FILENAME,
+        REVIEW_SUMMARY_FILENAME,
+        MANIFEST_FILENAME,
+        CONFIG_SNAPSHOT_FILENAME,
+    )
+    for filename in preferred:
+        for item in items:
+            if item["filename"] == filename and item["present"] is True:
+                return filename
+    for item in items:
+        if item["present"] is True:
+            return str(item["filename"])
+    return str(items[0]["filename"]) if items else ""
+
+
+def _runtime_export_artifact_browser_specs() -> tuple[dict[str, object], ...]:
+    return (
+        {
+            "logical_name": "scenario_review_bundle_v1",
+            "filename": SCENARIO_REVIEW_BUNDLE_FILENAME,
+            "category": "OPERATOR_REVIEW",
+            "review_priority": 10,
+            "format": "json",
+            "review_role": "Primary operator entry point for offline review.",
+            "content": "Binds configuration, diagnostics, audit evidence, and review order.",
+            "default_json_pointer": "/recommended_review_order",
+            "filter_hint": "recommended_review_order",
+        },
+        {
+            "logical_name": "diagnostics_bundle_v1",
+            "filename": DIAGNOSTICS_BUNDLE_FILENAME,
+            "category": "OPERATOR_REVIEW",
+            "review_priority": 20,
+            "format": "json",
+            "review_role": "Deterministic health and finding summary.",
+            "content": "Package diagnostics, artifact health, findings, and next actions.",
+            "default_json_pointer": "/artifact_browser_index_v1",
+            "filter_hint": "artifact_browser_index_v1",
+        },
+        {
+            "logical_name": "review_summary_v1",
+            "filename": REVIEW_SUMMARY_FILENAME,
+            "category": "OPERATOR_REVIEW",
+            "review_priority": 30,
+            "format": "json",
+            "review_role": "User-readable package review summary.",
+            "content": "Scenario summary, reproducibility hashes, and review notes.",
+            "default_json_pointer": "/artifacts",
+            "filter_hint": "artifacts",
+        },
+        {
+            "logical_name": "manifest",
+            "filename": MANIFEST_FILENAME,
+            "category": "CORE_REPRODUCIBILITY",
+            "review_priority": 40,
+            "format": "json",
+            "review_role": "Stable hash manifest for deterministic reproduction.",
+            "content": "Result package file hashes and runtime reproducibility hashes.",
+            "default_json_pointer": "/files",
+            "filter_hint": "sha256",
+        },
+        {
+            "logical_name": "config_snapshot",
+            "filename": CONFIG_SNAPSHOT_FILENAME,
+            "category": "CORE_REPRODUCIBILITY",
+            "review_priority": 50,
+            "format": "json",
+            "review_role": "Configuration and runtime status snapshot.",
+            "content": "Applied control config, generated backend config, and status.",
+            "default_json_pointer": "/status",
+            "filter_hint": "status",
+        },
+        {
+            "logical_name": "summary",
+            "filename": SUMMARY_FILENAME,
+            "category": "CORE_REPRODUCIBILITY",
+            "review_priority": 60,
+            "format": "json",
+            "review_role": "Aggregate runtime summary.",
+            "content": "Metrics summary and aggregate runtime counters.",
+            "default_json_pointer": "",
+            "filter_hint": "metric",
+        },
+        {
+            "logical_name": "events",
+            "filename": EVENTS_FILENAME,
+            "category": "RAW_RUNTIME",
+            "review_priority": 70,
+            "format": "jsonl",
+            "review_role": "Processed event evidence for replay review.",
+            "content": "Deterministically ordered processed runtime events.",
+            "default_json_pointer": "",
+            "filter_hint": "event",
+        },
+        {
+            "logical_name": "metrics",
+            "filename": METRICS_FILENAME,
+            "category": "RAW_RUNTIME",
+            "review_priority": 80,
+            "format": "csv",
+            "review_role": "Sampled metric evidence.",
+            "content": "Sampled metric records and KPI observations.",
+            "default_json_pointer": "",
+            "filter_hint": "metric",
+        },
+        {
+            "logical_name": "network_kpi_benchmark_validation_v1",
+            "filename": NETWORK_KPI_BENCHMARK_VALIDATION_FILENAME,
+            "category": "NETWORK_KPI_EVIDENCE",
+            "review_priority": 100,
+            "format": "json",
+            "review_role": "Network KPI benchmark guardrail evidence.",
+            "content": "Benchmark validation status and guardrail counters.",
+            "default_json_pointer": "/checks",
+            "filter_hint": "validation",
+        },
+        {
+            "logical_name": "network_kpi_formula_evidence_v1",
+            "filename": NETWORK_KPI_FORMULA_EVIDENCE_FILENAME,
+            "category": "NETWORK_KPI_EVIDENCE",
+            "review_priority": 110,
+            "format": "json",
+            "review_role": "Network KPI formula input evidence.",
+            "content": "Formula inputs and time-series evidence for KPI review.",
+            "default_json_pointer": "/evidence",
+            "filter_hint": "evidence",
+        },
+        {
+            "logical_name": "network_kpi_variation_explanation_v1",
+            "filename": NETWORK_KPI_VARIATION_EXPLANATION_FILENAME,
+            "category": "NETWORK_KPI_EVIDENCE",
+            "review_priority": 120,
+            "format": "json",
+            "review_role": "Network KPI variation explanation.",
+            "content": "Explains why flow-level KPI values moved or stayed flat.",
+            "default_json_pointer": "/evidence",
+            "filter_hint": "variation",
+        },
+        {
+            "logical_name": "traffic_demand_explanation_v1",
+            "filename": TRAFFIC_DEMAND_EXPLANATION_FILENAME,
+            "category": "TRAFFIC_BUSINESS",
+            "review_priority": 200,
+            "format": "json",
+            "review_role": "Business request generation explanation.",
+            "content": "Backend-owned traffic-demand semantics for offline review.",
+            "default_json_pointer": "/traffic_demand_explanation",
+            "filter_hint": "traffic_demand",
+        },
+        {
+            "logical_name": "user_service_request_summary_v2",
+            "filename": USER_SERVICE_REQUEST_SUMMARY_FILENAME,
+            "category": "TRAFFIC_BUSINESS",
+            "review_priority": 210,
+            "format": "json",
+            "review_role": "Per-user service request state window.",
+            "content": "Per-user communication and compute request state rows.",
+            "default_json_pointer": "/summary/items",
+            "filter_hint": "summary items",
+        },
+        {
+            "logical_name": "user_configuration_template_validation_v1",
+            "filename": USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME,
+            "category": "TRAFFIC_BUSINESS",
+            "review_priority": 220,
+            "format": "json",
+            "review_role": "Approved user configuration template validation.",
+            "content": "Schema validation evidence for user-facing templates.",
+            "default_json_pointer": "/template_validation/templates",
+            "filter_hint": "template_validation",
+        },
+        {
+            "logical_name": "route_detail_index_v1",
+            "filename": ROUTE_DETAIL_INDEX_FILENAME,
+            "category": "ROUTE_SERVICE_EVIDENCE",
+            "review_priority": 300,
+            "format": "json",
+            "review_role": "Flow-level route explanation index.",
+            "content": "Indexed route explanation rows for route trust review.",
+            "default_json_pointer": "/routes",
+            "filter_hint": "route",
+        },
+        {
+            "logical_name": "service_lifecycle_trace_v2",
+            "filename": SERVICE_LIFECYCLE_TRACE_FILENAME,
+            "category": "ROUTE_SERVICE_EVIDENCE",
+            "review_priority": 310,
+            "format": "json",
+            "review_role": "Communication-compute service trace.",
+            "content": "Input network, compute queue/execution, and output network trace.",
+            "default_json_pointer": "/items",
+            "filter_hint": "trace",
+        },
+        {
+            "logical_name": "route_comparison_review_report_v1",
+            "filename": ROUTE_COMPARISON_REVIEW_REPORT_FILENAME,
+            "category": "ROUTE_SERVICE_EVIDENCE",
+            "review_priority": 320,
+            "format": "json",
+            "review_role": "Saved route comparison review report.",
+            "content": "Operator-saved comparison between package and live route detail.",
+            "default_json_pointer": "/records",
+            "filter_hint": "route comparison",
+        },
+        {
+            "logical_name": "service_trace_comparison_review_report_v1",
+            "filename": SERVICE_TRACE_COMPARISON_REVIEW_REPORT_FILENAME,
+            "category": "ROUTE_SERVICE_EVIDENCE",
+            "review_priority": 330,
+            "format": "json",
+            "review_role": "Saved service trace comparison review report.",
+            "content": "Operator-saved comparison between package and live service trace.",
+            "default_json_pointer": "/records",
+            "filter_hint": "service trace",
+        },
+        {
+            "logical_name": "export_package_audit_index_v1",
+            "filename": EXPORT_PACKAGE_AUDIT_INDEX_FILENAME,
+            "category": "AUDIT_HANDOFF",
+            "review_priority": 400,
+            "format": "json",
+            "review_role": "Long-term package audit index.",
+            "content": "Artifact hashes, checklist status, and handoff readiness evidence.",
+            "default_json_pointer": "/artifact_hashes",
+            "filter_hint": "audit",
+        },
+        {
+            "logical_name": "package_handoff_report_v1",
+            "filename": PACKAGE_HANDOFF_REPORT_FILENAME,
+            "category": "AUDIT_HANDOFF",
+            "review_priority": 410,
+            "format": "markdown",
+            "review_role": "Operator-facing handoff report.",
+            "content": "Markdown handoff report for offline transfer.",
+            "default_json_pointer": "",
+            "filter_hint": "handoff",
+        },
+    )
 
 
 def build_runtime_export_reproducibility_boundary_v1(
@@ -904,6 +1310,11 @@ def build_runtime_export_diagnostics_bundle_v1(
         status,
         manifest,
     )
+    artifact_browser_index = _runtime_export_artifact_browser_index_v1(
+        artifact_filenames=artifacts,
+        required_filenames=required_filenames,
+        recommended_filenames=recommended_filenames,
+    )
     findings = _runtime_export_diagnostic_findings(
         manifest_ok=manifest_ok,
         review_status=review_status,
@@ -966,6 +1377,7 @@ def build_runtime_export_diagnostics_bundle_v1(
             "present_recommended_filenames": present_recommended,
             "missing_recommended_filenames": missing_recommended,
         },
+        "artifact_browser_index_v1": artifact_browser_index,
         "model_boundaries": {
             "event_kernel_policy": "NO_EVENT_KERNEL_BEHAVIOR_CHANGE",
             "packet_level_simulation": False,

@@ -871,7 +871,8 @@ export const DataPanel = memo(function DataPanel({
     runtimeExportCatalog,
     runtimeExportComparePackageId,
     runtimeExportReviewSummary,
-    benchmarkEvidenceFocus
+    benchmarkEvidenceFocus,
+    runtimeExportDiagnosticsBundle
   );
   const exportDiagnosticsDisplay = buildDataPanelExportDiagnosticsDisplay(
     runtimeExportDiagnosticsBundle
@@ -2372,6 +2373,13 @@ export const DataPanel = memo(function DataPanel({
                 <span>{exportArtifactHealthDisplay.sourceLabel}</span>
                 <small>{exportArtifactHealthDisplay.summaryLabel}</small>
               </div>
+              {exportArtifactHealthDisplay.browserLabels.length > 0 ? (
+                <div className="data-panel-export-compare-meta">
+                  {exportArtifactHealthDisplay.browserLabels.map((label) => (
+                    <span key={label}>{label}</span>
+                  ))}
+                </div>
+              ) : null}
               <div className="data-panel-export-artifact-health-grid">
                 {exportArtifactHealthDisplay.rows.map((row) =>
                   row.href && !row.inspectable ? (
@@ -2386,7 +2394,8 @@ export const DataPanel = memo(function DataPanel({
                         {row.statusLabel}
                       </strong>
                       <small>
-                        {row.roleLabel} / {row.sizeLabel} / {row.hashLabel}
+                        {row.roleLabel} / {row.categoryLabel} / {row.sizeLabel} /{" "}
+                        {row.hashLabel}
                       </small>
                       {row.focused ? (
                         <small className="data-panel-export-artifact-focus-label">
@@ -2411,7 +2420,8 @@ export const DataPanel = memo(function DataPanel({
                         {row.statusLabel}
                       </strong>
                       <small>
-                        {row.roleLabel} / {row.sizeLabel} / {row.hashLabel}
+                        {row.roleLabel} / {row.categoryLabel} / {row.sizeLabel} /{" "}
+                        {row.hashLabel}
                       </small>
                       {row.focused ? (
                         <small className="data-panel-export-artifact-focus-label">
@@ -2458,6 +2468,13 @@ export const DataPanel = memo(function DataPanel({
                   <span key={label}>{label}</span>
                 ))}
               </div>
+              {exportDiagnosticsStatus.artifactBrowserLabels.length > 0 ? (
+                <div className="data-panel-export-diagnostics-boundaries">
+                  {exportDiagnosticsStatus.artifactBrowserLabels.map((label) => (
+                    <span key={label}>{label}</span>
+                  ))}
+                </div>
+              ) : null}
               {exportDiagnosticsStatus.modelBoundaryLabels.length > 0 ? (
                 <div className="data-panel-export-diagnostics-boundaries">
                   {exportDiagnosticsStatus.modelBoundaryLabels.map((label) => (
@@ -12997,12 +13014,15 @@ export interface DataPanelExportArtifactHealthDisplay {
   packageId: string;
   sourceLabel: string;
   summaryLabel: string;
+  browserLabels: readonly string[];
   rows: readonly DataPanelExportArtifactHealthRow[];
 }
 
 export interface DataPanelExportArtifactHealthRow {
   filename: string;
   roleLabel: string;
+  categoryLabel: string;
+  reviewRoleLabel: string;
   statusLabel: string;
   sizeLabel: string;
   hashLabel: string;
@@ -13012,6 +13032,8 @@ export interface DataPanelExportArtifactHealthRow {
   inspectable: boolean;
   focused: boolean;
   focusLabel: string;
+  jsonPointer: string;
+  defaultInspectorFilter: string;
   title: string;
 }
 
@@ -14511,21 +14533,23 @@ export function buildDataPanelArtifactHealthInspectorFocus(
   if (row === null || row === undefined || !row.inspectable || row.href === null) {
     return null;
   }
+  const pointerLabel = dataPanelJsonPointerDisplayLabel(row.jsonPointer);
   return {
     focusSourceLabel: "Artifact inspector focus",
     tone: row.present ? "match" : "pending",
     statusLabel: `artifact / ${row.filename}`,
     summaryLabel: `${row.statusLabel} / ${row.hashLabel}`,
     metaLabels: [
-      `${row.roleLabel} / ${row.sizeLabel} / ${row.hashLabel}`,
-      "json root /",
+      `${row.roleLabel} / ${row.categoryLabel} / ${row.sizeLabel} / ${row.hashLabel}`,
+      row.reviewRoleLabel,
+      `json ${pointerLabel}`,
       "read-only package artifact"
-    ],
-    jsonPointer: "",
-    defaultInspectorFilter: "",
+    ].filter((label) => label.length > 0),
+    jsonPointer: row.jsonPointer,
+    defaultInspectorFilter: row.defaultInspectorFilter,
     artifactLabel: row.filename,
     artifactHref: row.href,
-    artifactTitle: `${row.title} / read-only JSON inspector`
+    artifactTitle: `${row.title} / ${pointerLabel} / read-only JSON inspector`
   };
 }
 
@@ -16243,7 +16267,8 @@ export function buildDataPanelExportArtifactHealthDisplay(
   catalog: RuntimeExportCatalogV1 | null | undefined,
   selectedPackageId: string | null | undefined,
   reviewSummary: RuntimeExportReviewSummaryV1 | null | undefined,
-  benchmarkEvidenceFocus: DataPanelBenchmarkEvidenceFocus | null | undefined = null
+  benchmarkEvidenceFocus: DataPanelBenchmarkEvidenceFocus | null | undefined = null,
+  diagnosticsBundle: RuntimeExportDiagnosticsBundleV1 | null | undefined = null
 ): DataPanelExportArtifactHealthDisplay | null {
   if (
     catalog === null ||
@@ -16257,6 +16282,13 @@ export function buildDataPanelExportArtifactHealthDisplay(
   if (record === null) {
     return null;
   }
+  const artifactBrowserIndex =
+    diagnosticsBundle?.package.package_id === selectedPackageId
+      ? diagnosticsBundle.artifact_browser_index_v1
+      : undefined;
+  const browserItemsByFilename = new Map(
+    (artifactBrowserIndex?.items ?? []).map((item) => [item.filename, item])
+  );
   const files = [...record.files].sort(compareRuntimeExportCatalogFiles);
   const filesByName = new Map(files.map((file) => [file.filename, file]));
   const requiredFilenames = new Set(
@@ -16273,15 +16305,22 @@ export function buildDataPanelExportArtifactHealthDisplay(
     ...new Set([
       ...Array.from(requiredFilenames),
       ...files.map((file) => file.filename),
-      ...Array.from(missingRequiredFilenames)
+      ...Array.from(missingRequiredFilenames),
+      ...(artifactBrowserIndex?.items.map((item) => item.filename) ?? [])
     ])
   ].sort((left, right) => left.localeCompare(right));
   const rows = orderedFilenames.map((filename) => {
     const file = filesByName.get(filename) ?? null;
-    const required = requiredFilenames.has(filename);
-    const missing = missingRequiredFilenames.has(filename) || (required && file === null);
+    const browserItem = browserItemsByFilename.get(filename) ?? null;
+    const required = browserItem?.required ?? requiredFilenames.has(filename);
+    const missing =
+      missingRequiredFilenames.has(filename) ||
+      (required && file === null) ||
+      browserItem?.present === false;
     const present = file !== null && !missing;
-    const inspectable = present && isDataPanelJsonArtifactFilename(filename);
+    const inspectable =
+      present &&
+      (browserItem?.inspectable_json ?? isDataPanelJsonArtifactFilename(filename));
     const focused = benchmarkEvidenceFocus?.artifactLabel === filename;
     const focusLabel = focused
       ? `${benchmarkEvidenceFocus.statusLabel} / ${benchmarkEvidenceFocus.summaryLabel}`
@@ -16290,6 +16329,8 @@ export function buildDataPanelExportArtifactHealthDisplay(
       filename,
       roleLabel: required ? "必需" : "附加",
       statusLabel: missing ? "缺失" : required ? "必需已登记" : "附加已登记",
+      categoryLabel: browserItem?.category_label ?? "Catalog artifact",
+      reviewRoleLabel: browserItem?.review_role ?? "",
       sizeLabel: file ? formatRuntimeExportFileBytes(file.bytes) : "-",
       hashLabel: file ? shortRuntimeHash(file.sha256) : "-",
       href: file ? runtimeExportPackageFileHref(selectedPackageId, filename) : null,
@@ -16298,6 +16339,8 @@ export function buildDataPanelExportArtifactHealthDisplay(
       inspectable,
       focused,
       focusLabel,
+      jsonPointer: browserItem?.default_json_pointer ?? "",
+      defaultInspectorFilter: browserItem?.filter_hint ?? "",
       title: `${filename} / ${missing ? "缺失" : "已登记"} / ${
         file ? file.sha256 : "no file hash"
       }`
@@ -16305,6 +16348,7 @@ export function buildDataPanelExportArtifactHealthDisplay(
   });
   const missingCount = rows.filter((row) => !row.present).length;
   return {
+    browserLabels: buildDataPanelArtifactBrowserLabels(artifactBrowserIndex),
     packageId: selectedPackageId,
     sourceLabel: `${catalog.source} / ${record.export_type} / files`,
     summaryLabel: `${selectedPackageId} / 登记 ${formatCount(
@@ -16312,6 +16356,32 @@ export function buildDataPanelExportArtifactHealthDisplay(
     )} 个文件 / 缺失 ${formatCount(missingCount)} 个`,
     rows
   };
+}
+
+function buildDataPanelArtifactBrowserLabels(
+  index: RuntimeExportDiagnosticsBundleV1["artifact_browser_index_v1"] | null | undefined
+): readonly string[] {
+  if (index === null || index === undefined) {
+    return [];
+  }
+  return [
+    `${index.source} / ${index.index_scope}`,
+    `artifact browser ${formatCount(index.item_count)} items / ${formatCount(
+      index.category_count
+    )} groups`,
+    `present ${formatCount(index.present_artifact_count)} / missing required ${formatCount(
+      index.missing_required_count
+    )} / missing recommended ${formatCount(index.missing_recommended_count)}`,
+    `default focus ${index.default_focus_filename || "none"}`,
+    ...index.categories
+      .slice(0, 6)
+      .map(
+        (category) =>
+          `${category.category_label} ${formatCount(
+            category.present_count
+          )}/${formatCount(category.item_count)}`
+      )
+  ];
 }
 
 function selectRuntimeExportCatalogRecordForPackage(
@@ -16394,6 +16464,7 @@ export interface DataPanelExportDiagnosticsDisplay {
   statusLabel: string;
   summaryLabel: string;
   metaLabels: readonly string[];
+  artifactBrowserLabels: readonly string[];
   modelBoundaryLabels: readonly string[];
   findingRows: readonly DataPanelExportDiagnosticsFindingRow[];
   actionLabels: readonly string[];
@@ -16405,6 +16476,7 @@ export interface DataPanelExportDiagnosticsStatus {
   statusLabel: string;
   summaryLabel: string;
   metaLabels: readonly string[];
+  artifactBrowserLabels: readonly string[];
   modelBoundaryLabels: readonly string[];
   findingRows: readonly DataPanelExportDiagnosticsFindingRow[];
   actionLabels: readonly string[];
@@ -17040,6 +17112,9 @@ export function buildDataPanelExportDiagnosticsDisplay(
       `WARN ${formatCount(warnCount)}`,
       `events ${formatCount(diagnostics.runtime.processed_event_count)}`
     ],
+    artifactBrowserLabels: buildDataPanelArtifactBrowserLabels(
+      diagnostics.artifact_browser_index_v1
+    ),
     modelBoundaryLabels: [
       diagnostics.model_boundaries.event_kernel_policy,
       diagnostics.model_boundaries.packet_level_simulation
@@ -17095,6 +17170,7 @@ export function buildDataPanelExportDiagnosticsStatus(
       statusLabel: "正在加载诊断包",
       summaryLabel: selectedPackageId ?? "等待复盘包选择",
       metaLabels: ["只读诊断", "不执行恢复或重放"],
+      artifactBrowserLabels: [],
       modelBoundaryLabels: [],
       findingRows: [],
       actionLabels: [],
@@ -17107,6 +17183,7 @@ export function buildDataPanelExportDiagnosticsStatus(
       statusLabel: "诊断包加载失败",
       summaryLabel: selectedPackageId ?? "未知复盘包",
       metaLabels: [error],
+      artifactBrowserLabels: [],
       modelBoundaryLabels: [],
       findingRows: [],
       actionLabels: [],

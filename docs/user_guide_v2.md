@@ -328,6 +328,14 @@ step opens `user_configuration_template_validation_v1.json` directly at
 `/template_validation/templates`, which is the exported per-template validation
 row list. This is an inspection path only: it does not reload templates,
 revalidate configs, or mutate the active runtime session.
+The diagnostics artifact also exposes `artifact_browser_index_v1`, which is the
+backend source of truth for artifact categories, present/missing state, review
+roles, default JSON pointers, and filter hints. The dashboard artifact-health
+card and diagnostics drawer display this browser index when it is available, so
+operators can move from a result package to the relevant KPI, business-demand,
+route/service, reproducibility, or audit artifact without browser-side semantic
+inference. Older packages that do not contain the index continue to use the
+catalog and review-summary fallback.
 The traffic-demand explanation step opens `traffic_demand_explanation_v1.json`
 directly at `/traffic_demand_explanation`, so an operator can inspect generated
 request counts, compute-service request counts, class rows, per-user state

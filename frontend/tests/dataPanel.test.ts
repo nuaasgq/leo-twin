@@ -2887,6 +2887,123 @@ describe("buildDataPanelExportCatalogDisplay", () => {
     ).toBeNull();
   });
 
+  it("uses backend artifact browser index for artifact health review hints", () => {
+    const catalog = {
+      version: "v1",
+      source: "BACKEND_RUNTIME_EXPORT_CATALOG",
+      catalog_scope: "PERSISTED_EXPORT_PACKAGES",
+      catalog_file: "artifacts/runtime_exports/runtime_export_catalog_v1.json",
+      export_root: "artifacts/runtime_exports",
+      record_count: 1,
+      catalog_hash:
+        "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      latest_export: null,
+      records: [
+        {
+          catalog_key: "ARCHIVE:pkg-review",
+          export_type: "ARCHIVE",
+          package_id: "pkg-review",
+          package_dir: "artifacts/runtime_exports/pkg-review",
+          relative_package_dir: "pkg-review",
+          file_count: 1,
+          manifest_hash:
+            "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+          current_sim_time: 12,
+          processed_event_count: 100,
+          archive_filename: "pkg-review.zip",
+          archive_sha256:
+            "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+          archive_bytes: 8192,
+          files: [
+            {
+              name: "network_kpi_variation_explanation",
+              filename: "network_kpi_variation_explanation_v1.json",
+              bytes: 512,
+              sha256:
+                "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+            }
+          ]
+        }
+      ]
+    };
+    const diagnostics = {
+      package: { package_id: "pkg-review" },
+      artifact_browser_index_v1: {
+        version: "v1",
+        index_id: "leo_twin.runtime_export_artifact_browser_index.v1",
+        source: "BACKEND_RUNTIME_EXPORT_DIAGNOSTICS",
+        index_scope: "RESULT_PACKAGE_ARTIFACT_BROWSER",
+        artifact_count: 1,
+        artifact_filenames: ["network_kpi_variation_explanation_v1.json"],
+        item_count: 1,
+        present_artifact_count: 1,
+        required_artifact_count: 0,
+        recommended_artifact_count: 1,
+        missing_required_count: 0,
+        missing_recommended_count: 0,
+        category_count: 1,
+        default_focus_filename: "network_kpi_variation_explanation_v1.json",
+        categories: [
+          {
+            category: "NETWORK_KPI_EVIDENCE",
+            category_label: "Network KPI evidence",
+            item_count: 1,
+            present_count: 1,
+            missing_count: 0
+          }
+        ],
+        items: [
+          {
+            filename: "network_kpi_variation_explanation_v1.json",
+            logical_name: "network_kpi_variation_explanation_v1",
+            category: "NETWORK_KPI_EVIDENCE",
+            category_label: "Network KPI evidence",
+            review_priority: 120,
+            review_role: "Network KPI variation explanation.",
+            format: "json",
+            content: "Explains why flow-level KPI values moved or stayed flat.",
+            required: false,
+            recommended: true,
+            present: true,
+            inspectable_json: true,
+            default_json_pointer: "/evidence",
+            filter_hint: "variation"
+          }
+        ],
+        browser_hash:
+          "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    };
+
+    const display = buildDataPanelExportArtifactHealthDisplay(
+      catalog,
+      "pkg-review",
+      null,
+      null,
+      diagnostics as any
+    );
+    const row = display?.rows.find(
+      (item) => item.filename === "network_kpi_variation_explanation_v1.json"
+    );
+
+    expect(display?.browserLabels).toContain(
+      "BACKEND_RUNTIME_EXPORT_DIAGNOSTICS / RESULT_PACKAGE_ARTIFACT_BROWSER"
+    );
+    expect(display?.browserLabels).toContain("Network KPI evidence 1/1");
+    expect(row).toMatchObject({
+      categoryLabel: "Network KPI evidence",
+      reviewRoleLabel: "Network KPI variation explanation.",
+      jsonPointer: "/evidence",
+      defaultInspectorFilter: "variation",
+      inspectable: true
+    });
+    expect(buildDataPanelArtifactHealthInspectorFocus(row)).toMatchObject({
+      artifactLabel: "network_kpi_variation_explanation_v1.json",
+      jsonPointer: "/evidence",
+      defaultInspectorFilter: "variation"
+    });
+  });
+
   it("marks the artifact health row linked to the selected benchmark evidence focus", () => {
     const catalog = {
       version: "v1",
@@ -3019,6 +3136,8 @@ describe("buildDataPanelExportCatalogDisplay", () => {
       buildDataPanelArtifactHealthInspectorFocus({
         filename: "events.jsonl",
         roleLabel: "required",
+        categoryLabel: "Raw runtime evidence",
+        reviewRoleLabel: "Processed event evidence for replay review.",
         statusLabel: "registered",
         sizeLabel: "1 KiB",
         hashLabel: "events",
@@ -3028,6 +3147,8 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         inspectable: false,
         focused: false,
         focusLabel: "",
+        jsonPointer: "",
+        defaultInspectorFilter: "event",
         title: "events.jsonl"
       })
     ).toBeNull();
@@ -6293,6 +6414,100 @@ describe("buildDataPanelExportCompareDisplay", () => {
         generated_config_hash: "sha256:generated",
         review_summary_hash: "sha256:summary"
       },
+      artifact_browser_index_v1: {
+        version: "v1",
+        index_id: "leo_twin.runtime_export_artifact_browser_index.v1",
+        source: "BACKEND_RUNTIME_EXPORT_DIAGNOSTICS",
+        index_scope: "RESULT_PACKAGE_ARTIFACT_BROWSER",
+        artifact_count: 9,
+        artifact_filenames: [
+          "config_snapshot.json",
+          "diagnostics_bundle_v1.json",
+          "events.jsonl",
+          "manifest.json",
+          "metrics.csv",
+          "review_summary_v1.json",
+          "service_lifecycle_trace_v2.json",
+          "summary.json",
+          "user_configuration_template_validation_v1.json"
+        ],
+        item_count: 3,
+        present_artifact_count: 3,
+        required_artifact_count: 1,
+        recommended_artifact_count: 2,
+        missing_required_count: 0,
+        missing_recommended_count: 0,
+        category_count: 2,
+        default_focus_filename: "diagnostics_bundle_v1.json",
+        categories: [
+          {
+            category: "OPERATOR_REVIEW",
+            category_label: "Operator review",
+            item_count: 2,
+            present_count: 2,
+            missing_count: 0
+          },
+          {
+            category: "NETWORK_KPI_EVIDENCE",
+            category_label: "Network KPI evidence",
+            item_count: 1,
+            present_count: 1,
+            missing_count: 0
+          }
+        ],
+        items: [
+          {
+            filename: "diagnostics_bundle_v1.json",
+            logical_name: "diagnostics_bundle_v1",
+            category: "OPERATOR_REVIEW",
+            category_label: "Operator review",
+            review_priority: 20,
+            review_role: "Deterministic health and finding summary.",
+            format: "json",
+            content: "Package diagnostics and artifact health.",
+            required: false,
+            recommended: true,
+            present: true,
+            inspectable_json: true,
+            default_json_pointer: "/artifact_browser_index_v1",
+            filter_hint: "artifact_browser_index_v1"
+          },
+          {
+            filename: "review_summary_v1.json",
+            logical_name: "review_summary_v1",
+            category: "OPERATOR_REVIEW",
+            category_label: "Operator review",
+            review_priority: 30,
+            review_role: "User-readable package review summary.",
+            format: "json",
+            content: "Scenario summary and review notes.",
+            required: false,
+            recommended: true,
+            present: true,
+            inspectable_json: true,
+            default_json_pointer: "/artifacts",
+            filter_hint: "artifacts"
+          },
+          {
+            filename: "network_kpi_variation_explanation_v1.json",
+            logical_name: "network_kpi_variation_explanation_v1",
+            category: "NETWORK_KPI_EVIDENCE",
+            category_label: "Network KPI evidence",
+            review_priority: 120,
+            review_role: "Network KPI variation explanation.",
+            format: "json",
+            content: "Explains KPI variation.",
+            required: false,
+            recommended: true,
+            present: true,
+            inspectable_json: true,
+            default_json_pointer: "/evidence",
+            filter_hint: "variation"
+          }
+        ],
+        browser_hash:
+          "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
       artifact_health: {
         artifact_count: 9,
         artifact_filenames: [
@@ -6379,6 +6594,11 @@ describe("buildDataPanelExportCompareDisplay", () => {
     });
     expect(display?.modelBoundaryLabels).toContain("无包级仿真");
     expect(display?.modelBoundaryLabels).toContain("禁用 STK/EXATA/AFSIM/DDS");
+    expect(display?.artifactBrowserLabels).toContain(
+      "BACKEND_RUNTIME_EXPORT_DIAGNOSTICS / RESULT_PACKAGE_ARTIFACT_BROWSER"
+    );
+    expect(display?.artifactBrowserLabels).toContain("Operator review 2/2");
+    expect(display?.artifactBrowserLabels).toContain("Network KPI evidence 1/1");
     expect(display?.modelBoundaryLabels).toContain(
       "route compare compare with live"
     );
@@ -6426,6 +6646,7 @@ describe("buildDataPanelExportCompareDisplay", () => {
       statusLabel: "正在加载诊断包",
       summaryLabel: "pkg-next",
       metaLabels: ["只读诊断", "不执行恢复或重放"],
+      artifactBrowserLabels: [],
       modelBoundaryLabels: [],
       findingRows: [],
       actionLabels: [],

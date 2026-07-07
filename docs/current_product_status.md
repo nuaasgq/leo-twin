@@ -185,6 +185,13 @@ the card without loading the full JSON artifact.
   diagnostics, scenario review, audit index, and dashboard export review
   labels. Offline package review can inspect why flow-level KPI values moved
   or stayed flat without loading a live runtime.
+- `diagnostics_bundle_v1.json` now includes backend-owned
+  `artifact_browser_index_v1`, a deterministic package artifact browser index
+  that groups core reproducibility, operator-review, KPI, business-demand,
+  route/service, raw-runtime, and audit/handoff artifacts. The dashboard
+  displays this backend-provided index in artifact health and diagnostics
+  review surfaces and uses its JSON pointer/filter hints for read-only artifact
+  inspection instead of hardcoding those review semantics locally.
 - Runtime export packages now also include
   `user_configuration_template_validation_v1.json` and propagate approved
   template validation status, valid/invalid counts, and evidence hash into the

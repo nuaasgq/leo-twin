@@ -11,6 +11,7 @@ from leo_twin.services.benchmark_scenarios import (
 )
 from leo_twin.services.result_package_contract import (
     RESULT_PACKAGE_CONTRACT_V1_ID,
+    RUNTIME_EXPORT_ARTIFACT_BROWSER_INDEX_V1_ID,
     RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1_ID,
     RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_V1_ID,
     RUNTIME_EXPORT_NETWORK_KPI_FORMULA_EVIDENCE_V1_ID,
@@ -103,6 +104,7 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
         "diagnostics_bundle_v1.json",
         "network_kpi_benchmark_validation_v1.json",
         "network_kpi_formula_evidence_v1.json",
+        "network_kpi_variation_explanation_v1.json",
         "user_configuration_template_validation_v1.json",
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         "scenario_review_bundle_v1.json",
@@ -246,6 +248,7 @@ def test_result_package_summary_accepts_complete_package_record() -> None:
         "diagnostics_bundle_v1.json",
         "network_kpi_benchmark_validation_v1.json",
         "network_kpi_formula_evidence_v1.json",
+        "network_kpi_variation_explanation_v1.json",
         "user_configuration_template_validation_v1.json",
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         "scenario_review_bundle_v1.json",
@@ -292,6 +295,9 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
                 _network_kpi_benchmark_validation()
             ),
             "network_kpi_formula_evidence_v1": _network_kpi_formula_evidence(),
+            "network_kpi_variation_explanation_v1": (
+                _network_kpi_variation_explanation()
+            ),
             "user_service_request_summary_v2": _user_service_request_summary(),
             "runtime_export_user_service_request_policy_v1": (
                 _user_service_request_export_policy()
@@ -786,6 +792,9 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
                 _network_kpi_benchmark_validation()
             ),
             "network_kpi_formula_evidence_v1": _network_kpi_formula_evidence(),
+            "network_kpi_variation_explanation_v1": (
+                _network_kpi_variation_explanation()
+            ),
             "user_service_request_summary_v2": _user_service_request_summary(),
             "runtime_export_user_service_request_policy_v1": (
                 _user_service_request_export_policy()
@@ -815,6 +824,7 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
         "metrics.csv",
         "network_kpi_benchmark_validation_v1.json",
         "network_kpi_formula_evidence_v1.json",
+        "network_kpi_variation_explanation_v1.json",
         "user_configuration_template_validation_v1.json",
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         "review_summary_v1.json",
@@ -889,6 +899,23 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
     assert first["route_comparison_review"]["exported_rows_only"] is True
     assert first["artifact_health"]["missing_required_filenames"] == ()
     assert first["artifact_health"]["missing_recommended_filenames"] == ()
+    artifact_browser = first["artifact_browser_index_v1"]
+    assert artifact_browser["index_id"] == RUNTIME_EXPORT_ARTIFACT_BROWSER_INDEX_V1_ID
+    assert artifact_browser["index_scope"] == "RESULT_PACKAGE_ARTIFACT_BROWSER"
+    assert artifact_browser["default_focus_filename"] == "scenario_review_bundle_v1.json"
+    assert artifact_browser["missing_required_count"] == 0
+    assert artifact_browser["browser_hash"].startswith("sha256:")
+    categories = {item["category"]: item for item in artifact_browser["categories"]}
+    assert categories["NETWORK_KPI_EVIDENCE"]["present_count"] == 3
+    variation_item = next(
+        item
+        for item in artifact_browser["items"]
+        if item["filename"] == "network_kpi_variation_explanation_v1.json"
+    )
+    assert variation_item["category"] == "NETWORK_KPI_EVIDENCE"
+    assert variation_item["present"] is True
+    assert variation_item["default_json_pointer"] == "/evidence"
+    assert variation_item["filter_hint"] == "variation"
     assert first["model_boundaries"]["event_replay_restore"] is False
     assert first["model_boundaries"]["route_recomputation"] is False
     assert first["model_boundaries"]["service_recomputation"] is False
@@ -916,6 +943,9 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
             "route_explanation_summary_v1": _route_summary(),
             "route_provenance_trust_summary_v1": _route_trust(),
             "network_kpi_formula_evidence_v1": _network_kpi_formula_evidence(),
+            "network_kpi_variation_explanation_v1": (
+                _network_kpi_variation_explanation()
+            ),
             "user_service_request_summary_v2": _user_service_request_summary(),
             "runtime_export_user_service_request_policy_v1": (
                 _user_service_request_export_policy()
@@ -947,6 +977,7 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
         "metrics.csv",
         "network_kpi_benchmark_validation_v1.json",
         "network_kpi_formula_evidence_v1.json",
+        "network_kpi_variation_explanation_v1.json",
         "user_configuration_template_validation_v1.json",
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         "review_summary_v1.json",
@@ -2698,6 +2729,7 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
         "metrics.csv",
         "network_kpi_benchmark_validation_v1.json",
         "network_kpi_formula_evidence_v1.json",
+        "network_kpi_variation_explanation_v1.json",
         "user_configuration_template_validation_v1.json",
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         "review_summary_v1.json",
@@ -2734,11 +2766,12 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
             "ROUTE_TRUST_EVIDENCE_MISSING",
             "NETWORK_KPI_BENCHMARK_VALIDATION_MISSING",
             "NETWORK_KPI_FORMULA_EVIDENCE_MISSING",
+            "NETWORK_KPI_VARIATION_EXPLANATION_MISSING",
             "USER_CONFIGURATION_TEMPLATE_VALIDATION_MISSING",
             "TRAFFIC_DEMAND_EXPLANATION_MISSING",
             "USER_SERVICE_REQUEST_SUMMARY_MISSING",
         }
-    assert diagnostics["finding_count"] == 6
+    assert diagnostics["finding_count"] == 7
 
 
 def _file(name: str, filename: str, sha256: str) -> dict[str, object]:
@@ -3067,6 +3100,33 @@ def _network_kpi_formula_evidence() -> dict[str, object]:
         ),
         "caveats": (
             "Formula evidence summarizes backend flow-level proxy inputs.",
+        ),
+    }
+
+
+def _network_kpi_variation_explanation() -> dict[str, object]:
+    return {
+        "version": "v1",
+        "explanation_id": "leo_twin.network_kpi_variation_explanation.v1",
+        "source": "NETWORK_KPI_PROVENANCE_V2_AND_TIME_SERIES",
+        "provenance_id": "leo_twin.network_kpi_provenance.v2",
+        "calibration_id": "leo_twin.network_kpi_calibration.v1",
+        "formula_evidence_id": "leo_twin.network_kpi_formula_evidence.v1",
+        "metric_model": "FLOW_LEVEL_PROXY",
+        "packet_level_simulation": False,
+        "explanation_status": "TIME_VARIATION_EXPLAINED",
+        "sample_count": 6,
+        "sim_time_span_s": 120.0,
+        "kpi_count": 2,
+        "time_varying_kpi_count": 1,
+        "flat_kpi_count": 1,
+        "zero_latest_kpi_count": 0,
+        "missing_explanation_count": 0,
+        "model_assumptions": (
+            "KPI variation is explained by backend flow-level proxy inputs.",
+        ),
+        "caveats": (
+            "Variation explanation is deterministic and not packet-level.",
         ),
     }
 

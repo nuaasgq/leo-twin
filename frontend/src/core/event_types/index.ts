@@ -2659,6 +2659,7 @@ export interface RuntimeExportDiagnosticsBundleV1 {
   reproducibility: RuntimeExportDiagnosticsReproducibilityV1;
   reproducibility_boundary?: RuntimeExportReproducibilityBoundaryV1;
   artifact_health: RuntimeExportDiagnosticsArtifactHealthV1;
+  artifact_browser_index_v1?: RuntimeExportArtifactBrowserIndexV1;
   model_boundaries: RuntimeExportDiagnosticsModelBoundariesV1;
   findings: readonly RuntimeExportDiagnosticsFindingV1[];
   finding_count: number;
@@ -2899,6 +2900,51 @@ export interface RuntimeExportDiagnosticsArtifactHealthV1 {
   missing_required_filenames: readonly string[];
   present_recommended_filenames: readonly string[];
   missing_recommended_filenames: readonly string[];
+}
+
+export interface RuntimeExportArtifactBrowserIndexV1 {
+  version: "v1" | string;
+  index_id: string;
+  source: string;
+  index_scope: string;
+  artifact_count: number;
+  artifact_filenames: readonly string[];
+  item_count: number;
+  present_artifact_count: number;
+  required_artifact_count: number;
+  recommended_artifact_count: number;
+  missing_required_count: number;
+  missing_recommended_count: number;
+  category_count: number;
+  default_focus_filename: string;
+  categories: readonly RuntimeExportArtifactBrowserCategoryV1[];
+  items: readonly RuntimeExportArtifactBrowserItemV1[];
+  browser_hash: string;
+}
+
+export interface RuntimeExportArtifactBrowserCategoryV1 {
+  category: string;
+  category_label: string;
+  item_count: number;
+  present_count: number;
+  missing_count: number;
+}
+
+export interface RuntimeExportArtifactBrowserItemV1 {
+  filename: string;
+  logical_name: string;
+  category: string;
+  category_label: string;
+  review_priority: number;
+  review_role: string;
+  format: string;
+  content: string;
+  required: boolean;
+  recommended: boolean;
+  present: boolean;
+  inspectable_json: boolean;
+  default_json_pointer: string;
+  filter_hint: string;
 }
 
 export interface RuntimeExportDiagnosticsModelBoundariesV1 {

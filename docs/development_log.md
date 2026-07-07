@@ -5,6 +5,56 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-07 - Result Package Artifact Browser Index v1
+
+- Branch: `feature/T386-result-package-artifact-browser-index-v1`
+- Commit: pending in this commit
+- Scope: add backend-owned `artifact_browser_index_v1` to
+  `diagnostics_bundle_v1.json` so result-package artifacts are grouped by
+  review category with present/missing, required/recommended, inspectable JSON,
+  default JSON pointer, and filter-hint metadata. The dashboard artifact-health
+  card and diagnostics drawer consume this diagnostics field instead of
+  deriving artifact review categories locally. This task does not change Event
+  Kernel behavior, runtime models, packet-level simulation, result package file
+  counts, or frontend architecture.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `docs/current_product_status.md`
+  - `docs/result_package_contract_v1.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests\unit\test_result_package_contract_v1.py::test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready -q`
+    - Result: passed, 1 test.
+  - `python -m pytest tests\integration\test_result_package_export_v1.py tests\unit\test_result_package_contract_v1.py tests\unit\test_system_v2_upgrade_plan_docs.py tests\unit\test_user_guide_v2_docs.py -q`
+    - Result: passed, 39 tests.
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed, 1 test file / 219 tests using the bundled Codex
+      Node/pnpm runtime.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing large DataPanel chunk
+      warning.
+- Problems encountered and handling:
+  - Existing result-package unit fixtures had not all been updated with the
+    previous KPI variation explanation artifact/status evidence. The affected
+    fixtures were updated so ready scenarios include the backend evidence and
+    missing-evidence scenarios assert the deterministic warning explicitly.
+  - The frontend dashboard source contains existing non-ASCII UI text that
+    renders as mojibake in PowerShell output. Patches were applied in smaller
+    chunks around ASCII anchors to avoid touching unrelated UI text.
+  - Local runtime/generated config files were already dirty and remain outside
+    the staged task scope.
+- Known remaining issues / follow-up:
+  - The dashboard now shows backend-owned artifact-browser categories and JSON
+    pointer hints, but a larger virtualized artifact browser with search,
+    filters, and per-category drill-down remains a future dashboard task.
+
 ## 2026-07-07 - Export KPI Variation Explanation v1
 
 - Branch: `feature/T385-export-kpi-variation-explanation-v1`

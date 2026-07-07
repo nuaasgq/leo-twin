@@ -712,6 +712,10 @@ It reports:
 - the package reproducibility boundary copied from
   `config_snapshot.status.runtime_export_reproducibility_boundary_v1`;
 - required and recommended artifact coverage;
+- `artifact_browser_index_v1`, a deterministic browser index for result-package
+  artifacts. It groups artifacts by review category, records whether each
+  required/recommended/present artifact is inspectable JSON, and provides
+  backend-owned default JSON pointer and filter hints for artifact inspection;
 - explicit model boundaries: no Event Kernel behavior change, no packet-level
   simulation, and no STK/EXATA/AFSIM/DDS integration;
 - deterministic findings and operator next actions.
@@ -734,6 +738,12 @@ export review, diagnostics, scenario review, and audit-index sections when the
 backend artifact provides them. Scenario review workflows include
 `user_service_request_summary_v2.json` as a guided evidence row when the
 artifact is present or recommended by the backend package.
+When `artifact_browser_index_v1` is present, the dashboard displays the
+backend-owned artifact browser categories in both artifact health and
+diagnostics views, and uses each item's `default_json_pointer` plus
+`filter_hint` to seed the read-only JSON inspector. This keeps artifact review
+navigation deterministic and backend-owned while preserving catalog/review
+summary fallback behavior for older packages.
 The dashboard also loads the selected package's `manifest.json` and renders a
 read-only manifest inspector that shows stable manifest/scenario/config/
 generated/metrics/runtime hashes, catalog file hashes, diagnostics manifest

@@ -294,6 +294,26 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert diagnostics_bundle["type"] == "RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1"
     assert diagnostics_bundle["package"]["package_complete"] is True
     assert diagnostics_bundle["artifact_health"]["missing_required_filenames"] == []
+    artifact_browser = diagnostics_bundle["artifact_browser_index_v1"]
+    assert artifact_browser["index_id"] == (
+        "leo_twin.runtime_export_artifact_browser_index.v1"
+    )
+    assert artifact_browser["index_scope"] == "RESULT_PACKAGE_ARTIFACT_BROWSER"
+    assert artifact_browser["default_focus_filename"] == "scenario_review_bundle_v1.json"
+    assert artifact_browser["missing_required_count"] == 0
+    assert artifact_browser["browser_hash"].startswith("sha256:")
+    browser_categories = {
+        category["category"]: category for category in artifact_browser["categories"]
+    }
+    assert browser_categories["NETWORK_KPI_EVIDENCE"]["present_count"] >= 3
+    variation_browser_item = next(
+        item
+        for item in artifact_browser["items"]
+        if item["filename"] == "network_kpi_variation_explanation_v1.json"
+    )
+    assert variation_browser_item["category"] == "NETWORK_KPI_EVIDENCE"
+    assert variation_browser_item["present"] is True
+    assert variation_browser_item["default_json_pointer"] == "/evidence"
     assert diagnostics_bundle["route_trust"]["trust_id"] == route_trust_status[
         "trust_id"
     ]

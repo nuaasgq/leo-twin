@@ -1119,6 +1119,12 @@ Current Phase 3 progress:
   `network_kpi_variation_explanation_v1.json` and binds it into package
   review summary, diagnostics, scenario review, audit index, and dashboard
   export-review labels for offline reproducibility.
+- T386 adds backend-owned `artifact_browser_index_v1` to
+  `diagnostics_bundle_v1.json`. The index groups result-package artifacts by
+  review category, records present/missing/required/recommended state, and
+  carries default JSON pointer/filter hints. The dashboard artifact-health card
+  and diagnostics drawer consume this backend index so offline package browsing
+  does not depend on frontend-local artifact semantics.
 - T364 adds a dashboard detail-coverage status card for backend detail
   families, cursor windows, hidden rows, exact node cards, and pagination
   contract status. This improves the node-detail workstream without changing
