@@ -330,6 +330,14 @@ def test_metrics_collector_reports_flow_level_network_quality_proxy() -> None:
     summary = collector.summary()
 
     assert summary["network_quality_available_route_count"] == 2
+    assert summary["network_quality_route_decision_count"] == 3
+    assert summary["network_quality_available_route_decision_count"] == 2
+    assert summary["network_quality_unavailable_route_decision_count"] == 1
+    assert summary["network_quality_topology_blocked_route_count"] == 1
+    assert summary["network_quality_pressure_admission_rejected_route_count"] == 0
+    assert summary["network_quality_queue_pressure_route_count"] == 0
+    assert summary["network_quality_route_admission_model"] == "FLOW_PRESSURE_ADMISSION_V1"
+    assert summary["network_quality_route_admission_source"] == "ROUTE_UPDATE"
     assert summary["network_quality_offered_route_capacity_mbps"] == 200.0
     assert summary["network_quality_estimated_delivered_throughput_mbps"] == 120.0
     assert summary["network_quality_route_latency_avg_s"] == pytest.approx(0.05)
@@ -650,6 +658,59 @@ def test_metrics_collector_reports_effective_flow_level_network_quality() -> Non
         "network.quality.effective_delay_variation_s",
     ).value == pytest.approx(0.015)
 
+
+def test_metrics_collector_reports_route_admission_and_queue_pressure_evidence() -> None:
+    collector = MetricsCollector()
+    for event in (
+        _event(
+            "route-queued",
+            1.0,
+            EventType.ROUTE_UPDATE,
+            Route(
+                route_id="route-queued",
+                flow_id="flow-queued",
+                path=("user-a", "sat-a", "user-b"),
+                latency=0.03,
+                capacity=80.0,
+                available=True,
+                demand_capacity=90.0,
+                loss_rate=0.1,
+            ),
+            "network",
+        ),
+        _event(
+            "route-rejected",
+            1.0,
+            EventType.ROUTE_UPDATE,
+            Route(
+                route_id="route-rejected",
+                flow_id="flow-rejected",
+                path=("user-c", "sat-c", "user-d"),
+                latency=0.04,
+                capacity=0.0,
+                available=False,
+                demand_capacity=30.0,
+                loss_rate=0.2,
+            ),
+            "network",
+        ),
+    ):
+        collector.observe(event)
+
+    summary = collector.summary()
+
+    assert summary["network_quality_route_decision_count"] == 2
+    assert summary["network_quality_available_route_decision_count"] == 1
+    assert summary["network_quality_unavailable_route_decision_count"] == 1
+    assert summary["network_quality_topology_blocked_route_count"] == 0
+    assert summary["network_quality_pressure_admission_rejected_route_count"] == 1
+    assert summary["network_quality_pressure_admission_rejection_ratio"] == pytest.approx(0.5)
+    assert summary["network_quality_queue_pressure_route_count"] == 1
+    assert summary["network_quality_saturated_route_count"] == 1
+    assert summary["network_quality_max_route_pressure_loss_rate"] == pytest.approx(0.2)
+    assert summary["network_quality_queue_pressure_proxy"] == pytest.approx(1.0)
+    assert summary["network_quality_route_blocking_ratio"] == pytest.approx(0.5)
+    assert summary["network_quality_effective_loss_proxy_rate"] == pytest.approx(0.5)
 
 def test_metrics_collector_uses_route_demand_for_network_pressure_proxy() -> None:
     collector = MetricsCollector()

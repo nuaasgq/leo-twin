@@ -47,6 +47,12 @@ def test_network_kpi_provenance_v2_binds_metrics_to_network_contract() -> None:
         "network_quality_demand_loss_proxy_rate": 0.05,
         "network_quality_time_pressure_loss_proxy_rate": 0.07,
         "network_quality_route_blocking_ratio": 0.0,
+        "network_quality_route_decision_count": 4,
+        "network_quality_available_route_decision_count": 4,
+        "network_quality_unavailable_route_decision_count": 0,
+        "network_quality_pressure_admission_rejected_route_count": 0,
+        "network_quality_pressure_admission_rejection_ratio": 0.0,
+        "network_quality_topology_blocked_route_count": 0,
         "network_quality_loss_source": "PRESSURE_LOSS_PROXY",
         "network_quality_loss_source_label": "pressure loss proxy",
         "network_quality_loss_zero_reason": "POSITIVE_PROXY",
@@ -150,6 +156,23 @@ def test_network_kpi_provenance_v2_binds_metrics_to_network_contract() -> None:
         "network_quality_time_pressure_loss_proxy_rate"
     ]["selected_for_current_value"] is True
     assert loss["formula_trace"]["selected_input_count"] == 3
+
+    blocking = _kpi(provenance, "ROUTE_BLOCKING_RATIO")
+    blocking_fields = _source_fields(blocking)
+    assert blocking_fields[
+        "network_quality_pressure_admission_rejected_route_count"
+    ]["current_value"] == 0
+    blocking_inputs = _formula_inputs(blocking)
+    assert blocking_inputs[
+        "network_quality_route_decision_count"
+    ]["role"] == "SELECTED_RUNTIME_INPUT"
+    assert blocking["formula_trace"]["selected_source_fields"] == (
+        "network_quality_route_decision_count",
+        "network_quality_available_route_decision_count",
+        "network_quality_unavailable_route_decision_count",
+        "network_quality_pressure_admission_rejected_route_count",
+        "network_quality_topology_blocked_route_count",
+    )
 
     delay_variation = _kpi(provenance, "EFFECTIVE_DELAY_VARIATION_PROXY")
     assert delay_variation["current_value"] == 0.006

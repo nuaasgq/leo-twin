@@ -416,6 +416,9 @@ def _default_kpi_contracts() -> tuple[NetworkKpiSemanticContract, ...]:
             source_fields=(
                 "network.transport_loss_rate",
                 "network_quality_route_blocking_ratio",
+                "network_quality_pressure_admission_rejected_route_count",
+                "network_quality_pressure_admission_rejection_ratio",
+                "network_quality_topology_blocked_route_count",
                 "network_quality_failed_flow_ratio",
                 "network_quality_congestion_loss_proxy_rate",
                 "network_quality_demand_loss_proxy_rate",
@@ -463,9 +466,18 @@ def _default_kpi_contracts() -> tuple[NetworkKpiSemanticContract, ...]:
             display_name="Route blocking ratio",
             layer=NetworkLayer.NETWORK,
             unit="ratio",
-            source_fields=("Route.available", "Route.demand_capacity", "Route.capacity"),
+            source_fields=(
+                "network_quality_route_decision_count",
+                "network_quality_available_route_decision_count",
+                "network_quality_unavailable_route_decision_count",
+                "network_quality_pressure_admission_rejected_route_count",
+                "network_quality_topology_blocked_route_count",
+            ),
             formula_summary="Unavailable routes divided by all recent route decisions.",
-            interpretation="Fraction of recent flow routes blocked by topology or capacity.",
+            interpretation=(
+                "Fraction of recent flow routes blocked by topology, capacity, or "
+                "flow-pressure admission."
+            ),
             zero_value_semantics="No recent route decision is blocked.",
         ),
     )

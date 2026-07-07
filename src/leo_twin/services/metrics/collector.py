@@ -1296,9 +1296,19 @@ class MetricsCollector:
             _standard_deviation(route_latencies),
             self._route_latency_delta_average(),
         )
-        unavailable_routes = max(0, len(self._routes) - len(available_routes))
+        routes = tuple(self._routes[route_id] for route_id in sorted(self._routes))
+        unavailable_routes = max(0, len(routes) - len(available_routes))
+        pressure_admission_rejected_routes = tuple(
+            route for route in routes if not route.available and len(route.path) > 0
+        )
+        topology_blocked_routes = tuple(
+            route for route in routes if not route.available and len(route.path) == 0
+        )
         route_blocking_ratio = (
-            0.0 if not self._routes else unavailable_routes / len(self._routes)
+            0.0 if not routes else unavailable_routes / len(routes)
+        )
+        pressure_admission_rejection_ratio = (
+            0.0 if not routes else len(pressure_admission_rejected_routes) / len(routes)
         )
         failed_flow_ratio = self._failed_flow_ratio()
         congestion_proxy = _average(
@@ -1308,13 +1318,13 @@ class MetricsCollector:
                 if link.utilization is not None
             )
         )
-        route_loss_proxy_rate = _average(
-            tuple(
-                float(route.loss_rate)
-                for route in self._routes.values()
-                if route.loss_rate is not None
-            )
+        route_loss_values = tuple(
+            float(route.loss_rate)
+            for route in routes
+            if route.loss_rate is not None
         )
+        route_loss_proxy_rate = _average(route_loss_values)
+        max_route_pressure_loss_rate = max(route_loss_values, default=0.0)
         congestion_loss_proxy_rate = _congestion_loss_proxy_rate(congestion_proxy)
         loss_proxy_rate = _clamp_probability(
             max(
@@ -1339,6 +1349,20 @@ class MetricsCollector:
             else 0.0
         )
         demand_loss_proxy_rate = _congestion_loss_proxy_rate(demand_pressure_proxy)
+        queue_pressure_routes = tuple(
+            route
+            for route in available_routes
+            if (route.loss_rate is not None and route.loss_rate > 0.0)
+            or _route_demand_capacity(route) > route.capacity
+        )
+        saturated_routes = tuple(
+            route
+            for route in available_routes
+            if _route_demand_capacity(route) > route.capacity
+        )
+        queue_pressure_proxy = _clamp_probability(
+            max(demand_pressure_proxy, congestion_proxy, max_route_pressure_loss_rate)
+        )
         flow_quality = self._completed_flow_quality()
         completed_route_capacity = flow_quality["capacity_sum"]
         throughput_pressure_proxy = _clamp_probability(
@@ -1449,6 +1473,24 @@ class MetricsCollector:
             ),
             "network_quality_active_link_count": len(active_links),
             "network_quality_available_route_count": len(available_routes),
+            "network_quality_route_decision_count": len(routes),
+            "network_quality_available_route_decision_count": len(available_routes),
+            "network_quality_unavailable_route_decision_count": unavailable_routes,
+            "network_quality_topology_blocked_route_count": len(topology_blocked_routes),
+            "network_quality_pressure_admission_rejected_route_count": len(
+                pressure_admission_rejected_routes
+            ),
+            "network_quality_pressure_admission_rejection_ratio": float(
+                pressure_admission_rejection_ratio
+            ),
+            "network_quality_queue_pressure_route_count": len(queue_pressure_routes),
+            "network_quality_saturated_route_count": len(saturated_routes),
+            "network_quality_max_route_pressure_loss_rate": float(
+                max_route_pressure_loss_rate
+            ),
+            "network_quality_queue_pressure_proxy": float(queue_pressure_proxy),
+            "network_quality_route_admission_model": "FLOW_PRESSURE_ADMISSION_V1",
+            "network_quality_route_admission_source": "ROUTE_UPDATE",
             "network_quality_offered_route_capacity_mbps": offered_route_capacity,
             "network_quality_requested_route_demand_mbps": requested_route_demand,
             "network_quality_available_route_demand_mbps": available_route_demand,

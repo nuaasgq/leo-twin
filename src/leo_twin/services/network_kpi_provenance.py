@@ -95,6 +95,9 @@ _SELECTED_FIELDS_BY_SOURCE = {
     ),
     ("EFFECTIVE_LOSS_PROXY", "ROUTE_BLOCKING_RATIO"): (
         "network_quality_route_blocking_ratio",
+        "network_quality_pressure_admission_rejected_route_count",
+        "network_quality_pressure_admission_rejection_ratio",
+        "network_quality_topology_blocked_route_count",
     ),
     ("EFFECTIVE_LOSS_PROXY", "FAILED_FLOW_RATIO"): (
         "network_quality_failed_flow_ratio",
@@ -108,6 +111,13 @@ _SELECTED_FIELDS_BY_SOURCE = {
     ("EFFECTIVE_DELAY_VARIATION_PROXY", "PRESSURE_DELAY_VARIATION"): (
         "network_quality_pressure_delay_variation_proxy_s",
         "network_quality_time_pressure_delay_variation_proxy_s",
+    ),
+    ("ROUTE_BLOCKING_RATIO", "RUNTIME_SUMMARY_KEY"): (
+        "network_quality_route_decision_count",
+        "network_quality_available_route_decision_count",
+        "network_quality_unavailable_route_decision_count",
+        "network_quality_pressure_admission_rejected_route_count",
+        "network_quality_topology_blocked_route_count",
     ),
 }
 

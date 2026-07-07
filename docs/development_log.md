@@ -5,6 +5,52 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-08 - Network Pressure Provenance v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: pending in this commit
+- Scope: expose backend route-admission and queue-pressure evidence through
+  `metrics_summary` and bind those evidence fields into
+  `network_kpi_provenance_v2`. Metrics now report route decision counts,
+  available/unavailable decisions, topology-blocked route count,
+  flow-pressure-admission rejection count/ratio, queue-pressure route count,
+  saturated route count, max route pressure loss, and queue-pressure proxy. The
+  network KPI contract now declares these backend summary fields as source
+  fields for route blocking and effective loss provenance. This task does not
+  modify Event Kernel behavior, frontend code, routing topology selection,
+  packet-level behavior, or external simulator integrations.
+- Changed files/modules:
+  - `src/leo_twin/services/metrics/collector.py`
+  - `src/leo_twin/services/network_kpi_provenance.py`
+  - `src/leo_twin/schema/network_model_contract.py`
+  - `tests/unit/test_metrics_module.py`
+  - `tests/unit/test_network_kpi_provenance_v2.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src\leo_twin\services\metrics\collector.py src\leo_twin\services\network_kpi_provenance.py src\leo_twin\schema\network_model_contract.py tests\unit\test_metrics_module.py tests\unit\test_network_kpi_provenance_v2.py`
+    - Result: passed using the bundled Codex Python runtime.
+  - `python -c "... build_network_kpi_provenance_v2 ..."`
+    - Result: passed; route-blocking provenance selected all five backend
+      admission evidence inputs.
+  - `python -c "... MetricsCollector ..."`
+    - Result: passed; metrics summary reported pressure-admission rejection,
+      queue-pressure route, and saturated-route evidence from route samples.
+  - Target `pytest` command was not run in this no-approval continuation: the
+    project Python at `C:\Users\沈高青\AppData\Local\Programs\Python\Python314\python.exe`
+    was denied by the sandbox without escalation, and the bundled Codex Python
+    runtime is accessible but does not include `pytest`.
+- Problems encountered and handling:
+  - The user requested no further approval prompts. Commands requiring approval
+    were avoided; validation was limited to static compile and direct backend
+    smoke checks that do not require pytest.
+  - Local runtime/generated config files remain dirty from user/runtime state and
+    are intentionally outside this task scope.
+- Known remaining issues / follow-up:
+  - The pressure evidence is still inferred from flow-level Route outputs. The
+    next backend step should add an explicit route-pressure evidence record or
+    payload contract if product requirements need exact per-edge queue-state
+    inspection in runtime status/export packages.
 ## 2026-07-08 - Network Admission Queue Semantics v1
 
 - Branch: `feature/T401-network-admission-queue-v1`
