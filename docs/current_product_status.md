@@ -2,7 +2,7 @@
 
 Date: 2026-07-08
 
-Branch: `feature/T397-dashboard-service-trace-pinned-path-diff-v1`
+Branch: `feature/T398-dashboard-pinned-diff-review-report-v1`
 
 ## Local Entry Points
 
@@ -288,6 +288,10 @@ the card without loading the full JSON artifact.
   the same trace id. It compares `/service_trace/...` paths, plus the `/trace`
   shortcut root, across package and live payloads without replaying events or
   recomputing service lifecycle state.
+- Saved route and service-trace comparison review reports now persist pinned
+  path diff rows with pointer, package/live values, per-side resolution status,
+  comparison status, and match/difference counts. The dashboard saved-report
+  drawers summarize this pinned-path evidence without opening raw JSON.
 - Launcher health v2 reports backend/frontend port readiness, HTTP readiness,
   process ids, latest log paths, config paths, and recommended actions.
 - Operator diagnostics bundle captures launcher health, runtime status, version

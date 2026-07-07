@@ -746,6 +746,11 @@ Tasks:
     exact trace detail at `/service_trace/...` paths, with `/trace` as a
     shortcut root, and reports match, different, missing, or invalid without
     replaying events or recomputing lifecycle state.
+  - Status: T398 persists pinned-path diff rows into saved route and
+    service-trace comparison review reports. The result package now stores the
+    pointer, package/live values, per-side resolution status, comparison
+    status, and pinned-path counts for reviewed package/live evidence without
+    replaying events, recomputing routes, or recomputing lifecycle state.
 - V2-054: Add model assumptions panel.
   - Scope: backend-derived model caveats, fidelity mode, KPI provenance.
   - Depends on: V2-003, V2-021.

@@ -628,6 +628,16 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
                         "live_route_detail_hash": "sha256:live-route-1",
                         "compared_fields": ["path", "latency", "bottleneck"],
                         "different_fields": ["bottleneck", "latency"],
+                        "pinned_path_diffs": [
+                            {
+                                "pointer": "/route/latency_s",
+                                "package_value": "0.1",
+                                "live_value": "0.25",
+                                "package_status": "RESOLVED",
+                                "live_status": "RESOLVED",
+                                "comparison_status": "DIFFERENT",
+                            }
+                        ],
                         "status_reason": "FIELDS_DIFFER",
                         "operator_note": "reviewed during integration test",
                     }
@@ -664,6 +674,10 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert review_report["records"][0]["different_fields"] == (
         "latency",
         "bottleneck",
+    )
+    assert review_report["records"][0]["pinned_path_count"] == 1
+    assert review_report["records"][0]["pinned_path_diffs"][0]["pointer"] == (
+        "/route/latency_s"
     )
     assert review_report["records"][0]["operator_note"] == (
         "reviewed during integration test"
@@ -738,6 +752,16 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
                             "stage_counts",
                         ],
                         "different_fields": ["stage_counts", "terminal"],
+                        "pinned_path_diffs": [
+                            {
+                                "pointer": "/trace/terminal_state",
+                                "package_value": '"RUNNING"',
+                                "live_value": '"COMPLETE"',
+                                "package_status": "RESOLVED",
+                                "live_status": "RESOLVED",
+                                "comparison_status": "DIFFERENT",
+                            }
+                        ],
                         "status_reason": "FIELDS_DIFFER",
                         "operator_note": "reviewed service trace during integration test",
                     }
@@ -764,6 +788,11 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         "terminal",
         "stage_counts",
     )
+    assert service_trace_report["records"][0]["pinned_path_count"] == 1
+    assert service_trace_report["records"][0]["pinned_path_different_count"] == 1
+    assert service_trace_report["records"][0]["pinned_path_diffs"][0][
+        "pointer"
+    ] == "/trace/terminal_state"
     service_trace_report_path = (
         package_dir / "service_trace_comparison_review_report_v1.json"
     )

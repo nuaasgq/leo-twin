@@ -1902,8 +1902,21 @@ export interface RuntimeExportRouteComparisonReviewReportRecordV1 {
   different_field_count: number;
   compared_fields: readonly string[];
   different_fields: readonly string[];
+  pinned_path_count?: number;
+  pinned_path_match_count?: number;
+  pinned_path_different_count?: number;
+  pinned_path_diffs?: readonly RuntimeExportPinnedPathDiffRecordV1[];
   status_reason: string;
   operator_note: string;
+}
+
+export interface RuntimeExportPinnedPathDiffRecordV1 {
+  pointer: string;
+  package_value: string;
+  live_value: string;
+  package_status: "RESOLVED" | "MISSING" | "INVALID" | string;
+  live_status: "RESOLVED" | "MISSING" | "INVALID" | string;
+  comparison_status: "MATCH" | "DIFFERENT" | "MISSING" | "INVALID" | string;
 }
 
 export interface RuntimeExportServiceTraceComparisonReviewV1 {
@@ -1986,6 +1999,10 @@ export interface RuntimeExportServiceTraceComparisonReviewReportRecordV1 {
   different_field_count: number;
   compared_fields: readonly string[];
   different_fields: readonly string[];
+  pinned_path_count?: number;
+  pinned_path_match_count?: number;
+  pinned_path_different_count?: number;
+  pinned_path_diffs?: readonly RuntimeExportPinnedPathDiffRecordV1[];
   status_reason: string;
   operator_note: string;
 }

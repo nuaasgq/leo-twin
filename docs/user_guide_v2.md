@@ -187,7 +187,9 @@ The standalone dashboard is for data situation awareness:
   a path-level package/live route diff. When a package service trace is
   compared with the matching live exact trace detail, the same pins are reused
   for a service-trace path diff using `/service_trace/...` or the `/trace`
-  shortcut root;
+  shortcut root. Saved route and service-trace comparison reports persist those
+  pinned path rows into the package review JSON, including pointer, package/live
+  values, status, and match/difference counts;
 - service-trace closed-loop evidence, showing whether the selected service
   trace has correlated flow, route, user, satellite, compute-node, stage, and
   latency evidence from backend exact detail or the visible dashboard window.
@@ -320,15 +322,18 @@ After using `compare with live`, the package-vs-live route comparison card can
 save the currently displayed comparison into
 `route_comparison_review_report_v1.json`. The saved record includes the
 compared fields, different fields, package route detail hash, live route detail
-hash, status reason, dashboard operator note, and the backend boundary
-alignment hash/status from the package restore-preflight evidence. After the
-save completes, the dashboard package review area shows the report artifact
-from the backend export catalog with a direct JSON link and file hash. If the
-report artifact is available, the dashboard loads it read-only and summarizes
-saved record counts, MATCH/DIFFERENT/UNAVAILABLE/ERROR totals, route detail
-hash pairs, boundary alignment evidence, and operator notes. The report drawer
-can filter by status, search route id/status/hash/note text, and page through
-matching records without opening the raw JSON. Each package also exposes
+hash, status reason, dashboard operator note, optional pinned path diff rows,
+and the backend boundary alignment hash/status from the package
+restore-preflight evidence. Service trace comparisons use the same pattern in
+`service_trace_comparison_review_report_v1.json`. After the save completes,
+the dashboard package review area shows the report artifact from the backend
+export catalog with a direct JSON link and file hash. If the report artifact is
+available, the dashboard loads it read-only and summarizes saved record counts,
+MATCH/DIFFERENT/UNAVAILABLE/ERROR totals, route or trace detail hash pairs,
+boundary alignment evidence, operator notes, and pinned-path counts. The route
+report drawer can filter by status, search id/status/hash/note/pinned-path
+text, and page through matching records without opening the raw JSON. Each
+package also exposes
 `export_package_audit_index_v1.json`, which summarizes manifest, boundary
 alignment, user configuration binding, diagnostics, route review report, and
 artifact file hashes in one read-only audit entry. The dashboard loads this

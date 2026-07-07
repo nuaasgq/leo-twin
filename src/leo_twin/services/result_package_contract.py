@@ -4821,6 +4821,10 @@ def _runtime_export_route_comparison_review_metadata() -> dict[str, object]:
                 "live_route_detail_hash",
                 "matched_field_count",
                 "different_field_count",
+                "pinned_path_count",
+                "pinned_path_match_count",
+                "pinned_path_different_count",
+                "pinned_path_diffs",
                 "operator_note",
             ),
             "status_values": (
@@ -4897,6 +4901,10 @@ def _runtime_export_service_trace_comparison_review_metadata() -> dict[str, obje
                 "live_trace_detail_hash",
                 "matched_field_count",
                 "different_field_count",
+                "pinned_path_count",
+                "pinned_path_match_count",
+                "pinned_path_different_count",
+                "pinned_path_diffs",
                 "operator_note",
             ),
             "status_values": (
@@ -6014,6 +6022,34 @@ def _runtime_export_route_comparison_report_record(
     different_field_count = _integer(record.get("different_field_count"))
     if different_field_count <= 0:
         different_field_count = len(different_fields)
+    pinned_path_diffs = _runtime_export_pinned_path_diff_records(
+        record.get("pinned_path_diffs")
+    )
+    pinned_path_count = _integer(record.get("pinned_path_count"))
+    if pinned_path_count <= 0:
+        pinned_path_count = len(pinned_path_diffs)
+    else:
+        pinned_path_count = min(pinned_path_count, len(pinned_path_diffs))
+    pinned_path_match_count = _integer(record.get("pinned_path_match_count"))
+    if pinned_path_match_count <= 0 and pinned_path_diffs:
+        pinned_path_match_count = sum(
+            1
+            for item in pinned_path_diffs
+            if item["comparison_status"] == "MATCH"
+        )
+    pinned_path_match_count = max(
+        0, min(pinned_path_match_count, pinned_path_count)
+    )
+    pinned_path_different_count = _integer(
+        record.get("pinned_path_different_count")
+    )
+    if pinned_path_different_count <= 0 and pinned_path_diffs:
+        pinned_path_different_count = max(
+            0, pinned_path_count - pinned_path_match_count
+        )
+    pinned_path_different_count = max(
+        0, min(pinned_path_different_count, pinned_path_count)
+    )
     return {
         "route_id": str(record.get("route_id", "")),
         "comparison_status": status,
@@ -6025,6 +6061,10 @@ def _runtime_export_route_comparison_report_record(
         "different_field_count": different_field_count,
         "compared_fields": compared_fields,
         "different_fields": different_fields,
+        "pinned_path_count": pinned_path_count,
+        "pinned_path_match_count": pinned_path_match_count,
+        "pinned_path_different_count": pinned_path_different_count,
+        "pinned_path_diffs": pinned_path_diffs,
         "status_reason": str(record.get("status_reason", "")),
         "operator_note": str(record.get("operator_note", "")),
     }
@@ -6054,6 +6094,34 @@ def _runtime_export_service_trace_comparison_report_record(
     different_field_count = _integer(record.get("different_field_count"))
     if different_field_count <= 0:
         different_field_count = len(different_fields)
+    pinned_path_diffs = _runtime_export_pinned_path_diff_records(
+        record.get("pinned_path_diffs")
+    )
+    pinned_path_count = _integer(record.get("pinned_path_count"))
+    if pinned_path_count <= 0:
+        pinned_path_count = len(pinned_path_diffs)
+    else:
+        pinned_path_count = min(pinned_path_count, len(pinned_path_diffs))
+    pinned_path_match_count = _integer(record.get("pinned_path_match_count"))
+    if pinned_path_match_count <= 0 and pinned_path_diffs:
+        pinned_path_match_count = sum(
+            1
+            for item in pinned_path_diffs
+            if item["comparison_status"] == "MATCH"
+        )
+    pinned_path_match_count = max(
+        0, min(pinned_path_match_count, pinned_path_count)
+    )
+    pinned_path_different_count = _integer(
+        record.get("pinned_path_different_count")
+    )
+    if pinned_path_different_count <= 0 and pinned_path_diffs:
+        pinned_path_different_count = max(
+            0, pinned_path_count - pinned_path_match_count
+        )
+    pinned_path_different_count = max(
+        0, min(pinned_path_different_count, pinned_path_count)
+    )
     return {
         "trace_id": str(record.get("trace_id", "")),
         "comparison_status": status,
@@ -6065,9 +6133,47 @@ def _runtime_export_service_trace_comparison_report_record(
         "different_field_count": different_field_count,
         "compared_fields": compared_fields,
         "different_fields": different_fields,
+        "pinned_path_count": pinned_path_count,
+        "pinned_path_match_count": pinned_path_match_count,
+        "pinned_path_different_count": pinned_path_different_count,
+        "pinned_path_diffs": pinned_path_diffs,
         "status_reason": str(record.get("status_reason", "")),
         "operator_note": str(record.get("operator_note", "")),
     }
+
+
+def _runtime_export_pinned_path_diff_records(
+    value: object,
+) -> tuple[dict[str, object], ...]:
+    rows: list[dict[str, object]] = []
+    seen: set[str] = set()
+    for item in _records(value):
+        pointer = str(item.get("pointer", "")).strip()
+        if not pointer or pointer in seen:
+            continue
+        seen.add(pointer)
+        comparison_status = str(item.get("comparison_status", "")).strip().upper()
+        if comparison_status not in {"MATCH", "DIFFERENT", "MISSING", "INVALID"}:
+            comparison_status = "INVALID"
+        package_status = str(item.get("package_status", "")).strip().upper()
+        if package_status not in {"RESOLVED", "MISSING", "INVALID"}:
+            package_status = "INVALID"
+        live_status = str(item.get("live_status", "")).strip().upper()
+        if live_status not in {"RESOLVED", "MISSING", "INVALID"}:
+            live_status = "INVALID"
+        rows.append(
+            {
+                "pointer": pointer,
+                "package_value": str(item.get("package_value", "")),
+                "live_value": str(item.get("live_value", "")),
+                "package_status": package_status,
+                "live_status": live_status,
+                "comparison_status": comparison_status,
+            }
+        )
+        if len(rows) >= 8:
+            break
+    return tuple(rows)
 
 
 def _runtime_export_service_trace_comparison_report_record_matches_filter(
@@ -6089,6 +6195,20 @@ def _runtime_export_service_trace_comparison_report_record_matches_filter(
         str(record.get("operator_note", "")),
         *tuple(str(value) for value in _string_tuple(record.get("compared_fields"))),
         *tuple(str(value) for value in _string_tuple(record.get("different_fields"))),
+        *tuple(
+            value
+            for item in _runtime_export_pinned_path_diff_records(
+                record.get("pinned_path_diffs")
+            )
+            for value in (
+                str(item["pointer"]),
+                str(item["package_value"]),
+                str(item["live_value"]),
+                str(item["package_status"]),
+                str(item["live_status"]),
+                str(item["comparison_status"]),
+            )
+        ),
     )
     return any(query in _normalized_search_query(value) for value in values)
 

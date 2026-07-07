@@ -5,6 +5,54 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-08 - Dashboard Pinned Diff Review Report v1
+
+- Branch: `feature/T398-dashboard-pinned-diff-review-report-v1`
+- Commit: pending in this commit
+- Scope: persist exact-detail pinned path diff rows into saved route and
+  service-trace comparison review reports. Frontend save requests now include
+  bounded pinned-path diff evidence when available. Backend result-package
+  report builders normalize and retain pointer, package/live values, per-side
+  resolution status, comparison status, and match/difference counts. Saved
+  report drawers summarize pinned-path evidence without opening raw JSON. This
+  task does not change Event Kernel behavior, runtime advancement, simulation
+  models, packet-level behavior, external dependencies, or frontend routing
+  architecture.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/current_product_status.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests\unit\test_result_package_contract_v1.py tests\integration\test_result_package_export_v1.py -q`
+    - Result: passed, 35 tests.
+  - `pnpm --dir frontend test dataPanel.test.ts api.test.ts`
+    - Result: passed after fixing a missing test-local `pinnedPathDiff`
+      variable, 2 test files / 275 tests using the bundled Codex Node/pnpm
+      runtime.
+  - `python -m pytest tests\unit\test_system_v2_upgrade_plan_docs.py tests\unit\test_user_guide_v2_docs.py -q`
+    - Result: passed, 4 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing large `DataPanel` chunk
+      warning after minification.
+- Problems encountered and handling:
+  - The backend report record normalizers previously whitelisted only
+    fixed-field comparison fields, so frontend-sent pinned-path diff rows would
+    have been dropped. T398 adds explicit normalized fields instead of relying
+    on passthrough behavior.
+  - Local runtime/generated config files were already dirty and remain outside
+    the staged task scope.
+- Known remaining issues / follow-up:
+  - The saved report stores path-level evidence, but it does not yet provide a
+    separate backend cursor endpoint for route report records; route report
+    filtering remains frontend-local over the loaded artifact.
+
 ## 2026-07-08 - Dashboard Service Trace Pinned Path Diff v1
 
 - Branch: `feature/T397-dashboard-service-trace-pinned-path-diff-v1`

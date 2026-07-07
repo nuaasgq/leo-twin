@@ -5597,6 +5597,27 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           different_field_count: 2,
           compared_fields: ["path", "latency", "bottleneck"],
           different_fields: ["latency", "bottleneck"],
+          pinned_path_count: 2,
+          pinned_path_match_count: 1,
+          pinned_path_different_count: 1,
+          pinned_path_diffs: [
+            {
+              pointer: "/route/route_id",
+              package_value: '"route-b"',
+              live_value: '"route-b"',
+              package_status: "RESOLVED",
+              live_status: "RESOLVED",
+              comparison_status: "MATCH"
+            },
+            {
+              pointer: "/route/latency_s",
+              package_value: "0.1",
+              live_value: "0.25",
+              package_status: "RESOLVED",
+              live_status: "RESOLVED",
+              comparison_status: "DIFFERENT"
+            }
+          ],
           status_reason: "FIELDS_DIFFER",
           operator_note: ""
         },
@@ -5653,7 +5674,7 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           tone: "different",
           statusLabel: "DIFFERENT",
           hashLabel: "package cccccccccccc / live dddddddddddd",
-          noteLabel: "FIELDS_DIFFER"
+          noteLabel: "FIELDS_DIFFER / pinned paths 2 / different 1"
         }
       ],
       reportHref:
@@ -5709,6 +5730,18 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           routeId: "route-d",
           statusLabel: "ERROR",
           noteLabel: "operator needs retry"
+        }
+      ]
+    });
+    expect(
+      buildDataPanelExportRouteComparisonReviewReportDisplay(report, {
+        query: "/route/latency_s"
+      })
+    ).toMatchObject({
+      recordRows: [
+        {
+          routeId: "route-b",
+          noteLabel: "FIELDS_DIFFER / pinned paths 2 / different 1"
         }
       ]
     });
@@ -5815,6 +5848,27 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           different_field_count: 1,
           compared_fields: ["terminal"],
           different_fields: ["terminal"],
+          pinned_path_count: 2,
+          pinned_path_match_count: 1,
+          pinned_path_different_count: 1,
+          pinned_path_diffs: [
+            {
+              pointer: "/service_trace/trace/trace_id",
+              package_value: '"trace:run"',
+              live_value: '"trace:run"',
+              package_status: "RESOLVED",
+              live_status: "RESOLVED",
+              comparison_status: "MATCH"
+            },
+            {
+              pointer: "/trace/terminal_state",
+              package_value: '"RUNNING"',
+              live_value: '"COMPLETE"',
+              package_status: "RESOLVED",
+              live_status: "RESOLVED",
+              comparison_status: "DIFFERENT"
+            }
+          ],
           status_reason: "FIELDS_DIFFER",
           operator_note: "operator reviewed"
         }
@@ -5850,7 +5904,7 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           tone: "different",
           statusLabel: "DIFFERENT",
           hashLabel: "package aaaaaaaaaaaa / live bbbbbbbbbbbb",
-          noteLabel: "operator reviewed"
+          noteLabel: "operator reviewed / pinned paths 2 / different 1"
         }
       ],
       reportHref:
@@ -7849,6 +7903,11 @@ describe("buildDataPanelExportCompareDisplay", () => {
       packageItem,
       liveDetail
     );
+    const pinnedPathDiff = buildDataPanelExportServiceTracePinnedPathDiffDisplay(
+      packageItem,
+      liveDetail,
+      "/service_trace/trace/trace_id /trace/terminal_state"
+    );
 
     expect(
       buildDataPanelExportServiceTraceLiveComparisonStatus(
@@ -7986,12 +8045,18 @@ describe("buildDataPanelExportCompareDisplay", () => {
       packageItem,
       liveDetail
     );
+    const pinnedPathDiff = buildDataPanelExportServiceTracePinnedPathDiffDisplay(
+      packageItem,
+      liveDetail,
+      "/service_trace/trace/trace_id /trace/terminal_state"
+    );
 
     expect(
       buildDataPanelExportServiceTraceComparisonReviewRecord(
         packageItem,
         liveDetail,
-        comparison
+        comparison,
+        pinnedPathDiff
       )
     ).toMatchObject({
       trace_id: "trace:run",
@@ -8008,6 +8073,21 @@ describe("buildDataPanelExportCompareDisplay", () => {
         "stage_counts"
       ]),
       different_fields: ["terminal", "reason", "total_latency", "stage_counts"],
+      pinned_path_count: 2,
+      pinned_path_match_count: 1,
+      pinned_path_different_count: 1,
+      pinned_path_diffs: [
+        expect.objectContaining({
+          pointer: "/service_trace/trace/trace_id",
+          comparison_status: "MATCH"
+        }),
+        expect.objectContaining({
+          pointer: "/trace/terminal_state",
+          comparison_status: "DIFFERENT",
+          package_status: "RESOLVED",
+          live_status: "RESOLVED"
+        })
+      ],
       status_reason: "FIELDS_DIFFER"
     });
     expect(
@@ -8312,12 +8392,18 @@ describe("buildDataPanelExportCompareDisplay", () => {
       packageItem,
       changedLiveRoute
     );
+    const pinnedPathDiff = buildDataPanelExportRoutePinnedPathDiffDisplay(
+      packageItem,
+      changedLiveRoute,
+      "/route/route_id /route/latency_s /route/missing"
+    );
 
     expect(
       buildDataPanelExportRouteComparisonReviewRecord(
         packageItem,
         changedLiveRoute,
-        comparison
+        comparison,
+        pinnedPathDiff
       )
     ).toEqual({
       route_id: "route-a",
@@ -8343,6 +8429,35 @@ describe("buildDataPanelExportCompareDisplay", () => {
         "bottleneck"
       ],
       different_fields: ["latency", "bottleneck"],
+      pinned_path_count: 3,
+      pinned_path_match_count: 1,
+      pinned_path_different_count: 2,
+      pinned_path_diffs: [
+        {
+          pointer: "/route/route_id",
+          package_value: '"route-a"',
+          live_value: '"route-a"',
+          package_status: "RESOLVED",
+          live_status: "RESOLVED",
+          comparison_status: "MATCH"
+        },
+        {
+          pointer: "/route/latency_s",
+          package_value: "0.1",
+          live_value: "0.25",
+          package_status: "RESOLVED",
+          live_status: "RESOLVED",
+          comparison_status: "DIFFERENT"
+        },
+        {
+          pointer: "/route/missing",
+          package_value: "No JSON value was found at /route/missing.",
+          live_value: "No JSON value was found at /route/missing.",
+          package_status: "MISSING",
+          live_status: "MISSING",
+          comparison_status: "MISSING"
+        }
+      ],
       status_reason: "FIELDS_DIFFER",
       operator_note: "Saved from dashboard package-vs-live route comparison."
     });

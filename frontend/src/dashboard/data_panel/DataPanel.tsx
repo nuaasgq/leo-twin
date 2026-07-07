@@ -1637,7 +1637,8 @@ export const DataPanel = memo(function DataPanel({
     buildDataPanelExportRouteComparisonReviewRecord(
       runtimeExportRouteDetailItem,
       selectedRouteBackendDetail,
-      exportRouteLiveComparison
+      exportRouteLiveComparison,
+      exportRoutePinnedPathDiff
     );
   const exportRouteComparisonReviewSaveStatus =
     buildDataPanelExportRouteComparisonReviewSaveStatus(
@@ -1681,7 +1682,8 @@ export const DataPanel = memo(function DataPanel({
     buildDataPanelExportServiceTraceComparisonReviewRecord(
       runtimeExportServiceTraceItem,
       selectedExportServiceTraceBackendDetail,
-      exportServiceTraceLiveComparison
+      exportServiceTraceLiveComparison,
+      exportServiceTracePinnedPathDiff
     );
   const exportServiceTraceComparisonReviewSaveStatus =
     buildDataPanelExportServiceTraceComparisonReviewSaveStatus(
@@ -17173,10 +17175,7 @@ export function buildDataPanelExportRouteComparisonReviewReportDisplay(
       hashLabel: `package ${shortRuntimeHash(
         record.package_route_detail_hash
       )} / live ${shortRuntimeHash(record.live_route_detail_hash)}`,
-      noteLabel:
-        record.operator_note.trim().length > 0
-          ? record.operator_note
-          : record.status_reason
+      noteLabel: comparisonReviewReportNoteLabel(record)
     }));
   const hiddenCount = Math.max(0, filteredRecords.length - rows.length);
   const hiddenLabel = hiddenCount > 0 ? ` / hidden ${formatCount(hiddenCount)}` : "";
@@ -17233,8 +17232,42 @@ function routeComparisonReviewReportRecordMatchesQuery(
     record.status_reason,
     record.operator_note,
     ...record.compared_fields,
-    ...record.different_fields
+    ...record.different_fields,
+    ...comparisonReviewPinnedPathSearchValues(record)
   ].some((value) => value.toLowerCase().includes(normalizedQuery));
+}
+
+function comparisonReviewReportNoteLabel(
+  record:
+    | RuntimeExportRouteComparisonReviewReportRecordV1
+    | RuntimeExportServiceTraceComparisonReviewReportRecordV1
+): string {
+  const base =
+    record.operator_note.trim().length > 0
+      ? record.operator_note
+      : record.status_reason;
+  const pinnedPathCount = record.pinned_path_count ?? 0;
+  if (pinnedPathCount <= 0) {
+    return base;
+  }
+  return `${base} / pinned paths ${formatCount(
+    pinnedPathCount
+  )} / different ${formatCount(record.pinned_path_different_count ?? 0)}`;
+}
+
+function comparisonReviewPinnedPathSearchValues(
+  record:
+    | RuntimeExportRouteComparisonReviewReportRecordV1
+    | RuntimeExportServiceTraceComparisonReviewReportRecordV1
+): readonly string[] {
+  return (record.pinned_path_diffs ?? []).flatMap((diff) => [
+    diff.pointer,
+    diff.package_value,
+    diff.live_value,
+    diff.package_status,
+    diff.live_status,
+    diff.comparison_status
+  ]);
 }
 
 export function buildDataPanelExportRouteComparisonReviewReportStatus(
@@ -17331,10 +17364,7 @@ export function buildDataPanelExportServiceTraceComparisonReviewReportDisplay(
       hashLabel: `package ${shortRuntimeHash(
         record.package_trace_item_hash
       )} / live ${shortRuntimeHash(record.live_trace_detail_hash)}`,
-      noteLabel:
-        record.operator_note.trim().length > 0
-          ? record.operator_note
-          : record.status_reason
+      noteLabel: comparisonReviewReportNoteLabel(record)
     }));
   const visibleStart = rows.length === 0 ? 0 : report.cursor + 1;
   const visibleEnd = report.cursor + rows.length;
@@ -19827,7 +19857,8 @@ export function buildDataPanelExportServiceTraceLiveComparisonStatus(
 export function buildDataPanelExportRouteComparisonReviewRecord(
   packageItem: RuntimeExportRouteDetailItemV1 | null | undefined,
   liveDetail: RuntimeRouteExplanationItemV1 | null | undefined,
-  comparison: DataPanelExportRouteLiveComparisonDisplay | null | undefined
+  comparison: DataPanelExportRouteLiveComparisonDisplay | null | undefined,
+  pinnedPathDiff: DataPanelExportRoutePinnedPathDiffDisplay | null | undefined = null
 ): Partial<RuntimeExportRouteComparisonReviewReportRecordV1> | null {
   if (
     packageItem === null ||
@@ -19856,6 +19887,7 @@ export function buildDataPanelExportRouteComparisonReviewRecord(
     different_field_count: differentFields.length,
     compared_fields: comparedFields,
     different_fields: differentFields,
+    ...comparisonReviewPinnedPathReportFields(pinnedPathDiff?.rows ?? []),
     status_reason: differentFields.length === 0 ? "MATCHED" : "FIELDS_DIFFER",
     operator_note: "Saved from dashboard package-vs-live route comparison."
   };
@@ -19921,7 +19953,11 @@ export function buildDataPanelExportServiceTraceComparisonReviewRecord(
   comparison:
     | DataPanelExportServiceTraceLiveComparisonDisplay
     | null
-    | undefined
+    | undefined,
+  pinnedPathDiff:
+    | DataPanelExportServiceTracePinnedPathDiffDisplay
+    | null
+    | undefined = null
 ): Partial<RuntimeExportServiceTraceComparisonReviewReportRecordV1> | null {
   if (
     packageItem === null ||
@@ -19950,6 +19986,7 @@ export function buildDataPanelExportServiceTraceComparisonReviewRecord(
     different_field_count: differentFields.length,
     compared_fields: comparedFields,
     different_fields: differentFields,
+    ...comparisonReviewPinnedPathReportFields(pinnedPathDiff?.rows ?? []),
     status_reason: differentFields.length === 0 ? "MATCHED" : "FIELDS_DIFFER",
     operator_note: "Saved from dashboard package-vs-live service trace comparison."
   };
@@ -20091,6 +20128,51 @@ function routeComparisonRow(
     liveValue,
     matches,
     statusLabel: matches ? "match" : "different"
+  };
+}
+
+type DataPanelPinnedPathDiffRowForReport = {
+  pointer: string;
+  packageValue: string;
+  liveValue: string;
+  packageStatusLabel: "resolved" | "missing" | "invalid";
+  liveStatusLabel: "resolved" | "missing" | "invalid";
+  matches: boolean;
+  statusLabel: "match" | "different" | "missing" | "invalid";
+};
+
+function comparisonReviewPinnedPathReportFields(
+  rows: readonly DataPanelPinnedPathDiffRowForReport[]
+): {
+  pinned_path_count?: number;
+  pinned_path_match_count?: number;
+  pinned_path_different_count?: number;
+  pinned_path_diffs?: readonly {
+    pointer: string;
+    package_value: string;
+    live_value: string;
+    package_status: string;
+    live_status: string;
+    comparison_status: string;
+  }[];
+} {
+  if (rows.length === 0) {
+    return {};
+  }
+  const pinnedPathDiffs = rows.map((row) => ({
+    pointer: row.pointer,
+    package_value: row.packageValue,
+    live_value: row.liveValue,
+    package_status: row.packageStatusLabel.toUpperCase(),
+    live_status: row.liveStatusLabel.toUpperCase(),
+    comparison_status: row.statusLabel.toUpperCase()
+  }));
+  const matchCount = rows.filter((row) => row.matches).length;
+  return {
+    pinned_path_count: rows.length,
+    pinned_path_match_count: matchCount,
+    pinned_path_different_count: rows.length - matchCount,
+    pinned_path_diffs: pinnedPathDiffs
   };
 }
 

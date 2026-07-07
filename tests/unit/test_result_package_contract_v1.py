@@ -1769,6 +1769,24 @@ def test_runtime_export_route_comparison_review_report_v1_is_deterministic() -> 
             "live_route_detail_hash": "sha256:live-route-1",
             "compared_fields": ("latency", "bottleneck", "path"),
             "different_fields": ("bottleneck", "latency"),
+            "pinned_path_diffs": (
+                {
+                    "pointer": "/route/route_id",
+                    "package_value": '"route-1"',
+                    "live_value": '"route-1"',
+                    "package_status": "resolved",
+                    "live_status": "resolved",
+                    "comparison_status": "match",
+                },
+                {
+                    "pointer": "/route/latency_s",
+                    "package_value": "0.1",
+                    "live_value": "0.25",
+                    "package_status": "resolved",
+                    "live_status": "resolved",
+                    "comparison_status": "different",
+                },
+            ),
             "status_reason": "FIELDS_DIFFER",
             "operator_note": "capacity changed after runtime advanced",
         },
@@ -1812,6 +1830,27 @@ def test_runtime_export_route_comparison_review_report_v1_is_deterministic() -> 
     assert first["records"][1]["different_fields"] == ("latency", "bottleneck")
     assert first["records"][1]["matched_field_count"] == 1
     assert first["records"][1]["different_field_count"] == 2
+    assert first["records"][1]["pinned_path_count"] == 2
+    assert first["records"][1]["pinned_path_match_count"] == 1
+    assert first["records"][1]["pinned_path_different_count"] == 1
+    assert first["records"][1]["pinned_path_diffs"] == (
+        {
+            "pointer": "/route/route_id",
+            "package_value": '"route-1"',
+            "live_value": '"route-1"',
+            "package_status": "RESOLVED",
+            "live_status": "RESOLVED",
+            "comparison_status": "MATCH",
+        },
+        {
+            "pointer": "/route/latency_s",
+            "package_value": "0.1",
+            "live_value": "0.25",
+            "package_status": "RESOLVED",
+            "live_status": "RESOLVED",
+            "comparison_status": "DIFFERENT",
+        },
+    )
     assert first["records"][1]["operator_note"] == (
         "capacity changed after runtime advanced"
     )
@@ -1860,6 +1899,24 @@ def test_runtime_export_service_trace_comparison_review_report_v1_is_determinist
                 "stage_counts",
             ),
             "different_fields": ("stage_counts", "terminal"),
+            "pinned_path_diffs": (
+                {
+                    "pointer": "/service_trace/trace/trace_id",
+                    "package_value": '"trace:run"',
+                    "live_value": '"trace:run"',
+                    "package_status": "resolved",
+                    "live_status": "resolved",
+                    "comparison_status": "match",
+                },
+                {
+                    "pointer": "/trace/terminal_state",
+                    "package_value": '"RUNNING"',
+                    "live_value": '"COMPLETE"',
+                    "package_status": "resolved",
+                    "live_status": "resolved",
+                    "comparison_status": "different",
+                },
+            ),
             "status_reason": "FIELDS_DIFFER",
             "operator_note": "trace finished after package export",
         },
@@ -1906,6 +1963,17 @@ def test_runtime_export_service_trace_comparison_review_report_v1_is_determinist
     )
     assert first["records"][1]["matched_field_count"] == 2
     assert first["records"][1]["different_field_count"] == 2
+    assert first["records"][1]["pinned_path_count"] == 2
+    assert first["records"][1]["pinned_path_match_count"] == 1
+    assert first["records"][1]["pinned_path_different_count"] == 1
+    assert first["records"][1]["pinned_path_diffs"][1] == {
+        "pointer": "/trace/terminal_state",
+        "package_value": '"RUNNING"',
+        "live_value": '"COMPLETE"',
+        "package_status": "RESOLVED",
+        "live_status": "RESOLVED",
+        "comparison_status": "DIFFERENT",
+    }
     assert first["records"][1]["operator_note"] == (
         "trace finished after package export"
     )
@@ -1955,6 +2023,16 @@ def test_runtime_export_service_trace_comparison_review_report_page_v1_filters_r
                     "stage_counts",
                 ),
                 "different_fields": ("stage_counts", "terminal"),
+                "pinned_path_diffs": (
+                    {
+                        "pointer": "/trace/terminal_state",
+                        "package_value": '"RUNNING"',
+                        "live_value": '"COMPLETE"',
+                        "package_status": "RESOLVED",
+                        "live_status": "RESOLVED",
+                        "comparison_status": "DIFFERENT",
+                    },
+                ),
                 "status_reason": "FIELDS_DIFFER",
                 "operator_note": "trace finished after package export",
             },
@@ -1991,6 +2069,13 @@ def test_runtime_export_service_trace_comparison_review_report_page_v1_filters_r
         status="different",
         query="after package",
     )
+    pinned_filtered = (
+        build_runtime_export_service_trace_comparison_review_report_page_v1(
+            report,
+            status="different",
+            query="/trace/terminal_state",
+        )
+    )
 
     assert first_page["page_id"] == (
         RUNTIME_EXPORT_SERVICE_TRACE_COMPARISON_REVIEW_REPORT_PAGE_V1_ID
@@ -2013,6 +2098,11 @@ def test_runtime_export_service_trace_comparison_review_report_page_v1_filters_r
     assert filtered["record_count"] == 1
     assert filtered["different_count"] == 1
     assert filtered["records"][0]["trace_id"] == "trace:run"
+    assert pinned_filtered["record_count"] == 1
+    assert pinned_filtered["records"][0]["pinned_path_different_count"] == 1
+    assert pinned_filtered["records"][0]["pinned_path_diffs"][0]["pointer"] == (
+        "/trace/terminal_state"
+    )
     assert filtered["page_hash"].startswith("sha256:")
 
 
