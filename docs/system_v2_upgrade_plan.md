@@ -701,6 +701,11 @@ Tasks:
     satellites, routes, services, and compute nodes. The dashboard now shows
     backend exact-detail loading, synchronized, and error states from App-owned
     request state while ignoring stale status for previously selected entities.
+  - Status: T389 adds a compact node evidence workspace in the same standalone
+    dashboard detail section. It joins backend detail-page coverage, selected
+    table-row presence, and exact-detail request status for users, satellites,
+    routes, services, service traces, and compute nodes without adding new
+    backend semantics or frontend-local business inference.
 - V2-054: Add model assumptions panel.
   - Scope: backend-derived model caveats, fidelity mode, KPI provenance.
   - Depends on: V2-003, V2-021.

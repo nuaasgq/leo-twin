@@ -165,6 +165,10 @@ The standalone dashboard is for data situation awareness:
 - selected-detail evidence for the current user, satellite, route, service,
   service trace, and compute node selection, including whether backend exact
   detail is loading, synced, missing, or failed;
+- a node evidence workspace that joins detail-page coverage, selected-row
+  presence, and exact-detail request status so operators can see which node or
+  service evidence comes from backend pages and which exact detail is still
+  pending;
 - service-trace closed-loop evidence, showing whether the selected service
   trace has correlated flow, route, user, satellite, compute-node, stage, and
   latency evidence from backend exact detail or the visible dashboard window;

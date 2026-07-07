@@ -1530,6 +1530,48 @@ export const DataPanel = memo(function DataPanel({
       computeNode: computeNodeDetailRequestStatus
     }
   });
+  const nodeEvidenceWorkspace = buildDataPanelNodeEvidenceWorkspace({
+    coverage: {
+      userSummary: userRequestSummary,
+      satelliteSummary: satelliteServiceSummary,
+      routeSummary: routeExplanationSummary,
+      servicePage: serviceDetailPage,
+      serviceTracePage,
+      computeNodePage: computeNodeDetailPage,
+      nodeDetailSummary,
+      paginationContract: detailPaginationContract
+    },
+    selected: {
+      userId: selectedDetailUserId,
+      satelliteId: selectedDetailSatelliteId,
+      routeId: selectedRouteDetailId,
+      serviceId: selectedServiceDetailId,
+      traceId: selectedServiceTraceRow?.traceId ?? null,
+      computeNodeId: selectedComputeNodeDetailId,
+      userRow: selectedUserDetailRow,
+      satelliteRow: selectedSatelliteDetailRow,
+      routeRow: selectedRouteDetailRow,
+      serviceRow: selectedServiceDetailRow,
+      traceRow: selectedServiceTraceRow,
+      computeNodeRow: selectedComputeNodeDetailRow,
+      backendDetails: {
+        user: selectedUserBackendDetail,
+        satellite: selectedSatelliteBackendDetail,
+        route: selectedRouteBackendDetail,
+        service: selectedServiceBackendDetail,
+        serviceTrace: selectedServiceTraceBackendDetail,
+        computeNode: selectedComputeNodeBackendDetail
+      },
+      requestStatuses: {
+        user: userDetailRequestStatus,
+        satellite: satelliteDetailRequestStatus,
+        route: routeDetailRequestStatus,
+        service: serviceDetailRequestStatus,
+        serviceTrace: serviceTraceDetailRequestStatus,
+        computeNode: computeNodeDetailRequestStatus
+      }
+    }
+  });
   const serviceTraceCorrelationEvidenceNote =
     buildDataPanelServiceTraceCorrelationEvidenceNote({
       trace: selectedServiceTraceRow,
@@ -5556,6 +5598,37 @@ export const DataPanel = memo(function DataPanel({
           {filteredSatelliteResourceRows.items.length} 个卫星
         </span>
       </div>
+      <div
+        className={`data-panel-node-evidence-workspace ${nodeEvidenceWorkspace.tone}`}
+        aria-label="节点明细证据工作区"
+      >
+        <div className="data-panel-node-evidence-header">
+          <div>
+            <span>{nodeEvidenceWorkspace.sourceLabel}</span>
+            <strong>{nodeEvidenceWorkspace.statusLabel}</strong>
+            <small>{nodeEvidenceWorkspace.summaryLabel}</small>
+          </div>
+          <div className="data-panel-node-evidence-meta">
+            {nodeEvidenceWorkspace.metaLabels.map((label) => (
+              <span key={label}>{label}</span>
+            ))}
+          </div>
+        </div>
+        <div className="data-panel-node-evidence-grid">
+          {nodeEvidenceWorkspace.rows.map((row) => (
+            <span
+              className={`data-panel-node-evidence-row ${row.tone}`}
+              key={row.family}
+              title={row.title}
+            >
+              <strong>{row.family}</strong>
+              <small>{row.coverageLabel}</small>
+              <small>{row.selectedLabel}</small>
+              <small>{row.exactDetailLabel}</small>
+            </span>
+          ))}
+        </div>
+      </div>
       <div className="data-panel-observability-notes" aria-label="明细观测范围说明">
         {detailScopeNotes.map((note) => (
           <div className={`data-panel-observability-note ${note.tone}`} key={note.label}>
@@ -7450,6 +7523,29 @@ export interface DataPanelSelectedDetailEvidenceInput {
   requestStatuses?: RuntimeSelectedNodeDetailRequests | null;
 }
 
+export interface DataPanelNodeEvidenceWorkspaceInput {
+  coverage: DataPanelDetailCoverageInput;
+  selected: DataPanelSelectedDetailEvidenceInput;
+}
+
+export interface DataPanelNodeEvidenceWorkspaceDisplay {
+  tone: "backend" | "limit" | "history";
+  sourceLabel: string;
+  statusLabel: string;
+  summaryLabel: string;
+  metaLabels: readonly string[];
+  rows: readonly DataPanelNodeEvidenceWorkspaceRow[];
+}
+
+export interface DataPanelNodeEvidenceWorkspaceRow {
+  family: string;
+  coverageLabel: string;
+  selectedLabel: string;
+  exactDetailLabel: string;
+  tone: "backend" | "limit" | "history";
+  title: string;
+}
+
 export interface DataPanelServiceTraceCorrelationEvidenceInput {
   trace?: DataPanelServiceLifecycleTraceRow | null;
   users: UserBusinessRequestRows;
@@ -8607,6 +8703,190 @@ export function buildDataPanelSelectedDetailEvidenceNote(
         : selected.length === 0
           ? "history"
           : "backend"
+  };
+}
+
+export function buildDataPanelNodeEvidenceWorkspace(
+  input: DataPanelNodeEvidenceWorkspaceInput
+): DataPanelNodeEvidenceWorkspaceDisplay {
+  const coverageRecords: DataPanelDetailCoverageRecord[] = [
+    detailCoverageRecord("用户", input.coverage.userSummary, {
+      total: input.coverage.userSummary?.user_count,
+      item: input.coverage.userSummary?.item_count,
+      hidden: Math.max(
+        0,
+        input.coverage.userSummary?.hidden_user_count ?? 0,
+        "hidden_request_count" in (input.coverage.userSummary ?? {})
+          ? Math.max(
+              0,
+              (input.coverage.userSummary as RuntimeUserServiceRequestSummaryV2)
+                .hidden_request_count
+            )
+          : 0
+      )
+    }),
+    detailCoverageRecord("卫星", input.coverage.satelliteSummary, {
+      total: input.coverage.satelliteSummary?.satellite_count,
+      item: input.coverage.satelliteSummary?.item_count,
+      hidden: input.coverage.satelliteSummary?.hidden_satellite_count
+    }),
+    detailCoverageRecord("路由", input.coverage.routeSummary, {
+      total: input.coverage.routeSummary?.route_count,
+      item: input.coverage.routeSummary?.item_count,
+      hidden: Math.max(
+        0,
+        (input.coverage.routeSummary?.route_count ?? 0) -
+          (input.coverage.routeSummary?.item_count ?? 0)
+      )
+    }),
+    detailCoverageRecord("服务", input.coverage.servicePage, {
+      total: input.coverage.servicePage?.service_count,
+      item: input.coverage.servicePage?.item_count,
+      hidden: input.coverage.servicePage?.hidden_service_count
+    }),
+    detailCoverageRecord("服务链路", input.coverage.serviceTracePage, {
+      total: input.coverage.serviceTracePage?.trace_count,
+      item:
+        input.coverage.serviceTracePage?.items.length ??
+        input.coverage.serviceTracePage?.trace_count,
+      hidden: input.coverage.serviceTracePage?.hidden_trace_count
+    }),
+    detailCoverageRecord("算力节点", input.coverage.computeNodePage, {
+      total: input.coverage.computeNodePage?.compute_node_count,
+      item: input.coverage.computeNodePage?.item_count,
+      hidden: input.coverage.computeNodePage?.hidden_compute_node_count
+    })
+  ];
+  const selectedRecords: DataPanelSelectedDetailEvidenceRecord[] = [
+    selectedDetailEvidenceRecord(
+      "用户",
+      input.selected.userId,
+      input.selected.userRow,
+      input.selected.backendDetails?.user,
+      input.selected.requestStatuses?.user
+    ),
+    selectedDetailEvidenceRecord(
+      "卫星",
+      input.selected.satelliteId,
+      input.selected.satelliteRow,
+      input.selected.backendDetails?.satellite,
+      input.selected.requestStatuses?.satellite
+    ),
+    selectedDetailEvidenceRecord(
+      "路由",
+      input.selected.routeId,
+      input.selected.routeRow,
+      input.selected.backendDetails?.route,
+      input.selected.requestStatuses?.route
+    ),
+    selectedDetailEvidenceRecord(
+      "服务",
+      input.selected.serviceId,
+      input.selected.serviceRow,
+      input.selected.backendDetails?.service,
+      input.selected.requestStatuses?.service
+    ),
+    selectedDetailEvidenceRecord(
+      "服务链路",
+      input.selected.traceId,
+      input.selected.traceRow,
+      input.selected.backendDetails?.serviceTrace,
+      input.selected.requestStatuses?.serviceTrace
+    ),
+    selectedDetailEvidenceRecord(
+      "算力节点",
+      input.selected.computeNodeId,
+      input.selected.computeNodeRow,
+      input.selected.backendDetails?.computeNode,
+      input.selected.requestStatuses?.computeNode
+    )
+  ];
+  const rows = coverageRecords.map((coverage, index) => {
+    const selected = selectedRecords[index];
+    const exactDetailLabel = selected.loading
+      ? "精确详情读取中"
+      : selected.error !== null
+        ? `精确详情错误 ${selected.error}`
+        : selected.backendPresent
+          ? "精确详情已同步"
+          : selected.selected
+            ? "等待精确详情"
+            : "未选择";
+    const tone: DataPanelNodeEvidenceWorkspaceRow["tone"] =
+      !coverage.present
+        ? selected.selected
+          ? "limit"
+          : "history"
+        : coverage.hiddenCount > 0 || coverage.hasMore
+        ? "limit"
+        : selected.selected && !selected.backendPresent
+          ? "limit"
+          : coverage.present
+            ? "backend"
+            : "history";
+    const coverageLabel = coverage.present
+      ? `覆盖 ${formatCount(coverage.itemCount)}/${formatCount(coverage.totalCount)} 行${
+          coverage.hiddenCount > 0
+            ? ` / 隐藏 ${formatCount(coverage.hiddenCount)}`
+            : ""
+        }${coverage.hasMore ? " / 可继续加载" : ""}`
+      : "等待后端覆盖";
+    return {
+      family: coverage.label,
+      coverageLabel,
+      selectedLabel: selected.selected
+        ? `已选中 / 表格${selected.rowPresent ? "命中" : "未命中"}`
+        : "未选择",
+      exactDetailLabel,
+      tone,
+      title: `${coverage.label}: ${coverageLabel}; ${exactDetailLabel}`
+    };
+  });
+  const availableCoverage = coverageRecords.filter((record) => record.present).length;
+  const limitedCoverage = coverageRecords.filter(
+    (record) => record.hiddenCount > 0 || record.hasMore
+  ).length;
+  const selectedCount = selectedRecords.filter((record) => record.selected).length;
+  const exactCount = selectedRecords.filter(
+    (record) => record.selected && record.backendPresent
+  ).length;
+  const pendingExact = selectedRecords.filter(
+    (record) =>
+      record.selected &&
+      (!record.backendPresent || record.loading || record.error !== null)
+  ).length;
+  const nodeCardCount =
+    Math.max(0, input.coverage.nodeDetailSummary?.user_detail_count ?? 0) +
+    Math.max(0, input.coverage.nodeDetailSummary?.satellite_detail_count ?? 0);
+  const tone: DataPanelNodeEvidenceWorkspaceDisplay["tone"] =
+    availableCoverage === 0
+      ? "history"
+      : limitedCoverage > 0 || pendingExact > 0 || availableCoverage < coverageRecords.length
+        ? "limit"
+        : "backend";
+  const contractLabel =
+    input.coverage.paginationContract === null ||
+    input.coverage.paginationContract === undefined
+      ? "分页契约未声明"
+      : `${input.coverage.paginationContract.active_profile_id} / ${input.coverage.paginationContract.cursor_model.cursor_type}`;
+  return {
+    tone,
+    sourceLabel: "后端明细页 + 精确详情请求",
+    statusLabel:
+      selectedCount === 0
+        ? "等待选择节点或业务"
+        : `精确详情 ${formatCount(exactCount)}/${formatCount(selectedCount)}`,
+    summaryLabel: `覆盖 ${formatCount(availableCoverage)}/${formatCount(
+      coverageRecords.length
+    )} 类；受限 ${formatCount(limitedCoverage)} 类；节点卡片 ${formatCount(
+      nodeCardCount
+    )}`,
+    metaLabels: [
+      contractLabel,
+      pendingExact > 0 ? `待同步 ${formatCount(pendingExact)} 类` : "精确详情已对齐",
+      `后端源 ${formatCount(availableCoverage)} 类`
+    ],
+    rows
   };
 }
 

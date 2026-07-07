@@ -1,8 +1,8 @@
 # Current Product Status
 
-Date: 2026-07-07
+Date: 2026-07-08
 
-Branch: `feature/T383-dashboard-traffic-demand-page-controls-v1`
+Branch: `feature/T389-dashboard-node-evidence-workspace-v1`
 
 ## Local Entry Points
 
@@ -250,6 +250,12 @@ the card without loading the full JSON artifact.
   expands the selected trace into lifecycle, correlation, route, user,
   satellite, and compute-node sections, using backend exact trace detail when
   available and visible-window fallback otherwise.
+- The same node-detail area now includes a compact evidence workspace that
+  joins backend detail-page coverage, selected table-row presence, and exact
+  detail request status for users, satellites, routes, services, service
+  traces, and compute nodes. The workspace is frontend display logic only; the
+  source of truth remains the existing backend detail pages and App-owned exact
+  detail requests.
 - Launcher health v2 reports backend/frontend port readiness, HTTP readiness,
   process ids, latest log paths, config paths, and recommended actions.
 - Operator diagnostics bundle captures launcher health, runtime status, version

@@ -14,6 +14,7 @@ import {
   buildDataPanelDetailScopeNotes,
   buildDataPanelDetailCoverageNote,
   buildDataPanelSelectedDetailEvidenceNote,
+  buildDataPanelNodeEvidenceWorkspace,
   buildDataPanelServiceTraceCorrelationEvidenceNote,
   buildDataPanelDetailPageSizes,
   buildDataPanelPaginationContractNotes,
@@ -16107,6 +16108,141 @@ describe("paginateDetailRows", () => {
       detail:
         "未选择用户、卫星、路由、服务、服务链路或算力节点；点击明细表格行后会显示后端精确详情证据。",
       tone: "history"
+    });
+  });
+  it("builds a backend-owned node evidence workspace when detail coverage and exact details are synced", () => {
+    const display = buildDataPanelNodeEvidenceWorkspace({
+      coverage: {
+        userSummary: {
+          source: "BACKEND_RUNTIME_STATUS",
+          cursor: 0,
+          limit: 1,
+          next_cursor: 1,
+          has_more: false,
+          user_count: 1,
+          item_count: 1,
+          hidden_user_count: 0
+        } as any,
+        satelliteSummary: {
+          source: "BACKEND_RUNTIME_STATUS",
+          cursor: 0,
+          limit: 1,
+          next_cursor: 1,
+          has_more: false,
+          satellite_count: 1,
+          item_count: 1,
+          hidden_satellite_count: 0
+        } as any,
+        routeSummary: {
+          version: "v1",
+          source: "BACKEND_RUNTIME_STATUS",
+          cursor: 0,
+          limit: 1,
+          next_cursor: 1,
+          has_more: false,
+          route_count: 1,
+          item_count: 1,
+          available_route_count: 1,
+          blocked_route_count: 0,
+          over_demand_route_count: 0,
+          compute_service_route_count: 1,
+          network_service_route_count: 0,
+          items: []
+        },
+        servicePage: {
+          source: "BACKEND_RUNTIME_STATUS",
+          cursor: 0,
+          limit: 1,
+          next_cursor: 1,
+          has_more: false,
+          service_count: 1,
+          item_count: 1,
+          hidden_service_count: 0
+        } as any,
+        serviceTracePage: {
+          source: "BACKEND_RUNTIME_STATUS",
+          cursor: 0,
+          limit: 1,
+          next_cursor: 1,
+          has_more: false,
+          trace_count: 1,
+          hidden_trace_count: 0,
+          items: [{}]
+        } as any,
+        computeNodePage: {
+          source: "BACKEND_RUNTIME_STATUS",
+          cursor: 0,
+          limit: 1,
+          next_cursor: 1,
+          has_more: false,
+          compute_node_count: 1,
+          item_count: 1,
+          hidden_compute_node_count: 0
+        } as any,
+        nodeDetailSummary: {
+          version: "v1",
+          source: "BACKEND_RUNTIME_STATUS",
+          user_detail_count: 1,
+          satellite_detail_count: 1,
+          users: [],
+          satellites: []
+        },
+        paginationContract: makeLargeDetailPaginationContract()
+      },
+      selected: {
+        userId: "user-0",
+        userRow: { userId: "user-0" } as any,
+        backendDetails: {
+          user: { entity_id: "user-0" } as any
+        },
+        requestStatuses: {
+          user: { entityId: "user-0", loading: false, error: null }
+        }
+      }
+    });
+
+    expect(display.tone).toBe("backend");
+    expect(display.sourceLabel).toBe("后端明细页 + 精确详情请求");
+    expect(display.statusLabel).toBe("精确详情 1/1");
+    expect(display.rows).toHaveLength(6);
+    expect(display.rows.find((row) => row.family === "用户")).toMatchObject({
+      tone: "backend",
+      exactDetailLabel: "精确详情已同步"
+    });
+  });
+
+  it("marks node evidence workspace as limited when coverage is cursor-limited or exact detail is pending", () => {
+    const display = buildDataPanelNodeEvidenceWorkspace({
+      coverage: {
+        userSummary: {
+          source: "BACKEND_RUNTIME_STATUS",
+          cursor: 0,
+          limit: 1,
+          next_cursor: 1,
+          has_more: true,
+          user_count: 3,
+          item_count: 1,
+          hidden_user_count: 2
+        } as any
+      },
+      selected: {
+        userId: "user-0",
+        userRow: { userId: "user-0" } as any,
+        backendDetails: {
+          user: null
+        },
+        requestStatuses: {
+          user: { entityId: "user-0", loading: true, error: null }
+        }
+      }
+    });
+
+    expect(display.tone).toBe("limit");
+    expect(display.statusLabel).toBe("精确详情 0/1");
+    expect(display.metaLabels).toContain("待同步 1 类");
+    expect(display.rows.find((row) => row.family === "用户")).toMatchObject({
+      tone: "limit",
+      exactDetailLabel: "精确详情读取中"
     });
   });
 });

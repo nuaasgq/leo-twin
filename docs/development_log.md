@@ -5,6 +5,49 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-08 - Dashboard Node Evidence Workspace v1
+
+- Branch: `feature/T389-dashboard-node-evidence-workspace-v1`
+- Commit: pending in this commit
+- Scope: add a compact node evidence workspace to the standalone dashboard
+  detail section. The workspace joins existing backend detail-page coverage,
+  selected table-row presence, and App-owned exact-detail request status for
+  users, satellites, routes, services, service traces, and compute nodes. This
+  task is frontend display and documentation only; it does not change Event
+  Kernel behavior, backend runtime contracts, simulation models, packet-level
+  behavior, or frontend routing architecture.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/current_product_status.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed, 1 test file / 221 tests using the bundled Codex
+      Node/pnpm runtime.
+  - `python -m pytest tests\unit\test_system_v2_upgrade_plan_docs.py tests\unit\test_user_guide_v2_docs.py -q`
+    - Result: passed, 4 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing large `DataPanel` chunk
+      warning after minification.
+- Problems encountered and handling:
+  - The existing source file contains user-facing Chinese strings that render
+    as mojibake in the PowerShell transcript. The implementation used stable
+    TypeScript identifiers and localized strings in newly added code while
+    avoiding broad edits to existing translated copy.
+  - The first build attempt caught an incomplete route-summary test fixture.
+    The mock was completed with the existing required route-count fields and
+    the target test/build were rerun successfully.
+  - Local runtime/generated config files were already dirty and remain outside
+    the staged task scope.
+- Known remaining issues / follow-up:
+  - The workspace summarizes evidence availability but does not yet open a
+    unified exact-detail payload diff. A later dashboard pass can add a
+    side-by-side exact detail inspector for selected node/service families.
+
 ## 2026-07-07 - Dashboard Artifact Browser Filter v1
 
 - Branch: `feature/T388-dashboard-artifact-browser-filter-v1`
