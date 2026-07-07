@@ -2,7 +2,7 @@
 
 Date: 2026-07-08
 
-Branch: `feature/T392-dashboard-exact-detail-json-filter-v1`
+Branch: `feature/T393-dashboard-exact-detail-json-focus-v1`
 
 ## Local Entry Points
 
@@ -269,6 +269,10 @@ the card without loading the full JSON artifact.
   search for terms such as `latency`, `route_id`, or `compute` and the
   dashboard shows matching JSON pointer rows plus useful parent context from
   the existing deterministic scanner.
+- The same inspector now surfaces deterministic focus rows for common
+  exact-detail fields such as user id, route id, route path, latency, service
+  state, compute node id, compute load, and running task count when those
+  fields are present in synchronized payloads.
 - Launcher health v2 reports backend/frontend port readiness, HTTP readiness,
   process ids, latest log paths, config paths, and recommended actions.
 - Operator diagnostics bundle captures launcher health, runtime status, version

@@ -722,6 +722,11 @@ Tasks:
     pointer labels, value types, depth labels, and value previews, preserving
     parent context rows while avoiding backend payload mutation or protocol
     changes.
+  - Status: T393 adds deterministic exact-detail JSON focus rows for common
+    audit fields when present in synchronized payloads. The focus rows are
+    derived through existing JSON pointer selection and expose ids, route path,
+    latency, service state, compute node id, compute load, FP32 use, and
+    running task count without frontend-side model recomputation.
 - V2-054: Add model assumptions panel.
   - Scope: backend-derived model caveats, fidelity mode, KPI provenance.
   - Depends on: V2-003, V2-021.

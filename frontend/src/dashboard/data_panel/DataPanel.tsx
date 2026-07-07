@@ -7012,6 +7012,22 @@ function ExactDetailJsonInspector({
           placeholder="latency / route_id / compute"
         />
       </label>
+      {display.focusRows.length > 0 ? (
+        <div className="data-panel-exact-detail-json-focus">
+          {display.focusRows.map((row) => (
+            <span
+              key={`${row.label}:${row.pointerLabel}`}
+              title={`${row.pointerLabel}: ${row.previewLabel}`}
+            >
+              <small>{row.label}</small>
+              <strong>{row.previewLabel}</strong>
+              <em>
+                {row.pointerLabel} / {row.typeLabel}
+              </em>
+            </span>
+          ))}
+        </div>
+      ) : null}
       {display.rows.length === 0 ? (
         <div className="data-panel-exact-detail-json-empty">
           {display.emptyLabel}
@@ -7763,7 +7779,15 @@ export interface DataPanelExactDetailJsonInspectorDisplay {
   emptyLabel: string;
   filterText: string;
   metaLabels: readonly string[];
+  focusRows: readonly DataPanelExactDetailJsonFocusRow[];
   rows: readonly DataPanelBenchmarkEvidenceArtifactInspectorRow[];
+}
+
+export interface DataPanelExactDetailJsonFocusRow {
+  label: string;
+  pointerLabel: string;
+  typeLabel: string;
+  previewLabel: string;
 }
 
 export interface DataPanelServiceTraceCorrelationEvidenceInput {
@@ -9308,6 +9332,7 @@ export function buildDataPanelExactDetailJsonInspector(
       emptyLabel: "选择明细行后显示后端精确详情 payload 的只读 JSON 路径。",
       filterText,
       metaLabels: ["只读审查", "不重新计算业务语义", "无活动 payload", filterLabel],
+      focusRows: [],
       rows: []
     };
   }
@@ -9321,6 +9346,7 @@ export function buildDataPanelExactDetailJsonInspector(
       emptyLabel: "后端精确详情 payload 尚未同步，暂无可审查 JSON 路径。",
       filterText,
       metaLabels: ["只读审查", "等待 exact-detail API", "无 raw JSON 可扫描", filterLabel],
+      focusRows: [],
       rows: []
     };
   }
@@ -9333,6 +9359,7 @@ export function buildDataPanelExactDetailJsonInspector(
     filterText,
     input.rowLimit ?? 18
   );
+  const focusRows = buildDataPanelExactDetailJsonFocusRows(document);
   const missingCount = Math.max(0, selectedRecords.length - payloadRecordsWithData.length);
   return {
     active: true,
@@ -9355,9 +9382,55 @@ export function buildDataPanelExactDetailJsonInspector(
         : "已选 payload 已覆盖",
       filterLabel
     ],
+    focusRows,
     rows: inspector.rows
   };
 }
+
+function buildDataPanelExactDetailJsonFocusRows(
+  document: unknown
+): readonly DataPanelExactDetailJsonFocusRow[] {
+  return EXACT_DETAIL_JSON_FOCUS_POINTERS.map((candidate) => {
+    const selection = selectDataPanelJsonPointerValue(document, candidate.pointer);
+    if (!selection.found) {
+      return null;
+    }
+    return {
+      label: candidate.label,
+      pointerLabel: `json ${selection.pathLabel}`,
+      typeLabel: selection.typeLabel,
+      previewLabel: formatDataPanelJsonInlinePreviewForSelection(selection.preview)
+    };
+  }).filter((row): row is DataPanelExactDetailJsonFocusRow => row !== null);
+}
+
+function formatDataPanelJsonInlinePreviewForSelection(preview: string): string {
+  const collapsed = preview.replace(/\s+/g, " ").trim();
+  return collapsed.length > 160 ? `${collapsed.slice(0, 157)}...` : collapsed;
+}
+
+const EXACT_DETAIL_JSON_FOCUS_POINTERS: readonly {
+  label: string;
+  pointer: string;
+}[] = [
+  { label: "用户ID", pointer: "/user/entity_id" },
+  { label: "卫星ID", pointer: "/satellite/entity_id" },
+  { label: "路由ID", pointer: "/route/route_id" },
+  { label: "路由路径", pointer: "/route/path_label" },
+  { label: "路由时延", pointer: "/route/latency_s" },
+  { label: "路由时延", pointer: "/route/metrics/latency_s" },
+  { label: "路由丢包", pointer: "/route/loss_proxy_rate" },
+  { label: "服务ID", pointer: "/service/service_id" },
+  { label: "服务状态", pointer: "/service/service_state" },
+  { label: "服务总时延", pointer: "/service/total_latency_s" },
+  { label: "算力节点", pointer: "/service/compute_node_id" },
+  { label: "链路Trace", pointer: "/service_trace/trace/trace_id" },
+  { label: "链路服务", pointer: "/service_trace/correlation/service_id" },
+  { label: "算力节点ID", pointer: "/compute_node/node_id" },
+  { label: "算力负载", pointer: "/compute_node/compute_load_ratio" },
+  { label: "FP32使用", pointer: "/compute_node/compute_used_gflops_fp32" },
+  { label: "运行任务", pointer: "/compute_node/running_task_count" }
+];
 
 function exactDetailJsonPayloadRecord(
   key: string,

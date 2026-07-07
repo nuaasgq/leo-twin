@@ -16366,6 +16366,7 @@ describe("paginateDetailRows", () => {
       emptyLabel: "选择明细行后显示后端精确详情 payload 的只读 JSON 路径。",
       filterText: "",
       metaLabels: ["只读审查", "不重新计算业务语义", "无活动 payload", "无过滤"],
+      focusRows: [],
       rows: []
     });
   });
@@ -16387,6 +16388,7 @@ describe("paginateDetailRows", () => {
       summaryLabel: "已选 1 类；后端 payload 0 类",
       emptyLabel: "后端精确详情 payload 尚未同步，暂无可审查 JSON 路径。",
       filterText: "",
+      focusRows: [],
       rows: []
     });
   });
@@ -16424,6 +16426,28 @@ describe("paginateDetailRows", () => {
     expect(display.summaryLabel).toBe(
       "paths 8 shown / 12 matched / 12 scanned / selected pointer visible"
     );
+    expect(display.focusRows).toEqual([
+      expect.objectContaining({
+        label: "用户ID",
+        pointerLabel: "json /user/entity_id",
+        previewLabel: '"user-0"'
+      }),
+      expect.objectContaining({
+        label: "路由ID",
+        pointerLabel: "json /route/route_id",
+        previewLabel: '"route-0"'
+      }),
+      expect.objectContaining({
+        label: "路由路径",
+        pointerLabel: "json /route/path_label",
+        previewLabel: '"user-0 -> sat-0"'
+      }),
+      expect.objectContaining({
+        label: "路由时延",
+        pointerLabel: "json /route/metrics/latency_s",
+        previewLabel: "0.12"
+      })
+    ]);
     expect(display.rows).toEqual([
       expect.objectContaining({ pointer: "", selected: true }),
       expect.objectContaining({ pointer: "/route" }),

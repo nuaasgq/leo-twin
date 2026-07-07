@@ -4871,6 +4871,49 @@ button.data-panel-compute-node-row {
   font-weight: 600;
 }
 
+.data-panel-exact-detail-json-focus {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  min-width: 0;
+}
+
+.data-panel-exact-detail-json-focus > span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  border: 1px solid #294252;
+  border-radius: 6px;
+  padding: 7px 8px;
+  background: #0b141b;
+}
+
+.data-panel-exact-detail-json-focus small,
+.data-panel-exact-detail-json-focus strong,
+.data-panel-exact-detail-json-focus em {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.data-panel-exact-detail-json-focus small {
+  color: var(--accent-cyan);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.data-panel-exact-detail-json-focus strong {
+  color: var(--app-text);
+  font-size: 11px;
+}
+
+.data-panel-exact-detail-json-focus em {
+  color: var(--app-muted);
+  font-size: 10px;
+  font-style: normal;
+}
+
 .data-panel-exact-detail-json-empty {
   border: 1px dashed #365068;
   border-radius: 6px;
@@ -6714,6 +6757,7 @@ button.data-panel-satellite-resource-row:hover,
   .data-panel-grid,
   .data-panel-node-evidence-grid,
   .data-panel-exact-detail-review-grid,
+  .data-panel-exact-detail-json-focus,
   .data-panel-exact-detail-json-rows,
   .data-panel-observability-notes,
   .data-panel-detail-grid {
@@ -6835,6 +6879,7 @@ button.data-panel-satellite-resource-row:hover,
   .data-panel-grid,
   .data-panel-node-evidence-grid,
   .data-panel-exact-detail-review-grid,
+  .data-panel-exact-detail-json-focus,
   .data-panel-exact-detail-json-rows,
   .data-panel-observability-notes,
   .data-panel-detail-grid {

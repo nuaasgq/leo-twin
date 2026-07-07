@@ -5,6 +5,50 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-08 - Dashboard Exact Detail JSON Focus v1
+
+- Branch: `feature/T393-dashboard-exact-detail-json-focus-v1`
+- Commit: pending in this commit
+- Scope: add deterministic focus rows to the standalone dashboard exact-detail
+  raw JSON inspector. When synchronized backend exact-detail payloads contain
+  common audit fields, the dashboard now exposes compact focus rows for user
+  id, satellite id, route id, route path, route latency/loss, service id,
+  service state, service total latency, compute node id, compute load, FP32
+  use, and running task count. The rows are derived through existing JSON
+  pointer selection and do not recompute model semantics. This task does not
+  change Event Kernel behavior, backend protocols, runtime contracts,
+  simulation models, packet-level behavior, or frontend routing architecture.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/current_product_status.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed, 1 test file / 227 tests using the bundled Codex
+      Node/pnpm runtime.
+  - `python -m pytest tests\unit\test_system_v2_upgrade_plan_docs.py tests\unit\test_user_guide_v2_docs.py -q`
+    - Result: passed, 4 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing large `DataPanel` chunk
+      warning after minification.
+- Problems encountered and handling:
+  - The focus rows intentionally include only fields present in synchronized
+    payloads. Missing optional pointers are ignored instead of displayed as
+    failures, keeping the review area focused on available evidence.
+  - The values are extracted through the existing JSON pointer helper, so the
+    feature does not introduce a second path parser or frontend-side model
+    interpretation.
+  - Local runtime/generated config files were already dirty and remain outside
+    the staged task scope.
+- Known remaining issues / follow-up:
+  - Focus rows are currently a fixed deterministic set. A later pass can allow
+    users to pin custom JSON paths or compare focused fields with package
+    evidence.
+
 ## 2026-07-08 - Dashboard Exact Detail JSON Filter v1
 
 - Branch: `feature/T392-dashboard-exact-detail-json-filter-v1`
