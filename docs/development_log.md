@@ -18051,3 +18051,47 @@ change.
   - The focus action uses existing text filters and selected IDs. A later task
     should add a wider service-trace drill-down browser with explicit
     cross-filtered result panes and virtualized large-table views.
+
+## 2026-07-07 - T368 dashboard service trace browser v1
+
+- Branch: `feature/T368-dashboard-service-trace-browser-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: add a wide service-trace browser to the standalone dashboard
+  node-detail workspace. The browser expands the selected service trace into
+  lifecycle, correlation, route, user, satellite, and compute-node sections.
+  Backend exact trace detail is preferred; visible-window correlation remains
+  the fallback. This task does not change backend protocols, Event Kernel
+  behavior, or simulation model logic.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/current_product_status.md`
+  - `docs/dashboard_information_architecture_v3.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/user_guide_v2.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts` using bundled Node/Pnpm
+    paths.
+    - Result: passed, 1 file / 214 tests.
+  - `pnpm --dir frontend test` using bundled Node/Pnpm paths.
+    - Result: passed, 26 files / 455 tests.
+  - `pnpm --dir frontend build` using bundled Node/Pnpm paths.
+    - Result: passed; Vite emitted the existing large-chunk warning for
+      `DataPanel`.
+  - `git diff --check`.
+    - Result: passed; Git emitted CRLF warnings for the existing unstaged
+      runtime config drift.
+  - `scripts/check_no_runtime_config_staged.ps1`.
+    - Result: passed; no runtime/local config files are staged.
+- Problems encountered:
+  - None so far. The browser display reuses existing service-trace drawer
+    sections, avoiding a second independent interpretation of the same backend
+    detail payload.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The browser improves readability for one selected trace. A later task
+    should add explicit cross-filtered result panes and virtualized tables for
+    large trace/detail payloads.

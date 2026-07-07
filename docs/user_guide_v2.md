@@ -148,6 +148,8 @@ The standalone dashboard is for data situation awareness:
 - one-click service-trace focus, which applies correlated filters across user,
   satellite, route, service, service-trace, and compute-node tables for the
   selected trace;
+- a wide service-trace browser that expands the selected trace into lifecycle,
+  correlation, route, user, satellite, and compute-node sections;
 - configuration explanation and model assumptions.
 
 Backend runtime status is the source of truth. The frontend should not invent

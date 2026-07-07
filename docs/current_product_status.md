@@ -2,7 +2,7 @@
 
 Date: 2026-07-07
 
-Branch: `feature/T367-dashboard-service-trace-focus-v1`
+Branch: `feature/T368-dashboard-service-trace-browser-v1`
 
 ## Local Entry Points
 
@@ -61,8 +61,8 @@ The latest full local run passed:
 The latest fast local run with `-RunControlCycleSmoke` also passed for a
 1200-satellite / 20-user / 1200-compute-node scenario and verified INITIALIZE,
 START, PAUSE, RESUME, STOP, and RESET through the control websocket.
-The latest frontend run after the service-trace focus task included 26 frontend
-test files / 452 tests.
+The latest frontend run after the service-trace browser task included 26
+frontend test files / 455 tests.
 
 ## Current Product Signals
 
@@ -95,6 +95,10 @@ test files / 452 tests.
   service trace, users can apply one-click correlated filters to the user,
   satellite, route, service, service-trace, and compute-node detail tables, with
   backend exact trace detail preferred over visible-window fallback.
+- The node-detail workspace now includes a wide service-trace browser. It
+  expands the selected trace into lifecycle, correlation, route, user,
+  satellite, and compute-node sections, using backend exact trace detail when
+  available and visible-window fallback otherwise.
 - Launcher health v2 reports backend/frontend port readiness, HTTP readiness,
   process ids, latest log paths, config paths, and recommended actions.
 - Operator diagnostics bundle captures launcher health, runtime status, version

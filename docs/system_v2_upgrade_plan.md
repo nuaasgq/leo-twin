@@ -1039,6 +1039,10 @@ Current Phase 3 progress:
   now drive correlated user/satellite, route, service, service-trace, and
   compute-node filters, again preferring backend exact detail over visible
   window fallback.
+- T368 adds a wide service-trace browser to the dashboard node-detail
+  workspace. The selected trace is expanded into lifecycle, correlation, route,
+  user, satellite, and compute-node sections so the communication-compute chain
+  is readable without manually stitching small cards together.
 
 ## 5. Parallel Agent Assignment Model
 

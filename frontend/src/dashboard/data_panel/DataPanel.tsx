@@ -1657,6 +1657,10 @@ export const DataPanel = memo(function DataPanel({
       displayedServiceTraceCorrelationInspector
     )
   );
+  const serviceTraceBrowserDisplay = buildDataPanelServiceTraceBrowserDisplay(
+    selectedServiceTraceBackendDetail,
+    displayedServiceTraceCorrelationInspector
+  );
   const userSourceBadge = buildRuntimeDetailSourceBadge(userBusinessRequests.sourceLabel);
   const satelliteSourceBadge = buildRuntimeDetailSourceBadge(satelliteResourceRows.sourceLabel);
   const detailScopeNotes = [
@@ -5056,6 +5060,7 @@ export const DataPanel = memo(function DataPanel({
         satellite={displayedSatelliteDetailInspector}
       />
       <DetailInspectorDrawer items={nodeDetailDrawerItems} />
+      <ServiceTraceWideBrowser display={serviceTraceBrowserDisplay} />
       <div className="data-panel-detail-grid">
         <section className="dashboard-section data-panel-detail-table" aria-label="用户节点状态明细">
           <div className="section-title">用户节点状态</div>
@@ -6281,6 +6286,73 @@ function DetailInspectorDrawer({
   );
 }
 
+function ServiceTraceWideBrowser({
+  display
+}: {
+  display: DataPanelServiceTraceBrowserDisplay;
+}) {
+  return (
+    <section className="data-panel-service-trace-browser" aria-label="服务链路宽详情">
+      <div className="data-panel-service-trace-browser-header">
+        <div>
+          <span>{display.title}</span>
+          <small>
+            {display.sourceLabel} / {display.subtitle}
+          </small>
+        </div>
+        <strong>{display.summaryLabel}</strong>
+      </div>
+      {!display.active ? (
+        <div className="data-panel-service-trace-browser-empty">
+          {display.emptyLabel}
+        </div>
+      ) : (
+        <>
+          <div className="data-panel-service-trace-browser-summary">
+            {display.summaryFields.map((field) => (
+              <span
+                className={`data-panel-service-trace-browser-chip ${
+                  field.tone ?? "normal"
+                }`}
+                key={field.label}
+                title={`${field.label}: ${field.value}`}
+              >
+                <small>{field.label}</small>
+                <strong>{field.value}</strong>
+              </span>
+            ))}
+          </div>
+          <div className="data-panel-service-trace-browser-sections">
+            {display.sections.map((section) => (
+              <section
+                className="data-panel-service-trace-browser-section"
+                key={section.sectionId}
+              >
+                <div className="data-panel-service-trace-browser-section-title">
+                  {section.title}
+                </div>
+                <dl className="data-panel-service-trace-browser-fields">
+                  {section.fields.map((field) => (
+                    <div
+                      className={`data-panel-service-trace-browser-field ${
+                        field.tone ?? "normal"
+                      }`}
+                      key={`${section.sectionId}:${field.label}`}
+                    >
+                      <dt>{field.label}</dt>
+                      <dd title={field.value}>{field.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+            ))}
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
 function DetailInspectorCard({ title, subtitle, fields }: DataPanelDetailInspector) {
   if (fields.length === 0) {
     return (
@@ -6894,6 +6966,17 @@ export interface DataPanelServiceTraceFocus {
   userIds: readonly string[];
   satelliteIds: readonly string[];
   computeNodeId: string;
+}
+
+export interface DataPanelServiceTraceBrowserDisplay {
+  active: boolean;
+  sourceLabel: string;
+  title: string;
+  subtitle: string;
+  emptyLabel: string;
+  summaryLabel: string;
+  summaryFields: readonly DataPanelDetailInspectorField[];
+  sections: readonly DataPanelNodeDetailSection[];
 }
 
 interface DataPanelDetailCoverageRecord {
@@ -9497,6 +9580,50 @@ export function buildDataPanelNodeDetailDrawerItems(
     items.push(serviceTrace);
   }
   return items;
+}
+
+export function buildDataPanelServiceTraceBrowserDisplay(
+  detail: RuntimeServiceTraceDetailV2 | null | undefined,
+  fallback: DataPanelDetailInspector
+): DataPanelServiceTraceBrowserDisplay {
+  const item = buildServiceTraceDetailDrawerItem(detail, fallback);
+  const exactDetail = detail !== null && detail !== undefined;
+  const sections =
+    item.sections.length > 0
+      ? item.sections
+      : item.fields.length > 0
+        ? [
+            {
+              sectionId: "service_trace_visible_window",
+              title: "当前窗口关联",
+              fields: item.fields
+            }
+          ]
+        : [];
+  const active = item.fields.length > 0 || sections.length > 0;
+  const routeSectionCount = sections.filter((section) =>
+    section.sectionId.includes("route")
+  ).length;
+  const nodeSectionCount = sections.filter(
+    (section) =>
+      section.sectionId.includes("user") ||
+      section.sectionId.includes("satellite") ||
+      section.sectionId.includes("compute_node")
+  ).length;
+  return {
+    active,
+    sourceLabel: exactDetail ? "后端精确服务链路详情" : "当前窗口服务链路详情",
+    title: active ? item.title : "服务链路宽详情",
+    subtitle: active ? item.subtitle : "等待选择服务 trace",
+    emptyLabel: item.emptyLabel,
+    summaryLabel: active
+      ? `${formatCount(sections.length)} 组详情 / ${formatCount(
+          routeSectionCount
+        )} 路由组 / ${formatCount(nodeSectionCount)} 节点组`
+      : "等待选择",
+    summaryFields: item.fields,
+    sections
+  };
 }
 
 export function buildServiceTraceDetailDrawerItem(
