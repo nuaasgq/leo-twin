@@ -717,6 +717,11 @@ Tasks:
     payloads into a bounded JSON pointer view using the existing deterministic
     JSON artifact scanner, so operators can audit source fields without
     payload editing, protocol changes, or frontend business recomputation.
+  - Status: T392 adds a local path/field filter to that exact-detail raw JSON
+    inspector. The filter reuses the same deterministic scanner matching over
+    pointer labels, value types, depth labels, and value previews, preserving
+    parent context rows while avoiding backend payload mutation or protocol
+    changes.
 - V2-054: Add model assumptions panel.
   - Scope: backend-derived model caveats, fidelity mode, KPI provenance.
   - Depends on: V2-003, V2-021.

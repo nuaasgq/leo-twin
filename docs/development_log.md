@@ -5,6 +5,49 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-08 - Dashboard Exact Detail JSON Filter v1
+
+- Branch: `feature/T392-dashboard-exact-detail-json-filter-v1`
+- Commit: pending in this commit
+- Scope: add a local path/field filter to the standalone dashboard
+  exact-detail raw JSON inspector. Operators can filter synchronized backend
+  exact-detail payload paths by JSON pointer, key/type/depth labels, or preview
+  values while preserving parent context rows from the existing deterministic
+  JSON scanner. This task does not change Event Kernel behavior, backend
+  protocols, runtime contracts, simulation models, packet-level behavior, or
+  frontend routing architecture.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/current_product_status.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed, 1 test file / 227 tests using the bundled Codex
+      Node/pnpm runtime.
+  - `python -m pytest tests\unit\test_system_v2_upgrade_plan_docs.py tests\unit\test_user_guide_v2_docs.py -q`
+    - Result: passed, 4 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing large `DataPanel` chunk
+      warning after minification.
+- Problems encountered and handling:
+  - The first filter test expected only a leaf JSON pointer for `latency`, but
+    the shared scanner intentionally matches parent object previews as useful
+    context. The test was updated to assert the contextual match behavior:
+    root, route, metrics, and the latency leaf remain visible.
+  - The filter is intentionally frontend-local. It does not mutate backend
+    payloads, request new exact details, or infer business semantics from raw
+    JSON.
+  - Local runtime/generated config files were already dirty and remain outside
+    the staged task scope.
+- Known remaining issues / follow-up:
+  - The inspector now filters the live exact-detail payload preview. A later
+    pass can add package/live exact-detail diffing or saved operator notes for
+    audited JSON paths.
+
 ## 2026-07-08 - Dashboard Exact Detail JSON Inspector v1
 
 - Branch: `feature/T391-dashboard-exact-detail-json-inspector-v1`

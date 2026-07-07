@@ -594,6 +594,7 @@ export const DataPanel = memo(function DataPanel({
   const [serviceTraceTerminalReasonFilter, setServiceTraceTerminalReasonFilter] =
     useState<DataPanelServiceTraceTerminalReasonFilter>("ALL");
   const [computeNodeDetailFilter, setComputeNodeDetailFilter] = useState("");
+  const [exactDetailJsonFilter, setExactDetailJsonFilter] = useState("");
   const [userDetailPage, setUserDetailPage] = useState(0);
   const [satelliteDetailPage, setSatelliteDetailPage] = useState(0);
   const [selectedHistorySatelliteId, setSelectedHistorySatelliteId] = useState<string | null>(
@@ -1876,7 +1877,8 @@ export const DataPanel = memo(function DataPanel({
         serviceTrace: selectedServiceTraceBackendDetail,
         computeNode: selectedComputeNodeBackendDetail
       }
-    }
+    },
+    filterText: exactDetailJsonFilter
   });
   const userSourceBadge = buildRuntimeDetailSourceBadge(userBusinessRequests.sourceLabel);
   const satelliteSourceBadge = buildRuntimeDetailSourceBadge(satelliteResourceRows.sourceLabel);
@@ -5703,7 +5705,10 @@ export const DataPanel = memo(function DataPanel({
       <DetailInspectorDrawer items={nodeDetailDrawerItems} />
       <ServiceTraceWideBrowser display={serviceTraceBrowserDisplay} />
       <ExactDetailReviewWorkspace display={exactDetailReviewWorkspace} />
-      <ExactDetailJsonInspector display={exactDetailJsonInspector} />
+      <ExactDetailJsonInspector
+        display={exactDetailJsonInspector}
+        onFilterChange={setExactDetailJsonFilter}
+      />
       <div className="data-panel-detail-grid">
         <section className="dashboard-section data-panel-detail-table" aria-label="用户节点状态明细">
           <div className="section-title">用户节点状态</div>
@@ -6971,9 +6976,11 @@ function ExactDetailReviewWorkspace({
 }
 
 function ExactDetailJsonInspector({
-  display
+  display,
+  onFilterChange
 }: {
   display: DataPanelExactDetailJsonInspectorDisplay;
+  onFilterChange: (value: string) => void;
 }) {
   return (
     <section
@@ -6992,11 +6999,22 @@ function ExactDetailJsonInspector({
           ))}
         </div>
       </div>
+      <label
+        className="data-panel-exact-detail-json-filter"
+        htmlFor="data-panel-exact-detail-json-filter"
+      >
+        <span>JSON 路径过滤</span>
+        <input
+          id="data-panel-exact-detail-json-filter"
+          type="search"
+          value={display.filterText}
+          onChange={(event) => onFilterChange(event.currentTarget.value)}
+          placeholder="latency / route_id / compute"
+        />
+      </label>
       {display.rows.length === 0 ? (
         <div className="data-panel-exact-detail-json-empty">
-          {display.active
-            ? "后端精确详情 payload 尚未同步，暂无可审查 JSON 路径。"
-            : "选择明细行后显示后端精确详情 payload 的只读 JSON 路径。"}
+          {display.emptyLabel}
         </div>
       ) : (
         <div className="data-panel-exact-detail-json-rows">
@@ -7732,6 +7750,7 @@ export interface DataPanelExactDetailReviewWorkspaceRow {
 
 export interface DataPanelExactDetailJsonInspectorInput {
   selected: DataPanelSelectedDetailEvidenceInput;
+  filterText?: string;
   rowLimit?: number;
 }
 
@@ -7741,6 +7760,8 @@ export interface DataPanelExactDetailJsonInspectorDisplay {
   sourceLabel: string;
   statusLabel: string;
   summaryLabel: string;
+  emptyLabel: string;
+  filterText: string;
   metaLabels: readonly string[];
   rows: readonly DataPanelBenchmarkEvidenceArtifactInspectorRow[];
 }
@@ -9235,6 +9256,8 @@ function exactDetailReviewWorkspaceRow(
 export function buildDataPanelExactDetailJsonInspector(
   input: DataPanelExactDetailJsonInspectorInput
 ): DataPanelExactDetailJsonInspectorDisplay {
+  const filterText = input.filterText?.trim() ?? "";
+  const filterLabel = filterText.length > 0 ? `过滤 ${filterText}` : "无过滤";
   const payloadRecords = [
     exactDetailJsonPayloadRecord(
       "user",
@@ -9282,7 +9305,9 @@ export function buildDataPanelExactDetailJsonInspector(
       sourceLabel: "精确详情 raw JSON",
       statusLabel: "等待选择明细行",
       summaryLabel: "选择节点或业务后显示后端 exact-detail payload 的只读 JSON 路径",
-      metaLabels: ["只读审查", "不重新计算业务语义", "无活动 payload"],
+      emptyLabel: "选择明细行后显示后端精确详情 payload 的只读 JSON 路径。",
+      filterText,
+      metaLabels: ["只读审查", "不重新计算业务语义", "无活动 payload", filterLabel],
       rows: []
     };
   }
@@ -9293,7 +9318,9 @@ export function buildDataPanelExactDetailJsonInspector(
       sourceLabel: "精确详情 raw JSON",
       statusLabel: "等待后端 payload",
       summaryLabel: `已选 ${formatCount(selectedRecords.length)} 类；后端 payload 0 类`,
-      metaLabels: ["只读审查", "等待 exact-detail API", "无 raw JSON 可扫描"],
+      emptyLabel: "后端精确详情 payload 尚未同步，暂无可审查 JSON 路径。",
+      filterText,
+      metaLabels: ["只读审查", "等待 exact-detail API", "无 raw JSON 可扫描", filterLabel],
       rows: []
     };
   }
@@ -9303,7 +9330,7 @@ export function buildDataPanelExactDetailJsonInspector(
   const inspector = buildDataPanelJsonArtifactInspectorRows(
     document,
     "",
-    "",
+    filterText,
     input.rowLimit ?? 18
   );
   const missingCount = Math.max(0, selectedRecords.length - payloadRecordsWithData.length);
@@ -9315,12 +9342,18 @@ export function buildDataPanelExactDetailJsonInspector(
       selectedRecords.length
     )}`,
     summaryLabel: inspector.summaryLabel,
+    emptyLabel:
+      inspector.rows.length === 0
+        ? "当前过滤没有匹配 JSON 路径。"
+        : "已显示匹配的只读 JSON 路径。",
+    filterText,
     metaLabels: [
       "只读 JSON pointer",
       payloadRecordsWithData.map((record) => record.label).join(" / "),
       missingCount > 0
         ? `缺少 ${formatCount(missingCount)} 类 payload`
-        : "已选 payload 已覆盖"
+        : "已选 payload 已覆盖",
+      filterLabel
     ],
     rows: inspector.rows
   };

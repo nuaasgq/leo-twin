@@ -2,7 +2,7 @@
 
 Date: 2026-07-08
 
-Branch: `feature/T391-dashboard-exact-detail-json-inspector-v1`
+Branch: `feature/T392-dashboard-exact-detail-json-filter-v1`
 
 ## Local Entry Points
 
@@ -265,6 +265,10 @@ the card without loading the full JSON artifact.
   synchronized backend exact-detail payloads. It combines the selected payloads
   into a bounded JSON pointer view so operators can audit exact backend fields
   without editing payloads or recomputing business semantics in the frontend.
+- The raw JSON inspector now has a local path/field filter. Operators can
+  search for terms such as `latency`, `route_id`, or `compute` and the
+  dashboard shows matching JSON pointer rows plus useful parent context from
+  the existing deterministic scanner.
 - Launcher health v2 reports backend/frontend port readiness, HTTP readiness,
   process ids, latest log paths, config paths, and recommended actions.
 - Operator diagnostics bundle captures launcher health, runtime status, version

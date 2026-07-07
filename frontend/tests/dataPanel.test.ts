@@ -16363,7 +16363,9 @@ describe("paginateDetailRows", () => {
       sourceLabel: "精确详情 raw JSON",
       statusLabel: "等待选择明细行",
       summaryLabel: "选择节点或业务后显示后端 exact-detail payload 的只读 JSON 路径",
-      metaLabels: ["只读审查", "不重新计算业务语义", "无活动 payload"],
+      emptyLabel: "选择明细行后显示后端精确详情 payload 的只读 JSON 路径。",
+      filterText: "",
+      metaLabels: ["只读审查", "不重新计算业务语义", "无活动 payload", "无过滤"],
       rows: []
     });
   });
@@ -16383,6 +16385,8 @@ describe("paginateDetailRows", () => {
       tone: "limit",
       statusLabel: "等待后端 payload",
       summaryLabel: "已选 1 类；后端 payload 0 类",
+      emptyLabel: "后端精确详情 payload 尚未同步，暂无可审查 JSON 路径。",
+      filterText: "",
       rows: []
     });
   });
@@ -16414,7 +16418,8 @@ describe("paginateDetailRows", () => {
     expect(display.metaLabels).toEqual([
       "只读 JSON pointer",
       "用户 / 路由",
-      "已选 payload 已覆盖"
+      "已选 payload 已覆盖",
+      "无过滤"
     ]);
     expect(display.summaryLabel).toBe(
       "paths 8 shown / 12 matched / 12 scanned / selected pointer visible"
@@ -16429,6 +16434,55 @@ describe("paginateDetailRows", () => {
       expect.objectContaining({ pointer: "/user" }),
       expect.objectContaining({ pointer: "/user/entity_id", previewLabel: '"user-0"' })
     ]);
+  });
+
+  it("filters exact-detail raw JSON pointer rows by path or preview text", () => {
+    const display = buildDataPanelExactDetailJsonInspector({
+      selected: {
+        routeId: "route-0",
+        backendDetails: {
+          route: {
+            route_id: "route-0",
+            path_label: "user-0 -> sat-0",
+            metrics: {
+              latency_s: 0.12,
+              loss_proxy_rate: 0.01
+            }
+          } as any
+        }
+      },
+      filterText: "latency",
+      rowLimit: 6
+    });
+
+    expect(display.filterText).toBe("latency");
+    expect(display.metaLabels).toContain("过滤 latency");
+    expect(display.summaryLabel).toBe(
+      "paths 4 shown / 4 matched / 7 scanned / selected pointer visible"
+    );
+    expect(display.rows).toEqual([
+      expect.objectContaining({ pointer: "", selected: true }),
+      expect.objectContaining({ pointer: "/route" }),
+      expect.objectContaining({ pointer: "/route/metrics" }),
+      expect.objectContaining({
+        pointer: "/route/metrics/latency_s",
+        previewLabel: "0.12"
+      })
+    ]);
+
+    const noMatch = buildDataPanelExactDetailJsonInspector({
+      selected: {
+        routeId: "route-0",
+        backendDetails: {
+          route: {
+            route_id: "route-0"
+          } as any
+        }
+      },
+      filterText: "not-present"
+    });
+    expect(noMatch.rows).toEqual([]);
+    expect(noMatch.emptyLabel).toBe("当前过滤没有匹配 JSON 路径。");
   });
 });
 
