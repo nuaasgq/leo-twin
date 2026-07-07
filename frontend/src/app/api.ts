@@ -361,6 +361,19 @@ export async function loadRuntimeExportManifest(
   return decodeRuntimeExportManifest(await response.json());
 }
 
+export async function loadRuntimeExportPackageJsonArtifact(
+  packageId: string,
+  filename: string,
+  endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT
+): Promise<unknown> {
+  const url = runtimeExportPackageFileHref(packageId, filename, endpoint);
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`failed to load runtime export package artifact from ${url}: HTTP ${response.status}`);
+  }
+  return response.json();
+}
+
 export async function loadRuntimeExportDiagnosticsBundle(
   packageId: string,
   endpoint = DEFAULT_RUNTIME_EXPORT_PACKAGES_ENDPOINT

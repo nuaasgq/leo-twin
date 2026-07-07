@@ -93,6 +93,7 @@ import {
   UserConfigurationValidationReportV1
 } from "../../core/event_types";
 import {
+  loadRuntimeExportPackageJsonArtifact,
   runtimeExportArchiveHref,
   runtimeExportPackageArchiveHref,
   runtimeExportPackageCompareHref,
@@ -601,6 +602,12 @@ export const DataPanel = memo(function DataPanel({
     useState<string | null>(null);
   const [benchmarkEvidenceFocus, setBenchmarkEvidenceFocus] =
     useState<DataPanelBenchmarkEvidenceFocus | null>(null);
+  const [benchmarkEvidenceArtifactDocument, setBenchmarkEvidenceArtifactDocument] =
+    useState<unknown>(undefined);
+  const [benchmarkEvidenceArtifactLoading, setBenchmarkEvidenceArtifactLoading] =
+    useState(false);
+  const [benchmarkEvidenceArtifactError, setBenchmarkEvidenceArtifactError] =
+    useState<string | null>(null);
   useEffect(() => {
     setExportRouteDetailIndexFilter("");
     setExportRouteDetailIndexAvailabilityFilter("ALL");
@@ -625,6 +632,43 @@ export const DataPanel = memo(function DataPanel({
     setExportServiceTracePageCursor(0);
     setBenchmarkEvidenceFocus(null);
   }, [runtimeExportComparePackageId]);
+  useEffect(() => {
+    setBenchmarkEvidenceArtifactDocument(undefined);
+    setBenchmarkEvidenceArtifactError(null);
+    if (
+      benchmarkEvidenceFocus === null ||
+      runtimeExportComparePackageId === null ||
+      runtimeExportComparePackageId === undefined ||
+      benchmarkEvidenceFocus.jsonPointer === null ||
+      !isDataPanelJsonArtifactFilename(benchmarkEvidenceFocus.artifactLabel)
+    ) {
+      setBenchmarkEvidenceArtifactLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setBenchmarkEvidenceArtifactLoading(true);
+    loadRuntimeExportPackageJsonArtifact(
+      runtimeExportComparePackageId,
+      benchmarkEvidenceFocus.artifactLabel
+    )
+      .then((document) => {
+        if (!cancelled) {
+          setBenchmarkEvidenceArtifactDocument(document);
+          setBenchmarkEvidenceArtifactLoading(false);
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setBenchmarkEvidenceArtifactError(
+            error instanceof Error ? error.message : String(error)
+          );
+          setBenchmarkEvidenceArtifactLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [benchmarkEvidenceFocus, runtimeExportComparePackageId]);
   useEffect(() => {
     setExportRouteReviewReportPage(0);
   }, [
@@ -1470,6 +1514,13 @@ export const DataPanel = memo(function DataPanel({
     buildDataPanelExportAcceptanceReportStatus(
       runtimeExportPackageAcceptanceReport,
       runtimeExportPackageAuditIndex
+    );
+  const benchmarkEvidenceArtifactViewerDisplay =
+    buildDataPanelBenchmarkEvidenceArtifactViewerDisplay(
+      benchmarkEvidenceFocus,
+      benchmarkEvidenceArtifactDocument,
+      benchmarkEvidenceArtifactLoading,
+      benchmarkEvidenceArtifactError
     );
   const exportRouteComparisonReviewReportStatus =
     buildDataPanelExportRouteComparisonReviewReportStatus(
@@ -3044,6 +3095,42 @@ export const DataPanel = memo(function DataPanel({
                               >
                                 {benchmarkEvidenceFocus.artifactLabel}
                               </a>
+                            </div>
+                          ) : null}
+                          {benchmarkEvidenceArtifactViewerDisplay ? (
+                            <div
+                              className={`data-panel-export-artifact-pointer-viewer ${benchmarkEvidenceArtifactViewerDisplay.tone}`}
+                            >
+                              <div>
+                                <span>Artifact pointer viewer</span>
+                                <strong>
+                                  {
+                                    benchmarkEvidenceArtifactViewerDisplay
+                                      .statusLabel
+                                  }
+                                </strong>
+                                <small>
+                                  {
+                                    benchmarkEvidenceArtifactViewerDisplay
+                                      .summaryLabel
+                                  }
+                                </small>
+                              </div>
+                              <div className="data-panel-export-compare-meta">
+                                {benchmarkEvidenceArtifactViewerDisplay.segmentLabels.map(
+                                  (label) => (
+                                    <span key={`artifact-pointer:${label}`}>
+                                      {label}
+                                    </span>
+                                  )
+                                )}
+                              </div>
+                              <pre>
+                                {
+                                  benchmarkEvidenceArtifactViewerDisplay
+                                    .targetPreview
+                                }
+                              </pre>
                             </div>
                           ) : null}
                         </div>
@@ -11505,6 +11592,7 @@ export interface DataPanelExportBenchmarkGateRow {
   hashLabel: string;
   contextLabel: string;
   pointerLabel: string;
+  jsonPointer: string | null;
   artifactLabel: string;
   artifactHref: string | null;
   artifactTitle: string;
@@ -11515,9 +11603,18 @@ export interface DataPanelBenchmarkEvidenceFocus {
   statusLabel: string;
   summaryLabel: string;
   metaLabels: readonly string[];
+  jsonPointer: string | null;
   artifactLabel: string;
   artifactHref: string | null;
   artifactTitle: string;
+}
+
+export interface DataPanelBenchmarkEvidenceArtifactViewerDisplay {
+  tone: "match" | "different" | "pending" | "error";
+  statusLabel: string;
+  summaryLabel: string;
+  segmentLabels: readonly string[];
+  targetPreview: string;
 }
 
 export interface DataPanelExportPackageAuditIndexDisplay {
@@ -12644,6 +12741,7 @@ function buildAcceptanceBenchmarkGateRows(
         hashLabel: shortRuntimeHash(gateCheck.check_hash),
         contextLabel: `context ${gateCheck.check_id}`,
         pointerLabel: "json /benchmark_acceptance_binding_v1",
+        jsonPointer: "/benchmark_acceptance_binding_v1",
         ...acceptanceBenchmarkArtifactLink(packageId, EXPORT_PACKAGE_AUDIT_INDEX_FILENAME)
       }
     ];
@@ -12698,6 +12796,7 @@ function buildAcceptanceBenchmarkResultRow(
     hashLabel: shortRuntimeHash(result.result_hash),
     contextLabel: acceptanceBenchmarkContextLabel(result),
     pointerLabel: acceptanceBenchmarkPointerLabel(result.evidence_json_pointer),
+    jsonPointer: result.evidence_json_pointer ?? null,
     ...acceptanceBenchmarkArtifactLink(
       packageId,
       artifactFilename,
@@ -12729,10 +12828,232 @@ export function buildDataPanelBenchmarkEvidenceFocus(
       row.observedLabel,
       row.issueLabel
     ].filter((label) => label.length > 0),
+    jsonPointer: row.jsonPointer,
     artifactLabel: row.artifactLabel,
     artifactHref: row.artifactHref,
     artifactTitle: row.artifactTitle
   };
+}
+
+export interface DataPanelJsonPointerSelection {
+  valid: boolean;
+  found: boolean;
+  pathLabel: string;
+  typeLabel: string;
+  segmentLabels: readonly string[];
+  preview: string;
+}
+
+export function buildDataPanelBenchmarkEvidenceArtifactViewerDisplay(
+  focus: DataPanelBenchmarkEvidenceFocus | null | undefined,
+  artifactDocument: unknown,
+  loading: boolean,
+  errorLabel: string | null | undefined
+): DataPanelBenchmarkEvidenceArtifactViewerDisplay | null {
+  if (focus === null || focus === undefined) {
+    return null;
+  }
+  if (focus.jsonPointer === null || focus.jsonPointer.length === 0) {
+    return {
+      tone: "pending",
+      statusLabel: "json pointer not recorded",
+      summaryLabel: focus.artifactLabel,
+      segmentLabels: [`artifact ${focus.artifactLabel}`],
+      targetPreview: "No backend evidence_json_pointer was recorded for this row."
+    };
+  }
+  if (!isDataPanelJsonArtifactFilename(focus.artifactLabel)) {
+    return {
+      tone: "pending",
+      statusLabel: "non-json artifact",
+      summaryLabel: `${focus.artifactLabel} / ${focus.jsonPointer}`,
+      segmentLabels: [
+        `artifact ${focus.artifactLabel}`,
+        `pointer ${focus.jsonPointer}`
+      ],
+      targetPreview:
+        "Pointer preview is available only for JSON result-package artifacts."
+    };
+  }
+  if (loading) {
+    return {
+      tone: "pending",
+      statusLabel: "loading artifact",
+      summaryLabel: `${focus.artifactLabel} / ${focus.jsonPointer}`,
+      segmentLabels: [
+        `artifact ${focus.artifactLabel}`,
+        `pointer ${focus.jsonPointer}`
+      ],
+      targetPreview: "Loading selected result-package artifact..."
+    };
+  }
+  if (errorLabel !== null && errorLabel !== undefined) {
+    return {
+      tone: "error",
+      statusLabel: "artifact load failed",
+      summaryLabel: `${focus.artifactLabel} / ${focus.jsonPointer}`,
+      segmentLabels: [
+        `artifact ${focus.artifactLabel}`,
+        `pointer ${focus.jsonPointer}`
+      ],
+      targetPreview: errorLabel
+    };
+  }
+  if (artifactDocument === undefined) {
+    return {
+      tone: "pending",
+      statusLabel: "artifact not loaded",
+      summaryLabel: `${focus.artifactLabel} / ${focus.jsonPointer}`,
+      segmentLabels: [
+        `artifact ${focus.artifactLabel}`,
+        `pointer ${focus.jsonPointer}`
+      ],
+      targetPreview: "Select a benchmark evidence row to load the artifact preview."
+    };
+  }
+  const selection = selectDataPanelJsonPointerValue(
+    artifactDocument,
+    focus.jsonPointer
+  );
+  return {
+    tone: selection.found ? focus.tone : selection.valid ? "different" : "error",
+    statusLabel: selection.found
+      ? "pointer target resolved"
+      : selection.valid
+        ? "pointer target missing"
+        : "invalid json pointer",
+    summaryLabel: `${focus.artifactLabel} / ${focus.jsonPointer}`,
+    segmentLabels: [
+      `artifact ${focus.artifactLabel}`,
+      `pointer ${focus.jsonPointer}`,
+      `path ${selection.pathLabel}`,
+      `target ${selection.typeLabel}`,
+      ...selection.segmentLabels
+    ],
+    targetPreview: selection.preview
+  };
+}
+
+export function selectDataPanelJsonPointerValue(
+  document: unknown,
+  pointer: string
+): DataPanelJsonPointerSelection {
+  if (pointer.length === 0) {
+    return {
+      valid: true,
+      found: true,
+      pathLabel: "/",
+      typeLabel: dataPanelJsonValueTypeLabel(document),
+      segmentLabels: ["root document"],
+      preview: formatDataPanelJsonPreview(document)
+    };
+  }
+  if (!pointer.startsWith("/")) {
+    return {
+      valid: false,
+      found: false,
+      pathLabel: pointer,
+      typeLabel: "invalid",
+      segmentLabels: ["pointer must start with /"],
+      preview: `Invalid JSON pointer: ${pointer}`
+    };
+  }
+  const segments = pointer
+    .slice(1)
+    .split("/")
+    .map((segment) => segment.replace(/~1/g, "/").replace(/~0/g, "~"));
+  let current = document;
+  const traversed: string[] = [];
+  for (const segment of segments) {
+    traversed.push(segment);
+    if (Array.isArray(current)) {
+      if (!/^(0|[1-9][0-9]*)$/.test(segment)) {
+        return missingDataPanelJsonPointerSelection(pointer, traversed, "array");
+      }
+      const index = Number(segment);
+      if (index < 0 || index >= current.length) {
+        return missingDataPanelJsonPointerSelection(pointer, traversed, "array");
+      }
+      current = current[index];
+      continue;
+    }
+    if (isDataPanelJsonObject(current)) {
+      if (!Object.prototype.hasOwnProperty.call(current, segment)) {
+        return missingDataPanelJsonPointerSelection(pointer, traversed, "object");
+      }
+      current = current[segment];
+      continue;
+    }
+    return missingDataPanelJsonPointerSelection(
+      pointer,
+      traversed,
+      dataPanelJsonValueTypeLabel(current)
+    );
+  }
+  return {
+    valid: true,
+    found: true,
+    pathLabel: pointer,
+    typeLabel: dataPanelJsonValueTypeLabel(current),
+    segmentLabels: dataPanelJsonPointerSegmentLabels(segments),
+    preview: formatDataPanelJsonPreview(current)
+  };
+}
+
+function missingDataPanelJsonPointerSelection(
+  pointer: string,
+  traversed: readonly string[],
+  containerType: string
+): DataPanelJsonPointerSelection {
+  return {
+    valid: true,
+    found: false,
+    pathLabel: pointer,
+    typeLabel: "missing",
+    segmentLabels: [
+      ...dataPanelJsonPointerSegmentLabels(traversed),
+      `missing in ${containerType}`
+    ],
+    preview: `No JSON value was found at ${pointer}.`
+  };
+}
+
+function dataPanelJsonPointerSegmentLabels(
+  segments: readonly string[]
+): readonly string[] {
+  if (segments.length === 0) {
+    return ["root document"];
+  }
+  return segments.slice(0, 6).map((segment, index) => {
+    const label = segment.length > 0 ? segment : "<empty>";
+    return `segment ${index + 1}: ${label}`;
+  });
+}
+
+function dataPanelJsonValueTypeLabel(value: unknown): string {
+  if (value === null) {
+    return "null";
+  }
+  if (Array.isArray(value)) {
+    return `array(${formatCount(value.length)})`;
+  }
+  if (typeof value === "object") {
+    return "object";
+  }
+  return typeof value;
+}
+
+function formatDataPanelJsonPreview(value: unknown): string {
+  const text = JSON.stringify(value, null, 2) ?? String(value);
+  return text.length > 1000 ? `${text.slice(0, 997)}...` : text;
+}
+
+function isDataPanelJsonObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isDataPanelJsonArtifactFilename(filename: string): boolean {
+  return filename.toLowerCase().endsWith(".json");
 }
 
 function acceptanceBenchmarkContextLabel(result: {

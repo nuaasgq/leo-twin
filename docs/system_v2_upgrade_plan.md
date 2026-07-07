@@ -813,7 +813,10 @@ Tasks:
     T353 carries that same selected focus into the package artifact health
     grid, marking the backend-named evidence file so an operator can trace a
     benchmark row to a concrete package artifact without browser-side package
-    parsing or acceptance recomputation.
+    parsing or acceptance recomputation. T354 adds a read-only artifact
+    pointer preview for selected JSON evidence files: the dashboard loads the
+    backend-named package artifact, resolves `evidence_json_pointer`, and shows
+    the target JSON value without mutating packages or recomputing acceptance.
 
 ### WS9. Delivery and Operations v2
 

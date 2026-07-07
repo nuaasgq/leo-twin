@@ -593,6 +593,11 @@ The same local focus also marks the matching filename in the package artifact
 health grid, making the selected benchmark evidence file visible without
 parsing artifacts, mutating result packages, or changing package acceptance
 semantics in the browser.
+For JSON artifacts, the dashboard can load the selected artifact through the
+existing read-only package file endpoint and resolve the backend-provided
+`evidence_json_pointer` as a local preview. The preview is informational only:
+it does not rewrite artifacts, recompute acceptance, or replace the linked
+package file as the authoritative evidence.
 
 For operator handoff, the demo backend also exposes the generated Markdown
 handoff report:

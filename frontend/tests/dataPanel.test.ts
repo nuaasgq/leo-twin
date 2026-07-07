@@ -19,6 +19,7 @@ import {
   buildDataPanelExportArtifactHealthDisplay,
   buildDataPanelExportAcceptanceReportStatus,
   buildDataPanelBenchmarkEvidenceFocus,
+  buildDataPanelBenchmarkEvidenceArtifactViewerDisplay,
   buildDataPanelExportBoundaryAlignmentDisplay,
   buildDataPanelExportCatalogDisplay,
   buildDataPanelExportCompareDisplay,
@@ -2770,6 +2771,7 @@ describe("buildDataPanelExportCatalogDisplay", () => {
       hashLabel: "deadbeefcafe",
       contextLabel: "KPI benchmark / avg_latency_ms",
       pointerLabel: "json /checks/0",
+      jsonPointer: "/checks/0",
       artifactLabel: "network_kpi_benchmark_validation_v1.json",
       artifactHref:
         "/runtime/export/packages/pkg-review/files/network_kpi_benchmark_validation_v1.json",
@@ -4445,6 +4447,7 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         "expected PASS",
         "observed PASS"
       ],
+      jsonPointer: "/validation",
       artifactLabel: "network_kpi_benchmark_validation_v1.json",
       artifactHref:
         "/runtime/export/packages/pkg-standard/files/network_kpi_benchmark_validation_v1.json",
@@ -4452,6 +4455,146 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         "network_kpi_benchmark_validation_v1.json / network_kpi_benchmark_validation contains the backend-owned evidence for this benchmark row."
     });
     expect(buildDataPanelBenchmarkEvidenceFocus(null)).toBeNull();
+  });
+
+  it("builds a read-only artifact pointer viewer from benchmark evidence focus", () => {
+    const focus = buildDataPanelBenchmarkEvidenceFocus({
+      tone: "different",
+      groupLabel: "runtime status",
+      itemLabel: "runtime_status.network_kpi",
+      statusLabel: "FAIL",
+      expectedLabel: "expected PASS",
+      observedLabel: "observed FAIL",
+      issueLabel: "benchmark KPI failed",
+      hashLabel: "kpi",
+      contextLabel: "network KPI benchmark validation / network_kpi",
+      pointerLabel: "json /validation/checks/0/observed_value",
+      jsonPointer: "/validation/checks/0/observed_value",
+      artifactLabel: "network_kpi_benchmark_validation_v1.json",
+      artifactHref:
+        "/runtime/export/packages/pkg-standard/files/network_kpi_benchmark_validation_v1.json",
+      artifactTitle:
+        "network_kpi_benchmark_validation_v1.json contains benchmark evidence."
+    });
+
+    expect(
+      buildDataPanelBenchmarkEvidenceArtifactViewerDisplay(
+        focus,
+        {
+          validation: {
+            checks: [
+              {
+                metric: "latency",
+                observed_value: 96.5
+              }
+            ]
+          }
+        },
+        false,
+        null
+      )
+    ).toMatchObject({
+      tone: "different",
+      statusLabel: "pointer target resolved",
+      summaryLabel:
+        "network_kpi_benchmark_validation_v1.json / /validation/checks/0/observed_value",
+      segmentLabels: expect.arrayContaining([
+        "pointer /validation/checks/0/observed_value",
+        "target number",
+        "segment 1: validation",
+        "segment 2: checks",
+        "segment 3: 0",
+        "segment 4: observed_value"
+      ]),
+      targetPreview: "96.5"
+    });
+  });
+
+  it("reports missing and escaped JSON pointer targets deterministically", () => {
+    const escapedFocus = {
+      tone: "match" as const,
+      statusLabel: "expected range / escaped",
+      summaryLabel: "PASS / escaped",
+      metaLabels: [],
+      jsonPointer: "/a~1b/c~0d",
+      artifactLabel: "export_package_audit_index_v1.json",
+      artifactHref:
+        "/runtime/export/packages/pkg-standard/files/export_package_audit_index_v1.json",
+      artifactTitle: "escaped pointer artifact"
+    };
+
+    expect(
+      buildDataPanelBenchmarkEvidenceArtifactViewerDisplay(
+        escapedFocus,
+        {
+          "a/b": {
+            "c~d": "resolved"
+          }
+        },
+        false,
+        null
+      )
+    ).toMatchObject({
+      statusLabel: "pointer target resolved",
+      targetPreview: '"resolved"',
+      segmentLabels: expect.arrayContaining(["segment 1: a/b", "segment 2: c~d"])
+    });
+
+    expect(
+      buildDataPanelBenchmarkEvidenceArtifactViewerDisplay(
+        { ...escapedFocus, jsonPointer: "/a~1b/missing" },
+        {
+          "a/b": {
+            "c~d": "resolved"
+          }
+        },
+        false,
+        null
+      )
+    ).toMatchObject({
+      tone: "different",
+      statusLabel: "pointer target missing",
+      targetPreview: "No JSON value was found at /a~1b/missing."
+    });
+  });
+
+  it("keeps artifact pointer viewer read-only when no JSON preview is available", () => {
+    const focus = {
+      tone: "match" as const,
+      statusLabel: "acceptance / gate",
+      summaryLabel: "PASS / hash",
+      metaLabels: [],
+      jsonPointer: null,
+      artifactLabel: "events.jsonl",
+      artifactHref: "/runtime/export/packages/pkg-standard/files/events.jsonl",
+      artifactTitle: "events artifact"
+    };
+
+    expect(
+      buildDataPanelBenchmarkEvidenceArtifactViewerDisplay(
+        focus,
+        undefined,
+        false,
+        null
+      )
+    ).toMatchObject({
+      tone: "pending",
+      statusLabel: "json pointer not recorded",
+      targetPreview: "No backend evidence_json_pointer was recorded for this row."
+    });
+    expect(
+      buildDataPanelBenchmarkEvidenceArtifactViewerDisplay(
+        { ...focus, jsonPointer: "/events/0" },
+        undefined,
+        false,
+        null
+      )
+    ).toMatchObject({
+      tone: "pending",
+      statusLabel: "non-json artifact",
+      targetPreview:
+        "Pointer preview is available only for JSON result-package artifacts."
+    });
   });
 
   it("summarizes saved route comparison review report contents", () => {

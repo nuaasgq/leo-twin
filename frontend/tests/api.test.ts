@@ -5,6 +5,7 @@ import {
   loadRuntimeExportDiagnosticsBundle,
   loadRuntimeExportHistory,
   loadRuntimeExportManifest,
+  loadRuntimeExportPackageJsonArtifact,
   loadRuntimeExportPackageAcceptanceReport,
   loadRuntimeExportPackageCompare,
   loadRuntimeExportPackageAuditIndex,
@@ -377,6 +378,34 @@ describe("runtime API diagnostics", () => {
       artifacts: [{ name: "events.jsonl" }]
     });
     expect(fetchMock).toHaveBeenCalledWith("/runtime/export/packages/pkg/manifest");
+  });
+
+  it("loads arbitrary runtime export JSON artifacts", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        validation: {
+          status: "PASS",
+          observed_value: 42
+        }
+      })
+    }));
+    vi.stubGlobal("fetch", fetchMock as unknown as typeof fetch);
+
+    await expect(
+      loadRuntimeExportPackageJsonArtifact(
+        "pkg",
+        "network_kpi_benchmark_validation_v1.json"
+      )
+    ).resolves.toEqual({
+      validation: {
+        status: "PASS",
+        observed_value: 42
+      }
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/runtime/export/packages/pkg/files/network_kpi_benchmark_validation_v1.json"
+    );
   });
 
   it("loads runtime export diagnostics bundles", async () => {

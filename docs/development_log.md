@@ -17327,3 +17327,58 @@ change.
   - Add a read-only artifact viewer mode that can use `evidence_json_pointer`
     to prefilter or highlight the linked JSON evidence path inside the
     selected package artifact.
+
+## 2026-07-07 - T354 dashboard artifact pointer viewer v1
+
+- Branch: `feature/T354-dashboard-artifact-pointer-viewer-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: extend the benchmark evidence review focus into a read-only JSON
+  artifact pointer preview. The dashboard now preserves the backend-provided
+  raw `evidence_json_pointer`, loads the selected JSON package artifact through
+  the existing package-file endpoint, resolves the JSON pointer locally, and
+  displays a compact target preview inside the benchmark focus card. The
+  preview is informational only; it does not mutate result packages, recompute
+  benchmark acceptance, change backend export routes, alter simulation models,
+  or modify Event Kernel behavior.
+- Changed files/modules:
+  - `frontend/src/app/api.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/api.test.ts`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `.\node_modules\.bin\tsc.cmd --noEmit -p tsconfig.json` from
+    `frontend`
+    - Result: passed with the bundled Codex Node runtime path.
+  - `pnpm --dir frontend test dataPanel.test.ts api.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 2 test
+      files and 240 tests.
+  - `pnpm --dir frontend test dataPanel.test.ts api.test.ts appSurface.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 3 test
+      files and 284 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path; Vite
+      reported the existing large `DataPanel` chunk warning.
+  - `git diff --check`
+    - Result: passed; Git emitted CRLF warnings for the existing unstaged
+      runtime config drift.
+- Problems encountered:
+  - The default shell environment still does not expose `node`; validation used
+    the bundled Codex Node/Pnpm runtime paths returned by the desktop workspace
+    dependency helper.
+  - TypeScript surfaced that the selected runtime export package id can be
+    `undefined`; the artifact loader effect now handles both `null` and
+    `undefined` before requesting a package file.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The pointer preview is embedded in the focus card rather than a full
+    multi-artifact inspector.
+  - Very large JSON targets are truncated for dashboard readability; the
+    linked package file remains the authoritative full evidence.
+- Recommended follow-up:
+  - Add a larger read-only artifact inspector with search, pointer navigation,
+    and row-level highlighting for result-package review workflows.
