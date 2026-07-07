@@ -2849,7 +2849,7 @@ button.data-panel-route-row {
   min-width: 0;
 }
 
-.data-panel-export-artifact-health-grid a,
+.data-panel-export-artifact-health-grid > a,
 .data-panel-export-artifact-health-grid > span {
   display: grid;
   gap: 3px;
@@ -2862,19 +2862,19 @@ button.data-panel-route-row {
   text-decoration: none;
 }
 
-.data-panel-export-artifact-health-grid a:hover {
+.data-panel-export-artifact-health-grid > a:hover {
   border-color: #4b7490;
   background: #0c1a24;
 }
 
-.data-panel-export-artifact-health-grid a.focused,
+.data-panel-export-artifact-health-grid > a.focused,
 .data-panel-export-artifact-health-grid > span.focused {
   border-color: var(--accent-cyan);
   background: #0d2028;
   box-shadow: inset 0 0 0 1px rgba(94, 234, 212, 0.18);
 }
 
-.data-panel-export-artifact-health-grid a > span,
+.data-panel-export-artifact-health-grid > a > span,
 .data-panel-export-artifact-health-grid > span > span {
   min-width: 0;
   overflow: hidden;
@@ -2907,6 +2907,44 @@ button.data-panel-route-row {
 .data-panel-export-artifact-health-grid small.data-panel-export-artifact-focus-label {
   color: var(--accent-cyan);
   font-weight: 800;
+}
+
+.data-panel-export-artifact-health-grid > span > a {
+  min-width: 0;
+  color: var(--app-text);
+  font-size: 11px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+  text-decoration: none;
+}
+
+.data-panel-export-artifact-health-grid > span > a:hover {
+  color: var(--accent-cyan);
+}
+
+.data-panel-export-artifact-health-grid > span > a > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.data-panel-export-artifact-health-grid button {
+  justify-self: start;
+  min-width: 0;
+  border: 1px solid #2a4658;
+  border-radius: 5px;
+  padding: 4px 6px;
+  background: #101922;
+  color: var(--accent-cyan);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.data-panel-export-artifact-health-grid button:hover {
+  border-color: #4b7490;
+  background: #0c1a24;
 }
 
 .data-panel-export-diagnostics-drawer {

@@ -602,6 +602,10 @@ The same preview includes a bounded read-only artifact inspector: JSON paths
 are listed in deterministic order, the selected evidence pointer is highlighted,
 and operators can filter path/key/value text without changing package files or
 browser-side acceptance decisions.
+The package artifact health grid also exposes this inspector for registered
+JSON artifacts. Selecting a package artifact opens the same read-only inspector
+at the JSON root, while the original package-file link remains available as the
+authoritative artifact reference.
 
 For operator handoff, the demo backend also exposes the generated Markdown
 handoff report:

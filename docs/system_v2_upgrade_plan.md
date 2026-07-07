@@ -819,7 +819,10 @@ Tasks:
     the target JSON value without mutating packages or recomputing acceptance.
     T355 expands that preview into a bounded read-only JSON artifact inspector
     with deterministic pointer rows, selected evidence pointer highlighting,
-    and local text filtering over pointer/key/value previews.
+    and local text filtering over pointer/key/value previews. T356 adds a
+    package artifact health entry point for the same inspector, so any
+    registered JSON result artifact can be inspected from its health row at the
+    JSON root while retaining the original package-file link.
 
 ### WS9. Delivery and Operations v2
 

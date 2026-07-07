@@ -17433,3 +17433,53 @@ change.
   - Add a dedicated result-package artifact browser with larger virtualized
     path lists and cross-links from benchmark rows, route evidence, and service
     trace evidence.
+
+## 2026-07-07 - T356 dashboard artifact browser entry v1
+
+- Branch: `feature/T356-dashboard-artifact-browser-entry-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: add a package artifact health entry point for the read-only JSON
+  inspector introduced in T355. Registered JSON result-package artifacts now
+  show a `检查 JSON` action in the artifact health grid. Selecting it opens the
+  shared inspector at the JSON root, highlights the root pointer, and keeps the
+  normal package-file link available as the authoritative evidence reference.
+  Non-JSON artifacts and missing artifacts remain non-inspectable. This task
+  changes only the dashboard review surface and tests; it does not mutate
+  packages, recompute acceptance, add backend routes, change model behavior, or
+  modify Event Kernel behavior.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `.\node_modules\.bin\tsc.cmd --noEmit -p tsconfig.json` from
+    `frontend`
+    - Result: passed with the bundled Codex Node runtime path.
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 197 tests.
+  - `pnpm --dir frontend test dataPanel.test.ts api.test.ts appSurface.test.ts`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path, 3 test
+      files and 285 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed with the bundled Codex Node/Pnpm runtime path; Vite
+      reported the existing large `DataPanel` chunk warning.
+  - `git diff --check`
+    - Result: passed; Git emitted CRLF warnings for the existing unstaged
+      runtime config drift.
+- Problems encountered:
+  - Adding a reusable focus source required existing benchmark-focus tests to
+    include the new `focusSourceLabel` field.
+  - Empty-string JSON pointers now represent the RFC 6901 root pointer for
+    package artifact inspection; `null` remains the "not recorded" state.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The inspector is still embedded in the review card rather than a dedicated
+    full-screen artifact browser.
+  - Non-JSON artifacts still open only through their normal package-file links.
+- Recommended follow-up:
+  - Add route and service-trace evidence cross-links that can preselect the
+    relevant artifact inspector row from route/detail review sections.

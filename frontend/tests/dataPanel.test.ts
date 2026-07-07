@@ -19,6 +19,7 @@ import {
   buildDataPanelExportArtifactHealthDisplay,
   buildDataPanelExportAcceptanceReportStatus,
   buildDataPanelBenchmarkEvidenceFocus,
+  buildDataPanelArtifactHealthInspectorFocus,
   buildDataPanelBenchmarkEvidenceArtifactViewerDisplay,
   buildDataPanelJsonArtifactInspectorRows,
   buildDataPanelExportBoundaryAlignmentDisplay,
@@ -2793,12 +2794,72 @@ describe("buildDataPanelExportCatalogDisplay", () => {
       )
     ).toMatchObject({
       focused: true,
+      inspectable: true,
       focusLabel: "expected range / avg_latency_ms / FAIL / deadbeefcafe"
     });
     expect(display?.rows.find((row) => row.filename === "manifest.json")).toMatchObject({
       focused: false,
+      inspectable: true,
       focusLabel: ""
     });
+    expect(
+      buildDataPanelArtifactHealthInspectorFocus(
+        display?.rows.find((row) => row.filename === "manifest.json")
+      )
+    ).toMatchObject({
+      focusSourceLabel: "Artifact inspector focus",
+      statusLabel: "artifact / manifest.json",
+      jsonPointer: "",
+      artifactLabel: "manifest.json",
+      artifactHref: "/runtime/export/packages/pkg-review/files/manifest.json"
+    });
+    expect(
+      buildDataPanelBenchmarkEvidenceArtifactViewerDisplay(
+        buildDataPanelArtifactHealthInspectorFocus(
+          display?.rows.find((row) => row.filename === "manifest.json")
+        ),
+        {
+          manifest_id: "leo_twin.runtime_reproducibility_manifest.v1",
+          artifact_count: 2
+        },
+        false,
+        null
+      )
+    ).toMatchObject({
+      tone: "match",
+      statusLabel: "pointer target resolved",
+      summaryLabel: "manifest.json / /",
+      inspectorEnabled: true,
+      inspectorRows: [
+        expect.objectContaining({
+          pointer: "",
+          pointerLabel: "json /",
+          selected: true
+        }),
+        expect.objectContaining({
+          pointer: "/artifact_count"
+        }),
+        expect.objectContaining({
+          pointer: "/manifest_id"
+        })
+      ]
+    });
+    expect(
+      buildDataPanelArtifactHealthInspectorFocus({
+        filename: "events.jsonl",
+        roleLabel: "required",
+        statusLabel: "registered",
+        sizeLabel: "1 KiB",
+        hashLabel: "events",
+        href: "/runtime/export/packages/pkg-review/files/events.jsonl",
+        required: true,
+        present: true,
+        inspectable: false,
+        focused: false,
+        focusLabel: "",
+        title: "events.jsonl"
+      })
+    ).toBeNull();
   });
 
   it("surfaces saved route comparison review report artifacts from backend catalog", () => {
@@ -4439,6 +4500,7 @@ describe("buildDataPanelExportCatalogDisplay", () => {
     expect(
       buildDataPanelBenchmarkEvidenceFocus(display?.benchmarkGate?.rows[3])
     ).toEqual({
+      focusSourceLabel: "Benchmark evidence focus",
       tone: "match",
       statusLabel: "runtime status / runtime_status.network_kpi",
       summaryLabel: "PASS / kpi",
@@ -4586,6 +4648,7 @@ describe("buildDataPanelExportCatalogDisplay", () => {
 
   it("reports missing and escaped JSON pointer targets deterministically", () => {
     const escapedFocus = {
+      focusSourceLabel: "Benchmark evidence focus",
       tone: "match" as const,
       statusLabel: "expected range / escaped",
       summaryLabel: "PASS / escaped",
@@ -4634,6 +4697,7 @@ describe("buildDataPanelExportCatalogDisplay", () => {
 
   it("keeps artifact pointer viewer read-only when no JSON preview is available", () => {
     const focus = {
+      focusSourceLabel: "Benchmark evidence focus",
       tone: "match" as const,
       statusLabel: "acceptance / gate",
       summaryLabel: "PASS / hash",

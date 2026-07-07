@@ -2050,7 +2050,7 @@ export const DataPanel = memo(function DataPanel({
               </div>
               <div className="data-panel-export-artifact-health-grid">
                 {exportArtifactHealthDisplay.rows.map((row) =>
-                  row.href ? (
+                  row.href && !row.inspectable ? (
                     <a
                       className={row.focused ? "focused" : undefined}
                       href={row.href}
@@ -2076,7 +2076,13 @@ export const DataPanel = memo(function DataPanel({
                       key={row.filename}
                       title={row.title}
                     >
-                      <span>{row.filename}</span>
+                      {row.href ? (
+                        <a href={row.href} title={row.title}>
+                          <span>{row.filename}</span>
+                        </a>
+                      ) : (
+                        <span>{row.filename}</span>
+                      )}
                       <strong className={row.present ? "present" : "missing"}>
                         {row.statusLabel}
                       </strong>
@@ -2087,6 +2093,18 @@ export const DataPanel = memo(function DataPanel({
                         <small className="data-panel-export-artifact-focus-label">
                           focused evidence / {row.focusLabel}
                         </small>
+                      ) : null}
+                      {row.inspectable ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setBenchmarkEvidenceFocus(
+                              buildDataPanelArtifactHealthInspectorFocus(row)
+                            )
+                          }
+                        >
+                          检查 JSON
+                        </button>
                       ) : null}
                     </span>
                   )
@@ -3078,7 +3096,7 @@ export const DataPanel = memo(function DataPanel({
                         >
                           <div className="data-panel-export-diagnostics-header">
                             <div>
-                              <span>Benchmark evidence focus</span>
+                              <span>{benchmarkEvidenceFocus.focusSourceLabel}</span>
                               <strong>{benchmarkEvidenceFocus.statusLabel}</strong>
                               <small>{benchmarkEvidenceFocus.summaryLabel}</small>
                             </div>
@@ -11519,6 +11537,7 @@ export interface DataPanelExportArtifactHealthRow {
   href: string | null;
   required: boolean;
   present: boolean;
+  inspectable: boolean;
   focused: boolean;
   focusLabel: string;
   title: string;
@@ -11649,6 +11668,7 @@ export interface DataPanelExportBenchmarkGateRow {
 }
 
 export interface DataPanelBenchmarkEvidenceFocus {
+  focusSourceLabel: string;
   tone: "match" | "different" | "pending" | "error";
   statusLabel: string;
   summaryLabel: string;
@@ -12880,6 +12900,7 @@ export function buildDataPanelBenchmarkEvidenceFocus(
     return null;
   }
   return {
+    focusSourceLabel: "Benchmark evidence focus",
     tone: row.tone,
     statusLabel: `${row.groupLabel} / ${row.itemLabel}`,
     summaryLabel: `${row.statusLabel} / ${row.hashLabel}`,
@@ -12894,6 +12915,29 @@ export function buildDataPanelBenchmarkEvidenceFocus(
     artifactLabel: row.artifactLabel,
     artifactHref: row.artifactHref,
     artifactTitle: row.artifactTitle
+  };
+}
+
+export function buildDataPanelArtifactHealthInspectorFocus(
+  row: DataPanelExportArtifactHealthRow | null | undefined
+): DataPanelBenchmarkEvidenceFocus | null {
+  if (row === null || row === undefined || !row.inspectable || row.href === null) {
+    return null;
+  }
+  return {
+    focusSourceLabel: "Artifact inspector focus",
+    tone: row.present ? "match" : "pending",
+    statusLabel: `artifact / ${row.filename}`,
+    summaryLabel: `${row.statusLabel} / ${row.hashLabel}`,
+    metaLabels: [
+      `${row.roleLabel} / ${row.sizeLabel} / ${row.hashLabel}`,
+      "json root /",
+      "read-only package artifact"
+    ],
+    jsonPointer: "",
+    artifactLabel: row.filename,
+    artifactHref: row.href,
+    artifactTitle: `${row.title} / read-only JSON inspector`
   };
 }
 
@@ -12925,7 +12969,7 @@ export function buildDataPanelBenchmarkEvidenceArtifactViewerDisplay(
   if (focus === null || focus === undefined) {
     return null;
   }
-  if (focus.jsonPointer === null || focus.jsonPointer.length === 0) {
+  if (focus.jsonPointer === null) {
     return {
       tone: "pending",
       statusLabel: "json pointer not recorded",
@@ -12935,14 +12979,15 @@ export function buildDataPanelBenchmarkEvidenceArtifactViewerDisplay(
       ...emptyDataPanelArtifactInspectorDisplay()
     };
   }
+  const pointerDisplayLabel = dataPanelJsonPointerDisplayLabel(focus.jsonPointer);
   if (!isDataPanelJsonArtifactFilename(focus.artifactLabel)) {
     return {
       tone: "pending",
       statusLabel: "non-json artifact",
-      summaryLabel: `${focus.artifactLabel} / ${focus.jsonPointer}`,
+      summaryLabel: `${focus.artifactLabel} / ${pointerDisplayLabel}`,
       segmentLabels: [
         `artifact ${focus.artifactLabel}`,
-        `pointer ${focus.jsonPointer}`
+        `pointer ${pointerDisplayLabel}`
       ],
       targetPreview:
         "Pointer preview is available only for JSON result-package artifacts.",
@@ -12953,10 +12998,10 @@ export function buildDataPanelBenchmarkEvidenceArtifactViewerDisplay(
     return {
       tone: "pending",
       statusLabel: "loading artifact",
-      summaryLabel: `${focus.artifactLabel} / ${focus.jsonPointer}`,
+      summaryLabel: `${focus.artifactLabel} / ${pointerDisplayLabel}`,
       segmentLabels: [
         `artifact ${focus.artifactLabel}`,
-        `pointer ${focus.jsonPointer}`
+        `pointer ${pointerDisplayLabel}`
       ],
       targetPreview: "Loading selected result-package artifact...",
       ...emptyDataPanelArtifactInspectorDisplay()
@@ -12966,10 +13011,10 @@ export function buildDataPanelBenchmarkEvidenceArtifactViewerDisplay(
     return {
       tone: "error",
       statusLabel: "artifact load failed",
-      summaryLabel: `${focus.artifactLabel} / ${focus.jsonPointer}`,
+      summaryLabel: `${focus.artifactLabel} / ${pointerDisplayLabel}`,
       segmentLabels: [
         `artifact ${focus.artifactLabel}`,
-        `pointer ${focus.jsonPointer}`
+        `pointer ${pointerDisplayLabel}`
       ],
       targetPreview: errorLabel,
       ...emptyDataPanelArtifactInspectorDisplay()
@@ -12979,10 +13024,10 @@ export function buildDataPanelBenchmarkEvidenceArtifactViewerDisplay(
     return {
       tone: "pending",
       statusLabel: "artifact not loaded",
-      summaryLabel: `${focus.artifactLabel} / ${focus.jsonPointer}`,
+      summaryLabel: `${focus.artifactLabel} / ${pointerDisplayLabel}`,
       segmentLabels: [
         `artifact ${focus.artifactLabel}`,
-        `pointer ${focus.jsonPointer}`
+        `pointer ${pointerDisplayLabel}`
       ],
       targetPreview: "Select a benchmark evidence row to load the artifact preview.",
       ...emptyDataPanelArtifactInspectorDisplay()
@@ -13004,10 +13049,10 @@ export function buildDataPanelBenchmarkEvidenceArtifactViewerDisplay(
       : selection.valid
         ? "pointer target missing"
         : "invalid json pointer",
-    summaryLabel: `${focus.artifactLabel} / ${focus.jsonPointer}`,
+    summaryLabel: `${focus.artifactLabel} / ${pointerDisplayLabel}`,
     segmentLabels: [
       `artifact ${focus.artifactLabel}`,
-      `pointer ${focus.jsonPointer}`,
+      `pointer ${pointerDisplayLabel}`,
       `path ${selection.pathLabel}`,
       `target ${selection.typeLabel}`,
       ...selection.segmentLabels
@@ -14001,6 +14046,7 @@ export function buildDataPanelExportArtifactHealthDisplay(
     const required = requiredFilenames.has(filename);
     const missing = missingRequiredFilenames.has(filename) || (required && file === null);
     const present = file !== null && !missing;
+    const inspectable = present && isDataPanelJsonArtifactFilename(filename);
     const focused = benchmarkEvidenceFocus?.artifactLabel === filename;
     const focusLabel = focused
       ? `${benchmarkEvidenceFocus.statusLabel} / ${benchmarkEvidenceFocus.summaryLabel}`
@@ -14014,6 +14060,7 @@ export function buildDataPanelExportArtifactHealthDisplay(
       href: file ? runtimeExportPackageFileHref(selectedPackageId, filename) : null,
       required,
       present,
+      inspectable,
       focused,
       focusLabel,
       title: `${filename} / ${missing ? "缺失" : "已登记"} / ${
