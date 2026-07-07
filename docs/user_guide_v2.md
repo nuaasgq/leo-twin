@@ -173,6 +173,9 @@ The standalone dashboard is for data situation awareness:
   as backend exact detail, visible-window fallback, loading, failed, pending,
   or not selected, and counts reviewable fields, warnings, and resource/sync
   fields without recomputing business semantics in the browser;
+- a read-only exact-detail raw JSON inspector. When backend exact details are
+  synchronized, it exposes bounded JSON pointer rows for the selected payloads
+  so operators can inspect the source fields behind the summary cards;
 - service-trace closed-loop evidence, showing whether the selected service
   trace has correlated flow, route, user, satellite, compute-node, stage, and
   latency evidence from backend exact detail or the visible dashboard window;

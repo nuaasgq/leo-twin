@@ -2,7 +2,7 @@
 
 Date: 2026-07-08
 
-Branch: `feature/T390-dashboard-exact-detail-review-workspace-v1`
+Branch: `feature/T391-dashboard-exact-detail-json-inspector-v1`
 
 ## Local Entry Points
 
@@ -261,6 +261,10 @@ the card without loading the full JSON artifact.
   detail, visible-window fallback, loading, failed, or pending, and counts
   reviewable fields, warning fields, and resource/synchronization fields from
   the existing inspector view models.
+- The same exact-detail area now includes a read-only raw JSON inspector for
+  synchronized backend exact-detail payloads. It combines the selected payloads
+  into a bounded JSON pointer view so operators can audit exact backend fields
+  without editing payloads or recomputing business semantics in the frontend.
 - Launcher health v2 reports backend/frontend port readiness, HTTP readiness,
   process ids, latest log paths, config paths, and recommended actions.
 - Operator diagnostics bundle captures launcher health, runtime status, version

@@ -5,6 +5,49 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-08 - Dashboard Exact Detail JSON Inspector v1
+
+- Branch: `feature/T391-dashboard-exact-detail-json-inspector-v1`
+- Commit: pending in this commit
+- Scope: add a read-only raw JSON inspector for synchronized backend
+  exact-detail payloads in the standalone dashboard detail section. The
+  inspector combines currently selected backend exact-detail payloads for
+  users, satellites, routes, services, service traces, and compute nodes into a
+  bounded JSON pointer view using the existing deterministic JSON artifact
+  scanner. This task does not change Event Kernel behavior, backend protocols,
+  runtime contracts, simulation models, packet-level behavior, or frontend
+  routing architecture.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/current_product_status.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed, 1 test file / 226 tests using the bundled Codex
+      Node/pnpm runtime.
+  - `python -m pytest tests\unit\test_system_v2_upgrade_plan_docs.py tests\unit\test_user_guide_v2_docs.py -q`
+    - Result: passed, 4 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed. Vite still reports the existing large `DataPanel` chunk
+      warning after minification.
+- Problems encountered and handling:
+  - The first target test run showed the expected JSON path count was off by
+    one in the new fixture. The fixture expectation was corrected to match the
+    deterministic scanner output and the target test was rerun successfully.
+  - The inspector intentionally scans bounded rows from already synchronized
+    backend payloads. It does not fetch new payloads, edit JSON, or infer
+    business semantics from raw fields.
+  - Local runtime/generated config files were already dirty and remain outside
+    the staged task scope.
+- Known remaining issues / follow-up:
+  - The raw JSON inspector is currently an always-on bounded preview for the
+    selected payloads. A later pass can add operator-controlled path filtering
+    or a side-by-side package/live exact-detail diff viewer.
+
 ## 2026-07-08 - Dashboard Exact Detail Review Workspace v1
 
 - Branch: `feature/T390-dashboard-exact-detail-review-workspace-v1`

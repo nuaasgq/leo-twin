@@ -712,6 +712,11 @@ Tasks:
     request loading/error state, reviewable field counts, warning-field counts,
     and resource/synchronization field counts without changing backend
     protocols.
+  - Status: T391 adds a read-only raw JSON inspector for synchronized
+    exact-detail payloads. The dashboard combines currently selected backend
+    payloads into a bounded JSON pointer view using the existing deterministic
+    JSON artifact scanner, so operators can audit source fields without
+    payload editing, protocol changes, or frontend business recomputation.
 - V2-054: Add model assumptions panel.
   - Scope: backend-derived model caveats, fidelity mode, KPI provenance.
   - Depends on: V2-003, V2-021.

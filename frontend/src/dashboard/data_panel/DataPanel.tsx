@@ -1860,6 +1860,24 @@ export const DataPanel = memo(function DataPanel({
       computeNode: displayedComputeNodeDetailInspector
     }
   });
+  const exactDetailJsonInspector = buildDataPanelExactDetailJsonInspector({
+    selected: {
+      userId: selectedDetailUserId,
+      satelliteId: selectedDetailSatelliteId,
+      routeId: selectedRouteDetailId,
+      serviceId: selectedServiceDetailId,
+      traceId: selectedServiceTraceRow?.traceId ?? null,
+      computeNodeId: selectedComputeNodeDetailId,
+      backendDetails: {
+        user: selectedUserBackendDetail,
+        satellite: selectedSatelliteBackendDetail,
+        route: selectedRouteBackendDetail,
+        service: selectedServiceBackendDetail,
+        serviceTrace: selectedServiceTraceBackendDetail,
+        computeNode: selectedComputeNodeBackendDetail
+      }
+    }
+  });
   const userSourceBadge = buildRuntimeDetailSourceBadge(userBusinessRequests.sourceLabel);
   const satelliteSourceBadge = buildRuntimeDetailSourceBadge(satelliteResourceRows.sourceLabel);
   const detailScopeNotes = [
@@ -5685,6 +5703,7 @@ export const DataPanel = memo(function DataPanel({
       <DetailInspectorDrawer items={nodeDetailDrawerItems} />
       <ServiceTraceWideBrowser display={serviceTraceBrowserDisplay} />
       <ExactDetailReviewWorkspace display={exactDetailReviewWorkspace} />
+      <ExactDetailJsonInspector display={exactDetailJsonInspector} />
       <div className="data-panel-detail-grid">
         <section className="dashboard-section data-panel-detail-table" aria-label="用户节点状态明细">
           <div className="section-title">用户节点状态</div>
@@ -6951,6 +6970,55 @@ function ExactDetailReviewWorkspace({
   );
 }
 
+function ExactDetailJsonInspector({
+  display
+}: {
+  display: DataPanelExactDetailJsonInspectorDisplay;
+}) {
+  return (
+    <section
+      className={`data-panel-exact-detail-json ${display.tone}`}
+      aria-label="精确详情 raw JSON 只读审查"
+    >
+      <div className="data-panel-exact-detail-json-header">
+        <div>
+          <span>{display.sourceLabel}</span>
+          <strong>{display.statusLabel}</strong>
+          <small>{display.summaryLabel}</small>
+        </div>
+        <div className="data-panel-exact-detail-json-meta">
+          {display.metaLabels.map((label) => (
+            <span key={label}>{label}</span>
+          ))}
+        </div>
+      </div>
+      {display.rows.length === 0 ? (
+        <div className="data-panel-exact-detail-json-empty">
+          {display.active
+            ? "后端精确详情 payload 尚未同步，暂无可审查 JSON 路径。"
+            : "选择明细行后显示后端精确详情 payload 的只读 JSON 路径。"}
+        </div>
+      ) : (
+        <div className="data-panel-exact-detail-json-rows">
+          {display.rows.map((row) => (
+            <span
+              className={row.selected ? "selected" : undefined}
+              key={`exact-detail-json:${row.pointer}`}
+              title={`${row.pointerLabel}: ${row.previewLabel}`}
+            >
+              <strong>{row.pointerLabel}</strong>
+              <small>
+                {row.typeLabel} / {row.depthLabel}
+              </small>
+              <em>{row.previewLabel}</em>
+            </span>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function ServiceTraceWideBrowser({
   display
 }: {
@@ -7660,6 +7728,21 @@ export interface DataPanelExactDetailReviewWorkspaceRow {
   warningLabel: string;
   resourceLabel: string;
   tone: "backend" | "limit" | "history";
+}
+
+export interface DataPanelExactDetailJsonInspectorInput {
+  selected: DataPanelSelectedDetailEvidenceInput;
+  rowLimit?: number;
+}
+
+export interface DataPanelExactDetailJsonInspectorDisplay {
+  active: boolean;
+  tone: "backend" | "limit" | "history";
+  sourceLabel: string;
+  statusLabel: string;
+  summaryLabel: string;
+  metaLabels: readonly string[];
+  rows: readonly DataPanelBenchmarkEvidenceArtifactInspectorRow[];
 }
 
 export interface DataPanelServiceTraceCorrelationEvidenceInput {
@@ -9146,6 +9229,115 @@ function exactDetailReviewWorkspaceRow(
     warningLabel: `${formatCount(warningCount)} 个告警字段`,
     resourceLabel: `${formatCount(resourceCount)} 个资源/同步字段`,
     tone
+  };
+}
+
+export function buildDataPanelExactDetailJsonInspector(
+  input: DataPanelExactDetailJsonInspectorInput
+): DataPanelExactDetailJsonInspectorDisplay {
+  const payloadRecords = [
+    exactDetailJsonPayloadRecord(
+      "user",
+      "用户",
+      input.selected.userId,
+      input.selected.backendDetails?.user
+    ),
+    exactDetailJsonPayloadRecord(
+      "satellite",
+      "卫星",
+      input.selected.satelliteId,
+      input.selected.backendDetails?.satellite
+    ),
+    exactDetailJsonPayloadRecord(
+      "route",
+      "路由",
+      input.selected.routeId,
+      input.selected.backendDetails?.route
+    ),
+    exactDetailJsonPayloadRecord(
+      "service",
+      "服务",
+      input.selected.serviceId,
+      input.selected.backendDetails?.service
+    ),
+    exactDetailJsonPayloadRecord(
+      "service_trace",
+      "服务链路",
+      input.selected.traceId,
+      input.selected.backendDetails?.serviceTrace
+    ),
+    exactDetailJsonPayloadRecord(
+      "compute_node",
+      "算力节点",
+      input.selected.computeNodeId,
+      input.selected.backendDetails?.computeNode
+    )
+  ];
+  const selectedRecords = payloadRecords.filter((record) => record.selected);
+  const payloadRecordsWithData = selectedRecords.filter((record) => record.payload !== null);
+  if (selectedRecords.length === 0) {
+    return {
+      active: false,
+      tone: "history",
+      sourceLabel: "精确详情 raw JSON",
+      statusLabel: "等待选择明细行",
+      summaryLabel: "选择节点或业务后显示后端 exact-detail payload 的只读 JSON 路径",
+      metaLabels: ["只读审查", "不重新计算业务语义", "无活动 payload"],
+      rows: []
+    };
+  }
+  if (payloadRecordsWithData.length === 0) {
+    return {
+      active: true,
+      tone: "limit",
+      sourceLabel: "精确详情 raw JSON",
+      statusLabel: "等待后端 payload",
+      summaryLabel: `已选 ${formatCount(selectedRecords.length)} 类；后端 payload 0 类`,
+      metaLabels: ["只读审查", "等待 exact-detail API", "无 raw JSON 可扫描"],
+      rows: []
+    };
+  }
+  const document = Object.fromEntries(
+    payloadRecordsWithData.map((record) => [record.key, record.payload])
+  );
+  const inspector = buildDataPanelJsonArtifactInspectorRows(
+    document,
+    "",
+    "",
+    input.rowLimit ?? 18
+  );
+  const missingCount = Math.max(0, selectedRecords.length - payloadRecordsWithData.length);
+  return {
+    active: true,
+    tone: missingCount > 0 ? "limit" : "backend",
+    sourceLabel: "精确详情 raw JSON",
+    statusLabel: `payload ${formatCount(payloadRecordsWithData.length)}/${formatCount(
+      selectedRecords.length
+    )}`,
+    summaryLabel: inspector.summaryLabel,
+    metaLabels: [
+      "只读 JSON pointer",
+      payloadRecordsWithData.map((record) => record.label).join(" / "),
+      missingCount > 0
+        ? `缺少 ${formatCount(missingCount)} 类 payload`
+        : "已选 payload 已覆盖"
+    ],
+    rows: inspector.rows
+  };
+}
+
+function exactDetailJsonPayloadRecord(
+  key: string,
+  label: string,
+  selectedId: string | null | undefined,
+  payload: unknown
+): { key: string; label: string; selected: boolean; payload: unknown | null } {
+  const selected = (selectedId ?? "").trim().length > 0;
+  return {
+    key,
+    label,
+    selected,
+    payload: payload === null || payload === undefined ? null : payload
   };
 }
 

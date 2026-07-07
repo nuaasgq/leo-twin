@@ -16,6 +16,7 @@ import {
   buildDataPanelSelectedDetailEvidenceNote,
   buildDataPanelNodeEvidenceWorkspace,
   buildDataPanelExactDetailReviewWorkspace,
+  buildDataPanelExactDetailJsonInspector,
   buildDataPanelServiceTraceCorrelationEvidenceNote,
   buildDataPanelDetailPageSizes,
   buildDataPanelPaginationContractNotes,
@@ -16353,6 +16354,81 @@ describe("paginateDetailRows", () => {
       statusLabel: "错误 HTTP 404",
       tone: "limit"
     });
+  });
+
+  it("keeps exact-detail raw JSON inspector idle before any detail row is selected", () => {
+    expect(buildDataPanelExactDetailJsonInspector({ selected: {} })).toEqual({
+      active: false,
+      tone: "history",
+      sourceLabel: "精确详情 raw JSON",
+      statusLabel: "等待选择明细行",
+      summaryLabel: "选择节点或业务后显示后端 exact-detail payload 的只读 JSON 路径",
+      metaLabels: ["只读审查", "不重新计算业务语义", "无活动 payload"],
+      rows: []
+    });
+  });
+
+  it("marks exact-detail raw JSON inspector as limited when selected payload is not synced", () => {
+    expect(
+      buildDataPanelExactDetailJsonInspector({
+        selected: {
+          routeId: "route-0",
+          backendDetails: {
+            route: null
+          }
+        }
+      })
+    ).toMatchObject({
+      active: true,
+      tone: "limit",
+      statusLabel: "等待后端 payload",
+      summaryLabel: "已选 1 类；后端 payload 0 类",
+      rows: []
+    });
+  });
+
+  it("builds deterministic read-only JSON pointer rows for exact-detail payloads", () => {
+    const display = buildDataPanelExactDetailJsonInspector({
+      selected: {
+        userId: "user-0",
+        routeId: "route-0",
+        backendDetails: {
+          user: {
+            entity_id: "user-0",
+            fields: [{ label: "state", value: "ACTIVE" }]
+          } as any,
+          route: {
+            route_id: "route-0",
+            path_label: "user-0 -> sat-0",
+            metrics: {
+              latency_s: 0.12
+            }
+          } as any
+        }
+      },
+      rowLimit: 8
+    });
+
+    expect(display.tone).toBe("backend");
+    expect(display.statusLabel).toBe("payload 2/2");
+    expect(display.metaLabels).toEqual([
+      "只读 JSON pointer",
+      "用户 / 路由",
+      "已选 payload 已覆盖"
+    ]);
+    expect(display.summaryLabel).toBe(
+      "paths 8 shown / 12 matched / 12 scanned / selected pointer visible"
+    );
+    expect(display.rows).toEqual([
+      expect.objectContaining({ pointer: "", selected: true }),
+      expect.objectContaining({ pointer: "/route" }),
+      expect.objectContaining({ pointer: "/route/metrics" }),
+      expect.objectContaining({ pointer: "/route/metrics/latency_s", previewLabel: "0.12" }),
+      expect.objectContaining({ pointer: "/route/path_label", previewLabel: '"user-0 -> sat-0"' }),
+      expect.objectContaining({ pointer: "/route/route_id", previewLabel: '"route-0"' }),
+      expect.objectContaining({ pointer: "/user" }),
+      expect.objectContaining({ pointer: "/user/entity_id", previewLabel: '"user-0"' })
+    ]);
   });
 });
 
