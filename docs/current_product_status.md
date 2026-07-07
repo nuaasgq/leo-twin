@@ -2,7 +2,7 @@
 
 Date: 2026-07-07
 
-Branch: `feature/T372-dashboard-template-validation-detail-v1`
+Branch: `feature/T377-traffic-demand-explanation-export-v1`
 
 ## Local Entry Points
 
@@ -86,6 +86,11 @@ entry for result-package artifacts. In particular,
 read-only package artifact viewer at `/template_validation/templates`, so
 operators can inspect exported per-template validation rows directly from the
 package review workflow.
+The latest T377 validation persists the backend-owned traffic-demand
+explanation into result packages as `traffic_demand_explanation_v1.json`.
+Review summary, diagnostics, scenario review, and audit index artifacts expose
+request counts, compute-service counts, frontend-inference flags, and evidence
+hashes without regenerating traffic or replaying events.
 
 ## Current Product Signals
 
@@ -130,6 +135,13 @@ package review workflow.
   same result-package review surfaces. Offline package review can verify the
   shipped user-facing configuration templates without revalidating them in the
   frontend or mutating the active runtime config.
+- Runtime export packages now also include
+  `traffic_demand_explanation_v1.json`, copied from
+  `config_snapshot.generated_config.backend_summary.traffic_demand_explanation_v1`.
+  The review summary, diagnostics bundle, scenario review bundle, and audit
+  index bind the same evidence hash and request counters so offline reviewers
+  can inspect backend-owned business-demand semantics without traffic
+  regeneration, event replay, packet-level simulation, or frontend inference.
 - The dashboard scenario-review workflow now provides JSON-inspector entry
   points for package artifacts. Configuration template validation artifacts
   default to the `/template_validation/templates` path and remain read-only,

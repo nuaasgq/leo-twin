@@ -188,7 +188,12 @@ Tasks:
     `backend_summary.traffic_demand_explanation_v1`, derived from backend
     traffic configuration and capped with explicit request/endpoint window
     policy for large payloads, so frontend surfaces can use backend-owned
-    business semantics rather than recomputing demand meaning locally. T332 preserves
+    business semantics rather than recomputing demand meaning locally. T377
+    persists the same backend-owned explanation into runtime result packages as
+    `traffic_demand_explanation_v1.json` and binds its request counts,
+    compute-service counts, frontend-inference flag, and evidence hash into
+    review summary, diagnostics, scenario review, and audit index artifacts
+    without traffic regeneration or event replay. T332 preserves
     backend-provided request/route/flow/task
     correlation ids in dashboard user-service rows and lets selected export
     package rows drive package route evidence, package service-trace filtering,
@@ -851,7 +856,10 @@ Tasks:
     `user_configuration_template_validation_v1.json` to the same review path,
     preserving approved user configuration template validation evidence
     offline without template reloads, config application, event replay, or
-    frontend-side validation. T344 adds
+    frontend-side validation. T377 adds `traffic_demand_explanation_v1.json`
+    to the same review path, preserving backend-owned business-demand
+    explanation evidence offline without traffic regeneration, event replay,
+    packet-level simulation, or frontend-side inference. T344 adds
     `GET /runtime/export/packages/{package_id}/acceptance-report`, a
     backend-owned pass/warn/fail acceptance summary that binds audit evidence,
     handoff completion, route review, service-trace review, scenario review,

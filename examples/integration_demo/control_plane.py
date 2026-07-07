@@ -106,6 +106,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_service_trace_comparison_review_report_v1,
     build_runtime_export_service_trace_item_v1,
     build_runtime_export_service_trace_page_v1,
+    build_runtime_export_traffic_demand_explanation_v1,
     build_runtime_export_user_configuration_template_validation_v1,
     build_runtime_export_user_service_request_page_v1,
     build_runtime_export_user_service_request_summary_v2,
@@ -171,6 +172,9 @@ _RUNTIME_EXPORT_NETWORK_KPI_FORMULA_EVIDENCE_FILENAME = (
 )
 _RUNTIME_EXPORT_USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME = (
     "user_configuration_template_validation_v1.json"
+)
+_RUNTIME_EXPORT_TRAFFIC_DEMAND_EXPLANATION_FILENAME = (
+    "traffic_demand_explanation_v1.json"
 )
 _RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_FILENAME = "scenario_review_bundle_v1.json"
 _RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_FILENAME = "scenario_review_checklist_v1.json"
@@ -817,6 +821,23 @@ class DemoControlPlane:
         )
         written_files["user_configuration_template_validation_v1"] = (
             user_configuration_template_validation_path
+        )
+        traffic_demand_explanation_path = (
+            package_dir / _RUNTIME_EXPORT_TRAFFIC_DEMAND_EXPLANATION_FILENAME
+        )
+        traffic_demand_explanation = (
+            build_runtime_export_traffic_demand_explanation_v1(
+                package_id=package_id,
+                package_dir=str(package_dir),
+                config_snapshot=config_snapshot,
+            )
+        )
+        traffic_demand_explanation_path.write_text(
+            stable_json_pretty(traffic_demand_explanation),
+            encoding="utf-8",
+        )
+        written_files["traffic_demand_explanation_v1"] = (
+            traffic_demand_explanation_path
         )
         written_files["user_service_request_summary_v2"] = (
             user_service_request_summary_path

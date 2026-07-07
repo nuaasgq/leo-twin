@@ -1002,6 +1002,7 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
         "scenario_review_bundle_v1.json",
         "service_lifecycle_trace_v2.json",
         "summary.json",
+        "traffic_demand_explanation_v1.json",
         "user_service_request_summary_v2.json",
     } <= set(files)
     for record in files.values():
@@ -1021,6 +1022,11 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
     )
     user_service_request_summary = json.loads(
         (package_dir / "user_service_request_summary_v2.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    traffic_demand_explanation = json.loads(
+        (package_dir / "traffic_demand_explanation_v1.json").read_text(
             encoding="utf-8"
         )
     )
@@ -1108,11 +1114,23 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
     )
     assert review_summary["reproducibility_boundary"] == reproducibility_boundary
     assert review_summary["artifacts"]["review_summary_exported"] is True
+    assert review_summary["artifacts"]["traffic_demand_explanation_exported"] is True
+    assert traffic_demand_explanation["traffic_demand_explanation"] == (
+        config_snapshot["generated_config"]["backend_summary"][
+            "traffic_demand_explanation_v1"
+        ]
+    )
+    assert traffic_demand_explanation["evidence"]["evidence_hash"] == (
+        review_summary["traffic_demand_explanation"]["evidence_hash"]
+    )
     assert diagnostics_bundle["type"] == "RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1"
     assert diagnostics_bundle["package"]["package_complete"] is True
     assert diagnostics_bundle["reproducibility_boundary"] == reproducibility_boundary
     assert diagnostics_bundle["model_boundaries"]["event_replay_restore"] is False
     assert diagnostics_bundle["artifact_health"]["missing_required_filenames"] == []
+    assert diagnostics_bundle["traffic_demand_explanation"]["evidence_hash"] == (
+        traffic_demand_explanation["evidence"]["evidence_hash"]
+    )
     assert scenario_review_bundle["type"] == (
         "RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1"
     )
@@ -1120,6 +1138,9 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
     assert scenario_review_bundle["user_configuration"]["validation_ok"] is True
     assert scenario_review_bundle["audit_index"]["filename"] == (
         "export_package_audit_index_v1.json"
+    )
+    assert scenario_review_bundle["traffic_demand_explanation"]["evidence_hash"] == (
+        traffic_demand_explanation["evidence"]["evidence_hash"]
     )
     assert scenario_review_bundle["scenario_review_hash"].startswith("sha256:")
     assert summary["event_count"] >= 1
@@ -1165,6 +1186,7 @@ def test_demo_adapter_exports_deterministic_runtime_archive(tmp_path) -> None:
             "scenario_review_bundle_v1.json",
             "service_lifecycle_trace_v2.json",
             "summary.json",
+            "traffic_demand_explanation_v1.json",
         } <= set(names)
         for info in archive.infolist():
             assert info.date_time == (2026, 1, 1, 0, 0, 0)
@@ -1261,6 +1283,7 @@ def test_demo_adapter_persists_runtime_export_catalog(tmp_path) -> None:
         "route_detail_index_v1.json",
         "scenario_review_bundle_v1.json",
         "summary.json",
+        "traffic_demand_explanation_v1.json",
     } <= {item["filename"] for item in package_record["files"]}
 
     restarted_control_plane = DemoControlPlane.from_result(
@@ -1316,6 +1339,13 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
         package_id,
         "user_service_request_summary_v2.json",
         export_root,
+    )
+    traffic_demand_explanation_artifact = (
+        control_plane.runtime_export_package_artifact(
+            package_id,
+            "traffic_demand_explanation_v1.json",
+            export_root,
+        )
     )
     route_detail_index_artifact = control_plane.runtime_export_package_artifact(
         package_id,
@@ -1410,6 +1440,28 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
         "user_service_request_summary_v2"
     ]
     assert user_service_request["evidence"]["evidence_present"] is True
+    assert (
+        Path(str(traffic_demand_explanation_artifact["path"])).name
+        == "traffic_demand_explanation_v1.json"
+    )
+    assert (
+        traffic_demand_explanation_artifact["content_type"]
+        == "application/json; charset=utf-8"
+    )
+    traffic_demand_explanation = json.loads(
+        Path(str(traffic_demand_explanation_artifact["path"])).read_text(
+            encoding="utf-8"
+        )
+    )
+    assert traffic_demand_explanation["type"] == (
+        "RUNTIME_EXPORT_TRAFFIC_DEMAND_EXPLANATION_V1"
+    )
+    assert traffic_demand_explanation["traffic_demand_explanation"] == (
+        config_snapshot["generated_config"]["backend_summary"][
+            "traffic_demand_explanation_v1"
+        ]
+    )
+    assert traffic_demand_explanation["evidence"]["evidence_present"] is True
     user_service_request_page = (
         control_plane.runtime_export_package_user_service_requests(
             package_id,

@@ -1496,6 +1496,7 @@ export interface RuntimeExportReviewSummaryV1 {
   network_kpi_benchmark_validation?: RuntimeExportNetworkKpiBenchmarkValidationEvidenceV1;
   network_kpi_formula_evidence?: RuntimeExportNetworkKpiFormulaEvidenceV1;
   user_configuration_template_validation?: RuntimeExportUserConfigurationTemplateValidationEvidenceV1;
+  traffic_demand_explanation?: RuntimeExportTrafficDemandExplanationEvidenceV1;
   user_service_requests?: RuntimeExportUserServiceRequestEvidenceV2;
   route_comparison_review?: RuntimeExportRouteComparisonReviewV1;
   reproducibility: RuntimeExportReviewReproducibilityV1;
@@ -1613,6 +1614,52 @@ export interface RuntimeExportUserConfigurationTemplateValidationEvidenceV1 {
   notes?: readonly string[];
   caveats?: readonly string[];
   evidence_hash: string;
+}
+
+export interface RuntimeExportTrafficDemandExplanationEvidenceV1 {
+  version: "v1" | string;
+  evidence_id: string;
+  source: string;
+  runtime_summary_source?: string;
+  evidence_present: boolean;
+  request_count: number;
+  configured_request_count: number;
+  explained_request_count: number;
+  input_flow_count: number;
+  task_request_count: number;
+  output_flow_count: number;
+  communication_only_request_count: number;
+  compute_service_request_count: number;
+  active_traffic_classes: readonly string[];
+  active_traffic_class_count?: number;
+  traffic_class_row_count: number;
+  per_user_state_count: number;
+  explanation_window_policy?: string;
+  endpoint_window_policy?: string;
+  all_compute_services_have_task?: boolean;
+  all_compute_services_have_output_flow?: boolean;
+  packet_level_simulation: boolean;
+  frontend_inference_required: boolean;
+  acceptable_for_demo_review: boolean;
+  model_assumptions?: readonly string[];
+  caveats?: readonly string[];
+  explanation_hash?: string;
+  evidence_hash: string;
+}
+
+export interface RuntimeExportTrafficDemandExplanationArtifactV1 {
+  type: "RUNTIME_EXPORT_TRAFFIC_DEMAND_EXPLANATION_V1" | string;
+  version: "v1" | string;
+  artifact_id: string;
+  source: string;
+  artifact_scope: string;
+  package_id: string;
+  package_dir: string;
+  runtime_status_field: string;
+  traffic_demand_explanation: Readonly<Record<string, unknown>>;
+  evidence?: RuntimeExportTrafficDemandExplanationEvidenceV1;
+  boundary_conditions: readonly string[];
+  artifact_hash: string;
 }
 
 export interface RuntimeExportUserServiceRequestEvidenceV2 {
@@ -2054,6 +2101,11 @@ export interface RuntimeExportPackageAuditIndexV1 {
   user_configuration_template_validation_present?: boolean;
   user_configuration_template_validation_all_templates_valid?: boolean;
   user_configuration_template_validation_invalid_template_count?: number;
+  traffic_demand_explanation_hash?: string;
+  traffic_demand_explanation_present?: boolean;
+  traffic_demand_explanation_request_count?: number;
+  traffic_demand_explanation_compute_service_request_count?: number;
+  traffic_demand_explanation_frontend_inference_required?: boolean;
   user_service_request_summary_hash?: string;
   user_service_request_summary_present?: boolean;
   user_service_request_summary_request_count?: number;
@@ -2275,6 +2327,7 @@ export interface RuntimeExportScenarioReviewBundleV1 {
   network_kpi_benchmark_validation?: RuntimeExportScenarioReviewNetworkKpiBenchmarkValidationRefV1;
   network_kpi_formula_evidence?: RuntimeExportScenarioReviewNetworkKpiFormulaEvidenceRefV1;
   user_configuration_template_validation?: RuntimeExportScenarioReviewUserConfigurationTemplateValidationRefV1;
+  traffic_demand_explanation?: RuntimeExportScenarioReviewTrafficDemandExplanationRefV1;
   user_service_requests?: RuntimeExportScenarioReviewUserServiceRequestRefV2;
   audit_index: RuntimeExportScenarioReviewAuditIndexRefV1;
   artifact_review: RuntimeExportScenarioReviewArtifactsV1;
@@ -2353,6 +2406,18 @@ export interface RuntimeExportScenarioReviewUserConfigurationTemplateValidationR
   invalid_template_count: number;
   all_templates_valid: boolean;
   template_evidence_hash: string;
+  evidence_hash: string;
+  evidence_present: boolean;
+}
+
+export interface RuntimeExportScenarioReviewTrafficDemandExplanationRefV1 {
+  evidence_id: string;
+  request_count: number;
+  compute_service_request_count: number;
+  traffic_class_row_count: number;
+  per_user_state_count: number;
+  frontend_inference_required: boolean;
+  packet_level_simulation: boolean;
   evidence_hash: string;
   evidence_present: boolean;
 }
@@ -2472,6 +2537,7 @@ export interface RuntimeExportReviewArtifactsV1 {
   network_kpi_benchmark_validation_exported?: boolean;
   network_kpi_formula_evidence_exported?: boolean;
   user_configuration_template_validation_exported?: boolean;
+  traffic_demand_explanation_exported?: boolean;
   user_service_request_summary_exported?: boolean;
 }
 
@@ -2487,6 +2553,7 @@ export interface RuntimeExportDiagnosticsBundleV1 {
   network_kpi_benchmark_validation?: RuntimeExportNetworkKpiBenchmarkValidationEvidenceV1;
   network_kpi_formula_evidence?: RuntimeExportNetworkKpiFormulaEvidenceV1;
   user_configuration_template_validation?: RuntimeExportUserConfigurationTemplateValidationEvidenceV1;
+  traffic_demand_explanation?: RuntimeExportTrafficDemandExplanationEvidenceV1;
   user_service_requests?: RuntimeExportUserServiceRequestEvidenceV2;
   route_comparison_review?: RuntimeExportRouteComparisonReviewV1;
   reproducibility: RuntimeExportDiagnosticsReproducibilityV1;

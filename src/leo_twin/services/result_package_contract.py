@@ -80,6 +80,9 @@ RUNTIME_EXPORT_NETWORK_KPI_FORMULA_EVIDENCE_V1_ID = (
 RUNTIME_EXPORT_USER_CONFIGURATION_TEMPLATE_VALIDATION_V1_ID = (
     "leo_twin.runtime_export_user_configuration_template_validation.v1"
 )
+RUNTIME_EXPORT_TRAFFIC_DEMAND_EXPLANATION_V1_ID = (
+    "leo_twin.runtime_export_traffic_demand_explanation.v1"
+)
 RUNTIME_EXPORT_USER_SERVICE_REQUEST_SUMMARY_V2_ID = (
     "leo_twin.runtime_export_user_service_request_summary.v2"
 )
@@ -100,6 +103,7 @@ NETWORK_KPI_FORMULA_EVIDENCE_FILENAME = "network_kpi_formula_evidence_v1.json"
 USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME = (
     "user_configuration_template_validation_v1.json"
 )
+TRAFFIC_DEMAND_EXPLANATION_FILENAME = "traffic_demand_explanation_v1.json"
 
 
 _REQUIRED_FILE_SPECS: tuple[dict[str, object], ...] = (
@@ -233,6 +237,15 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
                 ),
             },
             {
+                "logical_name": "traffic_demand_explanation_v1",
+                "filename": "traffic_demand_explanation_v1.json",
+                "format": "json",
+                "content": (
+                    "backend-owned generated traffic-demand explanation "
+                    "exported for offline business-request review"
+                ),
+            },
+            {
                 "logical_name": "scenario_review_bundle_v1",
                 "filename": "scenario_review_bundle_v1.json",
                 "format": "json",
@@ -361,6 +374,7 @@ def build_runtime_export_reproducibility_boundary_v1(
             "network_kpi_benchmark_validation_v1.json",
             "network_kpi_formula_evidence_v1.json",
             "user_configuration_template_validation_v1.json",
+            "traffic_demand_explanation_v1.json",
             "user_service_request_summary_v2.json",
             "scenario_review_bundle_v1.json",
         ),
@@ -528,6 +542,47 @@ def build_runtime_export_user_configuration_template_validation_v1(
     return artifact
 
 
+def build_runtime_export_traffic_demand_explanation_v1(
+    *,
+    package_id: str,
+    package_dir: str,
+    config_snapshot: Mapping[str, Any],
+) -> dict[str, object]:
+    """Build offline review evidence for backend traffic-demand semantics."""
+
+    if not isinstance(config_snapshot, Mapping):
+        raise TypeError("config_snapshot must be a mapping")
+
+    generated_config = _mapping(config_snapshot.get("generated_config"))
+    backend_summary = _mapping(generated_config.get("backend_summary"))
+    explanation = _mapping(backend_summary.get("traffic_demand_explanation_v1"))
+    evidence = _runtime_export_traffic_demand_explanation_evidence(config_snapshot)
+    artifact: dict[str, object] = {
+        "type": "RUNTIME_EXPORT_TRAFFIC_DEMAND_EXPLANATION_V1",
+        "version": "v1",
+        "artifact_id": RUNTIME_EXPORT_TRAFFIC_DEMAND_EXPLANATION_V1_ID,
+        "source": "BACKEND_RUNTIME_EXPORT",
+        "artifact_scope": "TRAFFIC_DEMAND_BUSINESS_SEMANTICS_REVIEW",
+        "package_id": str(package_id),
+        "package_dir": str(package_dir),
+        "config_snapshot_field": (
+            "generated_config.backend_summary.traffic_demand_explanation_v1"
+        ),
+        "artifact_policy": "STANDALONE_RUNTIME_EXPORT_ARTIFACT",
+        "traffic_demand_explanation": dict(explanation),
+        "evidence": evidence,
+        "boundary_conditions": (
+            "READ_GENERATED_CONFIG_ONLY",
+            "NO_TRAFFIC_REGENERATION",
+            "NO_EVENT_REPLAY",
+            "NO_PACKET_LEVEL_SIMULATION",
+            "NO_EXTERNAL_SIMULATOR_ARTIFACT",
+        ),
+    }
+    artifact["artifact_hash"] = stable_hash_payload(artifact)
+    return artifact
+
+
 def build_runtime_export_user_service_request_summary_v2(
     *,
     package_id: str,
@@ -611,6 +666,9 @@ def build_runtime_export_review_summary_v1(
             config_snapshot
         )
     )
+    traffic_demand_explanation = _runtime_export_traffic_demand_explanation_evidence(
+        config_snapshot
+    )
     user_service_requests = _runtime_export_user_service_request_evidence(status)
     route_comparison_review = _runtime_export_route_comparison_review_metadata()
     reproducibility_boundary = _runtime_export_reproducibility_boundary(
@@ -659,6 +717,7 @@ def build_runtime_export_review_summary_v1(
         "network_kpi_benchmark_validation": network_kpi_validation,
         "network_kpi_formula_evidence": network_kpi_formula_evidence,
         "user_configuration_template_validation": user_config_template_validation,
+        "traffic_demand_explanation": traffic_demand_explanation,
         "user_service_requests": user_service_requests,
         "route_comparison_review": route_comparison_review,
         "reproducibility": {
@@ -690,6 +749,9 @@ def build_runtime_export_review_summary_v1(
             "user_configuration_template_validation_exported": (
                 "user_configuration_template_validation_v1.json" in artifacts
             ),
+            "traffic_demand_explanation_exported": (
+                "traffic_demand_explanation_v1.json" in artifacts
+            ),
             "user_service_request_summary_exported": (
                 "user_service_request_summary_v2.json" in artifacts
             ),
@@ -703,6 +765,7 @@ def build_runtime_export_review_summary_v1(
             "Use network_kpi_benchmark_validation_v1.json to review KPI guardrail evidence.",
             "Use network_kpi_formula_evidence_v1.json to review KPI formula input and time-series evidence.",
             "Use user_configuration_template_validation_v1.json to review approved configuration template validation evidence.",
+            "Use traffic_demand_explanation_v1.json to review backend-owned business request generation semantics.",
             "Use route_detail_index_v1.json to inspect exported route explanation rows.",
             "Use route_comparison_review to compare exported route rows with the current live runtime when available.",
             "This package does not contain packet captures or external simulator artifacts.",
@@ -761,6 +824,9 @@ def build_runtime_export_diagnostics_bundle_v1(
             config_snapshot
         )
     )
+    traffic_demand_explanation = _runtime_export_traffic_demand_explanation_evidence(
+        config_snapshot
+    )
     user_service_requests = _runtime_export_user_service_request_evidence(status)
     route_comparison_review = _runtime_export_route_comparison_review_metadata()
     reproducibility_boundary = _runtime_export_reproducibility_boundary(
@@ -776,6 +842,7 @@ def build_runtime_export_diagnostics_bundle_v1(
         network_kpi_validation=network_kpi_validation,
         network_kpi_formula_evidence=network_kpi_formula_evidence,
         user_config_template_validation=user_config_template_validation,
+        traffic_demand_explanation=traffic_demand_explanation,
         user_service_requests=user_service_requests,
     )
     diagnostics: dict[str, object] = {
@@ -801,6 +868,7 @@ def build_runtime_export_diagnostics_bundle_v1(
         "network_kpi_benchmark_validation": network_kpi_validation,
         "network_kpi_formula_evidence": network_kpi_formula_evidence,
         "user_configuration_template_validation": user_config_template_validation,
+        "traffic_demand_explanation": traffic_demand_explanation,
         "user_service_requests": user_service_requests,
         "route_comparison_review": route_comparison_review,
         "reproducibility": {
@@ -903,6 +971,9 @@ def build_runtime_export_scenario_review_bundle_v1(
     user_config_template_validation = _mapping(
         review_summary.get("user_configuration_template_validation")
     )
+    traffic_demand_explanation = _mapping(
+        review_summary.get("traffic_demand_explanation")
+    )
     user_service_requests = _mapping(review_summary.get("user_service_requests"))
     if user_service_requests.get("evidence_present") is not True:
         scenario_review_warnings.append("USER_SERVICE_REQUEST_SUMMARY_MISSING")
@@ -912,6 +983,8 @@ def build_runtime_export_scenario_review_bundle_v1(
         scenario_review_warnings.append(
             "USER_CONFIGURATION_TEMPLATE_VALIDATION_MISSING"
         )
+    if traffic_demand_explanation.get("evidence_present") is not True:
+        scenario_review_warnings.append("TRAFFIC_DEMAND_EXPLANATION_MISSING")
 
     bundle: dict[str, object] = {
         "type": "RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1",
@@ -1011,6 +1084,39 @@ def build_runtime_export_scenario_review_bundle_v1(
                 user_config_template_validation.get("evidence_present") is True
             ),
         },
+        "traffic_demand_explanation": {
+            "evidence_id": str(traffic_demand_explanation.get("evidence_id", "")),
+            "request_count": _integer(
+                traffic_demand_explanation.get("request_count")
+            ),
+            "configured_request_count": _integer(
+                traffic_demand_explanation.get("configured_request_count")
+            ),
+            "explained_request_count": _integer(
+                traffic_demand_explanation.get("explained_request_count")
+            ),
+            "communication_only_request_count": _integer(
+                traffic_demand_explanation.get("communication_only_request_count")
+            ),
+            "compute_service_request_count": _integer(
+                traffic_demand_explanation.get("compute_service_request_count")
+            ),
+            "active_traffic_classes": _string_tuple(
+                traffic_demand_explanation.get("active_traffic_classes")
+            ),
+            "frontend_inference_required": (
+                traffic_demand_explanation.get("frontend_inference_required") is True
+            ),
+            "packet_level_simulation": (
+                traffic_demand_explanation.get("packet_level_simulation") is True
+            ),
+            "evidence_hash": str(
+                traffic_demand_explanation.get("evidence_hash", "")
+            ),
+            "evidence_present": (
+                traffic_demand_explanation.get("evidence_present") is True
+            ),
+        },
         "user_service_requests": {
             "evidence_id": str(user_service_requests.get("evidence_id", "")),
             "request_model": str(user_service_requests.get("request_model", "")),
@@ -1051,6 +1157,7 @@ def build_runtime_export_scenario_review_bundle_v1(
                 "network_kpi_benchmark_validation_v1.json",
                 "network_kpi_formula_evidence_v1.json",
                 "user_configuration_template_validation_v1.json",
+                "traffic_demand_explanation_v1.json",
                 "user_service_request_summary_v2.json",
                 "manifest.json",
                 "config_snapshot.json",
@@ -1075,6 +1182,7 @@ def build_runtime_export_scenario_review_bundle_v1(
             "network_kpi_benchmark_validation_v1.json",
             "network_kpi_formula_evidence_v1.json",
             "user_configuration_template_validation_v1.json",
+            "traffic_demand_explanation_v1.json",
             "user_service_request_summary_v2.json",
             "service_lifecycle_trace_v2.json",
             "service_trace_comparison_review_report_v1.json",
@@ -2312,6 +2420,9 @@ def build_runtime_export_package_audit_index_v1(
             config_snapshot
         )
     )
+    traffic_demand_explanation = _runtime_export_traffic_demand_explanation_evidence(
+        config_snapshot
+    )
     user_service_requests = _runtime_export_user_service_request_evidence(status)
     normalized_artifacts = tuple(
         sorted(
@@ -2447,6 +2558,21 @@ def build_runtime_export_package_audit_index_v1(
         ),
         "user_configuration_template_validation_invalid_template_count": _integer(
             user_config_template_validation.get("invalid_template_count")
+        ),
+        "traffic_demand_explanation_hash": str(
+            traffic_demand_explanation.get("evidence_hash", "")
+        ),
+        "traffic_demand_explanation_present": (
+            traffic_demand_explanation.get("evidence_present") is True
+        ),
+        "traffic_demand_explanation_request_count": _integer(
+            traffic_demand_explanation.get("request_count")
+        ),
+        "traffic_demand_explanation_compute_service_request_count": _integer(
+            traffic_demand_explanation.get("compute_service_request_count")
+        ),
+        "traffic_demand_explanation_frontend_inference_required": (
+            traffic_demand_explanation.get("frontend_inference_required") is True
         ),
         "user_service_request_summary_hash": str(
             user_service_requests.get("summary_hash", "")
@@ -3697,6 +3823,7 @@ def _runtime_export_diagnostic_findings(
     network_kpi_validation: Mapping[str, Any],
     network_kpi_formula_evidence: Mapping[str, Any],
     user_config_template_validation: Mapping[str, Any],
+    traffic_demand_explanation: Mapping[str, Any],
     user_service_requests: Mapping[str, Any],
 ) -> tuple[dict[str, object], ...]:
     findings: list[dict[str, object]] = []
@@ -3862,6 +3989,33 @@ def _runtime_export_diagnostic_findings(
                     "approved user configuration template validation requires "
                     "operator review."
                 ),
+            )
+        )
+    if traffic_demand_explanation.get("evidence_present") is not True:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "TRAFFIC_DEMAND_EXPLANATION_MISSING",
+                (
+                    "config_snapshot.generated_config.backend_summary does not "
+                    "include traffic_demand_explanation_v1."
+                ),
+            )
+        )
+    if traffic_demand_explanation.get("packet_level_simulation") is True:
+        findings.append(
+            _diagnostic_finding(
+                "ERROR",
+                "TRAFFIC_DEMAND_EXPLANATION_PACKET_LEVEL_DECLARED",
+                "traffic demand explanation declares packet-level simulation.",
+            )
+        )
+    if traffic_demand_explanation.get("frontend_inference_required") is True:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "TRAFFIC_DEMAND_EXPLANATION_FRONTEND_INFERENCE_REQUIRED",
+                "traffic demand explanation still requires frontend semantic inference.",
             )
         )
     if user_service_requests.get("evidence_present") is not True:
@@ -4281,6 +4435,13 @@ def _runtime_export_scenario_review_evidence_hash(
                 "",
             )
         )
+    if filename == "traffic_demand_explanation_v1.json":
+        return str(
+            _mapping(scenario_review_bundle.get("traffic_demand_explanation")).get(
+                "evidence_hash",
+                "",
+            )
+        )
     if filename == "route_comparison_review_report_v1.json":
         return str(audit_index.get("route_comparison_review_report_hash", ""))
     if filename == "service_trace_comparison_review_report_v1.json":
@@ -4331,6 +4492,7 @@ def _runtime_export_scenario_review_step_label(
         "diagnostics_bundle_v1.json": "diagnostics",
         "network_kpi_benchmark_validation_v1.json": "network KPI benchmark",
         "network_kpi_formula_evidence_v1.json": "network KPI formula evidence",
+        "traffic_demand_explanation_v1.json": "traffic demand",
         "user_service_request_summary_v2.json": "user services",
         "service_lifecycle_trace_v2.json": "service trace",
         "service_trace_comparison_review_report_v1.json": "service trace review",
@@ -4672,6 +4834,115 @@ def _runtime_export_user_configuration_template_validation_evidence(
         "invalid_template_ids": tuple(str(row.get("id", "")) for row in invalid_rows),
         "template_evidence_hash": str(template_validation.get("evidence_hash", "")),
         "notes": _string_tuple(template_validation.get("notes")),
+    }
+    evidence["evidence_hash"] = stable_hash_payload(evidence)
+    return evidence
+
+
+def _runtime_export_traffic_demand_explanation_evidence(
+    config_snapshot: Mapping[str, Any],
+) -> dict[str, object]:
+    generated_config = _mapping(config_snapshot.get("generated_config"))
+    backend_summary = _mapping(generated_config.get("backend_summary"))
+    explanation = _mapping(backend_summary.get("traffic_demand_explanation_v1"))
+    evidence_present = bool(explanation)
+    source = "config_snapshot.generated_config.backend_summary.traffic_demand_explanation_v1"
+    if not evidence_present:
+        evidence: dict[str, object] = {
+            "version": "v1",
+            "evidence_id": RUNTIME_EXPORT_TRAFFIC_DEMAND_EXPLANATION_V1_ID,
+            "source": source,
+            "evidence_present": False,
+            "request_count": 0,
+            "configured_request_count": 0,
+            "explained_request_count": 0,
+            "input_flow_count": 0,
+            "task_request_count": 0,
+            "output_flow_count": 0,
+            "communication_only_request_count": 0,
+            "compute_service_request_count": 0,
+            "active_traffic_classes": (),
+            "traffic_class_row_count": 0,
+            "per_user_state_count": 0,
+            "packet_level_simulation": False,
+            "frontend_inference_required": False,
+            "acceptable_for_demo_review": False,
+            "caveats": (
+                "Generated config did not expose backend_summary.traffic_demand_explanation_v1.",
+            ),
+        }
+        evidence["evidence_hash"] = stable_hash_payload(evidence)
+        return evidence
+
+    correlation = _mapping(explanation.get("correlation_summary"))
+    active_classes = _string_tuple(explanation.get("active_traffic_classes"))
+    row_count = len(_records(explanation.get("traffic_class_rows")))
+    per_user_count = len(_records(explanation.get("per_user_active_service_state")))
+    packet_level = correlation.get("packet_level_simulation") is True
+    frontend_inference = (
+        explanation.get("frontend_inference_required") is True
+        or correlation.get("frontend_inference_required") is True
+    )
+    compute_request_count = _integer(explanation.get("compute_service_request_count"))
+    compute_correlation_ok = (
+        compute_request_count == 0
+        or (
+            correlation.get("all_compute_services_have_task") is True
+            and correlation.get("all_compute_services_have_output_flow") is True
+        )
+    )
+    evidence = {
+        "version": "v1",
+        "evidence_id": str(
+            explanation.get(
+                "explanation_id",
+                RUNTIME_EXPORT_TRAFFIC_DEMAND_EXPLANATION_V1_ID,
+            )
+        ),
+        "source": source,
+        "runtime_summary_source": str(explanation.get("source", "")),
+        "evidence_present": True,
+        "request_count": _integer(explanation.get("request_count")),
+        "configured_request_count": _integer(
+            explanation.get(
+                "configured_request_count",
+                explanation.get("request_count"),
+            )
+        ),
+        "explained_request_count": _integer(
+            explanation.get(
+                "explained_request_count",
+                explanation.get("request_count"),
+            )
+        ),
+        "input_flow_count": _integer(explanation.get("input_flow_count")),
+        "task_request_count": _integer(explanation.get("task_request_count")),
+        "output_flow_count": _integer(explanation.get("output_flow_count")),
+        "communication_only_request_count": _integer(
+            explanation.get("communication_only_request_count")
+        ),
+        "compute_service_request_count": compute_request_count,
+        "active_traffic_classes": active_classes,
+        "active_traffic_class_count": len(active_classes),
+        "traffic_class_row_count": row_count,
+        "per_user_state_count": per_user_count,
+        "explanation_window_policy": str(
+            explanation.get("explanation_window_policy", "")
+        ),
+        "endpoint_window_policy": str(explanation.get("endpoint_window_policy", "")),
+        "all_compute_services_have_task": (
+            correlation.get("all_compute_services_have_task") is True
+        ),
+        "all_compute_services_have_output_flow": (
+            correlation.get("all_compute_services_have_output_flow") is True
+        ),
+        "packet_level_simulation": packet_level,
+        "frontend_inference_required": frontend_inference,
+        "acceptable_for_demo_review": (
+            not packet_level and not frontend_inference and compute_correlation_ok
+        ),
+        "model_assumptions": _string_tuple(explanation.get("model_assumptions")),
+        "explanation_hash": stable_hash_payload(explanation),
     }
     evidence["evidence_hash"] = stable_hash_payload(evidence)
     return evidence

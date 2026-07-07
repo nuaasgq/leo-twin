@@ -5,6 +5,59 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-07 - Traffic Demand Explanation Export v1
+
+- Branch: `feature/T377-traffic-demand-explanation-export-v1`
+- Commit: pending in this commit
+- Scope: persist the backend-owned
+  `backend_summary.traffic_demand_explanation_v1` object into runtime result
+  packages as `traffic_demand_explanation_v1.json`. The export artifact reads
+  the already generated config snapshot, adds compact evidence for review
+  summary, diagnostics, scenario review, and audit index surfaces, and records
+  no-regeneration/no-event-replay/no-packet-level/no-external-simulator
+  boundaries. This task does not change traffic generation, event scheduling,
+  runtime control, frontend layout, Event Kernel behavior, packet-level
+  simulation, or external simulator boundaries.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `examples/integration_demo/control_plane.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/current_product_status.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m compileall -q src\leo_twin\services\result_package_contract.py examples\integration_demo\control_plane.py`
+    - Result: passed.
+  - `python -m pytest tests\unit\test_result_package_contract_v1.py -q`
+    - Result: passed, 33 tests.
+  - `python -m pytest tests\integration\test_result_package_export_v1.py::test_runtime_export_package_satisfies_result_package_contract_v1 -q`
+    - Result: passed, 1 test.
+  - `python -m pytest tests\integration\test_runtime_session_control.py::test_demo_adapter_exports_runtime_result_package tests\integration\test_runtime_session_control.py::test_demo_adapter_exports_deterministic_runtime_archive tests\integration\test_runtime_session_control.py::test_demo_adapter_persists_runtime_export_catalog tests\integration\test_runtime_session_control.py::test_demo_adapter_serves_persisted_runtime_export_artifacts -q`
+    - Result: passed, 4 tests.
+  - `python -m pytest tests\unit\test_system_v2_upgrade_plan_docs.py tests\unit\test_user_guide_v2_docs.py -q`
+    - Result: passed, 4 tests.
+  - `pnpm --dir frontend build`
+    - Result: passed using the bundled Codex Node/pnpm runtime. Vite reported
+      the existing `DataPanel` chunk-size warning after minification.
+- Problems encountered and handling:
+  - The frontend TypeScript event contract needed optional result-package
+    fields for the new traffic-demand explanation evidence. These were added
+    without changing UI behavior or existing routes.
+  - The first `git push -u origin feature/T377-traffic-demand-explanation-export-v1`
+    attempt failed with a GitHub SSL/TLS handshake error. The same push was
+    retried and succeeded before final delivery.
+  - Existing local runtime/generated config files remain dirty and are
+    intentionally not included in this task.
+- Known remaining issues / follow-up:
+  - The dashboard does not yet render a dedicated compact
+    `traffic_demand_explanation_v1.json` artifact card. A follow-up UI task can
+    add a read-only package inspector entry while continuing to avoid browser
+    business-semantics recomputation.
+
 ## 2026-07-07 - Traffic Demand Explanation Backend Summary v1
 
 - Branch: `feature/T376-traffic-demand-explanation-summary-v1`

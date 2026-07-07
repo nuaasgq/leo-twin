@@ -10,6 +10,7 @@ from leo_twin.services.detail_pagination_contract import DETAIL_ENDPOINT_MAX_LIM
 from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_V1_ID,
     RUNTIME_EXPORT_NETWORK_KPI_FORMULA_EVIDENCE_V1_ID,
+    RUNTIME_EXPORT_TRAFFIC_DEMAND_EXPLANATION_V1_ID,
     RUNTIME_EXPORT_USER_CONFIGURATION_TEMPLATE_VALIDATION_V1_ID,
     RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT_V1_ID,
     RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID,
@@ -59,6 +60,7 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert (package_dir / "network_kpi_benchmark_validation_v1.json").exists()
     assert (package_dir / "network_kpi_formula_evidence_v1.json").exists()
     assert (package_dir / "user_configuration_template_validation_v1.json").exists()
+    assert (package_dir / "traffic_demand_explanation_v1.json").exists()
     assert (package_dir / "user_service_request_summary_v2.json").exists()
     assert (package_dir / "service_lifecycle_trace_v2.json").exists()
     assert (package_dir / "scenario_review_bundle_v1.json").exists()
@@ -72,6 +74,7 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert "network_kpi_benchmark_validation_v1.json" in filenames
     assert "network_kpi_formula_evidence_v1.json" in filenames
     assert "user_configuration_template_validation_v1.json" in filenames
+    assert "traffic_demand_explanation_v1.json" in filenames
     assert "user_service_request_summary_v2.json" in filenames
     assert "scenario_review_bundle_v1.json" in filenames
     assert "export_package_audit_index_v1.json" in filenames
@@ -105,6 +108,11 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     )
     user_configuration_template_validation = json.loads(
         (package_dir / "user_configuration_template_validation_v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    traffic_demand_explanation = json.loads(
+        (package_dir / "traffic_demand_explanation_v1.json").read_text(
             encoding="utf-8"
         )
     )
@@ -254,6 +262,13 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert review_summary["artifacts"][
         "user_configuration_template_validation_exported"
     ] is True
+    assert review_summary["traffic_demand_explanation"]["evidence_present"] is True
+    assert review_summary["traffic_demand_explanation"][
+        "frontend_inference_required"
+    ] is False
+    assert review_summary["artifacts"][
+        "traffic_demand_explanation_exported"
+    ] is True
     assert diagnostics_bundle["type"] == "RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1"
     assert diagnostics_bundle["package"]["package_complete"] is True
     assert diagnostics_bundle["artifact_health"]["missing_required_filenames"] == []
@@ -282,6 +297,12 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert diagnostics_bundle["user_configuration_template_validation"][
         "validation_status"
     ] == "ALL_TEMPLATES_VALID"
+    assert diagnostics_bundle["traffic_demand_explanation"]["evidence_hash"] == (
+        review_summary["traffic_demand_explanation"]["evidence_hash"]
+    )
+    assert diagnostics_bundle["traffic_demand_explanation"][
+        "evidence_present"
+    ] is True
     assert diagnostics_bundle["reproducibility"]["manifest_hash"] == manifest[
         "manifest_hash"
     ]
@@ -328,6 +349,23 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         "validation_status"
     ] == "ALL_TEMPLATES_VALID"
     assert "NO_TEMPLATE_RELOAD" in user_configuration_template_validation[
+        "boundary_conditions"
+    ]
+    assert traffic_demand_explanation["artifact_id"] == (
+        RUNTIME_EXPORT_TRAFFIC_DEMAND_EXPLANATION_V1_ID
+    )
+    assert traffic_demand_explanation["traffic_demand_explanation"] == (
+        config_snapshot["generated_config"]["backend_summary"][
+            "traffic_demand_explanation_v1"
+        ]
+    )
+    assert traffic_demand_explanation["evidence"]["evidence_hash"] == (
+        review_summary["traffic_demand_explanation"]["evidence_hash"]
+    )
+    assert traffic_demand_explanation["evidence"][
+        "frontend_inference_required"
+    ] is False
+    assert "NO_TRAFFIC_REGENERATION" in traffic_demand_explanation[
         "boundary_conditions"
     ]
     assert user_service_request_summary["artifact_id"] == (
@@ -379,6 +417,12 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert scenario_review_bundle["user_configuration_template_validation"][
         "all_templates_valid"
     ] is True
+    assert scenario_review_bundle["traffic_demand_explanation"][
+        "evidence_hash"
+    ] == traffic_demand_explanation["evidence"]["evidence_hash"]
+    assert scenario_review_bundle["traffic_demand_explanation"][
+        "evidence_present"
+    ] is True
     assert scenario_review_bundle["user_service_requests"][
         "summary_hash"
     ] == user_service_request_summary["evidence"]["summary_hash"]
@@ -395,6 +439,9 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         scenario_review_bundle["recommended_review_order"]
     )
     assert "user_configuration_template_validation_v1.json" in (
+        scenario_review_bundle["recommended_review_order"]
+    )
+    assert "traffic_demand_explanation_v1.json" in (
         scenario_review_bundle["recommended_review_order"]
     )
     assert scenario_review_bundle["scenario_review_hash"].startswith("sha256:")
@@ -444,6 +491,13 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     ] is True
     assert audit_index["user_configuration_template_validation_hash"] == (
         user_configuration_template_validation["evidence"]["evidence_hash"]
+    )
+    assert audit_index["traffic_demand_explanation_present"] is True
+    assert audit_index["traffic_demand_explanation_hash"] == (
+        traffic_demand_explanation["evidence"]["evidence_hash"]
+    )
+    assert audit_index["traffic_demand_explanation_request_count"] == (
+        traffic_demand_explanation["evidence"]["request_count"]
     )
     assert audit_index["user_service_request_summary_present"] is True
     assert audit_index["user_service_request_summary_hash"] == (

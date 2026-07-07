@@ -205,6 +205,7 @@ Each result package contains:
 - `network_kpi_benchmark_validation_v1.json`
 - `network_kpi_formula_evidence_v1.json`
 - `user_configuration_template_validation_v1.json`
+- `traffic_demand_explanation_v1.json`
 - `scenario_review_bundle_v1.json`
 - `export_package_audit_index_v1.json`
 
@@ -262,6 +263,16 @@ diagnostics, scenario review, and audit index artifacts all expose compact
 status/hash fields for this file so an exported package can prove which
 approved user-facing configuration templates were validated without reloading
 templates or applying a new config.
+New exports also persist `traffic_demand_explanation_v1.json`. This file is
+copied from
+`config_snapshot.generated_config.backend_summary.traffic_demand_explanation_v1`
+and records backend-owned business-demand semantics such as request counts,
+active traffic classes, input flows, compute tasks, output flows,
+compute-service correlation status, and per-user active-service row counts.
+The review summary, diagnostics, scenario review, and audit index artifacts all
+bind compact evidence fields for this file. Reading the artifact does not
+regenerate traffic, replay events, perform packet-level simulation, or require
+frontend-side business inference.
 After using `compare with live`, the package-vs-live route comparison card can
 save the currently displayed comparison into
 `route_comparison_review_report_v1.json`. The saved record includes the

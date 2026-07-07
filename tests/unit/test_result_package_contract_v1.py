@@ -14,6 +14,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1_ID,
     RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_V1_ID,
     RUNTIME_EXPORT_NETWORK_KPI_FORMULA_EVIDENCE_V1_ID,
+    RUNTIME_EXPORT_TRAFFIC_DEMAND_EXPLANATION_V1_ID,
     RUNTIME_EXPORT_USER_CONFIGURATION_TEMPLATE_VALIDATION_V1_ID,
     RUNTIME_EXPORT_PACKAGE_AUDIT_INDEX_V1_ID,
     RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT_V1_ID,
@@ -40,6 +41,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_diagnostics_bundle_v1,
     build_runtime_export_network_kpi_benchmark_validation_v1,
     build_runtime_export_network_kpi_formula_evidence_v1,
+    build_runtime_export_traffic_demand_explanation_v1,
     build_runtime_export_user_configuration_template_validation_v1,
     build_runtime_export_benchmark_acceptance_binding_v1,
     build_runtime_export_package_acceptance_report_v1,
@@ -68,6 +70,7 @@ from leo_twin.services.result_package_contract import (
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+_TRAFFIC_DEMAND_EXPLANATION_FILENAME = "traffic_demand_explanation_v1.json"
 
 
 def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
@@ -99,6 +102,7 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
         "network_kpi_benchmark_validation_v1.json",
         "network_kpi_formula_evidence_v1.json",
         "user_configuration_template_validation_v1.json",
+        _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         "scenario_review_bundle_v1.json",
         "export_package_audit_index_v1.json",
         "package_handoff_report_v1.md",
@@ -237,6 +241,7 @@ def test_result_package_summary_accepts_complete_package_record() -> None:
         "network_kpi_benchmark_validation_v1.json",
         "network_kpi_formula_evidence_v1.json",
         "user_configuration_template_validation_v1.json",
+        _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         "scenario_review_bundle_v1.json",
         "export_package_audit_index_v1.json",
         "package_handoff_report_v1.md",
@@ -289,13 +294,7 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
             "runtime_export_service_trace_policy_v1": _service_trace_export_policy(),
         },
         "config": {"seed": 7, "duration_seconds": 120},
-        "generated_config": {
-            "seed": 7,
-            "satellite_count": 72,
-            "ground_user_count": 20,
-            "compute_node_count": 12,
-            "duration_seconds": 120,
-        },
+        "generated_config": _generated_config(),
         "user_configuration_template_validation_v1": (
             _user_configuration_template_validation()
         ),
@@ -315,6 +314,7 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
         "network_kpi_benchmark_validation_v1.json",
         "network_kpi_formula_evidence_v1.json",
         "user_configuration_template_validation_v1.json",
+        _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         "review_summary_v1.json",
         "route_detail_index_v1.json",
         "scenario_review_bundle_v1.json",
@@ -374,6 +374,11 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
     assert first["user_configuration_template_validation"][
         "invalid_template_count"
     ] == 0
+    assert first["traffic_demand_explanation"]["evidence_present"] is True
+    assert first["traffic_demand_explanation"]["request_count"] == 2
+    assert first["traffic_demand_explanation"]["compute_service_request_count"] == 1
+    assert first["traffic_demand_explanation"]["frontend_inference_required"] is False
+    assert first["traffic_demand_explanation"]["packet_level_simulation"] is False
     assert first["user_service_requests"]["evidence_present"] is True
     assert first["user_service_requests"]["request_count"] == 2
     assert first["user_service_requests"]["exported_request_count"] == 2
@@ -385,6 +390,7 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
     assert first["artifacts"][
         "user_configuration_template_validation_exported"
     ] is True
+    assert first["artifacts"]["traffic_demand_explanation_exported"] is True
     assert first["artifacts"]["user_service_request_summary_exported"] is True
     assert first["route_comparison_review"]["review_scope"] == (
         "PACKAGE_ROUTE_DETAIL_TO_LIVE_RUNTIME_ROUTE_DETAIL"
@@ -425,7 +431,7 @@ def test_runtime_export_network_kpi_benchmark_validation_v1_is_deterministic() -
             ),
         },
         "config": {"seed": 7},
-        "generated_config": {"seed": 7, "satellite_count": 72},
+        "generated_config": _generated_config(),
     }
 
     first = build_runtime_export_network_kpi_benchmark_validation_v1(
@@ -459,7 +465,7 @@ def test_runtime_export_network_kpi_formula_evidence_v1_is_deterministic() -> No
             "network_kpi_formula_evidence_v1": _network_kpi_formula_evidence(),
         },
         "config": {"seed": 7},
-        "generated_config": {"seed": 7, "satellite_count": 72},
+        "generated_config": _generated_config(),
     }
 
     first = build_runtime_export_network_kpi_formula_evidence_v1(
@@ -531,6 +537,49 @@ def test_runtime_export_user_configuration_template_validation_v1_is_determinist
     assert first["evidence"]["evidence_hash"].startswith("sha256:")
     assert first["artifact_hash"].startswith("sha256:")
     assert "NO_TEMPLATE_RELOAD" in first["boundary_conditions"]
+
+
+def test_runtime_export_traffic_demand_explanation_v1_is_deterministic() -> None:
+    config_snapshot = {
+        "type": "RUNTIME_CONFIG_SNAPSHOT",
+        "status": {},
+        "config": {"seed": 7},
+        "generated_config": _generated_config(),
+    }
+
+    first = build_runtime_export_traffic_demand_explanation_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+    )
+    second = build_runtime_export_traffic_demand_explanation_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=dict(reversed(tuple(config_snapshot.items()))),
+    )
+
+    assert first == second
+    assert first["artifact_id"] == RUNTIME_EXPORT_TRAFFIC_DEMAND_EXPLANATION_V1_ID
+    assert first["config_snapshot_field"] == (
+        "generated_config.backend_summary.traffic_demand_explanation_v1"
+    )
+    assert first["traffic_demand_explanation"] == _traffic_demand_explanation()
+    assert first["evidence"]["evidence_present"] is True
+    assert first["evidence"]["request_count"] == 2
+    assert first["evidence"]["configured_request_count"] == 2
+    assert first["evidence"]["explained_request_count"] == 2
+    assert first["evidence"]["compute_service_request_count"] == 1
+    assert first["evidence"]["communication_only_request_count"] == 1
+    assert first["evidence"]["active_traffic_classes"] == (
+        "DATA_TRANSFER",
+        "COMPUTE_SERVICE",
+    )
+    assert first["evidence"]["frontend_inference_required"] is False
+    assert first["evidence"]["packet_level_simulation"] is False
+    assert first["evidence"]["acceptable_for_demo_review"] is True
+    assert first["evidence"]["evidence_hash"].startswith("sha256:")
+    assert first["artifact_hash"].startswith("sha256:")
+    assert "NO_TRAFFIC_REGENERATION" in first["boundary_conditions"]
 
 
 def test_runtime_export_user_service_request_summary_v2_is_deterministic() -> None:
@@ -678,13 +727,7 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
             "runtime_export_service_trace_policy_v1": _service_trace_export_policy(),
         },
         "config": {"seed": 7, "duration_seconds": 120},
-        "generated_config": {
-            "seed": 7,
-            "satellite_count": 72,
-            "ground_user_count": 20,
-            "compute_node_count": 12,
-            "duration_seconds": 120,
-        },
+        "generated_config": _generated_config(),
         "user_configuration_template_validation_v1": (
             _user_configuration_template_validation()
         ),
@@ -706,6 +749,7 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
         "network_kpi_benchmark_validation_v1.json",
         "network_kpi_formula_evidence_v1.json",
         "user_configuration_template_validation_v1.json",
+        _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         "review_summary_v1.json",
         "route_detail_index_v1.json",
         "scenario_review_bundle_v1.json",
@@ -765,6 +809,10 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
     assert first["user_configuration_template_validation"][
         "evidence_hash"
     ] == review_summary["user_configuration_template_validation"]["evidence_hash"]
+    assert first["traffic_demand_explanation"]["evidence_present"] is True
+    assert first["traffic_demand_explanation"]["request_count"] == 2
+    assert first["traffic_demand_explanation"]["compute_service_request_count"] == 1
+    assert first["traffic_demand_explanation"]["frontend_inference_required"] is False
     assert first["user_service_requests"]["evidence_present"] is True
     assert first["user_service_requests"]["request_count"] == 2
     assert first["user_service_requests"]["exported_request_count"] == 2
@@ -809,13 +857,7 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
             "runtime_export_service_trace_policy_v1": _service_trace_export_policy(),
         },
         "config": {"seed": 7, "duration_seconds": 120},
-        "generated_config": {
-            "seed": 7,
-            "satellite_count": 72,
-            "ground_user_count": 20,
-            "compute_node_count": 12,
-            "duration_seconds": 120,
-        },
+        "generated_config": _generated_config(),
         "user_configuration_template_validation_v1": (
             _user_configuration_template_validation()
         ),
@@ -839,6 +881,7 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
         "network_kpi_benchmark_validation_v1.json",
         "network_kpi_formula_evidence_v1.json",
         "user_configuration_template_validation_v1.json",
+        _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         "review_summary_v1.json",
         "route_detail_index_v1.json",
         "scenario_review_bundle_v1.json",
@@ -937,6 +980,13 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
     assert first["user_configuration_template_validation"][
         "all_templates_valid"
     ] is True
+    assert first["traffic_demand_explanation"]["evidence_present"] is True
+    assert first["traffic_demand_explanation"]["request_count"] == 2
+    assert first["traffic_demand_explanation"]["compute_service_request_count"] == 1
+    assert first["traffic_demand_explanation"]["frontend_inference_required"] is False
+    assert first["traffic_demand_explanation"]["evidence_hash"] == (
+        review_summary["traffic_demand_explanation"]["evidence_hash"]
+    )
     assert first["model_boundaries"]["packet_level_simulation"] is False
     assert first["model_boundaries"]["external_simulators"] is False
     assert first["recommended_review_order"][0] == "scenario_review_bundle_v1.json"
@@ -946,6 +996,12 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
     assert "user_configuration_template_validation_v1.json" in first[
         "recommended_review_order"
     ]
+    assert _TRAFFIC_DEMAND_EXPLANATION_FILENAME in first["recommended_review_order"]
+    assert first["recommended_review_order"].index(
+        _TRAFFIC_DEMAND_EXPLANATION_FILENAME
+    ) < first["recommended_review_order"].index(
+        "user_service_request_summary_v2.json"
+    )
     assert "service_trace_comparison_review_report_v1.json" in first[
         "recommended_review_order"
     ]
@@ -963,6 +1019,9 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
     assert "user_configuration_template_validation_v1.json" in first[
         "artifact_review"
     ]["entrypoint_filenames"]
+    assert _TRAFFIC_DEMAND_EXPLANATION_FILENAME in first["artifact_review"][
+        "entrypoint_filenames"
+    ]
     assert first["scenario_review_hash"].startswith("sha256:")
     assert json.loads(json.dumps(first, sort_keys=True))["bundle_id"] == (
         RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1_ID
@@ -2362,7 +2421,7 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
         "type": "RUNTIME_CONFIG_SNAPSHOT",
         "status": {"runtime_export_reproducibility_boundary_v1": boundary},
         "config": {"seed": 7},
-        "generated_config": {"seed": 7, "satellite_count": 72},
+        "generated_config": _generated_config(),
         "user_configuration_template_validation_v1": (
             _user_configuration_template_validation()
         ),
@@ -2415,6 +2474,11 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
             "user_configuration_template_validation_v1",
             "user_configuration_template_validation_v1.json",
             "sha256:template-validation-file",
+        ),
+        _file(
+            "traffic_demand_explanation_v1",
+            _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
+            "sha256:traffic-demand-file",
         ),
     )
 
@@ -2470,6 +2534,11 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
     ] is True
     assert first["user_configuration_template_validation_invalid_template_count"] == 0
     assert first["user_configuration_template_validation_hash"].startswith("sha256:")
+    assert first["traffic_demand_explanation_present"] is True
+    assert first["traffic_demand_explanation_request_count"] == 2
+    assert first["traffic_demand_explanation_compute_service_request_count"] == 1
+    assert first["traffic_demand_explanation_frontend_inference_required"] is False
+    assert first["traffic_demand_explanation_hash"].startswith("sha256:")
     assert first["route_comparison_review_report_hash"] == "sha256:route-report"
     assert first["route_comparison_review_report_present"] is True
     assert first["service_trace_comparison_review_report_hash"] == (
@@ -2519,6 +2588,7 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
         "scenario_review_checklist_v1.json",
         "service_trace_comparison_review_report_v1.json",
         "summary.json",
+        _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         "user_configuration_template_validation_v1.json",
     ]
     assert first["audit_hash"].startswith("sha256:")
@@ -2562,6 +2632,7 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
         "network_kpi_benchmark_validation_v1.json",
         "network_kpi_formula_evidence_v1.json",
         "user_configuration_template_validation_v1.json",
+        _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         "review_summary_v1.json",
         "route_detail_index_v1.json",
         "scenario_review_bundle_v1.json",
@@ -2597,9 +2668,10 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
             "NETWORK_KPI_BENCHMARK_VALIDATION_MISSING",
             "NETWORK_KPI_FORMULA_EVIDENCE_MISSING",
             "USER_CONFIGURATION_TEMPLATE_VALIDATION_MISSING",
+            "TRAFFIC_DEMAND_EXPLANATION_MISSING",
             "USER_SERVICE_REQUEST_SUMMARY_MISSING",
         }
-    assert diagnostics["finding_count"] == 5
+    assert diagnostics["finding_count"] == 6
 
 
 def _file(name: str, filename: str, sha256: str) -> dict[str, object]:
@@ -2972,6 +3044,118 @@ def _user_configuration_template_validation() -> dict[str, object]:
             "Approved templates validate against user configuration schema v2.",
         ),
         "evidence_hash": "sha256:template-validation",
+    }
+
+
+def _generated_config() -> dict[str, object]:
+    return {
+        "seed": 7,
+        "satellite_count": 72,
+        "ground_user_count": 20,
+        "compute_node_count": 12,
+        "duration_seconds": 120,
+        "backend_summary": {
+            "traffic_demand_explanation_v1": _traffic_demand_explanation(),
+        },
+    }
+
+
+def _traffic_demand_explanation() -> dict[str, object]:
+    return {
+        "version": "v1",
+        "explanation_id": "leo_twin.traffic_demand_explanation.v1",
+        "source": "backend_summary.traffic_demand_summary",
+        "configured_request_count": 2,
+        "explained_request_count": 2,
+        "explanation_window_policy": "FULL_CONFIGURED_WINDOW",
+        "endpoint_window_policy": (
+            "ROUND_ROBIN_ENDPOINT_IDS_CAPPED_AT_512_FOR_SUMMARY_PAYLOAD"
+        ),
+        "frontend_inference_required": False,
+        "request_count": 2,
+        "input_flow_count": 2,
+        "task_request_count": 1,
+        "output_flow_count": 1,
+        "communication_only_request_count": 1,
+        "compute_service_request_count": 1,
+        "active_traffic_classes": ("DATA_TRANSFER", "COMPUTE_SERVICE"),
+        "traffic_class_rows": (
+            {
+                "traffic_class": "DATA_TRANSFER",
+                "request_count": 1,
+                "input_flow_count": 1,
+                "task_request_count": 0,
+                "output_flow_count": 0,
+                "total_input_data_mb": 2.0,
+                "total_output_data_mb": 0.0,
+                "destination_types": ("SERVICE_ENDPOINT",),
+            },
+            {
+                "traffic_class": "COMPUTE_SERVICE",
+                "request_count": 1,
+                "input_flow_count": 1,
+                "task_request_count": 1,
+                "output_flow_count": 1,
+                "total_input_data_mb": 2.0,
+                "total_output_data_mb": 0.0,
+                "destination_types": ("COMPUTE_NODE",),
+            },
+        ),
+        "arrival_window": {
+            "first_arrival_time": 0.0,
+            "last_arrival_time": 1.0,
+            "duration_seconds": 1.0,
+        },
+        "priority_summary": {
+            "min_priority": 0,
+            "max_priority": 0,
+            "unique_priorities": (0,),
+        },
+        "data_volume": {
+            "total_input_data_mb": 4.0,
+            "total_output_data_mb": 0.0,
+            "total_data_mb": 4.0,
+        },
+        "correlation_summary": {
+            "all_compute_services_have_task": True,
+            "all_compute_services_have_output_flow": True,
+            "packet_level_simulation": False,
+            "frontend_inference_required": False,
+        },
+        "per_user_active_service_state": (
+            {
+                "user_id": "user-00000",
+                "request_count": 1,
+                "service_classes": ("COMPUTE_SERVICE",),
+                "primary_service_class": "COMPUTE_SERVICE",
+                "max_priority": 0,
+                "first_arrival_time": 0.0,
+                "last_arrival_time": 0.0,
+                "flow_ids": ("flow-compute-input",),
+                "task_ids": ("task-compute",),
+                "output_flow_ids": ("flow-compute-output",),
+                "total_input_data_mb": 2.0,
+                "total_output_data_mb": 0.0,
+            },
+            {
+                "user_id": "user-00001",
+                "request_count": 1,
+                "service_classes": ("DATA_TRANSFER",),
+                "primary_service_class": "DATA_TRANSFER",
+                "max_priority": 0,
+                "first_arrival_time": 1.0,
+                "last_arrival_time": 1.0,
+                "flow_ids": ("flow-data",),
+                "task_ids": (),
+                "output_flow_ids": (),
+                "total_input_data_mb": 2.0,
+                "total_output_data_mb": 0.0,
+            },
+        ),
+        "model_assumptions": (
+            "Traffic demand explanation summarizes generated flow-level requests only.",
+            "Packet-level traffic, stochastic retries, and external simulators are outside this model.",
+        ),
     }
 
 
