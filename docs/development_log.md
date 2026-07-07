@@ -17589,3 +17589,59 @@ change.
   - Start T359 by adding `user_service_request_summary_v2.json` evidence
     cross-links into the package JSON artifact inspector, then proceed to
     browser-rendered acceptance smoke coverage.
+
+## 2026-07-07 - T359 user service evidence crosslinks v1
+
+- Branch: `feature/T359-user-service-evidence-crosslinks-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: connect exported user-service request rows to the existing read-only
+  JSON package artifact inspector. `UserBusinessRequestRow` now carries
+  optional artifact filename, JSON pointer, and default filter context when the
+  row is sourced from `user_service_request_summary_v2.json`. Selecting a
+  package user-service row still drives the existing user, satellite, route,
+  and service-trace navigation, and now also opens the inspector on the
+  package-owned user-service artifact. Unfiltered backend pages can point to
+  exact `/summary/items/<index>` entries; filtered pages conservatively focus
+  `/summary/items` and use trace/request/user ids as default filters. This task
+  changes only dashboard evidence navigation, tests, and documentation; it
+  does not mutate packages, recompute services/routes, change model behavior,
+  or modify Event Kernel behavior.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/result_package_contract_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Node:
+    `.\node_modules\.bin\tsc.cmd --noEmit -p tsconfig.json` from `frontend`
+    - Result: passed.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed, 197 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend test dataPanel.test.ts api.test.ts appSurface.test.ts`
+    - Result: passed, 3 files and 285 tests.
+  - Bundled Node/Pnpm:
+    `pnpm --dir frontend build`
+    - Result: passed; Vite reported the existing large `DataPanel` chunk
+      warning.
+  - `git diff --check`
+    - Result: passed; Git emitted CRLF warnings for the existing unstaged
+      runtime config drift.
+- Problems encountered:
+  - The default shell environment did not have `node` on `PATH`; validation was
+    rerun with the bundled Codex Node/Pnpm runtime paths.
+  - Filtered backend user-service pages do not prove original artifact array
+    indexes, so the inspector intentionally uses `/summary/items` plus a
+    default trace/request filter rather than inventing an exact pointer.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The inspector is still embedded in the review card instead of a dedicated
+    full-page virtualized artifact browser.
+  - Exact user-service item pointers for filtered package pages would require
+    backend-provided artifact-local index metadata.
+- Recommended follow-up:
+  - Start T360 browser-rendered acceptance smoke for console initialize/start
+    and dashboard status visibility.

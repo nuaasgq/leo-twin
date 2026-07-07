@@ -221,6 +221,8 @@ const SERVICE_TRACE_COMPARISON_REVIEW_REPORT_FILENAME =
 const EXPORT_PACKAGE_AUDIT_INDEX_FILENAME = "export_package_audit_index_v1.json";
 const ROUTE_DETAIL_INDEX_FILENAME = "route_detail_index_v1.json";
 const SERVICE_LIFECYCLE_TRACE_FILENAME = "service_lifecycle_trace_v2.json";
+const USER_SERVICE_REQUEST_SUMMARY_FILENAME =
+  "user_service_request_summary_v2.json";
 const NETWORK_KPI_BENCHMARK_VALIDATION_FILENAME =
   "network_kpi_benchmark_validation_v1.json";
 const CONFIG_SNAPSHOT_FILENAME = "config_snapshot.json";
@@ -971,6 +973,13 @@ export const DataPanel = memo(function DataPanel({
   const openRuntimeExportUserServiceRequestEvidence = (
     row: UserBusinessRequestRow
   ) => {
+    const focus = buildDataPanelUserServiceRequestEvidenceInspectorFocus(
+      runtimeExportComparePackageId,
+      row
+    );
+    if (focus !== null) {
+      setBenchmarkEvidenceFocus(focus);
+    }
     const userId = linkedReviewId(row.userId);
     if (userId) {
       setSelectedDetailUserId(userId);
@@ -6490,6 +6499,9 @@ export interface UserBusinessRequestRow {
   serviceLabel: string;
   pathLabel: string;
   correlationLabel?: string;
+  artifactFilename?: string;
+  artifactPointer?: string | null;
+  artifactFilter?: string;
 }
 
 export interface DataPanelUserRequestHistory {
@@ -12236,7 +12248,7 @@ function buildDataPanelScenarioReviewWorkflowRows(
     "route_detail_index_v1.json",
     "service_lifecycle_trace_v2.json",
     SERVICE_TRACE_COMPARISON_REVIEW_REPORT_FILENAME,
-    "user_service_request_summary_v2.json"
+    USER_SERVICE_REQUEST_SUMMARY_FILENAME
   ];
   const seen = new Set<string>();
   return orderedFilenames
@@ -12290,7 +12302,7 @@ function scenarioReviewWorkflowStepLabel(filename: string): string | null {
       return "8 service trace";
     case SERVICE_TRACE_COMPARISON_REVIEW_REPORT_FILENAME:
       return "9 service trace review";
-    case "user_service_request_summary_v2.json":
+    case USER_SERVICE_REQUEST_SUMMARY_FILENAME:
       return "10 user services";
     case "events.jsonl":
       return "11 event evidence";
@@ -13053,6 +13065,42 @@ export function buildDataPanelServiceTraceEvidenceInspectorFocus(
     metaLabels: [row.serviceLabel, row.traceTitle],
     defaultInspectorFilter: row.artifactFilter,
     tone: row.terminalState === "COMPLETE" ? "match" : "different"
+  });
+}
+
+export function buildDataPanelUserServiceRequestEvidenceInspectorFocus(
+  packageId: string | null | undefined,
+  row: UserBusinessRequestRow | null | undefined
+): DataPanelBenchmarkEvidenceFocus | null {
+  if (
+    row === null ||
+    row === undefined ||
+    row.artifactFilename === undefined ||
+    row.artifactPointer === undefined ||
+    row.artifactPointer === null
+  ) {
+    return null;
+  }
+  const requestId =
+    linkedReviewId(row.serviceRequestId) ??
+    linkedReviewId(row.requestId) ??
+    linkedReviewId(row.userId) ??
+    "user-service";
+  return buildDataPanelPackageArtifactInspectorFocus({
+    sourceLabel: "User service request evidence inspector focus",
+    packageId,
+    artifactFilename: row.artifactFilename,
+    jsonPointer: row.artifactPointer,
+    statusLabel: `user service / ${requestId}`,
+    summaryLabel: `${row.userId} / ${row.statusLabel} / ${row.serviceLabel}`,
+    metaLabels: [
+      row.correlationLabel ?? "",
+      row.pathLabel,
+      row.networkQueueLabel,
+      row.placementLabel
+    ].filter((label) => label.length > 0),
+    defaultInspectorFilter: row.artifactFilter ?? requestId,
+    tone: row.statusLabel.toUpperCase().includes("FAIL") ? "different" : "match"
   });
 }
 
@@ -15022,7 +15070,15 @@ export function buildDataPanelExportUserServiceRequestStatus(
     return null;
   }
   const summary = runtimeExportUserServiceRequestPageToSummary(page);
-  const rows = buildBackendUserBusinessRequestRows(summary, page.items.length).items;
+  const rows = buildBackendUserBusinessRequestRows(
+    summary,
+    page.items.length
+  ).items.map((row, index) => ({
+    ...row,
+    artifactFilename: USER_SERVICE_REQUEST_SUMMARY_FILENAME,
+    artifactPointer: dataPanelExportUserServiceRequestArtifactPointer(page, index),
+    artifactFilter: userBusinessRequestArtifactFilter(row)
+  }));
   const policy = page.user_service_request_export_policy ?? {};
   const policyLabel =
     typeof policy.policy === "string"
@@ -15059,12 +15115,33 @@ export function buildDataPanelExportUserServiceRequestStatus(
     ].filter((label) => label.length > 0),
     artifactHref: runtimeExportPackageFileHref(
       packageId,
-      "user_service_request_summary_v2.json"
+      USER_SERVICE_REQUEST_SUMMARY_FILENAME
     ),
     rows,
     filterLabel: dataPanelExportUserServiceRequestBackendFilterLabel(page),
     ...pageFields
   };
+}
+
+function dataPanelExportUserServiceRequestArtifactPointer(
+  page: RuntimeExportUserServiceRequestPageV1,
+  index: number
+): string {
+  if (page.filter_applied) {
+    return "/summary/items";
+  }
+  return `/summary/items/${Math.max(0, Math.floor(page.cursor + index))}`;
+}
+
+function userBusinessRequestArtifactFilter(row: UserBusinessRequestRow): string {
+  return (
+    linkedReviewId(row.traceId) ??
+    linkedReviewId(row.serviceRequestId) ??
+    linkedReviewId(row.requestId) ??
+    linkedReviewId(row.flowId) ??
+    linkedReviewId(row.userId) ??
+    ""
+  );
 }
 
 function runtimeExportUserServiceRequestPageToSummary(

@@ -611,6 +611,12 @@ inspector with a backend-derived artifact filename, JSON pointer, and default
 filter text. These cross-links help operators jump from a route or service
 trace review row to the corresponding package artifact context without
 replaying events or changing package contents.
+User-service request rows use the same read-only inspector path for
+`user_service_request_summary_v2.json`. Unfiltered backend pages can point to
+an exact `/summary/items/<index>` item, while filtered pages conservatively
+focus `/summary/items` and carry a trace/request/user id as the default
+inspector filter. This preserves artifact evidence navigation without
+pretending that a filtered cursor proves the original artifact array index.
 
 For operator handoff, the demo backend also exposes the generated Markdown
 handoff report:

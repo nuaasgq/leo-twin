@@ -857,7 +857,10 @@ Tasks:
     JSON root while retaining the original package-file link. T357 adds route
     and service-trace evidence cross-links into that inspector, carrying
     route ids or trace ids as default filters and preselecting backend-derived
-    JSON pointer context where available.
+    JSON pointer context where available. T359 extends the same inspector
+    cross-link pattern to `user_service_request_summary_v2.json` rows so
+    exported user-service requests can open package-owned JSON context without
+    event replay, service recomputation, or frontend business inference.
 
 ### WS9. Delivery and Operations v2
 

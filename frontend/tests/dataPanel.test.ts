@@ -23,6 +23,7 @@ import {
   buildDataPanelPackageArtifactInspectorFocus,
   buildDataPanelRouteEvidenceInspectorFocus,
   buildDataPanelServiceTraceEvidenceInspectorFocus,
+  buildDataPanelUserServiceRequestEvidenceInspectorFocus,
   buildDataPanelBenchmarkEvidenceArtifactViewerDisplay,
   buildDataPanelJsonArtifactInspectorRows,
   buildDataPanelExportBoundaryAlignmentDisplay,
@@ -5388,6 +5389,9 @@ describe("buildDataPanelExportCompareDisplay", () => {
           computeNodeId: "sat-00001",
           computeLabel: "1 compute",
           selectedSatelliteId: "sat-00001",
+          artifactFilename: "user_service_request_summary_v2.json",
+          artifactPointer: "/summary/items",
+          artifactFilter: "trace:svc-00001",
           correlationLabel:
             "request svc-00001 / route route-00001 / flow flow-00001 / task task-00001 / trace trace:svc-00001 / compute sat-00001 / next sat-00001"
         })
@@ -5399,6 +5403,18 @@ describe("buildDataPanelExportCompareDisplay", () => {
       nextCursor: 1,
       canPreviousPage: false,
       canNextPage: true
+    });
+    expect(
+      buildDataPanelUserServiceRequestEvidenceInspectorFocus(
+        "pkg-review",
+        status?.rows[0]
+      )
+    ).toMatchObject({
+      focusSourceLabel: "User service request evidence inspector focus",
+      statusLabel: "user service / svc-00001",
+      artifactLabel: "user_service_request_summary_v2.json",
+      jsonPointer: "/summary/items",
+      defaultInspectorFilter: "trace:svc-00001"
     });
     expect(
       buildDataPanelExportUserServiceRequestStatus(null, "pkg-review", true)
