@@ -1027,6 +1027,10 @@ Current Phase 3 progress:
   families, cursor windows, hidden rows, exact node cards, and pagination
   contract status. This improves the node-detail workstream without changing
   backend protocols.
+- T365 adds selected-detail evidence status for user, satellite, route,
+  service, service trace, and compute-node selections so the dashboard can show
+  whether the current selection is backed by a table row, backend exact detail,
+  a loading request, or an exact-detail error.
 
 ## 5. Parallel Agent Assignment Model
 

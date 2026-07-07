@@ -28,7 +28,8 @@ The deterministic section order is:
    lanes, and task timelines.
 5. `NODE_DETAIL` - paged or virtualized drill-down for user and satellite
    nodes, including detail coverage status for backend detail families, cursor
-   windows, hidden rows, exact node cards, and active pagination contract.
+   windows, hidden rows, selected exact-detail evidence, exact node cards, and
+   active pagination contract.
 6. `MODEL_ASSUMPTIONS` - backend model boundaries, fidelity degradation,
    forbidden integrations, and KPI caveats.
 7. `DIAGNOSTICS` - reproducibility manifest, result packages, launcher health,
@@ -53,3 +54,4 @@ The deterministic section order is:
 - V2-053: virtualized large tables.
 - V2-054: model assumptions panel.
 - T364: dashboard detail coverage card.
+- T365: selected detail evidence card.

@@ -13,6 +13,7 @@ import {
   buildDataPanelBackendCursorDisplay,
   buildDataPanelDetailScopeNotes,
   buildDataPanelDetailCoverageNote,
+  buildDataPanelSelectedDetailEvidenceNote,
   buildDataPanelDetailPageSizes,
   buildDataPanelPaginationContractNotes,
   buildDataPanelDetailWindowPolicyNote,
@@ -13979,6 +13980,86 @@ describe("paginateDetailRows", () => {
       value: "0 / 6 来源",
       detail:
         "等待后端详情；当前返回 0 / 0 行；无显式隐藏行；无后端游标页；精确卡片 0 个；分页契约未声明",
+      tone: "history"
+    });
+  });
+
+  it("summarizes selected detail evidence when exact backend details are synced", () => {
+    expect(
+      buildDataPanelSelectedDetailEvidenceNote({
+        userId: "user-0",
+        satelliteId: "sat-0",
+        routeId: "route-0",
+        serviceId: "service-0",
+        traceId: "trace-0",
+        computeNodeId: "sat-0",
+        userRow: { userId: "user-0" } as any,
+        satelliteRow: { satelliteId: "sat-0" } as any,
+        routeRow: { routeId: "route-0" } as any,
+        serviceRow: { serviceId: "service-0" } as any,
+        traceRow: { traceId: "trace-0" } as any,
+        computeNodeRow: { nodeId: "sat-0" } as any,
+        backendDetails: {
+          user: { entity_id: "user-0" } as any,
+          satellite: { entity_id: "sat-0" } as any,
+          route: { route_id: "route-0" } as any,
+          service: { service_id: "service-0" } as any,
+          serviceTrace: { trace: { trace_id: "trace-0" } } as any,
+          computeNode: { node_id: "sat-0" } as any
+        },
+        requestStatuses: {
+          user: { entityId: "user-0", loading: false, error: null },
+          satellite: { entityId: "sat-0", loading: false, error: null },
+          route: { entityId: "route-0", loading: false, error: null },
+          service: { entityId: "service-0", loading: false, error: null },
+          serviceTrace: { entityId: "trace-0", loading: false, error: null },
+          computeNode: { entityId: "sat-0", loading: false, error: null }
+        }
+      })
+    ).toEqual({
+      label: "选中详情证据",
+      value: "6 / 6 精确",
+      detail:
+        "已选 用户、卫星、路由、服务、服务链路、算力节点；表格行 6/6；后端精确 6/6",
+      tone: "backend"
+    });
+  });
+
+  it("warns when selected detail evidence is loading or missing exact backend details", () => {
+    expect(
+      buildDataPanelSelectedDetailEvidenceNote({
+        userId: "user-0",
+        routeId: "route-0",
+        serviceId: "service-0",
+        userRow: { userId: "user-0" } as any,
+        routeRow: { routeId: "route-0" } as any,
+        serviceRow: { serviceId: "service-0" } as any,
+        backendDetails: {
+          user: { entity_id: "user-0" } as any,
+          route: null,
+          service: null
+        },
+        requestStatuses: {
+          user: { entityId: "user-0", loading: false, error: null },
+          route: { entityId: "route-0", loading: true, error: null },
+          service: { entityId: "service-0", loading: false, error: "HTTP 404" }
+        }
+      })
+    ).toEqual({
+      label: "选中详情证据",
+      value: "1 / 3 精确",
+      detail:
+        "已选 用户、路由、服务；表格行 3/3；后端精确 1/3；读取中 1；错误 服务:HTTP 404",
+      tone: "limit"
+    });
+  });
+
+  it("shows selected detail evidence as pending before a detail row is selected", () => {
+    expect(buildDataPanelSelectedDetailEvidenceNote({})).toEqual({
+      label: "选中详情证据",
+      value: "等待选择",
+      detail:
+        "未选择用户、卫星、路由、服务、服务链路或算力节点；点击明细表格行后会显示后端精确详情证据。",
       tone: "history"
     });
   });

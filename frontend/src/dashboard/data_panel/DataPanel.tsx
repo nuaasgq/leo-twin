@@ -1386,6 +1386,36 @@ export const DataPanel = memo(function DataPanel({
     runtimeSelectedNodeDetailRequests?.computeNode,
     selectedComputeNodeDetailId
   );
+  const selectedDetailEvidenceNote = buildDataPanelSelectedDetailEvidenceNote({
+    userId: selectedDetailUserId,
+    satelliteId: selectedDetailSatelliteId,
+    routeId: selectedRouteDetailId,
+    serviceId: selectedServiceDetailId,
+    traceId: selectedServiceTraceRow?.traceId ?? null,
+    computeNodeId: selectedComputeNodeDetailId,
+    userRow: selectedUserDetailRow,
+    satelliteRow: selectedSatelliteDetailRow,
+    routeRow: selectedRouteDetailRow,
+    serviceRow: selectedServiceDetailRow,
+    traceRow: selectedServiceTraceRow,
+    computeNodeRow: selectedComputeNodeDetailRow,
+    backendDetails: {
+      user: selectedUserBackendDetail,
+      satellite: selectedSatelliteBackendDetail,
+      route: selectedRouteBackendDetail,
+      service: selectedServiceBackendDetail,
+      serviceTrace: selectedServiceTraceBackendDetail,
+      computeNode: selectedComputeNodeBackendDetail
+    },
+    requestStatuses: {
+      user: userDetailRequestStatus,
+      satellite: satelliteDetailRequestStatus,
+      route: routeDetailRequestStatus,
+      service: serviceDetailRequestStatus,
+      serviceTrace: serviceTraceDetailRequestStatus,
+      computeNode: computeNodeDetailRequestStatus
+    }
+  });
   const userDetailInspector = buildUserBusinessRequestInspector(
     selectedUserDetailRow,
     nodeDetailSummary,
@@ -1617,6 +1647,7 @@ export const DataPanel = memo(function DataPanel({
   const satelliteSourceBadge = buildRuntimeDetailSourceBadge(satelliteResourceRows.sourceLabel);
   const detailScopeNotes = [
     detailCoverageNote,
+    selectedDetailEvidenceNote,
     ...buildDataPanelDetailScopeNotes(
       userBusinessRequests,
       satelliteResourceRows,
@@ -6671,6 +6702,23 @@ export interface DataPanelDetailCoverageInput {
   paginationContract?: LargeDetailPaginationContractV2 | null;
 }
 
+export interface DataPanelSelectedDetailEvidenceInput {
+  userId?: string | null;
+  satelliteId?: string | null;
+  routeId?: string | null;
+  serviceId?: string | null;
+  traceId?: string | null;
+  computeNodeId?: string | null;
+  userRow?: UserBusinessRequestRow | null;
+  satelliteRow?: SatelliteResourceRow | null;
+  routeRow?: DataPanelRouteExplanationRow | null;
+  serviceRow?: DataPanelServiceDetailRow | null;
+  traceRow?: DataPanelServiceLifecycleTraceRow | null;
+  computeNodeRow?: DataPanelComputeNodeDetailRow | null;
+  backendDetails?: RuntimeSelectedNodeDetails | null;
+  requestStatuses?: RuntimeSelectedNodeDetailRequests | null;
+}
+
 interface DataPanelDetailCoverageRecord {
   label: string;
   present: boolean;
@@ -6679,6 +6727,15 @@ interface DataPanelDetailCoverageRecord {
   hiddenCount: number;
   hasCursor: boolean;
   hasMore: boolean;
+}
+
+interface DataPanelSelectedDetailEvidenceRecord {
+  label: string;
+  selected: boolean;
+  rowPresent: boolean;
+  backendPresent: boolean;
+  loading: boolean;
+  error: string | null;
 }
 
 export function buildDataPanelDetailPageSizes(
@@ -7680,6 +7737,112 @@ export function buildDataPanelDetailCoverageNote(
         : hiddenItems > 0 || moreRecords.length > 0 || presentRecords.length < records.length
           ? "limit"
           : "backend"
+  };
+}
+
+export function buildDataPanelSelectedDetailEvidenceNote(
+  input: DataPanelSelectedDetailEvidenceInput
+): DataPanelDetailScopeNote {
+  const records: DataPanelSelectedDetailEvidenceRecord[] = [
+    selectedDetailEvidenceRecord(
+      "用户",
+      input.userId,
+      input.userRow,
+      input.backendDetails?.user,
+      input.requestStatuses?.user
+    ),
+    selectedDetailEvidenceRecord(
+      "卫星",
+      input.satelliteId,
+      input.satelliteRow,
+      input.backendDetails?.satellite,
+      input.requestStatuses?.satellite
+    ),
+    selectedDetailEvidenceRecord(
+      "路由",
+      input.routeId,
+      input.routeRow,
+      input.backendDetails?.route,
+      input.requestStatuses?.route
+    ),
+    selectedDetailEvidenceRecord(
+      "服务",
+      input.serviceId,
+      input.serviceRow,
+      input.backendDetails?.service,
+      input.requestStatuses?.service
+    ),
+    selectedDetailEvidenceRecord(
+      "服务链路",
+      input.traceId,
+      input.traceRow,
+      input.backendDetails?.serviceTrace,
+      input.requestStatuses?.serviceTrace
+    ),
+    selectedDetailEvidenceRecord(
+      "算力节点",
+      input.computeNodeId,
+      input.computeNodeRow,
+      input.backendDetails?.computeNode,
+      input.requestStatuses?.computeNode
+    )
+  ];
+  const selected = records.filter((record) => record.selected);
+  const rows = selected.filter((record) => record.rowPresent);
+  const backend = selected.filter((record) => record.backendPresent);
+  const loading = selected.filter((record) => record.loading);
+  const errors = selected.filter((record) => record.error !== null);
+  const pendingBackend = selected.filter(
+    (record) => !record.backendPresent && !record.loading && record.error === null
+  );
+  const detail =
+    selected.length === 0
+      ? "未选择用户、卫星、路由、服务、服务链路或算力节点；点击明细表格行后会显示后端精确详情证据。"
+      : [
+          `已选 ${selected.map((record) => record.label).join("、")}`,
+          `表格行 ${formatCount(rows.length)}/${formatCount(selected.length)}`,
+          `后端精确 ${formatCount(backend.length)}/${formatCount(selected.length)}`,
+          loading.length > 0 ? `读取中 ${formatCount(loading.length)}` : null,
+          errors.length > 0
+            ? `错误 ${errors.map((record) => `${record.label}:${record.error}`).join("；")}`
+            : null,
+          pendingBackend.length > 0
+            ? `待精确详情 ${pendingBackend.map((record) => record.label).join("、")}`
+            : null
+        ]
+          .filter((part): part is string => part !== null)
+          .join("；");
+  return {
+    label: "选中详情证据",
+    value:
+      selected.length === 0
+        ? "等待选择"
+        : `${formatCount(backend.length)} / ${formatCount(selected.length)} 精确`,
+    detail,
+    tone:
+      errors.length > 0 || pendingBackend.length > 0 || loading.length > 0
+        ? "limit"
+        : selected.length === 0
+          ? "history"
+          : "backend"
+  };
+}
+
+function selectedDetailEvidenceRecord(
+  label: string,
+  selectedId: string | null | undefined,
+  row: unknown,
+  backendDetail: unknown,
+  status: RuntimeExactDetailRequestState | null | undefined
+): DataPanelSelectedDetailEvidenceRecord {
+  const selected = (selectedId ?? "").trim().length > 0;
+  return {
+    label,
+    selected,
+    rowPresent: row !== null && row !== undefined,
+    backendPresent: backendDetail !== null && backendDetail !== undefined,
+    loading: status?.loading === true,
+    error: status?.error ? status.error : null
   };
 }
 

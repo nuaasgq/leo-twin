@@ -17926,3 +17926,42 @@ change.
   - The coverage card exposes whether detail data is complete or cursor-limited,
     but it does not replace deeper service-trace drill-down filtering or a
     dedicated virtualized detail browser.
+
+## 2026-07-07 - T365 dashboard selected detail evidence v1
+
+- Branch: `feature/T365-dashboard-selected-detail-evidence-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: add a selected-detail evidence status card to the standalone
+  dashboard detail section. The card covers user, satellite, route, service,
+  service trace, and compute-node selections and reports table-row evidence,
+  backend exact-detail availability, loading state, and exact-detail errors.
+  This task does not change backend protocols, Event Kernel behavior, or
+  simulation model logic.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/current_product_status.md`
+  - `docs/dashboard_information_architecture_v3.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/user_guide_v2.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts` using bundled Node/Pnpm
+    paths.
+    - Result: passed, 1 file / 205 tests.
+  - `pnpm --dir frontend test` using bundled Node/Pnpm paths.
+    - Result: passed, 26 files / 446 tests.
+  - `pnpm --dir frontend build` using bundled Node/Pnpm paths.
+    - Result: passed; Vite emitted the existing large-chunk warning for
+      `DataPanel`.
+- Problems encountered:
+  - The initial selected-detail evidence test duplicated the loading state as
+    both `读取中` and `待精确详情`. The product wording now treats a loading
+    exact-detail request as sufficient evidence of an in-flight backend request
+    and avoids the duplicate pending phrase.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The card summarizes selected detail evidence but does not yet provide a
+    dedicated wide drill-down browser for service trace correlations or large
+    exact-detail payloads.
