@@ -119,6 +119,7 @@ import {
   buildDataPanelUserConfigurationFieldSections,
   buildDataPanelUserConfigurationReferenceFieldSections,
   buildDataPanelUserConfigurationReferenceFieldRows,
+  buildDataPanelUserConfigurationTemplateValidationRows,
   buildDataPanelUserConfigurationValidationDisplay,
   buildUserBusinessRequestInspector,
   buildUserDetailDrawerSectionsV1,
@@ -1344,7 +1345,39 @@ describe("buildDataPanelUserConfigurationContractDisplay", () => {
           valid_template_count: 4,
           invalid_template_count: 0,
           all_templates_valid: true,
-          templates: [],
+          templates: [
+            {
+              id: "baseline_72sat",
+              label: "72-satellite baseline",
+              path: "configs/templates/sees_user_detailed.example.yaml",
+              scale: "72 satellites",
+              fidelity_mode: "SMALL_SCALE_PER_SATELLITE_ORBIT",
+              expected_kpi_behavior: "Stable baseline KPI curves.",
+              file_exists: true,
+              file_hash:
+                "sha256:5656565656565656565656565656565656565656565656565656565656565656",
+              config_hash:
+                "sha256:7878787878787878787878787878787878787878787878787878787878787878",
+              load_ok: true,
+              validation_ok: true,
+              error_count: 0,
+              errors: [],
+              config_summary: {
+                satellite_count: 72,
+                user_count: 1000,
+                compute_nodes: 72,
+                traffic_class: "COMPUTE_SERVICE",
+                destination_type: "COMPUTE_NODE",
+                runtime_mode: "REAL_TIME",
+                runtime_duration: 600,
+                runtime_seed: 20260703,
+                orbit_update_mode: null,
+                space_link_mode: null
+              },
+              row_hash:
+                "sha256:9090909090909090909090909090909090909090909090909090909090909090"
+            }
+          ],
           evidence_hash:
             "sha256:3434343434343434343434343434343434343434343434343434343434343434"
         },
@@ -1537,6 +1570,20 @@ describe("buildDataPanelUserConfigurationContractDisplay", () => {
       "文件 30",
       "模板 0"
     ]);
+    expect(display?.templateValidationRows).toEqual([
+      {
+        id: "baseline_72sat",
+        label: "72-satellite baseline",
+        statusLabel: "VALIDATED",
+        pathLabel: "configs/templates/sees_user_detailed.example.yaml",
+        scaleLabel: "72 sat / 1,000 user / 72 compute / COMPUTE_SERVICE / COMPUTE_NODE",
+        runtimeLabel: "REAL_TIME / 600s / seed 20,260,703",
+        modeLabel: "orbit auto / space auto",
+        fileHashLabel: "565656565656",
+        configHashLabel: "787878787878",
+        errorLabel: "none"
+      }
+    ]);
     expect(display?.referenceBoundaryLabels).toEqual([
       "语义源 BACKEND_USER_CONFIGURATION",
       "Event Kernel NO_EVENT_KERNEL_BEHAVIOR_CHANGE",
@@ -1605,6 +1652,100 @@ describe("buildDataPanelUserConfigurationContractDisplay", () => {
     expect(
       buildDataPanelUserConfigurationContractDisplay(null, null, null, null)
     ).toBeNull();
+  });
+});
+
+describe("buildDataPanelUserConfigurationTemplateValidationRows", () => {
+  it("maps backend template validation rows without local validation", () => {
+    expect(
+      buildDataPanelUserConfigurationTemplateValidationRows({
+        version: "v1",
+        evidence_id: "sees.user_configuration_template_validation.v1",
+        source: "BACKEND_USER_CONFIGURATION",
+        schema_id: "sees.user_configuration.v2",
+        validation_scope: "APPROVED_EXECUTABLE_TEMPLATES",
+        template_count: 2,
+        valid_template_count: 1,
+        invalid_template_count: 1,
+        all_templates_valid: false,
+        templates: [
+          {
+            id: "large_scale_1200sat",
+            label: "1200-satellite scale mode",
+            path: "configs/templates/sees_user_large_scale_1200.example.yaml",
+            file_exists: true,
+            file_hash:
+              "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            config_hash:
+              "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            load_ok: true,
+            validation_ok: true,
+            error_count: 0,
+            errors: [],
+            config_summary: {
+              satellite_count: 1200,
+              user_count: 1200,
+              compute_nodes: 1200,
+              traffic_class: "COMPUTE_SERVICE",
+              destination_type: "COMPUTE_NODE",
+              runtime_mode: "REAL_TIME",
+              runtime_duration: 300,
+              runtime_seed: 20260707,
+              orbit_update_mode: "BATCH",
+              space_link_mode: "BOUNDED_CANDIDATE"
+            },
+            row_hash:
+              "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          },
+          {
+            id: "missing_template",
+            label: "Missing template",
+            path: "configs/templates/missing.yaml",
+            file_exists: false,
+            file_hash: "",
+            config_hash: "",
+            load_ok: false,
+            validation_ok: false,
+            error_count: 1,
+            errors: [
+              {
+                source: "template_file",
+                message: "template file is missing"
+              }
+            ],
+            row_hash:
+              "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+          }
+        ],
+        evidence_hash:
+          "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+      })
+    ).toEqual([
+      {
+        id: "large_scale_1200sat",
+        label: "1200-satellite scale mode",
+        statusLabel: "VALIDATED",
+        pathLabel: "configs/templates/sees_user_large_scale_1200.example.yaml",
+        scaleLabel: "1,200 sat / 1,200 user / 1,200 compute / COMPUTE_SERVICE / COMPUTE_NODE",
+        runtimeLabel: "REAL_TIME / 300s / seed 20,260,707",
+        modeLabel: "BATCH / BOUNDED_CANDIDATE",
+        fileHashLabel: "aaaaaaaaaaaa",
+        configHashLabel: "bbbbbbbbbbbb",
+        errorLabel: "none"
+      },
+      {
+        id: "missing_template",
+        label: "Missing template",
+        statusLabel: "FILE_MISSING",
+        pathLabel: "configs/templates/missing.yaml",
+        scaleLabel: "",
+        runtimeLabel: "runtime unknown",
+        modeLabel: "orbit auto / space auto",
+        fileHashLabel: "",
+        configHashLabel: "",
+        errorLabel: "template_file: template file is missing"
+      }
+    ]);
   });
 });
 

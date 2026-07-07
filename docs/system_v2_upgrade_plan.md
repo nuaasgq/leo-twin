@@ -80,6 +80,10 @@ Tasks:
     `/scenario/user-config/template-validation` read-only endpoint and embeds
     the same evidence in the template catalog/reference surfaces so operators
     can see how many approved templates are executable before applying one.
+    T372 renders the backend evidence as a dashboard template-validation table
+    with per-template status, scale/runtime summary, orbit/space-link mode,
+    file hash, config hash, and error summary without revalidating templates in
+    the browser.
 - V2-003: Add config explanation summary.
   - Scope: backend-generated text/structured explanation for orbit, network,
     traffic, compute, runtime, fidelity.

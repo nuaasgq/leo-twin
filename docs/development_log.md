@@ -5,6 +5,43 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-07 - Dashboard Template Validation Detail v1
+
+- Branch: `feature/T372-dashboard-template-validation-detail-v1`
+- Commit: pending in this commit
+- Scope: render backend-owned user configuration template validation evidence
+  as a dashboard detail table. The standalone dashboard now maps
+  `sees.user_configuration_template_validation.v1` rows into a scrollable
+  per-template review table with validation status, scale/runtime summary,
+  orbit/space-link mode, file hash, config hash, and error summary. The
+  frontend does not revalidate templates locally; it only displays backend
+  evidence from the template catalog or reference surfaces.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/user_guide_v2.md`
+  - `docs/current_product_status.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed, 1 test file / 216 tests using the bundled Node/pnpm
+      runtime.
+  - `pnpm --dir frontend build`
+    - Result: passed using the bundled Node/pnpm runtime. Vite reported the
+      existing `DataPanel` chunk-size warning after minification.
+- Problems encountered and handling:
+  - Existing dashboard strings include prior encoded Chinese text, so the new
+    template validation detail table uses ASCII labels to avoid adding new
+    encoding churn in this focused task.
+  - Existing local runtime/generated config files remain dirty and are
+    intentionally not included in this task.
+- Known remaining issues / follow-up:
+  - Template validation rows are read-only and unfiltered. A future
+    configuration UX task can add search, status filters, and direct
+    load-template actions gated by runtime state.
+
 ## 2026-07-07 - User Configuration Template Validation Evidence v1
 
 - Branch: `feature/T371-user-config-template-validation-v1`

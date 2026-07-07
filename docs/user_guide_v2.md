@@ -106,6 +106,11 @@ backend config loader and schema validation path used by runtime control. The
 template catalog and reference endpoints also carry this evidence with template
 counts, valid/invalid counts, file hashes, config hashes, scale summaries, and
 the no-Event-Kernel/no-packet/no-external-simulator boundary.
+The standalone dashboard configuration contract section renders the compact
+template validation counts and an expandable template validation table so users
+can inspect each approved YAML template, its validation status, scale/runtime
+summary, orbit/space-link mode, file hash, config hash, and error summary
+without applying the template.
 
 Minimal YAML example:
 

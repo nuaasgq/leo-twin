@@ -2,7 +2,7 @@
 
 Date: 2026-07-07
 
-Branch: `feature/T371-user-config-template-validation-v1`
+Branch: `feature/T372-dashboard-template-validation-detail-v1`
 
 ## Local Entry Points
 
@@ -70,6 +70,10 @@ evidence to the backend template catalog/reference surfaces and dashboard
 configuration contract labels. Targeted backend configuration tests and
 frontend configuration/API tests passed, and the production build completed.
 Vite reported the existing `DataPanel` chunk-size warning after minification.
+The latest T372 validation adds a dashboard per-template validation evidence
+table on top of T371. `pnpm --dir frontend test dataPanel.test.ts` passed 216
+tests, and `pnpm --dir frontend build` completed. Vite reported the existing
+`DataPanel` chunk-size warning after minification.
 
 ## Current Product Signals
 
@@ -102,8 +106,8 @@ Vite reported the existing `DataPanel` chunk-size warning after minification.
   loader/schema validation path used by runtime control, records file/config
   hashes and scale summaries, and is also available through
   `/scenario/user-config/template-validation`. The dashboard configuration
-  contract card shows compact template validation counts and evidence hash
-  labels from backend output.
+  contract card shows compact template validation counts, evidence hash labels,
+  and a per-template validation table from backend output.
 - The standalone dashboard now shows a detail-coverage card in the user/satellite
   detail section. It reports how many backend detail families are present,
   returned-vs-total rows, hidden/cursor-limited rows, exact node cards, and the
@@ -177,6 +181,6 @@ Vite reported the existing `DataPanel` chunk-size warning after minification.
 - Formula evidence is exported as a package artifact, but the dashboard still
   uses compact labels rather than a dedicated artifact drawer for every KPI
   input row.
-- Template validation evidence is visible as compact configuration labels; a
-  future configuration UX pass can add a dedicated template validation drawer
-  with all template rows and error details.
+- Template validation evidence is visible in the dashboard configuration
+  contract section; a future configuration UX pass can add template search,
+  filtering, and direct jump-to-template actions.

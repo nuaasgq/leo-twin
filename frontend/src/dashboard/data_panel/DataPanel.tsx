@@ -2070,6 +2070,59 @@ export const DataPanel = memo(function DataPanel({
               </div>
             ) : null}
           </div>
+          {userConfigurationContractDisplay.templateValidationRows.length > 0 ? (
+            <details
+              className="data-panel-config-template-validation"
+              aria-label="User configuration template validation evidence"
+              open
+            >
+              <summary>
+                <div>
+                  <strong>Template validation evidence</strong>
+                  <small>Backend-loaded YAML templates, hashes and scale summaries</small>
+                </div>
+                <span>
+                  {userConfigurationContractDisplay.templateValidationRows.length} templates
+                </span>
+              </summary>
+              <div
+                className="data-panel-config-template-validation-table"
+                role="table"
+                aria-label="User configuration template validation table"
+              >
+                <div
+                  className="data-panel-config-template-validation-row header"
+                  role="row"
+                >
+                  <span role="columnheader">template</span>
+                  <span role="columnheader">status</span>
+                  <span role="columnheader">scale</span>
+                  <span role="columnheader">runtime</span>
+                  <span role="columnheader">mode</span>
+                  <span role="columnheader">file hash</span>
+                  <span role="columnheader">config hash</span>
+                  <span role="columnheader">errors</span>
+                </div>
+                {userConfigurationContractDisplay.templateValidationRows.map((row) => (
+                  <div
+                    className="data-panel-config-template-validation-row"
+                    key={row.id}
+                    role="row"
+                    title={row.pathLabel}
+                  >
+                    <span role="cell">{row.label}</span>
+                    <span role="cell">{row.statusLabel}</span>
+                    <span role="cell">{row.scaleLabel}</span>
+                    <span role="cell">{row.runtimeLabel}</span>
+                    <span role="cell">{row.modeLabel}</span>
+                    <span role="cell">{row.fileHashLabel}</span>
+                    <span role="cell">{row.configHashLabel}</span>
+                    <span role="cell">{row.errorLabel}</span>
+                  </div>
+                ))}
+              </div>
+            </details>
+          ) : null}
           {userConfigurationContractDisplay.fieldSections.length > 0 ? (
             <div
               className="data-panel-config-field-browser"
@@ -11772,6 +11825,7 @@ export interface DataPanelUserConfigurationContractDisplay {
   referenceSummaryLabels: readonly string[];
   referenceBoundaryLabels: readonly string[];
   referenceWorkflowLabels: readonly string[];
+  templateValidationRows: readonly DataPanelUserConfigurationTemplateValidationRowDisplay[];
   schemaHref: string;
   templatesHref: string;
   referenceHref: string;
@@ -11801,6 +11855,19 @@ export interface DataPanelUserConfigurationReferenceRowDisplay {
   defaultValueLabel: string;
   currentValueLabel: string;
   validationLabel: string;
+}
+
+export interface DataPanelUserConfigurationTemplateValidationRowDisplay {
+  id: string;
+  label: string;
+  statusLabel: string;
+  pathLabel: string;
+  scaleLabel: string;
+  runtimeLabel: string;
+  modeLabel: string;
+  fileHashLabel: string;
+  configHashLabel: string;
+  errorLabel: string;
 }
 
 export function buildDataPanelUserConfigurationContractDisplay(
@@ -11836,6 +11903,7 @@ export function buildDataPanelUserConfigurationContractDisplay(
       referenceSummaryLabels: [],
       referenceBoundaryLabels: [],
       referenceWorkflowLabels: [],
+      templateValidationRows: [],
       schemaHref: userConfigurationSchemaHref(),
       templatesHref: userConfigurationTemplatesHref(),
       referenceHref: userConfigurationReferenceHref(),
@@ -11862,6 +11930,7 @@ export function buildDataPanelUserConfigurationContractDisplay(
       referenceSummaryLabels: [],
       referenceBoundaryLabels: [],
       referenceWorkflowLabels: [],
+      templateValidationRows: [],
       schemaHref: userConfigurationSchemaHref(),
       templatesHref: userConfigurationTemplatesHref(),
       referenceHref: userConfigurationReferenceHref(),
@@ -11919,6 +11988,8 @@ export function buildDataPanelUserConfigurationContractDisplay(
     referenceSummaryLabels: buildDataPanelUserConfigurationReferenceSummaryLabels(reference),
     referenceBoundaryLabels: buildDataPanelUserConfigurationReferenceBoundaryLabels(reference),
     referenceWorkflowLabels: buildDataPanelUserConfigurationReferenceWorkflowLabels(reference),
+    templateValidationRows:
+      buildDataPanelUserConfigurationTemplateValidationRows(templateValidation),
     schemaHref: userConfigurationSchemaHref(),
     templatesHref: userConfigurationTemplatesHref(),
     referenceHref: userConfigurationReferenceHref(),
@@ -12002,6 +12073,66 @@ export function buildDataPanelUserConfigurationTemplateValidationLabels(
     .slice(0, 2)
     .map((row) => `${row.id} ${row.errors[0]?.message ?? "invalid template"}`);
   return [...labels, ...errorRows];
+}
+
+export function buildDataPanelUserConfigurationTemplateValidationRows(
+  validation: UserConfigurationTemplateValidationV1 | null | undefined
+): readonly DataPanelUserConfigurationTemplateValidationRowDisplay[] {
+  if (validation === null || validation === undefined) {
+    return [];
+  }
+  return validation.templates.map((row) => {
+    const summary = row.config_summary ?? {};
+    const status =
+      row.file_exists && row.load_ok && row.validation_ok
+        ? "VALIDATED"
+        : row.file_exists
+          ? row.load_ok
+            ? "VALIDATION_FAILED"
+            : "LOAD_FAILED"
+          : "FILE_MISSING";
+    const runtimeParts = [
+      summary.runtime_mode ?? "runtime unknown",
+      summary.runtime_duration !== undefined
+        ? `${formatCount(summary.runtime_duration)}s`
+        : null,
+      summary.runtime_seed !== undefined
+        ? `seed ${formatCount(summary.runtime_seed)}`
+        : null
+    ].filter((item): item is string => item !== null);
+    const modeParts = [
+      summary.orbit_update_mode ?? "orbit auto",
+      summary.space_link_mode ?? "space auto"
+    ];
+    const scaleParts = [
+      summary.satellite_count !== undefined
+        ? `${formatCount(summary.satellite_count)} sat`
+        : row.scale,
+      summary.user_count !== undefined
+        ? `${formatCount(summary.user_count)} user`
+        : null,
+      summary.compute_nodes !== undefined
+        ? `${formatCount(summary.compute_nodes)} compute`
+        : null,
+      summary.traffic_class,
+      summary.destination_type
+    ].filter((item): item is string => Boolean(item));
+    return {
+      id: row.id,
+      label: row.label || row.id,
+      statusLabel: status,
+      pathLabel: row.path,
+      scaleLabel: scaleParts.join(" / "),
+      runtimeLabel: runtimeParts.join(" / ") || "runtime unknown",
+      modeLabel: modeParts.join(" / "),
+      fileHashLabel: shortRuntimeHash(row.file_hash),
+      configHashLabel: shortRuntimeHash(row.config_hash),
+      errorLabel:
+        row.error_count > 0
+          ? row.errors.map((error) => `${error.source}: ${error.message}`).join(" / ")
+          : "none"
+    };
+  });
 }
 
 export function buildDataPanelUserConfigurationReferenceFieldSections(

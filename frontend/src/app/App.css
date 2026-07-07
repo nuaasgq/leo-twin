@@ -2411,6 +2411,111 @@ button.data-panel-route-row {
   color: var(--accent-cyan);
 }
 
+.data-panel-config-template-validation {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  border-top: 1px solid #213442;
+  padding-top: 8px;
+}
+
+.data-panel-config-template-validation summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  cursor: pointer;
+  list-style-position: inside;
+}
+
+.data-panel-config-template-validation summary div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.data-panel-config-template-validation summary strong,
+.data-panel-config-template-validation summary small,
+.data-panel-config-template-validation summary span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.data-panel-config-template-validation summary strong {
+  color: var(--app-text);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.data-panel-config-template-validation summary small,
+.data-panel-config-template-validation summary span {
+  color: var(--app-muted);
+  font-size: 10px;
+}
+
+.data-panel-config-template-validation-table {
+  display: grid;
+  max-height: 260px;
+  min-width: 0;
+  overflow: auto;
+  border: 1px solid #263a48;
+  border-radius: 6px;
+  background: #081018;
+}
+
+.data-panel-config-template-validation-row {
+  display: grid;
+  grid-template-columns:
+    minmax(170px, 1.1fr)
+    minmax(110px, 0.7fr)
+    minmax(220px, 1.4fr)
+    minmax(170px, 1fr)
+    minmax(160px, 1fr)
+    minmax(100px, 0.7fr)
+    minmax(100px, 0.7fr)
+    minmax(180px, 1.2fr);
+  min-width: 1210px;
+  border-bottom: 1px solid #172632;
+}
+
+.data-panel-config-template-validation-row:last-child {
+  border-bottom: 0;
+}
+
+.data-panel-config-template-validation-row.header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #101c28;
+}
+
+.data-panel-config-template-validation-row span {
+  min-width: 0;
+  padding: 7px 8px;
+  border-right: 1px solid #172632;
+  color: var(--app-muted);
+  font-size: 10px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.data-panel-config-template-validation-row span:first-child,
+.data-panel-config-template-validation-row.header span {
+  color: var(--app-text);
+  font-weight: 800;
+}
+
+.data-panel-config-template-validation-row span:nth-child(2) {
+  color: var(--accent-green);
+}
+
+.data-panel-config-template-validation-row span:last-child {
+  border-right: 0;
+}
+
 .data-panel-config-reference-browser {
   display: grid;
   gap: 8px;
