@@ -5,6 +5,41 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-07 - Traffic Demand Explanation v1
+
+- Branch: `feature/T375-traffic-demand-explanation-v1`
+- Commit: pending in this commit
+- Scope: add `leo_twin.traffic_demand_explanation.v1` as a deterministic
+  product-facing explanation on `TrafficDemandBatch`. The explanation reports
+  generated request counts, active traffic classes, per-class data volumes,
+  priority ranges, compute-service task/output-flow correlation completeness,
+  arrival window, and per-user active service state. It is read-only over
+  already generated records and does not change traffic generation, event
+  scheduling, Event Kernel behavior, packet-level simulation, or external
+  simulator boundaries.
+- Changed files/modules:
+  - `src/leo_twin/models/traffic/demand.py`
+  - `tests/unit/test_traffic_demand_model.py`
+  - `docs/current_product_status.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_traffic_demand_model.py -q`
+    - Result: passed, 13 tests.
+  - `python -m pytest tests/unit/test_system_v2_upgrade_plan_docs.py tests/unit/test_user_guide_v2_docs.py -q`
+    - Result: passed, 4 tests.
+  - `python -m compileall -q src\leo_twin\models\traffic`
+    - Result: passed.
+- Problems encountered and handling:
+  - Existing local runtime/generated config files remain dirty and are
+    intentionally not included in this task.
+- Known remaining issues / follow-up:
+  - The explanation is currently available from the traffic demand batch model.
+    A follow-up backend-runtime task should expose it through generated
+    summaries, runtime status, and result packages so the dashboard can render
+    it without frontend-side inference.
+
 ## 2026-07-07 - Config Template Validation Artifact Review v1
 
 - Branch: `feature/T374-config-template-validation-artifact-review-v1`

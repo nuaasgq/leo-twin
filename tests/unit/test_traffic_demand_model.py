@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from leo_twin.models.traffic import (
@@ -378,6 +380,103 @@ def test_service_mix_summary_reports_counts_and_per_user_state() -> None:
     )
     assert per_user["user-b"]["service_classes"] == ("EMERGENCY",)
     assert per_user["sat-a"]["service_classes"] == ("BULK_DOWNLINK",)
+
+
+def test_traffic_demand_explanation_reports_business_semantics() -> None:
+    config = TrafficServiceMixConfig(
+        total_request_count=7,
+        arrival_interval=4.0,
+        id_prefix="portfolio",
+        items=(
+            TrafficServiceMixItem(
+                traffic_class=TrafficClass.EMERGENCY,
+                weight=2.0,
+                source_ids=("user-a", "user-b"),
+                destination_ids=("ops-center",),
+                input_data_size=0.5,
+                priority=10,
+                arrival_profile=TrafficArrivalProfile.BURST,
+                burst_size=2,
+                burst_spacing=0.25,
+            ),
+            TrafficServiceMixItem(
+                traffic_class=TrafficClass.COMPUTE_SERVICE,
+                weight=1.0,
+                source_ids=("user-a",),
+                destination_ids=("sat-compute-a",),
+                input_data_size=6.0,
+                output_data_size=2.0,
+                priority=5,
+                output_destination_ids=("user-a",),
+            ),
+            TrafficServiceMixItem(
+                traffic_class=TrafficClass.BULK_DOWNLINK,
+                weight=1.0,
+                source_ids=("sat-a",),
+                destination_ids=("ground-a",),
+                input_data_size=10.0,
+                priority=1,
+            ),
+        ),
+    )
+
+    first = generate_traffic_service_mix(config).traffic_demand_explanation()
+    second = generate_traffic_service_mix(config).traffic_demand_explanation()
+    rows = {row["traffic_class"]: row for row in first["traffic_class_rows"]}
+    users = {
+        row["user_id"]: row
+        for row in first["per_user_active_service_state"]
+        if isinstance(row, dict)
+    }
+
+    assert first == second
+    assert first["explanation_id"] == "leo_twin.traffic_demand_explanation.v1"
+    assert first["request_count"] == 7
+    assert first["input_flow_count"] == 7
+    assert first["task_request_count"] == 2
+    assert first["output_flow_count"] == 2
+    assert first["communication_only_request_count"] == 5
+    assert first["compute_service_request_count"] == 2
+    assert first["active_traffic_classes"] == (
+        "BULK_DOWNLINK",
+        "COMPUTE_SERVICE",
+        "EMERGENCY",
+    )
+    assert first["arrival_window"] == {
+        "first_arrival_time": 0.0,
+        "last_arrival_time": 4.0,
+        "duration_seconds": 4.0,
+    }
+    assert first["priority_summary"] == {
+        "min_priority": 1,
+        "max_priority": 10,
+        "unique_priorities": (1, 5, 10),
+    }
+    assert first["data_volume"] == {
+        "total_input_data_mb": 33.5,
+        "total_output_data_mb": 4.0,
+        "total_data_mb": 37.5,
+    }
+    assert first["correlation_summary"] == {
+        "all_compute_services_have_task": True,
+        "all_compute_services_have_output_flow": True,
+        "packet_level_simulation": False,
+        "frontend_inference_required": False,
+    }
+    assert rows["COMPUTE_SERVICE"]["request_count"] == 2
+    assert rows["COMPUTE_SERVICE"]["task_request_count"] == 2
+    assert rows["COMPUTE_SERVICE"]["output_flow_count"] == 2
+    assert rows["COMPUTE_SERVICE"]["destination_types"] == ("COMPUTE_NODE",)
+    assert rows["EMERGENCY"]["destination_types"] == ("SERVICE_ENDPOINT",)
+    assert users["user-a"]["primary_service_class"] == "EMERGENCY"
+    assert users["user-a"]["task_ids"] == (
+        "portfolio-01-01-compute_service-00000-task",
+        "portfolio-01-01-compute_service-00001-task",
+    )
+    assert "Packet-level traffic" in first["model_assumptions"][2]
+    assert json.loads(json.dumps(first, sort_keys=True))["explanation_id"] == (
+        "leo_twin.traffic_demand_explanation.v1"
+    )
 
 
 def test_burst_arrival_profile_groups_requests_deterministically() -> None:

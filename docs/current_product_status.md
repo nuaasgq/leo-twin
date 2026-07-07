@@ -95,6 +95,12 @@ package review workflow.
 - Runtime health smoke reports endpoint timings, orbit/protocol fields,
   constellation profile, traffic class, compute node count, and compute
   resource model.
+- Traffic demand batches now expose a deterministic
+  `leo_twin.traffic_demand_explanation.v1` summary. It reports generated
+  request counts, active traffic classes, per-class data volumes, priority
+  ranges, compute-service task/output-flow correlation, arrival window, and
+  per-user active service state without changing flow generation or event
+  scheduling.
 - Runtime status now includes backend-owned `network_kpi_calibration_v1`, which
   audits whether throughput, latency, loss proxy, and delay-variation proxy
   have actually changed over simulation time and explains flat values from

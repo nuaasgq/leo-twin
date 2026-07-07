@@ -178,7 +178,13 @@ Tasks:
     and binds the dashboard export review drawer to backend cursor reads,
     service-class filtering, terminal-state filtering, and network-waiting
     filtering so large user-service artifacts are not loaded fully in the
-    browser by default. T332 preserves backend-provided request/route/flow/task
+    browser by default. T375 adds
+    `leo_twin.traffic_demand_explanation.v1` on `TrafficDemandBatch`, a
+    deterministic product-facing explanation of generated request counts,
+    active traffic classes, data volumes, priority range, compute-service
+    correlation completeness, arrival window, and per-user active service
+    state without changing flow generation or event scheduling. T332 preserves
+    backend-provided request/route/flow/task
     correlation ids in dashboard user-service rows and lets selected export
     package rows drive package route evidence, package service-trace filtering,
     and live runtime detail lookups without frontend business recomputation.

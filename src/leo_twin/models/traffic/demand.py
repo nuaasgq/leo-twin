@@ -340,6 +340,84 @@ class TrafficDemandBatch:
             "per_user_active_service_state": self.per_user_active_service_state(),
         }
 
+    def traffic_demand_explanation(self) -> dict[str, object]:
+        """Return deterministic product-facing demand semantics."""
+
+        traffic_class_rows = tuple(
+            _traffic_class_explanation_row(traffic_class, self.records)
+            for traffic_class in TrafficClass
+        )
+        active_rows = tuple(
+            row for row in traffic_class_rows if row["request_count"] > 0
+        )
+        arrival_times = tuple(record.arrival_time for record in self.records)
+        priorities = tuple(record.input_flow.priority for record in self.records)
+        compute_service_request_count = sum(
+            1
+            for record in self.records
+            if record.traffic_class == TrafficClass.COMPUTE_SERVICE
+        )
+        total_input_data_mb = sum(record.input_data_size for record in self.records)
+        total_output_data_mb = sum(record.output_data_size for record in self.records)
+        return {
+            "version": "v1",
+            "explanation_id": "leo_twin.traffic_demand_explanation.v1",
+            "source": "TrafficDemandBatch.records",
+            "request_count": len(self.records),
+            "input_flow_count": len(self.flow_requests),
+            "task_request_count": len(self.task_requests),
+            "output_flow_count": len(self.output_flow_metadata),
+            "communication_only_request_count": (
+                len(self.records) - compute_service_request_count
+            ),
+            "compute_service_request_count": compute_service_request_count,
+            "active_traffic_classes": tuple(
+                row["traffic_class"] for row in active_rows
+            ),
+            "traffic_class_rows": traffic_class_rows,
+            "arrival_window": {
+                "first_arrival_time": min(arrival_times) if arrival_times else None,
+                "last_arrival_time": max(arrival_times) if arrival_times else None,
+                "duration_seconds": (
+                    max(arrival_times) - min(arrival_times)
+                    if len(arrival_times) >= 2
+                    else 0.0
+                ),
+            },
+            "priority_summary": {
+                "min_priority": min(priorities) if priorities else None,
+                "max_priority": max(priorities) if priorities else None,
+                "unique_priorities": tuple(sorted(set(priorities))),
+            },
+            "data_volume": {
+                "total_input_data_mb": total_input_data_mb,
+                "total_output_data_mb": total_output_data_mb,
+                "total_data_mb": total_input_data_mb + total_output_data_mb,
+            },
+            "correlation_summary": {
+                "all_compute_services_have_task": (
+                    len(self.task_requests) == compute_service_request_count
+                ),
+                "all_compute_services_have_output_flow": (
+                    len(self.output_flow_metadata) == compute_service_request_count
+                ),
+                "packet_level_simulation": False,
+                "frontend_inference_required": False,
+            },
+            "per_user_active_service_state": self.per_user_active_service_state(),
+            "model_assumptions": (
+                "Traffic demand explanation summarizes generated flow-level requests only.",
+                (
+                    "Compute-service rows carry correlated input flow, task, "
+                    "and deferred output-flow metadata."
+                ),
+                (
+                    "Packet-level traffic, stochastic retries, and external "
+                    "simulators are outside this model."
+                ),
+            ),
+        }
+
     def per_user_active_service_state(self) -> tuple[dict[str, object], ...]:
         """Return deterministic per-source service state rows."""
 
@@ -871,6 +949,36 @@ def _per_user_active_service_state(
         "output_flow_ids": output_flow_ids,
         "total_input_data_mb": sum(record.input_data_size for record in ordered_records),
         "total_output_data_mb": sum(record.output_data_size for record in ordered_records),
+    }
+
+
+def _traffic_class_explanation_row(
+    traffic_class: TrafficClass,
+    records: tuple[TrafficDemandRecord, ...],
+) -> dict[str, object]:
+    class_records = tuple(
+        record for record in records if record.traffic_class == traffic_class
+    )
+    return {
+        "traffic_class": traffic_class.value,
+        "request_count": len(class_records),
+        "input_flow_count": len(class_records),
+        "task_request_count": sum(
+            1 for record in class_records if record.task is not None
+        ),
+        "output_flow_count": sum(
+            1 for record in class_records if record.output_flow is not None
+        ),
+        "total_input_data_mb": sum(record.input_data_size for record in class_records),
+        "total_output_data_mb": sum(record.output_data_size for record in class_records),
+        "destination_types": tuple(
+            destination_type.value
+            for destination_type in TrafficDestinationType
+            if any(
+                record.destination_type == destination_type
+                for record in class_records
+            )
+        ),
     }
 
 
