@@ -1495,6 +1495,7 @@ export interface RuntimeExportReviewSummaryV1 {
   route_trust?: RuntimeExportRouteTrustEvidenceV1;
   network_kpi_benchmark_validation?: RuntimeExportNetworkKpiBenchmarkValidationEvidenceV1;
   network_kpi_formula_evidence?: RuntimeExportNetworkKpiFormulaEvidenceV1;
+  network_kpi_variation_explanation?: RuntimeExportNetworkKpiVariationExplanationV1;
   user_configuration_template_validation?: RuntimeExportUserConfigurationTemplateValidationEvidenceV1;
   traffic_demand_explanation?: RuntimeExportTrafficDemandExplanationEvidenceV1;
   user_service_requests?: RuntimeExportUserServiceRequestEvidenceV2;
@@ -1586,6 +1587,31 @@ export interface RuntimeExportNetworkKpiFormulaEvidenceV1 {
   flat_kpi_count: number;
   packet_level_simulation: boolean;
   acceptable_for_demo_review: boolean;
+  caveats: readonly string[];
+  evidence_hash: string;
+}
+
+export interface RuntimeExportNetworkKpiVariationExplanationV1 {
+  version: "v1" | string;
+  explanation_id: string;
+  source: string;
+  evidence_present: boolean;
+  runtime_status_source?: string;
+  provenance_id?: string;
+  calibration_id?: string;
+  formula_evidence_id?: string;
+  metric_model: string;
+  explanation_status: string;
+  sample_count: number;
+  sim_time_span_s: number;
+  kpi_count: number;
+  time_varying_kpi_count: number;
+  flat_kpi_count: number;
+  zero_latest_kpi_count: number;
+  missing_explanation_count: number;
+  packet_level_simulation: boolean;
+  acceptable_for_demo_review: boolean;
+  model_assumptions: readonly string[];
   caveats: readonly string[];
   evidence_hash: string;
 }
@@ -2149,6 +2175,11 @@ export interface RuntimeExportPackageAuditIndexV1 {
   network_kpi_formula_evidence_status?: string;
   network_kpi_formula_evidence_present?: boolean;
   network_kpi_formula_evidence_missing_selected_input_count?: number;
+  network_kpi_variation_explanation_hash?: string;
+  network_kpi_variation_explanation_status?: string;
+  network_kpi_variation_explanation_present?: boolean;
+  network_kpi_variation_explanation_time_varying_kpi_count?: number;
+  network_kpi_variation_explanation_missing_explanation_count?: number;
   user_configuration_template_validation_hash?: string;
   user_configuration_template_validation_status?: string;
   user_configuration_template_validation_present?: boolean;
@@ -2379,6 +2410,7 @@ export interface RuntimeExportScenarioReviewBundleV1 {
   diagnostics: RuntimeExportScenarioReviewDiagnosticsRefV1;
   network_kpi_benchmark_validation?: RuntimeExportScenarioReviewNetworkKpiBenchmarkValidationRefV1;
   network_kpi_formula_evidence?: RuntimeExportScenarioReviewNetworkKpiFormulaEvidenceRefV1;
+  network_kpi_variation_explanation?: RuntimeExportScenarioReviewNetworkKpiVariationExplanationRefV1;
   user_configuration_template_validation?: RuntimeExportScenarioReviewUserConfigurationTemplateValidationRefV1;
   traffic_demand_explanation?: RuntimeExportScenarioReviewTrafficDemandExplanationRefV1;
   user_service_requests?: RuntimeExportScenarioReviewUserServiceRequestRefV2;
@@ -2446,6 +2478,19 @@ export interface RuntimeExportScenarioReviewNetworkKpiFormulaEvidenceRefV1 {
   observed_kpi_count: number;
   missing_selected_input_count: number;
   time_varying_kpi_count: number;
+  evidence_hash: string;
+  evidence_present: boolean;
+}
+
+export interface RuntimeExportScenarioReviewNetworkKpiVariationExplanationRefV1 {
+  explanation_id: string;
+  metric_model: string;
+  explanation_status: string;
+  sample_count: number;
+  kpi_count: number;
+  time_varying_kpi_count: number;
+  flat_kpi_count: number;
+  missing_explanation_count: number;
   evidence_hash: string;
   evidence_present: boolean;
 }
@@ -2589,6 +2634,7 @@ export interface RuntimeExportReviewArtifactsV1 {
   review_summary_exported: boolean;
   network_kpi_benchmark_validation_exported?: boolean;
   network_kpi_formula_evidence_exported?: boolean;
+  network_kpi_variation_explanation_exported?: boolean;
   user_configuration_template_validation_exported?: boolean;
   traffic_demand_explanation_exported?: boolean;
   user_service_request_summary_exported?: boolean;
@@ -2605,6 +2651,7 @@ export interface RuntimeExportDiagnosticsBundleV1 {
   route_trust?: RuntimeExportRouteTrustEvidenceV1;
   network_kpi_benchmark_validation?: RuntimeExportNetworkKpiBenchmarkValidationEvidenceV1;
   network_kpi_formula_evidence?: RuntimeExportNetworkKpiFormulaEvidenceV1;
+  network_kpi_variation_explanation?: RuntimeExportNetworkKpiVariationExplanationV1;
   user_configuration_template_validation?: RuntimeExportUserConfigurationTemplateValidationEvidenceV1;
   traffic_demand_explanation?: RuntimeExportTrafficDemandExplanationEvidenceV1;
   user_service_requests?: RuntimeExportUserServiceRequestEvidenceV2;

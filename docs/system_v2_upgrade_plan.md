@@ -371,7 +371,11 @@ Tasks:
     sections. T384 adds backend-owned
     `network_kpi_variation_explanation_v1`, derived from KPI formula evidence
     and KPI calibration, so the dashboard can explain why each flow-level KPI
-    moved or stayed flat without recomputing KPI semantics locally.
+    moved or stayed flat without recomputing KPI semantics locally. T385
+    exports the same variation explanation into
+    `network_kpi_variation_explanation_v1.json` and surfaces compact
+    status/hash labels in result-package review, diagnostics, scenario review,
+    and audit sections.
 - V2-022: Add time-varying flow-level network pressure.
   - Scope: deterministic demand/capacity pressure, route blocking, congestion
     proxy, loss proxy, delay variation proxy.
@@ -1111,6 +1115,10 @@ Current Phase 3 progress:
   binds it to the dashboard network KPI panel, making flat or time-varying
   throughput, latency, loss-proxy, and jitter-proxy behavior explicit from
   backend-owned fields.
+- T385 exports the same KPI variation explanation as
+  `network_kpi_variation_explanation_v1.json` and binds it into package
+  review summary, diagnostics, scenario review, audit index, and dashboard
+  export-review labels for offline reproducibility.
 - T364 adds a dashboard detail-coverage status card for backend detail
   families, cursor windows, hidden rows, exact node cards, and pagination
   contract status. This improves the node-detail workstream without changing

@@ -5,6 +5,48 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-07 - Export KPI Variation Explanation v1
+
+- Branch: `feature/T385-export-kpi-variation-explanation-v1`
+- Commit: pending in this commit
+- Scope: export backend-owned `network_kpi_variation_explanation_v1` as
+  `network_kpi_variation_explanation_v1.json` in runtime result packages and
+  propagate its status/hash, time-varying KPI count, and missing-explanation
+  count into review summary, diagnostics bundle, scenario review bundle, audit
+  index, and dashboard export-review labels. This task does not change KPI
+  formulas, runtime status generation, Event Kernel behavior, packet-level
+  simulation, network/orbit/compute models, or live streaming paths.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `examples/integration_demo/control_plane.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `docs/current_product_status.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests\integration\test_result_package_export_v1.py -q`
+    - Result: passed, 1 test.
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed, 1 test file / 218 tests using the bundled Codex
+      Node/pnpm runtime.
+- Problems encountered and handling:
+  - Initial audit-index integration missed the local
+    `network_kpi_variation_explanation` evidence variable; the result-package
+    integration test caught the NameError and the helper binding was added.
+  - The baseline package has non-zero
+    `missing_explanation_count`; the test was corrected to verify the audit
+    index preserves the backend evidence count instead of forcing it to zero.
+  - Local runtime/generated config files were already dirty and remain outside
+    the staged task scope.
+- Known remaining issues / follow-up:
+  - The package JSON inspector exposes the new artifact as a compact evidence
+    target. A later dashboard artifact-browser pass can add a wider per-KPI
+    explanation drawer.
+
 ## 2026-07-07 - Network KPI Variation Explanation v1
 
 - Branch: `feature/T384-network-kpi-variation-explanation-v1`
@@ -48,10 +90,8 @@ change.
     They remain outside the staged task scope and are intentionally not
     delivered as product changes.
 - Known remaining issues / follow-up:
-  - `network_kpi_variation_explanation_v1` is currently a runtime-status and
-    dashboard surface. A later result-package task can export it as a
-    standalone offline artifact if package review needs the same explanation
-    without loading the full runtime status snapshot.
+  - Resolved by T385: `network_kpi_variation_explanation_v1` is now exported
+    as a standalone offline artifact in runtime result packages.
 
 ## 2026-07-07 - Dashboard Traffic Demand Page Controls v1
 

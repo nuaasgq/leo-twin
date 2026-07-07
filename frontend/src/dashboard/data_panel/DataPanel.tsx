@@ -59,6 +59,7 @@ import {
   RuntimeMetricsSummary,
   RuntimeExportNetworkKpiBenchmarkValidationEvidenceV1,
   RuntimeExportNetworkKpiFormulaEvidenceV1,
+  RuntimeExportNetworkKpiVariationExplanationV1,
   RuntimeNetworkKpiCalibrationV1,
   RuntimeNetworkKpiCredibilityV1,
   RuntimeNetworkKpiBenchmarkValidationV1,
@@ -236,6 +237,8 @@ const NETWORK_KPI_BENCHMARK_VALIDATION_FILENAME =
   "network_kpi_benchmark_validation_v1.json";
 const NETWORK_KPI_FORMULA_EVIDENCE_FILENAME =
   "network_kpi_formula_evidence_v1.json";
+const NETWORK_KPI_VARIATION_EXPLANATION_FILENAME =
+  "network_kpi_variation_explanation_v1.json";
 const USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME =
   "user_configuration_template_validation_v1.json";
 const TRAFFIC_DEMAND_EXPLANATION_FILENAME =
@@ -13633,6 +13636,17 @@ export function buildDataPanelExportScenarioReviewBundleDisplay(
             )}`
           ]
         : []),
+      ...(bundle.network_kpi_variation_explanation
+        ? [
+            `KPI variation ${bundle.network_kpi_variation_explanation.explanation_status}`,
+            `KPI variation moving ${formatCount(
+              bundle.network_kpi_variation_explanation.time_varying_kpi_count
+            )}`,
+            `KPI variation ${shortRuntimeHash(
+              bundle.network_kpi_variation_explanation.evidence_hash
+            )}`
+          ]
+        : []),
       ...(bundle.user_configuration_template_validation
         ? [
             `config templates ${bundle.user_configuration_template_validation.validation_status}`,
@@ -13750,6 +13764,7 @@ function buildDataPanelScenarioReviewWorkflowRows(
     "service_lifecycle_trace_v2.json",
     SERVICE_TRACE_COMPARISON_REVIEW_REPORT_FILENAME,
     NETWORK_KPI_FORMULA_EVIDENCE_FILENAME,
+    NETWORK_KPI_VARIATION_EXPLANATION_FILENAME,
     USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME,
     TRAFFIC_DEMAND_EXPLANATION_FILENAME,
     USER_SERVICE_REQUEST_SUMMARY_FILENAME
@@ -13808,18 +13823,20 @@ function scenarioReviewWorkflowStepLabel(filename: string): string | null {
       return "9 service trace review";
     case NETWORK_KPI_FORMULA_EVIDENCE_FILENAME:
       return "10 KPI formula evidence";
+    case NETWORK_KPI_VARIATION_EXPLANATION_FILENAME:
+      return "11 KPI variation explanation";
     case USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME:
-      return "11 config template validation";
+      return "12 config template validation";
     case TRAFFIC_DEMAND_EXPLANATION_FILENAME:
-      return "12 traffic demand";
+      return "13 traffic demand";
     case USER_SERVICE_REQUEST_SUMMARY_FILENAME:
-      return "13 user services";
+      return "14 user services";
     case "events.jsonl":
-      return "14 event evidence";
+      return "15 event evidence";
     case "metrics.csv":
-      return "15 metrics";
+      return "16 metrics";
     case "summary.json":
-      return "16 summary";
+      return "17 summary";
     default:
       return null;
   }
@@ -14112,6 +14129,18 @@ function scenarioReviewWorkflowEvidenceHash(
       return auditIndex?.route_comparison_review_report_hash ?? "";
     case SERVICE_TRACE_COMPARISON_REVIEW_REPORT_FILENAME:
       return auditIndex?.service_trace_comparison_review_report_hash ?? "";
+    case NETWORK_KPI_FORMULA_EVIDENCE_FILENAME:
+      return (
+        bundle.network_kpi_formula_evidence?.evidence_hash ??
+        auditIndex?.network_kpi_formula_evidence_hash ??
+        ""
+      );
+    case NETWORK_KPI_VARIATION_EXPLANATION_FILENAME:
+      return (
+        bundle.network_kpi_variation_explanation?.evidence_hash ??
+        auditIndex?.network_kpi_variation_explanation_hash ??
+        ""
+      );
     case USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME:
       return (
         bundle.user_configuration_template_validation?.evidence_hash ??
@@ -14663,6 +14692,8 @@ function scenarioReviewWorkflowArtifactPointer(filename: string): string {
       return "/records";
     case NETWORK_KPI_FORMULA_EVIDENCE_FILENAME:
       return "/evidence";
+    case NETWORK_KPI_VARIATION_EXPLANATION_FILENAME:
+      return "/evidence";
     case USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME:
       return "/template_validation/templates";
     case TRAFFIC_DEMAND_EXPLANATION_FILENAME:
@@ -14687,6 +14718,8 @@ function scenarioReviewWorkflowArtifactFilter(filename: string): string {
     case SCENARIO_REVIEW_BUNDLE_FILENAME:
       return "user_configuration_template_validation";
     case NETWORK_KPI_FORMULA_EVIDENCE_FILENAME:
+      return "evidence";
+    case NETWORK_KPI_VARIATION_EXPLANATION_FILENAME:
       return "evidence";
     case USER_SERVICE_REQUEST_SUMMARY_FILENAME:
       return "summary items";
@@ -15705,6 +15738,24 @@ export function buildDataPanelExportPackageAuditIndexDisplay(
             )}`,
             `KPI formula ${shortRuntimeHash(
               auditIndex.network_kpi_formula_evidence_hash ?? ""
+            )}`
+          ]
+        : []),
+      ...(auditIndex.network_kpi_variation_explanation_present !== undefined
+        ? [
+            `KPI variation ${
+              auditIndex.network_kpi_variation_explanation_status ?? "-"
+            }`,
+            `KPI variation moving ${formatCount(
+              auditIndex.network_kpi_variation_explanation_time_varying_kpi_count ??
+                0
+            )}`,
+            `KPI variation missing ${formatCount(
+              auditIndex.network_kpi_variation_explanation_missing_explanation_count ??
+                0
+            )}`,
+            `KPI variation ${shortRuntimeHash(
+              auditIndex.network_kpi_variation_explanation_hash ?? ""
             )}`
           ]
         : []),
@@ -16754,6 +16805,20 @@ function runtimeExportNetworkKpiFormulaEvidenceLabels(
   ];
 }
 
+function runtimeExportNetworkKpiVariationExplanationLabels(
+  evidence: RuntimeExportNetworkKpiVariationExplanationV1 | null | undefined
+): readonly string[] {
+  if (evidence === null || evidence === undefined) {
+    return [];
+  }
+  return [
+    `KPI variation ${evidence.explanation_status}`,
+    `KPI variation moving ${formatCount(evidence.time_varying_kpi_count)}`,
+    `KPI variation missing ${formatCount(evidence.missing_explanation_count)}`,
+    `KPI variation ${shortRuntimeHash(evidence.evidence_hash)}`
+  ];
+}
+
 function runtimeExportUserConfigurationTemplateValidationLabels(
   evidence: RuntimeExportUserConfigurationTemplateValidationEvidenceV1 | null | undefined
 ): readonly string[] {
@@ -16839,6 +16904,9 @@ export function buildDataPanelExportReviewSummaryDisplay(
       ...runtimeExportNetworkKpiFormulaEvidenceLabels(
         summary.network_kpi_formula_evidence
       ),
+      ...runtimeExportNetworkKpiVariationExplanationLabels(
+        summary.network_kpi_variation_explanation
+      ),
       ...runtimeExportUserConfigurationTemplateValidationLabels(
         summary.user_configuration_template_validation
       ),
@@ -16860,6 +16928,15 @@ export function buildDataPanelExportReviewSummaryDisplay(
         ? [
             `KPI formula ${
               summary.artifacts.network_kpi_formula_evidence_exported
+                ? "exported"
+                : "missing"
+            }`
+          ]
+        : []),
+      ...(summary.artifacts.network_kpi_variation_explanation_exported !== undefined
+        ? [
+            `KPI variation ${
+              summary.artifacts.network_kpi_variation_explanation_exported
                 ? "exported"
                 : "missing"
             }`
@@ -16975,6 +17052,9 @@ export function buildDataPanelExportDiagnosticsDisplay(
       ),
       ...runtimeExportNetworkKpiFormulaEvidenceLabels(
         diagnostics.network_kpi_formula_evidence
+      ),
+      ...runtimeExportNetworkKpiVariationExplanationLabels(
+        diagnostics.network_kpi_variation_explanation
       ),
       ...runtimeExportUserConfigurationTemplateValidationLabels(
         diagnostics.user_configuration_template_validation

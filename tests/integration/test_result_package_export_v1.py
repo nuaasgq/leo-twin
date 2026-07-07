@@ -10,6 +10,7 @@ from leo_twin.services.detail_pagination_contract import DETAIL_ENDPOINT_MAX_LIM
 from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_V1_ID,
     RUNTIME_EXPORT_NETWORK_KPI_FORMULA_EVIDENCE_V1_ID,
+    RUNTIME_EXPORT_NETWORK_KPI_VARIATION_EXPLANATION_V1_ID,
     RUNTIME_EXPORT_TRAFFIC_DEMAND_EXPLANATION_V1_ID,
     RUNTIME_EXPORT_USER_CONFIGURATION_TEMPLATE_VALIDATION_V1_ID,
     RUNTIME_EXPORT_PACKAGE_ACCEPTANCE_REPORT_V1_ID,
@@ -59,6 +60,7 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert (package_dir / "route_detail_index_v1.json").exists()
     assert (package_dir / "network_kpi_benchmark_validation_v1.json").exists()
     assert (package_dir / "network_kpi_formula_evidence_v1.json").exists()
+    assert (package_dir / "network_kpi_variation_explanation_v1.json").exists()
     assert (package_dir / "user_configuration_template_validation_v1.json").exists()
     assert (package_dir / "traffic_demand_explanation_v1.json").exists()
     assert (package_dir / "user_service_request_summary_v2.json").exists()
@@ -73,6 +75,7 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert "diagnostics_bundle_v1.json" in filenames
     assert "network_kpi_benchmark_validation_v1.json" in filenames
     assert "network_kpi_formula_evidence_v1.json" in filenames
+    assert "network_kpi_variation_explanation_v1.json" in filenames
     assert "user_configuration_template_validation_v1.json" in filenames
     assert "traffic_demand_explanation_v1.json" in filenames
     assert "user_service_request_summary_v2.json" in filenames
@@ -103,6 +106,11 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     )
     network_kpi_formula_evidence = json.loads(
         (package_dir / "network_kpi_formula_evidence_v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    network_kpi_variation_explanation = json.loads(
+        (package_dir / "network_kpi_variation_explanation_v1.json").read_text(
             encoding="utf-8"
         )
     )
@@ -228,6 +236,17 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         "FORMULA_READY_FLAT_SERIES",
         "FORMULA_READY_INSUFFICIENT_SERIES",
     }
+    assert review_summary["network_kpi_variation_explanation"][
+        "evidence_present"
+    ] is True
+    assert review_summary["network_kpi_variation_explanation"][
+        "explanation_status"
+    ] in {
+        "TIME_VARIATION_EXPLAINED",
+        "FLAT_UNDER_ACTIVITY_EXPLAINED",
+        "FLAT_NO_ACTIVITY_EXPLAINED",
+        "INSUFFICIENT_SERIES",
+    }
     assert review_summary["reproducibility"]["manifest_hash"] == manifest[
         "manifest_hash"
     ]
@@ -249,6 +268,9 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     ] is True
     assert review_summary["artifacts"][
         "network_kpi_formula_evidence_exported"
+    ] is True
+    assert review_summary["artifacts"][
+        "network_kpi_variation_explanation_exported"
     ] is True
     assert review_summary["user_configuration_template_validation"][
         "evidence_present"
@@ -289,6 +311,12 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         "evidence_hash"
     ] == review_summary["network_kpi_formula_evidence"]["evidence_hash"]
     assert diagnostics_bundle["network_kpi_formula_evidence"][
+        "evidence_present"
+    ] is True
+    assert diagnostics_bundle["network_kpi_variation_explanation"][
+        "evidence_hash"
+    ] == review_summary["network_kpi_variation_explanation"]["evidence_hash"]
+    assert diagnostics_bundle["network_kpi_variation_explanation"][
         "evidence_present"
     ] is True
     assert diagnostics_bundle["user_configuration_template_validation"][
@@ -334,6 +362,18 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         review_summary["network_kpi_formula_evidence"]["evidence_hash"]
     )
     assert "NO_METRIC_RECOMPUTE" in network_kpi_formula_evidence[
+        "boundary_conditions"
+    ]
+    assert network_kpi_variation_explanation["artifact_id"] == (
+        RUNTIME_EXPORT_NETWORK_KPI_VARIATION_EXPLANATION_V1_ID
+    )
+    assert network_kpi_variation_explanation["variation_explanation"] == (
+        config_snapshot["status"]["network_kpi_variation_explanation_v1"]
+    )
+    assert network_kpi_variation_explanation["evidence"]["evidence_hash"] == (
+        review_summary["network_kpi_variation_explanation"]["evidence_hash"]
+    )
+    assert "NO_METRIC_RECOMPUTE" in network_kpi_variation_explanation[
         "boundary_conditions"
     ]
     assert user_configuration_template_validation["artifact_id"] == (
@@ -411,6 +451,12 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert scenario_review_bundle["network_kpi_formula_evidence"][
         "evidence_present"
     ] is True
+    assert scenario_review_bundle["network_kpi_variation_explanation"][
+        "evidence_hash"
+    ] == network_kpi_variation_explanation["evidence"]["evidence_hash"]
+    assert scenario_review_bundle["network_kpi_variation_explanation"][
+        "evidence_present"
+    ] is True
     assert scenario_review_bundle["user_configuration_template_validation"][
         "evidence_hash"
     ] == user_configuration_template_validation["evidence"]["evidence_hash"]
@@ -442,6 +488,9 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         scenario_review_bundle["recommended_review_order"]
     )
     assert "traffic_demand_explanation_v1.json" in (
+        scenario_review_bundle["recommended_review_order"]
+    )
+    assert "network_kpi_variation_explanation_v1.json" in (
         scenario_review_bundle["recommended_review_order"]
     )
     assert scenario_review_bundle["scenario_review_hash"].startswith("sha256:")
@@ -482,6 +531,15 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         network_kpi_formula_evidence["evidence"]["evidence_hash"]
     )
     assert audit_index["network_kpi_formula_evidence_missing_selected_input_count"] >= 0
+    assert audit_index["network_kpi_variation_explanation_present"] is True
+    assert audit_index["network_kpi_variation_explanation_hash"] == (
+        network_kpi_variation_explanation["evidence"]["evidence_hash"]
+    )
+    assert audit_index[
+        "network_kpi_variation_explanation_missing_explanation_count"
+    ] == network_kpi_variation_explanation["evidence"][
+        "missing_explanation_count"
+    ]
     assert audit_index["user_configuration_template_validation_present"] is True
     assert audit_index["user_configuration_template_validation_status"] == (
         "ALL_TEMPLATES_VALID"

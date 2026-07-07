@@ -92,6 +92,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_diagnostics_bundle_v1,
     build_runtime_export_network_kpi_benchmark_validation_v1,
     build_runtime_export_network_kpi_formula_evidence_v1,
+    build_runtime_export_network_kpi_variation_explanation_v1,
     build_runtime_export_package_acceptance_report_v1,
     build_runtime_export_package_audit_index_v1,
     build_runtime_export_package_handoff_report_v1,
@@ -173,6 +174,9 @@ _RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_FILENAME = (
 )
 _RUNTIME_EXPORT_NETWORK_KPI_FORMULA_EVIDENCE_FILENAME = (
     "network_kpi_formula_evidence_v1.json"
+)
+_RUNTIME_EXPORT_NETWORK_KPI_VARIATION_EXPLANATION_FILENAME = (
+    "network_kpi_variation_explanation_v1.json"
 )
 _RUNTIME_EXPORT_USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME = (
     "user_configuration_template_validation_v1.json"
@@ -807,6 +811,23 @@ class DemoControlPlane:
         )
         written_files["network_kpi_formula_evidence_v1"] = (
             network_kpi_formula_evidence_path
+        )
+        network_kpi_variation_explanation_path = (
+            package_dir / _RUNTIME_EXPORT_NETWORK_KPI_VARIATION_EXPLANATION_FILENAME
+        )
+        network_kpi_variation_explanation = (
+            build_runtime_export_network_kpi_variation_explanation_v1(
+                package_id=package_id,
+                package_dir=str(package_dir),
+                config_snapshot=config_snapshot,
+            )
+        )
+        network_kpi_variation_explanation_path.write_text(
+            stable_json_pretty(network_kpi_variation_explanation),
+            encoding="utf-8",
+        )
+        written_files["network_kpi_variation_explanation_v1"] = (
+            network_kpi_variation_explanation_path
         )
         user_configuration_template_validation_path = (
             package_dir

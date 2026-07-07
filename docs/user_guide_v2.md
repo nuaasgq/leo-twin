@@ -208,6 +208,7 @@ Each result package contains:
 - `diagnostics_bundle_v1.json`
 - `network_kpi_benchmark_validation_v1.json`
 - `network_kpi_formula_evidence_v1.json`
+- `network_kpi_variation_explanation_v1.json`
 - `user_configuration_template_validation_v1.json`
 - `traffic_demand_explanation_v1.json`
 - `scenario_review_bundle_v1.json`

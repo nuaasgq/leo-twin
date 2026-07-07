@@ -3547,6 +3547,19 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           "sha256:edededededededededededededededededededededededededededededededed",
         evidence_present: true
       },
+      network_kpi_variation_explanation: {
+        explanation_id: "leo_twin.network_kpi_variation_explanation.v1",
+        metric_model: "FLOW_LEVEL_PROXY",
+        explanation_status: "TIME_VARIATION_EXPLAINED",
+        sample_count: 4,
+        kpi_count: 6,
+        time_varying_kpi_count: 4,
+        flat_kpi_count: 2,
+        missing_explanation_count: 0,
+        evidence_hash:
+          "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        evidence_present: true
+      },
       user_configuration_template_validation: {
         evidence_id: "sees.user_configuration_template_validation.v1",
         schema_id: "sees.user_configuration.v2",
@@ -3604,6 +3617,7 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           "service_lifecycle_trace_v2.json",
           "service_trace_comparison_review_report_v1.json",
           "network_kpi_formula_evidence_v1.json",
+          "network_kpi_variation_explanation_v1.json",
           "user_configuration_template_validation_v1.json",
           "traffic_demand_explanation_v1.json",
           "user_service_request_summary_v2.json",
@@ -3634,6 +3648,7 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         "service_lifecycle_trace_v2.json",
         "service_trace_comparison_review_report_v1.json",
         "network_kpi_formula_evidence_v1.json",
+        "network_kpi_variation_explanation_v1.json",
         "user_configuration_template_validation_v1.json",
         "traffic_demand_explanation_v1.json",
         "user_service_request_summary_v2.json",
@@ -3677,6 +3692,9 @@ describe("buildDataPanelExportCatalogDisplay", () => {
         "diagnostics 999999999999",
         "KPI formula FORMULA_AND_TIME_EVIDENCE_READY",
         "KPI formula edededededed",
+        "KPI variation TIME_VARIATION_EXPLAINED",
+        "KPI variation moving 4",
+        "KPI variation eeeeeeeeeeee",
         "config templates ALL_TEMPLATES_VALID",
         "config templates valid 3 / 3",
         "config template fefefefefefe",
@@ -3793,58 +3811,68 @@ describe("buildDataPanelExportCatalogDisplay", () => {
           tone: "match"
         },
         {
-          stepLabel: "11 config template validation",
+          stepLabel: "11 KPI variation explanation",
+          statusLabel: "available",
+          detailLabel: "network_kpi_variation_explanation_v1.json",
+          href:
+            "/runtime/export/packages/pkg-review/files/network_kpi_variation_explanation_v1.json",
+          title:
+            "11 KPI variation explanation / network_kpi_variation_explanation_v1.json / package artifact available",
+          tone: "match"
+        },
+        {
+          stepLabel: "12 config template validation",
           statusLabel: "available",
           detailLabel: "user_configuration_template_validation_v1.json",
           href:
             "/runtime/export/packages/pkg-review/files/user_configuration_template_validation_v1.json",
           title:
-            "11 config template validation / user_configuration_template_validation_v1.json / package artifact available",
+            "12 config template validation / user_configuration_template_validation_v1.json / package artifact available",
           tone: "match"
         },
         {
-          stepLabel: "12 traffic demand",
+          stepLabel: "13 traffic demand",
           statusLabel: "available",
           detailLabel: "traffic_demand_explanation_v1.json",
           href:
             "/runtime/export/packages/pkg-review/files/traffic_demand_explanation_v1.json",
           title:
-            "12 traffic demand / traffic_demand_explanation_v1.json / package artifact available",
+            "13 traffic demand / traffic_demand_explanation_v1.json / package artifact available",
           tone: "match"
         },
         {
-          stepLabel: "13 user services",
+          stepLabel: "14 user services",
           statusLabel: "available",
           detailLabel: "user_service_request_summary_v2.json",
           href:
             "/runtime/export/packages/pkg-review/files/user_service_request_summary_v2.json",
           title:
-            "13 user services / user_service_request_summary_v2.json / package artifact available",
+            "14 user services / user_service_request_summary_v2.json / package artifact available",
           tone: "match"
         },
         {
-          stepLabel: "14 event evidence",
+          stepLabel: "15 event evidence",
           statusLabel: "available",
           detailLabel: "events.jsonl",
           href: "/runtime/export/packages/pkg-review/files/events.jsonl",
-          title: "14 event evidence / events.jsonl / package artifact available",
+          title: "15 event evidence / events.jsonl / package artifact available",
           tone: "match"
         },
         {
-          stepLabel: "15 metrics",
+          stepLabel: "16 metrics",
           statusLabel: "available",
           detailLabel: "metrics.csv",
           href: "/runtime/export/packages/pkg-review/files/metrics.csv",
-          title: "15 metrics / metrics.csv / package artifact available",
+          title: "16 metrics / metrics.csv / package artifact available",
           tone: "match"
         },
         {
-          stepLabel: "16 summary",
+          stepLabel: "17 summary",
           statusLabel: "missing",
           detailLabel: "summary.json",
           href: null,
           title:
-            "16 summary / summary.json / not listed in scenario review bundle",
+            "17 summary / summary.json / not listed in scenario review bundle",
           tone: "different"
         }
       ],

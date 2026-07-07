@@ -180,6 +180,12 @@ the card without loading the full JSON artifact.
   review can inspect KPI formula/input/time-series evidence without metric
   recomputation.
 - Runtime export packages now also include
+  `network_kpi_variation_explanation_v1.json` and propagate its status/hash,
+  time-varying KPI count, and missing-explanation count into review summary,
+  diagnostics, scenario review, audit index, and dashboard export review
+  labels. Offline package review can inspect why flow-level KPI values moved
+  or stayed flat without loading a live runtime.
+- Runtime export packages now also include
   `user_configuration_template_validation_v1.json` and propagate approved
   template validation status, valid/invalid counts, and evidence hash into the
   same result-package review surfaces. Offline package review can verify the
@@ -278,8 +284,9 @@ the card without loading the full JSON artifact.
 - KPI formula evidence is visible as a compact card; a future pass can add a
   wider source-field/input drawer if operators need to inspect every KPI input
   for larger scenarios.
-- KPI variation explanation is visible in the dashboard runtime view, but it is
-  not yet exported as a standalone package artifact.
+- KPI variation explanation is visible in the dashboard runtime view and in
+  exported result packages; a later artifact browser pass can add a wider
+  per-KPI drawer for every explanation item.
 - Formula evidence is exported as a package artifact, but the dashboard still
   uses compact labels rather than a dedicated artifact drawer for every KPI
   input row.

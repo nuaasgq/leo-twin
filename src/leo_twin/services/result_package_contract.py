@@ -77,6 +77,9 @@ RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_V1_ID = (
 RUNTIME_EXPORT_NETWORK_KPI_FORMULA_EVIDENCE_V1_ID = (
     "leo_twin.runtime_export_network_kpi_formula_evidence.v1"
 )
+RUNTIME_EXPORT_NETWORK_KPI_VARIATION_EXPLANATION_V1_ID = (
+    "leo_twin.runtime_export_network_kpi_variation_explanation.v1"
+)
 RUNTIME_EXPORT_USER_CONFIGURATION_TEMPLATE_VALIDATION_V1_ID = (
     "leo_twin.runtime_export_user_configuration_template_validation.v1"
 )
@@ -103,6 +106,9 @@ NETWORK_KPI_BENCHMARK_VALIDATION_FILENAME = (
     "network_kpi_benchmark_validation_v1.json"
 )
 NETWORK_KPI_FORMULA_EVIDENCE_FILENAME = "network_kpi_formula_evidence_v1.json"
+NETWORK_KPI_VARIATION_EXPLANATION_FILENAME = (
+    "network_kpi_variation_explanation_v1.json"
+)
 USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME = (
     "user_configuration_template_validation_v1.json"
 )
@@ -228,6 +234,15 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
                 "format": "json",
                 "content": (
                     "runtime network KPI formula input and time-series evidence "
+                    "exported for offline review"
+                ),
+            },
+            {
+                "logical_name": "network_kpi_variation_explanation_v1",
+                "filename": "network_kpi_variation_explanation_v1.json",
+                "format": "json",
+                "content": (
+                    "runtime network KPI variation explanation evidence "
                     "exported for offline review"
                 ),
             },
@@ -377,6 +392,7 @@ def build_runtime_export_reproducibility_boundary_v1(
             "diagnostics_bundle_v1.json",
             "network_kpi_benchmark_validation_v1.json",
             "network_kpi_formula_evidence_v1.json",
+            "network_kpi_variation_explanation_v1.json",
             "user_configuration_template_validation_v1.json",
             "traffic_demand_explanation_v1.json",
             "user_service_request_summary_v2.json",
@@ -492,6 +508,43 @@ def build_runtime_export_network_kpi_formula_evidence_v1(
         "package_dir": str(package_dir),
         "runtime_status_field": "network_kpi_formula_evidence_v1",
         "formula_evidence": dict(formula_evidence),
+        "evidence": evidence,
+        "boundary_conditions": (
+            "READ_RUNTIME_STATUS_ONLY",
+            "NO_METRIC_RECOMPUTE",
+            "NO_EVENT_REPLAY",
+            "NO_PACKET_LEVEL_SIMULATION",
+            "NO_EXTERNAL_SIMULATOR_ARTIFACT",
+        ),
+    }
+    artifact["artifact_hash"] = stable_hash_payload(artifact)
+    return artifact
+
+
+def build_runtime_export_network_kpi_variation_explanation_v1(
+    *,
+    package_id: str,
+    package_dir: str,
+    config_snapshot: Mapping[str, Any],
+) -> dict[str, object]:
+    """Build offline review evidence for runtime network KPI variation."""
+
+    if not isinstance(config_snapshot, Mapping):
+        raise TypeError("config_snapshot must be a mapping")
+
+    status = _mapping(config_snapshot.get("status"))
+    explanation = _mapping(status.get("network_kpi_variation_explanation_v1"))
+    evidence = _runtime_export_network_kpi_variation_explanation(status)
+    artifact: dict[str, object] = {
+        "type": "RUNTIME_EXPORT_NETWORK_KPI_VARIATION_EXPLANATION_V1",
+        "version": "v1",
+        "artifact_id": RUNTIME_EXPORT_NETWORK_KPI_VARIATION_EXPLANATION_V1_ID,
+        "source": "BACKEND_RUNTIME_EXPORT",
+        "artifact_scope": "NETWORK_KPI_VARIATION_EXPLANATION_REVIEW",
+        "package_id": str(package_id),
+        "package_dir": str(package_dir),
+        "runtime_status_field": "network_kpi_variation_explanation_v1",
+        "variation_explanation": dict(explanation),
         "evidence": evidence,
         "boundary_conditions": (
             "READ_RUNTIME_STATUS_ONLY",
@@ -665,6 +718,12 @@ def build_runtime_export_review_summary_v1(
     network_kpi_formula_evidence = _runtime_export_network_kpi_formula_evidence(
         status
     )
+    network_kpi_variation_explanation = (
+        _runtime_export_network_kpi_variation_explanation(status)
+    )
+    network_kpi_variation_explanation = (
+        _runtime_export_network_kpi_variation_explanation(status)
+    )
     user_config_template_validation = (
         _runtime_export_user_configuration_template_validation_evidence(
             config_snapshot
@@ -720,6 +779,7 @@ def build_runtime_export_review_summary_v1(
         "route_trust": route_trust,
         "network_kpi_benchmark_validation": network_kpi_validation,
         "network_kpi_formula_evidence": network_kpi_formula_evidence,
+        "network_kpi_variation_explanation": network_kpi_variation_explanation,
         "user_configuration_template_validation": user_config_template_validation,
         "traffic_demand_explanation": traffic_demand_explanation,
         "user_service_requests": user_service_requests,
@@ -750,6 +810,9 @@ def build_runtime_export_review_summary_v1(
             "network_kpi_formula_evidence_exported": (
                 "network_kpi_formula_evidence_v1.json" in artifacts
             ),
+            "network_kpi_variation_explanation_exported": (
+                "network_kpi_variation_explanation_v1.json" in artifacts
+            ),
             "user_configuration_template_validation_exported": (
                 "user_configuration_template_validation_v1.json" in artifacts
             ),
@@ -768,6 +831,7 @@ def build_runtime_export_review_summary_v1(
             "Use route_trust to inspect flow-level route explanation evidence.",
             "Use network_kpi_benchmark_validation_v1.json to review KPI guardrail evidence.",
             "Use network_kpi_formula_evidence_v1.json to review KPI formula input and time-series evidence.",
+            "Use network_kpi_variation_explanation_v1.json to review why flow-level KPI values moved or stayed flat.",
             "Use user_configuration_template_validation_v1.json to review approved configuration template validation evidence.",
             "Use traffic_demand_explanation_v1.json to review backend-owned business request generation semantics.",
             "Use route_detail_index_v1.json to inspect exported route explanation rows.",
@@ -823,6 +887,9 @@ def build_runtime_export_diagnostics_bundle_v1(
     network_kpi_formula_evidence = _runtime_export_network_kpi_formula_evidence(
         status
     )
+    network_kpi_variation_explanation = (
+        _runtime_export_network_kpi_variation_explanation(status)
+    )
     user_config_template_validation = (
         _runtime_export_user_configuration_template_validation_evidence(
             config_snapshot
@@ -845,6 +912,7 @@ def build_runtime_export_diagnostics_bundle_v1(
         route_trust=route_trust,
         network_kpi_validation=network_kpi_validation,
         network_kpi_formula_evidence=network_kpi_formula_evidence,
+        network_kpi_variation_explanation=network_kpi_variation_explanation,
         user_config_template_validation=user_config_template_validation,
         traffic_demand_explanation=traffic_demand_explanation,
         user_service_requests=user_service_requests,
@@ -871,6 +939,7 @@ def build_runtime_export_diagnostics_bundle_v1(
         "route_trust": route_trust,
         "network_kpi_benchmark_validation": network_kpi_validation,
         "network_kpi_formula_evidence": network_kpi_formula_evidence,
+        "network_kpi_variation_explanation": network_kpi_variation_explanation,
         "user_configuration_template_validation": user_config_template_validation,
         "traffic_demand_explanation": traffic_demand_explanation,
         "user_service_requests": user_service_requests,
@@ -972,6 +1041,9 @@ def build_runtime_export_scenario_review_bundle_v1(
     network_kpi_formula_evidence = _mapping(
         review_summary.get("network_kpi_formula_evidence")
     )
+    network_kpi_variation_explanation = _mapping(
+        review_summary.get("network_kpi_variation_explanation")
+    )
     user_config_template_validation = _mapping(
         review_summary.get("user_configuration_template_validation")
     )
@@ -983,6 +1055,10 @@ def build_runtime_export_scenario_review_bundle_v1(
         scenario_review_warnings.append("USER_SERVICE_REQUEST_SUMMARY_MISSING")
     if network_kpi_formula_evidence.get("evidence_present") is not True:
         scenario_review_warnings.append("NETWORK_KPI_FORMULA_EVIDENCE_MISSING")
+    if network_kpi_variation_explanation.get("evidence_present") is not True:
+        scenario_review_warnings.append(
+            "NETWORK_KPI_VARIATION_EXPLANATION_MISSING"
+        )
     if user_config_template_validation.get("evidence_present") is not True:
         scenario_review_warnings.append(
             "USER_CONFIGURATION_TEMPLATE_VALIDATION_MISSING"
@@ -1058,6 +1134,38 @@ def build_runtime_export_scenario_review_bundle_v1(
             ),
             "evidence_present": (
                 network_kpi_formula_evidence.get("evidence_present") is True
+            ),
+        },
+        "network_kpi_variation_explanation": {
+            "explanation_id": str(
+                network_kpi_variation_explanation.get("explanation_id", "")
+            ),
+            "metric_model": str(
+                network_kpi_variation_explanation.get("metric_model", "")
+            ),
+            "explanation_status": str(
+                network_kpi_variation_explanation.get("explanation_status", "")
+            ),
+            "sample_count": _integer(
+                network_kpi_variation_explanation.get("sample_count")
+            ),
+            "kpi_count": _integer(
+                network_kpi_variation_explanation.get("kpi_count")
+            ),
+            "time_varying_kpi_count": _integer(
+                network_kpi_variation_explanation.get("time_varying_kpi_count")
+            ),
+            "flat_kpi_count": _integer(
+                network_kpi_variation_explanation.get("flat_kpi_count")
+            ),
+            "missing_explanation_count": _integer(
+                network_kpi_variation_explanation.get("missing_explanation_count")
+            ),
+            "evidence_hash": str(
+                network_kpi_variation_explanation.get("evidence_hash", "")
+            ),
+            "evidence_present": (
+                network_kpi_variation_explanation.get("evidence_present") is True
             ),
         },
         "user_configuration_template_validation": {
@@ -1160,6 +1268,7 @@ def build_runtime_export_scenario_review_bundle_v1(
                 "diagnostics_bundle_v1.json",
                 "network_kpi_benchmark_validation_v1.json",
                 "network_kpi_formula_evidence_v1.json",
+                "network_kpi_variation_explanation_v1.json",
                 "user_configuration_template_validation_v1.json",
                 "traffic_demand_explanation_v1.json",
                 "user_service_request_summary_v2.json",
@@ -1185,6 +1294,7 @@ def build_runtime_export_scenario_review_bundle_v1(
             "diagnostics_bundle_v1.json",
             "network_kpi_benchmark_validation_v1.json",
             "network_kpi_formula_evidence_v1.json",
+            "network_kpi_variation_explanation_v1.json",
             "user_configuration_template_validation_v1.json",
             "traffic_demand_explanation_v1.json",
             "user_service_request_summary_v2.json",
@@ -2519,6 +2629,9 @@ def build_runtime_export_package_audit_index_v1(
     network_kpi_formula_evidence = _runtime_export_network_kpi_formula_evidence(
         status
     )
+    network_kpi_variation_explanation = (
+        _runtime_export_network_kpi_variation_explanation(status)
+    )
     user_config_template_validation = (
         _runtime_export_user_configuration_template_validation_evidence(
             config_snapshot
@@ -2647,6 +2760,21 @@ def build_runtime_export_package_audit_index_v1(
         ),
         "network_kpi_formula_evidence_missing_selected_input_count": _integer(
             network_kpi_formula_evidence.get("missing_selected_input_count")
+        ),
+        "network_kpi_variation_explanation_hash": str(
+            network_kpi_variation_explanation.get("evidence_hash", "")
+        ),
+        "network_kpi_variation_explanation_status": str(
+            network_kpi_variation_explanation.get("explanation_status", "")
+        ),
+        "network_kpi_variation_explanation_present": (
+            network_kpi_variation_explanation.get("evidence_present") is True
+        ),
+        "network_kpi_variation_explanation_time_varying_kpi_count": _integer(
+            network_kpi_variation_explanation.get("time_varying_kpi_count")
+        ),
+        "network_kpi_variation_explanation_missing_explanation_count": _integer(
+            network_kpi_variation_explanation.get("missing_explanation_count")
         ),
         "user_configuration_template_validation_hash": str(
             user_config_template_validation.get("evidence_hash", "")
@@ -3926,6 +4054,7 @@ def _runtime_export_diagnostic_findings(
     route_trust: Mapping[str, Any],
     network_kpi_validation: Mapping[str, Any],
     network_kpi_formula_evidence: Mapping[str, Any],
+    network_kpi_variation_explanation: Mapping[str, Any],
     user_config_template_validation: Mapping[str, Any],
     traffic_demand_explanation: Mapping[str, Any],
     user_service_requests: Mapping[str, Any],
@@ -4055,6 +4184,38 @@ def _runtime_export_diagnostic_findings(
                 (
                     "network KPI formula evidence requires operator review: "
                     f"{network_kpi_formula_evidence.get('formula_evidence_status', '')}."
+                ),
+            )
+        )
+    if network_kpi_variation_explanation.get("evidence_present") is not True:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "NETWORK_KPI_VARIATION_EXPLANATION_MISSING",
+                "config_snapshot.status does not include network_kpi_variation_explanation_v1.",
+            )
+        )
+    if network_kpi_variation_explanation.get("packet_level_simulation") is True:
+        findings.append(
+            _diagnostic_finding(
+                "ERROR",
+                "NETWORK_KPI_VARIATION_PACKET_LEVEL_DECLARED",
+                "network KPI variation explanation declares packet-level simulation, which is outside the v2 demo boundary.",
+            )
+        )
+    if network_kpi_variation_explanation.get("evidence_present") is True and str(
+        network_kpi_variation_explanation.get("explanation_status", "")
+    ) in {
+        "NO_KPI_EVIDENCE",
+        "MISSING_KPI_VARIATION_EXPLANATION",
+    }:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "NETWORK_KPI_VARIATION_EXPLANATION_INCOMPLETE",
+                (
+                    "network KPI variation explanation requires operator review: "
+                    f"{network_kpi_variation_explanation.get('explanation_status', '')}."
                 ),
             )
         )
@@ -4532,6 +4693,12 @@ def _runtime_export_scenario_review_evidence_hash(
                 scenario_review_bundle.get("network_kpi_formula_evidence")
             ).get("evidence_hash", "")
         )
+    if filename == "network_kpi_variation_explanation_v1.json":
+        return str(
+            _mapping(
+                scenario_review_bundle.get("network_kpi_variation_explanation")
+            ).get("evidence_hash", "")
+        )
     if filename == "user_service_request_summary_v2.json":
         return str(
             _mapping(scenario_review_bundle.get("user_service_requests")).get(
@@ -4596,6 +4763,7 @@ def _runtime_export_scenario_review_step_label(
         "diagnostics_bundle_v1.json": "diagnostics",
         "network_kpi_benchmark_validation_v1.json": "network KPI benchmark",
         "network_kpi_formula_evidence_v1.json": "network KPI formula evidence",
+        "network_kpi_variation_explanation_v1.json": "network KPI variation explanation",
         "traffic_demand_explanation_v1.json": "traffic demand",
         "user_service_request_summary_v2.json": "user services",
         "service_lifecycle_trace_v2.json": "service trace",
@@ -4841,6 +5009,81 @@ def _runtime_export_network_kpi_formula_evidence(
         ),
         "acceptable_for_demo_review": acceptable,
         "caveats": _string_tuple(formula_evidence.get("caveats")),
+    }
+    evidence["evidence_hash"] = stable_hash_payload(evidence)
+    return evidence
+
+
+def _runtime_export_network_kpi_variation_explanation(
+    status: Mapping[str, Any],
+) -> dict[str, object]:
+    explanation = _mapping(status.get("network_kpi_variation_explanation_v1"))
+    evidence_present = bool(explanation)
+    if not evidence_present:
+        evidence: dict[str, object] = {
+            "version": "v1",
+            "explanation_id": "",
+            "source": "config_snapshot.status.network_kpi_variation_explanation_v1",
+            "evidence_present": False,
+            "metric_model": "UNKNOWN",
+            "explanation_status": "MISSING_KPI_VARIATION_EXPLANATION",
+            "sample_count": 0,
+            "sim_time_span_s": 0.0,
+            "kpi_count": 0,
+            "time_varying_kpi_count": 0,
+            "flat_kpi_count": 0,
+            "zero_latest_kpi_count": 0,
+            "missing_explanation_count": 0,
+            "packet_level_simulation": False,
+            "acceptable_for_demo_review": False,
+            "model_assumptions": (),
+            "caveats": (
+                "Runtime status did not expose network_kpi_variation_explanation_v1.",
+            ),
+        }
+        evidence["evidence_hash"] = stable_hash_payload(evidence)
+        return evidence
+
+    explanation_status = str(explanation.get("explanation_status", ""))
+    acceptable = (
+        explanation_status
+        in {
+            "TIME_VARIATION_EXPLAINED",
+            "FLAT_UNDER_ACTIVITY_EXPLAINED",
+            "FLAT_NO_ACTIVITY_EXPLAINED",
+            "INSUFFICIENT_SERIES",
+        }
+        and explanation.get("packet_level_simulation") is not True
+        and _integer(explanation.get("missing_explanation_count")) == 0
+    )
+    evidence = {
+        "version": "v1",
+        "explanation_id": str(explanation.get("explanation_id", "")),
+        "source": "config_snapshot.status.network_kpi_variation_explanation_v1",
+        "runtime_status_source": str(explanation.get("source", "")),
+        "evidence_present": True,
+        "provenance_id": str(explanation.get("provenance_id", "")),
+        "calibration_id": str(explanation.get("calibration_id", "")),
+        "formula_evidence_id": str(explanation.get("formula_evidence_id", "")),
+        "metric_model": str(explanation.get("metric_model", "")),
+        "explanation_status": explanation_status,
+        "sample_count": _integer(explanation.get("sample_count")),
+        "sim_time_span_s": _number(explanation.get("sim_time_span_s")),
+        "kpi_count": _integer(explanation.get("kpi_count")),
+        "time_varying_kpi_count": _integer(
+            explanation.get("time_varying_kpi_count")
+        ),
+        "flat_kpi_count": _integer(explanation.get("flat_kpi_count")),
+        "zero_latest_kpi_count": _integer(explanation.get("zero_latest_kpi_count")),
+        "missing_explanation_count": _integer(
+            explanation.get("missing_explanation_count")
+        ),
+        "packet_level_simulation": (
+            explanation.get("packet_level_simulation") is True
+        ),
+        "acceptable_for_demo_review": acceptable,
+        "model_assumptions": _string_tuple(explanation.get("model_assumptions")),
+        "caveats": _string_tuple(explanation.get("caveats")),
     }
     evidence["evidence_hash"] = stable_hash_payload(evidence)
     return evidence
