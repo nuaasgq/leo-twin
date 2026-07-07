@@ -101,6 +101,12 @@ package review workflow.
   ranges, compute-service task/output-flow correlation, arrival window, and
   per-user active service state without changing flow generation or event
   scheduling.
+- Generated backend summaries now expose the same traffic-demand explanation
+  under `backend_summary.traffic_demand_explanation_v1`. The object is derived
+  from the backend traffic configuration, uses a bounded endpoint/request
+  explanation window for large payloads, and marks
+  `frontend_inference_required=false` so UI surfaces can explain user business
+  demand without recomputing it locally.
 - Runtime status now includes backend-owned `network_kpi_calibration_v1`, which
   audits whether throughput, latency, loss proxy, and delay-variation proxy
   have actually changed over simulation time and explains flat values from

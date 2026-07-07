@@ -264,6 +264,82 @@ export interface TrafficDemandSummary {
   average_user_request_rate_per_minute?: number;
 }
 
+export interface TrafficDemandExplanationV1 {
+  version: "v1" | string;
+  explanation_id: string;
+  source: string;
+  configured_request_count?: number;
+  explained_request_count?: number;
+  explanation_window_policy?: string;
+  endpoint_window_policy?: string;
+  frontend_inference_required?: boolean;
+  request_count: number;
+  input_flow_count: number;
+  task_request_count: number;
+  output_flow_count: number;
+  communication_only_request_count: number;
+  compute_service_request_count: number;
+  active_traffic_classes: readonly string[];
+  traffic_class_rows: readonly TrafficDemandExplanationClassRowV1[];
+  arrival_window: TrafficDemandExplanationArrivalWindowV1;
+  priority_summary: TrafficDemandExplanationPrioritySummaryV1;
+  data_volume: TrafficDemandExplanationDataVolumeV1;
+  correlation_summary: TrafficDemandExplanationCorrelationSummaryV1;
+  per_user_active_service_state: readonly TrafficDemandExplanationUserStateV1[];
+  model_assumptions: readonly string[];
+}
+
+export interface TrafficDemandExplanationClassRowV1 {
+  traffic_class: string;
+  request_count: number;
+  input_flow_count: number;
+  task_request_count: number;
+  output_flow_count: number;
+  total_input_data_mb: number;
+  total_output_data_mb: number;
+  destination_types: readonly string[];
+}
+
+export interface TrafficDemandExplanationArrivalWindowV1 {
+  first_arrival_time: number | null;
+  last_arrival_time: number | null;
+  duration_seconds: number;
+}
+
+export interface TrafficDemandExplanationPrioritySummaryV1 {
+  min_priority: number | null;
+  max_priority: number | null;
+  unique_priorities: readonly number[];
+}
+
+export interface TrafficDemandExplanationDataVolumeV1 {
+  total_input_data_mb: number;
+  total_output_data_mb: number;
+  total_data_mb: number;
+}
+
+export interface TrafficDemandExplanationCorrelationSummaryV1 {
+  all_compute_services_have_task: boolean;
+  all_compute_services_have_output_flow: boolean;
+  packet_level_simulation: boolean;
+  frontend_inference_required: boolean;
+}
+
+export interface TrafficDemandExplanationUserStateV1 {
+  user_id: string;
+  request_count: number;
+  service_classes: readonly string[];
+  primary_service_class: string | null;
+  max_priority: number | null;
+  first_arrival_time: number | null;
+  last_arrival_time: number | null;
+  flow_ids: readonly string[];
+  task_ids: readonly string[];
+  output_flow_ids: readonly string[];
+  total_input_data_mb: number;
+  total_output_data_mb: number;
+}
+
 export interface ComputeResourceSummary {
   resource_model: string;
   node_role: string;
@@ -541,6 +617,7 @@ export interface LargeDetailPaginationDeterminismV2 {
 export interface BackendDerivedSummary {
   derived_constellation_summary?: ConstellationDerivedSummary;
   traffic_demand_summary?: TrafficDemandSummary;
+  traffic_demand_explanation_v1?: TrafficDemandExplanationV1;
   compute_resource_summary?: ComputeResourceSummary;
   compute_resource_contract_v2?: ComputeResourceContractV2;
   service_placement_contract_v2?: ServicePlacementContractV2;

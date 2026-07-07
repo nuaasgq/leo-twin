@@ -5,6 +5,58 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-07 - Traffic Demand Explanation Backend Summary v1
+
+- Branch: `feature/T376-traffic-demand-explanation-summary-v1`
+- Commit: pending in this commit
+- Scope: expose the deterministic traffic-demand explanation through
+  `backend_summary.traffic_demand_explanation_v1`. The summary is derived from
+  backend traffic configuration and the existing traffic demand model, reports
+  configured/explained request counts, input flows, compute tasks, output-flow
+  metadata, active traffic classes, arrival windows, per-class rows,
+  per-source service state, and explicitly sets
+  `frontend_inference_required=false`. Large payloads use bounded
+  request/endpoint explanation windows. This task does not change flow
+  generation, event scheduling, Event Kernel behavior, runtime control,
+  packet-level simulation, or external simulator boundaries.
+- Changed files/modules:
+  - `src/leo_twin/services/derived_summary.py`
+  - `tests/unit/test_backend_derived_summary.py`
+  - `frontend/src/core/event_types/index.ts`
+  - `docs/current_product_status.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_backend_derived_summary.py -q`
+    - Result: passed, 11 tests.
+  - `python -m pytest tests/unit/test_system_v2_upgrade_plan_docs.py tests/unit/test_user_guide_v2_docs.py -q`
+    - Result: passed, 4 tests.
+  - `python -m pytest tests/unit/test_integration_demo_scenario.py tests/integration/test_config_control.py::test_control_plane_exposes_user_configuration_contract_api -q`
+    - Result: passed, 16 tests.
+  - `pnpm --dir frontend test runtimeContractFixture.test.ts`
+    - Result: passed, 1 test file / 3 tests using the bundled Codex Node/pnpm
+      runtime.
+  - `pnpm --dir frontend build`
+    - Result: passed using the bundled Codex Node/pnpm runtime. Vite reported
+      the existing `DataPanel` chunk-size warning after minification.
+  - `python -m compileall -q src\leo_twin\services src\leo_twin\models\traffic`
+    - Result: passed.
+- Problems encountered and handling:
+  - Running `pnpm --dir frontend build` with the ambient shell PATH failed
+    because `node` was not available. The same command was rerun with the
+    bundled Codex Node.js and pnpm paths and passed.
+  - Existing local runtime/generated config files remain dirty and are
+    intentionally not included in this task.
+- Known remaining issues / follow-up:
+  - Runtime export packages do not yet persist
+    `traffic_demand_explanation_v1.json`. A follow-up result-package task
+    should export this backend-owned demand explanation for offline review.
+  - Dashboard rendering still primarily uses existing traffic summary and
+    service detail surfaces. A follow-up UI task can add a compact
+    backend-summary demand explanation card without recomputing semantics in
+    the browser.
+
 ## 2026-07-07 - Traffic Demand Explanation v1
 
 - Branch: `feature/T375-traffic-demand-explanation-v1`

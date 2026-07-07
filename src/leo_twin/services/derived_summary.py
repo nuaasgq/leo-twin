@@ -8,7 +8,13 @@ from typing import Any
 
 from leo_twin.models.compute import ComputeResourceVector
 from leo_twin.models.orbit import ConstellationAllocation
-from leo_twin.models.traffic import TrafficClass, TrafficDestinationType
+from leo_twin.models.traffic import (
+    TrafficClass,
+    TrafficDestinationType,
+    TrafficServiceMixConfig,
+    TrafficServiceMixItem,
+    generate_traffic_service_mix,
+)
 from leo_twin.services.configuration_schema import USER_CONFIGURATION_SCHEMA_V2_ID
 from leo_twin.schema.cache_offload_migration_contract import (
     cache_offload_migration_contract_v1_to_dict,
@@ -35,6 +41,8 @@ from leo_twin.services.scale_policy_v2 import scale_policy_v2_to_dict
 BackendDerivedSummary = dict[str, object]
 _EARTH_RADIUS_KM = 6371.0
 _EARTH_MU_KM3_S2 = 398600.4418
+_TRAFFIC_EXPLANATION_MAX_REQUESTS = 2_000
+_TRAFFIC_EXPLANATION_MAX_ENDPOINT_IDS = 512
 
 
 def build_backend_derived_summary(
@@ -155,6 +163,19 @@ def build_backend_derived_summary(
         traffic_summary["average_user_request_rate_per_minute"] = (
             system_rate / float(user_count) if user_count > 0 else 0.0
         )
+    traffic_demand_explanation = _traffic_demand_explanation_v1(
+        traffic_summary,
+        selected_traffic_class=selected_traffic_class,
+        selected_destination_type=selected_destination_type,
+        satellite_count=satellite_count,
+        user_count=user_count,
+        compute_node_count=compute_node_count,
+        flow_count=flow_count,
+        task_compute_demand=task_compute_demand,
+        task_data_size=task_data_size,
+        traffic_output_data_size=traffic_output_data_size,
+        arrival_interval_seconds=arrival_interval_seconds,
+    )
 
     compute_summary = {
         "resource_model": "ComputeResourceVector",
@@ -276,6 +297,7 @@ def build_backend_derived_summary(
     return {
         "derived_constellation_summary": constellation_summary,
         "traffic_demand_summary": traffic_summary,
+        "traffic_demand_explanation_v1": traffic_demand_explanation,
         "compute_resource_summary": compute_summary,
         "compute_resource_contract_v2": compute_resource_contract,
         "service_placement_contract_v2": service_placement_contract,
@@ -525,6 +547,178 @@ def _traffic_service_mix_summary(
             normalized_weights,
         ),
     }
+
+
+def _traffic_demand_explanation_v1(
+    traffic_summary: Mapping[str, object],
+    *,
+    selected_traffic_class: TrafficClass,
+    selected_destination_type: TrafficDestinationType,
+    satellite_count: int,
+    user_count: int,
+    compute_node_count: int,
+    flow_count: int,
+    task_compute_demand: float,
+    task_data_size: float,
+    traffic_output_data_size: float,
+    arrival_interval_seconds: int | float | None,
+) -> dict[str, object]:
+    configured_request_count = max(0, int(flow_count))
+    explained_request_count = min(
+        configured_request_count,
+        _TRAFFIC_EXPLANATION_MAX_REQUESTS,
+    )
+    weights = traffic_summary.get("service_mix_weights", {})
+    if not isinstance(weights, Mapping):
+        weights = {selected_traffic_class.value: 1.0}
+    items = tuple(
+        TrafficServiceMixItem(
+            traffic_class=traffic_class,
+            weight=float(weights.get(traffic_class.value, 0.0)),
+            source_ids=_traffic_explanation_source_ids(
+                traffic_class,
+                satellite_count=satellite_count,
+                user_count=user_count,
+            ),
+            destination_ids=_traffic_explanation_destination_ids(
+                _traffic_explanation_destination_type(
+                    traffic_class,
+                    selected_traffic_class=selected_traffic_class,
+                    selected_destination_type=selected_destination_type,
+                ),
+                satellite_count=satellite_count,
+                user_count=user_count,
+                compute_node_count=compute_node_count,
+            ),
+            input_data_size=float(task_data_size),
+            output_data_size=float(traffic_output_data_size),
+            priority=int(traffic_summary.get("priority", 0)),
+            destination_type=_traffic_explanation_destination_type(
+                traffic_class,
+                selected_traffic_class=selected_traffic_class,
+                selected_destination_type=selected_destination_type,
+            ),
+            compute_demand=float(task_compute_demand),
+            input_data_mb=float(task_data_size),
+            output_data_mb=float(traffic_output_data_size),
+            output_destination_ids=_traffic_explanation_source_ids(
+                traffic_class,
+                satellite_count=satellite_count,
+                user_count=user_count,
+            )
+            if traffic_class == TrafficClass.COMPUTE_SERVICE
+            else (),
+        )
+        for traffic_class in _TRAFFIC_CLASS_ORDER
+        if float(weights.get(traffic_class.value, 0.0)) > 0.0
+    )
+    effective_items = items or (
+        TrafficServiceMixItem(
+            traffic_class=selected_traffic_class,
+            weight=1.0,
+            source_ids=_traffic_explanation_source_ids(
+                selected_traffic_class,
+                satellite_count=satellite_count,
+                user_count=user_count,
+            ),
+            destination_ids=_traffic_explanation_destination_ids(
+                selected_destination_type,
+                satellite_count=satellite_count,
+                user_count=user_count,
+                compute_node_count=compute_node_count,
+            ),
+            input_data_size=float(task_data_size),
+            output_data_size=float(traffic_output_data_size),
+            priority=int(traffic_summary.get("priority", 0)),
+            destination_type=selected_destination_type,
+            compute_demand=float(task_compute_demand),
+            input_data_mb=float(task_data_size),
+            output_data_mb=float(traffic_output_data_size),
+            output_destination_ids=_traffic_explanation_source_ids(
+                selected_traffic_class,
+                satellite_count=satellite_count,
+                user_count=user_count,
+            )
+            if selected_traffic_class == TrafficClass.COMPUTE_SERVICE
+            else (),
+        ),
+    )
+    explanation = generate_traffic_service_mix(
+        TrafficServiceMixConfig(
+            items=effective_items,
+            total_request_count=explained_request_count,
+            arrival_interval=_traffic_explanation_interval(arrival_interval_seconds),
+            id_prefix="backend-summary",
+        )
+    ).traffic_demand_explanation()
+    explanation["source"] = "backend_summary.traffic_demand_summary"
+    explanation["configured_request_count"] = configured_request_count
+    explanation["explained_request_count"] = explained_request_count
+    explanation["explanation_window_policy"] = (
+        "FULL_CONFIGURED_WINDOW"
+        if explained_request_count == configured_request_count
+        else "BOUNDED_BACKEND_SUMMARY_WINDOW"
+    )
+    explanation["endpoint_window_policy"] = (
+        "ROUND_ROBIN_ENDPOINT_IDS_CAPPED_AT_512_FOR_SUMMARY_PAYLOAD"
+    )
+    explanation["frontend_inference_required"] = False
+    return explanation
+
+
+def _traffic_explanation_destination_type(
+    traffic_class: TrafficClass,
+    *,
+    selected_traffic_class: TrafficClass,
+    selected_destination_type: TrafficDestinationType,
+) -> TrafficDestinationType:
+    if traffic_class == selected_traffic_class:
+        return selected_destination_type
+    return _destination_type(traffic_class)
+
+
+def _traffic_explanation_source_ids(
+    traffic_class: TrafficClass,
+    *,
+    satellite_count: int,
+    user_count: int,
+) -> tuple[str, ...]:
+    if traffic_class in {TrafficClass.TELEMETRY, TrafficClass.BULK_DOWNLINK}:
+        return _bounded_entity_ids("sat", satellite_count)
+    return _bounded_entity_ids("user", user_count)
+
+
+def _traffic_explanation_destination_ids(
+    destination_type: TrafficDestinationType,
+    *,
+    satellite_count: int,
+    user_count: int,
+    compute_node_count: int,
+) -> tuple[str, ...]:
+    if destination_type == TrafficDestinationType.COMPUTE_NODE:
+        return _bounded_entity_ids("sat-compute", compute_node_count)
+    if destination_type == TrafficDestinationType.SATELLITE:
+        return _bounded_entity_ids("sat", satellite_count)
+    if destination_type == TrafficDestinationType.GROUND_ENDPOINT:
+        return _bounded_entity_ids("ground-endpoint", user_count)
+    return _bounded_entity_ids("service-endpoint", max(1, min(user_count, 32)))
+
+
+def _bounded_entity_ids(prefix: str, count: int) -> tuple[str, ...]:
+    bounded_count = min(
+        max(1, int(count)),
+        _TRAFFIC_EXPLANATION_MAX_ENDPOINT_IDS,
+    )
+    return tuple(f"{prefix}-{index:05d}" for index in range(bounded_count))
+
+
+def _traffic_explanation_interval(value: int | float | None) -> float:
+    if value is None:
+        return 1.0
+    interval = float(value)
+    if not isfinite(interval) or interval <= 0.0:
+        return 1.0
+    return interval
 
 
 def _service_mix_request_counts(

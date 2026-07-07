@@ -183,7 +183,12 @@ Tasks:
     deterministic product-facing explanation of generated request counts,
     active traffic classes, data volumes, priority range, compute-service
     correlation completeness, arrival window, and per-user active service
-    state without changing flow generation or event scheduling. T332 preserves
+    state without changing flow generation or event scheduling. T376 exposes
+    that explanation as
+    `backend_summary.traffic_demand_explanation_v1`, derived from backend
+    traffic configuration and capped with explicit request/endpoint window
+    policy for large payloads, so frontend surfaces can use backend-owned
+    business semantics rather than recomputing demand meaning locally. T332 preserves
     backend-provided request/route/flow/task
     correlation ids in dashboard user-service rows and lets selected export
     package rows drive package route evidence, package service-trace filtering,

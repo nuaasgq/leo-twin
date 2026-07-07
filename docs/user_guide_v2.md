@@ -148,9 +148,11 @@ The standalone dashboard is for data situation awareness:
   evidence for whether KPI curves are time-varying or flat, and formula
   evidence showing selected backend inputs for the current KPI values;
 - business/service traces;
-- backend traffic-demand explanation for generated business request counts,
-  active traffic classes, priority/data-volume summaries, compute-service
-  correlation completeness, arrival windows, and per-user active service state;
+- backend traffic-demand explanation from
+  `backend_summary.traffic_demand_explanation_v1` for generated business
+  request counts, active traffic classes, priority/data-volume summaries,
+  compute-service correlation completeness, arrival windows, and per-user
+  active service state;
 - route explanations;
 - compute resource and task timeline summaries;
 - user, satellite, and node detail pages;

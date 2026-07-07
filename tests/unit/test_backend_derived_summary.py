@@ -126,6 +126,48 @@ def test_backend_derived_summary_is_deterministic_and_frontend_ready() -> None:
         "system_request_rate_per_minute": 1.0,
         "average_user_request_rate_per_minute": 0.001,
     }
+    traffic_explanation = first["traffic_demand_explanation_v1"]
+    assert traffic_explanation["explanation_id"] == (
+        "leo_twin.traffic_demand_explanation.v1"
+    )
+    assert traffic_explanation["source"] == "backend_summary.traffic_demand_summary"
+    assert traffic_explanation["request_count"] == 1200
+    assert traffic_explanation["input_flow_count"] == 1200
+    assert traffic_explanation["task_request_count"] == 1200
+    assert traffic_explanation["output_flow_count"] == 1200
+    assert traffic_explanation["communication_only_request_count"] == 0
+    assert traffic_explanation["compute_service_request_count"] == 1200
+    assert traffic_explanation["active_traffic_classes"] == ("COMPUTE_SERVICE",)
+    assert traffic_explanation["arrival_window"] == {
+        "first_arrival_time": 0.0,
+        "last_arrival_time": 71940.0,
+        "duration_seconds": 71940.0,
+    }
+    assert traffic_explanation["data_volume"] == {
+        "total_input_data_mb": 2400.0,
+        "total_output_data_mb": 0.0,
+        "total_data_mb": 2400.0,
+    }
+    assert traffic_explanation["correlation_summary"] == {
+        "all_compute_services_have_task": True,
+        "all_compute_services_have_output_flow": True,
+        "packet_level_simulation": False,
+        "frontend_inference_required": False,
+    }
+    assert traffic_explanation["configured_request_count"] == 1200
+    assert traffic_explanation["explained_request_count"] == 1200
+    assert traffic_explanation["explanation_window_policy"] == "FULL_CONFIGURED_WINDOW"
+    assert traffic_explanation["frontend_inference_required"] is False
+    explanation_rows = {
+        row["traffic_class"]: row
+        for row in traffic_explanation["traffic_class_rows"]
+        if isinstance(row, dict)
+    }
+    assert explanation_rows["COMPUTE_SERVICE"]["request_count"] == 1200
+    assert explanation_rows["COMPUTE_SERVICE"]["destination_types"] == (
+        "COMPUTE_NODE",
+    )
+    assert len(traffic_explanation["per_user_active_service_state"]) == 512
     assert first["compute_resource_summary"] == {
         "resource_model": "ComputeResourceVector",
         "node_role": "SATELLITE_HOSTED_COMPUTE",
@@ -483,6 +525,46 @@ def test_traffic_summary_exposes_weighted_service_mix() -> None:
         "EMERGENCY": 0,
     }
     assert summary["generated_task_count"] == 3
+
+    backend_summary = build_backend_derived_summary(
+        constellation=allocation,
+        satellite_count=12,
+        user_count=20,
+        compute_node_count=4,
+        compute_capacity=40.0,
+        flow_count=10,
+        demand_capacity=25.0,
+        task_compute_demand=20.0,
+        task_data_size=2.0,
+        application_protocol="TASK_OFFLOAD_FLOW",
+        traffic_data_transfer_weight=2.0,
+        traffic_compute_service_weight=1.0,
+    )
+    explanation = backend_summary["traffic_demand_explanation_v1"]
+    rows = {
+        row["traffic_class"]: row
+        for row in explanation["traffic_class_rows"]
+        if isinstance(row, dict)
+    }
+    assert explanation["active_traffic_classes"] == (
+        "DATA_TRANSFER",
+        "COMPUTE_SERVICE",
+    )
+    assert explanation["request_count"] == 10
+    assert explanation["input_flow_count"] == 10
+    assert explanation["task_request_count"] == 3
+    assert explanation["output_flow_count"] == 3
+    assert explanation["communication_only_request_count"] == 7
+    assert explanation["compute_service_request_count"] == 3
+    assert explanation["configured_request_count"] == 10
+    assert explanation["explained_request_count"] == 10
+    assert rows["DATA_TRANSFER"]["request_count"] == 7
+    assert rows["DATA_TRANSFER"]["destination_types"] == ("SERVICE_ENDPOINT",)
+    assert rows["COMPUTE_SERVICE"]["request_count"] == 3
+    assert rows["COMPUTE_SERVICE"]["task_request_count"] == 3
+    assert rows["COMPUTE_SERVICE"]["output_flow_count"] == 3
+    assert rows["COMPUTE_SERVICE"]["destination_types"] == ("COMPUTE_NODE",)
+    assert explanation["frontend_inference_required"] is False
 
 
 def test_traffic_summary_exposes_emergency_service_mix() -> None:
