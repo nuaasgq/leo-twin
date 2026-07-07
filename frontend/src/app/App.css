@@ -4219,6 +4219,67 @@ button.data-panel-compute-node-row {
   color: var(--app-muted);
 }
 
+.data-panel-service-trace-focus {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  border: 1px solid #2a5360;
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: #081820;
+  color: var(--app-muted);
+  font-size: 10px;
+}
+
+.data-panel-service-trace-focus.idle {
+  grid-template-columns: minmax(0, 1fr);
+  border-color: #2d3f4c;
+  background: #0b141b;
+}
+
+.data-panel-service-trace-focus div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.data-panel-service-trace-focus span {
+  color: var(--accent-cyan);
+  font-weight: 800;
+}
+
+.data-panel-service-trace-focus strong,
+.data-panel-service-trace-focus small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.data-panel-service-trace-focus strong {
+  color: var(--app-text);
+  font-size: 12px;
+}
+
+.data-panel-service-trace-focus button {
+  border: 1px solid #4c8b9d;
+  border-radius: 5px;
+  padding: 6px 9px;
+  background: #102633;
+  color: var(--app-text);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.data-panel-service-trace-focus button.secondary {
+  border-color: #314656;
+  background: #0d151d;
+  color: var(--app-muted);
+}
+
 .data-panel-detail-table {
   display: grid;
   grid-template-rows: auto auto auto minmax(0, 1fr);

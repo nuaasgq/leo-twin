@@ -145,6 +145,9 @@ The standalone dashboard is for data situation awareness:
 - service-trace closed-loop evidence, showing whether the selected service
   trace has correlated flow, route, user, satellite, compute-node, stage, and
   latency evidence from backend exact detail or the visible dashboard window;
+- one-click service-trace focus, which applies correlated filters across user,
+  satellite, route, service, service-trace, and compute-node tables for the
+  selected trace;
 - configuration explanation and model assumptions.
 
 Backend runtime status is the source of truth. The frontend should not invent

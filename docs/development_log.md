@@ -18007,3 +18007,47 @@ change.
   - The note summarizes the closed-loop evidence, but a later task should add a
     wider service-trace drill-down browser for large exact-detail payloads and
     cross-filtered route/user/satellite tables.
+
+## 2026-07-07 - T367 dashboard service trace focus v1
+
+- Branch: `feature/T367-dashboard-service-trace-focus-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: add one-click service-trace focus filters to the standalone dashboard.
+  After selecting a service trace, the dashboard can apply correlated filters
+  across user/satellite detail, route explanation, service detail,
+  service-trace, and compute-node detail tables. Backend exact service-trace
+  correlation is preferred; the selected visible trace row remains the fallback.
+  This task does not change backend protocols, Event Kernel behavior, or
+  simulation model logic.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/src/app/App.css`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/current_product_status.md`
+  - `docs/dashboard_information_architecture_v3.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/user_guide_v2.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts` using bundled Node/Pnpm
+    paths.
+    - Result: passed, 1 file / 211 tests.
+  - `pnpm --dir frontend test` using bundled Node/Pnpm paths.
+    - Result: passed, 26 files / 452 tests.
+  - `pnpm --dir frontend build` using bundled Node/Pnpm paths.
+    - Result: passed; Vite emitted the existing large-chunk warning for
+      `DataPanel`.
+  - `git diff --check`.
+    - Result: passed; Git emitted CRLF warnings for the existing unstaged
+      runtime config drift.
+  - `scripts/check_no_runtime_config_staged.ps1`.
+    - Result: passed; no runtime/local config files are staged.
+- Problems encountered:
+  - None so far. The change stayed inside the existing dashboard detail/filter
+    surfaces and reuses current backend cursor filter contracts where present.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The focus action uses existing text filters and selected IDs. A later task
+    should add a wider service-trace drill-down browser with explicit
+    cross-filtered result panes and virtualized large-table views.

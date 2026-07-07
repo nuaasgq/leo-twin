@@ -99,6 +99,7 @@ import {
   buildDataPanelSatelliteResourceHistory,
   buildDataPanelServiceLatencyDisplay,
   buildDataPanelServiceLifecycleTraceDisplay,
+  buildDataPanelServiceTraceFocus,
   buildServiceTraceCorrelationInspector,
   buildDataPanelServiceDetailRows,
   buildDataPanelServiceLatencyRows,
@@ -10356,6 +10357,200 @@ describe("buildDataPanelServiceLifecycleTraceDisplay", () => {
         query: "not-present"
       }).summaryLabel
     ).toContain("筛选 0");
+  });
+
+  it("builds backend exact service trace focus filters", () => {
+    const display = buildDataPanelServiceLifecycleTraceDisplay({
+      version: "v2",
+      source: "SERVICE_LATENCY_HISTORY",
+      source_summary: "service_latency_history_v1",
+      summary_scope: "SERVICE_LIFECYCLE_TRACE_WINDOW",
+      cursor: 0,
+      limit: 100,
+      next_cursor: 1,
+      has_more: false,
+      service_count: 1,
+      trace_count: 1,
+      complete_trace_count: 1,
+      running_trace_count: 0,
+      incomplete_trace_count: 0,
+      hidden_trace_count: 0,
+      items: [
+        {
+          trace_id: "trace:svc-02",
+          service_id: "svc-02-compute_service-00000",
+          task_id: "svc-02-compute_service-00000-task",
+          service_class: "COMPUTE_SERVICE",
+          input_flow_id: "svc-02-compute_service-00000-input",
+          output_flow_id: "svc-02-compute_service-00000-output",
+          input_route_id: "route:input-02",
+          output_route_id: "route:output-02",
+          compute_node_id: "sat-00002",
+          placement_status: "PLACED",
+          input_network_latency_s: 1,
+          compute_queue_delay_s: 0.2,
+          compute_execution_delay_s: 3,
+          output_network_latency_s: 1.5,
+          total_latency_s: 5.7,
+          terminal_state: "COMPLETE",
+          terminal_state_reason: "TOTAL_LATENCY_OBSERVED",
+          stage_count: 4,
+          observed_stage_count: 4,
+          pending_stage_count: 0,
+          stages: []
+        }
+      ]
+    });
+    const row = selectServiceLifecycleTraceRow(display.items, "trace:svc-02");
+    const focus = buildDataPanelServiceTraceFocus(row, {
+      version: "v2",
+      source: "BACKEND_RUNTIME_DETAIL",
+      summary_scope: "SERVICE_TRACE_EXACT_DETAIL",
+      detail_hash: "sha256:trace",
+      trace: {
+        trace_id: "trace:svc-02",
+        service_id: "svc-02-compute_service-00000",
+        task_id: "svc-02-compute_service-00000-task",
+        service_class: "COMPUTE_SERVICE",
+        input_flow_id: "svc-02-compute_service-00000-input",
+        output_flow_id: "svc-02-compute_service-00000-output",
+        input_route_id: "route:input-02",
+        output_route_id: "route:output-02",
+        compute_node_id: "sat-00002",
+        input_network_latency_s: 1,
+        compute_queue_delay_s: 0.2,
+        compute_execution_delay_s: 3,
+        output_network_latency_s: 1.5,
+        total_latency_s: 5.7,
+        terminal_state: "COMPLETE",
+        terminal_state_reason: "TOTAL_LATENCY_OBSERVED",
+        stage_count: 4,
+        observed_stage_count: 4,
+        pending_stage_count: 0,
+        stages: []
+      },
+      correlation: {
+        trace_id: "trace:svc-02",
+        service_id: "svc-02-compute_service-00000",
+        task_id: "svc-02-compute_service-00000-task",
+        flow_ids: [
+          "svc-02-compute_service-00000-input",
+          "svc-02-compute_service-00000-output"
+        ],
+        route_ids: ["route:input-02", "route:output-02"],
+        user_ids: ["user-7"],
+        satellite_ids: ["sat-00002", "sat-00003"],
+        compute_node_id: "sat-00002",
+        route_count: 2,
+        user_count: 1,
+        satellite_count: 2,
+        compute_node_detail_available: false
+      },
+      routes: [],
+      users: [],
+      satellites: [],
+      compute_node: null
+    });
+
+    expect(focus).toMatchObject({
+      active: true,
+      sourceLabel: "后端精确服务链路聚焦",
+      detailFilter: "sat-00002",
+      routeFilter: "route:input-02",
+      serviceFilter: "svc-02-compute_service-00000",
+      serviceTraceFilter: "trace:svc-02",
+      computeNodeFilter: "sat-00002",
+      traceId: "trace:svc-02",
+      serviceId: "svc-02-compute_service-00000",
+      routeIds: ["route:input-02", "route:output-02"],
+      flowIds: [
+        "svc-02-compute_service-00000-input",
+        "svc-02-compute_service-00000-output"
+      ],
+      userIds: ["user-7"],
+      satelliteIds: ["sat-00002", "sat-00003"],
+      computeNodeId: "sat-00002"
+    });
+    expect(focus.summaryLabel).toContain("2 路由");
+    expect(focus.summaryLabel).toContain("1 用户");
+  });
+
+  it("builds visible-window service trace focus filters", () => {
+    const display = buildDataPanelServiceLifecycleTraceDisplay({
+      version: "v2",
+      source: "SERVICE_LATENCY_HISTORY",
+      source_summary: "service_latency_history_v1",
+      summary_scope: "SERVICE_LIFECYCLE_TRACE_WINDOW",
+      cursor: 0,
+      limit: 100,
+      next_cursor: 1,
+      has_more: false,
+      service_count: 1,
+      trace_count: 1,
+      complete_trace_count: 0,
+      running_trace_count: 1,
+      incomplete_trace_count: 0,
+      hidden_trace_count: 0,
+      items: [
+        {
+          trace_id: "trace:run",
+          service_id: "svc-run-compute_service-00000",
+          task_id: "svc-run-compute_service-00000-task",
+          service_class: "COMPUTE_SERVICE",
+          input_flow_id: "svc-run-compute_service-00000-input",
+          output_flow_id: "svc-run-compute_service-00000-output",
+          input_route_id: "route:run-input",
+          output_route_id: "route:run-output",
+          compute_node_id: "sat-00001",
+          input_network_latency_s: 1,
+          compute_queue_delay_s: 0.1,
+          compute_execution_delay_s: 2,
+          output_network_latency_s: 0,
+          total_latency_s: 0,
+          terminal_state: "RUNNING",
+          terminal_state_reason: "OUTPUT_NETWORK_PENDING",
+          stage_count: 4,
+          observed_stage_count: 3,
+          pending_stage_count: 1,
+          stages: []
+        }
+      ]
+    });
+    const focus = buildDataPanelServiceTraceFocus(display.items[0]);
+
+    expect(focus).toMatchObject({
+      active: true,
+      sourceLabel: "窗口服务链路聚焦",
+      detailFilter: "sat-00001",
+      routeFilter: "route:run-input",
+      serviceFilter: "svc-run-compute_service-00000",
+      serviceTraceFilter: "trace:run",
+      computeNodeFilter: "sat-00001",
+      userIds: [],
+      satelliteIds: ["sat-00001"]
+    });
+    expect(focus.summaryLabel).toContain("2 路由");
+    expect(focus.summaryLabel).toContain("2 流");
+  });
+
+  it("keeps service trace focus inactive before selection", () => {
+    expect(buildDataPanelServiceTraceFocus(null)).toEqual({
+      active: false,
+      sourceLabel: "服务链路聚焦",
+      summaryLabel: "等待选择服务 trace",
+      detailFilter: "",
+      routeFilter: "",
+      serviceFilter: "",
+      serviceTraceFilter: "",
+      computeNodeFilter: "",
+      traceId: "",
+      serviceId: "",
+      routeIds: [],
+      flowIds: [],
+      userIds: [],
+      satelliteIds: [],
+      computeNodeId: ""
+    });
   });
 
   it("correlates a selected trace with user, route, satellite, and compute rows", () => {

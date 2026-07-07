@@ -1426,6 +1426,10 @@ export const DataPanel = memo(function DataPanel({
       backendDetail: selectedServiceTraceBackendDetail,
       requestStatus: serviceTraceDetailRequestStatus
     });
+  const serviceTraceFocus = buildDataPanelServiceTraceFocus(
+    selectedServiceTraceRow,
+    selectedServiceTraceBackendDetail
+  );
   const userDetailInspector = buildUserBusinessRequestInspector(
     selectedUserDetailRow,
     nodeDetailSummary,
@@ -1679,6 +1683,96 @@ export const DataPanel = memo(function DataPanel({
       detailPaginationContract
     )
   ];
+  const applyServiceTraceFocus = () => {
+    if (!serviceTraceFocus.active) {
+      return;
+    }
+    setDetailFilter(serviceTraceFocus.detailFilter);
+    setUserDetailPage(0);
+    setSatelliteDetailPage(0);
+    setRouteExplanationFilter(serviceTraceFocus.routeFilter);
+    setRouteExplanationAvailabilityFilter("ALL");
+    setRouteExplanationBusinessFilter("ALL");
+    setRouteExplanationBottleneckFilter("ALL");
+    setServiceDetailFilter(serviceTraceFocus.serviceFilter);
+    setServiceTraceFilter(serviceTraceFocus.serviceTraceFilter);
+    setServiceTraceTerminalFilter("ALL");
+    setServiceTraceComputeNodeFilter(serviceTraceFocus.computeNodeFilter);
+    setServiceTraceStageFilter("ALL");
+    setServiceTraceTerminalReasonFilter("ALL");
+    setComputeNodeDetailFilter(serviceTraceFocus.computeNodeFilter);
+    if (serviceTraceFocus.userIds[0]) {
+      setSelectedDetailUserId(serviceTraceFocus.userIds[0]);
+      onRuntimeUserDetailSelect?.(serviceTraceFocus.userIds[0]);
+    }
+    if (serviceTraceFocus.satelliteIds[0]) {
+      setSelectedDetailSatelliteId(serviceTraceFocus.satelliteIds[0]);
+      onRuntimeSatelliteDetailSelect?.(serviceTraceFocus.satelliteIds[0]);
+    }
+    if (serviceTraceFocus.routeIds[0]) {
+      setSelectedRouteDetailId(serviceTraceFocus.routeIds[0]);
+      onRuntimeRouteDetailSelect?.(serviceTraceFocus.routeIds[0]);
+    }
+    if (serviceTraceFocus.serviceId) {
+      setSelectedServiceDetailId(serviceTraceFocus.serviceId);
+      onRuntimeServiceDetailSelect?.(serviceTraceFocus.serviceId);
+    }
+    if (serviceTraceFocus.traceId) {
+      setSelectedServiceTraceId(serviceTraceFocus.traceId);
+      onRuntimeServiceTraceDetailSelect?.(serviceTraceFocus.traceId);
+    }
+    if (serviceTraceFocus.computeNodeId) {
+      setSelectedComputeNodeDetailId(serviceTraceFocus.computeNodeId);
+      onRuntimeComputeNodeDetailSelect?.(serviceTraceFocus.computeNodeId);
+    }
+    runtimeDetailCursorControls?.users?.onCursorChange?.(0, {
+      query: serviceTraceFocus.detailFilter
+    });
+    runtimeDetailCursorControls?.satellites?.onCursorChange?.(0, {
+      query: serviceTraceFocus.detailFilter
+    });
+    runtimeDetailCursorControls?.routes?.onCursorChange?.(0, {
+      query: serviceTraceFocus.routeFilter
+    });
+    runtimeDetailCursorControls?.services?.onCursorChange?.(0, {
+      query: serviceTraceFocus.serviceFilter
+    });
+    runtimeDetailCursorControls?.serviceTraces?.onCursorChange?.(
+      0,
+      serviceTraceDetailCursorFilters(
+        serviceTraceFocus.serviceTraceFilter,
+        "ALL",
+        serviceTraceFocus.computeNodeFilter,
+        "ALL",
+        "ALL"
+      )
+    );
+    runtimeDetailCursorControls?.computeNodes?.onCursorChange?.(0, {
+      query: serviceTraceFocus.computeNodeFilter
+    });
+  };
+  const clearServiceTraceFocus = () => {
+    setDetailFilter("");
+    setUserDetailPage(0);
+    setSatelliteDetailPage(0);
+    setRouteExplanationFilter("");
+    setRouteExplanationAvailabilityFilter("ALL");
+    setRouteExplanationBusinessFilter("ALL");
+    setRouteExplanationBottleneckFilter("ALL");
+    setServiceDetailFilter("");
+    setServiceTraceFilter("");
+    setServiceTraceTerminalFilter("ALL");
+    setServiceTraceComputeNodeFilter("");
+    setServiceTraceStageFilter("ALL");
+    setServiceTraceTerminalReasonFilter("ALL");
+    setComputeNodeDetailFilter("");
+    runtimeDetailCursorControls?.users?.onCursorChange?.(0, {});
+    runtimeDetailCursorControls?.satellites?.onCursorChange?.(0, {});
+    runtimeDetailCursorControls?.routes?.onCursorChange?.(0, {});
+    runtimeDetailCursorControls?.services?.onCursorChange?.(0, {});
+    runtimeDetailCursorControls?.serviceTraces?.onCursorChange?.(0, {});
+    runtimeDetailCursorControls?.computeNodes?.onCursorChange?.(0, {});
+  };
   const submitUserConfigurationValidation = async () => {
     if (
       userConfigurationValidatePending ||
@@ -4693,6 +4787,11 @@ export const DataPanel = memo(function DataPanel({
               }
             }}
           />
+          <ServiceTraceFocusBar
+            focus={serviceTraceFocus}
+            onApply={applyServiceTraceFocus}
+            onClear={clearServiceTraceFocus}
+          />
           <TopComputeNodeTable rows={topComputeNodes} />
           <ComputeNodeDetailPageTable
             rows={computeNodeDetailRows}
@@ -5723,6 +5822,45 @@ function ServiceLifecycleTracePanel({
   );
 }
 
+function ServiceTraceFocusBar({
+  focus,
+  onApply,
+  onClear
+}: {
+  focus: DataPanelServiceTraceFocus;
+  onApply: () => void;
+  onClear: () => void;
+}) {
+  if (!focus.active) {
+    return (
+      <div className="data-panel-service-trace-focus idle" aria-label="服务链路聚焦">
+        <span>服务链路聚焦</span>
+        <small>选择一条服务 trace 后，可一键聚焦用户、路由、卫星和算力节点表。</small>
+      </div>
+    );
+  }
+  return (
+    <div className="data-panel-service-trace-focus" aria-label="服务链路聚焦">
+      <div>
+        <span>{focus.sourceLabel}</span>
+        <strong>{focus.summaryLabel}</strong>
+        <small>
+          用户 {formatLimitedIds(focus.userIds, 3)} / 卫星{" "}
+          {formatLimitedIds(focus.satelliteIds, 3)} / 路由{" "}
+          {formatLimitedIds(focus.routeIds, 3)} / 算力{" "}
+          {focus.computeNodeId || "未放置"}
+        </small>
+      </div>
+      <button type="button" onClick={onApply}>
+        聚焦关联表
+      </button>
+      <button type="button" className="secondary" onClick={onClear}>
+        清除聚焦
+      </button>
+    </div>
+  );
+}
+
 function ServiceTraceFilterControls({
   filterValue,
   terminalFilter,
@@ -6738,6 +6876,24 @@ export interface DataPanelServiceTraceCorrelationEvidenceInput {
   computeNodes: DataPanelComputeNodeDetailRows;
   backendDetail?: RuntimeServiceTraceDetailV2 | null;
   requestStatus?: RuntimeExactDetailRequestState | null;
+}
+
+export interface DataPanelServiceTraceFocus {
+  active: boolean;
+  sourceLabel: string;
+  summaryLabel: string;
+  detailFilter: string;
+  routeFilter: string;
+  serviceFilter: string;
+  serviceTraceFilter: string;
+  computeNodeFilter: string;
+  traceId: string;
+  serviceId: string;
+  routeIds: readonly string[];
+  flowIds: readonly string[];
+  userIds: readonly string[];
+  satelliteIds: readonly string[];
+  computeNodeId: string;
 }
 
 interface DataPanelDetailCoverageRecord {
@@ -7859,6 +8015,111 @@ export function buildDataPanelSelectedDetailEvidenceNote(
           ? "history"
           : "backend"
   };
+}
+
+export function buildDataPanelServiceTraceFocus(
+  trace: DataPanelServiceLifecycleTraceRow | null | undefined,
+  backendDetail: RuntimeServiceTraceDetailV2 | null | undefined = undefined
+): DataPanelServiceTraceFocus {
+  if (trace === null || trace === undefined) {
+    return {
+      active: false,
+      sourceLabel: "服务链路聚焦",
+      summaryLabel: "等待选择服务 trace",
+      detailFilter: "",
+      routeFilter: "",
+      serviceFilter: "",
+      serviceTraceFilter: "",
+      computeNodeFilter: "",
+      traceId: "",
+      serviceId: "",
+      routeIds: [],
+      flowIds: [],
+      userIds: [],
+      satelliteIds: [],
+      computeNodeId: ""
+    };
+  }
+
+  if (backendDetail !== null && backendDetail !== undefined) {
+    const correlation = backendDetail.correlation;
+    const computeNodeId =
+      backendDetail.compute_node?.node_id ?? correlation.compute_node_id;
+    const routeIds = uniqueStrings(correlation.route_ids);
+    const flowIds = uniqueStrings(correlation.flow_ids);
+    const userIds = uniqueStrings(correlation.user_ids);
+    const satelliteIds = uniqueStrings(correlation.satellite_ids);
+    return {
+      active: true,
+      sourceLabel: "后端精确服务链路聚焦",
+      summaryLabel: `${compactTaskId(correlation.service_id)} / ${formatCount(
+        routeIds.length
+      )} 路由 / ${formatCount(userIds.length)} 用户 / ${formatCount(
+        satelliteIds.length
+      )} 卫星`,
+      detailFilter: serviceTraceDetailFocusFilter(userIds, satelliteIds, computeNodeId),
+      routeFilter: firstNonEmptyString(routeIds, flowIds, [correlation.service_id]),
+      serviceFilter: correlation.service_id,
+      serviceTraceFilter: correlation.trace_id || trace.traceId || correlation.service_id,
+      computeNodeFilter: computeNodeId,
+      traceId: correlation.trace_id || trace.traceId,
+      serviceId: correlation.service_id,
+      routeIds,
+      flowIds,
+      userIds,
+      satelliteIds,
+      computeNodeId
+    };
+  }
+
+  const routeIds = uniqueStrings(trace.routeIds);
+  const flowIds = uniqueStrings(trace.flowIds);
+  const computeNodeId = trace.computeNodeId;
+  const satelliteIds = uniqueStrings(
+    [computeNodeId, routeIds.find((routeId) => routeId.startsWith("sat-")) ?? ""]
+      .filter((id) => id.startsWith("sat-"))
+  );
+  return {
+    active: true,
+    sourceLabel: "窗口服务链路聚焦",
+    summaryLabel: `${trace.serviceLabel} / ${formatCount(
+      routeIds.length
+    )} 路由 / ${formatCount(flowIds.length)} 流`,
+    detailFilter: serviceTraceDetailFocusFilter([], satelliteIds, computeNodeId),
+    routeFilter: firstNonEmptyString(routeIds, flowIds, [trace.serviceId]),
+    serviceFilter: trace.serviceId,
+    serviceTraceFilter: trace.traceId || trace.serviceId,
+    computeNodeFilter: computeNodeId,
+    traceId: trace.traceId,
+    serviceId: trace.serviceId,
+    routeIds,
+    flowIds,
+    userIds: [],
+    satelliteIds,
+    computeNodeId
+  };
+}
+
+function serviceTraceDetailFocusFilter(
+  userIds: readonly string[],
+  satelliteIds: readonly string[],
+  computeNodeId: string
+): string {
+  return firstNonEmptyString(
+    computeNodeId ? [computeNodeId] : [],
+    satelliteIds,
+    userIds
+  );
+}
+
+function firstNonEmptyString(...groups: readonly (readonly string[])[]): string {
+  for (const group of groups) {
+    const value = group.find((item) => item.trim().length > 0);
+    if (value !== undefined) {
+      return value;
+    }
+  }
+  return "";
 }
 
 export function buildDataPanelServiceTraceCorrelationEvidenceNote(

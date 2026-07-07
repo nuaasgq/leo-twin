@@ -1035,6 +1035,10 @@ Current Phase 3 progress:
   detail evidence row. It makes the selected service trace's flow, route, user,
   satellite, compute-node, stage, and latency evidence explicit and prefers
   backend exact detail over visible-window fallback.
+- T367 adds one-click service-trace focus filters. A selected service trace can
+  now drive correlated user/satellite, route, service, service-trace, and
+  compute-node filters, again preferring backend exact detail over visible
+  window fallback.
 
 ## 5. Parallel Agent Assignment Model
 

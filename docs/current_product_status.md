@@ -2,7 +2,7 @@
 
 Date: 2026-07-07
 
-Branch: `feature/T366-dashboard-service-trace-correlation-v1`
+Branch: `feature/T367-dashboard-service-trace-focus-v1`
 
 ## Local Entry Points
 
@@ -61,8 +61,8 @@ The latest full local run passed:
 The latest fast local run with `-RunControlCycleSmoke` also passed for a
 1200-satellite / 20-user / 1200-compute-node scenario and verified INITIALIZE,
 START, PAUSE, RESUME, STOP, and RESET through the control websocket.
-The latest frontend run after the service-trace correlation evidence task
-included 26 frontend test files / 449 tests.
+The latest frontend run after the service-trace focus task included 26 frontend
+test files / 452 tests.
 
 ## Current Product Signals
 
@@ -91,6 +91,10 @@ included 26 frontend test files / 449 tests.
   note. For a selected service trace it reports whether flow, route, user,
   satellite, compute-node, stage, and latency evidence comes from backend exact
   detail or from the current visible window fallback.
+- The service trace table now exposes a compact focus bar. After selecting a
+  service trace, users can apply one-click correlated filters to the user,
+  satellite, route, service, service-trace, and compute-node detail tables, with
+  backend exact trace detail preferred over visible-window fallback.
 - Launcher health v2 reports backend/frontend port readiness, HTTP readiness,
   process ids, latest log paths, config paths, and recommended actions.
 - Operator diagnostics bundle captures launcher health, runtime status, version
