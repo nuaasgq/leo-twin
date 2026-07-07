@@ -61,6 +61,7 @@ import {
   buildDataPanelExportScenarioReviewChecklistTemplateComparisonStatus,
   buildDataPanelExportScenarioReviewBundleDisplay,
   buildDataPanelExportScenarioReviewBundleStatus,
+  buildDataPanelScenarioReviewWorkflowInspectorFocus,
   buildDataPanelScenarioReviewChecklistDraft,
   buildDataPanelScenarioReviewChecklistSaveRequest,
   updateDataPanelScenarioReviewChecklistDraft,
@@ -4978,6 +4979,74 @@ describe("buildDataPanelExportCatalogDisplay", () => {
       targetPreview:
         "Pointer preview is available only for JSON result-package artifacts."
     });
+  });
+
+  it("builds a scenario review workflow inspector focus for config template validation artifacts", () => {
+    const focus = buildDataPanelScenarioReviewWorkflowInspectorFocus("pkg-review", {
+      stepLabel: "11 config template validation",
+      statusLabel: "available",
+      detailLabel: "user_configuration_template_validation_v1.json",
+      href:
+        "/runtime/export/packages/pkg-review/files/user_configuration_template_validation_v1.json",
+      title:
+        "11 config template validation / user_configuration_template_validation_v1.json / package artifact available",
+      tone: "match"
+    });
+
+    expect(focus).toEqual({
+      focusSourceLabel: "Scenario review workflow artifact focus",
+      tone: "match",
+      statusLabel:
+        "11 config template validation / user_configuration_template_validation_v1.json",
+      summaryLabel: "available / match",
+      metaLabels: [
+        "artifact user_configuration_template_validation_v1.json",
+        "json /template_validation/templates",
+        "workflow 11 config template validation",
+        "11 config template validation / user_configuration_template_validation_v1.json / package artifact available",
+        "read-only scenario review artifact"
+      ],
+      jsonPointer: "/template_validation/templates",
+      defaultInspectorFilter: "template_validation",
+      artifactLabel: "user_configuration_template_validation_v1.json",
+      artifactHref:
+        "/runtime/export/packages/pkg-review/files/user_configuration_template_validation_v1.json",
+      artifactTitle:
+        "user_configuration_template_validation_v1.json / /template_validation/templates / read-only package artifact"
+    });
+    expect(
+      buildDataPanelBenchmarkEvidenceArtifactViewerDisplay(
+        focus,
+        {
+          template_validation: {
+            templates: [
+              {
+                id: "default-72",
+                validation_ok: true
+              }
+            ]
+          }
+        },
+        false,
+        null
+      )
+    ).toMatchObject({
+      tone: "match",
+      statusLabel: "pointer target resolved",
+      targetPreview:
+        '[\n  {\n    "id": "default-72",\n    "validation_ok": true\n  }\n]',
+      inspectorEnabled: true
+    });
+    expect(
+      buildDataPanelScenarioReviewWorkflowInspectorFocus("pkg-review", {
+        stepLabel: "13 event evidence",
+        statusLabel: "available",
+        detailLabel: "events.jsonl",
+        href: "/runtime/export/packages/pkg-review/files/events.jsonl",
+        title: "events",
+        tone: "match"
+      })
+    ).toBeNull();
   });
 
   it("summarizes saved route comparison review report contents", () => {

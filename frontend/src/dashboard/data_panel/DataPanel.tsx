@@ -3637,6 +3637,22 @@ export const DataPanel = memo(function DataPanel({
                         ) : (
                           <small>{row.detailLabel}</small>
                         )}
+                        {row.href &&
+                        isDataPanelJsonArtifactFilename(row.detailLabel) ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setBenchmarkEvidenceFocus(
+                                buildDataPanelScenarioReviewWorkflowInspectorFocus(
+                                  runtimeExportComparePackageId,
+                                  row
+                                )
+                              )
+                            }
+                          >
+                            检查 JSON
+                          </button>
+                        ) : null}
                       </span>
                     ))}
                   </div>
@@ -14288,6 +14304,77 @@ export function buildDataPanelUserServiceRequestEvidenceInspectorFocus(
     defaultInspectorFilter: row.artifactFilter ?? requestId,
     tone: row.statusLabel.toUpperCase().includes("FAIL") ? "different" : "match"
   });
+}
+
+export function buildDataPanelScenarioReviewWorkflowInspectorFocus(
+  packageId: string | null | undefined,
+  row: DataPanelExportScenarioReviewWorkflowRow | null | undefined
+): DataPanelBenchmarkEvidenceFocus | null {
+  if (row === null || row === undefined || row.href === null) {
+    return null;
+  }
+  return buildDataPanelPackageArtifactInspectorFocus({
+    sourceLabel: "Scenario review workflow artifact focus",
+    packageId,
+    artifactFilename: row.detailLabel,
+    jsonPointer: scenarioReviewWorkflowArtifactPointer(row.detailLabel),
+    statusLabel: `${row.stepLabel} / ${row.detailLabel}`,
+    summaryLabel: `${row.statusLabel} / ${row.tone}`,
+    metaLabels: [
+      `workflow ${row.stepLabel}`,
+      row.title,
+      "read-only scenario review artifact"
+    ],
+    defaultInspectorFilter: scenarioReviewWorkflowArtifactFilter(row.detailLabel),
+    tone: row.tone
+  });
+}
+
+function scenarioReviewWorkflowArtifactPointer(filename: string): string {
+  switch (filename) {
+    case SCENARIO_REVIEW_BUNDLE_FILENAME:
+      return "/user_configuration_template_validation";
+    case EXPORT_PACKAGE_AUDIT_INDEX_FILENAME:
+      return "/user_configuration_template_validation_hash";
+    case "review_summary_v1.json":
+    case "diagnostics_bundle_v1.json":
+      return "/user_configuration_template_validation";
+    case CONFIG_SNAPSHOT_FILENAME:
+      return "/user_configuration_template_validation_v1";
+    case ROUTE_DETAIL_INDEX_FILENAME:
+      return "/routes";
+    case SERVICE_LIFECYCLE_TRACE_FILENAME:
+      return "/items";
+    case SERVICE_TRACE_COMPARISON_REVIEW_REPORT_FILENAME:
+      return "/records";
+    case NETWORK_KPI_FORMULA_EVIDENCE_FILENAME:
+      return "/evidence";
+    case USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME:
+      return "/template_validation/templates";
+    case USER_SERVICE_REQUEST_SUMMARY_FILENAME:
+      return "/summary/items";
+    default:
+      return "";
+  }
+}
+
+function scenarioReviewWorkflowArtifactFilter(filename: string): string {
+  switch (filename) {
+    case USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME:
+      return "template_validation";
+    case CONFIG_SNAPSHOT_FILENAME:
+      return "user_configuration_template_validation_v1";
+    case "review_summary_v1.json":
+    case "diagnostics_bundle_v1.json":
+    case SCENARIO_REVIEW_BUNDLE_FILENAME:
+      return "user_configuration_template_validation";
+    case NETWORK_KPI_FORMULA_EVIDENCE_FILENAME:
+      return "evidence";
+    case USER_SERVICE_REQUEST_SUMMARY_FILENAME:
+      return "summary items";
+    default:
+      return "";
+  }
 }
 
 export interface DataPanelJsonPointerSelection {

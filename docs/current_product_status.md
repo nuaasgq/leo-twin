@@ -80,6 +80,12 @@ template validation evidence into result packages as
 scenario review, audit index, and dashboard export review labels now expose
 the backend validation status/hash without reloading templates or applying a
 new config.
+The latest T374 validation adds a scenario-review workflow JSON inspector
+entry for result-package artifacts. In particular,
+`user_configuration_template_validation_v1.json` now opens the existing
+read-only package artifact viewer at `/template_validation/templates`, so
+operators can inspect exported per-template validation rows directly from the
+package review workflow.
 
 ## Current Product Signals
 
@@ -112,6 +118,10 @@ new config.
   same result-package review surfaces. Offline package review can verify the
   shipped user-facing configuration templates without revalidating them in the
   frontend or mutating the active runtime config.
+- The dashboard scenario-review workflow now provides JSON-inspector entry
+  points for package artifacts. Configuration template validation artifacts
+  default to the `/template_validation/templates` path and remain read-only,
+  reusing the existing persisted package file endpoint.
 - User configuration template catalog and reference surfaces now include
   backend-owned `sees.user_configuration_template_validation.v1` evidence.
   The evidence loads approved YAML templates through the same backend config

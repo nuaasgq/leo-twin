@@ -89,7 +89,11 @@ Tasks:
     file hash, config hash, and error summary without revalidating templates in
     the browser. T373 adds compact export-review labels for the same evidence
     through review summary, diagnostics, scenario review, and audit index
-    package surfaces.
+    package surfaces. T374 connects the scenario-review workflow rows to the
+    existing read-only package artifact inspector and defaults
+    `user_configuration_template_validation_v1.json` to
+    `/template_validation/templates`, so offline package review can inspect
+    exported template rows without frontend validation or runtime mutation.
 - V2-003: Add config explanation summary.
   - Scope: backend-generated text/structured explanation for orbit, network,
     traffic, compute, runtime, fidelity.

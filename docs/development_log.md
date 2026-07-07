@@ -5,6 +5,47 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-07 - Config Template Validation Artifact Review v1
+
+- Branch: `feature/T374-config-template-validation-artifact-review-v1`
+- Commit: pending in this commit
+- Scope: add a read-only dashboard artifact-inspector entry from the
+  scenario-review workflow to persisted result-package JSON artifacts. The
+  workflow now exposes a `检查 JSON` action for available JSON artifacts and
+  maps `user_configuration_template_validation_v1.json` to
+  `/template_validation/templates`, letting operators inspect exported
+  per-template validation rows from the package review workflow without
+  reloading templates, applying config, replaying events, or recomputing model
+  state.
+- Changed files/modules:
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `docs/current_product_status.md`
+  - `docs/user_guide_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts`
+    - Result: passed, 1 test file / 217 tests using the bundled Node/pnpm
+      runtime.
+  - `pnpm --dir frontend build`
+    - Result: passed using the bundled Node/pnpm runtime. Vite reported the
+      existing `DataPanel` chunk-size warning after minification.
+- Problems encountered and handling:
+  - The first frontend test run failed because the expected artifact preview
+    used compact JSON while the existing viewer intentionally renders pretty
+    JSON for objects/arrays. The test was corrected to match the established
+    viewer behavior.
+  - Existing local runtime/generated config files remain dirty and are
+    intentionally not included in this task.
+  - The first `git push` attempt failed with an HTTPS SSL/TLS handshake error;
+    retrying the same push succeeded without code changes.
+- Known remaining issues / follow-up:
+  - The scenario-review workflow inspector is read-only and file-based. Future
+    UX work can add per-artifact quick filters or dedicated template status
+    tabs, but this task intentionally reuses the existing generic JSON
+    inspector.
+
 ## 2026-07-07 - User Config Template Validation Export v1
 
 - Branch: `feature/T373-user-config-template-validation-export-v1`
