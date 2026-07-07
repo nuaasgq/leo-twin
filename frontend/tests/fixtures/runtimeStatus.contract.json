@@ -411,6 +411,78 @@
         }
       ]
     },
+    "network_kpi_calibration_v1": {
+      "version": "v1",
+      "calibration_id": "leo_twin.network_kpi_calibration.v1",
+      "source": "KPI_TIME_SERIES_V1_AND_METRICS_SUMMARY",
+      "metric_model": "FLOW_LEVEL_PROXY",
+      "packet_level_simulation": false,
+      "sample_count": 1,
+      "sim_time_start_s": 120,
+      "sim_time_end_s": 120,
+      "sim_time_span_s": 0,
+      "activity_context": {
+        "active": true,
+        "requested_route_demand_mbps": 200,
+        "offered_route_capacity_mbps": 180,
+        "recent_flow_count": 0,
+        "available_route_count": 2
+      },
+      "time_driver": {
+        "source": "SIMULATION_TIME",
+        "period_s": 120,
+        "phase": 1,
+        "factor": 0.5,
+        "loss_proxy_rate": 0.05,
+        "delay_variation_proxy_s": 0.006
+      },
+      "kpi_count": 4,
+      "observed_kpi_count": 4,
+      "time_varying_kpi_count": 0,
+      "flat_kpi_count": 0,
+      "zero_latest_kpi_count": 0,
+      "calibration_status": "INSUFFICIENT_SERIES",
+      "kpis": [
+        {
+          "metric": "EFFECTIVE_THROUGHPUT",
+          "sample_key": "network_effective_throughput_mbps",
+          "runtime_summary_key": "network_quality_effective_throughput_mbps",
+          "unit": "Mbps",
+          "observed": true,
+          "first_value": 180,
+          "latest_value": 180,
+          "minimum_value": 180,
+          "maximum_value": 180,
+          "absolute_delta": 0,
+          "endpoint_delta": 0,
+          "relative_delta": 0,
+          "latest_is_zero": false,
+          "variation_status": "INSUFFICIENT_SAMPLES",
+          "flat_reason": "fewer than two samples are available"
+        },
+        {
+          "metric": "EFFECTIVE_LATENCY",
+          "sample_key": "network_effective_latency_s",
+          "runtime_summary_key": "network_quality_effective_latency_avg_s",
+          "unit": "s",
+          "observed": true,
+          "first_value": 0.045,
+          "latest_value": 0.045,
+          "minimum_value": 0.045,
+          "maximum_value": 0.045,
+          "absolute_delta": 0,
+          "endpoint_delta": 0,
+          "relative_delta": 0,
+          "latest_is_zero": false,
+          "variation_status": "INSUFFICIENT_SAMPLES",
+          "flat_reason": "fewer than two samples are available"
+        }
+      ],
+      "caveats": [
+        "Calibration audits KPI movement only; it does not change KPI formulas.",
+        "Network KPIs remain flow-level proxies, not packet-level measurements."
+      ]
+    },
     "satellite_kpi_slices_v1": {
       "version": "v1",
       "mode": "TOP_ACTIVITY_LIMITED",

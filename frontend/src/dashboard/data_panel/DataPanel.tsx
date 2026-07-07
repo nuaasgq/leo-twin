@@ -55,6 +55,7 @@ import {
   RuntimeExportHistoryV1,
   RuntimeMetricsSummary,
   RuntimeExportNetworkKpiBenchmarkValidationEvidenceV1,
+  RuntimeNetworkKpiCalibrationV1,
   RuntimeNetworkKpiCredibilityV1,
   RuntimeNetworkKpiBenchmarkValidationV1,
   RuntimeNetworkKpiProvenanceV2,
@@ -1122,6 +1123,9 @@ export const DataPanel = memo(function DataPanel({
     buildDataPanelNetworkKpiBenchmarkValidationDisplay(
       runtimeStatus.network_kpi_benchmark_validation_v1
     );
+  const networkKpiCalibrationDisplay = buildDataPanelNetworkKpiCalibrationDisplay(
+    runtimeStatus.network_kpi_calibration_v1
+  );
   const networkKpiFormulaInspector = buildDataPanelNetworkKpiFormulaInspector(
     runtimeStatus.network_kpi_provenance_v2,
     runtimeStatus.network_kpi_credibility_v1
@@ -1140,6 +1144,7 @@ export const DataPanel = memo(function DataPanel({
     modelAssumptions: modelAssumptionsDisplay,
     networkKpiCredibility: networkKpiCredibilityDisplay,
     networkKpiBenchmarkValidation: networkKpiBenchmarkValidationDisplay,
+    networkKpiCalibration: networkKpiCalibrationDisplay,
     networkKpiFormulaInspector,
     routeProvenanceTrust: routeProvenanceTrustDisplay,
     fidelitySummary,
@@ -4118,6 +4123,43 @@ export const DataPanel = memo(function DataPanel({
                 <div className="data-panel-kpi-credibility-caveats">
                   {networkKpiBenchmarkValidationDisplay.issueLabels.map((label) => (
                     <span key={label}>{label}</span>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+          {networkKpiCalibrationDisplay ? (
+            <div
+              className={`data-panel-kpi-formula-inspector ${networkKpiCalibrationDisplay.tone}`}
+              aria-label="网络KPI变化校准"
+            >
+              <div className="data-panel-kpi-formula-header">
+                <div>
+                  <span>{networkKpiCalibrationDisplay.sourceLabel}</span>
+                  <strong>{networkKpiCalibrationDisplay.statusLabel}</strong>
+                  <small>{networkKpiCalibrationDisplay.summaryLabel}</small>
+                </div>
+              </div>
+              <div className="data-panel-kpi-formula-meta">
+                {networkKpiCalibrationDisplay.metaLabels.map((label) => (
+                  <span key={label}>{label}</span>
+                ))}
+              </div>
+              <div className="data-panel-kpi-formula-rows">
+                {networkKpiCalibrationDisplay.rows.map((row) => (
+                  <span className={row.tone} key={row.metric} title={row.title}>
+                    <strong>{row.metricLabel}</strong>
+                    <em>{row.statusLabel}</em>
+                    <small>{row.valueLabel}</small>
+                    <small>{row.deltaLabel}</small>
+                    <small>{row.rangeLabel}</small>
+                  </span>
+                ))}
+              </div>
+              {networkKpiCalibrationDisplay.caveats.length > 0 ? (
+                <div className="data-panel-kpi-credibility-caveats">
+                  {networkKpiCalibrationDisplay.caveats.map((caveat) => (
+                    <span key={caveat}>{caveat}</span>
                   ))}
                 </div>
               ) : null}
@@ -17261,6 +17303,27 @@ export interface DataPanelNetworkKpiBenchmarkValidationDisplay {
   caveats: readonly string[];
 }
 
+export interface DataPanelNetworkKpiCalibrationDisplay {
+  tone: DataPanelNetworkKpiCredibilityTone;
+  sourceLabel: string;
+  statusLabel: string;
+  summaryLabel: string;
+  metaLabels: readonly string[];
+  rows: readonly DataPanelNetworkKpiCalibrationRow[];
+  caveats: readonly string[];
+}
+
+export interface DataPanelNetworkKpiCalibrationRow {
+  metric: string;
+  metricLabel: string;
+  statusLabel: string;
+  valueLabel: string;
+  deltaLabel: string;
+  rangeLabel: string;
+  tone: "observed" | "missing" | "invalid";
+  title: string;
+}
+
 export interface DataPanelNetworkKpiFormulaRow {
   metric: string;
   displayName: string;
@@ -17305,6 +17368,7 @@ export interface DataPanelModelTrustEvidenceWorkspaceInput {
   modelAssumptions?: DataPanelModelAssumptionsDisplay | null;
   networkKpiCredibility?: DataPanelNetworkKpiCredibilityDisplay | null;
   networkKpiBenchmarkValidation?: DataPanelNetworkKpiBenchmarkValidationDisplay | null;
+  networkKpiCalibration?: DataPanelNetworkKpiCalibrationDisplay | null;
   networkKpiFormulaInspector?: DataPanelNetworkKpiFormulaInspectorDisplay | null;
   routeProvenanceTrust?: DataPanelRouteProvenanceTrustDisplay | null;
   fidelitySummary?: FidelitySummary | null;
@@ -17332,6 +17396,7 @@ export interface DataPanelModelTrustEvidenceRow {
     | "fidelity"
     | "kpi"
     | "benchmark"
+    | "calibration"
     | "formula"
     | "route"
     | "replay"
@@ -17845,6 +17910,68 @@ export function buildDataPanelNetworkKpiBenchmarkValidationDisplay(
   };
 }
 
+export function buildDataPanelNetworkKpiCalibrationDisplay(
+  calibration: RuntimeNetworkKpiCalibrationV1 | null | undefined
+): DataPanelNetworkKpiCalibrationDisplay | null {
+  if (calibration === null || calibration === undefined) {
+    return null;
+  }
+  const kpiCount = Math.max(0, calibration.kpi_count);
+  const observedKpiCount = clampCount(calibration.observed_kpi_count, kpiCount);
+  const varyingKpiCount = clampCount(
+    calibration.time_varying_kpi_count,
+    observedKpiCount
+  );
+  const flatKpiCount = Math.max(0, calibration.flat_kpi_count);
+  const zeroLatestKpiCount = Math.max(0, calibration.zero_latest_kpi_count);
+  const activity = calibration.activity_context;
+  const timeDriver = calibration.time_driver;
+  const rows = calibration.kpis.map((kpi) => ({
+    metric: kpi.metric,
+    metricLabel: `${networkKpiCalibrationMetricLabel(kpi.metric)} / ${kpi.metric}`,
+    statusLabel: networkKpiCalibrationVariationLabel(kpi.variation_status),
+    valueLabel: `最新 ${formatNetworkKpiCalibrationValue(
+      kpi.latest_value,
+      kpi.unit
+    )}`,
+    deltaLabel: `变化 ${formatNetworkKpiCalibrationValue(
+      kpi.absolute_delta,
+      kpi.unit
+    )} / 端点 ${formatNetworkKpiCalibrationValue(kpi.endpoint_delta, kpi.unit)}`,
+    rangeLabel: `范围 ${formatNetworkKpiCalibrationValue(
+      kpi.minimum_value,
+      kpi.unit
+    )} - ${formatNetworkKpiCalibrationValue(kpi.maximum_value, kpi.unit)}`,
+    tone: networkKpiCalibrationRowTone(kpi),
+    title: `${kpi.sample_key} -> ${kpi.runtime_summary_key}; ${kpi.flat_reason}`
+  }));
+  return {
+    tone: networkKpiCalibrationTone(calibration.calibration_status),
+    sourceLabel: `${calibration.calibration_id} / ${calibration.source}`,
+    statusLabel: networkKpiCalibrationStatusLabel(calibration.calibration_status),
+    summaryLabel: `样本 ${formatCount(calibration.sample_count)} / 时间跨度 ${formatDurationCompact(
+      calibration.sim_time_span_s
+    )} / 变化 KPI ${formatCount(varyingKpiCount)}/${formatCount(
+      observedKpiCount
+    )}`,
+    metaLabels: [
+      `模型 ${networkKpiMetricModelLabel(calibration.metric_model)}`,
+      calibration.packet_level_simulation ? "含包级仿真" : "无包级仿真",
+      activity.active
+        ? `活动需求 ${formatMetricMbps(activity.requested_route_demand_mbps)}`
+        : "无活动需求",
+      `时间驱动 ${timeDriver.source} / phase ${formatNullableMetricValue(
+        timeDriver.phase
+      )} / factor ${formatNullableRatioValue(timeDriver.factor)}`,
+      `平坦 ${formatCount(flatKpiCount)} / 最新零值 ${formatCount(
+        zeroLatestKpiCount
+      )}`
+    ],
+    rows,
+    caveats: calibration.caveats.slice(0, 3)
+  };
+}
+
 export function buildDataPanelNetworkKpiFormulaInspector(
   provenance: RuntimeNetworkKpiProvenanceV2 | null | undefined,
   credibility: RuntimeNetworkKpiCredibilityV1 | null | undefined,
@@ -18106,6 +18233,8 @@ export function buildDataPanelModelTrustEvidenceWorkspace(
     (input.networkKpiCredibility === null || input.networkKpiCredibility === undefined) &&
     (input.networkKpiBenchmarkValidation === null ||
       input.networkKpiBenchmarkValidation === undefined) &&
+    (input.networkKpiCalibration === null ||
+      input.networkKpiCalibration === undefined) &&
     (input.networkKpiFormulaInspector === null ||
       input.networkKpiFormulaInspector === undefined) &&
     (input.routeProvenanceTrust === null || input.routeProvenanceTrust === undefined) &&
@@ -18126,6 +18255,7 @@ export function buildDataPanelModelTrustEvidenceWorkspace(
     buildModelTrustFidelityRow(input.fidelitySummary, input.modelAssumptions),
     buildModelTrustKpiRow(input.networkKpiCredibility),
     buildModelTrustKpiBenchmarkRow(input.networkKpiBenchmarkValidation),
+    buildModelTrustKpiCalibrationRow(input.networkKpiCalibration),
     buildModelTrustFormulaRow(input.networkKpiFormulaInspector),
     buildModelTrustRouteProvenanceRow(input.routeProvenanceTrust),
     buildModelTrustReplayRow(
@@ -18174,6 +18304,7 @@ export function buildDataPanelModelTrustEvidenceWorkspace(
     metaLabels: [
       input.configurationExplanation ? "配置语义已声明" : "配置语义待声明",
       input.networkKpiBenchmarkValidation ? "KPI基准已验证" : "KPI基准待验证",
+      input.networkKpiCalibration ? "KPI变化已校准" : "KPI变化待校准",
       input.networkKpiFormulaInspector ? "KPI公式可追踪" : "KPI公式待补齐",
       input.routeProvenanceTrust ? "路由证据可追踪" : "路由证据待补齐",
       input.reproducibilityManifest ? "manifest已生成" : "manifest待生成",
@@ -18293,6 +18424,36 @@ function buildModelTrustKpiBenchmarkRow(
     source: "network_kpi_benchmark_validation_v1",
     tone: validation.tone,
     title: [...validation.issueLabels, ...validation.caveats].join(" / ")
+  };
+}
+
+function buildModelTrustKpiCalibrationRow(
+  calibration: DataPanelNetworkKpiCalibrationDisplay | null | undefined
+): DataPanelModelTrustEvidenceRow {
+  if (calibration === null || calibration === undefined) {
+    return {
+      kind: "calibration",
+      label: "KPI变化校准",
+      statusLabel: "等待校准摘要",
+      detail: "未收到 network_kpi_calibration_v1。",
+      source: "network_kpi_calibration_v1",
+      tone: "pending",
+      title:
+        "KPI变化校准必须由后端基于 kpi_time_series_v1 和 metrics_summary 生成。"
+    };
+  }
+  return {
+    kind: "calibration",
+    label: "KPI变化校准",
+    statusLabel: calibration.statusLabel,
+    detail: calibration.summaryLabel,
+    source: calibration.sourceLabel,
+    tone: calibration.tone,
+    title: [
+      ...calibration.metaLabels,
+      ...calibration.rows.map((row) => `${row.metric}: ${row.statusLabel}`),
+      ...calibration.caveats
+    ].join(" / ")
   };
 }
 
@@ -18554,6 +18715,116 @@ function networkKpiBenchmarkValidationStatusLabel(status: string): string {
     return "基准失败";
   }
   return "基准未知";
+}
+
+function networkKpiCalibrationTone(status: string): DataPanelNetworkKpiCredibilityTone {
+  if (status === "TIME_VARYING_OBSERVED") {
+    return "match";
+  }
+  if (status === "PARTIAL_TIME_VARIATION" || status === "FLAT_UNDER_ACTIVITY") {
+    return "different";
+  }
+  if (status === "INSUFFICIENT_SERIES" || status === "FLAT_NO_ACTIVITY") {
+    return "pending";
+  }
+  return "error";
+}
+
+function networkKpiCalibrationStatusLabel(status: string): string {
+  if (status === "TIME_VARYING_OBSERVED") {
+    return "已观察到随仿真时间变化";
+  }
+  if (status === "PARTIAL_TIME_VARIATION") {
+    return "部分指标随时间变化";
+  }
+  if (status === "FLAT_UNDER_ACTIVITY") {
+    return "业务活动下指标仍平坦";
+  }
+  if (status === "FLAT_NO_ACTIVITY") {
+    return "无业务活动下指标平坦";
+  }
+  if (status === "INSUFFICIENT_SERIES") {
+    return "样本不足";
+  }
+  return "校准状态未知";
+}
+
+function networkKpiCalibrationVariationLabel(status: string): string {
+  if (status === "TIME_VARYING") {
+    return "随时间变化";
+  }
+  if (status === "FLAT_NONZERO") {
+    return "非零但平坦";
+  }
+  if (status === "FLAT_ZERO") {
+    return "零值平坦";
+  }
+  if (status === "INSUFFICIENT_SAMPLES") {
+    return "样本不足";
+  }
+  if (status === "MISSING_SAMPLE_VALUE") {
+    return "样本缺失";
+  }
+  return status || "状态未知";
+}
+
+function networkKpiCalibrationRowTone(
+  kpi: RuntimeNetworkKpiCalibrationV1["kpis"][number]
+): "observed" | "missing" | "invalid" {
+  if (!kpi.observed || kpi.variation_status === "MISSING_SAMPLE_VALUE") {
+    return "invalid";
+  }
+  if (kpi.variation_status === "TIME_VARYING") {
+    return "observed";
+  }
+  return "missing";
+}
+
+function networkKpiCalibrationMetricLabel(metric: string): string {
+  if (metric === "EFFECTIVE_THROUGHPUT") {
+    return "有效吞吐";
+  }
+  if (metric === "EFFECTIVE_LATENCY") {
+    return "有效时延";
+  }
+  if (metric === "EFFECTIVE_LOSS_PROXY") {
+    return "丢包代理";
+  }
+  if (metric === "EFFECTIVE_DELAY_VARIATION_PROXY") {
+    return "抖动代理";
+  }
+  return metric || "未知指标";
+}
+
+function formatNetworkKpiCalibrationValue(
+  value: number | null,
+  unit: string
+): string {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return "-";
+  }
+  if (unit === "Mbps") {
+    return formatMetricMbps(value);
+  }
+  if (unit === "s") {
+    return formatMetricMilliseconds(value);
+  }
+  if (unit === "ratio") {
+    return formatRatioPercent(value);
+  }
+  return `${formatPreciseMetricValue(value)} ${unit}`.trim();
+}
+
+function formatNullableMetricValue(value: number | null): string {
+  return typeof value === "number" && Number.isFinite(value)
+    ? formatPreciseMetricValue(value)
+    : "-";
+}
+
+function formatNullableRatioValue(value: number | null): string {
+  return typeof value === "number" && Number.isFinite(value)
+    ? formatRatioPercent(value)
+    : "-";
 }
 
 function networkKpiMetricModelLabel(metricModel: string): string {

@@ -2,7 +2,7 @@
 
 Date: 2026-07-07
 
-Branch: `feature/T362-network-kpi-calibration-v1`
+Branch: `feature/T363-dashboard-kpi-calibration-v1`
 
 ## Local Entry Points
 
@@ -76,6 +76,9 @@ frontend test files / 197 tests.
   audits whether throughput, latency, loss proxy, and delay-variation proxy
   have actually changed over simulation time and explains flat values from
   backend sample evidence.
+- The standalone dashboard renders `network_kpi_calibration_v1` in the network
+  KPI panel and model-trust workspace, so users can see whether KPI curves are
+  time-varying, partially varying, flat under activity, or sample-limited.
 - Launcher health v2 reports backend/frontend port readiness, HTTP readiness,
   process ids, latest log paths, config paths, and recommended actions.
 - Operator diagnostics bundle captures launcher health, runtime status, version
@@ -119,6 +122,5 @@ frontend test files / 197 tests.
   browser smoke when the risk is browser button wiring or dashboard rendering.
 - The package JSON inspector is still an embedded bounded review card rather
   than a dedicated virtualized artifact browser.
-- KPI provenance and benchmark gates are present, but calibration reporting
-  still needs a frontend v2.1 pass that renders backend calibration rows more
-  prominently in the dashboard.
+- KPI calibration is visible in the dashboard; a future pass can add filtering
+  or a wider drawer if more KPI families are added.

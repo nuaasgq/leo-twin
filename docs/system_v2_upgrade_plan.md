@@ -1019,6 +1019,10 @@ Current Phase 3 progress:
   exposes `network_kpi_calibration_v1` so benchmark and dashboard layers can
   distinguish time-varying KPI movement from flat-but-explained flow-level
   proxy values.
+- T363 completes the first dashboard binding for that evidence: the standalone
+  dashboard renders the backend calibration summary in the network KPI panel
+  and model-trust evidence workspace instead of deriving movement semantics
+  locally.
 
 ## 5. Parallel Agent Assignment Model
 

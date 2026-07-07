@@ -72,6 +72,22 @@ describe("runtime status contract fixture", () => {
       compute_resource_used_gpu_tflops_fp32: 2.5,
       compute_resource_used_npu_tops_int8: 8
     });
+    expect(status.network_kpi_calibration_v1).toMatchObject({
+      version: "v1",
+      calibration_id: "leo_twin.network_kpi_calibration.v1",
+      source: "KPI_TIME_SERIES_V1_AND_METRICS_SUMMARY",
+      metric_model: "FLOW_LEVEL_PROXY",
+      packet_level_simulation: false,
+      calibration_status: "INSUFFICIENT_SERIES",
+      sample_count: 1,
+      kpi_count: 4
+    });
+    expect(status.network_kpi_calibration_v1?.kpis[0]).toMatchObject({
+      metric: "EFFECTIVE_THROUGHPUT",
+      sample_key: "network_effective_throughput_mbps",
+      runtime_summary_key: "network_quality_effective_throughput_mbps",
+      variation_status: "INSUFFICIENT_SAMPLES"
+    });
     expect(status.network_quality_provenance_v1).toMatchObject({
       version: "v1",
       metric_model: "FLOW_LEVEL_PROXY",

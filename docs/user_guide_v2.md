@@ -131,7 +131,8 @@ The console is for simulation control and 3D inspection:
 
 The standalone dashboard is for data situation awareness:
 
-- network KPI trend and provenance;
+- network KPI trend, provenance, benchmark validation, and backend calibration
+  evidence for whether KPI curves are time-varying or flat;
 - business/service traces;
 - route explanations;
 - compute resource and task timeline summaries;

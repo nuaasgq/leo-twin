@@ -2627,6 +2627,7 @@ export interface RuntimeStatusPayload {
   network_kpi_provenance_v2?: RuntimeNetworkKpiProvenanceV2;
   network_kpi_credibility_v1?: RuntimeNetworkKpiCredibilityV1;
   network_kpi_benchmark_validation_v1?: RuntimeNetworkKpiBenchmarkValidationV1;
+  network_kpi_calibration_v1?: RuntimeNetworkKpiCalibrationV1;
   kpi_time_series_v1?: RuntimeKpiTimeSeriesV1;
   satellite_kpi_slices_v1?: RuntimeSatelliteKpiSlicesV1;
   satellite_kpi_history_v1?: RuntimeSatelliteKpiHistoryV1;
@@ -2806,6 +2807,63 @@ export interface RuntimeNetworkKpiBenchmarkValidationCheckV1 {
   expectation: string;
   source: string;
   explanation: string;
+}
+
+export interface RuntimeNetworkKpiCalibrationV1 {
+  version: "v1" | string;
+  calibration_id: string;
+  source: string;
+  metric_model: string;
+  packet_level_simulation: boolean;
+  sample_count: number;
+  sim_time_start_s: number;
+  sim_time_end_s: number;
+  sim_time_span_s: number;
+  activity_context: RuntimeNetworkKpiCalibrationActivityContextV1;
+  time_driver: RuntimeNetworkKpiCalibrationTimeDriverV1;
+  kpi_count: number;
+  observed_kpi_count: number;
+  time_varying_kpi_count: number;
+  flat_kpi_count: number;
+  zero_latest_kpi_count: number;
+  calibration_status: string;
+  kpis: readonly RuntimeNetworkKpiCalibrationItemV1[];
+  caveats: readonly string[];
+}
+
+export interface RuntimeNetworkKpiCalibrationActivityContextV1 {
+  active: boolean;
+  requested_route_demand_mbps: number;
+  offered_route_capacity_mbps: number;
+  recent_flow_count: number;
+  available_route_count: number;
+}
+
+export interface RuntimeNetworkKpiCalibrationTimeDriverV1 {
+  source: string;
+  period_s: number | null;
+  phase: number | null;
+  factor: number | null;
+  loss_proxy_rate: number | null;
+  delay_variation_proxy_s: number | null;
+}
+
+export interface RuntimeNetworkKpiCalibrationItemV1 {
+  metric: string;
+  sample_key: string;
+  runtime_summary_key: string;
+  unit: string;
+  observed: boolean;
+  first_value: number | null;
+  latest_value: number | null;
+  minimum_value: number | null;
+  maximum_value: number | null;
+  absolute_delta: number;
+  endpoint_delta: number;
+  relative_delta: number;
+  latest_is_zero: boolean;
+  variation_status: string;
+  flat_reason: string;
 }
 
 export interface RuntimeKpiTimeSeriesV1 {

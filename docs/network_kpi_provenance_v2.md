@@ -189,6 +189,13 @@ flat value is expected because route, flow, and pressure inputs stayed constant.
 It remains a deterministic flow-level proxy audit and does not introduce
 packet-level loss or jitter.
 
+The standalone dashboard consumes this field directly in the network KPI
+section. It renders the calibration status, sample/time span, activity context,
+simulation-time driver, flat/latest-zero counts, and per-KPI variation rows.
+The same calibration card is indexed into the model-trust evidence workspace so
+dashboard users can distinguish a live time-varying run from an insufficient or
+flat KPI series without local frontend inference.
+
 ## Follow-Up
 
 V2-022 added deterministic time-window pressure inputs while preserving this
@@ -200,5 +207,7 @@ binds compact status/hash labels into the dashboard export review surfaces.
 T362 adds `network_kpi_calibration_v1` so runtime status can prove whether the
 KPI time series is actually moving over simulation time and explain flat
 metrics without frontend inference.
-Future dashboard work can add filtering or a wider drawer for large
+T363 binds that backend calibration summary into the standalone dashboard
+network KPI panel and model-trust evidence workspace. Future dashboard work can
+add filtering or a wider drawer for large
 KPI/source-field/input tables if additional KPI families are added.

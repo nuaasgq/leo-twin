@@ -17843,3 +17843,47 @@ change.
 - Known remaining issues:
   - Dashboard rendering can surface `network_kpi_calibration_v1` more directly
     in a later frontend-focused task.
+
+## 2026-07-07 - T363 dashboard KPI calibration v1
+
+- Branch: `feature/T363-dashboard-kpi-calibration-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: bind the backend-owned `network_kpi_calibration_v1` runtime status
+  field into the standalone dashboard so users can see whether network KPI
+  charts are time-varying, partially varying, flat under activity, or
+  sample-limited. This task is a frontend semantic binding task only; it does
+  not modify Event Kernel behavior, backend KPI formulas, or packet-level
+  simulation boundaries.
+- Changed files/modules:
+  - `frontend/src/core/event_types/index.ts`
+  - `frontend/src/dashboard/data_panel/DataPanel.tsx`
+  - `frontend/tests/dataPanel.test.ts`
+  - `frontend/tests/runtimeContractFixture.test.ts`
+  - `frontend/tests/fixtures/runtimeStatus.contract.json`
+  - `docs/current_product_status.md`
+  - `docs/network_kpi_provenance_v2.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/user_guide_v2.md`
+  - `docs/development_log.md`
+- Validation:
+  - `pnpm --dir frontend test dataPanel.test.ts runtimeContractFixture.test.ts`
+    using bundled Node/Pnpm paths.
+    - Result: passed, 2 files / 202 tests.
+  - `pnpm --dir frontend test` using bundled Node/Pnpm paths.
+    - Result: passed, 26 files / 440 tests.
+  - `pnpm --dir frontend build` using bundled Node/Pnpm paths.
+    - Result: passed; Vite emitted the existing large-chunk warning for
+      `DataPanel`.
+  - `git diff --check`
+    - Result: passed; Git emitted CRLF warnings for the existing unstaged
+      runtime config drift.
+- Problems encountered:
+  - The first frontend test command failed because the current shell did not
+    have `node` on `PATH`. The bundled workspace Node/Pnpm paths from Codex
+    workspace dependencies were used for the successful run.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The dashboard now shows calibration rows inline. A later dashboard detail
+    pass can add filtering or a wider drawer if additional KPI families make
+    the inline row list too large.
