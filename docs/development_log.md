@@ -17733,3 +17733,71 @@ change.
 - Recommended follow-up:
   - Start T361 by adding a disposable-run acceptance harness for the standard
     72/300/1200 YAML scenarios, then wire browser smoke into that profile.
+
+## 2026-07-07 - T361 disposable acceptance harness v1
+
+- Branch: `feature/T361-disposable-acceptance-harness-v1`
+- Commit: pending in this task.
+- Scope: add a local disposable-run acceptance harness for the standard
+  72 / 300 / 1200 benchmark YAML scenarios. The harness builds backend-safe
+  `INITIALIZE` payloads from YAML, restarts local backend/frontend services,
+  applies each selected config through backend `/control`, starts and stops the
+  runtime, delegates product checks to `scripts\verify_product_acceptance.ps1`,
+  optionally exports a runtime package, and restores local runtime-generated
+  config files after execution.
+- Changed files/modules:
+  - `disposable_acceptance_leo_twin.bat`
+  - `scripts/disposable_acceptance_payload.py`
+  - `scripts/run_disposable_acceptance.ps1`
+  - `scripts/smoke_runtime_health.ps1`
+  - `tests/unit/test_disposable_acceptance_harness_docs.py`
+  - `docs/current_product_status.md`
+  - `docs/user_guide_v2.md`
+  - `docs/benchmark_scenario_matrix_v1.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests/unit/test_disposable_acceptance_harness_docs.py -q`
+    - Result: passed, 4 tests.
+  - `powershell -NoProfile -Command "[scriptblock]::Create((Get-Content -Raw 'scripts\run_disposable_acceptance.ps1'))"`
+    - Result: passed.
+  - `powershell -NoProfile -Command "[scriptblock]::Create((Get-Content -Raw 'scripts\smoke_runtime_health.ps1'))"`
+    - Result: passed.
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run_disposable_acceptance.ps1 -PlanOnly -JsonSummary`
+    - Result: passed; produced the standard 72 / 300 / 1200 disposable
+      acceptance plan.
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run_disposable_acceptance.ps1 -SkipBuild -AcceptanceConfig configs\acceptance\small_demo_72sat.yaml -JsonSummary -CommandTimeoutSeconds 300`
+    - Result: passed; restarted services, initialized the 72-satellite YAML,
+      started and stopped runtime, ran product acceptance, restored runtime
+      config files, and stopped services.
+  - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\sees_launcher.ps1 status -JsonSummary`
+    - Result: passed; backend and frontend were stopped after disposable
+      acceptance.
+  - `git diff --check`
+    - Result: passed; Git emitted CRLF warnings for the existing unstaged
+      runtime config drift.
+- Problems encountered:
+  - The existing acceptance verifier validates running services; this task keeps
+    it as the single acceptance standard and adds only the disposable
+    orchestration layer around it.
+  - The first real 72-satellite disposable run exposed a false positive in
+    `scripts/smoke_runtime_health.ps1`: backend runtime status legitimately
+    declares `STK`, `EXATA`, `AFSIM`, and `DDS` under explicit
+    `forbidden_integrations`/boundary fields, but the old smoke script rejected
+    any occurrence of those names. The smoke check now allows explicit boundary
+    declarations while still rejecting forbidden markers outside those contexts.
+  - Capturing child command output directly in PowerShell polluted JSON summary
+    output and could leave a timed-out parent process waiting. The harness now
+    executes child commands through bounded `Start-Process` calls with stdout
+    and stderr logs under `artifacts\disposable_acceptance\commands`.
+  - Windows PowerShell can return a null `ExitCode` from a completed
+    `Start-Process -PassThru` child. The harness normalizes null to success and
+    still fails on explicit non-zero exit codes.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The disposable harness is a local Windows workflow, not CI.
+  - The default disposable run verifies control responsiveness and product
+    acceptance for initialized scenarios; long real-time advancement checks
+    remain a separate smoke profile to avoid making the three-scenario default
+    run unnecessarily slow.

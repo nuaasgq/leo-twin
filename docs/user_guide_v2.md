@@ -394,6 +394,22 @@ Acceptance commands:
 .\scripts\verify_product_acceptance.ps1 -SkipBuild -SkipRuntimeSmoke -RunBrowserSmoke
 ```
 
+Disposable acceptance run from the shipped benchmark YAML files:
+
+```powershell
+.\disposable_acceptance_leo_twin.bat -PlanOnly -JsonSummary
+.\scripts\run_disposable_acceptance.ps1 -SkipBuild
+.\scripts\run_disposable_acceptance.ps1 -SkipBuild -AcceptanceConfig configs\acceptance\small_demo_72sat.yaml
+```
+
+The disposable harness restarts local services, applies each selected YAML
+through backend `/control`, starts and stops the runtime, reuses
+`verify_product_acceptance.ps1`, then restores `configs\sees_control.yaml` and
+`configs\generated_full_system_demo.json` so local run state is not delivered as
+product source. Add `-KeepServices` when you want to inspect the final scenario
+after the run, or `-ExportPackage` when you want the backend to create a result
+package during the same acceptance pass.
+
 Benchmark contracts:
 
 - `leo_twin.benchmark_scenario_matrix.v1`

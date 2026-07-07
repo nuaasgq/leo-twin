@@ -1011,6 +1011,10 @@ Current Phase 3 progress:
   surfaces. The dashboard now links persisted package artifacts, renders the
   selected `review_summary_v1.json`, and exposes backend-catalog artifact
   health rows for required-file coverage and direct file inspection.
+- V2-072/V2-083 now include a disposable local acceptance harness that can
+  restart services, apply the standard 72 / 300 / 1200 benchmark YAMLs through
+  backend `/control`, reuse the product acceptance script, and restore local
+  runtime config drift files after the run.
 
 ## 5. Parallel Agent Assignment Model
 

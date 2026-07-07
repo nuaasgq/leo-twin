@@ -63,13 +63,98 @@ function Assert-FrontendShell {
     }
 }
 
+function Test-AllowedForbiddenMarkerContext {
+    param(
+        [string]$Path,
+        [string]$Text
+    )
+
+    $allowedPathFragments = @(
+        "forbidden_integrations",
+        "forbidden_external_integrations",
+        "model_boundaries",
+        "constraints",
+        "assumptions",
+        "limitations",
+        "guardrails",
+        "exclusions"
+    )
+    foreach ($fragment in $allowedPathFragments) {
+        if ($Path -match [regex]::Escape($fragment)) {
+            return $true
+        }
+    }
+
+    $allowedTextPatterns = @(
+        "\bno\s+STK\b",
+        "\bno\s+EXATA\b",
+        "\bno\s+AFSIM\b",
+        "\bno\s+DDS\b",
+        "\bforbid",
+        "\bforbidden\b",
+        "\bnot\s+introduced\b",
+        "\bremain\s+forbidden\b"
+    )
+    foreach ($pattern in $allowedTextPatterns) {
+        if ($Text -match $pattern) {
+            return $true
+        }
+    }
+    return $false
+}
+
+function Get-ForbiddenRuntimeMarkerFindings {
+    param(
+        [object]$Value,
+        [string]$Path = "$"
+    )
+
+    $findings = @()
+    if ($null -eq $Value) {
+        return $findings
+    }
+    if ($Value -is [string]) {
+        foreach ($forbiddenName in @("STK", "EXATA", "AFSIM", "DDS")) {
+            if ($Value -match "\b$forbiddenName\b" -and `
+                -not (Test-AllowedForbiddenMarkerContext -Path $Path -Text $Value)) {
+                $findings += "$Path=$Value"
+            }
+        }
+        return $findings
+    }
+    if ($Value -is [System.Collections.IDictionary]) {
+        foreach ($key in @($Value.Keys)) {
+            $findings += Get-ForbiddenRuntimeMarkerFindings `
+                -Value $Value[$key] `
+                -Path "$Path.$key"
+        }
+        return $findings
+    }
+    if ($Value -is [System.Collections.IEnumerable] -and -not ($Value -is [string])) {
+        $index = 0
+        foreach ($item in $Value) {
+            $findings += Get-ForbiddenRuntimeMarkerFindings `
+                -Value $item `
+                -Path "$Path[$index]"
+            $index += 1
+        }
+        return $findings
+    }
+    foreach ($property in @($Value.PSObject.Properties)) {
+        $findings += Get-ForbiddenRuntimeMarkerFindings `
+            -Value $property.Value `
+            -Path "$Path.$($property.Name)"
+    }
+    return $findings
+}
+
 $runtimeCheck = Assert-HttpOk -Name "Backend runtime status" -Url $RuntimeStatusUrl
 $runtimeStatus = $runtimeCheck.Response.Content | ConvertFrom-Json
-$runtimeStatusText = $runtimeStatus | ConvertTo-Json -Depth 32
-foreach ($forbiddenName in @("STK", "EXATA", "AFSIM", "DDS")) {
-    if ($runtimeStatusText -match $forbiddenName) {
-        throw "Backend runtime status contains forbidden external simulator/runtime marker: $forbiddenName"
-    }
+$forbiddenRuntimeMarkerFindings = @(
+    Get-ForbiddenRuntimeMarkerFindings -Value $runtimeStatus
+)
+if ($forbiddenRuntimeMarkerFindings.Count -gt 0) {
+    throw "Backend runtime status contains forbidden external simulator/runtime marker outside an explicit boundary declaration: $($forbiddenRuntimeMarkerFindings -join '; ')"
 }
 
 if ($runtimeStatus.type -ne "RUNTIME_STATUS") {

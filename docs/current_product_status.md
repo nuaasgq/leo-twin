@@ -2,7 +2,7 @@
 
 Date: 2026-07-07
 
-Branch: `feature/T360-browser-acceptance-smoke-v1`
+Branch: `feature/T361-disposable-acceptance-harness-v1`
 
 ## Local Entry Points
 
@@ -15,6 +15,7 @@ Branch: `feature/T360-browser-acceptance-smoke-v1`
 - Read-only health smoke: `.\smoke_leo_twin.bat`
 - Mutating control-cycle smoke: `.\control_smoke_leo_twin.bat`
 - Browser acceptance smoke: `.\browser_smoke_leo_twin.bat`
+- Disposable acceptance harness: `.\disposable_acceptance_leo_twin.bat`
 - User guide: `docs\user_guide_v2.md`
 
 Default local URLs:
@@ -39,6 +40,13 @@ Optional browser-rendered gate:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_product_acceptance.ps1 -SkipBuild -SkipRuntimeSmoke -RunBrowserSmoke
+```
+
+Disposable acceptance harness for the shipped 72 / 300 / 1200 benchmark YAMLs:
+
+```powershell
+.\disposable_acceptance_leo_twin.bat -PlanOnly -JsonSummary
+.\scripts\run_disposable_acceptance.ps1 -SkipBuild
 ```
 
 The latest full local run passed:
@@ -80,6 +88,11 @@ frontend test files / 197 tests.
   backend `POST /control` as the frontend button transport, while the existing
   `/control` WebSocket remains available for backend control-cycle smoke and
   compatibility.
+- Disposable acceptance harness prepares a clean temporary backend/frontend run,
+  initializes each standard acceptance YAML through backend `/control`, starts
+  and stops the runtime, reuses `verify_product_acceptance.ps1`, optionally
+  exports a runtime package, and restores local runtime config drift files after
+  execution.
 - The Cesium control view disables Cesium's default render-loop error overlay
   and routes render errors into the existing local error state, so render errors
   no longer block runtime control buttons.
@@ -95,8 +108,8 @@ frontend test files / 197 tests.
 - Browser-rendered smoke is available as an optional local gate, but is still
   not part of CI.
 - Service trace drill-down filtering remains a future dashboard enhancement.
-- Acceptance scripts validate currently running services; they do not yet
-  launch disposable backends from selected acceptance YAML files.
+- Disposable acceptance can launch selected acceptance YAML files from a clean
+  service restart, but it is still a local Windows harness rather than CI.
 - Runtime config staging guard is script-enforced, not a Git hook.
 - Control-cycle smoke validates backend control protocol responsiveness; use
   browser smoke when the risk is browser button wiring or dashboard rendering.

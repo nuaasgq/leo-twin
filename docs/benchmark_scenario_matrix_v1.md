@@ -95,6 +95,20 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/verify_product_accep
 
 The config path changes per scenario.
 
+For a disposable local run that restarts services, applies one or more selected
+benchmark YAMLs through backend `/control`, then restores local runtime config
+drift, use:
+
+```powershell
+.\disposable_acceptance_leo_twin.bat -PlanOnly -JsonSummary
+.\scripts\run_disposable_acceptance.ps1 -SkipBuild
+.\scripts\run_disposable_acceptance.ps1 -SkipBuild -AcceptanceConfig configs\acceptance\scale_demo_1200sat_short.yaml
+```
+
+The harness delegates the actual product checks back to
+`scripts\verify_product_acceptance.ps1`; it does not define a second acceptance
+standard.
+
 ## Scope Boundaries
 
 The benchmark matrix keeps the same hard product constraints as the rest of
