@@ -430,12 +430,24 @@ class PositionDrivenNetworkEngine(SimulationModule):
         if demand <= 0.0:
             return route, ()
         self._flow_pressure.release(request.flow_id)
+        decision = self._flow_pressure.evaluate_route(
+            edges=edges,
+            demand_capacity=demand,
+            edge_capacities=self._pressure_edge_capacities(edges),
+            base_latency_s=route.latency,
+        )
+        if not decision.admitted:
+            blocked_route = self._pressure_blocked_route(route, decision.loss_rate)
+            return blocked_route, self._pressure_link_events(dispatch_time, edges)
         self._flow_pressure.reserve(request.flow_id, edges, demand)
 
         max_utilization = max(self._edge_utilization(edge) for edge in edges)
-        pressure_loss = pressure_loss_rate(max_utilization)
+        pressure_loss = max(decision.loss_rate, pressure_loss_rate(max_utilization))
         next_loss_rate = max(float(route.loss_rate or 0.0), pressure_loss)
-        queue_delay = pressure_queue_delay(route.latency, max_utilization)
+        queue_delay = max(
+            decision.queue_delay_s,
+            pressure_queue_delay(route.latency, max_utilization),
+        )
         pressured_route = Route(
             route_id=route.route_id,
             flow_id=route.flow_id,
@@ -493,6 +505,30 @@ class PositionDrivenNetworkEngine(SimulationModule):
             if (link.source_id, link.target_id) == edge:
                 return link
         return None
+
+    def _pressure_edge_capacities(
+        self,
+        edges: tuple[PressureEdge, ...],
+    ) -> dict[PressureEdge, float]:
+        capacities: dict[PressureEdge, float] = {}
+        for edge in edges:
+            link = self._link_for_pressure_edge(edge)
+            capacities[edge] = float(link.capacity) if link is not None else 0.0
+        return capacities
+
+    def _pressure_blocked_route(self, route: Route, pressure_loss: float) -> Route:
+        return Route(
+            route_id=route.route_id,
+            flow_id=route.flow_id,
+            path=route.path,
+            latency=route.latency,
+            capacity=0.0,
+            available=False,
+            routing_protocol=route.routing_protocol,
+            cost=route.cost,
+            demand_capacity=route.demand_capacity,
+            loss_rate=max(float(route.loss_rate or 0.0), pressure_loss),
+        )
 
     def _edge_utilization(self, edge: PressureEdge) -> float:
         link = self._link_for_pressure_edge(edge)

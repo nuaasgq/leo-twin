@@ -5,6 +5,39 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-08 - Network Admission Queue Semantics v1
+
+- Branch: `feature/T401-network-admission-queue-v1`
+- Commit: pending in this commit
+- Scope: add deterministic flow-level route-admission and queue-state semantics
+  on top of the extracted network pressure ledger. The backend now projects
+  active demand plus incoming flow demand before reserving route pressure,
+  reports edge queue state through `RoutePressureDecision`, admits bounded
+  saturation, and blocks extreme oversubscription without adding that rejected
+  flow to the pressure ledger. This remains a flow-level model and does not
+  introduce packet-level simulation, Event Kernel changes, frontend changes,
+  external simulators, or routing-stack redesign.
+- Changed files/modules:
+  - `src/leo_twin/models/network/pressure.py`
+  - `src/leo_twin/models/network/position_engine.py`
+  - `src/leo_twin/models/network/__init__.py`
+  - `tests/unit/test_network_pressure_model_v2.py`
+  - `tests/unit/test_position_driven_network_engine.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m pytest tests\unit\test_network_pressure_model_v2.py tests\unit\test_position_driven_network_engine.py -q`
+    - Result: passed, 39 tests.
+  - `python -m pytest tests\unit\test_network_pressure_model_v2.py tests\unit\test_position_driven_network_engine.py tests\unit\test_system_v2_upgrade_plan_docs.py -q`
+    - Result: passed, 41 tests.
+- Problems encountered and handling:
+  - Local runtime/generated config files remain dirty from user/runtime state and
+    are intentionally outside this task scope.
+- Known remaining issues / follow-up:
+  - Admission is still a deterministic flow-level proxy. It does not yet model
+    per-layer MAC/PHY contention, retransmission, protocol queues, or packets.
+    The next backend step should expose route-admission and queue-state evidence
+    into metrics/provenance so dashboard numbers can cite backend causes.
 ## 2026-07-08 - Network Flow Pressure Model v2
 
 - Branch: `feature/T400-network-pressure-model-v2`

@@ -16,6 +16,7 @@ PressureEdge = tuple[str, str]
 QUEUE_UTILIZATION_THRESHOLD = 0.75
 LOSS_UTILIZATION_THRESHOLD = 0.80
 MAX_PRESSURE_LOSS_RATE = 0.95
+ADMISSION_UTILIZATION_LIMIT = 1.20
 
 
 @dataclass(frozen=True)
@@ -25,6 +26,36 @@ class FlowPressureReservation:
     flow_id: str
     edges: tuple[PressureEdge, ...]
     demand_capacity: float
+
+
+@dataclass(frozen=True)
+class PressureEdgeQueueState:
+    """Projected queue pressure for one edge before admitting a new flow."""
+
+    edge: PressureEdge
+    active_demand: float
+    incoming_demand: float
+    projected_demand: float
+    capacity: float
+    projected_utilization: float
+    pressure_utilization: float
+    queued_demand: float
+    queue_delay_s: float
+    loss_rate: float
+    status: str
+
+
+@dataclass(frozen=True)
+class RoutePressureDecision:
+    """Flow-level admission and queue decision for one candidate route."""
+
+    admitted: bool
+    edge_states: tuple[PressureEdgeQueueState, ...]
+    max_projected_utilization: float
+    pressure_utilization: float
+    queue_delay_s: float
+    loss_rate: float
+    blocked_reason: str | None = None
 
 
 class FlowPressureLedger:
@@ -92,6 +123,91 @@ class FlowPressureLedger:
         if link_capacity <= 0.0:
             return 1.0
         return min(1.0, self.active_demand(edge) / float(link_capacity))
+
+    def evaluate_route(
+        self,
+        *,
+        edges: tuple[PressureEdge, ...],
+        demand_capacity: float,
+        edge_capacities: Mapping[PressureEdge, float],
+        base_latency_s: float,
+        admission_utilization_limit: float = ADMISSION_UTILIZATION_LIMIT,
+    ) -> RoutePressureDecision:
+        """Project whether a route can admit another flow.
+
+        The decision is deterministic and flow-level: it uses active reserved
+        demand plus the incoming flow demand. It does not model packets.
+        """
+
+        demand = max(0.0, float(demand_capacity))
+        if not edges or demand <= 0.0:
+            return RoutePressureDecision(
+                admitted=True,
+                edge_states=(),
+                max_projected_utilization=0.0,
+                pressure_utilization=0.0,
+                queue_delay_s=0.0,
+                loss_rate=0.0,
+            )
+
+        states: list[PressureEdgeQueueState] = []
+        max_projected_utilization = 0.0
+        pressure_utilization = 0.0
+        blocked_reason: str | None = None
+        for edge in edges:
+            capacity = float(edge_capacities.get(edge, 0.0))
+            active_demand = self.active_demand(edge)
+            projected_demand = active_demand + demand
+            if capacity <= 0.0:
+                projected_utilization = float("inf")
+                next_pressure_utilization = 1.0
+                queued_demand = projected_demand
+                status = "rejected"
+                blocked_reason = blocked_reason or "non_positive_capacity"
+            else:
+                projected_utilization = projected_demand / capacity
+                next_pressure_utilization = min(1.0, projected_utilization)
+                queued_demand = max(0.0, projected_demand - capacity)
+                if projected_utilization > admission_utilization_limit:
+                    status = "rejected"
+                    blocked_reason = blocked_reason or "pressure_admission_limit"
+                elif projected_utilization > 1.0:
+                    status = "saturated"
+                elif projected_utilization > QUEUE_UTILIZATION_THRESHOLD:
+                    status = "queued"
+                else:
+                    status = "nominal"
+
+            max_projected_utilization = max(max_projected_utilization, projected_utilization)
+            pressure_utilization = max(pressure_utilization, next_pressure_utilization)
+            states.append(
+                PressureEdgeQueueState(
+                    edge=edge,
+                    active_demand=active_demand,
+                    incoming_demand=demand,
+                    projected_demand=projected_demand,
+                    capacity=capacity,
+                    projected_utilization=projected_utilization,
+                    pressure_utilization=next_pressure_utilization,
+                    queued_demand=queued_demand,
+                    queue_delay_s=pressure_queue_delay(
+                        base_latency_s,
+                        next_pressure_utilization,
+                    ),
+                    loss_rate=pressure_loss_rate(next_pressure_utilization),
+                    status=status,
+                )
+            )
+
+        return RoutePressureDecision(
+            admitted=blocked_reason is None,
+            edge_states=tuple(states),
+            max_projected_utilization=max_projected_utilization,
+            pressure_utilization=pressure_utilization,
+            queue_delay_s=pressure_queue_delay(base_latency_s, pressure_utilization),
+            loss_rate=pressure_loss_rate(pressure_utilization),
+            blocked_reason=blocked_reason,
+        )
 
 
 def pressure_loss_rate(

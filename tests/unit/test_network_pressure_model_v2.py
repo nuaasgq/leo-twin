@@ -62,3 +62,41 @@ def test_pressure_loss_and_queue_delay_are_deterministic_flow_level_proxies() ->
     assert pressure_loss_rate(1.00) == pytest.approx(0.10)
     assert pressure_queue_delay(0.2, 0.70) == 0.0
     assert pressure_queue_delay(0.2, 1.00) == pytest.approx(0.05)
+
+def test_pressure_route_admission_reports_queue_state_before_reserve() -> None:
+    ledger = FlowPressureLedger()
+    ledger.reserve("flow-a", (("user-a", "sat-001"),), 30.0)
+
+    decision = ledger.evaluate_route(
+        edges=(("user-a", "sat-001"),),
+        demand_capacity=30.0,
+        edge_capacities={("user-a", "sat-001"): 50.0},
+        base_latency_s=0.2,
+    )
+
+    assert decision.admitted is True
+    assert decision.blocked_reason is None
+    assert decision.max_projected_utilization == pytest.approx(1.2)
+    assert decision.pressure_utilization == pytest.approx(1.0)
+    assert decision.queue_delay_s == pytest.approx(0.05)
+    assert decision.loss_rate == pytest.approx(0.1)
+    assert decision.edge_states[0].status == "saturated"
+    assert decision.edge_states[0].queued_demand == pytest.approx(10.0)
+
+
+def test_pressure_route_admission_rejects_extreme_oversubscription_without_reserve() -> None:
+    ledger = FlowPressureLedger()
+    ledger.reserve("flow-a", (("user-a", "sat-001"),), 60.0)
+
+    decision = ledger.evaluate_route(
+        edges=(("user-a", "sat-001"),),
+        demand_capacity=30.0,
+        edge_capacities={("user-a", "sat-001"): 50.0},
+        base_latency_s=0.2,
+    )
+
+    assert decision.admitted is False
+    assert decision.blocked_reason == "pressure_admission_limit"
+    assert decision.max_projected_utilization == pytest.approx(1.8)
+    assert decision.edge_states[0].status == "rejected"
+    assert ledger.active_demand(("user-a", "sat-001")) == pytest.approx(60.0)

@@ -1432,3 +1432,47 @@ def _run_scenario() -> tuple[tuple[str, object], ...]:
     )
     processed = kernel.run()
     return tuple((event.event_type, event.payload) for event in processed)
+
+def test_pressure_admission_blocks_extreme_concurrent_flow_without_reserving() -> None:
+    kernel = SimulationKernel()
+    network = _engine()
+    metrics = MetricsSink()
+    compute = ComputeSink()
+    kernel.register_module(network)
+    kernel.register_module(metrics)
+    kernel.register_module(compute)
+    kernel.schedule_event(
+        _event("orbit", EventType.ORBIT_UPDATE.value, _state((7000.0, 0.0, 0.0)))
+    )
+    for flow_id in ("flow-a", "flow-b", "flow-c"):
+        kernel.schedule_event(
+            _event(
+                flow_id,
+                EventType.FLOW_ARRIVAL.value,
+                FlowRequest(flow_id, "user-east", "node-a", 30.0),
+                1.0,
+            )
+        )
+
+    kernel.run()
+
+    assert [route.available for route in compute.routes] == [True, True, False]
+    assert compute.routes[2].path == ("user-east", "sat-001", "node-a")
+    assert compute.routes[2].capacity == 0.0
+    completed = [
+        event.payload
+        for event in metrics.events
+        if event.event_type == EventType.FLOW_COMPLETE
+    ]
+    assert [flow.status for flow in completed] == ["blocked", "complete", "complete"]
+    blocked_flow = next(flow for flow in completed if flow.status == "blocked")
+    assert blocked_flow.flow_id == "flow-c"
+    assert blocked_flow.latency is None
+    link_utilizations = [
+        event.payload.utilization
+        for event in metrics.events
+        if event.event_type == EventType.LINK_UPDATE
+        and isinstance(event.payload, LinkState)
+        and event.payload.utilization is not None
+    ]
+    assert link_utilizations[-1] == pytest.approx(0.0)

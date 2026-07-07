@@ -393,7 +393,9 @@ Tasks:
     active flow-pressure reservations, utilization, queue-delay, and pressure
     loss helpers into `models/network/pressure.py`, keeping the position-driven
     network engine as an event adapter while preserving flow-level,
-    non-packet-level behavior.
+    non-packet-level behavior. T401 adds deterministic route-admission and
+    edge queue-state decisions on top of the pressure ledger so extreme
+    oversubscription is blocked without reserving rejected flow demand.
 - V2-023: Add route explanation records.
   - Scope: selected route, alternative count, bottleneck reason, next hop,
     blocked reason.
