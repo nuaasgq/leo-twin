@@ -1192,6 +1192,12 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
     assert review_summary["reproducibility_boundary"] == reproducibility_boundary
     assert review_summary["artifacts"]["review_summary_exported"] is True
     assert review_summary["artifacts"]["traffic_demand_explanation_exported"] is True
+    assert review_summary["artifacts"]["route_pressure_evidence_exported"] is True
+    assert review_summary["route_pressure_evidence"]["evidence_present"] is True
+    assert review_summary["route_pressure_evidence"]["route_count"] == (
+        route_pressure_evidence["summary"]["route_count"]
+    )
+    assert review_summary["route_pressure_evidence"]["event_replay"] is False
     assert traffic_demand_explanation["traffic_demand_explanation"] == (
         config_snapshot["generated_config"]["backend_summary"][
             "traffic_demand_explanation_v1"
@@ -1205,6 +1211,10 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
     assert diagnostics_bundle["reproducibility_boundary"] == reproducibility_boundary
     assert diagnostics_bundle["model_boundaries"]["event_replay_restore"] is False
     assert diagnostics_bundle["artifact_health"]["missing_required_filenames"] == []
+    assert diagnostics_bundle["route_pressure_evidence"]["evidence_hash"] == (
+        review_summary["route_pressure_evidence"]["evidence_hash"]
+    )
+    assert diagnostics_bundle["route_pressure_evidence"]["evidence_present"] is True
     assert diagnostics_bundle["traffic_demand_explanation"]["evidence_hash"] == (
         traffic_demand_explanation["evidence"]["evidence_hash"]
     )
@@ -1216,6 +1226,12 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
     assert scenario_review_bundle["audit_index"]["filename"] == (
         "export_package_audit_index_v1.json"
     )
+    assert scenario_review_bundle["route_pressure_evidence"]["evidence_hash"] == (
+        review_summary["route_pressure_evidence"]["evidence_hash"]
+    )
+    assert scenario_review_bundle["route_pressure_evidence"][
+        "evidence_present"
+    ] is True
     assert scenario_review_bundle["traffic_demand_explanation"]["evidence_hash"] == (
         traffic_demand_explanation["evidence"]["evidence_hash"]
     )
@@ -1744,6 +1760,10 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
     assert review_summary["type"] == "RUNTIME_EXPORT_REVIEW_SUMMARY_V1"
     assert review_summary["review_status"] == "REVIEW_READY"
     assert review_summary["reproducibility_boundary"] == reproducibility_boundary
+    assert review_summary["route_pressure_evidence"]["evidence_present"] is True
+    assert review_summary["route_pressure_evidence"]["route_count"] == (
+        route_pressure_evidence["summary"]["route_count"]
+    )
     assert review_summary["summary_hash"].startswith("sha256:")
     assert (
         Path(str(diagnostics_bundle_artifact["path"])).name
@@ -1758,6 +1778,9 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
     )
     assert diagnostics_bundle["type"] == "RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1"
     assert diagnostics_bundle["reproducibility_boundary"] == reproducibility_boundary
+    assert diagnostics_bundle["route_pressure_evidence"]["evidence_hash"] == (
+        review_summary["route_pressure_evidence"]["evidence_hash"]
+    )
     assert diagnostics_bundle["model_boundaries"]["event_replay_restore"] is False
     assert diagnostics_bundle["diagnostics_hash"].startswith("sha256:")
     assert (

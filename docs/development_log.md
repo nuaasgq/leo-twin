@@ -5,6 +5,51 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-08 - Route Pressure Evidence Review Binding v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: pending in this commit
+- Scope: bind exported `route_pressure_evidence_v1` into result-package review
+  and diagnostics surfaces. `review_summary_v1.json`,
+  `diagnostics_bundle_v1.json`, `scenario_review_bundle_v1.json`, the artifact
+  browser, reproducibility boundary, and audit index now expose backend-owned
+  route pressure evidence hashes, route counts, admission-rejection counts,
+  queue/saturation counts, and model-boundary flags. This keeps offline review
+  deterministic and avoids frontend-local inference. This task does not modify
+  Event Kernel behavior, routing topology selection, packet-level behavior,
+  frontend rendering, or external simulator integrations.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src\leo_twin\services\result_package_contract.py tests\unit\test_result_package_contract_v1.py tests\integration\test_result_package_export_v1.py tests\integration\test_runtime_session_control.py`
+    - Result: passed using the bundled Codex Python runtime.
+  - `python -c "... build_runtime_export_review_summary_v1 / build_runtime_export_diagnostics_bundle_v1 ..."`
+    - Result: passed; route pressure evidence is present and diagnostics hash
+      binding matches the review summary evidence hash.
+  - Manual pure-function unit smoke for five result-package contract tests
+    - Result: passed.
+  - `git diff --check`
+    - Result: passed for task files; Git still warns that the two unrelated
+      local runtime config files would normalize line endings if touched.
+  - Target `pytest` command was attempted with the bundled Codex Python runtime
+    and did not run because that runtime does not include `pytest`. No approval
+    was requested, per the user's instruction.
+- Problems encountered and handling:
+  - The Windows `apply_patch` helper failed to launch under the current sandbox,
+    so bounded PowerShell UTF-8 file edits were used inside the workspace.
+  - A first large PowerShell replacement aborted before writeback due to an
+    unmatched anchor; edits were split and rechecked with targeted reads.
+  - Local runtime/generated config files remain dirty from user/runtime state and
+    are intentionally outside this task scope.
+- Known remaining issues / follow-up:
+  - The review binding summarizes route-level pressure evidence. A later backend
+    task can add per-edge queue-state evidence to the package if edge-level
+    operator replay becomes required.
 ## 2026-07-08 - Route Pressure Evidence Export v1
 
 - Branch: `feature/T402-network-pressure-provenance-v1`

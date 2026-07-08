@@ -402,7 +402,11 @@ Tasks:
     adds `route_pressure_evidence_v1` to runtime status so each observed route
     has replayable pressure-state and blocked-reason evidence. The export
     follow-up persists the same evidence as `route_pressure_evidence_v1.json`
-    with an explicit export policy for result-package review.
+    with an explicit export policy for result-package review. The review-binding
+    increment surfaces the same evidence through review summary, diagnostics,
+    scenario review, artifact browser, reproducibility boundary, and audit index
+    sections so route pressure can be inspected from the result package entry
+    points without event replay or frontend inference.
 - V2-023: Add route explanation records.
   - Scope: selected route, alternative count, bottleneck reason, next hop,
     blocked reason.

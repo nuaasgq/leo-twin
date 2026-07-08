@@ -76,6 +76,7 @@ from leo_twin.services.result_package_contract import (
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 _TRAFFIC_DEMAND_EXPLANATION_FILENAME = "traffic_demand_explanation_v1.json"
+_ROUTE_PRESSURE_EVIDENCE_FILENAME = "route_pressure_evidence_v1.json"
 
 
 def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
@@ -102,6 +103,7 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
         "service_lifecycle_trace_v2.json",
         "user_service_request_summary_v2.json",
         "route_detail_index_v1.json",
+        _ROUTE_PRESSURE_EVIDENCE_FILENAME,
         "review_summary_v1.json",
         "diagnostics_bundle_v1.json",
         "network_kpi_benchmark_validation_v1.json",
@@ -246,6 +248,7 @@ def test_result_package_summary_accepts_complete_package_record() -> None:
         "service_lifecycle_trace_v2.json",
         "user_service_request_summary_v2.json",
         "route_detail_index_v1.json",
+        _ROUTE_PRESSURE_EVIDENCE_FILENAME,
         "review_summary_v1.json",
         "diagnostics_bundle_v1.json",
         "network_kpi_benchmark_validation_v1.json",
@@ -293,6 +296,10 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
             "queued_event_count": 3,
             "route_explanation_summary_v1": _route_summary(),
             "route_provenance_trust_summary_v1": _route_trust(),
+            "route_pressure_evidence_v1": _route_pressure_evidence(),
+            "runtime_export_route_pressure_evidence_policy_v1": (
+                _route_pressure_export_policy()
+            ),
             "network_kpi_benchmark_validation_v1": (
                 _network_kpi_benchmark_validation()
             ),
@@ -331,6 +338,7 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         "review_summary_v1.json",
         "route_detail_index_v1.json",
+        _ROUTE_PRESSURE_EVIDENCE_FILENAME,
         "scenario_review_bundle_v1.json",
         "service_lifecycle_trace_v2.json",
         "summary.json",
@@ -371,6 +379,15 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
     assert first["route_trust"]["all_pairs_computation"] is False
     assert first["route_trust"]["assessed_route_count"] == 2
     assert first["route_trust"]["sample_route_ids"] == ("route-0", "route-1")
+    assert first["route_pressure_evidence"]["evidence_present"] is True
+    assert first["route_pressure_evidence"]["pressure_model"] == (
+        "FLOW_PRESSURE_ADMISSION_V1"
+    )
+    assert first["route_pressure_evidence"]["pressure_admission_rejected_count"] == 1
+    assert first["route_pressure_evidence"]["queued_route_count"] == 1
+    assert first["route_pressure_evidence"]["saturated_route_count"] == 1
+    assert first["route_pressure_evidence"]["packet_level_simulation"] is False
+    assert first["route_pressure_evidence"]["event_replay"] is False
     assert first["network_kpi_benchmark_validation"]["evidence_present"] is True
     assert first["network_kpi_benchmark_validation"]["validation_status"] == "PASS"
     assert first["network_kpi_benchmark_validation"]["failed_check_count"] == 0
@@ -405,6 +422,7 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
         "user_configuration_template_validation_exported"
     ] is True
     assert first["artifacts"]["traffic_demand_explanation_exported"] is True
+    assert first["artifacts"]["route_pressure_evidence_exported"] is True
     assert first["artifacts"]["user_service_request_summary_exported"] is True
     assert first["route_comparison_review"]["review_scope"] == (
         "PACKAGE_ROUTE_DETAIL_TO_LIVE_RUNTIME_ROUTE_DETAIL"
@@ -790,6 +808,10 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
             "queued_event_count": 0,
             "route_explanation_summary_v1": _route_summary(),
             "route_provenance_trust_summary_v1": _route_trust(),
+            "route_pressure_evidence_v1": _route_pressure_evidence(),
+            "runtime_export_route_pressure_evidence_policy_v1": (
+                _route_pressure_export_policy()
+            ),
             "network_kpi_benchmark_validation_v1": (
                 _network_kpi_benchmark_validation()
             ),
@@ -831,6 +853,7 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         "review_summary_v1.json",
         "route_detail_index_v1.json",
+        _ROUTE_PRESSURE_EVIDENCE_FILENAME,
         "scenario_review_bundle_v1.json",
         "service_lifecycle_trace_v2.json",
         "summary.json",
@@ -874,6 +897,10 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
     assert first["route_trust"]["trust_status"] == "COMPLETE_FLOW_LEVEL_ROUTE_PROXY"
     assert first["route_trust"]["available_route_count"] == 2
     assert first["route_trust"]["bottleneck_components"] == ("capacity",)
+    assert first["route_pressure_evidence"]["evidence_present"] is True
+    assert first["route_pressure_evidence"]["route_count"] == 2
+    assert first["route_pressure_evidence"]["pressure_admission_rejected_count"] == 1
+    assert first["route_pressure_evidence"]["acceptable_for_demo_review"] is True
     assert first["network_kpi_benchmark_validation"]["evidence_present"] is True
     assert first["network_kpi_benchmark_validation"]["validation_status"] == "PASS"
     assert first["network_kpi_benchmark_validation"]["failed_check_count"] == 0
@@ -918,6 +945,14 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
     assert variation_item["present"] is True
     assert variation_item["default_json_pointer"] == "/evidence"
     assert variation_item["filter_hint"] == "variation"
+    pressure_item = next(
+        item
+        for item in artifact_browser["items"]
+        if item["filename"] == _ROUTE_PRESSURE_EVIDENCE_FILENAME
+    )
+    assert pressure_item["category"] == "ROUTE_SERVICE_EVIDENCE"
+    assert pressure_item["present"] is True
+    assert pressure_item["default_json_pointer"] == "/summary/items"
     assert first["model_boundaries"]["event_replay_restore"] is False
     assert first["model_boundaries"]["route_recomputation"] is False
     assert first["model_boundaries"]["service_recomputation"] is False
@@ -944,6 +979,10 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
             "queued_event_count": 0,
             "route_explanation_summary_v1": _route_summary(),
             "route_provenance_trust_summary_v1": _route_trust(),
+            "route_pressure_evidence_v1": _route_pressure_evidence(),
+            "runtime_export_route_pressure_evidence_policy_v1": (
+                _route_pressure_export_policy()
+            ),
             "network_kpi_formula_evidence_v1": _network_kpi_formula_evidence(),
             "network_kpi_variation_explanation_v1": (
                 _network_kpi_variation_explanation()
@@ -984,6 +1023,7 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         "review_summary_v1.json",
         "route_detail_index_v1.json",
+        _ROUTE_PRESSURE_EVIDENCE_FILENAME,
         "scenario_review_bundle_v1.json",
         "service_lifecycle_trace_v2.json",
         "summary.json",
@@ -1064,6 +1104,11 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
     assert first["user_service_requests"]["summary_hash"] == review_summary[
         "user_service_requests"
     ]["summary_hash"]
+    assert first["route_pressure_evidence"]["evidence_present"] is True
+    assert first["route_pressure_evidence"]["evidence_hash"] == review_summary[
+        "route_pressure_evidence"
+    ]["evidence_hash"]
+    assert first["route_pressure_evidence"]["queued_route_count"] == 1
     assert first["network_kpi_formula_evidence"]["evidence_present"] is True
     assert first["network_kpi_formula_evidence"]["formula_evidence_status"] == (
         "FORMULA_AND_TIME_EVIDENCE_READY"
@@ -2946,6 +2991,7 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         "review_summary_v1.json",
         "route_detail_index_v1.json",
+        _ROUTE_PRESSURE_EVIDENCE_FILENAME,
         "scenario_review_bundle_v1.json",
         "service_lifecycle_trace_v2.json",
         "summary.json",
@@ -2969,6 +3015,7 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
     )
 
     assert review_summary["route_trust"]["evidence_present"] is False
+    assert review_summary["route_pressure_evidence"]["evidence_present"] is False
     assert diagnostics["route_trust"]["trust_status"] == "MISSING_ROUTE_TRUST_EVIDENCE"
     assert diagnostics["route_trust"]["evidence_present"] is False
     assert diagnostics["package"]["package_complete"] is True
@@ -2976,6 +3023,7 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
         finding["code"] for finding in diagnostics["findings"]
         } == {
             "ROUTE_TRUST_EVIDENCE_MISSING",
+            "ROUTE_PRESSURE_EVIDENCE_MISSING",
             "NETWORK_KPI_BENCHMARK_VALIDATION_MISSING",
             "NETWORK_KPI_FORMULA_EVIDENCE_MISSING",
             "NETWORK_KPI_VARIATION_EXPLANATION_MISSING",
@@ -2983,7 +3031,7 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
             "TRAFFIC_DEMAND_EXPLANATION_MISSING",
             "USER_SERVICE_REQUEST_SUMMARY_MISSING",
         }
-    assert diagnostics["finding_count"] == 7
+    assert diagnostics["finding_count"] == 8
 
 
 def _file(name: str, filename: str, sha256: str) -> dict[str, object]:
@@ -3605,6 +3653,58 @@ def _route_summary() -> dict[str, object]:
             _route_item("route-0", "flow-0", "user-0", "sat-0"),
             _route_item("route-1", "flow-1", "user-1", "sat-1"),
         ),
+    }
+
+
+def _route_pressure_evidence() -> dict[str, object]:
+    return {
+        "version": "v1",
+        "source": "BACKEND_METRICS_COLLECTOR",
+        "evidence_id": "leo_twin.route_pressure_evidence.v1",
+        "pressure_model": "FLOW_PRESSURE_ADMISSION_V1",
+        "route_source": "ROUTE_UPDATE",
+        "packet_level_simulation": False,
+        "route_count": 2,
+        "item_limit": 64,
+        "item_count": 2,
+        "hidden_route_count": 0,
+        "pressure_admission_rejected_count": 1,
+        "topology_blocked_count": 0,
+        "queued_route_count": 1,
+        "saturated_route_count": 1,
+        "items": (
+            {
+                "route_id": "route-0",
+                "flow_id": "flow-0",
+                "pressure_state": "QUEUED",
+                "blocked_reason": "demand_exceeds_capacity",
+                "queue_over_demand_mbps": 12.0,
+                "pressure_loss_rate": 0.15,
+            },
+            {
+                "route_id": "route-1",
+                "flow_id": "flow-1",
+                "pressure_state": "SATURATED",
+                "blocked_reason": "flow_pressure_admission_limit",
+                "queue_over_demand_mbps": 20.0,
+                "pressure_loss_rate": 0.25,
+            },
+        ),
+    }
+
+
+def _route_pressure_export_policy() -> dict[str, object]:
+    return {
+        "version": "v1",
+        "source": "BACKEND_RUNTIME_EXPORT",
+        "policy": "EXPORT_ROUTE_PRESSURE_EVIDENCE_WINDOW",
+        "route_pressure_evidence_source": "route_pressure_evidence_v1",
+        "route_pressure_evidence_limit": 64,
+        "route_count": 2,
+        "exported_item_count": 2,
+        "hidden_route_count": 0,
+        "packet_level_simulation": False,
+        "event_replay": False,
     }
 
 

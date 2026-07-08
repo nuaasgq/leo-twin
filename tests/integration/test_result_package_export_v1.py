@@ -228,6 +228,17 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     )
     assert review_summary["route_trust"]["packet_level_simulation"] is False
     assert review_summary["route_trust"]["all_pairs_computation"] is False
+    assert review_summary["route_pressure_evidence"]["evidence_present"] is True
+    assert review_summary["route_pressure_evidence"]["route_count"] == (
+        route_pressure_evidence["summary"]["route_count"]
+    )
+    assert review_summary["route_pressure_evidence"][
+        "pressure_admission_rejected_count"
+    ] == route_pressure_evidence["summary"].get(
+        "pressure_admission_rejected_count", 0
+    )
+    assert review_summary["route_pressure_evidence"]["packet_level_simulation"] is False
+    assert review_summary["artifacts"]["route_pressure_evidence_exported"] is True
     assert review_summary["network_kpi_benchmark_validation"][
         "validation_id"
     ] == "leo_twin.network_kpi_benchmark_validation.v1"
@@ -326,6 +337,14 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert variation_browser_item["category"] == "NETWORK_KPI_EVIDENCE"
     assert variation_browser_item["present"] is True
     assert variation_browser_item["default_json_pointer"] == "/evidence"
+    pressure_browser_item = next(
+        item
+        for item in artifact_browser["items"]
+        if item["filename"] == "route_pressure_evidence_v1.json"
+    )
+    assert pressure_browser_item["category"] == "ROUTE_SERVICE_EVIDENCE"
+    assert pressure_browser_item["present"] is True
+    assert pressure_browser_item["default_json_pointer"] == "/summary/items"
     assert diagnostics_bundle["route_trust"]["trust_id"] == route_trust_status[
         "trust_id"
     ]
@@ -333,6 +352,11 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         "trust_status"
     ]
     assert diagnostics_bundle["route_trust"]["evidence_present"] is True
+    assert diagnostics_bundle["route_pressure_evidence"]["evidence_hash"] == (
+        review_summary["route_pressure_evidence"]["evidence_hash"]
+    )
+    assert diagnostics_bundle["route_pressure_evidence"]["evidence_present"] is True
+    assert diagnostics_bundle["route_pressure_evidence"]["event_replay"] is False
     assert diagnostics_bundle["network_kpi_benchmark_validation"][
         "validation_hash"
     ] == review_summary["network_kpi_benchmark_validation"]["validation_hash"]
@@ -471,6 +495,12 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert scenario_review_bundle["diagnostics"]["diagnostics_hash"] == (
         diagnostics_bundle["diagnostics_hash"]
     )
+    assert scenario_review_bundle["route_pressure_evidence"]["evidence_hash"] == (
+        review_summary["route_pressure_evidence"]["evidence_hash"]
+    )
+    assert scenario_review_bundle["route_pressure_evidence"][
+        "evidence_present"
+    ] is True
     assert scenario_review_bundle["network_kpi_benchmark_validation"][
         "validation_hash"
     ] == network_kpi_benchmark_validation["evidence"]["validation_hash"]
@@ -523,6 +553,9 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         scenario_review_bundle["recommended_review_order"]
     )
     assert "network_kpi_variation_explanation_v1.json" in (
+        scenario_review_bundle["recommended_review_order"]
+    )
+    assert "route_pressure_evidence_v1.json" in (
         scenario_review_bundle["recommended_review_order"]
     )
     assert scenario_review_bundle["scenario_review_hash"].startswith("sha256:")
@@ -588,6 +621,13 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     )
     assert audit_index["traffic_demand_explanation_request_count"] == (
         traffic_demand_explanation["evidence"]["request_count"]
+    )
+    assert audit_index["route_pressure_evidence_present"] is True
+    assert audit_index["route_pressure_evidence_hash"] == (
+        review_summary["route_pressure_evidence"]["evidence_hash"]
+    )
+    assert audit_index["route_pressure_evidence_route_count"] == (
+        review_summary["route_pressure_evidence"]["route_count"]
     )
     assert audit_index["user_service_request_summary_present"] is True
     assert audit_index["user_service_request_summary_hash"] == (
