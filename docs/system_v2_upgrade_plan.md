@@ -263,7 +263,10 @@ Tasks:
   - Depends on: V2-017.
   - Status: T413 adds `network_flow_lifecycle_summary_v1`, including lifecycle
     status, active/completed flow counts, active demand/capacity/latency/age,
-    model assumptions, and a deterministic summary hash.
+    model assumptions, and a deterministic summary hash. T414 persists that same
+    backend-owned summary into runtime result packages as
+    `network_flow_lifecycle_summary_v1.json` and binds it into review summary,
+    diagnostics, scenario review, artifact browser, and audit index evidence.
 - V2-017: Add network flow lifecycle metrics.
   - Scope: track route-to-completion flow lifecycle state in backend metrics.
   - Depends on: V2-015, V2-016.
@@ -1038,7 +1041,10 @@ Tasks:
     `user_configuration_template_validation_v1.json` to the same review path,
     preserving approved user configuration template validation evidence
     offline without template reloads, config application, event replay, or
-    frontend-side validation. T377 adds `traffic_demand_explanation_v1.json`
+    frontend-side validation. T414 adds `network_flow_lifecycle_summary_v1.json`
+    to the same package review path, preserving backend aggregate flow lifecycle
+    evidence offline without event replay, route recomputation, package mutation,
+    or frontend inference. T377 adds `traffic_demand_explanation_v1.json`
     to the same review path, preserving backend-owned business-demand
     explanation evidence offline without traffic regeneration, event replay,
     packet-level simulation, or frontend-side inference. T344 adds

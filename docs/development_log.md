@@ -5,6 +5,55 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-08 - Runtime Export Network Flow Lifecycle Artifact v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: pending in this commit
+- Scope: persist backend-owned `network_flow_lifecycle_summary_v1` into runtime
+  result packages as `network_flow_lifecycle_summary_v1.json`. The export
+  contract now includes the artifact in recommended files, artifact browser,
+  review summary, diagnostics bundle, scenario review bundle, and long-term
+  audit index. The artifact is read-only export evidence derived from runtime
+  status and does not replay events, recompute routes, mutate packages, change
+  Event Kernel behavior, or introduce packet-level simulation.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `examples/integration_demo/control_plane.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src\leo_twin\services\result_package_contract.py examples\integration_demo\control_plane.py tests\unit\test_result_package_contract_v1.py tests\integration\test_result_package_export_v1.py`
+    - Result: passed using the bundled Codex Python runtime.
+  - Manual smoke for result package contract functions:
+    `test_result_package_contract_v1_is_deterministic_json_ready`,
+    `test_runtime_export_network_flow_lifecycle_summary_v1_is_deterministic`,
+    `test_runtime_export_review_summary_v1_is_deterministic_and_review_ready`,
+    `test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready`,
+    `test_runtime_export_scenario_review_bundle_v1_is_deterministic`, and
+    `test_runtime_export_package_audit_index_v1_is_deterministic`.
+    - Result: passed with `PYTHONPATH=src`.
+  - Manual smoke for `test_runtime_export_package_satisfies_result_package_contract_v1`
+    using a temporary export root.
+    - Result: passed; package wrote `network_flow_lifecycle_summary_v1.json` and
+      review/diagnostics/scenario/audit hashes aligned.
+- Problems encountered and handling:
+  - The no-approval bundled Python runtime does not include `pytest`; targeted
+    test functions were executed directly with `PYTHONPATH=src` instead of
+    requesting approval for another Python environment.
+  - A PowerShell replacement initially inserted only the export builder/helper;
+    constants and review bindings were then inspected and added with narrower
+    line-based edits. A later complex PowerShell snippet failed to parse before
+    executing, so integration-test updates were redone with deterministic
+    line insertion.
+  - Local runtime/generated config files and `%SystemDrive%/` remain outside
+    this task scope and were not staged.
+- Known remaining issues / follow-up:
+  - This task exports aggregate lifecycle state. A later backend task should
+    add per-user/per-satellite lifecycle detail rows and pagination if the
+    dashboard needs drill-down beyond the existing aggregate counters.
+
 ## 2026-07-08 - Runtime Network Flow Lifecycle Summary v1
 
 - Branch: `feature/T402-network-pressure-provenance-v1`

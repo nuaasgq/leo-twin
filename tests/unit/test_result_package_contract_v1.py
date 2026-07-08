@@ -17,6 +17,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_NETWORK_KPI_FORMULA_EVIDENCE_V1_ID,
     RUNTIME_EXPORT_NODE_NETWORK_PRESSURE_SUMMARY_V1_ID,
     RUNTIME_EXPORT_RUNTIME_KPI_MOVEMENT_SUMMARY_V1_ID,
+    RUNTIME_EXPORT_NETWORK_FLOW_LIFECYCLE_SUMMARY_V1_ID,
     RUNTIME_EXPORT_TRAFFIC_DEMAND_EXPLANATION_V1_ID,
     RUNTIME_EXPORT_TRAFFIC_DEMAND_USER_PAGE_V1_ID,
     RUNTIME_EXPORT_USER_CONFIGURATION_TEMPLATE_VALIDATION_V1_ID,
@@ -48,6 +49,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_network_kpi_formula_evidence_v1,
     build_runtime_export_node_network_pressure_summary_v1,
     build_runtime_export_runtime_kpi_movement_summary_v1,
+    build_runtime_export_network_flow_lifecycle_summary_v1,
     build_runtime_export_traffic_demand_explanation_v1,
     build_runtime_export_traffic_demand_user_page_v1,
     build_runtime_export_user_configuration_template_validation_v1,
@@ -83,6 +85,7 @@ _TRAFFIC_DEMAND_EXPLANATION_FILENAME = "traffic_demand_explanation_v1.json"
 _ROUTE_PRESSURE_EVIDENCE_FILENAME = "route_pressure_evidence_v1.json"
 _NODE_NETWORK_PRESSURE_SUMMARY_FILENAME = "node_network_pressure_summary_v1.json"
 _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME = "runtime_kpi_movement_summary_v1.json"
+_NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME = "network_flow_lifecycle_summary_v1.json"
 
 
 def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
@@ -117,6 +120,7 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
         "network_kpi_formula_evidence_v1.json",
         "network_kpi_variation_explanation_v1.json",
         _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
+        _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME,
         "user_configuration_template_validation_v1.json",
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         "scenario_review_bundle_v1.json",
@@ -264,6 +268,7 @@ def test_result_package_summary_accepts_complete_package_record() -> None:
         "network_kpi_formula_evidence_v1.json",
         "network_kpi_variation_explanation_v1.json",
         _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
+        _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME,
         "user_configuration_template_validation_v1.json",
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         "scenario_review_bundle_v1.json",
@@ -319,6 +324,7 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
                 _network_kpi_variation_explanation()
             ),
             "runtime_kpi_movement_summary_v1": _runtime_kpi_movement_summary(),
+            "network_flow_lifecycle_summary_v1": _network_flow_lifecycle_summary(),
             "user_service_request_summary_v2": _user_service_request_summary(),
             "runtime_export_user_service_request_policy_v1": (
                 _user_service_request_export_policy()
@@ -580,6 +586,39 @@ def test_runtime_export_runtime_kpi_movement_summary_v1_is_deterministic() -> No
     assert first["evidence"]["evidence_present"] is True
     assert first["evidence"]["movement_status"] == "TIME_VARYING_OBSERVED"
     assert "NO_METRIC_RECOMPUTE" in first["boundary_conditions"]
+    assert first["artifact_hash"].startswith("sha256:")
+
+
+def test_runtime_export_network_flow_lifecycle_summary_v1_is_deterministic() -> None:
+    config_snapshot = {
+        "status": {
+            "network_flow_lifecycle_summary_v1": _network_flow_lifecycle_summary(),
+        }
+    }
+
+    first = build_runtime_export_network_flow_lifecycle_summary_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+    )
+    second = build_runtime_export_network_flow_lifecycle_summary_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+    )
+
+    assert first == second
+    assert first["type"] == "RUNTIME_EXPORT_NETWORK_FLOW_LIFECYCLE_SUMMARY_V1"
+    assert first["artifact_id"] == RUNTIME_EXPORT_NETWORK_FLOW_LIFECYCLE_SUMMARY_V1_ID
+    assert first["runtime_status_field"] == "network_flow_lifecycle_summary_v1"
+    assert first["summary"] == _network_flow_lifecycle_summary()
+    assert first["evidence"]["evidence_present"] is True
+    assert first["evidence"]["lifecycle_status"] == "ACTIVE"
+    assert first["evidence"]["active_flow_count"] == 2
+    assert first["evidence"]["completed_flow_count"] == 1
+    assert first["evidence"]["frontend_inference_required"] is False
+    assert first["evidence"]["acceptable_for_demo_review"] is True
+    assert "NO_FLOW_LIFECYCLE_RECOMPUTE" in first["boundary_conditions"]
     assert first["artifact_hash"].startswith("sha256:")
 
 
@@ -910,6 +949,7 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
                 _network_kpi_variation_explanation()
             ),
             "runtime_kpi_movement_summary_v1": _runtime_kpi_movement_summary(),
+            "network_flow_lifecycle_summary_v1": _network_flow_lifecycle_summary(),
             "user_service_request_summary_v2": _user_service_request_summary(),
             "runtime_export_user_service_request_policy_v1": (
                 _user_service_request_export_policy()
@@ -941,6 +981,7 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
         "network_kpi_formula_evidence_v1.json",
         "network_kpi_variation_explanation_v1.json",
         _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
+        _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME,
         "user_configuration_template_validation_v1.json",
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         "review_summary_v1.json",
@@ -1033,7 +1074,7 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
     assert artifact_browser["missing_required_count"] == 0
     assert artifact_browser["browser_hash"].startswith("sha256:")
     categories = {item["category"]: item for item in artifact_browser["categories"]}
-    assert categories["NETWORK_KPI_EVIDENCE"]["present_count"] == 4
+    assert categories["NETWORK_KPI_EVIDENCE"]["present_count"] == 5
     variation_item = next(
         item
         for item in artifact_browser["items"]
@@ -1096,6 +1137,7 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
                 _network_kpi_variation_explanation()
             ),
             "runtime_kpi_movement_summary_v1": _runtime_kpi_movement_summary(),
+            "network_flow_lifecycle_summary_v1": _network_flow_lifecycle_summary(),
             "user_service_request_summary_v2": _user_service_request_summary(),
             "runtime_export_user_service_request_policy_v1": (
                 _user_service_request_export_policy()
@@ -1129,6 +1171,7 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
         "network_kpi_formula_evidence_v1.json",
         "network_kpi_variation_explanation_v1.json",
         _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
+        _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME,
         "user_configuration_template_validation_v1.json",
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         "review_summary_v1.json",
@@ -2891,7 +2934,10 @@ def test_runtime_export_package_audit_index_v1_is_deterministic() -> None:
     }
     config_snapshot = {
         "type": "RUNTIME_CONFIG_SNAPSHOT",
-        "status": {"runtime_export_reproducibility_boundary_v1": boundary},
+        "status": {
+            "runtime_export_reproducibility_boundary_v1": boundary,
+            "network_flow_lifecycle_summary_v1": _network_flow_lifecycle_summary(),
+        },
         "config": {"seed": 7},
         "generated_config": _generated_config(),
         "user_configuration_template_validation_v1": (
@@ -3105,6 +3151,7 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
         "network_kpi_formula_evidence_v1.json",
         "network_kpi_variation_explanation_v1.json",
         _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
+        _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME,
         "user_configuration_template_validation_v1.json",
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         "review_summary_v1.json",
@@ -3542,6 +3589,34 @@ def _runtime_kpi_movement_summary() -> dict[str, object]:
         ),
     }
 
+
+def _network_flow_lifecycle_summary() -> dict[str, object]:
+    return {
+        "version": "v1",
+        "summary_id": "leo_twin.network_flow_lifecycle_summary.v1",
+        "source": "METRICS_SUMMARY_NETWORK_FLOW_LIFECYCLE_FIELDS",
+        "metrics_source": "BACKEND_METRICS_COLLECTOR",
+        "lifecycle_model": "ROUTE_UPDATE_TO_FLOW_COMPLETE_WINDOW",
+        "packet_level_simulation": False,
+        "frontend_inference_required": False,
+        "active_flow_count": 2,
+        "active_available_flow_count": 2,
+        "active_blocked_flow_count": 0,
+        "active_demand_mbps": 30.0,
+        "active_capacity_mbps": 120.0,
+        "active_latency_avg_s": 0.08,
+        "oldest_active_age_s": 12.0,
+        "completed_flow_count": 1,
+        "successful_flow_count": 1,
+        "failed_flow_count": 0,
+        "lifecycle_status": "ACTIVE",
+        "model_assumptions": (
+            "Flow lifecycle state is derived from ROUTE_UPDATE and FLOW_COMPLETE observations.",
+            "Active demand and capacity are flow-level route proxies, not packet queues.",
+            "Packet-level behavior is not simulated.",
+        ),
+        "summary_hash": "sha256:network-flow-lifecycle",
+    }
 
 def _node_network_pressure_summary() -> dict[str, object]:
     return {

@@ -95,6 +95,9 @@ RUNTIME_EXPORT_NETWORK_KPI_VARIATION_EXPLANATION_V1_ID = (
 RUNTIME_EXPORT_RUNTIME_KPI_MOVEMENT_SUMMARY_V1_ID = (
     "leo_twin.runtime_export_runtime_kpi_movement_summary.v1"
 )
+RUNTIME_EXPORT_NETWORK_FLOW_LIFECYCLE_SUMMARY_V1_ID = (
+    "leo_twin.runtime_export_network_flow_lifecycle_summary.v1"
+)
 RUNTIME_EXPORT_USER_CONFIGURATION_TEMPLATE_VALIDATION_V1_ID = (
     "leo_twin.runtime_export_user_configuration_template_validation.v1"
 )
@@ -135,6 +138,7 @@ NETWORK_KPI_VARIATION_EXPLANATION_FILENAME = (
     "network_kpi_variation_explanation_v1.json"
 )
 RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME = "runtime_kpi_movement_summary_v1.json"
+NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME = "network_flow_lifecycle_summary_v1.json"
 USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME = (
     "user_configuration_template_validation_v1.json"
 )
@@ -314,6 +318,15 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
                 "content": (
                     "runtime network and compute KPI movement evidence "
                     "exported for offline review"
+                ),
+            },
+            {
+                "logical_name": "network_flow_lifecycle_summary_v1",
+                "filename": "network_flow_lifecycle_summary_v1.json",
+                "format": "json",
+                "content": (
+                    "runtime network flow lifecycle state exported for "
+                    "offline active/completed/failed-flow review"
                 ),
             },
             {
@@ -688,6 +701,17 @@ def _runtime_export_artifact_browser_specs() -> tuple[dict[str, object], ...]:
             "filter_hint": "movement",
         },
         {
+            "logical_name": "network_flow_lifecycle_summary_v1",
+            "filename": NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME,
+            "category": "NETWORK_KPI_EVIDENCE",
+            "review_priority": 140,
+            "format": "json",
+            "review_role": "Network flow lifecycle state evidence.",
+            "content": "Audits active, blocked, completed, and failed flow lifecycle counters.",
+            "default_json_pointer": "/evidence",
+            "filter_hint": "flow lifecycle",
+        },
+        {
             "logical_name": "traffic_demand_explanation_v1",
             "filename": TRAFFIC_DEMAND_EXPLANATION_FILENAME,
             "category": "TRAFFIC_BUSINESS",
@@ -879,6 +903,7 @@ def build_runtime_export_reproducibility_boundary_v1(
             "network_kpi_formula_evidence_v1.json",
             "network_kpi_variation_explanation_v1.json",
             "runtime_kpi_movement_summary_v1.json",
+            "network_flow_lifecycle_summary_v1.json",
             "route_pressure_evidence_v1.json",
             "node_network_pressure_summary_v1.json",
             "user_configuration_template_validation_v1.json",
@@ -1100,6 +1125,44 @@ def build_runtime_export_runtime_kpi_movement_summary_v1(
 
 
 
+
+def build_runtime_export_network_flow_lifecycle_summary_v1(
+    *,
+    package_id: str,
+    package_dir: str,
+    config_snapshot: Mapping[str, Any],
+) -> dict[str, object]:
+    """Build offline review evidence for runtime network flow lifecycle state."""
+
+    if not isinstance(config_snapshot, Mapping):
+        raise TypeError("config_snapshot must be a mapping")
+
+    status = _mapping(config_snapshot.get("status"))
+    summary = _mapping(status.get("network_flow_lifecycle_summary_v1"))
+    evidence = _runtime_export_network_flow_lifecycle_summary(status)
+    artifact: dict[str, object] = {
+        "type": "RUNTIME_EXPORT_NETWORK_FLOW_LIFECYCLE_SUMMARY_V1",
+        "version": "v1",
+        "artifact_id": RUNTIME_EXPORT_NETWORK_FLOW_LIFECYCLE_SUMMARY_V1_ID,
+        "source": "BACKEND_RUNTIME_EXPORT",
+        "artifact_scope": "NETWORK_FLOW_LIFECYCLE_REVIEW",
+        "package_id": str(package_id),
+        "package_dir": str(package_dir),
+        "runtime_status_field": "network_flow_lifecycle_summary_v1",
+        "artifact_policy": "STANDALONE_RUNTIME_EXPORT_ARTIFACT",
+        "summary": dict(summary),
+        "evidence": evidence,
+        "boundary_conditions": (
+            "READ_RUNTIME_STATUS_ONLY",
+            "NO_FLOW_LIFECYCLE_RECOMPUTE",
+            "NO_EVENT_REPLAY",
+            "NO_PACKET_LEVEL_SIMULATION",
+            "NO_EXTERNAL_SIMULATOR_ARTIFACT",
+        ),
+    }
+    artifact["artifact_hash"] = stable_hash_payload(artifact)
+    return artifact
+
 def build_runtime_export_node_network_pressure_summary_v1(
     *,
     package_id: str,
@@ -1307,6 +1370,9 @@ def build_runtime_export_review_summary_v1(
         _runtime_export_network_kpi_variation_explanation(status)
     )
     runtime_kpi_movement_summary = _runtime_export_runtime_kpi_movement_summary(status)
+    network_flow_lifecycle_summary = (
+        _runtime_export_network_flow_lifecycle_summary(status)
+    )
     user_config_template_validation = (
         _runtime_export_user_configuration_template_validation_evidence(
             config_snapshot
@@ -1366,6 +1432,7 @@ def build_runtime_export_review_summary_v1(
         "network_kpi_formula_evidence": network_kpi_formula_evidence,
         "network_kpi_variation_explanation": network_kpi_variation_explanation,
         "runtime_kpi_movement_summary": runtime_kpi_movement_summary,
+        "network_flow_lifecycle_summary": network_flow_lifecycle_summary,
         "user_configuration_template_validation": user_config_template_validation,
         "traffic_demand_explanation": traffic_demand_explanation,
         "user_service_requests": user_service_requests,
@@ -1408,6 +1475,9 @@ def build_runtime_export_review_summary_v1(
             "runtime_kpi_movement_summary_exported": (
                 "runtime_kpi_movement_summary_v1.json" in artifacts
             ),
+            "network_flow_lifecycle_summary_exported": (
+                "network_flow_lifecycle_summary_v1.json" in artifacts
+            ),
             "user_configuration_template_validation_exported": (
                 "user_configuration_template_validation_v1.json" in artifacts
             ),
@@ -1430,6 +1500,7 @@ def build_runtime_export_review_summary_v1(
             "Use network_kpi_formula_evidence_v1.json to review KPI formula input and time-series evidence.",
             "Use network_kpi_variation_explanation_v1.json to review why flow-level KPI values moved or stayed flat.",
             "Use runtime_kpi_movement_summary_v1.json to review network and compute KPI movement over simulation time.",
+            "Use network_flow_lifecycle_summary_v1.json to review active, blocked, completed, and failed flow lifecycle state.",
             "Use user_configuration_template_validation_v1.json to review approved configuration template validation evidence.",
             "Use traffic_demand_explanation_v1.json to review backend-owned business request generation semantics.",
             "Use route_detail_index_v1.json to inspect exported route explanation rows.",
@@ -1493,6 +1564,9 @@ def build_runtime_export_diagnostics_bundle_v1(
         _runtime_export_network_kpi_variation_explanation(status)
     )
     runtime_kpi_movement_summary = _runtime_export_runtime_kpi_movement_summary(status)
+    network_flow_lifecycle_summary = (
+        _runtime_export_network_flow_lifecycle_summary(status)
+    )
     user_config_template_validation = (
         _runtime_export_user_configuration_template_validation_evidence(
             config_snapshot
@@ -1520,6 +1594,7 @@ def build_runtime_export_diagnostics_bundle_v1(
         route_trust=route_trust,
         route_pressure_evidence=route_pressure_evidence,
         node_network_pressure_summary=node_network_pressure_summary,
+        network_flow_lifecycle_summary=network_flow_lifecycle_summary,
         network_kpi_validation=network_kpi_validation,
         network_kpi_formula_evidence=network_kpi_formula_evidence,
         network_kpi_variation_explanation=network_kpi_variation_explanation,
@@ -1553,6 +1628,7 @@ def build_runtime_export_diagnostics_bundle_v1(
         "network_kpi_formula_evidence": network_kpi_formula_evidence,
         "network_kpi_variation_explanation": network_kpi_variation_explanation,
         "runtime_kpi_movement_summary": runtime_kpi_movement_summary,
+        "network_flow_lifecycle_summary": network_flow_lifecycle_summary,
         "user_configuration_template_validation": user_config_template_validation,
         "traffic_demand_explanation": traffic_demand_explanation,
         "user_service_requests": user_service_requests,
@@ -1665,6 +1741,9 @@ def build_runtime_export_scenario_review_bundle_v1(
     runtime_kpi_movement_summary = _mapping(
         review_summary.get("runtime_kpi_movement_summary")
     )
+    network_flow_lifecycle_summary = _mapping(
+        review_summary.get("network_flow_lifecycle_summary")
+    )
     user_config_template_validation = _mapping(
         review_summary.get("user_configuration_template_validation")
     )
@@ -1686,6 +1765,8 @@ def build_runtime_export_scenario_review_bundle_v1(
         )
     if runtime_kpi_movement_summary.get("evidence_present") is not True:
         scenario_review_warnings.append("RUNTIME_KPI_MOVEMENT_SUMMARY_MISSING")
+    if network_flow_lifecycle_summary.get("evidence_present") is not True:
+        scenario_review_warnings.append("NETWORK_FLOW_LIFECYCLE_SUMMARY_MISSING")
     if user_config_template_validation.get("evidence_present") is not True:
         scenario_review_warnings.append(
             "USER_CONFIGURATION_TEMPLATE_VALIDATION_MISSING"
@@ -1903,6 +1984,33 @@ def build_runtime_export_scenario_review_bundle_v1(
                 runtime_kpi_movement_summary.get("evidence_present") is True
             ),
         },
+        "network_flow_lifecycle_summary": {
+            "summary_id": str(network_flow_lifecycle_summary.get("summary_id", "")),
+            "lifecycle_model": str(
+                network_flow_lifecycle_summary.get("lifecycle_model", "")
+            ),
+            "lifecycle_status": str(
+                network_flow_lifecycle_summary.get("lifecycle_status", "")
+            ),
+            "active_flow_count": _integer(
+                network_flow_lifecycle_summary.get("active_flow_count")
+            ),
+            "active_blocked_flow_count": _integer(
+                network_flow_lifecycle_summary.get("active_blocked_flow_count")
+            ),
+            "completed_flow_count": _integer(
+                network_flow_lifecycle_summary.get("completed_flow_count")
+            ),
+            "failed_flow_count": _integer(
+                network_flow_lifecycle_summary.get("failed_flow_count")
+            ),
+            "evidence_hash": str(
+                network_flow_lifecycle_summary.get("evidence_hash", "")
+            ),
+            "evidence_present": (
+                network_flow_lifecycle_summary.get("evidence_present") is True
+            ),
+        },
         "user_configuration_template_validation": {
             "evidence_id": str(user_config_template_validation.get("evidence_id", "")),
             "schema_id": str(user_config_template_validation.get("schema_id", "")),
@@ -2005,6 +2113,7 @@ def build_runtime_export_scenario_review_bundle_v1(
                 "network_kpi_formula_evidence_v1.json",
                 "network_kpi_variation_explanation_v1.json",
                 "runtime_kpi_movement_summary_v1.json",
+                "network_flow_lifecycle_summary_v1.json",
                 "user_configuration_template_validation_v1.json",
                 "traffic_demand_explanation_v1.json",
                 "route_pressure_evidence_v1.json",
@@ -2034,6 +2143,7 @@ def build_runtime_export_scenario_review_bundle_v1(
             "network_kpi_formula_evidence_v1.json",
             "network_kpi_variation_explanation_v1.json",
             "runtime_kpi_movement_summary_v1.json",
+            "network_flow_lifecycle_summary_v1.json",
             "route_pressure_evidence_v1.json",
             "node_network_pressure_summary_v1.json",
             "user_configuration_template_validation_v1.json",
@@ -3482,6 +3592,9 @@ def build_runtime_export_package_audit_index_v1(
         _runtime_export_network_kpi_variation_explanation(status)
     )
     runtime_kpi_movement_summary = _runtime_export_runtime_kpi_movement_summary(status)
+    network_flow_lifecycle_summary = (
+        _runtime_export_network_flow_lifecycle_summary(status)
+    )
     user_config_template_validation = (
         _runtime_export_user_configuration_template_validation_evidence(
             config_snapshot
@@ -3670,6 +3783,24 @@ def build_runtime_export_package_audit_index_v1(
         ),
         "node_network_pressure_summary_max_projected_utilization": _number(
             node_network_pressure_summary.get("max_projected_utilization")
+        ),
+        "network_flow_lifecycle_summary_hash": str(
+            network_flow_lifecycle_summary.get("evidence_hash", "")
+        ),
+        "network_flow_lifecycle_summary_present": (
+            network_flow_lifecycle_summary.get("evidence_present") is True
+        ),
+        "network_flow_lifecycle_summary_status": str(
+            network_flow_lifecycle_summary.get("lifecycle_status", "")
+        ),
+        "network_flow_lifecycle_summary_active_flow_count": _integer(
+            network_flow_lifecycle_summary.get("active_flow_count")
+        ),
+        "network_flow_lifecycle_summary_completed_flow_count": _integer(
+            network_flow_lifecycle_summary.get("completed_flow_count")
+        ),
+        "network_flow_lifecycle_summary_failed_flow_count": _integer(
+            network_flow_lifecycle_summary.get("failed_flow_count")
         ),
         "runtime_kpi_movement_summary_hash": str(
             runtime_kpi_movement_summary.get("evidence_hash", "")
@@ -4964,6 +5095,7 @@ def _runtime_export_diagnostic_findings(
     route_trust: Mapping[str, Any],
     route_pressure_evidence: Mapping[str, Any],
     node_network_pressure_summary: Mapping[str, Any],
+    network_flow_lifecycle_summary: Mapping[str, Any],
     network_kpi_validation: Mapping[str, Any],
     network_kpi_formula_evidence: Mapping[str, Any],
     network_kpi_variation_explanation: Mapping[str, Any],
@@ -5074,6 +5206,30 @@ def _runtime_export_diagnostic_findings(
                 "WARN",
                 "NODE_NETWORK_PRESSURE_FRONTEND_INFERENCE_DECLARED",
                 "node network pressure summary should be backend-owned and not require frontend inference.",
+            )
+        )
+    if network_flow_lifecycle_summary.get("evidence_present") is not True:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "NETWORK_FLOW_LIFECYCLE_SUMMARY_MISSING",
+                "config_snapshot.status does not include network_flow_lifecycle_summary_v1.",
+            )
+        )
+    if network_flow_lifecycle_summary.get("packet_level_simulation") is True:
+        findings.append(
+            _diagnostic_finding(
+                "ERROR",
+                "NETWORK_FLOW_LIFECYCLE_PACKET_LEVEL_DECLARED",
+                "network flow lifecycle summary declares packet-level simulation, which is outside the v2 demo boundary.",
+            )
+        )
+    if network_flow_lifecycle_summary.get("frontend_inference_required") is True:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "NETWORK_FLOW_LIFECYCLE_FRONTEND_INFERENCE_DECLARED",
+                "network flow lifecycle summary should be backend-owned and not require frontend inference.",
             )
         )
     if network_kpi_validation.get("evidence_present") is not True:
@@ -6333,6 +6489,88 @@ def _runtime_export_runtime_kpi_movement_summary(
     return evidence
 
 
+
+def _runtime_export_network_flow_lifecycle_summary(
+    status: Mapping[str, Any],
+) -> dict[str, object]:
+    summary = _mapping(status.get("network_flow_lifecycle_summary_v1"))
+    evidence_present = bool(summary)
+    source = "config_snapshot.status.network_flow_lifecycle_summary_v1"
+    if not evidence_present:
+        evidence: dict[str, object] = {
+            "version": "v1",
+            "summary_id": "leo_twin.network_flow_lifecycle_summary.v1",
+            "source": source,
+            "artifact_id": RUNTIME_EXPORT_NETWORK_FLOW_LIFECYCLE_SUMMARY_V1_ID,
+            "artifact_filename": NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME,
+            "evidence_present": False,
+            "lifecycle_model": "UNKNOWN",
+            "lifecycle_status": "MISSING_NETWORK_FLOW_LIFECYCLE_SUMMARY",
+            "active_flow_count": 0,
+            "active_available_flow_count": 0,
+            "active_blocked_flow_count": 0,
+            "completed_flow_count": 0,
+            "successful_flow_count": 0,
+            "failed_flow_count": 0,
+            "active_demand_mbps": 0.0,
+            "active_capacity_mbps": 0.0,
+            "active_latency_avg_s": 0.0,
+            "oldest_active_age_s": 0.0,
+            "packet_level_simulation": False,
+            "frontend_inference_required": False,
+            "acceptable_for_demo_review": False,
+            "model_assumptions": (),
+            "caveats": (
+                "Runtime status did not expose network_flow_lifecycle_summary_v1.",
+            ),
+        }
+        evidence["evidence_hash"] = stable_hash_payload(evidence)
+        return evidence
+
+    packet_level = summary.get("packet_level_simulation") is True
+    frontend_inference = summary.get("frontend_inference_required") is True
+    lifecycle_status = str(summary.get("lifecycle_status", ""))
+    evidence = {
+        "version": "v1",
+        "summary_id": str(
+            summary.get(
+                "summary_id",
+                "leo_twin.network_flow_lifecycle_summary.v1",
+            )
+        ),
+        "source": source,
+        "runtime_status_source": str(summary.get("source", "")),
+        "artifact_id": RUNTIME_EXPORT_NETWORK_FLOW_LIFECYCLE_SUMMARY_V1_ID,
+        "artifact_filename": NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME,
+        "evidence_present": True,
+        "lifecycle_model": str(summary.get("lifecycle_model", "")),
+        "lifecycle_status": lifecycle_status,
+        "active_flow_count": _integer(summary.get("active_flow_count")),
+        "active_available_flow_count": _integer(
+            summary.get("active_available_flow_count")
+        ),
+        "active_blocked_flow_count": _integer(
+            summary.get("active_blocked_flow_count")
+        ),
+        "active_demand_mbps": _number(summary.get("active_demand_mbps")),
+        "active_capacity_mbps": _number(summary.get("active_capacity_mbps")),
+        "active_latency_avg_s": _number(summary.get("active_latency_avg_s")),
+        "oldest_active_age_s": _number(summary.get("oldest_active_age_s")),
+        "completed_flow_count": _integer(summary.get("completed_flow_count")),
+        "successful_flow_count": _integer(summary.get("successful_flow_count")),
+        "failed_flow_count": _integer(summary.get("failed_flow_count")),
+        "packet_level_simulation": packet_level,
+        "frontend_inference_required": frontend_inference,
+        "acceptable_for_demo_review": (
+            not packet_level
+            and not frontend_inference
+            and lifecycle_status
+            not in {"", "MISSING_NETWORK_FLOW_LIFECYCLE_SUMMARY"}
+        ),
+        "model_assumptions": _string_tuple(summary.get("model_assumptions")),
+    }
+    evidence["evidence_hash"] = stable_hash_payload(evidence)
+    return evidence
 def _runtime_export_user_configuration_template_validation_evidence(
     config_snapshot: Mapping[str, Any],
 ) -> dict[str, object]:
