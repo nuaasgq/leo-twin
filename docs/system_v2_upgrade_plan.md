@@ -634,6 +634,15 @@ Tasks:
     pagination inference. The demo server now also exposes read-only cursor
     endpoints for routes, service lifecycle rows, and compute-node resource
     rows while preserving existing user, satellite, and combined-node endpoints.
+- V2-044: Add runtime clock gap observability.
+  - Scope: expose the difference between Event Kernel processed time and the
+    server-side runtime advance target during long event gaps.
+  - Depends on: V2-042.
+  - Status: T407 adds `kernel_current_sim_time`, `runtime_target_sim_time`,
+    `event_clock_lag_s`, and `runtime_time_source` to `RuntimeStatus` and demo
+    runtime status responses. This preserves Event Kernel time as audited DES
+    time while making sparse-event live runs explainable when progress appears
+    stalled between scheduled events.
 
 ### WS6. Dashboard and Frontend Product UX v3
 

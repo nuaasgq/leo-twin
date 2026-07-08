@@ -334,6 +334,9 @@ class SimulationSession:
 
     def get_status(self) -> RuntimeStatus:
         with self._lock:
+            kernel_time = self._kernel_current_sim_time()
+            runtime_target = self._runtime_target_sim_time(kernel_time)
+            event_clock_lag = max(0.0, runtime_target - kernel_time)
             return RuntimeStatus(
                 session_id=self._session_id,
                 lifecycle_state=self._lifecycle_state,
@@ -343,6 +346,10 @@ class SimulationSession:
                 wall_clock_start_time=self._clock.wall_clock_start_time,
                 processed_event_count=len(self._processed_events),
                 queued_event_count=_queued_event_count(self._kernel),
+                kernel_current_sim_time=kernel_time,
+                runtime_target_sim_time=runtime_target,
+                event_clock_lag_s=event_clock_lag,
+                runtime_time_source=self._runtime_time_source(kernel_time, runtime_target),
                 last_error=self._last_error,
                 deterministic_replay=self._deterministic_replay,
                 config_version=self._config_version,
@@ -446,6 +453,24 @@ class SimulationSession:
         if self._kernel is None:
             return 0.0
         return self._kernel.get_current_time()
+
+    def _kernel_current_sim_time(self) -> float:
+        if self._kernel is None:
+            return 0.0
+        return self._kernel.get_current_time()
+
+    def _runtime_target_sim_time(self, kernel_time: float) -> float:
+        if self._terminal_sim_time is not None:
+            return self._terminal_sim_time
+        duration = float(self._runtime_config.duration)
+        return min(duration, max(float(kernel_time), self._last_advance_target))
+
+    def _runtime_time_source(self, kernel_time: float, runtime_target: float) -> str:
+        if self._terminal_sim_time is not None:
+            return "TERMINAL_DURATION"
+        if runtime_target > float(kernel_time):
+            return "RUNTIME_ADVANCE_TARGET"
+        return "EVENT_KERNEL_TIME"
 
     def _advance_target_base(self) -> float:
         return max(self._current_sim_time(), self._last_advance_target)

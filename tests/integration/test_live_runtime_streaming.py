@@ -484,6 +484,10 @@ def test_demo_runtime_status_completes_at_configured_duration(tmp_path: Path) ->
     assert status["lifecycle_state"] == "COMPLETED"
     assert status["status"] == "COMPLETED"
     assert status["current_sim_time"] == 2.0
+    assert status["kernel_current_sim_time"] == 2.0
+    assert status["runtime_target_sim_time"] == 2.0
+    assert status["event_clock_lag_s"] == 0.0
+    assert status["runtime_time_source"] == "TERMINAL_DURATION"
     assert kpi_series["samples"][-1]["sim_time"] == 2.0
 
 

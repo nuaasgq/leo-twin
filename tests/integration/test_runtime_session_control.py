@@ -181,11 +181,23 @@ def test_bounded_live_advance_crosses_empty_event_gap() -> None:
         session.advance_bounded(1.0)
 
     assert [event.event_id for event in session.processed_events] == [0]
+    gap_status = session.get_status()
+    assert gap_status.current_sim_time == 0.0
+    assert gap_status.kernel_current_sim_time == 0.0
+    assert gap_status.runtime_target_sim_time == 4.0
+    assert gap_status.event_clock_lag_s == 4.0
+    assert gap_status.runtime_time_source == "RUNTIME_ADVANCE_TARGET"
 
     wall_time[0] = 5.0
     session.advance_bounded(1.0)
 
     assert [event.event_id for event in session.processed_events] == [0, 5]
+    caught_up_status = session.get_status()
+    assert caught_up_status.current_sim_time == 5.0
+    assert caught_up_status.kernel_current_sim_time == 5.0
+    assert caught_up_status.runtime_target_sim_time == 5.0
+    assert caught_up_status.event_clock_lag_s == 0.0
+    assert caught_up_status.runtime_time_source == "EVENT_KERNEL_TIME"
 
 
 def test_repeated_deterministic_run_produces_same_status_and_snapshots() -> None:

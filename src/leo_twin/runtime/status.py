@@ -34,6 +34,10 @@ class RuntimeStatus:
     wall_clock_start_time: float | None
     processed_event_count: int
     queued_event_count: int | None = None
+    kernel_current_sim_time: float | None = None
+    runtime_target_sim_time: float | None = None
+    event_clock_lag_s: float | None = None
+    runtime_time_source: str = "EVENT_KERNEL_TIME"
     last_error: str | None = None
     deterministic_replay: bool = False
     config_version: int = 0
@@ -66,6 +70,17 @@ class RuntimeStatus:
         _require_non_negative_int(self.processed_event_count, "processed_event_count")
         if self.queued_event_count is not None:
             _require_non_negative_int(self.queued_event_count, "queued_event_count")
+        _require_optional_non_negative(
+            self.kernel_current_sim_time,
+            "kernel_current_sim_time",
+        )
+        _require_optional_non_negative(
+            self.runtime_target_sim_time,
+            "runtime_target_sim_time",
+        )
+        _require_optional_non_negative(self.event_clock_lag_s, "event_clock_lag_s")
+        if not isinstance(self.runtime_time_source, str) or not self.runtime_time_source:
+            raise TypeError("runtime_time_source must be a non-empty str")
         if self.last_error is not None and not isinstance(self.last_error, str):
             raise TypeError("last_error must be a str or None")
         if not isinstance(self.deterministic_replay, bool):
@@ -96,6 +111,10 @@ class RuntimeStatus:
             "wall_clock_start_time": self.wall_clock_start_time,
             "processed_event_count": self.processed_event_count,
             "queued_event_count": self.queued_event_count,
+            "kernel_current_sim_time": self.kernel_current_sim_time,
+            "runtime_target_sim_time": self.runtime_target_sim_time,
+            "event_clock_lag_s": self.event_clock_lag_s,
+            "runtime_time_source": self.runtime_time_source,
             "last_error": self.last_error,
             "deterministic_replay": self.deterministic_replay,
             "config_version": self.config_version,
@@ -115,4 +134,12 @@ def _require_non_negative_int(value: object, field_name: str) -> None:
     if isinstance(value, bool) or not isinstance(value, int):
         raise TypeError(f"{field_name} must be an int")
     if value < 0:
+        raise ValueError(f"{field_name} must be non-negative")
+
+
+def _require_optional_non_negative(value: object, field_name: str) -> None:
+    if value is None:
+        return
+    _require_finite(value, field_name)
+    if float(value) < 0.0:
         raise ValueError(f"{field_name} must be non-negative")

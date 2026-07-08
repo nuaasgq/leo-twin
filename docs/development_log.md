@@ -5,6 +5,45 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-08 - Runtime Clock Gap Observability v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: pending in this commit
+- Scope: add backend runtime-status observability for long event gaps without
+  changing Event Kernel behavior. `RuntimeStatus` now reports
+  `kernel_current_sim_time`, `runtime_target_sim_time`, `event_clock_lag_s`,
+  and `runtime_time_source`, allowing operators and future frontend bindings to
+  distinguish event-kernel time from the server-side runtime advance target
+  when sparse DES events make progress appear stalled. This task does not
+  change Event Kernel ordering, domain event scheduling, KPI formulas,
+  frontend rendering, packet-level behavior, or external simulator
+  integrations.
+- Changed files/modules:
+  - `src/leo_twin/runtime/status.py`
+  - `src/leo_twin/runtime/session.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `tests/integration/test_live_runtime_streaming.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src\leo_twin\runtime\status.py src\leo_twin\runtime\session.py tests\integration\test_runtime_session_control.py tests\integration\test_live_runtime_streaming.py`
+    - Result: passed using the bundled Codex Python runtime.
+  - Manual smoke for `test_bounded_live_advance_crosses_empty_event_gap` and
+    `test_demo_runtime_status_completes_at_configured_duration`
+    - Result: passed with a minimal `pytest` stub because the bundled
+      no-approval Python runtime does not include `pytest`.
+  - `git diff --check`
+    - Result: passed for task files.
+- Problems encountered and handling:
+  - `apply_patch` could not start its Windows sandbox helper in this workspace;
+    the same localized edits were applied with exact PowerShell replacements
+    and verified with diff, compile, smoke tests, and whitespace checks.
+  - Local runtime/generated config files and the unrelated `%SystemDrive%/`
+    directory remain outside this task scope and were not staged.
+- Known remaining issues / follow-up:
+  - Frontend progress still reads `current_sim_time`; a follow-up UI binding
+    should prefer `runtime_target_sim_time` for progress display while showing
+    `kernel_current_sim_time` as the audited DES event time.
 
 ## 2026-07-08 - Single Node Detail Pressure Binding v1
 
