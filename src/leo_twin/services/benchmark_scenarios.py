@@ -286,6 +286,7 @@ def _runtime_status_expectation() -> dict[str, object]:
             "network_kpi_credibility_v1",
             "network_kpi_benchmark_validation_v1",
             "network_kpi_calibration_v1",
+            "network_kpi_provenance_v2.temporal_pressure_evidence",
             "route_explanation_summary_v1",
             "route_provenance_trust_summary_v1",
             "reproducibility_manifest_v1",
@@ -313,6 +314,17 @@ def _runtime_status_expectation() -> dict[str, object]:
             ),
             "packet_level_simulation": False,
             "maximum_failed_check_count": 0,
+        },
+        "network_temporal_pressure_evidence": {
+            "field": "network_kpi_provenance_v2.temporal_pressure_evidence",
+            "source": "network_kpi_provenance_v2",
+            "temporal_pressure_model": (
+                "DETERMINISTIC_TRIANGULAR_LOAD_GATED_PROXY"
+            ),
+            "allowed_statuses": ("OBSERVED",),
+            "minimum_observed_required_field_count": 3,
+            "packet_level_simulation": False,
+            "frontend_inference_required": False,
         },
         "route_trust": {
             "field": "route_provenance_trust_summary_v1",

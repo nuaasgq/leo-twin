@@ -20656,3 +20656,53 @@ change.
     scenarios.
   - Full pytest was not run because the available bundled runtime lacks pytest
     and system Python access is unreliable in this sandbox.
+
+## 2026-07-08 - T403 benchmark temporal pressure gate v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: make temporal pressure evidence part of backend benchmark acceptance.
+  The benchmark scenario matrix now requires
+  `network_kpi_provenance_v2.temporal_pressure_evidence`, and runtime export
+  benchmark acceptance binding adds a `runtime_status.network_temporal_pressure`
+  gate pointing to `network_temporal_pressure_evidence_v1.json`. This keeps
+  time-varying network KPI evidence backend-owned and reviewable for the
+  standard 72/300/1200 benchmark scenarios without metric recomputation.
+- Changed files/modules:
+  - `src/leo_twin/services/benchmark_scenarios.py`
+  - `src/leo_twin/services/result_package_contract.py`
+  - `tests/unit/test_benchmark_scenario_matrix_v1.py`
+  - `tests/integration/test_benchmark_acceptance_v1.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Python `py_compile` for touched backend/test files.
+    - Result: passed.
+  - Direct function run for benchmark scenario matrix target tests, including
+    all three parameterized scenarios.
+    - Result: passed.
+  - Direct function run for benchmark acceptance target tests, including
+    72/300/1200 runtime status checks and the small baseline KPI range test.
+    - Result: passed.
+  - Direct function run for runtime export benchmark acceptance binding target
+    tests.
+    - Result: passed.
+  - Direct function run for
+    `tests/integration/test_result_package_export_v1.py`.
+    - Result: passed.
+- Problems encountered:
+  - Attempting to create `feature/T403-benchmark-temporal-pressure-gate` failed
+    because the sandbox could not create the Git ref lock under `.git/refs`.
+    Per the no-approval instruction, no escalation was requested; this task is
+    delivered as a separate commit on the already pushed backend branch.
+  - The bundled Python runtime still lacks pytest as an importable module.
+    Parameterized tests were executed by direct function calls with a small
+    local `pytest.mark.parametrize` shim for import compatibility.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - This gate verifies that temporal pressure evidence exists and is reviewable
+    for benchmark packages. It does not yet calibrate the numerical temporal
+    pressure curve against an external or theoretical reference; that should be
+    a later backend model-calibration task using the shipped benchmark matrix.

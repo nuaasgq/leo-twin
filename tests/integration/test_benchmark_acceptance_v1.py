@@ -113,6 +113,10 @@ def test_benchmark_acceptance_runtime_status_requires_route_trust(
 
     assert "route_provenance_trust_summary_v1" in expectation["required_fields"]
     assert "network_kpi_benchmark_validation_v1" in expectation["required_fields"]
+    assert (
+        "network_kpi_provenance_v2.temporal_pressure_evidence"
+        in expectation["required_fields"]
+    )
     assert expectation["network_kpi_benchmark_validation"] == {
         "field": "network_kpi_benchmark_validation_v1",
         "source": "network_kpi_provenance_v2 + metrics_summary",
@@ -124,6 +128,17 @@ def test_benchmark_acceptance_runtime_status_requires_route_trust(
         ),
         "packet_level_simulation": False,
         "maximum_failed_check_count": 0,
+    }
+    assert expectation["network_temporal_pressure_evidence"] == {
+        "field": "network_kpi_provenance_v2.temporal_pressure_evidence",
+        "source": "network_kpi_provenance_v2",
+        "temporal_pressure_model": (
+            "DETERMINISTIC_TRIANGULAR_LOAD_GATED_PROXY"
+        ),
+        "allowed_statuses": ("OBSERVED",),
+        "minimum_observed_required_field_count": 3,
+        "packet_level_simulation": False,
+        "frontend_inference_required": False,
     }
     assert route_trust == {
         "field": "route_provenance_trust_summary_v1",
@@ -173,6 +188,10 @@ def test_benchmark_acceptance_route_trust_runtime_status_for_standard_scenarios(
             scenario["runtime_status_expectation"],
         )
         _assert_benchmark_network_kpi_validation_status(
+            status,
+            scenario["runtime_status_expectation"],
+        )
+        _assert_benchmark_network_temporal_pressure_status(
             status,
             scenario["runtime_status_expectation"],
         )
@@ -228,6 +247,13 @@ def test_benchmark_acceptance_runtime_kpi_ranges_for_small_baseline(
 
     provenance = status["network_kpi_provenance_v2"]
     assert provenance["packet_level_simulation"] is False
+    temporal = provenance["temporal_pressure_evidence"]
+    assert temporal["status"] == "OBSERVED"
+    assert temporal["temporal_pressure_model"] == (
+        "DETERMINISTIC_TRIANGULAR_LOAD_GATED_PROXY"
+    )
+    assert temporal["packet_level_simulation"] is False
+    assert temporal["frontend_inference_required"] is False
     assert provenance["kpi_count"] == 6
     assert all(
         item["status"] == "OBSERVED" and item["current_value"] is not None
@@ -364,6 +390,40 @@ def _assert_benchmark_network_kpi_validation_status(
         kpi_expectation["maximum_failed_check_count"]
     )
     assert int(validation["check_count"]) == len(validation["checks"])
+
+
+def _assert_benchmark_network_temporal_pressure_status(
+    status: dict[str, object],
+    expectation: object,
+) -> None:
+    assert isinstance(expectation, dict)
+    temporal_expectation = expectation["network_temporal_pressure_evidence"]
+    assert isinstance(temporal_expectation, dict)
+    provenance = status["network_kpi_provenance_v2"]
+    assert isinstance(provenance, dict)
+    temporal = provenance["temporal_pressure_evidence"]
+    assert isinstance(temporal, dict)
+
+    assert temporal["source"] == "METRICS_SUMMARY"
+    assert temporal["temporal_pressure_model"] == temporal_expectation[
+        "temporal_pressure_model"
+    ]
+    assert temporal["status"] in temporal_expectation["allowed_statuses"]
+    assert temporal["packet_level_simulation"] is temporal_expectation[
+        "packet_level_simulation"
+    ]
+    assert temporal["frontend_inference_required"] is temporal_expectation[
+        "frontend_inference_required"
+    ]
+    assert int(temporal["observed_required_field_count"]) >= int(
+        temporal_expectation["minimum_observed_required_field_count"]
+    )
+    assert int(temporal["required_field_count"]) == int(
+        temporal["observed_required_field_count"]
+    )
+    assert 0.0 <= float(temporal["time_pressure_factor"]) <= 1.0
+    assert 0.0 <= float(temporal["loss_proxy_rate"]) <= 1.0
+    assert float(temporal["delay_variation_proxy_s"]) >= 0.0
 
 
 def _control_plane(tmp_path: Path, scenario_id: str) -> DemoControlPlane:

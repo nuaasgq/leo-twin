@@ -4890,8 +4890,13 @@ def _runtime_export_benchmark_runtime_status_results(
     expectation = _mapping(scenario.get("runtime_status_expectation"))
     route_expectation = _mapping(expectation.get("route_trust"))
     kpi_expectation = _mapping(expectation.get("network_kpi_benchmark_validation"))
+    temporal_expectation = _mapping(
+        expectation.get("network_temporal_pressure_evidence")
+    )
     route_summary = _mapping(status.get(str(route_expectation.get("field", ""))))
     kpi_validation = _mapping(status.get(str(kpi_expectation.get("field", ""))))
+    kpi_provenance = _mapping(status.get("network_kpi_provenance_v2"))
+    temporal_evidence = _mapping(kpi_provenance.get("temporal_pressure_evidence"))
     route_status = str(route_summary.get("trust_status", ""))
     route_allowed = _string_tuple(route_expectation.get("allowed_trust_statuses"))
     route_assessed = _integer(route_summary.get("assessed_route_count"))
@@ -4902,6 +4907,33 @@ def _runtime_export_benchmark_runtime_status_results(
     kpi_failed = _integer(kpi_validation.get("failed_check_count"))
     kpi_max_failed = _integer(kpi_expectation.get("maximum_failed_check_count"))
     kpi_pass = kpi_status in kpi_allowed and kpi_failed <= kpi_max_failed
+    temporal_status = str(temporal_evidence.get("status", ""))
+    temporal_allowed = _string_tuple(temporal_expectation.get("allowed_statuses"))
+    temporal_observed = _integer(
+        temporal_evidence.get("observed_required_field_count")
+    )
+    temporal_minimum = _integer(
+        temporal_expectation.get("minimum_observed_required_field_count")
+    )
+    temporal_model_matches = str(temporal_evidence.get("temporal_pressure_model", "")) == str(
+        temporal_expectation.get("temporal_pressure_model", "")
+    )
+    temporal_packet_ok = (
+        temporal_evidence.get("packet_level_simulation") is False
+        and temporal_expectation.get("packet_level_simulation") is False
+    )
+    temporal_frontend_ok = (
+        temporal_evidence.get("frontend_inference_required") is False
+        and temporal_expectation.get("frontend_inference_required") is False
+    )
+    temporal_pass = (
+        bool(temporal_evidence)
+        and temporal_status in temporal_allowed
+        and temporal_observed >= temporal_minimum
+        and temporal_model_matches
+        and temporal_packet_ok
+        and temporal_frontend_ok
+    )
     return (
         _runtime_export_benchmark_status_result(
             check_id="runtime_status.route_trust",
@@ -4930,6 +4962,20 @@ def _runtime_export_benchmark_runtime_status_results(
             evidence_context_id=str(kpi_expectation.get("field", "")),
             evidence_context_label="network KPI benchmark validation",
             evidence_json_pointer="/validation",
+        ),
+        _runtime_export_benchmark_status_result(
+            check_id="runtime_status.network_temporal_pressure",
+            status="PASS" if temporal_pass else "FAIL",
+            expected="/".join(temporal_allowed),
+            actual=temporal_status or "MISSING_TEMPORAL_PRESSURE_EVIDENCE",
+            observed_count=temporal_observed,
+            minimum_count=temporal_minimum,
+            issue_label="BENCHMARK_NETWORK_TEMPORAL_PRESSURE_NOT_ACCEPTED",
+            evidence_artifact_filename=NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME,
+            evidence_artifact_role="network_temporal_pressure_evidence",
+            evidence_context_id=str(temporal_expectation.get("field", "")),
+            evidence_context_label="network temporal pressure evidence",
+            evidence_json_pointer="/evidence",
         ),
     )
 

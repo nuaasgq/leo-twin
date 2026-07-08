@@ -2713,6 +2713,7 @@ def test_runtime_export_benchmark_acceptance_binding_v1_matches_standard_scenari
                     "validation_status": "PASS",
                     "failed_check_count": 0,
                 },
+                "network_kpi_provenance_v2": _network_kpi_provenance_v2(),
             },
             "config": config_to_dict(config),
             "generated_config": {
@@ -2784,6 +2785,9 @@ def test_runtime_export_benchmark_acceptance_binding_v1_matches_standard_scenari
             "runtime_status.network_kpi": (
                 "network_kpi_benchmark_validation_v1.json"
             ),
+            "runtime_status.network_temporal_pressure": (
+                _NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME
+            ),
         }
         runtime_contexts = {
             result["check_id"]: result["evidence_context_id"]
@@ -2792,6 +2796,9 @@ def test_runtime_export_benchmark_acceptance_binding_v1_matches_standard_scenari
         assert runtime_contexts == {
             "runtime_status.route_trust": "route_provenance_trust_summary_v1",
             "runtime_status.network_kpi": "network_kpi_benchmark_validation_v1",
+            "runtime_status.network_temporal_pressure": (
+                "network_kpi_provenance_v2.temporal_pressure_evidence"
+            ),
         }
         runtime_pointers = {
             result["check_id"]: result["evidence_json_pointer"]
@@ -2800,6 +2807,7 @@ def test_runtime_export_benchmark_acceptance_binding_v1_matches_standard_scenari
         assert runtime_pointers == {
             "runtime_status.route_trust": "/route_trust",
             "runtime_status.network_kpi": "/validation",
+            "runtime_status.network_temporal_pressure": "/evidence",
         }
         assert binding["binding_hash"].startswith("sha256:")
 

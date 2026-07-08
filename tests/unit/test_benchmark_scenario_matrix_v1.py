@@ -149,3 +149,26 @@ def test_benchmark_scenario_matrix_requires_network_kpi_calibration() -> None:
         ),
         "packet_level_simulation": False,
     }
+
+
+def test_benchmark_scenario_matrix_requires_temporal_pressure_evidence() -> None:
+    for scenario_id in benchmark_scenario_ids():
+        scenario = benchmark_scenario_by_id(scenario_id, PROJECT_ROOT)
+        expectation = scenario["runtime_status_expectation"]  # type: ignore[index]
+
+        assert (
+            "network_kpi_provenance_v2.temporal_pressure_evidence"
+            in expectation["required_fields"]
+        )
+        temporal = expectation["network_temporal_pressure_evidence"]
+        assert temporal == {
+            "field": "network_kpi_provenance_v2.temporal_pressure_evidence",
+            "source": "network_kpi_provenance_v2",
+            "temporal_pressure_model": (
+                "DETERMINISTIC_TRIANGULAR_LOAD_GATED_PROXY"
+            ),
+            "allowed_statuses": ("OBSERVED",),
+            "minimum_observed_required_field_count": 3,
+            "packet_level_simulation": False,
+            "frontend_inference_required": False,
+        }

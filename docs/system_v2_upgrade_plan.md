@@ -1348,6 +1348,13 @@ Current Phase 3 progress:
   and audit index so network KPI time-variation evidence can be reviewed
   offline without frontend inference or metric recomputation.
 
+- T403 adds temporal pressure evidence to backend benchmark acceptance. The
+  standard scenario matrix now requires
+  `network_kpi_provenance_v2.temporal_pressure_evidence`, and result-package
+  benchmark binding checks `runtime_status.network_temporal_pressure` against
+  backend-owned status/model/source-field expectations with evidence anchored
+  to `network_temporal_pressure_evidence_v1.json`.
+
 ## 5. Parallel Agent Assignment Model
 
 - Kernel Agent: guard Event Kernel boundaries; review that no domain behavior
