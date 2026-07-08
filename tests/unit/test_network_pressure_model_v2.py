@@ -3,9 +3,14 @@ from __future__ import annotations
 import pytest
 
 from leo_twin.models.network.pressure import (
+    NETWORK_TIME_PRESSURE_PERIOD_S,
     FlowPressureLedger,
     pressure_loss_rate,
     pressure_queue_delay,
+    time_varying_pressure_delay_variation,
+    time_varying_pressure_factor,
+    time_varying_pressure_loss_rate,
+    time_varying_pressure_phase,
 )
 
 
@@ -62,6 +67,22 @@ def test_pressure_loss_and_queue_delay_are_deterministic_flow_level_proxies() ->
     assert pressure_loss_rate(1.00) == pytest.approx(0.10)
     assert pressure_queue_delay(0.2, 0.70) == 0.0
     assert pressure_queue_delay(0.2, 1.00) == pytest.approx(0.05)
+
+
+def test_time_varying_pressure_helpers_are_deterministic_load_gated_proxies() -> None:
+    assert NETWORK_TIME_PRESSURE_PERIOD_S == 120.0
+    assert time_varying_pressure_phase(0.0) == 0.0
+    assert time_varying_pressure_phase(60.0) == pytest.approx(0.5)
+    assert time_varying_pressure_phase(120.0) == 0.0
+    assert time_varying_pressure_factor(60.0, 0.0) == 0.0
+    assert time_varying_pressure_factor(0.0, 0.8) == pytest.approx(0.36)
+    assert time_varying_pressure_factor(30.0, 0.8) == pytest.approx(0.58)
+    assert time_varying_pressure_factor(60.0, 0.8) == pytest.approx(0.8)
+    assert time_varying_pressure_loss_rate(0.55) == 0.0
+    assert time_varying_pressure_loss_rate(0.8) == pytest.approx(0.05)
+    assert time_varying_pressure_delay_variation(0.2, 0.4) == 0.0
+    assert time_varying_pressure_delay_variation(0.2, 0.8) == pytest.approx(0.016)
+
 
 def test_pressure_route_admission_reports_queue_state_before_reserve() -> None:
     ledger = FlowPressureLedger()

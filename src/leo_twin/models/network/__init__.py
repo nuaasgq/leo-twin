@@ -42,6 +42,7 @@ from leo_twin.models.network.position_engine import (
 )
 from leo_twin.models.network.pressure import (
     ADMISSION_UTILIZATION_LIMIT,
+    NETWORK_TIME_PRESSURE_PERIOD_S,
     FlowPressureLedger,
     FlowPressureReservation,
     PressureEdge,
@@ -49,6 +50,10 @@ from leo_twin.models.network.pressure import (
     RoutePressureDecision,
     pressure_loss_rate,
     pressure_queue_delay,
+    time_varying_pressure_delay_variation,
+    time_varying_pressure_factor,
+    time_varying_pressure_loss_rate,
+    time_varying_pressure_phase,
 )
 from leo_twin.models.network.routing import (
     RoutingCostProfile,
@@ -90,6 +95,7 @@ __all__ = [
     "LayerTrace",
     "LinkBudgetCalculator",
     "LinkBudgetResult",
+    "NETWORK_TIME_PRESSURE_PERIOD_S",
     "NetworkEngine",
     "NetworkModule",
     "NetworkModuleContract",
@@ -119,6 +125,10 @@ __all__ = [
     "free_space_path_loss_db",
     "pressure_loss_rate",
     "pressure_queue_delay",
+    "time_varying_pressure_delay_variation",
+    "time_varying_pressure_factor",
+    "time_varying_pressure_loss_rate",
+    "time_varying_pressure_phase",
     "shannon_capacity_mbps",
     "thermal_noise_power_dbw",
 ]

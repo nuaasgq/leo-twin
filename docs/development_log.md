@@ -5,6 +5,48 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-08 - Network Time Pressure Model Extraction v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: pending in this commit
+- Scope: move deterministic network time-pressure KPI proxy formulas from the
+  metrics collector into `models/network/pressure.py`. The model layer now owns
+  `NETWORK_TIME_PRESSURE_PERIOD_S`, `time_varying_pressure_phase`,
+  `time_varying_pressure_factor`, `time_varying_pressure_loss_rate`, and
+  `time_varying_pressure_delay_variation`. `MetricsCollector` consumes these
+  helpers without changing the previous numeric formulas, preserving
+  deterministic flow-level, non-packet semantics while making the source of
+  time-varying loss/jitter proxies testable in the backend model layer.
+- Changed files/modules:
+  - `src/leo_twin/models/network/pressure.py`
+  - `src/leo_twin/models/network/__init__.py`
+  - `src/leo_twin/services/metrics/collector.py`
+  - `tests/unit/test_network_pressure_model_v2.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src\leo_twin\models\network\pressure.py src\leo_twin\models\network\__init__.py src\leo_twin\services\metrics\collector.py tests\unit\test_network_pressure_model_v2.py`
+    - Result: passed using the bundled Codex Python runtime.
+  - `pytest tests\unit\test_network_pressure_model_v2.py tests\unit\test_position_driven_network_engine.py -q`
+    - Result: `test_network_pressure_model_v2.py` passed inside the combined run;
+      two existing `test_position_driven_network_engine.py` reroute tests failed
+      because only the initial route was emitted. Those failures are outside
+      this formula-extraction change and remain follow-up investigation.
+  - Direct bundled-Python smoke for all 8 `test_network_pressure_model_v2.py`
+    test functions with a minimal `pytest.approx` shim.
+    - Result: passed with `PYTHONPATH=src`.
+- Problems encountered and handling:
+  - After the first combined pytest run, subsequent direct system-Python pytest
+    invocations were blocked by Windows with `Access is denied`; validation was
+    completed with bundled Python direct smoke instead of requesting approval or
+    installing dependencies.
+  - Local runtime/generated config files and `%SystemDrive%/` remain outside
+    this task scope and were not staged.
+- Known remaining issues / follow-up:
+  - Investigate the existing position-driven reroute test failures separately;
+    they appear to predate this metrics/model extraction and affect compute-node
+    update and orbit-reroute paths.
+
 ## 2026-07-08 - Runtime Duration Completion Evidence v1
 
 - Branch: `feature/T402-network-pressure-provenance-v1`

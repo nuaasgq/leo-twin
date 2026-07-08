@@ -17,6 +17,7 @@ QUEUE_UTILIZATION_THRESHOLD = 0.75
 LOSS_UTILIZATION_THRESHOLD = 0.80
 MAX_PRESSURE_LOSS_RATE = 0.95
 ADMISSION_UTILIZATION_LIMIT = 1.20
+NETWORK_TIME_PRESSURE_PERIOD_S = 120.0
 
 
 @dataclass(frozen=True)
@@ -232,3 +233,59 @@ def pressure_queue_delay(
     """Return the deterministic flow-level queue delay proxy in seconds."""
 
     return float(base_latency_s) * max(0.0, float(utilization) - queue_threshold)
+
+
+def time_varying_pressure_phase(
+    sim_time: float,
+    *,
+    period_s: float = NETWORK_TIME_PRESSURE_PERIOD_S,
+) -> float:
+    """Return the deterministic normalized time-pressure phase for KPI proxies."""
+
+    period = float(period_s)
+    if period <= 0.0:
+        return 0.0
+    return (max(0.0, float(sim_time)) % period) / period
+
+
+def time_varying_pressure_factor(
+    sim_time: float,
+    load_pressure: float,
+    *,
+    period_s: float = NETWORK_TIME_PRESSURE_PERIOD_S,
+) -> float:
+    """Return a deterministic load-gated temporal pressure factor.
+
+    This is a flow-level proxy for synchronized demand bursts. It is not a
+    packet-level model and it never introduces randomness.
+    """
+
+    pressure = _clamp_probability(load_pressure)
+    if pressure <= 0.0:
+        return 0.0
+    phase = time_varying_pressure_phase(sim_time, period_s=period_s)
+    triangular_wave = 1.0 - abs((2.0 * phase) - 1.0)
+    envelope = 0.45 + (0.55 * triangular_wave)
+    return _clamp_probability(pressure * envelope)
+
+
+def time_varying_pressure_loss_rate(time_pressure_factor: float) -> float:
+    """Return deterministic loss proxy contributed by temporal pressure."""
+
+    return _clamp_probability(max(0.0, float(time_pressure_factor) - 0.55) * 0.2)
+
+
+def time_varying_pressure_delay_variation(
+    effective_latency_s: float,
+    time_pressure_factor: float,
+) -> float:
+    """Return deterministic delay variation contributed by temporal pressure."""
+
+    latency = max(0.0, float(effective_latency_s))
+    if latency <= 0.0:
+        return 0.0
+    return latency * max(0.0, float(time_pressure_factor) - 0.4) * 0.2
+
+
+def _clamp_probability(value: float) -> float:
+    return min(1.0, max(0.0, float(value)))

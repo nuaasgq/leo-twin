@@ -13,6 +13,13 @@ from pathlib import Path
 from threading import RLock
 from typing import Any, Protocol
 
+from leo_twin.models.network.pressure import (
+    NETWORK_TIME_PRESSURE_PERIOD_S,
+    time_varying_pressure_delay_variation,
+    time_varying_pressure_factor,
+    time_varying_pressure_loss_rate,
+    time_varying_pressure_phase,
+)
 from leo_twin.models.orbit import ground_track_point
 from leo_twin.schema import (
     ComputeNodeState,
@@ -40,7 +47,7 @@ ReplayEvent = dict[str, ReplayPayload]
 
 _CSV_FIELDS = ("sim_time", "metric_name", "entity_id", "value", "tags")
 _RECENT_FLOW_KPI_WINDOW_S = 60.0
-_NETWORK_TIME_PRESSURE_PERIOD_S = 120.0
+_NETWORK_TIME_PRESSURE_PERIOD_S = NETWORK_TIME_PRESSURE_PERIOD_S
 
 
 class _MetricEventScheduler(Protocol):
@@ -1474,11 +1481,11 @@ class MetricsCollector:
         flow_pressure_proxy = (
             throughput_pressure_proxy if flow_quality["successful_count"] > 1 else 0.0
         )
-        time_pressure_factor = _network_time_pressure_factor(
+        time_pressure_factor = time_varying_pressure_factor(
             summary_time,
             max(demand_pressure_proxy, flow_pressure_proxy, congestion_proxy),
         )
-        time_pressure_loss_proxy_rate = _network_time_pressure_loss_proxy_rate(
+        time_pressure_loss_proxy_rate = time_varying_pressure_loss_rate(
             time_pressure_factor
         )
         pressure_loss_proxy_rate = (
@@ -1496,10 +1503,9 @@ class MetricsCollector:
         )
         flow_latency_avg = _average(flow_quality["latencies"])
         effective_latency_avg = flow_latency_avg or route_latency_avg
-        time_pressure_delay_variation_proxy = (
-            effective_latency_avg * max(0.0, time_pressure_factor - 0.4) * 0.2
-            if effective_latency_avg > 0.0
-            else 0.0
+        time_pressure_delay_variation_proxy = time_varying_pressure_delay_variation(
+            effective_latency_avg,
+            time_pressure_factor,
         )
         pressure_delay_variation_proxy = (
             effective_latency_avg * max(0.0, throughput_pressure_proxy - 0.75) * 0.1
@@ -1638,7 +1644,7 @@ class MetricsCollector:
                 _NETWORK_TIME_PRESSURE_PERIOD_S
             ),
             "network_quality_time_pressure_phase": float(
-                _network_time_pressure_phase(summary_time)
+                time_varying_pressure_phase(summary_time)
             ),
             "network_quality_time_pressure_factor": float(time_pressure_factor),
             "network_quality_time_pressure_loss_proxy_rate": float(
@@ -2801,28 +2807,6 @@ def _congestion_loss_proxy_rate(utilization: float) -> float:
     if utilization <= 0.8:
         return 0.0
     return _clamp_probability((utilization - 0.8) * 0.5)
-
-
-def _network_time_pressure_phase(sim_time: float) -> float:
-    if _NETWORK_TIME_PRESSURE_PERIOD_S <= 0.0:
-        return 0.0
-    return (max(0.0, float(sim_time)) % _NETWORK_TIME_PRESSURE_PERIOD_S) / (
-        _NETWORK_TIME_PRESSURE_PERIOD_S
-    )
-
-
-def _network_time_pressure_factor(sim_time: float, load_pressure: float) -> float:
-    pressure = _clamp_probability(load_pressure)
-    if pressure <= 0.0:
-        return 0.0
-    phase = _network_time_pressure_phase(sim_time)
-    triangular_wave = 1.0 - abs((2.0 * phase) - 1.0)
-    envelope = 0.45 + (0.55 * triangular_wave)
-    return _clamp_probability(pressure * envelope)
-
-
-def _network_time_pressure_loss_proxy_rate(time_pressure_factor: float) -> float:
-    return _clamp_probability(max(0.0, time_pressure_factor - 0.55) * 0.2)
 
 
 def _dominant_proxy_source(sources: tuple[tuple[str, float], ...]) -> str:
