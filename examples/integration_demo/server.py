@@ -538,6 +538,22 @@ def _handler_for(control_plane: DemoControlPlane) -> type[BaseHTTPRequestHandler
                     return
                 self._send_json(control_plane.runtime_node_details(cursor, limit))
                 return
+            if path == "/runtime/details/node-pressure":
+                try:
+                    cursor, limit = _detail_query(query, default_limit=120)
+                except ValueError as exc:
+                    self.send_error(400, str(exc))
+                    return
+                filters = _detail_filter_query(query)
+                self._send_json(
+                    control_plane.runtime_node_pressure_details(
+                        cursor,
+                        limit,
+                        query=filters["query"],
+                        entity_type=filters["entity_type"],
+                    )
+                )
+                return
             if path == "/runtime/details/routes":
                 try:
                     cursor, limit = _detail_query(query, default_limit=100)
@@ -952,6 +968,7 @@ def _detail_filter_query(query: dict[str, list[str]]) -> dict[str, str]:
             "bottleneck_component",
             "ALL",
         ).strip(),
+        "entity_type": _first_query_value(query, "entity_type", "ALL").strip(),
     }
 
 

@@ -6,6 +6,53 @@ task must update this log in the same commit as the code or documentation
 change.
 
 
+## 2026-07-08 - Node Network Pressure Detail Page v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: pending in this commit
+- Scope: add a backend-owned cursor detail page for per-node network pressure
+  evidence. The new runtime service builds `NODE_NETWORK_PRESSURE_DETAIL_WINDOW`
+  pages with deterministic ordering, cursor pagination, query/entity-type
+  filters, per-row `detail_hash`, and no frontend-local inference. The demo
+  control plane and HTTP server expose it as `/runtime/details/node-pressure`,
+  and `large_detail_pagination_contract_v2` advertises the endpoint as a
+  cursor-backed collection. This task does not change Event Kernel behavior,
+  route admission logic, orbit/network/compute model semantics, packet-level
+  behavior, frontend rendering, or external simulator integrations.
+- Changed files/modules:
+  - `src/leo_twin/services/runtime_observability.py`
+  - `src/leo_twin/services/detail_pagination_contract.py`
+  - `examples/integration_demo/control_plane.py`
+  - `examples/integration_demo/server.py`
+  - `tests/unit/test_runtime_observability.py`
+  - `tests/unit/test_large_detail_pagination_contract_v2.py`
+  - `tests/unit/test_backend_derived_summary.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src\leo_twin\services\runtime_observability.py src\leo_twin\services\detail_pagination_contract.py src\leo_twin\services\derived_summary.py examples\integration_demo\control_plane.py examples\integration_demo\server.py tests\unit\test_runtime_observability.py tests\unit\test_large_detail_pagination_contract_v2.py tests\unit\test_backend_derived_summary.py tests\integration\test_runtime_session_control.py`
+    - Result: passed using the bundled Codex Python runtime.
+  - Manual unit smoke for node pressure summary/detail page, pagination
+    contract, and backend derived summary tests
+    - Result: passed.
+  - Manual runtime control-layer smoke for
+    `test_demo_server_adapter_uses_runtime_status_and_control_layer`
+    - Result: passed with a minimal `pytest` stub because the bundled
+      no-approval Python runtime does not include `pytest`.
+  - `git diff --check`
+    - Result: passed for task files.
+- Problems encountered and handling:
+  - Existing status summary was bounded and not directly filterable. The new
+    detail page reuses the same backend route-pressure edge rows but applies
+    pagination and filtering in a read-only observation service.
+  - Local runtime/generated config files and the unrelated `%SystemDrive%/`
+    directory remain outside this task scope and were not staged.
+- Known remaining issues / follow-up:
+  - The frontend does not yet consume `/runtime/details/node-pressure`; the
+    next frontend/backend binding task should show this page in the standalone
+    dashboard node detail tables with backend cursor controls.
+
 ## 2026-07-08 - Node Network Pressure Export Binding v1
 
 - Branch: `feature/T402-network-pressure-provenance-v1`

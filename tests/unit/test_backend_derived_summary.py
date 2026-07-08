@@ -301,6 +301,7 @@ def test_backend_derived_summary_is_deterministic_and_frontend_ready() -> None:
     assert tuple(detail_collections) == (
         "ground_users",
         "satellites",
+        "node_pressure",
         "routes",
         "services",
         "service_traces",
@@ -318,7 +319,7 @@ def test_backend_derived_summary_is_deterministic_and_frontend_ready() -> None:
         "/runtime/details/nodes"
     )
     assert any(
-        "Large detail pagination contract v2 exposes 6 cursor-backed collections"
+        "Large detail pagination contract v2 exposes 7 cursor-backed collections"
         in assumption
         for assumption in first["model_assumptions"]
     )

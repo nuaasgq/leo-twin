@@ -682,6 +682,11 @@ Tasks:
     binds it into review summary, diagnostics, scenario review, artifact
     browser, and audit index evidence paths for reproducible node-detail
     review.
+  - Status: T405 adds backend cursor detail page
+    `/runtime/details/node-pressure`, exposing deterministic per-node network
+    pressure rows with query/entity-type filters and per-row hashes.
+    `large_detail_pagination_contract_v2` now advertises this collection so
+    the dashboard can bind node pressure tables without local inference.
 - V2-053: Add virtualized large tables.
   - Scope: avoid rendering hundreds/thousands of rows directly.
   - Depends on: V2-043.

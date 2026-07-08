@@ -11,6 +11,7 @@ from leo_twin.services.runtime_observability import (
     build_runtime_service_trace_detail_item,
     build_runtime_lifecycle_summaries,
     build_runtime_node_detail_page,
+    build_runtime_node_network_pressure_detail_page,
     build_runtime_node_network_pressure_summary,
     build_runtime_route_explanation_summary,
     build_runtime_route_provenance_trust_summary,
@@ -101,6 +102,107 @@ def test_node_network_pressure_summary_binds_route_edge_states_to_nodes() -> Non
     assert satellites["sat-1"]["pressure_edge_count"] == 2
     assert satellites["sat-1"]["route_ids"] == ("route-a", "route-b")
     assert first["summary_hash"].startswith("sha256:")
+
+
+def test_node_network_pressure_detail_page_filters_and_paginates() -> None:
+    snapshot = {
+        "routes": [
+            {
+                "route_id": "route-a",
+                "flow_id": "flow-a",
+                "path": ["user-0", "sat-0", "sat-1", "compute-0"],
+                "available": True,
+                "pressure_edge_states": [
+                    {
+                        "edge_id": "user-0->sat-0",
+                        "source_id": "user-0",
+                        "target_id": "sat-0",
+                        "pressure_state": "SATURATED",
+                        "projected_utilization": 1.1,
+                        "queue_delay_s": 0.02,
+                        "loss_proxy_rate": 0.1,
+                    },
+                    {
+                        "edge_id": "sat-0->sat-1",
+                        "source_id": "sat-0",
+                        "target_id": "sat-1",
+                        "pressure_state": "QUEUED",
+                        "projected_utilization": 0.9,
+                        "queue_delay_s": 0.01,
+                        "loss_proxy_rate": 0.05,
+                    },
+                ],
+            },
+            {
+                "route_id": "route-b",
+                "flow_id": "flow-b",
+                "path": ["user-1", "sat-1", "service-0"],
+                "available": False,
+                "pressure_edge_states": [
+                    {
+                        "edge_id": "user-1->sat-1",
+                        "source_id": "user-1",
+                        "target_id": "sat-1",
+                        "pressure_state": "ADMISSION_REJECTED",
+                        "projected_utilization": 1.8,
+                        "queue_delay_s": 0.04,
+                        "loss_proxy_rate": 0.2,
+                    },
+                ],
+            },
+        ]
+    }
+
+    first = build_runtime_node_network_pressure_detail_page(
+        snapshot,
+        cursor=0,
+        limit=2,
+    )
+    second = build_runtime_node_network_pressure_detail_page(
+        snapshot,
+        cursor=0,
+        limit=2,
+    )
+    filtered = build_runtime_node_network_pressure_detail_page(
+        snapshot,
+        cursor=0,
+        limit=10,
+        query="user-1",
+        entity_type="USER",
+    )
+
+    assert first == second
+    assert first["version"] == "v1"
+    assert first["summary_scope"] == "NODE_NETWORK_PRESSURE_DETAIL_WINDOW"
+    assert first["pressure_model"] == "FLOW_PRESSURE_ADMISSION_V1"
+    assert first["packet_level_simulation"] is False
+    assert first["frontend_inference_required"] is False
+    assert first["cursor"] == 0
+    assert first["limit"] == 2
+    assert first["next_cursor"] == 2
+    assert first["has_more"] is True
+    assert first["node_count"] == 4
+    assert first["unfiltered_node_count"] == 4
+    assert first["item_count"] == 2
+    assert first["user_count"] == 2
+    assert first["satellite_count"] == 2
+    assert first["route_pressure_route_count"] == 2
+    assert first["pressure_edge_count"] == 3
+    assert first["window_pressure_edge_count"] == 2
+    assert first["items"][0]["entity_type"] == "USER"
+    assert first["items"][0]["detail_id"] == "USER:user-0"
+    assert first["items"][0]["detail_hash"].startswith("sha256:")
+    assert filtered["filter_applied"] is True
+    assert filtered["filter_query"] == "user-1"
+    assert filtered["filter_entity_type"] == "USER"
+    assert filtered["node_count"] == 1
+    assert filtered["item_count"] == 1
+    assert filtered["items"][0]["entity_id"] == "user-1"
+    assert filtered["items"][0]["dominant_pressure_state"] == (
+        "ADMISSION_REJECTED"
+    )
+    assert filtered["summary_hash"].startswith("sha256:")
+
 
 
 def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> None:

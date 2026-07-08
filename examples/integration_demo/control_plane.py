@@ -73,6 +73,7 @@ from leo_twin.services.runtime_observability import (
     build_runtime_compute_node_detail_page,
     build_runtime_lifecycle_summaries,
     build_runtime_node_detail_page,
+    build_runtime_node_network_pressure_detail_page,
     build_runtime_route_detail_item,
     build_runtime_route_explanation_summary,
     build_runtime_route_provenance_trust_summary,
@@ -552,6 +553,27 @@ class DemoControlPlane:
         return {
             "type": "RUNTIME_DETAIL_PAGE",
             "kind": "nodes",
+            "summary": summary,
+        }
+
+    def runtime_node_pressure_details(
+        self,
+        cursor: int = 0,
+        limit: int = 100,
+        *,
+        query: str = "",
+        entity_type: str = "ALL",
+    ) -> dict[str, Any]:
+        summary = build_runtime_node_network_pressure_detail_page(
+            self.visible_snapshot(),
+            cursor=cursor,
+            limit=limit,
+            query=query,
+            entity_type=entity_type,
+        )
+        return {
+            "type": "RUNTIME_DETAIL_PAGE",
+            "kind": "node_pressure",
             "summary": summary,
         }
 

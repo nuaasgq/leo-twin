@@ -40,6 +40,16 @@ def test_large_detail_pagination_contract_v2_derives_large_scale_cursors() -> No
     assert collections["ground_users"]["cursor_required"] is True
     assert collections["ground_users"]["hidden_count_estimate"] == 280
     assert collections["satellites"]["endpoint"] == "/runtime/details/satellites"
+    assert collections["node_pressure"]["endpoint"] == (
+        "/runtime/details/node-pressure"
+    )
+    assert collections["node_pressure"]["query_parameters"] == (
+        "cursor",
+        "limit",
+        "query",
+        "entity_type",
+    )
+    assert collections["node_pressure"]["estimated_total_count"] == 1600
     assert collections["routes"]["endpoint"] == "/runtime/details/routes"
     assert collections["routes"]["recommended_limit"] == 96
     assert collections["routes"]["hidden_count_estimate"] == 144

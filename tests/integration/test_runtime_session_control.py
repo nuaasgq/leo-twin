@@ -758,6 +758,31 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
             "max_projected_utilization",
             "pressure_label",
         }.issubset(node_pressure_summary["items"][0])
+    node_pressure_page = control_plane.runtime_node_pressure_details(
+        cursor=0,
+        limit=2,
+    )
+    assert node_pressure_page["type"] == "RUNTIME_DETAIL_PAGE"
+    assert node_pressure_page["kind"] == "node_pressure"
+    assert node_pressure_page["summary"]["summary_scope"] == (
+        "NODE_NETWORK_PRESSURE_DETAIL_WINDOW"
+    )
+    assert node_pressure_page["summary"]["node_count"] >= (
+        node_pressure_page["summary"]["item_count"]
+    )
+    assert node_pressure_page["summary"]["summary_hash"].startswith("sha256:")
+    satellite_pressure_page = control_plane.runtime_node_pressure_details(
+        cursor=0,
+        limit=2,
+        entity_type="SATELLITE",
+    )
+    assert satellite_pressure_page["summary"].get("filter_applied") is True
+    assert satellite_pressure_page["summary"].get("filter_entity_type") == (
+        "SATELLITE"
+    )
+    for item in satellite_pressure_page["summary"]["items"]:
+        assert item["entity_type"] == "SATELLITE"
+        assert item["detail_hash"].startswith("sha256:")
     node_detail_summary = status_after_tick["node_detail_summary_v1"]
     assert node_detail_summary["version"] == "v1"
     assert node_detail_summary["source"] == "BACKEND_RUNTIME_STATUS"

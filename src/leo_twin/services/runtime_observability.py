@@ -251,40 +251,8 @@ def build_runtime_node_network_pressure_summary(
 
     if not isinstance(snapshot, Mapping):
         raise TypeError("snapshot must be a mapping")
-    entries: dict[tuple[str, str], dict[str, Any]] = {}
-    route_pressure_route_count = 0
-    pressure_edge_count = 0
-    for route in sorted(_records(snapshot.get("routes")), key=_route_sort_key):
-        edge_records = _route_pressure_edge_records(route)
-        if not edge_records:
-            continue
-        route_pressure_route_count += 1
-        pressure_edge_count += len(edge_records)
-        user_id = _route_user_id(route)
-        if user_id is not None:
-            user_records = _pressure_records_for_node(edge_records, user_id)
-            _accumulate_node_pressure(
-                entries.setdefault(
-                    ("USER", user_id),
-                    _node_pressure_entry("USER", user_id),
-                ),
-                route,
-                user_records or edge_records,
-            )
-        for satellite_id in _route_satellite_ids(route):
-            satellite_records = _pressure_records_for_node(edge_records, satellite_id)
-            _accumulate_node_pressure(
-                entries.setdefault(
-                    ("SATELLITE", satellite_id),
-                    _node_pressure_entry("SATELLITE", satellite_id),
-                ),
-                route,
-                satellite_records or edge_records,
-            )
-
-    rows = tuple(
-        _finalize_node_pressure_entry(entry)
-        for _, entry in sorted(entries.items(), key=lambda item: _node_pressure_sort_key(item[0]))
+    rows, route_pressure_route_count, pressure_edge_count = (
+        _runtime_node_network_pressure_rows(snapshot)
     )
     normalized_cursor = _page_cursor(cursor)
     normalized_limit = _page_limit(limit)
@@ -327,6 +295,156 @@ def build_runtime_node_network_pressure_summary(
     }
     summary["summary_hash"] = stable_hash_payload(summary)
     return summary
+
+
+def build_runtime_node_network_pressure_detail_page(
+    snapshot: Mapping[str, Any],
+    *,
+    cursor: int = 0,
+    limit: int = 100,
+    query: str = "",
+    entity_type: str = "ALL",
+) -> dict[str, object]:
+    """Build one deterministic cursor page of per-node pressure evidence."""
+
+    if not isinstance(snapshot, Mapping):
+        raise TypeError("snapshot must be a mapping")
+    rows, route_pressure_route_count, pressure_edge_count = (
+        _runtime_node_network_pressure_rows(snapshot)
+    )
+    filter_query = _normalized_filter_text(query)
+    filter_entity_type = _normalized_filter_choice(entity_type, default="ALL")
+    filtered_rows = tuple(
+        row
+        for row in rows
+        if (
+            filter_entity_type == "ALL"
+            or _str(row.get("entity_type")).upper() == filter_entity_type
+        )
+        and _node_pressure_row_matches_query(row, filter_query)
+    )
+
+    normalized_cursor = _page_cursor(cursor)
+    normalized_limit = _page_limit(limit)
+    page_rows = filtered_rows[normalized_cursor : normalized_cursor + normalized_limit]
+    items = tuple(_node_network_pressure_detail_item(row) for row in page_rows)
+    next_cursor = min(len(filtered_rows), normalized_cursor + len(items))
+    filter_applied = bool(filter_query) or filter_entity_type != "ALL"
+    detail_page: dict[str, object] = {
+        "version": "v1",
+        "source": "BACKEND_RUNTIME_SNAPSHOT",
+        "summary_scope": "NODE_NETWORK_PRESSURE_DETAIL_WINDOW",
+        "pressure_model": "FLOW_PRESSURE_ADMISSION_V1",
+        "packet_level_simulation": False,
+        "frontend_inference_required": False,
+        "cursor": normalized_cursor,
+        "limit": normalized_limit,
+        "next_cursor": next_cursor,
+        "has_more": next_cursor < len(filtered_rows),
+        "node_count": len(filtered_rows),
+        "unfiltered_node_count": len(rows),
+        "item_count": len(items),
+        "hidden_node_count": max(0, len(filtered_rows) - len(items)),
+        "user_count": sum(1 for item in filtered_rows if item["entity_type"] == "USER"),
+        "satellite_count": sum(
+            1 for item in filtered_rows if item["entity_type"] == "SATELLITE"
+        ),
+        "unfiltered_user_count": sum(1 for item in rows if item["entity_type"] == "USER"),
+        "unfiltered_satellite_count": sum(
+            1 for item in rows if item["entity_type"] == "SATELLITE"
+        ),
+        "route_pressure_route_count": route_pressure_route_count,
+        "pressure_edge_count": pressure_edge_count,
+        "window_pressure_edge_count": sum(
+            _count(item.get("pressure_edge_count")) for item in items
+        ),
+        "max_projected_utilization": max(
+            (_float(item.get("max_projected_utilization")) for item in filtered_rows),
+            default=0.0,
+        ),
+        "max_queue_delay_s": max(
+            (_float(item.get("max_queue_delay_s")) for item in filtered_rows),
+            default=0.0,
+        ),
+        "max_loss_proxy_rate": max(
+            (_float(item.get("max_loss_proxy_rate")) for item in filtered_rows),
+            default=0.0,
+        ),
+        "items": items,
+    }
+    if filter_applied:
+        detail_page.update(
+            {
+                "filter_applied": True,
+                "filter_query": filter_query,
+                "filter_entity_type": filter_entity_type,
+            }
+        )
+    detail_page["summary_hash"] = stable_hash_payload(detail_page)
+    return detail_page
+
+
+def _runtime_node_network_pressure_rows(
+    snapshot: Mapping[str, Any],
+) -> tuple[tuple[dict[str, object], ...], int, int]:
+    entries: dict[tuple[str, str], dict[str, Any]] = {}
+    route_pressure_route_count = 0
+    pressure_edge_count = 0
+    for route in sorted(_records(snapshot.get("routes")), key=_route_sort_key):
+        edge_records = _route_pressure_edge_records(route)
+        if not edge_records:
+            continue
+        route_pressure_route_count += 1
+        pressure_edge_count += len(edge_records)
+        user_id = _route_user_id(route)
+        if user_id is not None:
+            user_records = _pressure_records_for_node(edge_records, user_id)
+            _accumulate_node_pressure(
+                entries.setdefault(
+                    ("USER", user_id),
+                    _node_pressure_entry("USER", user_id),
+                ),
+                route,
+                user_records or edge_records,
+            )
+        for satellite_id in _route_satellite_ids(route):
+            satellite_records = _pressure_records_for_node(edge_records, satellite_id)
+            _accumulate_node_pressure(
+                entries.setdefault(
+                    ("SATELLITE", satellite_id),
+                    _node_pressure_entry("SATELLITE", satellite_id),
+                ),
+                route,
+                satellite_records or edge_records,
+            )
+
+    rows = tuple(
+        _finalize_node_pressure_entry(entry)
+        for _, entry in sorted(
+            entries.items(),
+            key=lambda item: _node_pressure_sort_key(item[0]),
+        )
+    )
+    return rows, route_pressure_route_count, pressure_edge_count
+
+
+def _node_network_pressure_detail_item(item: Mapping[str, Any]) -> dict[str, object]:
+    row = dict(item)
+    row["detail_id"] = f"{_str(row.get('entity_type'))}:{_str(row.get('entity_id'))}"
+    row["detail_scope"] = "NODE_NETWORK_PRESSURE_DETAIL"
+    row["detail_hash"] = stable_hash_payload(row)
+    return row
+
+
+def _node_pressure_row_matches_query(
+    row: Mapping[str, Any],
+    filter_query: str,
+) -> bool:
+    if not filter_query:
+        return True
+    values = " ".join(value.lower() for value in _filter_text_values(row))
+    return filter_query in values
+
 
 
 def build_runtime_node_detail_summary(
