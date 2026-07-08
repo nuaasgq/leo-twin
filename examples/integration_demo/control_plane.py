@@ -2848,6 +2848,10 @@ class DemoControlPlane:
                 item_limit=64,
             )
         )
+        timeline = _merge_traffic_timeline_observations(
+            timeline,
+            self._service_latency_history_json(),
+        )
         timeline["summary_hash"] = stable_hash_payload(timeline)
         return timeline
 
@@ -3074,6 +3078,112 @@ class DemoControlPlane:
                 f"runtime export package {package_id!r} has invalid traffic demand export"
             )
         return traffic_demand_export
+
+
+def _merge_traffic_timeline_observations(
+    timeline: Mapping[str, Any],
+    service_latency_history: Mapping[str, Any],
+) -> dict[str, Any]:
+    result = dict(timeline)
+    service_index = _traffic_timeline_service_observation_index(
+        service_latency_history,
+    )
+    enriched_items: list[dict[str, Any]] = []
+    observed_count = 0
+    completed_count = 0
+    running_count = 0
+    for raw_item in _control_records(result.get("items")):
+        item = dict(raw_item)
+        observation = _traffic_timeline_observation_for_item(item, service_index)
+        if observation["observed_execution_state"] != "NOT_OBSERVED":
+            observed_count += 1
+        if observation["observed_execution_state"] == "COMPLETED":
+            completed_count += 1
+        if observation["observed_execution_state"] == "OBSERVED_IN_PROGRESS":
+            running_count += 1
+        item.update(observation)
+        enriched_items.append(item)
+    result["items"] = tuple(enriched_items)
+    result["observation_source"] = "service_latency_history_v1"
+    result["observed_item_count"] = observed_count
+    result["completed_item_count"] = completed_count
+    result["running_item_count"] = running_count
+    result["not_observed_item_count"] = max(0, len(enriched_items) - observed_count)
+    result["observation_model"] = "PLANNED_REQUEST_WITH_SERVICE_TRACE_JOIN"
+    result["observation_packet_level_simulation"] = False
+    return result
+
+
+def _traffic_timeline_service_observation_index(
+    service_latency_history: Mapping[str, Any],
+) -> dict[str, Mapping[str, Any]]:
+    index: dict[str, Mapping[str, Any]] = {}
+    for item in _control_records(service_latency_history.get("items")):
+        for key in _traffic_timeline_observation_keys(item):
+            index.setdefault(key, item)
+    return index
+
+
+def _traffic_timeline_observation_for_item(
+    item: Mapping[str, Any],
+    service_index: Mapping[str, Mapping[str, Any]],
+) -> dict[str, Any]:
+    service: Mapping[str, Any] | None = None
+    for key in _traffic_timeline_observation_keys(item):
+        service = service_index.get(key)
+        if service is not None:
+            break
+    if service is None:
+        return {
+            "observed_execution_state": "NOT_OBSERVED",
+            "observed_complete": False,
+            "observed_task_id": "",
+            "observed_input_flow_id": "",
+            "observed_output_flow_id": "",
+            "observed_total_latency_s": None,
+            "observed_last_sample_sim_time": None,
+            "observed_component_count": 0,
+        }
+    complete = service.get("complete") is True
+    component_count = len(_control_records(service.get("component_timeline")))
+    return {
+        "observed_execution_state": (
+            "COMPLETED" if complete else "OBSERVED_IN_PROGRESS"
+        ),
+        "observed_complete": complete,
+        "observed_task_id": _control_string(service.get("task_id")),
+        "observed_input_flow_id": _control_string(service.get("input_flow_id")),
+        "observed_output_flow_id": _control_string(service.get("output_flow_id")),
+        "observed_total_latency_s": _control_optional_float(
+            service.get("total_latency_s")
+        ),
+        "observed_last_sample_sim_time": _control_optional_float(
+            service.get("last_sample_sim_time")
+        ),
+        "observed_component_count": component_count,
+    }
+
+
+def _traffic_timeline_observation_keys(
+    item: Mapping[str, Any],
+) -> tuple[str, ...]:
+    keys: list[str] = []
+    for field in ("request_id", "task_id", "input_flow_id", "output_flow_id"):
+        value = _control_string(item.get(field))
+        if not value:
+            continue
+        keys.append(value)
+        normalized = _strip_service_suffix(value)
+        if normalized and normalized != value:
+            keys.append(normalized)
+    return tuple(dict.fromkeys(keys))
+
+
+def _strip_service_suffix(value: str) -> str:
+    for suffix in ("-task", "-input", "-output"):
+        if value.endswith(suffix):
+            return value[: -len(suffix)]
+    return value
 
 
 def _runtime_completion_fields(

@@ -302,6 +302,19 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
     assert traffic_timeline["frontend_inference_required"] is False
     assert traffic_timeline["request_count"] > 0
     assert traffic_timeline["item_count"] <= traffic_timeline["item_limit"]
+    assert traffic_timeline["observation_source"] == "service_latency_history_v1"
+    assert traffic_timeline["observation_model"] == (
+        "PLANNED_REQUEST_WITH_SERVICE_TRACE_JOIN"
+    )
+    assert traffic_timeline["observation_packet_level_simulation"] is False
+    if traffic_timeline["items"]:
+        first_request = traffic_timeline["items"][0]
+        assert first_request["observed_execution_state"] in {
+            "NOT_OBSERVED",
+            "OBSERVED_IN_PROGRESS",
+            "COMPLETED",
+        }
+        assert "observed_complete" in first_request
     assert str(traffic_timeline["summary_hash"]).startswith("sha256:")
     lifecycle = status_after_tick["network_flow_lifecycle_summary_v1"]
     assert lifecycle["version"] == "v1"

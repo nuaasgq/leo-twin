@@ -1392,6 +1392,11 @@ Current Phase 3 progress:
   and PENDING states instead of inferring business activity from static
   frontend data.
 
+- T410 enriches `traffic_request_timeline_v1` with observed execution fields
+  joined from `service_latency_history_v1`. Planned request rows now expose
+  NOT_OBSERVED, OBSERVED_IN_PROGRESS, or COMPLETED status plus observed task,
+  flow, latency, and component-count fields when service traces are retained.
+
 ## 5. Parallel Agent Assignment Model
 
 - Kernel Agent: guard Event Kernel boundaries; review that no domain behavior
