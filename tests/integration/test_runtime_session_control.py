@@ -1108,6 +1108,7 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
         "review_summary_v1.json",
         "route_detail_index_v1.json",
         "route_pressure_evidence_v1.json",
+        "runtime_kpi_movement_summary_v1.json",
         "scenario_review_bundle_v1.json",
         "service_lifecycle_trace_v2.json",
         "summary.json",
@@ -1240,6 +1241,8 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
     assert review_summary["artifacts"]["review_summary_exported"] is True
     assert review_summary["artifacts"]["traffic_demand_explanation_exported"] is True
     assert review_summary["artifacts"]["route_pressure_evidence_exported"] is True
+    assert review_summary["artifacts"]["runtime_kpi_movement_summary_exported"] is True
+    assert review_summary["runtime_kpi_movement_summary"]["evidence_present"] is True
     assert review_summary["route_pressure_evidence"]["evidence_present"] is True
     assert review_summary["route_pressure_evidence"]["route_count"] == (
         route_pressure_evidence["summary"]["route_count"]

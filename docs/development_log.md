@@ -6,6 +6,52 @@ task must update this log in the same commit as the code or documentation
 change.
 
 
+## 2026-07-08 - Runtime KPI Movement Export Binding v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: pending in this commit
+- Scope: persist `runtime_kpi_movement_summary_v1` into runtime export packages
+  as `runtime_kpi_movement_summary_v1.json`. Result-package review, diagnostics,
+  scenario review, artifact browser, and audit index sections now expose the
+  movement evidence hash, movement status, moving metric counts, and compute
+  moving metric count. This makes KPI movement evidence available for offline
+  review without changing KPI formulas, Event Kernel behavior, frontend
+  rendering, packet-level behavior, topology selection, or external simulator
+  integrations.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `src/leo_twin/services/result_package_contract.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src\leo_twin\services\result_package_contract.py examples\integration_demo\control_plane.py tests\unit\test_result_package_contract_v1.py tests\integration\test_result_package_export_v1.py tests\integration\test_runtime_session_control.py`
+    - Result: passed using the bundled Codex Python runtime.
+  - Manual pure-function smoke for six result-package contract movement export
+    tests
+    - Result: passed.
+  - Manual integration smoke for
+    `test_runtime_export_package_satisfies_result_package_contract_v1`
+    - Result: passed.
+  - `git diff --check`
+    - Result: passed for task files.
+  - Target `pytest` command was not run in this no-approval continuation: the
+    bundled Codex Python runtime does not include `pytest`, and the user asked
+    not to request further approvals.
+- Problems encountered and handling:
+  - Adding the new artifact exposed that `route_pressure_evidence_v1.json` was
+    missing from the scenario review recommended order. The same localized
+    result-package binding update adds it to the recommended order so pressure
+    evidence remains review-visible.
+  - Local runtime/generated config files and the unrelated `%SystemDrive%/`
+    directory remain outside this task scope and were not staged.
+- Known remaining issues / follow-up:
+  - Offline packages now preserve KPI movement evidence, but the dashboard still
+    needs a frontend binding to display movement status next to KPI charts.
+
+
 ## 2026-07-08 - Runtime KPI Movement Summary v1
 
 - Branch: `feature/T402-network-pressure-provenance-v1`

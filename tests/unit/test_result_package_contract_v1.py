@@ -15,6 +15,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1_ID,
     RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_V1_ID,
     RUNTIME_EXPORT_NETWORK_KPI_FORMULA_EVIDENCE_V1_ID,
+    RUNTIME_EXPORT_RUNTIME_KPI_MOVEMENT_SUMMARY_V1_ID,
     RUNTIME_EXPORT_TRAFFIC_DEMAND_EXPLANATION_V1_ID,
     RUNTIME_EXPORT_TRAFFIC_DEMAND_USER_PAGE_V1_ID,
     RUNTIME_EXPORT_USER_CONFIGURATION_TEMPLATE_VALIDATION_V1_ID,
@@ -44,6 +45,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_diagnostics_bundle_v1,
     build_runtime_export_network_kpi_benchmark_validation_v1,
     build_runtime_export_network_kpi_formula_evidence_v1,
+    build_runtime_export_runtime_kpi_movement_summary_v1,
     build_runtime_export_traffic_demand_explanation_v1,
     build_runtime_export_traffic_demand_user_page_v1,
     build_runtime_export_user_configuration_template_validation_v1,
@@ -77,6 +79,7 @@ from leo_twin.services.result_package_contract import (
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 _TRAFFIC_DEMAND_EXPLANATION_FILENAME = "traffic_demand_explanation_v1.json"
 _ROUTE_PRESSURE_EVIDENCE_FILENAME = "route_pressure_evidence_v1.json"
+_RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME = "runtime_kpi_movement_summary_v1.json"
 
 
 def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
@@ -109,6 +112,7 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
         "network_kpi_benchmark_validation_v1.json",
         "network_kpi_formula_evidence_v1.json",
         "network_kpi_variation_explanation_v1.json",
+        _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
         "user_configuration_template_validation_v1.json",
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         "scenario_review_bundle_v1.json",
@@ -254,6 +258,7 @@ def test_result_package_summary_accepts_complete_package_record() -> None:
         "network_kpi_benchmark_validation_v1.json",
         "network_kpi_formula_evidence_v1.json",
         "network_kpi_variation_explanation_v1.json",
+        _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
         "user_configuration_template_validation_v1.json",
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         "scenario_review_bundle_v1.json",
@@ -307,6 +312,7 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
             "network_kpi_variation_explanation_v1": (
                 _network_kpi_variation_explanation()
             ),
+            "runtime_kpi_movement_summary_v1": _runtime_kpi_movement_summary(),
             "user_service_request_summary_v2": _user_service_request_summary(),
             "runtime_export_user_service_request_policy_v1": (
                 _user_service_request_export_policy()
@@ -400,6 +406,11 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
         "FORMULA_AND_TIME_EVIDENCE_READY"
     )
     assert first["network_kpi_formula_evidence"]["missing_selected_input_count"] == 0
+    assert first["runtime_kpi_movement_summary"]["evidence_present"] is True
+    assert first["runtime_kpi_movement_summary"]["movement_status"] == (
+        "TIME_VARYING_OBSERVED"
+    )
+    assert first["runtime_kpi_movement_summary"]["moving_metric_count"] == 3
     assert first["user_configuration_template_validation"][
         "evidence_present"
     ] is True
@@ -529,6 +540,35 @@ def test_runtime_export_network_kpi_formula_evidence_v1_is_deterministic() -> No
     assert first["evidence"]["evidence_hash"].startswith("sha256:")
     assert first["artifact_hash"].startswith("sha256:")
     assert "NO_METRIC_RECOMPUTE" in first["boundary_conditions"]
+
+
+def test_runtime_export_runtime_kpi_movement_summary_v1_is_deterministic() -> None:
+    config_snapshot = {
+        "status": {
+            "runtime_kpi_movement_summary_v1": _runtime_kpi_movement_summary(),
+        }
+    }
+
+    first = build_runtime_export_runtime_kpi_movement_summary_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+    )
+    second = build_runtime_export_runtime_kpi_movement_summary_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+    )
+
+    assert first == second
+    assert first["type"] == "RUNTIME_EXPORT_RUNTIME_KPI_MOVEMENT_SUMMARY_V1"
+    assert first["artifact_id"] == RUNTIME_EXPORT_RUNTIME_KPI_MOVEMENT_SUMMARY_V1_ID
+    assert first["runtime_status_field"] == "runtime_kpi_movement_summary_v1"
+    assert first["movement_summary"] == _runtime_kpi_movement_summary()
+    assert first["evidence"]["evidence_present"] is True
+    assert first["evidence"]["movement_status"] == "TIME_VARYING_OBSERVED"
+    assert "NO_METRIC_RECOMPUTE" in first["boundary_conditions"]
+    assert first["artifact_hash"].startswith("sha256:")
 
 
 def test_runtime_export_user_configuration_template_validation_v1_is_deterministic() -> None:
@@ -823,6 +863,7 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
             "network_kpi_variation_explanation_v1": (
                 _network_kpi_variation_explanation()
             ),
+            "runtime_kpi_movement_summary_v1": _runtime_kpi_movement_summary(),
             "user_service_request_summary_v2": _user_service_request_summary(),
             "runtime_export_user_service_request_policy_v1": (
                 _user_service_request_export_policy()
@@ -853,6 +894,7 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
         "network_kpi_benchmark_validation_v1.json",
         "network_kpi_formula_evidence_v1.json",
         "network_kpi_variation_explanation_v1.json",
+        _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
         "user_configuration_template_validation_v1.json",
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         "review_summary_v1.json",
@@ -941,7 +983,7 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
     assert artifact_browser["missing_required_count"] == 0
     assert artifact_browser["browser_hash"].startswith("sha256:")
     categories = {item["category"]: item for item in artifact_browser["categories"]}
-    assert categories["NETWORK_KPI_EVIDENCE"]["present_count"] == 3
+    assert categories["NETWORK_KPI_EVIDENCE"]["present_count"] == 4
     variation_item = next(
         item
         for item in artifact_browser["items"]
@@ -951,6 +993,15 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
     assert variation_item["present"] is True
     assert variation_item["default_json_pointer"] == "/evidence"
     assert variation_item["filter_hint"] == "variation"
+    movement_item = next(
+        item
+        for item in artifact_browser["items"]
+        if item["filename"] == _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME
+    )
+    assert movement_item["category"] == "NETWORK_KPI_EVIDENCE"
+    assert movement_item["present"] is True
+    assert movement_item["default_json_pointer"] == "/evidence"
+    assert movement_item["filter_hint"] == "movement"
     pressure_item = next(
         item
         for item in artifact_browser["items"]
@@ -993,6 +1044,7 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
             "network_kpi_variation_explanation_v1": (
                 _network_kpi_variation_explanation()
             ),
+            "runtime_kpi_movement_summary_v1": _runtime_kpi_movement_summary(),
             "user_service_request_summary_v2": _user_service_request_summary(),
             "runtime_export_user_service_request_policy_v1": (
                 _user_service_request_export_policy()
@@ -1025,6 +1077,7 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
         "network_kpi_benchmark_validation_v1.json",
         "network_kpi_formula_evidence_v1.json",
         "network_kpi_variation_explanation_v1.json",
+        _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
         "user_configuration_template_validation_v1.json",
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         "review_summary_v1.json",
@@ -2994,6 +3047,7 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
         "network_kpi_benchmark_validation_v1.json",
         "network_kpi_formula_evidence_v1.json",
         "network_kpi_variation_explanation_v1.json",
+        _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
         "user_configuration_template_validation_v1.json",
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         "review_summary_v1.json",
@@ -3394,6 +3448,38 @@ def _network_kpi_variation_explanation() -> dict[str, object]:
         ),
         "caveats": (
             "Variation explanation is deterministic and not packet-level.",
+        ),
+    }
+
+
+def _runtime_kpi_movement_summary() -> dict[str, object]:
+    return {
+        "version": "v1",
+        "summary_id": "leo_twin.runtime_kpi_movement_summary.v1",
+        "source": "KPI_TIME_SERIES_V1_AND_METRICS_SUMMARY",
+        "metric_model": "FLOW_LEVEL_PROXY",
+        "packet_level_simulation": False,
+        "frontend_inference_required": False,
+        "sample_count": 6,
+        "sim_time_span_s": 120.0,
+        "metric_count": 11,
+        "observed_metric_count": 11,
+        "moving_metric_count": 3,
+        "flat_metric_count": 8,
+        "zero_latest_metric_count": 6,
+        "network_moving_metric_count": 2,
+        "compute_moving_metric_count": 1,
+        "movement_status": "TIME_VARYING_OBSERVED",
+        "model_assumptions": (
+            "Movement evidence is derived only from backend kpi_time_series_v1 samples.",
+        ),
+        "items": (
+            {
+                "metric": "NETWORK_EFFECTIVE_THROUGHPUT",
+                "category": "NETWORK",
+                "movement_status": "TIME_VARYING",
+                "absolute_delta": 20.0,
+            },
         ),
     }
 

@@ -89,6 +89,9 @@ RUNTIME_EXPORT_NETWORK_KPI_FORMULA_EVIDENCE_V1_ID = (
 RUNTIME_EXPORT_NETWORK_KPI_VARIATION_EXPLANATION_V1_ID = (
     "leo_twin.runtime_export_network_kpi_variation_explanation.v1"
 )
+RUNTIME_EXPORT_RUNTIME_KPI_MOVEMENT_SUMMARY_V1_ID = (
+    "leo_twin.runtime_export_runtime_kpi_movement_summary.v1"
+)
 RUNTIME_EXPORT_USER_CONFIGURATION_TEMPLATE_VALIDATION_V1_ID = (
     "leo_twin.runtime_export_user_configuration_template_validation.v1"
 )
@@ -127,6 +130,7 @@ NETWORK_KPI_FORMULA_EVIDENCE_FILENAME = "network_kpi_formula_evidence_v1.json"
 NETWORK_KPI_VARIATION_EXPLANATION_FILENAME = (
     "network_kpi_variation_explanation_v1.json"
 )
+RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME = "runtime_kpi_movement_summary_v1.json"
 USER_CONFIGURATION_TEMPLATE_VALIDATION_FILENAME = (
     "user_configuration_template_validation_v1.json"
 )
@@ -287,6 +291,15 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
                 "format": "json",
                 "content": (
                     "runtime network KPI variation explanation evidence "
+                    "exported for offline review"
+                ),
+            },
+            {
+                "logical_name": "runtime_kpi_movement_summary_v1",
+                "filename": "runtime_kpi_movement_summary_v1.json",
+                "format": "json",
+                "content": (
+                    "runtime network and compute KPI movement evidence "
                     "exported for offline review"
                 ),
             },
@@ -651,6 +664,17 @@ def _runtime_export_artifact_browser_specs() -> tuple[dict[str, object], ...]:
             "filter_hint": "variation",
         },
         {
+            "logical_name": "runtime_kpi_movement_summary_v1",
+            "filename": RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
+            "category": "NETWORK_KPI_EVIDENCE",
+            "review_priority": 130,
+            "format": "json",
+            "review_role": "Runtime KPI movement evidence.",
+            "content": "Audits network and compute KPI movement over simulation time.",
+            "default_json_pointer": "/evidence",
+            "filter_hint": "movement",
+        },
+        {
             "logical_name": "traffic_demand_explanation_v1",
             "filename": TRAFFIC_DEMAND_EXPLANATION_FILENAME,
             "category": "TRAFFIC_BUSINESS",
@@ -830,6 +854,8 @@ def build_runtime_export_reproducibility_boundary_v1(
             "network_kpi_benchmark_validation_v1.json",
             "network_kpi_formula_evidence_v1.json",
             "network_kpi_variation_explanation_v1.json",
+            "runtime_kpi_movement_summary_v1.json",
+            "route_pressure_evidence_v1.json",
             "user_configuration_template_validation_v1.json",
             "traffic_demand_explanation_v1.json",
             "user_service_request_summary_v2.json",
@@ -1009,6 +1035,44 @@ def build_runtime_export_network_kpi_variation_explanation_v1(
     return artifact
 
 
+def build_runtime_export_runtime_kpi_movement_summary_v1(
+    *,
+    package_id: str,
+    package_dir: str,
+    config_snapshot: Mapping[str, Any],
+) -> dict[str, object]:
+    """Build offline review evidence for runtime KPI movement."""
+
+    if not isinstance(config_snapshot, Mapping):
+        raise TypeError("config_snapshot must be a mapping")
+
+    status = _mapping(config_snapshot.get("status"))
+    summary = _mapping(status.get("runtime_kpi_movement_summary_v1"))
+    evidence = _runtime_export_runtime_kpi_movement_summary(status)
+    artifact: dict[str, object] = {
+        "type": "RUNTIME_EXPORT_RUNTIME_KPI_MOVEMENT_SUMMARY_V1",
+        "version": "v1",
+        "artifact_id": RUNTIME_EXPORT_RUNTIME_KPI_MOVEMENT_SUMMARY_V1_ID,
+        "source": "BACKEND_RUNTIME_EXPORT",
+        "artifact_scope": "RUNTIME_KPI_MOVEMENT_REVIEW",
+        "package_id": str(package_id),
+        "package_dir": str(package_dir),
+        "runtime_status_field": "runtime_kpi_movement_summary_v1",
+        "artifact_policy": "STANDALONE_RUNTIME_EXPORT_ARTIFACT",
+        "movement_summary": dict(summary),
+        "evidence": evidence,
+        "boundary_conditions": (
+            "READ_RUNTIME_STATUS_ONLY",
+            "NO_METRIC_RECOMPUTE",
+            "NO_EVENT_REPLAY",
+            "NO_PACKET_LEVEL_SIMULATION",
+            "NO_EXTERNAL_SIMULATOR_ARTIFACT",
+        ),
+    }
+    artifact["artifact_hash"] = stable_hash_payload(artifact)
+    return artifact
+
+
 def build_runtime_export_user_configuration_template_validation_v1(
     *,
     package_id: str,
@@ -1173,9 +1237,7 @@ def build_runtime_export_review_summary_v1(
     network_kpi_variation_explanation = (
         _runtime_export_network_kpi_variation_explanation(status)
     )
-    network_kpi_variation_explanation = (
-        _runtime_export_network_kpi_variation_explanation(status)
-    )
+    runtime_kpi_movement_summary = _runtime_export_runtime_kpi_movement_summary(status)
     user_config_template_validation = (
         _runtime_export_user_configuration_template_validation_evidence(
             config_snapshot
@@ -1233,6 +1295,7 @@ def build_runtime_export_review_summary_v1(
         "network_kpi_benchmark_validation": network_kpi_validation,
         "network_kpi_formula_evidence": network_kpi_formula_evidence,
         "network_kpi_variation_explanation": network_kpi_variation_explanation,
+        "runtime_kpi_movement_summary": runtime_kpi_movement_summary,
         "user_configuration_template_validation": user_config_template_validation,
         "traffic_demand_explanation": traffic_demand_explanation,
         "user_service_requests": user_service_requests,
@@ -1269,6 +1332,9 @@ def build_runtime_export_review_summary_v1(
             "network_kpi_variation_explanation_exported": (
                 "network_kpi_variation_explanation_v1.json" in artifacts
             ),
+            "runtime_kpi_movement_summary_exported": (
+                "runtime_kpi_movement_summary_v1.json" in artifacts
+            ),
             "user_configuration_template_validation_exported": (
                 "user_configuration_template_validation_v1.json" in artifacts
             ),
@@ -1289,6 +1355,7 @@ def build_runtime_export_review_summary_v1(
             "Use network_kpi_benchmark_validation_v1.json to review KPI guardrail evidence.",
             "Use network_kpi_formula_evidence_v1.json to review KPI formula input and time-series evidence.",
             "Use network_kpi_variation_explanation_v1.json to review why flow-level KPI values moved or stayed flat.",
+            "Use runtime_kpi_movement_summary_v1.json to review network and compute KPI movement over simulation time.",
             "Use user_configuration_template_validation_v1.json to review approved configuration template validation evidence.",
             "Use traffic_demand_explanation_v1.json to review backend-owned business request generation semantics.",
             "Use route_detail_index_v1.json to inspect exported route explanation rows.",
@@ -1348,6 +1415,7 @@ def build_runtime_export_diagnostics_bundle_v1(
     network_kpi_variation_explanation = (
         _runtime_export_network_kpi_variation_explanation(status)
     )
+    runtime_kpi_movement_summary = _runtime_export_runtime_kpi_movement_summary(status)
     user_config_template_validation = (
         _runtime_export_user_configuration_template_validation_evidence(
             config_snapshot
@@ -1405,6 +1473,7 @@ def build_runtime_export_diagnostics_bundle_v1(
         "network_kpi_benchmark_validation": network_kpi_validation,
         "network_kpi_formula_evidence": network_kpi_formula_evidence,
         "network_kpi_variation_explanation": network_kpi_variation_explanation,
+        "runtime_kpi_movement_summary": runtime_kpi_movement_summary,
         "user_configuration_template_validation": user_config_template_validation,
         "traffic_demand_explanation": traffic_demand_explanation,
         "user_service_requests": user_service_requests,
@@ -1511,6 +1580,9 @@ def build_runtime_export_scenario_review_bundle_v1(
     network_kpi_variation_explanation = _mapping(
         review_summary.get("network_kpi_variation_explanation")
     )
+    runtime_kpi_movement_summary = _mapping(
+        review_summary.get("runtime_kpi_movement_summary")
+    )
     user_config_template_validation = _mapping(
         review_summary.get("user_configuration_template_validation")
     )
@@ -1528,6 +1600,8 @@ def build_runtime_export_scenario_review_bundle_v1(
         scenario_review_warnings.append(
             "NETWORK_KPI_VARIATION_EXPLANATION_MISSING"
         )
+    if runtime_kpi_movement_summary.get("evidence_present") is not True:
+        scenario_review_warnings.append("RUNTIME_KPI_MOVEMENT_SUMMARY_MISSING")
     if user_config_template_validation.get("evidence_present") is not True:
         scenario_review_warnings.append(
             "USER_CONFIGURATION_TEMPLATE_VALIDATION_MISSING"
@@ -1678,6 +1752,28 @@ def build_runtime_export_scenario_review_bundle_v1(
                 network_kpi_variation_explanation.get("evidence_present") is True
             ),
         },
+        "runtime_kpi_movement_summary": {
+            "summary_id": str(runtime_kpi_movement_summary.get("summary_id", "")),
+            "metric_model": str(runtime_kpi_movement_summary.get("metric_model", "")),
+            "movement_status": str(
+                runtime_kpi_movement_summary.get("movement_status", "")
+            ),
+            "sample_count": _integer(runtime_kpi_movement_summary.get("sample_count")),
+            "metric_count": _integer(runtime_kpi_movement_summary.get("metric_count")),
+            "moving_metric_count": _integer(
+                runtime_kpi_movement_summary.get("moving_metric_count")
+            ),
+            "network_moving_metric_count": _integer(
+                runtime_kpi_movement_summary.get("network_moving_metric_count")
+            ),
+            "compute_moving_metric_count": _integer(
+                runtime_kpi_movement_summary.get("compute_moving_metric_count")
+            ),
+            "evidence_hash": str(runtime_kpi_movement_summary.get("evidence_hash", "")),
+            "evidence_present": (
+                runtime_kpi_movement_summary.get("evidence_present") is True
+            ),
+        },
         "user_configuration_template_validation": {
             "evidence_id": str(user_config_template_validation.get("evidence_id", "")),
             "schema_id": str(user_config_template_validation.get("schema_id", "")),
@@ -1779,6 +1875,7 @@ def build_runtime_export_scenario_review_bundle_v1(
                 "network_kpi_benchmark_validation_v1.json",
                 "network_kpi_formula_evidence_v1.json",
                 "network_kpi_variation_explanation_v1.json",
+                "runtime_kpi_movement_summary_v1.json",
                 "user_configuration_template_validation_v1.json",
                 "traffic_demand_explanation_v1.json",
                 "route_pressure_evidence_v1.json",
@@ -1806,6 +1903,8 @@ def build_runtime_export_scenario_review_bundle_v1(
             "network_kpi_benchmark_validation_v1.json",
             "network_kpi_formula_evidence_v1.json",
             "network_kpi_variation_explanation_v1.json",
+            "runtime_kpi_movement_summary_v1.json",
+            "route_pressure_evidence_v1.json",
             "user_configuration_template_validation_v1.json",
             "traffic_demand_explanation_v1.json",
             "user_service_request_summary_v2.json",
@@ -3248,6 +3347,7 @@ def build_runtime_export_package_audit_index_v1(
     network_kpi_variation_explanation = (
         _runtime_export_network_kpi_variation_explanation(status)
     )
+    runtime_kpi_movement_summary = _runtime_export_runtime_kpi_movement_summary(status)
     user_config_template_validation = (
         _runtime_export_user_configuration_template_validation_evidence(
             config_snapshot
@@ -3421,6 +3521,21 @@ def build_runtime_export_package_audit_index_v1(
         ),
         "network_kpi_variation_explanation_missing_explanation_count": _integer(
             network_kpi_variation_explanation.get("missing_explanation_count")
+        ),
+        "runtime_kpi_movement_summary_hash": str(
+            runtime_kpi_movement_summary.get("evidence_hash", "")
+        ),
+        "runtime_kpi_movement_summary_status": str(
+            runtime_kpi_movement_summary.get("movement_status", "")
+        ),
+        "runtime_kpi_movement_summary_present": (
+            runtime_kpi_movement_summary.get("evidence_present") is True
+        ),
+        "runtime_kpi_movement_summary_moving_metric_count": _integer(
+            runtime_kpi_movement_summary.get("moving_metric_count")
+        ),
+        "runtime_kpi_movement_summary_compute_moving_metric_count": _integer(
+            runtime_kpi_movement_summary.get("compute_moving_metric_count")
         ),
         "user_configuration_template_validation_hash": str(
             user_config_template_validation.get("evidence_hash", "")
@@ -5450,6 +5565,7 @@ def _runtime_export_scenario_review_step_label(
         "network_kpi_benchmark_validation_v1.json": "network KPI benchmark",
         "network_kpi_formula_evidence_v1.json": "network KPI formula evidence",
         "network_kpi_variation_explanation_v1.json": "network KPI variation explanation",
+        "runtime_kpi_movement_summary_v1.json": "runtime KPI movement summary",
         "traffic_demand_explanation_v1.json": "traffic demand",
         "route_pressure_evidence_v1.json": "route pressure",
         "user_service_request_summary_v2.json": "user services",
@@ -5882,6 +5998,78 @@ def _runtime_export_network_kpi_variation_explanation(
         "acceptable_for_demo_review": acceptable,
         "model_assumptions": _string_tuple(explanation.get("model_assumptions")),
         "caveats": _string_tuple(explanation.get("caveats")),
+    }
+    evidence["evidence_hash"] = stable_hash_payload(evidence)
+    return evidence
+
+
+def _runtime_export_runtime_kpi_movement_summary(
+    status: Mapping[str, Any],
+) -> dict[str, object]:
+    movement = _mapping(status.get("runtime_kpi_movement_summary_v1"))
+    evidence_present = bool(movement)
+    if not evidence_present:
+        evidence: dict[str, object] = {
+            "version": "v1",
+            "summary_id": "",
+            "source": "config_snapshot.status.runtime_kpi_movement_summary_v1",
+            "evidence_present": False,
+            "metric_model": "UNKNOWN",
+            "movement_status": "MISSING_RUNTIME_KPI_MOVEMENT_SUMMARY",
+            "sample_count": 0,
+            "sim_time_span_s": 0.0,
+            "metric_count": 0,
+            "moving_metric_count": 0,
+            "network_moving_metric_count": 0,
+            "compute_moving_metric_count": 0,
+            "flat_metric_count": 0,
+            "zero_latest_metric_count": 0,
+            "packet_level_simulation": False,
+            "acceptable_for_demo_review": False,
+            "model_assumptions": (),
+            "caveats": (
+                "Runtime status did not expose runtime_kpi_movement_summary_v1.",
+            ),
+        }
+        evidence["evidence_hash"] = stable_hash_payload(evidence)
+        return evidence
+
+    movement_status = str(movement.get("movement_status", ""))
+    acceptable = (
+        movement_status
+        in {
+            "TIME_VARYING_OBSERVED",
+            "PARTIAL_TIME_VARIATION",
+            "FLAT_UNDER_ACTIVITY",
+            "FLAT_NO_ACTIVITY",
+            "INSUFFICIENT_SERIES",
+        }
+        and movement.get("packet_level_simulation") is not True
+    )
+    evidence = {
+        "version": "v1",
+        "summary_id": str(movement.get("summary_id", "")),
+        "source": "config_snapshot.status.runtime_kpi_movement_summary_v1",
+        "runtime_status_source": str(movement.get("source", "")),
+        "evidence_present": True,
+        "metric_model": str(movement.get("metric_model", "")),
+        "movement_status": movement_status,
+        "sample_count": _integer(movement.get("sample_count")),
+        "sim_time_span_s": _number(movement.get("sim_time_span_s")),
+        "metric_count": _integer(movement.get("metric_count")),
+        "moving_metric_count": _integer(movement.get("moving_metric_count")),
+        "network_moving_metric_count": _integer(
+            movement.get("network_moving_metric_count")
+        ),
+        "compute_moving_metric_count": _integer(
+            movement.get("compute_moving_metric_count")
+        ),
+        "flat_metric_count": _integer(movement.get("flat_metric_count")),
+        "zero_latest_metric_count": _integer(movement.get("zero_latest_metric_count")),
+        "packet_level_simulation": movement.get("packet_level_simulation") is True,
+        "acceptable_for_demo_review": acceptable,
+        "model_assumptions": _string_tuple(movement.get("model_assumptions")),
+        "caveats": _string_tuple(movement.get("caveats")),
     }
     evidence["evidence_hash"] = stable_hash_payload(evidence)
     return evidence

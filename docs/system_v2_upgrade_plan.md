@@ -414,7 +414,10 @@ Tasks:
     backend-owned `runtime_kpi_movement_summary_v1`, auditing whether network
     and compute KPI samples actually move over simulation time from
     `kpi_time_series_v1` without changing metric formulas or frontend-local
-    inference.
+    inference. The export-binding increment persists the same evidence as
+    `runtime_kpi_movement_summary_v1.json` and surfaces compact movement status
+    and hash fields through result-package review, diagnostics, scenario review,
+    artifact browser, and audit index sections.
 - V2-023: Add route explanation records.
   - Scope: selected route, alternative count, bottleneck reason, next hop,
     blocked reason.
