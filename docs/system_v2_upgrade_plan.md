@@ -267,6 +267,10 @@ Tasks:
     backend-owned summary into runtime result packages as
     `network_flow_lifecycle_summary_v1.json` and binds it into review summary,
     diagnostics, scenario review, artifact browser, and audit index evidence.
+    T415 adds backend-owned `network_lifecycle_status`, label, model, and
+    status-count fields to route explanation and user-service request detail
+    rows so dashboards and exports can distinguish routed, waiting, no-path,
+    and capacity-constrained flow-level states without frontend inference.
 - V2-017: Add network flow lifecycle metrics.
   - Scope: track route-to-completion flow lifecycle state in backend metrics.
   - Depends on: V2-015, V2-016.
@@ -469,7 +473,9 @@ Tasks:
     implemented in T209; standalone dashboard route explanation table bound to
     backend fields in T210; dashboard text filter for route/user/satellite/
     bottleneck/business search implemented in T211; structured availability,
-    business-type, and bottleneck filters implemented in T212.
+    business-type, and bottleneck filters implemented in T212. T415 extends the
+    same backend route rows with flow-level network lifecycle status, status
+    labels, model provenance, and aggregate lifecycle status counts.
   - Status: T275 adds backend-owned `route_provenance_trust_summary_v1`, derived
     from `route_explanation_summary_v1`, and binds it into the dashboard model
     trust evidence workspace. It reports route explanation coverage, path and

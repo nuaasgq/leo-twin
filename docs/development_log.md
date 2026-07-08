@@ -5,6 +5,46 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-08 - Runtime Network Lifecycle Detail Semantics v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: pending in this commit
+- Scope: add backend-owned network lifecycle semantics to route explanation rows
+  and user service request rows. Runtime observability now reports
+  `network_lifecycle_status`, `network_lifecycle_status_label`,
+  `network_lifecycle_model`, and deterministic status-count summaries for route
+  windows and user-service request windows. The frontend can consume these
+  fields directly instead of inferring routed/waiting/blocked network state from
+  route availability and queue counts. This is a service-layer observability
+  contract change only; it does not alter Event Kernel behavior, route
+  computation, packet-level fidelity, traffic demand, or frontend rendering.
+- Changed files/modules:
+  - `src/leo_twin/services/runtime_observability.py`
+  - `tests/unit/test_runtime_observability.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src\leo_twin\services\runtime_observability.py tests\unit\test_runtime_observability.py`
+    - Result: passed using the bundled Codex Python runtime.
+  - Manual smoke for
+    `test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned`,
+    `test_runtime_detail_pages_apply_filters_before_cursor_pagination`, and
+    `test_runtime_service_and_compute_detail_pages_apply_text_filters`.
+    - Result: passed with `PYTHONPATH=src`.
+- Problems encountered and handling:
+  - `apply_patch` could not launch the Windows sandbox helper in this session,
+    so test expectations were updated with exact PowerShell string replacements
+    that fail closed when a target block is missing.
+  - The no-approval bundled Python runtime still does not include `pytest`;
+    targeted test functions were executed directly without requesting approval
+    for a different environment.
+  - Local runtime/generated config files and `%SystemDrive%/` remain outside
+    this task scope and were not staged.
+- Known remaining issues / follow-up:
+  - This task exposes lifecycle semantics in existing route and user-service
+    detail rows. A later frontend task should bind dashboard badges/filters to
+    these backend fields and remove any remaining local lifecycle inference.
+
 ## 2026-07-08 - Runtime Export Network Flow Lifecycle Artifact v1
 
 - Branch: `feature/T402-network-pressure-provenance-v1`

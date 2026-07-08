@@ -843,6 +843,11 @@ def build_runtime_route_explanation_summary(
             for route, _ in filtered_route_items
             if _route_is_compute_service(route, service_lookup)
         ),
+        "network_lifecycle_status_counts": _service_request_counts(
+            items,
+            "network_lifecycle_status",
+            "network_lifecycle_status",
+        ),
         "network_service_route_count": sum(
             1
             for route, _ in filtered_route_items
@@ -1688,6 +1693,11 @@ def _user_service_request_summary_v2(
             "terminal_state",
             "terminal_state",
         ),
+        "network_lifecycle_status_counts": _service_request_counts(
+            filtered_items,
+            "network_lifecycle_status",
+            "network_lifecycle_status",
+        ),
         "field_sources": {
             "request_state": "route availability plus service lifecycle state",
             "service_class": "selected route business type",
@@ -1721,6 +1731,13 @@ def _user_service_request_item_v2(item: Mapping[str, Any]) -> dict[str, object]:
     service_label = _str(row.get("active_business_label")) or service_class
     terminal_state = _user_service_terminal_state(row)
     request_id = _user_service_request_id(row)
+    network_waiting = _count(row.get("network_queue_count")) > 0
+    route_available = _count(row.get("available_route_count")) > 0
+    network_lifecycle_status = _user_network_lifecycle_status(
+        terminal_state=terminal_state,
+        route_available=route_available,
+        network_waiting=network_waiting,
+    )
     row.update(
         {
             "request_id": request_id,
@@ -1734,8 +1751,12 @@ def _user_service_request_item_v2(item: Mapping[str, Any]) -> dict[str, object]:
                 _count(row.get("communication_route_count")) > 0
             ),
             "compute_request_active": _count(row.get("compute_service_count")) > 0,
-            "network_waiting": _count(row.get("network_queue_count")) > 0,
+            "network_waiting": network_waiting,
             "terminal_state": terminal_state,
+            "network_lifecycle_status": network_lifecycle_status,
+            "network_lifecycle_status_label": _network_lifecycle_status_label(
+                network_lifecycle_status
+            ),
             "terminal_state_label": _user_service_terminal_state_label(
                 terminal_state
             ),
@@ -1746,7 +1767,7 @@ def _user_service_request_item_v2(item: Mapping[str, Any]) -> dict[str, object]:
             "target_node_id": _str(row.get("destination_id")),
             "next_hop_id": _str(row.get("primary_next_hop_id")),
             "network_queue_depth": _count(row.get("network_queue_count")),
-            "route_available": _count(row.get("available_route_count")) > 0,
+            "route_available": route_available,
             "input_output_coupled": bool(
                 _str(row.get("input_route_id")) or _str(row.get("output_route_id"))
             ),
@@ -1760,6 +1781,7 @@ def _user_service_request_item_v2(item: Mapping[str, Any]) -> dict[str, object]:
                 )
             ),
             "route_model": "FLOW_LEVEL_ROUTE_PROXY",
+            "network_lifecycle_model": "FLOW_LEVEL_ROUTE_LIFECYCLE_PROXY",
             "service_model": "FLOW_LEVEL_COMMUNICATION_COMPUTE_PROXY",
             "packet_level_simulation": False,
         }
@@ -3115,6 +3137,12 @@ def _route_explanation_item(
     capacity = _optional_float(route.get("capacity"))
     demand = _optional_float(route.get("demand_capacity"))
     available = bool(route.get("available"))
+    network_lifecycle_status = _route_network_lifecycle_status(
+        available=available,
+        capacity=capacity,
+        demand=demand,
+        reason=reason,
+    )
     item: dict[str, object] = {
         "route_id": _str(route.get("route_id")),
         "flow_id": _str(route.get("flow_id")),
@@ -3127,6 +3155,11 @@ def _route_explanation_item(
         "hop_count": max(0, len(path) - 1),
         "path_label": _route_path_label(path),
         "available": available,
+        "network_lifecycle_status": network_lifecycle_status,
+        "network_lifecycle_status_label": _network_lifecycle_status_label(
+            network_lifecycle_status
+        ),
+        "network_lifecycle_model": "FLOW_LEVEL_ROUTE_LIFECYCLE_PROXY",
         "capacity_mbps": capacity,
         "demand_mbps": demand,
         "latency_s": _optional_float(route.get("latency")),
@@ -3354,6 +3387,53 @@ def _filter_text_values(value: object) -> tuple[str, ...]:
     return (text,) if text else ()
 
 
+
+def _route_network_lifecycle_status(
+    *,
+    available: bool,
+    capacity: float | None,
+    demand: float | None,
+    reason: str,
+) -> str:
+    if available:
+        return "ACTIVE_ROUTED"
+    if reason == "NO_ROUTE_PATH":
+        return "ACTIVE_NO_PATH"
+    if reason == "ROUTE_CAPACITY_BELOW_DEMAND":
+        return "ACTIVE_CAPACITY_CONSTRAINED"
+    if capacity is not None and demand is not None and demand > capacity:
+        return "ACTIVE_CAPACITY_CONSTRAINED"
+    return "ACTIVE_WAITING_ROUTE"
+
+
+def _user_network_lifecycle_status(
+    *,
+    terminal_state: str,
+    route_available: bool,
+    network_waiting: bool,
+) -> str:
+    if terminal_state == "IDLE":
+        return "IDLE_NO_REQUEST"
+    if terminal_state == "COMPLETED":
+        return "COMPLETED"
+    if network_waiting:
+        return "ACTIVE_NETWORK_WAIT"
+    if route_available:
+        return "ACTIVE_ROUTED"
+    return "ACTIVE_WAITING_ROUTE"
+
+
+def _network_lifecycle_status_label(status: str) -> str:
+    labels = {
+        "IDLE_NO_REQUEST": "No active request",
+        "ACTIVE_ROUTED": "Active routed flow",
+        "ACTIVE_NETWORK_WAIT": "Active waiting on network",
+        "ACTIVE_WAITING_ROUTE": "Active waiting for route",
+        "ACTIVE_NO_PATH": "Active with no route path",
+        "ACTIVE_CAPACITY_CONSTRAINED": "Active capacity constrained",
+        "COMPLETED": "Completed",
+    }
+    return labels.get(status, status)
 def _route_bottleneck_reason(route: Mapping[str, Any]) -> str:
     path = _route_path(route)
     if not path:

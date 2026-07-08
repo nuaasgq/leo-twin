@@ -376,9 +376,16 @@ def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> No
         "over_demand_route_count": 0,
         "compute_service_route_count": 1,
         "network_service_route_count": 1,
+        "network_lifecycle_status_counts": (
+            {"network_lifecycle_status": "ACTIVE_ROUTED", "request_count": 1},
+            {
+                "network_lifecycle_status": "ACTIVE_WAITING_ROUTE",
+                "request_count": 1,
+            },
+        ),
         "items": (
             {
-                "detail_hash": "sha256:1d608b1ae33256db4e3dd6121cc878e823d7b4eb50c78fec7a328ddb2828c20b",
+                "detail_hash": "sha256:03b38cbedbd1009cd84f2669cd1c1e565a7a0d3aaa1c95a86f6f2f588a6bb872",
                 "route_id": "route-b",
                 "flow_id": "flow-b",
                 "user_id": "user-1",
@@ -400,10 +407,13 @@ def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> No
                 "bottleneck_component": "AVAILABILITY",
                 "bottleneck_reason": "ROUTE_UNAVAILABLE",
                 "bottleneck_reason_label": "Route unavailable",
+                "network_lifecycle_status": "ACTIVE_WAITING_ROUTE",
+                "network_lifecycle_status_label": "Active waiting for route",
+                "network_lifecycle_model": "FLOW_LEVEL_ROUTE_LIFECYCLE_PROXY",
                 "explanation_label": "route is unavailable in the current snapshot",
             },
             {
-                "detail_hash": "sha256:3e859162f792ca841fcccac4fea9498fe548d69129cd24362116048c958eb535",
+                "detail_hash": "sha256:85d0666b5851fdd8dd8ef96f0cd6f81e119ee932fede0f0fe162a101e27660a8",
                 "route_id": "route-a",
                 "flow_id": "flow-a",
                 "user_id": "user-0",
@@ -425,6 +435,9 @@ def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> No
                 "bottleneck_component": "LOSS_PROXY",
                 "bottleneck_reason": "ROUTE_LOSS_PROXY_POSITIVE",
                 "bottleneck_reason_label": "Route loss proxy is positive",
+                "network_lifecycle_status": "ACTIVE_ROUTED",
+                "network_lifecycle_status_label": "Active routed flow",
+                "network_lifecycle_model": "FLOW_LEVEL_ROUTE_LIFECYCLE_PROXY",
                 "explanation_label": "route has a positive flow-level loss proxy",
             },
         ),
@@ -597,6 +610,10 @@ def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> No
         {"terminal_state": "RUNNING_COMPUTE_SERVICE", "request_count": 1},
         {"terminal_state": "WAITING_NETWORK", "request_count": 1},
     )
+    assert user_service_summary["network_lifecycle_status_counts"] == (
+        {"network_lifecycle_status": "ACTIVE_NETWORK_WAIT", "request_count": 1},
+        {"network_lifecycle_status": "ACTIVE_ROUTED", "request_count": 1},
+    )
     assert user_service_summary["items"][0] | {
         "detail_hash": user_service_summary["items"][0]["detail_hash"]
     } == {
@@ -613,6 +630,8 @@ def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> No
         "compute_request_active": True,
         "network_waiting": False,
         "terminal_state": "RUNNING_COMPUTE_SERVICE",
+        "network_lifecycle_status": "ACTIVE_ROUTED",
+        "network_lifecycle_status_label": "Active routed flow",
         "terminal_state_label": "Running compute service",
         "route_id": "route-a",
         "flow_id": "flow-a",
@@ -625,6 +644,7 @@ def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> No
         "input_output_coupled": True,
         "latency_components_observed": True,
         "route_model": "FLOW_LEVEL_ROUTE_PROXY",
+        "network_lifecycle_model": "FLOW_LEVEL_ROUTE_LIFECYCLE_PROXY",
         "service_model": "FLOW_LEVEL_COMMUNICATION_COMPUTE_PROXY",
         "packet_level_simulation": False,
         "status_digest": (
@@ -637,6 +657,9 @@ def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> No
     )
     assert user_service_summary["items"][1]["request_id"] == "flow-b"
     assert user_service_summary["items"][1]["terminal_state"] == "WAITING_NETWORK"
+    assert user_service_summary["items"][1]["network_lifecycle_status"] == (
+        "ACTIVE_NETWORK_WAIT"
+    )
     assert first["satellite_service_summary_v1"][
         "summary_scope"
     ] == "FULL_SATELLITE_SET_WITH_WINDOW_ITEMS"
@@ -1521,6 +1544,11 @@ def test_runtime_detail_pages_apply_filters_before_cursor_pagination() -> None:
     assert route_page["filter_bottleneck_component"] == "AVAILABILITY"
     assert route_page["filter_applied"] is True
     assert route_page["items"][0]["route_id"] == "route-blocked"
+    assert route_page["items"][0]["network_lifecycle_status"] in {
+        "ACTIVE_WAITING_ROUTE",
+        "ACTIVE_CAPACITY_CONSTRAINED",
+        "ACTIVE_NO_PATH",
+    }
 
 
 def test_runtime_service_and_compute_detail_pages_apply_text_filters() -> None:
