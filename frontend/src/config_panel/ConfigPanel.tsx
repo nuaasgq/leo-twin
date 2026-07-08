@@ -2251,11 +2251,23 @@ export function initializationControlPayload(
     visualization: visualizationControlPayload(values.visualization),
     ...networkKeyControlPayload(values.network)
   };
+  if (values.compute_cpu_gflops_fp64 !== undefined) {
+    payload.compute_cpu_gflops_fp64 = values.compute_cpu_gflops_fp64;
+  }
   if (values.compute_gpu_tflops_fp32 !== undefined) {
     payload.compute_gpu_tflops_fp32 = values.compute_gpu_tflops_fp32;
   }
+  if (values.compute_gpu_tflops_fp16 !== undefined) {
+    payload.compute_gpu_tflops_fp16 = values.compute_gpu_tflops_fp16;
+  }
   if (values.compute_npu_tops_int8 !== undefined) {
     payload.compute_npu_tops_int8 = values.compute_npu_tops_int8;
+  }
+  if (values.compute_memory_gb !== undefined) {
+    payload.compute_memory_gb = values.compute_memory_gb;
+  }
+  if (values.compute_storage_gb !== undefined) {
+    payload.compute_storage_gb = values.compute_storage_gb;
   }
   return payload;
 }

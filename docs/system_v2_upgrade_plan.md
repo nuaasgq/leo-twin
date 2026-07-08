@@ -1414,6 +1414,11 @@ Current Phase 3 progress:
   review bundles, audit indexes, and checklist templates, and keeps its source
   backend-owned rather than frontend-inferred.
 
+- T414 aligns initialization control payloads with the backend compute resource
+  vector contract. The frontend now sends CPU FP64, GPU FP32, GPU FP16, NPU
+  INT8, memory, and storage fields together, matching backend `CONFIG_UPDATE`
+  acceptance and preventing partial compute-resource initialization.
+
 ## 5. Parallel Agent Assignment Model
 
 - Kernel Agent: guard Event Kernel boundaries; review that no domain behavior

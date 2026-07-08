@@ -1140,7 +1140,7 @@ describe("trafficControlPayload", () => {
 });
 
 describe("initializationControlPayload", () => {
-  it("sends key operational fields without overwriting detailed file-only settings", () => {
+  it("sends the full compute resource vector in initialization payloads", () => {
     const payload = initializationControlPayload({
       satellite_count: 120,
       user_count: 500,
@@ -1207,8 +1207,12 @@ describe("initializationControlPayload", () => {
       user_count: 500,
       compute_nodes: 120,
       compute_capacity: 40,
+      compute_cpu_gflops_fp64: 8,
       compute_gpu_tflops_fp32: 2.5,
+      compute_gpu_tflops_fp16: 5,
       compute_npu_tops_int8: 12,
+      compute_memory_gb: 32,
+      compute_storage_gb: 512,
       mode: "ACCELERATED",
       speed_factor: 10,
       duration: 900,
@@ -1236,10 +1240,6 @@ describe("initializationControlPayload", () => {
       destination_type: "COMPUTE_NODE",
       output_data_size: 4
     });
-    expect(payload).not.toHaveProperty("compute_cpu_gflops_fp64");
-    expect(payload).not.toHaveProperty("compute_gpu_tflops_fp16");
-    expect(payload).not.toHaveProperty("compute_memory_gb");
-    expect(payload).not.toHaveProperty("compute_storage_gb");
     expect(payload).not.toHaveProperty("routing_latency_weight");
     expect(payload).not.toHaveProperty("carrier_frequency_hz");
     expect(payload).not.toHaveProperty("rain_rate_mm_h");

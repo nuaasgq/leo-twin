@@ -21163,3 +21163,45 @@ change.
     than a new placement scheduler or hardware telemetry model.
   - Dashboard rendering of this review evidence can be improved later; this
     task intentionally stayed backend/export-contract only.
+
+## 2026-07-08 - T414 frontend initialization compute vector payload v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: align the frontend initialization control payload with the backend
+  compute resource vector contract. `initializationControlPayload()` now sends
+  CPU FP64 GFLOPS, GPU FP32 TFLOPS, GPU FP16 TFLOPS, NPU INT8 TOPS, memory GB,
+  and storage GB when configured, matching the backend `CONFIG_UPDATE` keys that
+  are already accepted and tested. This fixes the product-level mismatch where
+  only part of the compute vector could reach the backend during initialization.
+  No Event Kernel, simulation model, packet-level, external simulator, dashboard
+  layout, or rendering behavior was changed.
+- Changed files/modules:
+  - `frontend/src/config_panel/ConfigPanel.tsx`
+  - `frontend/tests/configPanel.test.ts`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - Direct backend config-control function test for full compute vector
+    `CONFIG_UPDATE` acceptance.
+    - Result: passed.
+  - Frontend Vitest via bundled Node/pnpm: `pnpm --dir frontend test -- configPanel.test.ts`.
+    - Result: 26 test files passed, 474 tests passed.
+  - Frontend build via bundled Node/pnpm: `pnpm --dir frontend build`.
+    - Result: passed; Vite emitted the existing large chunk warning.
+- Problems encountered:
+  - The first pnpm invocation failed because the normal shell PATH did not
+    include Node (`'node' is not recognized`). The test/build were rerun with
+    the Codex bundled Node and pnpm paths and passed.
+  - pnpm reported a registry metadata fetch failure during build because network
+    access is restricted; the local build completed successfully from installed
+    dependencies.
+  - Existing local runtime config drift remains untouched and must stay
+    unstaged: `configs/generated_full_system_demo.json` and
+    `configs/sees_control.yaml`.
+- Known remaining issues:
+  - Detailed compute resource fields are now sent during initialization, but the
+    broader user configuration UX still needs a schema-driven import/export flow
+    so advanced fields are clearly separated from key controls.
+  - This task fixes payload alignment only; it does not change compute placement,
+    scheduling, or hardware telemetry semantics.
