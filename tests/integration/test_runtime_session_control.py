@@ -681,6 +681,19 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
     assert route_pressure_evidence["pressure_model"] == "FLOW_PRESSURE_ADMISSION_V1"
     assert route_pressure_evidence["packet_level_simulation"] is False
     assert route_pressure_evidence["route_count"] >= route_pressure_evidence["item_count"]
+    assert route_pressure_evidence["pressure_edge_count"] >= (
+        route_pressure_evidence["edge_item_count"]
+    )
+    assert route_pressure_evidence["max_edge_projected_utilization"] >= 0.0
+    if route_pressure_evidence["edge_items"]:
+        assert {
+            "route_id",
+            "edge_id",
+            "pressure_state",
+            "projected_utilization",
+            "queue_delay_s",
+            "loss_proxy_rate",
+        }.issubset(route_pressure_evidence["edge_items"][0])
     if route_pressure_evidence["items"]:
         assert {
             "route_id",
@@ -1196,6 +1209,9 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
     assert review_summary["route_pressure_evidence"]["evidence_present"] is True
     assert review_summary["route_pressure_evidence"]["route_count"] == (
         route_pressure_evidence["summary"]["route_count"]
+    )
+    assert review_summary["route_pressure_evidence"]["pressure_edge_count"] == (
+        route_pressure_evidence["summary"]["pressure_edge_count"]
     )
     assert review_summary["route_pressure_evidence"]["event_replay"] is False
     assert traffic_demand_explanation["traffic_demand_explanation"] == (
@@ -1763,6 +1779,9 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
     assert review_summary["route_pressure_evidence"]["evidence_present"] is True
     assert review_summary["route_pressure_evidence"]["route_count"] == (
         route_pressure_evidence["summary"]["route_count"]
+    )
+    assert review_summary["route_pressure_evidence"]["pressure_edge_count"] == (
+        route_pressure_evidence["summary"]["pressure_edge_count"]
     )
     assert review_summary["summary_hash"].startswith("sha256:")
     assert (

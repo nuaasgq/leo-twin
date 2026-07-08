@@ -232,6 +232,9 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert review_summary["route_pressure_evidence"]["route_count"] == (
         route_pressure_evidence["summary"]["route_count"]
     )
+    assert review_summary["route_pressure_evidence"]["pressure_edge_count"] == (
+        route_pressure_evidence["summary"]["pressure_edge_count"]
+    )
     assert review_summary["route_pressure_evidence"][
         "pressure_admission_rejected_count"
     ] == route_pressure_evidence["summary"].get(
@@ -628,6 +631,12 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     )
     assert audit_index["route_pressure_evidence_route_count"] == (
         review_summary["route_pressure_evidence"]["route_count"]
+    )
+    assert audit_index["route_pressure_evidence_pressure_edge_count"] == (
+        review_summary["route_pressure_evidence"]["pressure_edge_count"]
+    )
+    assert audit_index["route_pressure_evidence_max_edge_projected_utilization"] == (
+        review_summary["route_pressure_evidence"]["max_edge_projected_utilization"]
     )
     assert audit_index["user_service_request_summary_present"] is True
     assert audit_index["user_service_request_summary_hash"] == (

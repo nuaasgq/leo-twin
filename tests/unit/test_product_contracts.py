@@ -80,6 +80,7 @@ def test_backward_compatibility_aliases_use_canonical_contracts() -> None:
     assert isinstance(old_route, RouteState)
     assert old_route.demand_capacity is None
     assert old_route.loss_rate is None
+    assert old_route.pressure_edge_states == ()
     assert old_link.link_id == "sat-a->user-a"
     assert old_flow.demand_capacity == 10.0
     new_route = Route(
@@ -91,9 +92,19 @@ def test_backward_compatibility_aliases_use_canonical_contracts() -> None:
         available=True,
         demand_capacity=7.5,
         loss_rate=0.02,
+        pressure_edge_states=(
+            {
+                "edge_id": "user-a->sat-a",
+                "pressure_state": "QUEUED",
+                "projected_utilization": 0.9,
+                "queue_delay_s": 0.01,
+            },
+        ),
     )
     assert new_route.demand_capacity == 7.5
     assert new_route.loss_rate == 0.02
+    assert new_route.pressure_edge_states[0]["edge_id"] == "user-a->sat-a"
+    assert new_route.pressure_edge_states[0]["pressure_state"] == "QUEUED"
 
 
 def test_product_contracts_cover_required_runtime_domains() -> None:

@@ -5,6 +5,60 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+
+## 2026-07-08 - Route Pressure Edge Evidence v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: pending in this commit
+- Scope: add backend-owned per-edge pressure evidence to route pressure output.
+  `RouteState` now preserves optional deterministic `pressure_edge_states`, the
+  position-driven network engine records flow-pressure ledger edge decisions on
+  emitted routes, metrics expose edge evidence through `route_pressure_evidence_v1`,
+  and result-package review/audit surfaces summarize edge counts, admission
+  rejection, queue/saturation counts, maximum utilization, queue delay, and loss
+  proxy. This task stays at flow-level abstraction and does not modify Event
+  Kernel behavior, frontend rendering, topology selection, packet-level
+  behavior, or external simulator integrations.
+- Changed files/modules:
+  - `src/leo_twin/schema/domain.py`
+  - `src/leo_twin/models/network/position_engine.py`
+  - `src/leo_twin/services/metrics/collector.py`
+  - `src/leo_twin/services/result_package_contract.py`
+  - `examples/integration_demo/control_plane.py`
+  - `tests/unit/test_product_contracts.py`
+  - `tests/unit/test_position_driven_network_engine.py`
+  - `tests/unit/test_metrics_module.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/product_contracts.md`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile ...`
+    - Result: passed for changed backend, example, and test modules using the
+      bundled Codex Python runtime.
+  - Manual pure-function/unit smoke for seven selected route-pressure edge
+    evidence tests
+    - Result: passed with a local `pytest` assertion stub because the bundled
+      Python runtime does not include the `pytest` package.
+  - `git diff --check`
+    - Result: passed for task files.
+  - Target `pytest` command was not run in this no-approval continuation: the
+    bundled Codex Python runtime does not include `pytest`, and the user asked
+    not to request further approvals.
+- Problems encountered and handling:
+  - The Windows `apply_patch` helper is unavailable in the current sandbox, so
+    bounded UTF-8 workspace edits were used and rechecked with static compile
+    and targeted smoke tests.
+  - Local runtime/generated config files and the unrelated `%SystemDrive%/`
+    directory remain outside this task scope and were not staged.
+- Known remaining issues / follow-up:
+  - Edge evidence is now available in backend status and export summaries, but
+    the dashboard does not yet provide a dedicated per-edge drilldown. A later
+    task can bind these backend fields into operator-facing node or route detail
+    tables without frontend-local inference.
+
 ## 2026-07-08 - Route Pressure Evidence Review Binding v1
 
 - Branch: `feature/T402-network-pressure-provenance-v1`

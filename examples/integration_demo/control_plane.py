@@ -2562,7 +2562,18 @@ class DemoControlPlane:
                 "topology_blocked_count": 0,
                 "queued_route_count": 0,
                 "saturated_route_count": 0,
+                "pressure_edge_count": 0,
+                "edge_item_limit": 128,
+                "edge_item_count": 0,
+                "hidden_edge_count": 0,
+                "pressure_admission_rejected_edge_count": 0,
+                "queued_edge_count": 0,
+                "saturated_edge_count": 0,
+                "max_edge_projected_utilization": 0.0,
+                "max_edge_queue_delay_s": 0.0,
+                "max_edge_loss_proxy_rate": 0.0,
                 "items": (),
+                "edge_items": (),
             }
         return dict(self._runtime_context.metrics.route_pressure_evidence())
 
@@ -3335,7 +3346,18 @@ def _runtime_route_pressure_evidence_export(status: dict[str, Any]) -> dict[str,
             "item_limit": 64,
             "item_count": 0,
             "hidden_route_count": 0,
+            "pressure_edge_count": 0,
+            "edge_item_limit": 128,
+            "edge_item_count": 0,
+            "hidden_edge_count": 0,
+            "pressure_admission_rejected_edge_count": 0,
+            "queued_edge_count": 0,
+            "saturated_edge_count": 0,
+            "max_edge_projected_utilization": 0.0,
+            "max_edge_queue_delay_s": 0.0,
+            "max_edge_loss_proxy_rate": 0.0,
             "items": (),
+            "edge_items": (),
         }
     policy = status.get("runtime_export_route_pressure_evidence_policy_v1")
     if not isinstance(policy, dict):

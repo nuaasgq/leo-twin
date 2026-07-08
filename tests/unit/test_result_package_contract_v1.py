@@ -386,6 +386,10 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
     assert first["route_pressure_evidence"]["pressure_admission_rejected_count"] == 1
     assert first["route_pressure_evidence"]["queued_route_count"] == 1
     assert first["route_pressure_evidence"]["saturated_route_count"] == 1
+    assert first["route_pressure_evidence"]["pressure_edge_count"] == 2
+    assert first["route_pressure_evidence"]["queued_edge_count"] == 1
+    assert first["route_pressure_evidence"]["saturated_edge_count"] == 1
+    assert first["route_pressure_evidence"]["max_edge_projected_utilization"] == 1.25
     assert first["route_pressure_evidence"]["packet_level_simulation"] is False
     assert first["route_pressure_evidence"]["event_replay"] is False
     assert first["network_kpi_benchmark_validation"]["evidence_present"] is True
@@ -900,6 +904,8 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
     assert first["route_pressure_evidence"]["evidence_present"] is True
     assert first["route_pressure_evidence"]["route_count"] == 2
     assert first["route_pressure_evidence"]["pressure_admission_rejected_count"] == 1
+    assert first["route_pressure_evidence"]["pressure_edge_count"] == 2
+    assert first["route_pressure_evidence"]["max_edge_projected_utilization"] == 1.25
     assert first["route_pressure_evidence"]["acceptable_for_demo_review"] is True
     assert first["network_kpi_benchmark_validation"]["evidence_present"] is True
     assert first["network_kpi_benchmark_validation"]["validation_status"] == "PASS"
@@ -1109,6 +1115,7 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
         "route_pressure_evidence"
     ]["evidence_hash"]
     assert first["route_pressure_evidence"]["queued_route_count"] == 1
+    assert first["route_pressure_evidence"]["pressure_edge_count"] == 2
     assert first["network_kpi_formula_evidence"]["evidence_present"] is True
     assert first["network_kpi_formula_evidence"]["formula_evidence_status"] == (
         "FORMULA_AND_TIME_EVIDENCE_READY"
@@ -3672,6 +3679,38 @@ def _route_pressure_evidence() -> dict[str, object]:
         "topology_blocked_count": 0,
         "queued_route_count": 1,
         "saturated_route_count": 1,
+        "pressure_edge_count": 2,
+        "edge_item_limit": 128,
+        "edge_item_count": 2,
+        "hidden_edge_count": 0,
+        "pressure_admission_rejected_edge_count": 0,
+        "queued_edge_count": 1,
+        "saturated_edge_count": 1,
+        "max_edge_projected_utilization": 1.25,
+        "max_edge_queue_delay_s": 0.02,
+        "max_edge_loss_proxy_rate": 0.1,
+        "edge_items": (
+            {
+                "route_id": "route-0",
+                "flow_id": "flow-0",
+                "edge_id": "user-0->sat-0",
+                "pressure_state": "QUEUED",
+                "projected_utilization": 0.95,
+                "queue_delay_s": 0.01,
+                "loss_proxy_rate": 0.05,
+                "packet_level_simulation": False,
+            },
+            {
+                "route_id": "route-1",
+                "flow_id": "flow-1",
+                "edge_id": "user-1->sat-1",
+                "pressure_state": "SATURATED",
+                "projected_utilization": 1.25,
+                "queue_delay_s": 0.02,
+                "loss_proxy_rate": 0.1,
+                "packet_level_simulation": False,
+            },
+        ),
         "items": (
             {
                 "route_id": "route-0",

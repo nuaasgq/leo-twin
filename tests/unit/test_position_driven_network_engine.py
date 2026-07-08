@@ -490,6 +490,13 @@ def test_concurrent_flows_emit_link_pressure_and_release_updates() -> None:
     assert compute.routes[0].loss_rate == 0.0
     assert compute.routes[1].loss_rate == pytest.approx(0.1)
     assert compute.routes[1].latency > compute.routes[0].latency
+    assert compute.routes[1].pressure_edge_states
+    assert compute.routes[1].pressure_edge_states[0]["pressure_model"] == (
+        "FLOW_PRESSURE_ADMISSION_V1"
+    )
+    assert {
+        item["pressure_state"] for item in compute.routes[1].pressure_edge_states
+    } == {"SATURATED"}
     link_utilizations = [
         event.payload.utilization
         for event in metrics.events
@@ -1459,6 +1466,10 @@ def test_pressure_admission_blocks_extreme_concurrent_flow_without_reserving() -
     assert [route.available for route in compute.routes] == [True, True, False]
     assert compute.routes[2].path == ("user-east", "sat-001", "node-a")
     assert compute.routes[2].capacity == 0.0
+    assert compute.routes[2].pressure_edge_states
+    assert {
+        item["pressure_state"] for item in compute.routes[2].pressure_edge_states
+    } == {"ADMISSION_REJECTED"}
     completed = [
         event.payload
         for event in metrics.events

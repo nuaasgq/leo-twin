@@ -34,6 +34,7 @@ KpiSample = dict[str, str | float]
 SatelliteKpiSlice = dict[str, str | float | int]
 SatelliteKpiHistorySample = dict[str, float]
 RoutePressureEvidenceItem = dict[str, str | float | int | bool]
+RoutePressureEdgeEvidenceItem = dict[str, str | float | int | bool]
 ReplayPayload = str | int | float | bool | None | list["ReplayPayload"] | dict[str, "ReplayPayload"]
 ReplayEvent = dict[str, ReplayPayload]
 
@@ -434,6 +435,16 @@ class MetricsCollector:
         routes = tuple(self._routes[route_id] for route_id in sorted(self._routes))
         evidence_items = tuple(_route_pressure_evidence_item(route) for route in routes)
         selected = tuple(sorted(evidence_items, key=_route_pressure_evidence_sort_key)[:limit])
+        edge_evidence_items = tuple(
+            item
+            for route in routes
+            for item in _route_pressure_edge_evidence_items(route)
+        )
+        selected_edges = tuple(
+            sorted(edge_evidence_items, key=_route_pressure_edge_evidence_sort_key)[
+                : limit * 2
+            ]
+        )
         pressure_rejected_count = sum(
             1 for item in evidence_items if item["pressure_state"] == "ADMISSION_REJECTED"
         )
@@ -445,6 +456,15 @@ class MetricsCollector:
         )
         saturated_count = sum(
             1 for item in evidence_items if item["pressure_state"] == "SATURATED"
+        )
+        edge_rejected_count = sum(
+            1 for item in edge_evidence_items if item["pressure_state"] == "ADMISSION_REJECTED"
+        )
+        edge_queued_count = sum(
+            1 for item in edge_evidence_items if item["pressure_state"] == "QUEUED"
+        )
+        edge_saturated_count = sum(
+            1 for item in edge_evidence_items if item["pressure_state"] == "SATURATED"
         )
         return {
             "version": "v1",
@@ -461,7 +481,27 @@ class MetricsCollector:
             "topology_blocked_count": topology_blocked_count,
             "queued_route_count": queued_count,
             "saturated_route_count": saturated_count,
+            "pressure_edge_count": len(edge_evidence_items),
+            "edge_item_limit": limit * 2,
+            "edge_item_count": len(selected_edges),
+            "hidden_edge_count": max(0, len(edge_evidence_items) - len(selected_edges)),
+            "pressure_admission_rejected_edge_count": edge_rejected_count,
+            "queued_edge_count": edge_queued_count,
+            "saturated_edge_count": edge_saturated_count,
+            "max_edge_projected_utilization": max(
+                (float(item["projected_utilization"]) for item in edge_evidence_items),
+                default=0.0,
+            ),
+            "max_edge_queue_delay_s": max(
+                (float(item["queue_delay_s"]) for item in edge_evidence_items),
+                default=0.0,
+            ),
+            "max_edge_loss_proxy_rate": max(
+                (float(item["loss_proxy_rate"]) for item in edge_evidence_items),
+                default=0.0,
+            ),
             "items": selected,
+            "edge_items": selected_edges,
         }
 
     def _service_latency_history_unlocked(self, limit: int = 32) -> dict[str, Any]:
@@ -2343,6 +2383,67 @@ def _route_pressure_evidence_item(route: Route) -> RoutePressureEvidenceItem:
         "evidence_source": "ROUTE_UPDATE + FLOW_PRESSURE_ADMISSION_V1",
         "packet_level_simulation": False,
     }
+
+
+def _route_pressure_edge_evidence_items(
+    route: Route,
+) -> tuple[RoutePressureEdgeEvidenceItem, ...]:
+    return tuple(
+        _route_pressure_edge_evidence_item(route, item)
+        for item in route.pressure_edge_states
+    )
+
+
+def _route_pressure_edge_evidence_item(
+    route: Route,
+    item: Mapping[str, Any],
+) -> RoutePressureEdgeEvidenceItem:
+    return {
+        "route_id": route.route_id,
+        "flow_id": route.flow_id,
+        "edge_id": str(item.get("edge_id", "")),
+        "source_id": str(item.get("source_id", "")),
+        "target_id": str(item.get("target_id", "")),
+        "pressure_state": str(item.get("pressure_state", "UNKNOWN")),
+        "active_demand_mbps": _float_value(item.get("active_demand_mbps")),
+        "incoming_demand_mbps": _float_value(item.get("incoming_demand_mbps")),
+        "projected_demand_mbps": _float_value(item.get("projected_demand_mbps")),
+        "capacity_mbps": _float_value(item.get("capacity_mbps")),
+        "projected_utilization": _float_value(item.get("projected_utilization")),
+        "pressure_utilization": _float_value(item.get("pressure_utilization")),
+        "queued_demand_mbps": _float_value(item.get("queued_demand_mbps")),
+        "queue_delay_s": _float_value(item.get("queue_delay_s")),
+        "loss_proxy_rate": _float_value(item.get("loss_proxy_rate")),
+        "admission_rejected": item.get("admission_rejected") is True,
+        "evidence_source": "ROUTE_UPDATE.pressure_edge_states",
+        "packet_level_simulation": False,
+    }
+
+
+def _route_pressure_edge_evidence_sort_key(
+    item: RoutePressureEdgeEvidenceItem,
+) -> tuple[int, float, float, str, str]:
+    state_rank = {
+        "ADMISSION_REJECTED": 0,
+        "SATURATED": 1,
+        "QUEUED": 2,
+        "NOMINAL": 3,
+    }
+    return (
+        state_rank.get(str(item["pressure_state"]), 9),
+        -float(item["projected_utilization"]),
+        -float(item["loss_proxy_rate"]),
+        str(item["route_id"]),
+        str(item["edge_id"]),
+    )
+
+
+def _float_value(value: object) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return 0.0
+    if not isfinite(value):
+        return 0.0
+    return float(value)
 
 
 def _route_pressure_state(route: Route) -> str:

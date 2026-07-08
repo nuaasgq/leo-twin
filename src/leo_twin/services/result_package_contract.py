@@ -1585,6 +1585,21 @@ def build_runtime_export_scenario_review_bundle_v1(
             "saturated_route_count": _integer(
                 route_pressure_evidence.get("saturated_route_count")
             ),
+            "pressure_edge_count": _integer(
+                route_pressure_evidence.get("pressure_edge_count")
+            ),
+            "edge_item_count": _integer(
+                route_pressure_evidence.get("edge_item_count")
+            ),
+            "queued_edge_count": _integer(
+                route_pressure_evidence.get("queued_edge_count")
+            ),
+            "saturated_edge_count": _integer(
+                route_pressure_evidence.get("saturated_edge_count")
+            ),
+            "max_edge_projected_utilization": _number(
+                route_pressure_evidence.get("max_edge_projected_utilization")
+            ),
             "packet_level_simulation": (
                 route_pressure_evidence.get("packet_level_simulation") is True
             ),
@@ -3355,6 +3370,18 @@ def build_runtime_export_package_audit_index_v1(
         ),
         "route_pressure_evidence_saturated_route_count": _integer(
             route_pressure_evidence.get("saturated_route_count")
+        ),
+        "route_pressure_evidence_pressure_edge_count": _integer(
+            route_pressure_evidence.get("pressure_edge_count")
+        ),
+        "route_pressure_evidence_queued_edge_count": _integer(
+            route_pressure_evidence.get("queued_edge_count")
+        ),
+        "route_pressure_evidence_saturated_edge_count": _integer(
+            route_pressure_evidence.get("saturated_edge_count")
+        ),
+        "route_pressure_evidence_max_edge_projected_utilization": _number(
+            route_pressure_evidence.get("max_edge_projected_utilization")
         ),
         "network_kpi_benchmark_validation_hash": str(
             network_kpi_validation.get("validation_hash", "")
@@ -5564,6 +5591,15 @@ def _runtime_export_route_pressure_evidence(
             "topology_blocked_count": 0,
             "queued_route_count": 0,
             "saturated_route_count": 0,
+            "pressure_edge_count": 0,
+            "edge_item_count": 0,
+            "hidden_edge_count": 0,
+            "pressure_admission_rejected_edge_count": 0,
+            "queued_edge_count": 0,
+            "saturated_edge_count": 0,
+            "max_edge_projected_utilization": 0.0,
+            "max_edge_queue_delay_s": 0.0,
+            "max_edge_loss_proxy_rate": 0.0,
             "packet_level_simulation": False,
             "event_replay": False,
             "acceptable_for_demo_review": False,
@@ -5607,6 +5643,19 @@ def _runtime_export_route_pressure_evidence(
         "topology_blocked_count": _integer(summary.get("topology_blocked_count")),
         "queued_route_count": _integer(summary.get("queued_route_count")),
         "saturated_route_count": _integer(summary.get("saturated_route_count")),
+        "pressure_edge_count": _integer(summary.get("pressure_edge_count")),
+        "edge_item_count": _integer(summary.get("edge_item_count")),
+        "hidden_edge_count": _integer(summary.get("hidden_edge_count")),
+        "pressure_admission_rejected_edge_count": _integer(
+            summary.get("pressure_admission_rejected_edge_count")
+        ),
+        "queued_edge_count": _integer(summary.get("queued_edge_count")),
+        "saturated_edge_count": _integer(summary.get("saturated_edge_count")),
+        "max_edge_projected_utilization": _number(
+            summary.get("max_edge_projected_utilization")
+        ),
+        "max_edge_queue_delay_s": _number(summary.get("max_edge_queue_delay_s")),
+        "max_edge_loss_proxy_rate": _number(summary.get("max_edge_loss_proxy_rate")),
         "packet_level_simulation": packet_level,
         "event_replay": event_replay,
         "policy": str(policy.get("policy", "")),

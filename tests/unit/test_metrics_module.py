@@ -675,6 +675,24 @@ def test_metrics_collector_reports_route_admission_and_queue_pressure_evidence()
                 available=True,
                 demand_capacity=90.0,
                 loss_rate=0.1,
+                pressure_edge_states=(
+                    {
+                        "edge_id": "user-a->sat-a",
+                        "source_id": "user-a",
+                        "target_id": "sat-a",
+                        "pressure_state": "SATURATED",
+                        "active_demand_mbps": 70.0,
+                        "incoming_demand_mbps": 20.0,
+                        "projected_demand_mbps": 90.0,
+                        "capacity_mbps": 80.0,
+                        "projected_utilization": 1.125,
+                        "pressure_utilization": 1.0,
+                        "queued_demand_mbps": 10.0,
+                        "queue_delay_s": 0.01,
+                        "loss_proxy_rate": 0.1,
+                        "admission_rejected": False,
+                    },
+                ),
             ),
             "network",
         ),
@@ -691,6 +709,24 @@ def test_metrics_collector_reports_route_admission_and_queue_pressure_evidence()
                 available=False,
                 demand_capacity=30.0,
                 loss_rate=0.2,
+                pressure_edge_states=(
+                    {
+                        "edge_id": "user-c->sat-c",
+                        "source_id": "user-c",
+                        "target_id": "sat-c",
+                        "pressure_state": "ADMISSION_REJECTED",
+                        "active_demand_mbps": 60.0,
+                        "incoming_demand_mbps": 30.0,
+                        "projected_demand_mbps": 90.0,
+                        "capacity_mbps": 50.0,
+                        "projected_utilization": 1.8,
+                        "pressure_utilization": 1.0,
+                        "queued_demand_mbps": 40.0,
+                        "queue_delay_s": 0.02,
+                        "loss_proxy_rate": 0.1,
+                        "admission_rejected": True,
+                    },
+                ),
             ),
             "network",
         ),
@@ -720,6 +756,14 @@ def test_metrics_collector_reports_route_admission_and_queue_pressure_evidence()
     assert evidence["pressure_admission_rejected_count"] == 1
     assert evidence["queued_route_count"] == 0
     assert evidence["saturated_route_count"] == 1
+    assert evidence["pressure_edge_count"] == 2
+    assert evidence["pressure_admission_rejected_edge_count"] == 1
+    assert evidence["saturated_edge_count"] == 1
+    assert evidence["max_edge_projected_utilization"] == pytest.approx(1.8)
+    assert evidence["max_edge_queue_delay_s"] == pytest.approx(0.02)
+    assert evidence["edge_items"][0]["edge_id"] == "user-c->sat-c"
+    assert evidence["edge_items"][0]["pressure_state"] == "ADMISSION_REJECTED"
+    assert evidence["edge_items"][1]["pressure_state"] == "SATURATED"
     assert evidence["items"][0]["route_id"] == "route-rejected"
     assert evidence["items"][0]["pressure_state"] == "ADMISSION_REJECTED"
     assert evidence["items"][0]["blocked_reason"] == "flow_pressure_admission_limit"

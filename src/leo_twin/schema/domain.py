@@ -178,6 +178,7 @@ class RouteState:
     cost: float | None = None
     demand_capacity: float | None = None
     loss_rate: float | None = None
+    pressure_edge_states: tuple[dict[str, Any], ...] = ()
 
     def __post_init__(self) -> None:
         _require_non_empty_str(self.route_id, "route_id")
@@ -194,6 +195,14 @@ class RouteState:
             _require_non_negative_number(self.demand_capacity, "demand_capacity")
         if self.loss_rate is not None:
             _require_probability(self.loss_rate, "loss_rate")
+        object.__setattr__(
+            self,
+            "pressure_edge_states",
+            _normalize_mapping_tuple(
+                self.pressure_edge_states,
+                "pressure_edge_states",
+            ),
+        )
 
 
 Route = RouteState
@@ -635,6 +644,28 @@ def _normalize_str_tuple(
     if any(not value for value in normalized):
         raise ValueError(f"{field_name} must not contain empty values")
     return tuple(sorted(normalized)) if sort else normalized
+
+
+def _normalize_mapping_tuple(
+    values: tuple[dict[str, Any], ...],
+    field_name: str,
+) -> tuple[dict[str, Any], ...]:
+    if not isinstance(values, tuple):
+        raise TypeError(f"{field_name} must be a tuple")
+    normalized: list[dict[str, Any]] = []
+    for index, item in enumerate(values):
+        if not isinstance(item, dict):
+            raise TypeError(f"{field_name}[{index}] must be a dict")
+        normalized.append(
+            {
+                str(key): value
+                for key, value in sorted(
+                    item.items(),
+                    key=lambda pair: str(pair[0]),
+                )
+            }
+        )
+    return tuple(normalized)
 
 
 def _to_jsonable(value: Any) -> Any:

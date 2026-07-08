@@ -21,6 +21,7 @@ from leo_twin.models.network.geometry import (
 from leo_twin.models.network.pressure import (
     FlowPressureLedger,
     PressureEdge,
+    PressureEdgeQueueState,
     pressure_loss_rate,
     pressure_queue_delay,
 )
@@ -436,8 +437,13 @@ class PositionDrivenNetworkEngine(SimulationModule):
             edge_capacities=self._pressure_edge_capacities(edges),
             base_latency_s=route.latency,
         )
+        pressure_edge_states = _pressure_edge_state_records(decision.edge_states)
         if not decision.admitted:
-            blocked_route = self._pressure_blocked_route(route, decision.loss_rate)
+            blocked_route = self._pressure_blocked_route(
+                route,
+                decision.loss_rate,
+                pressure_edge_states,
+            )
             return blocked_route, self._pressure_link_events(dispatch_time, edges)
         self._flow_pressure.reserve(request.flow_id, edges, demand)
 
@@ -459,6 +465,7 @@ class PositionDrivenNetworkEngine(SimulationModule):
             cost=route.cost,
             demand_capacity=route.demand_capacity,
             loss_rate=next_loss_rate,
+            pressure_edge_states=pressure_edge_states,
         )
         return pressured_route, self._pressure_link_events(dispatch_time, edges)
 
@@ -516,7 +523,12 @@ class PositionDrivenNetworkEngine(SimulationModule):
             capacities[edge] = float(link.capacity) if link is not None else 0.0
         return capacities
 
-    def _pressure_blocked_route(self, route: Route, pressure_loss: float) -> Route:
+    def _pressure_blocked_route(
+        self,
+        route: Route,
+        pressure_loss: float,
+        pressure_edge_states: tuple[dict[str, Any], ...] = (),
+    ) -> Route:
         return Route(
             route_id=route.route_id,
             flow_id=route.flow_id,
@@ -528,6 +540,7 @@ class PositionDrivenNetworkEngine(SimulationModule):
             cost=route.cost,
             demand_capacity=route.demand_capacity,
             loss_rate=max(float(route.loss_rate or 0.0), pressure_loss),
+            pressure_edge_states=pressure_edge_states,
         )
 
     def _edge_utilization(self, edge: PressureEdge) -> float:
@@ -1177,6 +1190,49 @@ class PositionDrivenNetworkEngine(SimulationModule):
                 used_storage_gb=float(payload.get("used_storage_gb", 0.0)),
             )
         raise TypeError("COMPUTE_NODE_UPDATE payload must be ComputeNodeState or dict")
+
+
+def _pressure_edge_state_records(
+    edge_states: tuple[PressureEdgeQueueState, ...],
+) -> tuple[dict[str, Any], ...]:
+    return tuple(_pressure_edge_state_record(state) for state in edge_states)
+
+
+def _pressure_edge_state_record(state: PressureEdgeQueueState) -> dict[str, Any]:
+    source_id, target_id = state.edge
+    pressure_state = _pressure_edge_status_code(state.status)
+    return {
+        "edge_id": f"{source_id}->{target_id}",
+        "source_id": source_id,
+        "target_id": target_id,
+        "pressure_state": pressure_state,
+        "status": state.status,
+        "active_demand_mbps": float(state.active_demand),
+        "incoming_demand_mbps": float(state.incoming_demand),
+        "projected_demand_mbps": float(state.projected_demand),
+        "capacity_mbps": float(state.capacity),
+        "projected_utilization": float(state.projected_utilization),
+        "pressure_utilization": float(state.pressure_utilization),
+        "queued_demand_mbps": float(state.queued_demand),
+        "queue_delay_s": float(state.queue_delay_s),
+        "loss_proxy_rate": float(state.loss_rate),
+        "admission_rejected": pressure_state == "ADMISSION_REJECTED",
+        "packet_level_simulation": False,
+        "pressure_model": "FLOW_PRESSURE_ADMISSION_V1",
+    }
+
+
+def _pressure_edge_status_code(status: str) -> str:
+    normalized = str(status).strip().lower()
+    if normalized == "rejected":
+        return "ADMISSION_REJECTED"
+    if normalized == "saturated":
+        return "SATURATED"
+    if normalized == "queued":
+        return "QUEUED"
+    if normalized == "nominal":
+        return "NOMINAL"
+    return normalized.upper() or "UNKNOWN"
 
 
 def _unavailable_route(request: FlowRequest) -> Route:

@@ -76,6 +76,15 @@ Data-link and transport runtimes may populate `loss_rate` as a deterministic
 flow-level proxy from configured MAC collision loss and transport loss. This is
 not packet-level loss measurement.
 
+`RouteState.pressure_edge_states` is an optional deterministic tuple of
+serializable edge-pressure records emitted by the flow-level network pressure
+model. It preserves per-edge admission, queue, utilization, and loss-proxy
+evidence such as `edge_id`, `source_id`, `target_id`, `pressure_state`,
+`projected_utilization`, `queue_delay_s`, `loss_proxy_rate`, and
+`admission_rejected`. These records explain route-level pressure decisions for
+metrics, exports, and offline review. They remain flow-level evidence and do
+not represent packet-level simulation.
+
 ## Compute Resource Demand
 
 `TaskRequest.compute_demand` remains the legacy scalar CPU FP32 demand used by

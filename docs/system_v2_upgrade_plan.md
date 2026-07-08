@@ -406,7 +406,11 @@ Tasks:
     increment surfaces the same evidence through review summary, diagnostics,
     scenario review, artifact browser, reproducibility boundary, and audit index
     sections so route pressure can be inspected from the result package entry
-    points without event replay or frontend inference.
+    points without event replay or frontend inference. The edge-evidence
+    increment persists `RouteState.pressure_edge_states` from the pressure
+    ledger and summarizes edge item counts, admission rejections, queue/
+    saturation counts, maximum projected utilization, queue delay, and loss
+    proxy for runtime status and result-package review.
 - V2-023: Add route explanation records.
   - Scope: selected route, alternative count, bottleneck reason, next hop,
     blocked reason.
