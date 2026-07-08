@@ -110,6 +110,10 @@ _NETWORK_KEYS = frozenset(
         "space_link_mode",
         "max_space_link_candidates_per_satellite",
         "batch_space_link_update_limit",
+        "time_pressure_period_s",
+        "time_pressure_burst_center_phase",
+        "time_pressure_burst_width_phase",
+        "time_pressure_burst_amplitude",
     }
 )
 _RUNTIME_KEYS = frozenset({"mode", "speed_factor", "seed", "duration"})
@@ -275,6 +279,16 @@ def _build_config(data: Mapping[str, Any]) -> SEESConfig:
                 batch_space_link_update_limit=network[
                     "batch_space_link_update_limit"
                 ],
+                time_pressure_period_s=network["time_pressure_period_s"],
+                time_pressure_burst_center_phase=network[
+                    "time_pressure_burst_center_phase"
+                ],
+                time_pressure_burst_width_phase=network[
+                    "time_pressure_burst_width_phase"
+                ],
+                time_pressure_burst_amplitude=network[
+                    "time_pressure_burst_amplitude"
+                ],
             ),
             runtime=RuntimeConfig(
                 mode=RuntimeMode(str(runtime["mode"])),
@@ -340,6 +354,10 @@ def _normalize_update(update: Mapping[str, Any]) -> dict[str, Any]:
         "space_link_mode",
         "max_space_link_candidates_per_satellite",
         "batch_space_link_update_limit",
+        "time_pressure_period_s",
+        "time_pressure_burst_center_phase",
+        "time_pressure_burst_width_phase",
+        "time_pressure_burst_amplitude",
     ):
         if key in direct:
             nested.setdefault("network", {})[key] = direct.pop(key)
@@ -505,6 +523,10 @@ def _ordered_keys(context: str, data: Mapping[str, Any]) -> tuple[str, ...]:
             "space_link_mode",
             "max_space_link_candidates_per_satellite",
             "batch_space_link_update_limit",
+            "time_pressure_period_s",
+            "time_pressure_burst_center_phase",
+            "time_pressure_burst_width_phase",
+            "time_pressure_burst_amplitude",
         ),
         "runtime": ("mode", "speed_factor", "seed", "duration"),
         "ui": ("visualization", "update_frequency_hz", "dashboard_layout"),

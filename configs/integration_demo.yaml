@@ -39,6 +39,10 @@ network:
   transmit_power_dbw: 20.0
   system_loss_db: 1.0
   noise_temperature_k: 290.0
+  time_pressure_period_s: 120.0
+  time_pressure_burst_center_phase: 0.5
+  time_pressure_burst_width_phase: 0.25
+  time_pressure_burst_amplitude: 0.0
 
 frontend:
   websocket_events: /stream/events

@@ -116,6 +116,10 @@ def build_integration_demo_runtime(config: DemoConfig) -> DemoRuntimeContext:
         event_log_sample_interval=1,
         event_log_segment_size=10_000,
         satellite_position_scale_to_km=0.001,
+        time_pressure_period_s=config.time_pressure_period_s,
+        time_pressure_burst_center_phase=config.time_pressure_burst_center_phase,
+        time_pressure_burst_width_phase=config.time_pressure_burst_width_phase,
+        time_pressure_burst_amplitude=config.time_pressure_burst_amplitude,
     )
     space_ground_budget = _space_ground_budget(config)
     space_space_budget = _space_space_budget(config)

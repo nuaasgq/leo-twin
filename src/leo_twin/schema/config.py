@@ -75,6 +75,10 @@ class TrafficDestinationTypeConfig(StrEnum):
 
 DEFAULT_BATCH_SPACE_LINK_UPDATE_LIMIT = 999
 DEFAULT_MAX_SPACE_LINK_CANDIDATES_PER_SATELLITE = 4
+DEFAULT_NETWORK_TIME_PRESSURE_PERIOD_S = 120.0
+DEFAULT_NETWORK_TIME_PRESSURE_BURST_CENTER_PHASE = 0.5
+DEFAULT_NETWORK_TIME_PRESSURE_BURST_WIDTH_PHASE = 0.25
+DEFAULT_NETWORK_TIME_PRESSURE_BURST_AMPLITUDE = 0.0
 
 
 @dataclass(frozen=True)
@@ -209,6 +213,16 @@ class NetworkProfile:
         DEFAULT_MAX_SPACE_LINK_CANDIDATES_PER_SATELLITE
     )
     batch_space_link_update_limit: int = DEFAULT_BATCH_SPACE_LINK_UPDATE_LIMIT
+    time_pressure_period_s: float = DEFAULT_NETWORK_TIME_PRESSURE_PERIOD_S
+    time_pressure_burst_center_phase: float = (
+        DEFAULT_NETWORK_TIME_PRESSURE_BURST_CENTER_PHASE
+    )
+    time_pressure_burst_width_phase: float = (
+        DEFAULT_NETWORK_TIME_PRESSURE_BURST_WIDTH_PHASE
+    )
+    time_pressure_burst_amplitude: float = (
+        DEFAULT_NETWORK_TIME_PRESSURE_BURST_AMPLITUDE
+    )
 
     def __post_init__(self) -> None:
         if not isinstance(self.application_protocol, ApplicationProtocol):
@@ -294,6 +308,28 @@ class NetworkProfile:
             self.batch_space_link_update_limit,
             "network.batch_space_link_update_limit",
         )
+        _require_positive_finite(
+            self.time_pressure_period_s,
+            "network.time_pressure_period_s",
+        )
+        _require_finite_range(
+            self.time_pressure_burst_center_phase,
+            "network.time_pressure_burst_center_phase",
+            0.0,
+            1.0,
+        )
+        _require_finite_range(
+            self.time_pressure_burst_width_phase,
+            "network.time_pressure_burst_width_phase",
+            0.0,
+            1.0,
+        )
+        _require_finite_range(
+            self.time_pressure_burst_amplitude,
+            "network.time_pressure_burst_amplitude",
+            0.0,
+            1.0,
+        )
         object.__setattr__(self, "carrier_frequency_hz", float(self.carrier_frequency_hz))
         object.__setattr__(self, "channel_bandwidth_hz", float(self.channel_bandwidth_hz))
         object.__setattr__(self, "rain_rate_mm_h", float(self.rain_rate_mm_h))
@@ -338,6 +374,26 @@ class NetworkProfile:
             self,
             "batch_space_link_update_limit",
             int(self.batch_space_link_update_limit),
+        )
+        object.__setattr__(
+            self,
+            "time_pressure_period_s",
+            float(self.time_pressure_period_s),
+        )
+        object.__setattr__(
+            self,
+            "time_pressure_burst_center_phase",
+            float(self.time_pressure_burst_center_phase),
+        )
+        object.__setattr__(
+            self,
+            "time_pressure_burst_width_phase",
+            float(self.time_pressure_burst_width_phase),
+        )
+        object.__setattr__(
+            self,
+            "time_pressure_burst_amplitude",
+            float(self.time_pressure_burst_amplitude),
         )
 
 

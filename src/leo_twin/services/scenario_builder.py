@@ -87,6 +87,10 @@ class FullSystemScenarioBuilderConfig:
     transmit_power_dbw: float = 20.0
     system_loss_db: float = 1.0
     noise_temperature_k: float = 290.0
+    time_pressure_period_s: float = 120.0
+    time_pressure_burst_center_phase: float = 0.5
+    time_pressure_burst_width_phase: float = 0.25
+    time_pressure_burst_amplitude: float = 0.0
     compute_capacity: float = 10.0
     compute_cpu_gflops_fp64: float = 0.0
     compute_gpu_tflops_fp32: float = 0.0
@@ -240,6 +244,25 @@ class FullSystemScenarioBuilderConfig:
         _require_finite_number(self.transmit_power_dbw, "transmit_power_dbw")
         _require_non_negative_number(self.system_loss_db, "system_loss_db")
         _require_positive_number(self.noise_temperature_k, "noise_temperature_k")
+        _require_positive_number(self.time_pressure_period_s, "time_pressure_period_s")
+        _require_closed_range(
+            self.time_pressure_burst_center_phase,
+            "time_pressure_burst_center_phase",
+            0.0,
+            1.0,
+        )
+        _require_closed_range(
+            self.time_pressure_burst_width_phase,
+            "time_pressure_burst_width_phase",
+            0.0,
+            1.0,
+        )
+        _require_closed_range(
+            self.time_pressure_burst_amplitude,
+            "time_pressure_burst_amplitude",
+            0.0,
+            1.0,
+        )
         _require_positive_number(self.compute_capacity, "compute_capacity")
         for field_name in (
             "compute_cpu_gflops_fp64",
@@ -377,7 +400,7 @@ def scenario_builder_backend_summary(
 
     if not isinstance(config, FullSystemScenarioBuilderConfig):
         raise TypeError("config must be FullSystemScenarioBuilderConfig")
-    return build_backend_derived_summary(
+    summary = build_backend_derived_summary(
         constellation=_constellation_allocation(config),
         satellite_count=config.satellite_count,
         user_count=config.user_count,
@@ -410,6 +433,26 @@ def scenario_builder_backend_summary(
         phase_policy="SEEDED_RAAN_AND_MEAN_ANOMALY_OFFSETS",
         runtime_seed=config.seed,
     )
+    summary["network_temporal_pressure_profile"] = {
+        "profile_id": "leo_twin.network_temporal_pressure_profile.v1",
+        "source": "network.time_pressure_*",
+        "metric_model": "FLOW_LEVEL_PROXY",
+        "temporal_pressure_model": (
+            "DETERMINISTIC_TRIANGULAR_LOAD_GATED_PROXY"
+        ),
+        "packet_level_simulation": False,
+        "period_s": config.time_pressure_period_s,
+        "burst_center_phase": config.time_pressure_burst_center_phase,
+        "burst_width_phase": config.time_pressure_burst_width_phase,
+        "burst_amplitude": config.time_pressure_burst_amplitude,
+        "config_fields": (
+            "network.time_pressure_period_s",
+            "network.time_pressure_burst_center_phase",
+            "network.time_pressure_burst_width_phase",
+            "network.time_pressure_burst_amplitude",
+        ),
+    }
+    return summary
 
 
 def scenario_builder_config_from_mapping(
@@ -498,6 +541,14 @@ def scenario_builder_config_from_sees_config(
         transmit_power_dbw=config.network.transmit_power_dbw,
         system_loss_db=config.network.system_loss_db,
         noise_temperature_k=config.network.noise_temperature_k,
+        time_pressure_period_s=config.network.time_pressure_period_s,
+        time_pressure_burst_center_phase=(
+            config.network.time_pressure_burst_center_phase
+        ),
+        time_pressure_burst_width_phase=(
+            config.network.time_pressure_burst_width_phase
+        ),
+        time_pressure_burst_amplitude=config.network.time_pressure_burst_amplitude,
         space_link_mode=(
             config.network.space_link_mode.value
             if config.network.space_link_mode is not None
@@ -711,6 +762,17 @@ def _require_range(
     _require_finite_number(value, field_name)
     if value < lower or value >= upper:
         raise ValueError(f"{field_name} must be in [{lower}, {upper})")
+
+
+def _require_closed_range(
+    value: Any,
+    field_name: str,
+    lower: float,
+    upper: float,
+) -> None:
+    _require_finite_number(value, field_name)
+    if value < lower or value > upper:
+        raise ValueError(f"{field_name} must be in [{lower}, {upper}]")
 
 
 def _compute_scheduling_policy(value: str) -> str:

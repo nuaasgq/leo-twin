@@ -44,6 +44,10 @@ def test_config_loads_correctly() -> None:
     assert config.network.space_link_mode is None
     assert config.network.max_space_link_candidates_per_satellite == 4
     assert config.network.batch_space_link_update_limit == 999
+    assert config.network.time_pressure_period_s == 120.0
+    assert config.network.time_pressure_burst_center_phase == 0.5
+    assert config.network.time_pressure_burst_width_phase == 0.25
+    assert config.network.time_pressure_burst_amplitude == 0.0
     assert config.scenario.traffic_model.traffic_class == "COMPUTE_SERVICE"
     assert config.scenario.traffic_model.destination_type == "COMPUTE_NODE"
     assert config.scenario.traffic_model.output_data_size == 0.0
@@ -99,6 +103,10 @@ def test_network_protocol_profile_can_be_updated_directly() -> None:
             "space_link_mode": "BOUNDED_CANDIDATE",
             "max_space_link_candidates_per_satellite": 6,
             "batch_space_link_update_limit": 500,
+            "time_pressure_period_s": 90.0,
+            "time_pressure_burst_center_phase": 0.4,
+            "time_pressure_burst_width_phase": 0.2,
+            "time_pressure_burst_amplitude": 0.15,
             "compute_scheduling_policy": "SHORTEST_JOB_FIRST",
         }
     )
@@ -124,6 +132,10 @@ def test_network_protocol_profile_can_be_updated_directly() -> None:
     assert controller.config.network.space_link_mode == "BOUNDED_CANDIDATE"
     assert controller.config.network.max_space_link_candidates_per_satellite == 6
     assert controller.config.network.batch_space_link_update_limit == 500
+    assert controller.config.network.time_pressure_period_s == 90.0
+    assert controller.config.network.time_pressure_burst_center_phase == 0.4
+    assert controller.config.network.time_pressure_burst_width_phase == 0.2
+    assert controller.config.network.time_pressure_burst_amplitude == 0.15
     assert controller.config.scenario.compute_scheduling_policy == "SHORTEST_JOB_FIRST"
 
 
@@ -233,6 +245,10 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
                     "space_link_mode": "BOUNDED_CANDIDATE",
                     "max_space_link_candidates_per_satellite": 6,
                     "batch_space_link_update_limit": 500,
+                    "time_pressure_period_s": 90.0,
+                    "time_pressure_burst_center_phase": 0.4,
+                    "time_pressure_burst_width_phase": 0.2,
+                    "time_pressure_burst_amplitude": 0.15,
                     "compute_scheduling_policy": "SHORTEST_JOB_FIRST",
                 },
             }
@@ -283,6 +299,10 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
     assert control_plane.result.config.space_link_mode == "BOUNDED_CANDIDATE"
     assert control_plane.result.config.max_space_link_candidates_per_satellite == 6
     assert control_plane.result.config.batch_space_link_update_limit == 500
+    assert control_plane.result.config.time_pressure_period_s == 90.0
+    assert control_plane.result.config.time_pressure_burst_center_phase == 0.4
+    assert control_plane.result.config.time_pressure_burst_width_phase == 0.2
+    assert control_plane.result.config.time_pressure_burst_amplitude == 0.15
     assert control_plane.result.config.compute_scheduling_policy == "SHORTEST_JOB_FIRST"
     assert control_plane.result.scenario.frontend_config["scenario"][
         "compute_scheduling_policy"
@@ -340,6 +360,10 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
         "space_link_mode": "BOUNDED_CANDIDATE",
         "max_space_link_candidates_per_satellite": 6,
         "batch_space_link_update_limit": 500,
+        "time_pressure_period_s": 90.0,
+        "time_pressure_burst_center_phase": 0.4,
+        "time_pressure_burst_width_phase": 0.2,
+        "time_pressure_burst_amplitude": 0.15,
     }
     assert ack["generated_config"]["application_protocol"] == "MQTT"
     assert ack["generated_config"]["transport_protocol"] == "UDP"
@@ -359,6 +383,16 @@ def test_frontend_control_messages_are_processed(tmp_path) -> None:
     assert ack["generated_config"]["space_link_mode"] == "BOUNDED_CANDIDATE"
     assert ack["generated_config"]["max_space_link_candidates_per_satellite"] == 6
     assert ack["generated_config"]["batch_space_link_update_limit"] == 500
+    assert ack["generated_config"]["time_pressure_period_s"] == 90.0
+    assert ack["generated_config"]["time_pressure_burst_center_phase"] == 0.4
+    assert ack["generated_config"]["time_pressure_burst_width_phase"] == 0.2
+    assert ack["generated_config"]["time_pressure_burst_amplitude"] == 0.15
+    pressure_profile = ack["generated_config"]["backend_summary"][
+        "network_temporal_pressure_profile"
+    ]
+    assert pressure_profile["period_s"] == 90.0
+    assert pressure_profile["burst_amplitude"] == 0.15
+    assert pressure_profile["packet_level_simulation"] is False
     assert ack["generated_config"]["compute_scheduling_policy"] == "SHORTEST_JOB_FIRST"
     assert ack["generated_config"]["compute_cpu_gflops_fp64"] == 6.0
     assert ack["generated_config"]["compute_gpu_tflops_fp32"] == 2.5
@@ -506,6 +540,10 @@ def test_initialize_writes_config_and_start_gates_streams(tmp_path) -> None:
     assert generated_config["space_link_mode"] is None
     assert generated_config["max_space_link_candidates_per_satellite"] == 4
     assert generated_config["batch_space_link_update_limit"] == 999
+    assert generated_config["time_pressure_period_s"] == 120.0
+    assert generated_config["time_pressure_burst_center_phase"] == 0.5
+    assert generated_config["time_pressure_burst_width_phase"] == 0.25
+    assert generated_config["time_pressure_burst_amplitude"] == 0.0
     assert generated_config["compute_scheduling_policy"] == "FIFO"
     assert init_ack["generated_config"]["satellite_count"] == 24
     assert init_ack["generated_config"]["user_count"] == 40
@@ -543,6 +581,10 @@ def test_initialize_writes_config_and_start_gates_streams(tmp_path) -> None:
         for field in configuration_surface["key_fields"]
     )
     assert "network.carrier_frequency_hz" in configuration_surface["file_only_fields"]
+    assert (
+        "network.time_pressure_burst_amplitude"
+        in configuration_surface["file_only_fields"]
+    )
     assert control_plane.result.config.satellite_count == 24
     assert control_plane.result.processed_events == ()
     assert control_plane.stream_events() == ()

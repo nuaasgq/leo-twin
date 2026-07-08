@@ -557,6 +557,30 @@ def _expected_ranges(config: SEESConfig) -> tuple[BenchmarkExpectedRange, ...]:
             "count",
             "network.batch_space_link_update_limit",
         ),
+        (
+            "time_pressure_period_s",
+            config.network.time_pressure_period_s,
+            "seconds",
+            "network.time_pressure_period_s",
+        ),
+        (
+            "time_pressure_burst_center_phase",
+            config.network.time_pressure_burst_center_phase,
+            "phase",
+            "network.time_pressure_burst_center_phase",
+        ),
+        (
+            "time_pressure_burst_width_phase",
+            config.network.time_pressure_burst_width_phase,
+            "phase",
+            "network.time_pressure_burst_width_phase",
+        ),
+        (
+            "time_pressure_burst_amplitude",
+            config.network.time_pressure_burst_amplitude,
+            "ratio",
+            "network.time_pressure_burst_amplitude",
+        ),
     )
     return tuple(
         BenchmarkExpectedRange(

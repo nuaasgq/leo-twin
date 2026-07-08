@@ -159,6 +159,16 @@ def build_demo_scenario(config: DemoConfig) -> DemoScenario:
                     config.max_space_link_candidates_per_satellite
                 ),
                 "batch_space_link_update_limit": config.batch_space_link_update_limit,
+                "time_pressure_period_s": config.time_pressure_period_s,
+                "time_pressure_burst_center_phase": (
+                    config.time_pressure_burst_center_phase
+                ),
+                "time_pressure_burst_width_phase": (
+                    config.time_pressure_burst_width_phase
+                ),
+                "time_pressure_burst_amplitude": (
+                    config.time_pressure_burst_amplitude
+                ),
             },
             "runtime": {
                 "mode": config.runtime_mode,

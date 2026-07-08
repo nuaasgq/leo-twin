@@ -1373,6 +1373,13 @@ Current Phase 3 progress:
   so KPI variation has an inspectable model source instead of a single opaque
   number.
 
+- T407 exposes that temporal pressure profile through validated user/network
+  configuration, integration-demo runtime config, generated backend summary,
+  static user templates, benchmark guardrails, and MetricsCollector wiring.
+  The fields remain detailed-file configuration, preserving the compact
+  control-panel key-field surface while making KPI variation reproducible from
+  configuration.
+
 ## 5. Parallel Agent Assignment Model
 
 - Kernel Agent: guard Event Kernel boundaries; review that no domain behavior

@@ -116,6 +116,10 @@ def test_benchmark_scenario_matrix_expected_ranges_are_exact_guardrails() -> Non
     }
     assert ranges["max_space_link_candidates_per_satellite"]["minimum"] == 4.0
     assert ranges["batch_space_link_update_limit"]["maximum"] == 999.0
+    assert ranges["time_pressure_period_s"]["source"] == (
+        "network.time_pressure_period_s"
+    )
+    assert ranges["time_pressure_burst_amplitude"]["maximum"] == 0.0
     assert all(
         expected_range["minimum"] <= expected_range["maximum"]
         for expected_range in ranges.values()

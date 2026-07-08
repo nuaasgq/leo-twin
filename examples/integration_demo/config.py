@@ -101,6 +101,10 @@ class DemoConfig:
         DEFAULT_MAX_SPACE_LINK_CANDIDATES_PER_SATELLITE
     )
     batch_space_link_update_limit: int = DEFAULT_BATCH_SPACE_LINK_UPDATE_LIMIT
+    time_pressure_period_s: float = 120.0
+    time_pressure_burst_center_phase: float = 0.5
+    time_pressure_burst_width_phase: float = 0.25
+    time_pressure_burst_amplitude: float = 0.0
     initial_workload_smoothing_enabled: bool = False
     initial_workload_window_s: float = 0.0
     max_initial_events_per_tick: int = 0
@@ -292,6 +296,26 @@ def load_demo_config(path: str | Path = DEFAULT_CONFIG_PATH) -> DemoConfig:
             "batch_space_link_update_limit",
             DEFAULT_BATCH_SPACE_LINK_UPDATE_LIMIT,
         ),
+        time_pressure_period_s=_optional_float(
+            network,
+            "time_pressure_period_s",
+            120.0,
+        ),
+        time_pressure_burst_center_phase=_optional_float(
+            network,
+            "time_pressure_burst_center_phase",
+            0.5,
+        ),
+        time_pressure_burst_width_phase=_optional_float(
+            network,
+            "time_pressure_burst_width_phase",
+            0.25,
+        ),
+        time_pressure_burst_amplitude=_optional_float(
+            network,
+            "time_pressure_burst_amplitude",
+            0.0,
+        ),
     )
 
 
@@ -373,6 +397,12 @@ def demo_config_to_sees_config(config: DemoConfig) -> SEESConfig:
                 config.max_space_link_candidates_per_satellite
             ),
             batch_space_link_update_limit=config.batch_space_link_update_limit,
+            time_pressure_period_s=config.time_pressure_period_s,
+            time_pressure_burst_center_phase=(
+                config.time_pressure_burst_center_phase
+            ),
+            time_pressure_burst_width_phase=config.time_pressure_burst_width_phase,
+            time_pressure_burst_amplitude=config.time_pressure_burst_amplitude,
         ),
         runtime=RuntimeConfig(
             mode=RuntimeMode(str(config.runtime_mode)),
@@ -487,6 +517,14 @@ def demo_config_from_sees_config(
             config.network.max_space_link_candidates_per_satellite
         ),
         batch_space_link_update_limit=config.network.batch_space_link_update_limit,
+        time_pressure_period_s=config.network.time_pressure_period_s,
+        time_pressure_burst_center_phase=(
+            config.network.time_pressure_burst_center_phase
+        ),
+        time_pressure_burst_width_phase=(
+            config.network.time_pressure_burst_width_phase
+        ),
+        time_pressure_burst_amplitude=config.network.time_pressure_burst_amplitude,
     )
 
 

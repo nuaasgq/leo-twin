@@ -20842,3 +20842,61 @@ change.
   - The optional burst-window parameters are model-layer ready but not yet wired
     to user YAML configuration. The next backend task should expose these fields
     through validated user configuration and status summaries.
+
+## 2026-07-08 - T407 configurable temporal pressure profile v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: expose the deterministic temporal network-pressure profile through
+  backend-owned configuration instead of keeping burst parameters model-internal.
+  Added validated `network.time_pressure_*` fields to SEES config, DemoConfig,
+  generated integration-demo config, backend summary, user configuration schema,
+  benchmark guardrails, static templates, and MetricsCollector construction.
+  The UI key-field surface remains unchanged; these are advanced file/template
+  fields. No Event Kernel, frontend architecture, packet-level, or external
+  simulator behavior was changed.
+- Changed files/modules:
+  - `src/leo_twin/schema/config.py`
+  - `src/leo_twin/schema/config_loader.py`
+  - `src/leo_twin/services/metrics/collector.py`
+  - `src/leo_twin/services/scenario_builder.py`
+  - `src/leo_twin/services/benchmark_scenarios.py`
+  - `src/leo_twin/services/configuration_schema.py`
+  - `examples/integration_demo/config.py`
+  - `examples/integration_demo/runtime.py`
+  - `examples/integration_demo/scenario.py`
+  - `configs/integration_demo.yaml`
+  - `configs/templates/sees_user_*.example.yaml`
+  - `tests/unit/test_metrics_module.py`
+  - `tests/unit/test_benchmark_scenario_matrix_v1.py`
+  - `tests/unit/test_user_configuration_schema_v2.py`
+  - `tests/integration/test_config_control.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Python `py_compile` for touched backend/test files.
+    - Result: passed.
+  - Direct function run for 23 targeted metrics/configuration/benchmark/control
+    tests covering configured temporal pressure fields, backend summary output,
+    generated config output, user configuration schema, and DemoControlPlane
+    initialization.
+    - Result: passed.
+- Problems encountered:
+  - The bundled runtime still lacks pytest, so target tests were executed by
+    direct function calls with local `pytest.approx`, `pytest.raises`, and
+    `pytest.mark.parametrize` shims.
+  - The first direct test command missed `src` on `PYTHONPATH`; rerunning with
+    the project `src` path fixed imports.
+  - A too-strict local `pytest.approx` shim initially flagged the orbital-period
+    assertion even though the difference was within pytest's default tolerance;
+    the shim was adjusted to pytest-compatible default tolerance and the target
+    test passed.
+  - Existing local runtime config drift remains untouched and must stay
+    unstaged: `configs/generated_full_system_demo.json` and
+    `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The temporal pressure profile is configurable and backend-summarized, but it
+    is still a deterministic flow-level proxy, not packet-level or RF-level
+    validation.
+  - The control-panel key-field UI intentionally does not expose these advanced
+    fields yet; users configure them through detailed YAML templates.

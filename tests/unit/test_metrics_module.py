@@ -1206,6 +1206,63 @@ def test_metrics_collector_uses_runtime_sim_time_for_time_varying_pressure() -> 
     ]
 
 
+def test_metrics_collector_uses_configured_time_pressure_profile() -> None:
+    collector = MetricsCollector(
+        metric_sample_interval=100,
+        time_pressure_period_s=80.0,
+        time_pressure_burst_center_phase=0.25,
+        time_pressure_burst_width_phase=0.25,
+        time_pressure_burst_amplitude=0.2,
+    )
+    for route_id, flow_id in (("route-a", "flow-a"), ("route-b", "flow-b")):
+        collector.observe(
+            _event(
+                route_id,
+                1.0,
+                EventType.ROUTE_UPDATE,
+                Route(
+                    route_id=route_id,
+                    flow_id=flow_id,
+                    path=("user-a", "sat-a", "user-b"),
+                    latency=0.04,
+                    capacity=100.0,
+                    available=True,
+                ),
+                "network",
+            )
+        )
+        collector.observe(
+            _event(
+                flow_id,
+                2.0,
+                EventType.FLOW_COMPLETE,
+                FlowState(
+                    flow_id=flow_id,
+                    route_id=route_id,
+                    source_id="user-a",
+                    target_id="user-b",
+                    status="complete",
+                    latency=0.04,
+                    capacity=90.0,
+                ),
+                "network",
+            )
+        )
+
+    series = collector.kpi_time_series(sim_time=20.0)
+    baseline, tail = series["samples"]
+
+    assert baseline["network_time_pressure_period_s"] == 80.0
+    assert baseline["network_time_pressure_burst_amplitude"] == 0.2
+    assert tail["network_time_pressure_period_s"] == 80.0
+    assert tail["network_time_pressure_phase"] == pytest.approx(0.25)
+    assert tail["network_time_pressure_triangular_wave"] == pytest.approx(0.5)
+    assert tail["network_time_pressure_burst_window_factor"] == pytest.approx(1.0)
+    assert tail["network_time_pressure_burst_amplitude"] == pytest.approx(0.2)
+    assert tail["network_time_pressure_envelope"] == pytest.approx(0.925)
+    assert tail["network_time_pressure_factor"] > 0.0
+
+
 def test_metrics_collector_kpi_time_series_prepends_initial_baseline_for_single_sample() -> None:
     collector = MetricsCollector()
     collector.observe(

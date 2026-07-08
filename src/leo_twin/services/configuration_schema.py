@@ -108,6 +108,10 @@ _LABELS = {
     "network.system_loss_db": "System loss",
     "network.noise_temperature_k": "Noise temperature",
     "network.space_link_mode": "Space-space link mode",
+    "network.time_pressure_period_s": "Temporal pressure period",
+    "network.time_pressure_burst_center_phase": "Temporal pressure burst center",
+    "network.time_pressure_burst_width_phase": "Temporal pressure burst width",
+    "network.time_pressure_burst_amplitude": "Temporal pressure burst amplitude",
     "runtime.mode": "Runtime mode",
     "runtime.speed_factor": "Runtime speed factor",
     "runtime.seed": "Deterministic seed",
@@ -142,6 +146,18 @@ _DESCRIPTIONS = {
     "network.space_link_mode": (
         "Optional ISL fidelity override; null lets backend scale policy choose."
     ),
+    "network.time_pressure_period_s": (
+        "Period for deterministic flow-level temporal pressure KPI variation."
+    ),
+    "network.time_pressure_burst_center_phase": (
+        "Normalized phase center of the deterministic business burst window."
+    ),
+    "network.time_pressure_burst_width_phase": (
+        "Normalized half-width of the deterministic business burst window."
+    ),
+    "network.time_pressure_burst_amplitude": (
+        "Additional deterministic burst envelope amplitude; no randomness or packets."
+    ),
     "runtime.mode": (
         "Runtime pacing mode selected before start. Real-time mode should keep speed_factor at 1."
     ),
@@ -173,6 +189,7 @@ _UNITS = {
     "network.transmit_power_dbw": "dBW",
     "network.system_loss_db": "dB",
     "network.noise_temperature_k": "K",
+    "network.time_pressure_period_s": "s",
     "runtime.duration": "s",
 }
 
@@ -240,6 +257,7 @@ _POSITIVE_NUMBER_PATHS = frozenset(
         "network.channel_bandwidth_hz",
         "network.antenna_diameter_m",
         "network.noise_temperature_k",
+        "network.time_pressure_period_s",
     }
 )
 
@@ -272,6 +290,9 @@ _NON_NEGATIVE_NUMBER_PATHS = frozenset(
 _RANGE_LIMITS = {
     "scenario.orbit.inclination_deg": {"minimum": 0.0, "maximum": 180.0},
     "runtime.speed_factor": {"minimum": 1.0, "maximum": 100.0},
+    "network.time_pressure_burst_center_phase": {"minimum": 0.0, "maximum": 1.0},
+    "network.time_pressure_burst_width_phase": {"minimum": 0.0, "maximum": 1.0},
+    "network.time_pressure_burst_amplitude": {"minimum": 0.0, "maximum": 1.0},
 }
 
 _PROBABILITY_PATHS = frozenset({"network.transport_loss_rate"})

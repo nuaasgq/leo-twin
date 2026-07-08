@@ -92,6 +92,10 @@ network:
   space_link_mode: null
   max_space_link_candidates_per_satellite: 4
   batch_space_link_update_limit: 999
+  time_pressure_period_s: 120.0
+  time_pressure_burst_center_phase: 0.5
+  time_pressure_burst_width_phase: 0.25
+  time_pressure_burst_amplitude: 0.0
 
 runtime:
   # ACCELERATED is useful for demos and tests. Use REAL_TIME with

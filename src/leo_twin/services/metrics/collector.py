@@ -76,6 +76,10 @@ class MetricsCollector:
         kpi_sample_limit: int = 240,
         satellite_kpi_history_limit: int = 32,
         satellite_position_scale_to_km: float = 1.0,
+        time_pressure_period_s: float = _NETWORK_TIME_PRESSURE_PERIOD_S,
+        time_pressure_burst_center_phase: float = 0.5,
+        time_pressure_burst_width_phase: float = 0.25,
+        time_pressure_burst_amplitude: float = 0.0,
     ) -> None:
         if not module_name:
             raise ValueError("module_name must be non-empty")
@@ -95,6 +99,19 @@ class MetricsCollector:
             satellite_position_scale_to_km,
             "satellite_position_scale_to_km",
         )
+        _require_positive_number(time_pressure_period_s, "time_pressure_period_s")
+        _require_unit_interval_number(
+            time_pressure_burst_center_phase,
+            "time_pressure_burst_center_phase",
+        )
+        _require_unit_interval_number(
+            time_pressure_burst_width_phase,
+            "time_pressure_burst_width_phase",
+        )
+        _require_unit_interval_number(
+            time_pressure_burst_amplitude,
+            "time_pressure_burst_amplitude",
+        )
 
         self._module_name = module_name
         self._emit_metric_events = emit_metric_events
@@ -105,6 +122,12 @@ class MetricsCollector:
         self._kpi_sample_limit = kpi_sample_limit
         self._satellite_kpi_history_limit = satellite_kpi_history_limit
         self._satellite_position_scale_to_km = float(satellite_position_scale_to_km)
+        self._time_pressure_period_s = float(time_pressure_period_s)
+        self._time_pressure_burst_center_phase = float(
+            time_pressure_burst_center_phase
+        )
+        self._time_pressure_burst_width_phase = float(time_pressure_burst_width_phase)
+        self._time_pressure_burst_amplitude = float(time_pressure_burst_amplitude)
         self._records: deque[MetricRecord] = deque(maxlen=record_limit)
         self._event_log: deque[ReplayEvent] = deque(maxlen=event_log_limit)
         self._kpi_samples: deque[KpiSample] = deque(maxlen=kpi_sample_limit)
@@ -334,7 +357,7 @@ class MetricsCollector:
         current_sample = self._current_kpi_sample(current_sample_time)
         if not samples:
             samples = (
-                [_baseline_kpi_sample(0.0), current_sample]
+                [self._baseline_kpi_sample(0.0), current_sample]
                 if current_sample_time > 0.0
                 else [current_sample]
             )[-self._kpi_sample_limit :]
@@ -350,7 +373,7 @@ class MetricsCollector:
             and samples[0]["sim_time"] > 0.0
             and self._kpi_sample_limit > 1
         ):
-            samples = [_baseline_kpi_sample(0.0), samples[0]]
+            samples = [self._baseline_kpi_sample(0.0), samples[0]]
         return {
             "version": "v1",
             "sample_count": len(samples),
@@ -358,6 +381,15 @@ class MetricsCollector:
             "tail_sample_source_label": "当前指标摘要同步",
             "samples": samples,
         }
+
+    def _baseline_kpi_sample(self, sim_time: float) -> KpiSample:
+        return _baseline_kpi_sample(
+            sim_time,
+            time_pressure_period_s=self._time_pressure_period_s,
+            time_pressure_burst_center_phase=self._time_pressure_burst_center_phase,
+            time_pressure_burst_width_phase=self._time_pressure_burst_width_phase,
+            time_pressure_burst_amplitude=self._time_pressure_burst_amplitude,
+        )
 
     def satellite_kpi_slices(
         self,
@@ -1505,6 +1537,10 @@ class MetricsCollector:
         temporal_pressure = time_varying_pressure_state(
             summary_time,
             time_pressure_load_proxy,
+            period_s=self._time_pressure_period_s,
+            burst_center_phase=self._time_pressure_burst_center_phase,
+            burst_width_phase=self._time_pressure_burst_width_phase,
+            burst_amplitude=self._time_pressure_burst_amplitude,
         )
         time_pressure_factor = temporal_pressure.factor
         time_pressure_loss_proxy_rate = time_varying_pressure_loss_rate(
@@ -2226,7 +2262,22 @@ def _runtime_window_throughput_source_label(source: str) -> str:
     return labels.get(source, source)
 
 
-def _baseline_kpi_sample(sim_time: float) -> KpiSample:
+def _baseline_kpi_sample(
+    sim_time: float,
+    *,
+    time_pressure_period_s: float = _NETWORK_TIME_PRESSURE_PERIOD_S,
+    time_pressure_burst_center_phase: float = 0.5,
+    time_pressure_burst_width_phase: float = 0.25,
+    time_pressure_burst_amplitude: float = 0.0,
+) -> KpiSample:
+    temporal_pressure = time_varying_pressure_state(
+        sim_time,
+        0.0,
+        period_s=time_pressure_period_s,
+        burst_center_phase=time_pressure_burst_center_phase,
+        burst_width_phase=time_pressure_burst_width_phase,
+        burst_amplitude=time_pressure_burst_amplitude,
+    )
     return {
         "sim_time": float(sim_time),
         "network_effective_throughput_mbps": 0.0,
@@ -2255,13 +2306,19 @@ def _baseline_kpi_sample(sim_time: float) -> KpiSample:
         "network_effective_available_throughput_mbps": 0.0,
         "network_flow_delivered_capacity_mbps": 0.0,
         "network_time_adjusted_delivered_throughput_mbps": 0.0,
-        "network_time_pressure_period_s": float(_NETWORK_TIME_PRESSURE_PERIOD_S),
-        "network_time_pressure_phase": 0.0,
-        "network_time_pressure_load_proxy": 0.0,
-        "network_time_pressure_triangular_wave": 0.0,
-        "network_time_pressure_burst_window_factor": 0.0,
-        "network_time_pressure_burst_amplitude": 0.0,
-        "network_time_pressure_envelope": 0.45,
+        "network_time_pressure_period_s": float(temporal_pressure.period_s),
+        "network_time_pressure_phase": float(temporal_pressure.phase),
+        "network_time_pressure_load_proxy": float(temporal_pressure.load_pressure),
+        "network_time_pressure_triangular_wave": float(
+            temporal_pressure.triangular_wave
+        ),
+        "network_time_pressure_burst_window_factor": float(
+            temporal_pressure.burst_window_factor
+        ),
+        "network_time_pressure_burst_amplitude": float(
+            temporal_pressure.burst_amplitude
+        ),
+        "network_time_pressure_envelope": float(temporal_pressure.envelope),
         "network_time_pressure_factor": 0.0,
         "network_time_pressure_loss_proxy_rate": 0.0,
         "network_time_pressure_delay_variation_s": 0.0,
@@ -2999,3 +3056,11 @@ def _require_positive_number(value: float, field_name: str) -> None:
         raise TypeError(f"{field_name} must be a number")
     if not isfinite(value) or value <= 0.0:
         raise ValueError(f"{field_name} must be finite and positive")
+
+
+def _require_unit_interval_number(value: float, field_name: str) -> None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise TypeError(f"{field_name} must be a number")
+    numeric = float(value)
+    if not isfinite(numeric) or numeric < 0.0 or numeric > 1.0:
+        raise ValueError(f"{field_name} must be finite and in [0, 1]")

@@ -62,6 +62,12 @@ def test_user_configuration_schema_v2_covers_full_effective_config() -> None:
     assert fields["runtime.speed_factor"]["minimum"] == 1.0
     assert fields["runtime.speed_factor"]["maximum"] == 100.0
     assert fields["network.transport_loss_rate"]["exclusive_maximum"] == 1.0
+    assert fields["network.time_pressure_period_s"]["unit"] == "s"
+    assert fields["network.time_pressure_period_s"]["exclusive_minimum"] == 0.0
+    assert fields["network.time_pressure_burst_amplitude"]["maximum"] == 1.0
+    assert fields["network.time_pressure_burst_amplitude"][
+        "editable_surface"
+    ] == "DETAILED_CONFIG_FILE_ONLY"
     assert "routing_requires_at_least_one_positive_weight" in fields[
         "network.routing_latency_weight"
     ]["validation_rules"]
