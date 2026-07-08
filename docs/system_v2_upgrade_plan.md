@@ -467,6 +467,10 @@ Tasks:
     inference. T418 moves the deterministic time-pressure phase/factor/loss/
     delay-variation proxy formulas into models/network/pressure.py so KPI
     movement has a model-layer source instead of collector-local helper logic.
+    T420 adds `temporal_pressure_evidence` to `network_kpi_provenance_v2`,
+    exposing the backend-owned time-pressure model id, source-field coverage,
+    dominant load component, phase/factor/loss/delay values, and throughput
+    adjustment evidence for frontend consumption without local inference.
     The export-binding increment persists the same evidence as
     `runtime_kpi_movement_summary_v1.json` and surfaces compact movement status
     and hash fields through result-package review, diagnostics, scenario review,

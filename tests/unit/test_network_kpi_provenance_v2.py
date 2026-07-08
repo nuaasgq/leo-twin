@@ -5,6 +5,7 @@ import json
 from leo_twin.services.network_kpi_provenance import (
     NETWORK_KPI_CREDIBILITY_V1_ID,
     NETWORK_KPI_PROVENANCE_V2_ID,
+    NETWORK_TEMPORAL_PRESSURE_EVIDENCE_V1_ID,
     build_network_kpi_credibility_v1,
     build_network_kpi_provenance_v2,
 )
@@ -45,7 +46,13 @@ def test_network_kpi_provenance_v2_binds_metrics_to_network_contract() -> None:
         "network_quality_failed_flow_ratio": 0.0,
         "network_quality_congestion_loss_proxy_rate": 0.03,
         "network_quality_demand_loss_proxy_rate": 0.05,
+        "network_quality_time_pressure_period_s": 120.0,
+        "network_quality_time_pressure_phase": 0.5,
+        "network_quality_time_pressure_factor": 0.85,
         "network_quality_time_pressure_loss_proxy_rate": 0.07,
+        "network_quality_demand_pressure_proxy": 0.92,
+        "network_quality_throughput_pressure_proxy": 0.75,
+        "network_quality_flow_delivered_capacity_mbps": 180.0,
         "network_quality_route_blocking_ratio": 0.0,
         "network_quality_route_decision_count": 4,
         "network_quality_available_route_decision_count": 4,
@@ -83,6 +90,39 @@ def test_network_kpi_provenance_v2_binds_metrics_to_network_contract() -> None:
     assert json.loads(json.dumps(provenance, sort_keys=True))["provenance_id"] == (
         NETWORK_KPI_PROVENANCE_V2_ID
     )
+    temporal = provenance["temporal_pressure_evidence"]
+    assert isinstance(temporal, dict)
+    assert temporal["version"] == "v1"
+    assert temporal["evidence_id"] == NETWORK_TEMPORAL_PRESSURE_EVIDENCE_V1_ID
+    assert temporal["source"] == "METRICS_SUMMARY"
+    assert temporal["temporal_pressure_model"] == (
+        "DETERMINISTIC_TRIANGULAR_LOAD_GATED_PROXY"
+    )
+    assert temporal["packet_level_simulation"] is False
+    assert temporal["frontend_inference_required"] is False
+    assert temporal["status"] == "OBSERVED"
+    assert temporal["time_pressure_period_s"] == 120.0
+    assert temporal["time_pressure_phase"] == 0.5
+    assert temporal["time_pressure_factor"] == 0.85
+    assert temporal["dominant_load_component"] == {
+        "component": "demand_pressure",
+        "field": "network_quality_demand_pressure_proxy",
+        "current_value": 0.92,
+        "value_source": "METRICS_SUMMARY",
+    }
+    assert temporal["load_pressure_proxy"] == 0.92
+    assert temporal["loss_proxy_rate"] == 0.07
+    assert temporal["delay_variation_proxy_s"] == 0.002
+    assert temporal["temporal_pressure_active"] is True
+    assert temporal["loss_proxy_active"] is True
+    assert temporal["delay_variation_proxy_active"] is True
+    assert temporal["throughput_delta_mbps"] == 9.0
+    temporal_fields = _temporal_source_fields(temporal)
+    assert temporal_fields["network_quality_time_pressure_factor"] == {
+        "field": "network_quality_time_pressure_factor",
+        "current_value": 0.85,
+        "value_source": "METRICS_SUMMARY",
+    }
 
     throughput = _kpi(provenance, "EFFECTIVE_THROUGHPUT")
     assert throughput["runtime_summary_key"] == (
@@ -210,6 +250,19 @@ def test_network_kpi_provenance_v2_reports_missing_runtime_values() -> None:
         for item in provenance["kpis"]
         if isinstance(item, dict)
     )
+    temporal = provenance["temporal_pressure_evidence"]
+    assert isinstance(temporal, dict)
+    assert temporal["status"] == "MISSING_RUNTIME_VALUES"
+    assert temporal["observed_required_field_count"] == 0
+    assert temporal["dominant_load_component"] == {
+        "component": "demand_pressure",
+        "field": "network_quality_demand_pressure_proxy",
+        "current_value": 0.0,
+        "value_source": "MISSING",
+    }
+    assert temporal["time_pressure_factor"] is None
+    assert temporal["loss_proxy_active"] is False
+
     throughput = _kpi(provenance, "EFFECTIVE_THROUGHPUT")
     assert throughput["current_value"] is None
     assert throughput["observed_source"] == {"source": "", "label": ""}
@@ -258,6 +311,12 @@ def test_network_kpi_formula_evidence_v1_combines_formula_inputs_and_calibration
         "network_quality_delay_variation_source": "FLOW_LATENCY_VARIATION",
         "network_quality_delay_variation_source_label": "flow latency variation",
         "network_quality_route_blocking_ratio": 0.0,
+        "network_quality_route_decision_count": 4,
+        "network_quality_available_route_decision_count": 4,
+        "network_quality_unavailable_route_decision_count": 0,
+        "network_quality_pressure_admission_rejected_route_count": 0,
+        "network_quality_pressure_admission_rejection_ratio": 0.0,
+        "network_quality_topology_blocked_route_count": 0,
         "network_quality_congestion_proxy": 0.8,
         "network_quality_requested_route_demand_mbps": 200.0,
         "network_quality_offered_route_capacity_mbps": 220.0,
@@ -346,6 +405,12 @@ def test_network_kpi_variation_explanation_v1_explains_metric_movement() -> None
         "network_quality_delay_variation_source": "FLOW_LATENCY_VARIATION",
         "network_quality_delay_variation_source_label": "flow latency variation",
         "network_quality_route_blocking_ratio": 0.0,
+        "network_quality_route_decision_count": 4,
+        "network_quality_available_route_decision_count": 4,
+        "network_quality_unavailable_route_decision_count": 0,
+        "network_quality_pressure_admission_rejected_route_count": 0,
+        "network_quality_pressure_admission_rejection_ratio": 0.0,
+        "network_quality_topology_blocked_route_count": 0,
         "network_quality_congestion_proxy": 0.8,
         "network_quality_requested_route_demand_mbps": 200.0,
         "network_quality_offered_route_capacity_mbps": 220.0,
@@ -431,6 +496,12 @@ def test_network_kpi_variation_explanation_v1_explains_flat_active_kpis() -> Non
         "network_quality_delay_variation_source": "FLOW_LATENCY_VARIATION",
         "network_quality_delay_variation_source_label": "flow latency variation",
         "network_quality_route_blocking_ratio": 0.0,
+        "network_quality_route_decision_count": 4,
+        "network_quality_available_route_decision_count": 4,
+        "network_quality_unavailable_route_decision_count": 0,
+        "network_quality_pressure_admission_rejected_route_count": 0,
+        "network_quality_pressure_admission_rejection_ratio": 0.0,
+        "network_quality_topology_blocked_route_count": 0,
         "network_quality_congestion_proxy": 0.0,
         "network_quality_requested_route_demand_mbps": 100.0,
         "network_quality_offered_route_capacity_mbps": 100.0,
@@ -486,6 +557,15 @@ def _kpi(provenance: dict[str, object], metric: str) -> dict[str, object]:
             return item
     raise AssertionError(f"missing KPI {metric}")
 
+
+def _temporal_source_fields(item: dict[str, object]) -> dict[str, dict[str, object]]:
+    source_fields = item["source_fields"]
+    assert isinstance(source_fields, tuple)
+    result: dict[str, dict[str, object]] = {}
+    for field in source_fields:
+        assert isinstance(field, dict)
+        result[str(field["field"])] = field
+    return result
 
 def _source_fields(item: dict[str, object]) -> dict[str, dict[str, object]]:
     source_fields = item["source_fields"]

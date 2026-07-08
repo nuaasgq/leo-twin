@@ -13,9 +13,13 @@ from leo_twin.schema.network_model_contract import (
 
 NETWORK_KPI_PROVENANCE_V2_ID = "leo_twin.network_kpi_provenance.v2"
 NETWORK_KPI_CREDIBILITY_V1_ID = "leo_twin.network_kpi_credibility.v1"
+NETWORK_TEMPORAL_PRESSURE_EVIDENCE_V1_ID = (
+    "leo_twin.network_temporal_pressure_evidence.v1"
+)
 
 NetworkKpiProvenanceV2 = dict[str, object]
 NetworkKpiCredibilityV1 = dict[str, object]
+NetworkTemporalPressureEvidenceV1 = dict[str, object]
 
 _SOURCE_KEYS_BY_METRIC = {
     "EFFECTIVE_THROUGHPUT": (
@@ -72,6 +76,32 @@ _FORMULA_SELECTION_POLICY_BY_METRIC = {
         "Report blocked route decisions divided by recent route decisions."
     ),
 }
+
+_TEMPORAL_PRESSURE_REQUIRED_FIELDS = (
+    "network_quality_time_pressure_period_s",
+    "network_quality_time_pressure_phase",
+    "network_quality_time_pressure_factor",
+)
+
+_TEMPORAL_PRESSURE_FIELDS = (
+    "network_quality_time_pressure_period_s",
+    "network_quality_time_pressure_phase",
+    "network_quality_time_pressure_factor",
+    "network_quality_time_pressure_loss_proxy_rate",
+    "network_quality_time_pressure_delay_variation_proxy_s",
+    "network_quality_demand_pressure_proxy",
+    "network_quality_throughput_pressure_proxy",
+    "network_quality_congestion_proxy",
+    "network_quality_flow_delivered_capacity_mbps",
+    "network_quality_time_adjusted_delivered_throughput_mbps",
+)
+
+_TEMPORAL_LOAD_FIELDS = (
+    ("demand_pressure", "network_quality_demand_pressure_proxy"),
+    ("throughput_pressure", "network_quality_throughput_pressure_proxy"),
+    ("link_congestion", "network_quality_congestion_proxy"),
+)
+
 
 _SELECTED_FIELDS_BY_SOURCE = {
     ("EFFECTIVE_THROUGHPUT", "COMPLETED_FLOW_CAPACITY"): (
@@ -151,6 +181,7 @@ def build_network_kpi_provenance_v2(
         "packet_level_simulation": False,
         "proxy_note": _metric_string(metrics, "network_quality_proxy_note"),
         "provenance_note": _metric_string(metrics, "network_quality_provenance_note"),
+        "temporal_pressure_evidence": _temporal_pressure_evidence(metrics),
         "kpi_count": len(kpis),
         "kpis": kpis,
     }
@@ -231,6 +262,110 @@ def build_network_kpi_credibility_v1(
             zero_unexplained_count=len(zero_unexplained_metrics),
         ),
     }
+
+
+def _temporal_pressure_evidence(
+    metrics: Mapping[str, Any],
+) -> NetworkTemporalPressureEvidenceV1:
+    observed_required_count = sum(
+        1 for field in _TEMPORAL_PRESSURE_REQUIRED_FIELDS if field in metrics
+    )
+    status = (
+        "OBSERVED"
+        if observed_required_count == len(_TEMPORAL_PRESSURE_REQUIRED_FIELDS)
+        else "MISSING_RUNTIME_VALUES"
+    )
+    dominant_load = _dominant_temporal_load_component(metrics)
+    time_pressure_factor = _metric_number(
+        metrics,
+        "network_quality_time_pressure_factor",
+    ) or 0.0
+    loss_proxy_rate = _metric_number(
+        metrics,
+        "network_quality_time_pressure_loss_proxy_rate",
+    ) or 0.0
+    delay_variation_proxy_s = _metric_number(
+        metrics,
+        "network_quality_time_pressure_delay_variation_proxy_s",
+    ) or 0.0
+    delivered_throughput = _metric_number(
+        metrics,
+        "network_quality_flow_delivered_capacity_mbps",
+    ) or 0.0
+    adjusted_throughput = _metric_number(
+        metrics,
+        "network_quality_time_adjusted_delivered_throughput_mbps",
+    ) or 0.0
+    throughput_delta = max(0.0, delivered_throughput - adjusted_throughput)
+    return {
+        "version": "v1",
+        "evidence_id": NETWORK_TEMPORAL_PRESSURE_EVIDENCE_V1_ID,
+        "source": "METRICS_SUMMARY",
+        "metric_model": _metric_string(metrics, "network_quality_metric_model")
+        or "FLOW_LEVEL_PROXY",
+        "temporal_pressure_model": "DETERMINISTIC_TRIANGULAR_LOAD_GATED_PROXY",
+        "packet_level_simulation": False,
+        "frontend_inference_required": False,
+        "status": status,
+        "required_field_count": len(_TEMPORAL_PRESSURE_REQUIRED_FIELDS),
+        "observed_required_field_count": observed_required_count,
+        "source_field_count": len(_TEMPORAL_PRESSURE_FIELDS),
+        "time_pressure_period_s": _metric_value(
+            metrics,
+            "network_quality_time_pressure_period_s",
+        ),
+        "time_pressure_phase": _metric_value(
+            metrics,
+            "network_quality_time_pressure_phase",
+        ),
+        "time_pressure_factor": _metric_value(
+            metrics,
+            "network_quality_time_pressure_factor",
+        ),
+        "dominant_load_component": dominant_load,
+        "load_pressure_proxy": dominant_load["current_value"],
+        "loss_proxy_rate": float(loss_proxy_rate),
+        "delay_variation_proxy_s": float(delay_variation_proxy_s),
+        "temporal_pressure_active": time_pressure_factor > 0.0,
+        "loss_proxy_active": loss_proxy_rate > 0.0,
+        "delay_variation_proxy_active": delay_variation_proxy_s > 0.0,
+        "delivered_throughput_mbps": float(delivered_throughput),
+        "time_adjusted_delivered_throughput_mbps": float(adjusted_throughput),
+        "throughput_delta_mbps": float(throughput_delta),
+        "source_fields": tuple(
+            _source_field_value(field, metrics)
+            for field in _TEMPORAL_PRESSURE_FIELDS
+        ),
+        "model_assumptions": (
+            "Temporal pressure is a deterministic load-gated flow-level proxy.",
+            "No packet-level queue or packet-loss simulation is performed.",
+            "The pressure factor explains KPI movement over simulation time when load inputs are non-zero.",
+        ),
+    }
+
+
+def _dominant_temporal_load_component(
+    metrics: Mapping[str, Any],
+) -> dict[str, object]:
+    selected_name = "none"
+    selected_field = ""
+    selected_value = 0.0
+    selected_source = "MISSING"
+    for name, field in _TEMPORAL_LOAD_FIELDS:
+        value = _metric_number(metrics, field)
+        candidate_value = 0.0 if value is None else value
+        if selected_field == "" or candidate_value > selected_value:
+            selected_name = name
+            selected_field = field
+            selected_value = candidate_value
+            selected_source = "METRICS_SUMMARY" if value is not None else "MISSING"
+    return {
+        "component": selected_name,
+        "field": selected_field,
+        "current_value": float(selected_value),
+        "value_source": selected_source,
+    }
+
 
 
 def _kpi_provenance_item(
@@ -431,6 +566,15 @@ def _metric_value(metrics: Mapping[str, Any], key: str) -> str | int | float | b
     return None
 
 
+def _metric_number(metrics: Mapping[str, Any], key: str) -> float | None:
+    value = metrics.get(key)
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    return None
+
+
 def _is_zero_value(value: object) -> bool:
     return (
         not isinstance(value, bool)
@@ -490,8 +634,10 @@ def _credibility_caveats(
 __all__ = [
     "NETWORK_KPI_CREDIBILITY_V1_ID",
     "NETWORK_KPI_PROVENANCE_V2_ID",
+    "NETWORK_TEMPORAL_PRESSURE_EVIDENCE_V1_ID",
     "NetworkKpiCredibilityV1",
     "NetworkKpiProvenanceV2",
+    "NetworkTemporalPressureEvidenceV1",
     "build_network_kpi_credibility_v1",
     "build_network_kpi_provenance_v2",
 ]

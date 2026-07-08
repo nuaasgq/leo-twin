@@ -5,6 +5,43 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-08 - Network Temporal Pressure Evidence v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: pending in this commit
+- Scope: add backend-owned temporal pressure evidence to
+  `network_kpi_provenance_v2`. The new
+  `temporal_pressure_evidence` object reports the deterministic time-
+  pressure model id, required runtime fields, dominant load component,
+  phase/factor/loss/delay variation values, throughput adjustment, source
+  field coverage, and model assumptions. This makes time-varying network
+  KPI movement explainable from backend metrics instead of frontend-local
+  inference. No Event Kernel, packet-level simulation, frontend rendering,
+  or network advancement behavior was changed.
+- Changed files/modules:
+  - `src/leo_twin/services/network_kpi_provenance.py`
+  - `tests/unit/test_network_kpi_provenance_v2.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src\leo_twin\services\network_kpi_provenance.py tests\unit\test_network_kpi_provenance_v2.py`
+    - Result: passed using the bundled Codex Python runtime.
+  - Direct bundled-Python smoke for all five `test_network_kpi_provenance_v2.py` test functions.
+    - Result: passed with `PYTHONPATH=src`.
+- Problems encountered and handling:
+  - PowerShell text writes can corrupt existing non-ASCII test/doc bytes on
+    this Windows workspace; affected historical assertion lines were restored
+    from `HEAD` by byte replacement.
+  - Existing formula-evidence test fixtures lacked route-decision selected
+    inputs, so this task completed those fixture metrics while preserving the
+    existing formula/provenance logic.
+  - Local runtime/generated config files and `%SystemDrive%/` remain outside
+    this task scope and were not staged.
+- Known remaining issues / follow-up:
+  - Bind the new temporal pressure evidence into dashboard copy or model
+    assumptions panels in a frontend task after the backend contract is
+    consumed intentionally.
+
 ## 2026-07-08 - Position-Driven Active Flow Reroute Test Alignment v1
 
 - Branch: `feature/T402-network-pressure-provenance-v1`
