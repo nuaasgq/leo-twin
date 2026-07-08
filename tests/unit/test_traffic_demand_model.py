@@ -255,30 +255,35 @@ def test_service_mix_allocates_requests_and_generates_correlated_businesses() ->
     assert len(batch.task_requests) == 3
     assert len(batch.output_flow_metadata) == 3
     assert tuple(record.traffic_class for record in batch.records[:6]) == (
-        TrafficClass.DATA_TRANSFER,
-        TrafficClass.DATA_TRANSFER,
-        TrafficClass.DATA_TRANSFER,
-        TrafficClass.DATA_TRANSFER,
-        TrafficClass.DATA_TRANSFER,
         TrafficClass.COMPUTE_SERVICE,
+        TrafficClass.DATA_TRANSFER,
+        TrafficClass.TELEMETRY,
+        TrafficClass.COMPUTE_SERVICE,
+        TrafficClass.DATA_TRANSFER,
+        TrafficClass.TELEMETRY,
     )
-    assert batch.records[5].task is not None
-    assert batch.records[5].task.compute_demand == 16.0
-    assert batch.records[5].task.fp32_ops == 1_000.0
-    assert batch.records[5].task.memory_gb == 2.0
-    assert batch.records[5].output_flow is not None
-    assert batch.records[5].output_flow.target_id == "user-a"
+    compute_record = next(
+        record
+        for record in batch.records
+        if record.traffic_class == TrafficClass.COMPUTE_SERVICE
+    )
+    assert compute_record.task is not None
+    assert compute_record.task.compute_demand == 16.0
+    assert compute_record.task.fp32_ops == 1_000.0
+    assert compute_record.task.memory_gb == 2.0
+    assert compute_record.output_flow is not None
+    assert compute_record.output_flow.target_id == "user-a"
     assert tuple(event.sim_time for event in batch.flow_arrival_events()) == (
         1.0,
+        1.0,
+        1.0,
         4.0,
+        4.0,
+        4.0,
+        7.0,
         7.0,
         10.0,
         13.0,
-        1.0,
-        4.0,
-        7.0,
-        1.0,
-        4.0,
     )
 
 
@@ -367,6 +372,10 @@ def test_service_mix_summary_reports_counts_and_per_user_state() -> None:
         "COMPUTE_SERVICE",
         "EMERGENCY",
     )
+    assert summary["schedule_ordering"] == "ARRIVAL_TIME_PRIORITY_CLASS_FLOW"
+    assert summary["simultaneous_arrival_policy"] == (
+        "HIGHER_PRIORITY_FIRST_THEN_CLASS_AND_FLOW_ID"
+    )
     assert per_user["user-a"]["request_count"] == 4
     assert per_user["user-a"]["service_classes"] == (
         "COMPUTE_SERVICE",
@@ -441,6 +450,10 @@ def test_traffic_demand_explanation_reports_business_semantics() -> None:
         "BULK_DOWNLINK",
         "COMPUTE_SERVICE",
         "EMERGENCY",
+    )
+    assert first["schedule_ordering"] == "ARRIVAL_TIME_PRIORITY_CLASS_FLOW"
+    assert first["simultaneous_arrival_policy"] == (
+        "HIGHER_PRIORITY_FIRST_THEN_CLASS_AND_FLOW_ID"
     )
     assert first["arrival_window"] == {
         "first_arrival_time": 0.0,

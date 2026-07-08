@@ -4,6 +4,46 @@ This file records completed development tasks, committed changes, validation
 results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
+
+## 2026-07-08 - Traffic Service Mix Interleaving v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: pending in this commit
+- Scope: improve backend traffic-demand model realism by ordering generated
+  service-mix records by `arrival_time`, descending priority, traffic class,
+  and flow id after profile expansion. This avoids service-mix batches being
+  grouped by business class before entering the event stream and exposes the
+  schedule ordering through `service_mix_summary()` and
+  `traffic_demand_explanation()`. The change remains deterministic and
+  flow-level; it does not change Event Kernel ordering, packet-level behavior,
+  network routing, compute scheduling, frontend rendering, or external
+  simulator integrations.
+- Changed files/modules:
+  - `src/leo_twin/models/traffic/demand.py`
+  - `tests/unit/test_traffic_demand_model.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src\leo_twin\models\traffic\demand.py tests\unit\test_traffic_demand_model.py`
+    - Result: passed using the bundled Codex Python runtime.
+  - Manual smoke for traffic demand determinism, service-mix allocation,
+    service-mix summary, and traffic demand explanation tests
+    - Result: passed with a minimal `pytest` stub because the bundled
+      no-approval Python runtime does not include `pytest`.
+  - `git diff --check`
+    - Result: passed for task files.
+- Problems encountered and handling:
+  - Existing service-mix tests assumed grouped-by-class record order. The
+    expectation was updated to assert the new time/priority interleaving while
+    preserving generated counts and compute-service correlation checks.
+  - Local runtime/generated config files and the unrelated `%SystemDrive%/`
+    directory remain outside this task scope and were not staged.
+- Known remaining issues / follow-up:
+  - The service-mix scheduler is still flow-level and deterministic. It does
+    not yet model stochastic retries, session duration distributions, or
+    operator-defined time-of-day traffic windows beyond existing arrival
+    profiles.
+
 ## 2026-07-08 - Runtime KPI Tail Target Binding v1
 
 - Branch: `feature/T402-network-pressure-provenance-v1`

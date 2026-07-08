@@ -257,6 +257,16 @@ Tasks:
     status display so saved operator checklists can be compared against the
     latest backend template for missing records, evidence-hash drift, operator
     attention, and extra stale records without replay or recomputation.
+- V2-014: Add traffic service-mix temporal interleaving.
+  - Scope: order generated service-mix requests by arrival time, priority,
+    traffic class, and flow id after weighted profile expansion.
+  - Depends on: V2-012.
+  - Status: T409 updates the backend traffic demand model so mixed business
+    classes are not emitted as grouped-by-class blocks. `service_mix_summary()`
+    and `traffic_demand_explanation()` now expose
+    `schedule_ordering=ARRIVAL_TIME_PRIORITY_CLASS_FLOW` and the simultaneous
+    arrival policy, preserving deterministic flow-level semantics while making
+    time-varying demand more credible.
 - V2-013: Add service lifecycle trace.
   - Scope: input flow, queue, compute, output flow, terminal state.
   - Output: timeline records for dashboard and result export.

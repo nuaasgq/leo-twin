@@ -337,6 +337,10 @@ class TrafficDemandBatch:
             "generated_request_count": len(self.records),
             "generated_request_counts": counts,
             "active_service_classes": active_classes,
+            "schedule_ordering": "ARRIVAL_TIME_PRIORITY_CLASS_FLOW",
+            "simultaneous_arrival_policy": (
+                "HIGHER_PRIORITY_FIRST_THEN_CLASS_AND_FLOW_ID"
+            ),
             "per_user_active_service_state": self.per_user_active_service_state(),
         }
 
@@ -375,6 +379,10 @@ class TrafficDemandBatch:
                 row["traffic_class"] for row in active_rows
             ),
             "traffic_class_rows": traffic_class_rows,
+            "schedule_ordering": "ARRIVAL_TIME_PRIORITY_CLASS_FLOW",
+            "simultaneous_arrival_policy": (
+                "HIGHER_PRIORITY_FIRST_THEN_CLASS_AND_FLOW_ID"
+            ),
             "arrival_window": {
                 "first_arrival_time": min(arrival_times) if arrival_times else None,
                 "last_arrival_time": max(arrival_times) if arrival_times else None,
@@ -613,7 +621,9 @@ class TrafficDemandModel:
         records: list[TrafficDemandRecord] = []
         for profile_index, profile in enumerate(self._config.profiles):
             records.extend(_generate_profile_records(profile_index, profile))
-        return TrafficDemandBatch(records=tuple(records))
+        return TrafficDemandBatch(
+            records=tuple(sorted(records, key=_traffic_record_sort_key))
+        )
 
 
 def generate_traffic_demand(
@@ -708,6 +718,17 @@ def _default_destination_type(traffic_class: TrafficClass) -> TrafficDestination
     if traffic_class == TrafficClass.EMERGENCY:
         return TrafficDestinationType.SERVICE_ENDPOINT
     return TrafficDestinationType.GROUND_ENDPOINT
+
+
+def _traffic_record_sort_key(
+    record: TrafficDemandRecord,
+) -> tuple[float, int, str, str]:
+    return (
+        float(record.arrival_time),
+        -int(record.input_flow.priority),
+        record.traffic_class.value,
+        record.input_flow.flow_id,
+    )
 
 
 def _generate_profile_records(
