@@ -1355,6 +1355,12 @@ Current Phase 3 progress:
   backend-owned status/model/source-field expectations with evidence anchored
   to `network_temporal_pressure_evidence_v1.json`.
 
+- T404 adds `temporal_pressure_calibration` under
+  `network_kpi_calibration_v1`, classifying whether deterministic temporal
+  pressure is inactive, insufficiently sampled, aligned with observed
+  throughput/loss/jitter proxy movement, or active without KPI movement. This
+  improves backend KPI credibility without changing formulas or event behavior.
+
 ## 5. Parallel Agent Assignment Model
 
 - Kernel Agent: guard Event Kernel boundaries; review that no domain behavior

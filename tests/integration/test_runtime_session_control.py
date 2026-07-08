@@ -446,6 +446,24 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
         "FLAT_NO_ACTIVITY",
         "INSUFFICIENT_SERIES",
     }
+    temporal_calibration = network_kpi_calibration[
+        "temporal_pressure_calibration"
+    ]
+    assert temporal_calibration["calibration_id"] == (
+        "leo_twin.network_temporal_pressure_calibration.v1"
+    )
+    assert temporal_calibration["temporal_pressure_model"] == (
+        "DETERMINISTIC_TRIANGULAR_LOAD_GATED_PROXY"
+    )
+    assert temporal_calibration["packet_level_simulation"] is False
+    assert temporal_calibration["frontend_inference_required"] is False
+    assert temporal_calibration["status"] in {
+        "TEMPORAL_DRIVER_ALIGNED",
+        "TEMPORAL_DRIVER_INACTIVE",
+        "TEMPORAL_DRIVER_NO_KPI_MOVEMENT",
+        "INSUFFICIENT_SERIES",
+    }
+    assert str(temporal_calibration["calibration_hash"]).startswith("sha256:")
     assert {
         "EFFECTIVE_THROUGHPUT",
         "EFFECTIVE_LATENCY",

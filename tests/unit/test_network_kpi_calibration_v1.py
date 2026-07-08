@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from leo_twin.services.network_kpi_calibration import (
     NETWORK_KPI_CALIBRATION_V1_ID,
+    NETWORK_TEMPORAL_PRESSURE_CALIBRATION_V1_ID,
     build_network_kpi_calibration_v1,
 )
 
@@ -64,6 +65,26 @@ def test_network_kpi_calibration_reports_time_varying_runtime_series() -> None:
         "loss_proxy_rate": 0.07,
         "delay_variation_proxy_s": 0.006,
     }
+    temporal = calibration["temporal_pressure_calibration"]
+    assert temporal["calibration_id"] == (
+        NETWORK_TEMPORAL_PRESSURE_CALIBRATION_V1_ID
+    )
+    assert temporal["status"] == "TEMPORAL_DRIVER_ALIGNED"
+    assert temporal["temporal_pressure_model"] == (
+        "DETERMINISTIC_TRIANGULAR_LOAD_GATED_PROXY"
+    )
+    assert temporal["packet_level_simulation"] is False
+    assert temporal["frontend_inference_required"] is False
+    assert temporal["temporal_pressure_active"] is True
+    assert temporal["loss_proxy_active"] is True
+    assert temporal["delay_variation_proxy_active"] is True
+    assert temporal["aligned_metric_count"] == 3
+    assert temporal["aligned_metrics"] == (
+        "EFFECTIVE_THROUGHPUT",
+        "EFFECTIVE_LOSS_PROXY",
+        "EFFECTIVE_DELAY_VARIATION_PROXY",
+    )
+    assert str(temporal["calibration_hash"]).startswith("sha256:")
     kpis = _kpis(calibration)
     assert kpis["EFFECTIVE_THROUGHPUT"]["variation_status"] == "TIME_VARYING"
     assert kpis["EFFECTIVE_THROUGHPUT"]["absolute_delta"] == 9.0
@@ -88,6 +109,12 @@ def test_network_kpi_calibration_explains_insufficient_or_flat_series() -> None:
     )
 
     assert calibration["calibration_status"] == "INSUFFICIENT_SERIES"
+    assert calibration["temporal_pressure_calibration"]["status"] == (
+        "INSUFFICIENT_SERIES"
+    )
+    assert calibration["temporal_pressure_calibration"][
+        "aligned_metric_count"
+    ] == 0
     assert calibration["time_varying_kpi_count"] == 0
     assert calibration["zero_latest_kpi_count"] == 4
     kpis = _kpis(calibration)

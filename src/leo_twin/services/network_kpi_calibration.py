@@ -5,8 +5,13 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from leo_twin.services.runtime_reproducibility import stable_hash_payload
+
 
 NETWORK_KPI_CALIBRATION_V1_ID = "leo_twin.network_kpi_calibration.v1"
+NETWORK_TEMPORAL_PRESSURE_CALIBRATION_V1_ID = (
+    "leo_twin.network_temporal_pressure_calibration.v1"
+)
 
 NetworkKpiCalibrationV1 = dict[str, object]
 
@@ -70,6 +75,13 @@ def build_network_kpi_calibration_v1(
     )
     zero_latest = tuple(item for item in observed if item["latest_is_zero"] is True)
     activity_context = _activity_context(samples, metrics)
+    time_driver = _time_driver(samples, metrics)
+    temporal_pressure_calibration = _temporal_pressure_calibration(
+        time_driver,
+        kpis,
+        sample_count=len(samples),
+        sim_time_span_s=sim_span,
+    )
     return {
         "version": "v1",
         "calibration_id": NETWORK_KPI_CALIBRATION_V1_ID,
@@ -81,7 +93,8 @@ def build_network_kpi_calibration_v1(
         "sim_time_end_s": sim_end,
         "sim_time_span_s": sim_span,
         "activity_context": activity_context,
-        "time_driver": _time_driver(samples, metrics),
+        "time_driver": time_driver,
+        "temporal_pressure_calibration": temporal_pressure_calibration,
         "kpi_count": len(kpis),
         "observed_kpi_count": len(observed),
         "time_varying_kpi_count": len(varying),
@@ -254,6 +267,81 @@ def _time_driver(
     }
 
 
+def _temporal_pressure_calibration(
+    time_driver: Mapping[str, object],
+    kpis: tuple[Mapping[str, object], ...],
+    *,
+    sample_count: int,
+    sim_time_span_s: float,
+) -> dict[str, object]:
+    factor = _number(time_driver.get("factor")) or 0.0
+    loss_proxy_rate = _number(time_driver.get("loss_proxy_rate")) or 0.0
+    delay_variation_proxy_s = _number(
+        time_driver.get("delay_variation_proxy_s")
+    ) or 0.0
+    period_s = _number(time_driver.get("period_s")) or 0.0
+    active = (
+        factor > _EPSILON
+        or loss_proxy_rate > _EPSILON
+        or delay_variation_proxy_s > _EPSILON
+    )
+    by_metric = {str(item.get("metric", "")): item for item in kpis}
+    aligned_metrics: list[str] = []
+    if factor > _EPSILON and _is_time_varying(
+        by_metric.get("EFFECTIVE_THROUGHPUT")
+    ):
+        aligned_metrics.append("EFFECTIVE_THROUGHPUT")
+    if loss_proxy_rate > _EPSILON and _is_time_varying(
+        by_metric.get("EFFECTIVE_LOSS_PROXY")
+    ):
+        aligned_metrics.append("EFFECTIVE_LOSS_PROXY")
+    if delay_variation_proxy_s > _EPSILON and _is_time_varying(
+        by_metric.get("EFFECTIVE_DELAY_VARIATION_PROXY")
+    ):
+        aligned_metrics.append("EFFECTIVE_DELAY_VARIATION_PROXY")
+    if sample_count < 2 or sim_time_span_s <= _EPSILON:
+        status = "INSUFFICIENT_SERIES"
+    elif not active:
+        status = "TEMPORAL_DRIVER_INACTIVE"
+    elif aligned_metrics:
+        status = "TEMPORAL_DRIVER_ALIGNED"
+    else:
+        status = "TEMPORAL_DRIVER_NO_KPI_MOVEMENT"
+    payload: dict[str, object] = {
+        "version": "v1",
+        "calibration_id": NETWORK_TEMPORAL_PRESSURE_CALIBRATION_V1_ID,
+        "source": "NETWORK_KPI_CALIBRATION_V1",
+        "temporal_pressure_model": (
+            "DETERMINISTIC_TRIANGULAR_LOAD_GATED_PROXY"
+        ),
+        "packet_level_simulation": False,
+        "frontend_inference_required": False,
+        "status": status,
+        "sample_count": sample_count,
+        "sim_time_span_s": sim_time_span_s,
+        "period_s": period_s,
+        "factor": factor,
+        "loss_proxy_rate": loss_proxy_rate,
+        "delay_variation_proxy_s": delay_variation_proxy_s,
+        "temporal_pressure_active": active,
+        "loss_proxy_active": loss_proxy_rate > _EPSILON,
+        "delay_variation_proxy_active": delay_variation_proxy_s > _EPSILON,
+        "aligned_metric_count": len(aligned_metrics),
+        "aligned_metrics": tuple(aligned_metrics),
+        "model_assumptions": (
+            "Temporal pressure calibration audits existing KPI samples only.",
+            "Aligned metrics are flow-level proxy movements, not packet-level measurements.",
+            "No KPI formula is recomputed by this calibration summary.",
+        ),
+    }
+    payload["calibration_hash"] = stable_hash_payload(payload)
+    return payload
+
+
+def _is_time_varying(item: Mapping[str, object] | None) -> bool:
+    return bool(item) and item.get("variation_status") == "TIME_VARYING"
+
+
 def _metric_or_sample_number(
     metrics: Mapping[str, Any],
     sample: Mapping[str, Any],
@@ -314,6 +402,7 @@ def _caveats() -> tuple[str, ...]:
 
 __all__ = [
     "NETWORK_KPI_CALIBRATION_V1_ID",
+    "NETWORK_TEMPORAL_PRESSURE_CALIBRATION_V1_ID",
     "NetworkKpiCalibrationV1",
     "build_network_kpi_calibration_v1",
 ]

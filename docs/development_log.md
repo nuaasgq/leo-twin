@@ -20706,3 +20706,46 @@ change.
     for benchmark packages. It does not yet calibrate the numerical temporal
     pressure curve against an external or theoretical reference; that should be
     a later backend model-calibration task using the shipped benchmark matrix.
+
+## 2026-07-08 - T404 temporal pressure calibration summary v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: add a backend-owned `temporal_pressure_calibration` section under
+  `network_kpi_calibration_v1`. The summary audits existing KPI samples and
+  time-driver fields to report whether deterministic temporal pressure is
+  inactive, insufficiently sampled, aligned with observed throughput/loss/jitter
+  proxy movement, or active without KPI movement. It does not change KPI
+  formulas, event scheduling, packet-level semantics, or frontend rendering.
+- Changed files/modules:
+  - `src/leo_twin/services/network_kpi_calibration.py`
+  - `tests/unit/test_network_kpi_calibration_v1.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Python `py_compile` for touched backend/test files.
+    - Result: passed.
+  - `git diff --check` on touched backend/test files.
+    - Result: passed.
+  - Direct function run for all tests in
+    `tests/unit/test_network_kpi_calibration_v1.py`.
+    - Result: passed, 2 functions.
+  - Direct function run for
+    `test_demo_server_adapter_uses_runtime_status_and_control_layer` in
+    `tests/integration/test_runtime_session_control.py`.
+    - Result: passed.
+  - Direct function run for all tests in
+    `tests/unit/test_network_kpi_provenance_v2.py`.
+    - Result: passed, 5 functions.
+- Problems encountered:
+  - No additional implementation blockers. The bundled runtime still lacks
+    pytest as an importable module, so target tests were executed by direct
+    function calls with a local `pytest.raises` shim where needed.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The calibration summary audits deterministic proxy movement only. It still
+    does not validate temporal pressure against an external network simulator,
+    RF/channel model, or packet-level trace, all of which remain outside the
+    current product constraints.
