@@ -37,6 +37,9 @@ from leo_twin.services.configuration_schema import (
     build_user_configuration_schema_v2,
     validate_user_configuration_mapping_v2,
 )
+from leo_twin.services.compute_resource_pool_summary import (
+    build_compute_resource_pool_summary_v1,
+)
 from leo_twin.services.configuration_view import (
     build_user_configuration_reference,
     build_user_configuration_template_validation_evidence,
@@ -2433,6 +2436,9 @@ class DemoControlPlane:
         )
         metrics_summary = self._metrics_summary_json()
         status["metrics_summary"] = metrics_summary
+        status["compute_resource_pool_summary_v1"] = (
+            build_compute_resource_pool_summary_v1(metrics_summary)
+        )
         status["network_temporal_pressure_profile_v1"] = (
             build_network_temporal_pressure_profile_v1(
                 self._controller.config,

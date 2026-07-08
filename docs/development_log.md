@@ -21032,3 +21032,43 @@ change.
     `NOT_OBSERVED` even if they were processed earlier.
   - This is still a flow-level communication-compute trace join, not packet-level
     lifecycle reconstruction.
+
+## 2026-07-08 - T411 compute resource pool summary status v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: add a backend-owned runtime compute resource pool contract. The new
+  `compute_resource_pool_summary_v1` service converts MetricsCollector compute
+  resource fields into seven explicit dimensions: CPU FP32 GFLOPS, CPU FP64
+  GFLOPS, GPU FP32 TFLOPS, GPU FP16 TFLOPS, NPU INT8 TOPS, memory GB, and
+  storage GB. Each row includes total, available, used, utilization, status, and
+  source fields. DemoControlPlane publishes the summary in runtime status. The
+  visualization policy explicitly rejects one cross-unit pie denominator because
+  these resources use different units. No Event Kernel, compute execution model,
+  frontend rendering, packet-level, or external simulator behavior was changed.
+- Changed files/modules:
+  - `src/leo_twin/services/compute_resource_pool_summary.py`
+  - `examples/integration_demo/control_plane.py`
+  - `tests/unit/test_compute_resource_pool_summary_v1.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Python `py_compile` for touched backend/test files.
+    - Result: passed.
+  - Direct function run for 3 compute resource pool unit tests and the affected
+    runtime status integration test.
+    - Result: passed.
+- Problems encountered:
+  - The dashboard request for a single resource-consumption pie chart is
+    potentially misleading across GFLOPS, TFLOPS, TOPS, memory, and storage. The
+    backend contract therefore recommends per-dimension utilization bars and
+    marks cross-unit pie charts as disallowed.
+  - Existing local runtime config drift remains untouched and must stay
+    unstaged: `configs/generated_full_system_demo.json` and
+    `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The summary reflects MetricsCollector resource estimates. It does not add a
+    new scheduler, workload placement algorithm, or hardware telemetry source.
+  - Per-satellite resource tables can consume this summary plus existing
+    `satellite_kpi_slices_v1`, but this task intentionally did not change UI.

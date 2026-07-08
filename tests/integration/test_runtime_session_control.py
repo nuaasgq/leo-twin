@@ -285,6 +285,16 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
     status_after_tick = control_plane.runtime_status()["status"]
     assert "network_quality_loss_proxy_rate" in status_after_tick["metrics_summary"]
     assert "compute_resource_used_gflops_fp32" in status_after_tick["metrics_summary"]
+    compute_pool = status_after_tick["compute_resource_pool_summary_v1"]
+    assert compute_pool["version"] == "v1"
+    assert compute_pool["summary_id"] == "leo_twin.compute_resource_pool_summary.v1"
+    assert compute_pool["source"] == "METRICS_SUMMARY_COMPUTE_RESOURCE_FIELDS"
+    assert compute_pool["packet_level_simulation"] is False
+    assert compute_pool["frontend_inference_required"] is False
+    assert compute_pool["dimension_count"] == 7
+    assert len(compute_pool["dimensions"]) == 7
+    assert compute_pool["visualization_policy"]["pie_chart_allowed"] is False
+    assert str(compute_pool["summary_hash"]).startswith("sha256:")
     temporal_profile = status_after_tick["network_temporal_pressure_profile_v1"]
     assert temporal_profile["version"] == "v1"
     assert temporal_profile["source"] == "SEES_CONFIG_AND_METRICS_SUMMARY"

@@ -1397,6 +1397,12 @@ Current Phase 3 progress:
   NOT_OBSERVED, OBSERVED_IN_PROGRESS, or COMPLETED status plus observed task,
   flow, latency, and component-count fields when service traces are retained.
 
+- T411 adds `compute_resource_pool_summary_v1` to runtime status, converting
+  compute metrics into explicit CPU FP32, CPU FP64, GPU FP32, GPU FP16, NPU
+  INT8, memory, and storage dimensions with utilization/status fields. The
+  contract prevents misleading cross-unit pie charts and keeps the backend as
+  the source of truth for resource pool semantics.
+
 ## 5. Parallel Agent Assignment Model
 
 - Kernel Agent: guard Event Kernel boundaries; review that no domain behavior
