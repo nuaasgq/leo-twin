@@ -61,6 +61,9 @@ from leo_twin.services.network_kpi_provenance import (
 from leo_twin.services.network_kpi_variation_explanation import (
     build_network_kpi_variation_explanation_v1,
 )
+from leo_twin.services.network_flow_lifecycle_summary import (
+    build_network_flow_lifecycle_summary_v1,
+)
 from leo_twin.services.runtime_kpi_movement import (
     build_runtime_kpi_movement_summary_v1,
 )
@@ -2379,6 +2382,9 @@ class DemoControlPlane:
         )
         metrics_summary = self._metrics_summary_json()
         status["metrics_summary"] = metrics_summary
+        status["network_flow_lifecycle_summary_v1"] = (
+            build_network_flow_lifecycle_summary_v1(metrics_summary)
+        )
         status["network_quality_provenance_v1"] = _network_quality_provenance_from_metrics(
             metrics_summary
         )

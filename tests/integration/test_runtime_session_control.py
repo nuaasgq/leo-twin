@@ -285,6 +285,18 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
     status_after_tick = control_plane.runtime_status()["status"]
     assert "network_quality_loss_proxy_rate" in status_after_tick["metrics_summary"]
     assert "compute_resource_used_gflops_fp32" in status_after_tick["metrics_summary"]
+    lifecycle = status_after_tick["network_flow_lifecycle_summary_v1"]
+    assert lifecycle["version"] == "v1"
+    assert lifecycle["source"] == "METRICS_SUMMARY_NETWORK_FLOW_LIFECYCLE_FIELDS"
+    assert lifecycle["frontend_inference_required"] is False
+    assert lifecycle["packet_level_simulation"] is False
+    assert lifecycle["active_flow_count"] == status_after_tick["metrics_summary"][
+        "network_flow_lifecycle_active_flow_count"
+    ]
+    assert lifecycle["completed_flow_count"] == status_after_tick["metrics_summary"][
+        "network_flow_lifecycle_completed_flow_count"
+    ]
+    assert lifecycle["summary_hash"].startswith("sha256:")
     network_provenance = status_after_tick["network_quality_provenance_v1"]
     assert network_provenance["version"] == "v1"
     assert network_provenance["metric_model"] == "FLOW_LEVEL_PROXY"

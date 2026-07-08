@@ -5,6 +5,45 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-08 - Runtime Network Flow Lifecycle Summary v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: pending in this commit
+- Scope: add a top-level `network_flow_lifecycle_summary_v1` object to runtime
+  status. The summary wraps backend `metrics_summary` lifecycle fields into a
+  stable product contract with active/completed/success/failed flow counts,
+  active demand/capacity/latency/age, lifecycle status, model assumptions, and
+  a deterministic hash. This lets the frontend and result export consume
+  backend-owned lifecycle semantics without inferring them from raw metrics.
+  The change does not alter Event Kernel behavior, packet-level simulation,
+  routing, or frontend rendering.
+- Changed files/modules:
+  - `src/leo_twin/services/network_flow_lifecycle_summary.py`
+  - `examples/integration_demo/control_plane.py`
+  - `tests/unit/test_network_flow_lifecycle_summary.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src\leo_twin\services\network_flow_lifecycle_summary.py examples\integration_demo\control_plane.py tests\unit\test_network_flow_lifecycle_summary.py tests\integration\test_runtime_session_control.py`
+    - Result: passed using the bundled Codex Python runtime.
+  - Manual smoke for `test_network_flow_lifecycle_summary_*`
+    - Result: passed.
+  - Manual smoke for `test_demo_server_adapter_uses_runtime_status_and_control_layer`
+    - Result: passed with a minimal `pytest` stub and temporary directory.
+  - `git diff --check`
+    - Result: passed for task files.
+- Problems encountered and handling:
+  - PowerShell insertion initially produced literal newline tokens in the
+    control-plane status block; the generated code was inspected, corrected,
+    and recompiled before tests.
+  - Local runtime/generated config files and `%SystemDrive%/` remain outside
+    this task scope and were not staged.
+- Known remaining issues / follow-up:
+  - The top-level summary exposes aggregate lifecycle state. Per-user and
+    per-satellite lifecycle detail can now be bound to this contract in a later
+    backend/frontend task.
+
 ## 2026-07-08 - Network Flow Lifecycle Metrics v1
 
 - Branch: `feature/T402-network-pressure-provenance-v1`

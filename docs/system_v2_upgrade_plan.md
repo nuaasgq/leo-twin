@@ -257,6 +257,13 @@ Tasks:
     status display so saved operator checklists can be compared against the
     latest backend template for missing records, evidence-hash drift, operator
     attention, and extra stale records without replay or recomputation.
+- V2-018: Add runtime network flow lifecycle summary.
+  - Scope: expose flow lifecycle metrics as a top-level runtime status product
+    summary for frontend and export consumers.
+  - Depends on: V2-017.
+  - Status: T413 adds `network_flow_lifecycle_summary_v1`, including lifecycle
+    status, active/completed flow counts, active demand/capacity/latency/age,
+    model assumptions, and a deterministic summary hash.
 - V2-017: Add network flow lifecycle metrics.
   - Scope: track route-to-completion flow lifecycle state in backend metrics.
   - Depends on: V2-015, V2-016.
