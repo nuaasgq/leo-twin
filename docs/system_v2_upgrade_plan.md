@@ -642,7 +642,10 @@ Tasks:
     `event_clock_lag_s`, and `runtime_time_source` to `RuntimeStatus` and demo
     runtime status responses. This preserves Event Kernel time as audited DES
     time while making sparse-event live runs explainable when progress appears
-    stalled between scheduled events.
+    stalled between scheduled events. T408 binds the demo KPI time-series tail
+    query to `runtime_target_sim_time` when available, so live status can expose
+    current KPI tail samples during sparse-event intervals without changing
+    Event Kernel behavior or KPI formulas.
 
 ### WS6. Dashboard and Frontend Product UX v3
 

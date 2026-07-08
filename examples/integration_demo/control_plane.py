@@ -2578,8 +2578,13 @@ class DemoControlPlane:
                 "tail_sample_source_label": "等待运行时指标",
                 "samples": (),
             }
-        current_sim_time = self._require_session().get_status().current_sim_time
-        return dict(self._runtime_context.metrics.kpi_time_series(sim_time=current_sim_time))
+        runtime_status = self._require_session().get_status()
+        sample_time = (
+            runtime_status.runtime_target_sim_time
+            if runtime_status.runtime_target_sim_time is not None
+            else runtime_status.current_sim_time
+        )
+        return dict(self._runtime_context.metrics.kpi_time_series(sim_time=sample_time))
 
     def _satellite_kpi_slices_json(self) -> dict[str, Any]:
         if self._runtime_context is None:

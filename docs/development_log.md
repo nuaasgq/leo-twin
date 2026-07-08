@@ -4,6 +4,42 @@ This file records completed development tasks, committed changes, validation
 results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
+## 2026-07-08 - Runtime KPI Tail Target Binding v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: pending in this commit
+- Scope: bind the demo runtime KPI time-series tail sample to
+  `RuntimeStatus.runtime_target_sim_time` when available, while preserving
+  `current_sim_time` as Event Kernel processed time. This lets runtime status
+  produce a current KPI tail during sparse-event live intervals without
+  draining the simulation, altering Event Kernel behavior, changing KPI
+  formulas, modifying frontend rendering, introducing packet-level semantics,
+  or adding external simulator integrations.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `tests/integration/test_live_runtime_streaming.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile examples\integration_demo\control_plane.py tests\integration\test_live_runtime_streaming.py`
+    - Result: passed using the bundled Codex Python runtime.
+  - Manual smoke for
+    `test_demo_kpi_tail_uses_runtime_target_during_empty_event_gap`
+    - Result: passed with a minimal `pytest` stub because the bundled
+      no-approval Python runtime does not include `pytest`.
+  - `git diff --check`
+    - Result: passed for task files.
+- Problems encountered and handling:
+  - The first test version assumed a perfectly empty 0s-to-4s event gap, but
+    the demo scenario correctly schedules early flow/compute events around
+    0.21s. The assertion was corrected to check the stable product semantic:
+    `runtime_target_sim_time` is greater than `kernel_current_sim_time`, and
+    the KPI tail uses that runtime target.
+  - Local runtime/generated config files and the unrelated `%SystemDrive%/`
+    directory remain outside this task scope and were not staged.
+- Known remaining issues / follow-up:
+  - Frontend progress binding still needs to prefer `runtime_target_sim_time`
+    for progress display and show the event-time lag explicitly.
 
 ## 2026-07-08 - Runtime Clock Gap Observability v1
 

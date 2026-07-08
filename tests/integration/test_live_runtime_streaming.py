@@ -577,6 +577,37 @@ def test_demo_live_session_does_not_precompute_full_orbit_step(tmp_path: Path) -
     assert start_ack["status"]["queued_event_count"] > 0
 
 
+def test_demo_kpi_tail_uses_runtime_target_during_empty_event_gap(
+    tmp_path: Path,
+) -> None:
+    control_plane = DemoControlPlane.from_result(
+        run_integration_demo(_slow_orbit_demo_config()),
+        config_output_path=tmp_path / "sees_control.yaml",
+        generated_config_output_path=tmp_path / "generated_full_system_demo.json",
+    )
+    control_plane.handle_raw_message(
+        json.dumps({"type": "RUNTIME_CONTROL", "action": "INITIALIZE"})
+    )
+    start_ack = control_plane.handle_raw_message(
+        json.dumps({"type": "RUNTIME_CONTROL", "action": "START"})
+    )
+    assert start_ack["ok"] is True
+    control_plane._require_advance_loop().stop()
+
+    for _ in range(4):
+        control_plane._require_session().advance_control_step()
+    control_plane._require_advance_loop().publish_pending()
+
+    status = control_plane.runtime_status()["status"]
+    kpi_tail = status["kpi_time_series_v1"]["samples"][-1]
+
+    assert status["kernel_current_sim_time"] == status["current_sim_time"]
+    assert status["runtime_target_sim_time"] > status["kernel_current_sim_time"]
+    assert status["event_clock_lag_s"] > 0.0
+    assert status["runtime_time_source"] == "RUNTIME_ADVANCE_TARGET"
+    assert kpi_tail["sim_time"] == status["runtime_target_sim_time"]
+
+
 def test_live_stream_reads_do_not_run_until_idle(tmp_path: Path) -> None:
     control_plane = _initialized_running_control_plane(tmp_path)
 
