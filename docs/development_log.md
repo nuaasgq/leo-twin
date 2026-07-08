@@ -20749,3 +20749,49 @@ change.
     does not validate temporal pressure against an external network simulator,
     RF/channel model, or packet-level trace, all of which remain outside the
     current product constraints.
+
+## 2026-07-08 - T405 benchmark temporal pressure calibration gate v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: add backend benchmark acceptance coverage for
+  `network_kpi_calibration_v1.temporal_pressure_calibration`. The standard
+  scenario matrix now requires the calibration field, and result-package
+  benchmark binding emits a dedicated
+  `runtime_status.network_temporal_pressure_calibration` PASS/FAIL result with
+  evidence anchored to `config_snapshot.json`. This is a backend credibility
+  gate only; it does not change KPI formulas, Event Kernel ordering, packet
+  semantics, frontend rendering, or live-control behavior.
+- Changed files/modules:
+  - `src/leo_twin/services/benchmark_scenarios.py`
+  - `src/leo_twin/services/result_package_contract.py`
+  - `tests/unit/test_benchmark_scenario_matrix_v1.py`
+  - `tests/integration/test_benchmark_acceptance_v1.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Python `py_compile` for touched backend/test files.
+    - Result: passed.
+  - Direct function run for benchmark scenario matrix temporal calibration and
+    temporal evidence tests plus result-package benchmark acceptance binding.
+    - Result: passed.
+  - Direct function run for benchmark acceptance runtime status checks across
+    `small_demo_72sat`, `medium_demo_300sat`, and
+    `scale_demo_1200sat_short`.
+    - Result: passed.
+- Problems encountered:
+  - `apply_patch` is still blocked by the Windows sandbox helper
+    (`orchestrator_helper_launch_canceled`). Per the no-approval instruction,
+    no escalation was requested; deterministic UTF-8 Python text replacement was
+    used for scoped edits inside the workspace.
+  - The first direct test invocation lacked `src` on `PYTHONPATH` and failed to
+    import `leo_twin`. The command was corrected by inserting the resolved
+    `src` path before importing tests; the target tests then passed.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The new gate checks that temporal pressure calibration is present,
+    model-consistent, non-packet-level, backend-owned, and hash-backed. It still
+    does not validate numerical behavior against an external simulator or RF
+    baseline, which remains outside current project constraints.

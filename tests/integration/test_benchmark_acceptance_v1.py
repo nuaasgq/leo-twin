@@ -117,6 +117,10 @@ def test_benchmark_acceptance_runtime_status_requires_route_trust(
         "network_kpi_provenance_v2.temporal_pressure_evidence"
         in expectation["required_fields"]
     )
+    assert (
+        "network_kpi_calibration_v1.temporal_pressure_calibration"
+        in expectation["required_fields"]
+    )
     assert expectation["network_kpi_benchmark_validation"] == {
         "field": "network_kpi_benchmark_validation_v1",
         "source": "network_kpi_provenance_v2 + metrics_summary",
@@ -139,6 +143,23 @@ def test_benchmark_acceptance_runtime_status_requires_route_trust(
         "minimum_observed_required_field_count": 3,
         "packet_level_simulation": False,
         "frontend_inference_required": False,
+    }
+    assert expectation["network_temporal_pressure_calibration"] == {
+        "field": "network_kpi_calibration_v1.temporal_pressure_calibration",
+        "source": "network_kpi_calibration_v1",
+        "calibration_id": "leo_twin.network_temporal_pressure_calibration.v1",
+        "temporal_pressure_model": (
+            "DETERMINISTIC_TRIANGULAR_LOAD_GATED_PROXY"
+        ),
+        "allowed_statuses": (
+            "TEMPORAL_DRIVER_ALIGNED",
+            "TEMPORAL_DRIVER_INACTIVE",
+            "TEMPORAL_DRIVER_NO_KPI_MOVEMENT",
+            "INSUFFICIENT_SERIES",
+        ),
+        "packet_level_simulation": False,
+        "frontend_inference_required": False,
+        "calibration_hash_required": True,
     }
     assert route_trust == {
         "field": "route_provenance_trust_summary_v1",
@@ -192,6 +213,10 @@ def test_benchmark_acceptance_route_trust_runtime_status_for_standard_scenarios(
             scenario["runtime_status_expectation"],
         )
         _assert_benchmark_network_temporal_pressure_status(
+            status,
+            scenario["runtime_status_expectation"],
+        )
+        _assert_benchmark_network_temporal_pressure_calibration_status(
             status,
             scenario["runtime_status_expectation"],
         )
@@ -424,6 +449,34 @@ def _assert_benchmark_network_temporal_pressure_status(
     assert 0.0 <= float(temporal["time_pressure_factor"]) <= 1.0
     assert 0.0 <= float(temporal["loss_proxy_rate"]) <= 1.0
     assert float(temporal["delay_variation_proxy_s"]) >= 0.0
+
+
+def _assert_benchmark_network_temporal_pressure_calibration_status(
+    status: dict[str, object],
+    expectation: object,
+) -> None:
+    assert isinstance(expectation, dict)
+    calibration_expectation = expectation["network_temporal_pressure_calibration"]
+    assert isinstance(calibration_expectation, dict)
+    calibration = status["network_kpi_calibration_v1"]
+    assert isinstance(calibration, dict)
+    temporal = calibration["temporal_pressure_calibration"]
+    assert isinstance(temporal, dict)
+
+    assert temporal["calibration_id"] == calibration_expectation[
+        "calibration_id"
+    ]
+    assert temporal["temporal_pressure_model"] == calibration_expectation[
+        "temporal_pressure_model"
+    ]
+    assert temporal["status"] in calibration_expectation["allowed_statuses"]
+    assert temporal["packet_level_simulation"] is calibration_expectation[
+        "packet_level_simulation"
+    ]
+    assert temporal["frontend_inference_required"] is calibration_expectation[
+        "frontend_inference_required"
+    ]
+    assert str(temporal["calibration_hash"]).startswith("sha256:")
 
 
 def _control_plane(tmp_path: Path, scenario_id: str) -> DemoControlPlane:

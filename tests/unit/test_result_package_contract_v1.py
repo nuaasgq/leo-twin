@@ -2713,6 +2713,7 @@ def test_runtime_export_benchmark_acceptance_binding_v1_matches_standard_scenari
                     "validation_status": "PASS",
                     "failed_check_count": 0,
                 },
+                "network_kpi_calibration_v1": _network_kpi_calibration_v1(),
                 "network_kpi_provenance_v2": _network_kpi_provenance_v2(),
             },
             "config": config_to_dict(config),
@@ -2788,6 +2789,9 @@ def test_runtime_export_benchmark_acceptance_binding_v1_matches_standard_scenari
             "runtime_status.network_temporal_pressure": (
                 _NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME
             ),
+            "runtime_status.network_temporal_pressure_calibration": (
+                "config_snapshot.json"
+            ),
         }
         runtime_contexts = {
             result["check_id"]: result["evidence_context_id"]
@@ -2799,6 +2803,9 @@ def test_runtime_export_benchmark_acceptance_binding_v1_matches_standard_scenari
             "runtime_status.network_temporal_pressure": (
                 "network_kpi_provenance_v2.temporal_pressure_evidence"
             ),
+            "runtime_status.network_temporal_pressure_calibration": (
+                "network_kpi_calibration_v1.temporal_pressure_calibration"
+            ),
         }
         runtime_pointers = {
             result["check_id"]: result["evidence_json_pointer"]
@@ -2808,6 +2815,10 @@ def test_runtime_export_benchmark_acceptance_binding_v1_matches_standard_scenari
             "runtime_status.route_trust": "/route_trust",
             "runtime_status.network_kpi": "/validation",
             "runtime_status.network_temporal_pressure": "/evidence",
+            "runtime_status.network_temporal_pressure_calibration": (
+                "/status/network_kpi_calibration_v1/"
+                "temporal_pressure_calibration"
+            ),
         }
         assert binding["binding_hash"].startswith("sha256:")
 
@@ -3629,6 +3640,52 @@ def _network_kpi_formula_evidence() -> dict[str, object]:
         "caveats": (
             "Formula evidence summarizes backend flow-level proxy inputs.",
         ),
+    }
+
+
+def _network_kpi_calibration_v1() -> dict[str, object]:
+    return {
+        "version": "v1",
+        "calibration_id": "leo_twin.network_kpi_calibration.v1",
+        "source": "KPI_TIME_SERIES_V1_AND_METRICS_SUMMARY",
+        "packet_level_simulation": False,
+        "sample_count": 2,
+        "sim_time_span_s": 60.0,
+        "calibration_status": "TIME_VARYING_OBSERVED",
+        "temporal_pressure_calibration": {
+            "version": "v1",
+            "calibration_id": (
+                "leo_twin.network_temporal_pressure_calibration.v1"
+            ),
+            "source": "NETWORK_KPI_CALIBRATION_V1",
+            "temporal_pressure_model": (
+                "DETERMINISTIC_TRIANGULAR_LOAD_GATED_PROXY"
+            ),
+            "packet_level_simulation": False,
+            "frontend_inference_required": False,
+            "sample_count": 2,
+            "sim_time_span_s": 60.0,
+            "period_s": 120.0,
+            "factor": 0.85,
+            "loss_proxy_rate": 0.07,
+            "delay_variation_proxy_s": 0.002,
+            "temporal_pressure_active": True,
+            "loss_proxy_active": True,
+            "delay_variation_proxy_active": True,
+            "status": "TEMPORAL_DRIVER_ALIGNED",
+            "aligned_metric_count": 3,
+            "aligned_metrics": (
+                "EFFECTIVE_THROUGHPUT",
+                "EFFECTIVE_LOSS_PROXY",
+                "EFFECTIVE_DELAY_VARIATION_PROXY",
+            ),
+            "model_assumptions": (
+                "Temporal pressure calibration is a deterministic flow-level proxy.",
+            ),
+            "calibration_hash": "sha256:temporal-calibration-test",
+        },
+        "kpi_count": 0,
+        "kpis": (),
     }
 
 

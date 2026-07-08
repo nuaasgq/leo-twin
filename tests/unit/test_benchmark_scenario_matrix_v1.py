@@ -136,6 +136,10 @@ def test_benchmark_scenario_matrix_requires_network_kpi_calibration() -> None:
     expectation = scenario["runtime_status_expectation"]  # type: ignore[index]
 
     assert "network_kpi_calibration_v1" in expectation["required_fields"]
+    assert (
+        "network_kpi_calibration_v1.temporal_pressure_calibration"
+        in expectation["required_fields"]
+    )
     calibration = expectation["network_kpi_calibration"]
     assert calibration == {
         "field": "network_kpi_calibration_v1",
@@ -148,6 +152,24 @@ def test_benchmark_scenario_matrix_requires_network_kpi_calibration() -> None:
             "INSUFFICIENT_SERIES",
         ),
         "packet_level_simulation": False,
+    }
+    temporal_calibration = expectation["network_temporal_pressure_calibration"]
+    assert temporal_calibration == {
+        "field": "network_kpi_calibration_v1.temporal_pressure_calibration",
+        "source": "network_kpi_calibration_v1",
+        "calibration_id": "leo_twin.network_temporal_pressure_calibration.v1",
+        "temporal_pressure_model": (
+            "DETERMINISTIC_TRIANGULAR_LOAD_GATED_PROXY"
+        ),
+        "allowed_statuses": (
+            "TEMPORAL_DRIVER_ALIGNED",
+            "TEMPORAL_DRIVER_INACTIVE",
+            "TEMPORAL_DRIVER_NO_KPI_MOVEMENT",
+            "INSUFFICIENT_SERIES",
+        ),
+        "packet_level_simulation": False,
+        "frontend_inference_required": False,
+        "calibration_hash_required": True,
     }
 
 

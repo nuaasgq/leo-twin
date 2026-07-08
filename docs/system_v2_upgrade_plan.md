@@ -1361,6 +1361,12 @@ Current Phase 3 progress:
   throughput/loss/jitter proxy movement, or active without KPI movement. This
   improves backend KPI credibility without changing formulas or event behavior.
 
+- T405 gates `network_kpi_calibration_v1.temporal_pressure_calibration` in the
+  benchmark scenario matrix and result-package acceptance binding. Standard
+  benchmark exports now fail review if temporal pressure calibration is missing,
+  frontend-derived, packet-level, hashless, or inconsistent with the backend
+  deterministic temporal pressure model.
+
 ## 5. Parallel Agent Assignment Model
 
 - Kernel Agent: guard Event Kernel boundaries; review that no domain behavior

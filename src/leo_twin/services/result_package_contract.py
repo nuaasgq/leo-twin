@@ -4893,10 +4893,17 @@ def _runtime_export_benchmark_runtime_status_results(
     temporal_expectation = _mapping(
         expectation.get("network_temporal_pressure_evidence")
     )
+    temporal_calibration_expectation = _mapping(
+        expectation.get("network_temporal_pressure_calibration")
+    )
     route_summary = _mapping(status.get(str(route_expectation.get("field", ""))))
     kpi_validation = _mapping(status.get(str(kpi_expectation.get("field", ""))))
     kpi_provenance = _mapping(status.get("network_kpi_provenance_v2"))
+    kpi_calibration = _mapping(status.get("network_kpi_calibration_v1"))
     temporal_evidence = _mapping(kpi_provenance.get("temporal_pressure_evidence"))
+    temporal_calibration = _mapping(
+        kpi_calibration.get("temporal_pressure_calibration")
+    )
     route_status = str(route_summary.get("trust_status", ""))
     route_allowed = _string_tuple(route_expectation.get("allowed_trust_statuses"))
     route_assessed = _integer(route_summary.get("assessed_route_count"))
@@ -4933,6 +4940,40 @@ def _runtime_export_benchmark_runtime_status_results(
         and temporal_model_matches
         and temporal_packet_ok
         and temporal_frontend_ok
+    )
+    temporal_calibration_status = str(temporal_calibration.get("status", ""))
+    temporal_calibration_allowed = _string_tuple(
+        temporal_calibration_expectation.get("allowed_statuses")
+    )
+    temporal_calibration_aligned = _integer(
+        temporal_calibration.get("aligned_metric_count")
+    )
+    temporal_calibration_model_matches = str(
+        temporal_calibration.get("temporal_pressure_model", "")
+    ) == str(temporal_calibration_expectation.get("temporal_pressure_model", ""))
+    temporal_calibration_id_matches = str(
+        temporal_calibration.get("calibration_id", "")
+    ) == str(temporal_calibration_expectation.get("calibration_id", ""))
+    temporal_calibration_packet_ok = (
+        temporal_calibration.get("packet_level_simulation") is False
+        and temporal_calibration_expectation.get("packet_level_simulation") is False
+    )
+    temporal_calibration_frontend_ok = (
+        temporal_calibration.get("frontend_inference_required") is False
+        and temporal_calibration_expectation.get("frontend_inference_required") is False
+    )
+    temporal_calibration_hash_ok = (
+        temporal_calibration_expectation.get("calibration_hash_required") is not True
+        or str(temporal_calibration.get("calibration_hash", "")).startswith("sha256:")
+    )
+    temporal_calibration_pass = (
+        bool(temporal_calibration)
+        and temporal_calibration_status in temporal_calibration_allowed
+        and temporal_calibration_model_matches
+        and temporal_calibration_id_matches
+        and temporal_calibration_packet_ok
+        and temporal_calibration_frontend_ok
+        and temporal_calibration_hash_ok
     )
     return (
         _runtime_export_benchmark_status_result(
@@ -4976,6 +5017,28 @@ def _runtime_export_benchmark_runtime_status_results(
             evidence_context_id=str(temporal_expectation.get("field", "")),
             evidence_context_label="network temporal pressure evidence",
             evidence_json_pointer="/evidence",
+        ),
+        _runtime_export_benchmark_status_result(
+            check_id="runtime_status.network_temporal_pressure_calibration",
+            status="PASS" if temporal_calibration_pass else "FAIL",
+            expected="/".join(temporal_calibration_allowed),
+            actual=(
+                temporal_calibration_status
+                or "MISSING_TEMPORAL_PRESSURE_CALIBRATION"
+            ),
+            observed_count=temporal_calibration_aligned,
+            minimum_count=0,
+            issue_label="BENCHMARK_NETWORK_TEMPORAL_PRESSURE_CALIBRATION_NOT_ACCEPTED",
+            evidence_artifact_filename=CONFIG_SNAPSHOT_FILENAME,
+            evidence_artifact_role="network_temporal_pressure_calibration",
+            evidence_context_id=str(
+                temporal_calibration_expectation.get("field", "")
+            ),
+            evidence_context_label="network temporal pressure calibration",
+            evidence_json_pointer=(
+                "/status/network_kpi_calibration_v1/"
+                "temporal_pressure_calibration"
+            ),
         ),
     )
 

@@ -286,6 +286,7 @@ def _runtime_status_expectation() -> dict[str, object]:
             "network_kpi_credibility_v1",
             "network_kpi_benchmark_validation_v1",
             "network_kpi_calibration_v1",
+            "network_kpi_calibration_v1.temporal_pressure_calibration",
             "network_kpi_provenance_v2.temporal_pressure_evidence",
             "route_explanation_summary_v1",
             "route_provenance_trust_summary_v1",
@@ -302,6 +303,23 @@ def _runtime_status_expectation() -> dict[str, object]:
                 "INSUFFICIENT_SERIES",
             ),
             "packet_level_simulation": False,
+        },
+        "network_temporal_pressure_calibration": {
+            "field": "network_kpi_calibration_v1.temporal_pressure_calibration",
+            "source": "network_kpi_calibration_v1",
+            "calibration_id": "leo_twin.network_temporal_pressure_calibration.v1",
+            "temporal_pressure_model": (
+                "DETERMINISTIC_TRIANGULAR_LOAD_GATED_PROXY"
+            ),
+            "allowed_statuses": (
+                "TEMPORAL_DRIVER_ALIGNED",
+                "TEMPORAL_DRIVER_INACTIVE",
+                "TEMPORAL_DRIVER_NO_KPI_MOVEMENT",
+                "INSUFFICIENT_SERIES",
+            ),
+            "packet_level_simulation": False,
+            "frontend_inference_required": False,
+            "calibration_hash_required": True,
         },
         "network_kpi_benchmark_validation": {
             "field": "network_kpi_benchmark_validation_v1",
