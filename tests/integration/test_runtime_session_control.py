@@ -385,6 +385,23 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
     assert latest_kpi_sample["network_effective_delay_variation_s"] == status_after_tick[
         "metrics_summary"
     ]["network_quality_effective_delay_variation_proxy_s"]
+    runtime_kpi_movement = status_after_tick["runtime_kpi_movement_summary_v1"]
+    assert runtime_kpi_movement["version"] == "v1"
+    assert runtime_kpi_movement["summary_id"] == (
+        "leo_twin.runtime_kpi_movement_summary.v1"
+    )
+    assert runtime_kpi_movement["source"] == "KPI_TIME_SERIES_V1_AND_METRICS_SUMMARY"
+    assert runtime_kpi_movement["packet_level_simulation"] is False
+    assert runtime_kpi_movement["frontend_inference_required"] is False
+    assert runtime_kpi_movement["sample_count"] == kpi_series["sample_count"]
+    assert runtime_kpi_movement["metric_count"] == len(runtime_kpi_movement["items"])
+    assert runtime_kpi_movement["movement_status"] in {
+        "TIME_VARYING_OBSERVED",
+        "PARTIAL_TIME_VARIATION",
+        "FLAT_UNDER_ACTIVITY",
+        "FLAT_NO_ACTIVITY",
+        "INSUFFICIENT_SERIES",
+    }
     network_kpi_calibration = status_after_tick["network_kpi_calibration_v1"]
     assert network_kpi_calibration["version"] == "v1"
     assert network_kpi_calibration["calibration_id"] == (

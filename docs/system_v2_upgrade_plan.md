@@ -410,7 +410,11 @@ Tasks:
     increment persists `RouteState.pressure_edge_states` from the pressure
     ledger and summarizes edge item counts, admission rejections, queue/
     saturation counts, maximum projected utilization, queue delay, and loss
-    proxy for runtime status and result-package review.
+    proxy for runtime status and result-package review. T404 adds
+    backend-owned `runtime_kpi_movement_summary_v1`, auditing whether network
+    and compute KPI samples actually move over simulation time from
+    `kpi_time_series_v1` without changing metric formulas or frontend-local
+    inference.
 - V2-023: Add route explanation records.
   - Scope: selected route, alternative count, bottleneck reason, next hop,
     blocked reason.

@@ -6,6 +6,46 @@ task must update this log in the same commit as the code or documentation
 change.
 
 
+## 2026-07-08 - Runtime KPI Movement Summary v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: pending in this commit
+- Scope: add backend-owned `runtime_kpi_movement_summary_v1` to runtime status.
+  The summary audits `kpi_time_series_v1` and `metrics_summary` across network
+  throughput, latency, loss proxy, delay variation, and compute resource usage,
+  reporting first/latest/min/max values, deltas, moving/flat status, active
+  context, and a deterministic hash. This task does not change KPI formulas,
+  Event Kernel behavior, frontend rendering, packet-level behavior, topology
+  selection, or external simulator integrations.
+- Changed files/modules:
+  - `src/leo_twin/services/runtime_kpi_movement.py`
+  - `examples/integration_demo/control_plane.py`
+  - `tests/unit/test_runtime_kpi_movement.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src\leo_twin\services\runtime_kpi_movement.py examples\integration_demo\control_plane.py tests\unit\test_runtime_kpi_movement.py tests\integration\test_runtime_session_control.py`
+    - Result: passed using the bundled Codex Python runtime.
+  - Manual pure-function smoke for two `test_runtime_kpi_movement` cases
+    - Result: passed.
+  - `git diff --check`
+    - Result: passed for task files.
+  - Target `pytest` command was not run in this no-approval continuation: the
+    bundled Codex Python runtime does not include `pytest`, and the user asked
+    not to request further approvals.
+- Problems encountered and handling:
+  - This increment intentionally reports flat metrics as flat rather than
+    injecting artificial movement; it is evidence for diagnosis, not a formula
+    change.
+  - Local runtime/generated config files and the unrelated `%SystemDrive%/`
+    directory remain outside this task scope and were not staged.
+- Known remaining issues / follow-up:
+  - Frontend dashboards are not yet bound to `runtime_kpi_movement_summary_v1`.
+    A follow-up can display this evidence next to time-series charts so users
+    can distinguish model-flat inputs from refresh issues.
+
+
 ## 2026-07-08 - Node Network Pressure Summary v1
 
 - Branch: `feature/T402-network-pressure-provenance-v1`

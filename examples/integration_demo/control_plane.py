@@ -61,6 +61,9 @@ from leo_twin.services.network_kpi_provenance import (
 from leo_twin.services.network_kpi_variation_explanation import (
     build_network_kpi_variation_explanation_v1,
 )
+from leo_twin.services.runtime_kpi_movement import (
+    build_runtime_kpi_movement_summary_v1,
+)
 from leo_twin.services.control import (
     RuntimeController,
     ScaleSafetyChecker,
@@ -2327,6 +2330,12 @@ class DemoControlPlane:
             )
         )
         status["kpi_time_series_v1"] = self._kpi_time_series_json()
+        status["runtime_kpi_movement_summary_v1"] = (
+            build_runtime_kpi_movement_summary_v1(
+                status["kpi_time_series_v1"],
+                metrics_summary,
+            )
+        )
         status["network_kpi_calibration_v1"] = build_network_kpi_calibration_v1(
             status["kpi_time_series_v1"],
             metrics_summary,
