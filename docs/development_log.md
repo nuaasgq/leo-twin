@@ -5,6 +5,47 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-08 - Runtime KPI Recent Window v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: pending in this commit
+- Scope: refine backend KPI time-series semantics so
+  `network_effective_throughput_mbps` in `kpi_time_series_v1` represents the
+  live recent-flow window instead of always reusing lifetime completed capacity.
+  The original lifetime/capacity value is preserved as
+  `network_lifetime_effective_throughput_mbps`, and the backend now exposes
+  `network_effective_throughput_source` plus a label so frontend users can see
+  whether the sample comes from a recent flow window, an empty recent window,
+  or a cold-start available-route estimate. The change remains deterministic
+  and flow-level; it does not change Event Kernel ordering, packet-level
+  simulation, route computation, frontend rendering, or external simulator
+  integrations.
+- Changed files/modules:
+  - `src/leo_twin/services/metrics/collector.py`
+  - `tests/unit/test_metrics_module.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src\leo_twin\services\metrics\collector.py tests\unit\test_metrics_module.py`
+    - Result: passed using the bundled Codex Python runtime.
+  - Manual smoke for backend KPI time-series publication, runtime sim-time tail,
+    time-varying pressure, baseline prepending, and recent-flow window tests
+    - Result: passed with a minimal `pytest` stub because the bundled
+      no-approval Python runtime does not include `pytest`.
+  - `git diff --check`
+    - Result: passed for task files.
+- Problems encountered and handling:
+  - Local full pytest was not requested because the operator asked not to be
+    interrupted for approvals and the available no-approval bundled runtime has
+    no `pytest` package. Targeted smoke tests were used instead.
+  - Local runtime/generated config files and `%SystemDrive%/` remain outside
+    this task scope and were not staged.
+- Known remaining issues / follow-up:
+  - Latency, loss, and delay-variation are still flow-level proxies. A later
+    task should add an explicit network service lifecycle/state-window model so
+    active, queued, completed, and expired business requests are visible as
+    first-class runtime facts.
+
 ## 2026-07-08 - Network Active Flow Release v1
 
 - Branch: `feature/T402-network-pressure-provenance-v1`

@@ -257,6 +257,14 @@ Tasks:
     status display so saved operator checklists can be compared against the
     latest backend template for missing records, evidence-hash drift, operator
     attention, and extra stale records without replay or recomputation.
+- V2-016: Add runtime KPI recent-window semantics.
+  - Scope: make KPI time-series throughput reflect the recent completed-flow
+    window while preserving the lifetime/capacity estimate as a separate field.
+  - Depends on: V2-014, V2-015.
+  - Status: T411 updates `MetricsCollector.kpi_time_series()` with backend
+    source fields for recent-window, empty-window, and cold-start throughput
+    semantics so the dashboard no longer has to infer whether a value is live
+    or cumulative.
 - V2-015: Clean up completed network active-flow state.
   - Scope: remove completed or unavailable flow requests from the backend
     position-driven network active-flow registry after release/completion.

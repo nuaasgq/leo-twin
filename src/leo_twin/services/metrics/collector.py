@@ -733,12 +733,25 @@ class MetricsCollector:
                 recent_latency_count=len(recent_flow_quality["latencies"]),
             )
         )
+        lifetime_effective_throughput = float(
+            network_summary["network_quality_effective_throughput_mbps"]
+        )
+        runtime_effective_throughput, runtime_throughput_source = (
+            _runtime_window_effective_throughput(
+                network_summary,
+                recent_flow_count=recent_flow_count,
+                recent_delivered_capacity=float(recent_flow_quality["capacity_sum"]),
+            )
+        )
         compute_summary = self._compute_resource_summary()
         return {
             "sim_time": float(sim_time),
-            "network_effective_throughput_mbps": float(
-                network_summary["network_quality_effective_throughput_mbps"]
+            "network_effective_throughput_mbps": runtime_effective_throughput,
+            "network_effective_throughput_source": runtime_throughput_source,
+            "network_effective_throughput_source_label": (
+                _runtime_window_throughput_source_label(runtime_throughput_source)
             ),
+            "network_lifetime_effective_throughput_mbps": lifetime_effective_throughput,
             "network_requested_route_demand_mbps": float(
                 network_summary["network_quality_requested_route_demand_mbps"]
             ),
@@ -2086,10 +2099,46 @@ def _satellite_kpi_history_sort_key(
     )
 
 
+def _runtime_window_effective_throughput(
+    network_summary: Mapping[str, str | float | int | bool],
+    *,
+    recent_flow_count: int,
+    recent_delivered_capacity: float,
+) -> tuple[float, str]:
+    lifetime_flow_count = int(
+        float(network_summary["network_quality_flow_success_count"])
+        + float(network_summary["network_quality_flow_failure_count"])
+    )
+    if recent_flow_count > 0:
+        time_loss = float(network_summary["network_quality_time_pressure_loss_proxy_rate"])
+        return (
+            max(0.0, float(recent_delivered_capacity) * (1.0 - time_loss)),
+            "RECENT_FLOW_WINDOW",
+        )
+    if lifetime_flow_count > 0:
+        return 0.0, "NO_RECENT_FLOW_IN_WINDOW"
+    return (
+        float(network_summary["network_quality_effective_throughput_mbps"]),
+        "AVAILABLE_ROUTE_CAPACITY_AFTER_LOSS",
+    )
+
+
+def _runtime_window_throughput_source_label(source: str) -> str:
+    labels = {
+        "RECENT_FLOW_WINDOW": "recent completed flow window",
+        "NO_RECENT_FLOW_IN_WINDOW": "no completed flow in recent window",
+        "AVAILABLE_ROUTE_CAPACITY_AFTER_LOSS": "available route capacity estimate",
+    }
+    return labels.get(source, source)
+
+
 def _baseline_kpi_sample(sim_time: float) -> KpiSample:
     return {
         "sim_time": float(sim_time),
         "network_effective_throughput_mbps": 0.0,
+        "network_effective_throughput_source": "BASELINE",
+        "network_effective_throughput_source_label": "baseline",
+        "network_lifetime_effective_throughput_mbps": 0.0,
         "network_requested_route_demand_mbps": 0.0,
         "network_offered_route_capacity_mbps": 0.0,
         "network_available_route_demand_mbps": 0.0,

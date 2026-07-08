@@ -884,6 +884,9 @@ def test_metrics_collector_publishes_backend_kpi_time_series() -> None:
     assert series["samples"][-1] == {
         "sim_time": 2.0,
         "network_effective_throughput_mbps": 100.0,
+        "network_effective_throughput_source": "AVAILABLE_ROUTE_CAPACITY_AFTER_LOSS",
+        "network_effective_throughput_source_label": "available route capacity estimate",
+        "network_lifetime_effective_throughput_mbps": 100.0,
         "network_requested_route_demand_mbps": 0.0,
         "network_offered_route_capacity_mbps": 100.0,
         "network_available_route_demand_mbps": 0.0,
@@ -1112,6 +1115,8 @@ def test_metrics_collector_kpi_time_series_prepends_initial_baseline_for_single_
     assert series["sample_count"] == 2
     assert series["samples"][0]["sim_time"] == 0.0
     assert series["samples"][0]["network_effective_throughput_mbps"] == 0.0
+    assert series["samples"][0]["network_effective_throughput_source"] == "BASELINE"
+    assert series["samples"][0]["network_lifetime_effective_throughput_mbps"] == 0.0
     assert series["samples"][0]["network_effective_loss_proxy_rate"] == 0.0
     assert series["samples"][0]["network_recent_window_s"] == 60.0
     assert series["samples"][0]["network_time_pressure_period_s"] == 120.0
@@ -1181,10 +1186,28 @@ def test_metrics_collector_reports_recent_flow_kpi_window() -> None:
         recent["network_recent_delay_variation_zero_reason_label"]
         == "当前代理指标为正值"
     )
+    assert recent["network_effective_throughput_source"] == "RECENT_FLOW_WINDOW"
+    assert recent["network_effective_throughput_source_label"] == (
+        "recent completed flow window"
+    )
+    assert recent["network_lifetime_effective_throughput_mbps"] == pytest.approx(
+        recent["network_flow_delivered_capacity_mbps"]
+        * (1.0 - recent["network_time_pressure_loss_proxy_rate"])
+    )
+    assert recent["network_effective_throughput_mbps"] == pytest.approx(
+        recent["network_recent_delivered_throughput_mbps"]
+        * (1.0 - recent["network_time_pressure_loss_proxy_rate"])
+    )
     assert recent["network_flow_delivered_capacity_mbps"] == pytest.approx(140.0)
     assert recent["network_flow_delay_variation_s"] == pytest.approx(0.05)
 
     expired = collector.kpi_time_series(sim_time=111.0)["samples"][-1]
+    assert expired["network_effective_throughput_mbps"] == 0.0
+    assert expired["network_effective_throughput_source"] == "NO_RECENT_FLOW_IN_WINDOW"
+    assert expired["network_effective_throughput_source_label"] == (
+        "no completed flow in recent window"
+    )
+    assert expired["network_lifetime_effective_throughput_mbps"] > 0.0
     assert expired["network_recent_flow_count"] == 0.0
     assert expired["network_recent_delivered_throughput_mbps"] == 0.0
     assert expired["network_recent_latency_s"] == 0.0
