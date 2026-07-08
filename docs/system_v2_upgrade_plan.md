@@ -687,6 +687,10 @@ Tasks:
     pressure rows with query/entity-type filters and per-row hashes.
     `large_detail_pagination_contract_v2` now advertises this collection so
     the dashboard can bind node pressure tables without local inference.
+  - Status: T406 binds the same node pressure evidence into exact single-user
+    and single-satellite detail cards as a top-level `network_pressure` object,
+    preserving existing card fields/sections while making selected-node
+    pressure evidence directly available to detail drawers.
 - V2-053: Add virtualized large tables.
   - Scope: avoid rendering hundreds/thousands of rows directly.
   - Depends on: V2-043.

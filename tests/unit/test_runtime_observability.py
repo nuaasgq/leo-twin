@@ -205,6 +205,52 @@ def test_node_network_pressure_detail_page_filters_and_paginates() -> None:
 
 
 
+def test_single_node_detail_cards_embed_network_pressure_when_available() -> None:
+    snapshot = {
+        "ground_users": [
+            {"user_id": "user-0", "cell_id": "cell-a", "status": "ACTIVE"},
+        ],
+        "satellites": [
+            {"satellite_id": "sat-0", "status": "ACTIVE"},
+        ],
+        "routes": [
+            {
+                "route_id": "route-a",
+                "flow_id": "flow-a",
+                "path": ["user-0", "sat-0", "compute-0"],
+                "available": True,
+                "pressure_edge_states": [
+                    {
+                        "edge_id": "user-0->sat-0",
+                        "source_id": "user-0",
+                        "target_id": "sat-0",
+                        "pressure_state": "SATURATED",
+                        "projected_utilization": 1.4,
+                        "queue_delay_s": 0.03,
+                        "loss_proxy_rate": 0.12,
+                    },
+                ],
+            },
+        ],
+    }
+
+    user_card = build_runtime_user_detail_card(snapshot, "user-0")
+    satellite_card = build_runtime_satellite_detail_card(snapshot, "sat-0")
+
+    assert user_card is not None
+    assert user_card["network_pressure"]["entity_type"] == "USER"
+    assert user_card["network_pressure"]["entity_id"] == "user-0"
+    assert user_card["network_pressure"]["dominant_pressure_state"] == "SATURATED"
+    assert user_card["network_pressure"]["max_projected_utilization"] == 1.4
+    assert user_card["network_pressure"]["detail_hash"].startswith("sha256:")
+    assert satellite_card is not None
+    assert satellite_card["network_pressure"]["entity_type"] == "SATELLITE"
+    assert satellite_card["network_pressure"]["entity_id"] == "sat-0"
+    assert satellite_card["network_pressure"]["pressure_edge_count"] == 1
+    assert satellite_card["network_pressure"]["detail_hash"].startswith("sha256:")
+
+
+
 def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> None:
     snapshot = {
         "ground_users": [

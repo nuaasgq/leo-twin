@@ -436,6 +436,23 @@ def _node_network_pressure_detail_item(item: Mapping[str, Any]) -> dict[str, obj
     return row
 
 
+def _node_pressure_detail_by_entity(
+    snapshot: Mapping[str, Any],
+    entity_type: str,
+    entity_id: str,
+) -> dict[str, object] | None:
+    rows, _, _ = _runtime_node_network_pressure_rows(snapshot)
+    normalized_type = _str(entity_type).upper()
+    normalized_id = _str(entity_id)
+    for row in rows:
+        if (
+            _str(row.get("entity_type")).upper() == normalized_type
+            and _str(row.get("entity_id")) == normalized_id
+        ):
+            return _node_network_pressure_detail_item(row)
+    return None
+
+
 def _node_pressure_row_matches_query(
     row: Mapping[str, Any],
     filter_query: str,
@@ -593,7 +610,15 @@ def build_runtime_user_detail_card(
         service_lookup,
         service_detail_lookup,
     )
-    return _user_detail_card(item)
+    card = _user_detail_card(item)
+    pressure_detail = _node_pressure_detail_by_entity(
+        snapshot,
+        "USER",
+        normalized_user_id,
+    )
+    if pressure_detail is not None:
+        card["network_pressure"] = pressure_detail
+    return card
 
 
 def build_runtime_satellite_detail_card(
@@ -646,7 +671,15 @@ def build_runtime_satellite_detail_card(
         link_counts.get(normalized_satellite_id, {}),
         route_context.get(normalized_satellite_id, {}),
     )
-    return _satellite_detail_card(item)
+    card = _satellite_detail_card(item)
+    pressure_detail = _node_pressure_detail_by_entity(
+        snapshot,
+        "SATELLITE",
+        normalized_satellite_id,
+    )
+    if pressure_detail is not None:
+        card["network_pressure"] = pressure_detail
+    return card
 
 
 def build_runtime_user_request_summary(

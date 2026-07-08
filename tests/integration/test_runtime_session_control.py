@@ -806,6 +806,25 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
     if node_detail_summary["satellites"]:
         assert node_detail_summary["satellites"][0]["entity_type"] == "SATELLITE"
         assert node_detail_summary["satellites"][0]["fields"]
+    user_detail = control_plane.runtime_user_detail(
+        str(node_detail_summary["users"][0]["entity_id"])
+    )
+    if "network_pressure" in user_detail["summary"]:
+        assert user_detail["summary"]["network_pressure"]["entity_type"] == "USER"
+        assert user_detail["summary"]["network_pressure"]["detail_hash"].startswith(
+            "sha256:"
+        )
+    if node_detail_summary["satellites"]:
+        satellite_detail = control_plane.runtime_satellite_detail(
+            str(node_detail_summary["satellites"][0]["entity_id"])
+        )
+        if "network_pressure" in satellite_detail["summary"]:
+            assert satellite_detail["summary"]["network_pressure"][
+                "entity_type"
+            ] == "SATELLITE"
+            assert satellite_detail["summary"]["network_pressure"][
+                "detail_hash"
+            ].startswith("sha256:")
 
     speed_change = control_plane.handle_raw_message(
         json.dumps(

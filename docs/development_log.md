@@ -6,6 +6,49 @@ task must update this log in the same commit as the code or documentation
 change.
 
 
+## 2026-07-08 - Single Node Detail Pressure Binding v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: pending in this commit
+- Scope: bind backend-owned node pressure evidence into exact single-node
+  detail cards returned by `/runtime/details/users/{user_id}` and
+  `/runtime/details/satellites/{satellite_id}`. When a selected user or
+  satellite has route pressure edge evidence, the detail card now includes a
+  top-level `network_pressure` object with deterministic entity identity,
+  dominant pressure state, utilization/queue/loss proxy values, and
+  `detail_hash`. Existing list/detail card `fields` and `sections` are left
+  unchanged to preserve frontend compatibility. This task does not change Event
+  Kernel behavior, route admission logic, orbit/network/compute model
+  semantics, packet-level behavior, frontend rendering, or external simulator
+  integrations.
+- Changed files/modules:
+  - `src/leo_twin/services/runtime_observability.py`
+  - `tests/unit/test_runtime_observability.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src\leo_twin\services\runtime_observability.py tests\unit\test_runtime_observability.py tests\integration\test_runtime_session_control.py`
+    - Result: passed using the bundled Codex Python runtime.
+  - Manual unit smoke for node pressure summary/detail page, single-node detail
+    pressure binding, and lifecycle detail summaries
+    - Result: passed.
+  - Manual runtime control-layer smoke for
+    `test_demo_server_adapter_uses_runtime_status_and_control_layer`
+    - Result: passed with a minimal `pytest` stub because the bundled
+      no-approval Python runtime does not include `pytest`.
+  - `git diff --check`
+    - Result: passed for task files.
+- Problems encountered and handling:
+  - The existing node detail list tests assert exact `fields`/`sections`; the
+    implementation only augments exact single-node detail cards, avoiding
+    layout or list-shape churn.
+  - Local runtime/generated config files and the unrelated `%SystemDrive%/`
+    directory remain outside this task scope and were not staged.
+- Known remaining issues / follow-up:
+  - Frontend detail drawers can now read `network_pressure`, but the UI has not
+    yet been updated to render it explicitly.
+
 ## 2026-07-08 - Node Network Pressure Detail Page v1
 
 - Branch: `feature/T402-network-pressure-provenance-v1`
