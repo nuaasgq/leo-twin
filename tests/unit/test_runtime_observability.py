@@ -668,11 +668,34 @@ def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> No
     assert first["satellite_service_summary_v1"]["next_cursor"] == 2
     assert first["satellite_service_summary_v1"]["has_more"] is False
     assert first["satellite_service_summary_v1"]["window_satellite_count"] == 2
+    assert first["satellite_service_summary_v1"]["resource_utilization_state_counts"] == (
+        {"resource_utilization_state": "HIGH_UTILIZATION", "request_count": 1},
+        {"resource_utilization_state": "IDLE", "request_count": 1},
+    )
+    assert first["satellite_service_summary_v1"]["service_role_state_counts"] == (
+        {"service_role_state": "COMMUNICATION_RELAY", "request_count": 1},
+        {
+            "service_role_state": "MIXED_COMMUNICATION_COMPUTE",
+            "request_count": 1,
+        },
+    )
+    assert first["satellite_service_summary_v1"]["network_service_state_counts"] == (
+        {"network_service_state": "ALL_ROUTES_WAITING", "request_count": 1},
+        {"network_service_state": "PARTIAL_ROUTE_QUEUE", "request_count": 1},
+    )
     assert first["satellite_service_summary_v1"]["items"][0] == {
         "satellite_id": "sat-0",
         "status": "BUSY",
         "resource_role": "COMPUTE_NODE",
         "resource_role_label": "Satellite compute node",
+        "resource_vector_model": "SATELLITE_COMPUTE_RESOURCE_VECTOR_PROXY",
+        "resource_utilization_state": "HIGH_UTILIZATION",
+        "resource_utilization_label": "High compute utilization",
+        "service_context_model": "FLOW_LEVEL_SATELLITE_SERVICE_CONTEXT_PROXY",
+        "service_role_state": "MIXED_COMMUNICATION_COMPUTE",
+        "service_role_label": "Mixed communication and compute service",
+        "network_service_state": "PARTIAL_ROUTE_QUEUE",
+        "network_service_label": "Partial route queue",
         "service_user_ids": ("user-0", "user-1"),
         "service_user_count": 2,
         "primary_service_user_id": "user-0",
@@ -864,6 +887,12 @@ def test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned() -> No
     assert satellite_detail_card["entity_type"] == "SATELLITE"
     assert satellite_detail_card["entity_id"] == "sat-0"
     assert satellite_detail_card["fields"][0]["value"] == "75%"
+    assert first["satellite_service_summary_v1"]["items"][1]["network_service_state"] == (
+        "ALL_ROUTES_WAITING"
+    )
+    assert first["satellite_service_summary_v1"]["items"][1]["service_role_state"] == (
+        "COMMUNICATION_RELAY"
+    )
     assert build_runtime_satellite_detail_card(snapshot, "missing-sat") is None
     route_detail_item = build_runtime_route_detail_item(
         snapshot,

@@ -2834,6 +2834,21 @@ def _satellite_service_summary(
         "item_count": len(items),
         "window_satellite_count": len(items),
         "hidden_satellite_count": max(0, len(filtered_items) - len(items)),
+        "resource_utilization_state_counts": _service_request_counts(
+            filtered_items,
+            "resource_utilization_state",
+            "resource_utilization_state",
+        ),
+        "service_role_state_counts": _service_request_counts(
+            filtered_items,
+            "service_role_state",
+            "service_role_state",
+        ),
+        "network_service_state_counts": _service_request_counts(
+            filtered_items,
+            "network_service_state",
+            "network_service_state",
+        ),
         "items": items,
     }
     if filter_query:
@@ -2874,22 +2889,44 @@ def _satellite_item(
         route_context.get("network_service_route_count", 0)
     )
     network_queue_route_count = max(0, route_count - available_route_count)
+    service_user_ids = tuple(route_context.get("service_user_ids", ()))
+    next_hop_ids = tuple(route_context.get("next_hop_ids", ()))
+    service_user_count = len(service_user_ids)
     resource_role = "COMPUTE_NODE" if node is not None else "SATELLITE_ONLY"
+    resource_utilization_state = _satellite_resource_utilization_state(load_ratio)
+    service_role_state = _satellite_service_role_state(
+        compute_service_route_count,
+        network_service_route_count,
+        service_user_count,
+    )
+    network_service_state = _satellite_network_service_state(
+        route_count,
+        available_route_count,
+        network_queue_route_count,
+    )
     return {
         "satellite_id": satellite_id,
         "status": _str((node or satellite or {}).get("status")) or "ACTIVE",
         "resource_role": resource_role,
         "resource_role_label": _satellite_resource_role_label(resource_role),
-        "service_user_ids": tuple(route_context.get("service_user_ids", ())),
-        "service_user_count": len(tuple(route_context.get("service_user_ids", ()))),
-        "primary_service_user_id": _first_tuple_item(
-            tuple(route_context.get("service_user_ids", ()))
+        "resource_vector_model": "SATELLITE_COMPUTE_RESOURCE_VECTOR_PROXY",
+        "resource_utilization_state": resource_utilization_state,
+        "resource_utilization_label": _satellite_resource_utilization_label(
+            resource_utilization_state
         ),
-        "next_hop_ids": tuple(route_context.get("next_hop_ids", ())),
-        "next_hop_count": len(tuple(route_context.get("next_hop_ids", ()))),
-        "primary_next_hop_id": _first_tuple_item(
-            tuple(route_context.get("next_hop_ids", ()))
+        "service_context_model": "FLOW_LEVEL_SATELLITE_SERVICE_CONTEXT_PROXY",
+        "service_role_state": service_role_state,
+        "service_role_label": _satellite_service_role_label(service_role_state),
+        "network_service_state": network_service_state,
+        "network_service_label": _satellite_network_service_label(
+            network_service_state
         ),
+        "service_user_ids": service_user_ids,
+        "service_user_count": service_user_count,
+        "primary_service_user_id": _first_tuple_item(service_user_ids),
+        "next_hop_ids": next_hop_ids,
+        "next_hop_count": len(next_hop_ids),
+        "primary_next_hop_id": _first_tuple_item(next_hop_ids),
         "primary_route_id": _str(route_context.get("primary_route_id")),
         "primary_flow_id": _str(route_context.get("primary_flow_id")),
         "route_count": route_count,
@@ -3555,6 +3592,78 @@ def _satellite_route_mix_label(
         f"network={max(0, network_service_route_count)}; "
         f"queued={max(0, network_queue_route_count)}"
     )
+
+
+def _satellite_resource_utilization_state(load_ratio: float) -> str:
+    ratio = _clamp_ratio(load_ratio)
+    if ratio <= 0.0:
+        return "IDLE"
+    if ratio < 0.4:
+        return "LOW_UTILIZATION"
+    if ratio < 0.75:
+        return "MODERATE_UTILIZATION"
+    if ratio < 0.95:
+        return "HIGH_UTILIZATION"
+    return "SATURATED"
+
+
+def _satellite_resource_utilization_label(state: str) -> str:
+    labels = {
+        "IDLE": "Idle compute resources",
+        "LOW_UTILIZATION": "Low compute utilization",
+        "MODERATE_UTILIZATION": "Moderate compute utilization",
+        "HIGH_UTILIZATION": "High compute utilization",
+        "SATURATED": "Saturated compute resources",
+    }
+    return labels.get(state, state)
+
+
+def _satellite_service_role_state(
+    compute_service_route_count: int,
+    network_service_route_count: int,
+    service_user_count: int,
+) -> str:
+    if service_user_count <= 0 and compute_service_route_count <= 0 and network_service_route_count <= 0:
+        return "NO_ACTIVE_SERVICE"
+    if compute_service_route_count > 0 and network_service_route_count > 0:
+        return "MIXED_COMMUNICATION_COMPUTE"
+    if compute_service_route_count > 0:
+        return "COMPUTE_SERVICE"
+    return "COMMUNICATION_RELAY"
+
+
+def _satellite_service_role_label(state: str) -> str:
+    labels = {
+        "NO_ACTIVE_SERVICE": "No active service",
+        "COMMUNICATION_RELAY": "Communication relay",
+        "COMPUTE_SERVICE": "Compute service node",
+        "MIXED_COMMUNICATION_COMPUTE": "Mixed communication and compute service",
+    }
+    return labels.get(state, state)
+
+
+def _satellite_network_service_state(
+    route_count: int,
+    available_route_count: int,
+    network_queue_route_count: int,
+) -> str:
+    if route_count <= 0:
+        return "NO_ROUTE_CONTEXT"
+    if network_queue_route_count <= 0 and available_route_count >= route_count:
+        return "ALL_ROUTES_AVAILABLE"
+    if available_route_count <= 0:
+        return "ALL_ROUTES_WAITING"
+    return "PARTIAL_ROUTE_QUEUE"
+
+
+def _satellite_network_service_label(state: str) -> str:
+    labels = {
+        "NO_ROUTE_CONTEXT": "No route context",
+        "ALL_ROUTES_AVAILABLE": "All routes available",
+        "PARTIAL_ROUTE_QUEUE": "Partial route queue",
+        "ALL_ROUTES_WAITING": "All routes waiting",
+    }
+    return labels.get(state, state)
 
 
 def _route_business_type(

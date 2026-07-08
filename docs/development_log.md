@@ -5,6 +5,44 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-08 - Runtime Satellite Service Resource Semantics v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: pending in this commit
+- Scope: add backend-owned semantic states to satellite service/resource rows.
+  `satellite_service_summary_v1` now reports resource utilization state,
+  service role state, network service state, model provenance fields, labels,
+  and deterministic state-count summaries. This lets dashboards explain which
+  satellites are idle, high-utilization, communication relays, mixed
+  communication-compute service nodes, partially queued, or fully waiting
+  without deriving those meanings locally. The change is limited to runtime
+  observability rows and does not alter Event Kernel behavior, routing,
+  compute scheduling, traffic generation, packet-level fidelity, or frontend
+  rendering.
+- Changed files/modules:
+  - `src/leo_twin/services/runtime_observability.py`
+  - `tests/unit/test_runtime_observability.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src\leo_twin\services\runtime_observability.py tests\unit\test_runtime_observability.py`
+    - Result: passed using the bundled Codex Python runtime.
+  - Manual smoke for
+    `test_runtime_lifecycle_summaries_are_deterministic_and_backend_owned`,
+    `test_runtime_detail_pages_apply_filters_before_cursor_pagination`, and
+    `test_runtime_service_and_compute_detail_pages_apply_text_filters`.
+    - Result: passed with `PYTHONPATH=src`.
+- Problems encountered and handling:
+  - This task intentionally reused existing satellite resource rows instead of
+    adding a new endpoint, keeping the change bounded and compatible with the
+    current dashboard/detail API surface.
+  - Local runtime/generated config files and `%SystemDrive%/` remain outside
+    this task scope and were not staged.
+- Known remaining issues / follow-up:
+  - Frontend tables/detail drawers should later bind these semantic states as
+    badges and filters. The backend now owns the meanings, but this task does
+    not change rendering.
+
 ## 2026-07-08 - Runtime Network Lifecycle Detail Semantics v1
 
 - Branch: `feature/T402-network-pressure-provenance-v1`

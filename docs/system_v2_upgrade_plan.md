@@ -606,7 +606,11 @@ Tasks:
     backend-derived summaries. T213 adds backend-owned bottleneck resource,
     utilization, available/used/total, and pressure status fields to runtime
     metrics, with the standalone dashboard consuming those fields instead of
-    inferring bottlenecks locally.
+    inferring bottlenecks locally. T416 adds backend-owned satellite resource
+    utilization states, service role states, network service states, labels, and
+    model provenance to satellite_service_summary_v1, preserving the existing
+    resource vector fields while making per-satellite resource semantics
+    explicit.
 - V2-031: Add service placement model.
   - Scope: deterministic service-to-satellite placement, capacity check,
     queue state, rejection reason.
@@ -751,6 +755,10 @@ Tasks:
     and single-satellite detail cards as a top-level `network_pressure` object,
     preserving existing card fields/sections while making selected-node
     pressure evidence directly available to detail drawers.
+  - Status: T416 extends satellite service/resource rows with backend-owned
+    resource utilization, service role, and network service states plus summary
+    counts, so selected-satellite detail drawers can explain served users, next
+    hops, queues, and compute pressure without local semantic inference.
 - V2-053: Add virtualized large tables.
   - Scope: avoid rendering hundreds/thousands of rows directly.
   - Depends on: V2-043.
