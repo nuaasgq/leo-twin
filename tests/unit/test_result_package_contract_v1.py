@@ -15,6 +15,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1_ID,
     RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_V1_ID,
     RUNTIME_EXPORT_NETWORK_KPI_FORMULA_EVIDENCE_V1_ID,
+    RUNTIME_EXPORT_NODE_NETWORK_PRESSURE_SUMMARY_V1_ID,
     RUNTIME_EXPORT_RUNTIME_KPI_MOVEMENT_SUMMARY_V1_ID,
     RUNTIME_EXPORT_TRAFFIC_DEMAND_EXPLANATION_V1_ID,
     RUNTIME_EXPORT_TRAFFIC_DEMAND_USER_PAGE_V1_ID,
@@ -45,6 +46,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_diagnostics_bundle_v1,
     build_runtime_export_network_kpi_benchmark_validation_v1,
     build_runtime_export_network_kpi_formula_evidence_v1,
+    build_runtime_export_node_network_pressure_summary_v1,
     build_runtime_export_runtime_kpi_movement_summary_v1,
     build_runtime_export_traffic_demand_explanation_v1,
     build_runtime_export_traffic_demand_user_page_v1,
@@ -79,6 +81,7 @@ from leo_twin.services.result_package_contract import (
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 _TRAFFIC_DEMAND_EXPLANATION_FILENAME = "traffic_demand_explanation_v1.json"
 _ROUTE_PRESSURE_EVIDENCE_FILENAME = "route_pressure_evidence_v1.json"
+_NODE_NETWORK_PRESSURE_SUMMARY_FILENAME = "node_network_pressure_summary_v1.json"
 _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME = "runtime_kpi_movement_summary_v1.json"
 
 
@@ -107,6 +110,7 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
         "user_service_request_summary_v2.json",
         "route_detail_index_v1.json",
         _ROUTE_PRESSURE_EVIDENCE_FILENAME,
+        _NODE_NETWORK_PRESSURE_SUMMARY_FILENAME,
         "review_summary_v1.json",
         "diagnostics_bundle_v1.json",
         "network_kpi_benchmark_validation_v1.json",
@@ -253,6 +257,7 @@ def test_result_package_summary_accepts_complete_package_record() -> None:
         "user_service_request_summary_v2.json",
         "route_detail_index_v1.json",
         _ROUTE_PRESSURE_EVIDENCE_FILENAME,
+        _NODE_NETWORK_PRESSURE_SUMMARY_FILENAME,
         "review_summary_v1.json",
         "diagnostics_bundle_v1.json",
         "network_kpi_benchmark_validation_v1.json",
@@ -302,6 +307,7 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
             "route_explanation_summary_v1": _route_summary(),
             "route_provenance_trust_summary_v1": _route_trust(),
             "route_pressure_evidence_v1": _route_pressure_evidence(),
+            "node_network_pressure_summary_v1": _node_network_pressure_summary(),
             "runtime_export_route_pressure_evidence_policy_v1": (
                 _route_pressure_export_policy()
             ),
@@ -345,6 +351,7 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
         "review_summary_v1.json",
         "route_detail_index_v1.json",
         _ROUTE_PRESSURE_EVIDENCE_FILENAME,
+        _NODE_NETWORK_PRESSURE_SUMMARY_FILENAME,
         "scenario_review_bundle_v1.json",
         "service_lifecycle_trace_v2.json",
         "summary.json",
@@ -398,6 +405,10 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
     assert first["route_pressure_evidence"]["max_edge_projected_utilization"] == 1.25
     assert first["route_pressure_evidence"]["packet_level_simulation"] is False
     assert first["route_pressure_evidence"]["event_replay"] is False
+    assert first["node_network_pressure_summary"]["evidence_present"] is True
+    assert first["node_network_pressure_summary"]["node_count"] == 3
+    assert first["node_network_pressure_summary"]["pressure_edge_count"] == 4
+    assert first["node_network_pressure_summary"]["frontend_inference_required"] is False
     assert first["network_kpi_benchmark_validation"]["evidence_present"] is True
     assert first["network_kpi_benchmark_validation"]["validation_status"] == "PASS"
     assert first["network_kpi_benchmark_validation"]["failed_check_count"] == 0
@@ -438,6 +449,7 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
     ] is True
     assert first["artifacts"]["traffic_demand_explanation_exported"] is True
     assert first["artifacts"]["route_pressure_evidence_exported"] is True
+    assert first["artifacts"]["node_network_pressure_summary_exported"] is True
     assert first["artifacts"]["user_service_request_summary_exported"] is True
     assert first["route_comparison_review"]["review_scope"] == (
         "PACKAGE_ROUTE_DETAIL_TO_LIVE_RUNTIME_ROUTE_DETAIL"
@@ -568,6 +580,39 @@ def test_runtime_export_runtime_kpi_movement_summary_v1_is_deterministic() -> No
     assert first["evidence"]["evidence_present"] is True
     assert first["evidence"]["movement_status"] == "TIME_VARYING_OBSERVED"
     assert "NO_METRIC_RECOMPUTE" in first["boundary_conditions"]
+    assert first["artifact_hash"].startswith("sha256:")
+
+
+def test_runtime_export_node_network_pressure_summary_v1_is_deterministic() -> None:
+    config_snapshot = {
+        "status": {
+            "node_network_pressure_summary_v1": _node_network_pressure_summary(),
+        }
+    }
+
+    first = build_runtime_export_node_network_pressure_summary_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+    )
+    second = build_runtime_export_node_network_pressure_summary_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+    )
+
+    assert first == second
+    assert first["type"] == "RUNTIME_EXPORT_NODE_NETWORK_PRESSURE_SUMMARY_V1"
+    assert first["artifact_id"] == RUNTIME_EXPORT_NODE_NETWORK_PRESSURE_SUMMARY_V1_ID
+    assert first["runtime_status_field"] == "node_network_pressure_summary_v1"
+    assert first["summary"] == _node_network_pressure_summary()
+    assert first["evidence"]["evidence_present"] is True
+    assert first["evidence"]["pressure_model"] == "FLOW_PRESSURE_ADMISSION_V1"
+    assert first["evidence"]["node_count"] == 3
+    assert first["evidence"]["pressure_edge_count"] == 4
+    assert first["evidence"]["frontend_inference_required"] is False
+    assert first["evidence"]["acceptable_for_demo_review"] is True
+    assert "NO_NODE_PRESSURE_RECOMPUTE" in first["boundary_conditions"]
     assert first["artifact_hash"].startswith("sha256:")
 
 
@@ -853,6 +898,7 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
             "route_explanation_summary_v1": _route_summary(),
             "route_provenance_trust_summary_v1": _route_trust(),
             "route_pressure_evidence_v1": _route_pressure_evidence(),
+            "node_network_pressure_summary_v1": _node_network_pressure_summary(),
             "runtime_export_route_pressure_evidence_policy_v1": (
                 _route_pressure_export_policy()
             ),
@@ -900,6 +946,7 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
         "review_summary_v1.json",
         "route_detail_index_v1.json",
         _ROUTE_PRESSURE_EVIDENCE_FILENAME,
+        _NODE_NETWORK_PRESSURE_SUMMARY_FILENAME,
         "scenario_review_bundle_v1.json",
         "service_lifecycle_trace_v2.json",
         "summary.json",
@@ -949,6 +996,9 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
     assert first["route_pressure_evidence"]["pressure_edge_count"] == 2
     assert first["route_pressure_evidence"]["max_edge_projected_utilization"] == 1.25
     assert first["route_pressure_evidence"]["acceptable_for_demo_review"] is True
+    assert first["node_network_pressure_summary"]["evidence_present"] is True
+    assert first["node_network_pressure_summary"]["node_count"] == 3
+    assert first["node_network_pressure_summary"]["pressure_edge_count"] == 4
     assert first["network_kpi_benchmark_validation"]["evidence_present"] is True
     assert first["network_kpi_benchmark_validation"]["validation_status"] == "PASS"
     assert first["network_kpi_benchmark_validation"]["failed_check_count"] == 0
@@ -1037,6 +1087,7 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
             "route_explanation_summary_v1": _route_summary(),
             "route_provenance_trust_summary_v1": _route_trust(),
             "route_pressure_evidence_v1": _route_pressure_evidence(),
+            "node_network_pressure_summary_v1": _node_network_pressure_summary(),
             "runtime_export_route_pressure_evidence_policy_v1": (
                 _route_pressure_export_policy()
             ),
@@ -1083,6 +1134,7 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
         "review_summary_v1.json",
         "route_detail_index_v1.json",
         _ROUTE_PRESSURE_EVIDENCE_FILENAME,
+        _NODE_NETWORK_PRESSURE_SUMMARY_FILENAME,
         "scenario_review_bundle_v1.json",
         "service_lifecycle_trace_v2.json",
         "summary.json",
@@ -1169,6 +1221,11 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
     ]["evidence_hash"]
     assert first["route_pressure_evidence"]["queued_route_count"] == 1
     assert first["route_pressure_evidence"]["pressure_edge_count"] == 2
+    assert first["node_network_pressure_summary"]["evidence_present"] is True
+    assert first["node_network_pressure_summary"]["evidence_hash"] == review_summary[
+        "node_network_pressure_summary"
+    ]["evidence_hash"]
+    assert first["node_network_pressure_summary"]["pressure_edge_count"] == 4
     assert first["network_kpi_formula_evidence"]["evidence_present"] is True
     assert first["network_kpi_formula_evidence"]["formula_evidence_status"] == (
         "FORMULA_AND_TIME_EVIDENCE_READY"
@@ -3053,6 +3110,7 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
         "review_summary_v1.json",
         "route_detail_index_v1.json",
         _ROUTE_PRESSURE_EVIDENCE_FILENAME,
+        _NODE_NETWORK_PRESSURE_SUMMARY_FILENAME,
         "scenario_review_bundle_v1.json",
         "service_lifecycle_trace_v2.json",
         "summary.json",
@@ -3085,6 +3143,7 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
         } == {
             "ROUTE_TRUST_EVIDENCE_MISSING",
             "ROUTE_PRESSURE_EVIDENCE_MISSING",
+            "NODE_NETWORK_PRESSURE_SUMMARY_MISSING",
             "NETWORK_KPI_BENCHMARK_VALIDATION_MISSING",
             "NETWORK_KPI_FORMULA_EVIDENCE_MISSING",
             "NETWORK_KPI_VARIATION_EXPLANATION_MISSING",
@@ -3092,7 +3151,7 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
             "TRAFFIC_DEMAND_EXPLANATION_MISSING",
             "USER_SERVICE_REQUEST_SUMMARY_MISSING",
         }
-    assert diagnostics["finding_count"] == 8
+    assert diagnostics["finding_count"] == 9
 
 
 def _file(name: str, filename: str, sha256: str) -> dict[str, object]:
@@ -3480,6 +3539,69 @@ def _runtime_kpi_movement_summary() -> dict[str, object]:
                 "movement_status": "TIME_VARYING",
                 "absolute_delta": 20.0,
             },
+        ),
+    }
+
+
+def _node_network_pressure_summary() -> dict[str, object]:
+    return {
+        "version": "v1",
+        "summary_id": "leo_twin.node_network_pressure_summary.v1",
+        "source": "BACKEND_RUNTIME_SNAPSHOT",
+        "summary_scope": "NODE_NETWORK_PRESSURE_FROM_ROUTE_EDGE_STATES",
+        "pressure_model": "FLOW_PRESSURE_ADMISSION_V1",
+        "packet_level_simulation": False,
+        "frontend_inference_required": False,
+        "cursor": 0,
+        "limit": 500,
+        "next_cursor": 3,
+        "has_more": False,
+        "node_count": 3,
+        "item_count": 3,
+        "user_count": 1,
+        "satellite_count": 2,
+        "route_pressure_route_count": 2,
+        "pressure_edge_count": 4,
+        "max_projected_utilization": 1.4,
+        "max_queue_delay_s": 0.03,
+        "max_loss_proxy_rate": 0.12,
+        "items": (
+            {
+                "node_id": "user-0",
+                "node_type": "USER",
+                "route_count": 2,
+                "pressure_edge_count": 2,
+                "max_projected_utilization": 1.2,
+                "max_queue_delay_s": 0.02,
+                "max_loss_proxy_rate": 0.08,
+                "service_object_ids": ("sat-0", "sat-1"),
+            },
+            {
+                "node_id": "sat-0",
+                "node_type": "SATELLITE",
+                "route_count": 1,
+                "pressure_edge_count": 1,
+                "max_projected_utilization": 1.4,
+                "max_queue_delay_s": 0.03,
+                "max_loss_proxy_rate": 0.12,
+                "service_object_ids": ("user-0",),
+            },
+            {
+                "node_id": "sat-1",
+                "node_type": "SATELLITE",
+                "route_count": 1,
+                "pressure_edge_count": 1,
+                "max_projected_utilization": 0.8,
+                "max_queue_delay_s": 0.01,
+                "max_loss_proxy_rate": 0.02,
+                "service_object_ids": ("user-0",),
+            },
+        ),
+        "model_assumptions": (
+            "Node pressure is aggregated from route pressure edge states.",
+        ),
+        "caveats": (
+            "Flow-level pressure proxy; no packet-level queue simulation.",
         ),
     }
 

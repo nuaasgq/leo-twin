@@ -1108,6 +1108,7 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
         "review_summary_v1.json",
         "route_detail_index_v1.json",
         "route_pressure_evidence_v1.json",
+        "node_network_pressure_summary_v1.json",
         "runtime_kpi_movement_summary_v1.json",
         "scenario_review_bundle_v1.json",
         "service_lifecycle_trace_v2.json",
@@ -1145,6 +1146,11 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
     )
     route_pressure_evidence = json.loads(
         (package_dir / "route_pressure_evidence_v1.json").read_text(encoding="utf-8")
+    )
+    node_network_pressure_summary = json.loads(
+        (package_dir / "node_network_pressure_summary_v1.json").read_text(
+            encoding="utf-8"
+        )
     )
     review_summary = json.loads(
         (package_dir / "review_summary_v1.json").read_text(encoding="utf-8")
@@ -1228,6 +1234,13 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
     assert route_pressure_evidence["route_pressure_evidence_export_policy"] == (
         route_pressure_policy
     )
+    assert node_network_pressure_summary["type"] == (
+        "RUNTIME_EXPORT_NODE_NETWORK_PRESSURE_SUMMARY_V1"
+    )
+    assert node_network_pressure_summary["summary"] == config_snapshot["status"][
+        "node_network_pressure_summary_v1"
+    ]
+    assert node_network_pressure_summary["evidence"]["evidence_present"] is True
     assert review_summary["type"] == "RUNTIME_EXPORT_REVIEW_SUMMARY_V1"
     assert review_summary["package_id"] == exported["package_id"]
     assert review_summary["review_status"] == "REVIEW_READY"
@@ -1241,6 +1254,9 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
     assert review_summary["artifacts"]["review_summary_exported"] is True
     assert review_summary["artifacts"]["traffic_demand_explanation_exported"] is True
     assert review_summary["artifacts"]["route_pressure_evidence_exported"] is True
+    assert review_summary["artifacts"][
+        "node_network_pressure_summary_exported"
+    ] is True
     assert review_summary["artifacts"]["runtime_kpi_movement_summary_exported"] is True
     assert review_summary["runtime_kpi_movement_summary"]["evidence_present"] is True
     assert review_summary["route_pressure_evidence"]["evidence_present"] is True
@@ -1251,6 +1267,10 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
         route_pressure_evidence["summary"]["pressure_edge_count"]
     )
     assert review_summary["route_pressure_evidence"]["event_replay"] is False
+    assert review_summary["node_network_pressure_summary"]["evidence_present"] is True
+    assert review_summary["node_network_pressure_summary"]["evidence_hash"] == (
+        node_network_pressure_summary["evidence"]["evidence_hash"]
+    )
     assert traffic_demand_explanation["traffic_demand_explanation"] == (
         config_snapshot["generated_config"]["backend_summary"][
             "traffic_demand_explanation_v1"
@@ -1268,6 +1288,12 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
         review_summary["route_pressure_evidence"]["evidence_hash"]
     )
     assert diagnostics_bundle["route_pressure_evidence"]["evidence_present"] is True
+    assert diagnostics_bundle["node_network_pressure_summary"]["evidence_hash"] == (
+        review_summary["node_network_pressure_summary"]["evidence_hash"]
+    )
+    assert diagnostics_bundle["node_network_pressure_summary"][
+        "evidence_present"
+    ] is True
     assert diagnostics_bundle["traffic_demand_explanation"]["evidence_hash"] == (
         traffic_demand_explanation["evidence"]["evidence_hash"]
     )
@@ -1283,6 +1309,12 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
         review_summary["route_pressure_evidence"]["evidence_hash"]
     )
     assert scenario_review_bundle["route_pressure_evidence"][
+        "evidence_present"
+    ] is True
+    assert scenario_review_bundle["node_network_pressure_summary"]["evidence_hash"] == (
+        node_network_pressure_summary["evidence"]["evidence_hash"]
+    )
+    assert scenario_review_bundle["node_network_pressure_summary"][
         "evidence_present"
     ] is True
     assert scenario_review_bundle["traffic_demand_explanation"]["evidence_hash"] == (
@@ -1505,6 +1537,11 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
         "route_pressure_evidence_v1.json",
         export_root,
     )
+    node_network_pressure_artifact = control_plane.runtime_export_package_artifact(
+        package_id,
+        "node_network_pressure_summary_v1.json",
+        export_root,
+    )
     review_summary_artifact = control_plane.runtime_export_package_artifact(
         package_id,
         "review_summary_v1.json",
@@ -1549,6 +1586,18 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
         Path(str(route_pressure_evidence_artifact["path"])).read_text(encoding="utf-8")
     )
     assert route_pressure_evidence["type"] == "RUNTIME_EXPORT_ROUTE_PRESSURE_EVIDENCE_V1"
+    assert Path(str(node_network_pressure_artifact["path"])).name == (
+        "node_network_pressure_summary_v1.json"
+    )
+    assert node_network_pressure_artifact["content_type"] == (
+        "application/json; charset=utf-8"
+    )
+    node_network_pressure_summary = json.loads(
+        Path(str(node_network_pressure_artifact["path"])).read_text(encoding="utf-8")
+    )
+    assert node_network_pressure_summary["type"] == (
+        "RUNTIME_EXPORT_NODE_NETWORK_PRESSURE_SUMMARY_V1"
+    )
     assert Path(str(manifest_artifact["path"])).name == "manifest.json"
     assert manifest_artifact["content_type"] == "application/json; charset=utf-8"
     manifest = json.loads(Path(str(manifest_artifact["path"])).read_text(encoding="utf-8"))
@@ -1820,6 +1869,12 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
     assert review_summary["route_pressure_evidence"]["pressure_edge_count"] == (
         route_pressure_evidence["summary"]["pressure_edge_count"]
     )
+    assert review_summary["node_network_pressure_summary"]["evidence_hash"] == (
+        node_network_pressure_summary["evidence"]["evidence_hash"]
+    )
+    assert review_summary["node_network_pressure_summary"][
+        "evidence_present"
+    ] is True
     assert review_summary["summary_hash"].startswith("sha256:")
     assert (
         Path(str(diagnostics_bundle_artifact["path"])).name
@@ -1836,6 +1891,9 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
     assert diagnostics_bundle["reproducibility_boundary"] == reproducibility_boundary
     assert diagnostics_bundle["route_pressure_evidence"]["evidence_hash"] == (
         review_summary["route_pressure_evidence"]["evidence_hash"]
+    )
+    assert diagnostics_bundle["node_network_pressure_summary"]["evidence_hash"] == (
+        review_summary["node_network_pressure_summary"]["evidence_hash"]
     )
     assert diagnostics_bundle["model_boundaries"]["event_replay_restore"] is False
     assert diagnostics_bundle["diagnostics_hash"].startswith("sha256:")

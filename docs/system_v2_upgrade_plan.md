@@ -677,6 +677,11 @@ Tasks:
     from `RouteState.pressure_edge_states`, so user and satellite detail views
     can consume per-node route pressure, queue, utilization, and loss-proxy
     evidence without frontend-local inference.
+  - Status: T404 persists `node_network_pressure_summary_v1` into
+    `node_network_pressure_summary_v1.json` in runtime export packages and
+    binds it into review summary, diagnostics, scenario review, artifact
+    browser, and audit index evidence paths for reproducible node-detail
+    review.
 - V2-053: Add virtualized large tables.
   - Scope: avoid rendering hundreds/thousands of rows directly.
   - Depends on: V2-043.

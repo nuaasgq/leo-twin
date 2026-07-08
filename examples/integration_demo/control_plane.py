@@ -96,6 +96,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_network_kpi_benchmark_validation_v1,
     build_runtime_export_network_kpi_formula_evidence_v1,
     build_runtime_export_network_kpi_variation_explanation_v1,
+    build_runtime_export_node_network_pressure_summary_v1,
     build_runtime_export_runtime_kpi_movement_summary_v1,
     build_runtime_export_package_acceptance_report_v1,
     build_runtime_export_package_audit_index_v1,
@@ -193,6 +194,9 @@ _RUNTIME_EXPORT_TRAFFIC_DEMAND_EXPLANATION_FILENAME = (
     "traffic_demand_explanation_v1.json"
 )
 _RUNTIME_EXPORT_ROUTE_PRESSURE_EVIDENCE_FILENAME = "route_pressure_evidence_v1.json"
+_RUNTIME_EXPORT_NODE_NETWORK_PRESSURE_SUMMARY_FILENAME = (
+    "node_network_pressure_summary_v1.json"
+)
 _RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_FILENAME = "scenario_review_bundle_v1.json"
 _RUNTIME_EXPORT_SCENARIO_REVIEW_CHECKLIST_FILENAME = "scenario_review_checklist_v1.json"
 _RUNTIME_EXPORT_ROUTE_COMPARISON_REVIEW_REPORT_FILENAME = (
@@ -901,6 +905,23 @@ class DemoControlPlane:
             encoding="utf-8",
         )
         written_files["route_pressure_evidence_v1"] = route_pressure_evidence_path
+        node_network_pressure_summary_path = (
+            package_dir / _RUNTIME_EXPORT_NODE_NETWORK_PRESSURE_SUMMARY_FILENAME
+        )
+        node_network_pressure_summary = (
+            build_runtime_export_node_network_pressure_summary_v1(
+                package_id=package_id,
+                package_dir=str(package_dir),
+                config_snapshot=config_snapshot,
+            )
+        )
+        node_network_pressure_summary_path.write_text(
+            stable_json_pretty(node_network_pressure_summary),
+            encoding="utf-8",
+        )
+        written_files["node_network_pressure_summary_v1"] = (
+            node_network_pressure_summary_path
+        )
         written_files["user_service_request_summary_v2"] = (
             user_service_request_summary_path
         )

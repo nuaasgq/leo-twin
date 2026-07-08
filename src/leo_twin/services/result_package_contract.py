@@ -38,6 +38,9 @@ RUNTIME_EXPORT_ROUTE_DETAIL_INDEX_V1_ID = (
 RUNTIME_EXPORT_ROUTE_PRESSURE_EVIDENCE_V1_ID = (
     "leo_twin.runtime_export_route_pressure_evidence.v1"
 )
+RUNTIME_EXPORT_NODE_NETWORK_PRESSURE_SUMMARY_V1_ID = (
+    "leo_twin.runtime_export_node_network_pressure_summary.v1"
+)
 RUNTIME_EXPORT_ROUTE_DETAIL_PAGE_V1_ID = (
     "leo_twin.runtime_export_route_detail_page.v1"
 )
@@ -121,6 +124,7 @@ REVIEW_SUMMARY_FILENAME = "review_summary_v1.json"
 DIAGNOSTICS_BUNDLE_FILENAME = "diagnostics_bundle_v1.json"
 ROUTE_DETAIL_INDEX_FILENAME = "route_detail_index_v1.json"
 ROUTE_PRESSURE_EVIDENCE_FILENAME = "route_pressure_evidence_v1.json"
+NODE_NETWORK_PRESSURE_SUMMARY_FILENAME = "node_network_pressure_summary_v1.json"
 SERVICE_LIFECYCLE_TRACE_FILENAME = "service_lifecycle_trace_v2.json"
 USER_SERVICE_REQUEST_SUMMARY_FILENAME = "user_service_request_summary_v2.json"
 NETWORK_KPI_BENCHMARK_VALIDATION_FILENAME = (
@@ -250,6 +254,15 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
                 "content": (
                     "route pressure admission, queue, saturation, and topology "
                     "evidence exported for offline network review"
+                ),
+            },
+            {
+                "logical_name": "node_network_pressure_summary_v1",
+                "filename": "node_network_pressure_summary_v1.json",
+                "format": "json",
+                "content": (
+                    "runtime node network pressure summary exported for "
+                    "offline per-user and per-satellite review"
                 ),
             },
             {
@@ -730,6 +743,17 @@ def _runtime_export_artifact_browser_specs() -> tuple[dict[str, object], ...]:
             "filter_hint": "route pressure",
         },
         {
+            "logical_name": "node_network_pressure_summary_v1",
+            "filename": NODE_NETWORK_PRESSURE_SUMMARY_FILENAME,
+            "category": "ROUTE_SERVICE_EVIDENCE",
+            "review_priority": 306,
+            "format": "json",
+            "review_role": "Per-node network pressure summary.",
+            "content": "Aggregated user and satellite pressure evidence for node detail review.",
+            "default_json_pointer": "/summary/items",
+            "filter_hint": "node pressure",
+        },
+        {
             "logical_name": "service_lifecycle_trace_v2",
             "filename": SERVICE_LIFECYCLE_TRACE_FILENAME,
             "category": "ROUTE_SERVICE_EVIDENCE",
@@ -856,6 +880,7 @@ def build_runtime_export_reproducibility_boundary_v1(
             "network_kpi_variation_explanation_v1.json",
             "runtime_kpi_movement_summary_v1.json",
             "route_pressure_evidence_v1.json",
+            "node_network_pressure_summary_v1.json",
             "user_configuration_template_validation_v1.json",
             "traffic_demand_explanation_v1.json",
             "user_service_request_summary_v2.json",
@@ -1073,6 +1098,47 @@ def build_runtime_export_runtime_kpi_movement_summary_v1(
     return artifact
 
 
+
+
+def build_runtime_export_node_network_pressure_summary_v1(
+    *,
+    package_id: str,
+    package_dir: str,
+    config_snapshot: Mapping[str, Any],
+) -> dict[str, object]:
+    """Build offline review evidence for per-node network pressure."""
+
+    if not isinstance(config_snapshot, Mapping):
+        raise TypeError("config_snapshot must be a mapping")
+
+    status = _mapping(config_snapshot.get("status"))
+    summary = _mapping(status.get("node_network_pressure_summary_v1"))
+    evidence = _runtime_export_node_network_pressure_summary(status)
+    artifact: dict[str, object] = {
+        "type": "RUNTIME_EXPORT_NODE_NETWORK_PRESSURE_SUMMARY_V1",
+        "version": "v1",
+        "artifact_id": RUNTIME_EXPORT_NODE_NETWORK_PRESSURE_SUMMARY_V1_ID,
+        "source": "BACKEND_RUNTIME_EXPORT",
+        "artifact_scope": "NODE_NETWORK_PRESSURE_REVIEW",
+        "package_id": str(package_id),
+        "package_dir": str(package_dir),
+        "runtime_status_field": "node_network_pressure_summary_v1",
+        "artifact_policy": "STANDALONE_RUNTIME_EXPORT_ARTIFACT",
+        "artifact_window_only": True,
+        "summary": dict(summary),
+        "evidence": evidence,
+        "boundary_conditions": (
+            "READ_RUNTIME_STATUS_ONLY",
+            "NO_NODE_PRESSURE_RECOMPUTE",
+            "NO_EVENT_REPLAY",
+            "NO_PACKET_LEVEL_SIMULATION",
+            "NO_EXTERNAL_SIMULATOR_ARTIFACT",
+        ),
+    }
+    artifact["artifact_hash"] = stable_hash_payload(artifact)
+    return artifact
+
+
 def build_runtime_export_user_configuration_template_validation_v1(
     *,
     package_id: str,
@@ -1230,6 +1296,9 @@ def build_runtime_export_review_summary_v1(
     )
     route_trust = _runtime_export_route_trust_evidence(status)
     route_pressure_evidence = _runtime_export_route_pressure_evidence(status)
+    node_network_pressure_summary = _runtime_export_node_network_pressure_summary(
+        status
+    )
     network_kpi_validation = _runtime_export_network_kpi_validation_evidence(status)
     network_kpi_formula_evidence = _runtime_export_network_kpi_formula_evidence(
         status
@@ -1292,6 +1361,7 @@ def build_runtime_export_review_summary_v1(
         },
         "route_trust": route_trust,
         "route_pressure_evidence": route_pressure_evidence,
+        "node_network_pressure_summary": node_network_pressure_summary,
         "network_kpi_benchmark_validation": network_kpi_validation,
         "network_kpi_formula_evidence": network_kpi_formula_evidence,
         "network_kpi_variation_explanation": network_kpi_variation_explanation,
@@ -1321,6 +1391,9 @@ def build_runtime_export_review_summary_v1(
             ),
             "route_pressure_evidence_exported": (
                 "route_pressure_evidence_v1.json" in artifacts
+            ),
+            "node_network_pressure_summary_exported": (
+                "node_network_pressure_summary_v1.json" in artifacts
             ),
             "review_summary_exported": "review_summary_v1.json" in artifacts,
             "network_kpi_benchmark_validation_exported": (
@@ -1352,6 +1425,7 @@ def build_runtime_export_review_summary_v1(
             "Use user_service_request_summary_v2.json for per-user business request state review.",
             "Use route_trust to inspect flow-level route explanation evidence.",
             "Use route_pressure_evidence_v1.json to review route admission, queue, saturation, and topology block evidence.",
+            "Use node_network_pressure_summary_v1.json to review per-user and per-satellite network pressure evidence.",
             "Use network_kpi_benchmark_validation_v1.json to review KPI guardrail evidence.",
             "Use network_kpi_formula_evidence_v1.json to review KPI formula input and time-series evidence.",
             "Use network_kpi_variation_explanation_v1.json to review why flow-level KPI values moved or stayed flat.",
@@ -1408,6 +1482,9 @@ def build_runtime_export_diagnostics_bundle_v1(
     package_complete = manifest_ok and not missing_required
     route_trust = _runtime_export_route_trust_evidence(status)
     route_pressure_evidence = _runtime_export_route_pressure_evidence(status)
+    node_network_pressure_summary = _runtime_export_node_network_pressure_summary(
+        status
+    )
     network_kpi_validation = _runtime_export_network_kpi_validation_evidence(status)
     network_kpi_formula_evidence = _runtime_export_network_kpi_formula_evidence(
         status
@@ -1442,6 +1519,7 @@ def build_runtime_export_diagnostics_bundle_v1(
         missing_recommended=missing_recommended,
         route_trust=route_trust,
         route_pressure_evidence=route_pressure_evidence,
+        node_network_pressure_summary=node_network_pressure_summary,
         network_kpi_validation=network_kpi_validation,
         network_kpi_formula_evidence=network_kpi_formula_evidence,
         network_kpi_variation_explanation=network_kpi_variation_explanation,
@@ -1470,6 +1548,7 @@ def build_runtime_export_diagnostics_bundle_v1(
         },
         "route_trust": route_trust,
         "route_pressure_evidence": route_pressure_evidence,
+        "node_network_pressure_summary": node_network_pressure_summary,
         "network_kpi_benchmark_validation": network_kpi_validation,
         "network_kpi_formula_evidence": network_kpi_formula_evidence,
         "network_kpi_variation_explanation": network_kpi_variation_explanation,
@@ -1571,6 +1650,9 @@ def build_runtime_export_scenario_review_bundle_v1(
     if any(str(item.get("severity", "")) == "ERROR" for item in findings):
         scenario_review_warnings.append("DIAGNOSTICS_HAS_ERROR_FINDINGS")
     route_pressure_evidence = _mapping(review_summary.get("route_pressure_evidence"))
+    node_network_pressure_summary = _mapping(
+        review_summary.get("node_network_pressure_summary")
+    )
     network_kpi_validation = _mapping(
         review_summary.get("network_kpi_benchmark_validation")
     )
@@ -1594,6 +1676,8 @@ def build_runtime_export_scenario_review_bundle_v1(
         scenario_review_warnings.append("USER_SERVICE_REQUEST_SUMMARY_MISSING")
     if route_pressure_evidence.get("evidence_present") is not True:
         scenario_review_warnings.append("ROUTE_PRESSURE_EVIDENCE_MISSING")
+    if node_network_pressure_summary.get("evidence_present") is not True:
+        scenario_review_warnings.append("NODE_NETWORK_PRESSURE_SUMMARY_MISSING")
     if network_kpi_formula_evidence.get("evidence_present") is not True:
         scenario_review_warnings.append("NETWORK_KPI_FORMULA_EVIDENCE_MISSING")
     if network_kpi_variation_explanation.get("evidence_present") is not True:
@@ -1681,6 +1765,51 @@ def build_runtime_export_scenario_review_bundle_v1(
             "evidence_hash": str(route_pressure_evidence.get("evidence_hash", "")),
             "evidence_present": (
                 route_pressure_evidence.get("evidence_present") is True
+            ),
+        },
+        "node_network_pressure_summary": {
+            "summary_id": str(node_network_pressure_summary.get("summary_id", "")),
+            "pressure_model": str(
+                node_network_pressure_summary.get("pressure_model", "")
+            ),
+            "node_count": _integer(
+                node_network_pressure_summary.get("node_count")
+            ),
+            "item_count": _integer(
+                node_network_pressure_summary.get("item_count")
+            ),
+            "user_count": _integer(
+                node_network_pressure_summary.get("user_count")
+            ),
+            "satellite_count": _integer(
+                node_network_pressure_summary.get("satellite_count")
+            ),
+            "route_pressure_route_count": _integer(
+                node_network_pressure_summary.get("route_pressure_route_count")
+            ),
+            "pressure_edge_count": _integer(
+                node_network_pressure_summary.get("pressure_edge_count")
+            ),
+            "max_projected_utilization": _number(
+                node_network_pressure_summary.get("max_projected_utilization")
+            ),
+            "max_queue_delay_s": _number(
+                node_network_pressure_summary.get("max_queue_delay_s")
+            ),
+            "max_loss_proxy_rate": _number(
+                node_network_pressure_summary.get("max_loss_proxy_rate")
+            ),
+            "packet_level_simulation": (
+                node_network_pressure_summary.get("packet_level_simulation") is True
+            ),
+            "frontend_inference_required": (
+                node_network_pressure_summary.get("frontend_inference_required") is True
+            ),
+            "evidence_hash": str(
+                node_network_pressure_summary.get("evidence_hash", "")
+            ),
+            "evidence_present": (
+                node_network_pressure_summary.get("evidence_present") is True
             ),
         },
         "network_kpi_benchmark_validation": {
@@ -1879,6 +2008,7 @@ def build_runtime_export_scenario_review_bundle_v1(
                 "user_configuration_template_validation_v1.json",
                 "traffic_demand_explanation_v1.json",
                 "route_pressure_evidence_v1.json",
+                "node_network_pressure_summary_v1.json",
                 "user_service_request_summary_v2.json",
                 "manifest.json",
                 "config_snapshot.json",
@@ -1905,6 +2035,7 @@ def build_runtime_export_scenario_review_bundle_v1(
             "network_kpi_variation_explanation_v1.json",
             "runtime_kpi_movement_summary_v1.json",
             "route_pressure_evidence_v1.json",
+            "node_network_pressure_summary_v1.json",
             "user_configuration_template_validation_v1.json",
             "traffic_demand_explanation_v1.json",
             "user_service_request_summary_v2.json",
@@ -3340,6 +3471,9 @@ def build_runtime_export_package_audit_index_v1(
         )
     )
     route_pressure_evidence = _runtime_export_route_pressure_evidence(status)
+    node_network_pressure_summary = _runtime_export_node_network_pressure_summary(
+        status
+    )
     network_kpi_validation = _runtime_export_network_kpi_validation_evidence(status)
     network_kpi_formula_evidence = _runtime_export_network_kpi_formula_evidence(
         status
@@ -3521,6 +3655,21 @@ def build_runtime_export_package_audit_index_v1(
         ),
         "network_kpi_variation_explanation_missing_explanation_count": _integer(
             network_kpi_variation_explanation.get("missing_explanation_count")
+        ),
+        "node_network_pressure_summary_hash": str(
+            node_network_pressure_summary.get("evidence_hash", "")
+        ),
+        "node_network_pressure_summary_present": (
+            node_network_pressure_summary.get("evidence_present") is True
+        ),
+        "node_network_pressure_summary_node_count": _integer(
+            node_network_pressure_summary.get("node_count")
+        ),
+        "node_network_pressure_summary_pressure_edge_count": _integer(
+            node_network_pressure_summary.get("pressure_edge_count")
+        ),
+        "node_network_pressure_summary_max_projected_utilization": _number(
+            node_network_pressure_summary.get("max_projected_utilization")
         ),
         "runtime_kpi_movement_summary_hash": str(
             runtime_kpi_movement_summary.get("evidence_hash", "")
@@ -4814,6 +4963,7 @@ def _runtime_export_diagnostic_findings(
     missing_recommended: tuple[str, ...],
     route_trust: Mapping[str, Any],
     route_pressure_evidence: Mapping[str, Any],
+    node_network_pressure_summary: Mapping[str, Any],
     network_kpi_validation: Mapping[str, Any],
     network_kpi_formula_evidence: Mapping[str, Any],
     network_kpi_variation_explanation: Mapping[str, Any],
@@ -4900,6 +5050,30 @@ def _runtime_export_diagnostic_findings(
                 "ERROR",
                 "ROUTE_PRESSURE_EVENT_REPLAY_DECLARED",
                 "route pressure evidence declares event replay during export review.",
+            )
+        )
+    if node_network_pressure_summary.get("evidence_present") is not True:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "NODE_NETWORK_PRESSURE_SUMMARY_MISSING",
+                "config_snapshot.status does not include node_network_pressure_summary_v1.",
+            )
+        )
+    if node_network_pressure_summary.get("packet_level_simulation") is True:
+        findings.append(
+            _diagnostic_finding(
+                "ERROR",
+                "NODE_NETWORK_PRESSURE_PACKET_LEVEL_DECLARED",
+                "node network pressure summary declares packet-level simulation, which is outside the v2 demo boundary.",
+            )
+        )
+    if node_network_pressure_summary.get("frontend_inference_required") is True:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "NODE_NETWORK_PRESSURE_FRONTEND_INFERENCE_DECLARED",
+                "node network pressure summary should be backend-owned and not require frontend inference.",
             )
         )
     if network_kpi_validation.get("evidence_present") is not True:
@@ -5514,6 +5688,13 @@ def _runtime_export_scenario_review_evidence_hash(
                 "",
             )
         )
+    if filename == "node_network_pressure_summary_v1.json":
+        return str(
+            _mapping(scenario_review_bundle.get("node_network_pressure_summary")).get(
+                "evidence_hash",
+                "",
+            )
+        )
     if filename == "route_comparison_review_report_v1.json":
         return str(audit_index.get("route_comparison_review_report_hash", ""))
     if filename == "service_trace_comparison_review_report_v1.json":
@@ -5568,6 +5749,7 @@ def _runtime_export_scenario_review_step_label(
         "runtime_kpi_movement_summary_v1.json": "runtime KPI movement summary",
         "traffic_demand_explanation_v1.json": "traffic demand",
         "route_pressure_evidence_v1.json": "route pressure",
+        "node_network_pressure_summary_v1.json": "node pressure",
         "user_service_request_summary_v2.json": "user services",
         "service_lifecycle_trace_v2.json": "service trace",
         "service_trace_comparison_review_report_v1.json": "service trace review",
@@ -5793,6 +5975,82 @@ def _runtime_export_route_pressure_evidence(
     }
     evidence["evidence_hash"] = stable_hash_payload(evidence)
     return evidence
+
+def _runtime_export_node_network_pressure_summary(
+    status: Mapping[str, Any],
+) -> dict[str, object]:
+    summary = _mapping(status.get("node_network_pressure_summary_v1"))
+    evidence_present = bool(summary)
+    source = "config_snapshot.status.node_network_pressure_summary_v1"
+    if not evidence_present:
+        evidence: dict[str, object] = {
+            "version": "v1",
+            "summary_id": "leo_twin.node_network_pressure_summary.v1",
+            "source": source,
+            "artifact_id": RUNTIME_EXPORT_NODE_NETWORK_PRESSURE_SUMMARY_V1_ID,
+            "artifact_filename": NODE_NETWORK_PRESSURE_SUMMARY_FILENAME,
+            "evidence_present": False,
+            "pressure_model": "UNKNOWN",
+            "summary_scope": "UNKNOWN",
+            "node_count": 0,
+            "item_count": 0,
+            "user_count": 0,
+            "satellite_count": 0,
+            "route_pressure_route_count": 0,
+            "pressure_edge_count": 0,
+            "max_projected_utilization": 0.0,
+            "max_queue_delay_s": 0.0,
+            "max_loss_proxy_rate": 0.0,
+            "packet_level_simulation": False,
+            "frontend_inference_required": False,
+            "acceptable_for_demo_review": False,
+            "artifact_window_only": True,
+            "model_assumptions": (),
+            "caveats": (
+                "Runtime status did not expose node_network_pressure_summary_v1.",
+            ),
+        }
+        evidence["evidence_hash"] = stable_hash_payload(evidence)
+        return evidence
+
+    packet_level = summary.get("packet_level_simulation") is True
+    frontend_inference = summary.get("frontend_inference_required") is True
+    evidence = {
+        "version": "v1",
+        "summary_id": str(
+            summary.get("summary_id", "leo_twin.node_network_pressure_summary.v1")
+        ),
+        "source": source,
+        "runtime_status_source": str(summary.get("source", "")),
+        "artifact_id": RUNTIME_EXPORT_NODE_NETWORK_PRESSURE_SUMMARY_V1_ID,
+        "artifact_filename": NODE_NETWORK_PRESSURE_SUMMARY_FILENAME,
+        "evidence_present": True,
+        "pressure_model": str(summary.get("pressure_model", "")),
+        "summary_scope": str(summary.get("summary_scope", "")),
+        "node_count": _integer(summary.get("node_count")),
+        "item_count": _integer(summary.get("item_count")),
+        "user_count": _integer(summary.get("user_count")),
+        "satellite_count": _integer(summary.get("satellite_count")),
+        "route_pressure_route_count": _integer(
+            summary.get("route_pressure_route_count")
+        ),
+        "pressure_edge_count": _integer(summary.get("pressure_edge_count")),
+        "max_projected_utilization": _number(
+            summary.get("max_projected_utilization")
+        ),
+        "max_queue_delay_s": _number(summary.get("max_queue_delay_s")),
+        "max_loss_proxy_rate": _number(summary.get("max_loss_proxy_rate")),
+        "packet_level_simulation": packet_level,
+        "frontend_inference_required": frontend_inference,
+        "acceptable_for_demo_review": not packet_level and not frontend_inference,
+        "artifact_window_only": True,
+        "model_assumptions": _string_tuple(summary.get("model_assumptions")),
+        "caveats": _string_tuple(summary.get("caveats")),
+    }
+    evidence["evidence_hash"] = stable_hash_payload(evidence)
+    return evidence
+
+
 def _runtime_export_network_kpi_validation_evidence(
     status: Mapping[str, Any],
 ) -> dict[str, object]:

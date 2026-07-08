@@ -6,6 +6,53 @@ task must update this log in the same commit as the code or documentation
 change.
 
 
+## 2026-07-08 - Node Network Pressure Export Binding v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: pending in this commit
+- Scope: persist backend-owned `node_network_pressure_summary_v1` into runtime
+  export packages as `node_network_pressure_summary_v1.json`. Result-package
+  review summary, diagnostics bundle, scenario review bundle, artifact browser,
+  and audit index now bind the same node pressure evidence hash for offline
+  per-user and per-satellite review. This task does not change Event Kernel
+  behavior, network/orbit/compute model logic, frontend rendering, packet-level
+  behavior, topology selection, or external simulator integrations.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `src/leo_twin/services/result_package_contract.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src\leo_twin\services\result_package_contract.py examples\integration_demo\control_plane.py tests\unit\test_result_package_contract_v1.py tests\integration\test_result_package_export_v1.py tests\integration\test_runtime_session_control.py`
+    - Result: passed using the bundled Codex Python runtime.
+  - Manual pure-function smoke for eight result-package contract tests, including
+    `test_runtime_export_node_network_pressure_summary_v1_is_deterministic`
+    - Result: passed.
+  - Manual integration smoke for
+    `test_runtime_export_package_satisfies_result_package_contract_v1`
+    - Result: passed.
+  - Manual runtime session export smoke for
+    `test_demo_adapter_exports_runtime_result_package` and
+    `test_demo_adapter_serves_persisted_runtime_export_artifacts`
+    - Result: passed with a minimal `pytest.raises` stub because the bundled
+      no-approval Python runtime does not include `pytest`.
+  - `git diff --check`
+    - Result: passed for task files.
+- Problems encountered and handling:
+  - The result-package contract has multiple ordered artifact filename lists;
+    node pressure was inserted into each review/entrypoint path to keep the
+    package browser, scenario review, and audit index consistent.
+  - Local runtime/generated config files and the unrelated `%SystemDrive%/`
+    directory remain outside this task scope and were not staged.
+- Known remaining issues / follow-up:
+  - Offline packages now preserve node pressure evidence; the next backend task
+    should add a cursor/page endpoint or persisted detail page so dashboard node
+    detail tables can browse large node-pressure windows without relying on the
+    bounded status snapshot.
+
 ## 2026-07-08 - Runtime KPI Movement Export Binding v1
 
 - Branch: `feature/T402-network-pressure-provenance-v1`

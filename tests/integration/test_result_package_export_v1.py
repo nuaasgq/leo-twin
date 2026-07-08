@@ -11,6 +11,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_V1_ID,
     RUNTIME_EXPORT_NETWORK_KPI_FORMULA_EVIDENCE_V1_ID,
     RUNTIME_EXPORT_NETWORK_KPI_VARIATION_EXPLANATION_V1_ID,
+    RUNTIME_EXPORT_NODE_NETWORK_PRESSURE_SUMMARY_V1_ID,
     RUNTIME_EXPORT_RUNTIME_KPI_MOVEMENT_SUMMARY_V1_ID,
     RUNTIME_EXPORT_TRAFFIC_DEMAND_EXPLANATION_V1_ID,
     RUNTIME_EXPORT_USER_CONFIGURATION_TEMPLATE_VALIDATION_V1_ID,
@@ -60,6 +61,7 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert (package_dir / "review_summary_v1.json").exists()
     assert (package_dir / "route_detail_index_v1.json").exists()
     assert (package_dir / "route_pressure_evidence_v1.json").exists()
+    assert (package_dir / "node_network_pressure_summary_v1.json").exists()
     assert (package_dir / "network_kpi_benchmark_validation_v1.json").exists()
     assert (package_dir / "network_kpi_formula_evidence_v1.json").exists()
     assert (package_dir / "network_kpi_variation_explanation_v1.json").exists()
@@ -75,6 +77,7 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert "service_lifecycle_trace_v2.json" in filenames
     assert "route_detail_index_v1.json" in filenames
     assert "route_pressure_evidence_v1.json" in filenames
+    assert "node_network_pressure_summary_v1.json" in filenames
     assert "review_summary_v1.json" in filenames
     assert "diagnostics_bundle_v1.json" in filenames
     assert "network_kpi_benchmark_validation_v1.json" in filenames
@@ -100,6 +103,11 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     )
     route_pressure_evidence = json.loads(
         (package_dir / "route_pressure_evidence_v1.json").read_text(encoding="utf-8")
+    )
+    node_network_pressure_summary = json.loads(
+        (package_dir / "node_network_pressure_summary_v1.json").read_text(
+            encoding="utf-8"
+        )
     )
     review_summary = json.loads(
         (package_dir / "review_summary_v1.json").read_text(encoding="utf-8")
@@ -228,6 +236,13 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert route_pressure_evidence["route_pressure_evidence_export_policy"] == (
         config_snapshot["status"]["runtime_export_route_pressure_evidence_policy_v1"]
     )
+    assert node_network_pressure_summary["artifact_id"] == (
+        RUNTIME_EXPORT_NODE_NETWORK_PRESSURE_SUMMARY_V1_ID
+    )
+    assert node_network_pressure_summary["summary"] == (
+        config_snapshot["status"]["node_network_pressure_summary_v1"]
+    )
+    assert node_network_pressure_summary["evidence"]["evidence_present"] is True
     assert review_summary["type"] == "RUNTIME_EXPORT_REVIEW_SUMMARY_V1"
     assert review_summary["review_status"] == "REVIEW_READY"
     assert review_summary["route_trust"]["trust_id"] == route_trust_status["trust_id"]
@@ -249,7 +264,20 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         "pressure_admission_rejected_count", 0
     )
     assert review_summary["route_pressure_evidence"]["packet_level_simulation"] is False
+    assert review_summary["node_network_pressure_summary"]["evidence_present"] is True
+    assert review_summary["node_network_pressure_summary"]["node_count"] == (
+        node_network_pressure_summary["evidence"]["node_count"]
+    )
+    assert review_summary["node_network_pressure_summary"]["pressure_edge_count"] == (
+        node_network_pressure_summary["evidence"]["pressure_edge_count"]
+    )
+    assert review_summary["node_network_pressure_summary"][
+        "frontend_inference_required"
+    ] is False
     assert review_summary["artifacts"]["route_pressure_evidence_exported"] is True
+    assert review_summary["artifacts"][
+        "node_network_pressure_summary_exported"
+    ] is True
     assert review_summary["network_kpi_benchmark_validation"][
         "validation_id"
     ] == "leo_twin.network_kpi_benchmark_validation.v1"
@@ -357,6 +385,14 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert pressure_browser_item["category"] == "ROUTE_SERVICE_EVIDENCE"
     assert pressure_browser_item["present"] is True
     assert pressure_browser_item["default_json_pointer"] == "/summary/items"
+    node_pressure_browser_item = next(
+        item
+        for item in artifact_browser["items"]
+        if item["filename"] == "node_network_pressure_summary_v1.json"
+    )
+    assert node_pressure_browser_item["category"] == "ROUTE_SERVICE_EVIDENCE"
+    assert node_pressure_browser_item["present"] is True
+    assert node_pressure_browser_item["default_json_pointer"] == "/summary/items"
     assert diagnostics_bundle["route_trust"]["trust_id"] == route_trust_status[
         "trust_id"
     ]
@@ -369,6 +405,12 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     )
     assert diagnostics_bundle["route_pressure_evidence"]["evidence_present"] is True
     assert diagnostics_bundle["route_pressure_evidence"]["event_replay"] is False
+    assert diagnostics_bundle["node_network_pressure_summary"]["evidence_hash"] == (
+        review_summary["node_network_pressure_summary"]["evidence_hash"]
+    )
+    assert diagnostics_bundle["node_network_pressure_summary"][
+        "evidence_present"
+    ] is True
     assert diagnostics_bundle["network_kpi_benchmark_validation"][
         "validation_hash"
     ] == review_summary["network_kpi_benchmark_validation"]["validation_hash"]
@@ -450,6 +492,9 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert runtime_kpi_movement_summary["evidence"]["evidence_hash"] == (
         review_summary["runtime_kpi_movement_summary"]["evidence_hash"]
     )
+    assert node_network_pressure_summary["evidence"]["evidence_hash"] == (
+        review_summary["node_network_pressure_summary"]["evidence_hash"]
+    )
     assert network_kpi_variation_explanation["evidence"]["evidence_hash"] == (
         review_summary["network_kpi_variation_explanation"]["evidence_hash"]
     )
@@ -525,6 +570,12 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert scenario_review_bundle["route_pressure_evidence"][
         "evidence_present"
     ] is True
+    assert scenario_review_bundle["node_network_pressure_summary"]["evidence_hash"] == (
+        node_network_pressure_summary["evidence"]["evidence_hash"]
+    )
+    assert scenario_review_bundle["node_network_pressure_summary"][
+        "evidence_present"
+    ] is True
     assert scenario_review_bundle["network_kpi_benchmark_validation"][
         "validation_hash"
     ] == network_kpi_benchmark_validation["evidence"]["validation_hash"]
@@ -583,6 +634,9 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         scenario_review_bundle["recommended_review_order"]
     )
     assert "route_pressure_evidence_v1.json" in (
+        scenario_review_bundle["recommended_review_order"]
+    )
+    assert "node_network_pressure_summary_v1.json" in (
         scenario_review_bundle["recommended_review_order"]
     )
     assert scenario_review_bundle["scenario_review_hash"].startswith("sha256:")
@@ -665,6 +719,19 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     )
     assert audit_index["route_pressure_evidence_max_edge_projected_utilization"] == (
         review_summary["route_pressure_evidence"]["max_edge_projected_utilization"]
+    )
+    assert audit_index["node_network_pressure_summary_present"] is True
+    assert audit_index["node_network_pressure_summary_hash"] == (
+        node_network_pressure_summary["evidence"]["evidence_hash"]
+    )
+    assert audit_index["node_network_pressure_summary_node_count"] == (
+        review_summary["node_network_pressure_summary"]["node_count"]
+    )
+    assert audit_index["node_network_pressure_summary_pressure_edge_count"] == (
+        review_summary["node_network_pressure_summary"]["pressure_edge_count"]
+    )
+    assert audit_index["node_network_pressure_summary_max_projected_utilization"] == (
+        review_summary["node_network_pressure_summary"]["max_projected_utilization"]
     )
     assert audit_index["user_service_request_summary_present"] is True
     assert audit_index["user_service_request_summary_hash"] == (
