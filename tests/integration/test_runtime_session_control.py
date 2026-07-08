@@ -1237,6 +1237,7 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
         "route_detail_index_v1.json",
         "route_pressure_evidence_v1.json",
         "node_network_pressure_summary_v1.json",
+        "compute_resource_pool_summary_v1.json",
         "runtime_kpi_movement_summary_v1.json",
         "scenario_review_bundle_v1.json",
         "service_lifecycle_trace_v2.json",
@@ -1277,6 +1278,11 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
     )
     node_network_pressure_summary = json.loads(
         (package_dir / "node_network_pressure_summary_v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    compute_resource_pool_summary = json.loads(
+        (package_dir / "compute_resource_pool_summary_v1.json").read_text(
             encoding="utf-8"
         )
     )
@@ -1374,6 +1380,22 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
         "node_network_pressure_summary_v1"
     ]
     assert node_network_pressure_summary["evidence"]["evidence_present"] is True
+    assert compute_resource_pool_summary["type"] == (
+        "RUNTIME_EXPORT_COMPUTE_RESOURCE_POOL_SUMMARY_V1"
+    )
+    assert compute_resource_pool_summary["compute_resource_pool_summary"] == (
+        config_snapshot["status"]["compute_resource_pool_summary_v1"]
+    )
+    assert compute_resource_pool_summary["evidence"]["summary_hash"] == (
+        config_snapshot["status"]["compute_resource_pool_summary_v1"][
+            "summary_hash"
+        ]
+    )
+    assert compute_resource_pool_summary["evidence"]["packet_level_simulation"] is False
+    assert (
+        compute_resource_pool_summary["evidence"]["frontend_inference_required"]
+        is False
+    )
     assert network_temporal_pressure_evidence["type"] == (
         "RUNTIME_EXPORT_NETWORK_TEMPORAL_PRESSURE_EVIDENCE_V1"
     )
@@ -1517,6 +1539,7 @@ def test_demo_adapter_exports_deterministic_runtime_archive(tmp_path) -> None:
             "manifest.json",
             "metrics.csv",
             "network_temporal_pressure_evidence_v1.json",
+            "compute_resource_pool_summary_v1.json",
             "review_summary_v1.json",
             "route_detail_index_v1.json",
             "scenario_review_bundle_v1.json",

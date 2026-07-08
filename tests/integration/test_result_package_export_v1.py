@@ -64,6 +64,7 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert (package_dir / "route_detail_index_v1.json").exists()
     assert (package_dir / "route_pressure_evidence_v1.json").exists()
     assert (package_dir / "node_network_pressure_summary_v1.json").exists()
+    assert (package_dir / "compute_resource_pool_summary_v1.json").exists()
     assert (package_dir / "network_kpi_benchmark_validation_v1.json").exists()
     assert (package_dir / "network_kpi_formula_evidence_v1.json").exists()
     assert (package_dir / "network_temporal_pressure_evidence_v1.json").exists()
@@ -82,6 +83,7 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert "route_detail_index_v1.json" in filenames
     assert "route_pressure_evidence_v1.json" in filenames
     assert "node_network_pressure_summary_v1.json" in filenames
+    assert "compute_resource_pool_summary_v1.json" in filenames
     assert "review_summary_v1.json" in filenames
     assert "diagnostics_bundle_v1.json" in filenames
     assert "network_kpi_benchmark_validation_v1.json" in filenames
@@ -112,6 +114,11 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     )
     node_network_pressure_summary = json.loads(
         (package_dir / "node_network_pressure_summary_v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    compute_resource_pool_summary = json.loads(
+        (package_dir / "compute_resource_pool_summary_v1.json").read_text(
             encoding="utf-8"
         )
     )
@@ -259,6 +266,27 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         config_snapshot["status"]["node_network_pressure_summary_v1"]
     )
     assert node_network_pressure_summary["evidence"]["evidence_present"] is True
+    assert compute_resource_pool_summary["type"] == (
+        "RUNTIME_EXPORT_COMPUTE_RESOURCE_POOL_SUMMARY_V1"
+    )
+    assert compute_resource_pool_summary["artifact_id"] == (
+        "leo_twin.runtime_export_compute_resource_pool_summary.v1"
+    )
+    assert compute_resource_pool_summary["source"] == "BACKEND_RUNTIME_STATUS"
+    assert compute_resource_pool_summary["compute_resource_pool_summary"] == (
+        config_snapshot["status"]["compute_resource_pool_summary_v1"]
+    )
+    assert compute_resource_pool_summary["evidence"]["summary_hash"] == (
+        config_snapshot["status"]["compute_resource_pool_summary_v1"][
+            "summary_hash"
+        ]
+    )
+    assert compute_resource_pool_summary["evidence"]["packet_level_simulation"] is False
+    assert (
+        compute_resource_pool_summary["evidence"]["frontend_inference_required"]
+        is False
+    )
+    assert compute_resource_pool_summary["artifact_hash"].startswith("sha256:")
     assert review_summary["type"] == "RUNTIME_EXPORT_REVIEW_SUMMARY_V1"
     assert review_summary["review_status"] == "REVIEW_READY"
     assert review_summary["route_trust"]["trust_id"] == route_trust_status["trust_id"]
@@ -346,6 +374,9 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         "artifact_filenames"
     ]
     assert "diagnostics_bundle_v1.json" in review_summary["artifacts"][
+        "artifact_filenames"
+    ]
+    assert "compute_resource_pool_summary_v1.json" in review_summary["artifacts"][
         "artifact_filenames"
     ]
     assert review_summary["artifacts"][

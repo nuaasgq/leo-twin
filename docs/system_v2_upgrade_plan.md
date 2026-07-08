@@ -1403,6 +1403,11 @@ Current Phase 3 progress:
   contract prevents misleading cross-unit pie charts and keeps the backend as
   the source of truth for resource pool semantics.
 
+- T412 persists `compute_resource_pool_summary_v1` into runtime result packages
+  as `compute_resource_pool_summary_v1.json`. Offline review packages now carry
+  the same backend-owned per-dimension compute resource pool summary, its
+  summary hash, and the explicit no-packet-level/no-frontend-inference boundary.
+
 ## 5. Parallel Agent Assignment Model
 
 - Kernel Agent: guard Event Kernel boundaries; review that no domain behavior

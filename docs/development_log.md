@@ -21072,3 +21072,47 @@ change.
     new scheduler, workload placement algorithm, or hardware telemetry source.
   - Per-satellite resource tables can consume this summary plus existing
     `satellite_kpi_slices_v1`, but this task intentionally did not change UI.
+
+## 2026-07-08 - T412 compute resource pool result package export v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: persist the backend-owned `compute_resource_pool_summary_v1` runtime
+  status contract into runtime result packages as
+  `compute_resource_pool_summary_v1.json`. The artifact copies the exact status
+  summary, exposes summary/evidence hashes, and preserves the explicit
+  no-packet-level/no-frontend-inference boundary so offline result review can
+  inspect compute resource pool semantics without frontend-side derivation. No
+  Event Kernel, compute scheduler, frontend rendering, packet-level model, or
+  external simulator behavior was changed.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `tests/unit/test_runtime_compute_resource_pool_export.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Python `py_compile` for touched backend/test files.
+    - Result: passed.
+  - Direct function run for the new compute resource pool export unit test,
+    the result package contract export test, runtime package export test, and
+    deterministic runtime archive test.
+    - Result: 4 passed.
+- Problems encountered:
+  - `apply_patch` intermittently failed in the Windows sandbox with
+    `orchestrator_helper_launch_canceled`; after one successful new-file patch,
+    later patches were applied through deterministic UTF-8 text replacement.
+  - The first direct runner passed a non-created child directory as `tmp_path`,
+    unlike pytest's created `tmp_path` fixture, which left the live export at
+    zero processed events. Re-running with created temp directories matched
+    pytest semantics and passed.
+  - Existing local runtime config drift remains untouched and must stay
+    unstaged: `configs/generated_full_system_demo.json` and
+    `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The compute pool artifact is included in package files and artifact
+    filename lists, but it is not yet promoted into review/audit summary
+    sections or recommended review ordering.
+  - The artifact preserves MetricsCollector-derived resource estimates; it does
+    not add a new compute placement or hardware telemetry model.
