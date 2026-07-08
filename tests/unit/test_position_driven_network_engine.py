@@ -707,7 +707,7 @@ def test_compute_node_update_reroutes_active_flows_with_capacity_feedback() -> N
         compute_node_ids=("node-a",),
         link_capacity=100.0,
         routing_runtime=RoutingRuntime(RoutingProtocol.LINK_STATE),
-        static_links=(LinkState("user-east", "node-a", 0.5, 100.0, True),),
+        static_links=(LinkState("user-east", "node-a", 5.0, 100.0, True),),
     )
     compute = ComputeSink()
     metrics = MetricsSink()
@@ -905,7 +905,7 @@ def test_position_driven_stack_trace_updates_after_reroute() -> None:
         ),
         compute_node_ids=("node-a",),
         link_capacity=50.0,
-        propagation_speed_km_s=1000.0,
+        propagation_speed_km_s=100.0,
         cell_size_km=1000.0,
         stack_runtime=NetworkStackRuntime(build_default_leo_protocol_stack()),
     )

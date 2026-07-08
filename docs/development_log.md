@@ -5,6 +5,39 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-08 - Position-Driven Active Flow Reroute Test Alignment v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: pending in this commit
+- Scope: align the position-driven network reroute regression scenarios with
+  the completed-flow release semantics introduced by Network Active Flow Release
+  v1. The compute-node update reroute test now keeps the static route active
+  across the update window, and the stack-trace reroute test keeps the initial
+  route active until the orbit update can invalidate it. This preserves the
+  backend rule that completed business flows are not rerouted later by node or
+  orbit changes.
+- Changed files/modules:
+  - `tests/unit/test_position_driven_network_engine.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - Direct bundled-Python smoke for
+    `test_compute_node_update_reroutes_active_flows_with_capacity_feedback` and
+    `test_position_driven_stack_trace_updates_after_reroute` with a minimal
+    `pytest.approx`/`pytest.raises` shim.
+    - Result: passed with `PYTHONPATH=src`.
+- Problems encountered and handling:
+  - `apply_patch` could not launch the Windows sandbox helper in this session,
+    so the small test/doc edits were made with exact PowerShell replacements.
+  - The bundled Codex Python runtime does not include pytest; focused validation
+    used direct test-function smoke execution instead of dependency changes or
+    approval prompts.
+  - Local runtime/generated config files and `%SystemDrive%/` remain outside
+    this task scope and were not staged.
+- Known remaining issues / follow-up:
+  - Run the full pytest suite in a clean environment with pytest available when
+    the Windows system-Python access issue is resolved.
+
 ## 2026-07-08 - Network Time Pressure Model Extraction v1
 
 - Branch: `feature/T402-network-pressure-provenance-v1`

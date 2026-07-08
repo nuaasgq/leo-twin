@@ -293,6 +293,10 @@ Tasks:
   - Status: T410 prevents later orbit/link updates from rerouting historical
     completed business flows, reducing replay-like event and KPI residue while
     preserving Event Kernel ordering and flow-level semantics.
+  - Status: T419 aligns position-driven reroute regression tests with this
+    completed-flow release model by keeping the tested business flow active
+    across compute/orbit update windows, instead of expecting completed flows to
+    reroute.
 - V2-014: Add traffic service-mix temporal interleaving.
   - Scope: order generated service-mix requests by arrival time, priority,
     traffic class, and flow id after weighted profile expansion.
