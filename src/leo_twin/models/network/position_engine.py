@@ -226,7 +226,10 @@ class PositionDrivenNetworkEngine(SimulationModule):
             return
 
         if event.event_type == _NETWORK_FLOW_RELEASE:
-            for emitted in self._release_flow_pressure(event.sim_time, event.payload):
+            flow_id = _flow_id_from_release_payload(event.payload)
+            self._active_flows.pop(flow_id, None)
+            self._last_routes.pop(flow_id, None)
+            for emitted in self._release_flow_pressure(event.sim_time, flow_id):
                 kernel.schedule_event(emitted)
             return
 
@@ -247,6 +250,9 @@ class PositionDrivenNetworkEngine(SimulationModule):
             kernel.schedule_event(self._flow_completion_event(event.sim_time, request, route))
             if route.available:
                 kernel.schedule_event(self._flow_release_event(event.sim_time, request, route))
+            else:
+                self._active_flows.pop(request.flow_id, None)
+                self._last_routes.pop(request.flow_id, None)
             return
 
         if event.event_type == COMPUTE_NODE_UPDATE:
@@ -472,9 +478,8 @@ class PositionDrivenNetworkEngine(SimulationModule):
     def _release_flow_pressure(
         self,
         dispatch_time: float,
-        payload: object,
+        flow_id: str,
     ) -> tuple[SimEvent, ...]:
-        flow_id = _flow_id_from_release_payload(payload)
         edges = self._flow_pressure.release(flow_id)
         if not edges:
             return ()

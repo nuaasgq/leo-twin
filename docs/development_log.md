@@ -5,6 +5,46 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-08 - Network Active Flow Release v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: pending in this commit
+- Scope: fix position-driven network runtime state so completed or unavailable
+  flows are removed from the backend active-flow registry. `_NETWORK_FLOW_RELEASE`
+  now clears `_active_flows` and `_last_routes` before releasing pressure, and
+  unavailable routes are removed immediately after their completion event is
+  scheduled. This prevents later orbit/link updates from rerouting historical
+  completed business flows and reduces replay-like KPI/event residue. The
+  change does not modify Event Kernel ordering, packet-level semantics,
+  routing algorithms, frontend rendering, or external simulator integrations.
+- Changed files/modules:
+  - `src/leo_twin/models/network/position_engine.py`
+  - `tests/unit/test_position_driven_network_engine.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src\leo_twin\models\network\position_engine.py tests\unit\test_position_driven_network_engine.py`
+    - Result: passed using the bundled Codex Python runtime.
+  - Manual smoke for active-flow reroute before completion, released-flow no
+    reroute after completion, and no-reroute-without-link-delta tests
+    - Result: passed with a minimal `pytest` stub because the bundled
+      no-approval Python runtime does not include `pytest`.
+  - `git diff --check`
+    - Result: passed for task files.
+- Problems encountered and handling:
+  - `apply_patch` is still blocked by the Windows sandbox helper in this
+    workspace, so the edit used exact PowerShell replacements and was checked
+    with `git diff`.
+  - Running the local `Python314\python.exe -m pytest` was rejected by the
+    sandbox with access denied. No approval was requested per operator
+    instruction; targeted smoke tests were run with the bundled runtime.
+  - PowerShell initially wrote UTF-8 with BOM and extra EOF blank lines; both
+    were removed before validation.
+- Known remaining issues / follow-up:
+  - Flow completion events are still scheduled from the route selected at
+    arrival time. A later task should add an explicit service/flow lifecycle
+    state machine if in-flight reroute should alter completion timing.
+
 ## 2026-07-08 - Traffic Service Mix Interleaving v1
 
 - Branch: `feature/T402-network-pressure-provenance-v1`

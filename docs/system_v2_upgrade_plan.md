@@ -257,6 +257,13 @@ Tasks:
     status display so saved operator checklists can be compared against the
     latest backend template for missing records, evidence-hash drift, operator
     attention, and extra stale records without replay or recomputation.
+- V2-015: Clean up completed network active-flow state.
+  - Scope: remove completed or unavailable flow requests from the backend
+    position-driven network active-flow registry after release/completion.
+  - Depends on: V2-012, V2-014.
+  - Status: T410 prevents later orbit/link updates from rerouting historical
+    completed business flows, reducing replay-like event and KPI residue while
+    preserving Event Kernel ordering and flow-level semantics.
 - V2-014: Add traffic service-mix temporal interleaving.
   - Scope: order generated service-mix requests by arrival time, priority,
     traffic class, and flow id after weighted profile expansion.
