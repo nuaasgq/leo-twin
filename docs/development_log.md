@@ -20900,3 +20900,51 @@ change.
     validation.
   - The control-panel key-field UI intentionally does not expose these advanced
     fields yet; users configure them through detailed YAML templates.
+
+## 2026-07-08 - T408 runtime temporal pressure profile status v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: expose the configured and currently observed temporal network-pressure
+  profile directly in runtime status as `network_temporal_pressure_profile_v1`.
+  The new backend service binds `network.time_pressure_*` config fields with
+  MetricsCollector `network_quality_time_pressure_*` runtime fields, includes a
+  deterministic hash, and marks the contract as flow-level proxy only. Demo
+  ControlPlane now publishes this object so frontend/dashboard/export consumers
+  do not need to infer temporal pressure semantics from KPI samples. No Event
+  Kernel, frontend architecture, packet-level simulation, or external simulator
+  behavior was changed.
+- Changed files/modules:
+  - `src/leo_twin/services/network_temporal_pressure_profile.py`
+  - `examples/integration_demo/control_plane.py`
+  - `tests/unit/test_network_temporal_pressure_profile_v1.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Python `py_compile` for the new service, DemoControlPlane, and
+    affected tests.
+    - Result: passed.
+  - Direct function run for 3 new unit tests and the affected runtime status
+    integration test.
+    - Result: passed.
+  - Direct function run for existing runtime duration completion tests:
+    manual completion, background loop auto-completion, and server-side advance
+    loop duration stop.
+    - Result: passed.
+- Problems encountered:
+  - Automatic runtime duration completion was initially considered for this
+    task, but code inspection showed the behavior and tests already exist. The
+    task was narrowed to a non-duplicative runtime status contract and the
+    existing duration tests were re-run as regression checks.
+  - The bundled runtime still lacks pytest, so target tests were executed by
+    direct function calls with local pytest shims.
+  - Existing local runtime config drift remains untouched and must stay
+    unstaged: `configs/generated_full_system_demo.json` and
+    `configs/sees_control.yaml`.
+- Known remaining issues:
+  - Runtime temporal pressure profile explains the deterministic proxy source;
+    it still does not validate KPI values against packet-level, RF-level, or
+    external simulator measurements.
+  - The dashboard can consume this status field in a later frontend task, but
+    this task intentionally did not change frontend rendering.

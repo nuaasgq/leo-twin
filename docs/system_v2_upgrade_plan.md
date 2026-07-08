@@ -1380,6 +1380,12 @@ Current Phase 3 progress:
   control-panel key-field surface while making KPI variation reproducible from
   configuration.
 
+- T408 adds `network_temporal_pressure_profile_v1` to runtime status, binding
+  configured `network.time_pressure_*` fields with observed MetricsCollector
+  `network_quality_time_pressure_*` fields. This gives the frontend and
+  result/export layers a backend-owned, hash-backed status contract for KPI
+  temporal pressure semantics without changing the formulas.
+
 ## 5. Parallel Agent Assignment Model
 
 - Kernel Agent: guard Event Kernel boundaries; review that no domain behavior

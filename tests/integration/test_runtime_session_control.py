@@ -285,6 +285,16 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
     status_after_tick = control_plane.runtime_status()["status"]
     assert "network_quality_loss_proxy_rate" in status_after_tick["metrics_summary"]
     assert "compute_resource_used_gflops_fp32" in status_after_tick["metrics_summary"]
+    temporal_profile = status_after_tick["network_temporal_pressure_profile_v1"]
+    assert temporal_profile["version"] == "v1"
+    assert temporal_profile["source"] == "SEES_CONFIG_AND_METRICS_SUMMARY"
+    assert temporal_profile["configured"]["period_s"] == 120.0
+    assert temporal_profile["observed"]["period_s"] == status_after_tick[
+        "metrics_summary"
+    ]["network_quality_time_pressure_period_s"]
+    assert temporal_profile["packet_level_simulation"] is False
+    assert temporal_profile["frontend_inference_required"] is False
+    assert str(temporal_profile["profile_hash"]).startswith("sha256:")
     lifecycle = status_after_tick["network_flow_lifecycle_summary_v1"]
     assert lifecycle["version"] == "v1"
     assert lifecycle["source"] == "METRICS_SUMMARY_NETWORK_FLOW_LIFECYCLE_FIELDS"
