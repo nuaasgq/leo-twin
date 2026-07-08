@@ -2392,6 +2392,12 @@ class DemoControlPlane:
         status["queued_event_count"] = runtime_status["queued_event_count"]
         status["last_error"] = runtime_status["last_error"]
         status["deterministic_replay"] = runtime_status["deterministic_replay"]
+        status.update(
+            _runtime_completion_fields(
+                runtime_status,
+                self._require_session().runtime_config.duration,
+            )
+        )
         if runtime_status["lifecycle_state"] in {"COMPLETED", "ERROR"}:
             status["status"] = runtime_status["status"]
         status["initialized"] = self._initialized
@@ -2991,6 +2997,44 @@ class DemoControlPlane:
                 f"runtime export package {package_id!r} has invalid traffic demand export"
             )
         return traffic_demand_export
+
+
+def _runtime_completion_fields(
+    runtime_status: Mapping[str, Any],
+    runtime_duration: float | int,
+) -> dict[str, Any]:
+    duration_seconds = max(0.0, float(runtime_duration))
+    current_sim_time = max(0.0, float(runtime_status.get("current_sim_time", 0.0)))
+    lifecycle_state = str(runtime_status.get("lifecycle_state", ""))
+    duration_reached = (
+        lifecycle_state == RuntimeLifecycleState.COMPLETED.value
+        and current_sim_time >= duration_seconds
+    )
+    completion_reason = ""
+    if lifecycle_state == RuntimeLifecycleState.COMPLETED.value:
+        completion_reason = (
+            "RUNTIME_DURATION_REACHED"
+            if duration_reached
+            else "EVENT_QUEUE_DRAINED_BEFORE_DURATION"
+        )
+    return {
+        "runtime_duration_seconds": duration_seconds,
+        "runtime_duration_reached": duration_reached,
+        "runtime_completion_reason": completion_reason,
+        "runtime_completion_reason_label": _runtime_completion_reason_label(
+            completion_reason
+        ),
+        "runtime_completion_source": "SimulationSession",
+    }
+
+
+def _runtime_completion_reason_label(reason: str) -> str:
+    labels = {
+        "": "Runtime not completed",
+        "RUNTIME_DURATION_REACHED": "Runtime duration reached",
+        "EVENT_QUEUE_DRAINED_BEFORE_DURATION": "Event queue drained before runtime duration",
+    }
+    return labels.get(reason, reason)
 
 
 def _runtime_export_restore_control_payload(raw: str | bytes) -> dict[str, Any] | None:

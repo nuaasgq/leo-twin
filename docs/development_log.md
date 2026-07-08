@@ -5,6 +5,42 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-08 - Runtime Duration Completion Evidence v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: pending in this commit
+- Scope: make runtime-duration completion explicit in the demo backend status
+  payload. `/runtime/status` now includes `runtime_duration_seconds`,
+  `runtime_duration_reached`, `runtime_completion_reason`,
+  `runtime_completion_reason_label`, and `runtime_completion_source`, derived
+  from `SimulationSession` status and runtime config. This gives the frontend a
+  backend-owned completion signal when a live run ends because the configured
+  duration was reached, instead of inferring completion from progress values or
+  legacy controller status. The change does not alter Event Kernel behavior,
+  event ordering, runtime advancement, traffic, routing, compute, or frontend
+  rendering.
+- Changed files/modules:
+  - `examples/integration_demo/control_plane.py`
+  - `tests/integration/test_live_runtime_streaming.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile examples\integration_demo\control_plane.py tests\integration\test_live_runtime_streaming.py`
+    - Result: passed using the bundled Codex Python runtime.
+  - Manual smoke for
+    `test_demo_runtime_status_completes_at_configured_duration` and
+    `test_demo_background_loop_auto_completes_runtime_status`.
+    - Result: passed with `PYTHONPATH=src`.
+- Problems encountered and handling:
+  - A live-loop smoke test showed the backend already reaches `COMPLETED` at
+    duration and stops the advance loop. The code change therefore adds
+    explicit completion evidence rather than changing session advancement.
+  - Local runtime/generated config files and `%SystemDrive%/` remain outside
+    this task scope and were not staged.
+- Known remaining issues / follow-up:
+  - The frontend should bind completion banners/buttons to
+    `runtime_completion_reason` and `runtime_duration_reached` so simulation
+    end state is not inferred from progress text.
 ## 2026-07-08 - Runtime Satellite Service Resource Semantics v1
 
 - Branch: `feature/T402-network-pressure-provenance-v1`

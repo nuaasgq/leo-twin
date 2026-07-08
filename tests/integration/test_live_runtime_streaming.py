@@ -488,7 +488,57 @@ def test_demo_runtime_status_completes_at_configured_duration(tmp_path: Path) ->
     assert status["runtime_target_sim_time"] == 2.0
     assert status["event_clock_lag_s"] == 0.0
     assert status["runtime_time_source"] == "TERMINAL_DURATION"
+    assert status["runtime_duration_seconds"] == 2.0
+    assert status["runtime_duration_reached"] is True
+    assert status["runtime_completion_reason"] == "RUNTIME_DURATION_REACHED"
+    assert status["runtime_completion_reason_label"] == "Runtime duration reached"
+    assert status["runtime_completion_source"] == "SimulationSession"
     assert kpi_series["samples"][-1]["sim_time"] == 2.0
+
+
+def test_demo_background_loop_auto_completes_runtime_status(tmp_path: Path) -> None:
+    control_plane = _control_plane(tmp_path)
+    initialized = control_plane.handle_raw_message(
+        json.dumps(
+            {
+                "type": "RUNTIME_CONTROL",
+                "action": "INITIALIZE",
+                "payload": {
+                    "mode": "ACCELERATED",
+                    "speed_factor": 100,
+                    "duration": 2,
+                    "orbit": {"update_interval_seconds": 1},
+                    "traffic_model": {
+                        "flow_interval_seconds": 1,
+                        "task_interval_seconds": 1,
+                    },
+                },
+            }
+        )
+    )
+    assert initialized["ok"] is True
+    started = control_plane.handle_raw_message(
+        json.dumps({"type": "RUNTIME_CONTROL", "action": "START"})
+    )
+    assert started["ok"] is True
+
+    assert _wait_for(
+        lambda: control_plane.runtime_lifecycle_state()
+        == RuntimeLifecycleState.COMPLETED,
+        timeout_seconds=2.0,
+    )
+
+    status = control_plane.runtime_status()["status"]
+
+    assert control_plane.advance_loop_snapshot()["state"] == "STOPPED"
+    assert status["status"] == "COMPLETED"
+    assert status["lifecycle_state"] == "COMPLETED"
+    assert status["current_sim_time"] == 2.0
+    assert status["runtime_duration_seconds"] == 2.0
+    assert status["runtime_duration_reached"] is True
+    assert status["runtime_completion_reason"] == "RUNTIME_DURATION_REACHED"
+    assert status["runtime_completion_source"] == "SimulationSession"
+
 
 
 def test_legacy_live_streams_stop_after_session_completion(tmp_path: Path) -> None:

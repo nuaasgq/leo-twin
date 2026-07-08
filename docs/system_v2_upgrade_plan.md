@@ -697,7 +697,10 @@ Tasks:
     stalled between scheduled events. T408 binds the demo KPI time-series tail
     query to `runtime_target_sim_time` when available, so live status can expose
     current KPI tail samples during sparse-event intervals without changing
-    Event Kernel behavior or KPI formulas.
+    Event Kernel behavior or KPI formulas. T417 adds runtime-duration completion
+    evidence fields to demo /runtime/status, including duration reached,
+    completion reason, reason label, and source, and verifies that the backend
+    live advance loop auto-completes status at the configured duration.
 
 ### WS6. Dashboard and Frontend Product UX v3
 
