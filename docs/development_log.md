@@ -6,6 +6,47 @@ task must update this log in the same commit as the code or documentation
 change.
 
 
+## 2026-07-08 - Node Network Pressure Summary v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: pending in this commit
+- Scope: add backend-owned `node_network_pressure_summary_v1` to runtime
+  lifecycle summaries. The summary deterministically aggregates
+  `RouteState.pressure_edge_states` by user and satellite, exposing dominant
+  pressure state, edge counts, route/flow ids, max projected utilization, queue
+  delay, and loss proxy. This gives user/satellite detail surfaces a backend
+  source of truth for network pressure without changing Event Kernel behavior,
+  frontend rendering, packet-level behavior, topology selection, or external
+  simulator integrations.
+- Changed files/modules:
+  - `src/leo_twin/services/runtime_observability.py`
+  - `tests/unit/test_runtime_observability.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src\leo_twin\services\runtime_observability.py tests\unit\test_runtime_observability.py tests\integration\test_runtime_session_control.py`
+    - Result: passed using the bundled Codex Python runtime.
+  - Manual pure-function smoke for
+    `test_node_network_pressure_summary_binds_route_edge_states_to_nodes`
+    - Result: passed.
+  - `git diff --check`
+    - Result: passed for task files.
+  - Target `pytest` command was not run in this no-approval continuation: the
+    bundled Codex Python runtime does not include `pytest`, and the user asked
+    not to request further approvals.
+- Problems encountered and handling:
+  - The task intentionally avoided modifying existing user request rows to keep
+    current request/detail hashes stable. A separate backend summary was added
+    instead.
+  - Local runtime/generated config files and the unrelated `%SystemDrive%/`
+    directory remain outside this task scope and were not staged.
+- Known remaining issues / follow-up:
+  - Frontend detail drawers do not yet render this new node pressure summary.
+    A follow-up frontend binding can display these backend fields in user and
+    satellite detail panels.
+
+
 ## 2026-07-08 - Route Pressure Edge Evidence v1
 
 - Branch: `feature/T402-network-pressure-provenance-v1`

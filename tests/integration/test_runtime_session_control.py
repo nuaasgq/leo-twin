@@ -724,6 +724,23 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
         "PARTIAL_ROUTE_EXPLANATIONS",
         "MISSING_ROUTE_EXPLANATIONS",
     }
+    node_pressure_summary = status_after_tick["node_network_pressure_summary_v1"]
+    assert node_pressure_summary["version"] == "v1"
+    assert node_pressure_summary["source"] == "BACKEND_RUNTIME_SNAPSHOT"
+    assert node_pressure_summary["pressure_model"] == "FLOW_PRESSURE_ADMISSION_V1"
+    assert node_pressure_summary["packet_level_simulation"] is False
+    assert node_pressure_summary["frontend_inference_required"] is False
+    assert node_pressure_summary["pressure_edge_count"] >= 0
+    assert node_pressure_summary["node_count"] >= node_pressure_summary["item_count"]
+    if node_pressure_summary["items"]:
+        assert {
+            "entity_type",
+            "entity_id",
+            "dominant_pressure_state",
+            "pressure_edge_count",
+            "max_projected_utilization",
+            "pressure_label",
+        }.issubset(node_pressure_summary["items"][0])
     node_detail_summary = status_after_tick["node_detail_summary_v1"]
     assert node_detail_summary["version"] == "v1"
     assert node_detail_summary["source"] == "BACKEND_RUNTIME_STATUS"

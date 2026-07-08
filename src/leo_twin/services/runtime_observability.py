@@ -100,6 +100,9 @@ def build_runtime_lifecycle_summaries(
             user_summary,
             satellite_summary,
         ),
+        "node_network_pressure_summary_v1": (
+            build_runtime_node_network_pressure_summary(snapshot)
+        ),
     }
 
 
@@ -236,6 +239,94 @@ def build_runtime_service_lifecycle_trace_v2(
         if terminal_reason_filter != "ALL":
             result["filter_terminal_reason"] = terminal_reason_filter
     return result
+
+
+def build_runtime_node_network_pressure_summary(
+    snapshot: Mapping[str, Any],
+    *,
+    cursor: int = 0,
+    limit: int = 500,
+) -> dict[str, object]:
+    """Summarize flow-level route pressure evidence by user and satellite."""
+
+    if not isinstance(snapshot, Mapping):
+        raise TypeError("snapshot must be a mapping")
+    entries: dict[tuple[str, str], dict[str, Any]] = {}
+    route_pressure_route_count = 0
+    pressure_edge_count = 0
+    for route in sorted(_records(snapshot.get("routes")), key=_route_sort_key):
+        edge_records = _route_pressure_edge_records(route)
+        if not edge_records:
+            continue
+        route_pressure_route_count += 1
+        pressure_edge_count += len(edge_records)
+        user_id = _route_user_id(route)
+        if user_id is not None:
+            user_records = _pressure_records_for_node(edge_records, user_id)
+            _accumulate_node_pressure(
+                entries.setdefault(
+                    ("USER", user_id),
+                    _node_pressure_entry("USER", user_id),
+                ),
+                route,
+                user_records or edge_records,
+            )
+        for satellite_id in _route_satellite_ids(route):
+            satellite_records = _pressure_records_for_node(edge_records, satellite_id)
+            _accumulate_node_pressure(
+                entries.setdefault(
+                    ("SATELLITE", satellite_id),
+                    _node_pressure_entry("SATELLITE", satellite_id),
+                ),
+                route,
+                satellite_records or edge_records,
+            )
+
+    rows = tuple(
+        _finalize_node_pressure_entry(entry)
+        for _, entry in sorted(entries.items(), key=lambda item: _node_pressure_sort_key(item[0]))
+    )
+    normalized_cursor = _page_cursor(cursor)
+    normalized_limit = _page_limit(limit)
+    items = rows[normalized_cursor : normalized_cursor + normalized_limit]
+    next_cursor = min(len(rows), normalized_cursor + len(items))
+    users = tuple(item for item in items if item["entity_type"] == "USER")
+    satellites = tuple(item for item in items if item["entity_type"] == "SATELLITE")
+    summary = {
+        "version": "v1",
+        "source": "BACKEND_RUNTIME_SNAPSHOT",
+        "summary_scope": "NODE_NETWORK_PRESSURE_FROM_ROUTE_EDGE_STATES",
+        "pressure_model": "FLOW_PRESSURE_ADMISSION_V1",
+        "packet_level_simulation": False,
+        "frontend_inference_required": False,
+        "cursor": normalized_cursor,
+        "limit": normalized_limit,
+        "next_cursor": next_cursor,
+        "has_more": next_cursor < len(rows),
+        "node_count": len(rows),
+        "item_count": len(items),
+        "user_count": sum(1 for item in rows if item["entity_type"] == "USER"),
+        "satellite_count": sum(1 for item in rows if item["entity_type"] == "SATELLITE"),
+        "route_pressure_route_count": route_pressure_route_count,
+        "pressure_edge_count": pressure_edge_count,
+        "max_projected_utilization": max(
+            (_float(item.get("max_projected_utilization")) for item in rows),
+            default=0.0,
+        ),
+        "max_queue_delay_s": max(
+            (_float(item.get("max_queue_delay_s")) for item in rows),
+            default=0.0,
+        ),
+        "max_loss_proxy_rate": max(
+            (_float(item.get("max_loss_proxy_rate")) for item in rows),
+            default=0.0,
+        ),
+        "users": users,
+        "satellites": satellites,
+        "items": items,
+    }
+    summary["summary_hash"] = stable_hash_payload(summary)
+    return summary
 
 
 def build_runtime_node_detail_summary(
@@ -1072,6 +1163,168 @@ def build_runtime_compute_node_detail_item(
         node,
         kpi_slice_by_id.get(normalized_node_id),
     )
+
+
+def _route_pressure_edge_records(
+    route: Mapping[str, Any],
+) -> tuple[Mapping[str, Any], ...]:
+    return _records(route.get("pressure_edge_states"))
+
+
+def _route_satellite_ids(route: Mapping[str, Any]) -> tuple[str, ...]:
+    return _unique_str_tuple(
+        node_id for node_id in _route_path(route) if node_id.startswith("sat-")
+    )
+
+
+def _pressure_records_for_node(
+    records: Sequence[Mapping[str, Any]],
+    node_id: str,
+) -> tuple[Mapping[str, Any], ...]:
+    return tuple(record for record in records if _pressure_record_touches_node(record, node_id))
+
+
+def _pressure_record_touches_node(record: Mapping[str, Any], node_id: str) -> bool:
+    return node_id in {
+        _str(record.get("source_id")),
+        _str(record.get("target_id")),
+    }
+
+
+def _node_pressure_entry(entity_type: str, entity_id: str) -> dict[str, Any]:
+    return {
+        "entity_type": entity_type,
+        "entity_id": entity_id,
+        "route_ids": set(),
+        "flow_ids": set(),
+        "edge_ids": set(),
+        "pressure_edge_count": 0,
+        "admission_rejected_edge_count": 0,
+        "queued_edge_count": 0,
+        "saturated_edge_count": 0,
+        "nominal_edge_count": 0,
+        "max_projected_utilization": 0.0,
+        "max_queue_delay_s": 0.0,
+        "max_loss_proxy_rate": 0.0,
+        "dominant_pressure_state": "NO_PRESSURE_EVIDENCE",
+    }
+
+
+def _accumulate_node_pressure(
+    entry: dict[str, Any],
+    route: Mapping[str, Any],
+    records: Sequence[Mapping[str, Any]],
+) -> None:
+    route_id = _str(route.get("route_id"))
+    flow_id = _str(route.get("flow_id"))
+    if route_id:
+        entry["route_ids"].add(route_id)
+    if flow_id:
+        entry["flow_ids"].add(flow_id)
+    for record in records:
+        state = _pressure_state_code(record.get("pressure_state", record.get("status")))
+        edge_id = _str(record.get("edge_id")) or _join_non_empty(
+            record.get("source_id"),
+            record.get("target_id"),
+            separator="->",
+        )
+        if edge_id:
+            entry["edge_ids"].add(edge_id)
+        entry["pressure_edge_count"] += 1
+        if state == "ADMISSION_REJECTED":
+            entry["admission_rejected_edge_count"] += 1
+        elif state == "QUEUED":
+            entry["queued_edge_count"] += 1
+        elif state == "SATURATED":
+            entry["saturated_edge_count"] += 1
+        elif state == "NOMINAL":
+            entry["nominal_edge_count"] += 1
+        entry["max_projected_utilization"] = max(
+            _float(entry.get("max_projected_utilization")),
+            _float(record.get("projected_utilization")),
+        )
+        entry["max_queue_delay_s"] = max(
+            _float(entry.get("max_queue_delay_s")),
+            _float(record.get("queue_delay_s")),
+        )
+        entry["max_loss_proxy_rate"] = max(
+            _float(entry.get("max_loss_proxy_rate")),
+            _float(record.get("loss_proxy_rate")),
+        )
+        if _pressure_state_rank(state) < _pressure_state_rank(
+            _str(entry.get("dominant_pressure_state"))
+        ):
+            entry["dominant_pressure_state"] = state
+
+
+def _finalize_node_pressure_entry(entry: Mapping[str, Any]) -> dict[str, object]:
+    route_ids = tuple(sorted(entry.get("route_ids", ()), key=_entity_sort_key))
+    flow_ids = tuple(sorted(entry.get("flow_ids", ()), key=_entity_sort_key))
+    edge_ids = tuple(sorted(entry.get("edge_ids", ()), key=_entity_sort_key))
+    row = {
+        "entity_type": _str(entry.get("entity_type")),
+        "entity_id": _str(entry.get("entity_id")),
+        "pressure_model": "FLOW_PRESSURE_ADMISSION_V1",
+        "packet_level_simulation": False,
+        "frontend_inference_required": False,
+        "dominant_pressure_state": _str(entry.get("dominant_pressure_state")),
+        "route_count": len(route_ids),
+        "flow_count": len(flow_ids),
+        "pressure_edge_count": _count(entry.get("pressure_edge_count")),
+        "admission_rejected_edge_count": _count(entry.get("admission_rejected_edge_count")),
+        "queued_edge_count": _count(entry.get("queued_edge_count")),
+        "saturated_edge_count": _count(entry.get("saturated_edge_count")),
+        "nominal_edge_count": _count(entry.get("nominal_edge_count")),
+        "max_projected_utilization": _float(entry.get("max_projected_utilization")),
+        "max_queue_delay_s": _float(entry.get("max_queue_delay_s")),
+        "max_loss_proxy_rate": _float(entry.get("max_loss_proxy_rate")),
+        "route_ids": route_ids,
+        "flow_ids": flow_ids,
+        "edge_ids": edge_ids,
+    }
+    row["pressure_label"] = _node_pressure_label(row)
+    row["detail_hash"] = stable_hash_payload(row)
+    return row
+
+
+def _node_pressure_label(item: Mapping[str, Any]) -> str:
+    state = _str(item.get("dominant_pressure_state")) or "NO_PRESSURE_EVIDENCE"
+    return _join_non_empty(
+        state,
+        f"edges={_count(item.get('pressure_edge_count'))}",
+        f"max_util={_format_number(_float(item.get('max_projected_utilization')))}",
+        f"queue={_format_number(_float(item.get('max_queue_delay_s')))}s",
+        f"loss={_format_number(_float(item.get('max_loss_proxy_rate')) * 100.0)}%",
+        separator=" / ",
+    )
+
+
+def _pressure_state_code(value: object) -> str:
+    normalized = _str(value).strip().upper()
+    aliases = {
+        "REJECTED": "ADMISSION_REJECTED",
+        "SATURATED": "SATURATED",
+        "QUEUED": "QUEUED",
+        "NOMINAL": "NOMINAL",
+    }
+    return aliases.get(normalized, normalized or "UNKNOWN")
+
+
+def _pressure_state_rank(value: str) -> int:
+    ranks = {
+        "ADMISSION_REJECTED": 0,
+        "SATURATED": 1,
+        "QUEUED": 2,
+        "NOMINAL": 3,
+        "UNKNOWN": 4,
+        "NO_PRESSURE_EVIDENCE": 5,
+    }
+    return ranks.get(value, 4)
+
+
+def _node_pressure_sort_key(key: tuple[str, str]) -> tuple[int, tuple[object, ...]]:
+    entity_type, entity_id = key
+    return (0 if entity_type == "USER" else 1, _entity_sort_key(entity_id))
 
 
 def _user_request_items(

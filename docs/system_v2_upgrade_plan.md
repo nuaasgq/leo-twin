@@ -666,6 +666,10 @@ Tasks:
     The dashboard now requests `GET /runtime/details/satellites/<satellite_id>`
     on row selection and prefers that exact backend-owned detail card over
     bounded window summaries or frontend fallback rows.
+  - Status: T403 adds backend-owned `node_network_pressure_summary_v1`, derived
+    from `RouteState.pressure_edge_states`, so user and satellite detail views
+    can consume per-node route pressure, queue, utilization, and loss-proxy
+    evidence without frontend-local inference.
 - V2-053: Add virtualized large tables.
   - Scope: avoid rendering hundreds/thousands of rows directly.
   - Depends on: V2-043.
