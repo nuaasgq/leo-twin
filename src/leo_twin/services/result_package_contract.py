@@ -41,6 +41,9 @@ RUNTIME_EXPORT_ROUTE_PRESSURE_EVIDENCE_V1_ID = (
 RUNTIME_EXPORT_NODE_NETWORK_PRESSURE_SUMMARY_V1_ID = (
     "leo_twin.runtime_export_node_network_pressure_summary.v1"
 )
+RUNTIME_EXPORT_COMPUTE_RESOURCE_POOL_SUMMARY_V1_ID = (
+    "leo_twin.runtime_export_compute_resource_pool_summary.v1"
+)
 RUNTIME_EXPORT_ROUTE_DETAIL_PAGE_V1_ID = (
     "leo_twin.runtime_export_route_detail_page.v1"
 )
@@ -131,6 +134,7 @@ DIAGNOSTICS_BUNDLE_FILENAME = "diagnostics_bundle_v1.json"
 ROUTE_DETAIL_INDEX_FILENAME = "route_detail_index_v1.json"
 ROUTE_PRESSURE_EVIDENCE_FILENAME = "route_pressure_evidence_v1.json"
 NODE_NETWORK_PRESSURE_SUMMARY_FILENAME = "node_network_pressure_summary_v1.json"
+COMPUTE_RESOURCE_POOL_SUMMARY_FILENAME = "compute_resource_pool_summary_v1.json"
 SERVICE_LIFECYCLE_TRACE_FILENAME = "service_lifecycle_trace_v2.json"
 USER_SERVICE_REQUEST_SUMMARY_FILENAME = "user_service_request_summary_v2.json"
 NETWORK_KPI_BENCHMARK_VALIDATION_FILENAME = (
@@ -161,6 +165,7 @@ _ARTIFACT_BROWSER_CATEGORY_LABELS: tuple[tuple[str, str], ...] = (
     ("OPERATOR_REVIEW", "Operator review"),
     ("NETWORK_KPI_EVIDENCE", "Network KPI evidence"),
     ("TRAFFIC_BUSINESS", "Traffic and business requests"),
+    ("COMPUTE_RESOURCE_EVIDENCE", "Compute resource evidence"),
     ("ROUTE_SERVICE_EVIDENCE", "Route and service evidence"),
     ("AUDIT_HANDOFF", "Audit and handoff"),
     ("RAW_RUNTIME", "Raw runtime evidence"),
@@ -273,6 +278,15 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
                 "content": (
                     "runtime node network pressure summary exported for "
                     "offline per-user and per-satellite review"
+                ),
+            },
+            {
+                "logical_name": "compute_resource_pool_summary_v1",
+                "filename": "compute_resource_pool_summary_v1.json",
+                "format": "json",
+                "content": (
+                    "runtime compute resource pool summary exported for "
+                    "offline per-dimension resource review"
                 ),
             },
             {
@@ -804,6 +818,17 @@ def _runtime_export_artifact_browser_specs() -> tuple[dict[str, object], ...]:
             "filter_hint": "node pressure",
         },
         {
+            "logical_name": "compute_resource_pool_summary_v1",
+            "filename": COMPUTE_RESOURCE_POOL_SUMMARY_FILENAME,
+            "category": "COMPUTE_RESOURCE_EVIDENCE",
+            "review_priority": 307,
+            "format": "json",
+            "review_role": "Compute resource pool summary.",
+            "content": "Per-dimension CPU, GPU, NPU, memory, and storage resource evidence.",
+            "default_json_pointer": "/compute_resource_pool_summary/dimensions",
+            "filter_hint": "compute resource",
+        },
+        {
             "logical_name": "service_lifecycle_trace_v2",
             "filename": SERVICE_LIFECYCLE_TRACE_FILENAME,
             "category": "ROUTE_SERVICE_EVIDENCE",
@@ -933,6 +958,7 @@ def build_runtime_export_reproducibility_boundary_v1(
             "network_flow_lifecycle_summary_v1.json",
             "route_pressure_evidence_v1.json",
             "node_network_pressure_summary_v1.json",
+            "compute_resource_pool_summary_v1.json",
             "user_configuration_template_validation_v1.json",
             "traffic_demand_explanation_v1.json",
             "user_service_request_summary_v2.json",
@@ -1229,6 +1255,48 @@ def build_runtime_export_network_flow_lifecycle_summary_v1(
     artifact["artifact_hash"] = stable_hash_payload(artifact)
     return artifact
 
+def build_runtime_export_compute_resource_pool_summary_v1(
+    *,
+    package_id: str,
+    package_dir: str,
+    config_snapshot: Mapping[str, Any],
+) -> dict[str, object]:
+    """Build offline review evidence for compute resource pool semantics."""
+
+    if not isinstance(config_snapshot, Mapping):
+        raise TypeError("config_snapshot must be a mapping")
+
+    status = _mapping(config_snapshot.get("status"))
+    summary = _mapping(status.get("compute_resource_pool_summary_v1"))
+    evidence = _runtime_export_compute_resource_pool_summary(status)
+    artifact: dict[str, object] = {
+        "type": "RUNTIME_EXPORT_COMPUTE_RESOURCE_POOL_SUMMARY_V1",
+        "version": "v1",
+        "artifact_id": RUNTIME_EXPORT_COMPUTE_RESOURCE_POOL_SUMMARY_V1_ID,
+        "source": "BACKEND_RUNTIME_STATUS",
+        "artifact_scope": "COMPUTE_RESOURCE_POOL_REVIEW",
+        "package_id": str(package_id),
+        "package_dir": str(package_dir),
+        "runtime_status_field": "compute_resource_pool_summary_v1",
+        "artifact_policy": "STANDALONE_RUNTIME_EXPORT_ARTIFACT",
+        "compute_resource_pool_summary": dict(summary),
+        "evidence": evidence,
+        "review_notes": (
+            "Compute resource pool export preserves per-dimension units; "
+            "cross-unit pie aggregation is not performed."
+        ),
+        "boundary_conditions": (
+            "READ_RUNTIME_STATUS_ONLY",
+            "NO_COMPUTE_RESOURCE_RECOMPUTE",
+            "NO_EVENT_REPLAY",
+            "NO_PACKET_LEVEL_SIMULATION",
+            "NO_EXTERNAL_SIMULATOR_ARTIFACT",
+        ),
+    }
+    artifact["artifact_hash"] = stable_hash_payload(artifact)
+    return artifact
+
+
 def build_runtime_export_node_network_pressure_summary_v1(
     *,
     package_id: str,
@@ -1428,6 +1496,9 @@ def build_runtime_export_review_summary_v1(
     node_network_pressure_summary = _runtime_export_node_network_pressure_summary(
         status
     )
+    compute_resource_pool_summary = _runtime_export_compute_resource_pool_summary(
+        status
+    )
     network_kpi_validation = _runtime_export_network_kpi_validation_evidence(status)
     network_kpi_formula_evidence = _runtime_export_network_kpi_formula_evidence(
         status
@@ -1497,6 +1568,7 @@ def build_runtime_export_review_summary_v1(
         "route_trust": route_trust,
         "route_pressure_evidence": route_pressure_evidence,
         "node_network_pressure_summary": node_network_pressure_summary,
+        "compute_resource_pool_summary": compute_resource_pool_summary,
         "network_kpi_benchmark_validation": network_kpi_validation,
         "network_kpi_formula_evidence": network_kpi_formula_evidence,
         "network_temporal_pressure_evidence": network_temporal_pressure_evidence,
@@ -1531,6 +1603,9 @@ def build_runtime_export_review_summary_v1(
             ),
             "node_network_pressure_summary_exported": (
                 "node_network_pressure_summary_v1.json" in artifacts
+            ),
+            "compute_resource_pool_summary_exported": (
+                "compute_resource_pool_summary_v1.json" in artifacts
             ),
             "review_summary_exported": "review_summary_v1.json" in artifacts,
             "network_kpi_benchmark_validation_exported": (
@@ -1569,6 +1644,7 @@ def build_runtime_export_review_summary_v1(
             "Use route_trust to inspect flow-level route explanation evidence.",
             "Use route_pressure_evidence_v1.json to review route admission, queue, saturation, and topology block evidence.",
             "Use node_network_pressure_summary_v1.json to review per-user and per-satellite network pressure evidence.",
+            "Use compute_resource_pool_summary_v1.json to review per-dimension satellite compute resource pool evidence.",
             "Use network_kpi_benchmark_validation_v1.json to review KPI guardrail evidence.",
             "Use network_kpi_formula_evidence_v1.json to review KPI formula input and time-series evidence.",
             "Use network_temporal_pressure_evidence_v1.json to review deterministic temporal pressure evidence.",
@@ -1630,6 +1706,9 @@ def build_runtime_export_diagnostics_bundle_v1(
     node_network_pressure_summary = _runtime_export_node_network_pressure_summary(
         status
     )
+    compute_resource_pool_summary = _runtime_export_compute_resource_pool_summary(
+        status
+    )
     network_kpi_validation = _runtime_export_network_kpi_validation_evidence(status)
     network_kpi_formula_evidence = _runtime_export_network_kpi_formula_evidence(
         status
@@ -1671,6 +1750,7 @@ def build_runtime_export_diagnostics_bundle_v1(
         route_trust=route_trust,
         route_pressure_evidence=route_pressure_evidence,
         node_network_pressure_summary=node_network_pressure_summary,
+        compute_resource_pool_summary=compute_resource_pool_summary,
         network_flow_lifecycle_summary=network_flow_lifecycle_summary,
         network_kpi_validation=network_kpi_validation,
         network_kpi_formula_evidence=network_kpi_formula_evidence,
@@ -1702,6 +1782,7 @@ def build_runtime_export_diagnostics_bundle_v1(
         "route_trust": route_trust,
         "route_pressure_evidence": route_pressure_evidence,
         "node_network_pressure_summary": node_network_pressure_summary,
+        "compute_resource_pool_summary": compute_resource_pool_summary,
         "network_kpi_benchmark_validation": network_kpi_validation,
         "network_kpi_formula_evidence": network_kpi_formula_evidence,
         "network_temporal_pressure_evidence": network_temporal_pressure_evidence,
@@ -1808,6 +1889,9 @@ def build_runtime_export_scenario_review_bundle_v1(
     node_network_pressure_summary = _mapping(
         review_summary.get("node_network_pressure_summary")
     )
+    compute_resource_pool_summary = _mapping(
+        review_summary.get("compute_resource_pool_summary")
+    )
     network_kpi_validation = _mapping(
         review_summary.get("network_kpi_benchmark_validation")
     )
@@ -1839,6 +1923,8 @@ def build_runtime_export_scenario_review_bundle_v1(
         scenario_review_warnings.append("ROUTE_PRESSURE_EVIDENCE_MISSING")
     if node_network_pressure_summary.get("evidence_present") is not True:
         scenario_review_warnings.append("NODE_NETWORK_PRESSURE_SUMMARY_MISSING")
+    if compute_resource_pool_summary.get("evidence_present") is not True:
+        scenario_review_warnings.append("COMPUTE_RESOURCE_POOL_SUMMARY_MISSING")
     if network_kpi_formula_evidence.get("evidence_present") is not True:
         scenario_review_warnings.append("NETWORK_KPI_FORMULA_EVIDENCE_MISSING")
     if network_temporal_pressure_evidence.get("evidence_present") is not True:
@@ -1975,6 +2061,35 @@ def build_runtime_export_scenario_review_bundle_v1(
             ),
             "evidence_present": (
                 node_network_pressure_summary.get("evidence_present") is True
+            ),
+        },
+        "compute_resource_pool_summary": {
+            "summary_id": str(compute_resource_pool_summary.get("summary_id", "")),
+            "summary_hash": str(compute_resource_pool_summary.get("summary_hash", "")),
+            "node_count": _integer(compute_resource_pool_summary.get("node_count")),
+            "dimension_count": _integer(
+                compute_resource_pool_summary.get("dimension_count")
+            ),
+            "active_dimension_count": _integer(
+                compute_resource_pool_summary.get("active_dimension_count")
+            ),
+            "consumed_dimension_count": _integer(
+                compute_resource_pool_summary.get("consumed_dimension_count")
+            ),
+            "saturated_dimension_count": _integer(
+                compute_resource_pool_summary.get("saturated_dimension_count")
+            ),
+            "packet_level_simulation": (
+                compute_resource_pool_summary.get("packet_level_simulation") is True
+            ),
+            "frontend_inference_required": (
+                compute_resource_pool_summary.get("frontend_inference_required") is True
+            ),
+            "evidence_hash": str(
+                compute_resource_pool_summary.get("evidence_hash", "")
+            ),
+            "evidence_present": (
+                compute_resource_pool_summary.get("evidence_present") is True
             ),
         },
         "network_kpi_benchmark_validation": {
@@ -2232,6 +2347,7 @@ def build_runtime_export_scenario_review_bundle_v1(
                 "traffic_demand_explanation_v1.json",
                 "route_pressure_evidence_v1.json",
                 "node_network_pressure_summary_v1.json",
+                "compute_resource_pool_summary_v1.json",
                 "user_service_request_summary_v2.json",
                 "manifest.json",
                 "config_snapshot.json",
@@ -2261,6 +2377,7 @@ def build_runtime_export_scenario_review_bundle_v1(
             "network_flow_lifecycle_summary_v1.json",
             "route_pressure_evidence_v1.json",
             "node_network_pressure_summary_v1.json",
+            "compute_resource_pool_summary_v1.json",
             "user_configuration_template_validation_v1.json",
             "traffic_demand_explanation_v1.json",
             "user_service_request_summary_v2.json",
@@ -3699,6 +3816,9 @@ def build_runtime_export_package_audit_index_v1(
     node_network_pressure_summary = _runtime_export_node_network_pressure_summary(
         status
     )
+    compute_resource_pool_summary = _runtime_export_compute_resource_pool_summary(
+        status
+    )
     network_kpi_validation = _runtime_export_network_kpi_validation_evidence(status)
     network_kpi_formula_evidence = _runtime_export_network_kpi_formula_evidence(
         status
@@ -3916,6 +4036,27 @@ def build_runtime_export_package_audit_index_v1(
         ),
         "node_network_pressure_summary_max_projected_utilization": _number(
             node_network_pressure_summary.get("max_projected_utilization")
+        ),
+        "compute_resource_pool_summary_hash": str(
+            compute_resource_pool_summary.get("evidence_hash", "")
+        ),
+        "compute_resource_pool_summary_present": (
+            compute_resource_pool_summary.get("evidence_present") is True
+        ),
+        "compute_resource_pool_summary_node_count": _integer(
+            compute_resource_pool_summary.get("node_count")
+        ),
+        "compute_resource_pool_summary_dimension_count": _integer(
+            compute_resource_pool_summary.get("dimension_count")
+        ),
+        "compute_resource_pool_summary_active_dimension_count": _integer(
+            compute_resource_pool_summary.get("active_dimension_count")
+        ),
+        "compute_resource_pool_summary_consumed_dimension_count": _integer(
+            compute_resource_pool_summary.get("consumed_dimension_count")
+        ),
+        "compute_resource_pool_summary_saturated_dimension_count": _integer(
+            compute_resource_pool_summary.get("saturated_dimension_count")
         ),
         "network_flow_lifecycle_summary_hash": str(
             network_flow_lifecycle_summary.get("evidence_hash", "")
@@ -5337,6 +5478,7 @@ def _runtime_export_diagnostic_findings(
     route_trust: Mapping[str, Any],
     route_pressure_evidence: Mapping[str, Any],
     node_network_pressure_summary: Mapping[str, Any],
+    compute_resource_pool_summary: Mapping[str, Any],
     network_flow_lifecycle_summary: Mapping[str, Any],
     network_kpi_validation: Mapping[str, Any],
     network_kpi_formula_evidence: Mapping[str, Any],
@@ -5449,6 +5591,30 @@ def _runtime_export_diagnostic_findings(
                 "WARN",
                 "NODE_NETWORK_PRESSURE_FRONTEND_INFERENCE_DECLARED",
                 "node network pressure summary should be backend-owned and not require frontend inference.",
+            )
+        )
+    if compute_resource_pool_summary.get("evidence_present") is not True:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "COMPUTE_RESOURCE_POOL_SUMMARY_MISSING",
+                "config_snapshot.status does not include compute_resource_pool_summary_v1.",
+            )
+        )
+    if compute_resource_pool_summary.get("packet_level_simulation") is True:
+        findings.append(
+            _diagnostic_finding(
+                "ERROR",
+                "COMPUTE_RESOURCE_POOL_PACKET_LEVEL_DECLARED",
+                "compute resource pool summary declares packet-level simulation, which is outside the v2 demo boundary.",
+            )
+        )
+    if compute_resource_pool_summary.get("frontend_inference_required") is True:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "COMPUTE_RESOURCE_POOL_FRONTEND_INFERENCE_DECLARED",
+                "compute resource pool summary should be backend-owned and not require frontend inference.",
             )
         )
     if network_flow_lifecycle_summary.get("evidence_present") is not True:
@@ -6137,6 +6303,13 @@ def _runtime_export_scenario_review_evidence_hash(
                 "",
             )
         )
+    if filename == "compute_resource_pool_summary_v1.json":
+        return str(
+            _mapping(scenario_review_bundle.get("compute_resource_pool_summary")).get(
+                "evidence_hash",
+                "",
+            )
+        )
     if filename == "route_comparison_review_report_v1.json":
         return str(audit_index.get("route_comparison_review_report_hash", ""))
     if filename == "service_trace_comparison_review_report_v1.json":
@@ -6193,6 +6366,7 @@ def _runtime_export_scenario_review_step_label(
         "traffic_demand_explanation_v1.json": "traffic demand",
         "route_pressure_evidence_v1.json": "route pressure",
         "node_network_pressure_summary_v1.json": "node pressure",
+        "compute_resource_pool_summary_v1.json": "compute resource pool",
         "user_service_request_summary_v2.json": "user services",
         "service_lifecycle_trace_v2.json": "service trace",
         "service_trace_comparison_review_report_v1.json": "service trace review",
@@ -6418,6 +6592,73 @@ def _runtime_export_route_pressure_evidence(
     }
     evidence["evidence_hash"] = stable_hash_payload(evidence)
     return evidence
+
+def _runtime_export_compute_resource_pool_summary(
+    status: Mapping[str, Any],
+) -> dict[str, object]:
+    summary = _mapping(status.get("compute_resource_pool_summary_v1"))
+    evidence_present = bool(summary)
+    source = "runtime_status.compute_resource_pool_summary_v1"
+    if not evidence_present:
+        evidence: dict[str, object] = {
+            "version": "v1",
+            "summary_id": "leo_twin.compute_resource_pool_summary.v1",
+            "source": source,
+            "artifact_id": RUNTIME_EXPORT_COMPUTE_RESOURCE_POOL_SUMMARY_V1_ID,
+            "artifact_filename": COMPUTE_RESOURCE_POOL_SUMMARY_FILENAME,
+            "evidence_present": False,
+            "summary_hash": "",
+            "node_count": 0,
+            "dimension_count": 0,
+            "active_dimension_count": 0,
+            "consumed_dimension_count": 0,
+            "saturated_dimension_count": 0,
+            "packet_level_simulation": False,
+            "frontend_inference_required": False,
+            "acceptable_for_demo_review": False,
+            "visualization_policy": {},
+            "model_assumptions": (),
+            "caveats": (
+                "Runtime status did not expose compute_resource_pool_summary_v1.",
+            ),
+        }
+        evidence["evidence_hash"] = stable_hash_payload(summary)
+        return evidence
+
+    packet_level = summary.get("packet_level_simulation") is True
+    frontend_inference = summary.get("frontend_inference_required") is True
+    evidence = {
+        "version": "v1",
+        "summary_id": str(
+            summary.get("summary_id", "leo_twin.compute_resource_pool_summary.v1")
+        ),
+        "source": source,
+        "runtime_status_source": str(summary.get("source", "")),
+        "artifact_id": RUNTIME_EXPORT_COMPUTE_RESOURCE_POOL_SUMMARY_V1_ID,
+        "artifact_filename": COMPUTE_RESOURCE_POOL_SUMMARY_FILENAME,
+        "evidence_present": True,
+        "summary_hash": str(summary.get("summary_hash", "")),
+        "node_count": _integer(summary.get("node_count")),
+        "dimension_count": _integer(summary.get("dimension_count")),
+        "active_dimension_count": _integer(
+            summary.get("active_dimension_count")
+        ),
+        "consumed_dimension_count": _integer(
+            summary.get("consumed_dimension_count")
+        ),
+        "saturated_dimension_count": _integer(
+            summary.get("saturated_dimension_count")
+        ),
+        "packet_level_simulation": packet_level,
+        "frontend_inference_required": frontend_inference,
+        "acceptable_for_demo_review": not packet_level and not frontend_inference,
+        "visualization_policy": dict(_mapping(summary.get("visualization_policy"))),
+        "model_assumptions": _string_tuple(summary.get("model_assumptions")),
+        "caveats": _string_tuple(summary.get("caveats")),
+    }
+    evidence["evidence_hash"] = stable_hash_payload(summary)
+    return evidence
+
 
 def _runtime_export_node_network_pressure_summary(
     status: Mapping[str, Any],

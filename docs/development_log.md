@@ -21116,3 +21116,50 @@ change.
     sections or recommended review ordering.
   - The artifact preserves MetricsCollector-derived resource estimates; it does
     not add a new compute placement or hardware telemetry model.
+
+## 2026-07-08 - T413 compute resource pool result package review loop v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: promote `compute_resource_pool_summary_v1.json` from a standalone
+  exported file into the result-package review/audit/checklist loop. The result
+  package contract now declares it as recommended evidence, indexes it in the
+  artifact browser, exposes backend-owned evidence in review summary,
+  diagnostics, scenario review bundles, package audit indexes, and checklist
+  template evidence hashes. DemoControlPlane now uses the shared contract
+  builder for the artifact instead of a local private helper. No Event Kernel,
+  runtime model, compute scheduler, frontend rendering, packet-level, or
+  external simulator behavior was changed.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `examples/integration_demo/control_plane.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/unit/test_runtime_compute_resource_pool_export.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Python `py_compile` for touched backend/test files.
+    - Result: passed.
+  - Direct function run for 8 result package contract tests, the compute pool
+    export unit test, and the result package export integration test.
+    - Result: 10 passed.
+  - Direct function run for runtime package export and deterministic runtime
+    archive integration paths.
+    - Result: 2 passed.
+- Problems encountered:
+  - The task depended on the T412 exported artifact. To avoid duplicate artifact
+    semantics, the DemoControlPlane private helper was replaced with the shared
+    `build_runtime_export_compute_resource_pool_summary_v1()` builder.
+  - The compute evidence hash intentionally remains the stable hash of the
+    source summary object, not merely the summary's embedded `summary_hash`, so
+    checklist/audit evidence stays bound to the exact backend status payload.
+  - Existing local runtime config drift remains untouched and must stay
+    unstaged: `configs/generated_full_system_demo.json` and
+    `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The result package review loop now exposes compute pool summary evidence,
+    but it still reflects MetricsCollector-derived resource estimates rather
+    than a new placement scheduler or hardware telemetry model.
+  - Dashboard rendering of this review evidence can be improved later; this
+    task intentionally stayed backend/export-contract only.

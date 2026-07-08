@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from examples.integration_demo.control_plane import (
-    _runtime_compute_resource_pool_summary_export,
+from leo_twin.services.result_package_contract import (
+    build_runtime_export_compute_resource_pool_summary_v1,
 )
 
 
@@ -27,10 +27,12 @@ def test_runtime_compute_resource_pool_summary_export_preserves_status_contract(
         ),
     }
 
-    export = _runtime_compute_resource_pool_summary_export(
+    export = build_runtime_export_compute_resource_pool_summary_v1(
         package_id="package-1",
         package_dir="exports/package-1",
-        export_status={"compute_resource_pool_summary_v1": status_summary},
+        config_snapshot={
+            "status": {"compute_resource_pool_summary_v1": status_summary},
+        },
     )
 
     assert export["type"] == "RUNTIME_EXPORT_COMPUTE_RESOURCE_POOL_SUMMARY_V1"

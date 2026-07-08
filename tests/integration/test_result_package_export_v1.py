@@ -379,6 +379,18 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert "compute_resource_pool_summary_v1.json" in review_summary["artifacts"][
         "artifact_filenames"
     ]
+    assert review_summary["compute_resource_pool_summary"][
+        "evidence_present"
+    ] is True
+    assert review_summary["compute_resource_pool_summary"]["summary_hash"] == (
+        compute_resource_pool_summary["evidence"]["summary_hash"]
+    )
+    assert review_summary["compute_resource_pool_summary"][
+        "dimension_count"
+    ] == compute_resource_pool_summary["evidence"]["dimension_count"]
+    assert review_summary["artifacts"][
+        "compute_resource_pool_summary_exported"
+    ] is True
     assert review_summary["artifacts"][
         "network_kpi_benchmark_validation_exported"
     ] is True
@@ -431,6 +443,17 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         category["category"]: category for category in artifact_browser["categories"]
     }
     assert browser_categories["NETWORK_KPI_EVIDENCE"]["present_count"] >= 3
+    assert browser_categories["COMPUTE_RESOURCE_EVIDENCE"]["present_count"] == 1
+    compute_browser_item = next(
+        item
+        for item in artifact_browser["items"]
+        if item["filename"] == "compute_resource_pool_summary_v1.json"
+    )
+    assert compute_browser_item["category"] == "COMPUTE_RESOURCE_EVIDENCE"
+    assert compute_browser_item["present"] is True
+    assert compute_browser_item["default_json_pointer"] == (
+        "/compute_resource_pool_summary/dimensions"
+    )
     variation_browser_item = next(
         item
         for item in artifact_browser["items"]
@@ -471,6 +494,12 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         review_summary["node_network_pressure_summary"]["evidence_hash"]
     )
     assert diagnostics_bundle["node_network_pressure_summary"][
+        "evidence_present"
+    ] is True
+    assert diagnostics_bundle["compute_resource_pool_summary"]["evidence_hash"] == (
+        review_summary["compute_resource_pool_summary"]["evidence_hash"]
+    )
+    assert diagnostics_bundle["compute_resource_pool_summary"][
         "evidence_present"
     ] is True
     assert diagnostics_bundle["network_kpi_benchmark_validation"][
@@ -673,6 +702,12 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     assert scenario_review_bundle["node_network_pressure_summary"][
         "evidence_present"
     ] is True
+    assert scenario_review_bundle["compute_resource_pool_summary"][
+        "evidence_hash"
+    ] == compute_resource_pool_summary["evidence"]["evidence_hash"]
+    assert scenario_review_bundle["compute_resource_pool_summary"][
+        "evidence_present"
+    ] is True
     assert scenario_review_bundle["network_kpi_benchmark_validation"][
         "validation_hash"
     ] == network_kpi_benchmark_validation["evidence"]["validation_hash"]
@@ -750,6 +785,9 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         scenario_review_bundle["recommended_review_order"]
     )
     assert "node_network_pressure_summary_v1.json" in (
+        scenario_review_bundle["recommended_review_order"]
+    )
+    assert "compute_resource_pool_summary_v1.json" in (
         scenario_review_bundle["recommended_review_order"]
     )
     assert scenario_review_bundle["scenario_review_hash"].startswith("sha256:")
@@ -859,6 +897,18 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
     )
     assert audit_index["node_network_pressure_summary_max_projected_utilization"] == (
         review_summary["node_network_pressure_summary"]["max_projected_utilization"]
+    )
+    assert audit_index["compute_resource_pool_summary_present"] is True
+    assert audit_index["compute_resource_pool_summary_hash"] == (
+        compute_resource_pool_summary["evidence"]["evidence_hash"]
+    )
+    assert audit_index["compute_resource_pool_summary_dimension_count"] == (
+        review_summary["compute_resource_pool_summary"]["dimension_count"]
+    )
+    assert audit_index["compute_resource_pool_summary_saturated_dimension_count"] == (
+        review_summary["compute_resource_pool_summary"][
+            "saturated_dimension_count"
+        ]
     )
     assert audit_index["user_service_request_summary_present"] is True
     assert audit_index["user_service_request_summary_hash"] == (
@@ -1183,6 +1233,13 @@ def test_runtime_export_package_satisfies_result_package_contract_v1(
         record["artifact_filename"]
         == "service_trace_comparison_review_report_v1.json"
         and record["evidence_hash"] == service_trace_report["report_hash"]
+        for record in checklist_template["records"]
+    )
+    assert any(
+        record["artifact_filename"] == "compute_resource_pool_summary_v1.json"
+        and record["evidence_hash"]
+        == scenario_review_bundle["compute_resource_pool_summary"]["evidence_hash"]
+        and "compute resource pool" in record["step_label"]
         for record in checklist_template["records"]
     )
     checklist_records = [

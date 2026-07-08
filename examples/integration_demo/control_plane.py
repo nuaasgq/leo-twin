@@ -108,6 +108,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_network_temporal_pressure_evidence_v1,
     build_runtime_export_network_kpi_variation_explanation_v1,
     build_runtime_export_node_network_pressure_summary_v1,
+    build_runtime_export_compute_resource_pool_summary_v1,
     build_runtime_export_runtime_kpi_movement_summary_v1,
     build_runtime_export_network_flow_lifecycle_summary_v1,
     build_runtime_export_package_acceptance_report_v1,
@@ -1001,10 +1002,12 @@ class DemoControlPlane:
         compute_resource_pool_summary_path = (
             package_dir / _RUNTIME_EXPORT_COMPUTE_RESOURCE_POOL_SUMMARY_FILENAME
         )
-        compute_resource_pool_summary = _runtime_compute_resource_pool_summary_export(
-            package_id=package_id,
-            package_dir=str(package_dir),
-            export_status=export_status,
+        compute_resource_pool_summary = (
+            build_runtime_export_compute_resource_pool_summary_v1(
+                package_id=package_id,
+                package_dir=str(package_dir),
+                config_snapshot=config_snapshot,
+            )
         )
         compute_resource_pool_summary_path.write_text(
             stable_json_pretty(compute_resource_pool_summary),
@@ -3208,54 +3211,6 @@ def _strip_service_suffix(value: str) -> str:
         if value.endswith(suffix):
             return value[: -len(suffix)]
     return value
-
-
-def _runtime_compute_resource_pool_summary_export(
-    *,
-    package_id: str,
-    package_dir: str,
-    export_status: Mapping[str, Any],
-) -> dict[str, Any]:
-    summary = export_status.get("compute_resource_pool_summary_v1")
-    if not isinstance(summary, Mapping):
-        summary = {}
-    evidence = {
-        "source": "runtime_status.compute_resource_pool_summary_v1",
-        "summary_hash": str(summary.get("summary_hash", "")),
-        "node_count": _control_int(summary.get("node_count")),
-        "dimension_count": _control_int(summary.get("dimension_count")),
-        "active_dimension_count": _control_int(
-            summary.get("active_dimension_count")
-        ),
-        "consumed_dimension_count": _control_int(
-            summary.get("consumed_dimension_count")
-        ),
-        "saturated_dimension_count": _control_int(
-            summary.get("saturated_dimension_count")
-        ),
-        "packet_level_simulation": bool(
-            summary.get("packet_level_simulation", False)
-        ),
-        "frontend_inference_required": bool(
-            summary.get("frontend_inference_required", True)
-        ),
-        "evidence_hash": stable_hash_payload(summary),
-    }
-    artifact = {
-        "type": "RUNTIME_EXPORT_COMPUTE_RESOURCE_POOL_SUMMARY_V1",
-        "artifact_id": "leo_twin.runtime_export_compute_resource_pool_summary.v1",
-        "package_id": package_id,
-        "package_dir": package_dir,
-        "source": "BACKEND_RUNTIME_STATUS",
-        "compute_resource_pool_summary": dict(summary),
-        "evidence": evidence,
-        "review_notes": (
-            "Compute resource pool export preserves per-dimension units; "
-            "cross-unit pie aggregation is not performed."
-        ),
-    }
-    artifact["artifact_hash"] = stable_hash_payload(artifact)
-    return artifact
 
 
 def _runtime_completion_fields(

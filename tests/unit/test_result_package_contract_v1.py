@@ -17,6 +17,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_NETWORK_KPI_FORMULA_EVIDENCE_V1_ID,
     RUNTIME_EXPORT_NETWORK_TEMPORAL_PRESSURE_EVIDENCE_V1_ID,
     RUNTIME_EXPORT_NODE_NETWORK_PRESSURE_SUMMARY_V1_ID,
+    RUNTIME_EXPORT_COMPUTE_RESOURCE_POOL_SUMMARY_V1_ID,
     RUNTIME_EXPORT_RUNTIME_KPI_MOVEMENT_SUMMARY_V1_ID,
     RUNTIME_EXPORT_NETWORK_FLOW_LIFECYCLE_SUMMARY_V1_ID,
     RUNTIME_EXPORT_TRAFFIC_DEMAND_EXPLANATION_V1_ID,
@@ -50,6 +51,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_network_kpi_formula_evidence_v1,
     build_runtime_export_network_temporal_pressure_evidence_v1,
     build_runtime_export_node_network_pressure_summary_v1,
+    build_runtime_export_compute_resource_pool_summary_v1,
     build_runtime_export_runtime_kpi_movement_summary_v1,
     build_runtime_export_network_flow_lifecycle_summary_v1,
     build_runtime_export_traffic_demand_explanation_v1,
@@ -86,6 +88,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 _TRAFFIC_DEMAND_EXPLANATION_FILENAME = "traffic_demand_explanation_v1.json"
 _ROUTE_PRESSURE_EVIDENCE_FILENAME = "route_pressure_evidence_v1.json"
 _NODE_NETWORK_PRESSURE_SUMMARY_FILENAME = "node_network_pressure_summary_v1.json"
+_COMPUTE_RESOURCE_POOL_SUMMARY_FILENAME = "compute_resource_pool_summary_v1.json"
 _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME = "runtime_kpi_movement_summary_v1.json"
 _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME = "network_flow_lifecycle_summary_v1.json"
 _NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME = (
@@ -119,6 +122,7 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
         "route_detail_index_v1.json",
         _ROUTE_PRESSURE_EVIDENCE_FILENAME,
         _NODE_NETWORK_PRESSURE_SUMMARY_FILENAME,
+        _COMPUTE_RESOURCE_POOL_SUMMARY_FILENAME,
         "review_summary_v1.json",
         "diagnostics_bundle_v1.json",
         "network_kpi_benchmark_validation_v1.json",
@@ -320,6 +324,7 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
             "route_provenance_trust_summary_v1": _route_trust(),
             "route_pressure_evidence_v1": _route_pressure_evidence(),
             "node_network_pressure_summary_v1": _node_network_pressure_summary(),
+            "compute_resource_pool_summary_v1": _compute_resource_pool_summary(),
             "runtime_export_route_pressure_evidence_policy_v1": (
                 _route_pressure_export_policy()
             ),
@@ -367,6 +372,7 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
         "route_detail_index_v1.json",
         _ROUTE_PRESSURE_EVIDENCE_FILENAME,
         _NODE_NETWORK_PRESSURE_SUMMARY_FILENAME,
+        _COMPUTE_RESOURCE_POOL_SUMMARY_FILENAME,
         "scenario_review_bundle_v1.json",
         "service_lifecycle_trace_v2.json",
         "summary.json",
@@ -424,6 +430,17 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
     assert first["node_network_pressure_summary"]["node_count"] == 3
     assert first["node_network_pressure_summary"]["pressure_edge_count"] == 4
     assert first["node_network_pressure_summary"]["frontend_inference_required"] is False
+    assert first["compute_resource_pool_summary"]["evidence_present"] is True
+    assert first["compute_resource_pool_summary"]["summary_hash"] == (
+        "sha256:compute-pool"
+    )
+    assert first["compute_resource_pool_summary"]["node_count"] == 2
+    assert first["compute_resource_pool_summary"]["dimension_count"] == 7
+    assert first["compute_resource_pool_summary"]["saturated_dimension_count"] == 1
+    assert first["compute_resource_pool_summary"]["frontend_inference_required"] is False
+    assert first["compute_resource_pool_summary"]["evidence_hash"].startswith(
+        "sha256:"
+    )
     assert first["network_kpi_benchmark_validation"]["evidence_present"] is True
     assert first["network_kpi_benchmark_validation"]["validation_status"] == "PASS"
     assert first["network_kpi_benchmark_validation"]["failed_check_count"] == 0
@@ -472,6 +489,7 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
     assert first["artifacts"]["traffic_demand_explanation_exported"] is True
     assert first["artifacts"]["route_pressure_evidence_exported"] is True
     assert first["artifacts"]["node_network_pressure_summary_exported"] is True
+    assert first["artifacts"]["compute_resource_pool_summary_exported"] is True
     assert first["artifacts"]["user_service_request_summary_exported"] is True
     assert first["route_comparison_review"]["review_scope"] == (
         "PACKAGE_ROUTE_DETAIL_TO_LIVE_RUNTIME_ROUTE_DETAIL"
@@ -684,10 +702,48 @@ def test_runtime_export_network_flow_lifecycle_summary_v1_is_deterministic() -> 
     assert first["artifact_hash"].startswith("sha256:")
 
 
+def test_runtime_export_compute_resource_pool_summary_v1_is_deterministic() -> None:
+    config_snapshot = {
+        "status": {
+            "compute_resource_pool_summary_v1": _compute_resource_pool_summary(),
+        }
+    }
+
+    first = build_runtime_export_compute_resource_pool_summary_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+    )
+    second = build_runtime_export_compute_resource_pool_summary_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+    )
+
+    assert first == second
+    assert first["type"] == "RUNTIME_EXPORT_COMPUTE_RESOURCE_POOL_SUMMARY_V1"
+    assert first["artifact_id"] == RUNTIME_EXPORT_COMPUTE_RESOURCE_POOL_SUMMARY_V1_ID
+    assert first["source"] == "BACKEND_RUNTIME_STATUS"
+    assert first["runtime_status_field"] == "compute_resource_pool_summary_v1"
+    assert first["compute_resource_pool_summary"] == _compute_resource_pool_summary()
+    assert first["evidence"]["evidence_present"] is True
+    assert first["evidence"]["summary_hash"] == "sha256:compute-pool"
+    assert first["evidence"]["node_count"] == 2
+    assert first["evidence"]["dimension_count"] == 7
+    assert first["evidence"]["saturated_dimension_count"] == 1
+    assert first["evidence"]["packet_level_simulation"] is False
+    assert first["evidence"]["frontend_inference_required"] is False
+    assert first["evidence"]["acceptable_for_demo_review"] is True
+    assert first["evidence"]["evidence_hash"].startswith("sha256:")
+    assert "NO_COMPUTE_RESOURCE_RECOMPUTE" in first["boundary_conditions"]
+    assert first["artifact_hash"].startswith("sha256:")
+
+
 def test_runtime_export_node_network_pressure_summary_v1_is_deterministic() -> None:
     config_snapshot = {
         "status": {
             "node_network_pressure_summary_v1": _node_network_pressure_summary(),
+            "compute_resource_pool_summary_v1": _compute_resource_pool_summary(),
         }
     }
 
@@ -1000,6 +1056,7 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
             "route_provenance_trust_summary_v1": _route_trust(),
             "route_pressure_evidence_v1": _route_pressure_evidence(),
             "node_network_pressure_summary_v1": _node_network_pressure_summary(),
+            "compute_resource_pool_summary_v1": _compute_resource_pool_summary(),
             "runtime_export_route_pressure_evidence_policy_v1": (
                 _route_pressure_export_policy()
             ),
@@ -1052,6 +1109,7 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
         "route_detail_index_v1.json",
         _ROUTE_PRESSURE_EVIDENCE_FILENAME,
         _NODE_NETWORK_PRESSURE_SUMMARY_FILENAME,
+        _COMPUTE_RESOURCE_POOL_SUMMARY_FILENAME,
         "scenario_review_bundle_v1.json",
         "service_lifecycle_trace_v2.json",
         "summary.json",
@@ -1104,6 +1162,13 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
     assert first["node_network_pressure_summary"]["evidence_present"] is True
     assert first["node_network_pressure_summary"]["node_count"] == 3
     assert first["node_network_pressure_summary"]["pressure_edge_count"] == 4
+    assert first["compute_resource_pool_summary"]["evidence_present"] is True
+    assert first["compute_resource_pool_summary"]["node_count"] == 2
+    assert first["compute_resource_pool_summary"]["dimension_count"] == 7
+    assert first["compute_resource_pool_summary"]["acceptable_for_demo_review"] is True
+    assert first["compute_resource_pool_summary"]["evidence_hash"] == (
+        review_summary["compute_resource_pool_summary"]["evidence_hash"]
+    )
     assert first["network_kpi_benchmark_validation"]["evidence_present"] is True
     assert first["network_kpi_benchmark_validation"]["validation_status"] == "PASS"
     assert first["network_kpi_benchmark_validation"]["failed_check_count"] == 0
@@ -1144,6 +1209,18 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
     assert artifact_browser["browser_hash"].startswith("sha256:")
     categories = {item["category"]: item for item in artifact_browser["categories"]}
     assert categories["NETWORK_KPI_EVIDENCE"]["present_count"] == 6
+    assert categories["COMPUTE_RESOURCE_EVIDENCE"]["present_count"] == 1
+    compute_item = next(
+        item
+        for item in artifact_browser["items"]
+        if item["filename"] == _COMPUTE_RESOURCE_POOL_SUMMARY_FILENAME
+    )
+    assert compute_item["category"] == "COMPUTE_RESOURCE_EVIDENCE"
+    assert compute_item["present"] is True
+    assert compute_item["default_json_pointer"] == (
+        "/compute_resource_pool_summary/dimensions"
+    )
+    assert compute_item["filter_hint"] == "compute resource"
     variation_item = next(
         item
         for item in artifact_browser["items"]
@@ -1207,6 +1284,7 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
             "route_provenance_trust_summary_v1": _route_trust(),
             "route_pressure_evidence_v1": _route_pressure_evidence(),
             "node_network_pressure_summary_v1": _node_network_pressure_summary(),
+            "compute_resource_pool_summary_v1": _compute_resource_pool_summary(),
             "runtime_export_route_pressure_evidence_policy_v1": (
                 _route_pressure_export_policy()
             ),
@@ -1258,6 +1336,7 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
         "route_detail_index_v1.json",
         _ROUTE_PRESSURE_EVIDENCE_FILENAME,
         _NODE_NETWORK_PRESSURE_SUMMARY_FILENAME,
+        _COMPUTE_RESOURCE_POOL_SUMMARY_FILENAME,
         "scenario_review_bundle_v1.json",
         "service_lifecycle_trace_v2.json",
         "summary.json",
@@ -1349,6 +1428,11 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
         "node_network_pressure_summary"
     ]["evidence_hash"]
     assert first["node_network_pressure_summary"]["pressure_edge_count"] == 4
+    assert first["compute_resource_pool_summary"]["evidence_present"] is True
+    assert first["compute_resource_pool_summary"]["evidence_hash"] == (
+        review_summary["compute_resource_pool_summary"]["evidence_hash"]
+    )
+    assert first["compute_resource_pool_summary"]["dimension_count"] == 7
     assert first["network_kpi_formula_evidence"]["evidence_present"] is True
     assert first["network_kpi_formula_evidence"]["formula_evidence_status"] == (
         "FORMULA_AND_TIME_EVIDENCE_READY"
@@ -1407,6 +1491,12 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
     ]
     assert "user_service_request_summary_v2.json" in first["artifact_review"][
         "entrypoint_filenames"
+    ]
+    assert _COMPUTE_RESOURCE_POOL_SUMMARY_FILENAME in first["artifact_review"][
+        "entrypoint_filenames"
+    ]
+    assert _COMPUTE_RESOURCE_POOL_SUMMARY_FILENAME in first[
+        "recommended_review_order"
     ]
     assert "user_configuration_template_validation_v1.json" in first[
         "artifact_review"
@@ -3268,6 +3358,7 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
         "route_detail_index_v1.json",
         _ROUTE_PRESSURE_EVIDENCE_FILENAME,
         _NODE_NETWORK_PRESSURE_SUMMARY_FILENAME,
+        _COMPUTE_RESOURCE_POOL_SUMMARY_FILENAME,
         "scenario_review_bundle_v1.json",
         "service_lifecycle_trace_v2.json",
         "summary.json",
@@ -3301,6 +3392,7 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
             "ROUTE_TRUST_EVIDENCE_MISSING",
             "ROUTE_PRESSURE_EVIDENCE_MISSING",
             "NODE_NETWORK_PRESSURE_SUMMARY_MISSING",
+            "COMPUTE_RESOURCE_POOL_SUMMARY_MISSING",
             "NETWORK_FLOW_LIFECYCLE_SUMMARY_MISSING",
             "NETWORK_KPI_BENCHMARK_VALIDATION_MISSING",
             "NETWORK_KPI_FORMULA_EVIDENCE_MISSING",
@@ -3310,7 +3402,7 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
             "TRAFFIC_DEMAND_EXPLANATION_MISSING",
             "USER_SERVICE_REQUEST_SUMMARY_MISSING",
         }
-    assert diagnostics["finding_count"] == 11
+    assert diagnostics["finding_count"] == 12
 
 
 def _file(name: str, filename: str, sha256: str) -> dict[str, object]:
@@ -3830,6 +3922,66 @@ def _network_flow_lifecycle_summary() -> dict[str, object]:
         ),
         "summary_hash": "sha256:network-flow-lifecycle",
     }
+
+def _compute_resource_pool_summary() -> dict[str, object]:
+    return {
+        "version": "v1",
+        "summary_id": "leo_twin.compute_resource_pool_summary.v1",
+        "source": "METRICS_SUMMARY_COMPUTE_RESOURCE_FIELDS",
+        "metric_model": "RESOURCE_VECTOR_FLOW_LEVEL_ESTIMATE",
+        "packet_level_simulation": False,
+        "frontend_inference_required": False,
+        "node_count": 2,
+        "busy_node_count": 1,
+        "idle_node_count": 1,
+        "vector_capacity_reported": True,
+        "vector_utilization_mode": "RESOURCE_VECTOR_ESTIMATED",
+        "dimension_count": 7,
+        "active_dimension_count": 6,
+        "consumed_dimension_count": 3,
+        "saturated_dimension_count": 1,
+        "bottleneck": {
+            "resource": "gpu_tflops_fp32",
+            "label": "GPU FP32 TFLOPS",
+            "utilization": 1.0,
+            "used": 2.0,
+            "total": 2.0,
+            "available": 0.0,
+            "status": "SATURATED",
+        },
+        "dimensions": (
+            {
+                "resource": "cpu_gflops_fp32",
+                "label": "CPU FP32 GFLOPS",
+                "unit": "GFLOPS FP32",
+                "total": 20.0,
+                "available": 10.0,
+                "used": 10.0,
+                "utilization": 0.5,
+                "resource_status": "ACTIVE",
+            },
+            {
+                "resource": "gpu_tflops_fp32",
+                "label": "GPU FP32 TFLOPS",
+                "unit": "TFLOPS FP32",
+                "total": 2.0,
+                "available": 0.0,
+                "used": 2.0,
+                "utilization": 1.0,
+                "resource_status": "SATURATED",
+            },
+        ),
+        "visualization_policy": {
+            "preferred_chart": "PER_DIMENSION_UTILIZATION_BARS",
+            "pie_chart_allowed": False,
+            "reason": "Compute dimensions use different units.",
+        },
+        "model_assumptions": (
+            "Resource pool values are derived from ComputeNodeState metrics.",
+        ),
+        "summary_hash": "sha256:compute-pool",
+    }
+
 
 def _node_network_pressure_summary() -> dict[str, object]:
     return {

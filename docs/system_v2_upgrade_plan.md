@@ -1408,6 +1408,12 @@ Current Phase 3 progress:
   the same backend-owned per-dimension compute resource pool summary, its
   summary hash, and the explicit no-packet-level/no-frontend-inference boundary.
 
+- T413 promotes `compute_resource_pool_summary_v1.json` from an exported file
+  into the result-package review/audit loop. The contract now indexes it as
+  recommended evidence, exposes it in review summary, diagnostics, scenario
+  review bundles, audit indexes, and checklist templates, and keeps its source
+  backend-owned rather than frontend-inferred.
+
 ## 5. Parallel Agent Assignment Model
 
 - Kernel Agent: guard Event Kernel boundaries; review that no domain behavior
