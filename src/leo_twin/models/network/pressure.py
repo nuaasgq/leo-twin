@@ -59,6 +59,34 @@ class RoutePressureDecision:
     blocked_reason: str | None = None
 
 
+@dataclass(frozen=True)
+class TemporalPressureState:
+    """Deterministic source breakdown for time-varying KPI pressure."""
+
+    sim_time: float
+    period_s: float
+    phase: float
+    load_pressure: float
+    triangular_wave: float
+    burst_window_factor: float
+    burst_amplitude: float
+    envelope: float
+    factor: float
+
+    def to_dict(self) -> dict[str, float]:
+        return {
+            "sim_time": self.sim_time,
+            "period_s": self.period_s,
+            "phase": self.phase,
+            "load_pressure": self.load_pressure,
+            "triangular_wave": self.triangular_wave,
+            "burst_window_factor": self.burst_window_factor,
+            "burst_amplitude": self.burst_amplitude,
+            "envelope": self.envelope,
+            "factor": self.factor,
+        }
+
+
 class FlowPressureLedger:
     """Track active flow demand per routed edge deterministically."""
 
@@ -248,25 +276,62 @@ def time_varying_pressure_phase(
     return (max(0.0, float(sim_time)) % period) / period
 
 
+def time_varying_pressure_state(
+    sim_time: float,
+    load_pressure: float,
+    *,
+    period_s: float = NETWORK_TIME_PRESSURE_PERIOD_S,
+    burst_center_phase: float = 0.5,
+    burst_width_phase: float = 0.25,
+    burst_amplitude: float = 0.0,
+) -> TemporalPressureState:
+    """Return deterministic time-pressure factor and explainable components.
+
+    The default profile preserves the historical triangular load-gated factor.
+    Optional burst parameters let callers model a deterministic business-demand
+    window without randomness or packet-level behavior.
+    """
+
+    period = float(period_s)
+    phase = time_varying_pressure_phase(sim_time, period_s=period)
+    pressure = _clamp_probability(load_pressure)
+    triangular_wave = max(0.0, 1.0 - abs((2.0 * phase) - 1.0))
+    burst_window = _phase_window_factor(
+        phase,
+        center_phase=burst_center_phase,
+        width_phase=burst_width_phase,
+    )
+    burst = max(0.0, float(burst_amplitude))
+    envelope = _clamp_probability(
+        0.45 + (0.55 * triangular_wave) + (burst * burst_window)
+    )
+    factor = _clamp_probability(pressure * envelope) if pressure > 0.0 else 0.0
+    return TemporalPressureState(
+        sim_time=max(0.0, float(sim_time)),
+        period_s=max(0.0, period),
+        phase=phase,
+        load_pressure=pressure,
+        triangular_wave=triangular_wave,
+        burst_window_factor=burst_window,
+        burst_amplitude=burst,
+        envelope=envelope,
+        factor=factor,
+    )
+
+
 def time_varying_pressure_factor(
     sim_time: float,
     load_pressure: float,
     *,
     period_s: float = NETWORK_TIME_PRESSURE_PERIOD_S,
 ) -> float:
-    """Return a deterministic load-gated temporal pressure factor.
+    """Return a deterministic load-gated temporal pressure factor."""
 
-    This is a flow-level proxy for synchronized demand bursts. It is not a
-    packet-level model and it never introduces randomness.
-    """
-
-    pressure = _clamp_probability(load_pressure)
-    if pressure <= 0.0:
-        return 0.0
-    phase = time_varying_pressure_phase(sim_time, period_s=period_s)
-    triangular_wave = 1.0 - abs((2.0 * phase) - 1.0)
-    envelope = 0.45 + (0.55 * triangular_wave)
-    return _clamp_probability(pressure * envelope)
+    return time_varying_pressure_state(
+        sim_time,
+        load_pressure,
+        period_s=period_s,
+    ).factor
 
 
 def time_varying_pressure_loss_rate(time_pressure_factor: float) -> float:
@@ -285,6 +350,22 @@ def time_varying_pressure_delay_variation(
     if latency <= 0.0:
         return 0.0
     return latency * max(0.0, float(time_pressure_factor) - 0.4) * 0.2
+
+
+def _phase_window_factor(
+    phase: float,
+    *,
+    center_phase: float,
+    width_phase: float,
+) -> float:
+    width = max(0.0, float(width_phase))
+    if width <= 0.0:
+        return 0.0
+    center = float(center_phase) % 1.0
+    normalized_phase = float(phase) % 1.0
+    distance = abs(normalized_phase - center)
+    wrapped_distance = min(distance, 1.0 - distance)
+    return _clamp_probability(1.0 - (wrapped_distance / width))
 
 
 def _clamp_probability(value: float) -> float:

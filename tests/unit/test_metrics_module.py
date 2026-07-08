@@ -1013,6 +1013,11 @@ def test_metrics_collector_publishes_backend_kpi_time_series() -> None:
         "network_time_adjusted_delivered_throughput_mbps": 0.0,
         "network_time_pressure_period_s": 120.0,
         "network_time_pressure_phase": pytest.approx(1 / 60),
+        "network_time_pressure_load_proxy": 0.0,
+        "network_time_pressure_triangular_wave": pytest.approx(1 / 30),
+        "network_time_pressure_burst_window_factor": 0.0,
+        "network_time_pressure_burst_amplitude": 0.0,
+        "network_time_pressure_envelope": pytest.approx(0.4683333333333333),
         "network_time_pressure_factor": 0.0,
         "network_time_pressure_loss_proxy_rate": 0.0,
         "network_time_pressure_delay_variation_s": 0.0,
@@ -1190,6 +1195,15 @@ def test_metrics_collector_uses_runtime_sim_time_for_time_varying_pressure() -> 
         "network_effective_throughput_mbps"
     ]
     assert peak_tail["network_time_pressure_phase"] == pytest.approx(0.5)
+    assert peak_tail["network_time_pressure_triangular_wave"] == pytest.approx(1.0)
+    assert peak_tail["network_time_pressure_burst_window_factor"] == pytest.approx(1.0)
+    assert peak_tail["network_time_pressure_envelope"] == pytest.approx(1.0)
+    assert peak_tail["network_time_pressure_envelope"] > early_tail[
+        "network_time_pressure_envelope"
+    ]
+    assert peak_tail["network_time_pressure_load_proxy"] == early_tail[
+        "network_time_pressure_load_proxy"
+    ]
 
 
 def test_metrics_collector_kpi_time_series_prepends_initial_baseline_for_single_sample() -> None:
@@ -1222,6 +1236,11 @@ def test_metrics_collector_kpi_time_series_prepends_initial_baseline_for_single_
     assert series["samples"][0]["network_effective_loss_proxy_rate"] == 0.0
     assert series["samples"][0]["network_recent_window_s"] == 60.0
     assert series["samples"][0]["network_time_pressure_period_s"] == 120.0
+    assert series["samples"][0]["network_time_pressure_load_proxy"] == 0.0
+    assert series["samples"][0]["network_time_pressure_triangular_wave"] == 0.0
+    assert series["samples"][0]["network_time_pressure_burst_window_factor"] == 0.0
+    assert series["samples"][0]["network_time_pressure_burst_amplitude"] == 0.0
+    assert series["samples"][0]["network_time_pressure_envelope"] == 0.45
     assert series["samples"][0]["network_time_pressure_factor"] == 0.0
     assert series["samples"][1]["sim_time"] == 2.0
     assert series["samples"][1]["network_effective_throughput_mbps"] == pytest.approx(

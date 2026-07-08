@@ -1367,6 +1367,12 @@ Current Phase 3 progress:
   frontend-derived, packet-level, hashless, or inconsistent with the backend
   deterministic temporal pressure model.
 
+- T406 moves temporal network pressure closer to a product model by adding
+  `TemporalPressureState` in `models/network/pressure.py`. Metrics now expose
+  backend-owned load, triangular-wave, burst-window, envelope, and factor fields
+  so KPI variation has an inspectable model source instead of a single opaque
+  number.
+
 ## 5. Parallel Agent Assignment Model
 
 - Kernel Agent: guard Event Kernel boundaries; review that no domain behavior

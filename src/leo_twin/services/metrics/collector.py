@@ -16,9 +16,8 @@ from typing import Any, Protocol
 from leo_twin.models.network.pressure import (
     NETWORK_TIME_PRESSURE_PERIOD_S,
     time_varying_pressure_delay_variation,
-    time_varying_pressure_factor,
     time_varying_pressure_loss_rate,
-    time_varying_pressure_phase,
+    time_varying_pressure_state,
 )
 from leo_twin.models.orbit import ground_track_point
 from leo_twin.schema import (
@@ -836,6 +835,23 @@ class MetricsCollector:
             "network_time_pressure_phase": float(
                 network_summary["network_quality_time_pressure_phase"]
             ),
+            "network_time_pressure_load_proxy": float(
+                network_summary["network_quality_time_pressure_load_proxy"]
+            ),
+            "network_time_pressure_triangular_wave": float(
+                network_summary["network_quality_time_pressure_triangular_wave"]
+            ),
+            "network_time_pressure_burst_window_factor": float(
+                network_summary[
+                    "network_quality_time_pressure_burst_window_factor"
+                ]
+            ),
+            "network_time_pressure_burst_amplitude": float(
+                network_summary["network_quality_time_pressure_burst_amplitude"]
+            ),
+            "network_time_pressure_envelope": float(
+                network_summary["network_quality_time_pressure_envelope"]
+            ),
             "network_time_pressure_factor": float(
                 network_summary["network_quality_time_pressure_factor"]
             ),
@@ -1481,10 +1497,16 @@ class MetricsCollector:
         flow_pressure_proxy = (
             throughput_pressure_proxy if flow_quality["successful_count"] > 1 else 0.0
         )
-        time_pressure_factor = time_varying_pressure_factor(
-            summary_time,
-            max(demand_pressure_proxy, flow_pressure_proxy, congestion_proxy),
+        time_pressure_load_proxy = max(
+            demand_pressure_proxy,
+            flow_pressure_proxy,
+            congestion_proxy,
         )
+        temporal_pressure = time_varying_pressure_state(
+            summary_time,
+            time_pressure_load_proxy,
+        )
+        time_pressure_factor = temporal_pressure.factor
         time_pressure_loss_proxy_rate = time_varying_pressure_loss_rate(
             time_pressure_factor
         )
@@ -1641,10 +1663,23 @@ class MetricsCollector:
             ),
             "network_quality_demand_pressure_proxy": float(demand_pressure_proxy),
             "network_quality_time_pressure_period_s": float(
-                _NETWORK_TIME_PRESSURE_PERIOD_S
+                temporal_pressure.period_s
             ),
-            "network_quality_time_pressure_phase": float(
-                time_varying_pressure_phase(summary_time)
+            "network_quality_time_pressure_phase": float(temporal_pressure.phase),
+            "network_quality_time_pressure_load_proxy": float(
+                temporal_pressure.load_pressure
+            ),
+            "network_quality_time_pressure_triangular_wave": float(
+                temporal_pressure.triangular_wave
+            ),
+            "network_quality_time_pressure_burst_window_factor": float(
+                temporal_pressure.burst_window_factor
+            ),
+            "network_quality_time_pressure_burst_amplitude": float(
+                temporal_pressure.burst_amplitude
+            ),
+            "network_quality_time_pressure_envelope": float(
+                temporal_pressure.envelope
             ),
             "network_quality_time_pressure_factor": float(time_pressure_factor),
             "network_quality_time_pressure_loss_proxy_rate": float(
@@ -2222,6 +2257,11 @@ def _baseline_kpi_sample(sim_time: float) -> KpiSample:
         "network_time_adjusted_delivered_throughput_mbps": 0.0,
         "network_time_pressure_period_s": float(_NETWORK_TIME_PRESSURE_PERIOD_S),
         "network_time_pressure_phase": 0.0,
+        "network_time_pressure_load_proxy": 0.0,
+        "network_time_pressure_triangular_wave": 0.0,
+        "network_time_pressure_burst_window_factor": 0.0,
+        "network_time_pressure_burst_amplitude": 0.0,
+        "network_time_pressure_envelope": 0.45,
         "network_time_pressure_factor": 0.0,
         "network_time_pressure_loss_proxy_rate": 0.0,
         "network_time_pressure_delay_variation_s": 0.0,

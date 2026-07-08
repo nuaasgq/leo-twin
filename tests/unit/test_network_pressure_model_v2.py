@@ -9,6 +9,7 @@ from leo_twin.models.network.pressure import (
     pressure_queue_delay,
     time_varying_pressure_delay_variation,
     time_varying_pressure_factor,
+    time_varying_pressure_state,
     time_varying_pressure_loss_rate,
     time_varying_pressure_phase,
 )
@@ -78,6 +79,19 @@ def test_time_varying_pressure_helpers_are_deterministic_load_gated_proxies() ->
     assert time_varying_pressure_factor(0.0, 0.8) == pytest.approx(0.36)
     assert time_varying_pressure_factor(30.0, 0.8) == pytest.approx(0.58)
     assert time_varying_pressure_factor(60.0, 0.8) == pytest.approx(0.8)
+    state = time_varying_pressure_state(30.0, 0.8)
+    assert state.phase == pytest.approx(0.25)
+    assert state.load_pressure == pytest.approx(0.8)
+    assert state.triangular_wave == pytest.approx(0.5)
+    assert state.burst_window_factor == 0.0
+    assert state.burst_amplitude == 0.0
+    assert state.envelope == pytest.approx(0.725)
+    assert state.factor == pytest.approx(0.58)
+    assert state.to_dict()["factor"] == pytest.approx(0.58)
+    burst_state = time_varying_pressure_state(60.0, 0.8, burst_amplitude=0.15)
+    assert burst_state.burst_window_factor == pytest.approx(1.0)
+    assert burst_state.envelope == pytest.approx(1.0)
+    assert burst_state.factor == pytest.approx(0.8)
     assert time_varying_pressure_loss_rate(0.55) == 0.0
     assert time_varying_pressure_loss_rate(0.8) == pytest.approx(0.05)
     assert time_varying_pressure_delay_variation(0.2, 0.4) == 0.0

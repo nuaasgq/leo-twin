@@ -20795,3 +20795,50 @@ change.
     model-consistent, non-packet-level, backend-owned, and hash-backed. It still
     does not validate numerical behavior against an external simulator or RF
     baseline, which remains outside current project constraints.
+
+## 2026-07-08 - T406 network temporal pressure profile v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: strengthen the backend network model layer for time-varying KPI
+  pressure. Added `TemporalPressureState` and
+  `time_varying_pressure_state()` in `models/network/pressure.py` so the
+  deterministic pressure factor is backed by explicit components: load proxy,
+  triangular time wave, optional deterministic business burst window, envelope,
+  and final factor. The default profile preserves the previous factor values,
+  while MetricsCollector now exports these components into KPI time-series
+  samples for backend-owned explanation. No Event Kernel, packet-level,
+  frontend, or external simulator behavior was changed.
+- Changed files/modules:
+  - `src/leo_twin/models/network/pressure.py`
+  - `src/leo_twin/models/network/__init__.py`
+  - `src/leo_twin/services/metrics/collector.py`
+  - `tests/unit/test_network_pressure_model_v2.py`
+  - `tests/unit/test_metrics_module.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Python `py_compile` for touched backend/test files.
+    - Result: passed.
+  - Direct function run for all target tests in
+    `tests/unit/test_network_pressure_model_v2.py` and selected MetricsCollector
+    temporal-pressure tests in `tests/unit/test_metrics_module.py`.
+    - Result: passed.
+  - Direct function run for all tests in
+    `tests/unit/test_network_kpi_provenance_v2.py` and
+    `tests/unit/test_network_kpi_calibration_v1.py`.
+    - Result: passed.
+- Problems encountered:
+  - The bundled runtime still lacks pytest, so target tests were executed by
+    direct function calls with local `pytest.approx`, `pytest.raises`, and
+    `pytest.mark.parametrize` shims as needed.
+  - One draft assertion incorrectly expected the backend source load proxy to
+    change between early and peak samples. The source load is intentionally
+    stable in that test; the time-varying envelope/factor is what changes. The
+    assertion was corrected before validation passed.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The optional burst-window parameters are model-layer ready but not yet wired
+    to user YAML configuration. The next backend task should expose these fields
+    through validated user configuration and status summaries.
