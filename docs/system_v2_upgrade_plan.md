@@ -1342,6 +1342,12 @@ Current Phase 3 progress:
   user, satellite, and compute-node sections so the communication-compute chain
   is readable without manually stitching small cards together.
 
+- T402B exports backend-owned temporal pressure evidence into the runtime
+  result package. `network_temporal_pressure_evidence_v1.json` is now linked
+  from review summary, diagnostics, scenario review, artifact browser metadata,
+  and audit index so network KPI time-variation evidence can be reviewed
+  offline without frontend inference or metric recomputation.
+
 ## 5. Parallel Agent Assignment Model
 
 - Kernel Agent: guard Event Kernel boundaries; review that no domain behavior

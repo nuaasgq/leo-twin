@@ -1173,6 +1173,7 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
         "events.jsonl",
         "manifest.json",
         "metrics.csv",
+        "network_temporal_pressure_evidence_v1.json",
         "review_summary_v1.json",
         "route_detail_index_v1.json",
         "route_pressure_evidence_v1.json",
@@ -1217,6 +1218,11 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
     )
     node_network_pressure_summary = json.loads(
         (package_dir / "node_network_pressure_summary_v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    network_temporal_pressure_evidence = json.loads(
+        (package_dir / "network_temporal_pressure_evidence_v1.json").read_text(
             encoding="utf-8"
         )
     )
@@ -1309,6 +1315,17 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
         "node_network_pressure_summary_v1"
     ]
     assert node_network_pressure_summary["evidence"]["evidence_present"] is True
+    assert network_temporal_pressure_evidence["type"] == (
+        "RUNTIME_EXPORT_NETWORK_TEMPORAL_PRESSURE_EVIDENCE_V1"
+    )
+    assert network_temporal_pressure_evidence["temporal_pressure_evidence"] == (
+        config_snapshot["status"]["network_kpi_provenance_v2"][
+            "temporal_pressure_evidence"
+        ]
+    )
+    assert network_temporal_pressure_evidence["evidence"][
+        "packet_level_simulation"
+    ] is False
     assert review_summary["type"] == "RUNTIME_EXPORT_REVIEW_SUMMARY_V1"
     assert review_summary["package_id"] == exported["package_id"]
     assert review_summary["review_status"] == "REVIEW_READY"
@@ -1326,6 +1343,12 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
         "node_network_pressure_summary_exported"
     ] is True
     assert review_summary["artifacts"]["runtime_kpi_movement_summary_exported"] is True
+    assert review_summary["artifacts"][
+        "network_temporal_pressure_evidence_exported"
+    ] is True
+    assert review_summary["network_temporal_pressure_evidence"][
+        "evidence_hash"
+    ] == network_temporal_pressure_evidence["evidence"]["evidence_hash"]
     assert review_summary["runtime_kpi_movement_summary"]["evidence_present"] is True
     assert review_summary["route_pressure_evidence"]["evidence_present"] is True
     assert review_summary["route_pressure_evidence"]["route_count"] == (
@@ -1359,6 +1382,9 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
     assert diagnostics_bundle["node_network_pressure_summary"]["evidence_hash"] == (
         review_summary["node_network_pressure_summary"]["evidence_hash"]
     )
+    assert diagnostics_bundle["network_temporal_pressure_evidence"][
+        "evidence_hash"
+    ] == network_temporal_pressure_evidence["evidence"]["evidence_hash"]
     assert diagnostics_bundle["node_network_pressure_summary"][
         "evidence_present"
     ] is True
@@ -1385,6 +1411,9 @@ def test_demo_adapter_exports_runtime_result_package(tmp_path) -> None:
     assert scenario_review_bundle["node_network_pressure_summary"][
         "evidence_present"
     ] is True
+    assert scenario_review_bundle["network_temporal_pressure_evidence"][
+        "evidence_hash"
+    ] == network_temporal_pressure_evidence["evidence"]["evidence_hash"]
     assert scenario_review_bundle["traffic_demand_explanation"]["evidence_hash"] == (
         traffic_demand_explanation["evidence"]["evidence_hash"]
     )
@@ -1428,6 +1457,7 @@ def test_demo_adapter_exports_deterministic_runtime_archive(tmp_path) -> None:
             "events.jsonl",
             "manifest.json",
             "metrics.csv",
+            "network_temporal_pressure_evidence_v1.json",
             "review_summary_v1.json",
             "route_detail_index_v1.json",
             "scenario_review_bundle_v1.json",
@@ -1527,6 +1557,7 @@ def test_demo_adapter_persists_runtime_export_catalog(tmp_path) -> None:
         "events.jsonl",
         "manifest.json",
         "metrics.csv",
+        "network_temporal_pressure_evidence_v1.json",
         "review_summary_v1.json",
         "route_detail_index_v1.json",
         "scenario_review_bundle_v1.json",
@@ -1610,6 +1641,11 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
         "node_network_pressure_summary_v1.json",
         export_root,
     )
+    network_temporal_pressure_artifact = control_plane.runtime_export_package_artifact(
+        package_id,
+        "network_temporal_pressure_evidence_v1.json",
+        export_root,
+    )
     review_summary_artifact = control_plane.runtime_export_package_artifact(
         package_id,
         "review_summary_v1.json",
@@ -1665,6 +1701,20 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
     )
     assert node_network_pressure_summary["type"] == (
         "RUNTIME_EXPORT_NODE_NETWORK_PRESSURE_SUMMARY_V1"
+    )
+    assert Path(str(network_temporal_pressure_artifact["path"])).name == (
+        "network_temporal_pressure_evidence_v1.json"
+    )
+    assert network_temporal_pressure_artifact["content_type"] == (
+        "application/json; charset=utf-8"
+    )
+    network_temporal_pressure_evidence = json.loads(
+        Path(str(network_temporal_pressure_artifact["path"])).read_text(
+            encoding="utf-8"
+        )
+    )
+    assert network_temporal_pressure_evidence["type"] == (
+        "RUNTIME_EXPORT_NETWORK_TEMPORAL_PRESSURE_EVIDENCE_V1"
     )
     assert Path(str(manifest_artifact["path"])).name == "manifest.json"
     assert manifest_artifact["content_type"] == "application/json; charset=utf-8"
@@ -1943,6 +1993,9 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
     assert review_summary["node_network_pressure_summary"][
         "evidence_present"
     ] is True
+    assert review_summary["network_temporal_pressure_evidence"][
+        "evidence_hash"
+    ] == network_temporal_pressure_evidence["evidence"]["evidence_hash"]
     assert review_summary["summary_hash"].startswith("sha256:")
     assert (
         Path(str(diagnostics_bundle_artifact["path"])).name
@@ -2068,7 +2121,10 @@ def test_demo_adapter_serves_persisted_runtime_export_artifacts(tmp_path) -> Non
         for item in changed_summary["differences"]
     } >= {
         ("config", "$.scenario.satellite_count"),
-        ("generated_config", "$.satellite_count"),
+        (
+            "generated_config",
+            "$.backend_summary.configuration_explanation_v2.section_explanations[0].current_values.satellite_count",
+        ),
     }
     changed_preflight_summary = changed_preflight["summary"]
     assert changed_preflight_summary["readiness"] == "READY"

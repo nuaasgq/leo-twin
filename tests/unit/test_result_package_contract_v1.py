@@ -15,6 +15,7 @@ from leo_twin.services.result_package_contract import (
     RUNTIME_EXPORT_DIAGNOSTICS_BUNDLE_V1_ID,
     RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_V1_ID,
     RUNTIME_EXPORT_NETWORK_KPI_FORMULA_EVIDENCE_V1_ID,
+    RUNTIME_EXPORT_NETWORK_TEMPORAL_PRESSURE_EVIDENCE_V1_ID,
     RUNTIME_EXPORT_NODE_NETWORK_PRESSURE_SUMMARY_V1_ID,
     RUNTIME_EXPORT_RUNTIME_KPI_MOVEMENT_SUMMARY_V1_ID,
     RUNTIME_EXPORT_NETWORK_FLOW_LIFECYCLE_SUMMARY_V1_ID,
@@ -47,6 +48,7 @@ from leo_twin.services.result_package_contract import (
     build_runtime_export_diagnostics_bundle_v1,
     build_runtime_export_network_kpi_benchmark_validation_v1,
     build_runtime_export_network_kpi_formula_evidence_v1,
+    build_runtime_export_network_temporal_pressure_evidence_v1,
     build_runtime_export_node_network_pressure_summary_v1,
     build_runtime_export_runtime_kpi_movement_summary_v1,
     build_runtime_export_network_flow_lifecycle_summary_v1,
@@ -86,6 +88,9 @@ _ROUTE_PRESSURE_EVIDENCE_FILENAME = "route_pressure_evidence_v1.json"
 _NODE_NETWORK_PRESSURE_SUMMARY_FILENAME = "node_network_pressure_summary_v1.json"
 _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME = "runtime_kpi_movement_summary_v1.json"
 _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME = "network_flow_lifecycle_summary_v1.json"
+_NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME = (
+    "network_temporal_pressure_evidence_v1.json"
+)
 
 
 def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
@@ -118,6 +123,7 @@ def test_result_package_contract_v1_is_deterministic_json_ready() -> None:
         "diagnostics_bundle_v1.json",
         "network_kpi_benchmark_validation_v1.json",
         "network_kpi_formula_evidence_v1.json",
+        _NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME,
         "network_kpi_variation_explanation_v1.json",
         _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
         _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME,
@@ -266,6 +272,7 @@ def test_result_package_summary_accepts_complete_package_record() -> None:
         "diagnostics_bundle_v1.json",
         "network_kpi_benchmark_validation_v1.json",
         "network_kpi_formula_evidence_v1.json",
+        _NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME,
         "network_kpi_variation_explanation_v1.json",
         _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
         _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME,
@@ -320,6 +327,7 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
                 _network_kpi_benchmark_validation()
             ),
             "network_kpi_formula_evidence_v1": _network_kpi_formula_evidence(),
+            "network_kpi_provenance_v2": _network_kpi_provenance_v2(),
             "network_kpi_variation_explanation_v1": (
                 _network_kpi_variation_explanation()
             ),
@@ -352,6 +360,7 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
         "diagnostics_bundle_v1.json",
         "network_kpi_benchmark_validation_v1.json",
         "network_kpi_formula_evidence_v1.json",
+        _NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME,
         "user_configuration_template_validation_v1.json",
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME,
         "review_summary_v1.json",
@@ -423,6 +432,10 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
         "FORMULA_AND_TIME_EVIDENCE_READY"
     )
     assert first["network_kpi_formula_evidence"]["missing_selected_input_count"] == 0
+    assert first["network_temporal_pressure_evidence"]["evidence_present"] is True
+    assert first["network_temporal_pressure_evidence"]["status"] == "OBSERVED"
+    assert first["network_temporal_pressure_evidence"]["time_pressure_factor"] == 0.85
+    assert first["network_temporal_pressure_evidence"]["loss_proxy_rate"] == 0.07
     assert first["runtime_kpi_movement_summary"]["evidence_present"] is True
     assert first["runtime_kpi_movement_summary"]["movement_status"] == (
         "TIME_VARYING_OBSERVED"
@@ -450,6 +463,9 @@ def test_runtime_export_review_summary_v1_is_deterministic_and_review_ready() ->
         "network_kpi_benchmark_validation_exported"
     ] is True
     assert first["artifacts"]["network_kpi_formula_evidence_exported"] is True
+    assert first["artifacts"][
+        "network_temporal_pressure_evidence_exported"
+    ] is True
     assert first["artifacts"][
         "user_configuration_template_validation_exported"
     ] is True
@@ -528,6 +544,7 @@ def test_runtime_export_network_kpi_formula_evidence_v1_is_deterministic() -> No
         "type": "RUNTIME_CONFIG_SNAPSHOT",
         "status": {
             "network_kpi_formula_evidence_v1": _network_kpi_formula_evidence(),
+            "network_kpi_provenance_v2": _network_kpi_provenance_v2(),
         },
         "config": {"seed": 7},
         "generated_config": _generated_config(),
@@ -554,6 +571,51 @@ def test_runtime_export_network_kpi_formula_evidence_v1_is_deterministic() -> No
     assert first["evidence"]["formula_evidence_status"] == (
         "FORMULA_AND_TIME_EVIDENCE_READY"
     )
+    assert first["evidence"]["acceptable_for_demo_review"] is True
+    assert first["evidence"]["evidence_hash"].startswith("sha256:")
+    assert first["artifact_hash"].startswith("sha256:")
+    assert "NO_METRIC_RECOMPUTE" in first["boundary_conditions"]
+
+
+def test_runtime_export_network_temporal_pressure_evidence_v1_is_deterministic() -> None:
+    temporal_pressure = _network_kpi_provenance_v2()["temporal_pressure_evidence"]
+    config_snapshot = {
+        "type": "RUNTIME_CONFIG_SNAPSHOT",
+        "status": {
+            "network_kpi_provenance_v2": _network_kpi_provenance_v2(),
+        },
+        "config": {"seed": 7},
+        "generated_config": _generated_config(),
+    }
+
+    first = build_runtime_export_network_temporal_pressure_evidence_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=config_snapshot,
+    )
+    second = build_runtime_export_network_temporal_pressure_evidence_v1(
+        package_id="pkg-1",
+        package_dir="exports/pkg-1",
+        config_snapshot=dict(reversed(tuple(config_snapshot.items()))),
+    )
+
+    assert first == second
+    assert first["artifact_id"] == (
+        RUNTIME_EXPORT_NETWORK_TEMPORAL_PRESSURE_EVIDENCE_V1_ID
+    )
+    assert first["runtime_status_field"] == (
+        "network_kpi_provenance_v2.temporal_pressure_evidence"
+    )
+    assert first["temporal_pressure_evidence"] == temporal_pressure
+    assert first["evidence"]["evidence_present"] is True
+    assert first["evidence"]["status"] == "OBSERVED"
+    assert first["evidence"]["temporal_pressure_model"] == (
+        "DETERMINISTIC_TRIANGULAR_LOAD_GATED_PROXY"
+    )
+    assert first["evidence"]["time_pressure_factor"] == 0.85
+    assert first["evidence"]["loss_proxy_rate"] == 0.07
+    assert first["evidence"]["packet_level_simulation"] is False
+    assert first["evidence"]["frontend_inference_required"] is False
     assert first["evidence"]["acceptable_for_demo_review"] is True
     assert first["evidence"]["evidence_hash"].startswith("sha256:")
     assert first["artifact_hash"].startswith("sha256:")
@@ -945,6 +1007,7 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
                 _network_kpi_benchmark_validation()
             ),
             "network_kpi_formula_evidence_v1": _network_kpi_formula_evidence(),
+            "network_kpi_provenance_v2": _network_kpi_provenance_v2(),
             "network_kpi_variation_explanation_v1": (
                 _network_kpi_variation_explanation()
             ),
@@ -979,6 +1042,7 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
         "metrics.csv",
         "network_kpi_benchmark_validation_v1.json",
         "network_kpi_formula_evidence_v1.json",
+        _NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME,
         "network_kpi_variation_explanation_v1.json",
         _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
         _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME,
@@ -1048,6 +1112,11 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
         "FORMULA_AND_TIME_EVIDENCE_READY"
     )
     assert first["network_kpi_formula_evidence"]["acceptable_for_demo_review"] is True
+    assert first["network_temporal_pressure_evidence"]["evidence_present"] is True
+    assert first["network_temporal_pressure_evidence"]["status"] == "OBSERVED"
+    assert first["network_temporal_pressure_evidence"][
+        "acceptable_for_demo_review"
+    ] is True
     assert first["user_configuration_template_validation"][
         "validation_status"
     ] == "ALL_TEMPLATES_VALID"
@@ -1074,7 +1143,7 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
     assert artifact_browser["missing_required_count"] == 0
     assert artifact_browser["browser_hash"].startswith("sha256:")
     categories = {item["category"]: item for item in artifact_browser["categories"]}
-    assert categories["NETWORK_KPI_EVIDENCE"]["present_count"] == 5
+    assert categories["NETWORK_KPI_EVIDENCE"]["present_count"] == 6
     variation_item = next(
         item
         for item in artifact_browser["items"]
@@ -1093,6 +1162,15 @@ def test_runtime_export_diagnostics_bundle_v1_is_deterministic_and_review_ready(
     assert movement_item["present"] is True
     assert movement_item["default_json_pointer"] == "/evidence"
     assert movement_item["filter_hint"] == "movement"
+    temporal_pressure_item = next(
+        item
+        for item in artifact_browser["items"]
+        if item["filename"] == _NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME
+    )
+    assert temporal_pressure_item["category"] == "NETWORK_KPI_EVIDENCE"
+    assert temporal_pressure_item["present"] is True
+    assert temporal_pressure_item["default_json_pointer"] == "/evidence"
+    assert temporal_pressure_item["filter_hint"] == "temporal pressure"
     pressure_item = next(
         item
         for item in artifact_browser["items"]
@@ -1133,6 +1211,7 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
                 _route_pressure_export_policy()
             ),
             "network_kpi_formula_evidence_v1": _network_kpi_formula_evidence(),
+            "network_kpi_provenance_v2": _network_kpi_provenance_v2(),
             "network_kpi_variation_explanation_v1": (
                 _network_kpi_variation_explanation()
             ),
@@ -1169,6 +1248,7 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
         "metrics.csv",
         "network_kpi_benchmark_validation_v1.json",
         "network_kpi_formula_evidence_v1.json",
+        _NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME,
         "network_kpi_variation_explanation_v1.json",
         _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
         _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME,
@@ -1276,6 +1356,10 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
     assert first["network_kpi_formula_evidence"]["evidence_hash"] == (
         review_summary["network_kpi_formula_evidence"]["evidence_hash"]
     )
+    assert first["network_temporal_pressure_evidence"]["evidence_hash"] == (
+        review_summary["network_temporal_pressure_evidence"]["evidence_hash"]
+    )
+    assert first["network_temporal_pressure_evidence"]["evidence_present"] is True
     assert first["user_configuration_template_validation"][
         "validation_status"
     ] == "ALL_TEMPLATES_VALID"
@@ -1302,6 +1386,9 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
         "recommended_review_order"
     ]
     assert _TRAFFIC_DEMAND_EXPLANATION_FILENAME in first["recommended_review_order"]
+    assert _NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME in first[
+        "recommended_review_order"
+    ]
     assert first["recommended_review_order"].index(
         _TRAFFIC_DEMAND_EXPLANATION_FILENAME
     ) < first["recommended_review_order"].index(
@@ -1327,6 +1414,9 @@ def test_runtime_export_scenario_review_bundle_v1_is_deterministic() -> None:
     assert _TRAFFIC_DEMAND_EXPLANATION_FILENAME in first["artifact_review"][
         "entrypoint_filenames"
     ]
+    assert _NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME in first[
+        "artifact_review"
+    ]["entrypoint_filenames"]
     assert first["scenario_review_hash"].startswith("sha256:")
     assert json.loads(json.dumps(first, sort_keys=True))["bundle_id"] == (
         RUNTIME_EXPORT_SCENARIO_REVIEW_BUNDLE_V1_ID
@@ -3149,6 +3239,7 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
         "metrics.csv",
         "network_kpi_benchmark_validation_v1.json",
         "network_kpi_formula_evidence_v1.json",
+        _NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME,
         "network_kpi_variation_explanation_v1.json",
         _RUNTIME_KPI_MOVEMENT_SUMMARY_FILENAME,
         _NETWORK_FLOW_LIFECYCLE_SUMMARY_FILENAME,
@@ -3191,14 +3282,16 @@ def test_runtime_export_diagnostics_bundle_v1_warns_when_route_trust_missing() -
             "ROUTE_TRUST_EVIDENCE_MISSING",
             "ROUTE_PRESSURE_EVIDENCE_MISSING",
             "NODE_NETWORK_PRESSURE_SUMMARY_MISSING",
+            "NETWORK_FLOW_LIFECYCLE_SUMMARY_MISSING",
             "NETWORK_KPI_BENCHMARK_VALIDATION_MISSING",
             "NETWORK_KPI_FORMULA_EVIDENCE_MISSING",
+            "NETWORK_TEMPORAL_PRESSURE_EVIDENCE_MISSING",
             "NETWORK_KPI_VARIATION_EXPLANATION_MISSING",
             "USER_CONFIGURATION_TEMPLATE_VALIDATION_MISSING",
             "TRAFFIC_DEMAND_EXPLANATION_MISSING",
             "USER_SERVICE_REQUEST_SUMMARY_MISSING",
         }
-    assert diagnostics["finding_count"] == 9
+    assert diagnostics["finding_count"] == 11
 
 
 def _file(name: str, filename: str, sha256: str) -> dict[str, object]:
@@ -3528,6 +3621,61 @@ def _network_kpi_formula_evidence() -> dict[str, object]:
         "caveats": (
             "Formula evidence summarizes backend flow-level proxy inputs.",
         ),
+    }
+
+
+def _network_kpi_provenance_v2() -> dict[str, object]:
+    return {
+        "version": "v2",
+        "provenance_id": "leo_twin.network_kpi_provenance.v2",
+        "source": "BACKEND_METRICS_SUMMARY",
+        "network_model_contract_id": "leo_twin.network_model_contract.v2",
+        "metric_model": "FLOW_LEVEL_PROXY",
+        "packet_level_simulation": False,
+        "frontend_inference_required": False,
+        "temporal_pressure_evidence": {
+            "version": "v1",
+            "evidence_id": "leo_twin.network_temporal_pressure_evidence.v1",
+            "source": "METRICS_SUMMARY",
+            "metric_model": "FLOW_LEVEL_PROXY",
+            "temporal_pressure_model": (
+                "DETERMINISTIC_TRIANGULAR_LOAD_GATED_PROXY"
+            ),
+            "packet_level_simulation": False,
+            "frontend_inference_required": False,
+            "status": "OBSERVED",
+            "required_field_count": 3,
+            "observed_required_field_count": 3,
+            "source_field_count": 10,
+            "time_pressure_period_s": 120.0,
+            "time_pressure_phase": 0.5,
+            "time_pressure_factor": 0.85,
+            "dominant_load_component": {
+                "component": "demand_pressure",
+                "field": "network_quality_demand_pressure_proxy",
+                "current_value": 0.92,
+                "value_source": "METRICS_SUMMARY",
+            },
+            "load_pressure_proxy": 0.92,
+            "loss_proxy_rate": 0.07,
+            "delay_variation_proxy_s": 0.002,
+            "temporal_pressure_active": True,
+            "loss_proxy_active": True,
+            "delay_variation_proxy_active": True,
+            "delivered_throughput_mbps": 180.0,
+            "time_adjusted_delivered_throughput_mbps": 171.0,
+            "throughput_delta_mbps": 9.0,
+            "source_fields": (
+                "network_quality_time_pressure_factor",
+                "network_quality_time_pressure_loss_proxy_rate",
+                "network_quality_delay_variation_pressure_s",
+            ),
+            "model_assumptions": (
+                "Temporal pressure is a deterministic load-gated flow-level proxy.",
+            ),
+        },
+        "kpi_count": 0,
+        "kpis": (),
     }
 
 

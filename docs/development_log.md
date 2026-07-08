@@ -20599,3 +20599,60 @@ change.
   - The browser improves readability for one selected trace. A later task
     should add explicit cross-filtered result panes and virtualized tables for
     large trace/detail payloads.
+
+## 2026-07-08 - T402B network temporal pressure result package export v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: export backend-owned network temporal pressure evidence into runtime
+  result packages. The task binds `network_kpi_provenance_v2.temporal_pressure_evidence`
+  to `network_temporal_pressure_evidence_v1.json`, review summary,
+  diagnostics bundle, scenario review bundle, artifact browser metadata, and
+  package audit index. It does not modify Event Kernel behavior, network model
+  execution, packet-level semantics, frontend rendering, or external simulator
+  integrations.
+- Changed files/modules:
+  - `src/leo_twin/services/result_package_contract.py`
+  - `examples/integration_demo/control_plane.py`
+  - `tests/unit/test_result_package_contract_v1.py`
+  - `tests/integration/test_result_package_export_v1.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Python `py_compile` for result package contract, demo control
+    plane, and touched tests.
+    - Result: passed.
+  - Direct function run for all 39 functions in
+    `tests/unit/test_result_package_contract_v1.py`.
+    - Result: passed.
+  - Direct function run for `tests/integration/test_result_package_export_v1.py`.
+    - Result: passed, 1 integration function.
+  - Direct function run for runtime export package/archive/catalog/artifact
+    tests in `tests/integration/test_runtime_session_control.py`.
+    - Result: passed, 4 target functions.
+  - Direct function run for all 5 functions in
+    `tests/unit/test_network_kpi_provenance_v2.py`.
+    - Result: passed.
+  - `git diff --check` on touched source/test files.
+    - Result: passed; Git emitted existing CRLF warnings for touched files.
+- Problems encountered:
+  - The `apply_patch` helper is still blocked by the Windows sandbox helper
+    (`orchestrator_helper_launch_canceled`), so changes were made with exact
+    deterministic text edits instead.
+  - The bundled Python runtime does not expose pytest as a module in this
+    workspace. Target tests were executed by direct function calls with a small
+    local `pytest.raises` shim where the integration module import required it.
+  - An existing runtime export compare test expected
+    `generated_config.$.satellite_count`; current generated config exposes the
+    satellite-count change through backend summary current-value paths. The
+    assertion was aligned to the current backend-generated config structure.
+  - Existing local runtime config drift remains untouched and unstaged:
+    `configs/generated_full_system_demo.json` and `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The new result-package artifact is an offline review/export binding. It does
+    not improve the underlying flow-level network metric formula itself; a later
+    backend task should calibrate the temporal pressure proxy against benchmark
+    scenarios.
+  - Full pytest was not run because the available bundled runtime lacks pytest
+    and system Python access is unreliable in this sandbox.

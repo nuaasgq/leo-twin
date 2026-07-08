@@ -89,6 +89,9 @@ RUNTIME_EXPORT_NETWORK_KPI_BENCHMARK_VALIDATION_V1_ID = (
 RUNTIME_EXPORT_NETWORK_KPI_FORMULA_EVIDENCE_V1_ID = (
     "leo_twin.runtime_export_network_kpi_formula_evidence.v1"
 )
+RUNTIME_EXPORT_NETWORK_TEMPORAL_PRESSURE_EVIDENCE_V1_ID = (
+    "leo_twin.runtime_export_network_temporal_pressure_evidence.v1"
+)
 RUNTIME_EXPORT_NETWORK_KPI_VARIATION_EXPLANATION_V1_ID = (
     "leo_twin.runtime_export_network_kpi_variation_explanation.v1"
 )
@@ -134,6 +137,9 @@ NETWORK_KPI_BENCHMARK_VALIDATION_FILENAME = (
     "network_kpi_benchmark_validation_v1.json"
 )
 NETWORK_KPI_FORMULA_EVIDENCE_FILENAME = "network_kpi_formula_evidence_v1.json"
+NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME = (
+    "network_temporal_pressure_evidence_v1.json"
+)
 NETWORK_KPI_VARIATION_EXPLANATION_FILENAME = (
     "network_kpi_variation_explanation_v1.json"
 )
@@ -300,6 +306,15 @@ def result_package_contract_v1_to_dict() -> dict[str, object]:
                 "content": (
                     "runtime network KPI formula input and time-series evidence "
                     "exported for offline review"
+                ),
+            },
+            {
+                "logical_name": "network_temporal_pressure_evidence_v1",
+                "filename": "network_temporal_pressure_evidence_v1.json",
+                "format": "json",
+                "content": (
+                    "backend-owned deterministic temporal pressure evidence "
+                    "exported for offline network KPI review"
                 ),
             },
             {
@@ -679,6 +694,17 @@ def _runtime_export_artifact_browser_specs() -> tuple[dict[str, object], ...]:
             "filter_hint": "evidence",
         },
         {
+            "logical_name": "network_temporal_pressure_evidence_v1",
+            "filename": NETWORK_TEMPORAL_PRESSURE_EVIDENCE_FILENAME,
+            "category": "NETWORK_KPI_EVIDENCE",
+            "review_priority": 115,
+            "format": "json",
+            "review_role": "Network temporal pressure evidence.",
+            "content": "Time-pressure model source fields and runtime pressure values.",
+            "default_json_pointer": "/evidence",
+            "filter_hint": "temporal pressure",
+        },
+        {
             "logical_name": "network_kpi_variation_explanation_v1",
             "filename": NETWORK_KPI_VARIATION_EXPLANATION_FILENAME,
             "category": "NETWORK_KPI_EVIDENCE",
@@ -901,6 +927,7 @@ def build_runtime_export_reproducibility_boundary_v1(
             "diagnostics_bundle_v1.json",
             "network_kpi_benchmark_validation_v1.json",
             "network_kpi_formula_evidence_v1.json",
+            "network_temporal_pressure_evidence_v1.json",
             "network_kpi_variation_explanation_v1.json",
             "runtime_kpi_movement_summary_v1.json",
             "network_flow_lifecycle_summary_v1.json",
@@ -1046,6 +1073,45 @@ def build_runtime_export_network_kpi_formula_evidence_v1(
     }
     artifact["artifact_hash"] = stable_hash_payload(artifact)
     return artifact
+
+
+def build_runtime_export_network_temporal_pressure_evidence_v1(
+    *,
+    package_id: str,
+    package_dir: str,
+    config_snapshot: Mapping[str, Any],
+) -> dict[str, object]:
+    """Build offline review evidence for deterministic temporal pressure."""
+
+    if not isinstance(config_snapshot, Mapping):
+        raise TypeError("config_snapshot must be a mapping")
+
+    status = _mapping(config_snapshot.get("status"))
+    provenance = _mapping(status.get("network_kpi_provenance_v2"))
+    temporal = _mapping(provenance.get("temporal_pressure_evidence"))
+    evidence = _runtime_export_network_temporal_pressure_evidence(status)
+    artifact: dict[str, object] = {
+        "type": "RUNTIME_EXPORT_NETWORK_TEMPORAL_PRESSURE_EVIDENCE_V1",
+        "version": "v1",
+        "artifact_id": RUNTIME_EXPORT_NETWORK_TEMPORAL_PRESSURE_EVIDENCE_V1_ID,
+        "source": "BACKEND_RUNTIME_EXPORT",
+        "artifact_scope": "NETWORK_TEMPORAL_PRESSURE_REVIEW",
+        "package_id": str(package_id),
+        "package_dir": str(package_dir),
+        "runtime_status_field": "network_kpi_provenance_v2.temporal_pressure_evidence",
+        "temporal_pressure_evidence": dict(temporal),
+        "evidence": evidence,
+        "boundary_conditions": (
+            "READ_RUNTIME_STATUS_ONLY",
+            "NO_METRIC_RECOMPUTE",
+            "NO_EVENT_REPLAY",
+            "NO_PACKET_LEVEL_SIMULATION",
+            "NO_EXTERNAL_SIMULATOR_ARTIFACT",
+        ),
+    }
+    artifact["artifact_hash"] = stable_hash_payload(artifact)
+    return artifact
+
 
 
 def build_runtime_export_network_kpi_variation_explanation_v1(
@@ -1366,6 +1432,9 @@ def build_runtime_export_review_summary_v1(
     network_kpi_formula_evidence = _runtime_export_network_kpi_formula_evidence(
         status
     )
+    network_temporal_pressure_evidence = (
+        _runtime_export_network_temporal_pressure_evidence(status)
+    )
     network_kpi_variation_explanation = (
         _runtime_export_network_kpi_variation_explanation(status)
     )
@@ -1430,6 +1499,7 @@ def build_runtime_export_review_summary_v1(
         "node_network_pressure_summary": node_network_pressure_summary,
         "network_kpi_benchmark_validation": network_kpi_validation,
         "network_kpi_formula_evidence": network_kpi_formula_evidence,
+        "network_temporal_pressure_evidence": network_temporal_pressure_evidence,
         "network_kpi_variation_explanation": network_kpi_variation_explanation,
         "runtime_kpi_movement_summary": runtime_kpi_movement_summary,
         "network_flow_lifecycle_summary": network_flow_lifecycle_summary,
@@ -1469,6 +1539,9 @@ def build_runtime_export_review_summary_v1(
             "network_kpi_formula_evidence_exported": (
                 "network_kpi_formula_evidence_v1.json" in artifacts
             ),
+            "network_temporal_pressure_evidence_exported": (
+                "network_temporal_pressure_evidence_v1.json" in artifacts
+            ),
             "network_kpi_variation_explanation_exported": (
                 "network_kpi_variation_explanation_v1.json" in artifacts
             ),
@@ -1498,6 +1571,7 @@ def build_runtime_export_review_summary_v1(
             "Use node_network_pressure_summary_v1.json to review per-user and per-satellite network pressure evidence.",
             "Use network_kpi_benchmark_validation_v1.json to review KPI guardrail evidence.",
             "Use network_kpi_formula_evidence_v1.json to review KPI formula input and time-series evidence.",
+            "Use network_temporal_pressure_evidence_v1.json to review deterministic temporal pressure evidence.",
             "Use network_kpi_variation_explanation_v1.json to review why flow-level KPI values moved or stayed flat.",
             "Use runtime_kpi_movement_summary_v1.json to review network and compute KPI movement over simulation time.",
             "Use network_flow_lifecycle_summary_v1.json to review active, blocked, completed, and failed flow lifecycle state.",
@@ -1560,6 +1634,9 @@ def build_runtime_export_diagnostics_bundle_v1(
     network_kpi_formula_evidence = _runtime_export_network_kpi_formula_evidence(
         status
     )
+    network_temporal_pressure_evidence = (
+        _runtime_export_network_temporal_pressure_evidence(status)
+    )
     network_kpi_variation_explanation = (
         _runtime_export_network_kpi_variation_explanation(status)
     )
@@ -1597,6 +1674,7 @@ def build_runtime_export_diagnostics_bundle_v1(
         network_flow_lifecycle_summary=network_flow_lifecycle_summary,
         network_kpi_validation=network_kpi_validation,
         network_kpi_formula_evidence=network_kpi_formula_evidence,
+        network_temporal_pressure_evidence=network_temporal_pressure_evidence,
         network_kpi_variation_explanation=network_kpi_variation_explanation,
         user_config_template_validation=user_config_template_validation,
         traffic_demand_explanation=traffic_demand_explanation,
@@ -1626,6 +1704,7 @@ def build_runtime_export_diagnostics_bundle_v1(
         "node_network_pressure_summary": node_network_pressure_summary,
         "network_kpi_benchmark_validation": network_kpi_validation,
         "network_kpi_formula_evidence": network_kpi_formula_evidence,
+        "network_temporal_pressure_evidence": network_temporal_pressure_evidence,
         "network_kpi_variation_explanation": network_kpi_variation_explanation,
         "runtime_kpi_movement_summary": runtime_kpi_movement_summary,
         "network_flow_lifecycle_summary": network_flow_lifecycle_summary,
@@ -1735,6 +1814,9 @@ def build_runtime_export_scenario_review_bundle_v1(
     network_kpi_formula_evidence = _mapping(
         review_summary.get("network_kpi_formula_evidence")
     )
+    network_temporal_pressure_evidence = _mapping(
+        review_summary.get("network_temporal_pressure_evidence")
+    )
     network_kpi_variation_explanation = _mapping(
         review_summary.get("network_kpi_variation_explanation")
     )
@@ -1759,6 +1841,8 @@ def build_runtime_export_scenario_review_bundle_v1(
         scenario_review_warnings.append("NODE_NETWORK_PRESSURE_SUMMARY_MISSING")
     if network_kpi_formula_evidence.get("evidence_present") is not True:
         scenario_review_warnings.append("NETWORK_KPI_FORMULA_EVIDENCE_MISSING")
+    if network_temporal_pressure_evidence.get("evidence_present") is not True:
+        scenario_review_warnings.append("NETWORK_TEMPORAL_PRESSURE_EVIDENCE_MISSING")
     if network_kpi_variation_explanation.get("evidence_present") is not True:
         scenario_review_warnings.append(
             "NETWORK_KPI_VARIATION_EXPLANATION_MISSING"
@@ -1928,6 +2012,35 @@ def build_runtime_export_scenario_review_bundle_v1(
             ),
             "evidence_present": (
                 network_kpi_formula_evidence.get("evidence_present") is True
+            ),
+        },
+        "network_temporal_pressure_evidence": {
+            "evidence_id": str(network_temporal_pressure_evidence.get("evidence_id", "")),
+            "metric_model": str(network_temporal_pressure_evidence.get("metric_model", "")),
+            "temporal_pressure_model": str(
+                network_temporal_pressure_evidence.get("temporal_pressure_model", "")
+            ),
+            "status": str(network_temporal_pressure_evidence.get("status", "")),
+            "time_pressure_factor": _number(
+                network_temporal_pressure_evidence.get("time_pressure_factor")
+            ),
+            "load_pressure_proxy": _number(
+                network_temporal_pressure_evidence.get("load_pressure_proxy")
+            ),
+            "loss_proxy_rate": _number(
+                network_temporal_pressure_evidence.get("loss_proxy_rate")
+            ),
+            "delay_variation_proxy_s": _number(
+                network_temporal_pressure_evidence.get("delay_variation_proxy_s")
+            ),
+            "throughput_delta_mbps": _number(
+                network_temporal_pressure_evidence.get("throughput_delta_mbps")
+            ),
+            "evidence_hash": str(
+                network_temporal_pressure_evidence.get("evidence_hash", "")
+            ),
+            "evidence_present": (
+                network_temporal_pressure_evidence.get("evidence_present") is True
             ),
         },
         "network_kpi_variation_explanation": {
@@ -2111,6 +2224,7 @@ def build_runtime_export_scenario_review_bundle_v1(
                 "diagnostics_bundle_v1.json",
                 "network_kpi_benchmark_validation_v1.json",
                 "network_kpi_formula_evidence_v1.json",
+                "network_temporal_pressure_evidence_v1.json",
                 "network_kpi_variation_explanation_v1.json",
                 "runtime_kpi_movement_summary_v1.json",
                 "network_flow_lifecycle_summary_v1.json",
@@ -2141,6 +2255,7 @@ def build_runtime_export_scenario_review_bundle_v1(
             "diagnostics_bundle_v1.json",
             "network_kpi_benchmark_validation_v1.json",
             "network_kpi_formula_evidence_v1.json",
+            "network_temporal_pressure_evidence_v1.json",
             "network_kpi_variation_explanation_v1.json",
             "runtime_kpi_movement_summary_v1.json",
             "network_flow_lifecycle_summary_v1.json",
@@ -3588,6 +3703,9 @@ def build_runtime_export_package_audit_index_v1(
     network_kpi_formula_evidence = _runtime_export_network_kpi_formula_evidence(
         status
     )
+    network_temporal_pressure_evidence = (
+        _runtime_export_network_temporal_pressure_evidence(status)
+    )
     network_kpi_variation_explanation = (
         _runtime_export_network_kpi_variation_explanation(status)
     )
@@ -3753,6 +3871,21 @@ def build_runtime_export_package_audit_index_v1(
         ),
         "network_kpi_formula_evidence_missing_selected_input_count": _integer(
             network_kpi_formula_evidence.get("missing_selected_input_count")
+        ),
+        "network_temporal_pressure_evidence_hash": str(
+            network_temporal_pressure_evidence.get("evidence_hash", "")
+        ),
+        "network_temporal_pressure_evidence_status": str(
+            network_temporal_pressure_evidence.get("status", "")
+        ),
+        "network_temporal_pressure_evidence_present": (
+            network_temporal_pressure_evidence.get("evidence_present") is True
+        ),
+        "network_temporal_pressure_evidence_time_pressure_factor": _number(
+            network_temporal_pressure_evidence.get("time_pressure_factor")
+        ),
+        "network_temporal_pressure_evidence_loss_proxy_rate": _number(
+            network_temporal_pressure_evidence.get("loss_proxy_rate")
         ),
         "network_kpi_variation_explanation_hash": str(
             network_kpi_variation_explanation.get("evidence_hash", "")
@@ -5098,6 +5231,7 @@ def _runtime_export_diagnostic_findings(
     network_flow_lifecycle_summary: Mapping[str, Any],
     network_kpi_validation: Mapping[str, Any],
     network_kpi_formula_evidence: Mapping[str, Any],
+    network_temporal_pressure_evidence: Mapping[str, Any],
     network_kpi_variation_explanation: Mapping[str, Any],
     user_config_template_validation: Mapping[str, Any],
     traffic_demand_explanation: Mapping[str, Any],
@@ -5300,6 +5434,43 @@ def _runtime_export_diagnostic_findings(
                 (
                     "network KPI formula evidence requires operator review: "
                     f"{network_kpi_formula_evidence.get('formula_evidence_status', '')}."
+                ),
+            )
+        )
+    if network_temporal_pressure_evidence.get("evidence_present") is not True:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "NETWORK_TEMPORAL_PRESSURE_EVIDENCE_MISSING",
+                "config_snapshot.status does not include network_kpi_provenance_v2.temporal_pressure_evidence.",
+            )
+        )
+    if network_temporal_pressure_evidence.get("packet_level_simulation") is True:
+        findings.append(
+            _diagnostic_finding(
+                "ERROR",
+                "NETWORK_TEMPORAL_PRESSURE_PACKET_LEVEL_DECLARED",
+                "network temporal pressure evidence declares packet-level simulation, which is outside the v2 demo boundary.",
+            )
+        )
+    if network_temporal_pressure_evidence.get("frontend_inference_required") is True:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "NETWORK_TEMPORAL_PRESSURE_FRONTEND_INFERENCE_DECLARED",
+                "network temporal pressure evidence should be backend-owned and not require frontend inference.",
+            )
+        )
+    if network_temporal_pressure_evidence.get("evidence_present") is True and str(
+        network_temporal_pressure_evidence.get("status", "")
+    ) not in {"OBSERVED"}:
+        findings.append(
+            _diagnostic_finding(
+                "WARN",
+                "NETWORK_TEMPORAL_PRESSURE_EVIDENCE_INCOMPLETE",
+                (
+                    "network temporal pressure evidence requires operator review: "
+                    f"{network_temporal_pressure_evidence.get('status', '')}."
                 ),
             )
         )
@@ -5817,6 +5988,12 @@ def _runtime_export_scenario_review_evidence_hash(
                 scenario_review_bundle.get("network_kpi_formula_evidence")
             ).get("evidence_hash", "")
         )
+    if filename == "network_temporal_pressure_evidence_v1.json":
+        return str(
+            _mapping(
+                scenario_review_bundle.get("network_temporal_pressure_evidence")
+            ).get("evidence_hash", "")
+        )
     if filename == "network_kpi_variation_explanation_v1.json":
         return str(
             _mapping(
@@ -5901,6 +6078,7 @@ def _runtime_export_scenario_review_step_label(
         "diagnostics_bundle_v1.json": "diagnostics",
         "network_kpi_benchmark_validation_v1.json": "network KPI benchmark",
         "network_kpi_formula_evidence_v1.json": "network KPI formula evidence",
+        "network_temporal_pressure_evidence_v1.json": "network temporal pressure evidence",
         "network_kpi_variation_explanation_v1.json": "network KPI variation explanation",
         "runtime_kpi_movement_summary_v1.json": "runtime KPI movement summary",
         "traffic_demand_explanation_v1.json": "traffic demand",
@@ -6340,6 +6518,93 @@ def _runtime_export_network_kpi_formula_evidence(
     }
     evidence["evidence_hash"] = stable_hash_payload(evidence)
     return evidence
+
+
+def _runtime_export_network_temporal_pressure_evidence(
+    status: Mapping[str, Any],
+) -> dict[str, object]:
+    provenance = _mapping(status.get("network_kpi_provenance_v2"))
+    temporal = _mapping(provenance.get("temporal_pressure_evidence"))
+    evidence_present = bool(temporal)
+    source = "config_snapshot.status.network_kpi_provenance_v2.temporal_pressure_evidence"
+    if not evidence_present:
+        evidence: dict[str, object] = {
+            "version": "v1",
+            "evidence_id": "",
+            "source": source,
+            "evidence_present": False,
+            "metric_model": "UNKNOWN",
+            "temporal_pressure_model": "UNKNOWN",
+            "status": "MISSING_TEMPORAL_PRESSURE_EVIDENCE",
+            "required_field_count": 0,
+            "observed_required_field_count": 0,
+            "source_field_count": 0,
+            "time_pressure_period_s": 0.0,
+            "time_pressure_phase": 0.0,
+            "time_pressure_factor": 0.0,
+            "load_pressure_proxy": 0.0,
+            "loss_proxy_rate": 0.0,
+            "delay_variation_proxy_s": 0.0,
+            "throughput_delta_mbps": 0.0,
+            "dominant_load_component": "none",
+            "packet_level_simulation": False,
+            "frontend_inference_required": False,
+            "acceptable_for_demo_review": False,
+            "model_assumptions": (),
+            "caveats": (
+                "Runtime status did not expose network_kpi_provenance_v2.temporal_pressure_evidence.",
+            ),
+        }
+        evidence["evidence_hash"] = stable_hash_payload(evidence)
+        return evidence
+
+    status_value = str(temporal.get("status", ""))
+    packet_level = temporal.get("packet_level_simulation") is True
+    frontend_inference = temporal.get("frontend_inference_required") is True
+    dominant_load = _mapping(temporal.get("dominant_load_component"))
+    acceptable = (
+        status_value == "OBSERVED"
+        and not packet_level
+        and not frontend_inference
+        and _integer(temporal.get("required_field_count"))
+        == _integer(temporal.get("observed_required_field_count"))
+    )
+    evidence = {
+        "version": "v1",
+        "evidence_id": str(temporal.get("evidence_id", "")),
+        "source": source,
+        "runtime_status_source": str(temporal.get("source", "")),
+        "evidence_present": True,
+        "metric_model": str(temporal.get("metric_model", "")),
+        "temporal_pressure_model": str(temporal.get("temporal_pressure_model", "")),
+        "status": status_value,
+        "required_field_count": _integer(temporal.get("required_field_count")),
+        "observed_required_field_count": _integer(
+            temporal.get("observed_required_field_count")
+        ),
+        "source_field_count": _integer(temporal.get("source_field_count")),
+        "time_pressure_period_s": _number(temporal.get("time_pressure_period_s")),
+        "time_pressure_phase": _number(temporal.get("time_pressure_phase")),
+        "time_pressure_factor": _number(temporal.get("time_pressure_factor")),
+        "load_pressure_proxy": _number(temporal.get("load_pressure_proxy")),
+        "loss_proxy_rate": _number(temporal.get("loss_proxy_rate")),
+        "delay_variation_proxy_s": _number(temporal.get("delay_variation_proxy_s")),
+        "throughput_delta_mbps": _number(temporal.get("throughput_delta_mbps")),
+        "dominant_load_component": str(dominant_load.get("component", "")),
+        "dominant_load_field": str(dominant_load.get("field", "")),
+        "temporal_pressure_active": temporal.get("temporal_pressure_active") is True,
+        "loss_proxy_active": temporal.get("loss_proxy_active") is True,
+        "delay_variation_proxy_active": (
+            temporal.get("delay_variation_proxy_active") is True
+        ),
+        "packet_level_simulation": packet_level,
+        "frontend_inference_required": frontend_inference,
+        "acceptable_for_demo_review": acceptable,
+        "model_assumptions": _string_tuple(temporal.get("model_assumptions")),
+    }
+    evidence["evidence_hash"] = stable_hash_payload(evidence)
+    return evidence
+
 
 
 def _runtime_export_network_kpi_variation_explanation(
