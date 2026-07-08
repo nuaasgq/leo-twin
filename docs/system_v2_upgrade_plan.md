@@ -1386,6 +1386,12 @@ Current Phase 3 progress:
   result/export layers a backend-owned, hash-backed status contract for KPI
   temporal pressure semantics without changing the formulas.
 
+- T409 adds `TrafficDemandBatch.runtime_request_timeline()` and publishes
+  `traffic_request_timeline_v1` in runtime status. The dashboard can now
+  consume backend-owned per-request schedule rows with PAST, RECENTLY_ARRIVED,
+  and PENDING states instead of inferring business activity from static
+  frontend data.
+
 ## 5. Parallel Agent Assignment Model
 
 - Kernel Agent: guard Event Kernel boundaries; review that no domain behavior

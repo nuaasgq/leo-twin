@@ -295,6 +295,14 @@ def test_demo_server_adapter_uses_runtime_status_and_control_layer(tmp_path) -> 
     assert temporal_profile["packet_level_simulation"] is False
     assert temporal_profile["frontend_inference_required"] is False
     assert str(temporal_profile["profile_hash"]).startswith("sha256:")
+    traffic_timeline = status_after_tick["traffic_request_timeline_v1"]
+    assert traffic_timeline["version"] == "v1"
+    assert traffic_timeline["source"] == "TrafficDemandBatch.records"
+    assert traffic_timeline["packet_level_simulation"] is False
+    assert traffic_timeline["frontend_inference_required"] is False
+    assert traffic_timeline["request_count"] > 0
+    assert traffic_timeline["item_count"] <= traffic_timeline["item_limit"]
+    assert str(traffic_timeline["summary_hash"]).startswith("sha256:")
     lifecycle = status_after_tick["network_flow_lifecycle_summary_v1"]
     assert lifecycle["version"] == "v1"
     assert lifecycle["source"] == "METRICS_SUMMARY_NETWORK_FLOW_LIFECYCLE_FIELDS"

@@ -60,6 +60,7 @@ class DemoScenario:
     ground_user_render_states: tuple[GroundUserRenderState, ...]
     ground_endpoints: tuple[GroundEndpoint, ...]
     compute_nodes: tuple[ComputeNode, ...]
+    traffic_demand: TrafficDemandBatch
     initial_events: tuple[SimEvent, ...]
     frontend_config: dict[str, object]
 
@@ -73,7 +74,8 @@ def build_demo_scenario(config: DemoConfig) -> DemoScenario:
     orbit_elements = _orbit_elements(config, constellation_allocation)
     network_satellites = _network_satellites(config)
     compute_nodes = _compute_nodes(config)
-    initial_events = _initial_events(config)
+    traffic_demand = _traffic_demand_batch(config)
+    initial_events = _initial_events(config, traffic_demand)
     backend_summary = _backend_summary(config, constellation_allocation)
     orbit_frontend_config: dict[str, object] = {
         "update_interval_seconds": config.orbit_tick_seconds,
@@ -91,6 +93,7 @@ def build_demo_scenario(config: DemoConfig) -> DemoScenario:
         ground_user_render_states=render_users,
         ground_endpoints=ground_endpoints,
         compute_nodes=compute_nodes,
+        traffic_demand=traffic_demand,
         initial_events=initial_events,
         frontend_config={
             "scenario_id": f"integration-demo-{config.seed}",
@@ -440,7 +443,10 @@ def _compute_nodes(config: DemoConfig) -> tuple[ComputeNode, ...]:
     )
 
 
-def _initial_events(config: DemoConfig) -> tuple[SimEvent, ...]:
+def _initial_events(
+    config: DemoConfig,
+    traffic_demand: TrafficDemandBatch | None = None,
+) -> tuple[SimEvent, ...]:
     events: list[SimEvent] = []
     for tick in range(0, config.duration_seconds + 1, config.orbit_tick_seconds):
         events.append(
@@ -455,8 +461,9 @@ def _initial_events(config: DemoConfig) -> tuple[SimEvent, ...]:
             )
         )
 
+    demand = traffic_demand if traffic_demand is not None else _traffic_demand_batch(config)
     task_event_index = 0
-    for flow_index, record in enumerate(_traffic_demand_batch(config).records):
+    for flow_index, record in enumerate(demand.records):
         events.append(
             SimEvent(
                 event_id=f"scenario:flow-arrival:{flow_index:05d}",

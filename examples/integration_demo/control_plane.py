@@ -2496,6 +2496,9 @@ class DemoControlPlane:
             lifecycle_summaries["user_request_summary_v1"],
             float(status["current_sim_time"]),
         )
+        status["traffic_request_timeline_v1"] = (
+            self._traffic_request_timeline_json(float(status["current_sim_time"]))
+        )
         status["stream_diagnostics_v1"] = self._stream_diagnostics_json()
         status["reproducibility_manifest_v1"] = (
             build_runtime_reproducibility_manifest(
@@ -2803,6 +2806,50 @@ class DemoControlPlane:
             else:
                 history.append(sample)
             del history[: max(0, len(history) - self._user_request_history_limit)]
+
+    def _traffic_request_timeline_json(self, sim_time: float) -> dict[str, Any]:
+        context = self._runtime_context
+        if context is None:
+            return {
+                "version": "v1",
+                "summary_id": "leo_twin.traffic_request_timeline.v1",
+                "source": "TrafficDemandBatch.records",
+                "metric_model": "FLOW_LEVEL_REQUEST_SCHEDULE",
+                "packet_level_simulation": False,
+                "frontend_inference_required": False,
+                "current_sim_time": float(sim_time),
+                "request_count": 0,
+                "state_counts": {
+                    "PAST": 0,
+                    "RECENTLY_ARRIVED": 0,
+                    "PENDING": 0,
+                },
+                "recent_request_count": 0,
+                "pending_request_count": 0,
+                "past_request_count": 0,
+                "window": {
+                    "lookback_window_s": 60.0,
+                    "lookahead_window_s": 60.0,
+                    "window_start_s": max(0.0, float(sim_time) - 60.0),
+                    "window_end_s": float(sim_time) + 60.0,
+                },
+                "window_request_count": 0,
+                "item_limit": 64,
+                "item_count": 0,
+                "hidden_window_request_count": 0,
+                "items": (),
+                "summary_hash": "",
+            }
+        timeline = dict(
+            context.scenario.traffic_demand.runtime_request_timeline(
+                sim_time=sim_time,
+                lookback_window_s=60.0,
+                lookahead_window_s=60.0,
+                item_limit=64,
+            )
+        )
+        timeline["summary_hash"] = stable_hash_payload(timeline)
+        return timeline
 
     def _stream_diagnostics_json(self) -> dict[str, Any]:
         loop = self._require_advance_loop()

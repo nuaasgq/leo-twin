@@ -426,6 +426,86 @@ class TrafficDemandBatch:
             ),
         }
 
+    def runtime_request_timeline(
+        self,
+        *,
+        sim_time: float,
+        lookback_window_s: float = 60.0,
+        lookahead_window_s: float = 60.0,
+        item_limit: int = 64,
+    ) -> dict[str, object]:
+        """Return a deterministic request timeline around current sim time."""
+
+        _require_non_negative_number(sim_time, "sim_time")
+        _require_non_negative_number(lookback_window_s, "lookback_window_s")
+        _require_non_negative_number(lookahead_window_s, "lookahead_window_s")
+        _require_positive_int(item_limit, "item_limit")
+        current = float(sim_time)
+        window_start = max(0.0, current - float(lookback_window_s))
+        window_end = current + float(lookahead_window_s)
+        ordered_records = tuple(
+            sorted(
+                self.records,
+                key=lambda record: (
+                    record.arrival_time,
+                    -record.input_flow.priority,
+                    _service_id_from_record(record),
+                ),
+            )
+        )
+        state_counts = {
+            "PAST": 0,
+            "RECENTLY_ARRIVED": 0,
+            "PENDING": 0,
+        }
+        window_records: list[TrafficDemandRecord] = []
+        for record in ordered_records:
+            state = _request_timeline_state(
+                record,
+                sim_time=current,
+                window_start=window_start,
+            )
+            state_counts[state] += 1
+            if window_start <= record.arrival_time <= window_end:
+                window_records.append(record)
+        limited_records = tuple(window_records[:item_limit])
+        return {
+            "version": "v1",
+            "summary_id": "leo_twin.traffic_request_timeline.v1",
+            "source": "TrafficDemandBatch.records",
+            "metric_model": "FLOW_LEVEL_REQUEST_SCHEDULE",
+            "packet_level_simulation": False,
+            "frontend_inference_required": False,
+            "current_sim_time": current,
+            "request_count": len(ordered_records),
+            "state_counts": state_counts,
+            "recent_request_count": state_counts["RECENTLY_ARRIVED"],
+            "pending_request_count": state_counts["PENDING"],
+            "past_request_count": state_counts["PAST"],
+            "window": {
+                "lookback_window_s": float(lookback_window_s),
+                "lookahead_window_s": float(lookahead_window_s),
+                "window_start_s": window_start,
+                "window_end_s": window_end,
+            },
+            "window_request_count": len(window_records),
+            "item_limit": item_limit,
+            "item_count": len(limited_records),
+            "hidden_window_request_count": max(
+                0,
+                len(window_records) - len(limited_records),
+            ),
+            "items": tuple(
+                _traffic_request_timeline_item(record, current, window_start)
+                for record in limited_records
+            ),
+            "model_assumptions": (
+                "Timeline states are derived from configured flow-level arrival times.",
+                "RECENTLY_ARRIVED means the request arrived within the lookback window, not packet-level completion.",
+                "PENDING means scheduled after current sim time; no stochastic retry model is used.",
+            ),
+        }
+
     def per_user_active_service_state(self) -> tuple[dict[str, object], ...]:
         """Return deterministic per-source service state rows."""
 
@@ -971,6 +1051,60 @@ def _per_user_active_service_state(
         "total_input_data_mb": sum(record.input_data_size for record in ordered_records),
         "total_output_data_mb": sum(record.output_data_size for record in ordered_records),
     }
+
+
+def _request_timeline_state(
+    record: TrafficDemandRecord,
+    *,
+    sim_time: float,
+    window_start: float,
+) -> str:
+    if record.arrival_time > sim_time:
+        return "PENDING"
+    if record.arrival_time >= window_start:
+        return "RECENTLY_ARRIVED"
+    return "PAST"
+
+
+def _traffic_request_timeline_item(
+    record: TrafficDemandRecord,
+    sim_time: float,
+    window_start: float,
+) -> dict[str, object]:
+    task_id = record.task.task_id if record.task is not None else ""
+    output_flow_id = record.output_flow.flow_id if record.output_flow is not None else ""
+    state = _request_timeline_state(
+        record,
+        sim_time=sim_time,
+        window_start=window_start,
+    )
+    return {
+        "request_id": _service_id_from_record(record),
+        "input_flow_id": record.input_flow.flow_id,
+        "task_id": task_id,
+        "output_flow_id": output_flow_id,
+        "source_id": record.input_flow.source_id,
+        "target_id": record.input_flow.target_id,
+        "arrival_time": float(record.arrival_time),
+        "time_offset_s": float(record.arrival_time - sim_time),
+        "request_state": state,
+        "traffic_class": record.traffic_class.value,
+        "destination_type": record.destination_type.value,
+        "priority": int(record.input_flow.priority),
+        "input_data_size": float(record.input_data_size),
+        "output_data_size": float(record.output_data_size),
+        "has_compute_task": record.task is not None,
+        "has_output_flow": record.output_flow is not None,
+        "service_state": _request_service_state(state),
+    }
+
+
+def _request_service_state(state: str) -> str:
+    if state == "PENDING":
+        return "SCHEDULED"
+    if state == "RECENTLY_ARRIVED":
+        return "ARRIVED_IN_RECENT_WINDOW"
+    return "ARRIVED_BEFORE_RECENT_WINDOW"
 
 
 def _traffic_class_explanation_row(

@@ -492,6 +492,71 @@ def test_traffic_demand_explanation_reports_business_semantics() -> None:
     )
 
 
+def test_runtime_request_timeline_reports_time_relative_business_state() -> None:
+    profile = TrafficDemandProfile(
+        traffic_class=TrafficClass.COMPUTE_SERVICE,
+        source_ids=("user-a",),
+        destination_ids=("sat-compute-a",),
+        request_count=3,
+        arrival_interval=10.0,
+        input_data_size=6.0,
+        output_data_size=2.0,
+        priority=5,
+        destination_type=TrafficDestinationType.COMPUTE_NODE,
+        output_destination_ids=("user-a",),
+    )
+    batch = generate_traffic_demand((profile,))
+
+    timeline = batch.runtime_request_timeline(
+        sim_time=12.0,
+        lookback_window_s=5.0,
+        lookahead_window_s=10.0,
+        item_limit=2,
+    )
+
+    assert timeline["version"] == "v1"
+    assert timeline["summary_id"] == "leo_twin.traffic_request_timeline.v1"
+    assert timeline["source"] == "TrafficDemandBatch.records"
+    assert timeline["metric_model"] == "FLOW_LEVEL_REQUEST_SCHEDULE"
+    assert timeline["packet_level_simulation"] is False
+    assert timeline["frontend_inference_required"] is False
+    assert timeline["current_sim_time"] == 12.0
+    assert timeline["request_count"] == 3
+    assert timeline["state_counts"] == {
+        "PAST": 1,
+        "RECENTLY_ARRIVED": 1,
+        "PENDING": 1,
+    }
+    assert timeline["recent_request_count"] == 1
+    assert timeline["pending_request_count"] == 1
+    assert timeline["past_request_count"] == 1
+    assert timeline["window"] == {
+        "lookback_window_s": 5.0,
+        "lookahead_window_s": 10.0,
+        "window_start_s": 7.0,
+        "window_end_s": 22.0,
+    }
+    assert timeline["window_request_count"] == 2
+    assert timeline["item_count"] == 2
+    assert timeline["hidden_window_request_count"] == 0
+    first, second = timeline["items"]
+    assert first["arrival_time"] == 10.0
+    assert first["time_offset_s"] == -2.0
+    assert first["request_state"] == "RECENTLY_ARRIVED"
+    assert first["service_state"] == "ARRIVED_IN_RECENT_WINDOW"
+    assert first["traffic_class"] == "COMPUTE_SERVICE"
+    assert first["destination_type"] == "COMPUTE_NODE"
+    assert first["has_compute_task"] is True
+    assert first["has_output_flow"] is True
+    assert second["arrival_time"] == 20.0
+    assert second["time_offset_s"] == 8.0
+    assert second["request_state"] == "PENDING"
+    assert second["service_state"] == "SCHEDULED"
+    assert json.loads(json.dumps(timeline, sort_keys=True))["summary_id"] == (
+        "leo_twin.traffic_request_timeline.v1"
+    )
+
+
 def test_burst_arrival_profile_groups_requests_deterministically() -> None:
     profile = TrafficDemandProfile(
         traffic_class=TrafficClass.DATA_TRANSFER,

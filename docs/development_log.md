@@ -20948,3 +20948,49 @@ change.
     external simulator measurements.
   - The dashboard can consume this status field in a later frontend task, but
     this task intentionally did not change frontend rendering.
+
+## 2026-07-08 - T409 traffic request timeline status v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: this task commit; final hash reported in the delivery summary.
+- Scope: add a backend-owned flow-level business request timeline. `TrafficDemandBatch`
+  now exposes `runtime_request_timeline()`, classifying generated requests around
+  current simulation time as `PAST`, `RECENTLY_ARRIVED`, or `PENDING` with
+  request/user/target/task/output-flow metadata. Integration demo scenarios now
+  retain the generated `TrafficDemandBatch`, and DemoControlPlane publishes
+  `traffic_request_timeline_v1` in runtime status with a deterministic summary
+  hash. This gives the dashboard a backend semantic source for user business
+  request state without frontend inference. No Event Kernel, frontend rendering,
+  packet-level, or external simulator behavior was changed.
+- Changed files/modules:
+  - `src/leo_twin/models/traffic/demand.py`
+  - `examples/integration_demo/scenario.py`
+  - `examples/integration_demo/control_plane.py`
+  - `tests/unit/test_traffic_demand_model.py`
+  - `tests/integration/test_runtime_session_control.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - Bundled Python `py_compile` for touched backend/test files.
+    - Result: passed.
+  - Direct function run for the new traffic timeline model test and affected
+    runtime status integration test.
+    - Result: passed.
+  - Direct function run for all no-fixture tests in
+    `tests/unit/test_traffic_demand_model.py` and
+    `tests/unit/test_integration_demo_scenario.py`.
+    - Result: 29 passed.
+- Problems encountered:
+  - The first broad direct test run used a minimal `pytest.approx` shim without
+    sequence support, causing a false failure on an existing list-of-times
+    assertion. The actual event times matched the expected values; rerunning with
+    sequence-aware approx passed all 29 checks.
+  - Existing local runtime config drift remains untouched and must stay
+    unstaged: `configs/generated_full_system_demo.json` and
+    `configs/sees_control.yaml`.
+- Known remaining issues:
+  - The timeline is a planned flow-level request schedule. It does not yet merge
+    observed network completion, retry, queue, or packet-level state into each
+    request row.
+  - Frontend rendering can later use `traffic_request_timeline_v1`, but this
+    task intentionally did not modify UI layout.
