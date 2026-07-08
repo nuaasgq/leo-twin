@@ -257,6 +257,13 @@ Tasks:
     status display so saved operator checklists can be compared against the
     latest backend template for missing records, evidence-hash drift, operator
     attention, and extra stale records without replay or recomputation.
+- V2-017: Add network flow lifecycle metrics.
+  - Scope: track route-to-completion flow lifecycle state in backend metrics.
+  - Depends on: V2-015, V2-016.
+  - Status: T412 adds active/completed/success/failed flow counts and active
+    demand/capacity/latency/age fields to `metrics_summary`, giving the
+    dashboard and exports backend-owned lifecycle semantics instead of relying
+    on cumulative route or completed-flow values alone.
 - V2-016: Add runtime KPI recent-window semantics.
   - Scope: make KPI time-series throughput reflect the recent completed-flow
     window while preserving the lifetime/capacity estimate as a separate field.

@@ -533,6 +533,108 @@ def test_metrics_collector_reports_route_constraint_summary() -> None:
     assert summary["network_constraint_top_link_utilization"] == pytest.approx(0.92)
 
 
+def test_metrics_collector_reports_network_flow_lifecycle_summary() -> None:
+    collector = MetricsCollector()
+    collector.observe(
+        _event(
+            "route-active",
+            1.0,
+            EventType.ROUTE_UPDATE,
+            Route(
+                route_id="route-active",
+                flow_id="flow-active",
+                path=("user-a", "sat-a", "user-b"),
+                latency=0.05,
+                capacity=100.0,
+                available=True,
+                demand_capacity=30.0,
+            ),
+            "network",
+        )
+    )
+    collector.observe(
+        _event(
+            "route-blocked",
+            2.0,
+            EventType.ROUTE_UPDATE,
+            Route(
+                route_id="route-blocked",
+                flow_id="flow-blocked",
+                path=(),
+                latency=0.0,
+                capacity=0.0,
+                available=False,
+                demand_capacity=15.0,
+            ),
+            "network",
+        )
+    )
+
+    active = collector.summary()
+
+    assert active["network_flow_lifecycle_model"] == (
+        "ROUTE_UPDATE_TO_FLOW_COMPLETE_WINDOW"
+    )
+    assert active["network_flow_lifecycle_source"] == "BACKEND_METRICS_COLLECTOR"
+    assert active["network_flow_lifecycle_packet_level_simulation"] is False
+    assert active["network_flow_lifecycle_active_flow_count"] == 2
+    assert active["network_flow_lifecycle_active_available_flow_count"] == 1
+    assert active["network_flow_lifecycle_active_blocked_flow_count"] == 1
+    assert active["network_flow_lifecycle_active_demand_mbps"] == 45.0
+    assert active["network_flow_lifecycle_active_capacity_mbps"] == 100.0
+    assert active["network_flow_lifecycle_active_latency_avg_s"] == 0.05
+    assert active["network_flow_lifecycle_oldest_active_age_s"] == 1.0
+    assert active["network_flow_lifecycle_completed_flow_count"] == 0
+
+    collector.observe(
+        _event(
+            "flow-blocked",
+            2.0,
+            EventType.FLOW_COMPLETE,
+            FlowState(
+                flow_id="flow-blocked",
+                route_id="route-blocked",
+                source_id="user-c",
+                target_id="user-d",
+                status="blocked",
+            ),
+            "network",
+        )
+    )
+    partial = collector.summary()
+
+    assert partial["network_flow_lifecycle_active_flow_count"] == 1
+    assert partial["network_flow_lifecycle_active_blocked_flow_count"] == 0
+    assert partial["network_flow_lifecycle_completed_flow_count"] == 1
+    assert partial["network_flow_lifecycle_successful_flow_count"] == 0
+    assert partial["network_flow_lifecycle_failed_flow_count"] == 1
+
+    collector.observe(
+        _event(
+            "flow-active",
+            4.0,
+            EventType.FLOW_COMPLETE,
+            FlowState(
+                flow_id="flow-active",
+                route_id="route-active",
+                source_id="user-a",
+                target_id="user-b",
+                status="complete",
+                latency=0.05,
+                capacity=90.0,
+            ),
+            "network",
+        )
+    )
+    complete = collector.summary()
+
+    assert complete["network_flow_lifecycle_active_flow_count"] == 0
+    assert complete["network_flow_lifecycle_active_demand_mbps"] == 0.0
+    assert complete["network_flow_lifecycle_oldest_active_age_s"] == 0.0
+    assert complete["network_flow_lifecycle_completed_flow_count"] == 2
+    assert complete["network_flow_lifecycle_successful_flow_count"] == 1
+    assert complete["network_flow_lifecycle_failed_flow_count"] == 1
+
 def test_metrics_collector_reports_effective_flow_level_network_quality() -> None:
     collector = MetricsCollector()
     last_records: tuple[MetricRecord, ...] = ()

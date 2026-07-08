@@ -5,6 +5,42 @@ results, and issues encountered during implementation. Every future completed
 task must update this log in the same commit as the code or documentation
 change.
 
+## 2026-07-08 - Network Flow Lifecycle Metrics v1
+
+- Branch: `feature/T402-network-pressure-provenance-v1`
+- Commit: pending in this commit
+- Scope: add backend-owned flow lifecycle metrics to `MetricsCollector` by
+  treating `ROUTE_UPDATE` as a routed-flow start/update and `FLOW_COMPLETE` as
+  lifecycle completion. `metrics_summary` now reports active, active-available,
+  active-blocked, completed, successful, and failed flow counts plus active
+  demand, active capacity, active average latency, and oldest active age. This
+  gives the backend a deterministic flow-level runtime state window for the
+  dashboard and exports without introducing packet-level simulation or changing
+  Event Kernel behavior.
+- Changed files/modules:
+  - `src/leo_twin/services/metrics/collector.py`
+  - `tests/unit/test_metrics_module.py`
+  - `docs/system_v2_upgrade_plan.md`
+  - `docs/development_log.md`
+- Validation:
+  - `python -m py_compile src\leo_twin\services\metrics\collector.py tests\unit\test_metrics_module.py`
+    - Result: passed using the bundled Codex Python runtime.
+  - Manual smoke for route constraint summary, network flow lifecycle summary,
+    effective flow-level network quality, and route pressure evidence tests
+    - Result: passed with a minimal `pytest` stub because the bundled
+      no-approval Python runtime does not include `pytest`.
+  - `git diff --check`
+    - Result: passed for task files.
+- Problems encountered and handling:
+  - Exact PowerShell replacements are still being used because `apply_patch` is
+    blocked by the Windows sandbox helper in this workspace.
+  - Local runtime/generated config files and `%SystemDrive%/` remain outside
+    this task scope and were not staged.
+- Known remaining issues / follow-up:
+  - The lifecycle window is flow-level and derived from route/completion events.
+    It does not yet expose per-user request queues or per-satellite service
+    assignment tables as first-class paginated backend endpoints.
+
 ## 2026-07-08 - Runtime KPI Recent Window v1
 
 - Branch: `feature/T402-network-pressure-provenance-v1`

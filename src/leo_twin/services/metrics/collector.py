@@ -118,6 +118,8 @@ class MetricsCollector:
         self._active_links: set[tuple[str, str]] = set()
         self._routes: dict[str, Route] = {}
         self._route_latency_history: dict[str, deque[float]] = {}
+        self._active_flow_routes: dict[str, Route] = {}
+        self._flow_route_start_times: dict[str, float] = {}
         self._completed_flows: dict[str, FlowState] = {}
         self._completed_flow_times: dict[str, float] = {}
         self._compute_nodes: dict[str, ComputeNodeState] = {}
@@ -272,6 +274,7 @@ class MetricsCollector:
             )
         )
         summary.update(self._network_constraint_summary(active_links, available_routes))
+        summary.update(self._network_flow_lifecycle_summary(sim_time=self._last_sim_time))
         summary.update(self._compute_resource_summary())
         summary.update(self._service_latency_summary())
         for event_type, count in sorted(self._event_counts.items()):
@@ -1038,6 +1041,9 @@ class MetricsCollector:
         self._routes[route.route_id] = route
         history = self._route_latency_history.setdefault(route.route_id, deque(maxlen=16))
         history.append(float(route.latency))
+        if route.flow_id not in self._completed_flows:
+            self._active_flow_routes[route.flow_id] = route
+            self._flow_route_start_times.setdefault(route.flow_id, float(event.sim_time))
         return (
             MetricRecord(
                 metric_name="route.available",
@@ -1092,6 +1098,8 @@ class MetricsCollector:
         flow = _require_payload(event.payload, FlowState, "FLOW_COMPLETE")
         self._completed_flows[flow.flow_id] = flow
         self._completed_flow_times[flow.flow_id] = float(event.sim_time)
+        self._active_flow_routes.pop(flow.flow_id, None)
+        self._flow_route_start_times.pop(flow.flow_id, None)
         return (
             MetricRecord(
                 metric_name="flow.status",
@@ -1694,6 +1702,51 @@ class MetricsCollector:
             "network_quality_delay_variation_zero_reason_label": (
                 _network_quality_zero_reason_label(delay_variation_zero_reason)
             ),
+        }
+
+    def _network_flow_lifecycle_summary(
+        self,
+        *,
+        sim_time: float | None = None,
+    ) -> MetricSummary:
+        summary_time = self._last_sim_time if sim_time is None else max(0.0, float(sim_time))
+        active_routes = tuple(
+            self._active_flow_routes[flow_id]
+            for flow_id in sorted(self._active_flow_routes)
+        )
+        active_available_routes = tuple(route for route in active_routes if route.available)
+        active_latencies = tuple(float(route.latency) for route in active_available_routes)
+        active_demand = float(sum(_route_demand_capacity(route) for route in active_routes))
+        active_capacity = float(
+            sum(max(0.0, float(route.capacity)) for route in active_available_routes)
+        )
+        oldest_active_age = 0.0
+        if self._flow_route_start_times:
+            oldest_start = min(self._flow_route_start_times.values())
+            oldest_active_age = max(0.0, summary_time - oldest_start)
+        completed_flows = tuple(
+            self._completed_flows[flow_id]
+            for flow_id in sorted(self._completed_flows)
+        )
+        failed_count = sum(1 for flow in completed_flows if _flow_is_failed(flow))
+        successful_count = len(completed_flows) - failed_count
+        return {
+            "network_flow_lifecycle_model": "ROUTE_UPDATE_TO_FLOW_COMPLETE_WINDOW",
+            "network_flow_lifecycle_source": "BACKEND_METRICS_COLLECTOR",
+            "network_flow_lifecycle_packet_level_simulation": False,
+            "network_flow_lifecycle_active_flow_count": len(active_routes),
+            "network_flow_lifecycle_active_available_flow_count": len(active_available_routes),
+            "network_flow_lifecycle_active_blocked_flow_count": max(
+                0,
+                len(active_routes) - len(active_available_routes),
+            ),
+            "network_flow_lifecycle_active_demand_mbps": active_demand,
+            "network_flow_lifecycle_active_capacity_mbps": active_capacity,
+            "network_flow_lifecycle_active_latency_avg_s": _average(active_latencies),
+            "network_flow_lifecycle_oldest_active_age_s": float(oldest_active_age),
+            "network_flow_lifecycle_completed_flow_count": len(completed_flows),
+            "network_flow_lifecycle_successful_flow_count": successful_count,
+            "network_flow_lifecycle_failed_flow_count": failed_count,
         }
 
     def _network_constraint_summary(
